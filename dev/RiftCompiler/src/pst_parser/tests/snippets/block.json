@@ -1,0 +1,43 @@
+{
+	"PST": [
+		{
+			"Block": {
+				"optional name": "<ANONYMOUS>",
+				"code block": {
+					"CodeBlock": []
+				}
+			}
+		},
+		{
+			"Block": {
+				"optional name": {
+					"Name": "B"
+				},
+				"code block": {
+					"CodeBlock": []
+				}
+			}
+		},
+		{
+			"Block": {
+				"optional name": {
+					"Name": "B"
+				},
+				"code block": {
+					"CodeBlock": [
+						{
+							"Expr": [
+								{
+									"Identifier": "a"
+								},
+								{
+									"Operator": "++"
+								},
+							]
+						},
+					]
+				}
+			}
+		},
+	]
+}

@@ -1,0 +1,28 @@
+# cmake:
+cmake_install.cmake
+CMakeCache.txt
+Makefile
+CMakeFiles/
+Testing/
+CTestTestfile.cmake
+DartConfiguration.tcl
+compile_commands.json
+ 
+coverage/
+coverage.info
+
+# IDE configs
+compile_commands.json
+
+# windows cmake
+out/build/
+build/
+
+# bin:
+bin/
+lib/
+
+# python cache:
+__pycache__/
+
+!.clang-format

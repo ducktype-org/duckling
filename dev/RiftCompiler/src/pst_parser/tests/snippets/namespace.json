@@ -1,0 +1,28 @@
+{
+	"PST": [
+		{
+			"Namespace": {
+				"name": {
+					"Name": "myspace"
+				},
+				"block": {
+					"CodeBlock": [
+						{
+							"Expr": [
+								{
+									"Identifier": "x"
+								},
+								{
+									"Operator": "+"
+								},
+								{
+									"NumLiteral": "3"
+								}
+							]
+						}
+					]
+				}
+			}
+		}
+	]
+}

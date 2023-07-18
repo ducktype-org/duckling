@@ -1,0 +1,13 @@
+# Don't commit things beggining with `.`
+.*
+
+# We want all gitignores and github files
+!.gitignore
+!.github/
+
+bin/
+build/
+
+# Editor files:
+.vscode/
+compile_commands.json

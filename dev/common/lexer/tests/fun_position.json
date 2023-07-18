@@ -1,0 +1,188 @@
+[
+	{
+		"value": "<EMPTY>",
+		"line": "1",
+		"column": "1",
+		"raw": "0",
+		"recursive": [
+			{
+				"value": "fun",
+				"line": "2",
+				"column": "2",
+				"raw": "3",
+				"recursive": []
+			},
+			{
+				"value": "fo",
+				"line": "2",
+				"column": "6",
+				"raw": "7",
+				"recursive": []
+			},
+			{
+				"value": "<EMPTY>",
+				"line": "2",
+				"column": "8",
+				"raw": "9",
+				"recursive": [
+					{
+						"value": "notu16",
+						"line": "2",
+						"column": "9",
+						"raw": "10",
+						"recursive": []
+					},
+					{
+						"value": "x",
+						"line": "2",
+						"column": "16",
+						"raw": "17",
+						"recursive": []
+					},
+					{
+						"value": ",",
+						"line": "2",
+						"column": "17",
+						"raw": "18",
+						"recursive": []
+					},
+					{
+						"value": "another",
+						"line": "2",
+						"column": "19",
+						"raw": "20",
+						"recursive": []
+					},
+					{
+						"value": "something",
+						"line": "2",
+						"column": "27",
+						"raw": "28",
+						"recursive": []
+					}
+				]
+			},
+			{
+				"value": "->",
+				"line": "2",
+				"column": "38",
+				"raw": "39",
+				"recursive": []
+			},
+			{
+				"value": "noti32",
+				"line": "2",
+				"column": "41",
+				"raw": "42",
+				"recursive": []
+			},
+			{
+				"value": "<EMPTY>",
+				"line": "2",
+				"column": "48",
+				"raw": "49",
+				"recursive": [
+					{
+						"value": "if",
+						"line": "3",
+						"column": "3",
+						"raw": "53",
+						"recursive": []
+					},
+					{
+						"value": "<EMPTY>",
+						"line": "3",
+						"column": "6",
+						"raw": "56",
+						"recursive": [
+							{
+								"value": "true",
+								"line": "3",
+								"column": "7",
+								"raw": "57",
+								"recursive": []
+							}
+						]
+					},
+					{
+						"value": "<EMPTY>",
+						"line": "3",
+						"column": "13",
+						"raw": "63",
+						"recursive": []
+					}
+				]
+			},
+			{
+				"value": "fun",
+				"line": "6",
+				"column": "2",
+				"raw": "71",
+				"recursive": []
+			},
+			{
+				"value": "f",
+				"line": "6",
+				"column": "6",
+				"raw": "75",
+				"recursive": []
+			},
+			{
+				"value": "->",
+				"line": "6",
+				"column": "8",
+				"raw": "77",
+				"recursive": []
+			},
+			{
+				"value": "i43",
+				"line": "6",
+				"column": "11",
+				"raw": "80",
+				"recursive": []
+			},
+			{
+				"value": "<EMPTY>",
+				"line": "6",
+				"column": "15",
+				"raw": "84",
+				"recursive": []
+			},
+			{
+				"value": "fun",
+				"line": "7",
+				"column": "2",
+				"raw": "88",
+				"recursive": []
+			},
+			{
+				"value": "f",
+				"line": "7",
+				"column": "6",
+				"raw": "92",
+				"recursive": []
+			},
+			{
+				"value": "<EMPTY>",
+				"line": "7",
+				"column": "7",
+				"raw": "93",
+				"recursive": []
+			},
+			{
+				"value": "->",
+				"line": "7",
+				"column": "10",
+				"raw": "96",
+				"recursive": []
+			},
+			{
+				"value": "<EMPTY>",
+				"line": "7",
+				"column": "13",
+				"raw": "99",
+				"recursive": []
+			}
+		]
+	}
+]

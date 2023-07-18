@@ -1,0 +1,8 @@
+{
+	import imports.A.a;
+	//import imports.A.a.*;
+	import import_check;
+	import imports.std;
+	// import // "fun"."import".*; // sth
+	// import "import.a.a.*";
+}

@@ -1,0 +1,15 @@
+namespace A {
+	using B.C.*;
+}
+
+namespace B {
+	namespace C {
+		const x: t;
+	}
+	const z: t;
+
+	alias z_alias = z;
+
+	using A.*;
+	alias y = x;
+}

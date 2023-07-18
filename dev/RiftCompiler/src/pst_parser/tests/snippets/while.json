@@ -1,0 +1,56 @@
+{
+	"PST": [
+		{
+
+			"While": {
+				"name": "<ANONYMOUS>",
+				"condition": {
+					"RoundGroupExpr": {
+						"Expr": [
+							{
+								"Identifier": "a"
+							},
+							{
+								"Operator": "+"
+							},
+							{
+								"Identifier": "b"
+							},
+							{
+								"Operator": "<"
+							},
+							{
+								"NumLiteral": "4"
+							},
+							{
+								"Operator": "+"
+							},
+							{
+								"NumLiteral": "0.8"
+							}
+						]
+					}
+				},
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": [
+							{
+								"Expr": [
+									{
+										"Identifier": "c"
+									},
+									{
+										"Operator": "-"
+									},
+									{
+										"Identifier": "d"
+									}
+								]
+							}
+						]
+					}
+				}
+			}
+		}
+	]
+}

@@ -1,0 +1,21 @@
+function main {
+	arg_size: 0;
+	local_size: 24;
+	ret_size: 0;
+
+	code: {
+		mov_l64_imm   0, 10;
+		mov_l64_imm   8, 0;
+		mov_l64_imm   16, 1;
+
+		label Loop;
+
+		output_l64       8;
+		add_l64_l64      8, 16;
+
+		cmpEq_l64_l64    8, 0;
+		jmpRelNotIf_label Loop;
+
+		ret_l64 0;
+	}
+}

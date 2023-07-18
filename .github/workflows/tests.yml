@@ -1,0 +1,72 @@
+name: tests
+
+on:
+  push:
+    branches: [ "master", "dev" ]
+  pull_request:
+    branches: [ "master", "dev" ]
+  workflow_dispatch:
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+  WORKSPACE: ${{github.workspace}}/dev/
+
+jobs:
+  build:
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 3
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'false'
+
+    # checkout@v3 does not suport updating only specific submodules,
+    # so we get them independently
+    # @TODO: make it more automatic (e.g. via cmake), or setup PAT
+    # so checkout has read-access to submodules
+    # @TODO: commands might break if there is any change to checkout
+    # @TODO: this is generally somewhat temporary
+    - name: Sync submodules
+      working-directory: ${{github.workspace}}
+      run: /usr/bin/git submodule sync
+    
+    - name: Init submodules
+      working-directory: ${{github.workspace}}
+      run: /usr/bin/git -c protocol.version=2 submodule update --init --force --depth=1 -- "dev/libs/result" "dev/RiftVM/libs/asio" "dev/RiftVM/libs/Crow" "dev/libs/json_struct"
+
+    # @FIXME: Caching does not work, cmake rebuilds everything anyway
+    # Perhaps use https://cristianadam.eu/20200113/speeding-up-c-plus-plus-github-actions-using-ccache/
+    # - name: CacheBuild
+    #   id: cache-build
+    #   uses: actions/cache@v3
+    #   with:
+    #     path: |
+    #       ${{env.WORKSPACE}}/lib/*
+    #       ${{env.WORKSPACE}}/bin/*
+    #       ${{env.WORKSPACE}}/CMakeFiles/*
+    #       ${{env.WORKSPACE}}/CMakeLists.txt
+    #       ${{env.WORKSPACE}}/Makefile
+    #       ${{env.WORKSPACE}}/CMakeCache.txt
+    #       ${{env.WORKSPACE}}/cmake_install.cmake
+    #       ${{env.WORKSPACE}}/CTestTestfile.cmake
+    #     key: ${{ runner.os }}-cache-build
+
+
+    - name: Configure CMake
+      working-directory: ${{env.WORKSPACE}}
+      run: cmake -B ${{env.WORKSPACE}} -D CMAKE_CXX_COMPILER=g++-11 -D IGNORE_DOCS="" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      working-directory: ${{env.WORKSPACE}}
+      run: cmake --build ${{env.WORKSPACE}} -j --target build_all_tests --config ${{env.BUILD_TYPE}}
+
+    - name: Test
+      working-directory: ${{env.WORKSPACE}}
+      run: ctest -C ${{env.BUILD_TYPE}}
+      

@@ -1,0 +1,25 @@
+fun foo() {
+	a: T;
+	defer a.close();
+
+	while A (true) {
+		while B (true) {
+			break A;
+			break;
+
+			continue B;
+			continue;
+			
+			redo A;
+			redo;
+			
+			restart B;
+			restart;
+
+			throw 123;
+
+		}
+	}
+
+	return 12;
+}

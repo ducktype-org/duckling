@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="700" height="600" viewBox="0 0 700 600">
+<defs>
+</defs>
+<text x="90" y="540" font-size="20" text-anchor="end" dominant-baseline="middle" stroke="none" fill="#555555">0.0s</text>
+<path d="M100,540 L600,540" stroke="#666666" />
+<path d="M100,490 L600,490" stroke="#AAAAAA " />
+<text x="90" y="440" font-size="20" text-anchor="end" dominant-baseline="middle" stroke="none" fill="#555555">20.0s</text>
+<path d="M100,440 L600,440" stroke="#666666" />
+<path d="M100,390 L600,390" stroke="#AAAAAA " />
+<text x="90" y="340" font-size="20" text-anchor="end" dominant-baseline="middle" stroke="none" fill="#555555">40.0s</text>
+<path d="M100,340 L600,340" stroke="#666666" />
+<path d="M100,290 L600,290" stroke="#AAAAAA " />
+<text x="90" y="240" font-size="20" text-anchor="end" dominant-baseline="middle" stroke="none" fill="#555555">60.0s</text>
+<path d="M100,240 L600,240" stroke="#666666" />
+<path d="M100,190 L600,190" stroke="#AAAAAA " />
+<text x="90" y="140" font-size="20" text-anchor="end" dominant-baseline="middle" stroke="none" fill="#555555">80.0s</text>
+<path d="M100,140 L600,140" stroke="#666666" />
+<path d="M100,90 L600,90" stroke="#AAAAAA " />
+<text x="90" y="40" font-size="20" text-anchor="end" dominant-baseline="middle" stroke="none" fill="#555555">100.0s</text>
+<path d="M100,40 L600,40" stroke="#666666" />
+<text x="183.33333333333331" y="555" font-size="24" text-anchor="middle" dominant-baseline="hanging" font-family="serif" font-weight="lighter">RiftVM</text>
+<text x="350.0" y="555" font-size="24" text-anchor="middle" dominant-baseline="hanging" font-family="serif" font-weight="lighter">C++ GDB</text>
+<text x="516.6666666666666" y="555" font-size="24" text-anchor="middle" dominant-baseline="hanging" font-family="serif" font-weight="lighter">C++ Valgrind</text>
+<rect x="122.33333333333331" y="286.325" width="16" height="253.675" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1" />
+<rect x="142.33333333333331" y="418.645" width="16" height="121.355" fill="#FFE6CC" stroke="#D6B656" stroke-width="1" />
+<rect x="162.33333333333331" y="346.891" width="16" height="193.10899999999998" fill="#FFF2CC" stroke="#D79B00" stroke-width="1" />
+<rect x="182.33333333333331" y="419.54499999999996" width="16" height="120.45500000000001" fill="#E1D5E7" stroke="#9673A6" stroke-width="1" />
+<rect x="202.33333333333331" y="376.319" width="16" height="163.68099999999998" fill="#D5E8D4" stroke="#82B366" stroke-width="1" />
+<rect x="222.33333333333331" y="332.963" width="16" height="207.03699999999998" fill="#F8CECC" stroke="#B85450" stroke-width="1" />
+<rect x="289.0" y="510.238" width="16" height="29.762" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1" />
+<rect x="309.0" y="516.92" width="16" height="23.08" fill="#FFE6CC" stroke="#D6B656" stroke-width="1" />
+<rect x="329.0" y="517.284" width="16" height="22.716" fill="#FFF2CC" stroke="#D79B00" stroke-width="1" />
+<rect x="349.0" y="516.806" width="16" height="23.194" fill="#E1D5E7" stroke="#9673A6" stroke-width="1" />
+<rect x="369.0" y="521.151" width="16" height="18.849" fill="#D5E8D4" stroke="#82B366" stroke-width="1" />
+<rect x="389.0" y="522.484" width="16" height="17.516" fill="#F8CECC" stroke="#B85450" stroke-width="1" />
+<rect x="455.66666666666663" y="353.221" width="16" height="186.779" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1" />
+<rect x="475.66666666666663" y="429.416" width="16" height="110.584" fill="#FFE6CC" stroke="#D6B656" stroke-width="1" />
+<rect x="495.66666666666663" y="380.744" width="16" height="159.256" fill="#FFF2CC" stroke="#D79B00" stroke-width="1" />
+<rect x="515.6666666666666" y="422.966" width="16" height="117.034" fill="#E1D5E7" stroke="#9673A6" stroke-width="1" />
+<rect x="535.6666666666666" y="400.183" width="16" height="139.817" fill="#D5E8D4" stroke="#82B366" stroke-width="1" />
+<rect x="555.6666666666666" y="414.224" width="16" height="125.77600000000001" fill="#F8CECC" stroke="#B85450" stroke-width="1" />
+</svg>

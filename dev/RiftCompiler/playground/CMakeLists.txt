@@ -1,0 +1,14 @@
+# Playground
+add_executable(char_testing                  char_testing.cpp)
+add_executable(file_testing                  file_testing.cpp)
+add_executable(lexer_testing                 lexer_testing.cpp)
+add_executable(elements_testing              elements_testing.cpp)
+add_executable(parsing_hanlder_testing       parsing_handler_testing.cpp)
+add_executable(hir_testing                   hir_testing.cpp)
+
+target_link_libraries(file_testing Filesystem)
+target_link_libraries(char_testing Lexer)
+target_link_libraries(lexer_testing Lexer)
+target_link_libraries(elements_testing Lexer PstParser)
+target_link_libraries(parsing_hanlder_testing PstParser Compiler)
+target_link_libraries(hir_testing PstParser SymbolTable Filesystem HIR)

@@ -1,0 +1,1 @@
+Strona na której można przyjemnie edytować swaggera: https://editor-next.swagger.io/

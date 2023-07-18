@@ -1,0 +1,20 @@
+namespace A {
+	fun foo() {
+		while W() {}
+	}
+
+	namespace D {
+		fun foo2() {
+			while W() {}
+		}	
+	}
+}
+
+namespace B {
+	namespace C { namespace E {
+		fun foo3() {
+			while W() {}
+		}
+	}}
+}
+

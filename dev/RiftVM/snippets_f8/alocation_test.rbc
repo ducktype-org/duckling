@@ -1,0 +1,43 @@
+type primitive: int64 8
+
+function modify_pointer {
+	arg_size: 0;
+	local_size: 100;
+	ret_size: 0;
+
+	code: {
+		// init Pointer 
+		// init int
+		mov_lptr_ptrFuncArg   0;
+		load_l64_lptr         16, 0;
+		add_l64_imm           16, 1;
+		store_lptr_l64        0, 16;
+
+		ret_l64   0;
+	}
+}
+
+
+function main {
+	arg_size: 0;
+	local_size: 100;
+	ret_size: 0;
+
+	code: {
+		// init Pointer
+		// init int64
+		alloc_lptr_type    0, int64;
+		
+		input_l64          16;
+		store_lptr_l64     0, 16;
+		
+		// modify
+		setPtrArg_lptr     0;
+		call_func          0;
+		
+		load_l64_lptr      16, 0;
+		
+		free_lptr          0;
+		ret_l64            16;
+	}
+}

@@ -1,0 +1,3 @@
+3x
+stare dane
+

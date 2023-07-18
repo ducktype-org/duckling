@@ -1,0 +1,43 @@
+#include "../raw_view.hpp"
+#include <cstring>
+
+namespace base {
+	RawView RawView::memoryCopy() const {
+		auto new_data = new uint8_t[arr_size];
+		std::memcpy(new_data, begin, arr_size);
+		return {new_data, arr_size};
+	}
+	RawView RawView::subSuffix(size_t from) const {
+		return {begin + from, arr_size - from};
+	}
+	RawView::RawView(const char *const c_str): begin{reinterpret_cast<RawArray>(c_str)} {
+		arr_size = 0;
+		int pos = 0;
+		while (c_str[pos] != '\0') {
+			arr_size++;
+			pos++;
+		}
+	}
+
+	std::string_view RawView::stringView() const {
+		return {(char*)begin, arr_size};
+	}
+
+	std::string RawView::stdString() const {
+		return std::string(std::string_view((char*)begin, arr_size));
+	}
+
+	bool RawView::operator==(const RawView& oth) const {
+		return stringView() == oth.stringView();
+	}
+
+	std::size_t RawView::size() const {
+		return arr_size;
+	}
+	uint8_t RawView::operator[](std::size_t index) {
+		return begin[index];
+	}
+	RawArray RawView::getBegin() const {
+		return begin;
+	}
+}

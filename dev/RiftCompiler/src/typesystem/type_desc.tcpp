@@ -1,0 +1,12 @@
+#pragma once
+
+#include "implicit_coercibility.hpp"
+#include "type_desc.hpp"
+
+namespace ts {
+	template<std::derived_from<TypeInfo> TYPE_INFO>
+	bool TypeDesc<TYPE_INFO>::isDescImplicitlyCoercible(const TypeDesc<>& to) const {
+		return isImplicitlyCoercible(type_info, to.type_info) &&
+		       valueCategory.contains(to.valueCategory);
+	}
+}

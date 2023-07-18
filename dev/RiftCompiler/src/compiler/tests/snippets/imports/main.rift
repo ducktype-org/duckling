@@ -1,0 +1,7 @@
+import cyclic;
+import subfolder.subfile;
+import A;
+
+fun main() {
+	
+}

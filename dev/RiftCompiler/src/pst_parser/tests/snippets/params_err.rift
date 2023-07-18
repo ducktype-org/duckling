@@ -1,0 +1,13 @@
+
+
+fun foo(, ,) {}
+
+fun foo(a,) {}
+
+fun foo(a, b,) {}
+
+fun foo(,a) {}
+
+fun foo {}
+
+

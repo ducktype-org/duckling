@@ -1,0 +1,8 @@
+{
+	fun fo(notu16 x, another something) -> noti32 {
+		if (true) {}
+	}
+
+	fun f -> i43 {}
+	fun f() -> {}
+}

@@ -1,0 +1,51 @@
+{
+	"PST": [
+		{
+			"If": {
+				"name": {
+					"Name": "MyName"
+				},
+				"condition": {
+					"RoundGroupExpr": {
+						"Expr": [
+							{
+								"Identifier": "a"
+							},
+							{
+								"Operator": "+"
+							},
+							{
+								"Identifier": "b"
+							},
+							{
+								"Operator": ">"
+							},
+							{
+								"NumLiteral": "0"
+							}
+						]
+					}
+				},
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": [
+							{
+								"Expr": [
+									{
+										"Identifier": "c"
+									},
+									{
+										"Operator": "="
+									},
+									{
+										"NumLiteral": "4.25"
+									}
+								]
+							}
+						]
+					}
+				}
+			}
+		}
+	]
+}
