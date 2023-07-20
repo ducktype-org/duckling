@@ -16,7 +16,7 @@ In order to build one must first install all the dependencies listed in `require
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-pip3 install -r docs/requirements.txt
+pip3 install -r docs/doc-config/requirements.txt
 ```
 
 **Python dependencies must be installed before running CMake!**
