@@ -13,3 +13,6 @@
 [submodule "dev/docs/source-doc"]
 	path = dev/docs/source-doc
 	url = git@github.com:rift-lang/source-doc.git
+[submodule "dev/docs/doc-config"]
+	path = dev/docs/doc-config
+	url = git@github.com:rift-lang/doc-config.git
