@@ -10,9 +10,7 @@ Welcome to Rift the docs!
  
    rift-docs/index.rst
    rift-vm-docs/index.rst
-   source-docs/index.rst
-
-
+   source-doc/source-docs/index.rst
 
 
 Indices and tables
