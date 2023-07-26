@@ -100,7 +100,7 @@ endfunction()
 
 function(add_submodule_directory PATH)
     if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/${PATH}/CMakeLists.txt")
-        message(FATAL_ERROR "submodule not installed, please run:\ngit submodule update --init")
+        message(FATAL_ERROR "submodule \"${PATH}\" not installed, please run:\ngit submodule update --init")
     endif()
     add_subdirectory(${PATH})
 endfunction()
@@ -109,7 +109,7 @@ endfunction()
 add_submodule_directory(libs/result)
 
 if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/libs/json_struct/include/json_struct/json_struct.h")
-    message(FATAL_ERROR "submodule not installed, please run:\ngit submodule update --init")
+    message(FATAL_ERROR "submodule \"libs/json_struct\" not installed, please run:\ngit submodule update --init")
 endif()
 include_directories(libs/json_struct/include)
 
