@@ -25,10 +25,6 @@ Also following dependencies are needed:
 
 - Doxygen
 
-- sphinx
-- breathe
-- pydata-sphinx-theme
-
 Installing deps:
 
 - Debian (and derivatives):
@@ -36,18 +32,12 @@ Installing deps:
   ```sh
   sudo apt update
   sudo apt install doxygen
-  pip3 install sphinx
-  pip3 install breathe
-  pip3 install pydata-sphinx-theme
   ```
 
 - Arch Linux (btw, I use arch):
 
   ```sh
   sudo pacman -Syu doxygen
-  pip3 install sphinx
-  pip3 install breathe
-  pip3 install pydata-sphinx-theme
   ```
 
 Then, from the `dev/` directory run
