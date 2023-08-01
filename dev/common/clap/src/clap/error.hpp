@@ -31,7 +31,7 @@ namespace clap {
 	struct UnexpectedParameter {
 		base::StrId name;
 		
-		UnexpectedParameter(char c);
+		UnexpectedParameter(byte c);
 		UnexpectedParameter(base::StrId c);
 		std::string print() const;
 	};

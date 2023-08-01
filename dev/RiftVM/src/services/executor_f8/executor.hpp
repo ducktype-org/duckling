@@ -75,7 +75,7 @@ namespace vm {
 			result<base::ModRawView, std::string> internalDerefPointer(Pointer);
 			
 			Frame internalInitFrame(option<Frame&>, const FuncData&, VLADataReference);
-			int64_t internalCallFunction(option<Frame&>, const FuncData&, StandardFunctionArgs args);
+			i64 internalCallFunction(option<Frame&>, const FuncData&, StandardFunctionArgs args);
 
 			// @TODO add some thread data in the future
 

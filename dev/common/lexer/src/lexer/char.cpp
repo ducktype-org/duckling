@@ -59,8 +59,8 @@ namespace lexer {
 
 	std::string Char::rawStr() const {
 		std::string out;
-		out.reserve(size);
-		for (size_t i = 0; i < size; i++) {
+		out.reserve(uint8_t(size));
+		for (size_t i = 0; i < uint8_t(size); i++) {
 			out += (char)(*(raw_begin + i));
 		}
 		return out;
@@ -90,7 +90,7 @@ namespace lexer {
 		base::RawArray begin = array[from].raw_begin;
 		size_t size = 0;
 		for (size_t i = from; i <= to; i++) {
-			size += array[i].size;
+			size += u8{array[i].size};
 		}
 		return {begin, size};
 	}
@@ -196,12 +196,14 @@ namespace lexer {
 		}
 		out['_'] = Char::Character;
 
-		constexpr uint8_t specials[] = R"--("@#$'();[\]`{})--";
+		// @TODO: this char is not perfect:
+		constexpr uchar specials[] = R"--("@#$'();[\]`{})--";
 		for (const auto& c : specials) {
 			out[c] = Char::Special;
 		}
 
-		constexpr uint8_t operators[] = R"--(!%&*+-^|~:/.,<=>?)--";
+		// @TODO: this char is not perfect:
+		constexpr uchar operators[] = R"--(!%&*+-^|~:/.,<=>?)--";
 		for (const auto& c : operators) {
 			out[c] = Char::Operator;
 		}
@@ -217,14 +219,14 @@ namespace lexer {
 	constexpr std::array<Char::Type, 256> char_type_table = makeCharTable();
 
 	template<fs::Encoding encoding>
-	Char::Type charType(uint8_t ascii_value, base::RawArray r_data, size_t size);
+	Char::Type charType(uchar ascii_value, base::RawArray r_data, size_t size);
 
-	Char::Type charType(uint8_t ascii_value) {
+	Char::Type charType(uchar ascii_value) {
 		return char_type_table[ascii_value];
 	}
 
 	template<>
-	Char::Type charType<fs::US_ASCII>([[maybe_unused]] uint8_t ascii_value, base::RawArray r_data, [[maybe_unused]] size_t size) {
+	Char::Type charType<fs::US_ASCII>([[maybe_unused]] uchar ascii_value, base::RawArray r_data, [[maybe_unused]] size_t size) {
 		return charType((char)r_data[0]);
 	}
 
@@ -243,8 +245,8 @@ namespace lexer {
 		CharArray::Array out;
 		for (size_t i = 0; i < bytes.size(); i++) {
 			Char next;
-			next.ascii_value = bytes[i];
-			next.size = 1;
+			next.ascii_value = uchar(bytes[i]);
+			next.size = u8(1);
 			next.raw_begin = bytes.getBegin() + i;
 			next.type_ = charType(next.ascii_value);
 
@@ -259,19 +261,19 @@ namespace lexer {
 
 		size_t pos = 0;
 		while (pos < bytes.size()) {
-			while (((bytes[pos] ^ 0b10000000u) & 0b11000000u) == 0) {
+			while (((bytes[pos] ^ byte{0b10000000u}) & byte{0b11000000u}) == byte{0}) {
 				//bad char
 				pos++;
 			}
 			size_t size = 1;
-			if ((bytes[pos] & 0b10000000u) == 0) {size = 1;}
-			else if ((bytes[pos] & 0b00100000u) == 0) {size = 2;}
-			else if ((bytes[pos] & 0b00010000u) == 0) {size = 3;}
-			else if ((bytes[pos] & 0b00001000u) == 0) {size = 4;}
+			if ((bytes[pos] & byte{0b10000000u}) == byte{0}) {size = 1;}
+			else if ((bytes[pos] & byte{0b00100000u}) == byte{0}) {size = 2;}
+			else if ((bytes[pos] & byte{0b00010000u}) == byte{0}) {size = 3;}
+			else if ((bytes[pos] & byte{0b00001000u}) == byte{0}) {size = 4;}
 
 			Char next;
-			next.ascii_value = ((bytes[pos] & 0b10000000u) == 0) ? static_cast<char>(bytes[pos]) : bad_ascii;
-			next.size = size;
+			next.ascii_value = ((bytes[pos] & byte{0b10000000u}) == byte{0}) ? static_cast<char>(bytes[pos]) : bad_ascii;
+			next.size = u8{size};
 			next.raw_begin = bytes.getBegin() + pos;
 
 			next.type_ = charType<fs::UTF8>(next.ascii_value, next.raw_begin, next.size);

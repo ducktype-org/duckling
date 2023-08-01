@@ -32,8 +32,8 @@ namespace rift_def {
 		LeftToRight, RightToLeft 
 	};
 
-	int64_t operatorPrecedence(base::StrId operator_, OperatorType operator_type);
-	int64_t operatorPrecedence(Operator operator_, OperatorType operator_type);
+	i64 operatorPrecedence(base::StrId operator_, OperatorType operator_type);
+	i64 operatorPrecedence(Operator operator_, OperatorType operator_type);
 
 	OperatorAssociativity operatorAssociativity(base::StrId operator_, OperatorType operator_type);
 	OperatorAssociativity operatorAssociativity(Operator operator_, OperatorType operator_type);

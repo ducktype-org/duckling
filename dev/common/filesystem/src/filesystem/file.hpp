@@ -37,7 +37,7 @@ namespace fs {
 		FileContent(const FileContent&) = default;
 
 		size_t size() { return view().size(); };
-		uint8_t operator[](size_t i) { return view()[i]; };
+		byte operator[](size_t i) { return view()[i]; };
 		base::RawView view() { return content->view(); };
 	};
 

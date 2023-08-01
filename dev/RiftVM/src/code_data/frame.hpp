@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include <base/ints.hpp>
 #include <vector>
 #include <span>
 
@@ -13,7 +13,7 @@ namespace vm {
 
 	// Non-VLA data:
 	struct Registers {
-		uint64_t p64_reg_0;
+		u64 p64_reg_0;
 		Pointer pointer_reg_0;
 	};
 
@@ -34,7 +34,7 @@ namespace vm {
 	 * functions with common signatures
 	 */
 	struct StandardFunctionArgs {
-		uint64_t p64_arg;
+		u64 p64_arg;
 		Pointer pointer_arg;
 	};
 
@@ -50,7 +50,7 @@ namespace vm {
 		// Register like data:
 		Registers regs;
 		FlagData flags;
-		uint64_t ret_val;
+		u64 ret_val;
 		StandardFunctionArgs next_args;
 
 		// Local stack:

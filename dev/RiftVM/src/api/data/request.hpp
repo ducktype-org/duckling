@@ -32,7 +32,7 @@ namespace vm::api {
 		
 		struct Memory {
 			Pointer pointer;
-			std::uint64_t size;
+			u64 size;
 		};
 		
 	}

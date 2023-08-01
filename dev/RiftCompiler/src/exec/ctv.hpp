@@ -6,7 +6,7 @@
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
+#include <base/ints.hpp>
 #include <base/unique_pointer.hpp>
 #include <span>
 // @FIXME: Not including all of typesystem because templates in typesystem depend on CTVs.
@@ -21,7 +21,7 @@ namespace exec {
 	struct Block;
 
 	// @TODO: use strongly typed int
-	using BlockId = uint32_t;
+	using BlockId = u32;
 
 	using Data = std::vector<uint8_t>;
 
@@ -95,8 +95,8 @@ namespace exec {
 			CTV ctv(pointer_type, data_, ts::POINTER_SIZE);
 
 			// @TODO: redesign how pointers are handled. In particulat when size is not 64.
-			ctv.getData<uint32_t>()[0] = data.block;
-			ctv.getData<uint32_t>()[1] = data.offset;
+			ctv.getData<u32>()[0] = data.block;
+			ctv.getData<u32>()[1] = data.offset;
 
 			// @TODO: What if ts::Pointer_size is not 64?
 			// then we need to store something different in data.
@@ -110,7 +110,7 @@ namespace exec {
 			// Pointer or RawPointer, since both are castable to RawPointer.
 			ts::RawPointerInfo(type.getType());
 
-			auto pointer_data = getData<uint32_t>();
+			auto pointer_data = getData<u32>();
 			auto block_ = pointer_data[0];
 			auto offset_ = pointer_data[1];
 

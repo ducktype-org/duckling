@@ -38,9 +38,9 @@ namespace operation {
 
 	void addBuiltinOperations() {
 		addIntegral<int8_t, 8>();
-		addIntegral<int16_t, 16>();
-		addIntegral<int32_t, 32>();
-		addIntegral<int64_t, 64>();
+		addIntegral<i16, 16>();
+		addIntegral<i32, 32>();
+		addIntegral<i64, 64>();
 		addIntegral<__int128, 128>();
 	}
 

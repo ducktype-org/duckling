@@ -232,9 +232,9 @@ private:
 
 	void int_test() {
 		simple_int_test<int8_t, 8>();
-		simple_int_test<int16_t, 16>();
-		simple_int_test<int32_t, 32>();
-		simple_int_test<int64_t, 64>();
+		simple_int_test<i16, 16>();
+		simple_int_test<i32, 32>();
+		simple_int_test<i64, 64>();
 		simple_int_test<__int128, 128>();
 	}
 
@@ -438,7 +438,7 @@ private:
 
 		assert(member_b.getData<uint8_t>().front() == 7,
 		       base::strConcat("Constructor of B didn't set field in parent ",
-		                        (uint64_t)member_b.getData<uint8_t>().front()));
+		                        (u64)member_b.getData<uint8_t>().front()));
 
 
 		auto A =
@@ -462,7 +462,7 @@ private:
 		// @TODO: constructors should construct virtual parents
 		// assert(member.getData<uint8_t>().front() == 7,
 		//        base::strConcat("Constructor of A didn't set field in virtual parent ",
-		//                         (uint64_t)member.getData<uint8_t>().front()));
+		//                         (u64)member.getData<uint8_t>().front()));
 	}
 
 	void vtable_creation_test() {

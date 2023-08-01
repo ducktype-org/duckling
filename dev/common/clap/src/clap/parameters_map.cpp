@@ -20,6 +20,12 @@ namespace clap{
 		}
 		return it->second;
 	}
+
+	option<std::size_t> ParametersMap::to_id(byte name) const {
+		return to_id(char(name));
+	}
+
+
 	
 	option<base::RawView> ParametersMap::get(std::size_t id) const {
 		auto it = parameters.find(id);

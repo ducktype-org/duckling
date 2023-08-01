@@ -10,7 +10,7 @@
 #include "symbol_ref.hpp"
 #include "lookup_result.hpp"
 
-#include <cstdint>
+#include <base/ints.hpp>
 #include <span>
 #include <ostream>
 #include <base/stable_container.hpp>

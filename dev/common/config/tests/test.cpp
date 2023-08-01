@@ -66,7 +66,7 @@ private:
 		assert(parsed_args.getValue<std::string>("strOption") == "aa", "Incorrect strOption argument");
 
 		assert(parsed_args.getRawValue("intOption") == "123", "Incorrect intOption raw argument");
-		assert(parsed_args.getValue<int64_t>("intOption") == 123, "Incorrect intOption argument");
+		assert(parsed_args.getValue<i64>("intOption") == 123, "Incorrect intOption argument");
 	}
 
 	void simpleTest3() {
@@ -86,7 +86,7 @@ private:
 		assert(parsed_args.getValue<std::string>("strOption") == "hello there", "Incorrect strOption argument");
 		
 		assert(parsed_args.getRawValue("intOption2") == "0", "Incorrect intOption2 raw argument");
-		assert(parsed_args.getValue<int64_t>("intOption2") == 0, "Incorrect intOption2 argument");
+		assert(parsed_args.getValue<i64>("intOption2") == 0, "Incorrect intOption2 argument");
 
 		assertThrows<config::BadOptionAccess>(
 			[&](){parsed_args.wasOption("abc");},
@@ -114,7 +114,7 @@ private:
 		);
 
 		assertThrows<config::BadOptionAccess>(
-			[&](){parsed_args.getValue<int64_t>("intOption");},
+			[&](){parsed_args.getValue<i64>("intOption");},
 			"No error generated on bad option access (6)"
 		);
 	}

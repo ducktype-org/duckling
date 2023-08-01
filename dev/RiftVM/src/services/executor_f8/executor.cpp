@@ -1,4 +1,4 @@
-#include <cstdint>
+#include <base/ints.hpp>
 #include <chrono>
 
 #include <code_data/instruction.hpp>
@@ -105,7 +105,7 @@ namespace vm {
 
 	template<typename T>
 	__attribute__((always_inline))
-	inline static T& derefStack(std::byte stack[], int64_t position) {
+	inline static T& derefStack(std::byte stack[], i64 position) {
 		return *(reinterpret_cast<T*>(&stack[position]));
 	}
 
@@ -124,7 +124,7 @@ namespace vm {
 		arg1 = instr.arg1;
 	}
 
-	int64_t Executor::internalCallFunction(
+	i64 Executor::internalCallFunction(
 			option<Frame&> previous_frame,
 			const FuncData& function,
 			StandardFunctionArgs args) {
@@ -147,12 +147,12 @@ namespace vm {
 
 			// Flat frame should technically allow for better compiler optimizations
 			// but in practice are slower for some reason
-			uint64_t p64_reg_0 = 0;
+			u64 p64_reg_0 = 0;
 			Pointer pointer_reg_0 = memory.nullPtr();
 			bool flag = false;
 			const auto bc = function.bc;
 			size_t instruction_pointer = 0;
-			uint64_t ret_val = 0;
+			u64 ret_val = 0;
 			StandardFunctionArgs next_args = {0, memory.nullPtr()};
 		#else
 			Frame frame = internalInitFrame(previous_frame, function, {local_stack});
@@ -234,25 +234,25 @@ namespace vm {
 			IF_NOT_CG(switch (opcode)) {
 
 				OP_CASE(mov_l64_imm, {
-					derefStack<uint64_t>(local_stack, arg0) = arg1;
+					derefStack<u64>(local_stack, arg0) = arg1;
 				})
 
 				OP_CASE(mov_l64_l64, {
-					derefStack<uint64_t>(local_stack, arg0) = derefStack<uint64_t>(local_stack, arg1);
+					derefStack<u64>(local_stack, arg0) = derefStack<u64>(local_stack, arg1);
 				}) 
 
 				OP_CASE(cmov_l64_l64, {
 					if (FRAME_FLAGS(flag)) {
-						derefStack<uint64_t>(local_stack, arg0) = derefStack<uint64_t>(local_stack, arg1);
+						derefStack<u64>(local_stack, arg0) = derefStack<u64>(local_stack, arg1);
 					}
 				}) 
 
 				OP_CASE(mov_l64_r0, {
-					derefStack<uint64_t>(local_stack, arg0) = FRAME_REGS(p64_reg_0);
+					derefStack<u64>(local_stack, arg0) = FRAME_REGS(p64_reg_0);
 				})
 
 				OP_CASE(mov_l64_pFuncArg, {
-					derefStack<uint64_t>(local_stack, arg0) = args.p64_arg;
+					derefStack<u64>(local_stack, arg0) = args.p64_arg;
 				})
 
 				OP_CASE(mov_lptr_ptrFuncArg, {
@@ -260,59 +260,59 @@ namespace vm {
 				})
 
 				OP_CASE(add_l64_l64, {
-					derefStack<uint64_t>(local_stack, arg0) += derefStack<uint64_t>(local_stack, arg1);
+					derefStack<u64>(local_stack, arg0) += derefStack<u64>(local_stack, arg1);
 				})
 
 				OP_CASE(add_l64_imm, {
-					derefStack<uint64_t>(local_stack, arg0) += arg1;
+					derefStack<u64>(local_stack, arg0) += arg1;
 				})
 
 				OP_CASE(sub_l64_l64, {
-					derefStack<uint64_t>(local_stack, arg0) -= derefStack<uint64_t>(local_stack, arg1);
+					derefStack<u64>(local_stack, arg0) -= derefStack<u64>(local_stack, arg1);
 				})
 
 				OP_CASE(sub_l64_imm, {
-					derefStack<uint64_t>(local_stack, arg0) -= arg1;
+					derefStack<u64>(local_stack, arg0) -= arg1;
 				})
 
 				OP_CASE(mul_l64_imm, {
 					// @TODO: check types
-					derefStack<uint64_t>(local_stack, arg0) *= arg1;
+					derefStack<u64>(local_stack, arg0) *= arg1;
 				})
 
 				OP_CASE(mod_l64_imm, {
-					derefStack<uint64_t>(local_stack, arg0) %= arg1;
+					derefStack<u64>(local_stack, arg0) %= arg1;
 				})
 
 				OP_CASE(mod_l64_l64, {
-					derefStack<uint64_t>(local_stack, arg0) %= derefStack<uint64_t>(local_stack, arg1);
+					derefStack<u64>(local_stack, arg0) %= derefStack<u64>(local_stack, arg1);
 				})
 
 				OP_CASE(div_l64_imm, {
-					derefStack<uint64_t>(local_stack, arg0) /= arg1;
+					derefStack<u64>(local_stack, arg0) /= arg1;
 				})
 
 				OP_CASE(cmpEq_l64_l64, {
 					FRAME_FLAGS(flag) = 
-						derefStack<uint64_t>(local_stack, arg0) == 
-						derefStack<uint64_t>(local_stack, arg1);
+						derefStack<u64>(local_stack, arg0) == 
+						derefStack<u64>(local_stack, arg1);
 				})
 
 				OP_CASE(cmpEq_l64_imm, {
 					FRAME_FLAGS(flag) = 
-						derefStack<uint64_t>(local_stack, arg0) == 
+						derefStack<u64>(local_stack, arg0) == 
 						arg1;
 				})
 
 				OP_CASE(cmpG_l64_l64, {
 					FRAME_FLAGS(flag) = 
-						derefStack<uint64_t>(local_stack, arg0) >
-						derefStack<uint64_t>(local_stack, arg1);
+						derefStack<u64>(local_stack, arg0) >
+						derefStack<u64>(local_stack, arg1);
 				})
 
 				OP_CASE(cmpG_l64_imm, {
 					FRAME_FLAGS(flag) = 
-						derefStack<uint64_t>(local_stack, arg0) >
+						derefStack<u64>(local_stack, arg0) >
 						arg1;
 				})
 
@@ -337,7 +337,7 @@ namespace vm {
 				})
 
 				OP_CASE(setPArg_l64, {
-					FRAME(next_args.p64_arg) = derefStack<int64_t>(local_stack, arg0);
+					FRAME(next_args.p64_arg) = derefStack<i64>(local_stack, arg0);
 				})
 				
 				OP_CASE(call_func, {
@@ -351,7 +351,7 @@ namespace vm {
 				})
 
 				OP_CASE(ret_l64, {
-					FRAME(ret_val) = derefStack<uint64_t>(local_stack, arg0);
+					FRAME(ret_val) = derefStack<u64>(local_stack, arg0);
 					goto End;
 				});
 
@@ -372,12 +372,12 @@ namespace vm {
 
 				OP_CASE(input_l64, {
 					setStatus(api::WaitingForInput{});
-					derefStack<int64_t>(local_stack, arg0) = vcpu.getInput<int64_t>();
+					derefStack<i64>(local_stack, arg0) = vcpu.getInput<i64>();
 					setStatus(api::Running{});
 				});
 
 				OP_CASE(output_l64, {
-					vcpu.writeOutput(derefStack<uint64_t>(local_stack, arg0));
+					vcpu.writeOutput(derefStack<u64>(local_stack, arg0));
 				});
 
 				OP_CASE(nop, {});
@@ -421,7 +421,7 @@ namespace vm {
 				})
 
 				IF_NOT_CG (default: {
-					//RIFT_PANIC("Unknown operator:", uint64_t(instr.opcode));
+					//RIFT_PANIC("Unknown operator:", u64(instr.opcode));
 				})
 			}
 		}

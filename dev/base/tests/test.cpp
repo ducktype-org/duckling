@@ -5,7 +5,7 @@
 #include <base/defer.hpp>
 #include <cstring>
 
-STRONG_TYPEDEF_INT(Meters, int64_t);
+STRONG_TYPEDEF_INT(Meters, i64);
 
 bool compareCstr(const char* const c1, const char* const c2) {
 	return std::string_view(c1) == std::string_view(c2);
@@ -123,7 +123,7 @@ private:
 	void rawViewTest() {
 		message("Parts of this test are relevant only under valgrind");
 
-		const uint8_t* string = reinterpret_cast<const uint8_t*>("Some random string");
+		const byte* string = reinterpret_cast<const byte*>("Some random string");
 		{
 			base::RawView view(string, 18);
 		}
@@ -138,7 +138,7 @@ private:
 	void owningViewTest() {
 		message("Parts of this test are relevant only under valgrind");
 
-		const uint8_t* string_1 = reinterpret_cast<const uint8_t*>("Some random string 1");
+		const byte* string_1 = reinterpret_cast<const byte*>("Some random string 1");
 		const char* string_2 = "Some random string 2";
 
 		{
@@ -149,7 +149,7 @@ private:
 		{
 			base::OwningView copy_view(string_2);
 			assert(
-				copy_view.view().getBegin() != reinterpret_cast<const uint8_t*>(string_2),
+				copy_view.view().getBegin() != reinterpret_cast<const byte*>(string_2),
 				"Owning view didn't make memory copy (1)"
 			);
 			assert(
@@ -159,7 +159,7 @@ private:
 
 			auto copy_view_2 = base::OwningView::copy(base::RawView(string_1, 20));
 			assert(
-				copy_view_2.view().getBegin() != reinterpret_cast<const uint8_t*>(string_1),
+				copy_view_2.view().getBegin() != reinterpret_cast<const byte*>(string_1),
 				"Owning view didn't make memory copy (2)"
 			);
 			assert(
@@ -202,7 +202,7 @@ private:
 
 	void stronglyTypedInt() {
 		Meters m(0);
-		assert(int64_t(m) == 0, "Basic math failed (1)");
+		assert(i64(m) == 0, "Basic math failed (1)");
 		assert(m == Meters(0), "Basic math failed (2)");
 
 		Meters m1(2);

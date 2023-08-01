@@ -26,7 +26,7 @@ namespace vm {
 			
 			BlockId makeTypeBlock(TypeCRef type);
 
-			BlockId makeArrayBlock(TypeCRef type, std::uint64_t length);
+			BlockId makeArrayBlock(TypeCRef type, u64 length);
 
 			void deleteBlock(BlockId block_id);
 

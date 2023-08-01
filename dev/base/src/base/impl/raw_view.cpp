@@ -3,7 +3,7 @@
 
 namespace base {
 	RawView RawView::memoryCopy() const {
-		auto new_data = new uint8_t[arr_size];
+		auto new_data = new byte[arr_size];
 		std::memcpy(new_data, begin, arr_size);
 		return {new_data, arr_size};
 	}
@@ -34,7 +34,7 @@ namespace base {
 	std::size_t RawView::size() const {
 		return arr_size;
 	}
-	uint8_t RawView::operator[](std::size_t index) {
+	byte RawView::operator[](std::size_t index) {
 		return begin[index];
 	}
 	RawArray RawView::getBegin() const {

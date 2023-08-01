@@ -41,10 +41,10 @@ inline constexpr SELF_T& operator op (const BASE_T& rhs) noexcept {   \
 /**
  * @brief This macro is intended to create strongly typed
  * numeric types.
- * Usage: STRONG_TYPEDEF_INT(Meters, int64_t), created new type Meters, 
- * that behave exactly like int64_t but can only by explicitly casted to it.
+ * Usage: STRONG_TYPEDEF_INT(Meters, i64), created new type Meters, 
+ * that behave exactly like i64 but can only by explicitly casted to it.
  */
-#define STRONG_TYPEDEF_INT(NAME, BASE)                                          \
+#define STRONG_TYPEDEF_INT_AUX(NAME, BASE, EXPLICIT_BASE)                                          \
 	class NAME final {                                                          \
 	private:                                                                    \
 		using BASE_T = BASE;													\
@@ -61,7 +61,7 @@ inline constexpr SELF_T& operator op (const BASE_T& rhs) noexcept {   \
 		inline constexpr explicit operator const BASE&() const noexcept {       \
 			return value;                                                       \
 		}                                                                       \
-		inline constexpr explicit operator BASE&() noexcept { return value; }      \
+		inline constexpr explicit(EXPLICIT_BASE) operator BASE&() noexcept { return value; }      \
 		inline constexpr NAME operator+() const noexcept { return NAME(+value); }  \
 		inline constexpr NAME operator-() const noexcept { return NAME(-value); }  \
 		inline constexpr NAME& operator++() noexcept { value++; return *this; }  \
@@ -86,3 +86,5 @@ inline constexpr SELF_T& operator op (const BASE_T& rhs) noexcept {   \
                                                                                 \
 	static_assert(std::is_integral_v<BASE>, "STRONG_TYPEDEF_INT can only define integral types. Use `STRONG_TYPEDEF` for any generic types");
 
+#define STRONG_TYPEDEF_INT(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true)
+#define STRONG_TYPEDEF_INT_IMPLICIT(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, false)

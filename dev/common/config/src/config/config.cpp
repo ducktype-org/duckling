@@ -51,7 +51,7 @@ namespace config {
 				base::RawView what = arg_values[i];
 				size_t option_index = -1;
 
-				if (what.size() >= 2 and what[0] == '-' and what[1] == '-') {
+				if (what.size() >= 2 and what[0] == byte('-') and what[1] == byte('-')) {
 					// long option
 					auto opt_name = what.subSuffix(2);
 					if (long_options_map.find(opt_name) == long_options_map.end()) {
@@ -61,7 +61,7 @@ namespace config {
 					option_index = long_options_map.at(opt_name);
 
 				}
-				else if (what.size() >= 1 and what[0] == '-') {
+				else if (what.size() >= 1 and what[0] == byte('-')) {
 					// short option
 					auto opt_name = what.subSuffix(1);
 					if (short_options_map.find(opt_name) == short_options_map.end()) {

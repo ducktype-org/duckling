@@ -85,7 +85,7 @@ private:
 	}
 
 	static base::RawView make_view(std::string_view view) {
-		return base::RawView({reinterpret_cast<const uint8_t*>(view.data()), view.size()});
+		return base::RawView({reinterpret_cast<const byte*>(view.data()), view.size()});
 	}
 
 	void strIdTest() {

@@ -31,8 +31,8 @@ namespace clap {
 	DuplicatedParameter::DuplicatedParameter(const ParameterConfig& c) :
 		name(c.to_str_id()) {}
 
-	UnexpectedParameter::UnexpectedParameter(char c) :
-		name(base::StrId("" + c)) {}
+	UnexpectedParameter::UnexpectedParameter(byte c) :
+		name(base::StrId(uchar(c))) {}
 	UnexpectedParameter::UnexpectedParameter(base::StrId c) :
 		name(c) {}
 

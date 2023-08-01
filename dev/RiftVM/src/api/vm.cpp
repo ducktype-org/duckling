@@ -72,7 +72,7 @@ namespace vm::api {
 		return Supervisor::get().doRequest(api::makeDataRequest(pid, request::TypeMetadata{type_name})).flat_map(mapOrWrongResponse<TypeCRef>);
 	}
 	
-	result<response::Block, ApiError> getBlock(PID pid, std::uint64_t block_id) {
+	result<response::Block, ApiError> getBlock(PID pid, u64 block_id) {
 		return Supervisor::get().doRequest(api::makeDataRequest(pid, request::Block{BlockId(block_id)})).flat_map(mapOrWrongResponse<response::Block>);
 	}
 }

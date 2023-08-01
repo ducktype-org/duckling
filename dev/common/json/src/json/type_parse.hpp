@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/constexpr_cat.hpp>
+#include <base/ints.hpp>
 #include <variant>
 #include <vector>
 #include <memory>
@@ -51,13 +52,13 @@ struct TypeParseTraits<T<Args...>> { \
 REGISTER_PARSE_TYPE_ALIAS(std::string, "str");
 REGISTER_PARSE_TYPE(double);
 REGISTER_PARSE_TYPE(float);
-REGISTER_PARSE_TYPE_ALIAS(uint8_t, "u8");
-REGISTER_PARSE_TYPE_ALIAS(int16_t, "i16");
-REGISTER_PARSE_TYPE_ALIAS(uint16_t, "u16");
-REGISTER_PARSE_TYPE_ALIAS(int32_t, "i32");
-REGISTER_PARSE_TYPE_ALIAS(uint32_t, "u32");
-REGISTER_PARSE_TYPE_ALIAS(int64_t, "i64");
-REGISTER_PARSE_TYPE_ALIAS(uint64_t, "u64");
+REGISTER_PARSE_TYPE_ALIAS(u8, "u8");
+REGISTER_PARSE_TYPE_ALIAS(i16, "i16");
+REGISTER_PARSE_TYPE_ALIAS(u16, "u16");
+REGISTER_PARSE_TYPE_ALIAS(i32, "i32");
+REGISTER_PARSE_TYPE_ALIAS(u32, "u32");
+REGISTER_PARSE_TYPE_ALIAS(i64, "i64");
+REGISTER_PARSE_TYPE_ALIAS(u64, "u64");
 REGISTER_PARSE_TYPE(bool);
 
 REGISTER_PARSE_TYPE_TEMPLATE_ALIAS(std::vector, "vector")

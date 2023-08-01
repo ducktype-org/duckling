@@ -15,7 +15,7 @@ namespace vm {
 			friend class DataManagerDef;
 
 			struct BlockData {
-				std::uint64_t refcount = 0;
+				u64 refcount = 0;
 				bool owned = false;
 				bool filled = false;
 				bool deleted = false;

@@ -26,7 +26,7 @@ namespace base {
 
 		constexpr auto operator<=>(const FlagType& oth) const = default;
 
-		constexpr FlagType(uint64_t flag_id): data{1ull << flag_id} {}
+		constexpr FlagType(u64 flag_id): data{1ull << flag_id} {}
 	};
 
 	constexpr FlagType EmptyFlag;

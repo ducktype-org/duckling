@@ -22,7 +22,7 @@ namespace base {
 	}
 
 	void newBuffer() {
-		auto new_buffer = new uint8_t[default_buffer_size];
+		auto new_buffer = new byte[default_buffer_size];
 		buffer_list.emplace_back(new_buffer, default_buffer_size);
 		size_left = default_buffer_size;
 		next_pos = 0;
@@ -80,6 +80,8 @@ namespace base {
 
 	StrId::StrId(const char* data) :
 			StrId(base::RawView(data)) {}
+
+	StrId::StrId(char character): StrId(std::string(1, character).c_str()) {}
 
 	void StrId::dumpData(std::ostream& out) {
 		int i = 0;

@@ -97,9 +97,9 @@ namespace ts::internal {
 		explicit IntegralInfoImpl(size_t size, bool signedness)
 			: TypeInfoImpl(size), signedness(signedness) {
 			if (signedness)
-				representation = base::strConcat("int_", (uint64_t)(size));
+				representation = base::strConcat("int_", (u64)(size));
 			else
-				representation = base::strConcat("uint_", (uint64_t)(size));
+				representation = base::strConcat("uint_", (u64)(size));
 		}
 
 		bool getSignedness() const { return signedness; }

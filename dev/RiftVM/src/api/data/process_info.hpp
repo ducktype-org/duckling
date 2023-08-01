@@ -1,10 +1,10 @@
 #pragma once
 
-#include <cstdint>
+#include <base/ints.hpp>
 #include <json/json.hpp>
 
 namespace vm {
-	using PID = std::uint32_t;
+	using PID = u32;
 
 	namespace api {
 		struct ProcessInfo {

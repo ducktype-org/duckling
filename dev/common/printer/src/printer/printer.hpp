@@ -9,7 +9,7 @@
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
+#include <base/ints.hpp>
 #include <string>
 #include <initializer_list>
 #include <vector>
@@ -23,7 +23,7 @@ namespace printer {
 	// This way, it will be harder to forget to update it whenever making changes to MessageType.
 	constexpr size_t TYPE_COUNT = 6;
 
-	typedef int32_t LevelType;
+	typedef i32 LevelType;
 
 	typedef std::string MessageContentText;
 

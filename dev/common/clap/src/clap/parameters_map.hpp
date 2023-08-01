@@ -17,6 +17,7 @@ namespace clap{
 			option<std::size_t> to_id(base::StrId name) const;
 			option<std::size_t> to_id(const base::RawView& name) const;
 			option<std::size_t> to_id(char name) const;
+			option<std::size_t> to_id(byte name) const;
 			
 			option<base::RawView> get(std::size_t id) const;
 			bool contains(std::size_t id) const;

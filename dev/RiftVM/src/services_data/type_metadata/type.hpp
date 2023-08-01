@@ -11,7 +11,7 @@ namespace vm {
 	
 	/// Size of type in bytes
 	// @TODO: change to strongly typed int
-	using TypeSize = std::uint64_t;
+	using TypeSize = u64;
 
 	class Type {
 		public:
@@ -61,7 +61,7 @@ namespace vm {
 			// Type definition:
 			void definePrimitive(TypeSize size);
 			void definePointer(TypeCRef inner);
-			void defineStaticTable(TypeRef inner, std::uint64_t table_size);
+			void defineStaticTable(TypeRef inner, u64 table_size);
 			void defineDynamicTable(TypeRef inner);
 			void defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions);
 			void defineVariant(const std::vector<TypeRef>& variants_definitions);
@@ -102,7 +102,7 @@ namespace vm {
 			option<TypeCRef> getInnerType() const;
 			
 			// staticTable
-			option<std::uint64_t> getStaticTableSize() const;
+			option<u64> getStaticTableSize() const;
 
 			// data
 			option<TypeCRef> getFieldType(kind::Data::FieldId fieldId) const;
@@ -111,12 +111,12 @@ namespace vm {
 			option<TypeCRef> getFieldTypeByOffsetRecursive(Offset offset) const;
 
 			// variant
-			option<std::uint64_t> getVariantCount() const;
-			option<TypeCRef> getNthVariantType(std::uint64_t variantId) const;
+			option<u64> getVariantCount() const;
+			option<TypeCRef> getNthVariantType(u64 variantId) const;
 			
 			// function
-			option<std::uint64_t> getParameterCount() const;
-			option<TypeCRef> getNthParameterType(std::uint64_t parameterId) const;
+			option<u64> getParameterCount() const;
+			option<TypeCRef> getNthParameterType(u64 parameterId) const;
 			option<TypeCRef> getResultType() const;
 		
 			friend class TypeMetadata;

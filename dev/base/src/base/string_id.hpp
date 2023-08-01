@@ -25,6 +25,8 @@ namespace base {
 		StrId(const StrId& oth) = default;
 		StrId(StrId&& oth) = default;
 
+		explicit StrId(char character);
+		
 		// Makes copy
 		explicit StrId(const base::RawView& data);
 		explicit StrId(const char* data);

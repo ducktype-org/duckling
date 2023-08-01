@@ -11,7 +11,7 @@ namespace config {
 	}
 
 	std::any IntParser::parse(base::RawView data) {
-		int64_t value = 0;
+		i64 value = 0;
 		auto begin = reinterpret_cast<const char*>(data.getBegin());
 		auto end = reinterpret_cast<const char*>(data.getBegin() + data.size());
 		auto result = std::from_chars(begin, end, value, 10);
