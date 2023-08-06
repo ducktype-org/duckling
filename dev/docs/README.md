@@ -1,6 +1,6 @@
 **Docs might temporary be broken due to migration to submodule**
 
-# Rift the docs docs
+# Rift source docs and dev guide
 
 - [Rift the docs docs](#rift-the-docs-docs)
   - [Building](#building)
