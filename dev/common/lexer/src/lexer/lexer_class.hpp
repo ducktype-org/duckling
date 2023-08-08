@@ -16,11 +16,11 @@ namespace lexer {
 
 		private:
 			void next();
-			void skip(std::size_t n);
+			void skip(usize n);
 			[[nodiscard]]
-			const Char& peek(std::size_t fwd = 0) const;
+			const Char& peek(usize fwd = 0) const;
 			[[nodiscard]]
-			bool tryRawValue(char rawValue, std::size_t fwd = 0) const;
+			bool tryRawValue(char rawValue, usize fwd = 0) const;
 			
 			// top level parsers:
 			void codeblock();
@@ -31,15 +31,15 @@ namespace lexer {
 			Tokens parGroup(lexer::Char::ParType end);
 			
 			// terminal tokens parsers:
-			std::size_t comment(/*Tokens& output*/);
-			std::size_t blockComment();
-			std::size_t oper();
-			std::size_t identifier();
-			std::size_t special();
-			std::size_t numLiteral();
-			std::size_t numBinaryLiteral();
-			std::size_t numHexLiteral();
-			std::size_t string();
+			usize comment(/*Tokens& output*/);
+			usize blockComment();
+			usize oper();
+			usize identifier();
+			usize special();
+			usize numLiteral();
+			usize numBinaryLiteral();
+			usize numHexLiteral();
+			usize string();
 			
 			[[nodiscard]]
 			bool isEOF() const;
@@ -56,9 +56,9 @@ namespace lexer {
 			
 			std::string generateLineColumnInfo() const;
 			
-			std::size_t where_ = 0;
-			std::size_t lineNumber_ = 1;
-			std::size_t columnNumber_ = 1;
+			usize where_ = 0;
+			usize lineNumber_ = 1;
+			usize columnNumber_ = 1;
 			CharArray& charArray_;
 			Tokens tokens_;
 
@@ -66,7 +66,7 @@ namespace lexer {
 			
 			printer::Console console;
 			
-			void addTokenMsg(size_t begin, size_t end,
+			void addTokenMsg(usize begin, usize end,
 			                 std::string_view token_type, 
 			                 printer::MessageType message_type);
 	};

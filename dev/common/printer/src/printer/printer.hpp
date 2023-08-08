@@ -21,7 +21,7 @@ namespace printer {
 	// Important to update this value, when adding or removing MessageTypes.
 	// @IDEA: Make TYPE_COUNT the last member of enum class MessageType, and assign its value there.
 	// This way, it will be harder to forget to update it whenever making changes to MessageType.
-	constexpr size_t TYPE_COUNT = 6;
+	constexpr usize TYPE_COUNT = 6;
 
 	typedef i32 LevelType;
 
@@ -148,7 +148,7 @@ namespace printer {
 	typedef std::vector<Message> MessagePack;
 
 	typedef std::array<LevelType, TYPE_COUNT> minLevel_t;
-	typedef std::array<size_t, TYPE_COUNT> maxAmounts_t;
+	typedef std::array<usize, TYPE_COUNT> maxAmounts_t;
 
 	namespace detail {
 		static constexpr minLevel_t constructDefaultMinLevel() {
@@ -170,20 +170,20 @@ namespace printer {
 		static constexpr maxAmounts_t defaultMaxAmounts = detail::constructDefaultMaxAmounts();
 
 		std::vector<MessagePack> messagePacks;
-		size_t generalMax;
+		usize generalMax;
 		minLevel_t minLevel;
 		maxAmounts_t maxAmounts;
 
 	public:
-		Console(size_t generalMax = SIZE_MAX, minLevel_t minLevel = defaultMinLevel, maxAmounts_t maxAmounts = defaultMaxAmounts)
+		Console(usize generalMax = SIZE_MAX, minLevel_t minLevel = defaultMinLevel, maxAmounts_t maxAmounts = defaultMaxAmounts)
 			:generalMax(generalMax), minLevel(minLevel), maxAmounts(maxAmounts) {}
 
 		// @IDEA: make these sets constexpr (and implement them as such).
 		void setMinLevel(MessageType type, LevelType level);
 
-		void setGeneralMax(size_t max);
+		void setGeneralMax(usize max);
 
-		void setMaxAmounts(MessageType type, size_t amount);
+		void setMaxAmounts(MessageType type, usize amount);
 
 		void add(const MessagePack& pack);
 		void add(MessagePack&& pack);

@@ -64,7 +64,7 @@ namespace ts::internal {
 		base::StrId name,
 		const std::vector<std::pair<TypeDesc<>, symtable::SymbolId>>& member_types,
 		const std::vector<std::pair<ClassInfo, InheritanceTag>>& inheritance_classes,
-		size_t virtualMethods)
+		usize virtualMethods)
 		: TypeInfoImpl(0), name(name) {
 
 		virt_method_count = virtualMethods;
@@ -102,7 +102,7 @@ namespace ts::internal {
 		std::deque<ClassInfo> linearised_ancestors = mergeLinearisation(C3_linearisation_vector);
 
 		// Set ancestor order
-		size_t reserved_space = 0;
+		usize reserved_space = 0;
 		for (ClassInfo parent: parents) {
 			AncestorData data{.info = parent, .offset = reserved_space};
 			basic_parents.push_back(ancestors_data.size());
@@ -118,9 +118,9 @@ namespace ts::internal {
 		}
 
 		// Get members data for our parents
-		for (size_t parent_position: basic_parents) {
+		for (usize parent_position: basic_parents) {
 			ClassInfo parent_info = ancestors_data[parent_position].info;
-			size_t parent_offset = ancestors_data[parent_position].offset;
+			usize parent_offset = ancestors_data[parent_position].offset;
 			auto ancestor_pimpl = (const ClassInfoImpl*)parent_info.getPimpl();
 
 			for (MemberData member_data: ancestor_pimpl->members_data) {
@@ -177,14 +177,14 @@ namespace ts::internal {
 		}
 
 		// Fill indexes
-		for (size_t i = 0; i < ancestors_data.size(); i++) {
+		for (usize i = 0; i < ancestors_data.size(); i++) {
 			AncestorData& ancestor_data = ancestors_data[i];
 			if (!ancestors_positions.contains(ancestor_data.info)) {
 				ancestors_positions.put(ancestor_data.info, {});
 			}
 			ancestors_positions[ancestor_data.info].push_back(i);
 		}
-		for (size_t i = 0; i < members_data.size(); i++) {
+		for (usize i = 0; i < members_data.size(); i++) {
 			MemberData& member_data = members_data[i];
 			if (!members_positions.contains(member_data.symbol)) {
 				members_positions.put(member_data.symbol, {});
@@ -199,7 +199,7 @@ namespace ts::internal {
 		representation = "Class: " + name.str();
 	}
 
-	size_t ClassInfoImpl::getBaseSize() const {
+	usize ClassInfoImpl::getBaseSize() const {
 		return base_size;
 	}
 
@@ -209,7 +209,7 @@ namespace ts::internal {
 	const std::vector<AncestorData> ClassInfoImpl::basicParents() const {
 		std::vector<AncestorData> result;
 		result.reserve(basic_parents.size());
-		for (size_t parent_position: basic_parents) {
+		for (usize parent_position: basic_parents) {
 			result.push_back(ancestors_data[parent_position]);
 		}
 		return result;
@@ -242,7 +242,7 @@ namespace ts::internal {
 		if (!members_positions.contains(symbol)) {
 			return {.result_type = ResultType::NoResult};
 		}
-		const std::vector<size_t>& possible_positions = members_positions[symbol];
+		const std::vector<usize>& possible_positions = members_positions[symbol];
 
 		if (possible_positions.size() > 1) {
 			return {.result_type = ResultType::Ambiguous};
@@ -295,7 +295,7 @@ namespace ts::internal {
 			return {.result_type = ResultType::NoResult};
 		}
 
-		const std::vector<size_t>& possible_positions = ancestors_positions[ancestor_id];
+		const std::vector<usize>& possible_positions = ancestors_positions[ancestor_id];
 
 		if (possible_positions.size() > 1) {
 			return {.result_type = ResultType::Ambiguous};
@@ -328,7 +328,7 @@ namespace ts::internal {
 		return result;
 	}
 
-	size_t ClassInfoImpl::getVirtualAncestorOffset(ClassInfo ancestor_id) const {
+	usize ClassInfoImpl::getVirtualAncestorOffset(ClassInfo ancestor_id) const {
 		for (auto [checked_id, ancestor_offset]: virtual_layout) {
 			if (ancestor_id == checked_id) {
 				return ancestor_offset;
@@ -338,14 +338,14 @@ namespace ts::internal {
 		throw base::LogicError("This is not a virtual parent of this class");
 	}
 
-	std::vector<std::pair<ClassInfo, size_t>> ClassInfoImpl::getVirtualAncestorTable(
+	std::vector<std::pair<ClassInfo, usize>> ClassInfoImpl::getVirtualAncestorTable(
 		ClassInfo ancestor_id) const {
 		return getVirtualAncestorTable((std::vector<ClassInfo>){ancestor_id});
 	}
-	std::vector<std::pair<ClassInfo, size_t>> ClassInfoImpl::getVirtualAncestorTable(
+	std::vector<std::pair<ClassInfo, usize>> ClassInfoImpl::getVirtualAncestorTable(
 		std::vector<ClassInfo> ancestor_ids) const {
 		// @TODO: Fix this function
-		std::vector<std::pair<ClassInfo, size_t>> result;
+		std::vector<std::pair<ClassInfo, usize>> result;
 
 		const ClassInfoImpl* parent_ptr;
 		if (!ancestor_ids.empty()) {
@@ -355,7 +355,7 @@ namespace ts::internal {
 		}
 
 		auto clueless_parent_info = getAncestorInfo(ancestor_ids);
-		size_t parent_offset;
+		usize parent_offset;
 
 		switch (clueless_parent_info.result_type) {
 			using enum ts::ResultType;
@@ -379,7 +379,7 @@ namespace ts::internal {
 			// @TODO: Consider throwing virtual ancestors here in a set here temporarily
 			// This could reduce this function to O(n*log(n)), but there should be very few virtual
 			// ancestors, so may be unnecessary.
-			size_t virt_ancestor_offset = getVirtualAncestorOffset(parent_virt_ancestor);
+			usize virt_ancestor_offset = getVirtualAncestorOffset(parent_virt_ancestor);
 
 			result.emplace_back(parent_virt_ancestor, virt_ancestor_offset - parent_offset);
 		}
@@ -387,21 +387,21 @@ namespace ts::internal {
 		return result;
 	}
 
-	size_t ClassInfoImpl::getVtablePtrOffset() const {
+	usize ClassInfoImpl::getVtablePtrOffset() const {
 		if (virtual_layout.empty() && virt_method_count == 0) {
 			throw base::LogicError("Tried to get a vtable of a class without one");
 		}
 		return base_size - POINTER_SIZE;
 	}
 
-	size_t ClassInfoImpl::getVtableSize() const {
+	usize ClassInfoImpl::getVtableSize() const {
 		// @TODO: Possibly add size multipliers
 		return virtual_layout.size() + virt_method_count;
 	}
 
-	size_t ClassInfoImpl::getVtablePositionOf(ts::ClassInfo ancestor) const {
+	usize ClassInfoImpl::getVtablePositionOf(ts::ClassInfo ancestor) const {
 		// @TODO: Maybe add error handling?
-		for (size_t i = 0; i < virtual_layout.size(); i++) {
+		for (usize i = 0; i < virtual_layout.size(); i++) {
 			auto [info, offset] = virtual_layout[i];
 			if (info == ancestor) {
 				return i;

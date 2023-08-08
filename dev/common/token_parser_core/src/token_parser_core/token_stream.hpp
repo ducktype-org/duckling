@@ -18,9 +18,9 @@ namespace tpc {
 
 	class TokenStream {
 		const Tokens& tokens;
-		std::size_t where = 0;
+		usize where = 0;
 		/** inclusive */
-		std::size_t to;
+		usize to;
 		static lexer::Token sentinel;
 		friend void tokenStreamInit();
 	public:
@@ -28,39 +28,39 @@ namespace tpc {
 		TokenStream(TokenStream&) = delete;
 		TokenStream(TokenStream&&) noexcept;
 
-		TokenStream(const Tokens& tokens, std::size_t from, std::size_t to): 
+		TokenStream(const Tokens& tokens, usize from, usize to): 
 			tokens(tokens), where(from), to(to) {}
 		const Token& next();
 
 		TokenStream getRecursive() const;
 
 		[[nodiscard]]
-		const Token& peek(std::size_t fwd = 0) const;
-		void skip(std::size_t n = 1);
+		const Token& peek(usize fwd = 0) const;
+		void skip(usize n = 1);
 
 		[[nodiscard]]
-		bool isKeyword(std::size_t fwd = 0) const;
+		bool isKeyword(usize fwd = 0) const;
 		[[nodiscard]]
-		Keyword asKeyword(std::size_t fwd = 0) const;
+		Keyword asKeyword(usize fwd = 0) const;
 
 		[[nodiscard]]
-		bool isSpecial(std::size_t fwd = 0) const;
+		bool isSpecial(usize fwd = 0) const;
 		[[nodiscard]]
-		Special asSpecial(std::size_t fwd = 0) const;
+		Special asSpecial(usize fwd = 0) const;
 
 		[[nodiscard]]
-		bool isOperator(std::size_t fwd = 0) const;
+		bool isOperator(usize fwd = 0) const;
 		[[nodiscard]]
-		bool isOperator(base::StrId oper, std::size_t fwd = 0) const;
+		bool isOperator(base::StrId oper, usize fwd = 0) const;
 
 		template<class T>
 		[[nodiscard]]
-		bool is(T t, size_t fwd = 0) const {
+		bool is(T t, usize fwd = 0) const {
 			return peek(fwd).is(t);
 		}
 
 		[[nodiscard]]
-		std::size_t size() const;
+		usize size() const;
 
 	};
 

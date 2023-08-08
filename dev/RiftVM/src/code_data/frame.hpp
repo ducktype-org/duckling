@@ -45,7 +45,7 @@ namespace vm {
 		const std::span<const Fix8Instruction> bc; // this is duplication of function.bc, but allows for faster access
 
 		bool continue_execution;
-		size_t instruction_pointer;
+		usize instruction_pointer;
 
 		// Register like data:
 		Registers regs;

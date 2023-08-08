@@ -262,7 +262,7 @@ namespace assemble {
 
 	struct ByteCode: AsmElement {
 		std::vector<tpc::ParserRef<OpCode>> opcodes;
-		base::Map<base::StrId, size_t> label_position;
+		base::Map<base::StrId, usize> label_position;
 
 		static tpc::ParserRef<ByteCode> parse(tpc::ParserState& state) {
 			auto out = tpc::makeRef<ByteCode>();
@@ -330,12 +330,12 @@ namespace assemble {
 		~ByteCode() override = default;
 	};
 
-	constexpr size_t size_t_max = (size_t)(-1);
+	constexpr usize size_t_max = (usize)(-1);
 	struct Func: AsmElement {
 		tpc::Identifier name;
-		size_t arg_size = size_t_max;
-		size_t local_size = size_t_max;
-		size_t ret_size = size_t_max;
+		usize arg_size = size_t_max;
+		usize local_size = size_t_max;
+		usize ret_size = size_t_max;
 		tpc::ParserRef<ByteCode> code;
 
 		static tpc::ParserRef<Func> parse(tpc::ParserState& state);
@@ -908,7 +908,7 @@ namespace assemble {
 
 		vm::Code instructions_code;
 
-		size_t main_id = SIZE_MAX;
+		usize main_id = SIZE_MAX;
 
 		for (int idx = 0; idx < code.code->functions.size(); idx++) {
 			if (code.code->functions[idx]->name.value.strView() == "main") {

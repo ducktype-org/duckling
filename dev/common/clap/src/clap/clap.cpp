@@ -42,10 +42,10 @@ namespace clap {
 	
 	result<ParametersMap, ClapParsingError> Config::parse_internal(CLIArgs args) {
 		ParametersMap out;
-		std::size_t id = 0;
+		usize id = 0;
 		int i = 1;
-		std::size_t positional_parameters_count = 0;
-		std::size_t found_required_parameters_count = 0;
+		usize positional_parameters_count = 0;
+		usize found_required_parameters_count = 0;
 
 		auto add_param = [&i, &out, &id, &found_required_parameters_count, &args](auto parameter_name, option<const ParameterConfig&> parameter_option) -> result<void, ClapParsingError> {
 			if (parameter_option.has_error()) {

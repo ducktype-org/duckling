@@ -88,13 +88,13 @@ private:
 		std::vector<symtable::ScopeId> scopes;
 		scopes.push_back(bad_id);
 
-		for (size_t i = 0; i < 10; i++) {
+		for (usize i = 0; i < 10; i++) {
 			auto id = symbolTable.newScope(scopes.back());
 			scopes.push_back(id);
 		}
 
-		for (size_t i = 1; i < 10; i++) {
-			for (size_t j = 0; j < 10; j++) {
+		for (usize i = 1; i < 10; i++) {
+			for (usize j = 0; j < 10; j++) {
 
 				if (i < j) {
 					symbolTable.addConnection(
@@ -107,7 +107,7 @@ private:
 		}
 
 		// @TODO: for now just checking size, some more complicated test needed
-		for (size_t i = 1; i < 10; i++) {
+		for (usize i = 1; i < 10; i++) {
 			auto& imports_private =
 				symbolTable.get(scopes[i]).getConnections(symtable::ConnectionType::ImportPrivate);
 			assert(imports_private.size() == 9 - i, "wrong private imports count");

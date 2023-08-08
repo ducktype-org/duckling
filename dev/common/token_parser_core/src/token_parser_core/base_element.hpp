@@ -16,7 +16,7 @@ namespace tpc {
 		virtual bool trailingSemicolon();
 
 		// @IDEA perhaps add virtual final, so no one can override it
-		inline void* operator new(size_t size) {
+		inline void* operator new(usize size) {
 			// placeholder for future custom allocation
 			return ::operator new(size); 
 		}

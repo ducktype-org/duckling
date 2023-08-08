@@ -212,7 +212,7 @@ namespace pst {
 		 * @p exact_len = false: parses the expression until its over or until it parses @p len tokens
 		 * @p exact_len = true: parses the expression until it parses @p len tokens
 		 */
-		static ParserRef<Expr> parse(RiftParserState& state, size_t len, bool exact_len = true);
+		static ParserRef<Expr> parse(RiftParserState& state, usize len, bool exact_len = true);
 		void dprint(std::ostream& out) const final;
 		virtual ~Expr() = default;
 	};

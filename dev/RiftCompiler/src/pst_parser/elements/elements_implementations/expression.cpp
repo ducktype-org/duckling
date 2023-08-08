@@ -27,9 +27,9 @@ namespace pst {
 	 * It is left in this state for now, as a lot will depend on semantical analysis
 	 * @TODO: lambda, todo-s 
 	 */
-	ParserRef<Expr> Expr::parse(RiftParserState& state, size_t len, bool exact_len) {
+	ParserRef<Expr> Expr::parse(RiftParserState& state, usize len, bool exact_len) {
 		auto out = makeRef<Expr>();
-		size_t i = 0;
+		usize i = 0;
 		
 		while (state.notEmpty() and i < len) {
 			i++;

@@ -60,7 +60,7 @@ namespace lexer {
 	std::string Char::rawStr() const {
 		std::string out;
 		out.reserve(uint8_t(size));
-		for (size_t i = 0; i < uint8_t(size); i++) {
+		for (usize i = 0; i < uint8_t(size); i++) {
 			out += (char)(*(raw_begin + i));
 		}
 		return out;
@@ -85,21 +85,21 @@ namespace lexer {
 		swap(first.array, second.array);
 	}
 
-	base::RawView CharArray::composeRaw(size_t from, size_t to) const {
+	base::RawView CharArray::composeRaw(usize from, usize to) const {
 		// for now assumes there are no illegal char
 		base::RawArray begin = array[from].raw_begin;
-		size_t size = 0;
-		for (size_t i = from; i <= to; i++) {
+		usize size = 0;
+		for (usize i = from; i <= to; i++) {
 			size += u8{array[i].size};
 		}
 		return {begin, size};
 	}
 
-	base::RawView CharArray::getRaw(size_t i) const {
+	base::RawView CharArray::getRaw(usize i) const {
 		return composeRaw(i, i);
 	}
 
-	const Char& CharArray::get(size_t i) const {
+	const Char& CharArray::get(usize i) const {
 		return array[i];
 	}
 
@@ -174,7 +174,7 @@ namespace lexer {
 		}
 	}
 
-	constexpr size_t ASCII_LENGTH = 256;
+	constexpr usize ASCII_LENGTH = 256;
 
 	/**
 	 * When modifing it modify also key_spec_op.cpp
@@ -182,16 +182,16 @@ namespace lexer {
 	constexpr std::array<Char::Type, ASCII_LENGTH> makeCharTable() {
 		std::array<Char::Type, ASCII_LENGTH> out = {};
 
-		for (size_t i = 0; i < ASCII_LENGTH; i++) {
+		for (usize i = 0; i < ASCII_LENGTH; i++) {
 			out[i] = Char::Illegal;
 		}
-		for (size_t i = 'a'; i <= 'z'; i++) {
+		for (usize i = 'a'; i <= 'z'; i++) {
 			out[i] = Char::Character;
 		}
-		for (size_t i = 'A'; i <= 'Z'; i++) {
+		for (usize i = 'A'; i <= 'Z'; i++) {
 			out[i] = Char::Character;
 		}
-		for (size_t i = '0'; i <= '9'; i++) {
+		for (usize i = '0'; i <= '9'; i++) {
 			out[i] = Char::Digit;
 		}
 		out['_'] = Char::Character;
@@ -219,14 +219,14 @@ namespace lexer {
 	constexpr std::array<Char::Type, 256> char_type_table = makeCharTable();
 
 	template<fs::Encoding encoding>
-	Char::Type charType(uchar ascii_value, base::RawArray r_data, size_t size);
+	Char::Type charType(uchar ascii_value, base::RawArray r_data, usize size);
 
 	Char::Type charType(uchar ascii_value) {
 		return char_type_table[ascii_value];
 	}
 
 	template<>
-	Char::Type charType<fs::US_ASCII>([[maybe_unused]] uchar ascii_value, base::RawArray r_data, [[maybe_unused]] size_t size) {
+	Char::Type charType<fs::US_ASCII>([[maybe_unused]] uchar ascii_value, base::RawArray r_data, [[maybe_unused]] usize size) {
 		return charType((char)r_data[0]);
 	}
 
@@ -235,7 +235,7 @@ namespace lexer {
 	 * @TODO: make better parameters
 	*/
 	template<>
-	Char::Type charType<fs::UTF8>(uint8_t ascii_value, [[maybe_unused]] base::RawArray r_data, [[maybe_unused]] size_t size) {
+	Char::Type charType<fs::UTF8>(uint8_t ascii_value, [[maybe_unused]] base::RawArray r_data, [[maybe_unused]] usize size) {
 		return (ascii_value == bad_ascii) ? Char::Character : charType(ascii_value);
 	}
 
@@ -243,7 +243,7 @@ namespace lexer {
 	CharArray decode<fs::US_ASCII>(base::RawView bytes) {
 
 		CharArray::Array out;
-		for (size_t i = 0; i < bytes.size(); i++) {
+		for (usize i = 0; i < bytes.size(); i++) {
 			Char next;
 			next.ascii_value = uchar(bytes[i]);
 			next.size = u8(1);
@@ -259,13 +259,13 @@ namespace lexer {
 	CharArray decode<fs::UTF8>(base::RawView bytes) {
 		CharArray::Array out;
 
-		size_t pos = 0;
+		usize pos = 0;
 		while (pos < bytes.size()) {
 			while (((bytes[pos] ^ byte{0b10000000u}) & byte{0b11000000u}) == byte{0}) {
 				//bad char
 				pos++;
 			}
-			size_t size = 1;
+			usize size = 1;
 			if ((bytes[pos] & byte{0b10000000u}) == byte{0}) {size = 1;}
 			else if ((bytes[pos] & byte{0b00100000u}) == byte{0}) {size = 2;}
 			else if ((bytes[pos] & byte{0b00010000u}) == byte{0}) {size = 3;}

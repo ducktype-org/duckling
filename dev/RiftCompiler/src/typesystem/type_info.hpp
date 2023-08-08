@@ -33,11 +33,11 @@
 
 namespace ts {
 	// this is const, and not constexpr, because it might be defined during runtime in the future
-	const size_t META_SIZE = 64;
-	const size_t POINTER_SIZE = 64;
-	const size_t BYTE_SIZE = 8;
-	const size_t BOOL_SIZE = BYTE_SIZE;
-	const size_t CHAR_SIZE = BYTE_SIZE;
+	const usize META_SIZE = 64;
+	const usize POINTER_SIZE = 64;
+	const usize BYTE_SIZE = 8;
+	const usize BOOL_SIZE = BYTE_SIZE;
+	const usize CHAR_SIZE = BYTE_SIZE;
 	namespace internal {
 		class TypeInfoImpl;
 		class VoidInfoImpl;
@@ -72,7 +72,7 @@ namespace ts {
 
 	public:
 		[[nodiscard]] Kind getKind() const;
-		[[nodiscard]] size_t getSize() const;
+		[[nodiscard]] usize getSize() const;
 		TypeInfo() = delete;
 
 		template<std::derived_from<TypeInfo> T>

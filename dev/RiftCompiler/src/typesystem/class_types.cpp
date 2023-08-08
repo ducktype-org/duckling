@@ -96,7 +96,7 @@ namespace ts {
 
 	ClassInfo ClassInfo::create(
 		base::StrId name, std::vector<std::pair<TypeDesc<>, symtable::SymbolId>>&& member_types,
-		std::vector<std::pair<ClassInfo, InheritanceTag>>&& inheritance, size_t virtualMethods) {
+		std::vector<std::pair<ClassInfo, InheritanceTag>>&& inheritance, usize virtualMethods) {
 
 		auto ptr = base::make_unique<internal::ClassInfoImpl>(
 			name, std::move(member_types), std::move(inheritance), virtualMethods);
@@ -124,7 +124,7 @@ namespace ts {
 		const auto class_impl_ptr = (internal::ClassInfoImpl*)pimpl;
 		return class_impl_ptr->allAncestors();
 	}
-	// const std::map<ClassInfo, size_t> ClassInfo::virtualParents() const {
+	// const std::map<ClassInfo, usize> ClassInfo::virtualParents() const {
 	// 	const auto class_impl_ptr = (internal::ClassInfoImpl*)pimpl;
 	//	return class_impl_ptr->virtualParents();
 	//}
@@ -163,7 +163,7 @@ namespace ts {
 	}
 
 	// Returns the offset of a single specific virtual ancestor
-	size_t ClassInfo::getVirtualAncestorOffset(ClassInfo ancestor_id) const {
+	usize ClassInfo::getVirtualAncestorOffset(ClassInfo ancestor_id) const {
 		const auto class_ptr = (internal::ClassInfoImpl*)pimpl;
 		return class_ptr->getVirtualAncestorOffset(ancestor_id);
 	}
@@ -171,33 +171,33 @@ namespace ts {
 	// Returns all the offsets of virtual members of the clueless parent, as told by the
 	// knowledgeable kid. Since the virtual members are put at the end of the kid, they will all be
 	// positive.
-	std::vector<std::pair<ClassInfo, size_t>> ClassInfo::getVirtualAncestorTable(
+	std::vector<std::pair<ClassInfo, usize>> ClassInfo::getVirtualAncestorTable(
 		ClassInfo ancestor_id) const {
 		const auto kid = (internal::ClassInfoImpl*)pimpl;
 		return kid->getVirtualAncestorTable(ancestor_id);
 	}
-	std::vector<std::pair<ClassInfo, size_t>> ClassInfo::getVirtualAncestorTable(
+	std::vector<std::pair<ClassInfo, usize>> ClassInfo::getVirtualAncestorTable(
 		std::vector<ClassInfo> ancestor_ids) const {
 		const auto kid = (internal::ClassInfoImpl*)pimpl;
 		return kid->getVirtualAncestorTable(ancestor_ids);
 	}
 
-	size_t ClassInfo::getVtablePtrOffset() const {
+	usize ClassInfo::getVtablePtrOffset() const {
 		const auto class_ptr = (internal::ClassInfoImpl*)pimpl;
 		return class_ptr->getVtablePtrOffset();
 	}
 
-	size_t ClassInfo::getVtableSize() const {
+	usize ClassInfo::getVtableSize() const {
 		const auto class_ptr = (internal::ClassInfoImpl*)pimpl;
 		return class_ptr->getVtableSize();
 	}
 
-	size_t ClassInfo::getVtablePositionOf(ts::ClassInfo ancestor) const {
+	usize ClassInfo::getVtablePositionOf(ts::ClassInfo ancestor) const {
 		const auto class_ptr = (internal::ClassInfoImpl*)pimpl;
 		return class_ptr->getVtablePositionOf(ancestor);
 	}
 
-	size_t ClassInfo::getBaseSize() const {
+	usize ClassInfo::getBaseSize() const {
 		const auto class_ptr = (internal::ClassInfoImpl*)pimpl;
 		return class_ptr->getBaseSize();
 	}
@@ -214,11 +214,11 @@ namespace ts {
 		return ((Pimpl)pimpl)->getAssociatedClass();
 	}
 
-	size_t VTableInfo::getMethodCount() {
+	usize VTableInfo::getMethodCount() {
 		return ((Pimpl)pimpl)->getMethodCount();
 	}
 
-	size_t VTableInfo::getParentCount() {
+	usize VTableInfo::getParentCount() {
 		return ((Pimpl)pimpl)->getParentCount();
 	}
 }

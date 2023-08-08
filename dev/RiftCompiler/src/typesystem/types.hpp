@@ -54,7 +54,7 @@ namespace ts {
 		SETUP_TYPE(IntegralInfo, TypeInfo)
 
 	public:
-		static IntegralInfo create(size_t size, bool signedness = true);
+		static IntegralInfo create(usize size, bool signedness = true);
 
 		CHECKED_CAST(IntegralInfo)
 	protected:
@@ -65,7 +65,7 @@ namespace ts {
 		SETUP_TYPE(FloatInfo, TypeInfo)
 
 	public:
-		static FloatInfo create(size_t size);
+		static FloatInfo create(usize size);
 
 		CHECKED_CAST(FloatInfo)
 	protected:
@@ -159,7 +159,7 @@ namespace ts {
 
 		const std::vector<TypeDesc<>>& getUnderlyingTypes() const;
 
-		std::pair<TypeDesc<>, size_t> getMember(size_t index) const;
+		std::pair<TypeDesc<>, usize> getMember(usize index) const;
 
 		CHECKED_CAST(TupleInfo)
 	protected:

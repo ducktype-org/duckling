@@ -29,7 +29,7 @@ namespace exec {
 
 	struct Block {
 		Data data;
-		static BlockId create(size_t size) {
+		static BlockId create(usize size) {
 			getBlocks().emplace_back(Data(size, 0));
 
 			return BlockId(getBlocks().size() - 1);
@@ -51,10 +51,10 @@ namespace exec {
 
 	struct Pointer {
 		BlockId block;
-		size_t offset; /* in bits */
+		usize offset; /* in bits */
 
 		// @TODO: use strongly typed ints for bit / byte offsets
-		Pointer shift(size_t shift /* in bits */) const {
+		Pointer shift(usize shift /* in bits */) const {
 
 			// @TODO: assert(offset + shift in block)
 
@@ -68,13 +68,13 @@ namespace exec {
 		ts::TypeDesc<> type;
 		Pointer data;
 		// @TODO: it should be possible to calculate size based on type and data
-		size_t size;
+		usize size;
 
 		// @TODO: this should be more sensible but templates need it.
 		// probably we should use default comparison on type here.
 		auto operator<=>(const CTV&) const = default;
 
-		CTV subCTV(ts::TypeDesc<> type_, size_t offset, size_t size_) const {
+		CTV subCTV(ts::TypeDesc<> type_, usize offset, usize size_) const {
 			return CTV(type_, data.shift(offset), size_);
 		}
 
@@ -121,11 +121,11 @@ namespace exec {
 		}
 
 		CTV() = delete;
-		CTV(ts::TypeDesc<> type, Pointer data, size_t size): type(type), data(data), size(size) {}
+		CTV(ts::TypeDesc<> type, Pointer data, usize size): type(type), data(data), size(size) {}
 	};
 
 
-	CTV alloc_new(ts::TypeDesc<> type, size_t size);
+	CTV alloc_new(ts::TypeDesc<> type, usize size);
 
 	inline CTV alloc_new(ts::TypeDesc<> type) {
 		return alloc_new(type, type.getType().getSize());

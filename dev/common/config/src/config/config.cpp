@@ -12,12 +12,12 @@
 namespace config {
 
 	class ArgParser {
-		base::HashMap<base::RawView, size_t> long_options_map;
-		base::HashMap<base::RawView, size_t> short_options_map;
+		base::HashMap<base::RawView, usize> long_options_map;
+		base::HashMap<base::RawView, usize> short_options_map;
 		ConfigOptions options;
 
-		std::set<size_t> option_was;
-		base::Map<size_t, base::RawView> option_values;
+		std::set<usize> option_was;
+		base::Map<usize, base::RawView> option_values;
 
 		std::vector<base::RawView> values;
 
@@ -44,12 +44,12 @@ namespace config {
 
 		ParsingResult parse(const std::vector<base::RawView>& arg_values) {
 			reset();
-			const size_t arg_count = arg_values.size();
+			const usize arg_count = arg_values.size();
 
 			for (int i = 0; i < arg_count; i++) {
 
 				base::RawView what = arg_values[i];
-				size_t option_index = -1;
+				usize option_index = -1;
 
 				if (what.size() >= 2 and what[0] == byte('-') and what[1] == byte('-')) {
 					// long option
@@ -123,7 +123,7 @@ namespace config {
 		std::vector<base::RawView> out;
 
 		// we skip first because its a program name
-		for (size_t i = 1; i < args.argc; i++) {
+		for (usize i = 1; i < args.argc; i++) {
 			out.emplace_back(args.argv[i]);
 		}
 

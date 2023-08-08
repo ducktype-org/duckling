@@ -52,7 +52,7 @@ class Emitter{
 		}
 		
 		[[nodiscard]]
-		std::size_t listenerCount() const noexcept {
+		usize listenerCount() const noexcept {
 			return listeners.size();
 		}
 };

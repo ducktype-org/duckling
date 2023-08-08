@@ -39,11 +39,11 @@ private:
 
 		auto bool_desc = ts::TypeDesc<>(ts::BoolInfo::create());
 
-		size_t parent_counter = 0;
+		usize parent_counter = 0;
 		exec::CTV parent_result_ctv = exec::alloc_new(bool_desc, bool_desc.getType().getSize());
 		parent_result_ctv.getData<bool>().front() = true;
 
-		size_t member_counter = 0;
+		usize member_counter = 0;
 		exec::CTV member_result_ctv = exec::alloc_new(bool_desc, bool_desc.getType().getSize());
 		member_result_ctv.getData<bool>().front() = true;
 
@@ -121,11 +121,11 @@ private:
 
 		auto int_desc = ts::TypeDesc<>(ts::IntegralInfo::create(8));
 
-		size_t parent_counter = 0;
+		usize parent_counter = 0;
 		exec::CTV parent_result_ctv = exec::alloc_new(int_desc, int_desc.getType().getSize());
 		parent_result_ctv.getData<int8_t>().front() = 0;
 
-		size_t member_counter = 0;
+		usize member_counter = 0;
 		exec::CTV member_result_ctv = exec::alloc_new(int_desc, int_desc.getType().getSize());
 		member_result_ctv.getData<int8_t>().front() = 0;
 
@@ -192,7 +192,7 @@ private:
 	}
 
 
-	template<typename T, size_t SIZE>
+	template<typename T, usize SIZE>
 	void simple_int_test() {
 		static_assert(SIZE == sizeof(T) * 8);
 		// @TODO use the T and SIZE
@@ -309,7 +309,7 @@ private:
 			operation::Defaultable::ConstructEmpty, class_A, class_A_construct_empty);
 
 
-		size_t offset = 0;
+		usize offset = 0;
 		for (auto parent_data : class_B.basicParents()) {
 			if (parent_data.info == class_A) {
 				offset = parent_data.offset;
@@ -344,8 +344,8 @@ private:
 
 		operation::getDefault(operation::Defaultable::ConstructEmpty, class_B)({b1});
 
-		message(base::strConcat("value b1.a: ", (size_t)b1.getData<int8_t>()[0]));
-		message(base::strConcat("value b1.b: ", (size_t)b1.getData<int8_t>()[1]));
+		message(base::strConcat("value b1.a: ", (usize)b1.getData<int8_t>()[0]));
+		message(base::strConcat("value b1.b: ", (usize)b1.getData<int8_t>()[1]));
 
 
 		assert(b1.getData<int8_t>()[0] == 27, "b1.a != 27");

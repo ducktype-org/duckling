@@ -22,14 +22,14 @@ namespace ts::internal {
 	class TypeInfoImpl {
 	public:
 		[[nodiscard]] virtual Kind getKind() const = 0;
-		[[nodiscard]] size_t getSize() const { return size; }
+		[[nodiscard]] usize getSize() const { return size; }
 		[[nodiscard]] virtual const std::string& show() const {
 			// @TODO: this is just a draft, in the future this method may
 			// have verbosity / depth given as parameter
 			return representation;
 		}
 
-		explicit TypeInfoImpl(size_t size): size(size) {}
+		explicit TypeInfoImpl(usize size): size(size) {}
 
 		[[nodiscard]] virtual bool isInfoImplicitlyCoercible(
 			[[maybe_unused]] const TypeInfo to) const {
@@ -40,7 +40,7 @@ namespace ts::internal {
 
 	protected:
 		// Size in bits.
-		size_t size = 0;
+		usize size = 0;
 		// @TODO set this for each type and make it const.
 		std::string representation = "UNNAMED";
 	};
@@ -94,7 +94,7 @@ namespace ts::internal {
 	public:
 		[[nodiscard]] Kind getKind() const override { return Kind::Integral; }
 
-		explicit IntegralInfoImpl(size_t size, bool signedness)
+		explicit IntegralInfoImpl(usize size, bool signedness)
 			: TypeInfoImpl(size), signedness(signedness) {
 			if (signedness)
 				representation = base::strConcat("int_", (u64)(size));
@@ -118,7 +118,7 @@ namespace ts::internal {
 	public:
 		[[nodiscard]] Kind getKind() const override { return Kind::Float; }
 
-		explicit FloatInfoImpl(size_t size): TypeInfoImpl(size) {
+		explicit FloatInfoImpl(usize size): TypeInfoImpl(size) {
 			representation = base::strConcat("float_", size);
 		}
 
@@ -203,7 +203,7 @@ namespace ts::internal {
 			    parameterTypes.size() != toFunction.getParameterTypeList().size()) {
 				return false;
 			}
-			for (size_t i = 0; i < parameterTypes.size(); i++) {
+			for (usize i = 0; i < parameterTypes.size(); i++) {
 				if (!isImplicitlyCoercible(toFunction.getParameterTypeList()[i],
 				                           parameterTypes[i])) {
 					return false;
@@ -267,7 +267,7 @@ namespace ts::internal {
 
 	class TupleInfoImpl: public TypeInfoImpl {
 		std::vector<TypeDesc<>> underlyingTypes;
-		std::vector<size_t> offsets;
+		std::vector<usize> offsets;
 
 	public:
 		[[nodiscard]] Kind getKind() const override { return Kind::Tuple; }
@@ -276,9 +276,9 @@ namespace ts::internal {
 
 		const std::vector<TypeDesc<>>& getUnderlyingTypes() const { return underlyingTypes; }
 
-		std::pair<TypeDesc<>, size_t> getMember(size_t index) const;
+		std::pair<TypeDesc<>, usize> getMember(usize index) const;
 
-		TypeDesc<> getType(size_t idx) const { return underlyingTypes[idx]; }
+		TypeDesc<> getType(usize idx) const { return underlyingTypes[idx]; }
 
 		[[nodiscard]] bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
 			if (to.getKind() != Kind::Tuple) {
@@ -288,7 +288,7 @@ namespace ts::internal {
 			if (underlyingTypes.size() != toTuple.getUnderlyingTypes().size()) {
 				return false;
 			}
-			for (size_t i = 0; i < underlyingTypes.size(); i++) {
+			for (usize i = 0; i < underlyingTypes.size(); i++) {
 				if (!isImplicitlyCoercible(underlyingTypes[i], toTuple.getUnderlyingTypes()[i])) {
 					return false;
 				}
@@ -312,7 +312,7 @@ namespace ts::internal {
 
 		std::vector<TypeDesc<>> getTypes() const { return variant_types; }
 
-		TypeDesc<> getType(size_t idx) { return variant_types[idx]; }
+		TypeDesc<> getType(usize idx) { return variant_types[idx]; }
 	};
 
 	class ClassInfoImpl: public TypeInfoImpl {
@@ -325,19 +325,19 @@ namespace ts::internal {
 
 		// Indexes for looking up positions
 		// If they contain something, it's not an empty vector
-		base::Map<symtable::SymbolId, std::vector<size_t>> members_positions;
-		base::Map<ClassInfo, std::vector<size_t>> ancestors_positions;
+		base::Map<symtable::SymbolId, std::vector<usize>> members_positions;
+		base::Map<ClassInfo, std::vector<usize>> ancestors_positions;
 
 		// Positions of our parents in the ancestors vector, sorted by their order
-		std::vector<size_t> basic_parents;
+		std::vector<usize> basic_parents;
 		// @TODO: they are a connected subsequence, maybe just remember first and last index in
 		// members_data? Positions of our members in the members vector, sorted by their order
-		std::vector<size_t> direct_members;
+		std::vector<usize> direct_members;
 		// Layout of virtual ancestors, sorted by their offset
-		std::vector<std::pair<ClassInfo, size_t>> virtual_layout;
+		std::vector<std::pair<ClassInfo, usize>> virtual_layout;
 
-		size_t virt_method_count;
-		size_t base_size;
+		usize virt_method_count;
+		usize base_size;
 
 		[[nodiscard]] bool hasVtable() const;
 
@@ -360,24 +360,24 @@ namespace ts::internal {
 			const std::vector<ClassInfo>& ancestor_ids) const;
 
 		// Returns the offset of a single specific virtual ancestor
-		[[nodiscard]] size_t getVirtualAncestorOffset(ClassInfo ancestor_id) const;
+		[[nodiscard]] usize getVirtualAncestorOffset(ClassInfo ancestor_id) const;
 		// Returns all the offsets of virtual members of the clueless parent, assuming it's been
 		// created as a part of us. Since the virtual members are put at the end of the kid, they
 		// will all be positive.
-		[[nodiscard]] std::vector<std::pair<ClassInfo, size_t>> getVirtualAncestorTable(
+		[[nodiscard]] std::vector<std::pair<ClassInfo, usize>> getVirtualAncestorTable(
 			ClassInfo ancestor_id) const;
-		[[nodiscard]] std::vector<std::pair<ClassInfo, size_t>> getVirtualAncestorTable(
+		[[nodiscard]] std::vector<std::pair<ClassInfo, usize>> getVirtualAncestorTable(
 			std::vector<ClassInfo> ancestor_ids) const;
 
-		[[nodiscard]] size_t getBaseSize() const;
-		[[nodiscard]] size_t getVtablePtrOffset() const;
-		[[nodiscard]] size_t getVtableSize() const;
-		[[nodiscard]] size_t getVtablePositionOf(ClassInfo ancestor) const;
+		[[nodiscard]] usize getBaseSize() const;
+		[[nodiscard]] usize getVtablePtrOffset() const;
+		[[nodiscard]] usize getVtableSize() const;
+		[[nodiscard]] usize getVtablePositionOf(ClassInfo ancestor) const;
 
 		ClassInfoImpl(base::StrId name,
 		              const std::vector<std::pair<TypeDesc<>, symtable::SymbolId>>& member_types,
 		              const std::vector<std::pair<ClassInfo, InheritanceTag>>& inheritance,
-		              size_t virtualMethods);
+		              usize virtualMethods);
 
 		[[nodiscard]] bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
 			if (to.getKind() != Kind::Class) {
@@ -451,11 +451,11 @@ namespace ts::internal {
 	public:
 		[[nodiscard]] Kind getKind() const override { return Kind::VTable; }
 		[[nodiscard]] ClassInfo getAssociatedClass() const;
-		[[nodiscard]] size_t getParentCount() const;
-		[[nodiscard]] size_t getMethodCount() const;
+		[[nodiscard]] usize getParentCount() const;
+		[[nodiscard]] usize getMethodCount() const;
 
 		explicit VTableInfoImpl(ClassInfo class_info)
-			: TypeInfoImpl(class_info.getVtableSize() * sizeof(size_t) * 8),
+			: TypeInfoImpl(class_info.getVtableSize() * sizeof(usize) * 8),
 			  associated_class(class_info) {}
 	};
 }

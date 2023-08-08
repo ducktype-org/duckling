@@ -9,7 +9,7 @@ namespace exec {
 	}
 
 
-	CTV alloc_new(ts::TypeDesc<> type, size_t size) {
+	CTV alloc_new(ts::TypeDesc<> type, usize size) {
 		BlockId block = Block::create(size);
 		Pointer pointer(block, 0);
 		CTV ctv(type, pointer, size);

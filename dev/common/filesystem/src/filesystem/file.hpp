@@ -20,7 +20,7 @@
 // Delete this code when switched to GCC12 (currently GCC10/GCC11 is used)
 template<>
 struct std::hash<std::filesystem::path> {
-	size_t operator()(const std::filesystem::path& path) const {
+	usize operator()(const std::filesystem::path& path) const {
 		return std::filesystem::hash_value(path);
 	}
 };
@@ -36,8 +36,8 @@ namespace fs {
 		FileContent(): content(nullptr) {};
 		FileContent(const FileContent&) = default;
 
-		size_t size() { return view().size(); };
-		byte operator[](size_t i) { return view()[i]; };
+		usize size() { return view().size(); };
+		byte operator[](usize i) { return view()[i]; };
 		base::RawView view() { return content->view(); };
 	};
 
@@ -86,7 +86,7 @@ namespace fs {
 
 template<>
 struct std::hash<fs::FilePath> {
-	std::size_t operator()(const fs::FilePath& key) const {
+	usize operator()(const fs::FilePath& key) const {
 		return fs::FilePath::FileHash()(key.path);
 	}
 };

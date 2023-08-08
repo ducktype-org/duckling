@@ -29,7 +29,7 @@ namespace pst {
 	 */
 	template<bool NON_EMPTY, class Container, class Separator, class Ending>
 	bool parseList(RiftParserState& state, Container &cont, Separator sep, Ending end) {
-		size_t expr_length;
+		usize expr_length;
 		if (state.empty() || state.ctokens().is(end)) {
 			if (!NON_EMPTY)
 				return true;

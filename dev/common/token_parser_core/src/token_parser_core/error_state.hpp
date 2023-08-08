@@ -11,7 +11,7 @@
 namespace tpc {
 	class ErrorState {
 		bool failbit = false;
-		size_t err_count = 0;
+		usize err_count = 0;
 		// error list
 		// @TODO: add info about file for printing
 		printer::Console errorLog;
@@ -32,6 +32,6 @@ namespace tpc {
 			return failbit;
 		}
 
-		size_t errCount() const;
+		usize errCount() const;
 	};
 }

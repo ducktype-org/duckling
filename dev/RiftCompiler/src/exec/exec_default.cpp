@@ -30,23 +30,23 @@ namespace exec {
 
 		auto vtable = ts::PointerInfo::create(ts::VTableInfo::create(class_info));
 
-		size_t vtable_offset = class_info.getVtablePtrOffset();
+		usize vtable_offset = class_info.getVtablePtrOffset();
 
 		auto vtable_ptr_a = a.subCTV(vtable, vtable_offset, ts::POINTER_SIZE);
 
 
-		auto vtable_a = vtable_ptr_a.getDataUnderPointer<size_t>();
+		auto vtable_a = vtable_ptr_a.getDataUnderPointer<usize>();
 
 		auto vtable_ptr_b = b.subCTV(vtable, vtable_offset, ts::POINTER_SIZE);
 
-		// w vtable trzymane są offsety rozmiaru size_t	(oraz w przyszłości metody)
-		auto vtable_b = vtable_ptr_b.getDataUnderPointer<size_t>();
+		// w vtable trzymane są offsety rozmiaru usize	(oraz w przyszłości metody)
+		auto vtable_b = vtable_ptr_b.getDataUnderPointer<usize>();
 
 		for (auto ancestor_info: class_info.virtualAncestors()) {
-			size_t pos = class_info.getVtablePositionOf(ancestor_info);
+			usize pos = class_info.getVtablePositionOf(ancestor_info);
 
-			size_t off_a = vtable_a[pos];
-			size_t off_b = vtable_b[pos];
+			usize off_a = vtable_a[pos];
+			usize off_b = vtable_b[pos];
 
 			CTV sub_a = a.subCTV(ancestor_info, off_a, ancestor_info.getBaseSize());
 			CTV sub_b = b.subCTV(ancestor_info, off_b, ancestor_info.getBaseSize());
@@ -130,7 +130,7 @@ namespace exec {
 		const CTV& ctv = ctvs[0];
 
 
-		for (size_t i = 0; i < calls.size(); i++) {
+		for (usize i = 0; i < calls.size(); i++) {
 			const auto& call = calls[i];
 			const CTV& val = ctvs[i + 1];
 			CTV temp = ctv.subCTV(call.type, call.offset, call.size);

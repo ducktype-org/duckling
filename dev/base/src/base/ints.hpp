@@ -17,6 +17,7 @@ typedef int64_t i64;
 typedef unsigned char uchar;
 
 typedef std::byte byte;
+typedef std::size_t usize;
 
 // Code might break if following does not hold:
 static_assert(sizeof(byte) == sizeof(char));

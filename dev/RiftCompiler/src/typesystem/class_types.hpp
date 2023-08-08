@@ -52,7 +52,7 @@ namespace ts {
 		static ClassInfo create(
 			base::StrId name,
 			std::vector<std::pair<TypeDesc<>, symtable::SymbolId>>&& member_types,
-			std::vector<std::pair<ClassInfo, InheritanceTag>>&& inheritance, size_t virtualMethods);
+			std::vector<std::pair<ClassInfo, InheritanceTag>>&& inheritance, usize virtualMethods);
 
 		[[nodiscard]] base::StrId getName() const;
 
@@ -63,7 +63,7 @@ namespace ts {
 
 		// All the virtual parents, temporarily commented out to make sure it's not used
 		// accidentally
-		// const std::map<ClassInfo, size_t> virtualParents() const;
+		// const std::map<ClassInfo, usize> virtualParents() const;
 
 		// All the virtual ancestors
 		[[nodiscard]] const std::vector<ClassInfo> virtualAncestors() const;
@@ -86,23 +86,23 @@ namespace ts {
 		[[nodiscard]] AncestorInfo getAncestorInfo(std::vector<ClassInfo> ancestor_ids) const;
 
 		// Returns the offset of a single specific virtual ancestor
-		[[nodiscard]] size_t getVirtualAncestorOffset(ClassInfo ancestor_id) const;
+		[[nodiscard]] usize getVirtualAncestorOffset(ClassInfo ancestor_id) const;
 
 		// Returns all the offsets of virtual members of the ancestor (its vtable), assuming it's
 		// been created as a part of us.
-		[[nodiscard]] std::vector<std::pair<ClassInfo, size_t>> getVirtualAncestorTable(
+		[[nodiscard]] std::vector<std::pair<ClassInfo, usize>> getVirtualAncestorTable(
 			ClassInfo ancestor_id) const;
-		[[nodiscard]] std::vector<std::pair<ClassInfo, size_t>> getVirtualAncestorTable(
+		[[nodiscard]] std::vector<std::pair<ClassInfo, usize>> getVirtualAncestorTable(
 			std::vector<ClassInfo> ancestor_ids) const;
 
 		// Gets the position of the vtable in this class' memory
-		[[nodiscard]] size_t getVtablePtrOffset() const;
+		[[nodiscard]] usize getVtablePtrOffset() const;
 		// Gets size of the vtable
-		[[nodiscard]] size_t getVtableSize() const;
+		[[nodiscard]] usize getVtableSize() const;
 
-		[[nodiscard]] size_t getVtablePositionOf(ClassInfo ancestor) const;
+		[[nodiscard]] usize getVtablePositionOf(ClassInfo ancestor) const;
 
-		[[nodiscard]] size_t getBaseSize() const;
+		[[nodiscard]] usize getBaseSize() const;
 
 		CHECKED_CAST(ClassInfo)
 
@@ -122,8 +122,8 @@ namespace ts {
 
 		// If the member is in a virtual ancestor, this data is relative to the ancestor's start
 		// The exact offset of course needs to be looked up in the vtable at runtime
-		std::optional<size_t> start_offset{};
-		std::optional<size_t> end_offset{};
+		std::optional<usize> start_offset{};
+		std::optional<usize> end_offset{};
 
 		// If the field below is not equal to Standard or Virtual, the data structure will be
 		// full of empty optionals.
@@ -140,8 +140,8 @@ namespace ts {
 
 		// If the member is in a virtual ancestor, this data is relative to the ancestor's start
 		// The exact offset of course needs to be looked up in the vtable at runtime
-		std::optional<size_t> start_offset{};
-		std::optional<size_t> end_offset{};
+		std::optional<usize> start_offset{};
+		std::optional<usize> end_offset{};
 
 		// If the field below is not equal to Standard or Virtual, this data structure will be
 		// full of empty optionals.
@@ -166,21 +166,21 @@ namespace ts {
 	struct MemberData {
 		symtable::SymbolId symbol;
 		TypeDesc<> desc;
-		size_t offset;
+		usize offset;
 
 		std::optional<ClassInfo> last_virtual_ancestor{};
 
-		// MemberData(symtable::SymbolId symbol, TypeDesc<> desc, size_t offset): symbol(symbol),
+		// MemberData(symtable::SymbolId symbol, TypeDesc<> desc, usize offset): symbol(symbol),
 		// desc(desc), offset(offset) {}
 	};
 
 	struct AncestorData {
 		ClassInfo info;
-		size_t offset;
+		usize offset;
 
 		std::optional<ClassInfo> last_virtual_ancestor{};
 
-		// AncestorData(ClassInfo class_info, size_t offset): info(class_info), offset(offset) {}
+		// AncestorData(ClassInfo class_info, usize offset): info(class_info), offset(offset) {}
 	};
 
 
@@ -190,8 +190,8 @@ namespace ts {
 	public:
 		static VTableInfo create(ClassInfo class_info);
 		ClassInfo getAssociatedClass();
-		size_t getParentCount();
-		size_t getMethodCount();
+		usize getParentCount();
+		usize getMethodCount();
 
 		CHECKED_CAST(VTableInfo)
 	protected:

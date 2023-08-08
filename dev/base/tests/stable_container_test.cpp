@@ -2,7 +2,7 @@
 #include <base/stable_container.hpp>
 #include <base/strongly_typed_int.hpp>
 
-STRONG_TYPEDEF_INT(SomeId, size_t);
+STRONG_TYPEDEF_INT(SomeId, usize);
 
 class StableListTestSimple: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -45,7 +45,7 @@ private:
 		auto c_ref = maybe_c_ref.expect("No value");
 		assert(*c_ref == 2, "Bad stable list c_ref");
 
-		for (size_t i = 0; i < 100; i++) {
+		for (usize i = 0; i < 100; i++) {
 			list.pushBack(i);
 		}
 
@@ -80,7 +80,7 @@ private:
 		*ref = 100;
 		assert(*ref == 100, "bad reference");
 
-		for (size_t i = 0; i < 100; i++) {
+		for (usize i = 0; i < 100; i++) {
 			list.pushBack(i);
 		}
 

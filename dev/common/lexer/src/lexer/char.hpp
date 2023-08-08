@@ -114,11 +114,11 @@ namespace lexer {
 			const Array& getArray() const;
 			
 			[[nodiscard]]
-			base::RawView composeRaw(size_t from, size_t to) const;
+			base::RawView composeRaw(usize from, usize to) const;
 			[[nodiscard]]
-			base::RawView getRaw(size_t i) const;
+			base::RawView getRaw(usize i) const;
 			[[nodiscard]]
-			const Char& get(size_t i) const;
+			const Char& get(usize i) const;
 			
 			~CharArray();
 		private:

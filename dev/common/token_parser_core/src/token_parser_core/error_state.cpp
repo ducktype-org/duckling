@@ -23,7 +23,7 @@ namespace tpc {
 		errorLog.print(stream);
 	}
 
-	size_t ErrorState::errCount() const {
+	usize ErrorState::errCount() const {
 		return err_count;
 	}
 }

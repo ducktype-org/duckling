@@ -53,7 +53,7 @@ namespace symtable {
 		std::optional<ScopeRef> linked_lookup_scope;
 
 		// Symbol position relative to other symbols:
-		size_t relative_position;
+		usize relative_position;
 
 		// symbol is dependent if it can't be used independently
 		// example: class fields
@@ -90,7 +90,7 @@ namespace symtable {
 		ScopeRef getScope() const { return scope; }
 		base::StrId getName() const { return name; }
 		bool getIsStatic() const { return is_static; }
-		size_t getRelativePosition() const { return relative_position; }
+		usize getRelativePosition() const { return relative_position; }
 		bool isAnonymous() const { return anonymous; }
 		bool isWildcard() const { return wildcard; }
 

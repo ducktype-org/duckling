@@ -112,7 +112,7 @@ namespace vm {
 	__attribute__((always_inline))
 	void inline static nextInstruction(
 			const std::span<const vm::Fix8Instruction>& bc,
-			size_t& instruction_pointer,
+			usize& instruction_pointer,
 			OpcodeFix8& opcode,
 			int_fast32_t& arg0, int_fast32_t& arg1) {
 
@@ -151,7 +151,7 @@ namespace vm {
 			Pointer pointer_reg_0 = memory.nullPtr();
 			bool flag = false;
 			const auto bc = function.bc;
-			size_t instruction_pointer = 0;
+			usize instruction_pointer = 0;
 			u64 ret_val = 0;
 			StandardFunctionArgs next_args = {0, memory.nullPtr()};
 		#else

@@ -7,16 +7,16 @@ namespace base {
 	StrId::ToDataType StrId::to_data_map;
 	StrId::ToIdType StrId::to_id_map;
 
-	constexpr size_t default_buffer_size = 32768;
+	constexpr usize default_buffer_size = 32768;
 	typedef std::vector<base::OwningView> BufferList;
 	namespace {
 		BufferList buffer_list;
 
 		// remanding size of last buffer (equals default_buffer_size - next_pos)
-		size_t size_left = 0;
+		usize size_left = 0;
 
 		// next free position in last buffer
-		size_t next_pos = 0;
+		usize next_pos = 0;
 
 		bool any_buffer_exits = false;
 	}

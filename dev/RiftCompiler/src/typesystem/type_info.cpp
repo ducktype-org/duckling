@@ -12,7 +12,7 @@ namespace ts {
 		return pimpl->getKind();
 	}
 
-	[[nodiscard]] size_t TypeInfo::getSize() const {
+	[[nodiscard]] usize TypeInfo::getSize() const {
 		return pimpl->getSize();
 	}
 
@@ -47,8 +47,8 @@ namespace ts {
 		return CharInfo{&charImpl};
 	}
 
-	IntegralInfo IntegralInfo::create(size_t size, bool signedness) {
-		static std::map<std::pair<size_t, bool>, Impl> ints = {
+	IntegralInfo IntegralInfo::create(usize size, bool signedness) {
+		static std::map<std::pair<usize, bool>, Impl> ints = {
 			{{8, true}, Impl{8, true}},
 			{{8, false}, Impl{8, false}},
 			{{16, true}, Impl{16, true}},
@@ -66,8 +66,8 @@ namespace ts {
 		return IntegralInfo{&ints.at({size, signedness})};
 	}
 
-	FloatInfo FloatInfo::create(size_t size) {
-		static std::map<size_t, Impl> floats = {
+	FloatInfo FloatInfo::create(usize size) {
+		static std::map<usize, Impl> floats = {
 			{16, Impl{16}},   // For certain GPU applications
 			{32, Impl{32}},   // Standard float
 			{64, Impl{64}},   // Double precision
@@ -197,7 +197,7 @@ namespace ts {
 		return ((CPimpl)pimpl)->getUnderlyingTypes();
 	}
 
-	std::pair<TypeDesc<>, size_t> TupleInfo::getMember(size_t index) const {
+	std::pair<TypeDesc<>, usize> TupleInfo::getMember(usize index) const {
 		return ((CPimpl)pimpl)->getMember(index);
 	}
 

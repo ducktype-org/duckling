@@ -20,7 +20,7 @@ namespace compiler {
 
 		void addFileRecursively(const fs::FilePath& path, bool dprint = false, std::ostream* out = nullptr);
 
-		size_t pstCount() const { return pst_map.size(); }
+		usize pstCount() const { return pst_map.size(); }
 	};
 }
 

@@ -99,7 +99,7 @@ namespace base {
 namespace std {
 	template <typename T>
 	struct hash<base::NamedId<T>> {
-		std::size_t operator()(const base::NamedId<T>& key) const {
+		usize operator()(const base::NamedId<T>& key) const {
 			using std::hash;
 			return std::hash<id_t>()(base::id_t(key));
 		}

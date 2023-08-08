@@ -213,21 +213,21 @@ private:
 		);
 	}
 
-	std::pair<size_t, size_t> get_member_offsets(
+	std::pair<usize, usize> get_member_offsets(
 		ts::ClassInfo inheriting_class,
 		symtable::SymbolId symbol,
-		std::vector<size_t>& begin_vector,
-		std::vector<size_t>& end_vector,
+		std::vector<usize>& begin_vector,
+		std::vector<usize>& end_vector,
 		std::vector<ts::ClassInfo>&& hint = {}
     ) {
 		auto r0 = inheriting_class.getMemberInfo(symbol, hint);
 
 		assert(r0.isOk(),
 		       "Invalid result count");
-		size_t begin_offset0, end_offset0;
+		usize begin_offset0, end_offset0;
 		if (r0.result_type == ts::ResultType::Virtual) {
 
-			size_t ancestor_offset =
+			usize ancestor_offset =
 				inheriting_class.getVirtualAncestorOffset(r0.last_virtual_ancestor.value());
 
 			begin_offset0 = r0.start_offset.value() + ancestor_offset;
@@ -245,19 +245,19 @@ private:
 		return {begin_offset0, end_offset0};
 	}
 
-	std::pair<size_t, size_t> get_member_offsets(ts::ClassInfo inheriting_class,
+	std::pair<usize, usize> get_member_offsets(ts::ClassInfo inheriting_class,
 	                                             symtable::SymbolId symbol,
 	                                             std::vector<ts::ClassInfo>&& hint = {}) {
-		std::vector<size_t> v0, v1;
+		std::vector<usize> v0, v1;
 		return get_member_offsets(inheriting_class, symbol, v0, v1, std::move(hint));
 	}
 
-	static std::pair<size_t, size_t> get_vtable_ptr_offset(
+	static std::pair<usize, usize> get_vtable_ptr_offset(
 		ts::ClassInfo inheriting_class, std::vector<ts::ClassInfo> class_with_virtual_inh,
-		std::vector<size_t>& begin_offsets, std::vector<size_t>& end_offsets) {
+		std::vector<usize>& begin_offsets, std::vector<usize>& end_offsets) {
 
-		size_t begin_offset;
-		size_t end_offset;
+		usize begin_offset;
+		usize end_offset;
 		if (inheriting_class == class_with_virtual_inh.back()) {
 
 			begin_offset = inheriting_class.getVtablePtrOffset();
@@ -272,24 +272,24 @@ private:
 		return {begin_offset, end_offset};
 	}
 
-	static std::pair<size_t, size_t> get_vtable_ptr_offset(ts::ClassInfo inheriting_class,
+	static std::pair<usize, usize> get_vtable_ptr_offset(ts::ClassInfo inheriting_class,
 	                                                       ts::ClassInfo class_with_virtual_inh,
-	                                                       std::vector<size_t>& begin_offsets,
-	                                                       std::vector<size_t>& end_offsets) {
+	                                                       std::vector<usize>& begin_offsets,
+	                                                       std::vector<usize>& end_offsets) {
 		return get_vtable_ptr_offset(inheriting_class,
 		                             (std::vector<ts::ClassInfo>){class_with_virtual_inh},
 		                             begin_offsets,
 		                             end_offsets);
 	}
 
-	static std::pair<size_t, size_t> get_vtable_ptr_offset(
+	static std::pair<usize, usize> get_vtable_ptr_offset(
 		ts::ClassInfo inheriting_class, std::vector<ts::ClassInfo> class_with_virtual_inh) {
-		std::vector<size_t> v0, v1;
+		std::vector<usize> v0, v1;
 		return get_vtable_ptr_offset(inheriting_class, class_with_virtual_inh, v0, v1);
 	}
-	static std::pair<size_t, size_t> get_vtable_ptr_offset(ts::ClassInfo inheriting_class,
+	static std::pair<usize, usize> get_vtable_ptr_offset(ts::ClassInfo inheriting_class,
 	                                                       ts::ClassInfo class_with_virtual_inh) {
-		std::vector<size_t> v0, v1;
+		std::vector<usize> v0, v1;
 		return get_vtable_ptr_offset(inheriting_class, class_with_virtual_inh, v0, v1);
 	}
 
@@ -318,8 +318,8 @@ private:
 		assert(inheriting_class.getSize() == 5 * ts::POINTER_SIZE,
 		       "Inheriting class of wrong size");
 
-		std::vector<size_t> begin_offsets;
-		std::vector<size_t> end_offsets;
+		std::vector<usize> begin_offsets;
+		std::vector<usize> end_offsets;
 
 		get_member_offsets(inheriting_class, symbol0, begin_offsets, end_offsets);
 		get_member_offsets(inheriting_class, symbol1, begin_offsets, end_offsets);
@@ -331,12 +331,12 @@ private:
 		std::sort(begin_offsets.begin(), begin_offsets.end());
 		std::sort(end_offsets.begin(), end_offsets.end());
 
-		for (size_t i = 0; i < begin_offsets.size(); i++) {
+		for (usize i = 0; i < begin_offsets.size(); i++) {
 			std::cerr << begin_offsets[i] << " " << end_offsets[i] << std::endl;
 		}
 
 		assert(begin_offsets[0] == 0, "First member's memory doesn't align with the class start");
-		for (size_t i = 1; i < begin_offsets.size(); i++) {
+		for (usize i = 1; i < begin_offsets.size(); i++) {
 			assert(begin_offsets[i] >= end_offsets[i - 1],
 			       "There is overlap between members in class memory");
 			assert(begin_offsets[i] <= end_offsets[i - 1],
@@ -394,8 +394,8 @@ private:
 		     {C, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public)}},
 			0);
 
-		std::vector<size_t> begin_offsets;
-		std::vector<size_t> end_offsets;
+		std::vector<usize> begin_offsets;
+		std::vector<usize> end_offsets;
 
 		get_member_offsets(C, e);
 
@@ -414,19 +414,19 @@ private:
 		get_vtable_ptr_offset(A, {C, D}, begin_offsets, end_offsets);
 		get_vtable_ptr_offset(A, {B, D}, begin_offsets, end_offsets);
 
-		for (size_t i = 0; i < begin_offsets.size(); i++) {
+		for (usize i = 0; i < begin_offsets.size(); i++) {
 			std::cout << begin_offsets[i] << " " << end_offsets[i] << std::endl;
 		}
 
 		std::sort(begin_offsets.begin(), begin_offsets.end());
 		std::sort(end_offsets.begin(), end_offsets.end());
 
-		for (size_t i = 0; i < begin_offsets.size(); i++) {
+		for (usize i = 0; i < begin_offsets.size(); i++) {
 			std::cout << begin_offsets[i] << " " << end_offsets[i] << std::endl;
 		}
 
 		assert(begin_offsets[0] == 0, "First member's memory doesn't align with the class start");
-		for (size_t i = 1; i < begin_offsets.size(); i++) {
+		for (usize i = 1; i < begin_offsets.size(); i++) {
 			assert(begin_offsets[i] >= end_offsets[i - 1],
 			       "There is overlap between members in class memory");
 			assert(begin_offsets[i] <= end_offsets[i - 1],
@@ -474,7 +474,7 @@ private:
 		assert(A.getVirtualAncestorOffset(C) > A.getVirtualAncestorOffset(B), "C wasn't after B in our memory");
 	}
 
-	size_t getInVirtualAncestorOffset(ts::ClassInfo child, ts::ClassInfo ancestor) {
+	usize getInVirtualAncestorOffset(ts::ClassInfo child, ts::ClassInfo ancestor) {
 		auto result = child.getAncestorInfo(ancestor);
 		auto in_ancestor = result.last_virtual_ancestor.value();
 		return child.getVirtualAncestorOffset(in_ancestor) + result.start_offset.value();
@@ -598,7 +598,7 @@ private:
 	void assert_sorted_ancestors(ts::ClassInfo A, const std::vector<ts::AncestorData>& ancestors) {
 		std::optional<ts::ClassInfo> last_virtual_ancestor;
 		ssize_t last_offset = -1;
-		size_t last_size = 0;
+		usize last_size = 0;
 		for (auto ancestor_data: ancestors) {
 			if (!last_virtual_ancestor.has_value()) {
 				if (!ancestor_data.last_virtual_ancestor.has_value()) {

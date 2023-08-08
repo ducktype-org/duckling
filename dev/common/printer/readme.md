@@ -25,7 +25,7 @@ All symbols are in namespace `printer` and come from [printer.hpp](printer.hpp).
 
 Indicates how many different message types there are.
 ~~~~~cpp 
-constexpr size_t TYPE_COUNT;
+constexpr usize TYPE_COUNT;
 ~~~~~
 
 ### MessageType 
@@ -42,7 +42,7 @@ You can add `Message`s to it, change its settings and print its contents to cons
 #### Constructor
 
 ~~~~~cpp 
-Console(size_t generalMax = SIZE_MAX, minLevel_t minLevel = defaultMinLevel, maxAmounts_t maxAmounts = defaultMaxAmounts);
+Console(usize generalMax = SIZE_MAX, minLevel_t minLevel = defaultMinLevel, maxAmounts_t maxAmounts = defaultMaxAmounts);
 ~~~~~
 
 * generalMax
@@ -57,7 +57,7 @@ Console(size_t generalMax = SIZE_MAX, minLevel_t minLevel = defaultMinLevel, max
 
 * maxAmounts
   
-  `maxAmounts_t` is typedef for `std::array<size_t, TYPE_COUNT>`.
+  `maxAmounts_t` is typedef for `std::array<usize, TYPE_COUNT>`.
   Specifies maximum amount of each type of messages to be displayed. Helps not display some kind of messages and limit flooding by specific types of messages.
   Default is `SIZE_MAX` for all types.
 
@@ -76,14 +76,14 @@ When changing a setting, one can use `MessageType::ALL` to change it for all typ
   
   Sets [generalMax](#generalType).
   ~~~~~cpp
-  void setGeneralMax(size_t max);
+  void setGeneralMax(usize max);
   ~~~~~
 
 * setMaxAmounts
   
   Sets [maxAmounts](#maxAmounts) for a type.
   ~~~~~cpp
-  void setMaxAmounts(MessageType type, size_t amount);
+  void setMaxAmounts(MessageType type, usize amount);
   ~~~~~
 
 #### add

@@ -6,7 +6,7 @@
 namespace base {
 	class FlagType {
 		u64 data = 0;
-		constexpr static FlagType makeFlag(size_t data) {
+		constexpr static FlagType makeFlag(usize data) {
 			FlagType out;
 			out.data = data;
 			return out;

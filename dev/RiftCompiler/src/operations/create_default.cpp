@@ -41,7 +41,7 @@ namespace operation {
 
 
 		Calls collectCallsTuple(ts::TupleInfo tuple_info, op::Defaultable kind) {
-			size_t count = tuple_info.getUnderlyingTypes().size();
+			usize count = tuple_info.getUnderlyingTypes().size();
 
 			Calls res;
 
@@ -158,7 +158,7 @@ namespace operation {
 
 		std::vector<ts::TypeDesc<>> args = {type_info};
 
-		for (size_t i = 0; i < calls.size(); i++) {
+		for (usize i = 0; i < calls.size(); i++) {
 			args.push_back(calls[i].type);
 		}
 

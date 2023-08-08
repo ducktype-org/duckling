@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
 
 	auto out = file.getContent();
 	std::cout << out.size() << "\n";
-	for (size_t i = 0; i < out.size(); i++) {
+	for (usize i = 0; i < out.size(); i++) {
 		std::cout << (uint)out[i] << "\n";
 	}
 }

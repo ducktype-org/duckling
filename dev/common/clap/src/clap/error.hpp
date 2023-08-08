@@ -8,8 +8,8 @@
 
 namespace clap {
 	struct PositionalParametersCountError {
-		std::size_t required;
-		std::size_t found;
+		usize required;
+		usize found;
 		
 		std::string print() const;
 	};

@@ -36,7 +36,7 @@ namespace symtable {
 	}
 
 
-	size_t SymbolData::symbolCount() const {
+	usize SymbolData::symbolCount() const {
 		return symbols.size();
 	}
 
@@ -67,7 +67,7 @@ namespace symtable {
 		// ChainLookupResult result;
 		SymbolChain prefix = append_res_first.getAsSingle();
 
-		for (size_t i = 1; i < names.size() - 1; i++) {
+		for (usize i = 1; i < names.size() - 1; i++) {
 			auto append_res = prefix.back()->lookupIn(state, names[i]);
 			if (!append_res.isSingle()) {
 				// @TODO: error in state

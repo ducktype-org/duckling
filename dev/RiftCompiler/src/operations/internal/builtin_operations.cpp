@@ -6,7 +6,7 @@ namespace operation {
 	namespace {
 		// @TODO: maybe use some of the tools that are created in the operators branch.
 
-		template<typename T, size_t SIZE>
+		template<typename T, usize SIZE>
 		void addIntegral() {
 			static_assert(SIZE == 8 * (sizeof(T)));
 

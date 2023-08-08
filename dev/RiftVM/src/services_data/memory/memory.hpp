@@ -22,7 +22,7 @@ namespace vm {
 				Block* block = nullptr;
 			};
 
-			static constexpr size_t special_blocks_count = 1;
+			static constexpr usize special_blocks_count = 1;
 			static constexpr BlockId null_block_id = BlockId(-1);
 
 			std::vector<BlockData> blocks = {};

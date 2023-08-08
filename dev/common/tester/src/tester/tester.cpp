@@ -4,15 +4,15 @@
 
 namespace tester {
 
-	constexpr size_t header_line_length = 40;
+	constexpr usize header_line_length = 40;
 	
-	size_t beginEqualSignL(size_t name_l) {
+	usize beginEqualSignL(usize name_l) {
 		return header_line_length/2 - (name_l/2);
 	}
-	size_t endEqualSignL(size_t name_l) {
+	usize endEqualSignL(usize name_l) {
 		return header_line_length/2 - (name_l/2) - (name_l%2);
 	}
-	size_t fullEqualSignL([[maybe_unused]] size_t name_l) {
+	usize fullEqualSignL([[maybe_unused]] usize name_l) {
 		return header_line_length;
 	}
 
@@ -53,8 +53,8 @@ namespace tester {
 
 	bool TestSuite::run() {
 		prolog();
-		size_t passed = 0;
-		size_t failed = 0;
+		usize passed = 0;
+		usize failed = 0;
 		
 		auto begin = std::chrono::steady_clock::now();
 		for (auto& t: tests) {
@@ -146,7 +146,7 @@ namespace tester {
 		console.clear();
 	}
 
-	void TestSuite::epilog(size_t passed, size_t failed, double time) {
+	void TestSuite::epilog(usize passed, usize failed, double time) {
 		console.add({{
 			"\n",
 			std::string(fullEqualSignL(name.length() + 2), '='), "\n",

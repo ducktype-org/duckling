@@ -11,7 +11,7 @@
 
 namespace lexer{
 	Token Token::makeSentinel() {
-		Position dummy_position = {static_cast<size_t>(-1), -static_cast<size_t>(1), static_cast<size_t>(-1)};
+		Position dummy_position = {static_cast<usize>(-1), -static_cast<usize>(1), static_cast<usize>(-1)};
 		return Token(Type::Sentinel, base::RawView(""), dummy_position);
 	}
 

@@ -85,13 +85,13 @@ private:
 		assert(inheriting_class.getMemberInfo(symbol0).start_offset.has_value(),
 		       "Symbol0 not found in the class");
 
-		size_t symbol0_offset = inheriting_class.getMemberInfo(symbol0).start_offset.value();
+		usize symbol0_offset = inheriting_class.getMemberInfo(symbol0).start_offset.value();
 
 		classCTV.getData()[symbol0_offset / ts::BYTE_SIZE] = 123;
 
 		assert(inheriting_class.getMemberInfo(symbol1).isOk(), "Symbol1 not found in the class");
 
-		size_t symbol1_offset = inheriting_class.getMemberInfo(symbol1).start_offset.value();
+		usize symbol1_offset = inheriting_class.getMemberInfo(symbol1).start_offset.value();
 
 		classCTV.getData()[symbol1_offset / ts::BYTE_SIZE] = 210;
 
@@ -102,7 +102,7 @@ private:
 		assert(s1CTV.getData()[0] == 210, "Wrong value in the parent's member subCTV");
 
 		assert(inheriting_class.getAncestorInfo(parent_class).isOk(), "Parent not found in class");
-		size_t parent_offset = inheriting_class.getAncestorInfo(parent_class).start_offset.value();
+		usize parent_offset = inheriting_class.getAncestorInfo(parent_class).start_offset.value();
 
 		exec::CTV parentCTV =
 			classCTV.subCTV(desc_parent_class, parent_offset, parent_class.getSize());

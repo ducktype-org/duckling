@@ -15,7 +15,7 @@ namespace clap {
 			base::StrId file_name;
 			
 			std::vector<ParameterConfig> parameters;
-			std::size_t required_parameters_count;
+			usize required_parameters_count;
 			
 			std::vector<base::StrId> positional_parameters_names;
 			

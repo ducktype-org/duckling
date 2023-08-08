@@ -9,7 +9,7 @@ class SimpleIdMapsTest;
 class A {
 private:
 	int x;
-	size_t count;
+	usize count;
 	SimpleIdMapsTest& test;
 public:
 	A(int x, SimpleIdMapsTest& test) : x(x), count(0), test(test) {}

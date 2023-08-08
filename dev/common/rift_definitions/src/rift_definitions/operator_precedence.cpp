@@ -11,7 +11,7 @@ namespace rift_def {
 
 	namespace {
 		// this is highly ineffective but is meant as a placeholder:
-		base::Map<std::pair<Operator, OperatorType>, size_t> precedence;
+		base::Map<std::pair<Operator, OperatorType>, usize> precedence;
 		base::Map<std::pair<Operator, OperatorType>, OperatorAssociativity> associativity;
 	}
 

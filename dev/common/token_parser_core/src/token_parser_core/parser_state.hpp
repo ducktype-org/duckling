@@ -28,7 +28,7 @@ namespace tpc {
 		void goUp();
 		void goUpAndSkip();
 
-		void fail(size_t rel_pos, std::string message) {
+		void fail(usize rel_pos, std::string message) {
 			err.failAndLog(ctokens().peek(rel_pos).getPosition(), message);
 		}
 
