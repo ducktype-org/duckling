@@ -235,7 +235,7 @@ private:
 		simple_int_test<i16, 16>();
 		simple_int_test<i32, 32>();
 		simple_int_test<i64, 64>();
-		simple_int_test<__int128, 128>();
+		simple_int_test<i128, 128>();
 	}
 
 	void class_test() {

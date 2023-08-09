@@ -41,7 +41,7 @@ namespace operation {
 		addIntegral<i16, 16>();
 		addIntegral<i32, 32>();
 		addIntegral<i64, 64>();
-		addIntegral<__int128, 128>();
+		addIntegral<i128, 128>();
 	}
 
 }
