@@ -5,7 +5,7 @@
 #include <base/defer.hpp>
 #include <cstring>
 
-STRONG_TYPEDEF_INT(Meters, i64);
+STRONG_TYPEDEF_INT_DIMENSIONAL(Meters, i64);
 
 bool compareCstr(const char* const c1, const char* const c2) {
 	return std::string_view(c1) == std::string_view(c2);

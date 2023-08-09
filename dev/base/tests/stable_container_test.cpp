@@ -2,7 +2,7 @@
 #include <base/stable_container.hpp>
 #include <base/strongly_typed_int.hpp>
 
-STRONG_TYPEDEF_INT(SomeId, usize);
+STRONG_TYPEDEF_INT_DIMENSIONAL(SomeId, usize);
 
 class StableListTestSimple: public tester::TestSuite {
 #undef TESTER_CLASS

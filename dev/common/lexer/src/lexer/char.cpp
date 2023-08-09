@@ -90,7 +90,8 @@ namespace lexer {
 		base::RawArray begin = array[from].raw_begin;
 		usize size = 0;
 		for (usize i = from; i <= to; i++) {
-			size += u8{array[i].size};
+			// @TODO: this is ugly, better solution should be made:
+			size += usize{uchar{array[i].size}};
 		}
 		return {begin, size};
 	}
@@ -276,7 +277,7 @@ namespace lexer {
 			next.size = u8{size};
 			next.raw_begin = bytes.getBegin() + pos;
 
-			next.type_ = charType<fs::UTF8>(next.ascii_value, next.raw_begin, next.size);
+			next.type_ = charType<fs::UTF8>(next.ascii_value, next.raw_begin, uchar{next.size});
 
 			out.push_back(next);
 			pos += size;

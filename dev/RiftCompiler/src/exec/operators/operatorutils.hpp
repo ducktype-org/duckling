@@ -34,25 +34,25 @@ namespace exec::operators {
 
 // For functions of simple binary operations on ints.
 #define INT_BIN_SIMPLE_OP(size, operation, name) \
-	BIN_SIMPLE_OP(int##size##_t, operation, bin_##name##_int_##size)
+	BIN_SIMPLE_OP(i##size, operation, bin_##name##_int_##size)
 
 #define INT_BIN_SIMPLE_OPS(operation, name) \
 	INT_BIN_SIMPLE_OP(8, operation, name)   \
 	INT_BIN_SIMPLE_OP(16, operation, name)  \
 	INT_BIN_SIMPLE_OP(32, operation, name)  \
 	INT_BIN_SIMPLE_OP(64, operation, name)  \
-	BIN_SIMPLE_OP(__int128, operation, bin_##name##_int_128)
+	INT_BIN_SIMPLE_OP(128, operation, name)
 
 // For functions of simple binary operations on uints.
 #define UINT_BIN_SIMPLE_OP(size, operation, name) \
-	BIN_SIMPLE_OP(int##size##_t, operation, bin_##name##_uint_##size)
+	BIN_SIMPLE_OP(u##size, operation, bin_##name##_uint_##size)
 
 #define UINT_BIN_SIMPLE_OPS(operation, name) \
 	UINT_BIN_SIMPLE_OP(8, operation, name)   \
 	UINT_BIN_SIMPLE_OP(16, operation, name)  \
 	UINT_BIN_SIMPLE_OP(32, operation, name)  \
 	UINT_BIN_SIMPLE_OP(64, operation, name)  \
-	BIN_SIMPLE_OP(unsigned __int128, operation, bin_##name##_uint_128)
+	UINT_BIN_SIMPLE_OP(128, operation, name)
 
 // For aggregated functions on all numerical types.
 #define NUM_BIN_SIMPLE_OPS(operation, name) \

@@ -6,7 +6,7 @@
 namespace vm {
 
 	// @TODO: change to STRONG_TYPEDEF_IT when available
-	STRONG_TYPEDEF_INT(BlockId, u64);
+	STRONG_TYPEDEF_INT_DIMENSIONAL(BlockId, u64);
 
 	class Pointer {
 	private:

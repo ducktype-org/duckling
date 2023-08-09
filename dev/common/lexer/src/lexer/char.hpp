@@ -87,7 +87,7 @@ namespace lexer {
 			base::RawArray raw_begin = nullptr;
 
 			// @TODO: this u8 is strange
-			u8 size = u8(0);
+			u8 size = u8{0};
 
 			Char() = default;
 
