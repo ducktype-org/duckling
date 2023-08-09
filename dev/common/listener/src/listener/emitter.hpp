@@ -1,5 +1,6 @@
 #pragma once
 
+#include <base/ints.hpp>
 #include <set>
 #include <queue>
 #include <concepts>

@@ -1,9 +1,10 @@
 #pragma once
 
-#include <vector>
+#include "ints.hpp"
 #include "smart_pointers.hpp"
 #include "option.hpp"
 #include <concepts>
+#include <vector>
 
 namespace base {
 	

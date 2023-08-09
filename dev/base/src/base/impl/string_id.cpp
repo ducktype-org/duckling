@@ -1,4 +1,5 @@
 #include "../string_id.hpp"
+#include "../ints.hpp"
 #include <iostream>
 #include <cstring>
 

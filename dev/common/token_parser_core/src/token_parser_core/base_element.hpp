@@ -1,5 +1,6 @@
 #pragma once
 
+#include <base/ints.hpp>
 #include <ostream>
 
 namespace tpc {

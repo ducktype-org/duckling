@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <base/ints.hpp>
 #include "kind.hpp"
 #include <cstddef>
 #include <string>

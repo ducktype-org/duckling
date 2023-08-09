@@ -1,4 +1,5 @@
 #include "../define_helper.hpp"
+#include "../ints.hpp"
 #include <sstream>
 
 namespace base {

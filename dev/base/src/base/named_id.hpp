@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "ints.hpp"
 #include <type_traits>
 #include <cstddef>
 #include <functional>

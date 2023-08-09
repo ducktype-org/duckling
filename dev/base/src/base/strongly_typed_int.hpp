@@ -57,8 +57,8 @@ inline constexpr SELF_T& operator op (const BASE_T& rhs) noexcept {   \
 		inline NAME(NAME&& mX) noexcept = default;                              \
 		inline NAME& operator=(const NAME& rhs) = default;                      \
 		inline NAME& operator=(NAME&& rhs) noexcept = default;                  \
-		inline constexpr explicit NAME(const BASE& x) noexcept: value{x} {}     \
-		inline constexpr explicit operator const BASE&() const noexcept {       \
+		inline constexpr explicit(EXPLICIT_BASE) NAME(const BASE& x) noexcept: value{x} {}     \
+		inline constexpr explicit(EXPLICIT_BASE) operator const BASE&() const noexcept {       \
 			return value;                                                       \
 		}                                                                       \
 		inline constexpr explicit(EXPLICIT_BASE) operator BASE&() noexcept { return value; }      \
