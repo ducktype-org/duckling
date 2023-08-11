@@ -11,7 +11,7 @@ namespace rift_def {
 
 	namespace {
 		// this is highly ineffective but is meant as a placeholder:
-		base::Map<std::pair<Operator, OperatorType>, size_t> precedence;
+		base::Map<std::pair<Operator, OperatorType>, usize> precedence;
 		base::Map<std::pair<Operator, OperatorType>, OperatorAssociativity> associativity;
 	}
 
@@ -51,7 +51,7 @@ namespace rift_def {
 		RIFT_SIMPLE_INIT_GUARD_END;
 	}
 
-	int64_t operatorPrecedence([[maybe_unused]] base::StrId operator_, OperatorType operator_type) {
+	i64 operatorPrecedence([[maybe_unused]] base::StrId operator_, OperatorType operator_type) {
 		RIFT_ASSERT(operator_.isGood(), "Bad string passed to operator precedence");
 
 		if (precedence.contains({strAsOperator(operator_), operator_type})) {
@@ -70,7 +70,7 @@ namespace rift_def {
 		);
 	}
 
-	int64_t operatorPrecedence(Operator operator_, OperatorType operator_type) {
+	i64 operatorPrecedence(Operator operator_, OperatorType operator_type) {
 		return operatorPrecedence(operatorToStr(operator_), operator_type);
 	}
 

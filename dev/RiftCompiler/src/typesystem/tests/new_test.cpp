@@ -72,7 +72,7 @@ private:
 	}
 
 	void simple_ints() {
-		for (size_t i = 0; i < 5; i++) {
+		for (usize i = 0; i < 5; i++) {
 			auto int_i = ts::IntegralInfo::create(8 * (1 << i));
 			auto int_ii = ts::IntegralInfo::create(8 * (1 << i));
 			auto int_u = ts::IntegralInfo::create(8 * (1 << i), false);
@@ -93,8 +93,8 @@ private:
 	}
 
 	void simple_floats() {
-		size_t float_sizes[] = {16, 32, 64, 80, 128};
-		for (size_t float_size: float_sizes) {
+		usize float_sizes[] = {16, 32, 64, 80, 128};
+		for (usize float_size: float_sizes) {
 			auto float_i = ts::FloatInfo::create(float_size);
 			auto float_ii = ts::FloatInfo::create(float_size);
 

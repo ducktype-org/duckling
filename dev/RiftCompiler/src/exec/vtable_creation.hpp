@@ -20,7 +20,7 @@ namespace exec {
 
 	CTV getVtable(ts::ClassInfo parent, ts::ClassInfo child);
 
-	CTV getVirtualSubCtv(CTV ctv, size_t vtable_position, size_t offset,
+	CTV getVirtualSubCtv(CTV ctv, usize vtable_position, usize offset,
 	                     ts::TypeDesc<> wanted_type);
 
 	void fillVtablePtr(CTV ctv, ts::ClassInfo base_class);

@@ -51,17 +51,17 @@ private:
 		operation::getDefault(operation::Defaultable::ConstructEmpty, int_desc.getType())({ctv_int});
 		ctv_int.getData<int8_t>().front() = 14;
 	
-		message(base::strConcat("there are ", (uint64_t)cons_parent.operations.size(), "operations"));
+		message(base::strConcat("there are ", (u64)cons_parent.operations.size(), "operations"));
 
 		operation::execConstructor(cons_parent, {ctv_int}, ctv_parent);
 	
 		auto x = exec::getMember(ctv_parent, parent_class.getMemberInfo(symbol0), parent_class);
 
-		assert(x.getData<int8_t>().front() == 14, base::strConcat("This member should be set to ", (uint64_t)(14), " but is ", (uint64_t)(x.getData<int8_t>().front())));
+		assert(x.getData<int8_t>().front() == 14, base::strConcat("This member should be set to ", (u64)(14), " but is ", (u64)(x.getData<int8_t>().front())));
 	
 		ctv_int.getData<int8_t>().front() = 28;
 
-		assert(x.getData<int8_t>().front() == 14, base::strConcat("This member should be set to ", (uint64_t)(14), " but is ", (uint64_t)(x.getData<int8_t>().front())));
+		assert(x.getData<int8_t>().front() == 14, base::strConcat("This member should be set to ", (u64)(14), " but is ", (u64)(x.getData<int8_t>().front())));
 
 
 

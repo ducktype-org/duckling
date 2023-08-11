@@ -38,11 +38,11 @@ namespace printer {
 			minLevel[printer::msgToInt(type)] = level;
 	}
 
-	void Console::setGeneralMax(size_t max) {
+	void Console::setGeneralMax(usize max) {
 		generalMax = max;
 	}
 
-	void Console::setMaxAmounts(MessageType type, size_t amount) {
+	void Console::setMaxAmounts(MessageType type, usize amount) {
 		if (type == MessageType::ALL)
 			maxAmounts.fill(amount);
 		else
@@ -68,9 +68,9 @@ namespace printer {
 	}
 
 	void Console::print(std::ostream& out) const {
-		std::array<size_t, TYPE_COUNT> currentAmounts = {};
+		std::array<usize, TYPE_COUNT> currentAmounts = {};
 		currentAmounts.fill(0);
-		size_t currentCount = 0;
+		usize currentCount = 0;
 
 		for (const MessagePack& pack : messagePacks) {
 			for (const Message& message : pack) {

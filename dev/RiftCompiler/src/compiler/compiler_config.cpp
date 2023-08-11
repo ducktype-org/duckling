@@ -26,7 +26,7 @@ namespace compiler {
 		}
 
 		if (parsed_args.wasOption("intTest")) {
-			out.output = parsed_args.getValue<int>("intTest");
+			out.output = parsed_args.getValue<i32>("intTest");
 		}
 
 		for (auto file: parsed_args.getNonOptionValues()) {

@@ -42,10 +42,10 @@ namespace clap {
 	
 	result<ParametersMap, ClapParsingError> Config::parse_internal(CLIArgs args) {
 		ParametersMap out;
-		std::size_t id = 0;
-		int i = 1;
-		std::size_t positional_parameters_count = 0;
-		std::size_t found_required_parameters_count = 0;
+		usize id = 0;
+		i32 i = 1;
+		usize positional_parameters_count = 0;
+		usize found_required_parameters_count = 0;
 
 		auto add_param = [&i, &out, &id, &found_required_parameters_count, &args](auto parameter_name, option<const ParameterConfig&> parameter_option) -> result<void, ClapParsingError> {
 			if (parameter_option.has_error()) {
@@ -75,7 +75,7 @@ namespace clap {
 				}
 				else {
 					base::RawView param = args.argv[i + 1];
-					if (!config.is_required() && param.size() >= 1 && param[0] == '-') {
+					if (!config.is_required() && param.size() >= 1 && param[0] == byte('-')) {
 						out.parameters.put(id, config.get_default_value().value());
 					} else {
 						i++;
@@ -94,7 +94,7 @@ namespace clap {
 		
 		for (; i < args.argc; i++) {
 			base::RawView what = args.argv[i];
-			if (what.size() > 2 && what[0] == '-' && what[1] == '-') {
+			if (what.size() > 2 && what[0] == byte('-') && what[1] == byte('-')) {
 				base::StrId parameter_name = base::StrId(what.subSuffix(2));
 				if (parameter_name.str() == "help") {
 					return failure(HelpMessage{});
@@ -103,12 +103,12 @@ namespace clap {
 				if (result.has_error()) {
 					return failure(result.error());
 				}
-			} else if (what.size() == 2 && what[0] == '-') {
-				char parameter_name = what[1];
-				if (parameter_name == 'h') {
+			} else if (what.size() == 2 && what[0] == byte('-')) {
+				byte parameter_name = what[1];
+				if (parameter_name == byte('h')) {
 					return failure(HelpMessage{});
 				}
-				auto result = add_param(parameter_name, get_parameter_config(parameter_name));
+				auto result = add_param(parameter_name, get_parameter_config(char(parameter_name)));
 				if (result.has_error()) {
 					return failure(result.error());
 				}

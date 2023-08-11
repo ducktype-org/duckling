@@ -1,27 +1,27 @@
 #pragma once
 
-#include <cstdint>
+#include <base/ints.hpp>
 #include <base/strongly_typed_int.hpp>
 
 namespace vm {
 
 	// @TODO: change to STRONG_TYPEDEF_IT when available
-	STRONG_TYPEDEF_INT(BlockId, std::uint64_t);
+	STRONG_TYPEDEF_INT_DIMENSIONAL(BlockId, u64);
 
 	class Pointer {
 	private:
 		BlockId block;
-		std::uint64_t offset;
+		u64 offset;
 	public:
-		Pointer(BlockId block_, std::uint64_t offset_): block(block_), offset(offset_) {}
+		Pointer(BlockId block_, u64 offset_): block(block_), offset(offset_) {}
 		BlockId getBlock() const {
 			return block;
 		}
-		std::uint64_t getOffset() const {
+		u64 getOffset() const {
 			return offset;
 		}
 
-		void addOffset(std::int64_t off) {
+		void addOffset(i64 off) {
 			// @TODO: range checking
 			offset += off;
 		}

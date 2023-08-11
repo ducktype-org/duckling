@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include <base/ints.hpp>
 #include <base/stringifyable_enum.hpp>
 
 /**
@@ -22,7 +22,7 @@
  * Opcodes not following this convention have additional description
  */
 
-MAKE_STRINGFYABLE_ENUM(vm, uint16_t, OpcodeFix8,
+MAKE_STRINGFYABLE_ENUM(vm, u16, OpcodeFix8,
 
 	mov_l64_imm,
 

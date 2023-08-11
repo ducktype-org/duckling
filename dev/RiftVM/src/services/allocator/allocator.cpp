@@ -14,7 +14,7 @@ namespace vm {
 		return block_id;
 	}
 
-	BlockId Allocator::makeArrayBlock(TypeCRef type, std::uint64_t length) {
+	BlockId Allocator::makeArrayBlock(TypeCRef type, u64 length) {
 		auto block_id = memory.reserveBlockID();
 		byte* data = new byte[type->getSize() * length];
 		memory.makeBlock(block_id, Block(block_id, type, length, base::ModRawView(data, type->getSize() * length)));

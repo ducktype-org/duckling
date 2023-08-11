@@ -3,16 +3,16 @@
 
 namespace base {
 	RawView RawView::memoryCopy() const {
-		auto new_data = new uint8_t[arr_size];
+		auto new_data = new byte[arr_size];
 		std::memcpy(new_data, begin, arr_size);
 		return {new_data, arr_size};
 	}
-	RawView RawView::subSuffix(size_t from) const {
+	RawView RawView::subSuffix(usize from) const {
 		return {begin + from, arr_size - from};
 	}
 	RawView::RawView(const char *const c_str): begin{reinterpret_cast<RawArray>(c_str)} {
 		arr_size = 0;
-		int pos = 0;
+		i32 pos = 0;
 		while (c_str[pos] != '\0') {
 			arr_size++;
 			pos++;
@@ -31,10 +31,10 @@ namespace base {
 		return stringView() == oth.stringView();
 	}
 
-	std::size_t RawView::size() const {
+	usize RawView::size() const {
 		return arr_size;
 	}
-	uint8_t RawView::operator[](std::size_t index) {
+	byte RawView::operator[](usize index) {
 		return begin[index];
 	}
 	RawArray RawView::getBegin() const {

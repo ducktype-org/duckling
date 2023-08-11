@@ -1,5 +1,6 @@
 #pragma once
 
+#include <base/ints.hpp>
 #include <set>
 #include <queue>
 #include <concepts>
@@ -52,7 +53,7 @@ class Emitter{
 		}
 		
 		[[nodiscard]]
-		std::size_t listenerCount() const noexcept {
+		usize listenerCount() const noexcept {
 			return listeners.size();
 		}
 };

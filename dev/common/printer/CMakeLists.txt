@@ -1,6 +1,6 @@
 add_library(Printer src/printer/printer.cpp)
 
-make_module(Printer USES)
+make_module(Printer USES Base)
 
 add_example(printer_example examples/example.cpp USES Printer)
 

@@ -65,11 +65,11 @@ namespace fs {
 		auto fpos = file.tellg();
 		file.seekg(0, std::ios::end);
 		std::streamoff fsize = file.tellg() - fpos;
-		size_t file_size = fsize;
+		usize file_size = fsize;
 		file.seekg(0, std::ios::beg);
 
 		// should read full file:
-		auto r_array = new uint8_t[file_size];
+		auto r_array = new byte[file_size];
 		file.read(reinterpret_cast<char*>(r_array), file_size);
 
 		return {r_array, file_size};

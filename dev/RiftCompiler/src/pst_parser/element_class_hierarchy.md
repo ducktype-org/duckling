@@ -3,7 +3,7 @@ Forward deklaracje są zapisane w odziemnym pliku/plikach
 Klasy mogą mieć statyczną metodę `parse`, która parsuje dowolne wyrażenie, zależnie na jakie tokeny trafi.
 
 **Element**  
-│ Główna klasa, która definiuje wspólny interface parse-owania i alokator-ów.  │ `inline void* operator new(size_t size);` - to robienia custom-owych alokator-ów w przyszłości
+│ Główna klasa, która definiuje wspólny interface parse-owania i alokator-ów.  │ `inline void* operator new(usize size);` - to robienia custom-owych alokator-ów w przyszłości
 │ `inline void operator delete(void* p)` - j.w.
 │ `virtual @TODO dprint() const = 0;` - Creates printer message of element debug representation
 │

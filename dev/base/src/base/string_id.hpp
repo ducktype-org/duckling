@@ -25,6 +25,8 @@ namespace base {
 		StrId(const StrId& oth) = default;
 		StrId(StrId&& oth) = default;
 
+		explicit StrId(char character);
+		
 		// Makes copy
 		explicit StrId(const base::RawView& data);
 		explicit StrId(const char* data);
@@ -63,7 +65,7 @@ namespace base {
 			return id < oth.id;
 		}
 
-		explicit operator size_t() const { return size_t(id); }
+		explicit operator usize() const { return usize(id); }
 
 		friend void swap(StrId& first, StrId& second) {
 			using std::swap;
@@ -89,7 +91,7 @@ namespace base {
 namespace std {
 	template <>
 	struct hash<base::StrId> {
-		size_t operator()(const base::StrId & x) const {
+		usize operator()(const base::StrId & x) const {
 			return x.id.asInt();
 		}
 	};

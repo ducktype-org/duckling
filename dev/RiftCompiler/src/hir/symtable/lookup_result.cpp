@@ -8,7 +8,7 @@ namespace symtable {
 	SymbolChain deAliasSymbolChain(hir::AnalysisState& state, const SymbolChain& chain) {
 		// @TODO: this does not handle non-unique symbols (overloaded)
 		SymbolChain out;
-		for (size_t i = 0; i < chain.size(); i++) {
+		for (usize i = 0; i < chain.size(); i++) {
 			auto de_aliased = chain[i]->getUniqueDeAlias(state);
 			out.insert(out.end(), de_aliased.begin(), de_aliased.end());
 		}

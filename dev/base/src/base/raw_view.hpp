@@ -1,13 +1,11 @@
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
+#include <base/ints.hpp>
 #include <string_view>
 #include <string>
 
 namespace base {
-	typedef const uint8_t* RawArray;
-
+	typedef const byte* RawArray;
 
 	/**
 	 * @brief Non owning byte array view
@@ -20,13 +18,13 @@ namespace base {
 		[[nodiscard]] RawView memoryCopy() const;
 
 		RawArray begin = nullptr;
-		size_t arr_size = 0;
+		usize arr_size = 0;
 
 	public:
 		RawView() = default;
 		RawView(const RawView&) = default;
 		RawView(RawView&&) = default;
-		RawView(RawArray begin, std::size_t size): begin{begin}, arr_size{size} {}
+		RawView(RawArray begin, usize size): begin{begin}, arr_size{size} {}
 
 		RawView& operator=(const RawView&) = default;
 
@@ -35,12 +33,12 @@ namespace base {
 
 		[[nodiscard]] std::string_view stringView() const;
 		[[nodiscard]] std::string stdString() const;
-		[[nodiscard]] RawView subSuffix(std::size_t from) const;
+		[[nodiscard]] RawView subSuffix(usize from) const;
 
-		[[nodiscard]] std::size_t size() const;
+		[[nodiscard]] usize size() const;
 		[[nodiscard]] RawArray getBegin() const;
 
-		uint8_t operator[](std::size_t index);
+		byte operator[](usize index);
 		bool operator==(const RawView& oth) const;
 	};
 
@@ -49,19 +47,19 @@ namespace base {
 	*/
 	class ModRawView {
 	private:
-		uint8_t* begin = nullptr;
-		size_t arr_size = 0;
+		byte* begin = nullptr;
+		usize arr_size = 0;
 
 	public:
 		ModRawView() = default;
 		ModRawView(const ModRawView&) = default;
 		ModRawView(ModRawView&&) = default;
-		ModRawView(uint8_t* begin, std::size_t size): begin{begin}, arr_size{size} {}
+		ModRawView(byte* begin, usize size): begin{begin}, arr_size{size} {}
 
 		ModRawView& operator=(const ModRawView&) = default;
 
-		[[nodiscard]] std::size_t size() const { return arr_size; };
-		[[nodiscard]] uint8_t* getBegin() const { return begin; }
+		[[nodiscard]] usize size() const { return arr_size; };
+		[[nodiscard]] byte* getBegin() const { return begin; }
 	};
 
 	class StrId;
@@ -70,8 +68,8 @@ namespace base {
 	 * Owning byte array view
 	*/
 	class OwningView {
-		uint8_t* begin{};
-		size_t size{};
+		byte* begin{};
+		usize size{};
 		friend class base::StrId;
 
 	public:
@@ -79,19 +77,19 @@ namespace base {
 		explicit OwningView(std::nullptr_t): begin(nullptr), size{0} {}
 
 		// Takes ownership, begin should be on heap
-		OwningView(uint8_t* begin, size_t size): begin{begin}, size{size} {}
+		OwningView(byte* begin, usize size): begin{begin}, size{size} {}
 
 		// Makes copy
 		explicit OwningView(const char* const c_str) {
 			auto aux = RawView(c_str).memoryCopy();
-			begin = const_cast<uint8_t*>(aux.begin);
+			begin = const_cast<byte*>(aux.begin);
 			size = aux.arr_size;
 		}
 
 		OwningView static copy(RawView view) {
 			OwningView out;
 			auto aux = view.memoryCopy();
-			out.begin = const_cast<uint8_t*>(aux.begin);
+			out.begin = const_cast<byte*>(aux.begin);
 			out.size = aux.arr_size;
 			return out;
 		}
@@ -121,7 +119,7 @@ namespace base {
 namespace std {
 	template<>
 	struct hash<base::RawView> {
-		std::size_t operator()(const base::RawView& k) const {
+		usize operator()(const base::RawView& k) const {
 			return std::hash<std::string_view>()(k.stringView());
 		}
 	};

@@ -23,7 +23,7 @@
 	{                                                          \
 		nextInstruction(FRAME(bc), FRAME(instruction_pointer), \
 		                opcode, arg0, arg1);                   \
-		goto *opcode_label[static_cast<uint64_t>(opcode)];     \
+		goto *opcode_label[static_cast<u64>(opcode)];     \
 	}
 
 #define OP_CASE_HEADER(opcode) case OpcodeFix8 ::opcode:
@@ -33,7 +33,7 @@
 		IF_NOT_CG(OP_CASE_HEADER(opcode))  \
 		IF_CG(OP_LABEL_HEADER(opcode))     \
 	{ \
-		IF_CG (static_assert(opcode_label[static_cast<uint64_t>(OpcodeFix8:: opcode)] == LABEL_PTR(opcode)); ); \
+		IF_CG (static_assert(opcode_label[static_cast<u64>(OpcodeFix8:: opcode)] == LABEL_PTR(opcode)); ); \
 		{{                    \
 			body              \
 		}                     \

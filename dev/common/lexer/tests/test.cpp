@@ -44,7 +44,7 @@ private:
 		assert(td.tokens.size() == 8, "Wrong amount of top-level token groups");
 	}
 
-	void checkGroupIsGroup(size_t index) {
+	void checkGroupIsGroup(usize index) {
 		assert(td.tokens[index].isGroup(), "Group is not a group");
 	}
 
@@ -64,13 +64,13 @@ private:
 		assert(inner_tokens[2].getType() == lexer::Token::Type::CurlyGroup,
 		       "Second group is not CurlyGroup");
 
-		for (size_t i = 0; i < 3; i++) {
+		for (usize i = 0; i < 3; i++) {
 			assert(inner_tokens[i].getRecursive().empty(),
 			       "Group " + std::to_string(i) + " is not empty");
 		}
 	}
 
-	template<size_t index, lexer::Token::Type token_type, bool (lexer::Token::*isTokenType)() const>
+	template<usize index, lexer::Token::Type token_type, bool (lexer::Token::*isTokenType)() const>
 	void testTokenGroup() {
 		checkGroupIsGroup(index);
 		auto& inner_tokens = td.tokens[index].getRecursive();

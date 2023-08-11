@@ -7,7 +7,7 @@
 1. `enum MessageType` (Error = 0, Debug = 1, Note = 2, Hint = 3, ...)
     Powinna mieć określony typ, powinna być możliwa konwersja na odpowiedniego int-a (może być to funkcja).
 
-1. `constexpr size_t typeCount` określającą ilość typów wiadomości (kod powinien zakładać, że ta wartość może się zmienić)
+1. `constexpr usize typeCount` określającą ilość typów wiadomości (kod powinien zakładać, że ta wartość może się zmienić)
 
 1. `enum Color`, zmienną `Color defaultColor = White`.
 
@@ -33,9 +33,9 @@
     * (2) wartość `LevelType` dla każdego typu komunikatu, który określa minimalny poziom danego typu wiadomości.
         (powinien być możliwy łatwy refactor na maksymalny)
         (prawdopodobnie `std::array<LevelType, typeCount>`)
-    * (3) Wartość `generalMax` typu `size_t` określającą całkowitą maksymalną liczbę komunikatów.
-    * (4) Wartości typu `size_t` określającą maksymalną liczbę komunikatów każdego typu.
-        (prawdopodobnie `std::array<size_t, typeCount>`)
+    * (3) Wartość `generalMax` typu `usize` określającą całkowitą maksymalną liczbę komunikatów.
+    * (4) Wartości typu `usize` określającą maksymalną liczbę komunikatów każdego typu.
+        (prawdopodobnie `std::array<usize, typeCount>`)
 
     Posiada on też funkcję `printErr`, która wypisuje wszystkie komunikaty na `stderr` (z kolorami), ale:
      - pojedynczy MessagePack jest traktowany jako wiele oddzielnych komunikatów w nich zawartych.

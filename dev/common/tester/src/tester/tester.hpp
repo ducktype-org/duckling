@@ -38,7 +38,7 @@ namespace tester {
 		};
 		void resultHandler(const TestData& test, const TestResult& res);
 		void prolog();
-		void epilog(size_t passed, size_t failed, double time);
+		void epilog(usize passed, usize failed, double time);
 		
 		TestResult* curr_global_res;
 		void runTest(TestType test);

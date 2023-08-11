@@ -8,11 +8,11 @@ class SimpleIdMapsTest;
 
 class A {
 private:
-	int x;
-	size_t count;
+	i32 x;
+	usize count;
 	SimpleIdMapsTest& test;
 public:
-	A(int x, SimpleIdMapsTest& test) : x(x), count(0), test(test) {}
+	A(i32 x, SimpleIdMapsTest& test) : x(x), count(0), test(test) {}
 
 	A(const A& other);
 
@@ -85,7 +85,7 @@ private:
 	}
 
 	static base::RawView make_view(std::string_view view) {
-		return base::RawView({reinterpret_cast<const uint8_t*>(view.data()), view.size()});
+		return base::RawView({reinterpret_cast<const byte*>(view.data()), view.size()});
 	}
 
 	void strIdTest() {

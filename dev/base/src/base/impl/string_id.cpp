@@ -1,4 +1,5 @@
 #include "../string_id.hpp"
+#include "../ints.hpp"
 #include <iostream>
 #include <cstring>
 
@@ -7,22 +8,22 @@ namespace base {
 	StrId::ToDataType StrId::to_data_map;
 	StrId::ToIdType StrId::to_id_map;
 
-	constexpr size_t default_buffer_size = 32768;
+	constexpr usize default_buffer_size = 32768;
 	typedef std::vector<base::OwningView> BufferList;
 	namespace {
 		BufferList buffer_list;
 
 		// remanding size of last buffer (equals default_buffer_size - next_pos)
-		size_t size_left = 0;
+		usize size_left = 0;
 
 		// next free position in last buffer
-		size_t next_pos = 0;
+		usize next_pos = 0;
 
 		bool any_buffer_exits = false;
 	}
 
 	void newBuffer() {
-		auto new_buffer = new uint8_t[default_buffer_size];
+		auto new_buffer = new byte[default_buffer_size];
 		buffer_list.emplace_back(new_buffer, default_buffer_size);
 		size_left = default_buffer_size;
 		next_pos = 0;
@@ -81,8 +82,10 @@ namespace base {
 	StrId::StrId(const char* data) :
 			StrId(base::RawView(data)) {}
 
+	StrId::StrId(char character): StrId(std::string(1, character).c_str()) {}
+
 	void StrId::dumpData(std::ostream& out) {
-		int i = 0;
+		i32 i = 0;
 		for (auto v: to_data_map) {
 			if (v) {
 				out << i << ": " << v->stringView() << "\n";

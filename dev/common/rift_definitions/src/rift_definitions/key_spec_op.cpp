@@ -15,7 +15,7 @@ namespace rift_def {
 	}
 	
 	base::StrId makeStrId(std::string_view view) {
-		return base::StrId(base::RawView({reinterpret_cast<const uint8_t*>(view.data()), view.size()}));
+		return base::StrId(base::RawView({reinterpret_cast<const byte*>(view.data()), view.size()}));
 	}
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)

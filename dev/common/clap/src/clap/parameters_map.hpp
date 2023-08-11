@@ -8,22 +8,23 @@
 namespace clap{
 	class ParametersMap {
 		private:
-			base::HashMap<base::StrId, std::size_t> long_names_to_id;
-			base::HashMap<char, std::size_t> short_names_to_id;
+			base::HashMap<base::StrId, usize> long_names_to_id;
+			base::HashMap<char, usize> short_names_to_id;
 		
-			std::unordered_set<std::size_t> flags;
-			base::HashMap<std::size_t, base::StrId> parameters;
+			std::unordered_set<usize> flags;
+			base::HashMap<usize, base::StrId> parameters;
 			
-			option<std::size_t> to_id(base::StrId name) const;
-			option<std::size_t> to_id(const base::RawView& name) const;
-			option<std::size_t> to_id(char name) const;
+			option<usize> to_id(base::StrId name) const;
+			option<usize> to_id(const base::RawView& name) const;
+			option<usize> to_id(char name) const;
+			option<usize> to_id(byte name) const;
 			
-			option<base::RawView> get(std::size_t id) const;
-			bool contains(std::size_t id) const;
+			option<base::RawView> get(usize id) const;
+			bool contains(usize id) const;
 		public:
 			template <class T>
 			option<base::RawView> get(T name) const {
-				return to_id(name).flat_map([this](std::size_t id) {
+				return to_id(name).flat_map([this](usize id) {
 					return get(id);
 				});
 			}
@@ -31,7 +32,7 @@ namespace clap{
 			template <class T>
 			bool contains(T name) const {
 				return to_id(name)
-					.map([this](std::size_t id) {
+					.map([this](usize id) {
 						return contains(id);
 					})
 					.value_or(false);

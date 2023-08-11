@@ -4,9 +4,9 @@
 class SimpleTesterTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleTesterTest
-	int test_no;
+	i32 test_no;
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Tester Test", int test_no) {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Tester Test", i32 test_no) {
 		this->test_no = test_no;
 		TESTER_ADD_TEST(choose);
 	}
@@ -35,7 +35,7 @@ private:
 
 		assertThrows<std::exception>([&](){throw std::exception();}, "std::exception");
 
-		assertThrows<int>([&](){throw 3;}, "int");
+		assertThrows<i32>([&](){throw 3;}, "int");
 	}
 
 	void failing_is_not_throwing_std() {
@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 	 * Currently there is no way to specify that. 
 	 * @TODO: change that when "expected to fail" is added
 	 */ 
-	for(int i = 1 ; i < 4; i++) {
+	for(i32 i = 1 ; i < 4; i++) {
 		SimpleTesterTest failing_test(std::move(config), i);
 		if (failing_test.run())
 			return 1;

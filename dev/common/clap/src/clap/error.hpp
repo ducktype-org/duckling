@@ -8,8 +8,8 @@
 
 namespace clap {
 	struct PositionalParametersCountError {
-		std::size_t required;
-		std::size_t found;
+		usize required;
+		usize found;
 		
 		std::string print() const;
 	};
@@ -31,7 +31,7 @@ namespace clap {
 	struct UnexpectedParameter {
 		base::StrId name;
 		
-		UnexpectedParameter(char c);
+		UnexpectedParameter(byte c);
 		UnexpectedParameter(base::StrId c);
 		std::string print() const;
 	};

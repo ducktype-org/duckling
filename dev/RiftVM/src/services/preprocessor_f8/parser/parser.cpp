@@ -17,10 +17,10 @@
 
 namespace assemble {
 
-	int64_t strIdToNum(base::StrId str) {
+	i64 strIdToNum(base::StrId str) {
 		auto view = str.strView();
 
-		int64_t out;
+		i64 out;
 		std::from_chars_result res = std::from_chars(view.data(), view.data() + view.size(), out);
 		if (res.ec == std::errc::invalid_argument) {
 			throw std::invalid_argument{"invalid_argument"};
@@ -35,11 +35,11 @@ namespace assemble {
 
 	struct OpCodeNumArg {
 		OpCodeArgType type;
-		int64_t value;
+		i64 value;
 	};
 
 	struct OpCodeLabelArg {
-		int64_t value;
+		i64 value;
 		bool type_value;
 		base::StrId label_name;
 	};
@@ -47,7 +47,7 @@ namespace assemble {
 	typedef std::variant<OpCodeNumArg, OpCodeLabelArg> OpCodeAnyArg;
 
 	/// TODO: delete redundant using (the same as in type.hpp)
-	using TypeSize = std::uint64_t;
+	using TypeSize = u64;
 
 	struct PrimitiveType {
 		base::StrId name;
@@ -262,7 +262,7 @@ namespace assemble {
 
 	struct ByteCode: AsmElement {
 		std::vector<tpc::ParserRef<OpCode>> opcodes;
-		base::Map<base::StrId, size_t> label_position;
+		base::Map<base::StrId, usize> label_position;
 
 		static tpc::ParserRef<ByteCode> parse(tpc::ParserState& state) {
 			auto out = tpc::makeRef<ByteCode>();
@@ -289,7 +289,7 @@ namespace assemble {
 				}
 			}
 
-			for (int i = 0; i < out->opcodes.size(); i++) {
+			for (i32 i = 0; i < out->opcodes.size(); i++) {
 				for (auto& opcode: out->opcodes[i]->args) {
 					
 					VARIANT_MATCH(opcode, 
@@ -298,7 +298,7 @@ namespace assemble {
 								out->label_position.find(label.label_name);
 							if (it != out->label_position.end()) {
 								label.value =
-									static_cast<int64_t>(it->second) - i - 1;
+									static_cast<i64>(it->second) - i - 1;
 								label.type_value = false;
 							} else {
 								// @TODO: not failing here allow for "type arguments"
@@ -330,12 +330,12 @@ namespace assemble {
 		~ByteCode() override = default;
 	};
 
-	constexpr size_t size_t_max = (size_t)(-1);
+	constexpr usize size_t_max = (usize)(-1);
 	struct Func: AsmElement {
 		tpc::Identifier name;
-		size_t arg_size = size_t_max;
-		size_t local_size = size_t_max;
-		size_t ret_size = size_t_max;
+		usize arg_size = size_t_max;
+		usize local_size = size_t_max;
+		usize ret_size = size_t_max;
 		tpc::ParserRef<ByteCode> code;
 
 		static tpc::ParserRef<Func> parse(tpc::ParserState& state);
@@ -810,9 +810,9 @@ namespace assemble {
 		}
 	}
 
-	uint16_t nameToOpcodeValue(base::StrId str) {
+	u16 nameToOpcodeValue(base::StrId str) {
 		try {
-			return static_cast<uint16_t>(base::strToEnum<vm::OpcodeFix8>(str));
+			return static_cast<u16>(base::strToEnum<vm::OpcodeFix8>(str));
 		}
 		catch (std::out_of_range& err) {
 			// @TODO: better errors
@@ -840,7 +840,7 @@ namespace assemble {
 								label.value = 0;
 							}
 							else {
-								label.value = static_cast<int64_t>(uint64_t(type.value()->getId()));
+								label.value = static_cast<i64>(u64(type.value()->getId()));
 							}
 						}
 					})
@@ -859,27 +859,27 @@ namespace assemble {
 				break;
 			}
 			case 1: {
-				int64_t arg_0;
+				i64 arg_0;
 				std::visit([&arg_0](auto& arg) { arg_0 = arg.value; }, op->args[0]);
 				funcData.bc.emplace_back(
 					vm::Fix8Instruction{
 						.opcode = nameToOpcodeValue(op->opcode_name),
-						.arg0 = static_cast<int32_t>(arg_0),
+						.arg0 = static_cast<i32>(arg_0),
 						.arg1 = 0
 					}
 				);
 				break;
 			}
 			case 2: {
-				int64_t arg_0;
-				int64_t arg_1;
+				i64 arg_0;
+				i64 arg_1;
 				std::visit([&arg_0](auto& arg) { arg_0 = arg.value; }, op->args[0]);
 				std::visit([&arg_1](auto& arg) { arg_1 = arg.value; }, op->args[1]);
 				funcData.bc.emplace_back(
 					vm::Fix8Instruction{
 						.opcode = nameToOpcodeValue(op->opcode_name),
-						.arg0 = static_cast<int32_t>(arg_0),
-						.arg1 = static_cast<int32_t>(arg_1)
+						.arg0 = static_cast<i32>(arg_0),
+						.arg1 = static_cast<i32>(arg_1)
 					}
 				);
 				break;
@@ -891,7 +891,7 @@ namespace assemble {
 		// executor assumes it
 		funcData.bc.emplace_back(
 			vm::Fix8Instruction{
-				.opcode = static_cast<uint16_t>(vm::OpcodeFix8::nop),
+				.opcode = static_cast<u16>(vm::OpcodeFix8::nop),
 				.arg0 = 0,
 				.arg1 = 0
 			}
@@ -908,9 +908,9 @@ namespace assemble {
 
 		vm::Code instructions_code;
 
-		size_t main_id = SIZE_MAX;
+		usize main_id = SIZE_MAX;
 
-		for (int idx = 0; idx < code.code->functions.size(); idx++) {
+		for (i32 idx = 0; idx < code.code->functions.size(); idx++) {
 			if (code.code->functions[idx]->name.value.strView() == "main") {
 				main_id = idx;
 				break;

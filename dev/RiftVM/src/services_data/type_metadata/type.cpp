@@ -31,7 +31,7 @@ namespace vm {
 		kind = kind::Pointer{inner};
 	}
 	
-	void Type::defineStaticTable(TypeRef inner, std::uint64_t table_size) {
+	void Type::defineStaticTable(TypeRef inner, u64 table_size) {
 		RIFT_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
@@ -207,7 +207,7 @@ namespace vm {
 	}
 	
 	// staticTable
-	option<std::uint64_t> Type::getStaticTableSize() const {
+	option<u64> Type::getStaticTableSize() const {
 		return get<kind::StaticTable>()
 			.map([](const kind::StaticTable& table) { return table.size; });
 	}
@@ -236,7 +236,7 @@ namespace vm {
 	option<TypeCRef> Type::getFieldTypeByOffset(Offset offset) const {
 		return get<kind::Data>()
 			.flat_map([offset](const kind::Data& data) {
-				std::int64_t begin = -1, end = data.fields.size(), middle;
+				i64 begin = -1, end = data.fields.size(), middle;
 				while (end - begin > 1) {
 					middle = (begin + end) / 2;
 					if (data.fields[middle].offset <= offset)
@@ -253,7 +253,7 @@ namespace vm {
 	option<TypeCRef> Type::getFieldTypeByOffsetRecursive(Offset offset) const {
 		return get<kind::Data>()
 			.flat_map([this, offset](const kind::Data& data) {
-				std::int64_t begin = -1, end = data.fields.size(), middle;
+				i64 begin = -1, end = data.fields.size(), middle;
 				while (end - begin > 1) {
 					middle = (begin + end) / 2;
 					if (data.fields[middle].offset <= offset)
@@ -269,11 +269,11 @@ namespace vm {
 	}
 	
 	// variant
-	option<std::uint64_t> Type::getVariantCount() const {
+	option<u64> Type::getVariantCount() const {
 		return get<kind::Variant>()
 			.map([](const kind::Variant& variant) { return variant.alternatives.size(); });
 	}
-	option<TypeCRef> Type::getNthVariantType(std::uint64_t variant_id) const {
+	option<TypeCRef> Type::getNthVariantType(u64 variant_id) const {
 		return get<kind::Variant>()
 			.flat_map([variant_id](const kind::Variant& variant) { 
 				if (variant_id >= variant.alternatives.size()) {
@@ -284,12 +284,12 @@ namespace vm {
 	}
 	
 	// function
-	option<std::uint64_t> Type::getParameterCount() const {
+	option<u64> Type::getParameterCount() const {
 		return get<kind::Function>()
 			.map([](const kind::Function& function) { return function.parameters.size(); });
 	}
 	
-	option<TypeCRef> Type::getNthParameterType(std::uint64_t parameter_id) const {
+	option<TypeCRef> Type::getNthParameterType(u64 parameter_id) const {
 		return get<kind::Function>()
 			.flat_map([parameter_id](const kind::Function& function) { 
 				if (parameter_id >= function.parameters.size()) {

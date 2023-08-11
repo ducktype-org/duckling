@@ -10,14 +10,14 @@ namespace vm {
 
 	struct FuncData {
 		ByteCode bc;
-		size_t stack_size;
-		size_t arg_size;
-		size_t ret_size;
+		usize stack_size;
+		usize arg_size;
+		usize ret_size;
 	};
 
 	struct Code {
 		std::vector<FuncData> functions;
-		size_t main_id;
+		usize main_id;
 	};
 }
 

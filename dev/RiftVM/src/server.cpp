@@ -12,7 +12,7 @@ crow::response convertError(const vm::api::ApiError& apiError) {
 		400, 
 		std::visit(
 			[](const auto& v) {
-				return JS::serializeStruct(v);
+				return "JSON is broken\n";//JS::serializeStruct(v);
 			},
 			apiError
 		)
@@ -22,7 +22,7 @@ crow::response convertError(const vm::api::ApiError& apiError) {
 template<class T, class E>
 crow::response toResponse(const result<T, E>& x) {
 	static auto convert = [](const auto& v) {
-		return crow::response(200, JS::serializeStruct(v));
+		return crow::response(200, /*JS::serializeStruct(v)*/ "{OK, json is broken}");
 	};
 	return convertResult<T, E, crow::response>(x, convert, convertError);
 }
@@ -35,7 +35,7 @@ crow::response toResponse(const result<void, E>& x) {
 	return convertResult<E, crow::response>(x, convert, convertError);
 }
 
-void server(int port) {
+void server(i32 port) {
 	crow::SimpleApp app;
 
 	CROW_ROUTE(app, "/status/<uint>")([](vm::PID pid) {
@@ -110,12 +110,12 @@ void server(int port) {
 				.map([](const vm::TypeCRef& type_ptr){ return *type_ptr; }));
 		});
 	CROW_ROUTE(app, "/data/block/<uint>/<uint>")
-		([](vm::PID pid, std::uint32_t block_id) {
+		([](vm::PID pid, u32 block_id) {
 			return toResponse(vm::api::getBlock(pid, block_id)
 				.map([](const vm::api::response::Block& block) {
-					const std::uint8_t* begin = block.data.getBegin();
-					const std::uint8_t* end = begin + block.data.size();
-					return std::vector<vm::byte>(begin, end);
+					const byte* begin = block.data.getBegin();
+					const byte* end = begin + block.data.size();
+					return std::vector<byte>(begin, end);
 				}));
 		});
     app.port(port).run();

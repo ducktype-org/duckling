@@ -29,7 +29,7 @@ namespace operation {
 			                             " got ",
 			                             ctvs.size()))
 
-			for (size_t i = 0; i < ctvs.size(); i++) {
+			for (usize i = 0; i < ctvs.size(); i++) {
 				// @TODO: this should check if types are compatible.
 				// (possibly doing some conversion, or discarding consts?)
 				RIFT_ASSERT(ctvs[i].type == signature.getParameterTypeList()[i],
@@ -72,8 +72,8 @@ namespace operation {
 	struct Call {
 		const operation::OperationId op;
 		const ts::TypeDesc<> type;
-		const size_t offset;
-		const size_t size;
+		const usize offset;
+		const usize size;
 
 		exec::CTV operator()(const std::vector<exec::CTV>& ctvs) const {
 			return getOperation(op)(ctvs);

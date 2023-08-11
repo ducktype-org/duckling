@@ -2,12 +2,11 @@
 
 #include <filesystem/encoding.hpp>
 #include <base/raw_view.hpp>
-#include <cstddef>
 #include <vector>
 #include <string>
 
 namespace lexer {
-	constexpr uint8_t bad_ascii = static_cast<uint8_t>(0b11111111);
+	constexpr uchar bad_ascii = static_cast<uchar>(0b11111111);
 	class CharArray;
 
 	/**
@@ -83,9 +82,11 @@ namespace lexer {
 
 		private:
 			Type type_ = Empty;
-			uint8_t ascii_value = 0;
+			uchar ascii_value = 0;
 			base::RawArray raw_begin = nullptr;
-			uint8_t size = 0;
+
+			// @TODO: this u8 is strange
+			u8 size = u8{0};
 
 			Char() = default;
 
@@ -112,11 +113,11 @@ namespace lexer {
 			const Array& getArray() const;
 			
 			[[nodiscard]]
-			base::RawView composeRaw(size_t from, size_t to) const;
+			base::RawView composeRaw(usize from, usize to) const;
 			[[nodiscard]]
-			base::RawView getRaw(size_t i) const;
+			base::RawView getRaw(usize i) const;
 			[[nodiscard]]
-			const Char& get(size_t i) const;
+			const Char& get(usize i) const;
 			
 			~CharArray();
 		private:

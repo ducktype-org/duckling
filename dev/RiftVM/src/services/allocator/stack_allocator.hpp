@@ -30,7 +30,7 @@ namespace vm {
 				return block_id;
 			}
 
-			BlockId makeArrayBlock(TypeCRef type, std::uint64_t length, base::ModRawView data) {
+			BlockId makeArrayBlock(TypeCRef type, u64 length, base::ModRawView data) {
 				auto block_id = memory.reserveBlockID();
 				memory.makeBlock(block_id, Block(block_id, type, length, data));
 				return block_id;

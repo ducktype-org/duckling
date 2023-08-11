@@ -69,7 +69,7 @@ namespace base {
 	class VectorMap {
 	private:
 		std::vector<std::optional<DATA_T>> map;
-		size_t element_count{};
+		usize element_count{};
 	public:
 
 		typedef VectorMap SelfType;
@@ -88,8 +88,8 @@ namespace base {
 		~VectorMap() = default;
 
 		DATA_T& operator[](const KEY_T key) {
-			if (size_t(key) < map.size() and map.at(size_t(key)).has_value()) {
-				return *map.at(size_t(key));
+			if (usize(key) < map.size() and map.at(usize(key)).has_value()) {
+				return *map.at(usize(key));
 			}
 			else {
 				throw base::LogicError("No value assigned to key in VectorMap");
@@ -97,35 +97,35 @@ namespace base {
 		};
 
 		void put(KEY_T key) {
-			if (size_t(key) >= map.size()) {
+			if (usize(key) >= map.size()) {
 				map.resize(key + 1);
 			}
-			if (!map.at(size_t(key)).has_value()) {
+			if (!map.at(usize(key)).has_value()) {
 				element_count++;
 			}
-			map.at(size_t(key)) = DATA_T();
+			map.at(usize(key)) = DATA_T();
 		};
 
 		void put(KEY_T key, DATA_T&& data) 
 		requires is_move {
-			if (size_t(key) >= map.size()) {
-				map.resize(size_t(key) + 1);
+			if (usize(key) >= map.size()) {
+				map.resize(usize(key) + 1);
 			}
-			if (!map.at(size_t(key)).has_value()) {
+			if (!map.at(usize(key)).has_value()) {
 				element_count++;
 			}
-			map.at(size_t(key)).emplace(std::move(data));
+			map.at(usize(key)).emplace(std::move(data));
 		}
 
 		void put(KEY_T key, const DATA_T& data) 
 		requires is_copy {
-			if (size_t(key) >= map.size()) {
-				map.resize(size_t(key) + 1);
+			if (usize(key) >= map.size()) {
+				map.resize(usize(key) + 1);
 			}
-			if (!map.at(size_t(key)).has_value()) {
+			if (!map.at(usize(key)).has_value()) {
 				element_count++;
 			}
-			map.at(size_t(key)).emplace(data);
+			map.at(usize(key)).emplace(data);
 		}
 
 		template<class... Args> void emplace(KEY_T key, Args&&... args) {
@@ -133,23 +133,23 @@ namespace base {
 		}
 
 		bool contains(KEY_T key) const {
-			if (size_t(key) >= map.size())
+			if (usize(key) >= map.size())
 				return false;
-			return map.at(size_t(key)).has_value();
+			return map.at(usize(key)).has_value();
 		}
 
 		bool erase(KEY_T key) {
-			if (size_t(key) >= map.size())
+			if (usize(key) >= map.size())
 				return false;
-			if (map.at(size_t(key)).has_value()) {
-				map.at(size_t(key)).reset();
+			if (map.at(usize(key)).has_value()) {
+				map.at(usize(key)).reset();
 				element_count--;
 				return true;
 			}
 			return false;
 		}
 
-		size_t size() const {
+		usize size() const {
 			return element_count;
 		}
 

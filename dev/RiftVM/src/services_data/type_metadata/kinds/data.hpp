@@ -14,7 +14,7 @@ namespace vm::kind {
 
 	struct Data {
 		// @todo: change to strongly typed when it will be in utils
-		using FieldId = std::uint64_t;
+		using FieldId = u64;
 		
 		// @todo when hashmap has operator = change to base::HashMap
 		std::unordered_map<base::StrId, FieldId> field_name_map;

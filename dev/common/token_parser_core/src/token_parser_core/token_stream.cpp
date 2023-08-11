@@ -31,35 +31,35 @@ namespace tpc {
 		return (where >= to ? sentinel : tokens[where++]);
 	}
 
-	const Token& TokenStream::peek(std::size_t fwd) const {
+	const Token& TokenStream::peek(usize fwd) const {
 		return (where + fwd >= to ? sentinel : tokens[where + fwd]);
 	}
 
-	void TokenStream::skip(std::size_t n) {
+	void TokenStream::skip(usize n) {
 		where += n;
 	}
 
-	bool TokenStream::isKeyword(std::size_t fwd) const {
+	bool TokenStream::isKeyword(usize fwd) const {
 		return peek(fwd).isKeyword();
 	}
 
-	Keyword TokenStream::asKeyword(std::size_t fwd) const {
+	Keyword TokenStream::asKeyword(usize fwd) const {
 		return peek(fwd).asKeyword();
 	}
 
-	bool TokenStream::isSpecial(std::size_t fwd) const {
+	bool TokenStream::isSpecial(usize fwd) const {
 		return peek(fwd).isSpecial();
 	}
 
-	Special TokenStream::asSpecial(std::size_t fwd) const {
+	Special TokenStream::asSpecial(usize fwd) const {
 		return peek(fwd).asSpecial();
 	}
 
-	bool TokenStream::isOperator(std::size_t fwd) const {
+	bool TokenStream::isOperator(usize fwd) const {
 		return peek(fwd).isOperator();
 	}
 
-	std::size_t TokenStream::size() const {
+	usize TokenStream::size() const {
 	  return to - where;
 	}
 		

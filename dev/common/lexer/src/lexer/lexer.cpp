@@ -35,15 +35,15 @@ namespace lexer {
 		++where_;
 	}
 
-	void Lexer::skip(std::size_t n) {
-		for(std::size_t i = 0; i < n; i++) next();
+	void Lexer::skip(usize n) {
+		for(usize i = 0; i < n; i++) next();
 	}
 
-	bool Lexer::tryRawValue(char rawValue, std::size_t fwd) const {
+	bool Lexer::tryRawValue(char rawValue, usize fwd) const {
 		return charArray_.getArray().size() > where_ + fwd && peek(fwd).isAsciiValue(rawValue);
 	}
 
-	const Char& Lexer::peek(std::size_t fwd) const {
+	const Char& Lexer::peek(usize fwd) const {
 		return charArray_.get(where_ + fwd);
 	}
 
@@ -51,7 +51,7 @@ namespace lexer {
 		return "(" + std::to_string(lineNumber_) + ":" + std::to_string(columnNumber_) + ")";
 	}
 
-	void Lexer::addTokenMsg(size_t begin, size_t end,
+	void Lexer::addTokenMsg(usize begin, usize end,
 		std::string_view token_type, printer::MessageType message_type) {
 
 		if (token_messages) {
@@ -73,7 +73,7 @@ namespace lexer {
 	}
 
 	void Lexer::parseSingleInto(Tokens& output) {
-		std::size_t begin = where_;
+		usize begin = where_;
 		Token::Position position = {lineNumber_, columnNumber_, where_};
 		if(isEOF()) {
 			// @TODO: error
@@ -81,22 +81,22 @@ namespace lexer {
 		}
 		// @TODO: for now comments aren't saved because it's way to hard to parse with the current parser
 		else if(isCommentBegin()) {
-			std::size_t end = comment(/*output*/);
+			usize end = comment(/*output*/);
 			addTokenMsg(begin + 2, end, "line comment", printer::MessageType::DEBUG);
 			//output.push_back(Token::makeComment(charArray_.composeRaw(begin + 2, end), position));
 		}
 		else if(isBlockCommentBegin()) {
-			std::size_t end = blockComment();
+			usize end = blockComment();
 			addTokenMsg(begin + 2, end, "block comment", printer::MessageType::DEBUG);
 			//output.push_back(Token::makeComment(charArray_.composeRaw(begin + 2, end), position));
 		}
 		else if(peek().isOperator()) {
-			std::size_t end = oper();
+			usize end = oper();
 			addTokenMsg(begin, end, "operator", printer::MessageType::DEBUG);
 			output.push_back(Token::makeOperator(charArray_.composeRaw(begin, end), position));
 		}
 		else if(peek().isCharacter()) {
-			std::size_t end = identifier();
+			usize end = identifier();
 			std::string message;
 			output.push_back(Token::makeIdentifier(charArray_.composeRaw(begin, end), position));
 			if (output.back().getType() == Token::Type::Identifier) {
@@ -107,7 +107,7 @@ namespace lexer {
 			}
 		}
 		else if(isStringBegin()) {
-			std::size_t end = string();
+			usize end = string();
 			addTokenMsg(begin + 1, end, "string", printer::MessageType::DEBUG);
 			output.push_back(Token::makeString(charArray_.composeRaw(begin + 1, end), position));
 		}
@@ -122,13 +122,13 @@ namespace lexer {
 				console.add({{{"group end"}}, printer::MessageType::DEBUG});
 			}
 			else {
-				std::size_t end = special();
+				usize end = special();
 				addTokenMsg(begin, end, "special", printer::MessageType::DEBUG);
 				output.push_back(Token::makeSpecial(charArray_.composeRaw(begin, end),position));
 			}
 		}
 		else if(peek().isDigit()) {
-			std::size_t end = numLiteral();
+			usize end = numLiteral();
 			addTokenMsg(begin, end, "numLiteral", printer::MessageType::DEBUG);
 			output.push_back(Token::makeNumLiteral(charArray_.composeRaw(begin, end), position));
 		}
@@ -146,9 +146,9 @@ namespace lexer {
 	}
 
 	// @TODO: think if we want to allow some kind of nested single line comments, the version commented out below doesn't work
-	std::size_t Lexer::comment(/*Tokens& output*/) {
+	usize Lexer::comment(/*Tokens& output*/) {
 		skip(2); // "//"
-		//std::size_t begin = where_;
+		//usize begin = where_;
 		//Token::Position position = {lineNumber_, columnNumber_, where_};
 		while (true) {
 			if (isEOF()) {return where_ - 1;}
@@ -166,7 +166,7 @@ namespace lexer {
 		}
 	}
 
-	std::size_t Lexer::blockComment() {
+	usize Lexer::blockComment() {
 		skip(2); // "/*"
 		while(true) {
 			if (isEOF()) {
@@ -191,14 +191,14 @@ namespace lexer {
 		}
 	}
 
-	std::size_t Lexer::oper() {
+	usize Lexer::oper() {
 		while (!isEOF() and peek().isOperator()) {
 			next();
 		}
 		return where_ - 1;
 	}
 
-	std::size_t Lexer::identifier() {
+	usize Lexer::identifier() {
 		next(); // first char - character
 		while (!isEOF() and (peek().isCharacter() || peek().isDigit())) {
 			next();
@@ -206,12 +206,12 @@ namespace lexer {
 		return where_ - 1;
 	}
 
-	std::size_t Lexer::special() {
+	usize Lexer::special() {
 		next();
 		return where_ - 1;
 	}
 
-	std::size_t Lexer::numBinaryLiteral() {
+	usize Lexer::numBinaryLiteral() {
 		skip(2); // 0b
 		while (!peek().isEOF()) {
 			if(!peek().isAsciiValue('0') && !peek().isAsciiValue('1'))
@@ -224,7 +224,7 @@ namespace lexer {
 
 
 
-	std::size_t Lexer::numHexLiteral() {
+	usize Lexer::numHexLiteral() {
 		skip(2); // 0x
 
 		while (!peek().isEOF()) {
@@ -243,7 +243,7 @@ namespace lexer {
 		return where_ - 1;
 	}
 
-	std::size_t Lexer::numLiteral() {
+	usize Lexer::numLiteral() {
 		bool was_dot = false;
 		bool was_e = false;
 
@@ -276,7 +276,7 @@ namespace lexer {
 		return where_ - 1;
 	}
 
-	std::size_t Lexer::string() {
+	usize Lexer::string() {
 		next();
 		while(!peek().isAsciiValue('"')){
 			// @TODO add escaping

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tuple>
-#include <cstdint>
+#include <base/ints.hpp>
 #include <concepts>
 #include <base/option.hpp>
 #include "memory/memory.hpp"
@@ -12,9 +12,9 @@ namespace vm {
 	class DataManagerDef {
 		private:
 			template<class T>
-			using Dynamic = std::pair<option<T>, std::uint64_t>;
+			using Dynamic = std::pair<option<T>, u64>;
 			template<class T>
-			using DynamicRef = std::pair<option<T>&, std::uint64_t&>;
+			using DynamicRef = std::pair<option<T>&, u64&>;
 			using DynamicDataStorage = std::tuple<Dynamic<DynamicData>...>;
 			
 			template <class T>

@@ -18,7 +18,7 @@ private:
 	void simple() {
 		ts::TypeDesc<> td(ts::IntegralInfo::create(8));
 
-		for (int i = 0; i < 4; i++) {
+		for (i32 i = 0; i < 4; i++) {
 			exec::alloc_new(td, 8);
 		}
 
@@ -31,12 +31,12 @@ private:
 
 		auto p_ctv = ctv.makePointer();
 
-		auto pointer = ((uint32_t*)p_ctv.getData().data());
+		auto pointer = ((u32*)p_ctv.getData().data());
 		auto block = pointer[0];
 		auto offset = pointer[1];
 
 		// or:
-		auto pointer_data = p_ctv.getData<uint32_t>();
+		auto pointer_data = p_ctv.getData<u32>();
 		auto block_ = pointer_data[0];
 		auto offset_ = pointer_data[1];
 
@@ -46,7 +46,7 @@ private:
 
 		assert(offset == ctv.data.offset, "Pointer has incorrect offset");
 
-		assert(p_ctv.getData<uint32_t>().size() == 2,
+		assert(p_ctv.getData<u32>().size() == 2,
 		       "Pointer doesn't hold two values (block id and offset)");
 
 

@@ -1,9 +1,10 @@
 #pragma once
 
-#include <vector>
+#include "ints.hpp"
 #include "smart_pointers.hpp"
 #include "option.hpp"
 #include <concepts>
+#include <vector>
 
 namespace base {
 	
@@ -19,7 +20,7 @@ namespace base {
 	 * strongly typed int
 	 * NamedID
 	 * 
-	 * Right now StableList keys must be convertible to and from size_t
+	 * Right now StableList keys must be convertible to and from usize
 	 * 
 	 * @TODO make concept to check it
 	 * @TODO add range based iteration
@@ -38,31 +39,31 @@ namespace base {
 		using Ref = StableListRef<Data>;
 		using CRef = StableListCRef<Data>;
 
-		constexpr std::size_t size() const noexcept { return data.size(); }
-		constexpr std::size_t empty() const noexcept { return data.empty(); }
-		constexpr std::size_t notEmpty() const noexcept { return !data.empty(); }
+		constexpr usize size() const noexcept { return data.size(); }
+		constexpr usize empty() const noexcept { return data.empty(); }
+		constexpr usize notEmpty() const noexcept { return !data.empty(); }
 		
 		/**
 		 * @brief Quick, unsafe, constexpr access 
 		 */
 		constexpr Data& operator[](Key pos) {
-			return *data.at(std::size_t(pos));
+			return *data.at(usize(pos));
 		};
 		/**
 		 * @brief Quick, unsafe, constexpr access 
 		 */
 		constexpr const Data& operator[](Key pos) const {
-			return *data.at(std::size_t(pos));
+			return *data.at(usize(pos));
 		};
 
 		option<Ref> getRef(Key pos) noexcept {
-			if (size_t(pos) >= size()) return none<Ref>();
-			return data[size_t(pos)].borrow_mut();
+			if (usize(pos) >= size()) return none<Ref>();
+			return data[usize(pos)].borrow_mut();
 		}
 
 		option<CRef> getCRef(Key pos) const noexcept {
-			if (size_t(pos) >= size()) return none<CRef>();
-			return data[size_t(pos)].borrow();
+			if (usize(pos) >= size()) return none<CRef>();
+			return data[usize(pos)].borrow();
 		}
 
 		constexpr Key pushBack(const Data& value) {
@@ -87,6 +88,6 @@ namespace base {
 	};
 
 	template<typename T>
-	using StableIntList = StableList<std::size_t, T>;
+	using StableIntList = StableList<usize, T>;
 
 }

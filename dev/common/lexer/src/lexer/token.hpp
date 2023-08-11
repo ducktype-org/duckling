@@ -61,7 +61,7 @@ namespace lexer {
 			};
 
 			struct Position {
-				size_t line, column, raw;
+				usize line, column, raw;
 				std::string str() const {
 					return std::to_string(line) + ":" + std::to_string(column);
 				}

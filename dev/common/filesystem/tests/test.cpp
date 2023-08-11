@@ -25,7 +25,7 @@ private:
 		auto b_good_content = fs::getSimpleFileContent(path("b_file.txt"));
 
 		// loops twice to see if behavior is ok after all previous fileContents where destroyed
-		for (int i = 0; i < 2; i++) {
+		for (i32 i = 0; i < 2; i++) {
 			fs::FilePath a1(path("a_file.txt"));
 			fs::FilePath a2(path("a_file.txt"));
 			fs::FilePath b1(path("b_file.txt"));

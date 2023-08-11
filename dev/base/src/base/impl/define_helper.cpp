@@ -1,4 +1,5 @@
 #include "../define_helper.hpp"
+#include "../ints.hpp"
 #include <sstream>
 
 namespace base {
@@ -9,7 +10,7 @@ namespace base {
 		
 		std::ostringstream helper;
 
-		for(size_t i = 0; i < len; i++) {
+		for(usize i = 0; i < len; i++) {
 			if(isspace(va_arg[i])) continue;
 			else if(va_arg[i] == ',') {
 				out.push_back(helper.str());
