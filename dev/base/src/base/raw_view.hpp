@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <base/ints.hpp>
 #include <string_view>
 #include <string>

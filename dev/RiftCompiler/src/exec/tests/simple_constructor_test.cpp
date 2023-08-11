@@ -18,7 +18,7 @@ private:
 	void simple() {
 		ts::TypeDesc<> td(ts::IntegralInfo::create(8));
 
-		for (int i = 0; i < 4; i++) {
+		for (i32 i = 0; i < 4; i++) {
 			exec::alloc_new(td, 8);
 		}
 

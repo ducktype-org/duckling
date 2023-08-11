@@ -1,3 +1,3 @@
 #pragma once
 
-void server(int port);
+void server(i32 port);

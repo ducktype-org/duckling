@@ -2,7 +2,6 @@
 
 #include "ints.hpp"
 #include <array>
-#include <cstddef>
 
 namespace base {
 

@@ -229,14 +229,14 @@ private:
 	}
 
 	void deferTest() {
-		int a = 0;
+		i32 a = 0;
 		{
 			defer (a = 1);
 		}
 		assert(a == 1, "Defer didn't execute or didn't capture variable");
 
-		int b = 0;
-		int c = 0;
+		i32 b = 0;
+		i32 c = 0;
 		{
 			c = 100;
 			defer ({b = 1; c = 2;});

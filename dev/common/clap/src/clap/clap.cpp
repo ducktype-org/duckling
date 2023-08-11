@@ -43,7 +43,7 @@ namespace clap {
 	result<ParametersMap, ClapParsingError> Config::parse_internal(CLIArgs args) {
 		ParametersMap out;
 		usize id = 0;
-		int i = 1;
+		i32 i = 1;
 		usize positional_parameters_count = 0;
 		usize found_required_parameters_count = 0;
 

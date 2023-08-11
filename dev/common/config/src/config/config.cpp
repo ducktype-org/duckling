@@ -28,7 +28,7 @@ namespace config {
 			option_values.clear();
 			values.clear();
 
-			for (int i = 0; i < options.options.size(); i++) {
+			for (i32 i = 0; i < options.options.size(); i++) {
 				long_options_map.put(options.options[i].long_version, i);
 
 				if (options.options[i].has_short) {
@@ -46,7 +46,7 @@ namespace config {
 			reset();
 			const usize arg_count = arg_values.size();
 
-			for (int i = 0; i < arg_count; i++) {
+			for (i32 i = 0; i < arg_count; i++) {
 
 				base::RawView what = arg_values[i];
 				usize option_index = -1;

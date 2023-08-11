@@ -2,7 +2,7 @@
 
 namespace clap {
 	struct CLIArgs {
-		const int argc;
+		const i32 argc;
 		const char* const* const argv;
 	};
 }

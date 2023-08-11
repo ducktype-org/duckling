@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include <cstddef>
 #include <base/ints.hpp>
 #include <base/unique_pointer.hpp>
 #include <span>

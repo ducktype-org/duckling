@@ -274,7 +274,7 @@ namespace lexer {
 
 			Char next;
 			next.ascii_value = ((bytes[pos] & byte{0b10000000u}) == byte{0}) ? static_cast<char>(bytes[pos]) : bad_ascii;
-			next.size = u8{size};
+			next.size = u8(size);
 			next.raw_begin = bytes.getBegin() + pos;
 
 			next.type_ = charType<fs::UTF8>(next.ascii_value, next.raw_begin, uchar{next.size});

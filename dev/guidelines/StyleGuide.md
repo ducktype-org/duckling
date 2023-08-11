@@ -71,7 +71,7 @@ class Dog: public Animal, public Friend {
 ~~~
 
 ~~~cpp
-for (int i = 0; i < n; i++) {
+for (i32 i = 0; i < n; i++) {
 ~~~
 <br>After every `#include`
 <br>No space after `template`

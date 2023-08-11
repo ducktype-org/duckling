@@ -101,7 +101,7 @@ namespace ts {
 
 	public:
 		static FunctionInfo create(const std::vector<TypeDesc<>>& parameter_types,
-		                           TypeDesc<> result_type, int flags = 0);
+		                           TypeDesc<> result_type, i32 flags = 0);
 
 		[[nodiscard]] base::FlagType getFlags() const;
 

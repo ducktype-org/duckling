@@ -7,7 +7,6 @@
 #include "../type_info.hpp"
 #include "../types.hpp"
 #include <base/string_id.hpp>
-#include <cstddef>
 #include <base/smart_pointers.hpp>
 #include <vector>
 
@@ -177,7 +176,7 @@ namespace ts::internal {
 		[[nodiscard]] Kind getKind() const override { return Kind::Function; }
 
 		explicit FunctionInfoImpl(std::vector<TypeDesc<>> parameterTypes, TypeDesc<> resultType,
-		                          int flags = 0)
+		                          i32 flags = 0)
 			: TypeInfoImpl(POINTER_SIZE), parameterTypes(std::move(parameterTypes)),
 			  resultType(resultType), flags(flags) {
 			representation = "Function " + showVector(this->parameterTypes) + " -> (" +

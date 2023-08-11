@@ -45,7 +45,7 @@ namespace operation {
 
 			Calls res;
 
-			for (int i = 0; i < count; i++) {
+			for (i32 i = 0; i < count; i++) {
 				auto [type_desc, offset] = tuple_info.getMember(i);
 
 				auto op = operation::getIdDefault(kind, type_desc.getType());

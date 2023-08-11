@@ -4,10 +4,10 @@
 #include <variant>
 
 class T {
-	int data;
+	i32 data;
 public:
-	void setData(int v) { data = v; }
-	int getData() { return data; }
+	void setData(i32 v) { data = v; }
+	i32 getData() { return data; }
 };
 
 class VariantUtilsTest: public tester::TestSuite {
@@ -55,7 +55,7 @@ public:
 
 		std::variant<int, double> v_2;
 		v_2 = 2;
-		int a = 3;
+		i32 a = 3;
 		
 		VARIANT_VISIT(v_2,
 			VISIT_CASE(auto&, any_v, {
@@ -64,7 +64,7 @@ public:
 			})
 		);
 
-		assert(std::get<int>(v_2) == 6, "bad variant access");
+		assert(std::get<i32>(v_2) == 6, "bad variant access");
 		
 		VARIANT_VISIT(v_2,
 			VISIT_CASE(int, i_v, {
@@ -76,7 +76,7 @@ public:
 			})
 		);
 
-		assert(std::get<int>(v_2) == 6, "bad variant access");
+		assert(std::get<i32>(v_2) == 6, "bad variant access");
 	}
 
 };

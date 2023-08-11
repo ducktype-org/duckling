@@ -29,11 +29,10 @@
 
 #include "ints.hpp"
 #include <type_traits>
-#include <cstddef>
 #include <functional>
 
 namespace base {
-	typedef unsigned long id_t; //
+	typedef usize id_t; //
 
 	template<typename Par> // parameter
 	class NamedId {
@@ -78,7 +77,7 @@ namespace base {
 	template<typename par>
 	id_t NamedId<par>::bad_val  = (id_t)(-1);  // ~ max int
 
-	template<int n>
+	template<i32 n>
 	struct Number {};
 
 	/**

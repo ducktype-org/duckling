@@ -289,7 +289,7 @@ namespace assemble {
 				}
 			}
 
-			for (int i = 0; i < out->opcodes.size(); i++) {
+			for (i32 i = 0; i < out->opcodes.size(); i++) {
 				for (auto& opcode: out->opcodes[i]->args) {
 					
 					VARIANT_MATCH(opcode, 
@@ -910,7 +910,7 @@ namespace assemble {
 
 		usize main_id = SIZE_MAX;
 
-		for (int idx = 0; idx < code.code->functions.size(); idx++) {
+		for (i32 idx = 0; idx < code.code->functions.size(); idx++) {
 			if (code.code->functions[idx]->name.value.strView() == "main") {
 				main_id = idx;
 				break;

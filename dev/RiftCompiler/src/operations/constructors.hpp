@@ -67,7 +67,7 @@ namespace operation {
 		Env env{};
 
 
-		for (int i = 0; i < cons.input.size(); i++) {
+		for (i32 i = 0; i < cons.input.size(); i++) {
 			env.put(cons.input[i], args[i]);
 		}
 

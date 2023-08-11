@@ -2,8 +2,8 @@
 #include <iostream>
 
 namespace N {
-	int foo(int a, int b) {
-		for (int i = 0; i < b; i++) {
+	i32 foo(i32 a, i32 b) {
+		for (i32 i = 0; i < b; i++) {
 			a++;
 		}
 		return a + b;
@@ -20,8 +20,8 @@ namespace N {
 	}
 
 	class MyType {
-		int a; // a
-		MyType(int a): a(a) {}
+		i32 a; // a
+		MyType(i32 a): a(a) {}
 
 		virtual void fillSymTable([[maybe_unused]] symtable::ScopeId parent_scope,
 		                          [[maybe_unused]] symtable::SymbolTable& symtable) {}
@@ -30,13 +30,13 @@ namespace N {
 	template<typename T>
 	class MyTemplateType {
 	private:
-		int a;
-		mutable int b;
+		i32 a;
+		mutable i32 b;
 
 	public:
-		int aaa;
+		i32 aaa;
 
-		void method(int a, int b, int c);
+		void method(i32 a, i32 b, i32 c);
 	};
 
 	template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
@@ -50,11 +50,11 @@ namespace N {
  */
 namespace N1 {
 	namespace N2 {
-		int aLotOfParams([[maybe_unused]] const volatile unsigned long long int a,
-		                 [[maybe_unused]] const volatile unsigned long long int b,
-		                 [[maybe_unused]] const volatile unsigned long long int c, int y, int p,
-		                 int aaaaaaa, char yyyyyy) {
-			int var;
+		i32 aLotOfParams([[maybe_unused]] const volatile u64 a,
+		                 [[maybe_unused]] const volatile u64 b,
+		                 [[maybe_unused]] const volatile u64 c, i32 y, i32 p,
+		                 i32 aaaaaaa, char yyyyyy) {
+			i32 var;
 			while (true)
 				while (true)
 					while (true)
@@ -66,10 +66,10 @@ namespace N1 {
 											while (true)
 												while (true) {}
 
-			int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
-			int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
-			int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
-			int ccccccccccccccccccccccccccccccccccccccccc;
+			i32 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
+			i32 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
+			i32 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
+			i32 ccccccccccccccccccccccccccccccccccccccccc;
 
 			bool value = aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa +
 			                     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ==
@@ -81,7 +81,7 @@ namespace N1 {
 }
 
 int main() {
-	int a;
+	i32 a;
 
 	printer::Console console;
 	console.add({
@@ -156,12 +156,12 @@ int main() {
 	});
 
 
-	const int ah = 0;
-	const int ssssss = 0;
+	const i32 ah = 0;
+	const i32 ssssss = 0;
 
 	int& a;
 	int& a;
-	int a[5][5];
+	i32 a[5][5];
 
 	for (auto v: values) {}
 

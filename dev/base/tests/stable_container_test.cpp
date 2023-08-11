@@ -18,7 +18,7 @@ private:
 	void simpleTest() {
 		message("Parts of this state only make sense under valgrind");
 
-		base::StableIntList<int> list;
+		base::StableIntList<i32> list;
 
 		assert(list.empty(), "bad list empty");
 		assert(!list.notEmpty(), "bad list not empty");

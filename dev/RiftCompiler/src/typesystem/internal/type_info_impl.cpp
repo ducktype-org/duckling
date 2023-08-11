@@ -35,7 +35,7 @@ namespace ts::internal {
 		: TypeInfoImpl(sumTypeVectorSizes(tuple_types)), underlyingTypes(tuple_types),
 		  offsets(tuple_types.size() + 1, 0) {
 		representation = "Tuple" + showVector(tuple_types);
-		for (int i = 0; i < underlyingTypes.size(); i++) {
+		for (i32 i = 0; i < underlyingTypes.size(); i++) {
 			offsets[i + 1] = offsets[i] + underlyingTypes[i].getType().getSize();
 		}
 	}

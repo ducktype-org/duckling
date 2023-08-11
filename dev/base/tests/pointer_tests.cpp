@@ -4,22 +4,22 @@
 #include <sstream>
 
 struct Wrapper {
-	int x;
+	i32 x;
 	
 	Wrapper() = default;
-	Wrapper(int x) : x(x) {}
+	Wrapper(i32 x) : x(x) {}
 
 	virtual ~Wrapper() = default;
 };
 
 struct Derived: public Wrapper {
-	static int destructor_count;
+	static i32 destructor_count;
 	virtual ~Derived() {
 		destructor_count++;
 	};
 };
 
-int Derived::destructor_count = 0;
+i32 Derived::destructor_count = 0;
 
 class OwnershipPointerTest: public tester::TestSuite {
 #undef TESTER_CLASS

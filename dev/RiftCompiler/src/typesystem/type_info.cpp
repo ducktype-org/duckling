@@ -106,7 +106,7 @@ namespace ts {
 	}
 
 	FunctionInfo FunctionInfo::create(const std::vector<TypeDesc<>>& parameter_types,
-	                                  TypeDesc<> result_type, int flags) {
+	                                  TypeDesc<> result_type, i32 flags) {
 		static base::Map<std::tuple<std::vector<TypeDesc<>>, TypeDesc<>, int>, FunctionInfo>
 			function_types;
 		if (function_types.contains({parameter_types, result_type, flags})) {

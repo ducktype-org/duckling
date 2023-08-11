@@ -23,7 +23,7 @@ private:
 		out.addOption(
 			"intOption", "i", 
 			config::ParamType::Always, config::makeParser<config::IntParser>(), 
-			"long and short option with int parameter"
+			"long and short option with i32 parameter"
 		);
 		out.addOption(
 			"strOption", "s", 
@@ -33,7 +33,7 @@ private:
 		out.addOption(
 			"intOption2", 
 			config::ParamType::Always, config::makeParser<config::IntParser>(), 
-			"long option with int parameter"
+			"long option with i32 parameter"
 		);
 		return out;
 	}

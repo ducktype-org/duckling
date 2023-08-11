@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include <cstddef>
 #include <base/ints.hpp>
 #include <string>
 #include <initializer_list>

@@ -35,7 +35,7 @@ crow::response toResponse(const result<void, E>& x) {
 	return convertResult<E, crow::response>(x, convert, convertError);
 }
 
-void server(int port) {
+void server(i32 port) {
 	crow::SimpleApp app;
 
 	CROW_ROUTE(app, "/status/<uint>")([](vm::PID pid) {

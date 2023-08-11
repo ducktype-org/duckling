@@ -8,11 +8,11 @@ class SimpleIdMapsTest;
 
 class A {
 private:
-	int x;
+	i32 x;
 	usize count;
 	SimpleIdMapsTest& test;
 public:
-	A(int x, SimpleIdMapsTest& test) : x(x), count(0), test(test) {}
+	A(i32 x, SimpleIdMapsTest& test) : x(x), count(0), test(test) {}
 
 	A(const A& other);
 

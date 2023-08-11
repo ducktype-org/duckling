@@ -2,7 +2,6 @@
 
 #include <filesystem/encoding.hpp>
 #include <base/raw_view.hpp>
-#include <cstddef>
 #include <vector>
 #include <string>
 
