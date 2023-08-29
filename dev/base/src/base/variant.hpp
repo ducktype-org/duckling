@@ -52,6 +52,11 @@ namespace base {
 #define variant_case_novalue(type) \
 	break; \
 	case (base::alternative_index<decltype(internal_value), type>()): \
+		if (true)\
+
+#define variant_default \
+	break; \
+	default: \
 		if (true)
 
 /**

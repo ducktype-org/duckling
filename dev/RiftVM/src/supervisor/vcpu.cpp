@@ -132,7 +132,7 @@ namespace vm {
 			variant_case_novalue (api::request::Output) {
 				return output();
 			}
-			default: {
+			variant_default {
 				return api::Response(api::response::Empty());
 			}
 		}
@@ -172,7 +172,7 @@ namespace vm {
 						return api::CoreOperationError{api::OtherError(error)};
 					});
 			}
-			default: {
+			variant_default {
 				response = api::Response(api::response::Empty());
 			}
 		}
@@ -187,7 +187,7 @@ namespace vm {
 			variant_case (api::DataRequest, data_request) {
 				return doRequest(data_request);
 			}
-			default: {
+			variant_default {
 				return api::Response(getStatus());
 			}
 		}

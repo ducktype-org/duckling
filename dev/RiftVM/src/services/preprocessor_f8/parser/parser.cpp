@@ -792,7 +792,7 @@ namespace assemble {
 					}
 					type_map[data.name]->defineFunction(parameters, type_map[data.result]);
 				}
-				default: {
+				variant_default {
 					RIFT_PANIC("bad type");	
 				}
 			}

@@ -123,7 +123,7 @@ namespace pst {
 				variant_case (KeywordValue, key) {
 					out << "{\"KeywordValue\": \"" << key.key_id.strView() << "\"}";	
 				}
-				default: {
+				variant_default {
 					RIFT_PANIC("Bad Expr alternative");
 				}
 			}

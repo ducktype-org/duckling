@@ -37,6 +37,9 @@ public:
 				break;
 				fail("break did nothing");
 			}
+			variant_default {
+				fail("default happened");
+			}
 		}
 
 		assert(std::get<char>(v) == 'a', "something went wrong");
@@ -44,6 +47,9 @@ public:
 		variant_match (v) {
 			variant_case (T, v_t) {
 				v_t.setData(2);
+			}
+			variant_default {
+				fail("default happened");
 			}
 		}
 

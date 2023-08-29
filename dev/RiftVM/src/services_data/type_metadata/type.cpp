@@ -175,7 +175,7 @@ namespace vm {
 				if (pos == 2) return TypeCRef(this);
 				else return none<TypeCRef>();
 			}
-			default: {
+			variant_default {
 				RIFT_PANIC("Unexpected Type kind");
 			}
 		}
