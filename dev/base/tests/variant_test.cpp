@@ -72,6 +72,9 @@ public:
 			variant_case (T, v_t) {
 				assert(v_t.getData() == 2, "something failed");
 			}
+			variant_default {
+				fail("default happened (3)");
+			}
 		}
 
 		std::variant<int, double> v_2;
