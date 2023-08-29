@@ -741,7 +741,7 @@ namespace assemble {
 		base::Map<base::StrId, vm::TypeRef> type_map;
 
 		for (auto& type : code.code->types) {
-			base::StrId name = VISIT(type->datatype, return value.name);
+			base::StrId name = VISIT(type->datatype, value, return value.name);
 
 			if (type_map.contains(name)) {
 				code.ok = false;

@@ -49,50 +49,10 @@ namespace base {
 		if (bool variant_case_stop = true) \
 		for (auto& name = std::get<type>(internal_value); variant_case_stop; variant_case_stop = false)
 
-
 #define variant_case_novalue(type) \
 	break; \
 	case (base::alternative_index<decltype(internal_value), type>()): \
 		if (true)
-/**
- * @brief Use instead of `holds_alternative` if-chains
- * @deprecated
- */
-#define VARIANT_MATCH(value, code) \
-	do{                                      \
-		auto& internal_value = (value);      \
-		if (false) {}					     \
-		code                                 \
-	} while(false);
-
-
-// @deprecated
-#define VARIANT_CASE(type, name, code) \
-	else if (std::holds_alternative<type>(internal_value)) { \
-		auto& name = std::get<type>(internal_value); \
-		{                                            \
-			code                                     \
-		}                                            \
-	}
-
-
-// @deprecated
-#define VARIANT_CASE_NOVALUE(type, code) \
-	else if (std::holds_alternative<type>(internal_value)) { \
-		{                                            \
-			code                                     \
-		}                                            \
-	}
-
-/**
- * @brief VARIANT_DEFAULT_CASE must be the last case in chain
- */
-#define VARIANT_DEFAULT_CASE(code) \
-	else { \
-		{                                            \
-			code                                     \
-		}                                            \
-	}
 
 /**
  * @brief Use instead of `std::visit` with multiple choices
@@ -108,5 +68,7 @@ namespace base {
 	[&](type name) { code },
 
 
-// @TODO: better names
-#define VISIT(variant_value, code) std::visit( [&] (auto& value) { code ; }, (variant_value))
+/**
+ * @brief Use instead of simple `std::visit`
+ */
+#define VISIT(variant_value, name, code) std::visit( [&] (auto&& name) { code ; }, (variant_value))
