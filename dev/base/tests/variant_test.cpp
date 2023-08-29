@@ -44,12 +44,27 @@ public:
 
 		assert(std::get<char>(v) == 'a', "something went wrong");
 
+		bool default_ok = false;
+		variant_match (v) {
+			variant_case (int, v_i) {
+				fail("bad variant access");
+				v_i = 2;
+			}
+			variant_default {
+				default_ok = true;
+			}
+		}
+
+		assert(default_ok, "Default did not happen");
+
+		v = T();
+
 		variant_match (v) {
 			variant_case (T, v_t) {
 				v_t.setData(2);
 			}
 			variant_default {
-				fail("default happened");
+				fail("default happened (2)");
 			}
 		}
 
