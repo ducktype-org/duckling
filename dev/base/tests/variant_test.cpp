@@ -22,36 +22,36 @@ public:
 	void simpleTest() {
 		std::variant<int, bool, char, T> v;
 		v = 'b';
-		VARIANT_MATCH(v,
-			VARIANT_CASE(int, v_i, {
+		variant_match (v) {
+			variant_case (int, v_i) {
 				fail("bad variant access"); 
 				v_i = 2;
-			})
-			VARIANT_CASE(bool, v_b, {
+			}
+			variant_case(bool, v_b) {
 				fail("bad variant access");
 				v_b = 2;
-			})
-			VARIANT_CASE(char, v_c, {
+			}
+			variant_case(char, v_c) {
 				assert(v_c == 'b', "something went wrong");
 				v_c = 'a';
 				break;
 				fail("break did nothing");
-			})
-		)
+			}
+		}
 
 		assert(std::get<char>(v) == 'a', "something went wrong");
 
-		VARIANT_MATCH(v,
-			VARIANT_CASE(T, v_t, {
+		variant_match (v) {
+			variant_case (T, v_t) {
 				v_t.setData(2);
-			})
-		)
-		VARIANT_MATCH(v,
-			VARIANT_CASE(T, v_t, {
-				assert(v_t.getData() == 2, "something failed");
-			})
-		)
+			}
+		}
 
+		variant_match (v) {
+			variant_case (T, v_t) {
+				assert(v_t.getData() == 2, "something failed");
+			}
+		}
 
 		std::variant<int, double> v_2;
 		v_2 = 2;

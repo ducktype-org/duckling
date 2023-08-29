@@ -100,42 +100,43 @@ namespace vm {
 	}
 	
 	result<api::Response, api::CoreOperationError> VCPU::doRequest(const api::ExecutorRequest& request) {
-		VARIANT_MATCH(request,
-			VARIANT_CASE_NOVALUE(api::request::Run, {
+		variant_match (request) {
+			variant_case_novalue (api::request::Run) {
 				return run();
-			})
-			VARIANT_CASE_NOVALUE(api::request::Join, {
+			}
+			variant_case_novalue(api::request::Join) {
 				return join();
-			})
-			VARIANT_CASE_NOVALUE(api::request::Pause, {
+			}
+			variant_case_novalue(api::request::Pause) {
 				serviceManager.get<vm::Executor>().pause();
 				return api::Response(api::response::Empty());
-			})
-			VARIANT_CASE_NOVALUE(api::request::Resume, {
+			}
+			variant_case_novalue (api::request::Resume) {
 				serviceManager.get<vm::Executor>().resume();
 				return api::Response(api::response::Empty());
-			})
-			VARIANT_CASE_NOVALUE(api::request::Step, {
+			}
+			variant_case_novalue (api::request::Step) {
 				serviceManager.get<vm::Executor>().step();
 				return api::Response(api::response::Empty());
-			})
-			VARIANT_CASE(api::request::Load, load_request, {
+			}
+			variant_case (api::request::Load, load_request) {
 				return loadProgram(load_request.filename)
 					.map_error([](auto err){return api::CoreOperationError{err};});
-			})
-			VARIANT_CASE_NOVALUE(api::request::Stop, {
+			}
+			variant_case_novalue (api::request::Stop) {
 				return stop();
-			})
-			VARIANT_CASE(api::request::Input, input_request, {
+			}
+			variant_case (api::request::Input, input_request) {
 				return input(input_request);
-			})
-			VARIANT_CASE_NOVALUE(api::request::Output, {
+			}
+			variant_case_novalue (api::request::Output) {
 				return output();
-			})
-			VARIANT_DEFAULT_CASE({
+			}
+			default: {
 				return api::Response(api::response::Empty());
-			})
-		)
+			}
+		}
+		RIFT_PANIC("something went wrong");
 	}
 	
 	result<api::Response, api::CoreOperationError> VCPU::doRequest(const api::DataRequest& request) {
@@ -150,8 +151,8 @@ namespace vm {
 			return fail(api::OtherError("Cannot do memory request while program is running"));
 		}
 		result<api::Response, api::CoreOperationError> response;
-		VARIANT_MATCH(request,
-			VARIANT_CASE(api::request::TypeMetadata, type_request, {
+		variant_match (request) {
+			variant_case (api::request::TypeMetadata, type_request) {
 				response = dataManager.get<vm::TypeMetadata>()
 					.getTypeByName(base::StrId(type_request.type_name.c_str()))
 					.map([](const TypeCRef& type_ptr){
@@ -160,8 +161,8 @@ namespace vm {
 					.map_error([](auto&){
 						return api::CoreOperationError{api::OtherError("Type not found")};
 					});
-			})
-			VARIANT_CASE(api::request::Block, block_request, {
+			}
+			variant_case (api::request::Block, block_request) {
 				response = dataManager.get<vm::Memory>()
 					.getBlock(block_request.block_id)
 					.map([](Block* block_ptr){
@@ -170,26 +171,27 @@ namespace vm {
 					.map_error([](auto& error){
 						return api::CoreOperationError{api::OtherError(error)};
 					});
-			})
-			VARIANT_DEFAULT_CASE({
+			}
+			default: {
 				response = api::Response(api::response::Empty());
-			})
-		)
+			}
+		}
 		return response;
 	}
 	
 	result<api::Response, api::CoreOperationError> VCPU::doRequest(const api::RequestVariant& request) {
-		VARIANT_MATCH(request,
-			VARIANT_CASE(api::ExecutorRequest, exec_request, {
+		variant_match (request) {
+			variant_case (api::ExecutorRequest, exec_request) {
 				return doRequest(exec_request);
-			})
-			VARIANT_CASE(api::DataRequest, data_request, {
+			}
+			variant_case (api::DataRequest, data_request) {
 				return doRequest(data_request);
-			})
-			VARIANT_DEFAULT_CASE({
+			}
+			default: {
 				return api::Response(getStatus());
-			})
-		)
+			}
+		}
+		RIFT_PANIC("something went wrong");
 	}
 	
 	VCPU::~VCPU() {

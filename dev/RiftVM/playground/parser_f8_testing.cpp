@@ -18,15 +18,17 @@ int main(int argc, char** argv) {
 
 	if (loaded_file_response.has_error()) {
 		auto error = loaded_file_response.error();
-		VARIANT_MATCH(error,
-			VARIANT_CASE(vm::api::CoreOperationError, core_error, {
-				VARIANT_MATCH(core_error.error,
-					VARIANT_CASE(vm::api::LoadProgramError, load_error, {
+
+		variant_match (error) {
+			variant_case (vm::api::CoreOperationError, core_error) {
+				variant_match (core_error.error) {
+					variant_case (vm::api::LoadProgramError, load_error) {
 						std::cerr << "Load errors: \n" << load_error.why << "\n";
-					})
-				)
-			})
-		)
+					}
+				}
+			}
+		}
+
 	}
 	else {
 		std::cerr << "Running...\n";

@@ -243,16 +243,16 @@ namespace assemble {
 		void dprint(std::ostream& out) const override {
 			out << "        " << opcode_name.view().stringView() << " ";
 			for (auto& arg: args) {
-				VARIANT_MATCH(arg, 
-					VARIANT_CASE(OpCodeNumArg, num_arg, {
+				variant_match(arg) { 
+					variant_case(OpCodeNumArg, num_arg) {
 						out << num_arg.value << " ";			
-				  	}) 
-				  	VARIANT_CASE(OpCodeLabelArg, label_arg, {
+				  	}
+				  	variant_case(OpCodeLabelArg, label_arg) {
 						out << label_arg.label_name.strView() << " (" << label_arg.value
 							<< ")"
 							<< " ";
-					})
-				);
+					}
+				}
 			}
 			out << '\n';
 		}
@@ -292,8 +292,8 @@ namespace assemble {
 			for (i32 i = 0; i < out->opcodes.size(); i++) {
 				for (auto& opcode: out->opcodes[i]->args) {
 					
-					VARIANT_MATCH(opcode, 
-						VARIANT_CASE(OpCodeLabelArg, label, {
+					variant_match(opcode) { 
+						variant_case (OpCodeLabelArg, label) {
 							auto it =
 								out->label_position.find(label.label_name);
 							if (it != out->label_position.end()) {
@@ -311,8 +311,8 @@ namespace assemble {
 								// 	base::strConcat("Nonexistent label: ",
 								//                      std::get<OpCodeLabelArg>(opcode).value));
 							}
-						})
-					)
+						}
+					}
 				}
 			}
 
@@ -758,44 +758,44 @@ namespace assemble {
 
 		for (auto& type: code.code->types) {
 			
-			VARIANT_MATCH(type->datatype, 
-				VARIANT_CASE(PrimitiveType, data, {
+			variant_match(type->datatype) { 
+				variant_case(PrimitiveType, data) {
 					type_map[data.name]->definePrimitive(data.size);	
-				})
-				VARIANT_CASE(PointerType, data, {
+				}
+				variant_case(PointerType, data) {
 					type_map[data.name]->definePointer(type_map[data.inner]);
-				})
-				VARIANT_CASE(StaticTableType, data, {
+				}
+				variant_case(StaticTableType, data) {
 					type_map[data.name]->defineStaticTable(type_map[data.inner], data.table_size);
-				})
-				VARIANT_CASE(DynamicTableType, data, {
+				}
+				variant_case(DynamicTableType, data) {
 					type_map[data.name]->defineDynamicTable(type_map[data.inner]);
-				})
-				VARIANT_CASE(DataType, data, {
+				}
+				variant_case(DataType, data) {
 					std::vector<std::pair<base::StrId COMMA vm::TypeRef>> fields;
 					for (auto& field : data.fields) {
 						fields.emplace_back(field.name, type_map[field.type]);
 					}
 					type_map[data.name]->defineData(fields);
-				})
-				VARIANT_CASE(VariantType, data, {
+				}
+				variant_case(VariantType, data) {
 					std::vector<vm::TypeRef> variants;
 					for (auto& variant : data.variant_alternatives) {
 						variants.emplace_back(type_map[variant]);
 					}
 					type_map[data.name]->defineVariant(variants);
-				})
-				VARIANT_CASE(FunctionType, data, {
+				}
+				variant_case(FunctionType, data) {
 					std::vector<vm::TypeCRef> parameters;
 					for (auto& param : data.parameters) {
 						parameters.emplace_back(type_map[param]);
 					}
 					type_map[data.name]->defineFunction(parameters, type_map[data.result]);
-				})
-				VARIANT_DEFAULT_CASE({
+				}
+				default: {
 					RIFT_PANIC("bad type");	
-				})
-			)
+				}
+			}
 		}
 
 		type_metadata.finalize();
@@ -831,8 +831,8 @@ namespace assemble {
 		for (auto& op: func->code->opcodes) {
 			// calculate type arguments:
 			for (auto& arg: op->args) {
-				VARIANT_MATCH(arg, 
-					VARIANT_CASE(OpCodeLabelArg, label, {
+				variant_match(arg) {
+					variant_case(OpCodeLabelArg, label) {
 						if (label.type_value) {
 							auto type = types.getTypeByName(label.label_name);
 							if (!type.has_value()) {
@@ -843,8 +843,8 @@ namespace assemble {
 								label.value = static_cast<i64>(u64(type.value()->getId()));
 							}
 						}
-					})
-				)
+					}
+				}
 			}
 			
 			switch (op->args.size()) {
