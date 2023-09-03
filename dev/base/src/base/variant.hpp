@@ -67,7 +67,7 @@ namespace base {
 	break; \
 	case (base::alternative_index<decltype(internal_value), type>()): \
 		if (bool variant_case_stop = true) \
-		for (auto& name = std::get<type>(internal_value); variant_case_stop; variant_case_stop = false) \
+		for ([[maybe_unused]]auto& name = std::get<type>(internal_value); variant_case_stop; variant_case_stop = false) \
 	POP_DIAGNOSTIC
 
 #define variant_case_novalue(type) \

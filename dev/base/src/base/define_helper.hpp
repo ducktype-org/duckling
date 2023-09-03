@@ -38,10 +38,10 @@ namespace base {
 
 #if defined(__clang__)
 # define PUSH_DIAGNOSTIC _Pragma("clang diagnostic push")
-# define NO_SHADOW _Pragma("clang diagnostic ignored \"-Wshadow\"") 
+# define NO_SHADOW _Pragma("clang diagnostic ignored \"-Wshadow=local\"")_Pragma("clang diagnostic ignored \"-Wshadow=compatible-local\"") 
 # define POP_DIAGNOSTIC _Pragma("clang diagnostic pop")
 #elif defined(__GNUC__)
 # define PUSH_DIAGNOSTIC _Pragma("GCC diagnostic push")
-# define NO_SHADOW _Pragma("GCC diagnostic ignored \"-Wshadow\"") 
+# define NO_SHADOW _Pragma("GCC diagnostic ignored \"-Wshadow=local\"")_Pragma("GCC diagnostic ignored \"-Wshadow=compatible-local\"") 
 # define POP_DIAGNOSTIC _Pragma("GCC diagnostic pop")
 #endif
