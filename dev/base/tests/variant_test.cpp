@@ -23,9 +23,8 @@ public:
 		std::variant<int, bool, char, T> v;
 		v = 'b';
 		variant_match (v) {
-			variant_case (int, v_i) {
+			variant_case_novalue(int) {
 				fail("bad variant access"); 
-				v_i = 2;
 			}
 			variant_case(bool, v_b) {
 				fail("bad variant access");
@@ -46,9 +45,8 @@ public:
 
 		bool default_ok = false;
 		variant_match (v) {
-			variant_case (int, v_i) {
+			variant_case_novalue(int) {
 				fail("bad variant access");
-				v_i = 2;
 			}
 			variant_default {
 				default_ok = true;
