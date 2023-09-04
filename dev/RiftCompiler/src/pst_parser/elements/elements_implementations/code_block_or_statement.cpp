@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include <base/variant.hpp>
 
 namespace pst {
 	ParserRef<CodeBlockOrStmt> CodeBlockOrStmt::parse(RiftParserState& state) {
@@ -30,13 +31,15 @@ namespace pst {
 	}
 
 	std::span<const ParserRef<Stmt>> CodeBlockOrStmt::getStatements() const {
-		if (std::holds_alternative<ParserRef<Stmt>>(content)) {
-			auto& stmt = std::get<ParserRef<Stmt>>(content);
-			return std::span<const ParserRef<Stmt>, 1>{std::addressof(stmt), 1};
+		variant_match (content) {
+			variant_case (ParserRef<Stmt>, stmt) {
+				return std::span<const ParserRef<Stmt>, 1>{std::addressof(stmt), 1};	
+			}
+			variant_case (ParserRef<CodeBlock>, code_block) {
+				return code_block->getStatements();
+			}
 		}
-		else {
-			return std::get<ParserRef<CodeBlock>>(content)->getStatements();
-		}
+		RIFT_PANIC("something went wrong");
 	}
 
 }

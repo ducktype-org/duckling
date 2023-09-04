@@ -35,3 +35,13 @@ namespace base {
 #define IF_NOT(cond, t, e) CONCAT(IF_NOT, cond)(t, e)
 #define IF_NOT_false(t, e) t
 #define IF_NOT_true(t, e) e
+
+#if defined(__clang__)
+# define PUSH_DIAGNOSTIC _Pragma("clang diagnostic push")
+# define NO_SHADOW _Pragma("clang diagnostic ignored \"-Wshadow=local\"")_Pragma("clang diagnostic ignored \"-Wshadow=compatible-local\"") 
+# define POP_DIAGNOSTIC _Pragma("clang diagnostic pop")
+#elif defined(__GNUC__)
+# define PUSH_DIAGNOSTIC _Pragma("GCC diagnostic push")
+# define NO_SHADOW _Pragma("GCC diagnostic ignored \"-Wshadow=local\"")_Pragma("GCC diagnostic ignored \"-Wshadow=compatible-local\"") 
+# define POP_DIAGNOSTIC _Pragma("GCC diagnostic pop")
+#endif

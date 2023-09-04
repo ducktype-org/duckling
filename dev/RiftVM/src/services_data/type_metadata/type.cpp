@@ -94,12 +94,12 @@ namespace vm {
 		state = State::Finalizing;
 		defer(state = State::Finalized);
 
-		VARIANT_MATCH(kind,
-			VARIANT_CASE(kind::StaticTable, static_table, {
+		variant_match (kind) {
+			variant_case (kind::StaticTable, static_table) {
 				static_table.inner_type->finalize();
 				this->size = static_table.inner_type->getSize() * static_table.size;
-			})
-			VARIANT_CASE(kind::Data, data, {
+			}
+			variant_case(kind::Data, data) {
 				// calculate offset and size
 				Offset offset = 0;
 				for (auto& field: data.fields) {
@@ -108,8 +108,8 @@ namespace vm {
 					offset += field.type->getSize();
 				}
 				this->size = offset;
-			})
-			VARIANT_CASE(kind::Variant, variant, {
+			}
+			variant_case(kind::Variant, variant) {
 				// calculate size
 				TypeSize data_size = 0;
 				for (auto& alternative: variant.alternatives) {
@@ -117,8 +117,8 @@ namespace vm {
 					data_size = std::max(data_size, alternative->getSize());
 				}
 				this->size = 16 + data_size;
-			})
-		);
+			}
+		}
 	}
 
 	// common
@@ -146,39 +146,40 @@ namespace vm {
 	 * See: https://github.com/rift-lang/rift-poc-zpp1/issues/91
 	 */
 	option<TypeCRef> Type::getLowestTypeAtPos(Offset pos) const {
-		VARIANT_MATCH(kind,
-			VARIANT_CASE_NOVALUE(kind::Primitive, {
+		variant_match (kind) {
+			variant_case_novalue (kind::Primitive) {
 				if (pos == 0) return TypeCRef(this);
 				else return none<TypeCRef>();
-			})
-			VARIANT_CASE_NOVALUE(kind::Pointer, {
+			}
+			variant_case_novalue (kind::Pointer) {
 				if (pos == 0) return TypeCRef(this);
 				else return none<TypeCRef>();
-			})
-			VARIANT_CASE(kind::StaticTable, static_table, {
+			}
+			variant_case(kind::StaticTable, static_table) {
 				if (pos >= getSize()) return none<TypeCRef>();
 				else {
 					auto inner_size = static_table.inner_type->getSize();
 					return static_table.inner_type->getLowestTypeAtPos(pos % inner_size);
 				}
-			})
-			VARIANT_CASE_NOVALUE(kind::DynamicTable, {
+			}
+			variant_case_novalue(kind::DynamicTable) {
 				if (pos == 0) return TypeCRef(this);
 				else return none<TypeCRef>();
-			})
-			VARIANT_CASE(kind::Data, data, {
+			}
+			variant_case (kind::Data, data) {
 				throw base::NotYetImplemented("getLowestTypeAtPos data");
-			})
-			VARIANT_CASE_NOVALUE(kind::Variant, {
+			}
+			variant_case_novalue(kind::Variant) {
 				// @TODO: is pos == 0 then return some special TypeRef to variant index
 				// @TODO: is pos == 1 then return error
 				if (pos == 2) return TypeCRef(this);
 				else return none<TypeCRef>();
-			})
-			VARIANT_DEFAULT_CASE({
+			}
+			variant_default {
 				RIFT_PANIC("Unexpected Type kind");
-			});
-		);
+			}
+		}
+		RIFT_PANIC("something went wrong");
 	}
 	
 	// pointer, staticTable, dynamicTable

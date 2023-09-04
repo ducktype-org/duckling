@@ -22,36 +22,58 @@ public:
 	void simpleTest() {
 		std::variant<int, bool, char, T> v;
 		v = 'b';
-		VARIANT_MATCH(v,
-			VARIANT_CASE(int, v_i, {
+		variant_match (v) {
+			variant_case_novalue(int) {
 				fail("bad variant access"); 
-				v_i = 2;
-			})
-			VARIANT_CASE(bool, v_b, {
+			}
+			variant_case(bool, v_b) {
 				fail("bad variant access");
 				v_b = 2;
-			})
-			VARIANT_CASE(char, v_c, {
+			}
+			variant_case(char, v_c) {
 				assert(v_c == 'b', "something went wrong");
 				v_c = 'a';
 				break;
 				fail("break did nothing");
-			})
-		)
+			}
+			variant_default {
+				fail("default happened");
+			}
+		}
 
 		assert(std::get<char>(v) == 'a', "something went wrong");
 
-		VARIANT_MATCH(v,
-			VARIANT_CASE(T, v_t, {
-				v_t.setData(2);
-			})
-		)
-		VARIANT_MATCH(v,
-			VARIANT_CASE(T, v_t, {
-				assert(v_t.getData() == 2, "something failed");
-			})
-		)
+		bool default_ok = false;
+		variant_match (v) {
+			variant_case_novalue(int) {
+				fail("bad variant access");
+			}
+			variant_default {
+				default_ok = true;
+			}
+		}
 
+		assert(default_ok, "Default did not happen");
+
+		v = T();
+
+		variant_match (v) {
+			variant_case (T, v_t) {
+				v_t.setData(2);
+			}
+			variant_default {
+				fail("default happened (2)");
+			}
+		}
+
+		variant_match (v) {
+			variant_case (T, v_t) {
+				assert(v_t.getData() == 2, "something failed");
+			}
+			variant_default {
+				fail("default happened (3)");
+			}
+		}
 
 		std::variant<int, double> v_2;
 		v_2 = 2;

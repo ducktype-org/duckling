@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include <base/variant.hpp>
 
 namespace pst {
 
@@ -97,36 +98,35 @@ namespace pst {
 	}
 
 	void Expr::dprint(std::ostream& out) const {
-		struct PrinterFunctor {
-			std::ostream& out_;
-
-			void operator()(const Identifier& idt) {
-				out_ << "{\"Identifier\": \"" << idt.indent_id.strView() << "\"}";
-			}
-			void operator()(const Operator& oper) {
-				out_ << "{\"Operator\": \"" << oper.oper_id.strView() << "\"}";
-			}
-			void operator()(const NumLiteral& num) {
-				out_ << "{\"NumLiteral\": \"" << num.num_id.strView() << "\"}";
-			}
-			void operator()(const Group& group) {
-				constexpr std::array<std::string_view, 4> gr_strings = {
-					"()", "[]", "{}", "  "
-				};
-				out_<<"{ \"Group\": { \"type\": \"";
-				out_ << gr_strings[int(group.type)];
-				out_<<"\", \"expr\": ";
-				nullAwareDprint(group.expr, out_);
-				out_<<"} }";
-			}
-			void operator()(const KeywordValue& key) {
-				out_ << "{\"KeywordValue\": \"" << key.key_id.strView() << "\"}";	
-			}
-			PrinterFunctor(std::ostream& out) : out_(out) {}
-		};
 		out << "{\"Expr\" : [";
 		for (auto& e: elements) {
-			std::visit(PrinterFunctor(out), e);
+			variant_match (e) {
+				variant_case (Identifier, idt) {
+					out << "{\"Identifier\": \"" << idt.indent_id.strView() << "\"}";
+				}
+				variant_case (Operator, oper) {
+					out << "{\"Operator\": \"" << oper.oper_id.strView() << "\"}";
+				}
+				variant_case (NumLiteral, num) {
+					out << "{\"NumLiteral\": \"" << num.num_id.strView() << "\"}";
+				}
+				variant_case (Group, group) {
+					constexpr static std::array<std::string_view, 4> gr_strings = {
+						"()", "[]", "{}", "  "
+					};
+					out <<"{ \"Group\": { \"type\": \"";
+					out << gr_strings[int(group.type)];
+					out <<"\", \"expr\": ";
+					nullAwareDprint(group.expr, out);
+					out <<"} }";
+				}
+				variant_case (KeywordValue, key) {
+					out << "{\"KeywordValue\": \"" << key.key_id.strView() << "\"}";	
+				}
+				variant_default {
+					RIFT_PANIC("Bad Expr alternative");
+				}
+			}
 			out << ", ";
 		}    
         out << "]}";
