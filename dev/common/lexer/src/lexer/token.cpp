@@ -82,6 +82,7 @@ namespace lexer{
 		swap(first.str_id, second.str_id);
 		swap(first.type, second.type);
 		swap(first.position, second.position);
+		swap(first.sourcePosition, second.sourcePosition);
 	}
 	
 	Token& Token::operator = (Token other){

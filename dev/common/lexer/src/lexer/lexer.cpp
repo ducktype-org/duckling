@@ -11,7 +11,9 @@
 // @TODO: change name_ names to sth meaningfull
 
 namespace lexer {
-	Lexer::Lexer(CharArray& chars) : charArray_(chars) {}
+
+	Lexer::Lexer(const fs::FilePath& file, CharArray &chars) : file_(file), charArray_(chars) {
+	}
 
 	Tokens Lexer::tokenize(bool dprint) {
 		tokens_.clear();
@@ -75,6 +77,7 @@ namespace lexer {
 	void Lexer::parseSingleInto(Tokens& output) {
 		usize begin = where_;
 		Token::Position position = {lineNumber_, columnNumber_, where_};
+		SourcePosition sourcePosition;
 		if(isEOF()) {
 			// @TODO: error
 			RIFT_PANIC("EOF encountered inside parseSingleInto");
@@ -344,11 +347,9 @@ namespace lexer {
 		return out;
 	}
 
-	lexer::TokenData tokenizeFile(fs::FileContent file, bool dprint) {
-
-		CharArray chars = decode(file.view());
-		Lexer lexer(chars);
-
+	lexer::TokenData tokenizeFile(fs::FilePath file, bool dprint) {
+		CharArray chars = decode(file.getContent().view());
+		Lexer lexer(file, chars);
 		return {std::move(lexer.tokenize(dprint)), file};
 	}
 

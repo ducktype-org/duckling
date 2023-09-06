@@ -10,8 +10,5 @@
 
 namespace lexer {
 	void init();
-	lexer::TokenData tokenizeFile(fs::FileContent file, bool dprint = false);
+	lexer::TokenData tokenizeFile(fs::FilePath file, bool dprint = false);
 }
-
-
-

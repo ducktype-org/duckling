@@ -11,10 +11,11 @@
 #include <memory>
 
 #include "char.hpp"
-#include <rift_definitions/key_spec_op.hpp>
-#include <base/string_id.hpp>
+#include "source_position.hpp"
 #include <base/raw_view.hpp>
+#include <base/string_id.hpp>
 #include <filesystem/file.hpp>
+#include <rift_definitions/key_spec_op.hpp>
 
 namespace lexer {
 	class Token;
@@ -88,7 +89,7 @@ namespace lexer {
 			
 			Token() noexcept = default;
 			Token(const Token& other) = default;
-			Token(Type type, const base::RawView value, Position);
+			Token(Type type, base::RawView value, Position);
 			Token(Type type, Tokens&& recursive, Position);
 			friend void swap(Token& first, Token& second);
 			Token& operator = (Token other);
@@ -132,5 +133,6 @@ namespace lexer {
 			base::StrId str_id;
 			Tokens recursive;
 			Position position;
+			SourcePosition sourcePosition;
 	};
 }
