@@ -11,10 +11,11 @@
 #include <memory>
 
 #include "char.hpp"
-#include <rift_definitions/key_spec_op.hpp>
-#include <base/string_id.hpp>
+#include "source_position.hpp"
 #include <base/raw_view.hpp>
+#include <base/string_id.hpp>
 #include <filesystem/file.hpp>
+#include <rift_definitions/key_spec_op.hpp>
 
 namespace lexer {
 	class Token;
@@ -32,10 +33,10 @@ namespace lexer {
 
 		TokenData() = default;
 		TokenData(TokenData&&) noexcept;
-		TokenData(Tokens tokens, fs::FileContent file_content);
+		TokenData(Tokens tokens, const fs::FileContent& file_content);
 
 		void operator=(const TokenData&) = delete;
-		void operator=(TokenData&&) noexcept;
+		TokenData& operator=(TokenData&&) noexcept;
 
 		virtual ~TokenData();
 	};
@@ -62,7 +63,7 @@ namespace lexer {
 
 		struct Position {
 			usize line, column, raw;
-			std::string str() const {
+			[[nodiscard]] std::string str() const {
 				return std::to_string(line) + ":" + std::to_string(column);
 			}
 		};
@@ -73,57 +74,57 @@ namespace lexer {
 
 		static Token makeSentinel();
 
-		static Token makeKeyword(const base::RawView keyword, Position);
+		static Token makeKeyword(base::RawView keyword, Position);
 		static Token makeNumber(const base::RawView number, Position);
-		static Token makeString(const base::RawView string, Position);
+		static Token makeString(base::RawView string, Position);
 		static Token makeFormattedString(Tokens&& tokens, Position);
 		static Token makeGroup(Char::ParType groupType, Tokens&& tokens, Position);
-		static Token makeComment(const base::RawView comment, Position);
-		static Token makeOperator(const base::RawView oper, Position);
-		static Token makeIdentifier(const base::RawView identifier, Position);
-		static Token makeSpecial(const base::RawView identifier, Position);
-		static Token makeNumLiteral(const base::RawView literal, Position);
+		static Token makeComment(base::RawView comment, Position);
+		static Token makeOperator(base::RawView oper, Position);
+		static Token makeIdentifier(base::RawView identifier, Position);
+		static Token makeSpecial(base::RawView identifier, Position);
+		static Token makeNumLiteral(base::RawView literal, Position);
 
 		virtual ~Token() = default;
 
 		Token() noexcept = default;
-		Token(const Token& other) = default;
-		Token(Type type, const base::RawView value, Position);
-		Token(Type type, Tokens&& recursive, Position);
+		Token(Token& other) = default;
+		Token(Type type, base::RawView value, Position position);
+		Token(Type type, Tokens&& recursive, Position position);
 		friend void swap(Token& first, Token& second);
 		Token& operator = (Token other);
 		Token(Token&& other) noexcept;
 
-		Type getType() const;
-		base::StrId getValue() const;
-		std::string_view getStrValue() const;
-		const Tokens& getRecursive() const;
+		[[nodiscard]] Type getType() const;
+		[[nodiscard]] base::StrId getValue() const;
+		[[nodiscard]] std::string_view getStrValue() const;
+		[[nodiscard]] const Tokens& getRecursive() const;
 
-		bool isGroup() const;
+		[[nodiscard]] bool isGroup() const;
 
-		bool isTerminal() const;
-		bool isNotTerminal() const;
+		[[nodiscard]] bool isTerminal() const;
+		[[nodiscard]] bool isNotTerminal() const;
 
-		bool isSpecial() const;
-		Special asSpecial() const;
+		[[nodiscard]] bool isSpecial() const;
+		[[nodiscard]] Special asSpecial() const;
 
-		bool isKeyword() const;
-		Keyword asKeyword() const;
+		[[nodiscard]] bool isKeyword() const;
+		[[nodiscard]] Keyword asKeyword() const;
 
-		bool isOperator() const;
-		bool isIdentifier() const;
-		bool isNumLiteral() const;
-		bool isComment() const;
-		bool isString() const;
+		[[nodiscard]] bool isOperator() const;
+		[[nodiscard]] bool isIdentifier() const;
+		[[nodiscard]] bool isNumLiteral() const;
+		[[nodiscard]] bool isComment() const;
+		[[nodiscard]] bool isString() const;
 
-		bool is(Type) const;
-		bool is(Special) const;
-		bool is(Operator) const;
-		bool is(Keyword) const;
+		[[nodiscard]] bool is(Type) const;
+		[[nodiscard]] bool is(Special) const;
+		[[nodiscard]] bool is(Operator) const;
+		[[nodiscard]] bool is(Keyword) const;
 
-		bool isStr(base::StrId str) const;
+		[[nodiscard]] bool isStr(base::StrId str) const;
 
-		Position getPosition() const;
+		[[nodiscard]] Position getPosition() const;
 
 	private:
 		static Token makeError(Position);
@@ -131,6 +132,7 @@ namespace lexer {
 		Type type = Type::Empty;
 		base::StrId str_id;
 		Tokens recursive;
-		Position position;
+		Position position{};
+		//			SourcePosition sourcePosition;
 	};
 }
