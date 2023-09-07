@@ -12,7 +12,15 @@
 
 namespace lexer {
 
-	Lexer::Lexer(const fs::FilePath& file, CharArray &chars) : file_(file), charArray_(chars) {
+	// @TODO: Move it to a separate file...
+	CharArray decode(base::RawView file_content) {
+		// @TODO: deduce encoding
+		CharArray out = lexer::decode<fs::UTF8>(file_content);
+		//...
+		return out;
+	}
+
+	Lexer::Lexer(const fs::FilePath& file) : file_(file), charArray_(decode(file.getContent().view())) {
 	}
 
 	Tokens Lexer::tokenize(bool dprint) {
@@ -77,7 +85,7 @@ namespace lexer {
 	void Lexer::parseSingleInto(Tokens& output) {
 		usize begin = where_;
 		Token::Position position = {lineNumber_, columnNumber_, where_};
-		SourcePosition sourcePosition;
+//		SourcePosition sourcePosition;
 		if(isEOF()) {
 			// @TODO: error
 			RIFT_PANIC("EOF encountered inside parseSingleInto");
@@ -340,17 +348,9 @@ namespace lexer {
 		was_init = true;
 	}
 
-	CharArray decode(base::RawView file_content) {
-		// @TODO: deduce encoding
-		CharArray out = lexer::decode<fs::UTF8>(file_content);
-		//...
-		return out;
-	}
-
-	lexer::TokenData tokenizeFile(fs::FilePath file, bool dprint) {
-		CharArray chars = decode(file.getContent().view());
-		Lexer lexer(file, chars);
-		return {std::move(lexer.tokenize(dprint)), file};
+	lexer::TokenData tokenizeFile(const fs::FilePath& file, bool dprint) {
+		Lexer lexer(file);
+		return {lexer.tokenize(dprint), file.getContent()};
 	}
 
 }

@@ -14,7 +14,7 @@ public:
 		rift_def::setKeywordMode(rift_def::KeywordMode::RiftSource);
 
 		fs::FilePath file(path("token_code.rift"));
-		td = std::move(lexer::tokenizeFile(file.getContent()));
+		td = std::move(lexer::tokenizeFile(file));
 		TESTER_ADD_TEST(testBasicStructure);
 		TESTER_ADD_TEST(testGroup0);
 		TESTER_ADD_TEST(testGroup1);
@@ -75,7 +75,6 @@ private:
 		checkGroupIsGroup(index);
 		auto& inner_tokens = td.tokens[index].getRecursive();
 		message("got " + std::to_string(inner_tokens.size()) + " tokens");
-
 		for (const auto& token: inner_tokens) {
 			assert(token.getType() == token_type,
 			       std::string("Type of token `") + std::string(token.getStrValue()) +

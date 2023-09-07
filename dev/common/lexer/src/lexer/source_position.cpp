@@ -17,16 +17,29 @@ std::string SourcePosition::getSourceChars() const {
 	return sourceChars.substr(sourceIndexStart, sourceIndexEnd - sourceIndexStart + 1);
 }
 
+SourcePosition::SourcePosition() {
+	sourceIndexStart = sourceIndexEnd = -1;
+	this->sourceCode = nullptr;
+}
+
+SourcePosition::SourcePosition(SourcePosition& other) {
+	sourceIndexStart = other.getPositions().first;
+	sourceIndexEnd = other.getPositions().second;
+	sourceCode = base::make_unique<fs::FilePath>(*other.sourceCode);
+}
+
+SourcePosition::SourcePosition(SourcePosition&& other)  noexcept : SourcePosition(other) {}
+
 SourcePosition::SourcePosition(const fs::FilePath& sourceCode) : SourcePosition() {
-	this->sourceCode = std::make_unique<fs::FilePath>(sourceCode);
+	setSourceCode(sourceCode);
 }
 
 SourcePosition::SourcePosition(const fs::FilePath& sourceCode, u32 start) : SourcePosition(sourceCode) {
-	sourceIndexStart = start;
+    setStart(start);
 }
 
 SourcePosition::SourcePosition(const fs::FilePath& sourceCode, u32 start, u32 end) : SourcePosition(sourceCode, start) {
-	sourceIndexEnd = end;
+	setEnd(end);
 }
 
 void SourcePosition::setStart(u32 start) {
@@ -37,14 +50,20 @@ void SourcePosition::setStart(u32 start) {
 
 void SourcePosition::setEnd(u32 end) {
 	sourceIndexEnd = end;
+	if(end < sourceIndexStart)
+		sourceIndexEnd = sourceIndexStart;
 }
 
 std::pair<u32, u32> SourcePosition::getPositions() const {
 	return std::make_pair(sourceIndexStart, sourceIndexEnd);
 }
-SourcePosition::SourcePosition() {
-	sourceIndexStart = sourceIndexEnd = -1;
-}
 void SourcePosition::setSourceCode(const fs::FilePath& newSourceCode) {
-	sourceCode = std::make_unique<fs::FilePath>(newSourceCode);
+	sourceCode = base::make_unique<fs::FilePath>(newSourceCode);
+}
+
+void swap(SourcePosition& first, SourcePosition& second) {
+	using std::swap;
+	swap(first.sourceIndexStart, second.sourceIndexStart);
+	swap(first.sourceIndexEnd, second.sourceIndexEnd);
+	swap(first.sourceCode, second.sourceCode);
 }

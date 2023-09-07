@@ -6,6 +6,7 @@
 #pragma once
 
 #include <string>
+#include <utility>
 #include <vector>
 #include <filesystem>
 #include <unordered_map>
@@ -32,7 +33,7 @@ namespace fs {
 	class FileContent {
 		std::shared_ptr<base::OwningView> content;
 		friend class FilePath;
-		FileContent(std::shared_ptr<base::OwningView> content): content(content) {}
+		FileContent(std::shared_ptr<base::OwningView> content): content(std::move(content)) {}
 	public:
 		FileContent(): content(nullptr) {};
 		FileContent(const FileContent&) = default;

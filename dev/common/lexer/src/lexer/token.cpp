@@ -12,54 +12,54 @@
 namespace lexer{
 	Token Token::makeSentinel() {
 		Position dummy_position = {static_cast<usize>(-1), -static_cast<usize>(1), static_cast<usize>(-1)};
-		return Token(Type::Sentinel, base::RawView(""), dummy_position);
+		return {Type::Sentinel, base::RawView(""), dummy_position};
 	}
 
 	Token::Token(Token::Type type, const base::RawView value, Position position) : type(type), str_id(value), position(position) {}
-	
-	Token::Token(Token::Type type, Tokens&& recursive, Position position):
-		type(type), recursive(recursive), position(position) {}
-	
+
+	Token::Token(Token::Type type, Tokens&& recursive, Position position) :
+		type(type), recursive(std::move(recursive)), position(position) {}
+
 	Token Token::makeComment(const base::RawView comment, Position position){
-		return Token(Type::Comment, comment, position);
+		return {Type::Comment, comment, position};
 	}
 
 	Token Token::makeOperator(const base::RawView oper, Position position) { //operator is keyword
-		return Token(Type::Operator, oper, position);
+		return {Type::Operator, oper, position};
 	}
 
 	Token Token::makeIdentifier(const base::RawView identifier, Position position) {
 		if (rift_def::strAsKeyword(base::StrId(identifier)) != Keyword::NotAKeyword) {
 			return makeKeyword(identifier, position);
 		}
-		return Token(Type::Identifier, identifier, position);
+		return {Type::Identifier, identifier, position};
 	}
 
 	Token Token::makeKeyword(const base::RawView keyword, Position position) {
-		return Token(Type::Keyword, keyword, position);
+		return {Type::Keyword, keyword, position};
 	}
 
 	Token Token::makeSpecial(const base::RawView identifier, Position position) {
-		return Token(Type::Special, identifier, position);
+		return {Type::Special, identifier, position};
 	}
-	
+
 	Token Token::makeNumLiteral(const base::RawView literal, Position position) {
-		return Token(Type::NumLiteral, literal, position);
+		return {Type::NumLiteral, literal, position};
 	}
 
 	Token Token::makeString(const base::RawView string, Position position) {
-		return Token(Type::String, string, position);
+		return {Type::String, string, position};
 	}
 
 	Token Token::makeGroup(Char::ParType groupType, Tokens&& tokens, Position position) {
 		switch (groupType){
 			case Char::Round:
-				return Token(Type::RoundGroup, std::move(tokens), position);
+				return {Type::RoundGroup, std::move(tokens), position};
 			case Char::Square:
-				return Token(Type::SquareGroup, std::move(tokens), position);
+				return {Type::SquareGroup, std::move(tokens), position};
 			case Char::Curly:
-				return Token(Type::CurlyGroup, std::move(tokens), position);
-		
+				return {Type::CurlyGroup, std::move(tokens), position};
+
 			case Char::Angle:
 			case Char::NotAPar:
 			default:
@@ -73,23 +73,23 @@ namespace lexer{
 		out.position = position;
 		return out;
 	}
-			
-	
+
+
 	void swap(Token& first, Token& second){
 		using std::swap;
-		
+
 		swap(first.recursive, second.recursive);
 		swap(first.str_id, second.str_id);
 		swap(first.type, second.type);
 		swap(first.position, second.position);
-		swap(first.sourcePosition, second.sourcePosition);
+//		swap(first.sourcePosition, second.sourcePosition);
 	}
-	
+
 	Token& Token::operator = (Token other){
 		swap(*this, other);
 		return *this;
 	}
-	
+
 	Token::Token(Token&& other) noexcept: Token() {
 		swap(*this, other);
 	}
@@ -152,7 +152,7 @@ namespace lexer{
 	bool Token::isNumLiteral() const {
 		return type == Type::NumLiteral;
 	}
-	
+
 	bool Token::isComment() const {
 		return type == Type::Comment;
 	}
@@ -185,17 +185,21 @@ namespace lexer{
 		return position;
 	}
 
-	TokenData::TokenData(Tokens tokens, fs::FileContent file_content): 
+	TokenData::TokenData(Tokens tokens, const fs::FileContent& file_content):
 		tokens(std::move(tokens)), file_content(file_content) {}
-	
+
 	TokenData::TokenData(TokenData&& oth) noexcept:
 		tokens(std::move(oth.tokens)),
-		file_content(std::move(oth.file_content)) {};
-	
-	void TokenData::operator=(TokenData&& oth) noexcept {
-		file_content = std::move(oth.file_content);
-		tokens = std::move(oth.tokens);
+		file_content(oth.file_content) {};
+
+	TokenData& TokenData::operator=(TokenData&& other) noexcept {
+//		if (this == &other)
+//			return *this;
+
+		file_content = other.file_content;
+		tokens = std::move(other.tokens);
+		return *this;
 	}
 
-	TokenData::~TokenData() {}
+	TokenData::~TokenData() = default;
 }

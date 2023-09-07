@@ -2,8 +2,8 @@ add_library(Lexer
 			src/lexer/char.cpp
 			src/lexer/token.cpp
 			src/lexer/lexer.cpp
-        src/lexer/source_position.cpp
-        src/lexer/source_position.hpp)
+			src/lexer/source_position.hpp
+			src/lexer/source_position.cpp)
 
 make_module(Lexer USES Filesystem Printer RiftDefinitions)
 
