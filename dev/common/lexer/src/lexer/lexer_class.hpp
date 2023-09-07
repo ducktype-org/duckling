@@ -9,10 +9,9 @@
 namespace lexer {
 	class Lexer {
 	public:
-		explicit Lexer(CharArray& chars);
+		explicit Lexer(const fs::FilePath &file);
 
-		[[nodiscard]]
-		Tokens tokenize(bool dprint);
+		[[nodiscard]] Tokens tokenize(bool dprint);
 
 	private:
 		void next();
@@ -54,12 +53,13 @@ namespace lexer {
 		[[nodiscard]]
 		bool isStringBegin() const;
 
-		std::string generateLineColumnInfo() const;
+		[[nodiscard]] std::string generateLineColumnInfo() const;
 
 		usize where_ = 0;
 		usize lineNumber_ = 1;
 		usize columnNumber_ = 1;
-		CharArray& charArray_;
+		const fs::FilePath& file_;
+		CharArray charArray_;
 		Tokens tokens_;
 
 		bool token_messages = false;
