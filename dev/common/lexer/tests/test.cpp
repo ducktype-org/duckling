@@ -14,7 +14,7 @@ public:
 		rift_def::setKeywordMode(rift_def::KeywordMode::RiftSource);
 
 		fs::FilePath file(path("token_code.rift"));
-		td = std::move(lexer::tokenizeFile(file));
+		td = lexer::tokenizeFile(file);
 		TESTER_ADD_TEST(testBasicStructure);
 		TESTER_ADD_TEST(testGroup0);
 		TESTER_ADD_TEST(testGroup1);

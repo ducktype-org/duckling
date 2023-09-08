@@ -13,20 +13,19 @@ class SourcePosition {
 public:
 	SourcePosition();
 	SourcePosition(SourcePosition&);
-	SourcePosition(SourcePosition&&) noexcept;
 
-	explicit SourcePosition(const fs::FilePath& sourceCode);
-	SourcePosition(const fs::FilePath& sourceCode, u32 start);
-	SourcePosition(const fs::FilePath& sourceCode, u32 start, u32 end);
+	explicit SourcePosition(std::shared_ptr<fs::FilePath> sourceCode);
+	SourcePosition(std::shared_ptr<fs::FilePath> sourceCode, u32 start);
+	SourcePosition(std::shared_ptr<fs::FilePath> sourceCode, u32 start, u32 end);
 
 	friend void swap(SourcePosition& first, SourcePosition& second);
 	[[nodiscard]] std::string getSourceChars() const;
-	void setSourceCode(const fs::FilePath & newSourceCode);
+	void setSourceCode(std::shared_ptr<fs::FilePath> newSourceCode);
 	void setStart(u32 start);
 	void setEnd(u32 end);
 	[[nodiscard]] std::pair<u32, u32> getPositions() const;
 private:
-	base::unique_ptr<fs::FilePath> sourceCode;
+	std::shared_ptr<fs::FilePath> sourceCode;
 	u32 sourceIndexStart, sourceIndexEnd; // Indices of the characters in a source code.
 };
 

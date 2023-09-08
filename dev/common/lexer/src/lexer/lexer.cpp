@@ -20,7 +20,7 @@ namespace lexer {
 	   return out;
    }
 
-   Lexer::Lexer(const fs::FilePath& file) : file_(file), charArray_(decode(file.getContent().view())) {
+   Lexer::Lexer(const fs::FilePath& file) : file_(std::make_shared<fs::FilePath>(file)), charArray_(decode(file.getContent().view())) {
    }
 
    Tokens Lexer::tokenize(bool dprint) {

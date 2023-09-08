@@ -36,7 +36,7 @@ namespace lexer {
 		TokenData(Tokens tokens, const fs::FileContent& file_content);
 
 		void operator=(const TokenData&) = delete;
-		TokenData& operator=(TokenData&&) noexcept;
+		void operator=(TokenData&&) noexcept;
 
 		virtual ~TokenData();
 	};
@@ -88,12 +88,12 @@ namespace lexer {
 		virtual ~Token() = default;
 
 		Token() noexcept = default;
-		Token(Token& other) = default;
+		Token(const Token& other) = default;
+		Token(Token&& other) noexcept;
 		Token(Type type, base::RawView value, Position position);
 		Token(Type type, Tokens&& recursive, Position position);
 		friend void swap(Token& first, Token& second);
 		Token& operator = (Token other);
-		Token(Token&& other) noexcept;
 
 		[[nodiscard]] Type getType() const;
 		[[nodiscard]] base::StrId getValue() const;

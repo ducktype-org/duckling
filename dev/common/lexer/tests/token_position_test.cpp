@@ -47,7 +47,7 @@ private:
 
 	void simplePositionTest() {
 		fs::FilePath file(path("fun.rift"));
-		td = lexer::tokenizeFile(file.getContent());
+		td = lexer::tokenizeFile(file);
 
 		std::stringstream result_stream;
 		print(td.tokens, result_stream);

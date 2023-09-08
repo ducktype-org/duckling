@@ -18,7 +18,7 @@ namespace lexer{
 	Token::Token(Token::Type type, const base::RawView value, Position position) : type(type), str_id(value), position(position) {}
 
 	Token::Token(Token::Type type, Tokens&& recursive, Position position) :
-		  type(type), recursive(std::move(recursive)), position(position) {}
+		  type(type), recursive(recursive), position(position) {}
 
 	Token Token::makeComment(const base::RawView comment, Position position){
 		return {Type::Comment, comment, position};
@@ -192,13 +192,9 @@ namespace lexer{
 		  tokens(std::move(oth.tokens)),
 		  file_content(oth.file_content) {};
 
-	TokenData& TokenData::operator=(TokenData&& other) noexcept {
-		//		if (this == &other)
-		//			return *this;
-
+	void TokenData::operator=(TokenData&& other) noexcept {
 		file_content = other.file_content;
 		tokens = std::move(other.tokens);
-		return *this;
 	}
 
 	TokenData::~TokenData() = default;

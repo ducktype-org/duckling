@@ -28,17 +28,15 @@ SourcePosition::SourcePosition(SourcePosition& other) {
 	sourceCode = base::make_unique<fs::FilePath>(*other.sourceCode);
 }
 
-SourcePosition::SourcePosition(SourcePosition&& other)  noexcept : SourcePosition(other) {}
-
-SourcePosition::SourcePosition(const fs::FilePath& sourceCode) : SourcePosition() {
-	setSourceCode(sourceCode);
+SourcePosition::SourcePosition(std::shared_ptr<fs::FilePath> sourceCode) : SourcePosition() {
+	setSourceCode(std::move(sourceCode));
 }
 
-SourcePosition::SourcePosition(const fs::FilePath& sourceCode, u32 start) : SourcePosition(sourceCode) {
+SourcePosition::SourcePosition(std::shared_ptr<fs::FilePath> sourceCode, u32 start) : SourcePosition(std::move(sourceCode)) {
     setStart(start);
 }
 
-SourcePosition::SourcePosition(const fs::FilePath& sourceCode, u32 start, u32 end) : SourcePosition(sourceCode, start) {
+SourcePosition::SourcePosition(std::shared_ptr<fs::FilePath> sourceCode, u32 start, u32 end) : SourcePosition(std::move(sourceCode), start) {
 	setEnd(end);
 }
 
@@ -57,8 +55,8 @@ void SourcePosition::setEnd(u32 end) {
 std::pair<u32, u32> SourcePosition::getPositions() const {
 	return std::make_pair(sourceIndexStart, sourceIndexEnd);
 }
-void SourcePosition::setSourceCode(const fs::FilePath& newSourceCode) {
-	sourceCode = base::make_unique<fs::FilePath>(newSourceCode);
+void SourcePosition::setSourceCode(std::shared_ptr<fs::FilePath> newSourceCode) {
+	sourceCode = std::move(newSourceCode);
 }
 
 void swap(SourcePosition& first, SourcePosition& second) {

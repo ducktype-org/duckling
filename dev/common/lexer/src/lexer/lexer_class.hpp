@@ -26,7 +26,7 @@ namespace lexer {
 		void parseCodeblockInto(Tokens& output);
 		void parseSingleInto(Tokens& output);
 
-		// non terminal tokens parsers:
+		// non-terminal tokens parsers:
 		Tokens parGroup(lexer::Char::ParType end);
 
 		// terminal tokens parsers:
@@ -58,7 +58,7 @@ namespace lexer {
 		usize where_ = 0;
 		usize lineNumber_ = 1;
 		usize columnNumber_ = 1;
-		const fs::FilePath& file_;
+		std::shared_ptr<fs::FilePath> file_;
 		CharArray charArray_;
 		Tokens tokens_;
 
