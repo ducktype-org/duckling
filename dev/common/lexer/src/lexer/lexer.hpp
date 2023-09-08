@@ -9,6 +9,6 @@
 #include "token.hpp"
 
 namespace lexer {
-   void init();
-   lexer::TokenData tokenizeFile(const fs::FilePath& file, bool dprint = false);
+    void init();
+    lexer::TokenData tokenizeFile(const fs::FilePath& file, bool dprint = false);
 }

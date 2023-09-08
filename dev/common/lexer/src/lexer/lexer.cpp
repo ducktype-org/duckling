@@ -20,7 +20,7 @@ namespace lexer {
 	   return out;
    }
 
-   Lexer::Lexer(const fs::FilePath& file) : file_(std::make_shared<fs::FilePath>(file)), charArray_(decode(file.getContent().view())) {
+   Lexer::Lexer(const fs::FilePath& file) : file_(std::make_shared<fs::FilePath>(file)), fileContent_(file_->getContent()), charArray_(decode(fileContent_.view())) {
    }
 
    Tokens Lexer::tokenize(bool dprint) {
@@ -85,7 +85,6 @@ namespace lexer {
    void Lexer::parseSingleInto(Tokens& output) {
 	   usize begin = where_;
 	   Token::Position position = {lineNumber_, columnNumber_, where_};
-	   //		SourcePosition sourcePosition;
 	   if(isEOF()) {
 		   // @TODO: error
 		   RIFT_PANIC("EOF encountered inside parseSingleInto");
@@ -149,8 +148,8 @@ namespace lexer {
 				   printer::Message({
 										{"Skipped"}, {generateLineColumnInfo()}, {"("}, {std::string(charArray_.composeRaw(begin, begin).stringView())}, {")"}
 									},
-									printer::MessageType::DEBUG
-									));
+				                    printer::MessageType::DEBUG
+				                    ));
 		   }
 		   next(); // in else??
 	   }

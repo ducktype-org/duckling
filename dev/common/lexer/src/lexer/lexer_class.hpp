@@ -9,7 +9,7 @@
 namespace lexer {
 	class Lexer {
 	public:
-		explicit Lexer(const fs::FilePath &file);
+		explicit Lexer(const fs::FilePath& file);
 
 		[[nodiscard]] Tokens tokenize(bool dprint);
 
@@ -59,6 +59,7 @@ namespace lexer {
 		usize lineNumber_ = 1;
 		usize columnNumber_ = 1;
 		std::shared_ptr<fs::FilePath> file_;
+		fs::FileContent fileContent_;
 		CharArray charArray_;
 		Tokens tokens_;
 
