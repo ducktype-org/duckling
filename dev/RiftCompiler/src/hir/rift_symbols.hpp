@@ -2,6 +2,7 @@
 
 #include "symtable/symbol.hpp"
 #include "symtable/symbol_ref.hpp"
+#include "hir_expr.hpp"
 #include <pst_parser/rift_parser_base.hpp>
 #include <pst_parser/elements/elements.hpp>
 
@@ -69,11 +70,17 @@ namespace hir {
 	class ConstSymbol: public symtable::Symbol {
 		// optional calculated Value
 		PstRef<pst::Const> pst_element;
+
+		ExpressionRef type_expr;
+		ExpressionRef value_expr;
+
 	public:
 		ConstSymbol(ScopeRef scope, base::StrId name, 
 		            PstRef<pst::Const> pst_element):
 			Symbol(scope, name, false, true, SymbolKind::Const),
-			pst_element(pst_element) {}
+			pst_element(pst_element),
+			type_expr(Expression::makeExpr(pst_element->getType())),
+			value_expr(Expression::makeExpr(pst_element->getValue())) {}
 
 		void calculateType() override;
 		void analyzeAll(AnalysisState&) override;

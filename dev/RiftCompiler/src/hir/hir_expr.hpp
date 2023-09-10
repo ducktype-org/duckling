@@ -17,7 +17,7 @@ namespace hir {
 	public:
 		// in the future this will probably require some „grammar context”
 		// in the future this will require AnalysisState to log errors
-		ExpressionRef makeExpr(pst::ParserCBorrowRef<pst::Expr>);
+		static ExpressionRef makeExpr(pst::ParserCBorrowRef<pst::Expr>);
 		// eval
 	};
 

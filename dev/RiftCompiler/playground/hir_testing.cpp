@@ -4,8 +4,7 @@
 #include <lexer/lexer.hpp>
 #include <typesystem/typesystem.hpp>
 
-hir::SourceUnit prepare(std::string_view filename) {
-	fs::FilePath file(filename);
+hir::SourceUnit prepare(const fs::FilePath& file) {
 	auto td = lexer::tokenizeFile(file.getContent());
 	return {pst::parse(std::move(td)), file};
 }
@@ -23,7 +22,7 @@ int main(int argc, char** argv) {
 
 	hir::HIR hir;
 	
-	hir.addUnit(prepare(file.strView()));
+	hir.addUnit(prepare(file));
 	hir.doMagicStuff();
 }
 

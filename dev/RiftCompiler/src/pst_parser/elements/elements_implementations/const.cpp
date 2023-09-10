@@ -5,7 +5,9 @@ namespace pst {
 		auto out = makeRef<Const>();
 		RIFT_ASSERT(state.ctokens().is(Keyword::Const), "bad statement choice");
 
-		parseAll(state, Keyword::Const, &out->name, Operator::Colon, &out->type);
+		parseAll(state, Keyword::Const, &out->name, Operator::Colon);
+		out->type = Expr::parseUntil(state, Operator::Assign);
+		parseAll(state, Operator::Assign, &out->value);
 
 		return out;
 	}

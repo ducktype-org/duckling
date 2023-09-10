@@ -24,6 +24,21 @@ namespace pst {
 		return Expr::parse(state, 1e18, false);
 	}
 
+	ParserRef<Expr> Expr::parseUntil(RiftParserState& state, rift_def::Operator until) {
+		// look ahead:
+		usize count = 0;
+		while (!state.ctokens().is(until, count)) {
+			if (state.ctokens().size() < count) {
+				state.fail(0, "Bad expression end");
+				break;
+			}
+			count++;
+		}
+
+		return Expr::parse(state, count, true);
+	}
+
+
 	/** 
 	 * It is left in this state for now, as a lot will depend on semantical analysis
 	 * @TODO: lambda, todo-s 
