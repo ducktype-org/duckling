@@ -7,7 +7,6 @@
 #include <span>
 #include <iostream>
 
-#include <set>
 
 namespace symtable {
 
@@ -32,7 +31,7 @@ namespace symtable {
 		// @FIXME: this has to be much better that this:
 		// This is just a hotfix
 
-		static std::set<base::StrId> engaged_names;
+		std::set<base::StrId> engaged_names;
 		if (engaged_names.contains(name)) {
 			return result;
 		}

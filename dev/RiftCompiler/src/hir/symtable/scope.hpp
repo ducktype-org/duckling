@@ -5,7 +5,7 @@
 #include "symbol_ref.hpp"
 #include "lookup_result.hpp"
 #include <base/string_id.hpp>
-
+#include <set>
 
 namespace hir {
 	class AnalysisState;
@@ -28,7 +28,8 @@ namespace symtable {
 
 		std::vector<SymbolRef> symbols;
 
-		bool lookup_engaged = false;
+		// bool lookup_engaged = false;
+		std::set<base::StrId> engaged_names;
 
 		friend class SymbolData;
 
