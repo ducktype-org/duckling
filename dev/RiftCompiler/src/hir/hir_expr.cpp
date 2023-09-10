@@ -1,9 +1,12 @@
 #include "hir_expr.hpp"
+#include "symtable/symbol_ref.hpp"
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 #include <base/str_to_int.hpp>
 #include <typesystem/typesystem.hpp>
-#include "symtable/symbol_ref.hpp"
+
+#include <exec/operators/builtinoperators.hpp>
+#include <operations/operation.hpp>
 
 // @Placeholder
 
@@ -17,6 +20,9 @@ namespace hir {
 			Expression(scope), name(name) {}
 
 		void lookup(AnalysisState& state) final {
+			if (lookup_done) return;
+			lookup_done = true;
+
 			auto lookup_result = scope->lookupMeAndParents(state, name);
 			if (!lookup_result.isSingle()) {
 				RIFT_PANIC("ambiguity in expr lookup, @TODO: error in state");
@@ -37,10 +43,14 @@ namespace hir {
 			std::cerr << "SYMBOL : " << symbol.value()->getName().strView() << "\n";
 		}
 		void determineType(AnalysisState& state) final {
+			if (type_done) return;
+			type_done = true;
+
 			lookup(state);
 			type = symbol.value()->getType();
 		}
 		exec::CTV eval(AnalysisState& state) final {
+			// @TODO: this should be called just once
 			determineType(state);
 			return symbol.value()->getValue();
 		}
@@ -55,12 +65,16 @@ namespace hir {
 		LiteralIntExpr(symtable::ScopeRef scope, i32 value):
 			Expression(scope), value(value) {}
 		
-		void lookup(AnalysisState& state) final {}
+		void lookup(AnalysisState& state) final {
+			lookup_done = true;
+		}
 		void determineType(AnalysisState& state) final {
-			// @TODO: this 32 is just temporary:
+			if (type_done) return;
+			type_done = true;
 			type = ts::TypeDesc<>(ts::IntegralInfo::create(32));
 		}
 		exec::CTV eval(AnalysisState& state) final {
+			determineType(state);
 			exec::CTV out = exec::alloc_new(getType(state));
 			out.getData<i32>().front() = value;
 			return out;
@@ -75,11 +89,16 @@ namespace hir {
 		LiteralTypeExpr(symtable::ScopeRef scope, ts::TypeDesc<> type):
 			Expression(scope), type_value(type) {}
 		
-		void lookup(AnalysisState& state) final {}
+		void lookup(AnalysisState& state) final {
+			lookup_done = true;
+		}
 		void determineType(AnalysisState& state) final {
+			if (type_done) return;
+			type_done = true;
 			type = ts::TypeDesc<>(ts::MetaInfo::create());
 		}
 		ts::TypeDesc<> evalAsType(AnalysisState& state) final {
+			determineType(state);
 			return type_value;
 		}
 	};
@@ -88,23 +107,59 @@ namespace hir {
 		ExpressionRef lhs;
 		ExpressionRef rhs;
 		base::StrId oper;
+
+		std::optional<operation::OperationId> operation_id;
 	public:
 		BinOperatorExpr(symtable::ScopeRef scope, ExpressionRef lhs, ExpressionRef rhs, base::StrId oper):
 			Expression(scope), lhs(std::move(lhs)), rhs(std::move(rhs)), oper(oper) {}
 
 		void lookup(AnalysisState& state) final {
+			if (lookup_done) return;
+			lookup_done = true;
+			
 			lhs->lookup(state);
 			rhs->lookup(state);
 		}
 		void determineType(AnalysisState& state) final {
+			if (type_done) return;
+			type_done = true;
+
+			lookup(state);
 			lhs->determineType(state);
 			rhs->determineType(state);
 			
-			// @TODO
+			exec::Operator exec_operator;
+			if (oper == base::StrId('+')) {
+				exec_operator = exec::Operator::Plus;
+			}
+			else if (oper == base::StrId('-')) {
+				exec_operator = exec::Operator::Minus;
+			}
+			else {
+				throw base::NotYetImplemented("Operator different then + or -");
+			}
+
+			exec::BuiltInOp builtin_op {exec_operator, {lhs->getType(state), rhs->getType(state)}};
+
+			if (not exec::getBuiltInOps().contains(builtin_op)) {
+				RIFT_PANIC("BinOperatorExpr encountered expression that is not builtin");
+			}
+
+			operation_id = exec::getBuiltInOps().at(builtin_op);
+			const auto& typed_operation = operation::getOperation(operation_id.value());
+
+			type = typed_operation.signature.getResultType();
 		}
 
 		exec::CTV eval(AnalysisState& state) final {
-			// @TODO	
+			determineType(state);
+			
+			auto lhs_result = lhs->eval(state);	
+			auto rhs_result = rhs->eval(state);
+
+			const auto& typed_operation = operation::getOperation(operation_id.value());
+
+			return typed_operation.function({lhs_result, rhs_result});
 		}
 
 	};

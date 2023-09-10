@@ -19,6 +19,7 @@ int main(int argc, char** argv) {
 	lexer::init();
 	pst::init();
 	ts::init();
+	exec::init();
 
 	hir::HIR hir;
 	

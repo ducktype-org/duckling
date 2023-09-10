@@ -10,6 +10,8 @@
 #include <vector>
 
 namespace exec {
+
+	// @TODO: unify with rift_def?
 	enum class Operator {
 		Plus,
 		Minus,

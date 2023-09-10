@@ -18,6 +18,9 @@ namespace hir {
 	protected:
 		Expression(symtable::ScopeRef scope): scope(scope) {};
 
+		bool lookup_done = false;
+		bool type_done = false;
+
 		symtable::ScopeRef scope;
 		std::optional<ts::TypeDesc<> > type;
 
