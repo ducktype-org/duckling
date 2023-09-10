@@ -1,5 +1,5 @@
 namespace N {
-	const x: t;
+	const x: i32 = 0;
 }
 alias n = N;
 alias a = n;

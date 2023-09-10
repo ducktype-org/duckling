@@ -28,6 +28,7 @@ namespace symtable {
 
 	ScopeRef Symbol::getLinkedLookupScope(hir::AnalysisState& state) {
 		if (!linked_lookup_scope.has_value()) {
+			RIFT_ASSERT(unlockedLookup(), "Trying to calculateLinkedLookup while in lookup lock");
 			calculateLinkedLookup(state);
 		}
 		return linked_lookup_scope.value();
@@ -39,6 +40,7 @@ namespace symtable {
 
 	// @TODO: errors
 	LookupResult Symbol::lookupIn(hir::AnalysisState& state, base::StrId name)  {
+		RIFT_ASSERT(unlockedLookup(), "Trying to lookupIn while in locked lookup state");
 		scope = getLinkedLookupScope(state);
 		return scope->lookup(state, name);
 	}
@@ -55,5 +57,9 @@ namespace symtable {
 			RIFT_PANIC("de alias called on alias symbol not implementing deAlias");
 		}
 		return {{}, {{SymbolRef(this)}, {}}};
+	}
+
+	bool Symbol::unlockedLookup() const {
+		return not lock_lookup;
 	}
 }

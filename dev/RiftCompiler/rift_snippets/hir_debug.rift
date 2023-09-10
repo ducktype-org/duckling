@@ -1,0 +1,6 @@
+
+namespace A {}
+using A.*;
+
+
+

@@ -117,6 +117,7 @@ namespace hir {
 	};
 
 	class UsingSymbol: public GenericAlias {
+
 		PstRef<pst::Using> pst_element;
 	public:
 		UsingSymbol(hir::AnalysisState& state,

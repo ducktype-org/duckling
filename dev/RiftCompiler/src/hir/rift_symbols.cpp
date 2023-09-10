@@ -1,7 +1,8 @@
-#include <base/exceptions.hpp>
 #include <typesystem/typesystem.hpp>
 #include "rift_symbols.hpp"
 #include "analysis_state.hpp"
+#include <base/exceptions.hpp>
+#include <base/defer.hpp>
 
 namespace hir {
 
@@ -182,7 +183,7 @@ namespace hir {
 	AliasSymbol::AliasSymbol(hir::AnalysisState& state,
 	                ScopeRef scope, base::StrId name, 
 		            PstRef<pst::Alias> pst_element):
-			GenericAlias(state, scope, name, false, true, SymbolKind::Const),
+			GenericAlias(state, scope, name, false, true, SymbolKind::Alias),
 			pst_element(pst_element) {
 		is_alias = true;
 	}
@@ -236,7 +237,7 @@ namespace hir {
 	UsingSymbol::UsingSymbol(hir::AnalysisState& state,
 	            ScopeRef scope, base::StrId name, 
 				PstRef<pst::Using> pst_element):
-		GenericAlias(state, scope, name, false, true, SymbolKind::Const),
+		GenericAlias(state, scope, name, false, true, SymbolKind::Alias),
 		pst_element(pst_element) {
 		
 		wildcard = true;
@@ -254,8 +255,11 @@ namespace hir {
 	}
 
 	void UsingSymbol::calculateLinkedLookup(AnalysisState& state) {
-
 		std::cerr << "  UsingSymbol -- calculating linked lookup" << "\n";
+		RIFT_ASSERT(unlockedLookup(), "calculateLinkedLookup in locked lookup!");
+		lock_lookup = true;
+		defer (lock_lookup = false);
+
 
 		auto names = pst_element->getPointed();
 		auto lookup_result = state.symTable().lookupDottedNameInScopeAndParents(state, scope, {names.begin(), names.end()});

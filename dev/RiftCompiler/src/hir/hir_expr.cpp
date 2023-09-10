@@ -24,7 +24,7 @@ namespace hir {
 			auto as_single = lookup_result.getAsSingle();
 			auto dealiased_single = symtable::deAliasSymbolChain(state, as_single);
 
-			symbol = as_single.back();
+			symbol = dealiased_single.back();
 		}
 		void determineType(AnalysisState& state) final {
 			lookup(state);

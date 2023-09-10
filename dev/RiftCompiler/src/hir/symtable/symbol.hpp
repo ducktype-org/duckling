@@ -25,6 +25,7 @@ namespace symtable {
 		CompilationUnit,
 		Const,
 		Struct,
+		Alias,
 
 		TestSymbol,
 		// ...
@@ -67,6 +68,9 @@ namespace symtable {
 
 		std::optional<ts::TypeDesc<>> type;
 		SymbolKind kind;
+
+		// lookup lock:
+		bool lock_lookup = false;
 
 		Symbol(hir::AnalysisState& state,
 		       ScopeRef scope, base::StrId name, bool anonymous,
@@ -124,6 +128,7 @@ namespace symtable {
 
 		LookupResult lookupIn(hir::AnalysisState&, base::StrId name);
 		
+		bool unlockedLookup() const;
 	};
 
 }
