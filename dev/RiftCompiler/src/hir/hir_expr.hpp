@@ -3,6 +3,7 @@
 #include <pst_parser/pst.hpp> // Expr, @TODO: separate expr from rest?
 #include <typesystem/typesystem.hpp>
 #include <exec/exec.hpp>
+#include "analysis_state.hpp"
 
 // This code is a temporary setup
 // @Placeholder
@@ -15,23 +16,26 @@ namespace hir {
 
 	class Expression {
 	protected:
-		Expression() {};
+		Expression(symtable::ScopeRef scope): scope(scope) {};
+
+		symtable::ScopeRef scope;
 
 		std::optional<ts::TypeDesc<> > type;
 
-		// @TODO: pass some state here 
-		virtual void determineType();
+		virtual void lookup(AnalysisState&);
+		virtual void determineType(AnalysisState&);
+
 	public:
 		// in the future this will probably require some „grammar context”
 		// in the future this will require AnalysisState to log errors
-		static ExpressionRef makeExpr(pst::ParserCBorrowRef<pst::Expr>);
+		static ExpressionRef makeExpr(symtable::ScopeRef scope, pst::ParserCBorrowRef<pst::Expr>);
 		// eval
 
 		// @TODO: this should receive some state:
-		virtual ts::TypeDesc<> evalAsType();
-		virtual exec::CTV eval();
+		virtual ts::TypeDesc<> evalAsType(AnalysisState&);
+		virtual exec::CTV eval(AnalysisState&);
 		
-		ts::TypeDesc<> getType();
+		ts::TypeDesc<> getType(AnalysisState&);
 	};
 
 }

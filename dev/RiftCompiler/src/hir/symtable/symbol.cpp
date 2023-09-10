@@ -3,8 +3,10 @@
 
 namespace symtable {
 	
-	Symbol::Symbol(ScopeRef scope, base::StrId name, bool anonymous,
+	Symbol::Symbol(hir::AnalysisState& state,
+	               ScopeRef scope, base::StrId name, bool anonymous,
 	               bool is_static, SymbolKind kind):
+		analysis_state(state),
 		scope(scope),
 		name(name),
 		anonymous(anonymous),
@@ -21,7 +23,7 @@ namespace symtable {
 	}
 
 	exec::CTV Symbol::getValue() {
-		RIFT_PANIC("getValue called on Symbol not implemeting it");
+		RIFT_PANIC("getValue called on Symbol not implementing it");
 	}
 
 	ScopeRef Symbol::getLinkedLookupScope(hir::AnalysisState& state) {

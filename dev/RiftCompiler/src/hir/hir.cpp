@@ -41,6 +41,7 @@ namespace hir {
 		symtable::ScopeRef root_scope = state.newSubRootScope();
 
 		state.emplaceSymbol<TopLevelSymbol>(
+			state,
 			root_scope, base::StrId("TopLevel"),
 			pst.getTopLevelElement()
 		);

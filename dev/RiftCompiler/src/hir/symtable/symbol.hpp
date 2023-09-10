@@ -35,6 +35,10 @@ namespace symtable {
 		// Update constructors when adding fields here
 
 	protected:
+		// state:
+		// @TODO: use it instead of passing state everywhere
+		hir::AnalysisState& analysis_state;
+
 		// symbol identification:
 		ScopeRef scope;
 		base::StrId name;
@@ -64,7 +68,8 @@ namespace symtable {
 		std::optional<ts::TypeDesc<>> type;
 		SymbolKind kind;
 
-		Symbol(ScopeRef scope, base::StrId name, bool anonymous,
+		Symbol(hir::AnalysisState& state,
+		       ScopeRef scope, base::StrId name, bool anonymous,
 		       bool is_static, SymbolKind kind);
 
 

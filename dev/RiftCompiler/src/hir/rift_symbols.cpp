@@ -7,7 +7,7 @@ namespace hir {
 
 
 	base::unique_ptr<Symbol> makeSymbolFromStatement(
-		symtable::ScopeRef scope, PstRef<pst::Stmt> stmt) {
+		AnalysisState& state, symtable::ScopeRef scope, PstRef<pst::Stmt> stmt) {
 		
 		switch (stmt->getKind()) {
 		// @TODO: cast check
@@ -19,6 +19,7 @@ namespace hir {
 		case pst::StmtKind::Namespace: {
 			PstRef<pst::Namespace> namespace_ = stmt;
 			return base::make_unique<NamespaceSymbol>(
+				state,
 				scope,
 				namespace_->getName(),
 				namespace_
@@ -28,6 +29,7 @@ namespace hir {
 			PstRef<pst::Const> const_ = stmt;
 			std::cerr << "Const: " << const_->getName().strView() << "\n";
 			return base::make_unique<ConstSymbol>(
+				state,
 				scope,
 				const_->getName(),
 				const_
@@ -37,6 +39,7 @@ namespace hir {
 			PstRef<pst::Struct> struct_ = stmt;
 			std::cerr << "Struct: " << struct_->getName().strView() << "\n";
 			return base::make_unique<StructSymbol>(
+				state,
 				scope,
 				struct_->getName(),
 				struct_
@@ -47,6 +50,7 @@ namespace hir {
 			PstRef<pst::Alias> alias = stmt;
 			std::cerr << "Alias: " << alias->getName().strView() << "\n";
 			return base::make_unique<AliasSymbol>(
+				state,
 				scope,
 				alias->getName(),
 				alias
@@ -58,6 +62,7 @@ namespace hir {
 			std::cerr << "Using: " << using_->getPointed()[0].strView() << "\n";
 
 			return base::make_unique<UsingSymbol>(
+				state,
 				scope,
 				base::StrId("wildcard"),
 				using_
@@ -89,7 +94,7 @@ namespace hir {
 		for (auto& stmt: pst_element->getStatements()) {
 			std::cerr << "stmt...\n";
 			auto sym = makeSymbolFromStatement(
-				scope, stmt.borrow()
+				state, scope, stmt.borrow()
 			);
 			// @TODO: error symbol
 			if (sym != nullptr) {
@@ -99,9 +104,10 @@ namespace hir {
 	}
 
 
-	TopLevelSymbol::TopLevelSymbol(ScopeRef scope, base::StrId name,
+	TopLevelSymbol::TopLevelSymbol(hir::AnalysisState& state,
+	                               ScopeRef scope, base::StrId name,
 	                               PstRef<pst::TopLevel> pst_element):
-		Symbol(scope, name, false, true, SymbolKind::CompilationUnit),
+		Symbol(state, scope, name, false, true, SymbolKind::CompilationUnit),
 		pst_element(pst_element) {}
 
 	void TopLevelSymbol::calculateType() {
@@ -117,7 +123,7 @@ namespace hir {
 			std::cerr << "stmt...\n";
 			state.addSymbol(
 				makeSymbolFromStatement(
-					scope, stmt.borrow()
+					state, scope, stmt.borrow()
 				)
 			);
 		}
@@ -136,7 +142,7 @@ namespace hir {
 
 	void ConstSymbol::calculateType() {
 		// @TODO look up here and other stuff
-		type = type_expr->evalAsType();
+		type = type_expr->evalAsType(analysis_state);
 		//ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
 	}
 
@@ -145,7 +151,7 @@ namespace hir {
 	}
 
 	exec::CTV ConstSymbol::getValue() {
-		return value_expr->eval();
+		return value_expr->eval(analysis_state);
 	}
 
 	ts::ClassInfo StructSymbol::calculateValue() {
@@ -173,9 +179,10 @@ namespace hir {
 		throw base::NotYetImplemented("getDeAlias -- only require dealiasing any lookup results");
 	};
 
-	AliasSymbol::AliasSymbol(ScopeRef scope, base::StrId name, 
+	AliasSymbol::AliasSymbol(hir::AnalysisState& state,
+	                ScopeRef scope, base::StrId name, 
 		            PstRef<pst::Alias> pst_element):
-			GenericAlias(scope, name, false, true, SymbolKind::Const),
+			GenericAlias(state, scope, name, false, true, SymbolKind::Const),
 			pst_element(pst_element) {
 		is_alias = true;
 	}
@@ -226,9 +233,10 @@ namespace hir {
 		getAll(state);
 	}
 
-	UsingSymbol::UsingSymbol(ScopeRef scope, base::StrId name, 
+	UsingSymbol::UsingSymbol(hir::AnalysisState& state,
+	            ScopeRef scope, base::StrId name, 
 				PstRef<pst::Using> pst_element):
-		GenericAlias(scope, name, false, true, SymbolKind::Const),
+		GenericAlias(state, scope, name, false, true, SymbolKind::Const),
 		pst_element(pst_element) {
 		
 		wildcard = true;

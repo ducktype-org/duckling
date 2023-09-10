@@ -29,7 +29,8 @@ namespace hir {
 		// symbol representing single file/compilation unit
 		PstRef<pst::TopLevel> pst_element;
 	public:
-		TopLevelSymbol(ScopeRef scope, base::StrId name,
+		TopLevelSymbol(hir::AnalysisState& state,
+		               ScopeRef scope, base::StrId name,
 		               PstRef<pst::TopLevel> pst_element);
 
 		void calculateType() override;
@@ -39,9 +40,9 @@ namespace hir {
 	class NamespaceSymbol: public symtable::Symbol {
 		PstRef<pst::Namespace> pst_element;
 	public:
-		NamespaceSymbol(ScopeRef scope, base::StrId name, 
+		NamespaceSymbol(hir::AnalysisState& state, ScopeRef scope, base::StrId name, 
 		                PstRef<pst::Namespace> pst_element):
-			Symbol(scope, name, false, true, SymbolKind::Namespace),
+			Symbol(state, scope, name, false, true, SymbolKind::Namespace),
 			pst_element(pst_element) {}
 
 		void calculateType() override;
@@ -53,9 +54,10 @@ namespace hir {
 		PstRef<pst::Struct> pst_element;
 		std::optional<ts::ClassInfo> value;
 	public:
-		StructSymbol(ScopeRef scope, base::StrId name, 
-		                PstRef<pst::Struct> pst_element):
-			Symbol(scope, name, false, true, SymbolKind::Struct),
+		StructSymbol(hir::AnalysisState& state,
+		             ScopeRef scope, base::StrId name, 
+		             PstRef<pst::Struct> pst_element):
+			Symbol(state, scope, name, false, true, SymbolKind::Struct),
 			pst_element(pst_element) {}
 
 		void calculateType() override;
@@ -77,12 +79,12 @@ namespace hir {
 		ExpressionRef value_expr;
 
 	public:
-		ConstSymbol(ScopeRef scope, base::StrId name, 
+		ConstSymbol(hir::AnalysisState& state, ScopeRef scope, base::StrId name, 
 		            PstRef<pst::Const> pst_element):
-			Symbol(scope, name, false, true, SymbolKind::Const),
+			Symbol(state, scope, name, false, true, SymbolKind::Const),
 			pst_element(pst_element),
-			type_expr(Expression::makeExpr(pst_element->getType())),
-			value_expr(Expression::makeExpr(pst_element->getValue())) {}
+			type_expr(Expression::makeExpr(scope, pst_element->getType())),
+			value_expr(Expression::makeExpr(scope, pst_element->getValue())) {}
 
 		void calculateType() override;
 		void analyzeAll(AnalysisState&) override;
@@ -105,7 +107,8 @@ namespace hir {
 	class AliasSymbol: public GenericAlias {
 		PstRef<pst::Alias> pst_element;
 	public:
-		AliasSymbol(ScopeRef scope, base::StrId name, 
+		AliasSymbol(hir::AnalysisState& state,
+		            ScopeRef scope, base::StrId name, 
 		            PstRef<pst::Alias> pst_element);
 
 		void calculateType() override;
@@ -116,7 +119,8 @@ namespace hir {
 	class UsingSymbol: public GenericAlias {
 		PstRef<pst::Using> pst_element;
 	public:
-		UsingSymbol(ScopeRef scope, base::StrId name, 
+		UsingSymbol(hir::AnalysisState& state,
+		            ScopeRef scope, base::StrId name, 
 		            PstRef<pst::Using> pst_element);
 					
 		void calculateType() override;
