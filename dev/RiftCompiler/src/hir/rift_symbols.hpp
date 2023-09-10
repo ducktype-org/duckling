@@ -58,9 +58,11 @@ namespace hir {
 			Symbol(scope, name, false, true, SymbolKind::Struct),
 			pst_element(pst_element) {}
 
-		ts::ClassInfo calculateValue();
 		void calculateType() override;
 		void analyzeAll(AnalysisState&) override;
+
+		// @deprecated
+		ts::ClassInfo calculateValue();
 	};
 
 	class GlobalVarSymbol: public symtable::Symbol {
@@ -84,6 +86,8 @@ namespace hir {
 
 		void calculateType() override;
 		void analyzeAll(AnalysisState&) override;
+
+		exec::CTV getValue() final;
 	};
 
 	class GenericAlias: public symtable::Symbol {

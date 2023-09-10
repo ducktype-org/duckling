@@ -144,6 +144,10 @@ namespace hir {
 		getAll(state);
 	}
 
+	exec::CTV ConstSymbol::getValue() {
+		return value_expr->eval();
+	}
+
 	ts::ClassInfo StructSymbol::calculateValue() {
 		//...
 		// @TODO

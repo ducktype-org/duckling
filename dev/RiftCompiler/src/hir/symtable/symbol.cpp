@@ -20,6 +20,10 @@ namespace symtable {
 		return type.value();
 	}
 
+	exec::CTV Symbol::getValue() {
+		RIFT_PANIC("getValue called on Symbol not implemeting it");
+	}
+
 	ScopeRef Symbol::getLinkedLookupScope(hir::AnalysisState& state) {
 		if (!linked_lookup_scope.has_value()) {
 			calculateLinkedLookup(state);

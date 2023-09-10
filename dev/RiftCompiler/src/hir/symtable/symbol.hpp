@@ -4,6 +4,7 @@
 #include <optional>
 
 #include <typesystem/typesystem.hpp>
+#include <exec/ctv.hpp>
 #include <base/string_id.hpp>
 
 #include "scope_symbol_id.hpp"
@@ -105,7 +106,9 @@ namespace symtable {
 
 		ts::TypeDesc<> getType();
 		SymbolKind getKind() const { return kind; };
-		
+
+		// @TODO: decide if value should be kept in Symbol itself
+		virtual exec::CTV getValue();
 
 		virtual SymbolChain getUniqueDeAlias(hir::AnalysisState&);
 		virtual ChainLookupResult getDeAlias(hir::AnalysisState&);
