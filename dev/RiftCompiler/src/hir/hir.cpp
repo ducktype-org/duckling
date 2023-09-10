@@ -55,6 +55,8 @@ namespace hir {
 			symbol_ref->analyzeAll(state);
 
 			std::cerr << "    Type: " << symbol_ref->getType().getType().show() << "\n";
+
+			
 		}
 
 	}
