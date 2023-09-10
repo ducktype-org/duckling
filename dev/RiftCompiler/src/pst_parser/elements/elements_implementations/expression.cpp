@@ -81,7 +81,7 @@ namespace pst {
 					// @TODO: check if keyword is legal in expr and proceed accordingly
 					auto token = state.tokens().next();
 					out->elements.emplace_back(
-						KeywordValue({token.getValue()})
+						KeywordValue({token.asKeyword()})
 					);
 				}
 				else if (state.ctokens().peek().isNumLiteral()) {
@@ -136,7 +136,7 @@ namespace pst {
 					out <<"} }";
 				}
 				variant_case (KeywordValue, key) {
-					out << "{\"KeywordValue\": \"" << key.key_id.strView() << "\"}";	
+					out << "{\"KeywordValue\": \"" << rift_def::keywordToStr( key.keyword).strView() << "\"}";	
 				}
 				variant_default {
 					RIFT_PANIC("Bad Expr alternative");

@@ -191,7 +191,7 @@ namespace pst {
 		struct Identifier;
 		struct NumLiteral;
 		struct KeywordValue {
-			base::StrId key_id;
+			rift_def::Keyword keyword;
 		};
 		typedef std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue> ExprElem;
 		struct Group {
