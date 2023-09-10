@@ -170,7 +170,9 @@ namespace hir {
 	}
 
 	symtable::SymbolChain GenericAlias::getUniqueDeAlias(hir::AnalysisState& state) {
+		std::cerr << "  > getUniqueDeAlias of " << getName().strView() << "\n";
 		if (!dealiased_lookup_result.has_value()) {
+			std::cerr << "  > calculating...\n";
 			// this can be confusing:
 			calculateLinkedLookup(state);
 		}

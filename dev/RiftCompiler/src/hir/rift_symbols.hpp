@@ -96,7 +96,7 @@ namespace hir {
 	protected:
 		// @TODO: this should be ChainLookupResult
 		// it is SymbolChain for now, because only SymbolChain can be dealiased
-		option<symtable::SymbolChain> dealiased_lookup_result;
+		std::optional<symtable::SymbolChain> dealiased_lookup_result;
 	public:
 		using symtable::Symbol::Symbol;
 

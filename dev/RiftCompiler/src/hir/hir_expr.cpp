@@ -22,9 +22,19 @@ namespace hir {
 				RIFT_PANIC("ambiguity in expr lookup, @TODO: error in state");
 			}
 			auto as_single = lookup_result.getAsSingle();
+			
+			std::cerr << "   SYMBOL EXPR RES: ";
+			symtable::dprintSymbolChain(as_single, std::cerr);
+			std::cerr << "\n";
+
 			auto dealiased_single = symtable::deAliasSymbolChain(state, as_single);
 
+			std::cerr << "   SYMBOL EXPR RES DEALIASED: ";
+			symtable::dprintSymbolChain(dealiased_single, std::cerr);
+			std::cerr << "\n";
+
 			symbol = dealiased_single.back();
+			std::cerr << "SYMBOL : " << symbol.value()->getName().strView() << "\n";
 		}
 		void determineType(AnalysisState& state) final {
 			lookup(state);
