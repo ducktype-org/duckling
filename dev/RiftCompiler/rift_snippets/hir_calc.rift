@@ -1,11 +1,11 @@
 
 namespace N {
-	// alias X = A;
+	alias X = A;
 }
 
-// const A: i32 = 1;
+const A: i32 = 1;
 
-// const B: i32 = X;
+const B: i32 = X;
 
 using N.*;
 

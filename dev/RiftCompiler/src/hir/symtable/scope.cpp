@@ -7,6 +7,7 @@
 #include <span>
 #include <iostream>
 
+#include <set>
 
 namespace symtable {
 
@@ -22,11 +23,23 @@ namespace symtable {
 
 		LookupResult result{{}, {}};
 
-		if (lookup_engaged) {
+		// if (lookup_engaged) {
+		// 	return result;
+		// }
+		// lookup_engaged = true;
+		// defer (lookup_engaged = false);
+
+		// @FIXME: this has to be much better that this:
+		// This is just a hotfix
+
+		static std::set<base::StrId> engaged_names;
+		if (engaged_names.contains(name)) {
 			return result;
 		}
-		lookup_engaged = true;
-		defer (lookup_engaged = false);
+		engaged_names.insert(name);
+		defer (engaged_names.erase(name));
+
+		std::cerr << "         lookup actually being done\n";
 
 		for (auto& symbol: getSymbols()) {
 			std::cerr << "        i see: " << symbol->getName().strView() << "\n";
