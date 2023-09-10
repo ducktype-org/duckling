@@ -184,7 +184,6 @@ namespace pst {
 			AngleGroup = 3,
 		};
 		
-	private:
 		// @TODO: change StrId to Operator::, Keyword::, etc
 		struct Group;
 		struct Operator;
@@ -208,6 +207,7 @@ namespace pst {
 			base::StrId num_id;
 		};
 
+	private:
 		std::vector<ExprElem> elements;
 	public:
 		STMT_CHILD_CONSTRUCTOR(Expr);

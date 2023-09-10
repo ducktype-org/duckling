@@ -10,7 +10,10 @@ namespace internal {
 	struct NoneVariant{};
 }
 
-// @attention: this has bugy semantics of default constructor
+/**
+ * @attention: this has bugy semantics of default constructor:
+ * it will create value of T.
+ */
 template <class T>
 using option = result<T, internal::NoneVariant>;
 

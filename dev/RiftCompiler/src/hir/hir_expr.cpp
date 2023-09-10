@@ -72,9 +72,10 @@ namespace hir {
 	
 	public:
 	
-		void lookup(AnalysisState& state) final {}
 		LiteralTypeExpr(symtable::ScopeRef scope, ts::TypeDesc<> type):
 			Expression(scope), type_value(type) {}
+		
+		void lookup(AnalysisState& state) final {}
 		void determineType(AnalysisState& state) final {
 			type = ts::TypeDesc<>(ts::MetaInfo::create());
 		}
@@ -83,7 +84,30 @@ namespace hir {
 		}
 	};
 
-	class OperatorExpr: public Expression {};
+	class BinOperatorExpr: public Expression {
+		ExpressionRef lhs;
+		ExpressionRef rhs;
+		base::StrId oper;
+	public:
+		BinOperatorExpr(symtable::ScopeRef scope, ExpressionRef lhs, ExpressionRef rhs, base::StrId oper):
+			Expression(scope), lhs(std::move(lhs)), rhs(std::move(rhs)), oper(oper) {}
+
+		void lookup(AnalysisState& state) final {
+			lhs->lookup(state);
+			rhs->lookup(state);
+		}
+		void determineType(AnalysisState& state) final {
+			lhs->determineType(state);
+			rhs->determineType(state);
+			
+			// @TODO
+		}
+
+		exec::CTV eval(AnalysisState& state) final {
+			// @TODO	
+		}
+
+	};
 
 	// all other types like: lambda
 
@@ -102,6 +126,33 @@ namespace hir {
 		}
 	}
 
+	ExpressionRef makeFromSingle(symtable::ScopeRef scope, const pst::Expr::ExprElem& elem) {
+		variant_match(elem) {
+			variant_case (pst::Expr::KeywordValue, key) {
+				return makeFromKeyword(scope, key.keyword);
+			}
+			variant_case(pst::Expr::NumLiteral, num) {
+				auto val = base::strIdToNum(num.num_id);
+				return base::make_unique<LiteralIntExpr>(scope, val);
+			}
+			variant_case(pst::Expr::Identifier, identifier) {
+				return base::make_unique<SymbolExpr>(scope, identifier.indent_id);
+			}
+			variant_case(pst::Expr::Group, group) {
+				// @TODO: take type into consideration
+				return Expression::makeExpr(scope, group.expr.borrow());
+			}
+			variant_case_novalue (pst::Expr::Operator) {
+				RIFT_PANIC("Expression consisting of only operator is not allowed.");
+			}
+			variant_default {
+				// @TODO
+				return nullptr;
+			}
+		}
+		RIFT_PANIC("Some case did not return");
+	}
+
 	ExpressionRef Expression::makeExpr(symtable::ScopeRef scope, pst::ParserCBorrowRef<pst::Expr> pst_expr) {
 		
 		// temporary:
@@ -109,25 +160,25 @@ namespace hir {
 
 		if (pst_expr->elements.size() == 1) {
 			auto& elem = pst_expr->elements[0];
-			variant_match(elem) {
-				variant_case (pst::Expr::KeywordValue, key) {
-					return makeFromKeyword(scope, key.keyword);
-				}
-				variant_case(pst::Expr::NumLiteral, num) {
-					auto val = base::strIdToNum(num.num_id);
-					return base::make_unique<LiteralIntExpr>(scope, val);
-				}
-				variant_case(pst::Expr::Identifier, identifier) {
-					return base::make_unique<SymbolExpr>(scope, identifier.indent_id);
-				}
-				variant_default {
-					// @TODO
-					return nullptr;
-				}
-			}
+			return makeFromSingle(scope, elem);
+		}
+		else if (pst_expr->elements.size() == 3) {
+			// This assumes that it is expr as <value operator value>
+			auto lhs = makeFromSingle(scope, pst_expr->elements[0]);
+			auto rhs = makeFromSingle(scope, pst_expr->elements[2]);
+			
+			// @TODO: errors:
+			auto oper = std::get<pst::Expr::Operator>(pst_expr->elements[1]).oper_id;
+
+			return base::make_unique<BinOperatorExpr>(scope,
+				std::move(lhs), std::move(rhs), oper
+			);
 		}
 		else {
-			throw base::NotYetImplemented("Make Hir Expr for longer expressions");
+			throw base::NotYetImplemented(base::strConcat(
+				"Make Hir Expr for expressions of length ",
+				pst_expr->elements.size(), "."
+			));
 		}
 
 		RIFT_PANIC("Some case did not return");

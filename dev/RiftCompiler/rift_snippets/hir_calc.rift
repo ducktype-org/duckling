@@ -5,7 +5,7 @@ namespace N {
 
 const A: i32 = 1;
 
-const B: i32 = X;
+const B: i32 = X + 1;
 
 using N.*;
 

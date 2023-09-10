@@ -19,13 +19,12 @@ namespace hir {
 		Expression(symtable::ScopeRef scope): scope(scope) {};
 
 		symtable::ScopeRef scope;
-
 		std::optional<ts::TypeDesc<> > type;
 
+	public:
 		virtual void lookup(AnalysisState&);
 		virtual void determineType(AnalysisState&);
 
-	public:
 		// in the future this will probably require some „grammar context”
 		// in the future this will require AnalysisState to log errors
 		static ExpressionRef makeExpr(symtable::ScopeRef scope, pst::ParserCBorrowRef<pst::Expr>);
