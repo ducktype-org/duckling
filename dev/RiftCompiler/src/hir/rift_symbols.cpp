@@ -136,7 +136,8 @@ namespace hir {
 
 	void ConstSymbol::calculateType() {
 		// @TODO look up here and other stuff
-		type = ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
+		type = type_expr->evalAsType();
+		//ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
 	}
 
 	void ConstSymbol::analyzeAll(AnalysisState& state) {

@@ -22,7 +22,7 @@ namespace hir {
 		static ExpressionRef makeExpr(pst::ParserCBorrowRef<pst::Expr>);
 		// eval
 
-		virtual ts::TypeDesc<> evalAsType() = 0;
+		virtual ts::TypeDesc<> evalAsType();
 	};
 
 }

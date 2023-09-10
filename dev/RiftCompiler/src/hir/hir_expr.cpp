@@ -60,4 +60,9 @@ namespace hir {
 
 		RIFT_PANIC("Some case did not return");
 	}
-};
+
+	ts::TypeDesc<> Expression::evalAsType() {
+		RIFT_PANIC("Called evalAsType on expression not implementing it");
+	}
+
+}
