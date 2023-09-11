@@ -33,7 +33,7 @@ namespace fs {
 	class FileContent {
 		std::shared_ptr<base::OwningView> content;
 		friend class FilePath;
-		FileContent(std::shared_ptr<base::OwningView> content): content(std::move(content)) {}
+		explicit FileContent(std::shared_ptr<base::OwningView> content): content(std::move(content)) {}
 	public:
 		FileContent(): content(nullptr) {};
 		FileContent(const FileContent&) = default;
@@ -41,6 +41,7 @@ namespace fs {
 		usize size() { return view().size(); };
 		byte operator[](usize i) { return view()[i]; };
 		base::RawView view() { return content->view(); };
+
 	};
 
 	class FilePath {
@@ -50,13 +51,12 @@ namespace fs {
 
 		// This might be hidden in .cpp:
 		static ContentMap to_content;
-
-		FilePath() = delete;
 		std::filesystem::path path;
 
 		friend struct ::std::hash<fs::FilePath>;
 
 	public:
+		FilePath() = delete;
 		FilePath(const FilePath&);
 		FilePath(FilePath&&) = default;
 		~FilePath() = default;
@@ -74,8 +74,7 @@ namespace fs {
 		[[nodiscard]]
 		std::string_view strView() const;
 
-		[[nodiscard]]
-		FilePath parentPath() const;
+		[[nodiscard]] FilePath parentPath() const;
 
 		[[nodiscard]]
 		bool isFile(const std::string& ext = "") const noexcept;

@@ -1,14 +1,14 @@
-/** 
+/**
  * @file token.hpp
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
  */
 
 #pragma once
 
-#include <string>
-#include <vector>
 #include <array>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "char.hpp"
 #include "source_position.hpp"
@@ -24,8 +24,8 @@ using Tokens = std::vector<lexer::Token>;
 
 namespace lexer {
 	using rift_def::Keyword;
-	using rift_def::Special;
 	using rift_def::Operator;
+	using rift_def::Special;
 
 	struct TokenData {
 		Tokens tokens;
@@ -47,12 +47,12 @@ namespace lexer {
 			Keyword,
 			Identifier,
 			NumLiteral,
-			String, // special group, changes lexing rules
+			String,          // special group, changes lexing rules
 			FormattedString, // special group, changes lexing rules
-			RoundGroup, // (...)
-			SquareGroup, // [...]
-			CurlyGroup, // {...}
-			AngleGroup, // currently not used
+			RoundGroup,      // (...)
+			SquareGroup,     // [...]
+			CurlyGroup,      // {...}
+			AngleGroup,      // currently not used
 			Operator,
 			Comment,
 			Special,
@@ -61,39 +61,42 @@ namespace lexer {
 			Error
 		};
 
-		struct Position {
-			usize line, column, raw;
-			[[nodiscard]] std::string str() const {
-				return std::to_string(line) + ":" + std::to_string(column);
-			}
-		};
+//		struct Position {
+//			usize line, column, raw;
+//			[[nodiscard]] std::string str() const {
+//				return std::to_string(line) + ":" + std::to_string(column);
+//			}
+//		};
 
-		constexpr static std::array<Type, 6> non_terminal_tokens =
-			{Type::String, Type::FormattedString, Type::RoundGroup,
-		     Type::SquareGroup, Type::CurlyGroup, Type::AngleGroup};
+		constexpr static std::array<Type, 6> non_terminal_tokens = {Type::String,
+		                                                            Type::FormattedString,
+		                                                            Type::RoundGroup,
+		                                                            Type::SquareGroup,
+		                                                            Type::CurlyGroup,
+		                                                            Type::AngleGroup};
 
 		static Token makeSentinel();
 
-		static Token makeKeyword(base::RawView keyword, Position);
-		static Token makeNumber(const base::RawView number, Position);
-		static Token makeString(base::RawView string, Position);
-		static Token makeFormattedString(Tokens&& tokens, Position);
-		static Token makeGroup(Char::ParType groupType, Tokens&& tokens, Position);
-		static Token makeComment(base::RawView comment, Position);
-		static Token makeOperator(base::RawView oper, Position);
-		static Token makeIdentifier(base::RawView identifier, Position);
-		static Token makeSpecial(base::RawView identifier, Position);
-		static Token makeNumLiteral(base::RawView literal, Position);
+		static Token makeKeyword(base::RawView keyword, const SourcePosition&);
+		static Token makeNumber(const base::RawView number, SourcePosition);
+		static Token makeString(base::RawView string, const SourcePosition&);
+		static Token makeFormattedString(Tokens&& tokens, SourcePosition);
+		static Token makeGroup(Char::ParType groupType, Tokens&& tokens, const SourcePosition&);
+		static Token makeComment(base::RawView comment, const SourcePosition&);
+		static Token makeOperator(base::RawView oper, const SourcePosition&);
+		static Token makeIdentifier(base::RawView identifier, const SourcePosition&);
+		static Token makeSpecial(base::RawView identifier, const SourcePosition&);
+		static Token makeNumLiteral(base::RawView literal, const SourcePosition&);
 
 		virtual ~Token() = default;
 
 		Token() noexcept = default;
 		Token(const Token& other) = default;
 		Token(Token&& other) noexcept;
-		Token(Type type, base::RawView value, Position position);
-		Token(Type type, Tokens&& recursive, Position position);
+		Token(Type type, base::RawView value, SourcePosition position);
+		Token(Type type, Tokens&& recursive, SourcePosition  position);
 		friend void swap(Token& first, Token& second);
-		Token& operator = (Token other);
+		Token& operator=(Token other);
 
 		[[nodiscard]] Type getType() const;
 		[[nodiscard]] base::StrId getValue() const;
@@ -124,15 +127,14 @@ namespace lexer {
 
 		[[nodiscard]] bool isStr(base::StrId str) const;
 
-		[[nodiscard]] Position getPosition() const;
+		[[nodiscard]] SourcePosition getPosition() const;
 
 	private:
-		static Token makeError(Position);
+		static Token makeError(const SourcePosition&);
 
 		Type type = Type::Empty;
 		base::StrId str_id;
 		Tokens recursive;
-		Position position{};
-		//			SourcePosition sourcePosition;
+		SourcePosition sourcePosition;
 	};
 }

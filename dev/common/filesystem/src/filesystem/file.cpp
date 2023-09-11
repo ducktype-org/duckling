@@ -24,14 +24,12 @@ namespace fs {
 				to_content.erase(path);
 			}
 			else {
-				return weak_content.lock();
+				return FileContent(weak_content.lock());
 			}
 		}
 
 		FileContent file_content(
-			std::make_shared<base::OwningView>(
-				std::move(getSimpleFileContent(path.c_str()))
-			)
+			std::make_shared<base::OwningView>(getSimpleFileContent(path.c_str()))
 		);
 		
 		to_content.put(path, file_content.content);

@@ -11,47 +11,46 @@
 
 namespace lexer{
 	Token Token::makeSentinel() {
-		Position dummy_position = {static_cast<usize>(-1), -static_cast<usize>(1), static_cast<usize>(-1)};
-		return {Type::Sentinel, base::RawView(""), dummy_position};
+		return {Type::Sentinel, base::RawView(""), {}};
 	}
 
-	Token::Token(Token::Type type, const base::RawView value, Position position) : type(type), str_id(value), position(position) {}
+	Token::Token(Token::Type type, const base::RawView value, SourcePosition position) : type(type), str_id(value), sourcePosition(std::move(position)) {}
 
-	Token::Token(Token::Type type, Tokens&& recursive, Position position) :
-		  type(type), recursive(recursive), position(position) {}
+	Token::Token(Token::Type type, Tokens&& recursive, SourcePosition position) :
+		  type(type), recursive(recursive), sourcePosition(std::move(position)) {}
 
-	Token Token::makeComment(const base::RawView comment, Position position){
+	Token Token::makeComment(const base::RawView comment, const SourcePosition& position){
 		return {Type::Comment, comment, position};
 	}
 
-	Token Token::makeOperator(const base::RawView oper, Position position) { //operator is keyword
+	Token Token::makeOperator(const base::RawView oper, const SourcePosition& position) { //operator is keyword
 		return {Type::Operator, oper, position};
 	}
 
-	Token Token::makeIdentifier(const base::RawView identifier, Position position) {
+	Token Token::makeIdentifier(const base::RawView identifier, const SourcePosition& position) {
 		if (rift_def::strAsKeyword(base::StrId(identifier)) != Keyword::NotAKeyword) {
 			return makeKeyword(identifier, position);
 		}
 		return {Type::Identifier, identifier, position};
 	}
 
-	Token Token::makeKeyword(const base::RawView keyword, Position position) {
+	Token Token::makeKeyword(const base::RawView keyword, const SourcePosition& position) {
 		return {Type::Keyword, keyword, position};
 	}
 
-	Token Token::makeSpecial(const base::RawView identifier, Position position) {
+	Token Token::makeSpecial(const base::RawView identifier, const SourcePosition& position) {
 		return {Type::Special, identifier, position};
 	}
 
-	Token Token::makeNumLiteral(const base::RawView literal, Position position) {
+	Token Token::makeNumLiteral(const base::RawView literal, const SourcePosition& position) {
 		return {Type::NumLiteral, literal, position};
 	}
 
-	Token Token::makeString(const base::RawView string, Position position) {
+	Token Token::makeString(const base::RawView string, const SourcePosition& position) {
 		return {Type::String, string, position};
 	}
 
-	Token Token::makeGroup(Char::ParType groupType, Tokens&& tokens, Position position) {
+	Token Token::makeGroup(Char::ParType groupType, Tokens&& tokens, const SourcePosition& position) {
 		switch (groupType){
 		case Char::Round:
 			return {Type::RoundGroup, std::move(tokens), position};
@@ -67,10 +66,10 @@ namespace lexer{
 		}
 	}
 
-	Token Token::makeError(Position position) {
+	Token Token::makeError(const SourcePosition& position) {
 		Token out;
 		out.type = Type::Error;
-		out.position = position;
+		out.sourcePosition = position;
 		return out;
 	}
 
@@ -81,8 +80,7 @@ namespace lexer{
 		swap(first.recursive, second.recursive);
 		swap(first.str_id, second.str_id);
 		swap(first.type, second.type);
-		swap(first.position, second.position);
-		//		swap(first.sourcePosition, second.sourcePosition);
+		swap(first.sourcePosition, second.sourcePosition);
 	}
 
 	Token& Token::operator = (Token other){
@@ -181,8 +179,8 @@ namespace lexer{
 		return rift_def::strAsKeyword(str_id) == key;
 	};
 
-	Token::Position Token::getPosition() const{
-		return position;
+	SourcePosition Token::getPosition() const {
+		return sourcePosition;
 	}
 
 	TokenData::TokenData(Tokens tokens, const fs::FileContent& file_content):
