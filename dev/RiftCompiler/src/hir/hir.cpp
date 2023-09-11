@@ -51,6 +51,7 @@ namespace hir {
 		while (state.notEmpty()) {
 			auto symbol_ref = state.popNext();
 
+			std::cerr << "\n====================\n";
 			std::cerr << "Analyzing next: " << symbol_ref->getName().strView() << "\n";
 
 			symbol_ref->analyzeAll(state);

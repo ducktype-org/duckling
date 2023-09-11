@@ -35,6 +35,7 @@ namespace hir {
 
 		void calculateType() override;
 		void analyzeAll(AnalysisState&) override;
+		virtual void getSymbolsIn() override;
 	};
 
 	class NamespaceSymbol: public symtable::Symbol {
@@ -47,6 +48,7 @@ namespace hir {
 
 		void calculateType() override;
 		void analyzeAll(AnalysisState&) override;
+		virtual void getSymbolsIn() override;
 	};
 
 	// @TODO: StructSymbol should technically be isomorphic with `const a: type = magic_struct_value`. Perhaps merge them in the future
@@ -62,6 +64,7 @@ namespace hir {
 
 		void calculateType() override;
 		void analyzeAll(AnalysisState&) override;
+		virtual void getSymbolsIn() override;
 
 		// @deprecated
 		ts::ClassInfo calculateValue();

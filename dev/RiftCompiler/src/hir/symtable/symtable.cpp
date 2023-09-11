@@ -6,7 +6,7 @@
 namespace symtable {
 
 	SymbolData::SymbolData() {
-		root_scope = newScope(nullptr);
+		root_scope = newScope(nullptr, base::StrId("ROOT_SCOPE"));
 		next_relative_position = 0;
 	}
 
@@ -14,14 +14,14 @@ namespace symtable {
 		return root_scope;
 	}
 
-	ScopeRef SymbolData::newScope(ScopeRef parent) {
-		auto id = scopes.pushBack(std::move(Scope(parent)));
+	ScopeRef SymbolData::newScope(ScopeRef parent, base::StrId name) {
+		auto id = scopes.pushBack(std::move(Scope(parent, name)));
 		// scopes[id].id = id;
 		return scopes.last();
 	}
 
 	ScopeRef SymbolData::newSubRootScope() {
-		return newScope(getRootScope());
+		return newScope(getRootScope(), base::StrId("SUB_ROOT_SCOPE"));
 	}
 
 	SymbolRef SymbolData::newSymbol(base::unique_ptr<Symbol> symbol) {

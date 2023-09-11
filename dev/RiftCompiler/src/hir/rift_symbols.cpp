@@ -117,14 +117,20 @@ namespace hir {
 
 	void TopLevelSymbol::analyzeAll(AnalysisState& state) {
 		getAll(state);
+	}
 
+	void TopLevelSymbol::getSymbolsIn() {
+		if (symbol_in_done) return;
+		symbol_in_done = true;
+		
+		RIFT_ASSERT(scope != nullptr, "Getting symbols without scope!");
 		// @TODO: stmts/usings/alias/expand/...
 		// using and alias are just symbols
 		for (auto& stmt: pst_element->getStatements()) {
 			std::cerr << "stmt...\n";
-			state.addSymbol(
+			analysis_state.addSymbol(
 				makeSymbolFromStatement(
-					state, scope, stmt.borrow()
+					analysis_state, scope, stmt.borrow()
 				)
 			);
 		}
@@ -136,9 +142,14 @@ namespace hir {
 
 	void NamespaceSymbol::analyzeAll(AnalysisState& state) {
 		getAll(state);
+	}
 
-		auto inner_scope = getLinkedLookupScope(state);
-		goOverSymbols(state, inner_scope, pst_element->getBody());
+	void NamespaceSymbol::getSymbolsIn() {
+		if (symbol_in_done) return;
+		symbol_in_done = true;
+
+		auto inner_scope = getLinkedLookupScope(analysis_state);
+		goOverSymbols(analysis_state, inner_scope, pst_element->getBody());
 	}
 
 	void ConstSymbol::calculateType() {
@@ -166,6 +177,13 @@ namespace hir {
 	}
 
 	void StructSymbol::analyzeAll(AnalysisState&) {
+		// @TODO
+	}
+
+	void StructSymbol::getSymbolsIn() {
+		if (symbol_in_done) return;
+		symbol_in_done = true;
+		
 		// @TODO
 	}
 

@@ -18,7 +18,9 @@ namespace symtable {
 		//  wildcard_alias _ = a.b;
 		//  un aliasing then can perform proper un-aliasing 
 
-		std::cerr << "     simple lookup of " << name.strView() << "\n";
+		std::cerr << "     Simple lookup of " << name.strView();
+		std::cerr << " in " << this->name.strView();
+		std::cerr << "\n";
 
 		LookupResult result{{}, {}};
 
@@ -31,7 +33,6 @@ namespace symtable {
 		// @FIXME: this has to be much better that this:
 		// This is just a hotfix
 
-		std::set<base::StrId> engaged_names;
 		if (engaged_names.contains(name)) {
 			return result;
 		}

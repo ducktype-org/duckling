@@ -79,12 +79,15 @@ namespace symtable {
 
 		virtual void calculateType() = 0;
 
+		bool symbol_in_done = false;
+		virtual void getSymbolsIn();
 		virtual void calculateLinkedLookup(hir::AnalysisState&);
 
 		void getAll(hir::AnalysisState& state) {
 			getKind();
 			getType();
 			getLinkedLookupScope(state);
+			getSymbolsIn();
 		}
 
 	public:

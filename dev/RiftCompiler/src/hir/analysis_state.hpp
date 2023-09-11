@@ -34,7 +34,9 @@ namespace hir {
 		}
 
 		auto newSubRootScope() { return symbol_data.newSubRootScope(); }
-		auto newScope(symtable::ScopeRef scope) { return symbol_data.newScope(scope); }
+		auto newScope(symtable::ScopeRef parent, base::StrId name) {
+			return symbol_data.newScope(parent, name);
+		}
 
 		void logError(std::string_view error) {
 			// @TODO: temp

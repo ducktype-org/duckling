@@ -32,7 +32,7 @@ namespace symtable {
 	public:
 		SymbolData();
 		ScopeRef getRootScope();
-		ScopeRef newScope(ScopeRef parent);
+		ScopeRef newScope(ScopeRef parent, base::StrId name);
 		ScopeRef newSubRootScope();
 		SymbolRef newSymbol(base::unique_ptr<Symbol> symbol);
 

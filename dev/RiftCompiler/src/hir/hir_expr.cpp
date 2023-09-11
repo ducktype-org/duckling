@@ -24,6 +24,9 @@ namespace hir {
 			lookup_done = true;
 
 			auto lookup_result = scope->lookupMeAndParents(state, name);
+			std::cerr << "   FULL LK RES: ";
+			lookup_result.dprint(std::cerr);
+			std::cerr << "\n";
 			if (!lookup_result.isSingle()) {
 				RIFT_PANIC("ambiguity in expr lookup, @TODO: error in state");
 			}
@@ -40,7 +43,7 @@ namespace hir {
 			std::cerr << "\n";
 
 			symbol = dealiased_single.back();
-			std::cerr << "SYMBOL : " << symbol.value()->getName().strView() << "\n";
+			std::cerr << "   SYMBOL : " << symbol.value()->getName().strView() << "\n\n";
 		}
 		void determineType(AnalysisState& state) final {
 			if (type_done) return;

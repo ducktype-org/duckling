@@ -26,6 +26,9 @@ namespace symtable {
 		ScopeRef parent;
 		// ScopeId id;
 
+		// This name is for debug only:
+		base::StrId name;
+
 		std::vector<SymbolRef> symbols;
 
 		// bool lookup_engaged = false;
@@ -34,7 +37,7 @@ namespace symtable {
 		friend class SymbolData;
 
 		Scope() = default;
-		Scope(ScopeRef parent): parent(parent) {}
+		Scope(ScopeRef parent, base::StrId name): parent(parent), name(name) {}
 
 	public:
 		// This delete is important, to prevent any copy of scope data:

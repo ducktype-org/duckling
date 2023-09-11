@@ -34,14 +34,26 @@ namespace symtable {
 		return linked_lookup_scope.value();
 	}
 
+	void Symbol::getSymbolsIn() {
+		symbol_in_done = true;
+	}
+
 	void Symbol::calculateLinkedLookup(hir::AnalysisState& state) {
-		linked_lookup_scope = state.newScope(scope);
+		linked_lookup_scope = state.newScope(scope, name);
+		
+		// @TODO: this here is not perfect, but it guarantees,
+		// that Scope always has symbols 
+		// In the future there should be some link from Scope to symbol
+		// and going over symbols will be done only when necessary
+		getSymbolsIn();
 	}
 
 	// @TODO: errors
 	LookupResult Symbol::lookupIn(hir::AnalysisState& state, base::StrId name)  {
 		RIFT_ASSERT(unlockedLookup(), "Trying to lookupIn while in locked lookup state");
+		
 		scope = getLinkedLookupScope(state);
+		getSymbolsIn();
 		return scope->lookup(state, name);
 	}
 
