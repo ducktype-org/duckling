@@ -36,20 +36,20 @@ namespace hir {
 
 		pst::PST& pst = sources[0].pst;
 
-		AnalysisState state;
+		// @TODO: this should be root_scope, but it is root scope for now, so tests can work
+		// symtable::ScopeRef root_scope = analysis_state.newSubRootScope();
+		symtable::ScopeRef root_scope = analysis_state.symTable().getRootScope();
 
-		symtable::ScopeRef root_scope = state.newSubRootScope();
-
-		state.emplaceSymbol<TopLevelSymbol>(
-			state,
+		analysis_state.emplaceSymbol<TopLevelSymbol>(
+			analysis_state,
 			root_scope, base::StrId("TopLevel"),
 			pst.getTopLevelElement()
 		);
 
 		std::cerr << "Added top level symbol!\n";
 
-		while (state.notEmpty()) {
-			auto symbol_ref = state.popNext();
+		while (analysis_state.notEmpty()) {
+			auto symbol_ref = analysis_state.popNext();
 
 			std::cerr << "\n====================\n";
 			std::cerr << "Analyzing next: " << symbol_ref->getName().strView() << "\n";

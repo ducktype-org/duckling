@@ -123,14 +123,15 @@ namespace hir {
 		if (symbol_in_done) return;
 		symbol_in_done = true;
 		
-		RIFT_ASSERT(scope != nullptr, "Getting symbols without scope!");
+		auto inner_scope = getLinkedLookupScope();
+
 		// @TODO: stmts/usings/alias/expand/...
 		// using and alias are just symbols
 		for (auto& stmt: pst_element->getStatements()) {
 			std::cerr << "stmt...\n";
 			analysis_state.addSymbol(
 				makeSymbolFromStatement(
-					analysis_state, scope, stmt.borrow()
+					analysis_state, inner_scope, stmt.borrow()
 				)
 			);
 		}
@@ -163,6 +164,12 @@ namespace hir {
 	}
 
 	exec::CTV ConstSymbol::getValue() {
+		if (value) {
+			return *value;
+		}
+		else {
+			value = value_expr->eval(analysis_state);
+		}
 		return value_expr->eval(analysis_state);
 	}
 

@@ -81,6 +81,8 @@ namespace hir {
 		ExpressionRef type_expr;
 		ExpressionRef value_expr;
 
+		std::optional<exec::CTV> value;
+
 	public:
 		ConstSymbol(hir::AnalysisState& state, ScopeRef scope, base::StrId name, 
 		            PstRef<pst::Const> pst_element):

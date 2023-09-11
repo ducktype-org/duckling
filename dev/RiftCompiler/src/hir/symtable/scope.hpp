@@ -53,6 +53,7 @@ namespace symtable {
 		LookupResult lookup(hir::AnalysisState&, base::StrId name);
 		LookupResult lookupMeAndParents(hir::AnalysisState&, base::StrId name);
 
+		base::StrId getName() const { return name; }
 	};
 
 }
