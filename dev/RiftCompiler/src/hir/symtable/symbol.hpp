@@ -81,12 +81,12 @@ namespace symtable {
 
 		bool symbol_in_done = false;
 		virtual void getSymbolsIn();
-		virtual void calculateLinkedLookup(hir::AnalysisState&);
+		virtual void calculateLinkedLookup();
 
-		void getAll(hir::AnalysisState& state) {
+		void getAll() {
 			getKind();
 			getType();
-			getLinkedLookupScope(state);
+			getLinkedLookupScope();
 			getSymbolsIn();
 		}
 
@@ -107,14 +107,7 @@ namespace symtable {
 		bool isAnonymous() const { return anonymous; }
 		bool isWildcard() const { return wildcard; }
 
-		// @TODO: current design forces this function, to take
-		// hir::AnalysisState&, which results in
-		// symtable.lookup needing it as well
-		// Is should be changed somehow
-		// Ideas: 1. move lookup to hir::AnalysisState
-		//        2. change SymbolId to SymbolRef
-		//        3. add member hir::AnalysisState& to symbol
-		ScopeRef getLinkedLookupScope(hir::AnalysisState&);
+		ScopeRef getLinkedLookupScope();
 
 		ts::TypeDesc<> getType();
 		SymbolKind getKind() const { return kind; };
@@ -122,14 +115,14 @@ namespace symtable {
 		// @TODO: decide if value should be kept in Symbol itself
 		virtual exec::CTV getValue();
 
-		virtual SymbolChain getUniqueDeAlias(hir::AnalysisState&);
-		virtual ChainLookupResult getDeAlias(hir::AnalysisState&);
+		virtual SymbolChain getUniqueDeAlias();
+		virtual ChainLookupResult getDeAlias();
 
-		virtual void analyzeAll(hir::AnalysisState&) = 0;
+		virtual void analyzeAll() = 0;
 
 		virtual ~Symbol() = default;
 
-		LookupResult lookupIn(hir::AnalysisState&, base::StrId name);
+		LookupResult lookupIn(base::StrId name);
 		
 		bool unlockedLookup() const;
 	};

@@ -45,7 +45,7 @@ namespace symtable {
 			std::cerr << "        i see: " << symbol->getName().strView() << "\n";
 			if (symbol->isWildcard() and symbol->unlockedLookup()) {
 				std::cerr << "         looking in wildcard!\n";
-				auto wild_result = symbol->lookupIn(state, name);
+				auto wild_result = symbol->lookupIn(name);
 				std::cerr << "        wild see res:";
 				wild_result.dprint(std::cerr);
 				std::cerr << "\n";

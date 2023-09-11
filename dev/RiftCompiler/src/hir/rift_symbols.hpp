@@ -34,7 +34,7 @@ namespace hir {
 		               PstRef<pst::TopLevel> pst_element);
 
 		void calculateType() override;
-		void analyzeAll(AnalysisState&) override;
+		void analyzeAll() override;
 		virtual void getSymbolsIn() override;
 	};
 
@@ -47,7 +47,7 @@ namespace hir {
 			pst_element(pst_element) {}
 
 		void calculateType() override;
-		void analyzeAll(AnalysisState&) override;
+		void analyzeAll() override;
 		virtual void getSymbolsIn() override;
 	};
 
@@ -63,7 +63,7 @@ namespace hir {
 			pst_element(pst_element) {}
 
 		void calculateType() override;
-		void analyzeAll(AnalysisState&) override;
+		void analyzeAll() override;
 		virtual void getSymbolsIn() override;
 
 		// @deprecated
@@ -90,7 +90,7 @@ namespace hir {
 			value_expr(Expression::makeExpr(scope, pst_element->getValue())) {}
 
 		void calculateType() override;
-		void analyzeAll(AnalysisState&) override;
+		void analyzeAll() override;
 
 		exec::CTV getValue() final;
 	};
@@ -103,8 +103,8 @@ namespace hir {
 	public:
 		using symtable::Symbol::Symbol;
 
-		symtable::SymbolChain getUniqueDeAlias(hir::AnalysisState&) override;
-		symtable::ChainLookupResult getDeAlias(hir::AnalysisState&) override;
+		symtable::SymbolChain getUniqueDeAlias() override;
+		symtable::ChainLookupResult getDeAlias() override;
 	};
 
 	class AliasSymbol: public GenericAlias {
@@ -115,8 +115,8 @@ namespace hir {
 		            PstRef<pst::Alias> pst_element);
 
 		void calculateType() override;
-		void analyzeAll(AnalysisState&) override;
-		void calculateLinkedLookup(hir::AnalysisState&) override;
+		void analyzeAll() override;
+		void calculateLinkedLookup() override;
 	};
 
 	class UsingSymbol: public GenericAlias {
@@ -128,8 +128,8 @@ namespace hir {
 		            PstRef<pst::Using> pst_element);
 					
 		void calculateType() override;
-		void analyzeAll(AnalysisState&) override;
-		void calculateLinkedLookup(hir::AnalysisState&) override;
+		void analyzeAll() override;
+		void calculateLinkedLookup() override;
 	};
 
 	class FunSymbol: public symtable::Symbol {
@@ -155,6 +155,6 @@ namespace hir {
 	// 	                      PstRef<pst::Const> pst_element);
 
 	// 	void calculateType() override;
-	// 	void analyzeAll(AnalysisState&) override;
+	// 	void analyzeAll() override;
 	// };
 }

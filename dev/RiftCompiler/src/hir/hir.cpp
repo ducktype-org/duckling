@@ -54,7 +54,7 @@ namespace hir {
 			std::cerr << "\n====================\n";
 			std::cerr << "Analyzing next: " << symbol_ref->getName().strView() << "\n";
 
-			symbol_ref->analyzeAll(state);
+			symbol_ref->analyzeAll();
 
 			std::cerr << "    Type: " << symbol_ref->getType().getType().show() << "\n";
 

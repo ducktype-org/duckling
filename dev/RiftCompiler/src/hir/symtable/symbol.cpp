@@ -26,10 +26,10 @@ namespace symtable {
 		RIFT_PANIC("getValue called on Symbol not implementing it");
 	}
 
-	ScopeRef Symbol::getLinkedLookupScope(hir::AnalysisState& state) {
+	ScopeRef Symbol::getLinkedLookupScope() {
 		if (!linked_lookup_scope.has_value()) {
 			RIFT_ASSERT(unlockedLookup(), "Trying to calculateLinkedLookup while in lookup lock");
-			calculateLinkedLookup(state);
+			calculateLinkedLookup();
 		}
 		return linked_lookup_scope.value();
 	}
@@ -38,8 +38,8 @@ namespace symtable {
 		symbol_in_done = true;
 	}
 
-	void Symbol::calculateLinkedLookup(hir::AnalysisState& state) {
-		linked_lookup_scope = state.newScope(scope, name);
+	void Symbol::calculateLinkedLookup() {
+		linked_lookup_scope = analysis_state.newScope(scope, name);
 		
 		// @TODO: this here is not perfect, but it guarantees,
 		// that Scope always has symbols 
@@ -49,22 +49,22 @@ namespace symtable {
 	}
 
 	// @TODO: errors
-	LookupResult Symbol::lookupIn(hir::AnalysisState& state, base::StrId name)  {
+	LookupResult Symbol::lookupIn(base::StrId name)  {
 		RIFT_ASSERT(unlockedLookup(), "Trying to lookupIn while in locked lookup state");
 		
-		scope = getLinkedLookupScope(state);
+		scope = getLinkedLookupScope();
 		getSymbolsIn();
-		return scope->lookup(state, name);
+		return scope->lookup(analysis_state, name);
 	}
 
-	SymbolChain Symbol::getUniqueDeAlias(hir::AnalysisState&) {
+	SymbolChain Symbol::getUniqueDeAlias() {
 		if (is_alias) {
 			RIFT_PANIC("de alias called on wildcard symbol not implementing deAlias");
 		}
 		return { SymbolRef(this) };
 	}
 	
-	ChainLookupResult Symbol::getDeAlias(hir::AnalysisState&) {
+	ChainLookupResult Symbol::getDeAlias() {
 		if (is_alias) {
 			RIFT_PANIC("de alias called on alias symbol not implementing deAlias");
 		}
