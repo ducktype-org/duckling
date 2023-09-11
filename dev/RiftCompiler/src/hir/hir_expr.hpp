@@ -38,6 +38,8 @@ namespace hir {
 		virtual exec::CTV eval(AnalysisState&);
 		
 		ts::TypeDesc<> getType(AnalysisState&);
+
+		virtual ~Expression() = default;
 	};
 
 }
