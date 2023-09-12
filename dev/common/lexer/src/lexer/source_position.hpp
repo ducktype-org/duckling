@@ -2,8 +2,7 @@
 // Created by mateusz on 9/6/23.
 //
 
-#ifndef RIFT_COMMON_LEXER_SRC_LEXER_SOURCE_POSITION_HPP_
-#define RIFT_COMMON_LEXER_SRC_LEXER_SOURCE_POSITION_HPP_
+#pragma once
 
 #include <filesystem/file.hpp>
 #include <string>
@@ -38,5 +37,3 @@ namespace lexer {
 	};
 }
 
-
-#endif // RIFT_COMMON_LEXER_SRC_LEXER_SOURCE_POSITION_HPP_

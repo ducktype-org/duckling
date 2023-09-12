@@ -8,9 +8,10 @@ namespace pst {
 		ParserRef<Action> out;
 		auto keyword = state.ctokens().peek().asKeyword();
 		lexer::SourcePosition position = state.ctokens().peek().getPosition();
+
 		switch (keyword) {
 		case Keyword::Return:
-			out = makeRef<Return>(position);
+			out = makeRef<Return>();
 			break;
 		case Keyword::Break:
 			out = makeRef<Break>(position);
