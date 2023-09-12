@@ -6,7 +6,7 @@ namespace pst {
 	}
 
 	ParserRef<Attribute> Attribute::parse(RiftParserState& state){
-		ParserRef<Attribute> out = makeRef<Attribute>();
+		ParserRef<Attribute> out = makeRef<Attribute>(state.ctokens().peek().getPosition());
 	
 		RIFT_ASSERT(state.ctokens().is(Special::AtSign), "bad statement choice");
 

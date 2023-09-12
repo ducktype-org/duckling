@@ -24,7 +24,7 @@ namespace pst {
 	struct DottedName {
 		std::vector<tpc::Identifier> names;
 		bool star = false;
-		std::vector<base::StrId> getNames() const;
+		[[nodiscard]] std::vector<base::StrId> getNames() const;
 	};
 	void parseDottedName(tpc::ParserState& state, DottedName* d_name);
 
@@ -48,24 +48,26 @@ namespace pst {
 	class Stmt: public RiftElement {
 		StmtKind kind;
 	protected:
-		Stmt(StmtKind kind): kind(kind) {}
+		Stmt(StmtKind kind, lexer::SourcePosition position): RiftElement(std::move(position)), kind(kind) {}
 	public:
-		StmtKind getKind() const { return kind; }
+		[[nodiscard]] StmtKind getKind() const { return kind; }
 		static ParserRef<Stmt> parse(RiftParserState& state);
 		bool trailingSemicolon() override;
 	};
 	#define STMT_CHILD_CONSTRUCTOR(class_name) \
-		class_name(): Stmt(StmtKind::class_name) {}
+		class_name(lexer::SourcePosition position): Stmt(StmtKind::class_name, std::move(position)) {}
 
 	class NotStmt: public RiftElement {
 		// @TODO:
 	public:
+		explicit NotStmt(lexer::SourcePosition position) : RiftElement(std::move(position)) {}
 		bool trailingSemicolon() override;
 	};
 
 	class ParamList: public NotStmt {
 		std::vector<ParserRef<Expr>> params;
 	public:
+		explicit ParamList(lexer::SourcePosition position) : NotStmt(std::move(position)) {}
 		static ParserRef<ParamList> parse(RiftParserState& state);
 		virtual void dprint(std::ostream& out) const final;
 		virtual ~ParamList() = default;
@@ -74,6 +76,7 @@ namespace pst {
 	class RetList: public NotStmt {
 		std::vector<ParserRef<Expr>> rets;
 	public:
+		explicit RetList(lexer::SourcePosition position) : NotStmt(std::move(position)) {}
 		static ParserRef<RetList> parse(RiftParserState& state);
 		virtual void dprint(std::ostream& out) const final;
 		virtual ~RetList() = default;
@@ -82,6 +85,7 @@ namespace pst {
 	class ArgList: public NotStmt {
 		// @TODO
 	public:
+		explicit ArgList(lexer::SourcePosition position) : NotStmt(std::move(position)) {}
 		static ParserRef<ArgList> parse(RiftParserState& state);
 		virtual ~ArgList() = default;
 		virtual void dprint(std::ostream& out) const final;
@@ -142,6 +146,8 @@ namespace pst {
 	class CodeBlock: public NotStmt {
 		std::vector<ParserRef<Stmt>> statements;
 	public:
+		explicit CodeBlock(lexer::SourcePosition position) : NotStmt(std::move(position)) {}
+
 		static ParserRef<CodeBlock> parse(RiftParserState& state);
 		virtual ~CodeBlock() = default;
 		virtual void dprint(std::ostream& out) const final;
@@ -153,6 +159,8 @@ namespace pst {
 		std::variant<ParserRef<Stmt>, ParserRef<CodeBlock>> content;
 
 	public:
+		explicit CodeBlockOrStmt(lexer::SourcePosition position) : NotStmt(std::move(position)) {}
+
 		static ParserRef<CodeBlockOrStmt> parse(RiftParserState& state);
 		virtual ~CodeBlockOrStmt() = default;
 		virtual void dprint(std::ostream& out) const final;
@@ -163,6 +171,9 @@ namespace pst {
 	class RoundGroupExpr: public NotStmt {
 		ParserRef<Expr> expr = nullptr;
 	public:
+		explicit RoundGroupExpr(lexer::SourcePosition position) : NotStmt(std::move(position)) {}
+
+
 		static ParserRef<RoundGroupExpr> parse(RiftParserState& state);
 		virtual ~RoundGroupExpr() = default;
 		virtual void dprint(std::ostream& out) const final;
@@ -232,36 +243,48 @@ namespace pst {
 
 	class Return: public Action {
 	public:
+		explicit Return(lexer::SourcePosition position) : Action(std::move(position)) {}
+
 		void dprint(std::ostream& out) const final;
 		virtual ~Return() = default;
 	};
 
 	class Break: public Action {
 	public:
+		explicit Break(lexer::SourcePosition position) : Action(std::move(position)) {}
+
 		void dprint(std::ostream& out) const final;
 		virtual ~Break() = default;
 	};
 
 	class Continue: public Action {
 	public:
+		explicit Continue(lexer::SourcePosition position) : Action(std::move(position)) {}
+
 		void dprint(std::ostream& out) const final;
 		virtual ~Continue() = default;
 	};
 
 	class Redo: public Action {
 	public:
+		explicit Redo(lexer::SourcePosition position) : Action(std::move(position)) {}
+
 		void dprint(std::ostream& out) const final;
 		virtual ~Redo() = default;
 	};
 
 	class Restart: public Action {
 	public:
+		explicit Restart(lexer::SourcePosition position) : Action(std::move(position)) {}
+
 		void dprint(std::ostream& out) const final;
 		virtual ~Restart() = default;
 	};
 
 	class Defer: public Action {
 	public:
+		explicit Defer(lexer::SourcePosition position) : Action(std::move(position)) {}
+
 		void dprint(std::ostream& out) const final;
 		virtual ~Defer() = default;
 	};
@@ -269,6 +292,8 @@ namespace pst {
 	// @TODO: should it be an action
 	class Throw: public Action {
 	public:
+		explicit Throw(lexer::SourcePosition position) : Action(std::move(position)) {}
+
 		void dprint(std::ostream& out) const final;
 		virtual ~Throw() = default;
 	};
@@ -288,13 +313,13 @@ namespace pst {
 	// @TODO: should assert be an action
 	class Decl: public Stmt {
 	public:
-		Decl(StmtKind kind): Stmt(kind) {}
+		Decl(StmtKind kind, lexer::SourcePosition position): Stmt(kind, std::move(position)) {}
 
 		static ParserRef<Decl> parse(RiftParserState& state);
 		bool trailingSemicolon() override;
 	};
 	#define DECL_CHILD_CONSTRUCTOR(class_name) \
-		class_name(): Decl(StmtKind::class_name) {}
+		class_name(lexer::SourcePosition position): Decl(StmtKind::class_name, std::move(position)) {}
 
 	class CodeDecl: public Decl {
 	public:
@@ -317,6 +342,9 @@ namespace pst {
 		tpc::OptionalIdentifier optional_name;
 		ParserRef<CodeBlock> code_block = nullptr;
 	public:
+		explicit Block(lexer::SourcePosition position) : CodeDecl(std::move(position)) {}
+
+
 		static ParserRef<Block> parse(RiftParserState& state);
 		virtual ~Block() = default;
 		virtual void dprint(std::ostream& out) const final;
@@ -364,6 +392,8 @@ namespace pst {
 		tpc::OptionalIdentifier optional_name;
 		ParserRef<CodeBlockOrStmt> body = nullptr;
 	public:
+		explicit If(lexer::SourcePosition position) : CodeDecl(std::move(position)) {}
+
 		static ParserRef<If> parse(RiftParserState& state);
 		virtual void dprint(std::ostream& out) const final;
 		virtual ~If() = default;
@@ -374,6 +404,9 @@ namespace pst {
 		tpc::OptionalIdentifier optional_name;
 		ParserRef<CodeBlockOrStmt> body = nullptr;
 	public:
+		explicit While(lexer::SourcePosition position) : CodeDecl(std::move(position)) {}
+
+
 		static ParserRef<While> parse(RiftParserState& state);
 		virtual void dprint(std::ostream& out) const final;
 		virtual ~While() = default;
@@ -381,10 +414,10 @@ namespace pst {
 
 	class RiftTestingStmt: public Stmt {
 	public:
-		RiftTestingStmt(StmtKind kind): Stmt(kind) {}
+		RiftTestingStmt(StmtKind kind, lexer::SourcePosition position): Stmt(kind, std::move(position)) {}
 	};
 	#define RIFT_TEST_CHILD_CONSTRUCTOR(class_name) \
-		class_name(): RiftTestingStmt(StmtKind::class_name) {}
+		class_name(lexer::SourcePosition position): RiftTestingStmt(StmtKind::class_name, std::move(position)) {}
 
 	class EagerLookup: public RiftTestingStmt {
 		DottedName names;

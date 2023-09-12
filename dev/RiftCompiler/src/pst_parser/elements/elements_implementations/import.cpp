@@ -2,7 +2,7 @@
 
 namespace pst {
 	ParserRef<Import> Import::parse(RiftParserState& state) {
-		auto out = makeRef<Import>();
+		auto out = makeRef<Import>(state.ctokens().peek().getPosition());
 
 		RIFT_ASSERT(state.ctokens().is(Keyword::Import), "bad statement choice");
 

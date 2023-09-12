@@ -2,7 +2,7 @@
 
 namespace pst {
 	ParserRef<Namespace> Namespace::parse(RiftParserState& state) {
-		auto out = makeRef<Namespace>();
+		auto out = makeRef<Namespace>(state.ctokens().peek().getPosition());
 
 		RIFT_ASSERT(state.ctokens().is(Keyword::Namespace), "bad statement choice");
 

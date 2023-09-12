@@ -18,10 +18,10 @@ namespace tpc {
 		return ParserRef<T>(ptr);
 	}
 
-	template<typename T>
-	inline ParserRef<T> makeRef() {
-		return ParserRef<T>(new T);
+	template<class T, class... Args>
+	ParserRef<T> makeRef(Args &&... args) {
+		return ParserRef<T>(new T(std::forward<Args>(args)...));
 	}
-	
+
 
 }

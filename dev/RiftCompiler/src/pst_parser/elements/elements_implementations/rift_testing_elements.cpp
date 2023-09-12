@@ -2,7 +2,7 @@
 
 namespace pst {
 	ParserRef<EagerLookup> EagerLookup::parse(RiftParserState& state) {
-		auto out = makeRef<EagerLookup>();
+		auto out = makeRef<EagerLookup>(state.ctokens().peek().getPosition());
 		RIFT_ASSERT(state.ctokens().is(Keyword::RiftTestEagerLookup), "bad statement choice");
 
 		parseAll(state, Keyword::RiftTestEagerLookup);

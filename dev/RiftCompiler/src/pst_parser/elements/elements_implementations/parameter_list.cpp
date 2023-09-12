@@ -8,7 +8,7 @@ namespace pst {
 			return nullptr;
 		}
 
-		auto out = makeRef<ParamList>();
+		auto out = makeRef<ParamList>(state.ctokens().peek().getPosition());
 		state.goDown();
 
 		parseList<false>(state, out->params, Operator::Comma, Token::Type::Sentinel);

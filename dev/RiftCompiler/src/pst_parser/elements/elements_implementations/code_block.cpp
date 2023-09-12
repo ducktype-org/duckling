@@ -8,7 +8,7 @@ namespace pst {
 			return nullptr;
 		}
 
-		auto out = makeRef<CodeBlock>();
+		auto out = makeRef<CodeBlock>(state.ctokens().peek().getPosition());
 
 		state.goDown();
 

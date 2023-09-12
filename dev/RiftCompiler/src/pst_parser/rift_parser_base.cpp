@@ -5,6 +5,11 @@
 namespace pst {
 	void RiftParserState::addImport(tpc::ParserCBorrowRef<pst::Import> import) {
 		imports.push_back(import);
+
+	}
+
+	const lexer::SourcePosition& RiftElement::getSourcePosition() const {
+		return sourcePosition;
 	}
 
 	const RiftParserState::ImportType& RiftParserState::getImports() const {

@@ -3,7 +3,7 @@
 namespace pst {
 	// @TODO: make better
 	ParserRef<Fun> Fun::parse(RiftParserState& state) {
-		auto out = makeRef<Fun>();
+		auto out = makeRef<Fun>(state.ctokens().peek().getPosition());
 
 		RIFT_ASSERT(state.ctokens().is(Keyword::Fun), "bad statement choice");
 
