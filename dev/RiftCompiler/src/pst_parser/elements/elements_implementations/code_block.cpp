@@ -3,13 +3,14 @@
 namespace pst {
 	ParserRef<CodeBlock> CodeBlock::parse(RiftParserState& state) {
 
+		auto position = state.ctokens().peek().getPosition();
 		if (!state.ctokens().is(Token::Type::CurlyGroup)) {
-			state.fail(-1, "expected `{` after here");
+			state.fail(-1, position.genErrorMsg("expected `{` after here"));
 			return nullptr;
 		}
 
-		auto out = makeRef<CodeBlock>(state.ctokens().peek().getPosition());
 
+		auto out = makeRef<CodeBlock>(position);
 		state.goDown();
 
 		// @TODO: this may not work in case of compilation error

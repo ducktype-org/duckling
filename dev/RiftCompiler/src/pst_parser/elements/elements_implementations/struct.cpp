@@ -2,9 +2,10 @@
 
 namespace pst {
 	ParserRef<Struct> Struct::parse(RiftParserState& state) {
-		auto out = makeRef<Struct>(state.ctokens().peek().getPosition());
+		auto position = state.ctokens().peek().getPosition();
+		auto out = makeRef<Struct>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Struct), "bad statement choice");
+		RIFT_ASSERT(state.ctokens().is(Keyword::Struct), position.genErrorMsg("bad statement choice"));
 
 		parseAll(state, Keyword::Struct, &out->name);
 

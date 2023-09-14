@@ -3,9 +3,10 @@
 namespace pst {
 	// @TODO: make better
 	ParserRef<Fun> Fun::parse(RiftParserState& state) {
-		auto out = makeRef<Fun>(state.ctokens().peek().getPosition());
+		auto position = state.ctokens().peek().getPosition();
+		auto out = makeRef<Fun>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Fun), "bad statement choice");
+		RIFT_ASSERT(state.ctokens().is(Keyword::Fun), position.genErrorMsg("bad statement choice"));
 
 		parseAll(state, Keyword::Fun, &out->name, &out->params);
 		if (state.tryEat(Operator::SingleArrow)) {

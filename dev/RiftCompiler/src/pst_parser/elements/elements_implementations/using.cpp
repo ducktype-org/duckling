@@ -2,9 +2,10 @@
 
 namespace pst {
 	ParserRef<Using> Using::parse(RiftParserState& state) {
-		auto out = makeRef<Using>(state.ctokens().peek().getPosition());
+		auto position = state.ctokens().peek().getPosition();
+		auto out = makeRef<Using>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Using), "bad statement choice");
+		RIFT_ASSERT(state.ctokens().is(Keyword::Using), position.genErrorMsg("bad statement choice"));
 
 		parseOne(state, Keyword::Using);
 		parseDottedName(state, &out->names);

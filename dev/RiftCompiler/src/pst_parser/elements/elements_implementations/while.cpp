@@ -3,9 +3,10 @@
 namespace pst {
 	ParserRef<While> While::parse(RiftParserState& state) {
 		// @TODO: attr list
-		auto out = makeRef<While>(state.ctokens().peek().getPosition());
+		auto position = state.ctokens().peek().getPosition();
+		auto out = makeRef<While>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::While), "bad statement choice");
+		RIFT_ASSERT(state.ctokens().is(Keyword::While), position.genErrorMsg("bad statement choice"));
 
 		parseAll(state, Keyword::While, &out->optional_name, &out->condition, &out->body);
 
@@ -13,7 +14,7 @@ namespace pst {
 	}
 
 	void While::dprint(std::ostream& out) const {
-		out << "{\"While\": {\"name\":";
+		out << R"({"While": {"name":)";
 		nullAwareDprint(optional_name, out);
 		out<<", \"condition\": ";
 		nullAwareDprint(condition, out);

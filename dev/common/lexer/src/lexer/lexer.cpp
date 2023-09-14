@@ -100,14 +100,14 @@ namespace lexer {
 
 			addTokenMsg(begin + 2, end, "line comment", printer::MessageType::DEBUG);
 			// output.push_back(Token::makeComment(charArray_.composeRaw(begin + 2, end),
-			// sourcePosition));
+			// source_position));
 		} else if (isBlockCommentBegin()) {
 			usize end = blockComment();
 			sourcePosition.setEnd(end);
 
 			addTokenMsg(begin + 2, end, "block comment", printer::MessageType::DEBUG);
 			// output.push_back(Token::makeComment(charArray_.composeRaw(begin + 2, end),
-			// sourcePosition));
+			// source_position));
 		} else if (peek().isOperator()) {
 			usize end = oper();
 			sourcePosition.setEnd(end);
@@ -183,8 +183,7 @@ namespace lexer {
 	usize Lexer::comment(/*Tokens& output*/) {
 		skip(2); // "//"
 		// usize begin = where_;
-		// SourcePosition sourcePosition(file_, where_);
-		// Token::Position position = {lineNumber_, columnNumber_, where_};
+		// SourcePosition position(file_, lineNumber_, columnNumber_, where_);
 		while (true) {
 			if (isEOF()) {
 				return where_ - 1;

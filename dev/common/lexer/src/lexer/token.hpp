@@ -61,13 +61,6 @@ namespace lexer {
 			Error
 		};
 
-//		struct Position {
-//			usize line, column, raw;
-//			[[nodiscard]] std::string str() const {
-//				return std::to_string(line) + ":" + std::to_string(column);
-//			}
-//		};
-
 		constexpr static std::array<Type, 6> non_terminal_tokens = {Type::String,
 		                                                            Type::FormattedString,
 		                                                            Type::RoundGroup,
@@ -135,6 +128,6 @@ namespace lexer {
 		Type type = Type::Empty;
 		base::StrId str_id;
 		Tokens recursive;
-		SourcePosition sourcePosition;
+		SourcePosition source_position;
 	};
 }

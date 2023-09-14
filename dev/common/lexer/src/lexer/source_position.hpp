@@ -14,13 +14,14 @@ namespace lexer {
 	public:
 		SourcePosition();
 
-		explicit SourcePosition(std::shared_ptr<fs::FilePath> sourceCode);
-		SourcePosition(std::shared_ptr<fs::FilePath> sourceCode, u32 line, u32 column, u32 start);
-		SourcePosition(std::shared_ptr<fs::FilePath> sourceCode, u32 line, u32 column, u32 start,
+		explicit SourcePosition(std::shared_ptr<fs::FilePath> source_code);
+		SourcePosition(std::shared_ptr<fs::FilePath> source_code, u32 line, u32 column, u32 start);
+		SourcePosition(std::shared_ptr<fs::FilePath> source_code, u32 line, u32 column, u32 start,
 		               u32 end);
 
 		[[nodiscard]] std::string getSourceChars() const;
-		void setSourceCode(std::shared_ptr<fs::FilePath> newSourceCode);
+		[[nodiscard]] std::string genErrorMsg(const std::string& reason) const;
+		void setSourceCode(std::shared_ptr<fs::FilePath> new_source_code);
 		void setLineNumber(u32 line);
 		void setColumnNumber(u32 column);
 		void setStart(u32 start);
@@ -32,9 +33,9 @@ namespace lexer {
 		[[nodiscard]] usize getColumn() const;
 
 	private:
-		std::shared_ptr<fs::FilePath> sourceCode;
-		u32 lineNumber, columnNumber, sourceIndexStart,
-			sourceIndexEnd; // Indices of the characters in a source code.
+		std::shared_ptr<fs::FilePath> source_code;
+		u32 line_number, column_number, source_index_start,
+			source_index_end; // Indices of the characters in a source code.
 	};
 }
 

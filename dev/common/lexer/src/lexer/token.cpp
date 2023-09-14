@@ -14,10 +14,10 @@ namespace lexer{
 		return {Type::Sentinel, base::RawView(""), {}};
 	}
 
-	Token::Token(Token::Type type, const base::RawView value, SourcePosition position) : type(type), str_id(value), sourcePosition(std::move(position)) {}
+	Token::Token(Token::Type type, const base::RawView value, SourcePosition position) : type(type), str_id(value), source_position(std::move(position)) {}
 
 	Token::Token(Token::Type type, Tokens&& recursive, SourcePosition position) :
-		  type(type), recursive(recursive), sourcePosition(std::move(position)) {}
+		  type(type), recursive(recursive), source_position(std::move(position)) {}
 
 	Token Token::makeComment(const base::RawView comment, const SourcePosition& position){
 		return {Type::Comment, comment, position};
@@ -69,7 +69,7 @@ namespace lexer{
 	Token Token::makeError(const SourcePosition& position) {
 		Token out;
 		out.type = Type::Error;
-		out.sourcePosition = position;
+		out.source_position = position;
 		return out;
 	}
 
@@ -80,7 +80,7 @@ namespace lexer{
 		swap(first.recursive, second.recursive);
 		swap(first.str_id, second.str_id);
 		swap(first.type, second.type);
-		swap(first.sourcePosition, second.sourcePosition);
+		swap(first.source_position, second.source_position);
 	}
 
 	Token& Token::operator = (Token other){
@@ -180,7 +180,7 @@ namespace lexer{
 	};
 
 	SourcePosition Token::getPosition() const {
-		return sourcePosition;
+		return source_position;
 	}
 
 	TokenData::TokenData(Tokens tokens, const fs::FileContent& file_content):
