@@ -15,11 +15,10 @@ namespace pst {
 
 	class RiftElement: public tpc::Element {
 	public:
-//		RiftElement() = default;
 		explicit RiftElement(lexer::SourcePosition position) : sourcePosition(std::move(position)) {};
 
-		[[nodiscard]] const lexer::SourcePosition &getSourcePosition() const;
-	protected:
+		[[nodiscard]] const lexer::SourcePosition& getSourcePosition() const;
+	private:
  		lexer::SourcePosition sourcePosition;
 	};
 
