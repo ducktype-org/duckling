@@ -80,7 +80,7 @@ namespace lexer {
 
 		std::string output = "In file: ";
 		output += source_code->strView();
-		output += ":" + std::to_string(line_number) + std::to_string(column_number) + ":";
+		output += ":" + std::to_string(line_number) + ":" + std::to_string(column_number) + "\n";
 		output += "error: " + reason + "\n";
 		output += getSourceChars() + "\n";
 		return output;

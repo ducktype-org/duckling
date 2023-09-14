@@ -24,6 +24,7 @@ public:
 		TESTER_ADD_TEST(testGroup5);
 		TESTER_ADD_TEST(testGroup6);
 		TESTER_ADD_TEST(testGroup7);
+		TESTER_ADD_TEST(testSourcePosition);
 	}
 
 	~SimpleLexerTest() override = default;
@@ -112,6 +113,15 @@ private:
 	}
 
 	void testGroup7() { testTokenGroup<7, lexer::Token::Type::String, &lexer::Token::isString>(); }
+
+	void testSourcePosition() {
+		const auto& position = td.tokens[1].getRecursive().front().getPosition();
+		assert(position.getLineNumber() == 5, "Wrong line number");
+		assert(position.getColumn() == 2, "Wrong column");
+		assert(position.getStart() == 15, "Wrong start index");
+		assert(position.getEnd() == 19, "Wrong end index");
+		assert(position.getSourceChars() == "while", "Wrong getSourceChars()");
+	}
 };
 
 
