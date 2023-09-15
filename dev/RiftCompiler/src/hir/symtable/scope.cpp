@@ -85,6 +85,7 @@ namespace symtable {
 	}
 
 	void Scope::close() {
+		RIFT_ASSERT(state == ScopeState::Open, "Can not close closed scope.");
 		state = ScopeState::Closed;
 	}
 }
