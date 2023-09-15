@@ -46,6 +46,7 @@ namespace symtable {
 		// In the future there should be some link from Scope to symbol
 		// and going over symbols will be done only when necessary
 		getSymbolsIn();
+		linked_lookup_scope.value()->close();
 	}
 
 	// @TODO: errors

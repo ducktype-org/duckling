@@ -9,6 +9,11 @@
 
 namespace symtable {
 
+	void Scope::addSymbol(SymbolRef symbol) {
+		RIFT_ASSERT(state == ScopeState::Open, "Can not add symbols to closed scope");
+		symbols.push_back(symbol);
+	}
+
 	LookupResult Scope::lookup(base::StrId name) {
 		// go over local symbols
 		// go over local aliases (are aliases symbols? - yes)
@@ -20,6 +25,9 @@ namespace symtable {
 		std::cerr << "     Simple lookup of " << name.strView();
 		std::cerr << " in " << this->name.strView();
 		std::cerr << "\n";
+
+		RIFT_ASSERT(state == ScopeState::Closed, "Can not perform lookup in open scope");
+
 
 		LookupResult result{{}, {}};
 
@@ -74,5 +82,9 @@ namespace symtable {
 		else {
 			return result;
 		}
+	}
+
+	void Scope::close() {
+		state = ScopeState::Closed;
 	}
 }

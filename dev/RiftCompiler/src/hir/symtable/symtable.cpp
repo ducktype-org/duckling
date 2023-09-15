@@ -30,7 +30,7 @@ namespace symtable {
 		symbol->relative_position = next_relative_position++;
 		
 		symbols.push_back(std::move(symbol));
-		scope->symbols.push_back(symbols.back().borrow_mut());
+		scope->addSymbol(symbols.back().borrow_mut());
 
 		return symbols.back().borrow_mut();
 	}

@@ -34,6 +34,8 @@ namespace symtable {
 		ScopeRef getRootScope();
 		ScopeRef newScope(ScopeRef parent, base::StrId name);
 		ScopeRef newSubRootScope();
+
+		// @TODO: This mechanism is a little bit weird:
 		SymbolRef newSymbol(base::unique_ptr<Symbol> symbol);
 
 		const decltype(symbols)& getSymbols() const;

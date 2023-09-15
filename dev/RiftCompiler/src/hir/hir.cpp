@@ -46,6 +46,8 @@ namespace hir {
 			pst.getTopLevelElement()
 		);
 
+		root_scope->close();
+
 		std::cerr << "Added top level symbol!\n";
 
 		while (analysis_state.notEmpty()) {

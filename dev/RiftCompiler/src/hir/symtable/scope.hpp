@@ -15,6 +15,11 @@ namespace symtable {
 		UsingPrivate
 	};
 
+	enum class ScopeState {
+		Open,
+		Closed
+	};
+
 	class Scope {
 		// Update constructors when adding fields here:
 		
@@ -30,7 +35,10 @@ namespace symtable {
 		// bool lookup_engaged = false;
 		std::set<base::StrId> engaged_names;
 
+		ScopeState state = ScopeState::Open;
+
 		friend class SymbolData;
+		void addSymbol(SymbolRef symbol);
 
 		Scope() = default;
 		Scope(ScopeRef parent, base::StrId name): parent(parent), name(name) {}
@@ -50,6 +58,8 @@ namespace symtable {
 		LookupResult lookupMeAndParents(base::StrId name);
 
 		base::StrId getName() const { return name; }
+
+		void close();
 	};
 
 }
