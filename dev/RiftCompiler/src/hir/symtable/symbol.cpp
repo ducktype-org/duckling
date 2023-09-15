@@ -54,7 +54,7 @@ namespace symtable {
 		
 		scope = getLinkedLookupScope();
 		getSymbolsIn();
-		return scope->lookup(analysis_state, name);
+		return scope->lookup(name);
 	}
 
 	SymbolChain Symbol::getUniqueDeAlias() {

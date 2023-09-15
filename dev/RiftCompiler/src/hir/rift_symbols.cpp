@@ -225,7 +225,7 @@ namespace hir {
 		std::cerr << "  AliasSymbol -- calculating linked lookup" << "\n";
 
 		auto names = pst_element->getPointed();
-		auto lookup_result = analysis_state.symTable().lookupDottedNameInScopeAndParents(analysis_state, scope, {names.begin(), names.end()});
+		auto lookup_result = analysis_state.symTable().lookupDottedNameInScopeAndParents(scope, {names.begin(), names.end()});
 
 		std::cerr << "Got lookup result:\n";
 		lookup_result.dprint(std::cerr);
@@ -236,7 +236,7 @@ namespace hir {
 		}
 
 		auto as_single = lookup_result.getAsSingle();
-		auto dealiased_single = symtable::deAliasSymbolChain(analysis_state, as_single);
+		auto dealiased_single = symtable::deAliasSymbolChain(as_single);
 
 		// @TODO: in future alias should not necessary be single
 		// alias to "overloaded"
@@ -245,7 +245,7 @@ namespace hir {
 		std::cerr << "\n";
 		std::cerr << "deAliased: ";
 		symtable::dprintSymbolChain(
-			symtable::deAliasSymbolChain(analysis_state, as_single), 
+			symtable::deAliasSymbolChain(as_single), 
 			std::cerr);
 		std::cerr << "\n";
 		
@@ -289,7 +289,7 @@ namespace hir {
 
 
 		auto names = pst_element->getPointed();
-		auto lookup_result = analysis_state.symTable().lookupDottedNameInScopeAndParents(analysis_state, scope, {names.begin(), names.end()});
+		auto lookup_result = analysis_state.symTable().lookupDottedNameInScopeAndParents(scope, {names.begin(), names.end()});
 		
 		std::cerr << "Got lookup result:\n";
 		lookup_result.dprint(std::cerr);
@@ -300,7 +300,7 @@ namespace hir {
 			RIFT_PANIC("ambiguity in using, @TODO: error in state");
 		}
 		auto as_single = lookup_result.getAsSingle();
-		auto dealiased_single = symtable::deAliasSymbolChain(analysis_state, as_single);
+		auto dealiased_single = symtable::deAliasSymbolChain(as_single);
 
 		// @TODO: in future alias should not necessary be single
 		// using to "overloaded"

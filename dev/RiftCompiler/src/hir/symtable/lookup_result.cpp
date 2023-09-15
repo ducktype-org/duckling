@@ -6,7 +6,7 @@
 
 namespace symtable {
 
-	SymbolChain deAliasSymbolChain(hir::AnalysisState& state, const SymbolChain& chain) {
+	SymbolChain deAliasSymbolChain(const SymbolChain& chain) {
 		// @TODO: this does not handle non-unique symbols (overloaded)
 		SymbolChain out;
 		std::cerr << "     dealiasing... \n";

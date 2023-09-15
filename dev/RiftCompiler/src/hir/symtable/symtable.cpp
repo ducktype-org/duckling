@@ -46,13 +46,13 @@ namespace symtable {
 
 	// @TODO: errors
 	ChainLookupResult SymbolData::lookupDottedNameInScopeAndParents(
-		hir::AnalysisState& state, ScopeRef initial,
+		ScopeRef initial,
 		std::span<base::StrId> names) {
 		
 		RIFT_ASSERT(names.size() > 0, "lookupDotted received zero names");
 
 		// initial symbol:
-		auto append_res_first = initial->lookupMeAndParents(state, names[0]);
+		auto append_res_first = initial->lookupMeAndParents(names[0]);
 
 		if (names.size() == 1) {
 			return {{}, append_res_first};

@@ -30,13 +30,12 @@ private:
 	}
 
 	symtable::SymbolRef getSymbolFromLookupIn(
-			hir::HIR& hir,
 			symtable::SymbolRef symbol,
 			base::StrId name) {
 		auto lookup_result = symbol->lookupIn(name);
 		assert(lookup_result.isSingle(), "Lookup result not a single symbol.");
 		auto dealiased_single = symtable::deAliasSymbolChain(
-			hir.getState(), lookup_result.getAsSingle()
+			lookup_result.getAsSingle()
 		);
 		return dealiased_single.back();
 	}
@@ -55,7 +54,7 @@ private:
 		auto top_level_symbol = root_scope->getSymbols()[0];
 
 		auto get_symbol_from_top_level = [&](auto name) {
-			return getSymbolFromLookupIn(hir, top_level_symbol, base::StrId(name));
+			return getSymbolFromLookupIn(top_level_symbol, base::StrId(name));
 		};
 
 		auto C = get_symbol_from_top_level("C");

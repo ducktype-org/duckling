@@ -23,7 +23,7 @@ namespace hir {
 			if (lookup_done) return;
 			lookup_done = true;
 
-			auto lookup_result = scope->lookupMeAndParents(state, name);
+			auto lookup_result = scope->lookupMeAndParents(name);
 			std::cerr << "   FULL LK RES: ";
 			lookup_result.dprint(std::cerr);
 			std::cerr << "\n";
@@ -36,7 +36,7 @@ namespace hir {
 			symtable::dprintSymbolChain(as_single, std::cerr);
 			std::cerr << "\n";
 
-			auto dealiased_single = symtable::deAliasSymbolChain(state, as_single);
+			auto dealiased_single = symtable::deAliasSymbolChain(as_single);
 
 			std::cerr << "   SYMBOL EXPR RES DEALIASED: ";
 			symtable::dprintSymbolChain(dealiased_single, std::cerr);
