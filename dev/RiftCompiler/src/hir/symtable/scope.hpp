@@ -7,10 +7,6 @@
 #include <base/string_id.hpp>
 #include <set>
 
-namespace hir {
-	class AnalysisState;
-}
-
 namespace symtable {
 	enum class ConnectionType {
 		ImportPublic,
@@ -50,8 +46,8 @@ namespace symtable {
 		Scope(Scope&&) = default;
 		Scope& operator=(Scope&&) = default;
 
-		LookupResult lookup(hir::AnalysisState&, base::StrId name);
-		LookupResult lookupMeAndParents(hir::AnalysisState&, base::StrId name);
+		LookupResult lookup(base::StrId name);
+		LookupResult lookupMeAndParents(base::StrId name);
 
 		base::StrId getName() const { return name; }
 	};

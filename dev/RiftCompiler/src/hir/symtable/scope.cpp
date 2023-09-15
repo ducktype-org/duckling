@@ -1,6 +1,5 @@
 #include "scope.hpp"
 #include "symbol.hpp"
-#include "../analysis_state.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/defer.hpp>
@@ -10,7 +9,7 @@
 
 namespace symtable {
 
-	LookupResult Scope::lookup(hir::AnalysisState& state, base::StrId name) {
+	LookupResult Scope::lookup(base::StrId name) {
 		// go over local symbols
 		// go over local aliases (are aliases symbols? - yes)
 		// go over links -- wildcard alias -- static links can cutoff, dep links needs un-aliasing
@@ -64,11 +63,11 @@ namespace symtable {
 	}
 
 
-	LookupResult Scope::lookupMeAndParents(hir::AnalysisState& state, base::StrId name) {
-		auto result = lookup(state, name);
+	LookupResult Scope::lookupMeAndParents(base::StrId name) {
+		auto result = lookup(name);
 		if (parent != nullptr) {
 			// Reverse insertion order allow for linear result concatenation instead of quadratic 
-			auto parent_result = parent->lookupMeAndParents(state, name);
+			auto parent_result = parent->lookupMeAndParents(name);
 			parent_result.insert(std::move(result));
 			return parent_result;
 		}
