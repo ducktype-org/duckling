@@ -140,7 +140,7 @@ namespace lexer {
 				console.add({{{"group begin"}}, printer::MessageType::DEBUG}); // @TODO: better
 				Tokens inner_tokens = parGroup(group_type);
 
-				if(inner_tokens.empty()) {
+				if (inner_tokens.empty()) {
 					sourcePosition.setEnd(where_ + 1);
 				} else {
 					auto lastEnd = inner_tokens.back().getPosition().getEnd();
@@ -167,11 +167,13 @@ namespace lexer {
 		} else {
 			if (not peek().isWhitespace()) {
 				console.add(printer::Message(
-					{{"Skipped"},
-				     {generateLineColumnInfo()},
-				     {"("},
-				     {std::string(charArray_.composeRaw(begin, begin).stringView())},
-				     {")"}},
+					{
+						{"Skipped"},
+						{generateLineColumnInfo()},
+						{"("},
+						{std::string(charArray_.composeRaw(begin, begin).stringView())},
+						{")"},
+					},
 					printer::MessageType::DEBUG));
 			}
 			next(); // in else??

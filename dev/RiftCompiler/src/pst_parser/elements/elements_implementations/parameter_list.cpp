@@ -6,7 +6,7 @@ namespace pst {
 
 		if (!state.ctokens().is(Token::Type::RoundGroup)) {
 
-			state.fail(-1, position.genErrorMsg("parenthesis expected after here"));
+			state.fail(-1, "parenthesis expected after here");
 			return nullptr;
 		}
 

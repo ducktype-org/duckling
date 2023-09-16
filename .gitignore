@@ -7,8 +7,8 @@
 
 bin/
 build/
-cmake-build-debug/
+cmake-build-*/
 
 # Editor files:
-.vscode/
+.vscode/a
 compile_commands.json

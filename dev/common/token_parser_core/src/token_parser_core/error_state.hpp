@@ -22,8 +22,8 @@ namespace tpc {
 		void setFail() {
 			failbit = true;
 		}
-		void failAndLog(const lexer::SourcePosition& position, const std::string& message);
-		void logError(const lexer::SourcePosition& position, const std::string& message);
+		void failAndLog(const lexer::SourcePosition& position, std::string_view message);
+		void logError(const lexer::SourcePosition& position, std::string_view message);
 		void dumpLog(std::ostream& stream = std::cerr) const;
 		[[nodiscard]] bool good() const {
 			return !failbit;

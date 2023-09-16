@@ -33,10 +33,10 @@ namespace lexer {
 
 		TokenData() = default;
 		TokenData(TokenData&&) noexcept;
-		TokenData(Tokens tokens, const fs::FileContent& file_content);
+		TokenData(Tokens tokens, fs::FileContent  file_content);
 
 		void operator=(const TokenData&) = delete;
-		void operator=(TokenData&&) noexcept;
+		TokenData& operator=(TokenData&&) = default;
 
 		virtual ~TokenData();
 	};

@@ -19,7 +19,7 @@ namespace lexer {
 		               u32 end);
 
 		[[nodiscard]] std::string getSourceChars() const;
-		[[nodiscard]] std::string genErrorMsg(const std::string& reason) const;
+		[[nodiscard]] std::string genErrorMsg(std::string_view reason) const;
 		void setSourceCode(std::shared_ptr<fs::FilePath> new_source_code);
 		void setLineNumber(u32 line);
 		void setColumnNumber(u32 column);
@@ -37,4 +37,3 @@ namespace lexer {
 			source_index_end; // Indices of the characters in a source code.
 	};
 }
-

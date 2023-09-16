@@ -5,7 +5,7 @@ namespace pst {
 
 		auto position = state.ctokens().peek().getPosition();
 		if (!state.ctokens().is(Token::Type::CurlyGroup)) {
-			state.fail(-1, position.genErrorMsg("expected `{` after here"));
+			state.fail(-1, "expected `{` after here");
 			return nullptr;
 		}
 

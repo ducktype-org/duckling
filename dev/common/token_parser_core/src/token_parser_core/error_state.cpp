@@ -2,20 +2,19 @@
 
 namespace tpc {
 	// @TODO: change to sth working with utf8
-	void ErrorState::logError(const lexer::SourcePosition& position, const std::string& message) {
+	void ErrorState::logError(const lexer::SourcePosition& position, std::string_view message) {
 		err_count++;
 		errorLog.add({
 			{
 				{"error:", printer::Color::BRIGHT_RED},
-				// @TODO:  add file location info
-				{position.getSourceChars() + ": "},
-				{message + "\n"}
+				// @TODO: add file location info
+				position.genErrorMsg(message)
 			},
 			printer::MessageType::ERROR, 0 // @TODO: maybe change level
 		});
 	}
 
-	void ErrorState::failAndLog(const lexer::SourcePosition& position, const std::string& message) {
+	void ErrorState::failAndLog(const lexer::SourcePosition& position, std::string_view message) {
 		setFail(); logError(position, message);
 	}
 

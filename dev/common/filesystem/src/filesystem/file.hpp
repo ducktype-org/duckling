@@ -37,6 +37,10 @@ namespace fs {
 	public:
 		FileContent(): content(nullptr) {};
 		FileContent(const FileContent&) = default;
+		FileContent(FileContent&&) = default;
+
+		FileContent& operator=(const FileContent&) = default;
+		FileContent& operator=(FileContent&&) = default;
 
 		usize size() { return view().size(); };
 		byte operator[](usize i) { return view()[i]; };

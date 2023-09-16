@@ -183,17 +183,12 @@ namespace lexer{
 		return source_position;
 	}
 
-	TokenData::TokenData(Tokens tokens, const fs::FileContent& file_content):
-		  tokens(std::move(tokens)), file_content(file_content) {}
+	TokenData::TokenData(Tokens tokens, fs::FileContent file_content):
+		  tokens(std::move(tokens)), file_content(std::move(file_content)) {}
 
 	TokenData::TokenData(TokenData&& oth) noexcept:
 		  tokens(std::move(oth.tokens)),
-		  file_content(oth.file_content) {};
-
-	void TokenData::operator=(TokenData&& other) noexcept {
-		file_content = other.file_content;
-		tokens = std::move(other.tokens);
-	}
+		  file_content(std::move(oth.file_content)) {};
 
 	TokenData::~TokenData() = default;
 }
