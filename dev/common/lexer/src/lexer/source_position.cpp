@@ -1,6 +1,8 @@
-//
-// Created by mateusz on 9/6/23.
-//
+/**
+ * @file source_position.cpp
+ * @author Mateusz Kołpa (matihopemine@gmail.com)
+ */
+
 
 #include "source_position.hpp"
 

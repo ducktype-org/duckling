@@ -10,5 +10,5 @@ build/
 cmake-build-*/
 
 # Editor files:
-.vscode/a
+.vscode/
 compile_commands.json

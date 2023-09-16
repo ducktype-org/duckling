@@ -1,6 +1,7 @@
-//
-// Created by mateusz on 9/6/23.
-//
+/**
+ * @file source_position.hpp
+ * @author Mateusz Kołpa (matihopemine@gmail.com)
+ */
 
 #pragma once
 
