@@ -2,32 +2,33 @@
 
 namespace pst {
 	ParserRef<Action> Action::parse(RiftParserState& state) {
+		lexer::SourcePosition position = state.ctokens().peek().getPosition();
 
-		RIFT_ASSERT(state.ctokens().isKeyword(), "bad statement choice");
+		RIFT_ASSERT(state.ctokens().isKeyword(), position.genErrorMsg("bad statement choice"));
 
 		ParserRef<Action> out;
 		auto keyword = state.ctokens().peek().asKeyword();
 		switch (keyword) {
 		case Keyword::Return:
-			out = makeRef<Return>();
+			out = makeRef<Return>(position);
 			break;
 		case Keyword::Break:
-			out = makeRef<Break>();
+			out = makeRef<Break>(position);
 			break;
 		case Keyword::Continue:
-			out = makeRef<Continue>();
+			out = makeRef<Continue>(position);
 			break;
 		case Keyword::Redo:
-			out = makeRef<Redo>();
+			out = makeRef<Redo>(position);
 			break;
 		case Keyword::Restart:
-			out = makeRef<Restart>();
+			out = makeRef<Restart>(position);
 			break;
 		case Keyword::Defer:
-			out = makeRef<Defer>();
+			out = makeRef<Defer>(position);
 			break;
 		case Keyword::Throw:
-			out = makeRef<Throw>();
+			out = makeRef<Throw>(position);
 			break;	
 		default:	
 			RIFT_PANIC("bad statement choice");

@@ -6,7 +6,7 @@
 
 hir::SourceUnit prepare(std::string_view filename) {
 	fs::FilePath file(filename);
-	auto td = lexer::tokenizeFile(file.getContent());
+	auto td = lexer::tokenizeFile(file);
 	return {pst::parse(std::move(td)), file};
 }
 
@@ -26,4 +26,3 @@ int main(int argc, char** argv) {
 	hir.addUnit(prepare(file.strView()));
 	hir.doMagicStuff();
 }
-

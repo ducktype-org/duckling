@@ -14,117 +14,117 @@ namespace lexer {
 	 * 
 	 */
 	class Char {
-		public:
-			enum Type {
-				Character,
-				Digit,
-				Operator,
-				Whitespace,
-				Special,
-				Eof,
-				Illegal,
-				Empty
-			};
+	public:
+		enum Type {
+			Character,
+			Digit,
+			Operator,
+			Whitespace,
+			Special,
+			Eof,
+			Illegal,
+			Empty
+		};
 			
-			enum ParType {
-				Round,
-				Square,
-				Curly,
-				Angle,
-				NotAPar
-			};
+		enum ParType {
+			Round,
+			Square,
+			Curly,
+			Angle,
+			NotAPar
+		};
 
-			[[nodiscard]]
-			bool isCharacter() const;
-			[[nodiscard]]
-			bool isDigit() const;
-			[[nodiscard]]
-			bool isOperator() const;
-			[[nodiscard]]
-			bool isSpecial() const;
-			[[nodiscard]]
-			bool isWhitespace() const;
-			[[nodiscard]]
-			bool isEOF() const;
+		[[nodiscard]]
+		bool isCharacter() const;
+		[[nodiscard]]
+		bool isDigit() const;
+		[[nodiscard]]
+		bool isOperator() const;
+		[[nodiscard]]
+		bool isSpecial() const;
+		[[nodiscard]]
+		bool isWhitespace() const;
+		[[nodiscard]]
+		bool isEOF() const;
 
-			[[nodiscard]]
-			bool isParOpen() const;
-			[[nodiscard]]
-			bool isParOpen(ParType type) const;
-			[[nodiscard]]
-			bool isParClose() const;
-			[[nodiscard]]
-			bool isParClose(ParType type) const;
-			[[nodiscard]]
-			ParType getParType() const;
+		[[nodiscard]]
+		bool isParOpen() const;
+		[[nodiscard]]
+		bool isParOpen(ParType type) const;
+		[[nodiscard]]
+		bool isParClose() const;
+		[[nodiscard]]
+		bool isParClose(ParType type) const;
+		[[nodiscard]]
+		ParType getParType() const;
 			
-			[[nodiscard]]
-			bool isAscii() const;
-			[[nodiscard]]
-			char asciiValue() const;
-			[[nodiscard]]
-			bool isAsciiValue(char value) const;
+		[[nodiscard]]
+		bool isAscii() const;
+		[[nodiscard]]
+		char asciiValue() const;
+		[[nodiscard]]
+		bool isAsciiValue(char value) const;
 
-			[[nodiscard]]
-			Type getType() const;
+		[[nodiscard]]
+		Type getType() const;
 
-			void appendRawValueTo(std::string& to) const;
-			void appendRawValueTo(std::stringstream& to) const;
+		void appendRawValueTo(std::string& to) const;
+		void appendRawValueTo(std::stringstream& to) const;
 			
-			[[nodiscard]]
-			std::string rawStr() const;
-			[[nodiscard]]
-			std::string debugStr() const;
+		[[nodiscard]]
+		std::string rawStr() const;
+		[[nodiscard]]
+		std::string debugStr() const;
 
-			template<fs::Encoding encoding>
-			friend CharArray decode(base::RawView bytes);
-			friend CharArray;
+		template<fs::Encoding encoding>
+		friend CharArray decode(base::RawView bytes);
+		friend CharArray;
 
-		private:
-			Type type_ = Empty;
-			uchar ascii_value = 0;
-			base::RawArray raw_begin = nullptr;
+	private:
+		Type type_ = Empty;
+		uchar ascii_value = 0;
+		base::RawArray raw_begin = nullptr;
 
-			// @TODO: this u8 is strange
-			u8 size = u8{0};
+		// @TODO: this u8 is strange
+		u8 size = u8{0};
 
-			Char() = default;
+		Char() = default;
 
-			// funkcje poniżej na wypadek, gdyby kiedyś więcej rzeczy się działo przy ustawianiu typu
-			void setCharacter();
-			void setDigit();
-			void setOperator();
-			void setSpecial();
+		// funkcje poniżej na wypadek, gdyby kiedyś więcej rzeczy się działo przy ustawianiu typu
+		void setCharacter();
+		void setDigit();
+		void setOperator();
+		void setSpecial();
 	};
 
 
 	class CharArray {
-		public:
-			using Array = std::vector<Char>;
-			CharArray(Array array);
-			CharArray(CharArray&& other) noexcept;
-			CharArray(const CharArray& other) = delete;
-			void operator=(const CharArray& other) = delete;
-			[[nodiscard]]
-			CharArray& operator=(CharArray&& other) noexcept;
-			friend void swap(CharArray& first, CharArray& second);
+	public:
+		using Array = std::vector<Char>;
+		CharArray(Array array);
+		CharArray(CharArray&& other) noexcept;
+		CharArray(const CharArray& other) = delete;
+		void operator=(const CharArray& other) = delete;
+		[[nodiscard]]
+		CharArray& operator=(CharArray&& other) noexcept;
+		friend void swap(CharArray& first, CharArray& second);
 			
-			[[nodiscard]]
-			const Array& getArray() const;
+		[[nodiscard]]
+		const Array& getArray() const;
 			
-			[[nodiscard]]
-			base::RawView composeRaw(usize from, usize to) const;
-			[[nodiscard]]
-			base::RawView getRaw(usize i) const;
-			[[nodiscard]]
-			const Char& get(usize i) const;
+		[[nodiscard]]
+		base::RawView composeRaw(usize from, usize to) const;
+		[[nodiscard]]
+		base::RawView getRaw(usize i) const;
+		[[nodiscard]]
+		const Char& get(usize i) const;
 			
-			~CharArray();
-		private:
-			CharArray() = default;
+		~CharArray();
+	private:
+		CharArray() = default;
 			
-			base::RawArray r_array = nullptr;
-			Array array;
+		base::RawArray r_array = nullptr;
+		Array array;
 	};
 	
 	/**

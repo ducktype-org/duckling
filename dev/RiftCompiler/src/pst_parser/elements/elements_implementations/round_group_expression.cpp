@@ -2,7 +2,9 @@
 
 namespace pst {
 	ParserRef<RoundGroupExpr> RoundGroupExpr::parse(RiftParserState& state) {
-		auto out = makeRef<RoundGroupExpr>();
+		auto position = state.ctokens().peek().getPosition();
+
+		auto out = makeRef<RoundGroupExpr>(position);
 
 		if (!state.ctokens().is(Token::Type::RoundGroup)) {
 			state.fail(-1, "expected a `(` after here");

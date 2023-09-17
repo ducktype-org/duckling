@@ -9,7 +9,7 @@
 void print(const Tokens& tokens, std::ostream& out, const std::string& indent = "") {
 	out << "[";
 	for (const auto& token: tokens) {
-		lexer::Token::Position position = token.getPosition();
+		lexer::SourcePosition position = token.getPosition();
 
 		out << indent;
 
@@ -20,9 +20,10 @@ void print(const Tokens& tokens, std::ostream& out, const std::string& indent = 
 			out << "\"<EMPTY>\", ";
 		}
 
-		out << R"("line": ")" << position.line << "\",";
-		out << R"("column": ")" << position.column << "\",";
-		out << R"("raw": ")" << position.raw << "\",";
+		out << R"("line": ")" << position.getLineNumber() << "\",";
+		out << R"("column": ")" << position.getColumn() << "\",";
+		out << R"("raw_start": ")" << position.getStart() << "\",";
+		out << R"("raw_end": ")" << position.getEnd() << "\",";
 
 		out << R"("recursive": )";
 		print(token.getRecursive(), out, indent + "	");
@@ -47,10 +48,11 @@ private:
 
 	void simplePositionTest() {
 		fs::FilePath file(path("fun.rift"));
-		td = lexer::tokenizeFile(file.getContent());
+		td = lexer::tokenizeFile(file);
 
 		std::stringstream result_stream;
 		print(td.tokens, result_stream);
+		std::cout << result_stream.str() << std::endl;
 
 		auto corr_json = fs::getSimpleFileContent(path("fun_position.json"));
 		auto corr = corr_json.view().stringView();

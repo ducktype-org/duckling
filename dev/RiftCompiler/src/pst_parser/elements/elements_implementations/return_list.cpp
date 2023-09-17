@@ -2,7 +2,7 @@
 
 namespace pst {
 	ParserRef<RetList> RetList::parse(RiftParserState& state) {
-		auto out = makeRef<RetList>();
+		auto out = makeRef<RetList>(state.ctokens().peek().getPosition());
 
 		parseList<true>(state, out->rets, Operator::Comma, Token::Type::CurlyGroup);
 
