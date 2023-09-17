@@ -61,12 +61,14 @@ namespace lexer {
 			Error
 		};
 
-		constexpr static std::array<Type, 6> non_terminal_tokens = {Type::String,
-		                                                            Type::FormattedString,
-		                                                            Type::RoundGroup,
-		                                                            Type::SquareGroup,
-		                                                            Type::CurlyGroup,
-		                                                            Type::AngleGroup};
+		constexpr static std::array<Type, 6> non_terminal_tokens = {
+			Type::String,
+			Type::FormattedString,
+			Type::RoundGroup,
+			Type::SquareGroup,
+			Type::CurlyGroup,
+			Type::AngleGroup
+		};
 
 		static Token makeSentinel();
 
