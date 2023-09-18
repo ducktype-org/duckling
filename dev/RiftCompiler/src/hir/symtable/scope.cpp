@@ -31,15 +31,8 @@ namespace symtable {
 
 		LookupResult result{{}, {}};
 
-		// if (lookup_engaged) {
-		// 	return result;
-		// }
-		// lookup_engaged = true;
-		// defer (lookup_engaged = false);
-
-		// @FIXME: this has to be much better that this:
-		// This is just a hotfix
-
+		// @FIXME: this is probably a heuristic, and just a hotfix
+		// In the future something better has to be done
 		if (engaged_names.contains(name)) {
 			return result;
 		}

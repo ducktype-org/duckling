@@ -8,8 +8,6 @@
 #include <exec/operators/builtinoperators.hpp>
 #include <operations/operation.hpp>
 
-// @Placeholder
-
 namespace hir {
 
 	class SymbolExpr: public Expression {

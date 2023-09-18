@@ -186,6 +186,7 @@ namespace pst {
 
 	class Expr: public Stmt {
 	private:
+		// @TODO: this friend should probably be removed, and some stuff just should be public
 		friend ::hir::Expression;
 	public:
 		enum class GroupType {

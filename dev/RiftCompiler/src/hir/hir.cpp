@@ -36,7 +36,8 @@ namespace hir {
 
 		pst::PST& pst = sources[0].pst;
 
-		// @TODO: this should be root_scope, but it is root scope for now, so tests can work
+		// @TODO: this should be sub_root_scope, but it is root_scope for now, so tests can work
+		// Right now we can't lookup into sub root scopes
 		// symtable::ScopeRef root_scope = analysis_state.newSubRootScope();
 		symtable::ScopeRef root_scope = analysis_state.symTable().getRootScope();
 
