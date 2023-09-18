@@ -3,6 +3,8 @@
 #include "symtable/symtable.hpp"
 #include <queue>
 #include <span>
+#include <printer/printer.hpp>
+
 
 namespace hir {
 
@@ -18,6 +20,7 @@ namespace hir {
 		// @TODO: error state here
 
 	public:
+
 		bool empty() const { return to_analyze.empty(); }
 		bool notEmpty() const { return !empty(); }
 		

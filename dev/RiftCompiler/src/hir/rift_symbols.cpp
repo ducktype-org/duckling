@@ -14,7 +14,6 @@ namespace hir {
 		// @TODO: cast check
 		case pst::StmtKind::Fun: {
 			PstRef<pst::Fun> fun = stmt;
-			std::cerr << "Function: " << fun->getName().strView() << ", skipping\n";
 			break;
 		}
 		case pst::StmtKind::Namespace: {
@@ -28,7 +27,6 @@ namespace hir {
 		}
 		case pst::StmtKind::Const: {
 			PstRef<pst::Const> const_ = stmt;
-			std::cerr << "Const: " << const_->getName().strView() << "\n";
 			return base::make_unique<ConstSymbol>(
 				state,
 				scope,
@@ -38,7 +36,6 @@ namespace hir {
 		}
 		case pst::StmtKind::Struct: {
 			PstRef<pst::Struct> struct_ = stmt;
-			std::cerr << "Struct: " << struct_->getName().strView() << "\n";
 			return base::make_unique<StructSymbol>(
 				state,
 				scope,
@@ -49,7 +46,6 @@ namespace hir {
 
 		case pst::StmtKind::Alias: {
 			PstRef<pst::Alias> alias = stmt;
-			std::cerr << "Alias: " << alias->getName().strView() << "\n";
 			return base::make_unique<AliasSymbol>(
 				state,
 				scope,
@@ -60,8 +56,6 @@ namespace hir {
 
 		case pst::StmtKind::Using: {
 			PstRef<pst::Using> using_ = stmt;
-			std::cerr << "Using: " << using_->getPointed()[0].strView() << "\n";
-
 			return base::make_unique<UsingSymbol>(
 				state,
 				scope,
@@ -77,7 +71,6 @@ namespace hir {
 		
 		default:
 			break;
-			// RIFT_PANIC("makeSymbolFromStatement bad symbol kind");
 		}
 		RIFT_PANIC(
 			base::strConcat("makeSymbolFromStatement bad symbol kind, stmt: ",
@@ -90,10 +83,8 @@ namespace hir {
 		ScopeRef scope,
 		pst::ParserCBorrowRef<pst::CodeBlock> pst_element) {
 		
-		// @TODO: stmts/usings/alias/expand/...
-		// using and alias are just symbols
+		// @FUTURE: somewhere here will happen macro expansion
 		for (auto& stmt: pst_element->getStatements()) {
-			std::cerr << "stmt...\n";
 			auto sym = makeSymbolFromStatement(
 				state, scope, stmt.borrow()
 			);
@@ -128,7 +119,6 @@ namespace hir {
 		// @TODO: stmts/usings/alias/expand/...
 		// using and alias are just symbols
 		for (auto& stmt: pst_element->getStatements()) {
-			std::cerr << "stmt...\n";
 			analysis_state.addSymbol(
 				makeSymbolFromStatement(
 					analysis_state, inner_scope, stmt.borrow()
@@ -154,9 +144,7 @@ namespace hir {
 	}
 
 	void ConstSymbol::calculateType() {
-		// @TODO look up here and other stuff
 		type = type_expr->evalAsType(analysis_state);
-		//ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
 	}
 
 	void ConstSymbol::analyzeAll() {
@@ -174,7 +162,6 @@ namespace hir {
 	}
 
 	ts::ClassInfo StructSymbol::calculateValue() {
-		//...
 		// @TODO
 		return ts::ClassInfo::create(base::StrId("A"), {});
 	}
@@ -199,6 +186,7 @@ namespace hir {
 		if (!dealiased_lookup_result.has_value()) {
 			std::cerr << "  > calculating...\n";
 			// this can be confusing:
+			// we need it to ensure that dealiased_lookup_result has value
 			calculateLinkedLookup();
 		}
 		return dealiased_lookup_result.value();
@@ -317,23 +305,4 @@ namespace hir {
 		dealiased_lookup_result = std::move(dealiased_single);
 	}
 	
-
-	// TestEagerLookupSymbol::TestEagerLookupSymbol(
-	// 	ScopeId scope, base::StrId name, 
-	// 	PstRef<pst::Const> pst_element):
-	// 		Symbol(scope, name, false, true, SymbolKind::TestSymbol),
-	// 		pst_element(pst_element) {
-		
-	// 	state.
-	// }
-
-	// void TestEagerLookupSymbol::calculateType() {
-	// 	// placeholder type:
-	// 	type = ts::TypeDesc<ts::TupleInfo>(0, ts::VoidInfo::create());
-	// }
-
-	// void TestEagerLookupSymbol::analyzeAll(AnalysisState&) {
-	// 	getKind();
-	// 	getType();
-	// }
 }
