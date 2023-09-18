@@ -22,27 +22,37 @@ namespace ts {
 	class TypeDesc {
 	public:
 		template<std::derived_from<TypeInfo> OTHER_TYPE_INFO>
-		TypeDesc(TypeDesc<OTHER_TYPE_INFO> other)
-			: type_info(other.getType()), valueCategory(other.getValueCategory()) {}
+		TypeDesc(TypeDesc<OTHER_TYPE_INFO> other):
+			type_info(other.getType()),
+			valueCategory(other.getValueCategory()) {}
 
-		TypeDesc(TYPE_INFO type_info, ValueCategory valueCategory = {})
-			: type_info(type_info), valueCategory(valueCategory) {}
+		TypeDesc(TYPE_INFO type_info, ValueCategory valueCategory = {}):
+			type_info(type_info),
+			valueCategory(valueCategory) {}
 
-		[[nodiscard]] TYPE_INFO getType() const { return type_info; }
+		[[nodiscard]]
+		TYPE_INFO getType() const {
+			return type_info;
+		}
 
-		[[nodiscard]] ValueCategory getValueCategory() const { return valueCategory; }
+		[[nodiscard]]
+		ValueCategory getValueCategory() const {
+			return valueCategory;
+		}
 
 		template<std::derived_from<TypeInfo> OTHER_TYPE_INFO>
-		[[nodiscard]] bool operator==(const TypeDesc<OTHER_TYPE_INFO>& other) const {
+		[[nodiscard]]
+		bool operator==(const TypeDesc<OTHER_TYPE_INFO>& other) const {
 			return valueCategory == other.getValueCategory() && type_info == other.getType();
 		}
 
 		auto operator<=>(const TypeDesc<TYPE_INFO>& other) const = default;
 
-		[[nodiscard]] bool isDescImplicitlyCoercible(const TypeDesc<>& to) const;
+		[[nodiscard]]
+		bool isDescImplicitlyCoercible(const TypeDesc<>& to) const;
 
 	private:
-		TYPE_INFO type_info;
+		TYPE_INFO     type_info;
 		ValueCategory valueCategory;
 	};
 }

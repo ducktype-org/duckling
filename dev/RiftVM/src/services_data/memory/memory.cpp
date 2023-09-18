@@ -1,6 +1,7 @@
-#include <iostream>
 #include "memory.hpp"
+
 #include <base/exceptions.hpp>
+#include <iostream>
 
 namespace vm {
 	bool Memory::isUnowned(BlockId id) {
@@ -56,7 +57,7 @@ namespace vm {
 		} else if (blocks[usize(id)].filled) {
 			RIFT_PANIC("Tried creating an initialized block");
 		}
-		blocks[usize(id)].block = new Block(std::move(block));
+		blocks[usize(id)].block  = new Block(std::move(block));
 
 		// @TODO: this assumes every block is initialized
 		blocks[usize(id)].filled = true;
@@ -65,14 +66,14 @@ namespace vm {
 	void Memory::deleteBlock(BlockId id) {
 		if (isUnowned(id)) {
 			RIFT_PANIC("Tried deleting an unowned block");
-		} 
+		}
 		blocks[usize(id)].filled = false;
 		delete blocks[usize(id)].block;
-		
+
 		// @FIXME: refCheck deleted BlockData if ref count is zero
 		// Issue: https://github.com/rift-lang/rift-poc-zpp1/issues/90
 		// this can cause memory error here:
-		// this code only make sense if refCheck didn't delete block 
+		// this code only make sense if refCheck didn't delete block
 
 		// if (!refCheck(id)) {
 		// 	blocks[usize(id)].deleted = false;
@@ -94,7 +95,8 @@ namespace vm {
 	void Memory::destroyRef(BlockId id) {
 		if (id >= high_id || (!blocks[usize(id)].owned && !blocks[usize(id)].deleted)) {
 			RIFT_PANIC("Tried deleting a reference to an unowned block");
-		} if (blocks[usize(id)].refcount == 0) {
+		}
+		if (blocks[usize(id)].refcount == 0) {
 			RIFT_PANIC("Tried deleting a reference to an unreferenced block");
 		}
 		if (--blocks[usize(id)].refcount == 0 && blocks[usize(id)].deleted) {
@@ -104,6 +106,6 @@ namespace vm {
 	}
 
 	Pointer Memory::nullPtr() const {
-		return Pointer{null_block_id, 0};
+		return Pointer{ null_block_id, 0 };
 	}
 }

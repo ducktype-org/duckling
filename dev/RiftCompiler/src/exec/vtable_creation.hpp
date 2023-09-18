@@ -11,17 +11,15 @@
 #include <map>
 #include <typesystem/class_types.hpp>
 
-
 namespace exec {
 
 	namespace internal {
 		static std::map<std::pair<ts::ClassInfo, ts::ClassInfo>, CTV> vtables;
 	}
 
-	CTV getVtable(ts::ClassInfo parent, ts::ClassInfo child);
+	CTV  getVtable(ts::ClassInfo parent, ts::ClassInfo child);
 
-	CTV getVirtualSubCtv(CTV ctv, usize vtable_position, usize offset,
-	                     ts::TypeDesc<> wanted_type);
+	CTV  getVirtualSubCtv(CTV ctv, usize vtable_position, usize offset, ts::TypeDesc<> wanted_type);
 
 	void fillVtablePtr(CTV ctv, ts::ClassInfo base_class);
 

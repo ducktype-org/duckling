@@ -31,14 +31,7 @@ public:
 
 private:
 	constexpr static std::array<std::string_view, 8> group_names = {
-		"",
-		"keyword",
-		"operator",
-		"identifier",
-		"special",
-		"comment",
-		"numLiteral",
-		"string",
+		"", "keyword", "operator", "identifier", "special", "comment", "numLiteral", "string",
 	};
 
 	void testBasicStructure() {
@@ -76,14 +69,14 @@ private:
 		checkGroupIsGroup(index);
 		auto& inner_tokens = td.tokens[index].getRecursive();
 		message("got " + std::to_string(inner_tokens.size()) + " tokens");
-		for (const auto& token: inner_tokens) {
+		for (const auto& token : inner_tokens) {
 			assert(token.getType() == token_type,
-			       std::string("Type of token `") + std::string(token.getStrValue()) +
-			           "` is not a " + std::string(group_names[index]),
+			       std::string("Type of token `") + std::string(token.getStrValue()) + "` is not a "
+			           + std::string(group_names[index]),
 			       false);
 			assert((token.*isTokenType)(),
-			       std::string("Token `") + std::string(token.getStrValue()) + "` is not a " +
-			           std::string(group_names[index]),
+			       std::string("Token `") + std::string(token.getStrValue()) + "` is not a "
+			           + std::string(group_names[index]),
 			       false);
 		}
 	}
@@ -123,6 +116,5 @@ private:
 		assert(position.getSourceChars() == "while", "Wrong getSourceChars()");
 	}
 };
-
 
 TESTER_COMMON_MAIN("/common/lexer/tests/");

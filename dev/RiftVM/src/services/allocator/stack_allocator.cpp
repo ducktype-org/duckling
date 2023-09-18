@@ -1,6 +1,6 @@
-#include <supervisor/vcpu.hpp>
-
 #include "stack_allocator.hpp"
+
+#include <supervisor/vcpu.hpp>
 
 namespace vm {
 	Memory& StackAllocator::getMemory(VCPU& vcpu) {

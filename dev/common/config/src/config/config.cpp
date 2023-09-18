@@ -1,40 +1,41 @@
-#include <vector>
-#include <set>
+#include "config.hpp"
+
+#include "params_configuration.hpp"
+#include "parsing_result.hpp"
+
 #include <any>
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
 #include <base/smart_pointers.hpp>
-
-#include "config.hpp"
-#include "params_configuration.hpp"
-#include "parsing_result.hpp"
+#include <set>
+#include <vector>
 
 namespace config {
 
 	class ArgParser {
 		base::HashMap<base::RawView, usize> long_options_map;
 		base::HashMap<base::RawView, usize> short_options_map;
-		ConfigOptions options;
+		ConfigOptions                       options;
 
-		std::set<usize> option_was;
-		base::Map<usize, base::RawView> option_values;
+		std::set<usize>                     option_was;
+		base::Map<usize, base::RawView>     option_values;
 
-		std::vector<base::RawView> values;
+		std::vector<base::RawView>          values;
 
-		void reset() {
-			long_options_map.clear();
-			short_options_map.clear();
-			option_was.clear();
-			option_values.clear();
-			values.clear();
+		void                                reset() {
+            long_options_map.clear();
+            short_options_map.clear();
+            option_was.clear();
+            option_values.clear();
+            values.clear();
 
-			for (i32 i = 0; i < options.options.size(); i++) {
-				long_options_map.put(options.options[i].long_version, i);
+            for (i32 i = 0; i < options.options.size(); i++) {
+                long_options_map.put(options.options[i].long_version, i);
 
-				if (options.options[i].has_short) {
-					short_options_map.put(options.options[i].short_version, i);
-				}
-			}
+                if (options.options[i].has_short) {
+                    short_options_map.put(options.options[i].short_version, i);
+                }
+            }
 		}
 
 	public:
@@ -47,9 +48,8 @@ namespace config {
 			const usize arg_count = arg_values.size();
 
 			for (i32 i = 0; i < arg_count; i++) {
-
-				base::RawView what = arg_values[i];
-				usize option_index = -1;
+				base::RawView what         = arg_values[i];
+				usize         option_index = -1;
 
 				if (what.size() >= 2 and what[0] == byte('-') and what[1] == byte('-')) {
 					// long option
@@ -60,8 +60,7 @@ namespace config {
 					}
 					option_index = long_options_map.at(opt_name);
 
-				}
-				else if (what.size() >= 1 and what[0] == byte('-')) {
+				} else if (what.size() >= 1 and what[0] == byte('-')) {
 					// short option
 					auto opt_name = what.subSuffix(1);
 					if (short_options_map.find(opt_name) == short_options_map.end()) {
@@ -69,8 +68,7 @@ namespace config {
 						continue;
 					}
 					option_index = short_options_map.at(opt_name);
-				}
-				else {
+				} else {
 					values.push_back(what);
 					continue;
 				}
@@ -84,12 +82,12 @@ namespace config {
 					if (options.options[option_index].param_type == ParamType::Always) {
 						i++;
 						// @TODO: make decent error handling:
-						if (i >= arg_count) { throw base::Panic("Config", "No value provided for option"); }
-						else {
+						if (i >= arg_count) {
+							throw base::Panic("Config", "No value provided for option");
+						} else {
 							option_values.put(option_index, arg_values[i]);
 						}
-					}
-					else {
+					} else {
 						throw base::NotYetImplemented("Option ParamType different then Always");
 					}
 				}
@@ -99,7 +97,7 @@ namespace config {
 
 			out.non_option_values = std::move(values);
 
-			for (const auto& [name, index]: long_options_map) {
+			for (const auto& [name, index] : long_options_map) {
 				out.all_options.insert(name);
 				if (option_was.contains(index)) {
 					out.option_was.insert(name);
@@ -107,9 +105,7 @@ namespace config {
 					if (option_values.contains(index)) {
 						out.name_to_raw_value.put(name, option_values[index]);
 						out.name_to_value.put(
-							name,
-							options.options[index].value_parser->parse(option_values[index])
-						);
+							name, options.options[index].value_parser->parse(option_values[index]));
 					}
 				}
 			}
@@ -117,7 +113,6 @@ namespace config {
 			return out;
 		}
 	};
-
 
 	std::vector<base::RawView> cliArgsToVec(CLIArgs args) {
 		std::vector<base::RawView> out;
@@ -135,7 +130,7 @@ namespace config {
 	}
 
 	ParsingResult parse(ConfigOptions&& config, const std::vector<base::RawView>& args) {
-		ArgParser parser{std::move(config)};
+		ArgParser parser{ std::move(config) };
 		return parser.parse(args);
 	}
 }

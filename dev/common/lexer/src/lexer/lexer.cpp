@@ -4,7 +4,9 @@
  */
 
 #include "lexer.hpp"
+
 #include "lexer_class.hpp"
+
 #include <iostream>
 #include <rift_definitions/key_spec_op.hpp>
 
@@ -20,9 +22,10 @@ namespace lexer {
 		return out;
 	}
 
-	Lexer::Lexer(const fs::FilePath& file)
-		: file_(std::make_shared<fs::FilePath>(file)), fileContent_(file_->getContent()),
-		  charArray_(decode(fileContent_.view())) {}
+	Lexer::Lexer(const fs::FilePath& file):
+		file_(std::make_shared<fs::FilePath>(file)),
+		fileContent_(file_->getContent()),
+		charArray_(decode(fileContent_.view())) {}
 
 	Tokens Lexer::tokenize(bool dprint) {
 		tokens_.clear();
@@ -65,14 +68,13 @@ namespace lexer {
 
 	void Lexer::addTokenMsg(usize begin, usize end, std::string_view token_type,
 	                        printer::MessageType message_type) {
-
 		if (token_messages) {
 			console.add(
-				printer::Message({{"Add token: "},
-			                      {std::string(token_type)},
-			                      {"("},
-			                      {std::string(charArray_.composeRaw(begin, end).stringView())},
-			                      {")"}},
+				printer::Message({ { "Add token: " },
+			                       { std::string(token_type) },
+			                       { "(" },
+			                       { std::string(charArray_.composeRaw(begin, end).stringView()) },
+			                       { ")" } },
 			                     message_type));
 		}
 	}
@@ -86,7 +88,7 @@ namespace lexer {
 	}
 
 	void Lexer::parseSingleInto(Tokens& output) {
-		usize begin = where_;
+		usize          begin = where_;
 		SourcePosition sourcePosition(file_, lineNumber_, columnNumber_, where_);
 		if (isEOF()) {
 			// @TODO: error
@@ -133,11 +135,11 @@ namespace lexer {
 			output.push_back(
 				Token::makeString(charArray_.composeRaw(begin + 1, end), sourcePosition));
 		} else if (peek().isSpecial()) {
-
 			// the groups are constructed here
 			if (peek().isParOpen()) {
 				auto group_type = peek().getParType();
-				console.add({{{"group begin"}}, printer::MessageType::DEBUG}); // @TODO: better
+				console.add(
+					{ { { "group begin" } }, printer::MessageType::DEBUG });  // @TODO: better
 				Tokens inner_tokens = parGroup(group_type);
 
 				if (inner_tokens.empty()) {
@@ -149,7 +151,7 @@ namespace lexer {
 
 				output.push_back(
 					Token::makeGroup(group_type, std::move(inner_tokens), sourcePosition));
-				console.add({{{"group end"}}, printer::MessageType::DEBUG});
+				console.add({ { { "group end" } }, printer::MessageType::DEBUG });
 			} else {
 				usize end = special();
 				sourcePosition.setEnd(end);
@@ -168,22 +170,22 @@ namespace lexer {
 			if (not peek().isWhitespace()) {
 				console.add(printer::Message(
 					{
-						{"Skipped"},
-						{generateLineColumnInfo()},
-						{"("},
-						{std::string(charArray_.composeRaw(begin, begin).stringView())},
-						{")"},
+						{ "Skipped" },
+						{ generateLineColumnInfo() },
+						{ "(" },
+						{ std::string(charArray_.composeRaw(begin, begin).stringView()) },
+						{ ")" },
 					},
 					printer::MessageType::DEBUG));
 			}
-			next(); // in else??
+			next();  // in else??
 		}
 	}
 
 	// @TODO: think if we want to allow some kind of nested single line comments, the version
 	// commented out below doesn't work
 	usize Lexer::comment(/*Tokens& output*/) {
-		skip(2); // "//"
+		skip(2);  // "//"
 		// usize begin = where_;
 		// SourcePosition position(file_, lineNumber_, columnNumber_, where_);
 		while (true) {
@@ -206,13 +208,13 @@ namespace lexer {
 	}
 
 	usize Lexer::blockComment() {
-		skip(2); // "/*"
+		skip(2);  // "/*"
 		while (true) {
 			if (isEOF()) {
 				console.add(printer::Message(
 					{
-						{"Missing end of block comment at "},
-						{generateLineColumnInfo()},
+						{ "Missing end of block comment at " },
+						{ generateLineColumnInfo() },
 					},
 					printer::MessageType::WARNING));
 				return where_ - 1;
@@ -238,7 +240,7 @@ namespace lexer {
 	}
 
 	usize Lexer::identifier() {
-		next(); // first char - character
+		next();  // first char - character
 		while (!isEOF() and (peek().isCharacter() || peek().isDigit())) {
 			next();
 		}
@@ -251,26 +253,23 @@ namespace lexer {
 	}
 
 	usize Lexer::numBinaryLiteral() {
-		skip(2); // 0b
+		skip(2);  // 0b
 		while (!peek().isEOF()) {
-			if (!peek().isAsciiValue('0') && !peek().isAsciiValue('1'))
-				break;
+			if (!peek().isAsciiValue('0') && !peek().isAsciiValue('1')) break;
 			next();
 		}
 
 		return where_ - 1;
 	}
 
-
 	usize Lexer::numHexLiteral() {
-		skip(2); // 0x
+		skip(2);  // 0x
 
 		while (!peek().isEOF()) {
-
 			char curr = peek().asciiValue();
 
-			if (!peek().isDigit() && !('a' <= curr && curr <= 'f') &&
-			    !('A' <= curr && curr <= 'F')) {
+			if (!peek().isDigit() && !('a' <= curr && curr <= 'f')
+			    && !('A' <= curr && curr <= 'F')) {
 				break;
 			}
 
@@ -282,21 +281,20 @@ namespace lexer {
 
 	usize Lexer::numLiteral() {
 		bool was_dot = false;
-		bool was_e = false;
+		bool was_e   = false;
 
 		if (peek().isAsciiValue('0') && (peek(1).isAsciiValue('b') || peek(1).isAsciiValue('B')))
 			return numBinaryLiteral();
 
-		if (peek().isAsciiValue('0') && peek(1).isAsciiValue('x'))
-			return numHexLiteral();
+		if (peek().isAsciiValue('0') && peek(1).isAsciiValue('x')) return numHexLiteral();
 
-		next(); // first char - digit
+		next();  // first char - digit
 		while (!peek().isEOF()) {
 			if (!peek().isDigit()) {
 				if (!was_dot && peek().isAsciiValue('.')) {
 					was_dot = true;
 				} else if (!was_e && peek().isAsciiValue('e')) {
-					was_e = true;
+					was_e   = true;
 					was_dot = true;
 					if (peek(1).isAsciiValue('+') or peek(1).isAsciiValue('-')) {
 						next();
@@ -326,7 +324,7 @@ namespace lexer {
 
 	Tokens Lexer::parGroup(lexer::Char::ParType end) {
 		Tokens out;
-		next(); // par open
+		next();  // par open
 
 		while (!peek().isParClose(end)) {
 			if (isEOF()) {
@@ -336,7 +334,7 @@ namespace lexer {
 			parseSingleInto(out);
 		}
 
-		next(); // par close
+		next();  // par close
 		return out;
 	}
 
@@ -376,7 +374,7 @@ namespace lexer {
 
 	lexer::TokenData tokenizeFile(const fs::FilePath& file, bool dprint) {
 		Lexer lexer(file);
-		return {lexer.tokenize(dprint), file.getContent()};
+		return { lexer.tokenize(dprint), file.getContent() };
 	}
 
 }

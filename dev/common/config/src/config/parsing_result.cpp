@@ -7,13 +7,14 @@ namespace config {
 		}
 		return option_was.contains(name);
 	}
-	
+
 	base::RawView ParsingResult::getRawValue(base::RawView name) {
 		if (!wasOption(name)) {
 			throw BadOptionAccess(base::strConcat("Requested option `", name, "` was not found"));
 		}
 		if (!name_to_raw_value.contains(name)) {
-			throw BadOptionAccess(base::strConcat("Requested value of option `", name, "` was not found"));
+			throw BadOptionAccess(
+				base::strConcat("Requested value of option `", name, "` was not found"));
 		}
 		return name_to_raw_value[name];
 	}

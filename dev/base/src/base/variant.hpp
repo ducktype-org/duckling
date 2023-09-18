@@ -1,16 +1,18 @@
 #pragma once
 
-#include <variant>
-#include <type_traits>
-
 #include "define_helper.hpp"
+
+#include <type_traits>
+#include <variant>
 
 // See usage in test
 
 namespace base {
 	template<typename... T>
-	struct VisitOverloaded: T... { using T::operator()...; };
-	
+	struct VisitOverloaded: T... {
+		using T::operator()...;
+	};
+
 	template<class... Ts>
 	VisitOverloaded(Ts...) -> VisitOverloaded<Ts...>;
 
@@ -28,18 +30,16 @@ namespace base {
 
 	template<typename VariantT, typename T>
 	constexpr auto alternative_index() {
-		return alternative_index_aux<
-			std::remove_const_t<std::remove_reference_t<VariantT> >,
-			T,
-			0
-		>();
+		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>,
+		                             T,
+		                             0>();
 	}
 }
 
 /**
  * @brief Use instead of `holds_alternative` if-chains
  * implementation is temporary
- * 
+ *
  * Usage:
  * variant_match(variant_variable) {
  * 	variant_case(variant_option_type, variable_name) {
@@ -50,51 +50,46 @@ namespace base {
  * 	}
  * 	variant_default {
  * 		code;
- * 	}	
+ * 	}
  * }
- * 
+ *
  * Braces are IMPORTANT for the code to work properly
  */
-#define variant_match(value) \
-	PUSH_DIAGNOSTIC NO_SHADOW \
-	if (bool variant_match_stop = true) \
-	for (auto& internal_value = (value); variant_match_stop; variant_match_stop = false) \
-	switch (internal_value.index()) \
-	POP_DIAGNOSTIC
+#define variant_match(value)                                                                       \
+	PUSH_DIAGNOSTIC NO_SHADOW if (bool variant_match_stop                                          \
+	                              = true) for (auto& internal_value = (value); variant_match_stop; \
+	                                           variant_match_stop                                  \
+	                                           = false) switch (internal_value.index())            \
+		POP_DIAGNOSTIC
 
-#define variant_case(type, name) \
-	PUSH_DIAGNOSTIC NO_SHADOW \
-	break; \
-	case (base::alternative_index<decltype(internal_value), type>()): \
-		if (bool variant_case_stop = true) \
-		for ([[maybe_unused]]auto& name = std::get<type>(internal_value); variant_case_stop; variant_case_stop = false) \
-	POP_DIAGNOSTIC
+#define variant_case(type, name)                                                                  \
+	PUSH_DIAGNOSTIC NO_SHADOW break;                                                              \
+	case (base::alternative_index<decltype(internal_value), type>()):                             \
+		if (bool variant_case_stop = true)                                                        \
+			for ([[maybe_unused]] auto& name = std::get<type>(internal_value); variant_case_stop; \
+			     variant_case_stop           = false)                                             \
+		POP_DIAGNOSTIC
 
-#define variant_case_novalue(type) \
-	break; \
+#define variant_case_novalue(type)                                    \
+	break;                                                            \
 	case (base::alternative_index<decltype(internal_value), type>()): \
 		if (true)
 
 #define variant_default \
-	break; \
-	default: \
+	break;              \
+	default:            \
 		if (true)
 
 /**
  * @brief Use instead of `std::visit` with multiple choices
  */
 #define VARIANT_VISIT(value, code) \
-	{                                           \
-		std::visit(::base::VisitOverloaded {   \
-			code                                \
-		}, (value)); \
-	}
+	{ std::visit(::base::VisitOverloaded{ code }, (value)); }
 
-#define VISIT_CASE(type, name, code) \
-	[&](type name) { code ; },
+#define VISIT_CASE(type, name, code)     [&](type name) { code; },
 
 
 /**
  * @brief Use instead of simple `std::visit`
  */
-#define VISIT(variant_value, name, code) std::visit( [&] (auto&& name) { code ; }, (variant_value))
+#define VISIT(variant_value, name, code) std::visit([&](auto&& name) { code; }, (variant_value))

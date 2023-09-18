@@ -5,11 +5,12 @@ namespace pst {
 		return false;
 	}
 
-	ParserRef<Attribute> Attribute::parse(RiftParserState& state){
-		auto position = state.ctokens().peek().getPosition();
-		ParserRef<Attribute> out = makeRef<Attribute>(position);
-	
-		RIFT_ASSERT(state.ctokens().is(Special::AtSign), position.genErrorMsg("bad statement choice"));
+	ParserRef<Attribute> Attribute::parse(RiftParserState& state) {
+		auto                 position = state.ctokens().peek().getPosition();
+		ParserRef<Attribute> out      = makeRef<Attribute>(position);
+
+		RIFT_ASSERT(state.ctokens().is(Special::AtSign),
+		            position.genErrorMsg("bad statement choice"));
 
 		parseAll(state, Special::AtSign, &out->name);
 
@@ -25,9 +26,9 @@ namespace pst {
 		out << "\"name\" : ";
 		nullAwareDprint(name, out);
 		if (args != nullptr) {
-			out<<", \"args\": ";
+			out << ", \"args\": ";
 			nullAwareDprint(args, out);
 		}
-		out<<"}}";
+		out << "}}";
 	}
 }

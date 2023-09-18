@@ -1,13 +1,12 @@
-#include <pst_parser/elements/elements.hpp>
-#include <base/exceptions.hpp>
-#include <base/unique_pointer.hpp>
-
 #include "hir.hpp"
+
 #include "analysis_state.hpp"
 
-#include <queue>
-
+#include <base/exceptions.hpp>
+#include <base/unique_pointer.hpp>
 #include <iostream>
+#include <pst_parser/elements/elements.hpp>
+#include <queue>
 
 namespace hir {
 
@@ -32,18 +31,16 @@ namespace hir {
 		// perform all stuff like @compile_if(1 > 2) -- this requires exec
 		// expand macros -- macro can use symbol below
 		// macro can't delete symbol
-		// perhaps go top to to bottom with use/usings/expands 
+		// perhaps go top to to bottom with use/usings/expands
 
-		pst::PST& pst = sources[0].pst;
+		pst::PST&          pst = sources[0].pst;
 
-		AnalysisState state;
+		AnalysisState      state;
 
 		symtable::ScopeRef root_scope = state.newSubRootScope();
 
 		state.emplaceSymbol<TopLevelSymbol>(
-			root_scope, base::StrId("TopLevel"),
-			pst.getTopLevelElement()
-		);
+			root_scope, base::StrId("TopLevel"), pst.getTopLevelElement());
 
 		std::cerr << "Added top level symbol!\n";
 
@@ -54,7 +51,6 @@ namespace hir {
 
 			symbol_ref->analyzeAll(state);
 		}
-
 	}
 
 

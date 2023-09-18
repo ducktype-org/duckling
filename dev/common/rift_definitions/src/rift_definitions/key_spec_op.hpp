@@ -11,33 +11,37 @@
  */
 #pragma once
 
-#include <base/string_id.hpp>
 #include <base/flag.hpp>
+#include <base/string_id.hpp>
 
 // @TODO: Implement reflection for those enums
 
 namespace rift_def {
 
 	enum class KeywordMode {
-		RiftSource, RiftBC, 
+		RiftSource,
+		RiftBC,
 	};
 	constexpr KeywordMode DEFAULT_MODE = KeywordMode::RiftSource;
 
 
 	enum class Keyword {
 		NotAKeyword,
-		
+
 		// Non-code declaration
 		// @TODO: struct or class?
-		Fun, Struct, 
+		Fun,
+		Struct,
 		Namespace,
 		Import,
 		Using,
 		Alias,
 
 		// Var-like:
-		Var, Let, Const,
-		
+		Var,
+		Let,
+		Const,
+
 		// Control-flow:
 		While,
 		For,
@@ -53,7 +57,8 @@ namespace rift_def {
 		Catch,
 		Test,
 		Debug,
-		Switch, Case,
+		Switch,
+		Case,
 
 		// Actions:
 		Return,
@@ -65,31 +70,48 @@ namespace rift_def {
 		// @TODO: catch/rescue, raise/throw
 		Throw,
 		// @TODO: is assert a keyword?
-		Assert, 
+		Assert,
 		CompileAssert,
 
 		// Types:
 		// @IDEA: change i -> s
-		i8, i16, i32, i64, i128,
-		u8, u16, u32, u64, u128,
+		i8,
+		i16,
+		i32,
+		i64,
+		i128,
+		u8,
+		u16,
+		u32,
+		u64,
+		u128,
 		Float,
-		Char, 
-		Bool, // ...
+		Char,
+		Bool,  // ...
 
 		// @TODO: do we need all of them?
-		Vec, Set, Dict, Array, 
+		Vec,
+		Set,
+		Dict,
+		Array,
 
 		// Const values:
-		None, True, False, 
+		None,
+		True,
+		False,
 
 		// Literal Operators:
 		// @TODO: operators or functions?
 		// @TODO: | or bitor, || or or?
-		Sizeof, 
-		Not, And, Or, Xor,
-		
+		Sizeof,
+		Not,
+		And,
+		Or,
+		Xor,
+
 		// Access specifiers:
-		Public, Private, // ...
+		Public,
+		Private,  // ...
 
 		// Misc:
 
@@ -148,22 +170,22 @@ namespace rift_def {
 
 	// @TODO: this could be defined enum-like, maybe with macro
 	namespace KeywordFlags {
-		constexpr base::FlagType is_action(0); 
+		constexpr base::FlagType is_action(0);
 	}
 
 	namespace key_spec_op {
 		void init();
 	}
 
-	void setKeywordMode(KeywordMode mode);
+	void           setKeywordMode(KeywordMode mode);
 
-	Special strAsSpecial(base::StrId id);
-	Keyword strAsKeyword(base::StrId id);
-	Operator strAsOperator(base::StrId id);
+	Special        strAsSpecial(base::StrId id);
+	Keyword        strAsKeyword(base::StrId id);
+	Operator       strAsOperator(base::StrId id);
 
-	base::StrId keywordToStr(Keyword key);
-	base::StrId specialToStr(Special spec);
-	base::StrId operatorToStr(Operator oper);
+	base::StrId    keywordToStr(Keyword key);
+	base::StrId    specialToStr(Special spec);
+	base::StrId    operatorToStr(Operator oper);
 
 	base::FlagType keywordFlags(Keyword key);
 }

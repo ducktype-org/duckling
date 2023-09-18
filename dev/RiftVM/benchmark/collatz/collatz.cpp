@@ -1,5 +1,5 @@
-#include <iostream>
 #include <algorithm>
+#include <iostream>
 
 long long collatz(long long n) {
 	long long j = 0;
@@ -17,14 +17,14 @@ long long collatz(long long n) {
 }
 
 int main() {
-	int x;
+	int       x;
 	long long s = 0;
-	
+
 	std::cin >> x;
-	
+
 	for (int i = 1; i < x; i++) {
 		s = std::max(s, collatz(i));
 	}
-	
+
 	std::cout << s << "\n";
 }

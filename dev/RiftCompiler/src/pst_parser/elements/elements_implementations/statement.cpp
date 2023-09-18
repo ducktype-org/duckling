@@ -43,7 +43,7 @@ namespace pst {
 
 		case Keyword::Struct:
 			return detail::parseStmt<Struct>(state);
-		
+
 		case Keyword::Block:
 			return detail::parseStmt<Block>(state);
 

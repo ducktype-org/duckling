@@ -11,7 +11,7 @@ namespace pst {
 
 	void RetList::dprint(std::ostream& out) const {
 		out << "{\"RetList\" : [";
-		for (auto& x: rets) {
+		for (auto& x : rets) {
 			nullAwareDprint(x, out);
 			out << ",";
 		}

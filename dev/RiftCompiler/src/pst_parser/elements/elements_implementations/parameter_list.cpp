@@ -5,7 +5,6 @@ namespace pst {
 		auto position = state.ctokens().peek().getPosition();
 
 		if (!state.ctokens().is(Token::Type::RoundGroup)) {
-
 			state.fail(-1, "parenthesis expected after here");
 			return nullptr;
 		}
@@ -21,7 +20,7 @@ namespace pst {
 
 	void ParamList::dprint(std::ostream& out) const {
 		out << "{\"ParamList\" : [";
-		for (auto& x: params) {
+		for (auto& x : params) {
 			nullAwareDprint(x, out);
 			out << ",";
 		}

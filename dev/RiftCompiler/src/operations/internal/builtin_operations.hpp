@@ -9,7 +9,6 @@
 #include <operations/operation.hpp>
 #include <typesystem/type_info.hpp>
 
-
 namespace operation {
 
 	void addBuiltinOperations();

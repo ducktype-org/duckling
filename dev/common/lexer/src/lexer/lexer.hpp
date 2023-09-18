@@ -1,14 +1,15 @@
 /**
-* @file lexer.hpp
-* @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
-*/
+ * @file lexer.hpp
+ * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
+ */
 
 #pragma once
 
-#include <filesystem/file.hpp>
 #include "token.hpp"
 
+#include <filesystem/file.hpp>
+
 namespace lexer {
-	void init();
+	void             init();
 	lexer::TokenData tokenizeFile(const fs::FilePath& file, bool dprint = false);
 }

@@ -1,12 +1,13 @@
 #pragma once
 
-#include <services_data/type_metadata/type.hpp>
 #include "pointer.hpp"
 
-namespace vm {	
+#include <services_data/type_metadata/type.hpp>
+
+namespace vm {
 	class TypedPointer {
-		private:
-			TypeRef type;
-			Pointer pointer;
+	private:
+		TypeRef type;
+		Pointer pointer;
 	};
 }

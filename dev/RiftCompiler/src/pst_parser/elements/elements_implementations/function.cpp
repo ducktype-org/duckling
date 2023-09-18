@@ -4,7 +4,7 @@ namespace pst {
 	// @TODO: make better
 	ParserRef<Fun> Fun::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
-		auto out = makeRef<Fun>(position);
+		auto out      = makeRef<Fun>(position);
 
 		RIFT_ASSERT(state.ctokens().is(Keyword::Fun), position.genErrorMsg("bad statement choice"));
 
@@ -21,10 +21,14 @@ namespace pst {
 
 	void Fun::dprint(std::ostream& out) const {
 		out << "{\"Fun\": { ";
-		out << "\"name\": "; nullAwareDprint(name, out); 
-		out << ", \"params\":"; nullAwareDprint(params, out);
-		out << ", \"rets\":"; nullAwareDprint(rets, out);
-		out << ", \"body\":"; nullAwareDprint(body, out);
+		out << "\"name\": ";
+		nullAwareDprint(name, out);
+		out << ", \"params\":";
+		nullAwareDprint(params, out);
+		out << ", \"rets\":";
+		nullAwareDprint(rets, out);
+		out << ", \"body\":";
+		nullAwareDprint(body, out);
 		out << " } }";
 	}
 }

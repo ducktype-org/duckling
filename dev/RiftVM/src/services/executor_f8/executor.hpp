@@ -3,142 +3,134 @@
 #include "../services.hpp"
 #include "kill_core_exception.hpp"
 
-#include <code_data/code.hpp>
-#include <code_data/frame.hpp>
 #include <api/data/request.hpp>
 #include <api/data/status.hpp>
-
-#include <iostream>
-#include <shared_mutex>
-#include <mutex>
-#include <condition_variable>
 #include <atomic>
+#include <code_data/code.hpp>
+#include <code_data/frame.hpp>
+#include <condition_variable>
+#include <iostream>
+#include <mutex>
+#include <shared_mutex>
 
 /**
  * For now only single threaded execution is suported
  */
 
 namespace vm {
-	enum class ExecutionStrategy {
-		Normal,
-		StepByStep,
-		Paused,
-		Stoped
-	};
+	enum class ExecutionStrategy { Normal, StepByStep, Paused, Stoped };
 
 	class Executor {
-		private:
-			Allocator& dynamic_allocator;
-			Memory& memory;
-			TypeMetadata& types;
+	private:
+		Allocator&      dynamic_allocator;
+		Memory&         memory;
+		TypeMetadata&   types;
 
-			VCPU& vcpu;
+		VCPU&           vcpu;
 
-			/**
-			 * This is currently duplicated inside VCPUStatus
-			 */
-			api::ExecStatus status;
-			
-			template<class... DynamicServices>
-			Executor(ServiceManagerDef<DynamicServices...>& serviceManager):
-				dynamic_allocator(serviceManager.template get<Allocator>()),
-				memory(serviceManager.getVCPU().getData().template get<Memory>()),
-				types(serviceManager.getVCPU().getData().template get<TypeMetadata>()),
-				vcpu(serviceManager.getVCPU()) {
-				
-				// @TODO: not loaded status
-				setStatus(api::NotStarted{});
-			}
+		/**
+		 * This is currently duplicated inside VCPUStatus
+		 */
+		api::ExecStatus status;
 
-			// This might change:
-			std::condition_variable pause_cv;
-			std::mutex external_api_mutex;
-			ExecutionStrategy execution_strategy = ExecutionStrategy::Stoped;
+		template<class... DynamicServices>
+		Executor(ServiceManagerDef<DynamicServices...>& serviceManager):
+			dynamic_allocator(serviceManager.template get<Allocator>()),
+			memory(serviceManager.getVCPU().getData().template get<Memory>()),
+			types(serviceManager.getVCPU().getData().template get<TypeMetadata>()),
+			vcpu(serviceManager.getVCPU()) {
+			// @TODO: not loaded status
+			setStatus(api::NotStarted{});
+		}
 
-			/**
-			 * @brief @TODO:
-			 * get loaded code from VCPU when possible 
-			 */
-			const Code* executing_code = nullptr;
+		// This might change:
+		std::condition_variable               pause_cv;
+		std::mutex                            external_api_mutex;
+		ExecutionStrategy                     execution_strategy = ExecutionStrategy::Stoped;
 
-			void handleExecutionStrategy();
+		/**
+		 * @brief @TODO:
+		 * get loaded code from VCPU when possible
+		 */
+		const Code*                           executing_code     = nullptr;
 
-			/**
-			 * @TODO:
-			 * following modifications should be made in the future:
-			 * - Error handling done by throwing (for efficiency)
-			 * - Setup for execution recovery
-			 * - This functions currently can deref only simple pointers, and always return
-			 * view to data pointed by pointer. This does not take into consideration possibility
-			 * of derefing only part of a block with given type from given offset. 
-			 */
-			result<base::ModRawView, std::string> internalDerefPointer(Pointer);
-			
-			Frame internalInitFrame(option<Frame&>, const FuncData&, VLADataReference);
-			i64 internalCallFunction(option<Frame&>, const FuncData&, StandardFunctionArgs args);
+		void                                  handleExecutionStrategy();
 
-			// @TODO add some thread data in the future
+		/**
+		 * @TODO:
+		 * following modifications should be made in the future:
+		 * - Error handling done by throwing (for efficiency)
+		 * - Setup for execution recovery
+		 * - This functions currently can deref only simple pointers, and always return
+		 * view to data pointed by pointer. This does not take into consideration possibility
+		 * of derefing only part of a block with given type from given offset.
+		 */
+		result<base::ModRawView, std::string> internalDerefPointer(Pointer);
 
-			void setStatus(vm::api::ExecStatus status);
+		Frame internalInitFrame(option<Frame&>, const FuncData&, VLADataReference);
+		i64   internalCallFunction(option<Frame&>, const FuncData&, StandardFunctionArgs args);
 
-		public:
-			/**
-			 * @brief Pause the execution of a program (by Supervisor)
-			 * Set execution status to paused.
-			 * "Assumes execution status is `running`"
-			 * 
-			 * This function should return only when the execution is paused
-			 * This function may be called at any state of the execution
-			 * @return true if and only if program was in the running state and was successfully paused
-			 */
-			bool pause();
+		// @TODO add some thread data in the future
 
-			/**
-			 * @brief Resume the execution of a program (by Supervisor)
-			 * Set execution status to `running`.
-			 * "Assumes execution status is `paused`"
-			 * 
-			 * Function should return only when the execution is resumed
-			 * This function may be called at any state of the execution
-			 * @return true if and only if program was in the paused state and was successfully resumed
-			 */
-			bool resume();
-			
-			bool step();
+		void  setStatus(vm::api::ExecStatus status);
 
-			/**
-			 * @brief Force kill the execution of a program (by Supervisor)
-			 * Called from the supervisor.
-			 */
-			void stop();
-			
-			void prestart();
-			
-			/**
-			 * @brief Called on coreThread
-			 * coreThread is `main` exec thread
-			 */
-			void run(const Code&);
-			
-			// Given lock cannot be a lock on external_api_mutex
-			// If you have access to external_api_mutex, implement this yourself.
-			template<class Condition>
-			void waitUntilNotPausedAndCondition(std::unique_lock<std::mutex>& lock, Condition x) {
-				pause_cv.wait(lock, [this, &x]{
-					bool b1 = !isPaused();
-					bool b2 = x();
-					return b1 && b2;
-				});
-			}
-			
-			void notifyPaused();
-			
-			bool isPaused();
-			bool isAlive();
-			
-			template<class... DynamicServices>
-			friend class ServiceManagerDef;
+	public:
+		/**
+		 * @brief Pause the execution of a program (by Supervisor)
+		 * Set execution status to paused.
+		 * "Assumes execution status is `running`"
+		 *
+		 * This function should return only when the execution is paused
+		 * This function may be called at any state of the execution
+		 * @return true if and only if program was in the running state and was successfully paused
+		 */
+		bool pause();
+
+		/**
+		 * @brief Resume the execution of a program (by Supervisor)
+		 * Set execution status to `running`.
+		 * "Assumes execution status is `paused`"
+		 *
+		 * Function should return only when the execution is resumed
+		 * This function may be called at any state of the execution
+		 * @return true if and only if program was in the paused state and was successfully resumed
+		 */
+		bool resume();
+
+		bool step();
+
+		/**
+		 * @brief Force kill the execution of a program (by Supervisor)
+		 * Called from the supervisor.
+		 */
+		void stop();
+
+		void prestart();
+
+		/**
+		 * @brief Called on coreThread
+		 * coreThread is `main` exec thread
+		 */
+		void run(const Code&);
+
+		// Given lock cannot be a lock on external_api_mutex
+		// If you have access to external_api_mutex, implement this yourself.
+		template<class Condition>
+		void waitUntilNotPausedAndCondition(std::unique_lock<std::mutex>& lock, Condition x) {
+			pause_cv.wait(lock, [this, &x] {
+				bool b1 = !isPaused();
+				bool b2 = x();
+				return b1 && b2;
+			});
+		}
+
+		void notifyPaused();
+
+		bool isPaused();
+		bool isAlive();
+
+		template<class... DynamicServices>
+		friend class ServiceManagerDef;
 	};
 
 }
- 

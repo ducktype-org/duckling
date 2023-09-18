@@ -1,9 +1,9 @@
-#include <tester/tester.hpp>
 #include <compiler/compilation_handler.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/parser.hpp>
+#include <tester/tester.hpp>
 
-class CompilerTest : public tester::TestSuite {
+class CompilerTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS CompilerTest
 

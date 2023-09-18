@@ -9,7 +9,7 @@ namespace vm {
 	namespace api {
 		struct ProcessInfo {
 			PID pid;
-			
+
 			JS_OBJ(pid);
 		};
 	}

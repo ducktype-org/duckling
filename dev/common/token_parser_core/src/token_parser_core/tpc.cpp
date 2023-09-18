@@ -1,6 +1,8 @@
 #include "tpc.hpp"
-#include <lexer/lexer.hpp>
+
 #include "token_stream.hpp"
+
+#include <lexer/lexer.hpp>
 
 namespace tpc {
 	void init() {

@@ -5,16 +5,16 @@
 
 #pragma once
 
-#include <string>
-#include <utility>
-#include <vector>
-#include <filesystem>
-#include <unordered_map>
-#include <memory>
-#include <base/raw_view.hpp>
-#include <base/smart_pointers.hpp>
 #include <base/maps.hpp>
 #include <base/option.hpp>
+#include <base/raw_view.hpp>
+#include <base/smart_pointers.hpp>
+#include <filesystem>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 // Seams fixed:
 // #if __GNUC__ < 12 && (!defined(__clang__))
@@ -33,28 +33,32 @@ namespace fs {
 	class FileContent {
 		std::shared_ptr<base::OwningView> content;
 		friend class FilePath;
-		explicit FileContent(std::shared_ptr<base::OwningView> content): content(std::move(content)) {}
+
+		explicit FileContent(std::shared_ptr<base::OwningView> content):
+			content(std::move(content)) {}
+
 	public:
-		FileContent(): content(nullptr) {};
-		FileContent(const FileContent&) = default;
-		FileContent(FileContent&&) = default;
+		FileContent(): content(nullptr){};
+		FileContent(const FileContent&)             = default;
+		FileContent(FileContent&&)                  = default;
 
-		FileContent& operator=(const FileContent&) = default;
-		FileContent& operator=(FileContent&&) = default;
+		FileContent&  operator=(const FileContent&) = default;
+		FileContent&  operator=(FileContent&&)      = default;
 
-		usize size() { return view().size(); };
-		byte operator[](usize i) { return view()[i]; };
-		base::RawView view() { return content->view(); };
+		usize         size() { return view().size(); }
 
+		byte          operator[](usize i) { return view()[i]; }
+
+		base::RawView view() { return content->view(); }
 	};
 
 	class FilePath {
 		using WeakContent = std::weak_ptr<base::OwningView>;
-		using FileHash = std::hash<std::filesystem::path>;
-		using ContentMap = base::HashMap<std::filesystem::path, WeakContent, FileHash>;
+		using FileHash    = std::hash<std::filesystem::path>;
+		using ContentMap  = base::HashMap<std::filesystem::path, WeakContent, FileHash>;
 
 		// This might be hidden in .cpp:
-		static ContentMap to_content;
+		static ContentMap     to_content;
 		std::filesystem::path path;
 
 		friend struct ::std::hash<fs::FilePath>;
@@ -63,12 +67,12 @@ namespace fs {
 		FilePath() = delete;
 		FilePath(const FilePath&);
 		FilePath(FilePath&&) = default;
-		~FilePath() = default;
+		~FilePath()          = default;
 
 		FilePath(const std::filesystem::path& path);
 
 		// @TODO: this might not be perfect:
-		bool operator==(const FilePath& oth) const { return path == oth.path; };
+		bool operator==(const FilePath& oth) const { return path == oth.path; }
 
 		[[nodiscard]]
 		FileContent getContent() const;
@@ -78,7 +82,8 @@ namespace fs {
 		[[nodiscard]]
 		std::string_view strView() const;
 
-		[[nodiscard]] FilePath parentPath() const;
+		[[nodiscard]]
+		FilePath parentPath() const;
 
 		[[nodiscard]]
 		bool isFile(const std::string& ext = "") const noexcept;
@@ -91,7 +96,5 @@ namespace fs {
 
 template<>
 struct std::hash<fs::FilePath> {
-	usize operator()(const fs::FilePath& key) const {
-		return fs::FilePath::FileHash()(key.path);
-	}
+	usize operator()(const fs::FilePath& key) const { return fs::FilePath::FileHash()(key.path); }
 };

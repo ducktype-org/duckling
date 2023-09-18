@@ -1,13 +1,13 @@
 #pragma once
 
+#include "cli_args.hpp"
+#include "params_configuration.hpp"
+#include "parsing_result.hpp"
+#include "value_parser.hpp"
+
 #include <filesystem/file.hpp>
 #include <printer/printer.hpp>
 #include <string>
-
-#include "value_parser.hpp"
-#include "parsing_result.hpp"
-#include "params_configuration.hpp"
-#include "cli_args.hpp"
 
 // @TODO: perform memory copy
 
@@ -27,8 +27,8 @@ namespace config {
 	 * valid as long as ParsingResult
 	 * is valid
 	 */
-	ParsingResult parse(ConfigOptions&& config, CLIArgs args);
-	
+	ParsingResult              parse(ConfigOptions&& config, CLIArgs args);
+
 
 	/**
 	 * @brief This function does not copy memory,
@@ -39,4 +39,3 @@ namespace config {
 	ParsingResult parse(ConfigOptions&& config, const std::vector<base::RawView>& args);
 
 }
-

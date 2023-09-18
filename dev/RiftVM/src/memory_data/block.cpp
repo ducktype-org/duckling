@@ -11,7 +11,7 @@ namespace vm {
 				if (searched->getSize() > type->getSize()) {
 					return false;
 				} else if (searched->getId() == type->getId()) {
-					return true;	
+					return true;
 				}
 			}
 			switch (type->getKind()) {
@@ -21,7 +21,9 @@ namespace vm {
 			case Type::Kind::Function:
 				return false;
 			case Type::Kind::StaticTable:
-				return typeAtOffset(type->getInnerType().value(), offset % type->getInnerType().value()->getSize(), searched);	
+				return typeAtOffset(type->getInnerType().value(),
+				                    offset % type->getInnerType().value()->getSize(),
+				                    searched);
 			case Type::Kind::Variant:
 				if (offset <= 8) return false;
 				return typeAtOffset(type->getInnerType().value(), offset - 8, searched);
@@ -47,9 +49,9 @@ namespace vm {
 	}
 
 	result<base::ModRawView, Block::error> Block::deref(TypeCRef u, u64 offset) {
-		if (offset < start || offset > end ) {
+		if (offset < start || offset > end) {
 			return fail("Tried to defer outside of a block");
-		} 
+		}
 		if (end - offset < u->getSize()) {
 			return fail("Tried to defer too big of a type");
 		}
@@ -57,9 +59,9 @@ namespace vm {
 	}
 
 	result<base::ModRawView, Block::error> Block::derefCheck(TypeCRef u, u64 offset) {
-		if (offset < start || offset > end ) {
+		if (offset < start || offset > end) {
 			return fail("Tried to defer outside of a block");
-		} 
+		}
 		if (end - offset < u->getSize()) {
 			return fail("Tried to defer too big of a type");
 		}

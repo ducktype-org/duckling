@@ -1,4 +1,5 @@
 #include "import_to_path.hpp"
+
 #include <string>
 
 namespace modulesys {
@@ -8,7 +9,7 @@ namespace modulesys {
 			result.pop_back();
 		}
 		auto& names = import.getNames();
-		for (auto& name: names.names) {
+		for (auto& name : names.names) {
 			result += "/" + name.value.str();
 		}
 		if (import.getStar()) {

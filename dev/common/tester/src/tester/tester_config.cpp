@@ -1,12 +1,11 @@
 
 #include "tester_config.hpp"
+
 #include <config/config.hpp>
 
 namespace tester {
 
-	TestConfig testConfigFromArgs(config::CLIArgs args,
-	                              std::string_view path_to_test_from_dev) {
-
+	TestConfig testConfigFromArgs(config::CLIArgs args, std::string_view path_to_test_from_dev) {
 		auto parsed_args = config::parse(config::ConfigOptions(), args);
 
 		if (parsed_args.getNonOptionValues().size() > 1) {
@@ -16,8 +15,7 @@ namespace tester {
 		TestConfig out;
 		if (parsed_args.getNonOptionValues().size() == 1) {
 			out.test_files_path = parsed_args.getNonOptionValues()[0].stdString();
-		}
-		else {
+		} else {
 			out.test_files_path = "./";
 		}
 

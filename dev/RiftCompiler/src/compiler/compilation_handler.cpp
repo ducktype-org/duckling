@@ -1,9 +1,11 @@
 #include "compilation_handler.hpp"
-#include <pst_parser/parser.hpp>
+
 #include <module_system/import_to_path.hpp>
+#include <pst_parser/parser.hpp>
 
 namespace compiler {
-	void CompilationHandler::addFileRecursively(const fs::FilePath& path, bool dprint, std::ostream* out) {
+	void CompilationHandler::addFileRecursively(const fs::FilePath& path, bool dprint,
+	                                            std::ostream* out) {
 		RIFT_ASSERT(!dprint or out != nullptr, "out cannot by nullptr when dprint is true");
 		std::ostream& out_ref = *out;
 
@@ -14,7 +16,7 @@ namespace compiler {
 		if (dprint) {
 			out_ref << "Parsing new file: `" << path.strView() << "`\n";
 		}
-		
+
 		pst_map.put(path, std::move(pst::parse(path)));
 		pst::PST& new_pst = pst_map[path];
 
@@ -30,23 +32,23 @@ namespace compiler {
 
 		if (dprint) {
 			if (imports.size() == 0) {
-				out_ref << "  No imports. \n";	
-			}
-			else {
+				out_ref << "  No imports. \n";
+			} else {
 				out_ref << "  Imports: \n";
-				for (auto& import: imports) {
-					out_ref << "   " << modulesys::importToPath(path.parentPath().strView(), *import) << "\n";
+				for (auto& import : imports) {
+					out_ref << "   "
+							<< modulesys::importToPath(path.parentPath().strView(), *import)
+							<< "\n";
 				}
 				out_ref << "\n";
 			}
 		}
 
 		// @TODO: we should handle different import syntaxes like .* or .function_name
-		for (auto& import: imports) {
+		for (auto& import : imports) {
 			auto import_path = modulesys::importToPath(path.parentPath().strView(), *import);
 			addFileRecursively(fs::FilePath(import_path), dprint, out);
 		}
-		
 	}
 
 }

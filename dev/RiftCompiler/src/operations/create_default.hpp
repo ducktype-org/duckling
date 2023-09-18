@@ -9,17 +9,17 @@
 #include <typesystem/typesystem.hpp>
 
 namespace operation {
-	TypedOperation createDefaultEquality(ts::TypeInfo type_info);
-	TypedOperation createDefaultComparison(ts::TypeInfo type_info);
-	TypedOperation createDefaultAssign(ts::TypeInfo type_info);
-	TypedOperation createDefaultConstructEmpty(ts::TypeInfo type_info);
-	TypedOperation createDefaultConstructFull(ts::TypeInfo type_info);
+	TypedOperation        createDefaultEquality(ts::TypeInfo type_info);
+	TypedOperation        createDefaultComparison(ts::TypeInfo type_info);
+	TypedOperation        createDefaultAssign(ts::TypeInfo type_info);
+	TypedOperation        createDefaultConstructEmpty(ts::TypeInfo type_info);
+	TypedOperation        createDefaultConstructFull(ts::TypeInfo type_info);
 
 
 	// This only compares virtual ancestors.
 	// Result of this and the one created by createDefaultEquality complement each other.
 	// They should be stored separately and called in specific manner.
-	TypedOperation createDefaultVirtualEquality(ts::ClassInfo class_info);
+	TypedOperation        createDefaultVirtualEquality(ts::ClassInfo class_info);
 
 	inline TypedOperation createDefault(ts::TypeInfo type_info, Defaultable kind) {
 		switch (kind) {
@@ -46,18 +46,18 @@ namespace operation {
 	}
 
 	inline TypedOperation comparison(const Operation& op, ts::TypeDesc<> ty) {
-		return {op, ts::FunctionInfo::create({ty, ty}, ts::IntegralInfo::create(8))};
+		return { op, ts::FunctionInfo::create({ ty, ty }, ts::IntegralInfo::create(8)) };
 	}
 
 	inline TypedOperation equality(const Operation& op, ts::TypeDesc<> ty) {
-		return {op, ts::FunctionInfo::create({ty, ty}, ts::TypeDesc<>(ts::BoolInfo::create()))};
+		return { op, ts::FunctionInfo::create({ ty, ty }, ts::TypeDesc<>(ts::BoolInfo::create())) };
 	}
 
 	inline TypedOperation assign(const Operation& op, ts::TypeDesc<> ty) {
-		return {op, ts::FunctionInfo::create({ty, ty}, ty)};
+		return { op, ts::FunctionInfo::create({ ty, ty }, ty) };
 	}
 
 	inline TypedOperation construct(const Operation& op, ts::TypeDesc<> ty) {
-		return {op, ts::FunctionInfo::create({ty}, ty)};
+		return { op, ts::FunctionInfo::create({ ty }, ty) };
 	}
 }

@@ -7,7 +7,7 @@ namespace pst {
 		RIFT_ASSERT(state.ctokens().isKeyword(), position.genErrorMsg("bad statement choice"));
 
 		ParserRef<Action> out;
-		auto keyword = state.ctokens().peek().asKeyword();
+		auto              keyword = state.ctokens().peek().asKeyword();
 		switch (keyword) {
 		case Keyword::Return:
 			out = makeRef<Return>(position);
@@ -29,23 +29,23 @@ namespace pst {
 			break;
 		case Keyword::Throw:
 			out = makeRef<Throw>(position);
-			break;	
-		default:	
+			break;
+		default:
 			RIFT_PANIC("bad statement choice");
 		}
 		state.tokens().skip();
 
 		// @TODO: for now we assume if there is no expression there is a semicolon
-		if (!state.ctokens().is(Special::Semicolon))
-			out->expr = Expr::parse(state);
+		if (!state.ctokens().is(Special::Semicolon)) out->expr = Expr::parse(state);
 
 		return out;
-	}	
+	}
 
 	namespace {
-		void simpleActionDprint(std::ostream& out, const std::optional<ParserRef<Expr>> &action, const std::string_view name, std::string preposition) {
+		void simpleActionDprint(std::ostream& out, const std::optional<ParserRef<Expr>>& action,
+		                        const std::string_view name, std::string preposition) {
 			out << "{\"" << name << "\"";
-			if (action)  {
+			if (action) {
 				out << " : {\"" << preposition << "\": ";
 				nullAwareDprint(action.value(), out);
 				out << "}";

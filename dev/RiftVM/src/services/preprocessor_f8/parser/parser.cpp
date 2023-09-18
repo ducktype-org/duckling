@@ -1,31 +1,32 @@
 
 #include "parser.hpp"
-#include <code_data/opcodes.hpp>
-#include <charconv>
-#include <lexer/lexer.hpp>
+
+#include <base/maps.hpp>
 #include <base/option.hpp>
+#include <base/variant.hpp>
+#include <charconv>
+#include <code_data/opcodes.hpp>
+#include <lexer/lexer.hpp>
 #include <rift_definitions/key_spec_op.hpp>
+#include <services_data/type_metadata/type_metadata.hpp>
 #include <stdexcept>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/tpc.hpp>
-#include <base/maps.hpp>
 #include <variant>
-#include <base/variant.hpp>
-#include <services_data/type_metadata/type_metadata.hpp>
 
 namespace assemble {
 
 	i64 strIdToNum(base::StrId str) {
-		auto view = str.strView();
+		auto                   view = str.strView();
 
-		i64 out;
+		i64                    out;
 		std::from_chars_result res = std::from_chars(view.data(), view.data() + view.size(), out);
 		if (res.ec == std::errc::invalid_argument) {
-			throw std::invalid_argument{"invalid_argument"};
+			throw std::invalid_argument{ "invalid_argument" };
 		} else if (res.ec == std::errc::result_out_of_range) {
-			throw std::out_of_range{"out_of_range"};
+			throw std::out_of_range{ "out_of_range" };
 		}
 
 		return out;
@@ -35,12 +36,12 @@ namespace assemble {
 
 	struct OpCodeNumArg {
 		OpCodeArgType type;
-		i64 value;
+		i64           value;
 	};
 
 	struct OpCodeLabelArg {
-		i64 value;
-		bool type_value;
+		i64         value;
+		bool        type_value;
 		base::StrId label_name;
 	};
 
@@ -51,13 +52,13 @@ namespace assemble {
 
 	struct PrimitiveType {
 		base::StrId name;
-		TypeSize size;
+		TypeSize    size;
 
-		void dprint(std::ostream& out) const {
-			out << "primitive {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    size: " << size << "\n";
-			out << "}";
+		void        dprint(std::ostream& out) const {
+            out << "primitive {\n";
+            out << "    name: " << name.strView() << "\n";
+            out << "    size: " << size << "\n";
+            out << "}";
 		}
 	};
 
@@ -65,25 +66,25 @@ namespace assemble {
 		base::StrId name;
 		base::StrId inner;
 
-		void dprint(std::ostream& out) const {
-			out << "pointer {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    inner: " << inner.strView() << "\n";
-			out << "}";
+		void        dprint(std::ostream& out) const {
+            out << "pointer {\n";
+            out << "    name: " << name.strView() << "\n";
+            out << "    inner: " << inner.strView() << "\n";
+            out << "}";
 		}
 	};
 
 	struct StaticTableType {
 		base::StrId name;
 		base::StrId inner;
-		TypeSize table_size;
+		TypeSize    table_size;
 
-		void dprint(std::ostream& out) const {
-			out << "static_table {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    inner: " << inner.strView() << "\n";
-			out << "    table_size: " << table_size << "\n";
-			out << "}";
+		void        dprint(std::ostream& out) const {
+            out << "static_table {\n";
+            out << "    name: " << name.strView() << "\n";
+            out << "    inner: " << inner.strView() << "\n";
+            out << "    table_size: " << table_size << "\n";
+            out << "}";
 		}
 	};
 
@@ -91,11 +92,11 @@ namespace assemble {
 		base::StrId name;
 		base::StrId inner;
 
-		void dprint(std::ostream& out) const {
-			out << "dynamic_table {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    inner: " << inner.strView() << "\n";
-			out << "}";
+		void        dprint(std::ostream& out) const {
+            out << "dynamic_table {\n";
+            out << "    name: " << name.strView() << "\n";
+            out << "    inner: " << inner.strView() << "\n";
+            out << "}";
 		}
 	};
 
@@ -103,84 +104,79 @@ namespace assemble {
 		base::StrId name;
 		base::StrId type;
 	};
+
 	struct DataType {
-		base::StrId name;
+		base::StrId        name;
 		std::vector<Field> fields;
 
-		void dprint(std::ostream& out) const {
-			out << "data {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    fields: [";
-			for (auto& field: fields) {
-				out << field.name.strView() << ": " << field.type.strView() << ", ";
-			}
-			out << "]\n";
-			out << "}";
+		void               dprint(std::ostream& out) const {
+            out << "data {\n";
+            out << "    name: " << name.strView() << "\n";
+            out << "    fields: [";
+            for (auto& field : fields) {
+                out << field.name.strView() << ": " << field.type.strView() << ", ";
+            }
+            out << "]\n";
+            out << "}";
 		}
 	};
 
 	struct VariantType {
-		base::StrId name;
+		base::StrId              name;
 		std::vector<base::StrId> variant_alternatives;
 
-		void dprint(std::ostream& out) const {
-			out << "variant {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    alternatives: [";
-			for (auto& alt: variant_alternatives) {
-				out << alt.strView() << ", ";
-			}
-			out << "]\n";
-			out << "}";
+		void                     dprint(std::ostream& out) const {
+            out << "variant {\n";
+            out << "    name: " << name.strView() << "\n";
+            out << "    alternatives: [";
+            for (auto& alt : variant_alternatives) {
+                out << alt.strView() << ", ";
+            }
+            out << "]\n";
+            out << "}";
 		}
 	};
 
 	struct FunctionType {
-		base::StrId name;
+		base::StrId              name;
 		std::vector<base::StrId> parameters;
-		base::StrId result;
-	
-		void dprint(std::ostream& out) const {
-			out << "function {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    parameters: [";
-			for (auto& param: parameters) {
-				out << param.strView() << ", ";
-			}
-			out << "]\n";
-			out << "    result: " << result.strView() << "\n";
-			out << "}";
+		base::StrId              result;
+
+		void                     dprint(std::ostream& out) const {
+            out << "function {\n";
+            out << "    name: " << name.strView() << "\n";
+            out << "    parameters: [";
+            for (auto& param : parameters) {
+                out << param.strView() << ", ";
+            }
+            out << "]\n";
+            out << "    result: " << result.strView() << "\n";
+            out << "}";
 		}
 	};
 
 	using TypeData = std::variant<PrimitiveType, PointerType, StaticTableType, DynamicTableType,
 	                              DataType, VariantType, FunctionType>;
 
-	
-
 	struct AsmElement: tpc::Element {};
 
 	struct Type: AsmElement {
-		TypeData datatype;
+		TypeData                    datatype;
 		static tpc::ParserRef<Type> parse(tpc::ParserState& state);
 
-		void dprint(std::ostream& out) const override {
-			out << "type: ";
-			VARIANT_VISIT(datatype, 
-				VISIT_CASE(auto&, data, {
-					data.dprint(out);
-				})
-			)
-			out << "\n}";
+		void                        dprint(std::ostream& out) const override {
+            out << "type: ";
+            VARIANT_VISIT(datatype, VISIT_CASE(auto&, data, { data.dprint(out); }))
+            out << "\n}";
 		}
 	};
 
 	struct OpCode: AsmElement {
-		base::StrId opcode_name;
-		std::vector<OpCodeAnyArg> args;
+		base::StrId                   opcode_name;
+		std::vector<OpCodeAnyArg>     args;
 
 		static tpc::ParserRef<OpCode> parse(tpc::ParserState& state) {
-			auto out = tpc::makeRef<OpCode>();
+			auto            out = tpc::makeRef<OpCode>();
 
 			tpc::Identifier identifier1;
 			tpc::parseOne(state, &identifier1);
@@ -198,13 +194,13 @@ namespace assemble {
 					tpc::Identifier identifier2;
 					tpc::parseOne(state, &identifier2);
 
-					out->args.emplace_back(OpCodeLabelArg{0, false, identifier2.value});
+					out->args.emplace_back(OpCodeLabelArg{ 0, false, identifier2.value });
 					break;
 				}
 				case lexer::Token::Type::NumLiteral:
 					try {
 						out->args.emplace_back(OpCodeNumArg{
-							OpCodeArgType::imm, strIdToNum(state.tokens().next().getValue())});
+							OpCodeArgType::imm, strIdToNum(state.tokens().next().getValue()) });
 					} catch (std::logic_error& e) {
 						state.err.setFail();
 						state.err.logError(
@@ -242,14 +238,13 @@ namespace assemble {
 
 		void dprint(std::ostream& out) const override {
 			out << "        " << opcode_name.view().stringView() << " ";
-			for (auto& arg: args) {
-				variant_match(arg) { 
+			for (auto& arg : args) {
+				variant_match(arg) {
 					variant_case(OpCodeNumArg, num_arg) {
-						out << num_arg.value << " ";			
-				  	}
-				  	variant_case(OpCodeLabelArg, label_arg) {
-						out << label_arg.label_name.strView() << " (" << label_arg.value
-							<< ")"
+						out << num_arg.value << " ";
+					}
+					variant_case(OpCodeLabelArg, label_arg) {
+						out << label_arg.label_name.strView() << " (" << label_arg.value << ")"
 							<< " ";
 					}
 				}
@@ -262,66 +257,63 @@ namespace assemble {
 
 	struct ByteCode: AsmElement {
 		std::vector<tpc::ParserRef<OpCode>> opcodes;
-		base::Map<base::StrId, usize> label_position;
+		base::Map<base::StrId, usize>       label_position;
 
-		static tpc::ParserRef<ByteCode> parse(tpc::ParserState& state) {
-			auto out = tpc::makeRef<ByteCode>();
+		static tpc::ParserRef<ByteCode>     parse(tpc::ParserState& state) {
+            auto out = tpc::makeRef<ByteCode>();
 
-			while (state.notEmpty()) {
-				if (state.tryEat(rift_def::Keyword::BCLabel)) {
-					tpc::Identifier label_name;
-					tpc::parseOne(state, &label_name);
+            while (state.notEmpty()) {
+                if (state.tryEat(rift_def::Keyword::BCLabel)) {
+                    tpc::Identifier label_name;
+                    tpc::parseOne(state, &label_name);
 
-					if (!state.tryEat(rift_def::Special::Semicolon)) {
-						state.err.logError(state.ctokens().peek(-1).getPosition(),
-						                   "semicolon expected");
-					}
+                    if (!state.tryEat(rift_def::Special::Semicolon)) {
+                        state.err.logError(state.ctokens().peek(-1).getPosition(),
+                                           "semicolon expected");
+                    }
 
-					if (out->label_position.contains(label_name.value)) {
-						state.err.setFail();
-						state.err.logError(state.ctokens().peek(-1).getPosition(),
-						                   base::strConcat("repeated label: ", label_name.value));
-					} else {
-						out->label_position.put(label_name.value, out->opcodes.size());
-					}
-				} else {
-					out->opcodes.emplace_back(OpCode::parse(state));
-				}
-			}
+                    if (out->label_position.contains(label_name.value)) {
+                        state.err.setFail();
+                        state.err.logError(state.ctokens().peek(-1).getPosition(),
+                                           base::strConcat("repeated label: ", label_name.value));
+                    } else {
+                        out->label_position.put(label_name.value, out->opcodes.size());
+                    }
+                } else {
+                    out->opcodes.emplace_back(OpCode::parse(state));
+                }
+            }
 
-			for (i32 i = 0; i < out->opcodes.size(); i++) {
-				for (auto& opcode: out->opcodes[i]->args) {
-					
-					variant_match(opcode) { 
-						variant_case (OpCodeLabelArg, label) {
-							auto it =
-								out->label_position.find(label.label_name);
-							if (it != out->label_position.end()) {
-								label.value =
-									static_cast<i64>(it->second) - i - 1;
-								label.type_value = false;
-							} else {
-								// @TODO: not failing here allow for "type arguments"
-								// This setup should be changed in the future.
-								label.type_value = true;
+            for (i32 i = 0; i < out->opcodes.size(); i++) {
+                for (auto& opcode : out->opcodes[i]->args) {
+                    variant_match(opcode) {
+                        variant_case(OpCodeLabelArg, label) {
+                            auto it = out->label_position.find(label.label_name);
+                            if (it != out->label_position.end()) {
+                                label.value      = static_cast<i64>(it->second) - i - 1;
+                                label.type_value = false;
+                            } else {
+                                // @TODO: not failing here allow for "type arguments"
+                                // This setup should be changed in the future.
+                                label.type_value = true;
 
-								// state.err.setFail();
-								// state.err.logError(
-								// 	state.ctokens().peek().getPosition(),
-								// 	base::strConcat("Nonexistent label: ",
-								//                      std::get<OpCodeLabelArg>(opcode).value));
-							}
-						}
-					}
-				}
-			}
+                                // state.err.setFail();
+                                // state.err.logError(
+                                // 	state.ctokens().peek().getPosition(),
+                                // 	base::strConcat("Nonexistent label: ",
+                                //                      std::get<OpCodeLabelArg>(opcode).value));
+                            }
+                        }
+                    }
+                }
+            }
 
-			return out;
+            return out;
 		}
 
 		void dprint(std::ostream& out) const override {
 			out << "    code {\n";
-			for (auto& opcode: opcodes) {
+			for (auto& opcode : opcodes) {
 				opcode->dprint(out);
 			}
 			out << "    }\n";
@@ -330,25 +322,27 @@ namespace assemble {
 		~ByteCode() override = default;
 	};
 
-	constexpr usize size_t_max = (usize)(-1);
+	constexpr usize size_t_max = (usize) (-1);
+
 	struct Func: AsmElement {
-		tpc::Identifier name;
-		usize arg_size = size_t_max;
-		usize local_size = size_t_max;
-		usize ret_size = size_t_max;
-		tpc::ParserRef<ByteCode> code;
+		tpc::Identifier             name;
+		usize                       arg_size   = size_t_max;
+		usize                       local_size = size_t_max;
+		usize                       ret_size   = size_t_max;
+		tpc::ParserRef<ByteCode>    code;
 
 		static tpc::ParserRef<Func> parse(tpc::ParserState& state);
 
-		void dprint(std::ostream& out) const override {
-			out << "function {\n";
-			out << "    name: " << name.value.strView() << "\n";
-			out << "    arg_size: " << arg_size << "\n";
-			out << "    local_size: " << local_size << "\n";
-			out << "    ret_size: " << ret_size << "\n";
-			code->dprint(out);
-			out << "\n}";
+		void                        dprint(std::ostream& out) const override {
+            out << "function {\n";
+            out << "    name: " << name.value.strView() << "\n";
+            out << "    arg_size: " << arg_size << "\n";
+            out << "    local_size: " << local_size << "\n";
+            out << "    ret_size: " << ret_size << "\n";
+            code->dprint(out);
+            out << "\n}";
 		}
+
 		~Func() override = default;
 	};
 
@@ -358,16 +352,16 @@ namespace assemble {
 
 		static tpc::ParserRef<ParsedCode> parse(tpc::ParserState& state);
 
-		void dprint(std::ostream& out) const override {
-			for (auto& type: types) {
-				type->dprint(out);
-				out << "\n";
-			}
-			
-			for (auto& func: functions) {
-				func->dprint(out);
-				out << "\n";
-			}
+		void                              dprint(std::ostream& out) const override {
+            for (auto& type : types) {
+                type->dprint(out);
+                out << "\n";
+            }
+
+            for (auto& func : functions) {
+                func->dprint(out);
+                out << "\n";
+            }
 		}
 
 		~ParsedCode() override = default;
@@ -387,7 +381,6 @@ namespace assemble {
 		state.goDown();
 
 		while (state.ctokens().peek().isKeyword()) {
-
 			auto next = state.tokens().next();
 
 			switch (next.asKeyword()) {
@@ -444,8 +437,7 @@ namespace assemble {
 				tpc::parseOne(state, rift_def::Operator::Colon);
 				if (out->ret_size != size_t_max) {
 					state.err.setFail();
-					state.err.logError(state.ctokens().peek().getPosition(),
-					                   "ret_size duplicate");
+					state.err.logError(state.ctokens().peek().getPosition(), "ret_size duplicate");
 				}
 				auto value = state.tokens().next();
 				if (!value.isNumLiteral()) {
@@ -518,7 +510,7 @@ namespace assemble {
 			state.err.logError(state.ctokens().peek().getPosition(), "expected keyword 'type'");
 			return nullptr;
 		};
-		auto out = tpc::makeRef<Type>();
+		auto out  = tpc::makeRef<Type>();
 
 		/// @TODO: implement keywordToNumLiteral
 		auto type = state.tokens().next().asKeyword();
@@ -532,8 +524,8 @@ namespace assemble {
 				state.err.setFail();
 				state.err.logError(state.ctokens().peek().getPosition(), "expected number");
 			} else {
-				out->datatype =
-					PrimitiveType{name, static_cast<TypeSize>(strIdToNum(value.getValue()))};
+				out->datatype
+					= PrimitiveType{ name, static_cast<TypeSize>(strIdToNum(value.getValue())) };
 			}
 			break;
 		}
@@ -543,7 +535,7 @@ namespace assemble {
 				state.err.setFail();
 				state.err.logError(state.ctokens().peek().getPosition(), "expected identifier");
 			} else {
-				out->datatype = PointerType{name, pointered_type.getValue()};
+				out->datatype = PointerType{ name, pointered_type.getValue() };
 			}
 			break;
 		}
@@ -558,8 +550,10 @@ namespace assemble {
 					state.err.setFail();
 					state.err.logError(state.ctokens().peek().getPosition(), "expected number");
 				} else {
-					out->datatype = StaticTableType{
-					name, type_name.getValue(), static_cast<TypeSize>(strIdToNum(size.getValue()))};
+					out->datatype
+						= StaticTableType{ name,
+						                   type_name.getValue(),
+						                   static_cast<TypeSize>(strIdToNum(size.getValue())) };
 				}
 			}
 			break;
@@ -570,7 +564,7 @@ namespace assemble {
 				state.err.setFail();
 				state.err.logError(state.ctokens().peek().getPosition(), "expected identifier");
 			} else {
-				out->datatype = DynamicTableType{name, type_name.getValue()};
+				out->datatype = DynamicTableType{ name, type_name.getValue() };
 			}
 			break;
 		}
@@ -588,7 +582,7 @@ namespace assemble {
 				tpc::Identifier field_name;
 				tpc::Identifier field_type;
 				tpc::parseAll(state, &field_name, rift_def::Operator::Colon, &field_type);
-				fields.emplace_back(Field{field_name.value, field_type.value});
+				fields.emplace_back(Field{ field_name.value, field_type.value });
 
 				if (state.empty()) {
 					break;
@@ -603,7 +597,7 @@ namespace assemble {
 				}
 			}
 			state.goUpAndSkip();
-			out->datatype = DataType{name, fields};
+			out->datatype = DataType{ name, fields };
 			break;
 		}
 		case rift_def::Keyword::BCVariant: {
@@ -633,7 +627,7 @@ namespace assemble {
 				}
 			}
 			state.goUpAndSkip();
-			out->datatype = VariantType{name, alternatives};
+			out->datatype = VariantType{ name, alternatives };
 			break;
 		}
 		case rift_def::Keyword::BCFunType: {
@@ -665,7 +659,7 @@ namespace assemble {
 			state.goUpAndSkip();
 			tpc::Identifier result;
 			tpc::parseOne(state, &result);
-			out->datatype = FunctionType{name, arguments, result};
+			out->datatype = FunctionType{ name, arguments, result };
 			break;
 		}
 		default: {
@@ -687,14 +681,12 @@ namespace assemble {
 				if (type != nullptr) {
 					out->types.emplace_back(std::move(type));
 				}
-			}
-			else if (state.ctokens().is(rift_def::Keyword::BCFunction)) {
+			} else if (state.ctokens().is(rift_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state);
 				if (func != nullptr) {
 					out->functions.emplace_back(std::move(func));
 				}
-			}
-			else {
+			} else {
 				state.fail(0, "Unexpected keyword");
 				return out;
 			}
@@ -703,15 +695,13 @@ namespace assemble {
 		return out;
 	}
 
-
 	struct CodeContainer {
 		// @TODO: https://github.com/rift-lang/rift-poc-zpp1/issues/70
-		bool ok = true;
-		std::string error = "";
+		bool                       ok    = true;
+		std::string                error = "";
 		tpc::ParserRef<ParsedCode> code;
-		void print(std::ostream&);
+		void                       print(std::ostream&);
 	};
-
 
 	CodeContainer parseFile(const fs::FilePath& path) {
 		lexer::init();
@@ -720,7 +710,7 @@ namespace assemble {
 
 		auto maybeContent = path.getContentSafe();
 		if (maybeContent.has_error()) {
-			return CodeContainer{false, maybeContent.error(), nullptr};
+			return CodeContainer{ false, maybeContent.error(), nullptr };
 		}
 
 		lexer::TokenData td = lexer::tokenizeFile(path, false);
@@ -729,38 +719,36 @@ namespace assemble {
 
 		tpc::ParserRef<assemble::ParsedCode> out = ParsedCode::parse(state);
 
-		std::stringstream err_stream;
+		std::stringstream                    err_stream;
 		state.err.dumpLog(err_stream);
 
-		return {state.err.good(), err_stream.str(), std::move(out)};
+		return { state.err.good(), err_stream.str(), std::move(out) };
 	}
 
 	// returns true if was successfully
 	bool defineTypes(CodeContainer& code, vm::TypeMetadata& type_metadata) {
-
 		base::Map<base::StrId, vm::TypeRef> type_map;
 
 		for (auto& type : code.code->types) {
 			base::StrId name = VISIT(type->datatype, value, return value.name);
 
 			if (type_map.contains(name)) {
-				code.ok = false;
+				code.ok     = false;
 				code.error += base::strConcat("Error: repeated type: ", name, "\n");
 
-				/// Possible we can allow to continue	
+				/// Possible we can allow to continue
 				return false;
 			}
 
-			vm::Type typ = vm::Type::declareType(name);
-			auto type_ref = type_metadata.addType(std::move(typ));
+			vm::Type typ      = vm::Type::declareType(name);
+			auto     type_ref = type_metadata.addType(std::move(typ));
 			type_map.put(name, type_ref);
 		}
 
-		for (auto& type: code.code->types) {
-			
-			variant_match(type->datatype) { 
+		for (auto& type : code.code->types) {
+			variant_match(type->datatype) {
 				variant_case(PrimitiveType, data) {
-					type_map[data.name]->definePrimitive(data.size);	
+					type_map[data.name]->definePrimitive(data.size);
 				}
 				variant_case(PointerType, data) {
 					type_map[data.name]->definePointer(type_map[data.inner]);
@@ -793,13 +781,13 @@ namespace assemble {
 					type_map[data.name]->defineFunction(parameters, type_map[data.result]);
 				}
 				variant_default {
-					RIFT_PANIC("bad type");	
+					RIFT_PANIC("bad type");
 				}
 			}
 		}
 
 		type_metadata.finalize();
-		
+
 		return true;
 	}
 
@@ -813,8 +801,7 @@ namespace assemble {
 	u16 nameToOpcodeValue(base::StrId str) {
 		try {
 			return static_cast<u16>(base::strToEnum<vm::OpcodeFix8>(str));
-		}
-		catch (std::out_of_range& err) {
+		} catch (std::out_of_range& err) {
 			// @TODO: better errors
 			RIFT_PANIC(base::strConcat("Incorrect opcode: ", str));
 			return 0;
@@ -823,51 +810,43 @@ namespace assemble {
 
 	vm::FuncData changeFuncToFuncData(tpc::ParserCBorrowRef<Func> func, vm::TypeMetadata& types) {
 		vm::FuncData funcData;
-		funcData.ret_size = 0;
-		funcData.arg_size = func->arg_size;
+		funcData.ret_size   = 0;
+		funcData.arg_size   = func->arg_size;
 		funcData.stack_size = func->local_size;
-		funcData.ret_size = func->ret_size;
+		funcData.ret_size   = func->ret_size;
 
-		for (auto& op: func->code->opcodes) {
+		for (auto& op : func->code->opcodes) {
 			// calculate type arguments:
-			for (auto& arg: op->args) {
+			for (auto& arg : op->args) {
 				variant_match(arg) {
 					variant_case(OpCodeLabelArg, label) {
 						if (label.type_value) {
 							auto type = types.getTypeByName(label.label_name);
 							if (!type.has_value()) {
-								std::cerr << "Wrong type name! " << label.label_name.strView() << "\n";
+								std::cerr << "Wrong type name! " << label.label_name.strView()
+										  << "\n";
 								label.value = 0;
-							}
-							else {
+							} else {
 								label.value = static_cast<i64>(u64(type.value()->getId()));
 							}
 						}
 					}
 				}
 			}
-			
+
 			switch (op->args.size()) {
 			case 0: {
-				funcData.bc.emplace_back(
-					vm::Fix8Instruction{
-						.opcode = nameToOpcodeValue(op->opcode_name),
-						.arg0 = 0,
-						.arg1 = 0
-					}
-				);
+				funcData.bc.emplace_back(vm::Fix8Instruction{
+					.opcode = nameToOpcodeValue(op->opcode_name), .arg0 = 0, .arg1 = 0 });
 				break;
 			}
 			case 1: {
 				i64 arg_0;
 				std::visit([&arg_0](auto& arg) { arg_0 = arg.value; }, op->args[0]);
 				funcData.bc.emplace_back(
-					vm::Fix8Instruction{
-						.opcode = nameToOpcodeValue(op->opcode_name),
-						.arg0 = static_cast<i32>(arg_0),
-						.arg1 = 0
-					}
-				);
+					vm::Fix8Instruction{ .opcode = nameToOpcodeValue(op->opcode_name),
+				                         .arg0   = static_cast<i32>(arg_0),
+				                         .arg1   = 0 });
 				break;
 			}
 			case 2: {
@@ -876,12 +855,9 @@ namespace assemble {
 				std::visit([&arg_0](auto& arg) { arg_0 = arg.value; }, op->args[0]);
 				std::visit([&arg_1](auto& arg) { arg_1 = arg.value; }, op->args[1]);
 				funcData.bc.emplace_back(
-					vm::Fix8Instruction{
-						.opcode = nameToOpcodeValue(op->opcode_name),
-						.arg0 = static_cast<i32>(arg_0),
-						.arg1 = static_cast<i32>(arg_1)
-					}
-				);
+					vm::Fix8Instruction{ .opcode = nameToOpcodeValue(op->opcode_name),
+				                         .arg0   = static_cast<i32>(arg_0),
+				                         .arg1   = static_cast<i32>(arg_1) });
 				break;
 			}
 			}
@@ -889,13 +865,8 @@ namespace assemble {
 
 		// this is a convention
 		// executor assumes it
-		funcData.bc.emplace_back(
-			vm::Fix8Instruction{
-				.opcode = static_cast<u16>(vm::OpcodeFix8::nop),
-				.arg0 = 0,
-				.arg1 = 0
-			}
-		);
+		funcData.bc.emplace_back(vm::Fix8Instruction{
+			.opcode = static_cast<u16>(vm::OpcodeFix8::nop), .arg0 = 0, .arg1 = 0 });
 		return funcData;
 	}
 
@@ -908,7 +879,7 @@ namespace assemble {
 
 		vm::Code instructions_code;
 
-		usize main_id = SIZE_MAX;
+		usize    main_id = SIZE_MAX;
 
 		for (i32 idx = 0; idx < code.code->functions.size(); idx++) {
 			if (code.code->functions[idx]->name.value.strView() == "main") {
@@ -922,14 +893,13 @@ namespace assemble {
 		}
 		instructions_code.main_id = main_id;
 
-		for (auto& func: code.code->functions) {
-			instructions_code.functions.emplace_back(changeFuncToFuncData(func.borrow(), type_metadata));
+		for (auto& func : code.code->functions) {
+			instructions_code.functions.emplace_back(
+				changeFuncToFuncData(func.borrow(), type_metadata));
 		}
 
 		return instructions_code;
 	}
-
-
 
 	result<vm::Code, std::string> assemble(fs::FilePath file, vm::TypeMetadata& type_metadata) {
 		auto parsed_code = parseFile(file);
