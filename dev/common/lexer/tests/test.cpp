@@ -14,7 +14,7 @@ public:
 		rift_def::setKeywordMode(rift_def::KeywordMode::RiftSource);
 
 		fs::FilePath file(path("token_code.rift"));
-		td = std::move(lexer::tokenizeFile(file.getContent()));
+		td = lexer::tokenizeFile(file);
 		TESTER_ADD_TEST(testBasicStructure);
 		TESTER_ADD_TEST(testGroup0);
 		TESTER_ADD_TEST(testGroup1);
@@ -24,6 +24,7 @@ public:
 		TESTER_ADD_TEST(testGroup5);
 		TESTER_ADD_TEST(testGroup6);
 		TESTER_ADD_TEST(testGroup7);
+		TESTER_ADD_TEST(testSourcePosition);
 	}
 
 	~SimpleLexerTest() override = default;
@@ -75,7 +76,6 @@ private:
 		checkGroupIsGroup(index);
 		auto& inner_tokens = td.tokens[index].getRecursive();
 		message("got " + std::to_string(inner_tokens.size()) + " tokens");
-
 		for (const auto& token: inner_tokens) {
 			assert(token.getType() == token_type,
 			       std::string("Type of token `") + std::string(token.getStrValue()) +
@@ -113,6 +113,15 @@ private:
 	}
 
 	void testGroup7() { testTokenGroup<7, lexer::Token::Type::String, &lexer::Token::isString>(); }
+
+	void testSourcePosition() {
+		const auto& position = td.tokens[1].getRecursive().front().getPosition();
+		assert(position.getLineNumber() == 5, "Wrong line number");
+		assert(position.getColumn() == 2, "Wrong column");
+		assert(position.getStart() == 15, "Wrong start index");
+		assert(position.getEnd() == 19, "Wrong end index");
+		assert(position.getSourceChars() == "while", "Wrong getSourceChars()");
+	}
 };
 
 

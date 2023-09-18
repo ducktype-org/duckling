@@ -551,7 +551,7 @@ namespace assemble {
 			break;
 		}
 		case rift_def::Keyword::BCDynamicTable: {
-			auto type_name = state.tokens().next();
+			const lexer::Token& type_name = state.tokens().next();
 			if (!type_name.isIdentifier()) {
 				state.err.setFail();
 				state.err.logError(state.ctokens().peek().getPosition(), "expected identifier");
@@ -709,7 +709,7 @@ namespace assemble {
 			return CodeContainer{false, maybeContent.error(), nullptr};
 		}
 
-		lexer::TokenData td = lexer::tokenizeFile(maybeContent.value(), false);
+		lexer::TokenData td = lexer::tokenizeFile(path, false);
 
 		tpc::ParserState state(tpc::TokenStream(td.tokens, 0, td.tokens.size()), tpc::ErrorState());
 

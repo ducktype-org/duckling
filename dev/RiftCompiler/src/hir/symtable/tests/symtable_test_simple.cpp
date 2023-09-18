@@ -27,7 +27,7 @@ public:
 private:
 	pst::PST prepare(std::string filename) {
 		fs::FilePath file(filename);
-		auto td = lexer::tokenizeFile(file.getContent());
+		auto td = lexer::tokenizeFile(file);
 		return pst::parse(std::move(td));
 	}
 /*
@@ -241,4 +241,3 @@ public:
 };
 
 TESTER_COMMON_MAIN("/RiftCompiler/src/symtable/tests/");
-

@@ -3,8 +3,9 @@
 namespace pst {
 	ParserRef<ArgList> ArgList::parse(RiftParserState& state){
 		// @TODO: Placeholder
+		auto position = state.tokens().peek().getPosition();
 		state.tokens().next();
-		return ParserRef<ArgList>(new ArgList());
+		return makeRef<ArgList>(position);
 	}
 
 	// @TODO: Placeholder
@@ -12,4 +13,3 @@ namespace pst {
 		out << "{\"ArgList\" : \"<PLACEHOLDER>\"}";
 	}
 }
-

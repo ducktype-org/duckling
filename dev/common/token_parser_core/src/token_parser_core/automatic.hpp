@@ -30,7 +30,7 @@ namespace tpc {
 		*t = T::parse(state);
 	}
 
-	// parses all of the given elements
+	// parses all the given elements
 	template<typename State, typename T>
 	void parseAll(State& state, T t) {
 		parseOne(state, t);

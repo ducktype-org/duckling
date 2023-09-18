@@ -7,6 +7,10 @@ namespace pst {
 		imports.push_back(import);
 	}
 
+	const lexer::SourcePosition& RiftElement::getSourcePosition() const {
+		return source_position;
+	}
+
 	const RiftParserState::ImportType& RiftParserState::getImports() const {
 		return imports;
 	};

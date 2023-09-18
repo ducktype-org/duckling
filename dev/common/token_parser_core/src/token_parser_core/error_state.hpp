@@ -22,16 +22,16 @@ namespace tpc {
 		void setFail() {
 			failbit = true;
 		}
-		void failAndLog(lexer::Token::Position position, std::string message);
-		void logError(lexer::Token::Position position, std::string message);
+		void failAndLog(const lexer::SourcePosition& position, std::string_view message);
+		void logError(const lexer::SourcePosition& position, std::string_view message);
 		void dumpLog(std::ostream& stream = std::cerr) const;
-		bool good() const {
+		[[nodiscard]] bool good() const {
 			return !failbit;
 		}
-		bool fail() const {
+		[[nodiscard]] bool fail() const {
 			return failbit;
 		}
 
-		usize errCount() const;
+		[[nodiscard]] usize errCount() const;
 	};
 }

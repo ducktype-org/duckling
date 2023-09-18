@@ -4,8 +4,9 @@
 #include <lexer/lexer.hpp>
 #include <typesystem/typesystem.hpp>
 
-hir::SourceUnit prepare(const fs::FilePath& file) {
-	auto td = lexer::tokenizeFile(file.getContent());
+hir::SourceUnit prepare(std::string_view filename) {
+	fs::FilePath file(filename);
+	auto td = lexer::tokenizeFile(file);
 	return {pst::parse(std::move(td)), file};
 }
 
@@ -14,7 +15,7 @@ int main(int argc, char** argv) {
 		std::cerr << "usage: ./hir_testing file_name\n";
 		return 1;
 	}
-	fs::FilePath file(argv[1]);
+	std::string file_name(argv[1]);
 
 	lexer::init();
 	pst::init();
@@ -23,7 +24,6 @@ int main(int argc, char** argv) {
 
 	hir::HIR hir;
 	
-	hir.addUnit(prepare(file));
+	hir.addUnit(prepare(file_name));
 	hir.doMagicStuff();
 }
-

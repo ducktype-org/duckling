@@ -2,7 +2,7 @@
 
 namespace pst {
 	ParserRef<TopLevel> TopLevel::parse(RiftParserState& state) {
-		auto out = makeRef<TopLevel>();
+		auto out = makeRef<TopLevel>(state.ctokens().peek().getPosition());
 		while (state.notEmpty()) {
 			out->statements.emplace_back(
 				Stmt::parse(state)

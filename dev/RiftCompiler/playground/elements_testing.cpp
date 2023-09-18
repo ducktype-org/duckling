@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
 	pst::init();
 	fs::FilePath file(argv[1]);
 
-	auto tokens = lexer::tokenizeFile(file.getContent());
+	auto tokens = lexer::tokenizeFile(file);
 	auto pst = pst::parse(std::move(tokens));
 
 	if (pst.getErrorState().fail()) {

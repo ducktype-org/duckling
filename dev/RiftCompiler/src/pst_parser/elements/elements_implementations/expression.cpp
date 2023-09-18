@@ -44,7 +44,7 @@ namespace pst {
 	 * @TODO: lambda, todo-s 
 	 */
 	ParserRef<Expr> Expr::parse(RiftParserState& state, usize len, bool exact_len) {
-		auto out = makeRef<Expr>();
+		auto out = makeRef<Expr>(state.ctokens().peek().getPosition());
 		usize i = 0;
 		
 		while (state.notEmpty() and i < len) {
@@ -59,7 +59,7 @@ namespace pst {
 					);
 				} else {
 					out->elements.emplace_back(
-						Group{type, makeRef<Expr>()}
+						Group{type, makeRef<Expr>(state.ctokens().peek().getPosition())}
 					);
 				}
 				state.goUpAndSkip();

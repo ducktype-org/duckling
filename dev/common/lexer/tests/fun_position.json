@@ -3,61 +3,70 @@
 		"value": "<EMPTY>",
 		"line": "1",
 		"column": "1",
-		"raw": "0",
+		"raw_start": "0",
+		"raw_end": "103",
 		"recursive": [
 			{
 				"value": "fun",
 				"line": "2",
 				"column": "2",
-				"raw": "3",
+				"raw_start": "3",
+				"raw_end": "5",
 				"recursive": []
 			},
 			{
 				"value": "fo",
 				"line": "2",
 				"column": "6",
-				"raw": "7",
+				"raw_start": "7",
+				"raw_end": "8",
 				"recursive": []
 			},
 			{
 				"value": "<EMPTY>",
 				"line": "2",
 				"column": "8",
-				"raw": "9",
+				"raw_start": "9",
+				"raw_end": "37",
 				"recursive": [
 					{
 						"value": "notu16",
 						"line": "2",
 						"column": "9",
-						"raw": "10",
+						"raw_start": "10",
+						"raw_end": "15",
 						"recursive": []
 					},
 					{
 						"value": "x",
 						"line": "2",
 						"column": "16",
-						"raw": "17",
+						"raw_start": "17",
+						"raw_end": "17",
 						"recursive": []
 					},
 					{
 						"value": ",",
 						"line": "2",
 						"column": "17",
-						"raw": "18",
+						"raw_start": "18",
+						"raw_end": "18",
 						"recursive": []
 					},
 					{
 						"value": "another",
 						"line": "2",
 						"column": "19",
-						"raw": "20",
+						"raw_start": "20",
+						"raw_end": "26",
 						"recursive": []
 					},
 					{
 						"value": "something",
 						"line": "2",
 						"column": "27",
-						"raw": "28",
+						"raw_start": "28",
+						"raw_end": "36",
 						"recursive": []
 					}
 				]
@@ -66,121 +75,138 @@
 				"value": "->",
 				"line": "2",
 				"column": "38",
-				"raw": "39",
+				"raw_start": "39",
+				"raw_end": "40",
 				"recursive": []
 			},
 			{
 				"value": "noti32",
 				"line": "2",
 				"column": "41",
-				"raw": "42",
+				"raw_start": "42",
+				"raw_end": "47",
 				"recursive": []
 			},
 			{
 				"value": "<EMPTY>",
 				"line": "2",
 				"column": "48",
-				"raw": "49",
+				"raw_start": "49",
+				"raw_end": "67",
 				"recursive": [
 					{
 						"value": "if",
 						"line": "3",
 						"column": "3",
-						"raw": "53",
+						"raw_start": "53",
+						"raw_end": "54",
 						"recursive": []
 					},
 					{
 						"value": "<EMPTY>",
 						"line": "3",
 						"column": "6",
-						"raw": "56",
+						"raw_start": "56",
+						"raw_end": "61",
 						"recursive": [
 							{
 								"value": "true",
 								"line": "3",
 								"column": "7",
-								"raw": "57",
+								"raw_start": "57",
+								"raw_end": "60",
 								"recursive": []
-							}
+							},
 						]
 					},
 					{
 						"value": "<EMPTY>",
 						"line": "3",
 						"column": "13",
-						"raw": "63",
+						"raw_start": "63",
+						"raw_end": "66",
 						"recursive": []
-					}
+					},
 				]
 			},
 			{
 				"value": "fun",
 				"line": "6",
 				"column": "2",
-				"raw": "71",
+				"raw_start": "71",
+				"raw_end": "73",
 				"recursive": []
 			},
 			{
 				"value": "f",
 				"line": "6",
 				"column": "6",
-				"raw": "75",
+				"raw_start": "75",
+				"raw_end": "75",
 				"recursive": []
 			},
 			{
 				"value": "->",
 				"line": "6",
 				"column": "8",
-				"raw": "77",
+				"raw_start": "77",
+				"raw_end": "78",
 				"recursive": []
 			},
 			{
 				"value": "i43",
 				"line": "6",
 				"column": "11",
-				"raw": "80",
+				"raw_start": "80",
+				"raw_end": "82",
 				"recursive": []
 			},
 			{
 				"value": "<EMPTY>",
 				"line": "6",
 				"column": "15",
-				"raw": "84",
+				"raw_start": "84",
+				"raw_end": "87",
 				"recursive": []
 			},
 			{
 				"value": "fun",
 				"line": "7",
 				"column": "2",
-				"raw": "88",
+				"raw_start": "88",
+				"raw_end": "90",
 				"recursive": []
 			},
 			{
 				"value": "f",
 				"line": "7",
 				"column": "6",
-				"raw": "92",
+				"raw_start": "92",
+				"raw_end": "92",
 				"recursive": []
 			},
 			{
 				"value": "<EMPTY>",
 				"line": "7",
 				"column": "7",
-				"raw": "93",
+				"raw_start": "93",
+				"raw_end": "96",
 				"recursive": []
 			},
 			{
 				"value": "->",
 				"line": "7",
 				"column": "10",
-				"raw": "96",
+				"raw_start": "96",
+				"raw_end": "97",
 				"recursive": []
 			},
 			{
 				"value": "<EMPTY>",
 				"line": "7",
 				"column": "13",
-				"raw": "99",
+				"raw_start": "99",
+				"raw_end": "102",
 				"recursive": []
 			}
 		]
