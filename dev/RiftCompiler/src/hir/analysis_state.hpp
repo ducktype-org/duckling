@@ -4,7 +4,6 @@
 #include <queue>
 #include <span>
 
-
 namespace hir {
 
 	using symtable::SymbolRef;
