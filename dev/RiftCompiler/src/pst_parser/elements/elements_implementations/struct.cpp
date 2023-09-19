@@ -10,9 +10,8 @@ namespace pst {
 
 		parseAll(state, Keyword::Struct, &out->name);
 
-		if (state.tryEat(Operator::Colon)) {
+		if (state.tryEat(Operator::Colon))
 			parseList<true>(state, out->bases, Operator::Comma, Token::Type::CurlyGroup);
-		}
 
 		parseOne(state, &out->body);
 

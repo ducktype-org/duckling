@@ -115,9 +115,8 @@ namespace ts {
 	                                  TypeDesc<> result_type, i32 flags) {
 		static base::Map<std::tuple<std::vector<TypeDesc<>>, TypeDesc<>, int>, FunctionInfo>
 			function_types;
-		if (function_types.contains({ parameter_types, result_type, flags })) {
+		if (function_types.contains({ parameter_types, result_type, flags }))
 			return function_types[{ parameter_types, result_type, flags }];
-		}
 		auto ptr = base::make_unique<Impl>(parameter_types, result_type, flags);
 
 		function_types.put({ parameter_types, result_type, flags }, FunctionInfo(ptr.get()));
@@ -186,9 +185,7 @@ namespace ts {
 	// TODO: tupleInfo and variantInfo look nearly identical
 	TupleInfo TupleInfo::create(const std::vector<TypeDesc<>>& tuple_types) {
 		static base::Map<std::vector<TypeDesc<>>, TupleInfo> tuples;
-		if (tuples.contains(tuple_types)) {
-			return tuples[tuple_types];
-		}
+		if (tuples.contains(tuple_types)) return tuples[tuple_types];
 
 		auto ptr = base::make_unique<Impl>(tuple_types);
 
@@ -209,9 +206,7 @@ namespace ts {
 
 	VariantInfo VariantInfo::create(const std::vector<TypeDesc<>>& variant_types) {
 		static base::Map<std::vector<TypeDesc<>>, VariantInfo> variants;
-		if (variants.contains(variant_types)) {
-			return variants[variant_types];
-		}
+		if (variants.contains(variant_types)) return variants[variant_types];
 
 		auto ptr = base::make_unique<Impl>(variant_types);
 
@@ -224,9 +219,7 @@ namespace ts {
 
 	TypeTemplateInfo TypeTemplateInfo::create(std::vector<TypeDesc<>>& parameter_list) {
 		static base::Map<std::vector<TypeDesc<>>, TypeTemplateInfo> type_templates;
-		if (type_templates.contains(parameter_list)) {
-			return type_templates[parameter_list];
-		}
+		if (type_templates.contains(parameter_list)) return type_templates[parameter_list];
 		auto ptr = base::make_unique<Impl>(parameter_list);
 
 		type_templates.put(parameter_list, TypeTemplateInfo{ ptr.get() });

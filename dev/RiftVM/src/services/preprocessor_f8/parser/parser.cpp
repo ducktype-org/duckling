@@ -23,11 +23,10 @@ namespace assemble {
 
 		i64                    out;
 		std::from_chars_result res = std::from_chars(view.data(), view.data() + view.size(), out);
-		if (res.ec == std::errc::invalid_argument) {
+		if (res.ec == std::errc::invalid_argument)
 			throw std::invalid_argument{ "invalid_argument" };
-		} else if (res.ec == std::errc::result_out_of_range) {
+		else if (res.ec == std::errc::result_out_of_range)
 			throw std::out_of_range{ "out_of_range" };
-		}
 
 		return out;
 	}
@@ -113,9 +112,8 @@ namespace assemble {
 			out << "data {\n";
 			out << "    name: " << name.strView() << "\n";
 			out << "    fields: [";
-			for (auto& field : fields) {
+			for (auto& field : fields)
 				out << field.name.strView() << ": " << field.type.strView() << ", ";
-			}
 			out << "]\n";
 			out << "}";
 		}
@@ -129,9 +127,7 @@ namespace assemble {
 			out << "variant {\n";
 			out << "    name: " << name.strView() << "\n";
 			out << "    alternatives: [";
-			for (auto& alt : variant_alternatives) {
-				out << alt.strView() << ", ";
-			}
+			for (auto& alt : variant_alternatives) out << alt.strView() << ", ";
 			out << "]\n";
 			out << "}";
 		}
@@ -146,9 +142,7 @@ namespace assemble {
 			out << "function {\n";
 			out << "    name: " << name.strView() << "\n";
 			out << "    parameters: [";
-			for (auto& param : parameters) {
-				out << param.strView() << ", ";
-			}
+			for (auto& param : parameters) out << param.strView() << ", ";
 			out << "]\n";
 			out << "    result: " << result.strView() << "\n";
 			out << "}";
@@ -313,9 +307,7 @@ namespace assemble {
 
 		void dprint(std::ostream& out) const override {
 			out << "    code {\n";
-			for (auto& opcode : opcodes) {
-				opcode->dprint(out);
-			}
+			for (auto& opcode : opcodes) opcode->dprint(out);
 			out << "    }\n";
 		}
 
@@ -491,15 +483,9 @@ namespace assemble {
 
 		state.goUpAndSkip();
 
-		if (out->local_size == size_t_max) {
-			state.fail(0, "Local size not set");
-		}
-		if (out->arg_size == size_t_max) {
-			state.fail(0, "Arg size not set");
-		}
-		if (out->ret_size == size_t_max) {
-			state.fail(0, "Ret size not set");
-		}
+		if (out->local_size == size_t_max) state.fail(0, "Local size not set");
+		if (out->arg_size == size_t_max) state.fail(0, "Arg size not set");
+		if (out->ret_size == size_t_max) state.fail(0, "Ret size not set");
 
 		return out;
 	}
@@ -584,9 +570,7 @@ namespace assemble {
 				tpc::parseAll(state, &field_name, rift_def::Operator::Colon, &field_type);
 				fields.emplace_back(Field{ field_name.value, field_type.value });
 
-				if (state.empty()) {
-					break;
-				}
+				if (state.empty()) break;
 
 				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
 					tpc::parseOne(state, rift_def::Operator::Comma);
@@ -615,9 +599,7 @@ namespace assemble {
 				tpc::parseOne(state, &field_type);
 				alternatives.emplace_back(field_type.value);
 
-				if (state.empty()) {
-					break;
-				}
+				if (state.empty()) break;
 				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
 					tpc::parseOne(state, rift_def::Operator::Comma);
 				} else {
@@ -645,9 +627,7 @@ namespace assemble {
 				tpc::parseOne(state, &field_type);
 				arguments.emplace_back(field_type.value);
 
-				if (state.empty()) {
-					break;
-				}
+				if (state.empty()) break;
 				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
 					tpc::parseOne(state, rift_def::Operator::Comma);
 				} else {
@@ -678,14 +658,10 @@ namespace assemble {
 		while (state.notEmpty()) {
 			if (state.ctokens().is(rift_def::Keyword::BCType)) {
 				auto type = Type::parse(state);
-				if (type != nullptr) {
-					out->types.emplace_back(std::move(type));
-				}
+				if (type != nullptr) out->types.emplace_back(std::move(type));
 			} else if (state.ctokens().is(rift_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state);
-				if (func != nullptr) {
-					out->functions.emplace_back(std::move(func));
-				}
+				if (func != nullptr) out->functions.emplace_back(std::move(func));
 			} else {
 				state.fail(0, "Unexpected keyword");
 				return out;
@@ -709,9 +685,7 @@ namespace assemble {
 		rift_def::setKeywordMode(rift_def::KeywordMode::RiftBC);
 
 		auto maybeContent = path.getContentSafe();
-		if (maybeContent.has_error()) {
-			return CodeContainer{ false, maybeContent.error(), nullptr };
-		}
+		if (maybeContent.has_error()) return CodeContainer{ false, maybeContent.error(), nullptr };
 
 		lexer::TokenData td = lexer::tokenizeFile(path, false);
 
@@ -761,23 +735,19 @@ namespace assemble {
 				}
 				variant_case(DataType, data) {
 					std::vector<std::pair<base::StrId COMMA vm::TypeRef>> fields;
-					for (auto& field : data.fields) {
+					for (auto& field : data.fields)
 						fields.emplace_back(field.name, type_map[field.type]);
-					}
 					type_map[data.name]->defineData(fields);
 				}
 				variant_case(VariantType, data) {
 					std::vector<vm::TypeRef> variants;
-					for (auto& variant : data.variant_alternatives) {
+					for (auto& variant : data.variant_alternatives)
 						variants.emplace_back(type_map[variant]);
-					}
 					type_map[data.name]->defineVariant(variants);
 				}
 				variant_case(FunctionType, data) {
 					std::vector<vm::TypeCRef> parameters;
-					for (auto& param : data.parameters) {
-						parameters.emplace_back(type_map[param]);
-					}
+					for (auto& param : data.parameters) parameters.emplace_back(type_map[param]);
 					type_map[data.name]->defineFunction(parameters, type_map[data.result]);
 				}
 				variant_default {
@@ -793,9 +763,7 @@ namespace assemble {
 
 	void CodeContainer::print(std::ostream& out) {
 		code->dprint(out);
-		if (!ok) {
-			out << error << '\n';
-		}
+		if (!ok) out << error << '\n';
 	}
 
 	u16 nameToOpcodeValue(base::StrId str) {
@@ -873,9 +841,7 @@ namespace assemble {
 	// @TODO: this function returns errors as string, in the future `Console` like object should be
 	// returned, that can produce both human readable and json error output
 	result<vm::Code, std::string> getCode(CodeContainer& code, vm::TypeMetadata& type_metadata) {
-		if (!code.ok) {
-			return failure(code.error);
-		}
+		if (!code.ok) return failure(code.error);
 
 		vm::Code instructions_code;
 
@@ -888,9 +854,7 @@ namespace assemble {
 			}
 		}
 
-		if (main_id == SIZE_MAX) {
-			return failure("error: No main.");
-		}
+		if (main_id == SIZE_MAX) return failure("error: No main.");
 		instructions_code.main_id = main_id;
 
 		for (auto& func : code.code->functions) {
@@ -908,14 +872,10 @@ namespace assemble {
 		// it is left, because JSON is broken
 		std::cerr << parsed_code.error;
 
-		if (!parsed_code.ok) {
-			return fail(parsed_code.error);
-		}
+		if (!parsed_code.ok) return fail(parsed_code.error);
 
 		bool status = defineTypes(parsed_code, type_metadata);
-		if (!status) {
-			return fail(parsed_code.error);
-		}
+		if (!status) return fail(parsed_code.error);
 
 		auto result = getCode(parsed_code, type_metadata);
 

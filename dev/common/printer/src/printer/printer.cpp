@@ -112,12 +112,10 @@ namespace printer {
 								out << "\033[0m";
 							}
 
-							if (foreground_color_id > 0) {
+							if (foreground_color_id > 0)
 								out << "\033[" + std::to_string(foreground_color_id) + "m";
-							}
-							if (background_color_id > 0) {
+							if (background_color_id > 0)
 								out << "\033[" + std::to_string(background_color_id) + "m";
-							}
 
 							out << content.str;
 						}

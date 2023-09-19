@@ -9,13 +9,9 @@ namespace compiler {
 		RIFT_ASSERT(!dprint or out != nullptr, "out cannot by nullptr when dprint is true");
 		std::ostream& out_ref = *out;
 
-		if (pst_map.contains(path)) {
-			return;
-		}
+		if (pst_map.contains(path)) return;
 
-		if (dprint) {
-			out_ref << "Parsing new file: `" << path.strView() << "`\n";
-		}
+		if (dprint) out_ref << "Parsing new file: `" << path.strView() << "`\n";
 
 		pst_map.put(path, std::move(pst::parse(path)));
 		pst::PST& new_pst = pst_map[path];

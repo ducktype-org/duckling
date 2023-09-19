@@ -62,9 +62,7 @@ namespace operation {
 		Env env{};
 
 
-		for (i32 i = 0; i < cons.input.size(); i++) {
-			env.put(cons.input[i], args[i]);
-		}
+		for (i32 i = 0; i < cons.input.size(); i++) env.put(cons.input[i], args[i]);
 
 		for (const auto& con : cons.virtual_parent_cons) {
 			exec::CTV member_ctv = exec::getMember(ctv, con.member, ctv.type.getType());
@@ -78,9 +76,7 @@ namespace operation {
 
 			std::vector<exec::CTV> tmp_args{ ctv_member };
 
-			for (auto s : op.args) {
-				tmp_args.push_back(env[s]);
-			}
+			for (auto s : op.args) tmp_args.push_back(env[s]);
 			op.operation(tmp_args);
 		}
 

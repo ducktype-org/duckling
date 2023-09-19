@@ -348,9 +348,8 @@ private:
 		std::sort(begin_offsets.begin(), begin_offsets.end());
 		std::sort(end_offsets.begin(), end_offsets.end());
 
-		for (usize i = 0; i < begin_offsets.size(); i++) {
+		for (usize i = 0; i < begin_offsets.size(); i++)
 			std::cerr << begin_offsets[i] << " " << end_offsets[i] << std::endl;
-		}
 
 		assert(begin_offsets[0] == 0, "First member's memory doesn't align with the class start");
 		for (usize i = 1; i < begin_offsets.size(); i++) {
@@ -446,16 +445,14 @@ private:
 		get_vtable_ptr_offset(A, { C, D }, begin_offsets, end_offsets);
 		get_vtable_ptr_offset(A, { B, D }, begin_offsets, end_offsets);
 
-		for (usize i = 0; i < begin_offsets.size(); i++) {
+		for (usize i = 0; i < begin_offsets.size(); i++)
 			std::cout << begin_offsets[i] << " " << end_offsets[i] << std::endl;
-		}
 
 		std::sort(begin_offsets.begin(), begin_offsets.end());
 		std::sort(end_offsets.begin(), end_offsets.end());
 
-		for (usize i = 0; i < begin_offsets.size(); i++) {
+		for (usize i = 0; i < begin_offsets.size(); i++)
 			std::cout << begin_offsets[i] << " " << end_offsets[i] << std::endl;
-		}
 
 		assert(begin_offsets[0] == 0, "First member's memory doesn't align with the class start");
 		for (usize i = 1; i < begin_offsets.size(); i++) {
@@ -651,21 +648,18 @@ private:
 					assert(last_offset < (ssize_t) member_data.offset,
 					       "Members weren't sorted (case 1)");
 				}
-			} else {
-				if (member_data.last_virtual_ancestor.has_value()) {
-					if (member_data.last_virtual_ancestor.value()
-					    == last_virtual_ancestor.value()) {
-						assert(member_data.offset > last_offset, "Members weren't sorted (case 2)");
-					} else {
-						auto last_va = last_virtual_ancestor.value();
-						auto this_va = member_data.last_virtual_ancestor.value();
-						assert(A.getVirtualAncestorOffset(last_va)
-						           < A.getVirtualAncestorOffset(this_va),
-						       "Members weren't sorted (case 3)");
-					}
+			} else if (member_data.last_virtual_ancestor.has_value()) {
+				if (member_data.last_virtual_ancestor.value() == last_virtual_ancestor.value()) {
+					assert(member_data.offset > last_offset, "Members weren't sorted (case 2)");
 				} else {
-					fail("Members weren't sorted (case 4)");
+					auto last_va = last_virtual_ancestor.value();
+					auto this_va = member_data.last_virtual_ancestor.value();
+					assert(A.getVirtualAncestorOffset(last_va)
+					           < A.getVirtualAncestorOffset(this_va),
+					       "Members weren't sorted (case 3)");
 				}
+			} else {
+				fail("Members weren't sorted (case 4)");
 			}
 			last_offset           = (ssize_t) member_data.offset;
 			last_virtual_ancestor = member_data.last_virtual_ancestor;
@@ -687,27 +681,24 @@ private:
 						       "Ancestors weren't sorted (case 2)");
 					}
 				}
-			} else {
-				if (ancestor_data.last_virtual_ancestor.has_value()) {
-					if (ancestor_data.last_virtual_ancestor.value()
-					    == last_virtual_ancestor.value()) {
-						if (last_offset == ancestor_data.offset) {
-							assert(last_size > ancestor_data.info.getSize(),
-							       "Ancestors weren't sorted (case 3)");
-						} else {
-							assert(ancestor_data.offset >= last_offset,
-							       "Ancestors weren't sorted (case 4)");
-						}
+			} else if (ancestor_data.last_virtual_ancestor.has_value()) {
+				if (ancestor_data.last_virtual_ancestor.value() == last_virtual_ancestor.value()) {
+					if (last_offset == ancestor_data.offset) {
+						assert(last_size > ancestor_data.info.getSize(),
+						       "Ancestors weren't sorted (case 3)");
 					} else {
-						auto last_va = last_virtual_ancestor.value();
-						auto this_va = ancestor_data.last_virtual_ancestor.value();
-						assert(A.getVirtualAncestorOffset(last_va)
-						           < A.getVirtualAncestorOffset(this_va),
-						       "Ancestors weren't sorted (case 5)");
+						assert(ancestor_data.offset >= last_offset,
+						       "Ancestors weren't sorted (case 4)");
 					}
 				} else {
-					fail("Ancestors weren't sorted (case 6)");
+					auto last_va = last_virtual_ancestor.value();
+					auto this_va = ancestor_data.last_virtual_ancestor.value();
+					assert(A.getVirtualAncestorOffset(last_va)
+					           < A.getVirtualAncestorOffset(this_va),
+					       "Ancestors weren't sorted (case 5)");
 				}
+			} else {
+				fail("Ancestors weren't sorted (case 6)");
 			}
 			last_offset           = (ssize_t) ancestor_data.offset;
 			last_virtual_ancestor = ancestor_data.last_virtual_ancestor;

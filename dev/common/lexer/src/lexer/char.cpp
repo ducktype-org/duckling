@@ -61,9 +61,7 @@ namespace lexer {
 	std::string Char::rawStr() const {
 		std::string out;
 		out.reserve(uint8_t(size));
-		for (usize i = 0; i < uint8_t(size); i++) {
-			out += (char) (*(raw_begin + i));
-		}
+		for (usize i = 0; i < uint8_t(size); i++) out += (char) (*(raw_begin + i));
 		return out;
 	}
 
@@ -201,31 +199,19 @@ namespace lexer {
 	constexpr std::array<Char::Type, ASCII_LENGTH> makeCharTable() {
 		std::array<Char::Type, ASCII_LENGTH> out = {};
 
-		for (usize i = 0; i < ASCII_LENGTH; i++) {
-			out[i] = Char::Illegal;
-		}
-		for (usize i = 'a'; i <= 'z'; i++) {
-			out[i] = Char::Character;
-		}
-		for (usize i = 'A'; i <= 'Z'; i++) {
-			out[i] = Char::Character;
-		}
-		for (usize i = '0'; i <= '9'; i++) {
-			out[i] = Char::Digit;
-		}
+		for (usize i = 0; i < ASCII_LENGTH; i++) out[i] = Char::Illegal;
+		for (usize i = 'a'; i <= 'z'; i++) out[i] = Char::Character;
+		for (usize i = 'A'; i <= 'Z'; i++) out[i] = Char::Character;
+		for (usize i = '0'; i <= '9'; i++) out[i] = Char::Digit;
 		out['_'] = Char::Character;
 
 		// @TODO: this char is not perfect:
 		constexpr uchar specials[] = R"--("@#$'();[\]`{})--";
-		for (const auto& c : specials) {
-			out[c] = Char::Special;
-		}
+		for (const auto& c : specials) out[c] = Char::Special;
 
 		// @TODO: this char is not perfect:
 		constexpr uchar operators[] = R"--(!%&*+-^|~:/.,<=>?)--";
-		for (const auto& c : operators) {
-			out[c] = Char::Operator;
-		}
+		for (const auto& c : operators) out[c] = Char::Operator;
 
 		out[' ']  = Char::Whitespace;
 		out['\n'] = Char::Whitespace;
@@ -286,15 +272,14 @@ namespace lexer {
 				pos++;
 			}
 			usize size = 1;
-			if ((bytes[pos] & byte{ 0b10000000u }) == byte{ 0 }) {
+			if ((bytes[pos] & byte{ 0b10000000u }) == byte{ 0 })
 				size = 1;
-			} else if ((bytes[pos] & byte{ 0b00100000u }) == byte{ 0 }) {
+			else if ((bytes[pos] & byte{ 0b00100000u }) == byte{ 0 })
 				size = 2;
-			} else if ((bytes[pos] & byte{ 0b00010000u }) == byte{ 0 }) {
+			else if ((bytes[pos] & byte{ 0b00010000u }) == byte{ 0 })
 				size = 3;
-			} else if ((bytes[pos] & byte{ 0b00001000u }) == byte{ 0 }) {
+			else if ((bytes[pos] & byte{ 0b00001000u }) == byte{ 0 })
 				size = 4;
-			}
 
 			Char next;
 			next.ascii_value = ((bytes[pos] & byte{ 0b10000000u }) == byte{ 0 })

@@ -14,11 +14,10 @@ void print(const Tokens& tokens, std::ostream& out, const std::string& indent = 
 		out << indent;
 
 		out << "{\"value\" : ";
-		if (token.getValue().isGood()) {
+		if (token.getValue().isGood())
 			out << "\"" << token.getStrValue() << "\", ";
-		} else {
+		else
 			out << "\"<EMPTY>\", ";
-		}
 
 		out << R"("line": ")" << position.getLineNumber() << "\",";
 		out << R"("column": ")" << position.getColumn() << "\",";

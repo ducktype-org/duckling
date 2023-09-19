@@ -18,9 +18,7 @@ namespace vm {
 		RIFT_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
 		state = TypeMetadataState::Finalized;
 
-		for (auto id : types_ids) {
-			types[id].finalize();
-		}
+		for (auto id : types_ids) types[id].finalize();
 	}
 
 	TypeCRef TypeMetadata::getType(TypeId id) const {
@@ -32,11 +30,10 @@ namespace vm {
 	}
 
 	option<TypeCRef> TypeMetadata::getTypeByName(base::StrId name) const {
-		if (names_to_type.contains(name)) {
+		if (names_to_type.contains(name))
 			return getType(names_to_type[name]);
-		} else {
+		else
 			return none<TypeCRef>();
-		}
 	}
 
 }

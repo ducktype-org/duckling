@@ -53,9 +53,7 @@ namespace symtable {
 		// initial symbol:
 		auto append_res_first = initial->lookupMeAndParents(state, names[0]);
 
-		if (names.size() == 1) {
-			return { {}, append_res_first };
-		}
+		if (names.size() == 1) return { {}, append_res_first };
 
 		if (!append_res_first.isSingle()) {
 			// @TODO: error in state

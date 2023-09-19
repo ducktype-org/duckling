@@ -97,9 +97,7 @@ namespace vm {
 		requires(!IsCoreService<T>::value)
 		void disable() {
 			auto& service = get<T>();
-			if (service.has_value()) {
-				service.reset();
-			}
+			if (service.has_value()) service.reset();
 		}
 	};
 }

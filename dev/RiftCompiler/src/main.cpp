@@ -31,9 +31,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		std::cerr << "Got files (ignoring all other then first):\n";
-		for (const auto& file : config.file_names) {
-			std::cerr << file << "\n";
-		}
+		for (const auto& file : config.file_names) std::cerr << file << "\n";
 		std::cerr << "\n";
 
 		// we need file handler
@@ -43,9 +41,8 @@ int main(int argc, char* argv[]) {
 
 		compiler::CompilationHandler comp_handler;
 
-		for (const auto& file_name : config.file_names) {
+		for (const auto& file_name : config.file_names)
 			comp_handler.addFileRecursively(fs::FilePath(file_name), true, &out);
-		}
 
 		if (!config.was_output) {
 			std::cerr << out.str();

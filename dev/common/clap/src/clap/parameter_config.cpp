@@ -69,46 +69,29 @@ namespace clap {
 
 	std::string ParameterConfig::short_help_message() const {
 		std::stringstream builder;
-		if (!required_) {
-			builder << '[';
-		}
-		if (short_name_.has_value()) {
-			builder << '-' << short_name_.value();
-		}
-		if (long_name_.has_value() && !short_name_.has_value()) {
+		if (!required_) builder << '[';
+		if (short_name_.has_value()) builder << '-' << short_name_.value();
+		if (long_name_.has_value() && !short_name_.has_value())
 			builder << "--" << long_name_.value().str();
-		}
-		if (value_name_.has_value()) {
-			builder << ' ' << value_name_.value().str();
-		}
-		if (!required_) {
-			builder << ']';
-		}
+		if (value_name_.has_value()) builder << ' ' << value_name_.value().str();
+		if (!required_) builder << ']';
 		return builder.str();
 	}
 
 	std::string ParameterConfig::long_help_message() const {
 		std::stringstream builder;
 		builder << "\t";
-		if (short_name_.has_value()) {
-			builder << '-' << short_name_.value();
-		}
+		if (short_name_.has_value()) builder << '-' << short_name_.value();
 		if (long_name_.has_value()) {
-			if (short_name_.has_value()) {
-				builder << ", ";
-			}
+			if (short_name_.has_value()) builder << ", ";
 			builder << "--" << long_name_.value().str();
 		}
 		if (value_name_.has_value()) {
 			builder << " " << value_name_.value().str();
-			if (default_value_.has_value()) {
-				builder << "[= " << default_value_.value().str() << "]";
-			}
+			if (default_value_.has_value()) builder << "[= " << default_value_.value().str() << "]";
 		}
 		if (description_.has_value()) {
-			if (long_name_.has_value() || value_name_.has_value()) {
-				builder << "\n\t";
-			}
+			if (long_name_.has_value() || value_name_.has_value()) builder << "\n\t";
 			builder << "\t" << description_.value().str();
 		}
 
@@ -117,9 +100,7 @@ namespace clap {
 
 	base::StrId ParameterConfig::to_str_id() const {
 		auto x = get_long_name();
-		if (x.has_value()) {
-			return x.value();
-		}
+		if (x.has_value()) return x.value();
 		return base::StrId("" + get_short_name().value());
 	}
 }

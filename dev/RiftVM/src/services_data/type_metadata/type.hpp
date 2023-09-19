@@ -68,9 +68,7 @@ namespace vm {
 
 		template<class T>
 		option<const T&> get() const {
-			if (std::holds_alternative<T>(kind)) {
-				return some<const T&>(std::get<T>(kind));
-			}
+			if (std::holds_alternative<T>(kind)) return some<const T&>(std::get<T>(kind));
 			return none<const T&>();
 		}
 

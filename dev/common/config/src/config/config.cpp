@@ -32,9 +32,8 @@ namespace config {
 			for (i32 i = 0; i < options.options.size(); i++) {
 				long_options_map.put(options.options[i].long_version, i);
 
-				if (options.options[i].has_short) {
+				if (options.options[i].has_short)
 					short_options_map.put(options.options[i].short_version, i);
-				}
 			}
 		}
 
@@ -82,11 +81,10 @@ namespace config {
 					if (options.options[option_index].param_type == ParamType::Always) {
 						i++;
 						// @TODO: make decent error handling:
-						if (i >= arg_count) {
+						if (i >= arg_count)
 							throw base::Panic("Config", "No value provided for option");
-						} else {
+						else
 							option_values.put(option_index, arg_values[i]);
-						}
 					} else {
 						throw base::NotYetImplemented("Option ParamType different then Always");
 					}
@@ -118,9 +116,7 @@ namespace config {
 		std::vector<base::RawView> out;
 
 		// we skip first because its a program name
-		for (usize i = 1; i < args.argc; i++) {
-			out.emplace_back(args.argv[i]);
-		}
+		for (usize i = 1; i < args.argc; i++) out.emplace_back(args.argv[i]);
 
 		return out;
 	}

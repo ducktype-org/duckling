@@ -32,9 +32,7 @@ namespace base {
 		}
 
 		constexpr char* copy_n(const char* cs, usize n, char* p) {
-			for (usize i = 0; i < n; i++) {
-				*(p + i) = *(cs + i);
-			}
+			for (usize i = 0; i < n; i++) *(p + i) = *(cs + i);
 			return p + n;
 		}
 

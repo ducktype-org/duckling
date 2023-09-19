@@ -38,9 +38,8 @@ namespace exec {
 	inline exec::CTV getMember(exec::CTV ctv, symtable::SymbolId symbol, ts::ClassInfo class_info) {
 		ts::MemberInfo member = class_info.getMemberInfo(symbol);
 
-		if (member.last_virtual_ancestor.has_value()) {
+		if (member.last_virtual_ancestor.has_value())
 			return getVirtualMember(ctv, class_info, symbol);
-		}
 		return getMemberNonVirtual(ctv, symbol);
 	}
 
@@ -64,9 +63,8 @@ namespace exec {
 
 	inline exec::CTV getMember(exec::CTV ctv, const ts::MemberInfo& member,
 	                           ts::ClassInfo class_info) {
-		if (member.last_virtual_ancestor.has_value()) {
+		if (member.last_virtual_ancestor.has_value())
 			return getVirtualMember(ctv, class_info, member);
-		}
 		return getMemberNonVirtual(ctv, member);
 	}
 }

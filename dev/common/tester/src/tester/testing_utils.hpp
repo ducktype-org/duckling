@@ -3,9 +3,7 @@
 
 namespace testing_utils {
 	inline i32 nextChar(std::string_view s, i32 i) {
-		while (i < s.size() && (s[i] == ' ' || s[i] == '\n' || s[i] == '\t')) {
-			i++;
-		}
+		while (i < s.size() && (s[i] == ' ' || s[i] == '\n' || s[i] == '\t')) i++;
 
 		// Skipping trailing commas
 		if (i < s.size() && s[i] == ',') {

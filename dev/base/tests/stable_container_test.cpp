@@ -45,9 +45,7 @@ private:
 		auto c_ref = maybe_c_ref.expect("No value");
 		assert(*c_ref == 2, "Bad stable list c_ref");
 
-		for (usize i = 0; i < 100; i++) {
-			list.pushBack(i);
-		}
+		for (usize i = 0; i < 100; i++) list.pushBack(i);
 
 		assert(list.getRef(102).has_value(), "No value where there should be");
 		assert(list.getRef(103).has_error(), "No error where there should be");
@@ -79,9 +77,7 @@ private:
 		*ref = 100;
 		assert(*ref == 100, "bad reference");
 
-		for (usize i = 0; i < 100; i++) {
-			list.pushBack(i);
-		}
+		for (usize i = 0; i < 100; i++) list.pushBack(i);
 
 		assert(*ref == 100, "bad reference");
 		*ref = 1'000;

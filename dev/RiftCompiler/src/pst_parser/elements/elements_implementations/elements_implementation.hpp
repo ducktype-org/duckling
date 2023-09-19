@@ -42,9 +42,7 @@ namespace pst {
 				}
 				if (expr_length == 0) {
 					if (state.empty()) {
-						if (end == Token::Type::Sentinel) {
-							break;
-						}
+						if (end == Token::Type::Sentinel) break;
 						state.fail(-1, "unexpected end to a list");
 						return false;
 					} else {
@@ -53,14 +51,11 @@ namespace pst {
 					}
 				}
 				cont.emplace_back(Expr::parse(state, expr_length, true));
-				if (state.ctokens().is(end)) {
-					break;
-				}
-				if (state.ctokens().is(sep)) {
+				if (state.ctokens().is(end)) break;
+				if (state.ctokens().is(sep))
 					state.tokens().skip();
-				} else {
+				else
 					state.err.logError(state.ctokens().peek().getPosition(), "separator expected");
-				}
 			}
 		return true;
 	}

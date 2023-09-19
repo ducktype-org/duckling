@@ -202,9 +202,7 @@ namespace ts::internal {
 
 	inline std::string showVector(const std::vector<TypeDesc<>>& types) {
 		std::string res = "(";
-		for (const auto& t : types) {
-			res += t.getType().show() + ",";
-		}
+		for (const auto& t : types) res += t.getType().show() + ",";
 		res += ")";
 
 		return res;
@@ -252,20 +250,15 @@ namespace ts::internal {
 			// the return type is coercible to the other return type and
 			// the other parameter types are coercible to the parameter types,
 			// similar to the rules of function subtyping.
-			if (to.getKind() != Kind::Function) {
-				return false;
-			}
+			if (to.getKind() != Kind::Function) return false;
 			const FunctionInfo toFunction = to;
 			if (!flags.contains(toFunction.getFlags())
 			    || parameterTypes.size() != toFunction.getParameterTypeList().size()) {
 				return false;
 			}
-			for (usize i = 0; i < parameterTypes.size(); i++) {
-				if (!isImplicitlyCoercible(toFunction.getParameterTypeList()[i],
-				                           parameterTypes[i])) {
+			for (usize i = 0; i < parameterTypes.size(); i++)
+				if (!isImplicitlyCoercible(toFunction.getParameterTypeList()[i], parameterTypes[i]))
 					return false;
-				}
-			}
 			return isImplicitlyCoercible(resultType, toFunction.getResultType());
 		}
 	};
@@ -334,9 +327,7 @@ namespace ts::internal {
 
 		[[nodiscard]]
 		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
-			if (to.getKind() != Kind::Optional) {
-				return false;
-			}
+			if (to.getKind() != Kind::Optional) return false;
 			const OptionalInfo toOptional = to;
 			return isImplicitlyCoercible(underlying_type, toOptional.getUnderlying());
 		}
@@ -365,18 +356,12 @@ namespace ts::internal {
 
 		[[nodiscard]]
 		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
-			if (to.getKind() != Kind::Tuple) {
-				return false;
-			}
+			if (to.getKind() != Kind::Tuple) return false;
 			const TupleInfo toTuple = to;
-			if (underlyingTypes.size() != toTuple.getUnderlyingTypes().size()) {
-				return false;
-			}
-			for (usize i = 0; i < underlyingTypes.size(); i++) {
-				if (!isImplicitlyCoercible(underlyingTypes[i], toTuple.getUnderlyingTypes()[i])) {
+			if (underlyingTypes.size() != toTuple.getUnderlyingTypes().size()) return false;
+			for (usize i = 0; i < underlyingTypes.size(); i++)
+				if (!isImplicitlyCoercible(underlyingTypes[i], toTuple.getUnderlyingTypes()[i]))
 					return false;
-				}
-			}
 			return true;
 		}
 	};
@@ -490,9 +475,7 @@ namespace ts::internal {
 
 		[[nodiscard]]
 		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
-			if (to.getKind() != Kind::Class) {
-				return false;
-			}
+			if (to.getKind() != Kind::Class) return false;
 			const ClassInfo toClass      = to;
 			AncestorInfo    ancestorInfo = getAncestorInfo(toClass);
 			return ancestorInfo.result_type == ResultType::Standard

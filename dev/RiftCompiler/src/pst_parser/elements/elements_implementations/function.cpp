@@ -9,12 +9,9 @@ namespace pst {
 		RIFT_ASSERT(state.ctokens().is(Keyword::Fun), position.genErrorMsg("bad statement choice"));
 
 		parseAll(state, Keyword::Fun, &out->name, &out->params);
-		if (state.tryEat(Operator::SingleArrow)) {
-			parseOne(state, &out->rets);
-		}
-		while (state.notEmpty() and !state.ctokens().is(Token::Type::CurlyGroup)) {
+		if (state.tryEat(Operator::SingleArrow)) parseOne(state, &out->rets);
+		while (state.notEmpty() and !state.ctokens().is(Token::Type::CurlyGroup))
 			state.tokens().skip();
-		}
 		parseOne(state, &out->body);
 		return out;
 	}

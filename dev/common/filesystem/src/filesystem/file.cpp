@@ -20,11 +20,10 @@ namespace fs {
 	FileContent FilePath::getContent() const {
 		if (to_content.contains(path)) {
 			auto weak_content = to_content[path];
-			if (weak_content.expired()) {
+			if (weak_content.expired())
 				to_content.erase(path);
-			} else {
+			else
 				return FileContent(weak_content.lock());
-			}
 		}
 
 		FileContent file_content(
@@ -53,9 +52,7 @@ namespace fs {
 
 	base::OwningView getSimpleFileContent(const std::string& file_name) {
 		std::ifstream file(file_name, std::ios::in | std::ios::binary);
-		if (file.fail()) {
-			throw base::LogicError(std::string("file does not exist: ") + file_name);
-		}
+		if (file.fail()) throw base::LogicError(std::string("file does not exist: ") + file_name);
 
 		file.unsetf(std::ios::skipws);
 

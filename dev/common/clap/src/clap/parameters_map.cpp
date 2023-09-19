@@ -3,9 +3,7 @@
 namespace clap {
 	option<usize> ParametersMap::to_id(base::StrId name) const {
 		auto it = long_names_to_id.find(name);
-		if (it == long_names_to_id.end()) {
-			return none<usize>();
-		}
+		if (it == long_names_to_id.end()) return none<usize>();
 		return it->second;
 	}
 
@@ -15,9 +13,7 @@ namespace clap {
 
 	option<usize> ParametersMap::to_id(char name) const {
 		auto it = short_names_to_id.find(name);
-		if (it == short_names_to_id.end()) {
-			return none<usize>();
-		}
+		if (it == short_names_to_id.end()) return none<usize>();
 		return it->second;
 	}
 
@@ -27,9 +23,7 @@ namespace clap {
 
 	option<base::RawView> ParametersMap::get(usize id) const {
 		auto it = parameters.find(id);
-		if (it == parameters.end()) {
-			return none<base::RawView>();
-		}
+		if (it == parameters.end()) return none<base::RawView>();
 		return it->second.view();
 	}
 

@@ -42,12 +42,10 @@ int main(int argc, char** argv) {
 		showVersion();
 	} else if (parameters.contains('s')) {
 		server(std::stoi(parameters.get('s').value().stdString()));
+	} else if (parameters.contains('f')) {
+		auto file = parameters.get('f').value().stdString();
+		cli(file);
 	} else {
-		if (parameters.contains('f')) {
-			auto file = parameters.get('f').value().stdString();
-			cli(file);
-		} else {
-			cli();
-		}
+		cli();
 	}
 }

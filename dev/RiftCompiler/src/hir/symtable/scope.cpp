@@ -22,9 +22,7 @@ namespace symtable {
 
 		LookupResult result{ {}, {} };
 
-		if (lookup_engaged) {
-			return result;
-		}
+		if (lookup_engaged) return result;
 		lookup_engaged = true;
 		defer(lookup_engaged = false);
 
@@ -40,9 +38,7 @@ namespace symtable {
 					result.children.push_back(std::move(wild_result).toNode(symbol));
 				}
 			} else {
-				if (symbol->getName() == name) {
-					result.leaves.push_back(symbol);
-				}
+				if (symbol->getName() == name) result.leaves.push_back(symbol);
 			}
 		}
 		return result;

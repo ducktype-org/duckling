@@ -34,29 +34,26 @@ namespace vm {
 	}
 
 	void Memory::returnBlockID(BlockId id) {
-		if (isUnowned(id)) {
+		if (isUnowned(id))
 			RIFT_PANIC("Tried returning an unowned id");
-		} else if (blocks[usize(id)].filled) {
+		else if (blocks[usize(id)].filled)
 			RIFT_PANIC("Tried returning an id of an unfreed block");
-		}
 		refCheck(id);
 	}
 
 	cpp::result<Block*, Memory::error> Memory::getBlock(BlockId id) {
-		if (isUnowned(id)) {
+		if (isUnowned(id))
 			return cpp::fail("Tried accessing unowned block");
-		} else if (!blocks[usize(id)].filled) {
+		else if (!blocks[usize(id)].filled)
 			return cpp::fail("Tried accessing uninitialized block");
-		}
 		return blocks[usize(id)].block;
 	}
 
 	void Memory::makeBlock(BlockId id, Block&& block) {
-		if (isUnowned(id)) {
+		if (isUnowned(id))
 			RIFT_PANIC("Tried creating an unowned block");
-		} else if (blocks[usize(id)].filled) {
+		else if (blocks[usize(id)].filled)
 			RIFT_PANIC("Tried creating an initialized block");
-		}
 		blocks[usize(id)].block = new Block(std::move(block));
 
 		// @TODO: this assumes every block is initialized
@@ -64,9 +61,7 @@ namespace vm {
 	}
 
 	void Memory::deleteBlock(BlockId id) {
-		if (isUnowned(id)) {
-			RIFT_PANIC("Tried deleting an unowned block");
-		}
+		if (isUnowned(id)) RIFT_PANIC("Tried deleting an unowned block");
 		blocks[usize(id)].filled = false;
 		delete blocks[usize(id)].block;
 
@@ -84,21 +79,18 @@ namespace vm {
 	}
 
 	void Memory::createRef(BlockId id) {
-		if (isUnowned(id)) {
+		if (isUnowned(id))
 			RIFT_PANIC("Tried creating a reference to an unowned block");
-		} else if (!blocks[usize(id)].filled) {
+		else if (!blocks[usize(id)].filled)
 			RIFT_PANIC("Tried creating a reference to an uninitialized block");
-		}
 		blocks[usize(id)].refcount++;
 	}
 
 	void Memory::destroyRef(BlockId id) {
-		if (id >= high_id || (!blocks[usize(id)].owned && !blocks[usize(id)].deleted)) {
+		if (id >= high_id || (!blocks[usize(id)].owned && !blocks[usize(id)].deleted))
 			RIFT_PANIC("Tried deleting a reference to an unowned block");
-		}
-		if (blocks[usize(id)].refcount == 0) {
+		if (blocks[usize(id)].refcount == 0)
 			RIFT_PANIC("Tried deleting a reference to an unreferenced block");
-		}
 		if (--blocks[usize(id)].refcount == 0 && blocks[usize(id)].deleted) {
 			blocks[usize(id)].deleted = true;
 			refCheck(id);

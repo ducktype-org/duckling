@@ -7,9 +7,7 @@ namespace vm::api {
 
 	template<class T>
 	result<T, ApiError> mapOrWrongResponse(const Response& response) {
-		if (std::holds_alternative<T>(response)) {
-			return std::get<T>(response);
-		}
+		if (std::holds_alternative<T>(response)) return std::get<T>(response);
 		return failure(WrongResponse{});
 	}
 

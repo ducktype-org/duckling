@@ -222,18 +222,16 @@ namespace rift_def {
 	Keyword strAsKeyword(base::StrId id) {
 		switch (keyword_mode) {
 		case KeywordMode::RiftSource:
-			if (rift_keyword_map.contains(id)) {
+			if (rift_keyword_map.contains(id))
 				return rift_keyword_map[id];
-			} else {
+			else
 				return Keyword::NotAKeyword;
-			}
 
 		case KeywordMode::RiftBC:
-			if (bc_keyword_map.contains(id)) {
+			if (bc_keyword_map.contains(id))
 				return bc_keyword_map[id];
-			} else {
+			else
 				return Keyword::NotAKeyword;
-			}
 
 		default:
 			RIFT_PANIC("Illegal keyword_mode");

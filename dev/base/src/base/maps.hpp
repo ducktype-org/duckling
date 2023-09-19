@@ -79,44 +79,31 @@ namespace base {
 		~VectorMap() = default;
 
 		DATA_T& operator[](const KEY_T key) {
-			if (usize(key) < map.size() and map.at(usize(key)).has_value()) {
+			if (usize(key) < map.size() and map.at(usize(key)).has_value())
 				return *map.at(usize(key));
-			} else {
+			else
 				throw base::LogicError("No value assigned to key in VectorMap");
-			}
 		}
 
 		void put(KEY_T key) {
-			if (usize(key) >= map.size()) {
-				map.resize(key + 1);
-			}
-			if (!map.at(usize(key)).has_value()) {
-				element_count++;
-			}
+			if (usize(key) >= map.size()) map.resize(key + 1);
+			if (!map.at(usize(key)).has_value()) element_count++;
 			map.at(usize(key)) = DATA_T();
 		}
 
 		void put(KEY_T key, DATA_T&& data)
 		requires is_move
 		{
-			if (usize(key) >= map.size()) {
-				map.resize(usize(key) + 1);
-			}
-			if (!map.at(usize(key)).has_value()) {
-				element_count++;
-			}
+			if (usize(key) >= map.size()) map.resize(usize(key) + 1);
+			if (!map.at(usize(key)).has_value()) element_count++;
 			map.at(usize(key)).emplace(std::move(data));
 		}
 
 		void put(KEY_T key, const DATA_T& data)
 		requires is_copy
 		{
-			if (usize(key) >= map.size()) {
-				map.resize(usize(key) + 1);
-			}
-			if (!map.at(usize(key)).has_value()) {
-				element_count++;
-			}
+			if (usize(key) >= map.size()) map.resize(usize(key) + 1);
+			if (!map.at(usize(key)).has_value()) element_count++;
 			map.at(usize(key)).emplace(data);
 		}
 

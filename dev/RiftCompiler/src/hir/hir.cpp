@@ -11,18 +11,14 @@
 namespace hir {
 
 	void HIR::addUnit(SourceUnit&& unit) {
-		if (unit.pst.getErrorState().fail()) {
-			unit.pst.getErrorState().dumpLog(std::cerr);
-		}
+		if (unit.pst.getErrorState().fail()) unit.pst.getErrorState().dumpLog(std::cerr);
 		sources.emplace_back(std::move(unit));
 	}
 
 	void HIR::doMagicStuff() {
 		// Fow now we make just single PST
 
-		if (sources.size() != 1) {
-			throw base::NotYetImplemented("Source count not equal to 1");
-		}
+		if (sources.size() != 1) throw base::NotYetImplemented("Source count not equal to 1");
 
 		// here we assume import where already done
 		// analyze symbols one by one bfs like

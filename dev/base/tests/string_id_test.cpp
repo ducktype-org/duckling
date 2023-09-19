@@ -43,9 +43,7 @@ private:
 		assert(map.notEmpty(), "Bad map size 2");
 		assert(map["abc"] == 5, "Bad map value 1");
 
-		for (auto& [v, k] : map) {
-			assert(map[v] == k, "Bad map value 2");
-		}
+		for (auto& [v, k] : map) assert(map[v] == k, "Bad map value 2");
 
 		assert(map.erase("abc"), "Map element not erased");
 		assert(map.empty(), "Map is not empty");

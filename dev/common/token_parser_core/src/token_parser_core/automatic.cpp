@@ -24,26 +24,21 @@ namespace tpc {
 	}
 
 	void parseOne(ParserState& state, Identifier* ident) {
-		if (!state.ctokens().peek().isIdentifier()) {
-			state.fail(-1, "expected identifier");
-		}
+		if (!state.ctokens().peek().isIdentifier()) state.fail(-1, "expected identifier");
 		ident->value = state.tokens().next().getValue();
 	}
 
 	void parseOne(ParserState& state, OptionalIdentifier* ident) {
-		if (state.ctokens().peek().isIdentifier()) {
-			ident->value = state.tokens().next().getValue();
-		}
+		if (state.ctokens().peek().isIdentifier()) ident->value = state.tokens().next().getValue();
 	}
 
 	void identifierDprint(base::StrId value, std::ostream& out) {
 		// @TODO: change Name to Identifier
 		out << "{\"Name\": ";
-		if (value.isBad()) {
+		if (value.isBad())
 			out << "\"BAD_NAME\"";
-		} else {
+		else
 			out << "\"" << value.strView() << "\"";
-		}
 		out << "}";
 	}
 
@@ -52,11 +47,10 @@ namespace tpc {
 	}
 
 	void nullAwareDprint(OptionalIdentifier ident, std::ostream& out) {
-		if (ident.value.has_value()) {
+		if (ident.value.has_value())
 			identifierDprint(ident.value.value(), out);
-		} else {
+		else
 			out << "\"<ANONYMOUS>\"";
-		}
 	}
 
 }

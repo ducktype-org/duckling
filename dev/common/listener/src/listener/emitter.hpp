@@ -27,9 +27,7 @@ public:
 	}
 
 	void fire(const Event& event) noexcept {
-		for (auto l : listeners) {
-			l->onNotify(event);
-		}
+		for (auto l : listeners) l->onNotify(event);
 	}
 
 	void processEvents() noexcept {

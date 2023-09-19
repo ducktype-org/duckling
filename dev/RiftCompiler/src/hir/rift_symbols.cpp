@@ -66,9 +66,7 @@ namespace hir {
 			std::cerr << "stmt...\n";
 			auto sym = makeSymbolFromStatement(scope, stmt.borrow());
 			// @TODO: error symbol
-			if (sym != nullptr) {
-				state.addSymbol(std::move(sym));
-			}
+			if (sym != nullptr) state.addSymbol(std::move(sym));
 		}
 	}
 
@@ -161,9 +159,7 @@ namespace hir {
 		lookup_result.dprint(std::cerr);
 		std::cerr << "\n";
 
-		if (!lookup_result.isSingle()) {
-			RIFT_PANIC("ambiguity in alias, @TODO: error in state");
-		}
+		if (!lookup_result.isSingle()) RIFT_PANIC("ambiguity in alias, @TODO: error in state");
 
 		auto as_single        = lookup_result.getAsSingle();
 		auto dealiased_single = symtable::deAliasSymbolChain(state, as_single);
@@ -218,9 +214,7 @@ namespace hir {
 		std::cerr << "\n";
 
 
-		if (!lookup_result.isSingle()) {
-			RIFT_PANIC("ambiguity in using, @TODO: error in state");
-		}
+		if (!lookup_result.isSingle()) RIFT_PANIC("ambiguity in using, @TODO: error in state");
 		auto as_single        = lookup_result.getAsSingle();
 		auto dealiased_single = symtable::deAliasSymbolChain(state, as_single);
 

@@ -2,9 +2,8 @@
 
 namespace exec {
 	CTV getVtable(ts::ClassInfo parent, ts::ClassInfo child) {
-		if (internal::vtables.contains({ parent, child })) {
+		if (internal::vtables.contains({ parent, child }))
 			return internal::vtables.at({ parent, child });
-		}
 
 		auto table = child.getVirtualAncestorTable(parent);
 
@@ -12,9 +11,7 @@ namespace exec {
 			= alloc_new(ts::IntegralInfo::create(64), parent.getVtableSize() * sizeof(usize) * 8);
 		//							^^^ TO UWZGLĘDNIA METODY WIRTUALNE
 
-		for (usize i = 0; i < table.size(); i++) {
-			ctv.getData<usize>()[i] = table[i].second;
-		}
+		for (usize i = 0; i < table.size(); i++) ctv.getData<usize>()[i] = table[i].second;
 
 		internal::vtables.insert({
 			{parent, child},

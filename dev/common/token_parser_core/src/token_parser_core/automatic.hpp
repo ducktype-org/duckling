@@ -48,10 +48,9 @@ namespace tpc {
 
 	template<class T>
 	void nullAwareDprint(const ParserRef<T>& ref, std::ostream& out) {
-		if (!ref) {
+		if (!ref)
 			out << "\"<nullptr>\"";
-		} else {
+		else
 			ref->dprint(out);
-		}
 	}
 }

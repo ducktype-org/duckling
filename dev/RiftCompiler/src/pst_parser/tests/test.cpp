@@ -51,9 +51,8 @@ private:
 		auto             correct_content = fs::getSimpleFileContent(json_file);
 		std::string_view correct_string  = correct_content.view().stringView();
 
-		if (no_errors) {
+		if (no_errors)
 			assert(pst.getErrorState().good(), "there are unexpected errors in rift source-code");
-		}
 
 		assert(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
 		// @TODO: Do we want to print some information about the differences or the bad output to a

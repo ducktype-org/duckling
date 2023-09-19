@@ -45,28 +45,26 @@ namespace pst {
 						Group{ type, makeRef<Expr>(state.ctokens().peek().getPosition()) });
 				}
 				state.goUpAndSkip();
-			} else {
-				if (state.ctokens().isOperator()) {
-					auto token = state.tokens().next();
-					out->elements.emplace_back(Operator({ token.getValue() }));
-				} else if (state.ctokens().peek().isIdentifier()) {
-					auto token = state.tokens().next();
-					out->elements.emplace_back(Identifier({ token.getValue() }));
-				} else if (state.ctokens().isKeyword()) {
-					// @TODO: check if keyword is legal in expr and proceed accordingly
-					auto token = state.tokens().next();
-					out->elements.emplace_back(KeywordValue({ token.getValue() }));
-				} else if (state.ctokens().peek().isNumLiteral()) {
-					auto token = state.tokens().next();
-					out->elements.emplace_back(NumLiteral({ token.getValue() }));
-				} else if (state.ctokens().is(Special::Semicolon)) {
-					break;
-				}
-				// @TODO: Add support for strings
-				else {
-					state.fail(-1, "unexpected token in expression after here");
-					break;
-				}
+			} else if (state.ctokens().isOperator()) {
+				auto token = state.tokens().next();
+				out->elements.emplace_back(Operator({ token.getValue() }));
+			} else if (state.ctokens().peek().isIdentifier()) {
+				auto token = state.tokens().next();
+				out->elements.emplace_back(Identifier({ token.getValue() }));
+			} else if (state.ctokens().isKeyword()) {
+				// @TODO: check if keyword is legal in expr and proceed accordingly
+				auto token = state.tokens().next();
+				out->elements.emplace_back(KeywordValue({ token.getValue() }));
+			} else if (state.ctokens().peek().isNumLiteral()) {
+				auto token = state.tokens().next();
+				out->elements.emplace_back(NumLiteral({ token.getValue() }));
+			} else if (state.ctokens().is(Special::Semicolon)) {
+				break;
+			}
+			// @TODO: Add support for strings
+			else {
+				state.fail(-1, "unexpected token in expression after here");
+				break;
 			}
 		}
 		if (exact_len and i != len) {

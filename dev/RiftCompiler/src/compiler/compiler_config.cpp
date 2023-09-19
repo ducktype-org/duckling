@@ -23,22 +23,17 @@ namespace compiler {
 
 		CompilerConfig out;
 
-		if (parsed_args.wasOption("help")) {
-			out.was_help = true;
-		}
+		if (parsed_args.wasOption("help")) out.was_help = true;
 
 		if (parsed_args.wasOption("output")) {
 			out.was_output = true;
 			out.output     = parsed_args.getValue<std::string>("output");
 		}
 
-		if (parsed_args.wasOption("intTest")) {
-			out.output = parsed_args.getValue<i32>("intTest");
-		}
+		if (parsed_args.wasOption("intTest")) out.output = parsed_args.getValue<i32>("intTest");
 
-		for (auto file : parsed_args.getNonOptionValues()) {
+		for (auto file : parsed_args.getNonOptionValues())
 			out.file_names.emplace_back(file.stdString());
-		}
 
 		return out;
 	}

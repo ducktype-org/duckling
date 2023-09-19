@@ -10,9 +10,8 @@ namespace vm {
 
 	result<base::borrow_ptr<VCPU>, api::ApiError> Supervisor::getProcess(PID pid) {
 		std::shared_lock lock(rwProcessTable);
-		if (!processTable.contains(pid)) {
+		if (!processTable.contains(pid))
 			return failure(api::ProcessError{ api::ProcessNotFound{} });
-		}
 		return processTable.at(pid).borrow_mut();
 	}
 
@@ -33,9 +32,8 @@ namespace vm {
 
 	result<void, api::ApiError> Supervisor::killProcess(PID pid) {
 		std::unique_lock lock(rwProcessTable);
-		if (!processTable.contains(pid)) {
+		if (!processTable.contains(pid))
 			return failure(api::ProcessError{ api::ProcessNotFound{} });
-		}
 
 		processTable.erase(pid);
 		return {};

@@ -41,16 +41,13 @@ namespace config {
 
 	void ConfigOptions::generateOptionDesc(printer::Message& in) {
 		for (auto& opt : options) {
-			if (opt.has_short) {
-				in.add({ "-", opt.short_version.stdString(), ", " });
-			}
+			if (opt.has_short) in.add({ "-", opt.short_version.stdString(), ", " });
 			in.add({ "--", opt.long_version.stdString() });
 			if (opt.has_param) {
-				if (opt.param_type == ParamType::Always) {
+				if (opt.param_type == ParamType::Always)
 					in.add(base::strConcat(" ", opt.value_parser->helperMess()));
-				} else if (opt.param_type == ParamType::Optional) {
+				else if (opt.param_type == ParamType::Optional)
 					in.add(base::strConcat(" [", opt.value_parser->helperMess(), "]"));
-				}
 			}
 			// @TODO: allow printer to perform column alignment and other control sequences in
 			// message

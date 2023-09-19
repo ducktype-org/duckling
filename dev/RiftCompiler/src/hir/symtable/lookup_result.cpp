@@ -85,11 +85,10 @@ namespace symtable {
 	void dprintSymbolChain(const symtable::SymbolChain& chain, std::ostream& out) {
 		out << "[";
 		for (auto sym : chain) {
-			if (sym != nullptr) {
+			if (sym != nullptr)
 				out << sym->getName().strView();
-			} else {
+			else
 				out << "BAD";
-			}
 			out << " . ";
 		}
 		out << "]";
@@ -99,14 +98,10 @@ namespace symtable {
 	void LookupResult::dprint(std::ostream& out) {
 		out << "Result { ";
 		out << "[";
-		for (auto leaf : leaves) {
-			out << leaf->getName().strView() << ", ";
-		}
+		for (auto leaf : leaves) out << leaf->getName().strView() << ", ";
 		out << "] , ";
 		out << "Children: [";
-		for (auto child : children) {
-			child.dprint(out);
-		}
+		for (auto child : children) child.dprint(out);
 		out << "]";
 		out << " }";
 	}

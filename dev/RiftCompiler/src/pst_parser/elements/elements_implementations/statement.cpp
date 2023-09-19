@@ -7,9 +7,7 @@ namespace pst {
 		template<class T>
 		ParserRef<T> parseStmt(RiftParserState& state, bool force_semi = false) {
 			ParserRef<T> out = T::parse(state);
-			if (force_semi or out->trailingSemicolon()) {
-				parseOne(state, Special::Semicolon);
-			}
+			if (force_semi or out->trailingSemicolon()) parseOne(state, Special::Semicolon);
 			return out;
 		}
 	}
@@ -60,12 +58,9 @@ namespace pst {
 			break;
 		}
 
-		if (as_special == Special::AtSign) {
-			return detail::parseStmt<Attribute>(state);
-		}
-		if (rift_def::keywordFlags(as_keyword).contains(rift_def::KeywordFlags::is_action)) {
+		if (as_special == Special::AtSign) return detail::parseStmt<Attribute>(state);
+		if (rift_def::keywordFlags(as_keyword).contains(rift_def::KeywordFlags::is_action))
 			return detail::parseStmt<Action>(state);
-		}
 
 		if (as_special == Special::Semicolon) {
 			state.fail(0, "unexpected special `;`");

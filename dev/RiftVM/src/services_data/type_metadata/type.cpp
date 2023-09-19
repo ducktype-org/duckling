@@ -70,9 +70,7 @@ namespace vm {
 
 		kind_type    = Kind::Variant;
 		auto variant = kind::Variant{};
-		for (auto type : variants_definitions) {
-			variant.alternatives.push_back(type);
-		}
+		for (auto type : variants_definitions) variant.alternatives.push_back(type);
 		kind = variant;
 	}
 
@@ -90,9 +88,7 @@ namespace vm {
 			// @TODO: better errors
 			RIFT_PANIC("Cyclic type dependency");
 		}
-		if (state == State::Finalized) {
-			return;
-		}
+		if (state == State::Finalized) return;
 		state = State::Finalizing;
 		defer(state = State::Finalized);
 
@@ -201,19 +197,13 @@ namespace vm {
 		auto getInnerType = [](const auto& t) { return t.inner_type; };
 
 		auto pointerOption = get<kind::Pointer>().map(getInnerType);
-		if (pointerOption.has_value()) {
-			return pointerOption.value();
-		}
+		if (pointerOption.has_value()) return pointerOption.value();
 
 		auto staticTableOption = get<kind::StaticTable>().map(getInnerType);
-		if (staticTableOption.has_value()) {
-			return staticTableOption.value();
-		}
+		if (staticTableOption.has_value()) return staticTableOption.value();
 
 		auto dynamicTableOption = get<kind::DynamicTable>().map(getInnerType);
-		if (dynamicTableOption.has_value()) {
-			return dynamicTableOption.value();
-		}
+		if (dynamicTableOption.has_value()) return dynamicTableOption.value();
 
 		return none<TypeCRef>();
 	}
@@ -227,18 +217,14 @@ namespace vm {
 	// struct
 	option<TypeCRef> Type::getFieldType(kind::Data::FieldId field_id) const {
 		return get<kind::Data>().flat_map([field_id](const kind::Data& data) {
-			if (field_id >= data.fields.size()) {
-				return none<TypeCRef>();
-			}
+			if (field_id >= data.fields.size()) return none<TypeCRef>();
 			return some<TypeCRef>(data.fields[field_id].type);
 		});
 	}
 
 	option<Offset> Type::getFieldOffset(kind::Data::FieldId field_id) const {
 		return get<kind::Data>().flat_map([field_id](const kind::Data& data) {
-			if (field_id >= data.fields.size()) {
-				return none<Offset>();
-			}
+			if (field_id >= data.fields.size()) return none<Offset>();
 			return some<Offset>(Offset(data.fields[field_id].offset));
 		});
 	}
@@ -283,9 +269,7 @@ namespace vm {
 
 	option<TypeCRef> Type::getNthVariantType(u64 variant_id) const {
 		return get<kind::Variant>().flat_map([variant_id](const kind::Variant& variant) {
-			if (variant_id >= variant.alternatives.size()) {
-				return none<TypeCRef>();
-			}
+			if (variant_id >= variant.alternatives.size()) return none<TypeCRef>();
 			return some<TypeCRef>(variant.alternatives[variant_id]);
 		});
 	}
@@ -298,9 +282,7 @@ namespace vm {
 
 	option<TypeCRef> Type::getNthParameterType(u64 parameter_id) const {
 		return get<kind::Function>().flat_map([parameter_id](const kind::Function& function) {
-			if (parameter_id >= function.parameters.size()) {
-				return none<TypeCRef>();
-			}
+			if (parameter_id >= function.parameters.size()) return none<TypeCRef>();
 			return some<TypeCRef>(function.parameters[parameter_id]);
 		});
 	}

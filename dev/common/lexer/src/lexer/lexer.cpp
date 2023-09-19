@@ -122,11 +122,10 @@ namespace lexer {
 			std::string message;
 			output.push_back(
 				Token::makeIdentifier(charArray_.composeRaw(begin, end), sourcePosition));
-			if (output.back().getType() == Token::Type::Identifier) {
+			if (output.back().getType() == Token::Type::Identifier)
 				addTokenMsg(begin, end, "identifier", printer::MessageType::DEBUG);
-			} else if (output.back().getType() == Token::Type::Keyword) {
+			else if (output.back().getType() == Token::Type::Keyword)
 				addTokenMsg(begin, end, "keyword", printer::MessageType::DEBUG);
-			}
 		} else if (isStringBegin()) {
 			usize end = string();
 			sourcePosition.setEnd(end + 1);
@@ -233,17 +232,13 @@ namespace lexer {
 	}
 
 	usize Lexer::oper() {
-		while (!isEOF() and peek().isOperator()) {
-			next();
-		}
+		while (!isEOF() and peek().isOperator()) next();
 		return where_ - 1;
 	}
 
 	usize Lexer::identifier() {
 		next();  // first char - character
-		while (!isEOF() and (peek().isCharacter() || peek().isDigit())) {
-			next();
-		}
+		while (!isEOF() and (peek().isCharacter() || peek().isDigit())) next();
 		return where_ - 1;
 	}
 
@@ -268,10 +263,8 @@ namespace lexer {
 		while (!peek().isEOF()) {
 			char curr = peek().asciiValue();
 
-			if (!peek().isDigit() && !('a' <= curr && curr <= 'f')
-			    && !('A' <= curr && curr <= 'F')) {
+			if (!peek().isDigit() && !('a' <= curr && curr <= 'f') && !('A' <= curr && curr <= 'F'))
 				break;
-			}
 
 			next();
 		}
@@ -296,9 +289,7 @@ namespace lexer {
 				} else if (!was_e && peek().isAsciiValue('e')) {
 					was_e   = true;
 					was_dot = true;
-					if (peek(1).isAsciiValue('+') or peek(1).isAsciiValue('-')) {
-						next();
-					}
+					if (peek(1).isAsciiValue('+') or peek(1).isAsciiValue('-')) next();
 				} else {
 					// @TODO: perhaps add some errors/skips here
 					break;
@@ -364,9 +355,7 @@ namespace lexer {
 
 	void init() {
 		static bool was_init = false;
-		if (was_init) {
-			return;
-		}
+		if (was_init) return;
 		// Put inits here
 		rift_def::key_spec_op::init();
 		was_init = true;

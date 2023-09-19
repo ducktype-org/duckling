@@ -14,16 +14,12 @@ namespace symtable {
 		kind(kind) {}
 
 	ts::TypeDesc<> Symbol::getType() {
-		if (!type.has_value()) {
-			calculateType();
-		}
+		if (!type.has_value()) calculateType();
 		return type.value();
 	}
 
 	ScopeRef Symbol::getLinkedLookupScope(hir::AnalysisState& state) {
-		if (!linked_lookup_scope.has_value()) {
-			calculateLinkedLookup(state);
-		}
+		if (!linked_lookup_scope.has_value()) calculateLinkedLookup(state);
 		return linked_lookup_scope.value();
 	}
 
@@ -38,16 +34,12 @@ namespace symtable {
 	}
 
 	SymbolChain Symbol::getUniqueDeAlias(hir::AnalysisState&) {
-		if (is_alias) {
-			RIFT_PANIC("de alias called on wildcard symbol not implementing deAlias");
-		}
+		if (is_alias) RIFT_PANIC("de alias called on wildcard symbol not implementing deAlias");
 		return { SymbolRef(this) };
 	}
 
 	ChainLookupResult Symbol::getDeAlias(hir::AnalysisState&) {
-		if (is_alias) {
-			RIFT_PANIC("de alias called on alias symbol not implementing deAlias");
-		}
+		if (is_alias) RIFT_PANIC("de alias called on alias symbol not implementing deAlias");
 		return {
 			{},
             { { SymbolRef(this) }, {} }

@@ -6,9 +6,8 @@
 #include <supervisor/supervisor.hpp>
 
 crow::response convertError(const vm::api::ApiError& apiError) {
-	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) {
+	if (std::holds_alternative<vm::api::WrongResponse>(apiError))
 		return crow::response(500, "Wrong response");
-	}
 	return crow::response(400,
 	                      std::visit(
 							  [](const auto& v) {

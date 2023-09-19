@@ -13,9 +13,7 @@ namespace pst {
 		state.goDown();
 
 		// @TODO: this may not work in case of compilation error
-		while (state.notEmpty()) {
-			out->statements.emplace_back(Stmt::parse(state));
-		}
+		while (state.notEmpty()) out->statements.emplace_back(Stmt::parse(state));
 
 		state.goUpAndSkip();
 		return out;

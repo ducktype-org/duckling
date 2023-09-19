@@ -14,9 +14,7 @@ namespace pst {
 
 		parseAll(state, Special::AtSign, &out->name);
 
-		if (state.ctokens().is(Token::Type::RoundGroup)) {
-			out->args = ArgList::parse(state);
-		}
+		if (state.ctokens().is(Token::Type::RoundGroup)) out->args = ArgList::parse(state);
 
 		return out;
 	}

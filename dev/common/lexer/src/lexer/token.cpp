@@ -34,9 +34,8 @@ namespace lexer {
 	}
 
 	Token Token::makeIdentifier(const base::RawView identifier, const SourcePosition& position) {
-		if (rift_def::strAsKeyword(base::StrId(identifier)) != Keyword::NotAKeyword) {
+		if (rift_def::strAsKeyword(base::StrId(identifier)) != Keyword::NotAKeyword)
 			return makeKeyword(identifier, position);
-		}
 		return { Type::Identifier, identifier, position };
 	}
 

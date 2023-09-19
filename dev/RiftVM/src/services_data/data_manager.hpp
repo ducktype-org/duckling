@@ -57,9 +57,7 @@ namespace vm {
 		requires(!IsCoreData<T>::value)
 		T& require() {
 			auto [data, references] = get<T>();
-			if (references == 0) {
-				data = some<T>(T());
-			}
+			if (references == 0) data = some<T>(T());
 			references++;
 			return data.value();
 		}
@@ -72,12 +70,8 @@ namespace vm {
 		requires(!IsCoreData<T>::value)
 		void release() {
 			auto [data, references] = get<T>();
-			if (references == 1) {
-				data = none<T>();
-			}
-			if (references > 0) {
-				references--;
-			}
+			if (references == 1) data = none<T>();
+			if (references > 0) references--;
 		}
 	};
 }

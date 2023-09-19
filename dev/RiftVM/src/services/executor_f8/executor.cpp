@@ -17,17 +17,12 @@ namespace vm {
 
 	void Executor::handleExecutionStrategy() {
 		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Paused) {
-			setStatus(api::Paused{});
-		}
+		if (execution_strategy == ExecutionStrategy::Paused) setStatus(api::Paused{});
 		pause_cv.wait(lock, [this] { return execution_strategy != ExecutionStrategy::Paused; });
 		setStatus(api::Running{});
-		if (execution_strategy == ExecutionStrategy::Stoped) {
-			throw KillCoreException{};
-		}
-		if (execution_strategy == ExecutionStrategy::StepByStep) {
+		if (execution_strategy == ExecutionStrategy::Stoped) throw KillCoreException{};
+		if (execution_strategy == ExecutionStrategy::StepByStep)
 			execution_strategy = ExecutionStrategy::Paused;
-		}
 	}
 
 	Frame Executor::internalInitFrame(option<Frame&> previous_frame, const FuncData& function,
@@ -218,9 +213,8 @@ namespace vm {
 				})
 
 				OP_CASE(cmov_l64_l64, {
-					if (FRAME_FLAGS(flag)) {
+					if (FRAME_FLAGS(flag))
 						derefStack<u64>(local_stack, arg0) = derefStack<u64>(local_stack, arg1);
-					}
 				})
 
 				OP_CASE(mov_l64_r0, { derefStack<u64>(local_stack, arg0) = FRAME_REGS(p64_reg_0); })
@@ -274,15 +268,11 @@ namespace vm {
 				OP_CASE(jmpRel_label, { FRAME(instruction_pointer) += arg0; })
 
 				OP_CASE(jmpRelIf_label, {
-					if (FRAME_FLAGS(flag)) {
-						FRAME(instruction_pointer) += arg0;
-					}
+					if (FRAME_FLAGS(flag)) FRAME(instruction_pointer) += arg0;
 				})
 
 				OP_CASE(jmpRelNotIf_label, {
-					if (!FRAME_FLAGS(flag)) {
-						FRAME(instruction_pointer) += arg0;
-					}
+					if (!FRAME_FLAGS(flag)) FRAME(instruction_pointer) += arg0;
 				})
 
 				OP_CASE(setPtrArg_lptr,
@@ -398,9 +388,8 @@ namespace vm {
 
 	void Executor::prestart() {
 		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped) {
+		if (execution_strategy == ExecutionStrategy::Stoped)
 			execution_strategy = ExecutionStrategy::Normal;
-		}
 	}
 
 	void Executor::stop() {
@@ -435,11 +424,10 @@ namespace vm {
 
 	bool Executor::step() {
 		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped) {
+		if (execution_strategy == ExecutionStrategy::Stoped)
 			return false;
-		} else if (execution_strategy != ExecutionStrategy::Paused) {
+		else if (execution_strategy != ExecutionStrategy::Paused)
 			return true;
-		}
 		execution_strategy = ExecutionStrategy::StepByStep;
 		pause_cv.notify_all();
 		return true;

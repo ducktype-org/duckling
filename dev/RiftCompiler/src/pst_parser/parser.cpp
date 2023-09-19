@@ -21,9 +21,7 @@ namespace pst {
 
 	void init() {
 		static bool was_init = false;
-		if (was_init) {
-			return;
-		}
+		if (was_init) return;
 		tpc::init();
 		lexer::init();
 		was_init = true;

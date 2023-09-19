@@ -7,33 +7,24 @@ namespace ts::internal {
 	bool checkIfNext(ClassInfo                                 class_info,
 	                 const std::vector<std::deque<ClassInfo>>& C3_linearisation_vector) {
 		for (const auto& q : C3_linearisation_vector) {
-			if (q.empty()) {
-				continue;
-			}
+			if (q.empty()) continue;
 			auto x = std::find(std::next(q.cbegin()), q.cend(), class_info);
-			if (x != q.cend()) {
-				return false;
-			}
+			if (x != q.cend()) return false;
 		}
 		return true;
 	}
 
 	void linearise(ClassInfo                           class_info,
 	               std::vector<std::deque<ClassInfo>>& C3_linearisation_vector) {
-		for (auto& q : C3_linearisation_vector) {
-			if (!q.empty() && q.front() == class_info) {
-				q.pop_front();
-			}
-		}
+		for (auto& q : C3_linearisation_vector)
+			if (!q.empty() && q.front() == class_info) q.pop_front();
 	}
 
 	std::optional<ClassInfo>
 		lineariseOneStep(std::vector<std::deque<ClassInfo>>& C3_linearisation_vector) {
 		bool are_all_empty = true;
 		for (auto& q : C3_linearisation_vector) {
-			if (q.empty()) {
-				continue;
-			}
+			if (q.empty()) continue;
 			are_all_empty = false;
 			if (checkIfNext(q.front(), C3_linearisation_vector)) {
 				ClassInfo result = q.front();
@@ -41,11 +32,10 @@ namespace ts::internal {
 				return result;
 			}
 		}
-		if (are_all_empty) {
+		if (are_all_empty)
 			return {};
-		} else {
+		else
 			throw C3LinearisationException();
-		}
 	}
 
 	std::deque<ClassInfo>
@@ -54,9 +44,7 @@ namespace ts::internal {
 		std::optional<ClassInfo> next_element;
 		do {
 			next_element = lineariseOneStep(C3_linearisation_vector);
-			if (next_element.has_value()) {
-				result.push_back(next_element.value());
-			}
+			if (next_element.has_value()) result.push_back(next_element.value());
 		} while (next_element.has_value());
 		return result;
 	}
@@ -72,19 +60,14 @@ namespace ts::internal {
 
 		// Initialise parents vector
 		std::vector<ClassInfo> parents;
-		for (auto [parent_id, inheritance_tag] : inheritance_classes) {
-			if (!inheritance_tag.is_virtual) {
-				parents.push_back(parent_id);
-			}
-		}
+		for (auto [parent_id, inheritance_tag] : inheritance_classes)
+			if (!inheritance_tag.is_virtual) parents.push_back(parent_id);
 
 		// Calculate C3 linearisation
 		std::vector<std::deque<ClassInfo>> C3_linearisation_vector;
 		for (auto [parent_id, inheritance_tag] : inheritance_classes) {
 			std::deque<ClassInfo> temp;
-			if (inheritance_tag.is_virtual) {
-				temp.push_back(parent_id);
-			}
+			if (inheritance_tag.is_virtual) temp.push_back(parent_id);
 			for (auto [ancestor_info, ancestor_offset] :
 			     ((const ClassInfoImpl*) parent_id.getPimpl())->virtual_layout) {
 				temp.push_back(ancestor_info);
@@ -93,11 +76,8 @@ namespace ts::internal {
 		}
 
 		std::deque<ClassInfo> temp;
-		for (auto [parent_id, inheritance_tag] : inheritance_classes) {
-			if (inheritance_tag.is_virtual) {
-				temp.push_back(parent_id);
-			}
-		}
+		for (auto [parent_id, inheritance_tag] : inheritance_classes)
+			if (inheritance_tag.is_virtual) temp.push_back(parent_id);
 		C3_linearisation_vector.push_back(std::move(temp));
 
 		std::deque<ClassInfo> linearised_ancestors = mergeLinearisation(C3_linearisation_vector);
@@ -141,9 +121,7 @@ namespace ts::internal {
 			reserved_space += desc.getType().getSize();
 		}
 
-		if (virt_method_count > 0 || !linearised_ancestors.empty()) {
-			reserved_space += POINTER_SIZE;
-		}
+		if (virt_method_count > 0 || !linearised_ancestors.empty()) reserved_space += POINTER_SIZE;
 
 		base_size = reserved_space;
 
@@ -180,16 +158,14 @@ namespace ts::internal {
 		// Fill indexes
 		for (usize i = 0; i < ancestors_data.size(); i++) {
 			AncestorData& ancestor_data = ancestors_data[i];
-			if (!ancestors_positions.contains(ancestor_data.info)) {
+			if (!ancestors_positions.contains(ancestor_data.info))
 				ancestors_positions.put(ancestor_data.info, {});
-			}
 			ancestors_positions[ancestor_data.info].push_back(i);
 		}
 		for (usize i = 0; i < members_data.size(); i++) {
 			MemberData& member_data = members_data[i];
-			if (!members_positions.contains(member_data.symbol)) {
+			if (!members_positions.contains(member_data.symbol))
 				members_positions.put(member_data.symbol, {});
-			}
 			members_positions[member_data.symbol].push_back(i);
 		}
 
@@ -211,27 +187,22 @@ namespace ts::internal {
 	const std::vector<AncestorData> ClassInfoImpl::basicParents() const {
 		std::vector<AncestorData> result;
 		result.reserve(basic_parents.size());
-		for (usize parent_position : basic_parents) {
+		for (usize parent_position : basic_parents)
 			result.push_back(ancestors_data[parent_position]);
-		}
 		return result;
 	}
 
 	const std::vector<ClassInfo> ClassInfoImpl::virtualAncestors() const {
 		std::vector<ClassInfo> virtual_ancestors;
 		virtual_ancestors.reserve(virtual_layout.size());
-		for (auto [id, offset] : virtual_layout) {
-			virtual_ancestors.push_back(id);
-		}
+		for (auto [id, offset] : virtual_layout) virtual_ancestors.push_back(id);
 		return virtual_ancestors;
 	}
 
 	const std::vector<MemberData> ClassInfoImpl::members() const {
 		std::vector<MemberData> result;
 		result.reserve(direct_members.size());
-		for (auto position : direct_members) {
-			result.push_back(members_data[position]);
-		}
+		for (auto position : direct_members) result.push_back(members_data[position]);
 		return result;
 	}
 
@@ -242,14 +213,10 @@ namespace ts::internal {
 	// Gets the offset of (and some data about) our member
 	// We return it in case of no ambiguity
 	MemberInfo ClassInfoImpl::getMemberInfo(symtable::SymbolId symbol) const {
-		if (!members_positions.contains(symbol)) {
-			return { .result_type = ResultType::NoResult };
-		}
+		if (!members_positions.contains(symbol)) return { .result_type = ResultType::NoResult };
 		const std::vector<usize>& possible_positions = members_positions[symbol];
 
-		if (possible_positions.size() > 1) {
-			return { .result_type = ResultType::Ambiguous };
-		}
+		if (possible_positions.size() > 1) return { .result_type = ResultType::Ambiguous };
 
 		const MemberData& data = members_data[possible_positions[0]];
 		if (data.last_virtual_ancestor.has_value()) {
@@ -272,11 +239,10 @@ namespace ts::internal {
 		AncestorInfo ancestor_info = getAncestorInfo(hint);
 
 		const ClassInfoImpl* ancestor_to_look_from;
-		if (hint.empty()) {
+		if (hint.empty())
 			ancestor_to_look_from = this;
-		} else {
+		else
 			ancestor_to_look_from = (const ClassInfoImpl*) hint.back().getPimpl();
-		}
 
 		MemberInfo member_info = ancestor_to_look_from->getMemberInfo(symbol);
 
@@ -293,15 +259,12 @@ namespace ts::internal {
 			};
 		}
 
-		if (!ancestors_positions.contains(ancestor_id)) {
+		if (!ancestors_positions.contains(ancestor_id))
 			return { .result_type = ResultType::NoResult };
-		}
 
 		const std::vector<usize>& possible_positions = ancestors_positions[ancestor_id];
 
-		if (possible_positions.size() > 1) {
-			return { .result_type = ResultType::Ambiguous };
-		}
+		if (possible_positions.size() > 1) return { .result_type = ResultType::Ambiguous };
 
 		const AncestorData& data = ancestors_data[possible_positions[0]];
 		if (data.last_virtual_ancestor.has_value()) {
@@ -331,11 +294,8 @@ namespace ts::internal {
 	}
 
 	usize ClassInfoImpl::getVirtualAncestorOffset(ClassInfo ancestor_id) const {
-		for (auto [checked_id, ancestor_offset] : virtual_layout) {
-			if (ancestor_id == checked_id) {
-				return ancestor_offset;
-			}
-		}
+		for (auto [checked_id, ancestor_offset] : virtual_layout)
+			if (ancestor_id == checked_id) return ancestor_offset;
 
 		throw base::LogicError("This is not a virtual parent of this class");
 	}
@@ -351,11 +311,10 @@ namespace ts::internal {
 		std::vector<std::pair<ClassInfo, usize>> result;
 
 		const ClassInfoImpl* parent_ptr;
-		if (!ancestor_ids.empty()) {
+		if (!ancestor_ids.empty())
 			parent_ptr = ((const ClassInfoImpl*) ancestor_ids.back().getPimpl());
-		} else {
+		else
 			parent_ptr = this;
-		}
 
 		auto  clueless_parent_info = getAncestorInfo(ancestor_ids);
 		usize parent_offset;
@@ -392,9 +351,8 @@ namespace ts::internal {
 	}
 
 	usize ClassInfoImpl::getVtablePtrOffset() const {
-		if (virtual_layout.empty() && virt_method_count == 0) {
+		if (virtual_layout.empty() && virt_method_count == 0)
 			throw base::LogicError("Tried to get a vtable of a class without one");
-		}
 		return base_size - POINTER_SIZE;
 	}
 
@@ -407,9 +365,7 @@ namespace ts::internal {
 		// @TODO: Maybe add error handling?
 		for (usize i = 0; i < virtual_layout.size(); i++) {
 			auto [info, offset] = virtual_layout[i];
-			if (info == ancestor) {
-				return i;
-			}
+			if (info == ancestor) return i;
 		}
 		throw base::LogicError(
 			"Tried to get a vtable position of someone who is not our virtual ancestor");

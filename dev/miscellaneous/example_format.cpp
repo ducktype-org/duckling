@@ -4,9 +4,7 @@
 
 namespace N {
 	i32 foo(i32 a, i32 b) {
-		for (i32 i = 0; i < b; i++) {
-			a++;
-		}
+		for (i32 i = 0; i < b; i++) a++;
 		return a + b;
 
 		switch (1 + 1) {

@@ -33,9 +33,7 @@ namespace tester {
 		if (!v) {
 			curr_global_res->success = false;
 			message(err);
-			if (critical) {
-				throw CritTestError();
-			}
+			if (critical) throw CritTestError();
 		}
 	}
 
@@ -67,9 +65,7 @@ namespace tester {
 
 			passed += curr_global_res->success;
 			failed += !curr_global_res->success;
-			if (curr_global_res->stop) {
-				break;
-			}
+			if (curr_global_res->stop) break;
 		}
 		auto end     = std::chrono::steady_clock::now();
 		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
@@ -121,9 +117,7 @@ namespace tester {
 							: printer::MessageContent("FAIL", printer::Color::RED),
 			 }
         });
-		for (auto& mess : res.output) {
-			console.add(mess);
-		}
+		for (auto& mess : res.output) console.add(mess);
 		if (res.output.empty()) {
 			// @TODO: .newLine or something similar
 			console.add({ { "" } });

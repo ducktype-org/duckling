@@ -19,13 +19,12 @@ namespace base {
 	template<typename VariantT, typename T, std::size_t index>
 	constexpr auto alternative_index_aux() {
 		static_assert(std::variant_size_v<VariantT> > index, "Type not found in variant");
-		if constexpr (index == std::variant_size_v<VariantT>) {
+		if constexpr (index == std::variant_size_v<VariantT>)
 			return index;
-		} else if constexpr (std::is_same_v<std::variant_alternative_t<index, VariantT>, T>) {
+		else if constexpr (std::is_same_v<std::variant_alternative_t<index, VariantT>, T>)
 			return index;
-		} else {
+		else
 			return alternative_index_aux<VariantT, T, index + 1>();
-		}
 	}
 
 	template<typename VariantT, typename T>

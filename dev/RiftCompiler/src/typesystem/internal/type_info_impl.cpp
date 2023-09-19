@@ -10,9 +10,7 @@ namespace ts::internal {
 
 	usize maxTypeVectorSizes(const std::vector<TypeDesc<>>& types) {
 		usize max = 0;
-		for (const auto& type : types) {
-			max = std::max(max, type.getType().getSize());
-		}
+		for (const auto& type : types) max = std::max(max, type.getType().getSize());
 		return max;
 	}
 
@@ -26,9 +24,7 @@ namespace ts::internal {
 
 	usize sumTypeVectorSizes(const std::vector<TypeDesc<>>& types) {
 		usize sum = 0;
-		for (const auto& type : types) {
-			sum += type.getType().getSize();
-		}
+		for (const auto& type : types) sum += type.getType().getSize();
 		return sum;
 	}
 
@@ -39,9 +35,8 @@ namespace ts::internal {
 		underlyingTypes(tuple_types),
 		offsets(tuple_types.size() + 1, 0) {
 		representation = "Tuple" + showVector(tuple_types);
-		for (i32 i = 0; i < underlyingTypes.size(); i++) {
+		for (i32 i = 0; i < underlyingTypes.size(); i++)
 			offsets[i + 1] = offsets[i] + underlyingTypes[i].getType().getSize();
-		}
 	}
 
 	std::pair<TypeDesc<>, usize> TupleInfoImpl::getMember(usize index) const {

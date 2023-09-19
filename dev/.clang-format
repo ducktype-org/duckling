@@ -236,7 +236,7 @@ ForEachMacros:
   - BOOST_FOREACH
 IfMacros:
   - KJ_IF_MAYBE
-RemoveBracesLLVM: false  # This will soon be deprecated
+RemoveBracesLLVM: true  # This will soon be deprecated
 StatementAttributeLikeMacros:
   - Q_EMIT
 StatementMacros:

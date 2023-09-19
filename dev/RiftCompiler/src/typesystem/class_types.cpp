@@ -12,21 +12,11 @@ namespace ts {
 	}
 
 	MemberInfo AncestorInfo::operator^(const MemberInfo& a) const {
-		if (result_type == ResultType::NoResult) {
-			return { .result_type = ResultType::NoResult };
-		}
-		if (a.result_type == ResultType::NoResult) {
-			return a;
-		}
-		if (result_type == ResultType::Ambiguous) {
-			return { .result_type = ResultType::Ambiguous };
-		}
-		if (a.result_type == ResultType::Ambiguous) {
-			return a;
-		}
-		if (a.result_type == ResultType::Virtual) {
-			return a;
-		}
+		if (result_type == ResultType::NoResult) return { .result_type = ResultType::NoResult };
+		if (a.result_type == ResultType::NoResult) return a;
+		if (result_type == ResultType::Ambiguous) return { .result_type = ResultType::Ambiguous };
+		if (a.result_type == ResultType::Ambiguous) return a;
+		if (a.result_type == ResultType::Virtual) return a;
 		MemberInfo result{ .last_virtual_ancestor = last_virtual_ancestor,
 			               .desc                  = a.desc,
 			               .start_offset          = a.start_offset.value() + start_offset.value(),
@@ -37,21 +27,11 @@ namespace ts {
 	}
 
 	AncestorInfo AncestorInfo::operator^(const AncestorInfo& a) const {
-		if (result_type == ResultType::NoResult) {
-			return *this;
-		}
-		if (a.result_type == ResultType::NoResult) {
-			return a;
-		}
-		if (result_type == ResultType::Ambiguous) {
-			return *this;
-		}
-		if (a.result_type == ResultType::Ambiguous) {
-			return a;
-		}
-		if (a.result_type == ResultType::Virtual) {
-			return a;
-		}
+		if (result_type == ResultType::NoResult) return *this;
+		if (a.result_type == ResultType::NoResult) return a;
+		if (result_type == ResultType::Ambiguous) return *this;
+		if (a.result_type == ResultType::Ambiguous) return a;
+		if (a.result_type == ResultType::Virtual) return a;
 		AncestorInfo result = *this;
 		result.start_offset.value() += a.start_offset.value();
 		result.end_offset.value() = a.end_offset.value() + start_offset.value();
@@ -60,16 +40,12 @@ namespace ts {
 	}
 
 	AncestorInfo& AncestorInfo::operator^=(const AncestorInfo& a) {
-		if (result_type == ResultType::NoResult) {
-			return *this;
-		}
+		if (result_type == ResultType::NoResult) return *this;
 		if (a.result_type == ResultType::NoResult) {
 			*this = a;
 			return *this;
 		}
-		if (result_type == ResultType::Ambiguous) {
-			return *this;
-		}
+		if (result_type == ResultType::Ambiguous) return *this;
 		if (a.result_type == ResultType::Ambiguous) {
 			*this = a;
 			return *this;

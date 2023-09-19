@@ -39,12 +39,9 @@ namespace vm {
 
 	result<api::Response, api::CoreOperationError> VCPU::run() {
 		std::unique_lock lock(rwGlobal);
-		if (coreThread) {
+		if (coreThread)
 			return failure(api::RunError{});  // @TODO: change to more verbose error handling
-		}
-		if (!loadedCode.has_value()) {
-			return failure(api::RunError{});
-		}
+		if (!loadedCode.has_value()) return failure(api::RunError{});
 		// @TODO: check VCPU status for loaded code
 		if (!uses_stdio) {
 			input_stream  = base::make_unique<std::stringstream>(std::stringstream());
@@ -67,11 +64,10 @@ namespace vm {
 	result<api::Response, api::CoreOperationError> VCPU::join() {
 		// @TODO: more verbose errors
 		// @TODO: check status
-		if (coreThread && coreThread->joinable()) {
+		if (coreThread && coreThread->joinable())
 			coreThread->join();
-		} else {
+		else
 			return failure(api::JoinError{});
-		}
 		return api::Response(api::response::Empty());
 	}
 
@@ -151,9 +147,8 @@ namespace vm {
 			}
 		}
 		api::ExecStatus execStatus = std::get<api::Executing>(status).exec_status;
-		if (std::holds_alternative<api::Running>(execStatus)) {
+		if (std::holds_alternative<api::Running>(execStatus))
 			return fail(api::OtherError("Cannot do memory request while program is running"));
-		}
 		result<api::Response, api::CoreOperationError> response;
 		variant_match(request) {
 			variant_case(api::request::TypeMetadata, type_request) {
@@ -200,8 +195,6 @@ namespace vm {
 	}
 
 	VCPU::~VCPU() {
-		if (coreThread) {
-			ignore(stop());
-		}
+		if (coreThread) ignore(stop());
 	}
 }
