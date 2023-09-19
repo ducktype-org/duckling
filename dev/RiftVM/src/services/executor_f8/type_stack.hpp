@@ -13,7 +13,7 @@ namespace vm {
 		Offset                byte_size;
 
 	public:
-		TypeSize         byteSize() const { return byte_size; }
+		TypeSize byteSize() const { return byte_size; }
 
 		/**
 		 * @brief Returns „lowest” (smallest) type at given position inside stack

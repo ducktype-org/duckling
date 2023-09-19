@@ -25,7 +25,7 @@ namespace operation {
 		symtable::SymbolId symbol;
 		ts::TypeInfo       type_info;
 
-		auto               operator<=>(const TypedSymbol& other) const = default;
+		auto operator<=>(const TypedSymbol& other) const = default;
 	};
 
 	// data Typed a = T TypeInfo a
@@ -89,8 +89,8 @@ namespace operation {
 
 	std::map<ts::TypeInfo, Constructor> full_constructors;
 
-	void                                addConstructor(ts::ClassInfo info, Constructor cons) {
-        full_constructors.try_emplace(info, cons);
+	void addConstructor(ts::ClassInfo info, Constructor cons) {
+		full_constructors.try_emplace(info, cons);
 	}
 
 	Constructor getConstructor(ts::ClassInfo info) {

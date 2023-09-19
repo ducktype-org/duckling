@@ -20,12 +20,12 @@ namespace ts {
 		SETUP_TYPE(TemplateInfo, TypeInfo)
 
 	public:
-		std::vector<TypeDesc<>>      getParameterList() const;
+		std::vector<TypeDesc<>> getParameterList() const;
 
 		external::TemplateSchematic* getTemplateSchematic() const;
 
 		// @TODO: Change return type to baked template when it's created.
-		TypeInfo                     bake(std::vector<exec::CTV>& arg_list) const;
+		TypeInfo bake(std::vector<exec::CTV>& arg_list) const;
 
 		CHECKED_CAST(TemplateInfo)
 

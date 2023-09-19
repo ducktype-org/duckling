@@ -40,25 +40,25 @@ namespace base {
 		using Ref  = StableListRef<Data>;
 		using CRef = StableListCRef<Data>;
 
-		constexpr usize       size() const noexcept { return data.size(); }
+		constexpr usize size() const noexcept { return data.size(); }
 
-		constexpr usize       empty() const noexcept { return data.empty(); }
+		constexpr usize empty() const noexcept { return data.empty(); }
 
-		constexpr usize       notEmpty() const noexcept { return !data.empty(); }
+		constexpr usize notEmpty() const noexcept { return !data.empty(); }
 
 		/**
 		 * @brief Quick, unsafe, constexpr access
 		 */
-		constexpr Data&       operator[](Key pos) { return *data.at(usize(pos)); }
+		constexpr Data& operator[](Key pos) { return *data.at(usize(pos)); }
 
 		/**
 		 * @brief Quick, unsafe, constexpr access
 		 */
 		constexpr const Data& operator[](Key pos) const { return *data.at(usize(pos)); }
 
-		option<Ref>           getRef(Key pos) noexcept {
-            if (usize(pos) >= size()) return none<Ref>();
-            return data[usize(pos)].borrow_mut();
+		option<Ref> getRef(Key pos) noexcept {
+			if (usize(pos) >= size()) return none<Ref>();
+			return data[usize(pos)].borrow_mut();
 		}
 
 		option<CRef> getCRef(Key pos) const noexcept {
@@ -78,7 +78,7 @@ namespace base {
 			return Key(data.size() - 1);
 		}
 
-		Ref  last() { return data.back().borrow_mut(); }
+		Ref last() { return data.back().borrow_mut(); }
 
 		CRef last() const { return data.back().borrow(); }
 

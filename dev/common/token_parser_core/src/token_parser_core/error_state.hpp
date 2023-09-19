@@ -10,8 +10,8 @@
 
 namespace tpc {
 	class ErrorState {
-		bool             failbit   = false;
-		usize            err_count = 0;
+		bool  failbit   = false;
+		usize err_count = 0;
 		// error list
 		// @TODO: add info about file for printing
 		printer::Console errorLog;
@@ -21,11 +21,11 @@ namespace tpc {
 		ErrorState(ErrorState&&)            = default;
 		ErrorState& operator=(ErrorState&&) = default;
 
-		void        setFail() { failbit = true; }
+		void setFail() { failbit = true; }
 
-		void        failAndLog(const lexer::SourcePosition& position, std::string_view message);
-		void        logError(const lexer::SourcePosition& position, std::string_view message);
-		void        dumpLog(std::ostream& stream = std::cerr) const;
+		void failAndLog(const lexer::SourcePosition& position, std::string_view message);
+		void logError(const lexer::SourcePosition& position, std::string_view message);
+		void dumpLog(std::ostream& stream = std::cerr) const;
 
 		[[nodiscard]]
 		bool good() const {

@@ -12,27 +12,27 @@
 namespace vm {
 	class VCPU: public Listener<api::VCPUStatus> {
 	private:
-		std::shared_mutex                            rwGlobal;
+		std::shared_mutex rwGlobal;
 
-		std::unique_ptr<std::thread>                 coreThread;
+		std::unique_ptr<std::thread> coreThread;
 
-		std::condition_variable_any                  status_cv;
-		std::shared_mutex                            rwStatus;
-		api::VCPUStatus                              status;
+		std::condition_variable_any status_cv;
+		std::shared_mutex           rwStatus;
+		api::VCPUStatus             status;
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
-		std::ios_base::Init                          cin_cout_init;
+		std::ios_base::Init cin_cout_init;
 
 		// @TODO: In future, never use stdio. Even CLI should use custom input/output and manage IO
 		// on its own. It will help with the need to support other concurrent processes and
 		// inserting CLI's commands
-		bool                                         uses_stdio;
-		std::mutex                                   input_mutex;
-		std::mutex                                   output_mutex;
-		base::unique_ptr<std::stringstream>          input_stream  = nullptr;
-		base::unique_ptr<std::stringstream>          output_stream = nullptr;
+		bool                                uses_stdio;
+		std::mutex                          input_mutex;
+		std::mutex                          output_mutex;
+		base::unique_ptr<std::stringstream> input_stream  = nullptr;
+		base::unique_ptr<std::stringstream> output_stream = nullptr;
 
-		option<vm::Code>                             loadedCode    = none<vm::Code>();
+		option<vm::Code> loadedCode = none<vm::Code>();
 
 		result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
 
@@ -45,7 +45,7 @@ namespace vm {
 		result<api::Response, api::CoreOperationError> input(const api::request::Input& request);
 		result<api::Response, api::CoreOperationError> output();
 
-		api::VCPUStatus                                getStatus();
+		api::VCPUStatus getStatus();
 
 
 		/**
@@ -57,8 +57,8 @@ namespace vm {
 		 *
 		 * This design is not perfect, and might be changed in the future.
 		 */
-		DataManager                                    dataManager;
-		ServiceManager                                 serviceManager;
+		DataManager    dataManager;
+		ServiceManager serviceManager;
 
 	public:
 		/**
@@ -68,12 +68,12 @@ namespace vm {
 		 *
 		 * Name of this method may be misleading
 		 */
-		void            onEvent(const api::VCPUStatus& event) noexcept override;
+		void onEvent(const api::VCPUStatus& event) noexcept override;
 
 		/**
 		 * Can be safely called from Execution Thread only
 		 */
-		DataManager&    getData();
+		DataManager& getData();
 
 		/**
 		 * Can be safely called from Execution Thread only

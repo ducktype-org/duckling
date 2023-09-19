@@ -27,7 +27,7 @@ namespace vm {
 	result<api::Response, api::LoadProgramError> VCPU::loadProgram(const fs::FilePath& path) {
 		std::unique_lock lock(rwGlobal);
 		// @TODO: this code should be improved in the future to not just return plain strings
-		auto             code_result = serviceManager.get<vm::Preprocessor>().getCode(path);
+		auto code_result = serviceManager.get<vm::Preprocessor>().getCode(path);
 
 		if (code_result.has_value()) {
 			loadedCode = code_result.value();

@@ -103,7 +103,7 @@ namespace ts::internal {
 		std::deque<ClassInfo> linearised_ancestors = mergeLinearisation(C3_linearisation_vector);
 
 		// Set ancestor order
-		usize                 reserved_space       = 0;
+		usize reserved_space = 0;
 		for (ClassInfo parent : parents) {
 			AncestorData data{ .info = parent, .offset = reserved_space };
 			basic_parents.push_back(ancestors_data.size());
@@ -194,7 +194,7 @@ namespace ts::internal {
 		}
 
 		// Set the TypeInfo size variable, previously set to 0
-		size           = reserved_space;
+		size = reserved_space;
 
 		// @TODO: classes should probably know their name.
 		representation = "Class: " + name.str();
@@ -269,7 +269,7 @@ namespace ts::internal {
 	// Uses the hint to look what inheritance path to go through
 	MemberInfo ClassInfoImpl::getMemberInfo(symtable::SymbolId     symbol,
 	                                        std::vector<ClassInfo> hint) const {
-		AncestorInfo         ancestor_info = getAncestorInfo(hint);
+		AncestorInfo ancestor_info = getAncestorInfo(hint);
 
 		const ClassInfoImpl* ancestor_to_look_from;
 		if (hint.empty()) {
@@ -324,8 +324,8 @@ namespace ts::internal {
 		const ClassInfoImpl* last_ancestor = this;
 
 		for (auto ancestor_id : ancestor_ids) {
-			result        ^= last_ancestor->getAncestorInfo(ancestor_id);
-			last_ancestor  = (const ClassInfoImpl*) ancestor_id.getPimpl();
+			result ^= last_ancestor->getAncestorInfo(ancestor_id);
+			last_ancestor = (const ClassInfoImpl*) ancestor_id.getPimpl();
 		}
 		return result;
 	}
@@ -350,7 +350,7 @@ namespace ts::internal {
 		// @TODO: Fix this function
 		std::vector<std::pair<ClassInfo, usize>> result;
 
-		const ClassInfoImpl*                     parent_ptr;
+		const ClassInfoImpl* parent_ptr;
 		if (!ancestor_ids.empty()) {
 			parent_ptr = ((const ClassInfoImpl*) ancestor_ids.back().getPimpl());
 		} else {

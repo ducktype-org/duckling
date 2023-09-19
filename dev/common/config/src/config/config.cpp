@@ -17,25 +17,25 @@ namespace config {
 		base::HashMap<base::RawView, usize> short_options_map;
 		ConfigOptions                       options;
 
-		std::set<usize>                     option_was;
-		base::Map<usize, base::RawView>     option_values;
+		std::set<usize>                 option_was;
+		base::Map<usize, base::RawView> option_values;
 
-		std::vector<base::RawView>          values;
+		std::vector<base::RawView> values;
 
-		void                                reset() {
-            long_options_map.clear();
-            short_options_map.clear();
-            option_was.clear();
-            option_values.clear();
-            values.clear();
+		void reset() {
+			long_options_map.clear();
+			short_options_map.clear();
+			option_was.clear();
+			option_values.clear();
+			values.clear();
 
-            for (i32 i = 0; i < options.options.size(); i++) {
-                long_options_map.put(options.options[i].long_version, i);
+			for (i32 i = 0; i < options.options.size(); i++) {
+				long_options_map.put(options.options[i].long_version, i);
 
-                if (options.options[i].has_short) {
-                    short_options_map.put(options.options[i].short_version, i);
-                }
-            }
+				if (options.options[i].has_short) {
+					short_options_map.put(options.options[i].short_version, i);
+				}
+			}
 		}
 
 	public:

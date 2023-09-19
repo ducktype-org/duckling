@@ -38,8 +38,8 @@ int main(int argc, char* argv[]) {
 
 		// we need file handler
 
-		std::stringstream            out;
-		fs::FilePath                 main_file(config.file_names[0]);
+		std::stringstream out;
+		fs::FilePath      main_file(config.file_names[0]);
 
 		compiler::CompilationHandler comp_handler;
 

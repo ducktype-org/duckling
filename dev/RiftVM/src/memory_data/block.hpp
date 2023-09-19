@@ -19,7 +19,7 @@ namespace vm {
 		const u64 arr_length = 0;
 		TypeCRef  element_type;
 
-		byte*     data;
+		byte* data;
 		// TODO: Add a way to determine which allocator created this block, as well as check if
 		// appropriate allocator destroys the block.
 
@@ -46,10 +46,10 @@ namespace vm {
 
 		using error = std::string;
 
-		Pointer                         BasePointer() const;
-		base::RawView                   rawPointer();
+		Pointer       BasePointer() const;
+		base::RawView rawPointer();
 
-		TypeCRef                        innerType() const;
+		TypeCRef innerType() const;
 
 		result<base::ModRawView, error> deref(TypeCRef u, u64 offset);
 		result<base::ModRawView, error> derefCheck(TypeCRef u, u64 offset);

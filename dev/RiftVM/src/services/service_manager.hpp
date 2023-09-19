@@ -20,12 +20,12 @@ namespace vm {
 			bool, std::is_same_v<Allocator, T> || std::is_same_v<StackAllocator, T>
 					  || std::is_same_v<Executor, T> || std::is_same_v<Preprocessor, T>>;
 
-		VCPU&                  vcpu;
+		VCPU& vcpu;
 
-		Allocator              allocator;
-		StackAllocator         stackAllocator;
-		Executor               executor;
-		Preprocessor           preprocessor;
+		Allocator      allocator;
+		StackAllocator stackAllocator;
+		Executor       executor;
+		Preprocessor   preprocessor;
 
 		DynamicServicesStorage dynamic_services;
 

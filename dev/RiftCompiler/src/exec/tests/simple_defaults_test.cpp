@@ -34,20 +34,20 @@ private:
 		ts::ClassInfo memberClass       = ts::ClassInfo::create(base::StrId("Member"), {});
 		auto          member_class_desc = ts::TypeDesc<>(memberClass);
 
-		auto          bool_desc         = ts::TypeDesc<>(ts::BoolInfo::create());
+		auto bool_desc = ts::TypeDesc<>(ts::BoolInfo::create());
 
-		usize         parent_counter    = 0;
-		exec::CTV     parent_result_ctv = exec::alloc_new(bool_desc, bool_desc.getType().getSize());
+		usize     parent_counter    = 0;
+		exec::CTV parent_result_ctv = exec::alloc_new(bool_desc, bool_desc.getType().getSize());
 		parent_result_ctv.getData<bool>().front() = true;
 
-		usize     member_counter                  = 0;
+		usize     member_counter    = 0;
 		exec::CTV member_result_ctv = exec::alloc_new(bool_desc, bool_desc.getType().getSize());
 		member_result_ctv.getData<bool>().front() = true;
 
-		auto fun                                  = [&parent_counter,
-                    &parent_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
-            parent_counter++;
-            return parent_result_ctv;
+		auto fun = [&parent_counter,
+		            &parent_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
+			parent_counter++;
+			return parent_result_ctv;
 		};
 		operation::TypedOperation parent_eq{
 			fun, ts::FunctionInfo::create({ parent_class_desc, parent_class_desc }, bool_desc)
@@ -73,11 +73,11 @@ private:
 			0);
 		ts::TypeDesc<> custom_class_desc(customClass);
 
-		auto           x      = operation::createDefaultEquality(customClass);
+		auto x = operation::createDefaultEquality(customClass);
 
-		exec::CTV      a      = exec::alloc_new(custom_class_desc, customClass.getSize());
+		exec::CTV a = exec::alloc_new(custom_class_desc, customClass.getSize());
 
-		exec::CTV      result = x({ a, a });
+		exec::CTV result = x({ a, a });
 		assert(
 			result.getData<bool>().front(),
 			"Parent comparison is supposed to return true but default comparison returned false");
@@ -86,7 +86,7 @@ private:
 
 		parent_result_ctv.getData<bool>().front() = false;
 
-		result                                    = x({ a, a });
+		result = x({ a, a });
 		assert(
 			!result.getData<bool>().front(),
 			"Parent comparison is supposed to return false but default comparison returned true");
@@ -96,7 +96,7 @@ private:
 		parent_result_ctv.getData<bool>().front() = true;
 		member_result_ctv.getData<bool>().front() = false;
 
-		result                                    = x({ a, a });
+		result = x({ a, a });
 		assert(
 			!result.getData<bool>().front(),
 			"Member comparison is supposed to return false but default comparison returned true");
@@ -106,7 +106,7 @@ private:
 		parent_result_ctv.getData<bool>().front() = true;
 		member_result_ctv.getData<bool>().front() = true;
 
-		result                                    = x({ a, a });
+		result = x({ a, a });
 		assert(result.getData<bool>().front(),
 		       "Both results were set back to true but returned value is still false");
 		assert(parent_counter == 3, "Wrong number of compares on the parent class");
@@ -120,20 +120,20 @@ private:
 		ts::ClassInfo memberClass       = ts::ClassInfo::create(base::StrId("member"), {});
 		auto          member_class_desc = ts::TypeDesc<>(memberClass);
 
-		auto          int_desc          = ts::TypeDesc<>(ts::IntegralInfo::create(8));
+		auto int_desc = ts::TypeDesc<>(ts::IntegralInfo::create(8));
 
-		usize         parent_counter    = 0;
-		exec::CTV     parent_result_ctv = exec::alloc_new(int_desc, int_desc.getType().getSize());
+		usize     parent_counter    = 0;
+		exec::CTV parent_result_ctv = exec::alloc_new(int_desc, int_desc.getType().getSize());
 		parent_result_ctv.getData<int8_t>().front() = 0;
 
-		usize     member_counter                    = 0;
+		usize     member_counter    = 0;
 		exec::CTV member_result_ctv = exec::alloc_new(int_desc, int_desc.getType().getSize());
 		member_result_ctv.getData<int8_t>().front() = 0;
 
-		auto fun                                    = [&parent_counter,
-                    &parent_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
-            parent_counter++;
-            return parent_result_ctv;
+		auto fun = [&parent_counter,
+		            &parent_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
+			parent_counter++;
+			return parent_result_ctv;
 		};
 		operation::TypedOperation parent_comp{
 			fun, ts::FunctionInfo::create({ parent_class_desc, parent_class_desc }, int_desc)
@@ -159,11 +159,11 @@ private:
 			0);
 		ts::TypeDesc<> custom_class_desc(customClass);
 
-		auto           x      = operation::createDefaultComparison(customClass);
+		auto x = operation::createDefaultComparison(customClass);
 
-		exec::CTV      a      = exec::alloc_new(custom_class_desc, customClass.getSize());
+		exec::CTV a = exec::alloc_new(custom_class_desc, customClass.getSize());
 
-		exec::CTV      result = x({ a, a });
+		exec::CTV result = x({ a, a });
 		assert(result.getData<int8_t>().front() == 0,
 		       "Parent comparison is supposed to return 0 but default comparison returned nonzero");
 		assert(parent_counter == 1, "Wrong number of compares on the parent class");
@@ -171,7 +171,7 @@ private:
 
 		parent_result_ctv.getData<int8_t>().front() = -1;
 
-		result                                      = x({ a, a });
+		result = x({ a, a });
 		assert(result.getData<int8_t>().front() == -1,
 		       "Parent comparison is supposed to return -1 but default comparison returned ???");
 		assert(parent_counter == 2, "Wrong number of compares on the parent class");
@@ -180,7 +180,7 @@ private:
 		parent_result_ctv.getData<int8_t>().front() = 0;
 		member_result_ctv.getData<int8_t>().front() = 1;
 
-		result                                      = x({ a, a });
+		result = x({ a, a });
 		assert(result.getData<int8_t>().front() == 1,
 		       "Member comparison is supposed to return 1 but default comparison returned ???");
 		assert(parent_counter == 2, "Wrong number of compares on the parent class");
@@ -189,7 +189,7 @@ private:
 		parent_result_ctv.getData<int8_t>().front() = 1;
 		member_result_ctv.getData<int8_t>().front() = 1;
 
-		result                                      = x({ a, a });
+		result = x({ a, a });
 		assert(result.getData<int8_t>().front() == 1,
 		       "Both results were set back to 1 but returned value is still ???");
 		assert(parent_counter == 2, "Wrong number of compares on the parent class");
@@ -208,14 +208,14 @@ private:
 		/*			INT TESTS 		*/
 
 
-		exec::CTV      int_ctv_a       = exec::alloc_new(int_desc, int_type.getSize());
-		exec::CTV      int_ctv_b       = exec::alloc_new(int_desc, int_type.getSize());
+		exec::CTV int_ctv_a = exec::alloc_new(int_desc, int_type.getSize());
+		exec::CTV int_ctv_b = exec::alloc_new(int_desc, int_type.getSize());
 
 		int_ctv_a.getData<T>().front() = 42;
 		int_ctv_b.getData<T>().front() = 27;
 
-		auto eq_res                    = operation::getDefault(operation::Defaultable::Equality,
-                                            int_type)({ int_ctv_a, int_ctv_b });
+		auto eq_res = operation::getDefault(operation::Defaultable::Equality,
+		                                    int_type)({ int_ctv_a, int_ctv_b });
 		assert(eq_res.getData<bool>().front() == false, "42 should not be equal to 27.");
 
 
@@ -265,21 +265,21 @@ private:
 
 		*/
 
-		ts::ClassInfo  class_A
+		ts::ClassInfo class_A
 			= ts::ClassInfo::create(base::StrId("A"),
 		                            {
 										{int_desc, symtable::SymbolId::next()}
         });
 
-		auto          b_member = symtable::SymbolId::next();
+		auto b_member = symtable::SymbolId::next();
 
-		ts::ClassInfo class_B  = ts::ClassInfo::create(
-            base::StrId("B"),
-            {
-                {int_desc, b_member}
+		ts::ClassInfo class_B = ts::ClassInfo::create(
+			base::StrId("B"),
+			{
+				{int_desc, b_member}
         },
-            { { class_A, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
-            0);
+			{ { class_A, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
+			0);
 
 		ts::TypeDesc<> class_A_desc{ class_A };
 		ts::TypeDesc<> class_B_desc{ class_B };
@@ -372,7 +372,7 @@ private:
 		assert(a1.getData<int8_t>().front() == 27, "a1.a != 27");
 
 
-		a1.getData<int8_t>().front()   = 20;
+		a1.getData<int8_t>().front() = 20;
 
 		auto int1                      = exec::alloc_new(int_desc, int_type.getSize());
 		int1.getData<int8_t>().front() = 80;
@@ -381,7 +381,7 @@ private:
 		int2.getData<int8_t>().front() = 10;
 
 
-		auto b2                        = exec::alloc_new(class_B_desc, class_B.getSize());
+		auto b2 = exec::alloc_new(class_B_desc, class_B.getSize());
 
 
 		std::cerr << "parameters:"
@@ -412,10 +412,10 @@ private:
 		        A			B
 		*/
 
-		ts::TypeDesc<>       int_desc(ts::IntegralInfo::create(8));
-		auto                 symbol_z    = symtable::SymbolId::next();
-		auto                 Z           = ts::ClassInfo::create(base::StrId("Z"),
-		                                                         {
+		ts::TypeDesc<> int_desc(ts::IntegralInfo::create(8));
+		auto           symbol_z = symtable::SymbolId::next();
+		auto           Z        = ts::ClassInfo::create(base::StrId("Z"),
+		                                                {
                                            {int_desc, symbol_z}
         });
 
@@ -503,7 +503,7 @@ private:
         }));
 		ts::TypeDesc<> A_desc(A);
 
-		auto           symbol1 = symtable::SymbolId::next();
+		auto symbol1 = symtable::SymbolId::next();
 
 		ts::ClassInfo  B(ts::ClassInfo::create(
             base::StrId("B"),
@@ -515,7 +515,7 @@ private:
 		ts::TypeDesc<> B_desc(B);
 
 
-		auto           symbol2 = symtable::SymbolId::next();
+		auto symbol2 = symtable::SymbolId::next();
 
 
 		ts::ClassInfo  C(ts::ClassInfo::create(
@@ -528,10 +528,10 @@ private:
 		ts::TypeDesc<> C_desc(C);
 
 
-		exec::CTV      C_ctv = exec::alloc_new(C, C.getSize());
+		exec::CTV C_ctv = exec::alloc_new(C, C.getSize());
 
 
-		namespace op         = operation;
+		namespace op = operation;
 
 		op::createAddDefault(A, operation::Defaultable::ConstructEmpty);
 		op::createAddDefault(B, operation::Defaultable::ConstructEmpty);
@@ -590,7 +590,7 @@ private:
 		auto ctv_c                       = getVirtualMember(C_ctv, C, symbol0);
 		ctv_c.getData<uint8_t>().front() = 30;
 
-		auto res4                        = fun({ B_ctv, B_ctv_2 });
+		auto res4 = fun({ B_ctv, B_ctv_2 });
 
 		assert(res4.getData<bool>()[0] == true, "Those ctvs should be equal now");
 	}
@@ -600,8 +600,8 @@ private:
 		auto tuple = ts::TupleInfo::create({ int8, int8 });
 
 
-		auto ctv   = exec::alloc_new(tuple);
-		auto ctv2  = exec::alloc_new(tuple);
+		auto ctv  = exec::alloc_new(tuple);
+		auto ctv2 = exec::alloc_new(tuple);
 
 
 		using enum operation::Defaultable;
@@ -616,9 +616,9 @@ private:
 		construct({ ctv2 });
 
 
-		const auto& equal     = operation::getDefault(operation::Defaultable::Equality, tuple);
+		const auto& equal = operation::getDefault(operation::Defaultable::Equality, tuple);
 
-		auto        res_equal = equal({ ctv, ctv });
+		auto res_equal = equal({ ctv, ctv });
 		assert(res_equal.getData<bool>().front() == true, "tuple value is not equal to itself.");
 
 		res_equal = equal({ ctv, ctv2 });
@@ -631,7 +631,7 @@ private:
 		int_37.getData<uint8_t>().front() = 37;
 
 
-		const auto& construct_full        = operation::getDefault(ConstructFull, tuple);
+		const auto& construct_full = operation::getDefault(ConstructFull, tuple);
 
 		assert(
 			construct_full.signature.getParameterTypeList().size() == 3,

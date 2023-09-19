@@ -33,18 +33,18 @@ namespace vm {
 	Frame Executor::internalInitFrame(option<Frame&> previous_frame, const FuncData& function,
 	                                  VLADataReference vla_ref) {
 		return Frame{
-			.previous            = previous_frame,
+			.previous = previous_frame,
  // .function = function,
 			.bc                  = function.bc,
 			.continue_execution  = true,
 			.instruction_pointer = 0,
 
-			.regs                = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = memory.nullPtr() },
-			.flags               = FlagData{ .flag = false },
-			.ret_val             = 0,
-			.next_args           = { 0, memory.nullPtr() },
+			.regs      = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = memory.nullPtr() },
+			.flags     = FlagData{ .flag = false },
+			.ret_val   = 0,
+			.next_args = { 0, memory.nullPtr() },
 
-			.vla_data_reference  = vla_ref,
+			.vla_data_reference = vla_ref,
 		};
 	}
 
@@ -71,8 +71,8 @@ namespace vm {
 	// [rets][args][locals][temp] + memcpy between callee and caller
 
 	result<base::ModRawView, std::string> Executor::internalDerefPointer(Pointer pointer) {
-		auto block_id     = pointer.getBlock();
-		auto offset       = pointer.getOffset();
+		auto block_id = pointer.getBlock();
+		auto offset   = pointer.getOffset();
 
 		auto block_result = memory.getBlock(block_id);
 		if (block_result.has_error()) {

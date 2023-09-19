@@ -23,23 +23,23 @@ namespace symtable {
 	// using detail::SymbolList;
 
 	class SymbolData {
-		ScopeRef                              root_scope;
+		ScopeRef root_scope;
 
 		ScopesList                            scopes;
 		std::vector<base::unique_ptr<Symbol>> symbols;
 
-		usize                                 next_relative_position;
+		usize next_relative_position;
 
 	public:
 		SymbolData();
-		ScopeRef                 getRootScope();
-		ScopeRef                 newScope(ScopeRef parent);
-		ScopeRef                 newSubRootScope();
-		SymbolRef                newSymbol(base::unique_ptr<Symbol> symbol);
+		ScopeRef  getRootScope();
+		ScopeRef  newScope(ScopeRef parent);
+		ScopeRef  newSubRootScope();
+		SymbolRef newSymbol(base::unique_ptr<Symbol> symbol);
 
 		const decltype(symbols)& getSymbols() const;
 
-		usize                    symbolCount() const;
+		usize symbolCount() const;
 
 
 		// @TODO: add consts

@@ -32,9 +32,9 @@ namespace base {
 			return *this;
 		}
 
-		friend void     swap(unique_ptr<T>& first, unique_ptr<T>& second) { first.swap(second); }
+		friend void swap(unique_ptr<T>& first, unique_ptr<T>& second) { first.swap(second); }
 
-		borrow_ptr<T>   borrow_mut() noexcept { return borrow_ptr<T>(this->get()); }
+		borrow_ptr<T> borrow_mut() noexcept { return borrow_ptr<T>(this->get()); }
 
 		c_borrow_ptr<T> borrow() const noexcept { return c_borrow_ptr<T>(this->get()); }
 	};

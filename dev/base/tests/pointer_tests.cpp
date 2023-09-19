@@ -59,7 +59,7 @@ private:
 		sth1                             = std::move(n_ptr1);
 
 		// ownership check:
-		auto d_count                     = Derived::destructor_count;
+		auto d_count = Derived::destructor_count;
 		assert(Derived::destructor_count == d_count, "UB");
 
 		{

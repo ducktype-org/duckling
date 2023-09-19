@@ -42,15 +42,15 @@ private:
                                                        {desc_1, symbol0}
         });
 
-		auto          off     = id_3.getMemberInfo(symbol0);
+		auto off = id_3.getMemberInfo(symbol0);
 
 		assert(off.start_offset == 0 && off.end_offset == 0,
 		       "offsets of empty class should be zero");
 	}
 
 	void simple_pointer() {
-		ts::TypeDesc<>  desc_1(ts::ClassInfo::create(base::StrId("1"), {}));
-		ts::TypeDesc<>  desc_2(ts::ClassInfo::create(base::StrId("2"), {}));
+		ts::TypeDesc<> desc_1(ts::ClassInfo::create(base::StrId("1"), {}));
+		ts::TypeDesc<> desc_2(ts::ClassInfo::create(base::StrId("2"), {}));
 
 		ts::PointerInfo ptr_1  = ts::PointerInfo::create(desc_1);
 		ts::PointerInfo ptr_1_ = ts::PointerInfo::create(desc_1);
@@ -64,20 +64,20 @@ private:
 	}
 
 	void class_size() {
-		ts::TypeDesc<>  desc_1(ts::ClassInfo::create(base::StrId("1"), {}));
+		ts::TypeDesc<> desc_1(ts::ClassInfo::create(base::StrId("1"), {}));
 
 		ts::PointerInfo ptr_1 = ts::PointerInfo::create(desc_1);
 		ts::PointerInfo ptr_2 = ts::PointerInfo::create(desc_1);
 
-		ts::TypeDesc<>  ptr_desc_1(ptr_1);
-		ts::TypeDesc<>  ptr_desc_2(ptr_2);
+		ts::TypeDesc<> ptr_desc_1(ptr_1);
+		ts::TypeDesc<> ptr_desc_2(ptr_2);
 
-		auto            symbol0 = symtable::SymbolId::next();
-		auto            symbol1 = symtable::SymbolId::next();
-		ts::TypeDesc<>  desc_3(
-            ts::ClassInfo::create(base::StrId("3"),
-		                           {
-                                      {ptr_desc_1,  symbol0},
+		auto           symbol0 = symtable::SymbolId::next();
+		auto           symbol1 = symtable::SymbolId::next();
+		ts::TypeDesc<> desc_3(
+			ts::ClassInfo::create(base::StrId("3"),
+		                          {
+									  {ptr_desc_1,  symbol0},
                                       { ptr_desc_2, symbol1}
         }));
 
@@ -93,8 +93,8 @@ private:
 		ts::TypeDesc<> desc_0(ts::ClassInfo::create(base::StrId("0"), {}));
 		assert(desc_0.getType().getSize() == 0, "Empty class isn't empty");
 
-		auto          symbol0             = symtable::SymbolId::next();
-		auto          multiple_use_symbol = symtable::SymbolId::next();
+		auto symbol0             = symtable::SymbolId::next();
+		auto multiple_use_symbol = symtable::SymbolId::next();
 
 		ts::ClassInfo base_class
 			= ts::ClassInfo::create(base::StrId("base"),
@@ -144,7 +144,7 @@ private:
 
 		auto not_used_symbol = symtable::SymbolId::next();
 
-		res                  = inheriting_class.getMemberInfo(not_used_symbol);
+		res = inheriting_class.getMemberInfo(not_used_symbol);
 		assert(res.result_type == ts::ResultType::NoResult,
 		       "Found symbol that wasn't in the class");
 
@@ -171,10 +171,10 @@ private:
 	void optionals_emptiness() {
 		ts::TypeDesc<> desc_0(ts::ClassInfo::create(base::StrId("0"), {}));
 
-		auto           symbol0             = symtable::SymbolId::next();
-		auto           multiple_use_symbol = symtable::SymbolId::next();
+		auto symbol0             = symtable::SymbolId::next();
+		auto multiple_use_symbol = symtable::SymbolId::next();
 
-		ts::ClassInfo  base_class
+		ts::ClassInfo base_class
 			= ts::ClassInfo::create(base::StrId("base"),
 		                            {
 										{desc_0,  symbol0            },
@@ -191,7 +191,7 @@ private:
 
 		auto not_used_symbol = symtable::SymbolId::next();
 
-		auto res             = inheriting_class.getMemberInfo(not_used_symbol);
+		auto res = inheriting_class.getMemberInfo(not_used_symbol);
 		assert(res.result_type == ts::ResultType::NoResult,
 		       "Found symbol that wasn't in the class");
 		assert(!res.start_offset.has_value() && !res.end_offset.has_value() && !res.desc.has_value()
@@ -306,15 +306,15 @@ private:
 
 	void inheritance_offset_calculating() {
 		ts::TypeDesc<> raw_ptr_desc(ts::RawPointerInfo::create());
-		auto           symbol0       = symtable::SymbolId::next();
-		auto           symbol1       = symtable::SymbolId::next();
-		auto           symbol2       = symtable::SymbolId::next();
+		auto           symbol0 = symtable::SymbolId::next();
+		auto           symbol1 = symtable::SymbolId::next();
+		auto           symbol2 = symtable::SymbolId::next();
 
-		ts::ClassInfo  virtual_class = ts::ClassInfo::create(base::StrId("virtual"),
-		                                                     {
-                                                                {raw_ptr_desc, symbol0}
+		ts::ClassInfo virtual_class = ts::ClassInfo::create(base::StrId("virtual"),
+		                                                    {
+																{raw_ptr_desc, symbol0}
         });
-		ts::ClassInfo  parent_class  = ts::ClassInfo::create(
+		ts::ClassInfo parent_class  = ts::ClassInfo::create(
             base::StrId("parent_class"),
             {
                 {raw_ptr_desc, symbol1}
@@ -380,19 +380,19 @@ private:
 		auto           b = symtable::SymbolId::next();
 		auto           a = symtable::SymbolId::next();
 
-		ts::ClassInfo  F = ts::ClassInfo::create(base::StrId("F"),
-		                                         {
-                                                    {example_desc, f}
+		ts::ClassInfo F = ts::ClassInfo::create(base::StrId("F"),
+		                                        {
+													{example_desc, f}
         },
-		                                         {},
-                                                0);
-		ts::ClassInfo  E = ts::ClassInfo::create(
-            base::StrId("E"),
-            {
-                {example_desc, e}
+		                                        {},
+		                                        0);
+		ts::ClassInfo E = ts::ClassInfo::create(
+			base::StrId("E"),
+			{
+				{example_desc, e}
         },
-            { { F, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
-            0);
+			{ { F, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
+			0);
 		ts::ClassInfo D = ts::ClassInfo::create(
 			base::StrId("D"),
 			{
@@ -483,19 +483,19 @@ private:
 		auto           b = symtable::SymbolId::next();
 		auto           a = symtable::SymbolId::next();
 
-		ts::ClassInfo  D = ts::ClassInfo::create(base::StrId("D"),
-		                                         {
-                                                    {example_desc, d}
+		ts::ClassInfo D = ts::ClassInfo::create(base::StrId("D"),
+		                                        {
+													{example_desc, d}
         },
-		                                         {},
-                                                0);
-		ts::ClassInfo  C = ts::ClassInfo::create(
-            base::StrId("C"),
-            {
-                {example_desc, c}
+		                                        {},
+		                                        0);
+		ts::ClassInfo C = ts::ClassInfo::create(
+			base::StrId("C"),
+			{
+				{example_desc, c}
         },
-            { { D, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
-            0);
+			{ { D, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
+			0);
 		ts::ClassInfo B = ts::ClassInfo::create(
 			base::StrId("B"),
 			{
@@ -544,19 +544,19 @@ private:
 		auto           b = symtable::SymbolId::next();
 		auto           a = symtable::SymbolId::next();
 
-		ts::ClassInfo  G = ts::ClassInfo::create(base::StrId("G"),
-		                                         {
-                                                    {example_desc, g}
+		ts::ClassInfo G = ts::ClassInfo::create(base::StrId("G"),
+		                                        {
+													{example_desc, g}
         },
-		                                         {},
-                                                0);
-		ts::ClassInfo  F = ts::ClassInfo::create(
-            base::StrId("F"),
-            {
-                {example_desc, f}
+		                                        {},
+		                                        0);
+		ts::ClassInfo F = ts::ClassInfo::create(
+			base::StrId("F"),
+			{
+				{example_desc, f}
         },
-            { { G, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
-            0);
+			{ { G, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
+			0);
 		ts::ClassInfo E = ts::ClassInfo::create(base::StrId("E"),
 		                                        {
 													{example_desc, e}
@@ -734,19 +734,19 @@ private:
 		auto           b = symtable::SymbolId::next();
 		auto           a = symtable::SymbolId::next();
 
-		ts::ClassInfo  F = ts::ClassInfo::create(base::StrId("F"),
-		                                         {
-                                                    {example_desc, f}
+		ts::ClassInfo F = ts::ClassInfo::create(base::StrId("F"),
+		                                        {
+													{example_desc, f}
         },
-		                                         {},
-                                                0);
-		ts::ClassInfo  E = ts::ClassInfo::create(
-            base::StrId("E"),
-            {
-                {example_desc, e}
+		                                        {},
+		                                        0);
+		ts::ClassInfo E = ts::ClassInfo::create(
+			base::StrId("E"),
+			{
+				{example_desc, e}
         },
-            { { F, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
-            0);
+			{ { F, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
+			0);
 		ts::ClassInfo D = ts::ClassInfo::create(
 			base::StrId("D"),
 			{

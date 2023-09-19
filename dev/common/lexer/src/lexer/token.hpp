@@ -79,7 +79,7 @@ namespace lexer {
 		static Token makeSpecial(base::RawView identifier, const SourcePosition&);
 		static Token makeNumLiteral(base::RawView literal, const SourcePosition&);
 
-		virtual ~Token()          = default;
+		virtual ~Token() = default;
 
 		Token() noexcept          = default;
 		Token(const Token& other) = default;
@@ -125,7 +125,7 @@ namespace lexer {
 		[[nodiscard]]
 		bool isComment() const;
 		[[nodiscard]]
-		bool               isString() const;
+		bool isString() const;
 
 		[[nodiscard]] bool is(Type) const;
 		[[nodiscard]] bool is(Special) const;
@@ -139,7 +139,7 @@ namespace lexer {
 		SourcePosition getPosition() const;
 
 	private:
-		static Token   makeError(const SourcePosition&);
+		static Token makeError(const SourcePosition&);
 
 		Type           type = Type::Empty;
 		base::StrId    str_id;

@@ -29,9 +29,9 @@ private:
 			fs::FilePath a2(path("a_file.txt"));
 			fs::FilePath b1(path("b_file.txt"));
 
-			auto         a1_content = a1.getContent();
-			auto         a2_content = a1.getContent();
-			auto         b1_content = b1.getContent();
+			auto a1_content = a1.getContent();
+			auto a2_content = a1.getContent();
+			auto b1_content = b1.getContent();
 
 			assert(a1_content.view().getBegin() == a1.getContent().view().getBegin(),
 			       "a_file was read multiple times when it shouldn't");

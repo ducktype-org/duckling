@@ -19,10 +19,10 @@ namespace vm {
 		PID                                             next = 0;
 		std::unordered_map<PID, base::unique_ptr<VCPU>> processTable;
 
-		result<base::borrow_ptr<VCPU>, api::ApiError>   getProcess(PID pid);
+		result<base::borrow_ptr<VCPU>, api::ApiError> getProcess(PID pid);
 
 	public:
-		static Supervisor&                   get();
+		static Supervisor& get();
 
 		// Each of the following methods should synchronize access to the processTable, but should
 		// not synchronize usage of each of the processes. Each process synchronizes its resources

@@ -7,8 +7,8 @@
 
 namespace base {
 
-	StrId::ToDataType                     StrId::to_data_map;
-	StrId::ToIdType                       StrId::to_id_map;
+	StrId::ToDataType StrId::to_data_map;
+	StrId::ToIdType   StrId::to_id_map;
 
 	constexpr usize                       default_buffer_size = 32'768;
 	typedef std::vector<base::OwningView> BufferList;
@@ -17,12 +17,12 @@ namespace base {
 		BufferList buffer_list;
 
 		// remanding size of last buffer (equals default_buffer_size - next_pos)
-		usize      size_left        = 0;
+		usize size_left = 0;
 
 		// next free position in last buffer
-		usize      next_pos         = 0;
+		usize next_pos = 0;
 
-		bool       any_buffer_exits = false;
+		bool any_buffer_exits = false;
 	}
 
 	void newBuffer() {
@@ -74,7 +74,7 @@ namespace base {
 			actual_data = RawView(lastBuffer().getBegin() + next_pos, data.size());
 			std::memcpy(buffer_list.back().begin + next_pos, data.getBegin(), data.size());
 			size_left -= data.size();
-			next_pos  += data.size();
+			next_pos += data.size();
 		}
 
 		to_data_map.put(id, actual_data);

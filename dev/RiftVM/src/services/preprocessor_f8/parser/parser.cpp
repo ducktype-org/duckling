@@ -19,7 +19,7 @@
 namespace assemble {
 
 	i64 strIdToNum(base::StrId str) {
-		auto                   view = str.strView();
+		auto view = str.strView();
 
 		i64                    out;
 		std::from_chars_result res = std::from_chars(view.data(), view.data() + view.size(), out);
@@ -54,11 +54,11 @@ namespace assemble {
 		base::StrId name;
 		TypeSize    size;
 
-		void        dprint(std::ostream& out) const {
-            out << "primitive {\n";
-            out << "    name: " << name.strView() << "\n";
-            out << "    size: " << size << "\n";
-            out << "}";
+		void dprint(std::ostream& out) const {
+			out << "primitive {\n";
+			out << "    name: " << name.strView() << "\n";
+			out << "    size: " << size << "\n";
+			out << "}";
 		}
 	};
 
@@ -66,11 +66,11 @@ namespace assemble {
 		base::StrId name;
 		base::StrId inner;
 
-		void        dprint(std::ostream& out) const {
-            out << "pointer {\n";
-            out << "    name: " << name.strView() << "\n";
-            out << "    inner: " << inner.strView() << "\n";
-            out << "}";
+		void dprint(std::ostream& out) const {
+			out << "pointer {\n";
+			out << "    name: " << name.strView() << "\n";
+			out << "    inner: " << inner.strView() << "\n";
+			out << "}";
 		}
 	};
 
@@ -79,12 +79,12 @@ namespace assemble {
 		base::StrId inner;
 		TypeSize    table_size;
 
-		void        dprint(std::ostream& out) const {
-            out << "static_table {\n";
-            out << "    name: " << name.strView() << "\n";
-            out << "    inner: " << inner.strView() << "\n";
-            out << "    table_size: " << table_size << "\n";
-            out << "}";
+		void dprint(std::ostream& out) const {
+			out << "static_table {\n";
+			out << "    name: " << name.strView() << "\n";
+			out << "    inner: " << inner.strView() << "\n";
+			out << "    table_size: " << table_size << "\n";
+			out << "}";
 		}
 	};
 
@@ -92,11 +92,11 @@ namespace assemble {
 		base::StrId name;
 		base::StrId inner;
 
-		void        dprint(std::ostream& out) const {
-            out << "dynamic_table {\n";
-            out << "    name: " << name.strView() << "\n";
-            out << "    inner: " << inner.strView() << "\n";
-            out << "}";
+		void dprint(std::ostream& out) const {
+			out << "dynamic_table {\n";
+			out << "    name: " << name.strView() << "\n";
+			out << "    inner: " << inner.strView() << "\n";
+			out << "}";
 		}
 	};
 
@@ -109,15 +109,15 @@ namespace assemble {
 		base::StrId        name;
 		std::vector<Field> fields;
 
-		void               dprint(std::ostream& out) const {
-            out << "data {\n";
-            out << "    name: " << name.strView() << "\n";
-            out << "    fields: [";
-            for (auto& field : fields) {
-                out << field.name.strView() << ": " << field.type.strView() << ", ";
-            }
-            out << "]\n";
-            out << "}";
+		void dprint(std::ostream& out) const {
+			out << "data {\n";
+			out << "    name: " << name.strView() << "\n";
+			out << "    fields: [";
+			for (auto& field : fields) {
+				out << field.name.strView() << ": " << field.type.strView() << ", ";
+			}
+			out << "]\n";
+			out << "}";
 		}
 	};
 
@@ -125,15 +125,15 @@ namespace assemble {
 		base::StrId              name;
 		std::vector<base::StrId> variant_alternatives;
 
-		void                     dprint(std::ostream& out) const {
-            out << "variant {\n";
-            out << "    name: " << name.strView() << "\n";
-            out << "    alternatives: [";
-            for (auto& alt : variant_alternatives) {
-                out << alt.strView() << ", ";
-            }
-            out << "]\n";
-            out << "}";
+		void dprint(std::ostream& out) const {
+			out << "variant {\n";
+			out << "    name: " << name.strView() << "\n";
+			out << "    alternatives: [";
+			for (auto& alt : variant_alternatives) {
+				out << alt.strView() << ", ";
+			}
+			out << "]\n";
+			out << "}";
 		}
 	};
 
@@ -142,16 +142,16 @@ namespace assemble {
 		std::vector<base::StrId> parameters;
 		base::StrId              result;
 
-		void                     dprint(std::ostream& out) const {
-            out << "function {\n";
-            out << "    name: " << name.strView() << "\n";
-            out << "    parameters: [";
-            for (auto& param : parameters) {
-                out << param.strView() << ", ";
-            }
-            out << "]\n";
-            out << "    result: " << result.strView() << "\n";
-            out << "}";
+		void dprint(std::ostream& out) const {
+			out << "function {\n";
+			out << "    name: " << name.strView() << "\n";
+			out << "    parameters: [";
+			for (auto& param : parameters) {
+				out << param.strView() << ", ";
+			}
+			out << "]\n";
+			out << "    result: " << result.strView() << "\n";
+			out << "}";
 		}
 	};
 
@@ -164,19 +164,19 @@ namespace assemble {
 		TypeData                    datatype;
 		static tpc::ParserRef<Type> parse(tpc::ParserState& state);
 
-		void                        dprint(std::ostream& out) const override {
-            out << "type: ";
-            VARIANT_VISIT(datatype, VISIT_CASE(auto&, data, { data.dprint(out); }))
-            out << "\n}";
+		void dprint(std::ostream& out) const override {
+			out << "type: ";
+			VARIANT_VISIT(datatype, VISIT_CASE(auto&, data, { data.dprint(out); }))
+			out << "\n}";
 		}
 	};
 
 	struct OpCode: AsmElement {
-		base::StrId                   opcode_name;
-		std::vector<OpCodeAnyArg>     args;
+		base::StrId               opcode_name;
+		std::vector<OpCodeAnyArg> args;
 
 		static tpc::ParserRef<OpCode> parse(tpc::ParserState& state) {
-			auto            out = tpc::makeRef<OpCode>();
+			auto out = tpc::makeRef<OpCode>();
 
 			tpc::Identifier identifier1;
 			tpc::parseOne(state, &identifier1);
@@ -259,56 +259,56 @@ namespace assemble {
 		std::vector<tpc::ParserRef<OpCode>> opcodes;
 		base::Map<base::StrId, usize>       label_position;
 
-		static tpc::ParserRef<ByteCode>     parse(tpc::ParserState& state) {
-            auto out = tpc::makeRef<ByteCode>();
+		static tpc::ParserRef<ByteCode> parse(tpc::ParserState& state) {
+			auto out = tpc::makeRef<ByteCode>();
 
-            while (state.notEmpty()) {
-                if (state.tryEat(rift_def::Keyword::BCLabel)) {
-                    tpc::Identifier label_name;
-                    tpc::parseOne(state, &label_name);
+			while (state.notEmpty()) {
+				if (state.tryEat(rift_def::Keyword::BCLabel)) {
+					tpc::Identifier label_name;
+					tpc::parseOne(state, &label_name);
 
-                    if (!state.tryEat(rift_def::Special::Semicolon)) {
-                        state.err.logError(state.ctokens().peek(-1).getPosition(),
-                                           "semicolon expected");
-                    }
+					if (!state.tryEat(rift_def::Special::Semicolon)) {
+						state.err.logError(state.ctokens().peek(-1).getPosition(),
+						                   "semicolon expected");
+					}
 
-                    if (out->label_position.contains(label_name.value)) {
-                        state.err.setFail();
-                        state.err.logError(state.ctokens().peek(-1).getPosition(),
-                                           base::strConcat("repeated label: ", label_name.value));
-                    } else {
-                        out->label_position.put(label_name.value, out->opcodes.size());
-                    }
-                } else {
-                    out->opcodes.emplace_back(OpCode::parse(state));
-                }
-            }
+					if (out->label_position.contains(label_name.value)) {
+						state.err.setFail();
+						state.err.logError(state.ctokens().peek(-1).getPosition(),
+						                   base::strConcat("repeated label: ", label_name.value));
+					} else {
+						out->label_position.put(label_name.value, out->opcodes.size());
+					}
+				} else {
+					out->opcodes.emplace_back(OpCode::parse(state));
+				}
+			}
 
-            for (i32 i = 0; i < out->opcodes.size(); i++) {
-                for (auto& opcode : out->opcodes[i]->args) {
-                    variant_match(opcode) {
-                        variant_case(OpCodeLabelArg, label) {
-                            auto it = out->label_position.find(label.label_name);
-                            if (it != out->label_position.end()) {
-                                label.value      = static_cast<i64>(it->second) - i - 1;
-                                label.type_value = false;
-                            } else {
-                                // @TODO: not failing here allow for "type arguments"
-                                // This setup should be changed in the future.
-                                label.type_value = true;
+			for (i32 i = 0; i < out->opcodes.size(); i++) {
+				for (auto& opcode : out->opcodes[i]->args) {
+					variant_match(opcode) {
+						variant_case(OpCodeLabelArg, label) {
+							auto it = out->label_position.find(label.label_name);
+							if (it != out->label_position.end()) {
+								label.value      = static_cast<i64>(it->second) - i - 1;
+								label.type_value = false;
+							} else {
+								// @TODO: not failing here allow for "type arguments"
+								// This setup should be changed in the future.
+								label.type_value = true;
 
-                                // state.err.setFail();
-                                // state.err.logError(
-                                // 	state.ctokens().peek().getPosition(),
-                                // 	base::strConcat("Nonexistent label: ",
-                                //                      std::get<OpCodeLabelArg>(opcode).value));
-                            }
-                        }
-                    }
-                }
-            }
+								// state.err.setFail();
+								// state.err.logError(
+								// 	state.ctokens().peek().getPosition(),
+								// 	base::strConcat("Nonexistent label: ",
+								//                      std::get<OpCodeLabelArg>(opcode).value));
+							}
+						}
+					}
+				}
+			}
 
-            return out;
+			return out;
 		}
 
 		void dprint(std::ostream& out) const override {
@@ -325,22 +325,22 @@ namespace assemble {
 	constexpr usize size_t_max = (usize) (-1);
 
 	struct Func: AsmElement {
-		tpc::Identifier             name;
-		usize                       arg_size   = size_t_max;
-		usize                       local_size = size_t_max;
-		usize                       ret_size   = size_t_max;
-		tpc::ParserRef<ByteCode>    code;
+		tpc::Identifier          name;
+		usize                    arg_size   = size_t_max;
+		usize                    local_size = size_t_max;
+		usize                    ret_size   = size_t_max;
+		tpc::ParserRef<ByteCode> code;
 
 		static tpc::ParserRef<Func> parse(tpc::ParserState& state);
 
-		void                        dprint(std::ostream& out) const override {
-            out << "function {\n";
-            out << "    name: " << name.value.strView() << "\n";
-            out << "    arg_size: " << arg_size << "\n";
-            out << "    local_size: " << local_size << "\n";
-            out << "    ret_size: " << ret_size << "\n";
-            code->dprint(out);
-            out << "\n}";
+		void dprint(std::ostream& out) const override {
+			out << "function {\n";
+			out << "    name: " << name.value.strView() << "\n";
+			out << "    arg_size: " << arg_size << "\n";
+			out << "    local_size: " << local_size << "\n";
+			out << "    ret_size: " << ret_size << "\n";
+			code->dprint(out);
+			out << "\n}";
 		}
 
 		~Func() override = default;
@@ -352,16 +352,16 @@ namespace assemble {
 
 		static tpc::ParserRef<ParsedCode> parse(tpc::ParserState& state);
 
-		void                              dprint(std::ostream& out) const override {
-            for (auto& type : types) {
-                type->dprint(out);
-                out << "\n";
-            }
+		void dprint(std::ostream& out) const override {
+			for (auto& type : types) {
+				type->dprint(out);
+				out << "\n";
+			}
 
-            for (auto& func : functions) {
-                func->dprint(out);
-                out << "\n";
-            }
+			for (auto& func : functions) {
+				func->dprint(out);
+				out << "\n";
+			}
 		}
 
 		~ParsedCode() override = default;
@@ -510,7 +510,7 @@ namespace assemble {
 			state.err.logError(state.ctokens().peek().getPosition(), "expected keyword 'type'");
 			return nullptr;
 		};
-		auto out  = tpc::makeRef<Type>();
+		auto out = tpc::makeRef<Type>();
 
 		/// @TODO: implement keywordToNumLiteral
 		auto type = state.tokens().next().asKeyword();
@@ -719,7 +719,7 @@ namespace assemble {
 
 		tpc::ParserRef<assemble::ParsedCode> out = ParsedCode::parse(state);
 
-		std::stringstream                    err_stream;
+		std::stringstream err_stream;
 		state.err.dumpLog(err_stream);
 
 		return { state.err.good(), err_stream.str(), std::move(out) };
@@ -733,7 +733,7 @@ namespace assemble {
 			base::StrId name = VISIT(type->datatype, value, return value.name);
 
 			if (type_map.contains(name)) {
-				code.ok     = false;
+				code.ok = false;
 				code.error += base::strConcat("Error: repeated type: ", name, "\n");
 
 				/// Possible we can allow to continue
@@ -879,7 +879,7 @@ namespace assemble {
 
 		vm::Code instructions_code;
 
-		usize    main_id = SIZE_MAX;
+		usize main_id = SIZE_MAX;
 
 		for (i32 idx = 0; idx < code.code->functions.size(); idx++) {
 			if (code.code->functions[idx]->name.value.strView() == "main") {

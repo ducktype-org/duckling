@@ -6,9 +6,9 @@
 namespace clap {
 	class ParameterConfig {
 	private:
-		option<base::StrId> long_name_     = none<base::StrId>();
-		option<char>        short_name_    = none<char>();
-		option<base::StrId> description_   = none<base::StrId>();
+		option<base::StrId> long_name_   = none<base::StrId>();
+		option<char>        short_name_  = none<char>();
+		option<base::StrId> description_ = none<base::StrId>();
 
 		bool                required_      = false;
 		option<base::StrId> default_value_ = none<base::StrId>();
@@ -18,12 +18,12 @@ namespace clap {
 		ParameterConfig(const base::RawView& long_name);
 		ParameterConfig(char short_name);
 
-		ParameterConfig&           long_name(const base::RawView& long_name);
-		ParameterConfig&           short_name(char short_name);
-		ParameterConfig&           description(const base::RawView& description);
-		ParameterConfig&           required(const base::RawView& value_name);
-		ParameterConfig&           with_value(const base::RawView& value_name,
-		                                      const base::RawView& default_value);
+		ParameterConfig& long_name(const base::RawView& long_name);
+		ParameterConfig& short_name(char short_name);
+		ParameterConfig& description(const base::RawView& description);
+		ParameterConfig& required(const base::RawView& value_name);
+		ParameterConfig& with_value(const base::RawView& value_name,
+		                            const base::RawView& default_value);
 
 		const option<base::StrId>& get_long_name() const;
 		const option<char>&        get_short_name() const;
@@ -34,9 +34,9 @@ namespace clap {
 		const option<base::StrId>& get_value_name() const;
 		bool                       requires_argument() const;
 
-		std::string                short_help_message() const;
-		std::string                long_help_message() const;
+		std::string short_help_message() const;
+		std::string long_help_message() const;
 
-		base::StrId                to_str_id() const;
+		base::StrId to_str_id() const;
 	};
 }

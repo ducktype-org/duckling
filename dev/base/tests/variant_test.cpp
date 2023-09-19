@@ -8,7 +8,7 @@ class T {
 public:
 	void setData(i32 v) { data = v; }
 
-	i32  getData() { return data; }
+	i32 getData() { return data; }
 };
 
 class VariantUtilsTest: public tester::TestSuite {

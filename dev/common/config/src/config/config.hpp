@@ -27,7 +27,7 @@ namespace config {
 	 * valid as long as ParsingResult
 	 * is valid
 	 */
-	ParsingResult              parse(ConfigOptions&& config, CLIArgs args);
+	ParsingResult parse(ConfigOptions&& config, CLIArgs args);
 
 
 	/**

@@ -17,13 +17,13 @@ namespace vm::api {
 	 * @brief Create new process in the api
 	 * @return
 	 */
-	result<ProcessInfo, ApiError>      spawn(bool usesStdio);
+	result<ProcessInfo, ApiError> spawn(bool usesStdio);
 
 	/**
 	 * @brief Get the execution status of the RiftVM
 	 * @return
 	 */
-	result<VCPUStatus, ApiError>       getExecutionStatus(PID pid);
+	result<VCPUStatus, ApiError> getExecutionStatus(PID pid);
 
 	/**
 	 * @brief Pauses the execution of the program.
@@ -31,13 +31,13 @@ namespace vm::api {
 	 * When this function returns running, the program is paused. If false, the state is undefined.
 	 * @return
 	 */
-	result<void, ApiError>             pause(PID pid);
+	result<void, ApiError> pause(PID pid);
 	/** @brief Resumes the execution of the program.
 	 * When this function returns true, the program is running. If false, the state is undefined.
 	 * @return
 	 */
-	result<void, ApiError>             resume(PID pid);
-	result<void, ApiError>             step(PID pid);
+	result<void, ApiError> resume(PID pid);
+	result<void, ApiError> step(PID pid);
 
 	result<void, ApiError>             loadFile(PID pid, const fs::FilePath& path);
 	result<void, ApiError>             run(PID pid);
@@ -47,6 +47,6 @@ namespace vm::api {
 	result<void, ApiError>             input(PID pid, const std::string& input);
 	result<response::Output, ApiError> output(PID pid);
 
-	result<TypeCRef, ApiError>         getType(PID pid, const std::string& type_name);
-	result<response::Block, ApiError>  getBlock(PID pid, u64 block_id);
+	result<TypeCRef, ApiError>        getType(PID pid, const std::string& type_name);
+	result<response::Block, ApiError> getBlock(PID pid, u64 block_id);
 }

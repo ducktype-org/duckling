@@ -21,7 +21,7 @@ namespace base {
 		const char*        what() const noexcept final;
 
 		// @TODO: use Printer
-		void               print(std::ostream& out) const;
+		void print(std::ostream& out) const;
 	};
 
 	class Exception: public std::exception {};

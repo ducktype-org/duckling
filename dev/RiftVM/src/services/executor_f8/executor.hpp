@@ -22,11 +22,11 @@ namespace vm {
 
 	class Executor {
 	private:
-		Allocator&      dynamic_allocator;
-		Memory&         memory;
-		TypeMetadata&   types;
+		Allocator&    dynamic_allocator;
+		Memory&       memory;
+		TypeMetadata& types;
 
-		VCPU&           vcpu;
+		VCPU& vcpu;
 
 		/**
 		 * This is currently duplicated inside VCPUStatus
@@ -44,17 +44,17 @@ namespace vm {
 		}
 
 		// This might change:
-		std::condition_variable               pause_cv;
-		std::mutex                            external_api_mutex;
-		ExecutionStrategy                     execution_strategy = ExecutionStrategy::Stoped;
+		std::condition_variable pause_cv;
+		std::mutex              external_api_mutex;
+		ExecutionStrategy       execution_strategy = ExecutionStrategy::Stoped;
 
 		/**
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
 		 */
-		const Code*                           executing_code     = nullptr;
+		const Code* executing_code = nullptr;
 
-		void                                  handleExecutionStrategy();
+		void handleExecutionStrategy();
 
 		/**
 		 * @TODO:
@@ -72,7 +72,7 @@ namespace vm {
 
 		// @TODO add some thread data in the future
 
-		void  setStatus(vm::api::ExecStatus status);
+		void setStatus(vm::api::ExecStatus status);
 
 	public:
 		/**

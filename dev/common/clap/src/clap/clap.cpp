@@ -49,8 +49,8 @@ namespace clap {
 		usize         positional_parameters_count     = 0;
 		usize         found_required_parameters_count = 0;
 
-		auto          add_param = [&i, &out, &id, &found_required_parameters_count, &args](
-                             auto parameter_name, option<const ParameterConfig&> parameter_option)
+		auto add_param = [&i, &out, &id, &found_required_parameters_count, &args](
+							 auto parameter_name, option<const ParameterConfig&> parameter_option)
 			-> result<void, ClapParsingError> {
 			if (parameter_option.has_error()) {
 				return failure(UnexpectedParameter(parameter_name));

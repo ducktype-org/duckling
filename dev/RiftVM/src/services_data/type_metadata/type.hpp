@@ -32,7 +32,7 @@ namespace vm {
 	private:
 		enum class State { Declared, Defined, Finalizing, Finalized };
 
-		State       state = State::Declared;
+		State state = State::Declared;
 
 		base::StrId name;
 		TypeSize    size      = TypeSize(-1);
@@ -50,19 +50,19 @@ namespace vm {
 		static Type declareType(base::StrId name);
 
 		// Type definition:
-		void        definePrimitive(TypeSize size);
-		void        definePointer(TypeCRef inner);
-		void        defineStaticTable(TypeRef inner, u64 table_size);
-		void        defineDynamicTable(TypeRef inner);
-		void   defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions);
-		void   defineVariant(const std::vector<TypeRef>& variants_definitions);
-		void   defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
+		void definePrimitive(TypeSize size);
+		void definePointer(TypeCRef inner);
+		void defineStaticTable(TypeRef inner, u64 table_size);
+		void defineDynamicTable(TypeRef inner);
+		void defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions);
+		void defineVariant(const std::vector<TypeRef>& variants_definitions);
+		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
 
 		// Type finalization:
-		void   finalize();
+		void finalize();
 
 		// Type query:
-		TypeId getId() const;
+		TypeId      getId() const;
 		base::StrId getName() const;
 		TypeSize    getSize() const;
 
@@ -74,9 +74,9 @@ namespace vm {
 			return none<const T&>();
 		}
 
-		Kind             getKind() const;
+		Kind getKind() const;
 
-		bool             isPrimitive(TypeSize size) const;
+		bool isPrimitive(TypeSize size) const;
 
 		option<TypeCRef> getLowestTypeAtPos(Offset pos) const;
 
@@ -93,7 +93,7 @@ namespace vm {
 		option<TypeCRef> getInnerType() const;
 
 		// staticTable
-		option<u64>      getStaticTableSize() const;
+		option<u64> getStaticTableSize() const;
 
 		// data
 		option<TypeCRef> getFieldType(kind::Data::FieldId fieldId) const;

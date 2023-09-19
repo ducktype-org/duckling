@@ -177,15 +177,15 @@ namespace rift_def {
 		void init();
 	}
 
-	void           setKeywordMode(KeywordMode mode);
+	void setKeywordMode(KeywordMode mode);
 
-	Special        strAsSpecial(base::StrId id);
-	Keyword        strAsKeyword(base::StrId id);
-	Operator       strAsOperator(base::StrId id);
+	Special  strAsSpecial(base::StrId id);
+	Keyword  strAsKeyword(base::StrId id);
+	Operator strAsOperator(base::StrId id);
 
-	base::StrId    keywordToStr(Keyword key);
-	base::StrId    specialToStr(Special spec);
-	base::StrId    operatorToStr(Operator oper);
+	base::StrId keywordToStr(Keyword key);
+	base::StrId specialToStr(Special spec);
+	base::StrId operatorToStr(Operator oper);
 
 	base::FlagType keywordFlags(Keyword key);
 }

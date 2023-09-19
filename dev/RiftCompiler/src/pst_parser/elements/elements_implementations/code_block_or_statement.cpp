@@ -18,10 +18,10 @@ namespace pst {
 		struct PrinterFunctor {
 			std::ostream& out_;
 
-			void          operator()(const ParserRef<Stmt>& stmt) { nullAwareDprint(stmt, out_); }
+			void operator()(const ParserRef<Stmt>& stmt) { nullAwareDprint(stmt, out_); }
 
-			void          operator()(const ParserRef<CodeBlock>& codeBlock) {
-                nullAwareDprint(codeBlock, out_);
+			void operator()(const ParserRef<CodeBlock>& codeBlock) {
+				nullAwareDprint(codeBlock, out_);
 			}
 
 			PrinterFunctor(std::ostream& out): out_(out) {}

@@ -57,7 +57,7 @@ namespace vm {
 		} else if (blocks[usize(id)].filled) {
 			RIFT_PANIC("Tried creating an initialized block");
 		}
-		blocks[usize(id)].block  = new Block(std::move(block));
+		blocks[usize(id)].block = new Block(std::move(block));
 
 		// @TODO: this assumes every block is initialized
 		blocks[usize(id)].filled = true;

@@ -143,7 +143,7 @@ private:
 		auto int_16 = ts::TypeDesc<>(ts::IntegralInfo::create(16));
 		auto int_32 = ts::TypeDesc<>(ts::IntegralInfo::create(32));
 
-		auto fun    = ts::FunctionInfo::create({ int_16, int_32 }, int_32);
+		auto fun = ts::FunctionInfo::create({ int_16, int_32 }, int_32);
 
 		assert(fun.getParameterTypeList() == std::vector<ts::TypeDesc<>>({ int_16, int_32 }),
 		       "Wrong parameter types.");
@@ -169,7 +169,7 @@ private:
 	}
 
 	void simple_enum_and_flag() {
-		auto int_8  = ts::IntegralInfo::create(8);
+		auto int_8 = ts::IntegralInfo::create(8);
 
 		auto enum_1 = ts::EnumInfo::create(int_8);
 		assert(enum_1.getKind() == Enum, "Enum should have kind enum.");
@@ -213,15 +213,15 @@ private:
 	}
 
 	void simple_tuple() {
-		auto           void_i  = ts::VoidInfo::create();
-		auto           my_enum = ts::EnumInfo::create(ts::IntegralInfo::create(8));
+		auto void_i  = ts::VoidInfo::create();
+		auto my_enum = ts::EnumInfo::create(ts::IntegralInfo::create(8));
 
 		ts::TypeDesc<> desc_1(void_i);
 		ts::TypeDesc<> desc_2(my_enum);
 
-		auto           tup_1  = ts::TupleInfo::create({ desc_1, desc_2 });
-		auto           tup_1_ = ts::TupleInfo::create({ desc_1, desc_2 });
-		auto           tup_2  = ts::TupleInfo::create({ desc_2, desc_1 });
+		auto tup_1  = ts::TupleInfo::create({ desc_1, desc_2 });
+		auto tup_1_ = ts::TupleInfo::create({ desc_1, desc_2 });
+		auto tup_2  = ts::TupleInfo::create({ desc_2, desc_1 });
 
 		assert(tup_1.getKind() == Tuple, "Tuple is not a tuple");
 
@@ -234,15 +234,15 @@ private:
 	}
 
 	void simple_variant() {
-		auto           int_8   = ts::IntegralInfo::create(8);
-		auto           my_enum = ts::EnumInfo::create(int_8);
+		auto int_8   = ts::IntegralInfo::create(8);
+		auto my_enum = ts::EnumInfo::create(int_8);
 
 		ts::TypeDesc<> desc_1(int_8);
 		ts::TypeDesc<> desc_2(my_enum);
 
-		auto           var_1  = ts::VariantInfo::create({ desc_1, desc_2 });
-		auto           var_1_ = ts::VariantInfo::create({ desc_1, desc_2 });
-		auto           var_2  = ts::VariantInfo::create({ desc_2, desc_1 });
+		auto var_1  = ts::VariantInfo::create({ desc_1, desc_2 });
+		auto var_1_ = ts::VariantInfo::create({ desc_1, desc_2 });
+		auto var_2  = ts::VariantInfo::create({ desc_2, desc_1 });
 
 		assert(var_1.getKind() == Variant, "Variant is not a variant");
 		assert(var_1 != var_2, "Variants with different types should be the different.");
@@ -255,10 +255,10 @@ private:
 	}
 
 	void simple_type_template() {
-		auto                        int64          = ts::IntegralInfo::create(64);
-		auto                        int64_desc     = ts::TypeDesc<ts::IntegralInfo>(int64);
-		auto                        flag64         = ts::FlagInfo::create(int64);
-		auto                        flag64_desc    = ts::TypeDesc<ts::FlagInfo>(flag64);
+		auto int64       = ts::IntegralInfo::create(64);
+		auto int64_desc  = ts::TypeDesc<ts::IntegralInfo>(int64);
+		auto flag64      = ts::FlagInfo::create(int64);
+		auto flag64_desc = ts::TypeDesc<ts::FlagInfo>(flag64);
 
 		std::vector<ts::TypeDesc<>> int_parameter  = { int64_desc };
 		std::vector<ts::TypeDesc<>> flag_parameter = { flag64_desc };
@@ -299,8 +299,8 @@ private:
 	}
 
 	void simple_type_desc() {
-		auto                           void_i = ts::VoidInfo::create();
-		auto                           int_i  = ts::IntegralInfo::create(8);
+		auto void_i = ts::VoidInfo::create();
+		auto int_i  = ts::IntegralInfo::create(8);
 
 		ts::TypeDesc<ts::IntegralInfo> int_desc(int_i);
 

@@ -7,7 +7,7 @@ namespace base {
 	std::vector<std::string> vaArgSplit(std::string_view va_arg);
 }
 
-#define CONCAT(arg1, arg2)   arg1##arg2
+#define CONCAT(arg1, arg2) arg1##arg2
 /**
  * @brief This is needed so arg1, arg2 will be expanded
  * See: https://gcc.gnu.org/onlinedocs/cpp/Argument-Prescan.html
@@ -24,16 +24,16 @@ namespace base {
  *
  * This can be avoided using: SOME_MACRO(type<int COMMA int>)
  */
-#define COMMA                ,
+#define COMMA ,
 
 
-#define IF(cond, t, e)       CONCAT(IF_, cond)(t, e)
-#define IF_false(t, e)       e
-#define IF_true(t, e)        t
+#define IF(cond, t, e) CONCAT(IF_, cond)(t, e)
+#define IF_false(t, e) e
+#define IF_true(t, e)  t
 
-#define IF_NOT(cond, t, e)   CONCAT(IF_NOT, cond)(t, e)
-#define IF_NOT_false(t, e)   t
-#define IF_NOT_true(t, e)    e
+#define IF_NOT(cond, t, e) CONCAT(IF_NOT, cond)(t, e)
+#define IF_NOT_false(t, e) t
+#define IF_NOT_true(t, e)  e
 
 #if defined(__clang__)
 	#define PUSH_DIAGNOSTIC _Pragma("clang diagnostic push")

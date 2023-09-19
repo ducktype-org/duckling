@@ -13,14 +13,14 @@
 namespace base {
 
 	class StrId {
-		typedef base::NamedId<base::RawView>            InnerId;
-		InnerId                                         id;
+		typedef base::NamedId<base::RawView> InnerId;
+		InnerId                              id;
 
 		typedef base::VectorMap<InnerId, base::RawView> ToDataType;
 		typedef base::HashMap<base::RawView, InnerId>   ToIdType;
 
-		static ToDataType                               to_data_map;
-		static ToIdType                                 to_id_map;
+		static ToDataType to_data_map;
+		static ToIdType   to_id_map;
 
 	public:
 		StrId(): id(InnerId::bad()){};

@@ -61,7 +61,7 @@ private:
 };
 
 int main(int argc, char** argv) {
-	auto             config = tester::testConfigFromArgs({ argc, argv }, "/common/tester/tests/");
+	auto config = tester::testConfigFromArgs({ argc, argv }, "/common/tester/tests/");
 
 	SimpleTesterTest passing_test(std::move(config), 0);
 	if (!passing_test.run()) return 1;

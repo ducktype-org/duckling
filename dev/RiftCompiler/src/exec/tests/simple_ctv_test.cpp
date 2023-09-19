@@ -28,14 +28,14 @@ private:
 
 		assert(ctv.getData().size() * 8 == 8, "Size of ctv is incorrect");
 
-		ctv.getData()[0]  = 2;
+		ctv.getData()[0] = 2;
 
 
-		auto p_ctv        = ctv.makePointer();
+		auto p_ctv = ctv.makePointer();
 
-		auto pointer      = ((u32*) p_ctv.getData().data());
-		auto block        = pointer[0];
-		auto offset       = pointer[1];
+		auto pointer = ((u32*) p_ctv.getData().data());
+		auto block   = pointer[0];
+		auto offset  = pointer[1];
 
 		// or:
 		auto pointer_data = p_ctv.getData<u32>();
@@ -73,7 +73,7 @@ private:
         }));
 		ts::TypeDesc<> desc_parent_class(parent_class);
 
-		auto           symbol1 = symtable::SymbolId::next();
+		auto symbol1 = symtable::SymbolId::next();
 
 		ts::ClassInfo  inheriting_class(ts::ClassInfo::create(
             base::StrId("Inheriting"),
@@ -114,7 +114,7 @@ private:
 		assert(parent_class.getMemberInfo(symbol0).isOk(), "Parent didn't have symbol0");
 		symbol0_offset = parent_class.getMemberInfo(symbol0).start_offset.value();
 
-		s0CTV          = parentCTV.subCTV(int_desc, symbol0_offset, int_desc.getType().getSize());
+		s0CTV = parentCTV.subCTV(int_desc, symbol0_offset, int_desc.getType().getSize());
 		assert(s0CTV.getData()[0] == 123,
 		       "Wrong value in the parent's member subCTV when getting there indirectly");
 	}

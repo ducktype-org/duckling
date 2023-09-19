@@ -26,7 +26,7 @@ namespace symtable {
 	}
 
 	SymbolRef SymbolData::newSymbol(base::unique_ptr<Symbol> symbol) {
-		auto scope                = symbol->getScope();
+		auto scope = symbol->getScope();
 
 		symbol->relative_position = next_relative_position++;
 

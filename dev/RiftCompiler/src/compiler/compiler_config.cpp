@@ -19,7 +19,7 @@ namespace compiler {
 	}
 
 	CompilerConfig fromArgs(config::CLIArgs args) {
-		auto           parsed_args = config::parse(compilerOptions(), args);
+		auto parsed_args = config::parse(compilerOptions(), args);
 
 		CompilerConfig out;
 

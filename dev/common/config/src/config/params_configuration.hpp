@@ -12,16 +12,16 @@ namespace config {
 	enum class ParamType { Optional, Always };
 
 	struct OptionDescription {
-		base::RawView                 description;
-		base::RawView                 long_version;
+		base::RawView description;
+		base::RawView long_version;
 
-		base::RawView                 short_version;
+		base::RawView short_version;
 
 		ParamType                     param_type;
 		base::unique_ptr<ValueParser> value_parser;
 
-		bool                          has_param;
-		bool                          has_short;
+		bool has_param;
+		bool has_short;
 
 		OptionDescription(base::RawView long_version, base::RawView description);
 		OptionDescription(base::RawView long_version, base::RawView short_version,

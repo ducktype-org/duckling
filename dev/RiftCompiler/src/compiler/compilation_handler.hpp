@@ -18,8 +18,8 @@ namespace compiler {
 	public:
 		CompilationHandler() = default;
 
-		void  addFileRecursively(const fs::FilePath& path, bool dprint = false,
-		                         std::ostream* out = nullptr);
+		void addFileRecursively(const fs::FilePath& path, bool dprint = false,
+		                        std::ostream* out = nullptr);
 
 		usize pstCount() const { return pst_map.size(); }
 	};

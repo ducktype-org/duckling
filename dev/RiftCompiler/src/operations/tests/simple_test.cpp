@@ -15,19 +15,19 @@ public:
 
 private:
 	void simple_operation() {
-		ts::TypeDesc<>            td(ts::IntegralInfo::create(8));
-		exec::CTV                 ctv     = exec::alloc_new(td, 8);
+		ts::TypeDesc<> td(ts::IntegralInfo::create(8));
+		exec::CTV      ctv = exec::alloc_new(td, 8);
 
-		auto                      int_16  = ts::IntegralInfo::create(16);
+		auto int_16 = ts::IntegralInfo::create(16);
 
-		auto                      fun_sig = ts::FunctionInfo::create({ int_16 }, int_16);
+		auto fun_sig = ts::FunctionInfo::create({ int_16 }, int_16);
 
-		operation::Operation      fun     = [](std::vector<exec::CTV> a) { return a[0]; };
-		operation::TypedOperation op      = { fun, fun_sig };
+		operation::Operation      fun = [](std::vector<exec::CTV> a) { return a[0]; };
+		operation::TypedOperation op  = { fun, fun_sig };
 
 
-		auto                      id      = operation::addOperation(op);
-		auto                      get_op  = operation::getOperation(id);
+		auto id     = operation::addOperation(op);
+		auto get_op = operation::getOperation(id);
 
 
 		assert(get_op.signature == fun_sig, "Wrong signature.");
@@ -39,18 +39,18 @@ private:
 	}
 
 	void simple_default() {
-		ts::TypeDesc<>            td(ts::IntegralInfo::create(8));
-		exec::CTV                 ctv     = exec::alloc_new(td, 8);
+		ts::TypeDesc<> td(ts::IntegralInfo::create(8));
+		exec::CTV      ctv = exec::alloc_new(td, 8);
 
-		auto                      int16   = ts::IntegralInfo::create(16);
-		auto                      int_16  = ts::TypeDesc<>(int16);
+		auto int16  = ts::IntegralInfo::create(16);
+		auto int_16 = ts::TypeDesc<>(int16);
 
-		auto                      fun_sig = ts::FunctionInfo::create({ int_16 }, int_16);
+		auto fun_sig = ts::FunctionInfo::create({ int_16 }, int_16);
 
-		operation::Operation      fun     = [](std::vector<exec::CTV> a) { return a[0]; };
-		operation::TypedOperation op      = { fun, fun_sig };
+		operation::Operation      fun = [](std::vector<exec::CTV> a) { return a[0]; };
+		operation::TypedOperation op  = { fun, fun_sig };
 
-		auto id     = operation::addDefault(operation::Defaultable::Compare, int16, op);
+		auto id = operation::addDefault(operation::Defaultable::Compare, int16, op);
 
 		auto def_id = operation::getIdDefault(operation::Defaultable::Compare, int16);
 

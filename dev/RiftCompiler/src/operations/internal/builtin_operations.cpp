@@ -12,19 +12,19 @@ namespace operation {
 		void addIntegral() {
 			static_assert(SIZE == 8 * (sizeof(T)));
 
-			auto                      int_type = ts::IntegralInfo::create(SIZE);
-			ts::TypeDesc<>            int_desc{ int_type };
-			ts::TypeDesc<>            bool_desc{ ts::BoolInfo::create() };
+			auto           int_type = ts::IntegralInfo::create(SIZE);
+			ts::TypeDesc<> int_desc{ int_type };
+			ts::TypeDesc<> bool_desc{ ts::BoolInfo::create() };
 
-			operation::Operation      comp_int            = exec::compareBuiltin<T>;
-			operation::Operation      eq_int              = exec::equalityBuiltin<T>;
-			operation::Operation      assign_int          = exec::assignBuiltin<T>;
-			operation::Operation      construct_empty_int = exec::emptyBuiltin<T>;
+			operation::Operation comp_int            = exec::compareBuiltin<T>;
+			operation::Operation eq_int              = exec::equalityBuiltin<T>;
+			operation::Operation assign_int          = exec::assignBuiltin<T>;
+			operation::Operation construct_empty_int = exec::emptyBuiltin<T>;
 
-			operation::TypedOperation comp_int_t          = comparison(comp_int, int_desc);
-			operation::TypedOperation eq_int_t            = equality(eq_int, int_desc);
+			operation::TypedOperation comp_int_t = comparison(comp_int, int_desc);
+			operation::TypedOperation eq_int_t   = equality(eq_int, int_desc);
 
-			operation::TypedOperation assign_int_t        = assign(assign_int, int_desc);
+			operation::TypedOperation assign_int_t = assign(assign_int, int_desc);
 
 			operation::TypedOperation construct_empty_int_t
 				= construct(construct_empty_int, int_desc);

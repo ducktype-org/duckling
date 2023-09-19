@@ -65,22 +65,22 @@ private:
 
 	struct MyIdName {};
 
-	typedef base::NamedId<MyIdName>          MyId;
+	typedef base::NamedId<MyIdName> MyId;
 
 	typedef base::NamedId<base::Number<123>> MyId2;
 	typedef base::NamedId<base::Number<124>> MyId3;
 
-	void                                     simpleIdTest() {
-        MyId id_1 = MyId::next();
-        MyId id_2 = MyId::next();
-        MyId id_3;
-        assert(id_1 != id_2, "!= error");
-        assert(id_1 == id_1, "== error");
-        assert(!(id_1 == id_2), "== error");
-        assert(id_1 < id_2, "< error");
-        assert(id_3.isBad(), "isBad error");
-        assert(!(id_1 > id_2), "> error");
-        assert(id_1.range() == 2, "range error");
+	void simpleIdTest() {
+		MyId id_1 = MyId::next();
+		MyId id_2 = MyId::next();
+		MyId id_3;
+		assert(id_1 != id_2, "!= error");
+		assert(id_1 == id_1, "== error");
+		assert(!(id_1 == id_2), "== error");
+		assert(id_1 < id_2, "< error");
+		assert(id_3.isBad(), "isBad error");
+		assert(!(id_1 > id_2), "> error");
+		assert(id_1.range() == 2, "range error");
 	}
 
 	static base::RawView make_view(std::string_view view) {

@@ -13,7 +13,7 @@ namespace tpc {
 		TokenStream&       tokens();
 		const TokenStream& ctokens() const;
 
-		ErrorState         err;
+		ErrorState err;
 
 		ParserState(TokenStream&& tokens, ErrorState&& err): err(std::move(err)) {
 			stream_stack.emplace_back(std::move(tokens));

@@ -19,9 +19,9 @@ private:
 	void test() {
 		MessageContent mc = MessageContent("ms1", Color::DEFAULT, Color::RED);
 
-		Message        m({ mc });
-		MessagePack    mp = { m };
-		Console        c;
+		Message     m({ mc });
+		MessagePack mp = { m };
+		Console     c;
 		c.add(mp);
 		c.add(std::move(mp));
 

@@ -18,8 +18,8 @@ namespace tpc {
 	void tokenStreamInit();
 
 	class TokenStream {
-		const Tokens&       tokens;
-		usize               where = 0;
+		const Tokens& tokens;
+		usize         where = 0;
 		/** inclusive */
 		usize               to;
 		static lexer::Token sentinel;
@@ -37,7 +37,7 @@ namespace tpc {
 
 		const Token& next();
 
-		TokenStream  getRecursive() const;
+		TokenStream getRecursive() const;
 
 		[[nodiscard]]
 		const Token& peek(usize fwd = 0) const;

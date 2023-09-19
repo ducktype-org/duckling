@@ -12,9 +12,9 @@ int main(int argc, char** argv) {
 	}
 	fs::FilePath file(argv[1]);
 
-	auto         process_pid          = vm::api::spawn(true).expect("Process spawn error").pid;
+	auto process_pid = vm::api::spawn(true).expect("Process spawn error").pid;
 
-	auto         loaded_file_response = vm::api::loadFile(process_pid, file);
+	auto loaded_file_response = vm::api::loadFile(process_pid, file);
 
 	if (loaded_file_response.has_error()) {
 		auto error = loaded_file_response.error();

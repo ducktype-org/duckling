@@ -40,7 +40,7 @@ namespace base {
 	}
 
 	NotYetImplemented::NotYetImplemented(std::string message) {
-		this->message  = "The feature is not implemented yet.\n";
+		this->message = "The feature is not implemented yet.\n";
 		this->message += message;
 		this->message += '\0';
 	}

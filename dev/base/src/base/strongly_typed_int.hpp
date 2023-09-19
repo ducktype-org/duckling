@@ -126,4 +126,4 @@
  *
  * Allows for operations like MyOwnI32 * MyOwnI32
  */
-#define STRONG_TYPEDEF_INT(NAME, BASE)             STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, false)
+#define STRONG_TYPEDEF_INT(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, false)

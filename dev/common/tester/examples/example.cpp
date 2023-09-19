@@ -72,7 +72,7 @@ private:
 int main(int argc, char** argv) {
 	// Relative path to test folder should be here:
 	// It should in general be `/path-to-module/tests/`
-	auto   config = tester::testConfigFromArgs({ argc, argv }, "/common/tester/examples/");
+	auto config = tester::testConfigFromArgs({ argc, argv }, "/common/tester/examples/");
 
 	MyTest test(std::move(config));
 

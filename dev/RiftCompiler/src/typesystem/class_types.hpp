@@ -135,18 +135,18 @@ namespace ts {
 	struct MemberInfo {
 		// If there is a virtual in the inheritance path, this is the last one. Otherwise, it's
 		// an empty optional.
-		std::optional<ClassInfo>  last_virtual_ancestor{};
+		std::optional<ClassInfo> last_virtual_ancestor{};
 
 		std::optional<TypeDesc<>> desc{};
 
 		// If the member is in a virtual ancestor, this data is relative to the ancestor's start
 		// The exact offset of course needs to be looked up in the vtable at runtime
-		std::optional<usize>      start_offset{};
-		std::optional<usize>      end_offset{};
+		std::optional<usize> start_offset{};
+		std::optional<usize> end_offset{};
 
 		// If the field below is not equal to Standard or Virtual, the data structure will be
 		// full of empty optionals.
-		ResultType                result_type{ ResultType::NoResult };
+		ResultType result_type{ ResultType::NoResult };
 
 		// Returns whether the result is correct, i.e. Standard or Virtual
 		[[nodiscard]]
@@ -160,20 +160,20 @@ namespace ts {
 
 		// If the member is in a virtual ancestor, this data is relative to the ancestor's start
 		// The exact offset of course needs to be looked up in the vtable at runtime
-		std::optional<usize>     start_offset{};
-		std::optional<usize>     end_offset{};
+		std::optional<usize> start_offset{};
+		std::optional<usize> end_offset{};
 
 		// If the field below is not equal to Standard or Virtual, this data structure will be
 		// full of empty optionals.
-		ResultType               result_type{ ResultType::NoResult };
+		ResultType result_type{ ResultType::NoResult };
 
 		// The ^ operators combine results
 		// For example, if R1 tells us B has offset 10 in A, and R2 tells us C has offset 10 in B,
 		// then R1^R2 will let us know that C has offset 20 in A.
-		AncestorInfo             operator^(const AncestorInfo& a) const;
-		AncestorInfo&            operator^=(const AncestorInfo& a);
+		AncestorInfo  operator^(const AncestorInfo& a) const;
+		AncestorInfo& operator^=(const AncestorInfo& a);
 
-		MemberInfo               operator^(const MemberInfo& a) const;
+		MemberInfo operator^(const MemberInfo& a) const;
 
 		// Returns whether the result is correct, i.e. Standard or Virtual
 		[[nodiscard]]
@@ -185,9 +185,9 @@ namespace ts {
 	// However, what worries me, is that then people may use the result without checking if it's
 	// virtual
 	struct MemberData {
-		symtable::SymbolId       symbol;
-		TypeDesc<>               desc;
-		usize                    offset;
+		symtable::SymbolId symbol;
+		TypeDesc<>         desc;
+		usize              offset;
 
 		std::optional<ClassInfo> last_virtual_ancestor{};
 
@@ -196,8 +196,8 @@ namespace ts {
 	};
 
 	struct AncestorData {
-		ClassInfo                info;
-		usize                    offset;
+		ClassInfo info;
+		usize     offset;
 
 		std::optional<ClassInfo> last_virtual_ancestor{};
 

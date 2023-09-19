@@ -81,8 +81,8 @@ namespace lexer {
 	std::string SourcePosition::genErrorMsg(std::string_view reason) const {
 		if (line_number == 0) return "Error getting info: SourcePosition is invalid";
 
-		std::string output  = "In file: ";
-		output             += source_code->strView();
+		std::string output = "In file: ";
+		output += source_code->strView();
 		output += ":" + std::to_string(line_number) + ":" + std::to_string(column_number) + "\n";
 		output += "error: ";
 		output += reason;

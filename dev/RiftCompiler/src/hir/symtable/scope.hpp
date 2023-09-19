@@ -18,12 +18,12 @@ namespace symtable {
 		// Update constructors when adding fields here:
 
 		// @TODO: option
-		ScopeRef               parent;
+		ScopeRef parent;
 		// ScopeId id;
 
 		std::vector<SymbolRef> symbols;
 
-		bool                   lookup_engaged = false;
+		bool lookup_engaged = false;
 
 		friend class SymbolData;
 
@@ -33,15 +33,15 @@ namespace symtable {
 
 	public:
 		// This delete is important, to prevent any copy of scope data:
-		Scope(const Scope&)                                   = delete;
-		Scope&                        operator=(const Scope&) = delete;
+		Scope(const Scope&)            = delete;
+		Scope& operator=(const Scope&) = delete;
 
 		const std::vector<SymbolRef>& getSymbols() { return symbols; }
 
-		ScopeRef                      getParent() { return parent; }
+		ScopeRef getParent() { return parent; }
 
-		Scope(Scope&&)                  = default;
-		Scope&       operator=(Scope&&) = default;
+		Scope(Scope&&)            = default;
+		Scope& operator=(Scope&&) = default;
 
 		LookupResult lookup(hir::AnalysisState&, base::StrId name);
 		LookupResult lookupMeAndParents(hir::AnalysisState&, base::StrId name);

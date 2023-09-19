@@ -16,7 +16,7 @@ namespace base {
 		friend class OwningView;
 
 		[[nodiscard]]
-		RawView  memoryCopy() const;
+		RawView memoryCopy() const;
 
 		RawArray begin    = nullptr;
 		usize    arr_size = 0;
@@ -45,8 +45,8 @@ namespace base {
 		[[nodiscard]]
 		RawArray getBegin() const;
 
-		byte     operator[](usize index);
-		bool     operator==(const RawView& oth) const;
+		byte operator[](usize index);
+		bool operator==(const RawView& oth) const;
 	};
 
 	/**

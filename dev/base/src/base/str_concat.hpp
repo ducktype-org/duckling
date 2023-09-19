@@ -27,7 +27,7 @@ namespace base {
 
 		// This is forward declaration to prevent circular header dependency thru:
 		// string_id.hpp -> maps.hpp -> exceptions.hpp -> str_concat.hpp
-		void        strConcat(std::string& out, base::StrId str_id);
+		void strConcat(std::string& out, base::StrId str_id);
 
 		inline void strConcat(std::string& out, std::integral auto v) {
 			out.append(std::to_string(v));

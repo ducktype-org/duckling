@@ -13,7 +13,7 @@ private:
 	void simpleRun() {
 		auto process_pid_response = vm::api::spawn(false);
 		assert(process_pid_response.has_value(), "Spawn failed (1)");
-		auto         pid = process_pid_response.expect("Spawn failed (2)").pid;
+		auto pid = process_pid_response.expect("Spawn failed (2)").pid;
 
 		fs::FilePath file(path("working_rbc.rbc"));
 		auto         loaded_file_response = vm::api::loadFile(pid, file);

@@ -28,13 +28,13 @@ namespace base {
 		~MapWrapper() = default;
 
 		// Change operator[] behaviour:
-		DATA_T&       operator[](const KEY_T& key) { return ContainerType::at(key); }
+		DATA_T& operator[](const KEY_T& key) { return ContainerType::at(key); }
 
-		DATA_T&       operator[](KEY_T&& key) { return ContainerType::at(key); }
+		DATA_T& operator[](KEY_T&& key) { return ContainerType::at(key); }
 
 		const DATA_T& operator[](const KEY_T& key) const { return ContainerType::at(key); }
 
-		auto          put(const KEY_T& key) { return ContainerType::emplace(key, DATA_T()); }
+		auto put(const KEY_T& key) { return ContainerType::emplace(key, DATA_T()); }
 
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& data) {
@@ -63,20 +63,20 @@ namespace base {
 		usize                              element_count{};
 
 	public:
-		typedef VectorMap                                                   SelfType;
-		typedef KEY_T                                                       IdType;
-		typedef DATA_T                                                      DataType;
+		typedef VectorMap SelfType;
+		typedef KEY_T     IdType;
+		typedef DATA_T    DataType;
 
 		typedef typename std::vector<std::optional<DATA_T>>::iterator       iterator;
 		typedef typename std::vector<std::optional<DATA_T>>::const_iterator const_iterator;
 
-		VectorMap()                  = default;
+		VectorMap() = default;
 
-		VectorMap(const VectorMap&)  = delete;
+		VectorMap(const VectorMap&) = delete;
 
 		VectorMap(const VectorMap&&) = delete;
 
-		~VectorMap()                 = default;
+		~VectorMap() = default;
 
 		DATA_T& operator[](const KEY_T key) {
 			if (usize(key) < map.size() and map.at(usize(key)).has_value()) {
@@ -140,17 +140,17 @@ namespace base {
 			return false;
 		}
 
-		usize          size() const { return element_count; }
+		usize size() const { return element_count; }
 
-		bool           empty() const { return element_count == 0; }
+		bool empty() const { return element_count == 0; }
 
-		bool           notEmpty() const { return !empty(); }
+		bool notEmpty() const { return !empty(); }
 
-		iterator       begin() { return map.begin(); }
+		iterator begin() { return map.begin(); }
 
 		const_iterator begin() const { return map.cbegin(); }
 
-		iterator       end() { return map.end(); }
+		iterator end() { return map.end(); }
 
 		const_iterator end() const { return map.cend(); }
 	};

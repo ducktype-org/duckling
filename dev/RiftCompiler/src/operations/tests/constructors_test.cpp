@@ -18,41 +18,41 @@ public:
 
 private:
 	void simple_constructor() {
-		auto                   class_info = ts::ClassInfo::create(base::StrId("class"), {});
+		auto class_info = ts::ClassInfo::create(base::StrId("class"), {});
 		// operation::Constructor cons {{}, {}, {}};
 
-		operation::Constructor cons       = operation::makeConstructorClass(class_info);
+		operation::Constructor cons = operation::makeConstructorClass(class_info);
 
-		exec::CTV              ctv        = exec::alloc_new(class_info);
+		exec::CTV ctv = exec::alloc_new(class_info);
 		operation::execConstructor(cons, {}, ctv);
 
 
-		ts::TypeDesc<>         int_desc(ts::IntegralInfo::create(8));
-		auto                   symbol0 = symtable::SymbolId::next();
+		ts::TypeDesc<> int_desc(ts::IntegralInfo::create(8));
+		auto           symbol0 = symtable::SymbolId::next();
 
-		ts::ClassInfo          parent_class(ts::ClassInfo::create(base::StrId("parent"),
-		                                                          {
+		ts::ClassInfo  parent_class(ts::ClassInfo::create(base::StrId("parent"),
+		                                                  {
                                                              {int_desc, symbol0}
         }));
-		ts::TypeDesc<>         desc_parent_class(parent_class);
+		ts::TypeDesc<> desc_parent_class(parent_class);
 
-		auto                   symbol1 = symtable::SymbolId::next();
+		auto symbol1 = symtable::SymbolId::next();
 
-		ts::ClassInfo          inheriting_class(ts::ClassInfo::create(
+		ts::ClassInfo  inheriting_class(ts::ClassInfo::create(
             base::StrId("inheriting"),
             {
                 {int_desc, symbol1}
         },
             { { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
             0));
-		ts::TypeDesc<>         desc_inheriting_class(inheriting_class);
+		ts::TypeDesc<> desc_inheriting_class(inheriting_class);
 
 
 		operation::Constructor cons_parent = operation::makeConstructorClass(parent_class);
 
-		auto                   ctv_parent  = exec::alloc_new(parent_class);
+		auto ctv_parent = exec::alloc_new(parent_class);
 
-		auto                   ctv_int     = exec::alloc_new(int_desc.getType());
+		auto ctv_int = exec::alloc_new(int_desc.getType());
 		operation::getDefault(operation::Defaultable::ConstructEmpty,
 		                      int_desc.getType())({ ctv_int });
 		ctv_int.getData<int8_t>().front() = 14;

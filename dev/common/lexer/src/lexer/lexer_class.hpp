@@ -21,26 +21,26 @@ namespace lexer {
 		[[nodiscard]]
 		const Char& peek(usize fwd = 0) const;
 		[[nodiscard]]
-		bool   tryRawValue(char rawValue, usize fwd = 0) const;
+		bool tryRawValue(char rawValue, usize fwd = 0) const;
 
 		// top level parsers:
-		void   codeblock();
-		void   parseCodeblockInto(Tokens& output);
-		void   parseSingleInto(Tokens& output);
+		void codeblock();
+		void parseCodeblockInto(Tokens& output);
+		void parseSingleInto(Tokens& output);
 
 		// non-terminal tokens parsers:
 		Tokens parGroup(lexer::Char::ParType end);
 
 		// terminal tokens parsers:
-		usize  comment(/*Tokens& output*/);
-		usize  blockComment();
-		usize  oper();
-		usize  identifier();
-		usize  special();
-		usize  numLiteral();
-		usize  numBinaryLiteral();
-		usize  numHexLiteral();
-		usize  string();
+		usize comment(/*Tokens& output*/);
+		usize blockComment();
+		usize oper();
+		usize identifier();
+		usize special();
+		usize numLiteral();
+		usize numBinaryLiteral();
+		usize numHexLiteral();
+		usize string();
 
 		[[nodiscard]]
 		bool isEOF() const;
@@ -56,7 +56,7 @@ namespace lexer {
 		bool isStringBegin() const;
 
 		[[nodiscard]]
-		std::string                   generateLineColumnInfo() const;
+		std::string generateLineColumnInfo() const;
 
 		usize                         where_        = 0;
 		usize                         lineNumber_   = 1;
@@ -66,9 +66,9 @@ namespace lexer {
 		CharArray                     charArray_;
 		Tokens                        tokens_;
 
-		bool                          token_messages = false;
+		bool token_messages = false;
 
-		printer::Console              console;
+		printer::Console console;
 
 		void addTokenMsg(usize begin, usize end, std::string_view token_type,
 		                 printer::MessageType message_type);

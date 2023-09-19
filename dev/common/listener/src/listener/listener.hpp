@@ -9,5 +9,5 @@ class Listener {
 public:
 	virtual void onEvent(const Event& event) noexcept = 0;
 
-	virtual ~Listener() noexcept                      = default;
+	virtual ~Listener() noexcept = default;
 };

@@ -141,9 +141,9 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Using);
 		static ParserRef<Using> parse(RiftParserState& state);
 
-		auto                    getPointed() const { return names.getNames(); }
+		auto getPointed() const { return names.getNames(); }
 
-		bool                    isStar() const { return names.star; }
+		bool isStar() const { return names.star; }
 
 		virtual ~Using() = default;
 		virtual void dprint(std::ostream& out) const final;
@@ -156,9 +156,9 @@ namespace pst {
 	public:
 		STMT_CHILD_CONSTRUCTOR(Alias);
 
-		base::StrId             getName() const { return name.value; }
+		base::StrId getName() const { return name.value; }
 
-		auto                    getPointed() const { return points_to.getNames(); }
+		auto getPointed() const { return points_to.getNames(); }
 
 		static ParserRef<Alias> parse(RiftParserState& state);
 		virtual ~Alias() = default;
@@ -173,7 +173,7 @@ namespace pst {
 
 		static ParserRef<CodeBlock> parse(RiftParserState& state);
 		virtual ~CodeBlock() = default;
-		virtual void                     dprint(std::ostream& out) const final;
+		virtual void dprint(std::ostream& out) const final;
 
 		std::span<const ParserRef<Stmt>> getStatements() const { return statements; }
 	};
@@ -186,7 +186,7 @@ namespace pst {
 
 		static ParserRef<CodeBlockOrStmt> parse(RiftParserState& state);
 		virtual ~CodeBlockOrStmt() = default;
-		virtual void                     dprint(std::ostream& out) const final;
+		virtual void dprint(std::ostream& out) const final;
 
 		std::span<const ParserRef<Stmt>> getStatements() const;
 	};
@@ -338,7 +338,7 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Const);
 		static ParserRef<Const> parse(RiftParserState& state);
 
-		base::StrId             getName() const { return name.value; }
+		base::StrId getName() const { return name.value; }
 
 		~Const() final = default;
 		void dprint(std::ostream& out) const final;
@@ -369,7 +369,7 @@ namespace pst {
 		static ParserRef<TopLevel> parse(RiftParserState& state);
 
 		~TopLevel() final = default;
-		void        dprint(std::ostream& out) const final;
+		void dprint(std::ostream& out) const final;
 
 		const auto& getStatements() const { return statements; }
 	};
@@ -393,7 +393,7 @@ namespace pst {
 	public:
 		DECL_CHILD_CONSTRUCTOR(Namespace);
 
-		base::StrId                 getName() const { return name.value; }
+		base::StrId getName() const { return name.value; }
 
 		ParserCBorrowRef<CodeBlock> getBody() const { return body.borrow(); }
 
@@ -410,7 +410,7 @@ namespace pst {
 	public:
 		DECL_CHILD_CONSTRUCTOR(Struct);
 
-		base::StrId              getName() const { return name.value; }
+		base::StrId getName() const { return name.value; }
 
 		static ParserRef<Struct> parse(RiftParserState& state);
 		virtual ~Struct() = default;
@@ -426,7 +426,7 @@ namespace pst {
 	public:
 		DECL_CHILD_CONSTRUCTOR(Fun);
 
-		base::StrId           getName() const { return name.value; }
+		base::StrId getName() const { return name.value; }
 
 		static ParserRef<Fun> parse(RiftParserState& state);
 		virtual void          dprint(std::ostream& out) const final;

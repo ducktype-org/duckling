@@ -33,9 +33,9 @@ namespace hir {
 		// macro can't delete symbol
 		// perhaps go top to to bottom with use/usings/expands
 
-		pst::PST&          pst = sources[0].pst;
+		pst::PST& pst = sources[0].pst;
 
-		AnalysisState      state;
+		AnalysisState state;
 
 		symtable::ScopeRef root_scope = state.newSubRootScope();
 

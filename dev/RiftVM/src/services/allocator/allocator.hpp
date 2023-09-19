@@ -16,7 +16,7 @@ namespace vm {
 	 */
 	class Allocator {
 	private:
-		Memory&        memory;
+		Memory& memory;
 
 		static Memory& getMemory(VCPU& vcpu);
 
@@ -29,7 +29,7 @@ namespace vm {
 
 		BlockId makeArrayBlock(TypeCRef type, u64 length);
 
-		void    deleteBlock(BlockId block_id);
+		void deleteBlock(BlockId block_id);
 
 		template<class... DynamicServices>
 		friend class ServiceManagerDef;

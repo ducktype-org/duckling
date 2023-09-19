@@ -16,14 +16,14 @@ namespace vm {
 		std::vector<TypeId>            types_ids;
 		base::Map<base::StrId, TypeId> names_to_type;
 
-		TypeMetadataState              state;
+		TypeMetadataState state;
 
 		TypeMetadata(): state(TypeMetadataState::AddingTypes){};
 
 	public:
-		TypeRef          addType(Type&& type);
+		TypeRef addType(Type&& type);
 
-		void             finalize();
+		void finalize();
 
 		TypeCRef         getType(TypeId id) const;
 		option<TypeCRef> getTypeSafe(TypeId id) const;

@@ -17,7 +17,7 @@ namespace vm {
 	// Type definition:
 	void Type::definePrimitive(TypeSize size) {
 		RIFT_ASSERT(state == State::Declared, "Bad type define");
-		state      = State::Defined;
+		state = State::Defined;
 
 		kind_type  = Kind::Primitive;
 		this->size = size;
@@ -26,7 +26,7 @@ namespace vm {
 
 	void Type::definePointer(TypeCRef inner) {
 		RIFT_ASSERT(state == State::Declared, "Bad type define");
-		state     = State::Defined;
+		state = State::Defined;
 
 		size      = PointerSize;
 		kind_type = Kind::Pointer;
@@ -35,7 +35,7 @@ namespace vm {
 
 	void Type::defineStaticTable(TypeRef inner, u64 table_size) {
 		RIFT_ASSERT(state == State::Declared, "Bad type define");
-		state     = State::Defined;
+		state = State::Defined;
 
 		kind_type = Kind::StaticTable;
 		kind      = kind::StaticTable{ inner, table_size };
@@ -43,7 +43,7 @@ namespace vm {
 
 	void Type::defineDynamicTable(TypeRef inner) {
 		RIFT_ASSERT(state == State::Declared, "Bad type define");
-		state     = State::Defined;
+		state = State::Defined;
 
 		size      = PointerSize;
 		kind_type = Kind::DynamicTable;
@@ -52,7 +52,7 @@ namespace vm {
 
 	void Type::defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions) {
 		RIFT_ASSERT(state == State::Declared, "Bad type define");
-		state     = State::Defined;
+		state = State::Defined;
 
 		kind_type = Kind::Data;
 		auto data = kind::Data{};
@@ -66,7 +66,7 @@ namespace vm {
 
 	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {
 		RIFT_ASSERT(state == State::Declared, "Bad type define");
-		state        = State::Defined;
+		state = State::Defined;
 
 		kind_type    = Kind::Variant;
 		auto variant = kind::Variant{};
@@ -78,7 +78,7 @@ namespace vm {
 
 	void Type::defineFunction(std::vector<TypeCRef> parameters, TypeCRef result) {
 		RIFT_ASSERT(state == State::Declared, "Bad type define");
-		state     = State::Defined;
+		state = State::Defined;
 
 		size      = PointerSize;
 		kind_type = Kind::Function;
@@ -198,7 +198,7 @@ namespace vm {
 
 	// pointer, staticTable, dynamicTable
 	option<TypeCRef> Type::getInnerType() const {
-		auto getInnerType  = [](const auto& t) { return t.inner_type; };
+		auto getInnerType = [](const auto& t) { return t.inner_type; };
 
 		auto pointerOption = get<kind::Pointer>().map(getInnerType);
 		if (pointerOption.has_value()) {

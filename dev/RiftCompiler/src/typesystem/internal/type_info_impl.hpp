@@ -48,7 +48,7 @@ namespace ts::internal {
 
 	protected:
 		// Size in bits.
-		usize       size           = 0;
+		usize size = 0;
 		// @TODO set this for each type and make it const.
 		std::string representation = "UNNAMED";
 	};
@@ -359,9 +359,9 @@ namespace ts::internal {
 
 		const std::vector<TypeDesc<>>& getUnderlyingTypes() const { return underlyingTypes; }
 
-		std::pair<TypeDesc<>, usize>   getMember(usize index) const;
+		std::pair<TypeDesc<>, usize> getMember(usize index) const;
 
-		TypeDesc<>                     getType(usize idx) const { return underlyingTypes[idx]; }
+		TypeDesc<> getType(usize idx) const { return underlyingTypes[idx]; }
 
 		[[nodiscard]]
 		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
@@ -399,16 +399,16 @@ namespace ts::internal {
 
 		std::vector<TypeDesc<>> getTypes() const { return variant_types; }
 
-		TypeDesc<>              getType(usize idx) { return variant_types[idx]; }
+		TypeDesc<> getType(usize idx) { return variant_types[idx]; }
 	};
 
 	class ClassInfoImpl: public TypeInfoImpl {
-		const base::StrId                                 name;
+		const base::StrId name;
 
 		// Stores the data of our ancestors, sorted by their offset
-		std::vector<AncestorData>                         ancestors_data;
+		std::vector<AncestorData> ancestors_data;
 		// Stores the data of our members, could be sorted in the future
-		std::vector<MemberData>                           members_data;
+		std::vector<MemberData> members_data;
 
 		// Indexes for looking up positions
 		// If they contain something, it's not an empty vector
@@ -416,15 +416,15 @@ namespace ts::internal {
 		base::Map<ClassInfo, std::vector<usize>>          ancestors_positions;
 
 		// Positions of our parents in the ancestors vector, sorted by their order
-		std::vector<usize>                                basic_parents;
+		std::vector<usize> basic_parents;
 		// @TODO: they are a connected subsequence, maybe just remember first and last index in
 		// members_data? Positions of our members in the members vector, sorted by their order
-		std::vector<usize>                                direct_members;
+		std::vector<usize> direct_members;
 		// Layout of virtual ancestors, sorted by their offset
-		std::vector<std::pair<ClassInfo, usize>>          virtual_layout;
+		std::vector<std::pair<ClassInfo, usize>> virtual_layout;
 
-		usize                                             virt_method_count;
-		usize                                             base_size;
+		usize virt_method_count;
+		usize base_size;
 
 		[[nodiscard]]
 		bool hasVtable() const;

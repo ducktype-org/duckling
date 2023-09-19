@@ -11,8 +11,8 @@
 #include <lexer/token.hpp>
 
 namespace pst {
-	PST  parse(lexer::TokenData&& td);
-	PST  parse(const fs::FilePath&);
+	PST parse(lexer::TokenData&& td);
+	PST parse(const fs::FilePath&);
 
 	void init();
 }

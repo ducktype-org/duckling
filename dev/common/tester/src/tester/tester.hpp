@@ -41,12 +41,12 @@ namespace tester {
 			printer::MessagePack output;
 		};
 
-		void                  resultHandler(const TestData& test, const TestResult& res);
-		void                  prolog();
-		void                  epilog(usize passed, usize failed, double time);
+		void resultHandler(const TestData& test, const TestResult& res);
+		void prolog();
+		void epilog(usize passed, usize failed, double time);
 
-		TestResult*           curr_global_res;
-		void                  runTest(TestType test);
+		TestResult* curr_global_res;
+		void        runTest(TestType test);
 
 		std::string           name;
 		std::vector<TestData> tests;
@@ -83,7 +83,7 @@ namespace tester {
 		}
 	};
 
-#define TESTER_CLASS          TESTER_CLASS_MUST_BE_DEFINED_BEFORE_ANY_TEST_CLASS
+#define TESTER_CLASS TESTER_CLASS_MUST_BE_DEFINED_BEFORE_ANY_TEST_CLASS
 
 #define TESTER_ADD_TEST(test) addTest(static_cast<TestType>(&TESTER_CLASS::test), #test)
 
@@ -95,12 +95,12 @@ namespace tester {
  * @brief Only use this macro if single class test file
  * and after defining proper TESTER_CLASS
  */
-#define TESTER_COMMON_MAIN(test_path)                                                \
-	int main(int argc, char* argv[]) {                                               \
-		auto         config = tester::testConfigFromArgs({ argc, argv }, test_path); \
-                                                                                     \
-		TESTER_CLASS test(std::move(config));                                        \
-		if (!test.run()) return 1;                                                   \
+#define TESTER_COMMON_MAIN(test_path)                                        \
+	int main(int argc, char* argv[]) {                                       \
+		auto config = tester::testConfigFromArgs({ argc, argv }, test_path); \
+                                                                             \
+		TESTER_CLASS test(std::move(config));                                \
+		if (!test.run()) return 1;                                           \
 	}
 
 }

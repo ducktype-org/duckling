@@ -18,11 +18,11 @@ namespace vm {
 
 		BlockId getBlock() const { return block; }
 
-		u64     getOffset() const { return offset; }
+		u64 getOffset() const { return offset; }
 
-		void    addOffset(i64 off) {
-            // @TODO: range checking
-            offset += off;
-        }
+		void addOffset(i64 off) {
+			// @TODO: range checking
+			offset += off;
+		}
 	};
 }

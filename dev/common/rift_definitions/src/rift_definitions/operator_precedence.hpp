@@ -29,8 +29,8 @@ namespace rift_def {
 
 	enum class OperatorAssociativity { LeftToRight, RightToLeft };
 
-	i64                   operatorPrecedence(base::StrId operator_, OperatorType operator_type);
-	i64                   operatorPrecedence(Operator operator_, OperatorType operator_type);
+	i64 operatorPrecedence(base::StrId operator_, OperatorType operator_type);
+	i64 operatorPrecedence(Operator operator_, OperatorType operator_type);
 
 	OperatorAssociativity operatorAssociativity(base::StrId operator_, OperatorType operator_type);
 	OperatorAssociativity operatorAssociativity(Operator operator_, OperatorType operator_type);

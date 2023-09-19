@@ -25,11 +25,11 @@ private:
 		auto           int_type = ts::IntegralInfo::create(8);
 		ts::TypeDesc<> int_desc{ int_type };
 
-		auto           eq_int = [](std::vector<exec::CTV> ctvs) {
-            int8_t a   = ctvs[0].getData<int8_t>().front();
-            int8_t b   = ctvs[1].getData<int8_t>().front();
-            bool   res = (a == b);
-            return res;
+		auto eq_int = [](std::vector<exec::CTV> ctvs) {
+			int8_t a   = ctvs[0].getData<int8_t>().front();
+			int8_t b   = ctvs[1].getData<int8_t>().front();
+			bool   res = (a == b);
+			return res;
 		};
 
 		exec::CTV int_ctv_a                   = exec::alloc_new(int_desc, int_type.getSize());

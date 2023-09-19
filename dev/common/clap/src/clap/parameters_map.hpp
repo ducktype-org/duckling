@@ -14,13 +14,13 @@ namespace clap {
 		std::unordered_set<usize>         flags;
 		base::HashMap<usize, base::StrId> parameters;
 
-		option<usize>                     to_id(base::StrId name) const;
-		option<usize>                     to_id(const base::RawView& name) const;
-		option<usize>                     to_id(char name) const;
-		option<usize>                     to_id(byte name) const;
+		option<usize> to_id(base::StrId name) const;
+		option<usize> to_id(const base::RawView& name) const;
+		option<usize> to_id(char name) const;
+		option<usize> to_id(byte name) const;
 
-		option<base::RawView>             get(usize id) const;
-		bool                              contains(usize id) const;
+		option<base::RawView> get(usize id) const;
+		bool                  contains(usize id) const;
 
 	public:
 		template<class T>

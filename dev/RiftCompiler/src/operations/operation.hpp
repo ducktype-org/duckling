@@ -20,26 +20,26 @@ namespace operation {
 		const Operation        function;
 		const ts::FunctionInfo signature;
 
-		exec::CTV              operator()(const std::vector<exec::CTV>& ctvs) const {
-            RIFT_ASSERT(ctvs.size() == signature.getParameterTypeList().size(),
-                        base::strConcat("operation received incorrect number of arguments.",
-                                        "expected ",
-                                        signature.getParameterTypeList().size(),
-                                        " got ",
-                                        ctvs.size()))
+		exec::CTV operator()(const std::vector<exec::CTV>& ctvs) const {
+			RIFT_ASSERT(ctvs.size() == signature.getParameterTypeList().size(),
+			            base::strConcat("operation received incorrect number of arguments.",
+			                            "expected ",
+			                            signature.getParameterTypeList().size(),
+			                            " got ",
+			                            ctvs.size()))
 
-            for (usize i = 0; i < ctvs.size(); i++) {
-                // @TODO: this should check if types are compatible.
-                // (possibly doing some conversion, or discarding consts?)
-                RIFT_ASSERT(ctvs[i].type == signature.getParameterTypeList()[i],
-                            "Argument has incorrect type")
-            }
+			for (usize i = 0; i < ctvs.size(); i++) {
+				// @TODO: this should check if types are compatible.
+				// (possibly doing some conversion, or discarding consts?)
+				RIFT_ASSERT(ctvs[i].type == signature.getParameterTypeList()[i],
+				            "Argument has incorrect type")
+			}
 
-            return function(ctvs);
+			return function(ctvs);
 		}
 	};
 
-	using OperationId  = base::NamedId<TypedOperation>;
+	using OperationId = base::NamedId<TypedOperation>;
 
 	using OperationMap = base::VectorMap<OperationId, TypedOperation>;
 
@@ -57,15 +57,15 @@ namespace operation {
 
 	TypedOperation getOperation(OperationId id);
 
-	bool           existsOperation(OperationId id);
+	bool existsOperation(OperationId id);
 
-	OperationId    addOperation(const TypedOperation& operation);
+	OperationId addOperation(const TypedOperation& operation);
 
-	OperationId    addDefault(Defaultable kind, ts::TypeInfo type, const TypedOperation& operation);
+	OperationId addDefault(Defaultable kind, ts::TypeInfo type, const TypedOperation& operation);
 
 	TypedOperation& getDefault(Defaultable kind, ts::TypeInfo type);
 
-	OperationId     getIdDefault(Defaultable kind, ts::TypeInfo type);
+	OperationId getIdDefault(Defaultable kind, ts::TypeInfo type);
 
 	struct Call {
 		const operation::OperationId op;
@@ -73,8 +73,8 @@ namespace operation {
 		const usize                  offset;
 		const usize                  size;
 
-		exec::CTV                    operator()(const std::vector<exec::CTV>& ctvs) const {
-            return getOperation(op)(ctvs);
+		exec::CTV operator()(const std::vector<exec::CTV>& ctvs) const {
+			return getOperation(op)(ctvs);
 		}
 	};
 

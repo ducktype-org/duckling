@@ -52,9 +52,9 @@ namespace ts {
 		if (a.result_type == ResultType::Virtual) {
 			return a;
 		}
-		AncestorInfo result          = *this;
+		AncestorInfo result = *this;
 		result.start_offset.value() += a.start_offset.value();
-		result.end_offset.value()    = a.end_offset.value() + start_offset.value();
+		result.end_offset.value() = a.end_offset.value() + start_offset.value();
 
 		return result;
 	}
@@ -78,7 +78,7 @@ namespace ts {
 			*this = a;
 			return *this;
 		}
-		end_offset.value()    = a.end_offset.value() + start_offset.value();
+		end_offset.value() = a.end_offset.value() + start_offset.value();
 		start_offset.value() += a.start_offset.value();
 
 

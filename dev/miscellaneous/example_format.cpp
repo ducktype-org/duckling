@@ -36,7 +36,7 @@ namespace N {
 		mutable i32 b;
 
 	public:
-		i32  aaa;
+		i32 aaa;
 
 		void method(i32 a, i32 b, i32 c);
 	};
@@ -68,10 +68,10 @@ namespace N1 {
 											while (true)
 												while (true) {}
 
-			i32  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
-			i32  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
-			i32  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
-			i32  ccccccccccccccccccccccccccccccccccccccccc;
+			i32 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
+			i32 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
+			i32 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
+			i32 ccccccccccccccccccccccccccccccccccccccccc;
 
 			bool value = aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 			                   + aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -83,7 +83,7 @@ namespace N1 {
 }
 
 int main() {
-	i32              a;
+	i32 a;
 
 	printer::Console console;
 	console.add({
@@ -149,9 +149,9 @@ int main() {
 	const i32 ah     = 0;
 	const i32 ssssss = 0;
 
-	int&      a;
-	int&      a;
-	i32       a[5][5];
+	int& a;
+	int& a;
+	i32  a[5][5];
 
 	for (auto v : values) {}
 

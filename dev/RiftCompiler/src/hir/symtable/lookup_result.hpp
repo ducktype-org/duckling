@@ -16,9 +16,9 @@ namespace symtable {
 
 	typedef std::vector<SymbolRef> SymbolChain;
 
-	void                           dprintSymbolChain(const SymbolChain&, std::ostream&);
+	void dprintSymbolChain(const SymbolChain&, std::ostream&);
 
-	SymbolChain                    deAliasSymbolChain(hir::AnalysisState&, const SymbolChain&);
+	SymbolChain deAliasSymbolChain(hir::AnalysisState&, const SymbolChain&);
 
 	struct LookupNode;
 
@@ -26,35 +26,35 @@ namespace symtable {
 		std::vector<SymbolRef>  leaves;
 		std::vector<LookupNode> children;
 
-		bool                    isEmpty() const;
+		bool isEmpty() const;
 
-		bool                    isSingle() const;
-		SymbolChain             getAsSingle();
-		SymbolChain             getAsSingleReverse();
+		bool        isSingle() const;
+		SymbolChain getAsSingle();
+		SymbolChain getAsSingleReverse();
 
-		void                    insert(LookupResult&& other);
-		LookupNode              toNode(SymbolRef node) &;
-		LookupNode              toNode(SymbolRef node) &&;
+		void       insert(LookupResult&& other);
+		LookupNode toNode(SymbolRef node) &;
+		LookupNode toNode(SymbolRef node) &&;
 
-		void                    dprint(std::ostream&);
+		void dprint(std::ostream&);
 	};
 
 	struct LookupNode {
 		SymbolRef    node;  // node should always be alias-like of using-like thing
 		LookupResult inner;
 
-		void         dprint(std::ostream&);
+		void dprint(std::ostream&);
 	};
 
 	struct ChainLookupResult {
 		SymbolChain  prefix;
 		LookupResult result;
 
-		bool         isEmpty() const;
+		bool isEmpty() const;
 
-		bool         isSingle() const;
-		SymbolChain  getAsSingle();
+		bool        isSingle() const;
+		SymbolChain getAsSingle();
 
-		void         dprint(std::ostream&);
+		void dprint(std::ostream&);
 	};
 }

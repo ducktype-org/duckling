@@ -19,13 +19,13 @@ namespace hir {
 		// @TODO: error state here
 
 	public:
-		bool                  empty() const { return to_analyze.empty(); }
+		bool empty() const { return to_analyze.empty(); }
 
-		bool                  notEmpty() const { return !empty(); }
+		bool notEmpty() const { return !empty(); }
 
-		SymbolRef             popNext();
+		SymbolRef popNext();
 
-		void                  addSymbol(base::unique_ptr<Symbol> symbol);
+		void addSymbol(base::unique_ptr<Symbol> symbol);
 
 		// @TODO: add const
 		symtable::SymbolData& symTable() { return symbol_data; }

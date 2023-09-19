@@ -11,10 +11,10 @@ namespace exec {
 
 		bool res = true;
 		for (const operation::Call& call : calls) {
-			CTV tempA     = a.subCTV(call.type, call.offset, call.size);
-			CTV tempB     = b.subCTV(call.type, call.offset, call.size);
-			CTV localRes  = call({ tempA, tempB });
-			res          &= localRes.getData<bool>().front();
+			CTV tempA    = a.subCTV(call.type, call.offset, call.size);
+			CTV tempB    = b.subCTV(call.type, call.offset, call.size);
+			CTV localRes = call({ tempA, tempB });
+			res &= localRes.getData<bool>().front();
 			if (!res) break;
 		}
 
@@ -24,30 +24,30 @@ namespace exec {
 	}
 
 	CTV defaultEqualityVirtual(ts::ClassInfo class_info, const CTV& a, const CTV& b) {
-		bool  res           = true;
+		bool res = true;
 
-		auto  vtable        = ts::PointerInfo::create(ts::VTableInfo::create(class_info));
+		auto vtable = ts::PointerInfo::create(ts::VTableInfo::create(class_info));
 
 		usize vtable_offset = class_info.getVtablePtrOffset();
 
-		auto  vtable_ptr_a  = a.subCTV(vtable, vtable_offset, ts::POINTER_SIZE);
+		auto vtable_ptr_a = a.subCTV(vtable, vtable_offset, ts::POINTER_SIZE);
 
 
-		auto  vtable_a      = vtable_ptr_a.getDataUnderPointer<usize>();
+		auto vtable_a = vtable_ptr_a.getDataUnderPointer<usize>();
 
-		auto  vtable_ptr_b  = b.subCTV(vtable, vtable_offset, ts::POINTER_SIZE);
+		auto vtable_ptr_b = b.subCTV(vtable, vtable_offset, ts::POINTER_SIZE);
 
 		// w vtable trzymane są offsety rozmiaru usize	(oraz w przyszłości metody)
-		auto  vtable_b      = vtable_ptr_b.getDataUnderPointer<usize>();
+		auto vtable_b = vtable_ptr_b.getDataUnderPointer<usize>();
 
 		for (auto ancestor_info : class_info.virtualAncestors()) {
-			usize       pos   = class_info.getVtablePositionOf(ancestor_info);
+			usize pos = class_info.getVtablePositionOf(ancestor_info);
 
-			usize       off_a = vtable_a[pos];
-			usize       off_b = vtable_b[pos];
+			usize off_a = vtable_a[pos];
+			usize off_b = vtable_b[pos];
 
-			CTV         sub_a = a.subCTV(ancestor_info, off_a, ancestor_info.getBaseSize());
-			CTV         sub_b = b.subCTV(ancestor_info, off_b, ancestor_info.getBaseSize());
+			CTV sub_a = a.subCTV(ancestor_info, off_a, ancestor_info.getBaseSize());
+			CTV sub_b = b.subCTV(ancestor_info, off_b, ancestor_info.getBaseSize());
 
 			// W przyszłości tutaj powinniśmy wyszukiwać operację, która porównuje tylko
 			// niewirtualnych przodków (będzie ona zapewne przechowywana gdzie indziej)
@@ -55,9 +55,9 @@ namespace exec {
 			// wówczas nie będzie ona miała takiego podziału.
 			const auto& op = operation::getDefault(operation::Defaultable::Equality, ancestor_info);
 
-			CTV         localRes  = op({ sub_a, sub_b });
+			CTV localRes = op({ sub_a, sub_b });
 
-			res                  &= localRes.getData<bool>().front();
+			res &= localRes.getData<bool>().front();
 			if (!res) break;
 		}
 

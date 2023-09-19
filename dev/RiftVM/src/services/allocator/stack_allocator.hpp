@@ -16,7 +16,7 @@ namespace vm {
 	 */
 	class StackAllocator {
 	private:
-		Memory&        memory;
+		Memory& memory;
 
 		static Memory& getMemory(VCPU& vcpu);
 

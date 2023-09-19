@@ -9,8 +9,8 @@
 
 namespace clap {
 	struct PositionalParametersCountError {
-		usize       required;
-		usize       found;
+		usize required;
+		usize found;
 
 		std::string print() const;
 	};

@@ -11,8 +11,8 @@ namespace compiler {
 		bool                     was_help = false;
 		std::vector<std::string> file_names;
 
-		bool                     was_output = false;
-		std::string              output;
+		bool        was_output = false;
+		std::string output;
 	};
 
 	CompilerConfig   fromArgs(config::CLIArgs args);

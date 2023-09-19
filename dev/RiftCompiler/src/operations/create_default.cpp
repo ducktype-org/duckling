@@ -45,7 +45,7 @@ namespace operation {
 			for (i32 i = 0; i < count; i++) {
 				auto [type_desc, offset] = tuple_info.getMember(i);
 
-				auto op                  = operation::getIdDefault(kind, type_desc.getType());
+				auto op = operation::getIdDefault(kind, type_desc.getType());
 
 				Call curr(op, type_desc, offset, type_desc.getType().getSize());
 				res.push_back(curr);
@@ -114,7 +114,7 @@ namespace operation {
 	}
 
 	operation::TypedOperation createDefaultAssign(ts::TypeInfo type_info) {
-		Calls calls             = internal::collectCalls(type_info, operation::Defaultable::Assign);
+		Calls calls = internal::collectCalls(type_info, operation::Defaultable::Assign);
 
 		operation::Operation op = [type_info, calls](const std::vector<exec::CTV>& input) {
 			RIFT_ASSERT(input.size() == 2, "Assigment should receive two values.")
@@ -143,7 +143,7 @@ namespace operation {
 	operation::TypedOperation createDefaultConstructFull(ts::TypeInfo type_info) {
 		// @TODO: how should members be constructed?
 
-		Calls calls             = internal::collectCalls(type_info, operation::Defaultable::Assign);
+		Calls calls = internal::collectCalls(type_info, operation::Defaultable::Assign);
 
 		operation::Operation op = [type_info, calls](const std::vector<exec::CTV>& input) {
 			return exec::defaultConstructFull(type_info, calls, input);

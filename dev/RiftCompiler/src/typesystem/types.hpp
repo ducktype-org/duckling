@@ -97,7 +97,7 @@ namespace ts {
 	public:
 		static PointerInfo create(const TypeDesc<>& underlying_type);
 
-		TypeDesc<>         getUnderlying() const;
+		TypeDesc<> getUnderlying() const;
 
 		CHECKED_CAST(PointerInfo)
 
@@ -159,7 +159,7 @@ namespace ts {
 	public:
 		static OptionalInfo create(const TypeDesc<>& underlying_type);
 
-		TypeDesc<>          getUnderlying() const;
+		TypeDesc<> getUnderlying() const;
 
 		CHECKED_CAST(OptionalInfo)
 
@@ -171,11 +171,11 @@ namespace ts {
 		SETUP_TYPE(TupleInfo, TypeInfo)
 
 	public:
-		static TupleInfo               create(const std::vector<TypeDesc<>>& variant_types);
+		static TupleInfo create(const std::vector<TypeDesc<>>& variant_types);
 
 		const std::vector<TypeDesc<>>& getUnderlyingTypes() const;
 
-		std::pair<TypeDesc<>, usize>   getMember(usize index) const;
+		std::pair<TypeDesc<>, usize> getMember(usize index) const;
 
 		CHECKED_CAST(TupleInfo)
 

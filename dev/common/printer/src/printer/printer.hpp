@@ -20,13 +20,13 @@ namespace printer {
 	// Important to update this value, when adding or removing MessageTypes.
 	// @IDEA: Make TYPE_COUNT the last member of enum class MessageType, and assign its value there.
 	// This way, it will be harder to forget to update it whenever making changes to MessageType.
-	constexpr usize     TYPE_COUNT = 6;
+	constexpr usize TYPE_COUNT = 6;
 
-	typedef i32         LevelType;
+	typedef i32 LevelType;
 
 	typedef std::string MessageContentText;
 
-	typedef int8_t      MessageTypeId;
+	typedef int8_t MessageTypeId;
 
 	// Aside from 'ALL', types have to be enumerated from 0 to TYPE_COUNT - 1.
 	enum class MessageType : MessageTypeId {
@@ -62,8 +62,8 @@ namespace printer {
 	 * RESET resets color settings to terminal's default.
 	 */
 	enum class Color : ColorId {
-		DEFAULT        = -1,
-		RESET          = 0,
+		DEFAULT = -1,
+		RESET   = 0,
 
 		BLACK          = 30,
 		RED            = 31,
@@ -143,7 +143,7 @@ namespace printer {
 	};
 
 	// @FIXME MessagePack and Message(init_list) constructors can be ambiguous
-	typedef std::vector<Message>              MessagePack;
+	typedef std::vector<Message> MessagePack;
 
 	typedef std::array<LevelType, TYPE_COUNT> minLevel_t;
 	typedef std::array<usize, TYPE_COUNT>     maxAmounts_t;
@@ -167,10 +167,10 @@ namespace printer {
 		static constexpr minLevel_t   defaultMinLevel   = detail::constructDefaultMinLevel();
 		static constexpr maxAmounts_t defaultMaxAmounts = detail::constructDefaultMaxAmounts();
 
-		std::vector<MessagePack>      messagePacks;
-		usize                         generalMax;
-		minLevel_t                    minLevel;
-		maxAmounts_t                  maxAmounts;
+		std::vector<MessagePack> messagePacks;
+		usize                    generalMax;
+		minLevel_t               minLevel;
+		maxAmounts_t             maxAmounts;
 
 	public:
 		Console(usize generalMax = SIZE_MAX, minLevel_t minLevel = defaultMinLevel,

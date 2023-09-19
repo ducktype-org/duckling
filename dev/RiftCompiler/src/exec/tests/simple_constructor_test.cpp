@@ -25,14 +25,14 @@ private:
 
 		assert(ctv.getData().size() * 8 == 8, "Size of ctv is incorrect");
 
-		ctv.getData()[0]  = 2;
+		ctv.getData()[0] = 2;
 
 
-		auto p_ctv        = ctv.makePointer();
+		auto p_ctv = ctv.makePointer();
 
-		auto pointer      = ((u32*) p_ctv.getData().data());
-		auto block        = pointer[0];
-		auto offset       = pointer[1];
+		auto pointer = ((u32*) p_ctv.getData().data());
+		auto block   = pointer[0];
+		auto offset  = pointer[1];
 
 		// or:
 		auto pointer_data = p_ctv.getData<u32>();

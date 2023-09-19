@@ -28,7 +28,7 @@ private:
 	}
 
 	void testLongValuePresent() {
-		Config        config     = Config().add(ParameterConfig("long"));
+		Config config = Config().add(ParameterConfig("long"));
 
 		const char*   argv[2]    = { "name", "--long" };
 		ParametersMap parameters = config.parse(CLIArgs{ 2, argv });
@@ -36,7 +36,7 @@ private:
 	}
 
 	void testLongValueMissing() {
-		Config        config     = Config().add(ParameterConfig("long"));
+		Config config = Config().add(ParameterConfig("long"));
 
 		const char*   argv[1]    = { "name" };
 		ParametersMap parameters = config.parse(CLIArgs{ 1, argv });

@@ -71,9 +71,9 @@ namespace lexer {
 		base::RawArray raw_begin   = nullptr;
 
 		// @TODO: this u8 is strange
-		u8             size        = u8{ 0 };
+		u8 size = u8{ 0 };
 
-		Char()                     = default;
+		Char() = default;
 
 		// funkcje poniżej na wypadek, gdyby kiedyś więcej rzeczy się działo przy ustawianiu typu
 		void setCharacter();
@@ -107,7 +107,7 @@ namespace lexer {
 		~CharArray();
 
 	private:
-		CharArray()            = default;
+		CharArray() = default;
 
 		base::RawArray r_array = nullptr;
 		Array          array;

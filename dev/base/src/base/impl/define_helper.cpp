@@ -10,7 +10,7 @@ namespace base {
 		std::vector<std::string> out;
 		auto                     len = va_arg.length();
 
-		std::ostringstream       helper;
+		std::ostringstream helper;
 
 		for (usize i = 0; i < len; i++) {
 			if (isspace(va_arg[i]))

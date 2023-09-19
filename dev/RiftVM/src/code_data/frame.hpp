@@ -42,18 +42,18 @@ namespace vm {
 		option<Frame&> previous;
 		// const FuncData& function;
 		const std::span<const Fix8Instruction>
-				  bc;  // this is duplication of function.bc, but allows for faster access
+			bc;  // this is duplication of function.bc, but allows for faster access
 
-		bool      continue_execution;
-		usize     instruction_pointer;
+		bool  continue_execution;
+		usize instruction_pointer;
 
 		// Register like data:
-		Registers regs;
-		FlagData  flags;
-		u64       ret_val;
+		Registers            regs;
+		FlagData             flags;
+		u64                  ret_val;
 		StandardFunctionArgs next_args;
 
 		// Local stack:
-		VLADataReference     vla_data_reference;
+		VLADataReference vla_data_reference;
 	};
 }

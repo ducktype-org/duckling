@@ -158,65 +158,65 @@ namespace rift_def {
 	};
 
 	// Distinct for all keyword modes:
-	base::VectorMap<base::StrId, Keyword, false, true>    rift_keyword_map;
-	base::VectorMap<base::StrId, Keyword, false, true>    bc_keyword_map;
+	base::VectorMap<base::StrId, Keyword, false, true> rift_keyword_map;
+	base::VectorMap<base::StrId, Keyword, false, true> bc_keyword_map;
 
 	// Single for all
-	base::VectorMap<Keyword, base::StrId, false, true>    rev_keyword_map;
+	base::VectorMap<Keyword, base::StrId, false, true> rev_keyword_map;
 
 	// Single for all:
 	base::VectorMap<Keyword, base::FlagType, false, true> keyword_flags;
 
-	base::VectorMap<base::StrId, Special, false, true>    special_map;
-	base::VectorMap<base::StrId, Operator, false, true>   operator_map;
+	base::VectorMap<base::StrId, Special, false, true>  special_map;
+	base::VectorMap<base::StrId, Operator, false, true> operator_map;
 
-	base::VectorMap<Special, base::StrId, false, true>    rev_special_map;
-	base::VectorMap<Operator, base::StrId, false, true>   rev_operator_map;
+	base::VectorMap<Special, base::StrId, false, true>  rev_special_map;
+	base::VectorMap<Operator, base::StrId, false, true> rev_operator_map;
 
-	void                                                  key_spec_op::init() {
-        RIFT_SIMPLE_INIT_GUARD_BEGIN;
+	void key_spec_op::init() {
+		RIFT_SIMPLE_INIT_GUARD_BEGIN;
 
-        keyword_mode = DEFAULT_MODE;
+		keyword_mode = DEFAULT_MODE;
 
-        // keywords:
-        rev_keyword_map.put(Keyword::NotAKeyword, base::StrId("NotAKeyword"));
-        keyword_flags.put(Keyword::NotAKeyword, base::EmptyFlag);
+		// keywords:
+		rev_keyword_map.put(Keyword::NotAKeyword, base::StrId("NotAKeyword"));
+		keyword_flags.put(Keyword::NotAKeyword, base::EmptyFlag);
 
-        for (auto [k, s, f] : rift_keywords_array) {
-            rift_keyword_map.put(makeStrId(s), k);
-            rev_keyword_map.put(k, makeStrId(s));
-            keyword_flags.put(k, f);
-        }
+		for (auto [k, s, f] : rift_keywords_array) {
+			rift_keyword_map.put(makeStrId(s), k);
+			rev_keyword_map.put(k, makeStrId(s));
+			keyword_flags.put(k, f);
+		}
 
-        for (auto [k, s, f] : bc_keywords_array) {
-            bc_keyword_map.put(makeStrId(s), k);
-            rev_keyword_map.put(k, makeStrId(s));
-            keyword_flags.put(k, f);
-        }
+		for (auto [k, s, f] : bc_keywords_array) {
+			bc_keyword_map.put(makeStrId(s), k);
+			rev_keyword_map.put(k, makeStrId(s));
+			keyword_flags.put(k, f);
+		}
 
-        // specials:
-        for (auto [k, s] : special_array) {
-            special_map.put(makeStrId(s), k);
-            rev_special_map.put(k, makeStrId(s));
-        }
+		// specials:
+		for (auto [k, s] : special_array) {
+			special_map.put(makeStrId(s), k);
+			rev_special_map.put(k, makeStrId(s));
+		}
 
-        // operators:
-        for (auto [k, s] : operator_array) {
-            operator_map.put(makeStrId(s), k);
-            rev_operator_map.put(k, makeStrId(s));
-        }
+		// operators:
+		for (auto [k, s] : operator_array) {
+			operator_map.put(makeStrId(s), k);
+			rev_operator_map.put(k, makeStrId(s));
+		}
 
-        // just to be safe for any future changes
-        // @TODO: move to same tests
-        RIFT_ASSERT(rift_keywords_array.size() == rift_keyword_map.size(), "keyword map error");
-        RIFT_ASSERT(special_array.size() == special_map.size()
-                        && special_array.size() == rev_special_map.size(),
-                    "special map error");
-        RIFT_ASSERT(operator_array.size() == operator_map.size()
-                        && operator_array.size() == rev_operator_map.size(),
-                    "operator map error");
+		// just to be safe for any future changes
+		// @TODO: move to same tests
+		RIFT_ASSERT(rift_keywords_array.size() == rift_keyword_map.size(), "keyword map error");
+		RIFT_ASSERT(special_array.size() == special_map.size()
+		                && special_array.size() == rev_special_map.size(),
+		            "special map error");
+		RIFT_ASSERT(operator_array.size() == operator_map.size()
+		                && operator_array.size() == rev_operator_map.size(),
+		            "operator map error");
 
-        RIFT_SIMPLE_INIT_GUARD_END;
+		RIFT_SIMPLE_INIT_GUARD_END;
 	}
 
 	Keyword strAsKeyword(base::StrId id) {

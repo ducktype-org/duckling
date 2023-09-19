@@ -193,7 +193,7 @@ namespace lexer {
 		}
 	}
 
-	constexpr usize                                ASCII_LENGTH = 256;
+	constexpr usize ASCII_LENGTH = 256;
 
 	/**
 	 * When modifing it modify also key_spec_op.cpp
@@ -213,7 +213,7 @@ namespace lexer {
 		for (usize i = '0'; i <= '9'; i++) {
 			out[i] = Char::Digit;
 		}
-		out['_']                   = Char::Character;
+		out['_'] = Char::Character;
 
 		// @TODO: this char is not perfect:
 		constexpr uchar specials[] = R"--("@#$'();[\]`{})--";
@@ -279,7 +279,7 @@ namespace lexer {
 	CharArray decode<fs::UTF8>(base::RawView bytes) {
 		CharArray::Array out;
 
-		usize            pos = 0;
+		usize pos = 0;
 		while (pos < bytes.size()) {
 			while (((bytes[pos] ^ byte{ 0b10000000u }) & byte{ 0b11000000u }) == byte{ 0 }) {
 				// bad char

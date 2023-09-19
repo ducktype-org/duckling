@@ -10,28 +10,28 @@ AlignArrayOfStructures: Left
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments:
   Enabled:         true
-  AcrossEmptyLines: true
-  AcrossComments:  true
-  AlignCompound:   true
-  PadOperators:    true
+  AcrossEmptyLines: false
+  AcrossComments:  false
+  AlignCompound:   false
+  PadOperators:    false
 AlignConsecutiveBitFields:
   Enabled:         true
-  AcrossEmptyLines: true
-  AcrossComments:  true
-  AlignCompound:   true
-  PadOperators:    true
+  AcrossEmptyLines: false
+  AcrossComments:  false
+  AlignCompound:   false
+  PadOperators:    false
 AlignConsecutiveDeclarations:
   Enabled:         true
-  AcrossEmptyLines: true
-  AcrossComments:  true
-  AlignCompound:   true
-  PadOperators:    true
+  AcrossEmptyLines: false
+  AcrossComments:  false
+  AlignCompound:   false
+  PadOperators:    false
 AlignConsecutiveMacros:
   Enabled:         true
-  AcrossEmptyLines: true
-  AcrossComments:  true
-  AlignCompound:   true
-  PadOperators:    true
+  AcrossEmptyLines: false
+  AcrossComments:  false
+  AlignCompound:   false
+  PadOperators:    false
 AlignEscapedNewlines: Left
 AlignOperands:   AlignAfterOperator
 AlignTrailingComments:
@@ -58,7 +58,6 @@ AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: Yes
 BreakAfterAttributes: Always  # @Why not 'never'?
-BreakAfterJavaFieldAnnotations: false  # Java-related
 BreakArrays:     true
 BreakBeforeBinaryOperators: All
 BreakBeforeConceptDeclarations: Always
@@ -252,6 +251,7 @@ WhitespaceSensitiveMacros:
 
 
 # Other languages
+BreakAfterJavaFieldAnnotations: false
 JavaScriptQuotes: Single
 JavaScriptWrapImports: true
 InsertTrailingCommas:   'Wrapped'  # it's only available for JavaScript -,-

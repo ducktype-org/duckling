@@ -22,8 +22,8 @@ namespace vm {
 		using IsCoreData = std::integral_constant<bool, std::is_same_v<Memory, T>
 		                                                    || std::is_same_v<TypeMetadata, T>>;
 
-		Memory             memory;
-		TypeMetadata       typeMetadata;
+		Memory       memory;
+		TypeMetadata typeMetadata;
 
 		DynamicDataStorage dynamicData;
 

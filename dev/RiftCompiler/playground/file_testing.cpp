@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
 	}
 	fs::FilePath file(argv[1]);
 
-	auto         out = file.getContent();
+	auto out = file.getContent();
 	std::cout << out.size() << "\n";
 	for (usize i = 0; i < out.size(); i++) {
 		std::cout << (uint) out[i] << "\n";

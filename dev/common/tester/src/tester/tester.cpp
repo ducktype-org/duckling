@@ -7,8 +7,8 @@ namespace tester {
 
 	constexpr usize header_line_length = 40;
 
-	usize           beginEqualSignL(usize name_l) {
-        return header_line_length / 2 - (name_l / 2);
+	usize beginEqualSignL(usize name_l) {
+		return header_line_length / 2 - (name_l / 2);
 	}
 
 	usize endEqualSignL(usize name_l) {
@@ -57,7 +57,7 @@ namespace tester {
 		usize passed = 0;
 		usize failed = 0;
 
-		auto  begin  = std::chrono::steady_clock::now();
+		auto begin = std::chrono::steady_clock::now();
 		for (auto& t : tests) {
 			TestResult res;
 			curr_global_res = &res;
