@@ -14,22 +14,22 @@ namespace tpc {
 	using lexer::Token;
 	using lexer::Operator;
 
-	void tokenStreamInit();
-
 	class TokenStream {
 		const Tokens& tokens;
 		usize where = 0;
 		/** inclusive */
 		usize to;
-		static lexer::Token sentinel;
-		friend void tokenStreamInit();
+
+		// sentinel_begin is not necessary right now
+		lexer::Token sentinel_end;
+
 	public:
 		TokenStream() = delete;
 		TokenStream(TokenStream&) = delete;
 		TokenStream(TokenStream&&) noexcept;
 
-		TokenStream(const Tokens& tokens, usize from, usize to): 
-			tokens(tokens), where(from), to(to) {}
+		TokenStream(const Tokens& tokens, Token&& sentinel_end, usize from, usize to);
+
 		const Token& next();
 
 		TokenStream getRecursive() const;

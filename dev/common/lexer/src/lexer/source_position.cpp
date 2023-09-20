@@ -15,6 +15,8 @@ namespace lexer {
 		if (getStart() == -1 || getEnd() == -1)
 			return "Error: Empty SourcePosition";
 
+		// @OPT: this creates string with full source file which should be avoided.
+		// String with only start-end chars should be created.
 		std::string sourceChars = source_code->getContent().view().stdString();
 		return sourceChars.substr(getStart(), getEnd() - getStart() + 1);
 	}
@@ -62,6 +64,10 @@ namespace lexer {
 
 	void SourcePosition::setSourceCode(std::shared_ptr<fs::FilePath> new_source_code) {
 		source_code = std::move(new_source_code);
+	}
+
+	std::shared_ptr<fs::FilePath> SourcePosition::getSourceCode() {
+		return source_code;
 	}
 
 	usize SourcePosition::getStart() const {

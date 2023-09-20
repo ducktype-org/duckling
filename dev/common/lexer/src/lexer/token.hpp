@@ -27,20 +27,6 @@ namespace lexer {
 	using rift_def::Operator;
 	using rift_def::Special;
 
-	struct TokenData {
-		Tokens tokens;
-		fs::FileContent file_content;
-
-		TokenData() = default;
-		TokenData(TokenData&&) noexcept;
-		TokenData(Tokens tokens, fs::FileContent  file_content);
-
-		void operator=(const TokenData&) = delete;
-		TokenData& operator=(TokenData&&) = default;
-
-		virtual ~TokenData();
-	};
-
 	class Token {
 	public:
 		enum class Type {
@@ -70,8 +56,10 @@ namespace lexer {
 			Type::AngleGroup
 		};
 
-		static Token makeSentinel();
-
+		// Generates sentinel token of a group
+		Token makeSentinelEnd() const;
+		
+		static Token makeSentinelEof(const SourcePosition&);
 		static Token makeKeyword(base::RawView keyword, const SourcePosition&);
 		static Token makeNumber(const base::RawView number, SourcePosition);
 		static Token makeString(base::RawView string, const SourcePosition&);
@@ -85,11 +73,10 @@ namespace lexer {
 
 		virtual ~Token() = default;
 
-		Token() noexcept = default;
 		Token(const Token& other) = default;
 		Token(Token&& other) noexcept;
 		Token(Type type, base::RawView value, SourcePosition position);
-		Token(Type type, Tokens&& recursive, SourcePosition  position);
+		Token(Type type, Tokens&& recursive, SourcePosition position);
 		friend void swap(Token& first, Token& second);
 		Token& operator=(Token other);
 
@@ -125,11 +112,28 @@ namespace lexer {
 		[[nodiscard]] SourcePosition getPosition() const;
 
 	private:
+		Token() noexcept = default;
+
 		static Token makeError(const SourcePosition&);
 
 		Type type = Type::Empty;
 		base::StrId str_id;
 		Tokens recursive;
 		SourcePosition source_position;
+	};
+
+	struct TokenData {
+		Tokens tokens;
+		Token eof_sentinel;
+		fs::FileContent file_content;
+
+		TokenData() = default;
+		TokenData(TokenData&&) noexcept;
+		TokenData(Tokens&& tokens, Token&& eof_sentinel, fs::FileContent file_content);
+
+		void operator=(const TokenData&) = delete;
+		TokenData& operator=(TokenData&&) = default;
+
+		virtual ~TokenData();
 	};
 }
