@@ -67,7 +67,7 @@ namespace tpc {
 	}
 
 	usize TokenStream::size() const {
-	  return to - where;
+	  return (where >= to ? 0 : to - where);
 	}
 		
 }

@@ -15,10 +15,14 @@ namespace lexer {
 		if (getStart() == -1 || getEnd() == -1)
 			return "Error: Empty SourcePosition";
 
-		// @OPT: this creates string with full source file which should be avoided.
-		// String with only start-end chars should be created.
-		std::string sourceChars = source_code->getContent().view().stdString();
-		return sourceChars.substr(getStart(), getEnd() - getStart() + 1);
+		auto source_content = source_code->getContent();
+		std::string_view source = source_content.view().stringView();
+
+		if (getEnd() + 1 >= source.size()) {
+			return "Error: outside source!";
+		}
+
+		return std::string(source.begin() + getStart(), source.begin() + getEnd() + 1);
 	}
 
 	SourcePosition::SourcePosition() {
@@ -92,7 +96,11 @@ namespace lexer {
 		output += "error: ";
 		output += reason;
 		output += "\n";
+		output += "  |\n";
+		output += std::to_string(line_number);
+		output += " | ";
 		output += getSourceChars() + "\n";
+		output += "  |\n";
 		return output;
 	}
 }

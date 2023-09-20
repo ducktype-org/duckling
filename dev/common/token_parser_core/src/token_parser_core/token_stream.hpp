@@ -17,7 +17,7 @@ namespace tpc {
 	class TokenStream {
 		const Tokens& tokens;
 		usize where = 0;
-		/** inclusive */
+		/** exclusive */
 		usize to;
 
 		// sentinel_begin is not necessary right now
