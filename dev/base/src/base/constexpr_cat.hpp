@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ints.hpp"
-
 #include <array>
 
 namespace base {
@@ -26,29 +25,32 @@ namespace base {
 
 		// size(char[N]) overrides std::size(char[N]) as more specialized
 		// ***Assumes char[N] is string literal*** ***STRIPS ZERO TERMINATOR***
-		template<usize N>
-		constexpr usize size(const char (&)[N]) {
-			return N - 1;
+		template <usize N>
+		constexpr usize size(char const (&)[N]) {
+			return N-1;
 		}
 
 		constexpr char* copy_n(const char* cs, usize n, char* p) {
-			for (usize i = 0; i < n; i++) *(p + i) = *(cs + i);
+			for (usize i = 0; i < n; i++) {
+				*(p + i) = *(cs + i);
+			}
 			return p + n;
 		}
 
-		template<typename... Cs>
+		template <typename... Cs>
 		constexpr usize sizeSum(const Cs&... cs) {
 			return (0U + ... + size(cs));
 		}
 	}
 
+
 	// Returns std::array<char> concatenation of the input character sequences
-	template<usize SIZE, typename... Cs>
+	template <usize SIZE, typename... Cs>
 	constexpr auto cat(const Cs&... cs) {
-		using impl::data;
 		using impl::size;
+		using impl::data;
 		using std::data;
-		std::array<char, SIZE> ret{ {} };
+		std::array<char, SIZE> ret{{}};
 		if constexpr (ret.size()) {
 			char* p = ret.data();
 			((p = impl::copy_n(data(cs), size(cs), p)), ...);

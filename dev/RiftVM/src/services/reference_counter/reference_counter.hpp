@@ -4,12 +4,12 @@
 
 namespace vm {
 	class ReferenceCounter {
-	private:
-		template<class... DynamicServices>
-		ReferenceCounter(ServiceManagerDef<DynamicServices...>& serviceManager) {}
-
-	public:
-		template<class... DynamicServices>
-		friend class ServiceManagerDef;
+		private:
+			template<class... DynamicServices>
+			ReferenceCounter(ServiceManagerDef<DynamicServices...>& serviceManager) {}
+		public:
+			
+			template<class... DynamicServices>
+			friend class ServiceManagerDef;
 	};
 }

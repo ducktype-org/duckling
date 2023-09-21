@@ -1,23 +1,24 @@
 #include <filesystem/file.hpp>
-#include <fstream>
-#include <iostream>
 #include <lexer/lexer.hpp>
-#include <sstream>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
+#include <fstream>
+#include <iostream>
+#include <sstream>
 
 void print(const Tokens& tokens, std::ostream& out, const std::string& indent = "") {
 	out << "[";
-	for (const auto& token : tokens) {
+	for (const auto& token: tokens) {
 		lexer::SourcePosition position = token.getPosition();
 
 		out << indent;
 
 		out << "{\"value\" : ";
-		if (token.getValue().isGood())
+		if (token.getValue().isGood()) {
 			out << "\"" << token.getStrValue() << "\", ";
-		else
+		} else {
 			out << "\"<EMPTY>\", ";
+		}
 
 		out << R"("line": ")" << position.getLineNumber() << "\",";
 		out << R"("column": ")" << position.getColumn() << "\",";
@@ -31,6 +32,7 @@ void print(const Tokens& tokens, std::ostream& out, const std::string& indent = 
 	out << "]";
 }
 
+
 class LexerPositionTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS LexerPositionTest
@@ -43,6 +45,7 @@ public:
 	}
 
 private:
+
 	void simplePositionTest() {
 		fs::FilePath file(path("fun.rift"));
 		td = lexer::tokenizeFile(file);
@@ -52,7 +55,7 @@ private:
 		std::cout << result_stream.str() << std::endl;
 
 		auto corr_json = fs::getSimpleFileContent(path("fun_position.json"));
-		auto corr      = corr_json.view().stringView();
+		auto corr = corr_json.view().stringView();
 
 		assert(testing_utils::compareJson(result_stream.str(), corr), "outputs are not equal");
 	}

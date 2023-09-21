@@ -6,7 +6,6 @@
 #pragma once
 
 #include "exec.hpp"
-
 #include <operations/operation.hpp>
 
 namespace exec {

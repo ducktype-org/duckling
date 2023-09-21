@@ -1,47 +1,60 @@
-#include "executor.hpp"
-
-#include "op_case.hpp"
-
-#include <base/exceptions.hpp>
 #include <base/ints.hpp>
-#include <base/option.hpp>
 #include <chrono>
+
+#include <code_data/instruction.hpp>
 #include <code_data/code.hpp>
 #include <code_data/frame.hpp>
-#include <code_data/instruction.hpp>
-#include <iostream>
 #include <services_data/type_metadata/type.hpp>
 #include <supervisor/vcpu.hpp>
+#include "op_case.hpp"
+#include "executor.hpp"
+
+#include <iostream>
+
+#include <base/exceptions.hpp>
+#include <base/option.hpp>
 
 namespace vm {
 
 	void Executor::handleExecutionStrategy() {
 		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Paused) setStatus(api::Paused{});
-		pause_cv.wait(lock, [this] { return execution_strategy != ExecutionStrategy::Paused; });
+		if (execution_strategy == ExecutionStrategy::Paused) {
+			setStatus(api::Paused{});
+		}
+		pause_cv.wait(lock, [this]{
+			return execution_strategy != ExecutionStrategy::Paused; 
+		});
 		setStatus(api::Running{});
-		if (execution_strategy == ExecutionStrategy::Stoped) throw KillCoreException{};
-		if (execution_strategy == ExecutionStrategy::StepByStep)
+		if (execution_strategy == ExecutionStrategy::Stoped) {
+			throw KillCoreException{};
+		}
+		if (execution_strategy == ExecutionStrategy::StepByStep) {
 			execution_strategy = ExecutionStrategy::Paused;
+		}
 	}
 
-	Frame Executor::internalInitFrame(option<Frame&> previous_frame, const FuncData& function,
-	                                  VLADataReference vla_ref) {
+	Frame Executor::internalInitFrame(option<Frame&> previous_frame, const FuncData& function, VLADataReference vla_ref) {
 		return Frame{
 			.previous = previous_frame,
- // .function = function,
-			.bc                  = function.bc,
-			.continue_execution  = true,
+			// .function = function,
+			.bc = function.bc,
+			.continue_execution = true,
 			.instruction_pointer = 0,
 
-			.regs      = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = memory.nullPtr() },
-			.flags     = FlagData{ .flag = false },
-			.ret_val   = 0,
-			.next_args = { 0, memory.nullPtr() },
-
+			.regs = Registers{
+				.p64_reg_0 = 0,
+				.pointer_reg_0 = memory.nullPtr()
+			},
+			.flags = FlagData{
+				.flag = false
+			},
+			.ret_val = 0,
+			.next_args = {0, memory.nullPtr()},
+			
 			.vla_data_reference = vla_ref,
 		};
 	}
+
 
 	// arguments can be passed in temp values in caller
 	// return values must somehow be passed to caller
@@ -61,26 +74,28 @@ namespace vm {
 	// callee returns
 	// temp pop A
 	// temp use R
-	//
+	// 
 	// Or stack like this:
 	// [rets][args][locals][temp] + memcpy between callee and caller
 
 	result<base::ModRawView, std::string> Executor::internalDerefPointer(Pointer pointer) {
 		auto block_id = pointer.getBlock();
-		auto offset   = pointer.getOffset();
-
+		auto offset = pointer.getOffset();
+		
 		auto block_result = memory.getBlock(block_id);
 		if (block_result.has_error()) {
 			// @TODO: executor error
 			RIFT_PANIC(base::strConcat("Bad block access: ", block_result.error()));
-		} else {
-			auto block        = block_result.value();
-			auto type         = block->innerType();
+		}
+		else {
+			auto block = block_result.value();
+			auto type = block->innerType();
 			auto deref_result = block->deref(type, offset);
 			if (deref_result.has_error()) {
 				// @TODO: executor error
 				RIFT_PANIC("Bad deref access");
-			} else {
+			}
+			else {
 				base::ModRawView view = deref_result.value();
 				RIFT_ASSERT(view.size() == type->getSize(), "Bad deref size");
 				return view;
@@ -89,23 +104,31 @@ namespace vm {
 	}
 
 	template<typename T>
-	__attribute__((always_inline)) inline static T& derefStack(std::byte stack[], i64 position) {
+	__attribute__((always_inline))
+	inline static T& derefStack(std::byte stack[], i64 position) {
 		return *(reinterpret_cast<T*>(&stack[position]));
 	}
 
-	__attribute__((always_inline)) void inline static nextInstruction(
-		const std::span<const vm::Fix8Instruction>& bc, usize& instruction_pointer,
-		OpcodeFix8& opcode, int_fast32_t& arg0, int_fast32_t& arg1) {
+	__attribute__((always_inline))
+	void inline static nextInstruction(
+			const std::span<const vm::Fix8Instruction>& bc,
+			usize& instruction_pointer,
+			OpcodeFix8& opcode,
+			int_fast32_t& arg0, int_fast32_t& arg1) {
+
 		Fix8Instruction instr = bc[instruction_pointer];
 		instruction_pointer++;
 
 		opcode = static_cast<OpcodeFix8>(instr.opcode);
-		arg0   = instr.arg0;
-		arg1   = instr.arg1;
+		arg0 = instr.arg0;
+		arg1 = instr.arg1;
 	}
 
-	i64 Executor::internalCallFunction(option<Frame&> previous_frame, const FuncData& function,
-	                                   StandardFunctionArgs args) {
+	i64 Executor::internalCallFunction(
+			option<Frame&> previous_frame,
+			const FuncData& function,
+			StandardFunctionArgs args) {
+
 		// @TODO: sanity check should be added to see if function.stack_size is sensible small
 		// @TODO: some generic code should be added to work with that does not support VLA
 		std::byte local_stack[function.stack_size];
@@ -114,88 +137,91 @@ namespace vm {
 		// USE_FLAT_FRAME is on
 		// This will be best made with code generation
 
-#ifdef USE_FLAT_FRAME
-		// Keeping these lines in, even if USE_FLAT_FRAME is off
-		// for some very strange reason speeds up program by 10-20 %
-		// It probably pokes compiler optimization in just the right way
+		#ifdef USE_FLAT_FRAME
+			// Keeping these lines in, even if USE_FLAT_FRAME is off
+			// for some very strange reason speeds up program by 10-20 %
+			// It probably pokes compiler optimization in just the right way
 
 
-		// @TODO: this should be autogenerated
+			// @TODO: this should be autogenerated
 
-		// Flat frame should technically allow for better compiler optimizations
-		// but in practice are slower for some reason
-		u64                  p64_reg_0           = 0;
-		Pointer              pointer_reg_0       = memory.nullPtr();
-		bool                 flag                = false;
-		const auto           bc                  = function.bc;
-		usize                instruction_pointer = 0;
-		u64                  ret_val             = 0;
-		StandardFunctionArgs next_args           = { 0, memory.nullPtr() };
-#else
-		Frame frame = internalInitFrame(previous_frame, function, { local_stack });
-#endif
+			// Flat frame should technically allow for better compiler optimizations
+			// but in practice are slower for some reason
+			u64 p64_reg_0 = 0;
+			Pointer pointer_reg_0 = memory.nullPtr();
+			bool flag = false;
+			const auto bc = function.bc;
+			usize instruction_pointer = 0;
+			u64 ret_val = 0;
+			StandardFunctionArgs next_args = {0, memory.nullPtr()};
+		#else
+			Frame frame = internalInitFrame(previous_frame, function, {local_stack});
+		#endif
 
-		OpcodeFix8   opcode;
+		OpcodeFix8 opcode;
 		int_fast32_t arg0;
 		int_fast32_t arg1;
 
-// Computed gotos labales:
-#ifdef USE_COMPUTED_GOTO
-		constexpr static void* opcode_label[] = { LABEL_PTR(mov_l64_imm),
+		// Computed gotos labales:
+		#ifdef USE_COMPUTED_GOTO
+			constexpr static void* opcode_label[] = {
+				LABEL_PTR(mov_l64_imm),
 
-			                                      LABEL_PTR(mov_l64_l64),
-			                                      LABEL_PTR(cmov_l64_l64),
+				LABEL_PTR(mov_l64_l64),
+				LABEL_PTR(cmov_l64_l64),
 
-			                                      LABEL_PTR(mov_l64_r0),
+				LABEL_PTR(mov_l64_r0),
 
-			                                      LABEL_PTR(mov_l64_pFuncArg),
-			                                      LABEL_PTR(mov_lptr_ptrFuncArg),
+				LABEL_PTR(mov_l64_pFuncArg),
+				LABEL_PTR(mov_lptr_ptrFuncArg),
 
-			                                      LABEL_PTR(add_l64_l64),
-			                                      LABEL_PTR(add_l64_imm),
+				LABEL_PTR(add_l64_l64),
+				LABEL_PTR(add_l64_imm),
+				
+				LABEL_PTR(sub_l64_l64),
+				LABEL_PTR(sub_l64_imm),
 
-			                                      LABEL_PTR(sub_l64_l64),
-			                                      LABEL_PTR(sub_l64_imm),
+				// LABEL_PTR(mul_l64_l64),
+				LABEL_PTR(mul_l64_imm),
+				
+				LABEL_PTR(mod_l64_l64),
+				LABEL_PTR(mod_l64_imm),
 
-			                                      // LABEL_PTR(mul_l64_l64),
-			                                      LABEL_PTR(mul_l64_imm),
+				LABEL_PTR(div_l64_imm),
 
-			                                      LABEL_PTR(mod_l64_l64),
-			                                      LABEL_PTR(mod_l64_imm),
+				LABEL_PTR(cmpEq_l64_l64),
+				LABEL_PTR(cmpEq_l64_imm),
+				LABEL_PTR(cmpG_l64_l64),
+				LABEL_PTR(cmpG_l64_imm),
 
-			                                      LABEL_PTR(div_l64_imm),
+				LABEL_PTR(jmpRel_label),
+				LABEL_PTR(jmpRelIf_label),
+				LABEL_PTR(jmpRelNotIf_label),
 
-			                                      LABEL_PTR(cmpEq_l64_l64),
-			                                      LABEL_PTR(cmpEq_l64_imm),
-			                                      LABEL_PTR(cmpG_l64_l64),
-			                                      LABEL_PTR(cmpG_l64_imm),
+				LABEL_PTR(setPArg_l64),
+				LABEL_PTR(setPtrArg_lptr),
+				LABEL_PTR(call_func),
 
-			                                      LABEL_PTR(jmpRel_label),
-			                                      LABEL_PTR(jmpRelIf_label),
-			                                      LABEL_PTR(jmpRelNotIf_label),
+				LABEL_PTR(ret_l64),
+				LABEL_PTR(ret_imm),
 
-			                                      LABEL_PTR(setPArg_l64),
-			                                      LABEL_PTR(setPtrArg_lptr),
-			                                      LABEL_PTR(call_func),
+				LABEL_PTR(init_type),
+				LABEL_PTR(deinit),
 
-			                                      LABEL_PTR(ret_l64),
-			                                      LABEL_PTR(ret_imm),
+				LABEL_PTR(input_l64),
+				LABEL_PTR(output_l64),
 
-			                                      LABEL_PTR(init_type),
-			                                      LABEL_PTR(deinit),
+				LABEL_PTR(nop),
 
-			                                      LABEL_PTR(input_l64),
-			                                      LABEL_PTR(output_l64),
-
-			                                      LABEL_PTR(nop),
-
-			                                      LABEL_PTR(alloc_lptr_type),
-			                                      LABEL_PTR(free_lptr),
-			                                      LABEL_PTR(load_l64_lptr),
-			                                      LABEL_PTR(store_lptr_l64) };
-#endif
+				LABEL_PTR(alloc_lptr_type),
+				LABEL_PTR(free_lptr),
+				LABEL_PTR(load_l64_lptr),
+				LABEL_PTR(store_lptr_l64) 
+			};
+		#endif
 
 		IF_NOT_CG(while (true)) {
+
 			IF_NOT_CG(nextInstruction(FRAME(bc), FRAME(instruction_pointer), opcode, arg0, arg1));
 			IF_CG(DISPATCH_OPCODE());
 
@@ -206,88 +232,122 @@ namespace vm {
 			}
 
 			IF_NOT_CG(switch (opcode)) {
-				OP_CASE(mov_l64_imm, { derefStack<u64>(local_stack, arg0) = arg1; })
+
+				OP_CASE(mov_l64_imm, {
+					derefStack<u64>(local_stack, arg0) = arg1;
+				})
 
 				OP_CASE(mov_l64_l64, {
 					derefStack<u64>(local_stack, arg0) = derefStack<u64>(local_stack, arg1);
-				})
+				}) 
 
 				OP_CASE(cmov_l64_l64, {
-					if (FRAME_FLAGS(flag))
+					if (FRAME_FLAGS(flag)) {
 						derefStack<u64>(local_stack, arg0) = derefStack<u64>(local_stack, arg1);
+					}
+				}) 
+
+				OP_CASE(mov_l64_r0, {
+					derefStack<u64>(local_stack, arg0) = FRAME_REGS(p64_reg_0);
 				})
 
-				OP_CASE(mov_l64_r0, { derefStack<u64>(local_stack, arg0) = FRAME_REGS(p64_reg_0); })
+				OP_CASE(mov_l64_pFuncArg, {
+					derefStack<u64>(local_stack, arg0) = args.p64_arg;
+				})
 
-				OP_CASE(mov_l64_pFuncArg, { derefStack<u64>(local_stack, arg0) = args.p64_arg; })
-
-				OP_CASE(mov_lptr_ptrFuncArg,
-				        { derefStack<Pointer>(local_stack, arg0) = args.pointer_arg; })
+				OP_CASE(mov_lptr_ptrFuncArg, {
+					derefStack<Pointer>(local_stack, arg0) = args.pointer_arg;
+				})
 
 				OP_CASE(add_l64_l64, {
 					derefStack<u64>(local_stack, arg0) += derefStack<u64>(local_stack, arg1);
 				})
 
-				OP_CASE(add_l64_imm, { derefStack<u64>(local_stack, arg0) += arg1; })
+				OP_CASE(add_l64_imm, {
+					derefStack<u64>(local_stack, arg0) += arg1;
+				})
 
 				OP_CASE(sub_l64_l64, {
 					derefStack<u64>(local_stack, arg0) -= derefStack<u64>(local_stack, arg1);
 				})
 
-				OP_CASE(sub_l64_imm, { derefStack<u64>(local_stack, arg0) -= arg1; })
+				OP_CASE(sub_l64_imm, {
+					derefStack<u64>(local_stack, arg0) -= arg1;
+				})
 
 				OP_CASE(mul_l64_imm, {
 					// @TODO: check types
 					derefStack<u64>(local_stack, arg0) *= arg1;
 				})
 
-				OP_CASE(mod_l64_imm, { derefStack<u64>(local_stack, arg0) %= arg1; })
+				OP_CASE(mod_l64_imm, {
+					derefStack<u64>(local_stack, arg0) %= arg1;
+				})
 
 				OP_CASE(mod_l64_l64, {
 					derefStack<u64>(local_stack, arg0) %= derefStack<u64>(local_stack, arg1);
 				})
 
-				OP_CASE(div_l64_imm, { derefStack<u64>(local_stack, arg0) /= arg1; })
+				OP_CASE(div_l64_imm, {
+					derefStack<u64>(local_stack, arg0) /= arg1;
+				})
 
 				OP_CASE(cmpEq_l64_l64, {
-					FRAME_FLAGS(flag)
-						= derefStack<u64>(local_stack, arg0) == derefStack<u64>(local_stack, arg1);
+					FRAME_FLAGS(flag) = 
+						derefStack<u64>(local_stack, arg0) == 
+						derefStack<u64>(local_stack, arg1);
 				})
 
-				OP_CASE(cmpEq_l64_imm,
-				        { FRAME_FLAGS(flag) = derefStack<u64>(local_stack, arg0) == arg1; })
+				OP_CASE(cmpEq_l64_imm, {
+					FRAME_FLAGS(flag) = 
+						derefStack<u64>(local_stack, arg0) == 
+						arg1;
+				})
 
 				OP_CASE(cmpG_l64_l64, {
-					FRAME_FLAGS(flag)
-						= derefStack<u64>(local_stack, arg0) > derefStack<u64>(local_stack, arg1);
+					FRAME_FLAGS(flag) = 
+						derefStack<u64>(local_stack, arg0) >
+						derefStack<u64>(local_stack, arg1);
 				})
 
-				OP_CASE(cmpG_l64_imm,
-				        { FRAME_FLAGS(flag) = derefStack<u64>(local_stack, arg0) > arg1; })
+				OP_CASE(cmpG_l64_imm, {
+					FRAME_FLAGS(flag) = 
+						derefStack<u64>(local_stack, arg0) >
+						arg1;
+				})
 
-				OP_CASE(jmpRel_label, { FRAME(instruction_pointer) += arg0; })
+				OP_CASE(jmpRel_label, {
+					FRAME(instruction_pointer) += arg0;
+				})
 
 				OP_CASE(jmpRelIf_label, {
-					if (FRAME_FLAGS(flag)) FRAME(instruction_pointer) += arg0;
+					if (FRAME_FLAGS(flag)) {
+						FRAME(instruction_pointer) += arg0;
+					}
 				})
 
 				OP_CASE(jmpRelNotIf_label, {
-					if (!FRAME_FLAGS(flag)) FRAME(instruction_pointer) += arg0;
+					if (!FRAME_FLAGS(flag)) {
+						FRAME(instruction_pointer) += arg0;
+					}
 				})
 
-				OP_CASE(setPtrArg_lptr,
-				        { FRAME(next_args.pointer_arg) = derefStack<Pointer>(local_stack, arg1); })
+				OP_CASE(setPtrArg_lptr, {
+					FRAME(next_args.pointer_arg) = derefStack<Pointer>(local_stack, arg1);
+				})
 
-				OP_CASE(setPArg_l64,
-				        { FRAME(next_args.p64_arg) = derefStack<i64>(local_stack, arg0); })
-
+				OP_CASE(setPArg_l64, {
+					FRAME(next_args.p64_arg) = derefStack<i64>(local_stack, arg0);
+				})
+				
 				OP_CASE(call_func, {
-					auto function_id      = arg0;
+					auto function_id = arg0;
 					FRAME_REGS(p64_reg_0) = internalCallFunction(
 						// @TODO: this is not correct with flat frame
 						IF_NOT_FF(frame) IF_FF(none<Frame&>()),
 						executing_code->functions[function_id],
-						FRAME(next_args));
+						FRAME(next_args)
+					);
 				})
 
 				OP_CASE(ret_l64, {
@@ -300,17 +360,15 @@ namespace vm {
 					goto End;
 				});
 
-				OP_CASE(init_type,
-				        {
-							// @TODO
-				            // throw base::NotYetImplemented("init_type");
-						})
+				OP_CASE(init_type, {
+					// @TODO
+					// throw base::NotYetImplemented("init_type");
+				})
 
-				OP_CASE(deinit,
-				        {
-							// @TODO
-				            // throw base::NotYetImplemented("init_type");
-						})
+				OP_CASE(deinit, {
+					// @TODO
+					// throw base::NotYetImplemented("init_type");
+				})
 
 				OP_CASE(input_l64, {
 					setStatus(api::WaitingForInput{});
@@ -318,28 +376,30 @@ namespace vm {
 					setStatus(api::Running{});
 				});
 
-				OP_CASE(output_l64, { vcpu.writeOutput(derefStack<u64>(local_stack, arg0)); });
+				OP_CASE(output_l64, {
+					vcpu.writeOutput(derefStack<u64>(local_stack, arg0));
+				});
 
 				OP_CASE(nop, {});
 
 				OP_CASE(alloc_lptr_type, {
-					auto type                              = types.getType(vm::TypeId(arg1));
-					auto block                             = dynamic_allocator.makeTypeBlock(type);
+					auto type = types.getType(vm::TypeId(arg1));
+					auto block = dynamic_allocator.makeTypeBlock(type);
 					derefStack<Pointer>(local_stack, arg0) = Pointer(block, 0);
 				})
 
 				OP_CASE(free_lptr, {
-					dynamic_allocator.deleteBlock(
-						derefStack<Pointer>(local_stack, arg0).getBlock());
+					dynamic_allocator.deleteBlock(derefStack<Pointer>(local_stack, arg0).getBlock());
 				})
 
 				OP_CASE(load_l64_lptr, {
-					auto pointer      = derefStack<Pointer>(local_stack, arg1);
+					auto pointer = derefStack<Pointer>(local_stack, arg1);
 					auto deref_result = internalDerefPointer(pointer);
 					if (deref_result.has_error()) {
 						// @TODO: executor error
-						// RIFT_PANIC("Bad deref access");
-					} else {
+						//RIFT_PANIC("Bad deref access");
+					}
+					else {
 						auto view = deref_result.value();
 						RIFT_ASSERT(view.size() == 8, "bad type");
 						std::memcpy(&local_stack[arg0], view.getBegin(), view.size());
@@ -347,26 +407,26 @@ namespace vm {
 				})
 
 				OP_CASE(store_lptr_l64, {
-					auto pointer      = derefStack<Pointer>(local_stack, arg0);
+					auto pointer = derefStack<Pointer>(local_stack, arg0);
 					auto deref_result = internalDerefPointer(pointer);
 					if (deref_result.has_error()) {
 						// @TODO: executor error
-						// RIFT_PANIC("Bad deref access");
-					} else {
+						//RIFT_PANIC("Bad deref access");
+					}
+					else {
 						auto view = deref_result.value();
 						RIFT_ASSERT(view.size() == 8, "bad type");
 						std::memcpy(view.getBegin(), &local_stack[arg1], view.size());
 					}
 				})
 
-				IF_NOT_CG(default
-				          : {
-							  // RIFT_PANIC("Unknown operator:", u64(instr.opcode));
-						  })
+				IF_NOT_CG (default: {
+					//RIFT_PANIC("Unknown operator:", u64(instr.opcode));
+				})
 			}
 		}
 
-	End:
+		End:
 
 		return FRAME(ret_val);
 	}
@@ -378,20 +438,20 @@ namespace vm {
 
 		executing_code = &code;
 		try {
-			internalCallFunction(
-				none<Frame&>(), executing_code->functions[code.main_id], { 0, memory.nullPtr() });
+			internalCallFunction(none<Frame&>(), executing_code->functions[code.main_id], {0, memory.nullPtr()});
 			setStatus(api::NotStarted{});
 		} catch (KillCoreException) {
 			setStatus(api::NotStarted{});
 		}
-	}
-
+	};
+	
 	void Executor::prestart() {
 		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped)
+		if (execution_strategy == ExecutionStrategy::Stoped) {
 			execution_strategy = ExecutionStrategy::Normal;
+		}
 	}
-
+	
 	void Executor::stop() {
 		std::unique_lock lock(external_api_mutex);
 		execution_strategy = ExecutionStrategy::Stoped;
@@ -400,8 +460,7 @@ namespace vm {
 
 	bool Executor::resume() {
 		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped
-		    || execution_strategy == ExecutionStrategy::Normal) {
+		if (execution_strategy == ExecutionStrategy::Stoped || execution_strategy == ExecutionStrategy::Normal) {
 			return false;
 		}
 		execution_strategy = ExecutionStrategy::Normal;
@@ -411,8 +470,7 @@ namespace vm {
 
 	bool Executor::pause() {
 		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped
-		    || execution_strategy == ExecutionStrategy::Paused) {
+		if (execution_strategy == ExecutionStrategy::Stoped || execution_strategy == ExecutionStrategy::Paused) {
 			return false;
 		} else if (execution_strategy == ExecutionStrategy::StepByStep) {
 			return true;
@@ -421,13 +479,14 @@ namespace vm {
 		std::cout << "Set strategy to paused\n";
 		return true;
 	}
-
+	
 	bool Executor::step() {
 		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped)
+		if (execution_strategy == ExecutionStrategy::Stoped) {
 			return false;
-		else if (execution_strategy != ExecutionStrategy::Paused)
+		} else if (execution_strategy != ExecutionStrategy::Paused) {
 			return true;
+		}
 		execution_strategy = ExecutionStrategy::StepByStep;
 		pause_cv.notify_all();
 		return true;
@@ -438,17 +497,17 @@ namespace vm {
 		this->status = status;
 		vcpu.onEvent(api::Executing(this->status));
 	}
-
+	
 	bool Executor::isPaused() {
 		std::unique_lock lock(external_api_mutex);
 		return execution_strategy == ExecutionStrategy::Paused;
 	}
-
+	
 	bool Executor::isAlive() {
 		std::unique_lock lock(external_api_mutex);
 		return execution_strategy != ExecutionStrategy::Stoped;
 	}
-
+	
 	void Executor::notifyPaused() {
 		pause_cv.notify_all();
 	}

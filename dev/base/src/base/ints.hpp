@@ -1,9 +1,8 @@
 #pragma once
 
-#include "strongly_typed_int.hpp"
-
-#include <cstddef>
 #include <cstdint>
+#include <cstddef>
+#include "strongly_typed_int.hpp"
 
 STRONG_TYPEDEF_INT(u8, uint8_t);
 typedef uint16_t u16;
@@ -23,7 +22,7 @@ typedef __int128 i128;
 
 typedef unsigned char uchar;
 
-typedef std::byte   byte;
+typedef std::byte byte;
 typedef std::size_t usize;
 
 // Code might break if following does not hold:

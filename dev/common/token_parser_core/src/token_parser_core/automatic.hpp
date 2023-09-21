@@ -1,14 +1,13 @@
 #pragma once
 
-#include "common_elements.hpp"
 #include "parser_state.hpp"
-
+#include "common_elements.hpp"
 #include <rift_definitions/key_spec_op.hpp>
 
 namespace tpc {
 	using rift_def::Keyword;
-	using rift_def::Operator;
 	using rift_def::Special;
+	using rift_def::Operator;
 
 	// parses one of the available types
 	// template<class T>
@@ -17,7 +16,7 @@ namespace tpc {
 	// }
 
 	void parseOne(ParserState& state, Keyword key);
-
+	
 	void parseOne(ParserState& state, Special spec);
 
 	void parseOne(ParserState& state, Operator op);
@@ -48,9 +47,11 @@ namespace tpc {
 
 	template<class T>
 	void nullAwareDprint(const ParserRef<T>& ref, std::ostream& out) {
-		if (!ref)
+		if (!ref) {
 			out << "\"<nullptr>\"";
-		else
+		}
+		else {
 			ref->dprint(out);
+		}
 	}
 }

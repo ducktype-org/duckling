@@ -1,5 +1,7 @@
 #pragma once
 
 namespace vm {
-	class MemoryEvent {};
+	class MemoryEvent {
+		
+	};
 }

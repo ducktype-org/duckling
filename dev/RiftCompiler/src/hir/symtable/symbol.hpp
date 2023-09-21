@@ -1,13 +1,15 @@
 #pragma once
 
-#include "lookup_result.hpp"
+#include <vector>
+#include <optional>
+
+#include <typesystem/typesystem.hpp>
+#include <base/string_id.hpp>
+
 #include "scope_symbol_id.hpp"
 #include "symbol_ref.hpp"
+#include "lookup_result.hpp"
 
-#include <base/string_id.hpp>
-#include <optional>
-#include <typesystem/typesystem.hpp>
-#include <vector>
 
 namespace hir {
 	class AnalysisState;
@@ -27,14 +29,15 @@ namespace symtable {
 		// ...
 	};
 
+
 	class Symbol {
 		// Update constructors when adding fields here
 
 	protected:
 		// symbol identification:
-		ScopeRef    scope;
+		ScopeRef scope;
 		base::StrId name;
-		bool        anonymous;
+		bool anonymous;
 
 		// wildcard are anonymous symbols, that behave in special way in lookup
 		bool wildcard = false;
@@ -58,9 +61,10 @@ namespace symtable {
 
 
 		std::optional<ts::TypeDesc<>> type;
-		SymbolKind                    kind;
+		SymbolKind kind;
 
-		Symbol(ScopeRef scope, base::StrId name, bool anonymous, bool is_static, SymbolKind kind);
+		Symbol(ScopeRef scope, base::StrId name, bool anonymous,
+		       bool is_static, SymbolKind kind);
 
 
 		virtual void calculateType() = 0;
@@ -79,20 +83,15 @@ namespace symtable {
 		// This delete is important, to prevent any copy of symbol data:
 		Symbol(const Symbol&) = delete;
 
-		Symbol(Symbol&& other)            = default;
-		Symbol& operator=(const Symbol&)  = default;
+		Symbol(Symbol&& other) = default;
+		Symbol& operator=(const Symbol&) = default;
 		Symbol& operator=(Symbol&& other) = default;
-
+		
 		ScopeRef getScope() const { return scope; }
-
 		base::StrId getName() const { return name; }
-
 		bool getIsStatic() const { return is_static; }
-
 		usize getRelativePosition() const { return relative_position; }
-
 		bool isAnonymous() const { return anonymous; }
-
 		bool isWildcard() const { return wildcard; }
 
 		// @TODO: current design forces this function, to take
@@ -105,10 +104,10 @@ namespace symtable {
 		ScopeRef getLinkedLookupScope(hir::AnalysisState&);
 
 		ts::TypeDesc<> getType();
+		SymbolKind getKind() const { return kind; };
+		
 
-		SymbolKind getKind() const { return kind; }
-
-		virtual SymbolChain       getUniqueDeAlias(hir::AnalysisState&);
+		virtual SymbolChain getUniqueDeAlias(hir::AnalysisState&);
 		virtual ChainLookupResult getDeAlias(hir::AnalysisState&);
 
 		virtual void analyzeAll(hir::AnalysisState&) = 0;
@@ -116,6 +115,7 @@ namespace symtable {
 		virtual ~Symbol() = default;
 
 		LookupResult lookupIn(hir::AnalysisState&, base::StrId name);
+		
 	};
 
 }

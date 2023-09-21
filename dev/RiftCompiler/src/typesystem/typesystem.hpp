@@ -15,5 +15,5 @@
 #include "types.hpp"
 
 namespace ts {
-	void init();  // if needed
+	void init(); // if needed
 }

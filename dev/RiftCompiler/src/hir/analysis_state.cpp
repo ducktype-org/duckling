@@ -1,5 +1,4 @@
 #include "analysis_state.hpp"
-
 #include <iostream>
 
 namespace hir {
@@ -11,8 +10,7 @@ namespace hir {
 	}
 
 	void AnalysisState::addSymbol(base::unique_ptr<Symbol> symbol) {
-		std::cerr << " ADD SYMBOL: `" << symbol->getName().strView() << "`"
-				  << " in ???" /*<< symbol->getScope().asInt()*/ << "\n";
+		std::cerr << " ADD SYMBOL: `" << symbol->getName().strView() << "`" << " in ???" /*<< symbol->getScope().asInt()*/ << "\n";
 
 		auto sym_ref = symbol_data.newSymbol(std::move(symbol));
 		to_analyze.push(sym_ref);

@@ -9,7 +9,7 @@ namespace tpc {
 	template<typename T>
 	using ParserBorrowRef = base::borrow_ptr<T>;
 
-	template<typename T>
+	template<typename T>	
 	using ParserCBorrowRef = base::c_borrow_ptr<T>;
 
 	// this is an analogy of deduction guide for alias CTAD
@@ -21,7 +21,7 @@ namespace tpc {
 	// @TODO: this function does slightly different thing than
 	// the function above, so maybe change its name.
 	template<class T, class... Args>
-	ParserRef<T> makeRef(Args&&... args) {
+	ParserRef<T> makeRef(Args &&... args) {
 		return ParserRef<T>(new T(std::forward<Args>(args)...));
 	}
 

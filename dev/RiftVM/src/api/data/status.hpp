@@ -1,13 +1,11 @@
 #pragma once
 
-#include <json/json.hpp>
 #include <variant>
+#include <json/json.hpp>
 
 namespace vm::api {
 	struct ExecutionNotStarted {};
-
 	struct Parsing {};
-
 	struct TypeAnalysis {};
 
 	struct Panicked {
@@ -16,28 +14,34 @@ namespace vm::api {
 	};
 
 	struct Paused {};
-
 	struct Running {};
-
 	struct PausedOnError {
 		std::string reason;
 		JS_OBJ(reason);
 	};
-
 	struct WaitingForInput {};
-
 	struct NotStarted {};
-
-	using ExecStatus
-		= std::variant<Panicked, Running, Paused, PausedOnError, WaitingForInput, NotStarted>;
+	using ExecStatus = std::variant<
+		Panicked,
+		Running,
+		Paused,
+		PausedOnError,
+		WaitingForInput,
+		NotStarted
+	>;
 
 	struct Executing {
-		ExecStatus exec_status;
-		JS_OBJ(exec_status);
+		 ExecStatus exec_status;
+		 JS_OBJ(exec_status);
 	};
 
-	using VCPUStatus
-		= std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Panicked, Executing>;
+	using VCPUStatus = std::variant<
+		ExecutionNotStarted,
+		Parsing,
+		TypeAnalysis,
+		Panicked,
+		Executing
+	>;
 }
 
 REGISTER_PARSE_TYPE_ALIAS(vm::api::ExecutionNotStarted, "ExecutionNotStarted")

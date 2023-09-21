@@ -15,25 +15,22 @@ namespace pst {
 
 	class RiftElement: public tpc::Element {
 	public:
-		explicit RiftElement(lexer::SourcePosition position):
-			source_position(std::move(position)){};
+		explicit RiftElement(lexer::SourcePosition position) : source_position(std::move(position)) {};
 
-		[[nodiscard]]
-		const lexer::SourcePosition& getSourcePosition() const;
-
+		[[nodiscard]] const lexer::SourcePosition& getSourcePosition() const;
 	private:
-		lexer::SourcePosition source_position;
+ 		lexer::SourcePosition source_position;
 	};
 
 	class RiftParserState: public tpc::ParserState {
 		std::vector<tpc::ParserCBorrowRef<pst::Import>> imports;
-		typedef decltype(imports)                       ImportType;
+		typedef decltype(imports) ImportType;
 
 	public:
 		RiftParserState(tpc::TokenStream&& tokens, tpc::ErrorState&& err):
-			tpc::ParserState(std::move(tokens), std::move(err)) {}
+			  tpc::ParserState(std::move(tokens), std::move(err)) {}
 
-		void              addImport(tpc::ParserCBorrowRef<pst::Import> import);
+		void addImport(tpc::ParserCBorrowRef<pst::Import> import);
 		const ImportType& getImports() const;
 	};
 

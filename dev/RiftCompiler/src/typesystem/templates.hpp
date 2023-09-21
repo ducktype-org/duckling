@@ -18,7 +18,6 @@ namespace ts {
 
 	class TemplateInfo: public TypeInfo {
 		SETUP_TYPE(TemplateInfo, TypeInfo)
-
 	public:
 		std::vector<TypeDesc<>> getParameterList() const;
 
@@ -28,7 +27,6 @@ namespace ts {
 		TypeInfo bake(std::vector<exec::CTV>& arg_list) const;
 
 		CHECKED_CAST(TemplateInfo)
-
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(TemplateInfo)
 	};
@@ -40,7 +38,6 @@ namespace ts {
 		static TypeTemplateInfo create(std::vector<TypeDesc<>>& parameter_list);
 
 		CHECKED_CAST(TypeTemplateInfo)
-
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(TypeTemplateInfo)
 	};

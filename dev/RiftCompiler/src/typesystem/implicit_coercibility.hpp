@@ -17,9 +17,7 @@
 namespace ts {
 	void addUserDefinedImplicitCoercion(const TypeInfo& from, const TypeInfo& to);
 
-	[[nodiscard]]
-	bool isImplicitlyCoercible(const TypeInfo& from, const TypeInfo& to);
+	[[nodiscard]] bool isImplicitlyCoercible(const TypeInfo& from, const TypeInfo& to);
 
-	[[nodiscard]]
-	bool isImplicitlyCoercible(const TypeDesc<>& from, const TypeDesc<>& to);
+	[[nodiscard]] bool isImplicitlyCoercible(const TypeDesc<>& from, const TypeDesc<>& to);
 }

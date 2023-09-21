@@ -2,9 +2,8 @@
  * @file token_stream.cpp
  */
 
-#include "token_stream.hpp"
-
 #include <base/exceptions.hpp>
+#include "token_stream.hpp"
 
 namespace tpc {
 	void tokenStreamInit() {
@@ -15,15 +14,14 @@ namespace tpc {
 	lexer::Token TokenStream::sentinel;
 
 	TokenStream::TokenStream(TokenStream&& stream) noexcept:
-		tokens(stream.tokens),
-		where(stream.where),
-		to(stream.to) {}
+		tokens(stream.tokens), where(stream.where), to(stream.to) {}
 
 	TokenStream TokenStream::getRecursive() const {
 		if (peek().isGroup()) {
 			const auto& rec = peek().getRecursive();
 			return TokenStream(rec, 0, rec.size());
-		} else {
+		}
+		else {
 			// @TODO
 			throw base::LogicError("get recursive on no group");
 		}
@@ -62,7 +60,8 @@ namespace tpc {
 	}
 
 	usize TokenStream::size() const {
-		return to - where;
+	  return to - where;
 	}
-
+		
 }
+

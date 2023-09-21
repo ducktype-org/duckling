@@ -19,7 +19,7 @@ namespace exec {
 	};
 
 	struct BuiltInOp {
-		Operator                    op;
+		Operator op;
 		std::vector<ts::TypeDesc<>> parameters;
 
 		auto operator<=>(const BuiltInOp& other) const = default;

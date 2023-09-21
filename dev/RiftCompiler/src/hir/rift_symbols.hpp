@@ -2,16 +2,17 @@
 
 #include "symtable/symbol.hpp"
 #include "symtable/symbol_ref.hpp"
+#include <pst_parser/rift_parser_base.hpp>
+#include <pst_parser/elements/elements.hpp>
+
+#include <typesystem/typesystem.hpp>
 
 #include <optional>
-#include <pst_parser/elements/elements.hpp>
-#include <pst_parser/rift_parser_base.hpp>
-#include <typesystem/typesystem.hpp>
 
 namespace hir {
 
-	using symtable::ScopeRef;
 	using symtable::SymbolKind;
+	using symtable::ScopeRef;
 	using symtable::SymbolRef;
 
 	template<typename Element>
@@ -26,9 +27,9 @@ namespace hir {
 	class TopLevelSymbol: public symtable::Symbol {
 		// symbol representing single file/compilation unit
 		PstRef<pst::TopLevel> pst_element;
-
 	public:
-		TopLevelSymbol(ScopeRef scope, base::StrId name, PstRef<pst::TopLevel> pst_element);
+		TopLevelSymbol(ScopeRef scope, base::StrId name,
+		               PstRef<pst::TopLevel> pst_element);
 
 		void calculateType() override;
 		void analyzeAll(AnalysisState&) override;
@@ -36,9 +37,9 @@ namespace hir {
 
 	class NamespaceSymbol: public symtable::Symbol {
 		PstRef<pst::Namespace> pst_element;
-
 	public:
-		NamespaceSymbol(ScopeRef scope, base::StrId name, PstRef<pst::Namespace> pst_element):
+		NamespaceSymbol(ScopeRef scope, base::StrId name, 
+		                PstRef<pst::Namespace> pst_element):
 			Symbol(scope, name, false, true, SymbolKind::Namespace),
 			pst_element(pst_element) {}
 
@@ -46,20 +47,19 @@ namespace hir {
 		void analyzeAll(AnalysisState&) override;
 	};
 
-	// @TODO: StructSymbol should technically be isomorphic with `const a: type =
-	// magic_struct_value`. Perhaps merge them in the future
+	// @TODO: StructSymbol should technically be isomorphic with `const a: type = magic_struct_value`. Perhaps merge them in the future
 	class StructSymbol: public symtable::Symbol {
-		PstRef<pst::Struct>          pst_element;
+		PstRef<pst::Struct> pst_element;
 		std::optional<ts::ClassInfo> value;
-
 	public:
-		StructSymbol(ScopeRef scope, base::StrId name, PstRef<pst::Struct> pst_element):
+		StructSymbol(ScopeRef scope, base::StrId name, 
+		                PstRef<pst::Struct> pst_element):
 			Symbol(scope, name, false, true, SymbolKind::Struct),
 			pst_element(pst_element) {}
 
 		ts::ClassInfo calculateValue();
-		void          calculateType() override;
-		void          analyzeAll(AnalysisState&) override;
+		void calculateType() override;
+		void analyzeAll(AnalysisState&) override;
 	};
 
 	class GlobalVarSymbol: public symtable::Symbol {
@@ -69,9 +69,9 @@ namespace hir {
 	class ConstSymbol: public symtable::Symbol {
 		// optional calculated Value
 		PstRef<pst::Const> pst_element;
-
 	public:
-		ConstSymbol(ScopeRef scope, base::StrId name, PstRef<pst::Const> pst_element):
+		ConstSymbol(ScopeRef scope, base::StrId name, 
+		            PstRef<pst::Const> pst_element):
 			Symbol(scope, name, false, true, SymbolKind::Const),
 			pst_element(pst_element) {}
 
@@ -84,19 +84,18 @@ namespace hir {
 		// @TODO: this should be ChainLookupResult
 		// it is SymbolChain for now, because only SymbolChain can be dealiased
 		option<symtable::SymbolChain> dealiased_lookup_result;
-
 	public:
 		using symtable::Symbol::Symbol;
 
-		symtable::SymbolChain       getUniqueDeAlias(hir::AnalysisState&) override;
+		symtable::SymbolChain getUniqueDeAlias(hir::AnalysisState&) override;
 		symtable::ChainLookupResult getDeAlias(hir::AnalysisState&) override;
 	};
 
 	class AliasSymbol: public GenericAlias {
 		PstRef<pst::Alias> pst_element;
-
 	public:
-		AliasSymbol(ScopeRef scope, base::StrId name, PstRef<pst::Alias> pst_element);
+		AliasSymbol(ScopeRef scope, base::StrId name, 
+		            PstRef<pst::Alias> pst_element);
 
 		void calculateType() override;
 		void analyzeAll(AnalysisState&) override;
@@ -105,10 +104,10 @@ namespace hir {
 
 	class UsingSymbol: public GenericAlias {
 		PstRef<pst::Using> pst_element;
-
 	public:
-		UsingSymbol(ScopeRef scope, base::StrId name, PstRef<pst::Using> pst_element);
-
+		UsingSymbol(ScopeRef scope, base::StrId name, 
+		            PstRef<pst::Using> pst_element);
+					
 		void calculateType() override;
 		void analyzeAll(AnalysisState&) override;
 		void calculateLinkedLookup(hir::AnalysisState&) override;
@@ -126,14 +125,14 @@ namespace hir {
 	};
 
 	/**
-	 * @brief Tests lookup made before scan of symbols inside
+	 * @brief Tests lookup made before scan of symbols inside 
 	 * the scope.
 	 * Used by: early using statement
 	 */
 	// class TestEagerLookupSymbol: public symtable::Symbol {
 	// 	PstRef<pst::EagerLookup> pst_element;
 	// public:
-	// 	TestEagerLookupSymbol(ScopeId scope, base::StrId name,
+	// 	TestEagerLookupSymbol(ScopeId scope, base::StrId name, 
 	// 	                      PstRef<pst::Const> pst_element);
 
 	// 	void calculateType() override;

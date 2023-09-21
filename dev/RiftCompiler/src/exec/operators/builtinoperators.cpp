@@ -1,7 +1,6 @@
 #include "builtinoperators.hpp"
-
-#include <exec/operators/arithmetic.hpp>
 #include <exec/operators/operatorutils.hpp>
+#include <exec/operators/arithmetic.hpp>
 using namespace exec::operators;
 using namespace ts;
 

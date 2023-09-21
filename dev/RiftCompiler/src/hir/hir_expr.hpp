@@ -1,6 +1,6 @@
 #pragma once
 
-#include <pst_parser/pst.hpp>  // Expr, @TODO: separate expr from rest?
+#include <pst_parser/pst.hpp> // Expr, @TODO: separate expr from rest?
 
 // This code is a temporary setup
 // @Placeholder
@@ -8,7 +8,7 @@
 namespace hir {
 
 	class Expression;
-
+	
 	using ExpressionRef = base::unique_ptr<Expression>;
 
 	class Expression {
@@ -22,3 +22,5 @@ namespace hir {
 	};
 
 }
+
+

@@ -4,9 +4,7 @@
 
 namespace base {
 
-	Panic::Panic(std::string position, std::string reason):
-		position(std::move(position)),
-		reason(std::move(reason)) {
+	Panic::Panic(std::string position, std::string reason): position(std::move(position)), reason(std::move(reason)) {
 		this->reason += '\0';
 		makeWhatStr();
 	}
@@ -19,7 +17,7 @@ namespace base {
 	}
 
 	const std::string& Panic::getPosition() const {
-		return position;
+			return position;
 	}
 
 	const char* Panic::what() const noexcept {

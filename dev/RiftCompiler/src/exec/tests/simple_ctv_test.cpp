@@ -1,15 +1,14 @@
-#include <base/string_id.hpp>
 #include <exec/ctv.hpp>
 #include <iostream>
 #include <operations/create_default.hpp>
 #include <operations/operation.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
+#include <base/string_id.hpp>
 
 class SimpleExecTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleExecTest
-
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Exec Test") {
 		TESTER_ADD_TEST(simple);
@@ -20,7 +19,9 @@ private:
 	void simple() {
 		ts::TypeDesc<> td(ts::IntegralInfo::create(8));
 
-		for (i32 i = 0; i < 4; i++) exec::alloc_new(td, 8);
+		for (i32 i = 0; i < 4; i++) {
+			exec::alloc_new(td, 8);
+		}
 
 		exec::CTV ctv = exec::alloc_new(td, 8);
 
@@ -31,14 +32,14 @@ private:
 
 		auto p_ctv = ctv.makePointer();
 
-		auto pointer = ((u32*) p_ctv.getData().data());
-		auto block   = pointer[0];
-		auto offset  = pointer[1];
+		auto pointer = ((u32*)p_ctv.getData().data());
+		auto block = pointer[0];
+		auto offset = pointer[1];
 
 		// or:
 		auto pointer_data = p_ctv.getData<u32>();
-		auto block_       = pointer_data[0];
-		auto offset_      = pointer_data[1];
+		auto block_ = pointer_data[0];
+		auto offset_ = pointer_data[1];
 
 		assert(block_ == block && offset_ == offset, "Wrapper for data access didn't work");
 
@@ -62,24 +63,21 @@ private:
 	}
 
 	void class_subCTV_test() {
-		ts::TypeDesc<> int_desc(ts::IntegralInfo::create(8));
-		auto           symbol0 = symtable::SymbolId::next();
 
-		ts::ClassInfo  parent_class(ts::ClassInfo::create(base::StrId("Parent"),
-		                                                  {
-                                                             {int_desc, symbol0}
-        }));
+		ts::TypeDesc<> int_desc(ts::IntegralInfo::create(8));
+		auto symbol0 = symtable::SymbolId::next();
+
+		ts::ClassInfo parent_class(
+			ts::ClassInfo::create(base::StrId("Parent"), {{int_desc, symbol0}}));
 		ts::TypeDesc<> desc_parent_class(parent_class);
 
 		auto symbol1 = symtable::SymbolId::next();
 
-		ts::ClassInfo  inheriting_class(ts::ClassInfo::create(
-            base::StrId("Inheriting"),
-            {
-                {int_desc, symbol1}
-        },
-            { { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
-            0));
+		ts::ClassInfo inheriting_class(ts::ClassInfo::create(
+			base::StrId("Inheriting"),
+			{{int_desc, symbol1}},
+			{{parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public)}},
+			0));
 		ts::TypeDesc<> desc_inheriting_class(inheriting_class);
 
 		exec::CTV classCTV = exec::alloc_new(desc_inheriting_class, inheriting_class.getSize());
@@ -106,8 +104,8 @@ private:
 		assert(inheriting_class.getAncestorInfo(parent_class).isOk(), "Parent not found in class");
 		usize parent_offset = inheriting_class.getAncestorInfo(parent_class).start_offset.value();
 
-		exec::CTV parentCTV
-			= classCTV.subCTV(desc_parent_class, parent_offset, parent_class.getSize());
+		exec::CTV parentCTV =
+			classCTV.subCTV(desc_parent_class, parent_offset, parent_class.getSize());
 
 		assert(parent_class.getMemberInfo(symbol0).isOk(), "Parent didn't have symbol0");
 		symbol0_offset = parent_class.getMemberInfo(symbol0).start_offset.value();

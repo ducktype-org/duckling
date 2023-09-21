@@ -1,24 +1,26 @@
 #pragma once
 
+#include "token_stream.hpp"
 #include "error_state.hpp"
 #include "parser_ref.hpp"
-#include "token_stream.hpp"
+
 
 namespace tpc {
-
+	
 	class ParserState {
 		std::vector<TokenStream> stream_stack;
 
 	public:
-		TokenStream&       tokens();
+		TokenStream& tokens();
 		const TokenStream& ctokens() const;
-
+		
 		ErrorState err;
 
-		ParserState(TokenStream&& tokens, ErrorState&& err): err(std::move(err)) {
+		ParserState(TokenStream&& tokens, ErrorState&& err): 
+			err(std::move(err)) {
 			stream_stack.emplace_back(std::move(tokens));
 		}
-
+		
 		bool empty() const;
 		bool notEmpty() const;
 
@@ -57,6 +59,8 @@ namespace tpc {
 			}
 			return false;
 		}
+
+		
 	};
 
 }

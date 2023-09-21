@@ -4,44 +4,39 @@
 
 #pragma once
 
-#include "error_state.hpp"
-
-#include <base/string_id.hpp>
 #include <lexer/token.hpp>
+#include <base/string_id.hpp>
+#include "error_state.hpp"
 
 namespace tpc {
 	using lexer::Keyword;
-	using lexer::Operator;
 	using lexer::Special;
 	using lexer::Token;
+	using lexer::Operator;
 
 	void tokenStreamInit();
 
 	class TokenStream {
 		const Tokens& tokens;
-		usize         where = 0;
+		usize where = 0;
 		/** inclusive */
-		usize               to;
+		usize to;
 		static lexer::Token sentinel;
-		friend void         tokenStreamInit();
-
+		friend void tokenStreamInit();
 	public:
-		TokenStream()             = delete;
+		TokenStream() = delete;
 		TokenStream(TokenStream&) = delete;
 		TokenStream(TokenStream&&) noexcept;
 
-		TokenStream(const Tokens& tokens, usize from, usize to):
-			tokens(tokens),
-			where(from),
-			to(to) {}
-
+		TokenStream(const Tokens& tokens, usize from, usize to): 
+			tokens(tokens), where(from), to(to) {}
 		const Token& next();
 
 		TokenStream getRecursive() const;
 
 		[[nodiscard]]
 		const Token& peek(usize fwd = 0) const;
-		void         skip(usize n = 1);
+		void skip(usize n = 1);
 
 		[[nodiscard]]
 		bool isKeyword(usize fwd = 0) const;
@@ -66,6 +61,7 @@ namespace tpc {
 
 		[[nodiscard]]
 		usize size() const;
+
 	};
 
 }

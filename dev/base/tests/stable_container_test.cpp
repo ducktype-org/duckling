@@ -1,6 +1,6 @@
+#include <tester/tester.hpp>
 #include <base/stable_container.hpp>
 #include <base/strongly_typed_int.hpp>
-#include <tester/tester.hpp>
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(SomeId, usize);
 
@@ -45,7 +45,9 @@ private:
 		auto c_ref = maybe_c_ref.expect("No value");
 		assert(*c_ref == 2, "Bad stable list c_ref");
 
-		for (usize i = 0; i < 100; i++) list.pushBack(i);
+		for (usize i = 0; i < 100; i++) {
+			list.pushBack(i);
+		}
 
 		assert(list.getRef(102).has_value(), "No value where there should be");
 		assert(list.getRef(103).has_error(), "No error where there should be");
@@ -54,16 +56,17 @@ private:
 		assert(list.size() == 103, "bad list size");
 		assert(!list.empty(), "bad list empty");
 		assert(list.notEmpty(), "bad list not empty");
-
+		
 		assert(*ref == 4, "Stable list ref not stable");
 		assert(*c_ref == 2, "Bad stable list c_ref");
+
 	}
 
 	void customKeyTest() {
 		base::StableList<SomeId, int> list;
-
+		
 		assert(list.empty(), "bad list empty");
-
+		
 		auto key1 = list.pushBack(1);
 		auto key2 = list.emplaceBack(2);
 
@@ -77,11 +80,13 @@ private:
 		*ref = 100;
 		assert(*ref == 100, "bad reference");
 
-		for (usize i = 0; i < 100; i++) list.pushBack(i);
+		for (usize i = 0; i < 100; i++) {
+			list.pushBack(i);
+		}
 
 		assert(*ref == 100, "bad reference");
-		*ref = 1'000;
-		assert(*ref == 1'000, "bad reference");
+		*ref = 1000;
+		assert(*ref == 1000, "bad reference");
 	}
 };
 

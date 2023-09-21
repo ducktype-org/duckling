@@ -1,18 +1,15 @@
 #include "../string_id.hpp"
-
 #include "../ints.hpp"
-
-#include <cstring>
 #include <iostream>
+#include <cstring>
 
 namespace base {
 
 	StrId::ToDataType StrId::to_data_map;
-	StrId::ToIdType   StrId::to_id_map;
+	StrId::ToIdType StrId::to_id_map;
 
-	constexpr usize                       default_buffer_size = 32'768;
+	constexpr usize default_buffer_size = 32768;
 	typedef std::vector<base::OwningView> BufferList;
-
 	namespace {
 		BufferList buffer_list;
 
@@ -29,7 +26,7 @@ namespace base {
 		auto new_buffer = new byte[default_buffer_size];
 		buffer_list.emplace_back(new_buffer, default_buffer_size);
 		size_left = default_buffer_size;
-		next_pos  = 0;
+		next_pos = 0;
 	}
 
 	base::RawView lastBuffer() {
@@ -37,13 +34,13 @@ namespace base {
 	}
 
 	/**
-	 * @brief
+	 * @brief 
 	 * Stores data is vector of buffers of size 32768
 	 * New buffer is created, when new string cannot fit
 	 * in previous one.
 	 * If string has length greater then 32768 it is given its own buffer.
 	 * Only last buffer is considered
-	 *
+	 * 
 	 * @OPT: better memory/buffers usage
 	 */
 	StrId::StrId(const base::RawView& data) {
@@ -62,9 +59,10 @@ namespace base {
 		if (data.size() > default_buffer_size) {
 			// Data is too big to fit into any buffer
 			buffer_list.emplace_back(base::OwningView::copy(data));
-			actual_data      = RawView(lastBuffer().getBegin(), data.size());
+			actual_data = RawView(lastBuffer().getBegin(), data.size());
 			any_buffer_exits = true;
-		} else {
+		}
+		else {
 			if (size_left < data.size() || !any_buffer_exits) {
 				// Data can't fit into last buffer
 				newBuffer();
@@ -81,14 +79,17 @@ namespace base {
 		to_id_map.put(actual_data, id);
 	}
 
-	StrId::StrId(const char* data): StrId(base::RawView(data)) {}
+	StrId::StrId(const char* data) :
+			StrId(base::RawView(data)) {}
 
 	StrId::StrId(char character): StrId(std::string(1, character).c_str()) {}
 
 	void StrId::dumpData(std::ostream& out) {
 		i32 i = 0;
-		for (auto v : to_data_map) {
-			if (v) out << i << ": " << v->stringView() << "\n";
+		for (auto v: to_data_map) {
+			if (v) {
+				out << i << ": " << v->stringView() << "\n";
+			}
 			i++;
 		}
 	}

@@ -26,7 +26,7 @@ namespace ts {
 		Namespace,
 		CodeBlock,
 		Module,
-		Meta,  // The "type" type
+		Meta, // The "type" type
 		VTable
 	};
 }

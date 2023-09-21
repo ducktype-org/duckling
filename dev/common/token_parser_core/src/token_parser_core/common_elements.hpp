@@ -6,7 +6,6 @@
 namespace tpc {
 	struct Identifier {
 		base::StrId value;
-
 		operator base::StrId() { return value; }
 	};
 
@@ -14,3 +13,4 @@ namespace tpc {
 		std::optional<base::StrId> value;
 	};
 }
+

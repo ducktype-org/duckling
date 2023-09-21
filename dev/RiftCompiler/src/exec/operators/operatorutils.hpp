@@ -5,10 +5,10 @@
 
 #pragma once
 
-#include <base/exceptions.hpp>
 #include <exec/ctv.hpp>
 #include <exec/operators/builtinoperators.hpp>
 #include <operations/operation.hpp>
+#include <base/exceptions.hpp>
 #include <vector>
 
 namespace exec::operators {
@@ -60,15 +60,11 @@ namespace exec::operators {
 	UINT_BIN_SIMPLE_OPS(operation, name)
 
 // For built in operator map initialization of binary operators.
-#define BIN_ENTRY(arg_desc_1, arg_desc_2, res_desc, op_name, fun_name, flags)              \
-	operation::TypedOperation typed_op                                                     \
-		= { fun_name, FunctionInfo::create({ arg_desc_1, arg_desc_2 }, res_desc, flags) }; \
-	operation::OperationId id = operation::addOperation(typed_op);                         \
-	getBuiltInOps().put(                                                                   \
-		{                                                                                  \
-			Operator::op_name, {arg_desc_1, arg_desc_2}
-},                               \
-		id);
+#define BIN_ENTRY(arg_desc_1, arg_desc_2, res_desc, op_name, fun_name, flags)       \
+	operation::TypedOperation typed_op = {                                          \
+		fun_name, FunctionInfo::create({arg_desc_1, arg_desc_2}, res_desc, flags)}; \
+	operation::OperationId id = operation::addOperation(typed_op);                  \
+	getBuiltInOps().put({Operator::op_name, {arg_desc_1, arg_desc_2}}, id);
 
 #define BIN_ENTRY_SIMPLE(desc, op_name, fun_name) BIN_ENTRY(desc, desc, desc, op_name, fun_name, 0)
 

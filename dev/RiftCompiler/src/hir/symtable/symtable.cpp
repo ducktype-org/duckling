@@ -1,13 +1,12 @@
 #include "symtable.hpp"
-
-#include <base/defer.hpp>
 #include <base/exceptions.hpp>
+#include <base/defer.hpp>
 #include <iostream>
 
 namespace symtable {
 
 	SymbolData::SymbolData() {
-		root_scope             = newScope(nullptr);
+		root_scope = newScope(nullptr);
 		next_relative_position = 0;
 	}
 
@@ -26,15 +25,16 @@ namespace symtable {
 	}
 
 	SymbolRef SymbolData::newSymbol(base::unique_ptr<Symbol> symbol) {
-		auto scope = symbol->getScope();
-
+		auto scope = symbol->getScope();	
+		
 		symbol->relative_position = next_relative_position++;
-
+		
 		symbols.push_back(std::move(symbol));
 		scope->symbols.push_back(symbols.back().borrow_mut());
 
 		return symbols.back().borrow_mut();
 	}
+
 
 	usize SymbolData::symbolCount() const {
 		return symbols.size();
@@ -45,15 +45,18 @@ namespace symtable {
 	}
 
 	// @TODO: errors
-	ChainLookupResult SymbolData::lookupDottedNameInScopeAndParents(hir::AnalysisState&    state,
-	                                                                ScopeRef               initial,
-	                                                                std::span<base::StrId> names) {
+	ChainLookupResult SymbolData::lookupDottedNameInScopeAndParents(
+		hir::AnalysisState& state, ScopeRef initial,
+		std::span<base::StrId> names) {
+		
 		RIFT_ASSERT(names.size() > 0, "lookupDotted received zero names");
 
 		// initial symbol:
 		auto append_res_first = initial->lookupMeAndParents(state, names[0]);
 
-		if (names.size() == 1) return { {}, append_res_first };
+		if (names.size() == 1) {
+			return {{}, append_res_first};
+		}
 
 		if (!append_res_first.isSingle()) {
 			// @TODO: error in state
@@ -80,7 +83,7 @@ namespace symtable {
 		// last symbol:
 		auto last_res = prefix.back()->lookupIn(state, names.back());
 
-		return { prefix, last_res };
+		return {prefix, last_res};
 	}
 
 }

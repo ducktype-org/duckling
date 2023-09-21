@@ -1,5 +1,4 @@
 #include "elements.hpp"
-
 #include <token_parser_core/automatic.hpp>
 
 namespace pst {
@@ -7,7 +6,9 @@ namespace pst {
 	std::vector<base::StrId> DottedName::getNames() const {
 		std::vector<base::StrId> out;
 		out.reserve(names.size());
-		for (auto name : names) out.push_back(base::StrId(name));
+		for (auto name: names) {
+			out.push_back(base::StrId(name));
+		}
 		return out;
 	}
 
@@ -23,6 +24,8 @@ namespace pst {
 			}
 		} while (state.tryEat(rift_def::Operator::Period));
 
-		if (state.tryEat(rift_def::Operator::PeriodStar)) d_name->star = true;
+		if (state.tryEat(rift_def::Operator::PeriodStar)) {
+			d_name->star = true;
+		}
 	}
 }
