@@ -1,13 +1,13 @@
 #pragma once
 
 #include "ints.hpp"
-#include "smart_pointers.hpp"
 #include "option.hpp"
+#include "smart_pointers.hpp"
 #include <concepts>
 #include <vector>
 
 namespace base {
-	
+
 	template<typename Data>
 	using StableListRef = base::borrow_ptr<Data>;
 
@@ -19,42 +19,41 @@ namespace base {
 	 * integer
 	 * strongly typed int
 	 * NamedID
-	 * 
+	 *
 	 * Right now StableList keys must be convertible to and from usize
-	 * 
+	 *
 	 * @TODO make concept to check it
 	 * @TODO add range based iteration
 	 */
-	template<typename Key, typename Data> 
+	template<typename Key, typename Data>
 	class StableList {
 		/**
 		 * @brief @TODO
-		 * for now it is simple, naive implementation 
+		 * for now it is simple, naive implementation
 		 * in the future change it to something better
 		 */
 
 		std::vector<base::unique_ptr<Data>> data;
 
 	public:
-		using Ref = StableListRef<Data>;
+		using Ref  = StableListRef<Data>;
 		using CRef = StableListCRef<Data>;
 
 		constexpr usize size() const noexcept { return data.size(); }
+
 		constexpr usize empty() const noexcept { return data.empty(); }
+
 		constexpr usize notEmpty() const noexcept { return !data.empty(); }
-		
+
 		/**
-		 * @brief Quick, unsafe, constexpr access 
+		 * @brief Quick, unsafe, constexpr access
 		 */
-		constexpr Data& operator[](Key pos) {
-			return *data.at(usize(pos));
-		};
+		constexpr Data& operator[](Key pos) { return *data.at(usize(pos)); }
+
 		/**
-		 * @brief Quick, unsafe, constexpr access 
+		 * @brief Quick, unsafe, constexpr access
 		 */
-		constexpr const Data& operator[](Key pos) const {
-			return *data.at(usize(pos));
-		};
+		constexpr const Data& operator[](Key pos) const { return *data.at(usize(pos)); }
 
 		option<Ref> getRef(Key pos) noexcept {
 			if (usize(pos) >= size()) return none<Ref>();
@@ -79,6 +78,7 @@ namespace base {
 		}
 
 		Ref last() { return data.back().borrow_mut(); }
+
 		CRef last() const { return data.back().borrow(); }
 
 		template<class... Args>

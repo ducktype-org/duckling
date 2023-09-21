@@ -3,9 +3,9 @@
 # Rift source docs and dev guide
 
 - [Rift the docs docs](#rift-the-docs-docs)
-  - [Building](#building)
-  - [Excluded directories](#excluded-directories)
-  - [Writing docs](#writing-docs)
+    - [Building](#building)
+    - [Excluded directories](#excluded-directories)
+    - [Writing docs](#writing-docs)
 
 ## Building
 

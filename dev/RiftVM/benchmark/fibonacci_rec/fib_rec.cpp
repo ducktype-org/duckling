@@ -1,12 +1,10 @@
-#include <iostream>
 #include <algorithm>
+#include <iostream>
 
-const int m = 8388449;
+const int m = 8'388'449;
 
 int fib(int n) {
-	if (n <= 1) {
-		return n;
-	}
+	if (n <= 1) return n;
 	return (fib(n - 1) + fib(n - 2)) % m;
 }
 

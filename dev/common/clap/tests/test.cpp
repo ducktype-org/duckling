@@ -1,5 +1,5 @@
-#include <tester/tester.hpp>
 #include <clap/clap.hpp>
+#include <tester/tester.hpp>
 
 using namespace clap;
 
@@ -16,32 +16,30 @@ public:
 private:
 	Config getConfig() {
 		return Config()
-			.add(ParameterConfig("long")
-				.description("Long no short argument-less optional parameter"))
-			.add(ParameterConfig('c')
-				.description("Short no long optional parameter with argument")
-				.with_value("c_value", "c_default"))
-			.add(ParameterConfig('r')
-				.description("Long and short required parameter")
-				.long_name("req")
-				.required("r_value"));
+		    .add(ParameterConfig("long").description(
+				"Long no short argument-less optional parameter"))
+		    .add(ParameterConfig('c')
+		             .description("Short no long optional parameter with argument")
+		             .with_value("c_value", "c_default"))
+		    .add(ParameterConfig('r')
+		             .description("Long and short required parameter")
+		             .long_name("req")
+		             .required("r_value"));
 	}
 
 	void testLongValuePresent() {
-		Config config = Config()
-			.add(ParameterConfig("long"));
-		
-		const char* argv[2] = {"name", "--long"};
-		ParametersMap parameters = config.parse(CLIArgs{2, argv});
+		Config config = Config().add(ParameterConfig("long"));
+
+		const char*   argv[2]    = { "name", "--long" };
+		ParametersMap parameters = config.parse(CLIArgs{ 2, argv });
 		assert(parameters.contains("long"), "Expected parameter '--long', but missing");
 	}
-	
+
 	void testLongValueMissing() {
-		Config config = Config()
-			.add(ParameterConfig("long"));
-		
-		const char* argv[1] = {"name"};
-		ParametersMap parameters = config.parse(CLIArgs{1, argv});
+		Config config = Config().add(ParameterConfig("long"));
+
+		const char*   argv[1]    = { "name" };
+		ParametersMap parameters = config.parse(CLIArgs{ 1, argv });
 		assert(!parameters.contains("long"), "Parameter '--long' not expected, but found");
 	}
 };

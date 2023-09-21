@@ -1,21 +1,30 @@
 **JSON is broken, see: issue in ZPP1**
 
 # JSON module documentation
+
 ## Library json_struct
+
 Source and documentation:
 https://github.com/jorgen/json_struct
+
 ## Basic usage
+
 ### Type names
+
 JSON module provides a way to register name aliases to C++ types in order to serialize them
+
 ```c++
 REGISTER_PARSE_TYPE(Object)
 ```
+
 or with an alias
+
 ```c++
 REGISTER_PARSE_TYPE_ALIAS(Object, "Alias")
 ```
 
 Templated objects can also be aliased:
+
 ```c++
 REGISTER_PARSE_TYPE_TEMPLATE_ALIAS(std::vector, "vector")
 ```
@@ -27,6 +36,7 @@ REGISTER_PARSE_TYPE_TEMPLATE_VARIADIC_ALIAS(std::tuble, "tuple")
 ```
 
 Custom type names can be achieved by implementing `TypeParseTraits`, for example for tables:
+
 ```c++
 template<class T>
 struct TypeParseTraits<T[]> {
@@ -38,7 +48,8 @@ where `CONSTEXPR_CAT` concatenates string in compile time.
 
 ### Structs
 
-json_struct can parse JSON and automatically populate structures with content by adding some metadata to the C++ structs.
+json_struct can parse JSON and automatically populate structures with content by adding some metadata to the C++
+structs.
 
 ```json
 {
@@ -95,11 +106,16 @@ std::string compact_json = JS::serializeStruct(obj, JS::SerializerOptions(JS::Se
 ```
 
 ### Variants
-For now, only serialization of `std::variant<Args...>` is prepared, where each `Arg`$\in$`Args` is either a struct serialized with `JS_OBJ` or `JS_OBJ_EXT` or `JS_EMPTY`, or an empty struct. Each `Arg` must have a registered type as described above.
+
+For now, only serialization of `std::variant<Args...>` is prepared, where each `Arg`$\in$`Args` is either a struct
+serialized with `JS_OBJ` or `JS_OBJ_EXT` or `JS_EMPTY`, or an empty struct. Each `Arg` must have a registered type as
+described above.
 > Arg CANNOT be one of std::string, std::variant, std::unique_ptr, table, nor any primitive type
 
 ### Predefined serialization
+
 The following types have predefined serialization in json_struct
+
 - std::string
 - double
 - float
@@ -114,8 +130,11 @@ The following types have predefined serialization in json_struct
 - bool
 - std::vector
 - [T]
+
 ### Custom serialization
+
 You can implement custom serialization by implementing `TypeHandler` class. For example:
+
 ```c++
 namespace JS {
 template<>

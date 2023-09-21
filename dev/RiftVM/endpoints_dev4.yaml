@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: RiftVM API
-  description: API reference 
+  description: API reference
   # termsOfService: https://example.com/terms/
   # contact:
   #   name: API Support
@@ -12,14 +12,14 @@ info:
   #   url: https://www.apache.org/licenses/LICENSE-2.0.html
   version: dev1
 servers:
-- url: http://127.0.0.1:5000
-  description: Default local server
+  - url: http://127.0.0.1:5000
+    description: Default local server
 paths:
   /status/{pid}:
     get:
       description: Get status of process's execution
       parameters:
-      - $ref: '#/components/parameters/pid'
+        - $ref: '#/components/parameters/pid'
       responses:
         '200':
           description: Status of the process
@@ -44,7 +44,7 @@ paths:
     delete:
       description: Stop and remove a process
       parameters:
-      - $ref: '#/components/parameters/pid'
+        - $ref: '#/components/parameters/pid'
       responses:
         '200':
           $ref: '#/components/responses/Empty'
@@ -57,7 +57,7 @@ paths:
     post:
       description: Load code from file
       parameters:
-      - $ref: '#/components/parameters/pid'
+        - $ref: '#/components/parameters/pid'
       requestBody:
         description: Relative or absolute path to file in .riftbc format
         required: true
@@ -76,7 +76,7 @@ paths:
     post:
       description: Run a program
       parameters:
-      - $ref: '#/components/parameters/pid'
+        - $ref: '#/components/parameters/pid'
       responses:
         '200':
           $ref: '#/components/responses/Empty'
@@ -85,10 +85,10 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
   /process/join/{pid}:
-     post:
+    post:
       description: Wait until a program finishes
       parameters:
-      - $ref: '#/components/parameters/pid'
+        - $ref: '#/components/parameters/pid'
       responses:
         '200':
           $ref: '#/components/responses/Empty'
@@ -97,10 +97,10 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
   /process/stop/{pid}:
-     post:
+    post:
       description: Force stop a program
       parameters:
-      - $ref: '#/components/parameters/pid'
+        - $ref: '#/components/parameters/pid'
       responses:
         '200':
           $ref: '#/components/responses/Empty'
@@ -110,10 +110,10 @@ paths:
           $ref: '#/components/responses/ServerError'
   
   /process/input/{pid}:
-     post:
+    post:
       description: Pass input a standard input into a program
       parameters:
-      - $ref: '#/components/parameters/pid'
+        - $ref: '#/components/parameters/pid'
       requestBody:
         description: Input for a program as string
         required: true
@@ -130,10 +130,10 @@ paths:
           $ref: '#/components/responses/ServerError'
   
   /process/output/{pid}:
-     get:
+    get:
       description: Get output from a program
       parameters:
-      - $ref: '#/components/parameters/pid'
+        - $ref: '#/components/parameters/pid'
       responses:
         '200':
           description: Output of a program
@@ -147,10 +147,10 @@ paths:
           $ref: '#/components/responses/ServerError'
   
   /debug/pause/{pid}:
-     post:
+    post:
       description: Pause execution of a program
       parameters:
-      - $ref: '#/components/parameters/pid'
+        - $ref: '#/components/parameters/pid'
       responses:
         '200':
           $ref: '#/components/responses/Empty'
@@ -159,10 +159,10 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
   /debug/step/{pid}:
-     post:
+    post:
       description: Execute only next instruction
       parameters:
-      - $ref: '#/components/parameters/pid'
+        - $ref: '#/components/parameters/pid'
       responses:
         '200':
           $ref: '#/components/responses/Empty'
@@ -171,10 +171,10 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
   /debug/resume/{pid}:
-     post:
+    post:
       description: Resume execution of a program
       parameters:
-      - $ref: '#/components/parameters/pid'
+        - $ref: '#/components/parameters/pid'
       responses:
         '200':
           $ref: '#/components/responses/Empty'
@@ -184,10 +184,10 @@ paths:
           $ref: '#/components/responses/ServerError'
   
   /data/type/{pid}:
-     get:
+    get:
       description: Get type metadata
       parameters:
-      - $ref: '#/components/parameters/pid'
+        - $ref: '#/components/parameters/pid'
       responses:
         '200':
           description: Type metadata
@@ -200,11 +200,11 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
   /data/block/{pid}:
-     get:
+    get:
       description: Get raw data of a block
       parameters:
-      - $ref: '#/components/parameters/pid'
-      - $ref: '#/components/parameters/block_id'
+        - $ref: '#/components/parameters/pid'
+        - $ref: '#/components/parameters/block_id'
       responses:
         '200':
           description: Raw data of a block
@@ -221,7 +221,7 @@ components:
     ProcessInfo:
       type: object
       required:
-      - pid
+        - pid
       properties:
         pid:
           type: integer
@@ -229,11 +229,11 @@ components:
           minimum: 0
     Status:
       oneOf:
-      - $ref: '#/components/schemas/ExecutionNotStarted'
-      - $ref: '#/components/schemas/Parsing'
-      - $ref: '#/components/schemas/TypeAnalysis'
-      - $ref: '#/components/schemas/Panicked'
-      - $ref: '#/components/schemas/Executing'
+        - $ref: '#/components/schemas/ExecutionNotStarted'
+        - $ref: '#/components/schemas/Parsing'
+        - $ref: '#/components/schemas/TypeAnalysis'
+        - $ref: '#/components/schemas/Panicked'
+        - $ref: '#/components/schemas/Executing'
       discriminator:
         propertyName: type
     ExecutionNotStarted:
@@ -245,7 +245,7 @@ components:
     Panicked:
       type: object
       required:
-      - exception
+        - exception
       properties:
         exception:
           type: string
@@ -258,11 +258,11 @@ components:
           $ref: '#/components/schemas/ExecutingVariant'
     ExecutingVariant:
       oneOf:
-      - $ref: '#/components/schemas/Running'
-      - $ref: '#/components/schemas/Paused'
-      - $ref: '#/components/schemas/PausedOnError'
-      - $ref: '#/components/schemas/WaitingForInput'
-      - $ref: '#/components/schemas/NotStarted'
+        - $ref: '#/components/schemas/Running'
+        - $ref: '#/components/schemas/Paused'
+        - $ref: '#/components/schemas/PausedOnError'
+        - $ref: '#/components/schemas/WaitingForInput'
+        - $ref: '#/components/schemas/NotStarted'
       discriminator:
         propertyName: type
     Running:
@@ -272,7 +272,7 @@ components:
     PausedOnError:
       type: object
       required:
-      - reason
+        - reason
       properties:
         reason:
           type: string
@@ -283,14 +283,14 @@ components:
     Output:
       type: object
       required:
-      - output
+        - output
       properties:
         size:
           type: string
     Block:
       type: object
       required:
-      - data
+        - data
       properties:
         data:
           type: string
@@ -298,7 +298,7 @@ components:
     Type:
       type: object
       required:
-      - size
+        - size
       properties:
         size:
           type: integer
@@ -309,7 +309,7 @@ components:
     # Errors
     ProcessError:
       oneOf:
-      - $ref: '#/components/schemas/ProcessNotFound'
+        - $ref: '#/components/schemas/ProcessNotFound'
       discriminator:
         propertyName: type
     ProcessNotFound:
@@ -323,12 +323,12 @@ components:
           $ref: '#/components/schemas/CoreOperationErrorVariant'
     CoreOperationErrorVariant:
       oneOf:
-      - $ref: '#/components/schemas/ResumeError'
-      - $ref: '#/components/schemas/PauseError'
-      - $ref: '#/components/schemas/RunError'
-      - $ref: '#/components/schemas/JoinError'
-      - $ref: '#/components/schemas/OtherError'
-      - $ref: '#/components/schemas/LoadProgramError'
+        - $ref: '#/components/schemas/ResumeError'
+        - $ref: '#/components/schemas/PauseError'
+        - $ref: '#/components/schemas/RunError'
+        - $ref: '#/components/schemas/JoinError'
+        - $ref: '#/components/schemas/OtherError'
+        - $ref: '#/components/schemas/LoadProgramError'
       discriminator:
         propertyName: type
     ResumeError:
@@ -341,13 +341,13 @@ components:
       type: object
     OtherError:
       required:
-      - error
+        - error
       properties:
         error:
           type: string
     LoadProgramError:
       required:
-      - why
+        - why
       properties:
         why:
           type: string
@@ -385,12 +385,11 @@ components:
         application/json:
           schema:
             oneOf:
-            - $ref: '#/components/schemas/ProcessError'
-            - $ref: '#/components/schemas/Parsing'
+              - $ref: '#/components/schemas/ProcessError'
+              - $ref: '#/components/schemas/Parsing'
     CoreOperationError:
       description: Execution thread error
       content:
         application/json:
-          schema: 
+          schema:
             $ref: '#/components/schemas/CoreOperationError'
-    

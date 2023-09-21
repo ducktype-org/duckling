@@ -1,6 +1,5 @@
 import os
-import time
-from termcolor import colored, cprint
+from termcolor import colored
 
 wait_time = 5
 pid = 0
@@ -10,6 +9,7 @@ delete = colored("DELETE", "light_blue")
 post = colored("POST", "light_blue")
 put = colored("PUT", "light_blue")
 
+
 def status(id):
     print(get + " /status/{}:".format(id))
     os.system("curl -X 'GET' \
@@ -17,6 +17,7 @@ def status(id):
               -H 'accept: application/json'".format(id))
     print()
     input()
+
 
 def spawn():
     print(put + " /process/spawn:")
@@ -26,6 +27,7 @@ def spawn():
     print()
     input()
 
+
 def kill(id):
     print(delete + " /process/kill/{}:".format(id))
     os.system("curl -X 'DELETE' \
@@ -33,6 +35,7 @@ def kill(id):
               -H 'accept: application/json'".format(id))
     print()
     input()
+
 
 def load(id, path):
     print(post + " /process/load/{}:".format(id))
@@ -44,6 +47,7 @@ def load(id, path):
     print()
     input()
 
+
 def run(id):
     print(post + " /process/run/{}:".format(id))
     os.system("curl -X 'POST' \
@@ -51,6 +55,7 @@ def run(id):
               -H 'accept: application/json'".format(id))
     print()
     input()
+
 
 def stop(id):
     print(post + " /process/stop/{}:".format(id))
@@ -60,6 +65,7 @@ def stop(id):
     print()
     input()
 
+
 def pause(id):
     print(post + " /debug/pause/{}:".format(id))
     os.system("curl -X 'POST' \
@@ -67,6 +73,7 @@ def pause(id):
               -H 'accept: application/json'".format(id))
     print()
     input()
+
 
 def step(id, count):
     print("{} x " + post + " /debug/step/{}:".format(count, id))
@@ -78,6 +85,7 @@ def step(id, count):
         # input()
     input()
 
+
 def resume(id):
     print(post + " /debug/resume/{}:".format(id))
     os.system("curl -X 'POST' \
@@ -85,6 +93,7 @@ def resume(id):
               -H 'accept: application/json'".format(id))
     print()
     input()
+
 
 def vm_input(id, vm_input):
     print(post + " /process/input/{}\nBody: {}".format(id, vm_input))
@@ -96,6 +105,7 @@ def vm_input(id, vm_input):
     print()
     input()
 
+
 def output(id):
     print(get + " /process/output/{}:".format(id))
     os.system("curl -X 'GET' \
@@ -103,6 +113,7 @@ def output(id):
               -H 'accept: application/json'".format(id))
     print()
     input()
+
 
 def type(id, name):
     print(get + " /data/type/{}/{}:".format(id, name))
@@ -115,7 +126,6 @@ def type(id, name):
 
 print(colored("Spawning VCPU:", "light_green"))
 spawn()
-
 
 print(colored("Loading RiftBC:", "light_green"))
 load(pid, '/home/andrzej/mine/rift/rift-poc-zpp1/dev/RiftVM/snippets_f8/working.rbc')

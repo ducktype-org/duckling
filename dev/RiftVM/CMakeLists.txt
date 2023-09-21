@@ -1,17 +1,17 @@
 add_custom_test_pack(vm)
 
 function(add_files)
-	math(EXPR indices "${ARGC} - 1")
-	foreach(index RANGE ${indices})
-		set(tmp ${tmp} "${CMAKE_CURRENT_LIST_DIR}/${ARGV${index}}")
-	endforeach()
-	set(files ${files} ${tmp} PARENT_SCOPE)
+    math(EXPR indices "${ARGC} - 1")
+    foreach (index RANGE ${indices})
+        set(tmp ${tmp} "${CMAKE_CURRENT_LIST_DIR}/${ARGV${index}}")
+    endforeach ()
+    set(files ${files} ${tmp} PARENT_SCOPE)
 endfunction()
 
 # Add libraries
-if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/libs/asio/asio")
+if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/libs/asio/asio")
     message(FATAL_ERROR "submodule not installed, please run:\ngit submodule update --init")
-endif()
+endif ()
 set(ASIO_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/libs/asio")
 
 add_submodule_directory(libs/Crow)

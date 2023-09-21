@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "named_id.hpp"
 #include "maps.hpp"
+#include "named_id.hpp"
 #include "raw_view.hpp"
 #include <string>
 
@@ -13,57 +13,60 @@ namespace base {
 
 	class StrId {
 		typedef base::NamedId<base::RawView> InnerId;
-		InnerId id;
+		InnerId                              id;
 
 		typedef base::VectorMap<InnerId, base::RawView> ToDataType;
-		typedef base::HashMap<base::RawView, InnerId> ToIdType;
+		typedef base::HashMap<base::RawView, InnerId>   ToIdType;
 
 		static ToDataType to_data_map;
-		static ToIdType to_id_map;
+		static ToIdType   to_id_map;
+
 	public:
-		StrId(): id(InnerId::bad()) {};
+		StrId(): id(InnerId::bad()){};
 		StrId(const StrId& oth) = default;
-		StrId(StrId&& oth) = default;
+		StrId(StrId&& oth)      = default;
 
 		explicit StrId(char character);
-		
+
 		// Makes copy
 		explicit StrId(const base::RawView& data);
 		explicit StrId(const char* data);
 
-		void operator=(const StrId& oth) {
-			id = oth.id;
-		}
+		void operator=(const StrId& oth) { id = oth.id; }
 
-		[[nodiscard]] base::RawView view() const {
+		[[nodiscard]]
+		base::RawView view() const {
 			RIFT_ASSERT(id.isGood(), "StrId is bad");
 			return to_data_map[id];
-		};
-		[[nodiscard]] std::string_view strView() const {
+		}
+
+		[[nodiscard]]
+		std::string_view strView() const {
 			return view().stringView();
-		};
-		[[nodiscard]] std::string str() const {
+		}
+
+		[[nodiscard]]
+		std::string str() const {
 			return view().stdString();
-		};
-
-		[[nodiscard]] bool isBad() const { return id.isBad(); }
-		[[nodiscard]] bool isGood() const { return !id.isBad(); }
-
-		bool operator==(const StrId& oth) const {
-			return id == oth.id;
 		}
 
-		bool operator==(base::RawView oth) const {
-			return view().stringView() == oth.stringView();
+		[[nodiscard]]
+		bool isBad() const {
+			return id.isBad();
 		}
 
-		bool operator!=(const StrId& oth) const {
-			return id != oth.id;
+		[[nodiscard]]
+		bool isGood() const {
+			return !id.isBad();
 		}
 
-		bool operator<(const StrId& oth) const {
-			return id < oth.id;
-		}
+		bool operator==(const StrId& oth) const { return id == oth.id; }
+
+		bool operator==(base::RawView oth) const { return view().stringView() == oth.stringView(); }
+
+		bool operator!=(const StrId& oth) const { return id != oth.id; }
+
+		bool operator<(const StrId& oth) const { return id < oth.id; }
 
 		explicit operator usize() const { return usize(id); }
 
@@ -89,10 +92,8 @@ namespace base {
 }
 
 namespace std {
-	template <>
+	template<>
 	struct hash<base::StrId> {
-		usize operator()(const base::StrId & x) const {
-			return x.id.asInt();
-		}
+		usize operator()(const base::StrId& x) const { return x.id.asInt(); }
 	};
 }

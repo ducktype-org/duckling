@@ -1,19 +1,16 @@
-#include <api/api.hpp>
-#include <supervisor/supervisor.hpp>
-#include <json/json.hpp>
 #include "cli.hpp"
+#include <api/api.hpp>
+#include <json/json.hpp>
+#include <supervisor/supervisor.hpp>
 
 std::string convertError(const vm::api::ApiError& apiError) {
-	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) {
-		return "Wrong response";
-	}
+	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return "Wrong response";
 	return std::visit(
-			[](const auto&) {
-				return "Error, json does not work\n";
-				// return JS::serializeStruct(v); @TODO: issue #72
-			},
-			apiError
-		);
+		[](const auto&) {
+			return "Error, json does not work\n";
+			// return JS::serializeStruct(v); @TODO: issue #72
+		},
+		apiError);
 }
 
 template<class T, class E>
@@ -44,7 +41,7 @@ void cli(std::string filepath) {
 
 void cli() {
 	std::string filepath;
-	std::cout << "Path to file: "; 
+	std::cout << "Path to file: ";
 	std::cin >> filepath;
 	cli(filepath);
 }
