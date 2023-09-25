@@ -8,13 +8,8 @@ function(add_files)
 	set(files ${files} ${tmp} PARENT_SCOPE)
 endfunction()
 
-# Add libraries
-if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/libs/asio/asio")
-    message(FATAL_ERROR "submodule not installed, please run:\ngit submodule update --init")
-endif()
-set(ASIO_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/libs/asio")
-
-add_submodule_directory(libs/Crow)
+# Dependencies
+add_subdirectory(dependencies)
 
 # Add vm files
 add_subdirectory(src/api)
