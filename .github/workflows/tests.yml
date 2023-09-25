@@ -26,20 +26,6 @@ jobs:
       with:
         submodules: 'false'
 
-    # checkout@v3 does not suport updating only specific submodules,
-    # so we get them independently
-    # @TODO: make it more automatic (e.g. via cmake), or setup PAT
-    # so checkout has read-access to submodules
-    # @TODO: commands might break if there is any change to checkout
-    # @TODO: this is generally somewhat temporary
-    - name: Sync submodules
-      working-directory: ${{github.workspace}}
-      run: /usr/bin/git submodule sync
-    
-    - name: Init submodules
-      working-directory: ${{github.workspace}}
-      run: /usr/bin/git -c protocol.version=2 submodule update --init --force --depth=1 -- "dev/libs/result" "dev/RiftVM/libs/asio" "dev/RiftVM/libs/Crow" "dev/libs/json_struct"
-
     # @FIXME: Caching does not work, cmake rebuilds everything anyway
     # Perhaps use https://cristianadam.eu/20200113/speeding-up-c-plus-plus-github-actions-using-ccache/
     # - name: CacheBuild
@@ -69,4 +55,3 @@ jobs:
     - name: Test
       working-directory: ${{env.WORKSPACE}}
       run: ctest -C ${{env.BUILD_TYPE}}
-      
