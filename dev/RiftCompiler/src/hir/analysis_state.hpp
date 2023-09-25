@@ -6,27 +6,28 @@
 
 namespace hir {
 
-	using symtable::SymbolRef;
 	using symtable::Symbol;
+	using symtable::SymbolRef;
 
-	typedef std::vector<symtable::SymbolRef> LookupResult; 
+	typedef std::vector<symtable::SymbolRef> LookupResult;
 
 	class AnalysisState {
 		std::queue<symtable::SymbolRef> to_analyze;
-		symtable::SymbolData symbol_data;
+		symtable::SymbolData            symbol_data;
 
 		// @TODO: error state here
 
 	public:
 		bool empty() const { return to_analyze.empty(); }
+
 		bool notEmpty() const { return !empty(); }
-		
+
 		SymbolRef popNext();
 
 		void addSymbol(base::unique_ptr<Symbol> symbol);
 
 		// @TODO: add const
-		symtable::SymbolData& symTable() { return symbol_data; };
+		symtable::SymbolData& symTable() { return symbol_data; }
 
 		template<typename T, typename... Args>
 		void emplaceSymbol(Args&&... args) {
@@ -34,6 +35,7 @@ namespace hir {
 		}
 
 		auto newSubRootScope() { return symbol_data.newSubRootScope(); }
+
 		auto newScope(symtable::ScopeRef scope) { return symbol_data.newScope(scope); }
 
 		void logError(std::string_view error) {

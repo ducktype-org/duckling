@@ -1,7 +1,7 @@
 #include "lookup_result.hpp"
+#include "symbol.hpp"
 #include <base/exceptions.hpp>
 #include <hir/analysis_state.hpp>
-#include "symbol.hpp"
 
 namespace symtable {
 
@@ -21,7 +21,8 @@ namespace symtable {
 
 	bool LookupResult::isSingle() const {
 		if (leaves.size() == 1 and children.size() == 0) return true;
-		if (leaves.size() == 0 and children.size() == 1 and children[0].inner.isSingle()) return true;
+		if (leaves.size() == 0 and children.size() == 1 and children[0].inner.isSingle())
+			return true;
 		return false;
 	}
 
@@ -29,13 +30,11 @@ namespace symtable {
 		RIFT_ASSERT(isSingle(), "getAsSingle on non-single lookup result");
 		if (leaves.size() == 1) {
 			return leaves;
-		}
-		else if (children.size() == 1) {
+		} else if (children.size() == 1) {
 			auto single_from_child = children[0].inner.getAsSingleReverse();
 			single_from_child.push_back(children[0].node);
 			return single_from_child;
-		}
-		else {
+		} else {
 			RIFT_PANIC("getAsSingle failed");
 		}
 	}
@@ -48,21 +47,21 @@ namespace symtable {
 	}
 
 	void LookupResult::insert(LookupResult&& other) {
-		leaves.insert(leaves.end(), 
-			std::make_move_iterator(other.leaves.begin()), 
-			std::make_move_iterator(other.leaves.end()));
+		leaves.insert(leaves.end(),
+		              std::make_move_iterator(other.leaves.begin()),
+		              std::make_move_iterator(other.leaves.end()));
 
-		children.insert(children.end(), 
-			std::make_move_iterator(other.children.begin()), 
-			std::make_move_iterator(other.children.end()));
+		children.insert(children.end(),
+		                std::make_move_iterator(other.children.begin()),
+		                std::make_move_iterator(other.children.end()));
 	}
 
 	LookupNode LookupResult::toNode(SymbolRef node) & {
-		return {node, leaves, children}; 
+		return { node, leaves, children };
 	}
 
 	LookupNode LookupResult::toNode(SymbolRef node) && {
-		return {node, std::move(*this)}; 
+		return { node, std::move(*this) };
 	}
 
 	bool ChainLookupResult::isEmpty() const {
@@ -71,26 +70,24 @@ namespace symtable {
 
 	bool ChainLookupResult::isSingle() const {
 		return result.isSingle();
-	};
+	}
+
 	SymbolChain ChainLookupResult::getAsSingle() {
 		auto prefix_copy = prefix;
-		auto single = result.getAsSingle();
+		auto single      = result.getAsSingle();
 		prefix_copy.insert(prefix_copy.end(), single.begin(), single.end());
 		return prefix_copy;
 	}
 
-
 	// dprints:
 	void dprintSymbolChain(const symtable::SymbolChain& chain, std::ostream& out) {
 		out << "[";
-		for (auto sym: chain) {
-			if (sym != nullptr) {
+		for (auto sym : chain) {
+			if (sym != nullptr)
 				out << sym->getName().strView();
-			}
-			else {
+			else
 				out << "BAD";
-			}
-			out << " . ";	
+			out << " . ";
 		}
 		out << "]";
 		// out << "\n";
@@ -99,14 +96,10 @@ namespace symtable {
 	void LookupResult::dprint(std::ostream& out) {
 		out << "Result { ";
 		out << "[";
-		for (auto leaf: leaves) {
-			out << leaf->getName().strView() << ", ";
-		}
+		for (auto leaf : leaves) out << leaf->getName().strView() << ", ";
 		out << "] , ";
 		out << "Children: [";
-		for (auto child: children) {
-			child.dprint(out);
-		}
+		for (auto child : children) child.dprint(out);
 		out << "]";
 		out << " }";
 	}

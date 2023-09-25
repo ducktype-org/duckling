@@ -34,9 +34,9 @@ namespace vm {
 
 	void Memory::returnBlockID(BlockId id) {
 		if (isUnowned(id))
-			RIFT_PANIC("Tried returning an unowned id");
+			RIFT_PANIC("Tried returning an unowned id")
 		else if (blocks[usize(id)].filled)
-			RIFT_PANIC("Tried returning an id of an unfreed block");
+			RIFT_PANIC("Tried returning an id of an unfreed block")
 		refCheck(id);
 	}
 
@@ -50,9 +50,9 @@ namespace vm {
 
 	void Memory::makeBlock(BlockId id, Block&& block) {
 		if (isUnowned(id))
-			RIFT_PANIC("Tried creating an unowned block");
+			RIFT_PANIC("Tried creating an unowned block")
 		else if (blocks[usize(id)].filled)
-			RIFT_PANIC("Tried creating an initialized block");
+			RIFT_PANIC("Tried creating an initialized block")
 		blocks[usize(id)].block = new Block(std::move(block));
 
 		// @TODO: this assumes every block is initialized
@@ -79,17 +79,17 @@ namespace vm {
 
 	void Memory::createRef(BlockId id) {
 		if (isUnowned(id))
-			RIFT_PANIC("Tried creating a reference to an unowned block");
+			RIFT_PANIC("Tried creating a reference to an unowned block")
 		else if (!blocks[usize(id)].filled)
-			RIFT_PANIC("Tried creating a reference to an uninitialized block");
+			RIFT_PANIC("Tried creating a reference to an uninitialized block")
 		blocks[usize(id)].refcount++;
 	}
 
 	void Memory::destroyRef(BlockId id) {
 		if (id >= high_id || (!blocks[usize(id)].owned && !blocks[usize(id)].deleted))
-			RIFT_PANIC("Tried deleting a reference to an unowned block");
+			RIFT_PANIC("Tried deleting a reference to an unowned block")
 		if (blocks[usize(id)].refcount == 0)
-			RIFT_PANIC("Tried deleting a reference to an unreferenced block");
+			RIFT_PANIC("Tried deleting a reference to an unreferenced block")
 		if (--blocks[usize(id)].refcount == 0 && blocks[usize(id)].deleted) {
 			blocks[usize(id)].deleted = true;
 			refCheck(id);

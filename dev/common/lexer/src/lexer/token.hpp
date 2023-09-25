@@ -20,6 +20,7 @@
 namespace lexer {
 	class Token;
 }
+
 using Tokens = std::vector<lexer::Token>;
 
 namespace lexer {
@@ -28,15 +29,15 @@ namespace lexer {
 	using rift_def::Special;
 
 	struct TokenData {
-		Tokens tokens;
+		Tokens          tokens;
 		fs::FileContent file_content;
 
 		TokenData() = default;
 		TokenData(TokenData&&) noexcept;
-		TokenData(Tokens tokens, fs::FileContent  file_content);
+		TokenData(Tokens tokens, fs::FileContent file_content);
 
-		void operator=(const TokenData&) = delete;
-		TokenData& operator=(TokenData&&) = default;
+		void       operator=(const TokenData&) = delete;
+		TokenData& operator=(TokenData&&)      = default;
 
 		virtual ~TokenData();
 	};
@@ -47,12 +48,12 @@ namespace lexer {
 			Keyword,
 			Identifier,
 			NumLiteral,
-			String,          // special group, changes lexing rules
-			FormattedString, // special group, changes lexing rules
-			RoundGroup,      // (...)
-			SquareGroup,     // [...]
-			CurlyGroup,      // {...}
-			AngleGroup,      // currently not used
+			String,           // special group, changes lexing rules
+			FormattedString,  // special group, changes lexing rules
+			RoundGroup,       // (...)
+			SquareGroup,      // [...]
+			CurlyGroup,       // {...}
+			AngleGroup,       // currently not used
 			Operator,
 			Comment,
 			Special,
@@ -61,14 +62,9 @@ namespace lexer {
 			Error
 		};
 
-		constexpr static std::array<Type, 6> non_terminal_tokens = {
-			Type::String,
-			Type::FormattedString,
-			Type::RoundGroup,
-			Type::SquareGroup,
-			Type::CurlyGroup,
-			Type::AngleGroup
-		};
+		constexpr static std::array<Type, 6> non_terminal_tokens
+			= { Type::String,      Type::FormattedString, Type::RoundGroup,
+			    Type::SquareGroup, Type::CurlyGroup,      Type::AngleGroup };
 
 		static Token makeSentinel();
 
@@ -85,51 +81,69 @@ namespace lexer {
 
 		virtual ~Token() = default;
 
-		Token() noexcept = default;
+		Token() noexcept          = default;
 		Token(const Token& other) = default;
 		Token(Token&& other) noexcept;
 		Token(Type type, base::RawView value, SourcePosition position);
-		Token(Type type, Tokens&& recursive, SourcePosition  position);
+		Token(Type type, Tokens&& recursive, SourcePosition position);
 		friend void swap(Token& first, Token& second);
-		Token& operator=(Token other);
+		Token&      operator=(Token other);
 
-		[[nodiscard]] Type getType() const;
-		[[nodiscard]] base::StrId getValue() const;
-		[[nodiscard]] std::string_view getStrValue() const;
-		[[nodiscard]] const Tokens& getRecursive() const;
+		[[nodiscard]]
+		Type getType() const;
+		[[nodiscard]]
+		base::StrId getValue() const;
+		[[nodiscard]]
+		std::string_view getStrValue() const;
+		[[nodiscard]]
+		const Tokens& getRecursive() const;
 
-		[[nodiscard]] bool isGroup() const;
+		[[nodiscard]]
+		bool isGroup() const;
 
-		[[nodiscard]] bool isTerminal() const;
-		[[nodiscard]] bool isNotTerminal() const;
+		[[nodiscard]]
+		bool isTerminal() const;
+		[[nodiscard]]
+		bool isNotTerminal() const;
 
-		[[nodiscard]] bool isSpecial() const;
-		[[nodiscard]] Special asSpecial() const;
+		[[nodiscard]]
+		bool isSpecial() const;
+		[[nodiscard]]
+		Special asSpecial() const;
 
-		[[nodiscard]] bool isKeyword() const;
-		[[nodiscard]] Keyword asKeyword() const;
+		[[nodiscard]]
+		bool isKeyword() const;
+		[[nodiscard]]
+		Keyword asKeyword() const;
 
-		[[nodiscard]] bool isOperator() const;
-		[[nodiscard]] bool isIdentifier() const;
-		[[nodiscard]] bool isNumLiteral() const;
-		[[nodiscard]] bool isComment() const;
-		[[nodiscard]] bool isString() const;
+		[[nodiscard]]
+		bool isOperator() const;
+		[[nodiscard]]
+		bool isIdentifier() const;
+		[[nodiscard]]
+		bool isNumLiteral() const;
+		[[nodiscard]]
+		bool isComment() const;
+		[[nodiscard]]
+		bool isString() const;
 
 		[[nodiscard]] bool is(Type) const;
 		[[nodiscard]] bool is(Special) const;
 		[[nodiscard]] bool is(Operator) const;
 		[[nodiscard]] bool is(Keyword) const;
 
-		[[nodiscard]] bool isStr(base::StrId str) const;
+		[[nodiscard]]
+		bool isStr(base::StrId str) const;
 
-		[[nodiscard]] SourcePosition getPosition() const;
+		[[nodiscard]]
+		SourcePosition getPosition() const;
 
 	private:
 		static Token makeError(const SourcePosition&);
 
-		Type type = Type::Empty;
-		base::StrId str_id;
-		Tokens recursive;
+		Type           type = Type::Empty;
+		base::StrId    str_id;
+		Tokens         recursive;
 		SourcePosition source_position;
 	};
 }

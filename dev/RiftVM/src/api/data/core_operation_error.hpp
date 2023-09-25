@@ -1,5 +1,6 @@
 #pragma once
 
+#include "load_program_error.hpp"
 #include <json/json.hpp>
 #include <variant>
 

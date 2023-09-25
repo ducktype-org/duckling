@@ -8,7 +8,7 @@ namespace hir {
 
 namespace symtable {
 	// @TODO: current lookup types allow
-	// only for „last symbol in chain” to be overloaded. 
+	// only for „last symbol in chain” to be overloaded.
 	// This makes sense for functions, but not for namespaces
 	// Possible solution that will not modify this sections may
 	// be unifying all „same” namespace declarations into single symbol
@@ -22,16 +22,16 @@ namespace symtable {
 	struct LookupNode;
 
 	struct LookupResult {
-		std::vector<SymbolRef> leaves;
+		std::vector<SymbolRef>  leaves;
 		std::vector<LookupNode> children;
 
 		bool isEmpty() const;
 
-		bool isSingle() const;
+		bool        isSingle() const;
 		SymbolChain getAsSingle();
 		SymbolChain getAsSingleReverse();
 
-		void insert(LookupResult&& other);
+		void       insert(LookupResult&& other);
 		LookupNode toNode(SymbolRef node) &;
 		LookupNode toNode(SymbolRef node) &&;
 
@@ -39,23 +39,21 @@ namespace symtable {
 	};
 
 	struct LookupNode {
-		SymbolRef node; // node should always be alias-like of using-like thing
+		SymbolRef    node;  // node should always be alias-like of using-like thing
 		LookupResult inner;
 
 		void dprint(std::ostream&);
 	};
 
 	struct ChainLookupResult {
-		SymbolChain prefix;
+		SymbolChain  prefix;
 		LookupResult result;
 
 		bool isEmpty() const;
-		
-		bool isSingle() const;
+
+		bool        isSingle() const;
 		SymbolChain getAsSingle();
 
 		void dprint(std::ostream&);
 	};
 }
-
-

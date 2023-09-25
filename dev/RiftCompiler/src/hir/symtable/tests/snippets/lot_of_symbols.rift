@@ -1,26 +1,25 @@
-
 import a.b;
 
 
 // sym 1:
 fun A() {
 
-	// sym 2:
-	while (1 > 0) {}
+// sym 2:
+while (1 > 0) {}
 
-	// sym 3:
-	while F(123) {}
+// sym 3:
+while F(123) {}
 }
 
 // sym 4:
 namespace STD {
-	// sym 5:
-	fun B() -> i32 {
-		return 2;
-	}
-	
-	// sym 6:
-	struct T {}
+// sym 5:
+fun B() -> i32 {
+return 2;
+}
+
+// sym 6:
+struct T {}
 }
 
 // sym 7:
@@ -28,23 +27,20 @@ struct T {}
 
 // sym 8:
 namespace lala {
-	// sym 9:
-	fun B() -> i32, i32 {
-		// sym 10:
-		if (1 > 0) {}
+// sym 9:
+fun B() -> i32, i32 {
+// sym 10:
+if (1 > 0) {}
 
-		// sym 11:
-		if (1 > 0) {}
+// sym 11:
+if (1 > 0) {}
 
-		// sym 12:
-		if (1 > 0) a++;
+// sym 12:
+if (1 > 0) a+ +;
 
 
-		// sym 13, 14, 15, 16:
-		if (i > 0) while (4 < 5) if (a in 100) if A () {}
+// sym 13, 14, 15, 16:
+if (i > 0) while (4 < 5) if (a in 100) if A () {}
 
-	}
 }
-
-
-
+}
