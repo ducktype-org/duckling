@@ -123,7 +123,7 @@ add_subdirectory(scripts)
 
 # We still want to compile project,
 # if docs dependencies are not present (e.g. in GitHub workflows).
-# Add `-D DBUILD_DOCS=OFF` option to CMake to ignore docs
+# Add `-D BUILD_DOCS=OFF` option to CMake to ignore docs
 option(BUILD_DOCS "Build test programs" ON)
 
 if (BUILD_DOCS)

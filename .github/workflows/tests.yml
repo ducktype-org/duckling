@@ -46,7 +46,7 @@ jobs:
 
     - name: Configure CMake
       working-directory: ${{env.WORKSPACE}}
-      run: cmake -B ${{env.WORKSPACE}} -D CMAKE_CXX_COMPILER=g++-11 -D IGNORE_DOCS="" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -B ${{env.WORKSPACE}} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Build
       working-directory: ${{env.WORKSPACE}}
