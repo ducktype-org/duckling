@@ -32,8 +32,10 @@ namespace symtable {
 	public:
 		SymbolData();
 		ScopeRef getRootScope();
-		ScopeRef newScope(ScopeRef parent);
+		ScopeRef newScope(ScopeRef parent, base::StrId name);
 		ScopeRef newSubRootScope();
+
+		// @TODO: This mechanism is a little bit weird:
 		SymbolRef newSymbol(base::unique_ptr<Symbol> symbol);
 
 		const decltype(symbols)& getSymbols() const;
@@ -43,6 +45,6 @@ namespace symtable {
 
 		// @TODO: add consts
 		// naive implementations for now:
-		ChainLookupResult lookupDottedNameInScopeAndParents(hir::AnalysisState&, ScopeRef initial, std::span<base::StrId> names);
+		ChainLookupResult lookupDottedNameInScopeAndParents(ScopeRef initial, std::span<base::StrId> names);
 	};
 }

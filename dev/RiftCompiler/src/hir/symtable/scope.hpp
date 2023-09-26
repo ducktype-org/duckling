@@ -5,11 +5,7 @@
 #include "symbol_ref.hpp"
 #include "lookup_result.hpp"
 #include <base/string_id.hpp>
-
-
-namespace hir {
-	class AnalysisState;
-}
+#include <set>
 
 namespace symtable {
 	enum class ConnectionType {
@@ -19,6 +15,11 @@ namespace symtable {
 		UsingPrivate
 	};
 
+	enum class ScopeState {
+		Open,
+		Closed
+	};
+
 	class Scope {
 		// Update constructors when adding fields here:
 		
@@ -26,14 +27,21 @@ namespace symtable {
 		ScopeRef parent;
 		// ScopeId id;
 
+		// This name is for debug only:
+		base::StrId name;
+
 		std::vector<SymbolRef> symbols;
 
-		bool lookup_engaged = false;
+		// bool lookup_engaged = false;
+		std::set<base::StrId> engaged_names;
+
+		ScopeState state = ScopeState::Open;
 
 		friend class SymbolData;
+		void addSymbol(SymbolRef symbol);
 
 		Scope() = default;
-		Scope(ScopeRef parent): parent(parent) {}
+		Scope(ScopeRef parent, base::StrId name): parent(parent), name(name) {}
 
 	public:
 		// This delete is important, to prevent any copy of scope data:
@@ -46,9 +54,12 @@ namespace symtable {
 		Scope(Scope&&) = default;
 		Scope& operator=(Scope&&) = default;
 
-		LookupResult lookup(hir::AnalysisState&, base::StrId name);
-		LookupResult lookupMeAndParents(hir::AnalysisState&, base::StrId name);
+		LookupResult lookup(base::StrId name);
+		LookupResult lookupMeAndParents(base::StrId name);
 
+		base::StrId getName() const { return name; }
+
+		void close();
 	};
 
 }

@@ -3,8 +3,10 @@
 
 namespace symtable {
 	
-	Symbol::Symbol(ScopeRef scope, base::StrId name, bool anonymous,
+	Symbol::Symbol(hir::AnalysisState& state,
+	               ScopeRef scope, base::StrId name, bool anonymous,
 	               bool is_static, SymbolKind kind):
+		analysis_state(state),
 		scope(scope),
 		name(name),
 		anonymous(anonymous),
@@ -20,34 +22,57 @@ namespace symtable {
 		return type.value();
 	}
 
-	ScopeRef Symbol::getLinkedLookupScope(hir::AnalysisState& state) {
+	exec::CTV Symbol::getValue() {
+		RIFT_PANIC("getValue called on Symbol not implementing it");
+	}
+
+	ScopeRef Symbol::getLinkedLookupScope() {
 		if (!linked_lookup_scope.has_value()) {
-			calculateLinkedLookup(state);
+			RIFT_ASSERT(unlockedLookup(), "Trying to calculateLinkedLookup while in lookup lock");
+			calculateLinkedLookup();
 		}
 		return linked_lookup_scope.value();
 	}
 
-	void Symbol::calculateLinkedLookup(hir::AnalysisState& state) {
-		linked_lookup_scope = state.newScope(scope);
+	void Symbol::getSymbolsIn() {
+		symbol_in_done = true;
+	}
+
+	void Symbol::calculateLinkedLookup() {
+		linked_lookup_scope = analysis_state.newScope(scope, name);
+		
+		// @TODO: this here is not perfect, but it guarantees,
+		// that Scope always has symbols 
+		// In the future there should be some link from Scope to symbol
+		// and going over symbols will be done only when necessary
+		getSymbolsIn();
+		linked_lookup_scope.value()->close();
 	}
 
 	// @TODO: errors
-	LookupResult Symbol::lookupIn(hir::AnalysisState& state, base::StrId name)  {
-		scope = getLinkedLookupScope(state);
-		return scope->lookup(state, name);
+	LookupResult Symbol::lookupIn(base::StrId name)  {
+		RIFT_ASSERT(unlockedLookup(), "Trying to lookupIn while in locked lookup state");
+		
+		scope = getLinkedLookupScope();
+		getSymbolsIn();
+		return scope->lookup(name);
 	}
 
-	SymbolChain Symbol::getUniqueDeAlias(hir::AnalysisState&) {
+	SymbolChain Symbol::getUniqueDeAlias() {
 		if (is_alias) {
 			RIFT_PANIC("de alias called on wildcard symbol not implementing deAlias");
 		}
 		return { SymbolRef(this) };
 	}
 	
-	ChainLookupResult Symbol::getDeAlias(hir::AnalysisState&) {
+	ChainLookupResult Symbol::getDeAlias() {
 		if (is_alias) {
 			RIFT_PANIC("de alias called on alias symbol not implementing deAlias");
 		}
 		return {{}, {{SymbolRef(this)}, {}}};
+	}
+
+	bool Symbol::unlockedLookup() const {
+		return not lock_lookup;
 	}
 }
