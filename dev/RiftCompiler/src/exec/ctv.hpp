@@ -66,7 +66,7 @@ namespace exec {
 	struct CTV {
 		ts::TypeDesc<> type;
 		Pointer data;
-		// @TODO: it should be possible to calculate size based on type and data
+		// @TODO: it should be str_conpossible to calculate size based on type and data
 		usize size;
 
 		// @TODO: this should be more sensible but templates need it.

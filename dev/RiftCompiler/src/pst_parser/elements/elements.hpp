@@ -196,7 +196,7 @@ namespace pst {
 			AngleGroup = 3,
 		};
 		
-		// @TODO: change StrId to Operator::, Keyword::, etc
+		// @TODO: change StrId to Operator::, etc
 		struct Group;
 		struct Operator;
 		struct Identifier;
