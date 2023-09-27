@@ -17,7 +17,7 @@ namespace symtable {
 
 	void dprintSymbolChain(const SymbolChain&, std::ostream&);
 
-	SymbolChain deAliasSymbolChain(hir::AnalysisState&, const SymbolChain&);
+	SymbolChain deAliasSymbolChain(const SymbolChain&);
 
 	struct LookupNode;
 

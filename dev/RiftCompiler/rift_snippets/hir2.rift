@@ -4,9 +4,9 @@ namespace A {
 
 namespace B {
 	namespace C {
-		const x: t;
+		const x: i32 = 0;
 	}
-	const z: t;
+	const z: i32 = 0;
 
 	alias z_alias = z;
 

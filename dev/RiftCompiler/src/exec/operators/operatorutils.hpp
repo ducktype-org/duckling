@@ -13,12 +13,14 @@
 
 namespace exec::operators {
 	// Specializations can be added for types that cannot be simply casted this way.
+	// @TODO: this function should be exported in some form by type system
 	template<class T>
 	T CTVToType(CTV ctv) {
 		return *(ctv.getData<T>().data());
 	}
 
 	// Specializations can be added for types that cannot be simply casted this way.
+	// @TODO: this function should be exported in some form by type system
 	template<class T>
 	void PutDataInCTV(CTV ctv, T value) {
 		*(ctv.getData<T>().data()) = value;

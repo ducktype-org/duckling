@@ -4,6 +4,7 @@
 #include <optional>
 
 #include <typesystem/typesystem.hpp>
+#include <exec/ctv.hpp>
 #include <base/string_id.hpp>
 
 #include "scope_symbol_id.hpp"
@@ -24,6 +25,7 @@ namespace symtable {
 		CompilationUnit,
 		Const,
 		Struct,
+		Alias,
 
 		TestSymbol,
 		// ...
@@ -34,6 +36,10 @@ namespace symtable {
 		// Update constructors when adding fields here
 
 	protected:
+		// state:
+		// @TODO: use it instead of passing state everywhere
+		hir::AnalysisState& analysis_state;
+
 		// symbol identification:
 		ScopeRef scope;
 		base::StrId name;
@@ -63,18 +69,25 @@ namespace symtable {
 		std::optional<ts::TypeDesc<>> type;
 		SymbolKind kind;
 
-		Symbol(ScopeRef scope, base::StrId name, bool anonymous,
+		// lookup lock:
+		bool lock_lookup = false;
+
+		Symbol(hir::AnalysisState& state,
+		       ScopeRef scope, base::StrId name, bool anonymous,
 		       bool is_static, SymbolKind kind);
 
 
 		virtual void calculateType() = 0;
 
-		virtual void calculateLinkedLookup(hir::AnalysisState&);
+		bool symbol_in_done = false;
+		virtual void getSymbolsIn();
+		virtual void calculateLinkedLookup();
 
-		void getAll(hir::AnalysisState& state) {
+		void getAll() {
 			getKind();
 			getType();
-			getLinkedLookupScope(state);
+			getLinkedLookupScope();
+			getSymbolsIn();
 		}
 
 	public:
@@ -94,28 +107,24 @@ namespace symtable {
 		bool isAnonymous() const { return anonymous; }
 		bool isWildcard() const { return wildcard; }
 
-		// @TODO: current design forces this function, to take
-		// hir::AnalysisState&, which results in
-		// symtable.lookup needing it as well
-		// Is should be changed somehow
-		// Ideas: 1. move lookup to hir::AnalysisState
-		//        2. change SymbolId to SymbolRef
-		//        3. add member hir::AnalysisState& to symbol
-		ScopeRef getLinkedLookupScope(hir::AnalysisState&);
+		ScopeRef getLinkedLookupScope();
 
 		ts::TypeDesc<> getType();
 		SymbolKind getKind() const { return kind; };
-		
 
-		virtual SymbolChain getUniqueDeAlias(hir::AnalysisState&);
-		virtual ChainLookupResult getDeAlias(hir::AnalysisState&);
+		// @TODO: decide if value should be kept in Symbol itself
+		virtual exec::CTV getValue();
 
-		virtual void analyzeAll(hir::AnalysisState&) = 0;
+		virtual SymbolChain getUniqueDeAlias();
+		virtual ChainLookupResult getDeAlias();
+
+		virtual void analyzeAll() = 0;
 
 		virtual ~Symbol() = default;
 
-		LookupResult lookupIn(hir::AnalysisState&, base::StrId name);
+		LookupResult lookupIn(base::StrId name);
 		
+		bool unlockedLookup() const;
 	};
 
 }

@@ -15,14 +15,15 @@ int main(int argc, char** argv) {
 		std::cerr << "usage: ./hir_testing file_name\n";
 		return 1;
 	}
-	fs::FilePath file(argv[1]);
+	std::string file_name(argv[1]);
 
 	lexer::init();
 	pst::init();
 	ts::init();
+	exec::init();
 
 	hir::HIR hir;
 	
-	hir.addUnit(prepare(file.strView()));
+	hir.addUnit(prepare(file_name));
 	hir.doMagicStuff();
 }

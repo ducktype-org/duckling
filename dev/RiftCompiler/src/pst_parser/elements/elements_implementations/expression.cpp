@@ -24,6 +24,21 @@ namespace pst {
 		return Expr::parse(state, 1e18, false);
 	}
 
+	ParserRef<Expr> Expr::parseUntil(RiftParserState& state, rift_def::Operator until) {
+		// look ahead:
+		usize count = 0;
+		while (!state.ctokens().is(until, count)) {
+			if (state.ctokens().size() < count) {
+				state.fail(0, "Bad expression end");
+				break;
+			}
+			count++;
+		}
+
+		return Expr::parse(state, count, true);
+	}
+
+
 	/** 
 	 * It is left in this state for now, as a lot will depend on semantical analysis
 	 * @TODO: lambda, todo-s 
@@ -66,7 +81,7 @@ namespace pst {
 					// @TODO: check if keyword is legal in expr and proceed accordingly
 					auto token = state.tokens().next();
 					out->elements.emplace_back(
-						KeywordValue({token.getValue()})
+						KeywordValue({token.asKeyword()})
 					);
 				}
 				else if (state.ctokens().peek().isNumLiteral()) {
@@ -121,7 +136,7 @@ namespace pst {
 					out <<"} }";
 				}
 				variant_case (KeywordValue, key) {
-					out << "{\"KeywordValue\": \"" << key.key_id.strView() << "\"}";	
+					out << "{\"KeywordValue\": \"" << rift_def::keywordToStr( key.keyword).strView() << "\"}";	
 				}
 				variant_default {
 					RIFT_PANIC("Bad Expr alternative");

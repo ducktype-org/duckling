@@ -2,14 +2,19 @@
 #include <base/exceptions.hpp>
 #include <hir/analysis_state.hpp>
 #include "symbol.hpp"
+#include <iostream>
 
 namespace symtable {
 
-	SymbolChain deAliasSymbolChain(hir::AnalysisState& state, const SymbolChain& chain) {
+	SymbolChain deAliasSymbolChain(const SymbolChain& chain) {
 		// @TODO: this does not handle non-unique symbols (overloaded)
 		SymbolChain out;
+		std::cerr << "     dealiasing... \n";
 		for (usize i = 0; i < chain.size(); i++) {
-			auto de_aliased = chain[i]->getUniqueDeAlias(state);
+			auto de_aliased = chain[i]->getUniqueDeAlias();
+			std::cerr << "           ";
+			dprintSymbolChain(de_aliased, std::cerr);
+			std::cerr << "\n";
 			out.insert(out.end(), de_aliased.begin(), de_aliased.end());
 		}
 		return out;

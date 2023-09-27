@@ -36,23 +36,47 @@ namespace hir {
 
 		pst::PST& pst = sources[0].pst;
 
-		AnalysisState state;
+		// @TODO: this should be sub_root_scope, but it is root_scope for now, so tests can work
+		// Right now we can't lookup into sub root scopes
+		// symtable::ScopeRef root_scope = analysis_state.newSubRootScope();
+		symtable::ScopeRef root_scope = analysis_state.symTable().getRootScope();
 
-		symtable::ScopeRef root_scope = state.newSubRootScope();
-
-		state.emplaceSymbol<TopLevelSymbol>(
+		analysis_state.emplaceSymbol<TopLevelSymbol>(
+			analysis_state,
 			root_scope, base::StrId("TopLevel"),
 			pst.getTopLevelElement()
 		);
 
+		root_scope->close();
+
 		std::cerr << "Added top level symbol!\n";
 
-		while (state.notEmpty()) {
-			auto symbol_ref = state.popNext();
+		while (analysis_state.notEmpty()) {
+			auto symbol_ref = analysis_state.popNext();
 
+			std::cerr << "\n====================\n";
 			std::cerr << "Analyzing next: " << symbol_ref->getName().strView() << "\n";
 
-			symbol_ref->analyzeAll(state);
+			symbol_ref->analyzeAll();
+
+			std::cerr << "    Type: " << symbol_ref->getType().getType().show() << "\n";
+
+			std::cerr << "    Value: ";
+			if (symbol_ref->getKind() == SymbolKind::Const) {
+				auto val = symbol_ref->getValue();
+				if (val.getType().getType().getKind() == ts::Kind::Integral) {
+					// @TODO: i32 here is temporary:
+					std::cerr << val.getData<i32>().front() << "\n";
+				}
+				else {
+					std::cerr << "<NOT INTEGRAL>\n";
+				}
+			}
+			else {
+				std::cerr << "<NOT CONST>\n";
+			}
+
+			
 		}
 
 	}

@@ -6,7 +6,7 @@
 namespace symtable {
 
 	SymbolData::SymbolData() {
-		root_scope = newScope(nullptr);
+		root_scope = newScope(nullptr, base::StrId("ROOT_SCOPE"));
 		next_relative_position = 0;
 	}
 
@@ -14,14 +14,14 @@ namespace symtable {
 		return root_scope;
 	}
 
-	ScopeRef SymbolData::newScope(ScopeRef parent) {
-		auto id = scopes.pushBack(std::move(Scope(parent)));
+	ScopeRef SymbolData::newScope(ScopeRef parent, base::StrId name) {
+		auto id = scopes.pushBack(std::move(Scope(parent, name)));
 		// scopes[id].id = id;
 		return scopes.last();
 	}
 
 	ScopeRef SymbolData::newSubRootScope() {
-		return newScope(getRootScope());
+		return newScope(getRootScope(), base::StrId("SUB_ROOT_SCOPE"));
 	}
 
 	SymbolRef SymbolData::newSymbol(base::unique_ptr<Symbol> symbol) {
@@ -30,7 +30,7 @@ namespace symtable {
 		symbol->relative_position = next_relative_position++;
 		
 		symbols.push_back(std::move(symbol));
-		scope->symbols.push_back(symbols.back().borrow_mut());
+		scope->addSymbol(symbols.back().borrow_mut());
 
 		return symbols.back().borrow_mut();
 	}
@@ -46,13 +46,13 @@ namespace symtable {
 
 	// @TODO: errors
 	ChainLookupResult SymbolData::lookupDottedNameInScopeAndParents(
-		hir::AnalysisState& state, ScopeRef initial,
+		ScopeRef initial,
 		std::span<base::StrId> names) {
 		
 		RIFT_ASSERT(names.size() > 0, "lookupDotted received zero names");
 
 		// initial symbol:
-		auto append_res_first = initial->lookupMeAndParents(state, names[0]);
+		auto append_res_first = initial->lookupMeAndParents(names[0]);
 
 		if (names.size() == 1) {
 			return {{}, append_res_first};
@@ -68,7 +68,7 @@ namespace symtable {
 		SymbolChain prefix = append_res_first.getAsSingle();
 
 		for (usize i = 1; i < names.size() - 1; i++) {
-			auto append_res = prefix.back()->lookupIn(state, names[i]);
+			auto append_res = prefix.back()->lookupIn(names[i]);
 			if (!append_res.isSingle()) {
 				// @TODO: error in state
 				// return some „ErrorSymbol”
@@ -81,7 +81,7 @@ namespace symtable {
 		}
 
 		// last symbol:
-		auto last_res = prefix.back()->lookupIn(state, names.back());
+		auto last_res = prefix.back()->lookupIn(names.back());
 
 		return {prefix, last_res};
 	}
