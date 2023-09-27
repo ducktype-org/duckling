@@ -21,14 +21,14 @@ namespace clap {
 
 		result<ParametersMap, ClapParsingError> parse_internal(CLIArgs args);
 
-		option<const ParameterConfig&> get_parameter_config(base::StrId long_name);
-		option<const ParameterConfig&> get_parameter_config(char short_name);
+		option<const ParameterConfig &> get_parameter_config(base::StrId long_name);
+		option<const ParameterConfig &> get_parameter_config(char short_name);
 
 	public:
 		Config();
 
-		Config& add(ParameterConfig parameter_config);
-		Config& add_positional(const base::RawView& parameter_name);
+		Config &add(ParameterConfig parameter_config);
+		Config &add_positional(const base::RawView &parameter_name);
 
 		ParametersMap parse(CLIArgs args);
 

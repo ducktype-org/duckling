@@ -15,7 +15,6 @@ namespace operation {
 	TypedOperation createDefaultConstructEmpty(ts::TypeInfo type_info);
 	TypedOperation createDefaultConstructFull(ts::TypeInfo type_info);
 
-
 	// This only compares virtual ancestors.
 	// Result of this and the one created by createDefaultEquality complement each other.
 	// They should be stored separately and called in specific manner.
@@ -45,19 +44,19 @@ namespace operation {
 		return to;
 	}
 
-	inline TypedOperation comparison(const Operation& op, ts::TypeDesc<> ty) {
-		return {op, ts::FunctionInfo::create({ty, ty}, ts::IntegralInfo::create(8))};
+	inline TypedOperation comparison(const Operation &op, ts::TypeDesc<> ty) {
+		return { op, ts::FunctionInfo::create({ ty, ty }, ts::IntegralInfo::create(8)) };
 	}
 
-	inline TypedOperation equality(const Operation& op, ts::TypeDesc<> ty) {
-		return {op, ts::FunctionInfo::create({ty, ty}, ts::TypeDesc<>(ts::BoolInfo::create()))};
+	inline TypedOperation equality(const Operation &op, ts::TypeDesc<> ty) {
+		return { op, ts::FunctionInfo::create({ ty, ty }, ts::TypeDesc<>(ts::BoolInfo::create())) };
 	}
 
-	inline TypedOperation assign(const Operation& op, ts::TypeDesc<> ty) {
-		return {op, ts::FunctionInfo::create({ty, ty}, ty)};
+	inline TypedOperation assign(const Operation &op, ts::TypeDesc<> ty) {
+		return { op, ts::FunctionInfo::create({ ty, ty }, ty) };
 	}
 
-	inline TypedOperation construct(const Operation& op, ts::TypeDesc<> ty) {
-		return {op, ts::FunctionInfo::create({ty}, ty)};
+	inline TypedOperation construct(const Operation &op, ts::TypeDesc<> ty) {
+		return { op, ts::FunctionInfo::create({ ty }, ty) };
 	}
 }

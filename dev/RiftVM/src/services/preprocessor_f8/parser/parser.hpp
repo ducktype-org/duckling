@@ -7,5 +7,5 @@
 #include <string>
 
 namespace assemble {
-	result<vm::Code, std::string> assemble(fs::FilePath file, vm::TypeMetadata& type_metadata);
+	result<vm::Code, std::string> assemble(fs::FilePath file, vm::TypeMetadata &type_metadata);
 }

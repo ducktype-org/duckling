@@ -24,7 +24,6 @@ namespace rift_def {
 	};
 	constexpr KeywordMode DEFAULT_MODE = KeywordMode::RiftSource;
 
-
 	enum class Keyword {
 		NotAKeyword,
 
@@ -117,7 +116,6 @@ namespace rift_def {
 
 		// Rift Test:
 		RiftTestEagerLookup,
-
 
 		// BC:
 		BCFunction,

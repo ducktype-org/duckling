@@ -16,17 +16,17 @@ namespace base {
 	public:
 		constexpr FlagType() = default;
 
-		constexpr bool contains(const FlagType& oth) const { return (data & oth.data) == oth.data; }
+		constexpr bool contains(const FlagType &oth) const { return (data & oth.data) == oth.data; }
 
-		constexpr FlagType operator|(const FlagType& oth) const {
+		constexpr FlagType operator|(const FlagType &oth) const {
 			return makeFlag(data | oth.data);
 		}
 
-		constexpr void operator|=(const FlagType& oth) { data |= oth.data; }
+		constexpr void operator|=(const FlagType &oth) { data |= oth.data; }
 
-		constexpr bool operator==(const FlagType& oth) const { return data == oth.data; }
+		constexpr bool operator==(const FlagType &oth) const { return data == oth.data; }
 
-		constexpr auto operator<=>(const FlagType& oth) const = default;
+		constexpr auto operator<=>(const FlagType &oth) const = default;
 
 		constexpr FlagType(u64 flag_id): data{ 1ull << flag_id } {}
 	};

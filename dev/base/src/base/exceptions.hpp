@@ -16,11 +16,11 @@ namespace base {
 	public:
 		Panic(std::string position, std::string reason);
 
-		const std::string& getPosition() const;
-		const char*        what() const noexcept final;
+		const std::string &getPosition() const;
+		const char        *what() const noexcept final;
 
 		// @TODO: use Printer
-		void print(std::ostream& out) const;
+		void print(std::ostream &out) const;
 	};
 
 	class Exception: public std::exception {};
@@ -30,7 +30,7 @@ namespace base {
 
 	public:
 		LogicError(std::string message);
-		const char* what() const noexcept override;
+		const char *what() const noexcept override;
 	};
 
 	class NotYetImplemented: public Exception {
@@ -38,7 +38,7 @@ namespace base {
 
 	public:
 		NotYetImplemented(std::string message);
-		const char* what() const noexcept override;
+		const char *what() const noexcept override;
 	};
 }
 
@@ -50,6 +50,8 @@ namespace base {
 
 #define RIFT_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what)
 
-#define _THROW_PANIC(panic_title, what...)                                      \
-	throw base::Panic("    In " __FILE__ " at line " DETAIL_RIFT_STR(__LINE__), \
-	                  base::strConcat(panic_title, "    ", what));
+#define _THROW_PANIC(panic_title, what...)                        \
+	throw base::Panic(                                            \
+		"    In " __FILE__ " at line " DETAIL_RIFT_STR(__LINE__), \
+		base::strConcat(panic_title, "    ", what)                \
+	);

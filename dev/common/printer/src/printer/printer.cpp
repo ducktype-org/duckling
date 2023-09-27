@@ -14,17 +14,17 @@ namespace printer {
 		return color_id > 0 ? color_id + background_font_color_offset : color_id;
 	}
 
-	void Message::add(const MessageContent& mc) {
-		this->contents.push_back(mc);
-	}
+	void Message::add(const MessageContent &mc) { this->contents.push_back(mc); }
 
 	void Message::add(std::vector<MessageContent> mc) {
-		this->contents.insert(this->contents.end(),
-		                      std::make_move_iterator(mc.begin()),
-		                      std::make_move_iterator(mc.end()));
+		this->contents.insert(
+			this->contents.end(),
+			std::make_move_iterator(mc.begin()),
+			std::make_move_iterator(mc.end())
+		);
 	}
 
-	void Message::print(std::ostream& out) {
+	void Message::print(std::ostream &out) {
 		Console console;
 		console.add(*this);
 		console.print(out);
@@ -37,9 +37,7 @@ namespace printer {
 			minLevel[printer::msgToInt(type)] = level;
 	}
 
-	void Console::setGeneralMax(usize max) {
-		generalMax = max;
-	}
+	void Console::setGeneralMax(usize max) { generalMax = max; }
 
 	void Console::setMaxAmounts(MessageType type, usize amount) {
 		if (type == MessageType::ALL)
@@ -48,31 +46,25 @@ namespace printer {
 			maxAmounts[printer::msgToInt(type)] = amount;
 	}
 
-	void Console::add(const MessagePack& pack) {
-		messagePacks.push_back(std::move(pack));
-	}
+	void Console::add(const MessagePack &pack) { messagePacks.push_back(std::move(pack)); }
 
-	void Console::add(MessagePack&& pack) {
-		messagePacks.emplace_back(std::move(pack));
-	}
+	void Console::add(MessagePack &&pack) { messagePacks.emplace_back(std::move(pack)); }
 
-	void Console::add(const Message& message) {
-		messagePacks.push_back({ message });
-	}
+	void Console::add(const Message &message) { messagePacks.push_back({ message }); }
 
-	void Console::add(Message&& message) {
+	void Console::add(Message &&message) {
 		MessagePack pack;
 		pack.emplace_back(std::move(message));
 		messagePacks.push_back(std::move(pack));
 	}
 
-	void Console::print(std::ostream& out) const {
+	void Console::print(std::ostream &out) const {
 		std::array<usize, TYPE_COUNT> currentAmounts = {};
 		currentAmounts.fill(0);
 		usize currentCount = 0;
 
-		for (const MessagePack& pack : messagePacks) {
-			for (const Message& message : pack) {
+		for (const MessagePack &pack : messagePacks) {
+			for (const Message &message : pack) {
 				MessageTypeId messageType = msgToInt(message.type);
 				if (message.level >= minLevel[messageType]) {
 					if (currentAmounts[messageType] > maxAmounts[messageType]) continue;
@@ -85,7 +77,7 @@ namespace printer {
 					if (currentAmounts[messageType] == maxAmounts[messageType]) {
 						out << "Limit for this type of message has been reached.\n";
 					} else {
-						for (const MessageContent& content : message.contents) {
+						for (const MessageContent &content : message.contents) {
 							ColorId foreground_color_id, background_color_id;
 							if (content.foreground_color == Color::DEFAULT) {
 								foreground_color_id
@@ -129,7 +121,5 @@ namespace printer {
 		}
 	}
 
-	void Console::clear() {
-		messagePacks.resize(0);
-	}
+	void Console::clear() { messagePacks.resize(0); }
 }

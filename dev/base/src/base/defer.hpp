@@ -9,7 +9,7 @@ namespace detail {
 		ActionT action;
 
 	public:
-		DeferHelper(ActionT&& action): action(std::move(action)) {}
+		DeferHelper(ActionT &&action): action(std::move(action)) {}
 
 		~DeferHelper() noexcept { action(); }
 	};
@@ -33,6 +33,7 @@ namespace detail {
  *
  * See tests/test.cpp for examples.
  */
-#define defer(code)                                              \
-	::detail::DeferHelper CONCAT_2(defer_custom_name_rJd7liva5_, \
-	                               __LINE__)([&]() noexcept -> void { code; });
+#define defer(code)                                                         \
+	::detail::DeferHelper CONCAT_2(defer_custom_name_rJd7liva5_, __LINE__)( \
+		[&]() noexcept -> void { code; }                                    \
+	);

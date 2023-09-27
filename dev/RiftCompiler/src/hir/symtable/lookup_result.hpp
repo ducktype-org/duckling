@@ -15,9 +15,9 @@ namespace symtable {
 
 	typedef std::vector<SymbolRef> SymbolChain;
 
-	void dprintSymbolChain(const SymbolChain&, std::ostream&);
+	void dprintSymbolChain(const SymbolChain &, std::ostream &);
 
-	SymbolChain deAliasSymbolChain(hir::AnalysisState&, const SymbolChain&);
+	SymbolChain deAliasSymbolChain(hir::AnalysisState &, const SymbolChain &);
 
 	struct LookupNode;
 
@@ -31,18 +31,18 @@ namespace symtable {
 		SymbolChain getAsSingle();
 		SymbolChain getAsSingleReverse();
 
-		void       insert(LookupResult&& other);
+		void       insert(LookupResult &&other);
 		LookupNode toNode(SymbolRef node) &;
 		LookupNode toNode(SymbolRef node) &&;
 
-		void dprint(std::ostream&);
+		void dprint(std::ostream &);
 	};
 
 	struct LookupNode {
 		SymbolRef    node;  // node should always be alias-like of using-like thing
 		LookupResult inner;
 
-		void dprint(std::ostream&);
+		void dprint(std::ostream &);
 	};
 
 	struct ChainLookupResult {
@@ -54,6 +54,6 @@ namespace symtable {
 		bool        isSingle() const;
 		SymbolChain getAsSingle();
 
-		void dprint(std::ostream&);
+		void dprint(std::ostream &);
 	};
 }

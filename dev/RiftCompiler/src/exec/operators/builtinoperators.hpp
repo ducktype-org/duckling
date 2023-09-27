@@ -19,15 +19,15 @@ namespace exec {
 	};
 
 	struct BuiltInOp {
-		Operator op;
+		Operator                    op;
 		std::vector<ts::TypeDesc<>> parameters;
 
-		auto operator<=>(const BuiltInOp& other) const = default;
+		auto operator<=>(const BuiltInOp &other) const = default;
 	};
 
 	using BuiltInOpMap = base::Map<BuiltInOp, operation::OperationId>;
 
-	BuiltInOpMap& getBuiltInOps();
+	BuiltInOpMap &getBuiltInOps();
 
 	void initBuiltInOps();
 }

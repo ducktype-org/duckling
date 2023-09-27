@@ -17,7 +17,6 @@
 
 namespace symtable {
 
-
 	using detail::ScopesList;
 
 	// using detail::SymbolList;
@@ -37,14 +36,14 @@ namespace symtable {
 		ScopeRef  newSubRootScope();
 		SymbolRef newSymbol(base::unique_ptr<Symbol> symbol);
 
-		const decltype(symbols)& getSymbols() const;
+		const decltype(symbols) &getSymbols() const;
 
 		usize symbolCount() const;
 
-
 		// @TODO: add consts
 		// naive implementations for now:
-		ChainLookupResult lookupDottedNameInScopeAndParents(hir::AnalysisState&, ScopeRef initial,
-		                                                    std::span<base::StrId> names);
+		ChainLookupResult lookupDottedNameInScopeAndParents(
+			hir::AnalysisState &, ScopeRef initial, std::span<base::StrId> names
+		);
 	};
 }

@@ -29,9 +29,8 @@ namespace base {
 
 	template<typename VariantT, typename T>
 	constexpr auto alternative_index() {
-		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>,
-		                             T,
-		                             0>();
+		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>, T, 0>(
+		);
 	}
 }
 
@@ -54,18 +53,19 @@ namespace base {
  *
  * Braces are IMPORTANT for the code to work properly
  */
-#define variant_match(value)                                                                       \
-	PUSH_DIAGNOSTIC NO_SHADOW if (bool variant_match_stop                                          \
-	                              = true) for (auto& internal_value = (value); variant_match_stop; \
-	                                           variant_match_stop                                  \
-	                                           = false) switch (internal_value.index())            \
+#define variant_match(value)                                                                    \
+	PUSH_DIAGNOSTIC                                                                             \
+	NO_SHADOW if (bool variant_match_stop = true) for (auto &internal_value = (value);          \
+	                                                   variant_match_stop;                      \
+	                                                   variant_match_stop                       \
+	                                                   = false) switch (internal_value.index()) \
 		POP_DIAGNOSTIC
 
 #define variant_case(type, name)                                                                  \
 	PUSH_DIAGNOSTIC NO_SHADOW break;                                                              \
 	case (base::alternative_index<decltype(internal_value), type>()):                             \
 		if (bool variant_case_stop = true)                                                        \
-			for ([[maybe_unused]] auto& name = std::get<type>(internal_value); variant_case_stop; \
+			for ([[maybe_unused]] auto &name = std::get<type>(internal_value); variant_case_stop; \
 			     variant_case_stop           = false)                                             \
 		POP_DIAGNOSTIC
 
@@ -91,4 +91,4 @@ namespace base {
 /**
  * @brief Use instead of simple `std::visit`
  */
-#define VISIT(variant_value, name, code) std::visit([&](auto&& name) { code; }, (variant_value))
+#define VISIT(variant_value, name, code) std::visit([&](auto &&name) { code; }, (variant_value))

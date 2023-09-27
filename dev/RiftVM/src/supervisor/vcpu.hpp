@@ -35,19 +35,18 @@ namespace vm {
 
 		option<vm::Code> loadedCode = none<vm::Code>();
 
-		result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
+		result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath &path);
 
-		result<api::Response, api::CoreOperationError>
-			doRequest(const api::ExecutorRequest& request);
-		result<api::Response, api::CoreOperationError> doRequest(const api::DataRequest& request);
+		result<api::Response, api::CoreOperationError> doRequest(const api::ExecutorRequest &request
+		);
+		result<api::Response, api::CoreOperationError> doRequest(const api::DataRequest &request);
 		result<api::Response, api::CoreOperationError> run();
 		result<api::Response, api::CoreOperationError> join();
 		result<api::Response, api::CoreOperationError> stop();
-		result<api::Response, api::CoreOperationError> input(const api::request::Input& request);
+		result<api::Response, api::CoreOperationError> input(const api::request::Input &request);
 		result<api::Response, api::CoreOperationError> output();
 
 		api::VCPUStatus getStatus();
-
 
 		/**
 		 * Service and data manager constructors can depend on
@@ -69,17 +68,17 @@ namespace vm {
 		 *
 		 * Name of this method may be misleading
 		 */
-		void onEvent(const api::VCPUStatus& event) noexcept override;
+		void onEvent(const api::VCPUStatus &event) noexcept override;
 
 		/**
 		 * Can be safely called from Execution Thread only
 		 */
-		DataManager& getData();
+		DataManager &getData();
 
 		/**
 		 * Can be safely called from Execution Thread only
 		 */
-		ServiceManager& getServices();
+		ServiceManager &getServices();
 
 		/**
 		 * For executor use only
@@ -87,7 +86,7 @@ namespace vm {
 		template<class T>
 		T getInput() {
 			T         v;
-			Executor& exec = serviceManager.get<Executor>();
+			Executor &exec = serviceManager.get<Executor>();
 			if (uses_stdio) {
 				std::cin >> v;
 			} else {
@@ -101,7 +100,7 @@ namespace vm {
 		}
 
 		template<class T>
-		void writeOutput(const T& v) {
+		void writeOutput(const T &v) {
 			if (uses_stdio) {
 				std::cout << v;
 			} else {
@@ -114,13 +113,13 @@ namespace vm {
 
 		// Each of the following methods can be called concurrently, so they should synchronize
 		// resources.
-		result<api::Response, api::CoreOperationError>
-			doRequest(const api::RequestVariant& request);
+		result<api::Response, api::CoreOperationError> doRequest(const api::RequestVariant &request
+		);
 
 		VCPU(bool use_stdio):
-			status(api::ExecutionNotStarted{}),
-			uses_stdio(use_stdio),
-			serviceManager(*this){};
+			  status(api::ExecutionNotStarted{}),
+			  uses_stdio(use_stdio),
+			  serviceManager(*this){};
 		virtual ~VCPU();
 	};
 }

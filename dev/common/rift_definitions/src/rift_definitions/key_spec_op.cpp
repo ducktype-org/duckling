@@ -10,13 +10,11 @@ namespace rift_def {
 		KeywordMode keyword_mode;
 	}
 
-	void setKeywordMode(KeywordMode mode) {
-		keyword_mode = mode;
-	}
+	void setKeywordMode(KeywordMode mode) { keyword_mode = mode; }
 
 	base::StrId makeStrId(std::string_view view) {
-		return base::StrId(
-			base::RawView({ reinterpret_cast<const byte*>(view.data()), view.size() }));
+		return base::StrId(base::RawView({ reinterpret_cast<const byte *>(view.data()),
+		                                   view.size() }));
 	}
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
@@ -121,7 +119,6 @@ namespace rift_def {
 			 }
     };
 
-
 	/**
 	 * When modifing it modify also char.cpp -> makeCharTable
 	 */
@@ -208,12 +205,16 @@ namespace rift_def {
 		// just to be safe for any future changes
 		// @TODO: move to same tests
 		RIFT_ASSERT(rift_keywords_array.size() == rift_keyword_map.size(), "keyword map error");
-		RIFT_ASSERT(special_array.size() == special_map.size()
-		                && special_array.size() == rev_special_map.size(),
-		            "special map error");
-		RIFT_ASSERT(operator_array.size() == operator_map.size()
-		                && operator_array.size() == rev_operator_map.size(),
-		            "operator map error");
+		RIFT_ASSERT(
+			special_array.size() == special_map.size()
+				&& special_array.size() == rev_special_map.size(),
+			"special map error"
+		);
+		RIFT_ASSERT(
+			operator_array.size() == operator_map.size()
+				&& operator_array.size() == rev_operator_map.size(),
+			"operator map error"
+		);
 
 		RIFT_SIMPLE_INIT_GUARD_END;
 	}
@@ -249,20 +250,12 @@ namespace rift_def {
 		return Operator::NotAnOperator;
 	}
 
-	base::StrId keywordToStr(Keyword key) {
-		return rev_keyword_map[key];
-	}
+	base::StrId keywordToStr(Keyword key) { return rev_keyword_map[key]; }
 
-	base::StrId specialToStr(Special spec) {
-		return rev_special_map[spec];
-	}
+	base::StrId specialToStr(Special spec) { return rev_special_map[spec]; }
 
-	base::StrId operatorToStr(Operator oper) {
-		return rev_operator_map[oper];
-	}
+	base::StrId operatorToStr(Operator oper) { return rev_operator_map[oper]; }
 
-	base::FlagType keywordFlags(Keyword key) {
-		return keyword_flags[key];
-	}
+	base::FlagType keywordFlags(Keyword key) { return keyword_flags[key]; }
 
 }

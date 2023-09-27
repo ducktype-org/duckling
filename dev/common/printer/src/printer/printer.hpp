@@ -40,9 +40,7 @@ namespace printer {
 		// Important to update TYPE_COUNT value, when adding or removing MessageTypes.
 	};
 
-	constexpr MessageTypeId msgToInt(MessageType msg) {
-		return static_cast<MessageTypeId>(msg);
-	}
+	constexpr MessageTypeId msgToInt(MessageType msg) { return static_cast<MessageTypeId>(msg); }
 
 	// @TODO: Determine the correct type for enum class Color.
 	typedef int8_t ColorId;
@@ -93,23 +91,29 @@ namespace printer {
 		friend Console;
 
 	public:
-		MessageContent()                                 = delete;
-		MessageContent(const MessageContent&)            = default;
-		MessageContent(MessageContent&&)                 = default;
-		MessageContent& operator=(const MessageContent&) = default;
-		MessageContent& operator=(MessageContent&&)      = default;
+		MessageContent()                                  = delete;
+		MessageContent(const MessageContent &)            = default;
+		MessageContent(MessageContent &&)                 = default;
+		MessageContent &operator=(const MessageContent &) = default;
+		MessageContent &operator=(MessageContent &&)      = default;
 
-		MessageContent(const char* str, Color foreground_color = Color::DEFAULT,
-		               Color background_color = Color::DEFAULT):
-			str(str),
-			foreground_color(foreground_color),
-			background_color(background_color) {}
+		MessageContent(
+			const char *str,
+			Color       foreground_color = Color::DEFAULT,
+			Color       background_color = Color::DEFAULT
+		):
+			  str(str),
+			  foreground_color(foreground_color),
+			  background_color(background_color) {}
 
-		MessageContent(MessageContentText str, Color foreground_color = Color::DEFAULT,
-		               Color background_color = Color::DEFAULT):
-			str(str),
-			foreground_color(foreground_color),
-			background_color(background_color) {}
+		MessageContent(
+			MessageContentText str,
+			Color              foreground_color = Color::DEFAULT,
+			Color              background_color = Color::DEFAULT
+		):
+			  str(str),
+			  foreground_color(foreground_color),
+			  background_color(background_color) {}
 	};
 
 	class Message {
@@ -124,22 +128,26 @@ namespace printer {
 		Message() = delete;
 
 	public:
-		Message(const Message&) = default;
-		Message(Message&& oth)  = default;
+		Message(const Message &) = default;
+		Message(Message &&oth)   = default;
 
-		Message(std::vector<MessageContent> list, MessageType type = MessageType::GENERAL,
-		        LevelType level = 0, Color foreground_color = Color::RESET,
-		        Color background_color = Color::RESET):
-			contents(std::move(list)),
-			type(type),
-			level(level),
-			foreground_color(foreground_color),
-			background_color(background_color) {}
+		Message(
+			std::vector<MessageContent> list,
+			MessageType                 type             = MessageType::GENERAL,
+			LevelType                   level            = 0,
+			Color                       foreground_color = Color::RESET,
+			Color                       background_color = Color::RESET
+		):
+			  contents(std::move(list)),
+			  type(type),
+			  level(level),
+			  foreground_color(foreground_color),
+			  background_color(background_color) {}
 
-		void add(const MessageContent&);
+		void add(const MessageContent &);
 		void add(std::vector<MessageContent>);
 
-		void print(std::ostream& out = std::cerr);
+		void print(std::ostream &out = std::cerr);
 	};
 
 	// @FIXME MessagePack and Message(init_list) constructors can be ambiguous
@@ -173,11 +181,14 @@ namespace printer {
 		maxAmounts_t             maxAmounts;
 
 	public:
-		Console(usize generalMax = SIZE_MAX, minLevel_t minLevel = defaultMinLevel,
-		        maxAmounts_t maxAmounts = defaultMaxAmounts):
-			generalMax(generalMax),
-			minLevel(minLevel),
-			maxAmounts(maxAmounts) {}
+		Console(
+			usize        generalMax = SIZE_MAX,
+			minLevel_t   minLevel   = defaultMinLevel,
+			maxAmounts_t maxAmounts = defaultMaxAmounts
+		):
+			  generalMax(generalMax),
+			  minLevel(minLevel),
+			  maxAmounts(maxAmounts) {}
 
 		// @IDEA: make these sets constexpr (and implement them as such).
 		void setMinLevel(MessageType type, LevelType level);
@@ -186,12 +197,12 @@ namespace printer {
 
 		void setMaxAmounts(MessageType type, usize amount);
 
-		void add(const MessagePack& pack);
-		void add(MessagePack&& pack);
-		void add(const Message& message);
-		void add(Message&& message);
+		void add(const MessagePack &pack);
+		void add(MessagePack &&pack);
+		void add(const Message &message);
+		void add(Message &&message);
 
-		void print(std::ostream& out = std::cerr) const;
+		void print(std::ostream &out = std::cerr) const;
 
 		void clear();
 	};

@@ -38,8 +38,15 @@ namespace vm {
 		Kind        kind_type = Kind::None;
 		TypeId      id;
 
-		std::variant<std::monostate, kind::Primitive, kind::Pointer, kind::StaticTable,
-		             kind::DynamicTable, kind::Data, kind::Variant, kind::Function>
+		std::variant<
+			std::monostate,
+			kind::Primitive,
+			kind::Pointer,
+			kind::StaticTable,
+			kind::DynamicTable,
+			kind::Data,
+			kind::Variant,
+			kind::Function>
 			kind;
 
 		Type() = default;
@@ -53,8 +60,8 @@ namespace vm {
 		void definePointer(TypeCRef inner);
 		void defineStaticTable(TypeRef inner, u64 table_size);
 		void defineDynamicTable(TypeRef inner);
-		void defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions);
-		void defineVariant(const std::vector<TypeRef>& variants_definitions);
+		void defineData(const std::vector<std::pair<base::StrId, TypeRef>> &fields_definitions);
+		void defineVariant(const std::vector<TypeRef> &variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
 
 		// Type finalization:
@@ -66,9 +73,9 @@ namespace vm {
 		TypeSize    getSize() const;
 
 		template<class T>
-		option<const T&> get() const {
-			if (std::holds_alternative<T>(kind)) return some<const T&>(std::get<T>(kind));
-			return none<const T&>();
+		option<const T &> get() const {
+			if (std::holds_alternative<T>(kind)) return some<const T &>(std::get<T>(kind));
+			return none<const T &>();
 		}
 
 		Kind getKind() const;

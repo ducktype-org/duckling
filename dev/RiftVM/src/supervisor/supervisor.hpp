@@ -21,13 +21,13 @@ namespace vm {
 		result<base::borrow_ptr<VCPU>, api::ApiError> getProcess(PID pid);
 
 	public:
-		static Supervisor& get();
+		static Supervisor &get();
 
 		// Each of the following methods should synchronize access to the processTable, but should
 		// not synchronize usage of each of the processes. Each process synchronizes its resources
 		// by itself
 		result<PID, api::ApiError>           newProcess(bool usesStdio);
-		result<api::Response, api::ApiError> doRequest(const api::SupervisorRequest& request);
+		result<api::Response, api::ApiError> doRequest(const api::SupervisorRequest &request);
 		result<void, api::ApiError>          killProcess(PID pid);
 	};
 }

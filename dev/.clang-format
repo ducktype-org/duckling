@@ -7,7 +7,7 @@ Standard:       'c++20'
 
 # Alignments
 AlignArrayOfStructures: Left
-AlignAfterOpenBracket: Align
+AlignAfterOpenBracket: BlockIndent
 AlignConsecutiveAssignments:
   Enabled:         true
   AcrossEmptyLines: false
@@ -43,10 +43,10 @@ QualifierAlignment: Left
 
 
 # Single-lines
-AllowShortBlocksOnASingleLine: Empty  # @Though I would suggest always :))
+AllowShortBlocksOnASingleLine: Always
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortEnumsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: Inline  # @Again, I would suggest All
+AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: true
@@ -55,9 +55,9 @@ AllowShortLoopsOnASingleLine: true
 # Breaks, newlines and empty lines
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
-AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakBeforeMultilineStrings: true
 AlwaysBreakTemplateDeclarations: Yes
-BreakAfterAttributes: Always  # @Why not 'never'?
+BreakAfterAttributes: Always
 BreakArrays:     true
 BreakBeforeBinaryOperators: All
 BreakBeforeConceptDeclarations: Always
@@ -66,7 +66,7 @@ BreakBeforeInlineASMColon: OnlyMultiline
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: AfterColon
 BreakInheritanceList: AfterColon
-BreakStringLiterals: false  # @I would suggest true
+BreakStringLiterals: true
 CompactNamespaces: false
 EmptyLineAfterAccessModifier: Never
 EmptyLineBeforeAccessModifier: Always
@@ -78,8 +78,8 @@ SeparateDefinitionBlocks: Always
 
 
 # Braces
-BinPackArguments: false  # @I would suggest true
-BinPackParameters: true  # @Inconsistent with the upper setting
+BinPackArguments: false
+BinPackParameters: false
 BraceWrapping:
   AfterCaseLabel:  false
   AfterClass:      false
@@ -161,7 +161,7 @@ ShortNamespaceLines: 4
 IndentWidth: 4
 TabWidth:        4
 UseTab:     AlignWithSpaces
-ConstructorInitializerIndentWidth: 4
+ConstructorInitializerIndentWidth: 6
 ContinuationIndentWidth: 4
 AccessModifierOffset: -4
 IndentAccessModifiers: false
@@ -180,7 +180,7 @@ RequiresExpressionIndentation: OuterScope
 
 # Pointers *&
 DerivePointerAlignment: false
-PointerAlignment: Left  # @Right, because int* a, b -> then which one is the pointer?
+PointerAlignment: Right
 ReferenceAlignment: Pointer
 
 

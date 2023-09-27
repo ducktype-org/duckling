@@ -11,7 +11,7 @@
 
 namespace hir {
 
-	void HIR::addUnit(SourceUnit&& unit) {
+	void HIR::addUnit(SourceUnit &&unit) {
 		if (unit.pst.getErrorState().fail()) unit.pst.getErrorState().dumpLog(std::cerr);
 		sources.emplace_back(std::move(unit));
 	}
@@ -30,14 +30,15 @@ namespace hir {
 		// macro can't delete symbol
 		// perhaps go top to to bottom with use/usings/expands
 
-		pst::PST& pst = sources[0].pst;
+		pst::PST &pst = sources[0].pst;
 
 		AnalysisState state;
 
 		symtable::ScopeRef root_scope = state.newSubRootScope();
 
 		state.emplaceSymbol<TopLevelSymbol>(
-			root_scope, base::StrId("TopLevel"), pst.getTopLevelElement());
+			root_scope, base::StrId("TopLevel"), pst.getTopLevelElement()
+		);
 
 		std::cerr << "Added top level symbol!\n";
 
@@ -49,6 +50,5 @@ namespace hir {
 			symbol_ref->analyzeAll(state);
 		}
 	}
-
 
 }

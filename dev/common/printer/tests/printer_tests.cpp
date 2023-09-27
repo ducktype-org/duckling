@@ -29,23 +29,29 @@ private:
 		c.setMinLevel(MessageType::ERROR, 1);
 		std::stringstream ss1;
 		c.print(ss1);
-		assert(ss1.str() == "\033[0m\033[41mms1\033[0m\n\033[0m\033[41mms1\033[0m\n",
-		       "Full print wrong output (" + ss1.str() + ").",
-		       false);
+		assert(
+			ss1.str() == "\033[0m\033[41mms1\033[0m\n\033[0m\033[41mms1\033[0m\n",
+			"Full print wrong output (" + ss1.str() + ").",
+			false
+		);
 
 		c.setMaxAmounts(MessageType::ALL, 0);
 		std::stringstream ss2;
 		c.print(ss2);
-		assert(ss2.str() == "Limit for this type of message has been reached.\n",
-		       "Message type limit print wrong output (" + ss2.str() + ").",
-		       false);
+		assert(
+			ss2.str() == "Limit for this type of message has been reached.\n",
+			"Message type limit print wrong output (" + ss2.str() + ").",
+			false
+		);
 
 		c.setGeneralMax(0);
 		std::stringstream ss3;
 		c.print(ss3);
-		assert(ss3.str() == "Limit for messages has been reached.\n",
-		       "General limit print wrong output (" + ss3.str() + ").",
-		       false);
+		assert(
+			ss3.str() == "Limit for messages has been reached.\n",
+			"General limit print wrong output (" + ss3.str() + ").",
+			false
+		);
 
 		c.setMinLevel(MessageType::ALL, 1);
 		std::stringstream ss4;

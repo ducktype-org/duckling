@@ -13,14 +13,14 @@ namespace tpc {
 
 	lexer::Token TokenStream::sentinel;
 
-	TokenStream::TokenStream(TokenStream&& stream) noexcept:
-		tokens(stream.tokens),
-		where(stream.where),
-		to(stream.to) {}
+	TokenStream::TokenStream(TokenStream &&stream) noexcept:
+		  tokens(stream.tokens),
+		  where(stream.where),
+		  to(stream.to) {}
 
 	TokenStream TokenStream::getRecursive() const {
 		if (peek().isGroup()) {
-			const auto& rec = peek().getRecursive();
+			const auto &rec = peek().getRecursive();
 			return TokenStream(rec, 0, rec.size());
 		} else {
 			// @TODO
@@ -28,40 +28,24 @@ namespace tpc {
 		}
 	}
 
-	const Token& TokenStream::next() {
-		return (where >= to ? sentinel : tokens[where++]);
-	}
+	const Token &TokenStream::next() { return (where >= to ? sentinel : tokens[where++]); }
 
-	const Token& TokenStream::peek(usize fwd) const {
+	const Token &TokenStream::peek(usize fwd) const {
 		return (where + fwd >= to ? sentinel : tokens[where + fwd]);
 	}
 
-	void TokenStream::skip(usize n) {
-		where += n;
-	}
+	void TokenStream::skip(usize n) { where += n; }
 
-	bool TokenStream::isKeyword(usize fwd) const {
-		return peek(fwd).isKeyword();
-	}
+	bool TokenStream::isKeyword(usize fwd) const { return peek(fwd).isKeyword(); }
 
-	Keyword TokenStream::asKeyword(usize fwd) const {
-		return peek(fwd).asKeyword();
-	}
+	Keyword TokenStream::asKeyword(usize fwd) const { return peek(fwd).asKeyword(); }
 
-	bool TokenStream::isSpecial(usize fwd) const {
-		return peek(fwd).isSpecial();
-	}
+	bool TokenStream::isSpecial(usize fwd) const { return peek(fwd).isSpecial(); }
 
-	Special TokenStream::asSpecial(usize fwd) const {
-		return peek(fwd).asSpecial();
-	}
+	Special TokenStream::asSpecial(usize fwd) const { return peek(fwd).asSpecial(); }
 
-	bool TokenStream::isOperator(usize fwd) const {
-		return peek(fwd).isOperator();
-	}
+	bool TokenStream::isOperator(usize fwd) const { return peek(fwd).isOperator(); }
 
-	usize TokenStream::size() const {
-		return to - where;
-	}
+	usize TokenStream::size() const { return to - where; }
 
 }

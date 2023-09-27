@@ -2,11 +2,9 @@
 
 namespace clap {
 	std::string PositionalParametersCountError::print() const {
-		return base::strConcat("Wrong number of positional parameters. Found: ",
-		                       found,
-		                       ", required: ",
-		                       required,
-		                       "\n");
+		return base::strConcat(
+			"Wrong number of positional parameters. Found: ", found, ", required: ", required, "\n"
+		);
 	}
 
 	std::string MissingRequiredParameter::print() const {
@@ -25,19 +23,17 @@ namespace clap {
 		return base::strConcat("Missing argument of parameter: '", name, "'\n");
 	}
 
-	std::string HelpMessage::print() const {
-		return "";
-	}
+	std::string HelpMessage::print() const { return ""; }
 
-	MissingRequiredParameter::MissingRequiredParameter(const ParameterConfig& c):
-		name(c.to_str_id()) {}
+	MissingRequiredParameter::MissingRequiredParameter(const ParameterConfig &c):
+		  name(c.to_str_id()) {}
 
-	DuplicatedParameter::DuplicatedParameter(const ParameterConfig& c): name(c.to_str_id()) {}
+	DuplicatedParameter::DuplicatedParameter(const ParameterConfig &c): name(c.to_str_id()) {}
 
 	UnexpectedParameter::UnexpectedParameter(byte c): name(base::StrId(uchar(c))) {}
 
 	UnexpectedParameter::UnexpectedParameter(base::StrId c): name(c) {}
 
-	MissingParameterArgument::MissingParameterArgument(const ParameterConfig& c):
-		name(c.to_str_id()) {}
+	MissingParameterArgument::MissingParameterArgument(const ParameterConfig &c):
+		  name(c.to_str_id()) {}
 }

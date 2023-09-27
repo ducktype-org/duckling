@@ -27,10 +27,10 @@ namespace hir {
 		void addSymbol(base::unique_ptr<Symbol> symbol);
 
 		// @TODO: add const
-		symtable::SymbolData& symTable() { return symbol_data; }
+		symtable::SymbolData &symTable() { return symbol_data; }
 
 		template<typename T, typename... Args>
-		void emplaceSymbol(Args&&... args) {
+		void emplaceSymbol(Args &&...args) {
 			addSymbol(base::make_unique<T>(args...));
 		}
 

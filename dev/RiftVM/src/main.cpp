@@ -7,7 +7,7 @@
 
 #include <services/executor_f8/op_case_config.hpp>
 
-void initialise([[maybe_unused]] const clap::ParametersMap& params) {
+void initialise([[maybe_unused]] const clap::ParametersMap &params) {
 	// @TODO
 }
 
@@ -20,7 +20,7 @@ void showVersion() {
 	std::cout << "USE_FLAT_FRAME: " << USE_FLAT_FRAME_VALUE << "\n";
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 	clap::ParametersMap parameters
 		= clap::Config()
 	          .add(clap::ParameterConfig("server")
@@ -32,7 +32,8 @@ int main(int argc, char** argv) {
 	                   .description("Launch given file (only if not -serwer)")
 	                   .with_value("filename", "<@FIXME>"))
 	          .add(clap::ParameterConfig("version").short_name('v').description(
-				  "Shows version and config"))
+				  "Shows version and config"
+			  ))
 	          .parse(clap::CLIArgs{ argc, argv });
 
 	initialise(parameters);

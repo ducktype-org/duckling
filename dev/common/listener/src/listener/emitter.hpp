@@ -9,23 +9,23 @@
 template<class Event>
 class Emitter {
 private:
-	std::set<Listener<Event>*> listeners;
-	std::queue<Event>          eventQueue;
+	std::set<Listener<Event> *> listeners;
+	std::queue<Event>           eventQueue;
 
 public:
-	void addEvent(const Event& event) noexcept
+	void addEvent(const Event &event) noexcept
 	requires std::copy_constructible<Event>
 	{
 		eventQueue.push(event);
 	}
 
-	void addEvent(Event&& event) noexcept
+	void addEvent(Event &&event) noexcept
 	requires std::move_constructible<Event>
 	{
 		eventQueue.emplace(std::move(event));
 	}
 
-	void fire(const Event& event) noexcept {
+	void fire(const Event &event) noexcept {
 		for (auto l : listeners) l->onNotify(event);
 	}
 
@@ -41,9 +41,9 @@ public:
 	 * Unless manually erased, the emitter will clean added listener during it's destruction.
 	 * @param listener
 	 */
-	void attach(Listener<Event>* listener) noexcept { listeners.emplace(listener); }
+	void attach(Listener<Event> *listener) noexcept { listeners.emplace(listener); }
 
-	void detach(Listener<Event>* listener) noexcept { listeners.erase(listener); }
+	void detach(Listener<Event> *listener) noexcept { listeners.erase(listener); }
 
 	void removeAllListeners() noexcept { listeners.clear(); }
 

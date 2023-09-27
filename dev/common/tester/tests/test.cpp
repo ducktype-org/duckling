@@ -42,8 +42,9 @@ private:
 		try {
 			assertThrows<std::exception>(
 				[&]() { fail("Please wait patiently for the failure of the system..."); },
-				"This message is unfortunately discarded.");
-		} catch (const tester::TestSuite::CritTestError& e) {
+				"This message is unfortunately discarded."
+			);
+		} catch (const tester::TestSuite::CritTestError &e) {
 			message("Task failed successfully.");
 		}
 	}
@@ -55,12 +56,13 @@ private:
 
 	void catch_wrong_throw() {
 		message("Expected to fail: checks that assertThrows fails when wrong exception is caught.");
-		assertThrows<std::logic_error>([&]() { throw std::exception(); },
-		                               "expected failure: Wrong exception was thrown");
+		assertThrows<std::logic_error>(
+			[&]() { throw std::exception(); }, "expected failure: Wrong exception was thrown"
+		);
 	}
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 	auto config = tester::testConfigFromArgs({ argc, argv }, "/common/tester/tests/");
 
 	SimpleTesterTest passing_test(std::move(config), 0);

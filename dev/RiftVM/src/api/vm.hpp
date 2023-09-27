@@ -38,14 +38,14 @@ namespace vm::api {
 	result<void, ApiError> resume(PID pid);
 	result<void, ApiError> step(PID pid);
 
-	result<void, ApiError>             loadFile(PID pid, const fs::FilePath& path);
+	result<void, ApiError>             loadFile(PID pid, const fs::FilePath &path);
 	result<void, ApiError>             run(PID pid);
 	result<void, ApiError>             join(PID pid);
 	result<void, ApiError>             stop(PID pid);
 	result<void, ApiError>             kill(PID pid);
-	result<void, ApiError>             input(PID pid, const std::string& input);
+	result<void, ApiError>             input(PID pid, const std::string &input);
 	result<response::Output, ApiError> output(PID pid);
 
-	result<TypeCRef, ApiError>        getType(PID pid, const std::string& type_name);
+	result<TypeCRef, ApiError>        getType(PID pid, const std::string &type_name);
 	result<response::Block, ApiError> getBlock(PID pid, u64 block_id);
 }

@@ -15,7 +15,7 @@ namespace clap {
 		base::HashMap<usize, base::StrId> parameters;
 
 		option<usize> to_id(base::StrId name) const;
-		option<usize> to_id(const base::RawView& name) const;
+		option<usize> to_id(const base::RawView &name) const;
 		option<usize> to_id(char name) const;
 		option<usize> to_id(byte name) const;
 

@@ -6,12 +6,11 @@
 #pragma once
 
 #include "operation.hpp"
+#include <base/exceptions.hpp>
+#include <base/maps.hpp>
 #include <exec/helpers.hpp>
 #include <hir/symtable/scope_symbol_id.hpp>
 #include <typesystem/type_info.hpp>
-#include <base/exceptions.hpp>
-#include <base/maps.hpp>
-
 
 /*
  *	@TODO:
@@ -23,9 +22,9 @@ namespace operation {
 
 	struct TypedSymbol {
 		symtable::SymbolId symbol;
-		ts::TypeInfo type_info;
+		ts::TypeInfo       type_info;
 
-		auto operator<=>(const TypedSymbol& other) const = default;
+		auto operator<=>(const TypedSymbol &other) const = default;
 	};
 
 	// data Typed a = T TypeInfo a
@@ -34,88 +33,77 @@ namespace operation {
 
 	struct Constructor;
 
-
 	struct ConstructorCall {
-		Constructor* constructor;
-		ts::MemberInfo member;
+		Constructor             *constructor;
+		ts::MemberInfo           member;
 		std::vector<TypedSymbol> args;
 	};
 
 	struct OperationCall {
-		TypedOperation operation;
-		ts::MemberInfo member;
+		TypedOperation           operation;
+		ts::MemberInfo           member;
 		std::vector<TypedSymbol> args;
 	};
 
-
 	struct Constructor {
-
-		std::vector<TypedSymbol> input;
+		std::vector<TypedSymbol>     input;
 		std::vector<ConstructorCall> virtual_parent_cons;
-		std::vector<OperationCall> operations;
+		std::vector<OperationCall>   operations;
 	};
-
 
 	using Env = base::Map<TypedSymbol, exec::CTV>;
 
-
-	exec::CTV execConstructor(const Constructor& cons, const std::vector<exec::CTV>& args,
-	                          exec::CTV ctv) {
-		RIFT_ASSERT(args.size() == cons.input.size(),
-		            "Arguments don't match parameters in constructor.");
+	exec::CTV execConstructor(
+		const Constructor &cons, const std::vector<exec::CTV> &args, exec::CTV ctv
+	) {
+		RIFT_ASSERT(
+			args.size() == cons.input.size(), "Arguments don't match parameters in constructor."
+		);
 
 		Env env{};
 
+		for (i32 i = 0; i < cons.input.size(); i++) env.put(cons.input[i], args[i]);
 
-		for (i32 i = 0; i < cons.input.size(); i++) {
-			env.put(cons.input[i], args[i]);
-		}
-
-		for (const auto& con: cons.virtual_parent_cons) {
+		for (const auto &con : cons.virtual_parent_cons) {
 			exec::CTV member_ctv = exec::getMember(ctv, con.member, ctv.type.getType());
 			std::vector<exec::CTV> args2;
-			for (auto s: con.args) args2.push_back(env[s]);
+			for (auto s : con.args) args2.push_back(env[s]);
 			execConstructor(*con.constructor, args2, member_ctv);
 		}
 
-		for (const auto& op: cons.operations) {
-			auto ctv_member = exec::getMember(ctv, op.member, (ts::ClassInfo)ctv.type.getType());
+		for (const auto &op : cons.operations) {
+			auto ctv_member = exec::getMember(ctv, op.member, (ts::ClassInfo) ctv.type.getType());
 
-			std::vector<exec::CTV> tmp_args{ctv_member};
+			std::vector<exec::CTV> tmp_args{ ctv_member };
 
-			for (auto s: op.args) {
-				tmp_args.push_back(env[s]);
-			}
+			for (auto s : op.args) tmp_args.push_back(env[s]);
 			op.operation(tmp_args);
 		}
 
 		return ctv;
 	}
 
-
 	std::map<ts::TypeInfo, Constructor> full_constructors;
-
 
 	void addConstructor(ts::ClassInfo info, Constructor cons) {
 		full_constructors.try_emplace(info, cons);
 	}
 
-	Constructor getConstructor(ts::ClassInfo info) {
-		return full_constructors.at(info);
-	}
+	Constructor getConstructor(ts::ClassInfo info) { return full_constructors.at(info); }
 
 	// @TODO: obecnie tylko bezpośrednie składowe są konstruowane.
 	Constructor makeConstructorClass(ts::ClassInfo info) {
 		Constructor res;
 
-
-		for (const auto& [x, y, off_, virtual_ancestor_]: info.members()) {
-			res.input.push_back({x, y.getType()});
-			ts::TypeInfo type_arg = y.getType();
-			auto member_info = info.getMemberInfo(x);
-			std::vector<TypedSymbol> type_s = {{x, type_arg}};
+		for (const auto &[x, y, off_, virtual_ancestor_] : info.members()) {
+			res.input.push_back({ x, y.getType() });
+			ts::TypeInfo             type_arg    = y.getType();
+			auto                     member_info = info.getMemberInfo(x);
+			std::vector<TypedSymbol> type_s      = {
+                {x, type_arg}
+			};
 			TypedOperation operation = getDefault(Defaultable::Assign, type_arg);
-			OperationCall op{operation, member_info, type_s};
+			OperationCall  op{ operation, member_info, type_s };
 			res.operations.push_back(op);
 		}
 
@@ -127,7 +115,6 @@ namespace operation {
 		addConstructor(info, cons);
 		return cons;
 	}
-
 
 	// Constructor mergeConstructors(Constructor con1, Constructor con2) {
 	// 	Constructor res;

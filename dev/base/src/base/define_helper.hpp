@@ -26,7 +26,6 @@ namespace base {
  */
 #define COMMA ,
 
-
 #define IF(cond, t, e) CONCAT(IF_, cond)(t, e)
 #define IF_false(t, e) e
 #define IF_true(t, e)  t

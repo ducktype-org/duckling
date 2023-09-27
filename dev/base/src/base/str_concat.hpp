@@ -16,25 +16,23 @@ namespace base {
 
 		template<typename T>
 		requires(!std::is_integral_v<std::remove_reference_t<T>>)
-		void strConcat(std::string& out, T&& v) {
+		void strConcat(std::string &out, T &&v) {
 			out.append(v);
 		}
 
-		inline void strConcat(std::string& out, base::RawView view) {
+		inline void strConcat(std::string &out, base::RawView view) {
 			out.append(view.stringView());
 		}
 
 		// This is forward declaration to prevent circular header dependency thru:
 		// string_id.hpp -> maps.hpp -> exceptions.hpp -> str_concat.hpp
-		void strConcat(std::string& out, base::StrId str_id);
+		void strConcat(std::string &out, base::StrId str_id);
 
-		inline void strConcat(std::string& out, std::integral auto v) {
+		inline void strConcat(std::string &out, std::integral auto v) {
 			out.append(std::to_string(v));
 		}
 
-		inline void strConcat(std::string& out, bool v) {
-			out.append(v ? "true" : "false");
-		}
+		inline void strConcat(std::string &out, bool v) { out.append(v ? "true" : "false"); }
 	}
 
 	/**
@@ -53,7 +51,7 @@ namespace base {
 	 * @FIXME nullptr causes an crash
 	 */
 	template<typename... T>
-	std::string strConcat(T&&... elements) {
+	std::string strConcat(T &&...elements) {
 		std::string out;
 		(detail::strConcat(out, std::forward<T>(elements)), ...);
 		return out;

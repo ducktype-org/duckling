@@ -8,7 +8,6 @@ class SimpleVmTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Vm Test") { TESTER_ADD_TEST(simpleRun); }
 
-
 private:
 	void simpleRun() {
 		auto process_pid_response = vm::api::spawn(false);

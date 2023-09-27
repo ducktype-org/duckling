@@ -16,8 +16,9 @@ namespace lexer {
 
 		explicit SourcePosition(std::shared_ptr<fs::FilePath> source_code);
 		SourcePosition(std::shared_ptr<fs::FilePath> source_code, u32 line, u32 column, u32 start);
-		SourcePosition(std::shared_ptr<fs::FilePath> source_code, u32 line, u32 column, u32 start,
-		               u32 end);
+		SourcePosition(
+			std::shared_ptr<fs::FilePath> source_code, u32 line, u32 column, u32 start, u32 end
+		);
 
 		[[nodiscard]]
 		std::string getSourceChars() const;

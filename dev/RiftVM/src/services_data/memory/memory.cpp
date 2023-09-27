@@ -3,9 +3,7 @@
 #include <iostream>
 
 namespace vm {
-	bool Memory::isUnowned(BlockId id) {
-		return id >= high_id || !blocks[usize(id)].owned;
-	}
+	bool Memory::isUnowned(BlockId id) { return id >= high_id || !blocks[usize(id)].owned; }
 
 	BlockId Memory::reserveBlockID() {
 		if (free_ids.empty()) {
@@ -40,7 +38,7 @@ namespace vm {
 		refCheck(id);
 	}
 
-	cpp::result<Block*, Memory::error> Memory::getBlock(BlockId id) {
+	cpp::result<Block *, Memory::error> Memory::getBlock(BlockId id) {
 		if (isUnowned(id))
 			return cpp::fail("Tried accessing unowned block");
 		else if (!blocks[usize(id)].filled)
@@ -48,7 +46,7 @@ namespace vm {
 		return blocks[usize(id)].block;
 	}
 
-	void Memory::makeBlock(BlockId id, Block&& block) {
+	void Memory::makeBlock(BlockId id, Block &&block) {
 		if (isUnowned(id))
 			RIFT_PANIC("Tried creating an unowned block")
 		else if (blocks[usize(id)].filled)
@@ -96,7 +94,5 @@ namespace vm {
 		}
 	}
 
-	Pointer Memory::nullPtr() const {
-		return Pointer{ null_block_id, 0 };
-	}
+	Pointer Memory::nullPtr() const { return Pointer{ null_block_id, 0 }; }
 }

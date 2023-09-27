@@ -23,7 +23,7 @@ namespace vm {
 
 	// VLA: data:
 	struct VLADataReference {
-		std::byte* local_stack;
+		std::byte *local_stack;
 	};
 
 	/**
@@ -40,7 +40,7 @@ namespace vm {
 
 	struct Frame {
 		// Internal data:
-		option<Frame&> previous;
+		option<Frame &> previous;
 		// const FuncData& function;
 		const std::span<const Fix8Instruction>
 			bc;  // this is duplication of function.bc, but allows for faster access

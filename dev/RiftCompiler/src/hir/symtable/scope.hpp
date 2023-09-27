@@ -32,18 +32,18 @@ namespace symtable {
 
 	public:
 		// This delete is important, to prevent any copy of scope data:
-		Scope(const Scope&)            = delete;
-		Scope& operator=(const Scope&) = delete;
+		Scope(const Scope &)            = delete;
+		Scope &operator=(const Scope &) = delete;
 
-		const std::vector<SymbolRef>& getSymbols() { return symbols; }
+		const std::vector<SymbolRef> &getSymbols() { return symbols; }
 
 		ScopeRef getParent() { return parent; }
 
-		Scope(Scope&&)            = default;
-		Scope& operator=(Scope&&) = default;
+		Scope(Scope &&)            = default;
+		Scope &operator=(Scope &&) = default;
 
-		LookupResult lookup(hir::AnalysisState&, base::StrId name);
-		LookupResult lookupMeAndParents(hir::AnalysisState&, base::StrId name);
+		LookupResult lookup(hir::AnalysisState &, base::StrId name);
+		LookupResult lookupMeAndParents(hir::AnalysisState &, base::StrId name);
 	};
 
 }

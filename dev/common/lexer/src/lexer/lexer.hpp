@@ -10,5 +10,5 @@
 
 namespace lexer {
 	void             init();
-	lexer::TokenData tokenizeFile(const fs::FilePath& file, bool dprint = false);
+	lexer::TokenData tokenizeFile(const fs::FilePath &file, bool dprint = false);
 }

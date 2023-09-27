@@ -23,11 +23,11 @@ namespace vm {
 
 	class Executor {
 	private:
-		Allocator&    dynamic_allocator;
-		Memory&       memory;
-		TypeMetadata& types;
+		Allocator    &dynamic_allocator;
+		Memory       &memory;
+		TypeMetadata &types;
 
-		VCPU& vcpu;
+		VCPU &vcpu;
 
 		/**
 		 * This is currently duplicated inside VCPUStatus
@@ -35,11 +35,11 @@ namespace vm {
 		api::ExecStatus status;
 
 		template<class... DynamicServices>
-		Executor(ServiceManagerDef<DynamicServices...>& serviceManager):
-			dynamic_allocator(serviceManager.template get<Allocator>()),
-			memory(serviceManager.getVCPU().getData().template get<Memory>()),
-			types(serviceManager.getVCPU().getData().template get<TypeMetadata>()),
-			vcpu(serviceManager.getVCPU()) {
+		Executor(ServiceManagerDef<DynamicServices...> &serviceManager):
+			  dynamic_allocator(serviceManager.template get<Allocator>()),
+			  memory(serviceManager.getVCPU().getData().template get<Memory>()),
+			  types(serviceManager.getVCPU().getData().template get<TypeMetadata>()),
+			  vcpu(serviceManager.getVCPU()) {
 			// @TODO: not loaded status
 			setStatus(api::NotStarted{});
 		}
@@ -53,7 +53,7 @@ namespace vm {
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
 		 */
-		const Code* executing_code = nullptr;
+		const Code *executing_code = nullptr;
 
 		void handleExecutionStrategy();
 
@@ -68,8 +68,8 @@ namespace vm {
 		 */
 		result<base::ModRawView, std::string> internalDerefPointer(Pointer);
 
-		Frame internalInitFrame(option<Frame&>, const FuncData&, VLADataReference);
-		i64   internalCallFunction(option<Frame&>, const FuncData&, StandardFunctionArgs args);
+		Frame internalInitFrame(option<Frame &>, const FuncData &, VLADataReference);
+		i64   internalCallFunction(option<Frame &>, const FuncData &, StandardFunctionArgs args);
 
 		// @TODO add some thread data in the future
 
@@ -112,12 +112,12 @@ namespace vm {
 		 * @brief Called on coreThread
 		 * coreThread is `main` exec thread
 		 */
-		void run(const Code&);
+		void run(const Code &);
 
 		// Given lock cannot be a lock on external_api_mutex
 		// If you have access to external_api_mutex, implement this yourself.
 		template<class Condition>
-		void waitUntilNotPausedAndCondition(std::unique_lock<std::mutex>& lock, Condition x) {
+		void waitUntilNotPausedAndCondition(std::unique_lock<std::mutex> &lock, Condition x) {
 			pause_cv.wait(lock, [this, &x] {
 				bool b1 = !isPaused();
 				bool b2 = x();

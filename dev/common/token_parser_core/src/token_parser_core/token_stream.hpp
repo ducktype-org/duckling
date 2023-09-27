@@ -17,7 +17,7 @@ namespace tpc {
 	void tokenStreamInit();
 
 	class TokenStream {
-		const Tokens& tokens;
+		const Tokens &tokens;
 		usize         where = 0;
 		/** inclusive */
 		usize               to;
@@ -25,21 +25,21 @@ namespace tpc {
 		friend void         tokenStreamInit();
 
 	public:
-		TokenStream()             = delete;
-		TokenStream(TokenStream&) = delete;
-		TokenStream(TokenStream&&) noexcept;
+		TokenStream()              = delete;
+		TokenStream(TokenStream &) = delete;
+		TokenStream(TokenStream &&) noexcept;
 
-		TokenStream(const Tokens& tokens, usize from, usize to):
-			tokens(tokens),
-			where(from),
-			to(to) {}
+		TokenStream(const Tokens &tokens, usize from, usize to):
+			  tokens(tokens),
+			  where(from),
+			  to(to) {}
 
-		const Token& next();
+		const Token &next();
 
 		TokenStream getRecursive() const;
 
 		[[nodiscard]]
-		const Token& peek(usize fwd = 0) const;
+		const Token &peek(usize fwd = 0) const;
 		void         skip(usize n = 1);
 
 		[[nodiscard]]

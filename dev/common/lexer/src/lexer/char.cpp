@@ -12,50 +12,30 @@
 #include <vector>
 
 namespace lexer {
-	bool Char::isCharacter() const {
-		return type_ == Character;
-	}
+	bool Char::isCharacter() const { return type_ == Character; }
 
-	bool Char::isDigit() const {
-		return type_ == Digit;
-	}
+	bool Char::isDigit() const { return type_ == Digit; }
 
-	bool Char::isOperator() const {
-		return type_ == Operator;
-	}
+	bool Char::isOperator() const { return type_ == Operator; }
 
-	bool Char::isSpecial() const {
-		return type_ == Special;
-	}
+	bool Char::isSpecial() const { return type_ == Special; }
 
-	bool Char::isWhitespace() const {
-		return type_ == Whitespace;
-	}
+	bool Char::isWhitespace() const { return type_ == Whitespace; }
 
-	void Char::setCharacter() {
-		type_ = Character;
-	}
+	void Char::setCharacter() { type_ = Character; }
 
-	void Char::setDigit() {
-		type_ = Digit;
-	}
+	void Char::setDigit() { type_ = Digit; }
 
-	void Char::setOperator() {
-		type_ = Operator;
-	}
+	void Char::setOperator() { type_ = Operator; }
 
-	void Char::setSpecial() {
-		type_ = Special;
-	}
+	void Char::setSpecial() { type_ = Special; }
 
 	char Char::asciiValue() const {
 		// This is theoretically unsafe:
 		return static_cast<char>(ascii_value);
 	}
 
-	bool Char::isAsciiValue(char value) const {
-		return asciiValue() == value;
-	}
+	bool Char::isAsciiValue(char value) const { return asciiValue() == value; }
 
 	std::string Char::rawStr() const {
 		std::string out;
@@ -66,16 +46,14 @@ namespace lexer {
 
 	CharArray::CharArray(Array array): array(std::move(array)) {}
 
-	CharArray::CharArray(CharArray&& other) noexcept: CharArray() {
-		swap(*this, other);
-	}
+	CharArray::CharArray(CharArray &&other) noexcept: CharArray() { swap(*this, other); }
 
-	CharArray& CharArray::operator=(CharArray&& other) noexcept {
+	CharArray &CharArray::operator=(CharArray &&other) noexcept {
 		swap(*this, other);
 		return *this;
 	}
 
-	void swap(CharArray& first, CharArray& second) {
+	void swap(CharArray &first, CharArray &second) {
 		using std::swap;
 
 		swap(first.r_array, second.r_array);
@@ -93,21 +71,13 @@ namespace lexer {
 		return { begin, size };
 	}
 
-	base::RawView CharArray::getRaw(usize i) const {
-		return composeRaw(i, i);
-	}
+	base::RawView CharArray::getRaw(usize i) const { return composeRaw(i, i); }
 
-	const Char& CharArray::get(usize i) const {
-		return array[i];
-	}
+	const Char &CharArray::get(usize i) const { return array[i]; }
 
-	const CharArray::Array& CharArray::getArray() const {
-		return array;
-	}
+	const CharArray::Array &CharArray::getArray() const { return array; }
 
-	CharArray::~CharArray() {
-		delete[] r_array;
-	}
+	CharArray::~CharArray() { delete[] r_array; }
 
 	std::string Char::debugStr() const {
 		std::stringstream out;
@@ -140,39 +110,29 @@ namespace lexer {
 		return out.str();
 	}
 
-	Char::Type Char::getType() const {
-		return type_;
-	}
+	Char::Type Char::getType() const { return type_; }
 
-	void Char::appendRawValueTo(std::string& to) const {
+	void Char::appendRawValueTo(std::string &to) const {
 		to += rawStr();  // todo .. optimize
 	}
 
-	void Char::appendRawValueTo(std::stringstream& to) const {
-		to << asciiValue();
-	}
+	void Char::appendRawValueTo(std::stringstream &to) const { to << asciiValue(); }
 
-	bool Char::isEOF() const {
-		return type_ == Eof;
-	}
+	bool Char::isEOF() const { return type_ == Eof; }
 
 	bool Char::isParOpen() const {
 		auto av = asciiValue();
 		return av == '(' || av == '[' || av == '{';
 	}
 
-	bool Char::isParOpen(ParType type) const {
-		return isParOpen() && getParType() == type;
-	}
+	bool Char::isParOpen(ParType type) const { return isParOpen() && getParType() == type; }
 
 	bool Char::isParClose() const {
 		auto av = asciiValue();
 		return av == ')' || av == ']' || av == '}';
 	}
 
-	bool Char::isParClose(ParType type) const {
-		return isParClose() && getParType() == type;
-	}
+	bool Char::isParClose(ParType type) const { return isParClose() && getParType() == type; }
 
 	Char::ParType Char::getParType() const {
 		switch (asciiValue()) {
@@ -206,11 +166,11 @@ namespace lexer {
 
 		// @TODO: this char is not perfect:
 		constexpr uchar specials[] = R"--("@#$'();[\]`{})--";
-		for (const auto& c : specials) out[c] = Char::Special;
+		for (const auto &c : specials) out[c] = Char::Special;
 
 		// @TODO: this char is not perfect:
 		constexpr uchar operators[] = R"--(!%&*+-^|~:/.,<=>?)--";
-		for (const auto& c : operators) out[c] = Char::Operator;
+		for (const auto &c : operators) out[c] = Char::Operator;
 
 		out[' ']  = Char::Whitespace;
 		out['\n'] = Char::Whitespace;
@@ -225,13 +185,12 @@ namespace lexer {
 	template<fs::Encoding encoding>
 	Char::Type charType(uchar ascii_value, base::RawArray r_data, usize size);
 
-	Char::Type charType(uchar ascii_value) {
-		return char_type_table[ascii_value];
-	}
+	Char::Type charType(uchar ascii_value) { return char_type_table[ascii_value]; }
 
 	template<>
-	Char::Type charType<fs::US_ASCII>([[maybe_unused]] uchar ascii_value, base::RawArray r_data,
-	                                  [[maybe_unused]] usize size) {
+	Char::Type charType<fs::US_ASCII>(
+		[[maybe_unused]] uchar ascii_value, base::RawArray r_data, [[maybe_unused]] usize size
+	) {
 		return charType((char) r_data[0]);
 	}
 
@@ -240,8 +199,9 @@ namespace lexer {
 	 * @TODO: make better parameters
 	 */
 	template<>
-	Char::Type charType<fs::UTF8>(uint8_t ascii_value, [[maybe_unused]] base::RawArray r_data,
-	                              [[maybe_unused]] usize size) {
+	Char::Type charType<fs::UTF8>(
+		uint8_t ascii_value, [[maybe_unused]] base::RawArray r_data, [[maybe_unused]] usize size
+	) {
 		return (ascii_value == bad_ascii) ? Char::Character : charType(ascii_value);
 	}
 

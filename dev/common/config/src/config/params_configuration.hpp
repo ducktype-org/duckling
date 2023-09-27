@@ -25,13 +25,22 @@ namespace config {
 		bool has_short;
 
 		OptionDescription(base::RawView long_version, base::RawView description);
-		OptionDescription(base::RawView long_version, base::RawView short_version,
-		                  base::RawView description);
-		OptionDescription(base::RawView long_version, ParamType param_typ,
-		                  base::unique_ptr<ValueParser> value_parser, base::RawView description);
-		OptionDescription(base::RawView long_version, base::RawView short_version,
-		                  ParamType param_typ, base::unique_ptr<ValueParser> value_parser,
-		                  base::RawView description);
+		OptionDescription(
+			base::RawView long_version, base::RawView short_version, base::RawView description
+		);
+		OptionDescription(
+			base::RawView                 long_version,
+			ParamType                     param_typ,
+			base::unique_ptr<ValueParser> value_parser,
+			base::RawView                 description
+		);
+		OptionDescription(
+			base::RawView                 long_version,
+			base::RawView                 short_version,
+			ParamType                     param_typ,
+			base::unique_ptr<ValueParser> value_parser,
+			base::RawView                 description
+		);
 	};
 
 	class ConfigOptions {
@@ -40,12 +49,12 @@ namespace config {
 
 	public:
 		template<typename... Args>
-		ConfigOptions& addOption(Args&&... args) {
+		ConfigOptions &addOption(Args &&...args) {
 			options.emplace_back(std::forward<Args>(args)...);
 			return *this;
 		}
 
-		void generateOptionDesc(printer::Message& in);
+		void generateOptionDesc(printer::Message &in);
 	};
 
 }

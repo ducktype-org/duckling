@@ -5,9 +5,8 @@
 
 namespace hir {
 
-
-	base::unique_ptr<Symbol> makeSymbolFromStatement(symtable::ScopeRef scope,
-	                                                 PstRef<pst::Stmt>  stmt) {
+	base::unique_ptr<Symbol>
+		makeSymbolFromStatement(symtable::ScopeRef scope, PstRef<pst::Stmt> stmt) {
 		switch (stmt->getKind()) {
 		// @TODO: cast check
 		case pst::StmtKind::Fun: {
@@ -52,15 +51,17 @@ namespace hir {
 			break;
 			// RIFT_PANIC("makeSymbolFromStatement bad symbol kind");
 		}
-		RIFT_PANIC(base::strConcat("makeSymbolFromStatement bad symbol kind, stmt: ",
-		                           typeid(*stmt).name()));
+		RIFT_PANIC(
+			base::strConcat("makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt).name())
+		);
 	}
 
-	void goOverSymbols(AnalysisState& state, ScopeRef scope,
-	                   pst::ParserCBorrowRef<pst::CodeBlock> pst_element) {
+	void goOverSymbols(
+		AnalysisState &state, ScopeRef scope, pst::ParserCBorrowRef<pst::CodeBlock> pst_element
+	) {
 		// @TODO: stmts/usings/alias/expand/...
 		// using and alias are just symbols
-		for (auto& stmt : pst_element->getStatements()) {
+		for (auto &stmt : pst_element->getStatements()) {
 			std::cerr << "stmt...\n";
 			auto sym = makeSymbolFromStatement(scope, stmt.borrow());
 			// @TODO: error symbol
@@ -68,21 +69,22 @@ namespace hir {
 		}
 	}
 
-	TopLevelSymbol::TopLevelSymbol(ScopeRef scope, base::StrId name,
-	                               PstRef<pst::TopLevel> pst_element):
-		Symbol(scope, name, false, true, SymbolKind::CompilationUnit),
-		pst_element(pst_element) {}
+	TopLevelSymbol::TopLevelSymbol(
+		ScopeRef scope, base::StrId name, PstRef<pst::TopLevel> pst_element
+	):
+		  Symbol(scope, name, false, true, SymbolKind::CompilationUnit),
+		  pst_element(pst_element) {}
 
 	void TopLevelSymbol::calculateType() {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::ModuleInfo::create());
 	}
 
-	void TopLevelSymbol::analyzeAll(AnalysisState& state) {
+	void TopLevelSymbol::analyzeAll(AnalysisState &state) {
 		getAll(state);
 
 		// @TODO: stmts/usings/alias/expand/...
 		// using and alias are just symbols
-		for (auto& stmt : pst_element->getStatements()) {
+		for (auto &stmt : pst_element->getStatements()) {
 			std::cerr << "stmt...\n";
 			state.addSymbol(makeSymbolFromStatement(scope, stmt.borrow()));
 		}
@@ -92,7 +94,7 @@ namespace hir {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::NamespaceInfo::create());
 	}
 
-	void NamespaceSymbol::analyzeAll(AnalysisState& state) {
+	void NamespaceSymbol::analyzeAll(AnalysisState &state) {
 		getAll(state);
 
 		auto inner_scope = getLinkedLookupScope(state);
@@ -104,9 +106,7 @@ namespace hir {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
 	}
 
-	void ConstSymbol::analyzeAll(AnalysisState& state) {
-		getAll(state);
-	}
+	void ConstSymbol::analyzeAll(AnalysisState &state) { getAll(state); }
 
 	ts::ClassInfo StructSymbol::calculateValue() {
 		//...
@@ -118,11 +118,11 @@ namespace hir {
 		type = ts::TypeDesc<ts::TupleInfo>(ts::MetaInfo::create());
 	}
 
-	void StructSymbol::analyzeAll(AnalysisState&) {
+	void StructSymbol::analyzeAll(AnalysisState &) {
 		// @TODO
 	}
 
-	symtable::SymbolChain GenericAlias::getUniqueDeAlias(hir::AnalysisState& state) {
+	symtable::SymbolChain GenericAlias::getUniqueDeAlias(hir::AnalysisState &state) {
 		if (!dealiased_lookup_result.has_value()) {
 			// this can be confusing:
 			calculateLinkedLookup(state);
@@ -130,13 +130,13 @@ namespace hir {
 		return dealiased_lookup_result.value();
 	}
 
-	symtable::ChainLookupResult GenericAlias::getDeAlias(hir::AnalysisState& state) {
+	symtable::ChainLookupResult GenericAlias::getDeAlias(hir::AnalysisState &state) {
 		throw base::NotYetImplemented("getDeAlias -- only require dealiasing any lookup results");
 	}
 
 	AliasSymbol::AliasSymbol(ScopeRef scope, base::StrId name, PstRef<pst::Alias> pst_element):
-		GenericAlias(scope, name, false, true, SymbolKind::Const),
-		pst_element(pst_element) {
+		  GenericAlias(scope, name, false, true, SymbolKind::Const),
+		  pst_element(pst_element) {
 		is_alias = true;
 	}
 
@@ -145,13 +145,14 @@ namespace hir {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
 	}
 
-	void AliasSymbol::calculateLinkedLookup(AnalysisState& state) {
+	void AliasSymbol::calculateLinkedLookup(AnalysisState &state) {
 		std::cerr << "  AliasSymbol -- calculating linked lookup"
 				  << "\n";
 
 		auto names         = pst_element->getPointed();
 		auto lookup_result = state.symTable().lookupDottedNameInScopeAndParents(
-			state, scope, { names.begin(), names.end() });
+			state, scope, { names.begin(), names.end() }
+		);
 
 		std::cerr << "Got lookup result:\n";
 		lookup_result.dprint(std::cerr);
@@ -177,14 +178,14 @@ namespace hir {
 		// Or just ErrorSymbol propagation
 	}
 
-	void AliasSymbol::analyzeAll(AnalysisState& state) {
+	void AliasSymbol::analyzeAll(AnalysisState &state) {
 		// @TODO
 		getAll(state);
 	}
 
 	UsingSymbol::UsingSymbol(ScopeRef scope, base::StrId name, PstRef<pst::Using> pst_element):
-		GenericAlias(scope, name, false, true, SymbolKind::Const),
-		pst_element(pst_element) {
+		  GenericAlias(scope, name, false, true, SymbolKind::Const),
+		  pst_element(pst_element) {
 		wildcard = true;
 		is_alias = true;
 	}
@@ -194,23 +195,23 @@ namespace hir {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
 	}
 
-	void UsingSymbol::analyzeAll(AnalysisState& state) {
+	void UsingSymbol::analyzeAll(AnalysisState &state) {
 		// @TODO
 		getAll(state);
 	}
 
-	void UsingSymbol::calculateLinkedLookup(AnalysisState& state) {
+	void UsingSymbol::calculateLinkedLookup(AnalysisState &state) {
 		std::cerr << "  UsingSymbol -- calculating linked lookup"
 				  << "\n";
 
 		auto names         = pst_element->getPointed();
 		auto lookup_result = state.symTable().lookupDottedNameInScopeAndParents(
-			state, scope, { names.begin(), names.end() });
+			state, scope, { names.begin(), names.end() }
+		);
 
 		std::cerr << "Got lookup result:\n";
 		lookup_result.dprint(std::cerr);
 		std::cerr << "\n";
-
 
 		if (!lookup_result.isSingle()) RIFT_PANIC("ambiguity in using, @TODO: error in state");
 		auto as_single        = lookup_result.getAsSingle();

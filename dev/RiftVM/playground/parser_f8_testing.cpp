@@ -5,7 +5,7 @@
 #include <services/preprocessor_f8/parser/parser.hpp>
 #include <services/service_manager.hpp>
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 	if (argc != 2) {
 		std::cerr << "usage: ./vm_benchmark file_name\n";
 		return 1;

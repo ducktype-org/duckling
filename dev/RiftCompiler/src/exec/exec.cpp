@@ -5,12 +5,10 @@
 #include <exec/operators/builtinoperators.hpp>
 #include <operations/operation.hpp>
 
-
 namespace exec {
 	void init() {
 		static bool was_init = false;
-		if(was_init)
-			return;
+		if (was_init) return;
 		was_init = true;
 
 		operation::init();

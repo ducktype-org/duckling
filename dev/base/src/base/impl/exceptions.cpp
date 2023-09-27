@@ -5,8 +5,8 @@
 namespace base {
 
 	Panic::Panic(std::string position, std::string reason):
-		position(std::move(position)),
-		reason(std::move(reason)) {
+		  position(std::move(position)),
+		  reason(std::move(reason)) {
 		this->reason += '\0';
 		makeWhatStr();
 	}
@@ -18,15 +18,11 @@ namespace base {
 		what_str += reason + ":\n";
 	}
 
-	const std::string& Panic::getPosition() const {
-		return position;
-	}
+	const std::string &Panic::getPosition() const { return position; }
 
-	const char* Panic::what() const noexcept {
-		return what_str.c_str();
-	}
+	const char *Panic::what() const noexcept { return what_str.c_str(); }
 
-	void Panic::print(std::ostream& out) const {
+	void Panic::print(std::ostream &out) const {
 		// @TODO: use printer/error framework here
 		out << what_str;
 	}
@@ -35,9 +31,7 @@ namespace base {
 		this->message += '\0';
 	}
 
-	const char* LogicError::what() const noexcept {
-		return message.data();
-	}
+	const char *LogicError::what() const noexcept { return message.data(); }
 
 	NotYetImplemented::NotYetImplemented(std::string message) {
 		this->message = "The feature is not implemented yet.\n";
@@ -45,8 +39,6 @@ namespace base {
 		this->message += '\0';
 	}
 
-	const char* NotYetImplemented::what() const noexcept {
-		return message.data();
-	}
+	const char *NotYetImplemented::what() const noexcept { return message.data(); }
 
 }

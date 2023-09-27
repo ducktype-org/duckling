@@ -6,9 +6,9 @@
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 
-void print(const Tokens& tokens, std::ostream& out, const std::string& indent = "") {
+void print(const Tokens &tokens, std::ostream &out, const std::string &indent = "") {
 	out << "[";
-	for (const auto& token : tokens) {
+	for (const auto &token : tokens) {
 		lexer::SourcePosition position = token.getPosition();
 
 		out << indent;

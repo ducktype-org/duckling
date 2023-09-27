@@ -28,16 +28,17 @@ namespace config {
 		template<typename T>
 		T getValue(base::RawView name) const {
 			if (!wasOption(name)) {
-				throw BadOptionAccess(
-					base::strConcat("Requested option `", name, "` was not found"));
+				throw BadOptionAccess(base::strConcat("Requested option `", name, "` was not found")
+				);
 			}
 			if (!name_to_raw_value.contains(name)) {
 				throw BadOptionAccess(
-					base::strConcat("Requested value of option `", name, "` was not found"));
+					base::strConcat("Requested value of option `", name, "` was not found")
+				);
 			}
 			return std::any_cast<T>(name_to_value[name]);
 		}
 
-		const std::vector<base::RawView>& getNonOptionValues() const { return non_option_values; }
+		const std::vector<base::RawView> &getNonOptionValues() const { return non_option_values; }
 	};
 }

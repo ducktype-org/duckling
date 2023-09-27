@@ -9,7 +9,7 @@
 
 namespace symtable {
 
-	LookupResult Scope::lookup(hir::AnalysisState& state, base::StrId name) {
+	LookupResult Scope::lookup(hir::AnalysisState &state, base::StrId name) {
 		// go over local symbols
 		// go over local aliases (are aliases symbols? - yes)
 		// go over links -- wildcard alias -- static links can cutoff, dep links needs un-aliasing
@@ -25,7 +25,7 @@ namespace symtable {
 		lookup_engaged = true;
 		defer(lookup_engaged = false);
 
-		for (auto& symbol : getSymbols()) {
+		for (auto &symbol : getSymbols()) {
 			std::cerr << "        i see: " << symbol->getName().strView() << "\n";
 			if (symbol->isWildcard()) {
 				auto wild_result = symbol->lookupIn(state, name);
@@ -43,7 +43,7 @@ namespace symtable {
 		return result;
 	}
 
-	LookupResult Scope::lookupMeAndParents(hir::AnalysisState& state, base::StrId name) {
+	LookupResult Scope::lookupMeAndParents(hir::AnalysisState &state, base::StrId name) {
 		auto result = lookup(state, name);
 		if (parent != nullptr) {
 			// Reverse insertion order allow for linear result concatenation instead of quadratic

@@ -48,7 +48,7 @@ namespace vm {
 		kind      = kind::DynamicTable{ inner };
 	}
 
-	void Type::defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions) {
+	void Type::defineData(const std::vector<std::pair<base::StrId, TypeRef>> &fields_definitions) {
 		RIFT_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
@@ -62,7 +62,7 @@ namespace vm {
 		kind = data;
 	}
 
-	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {
+	void Type::defineVariant(const std::vector<TypeRef> &variants_definitions) {
 		RIFT_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
@@ -98,7 +98,7 @@ namespace vm {
 			variant_case(kind::Data, data) {
 				// calculate offset and size
 				Offset offset = 0;
-				for (auto& field : data.fields) {
+				for (auto &field : data.fields) {
 					field.offset = offset;
 					field.type->finalize();
 					offset += field.type->getSize();
@@ -108,7 +108,7 @@ namespace vm {
 			variant_case(kind::Variant, variant) {
 				// calculate size
 				TypeSize data_size = 0;
-				for (auto& alternative : variant.alternatives) {
+				for (auto &alternative : variant.alternatives) {
 					alternative->finalize();
 					data_size = std::max(data_size, alternative->getSize());
 				}
@@ -118,22 +118,16 @@ namespace vm {
 	}
 
 	// common
-	TypeId Type::getId() const {
-		return id;
-	}
+	TypeId Type::getId() const { return id; }
 
-	base::StrId Type::getName() const {
-		return name;
-	}
+	base::StrId Type::getName() const { return name; }
 
 	TypeSize Type::getSize() const {
 		RIFT_ASSERT(size != TypeSize(-1), "getSize called before type finalization");
 		return size;
 	}
 
-	Type::Kind Type::getKind() const {
-		return kind_type;
-	}
+	Type::Kind Type::getKind() const { return kind_type; }
 
 	bool Type::isPrimitive(TypeSize size) const {
 		return getKind() == Kind::Primitive and getSize() == size;
@@ -183,16 +177,14 @@ namespace vm {
 				else
 					return none<TypeCRef>();
 			}
-			variant_default {
-				RIFT_PANIC("Unexpected Type kind");
-			}
+			variant_default { RIFT_PANIC("Unexpected Type kind"); }
 		}
 		RIFT_PANIC("something went wrong");
 	}
 
 	// pointer, staticTable, dynamicTable
 	option<TypeCRef> Type::getInnerType() const {
-		auto getInnerType = [](const auto& t) { return t.inner_type; };
+		auto getInnerType = [](const auto &t) { return t.inner_type; };
 
 		auto pointerOption = get<kind::Pointer>().map(getInnerType);
 		if (pointerOption.has_value()) return pointerOption.value();
@@ -208,27 +200,28 @@ namespace vm {
 
 	// staticTable
 	option<u64> Type::getStaticTableSize() const {
-		return get<kind::StaticTable>().map(
-			[](const kind::StaticTable& table) { return table.size; });
+		return get<kind::StaticTable>().map([](const kind::StaticTable &table) {
+			return table.size;
+		});
 	}
 
 	// struct
 	option<TypeCRef> Type::getFieldType(kind::Data::FieldId field_id) const {
-		return get<kind::Data>().flat_map([field_id](const kind::Data& data) {
+		return get<kind::Data>().flat_map([field_id](const kind::Data &data) {
 			if (field_id >= data.fields.size()) return none<TypeCRef>();
 			return some<TypeCRef>(data.fields[field_id].type);
 		});
 	}
 
 	option<Offset> Type::getFieldOffset(kind::Data::FieldId field_id) const {
-		return get<kind::Data>().flat_map([field_id](const kind::Data& data) {
+		return get<kind::Data>().flat_map([field_id](const kind::Data &data) {
 			if (field_id >= data.fields.size()) return none<Offset>();
 			return some<Offset>(Offset(data.fields[field_id].offset));
 		});
 	}
 
 	option<TypeCRef> Type::getFieldTypeByOffset(Offset offset) const {
-		return get<kind::Data>().flat_map([offset](const kind::Data& data) {
+		return get<kind::Data>().flat_map([offset](const kind::Data &data) {
 			i64 begin = -1, end = data.fields.size(), middle;
 			while (end - begin > 1) {
 				middle = (begin + end) / 2;
@@ -243,7 +236,7 @@ namespace vm {
 	}
 
 	option<TypeCRef> Type::getFieldTypeByOffsetRecursive(Offset offset) const {
-		return get<kind::Data>().flat_map([this, offset](const kind::Data& data) {
+		return get<kind::Data>().flat_map([this, offset](const kind::Data &data) {
 			i64 begin = -1, end = data.fields.size(), middle;
 			while (end - begin > 1) {
 				middle = (begin + end) / 2;
@@ -254,19 +247,21 @@ namespace vm {
 			}
 			if (data.fields[begin].offset != offset)
 				return data.fields[begin].type->getFieldTypeByOffsetRecursive(
-					offset - data.fields[begin].offset);
+					offset - data.fields[begin].offset
+				);
 			return some<TypeCRef>(data.fields[begin].type);
 		});
 	}
 
 	// variant
 	option<u64> Type::getVariantCount() const {
-		return get<kind::Variant>().map(
-			[](const kind::Variant& variant) { return variant.alternatives.size(); });
+		return get<kind::Variant>().map([](const kind::Variant &variant) {
+			return variant.alternatives.size();
+		});
 	}
 
 	option<TypeCRef> Type::getNthVariantType(u64 variant_id) const {
-		return get<kind::Variant>().flat_map([variant_id](const kind::Variant& variant) {
+		return get<kind::Variant>().flat_map([variant_id](const kind::Variant &variant) {
 			if (variant_id >= variant.alternatives.size()) return none<TypeCRef>();
 			return some<TypeCRef>(variant.alternatives[variant_id]);
 		});
@@ -274,19 +269,21 @@ namespace vm {
 
 	// function
 	option<u64> Type::getParameterCount() const {
-		return get<kind::Function>().map(
-			[](const kind::Function& function) { return function.parameters.size(); });
+		return get<kind::Function>().map([](const kind::Function &function) {
+			return function.parameters.size();
+		});
 	}
 
 	option<TypeCRef> Type::getNthParameterType(u64 parameter_id) const {
-		return get<kind::Function>().flat_map([parameter_id](const kind::Function& function) {
+		return get<kind::Function>().flat_map([parameter_id](const kind::Function &function) {
 			if (parameter_id >= function.parameters.size()) return none<TypeCRef>();
 			return some<TypeCRef>(function.parameters[parameter_id]);
 		});
 	}
 
 	option<TypeCRef> Type::getResultType() const {
-		return get<kind::Function>().flat_map(
-			[](const kind::Function& function) { return some<TypeCRef>(function.result); });
+		return get<kind::Function>().flat_map([](const kind::Function &function) {
+			return some<TypeCRef>(function.result);
+		});
 	}
 }

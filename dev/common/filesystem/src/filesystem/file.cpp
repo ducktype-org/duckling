@@ -13,9 +13,9 @@
 namespace fs {
 	FilePath::ContentMap FilePath::to_content;
 
-	FilePath::FilePath(const std::filesystem::path& path): path(std::filesystem::absolute(path)) {}
+	FilePath::FilePath(const std::filesystem::path &path): path(std::filesystem::absolute(path)) {}
 
-	FilePath::FilePath(const FilePath& oth): path(oth.path) {}
+	FilePath::FilePath(const FilePath &oth): path(oth.path) {}
 
 	FileContent FilePath::getContent() const {
 		if (to_content.contains(path)) {
@@ -27,7 +27,8 @@ namespace fs {
 		}
 
 		FileContent file_content(
-			std::make_shared<base::OwningView>(getSimpleFileContent(path.c_str())));
+			std::make_shared<base::OwningView>(getSimpleFileContent(path.c_str()))
+		);
 
 		to_content.put(path, file_content.content);
 
@@ -37,20 +38,17 @@ namespace fs {
 	result<FileContent, std::string> FilePath::getContentSafe() const {
 		if (!std::filesystem::exists(path)) {
 			return fail(base::strConcat(
-				"Error: cannot get content of file `", path, "` - file does not exist"));
+				"Error: cannot get content of file `", path, "` - file does not exist"
+			));
 		}
 		return getContent();
 	}
 
-	std::string_view FilePath::strView() const {
-		return path.c_str();
-	}
+	std::string_view FilePath::strView() const { return path.c_str(); }
 
-	FilePath FilePath::parentPath() const {
-		return path.parent_path();
-	}
+	FilePath FilePath::parentPath() const { return path.parent_path(); }
 
-	base::OwningView getSimpleFileContent(const std::string& file_name) {
+	base::OwningView getSimpleFileContent(const std::string &file_name) {
 		std::ifstream file(file_name, std::ios::in | std::ios::binary);
 		if (file.fail()) throw base::LogicError(std::string("file does not exist: ") + file_name);
 
@@ -64,7 +62,7 @@ namespace fs {
 
 		// should read full file:
 		auto r_array = new byte[file_size];
-		file.read(reinterpret_cast<char*>(r_array), file_size);
+		file.read(reinterpret_cast<char *>(r_array), file_size);
 
 		return { r_array, file_size };
 	}

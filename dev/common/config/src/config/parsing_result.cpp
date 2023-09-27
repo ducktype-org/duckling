@@ -11,7 +11,8 @@ namespace config {
 			throw BadOptionAccess(base::strConcat("Requested option `", name, "` was not found"));
 		if (!name_to_raw_value.contains(name)) {
 			throw BadOptionAccess(
-				base::strConcat("Requested value of option `", name, "` was not found"));
+				base::strConcat("Requested value of option `", name, "` was not found")
+			);
 		}
 		return name_to_raw_value[name];
 	}

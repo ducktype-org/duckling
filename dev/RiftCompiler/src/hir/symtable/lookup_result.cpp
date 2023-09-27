@@ -5,7 +5,7 @@
 
 namespace symtable {
 
-	SymbolChain deAliasSymbolChain(hir::AnalysisState& state, const SymbolChain& chain) {
+	SymbolChain deAliasSymbolChain(hir::AnalysisState &state, const SymbolChain &chain) {
 		// @TODO: this does not handle non-unique symbols (overloaded)
 		SymbolChain out;
 		for (usize i = 0; i < chain.size(); i++) {
@@ -15,9 +15,7 @@ namespace symtable {
 		return out;
 	}
 
-	bool LookupResult::isEmpty() const {
-		return leaves.empty() and children.empty();
-	}
+	bool LookupResult::isEmpty() const { return leaves.empty() and children.empty(); }
 
 	bool LookupResult::isSingle() const {
 		if (leaves.size() == 1 and children.size() == 0) return true;
@@ -46,31 +44,27 @@ namespace symtable {
 		return res;
 	}
 
-	void LookupResult::insert(LookupResult&& other) {
-		leaves.insert(leaves.end(),
-		              std::make_move_iterator(other.leaves.begin()),
-		              std::make_move_iterator(other.leaves.end()));
+	void LookupResult::insert(LookupResult &&other) {
+		leaves.insert(
+			leaves.end(),
+			std::make_move_iterator(other.leaves.begin()),
+			std::make_move_iterator(other.leaves.end())
+		);
 
-		children.insert(children.end(),
-		                std::make_move_iterator(other.children.begin()),
-		                std::make_move_iterator(other.children.end()));
+		children.insert(
+			children.end(),
+			std::make_move_iterator(other.children.begin()),
+			std::make_move_iterator(other.children.end())
+		);
 	}
 
-	LookupNode LookupResult::toNode(SymbolRef node) & {
-		return { node, leaves, children };
-	}
+	LookupNode LookupResult::toNode(SymbolRef node) & { return { node, leaves, children }; }
 
-	LookupNode LookupResult::toNode(SymbolRef node) && {
-		return { node, std::move(*this) };
-	}
+	LookupNode LookupResult::toNode(SymbolRef node) && { return { node, std::move(*this) }; }
 
-	bool ChainLookupResult::isEmpty() const {
-		return prefix.empty() && result.isEmpty();
-	}
+	bool ChainLookupResult::isEmpty() const { return prefix.empty() && result.isEmpty(); }
 
-	bool ChainLookupResult::isSingle() const {
-		return result.isSingle();
-	}
+	bool ChainLookupResult::isSingle() const { return result.isSingle(); }
 
 	SymbolChain ChainLookupResult::getAsSingle() {
 		auto prefix_copy = prefix;
@@ -80,7 +74,7 @@ namespace symtable {
 	}
 
 	// dprints:
-	void dprintSymbolChain(const symtable::SymbolChain& chain, std::ostream& out) {
+	void dprintSymbolChain(const symtable::SymbolChain &chain, std::ostream &out) {
 		out << "[";
 		for (auto sym : chain) {
 			if (sym != nullptr)
@@ -93,7 +87,7 @@ namespace symtable {
 		// out << "\n";
 	}
 
-	void LookupResult::dprint(std::ostream& out) {
+	void LookupResult::dprint(std::ostream &out) {
 		out << "Result { ";
 		out << "[";
 		for (auto leaf : leaves) out << leaf->getName().strView() << ", ";
@@ -104,13 +98,13 @@ namespace symtable {
 		out << " }";
 	}
 
-	void LookupNode::dprint(std::ostream& out) {
+	void LookupNode::dprint(std::ostream &out) {
 		out << "Node{" << node->getName().strView() << ": ";
 		inner.dprint(out);
 		out << "}";
 	}
 
-	void ChainLookupResult::dprint(std::ostream& out) {
+	void ChainLookupResult::dprint(std::ostream &out) {
 		out << "ChainLookupResult: ";
 		dprintSymbolChain(prefix, out);
 		out << " . ";

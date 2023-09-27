@@ -17,14 +17,14 @@ namespace clap {
 	struct MissingRequiredParameter {
 		base::StrId name;
 
-		MissingRequiredParameter(const ParameterConfig& c);
+		MissingRequiredParameter(const ParameterConfig &c);
 		std::string print() const;
 	};
 
 	struct DuplicatedParameter {
 		base::StrId name;
 
-		DuplicatedParameter(const ParameterConfig& c);
+		DuplicatedParameter(const ParameterConfig &c);
 		std::string print() const;
 	};
 
@@ -39,7 +39,7 @@ namespace clap {
 	struct MissingParameterArgument {
 		base::StrId name;
 
-		MissingParameterArgument(const ParameterConfig& c);
+		MissingParameterArgument(const ParameterConfig &c);
 		std::string print() const;
 	};
 
@@ -47,7 +47,11 @@ namespace clap {
 		std::string print() const;
 	};
 
-	using ClapParsingError = std::variant<PositionalParametersCountError, MissingRequiredParameter,
-	                                      DuplicatedParameter, UnexpectedParameter,
-	                                      MissingParameterArgument, HelpMessage>;
+	using ClapParsingError = std::variant<
+		PositionalParametersCountError,
+		MissingRequiredParameter,
+		DuplicatedParameter,
+		UnexpectedParameter,
+		MissingParameterArgument,
+		HelpMessage>;
 }

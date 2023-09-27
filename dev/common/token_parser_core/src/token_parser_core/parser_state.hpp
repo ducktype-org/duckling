@@ -10,12 +10,12 @@ namespace tpc {
 		std::vector<TokenStream> stream_stack;
 
 	public:
-		TokenStream&       tokens();
-		const TokenStream& ctokens() const;
+		TokenStream       &tokens();
+		const TokenStream &ctokens() const;
 
 		ErrorState err;
 
-		ParserState(TokenStream&& tokens, ErrorState&& err): err(std::move(err)) {
+		ParserState(TokenStream &&tokens, ErrorState &&err): err(std::move(err)) {
 			stream_stack.emplace_back(std::move(tokens));
 		}
 

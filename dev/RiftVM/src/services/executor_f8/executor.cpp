@@ -26,8 +26,9 @@ namespace vm {
 			execution_strategy = ExecutionStrategy::Paused;
 	}
 
-	Frame Executor::internalInitFrame(option<Frame&> previous_frame, const FuncData& function,
-	                                  VLADataReference vla_ref) {
+	Frame Executor::internalInitFrame(
+		option<Frame &> previous_frame, const FuncData &function, VLADataReference vla_ref
+	) {
 		return Frame{
 			.previous = previous_frame,
  // .function = function,
@@ -90,13 +91,17 @@ namespace vm {
 	}
 
 	template<typename T>
-	__attribute__((always_inline)) inline static T& derefStack(std::byte stack[], i64 position) {
-		return *(reinterpret_cast<T*>(&stack[position]));
+	__attribute__((always_inline)) inline static T &derefStack(std::byte stack[], i64 position) {
+		return *(reinterpret_cast<T *>(&stack[position]));
 	}
 
 	__attribute__((always_inline)) void inline static nextInstruction(
-		const std::span<const vm::Fix8Instruction>& bc, usize& instruction_pointer,
-		OpcodeFix8& opcode, int_fast32_t& arg0, int_fast32_t& arg1) {
+		const std::span<const vm::Fix8Instruction> &bc,
+		usize                                      &instruction_pointer,
+		OpcodeFix8                                 &opcode,
+		int_fast32_t                               &arg0,
+		int_fast32_t                               &arg1
+	) {
 		Fix8Instruction instr = bc[instruction_pointer];
 		instruction_pointer++;
 
@@ -105,8 +110,9 @@ namespace vm {
 		arg1   = instr.arg1;
 	}
 
-	i64 Executor::internalCallFunction(option<Frame&> previous_frame, const FuncData& function,
-	                                   StandardFunctionArgs args) {
+	i64 Executor::internalCallFunction(
+		option<Frame &> previous_frame, const FuncData &function, StandardFunctionArgs args
+	) {
 		// @TODO: sanity check should be added to see if function.stack_size is sensible small
 		// @TODO: some generic code should be added to work with that does not support VLA
 		std::byte local_stack[function.stack_size];
@@ -142,7 +148,7 @@ namespace vm {
 
 // Computed gotos labales:
 #ifdef USE_COMPUTED_GOTO
-		constexpr static void* opcode_label[] = { LABEL_PTR(mov_l64_imm),
+		constexpr static void *opcode_label[] = { LABEL_PTR(mov_l64_imm),
 
 			                                      LABEL_PTR(mov_l64_l64),
 			                                      LABEL_PTR(cmov_l64_l64),
@@ -222,8 +228,9 @@ namespace vm {
 
 				OP_CASE(mov_l64_pFuncArg, { derefStack<u64>(local_stack, arg0) = args.p64_arg; })
 
-				OP_CASE(mov_lptr_ptrFuncArg,
-				        { derefStack<Pointer>(local_stack, arg0) = args.pointer_arg; })
+				OP_CASE(mov_lptr_ptrFuncArg, {
+					derefStack<Pointer>(local_stack, arg0) = args.pointer_arg;
+				})
 
 				OP_CASE(add_l64_l64, {
 					derefStack<u64>(local_stack, arg0) += derefStack<u64>(local_stack, arg1);
@@ -255,16 +262,18 @@ namespace vm {
 						= derefStack<u64>(local_stack, arg0) == derefStack<u64>(local_stack, arg1);
 				})
 
-				OP_CASE(cmpEq_l64_imm,
-				        { FRAME_FLAGS(flag) = derefStack<u64>(local_stack, arg0) == arg1; })
+				OP_CASE(cmpEq_l64_imm, {
+					FRAME_FLAGS(flag) = derefStack<u64>(local_stack, arg0) == arg1;
+				})
 
 				OP_CASE(cmpG_l64_l64, {
 					FRAME_FLAGS(flag)
 						= derefStack<u64>(local_stack, arg0) > derefStack<u64>(local_stack, arg1);
 				})
 
-				OP_CASE(cmpG_l64_imm,
-				        { FRAME_FLAGS(flag) = derefStack<u64>(local_stack, arg0) > arg1; })
+				OP_CASE(cmpG_l64_imm, {
+					FRAME_FLAGS(flag) = derefStack<u64>(local_stack, arg0) > arg1;
+				})
 
 				OP_CASE(jmpRel_label, { FRAME(instruction_pointer) += arg0; })
 
@@ -276,19 +285,22 @@ namespace vm {
 					if (!FRAME_FLAGS(flag)) FRAME(instruction_pointer) += arg0;
 				})
 
-				OP_CASE(setPtrArg_lptr,
-				        { FRAME(next_args.pointer_arg) = derefStack<Pointer>(local_stack, arg1); })
+				OP_CASE(setPtrArg_lptr, {
+					FRAME(next_args.pointer_arg) = derefStack<Pointer>(local_stack, arg1);
+				})
 
-				OP_CASE(setPArg_l64,
-				        { FRAME(next_args.p64_arg) = derefStack<i64>(local_stack, arg0); })
+				OP_CASE(setPArg_l64, {
+					FRAME(next_args.p64_arg) = derefStack<i64>(local_stack, arg0);
+				})
 
 				OP_CASE(call_func, {
 					auto function_id      = arg0;
 					FRAME_REGS(p64_reg_0) = internalCallFunction(
 						// @TODO: this is not correct with flat frame
-						IF_NOT_FF(frame) IF_FF(none<Frame&>()),
+						IF_NOT_FF(frame) IF_FF(none<Frame &>()),
 						executing_code->functions[function_id],
-						FRAME(next_args));
+						FRAME(next_args)
+					);
 				})
 
 				OP_CASE(ret_l64, {
@@ -301,17 +313,21 @@ namespace vm {
 					goto End;
 				});
 
-				OP_CASE(init_type,
-				        {
-							// @TODO
-				            // throw base::NotYetImplemented("init_type");
-						})
+				OP_CASE(
+					init_type,
+					{
+						// @TODO
+				        // throw base::NotYetImplemented("init_type");
+					}
+				)
 
-				OP_CASE(deinit,
-				        {
-							// @TODO
-				            // throw base::NotYetImplemented("init_type");
-						})
+				OP_CASE(
+					deinit,
+					{
+						// @TODO
+				        // throw base::NotYetImplemented("init_type");
+					}
+				)
 
 				OP_CASE(input_l64, {
 					setStatus(api::WaitingForInput{});
@@ -330,8 +346,8 @@ namespace vm {
 				})
 
 				OP_CASE(free_lptr, {
-					dynamic_allocator.deleteBlock(
-						derefStack<Pointer>(local_stack, arg0).getBlock());
+					dynamic_allocator.deleteBlock(derefStack<Pointer>(local_stack, arg0).getBlock()
+					);
 				})
 
 				OP_CASE(load_l64_lptr, {
@@ -372,7 +388,7 @@ namespace vm {
 		return FRAME(ret_val);
 	}
 
-	void Executor::run(const Code& code) {
+	void Executor::run(const Code &code) {
 		// @TODO: ensure correct status
 
 		setStatus(api::Running{});
@@ -380,11 +396,10 @@ namespace vm {
 		executing_code = &code;
 		try {
 			internalCallFunction(
-				none<Frame&>(), executing_code->functions[code.main_id], { 0, memory.nullPtr() });
+				none<Frame &>(), executing_code->functions[code.main_id], { 0, memory.nullPtr() }
+			);
 			setStatus(api::NotStarted{});
-		} catch (KillCoreException) {
-			setStatus(api::NotStarted{});
-		}
+		} catch (KillCoreException) { setStatus(api::NotStarted{}); }
 	}
 
 	void Executor::prestart() {
@@ -450,7 +465,5 @@ namespace vm {
 		return execution_strategy != ExecutionStrategy::Stoped;
 	}
 
-	void Executor::notifyPaused() {
-		pause_cv.notify_all();
-	}
+	void Executor::notifyPaused() { pause_cv.notify_all(); }
 }

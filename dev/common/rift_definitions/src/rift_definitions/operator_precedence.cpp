@@ -34,27 +34,34 @@ namespace rift_def {
 
 		precedence.put({ Operator::Assign, OperatorType::Binary }, 4);
 
+		associativity.put(
+			{ Operator::Period, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+		);
 
-		associativity.put({ Operator::Period, OperatorType::Binary },
-		                  OperatorAssociativity::LeftToRight);
+		associativity.put(
+			{ Operator::DoublePlus, OperatorType::UnaryRight }, OperatorAssociativity::RightToLeft
+		);
+		associativity.put(
+			{ Operator::Minus, OperatorType::UnaryRight }, OperatorAssociativity::RightToLeft
+		);
 
-		associativity.put({ Operator::DoublePlus, OperatorType::UnaryRight },
-		                  OperatorAssociativity::RightToLeft);
-		associativity.put({ Operator::Minus, OperatorType::UnaryRight },
-		                  OperatorAssociativity::RightToLeft);
+		associativity.put(
+			{ Operator::Multiply, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+		);
+		associativity.put(
+			{ Operator::Divide, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+		);
 
-		associativity.put({ Operator::Multiply, OperatorType::Binary },
-		                  OperatorAssociativity::LeftToRight);
-		associativity.put({ Operator::Divide, OperatorType::Binary },
-		                  OperatorAssociativity::LeftToRight);
+		associativity.put(
+			{ Operator::Plus, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+		);
+		associativity.put(
+			{ Operator::Minus, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+		);
 
-		associativity.put({ Operator::Plus, OperatorType::Binary },
-		                  OperatorAssociativity::LeftToRight);
-		associativity.put({ Operator::Minus, OperatorType::Binary },
-		                  OperatorAssociativity::LeftToRight);
-
-		associativity.put({ Operator::Assign, OperatorType::Binary },
-		                  OperatorAssociativity::RightToLeft);
+		associativity.put(
+			{ Operator::Assign, OperatorType::Binary }, OperatorAssociativity::RightToLeft
+		);
 
 		RIFT_SIMPLE_INIT_GUARD_END;
 	}
@@ -70,7 +77,8 @@ namespace rift_def {
 		RIFT_ASSERT(str_view.size() > 0, "String of size zero passed to operator precedence");
 
 		throw base::NotYetImplemented(base::strConcat(
-			"Generic rules for operator precedence dont yet exist for operator: ", operator_));
+			"Generic rules for operator precedence dont yet exist for operator: ", operator_
+		));
 	}
 
 	i64 operatorPrecedence(Operator operator_, OperatorType operator_type) {
@@ -88,7 +96,8 @@ namespace rift_def {
 		RIFT_ASSERT(str_view.size() > 0, "String of size zero passed to operator precedence");
 
 		throw base::NotYetImplemented(base::strConcat(
-			"Generic rules for operator associativity dont yet exist for operator: ", operator_));
+			"Generic rules for operator associativity dont yet exist for operator: ", operator_
+		));
 	}
 
 	OperatorAssociativity operatorAssociativity(Operator keyword, OperatorType operator_type) {

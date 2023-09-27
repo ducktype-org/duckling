@@ -10,9 +10,7 @@ namespace symtable {
 		next_relative_position = 0;
 	}
 
-	ScopeRef SymbolData::getRootScope() {
-		return root_scope;
-	}
+	ScopeRef SymbolData::getRootScope() { return root_scope; }
 
 	ScopeRef SymbolData::newScope(ScopeRef parent) {
 		auto id = scopes.pushBack(std::move(Scope(parent)));
@@ -20,9 +18,7 @@ namespace symtable {
 		return scopes.last();
 	}
 
-	ScopeRef SymbolData::newSubRootScope() {
-		return newScope(getRootScope());
-	}
+	ScopeRef SymbolData::newSubRootScope() { return newScope(getRootScope()); }
 
 	SymbolRef SymbolData::newSymbol(base::unique_ptr<Symbol> symbol) {
 		auto scope = symbol->getScope();
@@ -35,18 +31,14 @@ namespace symtable {
 		return symbols.back().borrow_mut();
 	}
 
-	usize SymbolData::symbolCount() const {
-		return symbols.size();
-	}
+	usize SymbolData::symbolCount() const { return symbols.size(); }
 
-	const decltype(SymbolData::symbols)& SymbolData::getSymbols() const {
-		return symbols;
-	}
+	const decltype(SymbolData::symbols) &SymbolData::getSymbols() const { return symbols; }
 
 	// @TODO: errors
-	ChainLookupResult SymbolData::lookupDottedNameInScopeAndParents(hir::AnalysisState&    state,
-	                                                                ScopeRef               initial,
-	                                                                std::span<base::StrId> names) {
+	ChainLookupResult SymbolData::lookupDottedNameInScopeAndParents(
+		hir::AnalysisState &state, ScopeRef initial, std::span<base::StrId> names
+	) {
 		RIFT_ASSERT(names.size() > 0, "lookupDotted received zero names");
 
 		// initial symbol:

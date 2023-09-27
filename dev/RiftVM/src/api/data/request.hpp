@@ -45,9 +45,16 @@ namespace vm::api {
 	}
 
 	// @Deprecated - ExecutorRequest will have template based api (not variant based)
-	using ExecutorRequest
-		= std::variant<request::Load, request::Resume, request::Pause, request::Stop, request::Run,
-	                   request::Join, request::Input, request::Output, request::Step>;
+	using ExecutorRequest = std::variant<
+		request::Load,
+		request::Resume,
+		request::Pause,
+		request::Stop,
+		request::Run,
+		request::Join,
+		request::Input,
+		request::Output,
+		request::Step>;
 
 	using DataRequest = std::variant<request::TypeMetadata, request::Block>;
 
@@ -60,7 +67,7 @@ namespace vm::api {
 		RequestVariant request;
 	};
 
-	SupervisorRequest makeExecutorRequest(PID pid, ExecutorRequest&& data);
-	SupervisorRequest makeDataRequest(PID pid, DataRequest&& data);
+	SupervisorRequest makeExecutorRequest(PID pid, ExecutorRequest &&data);
+	SupervisorRequest makeDataRequest(PID pid, DataRequest &&data);
 	SupervisorRequest makeStatusRequest(PID pid);
 }

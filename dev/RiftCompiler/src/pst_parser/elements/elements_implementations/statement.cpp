@@ -5,20 +5,16 @@ namespace pst {
 	namespace detail {
 
 		template<class T>
-		ParserRef<T> parseStmt(RiftParserState& state, bool force_semi = false) {
+		ParserRef<T> parseStmt(RiftParserState &state, bool force_semi = false) {
 			ParserRef<T> out = T::parse(state);
-			if (force_semi or out->trailingSemicolon()) {
-				parseOne(state, Special::Semicolon);
-			}
+			if (force_semi or out->trailingSemicolon()) parseOne(state, Special::Semicolon);
 			return out;
 		}
 	}
 
-	bool Stmt::trailingSemicolon() {
-		return true;
-	}
+	bool Stmt::trailingSemicolon() { return true; }
 
-	ParserRef<Stmt> Stmt::parse(RiftParserState& state) {
+	ParserRef<Stmt> Stmt::parse(RiftParserState &state) {
 		auto as_keyword = state.ctokens().peek().asKeyword();
 		auto as_special = state.ctokens().peek().asSpecial();
 
@@ -43,7 +39,7 @@ namespace pst {
 
 		case Keyword::Struct:
 			return detail::parseStmt<Struct>(state);
-		
+
 		case Keyword::Block:
 			return detail::parseStmt<Block>(state);
 
@@ -60,12 +56,9 @@ namespace pst {
 			break;
 		}
 
-		if (as_special == Special::AtSign) {
-			return detail::parseStmt<Attribute>(state);
-		}
-		if (rift_def::keywordFlags(as_keyword).contains(rift_def::KeywordFlags::is_action)) {
+		if (as_special == Special::AtSign) return detail::parseStmt<Attribute>(state);
+		if (rift_def::keywordFlags(as_keyword).contains(rift_def::KeywordFlags::is_action))
 			return detail::parseStmt<Action>(state);
-		}
 
 		if (as_special == Special::Semicolon) {
 			state.fail(0, "unexpected special `;`");

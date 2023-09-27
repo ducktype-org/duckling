@@ -20,9 +20,11 @@ namespace vm {
 			case Type::Kind::Function:
 				return false;
 			case Type::Kind::StaticTable:
-				return typeAtOffset(type->getInnerType().value(),
-				                    offset % type->getInnerType().value()->getSize(),
-				                    searched);
+				return typeAtOffset(
+					type->getInnerType().value(),
+					offset % type->getInnerType().value()->getSize(),
+					searched
+				);
 			case Type::Kind::Variant:
 				if (offset <= 8) return false;
 				return typeAtOffset(type->getInnerType().value(), offset - 8, searched);
@@ -35,17 +37,11 @@ namespace vm {
 		}
 	}
 
-	Pointer Block::BasePointer() const {
-		return Pointer(block_id, start);
-	}
+	Pointer Block::BasePointer() const { return Pointer(block_id, start); }
 
-	base::RawView Block::rawPointer() {
-		return base::RawView(data, element_type->getSize());
-	}
+	base::RawView Block::rawPointer() { return base::RawView(data, element_type->getSize()); }
 
-	TypeCRef Block::innerType() const {
-		return element_type;
-	}
+	TypeCRef Block::innerType() const { return element_type; }
 
 	result<base::ModRawView, Block::error> Block::deref(TypeCRef u, u64 offset) {
 		if (offset < start || offset > end) return fail("Tried to defer outside of a block");

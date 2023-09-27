@@ -40,7 +40,6 @@ REGISTER_PARSE_TYPE(Fiz);
 int main() {
 	using MyVar = std::variant<Foo, Bar, Empty>;
 
-
 	Foo foo{ 5, 'a', "abc" };
 	Bar bar{
 		"abc", {3, 4},
@@ -54,7 +53,7 @@ int main() {
 	std::cout << JS::serializeStruct(y) << "\n";
 	std::cout << JS::serializeStruct(z) << "\n";
 
-	std::exception* e = new std::runtime_error("error");
+	std::exception *e = new std::runtime_error("error");
 
 	std::cout << JS::serializeStruct(*e) << "\n";
 }

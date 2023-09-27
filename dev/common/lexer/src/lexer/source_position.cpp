@@ -26,27 +26,25 @@ namespace lexer {
 		setSourceCode(std::move(source_code));
 	}
 
-	SourcePosition::SourcePosition(std::shared_ptr<fs::FilePath> source_code, u32 line, u32 column,
-	                               u32 start):
-		SourcePosition(std::move(source_code)) {
+	SourcePosition::SourcePosition(
+		std::shared_ptr<fs::FilePath> source_code, u32 line, u32 column, u32 start
+	):
+		  SourcePosition(std::move(source_code)) {
 		setLineNumber(line);
 		setColumnNumber(column);
 		setStart(start);
 	}
 
-	SourcePosition::SourcePosition(std::shared_ptr<fs::FilePath> source_code, u32 line, u32 column,
-	                               u32 start, u32 end):
-		SourcePosition(std::move(source_code), line, column, start) {
+	SourcePosition::SourcePosition(
+		std::shared_ptr<fs::FilePath> source_code, u32 line, u32 column, u32 start, u32 end
+	):
+		  SourcePosition(std::move(source_code), line, column, start) {
 		setEnd(end);
 	}
 
-	void SourcePosition::setLineNumber(u32 line) {
-		line_number = line;
-	}
+	void SourcePosition::setLineNumber(u32 line) { line_number = line; }
 
-	void SourcePosition::setColumnNumber(u32 column) {
-		column_number = column;
-	}
+	void SourcePosition::setColumnNumber(u32 column) { column_number = column; }
 
 	void SourcePosition::setStart(u32 start) {
 		source_index_start = start;
@@ -62,21 +60,13 @@ namespace lexer {
 		source_code = std::move(new_source_code);
 	}
 
-	usize SourcePosition::getStart() const {
-		return source_index_start;
-	}
+	usize SourcePosition::getStart() const { return source_index_start; }
 
-	usize SourcePosition::getEnd() const {
-		return source_index_end;
-	}
+	usize SourcePosition::getEnd() const { return source_index_end; }
 
-	usize SourcePosition::getLineNumber() const {
-		return line_number;
-	}
+	usize SourcePosition::getLineNumber() const { return line_number; }
 
-	usize SourcePosition::getColumn() const {
-		return column_number;
-	}
+	usize SourcePosition::getColumn() const { return column_number; }
 
 	std::string SourcePosition::genErrorMsg(std::string_view reason) const {
 		if (line_number == 0) return "Error getting info: SourcePosition is invalid";

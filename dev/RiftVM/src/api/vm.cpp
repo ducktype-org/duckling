@@ -2,10 +2,10 @@
 #include "supervisor/supervisor.hpp"
 
 namespace vm::api {
-	void ignoreResponse([[maybe_unused]] const Response& response){};
+	void ignoreResponse([[maybe_unused]] const Response &response){};
 
 	template<class T>
-	result<T, ApiError> mapOrWrongResponse(const Response& response) {
+	result<T, ApiError> mapOrWrongResponse(const Response &response) {
 		if (std::holds_alternative<T>(response)) return std::get<T>(response);
 		return failure(WrongResponse{});
 	}
@@ -35,10 +35,10 @@ namespace vm::api {
 	}
 
 	result<ProcessInfo, ApiError> spawn(bool usesStdio) {
-		return Supervisor::get().newProcess(usesStdio).map([](auto& x) { return ProcessInfo(x); });
+		return Supervisor::get().newProcess(usesStdio).map([](auto &x) { return ProcessInfo(x); });
 	}
 
-	result<void, ApiError> loadFile(PID pid, const fs::FilePath& path) {
+	result<void, ApiError> loadFile(PID pid, const fs::FilePath &path) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::Load{ path }))
 		    .map(ignoreResponse);
@@ -69,7 +69,7 @@ namespace vm::api {
 		    .flat_map([pid] { return Supervisor::get().killProcess(pid); });
 	}
 
-	result<void, ApiError> input(PID pid, const std::string& input) {
+	result<void, ApiError> input(PID pid, const std::string &input) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::Input{ input }))
 		    .map(ignoreResponse);
@@ -81,7 +81,7 @@ namespace vm::api {
 		    .flat_map(mapOrWrongResponse<response::Output>);
 	}
 
-	result<TypeCRef, ApiError> getType(PID pid, const std::string& type_name) {
+	result<TypeCRef, ApiError> getType(PID pid, const std::string &type_name) {
 		return Supervisor::get()
 		    .doRequest(api::makeDataRequest(pid, request::TypeMetadata{ type_name }))
 		    .flat_map(mapOrWrongResponse<TypeCRef>);

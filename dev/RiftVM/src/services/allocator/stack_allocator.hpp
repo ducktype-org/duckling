@@ -16,13 +16,13 @@ namespace vm {
 	 */
 	class StackAllocator {
 	private:
-		Memory& memory;
+		Memory &memory;
 
-		static Memory& getMemory(VCPU& vcpu);
+		static Memory &getMemory(VCPU &vcpu);
 
 		template<class... DynamicServices>
-		StackAllocator(ServiceManagerDef<DynamicServices...>& serviceManager):
-			memory(getMemory(serviceManager.getVCPU())) {}
+		StackAllocator(ServiceManagerDef<DynamicServices...> &serviceManager):
+			  memory(getMemory(serviceManager.getVCPU())) {}
 
 	public:
 		BlockId makeTypeBlock(TypeCRef type, base::ModRawView data) {

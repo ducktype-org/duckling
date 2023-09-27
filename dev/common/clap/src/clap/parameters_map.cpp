@@ -7,7 +7,7 @@ namespace clap {
 		return it->second;
 	}
 
-	option<usize> ParametersMap::to_id(const base::RawView& name) const {
+	option<usize> ParametersMap::to_id(const base::RawView &name) const {
 		return to_id(base::StrId(name));
 	}
 
@@ -17,9 +17,7 @@ namespace clap {
 		return it->second;
 	}
 
-	option<usize> ParametersMap::to_id(byte name) const {
-		return to_id(char(name));
-	}
+	option<usize> ParametersMap::to_id(byte name) const { return to_id(char(name)); }
 
 	option<base::RawView> ParametersMap::get(usize id) const {
 		auto it = parameters.find(id);

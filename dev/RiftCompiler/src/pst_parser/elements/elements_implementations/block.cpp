@@ -1,18 +1,20 @@
 #include "elements_implementation.hpp"
 
 namespace pst {
-	ParserRef<Block> Block::parse(RiftParserState& state) {
+	ParserRef<Block> Block::parse(RiftParserState &state) {
 		auto position = state.ctokens().peek().getPosition();
-		auto out = makeRef<Block>(position);
+		auto out      = makeRef<Block>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Block), position.genErrorMsg("bad statement choice"));
+		RIFT_ASSERT(
+			state.ctokens().is(Keyword::Block), position.genErrorMsg("bad statement choice")
+		);
 
 		parseAll(state, Keyword::Block, &out->optional_name, &out->code_block);
 
 		return out;
 	}
 
-	void Block::dprint(std::ostream& out) const {
+	void Block::dprint(std::ostream &out) const {
 		out << "{\"Block\": {";
 
 		out << R"("optional name": )";

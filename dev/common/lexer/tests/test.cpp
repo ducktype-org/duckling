@@ -44,40 +44,54 @@ private:
 
 	void testGroup0() {
 		checkGroupIsGroup(0);
-		const auto& inner_tokens = td.tokens[0].getRecursive();
+		const auto &inner_tokens = td.tokens[0].getRecursive();
 
-		assert(inner_tokens.size() == 3,
-		       "Expected 3 tokens, got " + std::to_string(inner_tokens.size()));
+		assert(
+			inner_tokens.size() == 3,
+			"Expected 3 tokens, got " + std::to_string(inner_tokens.size())
+		);
 
-		assert(inner_tokens[0].getType() == lexer::Token::Type::RoundGroup,
-		       "First group is not RoundGroup");
+		assert(
+			inner_tokens[0].getType() == lexer::Token::Type::RoundGroup,
+			"First group is not RoundGroup"
+		);
 
-		assert(inner_tokens[1].getType() == lexer::Token::Type::SquareGroup,
-		       "Second group is not SquareGroup");
+		assert(
+			inner_tokens[1].getType() == lexer::Token::Type::SquareGroup,
+			"Second group is not SquareGroup"
+		);
 
-		assert(inner_tokens[2].getType() == lexer::Token::Type::CurlyGroup,
-		       "Second group is not CurlyGroup");
+		assert(
+			inner_tokens[2].getType() == lexer::Token::Type::CurlyGroup,
+			"Second group is not CurlyGroup"
+		);
 
 		for (usize i = 0; i < 3; i++) {
-			assert(inner_tokens[i].getRecursive().empty(),
-			       "Group " + std::to_string(i) + " is not empty");
+			assert(
+				inner_tokens[i].getRecursive().empty(),
+				"Group " + std::to_string(i) + " is not empty"
+			);
 		}
 	}
 
 	template<usize index, lexer::Token::Type token_type, bool (lexer::Token::*isTokenType)() const>
 	void testTokenGroup() {
 		checkGroupIsGroup(index);
-		auto& inner_tokens = td.tokens[index].getRecursive();
+		auto &inner_tokens = td.tokens[index].getRecursive();
 		message("got " + std::to_string(inner_tokens.size()) + " tokens");
-		for (const auto& token : inner_tokens) {
-			assert(token.getType() == token_type,
-			       std::string("Type of token `") + std::string(token.getStrValue()) + "` is not a "
-			           + std::string(group_names[index]),
-			       false);
-			assert((token.*isTokenType)(),
-			       std::string("Token `") + std::string(token.getStrValue()) + "` is not a "
-			           + std::string(group_names[index]),
-			       false);
+		for (const auto &token : inner_tokens) {
+			assert(
+				token.getType() == token_type,
+				std::string("Type of token `") + std::string(token.getStrValue()) + "` is not a "
+					+ std::string(group_names[index]),
+				false
+			);
+			assert(
+				(token.*isTokenType)(),
+				std::string("Token `") + std::string(token.getStrValue()) + "` is not a "
+					+ std::string(group_names[index]),
+				false
+			);
 		}
 	}
 
@@ -108,7 +122,7 @@ private:
 	void testGroup7() { testTokenGroup<7, lexer::Token::Type::String, &lexer::Token::isString>(); }
 
 	void testSourcePosition() {
-		const auto& position = td.tokens[1].getRecursive().front().getPosition();
+		const auto &position = td.tokens[1].getRecursive().front().getPosition();
 		assert(position.getLineNumber() == 5, "Wrong line number");
 		assert(position.getColumn() == 2, "Wrong column");
 		assert(position.getStart() == 15, "Wrong start index");

@@ -9,20 +9,21 @@ namespace JS {
 	template<class... Args>
 	class TypeHandler<std::variant<Args...>> {
 	public:
-		static inline Error to(std::variant<Args...>& to, ParseContext& contex) {
+		static inline Error to(std::variant<Args...> &to, ParseContext &contex) {
 			return Error::NoError;
 		}
 
-		static void from(const std::variant<Args...>& from, Token& token, Serializer& serializer) {
+		static void from(const std::variant<Args...> &from, Token &token, Serializer &serializer) {
 			impl::beginObject(token, serializer);
 
 			static const char name[] = "type";
 			std::string       value  = std::visit(
-                [](auto& x) {
+                [](auto &x) {
                     using T = std::decay_t<decltype(x)>;
                     return std::string(TypeParseTraits<T>::name.data());
                 },
-                from);
+                from
+            );
 			token.name       = DataRef(name);
 			token.name_type  = Type::Ascii;
 			token.value.data = value.data();
@@ -31,7 +32,7 @@ namespace JS {
 			serializer.write(token);
 
 			std::visit(
-				[&token, &serializer](auto& x) {
+				[&token, &serializer](auto &x) {
 					using T = std::decay_t<decltype(x)>;
 
 					if constexpr (std::is_empty_v<T> || IsEmptySerialization<T>::value) {
@@ -43,7 +44,8 @@ namespace JS {
 							serializeMembers(x, members, token, serializer, "");
 					}
 				},
-				from);
+				from
+			);
 
 			impl::endObject(token, serializer);
 		}

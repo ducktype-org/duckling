@@ -21,7 +21,7 @@ namespace hir {
 	public:
 		// @TODO How to do imports?
 		// @TODO Module system?, ignore for now
-		void addUnit(SourceUnit&&);
+		void addUnit(SourceUnit &&);
 
 		// @TODO: name
 		void doMagicStuff();

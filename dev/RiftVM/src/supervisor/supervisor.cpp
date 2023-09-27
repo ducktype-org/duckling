@@ -2,7 +2,7 @@
 #include <mutex>
 
 namespace vm {
-	Supervisor& Supervisor::get() {
+	Supervisor &Supervisor::get() {
 		static Supervisor supervisor = Supervisor();
 		return supervisor;
 	}
@@ -20,10 +20,10 @@ namespace vm {
 		return next++;
 	}
 
-	result<api::Response, api::ApiError>
-		Supervisor::doRequest(const api::SupervisorRequest& request) {
+	result<api::Response, api::ApiError> Supervisor::doRequest(const api::SupervisorRequest &request
+	) {
 		return getProcess(request.pid).flat_map([&request](base::borrow_ptr<VCPU> process) {
-			return process->doRequest(request.request).map_error([](auto& x) {
+			return process->doRequest(request.request).map_error([](auto &x) {
 				return api::ApiError{ x };
 			});
 		});
