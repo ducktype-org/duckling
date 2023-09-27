@@ -1,3 +1,6 @@
+// Old lookup testing.
+// Structs are commented, cause they are not supported yet.
+
 /*
 const abc: T;
 

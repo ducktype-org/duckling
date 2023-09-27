@@ -8,7 +8,6 @@ namespace tpc {
 		if (was_init) {
 			return;
 		}
-		tokenStreamInit();
 		lexer::init();
 		was_init = true;
 	}

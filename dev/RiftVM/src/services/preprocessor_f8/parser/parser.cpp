@@ -711,7 +711,14 @@ namespace assemble {
 
 		lexer::TokenData td = lexer::tokenizeFile(path, false);
 
-		tpc::ParserState state(tpc::TokenStream(td.tokens, 0, td.tokens.size()), tpc::ErrorState());
+		tpc::ParserState state(
+			tpc::TokenStream(
+				td.tokens,
+				tpc::Token(td.eof_sentinel),
+				0, td.tokens.size()
+			),
+			tpc::ErrorState()
+		);
 
 		tpc::ParserRef<assemble::ParsedCode> out = ParsedCode::parse(state);
 

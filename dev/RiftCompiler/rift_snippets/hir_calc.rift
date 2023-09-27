@@ -1,3 +1,5 @@
+// Simple const calculations.
+
 const D: i32 = A + (B + C);
 
 const C: i32 = X;
