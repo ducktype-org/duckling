@@ -1,3 +1,5 @@
+// Simple test of lookup.
+
 namespace N {
 	const x: i32 = 0;
 }

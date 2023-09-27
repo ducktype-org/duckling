@@ -20,7 +20,8 @@ namespace tpc {
 		/** exclusive */
 		usize to;
 
-		// sentinel_begin is not necessary right now
+		// sentinel_begin is not necessary right now.
+		// In will be necessary if TokenStream will allow to move backward.
 		lexer::Token sentinel_end;
 
 	public:

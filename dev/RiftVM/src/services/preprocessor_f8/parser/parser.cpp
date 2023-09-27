@@ -716,7 +716,8 @@ namespace assemble {
 				td.tokens,
 				tpc::Token(td.eof_sentinel),
 				0, td.tokens.size()
-			), tpc::ErrorState()
+			),
+			tpc::ErrorState()
 		);
 
 		tpc::ParserRef<assemble::ParsedCode> out = ParsedCode::parse(state);

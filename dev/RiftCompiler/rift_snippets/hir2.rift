@@ -1,3 +1,5 @@
+// Simple test of lookup.
+
 namespace A {
 	using B.C.*;
 }

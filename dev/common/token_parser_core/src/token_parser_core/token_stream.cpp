@@ -11,7 +11,7 @@ namespace tpc {
 			tokens(tokens), where(from), to(to),
 			sentinel_end(std::move(sentinel_end)) {
 		
-		RIFT_ASSERT(tokens.size() >= to, "TokenStream received to small stream");
+		RIFT_ASSERT(tokens.size() >= to, "TokenStream received to few tokens.");
 		RIFT_ASSERT(from <= to, "TokenStream received illegal from-to values");
 		sentinel_end;
 	}

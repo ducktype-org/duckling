@@ -23,7 +23,8 @@ namespace lexer{
 			getPosition().getEnd(),
 		};
 
-		// @TODO: this is not perfect solution:
+		// @TODO: this is not perfect solution, as group might in theory end with different character.
+		// Group tokens should have some info about closing and opening „brackets”.
 		base::RawView end_char;
 		switch (getType()) {
 		case Type::RoundGroup: end_char = ")"; break;
