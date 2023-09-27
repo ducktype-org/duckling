@@ -1,11 +1,11 @@
 add_custom_test_pack(vm)
 
 function(add_files)
-    math(EXPR indices "${ARGC} - 1")
-    foreach (index RANGE ${indices})
-        set(tmp ${tmp} "${CMAKE_CURRENT_LIST_DIR}/${ARGV${index}}")
-    endforeach ()
-    set(files ${files} ${tmp} PARENT_SCOPE)
+	math(EXPR indices "${ARGC} - 1")
+	foreach (index RANGE ${indices})
+		set(tmp ${tmp} "${CMAKE_CURRENT_LIST_DIR}/${ARGV${index}}")
+	endforeach ()
+	set(files ${files} ${tmp} PARENT_SCOPE)
 endfunction()
 
 # Dependencies
