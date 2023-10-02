@@ -8,9 +8,6 @@ function(add_files)
 	set(files ${files} ${tmp} PARENT_SCOPE)
 endfunction()
 
-# Dependencies
-add_subdirectory(dependencies)
-
 # Add vm files
 add_subdirectory(src/api)
 add_subdirectory(src/events)
