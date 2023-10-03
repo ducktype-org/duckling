@@ -73,6 +73,8 @@ namespace exec {
 		// probably we should use default comparison on type here.
 		auto operator<=>(const CTV&) const = default;
 
+		ts::TypeDesc<> getType() const { return type; }
+
 		CTV subCTV(ts::TypeDesc<> type_, usize offset, usize size_) const {
 			return CTV(type_, data.shift(offset), size_);
 		}

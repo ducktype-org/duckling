@@ -27,6 +27,7 @@ namespace lexer {
 		void setStart(u32 start);
 		void setEnd(u32 end);
 
+		[[nodiscard]] std::shared_ptr<fs::FilePath> getSourceCode();
 		[[nodiscard]] usize getStart() const;
 		[[nodiscard]] usize getEnd() const;
 		[[nodiscard]] usize getLineNumber() const;

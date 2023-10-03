@@ -7,11 +7,17 @@
 #include "token.hpp"
 
 namespace lexer {
+
+	struct TokenizationResult {
+		Tokens tokens;
+		Token eof_token;
+	};
+
 	class Lexer {
 	public:
 		explicit Lexer(const fs::FilePath& file);
 
-		[[nodiscard]] Tokens tokenize(bool dprint);
+		[[nodiscard]] TokenizationResult tokenize(bool dprint);
 
 	private:
 		void next();

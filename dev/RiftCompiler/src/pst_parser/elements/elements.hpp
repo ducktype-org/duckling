@@ -17,6 +17,11 @@
 
 // @TODO: make generic optional
 
+// forward for friend:
+namespace hir {
+	class Expression;
+}
+
 namespace pst {
 
 	class Expr;
@@ -180,6 +185,9 @@ namespace pst {
 	};
 
 	class Expr: public Stmt {
+	private:
+		// @TODO: this friend should probably be removed, and some stuff just should be public
+		friend ::hir::Expression;
 	public:
 		enum class GroupType {
 			RoundGroup = 0,
@@ -188,14 +196,13 @@ namespace pst {
 			AngleGroup = 3,
 		};
 		
-	private:
-		// @TODO: change StrId to Operator::, Keyword::, etc
+		// @TODO: change StrId to Operator::, etc
 		struct Group;
 		struct Operator;
 		struct Identifier;
 		struct NumLiteral;
 		struct KeywordValue {
-			base::StrId key_id;
+			rift_def::Keyword keyword;
 		};
 		typedef std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue> ExprElem;
 		struct Group {
@@ -212,6 +219,7 @@ namespace pst {
 			base::StrId num_id;
 		};
 
+	private:
 		std::vector<ExprElem> elements;
 	public:
 		STMT_CHILD_CONSTRUCTOR(Expr);
@@ -219,6 +227,7 @@ namespace pst {
 		 * @brief parses the expression until its over
 		 */
 		static ParserRef<Expr> parse(RiftParserState& state);
+		static ParserRef<Expr> parseUntil(RiftParserState& state, rift_def::Operator until);
 		/**
 		 * @p exact_len = false: parses the expression until its over or until it parses @p len tokens
 		 * @p exact_len = true: parses the expression until it parses @p len tokens
@@ -300,12 +309,15 @@ namespace pst {
 
 	class Const: public Stmt {
 		tpc::Identifier name;
-		// @TODO: type should be expr in the future
-		tpc::Identifier type;
+		ParserRef<Expr> type;
+		ParserRef<Expr> value;
+
 	public:
 		STMT_CHILD_CONSTRUCTOR(Const);
 		static ParserRef<Const> parse(RiftParserState& state);
 		base::StrId getName() const { return name.value; }
+		ParserCBorrowRef<Expr> getType() const { return type.borrow(); }
+		ParserCBorrowRef<Expr> getValue() const { return value.borrow(); }
 		~Const() final = default;
 		void dprint(std::ostream& out) const final;
 	};

@@ -1,6 +1,5 @@
 #include "scope.hpp"
 #include "symbol.hpp"
-#include "../analysis_state.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/defer.hpp>
@@ -10,7 +9,12 @@
 
 namespace symtable {
 
-	LookupResult Scope::lookup(hir::AnalysisState& state, base::StrId name) {
+	void Scope::addSymbol(SymbolRef symbol) {
+		RIFT_ASSERT(state == ScopeState::Open, "Can not add symbols to closed scope");
+		symbols.push_back(symbol);
+	}
+
+	LookupResult Scope::lookup(base::StrId name) {
 		// go over local symbols
 		// go over local aliases (are aliases symbols? - yes)
 		// go over links -- wildcard alias -- static links can cutoff, dep links needs un-aliasing
@@ -18,20 +22,30 @@ namespace symtable {
 		//  wildcard_alias _ = a.b;
 		//  un aliasing then can perform proper un-aliasing 
 
-		std::cerr << "     simple lookup of " << name.strView() << "\n";
+		std::cerr << "     Simple lookup of " << name.strView();
+		std::cerr << " in " << this->name.strView();
+		std::cerr << "\n";
+
+		RIFT_ASSERT(state == ScopeState::Closed, "Can not perform lookup in open scope");
+
 
 		LookupResult result{{}, {}};
 
-		if (lookup_engaged) {
+		// @FIXME: this is probably a heuristic, and just a hotfix
+		// In the future something better has to be done
+		if (engaged_names.contains(name)) {
 			return result;
 		}
-		lookup_engaged = true;
-		defer (lookup_engaged = false);
+		engaged_names.insert(name);
+		defer (engaged_names.erase(name));
+
+		std::cerr << "         lookup actually being done\n";
 
 		for (auto& symbol: getSymbols()) {
 			std::cerr << "        i see: " << symbol->getName().strView() << "\n";
-			if (symbol->isWildcard()) {
-				auto wild_result = symbol->lookupIn(state, name);
+			if (symbol->isWildcard() and symbol->unlockedLookup()) {
+				std::cerr << "         looking in wildcard!\n";
+				auto wild_result = symbol->lookupIn(name);
 				std::cerr << "        wild see res:";
 				wild_result.dprint(std::cerr);
 				std::cerr << "\n";
@@ -50,16 +64,21 @@ namespace symtable {
 	}
 
 
-	LookupResult Scope::lookupMeAndParents(hir::AnalysisState& state, base::StrId name) {
-		auto result = lookup(state, name);
+	LookupResult Scope::lookupMeAndParents(base::StrId name) {
+		auto result = lookup(name);
 		if (parent != nullptr) {
 			// Reverse insertion order allow for linear result concatenation instead of quadratic 
-			auto parent_result = parent->lookupMeAndParents(state, name);
+			auto parent_result = parent->lookupMeAndParents(name);
 			parent_result.insert(std::move(result));
 			return parent_result;
 		}
 		else {
 			return result;
 		}
+	}
+
+	void Scope::close() {
+		RIFT_ASSERT(state == ScopeState::Open, "Can not close closed scope.");
+		state = ScopeState::Closed;
 	}
 }

@@ -1,7 +1,6 @@
 
 #include "parser.hpp"
 #include <code_data/opcodes.hpp>
-#include <charconv>
 #include <lexer/lexer.hpp>
 #include <base/option.hpp>
 #include <rift_definitions/key_spec_op.hpp>
@@ -13,23 +12,10 @@
 #include <base/maps.hpp>
 #include <variant>
 #include <base/variant.hpp>
+#include <base/str_to_int.hpp>
 #include <services_data/type_metadata/type_metadata.hpp>
 
 namespace assemble {
-
-	i64 strIdToNum(base::StrId str) {
-		auto view = str.strView();
-
-		i64 out;
-		std::from_chars_result res = std::from_chars(view.data(), view.data() + view.size(), out);
-		if (res.ec == std::errc::invalid_argument) {
-			throw std::invalid_argument{"invalid_argument"};
-		} else if (res.ec == std::errc::result_out_of_range) {
-			throw std::out_of_range{"out_of_range"};
-		}
-
-		return out;
-	}
 
 	enum class OpCodeArgType { arg, local, imm };
 
@@ -204,7 +190,7 @@ namespace assemble {
 				case lexer::Token::Type::NumLiteral:
 					try {
 						out->args.emplace_back(OpCodeNumArg{
-							OpCodeArgType::imm, strIdToNum(state.tokens().next().getValue())});
+							OpCodeArgType::imm, base::strIdToNum(state.tokens().next().getValue())});
 					} catch (std::logic_error& e) {
 						state.err.setFail();
 						state.err.logError(
@@ -454,7 +440,7 @@ namespace assemble {
 					                   "ret_size argument is not num-literal");
 				}
 				try {
-					out->ret_size = strIdToNum(value.getValue());
+					out->ret_size = base::strIdToNum(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.setFail();
 					state.err.logError(state.ctokens().peek().getPosition(),
@@ -725,7 +711,14 @@ namespace assemble {
 
 		lexer::TokenData td = lexer::tokenizeFile(path, false);
 
-		tpc::ParserState state(tpc::TokenStream(td.tokens, 0, td.tokens.size()), tpc::ErrorState());
+		tpc::ParserState state(
+			tpc::TokenStream(
+				td.tokens,
+				tpc::Token(td.eof_sentinel),
+				0, td.tokens.size()
+			),
+			tpc::ErrorState()
+		);
 
 		tpc::ParserRef<assemble::ParsedCode> out = ParsedCode::parse(state);
 

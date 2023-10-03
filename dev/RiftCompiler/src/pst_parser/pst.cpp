@@ -5,7 +5,13 @@ namespace pst {
 
 	PST::PST(lexer::TokenData&& td):
 		token_data(std::forward<lexer::TokenData>(td)),
-		parser_state(tpc::TokenStream(token_data.tokens, 0, token_data.tokens.size()), ErrorState()) {
+
+		parser_state(tpc::TokenStream(
+			token_data.tokens,
+			tpc::Token(token_data.eof_sentinel),
+			0,
+			token_data.tokens.size()
+		), ErrorState()) {
 		
 		top_level = TopLevel::parse(parser_state);
 

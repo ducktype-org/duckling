@@ -10,14 +10,40 @@
 #include <algorithm>
 
 namespace lexer{
-	Token Token::makeSentinel() {
-		return {Type::Sentinel, base::RawView(""), {}};
+	Token Token::makeSentinelEnd() const {
+		RIFT_ASSERT(isGroup(), "makeSentinel called on non-group token");
+		
+		// @TODO: We need here to be able to determine full SourcePosition of closing parenthesis.
+		// It is currently not possible, because we can't figure out line and column from raw-end. 
+		SourcePosition end = {
+			getPosition().getSourceCode(),
+			getPosition().getLineNumber(),
+			getPosition().getColumn(),
+			getPosition().getEnd(),
+			getPosition().getEnd(),
+		};
+
+		// @TODO: this is not perfect solution, as group might in theory end with different character.
+		// Group tokens should have some info about closing and opening „brackets”.
+		base::RawView end_char;
+		switch (getType()) {
+		case Type::RoundGroup: end_char = ")"; break;
+		case Type::SquareGroup: end_char = "]"; break;
+		case Type::CurlyGroup: end_char = "}"; break;
+		default:
+			RIFT_PANIC("Bad group type");
+		}
+		return {Type::Sentinel, end_char, end};
 	}
 
 	Token::Token(Token::Type type, const base::RawView value, SourcePosition position) : type(type), str_id(value), source_position(std::move(position)) {}
 
 	Token::Token(Token::Type type, Tokens&& recursive, SourcePosition position) :
 		  type(type), recursive(recursive), source_position(std::move(position)) {}
+
+	Token Token::makeSentinelEof(const SourcePosition& pos) {
+		return {Type::Sentinel, base::RawView("EOF"), pos};
+	}
 
 	Token Token::makeComment(const base::RawView comment, const SourcePosition& position){
 		return {Type::Comment, comment, position};
@@ -183,11 +209,14 @@ namespace lexer{
 		return source_position;
 	}
 
-	TokenData::TokenData(Tokens tokens, fs::FileContent file_content):
-		  tokens(std::move(tokens)), file_content(std::move(file_content)) {}
+	TokenData::TokenData(Tokens&& tokens, Token&& eof_sentinel, fs::FileContent file_content):
+		  tokens(std::move(tokens)),
+		  eof_sentinel(std::move(eof_sentinel)),
+		  file_content(std::move(file_content)) {}
 
 	TokenData::TokenData(TokenData&& oth) noexcept:
 		  tokens(std::move(oth.tokens)),
+		  eof_sentinel(std::move(oth.eof_sentinel)),
 		  file_content(std::move(oth.file_content)) {};
 
 	TokenData::~TokenData() = default;

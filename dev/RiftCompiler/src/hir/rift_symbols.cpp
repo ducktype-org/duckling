@@ -1,24 +1,25 @@
-#include <base/exceptions.hpp>
 #include <typesystem/typesystem.hpp>
 #include "rift_symbols.hpp"
 #include "analysis_state.hpp"
+#include <base/exceptions.hpp>
+#include <base/defer.hpp>
 
 namespace hir {
 
 
 	base::unique_ptr<Symbol> makeSymbolFromStatement(
-		symtable::ScopeRef scope, PstRef<pst::Stmt> stmt) {
+		AnalysisState& state, symtable::ScopeRef scope, PstRef<pst::Stmt> stmt) {
 		
 		switch (stmt->getKind()) {
 		// @TODO: cast check
 		case pst::StmtKind::Fun: {
 			PstRef<pst::Fun> fun = stmt;
-			std::cerr << "Function: " << fun->getName().strView() << ", skipping\n";
 			break;
 		}
 		case pst::StmtKind::Namespace: {
 			PstRef<pst::Namespace> namespace_ = stmt;
 			return base::make_unique<NamespaceSymbol>(
+				state,
 				scope,
 				namespace_->getName(),
 				namespace_
@@ -26,8 +27,8 @@ namespace hir {
 		}
 		case pst::StmtKind::Const: {
 			PstRef<pst::Const> const_ = stmt;
-			std::cerr << "Const: " << const_->getName().strView() << "\n";
 			return base::make_unique<ConstSymbol>(
+				state,
 				scope,
 				const_->getName(),
 				const_
@@ -35,8 +36,8 @@ namespace hir {
 		}
 		case pst::StmtKind::Struct: {
 			PstRef<pst::Struct> struct_ = stmt;
-			std::cerr << "Struct: " << struct_->getName().strView() << "\n";
 			return base::make_unique<StructSymbol>(
+				state,
 				scope,
 				struct_->getName(),
 				struct_
@@ -45,8 +46,8 @@ namespace hir {
 
 		case pst::StmtKind::Alias: {
 			PstRef<pst::Alias> alias = stmt;
-			std::cerr << "Alias: " << alias->getName().strView() << "\n";
 			return base::make_unique<AliasSymbol>(
+				state,
 				scope,
 				alias->getName(),
 				alias
@@ -55,9 +56,8 @@ namespace hir {
 
 		case pst::StmtKind::Using: {
 			PstRef<pst::Using> using_ = stmt;
-			std::cerr << "Using: " << using_->getPointed()[0].strView() << "\n";
-
 			return base::make_unique<UsingSymbol>(
+				state,
 				scope,
 				base::StrId("wildcard"),
 				using_
@@ -71,7 +71,6 @@ namespace hir {
 		
 		default:
 			break;
-			// RIFT_PANIC("makeSymbolFromStatement bad symbol kind");
 		}
 		RIFT_PANIC(
 			base::strConcat("makeSymbolFromStatement bad symbol kind, stmt: ",
@@ -84,12 +83,10 @@ namespace hir {
 		ScopeRef scope,
 		pst::ParserCBorrowRef<pst::CodeBlock> pst_element) {
 		
-		// @TODO: stmts/usings/alias/expand/...
-		// using and alias are just symbols
+		// @FUTURE: somewhere here will happen macro expansion
 		for (auto& stmt: pst_element->getStatements()) {
-			std::cerr << "stmt...\n";
 			auto sym = makeSymbolFromStatement(
-				scope, stmt.borrow()
+				state, scope, stmt.borrow()
 			);
 			// @TODO: error symbol
 			if (sym != nullptr) {
@@ -99,25 +96,32 @@ namespace hir {
 	}
 
 
-	TopLevelSymbol::TopLevelSymbol(ScopeRef scope, base::StrId name,
+	TopLevelSymbol::TopLevelSymbol(hir::AnalysisState& state,
+	                               ScopeRef scope, base::StrId name,
 	                               PstRef<pst::TopLevel> pst_element):
-		Symbol(scope, name, false, true, SymbolKind::CompilationUnit),
+		Symbol(state, scope, name, false, true, SymbolKind::CompilationUnit),
 		pst_element(pst_element) {}
 
 	void TopLevelSymbol::calculateType() {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::ModuleInfo::create());
 	}
 
-	void TopLevelSymbol::analyzeAll(AnalysisState& state) {
-		getAll(state);
+	void TopLevelSymbol::analyzeAll() {
+		getAll();
+	}
+
+	void TopLevelSymbol::getSymbolsIn() {
+		if (symbol_in_done) return;
+		symbol_in_done = true;
+		
+		auto inner_scope = getLinkedLookupScope();
 
 		// @TODO: stmts/usings/alias/expand/...
 		// using and alias are just symbols
 		for (auto& stmt: pst_element->getStatements()) {
-			std::cerr << "stmt...\n";
-			state.addSymbol(
+			analysis_state.addSymbol(
 				makeSymbolFromStatement(
-					scope, stmt.borrow()
+					analysis_state, inner_scope, stmt.borrow()
 				)
 			);
 		}
@@ -127,24 +131,37 @@ namespace hir {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::NamespaceInfo::create());
 	} 
 
-	void NamespaceSymbol::analyzeAll(AnalysisState& state) {
-		getAll(state);
+	void NamespaceSymbol::analyzeAll() {
+		getAll();
+	}
 
-		auto inner_scope = getLinkedLookupScope(state);
-		goOverSymbols(state, inner_scope, pst_element->getBody());
+	void NamespaceSymbol::getSymbolsIn() {
+		if (symbol_in_done) return;
+		symbol_in_done = true;
+
+		auto inner_scope = getLinkedLookupScope();
+		goOverSymbols(analysis_state, inner_scope, pst_element->getBody());
 	}
 
 	void ConstSymbol::calculateType() {
-		// @TODO look up here and other stuff
-		type = ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
+		type = type_expr->evalAsType(analysis_state);
 	}
 
-	void ConstSymbol::analyzeAll(AnalysisState& state) {
-		getAll(state);
+	void ConstSymbol::analyzeAll() {
+		getAll();
+	}
+
+	exec::CTV ConstSymbol::getValue() {
+		if (value) {
+			return *value;
+		}
+		else {
+			value = value_expr->eval(analysis_state);
+		}
+		return value_expr->eval(analysis_state);
 	}
 
 	ts::ClassInfo StructSymbol::calculateValue() {
-		//...
 		// @TODO
 		return ts::ClassInfo::create(base::StrId("A"), {});
 	}
@@ -153,24 +170,35 @@ namespace hir {
 		type = ts::TypeDesc<ts::TupleInfo>(ts::MetaInfo::create());
 	}
 
-	void StructSymbol::analyzeAll(AnalysisState&) {
+	void StructSymbol::analyzeAll() {
 		// @TODO
 	}
 
-	symtable::SymbolChain GenericAlias::getUniqueDeAlias(hir::AnalysisState& state) {
+	void StructSymbol::getSymbolsIn() {
+		if (symbol_in_done) return;
+		symbol_in_done = true;
+		
+		// @TODO
+	}
+
+	symtable::SymbolChain GenericAlias::getUniqueDeAlias() {
+		std::cerr << "  > getUniqueDeAlias of " << getName().strView() << "\n";
 		if (!dealiased_lookup_result.has_value()) {
+			std::cerr << "  > calculating...\n";
 			// this can be confusing:
-			calculateLinkedLookup(state);
+			// we need it to ensure that dealiased_lookup_result has value
+			calculateLinkedLookup();
 		}
 		return dealiased_lookup_result.value();
 	};
-	symtable::ChainLookupResult GenericAlias::getDeAlias(hir::AnalysisState& state) {
+	symtable::ChainLookupResult GenericAlias::getDeAlias() {
 		throw base::NotYetImplemented("getDeAlias -- only require dealiasing any lookup results");
 	};
 
-	AliasSymbol::AliasSymbol(ScopeRef scope, base::StrId name, 
+	AliasSymbol::AliasSymbol(hir::AnalysisState& state,
+	                ScopeRef scope, base::StrId name, 
 		            PstRef<pst::Alias> pst_element):
-			GenericAlias(scope, name, false, true, SymbolKind::Const),
+			GenericAlias(state, scope, name, false, true, SymbolKind::Alias),
 			pst_element(pst_element) {
 		is_alias = true;
 	}
@@ -180,12 +208,12 @@ namespace hir {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
 	}
 
-	void AliasSymbol::calculateLinkedLookup(AnalysisState& state) {
+	void AliasSymbol::calculateLinkedLookup() {
 
 		std::cerr << "  AliasSymbol -- calculating linked lookup" << "\n";
 
 		auto names = pst_element->getPointed();
-		auto lookup_result = state.symTable().lookupDottedNameInScopeAndParents(state, scope, {names.begin(), names.end()});
+		auto lookup_result = analysis_state.symTable().lookupDottedNameInScopeAndParents(scope, {names.begin(), names.end()});
 
 		std::cerr << "Got lookup result:\n";
 		lookup_result.dprint(std::cerr);
@@ -196,7 +224,7 @@ namespace hir {
 		}
 
 		auto as_single = lookup_result.getAsSingle();
-		auto dealiased_single = symtable::deAliasSymbolChain(state, as_single);
+		auto dealiased_single = symtable::deAliasSymbolChain(as_single);
 
 		// @TODO: in future alias should not necessary be single
 		// alias to "overloaded"
@@ -205,25 +233,26 @@ namespace hir {
 		std::cerr << "\n";
 		std::cerr << "deAliased: ";
 		symtable::dprintSymbolChain(
-			symtable::deAliasSymbolChain(state, as_single), 
+			symtable::deAliasSymbolChain(as_single), 
 			std::cerr);
 		std::cerr << "\n";
 		
-		linked_lookup_scope = as_single.back()->getLinkedLookupScope(state);
+		linked_lookup_scope = as_single.back()->getLinkedLookupScope();
 		dealiased_lookup_result = std::move(dealiased_single);
 		// @TODO: some ok here?
 		// Or just ErrorSymbol propagation
 
 	}
 
-	void AliasSymbol::analyzeAll(AnalysisState& state) {
+	void AliasSymbol::analyzeAll() {
 		// @TODO
-		getAll(state);
+		getAll();
 	}
 
-	UsingSymbol::UsingSymbol(ScopeRef scope, base::StrId name, 
+	UsingSymbol::UsingSymbol(hir::AnalysisState& state,
+	            ScopeRef scope, base::StrId name, 
 				PstRef<pst::Using> pst_element):
-		GenericAlias(scope, name, false, true, SymbolKind::Const),
+		GenericAlias(state, scope, name, false, true, SymbolKind::Alias),
 		pst_element(pst_element) {
 		
 		wildcard = true;
@@ -235,17 +264,20 @@ namespace hir {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
 	}
 
-	void UsingSymbol::analyzeAll(AnalysisState& state) {
+	void UsingSymbol::analyzeAll() {
 		// @TODO
-		getAll(state);
+		getAll();
 	}
 
-	void UsingSymbol::calculateLinkedLookup(AnalysisState& state) {
-
+	void UsingSymbol::calculateLinkedLookup() {
 		std::cerr << "  UsingSymbol -- calculating linked lookup" << "\n";
+		RIFT_ASSERT(unlockedLookup(), "calculateLinkedLookup in locked lookup!");
+		lock_lookup = true;
+		defer (lock_lookup = false);
+
 
 		auto names = pst_element->getPointed();
-		auto lookup_result = state.symTable().lookupDottedNameInScopeAndParents(state, scope, {names.begin(), names.end()});
+		auto lookup_result = analysis_state.symTable().lookupDottedNameInScopeAndParents(scope, {names.begin(), names.end()});
 		
 		std::cerr << "Got lookup result:\n";
 		lookup_result.dprint(std::cerr);
@@ -256,7 +288,7 @@ namespace hir {
 			RIFT_PANIC("ambiguity in using, @TODO: error in state");
 		}
 		auto as_single = lookup_result.getAsSingle();
-		auto dealiased_single = symtable::deAliasSymbolChain(state, as_single);
+		auto dealiased_single = symtable::deAliasSymbolChain(as_single);
 
 		// @TODO: in future alias should not necessary be single
 		// using to "overloaded"
@@ -269,27 +301,8 @@ namespace hir {
 			std::cerr);
 		std::cerr << "\n";
 
-		linked_lookup_scope = as_single.back()->getLinkedLookupScope(state);
+		linked_lookup_scope = as_single.back()->getLinkedLookupScope();
 		dealiased_lookup_result = std::move(dealiased_single);
 	}
 	
-
-	// TestEagerLookupSymbol::TestEagerLookupSymbol(
-	// 	ScopeId scope, base::StrId name, 
-	// 	PstRef<pst::Const> pst_element):
-	// 		Symbol(scope, name, false, true, SymbolKind::TestSymbol),
-	// 		pst_element(pst_element) {
-		
-	// 	state.
-	// }
-
-	// void TestEagerLookupSymbol::calculateType() {
-	// 	// placeholder type:
-	// 	type = ts::TypeDesc<ts::TupleInfo>(0, ts::VoidInfo::create());
-	// }
-
-	// void TestEagerLookupSymbol::analyzeAll(AnalysisState&) {
-	// 	getKind();
-	// 	getType();
-	// }
 }

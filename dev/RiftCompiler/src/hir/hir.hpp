@@ -17,6 +17,8 @@ namespace hir {
 	// High intermediate representation
 	class HIR {
 		std::vector<SourceUnit> sources;
+		AnalysisState analysis_state;
+
 	public:
 		// @TODO How to do imports?
 		// @TODO Module system?, ignore for now
@@ -24,5 +26,8 @@ namespace hir {
 
 		// @TODO: name
 		void doMagicStuff();
+
+		// This is for debug/test only:
+		AnalysisState& getState() { return analysis_state; };
 	};
 }

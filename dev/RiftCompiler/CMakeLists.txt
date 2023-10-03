@@ -80,7 +80,9 @@ rift_add_test(compiler operations_test_simple src/operations/tests/simple_test.c
 rift_add_test(compiler operation_constructor src/operations/tests/constructors_test.cpp
 		USES Base Config Operations TypeSystem)
 rift_add_test(compiler exec_operators_test_simple src/exec/tests/operators_test.cpp
-		USES Exec Base Config Operations TypeSystem)
+	  USES Exec Base Config Operations TypeSystem)
+rift_add_test(compiler hir_test_simple src/hir/tests/test.cpp
+    USES Exec Base Config Operations TypeSystem TPC PstParser HIR)
 
 # Main:
 add_executable(rift_main src/main.cpp)

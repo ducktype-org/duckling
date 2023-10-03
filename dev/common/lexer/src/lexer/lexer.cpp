@@ -24,7 +24,7 @@ namespace lexer {
 		: file_(std::make_shared<fs::FilePath>(file)), fileContent_(file_->getContent()),
 		  charArray_(decode(fileContent_.view())) {}
 
-	Tokens Lexer::tokenize(bool dprint) {
+	TokenizationResult Lexer::tokenize(bool dprint) {
 		tokens_.clear();
 		token_messages = dprint;
 		codeblock();
@@ -32,7 +32,8 @@ namespace lexer {
 			// @TODO: better customization of this dprint
 			console.print(std::cerr);
 		}
-		return std::move(tokens_);
+		SourcePosition eof_pos(file_, lineNumber_, columnNumber_, where_);
+		return {std::move(tokens_), Token::makeSentinelEof(eof_pos)};
 	}
 
 	void Lexer::next() {
@@ -376,7 +377,8 @@ namespace lexer {
 
 	lexer::TokenData tokenizeFile(const fs::FilePath& file, bool dprint) {
 		Lexer lexer(file);
-		return {lexer.tokenize(dprint), file.getContent()};
+		auto [tokens, eof_token] = lexer.tokenize(dprint);
+		return {std::move(tokens), std::move(eof_token), file.getContent()};
 	}
 
 }

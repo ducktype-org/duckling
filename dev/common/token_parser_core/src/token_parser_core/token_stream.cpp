@@ -6,20 +6,23 @@
 #include "token_stream.hpp"
 
 namespace tpc {
-	void tokenStreamInit() {
-		// @TODO: change this to custom sentinel for each stream
-		TokenStream::sentinel = lexer::Token::makeSentinel();
+
+	TokenStream::TokenStream(const Tokens& tokens, Token&& sentinel_end,  usize from, usize to): 
+			tokens(tokens), where(from), to(to),
+			sentinel_end(std::move(sentinel_end)) {
+		
+		RIFT_ASSERT(tokens.size() >= to, "TokenStream received too few tokens.");
+		RIFT_ASSERT(from <= to, "TokenStream received illegal from-to values");
+		sentinel_end;
 	}
 
-	lexer::Token TokenStream::sentinel;
-
 	TokenStream::TokenStream(TokenStream&& stream) noexcept:
-		tokens(stream.tokens), where(stream.where), to(stream.to) {}
+		tokens(stream.tokens), where(stream.where), to(stream.to), sentinel_end(stream.sentinel_end) {}
 
 	TokenStream TokenStream::getRecursive() const {
 		if (peek().isGroup()) {
 			const auto& rec = peek().getRecursive();
-			return TokenStream(rec, 0, rec.size());
+			return TokenStream(rec, peek().makeSentinelEnd(), 0, rec.size());
 		}
 		else {
 			// @TODO
@@ -28,11 +31,11 @@ namespace tpc {
 	}
 
 	const Token& TokenStream::next() {
-		return (where >= to ? sentinel : tokens[where++]);
+		return (where >= to ? sentinel_end : tokens[where++]);
 	}
 
 	const Token& TokenStream::peek(usize fwd) const {
-		return (where + fwd >= to ? sentinel : tokens[where + fwd]);
+		return (where + fwd >= to ? sentinel_end : tokens[where + fwd]);
 	}
 
 	void TokenStream::skip(usize n) {
@@ -59,8 +62,12 @@ namespace tpc {
 		return peek(fwd).isOperator();
 	}
 
+	bool TokenStream::isOperator(base::StrId oper, usize fwd) const {
+		return peek(fwd).isOperator() and peek(fwd).isStr(oper);
+	}
+
 	usize TokenStream::size() const {
-	  return to - where;
+	  return (where >= to ? 0 : to - where);
 	}
 		
 }
