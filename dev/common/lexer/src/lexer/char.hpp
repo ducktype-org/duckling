@@ -53,8 +53,8 @@ namespace lexer {
 		[[nodiscard]]
 		Type getType() const;
 
-		void appendRawValueTo(std::string &to) const;
-		void appendRawValueTo(std::stringstream &to) const;
+		void appendRawValueTo(std::string& to) const;
+		void appendRawValueTo(std::stringstream& to) const;
 
 		[[nodiscard]]
 		std::string rawStr() const;
@@ -86,23 +86,23 @@ namespace lexer {
 	public:
 		using Array = std::vector<Char>;
 		CharArray(Array array);
-		CharArray(CharArray &&other) noexcept;
-		CharArray(const CharArray &other)      = delete;
-		void operator=(const CharArray &other) = delete;
+		CharArray(CharArray&& other) noexcept;
+		CharArray(const CharArray& other)      = delete;
+		void operator=(const CharArray& other) = delete;
 		[[nodiscard]]
-		CharArray         &
-            operator=(CharArray &&other) noexcept;
-		friend void swap(CharArray &first, CharArray &second);
+		CharArray&
+					operator=(CharArray&& other) noexcept;
+		friend void swap(CharArray& first, CharArray& second);
 
 		[[nodiscard]]
-		const Array &getArray() const;
+		const Array& getArray() const;
 
 		[[nodiscard]]
 		base::RawView composeRaw(usize from, usize to) const;
 		[[nodiscard]]
 		base::RawView getRaw(usize i) const;
 		[[nodiscard]]
-		const Char &get(usize i) const;
+		const Char& get(usize i) const;
 
 		~CharArray();
 

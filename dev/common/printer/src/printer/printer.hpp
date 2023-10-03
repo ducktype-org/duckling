@@ -91,14 +91,14 @@ namespace printer {
 		friend Console;
 
 	public:
-		MessageContent()                                  = delete;
-		MessageContent(const MessageContent &)            = default;
-		MessageContent(MessageContent &&)                 = default;
-		MessageContent &operator=(const MessageContent &) = default;
-		MessageContent &operator=(MessageContent &&)      = default;
+		MessageContent()                                 = delete;
+		MessageContent(const MessageContent&)            = default;
+		MessageContent(MessageContent&&)                 = default;
+		MessageContent& operator=(const MessageContent&) = default;
+		MessageContent& operator=(MessageContent&&)      = default;
 
 		MessageContent(
-			const char *str,
+			const char* str,
 			Color       foreground_color = Color::DEFAULT,
 			Color       background_color = Color::DEFAULT
 		):
@@ -128,8 +128,8 @@ namespace printer {
 		Message() = delete;
 
 	public:
-		Message(const Message &) = default;
-		Message(Message &&oth)   = default;
+		Message(const Message&) = default;
+		Message(Message&& oth)  = default;
 
 		Message(
 			std::vector<MessageContent> list,
@@ -144,10 +144,10 @@ namespace printer {
 			  foreground_color(foreground_color),
 			  background_color(background_color) {}
 
-		void add(const MessageContent &);
+		void add(const MessageContent&);
 		void add(std::vector<MessageContent>);
 
-		void print(std::ostream &out = std::cerr);
+		void print(std::ostream& out = std::cerr);
 	};
 
 	// @FIXME MessagePack and Message(init_list) constructors can be ambiguous
@@ -197,12 +197,12 @@ namespace printer {
 
 		void setMaxAmounts(MessageType type, usize amount);
 
-		void add(const MessagePack &pack);
-		void add(MessagePack &&pack);
-		void add(const Message &message);
-		void add(Message &&message);
+		void add(const MessagePack& pack);
+		void add(MessagePack&& pack);
+		void add(const Message& message);
+		void add(Message&& message);
 
-		void print(std::ostream &out = std::cerr) const;
+		void print(std::ostream& out = std::cerr) const;
 
 		void clear();
 	};

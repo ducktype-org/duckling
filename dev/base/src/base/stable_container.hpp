@@ -48,12 +48,12 @@ namespace base {
 		/**
 		 * @brief Quick, unsafe, constexpr access
 		 */
-		constexpr Data &operator[](Key pos) { return *data.at(usize(pos)); }
+		constexpr Data& operator[](Key pos) { return *data.at(usize(pos)); }
 
 		/**
 		 * @brief Quick, unsafe, constexpr access
 		 */
-		constexpr const Data &operator[](Key pos) const { return *data.at(usize(pos)); }
+		constexpr const Data& operator[](Key pos) const { return *data.at(usize(pos)); }
 
 		option<Ref> getRef(Key pos) noexcept {
 			if (usize(pos) >= size()) return none<Ref>();
@@ -65,13 +65,13 @@ namespace base {
 			return data[usize(pos)].borrow();
 		}
 
-		constexpr Key pushBack(const Data &value) {
+		constexpr Key pushBack(const Data& value) {
 			auto new_ptr = base::make_unique<Data>(value);
 			data.emplace_back(std::move(new_ptr));
 			return Key(data.size() - 1);
 		}
 
-		Key pushBack(Data &&value) {
+		Key pushBack(Data&& value) {
 			auto new_ptr = base::make_unique<Data>(std::move(value));
 			data.emplace_back(std::move(new_ptr));
 			return Key(data.size() - 1);
@@ -82,7 +82,7 @@ namespace base {
 		CRef last() const { return data.back().borrow(); }
 
 		template<class... Args>
-		constexpr Key emplaceBack(Args &&...args) {
+		constexpr Key emplaceBack(Args&&... args) {
 			return pushBack(Data(std::forward<Args...>(args...)));
 		}
 	};

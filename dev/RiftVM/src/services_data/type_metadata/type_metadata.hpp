@@ -20,7 +20,7 @@ namespace vm {
 		TypeMetadata(): state(TypeMetadataState::AddingTypes){};
 
 	public:
-		TypeRef addType(Type &&type);
+		TypeRef addType(Type&& type);
 
 		void finalize();
 

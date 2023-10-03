@@ -46,8 +46,8 @@ namespace config {
 		  has_param(true),
 		  has_short(true) {}
 
-	void ConfigOptions::generateOptionDesc(printer::Message &in) {
-		for (auto &opt : options) {
+	void ConfigOptions::generateOptionDesc(printer::Message& in) {
+		for (auto& opt: options) {
 			if (opt.has_short) in.add({ "-", opt.short_version.stdString(), ", " });
 			in.add({ "--", opt.long_version.stdString() });
 			if (opt.has_param) {

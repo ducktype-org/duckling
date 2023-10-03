@@ -28,7 +28,7 @@ namespace pst {
 	 * Set up to work on vector like containers with push_back and back
 	 */
 	template<bool NON_EMPTY, class Container, class Separator, class Ending>
-	bool parseList(RiftParserState &state, Container &cont, Separator sep, Ending end) {
+	bool parseList(RiftParserState& state, Container& cont, Separator sep, Ending end) {
 		usize expr_length;
 		if (state.empty() || state.ctokens().is(end)) {
 			if (!NON_EMPTY) return true;

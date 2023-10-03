@@ -20,19 +20,19 @@ namespace pst {
 		ParserRef<TopLevel> top_level;
 
 	public:
-		PST(lexer::TokenData &&td);
+		PST(lexer::TokenData&& td);
 
-		const std::vector<tpc::ParserCBorrowRef<Import>> &getImports() const;
-		const tpc::ErrorState                            &getErrorState() const;
+		const std::vector<tpc::ParserCBorrowRef<Import>>& getImports() const;
+		const tpc::ErrorState&                            getErrorState() const;
 
 		ParserCBorrowRef<TopLevel> getTopLevelElement() const;
 
-		PST(PST &&other):
+		PST(PST&& other):
 			  token_data(std::move(other.token_data)),
 			  parser_state(std::move(other.parser_state)),
 			  err(std::move(other.err)),
 			  top_level(std::move(other.top_level)) {}
 
-		void dprint(std::ostream &out) const;
+		void dprint(std::ostream& out) const;
 	};
 }

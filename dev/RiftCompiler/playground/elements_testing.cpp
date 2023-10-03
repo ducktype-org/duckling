@@ -3,7 +3,7 @@
 #include <lexer/lexer.hpp>
 #include <pst_parser/parser.hpp>
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	if (argc != 2) {
 		std::cerr << "usage: ./element_testing file_name\n";
 		return 1;

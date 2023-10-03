@@ -14,7 +14,7 @@ namespace vm {
 		template<class T>
 		using Dynamic = std::pair<option<T>, u64>;
 		template<class T>
-		using DynamicRef         = std::pair<option<T> &, u64 &>;
+		using DynamicRef         = std::pair<option<T>&, u64&>;
 		using DynamicDataStorage = std::tuple<Dynamic<DynamicData>...>;
 
 		template<class T>
@@ -29,7 +29,7 @@ namespace vm {
 		template<class T>
 		requires(!IsCoreData<T>::value)
 		DynamicRef<T> get() {
-			Dynamic<T> &data = std::get<Dynamic<T>>(dynamicData);
+			Dynamic<T>& data = std::get<Dynamic<T>>(dynamicData);
 			return DynamicRef(data.first, data.second);
 		}
 
@@ -38,13 +38,13 @@ namespace vm {
 
 		template<class T>
 		requires std::is_same_v<Memory, T>
-		T &get() {
+		T& get() {
 			return memory;
 		}
 
 		template<class T>
 		requires std::is_same_v<TypeMetadata, T>
-		T &get() {
+		T& get() {
 			return typeMetadata;
 		}
 
@@ -54,7 +54,7 @@ namespace vm {
 		 */
 		template<class T>
 		requires(!IsCoreData<T>::value)
-		T &require() {
+		T& require() {
 			auto [data, references] = get<T>();
 			if (references == 0) data = some<T>(T());
 			references++;

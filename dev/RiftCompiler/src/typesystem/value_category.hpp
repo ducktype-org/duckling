@@ -23,11 +23,11 @@ namespace ts {
 
 	public:
 		[[nodiscard]]
-		bool contains(const ValueCategory &other) const {
+		bool contains(const ValueCategory& other) const {
 			return allows_semantic >= other.allows_semantic
 			    && force_semantic <= other.force_semantic && (!is_const || other.is_const);
 		}
 
-		auto operator<=>(const ValueCategory &other) const = default;
+		auto operator<=>(const ValueCategory& other) const = default;
 	};
 }

@@ -51,11 +51,11 @@ namespace exec {
 
 	void fillAllVtablePtrs(CTV ctv) {
 		ts::ClassInfo                        base_class = ctv.type.getType();
-		const std::vector<ts::AncestorData> &ancestors  = base_class.allAncestors();
+		const std::vector<ts::AncestorData>& ancestors  = base_class.allAncestors();
 
 		fillVtablePtr(ctv, base_class);
 
-		for (auto ancestor_data : ancestors) {
+		for (auto ancestor_data: ancestors) {
 			// @TODO: Can be optimised -- we know the offsets at compile time here, no need to check
 			// the vtable
 			if (ancestor_data.last_virtual_ancestor.has_value()) {

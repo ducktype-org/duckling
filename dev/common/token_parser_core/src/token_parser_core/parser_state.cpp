@@ -1,9 +1,9 @@
 #include "parser_state.hpp"
 
 namespace tpc {
-	TokenStream &ParserState::tokens() { return stream_stack.back(); }
+	TokenStream& ParserState::tokens() { return stream_stack.back(); }
 
-	const TokenStream &ParserState::ctokens() const { return stream_stack.back(); }
+	const TokenStream& ParserState::ctokens() const { return stream_stack.back(); }
 
 	bool ParserState::empty() const { return ctokens().size() == 0; }
 

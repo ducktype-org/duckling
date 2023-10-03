@@ -30,7 +30,7 @@ private:
 
 		auto p_ctv = ctv.makePointer();
 
-		auto pointer = ((u32 *) p_ctv.getData().data());
+		auto pointer = ((u32*) p_ctv.getData().data());
 		auto block   = pointer[0];
 		auto offset  = pointer[1];
 
@@ -75,14 +75,15 @@ private:
 
 		auto symbol1 = symtable::SymbolId::next();
 
-		ts::ClassInfo  inheriting_class(ts::ClassInfo::create(
-            base::StrId("Inheriting"),
-            {
-                {int_desc, symbol1}
+		ts::ClassInfo inheriting_class(ts::ClassInfo::create(
+			base::StrId("Inheriting"),
+			{
+				{int_desc, symbol1}
         },
-            { { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
-            0
-        ));
+			{ { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
+			0
+		));
+
 		ts::TypeDesc<> desc_inheriting_class(inheriting_class);
 
 		exec::CTV classCTV = exec::alloc_new(desc_inheriting_class, inheriting_class.getSize());

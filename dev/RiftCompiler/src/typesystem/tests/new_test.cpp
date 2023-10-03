@@ -106,7 +106,7 @@ private:
 
 	void simple_floats() {
 		usize float_sizes[] = { 16, 32, 64, 80, 128 };
-		for (usize float_size : float_sizes) {
+		for (usize float_size: float_sizes) {
 			auto float_i  = ts::FloatInfo::create(float_size);
 			auto float_ii = ts::FloatInfo::create(float_size);
 
@@ -338,7 +338,7 @@ private:
 		try {
 			ts::TypeDesc<ts::IntegralInfo>{ void_i };
 			fail("Created IntegralDesc for Void type.");
-		} catch (const base::LogicError &) {
+		} catch (const base::LogicError&) {
 			// expected
 		}
 

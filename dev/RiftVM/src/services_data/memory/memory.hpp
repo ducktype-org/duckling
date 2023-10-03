@@ -19,7 +19,7 @@ namespace vm {
 			bool   owned    = false;
 			bool   filled   = false;
 			bool   deleted  = false;
-			Block *block    = nullptr;
+			Block* block    = nullptr;
 		};
 
 		static constexpr usize   special_blocks_count = 1;
@@ -42,9 +42,9 @@ namespace vm {
 		BlockId reserveBlockID();
 		void    returnBlockID(BlockId);
 
-		cpp::result<Block *, error> getBlock(BlockId block_id);
+		cpp::result<Block*, error> getBlock(BlockId block_id);
 
-		void makeBlock(BlockId block_id, Block &&block);
+		void makeBlock(BlockId block_id, Block&& block);
 		void deleteBlock(BlockId block_id);
 
 		void createRef(BlockId block_id);

@@ -1,7 +1,7 @@
 #include "elements_implementation.hpp"
 
 namespace pst {
-	ParserRef<While> While::parse(RiftParserState &state) {
+	ParserRef<While> While::parse(RiftParserState& state) {
 		// @TODO: attr list
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<While>(position);
@@ -15,7 +15,7 @@ namespace pst {
 		return out;
 	}
 
-	void While::dprint(std::ostream &out) const {
+	void While::dprint(std::ostream& out) const {
 		out << R"({"While": {"name":)";
 		nullAwareDprint(optional_name, out);
 		out << ", \"condition\": ";

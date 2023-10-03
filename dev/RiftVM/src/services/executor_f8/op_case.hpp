@@ -21,7 +21,7 @@
 #define DISPATCH_OPCODE()                                                           \
 	{                                                                               \
 		nextInstruction(FRAME(bc), FRAME(instruction_pointer), opcode, arg0, arg1); \
-		goto *opcode_label[static_cast<u64>(opcode)];                               \
+		goto* opcode_label[static_cast<u64>(opcode)];                               \
 	}
 
 #define OP_CASE_HEADER(opcode)  case OpcodeFix8 ::opcode:

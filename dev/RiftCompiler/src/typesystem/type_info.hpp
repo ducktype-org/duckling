@@ -12,7 +12,7 @@
 
 #define CHECKED_CAST(ClassName)                                        \
 	template<std::derived_from<TypeInfo> T>                            \
-	ClassName(const T &other): Base((const BPimpl) other.getPimpl()) { \
+	ClassName(const T& other): Base((const BPimpl) other.getPimpl()) { \
 		checkDynamicCast<CPimpl>(other.getPimpl());                    \
 	}
 
@@ -23,10 +23,10 @@
 	using Impl    = internal::ClassName##Impl; \
 	using BImpl   = internal::BaseClass##Impl; \
 	using Base    = BaseClass;                 \
-	using Pimpl   = Impl *;                    \
-	using CPimpl  = const Impl *;              \
-	using BPimpl  = BImpl *;                   \
-	using CBPimpl = const BImpl *;
+	using Pimpl   = Impl*;                     \
+	using CPimpl  = const Impl*;               \
+	using BPimpl  = BImpl*;                    \
+	using CBPimpl = const BImpl*;
 
 namespace ts {
 	// this is const, and not constexpr, because it might be defined during runtime in the future
@@ -63,10 +63,10 @@ namespace ts {
 	}
 
 	template<typename T>
-	T checkDynamicCast(const internal::TypeInfoImpl *);
+	T checkDynamicCast(const internal::TypeInfoImpl*);
 
 	class TypeInfo {
-		using Pimpl = internal::TypeInfoImpl *;
+		using Pimpl = internal::TypeInfoImpl*;
 
 	public:
 		[[nodiscard]]
@@ -76,16 +76,16 @@ namespace ts {
 		TypeInfo() = delete;
 
 		template<std::derived_from<TypeInfo> T>
-		explicit TypeInfo(const T &other): pimpl(other.pimpl) {
-			checkDynamicCast<const internal::TypeInfoImpl *>(other.pimpl);
+		explicit TypeInfo(const T& other): pimpl(other.pimpl) {
+			checkDynamicCast<const internal::TypeInfoImpl*>(other.pimpl);
 		}
 
 		[[nodiscard]]
-		auto operator<=>(const TypeInfo &other) const
+		auto operator<=>(const TypeInfo& other) const
 			= default;
 
 		[[nodiscard]]
-		const internal::TypeInfoImpl *getPimpl() const {
+		const internal::TypeInfoImpl* getPimpl() const {
 			return pimpl;
 		}
 
@@ -93,12 +93,12 @@ namespace ts {
 		bool isInfoImplicitlyCoercible(const TypeInfo to) const;
 
 		[[nodiscard]]
-		const std::string &show() const;
+		const std::string& show() const;
 
 	protected:
-		explicit TypeInfo(const internal::TypeInfoImpl *pimpl): pimpl(pimpl) {}
+		explicit TypeInfo(const internal::TypeInfoImpl* pimpl): pimpl(pimpl) {}
 
 		// This is almost-const, but we need assignment operator on TypeInfo.
-		const internal::TypeInfoImpl *pimpl;
+		const internal::TypeInfoImpl* pimpl;
 	};
 }

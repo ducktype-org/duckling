@@ -1,7 +1,7 @@
 #include "elements_implementation.hpp"
 
 namespace pst {
-	ParserRef<Const> Const::parse(RiftParserState &state) {
+	ParserRef<Const> Const::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Const>(position);
 		RIFT_ASSERT(
@@ -13,7 +13,7 @@ namespace pst {
 		return out;
 	}
 
-	void Const::dprint(std::ostream &out) const {
+	void Const::dprint(std::ostream& out) const {
 		out << "{\"Const\": {";
 
 		out << R"("name": )";

@@ -5,7 +5,7 @@
 #include <base/exceptions.hpp>
 
 #define INSTANTIATE_CHECKED_CAST(Type) \
-	template const internal::Type##InfoImpl *checkDynamicCast(const internal::TypeInfoImpl *p);
+	template const internal::Type##InfoImpl* checkDynamicCast(const internal::TypeInfoImpl* p);
 
 namespace ts {
 	[[nodiscard]]
@@ -19,7 +19,7 @@ namespace ts {
 	}
 
 	[[nodiscard]]
-	const std::string &TypeInfo::show() const {
+	const std::string& TypeInfo::show() const {
 		return pimpl->show();
 	}
 
@@ -91,7 +91,7 @@ namespace ts {
 		return raw_pointer;
 	}
 
-	PointerInfo PointerInfo::create(const TypeDesc<> &underlying_type) {
+	PointerInfo PointerInfo::create(const TypeDesc<>& underlying_type) {
 		static base::Map<TypeDesc<>, PointerInfo> pointers;
 
 		if (!pointers.contains(underlying_type)) {
@@ -108,7 +108,7 @@ namespace ts {
 	TypeDesc<> PointerInfo::getUnderlying() const { return ((CPimpl) pimpl)->getUnderlying(); }
 
 	FunctionInfo FunctionInfo::create(
-		const std::vector<TypeDesc<>> &parameter_types, TypeDesc<> result_type, i32 flags
+		const std::vector<TypeDesc<>>& parameter_types, TypeDesc<> result_type, i32 flags
 	) {
 		static base::Map<std::tuple<std::vector<TypeDesc<>>, TypeDesc<>, int>, FunctionInfo>
 			function_types;
@@ -131,7 +131,7 @@ namespace ts {
 
 	TypeDesc<> FunctionInfo::getResultType() const { return ((CPimpl) pimpl)->getResult(); }
 
-	EnumInfo EnumInfo::create(const IntegralInfo &type_info) {
+	EnumInfo EnumInfo::create(const IntegralInfo& type_info) {
 		auto enum_impl_p = base::make_unique<Impl>(type_info);
 		auto enum_impl   = EnumInfo{ enum_impl_p.get() };
 
@@ -142,7 +142,7 @@ namespace ts {
 
 	IntegralInfo EnumInfo::getBaseType() const { return ((CPimpl) pimpl)->getBaseType(); }
 
-	FlagInfo FlagInfo::create(const IntegralInfo &type_info) {
+	FlagInfo FlagInfo::create(const IntegralInfo& type_info) {
 		auto flag_impl_p = base::make_unique<Impl>(type_info);
 		auto flag_impl   = FlagInfo{ flag_impl_p.get() };
 
@@ -153,7 +153,7 @@ namespace ts {
 
 	IntegralInfo FlagInfo::getBaseType() const { return ((CPimpl) pimpl)->getBaseType(); }
 
-	OptionalInfo OptionalInfo::create(const TypeDesc<> &underlying_type) {
+	OptionalInfo OptionalInfo::create(const TypeDesc<>& underlying_type) {
 		static base::Map<TypeDesc<>, OptionalInfo> optionals;
 
 		if (!optionals.contains(underlying_type)) {
@@ -170,7 +170,7 @@ namespace ts {
 	TypeDesc<> OptionalInfo::getUnderlying() const { return ((CPimpl) pimpl)->getUnderlying(); }
 
 	// TODO: tupleInfo and variantInfo look nearly identical
-	TupleInfo TupleInfo::create(const std::vector<TypeDesc<>> &tuple_types) {
+	TupleInfo TupleInfo::create(const std::vector<TypeDesc<>>& tuple_types) {
 		static base::Map<std::vector<TypeDesc<>>, TupleInfo> tuples;
 		if (tuples.contains(tuple_types)) return tuples[tuple_types];
 
@@ -183,7 +183,7 @@ namespace ts {
 		return tuples[tuple_types];
 	}
 
-	const std::vector<TypeDesc<>> &TupleInfo::getUnderlyingTypes() const {
+	const std::vector<TypeDesc<>>& TupleInfo::getUnderlyingTypes() const {
 		return ((CPimpl) pimpl)->getUnderlyingTypes();
 	}
 
@@ -191,7 +191,7 @@ namespace ts {
 		return ((CPimpl) pimpl)->getMember(index);
 	}
 
-	VariantInfo VariantInfo::create(const std::vector<TypeDesc<>> &variant_types) {
+	VariantInfo VariantInfo::create(const std::vector<TypeDesc<>>& variant_types) {
 		static base::Map<std::vector<TypeDesc<>>, VariantInfo> variants;
 		if (variants.contains(variant_types)) return variants[variant_types];
 
@@ -204,7 +204,7 @@ namespace ts {
 		return variants[variant_types];
 	}
 
-	TypeTemplateInfo TypeTemplateInfo::create(std::vector<TypeDesc<>> &parameter_list) {
+	TypeTemplateInfo TypeTemplateInfo::create(std::vector<TypeDesc<>>& parameter_list) {
 		static base::Map<std::vector<TypeDesc<>>, TypeTemplateInfo> type_templates;
 		if (type_templates.contains(parameter_list)) return type_templates[parameter_list];
 		auto ptr = base::make_unique<Impl>(parameter_list);
@@ -248,7 +248,7 @@ namespace ts {
 
 	template<typename T>
 	// TODO enable_if or concept that this is from TypeInfo hierarchy
-	T checkDynamicCast(const internal::TypeInfoImpl *p) {
+	T checkDynamicCast(const internal::TypeInfoImpl* p) {
 		auto result = dynamic_cast<T>(p);
 		if (result == nullptr) throw base::LogicError{ "Type cast between TypeInfo kinds failed." };
 		return result;

@@ -11,7 +11,7 @@
 #include <vector>
 
 namespace ts::internal {
-	std::vector<base::unique_ptr<const TypeInfoImpl>> &getTypes();
+	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
 
 	template<typename T>
 	void pushType(T type) {
@@ -30,7 +30,7 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		virtual const std::string &show() const {
+		virtual const std::string& show() const {
 			// @TODO: this is just a draft, in the future this method may
 			// have verbosity / depth given as parameter
 			return representation;
@@ -189,7 +189,7 @@ namespace ts::internal {
 			return underlying_type;
 		}
 
-		explicit PointerInfoImpl(const TypeDesc<> &underlying_type):
+		explicit PointerInfoImpl(const TypeDesc<>& underlying_type):
 			  RawPointerInfoImpl(),
 			  underlying_type(underlying_type) {
 			representation = base::strConcat("pointer(", underlying_type.getType().show(), ")");
@@ -199,9 +199,9 @@ namespace ts::internal {
 		const TypeDesc<> underlying_type;
 	};
 
-	inline std::string showVector(const std::vector<TypeDesc<>> &types) {
+	inline std::string showVector(const std::vector<TypeDesc<>>& types) {
 		std::string res = "(";
-		for (const auto &t : types) res += t.getType().show() + ",";
+		for (const auto& t: types) res += t.getType().show() + ",";
 		res += ")";
 
 		return res;
@@ -319,7 +319,7 @@ namespace ts::internal {
 			return underlying_type;
 		}
 
-		explicit OptionalInfoImpl(const TypeDesc<> &underlying_type):
+		explicit OptionalInfoImpl(const TypeDesc<>& underlying_type):
 			  TypeInfoImpl(BYTE_SIZE + underlying_type.getType().getSize()),
 			  underlying_type(underlying_type) {
 			"Optional " + underlying_type.getType().show();
@@ -346,9 +346,9 @@ namespace ts::internal {
 			return Kind::Tuple;
 		}
 
-		explicit TupleInfoImpl(const std::vector<TypeDesc<>> &underlyingTypes);
+		explicit TupleInfoImpl(const std::vector<TypeDesc<>>& underlyingTypes);
 
-		const std::vector<TypeDesc<>> &getUnderlyingTypes() const { return underlyingTypes; }
+		const std::vector<TypeDesc<>>& getUnderlyingTypes() const { return underlyingTypes; }
 
 		std::pair<TypeDesc<>, usize> getMember(usize index) const;
 
@@ -380,7 +380,7 @@ namespace ts::internal {
 			return Kind::Variant;
 		}
 
-		explicit VariantInfoImpl(const std::vector<TypeDesc<>> &variant_types);
+		explicit VariantInfoImpl(const std::vector<TypeDesc<>>& variant_types);
 
 		std::vector<TypeDesc<>> getTypes() const { return variant_types; }
 
@@ -426,7 +426,7 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		const std::vector<AncestorData> &allAncestors() const;
+		const std::vector<AncestorData>& allAncestors() const;
 		[[nodiscard]]
 		const std::vector<AncestorData> basicParents() const;
 		[[nodiscard]]
@@ -434,7 +434,7 @@ namespace ts::internal {
 		[[nodiscard]]
 		const std::vector<MemberData> members() const;
 		[[nodiscard]]
-		const std::vector<MemberData> &allMembers() const;
+		const std::vector<MemberData>& allMembers() const;
 
 		[[nodiscard]]
 		MemberInfo getMemberInfo(symtable::SymbolId symbol) const;
@@ -444,7 +444,7 @@ namespace ts::internal {
 		[[nodiscard]]
 		AncestorInfo getAncestorInfo(ClassInfo ancestor_id) const;
 		[[nodiscard]]
-		AncestorInfo getAncestorInfo(const std::vector<ClassInfo> &ancestor_ids) const;
+		AncestorInfo getAncestorInfo(const std::vector<ClassInfo>& ancestor_ids) const;
 
 		// Returns the offset of a single specific virtual ancestor
 		[[nodiscard]]
@@ -470,8 +470,8 @@ namespace ts::internal {
 
 		ClassInfoImpl(
 			base::StrId                                                   name,
-			const std::vector<std::pair<TypeDesc<>, symtable::SymbolId>> &member_types,
-			const std::vector<std::pair<ClassInfo, InheritanceTag>>      &inheritance,
+			const std::vector<std::pair<TypeDesc<>, symtable::SymbolId>>& member_types,
+			const std::vector<std::pair<ClassInfo, InheritanceTag>>&      inheritance,
 			usize                                                         virtualMethods
 		);
 
@@ -492,7 +492,7 @@ namespace ts::internal {
 		std::vector<TypeDesc<>> parameter_list;
 
 	public:
-		explicit TemplateInfoImpl(const std::vector<TypeDesc<>> &parameter_list)
+		explicit TemplateInfoImpl(const std::vector<TypeDesc<>>& parameter_list)
 			  // @TODO: Change size to whatever StructTemplate or other value contained equals to.
 			  :
 			  TypeInfoImpl(0),
@@ -501,7 +501,7 @@ namespace ts::internal {
 			representation = "Template";
 		}
 
-		const std::vector<TypeDesc<>> &getParameterList() const { return parameter_list; }
+		const std::vector<TypeDesc<>>& getParameterList() const { return parameter_list; }
 	};
 
 	class TypeTemplateInfoImpl: public TemplateInfoImpl {
@@ -511,7 +511,7 @@ namespace ts::internal {
 			return Kind::TypeTemplate;
 		}
 
-		explicit TypeTemplateInfoImpl(const std::vector<TypeDesc<>> &parameter_list):
+		explicit TypeTemplateInfoImpl(const std::vector<TypeDesc<>>& parameter_list):
 			  TemplateInfoImpl(parameter_list) {}
 	};
 

@@ -2,7 +2,7 @@
 
 namespace exec {
 
-	std::vector<Block> &getBlocks() {
+	std::vector<Block>& getBlocks() {
 		// @TODO: static order initialization fiasco [solve it better]
 		static std::vector<Block> blocks;
 		return blocks;

@@ -13,14 +13,14 @@ namespace tpc {
 
 	lexer::Token TokenStream::sentinel;
 
-	TokenStream::TokenStream(TokenStream &&stream) noexcept:
+	TokenStream::TokenStream(TokenStream&& stream) noexcept:
 		  tokens(stream.tokens),
 		  where(stream.where),
 		  to(stream.to) {}
 
 	TokenStream TokenStream::getRecursive() const {
 		if (peek().isGroup()) {
-			const auto &rec = peek().getRecursive();
+			const auto& rec = peek().getRecursive();
 			return TokenStream(rec, 0, rec.size());
 		} else {
 			// @TODO
@@ -28,9 +28,9 @@ namespace tpc {
 		}
 	}
 
-	const Token &TokenStream::next() { return (where >= to ? sentinel : tokens[where++]); }
+	const Token& TokenStream::next() { return (where >= to ? sentinel : tokens[where++]); }
 
-	const Token &TokenStream::peek(usize fwd) const {
+	const Token& TokenStream::peek(usize fwd) const {
 		return (where + fwd >= to ? sentinel : tokens[where + fwd]);
 	}
 

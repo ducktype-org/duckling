@@ -3,6 +3,6 @@
 namespace config {
 	struct CLIArgs {
 		const int                argc;
-		const char *const *const argv;
+		const char* const* const argv;
 	};
 }

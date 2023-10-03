@@ -24,7 +24,7 @@ namespace operation {
 		symtable::SymbolId symbol;
 		ts::TypeInfo       type_info;
 
-		auto operator<=>(const TypedSymbol &other) const = default;
+		auto operator<=>(const TypedSymbol& other) const = default;
 	};
 
 	// data Typed a = T TypeInfo a
@@ -34,7 +34,7 @@ namespace operation {
 	struct Constructor;
 
 	struct ConstructorCall {
-		Constructor             *constructor;
+		Constructor*             constructor;
 		ts::MemberInfo           member;
 		std::vector<TypedSymbol> args;
 	};
@@ -54,7 +54,7 @@ namespace operation {
 	using Env = base::Map<TypedSymbol, exec::CTV>;
 
 	exec::CTV execConstructor(
-		const Constructor &cons, const std::vector<exec::CTV> &args, exec::CTV ctv
+		const Constructor& cons, const std::vector<exec::CTV>& args, exec::CTV ctv
 	) {
 		RIFT_ASSERT(
 			args.size() == cons.input.size(), "Arguments don't match parameters in constructor."
@@ -64,19 +64,19 @@ namespace operation {
 
 		for (i32 i = 0; i < cons.input.size(); i++) env.put(cons.input[i], args[i]);
 
-		for (const auto &con : cons.virtual_parent_cons) {
+		for (const auto& con: cons.virtual_parent_cons) {
 			exec::CTV member_ctv = exec::getMember(ctv, con.member, ctv.type.getType());
 			std::vector<exec::CTV> args2;
-			for (auto s : con.args) args2.push_back(env[s]);
+			for (auto s: con.args) args2.push_back(env[s]);
 			execConstructor(*con.constructor, args2, member_ctv);
 		}
 
-		for (const auto &op : cons.operations) {
+		for (const auto& op: cons.operations) {
 			auto ctv_member = exec::getMember(ctv, op.member, (ts::ClassInfo) ctv.type.getType());
 
 			std::vector<exec::CTV> tmp_args{ ctv_member };
 
-			for (auto s : op.args) tmp_args.push_back(env[s]);
+			for (auto s: op.args) tmp_args.push_back(env[s]);
 			op.operation(tmp_args);
 		}
 
@@ -95,7 +95,7 @@ namespace operation {
 	Constructor makeConstructorClass(ts::ClassInfo info) {
 		Constructor res;
 
-		for (const auto &[x, y, off_, virtual_ancestor_] : info.members()) {
+		for (const auto& [x, y, off_, virtual_ancestor_]: info.members()) {
 			res.input.push_back({ x, y.getType() });
 			ts::TypeInfo             type_arg    = y.getType();
 			auto                     member_info = info.getMemberInfo(x);

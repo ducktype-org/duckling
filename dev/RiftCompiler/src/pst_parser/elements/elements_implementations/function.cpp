@@ -2,7 +2,7 @@
 
 namespace pst {
 	// @TODO: make better
-	ParserRef<Fun> Fun::parse(RiftParserState &state) {
+	ParserRef<Fun> Fun::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Fun>(position);
 
@@ -16,7 +16,7 @@ namespace pst {
 		return out;
 	}
 
-	void Fun::dprint(std::ostream &out) const {
+	void Fun::dprint(std::ostream& out) const {
 		out << "{\"Fun\": { ";
 		out << "\"name\": ";
 		nullAwareDprint(name, out);

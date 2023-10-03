@@ -16,12 +16,12 @@ namespace vm {
 	 */
 	class Allocator {
 	private:
-		Memory &memory;
+		Memory& memory;
 
-		static Memory &getMemory(VCPU &vcpu);
+		static Memory& getMemory(VCPU& vcpu);
 
 		template<class... DynamicServices>
-		Allocator(ServiceManagerDef<DynamicServices...> &serviceManager):
+		Allocator(ServiceManagerDef<DynamicServices...>& serviceManager):
 			  memory(getMemory(serviceManager.getVCPU())) {}
 
 	public:

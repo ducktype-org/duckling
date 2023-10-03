@@ -14,11 +14,11 @@ namespace tester {
 
 	usize fullEqualSignL([[maybe_unused]] usize name_l) { return header_line_length; }
 
-	const char *TestSuite::CritTestError::what() const noexcept {
+	const char* TestSuite::CritTestError::what() const noexcept {
 		return "This shouldn't be called";
 	}
 
-	TestSuite::TestSuite(TestConfig &&config, std::string_view name):
+	TestSuite::TestSuite(TestConfig&& config, std::string_view name):
 		  name(name),
 		  config(std::move(config)) {
 		curr_global_res = nullptr;
@@ -51,7 +51,7 @@ namespace tester {
 		usize failed = 0;
 
 		auto begin = std::chrono::steady_clock::now();
-		for (auto &t : tests) {
+		for (auto& t: tests) {
 			TestResult res;
 			curr_global_res = &res;
 
@@ -77,36 +77,36 @@ namespace tester {
 	void TestSuite::runTest(TestType test) {
 		try {
 			(this->*test)();
-		} catch (const CritTestError &e) {
-		} catch (const base::Panic &panic) {
+		} catch (const CritTestError& e) {
+		} catch (const base::Panic& panic) {
 			curr_global_res->success = false;
 			message("Unexpected Panic occurred in:");
 			message(panic.getPosition());
 			message("Error:");
 			message(panic.what());
-		} catch (const base::LogicError &logicError) {
+		} catch (const base::LogicError& logicError) {
 			curr_global_res->success = false;
 			message("Logic Error occurred:");
 			message(logicError.what());
-		} catch (const base::NotYetImplemented &nyi) {
+		} catch (const base::NotYetImplemented& nyi) {
 			curr_global_res->success = false;
 			message("NotYetImplemented error:");
 			message(nyi.what());
-		} catch (const base::Exception &exception) {
+		} catch (const base::Exception& exception) {
 			curr_global_res->success = false;
 			message(
 				"base::Exception was thrown. This was not expected. Add this exception to "
 				"TestSuite."
 			);
 			message(exception.what());
-		} catch (const std::exception &exception) {
+		} catch (const std::exception& exception) {
 			curr_global_res->success = false;
 			message("std::exception was thrown. This was not expected.");
 			message(exception.what());
 		}
 	}
 
-	void TestSuite::resultHandler(const TestData &test, const TestResult &res) {
+	void TestSuite::resultHandler(const TestData& test, const TestResult& res) {
 		console.add({
 			{
              test.name,
@@ -114,7 +114,7 @@ namespace tester {
 							: printer::MessageContent("FAIL", printer::Color::RED),
 			 }
         });
-		for (auto &mess : res.output) console.add(mess);
+		for (auto& mess: res.output) console.add(mess);
 		if (res.output.empty()) {
 			// @TODO: .newLine or something similar
 			console.add({ { "" } });

@@ -130,7 +130,7 @@ add_custom_target(memcheck_test
         --force-new-ctest-process --test-action memcheck
         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
 
-add_subdirectory(scripts)
+add_subdirectory(scripts/cmake)
 
 # We still want to compile project,
 # if docs dependencies are not present (e.g. in GitHub workflows).

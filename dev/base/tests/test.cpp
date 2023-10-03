@@ -7,11 +7,11 @@
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(Meters, i64);
 
-bool compareCstr(const char *const c1, const char *const c2) {
+bool compareCstr(const char* const c1, const char* const c2) {
 	return std::string_view(c1) == std::string_view(c2);
 }
 
-bool containsCstr(const char *const base, const char *const pattern) {
+bool containsCstr(const char* const base, const char* const pattern) {
 	return std::strstr(base, pattern) != NULL;
 }
 
@@ -61,7 +61,7 @@ private:
 	void testPanic1() {
 		try {
 			throwPanic1();
-		} catch (base::Panic &panic) {
+		} catch (base::Panic& panic) {
 			assert(panic.getPosition() == "throwPanic", "Bad panic position");
 			assert(containsCstr(panic.what(), "panic test"), "Bad panic reason");
 			return;
@@ -72,7 +72,7 @@ private:
 	void testPanic2() {
 		try {
 			throwPanic2();
-		} catch (base::Panic &panic) {
+		} catch (base::Panic& panic) {
 			assert(
 				containsCstr(panic.what(), "    Panic thrown:\n    panic test 2"),
 				"Bad panic reason"
@@ -85,7 +85,7 @@ private:
 	void testPanic3() {
 		try {
 			throwPanic3();
-		} catch (base::Panic &panic) {
+		} catch (base::Panic& panic) {
 			assert(
 				containsCstr(panic.what(), "    Assertion failed: `false`\n    panic test 3"),
 				"Bad panic reason"
@@ -98,7 +98,7 @@ private:
 	void testNotYetImplemented() {
 		try {
 			throw base::NotYetImplemented("NotYetImplemented test");
-		} catch (base::NotYetImplemented &nyi) {
+		} catch (base::NotYetImplemented& nyi) {
 			assert(
 				compareCstr(nyi.what(), "NotYetImplemented test"), "Bad NotYetImplemented reason"
 			);
@@ -110,7 +110,7 @@ private:
 	void testLogicError() {
 		try {
 			throw base::LogicError("Logic error test");
-		} catch (base::LogicError &le) {
+		} catch (base::LogicError& le) {
 			assert(compareCstr(le.what(), "Logic error test"), "Bad LogicError reason");
 			return;
 		}
@@ -120,7 +120,7 @@ private:
 	void rawViewTest() {
 		message("Parts of this test are relevant only under valgrind");
 
-		const byte *string = reinterpret_cast<const byte *>("Some random string");
+		const byte* string = reinterpret_cast<const byte*>("Some random string");
 		{ base::RawView view(string, 18); }
 		base::RawView view(string, 18);
 
@@ -133,8 +133,8 @@ private:
 	void owningViewTest() {
 		message("Parts of this test are relevant only under valgrind");
 
-		const byte *string_1 = reinterpret_cast<const byte *>("Some random string 1");
-		const char *string_2 = "Some random string 2";
+		const byte* string_1 = reinterpret_cast<const byte*>("Some random string 1");
+		const char* string_2 = "Some random string 2";
 
 		{
 			base::OwningView empty_view_1;
@@ -144,18 +144,18 @@ private:
 		{
 			base::OwningView copy_view(string_2);
 			assert(
-				copy_view.view().getBegin() != reinterpret_cast<const byte *>(string_2),
+				copy_view.view().getBegin() != reinterpret_cast<const byte*>(string_2),
 				"Owning view didn't make memory copy (1)"
 			);
 			assert(copy_view.view().stringView() == string_2, "Owning view has bad content (1)");
 
 			auto copy_view_2 = base::OwningView::copy(base::RawView(string_1, 20));
 			assert(
-				copy_view_2.view().getBegin() != reinterpret_cast<const byte *>(string_1),
+				copy_view_2.view().getBegin() != reinterpret_cast<const byte*>(string_1),
 				"Owning view didn't make memory copy (2)"
 			);
 			assert(
-				copy_view_2.view().stringView() == reinterpret_cast<const char *>(string_1),
+				copy_view_2.view().stringView() == reinterpret_cast<const char*>(string_1),
 				"Owning view has bad content (2)"
 			);
 		}

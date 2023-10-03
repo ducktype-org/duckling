@@ -16,14 +16,14 @@ public:
 	}
 
 private:
-	pst::PST prepare(const std::string &filename) {
+	pst::PST prepare(const std::string& filename) {
 		fs::FilePath file(filename);
 		auto         td = lexer::tokenizeFile(file);
 		return pst::parse(std::move(td));
 	}
 
 	void testSingleImportToPath(
-		const pst::Import &import, std::string local_path, std::string expected_output
+		const pst::Import& import, std::string local_path, std::string expected_output
 	) {
 		assert(
 			modulesys::importToPath(local_path, import) == expected_output,

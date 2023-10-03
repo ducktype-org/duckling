@@ -57,11 +57,11 @@ namespace hir {
 	}
 
 	void goOverSymbols(
-		AnalysisState &state, ScopeRef scope, pst::ParserCBorrowRef<pst::CodeBlock> pst_element
+		AnalysisState& state, ScopeRef scope, pst::ParserCBorrowRef<pst::CodeBlock> pst_element
 	) {
 		// @TODO: stmts/usings/alias/expand/...
 		// using and alias are just symbols
-		for (auto &stmt : pst_element->getStatements()) {
+		for (auto& stmt: pst_element->getStatements()) {
 			std::cerr << "stmt...\n";
 			auto sym = makeSymbolFromStatement(scope, stmt.borrow());
 			// @TODO: error symbol
@@ -79,12 +79,12 @@ namespace hir {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::ModuleInfo::create());
 	}
 
-	void TopLevelSymbol::analyzeAll(AnalysisState &state) {
+	void TopLevelSymbol::analyzeAll(AnalysisState& state) {
 		getAll(state);
 
 		// @TODO: stmts/usings/alias/expand/...
 		// using and alias are just symbols
-		for (auto &stmt : pst_element->getStatements()) {
+		for (auto& stmt: pst_element->getStatements()) {
 			std::cerr << "stmt...\n";
 			state.addSymbol(makeSymbolFromStatement(scope, stmt.borrow()));
 		}
@@ -94,7 +94,7 @@ namespace hir {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::NamespaceInfo::create());
 	}
 
-	void NamespaceSymbol::analyzeAll(AnalysisState &state) {
+	void NamespaceSymbol::analyzeAll(AnalysisState& state) {
 		getAll(state);
 
 		auto inner_scope = getLinkedLookupScope(state);
@@ -106,7 +106,7 @@ namespace hir {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
 	}
 
-	void ConstSymbol::analyzeAll(AnalysisState &state) { getAll(state); }
+	void ConstSymbol::analyzeAll(AnalysisState& state) { getAll(state); }
 
 	ts::ClassInfo StructSymbol::calculateValue() {
 		//...
@@ -118,11 +118,11 @@ namespace hir {
 		type = ts::TypeDesc<ts::TupleInfo>(ts::MetaInfo::create());
 	}
 
-	void StructSymbol::analyzeAll(AnalysisState &) {
+	void StructSymbol::analyzeAll(AnalysisState&) {
 		// @TODO
 	}
 
-	symtable::SymbolChain GenericAlias::getUniqueDeAlias(hir::AnalysisState &state) {
+	symtable::SymbolChain GenericAlias::getUniqueDeAlias(hir::AnalysisState& state) {
 		if (!dealiased_lookup_result.has_value()) {
 			// this can be confusing:
 			calculateLinkedLookup(state);
@@ -130,7 +130,7 @@ namespace hir {
 		return dealiased_lookup_result.value();
 	}
 
-	symtable::ChainLookupResult GenericAlias::getDeAlias(hir::AnalysisState &state) {
+	symtable::ChainLookupResult GenericAlias::getDeAlias(hir::AnalysisState& state) {
 		throw base::NotYetImplemented("getDeAlias -- only require dealiasing any lookup results");
 	}
 
@@ -145,7 +145,7 @@ namespace hir {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
 	}
 
-	void AliasSymbol::calculateLinkedLookup(AnalysisState &state) {
+	void AliasSymbol::calculateLinkedLookup(AnalysisState& state) {
 		std::cerr << "  AliasSymbol -- calculating linked lookup"
 				  << "\n";
 
@@ -178,7 +178,7 @@ namespace hir {
 		// Or just ErrorSymbol propagation
 	}
 
-	void AliasSymbol::analyzeAll(AnalysisState &state) {
+	void AliasSymbol::analyzeAll(AnalysisState& state) {
 		// @TODO
 		getAll(state);
 	}
@@ -195,12 +195,12 @@ namespace hir {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
 	}
 
-	void UsingSymbol::analyzeAll(AnalysisState &state) {
+	void UsingSymbol::analyzeAll(AnalysisState& state) {
 		// @TODO
 		getAll(state);
 	}
 
-	void UsingSymbol::calculateLinkedLookup(AnalysisState &state) {
+	void UsingSymbol::calculateLinkedLookup(AnalysisState& state) {
 		std::cerr << "  UsingSymbol -- calculating linked lookup"
 				  << "\n";
 

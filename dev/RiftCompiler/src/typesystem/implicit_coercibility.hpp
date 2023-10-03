@@ -15,11 +15,11 @@
 // @TODO: Consider the above and add tests
 
 namespace ts {
-	void addUserDefinedImplicitCoercion(const TypeInfo &from, const TypeInfo &to);
+	void addUserDefinedImplicitCoercion(const TypeInfo& from, const TypeInfo& to);
 
 	[[nodiscard]]
-	bool isImplicitlyCoercible(const TypeInfo &from, const TypeInfo &to);
+	bool isImplicitlyCoercible(const TypeInfo& from, const TypeInfo& to);
 
 	[[nodiscard]]
-	bool isImplicitlyCoercible(const TypeDesc<> &from, const TypeDesc<> &to);
+	bool isImplicitlyCoercible(const TypeDesc<>& from, const TypeDesc<>& to);
 }

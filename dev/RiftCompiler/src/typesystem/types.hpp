@@ -95,7 +95,7 @@ namespace ts {
 		SETUP_TYPE(PointerInfo, RawPointerInfo)
 
 	public:
-		static PointerInfo create(const TypeDesc<> &underlying_type);
+		static PointerInfo create(const TypeDesc<>& underlying_type);
 
 		TypeDesc<> getUnderlying() const;
 
@@ -110,7 +110,7 @@ namespace ts {
 
 	public:
 		static FunctionInfo create(
-			const std::vector<TypeDesc<>> &parameter_types, TypeDesc<> result_type, i32 flags = 0
+			const std::vector<TypeDesc<>>& parameter_types, TypeDesc<> result_type, i32 flags = 0
 		);
 
 		[[nodiscard]]
@@ -132,7 +132,7 @@ namespace ts {
 		SETUP_TYPE(EnumInfo, TypeInfo)
 
 	public:
-		static EnumInfo create(const IntegralInfo &base_type);
+		static EnumInfo create(const IntegralInfo& base_type);
 		IntegralInfo    getBaseType() const;
 
 		CHECKED_CAST(EnumInfo)
@@ -145,7 +145,7 @@ namespace ts {
 		SETUP_TYPE(FlagInfo, TypeInfo)
 
 	public:
-		static FlagInfo create(const IntegralInfo &base_type);
+		static FlagInfo create(const IntegralInfo& base_type);
 		IntegralInfo    getBaseType() const;
 
 		CHECKED_CAST(FlagInfo)
@@ -158,7 +158,7 @@ namespace ts {
 		SETUP_TYPE(OptionalInfo, TypeInfo)
 
 	public:
-		static OptionalInfo create(const TypeDesc<> &underlying_type);
+		static OptionalInfo create(const TypeDesc<>& underlying_type);
 
 		TypeDesc<> getUnderlying() const;
 
@@ -172,9 +172,9 @@ namespace ts {
 		SETUP_TYPE(TupleInfo, TypeInfo)
 
 	public:
-		static TupleInfo create(const std::vector<TypeDesc<>> &variant_types);
+		static TupleInfo create(const std::vector<TypeDesc<>>& variant_types);
 
-		const std::vector<TypeDesc<>> &getUnderlyingTypes() const;
+		const std::vector<TypeDesc<>>& getUnderlyingTypes() const;
 
 		std::pair<TypeDesc<>, usize> getMember(usize index) const;
 
@@ -188,7 +188,7 @@ namespace ts {
 		SETUP_TYPE(VariantInfo, TypeInfo)
 
 	public:
-		static VariantInfo create(const std::vector<TypeDesc<>> &variant_types);
+		static VariantInfo create(const std::vector<TypeDesc<>>& variant_types);
 
 		CHECKED_CAST(VariantInfo)
 

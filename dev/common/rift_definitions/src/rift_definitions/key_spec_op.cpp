@@ -13,8 +13,8 @@ namespace rift_def {
 	void setKeywordMode(KeywordMode mode) { keyword_mode = mode; }
 
 	base::StrId makeStrId(std::string_view view) {
-		return base::StrId(base::RawView({ reinterpret_cast<const byte *>(view.data()),
-		                                   view.size() }));
+		return base::StrId(base::RawView({ reinterpret_cast<const byte*>(view.data()), view.size() }
+		));
 	}
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
@@ -178,26 +178,26 @@ namespace rift_def {
 		rev_keyword_map.put(Keyword::NotAKeyword, base::StrId("NotAKeyword"));
 		keyword_flags.put(Keyword::NotAKeyword, base::EmptyFlag);
 
-		for (auto [k, s, f] : rift_keywords_array) {
+		for (auto [k, s, f]: rift_keywords_array) {
 			rift_keyword_map.put(makeStrId(s), k);
 			rev_keyword_map.put(k, makeStrId(s));
 			keyword_flags.put(k, f);
 		}
 
-		for (auto [k, s, f] : bc_keywords_array) {
+		for (auto [k, s, f]: bc_keywords_array) {
 			bc_keyword_map.put(makeStrId(s), k);
 			rev_keyword_map.put(k, makeStrId(s));
 			keyword_flags.put(k, f);
 		}
 
 		// specials:
-		for (auto [k, s] : special_array) {
+		for (auto [k, s]: special_array) {
 			special_map.put(makeStrId(s), k);
 			rev_special_map.put(k, makeStrId(s));
 		}
 
 		// operators:
-		for (auto [k, s] : operator_array) {
+		for (auto [k, s]: operator_array) {
 			operator_map.put(makeStrId(s), k);
 			rev_operator_map.put(k, makeStrId(s));
 		}

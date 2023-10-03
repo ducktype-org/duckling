@@ -20,7 +20,7 @@ namespace lexer {
 		return out;
 	}
 
-	Lexer::Lexer(const fs::FilePath &file):
+	Lexer::Lexer(const fs::FilePath& file):
 		  file_(std::make_shared<fs::FilePath>(file)),
 		  fileContent_(file_->getContent()),
 		  charArray_(decode(fileContent_.view())) {}
@@ -56,7 +56,7 @@ namespace lexer {
 		return charArray_.getArray().size() > where_ + fwd && peek(fwd).isAsciiValue(rawValue);
 	}
 
-	const Char &Lexer::peek(usize fwd) const { return charArray_.get(where_ + fwd); }
+	const Char& Lexer::peek(usize fwd) const { return charArray_.get(where_ + fwd); }
 
 	std::string Lexer::generateLineColumnInfo() const {
 		return "(" + std::to_string(lineNumber_) + ":" + std::to_string(columnNumber_) + ")";
@@ -79,11 +79,11 @@ namespace lexer {
 
 	void Lexer::codeblock() { parseCodeblockInto(tokens_); }
 
-	void Lexer::parseCodeblockInto(Tokens &output) {
+	void Lexer::parseCodeblockInto(Tokens& output) {
 		while (!isEOF()) parseSingleInto(output);
 	}
 
-	void Lexer::parseSingleInto(Tokens &output) {
+	void Lexer::parseSingleInto(Tokens& output) {
 		usize          begin = where_;
 		SourcePosition sourcePosition(file_, lineNumber_, columnNumber_, where_);
 		if (isEOF()) {
@@ -352,7 +352,7 @@ namespace lexer {
 		was_init = true;
 	}
 
-	lexer::TokenData tokenizeFile(const fs::FilePath &file, bool dprint) {
+	lexer::TokenData tokenizeFile(const fs::FilePath& file, bool dprint) {
 		Lexer lexer(file);
 		return { lexer.tokenize(dprint), file.getContent() };
 	}

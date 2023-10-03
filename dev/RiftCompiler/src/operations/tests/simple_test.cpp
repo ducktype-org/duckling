@@ -63,7 +63,7 @@ private:
 		assert(res.data == ctv.data, "Wrong CTV result,");
 		assert(res.size == ctv.size, "Wrong CTV size.");
 
-		const operation::TypedOperation &get_op2
+		const operation::TypedOperation& get_op2
 			= operation::getDefault(operation::Defaultable::Compare, int16);
 
 		auto res2 = get_op2.function(std::vector<exec::CTV>{ ctv });

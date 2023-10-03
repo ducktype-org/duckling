@@ -23,12 +23,12 @@ namespace JS {
 		class TypeHandler<T> {                                                               \
 		public:                                                                              \
 			static inline Error                                                              \
-				to([[maybe_unused]] T &to, [[maybe_unused]] ParseContext &context) {         \
+				to([[maybe_unused]] T& to, [[maybe_unused]] ParseContext& context) {         \
 				return Error::NoError;                                                       \
 			}                                                                                \
                                                                                              \
 			static void                                                                      \
-				from([[maybe_unused]] const T &from, Token &token, Serializer &serializer) { \
+				from([[maybe_unused]] const T& from, Token& token, Serializer& serializer) { \
 				impl::emptyObject(token, serializer);                                        \
 			}                                                                                \
 		};                                                                                   \

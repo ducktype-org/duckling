@@ -22,26 +22,26 @@ namespace base {
 		typedef typename ContainerType::mapped_type DATA_T;
 
 		MapWrapper(): ContainerType(){};
-		MapWrapper(const MapWrapper &map): ContainerType(map){};
-		MapWrapper(MapWrapper &&map): ContainerType(std::move(map)){};
+		MapWrapper(const MapWrapper& map): ContainerType(map){};
+		MapWrapper(MapWrapper&& map): ContainerType(std::move(map)){};
 		~MapWrapper() = default;
 
 		// Change operator[] behaviour:
-		DATA_T &operator[](const KEY_T &key) { return ContainerType::at(key); }
+		DATA_T& operator[](const KEY_T& key) { return ContainerType::at(key); }
 
-		DATA_T &operator[](KEY_T &&key) { return ContainerType::at(key); }
+		DATA_T& operator[](KEY_T&& key) { return ContainerType::at(key); }
 
-		const DATA_T &operator[](const KEY_T &key) const { return ContainerType::at(key); }
+		const DATA_T& operator[](const KEY_T& key) const { return ContainerType::at(key); }
 
-		auto put(const KEY_T &key) { return ContainerType::emplace(key, DATA_T()); }
+		auto put(const KEY_T& key) { return ContainerType::emplace(key, DATA_T()); }
 
 		template<typename K = KEY_T, typename D = DATA_T>
-		auto put(K &&key, D &&data) {
+		auto put(K&& key, D&& data) {
 			return ContainerType::emplace(std::forward<K>(key), std::forward<D>(data));
 		}
 
 		// @TODO: delete it, since we are using C++20:
-		bool contains(const KEY_T &key) const {
+		bool contains(const KEY_T& key) const {
 			return ContainerType::find(key) != ContainerType::end();
 		}
 
@@ -74,13 +74,13 @@ namespace base {
 
 		VectorMap() = default;
 
-		VectorMap(const VectorMap &) = delete;
+		VectorMap(const VectorMap&) = delete;
 
-		VectorMap(const VectorMap &&) = delete;
+		VectorMap(const VectorMap&&) = delete;
 
 		~VectorMap() = default;
 
-		DATA_T &operator[](const KEY_T key) {
+		DATA_T& operator[](const KEY_T key) {
 			if (usize(key) < map.size() and map.at(usize(key)).has_value())
 				return *map.at(usize(key));
 			else
@@ -93,7 +93,7 @@ namespace base {
 			map.at(usize(key)) = DATA_T();
 		}
 
-		void put(KEY_T key, DATA_T &&data)
+		void put(KEY_T key, DATA_T&& data)
 		requires is_move
 		{
 			if (usize(key) >= map.size()) map.resize(usize(key) + 1);
@@ -101,7 +101,7 @@ namespace base {
 			map.at(usize(key)).emplace(std::move(data));
 		}
 
-		void put(KEY_T key, const DATA_T &data)
+		void put(KEY_T key, const DATA_T& data)
 		requires is_copy
 		{
 			if (usize(key) >= map.size()) map.resize(usize(key) + 1);
@@ -110,7 +110,7 @@ namespace base {
 		}
 
 		template<class... Args>
-		void emplace(KEY_T key, Args &&...args) {
+		void emplace(KEY_T key, Args&&... args) {
 			put(key, std::move(DATA_T(std::move(&args...))));
 		}
 

@@ -49,12 +49,12 @@ namespace config {
 
 	public:
 		template<typename... Args>
-		ConfigOptions &addOption(Args &&...args) {
+		ConfigOptions& addOption(Args&&... args) {
 			options.emplace_back(std::forward<Args>(args)...);
 			return *this;
 		}
 
-		void generateOptionDesc(printer::Message &in);
+		void generateOptionDesc(printer::Message& in);
 	};
 
 }

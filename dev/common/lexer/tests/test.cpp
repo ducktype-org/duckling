@@ -44,7 +44,7 @@ private:
 
 	void testGroup0() {
 		checkGroupIsGroup(0);
-		const auto &inner_tokens = td.tokens[0].getRecursive();
+		const auto& inner_tokens = td.tokens[0].getRecursive();
 
 		assert(
 			inner_tokens.size() == 3,
@@ -77,9 +77,9 @@ private:
 	template<usize index, lexer::Token::Type token_type, bool (lexer::Token::*isTokenType)() const>
 	void testTokenGroup() {
 		checkGroupIsGroup(index);
-		auto &inner_tokens = td.tokens[index].getRecursive();
+		auto& inner_tokens = td.tokens[index].getRecursive();
 		message("got " + std::to_string(inner_tokens.size()) + " tokens");
-		for (const auto &token : inner_tokens) {
+		for (const auto& token: inner_tokens) {
 			assert(
 				token.getType() == token_type,
 				std::string("Type of token `") + std::string(token.getStrValue()) + "` is not a "
@@ -122,7 +122,7 @@ private:
 	void testGroup7() { testTokenGroup<7, lexer::Token::Type::String, &lexer::Token::isString>(); }
 
 	void testSourcePosition() {
-		const auto &position = td.tokens[1].getRecursive().front().getPosition();
+		const auto& position = td.tokens[1].getRecursive().front().getPosition();
 		assert(position.getLineNumber() == 5, "Wrong line number");
 		assert(position.getColumn() == 2, "Wrong column");
 		assert(position.getStart() == 15, "Wrong start index");

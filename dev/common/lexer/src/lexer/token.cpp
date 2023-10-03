@@ -17,46 +17,46 @@ namespace lexer {
 		  str_id(value),
 		  source_position(std::move(position)) {}
 
-	Token::Token(Token::Type type, Tokens &&recursive, SourcePosition position):
+	Token::Token(Token::Type type, Tokens&& recursive, SourcePosition position):
 		  type(type),
 		  recursive(recursive),
 		  source_position(std::move(position)) {}
 
-	Token Token::makeComment(const base::RawView comment, const SourcePosition &position) {
+	Token Token::makeComment(const base::RawView comment, const SourcePosition& position) {
 		return { Type::Comment, comment, position };
 	}
 
 	Token Token::makeOperator(
 		const base::RawView   oper,
-		const SourcePosition &position
+		const SourcePosition& position
 	) {  // operator is keyword
 		return { Type::Operator, oper, position };
 	}
 
-	Token Token::makeIdentifier(const base::RawView identifier, const SourcePosition &position) {
+	Token Token::makeIdentifier(const base::RawView identifier, const SourcePosition& position) {
 		if (rift_def::strAsKeyword(base::StrId(identifier)) != Keyword::NotAKeyword)
 			return makeKeyword(identifier, position);
 		return { Type::Identifier, identifier, position };
 	}
 
-	Token Token::makeKeyword(const base::RawView keyword, const SourcePosition &position) {
+	Token Token::makeKeyword(const base::RawView keyword, const SourcePosition& position) {
 		return { Type::Keyword, keyword, position };
 	}
 
-	Token Token::makeSpecial(const base::RawView identifier, const SourcePosition &position) {
+	Token Token::makeSpecial(const base::RawView identifier, const SourcePosition& position) {
 		return { Type::Special, identifier, position };
 	}
 
-	Token Token::makeNumLiteral(const base::RawView literal, const SourcePosition &position) {
+	Token Token::makeNumLiteral(const base::RawView literal, const SourcePosition& position) {
 		return { Type::NumLiteral, literal, position };
 	}
 
-	Token Token::makeString(const base::RawView string, const SourcePosition &position) {
+	Token Token::makeString(const base::RawView string, const SourcePosition& position) {
 		return { Type::String, string, position };
 	}
 
 	Token
-		Token::makeGroup(Char::ParType groupType, Tokens &&tokens, const SourcePosition &position) {
+		Token::makeGroup(Char::ParType groupType, Tokens&& tokens, const SourcePosition& position) {
 		switch (groupType) {
 		case Char::Round:
 			return { Type::RoundGroup, std::move(tokens), position };
@@ -72,14 +72,14 @@ namespace lexer {
 		}
 	}
 
-	Token Token::makeError(const SourcePosition &position) {
+	Token Token::makeError(const SourcePosition& position) {
 		Token out;
 		out.type            = Type::Error;
 		out.source_position = position;
 		return out;
 	}
 
-	void swap(Token &first, Token &second) {
+	void swap(Token& first, Token& second) {
 		using std::swap;
 
 		swap(first.recursive, second.recursive);
@@ -88,12 +88,12 @@ namespace lexer {
 		swap(first.source_position, second.source_position);
 	}
 
-	Token &Token::operator=(Token other) {
+	Token& Token::operator=(Token other) {
 		swap(*this, other);
 		return *this;
 	}
 
-	Token::Token(Token &&other) noexcept: Token() { swap(*this, other); }
+	Token::Token(Token&& other) noexcept: Token() { swap(*this, other); }
 
 	Token::Type Token::getType() const { return type; }
 
@@ -101,7 +101,7 @@ namespace lexer {
 
 	std::string_view Token::getStrValue() const { return getValue().strView(); }
 
-	const Tokens &Token::getRecursive() const { return recursive; }
+	const Tokens& Token::getRecursive() const { return recursive; }
 
 	bool Token::isGroup() const {
 		return type == Type::AngleGroup || type == Type::CurlyGroup || type == Type::SquareGroup
@@ -149,7 +149,7 @@ namespace lexer {
 		  tokens(std::move(tokens)),
 		  file_content(std::move(file_content)) {}
 
-	TokenData::TokenData(TokenData &&oth) noexcept:
+	TokenData::TokenData(TokenData&& oth) noexcept:
 		  tokens(std::move(oth.tokens)),
 		  file_content(std::move(oth.file_content)){};
 

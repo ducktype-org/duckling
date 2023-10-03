@@ -18,7 +18,7 @@ namespace pst {
 		}
 	}
 
-	ParserRef<Expr> Expr::parse(RiftParserState &state) {
+	ParserRef<Expr> Expr::parse(RiftParserState& state) {
 		// @TODO: better inf
 		return Expr::parse(state, 1e18, false);
 	}
@@ -27,7 +27,7 @@ namespace pst {
 	 * It is left in this state for now, as a lot will depend on semantical analysis
 	 * @TODO: lambda, todo-s
 	 */
-	ParserRef<Expr> Expr::parse(RiftParserState &state, usize len, bool exact_len) {
+	ParserRef<Expr> Expr::parse(RiftParserState& state, usize len, bool exact_len) {
 		auto  out = makeRef<Expr>(state.ctokens().peek().getPosition());
 		usize i   = 0;
 
@@ -77,9 +77,9 @@ namespace pst {
 		return out;
 	}
 
-	void Expr::dprint(std::ostream &out) const {
+	void Expr::dprint(std::ostream& out) const {
 		out << "{\"Expr\" : [";
-		for (auto &e : elements) {
+		for (auto& e: elements) {
 			variant_match(e) {
 				variant_case(Identifier, idt) {
 					out << "{\"Identifier\": \"" << idt.indent_id.strView() << "\"}";

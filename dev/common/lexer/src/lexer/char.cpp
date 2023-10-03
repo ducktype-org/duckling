@@ -46,14 +46,14 @@ namespace lexer {
 
 	CharArray::CharArray(Array array): array(std::move(array)) {}
 
-	CharArray::CharArray(CharArray &&other) noexcept: CharArray() { swap(*this, other); }
+	CharArray::CharArray(CharArray&& other) noexcept: CharArray() { swap(*this, other); }
 
-	CharArray &CharArray::operator=(CharArray &&other) noexcept {
+	CharArray& CharArray::operator=(CharArray&& other) noexcept {
 		swap(*this, other);
 		return *this;
 	}
 
-	void swap(CharArray &first, CharArray &second) {
+	void swap(CharArray& first, CharArray& second) {
 		using std::swap;
 
 		swap(first.r_array, second.r_array);
@@ -73,9 +73,9 @@ namespace lexer {
 
 	base::RawView CharArray::getRaw(usize i) const { return composeRaw(i, i); }
 
-	const Char &CharArray::get(usize i) const { return array[i]; }
+	const Char& CharArray::get(usize i) const { return array[i]; }
 
-	const CharArray::Array &CharArray::getArray() const { return array; }
+	const CharArray::Array& CharArray::getArray() const { return array; }
 
 	CharArray::~CharArray() { delete[] r_array; }
 
@@ -112,11 +112,11 @@ namespace lexer {
 
 	Char::Type Char::getType() const { return type_; }
 
-	void Char::appendRawValueTo(std::string &to) const {
+	void Char::appendRawValueTo(std::string& to) const {
 		to += rawStr();  // todo .. optimize
 	}
 
-	void Char::appendRawValueTo(std::stringstream &to) const { to << asciiValue(); }
+	void Char::appendRawValueTo(std::stringstream& to) const { to << asciiValue(); }
 
 	bool Char::isEOF() const { return type_ == Eof; }
 
@@ -166,11 +166,11 @@ namespace lexer {
 
 		// @TODO: this char is not perfect:
 		constexpr uchar specials[] = R"--("@#$'();[\]`{})--";
-		for (const auto &c : specials) out[c] = Char::Special;
+		for (const auto& c: specials) out[c] = Char::Special;
 
 		// @TODO: this char is not perfect:
 		constexpr uchar operators[] = R"--(!%&*+-^|~:/.,<=>?)--";
-		for (const auto &c : operators) out[c] = Char::Operator;
+		for (const auto& c: operators) out[c] = Char::Operator;
 
 		out[' ']  = Char::Whitespace;
 		out['\n'] = Char::Whitespace;

@@ -5,7 +5,7 @@ using namespace exec::operators;
 using namespace ts;
 
 namespace exec {
-	BuiltInOpMap &getBuiltInOps() {
+	BuiltInOpMap& getBuiltInOps() {
 		static BuiltInOpMap built_in_ops;
 		return built_in_ops;
 	}

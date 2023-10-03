@@ -15,23 +15,23 @@ namespace clap {
 		option<base::StrId> value_name_    = none<base::StrId>();
 
 	public:
-		ParameterConfig(const base::RawView &long_name);
+		ParameterConfig(const base::RawView& long_name);
 		ParameterConfig(char short_name);
 
-		ParameterConfig &long_name(const base::RawView &long_name);
-		ParameterConfig &short_name(char short_name);
-		ParameterConfig &description(const base::RawView &description);
-		ParameterConfig &required(const base::RawView &value_name);
-		ParameterConfig &
-			with_value(const base::RawView &value_name, const base::RawView &default_value);
+		ParameterConfig& long_name(const base::RawView& long_name);
+		ParameterConfig& short_name(char short_name);
+		ParameterConfig& description(const base::RawView& description);
+		ParameterConfig& required(const base::RawView& value_name);
+		ParameterConfig&
+			with_value(const base::RawView& value_name, const base::RawView& default_value);
 
-		const option<base::StrId> &get_long_name() const;
-		const option<char>        &get_short_name() const;
-		const option<base::StrId> &get_description() const;
+		const option<base::StrId>& get_long_name() const;
+		const option<char>&        get_short_name() const;
+		const option<base::StrId>& get_description() const;
 		bool                       is_required() const;
 		bool                       has_default_value() const;
-		const option<base::StrId> &get_default_value() const;
-		const option<base::StrId> &get_value_name() const;
+		const option<base::StrId>& get_default_value() const;
+		const option<base::StrId>& get_value_name() const;
 		bool                       requires_argument() const;
 
 		std::string short_help_message() const;

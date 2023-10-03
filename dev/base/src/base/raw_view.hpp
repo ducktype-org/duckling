@@ -5,7 +5,7 @@
 #include <string_view>
 
 namespace base {
-	typedef const byte *RawArray;
+	typedef const byte* RawArray;
 
 	/**
 	 * @brief Non owning byte array view
@@ -22,16 +22,16 @@ namespace base {
 		usize    arr_size = 0;
 
 	public:
-		RawView()                = default;
-		RawView(const RawView &) = default;
-		RawView(RawView &&)      = default;
+		RawView()               = default;
+		RawView(const RawView&) = default;
+		RawView(RawView&&)      = default;
 
 		RawView(RawArray begin, usize size): begin{ begin }, arr_size{ size } {}
 
-		RawView &operator=(const RawView &) = default;
+		RawView& operator=(const RawView&) = default;
 
 		// do not make explicit
-		RawView(const char *c_str);
+		RawView(const char* c_str);
 
 		[[nodiscard]]
 		std::string_view stringView() const;
@@ -46,7 +46,7 @@ namespace base {
 		RawArray getBegin() const;
 
 		byte operator[](usize index);
-		bool operator==(const RawView &oth) const;
+		bool operator==(const RawView& oth) const;
 	};
 
 	/**
@@ -54,17 +54,17 @@ namespace base {
 	 */
 	class ModRawView {
 	private:
-		byte *begin    = nullptr;
+		byte* begin    = nullptr;
 		usize arr_size = 0;
 
 	public:
-		ModRawView()                   = default;
-		ModRawView(const ModRawView &) = default;
-		ModRawView(ModRawView &&)      = default;
+		ModRawView()                  = default;
+		ModRawView(const ModRawView&) = default;
+		ModRawView(ModRawView&&)      = default;
 
-		ModRawView(byte *begin, usize size): begin{ begin }, arr_size{ size } {}
+		ModRawView(byte* begin, usize size): begin{ begin }, arr_size{ size } {}
 
-		ModRawView &operator=(const ModRawView &) = default;
+		ModRawView& operator=(const ModRawView&) = default;
 
 		[[nodiscard]]
 		usize size() const {
@@ -72,7 +72,7 @@ namespace base {
 		}
 
 		[[nodiscard]]
-		byte *getBegin() const {
+		byte* getBegin() const {
 			return begin;
 		}
 	};
@@ -83,7 +83,7 @@ namespace base {
 	 * Owning byte array view
 	 */
 	class OwningView {
-		byte *begin{};
+		byte* begin{};
 		usize size{};
 		friend class base::StrId;
 
@@ -93,28 +93,28 @@ namespace base {
 		explicit OwningView(std::nullptr_t): begin(nullptr), size{ 0 } {}
 
 		// Takes ownership, begin should be on heap
-		OwningView(byte *begin, usize size): begin{ begin }, size{ size } {}
+		OwningView(byte* begin, usize size): begin{ begin }, size{ size } {}
 
 		// Makes copy
-		explicit OwningView(const char *const c_str) {
+		explicit OwningView(const char* const c_str) {
 			auto aux = RawView(c_str).memoryCopy();
-			begin    = const_cast<byte *>(aux.begin);
+			begin    = const_cast<byte*>(aux.begin);
 			size     = aux.arr_size;
 		}
 
 		OwningView static copy(RawView view) {
 			OwningView out;
 			auto       aux = view.memoryCopy();
-			out.begin      = const_cast<byte *>(aux.begin);
+			out.begin      = const_cast<byte*>(aux.begin);
 			out.size       = aux.arr_size;
 			return out;
 		}
 
-		OwningView(const OwningView &) = delete;
+		OwningView(const OwningView&) = delete;
 
-		OwningView(OwningView &&view) noexcept { *this = std::move(view); }
+		OwningView(OwningView&& view) noexcept { *this = std::move(view); }
 
-		OwningView &operator=(OwningView &&view) noexcept {
+		OwningView& operator=(OwningView&& view) noexcept {
 			begin      = view.begin;
 			size       = view.size;
 			view.begin = nullptr;
@@ -132,7 +132,7 @@ namespace base {
 namespace std {
 	template<>
 	struct hash<base::RawView> {
-		usize operator()(const base::RawView &k) const {
+		usize operator()(const base::RawView& k) const {
 			return std::hash<std::string_view>()(k.stringView());
 		}
 	};

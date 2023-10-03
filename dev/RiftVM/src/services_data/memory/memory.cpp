@@ -38,7 +38,7 @@ namespace vm {
 		refCheck(id);
 	}
 
-	cpp::result<Block *, Memory::error> Memory::getBlock(BlockId id) {
+	cpp::result<Block*, Memory::error> Memory::getBlock(BlockId id) {
 		if (isUnowned(id))
 			return cpp::fail("Tried accessing unowned block");
 		else if (!blocks[usize(id)].filled)
@@ -46,7 +46,7 @@ namespace vm {
 		return blocks[usize(id)].block;
 	}
 
-	void Memory::makeBlock(BlockId id, Block &&block) {
+	void Memory::makeBlock(BlockId id, Block&& block) {
 		if (isUnowned(id))
 			RIFT_PANIC("Tried creating an unowned block")
 		else if (blocks[usize(id)].filled)

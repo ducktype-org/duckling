@@ -23,9 +23,7 @@ using some = option<T>::result;
 
 template<class T, class E, class R>
 R convertResult(
-	result<T, E>                result,
-	std::function<R(const T &)> map_value,
-	std::function<R(const E &)> map_error
+	result<T, E> result, std::function<R(const T&)> map_value, std::function<R(const E&)> map_error
 ) {
 	if (result.has_value()) return map_value(result.value());
 	return map_error(result.error());
@@ -33,7 +31,7 @@ R convertResult(
 
 template<class E, class R>
 R convertResult(
-	result<void, E> result, std::function<R()> map_value, std::function<R(const E &)> map_error
+	result<void, E> result, std::function<R()> map_value, std::function<R(const E&)> map_error
 ) {
 	if (result.has_value()) return map_value();
 	return map_error(result.error());

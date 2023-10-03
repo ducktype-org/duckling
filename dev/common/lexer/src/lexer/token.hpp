@@ -33,11 +33,11 @@ namespace lexer {
 		fs::FileContent file_content;
 
 		TokenData() = default;
-		TokenData(TokenData &&) noexcept;
+		TokenData(TokenData&&) noexcept;
 		TokenData(Tokens tokens, fs::FileContent file_content);
 
-		void       operator=(const TokenData &) = delete;
-		TokenData &operator=(TokenData &&)      = default;
+		void       operator=(const TokenData&) = delete;
+		TokenData& operator=(TokenData&&)      = default;
 
 		virtual ~TokenData();
 	};
@@ -68,26 +68,26 @@ namespace lexer {
 
 		static Token makeSentinel();
 
-		static Token makeKeyword(base::RawView keyword, const SourcePosition &);
+		static Token makeKeyword(base::RawView keyword, const SourcePosition&);
 		static Token makeNumber(const base::RawView number, SourcePosition);
-		static Token makeString(base::RawView string, const SourcePosition &);
-		static Token makeFormattedString(Tokens &&tokens, SourcePosition);
-		static Token makeGroup(Char::ParType groupType, Tokens &&tokens, const SourcePosition &);
-		static Token makeComment(base::RawView comment, const SourcePosition &);
-		static Token makeOperator(base::RawView oper, const SourcePosition &);
-		static Token makeIdentifier(base::RawView identifier, const SourcePosition &);
-		static Token makeSpecial(base::RawView identifier, const SourcePosition &);
-		static Token makeNumLiteral(base::RawView literal, const SourcePosition &);
+		static Token makeString(base::RawView string, const SourcePosition&);
+		static Token makeFormattedString(Tokens&& tokens, SourcePosition);
+		static Token makeGroup(Char::ParType groupType, Tokens&& tokens, const SourcePosition&);
+		static Token makeComment(base::RawView comment, const SourcePosition&);
+		static Token makeOperator(base::RawView oper, const SourcePosition&);
+		static Token makeIdentifier(base::RawView identifier, const SourcePosition&);
+		static Token makeSpecial(base::RawView identifier, const SourcePosition&);
+		static Token makeNumLiteral(base::RawView literal, const SourcePosition&);
 
 		virtual ~Token() = default;
 
 		Token() noexcept          = default;
-		Token(const Token &other) = default;
-		Token(Token &&other) noexcept;
+		Token(const Token& other) = default;
+		Token(Token&& other) noexcept;
 		Token(Type type, base::RawView value, SourcePosition position);
-		Token(Type type, Tokens &&recursive, SourcePosition position);
-		friend void swap(Token &first, Token &second);
-		Token      &operator=(Token other);
+		Token(Type type, Tokens&& recursive, SourcePosition position);
+		friend void swap(Token& first, Token& second);
+		Token&      operator=(Token other);
 
 		[[nodiscard]]
 		Type getType() const;
@@ -96,7 +96,7 @@ namespace lexer {
 		[[nodiscard]]
 		std::string_view getStrValue() const;
 		[[nodiscard]]
-		const Tokens &getRecursive() const;
+		const Tokens& getRecursive() const;
 
 		[[nodiscard]]
 		bool isGroup() const;
@@ -139,7 +139,7 @@ namespace lexer {
 		SourcePosition getPosition() const;
 
 	private:
-		static Token makeError(const SourcePosition &);
+		static Token makeError(const SourcePosition&);
 
 		Type           type = Type::Empty;
 		base::StrId    str_id;

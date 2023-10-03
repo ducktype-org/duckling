@@ -63,7 +63,7 @@ public:
 		v_2   = 2;
 		i32 a = 3;
 
-		VARIANT_VISIT(v_2, VISIT_CASE(auto &, any_v, {
+		VARIANT_VISIT(v_2, VISIT_CASE(auto&, any_v, {
 						  any_v += 1;
 						  any_v += a;
 					  }));
@@ -73,7 +73,7 @@ public:
 		VARIANT_VISIT(v_2, VISIT_CASE(int, i_v, {
 						  i_v = 100;
 						  assert(i_v == 100, "something strange");
-					  }) VISIT_CASE([[maybe_unused]] auto &, any_v, {
+					  }) VISIT_CASE([[maybe_unused]] auto&, any_v, {
 						  fail("Bad variant access");
 					  }));
 

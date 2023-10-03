@@ -3,7 +3,7 @@
 namespace pst {
 	bool Attribute::trailingSemicolon() { return false; }
 
-	ParserRef<Attribute> Attribute::parse(RiftParserState &state) {
+	ParserRef<Attribute> Attribute::parse(RiftParserState& state) {
 		auto                 position = state.ctokens().peek().getPosition();
 		ParserRef<Attribute> out      = makeRef<Attribute>(position);
 
@@ -18,7 +18,7 @@ namespace pst {
 		return out;
 	}
 
-	void Attribute::dprint(std::ostream &out) const {
+	void Attribute::dprint(std::ostream& out) const {
 		out << "{\"Attribute\" : {";
 		out << "\"name\" : ";
 		nullAwareDprint(name, out);

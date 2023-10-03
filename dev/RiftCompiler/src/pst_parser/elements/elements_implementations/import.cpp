@@ -1,7 +1,7 @@
 #include "elements_implementation.hpp"
 
 namespace pst {
-	ParserRef<Import> Import::parse(RiftParserState &state) {
+	ParserRef<Import> Import::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Import>(position);
 
@@ -17,11 +17,11 @@ namespace pst {
 		return out;
 	}
 
-	const decltype(Import::names) &Import::getNames() const { return names; }
+	const decltype(Import::names)& Import::getNames() const { return names; }
 
 	bool Import::getStar() const { return names.star; }
 
-	void Import::dprint(std::ostream &out) const {
+	void Import::dprint(std::ostream& out) const {
 		out << "{\"Import\": {";
 
 		if (names.star)
@@ -31,7 +31,7 @@ namespace pst {
 
 		out << R"("names": [)";
 
-		for (const auto &name : names.names) {
+		for (const auto& name: names.names) {
 			tpc::nullAwareDprint(name, out);
 			out << ", ";
 		}

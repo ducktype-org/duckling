@@ -8,7 +8,7 @@
 #include "exec.hpp"
 
 namespace exec {
-	using Args = const std::vector<exec::CTV> &;
+	using Args = const std::vector<exec::CTV>&;
 
 	template<typename T>
 	exec::CTV compareBuiltin(Args ctvs) {

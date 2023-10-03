@@ -42,7 +42,7 @@ namespace base {
 	 *
 	 * @OPT: better memory/buffers usage
 	 */
-	StrId::StrId(const base::RawView &data) {
+	StrId::StrId(const base::RawView& data) {
 		RIFT_ASSERT(data.getBegin() != nullptr, "StrId received null string");
 
 		if (to_id_map.contains(data)) {
@@ -77,13 +77,13 @@ namespace base {
 		to_id_map.put(actual_data, id);
 	}
 
-	StrId::StrId(const char *data): StrId(base::RawView(data)) {}
+	StrId::StrId(const char* data): StrId(base::RawView(data)) {}
 
 	StrId::StrId(char character): StrId(std::string(1, character).c_str()) {}
 
-	void StrId::dumpData(std::ostream &out) {
+	void StrId::dumpData(std::ostream& out) {
 		i32 i = 0;
-		for (auto v : to_data_map) {
+		for (auto v: to_data_map) {
 			if (v) out << i << ": " << v->stringView() << "\n";
 			i++;
 		}

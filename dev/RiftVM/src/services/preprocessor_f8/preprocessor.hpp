@@ -10,16 +10,16 @@ namespace vm {
 
 	class Preprocessor {
 	private:
-		TypeMetadata &type_metadata;
+		TypeMetadata& type_metadata;
 
 		template<class... DynamicServices>
-		Preprocessor([[maybe_unused]] ServiceManagerDef<DynamicServices...> &serviceManager):
+		Preprocessor([[maybe_unused]] ServiceManagerDef<DynamicServices...>& serviceManager):
 			  type_metadata(serviceManager.getVCPU().getData().template get<TypeMetadata>()) {}
 
 	public:
 		template<class... DynamicServices>
 		friend class ServiceManagerDef;
 
-		result<vm::Code, std::string> getCode(const fs::FilePath &file);
+		result<vm::Code, std::string> getCode(const fs::FilePath& file);
 	};
 }

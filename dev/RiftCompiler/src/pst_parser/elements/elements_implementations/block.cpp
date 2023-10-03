@@ -1,7 +1,7 @@
 #include "elements_implementation.hpp"
 
 namespace pst {
-	ParserRef<Block> Block::parse(RiftParserState &state) {
+	ParserRef<Block> Block::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Block>(position);
 
@@ -14,7 +14,7 @@ namespace pst {
 		return out;
 	}
 
-	void Block::dprint(std::ostream &out) const {
+	void Block::dprint(std::ostream& out) const {
 		out << "{\"Block\": {";
 
 		out << R"("optional name": )";

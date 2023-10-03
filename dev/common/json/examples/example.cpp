@@ -53,7 +53,7 @@ int main() {
 	std::cout << JS::serializeStruct(y) << "\n";
 	std::cout << JS::serializeStruct(z) << "\n";
 
-	std::exception *e = new std::runtime_error("error");
+	std::exception* e = new std::runtime_error("error");
 
 	std::cout << JS::serializeStruct(*e) << "\n";
 }

@@ -36,7 +36,7 @@ namespace compiler {
 
 		if (parsed_args.wasOption("intTest")) out.output = parsed_args.getValue<i32>("intTest");
 
-		for (auto file : parsed_args.getNonOptionValues())
+		for (auto file: parsed_args.getNonOptionValues())
 			out.file_names.emplace_back(file.stdString());
 
 		return out;

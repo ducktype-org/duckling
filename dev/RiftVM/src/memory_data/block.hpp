@@ -19,7 +19,7 @@ namespace vm {
 		const u64 arr_length = 0;
 		TypeCRef  element_type;
 
-		byte *data;
+		byte* data;
 		// TODO: Add a way to determine which allocator created this block, as well as check if
 		// appropriate allocator destroys the block.
 

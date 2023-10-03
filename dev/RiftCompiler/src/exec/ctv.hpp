@@ -24,7 +24,7 @@ namespace exec {
 
 	using Data = std::vector<uint8_t>;
 
-	std::vector<Block> &getBlocks();
+	std::vector<Block>& getBlocks();
 
 	struct Block {
 		Data data;
@@ -41,11 +41,11 @@ namespace exec {
 		// sizeof(T)));
 		// }
 
-		Block(const Block &) = delete;
-		Block(Block &&)      = default;
+		Block(const Block&) = delete;
+		Block(Block&&)      = default;
 
 		// @TODO: this constructor should be private.
-		explicit Block(Data &&data): data(std::move(data)){};
+		explicit Block(Data&& data): data(std::move(data)){};
 	};
 
 	struct Pointer {
@@ -59,7 +59,7 @@ namespace exec {
 			return Pointer(block, offset + shift);
 		}
 
-		auto operator<=>(const Pointer &other) const = default;
+		auto operator<=>(const Pointer& other) const = default;
 	};
 
 	struct CTV {
@@ -70,7 +70,7 @@ namespace exec {
 
 		// @TODO: this should be more sensible but templates need it.
 		// probably we should use default comparison on type here.
-		auto operator<=>(const CTV &) const = default;
+		auto operator<=>(const CTV&) const = default;
 
 		CTV subCTV(ts::TypeDesc<> type_, usize offset, usize size_) const {
 			return CTV(type_, data.shift(offset), size_);
@@ -79,7 +79,7 @@ namespace exec {
 		template<typename T = uint8_t>
 		std::span<T> getData() const {
 			return std::span(
-				(T *) (getBlocks()[data.block].data.data() + data.offset / ts::BYTE_SIZE),
+				(T*) (getBlocks()[data.block].data.data() + data.offset / ts::BYTE_SIZE),
 				size / (8 * sizeof(T))
 			);
 		}
@@ -112,10 +112,10 @@ namespace exec {
 			auto block_       = pointer_data[0];
 			auto offset_      = pointer_data[1];
 
-			auto &block = exec::getBlocks()[block_];
+			auto& block = exec::getBlocks()[block_];
 
 			return std::span(
-				(T *) (block.data.data() + offset_ / ts::BYTE_SIZE),
+				(T*) (block.data.data() + offset_ / ts::BYTE_SIZE),
 				block.data.size() / (8 * sizeof(T))
 			);
 		}

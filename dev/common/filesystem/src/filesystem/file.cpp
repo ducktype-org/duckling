@@ -13,9 +13,9 @@
 namespace fs {
 	FilePath::ContentMap FilePath::to_content;
 
-	FilePath::FilePath(const std::filesystem::path &path): path(std::filesystem::absolute(path)) {}
+	FilePath::FilePath(const std::filesystem::path& path): path(std::filesystem::absolute(path)) {}
 
-	FilePath::FilePath(const FilePath &oth): path(oth.path) {}
+	FilePath::FilePath(const FilePath& oth): path(oth.path) {}
 
 	FileContent FilePath::getContent() const {
 		if (to_content.contains(path)) {
@@ -48,7 +48,7 @@ namespace fs {
 
 	FilePath FilePath::parentPath() const { return path.parent_path(); }
 
-	base::OwningView getSimpleFileContent(const std::string &file_name) {
+	base::OwningView getSimpleFileContent(const std::string& file_name) {
 		std::ifstream file(file_name, std::ios::in | std::ios::binary);
 		if (file.fail()) throw base::LogicError(std::string("file does not exist: ") + file_name);
 
@@ -62,7 +62,7 @@ namespace fs {
 
 		// should read full file:
 		auto r_array = new byte[file_size];
-		file.read(reinterpret_cast<char *>(r_array), file_size);
+		file.read(reinterpret_cast<char*>(r_array), file_size);
 
 		return { r_array, file_size };
 	}

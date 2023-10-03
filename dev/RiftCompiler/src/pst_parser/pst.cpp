@@ -3,7 +3,7 @@
 
 namespace pst {
 
-	PST::PST(lexer::TokenData &&td):
+	PST::PST(lexer::TokenData&& td):
 		  token_data(std::forward<lexer::TokenData>(td)),
 		  parser_state(
 			  tpc::TokenStream(token_data.tokens, 0, token_data.tokens.size()), ErrorState()
@@ -13,13 +13,13 @@ namespace pst {
 		err = std::move(parser_state.err);
 	}
 
-	const std::vector<tpc::ParserCBorrowRef<Import>> &PST::getImports() const {
+	const std::vector<tpc::ParserCBorrowRef<Import>>& PST::getImports() const {
 		return parser_state.getImports();
 	}
 
-	const ErrorState &PST::getErrorState() const { return err; }
+	const ErrorState& PST::getErrorState() const { return err; }
 
-	void PST::dprint(std::ostream &out) const { nullAwareDprint(top_level, out); }
+	void PST::dprint(std::ostream& out) const { nullAwareDprint(top_level, out); }
 
 	ParserCBorrowRef<TopLevel> PST::getTopLevelElement() const { return top_level.borrow(); }
 }

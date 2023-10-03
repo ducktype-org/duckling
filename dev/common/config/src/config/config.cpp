@@ -37,11 +37,11 @@ namespace config {
 		}
 
 	public:
-		ArgParser(ConfigOptions &&opts): options(std::move(opts)) {
+		ArgParser(ConfigOptions&& opts): options(std::move(opts)) {
 			// @TODO: validate options
 		}
 
-		ParsingResult parse(const std::vector<base::RawView> &arg_values) {
+		ParsingResult parse(const std::vector<base::RawView>& arg_values) {
 			reset();
 			const usize arg_count = arg_values.size();
 
@@ -94,7 +94,7 @@ namespace config {
 
 			out.non_option_values = std::move(values);
 
-			for (const auto &[name, index] : long_options_map) {
+			for (const auto& [name, index]: long_options_map) {
 				out.all_options.insert(name);
 				if (option_was.contains(index)) {
 					out.option_was.insert(name);
@@ -121,11 +121,11 @@ namespace config {
 		return out;
 	}
 
-	ParsingResult parse(ConfigOptions &&config, CLIArgs args) {
+	ParsingResult parse(ConfigOptions&& config, CLIArgs args) {
 		return parse(std::move(config), cliArgsToVec(args));
 	}
 
-	ParsingResult parse(ConfigOptions &&config, const std::vector<base::RawView> &args) {
+	ParsingResult parse(ConfigOptions&& config, const std::vector<base::RawView>& args) {
 		ArgParser parser{ std::move(config) };
 		return parser.parse(args);
 	}

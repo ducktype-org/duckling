@@ -17,15 +17,15 @@ namespace tpc {
 		printer::Console errorLog;
 
 	public:
-		ErrorState()                         = default;
-		ErrorState(ErrorState &&)            = default;
-		ErrorState &operator=(ErrorState &&) = default;
+		ErrorState()                        = default;
+		ErrorState(ErrorState&&)            = default;
+		ErrorState& operator=(ErrorState&&) = default;
 
 		void setFail() { failbit = true; }
 
-		void failAndLog(const lexer::SourcePosition &position, std::string_view message);
-		void logError(const lexer::SourcePosition &position, std::string_view message);
-		void dumpLog(std::ostream &stream = std::cerr) const;
+		void failAndLog(const lexer::SourcePosition& position, std::string_view message);
+		void logError(const lexer::SourcePosition& position, std::string_view message);
+		void dumpLog(std::ostream& stream = std::cerr) const;
 
 		[[nodiscard]]
 		bool good() const {

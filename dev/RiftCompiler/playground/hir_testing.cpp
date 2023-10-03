@@ -10,7 +10,7 @@ hir::SourceUnit prepare(std::string_view filename) {
 	return { pst::parse(std::move(td)), file };
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	if (argc != 2) {
 		std::cerr << "usage: ./hir_testing file_name\n";
 		return 1;

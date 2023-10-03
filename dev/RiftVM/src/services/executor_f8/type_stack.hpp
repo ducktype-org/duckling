@@ -21,7 +21,7 @@ namespace vm {
 		 */
 		option<TypeCRef> lowestAtOffset(Offset offset) const {
 			Offset curr_offset = 0;
-			for (auto type : types) {
+			for (auto type: types) {
 				if (curr_offset + type->getSize() > offset)
 					return type->getLowestTypeAtPos(offset - curr_offset);
 				curr_offset += type->getSize();

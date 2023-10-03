@@ -3,11 +3,11 @@
 #include <mutex>
 
 namespace vm {
-	DataManager &VCPU::getData() { return dataManager; }
+	DataManager& VCPU::getData() { return dataManager; }
 
-	ServiceManager &VCPU::getServices() { return serviceManager; }
+	ServiceManager& VCPU::getServices() { return serviceManager; }
 
-	void VCPU::onEvent(const api::VCPUStatus &event) noexcept {
+	void VCPU::onEvent(const api::VCPUStatus& event) noexcept {
 		std::unique_lock lock(rwStatus);
 		// @TODO: check if status change is legal
 		status = event;
@@ -19,7 +19,7 @@ namespace vm {
 		return status;
 	}
 
-	result<api::Response, api::LoadProgramError> VCPU::loadProgram(const fs::FilePath &path) {
+	result<api::Response, api::LoadProgramError> VCPU::loadProgram(const fs::FilePath& path) {
 		std::unique_lock lock(rwGlobal);
 		// @TODO: this code should be improved in the future to not just return plain strings
 		auto code_result = serviceManager.get<vm::Preprocessor>().getCode(path);
@@ -48,7 +48,7 @@ namespace vm {
 				serviceManager.get<vm::Executor>().run(*loadedCode);
 
 				// @TODO: catch not general std::exception&
-			} catch (const std::exception &e) {
+			} catch (const std::exception& e) {
 				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";
 				onEvent(api::VCPUStatus{ api::Panicked(e) });
 			}
@@ -66,7 +66,7 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	result<api::Response, api::CoreOperationError> VCPU::input(const api::request::Input &request) {
+	result<api::Response, api::CoreOperationError> VCPU::input(const api::request::Input& request) {
 		// TODO: add checking for stdio
 		std::unique_lock lock(input_mutex);
 		input_stream->write(request.input.c_str(), request.input.size());
@@ -90,7 +90,7 @@ namespace vm {
 	}
 
 	result<api::Response, api::CoreOperationError>
-		VCPU::doRequest(const api::ExecutorRequest &request) {
+		VCPU::doRequest(const api::ExecutorRequest& request) {
 		variant_match(request) {
 			variant_case_novalue(api::request::Run) { return run(); }
 			variant_case_novalue(api::request::Join) { return join(); }
@@ -119,7 +119,7 @@ namespace vm {
 		RIFT_PANIC("something went wrong");
 	}
 
-	result<api::Response, api::CoreOperationError> VCPU::doRequest(const api::DataRequest &request
+	result<api::Response, api::CoreOperationError> VCPU::doRequest(const api::DataRequest& request
 	) {
 		std::shared_lock lock(rwStatus);
 		if (!std::holds_alternative<api::Executing>(status)) {
@@ -139,8 +139,8 @@ namespace vm {
 				response
 					= dataManager.get<vm::TypeMetadata>()
 				          .getTypeByName(base::StrId(type_request.type_name.c_str()))
-				          .map([](const TypeCRef &type_ptr) { return api::Response(type_ptr); })
-				          .map_error([](auto &) {
+				          .map([](const TypeCRef& type_ptr) { return api::Response(type_ptr); })
+				          .map_error([](auto&) {
 							  return api::CoreOperationError{ api::OtherError("Type not found") };
 						  });
 			}
@@ -148,10 +148,10 @@ namespace vm {
 				response
 					= dataManager.get<vm::Memory>()
 				          .getBlock(block_request.block_id)
-				          .map([](Block *block_ptr) {
+				          .map([](Block* block_ptr) {
 							  return api::Response(api::response::Block{ block_ptr->rawPointer() });
 						  })
-				          .map_error([](auto &error) {
+				          .map_error([](auto& error) {
 							  return api::CoreOperationError{ api::OtherError(error) };
 						  });
 			}
@@ -161,7 +161,7 @@ namespace vm {
 	}
 
 	result<api::Response, api::CoreOperationError>
-		VCPU::doRequest(const api::RequestVariant &request) {
+		VCPU::doRequest(const api::RequestVariant& request) {
 		variant_match(request) {
 			variant_case(api::ExecutorRequest, exec_request) { return doRequest(exec_request); }
 			variant_case(api::DataRequest, data_request) { return doRequest(data_request); }

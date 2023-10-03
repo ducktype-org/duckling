@@ -12,12 +12,12 @@ namespace operation {
 	}
 
 	namespace {
-		OperationMap &getOperations() {
+		OperationMap& getOperations() {
 			static OperationMap operations;
 			return operations;
 		}
 
-		DefaultsMap &getDefaults() {
+		DefaultsMap& getDefaults() {
 			static DefaultsMap defaults;
 			return defaults;
 		}
@@ -27,13 +27,13 @@ namespace operation {
 
 	bool existsOperation(OperationId id) { return getOperations().contains(id); }
 
-	OperationId addOperation(const TypedOperation &operation) {
+	OperationId addOperation(const TypedOperation& operation) {
 		auto id = OperationId::next();
 		getOperations().put(id, operation);
 		return id;
 	}
 
-	OperationId addDefault(Defaultable kind, ts::TypeInfo type, const TypedOperation &operation) {
+	OperationId addDefault(Defaultable kind, ts::TypeInfo type, const TypedOperation& operation) {
 		// @TODO: One day add checking if the signature is ok
 		if (getDefaults().contains({ kind, type }))
 			throw base::LogicError("Redeclaration of default operation is not legal.");
@@ -44,7 +44,7 @@ namespace operation {
 		return id;
 	}
 
-	TypedOperation &getDefault(Defaultable kind, ts::TypeInfo type) {
+	TypedOperation& getDefault(Defaultable kind, ts::TypeInfo type) {
 		OperationId id = getIdDefault(kind, type);
 		return getOperations()[id];
 	}

@@ -63,7 +63,7 @@ namespace exec {
 	}
 
 	inline exec::CTV
-		getMember(exec::CTV ctv, const ts::MemberInfo &member, ts::ClassInfo class_info) {
+		getMember(exec::CTV ctv, const ts::MemberInfo& member, ts::ClassInfo class_info) {
 		if (member.last_virtual_ancestor.has_value())
 			return getVirtualMember(ctv, class_info, member);
 		return getMemberNonVirtual(ctv, member);

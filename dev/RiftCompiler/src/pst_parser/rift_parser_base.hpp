@@ -19,7 +19,7 @@ namespace pst {
 			  source_position(std::move(position)){};
 
 		[[nodiscard]]
-		const lexer::SourcePosition &getSourcePosition() const;
+		const lexer::SourcePosition& getSourcePosition() const;
 
 	private:
 		lexer::SourcePosition source_position;
@@ -30,11 +30,11 @@ namespace pst {
 		typedef decltype(imports)                       ImportType;
 
 	public:
-		RiftParserState(tpc::TokenStream &&tokens, tpc::ErrorState &&err):
+		RiftParserState(tpc::TokenStream&& tokens, tpc::ErrorState&& err):
 			  tpc::ParserState(std::move(tokens), std::move(err)) {}
 
 		void              addImport(tpc::ParserCBorrowRef<pst::Import> import);
-		const ImportType &getImports() const;
+		const ImportType& getImports() const;
 	};
 
 }

@@ -46,7 +46,7 @@ private:
 		member_result_ctv.getData<bool>().front() = true;
 
 		auto fun = [&parent_counter,
-		            &parent_result_ctv]([[maybe_unused]] const std::vector<exec::CTV> &input) {
+		            &parent_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
 			parent_counter++;
 			return parent_result_ctv;
 		};
@@ -56,7 +56,7 @@ private:
 		operation::addDefault(operation::Defaultable::Equality, parentClass, parent_eq);
 
 		auto fun2 = [&member_counter,
-		             &member_result_ctv]([[maybe_unused]] const std::vector<exec::CTV> &input) {
+		             &member_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
 			member_counter++;
 			return member_result_ctv;
 		};
@@ -138,7 +138,7 @@ private:
 		member_result_ctv.getData<int8_t>().front() = 0;
 
 		auto fun = [&parent_counter,
-		            &parent_result_ctv]([[maybe_unused]] const std::vector<exec::CTV> &input) {
+		            &parent_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
 			parent_counter++;
 			return parent_result_ctv;
 		};
@@ -148,7 +148,7 @@ private:
 		operation::addDefault(operation::Defaultable::Compare, parentClass, parent_comp);
 
 		auto fun2 = [&member_counter,
-		             &member_result_ctv]([[maybe_unused]] const std::vector<exec::CTV> &input) {
+		             &member_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
 			member_counter++;
 			return member_result_ctv;
 		};
@@ -342,7 +342,7 @@ private:
 		);
 
 		usize offset = 0;
-		for (auto parent_data : class_B.basicParents())
+		for (auto parent_data: class_B.basicParents())
 			if (parent_data.info == class_A) offset = parent_data.offset;
 
 		operation::TypedOperation class_B_construct_empty{
@@ -429,7 +429,7 @@ private:
         }
         );
 
-		operation::Operation construct_z = [](const std::vector<exec::CTV> &ctvs) {
+		operation::Operation construct_z = [](const std::vector<exec::CTV>& ctvs) {
 			ctvs[0].getData<uint8_t>().front() = 7;
 			return ctvs[0];
 		};
@@ -605,17 +605,17 @@ private:
 		auto ctv2 = exec::alloc_new(tuple);
 
 		using enum operation::Defaultable;
-		for (auto kind : std::vector<operation::Defaultable>{
+		for (auto kind: std::vector<operation::Defaultable>{
 				 ConstructEmpty, ConstructFull, Assign, Equality, Compare }) {
 			operation::createAddDefault(tuple, kind);
 		}
 
-		const auto &construct
+		const auto& construct
 			= operation::getDefault(operation::Defaultable::ConstructEmpty, tuple);
 		construct({ ctv });
 		construct({ ctv2 });
 
-		const auto &equal = operation::getDefault(operation::Defaultable::Equality, tuple);
+		const auto& equal = operation::getDefault(operation::Defaultable::Equality, tuple);
 
 		auto res_equal = equal({ ctv, ctv });
 		assert(res_equal.getData<bool>().front() == true, "tuple value is not equal to itself.");
@@ -629,7 +629,7 @@ private:
 		auto int_37                       = exec::alloc_new(int8);
 		int_37.getData<uint8_t>().front() = 37;
 
-		const auto &construct_full = operation::getDefault(ConstructFull, tuple);
+		const auto& construct_full = operation::getDefault(ConstructFull, tuple);
 
 		assert(
 			construct_full.signature.getParameterTypeList().size() == 3,

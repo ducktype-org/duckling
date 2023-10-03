@@ -36,14 +36,14 @@ public:
 	}
 
 private:
-	pst::PST prepare(const std::string &filename) {
+	pst::PST prepare(const std::string& filename) {
 		fs::FilePath file(filename);
 		auto         td = lexer::tokenizeFile(file);
 		return pst::parse(std::move(td));
 	}
 
 	void testJson(
-		const std::string &rift_file, const std::string &json_file, bool no_errors = true
+		const std::string& rift_file, const std::string& json_file, bool no_errors = true
 	) {
 		pst::PST          pst = prepare(rift_file);
 		std::stringstream ss;
@@ -61,7 +61,7 @@ private:
 	}
 
 	void testJsonRelativePath(
-		const std::string &rift_file, const std::string &json_file, bool no_errors = true
+		const std::string& rift_file, const std::string& json_file, bool no_errors = true
 	) {
 		testJson(path("snippets/" + rift_file), path("snippets/" + json_file), no_errors);
 	}

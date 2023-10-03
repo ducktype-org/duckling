@@ -9,7 +9,7 @@ namespace detail {
 		ActionT action;
 
 	public:
-		DeferHelper(ActionT &&action): action(std::move(action)) {}
+		DeferHelper(ActionT&& action): action(std::move(action)) {}
 
 		~DeferHelper() noexcept { action(); }
 	};

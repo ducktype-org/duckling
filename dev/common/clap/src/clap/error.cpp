@@ -25,15 +25,15 @@ namespace clap {
 
 	std::string HelpMessage::print() const { return ""; }
 
-	MissingRequiredParameter::MissingRequiredParameter(const ParameterConfig &c):
+	MissingRequiredParameter::MissingRequiredParameter(const ParameterConfig& c):
 		  name(c.to_str_id()) {}
 
-	DuplicatedParameter::DuplicatedParameter(const ParameterConfig &c): name(c.to_str_id()) {}
+	DuplicatedParameter::DuplicatedParameter(const ParameterConfig& c): name(c.to_str_id()) {}
 
 	UnexpectedParameter::UnexpectedParameter(byte c): name(base::StrId(uchar(c))) {}
 
 	UnexpectedParameter::UnexpectedParameter(base::StrId c): name(c) {}
 
-	MissingParameterArgument::MissingParameterArgument(const ParameterConfig &c):
+	MissingParameterArgument::MissingParameterArgument(const ParameterConfig& c):
 		  name(c.to_str_id()) {}
 }

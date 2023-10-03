@@ -71,7 +71,7 @@ CompactNamespaces: false
 EmptyLineAfterAccessModifier: Never
 EmptyLineBeforeAccessModifier: Always
 KeepEmptyLinesAtTheStartOfBlocks: false
-MaxEmptyLinesToKeep: 2  # @Why not 1?
+MaxEmptyLinesToKeep: 2
 PackConstructorInitializers: CurrentLine
 ReflowComments:  true
 SeparateDefinitionBlocks: Always
@@ -125,7 +125,7 @@ SpaceBeforeParensOptions:
   AfterRequiresInClause: false
   AfterRequiresInExpression: false
   BeforeNonEmptyParentheses: false
-SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeRangeBasedForLoopColon: false
 SpaceBeforeSquareBrackets: false
 SpaceInEmptyBlock: false
 SpaceInEmptyParentheses: false
@@ -180,7 +180,7 @@ RequiresExpressionIndentation: OuterScope
 
 # Pointers *&
 DerivePointerAlignment: false
-PointerAlignment: Right
+PointerAlignment: Left
 ReferenceAlignment: Pointer
 
 
@@ -208,7 +208,7 @@ MacroBlockEnd:   ''
 
 # Sorting
 SortUsingDeclarations: LexicographicNumeric
-SortIncludes:    CaseSensitive
+SortIncludes:    Never
 
 
 # Penalties

@@ -8,5 +8,5 @@
  */
 
 namespace modulesys {
-	std::string importToPath(std::string_view local_path, const pst::Import &import);
+	std::string importToPath(std::string_view local_path, const pst::Import& import);
 }

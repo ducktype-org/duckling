@@ -9,7 +9,7 @@
 namespace lexer {
 	class Lexer {
 	public:
-		explicit Lexer(const fs::FilePath &file);
+		explicit Lexer(const fs::FilePath& file);
 
 		[[nodiscard]]
 		Tokens tokenize(bool dprint);
@@ -18,14 +18,14 @@ namespace lexer {
 		void next();
 		void skip(usize n);
 		[[nodiscard]]
-		const Char &peek(usize fwd = 0) const;
+		const Char& peek(usize fwd = 0) const;
 		[[nodiscard]]
 		bool tryRawValue(char rawValue, usize fwd = 0) const;
 
 		// top level parsers:
 		void codeblock();
-		void parseCodeblockInto(Tokens &output);
-		void parseSingleInto(Tokens &output);
+		void parseCodeblockInto(Tokens& output);
+		void parseSingleInto(Tokens& output);
 
 		// non-terminal tokens parsers:
 		Tokens parGroup(lexer::Char::ParType end);

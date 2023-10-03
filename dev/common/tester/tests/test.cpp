@@ -44,7 +44,7 @@ private:
 				[&]() { fail("Please wait patiently for the failure of the system..."); },
 				"This message is unfortunately discarded."
 			);
-		} catch (const tester::TestSuite::CritTestError &e) {
+		} catch (const tester::TestSuite::CritTestError& e) {
 			message("Task failed successfully.");
 		}
 	}
@@ -62,7 +62,7 @@ private:
 	}
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	auto config = tester::testConfigFromArgs({ argc, argv }, "/common/tester/tests/");
 
 	SimpleTesterTest passing_test(std::move(config), 0);

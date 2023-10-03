@@ -24,7 +24,7 @@ namespace N {
 
 		virtual void fillSymTable(
 			[[maybe_unused]] symtable::ScopeId      parent_scope,
-			[[maybe_unused]] symtable::SymbolTable &symtable
+			[[maybe_unused]] symtable::SymbolTable& symtable
 		) {}
 	};
 
@@ -161,11 +161,11 @@ int main() {
 	const i32 ah     = 0;
 	const i32 ssssss = 0;
 
-	int &a;
-	int &a;
+	int& a;
+	int& a;
 	i32  a[5][5];
 
-	for (auto v : values) {}
+	for (auto v: values) {}
 
 	foo();
 }

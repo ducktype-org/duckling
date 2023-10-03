@@ -7,7 +7,7 @@ namespace clap {
 		return it->second;
 	}
 
-	option<usize> ParametersMap::to_id(const base::RawView &name) const {
+	option<usize> ParametersMap::to_id(const base::RawView& name) const {
 		return to_id(base::StrId(name));
 	}
 

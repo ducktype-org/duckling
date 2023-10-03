@@ -5,20 +5,22 @@
 
 #pragma once
 
-#include <base/exceptions.hpp>
 #include <exec/ctv.hpp>
 #include <exec/operators/builtinoperators.hpp>
 #include <operations/operation.hpp>
+#include <base/exceptions.hpp>
 #include <vector>
 
 namespace exec::operators {
 	// Specializations can be added for types that cannot be simply casted this way.
+	// @TODO: this function should be exported in some form by type system
 	template<class T>
 	T CTVToType(CTV ctv) {
 		return *(ctv.getData<T>().data());
 	}
 
 	// Specializations can be added for types that cannot be simply casted this way.
+	// @TODO: this function should be exported in some form by type system
 	template<class T>
 	void PutDataInCTV(CTV ctv, T value) {
 		*(ctv.getData<T>().data()) = value;
@@ -60,16 +62,13 @@ namespace exec::operators {
 	UINT_BIN_SIMPLE_OPS(operation, name)
 
 // For built in operator map initialization of binary operators.
+// clang-format off
 #define BIN_ENTRY(arg_desc_1, arg_desc_2, res_desc, op_name, fun_name, flags)              \
 	operation::TypedOperation typed_op                                                     \
 		= { fun_name, FunctionInfo::create({ arg_desc_1, arg_desc_2 }, res_desc, flags) }; \
 	operation::OperationId id = operation::addOperation(typed_op);                         \
-	getBuiltInOps().put(                                                                   \
-		{                                                                                  \
-			Operator::op_name, {arg_desc_1, arg_desc_2}
-},                               \
-		id                                                                                 \
-	);
+	getBuiltInOps().put({ Operator::op_name, { arg_desc_1, arg_desc_2 } }, id);
+// clang-format on
 
 #define BIN_ENTRY_SIMPLE(desc, op_name, fun_name) BIN_ENTRY(desc, desc, desc, op_name, fun_name, 0)
 

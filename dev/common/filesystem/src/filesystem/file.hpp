@@ -39,11 +39,11 @@ namespace fs {
 
 	public:
 		FileContent(): content(nullptr){};
-		FileContent(const FileContent &) = default;
-		FileContent(FileContent &&)      = default;
+		FileContent(const FileContent&) = default;
+		FileContent(FileContent&&)      = default;
 
-		FileContent &operator=(const FileContent &) = default;
-		FileContent &operator=(FileContent &&)      = default;
+		FileContent& operator=(const FileContent&) = default;
+		FileContent& operator=(FileContent&&)      = default;
 
 		usize size() { return view().size(); }
 
@@ -65,14 +65,14 @@ namespace fs {
 
 	public:
 		FilePath() = delete;
-		FilePath(const FilePath &);
-		FilePath(FilePath &&) = default;
-		~FilePath()           = default;
+		FilePath(const FilePath&);
+		FilePath(FilePath&&) = default;
+		~FilePath()          = default;
 
-		FilePath(const std::filesystem::path &path);
+		FilePath(const std::filesystem::path& path);
 
 		// @TODO: this might not be perfect:
-		bool operator==(const FilePath &oth) const { return path == oth.path; }
+		bool operator==(const FilePath& oth) const { return path == oth.path; }
 
 		[[nodiscard]]
 		FileContent getContent() const;
@@ -86,15 +86,15 @@ namespace fs {
 		FilePath parentPath() const;
 
 		[[nodiscard]]
-		bool isFile(const std::string &ext = "") const noexcept;
+		bool isFile(const std::string& ext = "") const noexcept;
 		[[nodiscard]]
 		bool isDirectory() const noexcept;
 	};
 
-	base::OwningView getSimpleFileContent(const std::string &file_name);
+	base::OwningView getSimpleFileContent(const std::string& file_name);
 }
 
 template<>
 struct std::hash<fs::FilePath> {
-	usize operator()(const fs::FilePath &key) const { return fs::FilePath::FileHash()(key.path); }
+	usize operator()(const fs::FilePath& key) const { return fs::FilePath::FileHash()(key.path); }
 };

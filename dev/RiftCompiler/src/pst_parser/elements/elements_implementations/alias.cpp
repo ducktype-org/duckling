@@ -1,7 +1,7 @@
 #include "elements_implementation.hpp"
 
 namespace pst {
-	ParserRef<Alias> Alias::parse(RiftParserState &state) {
+	ParserRef<Alias> Alias::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Alias>(position);
 
@@ -24,14 +24,14 @@ namespace pst {
 		return out;
 	}
 
-	void Alias::dprint(std::ostream &out) const {
+	void Alias::dprint(std::ostream& out) const {
 		out << "{\"Alias\": {";
 
 		out << base::strConcat(R"("name": ")", name.value, R"(",)");
 
 		out << R"("points_to": [)";
 
-		for (const auto &name : points_to.names) {
+		for (const auto& name: points_to.names) {
 			tpc::nullAwareDprint(name, out);
 			out << ", ";
 		}

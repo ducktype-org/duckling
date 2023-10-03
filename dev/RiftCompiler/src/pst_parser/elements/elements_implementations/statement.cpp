@@ -5,7 +5,7 @@ namespace pst {
 	namespace detail {
 
 		template<class T>
-		ParserRef<T> parseStmt(RiftParserState &state, bool force_semi = false) {
+		ParserRef<T> parseStmt(RiftParserState& state, bool force_semi = false) {
 			ParserRef<T> out = T::parse(state);
 			if (force_semi or out->trailingSemicolon()) parseOne(state, Special::Semicolon);
 			return out;
@@ -14,7 +14,7 @@ namespace pst {
 
 	bool Stmt::trailingSemicolon() { return true; }
 
-	ParserRef<Stmt> Stmt::parse(RiftParserState &state) {
+	ParserRef<Stmt> Stmt::parse(RiftParserState& state) {
 		auto as_keyword = state.ctokens().peek().asKeyword();
 		auto as_special = state.ctokens().peek().asSpecial();
 

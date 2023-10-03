@@ -33,11 +33,11 @@ namespace symtable {
 
 	usize SymbolData::symbolCount() const { return symbols.size(); }
 
-	const decltype(SymbolData::symbols) &SymbolData::getSymbols() const { return symbols; }
+	const decltype(SymbolData::symbols)& SymbolData::getSymbols() const { return symbols; }
 
 	// @TODO: errors
 	ChainLookupResult SymbolData::lookupDottedNameInScopeAndParents(
-		hir::AnalysisState &state, ScopeRef initial, std::span<base::StrId> names
+		hir::AnalysisState& state, ScopeRef initial, std::span<base::StrId> names
 	) {
 		RIFT_ASSERT(names.size() > 0, "lookupDotted received zero names");
 

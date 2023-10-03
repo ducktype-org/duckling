@@ -1,7 +1,7 @@
 #include "elements_implementation.hpp"
 
 namespace pst {
-	ParserRef<Namespace> Namespace::parse(RiftParserState &state) {
+	ParserRef<Namespace> Namespace::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Namespace>(position);
 
@@ -14,7 +14,7 @@ namespace pst {
 		return out;
 	}
 
-	void Namespace::dprint(std::ostream &out) const {
+	void Namespace::dprint(std::ostream& out) const {
 		out << "{\"Namespace\": {";
 
 		out << R"("name": )";

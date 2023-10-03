@@ -16,11 +16,11 @@ namespace base {
 	public:
 		Panic(std::string position, std::string reason);
 
-		const std::string &getPosition() const;
-		const char        *what() const noexcept final;
+		const std::string& getPosition() const;
+		const char*        what() const noexcept final;
 
 		// @TODO: use Printer
-		void print(std::ostream &out) const;
+		void print(std::ostream& out) const;
 	};
 
 	class Exception: public std::exception {};
@@ -30,7 +30,7 @@ namespace base {
 
 	public:
 		LogicError(std::string message);
-		const char *what() const noexcept override;
+		const char* what() const noexcept override;
 	};
 
 	class NotYetImplemented: public Exception {
@@ -38,7 +38,7 @@ namespace base {
 
 	public:
 		NotYetImplemented(std::string message);
-		const char *what() const noexcept override;
+		const char* what() const noexcept override;
 	};
 }
 

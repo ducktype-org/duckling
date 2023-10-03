@@ -1,7 +1,7 @@
 #include "type_metadata.hpp"
 
 namespace vm {
-	TypeRef TypeMetadata::addType(Type &&type) {
+	TypeRef TypeMetadata::addType(Type&& type) {
 		RIFT_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
 
 		auto id      = types.emplaceBack(std::move(type));
@@ -17,7 +17,7 @@ namespace vm {
 		RIFT_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
 		state = TypeMetadataState::Finalized;
 
-		for (auto id : types_ids) types[id].finalize();
+		for (auto id: types_ids) types[id].finalize();
 	}
 
 	TypeCRef TypeMetadata::getType(TypeId id) const {

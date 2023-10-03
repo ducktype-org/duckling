@@ -14,14 +14,14 @@ namespace tpc {
 
 	// this is an analogy of deduction guide for alias CTAD
 	template<typename T>
-	inline ParserRef<T> makeRef(T *ptr) {
+	inline ParserRef<T> makeRef(T* ptr) {
 		return ParserRef<T>(ptr);
 	}
 
 	// @TODO: this function does slightly different thing than
 	// the function above, so maybe change its name.
 	template<class T, class... Args>
-	ParserRef<T> makeRef(Args &&...args) {
+	ParserRef<T> makeRef(Args&&... args) {
 		return ParserRef<T>(new T(std::forward<Args>(args)...));
 	}
 

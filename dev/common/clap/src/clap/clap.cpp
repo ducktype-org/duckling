@@ -8,32 +8,32 @@ namespace clap {
 		add(ParameterConfig("help").short_name('h').description("Show this help message"));
 	}
 
-	option<const ParameterConfig &> Config::get_parameter_config(base::StrId long_name) {
-		for (const ParameterConfig &parameter : parameters) {
+	option<const ParameterConfig&> Config::get_parameter_config(base::StrId long_name) {
+		for (const ParameterConfig& parameter: parameters) {
 			if (parameter.get_long_name().map([long_name](base::StrId x) { return long_name == x; }
 			    ).value_or(false)) {
-				return some<const ParameterConfig &>(parameter);
+				return some<const ParameterConfig&>(parameter);
 			}
 		}
-		return none<const ParameterConfig &>();
+		return none<const ParameterConfig&>();
 	}
 
-	option<const ParameterConfig &> Config::get_parameter_config(char short_name) {
-		for (const ParameterConfig &parameter : parameters) {
+	option<const ParameterConfig&> Config::get_parameter_config(char short_name) {
+		for (const ParameterConfig& parameter: parameters) {
 			if (parameter.get_short_name().map([short_name](char x) { return short_name == x; }
 			    ).value_or(false)) {
-				return some<const ParameterConfig &>(parameter);
+				return some<const ParameterConfig&>(parameter);
 			}
 		}
-		return none<const ParameterConfig &>();
+		return none<const ParameterConfig&>();
 	}
 
-	Config &Config::add(ParameterConfig parameter_config) {
-		parameters.push_back(std::forward<ParameterConfig &&>(parameter_config));
+	Config& Config::add(ParameterConfig parameter_config) {
+		parameters.push_back(std::forward<ParameterConfig&&>(parameter_config));
 		return *this;
 	}
 
-	Config &Config::add_positional(const base::RawView &parameter_name) {
+	Config& Config::add_positional(const base::RawView& parameter_name) {
 		positional_parameters_names.push_back(base::StrId(parameter_name));
 		return *this;
 	}
@@ -46,15 +46,15 @@ namespace clap {
 		usize         found_required_parameters_count = 0;
 
 		auto add_param = [&i, &out, &id, &found_required_parameters_count, &args](
-							 auto parameter_name, option<const ParameterConfig &> parameter_option
+							 auto parameter_name, option<const ParameterConfig&> parameter_option
 						 ) -> result<void, ClapParsingError> {
 			if (parameter_option.has_error()) return failure(UnexpectedParameter(parameter_name));
-			const ParameterConfig &config = parameter_option.value();
+			const ParameterConfig& config = parameter_option.value();
 			if (out.contains(parameter_name)) return failure(DuplicatedParameter(config));
 
-			const auto &long_name = config.get_long_name();
+			const auto& long_name = config.get_long_name();
 			if (long_name.has_value()) out.long_names_to_id.put(long_name.value(), id);
-			const auto &short_name = config.get_short_name();
+			const auto& short_name = config.get_short_name();
 			if (short_name.has_value()) out.short_names_to_id.put(short_name.value(), id);
 			if (config.requires_argument()) {
 				if (i + 1 == args.argc) {
@@ -103,16 +103,16 @@ namespace clap {
 			}
 		}
 
-		for (const ParameterConfig &parameter : parameters) {
+		for (const ParameterConfig& parameter: parameters) {
 			if (parameter.is_required()
 			    && !(
 					parameter.get_long_name()
-						.map([&out](const base::StrId &long_name) {
+						.map([&out](const base::StrId& long_name) {
 							return out.contains(long_name);
 						})
 						.value_or(false)
 					|| parameter.get_short_name()
-						   .map([&out](const char &short_name) { return out.contains(short_name); })
+						   .map([&out](const char& short_name) { return out.contains(short_name); })
 						   .value_or(false)
 				)) {
 				return failure(ClapParsingError{ MissingRequiredParameter{ parameter } });
@@ -131,7 +131,7 @@ namespace clap {
 		file_name   = base::StrId(args.argv[0]);
 		auto result = parse_internal(args);
 		if (result.has_error()) {
-			std::visit([](auto &&arg) { std::cout << arg.print() << "\n"; }, result.error());
+			std::visit([](auto&& arg) { std::cout << arg.print() << "\n"; }, result.error());
 			std::cout << help_message() << "\n";
 			exit(0);
 		}
@@ -143,9 +143,9 @@ namespace clap {
 
 		builder << base::strConcat("Help message of ", file_name, "\n");
 		builder << base::strConcat("Usage: ", file_name, " ");
-		for (auto &param : parameters) builder << param.short_help_message() << " ";
+		for (auto& param: parameters) builder << param.short_help_message() << " ";
 		builder << "\n";
-		for (auto &param : parameters) builder << param.long_help_message() << "\n";
+		for (auto& param: parameters) builder << param.long_help_message() << "\n";
 
 		return builder.str();
 	}

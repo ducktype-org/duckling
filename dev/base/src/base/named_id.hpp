@@ -47,13 +47,13 @@ namespace base {
 		typedef NamedId<Par> SelfType;
 		typedef Par          ParameterType;
 		NamedId(): id(bad_val){};
-		NamedId(const SelfType &id) = default;
-		NamedId(SelfType &&id)      = default;
+		NamedId(const SelfType& id) = default;
+		NamedId(SelfType&& id)      = default;
 
-		inline SelfType &operator=(const SelfType &)            = default;
-		inline auto      operator<=>(const SelfType &oth) const = default;
+		inline SelfType& operator=(const SelfType&)             = default;
+		inline auto      operator<=>(const SelfType& oth) const = default;
 
-		inline bool operator==(const SelfType &oth) const { return id == oth.id; }
+		inline bool operator==(const SelfType& oth) const { return id == oth.id; }
 
 		inline id_t asInt() const { return id; }
 
@@ -69,7 +69,7 @@ namespace base {
 
 		inline static id_t range() { return next_val; }
 
-		friend void swap(SelfType &first, SelfType &second) {
+		friend void swap(SelfType& first, SelfType& second) {
 			using std::swap;
 			swap(first.id, second.id);
 		}
@@ -102,7 +102,7 @@ namespace base {
 namespace std {
 	template<typename T>
 	struct hash<base::NamedId<T>> {
-		usize operator()(const base::NamedId<T> &key) const {
+		usize operator()(const base::NamedId<T>& key) const {
 			using std::hash;
 			return std::hash<id_t>()(base::id_t(key));
 		}

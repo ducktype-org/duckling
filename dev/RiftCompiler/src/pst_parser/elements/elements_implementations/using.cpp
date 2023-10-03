@@ -1,7 +1,7 @@
 #include "elements_implementation.hpp"
 
 namespace pst {
-	ParserRef<Using> Using::parse(RiftParserState &state) {
+	ParserRef<Using> Using::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Using>(position);
 
@@ -15,7 +15,7 @@ namespace pst {
 		return out;
 	}
 
-	void Using::dprint(std::ostream &out) const {
+	void Using::dprint(std::ostream& out) const {
 		out << "{\"Using\": {";
 
 		if (names.star)
@@ -25,7 +25,7 @@ namespace pst {
 
 		out << R"("names": [)";
 
-		for (const auto &name : names.names) {
+		for (const auto& name: names.names) {
 			tpc::nullAwareDprint(name, out);
 			out << ", ";
 		}

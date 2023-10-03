@@ -4,7 +4,7 @@
 
 using namespace fs;
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 	if (argc != 2) {
 		std::cerr << "usage: ./file_testing file_name\n";
 		return 1;

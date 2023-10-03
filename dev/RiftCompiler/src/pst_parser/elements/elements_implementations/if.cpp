@@ -1,7 +1,7 @@
 #include "elements_implementation.hpp"
 
 namespace pst {
-	ParserRef<If> If::parse(RiftParserState &state) {
+	ParserRef<If> If::parse(RiftParserState& state) {
 		// @TODO: attr list
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<If>(position);
@@ -13,7 +13,7 @@ namespace pst {
 		return out;
 	}
 
-	void If::dprint(std::ostream &out) const {
+	void If::dprint(std::ostream& out) const {
 		out << "{\"If\": {\"name\":";
 		nullAwareDprint(optional_name, out);
 		out << ", \"condition\": ";

@@ -42,14 +42,14 @@ namespace ts {
 
 		template<std::derived_from<TypeInfo> OTHER_TYPE_INFO>
 		[[nodiscard]]
-		bool operator==(const TypeDesc<OTHER_TYPE_INFO> &other) const {
+		bool operator==(const TypeDesc<OTHER_TYPE_INFO>& other) const {
 			return valueCategory == other.getValueCategory() && type_info == other.getType();
 		}
 
-		auto operator<=>(const TypeDesc<TYPE_INFO> &other) const = default;
+		auto operator<=>(const TypeDesc<TYPE_INFO>& other) const = default;
 
 		[[nodiscard]]
-		bool isDescImplicitlyCoercible(const TypeDesc<> &to) const;
+		bool isDescImplicitlyCoercible(const TypeDesc<>& to) const;
 
 	private:
 		TYPE_INFO     type_info;

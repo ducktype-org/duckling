@@ -27,7 +27,7 @@ namespace vm {
 	}
 
 	Frame Executor::internalInitFrame(
-		option<Frame &> previous_frame, const FuncData &function, VLADataReference vla_ref
+		option<Frame&> previous_frame, const FuncData& function, VLADataReference vla_ref
 	) {
 		return Frame{
 			.previous = previous_frame,
@@ -91,16 +91,16 @@ namespace vm {
 	}
 
 	template<typename T>
-	__attribute__((always_inline)) inline static T &derefStack(std::byte stack[], i64 position) {
-		return *(reinterpret_cast<T *>(&stack[position]));
+	__attribute__((always_inline)) inline static T& derefStack(std::byte stack[], i64 position) {
+		return *(reinterpret_cast<T*>(&stack[position]));
 	}
 
 	__attribute__((always_inline)) void inline static nextInstruction(
-		const std::span<const vm::Fix8Instruction> &bc,
-		usize                                      &instruction_pointer,
-		OpcodeFix8                                 &opcode,
-		int_fast32_t                               &arg0,
-		int_fast32_t                               &arg1
+		const std::span<const vm::Fix8Instruction>& bc,
+		usize&                                      instruction_pointer,
+		OpcodeFix8&                                 opcode,
+		int_fast32_t&                               arg0,
+		int_fast32_t&                               arg1
 	) {
 		Fix8Instruction instr = bc[instruction_pointer];
 		instruction_pointer++;
@@ -111,7 +111,7 @@ namespace vm {
 	}
 
 	i64 Executor::internalCallFunction(
-		option<Frame &> previous_frame, const FuncData &function, StandardFunctionArgs args
+		option<Frame&> previous_frame, const FuncData& function, StandardFunctionArgs args
 	) {
 		// @TODO: sanity check should be added to see if function.stack_size is sensible small
 		// @TODO: some generic code should be added to work with that does not support VLA
@@ -148,7 +148,7 @@ namespace vm {
 
 // Computed gotos labales:
 #ifdef USE_COMPUTED_GOTO
-		constexpr static void *opcode_label[] = { LABEL_PTR(mov_l64_imm),
+		constexpr static void* opcode_label[] = { LABEL_PTR(mov_l64_imm),
 
 			                                      LABEL_PTR(mov_l64_l64),
 			                                      LABEL_PTR(cmov_l64_l64),
@@ -297,7 +297,7 @@ namespace vm {
 					auto function_id      = arg0;
 					FRAME_REGS(p64_reg_0) = internalCallFunction(
 						// @TODO: this is not correct with flat frame
-						IF_NOT_FF(frame) IF_FF(none<Frame &>()),
+						IF_NOT_FF(frame) IF_FF(none<Frame&>()),
 						executing_code->functions[function_id],
 						FRAME(next_args)
 					);
@@ -388,7 +388,7 @@ namespace vm {
 		return FRAME(ret_val);
 	}
 
-	void Executor::run(const Code &code) {
+	void Executor::run(const Code& code) {
 		// @TODO: ensure correct status
 
 		setStatus(api::Running{});
@@ -396,7 +396,7 @@ namespace vm {
 		executing_code = &code;
 		try {
 			internalCallFunction(
-				none<Frame &>(), executing_code->functions[code.main_id], { 0, memory.nullPtr() }
+				none<Frame&>(), executing_code->functions[code.main_id], { 0, memory.nullPtr() }
 			);
 			setStatus(api::NotStarted{});
 		} catch (KillCoreException) { setStatus(api::NotStarted{}); }

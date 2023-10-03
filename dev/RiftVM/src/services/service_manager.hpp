@@ -20,7 +20,7 @@ namespace vm {
 			std::is_same_v<Allocator, T> || std::is_same_v<StackAllocator, T>
 				|| std::is_same_v<Executor, T> || std::is_same_v<Preprocessor, T>>;
 
-		VCPU &vcpu;
+		VCPU& vcpu;
 
 		Allocator      allocator;
 		StackAllocator stackAllocator;
@@ -30,7 +30,7 @@ namespace vm {
 		DynamicServicesStorage dynamic_services;
 
 	public:
-		ServiceManagerDef(VCPU &_vcpu):
+		ServiceManagerDef(VCPU& _vcpu):
 			  vcpu(_vcpu),
 			  allocator(*this),
 			  stackAllocator(*this),
@@ -38,35 +38,35 @@ namespace vm {
 			  preprocessor(*this),
 			  dynamic_services(none<DynamicServices>()...) {}
 
-		VCPU &getVCPU() { return vcpu; }
+		VCPU& getVCPU() { return vcpu; }
 
 		template<class T>
 		requires std::is_same_v<Allocator, T>
-		T &get() {
+		T& get() {
 			return allocator;
 		}
 
 		template<class T>
 		requires std::is_same_v<StackAllocator, T>
-		T &get() {
+		T& get() {
 			return stackAllocator;
 		}
 
 		template<class T>
 		requires std::is_same_v<Executor, T>
-		T &get() {
+		T& get() {
 			return executor;
 		}
 
 		template<class T>
 		requires std::is_same_v<Preprocessor, T>
-		T &get() {
+		T& get() {
 			return preprocessor;
 		}
 
 		template<class T>
 		requires(!IsCoreService<T>::value)
-		T &get() {
+		T& get() {
 			return std::get<option<T>>(dynamic_services).value();
 		}
 
@@ -86,7 +86,7 @@ namespace vm {
 		template<class T>
 		requires(!IsCoreService<T>::value)
 		void enable() {
-			auto &service = get<T>();
+			auto& service = get<T>();
 			if (!service.has_value()) {
 				service.emplace();
 				service->init(*this);
@@ -96,7 +96,7 @@ namespace vm {
 		template<class T>
 		requires(!IsCoreService<T>::value)
 		void disable() {
-			auto &service = get<T>();
+			auto& service = get<T>();
 			if (service.has_value()) service.reset();
 		}
 	};

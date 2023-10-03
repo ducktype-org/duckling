@@ -18,7 +18,7 @@ namespace ts {
 
 	class C3LinearisationException: public base::Exception {
 		[[nodiscard]]
-		const char *what() const noexcept override {
+		const char* what() const noexcept override {
 			return "C3 linearisation impossible for this class";
 		}
 	};
@@ -50,12 +50,12 @@ namespace ts {
 		// These function will take more params in the future
 		// Constructors for classes
 		static ClassInfo create(
-			base::StrId name, std::vector<std::pair<TypeDesc<>, symtable::SymbolId>> &&member_types
+			base::StrId name, std::vector<std::pair<TypeDesc<>, symtable::SymbolId>>&& member_types
 		);
 		static ClassInfo create(
 			base::StrId                                              name,
-			std::vector<std::pair<TypeDesc<>, symtable::SymbolId>> &&member_types,
-			std::vector<std::pair<ClassInfo, InheritanceTag>>      &&inheritance,
+			std::vector<std::pair<TypeDesc<>, symtable::SymbolId>>&& member_types,
+			std::vector<std::pair<ClassInfo, InheritanceTag>>&&      inheritance,
 			usize                                                    virtualMethods
 		);
 
@@ -63,7 +63,7 @@ namespace ts {
 		base::StrId getName() const;
 
 		[[nodiscard]]
-		const std::vector<AncestorData> &allAncestors() const;
+		const std::vector<AncestorData>& allAncestors() const;
 
 		// All the non-virtual parents
 		[[nodiscard]]
@@ -83,7 +83,7 @@ namespace ts {
 
 		// All of our members recursively
 		[[nodiscard]]
-		const std::vector<MemberData> &allMembers() const;
+		const std::vector<MemberData>& allMembers() const;
 
 		// Gets all the info we could possibly want about our member
 		// If we give a vector of ancestors, they will work as an inheritance path hint
@@ -91,7 +91,7 @@ namespace ts {
 		MemberInfo getMemberInfo(symtable::SymbolId symbol) const;
 		[[nodiscard]]
 		MemberInfo
-			getMemberInfo(symtable::SymbolId symbol, const std::vector<ClassInfo> &hint) const;
+			getMemberInfo(symtable::SymbolId symbol, const std::vector<ClassInfo>& hint) const;
 
 		// Gets all the info we could possibly want about our ancestor
 		// If we give a whole vector of ancestors, they will work as an inheritance path hint
@@ -172,10 +172,10 @@ namespace ts {
 		// The ^ operators combine results
 		// For example, if R1 tells us B has offset 10 in A, and R2 tells us C has offset 10 in B,
 		// then R1^R2 will let us know that C has offset 20 in A.
-		AncestorInfo  operator^(const AncestorInfo &a) const;
-		AncestorInfo &operator^=(const AncestorInfo &a);
+		AncestorInfo  operator^(const AncestorInfo& a) const;
+		AncestorInfo& operator^=(const AncestorInfo& a);
 
-		MemberInfo operator^(const MemberInfo &a) const;
+		MemberInfo operator^(const MemberInfo& a) const;
 
 		// Returns whether the result is correct, i.e. Standard or Virtual
 		[[nodiscard]]

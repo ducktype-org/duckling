@@ -39,6 +39,6 @@ namespace config {
 			return std::any_cast<T>(name_to_value[name]);
 		}
 
-		const std::vector<base::RawView> &getNonOptionValues() const { return non_option_values; }
+		const std::vector<base::RawView>& getNonOptionValues() const { return non_option_values; }
 	};
 }

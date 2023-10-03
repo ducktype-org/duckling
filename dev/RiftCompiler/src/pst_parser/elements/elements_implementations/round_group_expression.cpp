@@ -1,7 +1,7 @@
 #include "elements_implementation.hpp"
 
 namespace pst {
-	ParserRef<RoundGroupExpr> RoundGroupExpr::parse(RiftParserState &state) {
+	ParserRef<RoundGroupExpr> RoundGroupExpr::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
 
 		auto out = makeRef<RoundGroupExpr>(position);
@@ -17,7 +17,7 @@ namespace pst {
 		return out;
 	}
 
-	void RoundGroupExpr::dprint(std::ostream &out) const {
+	void RoundGroupExpr::dprint(std::ostream& out) const {
 		out << "{\"RoundGroupExpr\": ";
 		nullAwareDprint(expr, out);
 		out << " }";
