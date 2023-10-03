@@ -6,7 +6,7 @@ Standard:       'c++20'
 
 
 # Alignments
-AlignArrayOfStructures: None
+AlignArrayOfStructures: None  # this option is kinda broken, don't change it
 AlignAfterOpenBracket: BlockIndent
 AlignConsecutiveAssignments:
   Enabled:         true
