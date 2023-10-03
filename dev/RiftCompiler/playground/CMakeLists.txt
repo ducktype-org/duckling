@@ -1,10 +1,10 @@
 # Playground
-add_executable(char_testing                  char_testing.cpp)
-add_executable(file_testing                  file_testing.cpp)
-add_executable(lexer_testing                 lexer_testing.cpp)
-add_executable(elements_testing              elements_testing.cpp)
-add_executable(parsing_hanlder_testing       parsing_handler_testing.cpp)
-add_executable(hir_testing                   hir_testing.cpp)
+add_executable(char_testing char_testing.cpp)
+add_executable(file_testing file_testing.cpp)
+add_executable(lexer_testing lexer_testing.cpp)
+add_executable(elements_testing elements_testing.cpp)
+add_executable(parsing_hanlder_testing parsing_handler_testing.cpp)
+add_executable(hir_testing hir_testing.cpp)
 
 target_link_libraries(file_testing Filesystem)
 target_link_libraries(char_testing Lexer)

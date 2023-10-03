@@ -1,15 +1,3 @@
-[submodule "dev/libs/result"]
-	path = dev/libs/result
-	url = https://github.com/bitwizeshift/result
-[submodule "dev/RiftVM/libs/asio"]
-	path = dev/RiftVM/libs/asio
-	url = https://github.com/chriskohlhoff/asio.git
-[submodule "dev/RiftVM/libs/Crow"]
-	path = dev/RiftVM/libs/Crow
-	url = https://github.com/CrowCpp/Crow.git
-[submodule "dev/libs/json_struct"]
-	path = dev/libs/json_struct
-	url = https://github.com/jorgen/json_struct
 [submodule "dev/docs/source-doc"]
 	path = dev/docs/source-doc
 	url = git@github.com:rift-lang/source-doc.git
