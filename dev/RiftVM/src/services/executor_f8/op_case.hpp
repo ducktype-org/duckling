@@ -42,5 +42,4 @@
 		}                                                                                 \
 	}
 
-
 // Prevent \ warning

@@ -1,5 +1,6 @@
 
 #include "tester_config.hpp"
+
 #include <config/config.hpp>
 
 namespace tester {
@@ -20,4 +21,4 @@ namespace tester {
 
 		return out;
 	}
-}
+}  // namespace tester

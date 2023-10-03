@@ -1,5 +1,6 @@
 
 #include "parser.hpp"
+
 #include <base/maps.hpp>
 #include <base/option.hpp>
 #include <base/variant.hpp>
@@ -857,8 +858,9 @@ namespace assemble {
 		return funcData;
 	}
 
-	// @TODO: this function returns errors as string, in the future `Console` like object should be
-	// returned, that can produce both human readable and json error output
+	// @TODO: this function returns errors as string, in the future `Console` like
+	// object should be returned, that can produce both human readable and json
+	// error output
 	result<vm::Code, std::string> getCode(CodeContainer& code, vm::TypeMetadata& type_metadata) {
 		if (!code.ok) return failure(code.error);
 
@@ -904,4 +906,4 @@ namespace assemble {
 		return result;
 	}
 
-}
+}  // namespace assemble

@@ -1,8 +1,9 @@
 #pragma once
 
+#include <listener/emitter.hpp>
+
 #include "function_call_event.hpp"
 #include "memory_event.hpp"
-#include <listener/emitter.hpp>
 
 namespace vm {
 	class EmitterManager {
@@ -21,4 +22,4 @@ namespace vm {
 		static Emitter<MemoryEvent>&       getMemoryEventEmitter() noexcept;
 		static Emitter<FunctionCallEvent>& getFunctionCallEventEmitter() noexcept;
 	};
-}
+}  // namespace vm

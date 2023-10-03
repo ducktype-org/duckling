@@ -1,4 +1,5 @@
 #include "rift_parser_base.hpp"
+
 #include <base/exceptions.hpp>
 #include <base/str_concat.hpp>
 
@@ -11,4 +12,4 @@ namespace pst {
 
 	const RiftParserState::ImportType& RiftParserState::getImports() const { return imports; }
 
-}
+}  // namespace pst

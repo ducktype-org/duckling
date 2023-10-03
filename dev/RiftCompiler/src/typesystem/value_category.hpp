@@ -30,4 +30,4 @@ namespace ts {
 
 		auto operator<=>(const ValueCategory& other) const = default;
 	};
-}
+}  // namespace ts

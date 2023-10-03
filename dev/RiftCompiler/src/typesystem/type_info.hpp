@@ -5,10 +5,11 @@
 
 #pragma once
 
-#include "kind.hpp"
 #include <base/ints.hpp>
 #include <string>
 #include <vector>
+
+#include "kind.hpp"
 
 #define CHECKED_CAST(ClassName)                                        \
 	template<std::derived_from<TypeInfo> T>                            \
@@ -29,7 +30,8 @@
 	using CBPimpl = const BImpl*;
 
 namespace ts {
-	// this is const, and not constexpr, because it might be defined during runtime in the future
+	// this is const, and not constexpr, because it might be defined during runtime
+	// in the future
 	const usize META_SIZE    = 64;
 	const usize POINTER_SIZE = 64;
 	const usize BYTE_SIZE    = 8;
@@ -60,7 +62,7 @@ namespace ts {
 		class ModuleInfoImpl;
 		class MetaInfoImpl;
 		class VTableInfoImpl;
-	}
+	}  // namespace internal
 
 	template<typename T>
 	T checkDynamicCast(const internal::TypeInfoImpl*);
@@ -101,4 +103,4 @@ namespace ts {
 		// This is almost-const, but we need assignment operator on TypeInfo.
 		const internal::TypeInfoImpl* pimpl;
 	};
-}
+}  // namespace ts

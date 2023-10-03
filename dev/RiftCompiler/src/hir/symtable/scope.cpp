@@ -1,19 +1,20 @@
 #include "scope.hpp"
-#include "../analysis_state.hpp"
-#include "symbol.hpp"
 
 #include <base/defer.hpp>
 #include <base/exceptions.hpp>
 #include <iostream>
 #include <span>
 
+#include "../analysis_state.hpp"
+#include "symbol.hpp"
+
 namespace symtable {
 
 	LookupResult Scope::lookup(hir::AnalysisState& state, base::StrId name) {
 		// go over local symbols
 		// go over local aliases (are aliases symbols? - yes)
-		// go over links -- wildcard alias -- static links can cutoff, dep links needs un-aliasing
-		// using a.b.*; is realized by:
+		// go over links -- wildcard alias -- static links can cutoff, dep links needs
+		// un-aliasing using a.b.*; is realized by:
 		//  wildcard_alias _ = a.b;
 		//  un aliasing then can perform proper un-aliasing
 
@@ -46,7 +47,8 @@ namespace symtable {
 	LookupResult Scope::lookupMeAndParents(hir::AnalysisState& state, base::StrId name) {
 		auto result = lookup(state, name);
 		if (parent != nullptr) {
-			// Reverse insertion order allow for linear result concatenation instead of quadratic
+			// Reverse insertion order allow for linear result concatenation instead of
+			// quadratic
 			auto parent_result = parent->lookupMeAndParents(state, name);
 			parent_result.insert(std::move(result));
 			return parent_result;
@@ -54,4 +56,4 @@ namespace symtable {
 			return result;
 		}
 	}
-}
+}  // namespace symtable

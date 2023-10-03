@@ -40,4 +40,4 @@ namespace tpc {
 		[[nodiscard]]
 		usize errCount() const;
 	};
-}
+}  // namespace tpc

@@ -1,10 +1,11 @@
 #pragma once
 
-#include "listener.hpp"
 #include <base/ints.hpp>
 #include <concepts>
 #include <queue>
 #include <set>
+
+#include "listener.hpp"
 
 template<class Event>
 class Emitter {
@@ -38,7 +39,8 @@ public:
 
 	/**
 	 * Adds listener to the emitter's notify list.<br>
-	 * Unless manually erased, the emitter will clean added listener during it's destruction.
+	 * Unless manually erased, the emitter will clean added listener during it's
+	 * destruction.
 	 * @param listener
 	 */
 	void attach(Listener<Event>* listener) noexcept { listeners.emplace(listener); }

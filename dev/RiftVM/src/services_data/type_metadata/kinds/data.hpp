@@ -1,9 +1,10 @@
 #pragma once
 
-#include "../definitions.hpp"
 #include <base/string_id.hpp>
 #include <unordered_map>
 #include <vector>
+
+#include "../definitions.hpp"
 
 namespace vm::kind {
 
@@ -20,4 +21,4 @@ namespace vm::kind {
 		std::unordered_map<base::StrId, FieldId> field_name_map;
 		std::vector<FieldDesc>                   fields;
 	};
-}
+}  // namespace vm::kind

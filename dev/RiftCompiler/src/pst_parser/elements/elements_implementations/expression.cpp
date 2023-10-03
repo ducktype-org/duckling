@@ -1,5 +1,6 @@
-#include "elements_implementation.hpp"
 #include <base/variant.hpp>
+
+#include "elements_implementation.hpp"
 
 namespace pst {
 
@@ -108,4 +109,4 @@ namespace pst {
 		}
 		out << "]}";
 	}
-}
+}  // namespace pst

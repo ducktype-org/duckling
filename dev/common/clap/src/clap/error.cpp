@@ -36,4 +36,4 @@ namespace clap {
 
 	MissingParameterArgument::MissingParameterArgument(const ParameterConfig& c):
 		  name(c.to_str_id()) {}
-}
+}  // namespace clap

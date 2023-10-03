@@ -1,9 +1,10 @@
 #pragma once
 
+#include <listener/listener.hpp>
+
 #include "../services.hpp"
 #include "events/function_call_event.hpp"
 #include "events/memory_event.hpp"
-#include <listener/listener.hpp>
 
 namespace vm {
 	class Profiler: public Listener<MemoryEvent>, public Listener<FunctionCallEvent> {
@@ -20,4 +21,4 @@ namespace vm {
 		template<class... DynamicServices>
 		friend class ServiceManagerDef;
 	};
-}
+}  // namespace vm

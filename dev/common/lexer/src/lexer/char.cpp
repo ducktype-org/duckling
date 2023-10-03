@@ -4,6 +4,7 @@
  */
 
 #include "char.hpp"
+
 #include <array>
 #include <cctype>
 #include <sstream>
@@ -256,4 +257,4 @@ namespace lexer {
 		return CharArray(std::move(out));
 	}
 
-}
+}  // namespace lexer

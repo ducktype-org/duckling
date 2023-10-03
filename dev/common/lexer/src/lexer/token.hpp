@@ -6,16 +6,16 @@
 #pragma once
 
 #include <array>
+#include <base/raw_view.hpp>
+#include <base/string_id.hpp>
+#include <filesystem/file.hpp>
 #include <memory>
+#include <rift_definitions/key_spec_op.hpp>
 #include <string>
 #include <vector>
 
 #include "char.hpp"
 #include "source_position.hpp"
-#include <base/raw_view.hpp>
-#include <base/string_id.hpp>
-#include <filesystem/file.hpp>
-#include <rift_definitions/key_spec_op.hpp>
 
 namespace lexer {
 	class Token;
@@ -146,4 +146,4 @@ namespace lexer {
 		Tokens         recursive;
 		SourcePosition source_position;
 	};
-}
+}  // namespace lexer

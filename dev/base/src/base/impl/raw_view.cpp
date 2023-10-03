@@ -1,4 +1,5 @@
 #include "../raw_view.hpp"
+
 #include <cstring>
 
 namespace base {
@@ -32,4 +33,4 @@ namespace base {
 	byte RawView::operator[](usize index) { return begin[index]; }
 
 	RawArray RawView::getBegin() const { return begin; }
-}
+}  // namespace base

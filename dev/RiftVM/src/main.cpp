@@ -1,11 +1,10 @@
+#include <clap/clap.hpp>
 #include <iomanip>
+#include <services/executor_f8/op_case_config.hpp>
+#include <supervisor/supervisor.hpp>
 
 #include "cli.hpp"
 #include "server.hpp"
-#include <clap/clap.hpp>
-#include <supervisor/supervisor.hpp>
-
-#include <services/executor_f8/op_case_config.hpp>
 
 void initialise([[maybe_unused]] const clap::ParametersMap& params) {
 	// @TODO

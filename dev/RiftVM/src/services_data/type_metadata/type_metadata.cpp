@@ -33,4 +33,4 @@ namespace vm {
 			return none<TypeCRef>();
 	}
 
-}
+}  // namespace vm

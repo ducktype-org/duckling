@@ -154,4 +154,4 @@ namespace lexer {
 		  file_content(std::move(oth.file_content)){};
 
 	TokenData::~TokenData() = default;
-}
+}  // namespace lexer

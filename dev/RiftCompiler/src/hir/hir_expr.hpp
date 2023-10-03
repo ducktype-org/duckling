@@ -21,4 +21,4 @@ namespace hir {
 		// eval
 	};
 
-}
+}  // namespace hir

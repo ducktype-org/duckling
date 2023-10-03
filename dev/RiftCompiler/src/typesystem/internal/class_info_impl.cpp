@@ -1,5 +1,6 @@
-#include "type_info_impl.hpp"
 #include <deque>
+
+#include "type_info_impl.hpp"
 
 namespace ts::internal {
 
@@ -326,18 +327,20 @@ namespace ts::internal {
 			break;
 		case Ambiguous:
 			throw base::LogicError(
-				"Not enough info to create such vtable - this class has multiple such ancestors"
+				"Not enough info to create such vtable - this class has multiple "
+				"such ancestors"
 			);
 		default:
 			throw base::LogicError(
-				"Tried to get an invalid vtable instance - this class has no such ancestor"
+				"Tried to get an invalid vtable instance - this class has no such "
+				"ancestor"
 			);
 		}
 
 		for (auto [parent_virt_ancestor, parent_virt_ancestor_offset]: parent_ptr->virtual_layout) {
 			// @TODO: Consider throwing virtual ancestors here in a set here temporarily
-			// This could reduce this function to O(n*log(n)), but there should be very few virtual
-			// ancestors, so may be unnecessary.
+			// This could reduce this function to O(n*log(n)), but there should be very
+			// few virtual ancestors, so may be unnecessary.
 			usize virt_ancestor_offset = getVirtualAncestorOffset(parent_virt_ancestor);
 
 			result.emplace_back(parent_virt_ancestor, virt_ancestor_offset - parent_offset);
@@ -364,9 +367,10 @@ namespace ts::internal {
 			if (info == ancestor) return i;
 		}
 		throw base::LogicError(
-			"Tried to get a vtable position of someone who is not our virtual ancestor"
+			"Tried to get a vtable position of someone who is not our virtual "
+			"ancestor"
 		);
 	}
 
 	// ClassInfoImpl::~ClassInfoImpl() = default;
-}
+}  // namespace ts::internal

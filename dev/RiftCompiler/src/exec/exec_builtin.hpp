@@ -47,4 +47,4 @@ namespace exec {
 		ctvs[0].getData<T>().front() = 0;
 		return ctvs[0];
 	}
-}
+}  // namespace exec

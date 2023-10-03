@@ -45,4 +45,4 @@ namespace lexer {
 		u32                           line_number, column_number, source_index_start,
 			source_index_end;  // Indices of the characters in a source code.
 	};
-}
+}  // namespace lexer

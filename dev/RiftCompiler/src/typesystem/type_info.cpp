@@ -1,8 +1,10 @@
 #include "type_info.hpp"
+
+#include <base/exceptions.hpp>
+
 #include "internal/type_info_impl.hpp"
 #include "templates.hpp"
 #include "type_desc.hpp"
-#include <base/exceptions.hpp>
 
 #define INSTANTIATE_CHECKED_CAST(Type) \
 	template const internal::Type##InfoImpl* checkDynamicCast(const internal::TypeInfoImpl* p);
@@ -53,16 +55,11 @@ namespace ts {
 
 	IntegralInfo IntegralInfo::create(usize size, bool signedness) {
 		static std::map<std::pair<usize, bool>, Impl> ints = {
-			{{ 8, true },     Impl{ 8, true }   },
-            { { 8, false },   Impl{ 8, false }  },
-			{ { 16, true },   Impl{ 16, true }  },
-            { { 16, false },  Impl{ 16, false } },
-			{ { 32, true },   Impl{ 32, true }  },
-            { { 32, false },  Impl{ 32, false } },
-			{ { 64, true },   Impl{ 64, true }  },
-            { { 64, false },  Impl{ 64, false } },
-			{ { 128, true },  Impl{ 128, true } },
-            { { 128, false }, Impl{ 128, false }},
+			{ { 8, true }, Impl{ 8, true } },     { { 8, false }, Impl{ 8, false } },
+			{ { 16, true }, Impl{ 16, true } },   { { 16, false }, Impl{ 16, false } },
+			{ { 32, true }, Impl{ 32, true } },   { { 32, false }, Impl{ 32, false } },
+			{ { 64, true }, Impl{ 64, true } },   { { 64, false }, Impl{ 64, false } },
+			{ { 128, true }, Impl{ 128, true } }, { { 128, false }, Impl{ 128, false } },
 		};
 
 		RIFT_ASSERT(ints.find({ size, signedness }) != ints.end(), "Incorrect simple int size")
@@ -72,11 +69,12 @@ namespace ts {
 
 	FloatInfo FloatInfo::create(usize size) {
 		static std::map<usize, Impl> floats = {
-			{16,   Impl{ 16 } }, // For certain GPU applications
-			{ 32,  Impl{ 32 } }, // Standard float
-			{ 64,  Impl{ 64 } }, // Double precision
-			{ 80,  Impl{ 80 } }, // Long double, covers sum of ranges of int64 and uint64 precisely
-			{ 128, Impl{ 128 }}, // Quad precision
+			{ 16, Impl{ 16 } },    // For certain GPU applications
+			{ 32, Impl{ 32 } },    // Standard float
+			{ 64, Impl{ 64 } },    // Double precision
+			{ 80, Impl{ 80 } },    // Long double, covers sum of ranges of int64 and uint64
+			                       // precisely
+			{ 128, Impl{ 128 } },  // Quad precision
 		};
 
 		RIFT_ASSERT(floats.find(size) != floats.end(), "Incorrect simple float size")
@@ -277,4 +275,4 @@ namespace ts {
 	INSTANTIATE_CHECKED_CAST(Class)
 	INSTANTIATE_CHECKED_CAST(Meta)
 	INSTANTIATE_CHECKED_CAST(VTable)
-}
+}  // namespace ts

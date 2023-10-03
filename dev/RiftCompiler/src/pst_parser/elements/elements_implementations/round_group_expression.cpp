@@ -22,4 +22,4 @@ namespace pst {
 		nullAwareDprint(expr, out);
 		out << " }";
 	}
-}
+}  // namespace pst

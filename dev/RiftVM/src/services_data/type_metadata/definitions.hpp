@@ -1,8 +1,7 @@
 #pragma once
 
-#include <base/stable_container.hpp>
-
 #include <base/ints.hpp>
+#include <base/stable_container.hpp>
 #include <base/strongly_typed_int.hpp>
 #include <json/json.hpp>
 
@@ -15,4 +14,4 @@ namespace vm {
 
 	using TypeRef  = base::StableListRef<Type>;
 	using TypeCRef = base::StableListCRef<Type>;
-}
+}  // namespace vm

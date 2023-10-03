@@ -1,4 +1,5 @@
 #include "pst.hpp"
+
 #include <token_parser_core/automatic.hpp>
 
 namespace pst {
@@ -22,4 +23,4 @@ namespace pst {
 	void PST::dprint(std::ostream& out) const { nullAwareDprint(top_level, out); }
 
 	ParserCBorrowRef<TopLevel> PST::getTopLevelElement() const { return top_level.borrow(); }
-}
+}  // namespace pst

@@ -1,4 +1,5 @@
 #include "operation.hpp"
+
 #include "internal/builtin_operations.hpp"
 
 namespace operation {
@@ -21,7 +22,7 @@ namespace operation {
 			static DefaultsMap defaults;
 			return defaults;
 		}
-	}
+	}  // namespace
 
 	TypedOperation getOperation(OperationId id) { return getOperations()[id]; }
 
@@ -52,4 +53,4 @@ namespace operation {
 	OperationId getIdDefault(Defaultable kind, ts::TypeInfo type) {
 		return getDefaults().at({ kind, type });
 	}
-}
+}  // namespace operation

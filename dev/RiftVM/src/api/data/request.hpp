@@ -1,9 +1,10 @@
 #pragma once
 
-#include "process_info.hpp"
 #include <filesystem/file.hpp>
 #include <memory_data/pointer.hpp>
 #include <variant>
+
+#include "process_info.hpp"
 
 namespace vm::api {
 	namespace request {
@@ -42,9 +43,10 @@ namespace vm::api {
 			u64     size;
 		};
 
-	}
+	}  // namespace request
 
-	// @Deprecated - ExecutorRequest will have template based api (not variant based)
+	// @Deprecated - ExecutorRequest will have template based api (not variant
+	// based)
 	using ExecutorRequest = std::variant<
 		request::Load,
 		request::Resume,
@@ -70,4 +72,4 @@ namespace vm::api {
 	SupervisorRequest makeExecutorRequest(PID pid, ExecutorRequest&& data);
 	SupervisorRequest makeDataRequest(PID pid, DataRequest&& data);
 	SupervisorRequest makeStatusRequest(PID pid);
-}
+}  // namespace vm::api

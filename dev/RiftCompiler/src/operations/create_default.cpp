@@ -1,13 +1,12 @@
+#include "create_default.hpp"
+
 #include <exec/ctv.hpp>
 #include <exec/exec_default.hpp>
 #include <exec/vtable_creation.hpp>
-
 #include <operations/operation.hpp>
 #include <typesystem/class_types.hpp>
 #include <typesystem/type_desc.hpp>
 #include <typesystem/typesystem.hpp>
-
-#include "create_default.hpp"
 
 namespace operation {
 
@@ -69,7 +68,7 @@ namespace operation {
 			}
 		}
 
-	}
+	}  // namespace internal
 
 	operation::TypedOperation createDefaultEquality(ts::TypeInfo type_info) {
 		Calls calls = internal::collectCalls(type_info, operation::Defaultable::Equality);
@@ -161,4 +160,4 @@ namespace operation {
 		return { op, sig };
 	}
 
-}
+}  // namespace operation

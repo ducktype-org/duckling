@@ -1,5 +1,6 @@
-#include "src/printer/printer.hpp"
 #include <iostream>
+
+#include "src/printer/printer.hpp"
 
 namespace N {
 	i32 foo(i32 a, i32 b) {
@@ -49,7 +50,7 @@ namespace N {
 		typename T6,
 		typename T7>
 	class MyLongTemplateType {};
-};
+};  // namespace N
 
 /**
  * @brief
@@ -89,8 +90,8 @@ namespace N1 {
 			          && (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 			              > ccccccccccccccccccccccccccccccccccccccccc);
 		}
-	}
-}
+	}  // namespace N2
+}  // namespace N1
 
 int main() {
 	i32 a;
@@ -98,15 +99,18 @@ int main() {
 	printer::Console console;
 	console.add({
 		{
-         {
+			{
 				{ "Hello, World! This is the first message, " },
-				{ "So it will be the only one you see before error, when GeneralMax is set to 1." },
-			}, printer::MessageType::HINT,
-         0, printer::Color::RESET,
-         printer::Color::RESET,
-		 },
+				{ "So it will be the only one you see before error, when "
+	              "GeneralMax is set to 1." },
+			},
+			printer::MessageType::HINT,
+			0,
+			printer::Color::RESET,
+			printer::Color::RESET,
+		},
 		{
-         {
+			{
 				{ "R", printer::Color::BRIGHT_RED },
 				{ "A", printer::Color::YELLOW },
 				{ "I", printer::Color::BRIGHT_YELLOW },
@@ -114,49 +118,61 @@ int main() {
 				{ "B", printer::Color::BRIGHT_BLUE },
 				{ "O", printer::Color::BRIGHT_CYAN },
 				{ "W", printer::Color::MAGENTA },
-			}, printer::MessageType::NOTE,
-         1, },
+			},
+			printer::MessageType::NOTE,
+			1,
+		},
 		{
-         {
+			{
 				{ "This message uses a default color. " },
 				{ "I can still manually change it. ", printer::Color::GREEN },
-				{ "But all messages that do not specify color display it. This is the second hint "
+				{ "But all messages that do not specify color display it. This is "
+	              "the second hint "
 	              "message,"
 	              " it won't be displayed when hints are limited to 1." },
-			}, printer::MessageType::HINT,
-         2, printer::Color::BLUE,
-		 },
+			},
+			printer::MessageType::HINT,
+			2,
+			printer::Color::BLUE,
+		},
 		{
-         {
+			{
 				{ "It's also possible now to change the " },
 				{ "BACKGROUND", printer::Color::DEFAULT, printer::Color::YELLOW },
 				{ ". " },
 				{ "How cool is that ?", printer::Color::RED, printer::Color::CYAN },
-			}, printer::MessageType::ERROR,
-         3, },
+			},
+			printer::MessageType::ERROR,
+			3,
+		},
 		{
-         {
-				{ "How about default message backgrounds? Also this is the only message of level 4 "
+			{
+				{ "How about default message backgrounds? Also this is the only "
+	              "message of level 4 "
 	              "or above" },
-				{ ", so it's the only one that appears when printing with MinLevel 4 on ALL." },
-			}, printer::MessageType::DEBUG,
-         4, printer::Color::RESET,
-         printer::Color::GRAY,
-		 },
+				{ ", so it's the only one that appears when printing with "
+	              "MinLevel 4 on ALL." },
+			},
+			printer::MessageType::DEBUG,
+			4,
+			printer::Color::RESET,
+			printer::Color::GRAY,
+		},
 	});
-
 
 	console.add({
 		{
-         {
+			{
 				{ "Hello, World! This is the first message, " },
-				{ "So it will be the only one you see before error, when GeneralMax is set to 1." },
-			}, printer::MessageType::HINT,
-         0, printer::Color::RESET,
-         printer::Color::RESET,
-		 },
+				{ "So it will be the only one you see before error, when "
+	              "GeneralMax is set to 1." },
+			},
+			printer::MessageType::HINT,
+			0,
+			printer::Color::RESET,
+			printer::Color::RESET,
+		},
 	});
-
 
 	const i32 ah     = 0;
 	const i32 ssssss = 0;

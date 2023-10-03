@@ -1,10 +1,11 @@
 #pragma once
 
+#include <base/option.hpp>
+#include <tuple>
+
 #include "profiler/profiler.hpp"
 #include "reference_counter/reference_counter.hpp"
 #include "services.hpp"
-#include <base/option.hpp>
-#include <tuple>
 
 namespace vm {
 	class VCPU;
@@ -100,4 +101,4 @@ namespace vm {
 			if (service.has_value()) service.reset();
 		}
 	};
-}
+}  // namespace vm

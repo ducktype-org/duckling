@@ -1,6 +1,7 @@
 #pragma once
-#include "symbol_ref.hpp"
 #include <variant>
+
+#include "symbol_ref.hpp"
 
 namespace hir {
 	class AnalysisState;
@@ -56,4 +57,4 @@ namespace symtable {
 
 		void dprint(std::ostream&);
 	};
-}
+}  // namespace symtable

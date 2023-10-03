@@ -38,9 +38,7 @@ private:
 		int_ctv_a.getData<int8_t>().front()   = 9;
 		int_ctv_b.getData<int8_t>().front()   = 4;
 		int_ctv_exp.getData<int8_t>().front() = 13;
-		BuiltInOp add_op                      = {
-            Operator::Plus, {int_desc, int_desc}
-		};
+		BuiltInOp add_op                      = { Operator::Plus, { int_desc, int_desc } };
 		assert(getBuiltInOps().contains(add_op), "Int8 addition not found in built in operations.");
 		auto add_id = getBuiltInOps()[add_op];
 		assert(operation::existsOperation(add_id), "Int8 addition not found in operations.");
@@ -49,9 +47,7 @@ private:
 		assert(eq_int({ int_ctv_r, int_ctv_exp }), "Wrong result of addition. Expected 9+4=13");
 
 		int_ctv_exp.getData<int8_t>().front() = 5;
-		BuiltInOp sub_op                      = {
-            Operator::Minus, {int_desc, int_desc}
-		};
+		BuiltInOp sub_op                      = { Operator::Minus, { int_desc, int_desc } };
 		assert(
 			getBuiltInOps().contains(sub_op), "Int8 subtraction not found in built in operations."
 		);
@@ -62,9 +58,7 @@ private:
 		assert(eq_int({ int_ctv_r, int_ctv_exp }), "Wrong result of subtraction. Expected 9-4=5");
 
 		int_ctv_exp.getData<int8_t>().front() = 36;
-		BuiltInOp mul_op                      = {
-            Operator::Asterisk, {int_desc, int_desc}
-		};
+		BuiltInOp mul_op                      = { Operator::Asterisk, { int_desc, int_desc } };
 		assert(
 			getBuiltInOps().contains(mul_op),
 			"Int8 multiplication not found in built in operations."
@@ -78,9 +72,7 @@ private:
 		);
 
 		int_ctv_exp.getData<int8_t>().front() = 2;
-		BuiltInOp div_op                      = {
-            Operator::Slash, {int_desc, int_desc}
-		};
+		BuiltInOp div_op                      = { Operator::Slash, { int_desc, int_desc } };
 		assert(getBuiltInOps().contains(div_op), "Int8 division not found in built in operations.");
 		auto div_id = getBuiltInOps()[div_op];
 		assert(operation::existsOperation(div_id), "Int8 division not found in operations.");

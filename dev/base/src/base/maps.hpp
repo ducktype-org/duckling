@@ -1,12 +1,13 @@
 #pragma once
 
-#include "exceptions.hpp"
 #include <iterator>
 #include <map>
 #include <optional>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
+
+#include "exceptions.hpp"
 
 namespace base {
 	template<typename ContainerType>
@@ -143,4 +144,4 @@ namespace base {
 
 		const_iterator end() const { return map.cend(); }
 	};
-}
+}  // namespace base

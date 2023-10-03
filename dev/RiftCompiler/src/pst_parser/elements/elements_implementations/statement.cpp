@@ -10,7 +10,7 @@ namespace pst {
 			if (force_semi or out->trailingSemicolon()) parseOne(state, Special::Semicolon);
 			return out;
 		}
-	}
+	}  // namespace detail
 
 	bool Stmt::trailingSemicolon() { return true; }
 
@@ -69,4 +69,4 @@ namespace pst {
 		// Expr as stmt have semicolon at the end:
 		return detail::parseStmt<Expr>(state, true);
 	}
-}
+}  // namespace pst

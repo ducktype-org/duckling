@@ -1,8 +1,9 @@
 #pragma once
 
-#include "str_concat.hpp"
 #include <exception>
 #include <string>
+
+#include "str_concat.hpp"
 
 namespace base {
 	// @TODO: final?
@@ -40,7 +41,7 @@ namespace base {
 		NotYetImplemented(std::string message);
 		const char* what() const noexcept override;
 	};
-}
+}  // namespace base
 
 #define DETAIL_RIFT_STR2(X) #X
 #define DETAIL_RIFT_STR(X)  DETAIL_RIFT_STR2(X)

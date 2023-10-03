@@ -1,6 +1,5 @@
 #include <base/variant.hpp>
 #include <tester/tester.hpp>
-
 #include <variant>
 
 class T {

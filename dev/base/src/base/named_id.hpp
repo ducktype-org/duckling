@@ -27,9 +27,10 @@
 
 #pragma once
 
-#include "ints.hpp"
 #include <functional>
 #include <type_traits>
+
+#include "ints.hpp"
 
 namespace base {
 	typedef usize id_t;     //
@@ -97,7 +98,7 @@ namespace base {
 	template<typename T>
 	concept NamedIdConcept = aux::is_named_id<T>::value;*/
 
-}
+}  // namespace base
 
 namespace std {
 	template<typename T>
@@ -107,4 +108,4 @@ namespace std {
 			return std::hash<id_t>()(base::id_t(key));
 		}
 	};
-}
+}  // namespace std

@@ -9,8 +9,8 @@ namespace base {
 
 		template<template<typename...> class Template, typename... Args>
 		struct IsInstantiationOfImpl<Template, Template<Args...>>: std::true_type {};
-	}
+	}  // namespace detail
 
 	template<template<typename...> class Template, typename T>
 	concept IsInstantiationOf = detail::IsInstantiationOfImpl<Template, T>::value;
-}
+}  // namespace base

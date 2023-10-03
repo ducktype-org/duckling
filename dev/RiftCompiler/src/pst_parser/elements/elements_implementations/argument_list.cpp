@@ -10,4 +10,4 @@ namespace pst {
 
 	// @TODO: Placeholder
 	void ArgList::dprint(std::ostream& out) const { out << "{\"ArgList\" : \"<PLACEHOLDER>\"}"; }
-}
+}  // namespace pst

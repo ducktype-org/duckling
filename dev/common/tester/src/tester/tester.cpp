@@ -1,4 +1,5 @@
 #include "tester.hpp"
+
 #include <base/exceptions.hpp>
 #include <chrono>
 
@@ -95,7 +96,8 @@ namespace tester {
 		} catch (const base::Exception& exception) {
 			curr_global_res->success = false;
 			message(
-				"base::Exception was thrown. This was not expected. Add this exception to "
+				"base::Exception was thrown. This was not expected. Add this exception "
+				"to "
 				"TestSuite."
 			);
 			message(exception.what());
@@ -107,13 +109,12 @@ namespace tester {
 	}
 
 	void TestSuite::resultHandler(const TestData& test, const TestResult& res) {
-		console.add({
-			{
-             test.name,
-             ": ", res.success ? printer::MessageContent("OK", printer::Color::GREEN)
-							: printer::MessageContent("FAIL", printer::Color::RED),
-			 }
-        });
+		console.add({ {
+			test.name,
+			": ",
+			res.success ? printer::MessageContent("OK", printer::Color::GREEN)
+						: printer::MessageContent("FAIL", printer::Color::RED),
+		} });
 		for (auto& mess: res.output) console.add(mess);
 		if (res.output.empty()) {
 			// @TODO: .newLine or something similar
@@ -124,32 +125,36 @@ namespace tester {
 	}
 
 	void TestSuite::prolog() {
-		console.add({
-			{std::string(beginEqualSignL(name.length() + 2), '='),
-             " ", name,
-             " ", std::string(endEqualSignL(name.length() + 2), '='),
-             "\n", "Running ",
-             std::to_string(tests.size()),
-             " tests.\n"}
-        });
+		console.add({ { std::string(beginEqualSignL(name.length() + 2), '='),
+		                " ",
+		                name,
+		                " ",
+		                std::string(endEqualSignL(name.length() + 2), '='),
+		                "\n",
+		                "Running ",
+		                std::to_string(tests.size()),
+		                " tests.\n" } });
 		console.print(std::cerr);
 		console.clear();
 	}
 
 	void TestSuite::epilog(usize passed, usize failed, double time) {
-		console.add({
-			{
-             "\n", std::string(fullEqualSignL(name.length() + 2), '='),
-             "\n", "Elapsed time: ",
-             std::to_string(time),
-             " s", { "\nPassed:       ", printer::Color::GREEN },
-             { std::to_string(passed), printer::Color::GREEN },
-             { "\nFailed:       ", failed ? printer::Color::RED : printer::Color::RESET },
-             { std::to_string(failed), failed ? printer::Color::RED : printer::Color::RESET },
-             "\n", std::string(fullEqualSignL(name.length() + 2), '='),
-             "\n", }
-        });
+		console.add({ {
+			"\n",
+			std::string(fullEqualSignL(name.length() + 2), '='),
+			"\n",
+			"Elapsed time: ",
+			std::to_string(time),
+			" s",
+			{ "\nPassed:       ", printer::Color::GREEN },
+			{ std::to_string(passed), printer::Color::GREEN },
+			{ "\nFailed:       ", failed ? printer::Color::RED : printer::Color::RESET },
+			{ std::to_string(failed), failed ? printer::Color::RED : printer::Color::RESET },
+			"\n",
+			std::string(fullEqualSignL(name.length() + 2), '='),
+			"\n",
+		} });
 		console.print(std::cerr);
 		console.clear();
 	}
-}
+}  // namespace tester

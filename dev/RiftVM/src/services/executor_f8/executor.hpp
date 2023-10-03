@@ -1,18 +1,17 @@
 #pragma once
 
-#include "../services.hpp"
-#include "kill_core_exception.hpp"
-
 #include <api/data/request.hpp>
 #include <api/data/status.hpp>
+#include <atomic>
 #include <code_data/code.hpp>
 #include <code_data/frame.hpp>
-
-#include <atomic>
 #include <condition_variable>
 #include <iostream>
 #include <mutex>
 #include <shared_mutex>
+
+#include "../services.hpp"
+#include "kill_core_exception.hpp"
 
 /**
  * For now only single threaded execution is suported
@@ -62,9 +61,10 @@ namespace vm {
 		 * following modifications should be made in the future:
 		 * - Error handling done by throwing (for efficiency)
 		 * - Setup for execution recovery
-		 * - This functions currently can deref only simple pointers, and always return
-		 * view to data pointed by pointer. This does not take into consideration possibility
-		 * of derefing only part of a block with given type from given offset.
+		 * - This functions currently can deref only simple pointers, and always
+		 * return view to data pointed by pointer. This does not take into
+		 * consideration possibility of derefing only part of a block with given type
+		 * from given offset.
 		 */
 		result<base::ModRawView, std::string> internalDerefPointer(Pointer);
 
@@ -83,7 +83,8 @@ namespace vm {
 		 *
 		 * This function should return only when the execution is paused
 		 * This function may be called at any state of the execution
-		 * @return true if and only if program was in the running state and was successfully paused
+		 * @return true if and only if program was in the running state and was
+		 * successfully paused
 		 */
 		bool pause();
 
@@ -94,7 +95,8 @@ namespace vm {
 		 *
 		 * Function should return only when the execution is resumed
 		 * This function may be called at any state of the execution
-		 * @return true if and only if program was in the paused state and was successfully resumed
+		 * @return true if and only if program was in the paused state and was
+		 * successfully resumed
 		 */
 		bool resume();
 
@@ -134,4 +136,4 @@ namespace vm {
 		friend class ServiceManagerDef;
 	};
 
-}
+}  // namespace vm

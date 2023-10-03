@@ -1,21 +1,22 @@
 #pragma once
 
-#include "helper.hpp"
 #include <json_struct/json_struct.h>
+
+#include "helper.hpp"
 
 namespace JS {
 	template<class T>
 	struct IsEmptySerialization {
 		static constexpr const bool value = false;
 	};
-}
+}  // namespace JS
 
 namespace JS {
 	template<>
 	struct IsEmptySerialization<void> {
 		static constexpr const bool value = false;
 	};
-}
+}  // namespace JS
 
 #define JS_EMPTY(T)                                                                          \
 	namespace JS {                                                                           \

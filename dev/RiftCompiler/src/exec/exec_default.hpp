@@ -1,12 +1,14 @@
 /**
  * @file exec_default.hpp
- * @brief actual implementation of default operation, lambdas in operations use functions from here
+ * @brief actual implementation of default operation, lambdas in operations use
+ * functions from here
  */
 
 #pragma once
 
-#include "exec.hpp"
 #include <operations/operation.hpp>
+
+#include "exec.hpp"
 
 namespace exec {
 	CTV defaultEquality(
@@ -30,4 +32,4 @@ namespace exec {
 	CTV defaultConstructFull(
 		ts::TypeInfo type_info, const operation::Calls& calls, const std::vector<CTV>& ctvs
 	);
-}
+}  // namespace exec

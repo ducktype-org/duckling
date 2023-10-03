@@ -1,8 +1,9 @@
 #pragma once
 
-#include "scope_symbol_id.hpp"
 #include <base/smart_pointers.hpp>
 #include <base/stable_container.hpp>
+
+#include "scope_symbol_id.hpp"
 
 namespace symtable {
 	class Scope;
@@ -14,10 +15,10 @@ namespace symtable {
 	namespace detail {
 		using ScopesList = base::StableIntList<Scope>;
 
-		// @TODO: For SymbolsList: StableList of pointers is needed (this is just vector of
-		// pointers) For ease of use UPtrStableList might be added
-	}
+		// @TODO: For SymbolsList: StableList of pointers is needed (this is just vector
+		// of pointers) For ease of use UPtrStableList might be added
+	}  // namespace detail
 
 	using ScopeRef  = detail::ScopesList::Ref;
 	using ScopeCRef = detail::ScopesList::CRef;
-}
+}  // namespace symtable

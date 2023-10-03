@@ -1,10 +1,11 @@
 #pragma once
 
+#include <concepts>
+#include <vector>
+
 #include "ints.hpp"
 #include "option.hpp"
 #include "smart_pointers.hpp"
-#include <concepts>
-#include <vector>
 
 namespace base {
 
@@ -90,4 +91,4 @@ namespace base {
 	template<typename T>
 	using StableIntList = StableList<usize, T>;
 
-}
+}  // namespace base

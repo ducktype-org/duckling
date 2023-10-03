@@ -38,7 +38,7 @@ namespace vm::api {
 
 	using VCPUStatus
 		= std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Panicked, Executing>;
-}
+}  // namespace vm::api
 
 REGISTER_PARSE_TYPE_ALIAS(vm::api::ExecutionNotStarted, "ExecutionNotStarted")
 REGISTER_PARSE_TYPE_ALIAS(vm::api::Parsing, "Parsing")

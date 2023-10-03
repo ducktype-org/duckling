@@ -1,9 +1,10 @@
 #pragma once
 
-#include "raw_view.hpp"
-#include "type_traits.hpp"
 #include <string>
 #include <tuple>
+
+#include "raw_view.hpp"
+#include "type_traits.hpp"
 
 // #include <concepts>
 // #include <type_traits>
@@ -33,7 +34,7 @@ namespace base {
 		}
 
 		inline void strConcat(std::string& out, bool v) { out.append(v ? "true" : "false"); }
-	}
+	}  // namespace detail
 
 	/**
 	 * @brief creates std::string from elements
@@ -57,4 +58,4 @@ namespace base {
 		return out;
 	}
 
-}
+}  // namespace base

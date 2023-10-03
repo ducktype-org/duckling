@@ -1,7 +1,8 @@
 #pragma once
 
-#include "opcodes.hpp"
 #include <base/ints.hpp>
+
+#include "opcodes.hpp"
 
 #define USE_COMPACT_INSTRUCTION
 
@@ -19,4 +20,4 @@ namespace vm {
 	};
 #endif
 
-}
+}  // namespace vm

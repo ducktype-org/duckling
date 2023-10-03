@@ -1,14 +1,12 @@
+#include <base/string_id.hpp>
 #include <exec/ctv.hpp>
 #include <exec/exec.hpp>
 #include <exec/helpers.hpp>
 #include <exec/vtable_creation.hpp>
-
 #include <operations/create_default.hpp>
 #include <operations/operation.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
-
-#include <base/string_id.hpp>
 
 class SimpleExecTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -67,9 +65,7 @@ private:
 
 		ts::ClassInfo customClass = ts::ClassInfo::create(
 			base::StrId("custom"),
-			{
-				{member_class_desc, symtable::SymbolId::next()}
-        },
+			{ { member_class_desc, symtable::SymbolId::next() } },
 			{ { parentClass, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
@@ -82,7 +78,8 @@ private:
 		exec::CTV result = x({ a, a });
 		assert(
 			result.getData<bool>().front(),
-			"Parent comparison is supposed to return true but default comparison returned false"
+			"Parent comparison is supposed to return true but default "
+			"comparison returned false"
 		);
 		assert(parent_counter == 1, "Wrong number of compares on the parent class");
 		assert(member_counter == 1, "Wrong number of compares on the member class");
@@ -92,7 +89,8 @@ private:
 		result = x({ a, a });
 		assert(
 			!result.getData<bool>().front(),
-			"Parent comparison is supposed to return false but default comparison returned true"
+			"Parent comparison is supposed to return false but default "
+			"comparison returned true"
 		);
 		assert(parent_counter == 2, "Wrong number of compares on the parent class");
 		assert(member_counter == 2, "Wrong number of compares on the member class");
@@ -103,7 +101,8 @@ private:
 		result = x({ a, a });
 		assert(
 			!result.getData<bool>().front(),
-			"Member comparison is supposed to return false but default comparison returned true"
+			"Member comparison is supposed to return false but default "
+			"comparison returned true"
 		);
 		assert(parent_counter == 2, "Wrong number of compares on the parent class");
 		assert(member_counter == 3, "Wrong number of compares on the member class");
@@ -159,9 +158,7 @@ private:
 
 		ts::ClassInfo customClass = ts::ClassInfo::create(
 			base::StrId("custom"),
-			{
-				{member_class_desc, symtable::SymbolId::next()}
-        },
+			{ { member_class_desc, symtable::SymbolId::next() } },
 			{ { parentClass, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
@@ -174,7 +171,8 @@ private:
 		exec::CTV result = x({ a, a });
 		assert(
 			result.getData<int8_t>().front() == 0,
-			"Parent comparison is supposed to return 0 but default comparison returned nonzero"
+			"Parent comparison is supposed to return 0 but default comparison "
+			"returned nonzero"
 		);
 		assert(parent_counter == 1, "Wrong number of compares on the parent class");
 		assert(member_counter == 1, "Wrong number of compares on the member class");
@@ -184,7 +182,8 @@ private:
 		result = x({ a, a });
 		assert(
 			result.getData<int8_t>().front() == -1,
-			"Parent comparison is supposed to return -1 but default comparison returned ???"
+			"Parent comparison is supposed to return -1 but default comparison "
+			"returned ???"
 		);
 		assert(parent_counter == 2, "Wrong number of compares on the parent class");
 		assert(member_counter == 2, "Wrong number of compares on the member class");
@@ -195,7 +194,8 @@ private:
 		result = x({ a, a });
 		assert(
 			result.getData<int8_t>().front() == 1,
-			"Member comparison is supposed to return 1 but default comparison returned ???"
+			"Member comparison is supposed to return 1 but default comparison "
+			"returned ???"
 		);
 		assert(parent_counter == 2, "Wrong number of compares on the parent class");
 		assert(member_counter == 3, "Wrong number of compares on the member class");
@@ -220,9 +220,7 @@ private:
 		ts::TypeDesc<> int_desc{ int_type };
 		ts::TypeDesc<> bool_desc{ ts::BoolInfo::create() };
 
-
 		/*			INT TESTS 		*/
-
 
 		exec::CTV int_ctv_a = exec::alloc_new(int_desc, int_type.getSize());
 		exec::CTV int_ctv_b = exec::alloc_new(int_desc, int_type.getSize());
@@ -282,20 +280,14 @@ private:
 
 		*/
 
-		ts::ClassInfo class_A = ts::ClassInfo::create(
-			base::StrId("A"),
-			{
-				{int_desc, symtable::SymbolId::next()}
-        }
-		);
+		ts::ClassInfo class_A
+			= ts::ClassInfo::create(base::StrId("A"), { { int_desc, symtable::SymbolId::next() } });
 
 		auto b_member = symtable::SymbolId::next();
 
 		ts::ClassInfo class_B = ts::ClassInfo::create(
 			base::StrId("B"),
-			{
-				{int_desc, b_member}
-        },
+			{ { int_desc, b_member } },
 			{ { class_A, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
@@ -350,10 +342,11 @@ private:
 			[class_B, class_A, offset, b_member](std::vector<exec::CTV> ctvs) {
 				// @TODO: this code explicitly initializes A
 			    // the code below uses default empty contructor of B for that
-			    // This is shorter, but initialises B.b twice (once to zero, then to 42).
-			    // Maybe those approaches should be somehow combined.
+			    // This is shorter, but initialises B.b twice (once to zero, then to
+			    // 42). Maybe those approaches should be somehow combined.
 
-				// exec::CTV sub_A = ctvs[0].subCTV(class_A, offset, class_A.getSize());
+				// exec::CTV sub_A = ctvs[0].subCTV(class_A, offset,
+			    // class_A.getSize());
 			    // operation::getDefault(operation::Defaultable::ConstructEmpty,
 			    // class_A).function({sub_A});
 
@@ -422,12 +415,7 @@ private:
 
 		ts::TypeDesc<> int_desc(ts::IntegralInfo::create(8));
 		auto           symbol_z = symtable::SymbolId::next();
-		auto           Z        = ts::ClassInfo::create(
-            base::StrId("Z"),
-            {
-                {int_desc, symbol_z}
-        }
-        );
+		auto           Z = ts::ClassInfo::create(base::StrId("Z"), { { int_desc, symbol_z } });
 
 		operation::Operation construct_z = [](const std::vector<exec::CTV>& ctvs) {
 			ctvs[0].getData<uint8_t>().front() = 7;
@@ -447,8 +435,7 @@ private:
 
 		auto B = ts::ClassInfo::create(
 			base::StrId("B"),
-			{
-        },
+			{},
 			{ { Z, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
@@ -471,8 +458,7 @@ private:
 
 		auto A = ts::ClassInfo::create(
 			base::StrId("A"),
-			{
-        },
+			{},
 			{ { Z, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
@@ -489,7 +475,8 @@ private:
 
 		// @TODO: constructors should construct virtual parents
 		// assert(member.getData<uint8_t>().front() == 7,
-		//        base::strConcat("Constructor of A didn't set field in virtual parent ",
+		//        base::strConcat("Constructor of A didn't set field in virtual
+		//        parent ",
 		//                         (u64)member.getData<uint8_t>().front()));
 	}
 
@@ -502,25 +489,17 @@ private:
 		        C
 		*/
 
-
 		ts::TypeDesc<> int_desc(ts::IntegralInfo::create(8));
 		auto           symbol0 = symtable::SymbolId::next();
 
-		ts::ClassInfo  A(ts::ClassInfo::create(
-            base::StrId("A"),
-            {
-                {int_desc, symbol0}
-        }
-        ));
+		ts::ClassInfo  A(ts::ClassInfo::create(base::StrId("A"), { { int_desc, symbol0 } }));
 		ts::TypeDesc<> A_desc(A);
 
 		auto symbol1 = symtable::SymbolId::next();
 
 		ts::ClassInfo  B(ts::ClassInfo::create(
             base::StrId("B"),
-            {
-                {int_desc, symbol1}
-        },
+            { { int_desc, symbol1 } },
             { { A, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
             0
         ));
@@ -530,16 +509,13 @@ private:
 
 		ts::ClassInfo  C(ts::ClassInfo::create(
             base::StrId("C"),
-            {
-                {int_desc, symbol2}
-        },
+            { { int_desc, symbol2 } },
             { { B, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
             0
         ));
 		ts::TypeDesc<> C_desc(C);
 
 		exec::CTV C_ctv = exec::alloc_new(C, C.getSize());
-
 
 		namespace op = operation;
 
@@ -567,9 +543,8 @@ private:
 
 		exec::fillAllVtablePtrs(B_ctv_2);
 
-
-		// This calculates the offset by hand (it works, because we know the exact hierarchy and
-		// instance).
+		// This calculates the offset by hand (it works, because we know the exact
+		// hierarchy and instance).
 		auto offset_a_in_b
 			= B.getVirtualAncestorOffset(A) + A.getMemberInfo(symbol0).start_offset.value();
 
@@ -633,7 +608,8 @@ private:
 
 		assert(
 			construct_full.signature.getParameterTypeList().size() == 3,
-			"Construct full should take 3 arguments: value being constructed and values of fields"
+			"Construct full should take 3 arguments: value being constructed "
+			"and values of fields"
 		);
 
 		auto ctv3 = exec::alloc_new(tuple);

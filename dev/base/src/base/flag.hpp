@@ -1,7 +1,8 @@
 #pragma once
 
-#include "ints.hpp"
 #include <compare>
+
+#include "ints.hpp"
 
 namespace base {
 	class FlagType {
@@ -32,4 +33,4 @@ namespace base {
 	};
 
 	constexpr FlagType EmptyFlag;
-}
+}  // namespace base

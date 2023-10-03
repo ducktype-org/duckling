@@ -25,4 +25,4 @@ namespace tpc {
 		return ParserRef<T>(new T(std::forward<Args>(args)...));
 	}
 
-}
+}  // namespace tpc

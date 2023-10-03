@@ -1,4 +1,5 @@
 #include "symtable.hpp"
+
 #include <base/defer.hpp>
 #include <base/exceptions.hpp>
 #include <iostream>
@@ -74,4 +75,4 @@ namespace symtable {
 		return { prefix, last_res };
 	}
 
-}
+}  // namespace symtable

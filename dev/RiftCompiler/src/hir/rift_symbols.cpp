@@ -1,7 +1,9 @@
 #include "rift_symbols.hpp"
-#include "analysis_state.hpp"
+
 #include <base/exceptions.hpp>
 #include <typesystem/typesystem.hpp>
+
+#include "analysis_state.hpp"
 
 namespace hir {
 
@@ -248,4 +250,4 @@ namespace hir {
 	// 	getKind();
 	// 	getType();
 	// }
-}
+}  // namespace hir

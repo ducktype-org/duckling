@@ -1,17 +1,15 @@
 #pragma once
 
-#include "../rift_parser_base.hpp"
-
+#include <base/string_id.hpp>
+#include <iostream>
+#include <span>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/token_stream.hpp>
-
-#include <base/string_id.hpp>
-
-#include <iostream>
-#include <span>
 #include <variant>
+
+#include "../rift_parser_base.hpp"
 
 // @TODO: AttrList
 
@@ -252,8 +250,8 @@ namespace pst {
 		 */
 		static ParserRef<Expr> parse(RiftParserState& state);
 		/**
-		 * @p exact_len = false: parses the expression until its over or until it parses @p len
-		 * tokens
+		 * @p exact_len = false: parses the expression until its over or until it
+		 * parses @p len tokens
 		 * @p exact_len = true: parses the expression until it parses @p len tokens
 		 */
 		static ParserRef<Expr> parse(RiftParserState& state, usize len, bool exact_len = true);
@@ -267,7 +265,8 @@ namespace pst {
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action);
-		// @TODO: do different Actions than ones with 0 or 1 expressions following exist?
+		// @TODO: do different Actions than ones with 0 or 1 expressions following
+		// exist?
 		static ParserRef<Action> parse(RiftParserState& state);
 		virtual ~Action() = default;
 
@@ -481,4 +480,4 @@ namespace pst {
 		virtual ~EagerLookup() = default;
 	};
 
-}
+}  // namespace pst

@@ -1,14 +1,15 @@
 /**
  * @file operatorutils.hpp
- * @brief macros implementing builtin operations on ints, and adding them to operations
+ * @brief macros implementing builtin operations on ints, and adding them to
+ * operations
  */
 
 #pragma once
 
+#include <base/exceptions.hpp>
 #include <exec/ctv.hpp>
 #include <exec/operators/builtinoperators.hpp>
 #include <operations/operation.hpp>
-#include <base/exceptions.hpp>
 #include <vector>
 
 namespace exec::operators {
@@ -25,7 +26,7 @@ namespace exec::operators {
 	void PutDataInCTV(CTV ctv, T value) {
 		*(ctv.getData<T>().data()) = value;
 	}
-}
+}  // namespace exec::operators
 
 #define BIN_SIMPLE_OP(ttype, operation, name)                                                    \
 	CTV name(std::vector<CTV> ctvs) {                                                            \

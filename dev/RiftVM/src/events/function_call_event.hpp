@@ -2,4 +2,4 @@
 
 namespace vm {
 	class FunctionCallEvent {};
-}
+}  // namespace vm

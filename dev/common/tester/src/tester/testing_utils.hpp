@@ -30,4 +30,4 @@ namespace testing_utils {
 
 		return true;
 	}
-}
+}  // namespace testing_utils

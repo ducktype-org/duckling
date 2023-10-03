@@ -5,10 +5,11 @@
 
 #pragma once
 
-#include "token.hpp"
 #include <filesystem/file.hpp>
+
+#include "token.hpp"
 
 namespace lexer {
 	void             init();
 	lexer::TokenData tokenizeFile(const fs::FilePath& file, bool dprint = false);
-}
+}  // namespace lexer

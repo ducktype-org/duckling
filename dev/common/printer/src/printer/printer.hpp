@@ -8,18 +8,20 @@
 
 #pragma once
 
+#include <limits.h>
+
 #include <array>
 #include <base/ints.hpp>
 #include <initializer_list>
 #include <iostream>
-#include <limits.h>
 #include <string>
 #include <vector>
 
 namespace printer {
 	// Important to update this value, when adding or removing MessageTypes.
-	// @IDEA: Make TYPE_COUNT the last member of enum class MessageType, and assign its value there.
-	// This way, it will be harder to forget to update it whenever making changes to MessageType.
+	// @IDEA: Make TYPE_COUNT the last member of enum class MessageType, and assign
+	// its value there. This way, it will be harder to forget to update it whenever
+	// making changes to MessageType.
 	constexpr usize TYPE_COUNT = 6;
 
 	typedef i32 LevelType;
@@ -44,20 +46,23 @@ namespace printer {
 
 	// @TODO: Determine the correct type for enum class Color.
 	typedef int8_t ColorId;
-	// @IDEA: Add possibility and functionality for custom colors. Reference ANSI escape code 38.
+	// @IDEA: Add possibility and functionality for custom colors. Reference ANSI
+	// escape code 38.
 	/**
-	 * Important to note that these colors are inconsistent across terminals and can have
-	 * deceiving names. For example WHITE is grayish (BRIGHT_WHITE is closer to real white)
-	 * and YELLOW is white in Windows PowerShell. Names were taken from Wikipedia. I recommend
-	 * taking a look to consult which colors you should use and how they will be displayed.
+	 * Important to note that these colors are inconsistent across terminals and can
+	 * have deceiving names. For example WHITE is grayish (BRIGHT_WHITE is closer to
+	 * real white) and YELLOW is white in Windows PowerShell. Names were taken from
+	 * Wikipedia. I recommend taking a look to consult which colors you should use
+	 * and how they will be displayed.
 	 * https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
 	 *
-	 * Positive integers indicate foreground ANSI escape code ids. Background ids are achieved
-	 * by adding 10 to foreground ids.
+	 * Positive integers indicate foreground ANSI escape code ids. Background ids
+	 * are achieved by adding 10 to foreground ids.
 	 *
-	 * DEFAULT is for MessageContent, it uses the message's default color. If message color is not
-	 * set, it's the defaultMessageColor from printer.cpp. Do not set message's color to DEFAULT.
-	 * RESET resets color settings to terminal's default.
+	 * DEFAULT is for MessageContent, it uses the message's default color. If
+	 * message color is not set, it's the defaultMessageColor from printer.cpp. Do
+	 * not set message's color to DEFAULT. RESET resets color settings to terminal's
+	 * default.
 	 */
 	enum class Color : ColorId {
 		DEFAULT = -1,
@@ -168,7 +173,7 @@ namespace printer {
 			res.fill(SIZE_MAX);
 			return res;
 		}
-	}
+	}  // namespace detail
 
 	class Console {
 	private:
@@ -206,4 +211,4 @@ namespace printer {
 
 		void clear();
 	};
-}
+}  // namespace printer

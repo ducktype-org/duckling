@@ -1,6 +1,8 @@
 #include "../define_helper.hpp"
-#include "../ints.hpp"
+
 #include <sstream>
+
+#include "../ints.hpp"
 
 namespace base {
 	// @TODO: this solution is somewhat over engineered
@@ -24,4 +26,4 @@ namespace base {
 
 		return out;
 	}
-}
+}  // namespace base

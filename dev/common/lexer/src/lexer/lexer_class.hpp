@@ -1,10 +1,11 @@
 #pragma once
 
-#include "char.hpp"
-#include "token.hpp"
 #include <filesystem/file.hpp>
 #include <printer/printer.hpp>
 #include <vector>
+
+#include "char.hpp"
+#include "token.hpp"
 
 namespace lexer {
 	class Lexer {
@@ -74,4 +75,4 @@ namespace lexer {
 		);
 	};
 
-}
+}  // namespace lexer

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "vcpu.hpp"
 #include <api/api.hpp>
 #include <base/option.hpp>
 #include <base/smart_pointers.hpp>
@@ -8,6 +7,8 @@
 #include <listener/listener.hpp>
 #include <mutex>
 #include <string>
+
+#include "vcpu.hpp"
 
 namespace vm {
 	class Supervisor {
@@ -23,11 +24,11 @@ namespace vm {
 	public:
 		static Supervisor& get();
 
-		// Each of the following methods should synchronize access to the processTable, but should
-		// not synchronize usage of each of the processes. Each process synchronizes its resources
-		// by itself
+		// Each of the following methods should synchronize access to the
+		// processTable, but should not synchronize usage of each of the processes.
+		// Each process synchronizes its resources by itself
 		result<PID, api::ApiError>           newProcess(bool usesStdio);
 		result<api::Response, api::ApiError> doRequest(const api::SupervisorRequest& request);
 		result<void, api::ApiError>          killProcess(PID pid);
 	};
-}
+}  // namespace vm

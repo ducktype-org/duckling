@@ -10,4 +10,4 @@ namespace vm {
 		// @TODO
 		// Delete maybe unused when is used
 	}
-}
+}  // namespace vm

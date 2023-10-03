@@ -1,17 +1,15 @@
 #pragma once
 
-#include "../elements.hpp"
-
-#include <token_parser_core/automatic.hpp>
-#include <token_parser_core/parser_ref.hpp>
-
+#include <base/exceptions.hpp>
 #include <lexer/token.hpp>
+#include <ostream>
 #include <rift_definitions/key_spec_op.hpp>
 #include <rift_definitions/operator_precedence.hpp>
-
-#include <base/exceptions.hpp>
-#include <ostream>
+#include <token_parser_core/automatic.hpp>
+#include <token_parser_core/parser_ref.hpp>
 #include <variant>
+
+#include "../elements.hpp"
 
 namespace pst {
 	using tpc::makeRef;
@@ -61,4 +59,4 @@ namespace pst {
 			}
 		return true;
 	}
-}
+}  // namespace pst

@@ -4,8 +4,8 @@
  */
 
 #include "file.hpp"
-#include <base/exceptions.hpp>
 
+#include <base/exceptions.hpp>
 #include <fstream>
 #include <iterator>
 #include <utility>
@@ -66,4 +66,4 @@ namespace fs {
 
 		return { r_array, file_size };
 	}
-}
+}  // namespace fs

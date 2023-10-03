@@ -23,7 +23,7 @@ namespace JS::impl {
 		static constexpr const auto name
 			= CONSTEXPR_CAT(TypeParseTraits<Arg1>::name, ", ", MakeList<Arg2, Args...>::name);
 	};
-}
+}  // namespace JS::impl
 
 #define REGISTER_PARSE_TYPE(T)                                      \
 	template<>                                                      \

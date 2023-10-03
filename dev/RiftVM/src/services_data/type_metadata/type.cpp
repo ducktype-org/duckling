@@ -1,8 +1,10 @@
 #include "type.hpp"
-#include "type_metadata.hpp"
+
 #include <base/defer.hpp>
 #include <base/variant.hpp>
 #include <supervisor/supervisor.hpp>
+
+#include "type_metadata.hpp"
 
 namespace vm {
 	// Type declaration:
@@ -286,4 +288,4 @@ namespace vm {
 			return some<TypeCRef>(function.result);
 		});
 	}
-}
+}  // namespace vm

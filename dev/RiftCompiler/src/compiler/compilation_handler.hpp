@@ -3,9 +3,8 @@
 #include <base/maps.hpp>
 #include <filesystem/file.hpp>
 #include <hir/symtable/symtable.hpp>
-#include <pst_parser/pst.hpp>
-
 #include <ostream>
+#include <pst_parser/pst.hpp>
 
 namespace compiler {
 
@@ -25,4 +24,4 @@ namespace compiler {
 
 		usize pstCount() const { return pst_map.size(); }
 	};
-}
+}  // namespace compiler

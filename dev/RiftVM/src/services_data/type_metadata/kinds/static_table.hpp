@@ -7,4 +7,4 @@ namespace vm::kind {
 		TypeRef inner_type;
 		u64     size;
 	};
-}
+}  // namespace vm::kind

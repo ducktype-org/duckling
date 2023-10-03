@@ -8,7 +8,8 @@
 #include <base/ints.hpp>
 #include <base/unique_pointer.hpp>
 #include <span>
-// @FIXME: Not including all of typesystem because templates in typesystem depend on CTVs.
+// @FIXME: Not including all of typesystem because templates in typesystem
+// depend on CTVs.
 #include <base/exceptions.hpp>
 #include <base/named_id.hpp>
 #include <typesystem/type_desc.hpp>
@@ -37,8 +38,8 @@ namespace exec {
 
 		// template <typename T = uint8_t>
 		// std::span<T> getData() const {
-		// 	return std::span((T*)(getBlocks()[data.block].data.data() + data.offset), size/(8 *
-		// sizeof(T)));
+		// 	return std::span((T*)(getBlocks()[data.block].data.data() +
+		// data.offset), size/(8 * sizeof(T)));
 		// }
 
 		Block(const Block&) = delete;
@@ -93,7 +94,8 @@ namespace exec {
 
 			CTV ctv(pointer_type, data_, ts::POINTER_SIZE);
 
-			// @TODO: redesign how pointers are handled. In particulat when size is not 64.
+			// @TODO: redesign how pointers are handled. In particulat when size is
+			// not 64.
 			ctv.getData<u32>()[0] = data.block;
 			ctv.getData<u32>()[1] = data.offset;
 
@@ -128,4 +130,4 @@ namespace exec {
 	CTV alloc_new(ts::TypeDesc<> type, usize size);
 
 	inline CTV alloc_new(ts::TypeDesc<> type) { return alloc_new(type, type.getType().getSize()); }
-}
+}  // namespace exec

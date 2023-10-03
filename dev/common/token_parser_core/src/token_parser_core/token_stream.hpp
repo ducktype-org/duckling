@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include "error_state.hpp"
 #include <base/string_id.hpp>
 #include <lexer/token.hpp>
+
+#include "error_state.hpp"
 
 namespace tpc {
 	using lexer::Keyword;
@@ -67,4 +68,4 @@ namespace tpc {
 		usize size() const;
 	};
 
-}
+}  // namespace tpc

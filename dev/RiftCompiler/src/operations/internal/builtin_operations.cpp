@@ -1,6 +1,8 @@
 #include "builtin_operations.hpp"
-#include "../create_default.hpp"
+
 #include <exec/exec_builtin.hpp>
+
+#include "../create_default.hpp"
 
 namespace operation {
 	namespace {
@@ -34,7 +36,7 @@ namespace operation {
 				operation::Defaultable::ConstructEmpty, int_type, construct_empty_int_t
 			);
 		}
-	}
+	}  // namespace
 
 	void addBuiltinOperations() {
 		addIntegral<int8_t, 8>();
@@ -44,4 +46,4 @@ namespace operation {
 		addIntegral<i128, 128>();
 	}
 
-}
+}  // namespace operation

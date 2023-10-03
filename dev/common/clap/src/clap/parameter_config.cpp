@@ -1,4 +1,5 @@
 #include "parameter_config.hpp"
+
 #include <sstream>
 
 namespace clap {
@@ -87,4 +88,4 @@ namespace clap {
 		if (x.has_value()) return x.value();
 		return base::StrId("" + get_short_name().value());
 	}
-}
+}  // namespace clap

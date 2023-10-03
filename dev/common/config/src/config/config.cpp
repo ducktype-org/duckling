@@ -1,3 +1,5 @@
+#include "config.hpp"
+
 #include <any>
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
@@ -5,7 +7,6 @@
 #include <set>
 #include <vector>
 
-#include "config.hpp"
 #include "params_configuration.hpp"
 #include "parsing_result.hpp"
 
@@ -129,4 +130,4 @@ namespace config {
 		ArgParser parser{ std::move(config) };
 		return parser.parse(args);
 	}
-}
+}  // namespace config

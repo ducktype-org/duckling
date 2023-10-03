@@ -2,11 +2,11 @@
 
 #include <base/maps.hpp>
 #include <base/unique_pointer.hpp>
+#include <memory_data/block.hpp>
 #include <services_data/type_metadata/type_metadata.hpp>
 
 #include "../services.hpp"
 #include "services_data/memory/memory.hpp"
-#include <memory_data/block.hpp>
 
 namespace vm {
 	class VCPU;
@@ -45,4 +45,4 @@ namespace vm {
 		template<class... DynamicServices>
 		friend class ServiceManagerDef;
 	};
-}
+}  // namespace vm

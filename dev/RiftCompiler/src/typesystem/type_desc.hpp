@@ -5,10 +5,10 @@
 
 #pragma once
 
+#include <concepts>
+
 #include "type_info.hpp"
 #include "value_category.hpp"
-
-#include <concepts>
 
 namespace ts {
 
@@ -55,4 +55,4 @@ namespace ts {
 		TYPE_INFO     type_info;
 		ValueCategory valueCategory;
 	};
-}
+}  // namespace ts

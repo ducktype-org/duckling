@@ -1,10 +1,11 @@
 #pragma once
 
+#include <base/string_id.hpp>
+#include <vector>
+
 #include "lookup_result.hpp"
 #include "scope_symbol_id.hpp"
 #include "symbol_ref.hpp"
-#include <base/string_id.hpp>
-#include <vector>
 
 namespace hir {
 	class AnalysisState;
@@ -46,4 +47,4 @@ namespace symtable {
 		LookupResult lookupMeAndParents(hir::AnalysisState&, base::StrId name);
 	};
 
-}
+}  // namespace symtable

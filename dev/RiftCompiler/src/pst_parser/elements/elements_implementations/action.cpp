@@ -56,7 +56,7 @@ namespace pst {
 			}
 			out << "}";
 		}
-	}
+	}  // namespace
 
 	void Return::dprint(std::ostream& out) const {
 		simpleActionDprint(out, expr, "Return", "with");
@@ -79,4 +79,4 @@ namespace pst {
 	void Throw::dprint(std::ostream& out) const {
 		simpleActionDprint(out, expr, "Throw", "exception");
 	}
-}
+}  // namespace pst

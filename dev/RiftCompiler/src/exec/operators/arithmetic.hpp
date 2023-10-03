@@ -13,4 +13,4 @@ namespace exec::operators {
 	NUM_BIN_SIMPLE_OPS(-, Minus)
 	NUM_BIN_SIMPLE_OPS(*, Asterisk)
 	NUM_BIN_SIMPLE_OPS(/, Slash)
-}
+}  // namespace exec::operators

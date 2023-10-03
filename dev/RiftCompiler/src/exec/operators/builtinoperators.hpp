@@ -30,4 +30,4 @@ namespace exec {
 	BuiltInOpMap& getBuiltInOps();
 
 	void initBuiltInOps();
-}
+}  // namespace exec

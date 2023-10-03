@@ -1,4 +1,5 @@
 #include "analysis_state.hpp"
+
 #include <iostream>
 
 namespace hir {
@@ -17,4 +18,4 @@ namespace hir {
 		to_analyze.push(sym_ref);
 	}
 
-}
+}  // namespace hir

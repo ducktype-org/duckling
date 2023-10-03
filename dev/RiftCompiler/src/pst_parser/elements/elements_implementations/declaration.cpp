@@ -2,4 +2,4 @@
 
 namespace pst {
 	bool Decl::trailingSemicolon() { return false; }
-}
+}  // namespace pst

@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include <string>
+
 #include "maps.hpp"
 #include "named_id.hpp"
 #include "raw_view.hpp"
-#include <string>
 
 namespace base {
 
@@ -88,12 +89,12 @@ namespace base {
 		inline void strConcat(std::string& out, base::StrId str_id) {
 			out.append(str_id.strView());
 		}
-	}
-}
+	}  // namespace detail
+}  // namespace base
 
 namespace std {
 	template<>
 	struct hash<base::StrId> {
 		usize operator()(const base::StrId& x) const { return x.id.asInt(); }
 	};
-}
+}  // namespace std

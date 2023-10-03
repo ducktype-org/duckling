@@ -1,19 +1,19 @@
 #pragma once
 
+#include <base/ints.hpp>
+#include <base/maps.hpp>
+#include <base/named_id.hpp>
+#include <base/smart_pointers.hpp>
+#include <base/stable_container.hpp>
+#include <base/string_id.hpp>
+#include <ostream>
+#include <span>
+
 #include "lookup_result.hpp"
 #include "scope.hpp"
 #include "scope_symbol_id.hpp"
 #include "symbol.hpp"
 #include "symbol_ref.hpp"
-#include <base/maps.hpp>
-#include <base/named_id.hpp>
-#include <base/smart_pointers.hpp>
-#include <base/string_id.hpp>
-
-#include <base/ints.hpp>
-#include <base/stable_container.hpp>
-#include <ostream>
-#include <span>
 
 namespace symtable {
 
@@ -46,4 +46,4 @@ namespace symtable {
 			hir::AnalysisState&, ScopeRef initial, std::span<base::StrId> names
 		);
 	};
-}
+}  // namespace symtable

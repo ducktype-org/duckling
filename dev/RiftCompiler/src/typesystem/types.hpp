@@ -243,4 +243,4 @@ namespace ts {
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(MetaInfo)
 	};
-}
+}  // namespace ts

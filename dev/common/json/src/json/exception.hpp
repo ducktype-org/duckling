@@ -1,7 +1,8 @@
 #pragma once
 
-#include <exception>
 #include <json_struct/json_struct.h>
+
+#include <exception>
 
 namespace JS {
 	template<>
@@ -25,4 +26,4 @@ namespace JS {
 			impl::endObject(token, serializer);
 		}
 	};
-}
+}  // namespace JS

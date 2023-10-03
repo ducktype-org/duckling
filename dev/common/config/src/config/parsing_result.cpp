@@ -16,4 +16,4 @@ namespace config {
 		}
 		return name_to_raw_value[name];
 	}
-}
+}  // namespace config

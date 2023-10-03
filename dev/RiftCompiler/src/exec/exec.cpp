@@ -1,9 +1,11 @@
 #include "exec.hpp"
+
+#include <exec/operators/builtinoperators.hpp>
+#include <operations/operation.hpp>
+
 #include "builtin_values.hpp"
 #include "ctv.hpp"
 #include "helpers.hpp"
-#include <exec/operators/builtinoperators.hpp>
-#include <operations/operation.hpp>
 
 namespace exec {
 	void init() {
@@ -14,4 +16,4 @@ namespace exec {
 		operation::init();
 		initBuiltInOps();
 	}
-}
+}  // namespace exec

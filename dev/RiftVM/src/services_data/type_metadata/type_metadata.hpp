@@ -1,7 +1,8 @@
 #pragma once
 
-#include "type.hpp"
 #include <base/stable_container.hpp>
+
+#include "type.hpp"
 
 namespace vm {
 	template<class... DynamicData>
@@ -34,4 +35,4 @@ namespace vm {
 		template<class... DynamicData>
 		friend class DataManagerDef;
 	};
-}
+}  // namespace vm

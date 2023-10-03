@@ -15,8 +15,9 @@
 
 #pragma once
 
-#include "key_spec_op.hpp"
 #include <base/string_id.hpp>
+
+#include "key_spec_op.hpp"
 
 namespace rift_def {
 
@@ -34,4 +35,4 @@ namespace rift_def {
 	OperatorAssociativity operatorAssociativity(base::StrId operator_, OperatorType operator_type);
 	OperatorAssociativity operatorAssociativity(Operator operator_, OperatorType operator_type);
 
-}
+}  // namespace rift_def

@@ -23,4 +23,4 @@ namespace pst {
 		nullAwareDprint(code_block, out);
 		out << "}}";
 	}
-}
+}  // namespace pst

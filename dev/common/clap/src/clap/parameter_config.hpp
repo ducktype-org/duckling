@@ -39,4 +39,4 @@ namespace clap {
 
 		base::StrId to_str_id() const;
 	};
-}
+}  // namespace clap

@@ -18,4 +18,4 @@ namespace tpc {
 		tokens().skip();
 	}
 
-}
+}  // namespace tpc

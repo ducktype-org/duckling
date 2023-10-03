@@ -12,4 +12,4 @@ namespace vm::api {
 	SupervisorRequest makeStatusRequest(PID pid) {
 		return SupervisorRequest{ pid, StatusRequest{} };
 	}
-}
+}  // namespace vm::api

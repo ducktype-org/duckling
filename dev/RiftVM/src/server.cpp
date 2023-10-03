@@ -1,6 +1,8 @@
 #include "server.hpp"
-#include <api/api.hpp>
+
 #include <crow.h>
+
+#include <api/api.hpp>
 #include <json/json.hpp>
 #include <supervisor/supervisor.hpp>
 
@@ -21,7 +23,10 @@ crow::response convertError(const vm::api::ApiError& apiError) {
 template<class T, class E>
 crow::response toResponse(const result<T, E>& x) {
 	static auto convert = [](const auto& v) {
-		return crow::response(200, /*JS::serializeStruct(v)*/ "{OK, json is broken}");
+		return crow::response(
+			200,
+			/*JS::serializeStruct(v)*/ "{OK, json is broken}"
+		);
 	};
 	return convertResult<T, E, crow::response>(x, convert, convertError);
 }

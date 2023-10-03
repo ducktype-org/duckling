@@ -8,4 +8,4 @@ namespace vm {
 	Emitter<FunctionCallEvent>& EmitterManager::getFunctionCallEventEmitter() noexcept {
 		return get().function_call_event_emitter;
 	}
-}
+}  // namespace vm

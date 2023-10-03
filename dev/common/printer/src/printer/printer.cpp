@@ -2,10 +2,10 @@
  * @file printer.cpp
  */
 
+#include "printer.hpp"
+
 #include <cstdlib>
 #include <iostream>
-
-#include "printer.hpp"
 
 namespace printer {
 	// All background color escape codes are 10 above foregrounds colors.
@@ -122,4 +122,4 @@ namespace printer {
 	}
 
 	void Console::clear() { messagePacks.resize(0); }
-}
+}  // namespace printer

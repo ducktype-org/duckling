@@ -17,4 +17,4 @@ namespace hir {
 
 		return nullptr;
 	}
-};
+};  // namespace hir

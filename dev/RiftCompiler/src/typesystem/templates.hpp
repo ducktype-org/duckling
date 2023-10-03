@@ -5,11 +5,11 @@
 
 #pragma once
 
+#include <exec/ctv.hpp>
+
 #include "type_desc.hpp"
 #include "type_desc.tcpp"
 #include "type_info.hpp"
-
-#include <exec/ctv.hpp>
 
 namespace ts {
 	namespace external {
@@ -44,4 +44,4 @@ namespace ts {
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(TypeTemplateInfo)
 	};
-}
+}  // namespace ts

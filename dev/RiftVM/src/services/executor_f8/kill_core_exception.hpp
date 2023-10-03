@@ -2,4 +2,4 @@
 
 namespace vm {
 	class KillCoreException {};
-}
+}  // namespace vm

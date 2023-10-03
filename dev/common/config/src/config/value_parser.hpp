@@ -39,4 +39,4 @@ namespace config {
 		return base::make_unique<T>();
 	}
 
-};
+};  // namespace config

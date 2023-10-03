@@ -1,10 +1,11 @@
 #pragma once
 
-#include "kinds.hpp"
 #include <base/option.hpp>
 #include <base/string_id.hpp>
 #include <memory_data/pointer.hpp>
 #include <variant>
+
+#include "kinds.hpp"
 
 namespace vm {
 	class TypeMetadata;
@@ -84,7 +85,6 @@ namespace vm {
 
 		option<TypeCRef> getLowestTypeAtPos(Offset pos) const;
 
-
 		// @todo: Interface below may change
 
 		// @TODO: move function below to kind:: structures without `option`
@@ -92,7 +92,8 @@ namespace vm {
 
 		/**
 		 * Get inner type of pointer, static or dynamic table
-		 * @return some(inner type) for pointer, static or dynamic table. none otherwise
+		 * @return some(inner type) for pointer, static or dynamic table. none
+		 * otherwise
 		 */
 		option<TypeCRef> getInnerType() const;
 
@@ -118,6 +119,6 @@ namespace vm {
 
 		JS_OBJ(size);  // TODO: add better output of type
 	};
-}
+}  // namespace vm
 
 REGISTER_PARSE_TYPE_ALIAS(vm::Type, "Type");

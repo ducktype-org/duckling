@@ -37,12 +37,7 @@ private:
 		assert(desc_1.getType() == id_1, "wrong TypeNamedId");
 
 		auto          symbol0 = symtable::SymbolId::next();
-		ts::ClassInfo id_3    = ts::ClassInfo::create(
-            base::StrId("3"),
-            {
-                {desc_1, symbol0}
-        }
-        );
+		ts::ClassInfo id_3    = ts::ClassInfo::create(base::StrId("3"), { { desc_1, symbol0 } });
 
 		auto off = id_3.getMemberInfo(symbol0);
 
@@ -78,11 +73,7 @@ private:
 		auto           symbol0 = symtable::SymbolId::next();
 		auto           symbol1 = symtable::SymbolId::next();
 		ts::TypeDesc<> desc_3(ts::ClassInfo::create(
-			base::StrId("3"),
-			{
-				{ptr_desc_1,  symbol0},
-                { ptr_desc_2, symbol1}
-        }
+			base::StrId("3"), { { ptr_desc_1, symbol0 }, { ptr_desc_2, symbol1 } }
 		));
 
 		assert(desc_3.getType().getSize() == 2 * 64, "size of class incorrect");
@@ -102,20 +93,14 @@ private:
 		auto multiple_use_symbol = symtable::SymbolId::next();
 
 		ts::ClassInfo base_class = ts::ClassInfo::create(
-			base::StrId("base"),
-			{
-				{desc_0,  symbol0            },
-                { desc_0, multiple_use_symbol}
-        }
+			base::StrId("base"), { { desc_0, symbol0 }, { desc_0, multiple_use_symbol } }
 		);
 
 		assert(base_class.getSize() == 0, "A class with an empty class isn't empty");
 
 		ts::ClassInfo inheriting_class = ts::ClassInfo::create(
 			base::StrId("inheriting"),
-			{
-				{desc_0, multiple_use_symbol}
-        },
+			{ { desc_0, multiple_use_symbol } },
 			{ { base_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
@@ -135,31 +120,34 @@ private:
 
 		ts::ClassInfo virtually_inheriting_class = ts::ClassInfo::create(
 			base::StrId("virtually_inheriting"),
-			{
-        },
+			{},
 			{ { base_class, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
 		assert(
 			virtually_inheriting_class.getSize() == ts::POINTER_SIZE,
-			"A virtually inheriting class has a different size than just the vtable pointer"
+			"A virtually inheriting class has a different size than just the "
+			"vtable pointer"
 		);
 
 		res = virtually_inheriting_class.getMemberInfo(symbol0);
 		assert(
 			res.result_type == ts::ResultType::Virtual,
-			"Found wrong number of members in virtual inheritance or thought the inheritance isn't "
+			"Found wrong number of members in virtual inheritance or thought "
+			"the inheritance isn't "
 			"virtual"
 		);
 		assert(res.last_virtual_ancestor == base_class, "Got the wrong virtual inheritance class");
 
 		assert(
 			res.start_offset == 0,
-			"Beginning offset of member of parent calculated incorrectly in the virtual case"
+			"Beginning offset of member of parent calculated incorrectly in the "
+			"virtual case"
 		);
 		assert(
 			res.end_offset == 0,
-			"End offset of member of parent calculated incorrectly in the virtual case"
+			"End offset of member of parent calculated incorrectly in the "
+			"virtual case"
 		);
 
 		auto not_used_symbol = symtable::SymbolId::next();
@@ -179,8 +167,7 @@ private:
 
 		ts::ClassInfo double_inheriting_class = ts::ClassInfo::create(
 			base::StrId("double_inheriting"),
-			{
-        },
+			{},
 			{ { inheriting_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
@@ -198,18 +185,12 @@ private:
 		auto multiple_use_symbol = symtable::SymbolId::next();
 
 		ts::ClassInfo base_class = ts::ClassInfo::create(
-			base::StrId("base"),
-			{
-				{desc_0,  symbol0            },
-                { desc_0, multiple_use_symbol}
-        }
+			base::StrId("base"), { { desc_0, symbol0 }, { desc_0, multiple_use_symbol } }
 		);
 
 		ts::ClassInfo inheriting_class = ts::ClassInfo::create(
 			base::StrId("inheriting"),
-			{
-				{desc_0, multiple_use_symbol}
-        },
+			{ { desc_0, multiple_use_symbol } },
 			{ { base_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
@@ -246,8 +227,7 @@ private:
 
 		ts::ClassInfo double_inheriting_class = ts::ClassInfo::create(
 			base::StrId("double_inheriting"),
-			{
-        },
+			{},
 			{ { inheriting_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
@@ -358,17 +338,11 @@ private:
 		auto           symbol1 = symtable::SymbolId::next();
 		auto           symbol2 = symtable::SymbolId::next();
 
-		ts::ClassInfo virtual_class = ts::ClassInfo::create(
-			base::StrId("virtual"),
-			{
-				{raw_ptr_desc, symbol0}
-        }
-		);
+		ts::ClassInfo virtual_class
+			= ts::ClassInfo::create(base::StrId("virtual"), { { raw_ptr_desc, symbol0 } });
 		ts::ClassInfo parent_class = ts::ClassInfo::create(
 			base::StrId("parent_class"),
-			{
-				{raw_ptr_desc, symbol1}
-        },
+			{ { raw_ptr_desc, symbol1 } },
 			{ { virtual_class, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
@@ -377,9 +351,7 @@ private:
 
 		ts::ClassInfo inheriting_class = ts::ClassInfo::create(
 			base::StrId("ineriting"),
-			{
-				{raw_ptr_desc, symbol2}
-        },
+			{ { raw_ptr_desc, symbol2 } },
 			{ { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) },
 		      { virtual_class, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
@@ -436,44 +408,29 @@ private:
 		auto           b = symtable::SymbolId::next();
 		auto           a = symtable::SymbolId::next();
 
-		ts::ClassInfo F = ts::ClassInfo::create(
-			base::StrId("F"),
-			{
-				{example_desc, f}
-        },
-			{},
-			0
-		);
+		ts::ClassInfo F = ts::ClassInfo::create(base::StrId("F"), { { example_desc, f } }, {}, 0);
 		ts::ClassInfo E = ts::ClassInfo::create(
 			base::StrId("E"),
-			{
-				{example_desc, e}
-        },
+			{ { example_desc, e } },
 			{ { F, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
 		ts::ClassInfo D = ts::ClassInfo::create(
 			base::StrId("D"),
-			{
-				{example_desc, d}
-        },
+			{ { example_desc, d } },
 			{ { F, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
 		ts::ClassInfo C = ts::ClassInfo::create(
 			base::StrId("C"),
-			{
-				{example_desc, c}
-        },
+			{ { example_desc, c } },
 			{ { E, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) },
 		      { D, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
 		ts::ClassInfo B = ts::ClassInfo::create(
 			base::StrId("B"),
-			{
-				{example_desc, b}
-        },
+			{ { example_desc, b } },
 			{ { D, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) },
 		      { F, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
@@ -481,9 +438,7 @@ private:
 
 		ts::ClassInfo A = ts::ClassInfo::create(
 			base::StrId("A"),
-			{
-				{example_desc, a}
-        },
+			{ { example_desc, a } },
 			{ { B, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) },
 		      { C, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
@@ -550,35 +505,22 @@ private:
 		auto           b = symtable::SymbolId::next();
 		auto           a = symtable::SymbolId::next();
 
-		ts::ClassInfo D = ts::ClassInfo::create(
-			base::StrId("D"),
-			{
-				{example_desc, d}
-        },
-			{},
-			0
-		);
+		ts::ClassInfo D = ts::ClassInfo::create(base::StrId("D"), { { example_desc, d } }, {}, 0);
 		ts::ClassInfo C = ts::ClassInfo::create(
 			base::StrId("C"),
-			{
-				{example_desc, c}
-        },
+			{ { example_desc, c } },
 			{ { D, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
 		ts::ClassInfo B = ts::ClassInfo::create(
 			base::StrId("B"),
-			{
-				{example_desc, b}
-        },
+			{ { example_desc, b } },
 			{ { D, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
 		ts::ClassInfo A = ts::ClassInfo::create(
 			base::StrId("A"),
-			{
-				{example_desc, a}
-        },
+			{ { example_desc, a } },
 			{ { B, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) },
 		      { C, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
@@ -622,61 +564,32 @@ private:
 		auto           b = symtable::SymbolId::next();
 		auto           a = symtable::SymbolId::next();
 
-		ts::ClassInfo G = ts::ClassInfo::create(
-			base::StrId("G"),
-			{
-				{example_desc, g}
-        },
-			{},
-			0
-		);
+		ts::ClassInfo G = ts::ClassInfo::create(base::StrId("G"), { { example_desc, g } }, {}, 0);
 		ts::ClassInfo F = ts::ClassInfo::create(
 			base::StrId("F"),
-			{
-				{example_desc, f}
-        },
+			{ { example_desc, f } },
 			{ { G, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
-		ts::ClassInfo E = ts::ClassInfo::create(
-			base::StrId("E"),
-			{
-				{example_desc, e}
-        },
-			{},
-			0
-		);
-		ts::ClassInfo D = ts::ClassInfo::create(
-			base::StrId("D"),
-			{
-				{example_desc, d}
-        },
-			{},
-			0
-		);
+		ts::ClassInfo E = ts::ClassInfo::create(base::StrId("E"), { { example_desc, e } }, {}, 0);
+		ts::ClassInfo D = ts::ClassInfo::create(base::StrId("D"), { { example_desc, d } }, {}, 0);
 		ts::ClassInfo C = ts::ClassInfo::create(
 			base::StrId("C"),
-			{
-				{example_desc, c}
-        },
+			{ { example_desc, c } },
 			{ { D, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) },
 		      { F, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
 		ts::ClassInfo B = ts::ClassInfo::create(
 			base::StrId("B"),
-			{
-				{example_desc, b}
-        },
+			{ { example_desc, b } },
 			{ { D, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) },
 		      { E, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
 		ts::ClassInfo A = ts::ClassInfo::create(
 			base::StrId("A"),
-			{
-				{example_desc, a}
-        },
+			{ { example_desc, a } },
 			{ { B, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) },
 		      { C, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
@@ -713,15 +626,13 @@ private:
 		ts::ClassInfo  X          = ts::ClassInfo::create(base::StrId("X"), {}, {}, 0);
 		ts::ClassInfo  doubleVirt = ts::ClassInfo::create(
             base::StrId("doubleVirt"),
-            {
-        },
+            {},
             { { X, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
             1
         );
 		ts::ClassInfo virtInh = ts::ClassInfo::create(
 			base::StrId("virtInh"),
-			{
-        },
+			{},
 			{ { X, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
@@ -844,44 +755,29 @@ private:
 		auto           b = symtable::SymbolId::next();
 		auto           a = symtable::SymbolId::next();
 
-		ts::ClassInfo F = ts::ClassInfo::create(
-			base::StrId("F"),
-			{
-				{example_desc, f}
-        },
-			{},
-			0
-		);
+		ts::ClassInfo F = ts::ClassInfo::create(base::StrId("F"), { { example_desc, f } }, {}, 0);
 		ts::ClassInfo E = ts::ClassInfo::create(
 			base::StrId("E"),
-			{
-				{example_desc, e}
-        },
+			{ { example_desc, e } },
 			{ { F, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
 		ts::ClassInfo D = ts::ClassInfo::create(
 			base::StrId("D"),
-			{
-				{example_desc, d}
-        },
+			{ { example_desc, d } },
 			{ { F, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
 		ts::ClassInfo C = ts::ClassInfo::create(
 			base::StrId("C"),
-			{
-				{example_desc, c}
-        },
+			{ { example_desc, c } },
 			{ { E, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) },
 		      { D, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
 		ts::ClassInfo B = ts::ClassInfo::create(
 			base::StrId("B"),
-			{
-				{example_desc, b}
-        },
+			{ { example_desc, b } },
 			{ { D, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) },
 		      { F, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
@@ -889,9 +785,7 @@ private:
 
 		ts::ClassInfo A = ts::ClassInfo::create(
 			base::StrId("A"),
-			{
-				{example_desc, a}
-        },
+			{ { example_desc, a } },
 			{ { B, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) },
 		      { C, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0

@@ -9,7 +9,6 @@
 #include <exec/exec.hpp>
 #include <exec/vtable_creation.hpp>
 #include <operations/create_default.hpp>
-
 #include <operations/operation.hpp>
 #include <typesystem/typesystem.hpp>
 
@@ -68,4 +67,4 @@ namespace exec {
 			return getVirtualMember(ctv, class_info, member);
 		return getMemberNonVirtual(ctv, member);
 	}
-}
+}  // namespace exec

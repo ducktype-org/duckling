@@ -56,4 +56,4 @@ namespace tpc {
 			out << "\"<ANONYMOUS>\"";
 	}
 
-}
+}  // namespace tpc

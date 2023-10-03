@@ -1,4 +1,5 @@
 #include "type_info_impl.hpp"
+
 #include <queue>
 
 namespace ts::internal {
@@ -14,7 +15,8 @@ namespace ts::internal {
 	}
 
 	VariantInfoImpl::VariantInfoImpl(const std::vector<TypeDesc<>>& variant_types)
-		  // 1 byte is for information which type is it. Maybe dynamic size in the future.
+		  // 1 byte is for information which type is it. Maybe dynamic size in the
+	      // future.
 		  :
 		  TypeInfoImpl(BYTE_SIZE + maxTypeVectorSizes(variant_types)),
 		  variant_types(variant_types) {
@@ -56,4 +58,4 @@ namespace ts::internal {
 	usize VTableInfoImpl::getMethodCount() const {
 		return associated_class.getVtableSize() - getParentCount();
 	}
-}
+}  // namespace ts::internal

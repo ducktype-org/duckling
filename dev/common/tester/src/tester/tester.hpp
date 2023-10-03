@@ -5,12 +5,12 @@
 
 #pragma once
 
-#include "tester_config.hpp"
-
 #include <config/config.hpp>
 #include <exception>
 #include <printer/printer.hpp>
 #include <string>
+
+#include "tester_config.hpp"
 
 class SimpleTesterTest;
 
@@ -101,4 +101,4 @@ namespace tester {
 		if (!test.run()) return 1;                                           \
 	}
 
-}
+}  // namespace tester

@@ -126,7 +126,7 @@ namespace base {
 
 		~OwningView() { delete[] begin; }
 	};
-}
+}  // namespace base
 
 // std::hash functor for RawView:
 namespace std {
@@ -136,4 +136,4 @@ namespace std {
 			return std::hash<std::string_view>()(k.stringView());
 		}
 	};
-}
+}  // namespace std

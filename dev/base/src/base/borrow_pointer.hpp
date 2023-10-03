@@ -58,4 +58,4 @@ namespace base {
 	template<class T>
 	using c_borrow_ptr = borrow_ptr<const T>;
 
-}
+}  // namespace base

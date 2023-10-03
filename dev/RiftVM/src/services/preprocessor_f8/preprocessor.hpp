@@ -1,9 +1,10 @@
 #pragma once
 
-#include "../services.hpp"
 #include <base/option.hpp>
 #include <code_data/code.hpp>
 #include <filesystem/file.hpp>
+
+#include "../services.hpp"
 
 namespace vm {
 	// @TODO: static type checking
@@ -22,4 +23,4 @@ namespace vm {
 
 		result<vm::Code, std::string> getCode(const fs::FilePath& file);
 	};
-}
+}  // namespace vm

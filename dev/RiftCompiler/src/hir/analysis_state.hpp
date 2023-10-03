@@ -1,8 +1,9 @@
 #pragma once
 
-#include "symtable/symtable.hpp"
 #include <queue>
 #include <span>
+
+#include "symtable/symtable.hpp"
 
 namespace hir {
 
@@ -43,4 +44,4 @@ namespace hir {
 			RIFT_PANIC(error);
 		}
 	};
-}
+}  // namespace hir

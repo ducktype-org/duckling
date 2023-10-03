@@ -32,7 +32,7 @@ namespace base {
 		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>, T, 0>(
 		);
 	}
-}
+}  // namespace base
 
 /**
  * @brief Use instead of `holds_alternative` if-chains
@@ -86,7 +86,6 @@ namespace base {
 	{ std::visit(::base::VisitOverloaded{ code }, (value)); }
 
 #define VISIT_CASE(type, name, code) [&](type name) { code; },
-
 
 /**
  * @brief Use instead of simple `std::visit`

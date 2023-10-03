@@ -4,6 +4,7 @@
  */
 
 #include "operator_precedence.hpp"
+
 #include <base/init_guard.hpp>
 #include <base/maps.hpp>
 
@@ -13,7 +14,7 @@ namespace rift_def {
 		// this is highly ineffective but is meant as a placeholder:
 		base::Map<std::pair<Operator, OperatorType>, usize>                 precedence;
 		base::Map<std::pair<Operator, OperatorType>, OperatorAssociativity> associativity;
-	}
+	}  // namespace
 
 	void operator_precedence::init() {
 		RIFT_SIMPLE_INIT_GUARD_BEGIN;
@@ -103,4 +104,4 @@ namespace rift_def {
 	OperatorAssociativity operatorAssociativity(Operator keyword, OperatorType operator_type) {
 		return operatorAssociativity(operatorToStr(keyword), operator_type);
 	}
-}
+}  // namespace rift_def

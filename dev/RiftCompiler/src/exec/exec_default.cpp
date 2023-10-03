@@ -38,7 +38,8 @@ namespace exec {
 
 		auto vtable_ptr_b = b.subCTV(vtable, vtable_offset, ts::POINTER_SIZE);
 
-		// w vtable trzymane są offsety rozmiaru usize	(oraz w przyszłości metody)
+		// w vtable trzymane są offsety rozmiaru usize	(oraz w przyszłości
+		// metody)
 		auto vtable_b = vtable_ptr_b.getDataUnderPointer<usize>();
 
 		for (auto ancestor_info: class_info.virtualAncestors()) {
@@ -52,8 +53,8 @@ namespace exec {
 
 			// W przyszłości tutaj powinniśmy wyszukiwać operację, która porównuje tylko
 			// niewirtualnych przodków (będzie ona zapewne przechowywana gdzie indziej)
-			// Możliwe też że użytkownik sam zdefiniował operację porównywania której szukamy
-			// wówczas nie będzie ona miała takiego podziału.
+			// Możliwe też że użytkownik sam zdefiniował operację porównywania której
+			// szukamy wówczas nie będzie ona miała takiego podziału.
 			const auto& op = operation::getDefault(operation::Defaultable::Equality, ancestor_info);
 
 			CTV localRes = op({ sub_a, sub_b });
@@ -124,7 +125,8 @@ namespace exec {
 
 		RIFT_ASSERT(
 			ctvs.size() == calls.size() + 1,
-			"Default full constructor should receive value for each call, and one target CTV."
+			"Default full constructor should receive value for each call, "
+			"and one target CTV."
 		)
 
 		// First ctv is the one we are constructing.
@@ -141,4 +143,4 @@ namespace exec {
 
 		return ctv;
 	}
-}
+}  // namespace exec

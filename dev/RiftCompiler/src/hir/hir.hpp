@@ -1,11 +1,11 @@
 #pragma once
 
-#include "symtable/symtable.hpp"
 #include <filesystem/file.hpp>
 #include <pst_parser/pst.hpp>
 #include <vector>
 
 #include "rift_symbols.hpp"
+#include "symtable/symtable.hpp"
 
 namespace hir {
 
@@ -26,4 +26,4 @@ namespace hir {
 		// @TODO: name
 		void doMagicStuff();
 	};
-}
+}  // namespace hir

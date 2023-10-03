@@ -37,4 +37,4 @@ namespace config {
 	 */
 	ParsingResult parse(ConfigOptions&& config, const std::vector<base::RawView>& args);
 
-}
+}  // namespace config

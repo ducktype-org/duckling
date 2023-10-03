@@ -1,6 +1,7 @@
 /**
  * @file create_default.hpp
- * @brief Creates defaultable operations (but generally does not add them to operations)
+ * @brief Creates defaultable operations (but generally does not add them to
+ * operations)
  */
 #pragma once
 
@@ -16,8 +17,8 @@ namespace operation {
 	TypedOperation createDefaultConstructFull(ts::TypeInfo type_info);
 
 	// This only compares virtual ancestors.
-	// Result of this and the one created by createDefaultEquality complement each other.
-	// They should be stored separately and called in specific manner.
+	// Result of this and the one created by createDefaultEquality complement each
+	// other. They should be stored separately and called in specific manner.
 	TypedOperation createDefaultVirtualEquality(ts::ClassInfo class_info);
 
 	inline TypedOperation createDefault(ts::TypeInfo type_info, Defaultable kind) {
@@ -59,4 +60,4 @@ namespace operation {
 	inline TypedOperation construct(const Operation& op, ts::TypeDesc<> ty) {
 		return { op, ts::FunctionInfo::create({ ty }, ty) };
 	}
-}
+}  // namespace operation

@@ -1,4 +1,5 @@
 #include "supervisor.hpp"
+
 #include <mutex>
 
 namespace vm {
@@ -37,4 +38,4 @@ namespace vm {
 		processTable.erase(pid);
 		return {};
 	}
-}
+}  // namespace vm

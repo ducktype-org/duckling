@@ -1,8 +1,9 @@
 #pragma once
 
-#include "load_program_error.hpp"
 #include <json/json.hpp>
 #include <variant>
+
+#include "load_program_error.hpp"
 
 namespace vm::api {
 	struct ResumeError {};
@@ -25,7 +26,7 @@ namespace vm::api {
 		CoreOperationErrorVariant error;
 		JS_OBJ(error);
 	};
-}
+}  // namespace vm::api
 
 REGISTER_PARSE_TYPE_ALIAS(vm::api::ResumeError, "ResumeError");
 REGISTER_PARSE_TYPE_ALIAS(vm::api::PauseError, "PauseError");

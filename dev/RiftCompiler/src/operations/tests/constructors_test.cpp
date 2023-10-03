@@ -29,21 +29,16 @@ private:
 		ts::TypeDesc<> int_desc(ts::IntegralInfo::create(8));
 		auto           symbol0 = symtable::SymbolId::next();
 
-		ts::ClassInfo  parent_class(ts::ClassInfo::create(
-            base::StrId("parent"),
-            {
-                {int_desc, symbol0}
-        }
-        ));
+		ts::ClassInfo parent_class(
+			ts::ClassInfo::create(base::StrId("parent"), { { int_desc, symbol0 } })
+		);
 		ts::TypeDesc<> desc_parent_class(parent_class);
 
 		auto symbol1 = symtable::SymbolId::next();
 
 		ts::ClassInfo  inheriting_class(ts::ClassInfo::create(
             base::StrId("inheriting"),
-            {
-                {int_desc, symbol1}
-        },
+            { { int_desc, symbol1 } },
             { { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
             0
         ));
@@ -90,7 +85,8 @@ private:
 		operation::Constructor cons_inherit = operation::makeConstructorClass(inheriting_class);
 		auto                   ctv_inherit  = exec::alloc_new(inheriting_class);
 
-		// operation::execConstructor(cons_inherit, {ctv_int, ctv_parent}, ctv_inherit);
+		// operation::execConstructor(cons_inherit, {ctv_int, ctv_parent},
+		// ctv_inherit);
 	}
 
 public:

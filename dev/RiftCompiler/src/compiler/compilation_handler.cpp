@@ -1,4 +1,5 @@
 #include "compilation_handler.hpp"
+
 #include <module_system/import_to_path.hpp>
 #include <pst_parser/parser.hpp>
 
@@ -47,4 +48,4 @@ namespace compiler {
 		}
 	}
 
-}
+}  // namespace compiler

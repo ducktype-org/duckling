@@ -9,4 +9,4 @@ namespace ts {
 		return isImplicitlyCoercible(type_info, to.type_info)
 		    && valueCategory.contains(to.valueCategory);
 	}
-}
+}  // namespace ts

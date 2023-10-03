@@ -9,14 +9,12 @@ namespace exec {
 
 		auto ctv
 			= alloc_new(ts::IntegralInfo::create(64), parent.getVtableSize() * sizeof(usize) * 8);
-		//							^^^ TO UWZGLĘDNIA METODY WIRTUALNE
+		//							^^^ TO UWZGLĘDNIA METODY
+		// WIRTUALNE
 
 		for (usize i = 0; i < table.size(); i++) ctv.getData<usize>()[i] = table[i].second;
 
-		internal::vtables.insert({
-			{parent, child},
-            ctv
-        });
+		internal::vtables.insert({ { parent, child }, ctv });
 
 		return ctv;
 	}
@@ -56,8 +54,8 @@ namespace exec {
 		fillVtablePtr(ctv, base_class);
 
 		for (auto ancestor_data: ancestors) {
-			// @TODO: Can be optimised -- we know the offsets at compile time here, no need to check
-			// the vtable
+			// @TODO: Can be optimised -- we know the offsets at compile time here, no
+			// need to check the vtable
 			if (ancestor_data.last_virtual_ancestor.has_value()) {
 				usize vtable_position
 					= base_class.getVtablePositionOf(ancestor_data.last_virtual_ancestor.value());
@@ -75,4 +73,4 @@ namespace exec {
 			}
 		}
 	}
-}
+}  // namespace exec

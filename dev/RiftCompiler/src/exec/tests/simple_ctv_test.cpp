@@ -65,21 +65,16 @@ private:
 		ts::TypeDesc<> int_desc(ts::IntegralInfo::create(8));
 		auto           symbol0 = symtable::SymbolId::next();
 
-		ts::ClassInfo  parent_class(ts::ClassInfo::create(
-            base::StrId("Parent"),
-            {
-                {int_desc, symbol0}
-        }
-        ));
+		ts::ClassInfo parent_class(
+			ts::ClassInfo::create(base::StrId("Parent"), { { int_desc, symbol0 } })
+		);
 		ts::TypeDesc<> desc_parent_class(parent_class);
 
 		auto symbol1 = symtable::SymbolId::next();
 
 		ts::ClassInfo inheriting_class(ts::ClassInfo::create(
 			base::StrId("Inheriting"),
-			{
-				{int_desc, symbol1}
-        },
+			{ { int_desc, symbol1 } },
 			{ { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		));
@@ -121,7 +116,8 @@ private:
 		s0CTV = parentCTV.subCTV(int_desc, symbol0_offset, int_desc.getType().getSize());
 		assert(
 			s0CTV.getData()[0] == 123,
-			"Wrong value in the parent's member subCTV when getting there indirectly"
+			"Wrong value in the parent's member subCTV when getting there "
+			"indirectly"
 		);
 	}
 

@@ -8,7 +8,7 @@ using cpp::result;
 
 namespace internal {
 	struct NoneVariant {};
-}
+}  // namespace internal
 
 template<class T>
 using option = result<T, internal::NoneVariant>;

@@ -22,4 +22,4 @@ namespace JS::impl {
 		beginObject(token, serializer);
 		endObject(token, serializer);
 	}
-}
+}  // namespace JS::impl

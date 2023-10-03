@@ -1,6 +1,6 @@
-#include <supervisor/vcpu.hpp>
-
 #include "allocator.hpp"
+
+#include <supervisor/vcpu.hpp>
 
 namespace vm {
 	Memory& Allocator::getMemory(VCPU& vcpu) { return vcpu.getData().get<Memory>(); }
@@ -27,4 +27,4 @@ namespace vm {
 		memory.deleteBlock(block_id);
 		memory.returnBlockID(block_id);
 	}
-}
+}  // namespace vm

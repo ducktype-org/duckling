@@ -1,13 +1,12 @@
 #pragma once
 
-#include "symtable/symbol.hpp"
-#include "symtable/symbol_ref.hpp"
+#include <optional>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/rift_parser_base.hpp>
-
 #include <typesystem/typesystem.hpp>
 
-#include <optional>
+#include "symtable/symbol.hpp"
+#include "symtable/symbol_ref.hpp"
 
 namespace hir {
 
@@ -140,4 +139,4 @@ namespace hir {
 	// 	void calculateType() override;
 	// 	void analyzeAll(AnalysisState&) override;
 	// };
-}
+}  // namespace hir

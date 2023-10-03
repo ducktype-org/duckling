@@ -6,4 +6,4 @@ namespace JS::impl {
 	void beginObject(Token& token, Serializer& serializer);
 	void endObject(Token& token, Serializer& serializer);
 	void emptyObject(Token& token, Serializer& serializer);
-}
+}  // namespace JS::impl

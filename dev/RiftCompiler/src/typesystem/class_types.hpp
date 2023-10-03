@@ -5,14 +5,14 @@
 
 #pragma once
 
-#include "type_desc.hpp"
-#include "type_desc.tcpp"
-#include "type_info.hpp"
-
 #include <base/exceptions.hpp>
 #include <hir/symtable/scope_symbol_id.hpp>
 #include <optional>
 #include <utility>
+
+#include "type_desc.hpp"
+#include "type_desc.tcpp"
+#include "type_info.hpp"
 
 namespace ts {
 
@@ -69,9 +69,8 @@ namespace ts {
 		[[nodiscard]]
 		const std::vector<AncestorData> basicParents() const;
 
-		// All the virtual parents, temporarily commented out to make sure it's not used
-		// accidentally
-		// const std::map<ClassInfo, usize> virtualParents() const;
+		// All the virtual parents, temporarily commented out to make sure it's not
+		// used accidentally const std::map<ClassInfo, usize> virtualParents() const;
 
 		// All the virtual ancestors
 		[[nodiscard]]
@@ -86,7 +85,8 @@ namespace ts {
 		const std::vector<MemberData>& allMembers() const;
 
 		// Gets all the info we could possibly want about our member
-		// If we give a vector of ancestors, they will work as an inheritance path hint
+		// If we give a vector of ancestors, they will work as an inheritance path
+		// hint
 		[[nodiscard]]
 		MemberInfo getMemberInfo(symtable::SymbolId symbol) const;
 		[[nodiscard]]
@@ -94,7 +94,8 @@ namespace ts {
 			getMemberInfo(symtable::SymbolId symbol, const std::vector<ClassInfo>& hint) const;
 
 		// Gets all the info we could possibly want about our ancestor
-		// If we give a whole vector of ancestors, they will work as an inheritance path hint
+		// If we give a whole vector of ancestors, they will work as an inheritance
+		// path hint
 		[[nodiscard]]
 		AncestorInfo getAncestorInfo(ClassInfo ancestor_id) const;
 		[[nodiscard]]
@@ -104,8 +105,8 @@ namespace ts {
 		[[nodiscard]]
 		usize getVirtualAncestorOffset(ClassInfo ancestor_id) const;
 
-		// Returns all the offsets of virtual members of the ancestor (its vtable), assuming it's
-		// been created as a part of us.
+		// Returns all the offsets of virtual members of the ancestor (its vtable),
+		// assuming it's been created as a part of us.
 		[[nodiscard]]
 		std::vector<std::pair<ClassInfo, usize>> getVirtualAncestorTable(ClassInfo ancestor_id
 		) const;
@@ -135,19 +136,20 @@ namespace ts {
 	enum class ResultType { NoResult, Standard, Virtual, Ambiguous };
 
 	struct MemberInfo {
-		// If there is a virtual in the inheritance path, this is the last one. Otherwise, it's
-		// an empty optional.
+		// If there is a virtual in the inheritance path, this is the last one.
+		// Otherwise, it's an empty optional.
 		std::optional<ClassInfo> last_virtual_ancestor{};
 
 		std::optional<TypeDesc<>> desc{};
 
-		// If the member is in a virtual ancestor, this data is relative to the ancestor's start
-		// The exact offset of course needs to be looked up in the vtable at runtime
+		// If the member is in a virtual ancestor, this data is relative to the
+		// ancestor's start The exact offset of course needs to be looked up in the
+		// vtable at runtime
 		std::optional<usize> start_offset{};
 		std::optional<usize> end_offset{};
 
-		// If the field below is not equal to Standard or Virtual, the data structure will be
-		// full of empty optionals.
+		// If the field below is not equal to Standard or Virtual, the data structure
+		// will be full of empty optionals.
 		ResultType result_type{ ResultType::NoResult };
 
 		// Returns whether the result is correct, i.e. Standard or Virtual
@@ -156,22 +158,23 @@ namespace ts {
 	};
 
 	struct AncestorInfo {
-		// If there is a virtual in the inheritance path, this is the last one. Otherwise, it's
-		// an empty optional.
+		// If there is a virtual in the inheritance path, this is the last one.
+		// Otherwise, it's an empty optional.
 		std::optional<ClassInfo> last_virtual_ancestor{};
 
-		// If the member is in a virtual ancestor, this data is relative to the ancestor's start
-		// The exact offset of course needs to be looked up in the vtable at runtime
+		// If the member is in a virtual ancestor, this data is relative to the
+		// ancestor's start The exact offset of course needs to be looked up in the
+		// vtable at runtime
 		std::optional<usize> start_offset{};
 		std::optional<usize> end_offset{};
 
-		// If the field below is not equal to Standard or Virtual, this data structure will be
-		// full of empty optionals.
+		// If the field below is not equal to Standard or Virtual, this data structure
+		// will be full of empty optionals.
 		ResultType result_type{ ResultType::NoResult };
 
 		// The ^ operators combine results
-		// For example, if R1 tells us B has offset 10 in A, and R2 tells us C has offset 10 in B,
-		// then R1^R2 will let us know that C has offset 20 in A.
+		// For example, if R1 tells us B has offset 10 in A, and R2 tells us C has
+		// offset 10 in B, then R1^R2 will let us know that C has offset 20 in A.
 		AncestorInfo  operator^(const AncestorInfo& a) const;
 		AncestorInfo& operator^=(const AncestorInfo& a);
 
@@ -184,8 +187,8 @@ namespace ts {
 
 	// @TODO: In the future, Info and Data should be merged into one struct
 	// Exceptions should handle bad results
-	// However, what worries me, is that then people may use the result without checking if it's
-	// virtual
+	// However, what worries me, is that then people may use the result without
+	// checking if it's virtual
 	struct MemberData {
 		symtable::SymbolId symbol;
 		TypeDesc<>         desc;
@@ -193,8 +196,8 @@ namespace ts {
 
 		std::optional<ClassInfo> last_virtual_ancestor{};
 
-		// MemberData(symtable::SymbolId symbol, TypeDesc<> desc, usize offset): symbol(symbol),
-		// desc(desc), offset(offset) {}
+		// MemberData(symtable::SymbolId symbol, TypeDesc<> desc, usize offset):
+		// symbol(symbol), desc(desc), offset(offset) {}
 	};
 
 	struct AncestorData {
@@ -203,7 +206,8 @@ namespace ts {
 
 		std::optional<ClassInfo> last_virtual_ancestor{};
 
-		// AncestorData(ClassInfo class_info, usize offset): info(class_info), offset(offset) {}
+		// AncestorData(ClassInfo class_info, usize offset): info(class_info),
+		// offset(offset) {}
 	};
 
 	class VTableInfo: public TypeInfo {
@@ -221,4 +225,4 @@ namespace ts {
 		CONSTRUCT_FROM_IMPLEMENTATION(VTableInfo)
 	};
 
-}
+}  // namespace ts

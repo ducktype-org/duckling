@@ -13,4 +13,4 @@ namespace tpc {
 	struct OptionalIdentifier {
 		std::optional<base::StrId> value;
 	};
-}
+}  // namespace tpc

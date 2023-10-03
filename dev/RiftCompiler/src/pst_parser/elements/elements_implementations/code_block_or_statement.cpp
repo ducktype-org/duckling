@@ -1,5 +1,6 @@
-#include "elements_implementation.hpp"
 #include <base/variant.hpp>
+
+#include "elements_implementation.hpp"
 
 namespace pst {
 	ParserRef<CodeBlockOrStmt> CodeBlockOrStmt::parse(RiftParserState& state) {
@@ -40,4 +41,4 @@ namespace pst {
 		RIFT_PANIC("something went wrong");
 	}
 
-}
+}  // namespace pst

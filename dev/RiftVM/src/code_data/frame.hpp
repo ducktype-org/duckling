@@ -1,13 +1,12 @@
 #pragma once
 
 #include <base/ints.hpp>
+#include <base/option.hpp>
+#include <memory_data/pointer.hpp>
 #include <span>
 #include <vector>
 
-#include <base/option.hpp>
-
 #include "code.hpp"
-#include <memory_data/pointer.hpp>
 
 namespace vm {
 
@@ -57,4 +56,4 @@ namespace vm {
 		// Local stack:
 		VLADataReference vla_data_reference;
 	};
-}
+}  // namespace vm

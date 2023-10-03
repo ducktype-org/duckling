@@ -1,4 +1,5 @@
 #include "memory.hpp"
+
 #include <base/exceptions.hpp>
 #include <iostream>
 
@@ -95,4 +96,4 @@ namespace vm {
 	}
 
 	Pointer Memory::nullPtr() const { return Pointer{ null_block_id, 0 }; }
-}
+}  // namespace vm

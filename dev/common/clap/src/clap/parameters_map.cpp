@@ -28,4 +28,4 @@ namespace clap {
 	bool ParametersMap::contains(usize id) const {
 		return flags.count(id) != 0 || parameters.count(id) != 0;
 	}
-}
+}  // namespace clap

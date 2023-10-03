@@ -1,7 +1,9 @@
 #include "clap.hpp"
-#include "error.hpp"
+
 #include <iostream>
 #include <sstream>
+
+#include "error.hpp"
 
 namespace clap {
 	Config::Config() {
@@ -149,4 +151,4 @@ namespace clap {
 
 		return builder.str();
 	}
-}
+}  // namespace clap

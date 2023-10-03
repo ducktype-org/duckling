@@ -1,4 +1,5 @@
 #include "symbol.hpp"
+
 #include "../analysis_state.hpp"
 
 namespace symtable {
@@ -40,9 +41,6 @@ namespace symtable {
 
 	ChainLookupResult Symbol::getDeAlias(hir::AnalysisState&) {
 		if (is_alias) RIFT_PANIC("de alias called on alias symbol not implementing deAlias");
-		return {
-			{},
-            { { SymbolRef(this) }, {} }
-		};
+		return { {}, { { SymbolRef(this) }, {} } };
 	}
-}
+}  // namespace symtable

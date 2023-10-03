@@ -1,6 +1,8 @@
 #include "tpc.hpp"
-#include "token_stream.hpp"
+
 #include <lexer/lexer.hpp>
+
+#include "token_stream.hpp"
 
 namespace tpc {
 	void init() {
@@ -10,4 +12,4 @@ namespace tpc {
 		lexer::init();
 		was_init = true;
 	}
-}
+}  // namespace tpc

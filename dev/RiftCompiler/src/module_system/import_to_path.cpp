@@ -1,4 +1,5 @@
 #include "import_to_path.hpp"
+
 #include <string>
 
 namespace modulesys {
@@ -11,4 +12,4 @@ namespace modulesys {
 		result += ".rift";
 		return result;
 	}
-}
+}  // namespace modulesys

@@ -1,12 +1,11 @@
 #pragma once
 
-#include "elements/elements_forward.hpp"
-
-#include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better
-
-#include "rift_parser_base.hpp"
 #include <token_parser_core/error_state.hpp>
 #include <token_parser_core/parser_state.hpp>
+
+#include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better
+#include "elements/elements_forward.hpp"
+#include "rift_parser_base.hpp"
 
 namespace pst {
 	/**
@@ -35,4 +34,4 @@ namespace pst {
 
 		void dprint(std::ostream& out) const;
 	};
-}
+}  // namespace pst

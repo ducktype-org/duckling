@@ -38,7 +38,8 @@ private:
 	}
 
 	void failing_is_not_throwing_std() {
-		// Expected to fail: checks that failing a test is not mistaken for throwing std::exception.
+		// Expected to fail: checks that failing a test is not mistaken for throwing
+		// std::exception.
 		try {
 			assertThrows<std::exception>(
 				[&]() { fail("Please wait patiently for the failure of the system..."); },
@@ -50,12 +51,18 @@ private:
 	}
 
 	void catch_no_throw() {
-		message("Expected to fail: checks that assertThrows fails when no exception is caught");
+		message(
+			"Expected to fail: checks that assertThrows fails when no exception is "
+			"caught"
+		);
 		assertThrows<std::logic_error>([&]() {}, "expected failure: No exception was thrown");
 	}
 
 	void catch_wrong_throw() {
-		message("Expected to fail: checks that assertThrows fails when wrong exception is caught.");
+		message(
+			"Expected to fail: checks that assertThrows fails when wrong exception "
+			"is caught."
+		);
 		assertThrows<std::logic_error>(
 			[&]() { throw std::exception(); }, "expected failure: Wrong exception was thrown"
 		);

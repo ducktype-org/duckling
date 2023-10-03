@@ -5,9 +5,9 @@ namespace tpc {
 	void ErrorState::logError(const lexer::SourcePosition& position, std::string_view message) {
 		err_count++;
 		errorLog.add({
-			{{ "error:", printer::Color::BRIGHT_RED },
-             // @TODO: add file location info
-		      position.genErrorMsg(message)},
+			{ { "error:", printer::Color::BRIGHT_RED },
+		      // @TODO: add file location info
+		      position.genErrorMsg(message) },
 			printer::MessageType::ERROR,
 			0  // @TODO: maybe change level
 		});
@@ -21,4 +21,4 @@ namespace tpc {
 	void ErrorState::dumpLog(std::ostream& stream) const { errorLog.print(stream); }
 
 	usize ErrorState::errCount() const { return err_count; }
-}
+}  // namespace tpc

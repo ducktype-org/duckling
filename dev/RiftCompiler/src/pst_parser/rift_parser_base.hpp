@@ -37,4 +37,4 @@ namespace pst {
 		const ImportType& getImports() const;
 	};
 
-}
+}  // namespace pst

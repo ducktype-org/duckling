@@ -51,4 +51,4 @@ namespace compiler {
 		return out;
 	}
 
-}
+}  // namespace compiler

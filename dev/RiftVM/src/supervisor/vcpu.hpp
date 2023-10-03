@@ -2,13 +2,12 @@
 
 #include <api/vm.hpp>
 #include <base/option.hpp>
-#include <memory>
-#include <shared_mutex>
-#include <thread>
-
 #include <iostream>
 #include <istream>
+#include <memory>
 #include <ostream>
+#include <shared_mutex>
+#include <thread>
 
 namespace vm {
 	class VCPU: public Listener<api::VCPUStatus> {
@@ -24,9 +23,9 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		// @TODO: In future, never use stdio. Even CLI should use custom input/output and manage IO
-		// on its own. It will help with the need to support other concurrent processes and
-		// inserting CLI's commands
+		// @TODO: In future, never use stdio. Even CLI should use custom input/output
+		// and manage IO on its own. It will help with the need to support other
+		// concurrent processes and inserting CLI's commands
 		bool                                uses_stdio;
 		std::mutex                          input_mutex;
 		std::mutex                          output_mutex;
@@ -111,8 +110,8 @@ namespace vm {
 
 		// For external API
 
-		// Each of the following methods can be called concurrently, so they should synchronize
-		// resources.
+		// Each of the following methods can be called concurrently, so they should
+		// synchronize resources.
 		result<api::Response, api::CoreOperationError> doRequest(const api::RequestVariant& request
 		);
 
@@ -122,4 +121,4 @@ namespace vm {
 			  serviceManager(*this){};
 		virtual ~VCPU();
 	};
-}
+}  // namespace vm

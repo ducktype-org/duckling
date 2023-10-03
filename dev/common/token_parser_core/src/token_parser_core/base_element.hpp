@@ -12,7 +12,8 @@ namespace tpc {
 		virtual void dprint(std::ostream& out) const = 0;
 		virtual ~Element()                           = 0;
 
-		// @IDEA: this might be just a const variable if it will be enough in the future
+		// @IDEA: this might be just a const variable if it will be enough in the
+		// future
 		[[noreturn]]
 		virtual bool trailingSemicolon();
 
@@ -27,4 +28,4 @@ namespace tpc {
 			return ::operator delete(p);
 		}
 	};
-}
+}  // namespace tpc

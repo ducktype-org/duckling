@@ -47,9 +47,10 @@ private:
 	        assert(scope_1.getParent() == bad_id, "parent incorrect 0");
 	        assert(scope_2.getParent() == id, "parent incorrect 1");
 
-	        auto s_id_data = new symtable::Symbol(id, base::StrId("mysymbol"), false, false);
-	        auto s_id_1_data = new symtable::Symbol(id, base::StrId("mysymbol_1"), false, true);
-	        auto s_id_2_data = new symtable::Symbol(id_2, base::StrId("mysymbol_2"), false, false);
+	        auto s_id_data = new symtable::Symbol(id, base::StrId("mysymbol"),
+	   false, false); auto s_id_1_data = new symtable::Symbol(id,
+	   base::StrId("mysymbol_1"), false, true); auto s_id_2_data = new
+	   symtable::Symbol(id_2, base::StrId("mysymbol_2"), false, false);
 
 	        auto s_id = symbolTable.newSymbol(base::unique_ptr(s_id_data));
 	        auto s_id_1 = symbolTable.newSymbol(base::unique_ptr(s_id_1_data));
@@ -77,8 +78,9 @@ private:
 	        assert(symbols_1.size() == 2, "bad amount of symbols in scope 1");
 	        assert(symbols_2.size() == 1, "bad amount of symbols in scope 2");
 
-	        assert(symbols_1[0] == s_id && symbols_1[1] == s_id_1, "wrong list of symbols in scope
-	   1"); assert(symbols_2[0] == s_id_2, "wrong list of symbols in scope 2");
+	        assert(symbols_1[0] == s_id && symbols_1[1] == s_id_1, "wrong list of
+	   symbols in scope 1"); assert(symbols_2[0] == s_id_2, "wrong list of symbols
+	   in scope 2");
 	    }
 
 	    void connections() {
@@ -99,28 +101,27 @@ private:
 
 	                if (i < j) {
 	                    symbolTable.addConnection(
-	                        symtable::ConnectionType::ImportPrivate, scopes[i], scopes[j]);
-	                } else {
-	                    symbolTable.addConnection(
-	                        symtable::ConnectionType::ImportPublic, scopes[i], scopes[j]);
+	                        symtable::ConnectionType::ImportPrivate, scopes[i],
+	   scopes[j]); } else { symbolTable.addConnection(
+	                        symtable::ConnectionType::ImportPublic, scopes[i],
+	   scopes[j]);
 	                }
 	            }
 	        }
 
-	        // @TODO: for now just checking size, some more complicated test needed
-	        for (usize i = 1; i < 10; i++) {
-	            auto& imports_private =
+	        // @TODO: for now just checking size, some more complicated test
+	   needed for (usize i = 1; i < 10; i++) { auto& imports_private =
 	                symbolTable.get(scopes[i]).getConnections(symtable::ConnectionType::ImportPrivate);
-	            assert(imports_private.size() == 9 - i, "wrong private imports count");
-	            auto& imports_public =
+	            assert(imports_private.size() == 9 - i, "wrong private imports
+	   count"); auto& imports_public =
 	                symbolTable.get(scopes[i]).getConnections(symtable::ConnectionType::ImportPublic);
-	            assert(imports_public.size() == i + 1, "wrong public imports count");
+	            assert(imports_public.size() == i + 1, "wrong public imports
+	   count");
 	        }
 	    }
 
-	    // @TODO: this test is not finished, it should test creating two symtables at once
-	    void two_tables() {
-	        symtable::SymbolTable symbolTable_1;
+	    // @TODO: this test is not finished, it should test creating two symtables
+	   at once void two_tables() { symtable::SymbolTable symbolTable_1;
 	        symtable::SymbolTable symbolTable_2;
 
 	        auto bad_id = symtable::ScopeId::bad();
@@ -141,7 +142,8 @@ private:
 
 	    void simpleSymtableFillingTest() {
 	        pst::PST pst = prepare(path("snippets/lot_of_symbols.rift"));
-	        assert(pst.getErrorState().good(), "there are unexpected errors in rift source-code");
+	        assert(pst.getErrorState().good(), "there are unexpected errors in
+	   rift source-code");
 
 	        symtable::SymbolTable sym_table;
 	        pst.fillSymTable(sym_table);
@@ -158,8 +160,8 @@ private:
 	    void lookupTestOnRealFile() {
 
 	        pst::PST pst = prepare(path("snippets/symbol_in_namespaces.rift"));
-	        assert(pst.getErrorState().good(), "there are unexpected errors in rift source-code");
-	        symtable::SymbolTable sym_table;
+	        assert(pst.getErrorState().good(), "there are unexpected errors in
+	   rift source-code"); symtable::SymbolTable sym_table;
 	        pst.fillSymTable(sym_table);
 
 	        // Top-level scopes:
@@ -177,9 +179,10 @@ private:
 	        assert(A.isGood(), "A symbol was not found");
 	        assert(A.isGood(), "B symbol was not found");
 
-	        // this should fail, and might need a change when other error handling is introduced:
-	        auto badC = sym_table.lookup(pst_root_scope, base::StrId("C"));
-	        assert(badC.isBad(), "C symbol was found is global scope");
+	        // this should fail, and might need a change when other error handling
+	   is introduced: auto badC = sym_table.lookup(pst_root_scope,
+	   base::StrId("C")); assert(badC.isBad(), "C symbol was found is global
+	   scope");
 
 	        // Linked lookups:
 
@@ -201,22 +204,26 @@ private:
 	        auto foo3 = sym_table.lookupLinked(E, base::StrId("foo3"));
 	        assert(foo3.isGood(), "foo3 symbol was not found in E");
 
-	        auto random_bad = sym_table.lookupLinked(E, base::StrId("random_bad"));
-	        assert(random_bad.isBad(), "random_bad symbol was found in E");
+	        auto random_bad = sym_table.lookupLinked(E,
+	   base::StrId("random_bad")); assert(random_bad.isBad(), "random_bad symbol
+	   was found in E");
 
 	        // QNL lookup from top-level:
 	        {
 	            auto qnl_A = sym_table.QNL(pst_root_scope, strIdVectorMaker("A"));
 	            assert(A.isGood(), "A symbol was not found by QNL");
-	            assert(qnl_A == A, "A symbol is different from the one found by QNL");
+	            assert(qnl_A == A, "A symbol is different from the one found by
+	   QNL");
 
-	            auto qnl_foo2 = sym_table.QNL(pst_root_scope, strIdVectorMaker("A", "D", "foo2"));
-	            assert(qnl_foo2.isGood(), "foo2 symbol was not found by QNL");
-	            assert(qnl_foo2 == foo2, "A symbol is different from the one found by QNL");
+	            auto qnl_foo2 = sym_table.QNL(pst_root_scope,
+	   strIdVectorMaker("A", "D", "foo2")); assert(qnl_foo2.isGood(), "foo2 symbol
+	   was not found by QNL"); assert(qnl_foo2 == foo2, "A symbol is different
+	   from the one found by QNL");
 
-	            auto qnl_foo3 = sym_table.QNL(pst_root_scope, strIdVectorMaker("B", "C", "E",
-	   "foo3")); assert(qnl_foo3.isGood(), "foo3 symbol was not found by QNL"); assert(qnl_foo3 ==
-	   foo3, "A symbol is different from the one found by QNL");
+	            auto qnl_foo3 = sym_table.QNL(pst_root_scope,
+	   strIdVectorMaker("B", "C", "E", "foo3")); assert(qnl_foo3.isGood(), "foo3
+	   symbol was not found by QNL"); assert(qnl_foo3 == foo3, "A symbol is
+	   different from the one found by QNL");
 	        }
 
 	        // QNL lookup from inner scopes:
@@ -225,15 +232,18 @@ private:
 
 	            auto qnl_A = sym_table.QNL(linked_C_scope, strIdVectorMaker("A"));
 	            assert(A.isGood(), "A symbol was not found by QNL from C");
-	            assert(qnl_A == A, "A symbol is different from the one found by QNL from C");
+	            assert(qnl_A == A, "A symbol is different from the one found by
+	   QNL from C");
 
-	            auto qnl_foo2 = sym_table.QNL(linked_C_scope, strIdVectorMaker("A", "D", "foo2"));
-	            assert(qnl_foo2.isGood(), "foo2 symbol was not found by QNL from C");
-	            assert(qnl_foo2 == foo2, "A symbol is different from the one found by QNL from C");
+	            auto qnl_foo2 = sym_table.QNL(linked_C_scope,
+	   strIdVectorMaker("A", "D", "foo2")); assert(qnl_foo2.isGood(), "foo2 symbol
+	   was not found by QNL from C"); assert(qnl_foo2 == foo2, "A symbol is
+	   different from the one found by QNL from C");
 
-	            auto qnl_foo3 = sym_table.QNL(linked_C_scope, strIdVectorMaker("E", "foo3"));
-	            assert(qnl_foo3.isGood(), "foo3 symbol was not found by QNL from C");
-	            assert(qnl_foo3 == foo3, "A symbol is different from the one found by QNL from C");
+	            auto qnl_foo3 = sym_table.QNL(linked_C_scope,
+	   strIdVectorMaker("E", "foo3")); assert(qnl_foo3.isGood(), "foo3 symbol was
+	   not found by QNL from C"); assert(qnl_foo3 == foo3, "A symbol is different
+	   from the one found by QNL from C");
 	        }
 	    }
 	*/

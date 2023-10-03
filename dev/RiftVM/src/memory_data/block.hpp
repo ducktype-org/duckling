@@ -20,8 +20,8 @@ namespace vm {
 		TypeCRef  element_type;
 
 		byte* data;
-		// TODO: Add a way to determine which allocator created this block, as well as check if
-		// appropriate allocator destroys the block.
+		// TODO: Add a way to determine which allocator created this block, as well as
+		// check if appropriate allocator destroys the block.
 
 	public:
 		const BlockId block_id;
@@ -55,4 +55,4 @@ namespace vm {
 		result<base::ModRawView, error> deref(TypeCRef u, u64 offset);
 		result<base::ModRawView, error> derefCheck(TypeCRef u, u64 offset);
 	};
-}
+}  // namespace vm

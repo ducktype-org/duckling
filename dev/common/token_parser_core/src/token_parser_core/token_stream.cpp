@@ -3,6 +3,7 @@
  */
 
 #include "token_stream.hpp"
+
 #include <base/exceptions.hpp>
 
 namespace tpc {
@@ -48,4 +49,4 @@ namespace tpc {
 
 	usize TokenStream::size() const { return to - where; }
 
-}
+}  // namespace tpc

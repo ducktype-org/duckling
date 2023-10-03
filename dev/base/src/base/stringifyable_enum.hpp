@@ -19,8 +19,8 @@ namespace base {
 			EnumToStrType<EnumType> to_str;
 			EnumToStrType<EnumType> to_enum;
 		};
-	}
-}
+	}  // namespace detail
+}  // namespace base
 
 /**
  * @brief This macro has to be used in global namespace for technical reasons
@@ -75,4 +75,4 @@ namespace base {
 
 	template<typename EnumType>
 	StrId enumToStr(EnumType v);
-}
+}  // namespace base

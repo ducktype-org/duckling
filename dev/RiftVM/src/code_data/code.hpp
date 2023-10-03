@@ -1,8 +1,9 @@
 #pragma once
 
-#include "instruction.hpp"
 #include <string>
 #include <vector>
+
+#include "instruction.hpp"
 
 namespace vm {
 
@@ -19,4 +20,4 @@ namespace vm {
 		std::vector<FuncData> functions;
 		usize                 main_id;
 	};
-}
+}  // namespace vm

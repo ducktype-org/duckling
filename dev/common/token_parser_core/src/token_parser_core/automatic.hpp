@@ -1,8 +1,9 @@
 #pragma once
 
+#include <rift_definitions/key_spec_op.hpp>
+
 #include "common_elements.hpp"
 #include "parser_state.hpp"
-#include <rift_definitions/key_spec_op.hpp>
 
 namespace tpc {
 	using rift_def::Keyword;
@@ -12,7 +13,8 @@ namespace tpc {
 	// parses one of the available types
 	// template<class T>
 	// void parseOne([[maybe_unused]]ParserState& state, [[maybe_unused]]T t) {
-	// 	static_assert(sizeof(T) < 0, "parseOne for type `T` is not implemented\n");
+	// 	static_assert(sizeof(T) < 0, "parseOne for type `T` is not
+	// implemented\n");
 	// }
 
 	void parseOne(ParserState& state, Keyword key);
@@ -52,4 +54,4 @@ namespace tpc {
 		else
 			ref->dprint(out);
 	}
-}
+}  // namespace tpc

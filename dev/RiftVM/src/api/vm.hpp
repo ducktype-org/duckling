@@ -1,15 +1,16 @@
 #pragma once
 
-#include "services/service_manager.hpp"
-#include "services_data/data_manager.hpp"
 #include <api/api.hpp>
 #include <filesystem/file.hpp>
+
+#include "services/service_manager.hpp"
+#include "services_data/data_manager.hpp"
 
 namespace vm {
 	// @TODO: move somewhere else
 	using DataManager    = DataManagerDef<>;
 	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
-}
+}  // namespace vm
 
 namespace vm::api {
 	/**
@@ -27,12 +28,14 @@ namespace vm::api {
 	/**
 	 * @brief Pauses the execution of the program.
 	 * The program will be paused at the next nearest safe point.
-	 * When this function returns running, the program is paused. If false, the state is undefined.
+	 * When this function returns running, the program is paused. If false, the
+	 * state is undefined.
 	 * @return
 	 */
 	result<void, ApiError> pause(PID pid);
 	/** @brief Resumes the execution of the program.
-	 * When this function returns true, the program is running. If false, the state is undefined.
+	 * When this function returns true, the program is running. If false, the state
+	 * is undefined.
 	 * @return
 	 */
 	result<void, ApiError> resume(PID pid);
@@ -48,4 +51,4 @@ namespace vm::api {
 
 	result<TypeCRef, ApiError>        getType(PID pid, const std::string& type_name);
 	result<response::Block, ApiError> getBlock(PID pid, u64 block_id);
-}
+}  // namespace vm::api

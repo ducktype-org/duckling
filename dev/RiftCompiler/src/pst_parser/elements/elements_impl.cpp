@@ -1,8 +1,9 @@
 /**
  * @file elements.cpp
  * @brief
- * Implementation files are splitted, but we still wan't to treat it as single compilation unit.
- * This file might be decided further into logical pars to speed up partial compilation.
+ * Implementation files are splitted, but we still wan't to treat it as single
+ * compilation unit. This file might be decided further into logical pars to
+ * speed up partial compilation.
  */
 
 #include "elements_implementations/action.cpp"

@@ -1,14 +1,15 @@
 #pragma once
 
+#include <base/smart_pointers.hpp>
+#include <base/string_id.hpp>
+#include <vector>
+
 #include "../class_types.hpp"
 #include "../kind.hpp"
 #include "../type_desc.hpp"
 #include "../type_desc.tcpp"
 #include "../type_info.hpp"
 #include "../types.hpp"
-#include <base/smart_pointers.hpp>
-#include <base/string_id.hpp>
-#include <vector>
 
 namespace ts::internal {
 	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
@@ -171,8 +172,8 @@ namespace ts::internal {
 		[[nodiscard]]
 		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
 			// Implicit coercions allow checking against null pointer.
-			// We do not allow casting to a typed pointer, because we forbid implicit type
-			// specification.
+			// We do not allow casting to a typed pointer, because we forbid implicit
+			// type specification.
 			return to.getKind() == Kind::Bool;
 		}
 	};
@@ -402,8 +403,9 @@ namespace ts::internal {
 
 		// Positions of our parents in the ancestors vector, sorted by their order
 		std::vector<usize> basic_parents;
-		// @TODO: they are a connected subsequence, maybe just remember first and last index in
-		// members_data? Positions of our members in the members vector, sorted by their order
+		// @TODO: they are a connected subsequence, maybe just remember first and last
+		// index in members_data? Positions of our members in the members vector,
+		// sorted by their order
 		std::vector<usize> direct_members;
 		// Layout of virtual ancestors, sorted by their offset
 		std::vector<std::pair<ClassInfo, usize>> virtual_layout;
@@ -449,9 +451,9 @@ namespace ts::internal {
 		// Returns the offset of a single specific virtual ancestor
 		[[nodiscard]]
 		usize getVirtualAncestorOffset(ClassInfo ancestor_id) const;
-		// Returns all the offsets of virtual members of the clueless parent, assuming it's been
-		// created as a part of us. Since the virtual members are put at the end of the kid, they
-		// will all be positive.
+		// Returns all the offsets of virtual members of the clueless parent, assuming
+		// it's been created as a part of us. Since the virtual members are put at the
+		// end of the kid, they will all be positive.
 		[[nodiscard]]
 		std::vector<std::pair<ClassInfo, usize>> getVirtualAncestorTable(ClassInfo ancestor_id
 		) const;
@@ -493,7 +495,8 @@ namespace ts::internal {
 
 	public:
 		explicit TemplateInfoImpl(const std::vector<TypeDesc<>>& parameter_list)
-			  // @TODO: Change size to whatever StructTemplate or other value contained equals to.
+			  // @TODO: Change size to whatever StructTemplate or other value contained
+		      // equals to.
 			  :
 			  TypeInfoImpl(0),
 			  parameter_list(parameter_list) {
@@ -575,4 +578,4 @@ namespace ts::internal {
 			  TypeInfoImpl(class_info.getVtableSize() * sizeof(usize) * 8),
 			  associated_class(class_info) {}
 	};
-}
+}  // namespace ts::internal

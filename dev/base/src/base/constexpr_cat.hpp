@@ -1,7 +1,8 @@
 #pragma once
 
-#include "ints.hpp"
 #include <array>
+
+#include "ints.hpp"
 
 namespace base {
 
@@ -35,7 +36,7 @@ namespace base {
 		constexpr usize sizeSum(const Cs&... cs) {
 			return (0U + ... + size(cs));
 		}
-	}
+	}  // namespace impl
 
 	// Returns std::array<char> concatenation of the input character sequences
 	template<usize SIZE, typename... Cs>
@@ -50,6 +51,6 @@ namespace base {
 		}
 		return ret;
 	}
-}
+}  // namespace base
 
 #define CONSTEXPR_CAT(...) base::cat<base::impl::sizeSum(__VA_ARGS__)>(__VA_ARGS__);

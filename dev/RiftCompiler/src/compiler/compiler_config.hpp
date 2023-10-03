@@ -18,4 +18,4 @@ namespace compiler {
 	CompilerConfig   fromArgs(config::CLIArgs args);
 	printer::Message generateHelpMessage();
 
-}
+}  // namespace compiler

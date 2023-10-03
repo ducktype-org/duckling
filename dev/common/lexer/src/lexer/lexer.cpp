@@ -4,9 +4,11 @@
  */
 
 #include "lexer.hpp"
-#include "lexer_class.hpp"
+
 #include <iostream>
 #include <rift_definitions/key_spec_op.hpp>
+
+#include "lexer_class.hpp"
 
 // @TODO: change name_ names to sth meaningfull
 
@@ -90,22 +92,22 @@ namespace lexer {
 			// @TODO: error
 			RIFT_PANIC("EOF encountered inside parseSingleInto");
 		}
-		// @TODO: for now comments aren't saved because it's way to hard to parse with the current
-		// parser
+		// @TODO: for now comments aren't saved because it's way to hard to parse with
+		// the current parser
 		else if (isCommentBegin()) {
 			usize end = comment(/*output*/);
 			sourcePosition.setEnd(end);
 
 			addTokenMsg(begin + 2, end, "line comment", printer::MessageType::DEBUG);
-			// output.push_back(Token::makeComment(charArray_.composeRaw(begin + 2, end),
-			// source_position));
+			// output.push_back(Token::makeComment(charArray_.composeRaw(begin + 2,
+			// end), source_position));
 		} else if (isBlockCommentBegin()) {
 			usize end = blockComment();
 			sourcePosition.setEnd(end);
 
 			addTokenMsg(begin + 2, end, "block comment", printer::MessageType::DEBUG);
-			// output.push_back(Token::makeComment(charArray_.composeRaw(begin + 2, end),
-			// source_position));
+			// output.push_back(Token::makeComment(charArray_.composeRaw(begin + 2,
+			// end), source_position));
 		} else if (peek().isOperator()) {
 			usize end = oper();
 			sourcePosition.setEnd(end);
@@ -183,8 +185,8 @@ namespace lexer {
 		}
 	}
 
-	// @TODO: think if we want to allow some kind of nested single line comments, the version
-	// commented out below doesn't work
+	// @TODO: think if we want to allow some kind of nested single line comments,
+	// the version commented out below doesn't work
 	usize Lexer::comment(/*Tokens& output*/) {
 		skip(2);  // "//"
 		// usize begin = where_;
@@ -198,9 +200,10 @@ namespace lexer {
 			}
 			// else if(isCommentBegin()) {comment(output);}
 			// else if(isBlockCommentBegin()) {
-			// addTokenMsg(begin, where_ - 1, "line comment", printer::MessageType::DEBUG);
-			// output.push_back(Token::makeComment(charArray_.composeRaw(begin, where_ - 1),
-			// position)); return blockComment();
+			// addTokenMsg(begin, where_ - 1, "line comment",
+			// printer::MessageType::DEBUG);
+			// output.push_back(Token::makeComment(charArray_.composeRaw(begin, where_ -
+			// 1), position)); return blockComment();
 			// }
 			else {
 				next();
@@ -221,8 +224,8 @@ namespace lexer {
 				));
 				return where_ - 1;
 			}
-			// @FIXME: with the current way of adding tokens this doesn't add them as separate
-			// comments just pairs starts and ends
+			// @FIXME: with the current way of adding tokens this doesn't add them as
+			// separate comments just pairs starts and ends
 			else if (isBlockCommentBegin()) {
 				blockComment();
 			} else if (isBlockCommentEnd()) {
@@ -357,4 +360,4 @@ namespace lexer {
 		return { lexer.tokenize(dprint), file.getContent() };
 	}
 
-}
+}  // namespace lexer

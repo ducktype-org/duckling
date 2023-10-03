@@ -1,4 +1,5 @@
 #include "elements.hpp"
+
 #include <token_parser_core/automatic.hpp>
 
 namespace pst {
@@ -24,4 +25,4 @@ namespace pst {
 
 		if (state.tryEat(rift_def::Operator::PeriodStar)) d_name->star = true;
 	}
-}
+}  // namespace pst

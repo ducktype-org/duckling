@@ -12,7 +12,7 @@ namespace vm {
 
 			JS_OBJ(pid);
 		};
-	}
-}
+	}  // namespace api
+}  // namespace vm
 
 REGISTER_PARSE_TYPE_ALIAS(vm::api::ProcessInfo, "ProcessInfo")

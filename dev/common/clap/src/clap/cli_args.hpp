@@ -7,4 +7,4 @@ namespace clap {
 		const i32                argc;
 		const char* const* const argv;
 	};
-}
+}  // namespace clap

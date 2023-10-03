@@ -1,4 +1,5 @@
 #include "builtinoperators.hpp"
+
 #include <exec/operators/arithmetic.hpp>
 #include <exec/operators/operatorutils.hpp>
 using namespace exec::operators;
@@ -17,4 +18,4 @@ namespace exec {
 		NUM_BIN_ENTRIES_SIMPLE(Asterisk);
 		NUM_BIN_ENTRIES_SIMPLE(Slash);
 	}
-}
+}  // namespace exec

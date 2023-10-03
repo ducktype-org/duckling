@@ -3,7 +3,6 @@
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
-
 #include "source_position.hpp"
 
 #include <utility>
@@ -80,4 +79,4 @@ namespace lexer {
 		output += getSourceChars() + "\n";
 		return output;
 	}
-}
+}  // namespace lexer

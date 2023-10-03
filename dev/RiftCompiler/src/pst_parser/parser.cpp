@@ -4,6 +4,7 @@
  */
 
 #include "parser.hpp"
+
 #include <lexer/lexer.hpp>
 #include <token_parser_core/tpc.hpp>
 
@@ -23,4 +24,4 @@ namespace pst {
 		lexer::init();
 		was_init = true;
 	}
-}
+}  // namespace pst

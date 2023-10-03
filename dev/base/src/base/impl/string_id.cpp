@@ -1,7 +1,9 @@
 #include "../string_id.hpp"
-#include "../ints.hpp"
+
 #include <cstring>
 #include <iostream>
+
+#include "../ints.hpp"
 
 namespace base {
 
@@ -21,7 +23,7 @@ namespace base {
 		usize next_pos = 0;
 
 		bool any_buffer_exits = false;
-	}
+	}  // namespace
 
 	void newBuffer() {
 		auto new_buffer = new byte[default_buffer_size];
@@ -88,4 +90,4 @@ namespace base {
 			i++;
 		}
 	}
-}
+}  // namespace base

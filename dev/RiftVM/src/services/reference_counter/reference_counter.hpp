@@ -12,4 +12,4 @@ namespace vm {
 		template<class... DynamicServices>
 		friend class ServiceManagerDef;
 	};
-}
+}  // namespace vm

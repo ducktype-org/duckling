@@ -1,4 +1,5 @@
 #include "value_parser.hpp"
+
 #include <charconv>
 
 namespace config {
@@ -23,4 +24,4 @@ namespace config {
 	}
 
 	std::string IntParser::helperMess() { return "<int>"; }
-}
+}  // namespace config

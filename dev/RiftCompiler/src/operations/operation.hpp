@@ -83,4 +83,4 @@ namespace operation {
 	};
 
 	using Calls = std::vector<Call>;
-}
+}  // namespace operation

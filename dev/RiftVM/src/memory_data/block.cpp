@@ -35,7 +35,7 @@ namespace vm {
 				RIFT_PANIC("not implemented");
 			}
 		}
-	}
+	}  // namespace detail
 
 	Pointer Block::BasePointer() const { return Pointer(block_id, start); }
 
@@ -57,4 +57,4 @@ namespace vm {
 			return fail("Type not present at offset");
 		return base::ModRawView(data, u->getSize());
 	}
-}
+}  // namespace vm

@@ -9,4 +9,4 @@ namespace tester {
 	};
 
 	TestConfig testConfigFromArgs(config::CLIArgs args, std::string_view path_to_test_from_dev);
-}
+}  // namespace tester

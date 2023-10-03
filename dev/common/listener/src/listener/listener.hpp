@@ -1,7 +1,8 @@
 #pragma once
 
 /**
- * Class that listens to a particular Event and executes a function on that event
+ * Class that listens to a particular Event and executes a function on that
+ * event
  * @tparam Event
  */
 template<class Event>

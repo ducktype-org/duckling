@@ -1,7 +1,8 @@
 #pragma once
 
-#include "pointer.hpp"
 #include <services_data/type_metadata/type.hpp>
+
+#include "pointer.hpp"
 
 namespace vm {
 	class TypedPointer {
@@ -9,4 +10,4 @@ namespace vm {
 		TypeRef type;
 		Pointer pointer;
 	};
-}
+}  // namespace vm

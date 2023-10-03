@@ -40,11 +40,8 @@ REGISTER_PARSE_TYPE(Fiz);
 int main() {
 	using MyVar = std::variant<Foo, Bar, Empty>;
 
-	Foo foo{ 5, 'a', "abc" };
-	Bar bar{
-		"abc", {3, 4},
-         'b', 4.1f
-	};
+	Foo   foo{ 5, 'a', "abc" };
+	Bar   bar{ "abc", { 3, 4 }, 'b', 4.1f };
 	MyVar x{ Empty{} };
 	MyVar y{ foo };
 	MyVar z{ bar };

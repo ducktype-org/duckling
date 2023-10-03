@@ -1,7 +1,8 @@
 #pragma once
 
-#include "borrow_pointer.hpp"
 #include <memory>
+
+#include "borrow_pointer.hpp"
 
 namespace base {
 	template<class T>
@@ -43,4 +44,4 @@ namespace base {
 		return unique_ptr<T>(new T(std::forward<Args>(args)...));
 	}
 
-}
+}  // namespace base

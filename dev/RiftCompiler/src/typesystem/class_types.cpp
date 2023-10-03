@@ -1,8 +1,9 @@
 #include "class_types.hpp"
-#include "internal/type_info_impl.hpp"
-#include "type_info.hpp"
 
 #include <utility>
+
+#include "internal/type_info_impl.hpp"
+#include "type_info.hpp"
 
 namespace ts {
 
@@ -141,9 +142,9 @@ namespace ts {
 		return class_ptr->getVirtualAncestorOffset(ancestor_id);
 	}
 
-	// Returns all the offsets of virtual members of the clueless parent, as told by the
-	// knowledgeable kid. Since the virtual members are put at the end of the kid, they will all be
-	// positive.
+	// Returns all the offsets of virtual members of the clueless parent, as told by
+	// the knowledgeable kid. Since the virtual members are put at the end of the
+	// kid, they will all be positive.
 	std::vector<std::pair<ClassInfo, usize>>
 		ClassInfo::getVirtualAncestorTable(ClassInfo ancestor_id) const {
 		const auto kid = (internal::ClassInfoImpl*) pimpl;
@@ -188,4 +189,4 @@ namespace ts {
 	usize VTableInfo::getMethodCount() { return ((Pimpl) pimpl)->getMethodCount(); }
 
 	usize VTableInfo::getParentCount() { return ((Pimpl) pimpl)->getParentCount(); }
-}
+}  // namespace ts

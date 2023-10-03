@@ -59,4 +59,4 @@ namespace tpc {
 		}
 	};
 
-}
+}  // namespace tpc

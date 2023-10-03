@@ -53,4 +53,4 @@ namespace vm {
 		// @TODO: nullPtr deref errors, block ownership, etc
 		Pointer nullPtr() const;
 	};
-}
+}  // namespace vm

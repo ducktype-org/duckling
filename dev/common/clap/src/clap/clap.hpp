@@ -1,13 +1,14 @@
 #pragma once
 
-#include "cli_args.hpp"
-#include "error.hpp"
-#include "parameter_config.hpp"
-#include "parameters_map.hpp"
 #include <base/option.hpp>
 #include <base/string_id.hpp>
 #include <string>
 #include <vector>
+
+#include "cli_args.hpp"
+#include "error.hpp"
+#include "parameter_config.hpp"
+#include "parameters_map.hpp"
 
 namespace clap {
 	class Config {
@@ -34,4 +35,4 @@ namespace clap {
 
 		std::string help_message() const;
 	};
-}
+}  // namespace clap

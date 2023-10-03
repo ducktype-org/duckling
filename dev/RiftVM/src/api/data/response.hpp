@@ -1,8 +1,9 @@
 #pragma once
 
-#include "status.hpp"
 #include <memory_data/block.hpp>
 #include <services_data/type_metadata/type.hpp>
+
+#include "status.hpp"
 
 namespace vm::api {
 	namespace response {
@@ -17,8 +18,8 @@ namespace vm::api {
 			base::RawView data;
 			JS_OBJ(data);
 		};
-	}
+	}  // namespace response
 
 	using Response
 		= std::variant<VCPUStatus, response::Output, response::Block, TypeCRef, response::Empty>;
-}
+}  // namespace vm::api

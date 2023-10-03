@@ -56,10 +56,10 @@ namespace config {
 				else if (opt.param_type == ParamType::Optional)
 					in.add(base::strConcat(" [", opt.value_parser->helperMess(), "]"));
 			}
-			// @TODO: allow printer to perform column alignment and other control sequences in
-			// message
+			// @TODO: allow printer to perform column alignment and other control
+			// sequences in message
 			in.add({ "\t\t ", opt.description.stdString(), "\n" });
 		}
 	}
 
-}
+}  // namespace config

@@ -41,4 +41,4 @@ namespace config {
 
 		const std::vector<base::RawView>& getNonOptionValues() const { return non_option_values; }
 	};
-}
+}  // namespace config

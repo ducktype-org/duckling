@@ -25,4 +25,4 @@ namespace vm {
 			offset += off;
 		}
 	};
-}
+}  // namespace vm

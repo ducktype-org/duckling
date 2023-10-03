@@ -75,7 +75,8 @@ namespace lexer {
 
 		Char() = default;
 
-		// funkcje poniżej na wypadek, gdyby kiedyś więcej rzeczy się działo przy ustawianiu typu
+		// funkcje poniżej na wypadek, gdyby kiedyś więcej rzeczy się działo przy
+		// ustawianiu typu
 		void setCharacter();
 		void setDigit();
 		void setOperator();
@@ -131,4 +132,4 @@ namespace lexer {
 	template<>
 	CharArray decode<fs::UTF8>(base::RawView bytes);
 
-}
+}  // namespace lexer

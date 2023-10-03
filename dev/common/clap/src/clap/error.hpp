@@ -1,10 +1,11 @@
 #pragma once
 
-#include "parameter_config.hpp"
 #include <base/option.hpp>
 #include <base/str_concat.hpp>
 #include <base/string_id.hpp>
 #include <variant>
+
+#include "parameter_config.hpp"
 
 namespace clap {
 	struct PositionalParametersCountError {
@@ -54,4 +55,4 @@ namespace clap {
 		UnexpectedParameter,
 		MissingParameterArgument,
 		HelpMessage>;
-}
+}  // namespace clap

@@ -38,4 +38,4 @@ namespace pst {
 
 		out << "]}}";
 	}
-}
+}  // namespace pst

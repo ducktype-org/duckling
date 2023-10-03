@@ -35,4 +35,4 @@ namespace clap {
 
 		friend class Config;
 	};
-}
+}  // namespace clap

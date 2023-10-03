@@ -1,11 +1,12 @@
 #pragma once
 
-#include "memory/memory.hpp"
-#include "type_metadata/type_metadata.hpp"
 #include <base/ints.hpp>
 #include <base/option.hpp>
 #include <concepts>
 #include <tuple>
+
+#include "memory/memory.hpp"
+#include "type_metadata/type_metadata.hpp"
 
 namespace vm {
 	template<class... DynamicData>
@@ -49,8 +50,9 @@ namespace vm {
 		}
 
 		/**
-		 * Get a dynamic data of type T. If dynamic data does not exist, it creates one first.
-		 * Each call to require should be followed by exactly one call to release.
+		 * Get a dynamic data of type T. If dynamic data does not exist, it creates
+		 * one first. Each call to require should be followed by exactly one call to
+		 * release.
 		 */
 		template<class T>
 		requires(!IsCoreData<T>::value)
@@ -62,8 +64,8 @@ namespace vm {
 		}
 
 		/**
-		 * Release a dynamic data of type T. If dynamic data does not have any more references, it
-		 * is removed.
+		 * Release a dynamic data of type T. If dynamic data does not have any more
+		 * references, it is removed.
 		 */
 		template<class T>
 		requires(!IsCoreData<T>::value)
@@ -73,4 +75,4 @@ namespace vm {
 			if (references > 0) references--;
 		}
 	};
-}
+}  // namespace vm

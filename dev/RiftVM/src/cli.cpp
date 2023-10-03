@@ -1,4 +1,5 @@
 #include "cli.hpp"
+
 #include <api/api.hpp>
 #include <json/json.hpp>
 #include <supervisor/supervisor.hpp>

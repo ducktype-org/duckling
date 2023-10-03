@@ -6,4 +6,4 @@ namespace vm::kind {
 	struct Pointer {
 		TypeCRef inner_type;
 	};
-}
+}  // namespace vm::kind

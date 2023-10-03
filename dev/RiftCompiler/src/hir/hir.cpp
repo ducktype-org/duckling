@@ -1,13 +1,12 @@
-#include <base/exceptions.hpp>
-#include <base/unique_pointer.hpp>
-#include <pst_parser/elements/elements.hpp>
-
-#include "analysis_state.hpp"
 #include "hir.hpp"
 
+#include <base/exceptions.hpp>
+#include <base/unique_pointer.hpp>
+#include <iostream>
+#include <pst_parser/elements/elements.hpp>
 #include <queue>
 
-#include <iostream>
+#include "analysis_state.hpp"
 
 namespace hir {
 
@@ -23,7 +22,8 @@ namespace hir {
 
 		// here we assume import where already done
 		// analyze symbols one by one bfs like
-		// if symbol tries to use other then we analyze that symbol to the point we need
+		// if symbol tries to use other then we analyze that symbol to the point we
+		// need
 		// @TODO
 		// perform all stuff like @compile_if(1 > 2) -- this requires exec
 		// expand macros -- macro can use symbol below
@@ -51,4 +51,4 @@ namespace hir {
 		}
 	}
 
-}
+}  // namespace hir

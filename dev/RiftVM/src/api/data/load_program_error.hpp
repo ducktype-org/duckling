@@ -8,6 +8,6 @@ namespace vm::api {
 
 		JS_OBJ(why);
 	};
-}
+}  // namespace vm::api
 
 REGISTER_PARSE_TYPE_ALIAS(vm::api::LoadProgramError, "LoadProgramError")

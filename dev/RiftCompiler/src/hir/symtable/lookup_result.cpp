@@ -1,7 +1,9 @@
 #include "lookup_result.hpp"
-#include "symbol.hpp"
+
 #include <base/exceptions.hpp>
 #include <hir/analysis_state.hpp>
+
+#include "symbol.hpp"
 
 namespace symtable {
 
@@ -110,4 +112,4 @@ namespace symtable {
 		out << " . ";
 		result.dprint(out);
 	}
-}
+}  // namespace symtable

@@ -7,4 +7,4 @@ namespace ts {
 		if (was_init) return;
 		was_init = true;
 	}
-}
+}  // namespace ts

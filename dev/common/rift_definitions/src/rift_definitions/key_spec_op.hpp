@@ -5,9 +5,9 @@
  *
  *
  * Usage:
- * keywords::init() should be called before anything else (including lexer), and only once
- * getKeyword return keyword based, on `keywords_array` inside cpp
- * if given RawView does not represent keyword NotAKeyword is returned.
+ * keywords::init() should be called before anything else (including lexer), and
+ * only once getKeyword return keyword based, on `keywords_array` inside cpp if
+ * given RawView does not represent keyword NotAKeyword is returned.
  */
 #pragma once
 
@@ -186,4 +186,4 @@ namespace rift_def {
 	base::StrId operatorToStr(Operator oper);
 
 	base::FlagType keywordFlags(Keyword key);
-}
+}  // namespace rift_def

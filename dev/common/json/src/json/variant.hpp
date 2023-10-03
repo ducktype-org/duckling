@@ -1,9 +1,11 @@
 #pragma once
 
-#include "empty_struct.hpp"
 #include <json_struct/json_struct.h>
+
 #include <type_traits>
 #include <variant>
+
+#include "empty_struct.hpp"
 
 namespace JS {
 	template<class... Args>
@@ -50,4 +52,4 @@ namespace JS {
 			impl::endObject(token, serializer);
 		}
 	};
-}
+}  // namespace JS

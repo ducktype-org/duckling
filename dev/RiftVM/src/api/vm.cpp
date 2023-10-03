@@ -1,4 +1,5 @@
 #include "vm.hpp"
+
 #include "supervisor/supervisor.hpp"
 
 namespace vm::api {
@@ -92,4 +93,4 @@ namespace vm::api {
 		    .doRequest(api::makeDataRequest(pid, request::Block{ BlockId(block_id) }))
 		    .flat_map(mapOrWrongResponse<response::Block>);
 	}
-}
+}  // namespace vm::api

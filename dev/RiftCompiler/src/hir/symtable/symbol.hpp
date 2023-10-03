@@ -1,10 +1,9 @@
 #pragma once
 
-#include <optional>
-#include <vector>
-
 #include <base/string_id.hpp>
+#include <optional>
 #include <typesystem/typesystem.hpp>
+#include <vector>
 
 #include "lookup_result.hpp"
 #include "scope_symbol_id.hpp"
@@ -117,4 +116,4 @@ namespace symtable {
 		LookupResult lookupIn(hir::AnalysisState&, base::StrId name);
 	};
 
-}
+}  // namespace symtable

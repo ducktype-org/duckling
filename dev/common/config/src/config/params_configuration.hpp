@@ -1,10 +1,9 @@
 #pragma once
 
-#include <vector>
-
 #include <base/raw_view.hpp>
 #include <base/unique_pointer.hpp>
 #include <printer/printer.hpp>
+#include <vector>
 
 #include "value_parser.hpp"
 
@@ -57,4 +56,4 @@ namespace config {
 		void generateOptionDesc(printer::Message& in);
 	};
 
-}
+}  // namespace config

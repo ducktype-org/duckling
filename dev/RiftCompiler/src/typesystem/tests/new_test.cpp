@@ -88,7 +88,8 @@ private:
 			assert(int_i == int_ii, "Ints of the same size and signedness should be the same.");
 			assert(
 				int_i != int_u,
-				"Ints of the same size but different signedness should be the different."
+				"Ints of the same size but different signedness should be the "
+				"different."
 			);
 			assert(int_i.getKind() == Integral, "Ints should have integral as kind.");
 

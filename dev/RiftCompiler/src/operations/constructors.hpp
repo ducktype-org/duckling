@@ -5,12 +5,13 @@
 
 #pragma once
 
-#include "operation.hpp"
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <exec/helpers.hpp>
 #include <hir/symtable/scope_symbol_id.hpp>
 #include <typesystem/type_info.hpp>
+
+#include "operation.hpp"
 
 /*
  *	@TODO:
@@ -29,7 +30,6 @@ namespace operation {
 
 	// data Typed a = T TypeInfo a
 	// TypedSymbol = Typed Symbol
-
 
 	struct Constructor;
 
@@ -99,11 +99,9 @@ namespace operation {
 			res.input.push_back({ x, y.getType() });
 			ts::TypeInfo             type_arg    = y.getType();
 			auto                     member_info = info.getMemberInfo(x);
-			std::vector<TypedSymbol> type_s      = {
-                {x, type_arg}
-			};
-			TypedOperation operation = getDefault(Defaultable::Assign, type_arg);
-			OperationCall  op{ operation, member_info, type_s };
+			std::vector<TypedSymbol> type_s      = { { x, type_arg } };
+			TypedOperation           operation   = getDefault(Defaultable::Assign, type_arg);
+			OperationCall            op{ operation, member_info, type_s };
 			res.operations.push_back(op);
 		}
 
@@ -119,34 +117,33 @@ namespace operation {
 	// Constructor mergeConstructors(Constructor con1, Constructor con2) {
 	// 	Constructor res;
 
-
 	// }
 
-
 	// lista TypedSymbol - parametry konstruktora
-	// lista wywołań konstruktorów wirtualnych (który kontruktor, gdzie ma działać, jakei argumenty)
-	// lista: variant spośród
+	// lista wywołań konstruktorów wirtualnych (który kontruktor, gdzie ma działać,
+	// jakei argumenty) lista: variant spośród
 	//		* inicjalizacja jakiegoś pola (A.a = 4, a.b {3, 45}, ...)
 	//		* wywołanie jakiejś funkcji użytkownika
-	//		- potencjalnie grupujemy te operacje wg kontruktorów z których pochodzą
+	//		- potencjalnie grupujemy te operacje wg kontruktorów z których
+	// pochodzą
 	//			- z tego można korzytsać by wplatać wypełnianie vtable
-	//		* kiedyś będzie jeszcze wyliczanie zmiennych lokalnych (żeby argumenty mogły być postaci
-	//		  x+y itd)
-
+	//		* kiedyś będzie jeszcze wyliczanie zmiennych lokalnych (żeby
+	// argumenty mogły być postaci 		  x+y itd)
 
 	// jak to zrobić bardziej defaultowo:
 	// 1. tylko pełne i puste konstruktory
 	//     usuwamy użycie symboli. to gdzie co idzie się teraz wylicza jakoooś...
-	//	   nie ma też zmiennych lokalnych (ale i tak ich mieliśmy na razie nie mieć)
-
+	//	   nie ma też zmiennych lokalnych (ale i tak ich mieliśmy na razie nie
+	// mieć)
 
 	// w ten sposób konstruktory byłyby jednolite
-	// natomiast ich tworzenie także od strony użytkownika byłoby nieco bardziej skomoplikowane
-	// bo trzeba by dostarczać takiej struktury
-	// natomiast ta struktura dałaby się wprost pzretłumaczyć z np składni konstruktora jaką ma cpp
+	// natomiast ich tworzenie także od strony użytkownika byłoby nieco bardziej
+	// skomoplikowane bo trzeba by dostarczać takiej struktury natomiast ta
+	// struktura dałaby się wprost pzretłumaczyć z np składni konstruktora jaką ma
+	// cpp
 
 	/* zaletą takiego podejścia jest to że w ten sposób konstruktory
 	 * są czymś co potencjalnie daje się kompilować
 	 *
 	 */
-}
+}  // namespace operation
