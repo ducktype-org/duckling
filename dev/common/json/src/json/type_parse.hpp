@@ -18,36 +18,38 @@ namespace JS::impl {
 		static constexpr const auto name = CONSTEXPR_CAT(TypeParseTraits<Arg>::name);
 	};
 
-
 	template<class Arg1, class Arg2, class... Args>
 	struct MakeList<Arg1, Arg2, Args...> {
-		static constexpr const auto name = CONSTEXPR_CAT(TypeParseTraits<Arg1>::name, ", ", MakeList<Arg2, Args...>::name);
+		static constexpr const auto name
+			= CONSTEXPR_CAT(TypeParseTraits<Arg1>::name, ", ", MakeList<Arg2, Args...>::name);
 	};
 }
 
-#define REGISTER_PARSE_TYPE(T) \
-template <> \
-struct TypeParseTraits<T> { \
-	static constexpr const auto name = CONSTEXPR_CAT(#T, '\0'); \
-};
+#define REGISTER_PARSE_TYPE(T)                                      \
+	template<>                                                      \
+	struct TypeParseTraits<T> {                                     \
+		static constexpr const auto name = CONSTEXPR_CAT(#T, '\0'); \
+	};
 
-#define REGISTER_PARSE_TYPE_ALIAS(T, NAME) \
-template <> \
-struct TypeParseTraits<T> { \
-	static constexpr const auto name = CONSTEXPR_CAT(NAME); \
-};
+#define REGISTER_PARSE_TYPE_ALIAS(T, NAME)                      \
+	template<>                                                  \
+	struct TypeParseTraits<T> {                                 \
+		static constexpr const auto name = CONSTEXPR_CAT(NAME); \
+	};
 
-#define REGISTER_PARSE_TYPE_TEMPLATE_ALIAS(T, NAME) \
-template <class X> \
-struct TypeParseTraits<T<X>> { \
-	static constexpr const auto name = CONSTEXPR_CAT(NAME, "<", TypeParseTraits<X>::name, ">\0"); \
-};
+#define REGISTER_PARSE_TYPE_TEMPLATE_ALIAS(T, NAME)                      \
+	template<class X>                                                    \
+	struct TypeParseTraits<T<X>> {                                       \
+		static constexpr const auto name                                 \
+			= CONSTEXPR_CAT(NAME, "<", TypeParseTraits<X>::name, ">\0"); \
+	};
 
-#define REGISTER_PARSE_TYPE_TEMPLATE_VARIADIC_ALIAS(T, NAME) \
-template <class... Args> \
-struct TypeParseTraits<T<Args...>> { \
-	static constexpr const auto name = CONSTEXPR_CAT(NAME, "<", JS::impl::MakeList<Args...>::name, ">\0"); \
-};
+#define REGISTER_PARSE_TYPE_TEMPLATE_VARIADIC_ALIAS(T, NAME)                      \
+	template<class... Args>                                                       \
+	struct TypeParseTraits<T<Args...>> {                                          \
+		static constexpr const auto name                                          \
+			= CONSTEXPR_CAT(NAME, "<", JS::impl::MakeList<Args...>::name, ">\0"); \
+	};
 
 REGISTER_PARSE_TYPE_ALIAS(std::string, "str");
 REGISTER_PARSE_TYPE(double);

@@ -12,18 +12,14 @@
 namespace hir {
 
 	void HIR::addUnit(SourceUnit&& unit) {
-		if (unit.pst.getErrorState().fail()) {
-			unit.pst.getErrorState().dumpLog(std::cerr);
-		}
+		if (unit.pst.getErrorState().fail()) unit.pst.getErrorState().dumpLog(std::cerr);
 		sources.emplace_back(std::move(unit));
 	}
 
 	void HIR::doMagicStuff() {
 		// Fow now we make just single PST
 
-		if (sources.size() != 1) {
-			throw base::NotYetImplemented("Source count not equal to 1");
-		}
+		if (sources.size() != 1) throw base::NotYetImplemented("Source count not equal to 1");
 
 		// here we assume import where already done
 		// analyze symbols one by one bfs like
@@ -32,7 +28,7 @@ namespace hir {
 		// perform all stuff like @compile_if(1 > 2) -- this requires exec
 		// expand macros -- macro can use symbol below
 		// macro can't delete symbol
-		// perhaps go top to to bottom with use/usings/expands 
+		// perhaps go top to to bottom with use/usings/expands
 
 		pst::PST& pst = sources[0].pst;
 
@@ -42,9 +38,7 @@ namespace hir {
 		symtable::ScopeRef root_scope = analysis_state.symTable().getRootScope();
 
 		analysis_state.emplaceSymbol<TopLevelSymbol>(
-			analysis_state,
-			root_scope, base::StrId("TopLevel"),
-			pst.getTopLevelElement()
+			analysis_state, root_scope, base::StrId("TopLevel"), pst.getTopLevelElement()
 		);
 
 		root_scope->close();
@@ -67,18 +61,13 @@ namespace hir {
 				if (val.getType().getType().getKind() == ts::Kind::Integral) {
 					// @TODO: i32 here is temporary:
 					std::cerr << val.getData<i32>().front() << "\n";
-				}
-				else {
+				} else {
 					std::cerr << "<NOT INTEGRAL>\n";
 				}
-			}
-			else {
+			} else {
 				std::cerr << "<NOT CONST>\n";
 			}
-
-			
 		}
-
 	}
 
 

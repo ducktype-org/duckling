@@ -8,15 +8,14 @@
 namespace compiler {
 
 	struct CompilerConfig {
-		bool was_help = false;
+		bool                     was_help = false;
 		std::vector<std::string> file_names;
-		
-		bool was_output = false;
+
+		bool        was_output = false;
 		std::string output;
 	};
 
-	CompilerConfig fromArgs(config::CLIArgs args);
-	printer::Message generateHelpMessage(); 
+	CompilerConfig   fromArgs(config::CLIArgs args);
+	printer::Message generateHelpMessage();
 
 }
-

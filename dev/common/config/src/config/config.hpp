@@ -28,7 +28,7 @@ namespace config {
 	 * is valid
 	 */
 	ParsingResult parse(ConfigOptions&& config, CLIArgs args);
-	
+
 
 	/**
 	 * @brief This function does not copy memory,
@@ -39,4 +39,3 @@ namespace config {
 	ParsingResult parse(ConfigOptions&& config, const std::vector<base::RawView>& args);
 
 }
-

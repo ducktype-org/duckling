@@ -8,9 +8,13 @@ namespace base {
 	class unique_ptr: public std::unique_ptr<T> {
 	public:
 		constexpr unique_ptr() noexcept: std::unique_ptr<T>() {}
+
 		explicit unique_ptr(T* ptr) noexcept: std::unique_ptr<T>(ptr) {}
+
 		constexpr unique_ptr(std::nullptr_t) noexcept: std::unique_ptr<T>(nullptr) {}
+
 		unique_ptr(const unique_ptr<T>&) = delete;
+
 		template<class U>
 		unique_ptr(unique_ptr<U>&& other) noexcept: unique_ptr() {
 			this->reset(other.release());
@@ -26,19 +30,12 @@ namespace base {
 			this->reset(oth.release());
 			return *this;
 		}
-		
-		friend void swap(unique_ptr<T>& first, unique_ptr<T>& second) {
-			first.swap(second);
-		}
-	
-		
-		borrow_ptr<T> borrow_mut() noexcept {
-			return borrow_ptr<T>(this->get());
-		}
-		
-		c_borrow_ptr<T> borrow() const noexcept {
-			return c_borrow_ptr<T>(this->get());
-		}
+
+		friend void swap(unique_ptr<T>& first, unique_ptr<T>& second) { first.swap(second); }
+
+		borrow_ptr<T> borrow_mut() noexcept { return borrow_ptr<T>(this->get()); }
+
+		c_borrow_ptr<T> borrow() const noexcept { return c_borrow_ptr<T>(this->get()); }
 	};
 
 	template<class T, class... Args>

@@ -8,17 +8,17 @@ class SimpleIdMapsTest;
 
 class A {
 private:
-	i32 x;
-	usize count;
+	i32               x;
+	usize             count;
 	SimpleIdMapsTest& test;
+
 public:
-	A(i32 x, SimpleIdMapsTest& test) : x(x), count(0), test(test) {}
+	A(i32 x, SimpleIdMapsTest& test): x(x), count(0), test(test) {}
 
 	A(const A& other);
 
 	A(A&& other) noexcept: x(other.x), count(other.count), test(other.test) {}
 };
-
 
 class SimpleIdMapsTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -34,8 +34,8 @@ public:
 	~SimpleIdMapsTest() override = default;
 
 	friend A;
-private:
 
+private:
 	void basicMapTest() {
 		base::Map<std::string, int> map;
 		map.put("abc", 5);
@@ -43,33 +43,31 @@ private:
 		assert(map.notEmpty(), "Bad map size 2");
 		assert(map["abc"] == 5, "Bad map value 1");
 
-		for(auto& [v, k]: map) {
-			assert(map[v] == k, "Bad map value 2");
-		}
+		for (auto& [v, k]: map) assert(map[v] == k, "Bad map value 2");
 
 		assert(map.erase("abc"), "Map element not erased");
 		assert(map.empty(), "Map is not empty");
 
 		base::HashMap<int, A> map2;
-		A a(4, *this);
+		A                     a(4, *this);
 		map2.put(5, a);
 		map2.put(3, A(3, *this));
 
 		base::VectorMap<int, int> map3;
 		assertThrows<std::exception>(
-			[&](){ map3[5] = 5; },
-			"Map should throw exception but does not"
+			[&]() { map3[5] = 5; }, "Map should throw exception but does not"
 		);
-		
+
 		map3.put(5, 5);
 		assert(map3.erase(5), "Map element not erased 2");
 	}
 
 	struct MyIdName {};
+
 	typedef base::NamedId<MyIdName> MyId;
 
-	typedef base::NamedId<base::Number<123> > MyId2;
-	typedef base::NamedId<base::Number<124> > MyId3;
+	typedef base::NamedId<base::Number<123>> MyId2;
+	typedef base::NamedId<base::Number<124>> MyId3;
 
 	void simpleIdTest() {
 		MyId id_1 = MyId::next();
@@ -85,7 +83,7 @@ private:
 	}
 
 	static base::RawView make_view(std::string_view view) {
-		return base::RawView({reinterpret_cast<const byte*>(view.data()), view.size()});
+		return base::RawView({ reinterpret_cast<const byte*>(view.data()), view.size() });
 	}
 
 	void strIdTest() {
@@ -98,7 +96,6 @@ private:
 		assert(id3 == id3, "== error");
 		assert(id3 == "ab", "data error");
 	}
-
 };
 
 A::A(const A& other): x(other.x), count(other.count), test(other.test) {

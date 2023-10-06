@@ -4,10 +4,9 @@
 class SimpleVmTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleVmTest
+
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Vm Test") {
-		TESTER_ADD_TEST(simpleRun);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Vm Test") { TESTER_ADD_TEST(simpleRun); }
 
 
 private:
@@ -17,7 +16,7 @@ private:
 		auto pid = process_pid_response.expect("Spawn failed (2)").pid;
 
 		fs::FilePath file(path("working_rbc.rbc"));
-		auto loaded_file_response = vm::api::loadFile(pid, file);
+		auto         loaded_file_response = vm::api::loadFile(pid, file);
 		assert(loaded_file_response.has_value(), "Load failed (1)");
 
 		auto run_response = vm::api::run(pid);
@@ -25,8 +24,7 @@ private:
 
 		auto join_response = vm::api::join(pid);
 		assert(join_response.has_value(), "Join failed (1)");
-	};
+	}
 };
-
 
 TESTER_COMMON_MAIN("/RiftVM/tests/");

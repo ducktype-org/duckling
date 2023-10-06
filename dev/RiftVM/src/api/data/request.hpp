@@ -10,33 +10,40 @@ namespace vm::api {
 		struct Load {
 			fs::FilePath filename;
 		};
-		
+
 		struct Pause {};
+
 		struct Resume {};
+
 		struct Stop {};
+
 		struct Run {};
+
 		struct Input {
 			std::string input;
 		};
+
 		struct Output {};
+
 		struct Join {};
+
 		struct Step {};
-	
+
 		struct TypeMetadata {
 			std::string type_name;
 		};
-		
+
 		struct Block {
 			BlockId block_id;
 		};
-		
+
 		struct Memory {
 			Pointer pointer;
-			u64 size;
+			u64     size;
 		};
-		
+
 	}
-	
+
 	// @Deprecated - ExecutorRequest will have template based api (not variant based)
 	using ExecutorRequest = std::variant<
 		request::Load,
@@ -47,27 +54,19 @@ namespace vm::api {
 		request::Join,
 		request::Input,
 		request::Output,
-		request::Step
-	>;
-		
-	using DataRequest = std::variant<
-		request::TypeMetadata,
-		request::Block
-	>;
-	
-	struct StatusRequest{};
+		request::Step>;
 
-	using RequestVariant = std::variant<
-		ExecutorRequest,
-		DataRequest,
-		StatusRequest
-	>;
+	using DataRequest = std::variant<request::TypeMetadata, request::Block>;
+
+	struct StatusRequest {};
+
+	using RequestVariant = std::variant<ExecutorRequest, DataRequest, StatusRequest>;
 
 	struct SupervisorRequest {
-		PID pid;
+		PID            pid;
 		RequestVariant request;
 	};
-	
+
 	SupervisorRequest makeExecutorRequest(PID pid, ExecutorRequest&& data);
 	SupervisorRequest makeDataRequest(PID pid, DataRequest&& data);
 	SupervisorRequest makeStatusRequest(PID pid);

@@ -5,22 +5,20 @@
 
 namespace vm::api {
 	struct ResumeError {};
+
 	struct PauseError {};
+
 	struct RunError {};
+
 	struct JoinError {};
+
 	struct OtherError {
 		std::string error;
 		JS_OBJ(error);
 	};
-	
-	using CoreOperationErrorVariant = std::variant <
-		ResumeError,
-		PauseError,
-		RunError,
-		JoinError,
-		OtherError,
-		LoadProgramError
-	>;
+
+	using CoreOperationErrorVariant
+		= std::variant<ResumeError, PauseError, RunError, JoinError, OtherError, LoadProgramError>;
 
 	struct CoreOperationError {
 		CoreOperationErrorVariant error;

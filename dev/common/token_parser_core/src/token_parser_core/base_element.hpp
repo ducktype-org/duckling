@@ -8,9 +8,9 @@ namespace tpc {
 	public:
 		/** Things that can parse themself have this method: */
 		// static ParserRef<Element> parse(RiftParserState& state);
-		
+
 		virtual void dprint(std::ostream& out) const = 0;
-		virtual ~Element() = 0;
+		virtual ~Element()                           = 0;
 
 		// @IDEA: this might be just a const variable if it will be enough in the future
 		[[noreturn]]
@@ -19,11 +19,12 @@ namespace tpc {
 		// @IDEA perhaps add virtual final, so no one can override it
 		inline void* operator new(usize size) {
 			// placeholder for future custom allocation
-			return ::operator new(size); 
+			return ::operator new(size);
 		}
+
 		inline void operator delete(void* p) {
 			// placeholder for future custom allocation
-			return ::operator delete(p); 
+			return ::operator delete(p);
 		}
 	};
 }

@@ -17,29 +17,33 @@ namespace operation {
 	void init();
 
 	struct TypedOperation {
-		const Operation function;
+		const Operation        function;
 		const ts::FunctionInfo signature;
 
-
 		exec::CTV operator()(const std::vector<exec::CTV>& ctvs) const {
-			RIFT_ASSERT(ctvs.size() == signature.getParameterTypeList().size(),
-			            base::strConcat("operation received incorrect number of arguments.",
-			                             "expected ",
-			                             signature.getParameterTypeList().size(),
-			                             " got ",
-			                             ctvs.size()))
+			RIFT_ASSERT(
+				ctvs.size() == signature.getParameterTypeList().size(),
+				base::strConcat(
+					"operation received incorrect number of arguments.",
+					"expected ",
+					signature.getParameterTypeList().size(),
+					" got ",
+					ctvs.size()
+				)
+			);
 
 			for (usize i = 0; i < ctvs.size(); i++) {
 				// @TODO: this should check if types are compatible.
 				// (possibly doing some conversion, or discarding consts?)
-				RIFT_ASSERT(ctvs[i].type == signature.getParameterTypeList()[i],
-				            "Argument has incorrect type")
+				RIFT_ASSERT(
+					ctvs[i].type == signature.getParameterTypeList()[i],
+					"Argument has incorrect type"
+				);
 			}
 
 			return function(ctvs);
 		}
 	};
-
 
 	using OperationId = base::NamedId<TypedOperation>;
 
@@ -71,9 +75,9 @@ namespace operation {
 
 	struct Call {
 		const operation::OperationId op;
-		const ts::TypeDesc<> type;
-		const usize offset;
-		const usize size;
+		const ts::TypeDesc<>         type;
+		const usize                  offset;
+		const usize                  size;
 
 		exec::CTV operator()(const std::vector<exec::CTV>& ctvs) const {
 			return getOperation(op)(ctvs);

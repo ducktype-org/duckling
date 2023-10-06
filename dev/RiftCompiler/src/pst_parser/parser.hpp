@@ -1,6 +1,6 @@
 /**
  * @file parser.hpp
- * @brief top level parser interface 
+ * @brief top level parser interface
  */
 
 #pragma once
@@ -12,6 +12,6 @@
 namespace pst {
 	PST parse(lexer::TokenData&& td);
 	PST parse(const fs::FilePath&);
-	
+
 	void init();
 }

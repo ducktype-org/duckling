@@ -2,126 +2,122 @@
 
 #include <variant>
 #include <base/string_id.hpp>
-#include <base/option.hpp>
+#include <base/optional.hpp>
 #include <memory_data/pointer.hpp>
 #include "kinds.hpp"
+#include "base/optional.hpp"
 
-namespace vm {	
+namespace vm {
 	class TypeMetadata;
-	
+
 	/// Size of type in bytes
 	// @TODO: change to strongly typed int
 	using TypeSize = u64;
 
 	class Type {
-		public:
-			constexpr static TypeSize PointerSize = sizeof(Pointer);
-			
-			enum class Kind {
-				None,
-				Primitive,
-				Pointer,
-				StaticTable,
-				DynamicTable,
-				Data,
-				Variant,
-				Function
-			};
-		private:
-			enum class State {
-				Declared,
-				Defined,
-				Finalizing,
-				Finalized
-			};
+	public:
+		constexpr static TypeSize PointerSize = sizeof(Pointer);
 
-			State state = State::Declared;
+		enum class Kind {
+			None,
+			Primitive,
+			Pointer,
+			StaticTable,
+			DynamicTable,
+			Data,
+			Variant,
+			Function
+		};
 
-			base::StrId name;
-			TypeSize size = TypeSize(-1);
-			Kind kind_type = Kind::None;
-			TypeId id;
-			
-			std::variant<
-				std::monostate,
-				kind::Primitive,
-				kind::Pointer,
-				kind::StaticTable,
-				kind::DynamicTable,
-				kind::Data,
-				kind::Variant,
-				kind::Function
-			> kind;
-			
-			Type() = default;
-		public:
-			// Type declaration:
-			static Type declareType(base::StrId name);
+	private:
+		enum class State { Declared, Defined, Finalizing, Finalized };
 
-			// Type definition:
-			void definePrimitive(TypeSize size);
-			void definePointer(TypeCRef inner);
-			void defineStaticTable(TypeRef inner, u64 table_size);
-			void defineDynamicTable(TypeRef inner);
-			void defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions);
-			void defineVariant(const std::vector<TypeRef>& variants_definitions);
-			void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
+		State state = State::Declared;
 
-			// Type finalization:
-			void finalize();
+		base::StrId name;
+		TypeSize    size      = TypeSize(-1);
+		Kind        kind_type = Kind::None;
+		TypeId      id;
 
-			// Type query:
-			TypeId getId() const;
-			base::StrId getName() const;
-			TypeSize getSize() const;
+		std::variant<
+			std::monostate,
+			kind::Primitive,
+			kind::Pointer,
+			kind::StaticTable,
+			kind::DynamicTable,
+			kind::Data,
+			kind::Variant,
+			kind::Function>
+			kind;
 
-			template<class T>
-			option<const T&> get() const {
-				if (std::holds_alternative<T>(kind)) {
-					return some<const T&>(std::get<T>(kind));
-				}
-				return none<const T&>();
-			}
-			
-			Kind getKind() const;
+		Type() = default;
 
-			bool isPrimitive(TypeSize size) const;
+	public:
+		// Type declaration:
+		static Type declareType(base::StrId name);
 
-			option<TypeCRef> getLowestTypeAtPos(Offset pos) const;
-	
-			
-			// @todo: Interface below may change
-			
-			// @TODO: move function below to kind:: structures without `option`
-			// Forward here version with option
+		// Type definition:
+		void definePrimitive(TypeSize size);
+		void definePointer(TypeCRef inner);
+		void defineStaticTable(TypeRef inner, u64 table_size);
+		void defineDynamicTable(TypeRef inner);
+		void defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions);
+		void defineVariant(const std::vector<TypeRef>& variants_definitions);
+		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
 
-			/**
-			 * Get inner type of pointer, static or dynamic table
-			 * @return some(inner type) for pointer, static or dynamic table. none otherwise
-			*/
-			option<TypeCRef> getInnerType() const;
-			
-			// staticTable
-			option<u64> getStaticTableSize() const;
+		// Type finalization:
+		void finalize();
 
-			// data
-			option<TypeCRef> getFieldType(kind::Data::FieldId fieldId) const;
-			option<Offset> getFieldOffset(kind::Data::FieldId fieldId) const;
-			option<TypeCRef> getFieldTypeByOffset(Offset offset) const;
-			option<TypeCRef> getFieldTypeByOffsetRecursive(Offset offset) const;
+		// Type query:
+		TypeId      getId() const;
+		base::StrId getName() const;
+		TypeSize    getSize() const;
 
-			// variant
-			option<u64> getVariantCount() const;
-			option<TypeCRef> getNthVariantType(u64 variantId) const;
-			
-			// function
-			option<u64> getParameterCount() const;
-			option<TypeCRef> getNthParameterType(u64 parameterId) const;
-			option<TypeCRef> getResultType() const;
-		
-			friend class TypeMetadata;
-			
-			JS_OBJ(size); // TODO: add better output of type
+		template<class T>
+		base::Optional<const T&> get() const {
+			if (std::holds_alternative<T>(kind)) return base::Optional<const T&>(std::get<T>(kind));
+			return {};
+		}
+
+		Kind getKind() const;
+
+		bool isPrimitive(TypeSize size) const;
+
+		base::Optional<TypeCRef> getLowestTypeAtPos(Offset pos) const;
+
+
+		// @todo: Interface below may change
+
+		// @TODO: move function below to kind:: structures without `option`
+		// Forward here version with option
+
+		/**
+		 * Get inner type of pointer, static or dynamic table
+		 * @return some(inner type) for pointer, static or dynamic table. none otherwise
+		 */
+		base::Optional<TypeCRef> getInnerType() const;
+
+		// staticTable
+		base::Optional<u64> getStaticTableSize() const;
+
+		// data
+		base::Optional<TypeCRef> getFieldType(kind::Data::FieldId fieldId) const;
+		base::Optional<Offset>   getFieldOffset(kind::Data::FieldId fieldId) const;
+		base::Optional<TypeCRef> getFieldTypeByOffset(Offset offset) const;
+		base::Optional<TypeCRef> getFieldTypeByOffsetRecursive(Offset offset) const;
+
+		// variant
+		base::Optional<u64>      getVariantCount() const;
+		base::Optional<TypeCRef> getNthVariantType(u64 variantId) const;
+
+		// function
+		base::Optional<u64>      getParameterCount() const;
+		base::Optional<TypeCRef> getNthParameterType(u64 parameterId) const;
+		base::Optional<TypeCRef> getResultType() const;
+
+		friend class TypeMetadata;
+
+		JS_OBJ(size);  // TODO: add better output of type
 	};
 }
 

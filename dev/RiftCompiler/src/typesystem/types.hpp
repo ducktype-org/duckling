@@ -9,10 +9,12 @@
 namespace ts {
 	class VoidInfo: public TypeInfo {
 		SETUP_TYPE(VoidInfo, TypeInfo)
+
 	public:
 		static VoidInfo create();
 
 		CHECKED_CAST(VoidInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(VoidInfo)
 	};
@@ -24,6 +26,7 @@ namespace ts {
 		static ByteInfo create();
 
 		CHECKED_CAST(ByteInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(ByteInfo)
 	};
@@ -35,6 +38,7 @@ namespace ts {
 		static BoolInfo create();
 
 		CHECKED_CAST(BoolInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(BoolInfo)
 	};
@@ -46,6 +50,7 @@ namespace ts {
 		static CharInfo create();
 
 		CHECKED_CAST(CharInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(CharInfo)
 	};
@@ -57,6 +62,7 @@ namespace ts {
 		static IntegralInfo create(usize size, bool signedness = true);
 
 		CHECKED_CAST(IntegralInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(IntegralInfo)
 	};
@@ -68,6 +74,7 @@ namespace ts {
 		static FloatInfo create(usize size);
 
 		CHECKED_CAST(FloatInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(FloatInfo)
 	};
@@ -79,6 +86,7 @@ namespace ts {
 		static RawPointerInfo create();
 
 		CHECKED_CAST(RawPointerInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(RawPointerInfo)
 	};
@@ -92,6 +100,7 @@ namespace ts {
 		TypeDesc<> getUnderlying() const;
 
 		CHECKED_CAST(PointerInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(PointerInfo)
 	};
@@ -100,16 +109,21 @@ namespace ts {
 		SETUP_TYPE(FunctionInfo, TypeInfo)
 
 	public:
-		static FunctionInfo create(const std::vector<TypeDesc<>>& parameter_types,
-		                           TypeDesc<> result_type, i32 flags = 0);
+		static FunctionInfo create(
+			const std::vector<TypeDesc<>>& parameter_types, TypeDesc<> result_type, i32 flags = 0
+		);
 
-		[[nodiscard]] base::FlagType getFlags() const;
+		[[nodiscard]]
+		base::FlagType getFlags() const;
 
-		[[nodiscard]] std::vector<TypeDesc<>> getParameterTypeList() const;
+		[[nodiscard]]
+		std::vector<TypeDesc<>> getParameterTypeList() const;
 
-		[[nodiscard]] TypeDesc<> getResultType() const;
+		[[nodiscard]]
+		TypeDesc<> getResultType() const;
 
 		CHECKED_CAST(FunctionInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(FunctionInfo)
 	};
@@ -119,9 +133,10 @@ namespace ts {
 
 	public:
 		static EnumInfo create(const IntegralInfo& base_type);
-		IntegralInfo getBaseType() const;
+		IntegralInfo    getBaseType() const;
 
 		CHECKED_CAST(EnumInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(EnumInfo)
 	};
@@ -131,9 +146,10 @@ namespace ts {
 
 	public:
 		static FlagInfo create(const IntegralInfo& base_type);
-		IntegralInfo getBaseType() const;
+		IntegralInfo    getBaseType() const;
 
 		CHECKED_CAST(FlagInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(FlagInfo)
 	};
@@ -147,6 +163,7 @@ namespace ts {
 		TypeDesc<> getUnderlying() const;
 
 		CHECKED_CAST(OptionalInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(OptionalInfo)
 	};
@@ -162,6 +179,7 @@ namespace ts {
 		std::pair<TypeDesc<>, usize> getMember(usize index) const;
 
 		CHECKED_CAST(TupleInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(TupleInfo)
 	};
@@ -173,26 +191,31 @@ namespace ts {
 		static VariantInfo create(const std::vector<TypeDesc<>>& variant_types);
 
 		CHECKED_CAST(VariantInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(VariantInfo)
 	};
 
 	class NamespaceInfo: public TypeInfo {
 		SETUP_TYPE(NamespaceInfo, TypeInfo)
+
 	public:
 		static NamespaceInfo create();
 
 		CHECKED_CAST(NamespaceInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(NamespaceInfo)
 	};
 
 	class CodeBlockInfo: public TypeInfo {
 		SETUP_TYPE(CodeBlockInfo, TypeInfo)
+
 	public:
 		static CodeBlockInfo create();
 
 		CHECKED_CAST(CodeBlockInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(CodeBlockInfo)
 	};
@@ -204,6 +227,7 @@ namespace ts {
 		static ModuleInfo create();
 
 		CHECKED_CAST(ModuleInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(ModuleInfo)
 	};
@@ -215,6 +239,7 @@ namespace ts {
 		static MetaInfo create();
 
 		CHECKED_CAST(MetaInfo)
+
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(MetaInfo)
 	};

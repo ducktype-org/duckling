@@ -8,21 +8,13 @@
 #include <set>
 
 namespace symtable {
-	enum class ConnectionType {
-		ImportPublic,
-		ImportPrivate,
-		UsingPublic,
-		UsingPrivate
-	};
+	enum class ConnectionType { ImportPublic, ImportPrivate, UsingPublic, UsingPrivate };
 
-	enum class ScopeState {
-		Open,
-		Closed
-	};
+	enum class ScopeState { Open, Closed };
 
 	class Scope {
 		// Update constructors when adding fields here:
-		
+
 		// @TODO: option
 		ScopeRef parent;
 		// ScopeId id;
@@ -41,17 +33,19 @@ namespace symtable {
 		void addSymbol(SymbolRef symbol);
 
 		Scope() = default;
+
 		Scope(ScopeRef parent, base::StrId name): parent(parent), name(name) {}
 
 	public:
 		// This delete is important, to prevent any copy of scope data:
-		Scope(const Scope&) = delete;
-		Scope & operator=(const Scope&) = delete;
+		Scope(const Scope&)            = delete;
+		Scope& operator=(const Scope&) = delete;
 
-		const std::vector<SymbolRef>& getSymbols() { return symbols; };
+		const std::vector<SymbolRef>& getSymbols() { return symbols; }
+
 		ScopeRef getParent() { return parent; }
-		
-		Scope(Scope&&) = default;
+
+		Scope(Scope&&)            = default;
 		Scope& operator=(Scope&&) = default;
 
 		LookupResult lookup(base::StrId name);

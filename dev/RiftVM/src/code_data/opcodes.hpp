@@ -5,7 +5,7 @@
 
 /**
  * Opcodes names conventions:
- * 
+ *
  * Name is: name_[first arg description]_[optional second arg description]
  * Each name is:
  * imm      - immediate value
@@ -16,13 +16,16 @@
  * rprt[nr] - pointer register with number [nr]
  * type     - type name
  * label    - label name
- * 
+ *
  * Most two argument operation store result in first argument
- * 
+ *
  * Opcodes not following this convention have additional description
  */
 
-MAKE_STRINGFYABLE_ENUM(vm, u16, OpcodeFix8,
+MAKE_STRINGFYABLE_ENUM(
+	vm,
+	u16,
+	OpcodeFix8,
 
 	mov_l64_imm,
 
@@ -31,19 +34,19 @@ MAKE_STRINGFYABLE_ENUM(vm, u16, OpcodeFix8,
 
 	mov_l64_r0,
 
-	mov_l64_pFuncArg,    // moves primitive function arg to local variable
-	mov_lptr_ptrFuncArg, // moves pointer function arg to local variable
+	mov_l64_pFuncArg,     // moves primitive function arg to local variable
+	mov_lptr_ptrFuncArg,  // moves pointer function arg to local variable
 
 	add_l64_l64,
 	add_l64_imm,
-	
+
 	// sub_l64_l64,
 	sub_l64_l64,
 	sub_l64_imm,
 
 	// mul_l64_l64,
 	mul_l64_imm,
-	
+
 	mod_l64_l64,
 	mod_l64_imm,
 
@@ -59,8 +62,8 @@ MAKE_STRINGFYABLE_ENUM(vm, u16, OpcodeFix8,
 	jmpRelIf_label,
 	jmpRelNotIf_label,
 
-	setPArg_l64,    // set primitive argument
-	setPtrArg_lptr, // set pointer argument
+	setPArg_l64,     // set primitive argument
+	setPtrArg_lptr,  // set pointer argument
 	call_func,
 
 	ret_l64,
@@ -74,8 +77,8 @@ MAKE_STRINGFYABLE_ENUM(vm, u16, OpcodeFix8,
 
 	nop,
 
-	alloc_lptr_type, // allocates given type, stores pointer
-	free_lptr,		 // frees block under pointer
-	load_l64_lptr,   // load 64-bit primitive value from given pointer
-	store_lptr_l64   // stores 64-bit primitive value under given pointer
+	alloc_lptr_type,  // allocates given type, stores pointer
+	free_lptr,        // frees block under pointer
+	load_l64_lptr,    // load 64-bit primitive value from given pointer
+	store_lptr_l64    // stores 64-bit primitive value under given pointer
 );

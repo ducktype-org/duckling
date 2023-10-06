@@ -1,4 +1,4 @@
-/** 
+/**
  * @file file.hpp
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
  */
@@ -20,56 +20,50 @@ namespace fs {
 	FileContent FilePath::getContent() const {
 		if (to_content.contains(path)) {
 			auto weak_content = to_content[path];
-			if (weak_content.expired()) {
+			if (weak_content.expired())
 				to_content.erase(path);
-			}
-			else {
+			else
 				return FileContent(weak_content.lock());
-			}
 		}
 
 		FileContent file_content(
 			std::make_shared<base::OwningView>(getSimpleFileContent(path.c_str()))
 		);
-		
+
 		to_content.put(path, file_content.content);
-		
+
 		return file_content;
 	}
 
-	result<FileContent, std::string> FilePath::getContentSafe() const {
+	cpp::result<FileContent, std::string> FilePath::getContentSafe() const {
 		if (!std::filesystem::exists(path)) {
-			return fail(base::strConcat("Error: cannot get content of file `", path, "` - file does not exist"));
+			return cpp::fail(base::strConcat(
+				"Error: cannot get content of file `", path, "` - file does not exist"
+			));
 		}
 		return getContent();
 	}
 
-	std::string_view FilePath::strView() const {
-		return path.c_str();
-	}
+	std::string_view FilePath::strView() const { return path.c_str(); }
 
-	FilePath FilePath::parentPath() const {
-		return path.parent_path();
-	}
+	FilePath FilePath::parentPath() const { return path.parent_path(); }
 
 	base::OwningView getSimpleFileContent(const std::string& file_name) {
 		std::ifstream file(file_name, std::ios::in | std::ios::binary);
-		if (file.fail()) {
-			throw base::LogicError(std::string("file does not exist: ") + file_name);
-		}
+		if (file.fail()) throw base::LogicError(std::string("file does not exist: ") + file_name);
 
 		file.unsetf(std::ios::skipws);
 
 		auto fpos = file.tellg();
 		file.seekg(0, std::ios::end);
-		std::streamoff fsize = file.tellg() - fpos;
-		usize file_size = fsize;
+		std::streamoff fsize     = file.tellg() - fpos;
+		usize          file_size = fsize;
 		file.seekg(0, std::ios::beg);
 
 		// should read full file:
 		auto r_array = new byte[file_size];
 		file.read(reinterpret_cast<char*>(r_array), file_size);
 
-		return {r_array, file_size};
+		return { r_array, file_size };
 	}
 }

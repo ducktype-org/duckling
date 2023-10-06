@@ -1,6 +1,6 @@
 #pragma once
 
-#include <pst_parser/pst.hpp> // Expr, @TODO: separate expr from rest?
+#include <pst_parser/pst.hpp>  // Expr, @TODO: separate expr from rest?
 #include <typesystem/typesystem.hpp>
 #include <exec/exec.hpp>
 #include "analysis_state.hpp"
@@ -11,18 +11,18 @@
 namespace hir {
 
 	class Expression;
-	
+
 	using ExpressionRef = base::unique_ptr<Expression>;
 
 	class Expression {
 	protected:
-		Expression(symtable::ScopeRef scope): scope(scope) {};
+		Expression(symtable::ScopeRef scope): scope(scope){};
 
 		bool lookup_done = false;
-		bool type_done = false;
+		bool type_done   = false;
 
-		symtable::ScopeRef scope;
-		std::optional<ts::TypeDesc<> > type;
+		symtable::ScopeRef            scope;
+		std::optional<ts::TypeDesc<>> type;
 
 	public:
 		virtual void lookup(AnalysisState&);
@@ -34,13 +34,11 @@ namespace hir {
 
 		// @TODO: this should receive some state:
 		virtual ts::TypeDesc<> evalAsType(AnalysisState&);
-		virtual exec::CTV eval(AnalysisState&);
-		
+		virtual exec::CTV      eval(AnalysisState&);
+
 		ts::TypeDesc<> getType(AnalysisState&);
 
 		virtual ~Expression() = default;
 	};
 
 }
-
-

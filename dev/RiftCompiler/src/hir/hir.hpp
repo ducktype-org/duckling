@@ -10,14 +10,14 @@
 namespace hir {
 
 	struct SourceUnit {
-		pst::PST pst;
+		pst::PST     pst;
 		fs::FilePath file_path;
 	};
 
 	// High intermediate representation
 	class HIR {
 		std::vector<SourceUnit> sources;
-		AnalysisState analysis_state;
+		AnalysisState           analysis_state;
 
 	public:
 		// @TODO How to do imports?
@@ -28,6 +28,6 @@ namespace hir {
 		void doMagicStuff();
 
 		// This is for debug/test only:
-		AnalysisState& getState() { return analysis_state; };
+		AnalysisState& getState() { return analysis_state; }
 	};
 }
