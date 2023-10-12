@@ -33,7 +33,7 @@ public:
 		base::Optional<int> opt2;
 		match_optional(opt2) {
 			opt_some(_val) assert(false, "No value, in opt2, shouldn't enter this case");
-			opt_none {}
+			opt_none assert(opt2.empty(), "Entered opt_none with a value!");
 		}
 
 		base::Optional<int> opt3;
