@@ -9,4 +9,3 @@
 namespace assemble {
 	result<vm::Code, std::string> assemble(fs::FilePath file, vm::TypeMetadata& type_metadata);
 }
-

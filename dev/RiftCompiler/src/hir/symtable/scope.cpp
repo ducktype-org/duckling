@@ -6,7 +6,6 @@
 #include <span>
 #include <iostream>
 
-
 namespace symtable {
 
 	void Scope::addSymbol(SymbolRef symbol) {
@@ -20,7 +19,7 @@ namespace symtable {
 		// go over links -- wildcard alias -- static links can cutoff, dep links needs un-aliasing
 		// using a.b.*; is realized by:
 		//  wildcard_alias _ = a.b;
-		//  un aliasing then can perform proper un-aliasing 
+		//  un aliasing then can perform proper un-aliasing
 
 		std::cerr << "     Simple lookup of " << name.strView();
 		std::cerr << " in " << this->name.strView();
@@ -29,15 +28,13 @@ namespace symtable {
 		RIFT_ASSERT(state == ScopeState::Closed, "Can not perform lookup in open scope");
 
 
-		LookupResult result{{}, {}};
+		LookupResult result{ {}, {} };
 
 		// @FIXME: this is probably a heuristic, and just a hotfix
 		// In the future something better has to be done
-		if (engaged_names.contains(name)) {
-			return result;
-		}
+		if (engaged_names.contains(name)) return result;
 		engaged_names.insert(name);
-		defer (engaged_names.erase(name));
+		defer(engaged_names.erase(name));
 
 		std::cerr << "         lookup actually being done\n";
 
@@ -53,26 +50,21 @@ namespace symtable {
 					std::cerr << "         adding child!\n";
 					result.children.push_back(std::move(wild_result).toNode(symbol));
 				}
-			}
-			else {
-				if (symbol->getName() == name) {
-					result.leaves.push_back(symbol);
-				} 
+			} else {
+				if (symbol->getName() == name) result.leaves.push_back(symbol);
 			}
 		}
 		return result;
 	}
 
-
 	LookupResult Scope::lookupMeAndParents(base::StrId name) {
 		auto result = lookup(name);
 		if (parent != nullptr) {
-			// Reverse insertion order allow for linear result concatenation instead of quadratic 
+			// Reverse insertion order allow for linear result concatenation instead of quadratic
 			auto parent_result = parent->lookupMeAndParents(name);
 			parent_result.insert(std::move(result));
 			return parent_result;
-		}
-		else {
+		} else {
 			return result;
 		}
 	}

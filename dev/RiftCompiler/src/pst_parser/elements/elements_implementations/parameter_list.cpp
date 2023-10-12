@@ -5,7 +5,6 @@ namespace pst {
 		auto position = state.ctokens().peek().getPosition();
 
 		if (!state.ctokens().is(Token::Type::RoundGroup)) {
-
 			state.fail(-1, "parenthesis expected after here");
 			return nullptr;
 		}

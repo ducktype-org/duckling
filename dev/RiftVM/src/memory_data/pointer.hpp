@@ -11,15 +11,14 @@ namespace vm {
 	class Pointer {
 	private:
 		BlockId block;
-		u64 offset;
+		u64     offset;
+
 	public:
 		Pointer(BlockId block_, u64 offset_): block(block_), offset(offset_) {}
-		BlockId getBlock() const {
-			return block;
-		}
-		u64 getOffset() const {
-			return offset;
-		}
+
+		BlockId getBlock() const { return block; }
+
+		u64 getOffset() const { return offset; }
 
 		void addOffset(i64 off) {
 			// @TODO: range checking

@@ -1,7 +1,7 @@
 #include "elements_implementation.hpp"
 
 namespace pst {
-	ParserRef<ArgList> ArgList::parse(RiftParserState& state){
+	ParserRef<ArgList> ArgList::parse(RiftParserState& state) {
 		// @TODO: Placeholder
 		auto position = state.tokens().peek().getPosition();
 		state.tokens().next();
@@ -9,7 +9,5 @@ namespace pst {
 	}
 
 	// @TODO: Placeholder
-	void ArgList::dprint(std::ostream& out) const {
-		out << "{\"ArgList\" : \"<PLACEHOLDER>\"}";
-	}
+	void ArgList::dprint(std::ostream& out) const { out << "{\"ArgList\" : \"<PLACEHOLDER>\"}"; }
 }

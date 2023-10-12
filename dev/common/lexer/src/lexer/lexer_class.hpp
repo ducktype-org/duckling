@@ -10,14 +10,15 @@ namespace lexer {
 
 	struct TokenizationResult {
 		Tokens tokens;
-		Token eof_token;
+		Token  eof_token;
 	};
 
 	class Lexer {
 	public:
 		explicit Lexer(const fs::FilePath& file);
 
-		[[nodiscard]] TokenizationResult tokenize(bool dprint);
+		[[nodiscard]]
+		TokenizationResult tokenize(bool dprint);
 
 	private:
 		void next();
@@ -59,23 +60,24 @@ namespace lexer {
 		[[nodiscard]]
 		bool isStringBegin() const;
 
-		[[nodiscard]] std::string generateLineColumnInfo() const;
+		[[nodiscard]]
+		std::string generateLineColumnInfo() const;
 
-		usize where_ = 0;
-		usize lineNumber_ = 1;
-		usize columnNumber_ = 1;
+		usize                         where_        = 0;
+		usize                         lineNumber_   = 1;
+		usize                         columnNumber_ = 1;
 		std::shared_ptr<fs::FilePath> file_;
-		fs::FileContent fileContent_;
-		CharArray charArray_;
-		Tokens tokens_;
+		fs::FileContent               fileContent_;
+		CharArray                     charArray_;
+		Tokens                        tokens_;
 
 		bool token_messages = false;
 
 		printer::Console console;
 
-		void addTokenMsg(usize begin, usize end,
-		                 std::string_view token_type,
-		                 printer::MessageType message_type);
+		void addTokenMsg(
+			usize begin, usize end, std::string_view token_type, printer::MessageType message_type
+		);
 	};
 
 }

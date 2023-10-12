@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
 	}
 	pst::init();
 	compiler::CompilationHandler comp_handler;
-	fs::FilePath base_file_path = std::filesystem::path(argv[1]);
+	fs::FilePath                 base_file_path = std::filesystem::path(argv[1]);
 
 	comp_handler.addFileRecursively(base_file_path, true, &std::cerr);
 }

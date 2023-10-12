@@ -9,7 +9,6 @@
 
 #include "create_default.hpp"
 
-
 namespace operation {
 
 	namespace op = operation;
@@ -22,23 +21,25 @@ namespace operation {
 				auto op = operation::getIdDefault(kind, member_data.desc.getType());
 
 				Call curr(
-					op, member_data.desc, member_data.offset, member_data.desc.getType().getSize());
+					op, member_data.desc, member_data.offset, member_data.desc.getType().getSize()
+				);
 				res.push_back(curr);
 			}
 
 			for (const auto& parent_data: class_info.basicParents()) {
 				auto op = operation::getIdDefault(kind, parent_data.info);
 
-				Call curr(op,
-				          ts::TypeDesc<>(parent_data.info),
-				          parent_data.offset,
-				          parent_data.info.getSize());
+				Call curr(
+					op,
+					ts::TypeDesc<>(parent_data.info),
+					parent_data.offset,
+					parent_data.info.getSize()
+				);
 				res.push_back(curr);
 			}
 
 			return res;
 		}
-
 
 		Calls collectCallsTuple(ts::TupleInfo tuple_info, op::Defaultable kind) {
 			usize count = tuple_info.getUnderlyingTypes().size();
@@ -70,81 +71,78 @@ namespace operation {
 
 	}
 
-
 	operation::TypedOperation createDefaultEquality(ts::TypeInfo type_info) {
 		Calls calls = internal::collectCalls(type_info, operation::Defaultable::Equality);
 
 
 		operation::Operation op = [type_info, calls](const std::vector<exec::CTV>& input) {
-			RIFT_ASSERT(input.size() == 2, "Comparison should receive two values.")
+			RIFT_ASSERT(input.size() == 2, "Comparison should receive two values.");
 
 			return exec::defaultEquality(type_info, calls, input[0], input[1]);
 		};
 
 		// @TODO: Add flags (const) to the type desc in all the default operations
-		ts::FunctionInfo sig =
-			ts::FunctionInfo::create({{type_info}, {type_info}}, ts::BoolInfo::create());
+		ts::FunctionInfo sig
+			= ts::FunctionInfo::create({ { type_info }, { type_info } }, ts::BoolInfo::create());
 
-		return operation::TypedOperation{op, sig};
+		return operation::TypedOperation{ op, sig };
 	}
-
 
 	operation::TypedOperation createDefaultVirtualEquality(ts::ClassInfo class_info) {
 		operation::Operation op = [class_info](const std::vector<exec::CTV>& input) {
-			RIFT_ASSERT(input.size() == 2, "Comparison should receive two values.")
+			RIFT_ASSERT(input.size() == 2, "Comparison should receive two values.");
 
 			return exec::defaultEqualityVirtual(class_info, input[0], input[1]);
 		};
 
 		// @TODO: Add flags (const) to the type desc in all the default operations
-		ts::FunctionInfo sig =
-			ts::FunctionInfo::create({{class_info}, {class_info}}, ts::BoolInfo::create());
+		ts::FunctionInfo sig
+			= ts::FunctionInfo::create({ { class_info }, { class_info } }, ts::BoolInfo::create());
 
-		return operation::TypedOperation{op, sig};
+		return operation::TypedOperation{ op, sig };
 	}
-
 
 	operation::TypedOperation createDefaultComparison(ts::TypeInfo type_info) {
 		Calls calls = internal::collectCalls(type_info, operation::Defaultable::Compare);
 
 
 		operation::Operation op = [type_info, calls](const std::vector<exec::CTV>& input) {
-			RIFT_ASSERT(input.size() == 2, "Comparison should receive two values.")
+			RIFT_ASSERT(input.size() == 2, "Comparison should receive two values.");
 			return exec::defaultCompare(type_info, calls, input[0], input[1]);
 		};
 
-		ts::FunctionInfo sig =
-			ts::FunctionInfo::create({{type_info}, {type_info}}, ts::IntegralInfo::create(8));
+		ts::FunctionInfo sig = ts::FunctionInfo::create(
+			{ { type_info }, { type_info } }, ts::IntegralInfo::create(8)
+		);
 
-		return {op, sig};
+		return { op, sig };
 	}
-
 
 	operation::TypedOperation createDefaultAssign(ts::TypeInfo type_info) {
 		Calls calls = internal::collectCalls(type_info, operation::Defaultable::Assign);
 
 		operation::Operation op = [type_info, calls](const std::vector<exec::CTV>& input) {
-			RIFT_ASSERT(input.size() == 2, "Assigment should receive two values.")
+			RIFT_ASSERT(input.size() == 2, "Assigment should receive two values.");
 			return exec::defaultAssign(type_info, calls, input[0], input[1]);
 		};
 
-		ts::FunctionInfo sig = ts::FunctionInfo::create({{type_info}, {type_info}}, type_info);
+		ts::FunctionInfo sig
+			= ts::FunctionInfo::create({ { type_info }, { type_info } }, type_info);
 
-		return {op, sig};
+		return { op, sig };
 	}
-
 
 	operation::TypedOperation createDefaultConstructEmpty(ts::TypeInfo type_info) {
 		Calls calls = internal::collectCalls(type_info, operation::Defaultable::ConstructEmpty);
 
 		operation::Operation op = [type_info, calls](const std::vector<exec::CTV>& input) {
-			RIFT_ASSERT(input.size() == 1, "Empty constructor should receive one CTV.")
+			RIFT_ASSERT(input.size() == 1, "Empty constructor should receive one CTV.");
 			return exec::defaultConstructEmpty(type_info, calls, input[0]);
 		};
 
-		ts::FunctionInfo sig = ts::FunctionInfo::create({{type_info}}, type_info);
+		ts::FunctionInfo sig = ts::FunctionInfo::create({ { type_info } }, type_info);
 
-		return {op, sig};
+		return { op, sig };
 	}
 
 	operation::TypedOperation createDefaultConstructFull(ts::TypeInfo type_info) {
@@ -156,15 +154,13 @@ namespace operation {
 			return exec::defaultConstructFull(type_info, calls, input);
 		};
 
-		std::vector<ts::TypeDesc<>> args = {type_info};
+		std::vector<ts::TypeDesc<>> args = { type_info };
 
-		for (usize i = 0; i < calls.size(); i++) {
-			args.push_back(calls[i].type);
-		}
+		for (usize i = 0; i < calls.size(); i++) args.push_back(calls[i].type);
 
 		ts::FunctionInfo sig = ts::FunctionInfo::create(args, type_info);
 
-		return {op, sig};
+		return { op, sig };
 	}
 
 }

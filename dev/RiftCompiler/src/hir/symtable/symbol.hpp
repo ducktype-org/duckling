@@ -11,7 +11,6 @@
 #include "symbol_ref.hpp"
 #include "lookup_result.hpp"
 
-
 namespace hir {
 	class AnalysisState;
 }
@@ -31,7 +30,6 @@ namespace symtable {
 		// ...
 	};
 
-
 	class Symbol {
 		// Update constructors when adding fields here
 
@@ -41,9 +39,9 @@ namespace symtable {
 		hir::AnalysisState& analysis_state;
 
 		// symbol identification:
-		ScopeRef scope;
+		ScopeRef    scope;
 		base::StrId name;
-		bool anonymous;
+		bool        anonymous;
 
 		// wildcard are anonymous symbols, that behave in special way in lookup
 		bool wildcard = false;
@@ -67,19 +65,24 @@ namespace symtable {
 
 
 		std::optional<ts::TypeDesc<>> type;
-		SymbolKind kind;
+		SymbolKind                    kind;
 
 		// lookup lock:
 		bool lock_lookup = false;
 
-		Symbol(hir::AnalysisState& state,
-		       ScopeRef scope, base::StrId name, bool anonymous,
-		       bool is_static, SymbolKind kind);
+		Symbol(
+			hir::AnalysisState& state,
+			ScopeRef            scope,
+			base::StrId         name,
+			bool                anonymous,
+			bool                is_static,
+			SymbolKind          kind
+		);
 
 
 		virtual void calculateType() = 0;
 
-		bool symbol_in_done = false;
+		bool         symbol_in_done = false;
 		virtual void getSymbolsIn();
 		virtual void calculateLinkedLookup();
 
@@ -96,26 +99,32 @@ namespace symtable {
 		// This delete is important, to prevent any copy of symbol data:
 		Symbol(const Symbol&) = delete;
 
-		Symbol(Symbol&& other) = default;
-		Symbol& operator=(const Symbol&) = default;
+		Symbol(Symbol&& other)            = default;
+		Symbol& operator=(const Symbol&)  = default;
 		Symbol& operator=(Symbol&& other) = default;
-		
+
 		ScopeRef getScope() const { return scope; }
+
 		base::StrId getName() const { return name; }
+
 		bool getIsStatic() const { return is_static; }
+
 		usize getRelativePosition() const { return relative_position; }
+
 		bool isAnonymous() const { return anonymous; }
+
 		bool isWildcard() const { return wildcard; }
 
 		ScopeRef getLinkedLookupScope();
 
 		ts::TypeDesc<> getType();
-		SymbolKind getKind() const { return kind; };
+
+		SymbolKind getKind() const { return kind; }
 
 		// @TODO: decide if value should be kept in Symbol itself
 		virtual exec::CTV getValue();
 
-		virtual SymbolChain getUniqueDeAlias();
+		virtual SymbolChain       getUniqueDeAlias();
 		virtual ChainLookupResult getDeAlias();
 
 		virtual void analyzeAll() = 0;
@@ -123,7 +132,7 @@ namespace symtable {
 		virtual ~Symbol() = default;
 
 		LookupResult lookupIn(base::StrId name);
-		
+
 		bool unlockedLookup() const;
 	};
 

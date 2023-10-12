@@ -3,10 +3,10 @@
 #include <services_data/type_metadata/type.hpp>
 #include "pointer.hpp"
 
-namespace vm {	
+namespace vm {
 	class TypedPointer {
-		private:
-			TypeRef type;
-			Pointer pointer;
+	private:
+		TypeRef type;
+		Pointer pointer;
 	};
 }

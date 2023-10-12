@@ -5,7 +5,7 @@
 namespace vm::api {
 	struct LoadProgramError {
 		std::string why;
-		
+
 		JS_OBJ(why);
 	};
 }

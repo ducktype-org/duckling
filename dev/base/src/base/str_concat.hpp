@@ -15,7 +15,7 @@ namespace base {
 	namespace detail {
 
 		template<typename T>
-		requires (!std::is_integral_v<std::remove_reference_t<T>>)
+		requires(!std::is_integral_v<std::remove_reference_t<T>>)
 		void strConcat(std::string& out, T&& v) {
 			out.append(v);
 		}
@@ -32,9 +32,7 @@ namespace base {
 			out.append(std::to_string(v));
 		}
 
-		inline void strConcat(std::string& out, bool v) {
-			out.append(v ? "true" : "false");
-		}
+		inline void strConcat(std::string& out, bool v) { out.append(v ? "true" : "false"); }
 	}
 
 	/**
@@ -49,7 +47,7 @@ namespace base {
 	 * integer types - uses std::to_string
 	 * RawView - uses RawView.str()
 	 * std::tuple - uses std::make_from_tuple<std::string>
-	 * 
+	 *
 	 * @FIXME nullptr causes an crash
 	 */
 	template<typename... T>
