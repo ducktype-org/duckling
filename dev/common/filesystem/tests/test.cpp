@@ -12,7 +12,6 @@ public:
 	}
 
 private:
-
 	void getSimpleContentTest() {
 		auto a_content = fs::getSimpleFileContent(path("a_file.txt"));
 
@@ -34,15 +33,27 @@ private:
 			auto a2_content = a1.getContent();
 			auto b1_content = b1.getContent();
 
-			assert(a1_content.view().getBegin() == a1.getContent().view().getBegin(),
-			       "a_file was read multiple times when it shouldn't");
-			assert(a2_content.view().getBegin() == a1.getContent().view().getBegin(),
-			       "a_file was read multiple times when it shouldn't");
-			assert(a1_content.view().getBegin() == a2_content.view().getBegin(),
-			       "a_file was read multiple times when it shouldn't");
+			assert(
+				a1_content.view().getBegin() == a1.getContent().view().getBegin(),
+				"a_file was read multiple times when it shouldn't"
+			);
+			assert(
+				a2_content.view().getBegin() == a1.getContent().view().getBegin(),
+				"a_file was read multiple times when it shouldn't"
+			);
+			assert(
+				a1_content.view().getBegin() == a2_content.view().getBegin(),
+				"a_file was read multiple times when it shouldn't"
+			);
 
-			assert(a1_content.view().stringView() == a_good_content.view().stringView(), "Wrong a_file content");
-			assert(b1_content.view().stringView() == b_good_content.view().stringView(), "Wrong b_file content");
+			assert(
+				a1_content.view().stringView() == a_good_content.view().stringView(),
+				"Wrong a_file content"
+			);
+			assert(
+				b1_content.view().stringView() == b_good_content.view().stringView(),
+				"Wrong b_file content"
+			);
 		}
 	}
 };

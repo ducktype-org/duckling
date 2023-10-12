@@ -8,32 +8,30 @@ namespace vm {
 	class DataManagerDef;
 
 	class TypeMetadata {
-		private:
-			enum class TypeMetadataState {
-				AddingTypes,
-				Finalized
-			};
-			
-			base::StableList<TypeId, Type> types;
-			std::vector<TypeId> types_ids;
-			base::Map<base::StrId, TypeId> names_to_type;
+	private:
+		enum class TypeMetadataState { AddingTypes, Finalized };
 
-			TypeMetadataState state;
+		base::StableList<TypeId, Type> types;
+		std::vector<TypeId>            types_ids;
+		base::Map<base::StrId, TypeId> names_to_type;
 
-			TypeMetadata(): state(TypeMetadataState::AddingTypes) {};
-		public:
-			TypeRef addType(Type&& type);
+		TypeMetadataState state;
 
-			void finalize();
+		TypeMetadata(): state(TypeMetadataState::AddingTypes){};
 
-			TypeCRef getType(TypeId id) const;
-			option<TypeCRef> getTypeSafe(TypeId id) const;
-			
-			// @TODO: This function is currently used by parser, but
-			// should be deleted in the future
-			option<TypeCRef> getTypeByName(base::StrId name) const;
+	public:
+		TypeRef addType(Type&& type);
 
-			template<class... DynamicData>
-			friend class DataManagerDef;
+		void finalize();
+
+		TypeCRef         getType(TypeId id) const;
+		option<TypeCRef> getTypeSafe(TypeId id) const;
+
+		// @TODO: This function is currently used by parser, but
+		// should be deleted in the future
+		option<TypeCRef> getTypeByName(base::StrId name) const;
+
+		template<class... DynamicData>
+		friend class DataManagerDef;
 	};
 }

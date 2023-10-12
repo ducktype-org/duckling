@@ -10,13 +10,13 @@
 
 namespace tpc {
 	using lexer::Keyword;
+	using lexer::Operator;
 	using lexer::Special;
 	using lexer::Token;
-	using lexer::Operator;
 
 	class TokenStream {
 		const Tokens& tokens;
-		usize where = 0;
+		usize         where = 0;
 		/** exclusive */
 		usize to;
 
@@ -25,7 +25,7 @@ namespace tpc {
 		lexer::Token sentinel_end;
 
 	public:
-		TokenStream() = delete;
+		TokenStream()             = delete;
 		TokenStream(TokenStream&) = delete;
 		TokenStream(TokenStream&&) noexcept;
 
@@ -37,7 +37,7 @@ namespace tpc {
 
 		[[nodiscard]]
 		const Token& peek(usize fwd = 0) const;
-		void skip(usize n = 1);
+		void         skip(usize n = 1);
 
 		[[nodiscard]]
 		bool isKeyword(usize fwd = 0) const;
@@ -62,7 +62,6 @@ namespace tpc {
 
 		[[nodiscard]]
 		usize size() const;
-
 	};
 
 }

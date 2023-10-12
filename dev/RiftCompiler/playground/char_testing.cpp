@@ -8,12 +8,10 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	fs::FilePath file(argv[1]);
-	auto file_content = file.getContent();
-	
+	auto         file_content = file.getContent();
+
 	auto chars = lexer::decode<fs::UTF8>(file_content.view());
 
-	for (const auto& c : chars.getArray()) {
-		std::cout << c.rawStr() << " ";
-	}
+	for (const auto& c: chars.getArray()) std::cout << c.rawStr() << " ";
 	std::cout << "\n";
 }

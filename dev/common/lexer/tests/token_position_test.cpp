@@ -14,11 +14,10 @@ void print(const Tokens& tokens, std::ostream& out, const std::string& indent = 
 		out << indent;
 
 		out << "{\"value\" : ";
-		if (token.getValue().isGood()) {
+		if (token.getValue().isGood())
 			out << "\"" << token.getStrValue() << "\", ";
-		} else {
+		else
 			out << "\"<EMPTY>\", ";
-		}
 
 		out << R"("line": ")" << position.getLineNumber() << "\",";
 		out << R"("column": ")" << position.getColumn() << "\",";
@@ -32,7 +31,6 @@ void print(const Tokens& tokens, std::ostream& out, const std::string& indent = 
 	out << "]";
 }
 
-
 class LexerPositionTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS LexerPositionTest
@@ -45,7 +43,6 @@ public:
 	}
 
 private:
-
 	void simplePositionTest() {
 		fs::FilePath file(path("fun.rift"));
 		td = lexer::tokenizeFile(file);
@@ -55,7 +52,7 @@ private:
 		std::cout << result_stream.str() << std::endl;
 
 		auto corr_json = fs::getSimpleFileContent(path("fun_position.json"));
-		auto corr = corr_json.view().stringView();
+		auto corr      = corr_json.view().stringView();
 
 		assert(testing_utils::compareJson(result_stream.str(), corr), "outputs are not equal");
 	}

@@ -15,9 +15,11 @@ namespace ts {
 		// Implicit coercion is possible when either the user defined it,
 		// or if the type kind knows to implicitly coerce to the target type,
 		// often of the same kind, e.g. integer promotion or upwards a class hierarchy.
-		return ((userDefinedImplicitCoercions.contains(from) &&
-		         userDefinedImplicitCoercions[from].contains(to)) ||
-		        from.isInfoImplicitlyCoercible(to));
+		return (
+			(userDefinedImplicitCoercions.contains(from)
+		     && userDefinedImplicitCoercions[from].contains(to))
+			|| from.isInfoImplicitlyCoercible(to)
+		);
 	}
 
 	bool isImplicitlyCoercible(const TypeDesc<>& from, const TypeDesc<>& to) {

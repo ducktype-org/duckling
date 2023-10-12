@@ -8,11 +8,10 @@ namespace vm {
 		// See: https://github.com/rift-lang/rift-poc-zpp1/issues/91
 		bool typeAtOffset(TypeCRef type, u64 offset, TypeCRef searched) {
 			if (offset == 0) {
-				if (searched->getSize() > type->getSize()) {
+				if (searched->getSize() > type->getSize())
 					return false;
-				} else if (searched->getId() == type->getId()) {
-					return true;	
-				}
+				else if (searched->getId() == type->getId())
+					return true;
 			}
 			switch (type->getKind()) {
 			case Type::Kind::DynamicTable:
@@ -21,7 +20,11 @@ namespace vm {
 			case Type::Kind::Function:
 				return false;
 			case Type::Kind::StaticTable:
-				return typeAtOffset(type->getInnerType().value(), offset % type->getInnerType().value()->getSize(), searched);	
+				return typeAtOffset(
+					type->getInnerType().value(),
+					offset % type->getInnerType().value()->getSize(),
+					searched
+				);
 			case Type::Kind::Variant:
 				if (offset <= 8) return false;
 				return typeAtOffset(type->getInnerType().value(), offset - 8, searched);
@@ -34,39 +37,24 @@ namespace vm {
 		}
 	}
 
-	Pointer Block::BasePointer() const {
-		return Pointer(block_id, start);
-	}
+	Pointer Block::BasePointer() const { return Pointer(block_id, start); }
 
-	base::RawView Block::rawPointer() {
-		return base::RawView(data, element_type->getSize());
-	}
+	base::RawView Block::rawPointer() { return base::RawView(data, element_type->getSize()); }
 
-	TypeCRef Block::innerType() const {
-		return element_type;
-	}
+	TypeCRef Block::innerType() const { return element_type; }
 
 	result<base::ModRawView, Block::error> Block::deref(TypeCRef u, u64 offset) {
-		if (offset < start || offset > end ) {
-			return fail("Tried to defer outside of a block");
-		} 
-		if (end - offset < u->getSize()) {
-			return fail("Tried to defer too big of a type");
-		}
+		if (offset < start || offset > end) return fail("Tried to defer outside of a block");
+		if (end - offset < u->getSize()) return fail("Tried to defer too big of a type");
 		return base::ModRawView(data, u->getSize());
 	}
 
 	result<base::ModRawView, Block::error> Block::derefCheck(TypeCRef u, u64 offset) {
-		if (offset < start || offset > end ) {
-			return fail("Tried to defer outside of a block");
-		} 
-		if (end - offset < u->getSize()) {
-			return fail("Tried to defer too big of a type");
-		}
+		if (offset < start || offset > end) return fail("Tried to defer outside of a block");
+		if (end - offset < u->getSize()) return fail("Tried to defer too big of a type");
 		u64 element_offset = (offset - start) % element_type->getSize();
-		if (!detail::typeAtOffset(element_type, element_offset, u)) {
+		if (!detail::typeAtOffset(element_type, element_offset, u))
 			return fail("Type not present at offset");
-		}
 		return base::ModRawView(data, u->getSize());
 	}
 }

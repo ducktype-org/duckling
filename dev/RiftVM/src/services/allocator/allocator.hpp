@@ -15,22 +15,23 @@ namespace vm {
 	 * @brief Default dynamic memory allocator
 	 */
 	class Allocator {
-		private:
-			Memory& memory;
+	private:
+		Memory& memory;
 
-			static Memory& getMemory(VCPU& vcpu);
+		static Memory& getMemory(VCPU& vcpu);
 
-			template<class... DynamicServices>
-			Allocator(ServiceManagerDef<DynamicServices...>& serviceManager): memory(getMemory(serviceManager.getVCPU())) {}
-		public:
-			
-			BlockId makeTypeBlock(TypeCRef type);
+		template<class... DynamicServices>
+		Allocator(ServiceManagerDef<DynamicServices...>& serviceManager):
+			  memory(getMemory(serviceManager.getVCPU())) {}
 
-			BlockId makeArrayBlock(TypeCRef type, u64 length);
+	public:
+		BlockId makeTypeBlock(TypeCRef type);
 
-			void deleteBlock(BlockId block_id);
+		BlockId makeArrayBlock(TypeCRef type, u64 length);
 
-			template<class... DynamicServices>
-			friend class ServiceManagerDef;
+		void deleteBlock(BlockId block_id);
+
+		template<class... DynamicServices>
+		friend class ServiceManagerDef;
 	};
 }

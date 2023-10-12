@@ -1,6 +1,6 @@
 /**
  * @file elements.cpp
- * @brief 
+ * @brief
  * Implementation files are splitted, but we still wan't to treat it as single compilation unit.
  * This file might be decided further into logical pars to speed up partial compilation.
  */
@@ -29,4 +29,3 @@
 #include "elements_implementations/top_level.cpp"
 #include "elements_implementations/const.cpp"
 #include "elements_implementations/rift_testing_elements.cpp"
-

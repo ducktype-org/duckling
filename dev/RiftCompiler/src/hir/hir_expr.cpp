@@ -11,11 +11,11 @@
 namespace hir {
 
 	class SymbolExpr: public Expression {
-		base::StrId name;
+		base::StrId                        name;
 		std::optional<symtable::SymbolRef> symbol;
+
 	public:
-		SymbolExpr(symtable::ScopeRef scope, base::StrId name):
-			Expression(scope), name(name) {}
+		SymbolExpr(symtable::ScopeRef scope, base::StrId name): Expression(scope), name(name) {}
 
 		void lookup(AnalysisState& state) final {
 			if (lookup_done) return;
@@ -25,11 +25,10 @@ namespace hir {
 			std::cerr << "   FULL LK RES: ";
 			lookup_result.dprint(std::cerr);
 			std::cerr << "\n";
-			if (!lookup_result.isSingle()) {
+			if (!lookup_result.isSingle())
 				RIFT_PANIC("ambiguity in expr lookup, @TODO: error in state");
-			}
 			auto as_single = lookup_result.getAsSingle();
-			
+
 			std::cerr << "   SYMBOL EXPR RES: ";
 			symtable::dprintSymbolChain(as_single, std::cerr);
 			std::cerr << "\n";
@@ -43,6 +42,7 @@ namespace hir {
 			symbol = dealiased_single.back();
 			std::cerr << "   SYMBOL : " << symbol.value()->getName().strView() << "\n\n";
 		}
+
 		void determineType(AnalysisState& state) final {
 			if (type_done) return;
 			type_done = true;
@@ -50,6 +50,7 @@ namespace hir {
 			lookup(state);
 			type = symbol.value()->getType();
 		}
+
 		exec::CTV eval(AnalysisState& state) final {
 			// @TODO: this should be called just once
 			determineType(state);
@@ -61,22 +62,21 @@ namespace hir {
 		// @TODO: some „BigInt” in the future here
 		// perhaps we can treat it like string as long as possible
 		i32 value;
-	
+
 	public:
-		LiteralIntExpr(symtable::ScopeRef scope, i32 value):
-			Expression(scope), value(value) {}
-		
-		void lookup(AnalysisState& state) final {
-			lookup_done = true;
-		}
+		LiteralIntExpr(symtable::ScopeRef scope, i32 value): Expression(scope), value(value) {}
+
+		void lookup(AnalysisState& state) final { lookup_done = true; }
+
 		void determineType(AnalysisState& state) final {
 			if (type_done) return;
 			type_done = true;
-			type = ts::TypeDesc<>(ts::IntegralInfo::create(32));
+			type      = ts::TypeDesc<>(ts::IntegralInfo::create(32));
 		}
+
 		exec::CTV eval(AnalysisState& state) final {
 			determineType(state);
-			exec::CTV out = exec::alloc_new(getType(state));
+			exec::CTV out              = exec::alloc_new(getType(state));
 			out.getData<i32>().front() = value;
 			return out;
 		}
@@ -84,20 +84,20 @@ namespace hir {
 
 	class LiteralTypeExpr: public Expression {
 		ts::TypeDesc<> type_value;
-	
+
 	public:
-	
 		LiteralTypeExpr(symtable::ScopeRef scope, ts::TypeDesc<> type):
-			Expression(scope), type_value(type) {}
-		
-		void lookup(AnalysisState& state) final {
-			lookup_done = true;
-		}
+			  Expression(scope),
+			  type_value(type) {}
+
+		void lookup(AnalysisState& state) final { lookup_done = true; }
+
 		void determineType(AnalysisState& state) final {
 			if (type_done) return;
 			type_done = true;
-			type = ts::TypeDesc<>(ts::MetaInfo::create());
+			type      = ts::TypeDesc<>(ts::MetaInfo::create());
 		}
+
 		ts::TypeDesc<> evalAsType(AnalysisState& state) final {
 			determineType(state);
 			return type_value;
@@ -107,20 +107,27 @@ namespace hir {
 	class BinOperatorExpr: public Expression {
 		ExpressionRef lhs;
 		ExpressionRef rhs;
-		base::StrId oper;
+		base::StrId   oper;
 
 		std::optional<operation::OperationId> operation_id;
+
 	public:
-		BinOperatorExpr(symtable::ScopeRef scope, ExpressionRef lhs, ExpressionRef rhs, base::StrId oper):
-			Expression(scope), lhs(std::move(lhs)), rhs(std::move(rhs)), oper(oper) {}
+		BinOperatorExpr(
+			symtable::ScopeRef scope, ExpressionRef lhs, ExpressionRef rhs, base::StrId oper
+		):
+			  Expression(scope),
+			  lhs(std::move(lhs)),
+			  rhs(std::move(rhs)),
+			  oper(oper) {}
 
 		void lookup(AnalysisState& state) final {
 			if (lookup_done) return;
 			lookup_done = true;
-			
+
 			lhs->lookup(state);
 			rhs->lookup(state);
 		}
+
 		void determineType(AnalysisState& state) final {
 			if (type_done) return;
 			type_done = true;
@@ -128,25 +135,22 @@ namespace hir {
 			lookup(state);
 			lhs->determineType(state);
 			rhs->determineType(state);
-			
+
 			exec::Operator exec_operator;
-			if (oper == base::StrId('+')) {
+			if (oper == base::StrId('+'))
 				exec_operator = exec::Operator::Plus;
-			}
-			else if (oper == base::StrId('-')) {
+			else if (oper == base::StrId('-'))
 				exec_operator = exec::Operator::Minus;
-			}
-			else {
+			else
 				throw base::NotYetImplemented("Operator different then + or -");
-			}
 
-			exec::BuiltInOp builtin_op {exec_operator, {lhs->getType(state), rhs->getType(state)}};
+			exec::BuiltInOp builtin_op{ exec_operator,
+				                        { lhs->getType(state), rhs->getType(state) } };
 
-			if (not exec::getBuiltInOps().contains(builtin_op)) {
+			if (not exec::getBuiltInOps().contains(builtin_op))
 				RIFT_PANIC("BinOperatorExpr encountered expression that is not builtin");
-			}
 
-			operation_id = exec::getBuiltInOps().at(builtin_op);
+			operation_id                = exec::getBuiltInOps().at(builtin_op);
 			const auto& typed_operation = operation::getOperation(operation_id.value());
 
 			type = typed_operation.signature.getResultType();
@@ -154,15 +158,14 @@ namespace hir {
 
 		exec::CTV eval(AnalysisState& state) final {
 			determineType(state);
-			
-			auto lhs_result = lhs->eval(state);	
+
+			auto lhs_result = lhs->eval(state);
 			auto rhs_result = rhs->eval(state);
 
 			const auto& typed_operation = operation::getOperation(operation_id.value());
 
-			return typed_operation.function({lhs_result, rhs_result});
+			return typed_operation.function({ lhs_result, rhs_result });
 		}
-
 	};
 
 	// all other types like: lambda
@@ -170,21 +173,20 @@ namespace hir {
 	ExpressionRef makeFromKeyword(symtable::ScopeRef scope, rift_def::Keyword keyword) {
 		switch (keyword) {
 		case rift_def::Keyword::i32:
-			// @TODO: signedness 
+			// @TODO: signedness
 			return base::make_unique<LiteralTypeExpr>(
-				scope,
-				ts::TypeDesc<>(ts::IntegralInfo::create(32))
+				scope, ts::TypeDesc<>(ts::IntegralInfo::create(32))
 			);
-	
+
 		default:
-			// @TODO: errors 
+			// @TODO: errors
 			RIFT_PANIC("Bad keyword in hir expr");
 		}
 	}
 
 	ExpressionRef makeFromSingle(symtable::ScopeRef scope, const pst::Expr::ExprElem& elem) {
 		variant_match(elem) {
-			variant_case (pst::Expr::KeywordValue, key) {
+			variant_case(pst::Expr::KeywordValue, key) {
 				return makeFromKeyword(scope, key.keyword);
 			}
 			variant_case(pst::Expr::NumLiteral, num) {
@@ -198,7 +200,7 @@ namespace hir {
 				// @TODO: take type into consideration
 				return Expression::makeExpr(scope, group.expr.borrow());
 			}
-			variant_case_novalue (pst::Expr::Operator) {
+			variant_case_novalue(pst::Expr::Operator) {
 				RIFT_PANIC("Expression consisting of only operator is not allowed.");
 			}
 			variant_default {
@@ -209,31 +211,26 @@ namespace hir {
 		RIFT_PANIC("Some case did not return");
 	}
 
-	ExpressionRef Expression::makeExpr(symtable::ScopeRef scope, pst::ParserCBorrowRef<pst::Expr> pst_expr) {
-		
+	ExpressionRef
+		Expression::makeExpr(symtable::ScopeRef scope, pst::ParserCBorrowRef<pst::Expr> pst_expr) {
 		// temporary:
 		// @TODO: proper algorithm
 
 		if (pst_expr->elements.size() == 1) {
 			auto& elem = pst_expr->elements[0];
 			return makeFromSingle(scope, elem);
-		}
-		else if (pst_expr->elements.size() == 3) {
+		} else if (pst_expr->elements.size() == 3) {
 			// This assumes that it is expr as <value operator value>
 			auto lhs = makeFromSingle(scope, pst_expr->elements[0]);
 			auto rhs = makeFromSingle(scope, pst_expr->elements[2]);
-			
+
 			// @TODO: errors:
 			auto oper = std::get<pst::Expr::Operator>(pst_expr->elements[1]).oper_id;
 
-			return base::make_unique<BinOperatorExpr>(scope,
-				std::move(lhs), std::move(rhs), oper
-			);
-		}
-		else {
+			return base::make_unique<BinOperatorExpr>(scope, std::move(lhs), std::move(rhs), oper);
+		} else {
 			throw base::NotYetImplemented(base::strConcat(
-				"Make Hir Expr for expressions of length ",
-				pst_expr->elements.size(), "."
+				"Make Hir Expr for expressions of length ", pst_expr->elements.size(), "."
 			));
 		}
 
@@ -241,9 +238,7 @@ namespace hir {
 	}
 
 	ts::TypeDesc<> Expression::getType(AnalysisState& state) {
-		if (!type.has_value()) {
-			determineType(state);
-		}
+		if (!type.has_value()) determineType(state);
 		RIFT_ASSERT(type.has_value(), "Type determination failed");
 		return *type;
 	}

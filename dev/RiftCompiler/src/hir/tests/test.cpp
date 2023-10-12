@@ -5,8 +5,7 @@
 #include <lexer/lexer.hpp>
 #include <typesystem/typesystem.hpp>
 
-
-class HirTest : public tester::TestSuite {
+class HirTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS HirTest
 
@@ -21,22 +20,17 @@ public:
 	}
 
 private:
-
 	hir::SourceUnit prepare(const fs::FilePath& file) {
-		auto td = lexer::tokenizeFile(file);
+		auto td     = lexer::tokenizeFile(file);
 		auto parsed = pst::parse(std::move(td));
 		assert(parsed.getErrorState().good(), "there are unexpected errors in rift source-code");
-		return {std::move(parsed), file};
+		return { std::move(parsed), file };
 	}
 
-	symtable::SymbolRef getSymbolFromLookupIn(
-			symtable::SymbolRef symbol,
-			base::StrId name) {
+	symtable::SymbolRef getSymbolFromLookupIn(symtable::SymbolRef symbol, base::StrId name) {
 		auto lookup_result = symbol->lookupIn(name);
 		assert(lookup_result.isSingle(), "Lookup result not a single symbol.");
-		auto dealiased_single = symtable::deAliasSymbolChain(
-			lookup_result.getAsSingle()
-		);
+		auto dealiased_single = symtable::deAliasSymbolChain(lookup_result.getAsSingle());
 		return dealiased_single.back();
 	}
 
@@ -49,20 +43,21 @@ private:
 		hir.doMagicStuff();
 
 		auto root_scope = hir.getState().symTable().getRootScope();
-		assert(root_scope->getSymbols().size() == 1, "Root scope does not has single sub root scope");
-		
+		assert(
+			root_scope->getSymbols().size() == 1, "Root scope does not has single sub root scope"
+		);
+
 		auto top_level_symbol = root_scope->getSymbols()[0];
 
-		auto get_symbol_from_top_level = [&](auto name) {
-			return getSymbolFromLookupIn(top_level_symbol, base::StrId(name));
-		};
+		auto get_symbol_from_top_level
+			= [&](auto name) { return getSymbolFromLookupIn(top_level_symbol, base::StrId(name)); };
 
 		auto C = get_symbol_from_top_level("C");
 		assert(C->getValue().getData<i32>().back() == 1, "Bad value of C");
-		
+
 		auto A = get_symbol_from_top_level("A");
 		assert(A->getValue().getData<i32>().back() == 1, "Bad value of A");
-		
+
 		auto B = get_symbol_from_top_level("B");
 		assert(B->getValue().getData<i32>().back() == -3, "Bad value of B");
 
@@ -71,7 +66,7 @@ private:
 
 		auto H2 = get_symbol_from_top_level("H2");
 		assert(H2->getValue().getData<i32>().back() == 3, "Bad value of H2");
-		
+
 		auto T0 = get_symbol_from_top_level("T0");
 		auto T1 = get_symbol_from_top_level("T1");
 		auto T2 = get_symbol_from_top_level("T2");
@@ -79,7 +74,6 @@ private:
 		assert(T1->getValue().getData<i32>().back() == 2, "Bad value of T1");
 		assert(T2->getValue().getData<i32>().back() == 3, "Bad value of T2");
 	}
-
 };
 
 TESTER_COMMON_MAIN("/RiftCompiler/src/hir/tests/");
