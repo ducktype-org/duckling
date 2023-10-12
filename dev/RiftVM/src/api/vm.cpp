@@ -66,7 +66,7 @@ namespace vm::api {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::Stop{}))
 		    .map(ignoreResponse)
-		    .flat_map([pid] { return Supervisor::get().killProcess(pid); });
+		    .flatMap([pid] { return Supervisor::get().killProcess(pid); });
 	}
 
 	result<void, ApiError> input(PID pid, const std::string& input) {
