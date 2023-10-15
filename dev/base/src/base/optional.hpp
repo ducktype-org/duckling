@@ -44,19 +44,21 @@
 namespace base {
 
 	template<class T>
+	// Optional does not inherit from std::optional, because std::optional doesn't throw on
+	// no-value access.
 	class Optional {
 	public:
 		Optional() = default;
 
-		explicit Optional(T value): private_optional(make_unique<T>(value)) {}
+		explicit Optional(T value): private_optional(std::make_optional<T>(value)) {}
 
 		template<class... Args>
 		explicit Optional(Args&&... args):
-			  private_optional(make_unique<T>(std::forward<Args>(args)...)) {}
+			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
 		[[nodiscard]]
 		constexpr bool has_value() const {
-			return private_optional != nullptr;
+			return private_optional.has_value();
 		}
 
 		[[nodiscard]]
@@ -119,7 +121,7 @@ namespace base {
 			return {};
 		}
 
-		// Idea of a flatMap is simple: If "func" is to use Optional<X>, then we use flat map,
+		// Idea of a flatMap is simple: If "func" returns Optional<X>, then we use a flat map,
 		// and we don't end up with Optional<Optional<X>>, but Optional<X>.
 		template<typename Fn>
 		auto flatMap(const Fn& func) -> decltype(func(T())) {
@@ -134,7 +136,7 @@ namespace base {
 			if (!has_value()) RIFT_PANIC("Tried to retrieve a value from an empty optional.");
 		}
 
-		unique_ptr<T> private_optional = nullptr;
+		std::optional<T> private_optional;
 
 		// Helpers for flatMap
 		template<class, template<class> class>
