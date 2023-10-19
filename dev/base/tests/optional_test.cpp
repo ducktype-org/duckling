@@ -5,9 +5,7 @@
 
 #include <tester/tester.hpp>
 #include <base/optional.hpp>
-#include <string>
 #include <queue>
-#include <format>
 
 class OptionalTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -32,7 +30,10 @@ public:
 
 		base::Optional<int> opt2;
 		match_optional(opt2) {
-			opt_some(_val) assert(false, "No value, in opt2, shouldn't enter this case");
+			opt_some(_val) {
+				(void) _val;
+				assert(false, "No value, in opt2, shouldn't enter this case");
+			}
 			opt_none assert(opt2.empty(), "Entered opt_none with a value!");
 		}
 
@@ -48,10 +49,10 @@ public:
 		Optional<int> opt(4);
 
 		auto result = opt.map([](int val) { return val * 1.1; });
-		assert(result.value() == 4.4, std::format("Result is not 4.4, but: {}", result.value()));
+		assert(result.value() == 4.4, base::strConcat("Result is not 4.4, but: ", result.value()));
 
 		auto result2 = opt.map([](int val) { return val * val; });
-		assert(result2.value() == 16, std::format("Result is not 16, but: {}", result2.value()));
+		assert(result2.value() == 16, base::strConcat("Result is not 16, but: ", result2.value()));
 
 		Optional<int> empty;
 		auto          result3 = empty.map([](int val) { return val * 2; });
@@ -62,10 +63,10 @@ public:
 		using base::Optional;
 		Optional<int> opt(4);
 		auto          result = opt.flatMap([](int val) { return Optional(val * 1.1); });
-		assert(result.value() == 4.4, std::format("Result is not 4.4, but: {}", result.value()));
+		assert(result.value() == 4.4, base::strConcat("Result is not 4.4, but: ", result.value()));
 
 		Optional<int> empty;
-		auto          result2 = empty.flatMap([](int val) { return Optional(val * 2); });
+		auto          result2 = empty.flatMap([](auto val) { return Optional(val * 2); });
 		assert(result2.empty(), "Result2 is not empty!");
 	}
 };

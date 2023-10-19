@@ -7,9 +7,11 @@
 
 #include <optional>
 #include "exceptions.hpp"
+#include "type_traits.hpp"
 
 /* Some c00l macros.
- * Use like:
+ *
+ * Example use:
  *
  * base::Optional<int> test(4);
  * match_optional(test) {
@@ -22,11 +24,11 @@
  * }
  *
  */
-#define match_optional(optional)                                                                \
-	PUSH_DIAGNOSTIC                                                                             \
-	NO_SHADOW                                                                                   \
-	if (bool _perform_match = true)                                                             \
-		for (const auto& _internal_optional = optional; _perform_match; _perform_match = false) \
+#define match_optional(optional)                                                          \
+	PUSH_DIAGNOSTIC                                                                       \
+	NO_SHADOW                                                                             \
+	if (bool _perform_match = true)                                                       \
+		for (auto& _internal_optional = optional; _perform_match; _perform_match = false) \
 	POP_DIAGNOSTIC
 
 #define opt_some(_value_name)                                                                  \
@@ -42,10 +44,20 @@
 	if (!_internal_optional.has_value()) POP_DIAGNOSTIC
 
 namespace base {
-
+	/**
+	 * Optional is used as a better and safer alternative to pointers. It's name naturally suggests,
+	 * that it may or may not hold a value underneath, and the programmer is responsible to first
+	 * check for it's presence.
+	 *
+	 * Macros defined above may come in handy when dealing with these creatures.
+	 * Also methods - map and flatMap - are very useful.
+	 *
+	 * Optional does not inherit from std::optional, because std::optional doesn't throw on
+	 * null-value access, but base::optional does.
+	 *
+	 * @tparam T
+	 */
 	template<class T>
-	// Optional does not inherit from std::optional, because std::optional doesn't throw on
-	// no-value access.
 	class Optional {
 	public:
 		Optional() = default;
@@ -91,42 +103,59 @@ namespace base {
 			return std::move(private_optional);
 		}
 
+		// clang-format off
+		// Turning clang-format, because it cannot format the following functions correctly.
 		[[nodiscard]]
-		constexpr const T&
-			operator*() const& {
+		constexpr const T& operator*() const& {
 			return value();
 		}
 
 		[[nodiscard]]
-		constexpr const T&&
-			operator*() const&& {
+		constexpr const T&& operator*() const&& {
 			return value();
 		}
 
 		[[nodiscard]]
-		constexpr T&
-			operator*() & {
+		constexpr T& operator*() & {
 			return value();
 		}
 
 		[[nodiscard]]
-		constexpr T&&
-			operator*() && {
+		constexpr T&& operator*() && {
 			return value();
 		}
 
-		template<typename Fn>
-		auto map(const Fn& func) -> Optional<decltype(func(T()))> {
-			if (has_value()) return Optional<decltype(func(T()))>(func(value()));
+		// clang-format on
+
+
+		/**
+		 * Applies the passed function on the value and wraps in Optional if the object contains a
+		 * value, otherwise does nothing.
+		 * @tparam Function
+		 * @param function Function to apply on the value. Function must take one argument which
+		 * type has to match the optional's type (auto works too). Function can return any type of
+		 * data.
+		 * @return On value: Optional(function(value)), otherwise does
+		 * nothing.
+		 */
+		template<typename Function>
+		auto map(const Function& function) -> Optional<decltype(function(T()))> {
+			if (has_value()) return Optional<decltype(function(T()))>(function(value()));
 			return {};
 		}
 
-		// Idea of a flatMap is simple: If "func" returns Optional<X>, then we use a flat map,
-		// and we don't end up with Optional<Optional<X>>, but Optional<X>.
-		template<typename Fn>
-		auto flatMap(const Fn& func) -> decltype(func(T())) {
-			static_assert(is_instance<decltype(func(T())), Optional>::value);
-			if (has_value()) return decltype(func(T()))(func(value()));
+		/**
+		 * Idea of a flatMap is simple: If "function" returns Optional<X>, then we use a flat map,
+		 * and we don't end up with Optional<Optional<X>>, but Optional<X>.
+		 * @tparam Function
+		 * @param function Function to apply on the value. Function must take one argument which
+		 * type has to match the optional's type (auto works too), and should return Optional<U>;
+		 * @return If object contains a value, then applies a function, otherwise does nothing.
+		 */
+		template<typename Function>
+		auto flatMap(const Function& function) -> decltype(function(T())) {
+			static_assert(IsOfSameClass<decltype(function(T())), Optional>);
+			if (has_value()) return decltype(function(T()))(function(value()));
 			return {};
 		}
 
@@ -137,13 +166,6 @@ namespace base {
 		}
 
 		std::optional<T> private_optional;
-
-		// Helpers for flatMap
-		template<class, template<class> class>
-		struct is_instance: public std::false_type {};
-
-		template<class T2, template<class> class U>
-		struct is_instance<U<T2>, U>: public std::true_type {};
 	};
 
 
