@@ -8,6 +8,12 @@
 #include <optional>
 #include "exceptions.hpp"
 #include "type_traits.hpp"
+#include "unique_pointer.hpp"
+#include <result.hpp>
+
+
+// For the sake of option.hpp
+using cpp::result;
 
 /* Some c00l macros.
  *
@@ -88,7 +94,7 @@ namespace base {
 		[[nodiscard]]
 		constexpr const T&& value() const&& {
 			_throwOnNoValue();
-			return std::move(private_optional);
+			return std::move(private_optional.value());
 		}
 
 		[[nodiscard]]
@@ -100,7 +106,31 @@ namespace base {
 		[[nodiscard]]
 		constexpr T&& value() && {
 			_throwOnNoValue();
-			return std::move(private_optional);
+			return std::move(private_optional.value());
+		}
+
+		[[nodiscard]]
+		const T& value_or(const T& or_value) const& {
+			if (has_value()) return *private_optional;
+			return or_value;
+		}
+
+		[[nodiscard]]
+		const T&& value_or(const T&& or_value) const&& {
+			if (has_value()) return std::move(private_optional.value());
+			return std::move(or_value);
+		}
+
+		[[nodiscard]]
+		T& value_or(T& or_value) & {
+			if (has_value()) return *private_optional;
+			return or_value;
+		}
+
+		[[nodiscard]]
+		T&& value_or(T&& or_value) && {
+			if (has_value()) return std::move(private_optional.value());
+			return std::move(or_value);
 		}
 
 		// clang-format off
@@ -139,6 +169,13 @@ namespace base {
 		 * nothing.
 		 */
 		template<typename Function>
+		auto map(const Function& function) const -> Optional<decltype(function(T()))> {
+			if (has_value()) return Optional<decltype(function(T()))>(function(value()));
+			return {};
+		}
+
+		// A non-const version.
+		template<typename Function>
 		auto map(const Function& function) -> Optional<decltype(function(T()))> {
 			if (has_value()) return Optional<decltype(function(T()))>(function(value()));
 			return {};
@@ -152,6 +189,14 @@ namespace base {
 		 * type has to match the optional's type (auto works too), and should return Optional<U>;
 		 * @return If object contains a value, then applies a function, otherwise does nothing.
 		 */
+		template<typename Function>
+		auto flatMap(const Function& function) const -> decltype(function(T())) {
+			static_assert(IsOfSameClass<decltype(function(T())), Optional>);
+			if (has_value()) return decltype(function(T()))(function(value()));
+			return {};
+		}
+
+		// A non-const version.
 		template<typename Function>
 		auto flatMap(const Function& function) -> decltype(function(T())) {
 			static_assert(IsOfSameClass<decltype(function(T())), Optional>);
@@ -167,6 +212,4 @@ namespace base {
 
 		std::optional<T> private_optional;
 	};
-
-
 }  // base

@@ -2,7 +2,7 @@
 
 #include "ints.hpp"
 #include "smart_pointers.hpp"
-#include "option.hpp"
+#include "optional.hpp"
 #include <concepts>
 #include <vector>
 
@@ -55,14 +55,14 @@ namespace base {
 		 */
 		constexpr const Data& operator[](Key pos) const { return *data.at(usize(pos)); }
 
-		option<Ref> getRef(Key pos) noexcept {
-			if (usize(pos) >= size()) return none<Ref>();
-			return data[usize(pos)].borrow_mut();
+		Optional<Ref> getRef(Key pos) noexcept {
+			if (usize(pos) >= size()) return {};
+			return Optional(data[usize(pos)].borrow_mut());
 		}
 
-		option<CRef> getCRef(Key pos) const noexcept {
-			if (usize(pos) >= size()) return none<CRef>();
-			return data[usize(pos)].borrow();
+		Optional<CRef> getCRef(Key pos) const noexcept {
+			if (usize(pos) >= size()) return {};
+			return Optional(data[usize(pos)].borrow());
 		}
 
 		constexpr Key pushBack(const Data& value) {

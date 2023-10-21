@@ -3,7 +3,7 @@
 #include <unordered_set>
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
-#include <base/option.hpp>
+#include <base/optional.hpp>
 
 namespace clap {
 	class ParametersMap {
@@ -14,17 +14,17 @@ namespace clap {
 		std::unordered_set<usize>         flags;
 		base::HashMap<usize, base::StrId> parameters;
 
-		option<usize> to_id(base::StrId name) const;
-		option<usize> to_id(const base::RawView& name) const;
-		option<usize> to_id(char name) const;
-		option<usize> to_id(byte name) const;
+		base::Optional<usize> to_id(base::StrId name) const;
+		base::Optional<usize> to_id(const base::RawView& name) const;
+		base::Optional<usize> to_id(char name) const;
+		base::Optional<usize> to_id(byte name) const;
 
-		option<base::RawView> get(usize id) const;
-		bool                  contains(usize id) const;
+		base::Optional<base::RawView> get(usize id) const;
+		bool                          contains(usize id) const;
 
 	public:
 		template<class T>
-		option<base::RawView> get(T name) const {
+		base::Optional<base::RawView> get(T name) const {
 			return to_id(name).flat_map([this](usize id) { return get(id); });
 		}
 

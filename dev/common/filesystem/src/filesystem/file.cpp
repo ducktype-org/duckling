@@ -37,7 +37,7 @@ namespace fs {
 
 	result<FileContent, std::string> FilePath::getContentSafe() const {
 		if (!std::filesystem::exists(path)) {
-			return fail(base::strConcat(
+			return cpp::fail(base::strConcat(
 				"Error: cannot get content of file `", path, "` - file does not exist"
 			));
 		}

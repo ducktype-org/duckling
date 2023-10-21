@@ -3,7 +3,7 @@
 #include <variant>
 #include <base/str_concat.hpp>
 #include <base/string_id.hpp>
-#include <base/option.hpp>
+#include <base/optional.hpp>
 #include "parameter_config.hpp"
 
 namespace clap {

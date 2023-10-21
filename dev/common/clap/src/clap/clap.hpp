@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <base/string_id.hpp>
-#include <base/option.hpp>
+#include <base/optional_reference.hpp>
 #include "error.hpp"
 #include "parameters_map.hpp"
 #include "parameter_config.hpp"
@@ -21,8 +21,8 @@ namespace clap {
 
 		result<ParametersMap, ClapParsingError> parse_internal(CLIArgs args);
 
-		option<const ParameterConfig&> get_parameter_config(base::StrId long_name);
-		option<const ParameterConfig&> get_parameter_config(char short_name);
+		base::OptionalReference<const ParameterConfig> get_parameter_config(base::StrId long_name);
+		base::OptionalReference<const ParameterConfig> get_parameter_config(char short_name);
 
 	public:
 		Config();

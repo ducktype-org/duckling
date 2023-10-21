@@ -5,6 +5,7 @@
 
 #include <tester/tester.hpp>
 #include <base/optional.hpp>
+#include <base/optional_reference.hpp>
 #include <queue>
 
 class OptionalTest: public tester::TestSuite {
@@ -13,6 +14,7 @@ class OptionalTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("base::Optional<T> test") {
+		TESTER_ADD_TEST(playground);
 		TESTER_ADD_TEST(basicTest);
 		TESTER_ADD_TEST(mapTest);
 		TESTER_ADD_TEST(flatMapTest);
@@ -68,6 +70,21 @@ public:
 		Optional<int> empty;
 		auto          result2 = empty.flatMap([](auto val) { return Optional(val * 2); });
 		assert(result2.empty(), "Result2 is not empty!");
+	}
+
+	void playground() {
+		using base::OptionalReference;
+		std::string       str = "abc";
+		OptionalReference test(str);
+		test.value()[0]++;
+		std::cout << str << '\n';
+		std::cout << test.value() << '\n';
+
+		std::vector<int>  vec = { 1, 2, 3 };
+		OptionalReference optVec(vec);
+		optVec.value()[0]++;
+		for (auto i: vec) std::cout << i << " ";
+		std::cout << '\n';
 	}
 };
 

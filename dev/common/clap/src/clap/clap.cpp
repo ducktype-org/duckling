@@ -8,24 +8,25 @@ namespace clap {
 		add(ParameterConfig("help").short_name('h').description("Show this help message"));
 	}
 
-	option<const ParameterConfig&> Config::get_parameter_config(base::StrId long_name) {
+	base::OptionalReference<const ParameterConfig>
+		Config::get_parameter_config(base::StrId long_name) {
 		for (const ParameterConfig& parameter: parameters) {
-			if (parameter.get_long_name().map([long_name](base::StrId x) { return long_name == x; }
+			if (parameter.get_long_name().map([long_name](auto x) { return long_name == x; }
 			    ).value_or(false)) {
-				return some<const ParameterConfig&>(parameter);
+				return base::OptionalReference<const ParameterConfig>(parameter);
 			}
 		}
-		return none<const ParameterConfig&>();
+		return {};
 	}
 
-	option<const ParameterConfig&> Config::get_parameter_config(char short_name) {
+	base::OptionalReference<const ParameterConfig> Config::get_parameter_config(char short_name) {
 		for (const ParameterConfig& parameter: parameters) {
 			if (parameter.get_short_name().map([short_name](char x) { return short_name == x; }
 			    ).value_or(false)) {
-				return some<const ParameterConfig&>(parameter);
+				return base::OptionalReference<const ParameterConfig>(parameter);
 			}
 		}
-		return none<const ParameterConfig&>();
+		return {};
 	}
 
 	Config& Config::add(ParameterConfig parameter_config) {
@@ -34,7 +35,7 @@ namespace clap {
 	}
 
 	Config& Config::add_positional(const base::RawView& parameter_name) {
-		positional_parameters_names.push_back(base::StrId(parameter_name));
+		positional_parameters_names.emplace_back(parameter_name);
 		return *this;
 	}
 
@@ -45,12 +46,13 @@ namespace clap {
 		usize         positional_parameters_count     = 0;
 		usize         found_required_parameters_count = 0;
 
-		auto add_param = [&i, &out, &id, &found_required_parameters_count, &args](
-							 auto parameter_name, option<const ParameterConfig&> parameter_option
-						 ) -> result<void, ClapParsingError> {
-			if (parameter_option.has_error()) return failure(UnexpectedParameter(parameter_name));
+		auto add_param
+			= [&i, &out, &id, &found_required_parameters_count, &args](
+				  auto parameter_name, base::Optional<const ParameterConfig&> parameter_option
+			  ) -> result<void, ClapParsingError> {
+			if (parameter_option.empty()) return cpp::failure(UnexpectedParameter(parameter_name));
 			const ParameterConfig& config = parameter_option.value();
-			if (out.contains(parameter_name)) return failure(DuplicatedParameter(config));
+			if (out.contains(parameter_name)) return cpp::failure(DuplicatedParameter(config));
 
 			const auto& long_name = config.get_long_name();
 			if (long_name.has_value()) out.long_names_to_id.put(long_name.value(), id);
@@ -59,7 +61,7 @@ namespace clap {
 			if (config.requires_argument()) {
 				if (i + 1 == args.argc) {
 					if (config.is_required())
-						return failure(MissingParameterArgument(config));
+						return cpp::failure(MissingParameterArgument(config));
 					else
 						out.parameters.put(id, config.get_default_value().value());
 				} else {
@@ -83,17 +85,17 @@ namespace clap {
 			base::RawView what = args.argv[i];
 			if (what.size() > 2 && what[0] == byte('-') && what[1] == byte('-')) {
 				base::StrId parameter_name = base::StrId(what.subSuffix(2));
-				if (parameter_name.str() == "help") return failure(HelpMessage{});
+				if (parameter_name.str() == "help") return cpp::failure(HelpMessage{});
 				auto result = add_param(parameter_name, get_parameter_config(parameter_name));
-				if (result.has_error()) return failure(result.error());
+				if (result.has_error()) return cpp::failure(result.error());
 			} else if (what.size() == 2 && what[0] == byte('-')) {
 				byte parameter_name = what[1];
-				if (parameter_name == byte('h')) return failure(HelpMessage{});
+				if (parameter_name == byte('h')) return cpp::failure(HelpMessage{});
 				auto result = add_param(parameter_name, get_parameter_config(char(parameter_name)));
-				if (result.has_error()) return failure(result.error());
+				if (result.has_error()) return cpp::failure(result.error());
 			} else {
 				if (positional_parameters_count == positional_parameters_names.size()) {
-					return failure(PositionalParametersCountError{
+					return cpp::failure(PositionalParametersCountError{
 						positional_parameters_names.size(), positional_parameters_count + 1 });
 				}
 				out.parameters.put(
@@ -115,13 +117,13 @@ namespace clap {
 						   .map([&out](const char& short_name) { return out.contains(short_name); })
 						   .value_or(false)
 				)) {
-				return failure(ClapParsingError{ MissingRequiredParameter{ parameter } });
+				return cpp::failure(ClapParsingError{ MissingRequiredParameter{ parameter } });
 			}
 		}
 
 		if (positional_parameters_count != positional_parameters_names.size()) {
-			return failure(PositionalParametersCountError{ positional_parameters_names.size(),
-			                                               positional_parameters_count });
+			return cpp::failure(PositionalParametersCountError{ positional_parameters_names.size(),
+			                                                    positional_parameters_count });
 		}
 
 		return out;
