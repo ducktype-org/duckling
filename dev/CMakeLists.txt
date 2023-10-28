@@ -6,7 +6,7 @@ cmake_policy(SET CMP0054 NEW)
 
 # This is ifed-out, because it is
 # avaiable only from CMAKE 3.24.
-# @FUTURE: uncomment it.
+# @FUTURE: un-if it.
 # Note: It is not that important for us (as of 11.2023).
 #       It is realated to dependecies. 
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0") 
