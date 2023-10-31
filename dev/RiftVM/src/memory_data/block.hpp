@@ -6,7 +6,7 @@
 #include <memory_data/pointer.hpp>
 #include <services_data/type_metadata/type.hpp>
 #include <base/raw_view.hpp>
-#include <base/option.hpp>
+#include <base/optional.hpp>
 #include <result.hpp>
 
 namespace vm {
@@ -52,7 +52,7 @@ namespace vm {
 
 		TypeCRef innerType() const;
 
-		result<base::ModRawView, error> deref(TypeCRef u, u64 offset);
-		result<base::ModRawView, error> derefCheck(TypeCRef u, u64 offset);
+		cpp::result<base::ModRawView, error> deref(TypeCRef u, u64 offset);
+		cpp::result<base::ModRawView, error> derefCheck(TypeCRef u, u64 offset);
 	};
 }

@@ -8,22 +8,21 @@ namespace clap {
 		add(ParameterConfig("help").short_name('h').description("Show this help message"));
 	}
 
-	base::OptionalReference<const ParameterConfig>
-		Config::get_parameter_config(base::StrId long_name) {
+	base::Optional<const ParameterConfig&> Config::get_parameter_config(base::StrId long_name) {
 		for (const ParameterConfig& parameter: parameters) {
 			if (parameter.get_long_name().map([long_name](auto x) { return long_name == x; }
 			    ).value_or(false)) {
-				return base::OptionalReference<const ParameterConfig>(parameter);
+				return base::Optional<const ParameterConfig&>(parameter);
 			}
 		}
 		return {};
 	}
 
-	base::OptionalReference<const ParameterConfig> Config::get_parameter_config(char short_name) {
+	base::Optional<const ParameterConfig&> Config::get_parameter_config(char short_name) {
 		for (const ParameterConfig& parameter: parameters) {
 			if (parameter.get_short_name().map([short_name](char x) { return short_name == x; }
 			    ).value_or(false)) {
-				return base::OptionalReference<const ParameterConfig>(parameter);
+				return base::Optional<const ParameterConfig&>(parameter);
 			}
 		}
 		return {};
@@ -39,7 +38,7 @@ namespace clap {
 		return *this;
 	}
 
-	result<ParametersMap, ClapParsingError> Config::parse_internal(CLIArgs args) {
+	cpp::result<ParametersMap, ClapParsingError> Config::parse_internal(CLIArgs args) {
 		ParametersMap out;
 		usize         id                              = 0;
 		i32           i                               = 1;
@@ -49,7 +48,7 @@ namespace clap {
 		auto add_param
 			= [&i, &out, &id, &found_required_parameters_count, &args](
 				  auto parameter_name, base::Optional<const ParameterConfig&> parameter_option
-			  ) -> result<void, ClapParsingError> {
+			  ) -> cpp::result<void, ClapParsingError> {
 			if (parameter_option.empty()) return cpp::failure(UnexpectedParameter(parameter_name));
 			const ParameterConfig& config = parameter_option.value();
 			if (out.contains(parameter_name)) return cpp::failure(DuplicatedParameter(config));
@@ -78,7 +77,7 @@ namespace clap {
 			}
 			if (config.is_required()) found_required_parameters_count++;
 			id++;
-			return result<void, ClapParsingError>();
+			return cpp::result<void, ClapParsingError>();
 		};
 
 		for (; i < args.argc; i++) {

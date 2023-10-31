@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tuple>
-#include <base/option.hpp>
+#include <base/optional.hpp>
 #include "services.hpp"
 #include "reference_counter/reference_counter.hpp"
 #include "profiler/profiler.hpp"
@@ -12,7 +12,7 @@ namespace vm {
 	template<class... DynamicServices>
 	class ServiceManagerDef {
 	private:
-		using DynamicServicesStorage = std::tuple<option<DynamicServices>...>;
+		using DynamicServicesStorage = std::tuple<base::Optional<DynamicServices>...>;
 
 		template<class T>
 		using IsCoreService = std::integral_constant<
@@ -36,7 +36,7 @@ namespace vm {
 			  stackAllocator(*this),
 			  executor(*this),
 			  preprocessor(*this),
-			  dynamic_services(none<DynamicServices>()...) {}
+			  dynamic_services(base::Optional<DynamicServices>()...) {}
 
 		VCPU& getVCPU() { return vcpu; }
 
@@ -67,7 +67,7 @@ namespace vm {
 		template<class T>
 		requires(!IsCoreService<T>::value)
 		T& get() {
-			return std::get<option<T>>(dynamic_services).value();
+			return std::get<base::Optional<T&>>(dynamic_services).value();
 		}
 
 		// The following are mostly for dynamic services

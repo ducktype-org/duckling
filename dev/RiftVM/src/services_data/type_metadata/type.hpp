@@ -2,9 +2,10 @@
 
 #include <variant>
 #include <base/string_id.hpp>
-#include <base/option.hpp>
+#include <base/optional.hpp>
 #include <memory_data/pointer.hpp>
 #include "kinds.hpp"
+#include "base/optional.hpp"
 
 namespace vm {
 	class TypeMetadata;
@@ -73,16 +74,16 @@ namespace vm {
 		TypeSize    getSize() const;
 
 		template<class T>
-		option<const T&> get() const {
-			if (std::holds_alternative<T>(kind)) return some<const T&>(std::get<T>(kind));
-			return none<const T&>();
+		base::Optional<const T&> get() const {
+			if (std::holds_alternative<T>(kind)) return base::Optional<const T&>(std::get<T>(kind));
+			return {};
 		}
 
 		Kind getKind() const;
 
 		bool isPrimitive(TypeSize size) const;
 
-		option<TypeCRef> getLowestTypeAtPos(Offset pos) const;
+		base::Optional<TypeCRef> getLowestTypeAtPos(Offset pos) const;
 
 
 		// @todo: Interface below may change
@@ -94,25 +95,25 @@ namespace vm {
 		 * Get inner type of pointer, static or dynamic table
 		 * @return some(inner type) for pointer, static or dynamic table. none otherwise
 		 */
-		option<TypeCRef> getInnerType() const;
+		base::Optional<TypeCRef> getInnerType() const;
 
 		// staticTable
-		option<u64> getStaticTableSize() const;
+		base::Optional<u64> getStaticTableSize() const;
 
 		// data
-		option<TypeCRef> getFieldType(kind::Data::FieldId fieldId) const;
-		option<Offset>   getFieldOffset(kind::Data::FieldId fieldId) const;
-		option<TypeCRef> getFieldTypeByOffset(Offset offset) const;
-		option<TypeCRef> getFieldTypeByOffsetRecursive(Offset offset) const;
+		base::Optional<TypeCRef> getFieldType(kind::Data::FieldId fieldId) const;
+		base::Optional<Offset>   getFieldOffset(kind::Data::FieldId fieldId) const;
+		base::Optional<TypeCRef> getFieldTypeByOffset(Offset offset) const;
+		base::Optional<TypeCRef> getFieldTypeByOffsetRecursive(Offset offset) const;
 
 		// variant
-		option<u64>      getVariantCount() const;
-		option<TypeCRef> getNthVariantType(u64 variantId) const;
+		base::Optional<u64>      getVariantCount() const;
+		base::Optional<TypeCRef> getNthVariantType(u64 variantId) const;
 
 		// function
-		option<u64>      getParameterCount() const;
-		option<TypeCRef> getNthParameterType(u64 parameterId) const;
-		option<TypeCRef> getResultType() const;
+		base::Optional<u64>      getParameterCount() const;
+		base::Optional<TypeCRef> getNthParameterType(u64 parameterId) const;
+		base::Optional<TypeCRef> getResultType() const;
 
 		friend class TypeMetadata;
 

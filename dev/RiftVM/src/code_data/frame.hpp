@@ -4,10 +4,9 @@
 #include <vector>
 #include <span>
 
-#include <base/option.hpp>
-
 #include <memory_data/pointer.hpp>
 #include "code.hpp"
+#include <base/optional.hpp>
 
 namespace vm {
 
@@ -39,10 +38,23 @@ namespace vm {
 	};
 
 	struct Frame {
+		Frame(Frame&& frame) {
+			previous            = frame.previous;
+			bc                  = frame.bc;
+			continue_execution  = frame.continue_execution;
+			instruction_pointer = frame.instruction_pointer;
+
+			// Register like data:
+			regs      = frame.regs;
+			flags     = frame.flags;
+			ret_val   = frame.ret_val;
+			next_args = frame.next_args;
+		}
+
 		// Internal data:
-		option<Frame&> previous;
+		base::Optional<Frame&> previous;
 		// const FuncData& function;
-		const std::span<const Fix8Instruction>
+		std::span<const Fix8Instruction>
 			bc;  // this is duplication of function.bc, but allows for faster access
 
 		bool  continue_execution;

@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <base/string_id.hpp>
-#include <base/optional_reference.hpp>
+#include <base/optional.hpp>
 #include "error.hpp"
 #include "parameters_map.hpp"
 #include "parameter_config.hpp"
@@ -19,10 +19,10 @@ namespace clap {
 
 		std::vector<base::StrId> positional_parameters_names;
 
-		result<ParametersMap, ClapParsingError> parse_internal(CLIArgs args);
+		cpp::result<ParametersMap, ClapParsingError> parse_internal(CLIArgs args);
 
-		base::OptionalReference<const ParameterConfig> get_parameter_config(base::StrId long_name);
-		base::OptionalReference<const ParameterConfig> get_parameter_config(char short_name);
+		base::Optional<const ParameterConfig&> get_parameter_config(base::StrId long_name);
+		base::Optional<const ParameterConfig&> get_parameter_config(char short_name);
 
 	public:
 		Config();

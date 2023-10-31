@@ -14,7 +14,13 @@ namespace vm {
 		u64     offset;
 
 	public:
+		Pointer() = default;
+
 		Pointer(BlockId block_, u64 offset_): block(block_), offset(offset_) {}
+
+		Pointer(Pointer&& other) noexcept: block(other.block), offset(other.offset) {}
+
+		Pointer(Pointer& other) noexcept = default;
 
 		BlockId getBlock() const { return block; }
 

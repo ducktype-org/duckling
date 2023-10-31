@@ -77,7 +77,7 @@ namespace fs {
 		[[nodiscard]]
 		FileContent getContent() const;
 		[[nodiscard]]
-		result<FileContent, std::string> getContentSafe() const;
+		cpp::result<FileContent, std::string> getContentSafe() const;
 
 		[[nodiscard]]
 		std::string_view strView() const;

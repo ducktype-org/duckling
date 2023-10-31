@@ -3,7 +3,7 @@
 #include "../services.hpp"
 #include <code_data/code.hpp>
 #include <filesystem/file.hpp>
-#include <base/option.hpp>
+#include <base/optional.hpp>
 
 namespace vm {
 	// @TODO: static type checking
@@ -20,6 +20,6 @@ namespace vm {
 		template<class... DynamicServices>
 		friend class ServiceManagerDef;
 
-		result<vm::Code, std::string> getCode(const fs::FilePath& file);
+		cpp::result<vm::Code, std::string> getCode(const fs::FilePath& file);
 	};
 }

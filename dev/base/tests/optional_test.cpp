@@ -5,7 +5,6 @@
 
 #include <tester/tester.hpp>
 #include <base/optional.hpp>
-#include <base/optional_reference.hpp>
 #include <queue>
 
 class OptionalTest: public tester::TestSuite {
@@ -72,16 +71,18 @@ public:
 		assert(result2.empty(), "Result2 is not empty!");
 	}
 
+	template<class T>
+	using lol = base::Optional<T>;
+
 	void playground() {
-		using base::OptionalReference;
 		std::string       str = "abc";
-		OptionalReference test(str);
+		lol<std::string&> test(str);
 		test.value()[0]++;
 		std::cout << str << '\n';
 		std::cout << test.value() << '\n';
 
-		std::vector<int>  vec = { 1, 2, 3 };
-		OptionalReference optVec(vec);
+		std::vector<int>                  vec = { 1, 2, 3 };
+		base::Optional<std::vector<int>&> optVec(vec);
 		optVec.value()[0]++;
 		for (auto i: vec) std::cout << i << " ";
 		std::cout << '\n';

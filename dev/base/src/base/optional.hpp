@@ -10,10 +10,8 @@
 #include "type_traits.hpp"
 #include "unique_pointer.hpp"
 #include <result.hpp>
+#include <functional>
 
-
-// For the sake of option.hpp
-using cpp::result;
 
 /* Some c00l macros.
  *
@@ -63,7 +61,7 @@ namespace base {
 	 *
 	 * @tparam T
 	 */
-	template<class T>
+	template<class T, class Container = std::optional<T>>
 	class Optional {
 	public:
 		Optional() = default;
@@ -75,7 +73,7 @@ namespace base {
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
 		[[nodiscard]]
-		constexpr bool has_value() const {
+		virtual constexpr bool has_value() const {
 			return private_optional.has_value();
 		}
 
@@ -86,50 +84,50 @@ namespace base {
 
 		// Accessors.
 		[[nodiscard]]
-		constexpr const T& value() const& {
+		virtual constexpr const T& value() const& {
 			_throwOnNoValue();
-			return *private_optional;
+			return private_optional.value();
 		}
 
 		[[nodiscard]]
-		constexpr const T&& value() const&& {
+		virtual constexpr const T&& value() const&& {
 			_throwOnNoValue();
 			return std::move(private_optional.value());
 		}
 
 		[[nodiscard]]
-		constexpr T& value() & {
+		virtual constexpr T& value() & {
 			_throwOnNoValue();
-			return *private_optional;
+			return private_optional.value();
 		}
 
 		[[nodiscard]]
-		constexpr T&& value() && {
+		virtual constexpr T&& value() && {
 			_throwOnNoValue();
 			return std::move(private_optional.value());
 		}
 
 		[[nodiscard]]
 		const T& value_or(const T& or_value) const& {
-			if (has_value()) return *private_optional;
+			if (has_value()) return value();
 			return or_value;
 		}
 
 		[[nodiscard]]
 		const T&& value_or(const T&& or_value) const&& {
-			if (has_value()) return std::move(private_optional.value());
+			if (has_value()) return std::move(value());
 			return std::move(or_value);
 		}
 
 		[[nodiscard]]
 		T& value_or(T& or_value) & {
-			if (has_value()) return *private_optional;
+			if (has_value()) return value();
 			return or_value;
 		}
 
 		[[nodiscard]]
 		T&& value_or(T&& or_value) && {
-			if (has_value()) return std::move(private_optional.value());
+			if (has_value()) return std::move(value());
 			return std::move(or_value);
 		}
 
@@ -142,7 +140,7 @@ namespace base {
 
 		[[nodiscard]]
 		constexpr const T&& operator*() const&& {
-			return value();
+			return std::move(value());
 		}
 
 		[[nodiscard]]
@@ -152,11 +150,34 @@ namespace base {
 
 		[[nodiscard]]
 		constexpr T&& operator*() && {
-			return value();
+			return std::move(value());
 		}
 
 		// clang-format on
 
+		[[nodiscard]]
+		constexpr const T& expect(std::string_view message) const& {
+			if (!has_value()) RIFT_PANIC(message);
+			return value();
+		}
+
+		[[nodiscard]]
+		constexpr const T&& expect(std::string_view message) const&& {
+			if (!has_value()) RIFT_PANIC(message);
+			return std::move(value());
+		}
+
+		[[nodiscard]]
+		constexpr T& expect(std::string_view message) & {
+			if (!has_value()) RIFT_PANIC(message);
+			return value();
+		}
+
+		[[nodiscard]]
+		constexpr T&& expect(std::string_view message) && {
+			if (!has_value()) RIFT_PANIC(message);
+			return std::move(value());
+		}
 
 		/**
 		 * Applies the passed function on the value and wraps in Optional if the object contains a
@@ -204,12 +225,211 @@ namespace base {
 			return {};
 		}
 
-
-	private:
+	protected:
 		void _throwOnNoValue() const {
 			if (!has_value()) RIFT_PANIC("Tried to retrieve a value from an empty optional.");
 		}
 
-		std::optional<T> private_optional;
+	private:
+		Container private_optional;
 	};
+
+	template<class T>
+	class Optional<T&, std::unique_ptr<T>>: public Optional<T, std::unique_ptr<T>> {
+	public:
+		Optional() = default;
+
+		explicit Optional(T& value): private_optional(std::ref(value)) {}
+
+		Optional(Optional& opt): Optional(opt.value()) {}
+
+		Optional(Optional&& opt) noexcept: Optional(std::move(opt.value())) {}
+
+		[[nodiscard]]
+		constexpr bool has_value() const override {
+			return private_optional.has_value();
+		}
+
+		// Accessors.
+		[[nodiscard]]
+		constexpr const T& value() const& override {
+			Optional::_throwOnNoValue();
+			return private_optional.value().get();
+		}
+
+		[[nodiscard]]
+		constexpr const T&& value() const&& override {
+			Optional::_throwOnNoValue();
+			return std::move(private_optional.value().get());
+		}
+
+		[[nodiscard]]
+			constexpr T& value()
+			& override {
+			Optional::_throwOnNoValue();
+			return private_optional.value().get();
+		}
+
+		[[nodiscard]]
+			constexpr T&& value()
+			&& override {
+			Optional::_throwOnNoValue();
+			return std::move(private_optional.value().get());
+		}
+
+
+	private:
+		Optional<std::reference_wrapper<T>> private_optional;
+	};
+
+	//	template<class T>
+	//	class Optional<T&> {
+	//	public:
+	//		Optional() = default;
+	//
+	//		explicit Optional(T& value): private_optional(std::ref(value)) {}
+	//
+	//		[[nodiscard]]
+	//		constexpr bool has_value() const {
+	//			return private_optional.has_value();
+	//		}
+	//
+	//		[[nodiscard]]
+	//		constexpr bool empty() const {
+	//			return !has_value();
+	//		}
+	//
+	//		// Accessors.
+	//		[[nodiscard]]
+	//		constexpr const T& value() const& {
+	//			_throwOnNoValue();
+	//			return private_optional.value().get();
+	//		}
+	//
+	//		[[nodiscard]]
+	//		constexpr const T&& value() const&& {
+	//			_throwOnNoValue();
+	//			return std::move(private_optional.value().get());
+	//		}
+	//
+	//		[[nodiscard]]
+	//		constexpr T& value() & {
+	//			_throwOnNoValue();
+	//			return private_optional.value().get();
+	//		}
+	//
+	//		[[nodiscard]]
+	//		constexpr T&& value() && {
+	//			_throwOnNoValue();
+	//			return std::move(private_optional.value().get());
+	//		}
+	//
+	//		[[nodiscard]]
+	//		const T& value_or(const T& or_value) const& {
+	//			if (has_value()) return value();
+	//			return or_value;
+	//		}
+	//
+	//		[[nodiscard]]
+	//		const T&& value_or(const T&& or_value) const&& {
+	//			if (has_value()) return std::move(value());
+	//			return std::move(or_value);
+	//		}
+	//
+	//		[[nodiscard]]
+	//		T& value_or(T& or_value) & {
+	//			if (has_value()) return value();
+	//			return or_value;
+	//		}
+	//
+	//		[[nodiscard]]
+	//		T&& value_or(T&& or_value) && {
+	//			if (has_value()) return std::move(value());
+	//			return std::move(or_value);
+	//		}
+	//
+	//		// clang-format off
+	//		// Turning clang-format, because it cannot format the following functions correctly.
+	//		[[nodiscard]]
+	//		constexpr const T& operator*() const& {
+	//			return value();
+	//		}
+	//
+	//		[[nodiscard]]
+	//		constexpr const T&& operator*() const&& {
+	//			return std::move(value());
+	//		}
+	//
+	//		[[nodiscard]]
+	//		constexpr T& operator*() & {
+	//			return value();
+	//		}
+	//
+	//		[[nodiscard]]
+	//		constexpr T&& operator*() && {
+	//			return std::move(value());
+	//		}
+	//
+	//		// clang-format on
+	//
+	//		[[nodiscard]]
+	//		constexpr const T& expect(std::string_view message) const& {
+	//			if (!has_value()) RIFT_PANIC(message);
+	//			return value();
+	//		}
+	//
+	//		[[nodiscard]]
+	//		constexpr const T&& expect(std::string_view message) const&& {
+	//			if (!has_value()) RIFT_PANIC(message);
+	//			return std::move(value());
+	//		}
+	//
+	//		[[nodiscard]]
+	//		constexpr T& expect(std::string_view message) & {
+	//			if (!has_value()) RIFT_PANIC(message);
+	//			return value();
+	//		}
+	//
+	//		[[nodiscard]]
+	//		constexpr T&& expect(std::string_view message) && {
+	//			if (!has_value()) RIFT_PANIC(message);
+	//			return std::move(value());
+	//		}
+	//
+	//		template<typename Function>
+	//		auto map(const Function& function) const -> Optional<decltype(function(T()))> {
+	//			if (has_value()) return Optional<decltype(function(T()))>(function(value()));
+	//			return {};
+	//		}
+	//
+	//		// A non-const version.
+	//		template<typename Function>
+	//		auto map(const Function& function) -> Optional<decltype(function(T()))> {
+	//			if (has_value()) return Optional<decltype(function(T()))>(function(value()));
+	//			return {};
+	//		}
+	//
+	//		template<typename Function>
+	//		auto flatMap(const Function& function) const -> decltype(function(T())) {
+	//			static_assert(IsOfSameClass<decltype(function(T())), Optional>);
+	//			if (has_value()) return decltype(function(T()))(function(value()));
+	//			return {};
+	//		}
+	//
+	//		// A non-const version.
+	//		template<typename Function>
+	//		auto flatMap(const Function& function) -> decltype(function(T())) {
+	//			static_assert(IsOfSameClass<decltype(function(T())), Optional>);
+	//			if (has_value()) return decltype(function(T()))(function(value()));
+	//			return {};
+	//		}
+	//
+	//
+	//	private:
+	//		void _throwOnNoValue() const {
+	//			if (!has_value()) RIFT_PANIC("Tried to retrieve a value from an empty optional.");
+	//		}
+	//
+	//		Optional<std::reference_wrapper<T>> private_optional;
+	//	};
 }  // base

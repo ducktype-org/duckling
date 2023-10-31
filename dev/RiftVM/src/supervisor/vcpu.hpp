@@ -3,7 +3,7 @@
 #include <shared_mutex>
 #include <thread>
 #include <memory>
-#include <base/option.hpp>
+#include <base/optional.hpp>
 #include <api/vm.hpp>
 
 #include <ostream>
@@ -33,18 +33,20 @@ namespace vm {
 		base::unique_ptr<std::stringstream> input_stream  = nullptr;
 		base::unique_ptr<std::stringstream> output_stream = nullptr;
 
-		option<vm::Code> loadedCode = none<vm::Code>();
+		base::Optional<vm::Code> loadedCode = {};
 
-		result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
+		cpp::result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
 
-		result<api::Response, api::CoreOperationError> doRequest(const api::ExecutorRequest& request
+		cpp::result<api::Response, api::CoreOperationError>
+			doRequest(const api::ExecutorRequest& request);
+		cpp::result<api::Response, api::CoreOperationError>
+			doRequest(const api::DataRequest& request);
+		cpp::result<api::Response, api::CoreOperationError> run();
+		cpp::result<api::Response, api::CoreOperationError> join();
+		cpp::result<api::Response, api::CoreOperationError> stop();
+		cpp::result<api::Response, api::CoreOperationError> input(const api::request::Input& request
 		);
-		result<api::Response, api::CoreOperationError> doRequest(const api::DataRequest& request);
-		result<api::Response, api::CoreOperationError> run();
-		result<api::Response, api::CoreOperationError> join();
-		result<api::Response, api::CoreOperationError> stop();
-		result<api::Response, api::CoreOperationError> input(const api::request::Input& request);
-		result<api::Response, api::CoreOperationError> output();
+		cpp::result<api::Response, api::CoreOperationError> output();
 
 		api::VCPUStatus getStatus();
 
@@ -114,8 +116,8 @@ namespace vm {
 
 		// Each of the following methods can be called concurrently, so they should synchronize
 		// resources.
-		result<api::Response, api::CoreOperationError> doRequest(const api::RequestVariant& request
-		);
+		cpp::result<api::Response, api::CoreOperationError>
+			doRequest(const api::RequestVariant& request);
 
 		VCPU(bool use_stdio):
 			  status(api::ExecutionNotStarted{}),

@@ -4,7 +4,7 @@ add_library(Base
 		src/base/impl/raw_view.cpp
 		src/base/impl/string_id.cpp
 		src/base/optional.hpp
-		src/base/optional_reference.hpp
+		src/base/optional_containers.hpp
 )
 
 set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)

@@ -12,7 +12,7 @@
 #include <iostream>
 
 #include <base/exceptions.hpp>
-#include <base/option.hpp>
+#include <base/optional.hpp>
 
 namespace vm {
 
@@ -27,7 +27,7 @@ namespace vm {
 	}
 
 	Frame Executor::internalInitFrame(
-		option<Frame&> previous_frame, const FuncData& function, VLADataReference vla_ref
+		base::Optional<Frame&> previous_frame, const FuncData& function, VLADataReference vla_ref
 	) {
 		return Frame{
 			.previous = previous_frame,
@@ -67,7 +67,7 @@ namespace vm {
 	// Or stack like this:
 	// [rets][args][locals][temp] + memcpy between callee and caller
 
-	result<base::ModRawView, std::string> Executor::internalDerefPointer(Pointer pointer) {
+	cpp::result<base::ModRawView, std::string> Executor::internalDerefPointer(Pointer pointer) {
 		auto block_id = pointer.getBlock();
 		auto offset   = pointer.getOffset();
 
@@ -111,7 +111,7 @@ namespace vm {
 	}
 
 	i64 Executor::internalCallFunction(
-		option<Frame&> previous_frame, const FuncData& function, StandardFunctionArgs args
+		base::Optional<Frame&> previous_frame, const FuncData& function, StandardFunctionArgs args
 	) {
 		// @TODO: sanity check should be added to see if function.stack_size is sensible small
 		// @TODO: some generic code should be added to work with that does not support VLA
@@ -297,7 +297,7 @@ namespace vm {
 					auto function_id      = arg0;
 					FRAME_REGS(p64_reg_0) = internalCallFunction(
 						// @TODO: this is not correct with flat frame
-						IF_NOT_FF(frame) IF_FF(none<Frame&>()),
+						IF_NOT_FF(base::Optional<Frame&>(frame)) IF_FF(base::Optional<Frame&>()),
 						executing_code->functions[function_id],
 						FRAME(next_args)
 					);
@@ -396,7 +396,9 @@ namespace vm {
 		executing_code = &code;
 		try {
 			internalCallFunction(
-				none<Frame&>(), executing_code->functions[code.main_id], { 0, memory.nullPtr() }
+				base::Optional<Frame&>(),
+				executing_code->functions[code.main_id],
+				{ 0, memory.nullPtr() }
 			);
 			setStatus(api::NotStarted{});
 		} catch (KillCoreException) { setStatus(api::NotStarted{}); }

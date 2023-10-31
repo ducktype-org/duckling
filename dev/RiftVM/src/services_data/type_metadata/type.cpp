@@ -138,23 +138,23 @@ namespace vm {
 	 * inside the type.
 	 * See: https://github.com/rift-lang/rift-poc-zpp1/issues/91
 	 */
-	option<TypeCRef> Type::getLowestTypeAtPos(Offset pos) const {
+	base::Optional<TypeCRef> Type::getLowestTypeAtPos(Offset pos) const {
 		variant_match(kind) {
 			variant_case_novalue(kind::Primitive) {
 				if (pos == 0)
-					return TypeCRef(this);
+					return base::Optional<TypeCRef>(TypeCRef(this));
 				else
-					return none<TypeCRef>();
+					return {};
 			}
 			variant_case_novalue(kind::Pointer) {
 				if (pos == 0)
-					return TypeCRef(this);
+					return base::Optional<TypeCRef>(TypeCRef(this));
 				else
-					return none<TypeCRef>();
+					return {};
 			}
 			variant_case(kind::StaticTable, static_table) {
 				if (pos >= getSize())
-					return none<TypeCRef>();
+					return {};
 				else {
 					auto inner_size = static_table.inner_type->getSize();
 					return static_table.inner_type->getLowestTypeAtPos(pos % inner_size);
@@ -162,9 +162,9 @@ namespace vm {
 			}
 			variant_case_novalue(kind::DynamicTable) {
 				if (pos == 0)
-					return TypeCRef(this);
+					return base::Optional<TypeCRef>(TypeCRef(this));
 				else
-					return none<TypeCRef>();
+					return {};
 			}
 			variant_case(kind::Data, data) {
 				throw base::NotYetImplemented("getLowestTypeAtPos data");
@@ -173,9 +173,9 @@ namespace vm {
 				// @TODO: is pos == 0 then return some special TypeRef to variant index
 				// @TODO: is pos == 1 then return error
 				if (pos == 2)
-					return TypeCRef(this);
+					return base::Optional<TypeCRef>(TypeCRef(this));
 				else
-					return none<TypeCRef>();
+					return {};
 			}
 			variant_default { RIFT_PANIC("Unexpected Type kind"); }
 		}
@@ -183,45 +183,47 @@ namespace vm {
 	}
 
 	// pointer, staticTable, dynamicTable
-	option<TypeCRef> Type::getInnerType() const {
+	base::Optional<TypeCRef> Type::getInnerType() const {
 		auto getInnerType = [](const auto& t) { return t.inner_type; };
 
 		auto pointerOption = get<kind::Pointer>().map(getInnerType);
-		if (pointerOption.has_value()) return pointerOption.value();
+		if (pointerOption.has_value()) return base::Optional<TypeCRef>(pointerOption.value());
 
 		auto staticTableOption = get<kind::StaticTable>().map(getInnerType);
-		if (staticTableOption.has_value()) return staticTableOption.value();
+		if (staticTableOption.has_value())
+			return base::Optional<TypeCRef>(staticTableOption.value());
 
 		auto dynamicTableOption = get<kind::DynamicTable>().map(getInnerType);
-		if (dynamicTableOption.has_value()) return dynamicTableOption.value();
+		if (dynamicTableOption.has_value())
+			return base::Optional<TypeCRef>(dynamicTableOption.value());
 
-		return none<TypeCRef>();
+		return {};
 	}
 
 	// staticTable
-	option<u64> Type::getStaticTableSize() const {
+	base::Optional<u64> Type::getStaticTableSize() const {
 		return get<kind::StaticTable>().map([](const kind::StaticTable& table) {
 			return table.size;
 		});
 	}
 
 	// struct
-	option<TypeCRef> Type::getFieldType(kind::Data::FieldId field_id) const {
-		return get<kind::Data>().flat_map([field_id](const kind::Data& data) {
-			if (field_id >= data.fields.size()) return none<TypeCRef>();
-			return some<TypeCRef>(data.fields[field_id].type);
+	base::Optional<TypeCRef> Type::getFieldType(kind::Data::FieldId field_id) const {
+		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
+			if (field_id >= data.fields.size()) return base::Optional<TypeCRef>();
+			return base::Optional<TypeCRef>(data.fields[field_id].type);
 		});
 	}
 
-	option<Offset> Type::getFieldOffset(kind::Data::FieldId field_id) const {
-		return get<kind::Data>().flat_map([field_id](const kind::Data& data) {
-			if (field_id >= data.fields.size()) return none<Offset>();
-			return some<Offset>(Offset(data.fields[field_id].offset));
+	base::Optional<Offset> Type::getFieldOffset(kind::Data::FieldId field_id) const {
+		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
+			if (field_id >= data.fields.size()) return base::Optional<Offset>();
+			return base::Optional<Offset>(Offset(data.fields[field_id].offset));
 		});
 	}
 
-	option<TypeCRef> Type::getFieldTypeByOffset(Offset offset) const {
-		return get<kind::Data>().flat_map([offset](const kind::Data& data) {
+	base::Optional<TypeCRef> Type::getFieldTypeByOffset(Offset offset) const {
+		return get<kind::Data>().flatMap([offset](const kind::Data& data) {
 			i64 begin = -1, end = data.fields.size(), middle;
 			while (end - begin > 1) {
 				middle = (begin + end) / 2;
@@ -230,13 +232,13 @@ namespace vm {
 				else
 					middle = end;
 			}
-			if (data.fields[begin].offset != offset) return none<TypeCRef>();
-			return some<TypeCRef>(data.fields[begin].type);
+			if (data.fields[begin].offset != offset) return base::Optional<TypeCRef>();
+			return base::Optional<TypeCRef>(data.fields[begin].type);
 		});
 	}
 
-	option<TypeCRef> Type::getFieldTypeByOffsetRecursive(Offset offset) const {
-		return get<kind::Data>().flat_map([this, offset](const kind::Data& data) {
+	base::Optional<TypeCRef> Type::getFieldTypeByOffsetRecursive(Offset offset) const {
+		return get<kind::Data>().flatMap([this, offset](const kind::Data& data) {
 			i64 begin = -1, end = data.fields.size(), middle;
 			while (end - begin > 1) {
 				middle = (begin + end) / 2;
@@ -249,41 +251,41 @@ namespace vm {
 				return data.fields[begin].type->getFieldTypeByOffsetRecursive(
 					offset - data.fields[begin].offset
 				);
-			return some<TypeCRef>(data.fields[begin].type);
+			return base::Optional<TypeCRef>(data.fields[begin].type);
 		});
 	}
 
 	// variant
-	option<u64> Type::getVariantCount() const {
+	base::Optional<u64> Type::getVariantCount() const {
 		return get<kind::Variant>().map([](const kind::Variant& variant) {
 			return variant.alternatives.size();
 		});
 	}
 
-	option<TypeCRef> Type::getNthVariantType(u64 variant_id) const {
-		return get<kind::Variant>().flat_map([variant_id](const kind::Variant& variant) {
-			if (variant_id >= variant.alternatives.size()) return none<TypeCRef>();
-			return some<TypeCRef>(variant.alternatives[variant_id]);
+	base::Optional<TypeCRef> Type::getNthVariantType(u64 variant_id) const {
+		return get<kind::Variant>().flatMap([variant_id](const kind::Variant& variant) {
+			if (variant_id >= variant.alternatives.size()) return base::Optional<TypeCRef>();
+			return base::Optional<TypeCRef>(variant.alternatives[variant_id]);
 		});
 	}
 
 	// function
-	option<u64> Type::getParameterCount() const {
+	base::Optional<u64> Type::getParameterCount() const {
 		return get<kind::Function>().map([](const kind::Function& function) {
 			return function.parameters.size();
 		});
 	}
 
-	option<TypeCRef> Type::getNthParameterType(u64 parameter_id) const {
-		return get<kind::Function>().flat_map([parameter_id](const kind::Function& function) {
-			if (parameter_id >= function.parameters.size()) return none<TypeCRef>();
-			return some<TypeCRef>(function.parameters[parameter_id]);
+	base::Optional<TypeCRef> Type::getNthParameterType(u64 parameter_id) const {
+		return get<kind::Function>().flatMap([parameter_id](const kind::Function& function) {
+			if (parameter_id >= function.parameters.size()) return base::Optional<TypeCRef>();
+			return base::Optional<TypeCRef>(function.parameters[parameter_id]);
 		});
 	}
 
-	option<TypeCRef> Type::getResultType() const {
-		return get<kind::Function>().flat_map([](const kind::Function& function) {
-			return some<TypeCRef>(function.result);
+	base::Optional<TypeCRef> Type::getResultType() const {
+		return get<kind::Function>().flatMap([](const kind::Function& function) {
+			return base::Optional<TypeCRef>(function.result);
 		});
 	}
 }
