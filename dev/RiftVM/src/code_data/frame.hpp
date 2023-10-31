@@ -38,19 +38,6 @@ namespace vm {
 	};
 
 	struct Frame {
-		Frame(Frame&& frame) {
-			previous            = frame.previous;
-			bc                  = frame.bc;
-			continue_execution  = frame.continue_execution;
-			instruction_pointer = frame.instruction_pointer;
-
-			// Register like data:
-			regs      = frame.regs;
-			flags     = frame.flags;
-			ret_val   = frame.ret_val;
-			next_args = frame.next_args;
-		}
-
 		// Internal data:
 		base::Optional<Frame&> previous;
 		// const FuncData& function;
