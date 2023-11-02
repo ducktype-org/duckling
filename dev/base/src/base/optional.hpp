@@ -88,7 +88,11 @@ namespace base {
 	public:
 		Optional() = default;
 
-		explicit Optional(T value): private_optional(std::make_optional<T>(value)) {}
+		// Do not make explicit
+		Optional(T value): private_optional(std::make_optional<T>(value)) {}
+
+		//		Optional(Optional&& other) noexcept:
+		//private_optional(std::move(other.private_optional)) {}
 
 		template<class... Args>
 		explicit Optional(Args&&... args):
@@ -264,7 +268,8 @@ namespace base {
 	public:
 		Optional() = default;
 
-		explicit Optional(T& value): private_optional(std::ref(value)) {}
+		// Do not make explicit
+		Optional(T& value): private_optional(std::ref(value)) {}
 
 		[[nodiscard]]
 		constexpr bool has_value() const {
