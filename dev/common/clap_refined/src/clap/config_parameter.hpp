@@ -29,7 +29,7 @@ namespace clap {
 
 	public:
 		[[nodiscard]]
-		const base::Optional<base::RawView>& getShortName() const;
+		const base::Optional<char>& getShortName() const;
 		[[nodiscard]]
 		const base::Optional<base::RawView>& getLongName() const;
 		[[nodiscard]]
@@ -43,9 +43,9 @@ namespace clap {
 
 	private:
 		ConfigParameter() = default;
-		base::Optional<base::RawView> short_name;
+		base::Optional<char>          short_name;
 		base::Optional<base::RawView> long_name;
-		base::RawView                 short_description;  // Required short description.
+		base::RawView                 short_description;
 		base::Optional<base::RawView> long_description;
 
 		// If a ConfigParameter has a ValueParser, then

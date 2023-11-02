@@ -27,7 +27,7 @@ namespace clap {
 		return std::move(builder);
 	}
 
-	ParamBuilder& ParamBuilder::addShortName(base::RawView new_short_name) {
+	ParamBuilder& ParamBuilder::addShortName(char new_short_name) {
 		short_name = new_short_name;
 		return *this;
 	}
