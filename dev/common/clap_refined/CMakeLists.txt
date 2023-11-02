@@ -13,4 +13,4 @@ add_library(Clap2
 make_module(Clap2 USES Base Filesystem)
 
 rift_add_test(common clap_test_param_builder tests/param_builder_test.cpp
-        USES Clap2 Base)
+        USES Base)

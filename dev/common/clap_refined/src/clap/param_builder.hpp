@@ -20,7 +20,7 @@ namespace clap {
 		static ParamBuilder ofNonKeyword(base::unique_ptr<ValueParser> value_parser);
 		static ParamBuilder ofFlag();
 
-		ParamBuilder& addShortName(base::RawView new_short_name);
+		ParamBuilder& addShortName(char new_short_name);
 		ParamBuilder& addLongName(base::RawView new_long_name);
 		ParamBuilder& addShortDesc(base::RawView new_short_desc);
 		ParamBuilder& addLongDesc(base::RawView new_long_desc);
@@ -39,7 +39,7 @@ namespace clap {
 		bool non_keyword      = false;
 		bool has_value_parser = false;
 
-		base::Optional<base::RawView> short_name;
+		base::Optional<char>          short_name;
 		base::Optional<base::RawView> long_name;
 		base::Optional<base::RawView> short_description;
 		base::Optional<base::RawView> long_description;

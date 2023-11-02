@@ -19,8 +19,6 @@ namespace clap {
 		std::string arg0 = std::string(argv[0]);
 		std::string args;
 		for (usize i = 1; i < argc; i++) args += std::string(argv[i]) + " ";
-
-
 	}
 
 	const ValueParser* Clap::getDefaultValueParser() const { return default_value_parser.get(); }

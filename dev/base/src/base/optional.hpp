@@ -90,7 +90,7 @@ namespace base {
 		Optional(T value): private_optional(std::make_optional<T>(value)) {}
 
 		//		Optional(Optional&& other) noexcept:
-		//private_optional(std::move(other.private_optional)) {}
+		// private_optional(std::move(other.private_optional)) {}
 
 		template<class... Args>
 		explicit Optional(Args&&... args):

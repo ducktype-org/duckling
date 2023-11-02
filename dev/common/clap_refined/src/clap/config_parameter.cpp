@@ -7,9 +7,7 @@
 
 namespace clap {
 
-	const base::Optional<base::RawView>& ConfigParameter::getShortName() const {
-		return short_name;
-	}
+	const base::Optional<char>& ConfigParameter::getShortName() const { return short_name; }
 
 	const base::Optional<base::RawView>& ConfigParameter::getLongName() const { return long_name; }
 
