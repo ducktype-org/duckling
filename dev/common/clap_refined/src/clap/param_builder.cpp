@@ -62,9 +62,9 @@ namespace clap {
 		return *this;
 	}
 
-	ConfigParameter ParamBuilder::build() {
+	ClapParameter ParamBuilder::build() {
 		if (!parameter_necessity.has_value())
-			throw ParamBuilderException("Every parameter has to have a clear necessity set.");
+			throw ParamBuilderException("Every parameter has to have a necessity set.");
 
 		// Check all the requirements
 		if (!short_name.has_value() && !long_name.has_value())
@@ -90,13 +90,14 @@ namespace clap {
 			variant_case(Conditional, _) {}
 		}
 
-		ConfigParameter parameter;
+		ClapParameter parameter;
 		parameter.value_parser        = std::move(value_parser);
 		parameter.parameter_necessity = parameter_necessity.value();
 		parameter.long_name           = std::move(long_name);
 		parameter.short_name          = std::move(short_name);
 		parameter.short_description   = short_description.value();
 		parameter.long_description    = std::move(long_description);
+		return parameter;
 	}
 
 	//	ParamBuilder::ParamBuilder(ParamBuilder&& other) noexcept:
