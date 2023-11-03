@@ -6,8 +6,9 @@
 #pragma once
 #include "parsing_result.hpp"
 #include "base/ints.hpp"
-#include "config_parameter.hpp"
+#include "clap_parameter.hpp"
 #include "value_parser.hpp"
+#include <memory>
 
 namespace clap {
 
@@ -24,21 +25,34 @@ namespace clap {
 	 */
 	class Clap {
 	public:
-		Clap() { default_value_parser = StringParser::make(true, " "); }
+		Clap() { default_value_parser = StringParser::make(); }
 
-		Clap& add(ConfigParameter&& parameter);
+		Clap(Clap& other) noexcept:
+			  default_value_parser(std::move(other.default_value_parser)),
+			  positional_parameters(std::move(other.positional_parameters)),
+			  parameters(std::move(other.parameters)) {}
+
+		/**
+		 * Adds parameter to the Clap object. Positional arguments should come before named
+		 * arguments.
+		 * @param parameter
+		 * @return
+		 */
+		Clap& add(ClapParameter&& parameter);
+
+		Clap& addPositional(base::unique_ptr<ValueParser> parameter);
 
 		ParsingResult parse(usize argc, char* const argv[]);
 
 		[[nodiscard]]
 		const ValueParser* getDefaultValueParser() const;
 		[[nodiscard]]
-		const std::vector<ConfigParameter>& getParameters() const;
+		const std::vector<ClapParameter>& getParameters() const;
 
 	private:
-		bool                          started_keyword_args = false;
-		base::unique_ptr<ValueParser> default_value_parser;
-		std::vector<ConfigParameter>  parameters;
+		base::unique_ptr<ValueParser>              default_value_parser;
+		std::vector<base::unique_ptr<ValueParser>> positional_parameters;
+		std::vector<ClapParameter>                 parameters;
 	};
 
 }  // clap

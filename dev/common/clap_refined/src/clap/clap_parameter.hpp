@@ -1,5 +1,5 @@
 /**
- * @file config_parameter.hpp
+ * @file clap_parameter.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
@@ -8,10 +8,11 @@
 #include "base/raw_view.hpp"
 #include "value_parser.hpp"
 #include "base/optional.hpp"
-#include "parsing_result.hpp"
 #include <variant>
 
 namespace clap {
+
+	class ParsingResult;  // Forward declaration
 
 	struct Optional {};
 
@@ -24,7 +25,7 @@ namespace clap {
 
 	using ParameterNecessity = std::variant<Optional, Required, Conditional>;
 
-	class ConfigParameter {
+	class ClapParameter {
 		friend class ParamBuilder;
 
 	public:
@@ -42,7 +43,7 @@ namespace clap {
 		const ParameterNecessity& getParameterNecessity() const;
 
 	private:
-		ConfigParameter() = default;
+		ClapParameter() = default;
 		base::Optional<char>          short_name;
 		base::Optional<base::RawView> long_name;
 		base::RawView                 short_description;

@@ -12,9 +12,15 @@
 #include "base/ints.hpp"
 #include "base/optional.hpp"
 #include "base/maps.hpp"
+#include "clap_parameter.hpp"
 
 namespace clap {
 	class Clap;
+
+	struct ParsedValue {
+		std::any    value;
+		std::string raw_source;
+	};
 
 	class ParsingResult {
 	public:
@@ -27,18 +33,46 @@ namespace clap {
 		[[nodiscard]]
 		const std::string& getArgs() const;
 
+		void insertFlag(const ClapParameter& parameter);
+		void insertParameterValue(const ClapParameter& parameter, const ParsedValue& value);
+		void insertPositional(const ParsedValue& value);
+
+		template<class T, class N>
+		std::vector<T> getValue(const N& name) const {
+			if_opt_some(getId(name), id) {
+				return std::vector<T>(
+					std::
+						for_each(id_to_value.at(id).begin(), id_to_value.at(id).end(), std::any_cast<T>)
+				);
+			}
+			return {};
+		}
+
+		template<class T>
+		[[nodiscard]]
+		base::Optional<T> getPositional(usize position) const;
+
+		template<class N>
+		[[nodiscard]]
+		bool isFlag(const N& name) const {
+			return flags.contains(getid(name));
+		}
+
 	private:
 		std::string file_path;
 		std::string args;
 
-		base::Optional<usize> getId(char name) const;
-		base::Optional<usize> getId(base::RawView name) const;
+		usize insertQueryId(const ClapParameter& parameter);
 
+		base::Optional<usize> getId(char name) const;
+		base::Optional<usize> getId(const base::RawView& name) const;
+
+		usize                               id_counter = 1;
 		base::HashMap<char, usize>          short_names_to_id;
 		base::HashMap<base::RawView, usize> long_names_to_id;
 
-		base::HashMap<usize, std::vector<base::RawView>> id_to_source;
-		base::HashMap<usize, std::vector<std::any>>      id_to_value;
+		base::HashMap<usize, std::vector<ParsedValue>> id_to_value;
+		std::vector<ParsedValue>                       positional_values;
 
 		std::unordered_set<usize> flags;
 	};

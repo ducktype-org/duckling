@@ -6,7 +6,7 @@
 #pragma once
 
 #include "value_parser.hpp"
-#include "config_parameter.hpp"
+#include "clap_parameter.hpp"
 
 namespace clap {
 
@@ -29,7 +29,7 @@ namespace clap {
 		ParamBuilder& required();
 		ParamBuilder& conditional(Conditional::Condition&& condition);
 
-		ConfigParameter build();
+		ClapParameter build();
 
 	private:
 		ParamBuilder() = default;
