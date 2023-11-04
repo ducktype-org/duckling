@@ -50,7 +50,11 @@ namespace clap {
 
 		template<class T>
 		[[nodiscard]]
-		base::Optional<T> getPositional(usize position) const;
+		base::Optional<T> getPositional(usize position) const {
+			if (position < positional_values.size())
+				return std::any_cast<T>(positional_values[position].value);
+			return {};
+		}
 
 		template<class N>
 		[[nodiscard]]
@@ -58,11 +62,15 @@ namespace clap {
 			return flags.contains(getid(name));
 		}
 
+		[[nodiscard]]
+		bool hasParam(const ClapParameter& parameter) const;
+
 	private:
 		std::string file_path;
 		std::string args;
 
-		usize insertQueryId(const ClapParameter& parameter);
+		usize                 insertQueryId(const ClapParameter& parameter);
+		base::Optional<usize> queryId(const ClapParameter& parameter) const;
 
 		base::Optional<usize> getId(char name) const;
 		base::Optional<usize> getId(const base::RawView& name) const;

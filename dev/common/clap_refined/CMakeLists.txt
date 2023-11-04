@@ -14,3 +14,6 @@ make_module(Clap2 USES Base Filesystem)
 
 rift_add_test(common clap_tester tests/clap_tests.cpp
         USES Clap2 Base)
+
+rift_add_test(common clap_parser_tester tests/clap_parser_tests.cpp
+        USES Clap2 Base)

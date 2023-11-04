@@ -1,5 +1,6 @@
 #include <tester/tester.hpp>
 #include <clap/clap.hpp>
+#include <clap/parsing_result.hpp>
 #include <array>
 
 class ClapTester: public tester::TestSuite {
@@ -11,13 +12,27 @@ public:
 
 private:
 	void simpleTest() {
-		auto                 par  = clap::Clap().addPositional(clap::StringParser::make());
-		std::array<char*, 2> argv = { "./prog", "1 test 3" };
-		auto                 res  = par.parse(argv.size(), argv.begin());
+		auto                       par  = clap::Clap();
+		std::array<const char*, 4> argv = { "./prog", "1", "test", "3" };
+		auto                       res  = par.parse(argv.size(), argv.begin());
 
-		//		assert(res.getPositional<std::string>(0).value() == "1", "lol");
-		auto pos1 = res.getPositional<std::string>(0);
-		std::cout << *pos1 << std::endl;
+		assert(
+			res.getPositional<std::string>(0).has_value(),
+			"ParsingResult does not contain the first positional parameter!"
+		);
+		ASSERT_EQUAL("1", res.getPositional<std::string>(0).value());
+
+		assert(
+			res.getPositional<std::string>(1).has_value(),
+			"ParsingResult does not contain the second positional parameter!"
+		);
+		ASSERT_EQUAL("test", res.getPositional<std::string>(1).value());
+
+		assert(
+			res.getPositional<std::string>(2).has_value(),
+			"ParsingResult does not contain the third positional parameter!"
+		);
+		ASSERT_EQUAL("3", res.getPositional<std::string>(2).value());
 	}
 };
 

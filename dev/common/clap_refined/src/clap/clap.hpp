@@ -42,7 +42,10 @@ namespace clap {
 
 		Clap& addPositional(base::unique_ptr<ValueParser> parameter);
 
-		ParsingResult parse(usize argc, char* const argv[]);
+		Clap& addDefaultParser(base::unique_ptr<ValueParser> parser);
+
+
+		ParsingResult parse(usize argc, const char** argv);
 
 		[[nodiscard]]
 		const ValueParser* getDefaultValueParser() const;
