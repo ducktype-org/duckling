@@ -39,10 +39,22 @@ namespace clap {
 		return *this;
 	}
 
-	ParsingResult Clap::parse(usize argc, char* const* argv) {
+	ParsingResult Clap::parse(usize argc, const char** argv) {
 		// Merge args with spaces between.
 		std::string args;
-		for (usize i = 1; i < argc; i++) args += std::string(argv[i]) + " ";
+
+		// if an argv[i] contains a white space, then it must have been added with quotes
+		for (usize i = 1; i < argc; i++) {
+			bool has_whitespace = false;
+			auto arg            = std::string(argv[i]);
+			for (auto c: arg)
+				if (std::isspace(c)) has_whitespace = true;
+
+			if (has_whitespace)
+				args += "\"" + arg + "\" ";
+			else
+				args += arg + " ";
+		}
 
 		// Create result object.
 		std::string   arg0 = std::string(argv[0]);
@@ -54,7 +66,7 @@ namespace clap {
 		// argument.
 		usize parsing_position = 0;
 		for (auto& param: positional_parameters) {
-			ValueParsingResult parsed = param->parse(parsing_position, args.c_str());
+			ValueParsingResult parsed = param->parse(parsing_position, args);
 			if (parsed.position > parsing_position) {
 				parsing_position = parsed.position;
 				result.insertPositional({ parsed.value, parsed.raw_source });
@@ -70,8 +82,17 @@ namespace clap {
 			if (args[parsing_position] == '-') {
 				auto [param_name, name_type] = parse_param_name(parsing_position, args);
 				if (name_type == NameType::InvalidName) {
-					// @TODO: Error: Invalid name
-					std::cerr << "Invalid name\n";
+					// Though it could be a negative number, like -1, or -.5
+					if (parsing_position + 1 < args.size()
+					    && (args[parsing_position + 1] == '.'
+					        || std::isdigit(args[parsing_position]))) {
+						// It is a number most likely
+						parsing_position++;
+						continue;
+					} else {
+						// @TODO: Error: Invalid name
+						std::cerr << "Invalid name\n";
+					}
 				}
 				for (auto& param: parameters) {
 					bool is_this_param = false;
@@ -118,20 +139,25 @@ namespace clap {
 			skip_whitespace(parsing_position, args);
 		}
 
-		//		for(auto& param: parameters) {
-		//			variant_match(param.getParameterNecessity()) {
-		//				variant_case(Required, _) {
-		//					if(!)
-		//				}
-		//				variant_case(Optional, _) {
-		//					// Nothing in this case
-		//				}
-		//				variant_case(Conditional, c) {
-		//
-		//				}
-		//
-		//			}
-		//		}
+		for (auto& param: parameters) {
+			variant_match(param.getParameterNecessity()) {
+				variant_case(Required, _) {
+					if (!result.hasParam(param)) {
+						// @TODO: Throw error: Required value not present
+						;
+					}
+				}
+				variant_case(Optional, _) {
+					// Nothing in this case
+				}
+				variant_case(Conditional, c) {
+					if (!c.condition(result)) {
+						// @TODO: Throw error: Conditional's condition not met
+						;
+					}
+				}
+			}
+		}
 
 		return result;
 	}
@@ -145,6 +171,11 @@ namespace clap {
 			throw base::LogicError("Cannot add positional after a keyword parameter has been added"
 			);
 		positional_parameters.push_back(std::move(parameter));
+		return *this;
+	}
+
+	Clap& Clap::addDefaultParser(base::unique_ptr<ValueParser> parser) {
+		default_value_parser = std::move(parser);
 		return *this;
 	}
 

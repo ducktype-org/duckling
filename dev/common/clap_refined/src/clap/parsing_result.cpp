@@ -63,11 +63,21 @@ namespace clap {
 		positional_values.push_back(value);
 	}
 
-	template<class T>
-	base::Optional<T> ParsingResult::getPositional(usize position) const {
-		if (position < positional_values.size())
-			return std::any_cast<T>(positional_values[position].value);
+	base::Optional<usize> ParsingResult::queryId(const ClapParameter& parameter) const {
+		if_opt_some(parameter.getShortName(), name) return short_names_to_id.at(name);
+		if_opt_some(parameter.getLongName(), name) return long_names_to_id.at(name);
 		return {};
 	}
+
+	bool ParsingResult::hasParam(const ClapParameter& parameter) const {
+		return queryId(parameter)
+		    .map([this](auto id) {
+				if (flags.contains(id)) return true;
+				if (id_to_value.contains(id)) return true;
+				return false;
+			})
+		    .value_or(false);
+	}
+
 
 }

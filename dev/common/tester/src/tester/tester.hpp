@@ -12,6 +12,26 @@
 #include <printer/printer.hpp>
 #include <config/config.hpp>
 
+#define ASSERT_EQUAL(expected, actual)         \
+	assertEqual(                               \
+		expected,                              \
+		actual,                                \
+		base::strConcat(                       \
+			"Values not equal:\n\t\tIn line ", \
+			__LINE__,                          \
+			": ",                              \
+			expected,                          \
+			" != ",                            \
+			#actual,                           \
+			"\n\t\tExpected:\t",               \
+			expected,                          \
+			"\n\t\tFound:  \t",                \
+			actual,                            \
+			" == ",                            \
+			#actual                            \
+		)                                      \
+	)
+
 class SimpleTesterTest;
 
 namespace tester {
@@ -78,6 +98,12 @@ namespace tester {
 				fail("CritTestError thrown in assertThrows");
 			} catch (const Exception& e) { return; }
 			fail(error);
+		}
+
+		// rvalue reference to make sure the order is correct for the macro above.
+		template<class T, class U>
+		void assertEqual(T&& expected, const U& actual, std::string_view error) {
+			assert(expected == actual, error);
 		}
 	};
 
