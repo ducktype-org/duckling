@@ -55,7 +55,8 @@ private:
 		               .setDefaultParser(clap::IntParser::make())
 		               .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
 		                        .addShortName('n')
-		                        .addShortDesc("How many times print the string")
+		                        .addLongName("nnn")
+		                        .addShortDesc("Desc")
 		                        .required()
 		                        .build());
 		std::array argv{ "./prog", "-1", "-n", "-20" };
@@ -63,11 +64,42 @@ private:
 
 		ASSERT_EQUAL(1, res.getNamedParameterCount());
 		ASSERT_EQUAL(0, res.getFlagCount());
-		ASSERT_EQUAL(1, res.getPositionalParameterCount());
-		ASSERT_EQUAL(0, res.getExtraParameterCount());
+		ASSERT_EQUAL(0, res.getPositionalParameterCount());
+		ASSERT_EQUAL(1, res.getExtraParameterCount());
 
 		ASSERT_EQUAL(-1, *res.getExtra<i64>(0));
 		ASSERT_EQUAL(-20, *res.getValue<i64>('n'));
+		ASSERT_EQUAL(-20, *res.getValue<i64>("nnn"));
+		ASSERT_EQUAL("-20", *res.getRaw('n'));
+	}
+
+	void flagTest() {
+		auto par = clap::Clap()
+		               .setDefaultParser(clap::IntParser::make())
+		               .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
+		                        .addShortName('f')
+		                        .addLongName("flag")
+		                        .addShortDesc("Desc")
+		                        .build());
+		std::array argv{ "./prog" };
+		auto       res = par.parse(argv.size(), argv.begin());
+
+		ASSERT_EQUAL(0, res.getNamedParameterCount());
+		ASSERT_EQUAL(0, res.getFlagCount());
+		ASSERT_EQUAL(0, res.getPositionalParameterCount());
+		ASSERT_EQUAL(0, res.getExtraParameterCount());
+
+		std::array argv2{ "./prog", "-f", "123" };
+		auto       res2 = par.parse(argv2.size(), argv2.begin());
+
+		ASSERT_EQUAL(0, res.getNamedParameterCount());
+		ASSERT_EQUAL(1, res.getFlagCount());
+		ASSERT_EQUAL(0, res.getPositionalParameterCount());
+		ASSERT_EQUAL(1, res.getExtraParameterCount());
+
+		ASSERT_EQUAL("123", *res.getExtra<std::string>(0));
+		ASSERT_EQUAL(true, res.isFlag('f'));
+		ASSERT_EQUAL(true, res.isFlag("flag"));
 	}
 };
 

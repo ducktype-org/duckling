@@ -40,7 +40,13 @@ namespace clap {
 
 		template<class T, class N>
 		base::Optional<T> getValue(const N& name) const {
-			if_opt_some(getId(name), id) return std::any_cast<T>(id_to_value.at(id));
+			if_opt_some(getId(name), id) return std::any_cast<T>(id_to_value.at(id).value);
+			return {};
+		}
+
+		template<class N>
+		base::Optional<std::string> getRaw(const N& name) const {
+			if_opt_some(getId(name), id) return id_to_value.at(id).raw_source;
 			return {};
 		}
 
@@ -62,12 +68,10 @@ namespace clap {
 
 		template<class N>
 		[[nodiscard]]
-		bool isFlag(const N& name) const {
-			return flags.contains(getid(name));
-		}
+		bool isFlag(const N& name) const;
 
 		[[nodiscard]]
-		bool hasParam(const ClapParameter& parameter) const;
+		bool hasParam(const ClapParameter& parameter);
 
 		[[nodiscard]]
 		usize getPositionalParameterCount() const;
@@ -82,8 +86,7 @@ namespace clap {
 		std::string file_path;
 		std::string args;
 
-		usize                 insertQueryId(const ClapParameter& parameter);
-		base::Optional<usize> queryId(const ClapParameter& parameter) const;
+		usize insertQueryId(const ClapParameter& parameter);
 
 		base::Optional<usize> getId(char name) const;
 		base::Optional<usize> getId(const base::RawView& name) const;

@@ -61,20 +61,11 @@ namespace clap {
 		positional_values.push_back(value);
 	}
 
-	base::Optional<usize> ParsingResult::queryId(const ClapParameter& parameter) const {
-		if_opt_some(parameter.getShortName(), name) return short_names_to_id.at(name);
-		if_opt_some(parameter.getLongName(), name) return long_names_to_id.at(name);
-		return {};
-	}
-
-	bool ParsingResult::hasParam(const ClapParameter& parameter) const {
-		return queryId(parameter)
-		    .map([this](auto id) {
-				if (flags.contains(id)) return true;
-				if (id_to_value.contains(id)) return true;
-				return false;
-			})
-		    .value_or(false);
+	bool ParsingResult::hasParam(const ClapParameter& parameter) {
+		auto id = insertQueryId(parameter);
+		if (flags.contains(id)) return true;
+		if (id_to_value.contains(id)) return true;
+		return false;
 	}
 
 	void ParsingResult::insertExtra(const ParsedValue& value) { extra_values.push_back(value); }
@@ -86,6 +77,11 @@ namespace clap {
 	usize ParsingResult::getFlagCount() const { return flags.size(); }
 
 	usize ParsingResult::getNamedParameterCount() const { return id_to_value.size(); }
+
+	template<class N>
+	bool ParsingResult::isFlag(const N& name) const {
+		return flags.contains(getId(name));
+	}
 
 
 }

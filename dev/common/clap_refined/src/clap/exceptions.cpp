@@ -45,4 +45,7 @@ namespace clap::exceptions {
 		const std::string& name, std::string_view why
 	):
 		  ClapException(base::strConcat("Missing parameter: ", name, " - ", why)) {}
+
+	DuplicatedParameter::DuplicatedParameter(const std::string& name):
+		  ClapException(base::strConcat("Duplicated parameter named: ", name)) {}
 }

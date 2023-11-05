@@ -26,6 +26,10 @@ namespace clap::exceptions {
 		explicit InvalidParameterName(const std::string& name);
 	};
 
+	struct DuplicatedParameter: public ClapException {
+		explicit DuplicatedParameter(const std::string& name);
+	};
+
 	struct ParameterRequiresValue: public ClapException {
 		ParameterRequiresValue(const std::string& name, const std::string& value_type);
 	};

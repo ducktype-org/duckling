@@ -93,8 +93,7 @@ namespace clap {
 		// If a positional parameter fails to parse, then a user must have passed an invalid
 		// argument.
 		for (auto& param: positional_parameters) {
-			base::Optional<ParsedValue> parsed = PARSE(param.get());
-			match_optional(parsed) {
+			match_optional(PARSE(param.get())) {
 				opt_some(value) result.insertPositional(value);
 				opt_none throw exceptions::PositionalParameterExpected(
 					result.getPositionalParameterCount(), param->getTypeName()
@@ -106,56 +105,58 @@ namespace clap {
 			// If not found a "-" parse using default value parser
 			if (args[parsing_position] == '-') {
 				// It could be a negative number, like -1, or -.5
-				if (parsing_position + 1 < args.size()
-				    && (args[parsing_position + 1] == '.' || std::isdigit(args[parsing_position])
-				    )) {
-					// It is a number most likely, so we skip this iteration and allow
-					// default parser to work
-					parsing_position++;
-					continue;
-				}
-				auto [param_name, name_type] = parseParamName(parsing_position, args);
-				if (name_type == NameType::EmptyName)
-					throw exceptions::ExpectedParameterIdentifier((i32) parsing_position, args);
-				bool found_param = false;
-				for (auto& param: parameters) {
-					if (name_type == NameType::ShortName) {
-						if_opt_some(param.getShortName(), val) {
-							if (val == param_name[0]) found_param = true;
-						}
-					} else {
-						if_opt_some(param.getLongName(), val) {
-							if (val == param_name.c_str()) found_param = true;
-						}
-					}
-					if (found_param) {
-						if (param.getValueParser() == nullptr) {
-							// then it's a flag
-							result.insertFlag(param);
+				bool is_number
+					= (parsing_position + 1 < args.size()
+				       && (args[parsing_position + 1] == '.'
+				           || std::isdigit(args[parsing_position + 1])));
+				if (!is_number) {
+					auto [param_name, name_type] = parseParamName(parsing_position, args);
+					if (name_type == NameType::EmptyName)
+						throw exceptions::ExpectedParameterIdentifier((i32) parsing_position, args);
+					bool found_param = false;
+					for (auto& param: parameters) {
+						if (name_type == NameType::ShortName) {
+							if_opt_some(param.getShortName(), val) {
+								if (val == param_name[0]) found_param = true;
+							}
 						} else {
-							// it's a parsable value
-							base::Optional<ParsedValue> parsed = PARSE(param.getValueParser());
-							match_optional(parsed) {
-								opt_some(value) result.insertParameterValue(param, value);
-								opt_none throw exceptions::ParameterRequiresValue(
-									param_name, param.getValueParser()->getTypeName()
-								);
+							if_opt_some(param.getLongName(), val) {
+								if (val == param_name.c_str()) found_param = true;
 							}
 						}
-						break;
+						if (found_param) {
+							if (param.getValueParser() == nullptr) {
+								// then it's a flag
+								result.insertFlag(param);
+							} else {
+								// it's a parsable value
+
+								// Throw if duplicated
+								if (result.hasParam(param))
+									throw exceptions::DuplicatedParameter(param_name);
+
+								match_optional(PARSE(param.getValueParser())) {
+									opt_some(value) result.insertParameterValue(param, value);
+									opt_none throw exceptions::ParameterRequiresValue(
+										param_name, param.getValueParser()->getTypeName()
+									);
+								}
+							}
+							break;
+						}
 					}
-				}
-				if (!found_param) throw exceptions::InvalidParameterName(param_name);
-			} else {
-				base::Optional<ParsedValue> parsed = PARSE(default_value_parser.get());
-				match_optional(parsed) {
-					opt_some(value) result.insertExtra(value);
-					opt_none throw exceptions::ClapException(
-						"Cannot continue parsing... Please report this incident"
-					);
+					if (found_param)
+						continue;
+					else
+						throw exceptions::InvalidParameterName(param_name);
 				}
 			}
-			skipWhitespace(parsing_position, args);
+			match_optional(PARSE(default_value_parser.get())) {
+				opt_some(value) result.insertExtra(value);
+				opt_none throw exceptions::ClapException(
+					"Cannot continue parsing... Please report this incident"
+				);
+			}
 		}
 
 		validate_parsing(result);
