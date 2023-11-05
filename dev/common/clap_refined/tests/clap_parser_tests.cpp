@@ -2,6 +2,7 @@
 #include <clap/clap.hpp>
 #include <clap/parsing_result.hpp>
 #include <array>
+#include "clap/exceptions.hpp"
 
 class ClapParserTester: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -36,6 +37,10 @@ private:
 		auto parsed2 = clap::IntParser::make()->parse(0, "123");
 		ASSERT_EQUAL("123", parsed2.raw_source);
 		ASSERT_EQUAL(3, parsed2.position);
+
+		assertThrows<clap::exceptions::ValueParsingException>(
+			[&]() { parseInt("str"); }, "Cannot parse str to int"
+		);
 	}
 
 	void stringParserTest() {
@@ -58,6 +63,11 @@ private:
 		ASSERT_EQUAL("val: \"1\"", std::any_cast<std::string>(parsed4.value));
 		ASSERT_EQUAL(12, parsed4.position);
 		ASSERT_EQUAL("val: \"1\"", parsed4.raw_source);
+
+		auto parsed5 = clap::StringParser::make()->parse(0, R"("")");
+		ASSERT_EQUAL("", std::any_cast<std::string>(parsed5.value));
+		ASSERT_EQUAL(2, parsed5.position);
+		ASSERT_EQUAL("", parsed5.raw_source);
 	}
 };
 

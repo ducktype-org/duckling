@@ -93,7 +93,7 @@ namespace base {
 		// private_optional(std::move(other.private_optional)) {}
 
 		template<class... Args>
-		explicit Optional(Args&&... args):
+		Optional(Args&&... args):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
 		[[nodiscard]]

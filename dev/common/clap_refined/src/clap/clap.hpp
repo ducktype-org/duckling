@@ -42,8 +42,7 @@ namespace clap {
 
 		Clap& addPositional(base::unique_ptr<ValueParser> parameter);
 
-		Clap& addDefaultParser(base::unique_ptr<ValueParser> parser);
-
+		Clap& setDefaultParser(base::unique_ptr<ValueParser> parser);
 
 		ParsingResult parse(usize argc, const char** argv);
 
@@ -56,6 +55,8 @@ namespace clap {
 		base::unique_ptr<ValueParser>              default_value_parser;
 		std::vector<base::unique_ptr<ValueParser>> positional_parameters;
 		std::vector<ClapParameter>                 parameters;
+
+		void validate_parsing(ParsingResult& result) const;
 	};
 
 }  // clap

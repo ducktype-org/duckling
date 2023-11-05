@@ -8,7 +8,9 @@ add_library(Clap2
         src/clap/parsing_result.cpp
         src/clap/parsing_result.hpp
         src/clap/param_builder.hpp
-        src/clap/param_builder.cpp)
+        src/clap/param_builder.cpp
+        src/clap/exceptions.cpp
+        src/clap/exceptions.hpp)
 
 make_module(Clap2 USES Base Filesystem)
 
