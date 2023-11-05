@@ -54,9 +54,7 @@ namespace clap {
 	void ParsingResult::insertParameterValue(
 		const ClapParameter& parameter, const ParsedValue& value
 	) {
-		usize id = insertQueryId(parameter);
-		if (!id_to_value.contains(id)) id_to_value.put(id, {});
-		id_to_value.at(id).push_back(value);
+		id_to_value.put(insertQueryId(parameter), value);
 	}
 
 	void ParsingResult::insertPositional(const ParsedValue& value) {
@@ -78,6 +76,16 @@ namespace clap {
 			})
 		    .value_or(false);
 	}
+
+	void ParsingResult::insertExtra(const ParsedValue& value) { extra_values.push_back(value); }
+
+	usize ParsingResult::getPositionalParameterCount() const { return positional_values.size(); }
+
+	usize ParsingResult::getExtraParameterCount() const { return extra_values.size(); }
+
+	usize ParsingResult::getFlagCount() const { return flags.size(); }
+
+	usize ParsingResult::getNamedParameterCount() const { return id_to_value.size(); }
 
 
 }

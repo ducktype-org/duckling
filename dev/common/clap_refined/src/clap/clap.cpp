@@ -1,45 +1,18 @@
 /**
- * @file config_parameter.cpp
+ * @file clap.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
 #include "clap.hpp"
+#include "exceptions.hpp"
 #include "base/variant.hpp"
 #include <cctype>
 #include <iostream>
 
+#define PARSE(parser) parseWithParser(parsing_position, args, parser)
+
 namespace {
-	void skip_whitespace(usize& position, const std::string& str) {
-		while (std::isspace(str[position])) position++;
-	}
-
-	enum class NameType { InvalidName, ShortName, LongName };
-
-	std::pair<std::string, NameType> parse_param_name(usize& position, const std::string& str) {
-		std::string name;
-		int         counter = 0;
-		while (position < str.size() && str[position] == '-') {
-			position++;
-			counter++;
-		}
-		while (position < str.size() && !std::isspace(str[position]) && str[position] != '=')
-			name += str[position++];
-		if (str[position] == '=') position++;
-		skip_whitespace(position, str);
-		if (name.empty()) return { "", NameType::InvalidName };
-		return { name, counter == 1 ? NameType::ShortName : NameType::LongName };
-	}
-
-
-}
-
-namespace clap {
-	Clap& Clap::add(ClapParameter&& parameter) {
-		parameters.push_back(std::move(parameter));
-		return *this;
-	}
-
-	ParsingResult Clap::parse(usize argc, const char** argv) {
+	std::string mergeArgs(usize argc, const char** argv) {
 		// Merge args with spaces between.
 		std::string args;
 
@@ -55,109 +28,137 @@ namespace clap {
 			else
 				args += arg + " ";
 		}
+		// The last character is space, so we pop it.
+		if (!args.empty()) args.pop_back();
+		return args;
+	}
 
-		// Create result object.
-		std::string   arg0 = std::string(argv[0]);
-		ParsingResult result(arg0.substr(2, arg0.size() - 2), args);
+	void skipWhitespace(usize& position, std::string_view str) {
+		while (std::isspace(str[position])) position++;
+	}
+
+	enum class NameType { EmptyName, ShortName, LongName };
+
+	std::pair<std::string, NameType> parseParamName(usize& position, std::string_view str) {
+		std::string name;
+		int         counter = 0;
+		while (position < str.size() && str[position] == '-') {
+			position++;
+			counter++;
+		}
+		while (position < str.size() && !std::isspace(str[position]) && str[position] != '=')
+			name += str[position++];
+		if (str[position] == '=') position++;
+		skipWhitespace(position, str);
+		if (name.empty()) return { "", NameType::EmptyName };
+		return { name, counter == 1 ? NameType::ShortName : NameType::LongName };
+	}
+
+	base::Optional<clap::ParsedValue> parseWithParser(
+		usize& parsing_position, std::string_view args, const clap::ValueParser* parser
+	) {
+		clap::ValueParsingResult parsed = parser->parse(parsing_position, args);
+		if (parsed.position > parsing_position) {
+			parsing_position = parsed.position;
+			skipWhitespace(parsing_position, args);
+			return { parsed.value, parsed.raw_source };
+		} else {
+			return {};
+		}
+	}
+
+	std::string getName(const clap::ClapParameter& param) {
+		if_opt_some(param.getLongName(), name) return name.stdString();
+		if_opt_some(param.getShortName(), name) return { name };
+		throw clap::exceptions::ClapException("Parameter has no name!");
+	}
+}
+
+namespace clap {
+	Clap& Clap::add(ClapParameter&& parameter) {
+		parameters.push_back(std::move(parameter));
+		return *this;
+	}
+
+	ParsingResult Clap::parse(usize argc, const char** argv) {
+		std::string args = mergeArgs(argc, argv);
+
+		ParsingResult result(argv[0] + 2, args);
 
 		// Going left to right through chars in args.
+		usize parsing_position = 0;
+		skipWhitespace(parsing_position, args);
+
 		// First are the positional parameters.
 		// If a positional parameter fails to parse, then a user must have passed an invalid
 		// argument.
-		usize parsing_position = 0;
 		for (auto& param: positional_parameters) {
-			ValueParsingResult parsed = param->parse(parsing_position, args);
-			if (parsed.position > parsing_position) {
-				parsing_position = parsed.position;
-				result.insertPositional({ parsed.value, parsed.raw_source });
-			} else {
-				// @TODO: Error: positional parameter expected
-				continue;
+			base::Optional<ParsedValue> parsed = PARSE(param.get());
+			match_optional(parsed) {
+				opt_some(value) result.insertPositional(value);
+				opt_none throw exceptions::PositionalParameterExpected(
+					result.getPositionalParameterCount(), param->getTypeName()
+				);
 			}
-			skip_whitespace(parsing_position, args);
 		}
 
 		while (parsing_position < args.size()) {
 			// If not found a "-" parse using default value parser
 			if (args[parsing_position] == '-') {
-				auto [param_name, name_type] = parse_param_name(parsing_position, args);
-				if (name_type == NameType::InvalidName) {
-					// Though it could be a negative number, like -1, or -.5
-					if (parsing_position + 1 < args.size()
-					    && (args[parsing_position + 1] == '.'
-					        || std::isdigit(args[parsing_position]))) {
-						// It is a number most likely
-						parsing_position++;
-						continue;
-					} else {
-						// @TODO: Error: Invalid name
-						std::cerr << "Invalid name\n";
-					}
+				// It could be a negative number, like -1, or -.5
+				if (parsing_position + 1 < args.size()
+				    && (args[parsing_position + 1] == '.' || std::isdigit(args[parsing_position])
+				    )) {
+					// It is a number most likely, so we skip this iteration and allow
+					// default parser to work
+					parsing_position++;
+					continue;
 				}
+				auto [param_name, name_type] = parseParamName(parsing_position, args);
+				if (name_type == NameType::EmptyName)
+					throw exceptions::ExpectedParameterIdentifier((i32) parsing_position, args);
+				bool found_param = false;
 				for (auto& param: parameters) {
-					bool is_this_param = false;
 					if (name_type == NameType::ShortName) {
 						if_opt_some(param.getShortName(), val) {
-							if (val == param_name[0]) is_this_param = true;
+							if (val == param_name[0]) found_param = true;
 						}
 					} else {
 						if_opt_some(param.getLongName(), val) {
-							if (val == param_name.c_str()) is_this_param = true;
+							if (val == param_name.c_str()) found_param = true;
 						}
 					}
-					if (is_this_param) {
+					if (found_param) {
 						if (param.getValueParser() == nullptr) {
 							// then it's a flag
 							result.insertFlag(param);
 						} else {
 							// it's a parsable value
-							ValueParsingResult parsed
-								= param.getValueParser()->parse(parsing_position, args.c_str());
-							if (parsed.position > parsing_position) {
-								parsing_position = parsed.position;
-								result.insertParameterValue(
-									param, { parsed.value, parsed.raw_source }
+							base::Optional<ParsedValue> parsed = PARSE(param.getValueParser());
+							match_optional(parsed) {
+								opt_some(value) result.insertParameterValue(param, value);
+								opt_none throw exceptions::ParameterRequiresValue(
+									param_name, param.getValueParser()->getTypeName()
 								);
-							} else {
-								// @TODO: Error: positional parameter expected
-								continue;
 							}
 						}
+						break;
 					}
 				}
+				if (!found_param) throw exceptions::InvalidParameterName(param_name);
 			} else {
-				ValueParsingResult parsed
-					= default_value_parser->parse(parsing_position, args.c_str());
-				if (parsed.position > parsing_position) {
-					parsing_position = parsed.position;
-					result.insertPositional({ parsed.value, parsed.raw_source });
-				} else {
-					// @TODO: Error: positional parameter expected
-					continue;
+				base::Optional<ParsedValue> parsed = PARSE(default_value_parser.get());
+				match_optional(parsed) {
+					opt_some(value) result.insertExtra(value);
+					opt_none throw exceptions::ClapException(
+						"Cannot continue parsing... Please report this incident"
+					);
 				}
 			}
-			skip_whitespace(parsing_position, args);
+			skipWhitespace(parsing_position, args);
 		}
 
-		for (auto& param: parameters) {
-			variant_match(param.getParameterNecessity()) {
-				variant_case(Required, _) {
-					if (!result.hasParam(param)) {
-						// @TODO: Throw error: Required value not present
-						;
-					}
-				}
-				variant_case(Optional, _) {
-					// Nothing in this case
-				}
-				variant_case(Conditional, c) {
-					if (!c.condition(result)) {
-						// @TODO: Throw error: Conditional's condition not met
-						;
-					}
-				}
-			}
-		}
+		validate_parsing(result);
 
 		return result;
 	}
@@ -174,9 +175,31 @@ namespace clap {
 		return *this;
 	}
 
-	Clap& Clap::addDefaultParser(base::unique_ptr<ValueParser> parser) {
+	Clap& Clap::setDefaultParser(base::unique_ptr<ValueParser> parser) {
 		default_value_parser = std::move(parser);
 		return *this;
+	}
+
+	void Clap::validate_parsing(ParsingResult& result) const {
+		for (auto& param: parameters) {
+			variant_match(param.getParameterNecessity()) {
+				variant_case(Required, _) {
+					if (!result.hasParam(param))
+						throw exceptions::MissingRequiredParameter(getName(param));
+				}
+				variant_case(Optional, _) {
+					// Nothing in this case
+				}
+				variant_case(Conditional, c) {
+					if (!c.condition(result)) {
+						throw exceptions::MissingConditionalParameter(
+							getName(param),
+							"A condition has not been met: " + c.condition_description
+						);
+					}
+				}
+			}
+		}
 	}
 
 }  // clap

@@ -12,11 +12,6 @@
 
 namespace clap {
 
-	struct ValueParsingException: public base::LogicError {
-	public:
-		using base::LogicError::LogicError;
-	};
-
 	struct ValueParsingResult {
 		std::any    value;
 		std::string raw_source;  // Source chars from which the value was created
@@ -31,6 +26,8 @@ namespace clap {
 		// It is assumed that the raw_input[start] is a non-whitespace character.
 		virtual ValueParsingResult parse(usize start, const std::string_view& raw_input) const
 			= 0;
+
+		virtual std::string getTypeName() const = 0;
 	};
 
 	class StringParser: public ValueParser {
@@ -39,6 +36,11 @@ namespace clap {
 
 		[[nodiscard]]
 		ValueParsingResult parse(usize start, const std::string_view& raw_input) const override;
+
+		[[nodiscard]]
+		std::string getTypeName() const override {
+			return "<string>";
+		}
 	};
 
 	class IntParser: public ValueParser {
@@ -47,6 +49,11 @@ namespace clap {
 
 		[[nodiscard]]
 		ValueParsingResult parse(usize start, const std::string_view& raw_input) const override;
+
+		[[nodiscard]]
+		std::string getTypeName() const override {
+			return "<int>";
+		}
 	};
 
 }

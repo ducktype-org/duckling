@@ -36,23 +36,27 @@ namespace clap {
 		void insertFlag(const ClapParameter& parameter);
 		void insertParameterValue(const ClapParameter& parameter, const ParsedValue& value);
 		void insertPositional(const ParsedValue& value);
+		void insertExtra(const ParsedValue& value);
 
 		template<class T, class N>
-		std::vector<T> getValue(const N& name) const {
-			if_opt_some(getId(name), id) {
-				return std::vector<T>(
-					std::
-						for_each(id_to_value.at(id).begin(), id_to_value.at(id).end(), std::any_cast<T>)
-				);
-			}
+		base::Optional<T> getValue(const N& name) const {
+			if_opt_some(getId(name), id) return std::any_cast<T>(id_to_value.at(id));
 			return {};
 		}
 
 		template<class T>
 		[[nodiscard]]
 		base::Optional<T> getPositional(usize position) const {
-			if (position < positional_values.size())
+			if (position < getPositionalParameterCount())
 				return std::any_cast<T>(positional_values[position].value);
+			return {};
+		}
+
+		template<class T>
+		[[nodiscard]]
+		base::Optional<T> getExtra(usize position) const {
+			if (position < getExtraParameterCount())
+				return std::any_cast<T>(extra_values[position].value);
 			return {};
 		}
 
@@ -64,6 +68,15 @@ namespace clap {
 
 		[[nodiscard]]
 		bool hasParam(const ClapParameter& parameter) const;
+
+		[[nodiscard]]
+		usize getPositionalParameterCount() const;
+		[[nodiscard]]
+		usize getExtraParameterCount() const;
+		[[nodiscard]]
+		usize getFlagCount() const;
+		[[nodiscard]]
+		usize getNamedParameterCount() const;
 
 	private:
 		std::string file_path;
@@ -79,8 +92,10 @@ namespace clap {
 		base::HashMap<char, usize>          short_names_to_id;
 		base::HashMap<base::RawView, usize> long_names_to_id;
 
-		base::HashMap<usize, std::vector<ParsedValue>> id_to_value;
-		std::vector<ParsedValue>                       positional_values;
+		base::HashMap<usize, ParsedValue> id_to_value;
+		std::vector<ParsedValue>          positional_values;
+		std::vector<ParsedValue> extra_values;  // Values parsed with default value parser - that is
+		                                        // they were passed additionally.
 
 		std::unordered_set<usize> flags;
 	};

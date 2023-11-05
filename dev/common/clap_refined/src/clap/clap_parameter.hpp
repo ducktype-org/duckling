@@ -20,7 +20,8 @@ namespace clap {
 
 	struct Conditional {
 		using Condition = std::function<bool(ParsingResult)>;
-		Condition condition;
+		Condition   condition;
+		std::string condition_description;
 	};
 
 	using ParameterNecessity = std::variant<Optional, Required, Conditional>;

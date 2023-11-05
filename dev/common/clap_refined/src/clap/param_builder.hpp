@@ -17,7 +17,6 @@ namespace clap {
 	class ParamBuilder {
 	public:
 		static ParamBuilder ofValue(base::unique_ptr<ValueParser> value_parser);
-		static ParamBuilder ofNonKeyword(base::unique_ptr<ValueParser> value_parser);
 		static ParamBuilder ofFlag();
 
 		ParamBuilder& addShortName(char new_short_name);
@@ -27,17 +26,13 @@ namespace clap {
 
 		ParamBuilder& optional();
 		ParamBuilder& required();
-		ParamBuilder& conditional(Conditional::Condition&& condition);
+		ParamBuilder&
+			conditional(Conditional::Condition&& condition, const std::string& description = "");
 
 		ClapParameter build();
 
 	private:
-		ParamBuilder() = default;
-		//		ParamBuilder(ParamBuilder&& other) noexcept;
-
-		bool flag             = false;
-		bool non_keyword      = false;
-		bool has_value_parser = false;
+		ParamBuilder() { optional(); }
 
 		base::Optional<char>          short_name;
 		base::Optional<base::RawView> long_name;

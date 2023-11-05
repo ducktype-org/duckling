@@ -1,38 +1,73 @@
 #include <tester/tester.hpp>
 #include <clap/clap.hpp>
-#include <clap/parsing_result.hpp>
+#include <clap/param_builder.hpp>
 #include <array>
 
 class ClapTester: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ClapTester
 
+
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Clap Tester") { TESTER_ADD_TEST(simpleTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("Clap Tester") {
+		TESTER_ADD_TEST(simpleTest);
+		TESTER_ADD_TEST(positionalTest);
+		TESTER_ADD_TEST(namedTest);
+	}
 
 private:
 	void simpleTest() {
-		auto                       par  = clap::Clap();
-		std::array<const char*, 4> argv = { "./prog", "1", "test", "3" };
-		auto                       res  = par.parse(argv.size(), argv.begin());
+		auto       par = clap::Clap();
+		std::array argv{ "./prog", "1", "test", "3" };
+		auto       res = par.parse(argv.size(), argv.begin());
 
-		assert(
-			res.getPositional<std::string>(0).has_value(),
-			"ParsingResult does not contain the first positional parameter!"
-		);
-		ASSERT_EQUAL("1", res.getPositional<std::string>(0).value());
+		ASSERT_EQUAL("prog", res.getFilePath());
+		ASSERT_EQUAL("1 test 3", res.getArgs());
+		ASSERT_EQUAL(0, res.getNamedParameterCount());
+		ASSERT_EQUAL(0, res.getFlagCount());
+		ASSERT_EQUAL(0, res.getPositionalParameterCount());
+		ASSERT_EQUAL(3, res.getExtraParameterCount());
 
-		assert(
-			res.getPositional<std::string>(1).has_value(),
-			"ParsingResult does not contain the second positional parameter!"
-		);
-		ASSERT_EQUAL("test", res.getPositional<std::string>(1).value());
+		ASSERT_EQUAL("1", *res.getExtra<std::string>(0));
+		ASSERT_EQUAL("test", *res.getExtra<std::string>(1));
+		ASSERT_EQUAL("3", *res.getExtra<std::string>(2));
+	}
 
-		assert(
-			res.getPositional<std::string>(2).has_value(),
-			"ParsingResult does not contain the third positional parameter!"
-		);
-		ASSERT_EQUAL("3", res.getPositional<std::string>(2).value());
+	void positionalTest() {
+		auto par = clap::Clap()
+		               .addPositional(clap::StringParser::make())
+		               .addPositional(clap::IntParser::make());
+
+		std::array argv{ "./prog", "test", "2" };
+		auto       res = par.parse(argv.size(), argv.begin());
+
+		ASSERT_EQUAL(0, res.getNamedParameterCount());
+		ASSERT_EQUAL(0, res.getFlagCount());
+		ASSERT_EQUAL(2, res.getPositionalParameterCount());
+		ASSERT_EQUAL(0, res.getExtraParameterCount());
+
+		ASSERT_EQUAL("test", *res.getPositional<std::string>(0));
+		ASSERT_EQUAL(2, *res.getPositional<i64>(1));
+	}
+
+	void namedTest() {
+		auto par = clap::Clap()
+		               .setDefaultParser(clap::IntParser::make())
+		               .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
+		                        .addShortName('n')
+		                        .addShortDesc("How many times print the string")
+		                        .required()
+		                        .build());
+		std::array argv{ "./prog", "-1", "-n", "-20" };
+		auto       res = par.parse(argv.size(), argv.begin());
+
+		ASSERT_EQUAL(1, res.getNamedParameterCount());
+		ASSERT_EQUAL(0, res.getFlagCount());
+		ASSERT_EQUAL(1, res.getPositionalParameterCount());
+		ASSERT_EQUAL(0, res.getExtraParameterCount());
+
+		ASSERT_EQUAL(-1, *res.getExtra<i64>(0));
+		ASSERT_EQUAL(-20, *res.getValue<i64>('n'));
 	}
 };
 

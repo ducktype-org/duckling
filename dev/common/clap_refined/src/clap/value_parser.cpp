@@ -6,31 +6,32 @@
 
 #include <charconv>
 #include "value_parser.hpp"
+#include "exceptions.hpp"
 
 namespace clap {
 	ValueParsingResult StringParser::parse(usize start, const std::string_view& raw_input) const {
-		usize       position           = start;
-		bool        started_with_quote = raw_input[position] == '\"';
+		// Allows parsing of strings like "\"Hello\\\" here\" and the\"re!".
+		usize position        = start;
+		usize quotes_to_close = raw_input[position] == '\"';
+
+		if (quotes_to_close > 0) position++;
+
 		std::string data;
-		if (started_with_quote) {
-			position++;
-			while (position < raw_input.size()) {
-				if (raw_input[position] == '\"') {
-					if (data.empty() || data.back() == '\\') {
-						data.pop_back();
-						data += raw_input[position++];
-					} else {
-						position++;
-						break;
-					}
-				} else {
-					data += raw_input[position++];
+		while (position < raw_input.size()
+		       && (quotes_to_close || !std::isspace(raw_input[position]))) {
+			if (raw_input[position] == '\"') {
+				if (!data.empty() && data.back() == '\\')
+					data.pop_back();
+				else {
+					quotes_to_close--;
+					position++;
+					continue;
 				}
 			}
-		} else {
-			while (position < raw_input.size() && !std::isspace(raw_input[position]))
-				data += raw_input[position++];
+
+			data.push_back(raw_input[position++]);
 		}
+
 		return { data, data, position };
 	}
 
@@ -44,8 +45,9 @@ namespace clap {
 		auto result = std::from_chars(begin, end, value, 10);
 		if (result.ptr != end or result.ec == std::errc::invalid_argument
 		    or result.ec == std::errc::result_out_of_range) {
-			//			throw WrongParamValue("IntType");
-			throw base::LogicError("Wrong param value!");
+			throw exceptions::ValueParsingException(
+				getTypeName().c_str(), start, end_index, raw_input
+			);
 		}
 		return { value, std::string(raw_input.substr(start, end_index - start)), end_index };
 	}
