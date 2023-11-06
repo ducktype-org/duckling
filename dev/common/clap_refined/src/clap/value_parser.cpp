@@ -9,7 +9,7 @@
 #include "exceptions.hpp"
 
 namespace clap {
-	ValueParsingResult StringParser::parse(usize start, const std::string_view& raw_input) const {
+	ValueParsingResult StringParser::parse(usize start, std::string_view raw_input) const {
 		// Allows parsing of strings like "\"Hello\\\" here\" and the\"re!".
 		usize position        = start;
 		usize quotes_to_close = raw_input[position] == '\"';
@@ -35,7 +35,7 @@ namespace clap {
 		return { data, data, position };
 	}
 
-	ValueParsingResult IntParser::parse(usize start, const std::string_view& raw_input) const {
+	ValueParsingResult IntParser::parse(usize start, std::string_view raw_input) const {
 		usize end_index = start;
 		while (end_index < raw_input.size() && !std::isspace(raw_input[end_index])) end_index++;
 

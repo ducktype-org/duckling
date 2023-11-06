@@ -27,7 +27,7 @@ namespace clap {
 	public:
 		Config();
 
-		Config& add(ParameterConfig&& parameter_config);
+		Config& add(ParameterConfig parameter_config);
 		Config& add_positional(const base::RawView& parameter_name);
 
 		ParametersMap parse(CLIArgs args);

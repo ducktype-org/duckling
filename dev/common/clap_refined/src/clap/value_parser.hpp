@@ -24,7 +24,7 @@ namespace clap {
 
 		[[nodiscard]]
 		// It is assumed that the raw_input[start] is a non-whitespace character.
-		virtual ValueParsingResult parse(usize start, const std::string_view& raw_input) const
+		virtual ValueParsingResult parse(usize start, std::string_view raw_input) const
 			= 0;
 
 		virtual std::string getTypeName() const = 0;
@@ -35,7 +35,7 @@ namespace clap {
 		static base::unique_ptr<StringParser> make() { return base::make_unique<StringParser>(); }
 
 		[[nodiscard]]
-		ValueParsingResult parse(usize start, const std::string_view& raw_input) const override;
+		ValueParsingResult parse(usize start, std::string_view raw_input) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
@@ -48,7 +48,7 @@ namespace clap {
 		static base::unique_ptr<IntParser> make() { return base::make_unique<IntParser>(); }
 
 		[[nodiscard]]
-		ValueParsingResult parse(usize start, const std::string_view& raw_input) const override;
+		ValueParsingResult parse(usize start, std::string_view raw_input) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {

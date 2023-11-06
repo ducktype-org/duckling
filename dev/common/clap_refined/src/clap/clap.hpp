@@ -56,7 +56,7 @@ namespace clap {
 		std::vector<base::unique_ptr<ValueParser>> positional_parameters;
 		std::vector<ClapParameter>                 parameters;
 
-		void validate_parsing(ParsingResult& result) const;
+		void validateParsing(ParsingResult& result) const;
 	};
 
 }  // clap

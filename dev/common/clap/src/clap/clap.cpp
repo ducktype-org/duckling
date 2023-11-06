@@ -28,8 +28,8 @@ namespace clap {
 		return {};
 	}
 
-	Config& Config::add(ParameterConfig&& parameter_config) {
-		parameters.push_back(std::forward<ParameterConfig>(parameter_config));
+	Config& Config::add(ParameterConfig parameter_config) {
+		parameters.push_back(std::forward<ParameterConfig&&>(parameter_config));
 		return *this;
 	}
 

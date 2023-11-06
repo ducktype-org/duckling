@@ -159,7 +159,7 @@ namespace clap {
 			}
 		}
 
-		validate_parsing(result);
+		validateParsing(result);
 
 		return result;
 	}
@@ -181,7 +181,7 @@ namespace clap {
 		return *this;
 	}
 
-	void Clap::validate_parsing(ParsingResult& result) const {
+	void Clap::validateParsing(ParsingResult& result) const {
 		for (auto& param: parameters) {
 			variant_match(param.getParameterNecessity()) {
 				variant_case(Required, _) {
