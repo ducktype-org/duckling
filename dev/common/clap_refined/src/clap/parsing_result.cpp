@@ -77,11 +77,4 @@ namespace clap {
 	usize ParsingResult::getFlagCount() const { return flags.size(); }
 
 	usize ParsingResult::getNamedParameterCount() const { return id_to_value.size(); }
-
-	template<class N>
-	bool ParsingResult::isFlag(const N& name) const {
-		return flags.contains(getId(name));
-	}
-
-
 }

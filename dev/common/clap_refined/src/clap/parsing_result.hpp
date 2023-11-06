@@ -66,9 +66,11 @@ namespace clap {
 			return {};
 		}
 
-		template<class N>
-		[[nodiscard]]
-		bool isFlag(const N& name) const;
+		template<class T>
+		bool isFlag(const T& name) const {
+			if_opt_some(getId(name), id) return flags.contains(id);
+			return false;
+		}
 
 		[[nodiscard]]
 		bool hasParam(const ClapParameter& parameter);

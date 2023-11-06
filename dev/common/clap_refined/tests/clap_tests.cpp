@@ -13,6 +13,7 @@ public:
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(positionalTest);
 		TESTER_ADD_TEST(namedTest);
+		TESTER_ADD_TEST(flagTest);
 	}
 
 private:
@@ -76,7 +77,7 @@ private:
 	void flagTest() {
 		auto par = clap::Clap()
 		               .setDefaultParser(clap::IntParser::make())
-		               .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
+		               .add(clap::ParamBuilder::ofFlag()
 		                        .addShortName('f')
 		                        .addLongName("flag")
 		                        .addShortDesc("Desc")
@@ -92,14 +93,14 @@ private:
 		std::array argv2{ "./prog", "-f", "123" };
 		auto       res2 = par.parse(argv2.size(), argv2.begin());
 
-		ASSERT_EQUAL(0, res.getNamedParameterCount());
-		ASSERT_EQUAL(1, res.getFlagCount());
-		ASSERT_EQUAL(0, res.getPositionalParameterCount());
-		ASSERT_EQUAL(1, res.getExtraParameterCount());
+		ASSERT_EQUAL(0, res2.getNamedParameterCount());
+		ASSERT_EQUAL(1, res2.getFlagCount());
+		ASSERT_EQUAL(0, res2.getPositionalParameterCount());
+		ASSERT_EQUAL(1, res2.getExtraParameterCount());
 
-		ASSERT_EQUAL("123", *res.getExtra<std::string>(0));
-		ASSERT_EQUAL(true, res.isFlag('f'));
-		ASSERT_EQUAL(true, res.isFlag("flag"));
+		ASSERT_EQUAL(123, *res2.getExtra<i64>(0));
+		ASSERT_EQUAL(true, res2.isFlag('f'));
+		ASSERT_EQUAL(true, res2.isFlag("flag"));
 	}
 };
 
