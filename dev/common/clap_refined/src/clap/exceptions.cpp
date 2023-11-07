@@ -16,20 +16,26 @@ namespace clap::exceptions {
 		  )) {}
 
 	ValueParsingException::ValueParsingException(
-		base::RawView type, usize start, usize end, std::string_view source
+		base::RawView type, usize start, usize end, std::string_view source, std::string_view reason
 	):
 		  ClapException(base::strConcat(
-			  "Couldn't parse into ", type, " from: ", source.substr(start, end - start + 1)
+			  "Couldn't parse into ",
+			  type,
+			  " from: \"",
+			  source.substr(start, end - start + 1),
+			  "\"",
+			  reason.empty() ? "" : ", reason: ",
+			  reason
 		  )) {}
 
 	InvalidParameterName::InvalidParameterName(const std::string& name):
-		  ClapException("There is no parameter named " + name) {}
+		  ClapException("There is no parameter named \'" + name + '\'') {}
 
 	ParameterRequiresValue::ParameterRequiresValue(
 		const std::string& name, const std::string& value_type
 	):
 		  ClapException(
-			  base::strConcat("Parameter: ", name, " requires a value of type ", value_type)
+			  base::strConcat("Parameter \"", name, "\" requires a value of type ", value_type)
 		  ) {}
 
 	ExpectedParameterIdentifier::ExpectedParameterIdentifier(i32 at, std::string_view source):

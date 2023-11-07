@@ -4,9 +4,24 @@
  */
 
 #include "parsing_result.hpp"
-#include "clap.hpp"
 
 namespace clap {
+	ParsingResult::ParsingResult(ParsingResult& other) noexcept:
+		  file_path(other.file_path),
+		  args(other.args),
+		  id_counter(other.id_counter),
+		  positional_values(other.positional_values),
+		  extra_values(other.extra_values),
+		  flags(other.flags) {
+		short_names_to_id.merge(other.short_names_to_id);
+		long_names_to_id.merge(other.long_names_to_id);
+		id_to_value.merge(other.id_to_value);
+	}
+
+	ParsingResult::ParsingResult(std::string file_path, std::string args):
+		  file_path(std::move(file_path)),
+		  args(std::move(args)) {}
+
 	const std::string& ParsingResult::getFilePath() const { return file_path; }
 
 	const std::string& ParsingResult::getArgs() const { return args; }
@@ -77,4 +92,20 @@ namespace clap {
 	usize ParsingResult::getFlagCount() const { return flags.size(); }
 
 	usize ParsingResult::getNamedParameterCount() const { return id_to_value.size(); }
+
+	ParsingResult& ParsingResult::operator=(const ParsingResult& other) {
+		file_path         = other.file_path;
+		args              = other.args;
+		id_counter        = other.id_counter;
+		positional_values = other.positional_values;
+		extra_values      = other.extra_values;
+		flags             = other.flags;
+		for (const auto& elem: other.short_names_to_id)
+			short_names_to_id.put(elem.first, elem.second);
+		for (const auto& elem: other.long_names_to_id)
+			long_names_to_id.put(elem.first, elem.second);
+		for (const auto& elem: other.id_to_value) id_to_value.put(elem.first, elem.second);
+		return *this;
+	}
+
 }

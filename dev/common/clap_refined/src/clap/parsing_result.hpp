@@ -24,9 +24,11 @@ namespace clap {
 
 	class ParsingResult {
 	public:
-		ParsingResult(std::string file_path, std::string args):
-			  file_path(std::move(file_path)),
-			  args(std::move(args)) {}
+		ParsingResult() = default;
+
+		ParsingResult(ParsingResult& other) noexcept;
+
+		ParsingResult(std::string file_path, std::string args);
 
 		[[nodiscard]]
 		const std::string& getFilePath() const;
@@ -83,6 +85,8 @@ namespace clap {
 		usize getFlagCount() const;
 		[[nodiscard]]
 		usize getNamedParameterCount() const;
+
+		ParsingResult& operator=(const ParsingResult& other);
 
 	private:
 		std::string file_path;

@@ -44,6 +44,7 @@ namespace clap {
 
 	ParamBuilder& ParamBuilder::required() {
 		parameter_necessity = ParameterNecessity(Required());
+		if (value_parser == nullptr) throw ParamBuilderException("Flag cannot be required!");
 		return *this;
 	}
 
@@ -60,14 +61,6 @@ namespace clap {
 			throw ParamBuilderException("Every parameter has to have a (short or long) name!");
 		if (!short_description.has_value())
 			throw ParamBuilderException("Every parameter has to have a short description!");
-
-		variant_match(parameter_necessity.value()) {
-			variant_case(Required, _) {
-				if (value_parser == nullptr)
-					throw ParamBuilderException("Flag cannot be required!");
-			}
-			variant_default {}
-		}
 
 		ClapParameter parameter;
 		parameter.value_parser        = std::move(value_parser);

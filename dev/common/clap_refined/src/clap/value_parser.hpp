@@ -9,6 +9,7 @@
 #include "base/raw_view.hpp"
 #include "base/smart_pointers.hpp"
 #include "base/exceptions.hpp"
+#include "base/type_traits.hpp"
 
 namespace clap {
 
@@ -53,6 +54,23 @@ namespace clap {
 		[[nodiscard]]
 		std::string getTypeName() const override {
 			return "<int>";
+		}
+	};
+
+	class RangeParser: public ValueParser {
+	public:
+		struct Range {
+			i64 begin, end;
+		};
+
+		static base::unique_ptr<RangeParser> make() { return base::make_unique<RangeParser>(); }
+
+		[[nodiscard]]
+		ValueParsingResult parse(usize start, std::string_view raw_input) const override;
+
+		[[nodiscard]]
+		std::string getTypeName() const override {
+			return "<range:int..int>";
 		}
 	};
 

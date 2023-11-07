@@ -15,7 +15,13 @@ namespace clap::exceptions {
 	};
 
 	struct ValueParsingException: public ClapException {
-		ValueParsingException(base::RawView type, usize start, usize end, std::string_view source);
+		ValueParsingException(
+			base::RawView    type,
+			usize            start,
+			usize            end,
+			std::string_view source,
+			std::string_view reason = ""
+		);
 	};
 
 	struct PositionalParameterExpected: public ClapException {
