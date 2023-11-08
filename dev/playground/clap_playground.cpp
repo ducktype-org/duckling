@@ -6,32 +6,41 @@
 #include <clap/clap.hpp>
 #include <clap/param_builder.hpp>
 #include <clap/exceptions.hpp>
+#include <clap/help_message_generator.hpp>
 #include <printer/printer.hpp>
 
+void greet(i64 n, const std::string& name) { std::cout << n << ": Hello " << name << "!\n"; }
+
 int main(int argc, const char** argv) {
-	auto clapper
+	auto clap
 		= clap::Clap()
-	          .setDefaultParser(clap::StringParser::make())
+	          .addHelpFlag()
+	          .setDefaultParser(clap::StringParser::make("name"))
+	          .addPositional(clap::StringParser::make("name"))
 	          .add(clap::ParamBuilder::ofValue(clap::RangeParser::make())
 	                   .addShortName('r')
+	                   .addLongName("range")
 	                   .addShortDesc("Range of values to greet.")
 	                   .required()
+	                   .build())
+	          .add(clap::ParamBuilder::ofFlag()
+	                   .addShortName('d')
+	                   .addLongName("descending")
+	                   .addShortDesc("Whether or not numbers should be print in a descending order."
+	                   )
+	                   .addLongDesc("This is a multiline,\nlong comment, that should\n"
+	                                "explain this parameter with more\ndetail...")
 	                   .build())
 	          .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
 	                   .addShortName('n')
 	                   .addLongName("number")
 	                   .addShortDesc("Number of times to greet each person.")
-	                   .build())
-	          .add(clap::ParamBuilder::ofFlag()
-	                   .addShortName('d')
-	                   .addLongName("descending")
-	                   .addShortDesc("Whether or not numbers should be print in a descending order")
 	                   .build());
 
 	clap::ParsingResult result;
 
 	try {
-		result = clapper.parse(argc, argv);
+		result = clap.parse(argc, argv);
 	} catch (clap::exceptions::ClapException& e) {
 		printer::Console console = printer::Console();
 		console.add({
@@ -45,27 +54,30 @@ int main(int argc, const char** argv) {
 		});
 		console.print(std::cerr);
 		return 1;
+	} catch (clap::exceptions::HelpException& e) {
+		std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);
+		std::cout << help_message << '\n';
+		return 0;
 	}
 
-	auto range = *result.getValue<clap::RangeParser::Range>('r');
-	i64  start = range.begin;
-	i64  end   = range.end;
-	if (start > end)
-		for (i64 i = start; i > end; i--) std::cout << i << ' ';
+	std::vector<std::string> names;
 
-	else
-		for (i64 i = start; i < end; i++) std::cout << i << ' ';
+	names.push_back(*result.getPositional<std::string>(0));
+	for (usize c = 0; c < result.getExtraParameterCount(); c++)
+		names.push_back(*result.getExtra<std::string>(0));
+
+	clap::RangeParser::Range range = *result.getValue<clap::RangeParser::Range>("range");
+	auto [begin, end]              = range;
+	i64 n                          = result.getValue<i64>('n').value_or(1);
+
+	for (const auto& name: names) {
+		for (i64 i = 0; i < n; i++) {
+			if (result.isFlag("descending"))
+				for (i64 j = end - 1; j >= begin; j--) greet(j, name);
+			else
+				for (i64 j = begin; j < end; j++) greet(j, name);
+		}
+	}
+
 	std::cout << '\n';
-
-
-	for (usize c = 0; c < result.getExtraParameterCount(); c++) {
-		i64  times = result.getValue<i64>("number").value_or(3);
-		auto name  = *result.getExtra<std::string>(c);
-		if (result.isFlag("descending"))
-			for (i64 i = times; i >= 1; i--) std::cout << i << ": " + name << ' ';
-
-		else
-			for (i64 i = 1; i <= times; i++) std::cout << i << ": " + name << ' ';
-		std::cout << '\n';
-	}
 }

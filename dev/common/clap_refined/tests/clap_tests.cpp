@@ -39,9 +39,10 @@ private:
 		               .addPositional(clap::StringParser::make())
 		               .addPositional(clap::IntParser::make());
 
-		std::array argv{ "./prog", "test", "2" };
+		std::array argv{ "prog", "test", "2" };
 		auto       res = par.parse(argv.size(), argv.begin());
 
+		ASSERT_EQUAL("prog", res.getFilePath());  // now, prog is invoked without "./"
 		ASSERT_EQUAL(0, res.getNamedParameterCount());
 		ASSERT_EQUAL(0, res.getFlagCount());
 		ASSERT_EQUAL(2, res.getPositionalParameterCount());

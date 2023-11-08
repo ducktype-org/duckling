@@ -7,11 +7,18 @@
 #include <utility>
 
 #include "base/exceptions.hpp"
+#include "parsing_result.hpp"
 
 namespace clap::exceptions {
 
 	struct ClapException: public base::LogicError {
 		explicit ClapException(const std::string& message);
+	};
+
+	struct HelpException: public base::LogicError {
+		ParsingResult parsing_result;
+
+		explicit HelpException(ParsingResult result);
 	};
 
 	struct ValueParsingException: public ClapException {

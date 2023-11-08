@@ -4,6 +4,7 @@
  */
 
 #include "clap.hpp"
+#include "param_builder.hpp"
 #include "exceptions.hpp"
 #include "base/variant.hpp"
 #include <cctype>
@@ -48,8 +49,12 @@ namespace {
 		}
 		while (position < str.size() && !std::isspace(str[position]) && str[position] != '=')
 			name += str[position++];
-		if (str[position] == '=') position++;
-		skipWhitespace(position, str);
+
+		if (str[position] == '=')
+			position++;
+		else
+			skipWhitespace(position, str);
+
 		if (name.empty()) return { "", NameType::EmptyName };
 		return { name, counter == 1 ? NameType::ShortName : NameType::LongName };
 	}
@@ -83,23 +88,15 @@ namespace clap {
 	ParsingResult Clap::parse(usize argc, const char** argv) {
 		std::string args = mergeArgs(argc, argv);
 
-		ParsingResult result(argv[0] + 2, args);
+		usize path_offset = 0;
+		// Check if program is invoked using "./" or by name. This is potentially unsafe.
+		if (argv[0][0] == '.' && argv[0][1] == '/') path_offset = 2;
+
+		ParsingResult result(argv[0] + path_offset, args);
 
 		// Going left to right through chars in args.
 		usize parsing_position = 0;
 		skipWhitespace(parsing_position, args);
-
-		// First are the positional parameters.
-		// If a positional parameter fails to parse, then a user must have passed an invalid
-		// argument.
-		for (auto& param: positional_parameters) {
-			match_optional(PARSE(param.get())) {
-				opt_some(value) result.insertPositional(value);
-				opt_none throw exceptions::PositionalParameterExpected(
-					result.getPositionalParameterCount(), param->getTypeName()
-				);
-			}
-		}
 
 		while (parsing_position < args.size()) {
 			// If not found a "-" parse using default value parser
@@ -151,13 +148,28 @@ namespace clap {
 						throw exceptions::InvalidParameterName(param_name);
 				}
 			}
-			match_optional(PARSE(default_value_parser.get())) {
-				opt_some(value) result.insertExtra(value);
-				opt_none throw exceptions::ClapException(
-					"Cannot continue parsing... Please report this incident"
-				);
+			// Check if value is positional or extra.
+			usize current_positional_args = result.getPositionalParameterCount();
+			if (current_positional_args < getPositionalParameters().size()) {
+				const auto& param = getPositionalParameters()[current_positional_args];
+				match_optional(PARSE(param.get())) {
+					opt_some(value) result.insertPositional(value);
+					opt_none throw exceptions::ClapException(
+						"Cannot continue parsing... Please report this incident."
+					);
+				}
+			} else {
+				// So it's an extra argument.
+				match_optional(PARSE(default_value_parser.get())) {
+					opt_some(value) result.insertExtra(value);
+					opt_none throw exceptions::ClapException(
+						"Cannot continue parsing... Please report this incident."
+					);
+				}
 			}
 		}
+
+		if (result.isFlag("help")) throw exceptions::HelpException(result);
 
 		validateParsing(result);
 
@@ -169,9 +181,6 @@ namespace clap {
 	const std::vector<ClapParameter>& Clap::getParameters() const { return parameters; }
 
 	Clap& Clap::addPositional(base::unique_ptr<ValueParser> parameter) {
-		if (!parameters.empty())
-			throw base::LogicError("Cannot add positional after a keyword parameter has been added"
-			);
 		positional_parameters.push_back(std::move(parameter));
 		return *this;
 	}
@@ -182,11 +191,20 @@ namespace clap {
 	}
 
 	void Clap::validateParsing(ParsingResult& result) const {
+		usize num_positional_args = result.getPositionalParameterCount();
+
+		if (num_positional_args < getPositionalParameters().size()) {
+			const auto& param = getPositionalParameters()[num_positional_args];
+			throw exceptions::PositionalParameterExpected(
+				result.getPositionalParameterCount(), param->getTypeName()
+			);
+		}
+
 		for (auto& param: parameters) {
 			variant_match(param.getParameterNecessity()) {
 				variant_case(Required, _) {
 					if (!result.hasParam(param))
-						throw exceptions::MissingRequiredParameter(getName(param));
+						throw exceptions::MissingRequiredParameter("\"" + getName(param) + "\"");
 				}
 				variant_case(Optional, _) {
 					// Nothing in this case
@@ -201,6 +219,20 @@ namespace clap {
 				}
 			}
 		}
+	}
+
+	Clap::Clap() { default_value_parser = StringParser::make(); }
+
+	Clap& Clap::addHelpFlag() {
+		return add(ParamBuilder::ofFlag()
+		               .addShortName('h')
+		               .addLongName("help")
+		               .addShortDesc("Display this information.")
+		               .build());
+	}
+
+	const std::vector<base::unique_ptr<ValueParser>>& Clap::getPositionalParameters() const {
+		return positional_parameters;
 	}
 
 }  // clap

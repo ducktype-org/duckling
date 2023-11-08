@@ -26,7 +26,8 @@ namespace clap {
 	public:
 		ParsingResult() = default;
 
-		ParsingResult(ParsingResult& other) noexcept;
+		ParsingResult(const ParsingResult& other) noexcept = default;
+		ParsingResult(ParsingResult&& other) noexcept      = default;
 
 		ParsingResult(std::string file_path, std::string args);
 

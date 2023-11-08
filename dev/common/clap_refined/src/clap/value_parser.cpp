@@ -55,7 +55,7 @@ namespace clap {
 
 	ValueParsingResult RangeParser::parse(usize start, std::string_view raw_input) const {
 		usize position = start;
-		while (!std::isspace(raw_input[position])) position++;
+		while (position < raw_input.size() && !std::isspace(raw_input[position])) position++;
 
 		std::string_view my_chunk    = raw_input.substr(start, position - start + 1);
 		auto             dot_dot_pos = my_chunk.find("..");

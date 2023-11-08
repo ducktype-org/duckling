@@ -5,6 +5,9 @@
 
 #include "exceptions.hpp"
 
+#include <utility>
+#include "parsing_result.hpp"
+
 namespace clap::exceptions {
 	ClapException::ClapException(const std::string& message): base::LogicError(message) {}
 
@@ -12,16 +15,20 @@ namespace clap::exceptions {
 		usize param_index, const std::string& param_type
 	):
 		  ClapException(base::strConcat(
-			  "Expected positional parameter at index: ", param_index, " of type: ", param_type
+			  "Expected positional parameter at index: ",
+			  param_index,
+			  " of type: <",
+			  param_type,
+			  ">"
 		  )) {}
 
 	ValueParsingException::ValueParsingException(
 		base::RawView type, usize start, usize end, std::string_view source, std::string_view reason
 	):
 		  ClapException(base::strConcat(
-			  "Couldn't parse into ",
+			  "Couldn't parse into <",
 			  type,
-			  " from: \"",
+			  "> from: \"",
 			  source.substr(start, end - start + 1),
 			  "\"",
 			  reason.empty() ? "" : ", reason: ",
@@ -34,9 +41,9 @@ namespace clap::exceptions {
 	ParameterRequiresValue::ParameterRequiresValue(
 		const std::string& name, const std::string& value_type
 	):
-		  ClapException(
-			  base::strConcat("Parameter \"", name, "\" requires a value of type ", value_type)
-		  ) {}
+		  ClapException(base::strConcat(
+			  "Parameter \"", name, "\" requires a value of type <", value_type, ">"
+		  )) {}
 
 	ExpectedParameterIdentifier::ExpectedParameterIdentifier(i32 at, std::string_view source):
 		  ClapException(base::strConcat(
@@ -54,4 +61,8 @@ namespace clap::exceptions {
 
 	DuplicatedParameter::DuplicatedParameter(const std::string& name):
 		  ClapException(base::strConcat("Duplicated parameter named: ", name)) {}
+
+	HelpException::HelpException(ParsingResult result):
+		  base::LogicError("Help flag was passed, help message should be generated."),
+		  parsing_result(std::move(result)) {}
 }

@@ -6,17 +6,17 @@
 #include "parsing_result.hpp"
 
 namespace clap {
-	ParsingResult::ParsingResult(ParsingResult& other) noexcept:
-		  file_path(other.file_path),
-		  args(other.args),
-		  id_counter(other.id_counter),
-		  positional_values(other.positional_values),
-		  extra_values(other.extra_values),
-		  flags(other.flags) {
-		short_names_to_id.merge(other.short_names_to_id);
-		long_names_to_id.merge(other.long_names_to_id);
-		id_to_value.merge(other.id_to_value);
-	}
+	//	ParsingResult::ParsingResult(ParsingResult& other) noexcept:
+	//		  file_path(other.file_path),
+	//		  args(other.args),
+	//		  id_counter(other.id_counter),
+	//		  positional_values(other.positional_values),
+	//		  extra_values(other.extra_values),
+	//		  flags(other.flags) {
+	//		short_names_to_id.merge(other.short_names_to_id);
+	//		long_names_to_id.merge(other.long_names_to_id);
+	//		id_to_value.merge(other.id_to_value);
+	//	}
 
 	ParsingResult::ParsingResult(std::string file_path, std::string args):
 		  file_path(std::move(file_path)),

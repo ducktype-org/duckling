@@ -5,6 +5,7 @@
 
 #include "param_builder.hpp"
 #include "base/variant.hpp"
+#include "clap/exceptions.hpp"
 
 namespace clap {
 
@@ -23,6 +24,11 @@ namespace clap {
 	}
 
 	ParamBuilder& ParamBuilder::addLongName(base::RawView new_long_name) {
+		if (new_long_name.size() <= 1)
+			throw exceptions::ClapException(base::strConcat(
+				"Name should be longer than 1 character, but received \"", new_long_name, "\"."
+			));
+
 		long_name = new_long_name;
 		return *this;
 	}

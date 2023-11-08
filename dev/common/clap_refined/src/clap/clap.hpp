@@ -11,7 +11,6 @@
 #include <memory>
 
 namespace clap {
-
 	/**
 	 * Command-line argument parser
 	 *
@@ -25,7 +24,7 @@ namespace clap {
 	 */
 	class Clap {
 	public:
-		Clap() { default_value_parser = StringParser::make(); }
+		Clap();
 
 		Clap(Clap& other) noexcept:
 			  default_value_parser(std::move(other.default_value_parser)),
@@ -44,12 +43,16 @@ namespace clap {
 
 		Clap& setDefaultParser(base::unique_ptr<ValueParser> parser);
 
+		Clap& addHelpFlag();
+
 		ParsingResult parse(usize argc, const char** argv);
 
 		[[nodiscard]]
 		const ValueParser* getDefaultValueParser() const;
 		[[nodiscard]]
 		const std::vector<ClapParameter>& getParameters() const;
+		[[nodiscard]]
+		const std::vector<base::unique_ptr<ValueParser>>& getPositionalParameters() const;
 
 	private:
 		base::unique_ptr<ValueParser>              default_value_parser;
