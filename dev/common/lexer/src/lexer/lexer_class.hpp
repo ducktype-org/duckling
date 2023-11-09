@@ -13,6 +13,18 @@ namespace lexer {
 		Token  eof_token;
 	};
 
+	/**
+	 * @brief Class used to manage lexing
+	 * 
+	 * @todo Change whole lexing to be done in #Lexer
+	 * @todo Improve error handling in lexing, possibly using Error tokens and logging some sensible errors
+	 * @todo Add format string lexing and escape handling to string lexing(some sort of parity of back-slashes or something similar should suffice)
+	 * @todo Improve comment lexing
+	 * @todo Add init guard from `base/init_guard.init` to Lexer::init()
+	 * @todo Change `name_` member names to a different method of naming 
+	 * @todo Improve unicode support(soon: EOLs, vertical spaces, identifier normalization, at some point: ignorable format controls)
+	 * @todo Try to improve #parseSingleInto() to be more readable, maybe divide it into some logical parts
+	 */
 	class Lexer {
 	public:
 		explicit Lexer(const fs::FilePath& file);
@@ -21,22 +33,38 @@ namespace lexer {
 		TokenizationResult tokenize(bool dprint);
 
 	private:
+		/**
+		 * @name CharArray operations 
+		 * @{
+		 */
 		void next();
 		void skip(usize n);
 		[[nodiscard]]
 		const Char& peek(usize fwd = 0) const;
 		[[nodiscard]]
 		bool tryRawValue(char rawValue, usize fwd = 0) const;
+		/**@}*/
 
-		// top level parsers:
+		/** 
+		 * @name top level parsers:
+		 * @{
+		 */
 		void codeblock();
 		void parseCodeblockInto(Tokens& output);
 		void parseSingleInto(Tokens& output);
+		/**@}*/
 
-		// non-terminal tokens parsers:
+		/** 
+		 * @name non-terminal tokens parsers:
+		 * @{
+		 */
 		Tokens parGroup(lexer::Char::ParType end);
+		/**@}*/
 
-		// terminal tokens parsers:
+		/** 
+		 * @name terminal tokens parsers:
+		 * @{
+		 */
 		usize comment(/*Tokens& output*/);
 		usize blockComment();
 		usize oper();
@@ -46,7 +74,12 @@ namespace lexer {
 		usize numBinaryLiteral();
 		usize numHexLiteral();
 		usize string();
+		/**@}*/
 
+		/**
+		 * @name helper functions checking for patterns ahead
+		 * @{
+		 */
 		[[nodiscard]]
 		bool isEOF() const;
 		[[nodiscard]]
@@ -59,19 +92,28 @@ namespace lexer {
 		bool isBlockCommentEnd() const;
 		[[nodiscard]]
 		bool isStringBegin() const;
+		/**@}*/
 
+		/**
+		 * @return std::string in format `(<line number>:<column number>)`
+		 */
 		[[nodiscard]]
 		std::string generateLineColumnInfo() const;
 
+		/**
+		 * @name current position of lexing
+		 * @{
+		 */
 		usize                         where_        = 0;
 		usize                         lineNumber_   = 1;
 		usize                         columnNumber_ = 1;
+		/**@}*/
 		std::shared_ptr<fs::FilePath> file_;
 		fs::FileContent               fileContent_;
 		CharArray                     charArray_;
 		Tokens                        tokens_;
 
-		bool token_messages = false;
+		bool token_messages = false; ///< Informs whether to print messages about what tokens are created to the debug stream
 
 		printer::Console console;
 

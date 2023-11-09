@@ -28,18 +28,25 @@ namespace lexer {
 	using rift_def::Operator;
 	using rift_def::Special;
 
+	/**
+	 * @brief Class used to store token information
+	 * 
+	 * @todo The way of handling groups might need a more general approach. Maybe just a bracketGroup with additional information about start and en additional information about start and end. A similar idea might be applicable to strings as well
+	 * @todo The implementation of #makeSentinelEnd() isn't perfect and can't get the full SourcePosition of the end
+	 * @todo Implement formatted string
+	 */
 	class Token {
 	public:
 		enum class Type {
 			Keyword,
 			Identifier,
 			NumLiteral,
-			String,           // special group, changes lexing rules
-			FormattedString,  // special group, changes lexing rules
-			RoundGroup,       // (...)
-			SquareGroup,      // [...]
-			CurlyGroup,       // {...}
-			AngleGroup,       // currently not used
+			String,           ///< special group, changes lexing rules
+			FormattedString,  ///< special group, changes lexing rules
+			RoundGroup,       ///< (...)
+			SquareGroup,      ///< [...]
+			CurlyGroup,       ///< {...}
+			AngleGroup,       ///< currently not used
 			Operator,
 			Comment,
 			Special,
@@ -52,9 +59,17 @@ namespace lexer {
 			= { Type::String,      Type::FormattedString, Type::RoundGroup,
 			    Type::SquareGroup, Type::CurlyGroup,      Type::AngleGroup };
 
-		// Generates sentinel token of a group
-		Token makeSentinelEnd() const;
 
+		/**
+		 * @name Functions that construct Tokens
+		 * @{
+		 */
+		/**
+		 * @brief Generates sentinel token of a group
+		 * 
+		 * @todo Handle getting the correct SourcePosition of the group end
+		 */
+		Token makeSentinelEnd() const;
 		static Token makeSentinelEof(const SourcePosition&);
 		static Token makeKeyword(base::RawView keyword, const SourcePosition&);
 		static Token makeNumber(const base::RawView number, SourcePosition);
@@ -66,6 +81,7 @@ namespace lexer {
 		static Token makeIdentifier(base::RawView identifier, const SourcePosition&);
 		static Token makeSpecial(base::RawView identifier, const SourcePosition&);
 		static Token makeNumLiteral(base::RawView literal, const SourcePosition&);
+		/**@}*/
 
 		virtual ~Token() = default;
 
@@ -136,6 +152,9 @@ namespace lexer {
 		SourcePosition source_position;
 	};
 
+	/**
+	 * @brief Class used to store a tokenized file
+	 */
 	struct TokenData {
 		Tokens          tokens;
 		Token           eof_sentinel;
