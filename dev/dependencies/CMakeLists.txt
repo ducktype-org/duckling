@@ -36,6 +36,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(asio)
 set(ASIO_INCLUDE_DIR "${asio_SOURCE_DIR}/asio/include")
+set(ASIO_INCLUDE_DIR "${asio_SOURCE_DIR}/asio/include" PARENT_SCOPE)
 
 FetchContent_MakeAvailable(crow)
 

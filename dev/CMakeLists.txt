@@ -66,14 +66,17 @@ function(rift_add_test test_pack test_name source USES)
 	endif ()
 endfunction()
 
-function(make_module MODULE_NAME USES)
-	target_include_directories(${MODULE_NAME} PUBLIC src)
+function(make_module MODULE_NAME)
+	set(multiValueArgs USES INCLUDE)
+	cmake_parse_arguments(make_module "" "" "${multiValueArgs}" ${ARGN})
 
-	if (${USES} STREQUAL "USES")
-		target_link_libraries(${MODULE_NAME} ${ARGN}) # ARGN represents all arguemtns beyond defined
-	else ()
-		message(FATAL_ERROR "make_module lacks uses clause")
-	endif ()
+	# Checks if USES is used with 0 or more arguments
+	if ((NOT make_module_USES) AND (NOT ("USES" IN_LIST make_module_KEYWORDS_MISSING_VALUES)))
+		message(FATAL_ERROR "make_module lacks uses argument")
+	endif()
+
+	target_include_directories(${MODULE_NAME} PUBLIC src)
+	target_link_libraries(${MODULE_NAME} ${make_module_USES}) 
 endfunction()
 
 function(add_example exmaple_name source USES)
@@ -110,6 +113,10 @@ endfunction()
 
 # Dependencies
 add_subdirectory(dependencies)
+
+# Sets variables for including ICU. It's not necessarly the cleanest way.
+get_cmake_property(ICU_INCLUDE_DIRS ICU_INCLUDE_DIRS)
+get_cmake_property(ICU_LIBRARIES ICU_LIBRARIES)
 
 # The first test is building tests.
 add_custom_test_pack(base)
