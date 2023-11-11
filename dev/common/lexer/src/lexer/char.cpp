@@ -56,7 +56,6 @@ namespace lexer {
 	void swap(CharArray& first, CharArray& second) {
 		using std::swap;
 
-		swap(first.r_array, second.r_array);
 		swap(first.array, second.array);
 	}
 
@@ -76,8 +75,6 @@ namespace lexer {
 	const Char& CharArray::get(usize i) const { return array[i]; }
 
 	const CharArray::Array& CharArray::getArray() const { return array; }
-
-	CharArray::~CharArray() { delete[] r_array; }
 
 	std::string Char::debugStr() const {
 		std::stringstream out;

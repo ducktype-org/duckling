@@ -94,8 +94,6 @@ namespace lexer {
 	public:
 		/**
 		 * @brief Type used to store the underlying data
-		 * 
-		 * @todo `r_array` member is unused. Delete it
 		 */
 		using Array = std::vector<Char>;
 		CharArray(Array array);
@@ -116,12 +114,9 @@ namespace lexer {
 		[[nodiscard]]
 		const Char& get(usize i) const;
 
-		~CharArray();
-
 	private:
 		CharArray() = default;
 
-		base::RawArray r_array = nullptr;
 		/**
 		 * @brief Underlying data
 		 */
