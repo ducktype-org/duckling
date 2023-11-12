@@ -7,9 +7,11 @@ Rift source docs
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+   :titlesonly:
  
    source-doc/source-docs/index.rst
    source-doc/dev-guides/index.rst
+   source-doc/dev-handbook/index.rst
 
 
 Indices and tables
