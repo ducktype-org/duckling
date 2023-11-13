@@ -75,7 +75,7 @@ function(make_module MODULE_NAME)
 		message(FATAL_ERROR "make_module lacks uses argument")
 	endif()
 
-	target_include_directories(${MODULE_NAME} PUBLIC src)
+	target_include_directories(${MODULE_NAME} PUBLIC src ${make_module_INCLUDE})
 	target_link_libraries(${MODULE_NAME} ${make_module_USES}) 
 endfunction()
 
@@ -117,6 +117,9 @@ add_subdirectory(dependencies)
 # Sets variables for including ICU. It's not necessarly the cleanest way.
 get_cmake_property(ICU_INCLUDE_DIRS ICU_INCLUDE_DIRS)
 get_cmake_property(ICU_LIBRARIES ICU_LIBRARIES)
+# Makes it so that system headers aren't accidentally used if icu is installed with an older version
+# These headers have paths unicode/*.h so they shouldn't have any conflicts
+include_directories(${ICU_INCLUDE_DIRS})
 
 # The first test is building tests.
 add_custom_test_pack(base)

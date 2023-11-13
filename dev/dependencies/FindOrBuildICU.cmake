@@ -1,4 +1,6 @@
 # Based on: https://github.com/meta-toolkit/meta-cmake/blob/master/FindOrBuildICU.cmake
+# With Windows building removed because it's very dependent on version
+# @TODO: It might be possible to add include directory automaticly from target
 
 include(ExternalProject)
 
@@ -30,7 +32,7 @@ function(FindOrBuildICU)
   message("-- Searching for ICU ${FindOrBuildICU_VERSION}")
 
   if (NOT BUILD_STATIC_ICU)
-    find_package(ICU ${FindOrBuildICU_VERSION} COMPONENTS data i18n uc)
+    find_package(ICU ${FindOrBuildICU_VERSION} COMPONENTS data i18n uc io)
   endif()
 
   if (BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_EQUAL "${FindOrBuildICU_VERSION}")

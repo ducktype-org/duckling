@@ -5,7 +5,7 @@ add_library(Lexer
 		src/lexer/source_position.hpp
 		src/lexer/source_position.cpp)
 
-make_module(Lexer USES Filesystem Printer RiftDefinitions INCLUDE ${ICU_INCLUDE_DIRS})
+make_module(Lexer USES Filesystem Printer RiftDefinitions)
 
 rift_add_test(common lexer_test_simple tests/test.cpp
 		USES Lexer RiftDefinitions)
