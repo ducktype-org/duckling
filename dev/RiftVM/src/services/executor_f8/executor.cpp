@@ -286,7 +286,7 @@ namespace vm {
 				})
 
 				OP_CASE(setPtrArg_lptr, {
-					FRAME(next_args.pointer_arg) = derefStack<Pointer>(local_stack, arg1);
+					FRAME(next_args.pointer_arg) = derefStack<Pointer>(local_stack, arg0);
 				})
 
 				OP_CASE(setPArg_l64, {
