@@ -1,8 +1,8 @@
 {
-	"name": "lsp-sample-server",
-	"description": "Example implementation of a language server in node.",
-	"version": "1.0.0",
-	"author": "Microsoft Corporation",
+	"name": "rift-server",
+	"description": "Implementation of Rift language server in node.",
+	"version": "0.0.1",
+	"author": "zpp-2.1",
 	"license": "MIT",
 	"engines": {
 		"node": "*"
