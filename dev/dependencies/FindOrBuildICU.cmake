@@ -54,8 +54,8 @@ function(FindOrBuildICU)
     elseif(UNIX)
       # always build with position independent code in case we are linked
       # against a shared library
-      set(ICU_CFLAGS "-fPIC")
-      set(ICU_CXXFLAGS "-fPIC")
+      # set(ICU_CFLAGS "-fPIC")
+      # set(ICU_CXXFLAGS "-fPIC")
 
       # determine a reasonable number of threads to build ICU with
       include(ProcessorCount)
@@ -109,25 +109,30 @@ function(FindOrBuildICU)
 
       set(ICU_INCLUDE_DIRS ${ICU_EP_PREFIX}/include)
 
-      add_library(icudata IMPORTED STATIC)
+      add_library(icudata IMPORTED STATIC GLOBAL)
       set_target_properties(icudata PROPERTIES IMPORTED_LOCATION
         ${ICU_EP_LIBICUDATA})
       add_dependencies(icudata ExternalICU)
+      target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
 
-      add_library(icui18n IMPORTED STATIC)
+      add_library(icui18n IMPORTED STATIC GLOBAL)
       set_target_properties(icui18n PROPERTIES IMPORTED_LOCATION
         ${ICU_EP_LIBICUI18N})
       add_dependencies(icui18n ExternalICU)
+      target_include_directories(icui18n INTERFACE ${ICU_INCLUDE_DIRS})
 
-      add_library(icuuc IMPORTED STATIC)
+      add_library(icuuc IMPORTED STATIC GLOBAL)
       set_target_properties(icuuc PROPERTIES IMPORTED_LOCATION
         ${ICU_EP_LIBICUUC})
       add_dependencies(icuuc ExternalICU)
+      target_include_directories(icuuc INTERFACE ${ICU_INCLUDE_DIRS})
 
-      add_library(icuio IMPORTED STATIC)
+      add_library(icuio IMPORTED STATIC GLOBAL)
       set_target_properties(icuio PROPERTIES IMPORTED_LOCATION
         ${ICU_EP_LIBICUIO})
       add_dependencies(icuio ExternalICU)
+      target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
+
 
       set(ICU_LIBRARIES icui18n icuuc icudata icuio)
       set(ICU_IS_EXTERNAL TRUE PARENT_SCOPE)
@@ -139,8 +144,6 @@ function(FindOrBuildICU)
   message("-- ICU include dirs: ${ICU_INCLUDE_DIRS}")
   message("-- ICU libraries: ${ICU_LIBRARIES}")
 
-  set_property(GLOBAL PROPERTY ICU_INCLUDE_DIRS ${ICU_INCLUDE_DIRS})
-  set_property(GLOBAL PROPERTY ICU_LIBRARIES ${ICU_LIBRARIES})
 
   if (ICU_IS_EXTERNAL)
     file(MAKE_DIRECTORY ${ICU_INCLUDE_DIRS})

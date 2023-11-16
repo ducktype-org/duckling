@@ -31,6 +31,7 @@ FetchContent_Declare(
 FetchContent_Declare(
 		crow
 		URL "https://github.com/CrowCpp/Crow/archive/${CROW_COMMIT}.zip"
+		SYSTEM
 )
 
 
