@@ -83,18 +83,12 @@ namespace base {
 	 *
 	 * @tparam T
 	 */
-	template<class T, class Container = std::optional<T>>
+	template<class T>
 	class Optional {
 	public:
 		Optional() = default;
 
-		explicit Optional(T value): private_optional(std::make_optional<T>(value)) {}
-
-		template<class U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
-		wrapper(const U& u): t_(u) {}
-
-		template<class U, std::enable_if_t<!std::is_convertible_v<U, T>>* = nullptr>
-		explicit wrapper(const U& u): t_(u) {}
+		Optional(const T& value) { private_optional = value; }
 
 		template<class... Args>
 		explicit Optional(Args&&... args):
@@ -259,7 +253,7 @@ namespace base {
 		}
 
 	private:
-		Container private_optional;
+		std::optional<T> private_optional;
 	};
 
 	// @WARNING: This is almost an exact copy of the code above and there is pretty much nothing

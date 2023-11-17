@@ -187,13 +187,13 @@ namespace vm {
 		auto getInnerType = [](const auto& t) { return t.inner_type; };
 
 		auto pointerOption = get<kind::Pointer>().map(getInnerType);
-		if (pointerOption.has_value()) return pointerOption.value();
+		if (pointerOption.has_value()) return (TypeCRef) pointerOption.value();
 
 		auto staticTableOption = get<kind::StaticTable>().map(getInnerType);
-		if (staticTableOption.has_value()) return staticTableOption.value();
+		if (staticTableOption.has_value()) return (TypeCRef) staticTableOption.value();
 
 		auto dynamicTableOption = get<kind::DynamicTable>().map(getInnerType);
-		if (dynamicTableOption.has_value()) return dynamicTableOption.value();
+		if (dynamicTableOption.has_value()) return (TypeCRef) dynamicTableOption.value();
 
 		return {};
 	}

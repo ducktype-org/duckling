@@ -25,7 +25,7 @@ namespace clap {
 	public:
 		template<class T>
 		base::Optional<base::RawView> get(T name) const {
-			return to_id(name).flat_map([this](usize id) { return get(id); });
+			return to_id(name).flatMap([this](usize id) { return get(id); });
 		}
 
 		template<class T>

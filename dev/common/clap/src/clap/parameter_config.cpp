@@ -7,31 +7,31 @@ namespace clap {
 	ParameterConfig::ParameterConfig(char short_name): short_name_(short_name) {}
 
 	ParameterConfig& ParameterConfig::long_name(const base::RawView& long_name) {
-		long_name_ = base::Optional(base::StrId(long_name));
+		long_name_ = base::StrId(long_name);
 		return *this;
 	}
 
 	ParameterConfig& ParameterConfig::short_name(char short_name) {
-		short_name_ = base::Optional(short_name);
+		short_name_ = short_name;
 		return *this;
 	}
 
 	ParameterConfig& ParameterConfig::description(const base::RawView& description) {
-		description_ = base::Optional(base::StrId(description));
+		description_ = base::StrId(description);
 		return *this;
 	}
 
 	ParameterConfig& ParameterConfig::required(const base::RawView& value_name) {
 		required_   = true;
-		value_name_ = base::Optional(base::StrId(value_name));
+		value_name_ = base::StrId(value_name);
 		return *this;
 	}
 
 	ParameterConfig& ParameterConfig::with_value(
 		const base::RawView& value_name, const base::RawView& default_value
 	) {
-		default_value_ = base::Optional(base::StrId(default_value));
-		value_name_    = base::Optional(base::StrId(value_name));
+		default_value_ = base::StrId(default_value);
+		value_name_    = base::StrId(value_name);
 		return *this;
 	}
 

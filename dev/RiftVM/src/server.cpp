@@ -4,22 +4,45 @@
 #include <supervisor/supervisor.hpp>
 #include "server.hpp"
 
+#pragma once
+
+#include <result.hpp>
+
+namespace {
+	template<class T, class E, class R>
+	R convertResult(
+		cpp::result<T, E>          result,
+		std::function<R(const T&)> map_value,
+		std::function<R(const E&)> map_error
+	) {
+		if (result.has_value()) return map_value(result.value());
+		return map_error(result.error());
+	}
+
+	template<class E, class R>
+	R convertResult(
+		cpp::result<void, E>       result,
+		std::function<R()>         map_value,
+		std::function<R(const E&)> map_error
+	) {
+		if (result.has_value()) return map_value();
+		return map_error(result.error());
+	}
+}
+
 crow::response convertError(const vm::api::ApiError& apiError) {
-	if (std::holds_alternative<vm::api::WrongResponse>(apiError))
-		return crow::response(500, "Wrong response");
-	return crow::response(
-		400,
-		std::visit(
-			[](const auto& v) {
-				return "JSON is broken\n";  // JS::serializeStruct(v);
-			},
-			apiError
-		)
-	);
+	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return { 500, "Wrong response" };
+	return { 400,
+		     std::visit(
+				 [](const auto& v) {
+					 return "JSON is broken\n";  // JS::serializeStruct(v);
+				 },
+				 apiError
+			 ) };
 }
 
 template<class T, class E>
-crow::response toResponse(const result<T, E>& x) {
+crow::response toResponse(const cpp::result<T, E>& x) {
 	static auto convert = [](const auto& v) {
 		return crow::response(200, /*JS::serializeStruct(v)*/ "{OK, json is broken}");
 	};
@@ -27,7 +50,7 @@ crow::response toResponse(const result<T, E>& x) {
 }
 
 template<class E>
-crow::response toResponse(const result<void, E>& x) {
+crow::response toResponse(const cpp::result<void, E>& x) {
 	static auto convert = []() { return crow::response(200, "{}"); };
 	return convertResult<E, crow::response>(x, convert, convertError);
 }
@@ -81,7 +104,7 @@ void server(i32 port) {
 	});
 
 	CROW_ROUTE(app, "/data/type/<uint>/<string>")
-	([](vm::PID pid, std::string type_name) {
+	([](vm::PID pid, const std::string& type_name) {
 		return toResponse(vm::api::getType(pid, type_name).map([](const vm::TypeCRef& type_ptr) {
 			return *type_ptr;
 		}));
