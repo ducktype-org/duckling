@@ -142,13 +142,13 @@ namespace vm {
 		variant_match(kind) {
 			variant_case_novalue(kind::Primitive) {
 				if (pos == 0)
-					return base::Optional<TypeCRef>(TypeCRef(this));
+					return TypeCRef(this);
 				else
 					return {};
 			}
 			variant_case_novalue(kind::Pointer) {
 				if (pos == 0)
-					return base::Optional<TypeCRef>(TypeCRef(this));
+					return TypeCRef(this);
 				else
 					return {};
 			}
@@ -162,7 +162,7 @@ namespace vm {
 			}
 			variant_case_novalue(kind::DynamicTable) {
 				if (pos == 0)
-					return base::Optional<TypeCRef>(TypeCRef(this));
+					return TypeCRef(this);
 				else
 					return {};
 			}
@@ -173,7 +173,7 @@ namespace vm {
 				// @TODO: is pos == 0 then return some special TypeRef to variant index
 				// @TODO: is pos == 1 then return error
 				if (pos == 2)
-					return base::Optional<TypeCRef>(TypeCRef(this));
+					return TypeCRef(this);
 				else
 					return {};
 			}
@@ -187,15 +187,13 @@ namespace vm {
 		auto getInnerType = [](const auto& t) { return t.inner_type; };
 
 		auto pointerOption = get<kind::Pointer>().map(getInnerType);
-		if (pointerOption.has_value()) return base::Optional<TypeCRef>(pointerOption.value());
+		if (pointerOption.has_value()) return pointerOption.value();
 
 		auto staticTableOption = get<kind::StaticTable>().map(getInnerType);
-		if (staticTableOption.has_value())
-			return base::Optional<TypeCRef>(staticTableOption.value());
+		if (staticTableOption.has_value()) return staticTableOption.value();
 
 		auto dynamicTableOption = get<kind::DynamicTable>().map(getInnerType);
-		if (dynamicTableOption.has_value())
-			return base::Optional<TypeCRef>(dynamicTableOption.value());
+		if (dynamicTableOption.has_value()) return dynamicTableOption.value();
 
 		return {};
 	}
