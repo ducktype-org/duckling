@@ -4,7 +4,6 @@ namespace vm {
 
 	namespace detail {
 
-
 		// @TODO: too similar to code in type.cpp with witch its now incompatible
 		// See: https://github.com/rift-lang/rift-poc-zpp1/issues/91
 		bool typeAtOffset(TypeCRef type, u64 offset, TypeCRef searched) {

@@ -4,9 +4,9 @@
 #include <vector>
 #include <span>
 
+#include <base/optional.hpp>
 #include <memory_data/pointer.hpp>
 #include "code.hpp"
-#include <base/optional.hpp>
 
 namespace vm {
 
@@ -41,7 +41,7 @@ namespace vm {
 		// Internal data:
 		base::Optional<Frame&> previous;
 		// const FuncData& function;
-		std::span<const Fix8Instruction>
+		const std::span<const Fix8Instruction>
 			bc;  // this is duplication of function.bc, but allows for faster access
 
 		bool  continue_execution;

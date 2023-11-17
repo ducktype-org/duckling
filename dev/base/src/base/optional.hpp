@@ -90,6 +90,12 @@ namespace base {
 
 		explicit Optional(T value): private_optional(std::make_optional<T>(value)) {}
 
+		template<class U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
+		wrapper(const U& u): t_(u) {}
+
+		template<class U, std::enable_if_t<!std::is_convertible_v<U, T>>* = nullptr>
+		explicit wrapper(const U& u): t_(u) {}
+
 		template<class... Args>
 		explicit Optional(Args&&... args):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}

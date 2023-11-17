@@ -3,7 +3,7 @@
 #include <type_traits>
 
 namespace base {
-	namespace {
+	namespace detail {
 		template<template<typename...> class Template, typename>
 		struct IsInstantiationOfImpl: std::false_type {};
 
@@ -18,7 +18,7 @@ namespace base {
 	}
 
 	template<template<typename...> class Template, typename T>
-	concept IsInstantiationOf = IsInstantiationOfImpl<Template, T>::value;
+	concept IsInstantiationOf = detail::IsInstantiationOfImpl<Template, T>::value;
 
 	/**
 	 * This concept is used to statically determine if two types are instances of the same templated
@@ -38,5 +38,5 @@ namespace base {
 	 * @tparam TypeB
 	 */
 	template<class TypeA, template<class> class TypeB>
-	concept IsOfSameClass = IsOfSameClassImpl<TypeA, TypeB>::value;
+	concept IsOfSameClass = detail::IsOfSameClassImpl<TypeA, TypeB>::value;
 }
