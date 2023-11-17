@@ -88,7 +88,7 @@ namespace base {
 	public:
 		Optional() = default;
 
-		Optional(const T& value) { private_optional = value; }
+		Optional(const T& value): private_optional(value) {}
 
 		template<class... Args>
 		explicit Optional(Args&&... args):
