@@ -10,6 +10,7 @@
 #include <sstream>
 #include <array>
 #include <string>
+#include <iostream>
 
 namespace lexer {
 	bool Char::isCharacter() const { return type_ == Character; }

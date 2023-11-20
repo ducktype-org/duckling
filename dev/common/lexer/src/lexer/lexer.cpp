@@ -3,12 +3,13 @@
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
  */
 
+#include "classifications.hpp"
+
 #include "lexer.hpp"
 #include "lexer_class.hpp"
 #include <iostream>
 #include <rift_definitions/key_spec_op.hpp>
-
-// @TODO: change name_ names to sth meaningfull
+#include <base/init_guard.hpp>
 
 namespace lexer {
 
@@ -346,11 +347,11 @@ namespace lexer {
 	bool Lexer::isStringBegin() const { return tryRawValue('"'); }
 
 	void init() {
-		static bool was_init = false;
-		if (was_init) return;
+		RIFT_SIMPLE_INIT_GUARD_BEGIN
 		// Put inits here
+		Classifications::init();
 		rift_def::key_spec_op::init();
-		was_init = true;
+		RIFT_SIMPLE_INIT_GUARD_END
 	}
 
 	lexer::TokenData tokenizeFile(const fs::FilePath& file, bool dprint) {
