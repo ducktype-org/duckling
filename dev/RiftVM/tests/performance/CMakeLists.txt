@@ -45,4 +45,6 @@ if (PROFILE)
             USES LibRiftVm Tester)
     rift_add_perf_test(vm vm_collatz collatz.cpp
             USES LibRiftVm Tester)
+    rift_add_perf_test(vm vm_ackermann ackermann.cpp
+            USES LibRiftVm Tester)
 endif ()
