@@ -10,7 +10,8 @@
 #include <exception>
 #include <string>
 #include <printer/printer.hpp>
-#include <config/config.hpp>
+#include <base/str_concat.hpp>
+#include <base/exceptions.hpp>
 
 #define ASSERT_EQUAL(expected, actual)         \
 	assertEqual(                               \
@@ -102,7 +103,7 @@ namespace tester {
 
 		// rvalue reference to make sure the order is correct for the macro above.
 		template<class T, class U>
-		void assertEqual(T&& expected, const U& actual, std::string_view error) {
+		void assertEqual(const T& expected, const U& actual, std::string_view error) {
 			assert(expected == actual, error);
 		}
 	};
@@ -119,12 +120,12 @@ namespace tester {
  * @brief Only use this macro if single class test file
  * and after defining proper TESTER_CLASS
  */
-#define TESTER_COMMON_MAIN(test_path)                                        \
-	int main(int argc, char* argv[]) {                                       \
-		auto config = tester::testConfigFromArgs({ argc, argv }, test_path); \
-                                                                             \
-		TESTER_CLASS test(std::move(config));                                \
-		if (!test.run()) return 1;                                           \
+#define TESTER_COMMON_MAIN(test_path)                                                \
+	int main(int argc, const char* argv[]) {                                         \
+		auto config = tester::testConfigFromArgs({ (usize) argc, argv }, test_path); \
+                                                                                     \
+		TESTER_CLASS test(std::move(config));                                        \
+		if (!test.run()) return 1;                                                   \
 	}
 
 }

@@ -47,8 +47,8 @@ namespace clap::exceptions {
 
 	ExpectedParameterIdentifier::ExpectedParameterIdentifier(i32 at, std::string_view source):
 		  ClapException(base::strConcat(
-			  source.substr(std::min(0, at - 20), source.size() - std::min(0, at - 20) + 1),
-			  "<HERE>"
+			  source.substr(std::max(0, at - 20), source.size() - std::max(0, at - 20) + 1),
+			  "_<- Here expected parameter identifier."
 		  )) {}
 
 	MissingRequiredParameter::MissingRequiredParameter(const std::string& name):

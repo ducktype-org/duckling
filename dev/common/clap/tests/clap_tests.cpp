@@ -1,5 +1,6 @@
 #include <tester/tester.hpp>
 #include <clap/clap.hpp>
+#include <clap/exceptions.hpp>
 #include <clap/param_builder.hpp>
 #include <array>
 
@@ -14,6 +15,8 @@ public:
 		TESTER_ADD_TEST(positionalTest);
 		TESTER_ADD_TEST(namedTest);
 		TESTER_ADD_TEST(flagTest);
+		TESTER_ADD_TEST(multipleFlagsTest);
+		TESTER_ADD_TEST(weirdCases);
 	}
 
 private:
@@ -102,6 +105,59 @@ private:
 		ASSERT_EQUAL(123, *res2.getExtra<i64>(0));
 		ASSERT_EQUAL(true, res2.isFlag('f'));
 		ASSERT_EQUAL(true, res2.isFlag("flag"));
+	}
+
+	void multipleFlagsTest() {
+		auto par = clap::Clap()
+		               .setDefaultParser(clap::IntParser::make())
+		               .add(clap::ParamBuilder::ofFlag()
+		                        .addShortName('a')
+		                        .addLongName("flag")
+		                        .addShortDesc("Desc")
+		                        .build())
+		               .add(clap::ParamBuilder::ofFlag()
+		                        .addShortName('b')
+		                        .addLongName("flag")
+		                        .addShortDesc("Desc")
+		                        .build())
+		               .add(clap::ParamBuilder::ofFlag()
+		                        .addShortName('c')
+		                        .addLongName("flag")
+		                        .addShortDesc("Desc")
+		                        .build());
+
+		std::array argv{ "./prog", "-abc" };
+		auto       res = par.parse(argv.size(), argv.begin());
+		ASSERT_EQUAL(3, res.getFlagCount());
+		ASSERT_EQUAL(true, res.isFlag('a'));
+		ASSERT_EQUAL(true, res.isFlag('b'));
+		ASSERT_EQUAL(true, res.isFlag('c'));
+	}
+
+	void weirdCases() {
+		auto par = clap::Clap()
+		               .setDefaultParser(clap::IntParser::make())
+		               .add(clap::ParamBuilder::ofFlag()
+		                        .addShortName('a')
+		                        .addLongName("flag")
+		                        .addShortDesc("Desc")
+		                        .build())
+		               .add(clap::ParamBuilder::ofFlag()
+		                        .addShortName('b')
+		                        .addLongName("flag")
+		                        .addShortDesc("Desc")
+		                        .build())
+		               .add(clap::ParamBuilder::ofFlag()
+		                        .addShortName('c')
+		                        .addLongName("flag")
+		                        .addShortDesc("Desc")
+		                        .build());
+		std::array argv{ "./prog", "--" };
+		bool       exception = false;
+		try {
+			auto res = par.parse(argv.size(), argv.begin());
+		} catch (clap::exceptions::ExpectedParameterIdentifier& _) { exception = true; }
+		assertEqual(true, exception, "Should throw ExpectedParameterIdentifier exception.");
 	}
 };
 

@@ -77,6 +77,49 @@ namespace {
 		if_opt_some(param.getShortName(), name) return { name };
 		throw clap::exceptions::ClapException("Parameter has no name!");
 	}
+
+	base::Optional<clap::ClapParameter&> getParam(
+		clap::ParsingResult&                    result,
+		const std::vector<clap::ClapParameter>& parameters,
+		NameType                                name_type,
+		const std::string&                      param_name
+	) {
+		for (auto& param: parameters) {
+			if (name_type == NameType::ShortName) {
+				if_opt_some(param.getShortName(), val) {
+					if (val == param_name[flag_pack_index]) return param;
+				}
+			} else {
+				if_opt_some(param.getLongName(), val) {
+					if (val == param_name.c_str()) found_param = true;
+				}
+			}
+			if (found_param) {
+				if (param.getValueParser() == nullptr) {
+					// then it's a flag
+					result.insertFlag(param);
+				} else {
+					// it's a parsable value
+
+					// Throw if duplicated
+					if (result.hasParam(param))
+						throw clap::exceptions::DuplicatedParameter(param_name);
+
+					match_optional(PARSE(param.getValueParser())) {
+						opt_some(value) result.insertParameterValue(param, value);
+						opt_none throw exceptions::ParameterRequiresValue(
+							param_name, param.getValueParser()->getTypeName()
+						);
+					}
+				}
+				if (is_flag_pack && flag_pack_index + 1 < param_name.size()) {
+					found_param = false;
+					flag_pack_index++;
+				}
+				break;
+			}
+		}
+	}
 }
 
 namespace clap {
@@ -84,6 +127,8 @@ namespace clap {
 		parameters.push_back(std::move(parameter));
 		return *this;
 	}
+
+	ParsingResult Clap::parse(CLIArgs args) { return parse(args.argc, args.argv); }
 
 	ParsingResult Clap::parse(usize argc, const char** argv) {
 		std::string args = mergeArgs(argc, argv);
@@ -110,39 +155,17 @@ namespace clap {
 					auto [param_name, name_type] = parseParamName(parsing_position, args);
 					if (name_type == NameType::EmptyName)
 						throw exceptions::ExpectedParameterIdentifier((i32) parsing_position, args);
-					bool found_param = false;
-					for (auto& param: parameters) {
-						if (name_type == NameType::ShortName) {
-							if_opt_some(param.getShortName(), val) {
-								if (val == param_name[0]) found_param = true;
-							}
-						} else {
-							if_opt_some(param.getLongName(), val) {
-								if (val == param_name.c_str()) found_param = true;
-							}
-						}
-						if (found_param) {
-							if (param.getValueParser() == nullptr) {
-								// then it's a flag
-								result.insertFlag(param);
-							} else {
-								// it's a parsable value
 
-								// Throw if duplicated
-								if (result.hasParam(param))
-									throw exceptions::DuplicatedParameter(param_name);
+					bool  found_param     = false;
+					usize flag_pack_index = 0;
 
-								match_optional(PARSE(param.getValueParser())) {
-									opt_some(value) result.insertParameterValue(param, value);
-									opt_none throw exceptions::ParameterRequiresValue(
-										param_name, param.getValueParser()->getTypeName()
-									);
-								}
-							}
-							break;
-						}
-					}
-					if (found_param)
+					// A flag pack is multiple flags after one "-" like "tar -xf file" where "-xf"
+					// is a flag pack.
+					bool is_flag_pack = name_type == NameType::ShortName && param_name.size() > 1;
+
+					auto paramOpt = getParam(result, parameters, name_type, param_name);
+
+					if (paramOpt.has_value())
 						continue;
 					else
 						throw exceptions::InvalidParameterName(param_name);
@@ -234,5 +257,6 @@ namespace clap {
 	const std::vector<base::unique_ptr<ValueParser>>& Clap::getPositionalParameters() const {
 		return positional_parameters;
 	}
+
 
 }  // clap

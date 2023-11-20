@@ -11,6 +11,11 @@
 #include <memory>
 
 namespace clap {
+	struct CLIArgs {
+		usize        argc;
+		const char** argv;
+	};
+
 	/**
 	 * Command-line argument parser
 	 *
@@ -46,6 +51,7 @@ namespace clap {
 		Clap& addHelpFlag();
 
 		ParsingResult parse(usize argc, const char** argv);
+		ParsingResult parse(CLIArgs args);
 
 		[[nodiscard]]
 		const ValueParser* getDefaultValueParser() const;

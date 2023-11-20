@@ -107,5 +107,4 @@ namespace clap {
 		for (const auto& elem: other.id_to_value) id_to_value.put(elem.first, elem.second);
 		return *this;
 	}
-
 }

@@ -6,24 +6,21 @@
 #include <base/exceptions.hpp>
 #include <iostream>
 #include <fstream>
+#include "clap/clap.hpp"
+#include "clap/exceptions.hpp"
 
 void init() {
 	lexer::init();
 	pst::init();
 }
 
-int main(int argc, char* argv[]) {
-	config::CLIArgs args{ argc, argv };
+int main(int argc, const char* argv[]) {
+	clap::CLIArgs args{ (usize) argc, argv };
 
 	try {
 		init();
 
 		auto config = compiler::fromArgs(args);
-
-		if (config.was_help) {
-			compiler::generateHelpMessage().print(std::cerr);
-			return 1;
-		}
 
 		if (config.file_names.empty()) {
 			std::cerr << "Nothing to be done.\n";
@@ -51,6 +48,8 @@ int main(int argc, char* argv[]) {
 			output << out.str();
 		}
 
+	} catch (const clap::exceptions::HelpException& e) {
+		compiler::generateHelpMessage(e);
 	} catch (const base::Exception& e) {
 		std::cerr << "Compiler Exception was caught with message:\n";
 		std::cerr << e.what();

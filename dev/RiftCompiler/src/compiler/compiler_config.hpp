@@ -3,19 +3,19 @@
 #include <vector>
 #include <string>
 #include <printer/printer.hpp>
-#include <config/cli_args.hpp>
+#include <clap/exceptions.hpp>
+#include <clap/clap.hpp>
 
 namespace compiler {
 
 	struct CompilerConfig {
-		bool                     was_help = false;
 		std::vector<std::string> file_names;
 
 		bool        was_output = false;
 		std::string output;
 	};
 
-	CompilerConfig   fromArgs(config::CLIArgs args);
-	printer::Message generateHelpMessage();
+	CompilerConfig   fromArgs(clap::CLIArgs args);
+	printer::Message generateHelpMessage(const clap::exceptions::HelpException& e);
 
 }
