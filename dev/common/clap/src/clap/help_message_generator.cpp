@@ -45,7 +45,7 @@ namespace {
 	}
 
 	std::string generateOptions(
-		const clap::Clap& clap, const clap::ParsingResult& parsing_result, int padding = 27
+		const clap::Clap& clap, int padding = 27
 	) {
 		std::stringstream output;
 
@@ -88,7 +88,7 @@ namespace clap {
 
 		std::string output;
 		output += generateUsage(clap, parsing_result);
-		if (!clap.getParameters().empty()) output += generateOptions(clap, parsing_result);
+		if (!clap.getParameters().empty()) output += generateOptions(clap);
 
 		return output;
 	}
