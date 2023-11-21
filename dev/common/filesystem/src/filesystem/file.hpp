@@ -64,7 +64,6 @@ namespace fs {
 		friend struct ::std::hash<fs::FilePath>;
 
 	public:
-		FilePath() = delete;
 		FilePath(const FilePath&);
 		FilePath(FilePath&&) = default;
 		~FilePath()          = default;

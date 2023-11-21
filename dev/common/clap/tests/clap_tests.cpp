@@ -130,23 +130,7 @@ private:
 	}
 
 	void weirdCases() {
-		auto par = clap::Clap()
-		               .setDefaultParser(clap::IntParser::make())
-		               .add(clap::ParamBuilder::ofFlag()
-		                        .addShortName('a')
-		                        .addLongName("flag")
-		                        .addShortDesc("Desc")
-		                        .build())
-		               .add(clap::ParamBuilder::ofFlag()
-		                        .addShortName('b')
-		                        .addLongName("flag")
-		                        .addShortDesc("Desc")
-		                        .build())
-		               .add(clap::ParamBuilder::ofFlag()
-		                        .addShortName('c')
-		                        .addLongName("flag")
-		                        .addShortDesc("Desc")
-		                        .build());
+		auto       par = clap::Clap();
 		std::array argv{ "./prog", "--" };
 		bool       exception = false;
 		try {

@@ -104,8 +104,10 @@ namespace clap {
 
 		base::HashMap<usize, ParsedValue> id_to_value;
 		std::vector<ParsedValue>          positional_values;
-		std::vector<ParsedValue> extra_values;  // Values parsed with default value parser - that is
-		                                        // they were passed additionally.
+
+		// Values parsed with default value parser - that is
+		// they were passed additionally.
+		std::vector<ParsedValue> extra_values;
 
 		std::unordered_set<usize> flags;
 	};
