@@ -212,15 +212,17 @@ namespace base {
 		 * nothing.
 		 */
 		template<typename Function>
-		auto map(const Function& function) const -> Optional<decltype(function(T()))> {
-			if (has_value()) return Optional<decltype(function(T()))>(function(value()));
+		auto map(const Function& function) const
+			-> Optional<typename std::invoke_result<Function, T>::type> {
+			if (has_value()) return function(value());
 			return {};
 		}
 
 		// A non-const version.
 		template<typename Function>
-		auto map(const Function& function) -> Optional<decltype(function(T()))> {
-			if (has_value()) return Optional<decltype(function(T()))>(function(value()));
+		auto map(const Function& function)
+			-> Optional<typename std::invoke_result<Function, T>::type> {
+			if (has_value()) return function(value());
 			return {};
 		}
 
@@ -233,17 +235,17 @@ namespace base {
 		 * @return If object contains a value, then applies a function, otherwise does nothing.
 		 */
 		template<typename Function>
-		auto flatMap(const Function& function) const -> decltype(function(T())) {
-			static_assert(IsOfSameClass<decltype(function(T())), Optional>);
-			if (has_value()) return decltype(function(T()))(function(value()));
+		auto flatMap(const Function& function) const -> std::invoke_result<Function, T>::type {
+			static_assert(IsOfSameClass<typename std::invoke_result<Function, T>::type, Optional>);
+			if (has_value()) return function(value());
 			return {};
 		}
 
 		// A non-const version.
 		template<typename Function>
-		auto flatMap(const Function& function) -> decltype(function(T())) {
-			static_assert(IsOfSameClass<decltype(function(T())), Optional>);
-			if (has_value()) return decltype(function(T()))(function(value()));
+		auto flatMap(const Function& function) -> std::invoke_result<Function, T>::type {
+			static_assert(IsOfSameClass<typename std::invoke_result<Function, T>::type, Optional>);
+			if (has_value()) return function(value());
 			return {};
 		}
 
@@ -374,30 +376,32 @@ namespace base {
 		}
 
 		template<typename Function>
-		auto map(const Function& function) const -> Optional<decltype(function(T()))> {
-			if (has_value()) return Optional<decltype(function(T()))>(function(value()));
+		auto map(const Function& function) const
+			-> Optional<typename std::invoke_result<Function, T>::type> {
+			if (has_value()) return function(value());
 			return {};
 		}
 
 		// A non-const version.
 		template<typename Function>
-		auto map(const Function& function) -> Optional<decltype(function(T()))> {
-			if (has_value()) return Optional<decltype(function(T()))>(function(value()));
+		auto map(const Function& function)
+			-> Optional<typename std::invoke_result<Function, T>::type> {
+			if (has_value()) return function(value());
 			return {};
 		}
 
 		template<typename Function>
-		auto flatMap(const Function& function) const -> decltype(function(T())) {
-			static_assert(IsOfSameClass<decltype(function(T())), Optional>);
-			if (has_value()) return decltype(function(T()))(function(value()));
+		auto flatMap(const Function& function) const -> std::invoke_result<Function, T>::type {
+			static_assert(IsOfSameClass<typename std::invoke_result<Function, T>::type, Optional>);
+			if (has_value()) return function(value());
 			return {};
 		}
 
 		// A non-const version.
 		template<typename Function>
-		auto flatMap(const Function& function) -> decltype(function(T())) {
-			static_assert(IsOfSameClass<decltype(function(T())), Optional>);
-			if (has_value()) return decltype(function(T()))(function(value()));
+		auto flatMap(const Function& function) -> std::invoke_result<Function, T>::type {
+			static_assert(IsOfSameClass<typename std::invoke_result<Function, T>::type, Optional>);
+			if (has_value()) return function(value());
 			return {};
 		}
 
