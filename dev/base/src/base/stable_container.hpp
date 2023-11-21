@@ -57,12 +57,12 @@ namespace base {
 
 		Optional<Ref> getRef(Key pos) noexcept {
 			if (usize(pos) >= size()) return {};
-			return Optional(data[usize(pos)].borrow_mut());
+			return data[usize(pos)].borrow_mut();
 		}
 
 		Optional<CRef> getCRef(Key pos) const noexcept {
 			if (usize(pos) >= size()) return {};
-			return Optional(data[usize(pos)].borrow());
+			return data[usize(pos)].borrow();
 		}
 
 		constexpr Key pushBack(const Data& value) {

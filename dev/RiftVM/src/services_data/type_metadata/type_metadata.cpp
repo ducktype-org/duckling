@@ -31,7 +31,7 @@ namespace vm {
 
 	base::Optional<TypeCRef> TypeMetadata::getTypeByName(base::StrId name) const {
 		if (names_to_type.contains(name))
-			return base::Optional<TypeCRef>(getType(names_to_type[name]));
+			return getType(names_to_type[name]);
 		else
 			return {};
 	}
