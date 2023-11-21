@@ -35,3 +35,9 @@ It also includes an End-to-End test.
 - In the [Extension Development Host](https://code.visualstudio.com/api/get-started/your-first-extension#:~:text=Then%2C%20inside%20the%20editor%2C%20press%20F5.%20This%20will%20compile%20and%20run%20the%20extension%20in%20a%20new%20Extension%20Development%20Host%20window.) instance of VSCode, open a document in 'plain text' language mode.
   - Type `j` or `t` to see `Javascript` and `TypeScript` completion.
   - Enter text content such as `AAA aaa BBB`. The extension will emit diagnostics for all words in all-uppercase.
+
+## Logging
+
+To log from the Language Server you can simply use `console.log`. 
+
+To see the output from the Language Server you have to Run the configuration `Launch Client` and then `Attach`. The output will appear in the `Debug Console` after switching the tab to `Attach`.
