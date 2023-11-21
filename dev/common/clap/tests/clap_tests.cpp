@@ -108,30 +108,25 @@ private:
 	}
 
 	void multipleFlagsTest() {
-		auto par = clap::Clap()
-		               .setDefaultParser(clap::IntParser::make())
-		               .add(clap::ParamBuilder::ofFlag()
-		                        .addShortName('a')
-		                        .addLongName("flag")
-		                        .addShortDesc("Desc")
-		                        .build())
-		               .add(clap::ParamBuilder::ofFlag()
-		                        .addShortName('b')
-		                        .addLongName("flag")
-		                        .addShortDesc("Desc")
-		                        .build())
-		               .add(clap::ParamBuilder::ofFlag()
-		                        .addShortName('c')
-		                        .addLongName("flag")
-		                        .addShortDesc("Desc")
-		                        .build());
+		auto par
+			= clap::Clap()
+		          .setDefaultParser(clap::IntParser::make())
+		          .add(clap::ParamBuilder::ofFlag().addShortName('a').addShortDesc("Desc").build())
+		          .add(clap::ParamBuilder::ofFlag().addShortName('b').addShortDesc("Desc").build())
+		          .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
+		                   .addShortName('c')
+		                   .addShortDesc("Desc")
+		                   .build());
 
-		std::array argv{ "./prog", "-abc" };
+		std::array argv{ "./prog", "-abc", "-123" };
 		auto       res = par.parse(argv.size(), argv.begin());
-		ASSERT_EQUAL(3, res.getFlagCount());
+
+		ASSERT_EQUAL(2, res.getFlagCount());
+		ASSERT_EQUAL(1, res.getNamedParameterCount());
+
 		ASSERT_EQUAL(true, res.isFlag('a'));
 		ASSERT_EQUAL(true, res.isFlag('b'));
-		ASSERT_EQUAL(true, res.isFlag('c'));
+		ASSERT_EQUAL(-123, *res.getValue<i64>('c'));
 	}
 
 	void weirdCases() {
