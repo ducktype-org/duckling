@@ -28,6 +28,8 @@ namespace base {
 			out.append(std::to_string(v));
 		}
 
+		inline void strConcat(std::string& out, double v) { out.append(std::to_string(v)); }
+
 		inline void strConcat(std::string& out, bool v) { out.append(v ? "true" : "false"); }
 
 		template<typename U, typename V>
