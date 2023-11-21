@@ -5,15 +5,11 @@
 #include "type_traits.hpp"
 #include "raw_view.hpp"
 
-// #include <concepts>
-// #include <type_traits>
-
 namespace base {
 
 	class StrId;
 
 	namespace detail {
-
 		template<typename T>
 		requires(!std::is_integral_v<std::remove_reference_t<T>>)
 		void strConcat(std::string& out, T&& v) {
@@ -24,7 +20,7 @@ namespace base {
 			out.append(view.stringView());
 		}
 
-		// This is forward declaration to prevent circular header dependency thru:
+		// This is forward declaration to prevent circular header dependency through:
 		// string_id.hpp -> maps.hpp -> exceptions.hpp -> str_concat.hpp
 		void strConcat(std::string& out, base::StrId str_id);
 
@@ -34,7 +30,16 @@ namespace base {
 
 		inline void strConcat(std::string& out, bool v) { out.append(v ? "true" : "false"); }
 
-		inline void strConcat(std::string& out, double v) { out.append(std::to_string(v)); }
+		template<typename U, typename V>
+		requires(std::is_trivially_copyable<U>::value && std::is_trivially_copyable<V>::value)
+		inline void strConcat(std::string& out, std::pair<U, V> pair) {
+			out += "<";
+			strConcat(out, pair.first);
+			out += ", ";
+			strConcat(out, pair.second);
+			out += ">";
+		}
+
 	}
 
 	/**

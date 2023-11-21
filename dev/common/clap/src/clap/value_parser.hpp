@@ -11,6 +11,7 @@
 #include "base/exceptions.hpp"
 #include "base/type_traits.hpp"
 #include <base/optional.hpp>
+#include <regex>
 
 namespace clap {
 
@@ -103,6 +104,32 @@ namespace clap {
 		[[nodiscard]]
 		std::string getTypeName() const override {
 			return getCustomValueName().value_or("int..int");
+		}
+	};
+
+	class FileParser: public ValueParser {
+		using ValueParser::ValueParser;
+
+		std::regex file_regex = std::regex(".*");
+
+	public:
+		FileParser(const std::regex& regex): file_regex(regex) {}
+
+		FileParser(const std::string& name, const std::regex& regex):
+			  ValueParser(name),
+			  file_regex(regex) {}
+
+		template<class... Args>
+		static base::unique_ptr<FileParser> make(Args&&... args) {
+			return base::make_unique<FileParser>(std::forward<Args>(args)...);
+		}
+
+		[[nodiscard]]
+		ValueParsingResult parse(usize start, std::string_view raw_input) const override;
+
+		[[nodiscard]]
+		std::string getTypeName() const override {
+			return getCustomValueName().value_or("file");
 		}
 	};
 

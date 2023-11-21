@@ -1,8 +1,8 @@
 #include <tester/tester.hpp>
-#include <clap/clap.hpp>
 #include <clap/parsing_result.hpp>
 #include <array>
 #include "clap/exceptions.hpp"
+#include "filesystem/file.hpp"
 
 class ClapParserTester: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -12,6 +12,8 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Clap Parser Tester") {
 		TESTER_ADD_TEST(intParserTest);
 		TESTER_ADD_TEST(stringParserTest);
+		TESTER_ADD_TEST(rangeParserTest);
+		TESTER_ADD_TEST(fileParserTest);
 	}
 
 private:
@@ -21,6 +23,19 @@ private:
 
 	static std::string parseString(const std::string& str) {
 		return std::any_cast<std::string>(clap::StringParser::make()->parse(0, str).value);
+	}
+
+	using Range = std::pair<i64, i64>;
+
+	static Range parseRange(const std::string& str) {
+		auto val
+			= std::any_cast<clap::RangeParser::Range>(clap::RangeParser::make()->parse(0, str).value
+		    );
+		return { val.begin, val.end };
+	}
+
+	static fs::FilePath parseFile(const std::string& str, std::regex regex = std::regex(".*")) {
+		return std::any_cast<fs::FilePath>(clap::FileParser::make(regex)->parse(0, str).value);
 	}
 
 	void intParserTest() {
@@ -68,6 +83,34 @@ private:
 		ASSERT_EQUAL("", std::any_cast<std::string>(parsed5.value));
 		ASSERT_EQUAL(2, parsed5.position);
 		ASSERT_EQUAL("", parsed5.raw_source);
+	}
+
+	void rangeParserTest() {
+		ASSERT_EQUAL(Range(1, 2), parseRange("1..2"));
+		ASSERT_EQUAL(Range(-1, 2), parseRange("-1..2"));
+		ASSERT_EQUAL(Range(5, 2), parseRange("5..2"));
+		assertThrows<clap::exceptions::ValueParsingException>(
+			[&]() { parseRange("1 .. 3"); }, "Should throw on invalid value"
+		);
+	}
+
+	void fileParserTest() {
+		auto                  initial_path = std::filesystem::current_path();
+		std::filesystem::path path         = __FILE__;
+		path.remove_filename();
+		std::filesystem::current_path(path);
+
+		ASSERT_EQUAL(
+			"awesome_content\n",
+			parseFile("test_file.txt", std::regex(".*\\.txt")).getContent().view().stdString()
+		);
+
+		assertThrows<clap::exceptions::ValueParsingException>(
+			[&]() { parseFile("test_file.txt", std::regex(".*\\.cpp")); },
+			"Regex should make it invalid"
+		);
+
+		std::filesystem::current_path(initial_path);
 	}
 };
 

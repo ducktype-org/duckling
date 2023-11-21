@@ -8,6 +8,7 @@
 #include <iostream>
 #include "value_parser.hpp"
 #include "exceptions.hpp"
+#include "filesystem/file.hpp"
 
 namespace clap {
 	ValueParsingResult StringParser::parse(usize start, std::string_view raw_input) const {
@@ -71,17 +72,35 @@ namespace clap {
 		auto left_value_source = my_chunk.substr(0, dot_dot_pos);
 		auto right_value_source
 			= my_chunk.substr(dot_dot_pos + 2, my_chunk.size() - dot_dot_pos - 2);
-		i64 value_left = 0, value_right = 0;
 		try {
-			auto parser = IntParser::make();
-			value_left  = std::any_cast<i64>(parser->parse(0, left_value_source).value);
-			value_right = std::any_cast<i64>(parser->parse(0, right_value_source).value);
+			auto parser      = IntParser::make();
+			i64  value_left  = std::any_cast<i64>(parser->parse(0, left_value_source).value);
+			i64  value_right = std::any_cast<i64>(parser->parse(0, right_value_source).value);
+
+			return { Range{ value_left, value_right }, std::string(my_chunk), position };
 		} catch (clap::exceptions::ValueParsingException& e) {
 			throw exceptions::ValueParsingException(
 				getTypeName().c_str(), start, position, raw_input, "Error parsing range's values"
 			);
 		}
+	}
 
-		return { Range{ value_left, value_right }, std::string(my_chunk), position };
+	ValueParsingResult FileParser::parse(usize start, std::string_view raw_input) const {
+		auto result = StringParser::make()->parse(start, raw_input);
+		auto str    = std::any_cast<std::string>(result.value);
+
+		std::smatch _match;
+		if (!std::regex_match(str, _match, file_regex))
+			throw clap::exceptions::ValueParsingException(
+				getTypeName().c_str(), start, result.position, raw_input
+			);
+
+		std::filesystem::path path = str;
+
+		if (!std::filesystem::exists(path)) throw clap::exceptions::FileDoesNotExist(path);
+		
+		fs::FilePath file(path);
+
+		return { file, result.raw_source, result.position };
 	}
 }

@@ -65,4 +65,7 @@ namespace clap::exceptions {
 	HelpException::HelpException(ParsingResult result):
 		  base::LogicError("Help flag was passed, help message should be generated."),
 		  parsing_result(std::move(result)) {}
+
+	FileDoesNotExist::FileDoesNotExist(std::filesystem::path path):
+		  ClapException("File at: " + path.string() + " does not exist.") {}
 }

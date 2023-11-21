@@ -5,6 +5,7 @@
 
 #pragma once
 #include <utility>
+#include <filesystem>
 
 #include "base/exceptions.hpp"
 #include "parsing_result.hpp"
@@ -29,6 +30,10 @@ namespace clap::exceptions {
 			std::string_view source,
 			std::string_view reason = ""
 		);
+	};
+
+	struct FileDoesNotExist: public ClapException {
+		FileDoesNotExist(std::filesystem::path path);
 	};
 
 	struct PositionalParameterExpected: public ClapException {
