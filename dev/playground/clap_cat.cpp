@@ -11,7 +11,10 @@
 #include "filesystem/file.hpp"
 
 int main(int argc, const char** argv) {
-	auto clap = clap::Clap().addHelpFlag().setDefaultParser(clap::FileParser::make());
+	auto clap = clap::Clap()
+	                .addHelpFlag()
+	                .addPositional(clap::FileParser::make())
+	                .setDefaultParser(clap::FileParser::make());
 	clap::ParsingResult result;
 	try {
 		result = clap.parse(argc, argv);
@@ -19,8 +22,8 @@ int main(int argc, const char** argv) {
 		printer::Console console = printer::Console();
 		console.add({
 			{
-				{ "rift: ", printer::Color::DEFAULT },
-				{ "error: ", printer::Color::RED },
+				{ argv[0], printer::Color::DEFAULT },
+				{ ": error: ", printer::Color::RED },
 				{ e.what(), printer::Color::DEFAULT },
 			},
 			printer::MessageType::ERROR,
@@ -34,7 +37,10 @@ int main(int argc, const char** argv) {
 		return 0;
 	}
 
-	base::Optional<fs::FilePath> s;
-	//	for (usize i = 0; i < result.getExtraParameterCount(); i++)
-	//		std::cout << result.getExtra<fs::FilePath>(i).value().getContent().view() << std::endl;
+	std::cout << result.getPositional<fs::FilePath>(0).value().getContent().view().stdString()
+			  << '\n';
+
+	for (usize i = 0; i < result.getExtraParameterCount(); i++)
+		std::cout << result.getExtra<fs::FilePath>(i).value().getContent().view().stdString()
+				  << '\n';
 }

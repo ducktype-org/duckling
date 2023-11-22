@@ -44,9 +44,7 @@ namespace {
 		return usage;
 	}
 
-	std::string generateOptions(
-		const clap::Clap& clap, int padding = 27
-	) {
+	std::string generateOptions(const clap::Clap& clap, int padding = 27) {
 		std::stringstream output;
 
 		output << "Options:\n";
