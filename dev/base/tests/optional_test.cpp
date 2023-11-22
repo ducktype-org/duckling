@@ -145,8 +145,8 @@ public:
 	}
 
 	void testSwap() {
-		base::Optional<std::string> a("1");
-		base::Optional<std::string> b("2");
+		base::Optional<std::string> a = "1";
+		base::Optional<std::string> b = "2";
 		std::swap(a, b);
 		assert("2" == *a, "a does not hold 2");
 		assert("1" == *b, "b does not hold 2");
@@ -155,7 +155,6 @@ public:
 		std::string                  str2 = "321";
 		base::Optional<std::string&> c    = str1;
 		base::Optional<std::string&> d    = str2;
-
 		std::swap(c, d);
 		assert(str2 == *c, "c does not hold str2");
 		assert(str1 == *d, "d does not hold str1");
