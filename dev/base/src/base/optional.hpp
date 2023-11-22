@@ -90,6 +90,10 @@ namespace base {
 
 		Optional(const T& value): private_optional(value) {}
 
+		template<class... Args>
+		Optional(Args&&... args):
+			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
+
 		Optional(Optional&&)                 = default;
 		Optional(const Optional&)            = default;
 		Optional& operator=(Optional&&)      = default;
@@ -108,10 +112,6 @@ namespace base {
 		friend void swap(Optional& a, Optional& b) {
 			std::swap(a.private_optional, b.private_optional);
 		}
-
-		template<class... Args>
-		explicit Optional(Args&&... args):
-			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
 		[[nodiscard]]
 		virtual constexpr bool has_value() const {
