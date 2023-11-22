@@ -90,6 +90,25 @@ namespace base {
 
 		Optional(const T& value): private_optional(value) {}
 
+		Optional(Optional&&)                 = default;
+		Optional(const Optional&)            = default;
+		Optional& operator=(Optional&&)      = default;
+		Optional& operator=(const Optional&) = default;
+
+		Optional& operator=(T&& other) {
+			private_optional = std::move(other);
+			return *this;
+		}
+
+		Optional& operator=(const T& other) {
+			private_optional = other;
+			return *this;
+		}
+
+		friend void swap(Optional& a, Optional& b) {
+			std::swap(a.private_optional, b.private_optional);
+		}
+
 		template<class... Args>
 		explicit Optional(Args&&... args):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
@@ -264,7 +283,26 @@ namespace base {
 	public:
 		Optional() = default;
 
-		explicit Optional(T& value): private_optional(std::ref(value)) {}
+		Optional(T& value): private_optional(std::ref(value)) {}
+
+		Optional(Optional&&)                 = default;
+		Optional(const Optional&)            = default;
+		Optional& operator=(Optional&&)      = default;
+		Optional& operator=(const Optional&) = default;
+
+		Optional& operator=(T&& other) {
+			private_optional = std::move(other);
+			return *this;
+		}
+
+		Optional& operator=(T& other) {
+			private_optional = std::ref(other);
+			return *this;
+		}
+
+		friend void swap(Optional& a, Optional& b) {
+			std::swap(a.private_optional, b.private_optional);
+		}
 
 		[[nodiscard]]
 		constexpr bool has_value() const {
