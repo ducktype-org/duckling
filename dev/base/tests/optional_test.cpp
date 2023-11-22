@@ -23,6 +23,7 @@ public:
 		TESTER_ADD_TEST(throwTest);
 		TESTER_ADD_TEST(testAssign);
 		TESTER_ADD_TEST(testSwap);
+		TESTER_ADD_TEST(testNoDanglingPointer);
 	}
 
 	void basicTest() {
@@ -158,6 +159,10 @@ public:
 		std::swap(c, d);
 		assert(str2 == *c, "c does not hold str2");
 		assert(str1 == *d, "d does not hold str1");
+	}
+
+	void testNoDanglingPointer() {
+		if_opt_some(Optional(1), val) { assert(val == 1, base::strConcat("val != 1, but: ", val)); }
 	}
 };
 
