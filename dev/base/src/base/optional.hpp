@@ -12,12 +12,17 @@
 #include <result.hpp>
 #include <functional>
 
-template<typename T>
-auto forwardReferenceMaker(T&& arg) -> decltype(std::forward<T>(arg)) {
+template<class T>
+T&& typeFinder(T&& arg) {
 	return std::forward<T>(arg);
 }
 
-#define FORWARD_VAR_TYPE(expr) decltype(forwardReferenceMaker(expr))
+template<class T>
+const T& typeFinder(T& arg) {
+	return arg;
+}
+
+#define GET_REF_OF_VAL(expr) decltype((typeFinder) (expr))
 
 /* Some c00l macros.
  *
@@ -43,12 +48,12 @@ auto forwardReferenceMaker(T&& arg) -> decltype(std::forward<T>(arg)) {
  * }
  *
  */
-#define match_optional(optional)                                                       \
-	PUSH_DIAGNOSTIC                                                                    \
-	NO_SHADOW                                                                          \
-	if (bool _perform_match = true)                                                    \
-		for (FORWARD_VAR_TYPE(optional) _internal_optional = optional; _perform_match; \
-		     _perform_match                                = false)                    \
+#define match_optional(optional)                                                     \
+	PUSH_DIAGNOSTIC                                                                  \
+	NO_SHADOW                                                                        \
+	if (bool _perform_match = true)                                                  \
+		for (GET_REF_OF_VAL(optional) _internal_optional = optional; _perform_match; \
+		     _perform_match                              = false)                    \
 	POP_DIAGNOSTIC
 
 #define opt_some(_value_name)                                                   \
@@ -64,12 +69,13 @@ auto forwardReferenceMaker(T&& arg) -> decltype(std::forward<T>(arg)) {
 	NO_SHADOW       \
 	if (!_internal_optional.has_value()) POP_DIAGNOSTIC
 
-#define if_opt_some(optional, _value_name)                                                   \
-	PUSH_DIAGNOSTIC                                                                          \
-	NO_SHADOW                                                                                \
-	if (bool _perform_if = optional.has_value())                                             \
-		for (FORWARD_VAR_TYPE(optional.value()) _value_name = optional.value(); _perform_if; \
-		     _perform_if                                    = false)                         \
+#define if_opt_some(optional, _value_name)                                          \
+	PUSH_DIAGNOSTIC                                                                 \
+	NO_SHADOW                                                                       \
+	if (bool _perform_if = optional.has_value())                                    \
+		for (GET_REF_OF_VAL(optional) _internal_optional = optional; _perform_if;)  \
+			for (const auto& _value_name = _internal_optional.value(); _perform_if; \
+			     _perform_if             = false)                                   \
 	POP_DIAGNOSTIC
 
 
