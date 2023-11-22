@@ -21,6 +21,8 @@ public:
 		TESTER_ADD_TEST(testReference);
 		TESTER_ADD_TEST(macroTest);
 		TESTER_ADD_TEST(throwTest);
+		TESTER_ADD_TEST(testAssign);
+		TESTER_ADD_TEST(testSwap);
 	}
 
 	void basicTest() {
@@ -118,6 +120,46 @@ public:
 			);
 		}
 	}
+
+	void testAssign() {
+		base::Optional<int> a;
+		a = 1;
+		assert(1 == *a, "A not equal to 1");
+		a = 2;
+		assert(2 == *a, "A not equal to 2");
+
+		std::string                 str1 = "str1", str2 = "str2";
+		base::Optional<std::string> b;
+		b = str1;
+		assert(str1 == *b, "B not equal to str1");
+		b = str2;
+		assert(str2 == *b, "B not equal to str2");
+
+		base::Optional<std::string&> c;
+		c = str1;
+		assert(str1 == *c, "C not equal to str1");
+		c = str2;
+		assert(str2 == *c, "C not equal to str2");
+		c.value()[0] = 'd';
+		assert(str2[0] == 'd', "C should start with a d");
+	}
+
+	void testSwap() {
+		base::Optional<std::string> a("1");
+		base::Optional<std::string> b("2");
+		std::swap(a, b);
+		assert("2" == *a, "a does not hold 2");
+		assert("1" == *b, "b does not hold 2");
+
+		std::string                  str1 = "123";
+		std::string                  str2 = "321";
+		base::Optional<std::string&> c    = str1;
+		base::Optional<std::string&> d    = str2;
+
+		std::swap(c, d);
+		assert(str2 == *c, "c does not hold str2");
+		assert(str1 == *d, "d does not hold str1");
+	}
 };
 
-TESTER_COMMON_MAIN("/common/flag_type/tests/");
+TESTER_COMMON_MAIN("/common/base/tests/");

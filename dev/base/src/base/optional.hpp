@@ -90,6 +90,25 @@ namespace base {
 
 		Optional(const T& value): private_optional(value) {}
 
+		Optional(Optional&&)                 = default;
+		Optional(const Optional&)            = default;
+		Optional& operator=(Optional&&)      = default;
+		Optional& operator=(const Optional&) = default;
+
+		Optional& operator=(T&& other) {
+			private_optional = std::move(other);
+			return *this;
+		}
+
+		Optional& operator=(const T& other) {
+			private_optional = other;
+			return *this;
+		}
+
+		friend void swap(Optional& a, Optional& b) {
+			std::swap(a.private_optional, b.private_optional);
+		}
+
 		template<class... Args>
 		Optional(Args&&... args):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
@@ -212,16 +231,14 @@ namespace base {
 		 * nothing.
 		 */
 		template<typename Function>
-		auto map(const Function& function) const
-			-> Optional<typename std::invoke_result<Function, T>::type> {
+		auto map(const Function& function) const -> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		// A non-const version.
 		template<typename Function>
-		auto map(const Function& function)
-			-> Optional<typename std::invoke_result<Function, T>::type> {
+		auto map(const Function& function) -> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
@@ -235,16 +252,16 @@ namespace base {
 		 * @return If object contains a value, then applies a function, otherwise does nothing.
 		 */
 		template<typename Function>
-		auto flatMap(const Function& function) const -> std::invoke_result<Function, T>::type {
-			static_assert(IsOfSameClass<typename std::invoke_result<Function, T>::type, Optional>);
+		auto flatMap(const Function& function) const -> std::invoke_result_t<Function, T> {
+			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		// A non-const version.
 		template<typename Function>
-		auto flatMap(const Function& function) -> std::invoke_result<Function, T>::type {
-			static_assert(IsOfSameClass<typename std::invoke_result<Function, T>::type, Optional>);
+		auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
+			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
 		}
@@ -266,8 +283,31 @@ namespace base {
 	public:
 		Optional() = default;
 
+<<<<<<< HEAD
 		// Do not make explicit
 		Optional(T& value): private_optional(std::ref(value)) {}
+=======
+		Optional(T& value): private_optional(std::ref(value)) {}
+
+		Optional(Optional&&)                 = default;
+		Optional(const Optional&)            = default;
+		Optional& operator=(Optional&&)      = default;
+		Optional& operator=(const Optional&) = default;
+
+		Optional& operator=(T&& other) {
+			private_optional = std::move(other);
+			return *this;
+		}
+
+		Optional& operator=(T& other) {
+			private_optional = std::ref(other);
+			return *this;
+		}
+
+		friend void swap(Optional& a, Optional& b) {
+			std::swap(a.private_optional, b.private_optional);
+		}
+>>>>>>> 46-option-type-defined-in-optionhpp-has-buggy-semantics-other-version-should-be-created
 
 		[[nodiscard]]
 		constexpr bool has_value() const {
@@ -377,31 +417,29 @@ namespace base {
 		}
 
 		template<typename Function>
-		auto map(const Function& function) const
-			-> Optional<typename std::invoke_result<Function, T>::type> {
+		auto map(const Function& function) const -> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		// A non-const version.
 		template<typename Function>
-		auto map(const Function& function)
-			-> Optional<typename std::invoke_result<Function, T>::type> {
+		auto map(const Function& function) -> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		template<typename Function>
-		auto flatMap(const Function& function) const -> std::invoke_result<Function, T>::type {
-			static_assert(IsOfSameClass<typename std::invoke_result<Function, T>::type, Optional>);
+		auto flatMap(const Function& function) const -> std::invoke_result_t<Function, T> {
+			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		// A non-const version.
 		template<typename Function>
-		auto flatMap(const Function& function) -> std::invoke_result<Function, T>::type {
-			static_assert(IsOfSameClass<typename std::invoke_result<Function, T>::type, Optional>);
+		auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
+			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
 		}
