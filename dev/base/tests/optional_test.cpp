@@ -162,6 +162,7 @@ public:
 	}
 
 	void testNoDanglingPointer() {
+		// This would not compile if -Werror flag is on, and it would create a dangling pointer...
 		if_opt_some(Optional(1), val) { assert(val == 1, base::strConcat("val != 1, but: ", val)); }
 	}
 };
