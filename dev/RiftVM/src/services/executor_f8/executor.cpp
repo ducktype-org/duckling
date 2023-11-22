@@ -297,7 +297,7 @@ namespace vm {
 					auto function_id      = arg0;
 					FRAME_REGS(p64_reg_0) = internalCallFunction(
 						// @TODO: this is not correct with flat frame
-						IF_NOT_FF(base::Optional<Frame&>(frame)) IF_FF(base::Optional<Frame&>()),
+						IF_NOT_FF(frame) IF_FF({}),
 						executing_code->functions[function_id],
 						FRAME(next_args)
 					);
