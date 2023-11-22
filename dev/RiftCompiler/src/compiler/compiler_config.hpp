@@ -5,11 +5,12 @@
 #include <printer/printer.hpp>
 #include <clap/exceptions.hpp>
 #include <clap/clap.hpp>
+#include "filesystem/file.hpp"
 
 namespace compiler {
 
 	struct CompilerConfig {
-		std::vector<std::string> file_names;
+		std::vector<fs::FilePath> files;
 
 		bool        was_output = false;
 		std::string output;

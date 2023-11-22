@@ -22,24 +22,23 @@ int main(int argc, const char* argv[]) {
 
 		auto config = compiler::fromArgs(args);
 
-		if (config.file_names.empty()) {
+		if (config.files.empty()) {
 			std::cerr << "Nothing to be done.\n";
 			return 0;
 		}
 
 		std::cerr << "Got files (ignoring all other then first):\n";
-		for (const auto& file: config.file_names) std::cerr << file << "\n";
+		for (const auto& file: config.files) std::cerr << file.strView() << "\n";
 		std::cerr << "\n";
 
 		// we need file handler
 
 		std::stringstream out;
-		fs::FilePath      main_file(config.file_names[0]);
+		fs::FilePath      main_file = config.files[0];
 
 		compiler::CompilationHandler comp_handler;
 
-		for (const auto& file_name: config.file_names)
-			comp_handler.addFileRecursively(fs::FilePath(file_name), true, &out);
+		for (const auto& file: config.files) comp_handler.addFileRecursively(file, true, &out);
 
 		if (!config.was_output) {
 			std::cerr << out.str();
@@ -49,7 +48,7 @@ int main(int argc, const char* argv[]) {
 		}
 
 	} catch (const clap::exceptions::HelpException& e) {
-		compiler::generateHelpMessage(e);
+		compiler::generateHelpMessage(e).print(std::cerr);
 	} catch (const base::Exception& e) {
 		std::cerr << "Compiler Exception was caught with message:\n";
 		std::cerr << e.what();

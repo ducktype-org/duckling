@@ -9,7 +9,7 @@
 namespace {
 	std::string getFileName(const std::string& path) {
 		usize position = path.size() - 1;
-		while (position > 0 && path[position] != '/' && path[position] != '\\') position--;
+		while (position > 0 && path[position - 1] != '/' && path[position - 1] != '\\') position--;
 		return path.substr(position, path.size() - position + 1);
 	}
 

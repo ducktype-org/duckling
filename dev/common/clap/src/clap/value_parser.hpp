@@ -12,6 +12,7 @@
 #include "base/type_traits.hpp"
 #include <base/optional.hpp>
 #include <regex>
+#include <utility>
 
 namespace clap {
 
@@ -113,11 +114,11 @@ namespace clap {
 		std::regex file_regex = std::regex(".*");
 
 	public:
-		FileParser(const std::regex& regex): file_regex(regex) {}
+		explicit FileParser(std::regex regex): file_regex(std::move(regex)) {}
 
-		FileParser(const std::string& name, const std::regex& regex):
+		FileParser(const std::string& name, std::regex regex):
 			  ValueParser(name),
-			  file_regex(regex) {}
+			  file_regex(std::move(regex)) {}
 
 		template<class... Args>
 		static base::unique_ptr<FileParser> make(Args&&... args) {

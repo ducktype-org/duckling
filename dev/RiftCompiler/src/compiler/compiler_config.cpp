@@ -8,15 +8,11 @@ namespace compiler {
 	clap::Clap compilerOptions() {
 		return clap::Clap()
 		    .addHelpFlag()
-		    .add(clap::ParamBuilder::ofValue(clap::StringParser::make("file"))
+		    .setDefaultParser(clap::FileParser::make())
+		    .add(clap::ParamBuilder::ofValue(clap::StringParser::make())
 		             .addShortName('o')
 		             .addLongName("output")
 		             .addShortDesc("Set output file")
-		             .build())
-		    .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
-		             .required()
-		             .addLongName("intTest")
-		             .addShortDesc("Test number")
 		             .build());
 	}
 
@@ -31,11 +27,8 @@ namespace compiler {
 			out.output     = value;
 		}
 
-		auto intTest                         = parsed_args.getValue<std::string>("intTest");
-		if_opt_some(intTest, val) out.output = val;
-
 		for (usize i = 0; i < parsed_args.getExtraParameterCount(); i++)
-			out.file_names.emplace_back(parsed_args.getExtra<std::string>(i).value());
+			out.files.emplace_back(parsed_args.getExtra<fs::FilePath>(i).value());
 
 		return out;
 	}
