@@ -15,9 +15,9 @@ namespace clap::exceptions {
 		usize param_index, const std::string& param_type
 	):
 		  ClapException(base::strConcat(
-			  "Expected positional parameter at index: ",
+			  "Expected positional parameter at position: ",
 			  param_index,
-			  " of type: <",
+			  ", of type: <",
 			  param_type,
 			  ">"
 		  )) {}

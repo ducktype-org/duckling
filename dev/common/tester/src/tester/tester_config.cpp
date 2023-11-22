@@ -12,7 +12,7 @@ namespace tester {
 
 		TestConfig out;
 		if (parsed_args.getExtraParameterCount() == 1)
-			out.test_files_path = parsed_args.getExtra<std::string>(0).value();
+			out.test_files_path = *parsed_args.getExtra<std::string>(0);
 		else
 			out.test_files_path = "./";
 

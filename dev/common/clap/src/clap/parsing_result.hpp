@@ -55,10 +55,8 @@ namespace clap {
 
 		template<class T>
 		[[nodiscard]]
-		base::Optional<T> getPositional(usize position) const {
-			if (position < getPositionalParameterCount())
-				return std::any_cast<T>(positional_values[position].value);
-			return {};
+		T getPositional(usize position) const {
+			return std::any_cast<T>(positional_values[position].value);
 		}
 
 		template<class T>

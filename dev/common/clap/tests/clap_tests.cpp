@@ -51,8 +51,8 @@ private:
 		ASSERT_EQUAL(2, res.getPositionalParameterCount());
 		ASSERT_EQUAL(0, res.getExtraParameterCount());
 
-		ASSERT_EQUAL("test", *res.getPositional<std::string>(0));
-		ASSERT_EQUAL(2, *res.getPositional<i64>(1));
+		ASSERT_EQUAL("test", res.getPositional<std::string>(0));
+		ASSERT_EQUAL(2, res.getPositional<i64>(1));
 	}
 
 	void namedTest() {

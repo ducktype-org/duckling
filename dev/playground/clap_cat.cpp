@@ -22,8 +22,8 @@ int main(int argc, const char** argv) {
 		printer::Console console = printer::Console();
 		console.add({
 			{
-				{ argv[0], printer::Color::DEFAULT },
-				{ ": error: ", printer::Color::RED },
+				{ base::strConcat(argv[0], ": "), printer::Color::DEFAULT },
+				{ "error: ", printer::Color::RED },
 				{ e.what(), printer::Color::DEFAULT },
 			},
 			printer::MessageType::ERROR,
@@ -37,8 +37,7 @@ int main(int argc, const char** argv) {
 		return 0;
 	}
 
-	std::cout << result.getPositional<fs::FilePath>(0).value().getContent().view().stdString()
-			  << '\n';
+	std::cout << result.getPositional<fs::FilePath>(0).getContent().view().stdString() << '\n';
 
 	for (usize i = 0; i < result.getExtraParameterCount(); i++)
 		std::cout << result.getExtra<fs::FilePath>(i).value().getContent().view().stdString()
