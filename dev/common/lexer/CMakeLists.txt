@@ -5,7 +5,7 @@ add_library(Lexer
 		src/lexer/classifications.cpp
 		src/lexer/source_position.cpp)
 
-make_module(Lexer USES Filesystem Printer RiftDefinitions icuio icuuc icui18n icudata)
+make_module(Lexer USES Filesystem Printer RiftDefinitions icuio icuuc icui18n icudata Result::Result)
 
 rift_add_test(common lexer_test_simple tests/test.cpp
 		USES Lexer RiftDefinitions)

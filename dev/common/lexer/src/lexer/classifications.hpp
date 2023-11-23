@@ -11,7 +11,7 @@ namespace lexer {
 	 * 
 	 * @attention There are currently two codepoints that belong in both name_start and operator_continue They are U+1885 and U+1886 for now they will be treated as a continuation of the operator
 	 * 
-	 * @attention There are some undefined characters in Syntax and operator sets
+	 * @note There are some undefined characters in Syntax and operator sets(They will be caught by the decoder)
 	 */
 	struct Classifications {
 

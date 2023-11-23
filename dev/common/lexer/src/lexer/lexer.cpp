@@ -9,22 +9,21 @@
 #include "lexer_class.hpp"
 #include <iostream>
 #include <rift_definitions/key_spec_op.hpp>
+#include <base/exceptions.hpp>
 #include <base/init_guard.hpp>
 
 namespace lexer {
 
-	// @TODO: Move it to a separate file...
-	CharArray decode(base::RawView file_content) {
-		// @TODO: deduce encoding
-		CharArray out = lexer::decode<fs::UTF8>(file_content);
-		//...
-		return out;
-	}
-
 	Lexer::Lexer(const fs::FilePath& file):
 		  file_(std::make_shared<fs::FilePath>(file)),
-		  fileContent_(file_->getContent()),
-		  charArray_(decode(fileContent_.view())) {}
+		  fileContent_(file_->getContent()) {
+			auto result = decode<fs::Encoding::UTF8>(fileContent_.view(), console);
+			if (!result) {
+				console.print(std::cerr);
+				throw base::LogicError("Error while decoding");
+			}
+			charArray_ = std::move(result.value());
+		}
 
 	TokenizationResult Lexer::tokenize(bool dprint) {
 		tokens_.clear();
