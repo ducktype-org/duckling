@@ -42,7 +42,15 @@ namespace lexer {
 		inline static icu::UnicodeSet open_bracket;
 		inline static icu::UnicodeSet close_bracket;
 
-		inline static const std::array<icu::UnicodeSet*, 12> classes= {&name_start, &name_continue, &operator_start, &operator_continue, &vertical_space, &newline, &whitespace, &format_control, &special, &syntax, &open_bracket, &close_bracket};
+		/** 
+		 * @brief Custom codepoint(\U0010FFFF) signaling EOF internally
+		 * 
+		 * @note This codepoint is in a private use plane(It's left empty by the Unicode standard)
+		 */
+		inline static icu::UnicodeSet end_of_file;
+		inline static UChar32 end_of_file_value = 0x10FFFF;
+
+		inline static const std::array<icu::UnicodeSet*, 13> classes= {&name_start, &name_continue, &operator_start, &operator_continue, &vertical_space, &newline, &whitespace, &format_control, &special, &syntax, &open_bracket, &close_bracket, &end_of_file};
 
 		static void init();
 		Classifications() = delete;

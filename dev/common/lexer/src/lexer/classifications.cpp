@@ -36,7 +36,7 @@ namespace lexer {
         icu::UnicodeString ustring;
         uset.toPattern(ustring, true);
         std::cerr << "pattern: " << ustring << "\n";
-		int32_t rb, re;
+		UChar32 rb, re;
         for(int32_t rangeid = 0; rangeid < uset.getRangeCount(); rangeid++) {
             rb = uset.getRangeStart(rangeid);
             re = uset.getRangeEnd(rangeid);
@@ -105,6 +105,9 @@ namespace lexer {
 		icu::ErrorCode err;
 		operator_continue.applyPattern(icu::UnicodeString::fromUTF8(u8R"([:Mn:])"), err).addAll(operator_start).freeze();
 		if (err.isFailure()) { RIFT_PANIC(std::string(err.errorName())); }
+
+		end_of_file.add(end_of_file_value).freeze();
+
 		sanityChecks();
 		RIFT_SIMPLE_INIT_GUARD_END
 	}
