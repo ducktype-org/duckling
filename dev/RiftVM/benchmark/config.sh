@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Set correct values here:
 
 . local_config.sh

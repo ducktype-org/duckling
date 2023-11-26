@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Example usage:
 # 1. Copy the script to /results folder
 # 2. To change the name of all results from profile_xyz to new_name invoke
