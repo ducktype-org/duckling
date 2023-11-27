@@ -16,7 +16,6 @@ namespace lexer {
 	/**
 	 * @brief Class used to manage lexing
 	 * 
-	 * @todo Change whole lexing to be done in #Lexer
 	 * @todo Improve error handling in lexing, possibly using Error tokens and logging some sensible errors
 	 * @todo Add format string lexing and escape handling to string lexing(some sort of parity of back-slashes or something similar should suffice)
 	 * @todo Improve comment lexing
@@ -26,6 +25,9 @@ namespace lexer {
 	 */
 	class Lexer {
 	public:
+		/**
+		 * @note if file decoding fails outputs the reason to cerr and throws LogicError
+		 */
 		explicit Lexer(const fs::FilePath& file);
 
 		[[nodiscard]]

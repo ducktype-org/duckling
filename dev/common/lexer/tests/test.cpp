@@ -125,8 +125,8 @@ private:
 		const auto& position = td->tokens[1].getRecursive().front().getPosition();
 		assert(position.getLineNumber() == 5, "Wrong line number");
 		assert(position.getColumn() == 2, "Wrong column");
-		assert(position.getStart() == 15, "Wrong start index");
-		assert(position.getEnd() == 19, "Wrong end index");
+		assert(position.getStart() == 16, "Wrong start index");
+		assert(position.getEnd() == 20, "Wrong end index");
 		assert(position.getSourceChars() == "while", "Wrong getSourceChars()");
 	}
 };

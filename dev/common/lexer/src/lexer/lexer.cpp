@@ -21,7 +21,6 @@ namespace lexer {
 			auto result = decode<fs::Encoding::UTF8>(fileContent_.view(), console);
 			if (!result) {
 				console.print(std::cerr);
-				// Error here should be fatal but maybe handle it differently then an exception
 				throw base::LogicError("Error while decoding");
 			}
 			charArray_ = std::move(result.value());
@@ -47,13 +46,23 @@ namespace lexer {
 	void Lexer::next() {
 		if (!isEOF()) {
 			if (isEOL()) {
-				++lineNumber_;
+				// handling of CR+LF as one newline
+				if (peek().is(0x0D) && peek(1).is(0x0A)) where_++;
+				lineNumber_++;
 				columnNumber_ = 1;
+				where_++;
 			} else {
 				columnNumber_++;
+				where_++;
 			}
+		} else {
+			console.add(printer::Message(
+				{
+					{ "Tried to skip EOF" },
+				},
+				printer::MessageType::ERROR
+			));
 		}
-		++where_;
 	}
 
 	void Lexer::skip(usize n) {
@@ -340,7 +349,7 @@ namespace lexer {
 
 	bool Lexer::isEOF() const { return peek().is(Class::end_of_file_value); }
 
-	bool Lexer::isEOL() const { return peek().is('\n'); }
+	bool Lexer::isEOL() const { return peek().is(Class::newline); }
 
 	bool Lexer::isCommentBegin() const { return tryRawValue('/') && tryRawValue('/', 1); }
 

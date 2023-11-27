@@ -149,7 +149,7 @@ namespace lexer {
 					break;
 				}
 				value <<= 6;
-				value += std::to_integer<UChar32>(bytes[new_pos]);
+				value += std::to_integer<UChar32>(bytes[new_pos]) & 0b00111111;
 			}
 			
 			if (pos + size - 1 >= bytes.size()) {
