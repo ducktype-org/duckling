@@ -14,7 +14,6 @@ namespace tpc {
 		  sentinel_end(std::move(sentinel_end)) {
 		RIFT_ASSERT(tokens.size() >= to, "TokenStream received too few tokens.");
 		RIFT_ASSERT(from <= to, "TokenStream received illegal from-to values");
-		sentinel_end;
 	}
 
 	TokenStream::TokenStream(TokenStream&& stream) noexcept:
@@ -54,6 +53,15 @@ namespace tpc {
 	bool TokenStream::isOperator(base::StrId oper, usize fwd) const {
 		return peek(fwd).isOperator() and peek(fwd).isStr(oper);
 	}
+
+	bool TokenStream::isGroup(usize fwd) const {
+		return peek(fwd).isGroup();
+	}
+
+	bool TokenStream::isGroup(UChar32 group_type, usize fwd) const {
+		return peek(fwd).isGroup(group_type);
+	}
+
 
 	usize TokenStream::size() const { return (where >= to ? 0 : to - where); }
 

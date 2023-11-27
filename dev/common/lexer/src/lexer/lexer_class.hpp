@@ -20,7 +20,6 @@ namespace lexer {
 	 * @todo Improve error handling in lexing, possibly using Error tokens and logging some sensible errors
 	 * @todo Add format string lexing and escape handling to string lexing(some sort of parity of back-slashes or something similar should suffice)
 	 * @todo Improve comment lexing
-	 * @todo Add init guard from `base/init_guard.init` to Lexer::init()
 	 * @todo Change `name_` member names to a different method of naming 
 	 * @todo Improve unicode support(soon: EOLs, vertical spaces, identifier normalization, at some point: ignorable format controls)
 	 * @todo Try to improve #parseSingleInto() to be more readable, maybe divide it into some logical parts
@@ -58,7 +57,7 @@ namespace lexer {
 		 * @name non-terminal tokens parsers:
 		 * @{
 		 */
-		Tokens parGroup(lexer::Char::ParType end);
+		Tokens parGroup(UChar32 group_end);
 		/**@}*/
 
 		/** 

@@ -4,7 +4,7 @@ namespace pst {
 	ParserRef<ParamList> ParamList::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
 
-		if (!state.ctokens().is(Token::Type::RoundGroup)) {
+		if (!state.ctokens().isGroup(BracketType::Round)) {
 			state.fail(-1, "parenthesis expected after here");
 			return nullptr;
 		}
@@ -12,7 +12,12 @@ namespace pst {
 		auto out = makeRef<ParamList>(position);
 		state.goDown();
 
-		parseList<false>(state, out->params, Operator::Comma, Token::Type::Sentinel);
+		constexpr auto isSentinel =
+			[](const RiftParserState& lstate, usize fwd) {
+				return lstate.ctokens().is(Token::Type::Sentinel, fwd);
+			};
+
+		parseList<false>(state, out->params, Operator::Comma, isSentinel);
 
 		state.goUpAndSkip();
 		return out;

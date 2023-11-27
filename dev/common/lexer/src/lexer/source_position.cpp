@@ -31,7 +31,7 @@ namespace lexer {
 	}
 
 	SourcePosition::SourcePosition(
-		std::shared_ptr<fs::FilePath> source_code, u32 line, u32 column, u32 start
+		std::shared_ptr<fs::FilePath> source_code, u64 line, u64 column, u64 start
 	):
 		  SourcePosition(std::move(source_code)) {
 		setLineNumber(line);
@@ -40,22 +40,22 @@ namespace lexer {
 	}
 
 	SourcePosition::SourcePosition(
-		std::shared_ptr<fs::FilePath> source_code, u32 line, u32 column, u32 start, u32 end
+		std::shared_ptr<fs::FilePath> source_code, u64 line, u64 column, u64 start, u64 end
 	):
 		  SourcePosition(std::move(source_code), line, column, start) {
 		setEnd(end);
 	}
 
-	void SourcePosition::setLineNumber(u32 line) { line_number = line; }
+	void SourcePosition::setLineNumber(u64 line) { line_number = line; }
 
-	void SourcePosition::setColumnNumber(u32 column) { column_number = column; }
+	void SourcePosition::setColumnNumber(u64 column) { column_number = column; }
 
-	void SourcePosition::setStart(u32 start) {
+	void SourcePosition::setStart(u64 start) {
 		source_index_start = start;
 		if (source_index_end < start) source_index_end = start;
 	}
 
-	void SourcePosition::setEnd(u32 end) {
+	void SourcePosition::setEnd(u64 end) {
 		source_index_end = end;
 		if (end < source_index_start) source_index_end = source_index_start;
 	}

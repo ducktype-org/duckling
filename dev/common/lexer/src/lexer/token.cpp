@@ -8,6 +8,7 @@
 #include <rift_definitions/key_spec_op.hpp>
 #include <utility>
 #include <algorithm>
+#include <unicode/uchar.h>
 
 namespace lexer {
 	Token Token::makeSentinelEnd() const {
@@ -21,22 +22,11 @@ namespace lexer {
 			                   getPosition().getEnd(),
 			                   getPosition().getEnd() };
 
-		// @TODO: this is not perfect solution, as group might in theory end with different
+		// @TODO: This is not perfect solution, as group might in theory end with different
 		// character. Group tokens should have some info about closing and opening „brackets”.
 		base::RawView end_char;
-		switch (getType()) {
-		case Type::RoundGroup:
-			end_char = ")";
-			break;
-		case Type::SquareGroup:
-			end_char = "]";
-			break;
-		case Type::CurlyGroup:
-			end_char = "}";
-			break;
-		default:
-			RIFT_PANIC("Bad group type");
-		}
+		std::string str;
+		end_char = icu::UnicodeString(u_getBidiPairedBracket(getBracketType())).toUTF8String(str).data();
 		return { Type::Sentinel, end_char, end };
 	}
 
@@ -45,10 +35,11 @@ namespace lexer {
 		  str_id(value),
 		  source_position(std::move(position)) {}
 
-	Token::Token(Token::Type type, Tokens&& recursive, SourcePosition position):
+	Token::Token(Token::Type type, Tokens&& recursive, SourcePosition position, UChar32 bracketType):
 		  type(type),
 		  recursive(recursive),
-		  source_position(std::move(position)) {}
+		  source_position(std::move(position)),
+		  bracket_type(bracketType) {}
 
 	Token Token::makeSentinelEof(const SourcePosition& pos) {
 		return { Type::Sentinel, base::RawView("EOF"), pos };
@@ -87,20 +78,9 @@ namespace lexer {
 	}
 
 	Token
-		Token::makeGroup(Char::ParType groupType, Tokens&& tokens, const SourcePosition& position) {
-		switch (groupType) {
-		case Char::Round:
-			return { Type::RoundGroup, std::move(tokens), position };
-		case Char::Square:
-			return { Type::SquareGroup, std::move(tokens), position };
-		case Char::Curly:
-			return { Type::CurlyGroup, std::move(tokens), position };
-
-		case Char::Angle:
-		case Char::NotAPar:
-		default:
-			return makeError(position);
-		}
+		Token::makeGroup(UChar32 groupType, Tokens&& tokens, const SourcePosition& position) {
+			// for now doesn't fail on bad groupTypes
+			return { Type::BracketGroup, std::move(tokens), position, groupType };
 	}
 
 	Token Token::makeError(const SourcePosition& position) {
@@ -117,6 +97,7 @@ namespace lexer {
 		swap(first.str_id, second.str_id);
 		swap(first.type, second.type);
 		swap(first.source_position, second.source_position);
+		swap(first.bracket_type, second.bracket_type);
 	}
 
 	Token& Token::operator=(Token other) {
@@ -128,6 +109,8 @@ namespace lexer {
 
 	Token::Type Token::getType() const { return type; }
 
+	UChar32 Token::getBracketType() const { return bracket_type; }
+
 	base::StrId Token::getValue() const { return str_id; }
 
 	std::string_view Token::getStrValue() const { return getValue().strView(); }
@@ -135,8 +118,11 @@ namespace lexer {
 	const Tokens& Token::getRecursive() const { return recursive; }
 
 	bool Token::isGroup() const {
-		return type == Type::AngleGroup || type == Type::CurlyGroup || type == Type::SquareGroup
-		    || type == Type::RoundGroup;
+		return type == Type::BracketGroup;
+	}
+
+	bool Token::isGroup(UChar32 group_type) const {
+		return isGroup() && bracket_type == group_type;
 	}
 
 	bool Token::isTerminal() const {

@@ -4,12 +4,24 @@
 #include <unicode/uniset.h>
 
 namespace lexer {
+
+	/**
+	 * @brief Non-exhaustive enum of bracket name -> bracket type(code of opening bracket)
+	 * 
+	 */
+	enum BracketType: UChar32 {
+		Round = '(',
+		Square = '[',
+		Curly = '{',
+		Angle = 0x3008
+	};
+
 	/**
 	 * @brief Sets of characters used to distinguish between their usage in source code
 	 * 
 	 * @todo Maybe move to a more general location
 	 * 
-	 * @attention There are currently two codepoints that belong in both name_start and operator_continue They are U+1885 and U+1886 for now they will be treated as a continuation of the operator
+	 * @attention There are currently two codepoints that belong in both name_start and operator_continue They are U+1885 and U+1886 for now they will be treated as a continuation of the operator when it's ambiguous
 	 * 
 	 * @note There are some undefined characters in Syntax and operator sets(They will be caught by the decoder)
 	 */

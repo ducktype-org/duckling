@@ -10,7 +10,7 @@ namespace pst {
 
 		parseAll(state, Keyword::Fun, &out->name, &out->params);
 		if (state.tryEat(Operator::SingleArrow)) parseOne(state, &out->rets);
-		while (state.notEmpty() and !state.ctokens().is(Token::Type::CurlyGroup))
+		while (state.notEmpty() and !state.ctokens().isGroup(BracketType::Curly))
 			state.tokens().skip();
 		parseOne(state, &out->body);
 		return out;

@@ -13,6 +13,7 @@
 #include <base/init_guard.hpp>
 
 namespace lexer {
+	using Class = Classifications;
 
 	Lexer::Lexer(const fs::FilePath& file):
 		  file_(std::make_shared<fs::FilePath>(file)),
@@ -20,6 +21,7 @@ namespace lexer {
 			auto result = decode<fs::Encoding::UTF8>(fileContent_.view(), console);
 			if (!result) {
 				console.print(std::cerr);
+				// Error here should be fatal but maybe handle it differently then an exception
 				throw base::LogicError("Error while decoding");
 			}
 			charArray_ = std::move(result.value());
@@ -28,7 +30,12 @@ namespace lexer {
 	TokenizationResult Lexer::tokenize(bool dprint) {
 		tokens_.clear();
 		token_messages = dprint;
-		codeblock();
+		try {
+			codeblock();
+		} catch (...) {
+			console.print(std::cerr);
+			throw;
+		}
 		if (dprint) {
 			// @TODO: better customization of this dprint
 			console.print(std::cerr);
@@ -54,7 +61,7 @@ namespace lexer {
 	}
 
 	bool Lexer::tryRawValue(char rawValue, usize fwd) const {
-		return charArray_.getArray().size() > where_ + fwd && peek(fwd).isAsciiValue(rawValue);
+		return charArray_.getArray().size() > where_ + fwd && peek(fwd).is(rawValue);
 	}
 
 	const Char& Lexer::peek(usize fwd) const { return charArray_.get(where_ + fwd); }
@@ -107,13 +114,13 @@ namespace lexer {
 			addTokenMsg(begin + 2, end, "block comment", printer::MessageType::DEBUG);
 			// output.push_back(Token::makeComment(charArray_.composeRaw(begin + 2, end),
 			// source_position));
-		} else if (peek().isOperator()) {
+		} else if (peek().is(Class::operator_start)) {
 			usize end = oper();
 			sourcePosition.setEnd(end);
 			addTokenMsg(begin, end, "operator", printer::MessageType::DEBUG);
 			output.push_back(Token::makeOperator(charArray_.composeRaw(begin, end), sourcePosition)
 			);
-		} else if (peek().isCharacter()) {
+		} else if (peek().is(Class::name_start)) {
 			usize end = identifier();
 			sourcePosition.setEnd(end);
 			std::string message;
@@ -132,33 +139,32 @@ namespace lexer {
 			output.push_back(
 				Token::makeString(charArray_.composeRaw(begin + 1, end), sourcePosition)
 			);
-		} else if (peek().isSpecial()) {
+		} else if (peek().is(Class::open_bracket)) {
 			// the groups are constructed here
-			if (peek().isParOpen()) {
-				auto group_type = peek().getParType();
-				console.add({ { { "group begin" } }, printer::MessageType::DEBUG }
-				);  // @TODO: better
-				Tokens inner_tokens = parGroup(group_type);
+			auto group_type = peek().getValue();
+			auto group_end = peek().bracketPair();
+			console.add({ { { "group begin" } }, printer::MessageType::DEBUG }
+			);  // @TODO: better
+			Tokens inner_tokens = parGroup(group_end);
 
-				if (inner_tokens.empty()) {
-					sourcePosition.setEnd(where_ + 1);
-				} else {
-					auto lastEnd = inner_tokens.back().getPosition().getEnd();
-					sourcePosition.setEnd(lastEnd + 1);
-				}
-
-				output.push_back(
-					Token::makeGroup(group_type, std::move(inner_tokens), sourcePosition)
-				);
-				console.add({ { { "group end" } }, printer::MessageType::DEBUG });
+			if (inner_tokens.empty()) {
+				sourcePosition.setEnd(where_ + 1);
 			} else {
-				usize end = special();
-				sourcePosition.setEnd(end);
-				addTokenMsg(begin, end, "special", printer::MessageType::DEBUG);
-				output.push_back(
-					Token::makeSpecial(charArray_.composeRaw(begin, end), sourcePosition)
-				);
+				auto lastEnd = inner_tokens.back().getPosition().getEnd();
+				sourcePosition.setEnd(lastEnd + 1);
 			}
+
+			output.push_back(
+				Token::makeGroup(group_type, std::move(inner_tokens), sourcePosition)
+			);
+			console.add({ { { "group end" } }, printer::MessageType::DEBUG });
+		} else if (peek().is(Class::special)) {
+			usize end = special();
+			sourcePosition.setEnd(end);
+			addTokenMsg(begin, end, "special", printer::MessageType::DEBUG);
+			output.push_back(
+				Token::makeSpecial(charArray_.composeRaw(begin, end), sourcePosition)
+			);
 		} else if (peek().isDigit()) {
 			usize end = numLiteral();
 			sourcePosition.setEnd(end);
@@ -168,13 +174,13 @@ namespace lexer {
 				Token::makeNumLiteral(charArray_.composeRaw(begin, end), sourcePosition)
 			);
 		} else {
-			if (not peek().isWhitespace()) {
+			if (not peek().is(Class::whitespace)) {
 				console.add(printer::Message(
 					{
 						{ "Skipped" },
 						{ generateLineColumnInfo() },
 						{ "(" },
-						{ std::string(charArray_.composeRaw(begin, begin).stringView()) },
+						{ std::string(peek().rawStr()) },
 						{ ")" },
 					},
 					printer::MessageType::DEBUG
@@ -236,13 +242,13 @@ namespace lexer {
 	}
 
 	usize Lexer::oper() {
-		while (!isEOF() and peek().isOperator()) next();
+		while (!isEOF() and peek().is(Class::operator_continue)) next();
 		return where_ - 1;
 	}
 
 	usize Lexer::identifier() {
 		next();  // first char - character
-		while (!isEOF() and (peek().isCharacter() || peek().isDigit())) next();
+		while (!isEOF() and (peek().is(Class::name_continue) || peek().isDigit())) next();
 		return where_ - 1;
 	}
 
@@ -253,8 +259,8 @@ namespace lexer {
 
 	usize Lexer::numBinaryLiteral() {
 		skip(2);  // 0b
-		while (!peek().isEOF()) {
-			if (!peek().isAsciiValue('0') && !peek().isAsciiValue('1')) break;
+		while (!peek().is(Class::end_of_file_value)) {
+			if (!peek().isBinDigit()) break;
 			next();
 		}
 
@@ -264,10 +270,9 @@ namespace lexer {
 	usize Lexer::numHexLiteral() {
 		skip(2);  // 0x
 
-		while (!peek().isEOF()) {
-			char curr = peek().asciiValue();
+		while (!peek().is(Class::end_of_file_value)) {
 
-			if (!peek().isDigit() && !('a' <= curr && curr <= 'f') && !('A' <= curr && curr <= 'F'))
+			if (!peek().isHexDigit())
 				break;
 
 			next();
@@ -280,20 +285,20 @@ namespace lexer {
 		bool was_dot = false;
 		bool was_e   = false;
 
-		if (peek().isAsciiValue('0') && (peek(1).isAsciiValue('b') || peek(1).isAsciiValue('B')))
+		if (peek().is('0') && (peek(1).is('b') || peek(1).is('B')))
 			return numBinaryLiteral();
 
-		if (peek().isAsciiValue('0') && peek(1).isAsciiValue('x')) return numHexLiteral();
+		if (peek().is('0') && peek(1).is('x')) return numHexLiteral();
 
 		next();  // first char - digit
-		while (!peek().isEOF()) {
+		while (!peek().is(Class::end_of_file_value)) {
 			if (!peek().isDigit()) {
-				if (!was_dot && peek().isAsciiValue('.')) {
+				if (!was_dot && peek().is('.')) {
 					was_dot = true;
-				} else if (!was_e && peek().isAsciiValue('e')) {
+				} else if (!was_e && peek().is('e')) {
 					was_e   = true;
 					was_dot = true;
-					if (peek(1).isAsciiValue('+') or peek(1).isAsciiValue('-')) next();
+					if (peek(1).is('+') or peek(1).is('-')) next();
 				} else {
 					// @TODO: perhaps add some errors/skips here
 					break;
@@ -308,7 +313,7 @@ namespace lexer {
 
 	usize Lexer::string() {
 		next();
-		while (!peek().isAsciiValue('"')) {
+		while (!peek().is('"')) {
 			// @TODO add escaping
 			// @TODO add support for formatted string
 			next();
@@ -317,11 +322,11 @@ namespace lexer {
 		return where_ - 2;
 	}
 
-	Tokens Lexer::parGroup(lexer::Char::ParType end) {
+	Tokens Lexer::parGroup(UChar32 group_end) {
 		Tokens out;
 		next();  // par open
 
-		while (!peek().isParClose(end)) {
+		while (!peek().is(group_end)) {
 			if (isEOF()) {
 				// @TODO: error - unclosed par
 				return out;
@@ -333,9 +338,9 @@ namespace lexer {
 		return out;
 	}
 
-	bool Lexer::isEOF() const { return where_ >= charArray_.getArray().size(); }
+	bool Lexer::isEOF() const { return peek().is(Class::end_of_file_value); }
 
-	bool Lexer::isEOL() const { return peek().isAsciiValue('\n'); }
+	bool Lexer::isEOL() const { return peek().is('\n'); }
 
 	bool Lexer::isCommentBegin() const { return tryRawValue('/') && tryRawValue('/', 1); }
 

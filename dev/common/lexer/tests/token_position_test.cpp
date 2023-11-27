@@ -39,6 +39,7 @@ class LexerPositionTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Lexer: Token Position Tests") {
+		lexer::init();
 		TESTER_ADD_TEST(simplePositionTest);
 	}
 

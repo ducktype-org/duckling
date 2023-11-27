@@ -31,7 +31,6 @@ namespace lexer {
 	/**
 	 * @brief Class used to store token information
 	 * 
-	 * @todo The way of handling groups might need a more general approach. Maybe just a bracketGroup with additional information about start and en additional information about start and end. A similar idea might be applicable to strings as well
 	 * @todo The implementation of #makeSentinelEnd() isn't perfect and can't get the full SourcePosition of the end
 	 * @todo Implement formatted string
 	 */
@@ -43,10 +42,7 @@ namespace lexer {
 			NumLiteral,
 			String,           ///< special group, changes lexing rules
 			FormattedString,  ///< special group, changes lexing rules
-			RoundGroup,       ///< (...)
-			SquareGroup,      ///< [...]
-			CurlyGroup,       ///< {...}
-			AngleGroup,       ///< currently not used
+			BracketGroup,     ///< stores opening bracket value in bracket_type
 			Operator,
 			Comment,
 			Special,
@@ -55,9 +51,8 @@ namespace lexer {
 			Error
 		};
 
-		constexpr static std::array<Type, 6> non_terminal_tokens
-			= { Type::String,      Type::FormattedString, Type::RoundGroup,
-			    Type::SquareGroup, Type::CurlyGroup,      Type::AngleGroup };
+		constexpr static std::array<Type, 3> non_terminal_tokens
+			= { Type::String,      Type::FormattedString, Type::BracketGroup};
 
 
 		/**
@@ -75,7 +70,7 @@ namespace lexer {
 		static Token makeNumber(const base::RawView number, SourcePosition);
 		static Token makeString(base::RawView string, const SourcePosition&);
 		static Token makeFormattedString(Tokens&& tokens, SourcePosition);
-		static Token makeGroup(Char::ParType groupType, Tokens&& tokens, const SourcePosition&);
+		static Token makeGroup(UChar32 groupType, Tokens&& tokens, const SourcePosition&);
 		static Token makeComment(base::RawView comment, const SourcePosition&);
 		static Token makeOperator(base::RawView oper, const SourcePosition&);
 		static Token makeIdentifier(base::RawView identifier, const SourcePosition&);
@@ -88,12 +83,14 @@ namespace lexer {
 		Token(const Token& other) = default;
 		Token(Token&& other) noexcept;
 		Token(Type type, base::RawView value, SourcePosition position);
-		Token(Type type, Tokens&& recursive, SourcePosition position);
+		Token(Type type, Tokens&& recursive, SourcePosition position, UChar32 bracket = 0);
 		friend void swap(Token& first, Token& second);
 		Token&      operator=(Token other);
 
 		[[nodiscard]]
 		Type getType() const;
+		[[nodiscard]]
+		UChar32 getBracketType() const;
 		[[nodiscard]]
 		base::StrId getValue() const;
 		[[nodiscard]]
@@ -103,6 +100,8 @@ namespace lexer {
 
 		[[nodiscard]]
 		bool isGroup() const;
+		[[nodiscard]]
+		bool isGroup(UChar32 group_type) const;
 
 		[[nodiscard]]
 		bool isTerminal() const;
@@ -150,6 +149,7 @@ namespace lexer {
 		base::StrId    str_id;
 		Tokens         recursive;
 		SourcePosition source_position;
+		UChar32 bracket_type = 0;
 	};
 
 	/**

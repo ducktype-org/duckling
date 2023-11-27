@@ -11,8 +11,13 @@ namespace pst {
 
 		parseAll(state, Keyword::Struct, &out->name);
 
+		constexpr auto isCurlyGroupStart = 
+			[](const RiftParserState& lstate, usize fwd){
+				return lstate.ctokens().isGroup(BracketType::Curly, fwd);
+			};
+
 		if (state.tryEat(Operator::Colon))
-			parseList<true>(state, out->bases, Operator::Comma, Token::Type::CurlyGroup);
+			parseList<true>(state, out->bases, Operator::Comma, isCurlyGroupStart);
 
 		parseOne(state, &out->body);
 

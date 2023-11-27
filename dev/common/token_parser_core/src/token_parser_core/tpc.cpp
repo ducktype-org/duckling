@@ -1,12 +1,12 @@
 #include "tpc.hpp"
 #include <lexer/lexer.hpp>
+#include <base/init_guard.hpp>
 #include "token_stream.hpp"
 
 namespace tpc {
 	void init() {
-		static bool was_init = false;
-		if (was_init) return;
+		RIFT_SIMPLE_INIT_GUARD_BEGIN		
 		lexer::init();
-		was_init = true;
+		RIFT_SIMPLE_INIT_GUARD_END
 	}
 }

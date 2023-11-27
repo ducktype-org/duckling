@@ -52,18 +52,18 @@ private:
 		);
 
 		assert(
-			inner_tokens[0].getType() == lexer::Token::Type::RoundGroup,
-			"First group is not RoundGroup"
+			inner_tokens[0].isGroup('('),
+			"First group is not a round bracket group"
 		);
 
 		assert(
-			inner_tokens[1].getType() == lexer::Token::Type::SquareGroup,
-			"Second group is not SquareGroup"
+			inner_tokens[1].isGroup('['),
+			"Second group is not a square bracket group"
 		);
 
 		assert(
-			inner_tokens[2].getType() == lexer::Token::Type::CurlyGroup,
-			"Second group is not CurlyGroup"
+			inner_tokens[2].isGroup('{'),
+			"Third group is not a curly bracket group"
 		);
 
 		for (usize i = 0; i < 3; i++) {

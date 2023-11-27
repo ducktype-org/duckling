@@ -20,9 +20,9 @@ namespace lexer {
 		SourcePosition();
 
 		explicit SourcePosition(std::shared_ptr<fs::FilePath> source_code);
-		SourcePosition(std::shared_ptr<fs::FilePath> source_code, u32 line, u32 column, u32 start);
+		SourcePosition(std::shared_ptr<fs::FilePath> source_code, u64 line, u64 column, u64 start);
 		SourcePosition(
-			std::shared_ptr<fs::FilePath> source_code, u32 line, u32 column, u32 start, u32 end
+			std::shared_ptr<fs::FilePath> source_code, u64 line, u64 column, u64 start, u64 end
 		);
 
 		/**
@@ -45,10 +45,10 @@ namespace lexer {
 		[[nodiscard]]
 		std::string genErrorMsg(std::string_view reason) const;
 		void        setSourceCode(std::shared_ptr<fs::FilePath> new_source_code);
-		void        setLineNumber(u32 line);
-		void        setColumnNumber(u32 column);
-		void        setStart(u32 start);
-		void        setEnd(u32 end);
+		void        setLineNumber(usize line);
+		void        setColumnNumber(usize column);
+		void        setStart(usize start);
+		void        setEnd(usize end);
 
 		[[nodiscard]]
 		std::shared_ptr<fs::FilePath> getSourceCode();
@@ -63,7 +63,7 @@ namespace lexer {
 
 	private:
 		std::shared_ptr<fs::FilePath> source_code; ///< pointer to source file data
-		u32 line_number, column_number; ///< #line_number, #column_number describe start position in code for the user
-		u32 source_index_start, source_index_end;  ///< #source_index_start, #source_index_end describe range of bytes in the file
+		usize line_number, column_number; ///< #line_number, #column_number describe start position in code for the user
+		usize source_index_start, source_index_end;  ///< #source_index_start, #source_index_end describe range of bytes in the file
 	};
 }

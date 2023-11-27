@@ -91,7 +91,7 @@ namespace lexer {
 		vertical_space.clear().addAll(whitespace).removeAll(newline).removeAll(format_control).freeze();
 
 		createFromPattern(syntax, u8R"([[:Pattern_Syntax:]-[:ID_Compat_Math_Continue:]])");
-		createFromPattern(special, u8R"([;:@#,'"])");
+		createFromPattern(special, u8R"([;$@#,'"])");
 		createFromPattern(open_bracket, u8R"([[:Pattern_Syntax:]&[:Bidi_Paired_Bracket_Type=Open:]])");
 		createFromPattern(close_bracket, u8R"([[:Pattern_Syntax:]&[:Bidi_Paired_Bracket_Type=Close:]])");
 

@@ -4,7 +4,12 @@ namespace pst {
 	ParserRef<RetList> RetList::parse(RiftParserState& state) {
 		auto out = makeRef<RetList>(state.ctokens().peek().getPosition());
 
-		parseList<true>(state, out->rets, Operator::Comma, Token::Type::CurlyGroup);
+		constexpr auto isCurlyGroupStart = 
+			[](const RiftParserState& lstate, usize fwd){
+				return lstate.ctokens().isGroup(BracketType::Curly, fwd);
+			};
+
+		parseList<true>(state, out->rets, Operator::Comma, isCurlyGroupStart);
 
 		return out;
 	}

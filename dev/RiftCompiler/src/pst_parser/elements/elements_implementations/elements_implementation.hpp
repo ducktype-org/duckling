@@ -8,10 +8,12 @@
 #include <rift_definitions/key_spec_op.hpp>
 #include <rift_definitions/operator_precedence.hpp>
 #include <lexer/token.hpp>
+#include <lexer/classifications.hpp>
 
 #include <base/exceptions.hpp>
 #include <ostream>
 #include <variant>
+#include <functional>
 
 namespace pst {
 	using tpc::makeRef;
@@ -23,14 +25,17 @@ namespace pst {
 	using rift_def::Special;
 
 	using lexer::Token;
+	using lexer::BracketType;
+
+	using StateCondition = std::function<bool(const RiftParserState&, usize)>;
 
 	/**
 	 * Set up to work on vector like containers with push_back and back
 	 */
-	template<bool NON_EMPTY, class Container, class Separator, class Ending>
-	bool parseList(RiftParserState& state, Container& cont, Separator sep, Ending end) {
+	template<bool NON_EMPTY, class Container, class Separator>
+	bool parseList(RiftParserState& state, Container& cont, Separator sep, StateCondition end_condition) {
 		usize expr_length;
-		if (state.empty() || state.ctokens().is(end)) {
+		if (state.empty() || end_condition(state, 0)) {
 			if (!NON_EMPTY) return true;
 			state.fail(-1, "empty list");
 			return false;
@@ -39,12 +44,12 @@ namespace pst {
 				expr_length = 0;
 				while (!state.ctokens().is(Token::Type::Sentinel, expr_length)
 				       && !state.ctokens().is(sep, expr_length)
-				       && !state.ctokens().is(end, expr_length)) {
+				       && !end_condition(state, expr_length)) {
 					expr_length++;
 				}
 				if (expr_length == 0) {
 					if (state.empty()) {
-						if (end == Token::Type::Sentinel) break;
+						if (end_condition(state, 0)) break;
 						state.fail(-1, "unexpected end to a list");
 						return false;
 					} else {
@@ -53,7 +58,7 @@ namespace pst {
 					}
 				}
 				cont.emplace_back(Expr::parse(state, expr_length, true));
-				if (state.ctokens().is(end)) break;
+				if (end_condition(state, 0)) break;
 				if (state.ctokens().is(sep))
 					state.tokens().skip();
 				else

@@ -54,6 +54,12 @@ namespace tpc {
 		[[nodiscard]]
 		bool isOperator(base::StrId oper, usize fwd = 0) const;
 
+		[[nodiscard]]
+		bool isGroup(usize fwd = 0) const;
+		[[nodiscard]]
+		bool isGroup(UChar32 group_type, usize fwd = 0) const;
+
+
 		template<class T>
 		[[nodiscard]]
 		bool is(T t, usize fwd = 0) const {

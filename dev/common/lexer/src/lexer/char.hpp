@@ -10,25 +10,20 @@
 #include <optional>
 
 namespace lexer {
-	constexpr uchar bad_ascii = static_cast<uchar>(0b11111111);
 	class CharArray;
 
 	/**
-	 * @brief Class used for characters and their classifications
+	 * @brief Class used for characters and checking their classifications
 	 * 
-	 * @todo The current approach is a bit simplistic change it to reflect the requirements of handling unicode(It should probably keep codepoints in u32 or i32 and check for the characteristics that are interesting from the position of unicode.)
-	 * @todo Divide Whitespace into EOL and vertical
-	 * @todo Some characters might be in multiple `Type`-s
-	 * @todo `ParType` being an enum might not be the best
 	 */
 	class Char {
 	public:
 		[[nodiscard]]
 		bool is(icu::UnicodeSet&) const;
 		[[nodiscard]]
-		bool is(UChar) const;
+		bool is(UChar32) const;
 		[[nodiscard]]
-		bool isInRange(UChar begin, UChar end) const;
+		bool isInRange(UChar32 begin, UChar32 end) const;
 
 		[[nodiscard]]
 		bool isBinDigit() const;
@@ -38,7 +33,13 @@ namespace lexer {
 		bool isHexDigit() const;
 
 		[[nodiscard]]
-		UChar bracketPair() const;
+		UChar32 bracketPair() const;
+
+		[[nodiscard]]
+		UChar32 getValue() const;
+
+		[[nodiscard]]
+		std::string rawStr() const;
 
 		template<fs::Encoding encoding>
 		friend std::optional<CharArray> decode(base::RawView bytes, printer::Console&);
@@ -69,12 +70,17 @@ namespace lexer {
 		CharArray(CharArray&& other) noexcept;
 		CharArray(const CharArray& other)      = delete;
 		void operator=(const CharArray& other) = delete;
-		[[nodiscard]]
 		CharArray& operator=(CharArray&& other) noexcept;
 		friend void swap(CharArray& first, CharArray& second);
 
 		[[nodiscard]]
 		const Array& getArray() const;
+
+		[[nodiscard]]
+		base::RawView composeRaw(usize from, usize to) const;
+
+		[[nodiscard]]
+		base::RawView getRaw(usize i) const;
 
 		[[nodiscard]]
 		const Char& get(usize i) const;
