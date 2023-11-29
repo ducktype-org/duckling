@@ -108,7 +108,10 @@ namespace lexer {
 
 	const Tokens& Token::getRecursive() const { return recursive; }
 
-	const Token& Token::getSentinel() const { return *sentinel; }
+	const Token& Token::getSentinel() const { 
+		RIFT_ASSERT(isGroup(), "getSentinel called on non group token"); 
+		return *sentinel; 
+	}
 
 	bool Token::isGroup() const {
 		return type == Type::BracketGroup;
