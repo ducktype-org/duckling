@@ -31,7 +31,6 @@ namespace lexer {
 	/**
 	 * @brief Class used to store token information
 	 * 
-	 * @todo The implementation of #makeSentinelEnd() isn't perfect and can't get the full SourcePosition of the end
 	 * @todo Implement formatted string
 	 */
 	class Token {
@@ -59,18 +58,13 @@ namespace lexer {
 		 * @name Functions that construct Tokens
 		 * @{
 		 */
-		/**
-		 * @brief Generates sentinel token of a group
-		 * 
-		 * @todo Handle getting the correct SourcePosition of the group end
-		 */
-		Token makeSentinelEnd() const;
+		static Token makeSentinelEnd(base::RawView view, const SourcePosition&);
 		static Token makeSentinelEof(const SourcePosition&);
 		static Token makeKeyword(base::RawView keyword, const SourcePosition&);
 		static Token makeNumber(const base::RawView number, SourcePosition);
 		static Token makeString(base::RawView string, const SourcePosition&);
 		static Token makeFormattedString(Tokens&& tokens, SourcePosition);
-		static Token makeGroup(UChar32 groupType, Tokens&& tokens, const SourcePosition&);
+		static Token makeGroup(UChar32 groupType, Tokens&& tokens, Token&& sentinel, const SourcePosition&);
 		static Token makeComment(base::RawView comment, const SourcePosition&);
 		static Token makeOperator(base::RawView oper, const SourcePosition&);
 		static Token makeIdentifier(base::RawView identifier, const SourcePosition&);
@@ -83,7 +77,7 @@ namespace lexer {
 		Token(const Token& other) = default;
 		Token(Token&& other) noexcept;
 		Token(Type type, base::RawView value, SourcePosition position);
-		Token(Type type, Tokens&& recursive, SourcePosition position, UChar32 bracket = 0);
+		Token(Type type, Tokens&& recursive, Token&& sentinel, SourcePosition position, UChar32 bracket);
 		friend void swap(Token& first, Token& second);
 		Token&      operator=(Token other);
 
@@ -97,6 +91,8 @@ namespace lexer {
 		std::string_view getStrValue() const;
 		[[nodiscard]]
 		const Tokens& getRecursive() const;
+		[[nodiscard]]
+		const Token& getSentinel() const;
 
 		[[nodiscard]]
 		bool isGroup() const;
@@ -148,6 +144,7 @@ namespace lexer {
 		Type           type = Type::Empty;
 		base::StrId    str_id;
 		Tokens         recursive;
+		Token* sentinel = nullptr;
 		SourcePosition source_position;
 		UChar32 bracket_type = 0;
 	};

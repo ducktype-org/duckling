@@ -161,8 +161,12 @@ namespace lexer {
 
 			auto sourcePosition = fromEnd(where_ - 1);
 
+			SourcePosition sentinelPosition(file_, lineNumber_, columnNumber_, where_ - 1); 
+			auto sentinelView = charArray_.composeRaw(where_ - 1, where_ -1);
+			Token sentinel = Token::makeSentinelEnd(sentinelView, sentinelPosition);
+
 			output.push_back(
-				Token::makeGroup(group_type, std::move(inner_tokens), sourcePosition)
+				Token::makeGroup(group_type, std::move(inner_tokens), std::move(sentinel), sourcePosition)
 			);
 			if (token_messages)
 				console.add({ { { "group end" } }, printer::MessageType::DEBUG });

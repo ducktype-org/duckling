@@ -7,11 +7,11 @@
 
 namespace tpc {
 
-	TokenStream::TokenStream(const Tokens& tokens, Token&& sentinel_end, usize from, usize to):
+	TokenStream::TokenStream(const Tokens& tokens, const Token& sentinel_end, usize from, usize to):
 		  tokens(tokens),
 		  where(from),
 		  to(to),
-		  sentinel_end(std::move(sentinel_end)) {
+		  sentinel_end(sentinel_end) {
 		RIFT_ASSERT(tokens.size() >= to, "TokenStream received too few tokens.");
 		RIFT_ASSERT(from <= to, "TokenStream received illegal from-to values");
 	}
@@ -20,12 +20,12 @@ namespace tpc {
 		  tokens(stream.tokens),
 		  where(stream.where),
 		  to(stream.to),
-		  sentinel_end(stream.sentinel_end) {}
+		  sentinel_end(std::move(stream.sentinel_end)) {}
 
 	TokenStream TokenStream::getRecursive() const {
 		if (peek().isGroup()) {
 			const auto& rec = peek().getRecursive();
-			return TokenStream(rec, peek().makeSentinelEnd(), 0, rec.size());
+			return TokenStream(rec, peek().getSentinel(), 0, rec.size());
 		} else {
 			// @TODO
 			throw base::LogicError("get recursive on no group");

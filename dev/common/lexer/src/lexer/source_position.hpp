@@ -12,6 +12,8 @@
 namespace lexer {
 	/** 
 	 * @brief  Type used for storing token position in a source file
+	 * 
+	 * It always stores a valid position with the position (end() + 1, end() + 1) being EOF
 	 */
 	class SourcePosition {
 	public:
