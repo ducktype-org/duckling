@@ -123,7 +123,7 @@ private:
 
 	void testSourcePosition() {
 		const auto& position = td->tokens[1].getRecursive().front().getPosition();
-		assert(position.getLineNumber() == 5, "Wrong line number");
+		assert(position.getLine() == 5, "Wrong line number");
 		assert(position.getColumn() == 2, "Wrong column");
 		assert(position.getStart() == 16, "Wrong start index");
 		assert(position.getEnd() == 20, "Wrong end index");

@@ -19,7 +19,7 @@ void print(const Tokens& tokens, std::ostream& out, const std::string& indent = 
 		else
 			out << "\"<EMPTY>\", ";
 
-		out << R"("line": ")" << position.getLineNumber() << "\",";
+		out << R"("line": ")" << position.getLine() << "\",";
 		out << R"("column": ")" << position.getColumn() << "\",";
 		out << R"("raw_start": ")" << position.getStart() << "\",";
 		out << R"("raw_end": ")" << position.getEnd() << "\",";
@@ -46,7 +46,7 @@ public:
 private:
 	void simplePositionTest() {
 		fs::FilePath file(path("fun.rift"));
-		td = lexer::tokenizeFile(file);
+		td = lexer::tokenizeFile(file, true);
 
 		std::stringstream result_stream;
 		print(td->tokens, result_stream);

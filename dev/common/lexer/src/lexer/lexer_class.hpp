@@ -59,6 +59,9 @@ namespace lexer {
 		 * @name non-terminal tokens parsers:
 		 * @{
 		 */
+		/**
+		 * @note handle unexpected eof / bad closing brackets
+		*/
 		Tokens parGroup(UChar32 group_end);
 		/**@}*/
 

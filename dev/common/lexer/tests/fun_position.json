@@ -1,10 +1,10 @@
 [
 	{
-		"value": "<EMPTY>",
+		"value": "{}",
 		"line": "1",
 		"column": "1",
 		"raw_start": "0",
-		"raw_end": "103",
+		"raw_end": "102",
 		"recursive": [
 			{
 				"value": "fun",
@@ -23,7 +23,7 @@
 				"recursive": []
 			},
 			{
-				"value": "<EMPTY>",
+				"value": "()",
 				"line": "2",
 				"column": "8",
 				"raw_start": "9",
@@ -68,7 +68,7 @@
 						"raw_start": "28",
 						"raw_end": "36",
 						"recursive": []
-					}
+					},
 				]
 			},
 			{
@@ -88,7 +88,7 @@
 				"recursive": []
 			},
 			{
-				"value": "<EMPTY>",
+				"value": "{}",
 				"line": "2",
 				"column": "48",
 				"raw_start": "49",
@@ -103,7 +103,7 @@
 						"recursive": []
 					},
 					{
-						"value": "<EMPTY>",
+						"value": "()",
 						"line": "3",
 						"column": "6",
 						"raw_start": "56",
@@ -120,11 +120,11 @@
 						]
 					},
 					{
-						"value": "<EMPTY>",
+						"value": "{}",
 						"line": "3",
 						"column": "13",
 						"raw_start": "63",
-						"raw_end": "66",
+						"raw_end": "64",
 						"recursive": []
 					},
 				]
@@ -162,11 +162,11 @@
 				"recursive": []
 			},
 			{
-				"value": "<EMPTY>",
+				"value": "{}",
 				"line": "6",
 				"column": "15",
 				"raw_start": "84",
-				"raw_end": "87",
+				"raw_end": "85",
 				"recursive": []
 			},
 			{
@@ -186,11 +186,11 @@
 				"recursive": []
 			},
 			{
-				"value": "<EMPTY>",
+				"value": "()",
 				"line": "7",
 				"column": "7",
 				"raw_start": "93",
-				"raw_end": "96",
+				"raw_end": "94",
 				"recursive": []
 			},
 			{
@@ -202,13 +202,13 @@
 				"recursive": []
 			},
 			{
-				"value": "<EMPTY>",
+				"value": "{}",
 				"line": "7",
 				"column": "13",
 				"raw_start": "99",
-				"raw_end": "102",
+				"raw_end": "100",
 				"recursive": []
-			}
+			},
 		]
-	}
+	},
 ]

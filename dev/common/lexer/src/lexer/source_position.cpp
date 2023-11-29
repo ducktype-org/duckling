@@ -5,86 +5,80 @@
 
 
 #include "source_position.hpp"
+#include "base/exceptions.hpp"
 
+#include <iostream>
 #include <utility>
 
 namespace lexer {
 	std::string SourcePosition::getSourceChars() const {
-		if (!source_code) return "Error: No source code given!";
-		if (getStart() == -1 || getEnd() == -1) return "Error: Empty SourcePosition";
-
 		auto             source_content = source_code->getContent();
 		std::string_view source         = source_content.view().stringView();
 
-		if (getEnd() + 1 >= source.size()) return "Error: outside source!";
-
-		return std::string(source.begin() + getStart(), source.begin() + getEnd() + 1);
-	}
-
-	SourcePosition::SourcePosition() {
-		line_number = column_number = source_index_start = source_index_end = 0;
-		this->source_code                                                   = nullptr;
-	}
-
-	SourcePosition::SourcePosition(std::shared_ptr<fs::FilePath> source_code): SourcePosition() {
-		setSourceCode(std::move(source_code));
+		if (source_end == source.size()) return "<EOF>";
+		return std::string(source.begin() + source_start, source.begin() + source_end + 1);
 	}
 
 	SourcePosition::SourcePosition(
-		std::shared_ptr<fs::FilePath> source_code, u64 line, u64 column, u64 start
+		Source source_code_, usize line_, usize column_, usize source_start_
 	):
-		  SourcePosition(std::move(source_code)) {
-		setLineNumber(line);
-		setColumnNumber(column);
-		setStart(start);
-	}
+		  SourcePosition(source_code_, line_, column_, source_start_, source_start_) {}
 
 	SourcePosition::SourcePosition(
-		std::shared_ptr<fs::FilePath> source_code, u64 line, u64 column, u64 start, u64 end
+		Source source_code_, usize line_, usize column_, usize source_start_, usize source_end_
 	):
-		  SourcePosition(std::move(source_code), line, column, start) {
-		setEnd(end);
+			line(line_), column(column_), 
+			source_start(source_start_), source_end(source_end_),
+			source_code(source_code_) {
+		if (!source_code_) throw base::LogicError("Invalid SourcePosition: No such file");
+		if (line == 0) throw base::LogicError("Invalid SourcePosition: line = 0");
+		if (column == 0) throw base::LogicError("Invalid SourcePosition: column = 0");
+		if (source_end < source_start)
+			throw base::LogicError("Invalid SourcePosition: source end before source start");
+		// allow EOF position
+		if (not (source_end == source_start and source_end == source_code->getContent().size()))
+			if (source_end >= source_code->getContent().size())
+				throw base::LogicError("Invalid SourcePosition: source end outside the file");
+	}
+	SourcePosition::SourcePosition(const SourcePosition& other):
+		line(other.line), column(other.column), 
+		source_start(other.source_start), source_end(other.source_end), 
+		source_code(other.source_code) {}
+
+	usize SourcePosition::getColumn() const { return column; }
+	usize SourcePosition::getLine() const { return line; }
+	usize SourcePosition::getStart() const { return source_start; }
+	usize SourcePosition::getEnd() const { return source_end; }
+	SourcePosition::Source SourcePosition::getSource() const { return source_code; }
+
+	printer::Message SourcePosition::genErrorMsg(std::string_view reason) const {
+		return printer::Message({
+			{
+				{ "In file: " },
+				{ source_code->strView().data() },
+				{ ":" + std::to_string(line) + ":" + std::to_string(column) + "\n"},
+				{ "error: " , printer::Color::BRIGHT_RED},
+				{ reason.data() },
+				{ "\n" },
+				{ "  |\n" },
+				{ std::to_string(line) },
+				{ " | " },
+				{ getSourceChars() + "\n" },
+				{ "  |\n" }
+			},
+			printer::MessageType::ERROR
+		});
 	}
 
-	void SourcePosition::setLineNumber(u64 line) { line_number = line; }
-
-	void SourcePosition::setColumnNumber(u64 column) { column_number = column; }
-
-	void SourcePosition::setStart(u64 start) {
-		source_index_start = start;
-		if (source_index_end < start) source_index_end = start;
-	}
-
-	void SourcePosition::setEnd(u64 end) {
-		source_index_end = end;
-		if (end < source_index_start) source_index_end = source_index_start;
-	}
-
-	void SourcePosition::setSourceCode(std::shared_ptr<fs::FilePath> new_source_code) {
-		source_code = std::move(new_source_code);
-	}
-
-	std::shared_ptr<fs::FilePath> SourcePosition::getSourceCode() { return source_code; }
-
-	usize SourcePosition::getStart() const { return source_index_start; }
-
-	usize SourcePosition::getEnd() const { return source_index_end; }
-
-	usize SourcePosition::getLineNumber() const { return line_number; }
-
-	usize SourcePosition::getColumn() const { return column_number; }
-
-	std::string SourcePosition::genErrorMsg(std::string_view reason) const {
-		if (line_number == 0) return "Error getting info: SourcePosition is invalid";
-
+	std::string SourcePosition::genErrorStr(std::string_view reason) const {
 		std::string output = "In file: ";
 		output += source_code->strView();
-		output += ":" + std::to_string(line_number) + ":" + std::to_string(column_number) + "\n";
+		output += ":" + std::to_string(line) + ":" + std::to_string(column) + "\n";
 		output += "error: ";
 		output += reason;
 		output += "\n";
 		output += "  |\n";
-		output += std::to_string(line_number);
+		output += std::to_string(line);
 		output += " | ";
 		output += getSourceChars() + "\n";
 		output += "  |\n";

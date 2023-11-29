@@ -40,6 +40,7 @@ namespace lexer {
 			console.print(std::cerr);
 		}
 		SourcePosition eof_pos(file_, lineNumber_, columnNumber_, where_);
+		std::cerr << lineNumber_ << ":" << columnNumber_ << ":" << where_ << "\n";
 		return { std::move(tokens_), Token::makeSentinelEof(eof_pos) };
 	}
 
@@ -102,7 +103,9 @@ namespace lexer {
 
 	void Lexer::parseSingleInto(Tokens& output) {
 		usize          begin = where_;
-		SourcePosition sourcePosition(file_, lineNumber_, columnNumber_, where_);
+		auto fromEnd = [file = file_, line = lineNumber_, column = columnNumber_, start = where_](u64 end) {
+			return SourcePosition(file, line, column, start, end);
+		};
 		if (isEOF()) {
 			// @TODO: error
 			RIFT_PANIC("EOF encountered inside parseSingleInto");
@@ -111,27 +114,27 @@ namespace lexer {
 		// parser
 		else if (isCommentBegin()) {
 			usize end = comment(/*output*/);
-			sourcePosition.setEnd(end);
+			auto sourcePosition = fromEnd(end);
 
 			addTokenMsg(begin + 2, end, "line comment", printer::MessageType::DEBUG);
 			// output.push_back(Token::makeComment(charArray_.composeRaw(begin + 2, end),
 			// source_position));
 		} else if (isBlockCommentBegin()) {
 			usize end = blockComment();
-			sourcePosition.setEnd(end);
+			auto sourcePosition = fromEnd(end);
 
 			addTokenMsg(begin + 2, end, "block comment", printer::MessageType::DEBUG);
 			// output.push_back(Token::makeComment(charArray_.composeRaw(begin + 2, end),
 			// source_position));
 		} else if (peek().is(Class::operator_start)) {
 			usize end = oper();
-			sourcePosition.setEnd(end);
+			auto sourcePosition = fromEnd(end);
 			addTokenMsg(begin, end, "operator", printer::MessageType::DEBUG);
 			output.push_back(Token::makeOperator(charArray_.composeRaw(begin, end), sourcePosition)
 			);
 		} else if (peek().is(Class::name_start)) {
 			usize end = identifier();
-			sourcePosition.setEnd(end);
+			auto sourcePosition = fromEnd(end);
 			std::string message;
 			output.push_back(
 				Token::makeIdentifier(charArray_.composeRaw(begin, end), sourcePosition)
@@ -142,7 +145,7 @@ namespace lexer {
 				addTokenMsg(begin, end, "keyword", printer::MessageType::DEBUG);
 		} else if (isStringBegin()) {
 			usize end = string();
-			sourcePosition.setEnd(end + 1);
+			auto sourcePosition = fromEnd(end + 1);
 
 			addTokenMsg(begin + 1, end, "string", printer::MessageType::DEBUG);
 			output.push_back(
@@ -152,31 +155,27 @@ namespace lexer {
 			// the groups are constructed here
 			auto group_type = peek().getValue();
 			auto group_end = peek().bracketPair();
-			console.add({ { { "group begin" } }, printer::MessageType::DEBUG }
-			);  // @TODO: better
+			if (token_messages)
+				console.add({ { { "group begin" } }, printer::MessageType::DEBUG });  // @TODO: better
 			Tokens inner_tokens = parGroup(group_end);
 
-			if (inner_tokens.empty()) {
-				sourcePosition.setEnd(where_ + 1);
-			} else {
-				auto lastEnd = inner_tokens.back().getPosition().getEnd();
-				sourcePosition.setEnd(lastEnd + 1);
-			}
+			auto sourcePosition = fromEnd(where_ - 1);
 
 			output.push_back(
 				Token::makeGroup(group_type, std::move(inner_tokens), sourcePosition)
 			);
-			console.add({ { { "group end" } }, printer::MessageType::DEBUG });
+			if (token_messages)
+				console.add({ { { "group end" } }, printer::MessageType::DEBUG });
 		} else if (peek().is(Class::special)) {
 			usize end = special();
-			sourcePosition.setEnd(end);
+			auto sourcePosition = fromEnd(end);
 			addTokenMsg(begin, end, "special", printer::MessageType::DEBUG);
 			output.push_back(
 				Token::makeSpecial(charArray_.composeRaw(begin, end), sourcePosition)
 			);
 		} else if (peek().isDigit()) {
 			usize end = numLiteral();
-			sourcePosition.setEnd(end);
+			auto sourcePosition = fromEnd(end);
 
 			addTokenMsg(begin, end, "numLiteral", printer::MessageType::DEBUG);
 			output.push_back(
@@ -257,7 +256,7 @@ namespace lexer {
 
 	usize Lexer::identifier() {
 		next();  // first char - character
-		while (!isEOF() and (peek().is(Class::name_continue) || peek().isDigit())) next();
+		while (!isEOF() and peek().is(Class::name_continue)) next();
 		return where_ - 1;
 	}
 
@@ -268,8 +267,7 @@ namespace lexer {
 
 	usize Lexer::numBinaryLiteral() {
 		skip(2);  // 0b
-		while (!peek().is(Class::end_of_file_value)) {
-			if (!peek().isBinDigit()) break;
+		while (peek().isBinDigit()) {
 			next();
 		}
 
@@ -279,11 +277,7 @@ namespace lexer {
 	usize Lexer::numHexLiteral() {
 		skip(2);  // 0x
 
-		while (!peek().is(Class::end_of_file_value)) {
-
-			if (!peek().isHexDigit())
-				break;
-
+		while (peek().isHexDigit()) {
 			next();
 		}
 
@@ -323,8 +317,7 @@ namespace lexer {
 	usize Lexer::string() {
 		next();
 		while (!peek().is('"')) {
-			// @TODO add escaping
-			// @TODO add support for formatted string
+			if (peek().is('\\')) next();
 			next();
 		}
 		next();
@@ -337,7 +330,6 @@ namespace lexer {
 
 		while (!peek().is(group_end)) {
 			if (isEOF()) {
-				// @TODO: error - unclosed par
 				return out;
 			}
 			parseSingleInto(out);

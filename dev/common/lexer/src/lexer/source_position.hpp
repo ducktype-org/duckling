@@ -6,31 +6,29 @@
 #pragma once
 
 #include <filesystem/file.hpp>
+#include <printer/printer.hpp>
 #include <string>
 
 namespace lexer {
 	/** 
 	 * @brief  Type used for storing token position in a source file
-	 * 
-	 * @todo add better error management
-	 * @todo change it to immutable and check for errors on construction
 	 */
 	class SourcePosition {
 	public:
-		SourcePosition();
+		using Source = std::shared_ptr<const fs::FilePath>;
 
-		explicit SourcePosition(std::shared_ptr<fs::FilePath> source_code);
-		SourcePosition(std::shared_ptr<fs::FilePath> source_code, u64 line, u64 column, u64 start);
+		SourcePosition() = delete;
+
+		SourcePosition(Source source_code, usize line, usize column, usize start);
 		SourcePosition(
-			std::shared_ptr<fs::FilePath> source_code, u64 line, u64 column, u64 start, u64 end
+			Source source_code, usize line, usize column, usize start, usize end
 		);
+		SourcePosition(const SourcePosition& other);
 
 		/**
 		 * @brief Get a copy of the bytes in this position
 		 * 
 		 * @return std::string containing a copy of the bytes in this position, if it fails it returns error message instead
-		 * 
-		 * @todo Change behaviour on error to be detectible
 		 */
 		[[nodiscard]]
 		std::string getSourceChars() const;
@@ -38,32 +36,24 @@ namespace lexer {
 		 * @brief generates formatted error message with a given reason
 		 * 
 		 * @param reason contains the reason for the error
-		 * @return std::string containing the generated error message or, if it fails an error message
-		 * 
-		 * @todo Change behaviour on error to be detectible
 		 */
-		[[nodiscard]]
-		std::string genErrorMsg(std::string_view reason) const;
-		void        setSourceCode(std::shared_ptr<fs::FilePath> new_source_code);
-		void        setLineNumber(usize line);
-		void        setColumnNumber(usize column);
-		void        setStart(usize start);
-		void        setEnd(usize end);
+		printer::Message genErrorMsg(std::string_view reason) const;
+		/**
+		 * @brief generates formatted error string with a given reason
+		 * 
+		 * @param reason contains the reason for the error
+		 */
+		std::string genErrorStr(std::string_view reason) const;
 
-		[[nodiscard]]
-		std::shared_ptr<fs::FilePath> getSourceCode();
-		[[nodiscard]]
-		usize getStart() const;
-		[[nodiscard]]
-		usize getEnd() const;
-		[[nodiscard]]
-		usize getLineNumber() const;
-		[[nodiscard]]
+		usize getLine() const;
 		usize getColumn() const;
+		usize getStart() const;
+		usize getEnd() const;
+		Source getSource() const;
 
 	private:
-		std::shared_ptr<fs::FilePath> source_code; ///< pointer to source file data
-		usize line_number, column_number; ///< #line_number, #column_number describe start position in code for the user
-		usize source_index_start, source_index_end;  ///< #source_index_start, #source_index_end describe range of bytes in the file
+		usize line, column; ///< #line, #column describe start position in code for the user
+		usize source_start, source_end;  ///< #source_start, #source_end describe range of bytes in the file
+		Source source_code; ///< pointer to source file data
 	};
 }

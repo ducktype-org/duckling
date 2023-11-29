@@ -6,7 +6,7 @@ namespace pst {
 		auto out      = makeRef<Struct>(position);
 
 		RIFT_ASSERT(
-			state.ctokens().is(Keyword::Struct), position.genErrorMsg("bad statement choice")
+			state.ctokens().is(Keyword::Struct), position.genErrorStr("bad statement choice")
 		);
 
 		parseAll(state, Keyword::Struct, &out->name);

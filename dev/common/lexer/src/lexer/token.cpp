@@ -12,12 +12,12 @@
 
 namespace lexer {
 	Token Token::makeSentinelEnd() const {
-		RIFT_ASSERT(isGroup(), "makeSentinel called on non-group token");
+		RIFT_ASSERT(isGroup(), "makeSentinelEnd called on non-group token");
 
 		// @TODO: We need here to be able to determine full SourcePosition of closing parenthesis.
 		// It is currently not possible, because we can't figure out line and column from raw-end.
-		SourcePosition end = { getPosition().getSourceCode(),
-			                   getPosition().getLineNumber(),
+		SourcePosition end = { getPosition().getSource(),
+			                   getPosition().getLine(),
 			                   getPosition().getColumn(),
 			                   getPosition().getEnd(),
 			                   getPosition().getEnd() };
@@ -39,7 +39,13 @@ namespace lexer {
 		  type(type),
 		  recursive(recursive),
 		  source_position(std::move(position)),
-		  bracket_type(bracketType) {}
+		  bracket_type(bracketType) {
+			if (type == Token::Type::BracketGroup) {
+				std::string s;
+				icu::UnicodeString(bracket_type).append(u_getBidiPairedBracket(bracket_type)).toUTF8String(s);
+				str_id = base::StrId(base::RawView(s.data()));
+			}
+		  }
 
 	Token Token::makeSentinelEof(const SourcePosition& pos) {
 		return { Type::Sentinel, base::RawView("EOF"), pos };
@@ -84,10 +90,7 @@ namespace lexer {
 	}
 
 	Token Token::makeError(const SourcePosition& position) {
-		Token out;
-		out.type            = Type::Error;
-		out.source_position = position;
-		return out;
+		return Token(Type::Error, base::RawView("<error>"), position);
 	}
 
 	void swap(Token& first, Token& second) {
@@ -105,7 +108,7 @@ namespace lexer {
 		return *this;
 	}
 
-	Token::Token(Token&& other) noexcept: Token() { swap(*this, other); }
+	Token::Token(Token&& other) noexcept: source_position(other.source_position) { swap(*this, other); }
 
 	Token::Type Token::getType() const { return type; }
 
