@@ -16,18 +16,18 @@ namespace lexer {
 	using Class = Classifications;
 
 	Lexer::Lexer(const fs::FilePath& file):
-		  file_(std::make_shared<fs::FilePath>(file)),
-		  fileContent_(file_->getContent()) {
-			auto result = decode<fs::Encoding::UTF8>(fileContent_.view(), console);
+		  file(std::make_shared<fs::FilePath>(file)),
+		  file_content(this->file->getContent()) {
+			auto result = decode<fs::Encoding::UTF8>(file_content.view(), console);
 			if (!result) {
 				console.print(std::cerr);
 				throw base::LogicError("Error while decoding");
 			}
-			charArray_ = std::move(result.value());
+			char_array = std::move(result.value());
 		}
 
 	TokenizationResult Lexer::tokenize(bool dprint) {
-		tokens_.clear();
+		tokens.clear();
 		token_messages = dprint;
 		try {
 			codeblock();
@@ -39,22 +39,22 @@ namespace lexer {
 			// @TODO: better customization of this dprint
 			console.print(std::cerr);
 		}
-		SourcePosition eof_pos(file_, lineNumber_, columnNumber_, where_);
-		std::cerr << lineNumber_ << ":" << columnNumber_ << ":" << where_ << "\n";
-		return { std::move(tokens_), Token::makeSentinelEof(eof_pos) };
+		SourcePosition eof_pos(file, line, column, where);
+		std::cerr << line << ":" << column << ":" << where << "\n";
+		return { std::move(tokens), Token::makeSentinelEof(eof_pos) };
 	}
 
 	void Lexer::next() {
 		if (!isEOF()) {
 			if (isEOL()) {
 				// handling of CR+LF as one newline
-				if (peek().is(0x0D) && peek(1).is(0x0A)) where_++;
-				lineNumber_++;
-				columnNumber_ = 1;
-				where_++;
+				if (peek().is(0x0D) && peek(1).is(0x0A)) where++;
+				line++;
+				column = 1;
+				where++;
 			} else {
-				columnNumber_++;
-				where_++;
+				column++;
+				where++;
 			}
 		} else {
 			console.add(printer::Message(
@@ -71,13 +71,13 @@ namespace lexer {
 	}
 
 	bool Lexer::tryRawValue(char rawValue, usize fwd) const {
-		return charArray_.getArray().size() > where_ + fwd && peek(fwd).is(rawValue);
+		return char_array.getArray().size() > where + fwd && peek(fwd).is(rawValue);
 	}
 
-	const Char& Lexer::peek(usize fwd) const { return charArray_.get(where_ + fwd); }
+	const Char& Lexer::peek(usize fwd) const { return char_array.get(where + fwd); }
 
 	std::string Lexer::generateLineColumnInfo() const {
-		return "(" + std::to_string(lineNumber_) + ":" + std::to_string(columnNumber_) + ")";
+		return "(" + std::to_string(line) + ":" + std::to_string(column) + ")";
 	}
 
 	void Lexer::addTokenMsg(
@@ -88,22 +88,22 @@ namespace lexer {
 				{ { "Add token: " },
 			      { std::string(token_type) },
 			      { "(" },
-			      { std::string(charArray_.composeRaw(begin, end).stringView()) },
+			      { std::string(char_array.composeRaw(begin, end).stringView()) },
 			      { ")" } },
 				message_type
 			));
 		}
 	}
 
-	void Lexer::codeblock() { parseCodeblockInto(tokens_); }
+	void Lexer::codeblock() { parseCodeblockInto(tokens); }
 
 	void Lexer::parseCodeblockInto(Tokens& output) {
 		while (!isEOF()) parseSingleInto(output);
 	}
 
 	void Lexer::parseSingleInto(Tokens& output) {
-		usize          begin = where_;
-		auto fromEnd = [file = file_, line = lineNumber_, column = columnNumber_, start = where_](u64 end) {
+		usize          begin = where;
+		auto fromEnd = [file = file, line = line, column = column, start = where](u64 end) {
 			return SourcePosition(file, line, column, start, end);
 		};
 		if (isEOF()) {
@@ -130,14 +130,14 @@ namespace lexer {
 			usize end = oper();
 			auto sourcePosition = fromEnd(end);
 			addTokenMsg(begin, end, "operator", printer::MessageType::DEBUG);
-			output.push_back(Token::makeOperator(charArray_.composeRaw(begin, end), sourcePosition)
+			output.push_back(Token::makeOperator(char_array.composeRaw(begin, end), sourcePosition)
 			);
 		} else if (peek().is(Class::name_start)) {
 			usize end = identifier();
 			auto sourcePosition = fromEnd(end);
 			std::string message;
 			output.push_back(
-				Token::makeIdentifier(charArray_.composeRaw(begin, end), sourcePosition)
+				Token::makeIdentifier(char_array.composeRaw(begin, end), sourcePosition)
 			);
 			if (output.back().getType() == Token::Type::Identifier)
 				addTokenMsg(begin, end, "identifier", printer::MessageType::DEBUG);
@@ -149,7 +149,7 @@ namespace lexer {
 
 			addTokenMsg(begin + 1, end, "string", printer::MessageType::DEBUG);
 			output.push_back(
-				Token::makeString(charArray_.composeRaw(begin + 1, end), sourcePosition)
+				Token::makeString(char_array.composeRaw(begin + 1, end), sourcePosition)
 			);
 		} else if (peek().is(Class::open_bracket)) {
 			// the groups are constructed here
@@ -159,10 +159,10 @@ namespace lexer {
 				console.add({ { { "group begin" } }, printer::MessageType::DEBUG });  // @TODO: better
 			Tokens inner_tokens = parGroup(group_end);
 
-			auto sourcePosition = fromEnd(where_ - 1);
+			auto sourcePosition = fromEnd(where - 1);
 
-			SourcePosition sentinelPosition(file_, lineNumber_, columnNumber_, where_ - 1); 
-			auto sentinelView = charArray_.composeRaw(where_ - 1, where_ -1);
+			SourcePosition sentinelPosition(file, line, column, where - 1); 
+			auto sentinelView = char_array.composeRaw(where - 1, where -1);
 			Token sentinel = Token::makeSentinelEnd(sentinelView, sentinelPosition);
 
 			output.push_back(
@@ -175,7 +175,7 @@ namespace lexer {
 			auto sourcePosition = fromEnd(end);
 			addTokenMsg(begin, end, "special", printer::MessageType::DEBUG);
 			output.push_back(
-				Token::makeSpecial(charArray_.composeRaw(begin, end), sourcePosition)
+				Token::makeSpecial(char_array.composeRaw(begin, end), sourcePosition)
 			);
 		} else if (peek().isDigit()) {
 			usize end = numLiteral();
@@ -183,7 +183,7 @@ namespace lexer {
 
 			addTokenMsg(begin, end, "numLiteral", printer::MessageType::DEBUG);
 			output.push_back(
-				Token::makeNumLiteral(charArray_.composeRaw(begin, end), sourcePosition)
+				Token::makeNumLiteral(char_array.composeRaw(begin, end), sourcePosition)
 			);
 		} else {
 			if (not peek().is(Class::whitespace)) {
@@ -210,10 +210,10 @@ namespace lexer {
 		// SourcePosition position(file_, lineNumber_, columnNumber_, where_);
 		while (true) {
 			if (isEOF()) {
-				return where_ - 1;
+				return where - 1;
 			} else if (isEOL()) {
 				skip(1);
-				return where_ - 2;
+				return where - 2;
 			}
 			// else if(isCommentBegin()) {comment(output);}
 			// else if(isBlockCommentBegin()) {
@@ -238,7 +238,7 @@ namespace lexer {
 					},
 					printer::MessageType::WARNING
 				));
-				return where_ - 1;
+				return where - 1;
 			}
 			// @FIXME: with the current way of adding tokens this doesn't add them as separate
 			// comments just pairs starts and ends
@@ -246,7 +246,7 @@ namespace lexer {
 				blockComment();
 			} else if (isBlockCommentEnd()) {
 				skip(2);
-				return where_ - 3;
+				return where - 3;
 			} else {
 				next();
 			}
@@ -255,18 +255,18 @@ namespace lexer {
 
 	usize Lexer::oper() {
 		while (!isEOF() and peek().is(Class::operator_continue)) next();
-		return where_ - 1;
+		return where - 1;
 	}
 
 	usize Lexer::identifier() {
 		next();  // first char - character
 		while (!isEOF() and peek().is(Class::name_continue)) next();
-		return where_ - 1;
+		return where - 1;
 	}
 
 	usize Lexer::special() {
 		next();
-		return where_ - 1;
+		return where - 1;
 	}
 
 	usize Lexer::numBinaryLiteral() {
@@ -275,7 +275,7 @@ namespace lexer {
 			next();
 		}
 
-		return where_ - 1;
+		return where - 1;
 	}
 
 	usize Lexer::numHexLiteral() {
@@ -285,7 +285,7 @@ namespace lexer {
 			next();
 		}
 
-		return where_ - 1;
+		return where - 1;
 	}
 
 	usize Lexer::numLiteral() {
@@ -315,7 +315,7 @@ namespace lexer {
 			next();
 		}
 
-		return where_ - 1;
+		return where - 1;
 	}
 
 	usize Lexer::string() {
@@ -325,7 +325,7 @@ namespace lexer {
 			next();
 		}
 		next();
-		return where_ - 2;
+		return where - 2;
 	}
 
 	Tokens Lexer::parGroup(UChar32 group_end) {

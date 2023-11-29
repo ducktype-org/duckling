@@ -17,10 +17,9 @@ namespace lexer {
 	 * @brief Class used to manage lexing
 	 * 
 	 * @todo Improve error handling in lexing, possibly using Error tokens and logging some sensible errors
-	 * @todo Add format string lexing and escape handling to string lexing(some sort of parity of back-slashes or something similar should suffice)
+	 * @todo Add format string lexing
 	 * @todo Improve comment lexing
-	 * @todo Change `name_` member names to a different method of naming 
-	 * @todo Improve unicode support(soon: EOLs, vertical spaces, identifier normalization, at some point: ignorable format controls)
+	 * @todo Improve unicode support(soon: identifier normalization, at some point: ignorable format controls)
 	 * @todo Try to improve #parseSingleInto() to be more readable, maybe divide it into some logical parts
 	 */
 	class Lexer {
@@ -108,14 +107,14 @@ namespace lexer {
 		 * @name current position of lexing
 		 * @{
 		 */
-		usize                         where_        = 0;
-		usize                         lineNumber_   = 1;
-		usize                         columnNumber_ = 1;
+		usize                         where        = 0;
+		usize                         line   = 1;
+		usize                         column = 1;
 		/**@}*/
-		std::shared_ptr<fs::FilePath> file_;
-		fs::FileContent               fileContent_;
-		CharArray                     charArray_;
-		Tokens                        tokens_;
+		std::shared_ptr<fs::FilePath> file;
+		fs::FileContent               file_content;
+		CharArray                     char_array;
+		Tokens                        tokens;
 
 		bool token_messages = false; ///< Informs whether to print messages about what tokens are created to the debug stream
 

@@ -7,7 +7,6 @@
 #include "source_position.hpp"
 #include "base/exceptions.hpp"
 
-#include <iostream>
 #include <utility>
 
 namespace lexer {
