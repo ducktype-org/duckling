@@ -40,7 +40,6 @@ namespace lexer {
 			console.print(std::cerr);
 		}
 		SourcePosition eof_pos(file, line, column, where);
-		std::cerr << line << ":" << column << ":" << where << "\n";
 		return { std::move(tokens), Token::makeSentinelEof(eof_pos) };
 	}
 
@@ -97,8 +96,15 @@ namespace lexer {
 
 	void Lexer::codeblock() { parseCodeblockInto(tokens); }
 
+	void Lexer::parseUntil(Tokens& output, LexerCondition stop) {
+		while(!stop(*this)) parseSingleInto(output);
+	}
+
 	void Lexer::parseCodeblockInto(Tokens& output) {
-		while (!isEOF()) parseSingleInto(output);
+		constexpr auto stopOnEOF = [](const Lexer& lexer){
+			return lexer.isEOF();
+		};
+		parseUntil(output, stopOnEOF);
 	}
 
 	void Lexer::parseSingleInto(Tokens& output) {
@@ -254,13 +260,13 @@ namespace lexer {
 	}
 
 	usize Lexer::oper() {
-		while (!isEOF() and peek().is(Class::operator_continue)) next();
+		while (peek().is(Class::operator_continue)) next();
 		return where - 1;
 	}
 
 	usize Lexer::identifier() {
 		next();  // first char - character
-		while (!isEOF() and peek().is(Class::name_continue)) next();
+		while (peek().is(Class::name_continue)) next();
 		return where - 1;
 	}
 
@@ -271,20 +277,13 @@ namespace lexer {
 
 	usize Lexer::numBinaryLiteral() {
 		skip(2);  // 0b
-		while (peek().isBinDigit()) {
-			next();
-		}
-
+		while (peek().isBinDigit()) next();
 		return where - 1;
 	}
 
 	usize Lexer::numHexLiteral() {
 		skip(2);  // 0x
-
-		while (peek().isHexDigit()) {
-			next();
-		}
-
+		while (peek().isHexDigit()) next();
 		return where - 1;
 	}
 
@@ -331,15 +330,15 @@ namespace lexer {
 	Tokens Lexer::parGroup(UChar32 group_end) {
 		Tokens out;
 		next();  // par open
+		constexpr auto isGroupEnd = [](const Lexer& lexer) {
+			return lexer.isEOF() || lexer.peek().is(Class::close_bracket);
+		};
+		parseUntil(out, isGroupEnd);
 
-		while (!peek().is(group_end)) {
-			if (isEOF()) {
-				return out;
-			}
-			parseSingleInto(out);
-		}
+		if (peek().is(group_end)) next(); // par close
+		else if (isEOF()); // log eof error here
+		else; // log unclosed parenthesis error here
 
-		next();  // par close
 		return out;
 	}
 
