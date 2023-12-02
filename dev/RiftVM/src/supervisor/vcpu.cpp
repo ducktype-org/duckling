@@ -77,7 +77,8 @@ namespace vm {
 	result<api::Response, api::CoreOperationError> VCPU::output() {
 		// TODO: add checking for stdio
 		std::unique_lock lock(output_mutex);
-		std::string      content = output_stream->str();
+		std::string      content;
+		output_empty_cv.wait(lock, [&] { return !(content = output_stream->str()).empty(); });
 		output_stream->str(std::string());
 		return api::Response(api::response::Output{ content });
 	}

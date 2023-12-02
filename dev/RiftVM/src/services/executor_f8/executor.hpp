@@ -23,9 +23,10 @@ namespace vm {
 
 	class Executor {
 	private:
-		Allocator&    dynamic_allocator;
-		Memory&       memory;
-		TypeMetadata& types;
+		Allocator&      dynamic_allocator;
+		StackAllocator& stack_allocator;
+		Memory&         memory;
+		TypeMetadata&   types;
 
 		VCPU& vcpu;
 
@@ -37,6 +38,7 @@ namespace vm {
 		template<class... DynamicServices>
 		Executor(ServiceManagerDef<DynamicServices...>& serviceManager):
 			  dynamic_allocator(serviceManager.template get<Allocator>()),
+			  stack_allocator(serviceManager.template get<StackAllocator>()),
 			  memory(serviceManager.getVCPU().getData().template get<Memory>()),
 			  types(serviceManager.getVCPU().getData().template get<TypeMetadata>()),
 			  vcpu(serviceManager.getVCPU()) {
