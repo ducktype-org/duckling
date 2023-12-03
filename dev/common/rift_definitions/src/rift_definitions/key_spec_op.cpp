@@ -251,4 +251,11 @@ namespace rift_def {
 
 	base::FlagType keywordFlags(Keyword key) { return keyword_flags[key]; }
 
+	std::vector<Keyword> getKeywords() {
+		std::vector<Keyword> result;
+		for (auto [k, s, f]: rift_keywords_array) {
+			result.push_back(k);
+		}
+		return result;
+	}
 }
