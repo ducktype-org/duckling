@@ -15,8 +15,8 @@
 			"request": "launch",
 			"name": "Launch Client",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
-			"outFiles": ["${workspaceRoot}/client/out/**/*.js"],
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/dev/RiftLS"],
+			"outFiles": ["${workspaceRoot}/dev/RiftLS/client/out/**/*.js"],
 			"preLaunchTask": {
 				"type": "npm",
 				"script": "watch"
@@ -28,11 +28,11 @@
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}",
-				"--extensionTestsPath=${workspaceRoot}/client/out/test/index",
-				"${workspaceRoot}/client/testFixture"
+				"--extensionDevelopmentPath=${workspaceRoot}/dev/RiftLS",
+				"--extensionTestsPath=${workspaceRoot}/dev/RiftLS/client/out/test/index",
+				"${workspaceRoot}/dev/RiftLS/client/testFixture"
 			],
-			"outFiles": ["${workspaceRoot}/client/out/test/**/*.js"]
+			"outFiles": ["${workspaceRoot}/dev/RiftLS/client/out/test/**/*.js"]
 		}
 	]
 }
