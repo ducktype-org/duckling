@@ -8,14 +8,6 @@
 #include <vector>
 #include <map>
 
-// make E a template
-template<typename E>
-E& operator++(E& e) {
-	if (e == E::End) throw std::out_of_range("for E& operator ++ (E&)");
-	e = E(static_cast<std::underlying_type<E>::type>(e) + 1);
-	return e;
-}
-
 std::string json_list(const std::vector<std::string>& list) {
 	std::string result = "[";
 	for (const std::string& str: list) result += "\"" + str + "\",";
@@ -36,17 +28,66 @@ std::string json_dict(const std::map<std::string, std::string>& dict) {
 	return result;
 }
 
-std::string get_keyword_list_json() {
-	std::vector<std::string> keywords;
-	for (rift_def::Keyword k: rift_def::getKeywords()) {
-		keywords.push_back(rift_def::keywordToStr(k).str());
+std::map<std::string, std::string> get_all_map();
+namespace lsp_interface {
+
+	std::string get_keyword_list_json() {
+		rift_def::key_spec_op::init();
+		std::vector<std::string> keywords;
+		for (rift_def::Keyword k: rift_def::getKeywords())
+			keywords.push_back(rift_def::keywordToStr(k).str());
+
+		return json_list(keywords);
 	}
 
-	return json_list(keywords);
+	std::string get_special_list_json() {
+		rift_def::key_spec_op::init();
+		std::vector<std::string> specials;
+		for (rift_def::Special s: rift_def::getSpecials())
+			specials.push_back(rift_def::specialToStr(s).str());
+
+		return json_list(specials);
+	}
+
+	std::string get_operator_list_json() {
+		rift_def::key_spec_op::init();
+		std::vector<std::string> operators;
+		for (rift_def::Operator o: rift_def::getOperators())
+			operators.push_back(rift_def::operatorToStr(o).str());
+
+		return json_list(operators);
+	}
+
+    std::string get_all_json() {
+		rift_def::key_spec_op::init();
+        return json_dict(get_all_map());
+    }
+
+	void print_keyword_list() {
+		rift_def::key_spec_op::init();
+		std::cout << get_keyword_list_json() << "\n";
+	}
+
+	void print_special_list() {
+		rift_def::key_spec_op::init();
+		std::cout << get_special_list_json() << "\n";
+	}
+
+	void print_operator_list() {
+		rift_def::key_spec_op::init();
+		std::cout << get_operator_list_json() << "\n";
+	}
+    
+    void print_all_dict() {
+        rift_def::key_spec_op::init();
+        std::cout << get_all_json() << "\n";
+    }
 }
 
-namespace lsp_interface {
-	void print_keyword_list() { 
-        rift_def::key_spec_op::init();
-        std::cout << get_keyword_list_json() << "\n"; }
+std::map<std::string, std::string> get_all_map() {
+	std::map<std::string, std::string> result;
+	result["keywords"]  = lsp_interface::get_keyword_list_json();
+	result["specials"]  = lsp_interface::get_special_list_json();
+	result["operators"] = lsp_interface::get_operator_list_json();
+    return result;
 }
