@@ -11,7 +11,8 @@
 			},
 			"problemMatcher": [
 				"$tsc"
-			]
+			],
+			"path": "dev/RiftLS"
 		},
 		{
 			"type": "npm",
@@ -27,7 +28,8 @@
 			},
 			"problemMatcher": [
 				"$tsc-watch"
-			]
+			],
+			"path": "dev/RiftLS"
 		}
 	]
 }
