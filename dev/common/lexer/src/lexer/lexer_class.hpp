@@ -64,22 +64,22 @@ namespace lexer {
 		/**
 		 * @note handle unexpected eof / bad closing brackets
 		*/
-		Tokens parGroup(UChar32 group_end);
+		void groupHandler(Tokens& output);
 		/**@}*/
 
 		/** 
 		 * @name terminal tokens parsers:
 		 * @{
 		 */
-		usize comment(/*Tokens& output*/);
-		usize blockComment();
-		usize oper();
-		usize identifier();
-		usize special();
-		usize numLiteral();
-		usize numBinaryLiteral();
-		usize numHexLiteral();
-		usize string();
+		void commentHandler(Tokens& output);
+		void blockCommentHandler(Tokens& output);
+		void operatorHandler(Tokens& output);
+		void nameHandler(Tokens& output);
+		void stringHandler(Tokens& output);
+		void specialHandler(Tokens& output);
+		void decLiteralHandler(Tokens& output);
+		void binLiteralHandler(Tokens& output);
+		void hexLiteralHandler(Tokens& output);
 		/**@}*/
 
 		/**
