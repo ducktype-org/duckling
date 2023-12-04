@@ -49,6 +49,7 @@ namespace vm {
 		// This might change:
 		std::condition_variable pause_cv;
 		std::mutex              external_api_mutex;
+		std::atomic<bool>       isRunning          = false;
 		ExecutionStrategy       execution_strategy = ExecutionStrategy::Stoped;
 
 		/**

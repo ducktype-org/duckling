@@ -17,6 +17,7 @@
 namespace vm {
 
 	void Executor::handleExecutionStrategy() {
+		if (isRunning) return;
 		std::unique_lock lock(external_api_mutex);
 		if (execution_strategy == ExecutionStrategy::Paused) setStatus(api::Paused{});
 		pause_cv.wait(lock, [this] { return execution_strategy != ExecutionStrategy::Paused; });
@@ -436,12 +437,15 @@ namespace vm {
 
 	void Executor::prestart() {
 		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped)
+		if (execution_strategy == ExecutionStrategy::Stoped) {
+			isRunning          = true;
 			execution_strategy = ExecutionStrategy::Normal;
+		}
 	}
 
 	void Executor::stop() {
 		std::unique_lock lock(external_api_mutex);
+		isRunning          = false;
 		execution_strategy = ExecutionStrategy::Stoped;
 		pause_cv.notify_all();
 	}
@@ -452,6 +456,7 @@ namespace vm {
 		    || execution_strategy == ExecutionStrategy::Normal) {
 			return false;
 		}
+		isRunning          = true;
 		execution_strategy = ExecutionStrategy::Normal;
 		pause_cv.notify_all();
 		return true;
@@ -465,6 +470,7 @@ namespace vm {
 		} else if (execution_strategy == ExecutionStrategy::StepByStep) {
 			return true;
 		}
+		isRunning          = false;
 		execution_strategy = ExecutionStrategy::Paused;
 		std::cout << "Set strategy to paused\n";
 		return true;
@@ -476,6 +482,7 @@ namespace vm {
 			return false;
 		else if (execution_strategy != ExecutionStrategy::Paused)
 			return true;
+		isRunning          = false;
 		execution_strategy = ExecutionStrategy::StepByStep;
 		pause_cv.notify_all();
 		return true;
