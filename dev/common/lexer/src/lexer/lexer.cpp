@@ -74,7 +74,7 @@ namespace lexer {
 	}
 
 	void Lexer::addTokenMsg(
-		usize begin, usize end, std::string_view token_type, printer::MessageType message_type
+		usize begin, usize end, std::string_view token_type
 	) {
 		if (token_messages) {
 			log.add(printer::Message(
@@ -83,7 +83,7 @@ namespace lexer {
 			      { "(" },
 			      { std::string(char_array.composeRaw(begin, end).stringView()) },
 			      { ")" } },
-				message_type
+				printer::MessageType::DEBUG
 			));
 		}
 	}
@@ -103,9 +103,7 @@ namespace lexer {
 
 	void Lexer::parseSingleInto(Tokens& output) {
 		usize          begin = where;
-		auto fromEnd = [file = file, line = line, column = column, start = where](u64 end) {
-			return SourcePosition(file, line, column, start, end);
-		};
+		SourcePosition sourceStart(file, line, column, where);
 		if (isEOF()) {
 			// @TODO: error
 			RIFT_PANIC("EOF encountered inside parseSingleInto");
@@ -114,40 +112,41 @@ namespace lexer {
 		// parser
 		else if (isCommentBegin()) {
 			usize end = comment(/*output*/);
-			auto sourcePosition = fromEnd(end);
+			SourcePosition sourcePosition(sourceStart, end);
 
-			addTokenMsg(begin + 2, end, "line comment", printer::MessageType::DEBUG);
+			addTokenMsg(begin + 2, end, "line comment");
 			// output.push_back(Token::makeComment(charArray_.composeRaw(begin + 2, end),
 			// source_position));
 		} else if (isBlockCommentBegin()) {
 			usize end = blockComment();
-			auto sourcePosition = fromEnd(end);
+			SourcePosition sourcePosition(sourceStart, end);
 
-			addTokenMsg(begin + 2, end, "block comment", printer::MessageType::DEBUG);
+			addTokenMsg(begin + 2, end, "block comment");
 			// output.push_back(Token::makeComment(charArray_.composeRaw(begin + 2, end),
 			// source_position));
 		} else if (peek().is(Class::operator_start)) {
 			usize end = oper();
-			auto sourcePosition = fromEnd(end);
-			addTokenMsg(begin, end, "operator", printer::MessageType::DEBUG);
+			SourcePosition sourcePosition(sourceStart, end);
+
+			addTokenMsg(begin, end, "operator");
 			output.push_back(Token::makeOperator(char_array.composeRaw(begin, end), sourcePosition)
 			);
 		} else if (peek().is(Class::name_start)) {
 			usize end = identifier();
-			auto sourcePosition = fromEnd(end);
+			SourcePosition sourcePosition(sourceStart, end);
 			std::string message;
 			output.push_back(
 				Token::makeIdentifier(char_array.composeRaw(begin, end), sourcePosition)
 			);
 			if (output.back().getType() == Token::Type::Identifier)
-				addTokenMsg(begin, end, "identifier", printer::MessageType::DEBUG);
+				addTokenMsg(begin, end, "identifier");
 			else if (output.back().getType() == Token::Type::Keyword)
-				addTokenMsg(begin, end, "keyword", printer::MessageType::DEBUG);
+				addTokenMsg(begin, end, "keyword");
 		} else if (isStringBegin()) {
 			usize end = string();
-			auto sourcePosition = fromEnd(end + 1);
+			SourcePosition sourcePosition(sourceStart, end + 1);
 
-			addTokenMsg(begin + 1, end, "string", printer::MessageType::DEBUG);
+			addTokenMsg(begin + 1, end, "string");
 			output.push_back(
 				Token::makeString(char_array.composeRaw(begin + 1, end), sourcePosition)
 			);
@@ -159,7 +158,7 @@ namespace lexer {
 				log.add({ { { "group begin" } }, printer::MessageType::DEBUG });  // @TODO: better
 			Tokens inner_tokens = parGroup(group_end);
 
-			auto sourcePosition = fromEnd(where - 1);
+			SourcePosition sourcePosition(sourceStart, where - 1);
 
 			SourcePosition sentinelPosition(file, line, column, where - 1); 
 			auto sentinelView = char_array.composeRaw(where - 1, where -1);
@@ -172,16 +171,16 @@ namespace lexer {
 				log.add({ { { "group end" } }, printer::MessageType::DEBUG });
 		} else if (peek().is(Class::special)) {
 			usize end = special();
-			auto sourcePosition = fromEnd(end);
-			addTokenMsg(begin, end, "special", printer::MessageType::DEBUG);
+			SourcePosition sourcePosition(sourceStart, end);
+			addTokenMsg(begin, end, "special");
 			output.push_back(
 				Token::makeSpecial(char_array.composeRaw(begin, end), sourcePosition)
 			);
 		} else if (peek().isDigit()) {
 			usize end = numLiteral();
-			auto sourcePosition = fromEnd(end);
+			SourcePosition sourcePosition(sourceStart, end);
 
-			addTokenMsg(begin, end, "numLiteral", printer::MessageType::DEBUG);
+			addTokenMsg(begin, end, "numLiteral");
 			output.push_back(
 				Token::makeNumLiteral(char_array.composeRaw(begin, end), sourcePosition)
 			);

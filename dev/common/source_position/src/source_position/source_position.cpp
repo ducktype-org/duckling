@@ -18,17 +18,17 @@ std::string SourcePosition::getSourceChars() const {
 }
 
 SourcePosition::SourcePosition(
-	Source source_code_, usize line_, usize column_, usize source_start_
+	Source source_code, usize line, usize column, usize source_start
 ):
-		SourcePosition(source_code_, line_, column_, source_start_, source_start_) {}
+		SourcePosition(source_code, line, column, source_start, source_start) {}
 
 SourcePosition::SourcePosition(
-	Source source_code_, usize line_, usize column_, usize source_start_, usize source_end_
+	Source source_code, usize line, usize column, usize source_start, usize source_end
 ):
-		line(line_), column(column_), 
-		source_start(source_start_), source_end(source_end_),
-		source_code(source_code_) {
-	if (!source_code_) throw base::LogicError("Invalid SourcePosition: No such file");
+		line(line), column(column), 
+		source_start(source_start), source_end(source_end),
+		source_code(source_code) {
+	if (!source_code) throw base::LogicError("Invalid SourcePosition: No such file");
 	if (line == 0) throw base::LogicError("Invalid SourcePosition: line = 0");
 	if (column == 0) throw base::LogicError("Invalid SourcePosition: column = 0");
 	if (source_end < source_start)
@@ -42,6 +42,9 @@ SourcePosition::SourcePosition(const SourcePosition& other):
 	line(other.line), column(other.column), 
 	source_start(other.source_start), source_end(other.source_end), 
 	source_code(other.source_code) {}
+
+SourcePosition::SourcePosition(const SourcePosition& other, usize source_end):
+	SourcePosition(other.source_code, other.line, other.column, other.source_start, source_end) {}
 
 usize SourcePosition::getColumn() const { return column; }
 usize SourcePosition::getLine() const { return line; }

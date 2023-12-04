@@ -124,9 +124,7 @@ namespace lexer {
 		ErrorState errorState;
 		printer::Console log;
 
-		void addTokenMsg(
-			usize begin, usize end, std::string_view token_type, printer::MessageType message_type
-		);
+		void addTokenMsg(usize begin, usize end, std::string_view token_type);
 	};
 
 }
