@@ -108,6 +108,7 @@ function(FindOrBuildICU)
       )
 
       set(ICU_INCLUDE_DIRS ${ICU_EP_PREFIX}/include)
+      file(MAKE_DIRECTORY ${ICU_INCLUDE_DIRS})
 
       add_library(icudata IMPORTED STATIC GLOBAL)
       set_target_properties(icudata PROPERTIES IMPORTED_LOCATION
