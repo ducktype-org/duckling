@@ -2,6 +2,7 @@
 
 #include <printer/printer.hpp>
 #include <filesystem/file.hpp>
+#include <error_state/error_state.hpp>
 #include <vector>
 #include "char.hpp"
 #include "token.hpp"
@@ -120,7 +121,8 @@ namespace lexer {
 
 		bool token_messages = false; ///< Informs whether to print messages about what tokens are created to the debug stream
 
-		printer::Console console;
+		ErrorState errorState;
+		printer::Console log;
 
 		void addTokenMsg(
 			usize begin, usize end, std::string_view token_type, printer::MessageType message_type

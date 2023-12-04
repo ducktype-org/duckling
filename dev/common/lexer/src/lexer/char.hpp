@@ -4,6 +4,7 @@
 #include <unicode/utypes.h>
 #include <printer/printer.hpp>
 #include <filesystem/encoding.hpp>
+#include <error_state/error_state.hpp>
 #include <base/raw_view.hpp>
 #include <vector>
 #include <string>
@@ -42,7 +43,7 @@ namespace lexer {
 		std::string rawStr() const;
 
 		template<fs::Encoding encoding>
-		friend std::optional<CharArray> decode(base::RawView bytes, printer::Console&);
+		friend CharArray decode(base::RawView bytes, ErrorState&);
 		friend CharArray;
 
 	private:
@@ -104,12 +105,12 @@ namespace lexer {
 	 */
 	
 	template<fs::Encoding encoding>
-	std::optional<CharArray> decode(base::RawView bytes, printer::Console&);
+	CharArray decode(base::RawView bytes, ErrorState&);
 
 	template<>
-	std::optional<CharArray> decode<fs::US_ASCII>(base::RawView bytes, printer::Console&);
+	CharArray decode<fs::US_ASCII>(base::RawView bytes, ErrorState&);
 
 	template<>
-	std::optional<CharArray> decode<fs::UTF8>(base::RawView bytes, printer::Console&);
+	CharArray decode<fs::UTF8>(base::RawView bytes, ErrorState&);
 
 }

@@ -11,6 +11,16 @@ void ErrorState::failAndLog(const SourcePosition& position, std::string_view mes
 	logError(position, message);
 }
 
+void ErrorState::logError(printer::Message message) {
+	err_count++;
+	errorLog.add(message);
+}
+
+void ErrorState::failAndLog(printer::Message message) {
+	setFail();
+	logError(message);
+}
+
 void ErrorState::dumpLog(std::ostream& stream) const { errorLog.print(stream); }
 
 usize ErrorState::errCount() const { return err_count; }

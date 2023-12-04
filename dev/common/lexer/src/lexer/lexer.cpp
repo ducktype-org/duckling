@@ -17,27 +17,21 @@ namespace lexer {
 
 	Lexer::Lexer(const fs::FilePath& file):
 		  file(std::make_shared<fs::FilePath>(file)),
-		  file_content(this->file->getContent()) {
-			auto result = decode<fs::Encoding::UTF8>(file_content.view(), console);
-			if (!result) {
-				console.print(std::cerr);
+		  file_content(this->file->getContent()),
+		  char_array(std::move(decode<fs::Encoding::UTF8>(file_content.view(), errorState))) {
+			if (errorState.fail()) {
+				errorState.dumpLog(std::cerr);
 				throw base::LogicError("Error while decoding");
 			}
-			char_array = std::move(result.value());
 		}
 
 	TokenizationResult Lexer::tokenize(bool dprint) {
 		tokens.clear();
 		token_messages = dprint;
-		try {
-			codeblock();
-		} catch (...) {
-			console.print(std::cerr);
-			throw;
-		}
+		codeblock();
 		if (dprint) {
 			// @TODO: better customization of this dprint
-			console.print(std::cerr);
+			log.print(std::cerr);
 		}
 		SourcePosition eof_pos(file, line, column, where);
 		return { std::move(tokens), Token::makeSentinelEof(eof_pos) };
@@ -56,7 +50,7 @@ namespace lexer {
 				where++;
 			}
 		} else {
-			console.add(printer::Message(
+			errorState.failAndLog(printer::Message(
 				{
 					{ "Tried to skip EOF" },
 				},
@@ -83,7 +77,7 @@ namespace lexer {
 		usize begin, usize end, std::string_view token_type, printer::MessageType message_type
 	) {
 		if (token_messages) {
-			console.add(printer::Message(
+			log.add(printer::Message(
 				{ { "Add token: " },
 			      { std::string(token_type) },
 			      { "(" },
@@ -162,7 +156,7 @@ namespace lexer {
 			auto group_type = peek().getValue();
 			auto group_end = peek().bracketPair();
 			if (token_messages)
-				console.add({ { { "group begin" } }, printer::MessageType::DEBUG });  // @TODO: better
+				log.add({ { { "group begin" } }, printer::MessageType::DEBUG });  // @TODO: better
 			Tokens inner_tokens = parGroup(group_end);
 
 			auto sourcePosition = fromEnd(where - 1);
@@ -175,7 +169,7 @@ namespace lexer {
 				Token::makeGroup(group_type, std::move(inner_tokens), std::move(sentinel), sourcePosition)
 			);
 			if (token_messages)
-				console.add({ { { "group end" } }, printer::MessageType::DEBUG });
+				log.add({ { { "group end" } }, printer::MessageType::DEBUG });
 		} else if (peek().is(Class::special)) {
 			usize end = special();
 			auto sourcePosition = fromEnd(end);
@@ -193,7 +187,7 @@ namespace lexer {
 			);
 		} else {
 			if (not peek().is(Class::whitespace)) {
-				console.add(printer::Message(
+				log.add(printer::Message(
 					{
 						{ "Skipped" },
 						{ generateLineColumnInfo() },
@@ -237,7 +231,7 @@ namespace lexer {
 		skip(2);  // "/*"
 		while (true) {
 			if (isEOF()) {
-				console.add(printer::Message(
+				log.add(printer::Message(
 					{
 						{ "Missing end of block comment at " },
 						{ generateLineColumnInfo() },

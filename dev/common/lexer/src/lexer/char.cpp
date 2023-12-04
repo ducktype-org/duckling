@@ -80,13 +80,11 @@ namespace lexer {
 	base::RawView CharArray::getRaw(usize i) const { return composeRaw(i, i); }
 
 	template<>
-	std::optional<CharArray> decode<fs::US_ASCII>(base::RawView bytes, printer::Console& console) {
+	CharArray decode<fs::US_ASCII>(base::RawView bytes, ErrorState& errorState) {
 		CharArray::Array out;
-		bool is_error = false;
 		for (usize i = 0; i < bytes.size(); i++) {
 			if ((bytes[i] & byte{ 0b10000000u }) != byte{ 0 }) {
-				is_error = true;
-				console.add({{{"ASCII decoding error:", printer::Color::BRIGHT_RED},
+				errorState.failAndLog({{{"ASCII decoding error:", printer::Color::BRIGHT_RED},
 							std::format("undefined ASCII byte {:#04X} encountered at position {}", std::to_integer<u16>(bytes[i]), i + 1)},
 							printer::MessageType::ERROR});
 				continue;
@@ -103,19 +101,16 @@ namespace lexer {
 		eof.size = u8(0);
 		eof.raw_begin = bytes.getBegin() + bytes.size();
 		out.push_back(eof);
-		if (is_error) return std::nullopt;
 		return CharArray(std::move(out));
 	}
 
 	template<>
-	std::optional<CharArray> decode<fs::UTF8>(base::RawView bytes, printer::Console& console) {
+	CharArray decode<fs::UTF8>(base::RawView bytes, ErrorState& errorState) {
 		CharArray::Array out;
-		bool is_error = false;
 
 		auto log_error = [&](std::string message){
-			console.add({{{"UTF-8 decoding error:", printer::Color::BRIGHT_RED},
+			errorState.failAndLog({{{"UTF-8 decoding error:", printer::Color::BRIGHT_RED},
 				message}, printer::MessageType::ERROR});
-			is_error = true;
 		};
 
 		usize pos = 0;
