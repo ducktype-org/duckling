@@ -6,7 +6,7 @@
 
 #include "rift_parser_base.hpp"
 #include <token_parser_core/parser_state.hpp>
-#include <token_parser_core/error_state.hpp>
+#include <error_state/error_state.hpp>
 
 namespace pst {
 	/**
@@ -15,7 +15,7 @@ namespace pst {
 	class PST {
 		lexer::TokenData token_data;
 		RiftParserState  parser_state;
-		tpc::ErrorState  err;
+		ErrorState  err;
 
 		ParserRef<TopLevel> top_level;
 
@@ -24,7 +24,7 @@ namespace pst {
 		PST(lexer::TokenData&& td);
 
 		const std::vector<tpc::ParserCBorrowRef<Import>>& getImports() const;
-		const tpc::ErrorState&                            getErrorState() const;
+		const ErrorState&                            getErrorState() const;
 
 		ParserCBorrowRef<TopLevel> getTopLevelElement() const;
 

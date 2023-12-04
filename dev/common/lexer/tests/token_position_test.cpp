@@ -9,7 +9,7 @@
 void print(const Tokens& tokens, std::ostream& out, const std::string& indent = "") {
 	out << "[";
 	for (const auto& token: tokens) {
-		lexer::SourcePosition position = token.getPosition();
+		SourcePosition position = token.getPosition();
 
 		out << indent;
 

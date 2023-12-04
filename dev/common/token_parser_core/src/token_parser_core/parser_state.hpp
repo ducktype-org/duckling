@@ -1,8 +1,9 @@
 #pragma once
 
 #include "token_stream.hpp"
-#include "error_state.hpp"
 #include "parser_ref.hpp"
+
+#include <error_state/error_state.hpp>
 
 namespace tpc {
 

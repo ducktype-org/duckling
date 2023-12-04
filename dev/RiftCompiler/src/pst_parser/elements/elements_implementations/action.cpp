@@ -2,7 +2,7 @@
 
 namespace pst {
 	ParserRef<Action> Action::parse(RiftParserState& state) {
-		lexer::SourcePosition position = state.ctokens().peek().getPosition();
+		SourcePosition position = state.ctokens().peek().getPosition();
 
 		RIFT_ASSERT(state.ctokens().isKeyword(), position.genErrorStr("bad statement choice"));
 

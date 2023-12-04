@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "char.hpp"
-#include "source_position.hpp"
+#include "source_position/source_position.hpp"
 #include <base/raw_view.hpp>
 #include <base/string_id.hpp>
 #include <filesystem/file.hpp>

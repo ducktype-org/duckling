@@ -6,7 +6,6 @@
 
 #include <lexer/token.hpp>
 #include <base/string_id.hpp>
-#include "error_state.hpp"
 
 namespace tpc {
 	using lexer::Keyword;
