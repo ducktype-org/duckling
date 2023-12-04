@@ -70,10 +70,10 @@ namespace lexer {
 		return { Type::String, string, position };
 	}
 
-	Token
-		Token::makeGroup(UChar32 groupType, Tokens&& tokens, Token&& sentinel, const SourcePosition& position) {
-			// for now doesn't fail on bad groupTypes
-			return { Type::BracketGroup, std::move(tokens), std::move(sentinel), position, groupType };
+	Token Token::makeGroup(
+			UChar32 groupType, Tokens&& tokens, Token&& sentinel, const SourcePosition& position) {
+		// for now doesn't fail on bad groupTypes
+		return { Type::BracketGroup, std::move(tokens), std::move(sentinel), position, groupType };
 	}
 
 	Token Token::makeError(const SourcePosition& position) {
@@ -110,6 +110,7 @@ namespace lexer {
 
 	const Token& Token::getSentinel() const { 
 		RIFT_ASSERT(isGroup(), "getSentinel called on non group token"); 
+		RIFT_ASSERT(sentinel != nullptr, "un assigned sentinel in a group token"); 
 		return *sentinel; 
 	}
 

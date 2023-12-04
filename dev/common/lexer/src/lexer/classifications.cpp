@@ -6,11 +6,11 @@
 #include <unicode/utypes.h>
 #include <unicode/errorcode.h>
 #include <unicode/ustream.h>
-#include <cassert>
+
 #include <iostream>
 
 namespace lexer {
-	void createFromPattern (icu::UnicodeSet& set, const std::u8string& pattern) {
+	void createFromPattern(icu::UnicodeSet& set, const std::u8string& pattern) {
 		icu::ErrorCode err;
 		set.applyPattern(icu::UnicodeString::fromUTF8(pattern), err);
 		if (err.isFailure()) {
@@ -47,41 +47,56 @@ namespace lexer {
 	void sanityChecks() {
 		using Class = Classifications;
 		for (auto cl: Class::classes) {
-			assert(!cl->isEmpty());
+			RIFT_ASSERT(!cl->isEmpty(), "a classification is empty");
 		}
 		for (auto cl: Class::classes) {
-			assert(cl->isFrozen());
+			RIFT_ASSERT(cl->isFrozen(), "a classification isn't frozen");
 		}
-		assert(Class::name_continue.containsAll(Class::name_start));
 
-		assert(checkEmptyIntersect(Class::newline, Class::vertical_space));
-		assert(checkEmptyIntersect(Class::newline, Class::format_control));
-		assert(checkEmptyIntersect(Class::format_control, Class::vertical_space));
+		RIFT_ASSERT(Class::name_continue.containsAll(Class::name_start), 
+			"Set of characters continuing a name should include all the characters starting a name.");
 
-		assert(checkEmptyIntersect(Class::syntax, Class::name_start));
-		assert(Class::syntax.containsAll(Class::special));
-		assert(Class::syntax.containsAll(Class::operator_start));
-		assert(Class::syntax.containsAll(Class::open_bracket));
-		assert(Class::syntax.containsAll(Class::close_bracket));
+		RIFT_ASSERT(checkEmptyIntersect(Class::newline, Class::vertical_space), 
+			"Sets of newline characters and vertical space characters should be disjoint.");
+		RIFT_ASSERT(checkEmptyIntersect(Class::newline, Class::format_control), 
+			"Sets of newline characters and format control characters should be disjoint.");
+		RIFT_ASSERT(checkEmptyIntersect(Class::format_control, Class::vertical_space), 
+			"Sets of format control characters and vertical space characters should be disjoint.");
 
-		assert(Class::operator_continue.containsAll(Class::operator_start));
+		RIFT_ASSERT(checkEmptyIntersect(Class::syntax, Class::name_start), 
+			"Sets of syntax characters and characters starting a name should be disjoint");
+		RIFT_ASSERT(Class::syntax.containsAll(Class::special), 
+			"Special characters should be a subset of syntax characters");
+		RIFT_ASSERT(Class::syntax.containsAll(Class::operator_start),
+			"Characters starting an operator should be a subset of syntax characters");
+		RIFT_ASSERT(Class::syntax.containsAll(Class::open_bracket),
+			"Open brackets should be a subset of syntax characters");
+		RIFT_ASSERT(Class::syntax.containsAll(Class::close_bracket), 
+			"Closed brackets should be a subset of syntax characters");
 
-		assert(checkEmptyIntersect(Class::special, Class::operator_continue));
+		RIFT_ASSERT(Class::operator_continue.containsAll(Class::operator_start), 
+			"Set of characters continuing an operator should include all the characters starting an operator.");
+
+		RIFT_ASSERT(checkEmptyIntersect(Class::special, Class::operator_continue),
+			"Sets of special characters and characters continuing an operator should be disjoint.");
 
 		// name_start and name_continue intersection isn't currently empty. More in Classifications documentation
 		// assert(checkEmptyIntersect(Class::name_start, Class::operator_continue));
 		icu::UnicodeSet c;
 		c.addAll(Class::name_start).retainAll(Class::operator_continue);
-		assert(c.size() == 2);
+		RIFT_ASSERT(c.size() == 2,
+			"Intersection of Characters starting a name and characters continuing an operator should be known.");
 
-		assert(checkEmptyIntersect(Class::whitespace, Class::name_continue));
-		assert(checkEmptyIntersect(Class::whitespace, Class::syntax));
+		RIFT_ASSERT(checkEmptyIntersect(Class::whitespace, Class::name_continue),
+			"Whitespace characters and characters continuing a name should be disjoint.");
+		RIFT_ASSERT(checkEmptyIntersect(Class::whitespace, Class::syntax),
+			"Whitespace characters and syntax characters should be disjoint.");
 	}
 
-	void Classifications::init () {
+	void Classifications::init() {
 		RIFT_SIMPLE_INIT_GUARD_BEGIN
 		for (auto cl: classes) {
-			assert(!cl->isFrozen());
+			RIFT_ASSERT(!cl->isFrozen(), "a classification is frozen at the beginning");
 		}
 		createFromPattern(name_start, u8R"([[:XID_Start:][:ID_Compat_Math_Start:][_]])");
 		createFromPattern(name_continue, u8R"([[:XID_Continue:][:ID_Compat_Math_Continue:]])");

@@ -2,6 +2,7 @@
 #include "parser.hpp"
 #include <code_data/opcodes.hpp>
 #include <lexer/lexer.hpp>
+#include <lexer/classifications.hpp>
 #include <base/option.hpp>
 #include <rift_definitions/key_spec_op.hpp>
 #include <stdexcept>
@@ -361,7 +362,7 @@ namespace assemble {
 
 		tpc::parseAll(state, rift_def::Keyword::BCFunction, &out->name);
 
-		if (!state.ctokens().isGroup('{')) {
+		if (!state.ctokens().isGroup(lexer::BracketType::Curly)) {
 			state.err.setFail();
 			state.err.logError(state.ctokens().peek(-1).getPosition(), "expected `{` after here");
 			return nullptr;
@@ -461,7 +462,7 @@ namespace assemble {
 
 			case rift_def::Keyword::BCCode: {
 				tpc::parseOne(state, rift_def::Operator::Colon);
-				if (!state.ctokens().isGroup('{')) {
+				if (!state.ctokens().isGroup(lexer::BracketType::Curly)) {
 					state.err.setFail();
 					state.err.logError(state.ctokens().peek().getPosition(), "no {} on code:");
 				}
@@ -562,7 +563,7 @@ namespace assemble {
 			break;
 		}
 		case rift_def::Keyword::BCData: {
-			if (!state.ctokens().isGroup('{')) {
+			if (!state.ctokens().isGroup(lexer::BracketType::Curly)) {
 				state.err.setFail();
 				state.err.logError(
 					state.ctokens().peek(-1).getPosition(), "expected `{` after here"
@@ -593,7 +594,7 @@ namespace assemble {
 			break;
 		}
 		case rift_def::Keyword::BCVariant: {
-			if (!state.ctokens().isGroup('{')) {
+			if (!state.ctokens().isGroup(lexer::BracketType::Curly)) {
 				state.err.setFail();
 				state.err.logError(
 					state.ctokens().peek(-1).getPosition(), "expected `{` after here"
@@ -622,7 +623,7 @@ namespace assemble {
 			break;
 		}
 		case rift_def::Keyword::BCFunType: {
-			if (!state.ctokens().isGroup('{')) {
+			if (!state.ctokens().isGroup(lexer::BracketType::Curly)) {
 				state.err.setFail();
 				state.err.logError(
 					state.ctokens().peek(-1).getPosition(), "expected `{` after here"

@@ -1,6 +1,5 @@
 #include <lexer/char.hpp>
 #include <filesystem/file.hpp>
-#include <iostream>
 #include <printer/printer.hpp>
 #include <error_state/error_state.hpp>
 

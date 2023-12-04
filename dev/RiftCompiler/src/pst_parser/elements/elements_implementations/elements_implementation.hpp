@@ -27,6 +27,9 @@ namespace pst {
 	using lexer::Token;
 	using lexer::BracketType;
 
+	/**
+	 * @brief A function which takes in the state of the parser and a distance as its arguments and returns whether a condition is met at the distance from the current position
+	 */
 	using StateCondition = std::function<bool(const RiftParserState&, usize)>;
 
 	/**
