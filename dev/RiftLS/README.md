@@ -22,8 +22,8 @@ It also includes an End-to-End test.
 
 ## Running the Language Server
 
-- Copy `.vscode.template` to `.vscode` in the root folder (of the whole project).
-- Press Ctrl+Shift+B to start building the project. A window will open up asking you to select a task to run. Don't select anything for now, jsut ensure that a section `npm scripts` is visible in the left bottom corner of VSC.
+- Copy contents of `.vscode.template` to `.vscode` in the root folder (of the whole project).
+- Press Ctrl+Shift+B to start building the project. A window will pop up asking you to select a task to run. Don't select anything for now, just ensure that a section `npm scripts` is visible in the left bottom corner of VSC.
 - Run `npm install` (can be selected from the `npm scripts` modal in the left bottom corner of VSC). This installs all necessary npm modules in both the client and server folder.
 - Press Ctrl+Shift+B to start compiling the client and server in `watch mode` (you might have to select it from the same modal as `npm install` if you are doing it for the first time - just run the option labeled `watch`).
 - Switch to the Run and Debug View in the Sidebar (Ctrl+Shift+D).
