@@ -49,7 +49,9 @@ namespace lsp_interface {
 std::string json_list(const std::vector<std::string>& list) {
 	std::string result = "[";
 	for (const std::string& str : list) result += "\"" + str + "\",";
-	if (result[result.length() - 1] == ',') result.pop_back();
+	if (result[result.length() - 1] == ',') {
+		result.pop_back();
+	}
 	result += "]";
 	return result;
 }
@@ -61,7 +63,9 @@ std::string json_dict(const std::map<std::string, std::string>& dict) {
 		const auto& value = pair.second;
 		result += "\"" + key + "\":" + value + ",";
 	}
-	if (result[result.length() - 1] == ',') result.pop_back();
+	if (result[result.length() - 1] == ',') {
+		result.pop_back();
+	}
 	result += "}";
 	return result;
 }
