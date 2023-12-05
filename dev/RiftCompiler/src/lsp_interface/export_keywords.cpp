@@ -58,7 +58,7 @@ std::string json_dict(const std::map<std::string, std::string>& dict) {
 	for (const auto& pair: dict) {
 		const auto& key   = pair.first;
 		const auto& value = pair.second;
-		result += "\"" + key + "\":\"" + value + "\",";
+		result += "\"" + key + "\":" + value + ",";
 	}
 	if (result[result.length() - 1] == ',') result.pop_back();
 	result += "}";
