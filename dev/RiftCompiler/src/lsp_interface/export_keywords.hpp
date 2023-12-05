@@ -2,9 +2,15 @@
 
 #include <string>
 
+
+
 namespace lsp_interface {
-    void print_keyword_list();
-    void print_special_list();
-    void print_operator_list();
-    void print_all_dict();
+    class LspInterface {
+        public:
+            LspInterface();
+            std::string get_keyword_list_json();
+            std::string get_special_list_json();
+            std::string get_operator_list_json();
+            std::string get_all_json();
+    };
 }
