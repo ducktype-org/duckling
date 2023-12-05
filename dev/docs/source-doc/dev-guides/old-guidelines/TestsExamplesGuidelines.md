@@ -9,7 +9,7 @@
 
 # Code
 
-  * All tests should be written using framework provided by `tester` module and follow structure of [test_example](../common/tester/examples/example.cpp)
+  * All tests should be written using framework provided by `tester` module and follow structure of [test_example](../../../../common/tester/examples/example.cpp)
 
   * All tests and examples should be added in CMake according to [CMakeGuidelines.md](CMakeGuidelines.md)
 

@@ -1,6 +1,6 @@
 # CMake
 
-Top level [CMakeLists.txt](CMakeLists.txt) only provides common options, configurations, and functions. Each module and submodule should have it's own `CMakeLists.txt` file that is included by the one above it.
+Top level [CMakeLists.txt](../../../../CMakeLists.txt) only provides common options, configurations, and functions. Each module and submodule should have it's own `CMakeLists.txt` file that is included by the one above it.
 
 `CMakeLists.txt` of each module should follow structure similar to:
 ```cmake

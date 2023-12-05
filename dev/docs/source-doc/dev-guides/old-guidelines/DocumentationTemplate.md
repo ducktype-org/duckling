@@ -1,10 +1,10 @@
 # Module name (example: my_module)
 
-[Description](#Description)  
-[Interface](#Interface)  
-[Usage](#Usage)  
-[Files](#File-list)  
-[Implementation details](#Implementation)  
+[Description](#source-doc/dev-guides/old-guidelines/DocumentationTemplate:Description)  
+[Interface](#source-doc/dev-guides/old-guidelines/DocumentationTemplate:Interface)  
+[Usage](#source-doc/dev-guides/old-guidelines/DocumentationTemplate:Usage)  
+[Files](#source-doc/dev-guides/old-guidelines/DocumentationTemplate:File-list)  
+[Implementation details](#source-doc/dev-guides/old-guidelines/DocumentationTemplate:Implementation)  
 
 # Description
 
