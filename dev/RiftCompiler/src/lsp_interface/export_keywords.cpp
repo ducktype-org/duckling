@@ -4,8 +4,10 @@
 #include <vector>
 #include <map>
 
-std::string json_list(const std::vector<std::string>& list);
-std::string json_dict(const std::map<std::string, std::string>& dict);
+namespace {
+	std::string json_list(const std::vector<std::string>& list);
+	std::string json_dict(const std::map<std::string, std::string>& dict);
+}
 
 namespace lsp_interface {
 
@@ -45,27 +47,29 @@ namespace lsp_interface {
 		return json_dict(result);
 	}
 }
+namespace {
 
-std::string json_list(const std::vector<std::string>& list) {
-	std::string result = "[";
-	for (const std::string& str : list) result += "\"" + str + "\",";
-	if (result[result.length() - 1] == ',') {
-		result.pop_back();
+	std::string json_list(const std::vector<std::string>& list) {
+		std::string result = "[";
+		for (const std::string& str : list) result += "\"" + str + "\",";
+		if (result[result.length() - 1] == ',') {
+			result.pop_back();
+		}
+		result += "]";
+		return result;
 	}
-	result += "]";
-	return result;
-}
 
-std::string json_dict(const std::map<std::string, std::string>& dict) {
-	std::string result = "{";
-	for (const auto& pair : dict) {
-		const auto& key = pair.first;
-		const auto& value = pair.second;
-		result += "\"" + key + "\":" + value + ",";
+	std::string json_dict(const std::map<std::string, std::string>& dict) {
+		std::string result = "{";
+		for (const auto& pair : dict) {
+			const auto& key = pair.first;
+			const auto& value = pair.second;
+			result += "\"" + key + "\":" + value + ",";
+		}
+		if (result[result.length() - 1] == ',') {
+			result.pop_back();
+		}
+		result += "}";
+		return result;
 	}
-	if (result[result.length() - 1] == ',') {
-		result.pop_back();
-	}
-	result += "}";
-	return result;
 }
