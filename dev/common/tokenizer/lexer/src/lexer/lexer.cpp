@@ -33,7 +33,7 @@ namespace lexer {
 			// @TODO: better customization of this dprint
 			log.print(std::cerr);
 		}
-		SourcePosition eof_pos(file, line, column, where);
+		dia::SourcePosition eof_pos(file, line, column, where);
 		return { std::move(tokens), Token::makeSentinelEof(eof_pos) };
 	}
 
@@ -102,7 +102,7 @@ namespace lexer {
 	}
 
 	void Lexer::parseSingleInto(Tokens& output) {
-		SourcePosition sourceStart(file, line, column, where);
+		dia::SourcePosition sourceStart(file, line, column, where);
 		if (isEOF()) {
 			// @TODO: error
 			RIFT_PANIC("EOF encountered inside parseSingleInto");
@@ -141,7 +141,7 @@ namespace lexer {
 	void Lexer::commentHandler([[maybe_unused]]Tokens& output) {
 		usize          begin = where;
 		usize          end = where;
-		SourcePosition sourceStart(file, line, column, where);
+		dia::SourcePosition sourceStart(file, line, column, where);
 
 		skip(2);  // "//"
 		while (true) {
@@ -157,7 +157,7 @@ namespace lexer {
 			}
 		}
 
-		SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "line comment");
 		//output.push_back(Token::makeComment(
@@ -167,7 +167,7 @@ namespace lexer {
 	void Lexer::blockCommentHandler([[maybe_unused]]Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		SourcePosition sourceStart(file, line, column, where);
+		dia::SourcePosition sourceStart(file, line, column, where);
 
 		skip(2);  // "/*"
 		while (true) {
@@ -185,21 +185,21 @@ namespace lexer {
 			}
 		}
 
-		SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition sourcePosition(sourceStart, end);
 		addTokenMsg(begin, end, "block comment");
 		// output.push_back(Token::makeComment(char_array.composeRaw(begin, end),
-		// source_position));
+		// sourcePosition));
 	}
 
 	void Lexer::operatorHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		SourcePosition sourceStart(file, line, column, where);
+		dia::SourcePosition sourceStart(file, line, column, where);
 
 		while (peek().is(Class::operator_continue)) next();
 		end = where - 1;
 
-		SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "operator");
 		output.push_back(Token::makeOperator(char_array.composeRaw(begin, end), sourcePosition));
@@ -208,13 +208,13 @@ namespace lexer {
 	void Lexer::nameHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		SourcePosition sourceStart(file, line, column, where);
+		dia::SourcePosition sourceStart(file, line, column, where);
 
 		next();  // first char - character
 		while (peek().is(Class::name_continue)) next();
 		end = where - 1;
 
-		SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition sourcePosition(sourceStart, end);
 		std::string message;
 		output.push_back(
 			Token::makeIdentifier(char_array.composeRaw(begin, end), sourcePosition)
@@ -228,11 +228,11 @@ namespace lexer {
 	void Lexer::specialHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		SourcePosition sourceStart(file, line, column, where);
+		dia::SourcePosition sourceStart(file, line, column, where);
 
 		next();
 
-		SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition sourcePosition(sourceStart, end);
 		addTokenMsg(begin, end, "special");
 		output.push_back(
 			Token::makeSpecial(char_array.composeRaw(begin, end), sourcePosition)
@@ -242,13 +242,13 @@ namespace lexer {
 	void Lexer::binLiteralHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		SourcePosition sourceStart(file, line, column, where);
+		dia::SourcePosition sourceStart(file, line, column, where);
 
 		skip(2);  // 0b
 		while (peek().isBinDigit()) next();
 		end = where - 1;
 
-		SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
 		output.push_back(
@@ -259,13 +259,13 @@ namespace lexer {
 	void Lexer::hexLiteralHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		SourcePosition sourceStart(file, line, column, where);
+		dia::SourcePosition sourceStart(file, line, column, where);
 
 		skip(2);  // 0x
 		while (peek().isHexDigit()) next();
 		end = where - 1;
 
-		SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
 		output.push_back(
@@ -276,7 +276,7 @@ namespace lexer {
 	void Lexer::decLiteralHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		SourcePosition sourceStart(file, line, column, where);
+		dia::SourcePosition sourceStart(file, line, column, where);
 
 		bool was_dot = false;
 		bool was_e   = false;
@@ -298,7 +298,7 @@ namespace lexer {
 
 		end = where - 1;
 
-		SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
 		output.push_back(
@@ -309,7 +309,7 @@ namespace lexer {
 	void Lexer::stringHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		SourcePosition sourceStart(file, line, column, where);
+		dia::SourcePosition sourceStart(file, line, column, where);
 
 		next();
 		while (!peek().is('"')) {
@@ -323,7 +323,7 @@ namespace lexer {
 		end = where;
 		next();
 
-		SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "string");
 		output.push_back(
@@ -333,7 +333,7 @@ namespace lexer {
 
 	void Lexer::groupHandler(Tokens& output) {
 		usize end = where;
-		SourcePosition sourceStart(file, line, column, where);
+		dia::SourcePosition sourceStart(file, line, column, where);
 
 		auto group_type = peek().getValue();
 		auto group_end = peek().bracketPair();
@@ -354,9 +354,9 @@ namespace lexer {
 
 		end = where - 1;
 
-		SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition sourcePosition(sourceStart, end);
 
-		SourcePosition sentinelPosition(file, line, column, end); 
+		dia::SourcePosition sentinelPosition(file, line, column, end); 
 		auto sentinelView = char_array.composeRaw(end, end);
 		Token sentinel = Token::makeSentinelEnd(sentinelView, sentinelPosition);
 

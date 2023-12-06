@@ -43,7 +43,7 @@ namespace lexer {
 		std::string rawStr() const;
 
 		template<fs::Encoding encoding>
-		friend CharArray decode(base::RawView bytes, ErrorState&);
+		friend CharArray decode(base::RawView bytes, dia::ErrorState&);
 		friend CharArray;
 
 	private:
@@ -105,12 +105,12 @@ namespace lexer {
 	 */
 	
 	template<fs::Encoding encoding>
-	CharArray decode(base::RawView bytes, ErrorState&);
+	CharArray decode(base::RawView bytes, dia::ErrorState&);
 
 	template<>
-	CharArray decode<fs::US_ASCII>(base::RawView bytes, ErrorState&);
+	CharArray decode<fs::US_ASCII>(base::RawView bytes, dia::ErrorState&);
 
 	template<>
-	CharArray decode<fs::UTF8>(base::RawView bytes, ErrorState&);
+	CharArray decode<fs::UTF8>(base::RawView bytes, dia::ErrorState&);
 
 }

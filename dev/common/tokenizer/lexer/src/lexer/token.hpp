@@ -58,26 +58,26 @@ namespace lexer {
 		 * @name Functions that construct Tokens
 		 * @{
 		 */
-		static Token makeSentinelEnd(base::RawView view, const SourcePosition&);
-		static Token makeSentinelEof(const SourcePosition&);
-		static Token makeKeyword(base::RawView keyword, const SourcePosition&);
-		static Token makeNumber(const base::RawView number, SourcePosition);
-		static Token makeString(base::RawView string, const SourcePosition&);
-		static Token makeFormattedString(Tokens&& tokens, SourcePosition);
-		static Token makeGroup(UChar32 groupType, Tokens&& tokens, Token&& sentinel, const SourcePosition&);
-		static Token makeComment(base::RawView comment, const SourcePosition&);
-		static Token makeOperator(base::RawView oper, const SourcePosition&);
-		static Token makeIdentifier(base::RawView identifier, const SourcePosition&);
-		static Token makeSpecial(base::RawView identifier, const SourcePosition&);
-		static Token makeNumLiteral(base::RawView literal, const SourcePosition&);
+		static Token makeSentinelEnd(base::RawView view, const dia::SourcePosition&);
+		static Token makeSentinelEof(const dia::SourcePosition&);
+		static Token makeKeyword(base::RawView keyword, const dia::SourcePosition&);
+		static Token makeNumber(const base::RawView number, dia::SourcePosition);
+		static Token makeString(base::RawView string, const dia::SourcePosition&);
+		static Token makeFormattedString(Tokens&& tokens, dia::SourcePosition);
+		static Token makeGroup(UChar32 groupType, Tokens&& tokens, Token&& sentinel, const dia::SourcePosition&);
+		static Token makeComment(base::RawView comment, const dia::SourcePosition&);
+		static Token makeOperator(base::RawView oper, const dia::SourcePosition&);
+		static Token makeIdentifier(base::RawView identifier, const dia::SourcePosition&);
+		static Token makeSpecial(base::RawView identifier, const dia::SourcePosition&);
+		static Token makeNumLiteral(base::RawView literal, const dia::SourcePosition&);
 		/**@}*/
 
 		virtual ~Token() = default;
 
 		Token(const Token& other) = default;
 		Token(Token&& other) noexcept;
-		Token(Type type, base::RawView value, SourcePosition position);
-		Token(Type type, Tokens&& recursive, Token&& sentinel, SourcePosition position, UChar32 bracket);
+		Token(Type type, base::RawView value, dia::SourcePosition position);
+		Token(Type type, Tokens&& recursive, Token&& sentinel, dia::SourcePosition position, UChar32 bracket);
 		friend void swap(Token& first, Token& second);
 		Token&      operator=(Token other);
 
@@ -134,18 +134,18 @@ namespace lexer {
 		bool isStr(base::StrId str) const;
 
 		[[nodiscard]]
-		SourcePosition getPosition() const;
+		dia::SourcePosition getPosition() const;
 
 	private:
 		Token() noexcept = default;
 
-		static Token makeError(const SourcePosition&);
+		static Token makeError(const dia::SourcePosition&);
 
 		Type           type = Type::Empty;
 		base::StrId    str_id;
 		Tokens         recursive;
 		Token* sentinel = nullptr;
-		SourcePosition source_position;
+		dia::SourcePosition source_position;
 		UChar32 bracket_type = 0;
 	};
 

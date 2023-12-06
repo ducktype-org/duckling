@@ -7,7 +7,7 @@ namespace pst {
 		imports.push_back(import);
 	}
 
-	const SourcePosition& RiftElement::getSourcePosition() const { return source_position; }
+	const dia::SourcePosition& RiftElement::getSourcePosition() const { return source_position; }
 
 	const RiftParserState::ImportType& RiftParserState::getImports() const { return imports; }
 

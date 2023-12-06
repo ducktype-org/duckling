@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
 	fs::FilePath file(argv[1]);
 	auto         file_content = file.getContent();
 
-	ErrorState errorState;
+	dia::ErrorState errorState;
 	auto chars = lexer::decode<fs::UTF8>(file_content.view(), errorState);
 	if (errorState.fail()) {
 		errorState.dumpLog(std::cerr);

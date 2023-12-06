@@ -121,7 +121,7 @@ namespace lexer {
 
 		bool token_messages = false; ///< Informs whether to print messages about what tokens are created to the debug stream
 
-		ErrorState errorState;
+		dia::ErrorState errorState;
 		printer::Console log;
 
 		void addTokenMsg(usize begin, usize end, std::string_view token_type);

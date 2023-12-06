@@ -15,7 +15,7 @@ namespace pst {
 	class PST {
 		lexer::TokenData token_data;
 		RiftParserState  parser_state;
-		ErrorState  err;
+		dia::ErrorState  err;
 
 		ParserRef<TopLevel> top_level;
 
@@ -24,7 +24,7 @@ namespace pst {
 		PST(lexer::TokenData&& td);
 
 		const std::vector<tpc::ParserCBorrowRef<Import>>& getImports() const;
-		const ErrorState&                            getErrorState() const;
+		const dia::ErrorState&                            getErrorState() const;
 
 		ParserCBorrowRef<TopLevel> getTopLevelElement() const;
 

@@ -14,14 +14,14 @@ namespace pst {
 
 	class RiftElement: public tpc::Element {
 	public:
-		explicit RiftElement(SourcePosition position):
+		explicit RiftElement(dia::SourcePosition position):
 			  source_position(std::move(position)){};
 
 		[[nodiscard]]
-		const SourcePosition& getSourcePosition() const;
+		const dia::SourcePosition& getSourcePosition() const;
 
 	private:
-		SourcePosition source_position;
+		dia::SourcePosition source_position;
 	};
 
 	class RiftParserState: public tpc::ParserState {
@@ -29,7 +29,7 @@ namespace pst {
 		typedef decltype(imports)                       ImportType;
 
 	public:
-		RiftParserState(tpc::TokenStream&& tokens, ErrorState&& err):
+		RiftParserState(tpc::TokenStream&& tokens, dia::ErrorState&& err):
 			  tpc::ParserState(std::move(tokens), std::move(err)) {}
 
 		void              addImport(tpc::ParserCBorrowRef<pst::Import> import);

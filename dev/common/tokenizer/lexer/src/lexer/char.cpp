@@ -81,7 +81,7 @@ namespace lexer {
 	base::RawView CharArray::getRaw(usize i) const { return composeRaw(i, i); }
 
 	template<>
-	CharArray decode<fs::US_ASCII>(base::RawView bytes, ErrorState& errorState) {
+	CharArray decode<fs::US_ASCII>(base::RawView bytes, dia::ErrorState& errorState) {
 		CharArray::Array out;
 		for (usize i = 0; i < bytes.size(); i++) {
 			if ((bytes[i] & byte{ 0b10000000u }) != byte{ 0 }) {
@@ -112,7 +112,7 @@ namespace lexer {
 	}
 
 	template<>
-	CharArray decode<fs::UTF8>(base::RawView bytes, ErrorState& errorState) {
+	CharArray decode<fs::UTF8>(base::RawView bytes, dia::ErrorState& errorState) {
 		CharArray::Array out;
 
 		auto log_error = [&](std::string message){
