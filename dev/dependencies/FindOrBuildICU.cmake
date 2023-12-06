@@ -52,10 +52,8 @@ function(FindOrBuildICU)
       message("-- ICU building not supported on Windows.")
       message(FATAL_ERROR "   -- Please download the latest ICU binaries from http://site.icu-project.org/download")
     elseif(UNIX)
-      # always build with position independent code in case we are linked
-      # against a shared library
-      # set(ICU_CFLAGS "-fPIC")
-      # set(ICU_CXXFLAGS "-fPIC")
+      set(ICU_CFLAGS "-w")
+      set(ICU_CXXFLAGS "-w")
 
       # determine a reasonable number of threads to build ICU with
       include(ProcessorCount)
@@ -97,20 +95,19 @@ function(FindOrBuildICU)
             CXXFLAGS=${ICU_CXXFLAGS}
           sh ${ICU_EP_PREFIX}/src/ExternalICU/source/configure
             --disable-shared --enable-static --disable-dyload --disable-extras
-            --disable-tests --disable-samples
+            --disable-tests --disable-samples --quiet
             --prefix=<INSTALL_DIR>
         BUILD_COMMAND
-          make ${ICU_MAKE_EXTRA_FLAGS}
+          make ${ICU_MAKE_EXTRA_FLAGS} > /dev/null
         INSTALL_COMMAND
-          make install
+          make install -s > /dev/null
         BUILD_BYPRODUCTS
           ${ICU_EP_LIBICUDATA};${ICU_EP_LIBICUI18N};${ICU_EP_LIBICUUC};${ICU_EP_LIBICUIO}
       )
 
       set(ICU_INCLUDE_DIRS ${ICU_EP_PREFIX}/include)
 
-      # For now abscense of this blocks unnecesary github actions
-      # file(MAKE_DIRECTORY ${ICU_INCLUDE_DIRS})
+      file(MAKE_DIRECTORY ${ICU_INCLUDE_DIRS})
 
       add_library(icudata IMPORTED STATIC GLOBAL)
       set_target_properties(icudata PROPERTIES IMPORTED_LOCATION
@@ -135,7 +132,6 @@ function(FindOrBuildICU)
         ${ICU_EP_LIBICUIO})
       add_dependencies(icuio ExternalICU)
       target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
-
 
       set(ICU_LIBRARIES icui18n icuuc icudata icuio)
       set(ICU_IS_EXTERNAL TRUE PARENT_SCOPE)
