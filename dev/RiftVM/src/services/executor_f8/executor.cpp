@@ -96,6 +96,16 @@ namespace vm {
 		return *(reinterpret_cast<T*>(&stack[position]));
 	}
 
+	__attribute__((always_inline)) void inline static peekNextInstruction(
+		const std::span<const vm::Fix8Instruction>& bc,
+		usize&                                      instruction_pointer,
+		OpcodeFix8&                                 opcode
+	) {
+		Fix8Instruction instr = bc[instruction_pointer];
+
+		opcode = static_cast<OpcodeFix8>(instr.opcode);
+	}
+
 	__attribute__((always_inline)) void inline static nextInstruction(
 		const std::span<const vm::Fix8Instruction>& bc,
 		usize&                                      instruction_pointer,
@@ -378,10 +388,15 @@ namespace vm {
 						// @TODO: executor error
 						// RIFT_PANIC("Bad deref access");
 					} else {
-						nextInstruction(FRAME(bc), FRAME(instruction_pointer), opcode, arg2, arg3);
-						// @TODO: verify this statically
-						RIFT_ASSERT(opcode == OpcodeFix8::ext_l64, "ofs via ext_l64 expected");
-						auto idx  = derefStack<u64>(local_stack, arg2);
+						peekNextInstruction(FRAME(bc), FRAME(instruction_pointer), opcode);
+						u64 idx;
+						if (opcode == OpcodeFix8::ext_l64) {
+							nextInstruction(
+								FRAME(bc), FRAME(instruction_pointer), opcode, arg2, arg3
+							);
+							idx = derefStack<u64>(local_stack, arg2);
+						} else
+							idx = 0;
 						auto view = deref_result.value();
 						RIFT_ASSERT(view.size() == 8, "bad type");
 						std::memcpy(
@@ -397,10 +412,15 @@ namespace vm {
 						// @TODO: executor error
 						// RIFT_PANIC("Bad deref access");
 					} else {
-						nextInstruction(FRAME(bc), FRAME(instruction_pointer), opcode, arg2, arg3);
-						// @TODO: verify this statically
-						RIFT_ASSERT(opcode == OpcodeFix8::ext_l64, "ofs via ext_l64 expected");
-						auto idx  = derefStack<u64>(local_stack, arg2);
+						peekNextInstruction(FRAME(bc), FRAME(instruction_pointer), opcode);
+						u64 idx;
+						if (opcode == OpcodeFix8::ext_l64) {
+							nextInstruction(
+								FRAME(bc), FRAME(instruction_pointer), opcode, arg2, arg3
+							);
+							idx = derefStack<u64>(local_stack, arg2);
+						} else
+							idx = 0;
 						auto view = deref_result.value();
 						RIFT_ASSERT(view.size() == 8, "bad type");
 						std::memcpy(

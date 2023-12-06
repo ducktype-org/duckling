@@ -9,7 +9,7 @@ function ackermann {
     code: {
         mov_l64_pFuncArg    0;
         mov_lptr_ptrFuncArg 16;
-        load_l64_lptr       8, 16;
+        load_l64_lptr_ofs   8, 16;
 
         cmpEq_l64_imm       0, 0;
         jmpRelIf_label      M0;
@@ -22,7 +22,7 @@ function ackermann {
         sub_l64_imm         8, 1;
         setPArg_l64         0;
         alloc_lptr_type     16, int64;
-        store_lptr_l64      16, 8;
+        store_lptr_l64_ofs  16, 8;
         setPtrArg_lptr      16;
         call_func           0; // A(m, n-1)
         free_lptr           16;
@@ -30,7 +30,7 @@ function ackermann {
         sub_l64_imm         0, 1;
         setPArg_l64         0;
         alloc_lptr_type     16, int64;
-        store_lptr_l64      16, 8;
+        store_lptr_l64_ofs  16, 8;
         setPtrArg_lptr      16;
         call_func           0;  // A(m-1, A(m, n-1))
         free_lptr           16;
@@ -43,7 +43,7 @@ function ackermann {
         setPArg_l64         0;
         mov_l64_imm         8, 1;    
         alloc_lptr_type     16, int64;
-        store_lptr_l64      16, 8;
+        store_lptr_l64_ofs  16, 8;
         setPtrArg_lptr      16;
         call_func           0;
         free_lptr           16;
@@ -71,7 +71,7 @@ function main {
         
         input_l64           8;
         alloc_lptr_type     16, int64;
-        store_lptr_l64      16, 8;
+        store_lptr_l64_ofs  16, 8;
         setPtrArg_lptr      16;
         call_func           0;
         free_lptr           16;
