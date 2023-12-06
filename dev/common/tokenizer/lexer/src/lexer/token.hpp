@@ -92,7 +92,7 @@ namespace lexer {
 		[[nodiscard]]
 		const Tokens& getRecursive() const;
 		[[nodiscard]]
-		const Token& getSentinel() const;
+		const Token getSentinel() const;
 
 		[[nodiscard]]
 		bool isGroup() const;
@@ -144,7 +144,7 @@ namespace lexer {
 		Type           type = Type::Empty;
 		base::StrId    str_id;
 		Tokens         recursive;
-		Token* sentinel = nullptr;
+		std::shared_ptr<Token> sentinel;
 		dia::SourcePosition source_position;
 		UChar32 bracket_type = 0;
 	};

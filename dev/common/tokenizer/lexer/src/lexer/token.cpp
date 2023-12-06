@@ -108,10 +108,10 @@ namespace lexer {
 
 	const Tokens& Token::getRecursive() const { return recursive; }
 
-	const Token& Token::getSentinel() const { 
+	const Token Token::getSentinel() const { 
 		RIFT_ASSERT(isGroup(), "getSentinel called on non group token"); 
 		RIFT_ASSERT(sentinel != nullptr, "un assigned sentinel in a group token"); 
-		return *sentinel; 
+		return Token(*sentinel); 
 	}
 
 	bool Token::isGroup() const {
