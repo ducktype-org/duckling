@@ -62,4 +62,4 @@ public:
 	~LexerPositionTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/common/lexer/tests/");
+TESTER_COMMON_MAIN("/common/tokenizer/lexer/tests/");
