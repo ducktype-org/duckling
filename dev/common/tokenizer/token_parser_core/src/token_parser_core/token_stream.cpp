@@ -23,12 +23,12 @@ namespace tpc {
 		  sentinel_end(std::move(stream.sentinel_end)) {}
 
 	TokenStream TokenStream::getRecursive() const {
-		if (peek().isGroup()) {
+		if (peek().isRecursive()) {
 			const auto& rec = peek().getRecursive();
 			return TokenStream(rec, peek().getSentinel(), 0, rec.size());
 		} else {
 			// @TODO
-			throw base::LogicError("get recursive on no group");
+			throw base::LogicError("get recursive on non-recursive token");
 		}
 	}
 
@@ -54,14 +54,17 @@ namespace tpc {
 		return peek(fwd).isOperator() and peek(fwd).isStr(oper);
 	}
 
-	bool TokenStream::isGroup(usize fwd) const {
-		return peek(fwd).isGroup();
+	bool TokenStream::isBracketGroup(usize fwd) const {
+		return peek(fwd).isBracketGroup();
 	}
 
-	bool TokenStream::isGroup(UChar32 group_type, usize fwd) const {
-		return peek(fwd).isGroup(group_type);
+	bool TokenStream::isBracketGroup(UChar32 group_type, usize fwd) const {
+		return peek(fwd).isBracketGroup(group_type);
 	}
 
+	bool TokenStream::isRecursive(usize fwd) const {
+		return peek(fwd).isRecursive();
+	}
 
 	usize TokenStream::size() const { return (where >= to ? 0 : to - where); }
 

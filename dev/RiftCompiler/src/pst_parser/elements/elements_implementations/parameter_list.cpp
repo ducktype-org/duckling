@@ -4,7 +4,7 @@ namespace pst {
 	ParserRef<ParamList> ParamList::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
 
-		if (!state.ctokens().isGroup(BracketType::Round)) {
+		if (!state.ctokens().isBracketGroup(Token::BracketType::Round)) {
 			state.fail(-1, "parenthesis expected after here");
 			return nullptr;
 		}

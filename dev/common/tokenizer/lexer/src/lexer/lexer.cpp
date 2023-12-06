@@ -120,7 +120,7 @@ namespace lexer {
 		} else if (isStringBegin()) {
 			stringHandler(output);
 		} else if (peek().is(Class::open_bracket)) {
-			groupHandler(output);
+			bracketHandler(output);
 		} else if (peek().is(Class::special)) {
 			specialHandler(output);
 		} else if (peek().isDigit()) {
@@ -331,11 +331,11 @@ namespace lexer {
 		);
 	}
 
-	void Lexer::groupHandler(Tokens& output) {
+	void Lexer::bracketHandler(Tokens& output) {
 		usize end = where;
 		dia::SourcePosition sourceStart(file, line, column, where);
 
-		auto group_type = peek().getValue();
+		Token::BracketType bracket_type{peek().getValue()};
 		auto group_end = peek().bracketPair();
 		if (token_messages)
 			log.add({ { { base::strConcat("group begin(", line, ":", column, ")") } }, printer::MessageType::DEBUG });
@@ -361,7 +361,7 @@ namespace lexer {
 		Token sentinel = Token::makeSentinelEnd(sentinelView, sentinelPosition);
 
 		output.push_back(
-			Token::makeGroup(group_type, std::move(inner_tokens), std::move(sentinel), sourcePosition)
+			Token::makeBracketGroup(bracket_type, std::move(inner_tokens), std::move(sentinel), sourcePosition)
 		);
 		if (token_messages)
 			log.add({ { { "group end" } }, printer::MessageType::DEBUG });

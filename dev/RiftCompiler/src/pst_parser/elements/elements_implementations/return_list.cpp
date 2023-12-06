@@ -6,7 +6,7 @@ namespace pst {
 
 		constexpr auto isCurlyGroupStart = 
 			[](const RiftParserState& lstate, usize fwd){
-				return lstate.ctokens().isGroup(BracketType::Curly, fwd);
+				return lstate.ctokens().isBracketGroup(Token::BracketType::Curly, fwd);
 			};
 
 		parseList<true>(state, out->rets, Operator::Comma, isCurlyGroupStart);

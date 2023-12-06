@@ -38,12 +38,12 @@ private:
 		assert(td->tokens.size() == 8, "Wrong amount of top-level token groups");
 	}
 
-	void checkGroupIsGroup(usize index) {
-		assert(td->tokens[index].isGroup(), "Group is not a group");
+	void checkTokenIsBracketGroup(usize index) {
+		assert(td->tokens[index].isBracketGroup(), "Token is not a bracket group");
 	}
 
 	void testGroup0() {
-		checkGroupIsGroup(0);
+		checkTokenIsBracketGroup(0);
 		const auto& inner_tokens = td->tokens[0].getRecursive();
 
 		assert(
@@ -52,18 +52,18 @@ private:
 		);
 
 		assert(
-			inner_tokens[0].isGroup('('),
-			"First group is not a round bracket group"
+			inner_tokens[0].isBracketGroup('('),
+			"First token is not a round bracket group"
 		);
 
 		assert(
-			inner_tokens[1].isGroup('['),
-			"Second group is not a square bracket group"
+			inner_tokens[1].isBracketGroup('['),
+			"Second token is not a square bracket group"
 		);
 
 		assert(
-			inner_tokens[2].isGroup('{'),
-			"Third group is not a curly bracket group"
+			inner_tokens[2].isBracketGroup('{'),
+			"Third token is not a curly bracket group"
 		);
 
 		for (usize i = 0; i < 3; i++) {
@@ -76,7 +76,7 @@ private:
 
 	template<usize index, lexer::Token::Type token_type, bool (lexer::Token::*isTokenType)() const>
 	void testTokenGroup() {
-		checkGroupIsGroup(index);
+		checkTokenIsBracketGroup(index);
 		auto& inner_tokens = td->tokens[index].getRecursive();
 		message("got " + std::to_string(inner_tokens.size()) + " tokens");
 		for (const auto& token: inner_tokens) {

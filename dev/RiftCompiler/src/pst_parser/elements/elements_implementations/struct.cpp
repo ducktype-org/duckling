@@ -13,7 +13,7 @@ namespace pst {
 
 		constexpr auto isCurlyGroupStart = 
 			[](const RiftParserState& lstate, usize fwd){
-				return lstate.ctokens().isGroup(BracketType::Curly, fwd);
+				return lstate.ctokens().isBracketGroup(Token::BracketType::Curly, fwd);
 			};
 
 		if (state.tryEat(Operator::Colon))

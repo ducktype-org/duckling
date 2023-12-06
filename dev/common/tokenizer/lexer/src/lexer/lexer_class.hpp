@@ -64,7 +64,7 @@ namespace lexer {
 		/**
 		 * @note handle unexpected eof / bad closing brackets
 		*/
-		void groupHandler(Tokens& output);
+		void bracketHandler(Tokens& output);
 		/**@}*/
 
 		/** 

@@ -39,9 +39,9 @@ namespace lexer {
 			Keyword,
 			Identifier,
 			NumLiteral,
-			String,           ///< special group, changes lexing rules
-			FormattedString,  ///< special group, changes lexing rules
-			BracketGroup,     ///< stores opening bracket value in bracket_type
+			String,
+			FormattedString,  ///< group
+			BracketGroup,     ///< group storing opening bracket value in group_type
 			Operator,
 			Comment,
 			Special,
@@ -50,8 +50,17 @@ namespace lexer {
 			Error
 		};
 
-		constexpr static std::array<Type, 3> non_terminal_tokens
-			= { Type::String,      Type::FormattedString, Type::BracketGroup};
+		/**
+	 	* @brief Non-exhaustive enum of bracket name -> bracket type(code of opening bracket)
+	 	* 
+	 	*/
+		enum BracketType: UChar32 {
+			None = 0,
+			Round = '(',
+			Square = '[',
+			Curly = '{',
+			Angle = 0x3008,
+		};
 
 
 		/**
@@ -64,7 +73,7 @@ namespace lexer {
 		static Token makeNumber(const base::RawView number, dia::SourcePosition);
 		static Token makeString(base::RawView string, const dia::SourcePosition&);
 		static Token makeFormattedString(Tokens&& tokens, dia::SourcePosition);
-		static Token makeGroup(UChar32 groupType, Tokens&& tokens, Token&& sentinel, const dia::SourcePosition&);
+		static Token makeBracketGroup(BracketType bracket_type, Tokens&& tokens, Token&& sentinel, const dia::SourcePosition&);
 		static Token makeComment(base::RawView comment, const dia::SourcePosition&);
 		static Token makeOperator(base::RawView oper, const dia::SourcePosition&);
 		static Token makeIdentifier(base::RawView identifier, const dia::SourcePosition&);
@@ -77,14 +86,14 @@ namespace lexer {
 		Token(const Token& other) = default;
 		Token(Token&& other) noexcept;
 		Token(Type type, base::RawView value, dia::SourcePosition position);
-		Token(Type type, Tokens&& recursive, Token&& sentinel, dia::SourcePosition position, UChar32 bracket);
+		Token(Type type, Tokens&& recursive, Token&& sentinel, dia::SourcePosition position, BracketType bracket);
 		friend void swap(Token& first, Token& second);
-		Token&      operator=(Token other);
+		Token&      operator=(Token&& other);
 
 		[[nodiscard]]
 		Type getType() const;
 		[[nodiscard]]
-		UChar32 getBracketType() const;
+		BracketType getBracketType() const;
 		[[nodiscard]]
 		base::StrId getValue() const;
 		[[nodiscard]]
@@ -95,14 +104,12 @@ namespace lexer {
 		const Token getSentinel() const;
 
 		[[nodiscard]]
-		bool isGroup() const;
+		bool isBracketGroup() const;
 		[[nodiscard]]
-		bool isGroup(UChar32 group_type) const;
+		bool isBracketGroup(UChar32 bracket_type) const;
 
 		[[nodiscard]]
-		bool isTerminal() const;
-		[[nodiscard]]
-		bool isNotTerminal() const;
+		bool isRecursive() const;
 
 		[[nodiscard]]
 		bool isSpecial() const;
@@ -146,7 +153,7 @@ namespace lexer {
 		Tokens         recursive;
 		std::shared_ptr<const Token> sentinel;
 		dia::SourcePosition source_position;
-		UChar32 bracket_type = 0;
+		BracketType bracket_type{BracketType::None};
 	};
 
 	/**

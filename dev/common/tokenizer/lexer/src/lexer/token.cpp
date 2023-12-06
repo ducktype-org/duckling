@@ -16,17 +16,18 @@ namespace lexer {
 		  str_id(value),
 		  source_position(std::move(position)) {}
 
-	Token::Token(Token::Type type, Tokens&& recursive, Token&& sentinel, dia::SourcePosition position, UChar32 bracketType):
+	Token::Token(Token::Type type, Tokens&& recursive, Token&& sentinel, dia::SourcePosition position, BracketType bracket_type):
 		  type(type),
 		  recursive(std::move(recursive)),
 		  sentinel(new Token(std::move(sentinel))),
 		  source_position(std::move(position)),
-		  bracket_type(bracketType) {
-			if (type == Token::Type::BracketGroup) {
-				std::string s;
-				icu::UnicodeString(bracket_type).append(u_getBidiPairedBracket(bracket_type)).toUTF8String(s);
-				str_id = base::StrId(base::RawView(s.data()));
-			}
+		  bracket_type(bracket_type) {
+			RIFT_ASSERT(this->sentinel->getType() == Type::Sentinel, "non-sentinel token passed as sentinel");
+			RIFT_ASSERT(type == Type::BracketGroup, "non-bracket token created with bracket constructor");
+
+			std::string s;
+			icu::UnicodeString(bracket_type).append(u_getBidiPairedBracket(bracket_type)).toUTF8String(s);
+			str_id = base::StrId(base::RawView(s.data()));
 		  }
 
 
@@ -70,9 +71,8 @@ namespace lexer {
 		return { Type::String, string, position };
 	}
 
-	Token Token::makeGroup(
-			UChar32 groupType, Tokens&& tokens, Token&& sentinel, const dia::SourcePosition& position) {
-		// for now doesn't fail on bad groupTypes
+	Token Token::makeBracketGroup(
+			BracketType groupType, Tokens&& tokens, Token&& sentinel, const dia::SourcePosition& position) {
 		return { Type::BracketGroup, std::move(tokens), std::move(sentinel), position, groupType };
 	}
 
@@ -91,7 +91,7 @@ namespace lexer {
 		swap(first.bracket_type, second.bracket_type);
 	}
 
-	Token& Token::operator=(Token other) {
+	Token& Token::operator=(Token&& other) {
 		swap(*this, other);
 		return *this;
 	}
@@ -100,7 +100,7 @@ namespace lexer {
 
 	Token::Type Token::getType() const { return type; }
 
-	UChar32 Token::getBracketType() const { return bracket_type; }
+	Token::BracketType Token::getBracketType() const { return bracket_type; }
 
 	base::StrId Token::getValue() const { return str_id; }
 
@@ -109,25 +109,22 @@ namespace lexer {
 	const Tokens& Token::getRecursive() const { return recursive; }
 
 	const Token Token::getSentinel() const { 
-		RIFT_ASSERT(isGroup(), "getSentinel called on non group token"); 
-		RIFT_ASSERT(sentinel != nullptr, "un assigned sentinel in a group token"); 
+		RIFT_ASSERT(isRecursive(), "getSentinel called on non-recursive token"); 
+		RIFT_ASSERT(sentinel, "un assigned sentinel in recursive token"); 
 		return Token(*sentinel); 
 	}
 
-	bool Token::isGroup() const {
+	bool Token::isBracketGroup() const {
 		return type == Type::BracketGroup;
 	}
 
-	bool Token::isGroup(UChar32 group_type) const {
-		return isGroup() && bracket_type == group_type;
+	bool Token::isBracketGroup(UChar32 type) const {
+		return isBracketGroup() && bracket_type == type;
 	}
 
-	bool Token::isTerminal() const {
-		return std::find(non_terminal_tokens.begin(), non_terminal_tokens.end(), type)
-		    == non_terminal_tokens.end();
+	bool Token::isRecursive() const {
+		return type == Type::BracketGroup || type == Type::FormattedString;
 	}
-
-	bool Token::isNotTerminal() const { return !isTerminal(); }
 
 	bool Token::isSpecial() const { return type == Type::Special; }
 

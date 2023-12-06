@@ -362,7 +362,7 @@ namespace assemble {
 
 		tpc::parseAll(state, rift_def::Keyword::BCFunction, &out->name);
 
-		if (!state.ctokens().isGroup(lexer::BracketType::Curly)) {
+		if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
 			state.err.setFail();
 			state.err.logError(state.ctokens().peek(-1).getPosition(), "expected `{` after here");
 			return nullptr;
@@ -462,7 +462,7 @@ namespace assemble {
 
 			case rift_def::Keyword::BCCode: {
 				tpc::parseOne(state, rift_def::Operator::Colon);
-				if (!state.ctokens().isGroup(lexer::BracketType::Curly)) {
+				if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
 					state.err.setFail();
 					state.err.logError(state.ctokens().peek().getPosition(), "no {} on code:");
 				}
@@ -563,7 +563,7 @@ namespace assemble {
 			break;
 		}
 		case rift_def::Keyword::BCData: {
-			if (!state.ctokens().isGroup(lexer::BracketType::Curly)) {
+			if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
 				state.err.setFail();
 				state.err.logError(
 					state.ctokens().peek(-1).getPosition(), "expected `{` after here"
@@ -594,7 +594,7 @@ namespace assemble {
 			break;
 		}
 		case rift_def::Keyword::BCVariant: {
-			if (!state.ctokens().isGroup(lexer::BracketType::Curly)) {
+			if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
 				state.err.setFail();
 				state.err.logError(
 					state.ctokens().peek(-1).getPosition(), "expected `{` after here"
@@ -623,7 +623,7 @@ namespace assemble {
 			break;
 		}
 		case rift_def::Keyword::BCFunType: {
-			if (!state.ctokens().isGroup(lexer::BracketType::Curly)) {
+			if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
 				state.err.setFail();
 				state.err.logError(
 					state.ctokens().peek(-1).getPosition(), "expected `{` after here"

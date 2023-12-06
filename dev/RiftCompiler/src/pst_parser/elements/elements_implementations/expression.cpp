@@ -3,15 +3,15 @@
 
 namespace pst {
 
-	Expr::GroupType fromTokenType(UChar32 type) {
+	Expr::GroupType fromTokenType(Token::BracketType type) {
 		switch (type) {
-		case BracketType::Round:
+		case Token::BracketType::Round:
 			return Expr::GroupType::RoundGroup;
-		case BracketType::Angle:
+		case Token::BracketType::Angle:
 			return Expr::GroupType::AngleGroup;
-		case BracketType::Curly:
+		case Token::BracketType::Curly:
 			return Expr::GroupType::CurlyGroup;
-		case BracketType::Square:
+		case Token::BracketType::Square:
 			return Expr::GroupType::SquareGroup;
 		default:
 			throw std::logic_error("unsupported bracket type\n");
@@ -48,7 +48,7 @@ namespace pst {
 		while (state.notEmpty() and i < len) {
 			i++;
 
-			if (state.ctokens().peek().isGroup()) {
+			if (state.ctokens().peek().isBracketGroup()) {
 				auto type = fromTokenType(state.ctokens().peek().getBracketType());
 				state.goDown();
 				if (state.notEmpty()) {
