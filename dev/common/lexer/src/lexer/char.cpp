@@ -3,14 +3,15 @@
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
  */
 
-#include "unicode/uchar.h"
 #include "char.hpp"
 #include "classifications.hpp"
+#include <unicode/uchar.h>
+#include <base/convert.hpp>
+#include <base/str_concat.hpp>
 #include <utility>
 #include <vector>
 #include <cctype>
 #include <sstream>
-#include <format>
 #include <array>
 #include <string>
 #include <iostream>
@@ -84,13 +85,19 @@ namespace lexer {
 		CharArray::Array out;
 		for (usize i = 0; i < bytes.size(); i++) {
 			if ((bytes[i] & byte{ 0b10000000u }) != byte{ 0 }) {
-				errorState.failAndLog({{{"ASCII decoding error:", printer::Color::BRIGHT_RED},
-							std::format("undefined ASCII byte {:#04X} encountered at position {}", std::to_integer<u16>(bytes[i]), i + 1)},
+				errorState.failAndLog({{
+								{"ASCII decoding error:", printer::Color::BRIGHT_RED},
+								base::strConcat(
+									"undefined ASCII byte ", 
+									base::toHexString(usize(bytes[i]), 2), 
+									" encountered at position ", 
+									i + 1
+								)},
 							printer::MessageType::ERROR});
 				continue;
 			}
 			Char next;
-			next.value = std::to_integer<UChar32>(bytes[i]);
+			next.value = UChar32(bytes[i]);
 			next.size        = u8(1);
 			next.raw_begin   = bytes.getBegin() + i;
 
@@ -116,7 +123,13 @@ namespace lexer {
 		usize pos = 0;
 		while (pos < bytes.size()) {
 			while (((bytes[pos] ^ byte{ 0b10000000u }) & byte{ 0b11000000u }) == byte{ 0 }) {
-				log_error(std::format("continuation byte {:#04X} encountered at byte position {} during decoding", std::to_integer<u16>(bytes[pos]), pos + 1));
+				log_error(base::strConcat(
+					"continuation byte ", 
+					base::toHexString(usize(bytes[pos]), 2), 
+					" encountered at byte position ", 
+					pos + 1, 
+					" during decoding"
+				));
 				pos++;
 			}
 			usize size = 1;
@@ -139,7 +152,13 @@ namespace lexer {
 			for(usize new_pos = pos + 1; new_pos < pos + size && new_pos < bytes.size(); new_pos++) {
 				if ((bytes[new_pos] & byte{ 0b11000000u }) != byte{ 0b10000000}) {
 					are_bytes_ok = false;
-					log_error(std::format("non-continuation byte encountered at byte position {} where continuation from byte at position {} was expected", new_pos + 1, pos + 1));
+					log_error(base::strConcat(
+						"non-continuation byte encountered at byte position ", 
+						new_pos + 1, 
+						" where continuation from byte at position ", 
+						pos + 1, 
+						" was expected"
+					));
 					size = new_pos - pos;
 					break;
 				}
@@ -148,7 +167,11 @@ namespace lexer {
 			}
 			
 			if (pos + size - 1 >= bytes.size()) {
-				log_error(std::format("EOF encountered before UTF-8 codepoint at {} ended", pos + 1));
+				log_error(base::strConcat(
+					"EOF encountered before UTF-8 codepoint starting at byte ", 
+					pos + 1, 
+					" ended"
+				));
 				pos = bytes.size();
 				continue;
 			}
@@ -160,7 +183,12 @@ namespace lexer {
 
 			if (!U_IS_UNICODE_CHAR(value) 
 				|| (U_GET_GC_MASK(value) & (U_GC_CN_MASK | U_GC_CO_MASK | U_GC_CS_MASK))) {
-				log_error(std::format("codepoint undefined in the Unicode standard encountered starting at position {} with value of {:X}", pos + 1, value));
+				log_error(base::strConcat(
+					"codepoint undefined in the Unicode standard encountered starting at position ",
+					pos + 1,
+					" with value of ",
+					base::toHexString(value)
+				));
 				pos += size;
 				continue;
 			}

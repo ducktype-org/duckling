@@ -1,6 +1,5 @@
 #include "error_state.hpp"
 
-// @TODO: change to sth working with utf8
 void ErrorState::logError(const SourcePosition& position, std::string_view message) {
 	err_count++;
 	errorLog.add(position.genErrorMsg(message));

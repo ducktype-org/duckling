@@ -8,7 +8,6 @@
 #include "lexer.hpp"
 #include "lexer_class.hpp"
 #include <iostream>
-#include <format>
 #include <rift_definitions/key_spec_op.hpp>
 #include <base/exceptions.hpp>
 #include <base/init_guard.hpp>
@@ -339,7 +338,7 @@ namespace lexer {
 		auto group_type = peek().getValue();
 		auto group_end = peek().bracketPair();
 		if (token_messages)
-			log.add({ { { std::format("group begin({}:{})", line, column) } }, printer::MessageType::DEBUG });
+			log.add({ { { base::strConcat("group begin(", line, ":", column, ")") } }, printer::MessageType::DEBUG });
 
 
 		Tokens inner_tokens;
