@@ -144,7 +144,7 @@ namespace lexer {
 		Type           type = Type::Empty;
 		base::StrId    str_id;
 		Tokens         recursive;
-		std::shared_ptr<Token> sentinel;
+		std::shared_ptr<const Token> sentinel;
 		dia::SourcePosition source_position;
 		UChar32 bracket_type = 0;
 	};
