@@ -2,6 +2,7 @@
 
 #include <string>
 #include <tuple>
+#include <unicode/unistr.h>
 #include "type_traits.hpp"
 #include "raw_view.hpp"
 
@@ -31,6 +32,8 @@ namespace base {
 		inline void strConcat(std::string& out, std::integral auto v) {
 			out.append(std::to_string(v));
 		}
+
+		void strConcat(std::string& out, icu::UnicodeString unistr);
 
 		inline void strConcat(std::string& out, bool v) { out.append(v ? "true" : "false"); }
 	}

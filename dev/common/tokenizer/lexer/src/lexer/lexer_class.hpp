@@ -106,6 +106,9 @@ namespace lexer {
 		[[nodiscard]]
 		std::string generateLineColumnInfo() const;
 
+		[[nodiscard]]
+		dia::SourcePosition currentPostion() const;
+
 		/**
 		 * @name current position of lexing
 		 * @{

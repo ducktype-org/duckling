@@ -3,11 +3,12 @@ add_library(Base
 		src/base/impl/exceptions.cpp
 		src/base/impl/raw_view.cpp
 		src/base/impl/string_id.cpp
+		src/base/impl/str_concat.cpp
 )
 
 set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)
 
-make_module(Base USES Result::Result)
+make_module(Base USES Result::Result unicode)
 
 rift_add_test(base base_test_simple tests/test.cpp
 		USES Printer Base)

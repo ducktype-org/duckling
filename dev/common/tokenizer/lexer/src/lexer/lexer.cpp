@@ -141,7 +141,7 @@ namespace lexer {
 	void Lexer::commentHandler([[maybe_unused]]Tokens& output) {
 		usize          begin = where;
 		usize          end = where;
-		dia::SourcePosition sourceStart(file, line, column, where);
+		auto sourceStart = currentPostion();
 
 		skip(2);  // "//"
 		while (true) {
@@ -160,14 +160,12 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "line comment");
-		//output.push_back(Token::makeComment(
-			//char_array.composeRaw(begin, end),sourcePosition));
 	}
 
 	void Lexer::blockCommentHandler([[maybe_unused]]Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		dia::SourcePosition sourceStart(file, line, column, where);
+		auto sourceStart = currentPostion();
 
 		skip(2);  // "/*"
 		while (true) {
@@ -187,14 +185,12 @@ namespace lexer {
 
 		dia::SourcePosition sourcePosition(sourceStart, end);
 		addTokenMsg(begin, end, "block comment");
-		// output.push_back(Token::makeComment(char_array.composeRaw(begin, end),
-		// sourcePosition));
 	}
 
 	void Lexer::operatorHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		dia::SourcePosition sourceStart(file, line, column, where);
+		auto sourceStart = currentPostion();
 
 		while (peek().is(Class::operator_continue)) next();
 		end = where - 1;
@@ -208,7 +204,7 @@ namespace lexer {
 	void Lexer::nameHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		dia::SourcePosition sourceStart(file, line, column, where);
+		auto sourceStart = currentPostion();
 
 		next();  // first char - character
 		while (peek().is(Class::name_continue)) next();
@@ -228,7 +224,7 @@ namespace lexer {
 	void Lexer::specialHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		dia::SourcePosition sourceStart(file, line, column, where);
+		auto sourceStart = currentPostion();
 
 		next();
 
@@ -242,7 +238,7 @@ namespace lexer {
 	void Lexer::binLiteralHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		dia::SourcePosition sourceStart(file, line, column, where);
+		auto sourceStart = currentPostion();
 
 		skip(2);  // 0b
 		while (peek().isBinDigit()) next();
@@ -259,7 +255,7 @@ namespace lexer {
 	void Lexer::hexLiteralHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		dia::SourcePosition sourceStart(file, line, column, where);
+		auto sourceStart = currentPostion();
 
 		skip(2);  // 0x
 		while (peek().isHexDigit()) next();
@@ -276,7 +272,7 @@ namespace lexer {
 	void Lexer::decLiteralHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		dia::SourcePosition sourceStart(file, line, column, where);
+		auto sourceStart = currentPostion();
 
 		bool was_dot = false;
 		bool was_e   = false;
@@ -309,31 +305,40 @@ namespace lexer {
 	void Lexer::stringHandler(Tokens& output) {
 		usize          begin = where;
 		usize end = where;
-		dia::SourcePosition sourceStart(file, line, column, where);
+		auto sourceStart = currentPostion();
+		bool closed = true;
 
 		next();
 		while (!peek().is('"')) {
 			if (peek().is('\\')) {
 				next();
 				next();
-			} else { // @TODO: handle EOL, EOF
+			} else if (isEOL()) {
+				errorState.failAndLog(sourceStart, "Expected this string to end before the end of line at: " + generateLineColumnInfo());
+				closed = false;
+				break;
+			} else if (isEOF()) {
+				errorState.failAndLog(sourceStart, "Expected this string to end before the end of file");
+				closed = false;
+				break;
+			} else {
 				next();
 			}
 		}
 		end = where;
-		next();
+		if (closed) next();
 
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "string");
 		output.push_back(
-			Token::makeString(char_array.composeRaw(begin + 1, end - 1), sourcePosition)
+			Token::makeString(char_array.composeRaw(begin + 1, end - usize(closed)), sourcePosition)
 		);
 	}
 
 	void Lexer::bracketHandler(Tokens& output) {
 		usize end = where;
-		dia::SourcePosition sourceStart(file, line, column, where);
+		auto sourceStart = currentPostion();
 
 		Token::BracketType bracket_type{peek().getValue()};
 		auto group_end = peek().bracketPair();
@@ -348,11 +353,15 @@ namespace lexer {
 		};
 		parseUntil(inner_tokens, isGroupEnd);
 
-		if (peek().is(group_end)) next(); // par close
-		else if (isEOF()); // log eof error here
-		else; // log unclosed parenthesis error here
+		end = where;
 
-		end = where - 1;
+		if (peek().is(group_end)) next(); // par close
+		else if (isEOF()) {
+			errorState.failAndLog(sourceStart, "Expected brackets starting here to be closed before the end of file");
+		} else {
+			errorState.failAndLog(sourceStart, base::strConcat("Expected brackets starting here to be closed with: `", icu::UnicodeString(group_end), "` but encountered `", icu::UnicodeString(peek().getValue()), "` at position ", generateLineColumnInfo(), " instead"));
+		} 
+
 
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
@@ -378,6 +387,10 @@ namespace lexer {
 	bool Lexer::isBlockCommentEnd() const { return tryRawValue('*') && tryRawValue('/', 1); }
 
 	bool Lexer::isStringBegin() const { return tryRawValue('"'); }
+
+	dia::SourcePosition Lexer::currentPostion() const {
+		return {file, line, column, where};
+	}
 
 	void init() {
 		RIFT_SIMPLE_INIT_GUARD_BEGIN
