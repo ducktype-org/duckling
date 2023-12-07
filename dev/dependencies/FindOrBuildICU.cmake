@@ -133,6 +133,9 @@ function(FindOrBuildICU)
       add_dependencies(icuio ExternalICU)
       target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
 
+      add_library(unicode INTERFACE)
+      target_link_libraries(unicode INTERFACE icuio icuuc icui18n icudata)
+
       set(ICU_LIBRARIES icui18n icuuc icudata icuio)
       set(ICU_IS_EXTERNAL TRUE PARENT_SCOPE)
     else()
