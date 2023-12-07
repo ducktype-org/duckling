@@ -314,18 +314,18 @@ namespace lexer {
 				next();
 				next();
 			} else if (isEOL()) {
-				errorState.failAndLog(sourceStart, "Expected this string to end before the end of line at: " + generateLineColumnInfo());
+				errorState.failAndLog(dia::SourcePosition(sourceStart, where - 1), "Expected this string to end before the end of line at: " + generateLineColumnInfo());
 				closed = false;
 				break;
 			} else if (isEOF()) {
-				errorState.failAndLog(sourceStart, "Expected this string to end before the end of file");
+				errorState.failAndLog(dia::SourcePosition(sourceStart, where - 1), "Expected this string to end before the end of file");
 				closed = false;
 				break;
 			} else {
 				next();
 			}
 		}
-		end = where;
+		end = where - 1 + int(closed);
 		if (closed) next();
 
 		dia::SourcePosition sourcePosition(sourceStart, end);
@@ -357,9 +357,20 @@ namespace lexer {
 
 		if (peek().is(group_end)) next(); // par close
 		else if (isEOF()) {
-			errorState.failAndLog(sourceStart, "Expected brackets starting here to be closed before the end of file");
+			errorState.failAndLog(dia::SourcePosition(sourceStart, where - 1), "Expected bracket to be closed before the end of file");
+			end = where - 1;
 		} else {
-			errorState.failAndLog(sourceStart, base::strConcat("Expected brackets starting here to be closed with: `", icu::UnicodeString(group_end), "` but encountered `", icu::UnicodeString(peek().getValue()), "` at position ", generateLineColumnInfo(), " instead"));
+			errorState.failAndLog(dia::SourcePosition(sourceStart, where - 1), 
+				base::strConcat(
+					"Expected brackets starting here to be closed with: `", 
+					icu::UnicodeString(group_end), 
+					"` but encountered `", 
+					icu::UnicodeString(peek().getValue()), 
+					"` at position ", 
+					generateLineColumnInfo(), 
+					" instead"
+			));
+			end = where - 1;
 		} 
 
 
@@ -403,6 +414,10 @@ namespace lexer {
 	lexer::TokenData tokenizeFile(const fs::FilePath& file, bool dprint) {
 		Lexer lexer(file);
 		auto [tokens, eof_token] = lexer.tokenize(dprint);
+		if (lexer.getErrorState().fail()) {
+			lexer.getErrorState().dumpLog(std::cerr);
+			throw base::LogicError("syntax error during lexing");
+		}
 		return { std::move(tokens), std::move(eof_token), file.getContent() };
 	}
 

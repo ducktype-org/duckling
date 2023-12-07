@@ -33,6 +33,11 @@ namespace lexer {
 		[[nodiscard]]
 		TokenizationResult tokenize(bool dprint);
 
+		[[nodiscard]]
+		const dia::ErrorState& getErrorState() const {
+			return errorState;
+		}
+
 	private:
 		/**
 		 * @name CharArray operations 
