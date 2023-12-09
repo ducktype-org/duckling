@@ -17,10 +17,7 @@
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/dev/RiftLS"],
 			"outFiles": ["${workspaceRoot}/dev/RiftLS/client/out/**/*.js"],
-			"preLaunchTask": {
-				"type": "npm",
-				"script": "watch"
-			}
+			"preLaunchTask": "npm: watch"
 		},
 		{
 			"name": "Language Server E2E Test",
