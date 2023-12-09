@@ -58,6 +58,7 @@ namespace vm {
 		 */
 		const Code* executing_code = nullptr;
 
+		void handleExecutionStrategyIfNeeded();
 		void handleExecutionStrategy();
 
 		/**

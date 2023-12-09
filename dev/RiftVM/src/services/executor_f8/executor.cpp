@@ -17,7 +17,6 @@
 namespace vm {
 
 	void Executor::handleExecutionStrategy() {
-		if (isRunning) return;
 		std::unique_lock lock(external_api_mutex);
 		if (execution_strategy == ExecutionStrategy::Paused) setStatus(api::Paused{});
 		pause_cv.wait(lock, [this] { return execution_strategy != ExecutionStrategy::Paused; });
@@ -25,6 +24,11 @@ namespace vm {
 		if (execution_strategy == ExecutionStrategy::Stoped) throw KillCoreException{};
 		if (execution_strategy == ExecutionStrategy::StepByStep)
 			execution_strategy = ExecutionStrategy::Paused;
+	}
+
+	__attribute__((always_inline)) void inline Executor::handleExecutionStrategyIfNeeded() {
+		if (isRunning) return;
+		handleExecutionStrategy();
 	}
 
 	Frame Executor::internalInitFrame(
@@ -172,6 +176,7 @@ namespace vm {
 			                                      LABEL_PTR(cmov_l64_l64),
 
 			                                      LABEL_PTR(mov_l64_r0),
+			                                      LABEL_PTR(mov_r0_l64),
 
 			                                      LABEL_PTR(mov_l64_pFuncArg),
 			                                      LABEL_PTR(mov_lptr_ptrFuncArg),
@@ -217,20 +222,14 @@ namespace vm {
 			                                      LABEL_PTR(alloc_lptr_type),
 			                                      LABEL_PTR(free_lptr),
 			                                      LABEL_PTR(load_l64_lptr_ofs),
-			                                      LABEL_PTR(store_lptr_l64_ofs),
-
-			                                      LABEL_PTR(ext_l64) };
+			                                      LABEL_PTR(store_lptr_l64_ofs) };
 #endif
 
 		IF_NOT_CG(while (true)) {
 			IF_NOT_CG(nextInstruction(FRAME(bc), FRAME(instruction_pointer), opcode, arg0, arg1));
 			IF_CG(DISPATCH_OPCODE());
 
-			// @TODO: this does not work with computed gotos
-			if constexpr (!IGNORE_EXECUTION_STRATEGY) {
-				// This is very slow:
-				handleExecutionStrategy();
-			}
+			if constexpr (!IGNORE_EXECUTION_STRATEGY) handleExecutionStrategyIfNeeded();
 
 			IF_NOT_CG(switch (opcode)) {
 				OP_CASE(mov_l64_imm, { derefStack<u64>(local_stack, arg0) = arg1; })

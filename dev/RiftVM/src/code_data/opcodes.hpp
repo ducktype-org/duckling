@@ -80,8 +80,8 @@ MAKE_STRINGFYABLE_ENUM(
 
 	alloc_lptr_type,     // allocates given type, stores pointer
 	free_lptr,           // frees block under pointer
-	store_lptr_l64_ofs,  // stores 64-bit primitive value under lptr + ofs
 	load_l64_lptr_ofs,   // load 64-bit primitive value from lptr + ofs
+	store_lptr_l64_ofs,  // stores 64-bit primitive value under lptr + ofs
 
 	ext_l64              // passes additional argument to preceding opcode
 );
