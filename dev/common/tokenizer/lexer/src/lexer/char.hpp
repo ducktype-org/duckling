@@ -81,9 +81,6 @@ namespace lexer {
 		base::RawView composeRaw(usize from, usize to) const;
 
 		[[nodiscard]]
-		base::RawView getRaw(usize i) const;
-
-		[[nodiscard]]
 		const Char& get(usize i) const;
 
 	private:

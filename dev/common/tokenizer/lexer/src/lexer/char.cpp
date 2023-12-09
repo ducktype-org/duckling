@@ -78,7 +78,6 @@ namespace lexer {
 		usize size = array[to + 1].raw_begin - begin;
 		return { begin, size };
 	}
-	base::RawView CharArray::getRaw(usize i) const { return composeRaw(i, i); }
 
 	template<>
 	CharArray decode<fs::US_ASCII>(base::RawView bytes, dia::ErrorState& errorState) {
@@ -122,15 +121,16 @@ namespace lexer {
 
 		usize pos = 0;
 		while (pos < bytes.size()) {
-			while (((bytes[pos] ^ byte{ 0b10000000u }) & byte{ 0b11000000u }) == byte{ 0 }) {
+			if (((bytes[pos] ^ byte{ 0b10000000u }) & byte{ 0b11000000u }) == byte{ 0 }) {
 				log_error(base::strConcat(
-					"continuation byte ", 
+					"Unexpected continuation byte ", 
 					base::toHexString(usize(bytes[pos]), 2), 
 					" encountered at byte position ", 
 					pos + 1, 
 					" during decoding"
 				));
 				pos++;
+				continue;
 			}
 			usize size = 1;
 			UChar32 value = std::to_integer<UChar32>(bytes[pos]);
@@ -146,6 +146,16 @@ namespace lexer {
 			} else if ((bytes[pos] & byte{ 0b00001000u }) == byte{ 0 }) {
 				size = 4;
 				value &= 0b00000111;
+			} else {
+				log_error(base::strConcat(
+					"Invalid code-point starting byte ",
+					base::toHexString(usize(bytes[pos]), 2),
+					" encountered at byte position ",
+					pos + 1,
+					" during decoding"
+				));
+				pos++;
+				continue;
 			}
 
 			bool are_bytes_ok = true;
@@ -153,7 +163,9 @@ namespace lexer {
 				if ((bytes[new_pos] & byte{ 0b11000000u }) != byte{ 0b10000000}) {
 					are_bytes_ok = false;
 					log_error(base::strConcat(
-						"non-continuation byte encountered at byte position ", 
+						"non-continuation byte ",
+						base::toHexString(usize(bytes[new_pos]), 2),
+						" encountered at byte position ", 
 						new_pos + 1, 
 						" where continuation from byte at position ", 
 						pos + 1, 
@@ -165,6 +177,11 @@ namespace lexer {
 				value <<= 6;
 				value += std::to_integer<UChar32>(bytes[new_pos]) & 0b00111111;
 			}
+
+			if (!are_bytes_ok) {
+				pos += size;
+				continue;
+			}
 			
 			if (pos + size - 1 >= bytes.size()) {
 				log_error(base::strConcat(
@@ -173,11 +190,6 @@ namespace lexer {
 					" ended"
 				));
 				pos = bytes.size();
-				continue;
-			}
-
-			if (!are_bytes_ok) {
-				pos += size;
 				continue;
 			}
 

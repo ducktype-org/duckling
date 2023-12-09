@@ -6,17 +6,6 @@
 namespace lexer {
 
 	/**
-	 * @brief Non-exhaustive enum of bracket name -> bracket type(code of opening bracket)
-	 * 
-	 */
-	enum BracketType: UChar32 {
-		Round = '(',
-		Square = '[',
-		Curly = '{',
-		Angle = 0x3008
-	};
-
-	/**
 	 * @brief Sets of characters used to distinguish between their usage in source code
 	 * 
 	 * @todo Maybe move to a more general location

@@ -10,3 +10,5 @@ rift_add_test(common lexer_test_simple tests/test.cpp
 		USES Lexer RiftDefinitions)
 rift_add_test(common token_test_position tests/token_position_test.cpp
 		USES Lexer RiftDefinitions)
+rift_add_test(common lexer_test_decode tests/decode_test.cpp
+		USES Lexer RiftDefinitions)
