@@ -15,6 +15,7 @@
 #include <base/smart_pointers.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
+#include <result.hpp>
 
 // Seams fixed:
 // #if __GNUC__ < 12 && (!defined(__clang__))

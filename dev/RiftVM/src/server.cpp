@@ -4,8 +4,6 @@
 #include <supervisor/supervisor.hpp>
 #include "server.hpp"
 
-#pragma once
-
 #include <result.hpp>
 
 namespace {

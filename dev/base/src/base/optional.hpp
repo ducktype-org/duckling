@@ -9,7 +9,6 @@
 #include "exceptions.hpp"
 #include "type_traits.hpp"
 #include "unique_pointer.hpp"
-#include <result.hpp>
 #include <functional>
 
 template<class T>
