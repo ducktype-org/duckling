@@ -13,7 +13,7 @@
 #include "forward_reference_type.hpp"
 #include "unique_pointer.hpp"
 
-/* Some c00l macros.
+/* Some cool macros.
  *
  * Example use:
  *
@@ -75,8 +75,10 @@
 
 namespace base {
 	/**
-	 * Optional is used as a better and safer alternative to pointers. It's name naturally suggests,
-	 * that it may or may not hold a value underneath, and the programmer is responsible to first
+	 * Optional is a analogue of std::optional, but better.
+	 * As its name naturally suggests,
+	 * it may or may not hold a value underneath, 
+	 * and the programmer has to first
 	 * check for it's presence.
 	 *
 	 * Macros defined above may come in handy when dealing with these creatures.
