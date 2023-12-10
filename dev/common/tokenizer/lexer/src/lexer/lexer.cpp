@@ -64,10 +64,10 @@ namespace lexer {
 	}
 
 	bool Lexer::tryRawValue(char rawValue, usize fwd) const {
-		return char_array.getArray().size() > where + fwd && peek(fwd).is(rawValue);
+		return char_array.size() > where + fwd && peek(fwd).is(rawValue);
 	}
 
-	const Char& Lexer::peek(usize fwd) const { return char_array.get(where + fwd); }
+	const Char& Lexer::peek(usize fwd) const { return char_array.at(where + fwd); }
 
 	std::string Lexer::generateLineColumnInfo() const {
 		return "(" + std::to_string(line) + ":" + std::to_string(column) + ")";
@@ -81,7 +81,7 @@ namespace lexer {
 				{ { "Add token: " },
 			      { std::string(token_type) },
 			      { "(" },
-			      { std::string(char_array.composeRaw(begin, end).stringView()) },
+			      { std::string(composeRaw(char_array, begin, end).stringView()) },
 			      { ")" } },
 				printer::MessageType::DEBUG
 			));
@@ -198,7 +198,7 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "operator");
-		output.push_back(Token::makeOperator(char_array.composeRaw(begin, end), sourcePosition));
+		output.push_back(Token::makeOperator(composeRaw(char_array, begin, end), sourcePosition));
 	}
 
 	void Lexer::nameHandler(Tokens& output) {
@@ -213,7 +213,7 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 		std::string message;
 		output.push_back(
-			Token::makeIdentifier(char_array.composeRaw(begin, end), sourcePosition)
+			Token::makeIdentifier(composeRaw(char_array, begin, end), sourcePosition)
 		);
 		if (output.back().getType() == Token::Type::Identifier)
 			addTokenMsg(begin, end, "identifier");
@@ -231,7 +231,7 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 		addTokenMsg(begin, end, "special");
 		output.push_back(
-			Token::makeSpecial(char_array.composeRaw(begin, end), sourcePosition)
+			Token::makeSpecial(composeRaw(char_array, begin, end), sourcePosition)
 		);
 	}
 
@@ -248,7 +248,7 @@ namespace lexer {
 
 		addTokenMsg(begin, end, "numLiteral");
 		output.push_back(
-			Token::makeNumLiteral(char_array.composeRaw(begin, end), sourcePosition)
+			Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition)
 		);
 	}
 
@@ -265,7 +265,7 @@ namespace lexer {
 
 		addTokenMsg(begin, end, "numLiteral");
 		output.push_back(
-			Token::makeNumLiteral(char_array.composeRaw(begin, end), sourcePosition)
+			Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition)
 		);
 	}
 
@@ -298,7 +298,7 @@ namespace lexer {
 
 		addTokenMsg(begin, end, "numLiteral");
 		output.push_back(
-			Token::makeNumLiteral(char_array.composeRaw(begin, end), sourcePosition)
+			Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition)
 		);
 	}
 
@@ -332,7 +332,7 @@ namespace lexer {
 
 		addTokenMsg(begin, end, "string");
 		output.push_back(
-			Token::makeString(char_array.composeRaw(begin + 1, end - usize(closed)), sourcePosition)
+			Token::makeString(composeRaw(char_array, begin + 1, end - usize(closed)), sourcePosition)
 		);
 	}
 
@@ -377,7 +377,7 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		dia::SourcePosition sentinelPosition(file, line, column, end); 
-		auto sentinelView = char_array.composeRaw(end, end);
+		auto sentinelView = composeRaw(char_array, end, end);
 		Token sentinel = Token::makeSentinelEnd(sentinelView, sentinelPosition);
 
 		output.push_back(

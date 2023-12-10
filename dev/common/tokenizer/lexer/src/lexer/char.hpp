@@ -11,7 +11,10 @@
 #include <optional>
 
 namespace lexer {
-	class CharArray;
+	class Char;
+	using CharArray = const std::vector<Char>;
+
+	base::RawView composeRaw(CharArray&, usize begin, usize end);
 
 	/**
 	 * @brief Class used for characters and checking their classifications
@@ -42,52 +45,18 @@ namespace lexer {
 		[[nodiscard]]
 		std::string rawStr() const;
 
+		[[nodiscard]]
+		base::RawArray getRawBegin() const;		
+
 		template<fs::Encoding encoding>
 		friend CharArray decode(base::RawView bytes, dia::ErrorState&);
-		friend CharArray;
 
 	private:
 		UChar32          value = 0;
 		base::RawArray raw_begin   = nullptr;
-
-		// @TODO: this u8 is strange
 		u8 size = u8{ 0 };
 
 		Char() = default;
-	};
-
-	/**
-	 * @brief Class used to store the decoded file
-	 * 
-	 */
-	class CharArray {
-	public:
-		/**
-		 * @brief Type used to store the underlying data
-		 */
-		using Array = std::vector<Char>;
-		CharArray() = default;
-		CharArray(Array array);
-		CharArray(CharArray&& other) noexcept;
-		CharArray(const CharArray& other)      = delete;
-		void operator=(const CharArray& other) = delete;
-		CharArray& operator=(CharArray&& other) noexcept;
-		friend void swap(CharArray& first, CharArray& second);
-
-		[[nodiscard]]
-		const Array& getArray() const;
-
-		[[nodiscard]]
-		base::RawView composeRaw(usize from, usize to) const;
-
-		[[nodiscard]]
-		const Char& get(usize i) const;
-
-	private:
-		/**
-		 * @brief Underlying data
-		 */
-		Array          array;
 	};
 
 	/**
@@ -95,14 +64,15 @@ namespace lexer {
 	 * 
 	 * @tparam encoding Which encoding should function use
 	 * @param bytes Vector of bytes to decode
+	 * @param err ErrorState to store errors
 	 * 
-	 * @return CharArray of decoded data or std::nullopt if errors encountered
+	 * @return CharArray of decoded data
 	 * 
 	 * @note We should probably stick to only decoding UTF-8 for now
 	 */
 	
 	template<fs::Encoding encoding>
-	CharArray decode(base::RawView bytes, dia::ErrorState&);
+	CharArray decode(base::RawView bytes, dia::ErrorState& err);
 
 	template<>
 	CharArray decode<fs::US_ASCII>(base::RawView bytes, dia::ErrorState&);

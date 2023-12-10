@@ -54,34 +54,19 @@ namespace lexer {
 		return res;
 	}
 
-	CharArray::CharArray(Array array): array(std::move(array)) {}
-
-	CharArray::CharArray(CharArray&& other) noexcept: CharArray() { swap(*this, other); }
-
-	CharArray& CharArray::operator=(CharArray&& other) noexcept {
-		swap(*this, other);
-		return *this;
+	base::RawArray Char::getRawBegin() const {
+		return raw_begin;
 	}
 
-	void swap(CharArray& first, CharArray& second) {
-		using std::swap;
-
-		swap(first.array, second.array);
-	}
-
-	const Char& CharArray::get(usize i) const { return array[i]; }
-
-	const CharArray::Array& CharArray::getArray() const { return array; }
-
-	base::RawView CharArray::composeRaw(usize from, usize to) const {
-		base::RawArray begin = array[from].raw_begin;
-		usize size = array[to + 1].raw_begin - begin;
+	base::RawView composeRaw(CharArray& array, usize from, usize to) {
+		base::RawArray begin = array.at(from).getRawBegin();
+		usize size = array.at(to + 1).getRawBegin() - begin;
 		return { begin, size };
 	}
 
 	template<>
 	CharArray decode<fs::US_ASCII>(base::RawView bytes, dia::ErrorState& errorState) {
-		CharArray::Array out;
+		std::vector<Char> out;
 		for (usize i = 0; i < bytes.size(); i++) {
 			if ((bytes[i] & byte{ 0b10000000u }) != byte{ 0 }) {
 				errorState.failAndLog({{
@@ -112,7 +97,7 @@ namespace lexer {
 
 	template<>
 	CharArray decode<fs::UTF8>(base::RawView bytes, dia::ErrorState& errorState) {
-		CharArray::Array out;
+		std::vector<Char> out;
 
 		auto log_error = [&](std::string message){
 			errorState.failAndLog({{{"UTF-8 decoding error:", printer::Color::BRIGHT_RED},

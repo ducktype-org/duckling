@@ -18,6 +18,6 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
-	for (const auto& c: chars.getArray()) std::cout << c.rawStr() << " ";
+	for (const auto& c: chars) std::cout << c.rawStr() << " ";
 	std::cout << "\n";
 }
