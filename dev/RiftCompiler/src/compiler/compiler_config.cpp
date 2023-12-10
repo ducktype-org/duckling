@@ -1,8 +1,9 @@
 #include "compiler_config.hpp"
-#include "clap/clap.hpp"
-#include "clap/param_builder.hpp"
-#include "clap/exceptions.hpp"
-#include "clap/help_message_generator.hpp"
+
+#include <clap/clap.hpp>
+#include <clap/param_builder.hpp>
+#include <clap/exceptions.hpp>
+#include <clap/help_message_generator.hpp>
 
 namespace compiler {
 	clap::Clap compilerOptions() {

@@ -97,7 +97,7 @@ namespace base {
 
 		template<class... Args>
 		Optional(Args&&... args):
-			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
+			private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
 		Optional(Optional&&)                 = default;
 		Optional(const Optional&)            = default;

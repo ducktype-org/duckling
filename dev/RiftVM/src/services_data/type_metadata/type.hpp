@@ -5,7 +5,6 @@
 #include <base/optional.hpp>
 #include <memory_data/pointer.hpp>
 #include "kinds.hpp"
-#include "base/optional.hpp"
 
 namespace vm {
 	class TypeMetadata;
@@ -75,7 +74,7 @@ namespace vm {
 
 		template<class T>
 		base::Optional<const T&> get() const {
-			if (std::holds_alternative<T>(kind)) return base::Optional<const T&>(std::get<T>(kind));
+			if (std::holds_alternative<T>(kind)) return std::get<T>(kind);
 			return {};
 		}
 
