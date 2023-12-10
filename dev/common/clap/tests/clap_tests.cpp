@@ -72,10 +72,10 @@ private:
 		ASSERT_EQUAL(0, res.getPositionalParameterCount());
 		ASSERT_EQUAL(1, res.getExtraParameterCount());
 
-		ASSERT_EQUAL(-1, *res.getExtra<i64>(0));
-		ASSERT_EQUAL(-20, *res.getValue<i64>('n'));
-		ASSERT_EQUAL(-20, *res.getValue<i64>("nnn"));
-		ASSERT_EQUAL("-20", *res.getRaw('n'));
+		ASSERT_EQUAL(-1, res.getExtra<i64>(0).value());
+		ASSERT_EQUAL(-20, res.getValue<i64>('n').value());
+		ASSERT_EQUAL(-20, res.getValue<i64>("nnn").value());
+		ASSERT_EQUAL("-20", res.getRaw('n').value());
 	}
 
 	void flagTest() {
@@ -102,7 +102,7 @@ private:
 		ASSERT_EQUAL(0, res2.getPositionalParameterCount());
 		ASSERT_EQUAL(1, res2.getExtraParameterCount());
 
-		ASSERT_EQUAL(123, *res2.getExtra<i64>(0));
+		ASSERT_EQUAL(123, res2.getExtra<i64>(0).value());
 		ASSERT_EQUAL(true, res2.isFlag('f'));
 		ASSERT_EQUAL(true, res2.isFlag("flag"));
 	}
@@ -126,7 +126,7 @@ private:
 
 		ASSERT_EQUAL(true, res.isFlag('a'));
 		ASSERT_EQUAL(true, res.isFlag('b'));
-		ASSERT_EQUAL(-123, *res.getValue<i64>('c'));
+		ASSERT_EQUAL(-123, res.getValue<i64>('c').value());
 	}
 
 	void weirdCases() {

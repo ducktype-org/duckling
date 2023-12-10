@@ -62,7 +62,7 @@ int main(int argc, const char** argv) {
 
 	std::vector<std::string> names;
 
-	names.push_back(*result.getPositional<std::string>(0));
+	names.push_back(result.getPositional<std::string>(0));
 	for (usize c = 0; c < result.getExtraParameterCount(); c++)
 		names.push_back(*result.getExtra<std::string>(0));
 

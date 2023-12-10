@@ -102,6 +102,7 @@ namespace base {
 	class Optional {
 	public:
 		Optional() = default;
+		~Optional() = default;
 
 		Optional(const T& value): private_optional(value) {}
 
@@ -113,6 +114,10 @@ namespace base {
 		Optional(const Optional&)            = default;
 		Optional& operator=(Optional&&)      = default;
 		Optional& operator=(const Optional&) = default;
+
+		explicit constexpr operator bool() const {
+			return has_value();
+		}
 
 		Optional& operator=(T&& other) {
 			private_optional = std::move(other);
@@ -129,7 +134,7 @@ namespace base {
 		}
 
 		[[nodiscard]]
-		virtual constexpr bool has_value() const {
+		constexpr bool has_value() const {
 			return private_optional.has_value();
 		}
 
@@ -140,25 +145,25 @@ namespace base {
 
 		// Accessors.
 		[[nodiscard]]
-		virtual constexpr const T& value() const& {
+		constexpr const T& value() const& {
 			_throwOnNoValue();
 			return private_optional.value();
 		}
 
 		[[nodiscard]]
-		virtual constexpr const T&& value() const&& {
+		constexpr const T&& value() const&& {
 			_throwOnNoValue();
 			return std::move(private_optional.value());
 		}
 
 		[[nodiscard]]
-		virtual constexpr T& value() & {
+		constexpr T& value() & {
 			_throwOnNoValue();
 			return private_optional.value();
 		}
 
 		[[nodiscard]]
-		virtual constexpr T&& value() && {
+		constexpr T&& value() && {
 			_throwOnNoValue();
 			return std::move(private_optional.value());
 		}
