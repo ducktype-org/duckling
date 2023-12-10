@@ -6,22 +6,12 @@
 #pragma once
 
 #include <optional>
-#include "exceptions.hpp"
-#include "type_traits.hpp"
-#include "unique_pointer.hpp"
 #include <functional>
 
-template<class T>
-T&& typeFinder(T&& arg) {
-	return std::forward<T>(arg);
-}
-
-template<class T>
-const T& typeFinder(T& arg) {
-	return arg;
-}
-
-#define GET_REF_OF_VAL(expr) decltype((typeFinder) (expr))
+#include "exceptions.hpp"
+#include "type_traits.hpp"
+#include "forward_reference_type.hpp"
+#include "unique_pointer.hpp"
 
 /* Some c00l macros.
  *
@@ -51,7 +41,7 @@ const T& typeFinder(T& arg) {
 	PUSH_DIAGNOSTIC                                                                  \
 	NO_SHADOW                                                                        \
 	if (bool _perform_match = true)                                                  \
-		for (GET_REF_OF_VAL(optional) _internal_optional = optional; _perform_match; \
+		for (DECL_FORWARDING_VAR(_internal_optional, optional); _perform_match; \
 		     _perform_match                              = false)                    \
 	POP_DIAGNOSTIC
 
@@ -72,7 +62,7 @@ const T& typeFinder(T& arg) {
 	PUSH_DIAGNOSTIC                                                                 \
 	NO_SHADOW                                                                       \
 	if (bool _perform_if = optional.has_value())                                    \
-		for (GET_REF_OF_VAL(optional) _internal_optional = optional; _perform_if;)  \
+		for (DECL_FORWARDING_VAR(_internal_optional, optional); _perform_if;)  \
 			for (const auto& _value_name = _internal_optional.value(); _perform_if; \
 			     _perform_if             = false)                                   \
 	POP_DIAGNOSTIC
