@@ -18,10 +18,16 @@ namespace lexer {
 
 	/**
 	 * @brief Class used for characters and checking their classifications
-	 * 
 	 */
 	class Char {
 	public:
+
+		const UChar32 value;
+		const u8 size;
+		const base::RawArray raw_begin;
+
+		Char(UChar32, u8, base::RawArray);
+
 		[[nodiscard]]
 		bool is(icu::UnicodeSet&) const;
 		[[nodiscard]]
@@ -36,6 +42,9 @@ namespace lexer {
 		[[nodiscard]]
 		bool isHexDigit() const;
 
+		/**
+		 * @brief Returns value of paired bracket for brackets or value of this character otherwise
+		 */
 		[[nodiscard]]
 		UChar32 bracketPair() const;
 
@@ -51,12 +60,6 @@ namespace lexer {
 		template<fs::Encoding encoding>
 		friend CharArray decode(base::RawView bytes, dia::ErrorState&);
 
-	private:
-		UChar32          value = 0;
-		base::RawArray raw_begin   = nullptr;
-		u8 size = u8{ 0 };
-
-		Char() = default;
 	};
 
 	/**

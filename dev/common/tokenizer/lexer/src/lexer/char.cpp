@@ -18,6 +18,17 @@
 
 namespace lexer {
 
+	Char::Char(UChar32 value, u8 size, base::RawArray raw_begin):
+			value(value), size(size), raw_begin(raw_begin) {
+		RIFT_ASSERT(raw_begin != nullptr, "Char constructed without raw pointer");	
+		if (size == u8{0}) {
+			RIFT_ASSERT(value == Classifications::end_of_file_value, 
+				"non-EOF Char created with size 0");
+		} else {
+			RIFT_ASSERT(size > u8{0} && size <= u8{4}, "Char constructed with bad size");	
+		}
+	} 
+
 	bool Char::is(icu::UnicodeSet& set) const {
 		return set.contains(value);
 	}
@@ -80,18 +91,9 @@ namespace lexer {
 							printer::MessageType::ERROR});
 				continue;
 			}
-			Char next;
-			next.value = UChar32(bytes[i]);
-			next.size        = u8(1);
-			next.raw_begin   = bytes.getBegin() + i;
-
-			out.push_back(next);
+			out.emplace_back(UChar32(bytes[i]), u8{1}, bytes.getBegin() + i);
 		}
-		Char eof;
-		eof.value = Classifications::end_of_file_value;
-		eof.size = u8(0);
-		eof.raw_begin = bytes.getBegin() + bytes.size();
-		out.push_back(eof);
+		out.emplace_back(Classifications::end_of_file_value, u8{0}, bytes.getBegin() + bytes.size());
 		return CharArray(std::move(out));
 	}
 
@@ -190,20 +192,10 @@ namespace lexer {
 				continue;
 			}
 
-			Char next;
-			next.value = value;
-			next.size        = u8(size);
-			next.raw_begin   = bytes.getBegin() + pos;
-
-			out.push_back(next);
+			out.emplace_back(value, u8{size}, bytes.getBegin() + pos);
 			pos += size;
 		}
-
-		Char eof;
-		eof.value = Classifications::end_of_file_value;
-		eof.size = u8(0);
-		eof.raw_begin = bytes.getBegin() + bytes.size();
-		out.push_back(eof);
+		out.emplace_back(Classifications::end_of_file_value, u8{0}, bytes.getBegin() + bytes.size());
 
 		return CharArray(std::move(out));
 	}
