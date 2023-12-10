@@ -1,9 +1,17 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 project(Rift)
 
 cmake_policy(SET CMP0079 NEW)
 cmake_policy(SET CMP0054 NEW)
-cmake_policy(SET CMP0135 NEW)
+
+# This is ifed-out, because it is
+# avaiable only from CMAKE 3.24.
+# @FUTURE: un-if it.
+# Note: It is not that important for us (as of 11.2023).
+#       It is realated to dependecies. 
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0") 
+	cmake_policy(SET CMP0135 NEW)
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
