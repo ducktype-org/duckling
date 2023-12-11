@@ -61,14 +61,14 @@ namespace clap {
 		return *this;
 	}
 
-	ClapParameter ParamBuilder::build() {
+	Parameter ParamBuilder::build() {
 		// Check all the requirements
 		if (!short_name.has_value() && !long_name.has_value())
 			throw ParamBuilderException("Every parameter has to have a (short or long) name!");
 		if (!short_description.has_value())
 			throw ParamBuilderException("Every parameter has to have a short description!");
 
-		ClapParameter parameter;
+		Parameter parameter;
 		parameter.value_parser        = std::move(value_parser);
 		parameter.parameter_necessity = parameter_necessity.value();
 		parameter.long_name           = std::move(long_name);

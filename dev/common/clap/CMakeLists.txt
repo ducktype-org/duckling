@@ -1,8 +1,8 @@
 add_library(Clap
-		src/clap/clap.cpp
+		src/clap/clap_class.cpp
 		src/clap/clap.hpp
-		src/clap/clap_parameter.cpp
-		src/clap/clap_parameter.hpp
+		src/clap/parameter.cpp
+		src/clap/parameter.hpp
 		src/clap/value_parser.cpp
 		src/clap/value_parser.hpp
 		src/clap/parsing_result.cpp
@@ -12,7 +12,8 @@ add_library(Clap
 		src/clap/exceptions.cpp
 		src/clap/exceptions.hpp
 		src/clap/help_message_generator.cpp
-		src/clap/help_message_generator.hpp)
+		src/clap/help_message_generator.hpp
+		src/clap/clap_class.hpp)
 
 make_module(Clap USES Base Filesystem)
 

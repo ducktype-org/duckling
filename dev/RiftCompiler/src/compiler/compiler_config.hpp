@@ -3,7 +3,6 @@
 #include <vector>
 #include <string>
 #include <printer/printer.hpp>
-#include <clap/exceptions.hpp>
 #include <clap/clap.hpp>
 #include "filesystem/file.hpp"
 

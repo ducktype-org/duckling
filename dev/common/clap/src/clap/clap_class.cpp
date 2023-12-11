@@ -37,7 +37,7 @@ namespace {
 		while (std::isspace(str[position])) position++;
 	}
 
-	std::string getParameterName(const clap::ClapParameter& param) {
+	std::string getParameterName(const clap::Parameter& param) {
 		if_opt_some(param.getLongName(), name) return name.stdString();
 
 		// Brace initializer, because name is a char.
@@ -97,7 +97,7 @@ namespace {
 			}
 		}
 
-		void parseParameter(const std::vector<clap::ClapParameter>& parameters) {
+		void parseParameter(const std::vector<clap::Parameter>& parameters) {
 			auto [param_name, name_type] = parseName();
 			if (name_type == NameType::EmptyName)
 				throw clap::exceptions::ExpectedParameterIdentifier((i32) parsing_position, args);
@@ -130,9 +130,9 @@ namespace {
 		}
 
 		void findParameterAndParse(
-			const std::vector<clap::ClapParameter>& parameters,
-			const std::string&                      param_name,
-			NameType                                name_type
+			const std::vector<clap::Parameter>& parameters,
+			const std::string&                  param_name,
+			NameType                            name_type
 		) {
 			bool found_parameter = false;
 			for (auto& parameter: parameters) {
@@ -153,7 +153,7 @@ namespace {
 			if (!found_parameter) throw clap::exceptions::InvalidParameterName(param_name);
 		}
 
-		void parseWithParameter(const clap::ClapParameter& parameter, const std::string& name) {
+		void parseWithParameter(const clap::Parameter& parameter, const std::string& name) {
 			if (parameter.getValueParser() == nullptr) {
 				// then it's a flag
 				result.insertFlag(parameter);
@@ -183,7 +183,7 @@ namespace {
 }
 
 namespace clap {
-	Clap& Clap::add(ClapParameter&& parameter) {
+	Clap& Clap::add(Parameter&& parameter) {
 		parameters.push_back(std::move(parameter));
 		return *this;
 	}
@@ -222,7 +222,7 @@ namespace clap {
 
 	const ValueParser* Clap::getDefaultValueParser() const { return default_value_parser.get(); }
 
-	const std::vector<ClapParameter>& Clap::getParameters() const { return parameters; }
+	const std::vector<Parameter>& Clap::getParameters() const { return parameters; }
 
 	Clap& Clap::addPositional(base::unique_ptr<ValueParser> parameter) {
 		positional_parameters.push_back(std::move(parameter));

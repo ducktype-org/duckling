@@ -24,7 +24,7 @@ namespace clap {
 		return {};
 	}
 
-	usize ParsingResult::insertQueryId(const ClapParameter& parameter) {
+	usize ParsingResult::insertQueryId(const Parameter& parameter) {
 		usize id = 0;
 		if_opt_some(parameter.getShortName(), name) {
 			if (short_names_to_id.contains(name))
@@ -50,13 +50,11 @@ namespace clap {
 		return id;
 	}
 
-	void ParsingResult::insertFlag(const ClapParameter& parameter) {
+	void ParsingResult::insertFlag(const Parameter& parameter) {
 		flags.insert(insertQueryId(parameter));
 	}
 
-	void ParsingResult::insertParameterValue(
-		const ClapParameter& parameter, const ParsedValue& value
-	) {
+	void ParsingResult::insertParameterValue(const Parameter& parameter, const ParsedValue& value) {
 		id_to_value.put(insertQueryId(parameter), value);
 	}
 
@@ -64,7 +62,7 @@ namespace clap {
 		positional_values.push_back(value);
 	}
 
-	bool ParsingResult::hasParam(const ClapParameter& parameter) {
+	bool ParsingResult::hasParam(const Parameter& parameter) {
 		auto id = insertQueryId(parameter);
 		if (flags.contains(id)) return true;
 		if (id_to_value.contains(id)) return true;

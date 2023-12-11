@@ -6,8 +6,7 @@
 #include <base/exceptions.hpp>
 #include <iostream>
 #include <fstream>
-#include "clap/clap.hpp"
-#include "clap/exceptions.hpp"
+#include <clap/clap.hpp>
 
 void init() {
 	lexer::init();

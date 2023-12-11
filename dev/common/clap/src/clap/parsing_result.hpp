@@ -12,7 +12,7 @@
 #include "base/ints.hpp"
 #include "base/optional.hpp"
 #include "base/maps.hpp"
-#include "clap_parameter.hpp"
+#include "parameter.hpp"
 
 namespace clap {
 	class Clap;
@@ -36,8 +36,8 @@ namespace clap {
 		[[nodiscard]]
 		const std::string& getArgs() const;
 
-		void insertFlag(const ClapParameter& parameter);
-		void insertParameterValue(const ClapParameter& parameter, const ParsedValue& value);
+		void insertFlag(const Parameter& parameter);
+		void insertParameterValue(const Parameter& parameter, const ParsedValue& value);
 		void insertPositional(const ParsedValue& value);
 		void insertExtra(const ParsedValue& value);
 
@@ -80,7 +80,7 @@ namespace clap {
 		}
 
 		[[nodiscard]]
-		bool hasParam(const ClapParameter& parameter);
+		bool hasParam(const Parameter& parameter);
 
 		[[nodiscard]]
 		usize getPositionalParameterCount() const;
@@ -97,7 +97,7 @@ namespace clap {
 		std::string file_path;
 		std::string args;
 
-		usize insertQueryId(const ClapParameter& parameter);
+		usize insertQueryId(const Parameter& parameter);
 
 		base::Optional<usize> getId(char name) const;
 		base::Optional<usize> getId(const base::RawView& name) const;

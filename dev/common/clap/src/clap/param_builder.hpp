@@ -6,7 +6,7 @@
 #pragma once
 
 #include "value_parser.hpp"
-#include "clap_parameter.hpp"
+#include "parameter.hpp"
 
 namespace clap {
 
@@ -29,7 +29,7 @@ namespace clap {
 		ParamBuilder&
 			conditional(Conditional::Condition&& condition, const std::string& description = "");
 
-		ClapParameter build();
+		Parameter build();
 
 	private:
 		ParamBuilder() { optional(); }

@@ -33,7 +33,7 @@ namespace clap::exceptions {
 	};
 
 	struct FileDoesNotExist: public ClapException {
-		FileDoesNotExist(const std::filesystem::path& path);
+		explicit FileDoesNotExist(const std::filesystem::path& path);
 	};
 
 	struct PositionalParameterExpected: public ClapException {

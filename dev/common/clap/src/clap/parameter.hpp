@@ -26,7 +26,7 @@ namespace clap {
 
 	using ParameterNecessity = std::variant<Optional, Required, Conditional>;
 
-	class ClapParameter {
+	class Parameter {
 		friend class ParamBuilder;
 
 	public:
@@ -44,7 +44,7 @@ namespace clap {
 		const ParameterNecessity& getParameterNecessity() const;
 
 	private:
-		ClapParameter() = default;
+		Parameter() = default;
 		base::Optional<char>          short_name;
 		base::Optional<base::RawView> long_name;
 		base::RawView                 short_description;
