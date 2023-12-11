@@ -20,6 +20,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # @TODO: add -Werror=shadow=local, but "turn it off" for Crow and Asio
 set(CMAKE_CXX_FLAGS "-Werror=return-type -Werror=terminate -Wshadow=local -Wall -Wextra -Wno-sign-compare -O2")
+# Wersja debug wypisuje na razie wszystkie możliwe informacje dynamicznie
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -O0")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
