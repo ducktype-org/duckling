@@ -17,11 +17,9 @@ namespace lexer {
 	/**
 	 * @brief Class used to manage lexing
 	 * 
-	 * @todo Improve error handling in lexing, possibly using Error tokens and logging some sensible errors
 	 * @todo Add format string lexing
 	 * @todo Improve comment lexing
 	 * @todo Improve unicode support(soon: identifier normalization, at some point: ignorable format controls)
-	 * @todo Try to improve #parseSingleInto() to be more readable, maybe divide it into some logical parts
 	 */
 	class Lexer {
 	public:
