@@ -24,13 +24,15 @@ namespace base {
 		// string_id.hpp -> maps.hpp -> exceptions.hpp -> str_concat.hpp
 		void strConcat(std::string& out, base::StrId str_id);
 
-		inline void strConcat(std::string& out, std::integral auto v) {
+		template<class T>
+		requires(std::integral<T> || std::floating_point<T>)
+		inline void strConcat(std::string& out, T v) {
 			out.append(std::to_string(v));
 		}
 
-		inline void strConcat(std::string& out, double v) { out.append(std::to_string(v)); }
-
 		inline void strConcat(std::string& out, bool v) { out.append(v ? "true" : "false"); }
+
+		inline void strConcat(std::string& out, const char* v) { out.append(std::string(v)); }
 
 		template<typename U, typename V>
 		requires(std::is_trivially_copyable<U>::value && std::is_trivially_copyable<V>::value)
@@ -41,7 +43,6 @@ namespace base {
 			strConcat(out, pair.second);
 			out += ">";
 		}
-
 	}
 
 	/**
