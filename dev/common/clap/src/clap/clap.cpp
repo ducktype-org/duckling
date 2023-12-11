@@ -257,8 +257,7 @@ namespace clap {
 				variant_case(Conditional, c) {
 					if (!c.condition(result)) {
 						throw exceptions::MissingConditionalParameter(
-							getParameterName(param),
-							"A condition has not been met: " + c.condition_description
+							getParameterName(param), "reason: " + c.condition_description
 						);
 					}
 				}

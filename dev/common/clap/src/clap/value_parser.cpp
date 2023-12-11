@@ -92,7 +92,11 @@ namespace clap {
 		std::smatch _match;
 		if (!std::regex_match(str, _match, file_regex))
 			throw clap::exceptions::ValueParsingException(
-				getTypeName().c_str(), start, result.position, raw_input
+				getTypeName().c_str(),
+				start,
+				result.position,
+				raw_input,
+				"argument does not match regex"
 			);
 
 		std::filesystem::path path = str;

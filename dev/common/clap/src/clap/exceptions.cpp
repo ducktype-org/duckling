@@ -57,7 +57,7 @@ namespace clap::exceptions {
 	MissingConditionalParameter::MissingConditionalParameter(
 		const std::string& name, std::string_view why
 	):
-		  ClapException(base::strConcat("Missing parameter: ", name, " - ", why)) {}
+		  ClapException(base::strConcat("Invalid parameter - ", name, " - ", why)) {}
 
 	DuplicatedParameter::DuplicatedParameter(const std::string& name):
 		  ClapException(base::strConcat("Duplicated parameter named: ", name)) {}
@@ -66,6 +66,6 @@ namespace clap::exceptions {
 		  base::LogicError("Help flag was passed, help message should be generated."),
 		  parsing_result(std::move(result)) {}
 
-	FileDoesNotExist::FileDoesNotExist(std::filesystem::path path):
-		  ClapException("File at: " + path.string() + " does not exist.") {}
+	FileDoesNotExist::FileDoesNotExist(const std::filesystem::path& path):
+		  ClapException("File at \"" + absolute(path).string() + "\" does not exist.") {}
 }

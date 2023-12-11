@@ -73,6 +73,12 @@ namespace clap {
 			return false;
 		}
 
+		template<class T>
+		bool isParam(const T& name) const {
+			if_opt_some(getId(name), id) return id_to_value.contains(id);
+			return false;
+		}
+
 		[[nodiscard]]
 		bool hasParam(const ClapParameter& parameter);
 

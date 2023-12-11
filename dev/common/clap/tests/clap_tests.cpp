@@ -76,6 +76,9 @@ private:
 		ASSERT_EQUAL(-20, res.getValue<i64>('n').value());
 		ASSERT_EQUAL(-20, res.getValue<i64>("nnn").value());
 		ASSERT_EQUAL("-20", res.getRaw('n').value());
+
+		ASSERT_EQUAL(true, res.isParam('n'));
+		ASSERT_EQUAL(false, res.isParam("sth"));
 	}
 
 	void flagTest() {

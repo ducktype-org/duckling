@@ -19,7 +19,7 @@ namespace clap {
 	struct Required {};
 
 	struct Conditional {
-		using Condition = std::function<bool(ParsingResult)>;
+		using Condition = std::function<bool(const ParsingResult&)>;
 		Condition   condition;
 		std::string condition_description;
 	};
