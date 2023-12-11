@@ -6,6 +6,7 @@
 #include "classifications.hpp"
 
 #include "lexer.hpp"
+#include "decode.hpp"
 #include "lexer_class.hpp"
 #include <iostream>
 #include <rift_definitions/key_spec_op.hpp>
@@ -340,7 +341,7 @@ namespace lexer {
 		usize end = where;
 		auto sourceStart = currentPostion();
 
-		Token::BracketType bracket_type{peek().getValue()};
+		Token::BracketType bracket_type{peek().value};
 		auto group_end = peek().bracketPair();
 		if (token_messages)
 			log.add({ { { base::strConcat("group begin(", line, ":", column, ")") } }, printer::MessageType::DEBUG });
@@ -365,7 +366,7 @@ namespace lexer {
 					"Expected brackets starting here to be closed with: `", 
 					icu::UnicodeString(group_end), 
 					"` but encountered `", 
-					icu::UnicodeString(peek().getValue()), 
+					icu::UnicodeString(peek().value), 
 					"` at position ", 
 					generateLineColumnInfo(), 
 					" instead"

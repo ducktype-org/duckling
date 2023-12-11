@@ -2,7 +2,8 @@ add_library(Lexer
 		src/lexer/char.cpp
 		src/lexer/token.cpp
 		src/lexer/lexer.cpp
-		src/lexer/classifications.cpp)
+		src/lexer/classifications.cpp
+		src/lexer/decode.cpp)
 
 make_module(Lexer USES Filesystem Printer RiftDefinitions unicode Result::Result SourcePosition ErrorState)
 

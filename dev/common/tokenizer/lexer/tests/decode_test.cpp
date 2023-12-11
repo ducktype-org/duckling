@@ -1,4 +1,5 @@
 #include <filesystem/file.hpp>
+#include <lexer/decode.hpp>
 #include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
 
