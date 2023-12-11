@@ -22,25 +22,23 @@ void showVersion() {
 }
 
 int main(int argc, const char** argv) {
-
 	auto clap = clap::Clap()
-		.addHelpFlag()
-		.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
-			.addShortName('s')
-			.addLongName("server")
-			.addShortDesc("Launch RiftVM as a http server <arg is port num>")
-			.build())
-		.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
-			.addShortName('f')
-			.addLongName("file")
-			.addShortDesc("Launch given file (only if not -serwer)")
-			.build())
-		.add(clap::ParamBuilder::ofFlag()
-			.addShortName('v')
-			.addLongName("version")
-			.addShortDesc("Shows version and config")
-			.build())
-	;
+	                .addHelpFlag()
+	                .add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+	                         .addShortName('s')
+	                         .addLongName("server")
+	                         .addShortDesc("Launch RiftVM as a http server <arg is port num>")
+	                         .build())
+	                .add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+	                         .addShortName('f')
+	                         .addLongName("file")
+	                         .addShortDesc("Launch given file (only if not -serwer)")
+	                         .build())
+	                .add(clap::ParamBuilder::ofFlag()
+	                         .addShortName('v')
+	                         .addLongName("version")
+	                         .addShortDesc("Shows version and config")
+	                         .build());
 
 	clap::ParsingResult result;
 
@@ -68,13 +66,12 @@ int main(int argc, const char** argv) {
 	// Instantiate supervisor
 	vm::Supervisor::get();
 
-	if (result.isFlag('v')) {
+	if (result.isFlag('v'))
 		showVersion();
-	} else if (auto port = result.getValue<int>("server")) {
+	else if (auto port = result.getValue<int>("server"))
 		server(port.value());
-	} else if (auto file = result.getValue<std::string>("file")) {
+	else if (auto file = result.getValue<std::string>("file"))
 		cli(file.value());
-	} else {
+	else
 		cli();
-	}
 }

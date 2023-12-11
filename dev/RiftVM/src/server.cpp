@@ -6,37 +6,17 @@
 
 #include <result.hpp>
 
-namespace {
-	template<class T, class E, class R>
-	R convertResult(
-		cpp::result<T, E>          result,
-		std::function<R(const T&)> map_value,
-		std::function<R(const E&)> map_error
-	) {
-		if (result.has_value()) return map_value(result.value());
-		return map_error(result.error());
-	}
-
-	template<class E, class R>
-	R convertResult(
-		cpp::result<void, E>       result,
-		std::function<R()>         map_value,
-		std::function<R(const E&)> map_error
-	) {
-		if (result.has_value()) return map_value();
-		return map_error(result.error());
-	}
-}
-
 crow::response convertError(const vm::api::ApiError& apiError) {
 	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return { 500, "Wrong response" };
-	return { 400,
-		     std::visit(
-				 [](const auto& v) {
-					 return "JSON is broken\n";  // JS::serializeStruct(v);
-				 },
-				 apiError
-			 ) };
+	return {
+		400,
+		std::visit(
+			[](const auto& v) {
+				return "JSON is broken\n";  // JS::serializeStruct(v);
+			},
+			apiError
+		),
+	};
 }
 
 template<class T, class E>
@@ -44,13 +24,17 @@ crow::response toResponse(const cpp::result<T, E>& x) {
 	static auto convert = [](const auto& v) {
 		return crow::response(200, /*JS::serializeStruct(v)*/ "{OK, json is broken}");
 	};
-	return convertResult<T, E, crow::response>(x, convert, convertError);
+
+	if (x.has_value()) return convert(x.value());
+	return convertError(x.error());
 }
 
 template<class E>
 crow::response toResponse(const cpp::result<void, E>& x) {
 	static auto convert = []() { return crow::response(200, "{}"); };
-	return convertResult<E, crow::response>(x, convert, convertError);
+
+	if (x.has_value()) return convert();
+	return convertError(x.error());
 }
 
 void server(i32 port) {
