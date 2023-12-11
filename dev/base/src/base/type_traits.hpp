@@ -21,6 +21,10 @@ namespace base {
 	template<template<typename...> class Template, typename T>
 	concept IsInstantiationOf = detail::IsInstantiationOfImpl<Template, T>::value;
 
+	template<typename T>
+	concept IsNumber = std::is_floating_point_v<T> || std::is_integral_v<T>;
+
+
 	/**
 	 * This concept is used to statically determine if two types are instances of the same templated
 	 * class.

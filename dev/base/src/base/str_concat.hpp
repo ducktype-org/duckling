@@ -11,7 +11,7 @@ namespace base {
 
 	namespace detail {
 		template<typename T>
-		requires(!std::is_integral_v<std::remove_reference_t<T>>)
+		requires(!base::IsNumber<std::remove_reference_t<T>>)
 		void strConcat(std::string& out, T&& v) {
 			out.append(v);
 		}
@@ -20,15 +20,13 @@ namespace base {
 			out.append(view.stringView());
 		}
 
+		inline void strConcat(std::string& out, base::IsNumber auto v) {
+			out.append(std::to_string(v));
+		}
+
 		// This is forward declaration to prevent circular header dependency through:
 		// string_id.hpp -> maps.hpp -> exceptions.hpp -> str_concat.hpp
 		void strConcat(std::string& out, base::StrId str_id);
-
-		template<class T>
-		requires(std::integral<T> || std::floating_point<T>)
-		inline void strConcat(std::string& out, T v) {
-			out.append(std::to_string(v));
-		}
 
 		inline void strConcat(std::string& out, bool v) { out.append(v ? "true" : "false"); }
 
