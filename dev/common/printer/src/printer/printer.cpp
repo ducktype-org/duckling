@@ -7,6 +7,12 @@
 
 #include "printer.hpp"
 
+#ifdef PRINT_LOG
+#define INSTANT_LOG print(std::cerr);clear();
+#else
+#define INSTANT_LOG
+#endif
+
 namespace printer {
 	// All background color escape codes are 10 above foregrounds colors.
 	ColorId calculateBackgroundColorId(ColorId color_id) {
@@ -46,16 +52,26 @@ namespace printer {
 			maxAmounts[printer::msgToInt(type)] = amount;
 	}
 
-	void Console::add(const MessagePack& pack) { messagePacks.push_back(std::move(pack)); }
+	void Console::add(const MessagePack& pack) { 
+		messagePacks.push_back(std::move(pack)); 
+		INSTANT_LOG
+	}
 
-	void Console::add(MessagePack&& pack) { messagePacks.emplace_back(std::move(pack)); }
+	void Console::add(MessagePack&& pack) { 
+		messagePacks.emplace_back(std::move(pack)); 
+		INSTANT_LOG	
+	}
 
-	void Console::add(const Message& message) { messagePacks.push_back({ message }); }
+	void Console::add(const Message& message) { 
+		messagePacks.push_back({ message }); 
+		INSTANT_LOG
+	}
 
 	void Console::add(Message&& message) {
 		MessagePack pack;
 		pack.emplace_back(std::move(message));
 		messagePacks.push_back(std::move(pack));
+		INSTANT_LOG
 	}
 
 	void Console::print(std::ostream& out) const {
