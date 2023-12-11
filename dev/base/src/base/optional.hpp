@@ -28,21 +28,22 @@
  * }
  *
  * // Or simply
- * if_opt_some(test, value) {
- * 	std::cout << "Test has value of: " << value << "\n";
+ * base::optional<int> test2 = 42;
+ * if_opt_some(test2, value) {
+ * 	std::cout << "Test2 has value of: " << value << "\n";
  * }
  *
- * if_opt_none(test) {
- * 	std::cout << "Test has no value.\n";
+ * if_opt_none(test2) {
+ * 	std::cout << "Test2 has no value.\n";
  * }
  *
  */
-#define match_optional(optional)                                                     \
-	PUSH_DIAGNOSTIC                                                                  \
-	NO_SHADOW                                                                        \
-	if (bool _perform_match = true)                                                  \
+#define match_optional(optional)                                                \
+	PUSH_DIAGNOSTIC                                                             \
+	NO_SHADOW                                                                   \
+	if (bool _perform_match = true)                                             \
 		for (DECL_FORWARDING_VAR(_internal_optional, optional); _perform_match; \
-		     _perform_match                              = false)                    \
+		     _perform_match = false)                                            \
 	POP_DIAGNOSTIC
 
 #define opt_some(_value_name)                                                   \
@@ -62,7 +63,7 @@
 	PUSH_DIAGNOSTIC                                                                 \
 	NO_SHADOW                                                                       \
 	if (bool _perform_if = optional.has_value())                                    \
-		for (DECL_FORWARDING_VAR(_internal_optional, optional); _perform_if;)  \
+		for (DECL_FORWARDING_VAR(_internal_optional, optional); _perform_if;)       \
 			for (const auto& _value_name = _internal_optional.value(); _perform_if; \
 			     _perform_if             = false)                                   \
 	POP_DIAGNOSTIC
@@ -75,9 +76,9 @@
 
 namespace base {
 	/**
-	 * Optional is a analogue of std::optional, but better.
+	 * base::Optional is analogous to std::optional, but better.
 	 * As its name naturally suggests,
-	 * it may or may not hold a value underneath, 
+	 * it may or may not hold a value underneath,
 	 * and the programmer has to first
 	 * check for it's presence.
 	 *
@@ -92,23 +93,21 @@ namespace base {
 	template<class T>
 	class Optional {
 	public:
-		Optional() = default;
+		Optional()  = default;
 		~Optional() = default;
 
 		Optional(const T& value): private_optional(value) {}
 
 		template<class... Args>
 		Optional(Args&&... args):
-			private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
+			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
 		Optional(Optional&&)                 = default;
 		Optional(const Optional&)            = default;
 		Optional& operator=(Optional&&)      = default;
 		Optional& operator=(const Optional&) = default;
 
-		explicit constexpr operator bool() const {
-			return has_value();
-		}
+		explicit constexpr operator bool() const { return has_value(); }
 
 		Optional& operator=(T&& other) {
 			private_optional = std::move(other);
