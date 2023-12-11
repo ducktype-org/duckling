@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <source_position/source_position.hpp>
+#include <diagnostic/source_position.hpp>
 #include <printer/printer.hpp>
 
 namespace dia {

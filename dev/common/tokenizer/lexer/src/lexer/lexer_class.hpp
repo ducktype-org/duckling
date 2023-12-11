@@ -2,7 +2,7 @@
 
 #include <printer/printer.hpp>
 #include <filesystem/file.hpp>
-#include <error_state/error_state.hpp>
+#include <diagnostic/error_state.hpp>
 #include <vector>
 #include "char.hpp"
 #include "token.hpp"

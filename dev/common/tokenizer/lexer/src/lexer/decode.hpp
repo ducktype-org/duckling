@@ -1,6 +1,8 @@
 #pragma once
 
 #include "char.hpp"
+#include <diagnostic/error_state.hpp>
+#include <filesystem/encoding.hpp>
 
 namespace lexer {
 	/**

@@ -5,13 +5,12 @@
 
 #pragma once
 
-#include <array>
-#include <memory>
 #include <string>
 #include <vector>
 
 #include "char.hpp"
-#include "source_position/source_position.hpp"
+#include "diagnostic/source_position.hpp"
+#include <base/smart_pointers.hpp>
 #include <base/raw_view.hpp>
 #include <base/string_id.hpp>
 #include <filesystem/file.hpp>

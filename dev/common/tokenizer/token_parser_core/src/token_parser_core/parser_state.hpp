@@ -3,7 +3,7 @@
 #include "token_stream.hpp"
 #include "parser_ref.hpp"
 
-#include <error_state/error_state.hpp>
+#include <diagnostic/error_state.hpp>
 
 namespace tpc {
 

@@ -1,10 +1,6 @@
 #pragma once
 
-#include <unicode/uniset.h>
-#include <unicode/utypes.h>
-#include <printer/printer.hpp>
-#include <filesystem/encoding.hpp>
-#include <error_state/error_state.hpp>
+#include "classifications.hpp"
 #include <base/raw_view.hpp>
 #include <vector>
 #include <string>

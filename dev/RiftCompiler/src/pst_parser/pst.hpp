@@ -6,7 +6,7 @@
 
 #include "rift_parser_base.hpp"
 #include <token_parser_core/parser_state.hpp>
-#include <error_state/error_state.hpp>
+#include <diagnostic/error_state.hpp>
 
 namespace pst {
 	/**

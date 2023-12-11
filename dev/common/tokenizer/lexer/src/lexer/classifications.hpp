@@ -5,6 +5,8 @@
 
 namespace lexer {
 
+	using UChar = UChar32;
+
 	/**
 	 * @brief Sets of characters used to distinguish between their usage in source code
 	 * 

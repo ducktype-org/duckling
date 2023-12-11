@@ -4,17 +4,7 @@
  */
 
 #include "char.hpp"
-#include "classifications.hpp"
-#include <unicode/uchar.h>
-#include <base/convert.hpp>
-#include <base/str_concat.hpp>
-#include <utility>
-#include <vector>
-#include <cctype>
-#include <sstream>
-#include <array>
-#include <string>
-#include <iostream>
+#include <base/exceptions.hpp>
 
 namespace lexer {
 
