@@ -7,13 +7,17 @@
 
 #include "printer.hpp"
 
-#ifdef PRINT_LOG
-#define INSTANT_LOG print(std::cerr);clear();
-#else
-#define INSTANT_LOG
-#endif
 
 namespace printer {
+	static inline void INSTANT_DEBUG_LOG(Console& console) {
+		#ifdef PRINT_LOG
+		if (!console.isIgnoreInstantDebug()) {
+			console.print(std::cerr);
+			console.clear();
+		}
+		#endif
+	}
+
 	// All background color escape codes are 10 above foregrounds colors.
 	ColorId calculateBackgroundColorId(ColorId color_id) {
 		constexpr int8_t background_font_color_offset = 10;
@@ -54,24 +58,24 @@ namespace printer {
 
 	void Console::add(const MessagePack& pack) { 
 		messagePacks.push_back(std::move(pack)); 
-		INSTANT_LOG
+		INSTANT_DEBUG_LOG(*this);
 	}
 
 	void Console::add(MessagePack&& pack) { 
 		messagePacks.emplace_back(std::move(pack)); 
-		INSTANT_LOG	
+		INSTANT_DEBUG_LOG(*this);
 	}
 
 	void Console::add(const Message& message) { 
 		messagePacks.push_back({ message }); 
-		INSTANT_LOG
+		INSTANT_DEBUG_LOG(*this);
 	}
 
 	void Console::add(Message&& message) {
 		MessagePack pack;
 		pack.emplace_back(std::move(message));
 		messagePacks.push_back(std::move(pack));
-		INSTANT_LOG
+		INSTANT_DEBUG_LOG(*this);
 	}
 
 	void Console::print(std::ostream& out) const {
