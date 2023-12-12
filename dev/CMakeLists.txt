@@ -19,7 +19,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 set(CMAKE_CXX_FLAGS "-Werror=return-type -Werror=terminate -Werror=shadow=local -Wall -Wextra -Wno-sign-compare -O2")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+# Wersja debug wypisuje na razie wszystkie możliwe informacje dynamicznie
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -O0")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
