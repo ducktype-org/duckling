@@ -1,16 +1,19 @@
+/**
+ * @file export_keywords.hpp
+ * @brief LSP Interface
+ */
+
 #pragma once
 
 #include <string>
 
-
-
-namespace lsp_interface {
+namespace lsp {
     class LspInterface {
     public:
         LspInterface();
-        std::string get_keyword_list_json();
-        std::string get_special_list_json();
-        std::string get_operator_list_json();
-        std::string get_all_json();
+        std::string getKeywordListJson();
+        std::string getSpecialListJson();
+        std::string getOperatorListJson();
+        std::string getAllJson();
     };
 }

@@ -253,7 +253,7 @@ namespace rift_def {
 
 	std::vector<Keyword> getKeywords() {
 		std::vector<Keyword> result;
-		for (auto &[k, s, f]: rift_keywords_array) {
+		for (const auto& [k, s, f]: rift_keywords_array) {
 			result.push_back(k);
 		}
 		return result;
@@ -261,7 +261,7 @@ namespace rift_def {
 	
 	std::vector<Special> getSpecials() {
 		std::vector<Special> result;
-		for (auto &[k, s]: special_array) {
+		for (const auto& [k, s]: special_array) {
 			result.push_back(k);
 		}
 		return result;
@@ -269,11 +269,9 @@ namespace rift_def {
 
 	std::vector<Operator> getOperators() {
 		std::vector<Operator> result;
-		for (auto &[k, s]: operator_array) {
+		for (const auto& [k, s]: operator_array) {
 			result.push_back(k);
 		}
 		return result;
 	}
-
-
 }
