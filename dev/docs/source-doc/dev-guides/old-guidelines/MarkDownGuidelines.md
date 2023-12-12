@@ -48,4 +48,4 @@
 1. Links  
    <https://github.com/rift-lang/>  
    [Rift Lang](https://github.com/rift-lang/)  
-   [How to write .md](#source-doc/dev-guides/old-guidelines/MarkDownGuidelines.md:how-to-write-md-for-github)
+   [How to write .md](source-doc/dev-guides/old-guidelines/MarkDownGuidelines:how-to-write-md-for-github)
