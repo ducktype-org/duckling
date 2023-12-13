@@ -52,17 +52,17 @@ private:
 		);
 
 		assert(
-			inner_tokens[0].isBracketGroup('('),
+			inner_tokens[0].isBracketGroup(lexer::Token::BracketType::Round),
 			"First token is not a round bracket group"
 		);
 
 		assert(
-			inner_tokens[1].isBracketGroup('['),
+			inner_tokens[1].isBracketGroup(lexer::Token::BracketType::Square),
 			"Second token is not a square bracket group"
 		);
 
 		assert(
-			inner_tokens[2].isBracketGroup('{'),
+			inner_tokens[2].isBracketGroup(lexer::Token::BracketType::Curly),
 			"Third token is not a curly bracket group"
 		);
 

@@ -6,17 +6,16 @@
 
 namespace lexer {
 	/**
-	 * Decode array of bytes using given encoding
+	 * Decode an array of bytes using given encoding
 	 * 
-	 * @tparam encoding Which encoding should function use
-	 * @param bytes Vector of bytes to decode
-	 * @param err ErrorState to store errors
+	 * @tparam encoding Which encoding should the function use.
+	 * @param bytes View of the bytes to decode
+	 * @param err `dia::ErrorState` to store errors
 	 * 
 	 * @return CharArray of decoded data
 	 * 
 	 * @note We should probably stick to only decoding UTF-8 for now
 	 */
-	
 	template<fs::Encoding encoding>
 	CharArray decode(base::RawView bytes, dia::ErrorState& err);
 

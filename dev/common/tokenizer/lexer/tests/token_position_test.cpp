@@ -6,7 +6,7 @@
 #include <iostream>
 #include <sstream>
 
-void print(const Tokens& tokens, std::ostream& out, const std::string& indent = "") {
+void print(const lexer::Tokens& tokens, std::ostream& out, const std::string& indent = "") {
 	out << "[";
 	for (const auto& token: tokens) {
 		dia::SourcePosition position = token.getPosition();
@@ -46,7 +46,7 @@ public:
 private:
 	void simplePositionTest() {
 		fs::FilePath file(path("fun.rift"));
-		td = lexer::tokenizeFile(file, true);
+		td = lexer::tokenizeFile(file);
 
 		std::stringstream result_stream;
 		print(td->tokens, result_stream);

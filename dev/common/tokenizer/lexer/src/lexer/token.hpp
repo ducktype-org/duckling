@@ -17,20 +17,21 @@
 #include <rift_definitions/key_spec_op.hpp>
 
 namespace lexer {
-	class Token;
-}
-
-using Tokens = std::vector<lexer::Token>;
-
-namespace lexer {
 	using rift_def::Keyword;
 	using rift_def::Operator;
 	using rift_def::Special;
 
+	class Token;
 	/**
-	 * @brief Class used to store token information
+	 * @brief Type representing a list of tokens
 	 * 
-	 * @todo Implement formatted string
+	 */
+	using Tokens = std::vector<lexer::Token>;
+
+	/**
+	 * @brief Class representing a single token and providing methods of accessing information about it
+	 * 
+	 * @todo Implement formatted string support
 	 */
 	class Token {
 	public:
@@ -50,7 +51,7 @@ namespace lexer {
 		};
 
 		/**
-	 	* @brief Non-exhaustive enum of bracket name -> bracket type(code of opening bracket)
+	 	* @brief Non-exhaustive enum of bracket types
 	 	* 
 	 	*/
 		enum BracketType: UChar32 {
@@ -63,7 +64,7 @@ namespace lexer {
 
 
 		/**
-		 * @name Functions that construct Tokens
+		 * @name Functions that construct a Token
 		 * @{
 		 */
 		static Token makeSentinelEnd(base::RawView view, const dia::SourcePosition&);
@@ -71,7 +72,7 @@ namespace lexer {
 		static Token makeKeyword(base::RawView keyword, const dia::SourcePosition&);
 		static Token makeNumber(const base::RawView number, dia::SourcePosition);
 		static Token makeString(base::RawView string, const dia::SourcePosition&);
-		static Token makeFormattedString(Tokens&& tokens, dia::SourcePosition);
+		static Token makeFormattedString(Tokens&& tokens, dia::SourcePosition); ///< Unimplemented
 		static Token makeBracketGroup(BracketType bracket_type, Tokens&& tokens, Token&& sentinel, const dia::SourcePosition&);
 		static Token makeComment(base::RawView comment, const dia::SourcePosition&);
 		static Token makeOperator(base::RawView oper, const dia::SourcePosition&);
@@ -105,7 +106,7 @@ namespace lexer {
 		[[nodiscard]]
 		bool isBracketGroup() const;
 		[[nodiscard]]
-		bool isBracketGroup(UChar32 bracket_type) const;
+		bool isBracketGroup(BracketType) const;
 
 		[[nodiscard]]
 		bool isRecursive() const;
@@ -156,7 +157,7 @@ namespace lexer {
 	};
 
 	/**
-	 * @brief Class used to store a tokenized file
+	 * @brief A basic wrapper for tokenization result
 	 */
 	struct TokenData {
 		Tokens          tokens;

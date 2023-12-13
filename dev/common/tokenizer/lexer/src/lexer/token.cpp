@@ -118,7 +118,7 @@ namespace lexer {
 		return type == Type::BracketGroup;
 	}
 
-	bool Token::isBracketGroup(UChar32 type) const {
+	bool Token::isBracketGroup(BracketType type) const {
 		return isBracketGroup() && bracket_type == type;
 	}
 

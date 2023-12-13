@@ -3,6 +3,8 @@
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
  */
 
+#define PRINT_LOG
+
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <iostream>
@@ -16,5 +18,5 @@ int main(int argc, char** argv) {
 	}
 	lexer::init();
 	FilePath file(argv[1]);
-	auto     tokens = lexer::tokenizeFile(file, true);
+	auto     tokens = lexer::tokenizeFile(file);
 }

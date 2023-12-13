@@ -2,9 +2,6 @@
 SourcePosition
 ==============
 
-This is detailed code documentation for
-`source_position.hpp <https://github.com/rift-lang/rift-dev/blob/main/dev/common/lexer/src/lexer/source_position.hpp>`_.
-
 SourcePosition is used for storing a position of the token in a source file.
 
 .. code-block:: cpp
@@ -22,5 +19,7 @@ SourcePosition is used for storing a position of the token in a source file.
     std::cout << error_message << '\n';
     ...
 
-.. doxygenclass:: lexer::SourcePosition
+.. doxygenclass:: dia::SourcePosition
    :members:
+   :private-members:
+   :undoc-members:

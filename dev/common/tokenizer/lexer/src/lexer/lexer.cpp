@@ -19,9 +19,9 @@ namespace lexer {
 		RIFT_SIMPLE_INIT_GUARD_END
 	}
 
-	lexer::TokenData tokenizeFile(const fs::FilePath& file, bool dprint) {
+	lexer::TokenData tokenizeFile(const fs::FilePath& file) {
 		Lexer lexer(file);
-		auto [tokens, eof_token] = lexer.tokenize(dprint);
+		auto [tokens, eof_token] = lexer.tokenize();
 		if (lexer.getErrorState().fail()) {
 			lexer.getErrorState().dumpLog(std::cerr);
 			throw base::LogicError("syntax error during lexing");

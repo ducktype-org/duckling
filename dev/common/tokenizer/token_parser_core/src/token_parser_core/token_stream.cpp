@@ -58,8 +58,8 @@ namespace tpc {
 		return peek(fwd).isBracketGroup();
 	}
 
-	bool TokenStream::isBracketGroup(UChar32 group_type, usize fwd) const {
-		return peek(fwd).isBracketGroup(group_type);
+	bool TokenStream::isBracketGroup(Token::BracketType bracket_type, usize fwd) const {
+		return peek(fwd).isBracketGroup(bracket_type);
 	}
 
 	bool TokenStream::isRecursive(usize fwd) const {

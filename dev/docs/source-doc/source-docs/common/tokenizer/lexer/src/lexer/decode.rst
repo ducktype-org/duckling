@@ -1,0 +1,5 @@
+======
+Decode
+======
+
+.. doxygenfunction:: lexer::decode

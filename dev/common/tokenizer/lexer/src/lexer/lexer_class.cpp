@@ -15,14 +15,9 @@ namespace lexer {
 			}
 		}
 
-	TokenizationResult Lexer::tokenize(bool dprint) {
+	TokenizationResult Lexer::tokenize() {
 		tokens.clear();
-		token_messages = dprint;
 		codeblock();
-		if (dprint) {
-			// @TODO: better customization of this dprint
-			log.print(std::cerr);
-		}
 		dia::SourcePosition eof_pos(file, line, column, where);
 		return { std::move(tokens), Token::makeSentinelEof(eof_pos) };
 	}
@@ -66,7 +61,7 @@ namespace lexer {
 	void Lexer::addTokenMsg(
 		usize begin, usize end, std::string_view token_type
 	) {
-		if (token_messages) {
+		if (token_messages()) {
 			log.add(printer::Message(
 				{ { "Add token: " },
 			      { std::string(token_type) },
@@ -330,7 +325,7 @@ namespace lexer {
 
 		Token::BracketType bracket_type{peek().value};
 		auto group_end = peek().bracketPair();
-		if (token_messages)
+		if (token_messages())
 			log.add({ { { base::strConcat("group begin(", line, ":", column, ")") } }, printer::MessageType::DEBUG });
 
 
@@ -371,7 +366,7 @@ namespace lexer {
 		output.push_back(
 			Token::makeBracketGroup(bracket_type, std::move(inner_tokens), std::move(sentinel), sourcePosition)
 		);
-		if (token_messages)
+		if (token_messages())
 			log.add({ { { "group end" } }, printer::MessageType::DEBUG });
 	}
 

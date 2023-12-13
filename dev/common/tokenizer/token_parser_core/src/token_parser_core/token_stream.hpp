@@ -12,6 +12,7 @@ namespace tpc {
 	using lexer::Operator;
 	using lexer::Special;
 	using lexer::Token;
+	using lexer::Tokens;
 
 	class TokenStream {
 		const Tokens& tokens;
@@ -56,7 +57,7 @@ namespace tpc {
 		[[nodiscard]]
 		bool isBracketGroup(usize fwd = 0) const;
 		[[nodiscard]]
-		bool isBracketGroup(UChar32 group_type, usize fwd = 0) const;
+		bool isBracketGroup(Token::BracketType type, usize fwd = 0) const;
 
 		[[nodiscard]]
 		bool isRecursive(usize fwd = 0) const;

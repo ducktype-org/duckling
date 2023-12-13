@@ -14,9 +14,7 @@ Common
     config/index.rst
     filesystem/index.rst
     json/index.rst
-    lexer/index.rst
     listener/index.rst
     printer/index.rst
-    rift_definitions/index.rst
     tester/index.rst
-    token_parser_core/index.rst
+    tokenizer/index.rst

@@ -1,6 +1,6 @@
-=====
-Lexer
-=====
+===========
+Error State
+===========
 
 .. @TODO
 .. this description is copied from README.md from github
@@ -13,5 +13,4 @@ Module implementing lexing of any text according to rules defined by Rift Progra
     :titlesonly:
     :glob:
 
-    src/lexer/index.rst
-    tests.rst
+    src/error_state/index.rst

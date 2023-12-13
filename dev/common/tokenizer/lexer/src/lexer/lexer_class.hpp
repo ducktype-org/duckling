@@ -18,7 +18,6 @@ namespace lexer {
 	 * @brief Class used to manage lexing
 	 * 
 	 * @todo Add format string lexing
-	 * @todo Improve comment lexing
 	 * @todo Improve unicode support(soon: identifier normalization, at some point: ignorable format controls)
 	 */
 	class Lexer {
@@ -29,7 +28,7 @@ namespace lexer {
 		explicit Lexer(const fs::FilePath& file);
 
 		[[nodiscard]]
-		TokenizationResult tokenize(bool dprint);
+		TokenizationResult tokenize();
 
 		[[nodiscard]]
 		const dia::ErrorState& getErrorState() const {
@@ -50,7 +49,7 @@ namespace lexer {
 		/**@}*/
 
 		/** 
-		 * @name top level parsers:
+		 * @name Top level parsers:
 		 * @{
 		 */
 		using LexerCondition = std::function<bool(const Lexer&)>;
@@ -61,19 +60,10 @@ namespace lexer {
 		/**@}*/
 
 		/** 
-		 * @name non-terminal tokens parsers:
+		 * @name tokens parsers:
 		 * @{
 		 */
-		/**
-		 * @note handle unexpected eof / bad closing brackets
-		*/
 		void bracketHandler(Tokens& output);
-		/**@}*/
-
-		/** 
-		 * @name terminal tokens parsers:
-		 * @{
-		 */
 		void commentHandler(Tokens& output);
 		void blockCommentHandler(Tokens& output);
 		void operatorHandler(Tokens& output);
@@ -112,20 +102,24 @@ namespace lexer {
 		[[nodiscard]]
 		dia::SourcePosition currentPostion() const;
 
-		/**
-		 * @name current position of lexing
-		 * @{
-		 */
-		usize                         where        = 0;
+		usize                         where        = 0; ///< Current position in file
 		usize                         line   = 1;
 		usize                         column = 1;
-		/**@}*/
 		std::shared_ptr<fs::FilePath> file;
 		fs::FileContent               file_content;
 		CharArray                     char_array;
 		Tokens                        tokens;
 
-		bool token_messages = false; ///< Informs whether to print messages about what tokens are created to the debug stream
+		/**
+		 * @brief Informs whether to print messages about what tokens are created to the debug stream based on the PRINT_LOG define
+		 */
+		static constexpr bool token_messages() {
+			#ifdef PRINT_LOG
+			return true;
+			#else
+			return false;
+			#endif
+		}
 
 		dia::ErrorState errorState;
 		printer::Console log;

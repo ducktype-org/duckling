@@ -2,9 +2,9 @@
 Char
 ====
 
-.. @TODO
+.. doxygentypedef:: lexer::CharArray
 
-ABC
+.. doxygenfunction:: lexer::composeRaw
 
 .. doxygenclass:: lexer::Char
    :members:

@@ -5,16 +5,14 @@
 
 namespace lexer {
 
-	using UChar = UChar32;
-
 	/**
-	 * @brief Sets of characters used to distinguish between their usage in source code
+	 * @brief Sets of characters used to decide what a certain character means in source code
 	 * 
-	 * @todo Maybe move to a more general location
+	 * @note Maybe it should be separated from lexer
 	 * 
-	 * @attention There are currently two codepoints that belong in both name_start and operator_continue They are U+1885 and U+1886 for now they will be treated as a continuation of the operator when it's ambiguous
+	 * @note There are currently two codepoints that belong in both `name_start` and `operator_continue`. They are U+1885 and U+1886. For now they will be treated as a continuation of the operator when it's ambiguous.
 	 * 
-	 * @note There are some undefined characters in Syntax and operator sets(They will be caught by the decoder)
+	 * @note There are some undefined characters in Syntax and operator sets(They are currently detected by the decoder).
 	 */
 	struct Classifications {
 
@@ -33,7 +31,7 @@ namespace lexer {
 		inline static icu::UnicodeSet newline;
 		inline static icu::UnicodeSet whitespace; ///< union of vertical_space, newline and format_control
 		/**
-		 * @brief  Codepoints that allow to change the look of the text like left to right and right to left. They are to be treated according to @link https://unicode.org/reports/tr31/#Contexts_for_Ignorable_Format_Controls @endlink
+		 * @brief  Codepoints that allow to change the look of the text like left to right and right to left. They are to be treated according to the [Unicode report](https://unicode.org/reports/tr31/#Contexts_for_Ignorable_Format_Controls). 
 		 * 
 		 */
 		inline static icu::UnicodeSet format_control;
@@ -55,6 +53,9 @@ namespace lexer {
 
 		inline static const std::array<icu::UnicodeSet*, 13> classes= {&name_start, &name_continue, &operator_start, &operator_continue, &vertical_space, &newline, &whitespace, &format_control, &special, &syntax, &open_bracket, &close_bracket, &end_of_file};
 
+		/**
+		 * @brief Populates the data members of this class
+		 */
 		static void init();
 		Classifications() = delete;
 	};

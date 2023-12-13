@@ -7,13 +7,8 @@
 #include <optional>
 
 namespace lexer {
-	class Char;
-	using CharArray = const std::vector<Char>;
-
-	base::RawView composeRaw(CharArray&, usize begin, usize end);
-
 	/**
-	 * @brief Class used for characters and checking their classifications
+	 * @brief Class representing a Unicode code point and allowing to check it's classifications
 	 */
 	class Char {
 	public:
@@ -47,4 +42,19 @@ namespace lexer {
 		[[nodiscard]]
 		std::string rawStr() const;
 	};
+
+	/**
+	 * @brief Type used to store all characters decoded from a single source code
+	 */
+	using CharArray = const std::vector<Char>;
+
+	/**
+	 * @brief Assembles a `base::RawView` pointing to the placement of the given range in source code.
+	 * 
+	 * @param arr Array of characters in source code
+	 * @param begin First character index in `arr` 
+	 * @param end Last character index in `arr` 
+	 */
+	base::RawView composeRaw(CharArray& arr, usize begin, usize end);
+
 }
