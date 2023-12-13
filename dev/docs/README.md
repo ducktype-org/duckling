@@ -32,15 +32,13 @@ Installing deps:
 
   ```sh
   sudo apt update
-  sudo apt install doxygen
-  sudo apt install graphviz
+  sudo apt install doxygen graphviz
   ```
 
 - Arch Linux (btw, I use arch):
 
   ```sh
-  sudo pacman -Syu doxygen
-  sudo pacman -S graphviz
+  sudo pacman -Syu doxygen graphviz
   ```
 
 Then, from the `dev/` directory run
