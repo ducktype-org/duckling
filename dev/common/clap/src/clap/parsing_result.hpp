@@ -13,6 +13,7 @@
 #include "base/optional.hpp"
 #include "base/maps.hpp"
 #include "parameter.hpp"
+#include "base/anycast.hpp"
 
 namespace clap {
 	class Clap;
@@ -43,7 +44,7 @@ namespace clap {
 
 		template<class T, class N>
 		base::Optional<T> getValue(const N& name) const {
-			if_opt_some(getId(name), id) return castValue<T>(id_to_value.at(id).value);
+			if_opt_some(getId(name), id) return base::anyCast<T>(id_to_value.at(id).value);
 			return {};
 		}
 
@@ -56,14 +57,14 @@ namespace clap {
 		template<class T>
 		[[nodiscard]]
 		T getPositional(usize position) const {
-			return castValue<T>(positional_values[position].value);
+			return base::anyCast<T>(positional_values[position].value);
 		}
 
 		template<class T>
 		[[nodiscard]]
 		base::Optional<T> getExtra(usize position) const {
 			if (position < getExtraParameterCount())
-				return castValue<T>(extra_values[position].value);
+				return base::anyCast<T>(extra_values[position].value);
 			return {};
 		}
 
@@ -114,26 +115,5 @@ namespace clap {
 		std::vector<ParsedValue> extra_values;
 
 		std::unordered_set<usize> flags;
-
-		template<class T>
-		T castValue(const std::any& value) const {
-			try {
-				return std::any_cast<T>(value);
-			} catch (std::bad_any_cast&) {
-				throw base::LogicError(base::strConcat(
-					"Bad any_cast: Value is of ",
-#ifndef __GNUC__
-					"type : \"",
-					value.type().name(),  // This function works very poorly in gcc - displays only
-				                          // the first letter of the type - for i64 == 'l'
-					"\" instead of \"",
-#else
-					"different type than \"",
-#endif
-					base::type_name<T>(),
-					"\""
-				));
-			}
-		}
 	};
 }

@@ -47,15 +47,15 @@ namespace base {
 
 	// Thanks to https://stackoverflow.com/a/56766138
 	template<class T>
-	constexpr auto type_name() {
+	constexpr auto typeName() {
 		std::string_view name, prefix, suffix;
 #ifdef __clang__
 		name   = __PRETTY_FUNCTION__;
-		prefix = "auto base::type_name() [T = ";
+		prefix = "auto base::typeName() [T = ";
 		suffix = "]";
 #elif defined(__GNUC__)
 		name   = __PRETTY_FUNCTION__;
-		prefix = "constexpr auto base::type_name() [with T = ";
+		prefix = "constexpr auto base::typeName() [with T = ";
 		suffix = "]";
 #elif defined(_MSC_VER)
 		name   = __FUNCSIG__;
