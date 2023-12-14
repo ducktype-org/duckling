@@ -24,6 +24,7 @@ pip3 install -r docs/doc-config/requirements.txt
 Also following dependencies are needed:
 
 - Doxygen
+- graphviz
 
 Installing deps:
 
@@ -32,12 +33,14 @@ Installing deps:
   ```sh
   sudo apt update
   sudo apt install doxygen
+  sudo apt install graphviz
   ```
 
 - Arch Linux (btw, I use arch):
 
   ```sh
   sudo pacman -Syu doxygen
+  sudo pacman -S graphviz
   ```
 
 Then, from the `dev/` directory run
