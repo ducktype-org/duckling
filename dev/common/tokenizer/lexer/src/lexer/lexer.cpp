@@ -21,12 +21,12 @@ namespace lexer {
 
 	lexer::TokenData tokenizeFile(const fs::FilePath& file) {
 		Lexer lexer(file);
-		auto [tokens, eof_token] = lexer.tokenize();
+		auto result = lexer.tokenize();
 		if (lexer.getErrorState().fail()) {
 			lexer.getErrorState().dumpLog(std::cerr);
 			throw base::LogicError("syntax error during lexing");
 		}
-		return { std::move(tokens), std::move(eof_token), file.getContent() };
+		return result;
 	}
 
 }

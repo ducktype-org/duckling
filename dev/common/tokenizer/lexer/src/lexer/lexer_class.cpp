@@ -15,11 +15,11 @@ namespace lexer {
 			}
 		}
 
-	TokenizationResult Lexer::tokenize() {
+	TokenData Lexer::tokenize() {
 		tokens.clear();
 		codeblock();
 		dia::SourcePosition eof_pos(file, line, column, where);
-		return { std::move(tokens), Token::makeSentinelEof(eof_pos) };
+		return { std::move(tokens), Token::makeSentinelEof(eof_pos), file_content };
 	}
 
 	void Lexer::next() {

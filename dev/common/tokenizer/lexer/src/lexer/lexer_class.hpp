@@ -9,11 +9,6 @@
 
 namespace lexer {
 
-	struct TokenizationResult {
-		Tokens tokens;
-		Token  eof_token;
-	};
-
 	/**
 	 * @brief Class used to manage lexing
 	 * 
@@ -28,7 +23,7 @@ namespace lexer {
 		explicit Lexer(const fs::FilePath& file);
 
 		[[nodiscard]]
-		TokenizationResult tokenize();
+		TokenData tokenize();
 
 		[[nodiscard]]
 		const dia::ErrorState& getErrorState() const {

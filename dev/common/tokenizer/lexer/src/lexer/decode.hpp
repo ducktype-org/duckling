@@ -6,7 +6,7 @@
 
 namespace lexer {
 	/**
-	 * Decode an array of bytes using given encoding
+	 * Decode an array of bytes using the given encoding
 	 * 
 	 * @tparam encoding Which encoding should the function use.
 	 * @param bytes View of the bytes to decode
