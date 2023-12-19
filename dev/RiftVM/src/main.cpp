@@ -52,7 +52,7 @@ int main(int argc, const char** argv) {
 		printer::Console console = printer::Console();
 		console.add({
 			{
-				{ "rift: ", printer::Color::DEFAULT },
+				{ base::strConcat(result.getFilePath(), ": "), printer::Color::DEFAULT },
 				{ "error: ", printer::Color::RED },
 				{ e.what(), printer::Color::DEFAULT },
 			},
