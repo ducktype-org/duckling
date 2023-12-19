@@ -24,12 +24,12 @@ namespace vm {
 
 		void finalize();
 
-		TypeCRef         getType(TypeId id) const;
-		option<TypeCRef> getTypeSafe(TypeId id) const;
+		TypeCRef                 getType(TypeId id) const;
+		base::Optional<TypeCRef> getTypeSafe(TypeId id) const;
 
 		// @TODO: This function is currently used by parser, but
 		// should be deleted in the future
-		option<TypeCRef> getTypeByName(base::StrId name) const;
+		base::Optional<TypeCRef> getTypeByName(base::StrId name) const;
 
 		template<class... DynamicData>
 		friend class DataManagerDef;

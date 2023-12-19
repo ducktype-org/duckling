@@ -25,13 +25,15 @@ namespace vm {
 		return types.getCRef(id).expect("Bad TypeId in getType");
 	}
 
-	option<TypeCRef> TypeMetadata::getTypeSafe(TypeId id) const { return types.getCRef(id); }
+	base::Optional<TypeCRef> TypeMetadata::getTypeSafe(TypeId id) const {
+		return types.getCRef(id);
+	}
 
-	option<TypeCRef> TypeMetadata::getTypeByName(base::StrId name) const {
+	base::Optional<TypeCRef> TypeMetadata::getTypeByName(base::StrId name) const {
 		if (names_to_type.contains(name))
 			return getType(names_to_type[name]);
 		else
-			return none<TypeCRef>();
+			return {};
 	}
 
 }

@@ -34,7 +34,7 @@ private:
 
 		auto maybe_ref = list.getRef(1);
 		assert(maybe_ref.has_value(), "No value");
-		auto ref = maybe_ref.expect("No value");
+		auto ref = maybe_ref.value();
 
 		assert(*ref == 3, "Bad stable list ref");
 		*ref = 4;
@@ -42,14 +42,14 @@ private:
 
 		auto maybe_c_ref = list.getCRef(0);
 		assert(maybe_c_ref.has_value(), "No value");
-		auto c_ref = maybe_c_ref.expect("No value");
+		auto c_ref = maybe_c_ref.value();
 		assert(*c_ref == 2, "Bad stable list c_ref");
 
-		for (usize i = 0; i < 100; i++) list.pushBack(i);
+		for (int i = 0; i < 100; i++) list.pushBack(i);
 
 		assert(list.getRef(102).has_value(), "No value where there should be");
-		assert(list.getRef(103).has_error(), "No error where there should be");
-		assert(list.getRef(104).has_error(), "No error where there should be");
+		assert(list.getRef(103).empty(), "Value where there should be none");
+		assert(list.getRef(104).empty(), "Value where there should be none");
 
 		assert(list.size() == 103, "bad list size");
 		assert(!list.empty(), "bad list empty");
@@ -72,7 +72,7 @@ private:
 
 		assert(list[key1] == 1, "bad value in list");
 
-		auto ref = list.getRef(key1).expect("No value in list");
+		auto ref = list.getRef(key1).value();
 		assert(*ref == 1, "bad reference");
 		*ref = 100;
 		assert(*ref == 100, "bad reference");

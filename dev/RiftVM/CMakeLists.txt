@@ -18,9 +18,7 @@ add_subdirectory(src/services_data)
 add_subdirectory(src/supervisor)
 
 add_library(LibRiftVm ${riftvm_sources})
-target_include_directories(LibRiftVm PUBLIC "${CMAKE_CURRENT_LIST_DIR}/libs/asio/asio/include")
-
-make_module(LibRiftVm USES Base Listener Clap Crow::Crow Filesystem TPC JSON)
+make_module(LibRiftVm USES Base Listener Clap Crow::Crow Filesystem TPC JSON Result)
 
 add_executable(RiftVm src/main.cpp src/server.cpp src/cli.cpp)
 target_link_libraries(RiftVm LibRiftVm)

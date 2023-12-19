@@ -19,24 +19,24 @@ namespace vm {
 		return status;
 	}
 
-	result<api::Response, api::LoadProgramError> VCPU::loadProgram(const fs::FilePath& path) {
+	cpp::result<api::Response, api::LoadProgramError> VCPU::loadProgram(const fs::FilePath& path) {
 		std::unique_lock lock(rwGlobal);
 		// @TODO: this code should be improved in the future to not just return plain strings
 		auto code_result = serviceManager.get<vm::Preprocessor>().getCode(path);
 
 		if (code_result.has_value()) {
-			loadedCode = code_result.value();
+			loadedCode = base::Optional(code_result.value());
 			return api::Response(api::response::Empty());
 		} else {
-			return failure(api::LoadProgramError(code_result.error()));
+			return cpp::failure(api::LoadProgramError(code_result.error()));
 		}
 	}
 
-	result<api::Response, api::CoreOperationError> VCPU::run() {
+	cpp::result<api::Response, api::CoreOperationError> VCPU::run() {
 		std::unique_lock lock(rwGlobal);
 		if (coreThread)
-			return failure(api::RunError{});  // @TODO: change to more verbose error handling
-		if (!loadedCode.has_value()) return failure(api::RunError{});
+			return cpp::failure(api::RunError{});  // @TODO: change to more verbose error handling
+		if (!loadedCode.has_value()) return cpp::failure(api::RunError{});
 		// @TODO: check VCPU status for loaded code
 		if (!uses_stdio) {
 			input_stream  = base::make_unique<std::stringstream>(std::stringstream());
@@ -56,17 +56,18 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	result<api::Response, api::CoreOperationError> VCPU::join() {
+	cpp::result<api::Response, api::CoreOperationError> VCPU::join() {
 		// @TODO: more verbose errors
 		// @TODO: check status
 		if (coreThread && coreThread->joinable())
 			coreThread->join();
 		else
-			return failure(api::JoinError{});
+			return cpp::failure(api::JoinError{});
 		return api::Response(api::response::Empty());
 	}
 
-	result<api::Response, api::CoreOperationError> VCPU::input(const api::request::Input& request) {
+	cpp::result<api::Response, api::CoreOperationError>
+		VCPU::input(const api::request::Input& request) {
 		// TODO: add checking for stdio
 		std::unique_lock lock(input_mutex);
 		input_stream->write(request.input.c_str(), request.input.size());
@@ -74,7 +75,7 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	result<api::Response, api::CoreOperationError> VCPU::output() {
+	cpp::result<api::Response, api::CoreOperationError> VCPU::output() {
 		// TODO: add checking for stdio
 		std::unique_lock lock(output_mutex);
 		std::string      content = output_stream->str();
@@ -82,14 +83,14 @@ namespace vm {
 		return api::Response(api::response::Output{ content });
 	}
 
-	result<api::Response, api::CoreOperationError> VCPU::stop() {
+	cpp::result<api::Response, api::CoreOperationError> VCPU::stop() {
 		serviceManager.get<vm::Executor>().stop();
-		ignore(join());
+		(void) join();
 		coreThread.reset(nullptr);
 		return api::response::Empty{};
 	}
 
-	result<api::Response, api::CoreOperationError>
+	cpp::result<api::Response, api::CoreOperationError>
 		VCPU::doRequest(const api::ExecutorRequest& request) {
 		variant_match(request) {
 			variant_case_novalue(api::request::Run) { return run(); }
@@ -119,30 +120,33 @@ namespace vm {
 		RIFT_PANIC("something went wrong");
 	}
 
-	result<api::Response, api::CoreOperationError> VCPU::doRequest(const api::DataRequest& request
-	) {
+	cpp::result<api::Response, api::CoreOperationError>
+		VCPU::doRequest(const api::DataRequest& request) {
 		std::shared_lock lock(rwStatus);
 		if (!std::holds_alternative<api::Executing>(status)) {
 			if (std::holds_alternative<api::Parsing>(status)
 			    || std::holds_alternative<api::TypeAnalysis>(status)) {
-				return fail(
+				return cpp::fail(
 					api::OtherError("Cannot do memory request while parsing or analyzing types")
 				);
 			}
 		}
 		api::ExecStatus execStatus = std::get<api::Executing>(status).exec_status;
 		if (std::holds_alternative<api::Running>(execStatus))
-			return fail(api::OtherError("Cannot do memory request while program is running"));
-		result<api::Response, api::CoreOperationError> response;
+			return cpp::fail(api::OtherError("Cannot do memory request while program is running"));
+		cpp::result<api::Response, api::CoreOperationError> response;
 		variant_match(request) {
 			variant_case(api::request::TypeMetadata, type_request) {
-				response
-					= dataManager.get<vm::TypeMetadata>()
-				          .getTypeByName(base::StrId(type_request.type_name.c_str()))
-				          .map([](const TypeCRef& type_ptr) { return api::Response(type_ptr); })
-				          .map_error([](auto&) {
-							  return api::CoreOperationError{ api::OtherError("Type not found") };
-						  });
+				auto res = dataManager.get<vm::TypeMetadata>().getTypeByName(
+					base::StrId(type_request.type_name.c_str())
+				);
+				match_optional(res) {
+					opt_some(value) { response = value; }
+					opt_none {
+						response = cpp::failure(api::CoreOperationError{
+							api::OtherError("Type not found") });
+					}
+				}
 			}
 			variant_case(api::request::Block, block_request) {
 				response
@@ -160,7 +164,7 @@ namespace vm {
 		return response;
 	}
 
-	result<api::Response, api::CoreOperationError>
+	cpp::result<api::Response, api::CoreOperationError>
 		VCPU::doRequest(const api::RequestVariant& request) {
 		variant_match(request) {
 			variant_case(api::ExecutorRequest, exec_request) { return doRequest(exec_request); }
@@ -171,6 +175,6 @@ namespace vm {
 	}
 
 	VCPU::~VCPU() {
-		if (coreThread) ignore(stop());
+		if (coreThread) (void) (stop());
 	}
 }

@@ -1,4 +1,3 @@
-add_subdirectory(config)
 add_subdirectory(filesystem)
 add_subdirectory(printer)
 add_subdirectory(tester)

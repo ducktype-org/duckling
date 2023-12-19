@@ -3,6 +3,8 @@ add_library(Base
 		src/base/impl/exceptions.cpp
 		src/base/impl/raw_view.cpp
 		src/base/impl/string_id.cpp
+		src/base/optional.hpp
+		src/base/anycast.hpp
 )
 
 set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)
@@ -24,5 +26,8 @@ rift_add_test(base stable_container_test_simple tests/stable_container_test.cpp
 rift_add_test(base test_smart_pointer tests/pointer_tests.cpp
 		USES Base)
 
-rift_add_test(base strimg_id_test_simple tests/string_id_test.cpp
+rift_add_test(base string_id_test_simple tests/string_id_test.cpp
 		USES Lexer Base)
+
+rift_add_test(base optional_tests tests/optional_test.cpp
+		USES Base Tester)
