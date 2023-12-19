@@ -22,6 +22,7 @@ private:
 		Message     m({ mc });
 		MessagePack mp = { m };
 		Console     c;
+		c.ignoreInstantDebug();
 		c.add(mp);
 		c.add(std::move(mp));
 
