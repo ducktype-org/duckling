@@ -3,8 +3,6 @@
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
  */
 
-#define PRINT_LOG
-
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <iostream>
