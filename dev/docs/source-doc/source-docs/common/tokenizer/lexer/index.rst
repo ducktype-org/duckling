@@ -8,6 +8,9 @@ Lexer
 
 Module implementing the conversion from source code to tokens using keyword definitions provided by ``rift_definitions`` module.
 
+.. note::
+    Lexer doesn't currently support other varieties of strings(format, raw), number separators, some comment features(token from text, recursive comments) and handling of ignorable format controls. It also doesn't currently do any normalization.
+
 .. toctree::
     :caption: Contents:
     :titlesonly:
