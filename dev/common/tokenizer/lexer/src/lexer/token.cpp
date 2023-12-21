@@ -25,6 +25,7 @@ namespace lexer {
 			RIFT_ASSERT(this->sentinel->getType() == Type::Sentinel, "non-sentinel token passed as sentinel");
 			RIFT_ASSERT(type == Type::BracketGroup, "non-bracket token created with bracket constructor");
 
+			// sets str_id of brackets to the pair of brackets for example "()"
 			std::string s;
 			icu::UnicodeString(bracket_type).append(u_getBidiPairedBracket(bracket_type)).toUTF8String(s);
 			str_id = base::StrId(base::RawView(s.data()));
