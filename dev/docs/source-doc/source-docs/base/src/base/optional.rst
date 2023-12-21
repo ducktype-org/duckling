@@ -33,6 +33,9 @@ Example
 		// Mapping the value, and changing a type!
 		ASSERT_EQUAL(2.2, *opt2.map([](int v) { return v * 1.1; }));
 
+        // --------------------------------------------------
+
+        // base::Optional can also hold a reference!
 		std::string                  name = "Rift";
 		base::Optional<std::string&> opt_name(name);
 
@@ -50,24 +53,18 @@ Example
 
     base::Optional<int> opt(4);
     match_optional(opt) {
-      opt_some(val) {
-        // Opt's value is now accessible through val!
-        std::cout << "Value: " << val << '\n';
-      }
-      opt_none {
-        std::cout << "No value!\n";
-      }
+        opt_some(val) {
+            // Opt's value is now accessible through val!
+            std::cout << "Value: " << val << '\n';
+        }
+        opt_none { std::cout << "No value!\n"; }
     }
 
     // Or simply
-    base::optional<int> magic_number = 42;
-    if_opt_some(magic_number, value) {
-      std::cout << "Magic number = " << value << "\n";
-    }
+    base::Optional<int> magic_number = 42;
+    if_opt_some(magic_number, value) { std::cout << "Magic number = " << value << "\n"; }
 
-    if_opt_none(test2) {
-      std::cout << "magic_number holds no value.\n";
-    }
+    if_opt_none(magic_number) { std::cout << "magic_number holds no value.\n"; }
 
 .. code-block::
     :caption: output

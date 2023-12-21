@@ -183,6 +183,9 @@ public:
 		// Mapping the value, and changing a type!
 		ASSERT_EQUAL(2.2, *opt2.map([](int v) { return v * 1.1; }));
 
+		// --------------------------------------------------
+
+		// base::Optional can also hold a reference!
 		std::string                  name = "Rift";
 		base::Optional<std::string&> opt_name(name);
 
