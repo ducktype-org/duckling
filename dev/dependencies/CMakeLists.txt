@@ -31,7 +31,6 @@ FetchContent_Declare(
 FetchContent_Declare(
 		crow
 		URL "https://github.com/CrowCpp/Crow/archive/${CROW_COMMIT}.zip"
-		SYSTEM
 )
 
 
@@ -39,6 +38,10 @@ FetchContent_MakeAvailable(asio)
 set(ASIO_INCLUDE_DIR "${asio_SOURCE_DIR}/asio/include")
 
 FetchContent_MakeAvailable(crow)
+# Marks Crow include libraries as system
+get_target_property(TEMP Crow INTERFACE_INCLUDE_DIRECTORIES)
+set_target_properties(Crow PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
+
 
 FetchContent_MakeAvailable(json_struct)
 
