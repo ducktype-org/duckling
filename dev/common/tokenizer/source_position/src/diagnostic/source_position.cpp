@@ -29,15 +29,24 @@ namespace dia {
 			line(line), column(column), 
 			source_start(source_start), source_end(source_end),
 			source_code(source_code) {
-		if (!source_code) throw base::LogicError("Invalid SourcePosition: No such file");
-		if (line == 0) throw base::LogicError("Invalid SourcePosition: line = 0");
-		if (column == 0) throw base::LogicError("Invalid SourcePosition: column = 0");
-		if (source_end < source_start)
+		if (!source_code) {
+			throw base::LogicError("Invalid SourcePosition: No such file");
+		}
+		if (line == 0) {
+			throw base::LogicError("Invalid SourcePosition: line = 0");
+		}
+		if (column == 0) { 
+			throw base::LogicError("Invalid SourcePosition: column = 0");
+		}
+		if (source_end < source_start) {
 			throw base::LogicError("Invalid SourcePosition: source end before source start");
+		}
 		// allow EOF position
-		if (not (source_end == source_start and source_end == source_code->getContent().size()))
-			if (source_end >= source_code->getContent().size())
+		if (not (source_end == source_start and source_end == source_code->getContent().size())) {
+			if (source_end >= source_code->getContent().size()) {
 				throw base::LogicError("Invalid SourcePosition: source end outside the file");
+			}
+		}
 	}
 	SourcePosition::SourcePosition(const SourcePosition& other):
 		line(other.line), column(other.column), 
