@@ -35,7 +35,8 @@ Example
         auto clap = clap::Clap()
                         .addHelpFlag()
                         .addPositional(clap::FileParser::make())
-                        .setDefaultParser(clap::FileParser::make())
+                        // "another_file" is an optional name for the parameter - displays in i.e. a help message
+                        .setDefaultParser(clap::FileParser::make("another_file"))
                         .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
                                  .optional()  // It's the default
                                  .addShortName('n')
@@ -73,3 +74,13 @@ Example
             return 1;
         }
     }
+
+
+.. code-block::
+    :caption: Help message illustration
+
+    ❯ ./clap_example_cat -h
+    Usage: clap_example_cat <file> [options] [another_file...]
+    Options:
+      -h, --help               Display this information.
+      -n, --times <int>        How many times to print each content
