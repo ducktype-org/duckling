@@ -108,7 +108,7 @@ namespace lexer {
 		/**
 		 * @brief Informs whether to print messages about what tokens are created to the debug stream based on the PRINT_LOG define
 		 */
-		static constexpr bool token_messages() {
+		static constexpr bool tokenMessages() {
 			#ifdef PRINT_LOG
 			return true;
 			#else
