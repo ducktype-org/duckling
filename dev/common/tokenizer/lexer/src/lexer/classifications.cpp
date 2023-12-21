@@ -10,6 +10,11 @@
 #include <iostream>
 
 namespace lexer {
+	/**
+	 * @brief Create unicode set from an u8 pattern, handles the errorcode and freezes the set
+	 * 
+	 * The pattern is in the icu::UnicodeSet::applyPattern format.
+	 */
 	void createFromPattern(icu::UnicodeSet& set, const std::u8string& pattern) {
 		icu::ErrorCode err;
 		set.applyPattern(icu::UnicodeString::fromUTF8(pattern), err);
@@ -22,6 +27,9 @@ namespace lexer {
 		return;
 	}
 
+	/**
+	 * @brief Checks whether the intersection of two sets is empty
+	 */
 	bool checkEmptyIntersect(icu::UnicodeSet& a, icu::UnicodeSet& b) {
 		icu::UnicodeSet c;
 		c.addAll(a).retainAll(b);
@@ -44,6 +52,9 @@ namespace lexer {
         }
 	}
 
+	/**
+	 * @brief Makes some checks on generated sets that might be useful when making changes or changing the icu version
+	 */
 	void sanityChecks() {
 		using Class = Classifications;
 		for (auto cl: Class::classes) {
