@@ -18,7 +18,7 @@ namespace base {
 		usize rest;
 		while (i < length && hex) {
 			rest = hex % 16;	
-			out[length + 1 - i] = (rest > 9) ? ('A' + rest - 10) : ('0' + rest);
+			out.at(length + 1 - i) = (rest > 9) ? ('A' + rest - 10) : ('0' + rest);
 			hex = hex / 16;
 			i++;
 		} 
