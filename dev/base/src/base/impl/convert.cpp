@@ -14,10 +14,11 @@ namespace base {
 		}
 		std::string out(length + 2, '0');
 		out[1] = 'x';
-		usize i = 0, r;
+		usize i = 0;
+		usize rest;
 		while (i < length && hex) {
-			r = hex % 16;	
-			out[length + 1 - i] = (r > 9) ? ('A' + r - 10) : ('0' + r);
+			rest = hex % 16;	
+			out[length + 1 - i] = (rest > 9) ? ('A' + rest - 10) : ('0' + rest);
 			hex = hex / 16;
 			i++;
 		} 
