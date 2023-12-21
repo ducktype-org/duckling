@@ -8,6 +8,7 @@ namespace lexer {
 	CharArray decode<fs::US_ASCII>(base::RawView bytes, dia::ErrorState& errorState) {
 		std::vector<Char> out;
 		for (usize i = 0; i < bytes.size(); i++) {
+			// Check if valid ascii byte
 			if ((bytes[i] & byte{ 0b10000000u }) != byte{ 0 }) {
 				errorState.failAndLog({{
 								{"ASCII decoding error:", printer::Color::BRIGHT_RED},
@@ -22,6 +23,7 @@ namespace lexer {
 			}
 			out.emplace_back(UChar32(bytes[i]), u8{1}, bytes.getBegin() + i);
 		}
+		// Add eof value
 		out.emplace_back(Classifications::end_of_file_value, u8{0}, bytes.getBegin() + bytes.size());
 		return CharArray(std::move(out));
 	}
@@ -37,6 +39,7 @@ namespace lexer {
 
 		usize pos = 0;
 		while (pos < bytes.size()) {
+			// Check if current byte is not a continuation byte
 			if (((bytes[pos] ^ byte{ 0b10000000u }) & byte{ 0b11000000u }) == byte{ 0 }) {
 				log_error(base::strConcat(
 					"Unexpected continuation byte ", 
@@ -48,6 +51,7 @@ namespace lexer {
 				pos++;
 				continue;
 			}
+			// Figure out the size and value stored in the first byte
 			usize size = 1;
 			UChar32 value = std::to_integer<UChar32>(bytes[pos]);
 			if ((bytes[pos] & byte{ 0b10000000u }) == byte{ 0 }) {
@@ -74,6 +78,7 @@ namespace lexer {
 				continue;
 			}
 
+			// check continuation bytes for validity and figure out their value
 			bool are_bytes_ok = true;
 			for(usize new_pos = pos + 1; new_pos < pos + size && new_pos < bytes.size(); new_pos++) {
 				if ((bytes[new_pos] & byte{ 0b11000000u }) != byte{ 0b10000000}) {
@@ -109,6 +114,7 @@ namespace lexer {
 				continue;
 			}
 
+			// Check if value is a valid unicode code point
 			if (!U_IS_UNICODE_CHAR(value) 
 				|| (U_GET_GC_MASK(value) & (U_GC_CN_MASK | U_GC_CO_MASK | U_GC_CS_MASK))) {
 				log_error(base::strConcat(
@@ -124,6 +130,7 @@ namespace lexer {
 			out.emplace_back(value, u8{size}, bytes.getBegin() + pos);
 			pos += size;
 		}
+		// Add eof value
 		out.emplace_back(Classifications::end_of_file_value, u8{0}, bytes.getBegin() + bytes.size());
 
 		return CharArray(std::move(out));
