@@ -10,6 +10,10 @@
 #include <printer/printer.hpp>
 #include "filesystem/file.hpp"
 
+void print_file(const fs::FilePath& file) {
+	std::cout << file.getContent().view().stdString() << '\n';
+}
+
 int main(int argc, const char** argv) {
 	auto clap = clap::Clap()
 	                .addHelpFlag()
@@ -38,6 +42,7 @@ int main(int argc, const char** argv) {
 	}
 
 	std::cout << result.getPositional<fs::FilePath>(0).getContent().view().stdString() << '\n';
+
 
 	for (usize i = 0; i < result.getExtraParameterCount(); i++)
 		std::cout << result.getExtra<fs::FilePath>(i).value().getContent().view().stdString()
