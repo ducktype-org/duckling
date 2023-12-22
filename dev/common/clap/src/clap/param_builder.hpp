@@ -5,13 +5,22 @@
 
 #pragma once
 
+#include <utility>
+
 #include "value_parser.hpp"
 #include "parameter.hpp"
 
 namespace clap {
 
-	class ParamBuilderException: public base::LogicError {
-		using base::LogicError::LogicError;
+	// This exception is not meant to be handled, as it means clap::Parameter
+	// has been built inappropriately.
+	struct ParamBuilderException: std::exception {
+		std::string what_str;
+
+	public:
+		explicit ParamBuilderException(std::string what_str): what_str(std::move(what_str)) {}
+
+		const char* what() const noexcept override { return what_str.c_str(); }
 	};
 
 	class ParamBuilder {

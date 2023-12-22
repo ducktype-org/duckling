@@ -43,11 +43,6 @@ Example
 		ASSERT_EQUAL("Rift!", name);
     }
 
-
-
-
-
-
 .. code-block:: cpp
     :caption: Macro usage example
 

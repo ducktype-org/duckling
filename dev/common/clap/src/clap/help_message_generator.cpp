@@ -36,9 +36,11 @@ namespace {
 				}
 			}
 		}
-
 		usage += "[options] ";
-		usage += "[" + clap.getDefaultValueParser()->getTypeName() + "...]";
+
+		auto default_parser = clap.getDefaultValueParser();
+		if (default_parser != nullptr) usage += "[" + default_parser->getTypeName() + "...]";
+
 		usage += '\n';
 
 		return usage;

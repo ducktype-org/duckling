@@ -1,8 +1,3 @@
-/**
- * @file clap_example_cat.cpp
- * @author Mateusz Kołpa (matihopemine@gmail.com)
- */
-
 // Prints n (n is optional) times contents of a given file(s) to stdin.
 // Usage:   cat <file> [file...]
 // Example: cat foo.txt -n 5
@@ -20,8 +15,8 @@ int main(int argc, const char** argv) {
 	auto clap = clap::Clap()
 	                .addHelpFlag()
 	                .addPositional(clap::FileParser::make())
-	                // "another_file" is an optional name for the parameter - displays in i.e. a
-	                // help message
+	                // "another_file" is an optional name for the parameter's value.
+	                // Displays in i.e. a help message.
 	                .setDefaultParser(clap::FileParser::make("another_file"))
 	                .add(clap::ParamBuilder::ofValue(clap::IntParser::make())
 	                         .optional()  // It's the default

@@ -13,20 +13,16 @@
 
 namespace clap {
 	struct CLIArgs {
-		usize        argc;
-		const char** argv;
+		usize        argc;  // Argument count
+		const char** argv;  // Pointer to an array of strings
 	};
 
 	/**
-	 * Command-line argument parser
+	 * Command-line argument parser.
 	 *
-	 * Clap assumes, that all of the non keyword arguments are at the beginning
-	 * : ./prog 1 2 3 -o file.txt
-	 * Where `1 2 3` are the non keyword arguments
+	 * Use clap::ParamBuilder to construct clap::Parameter.
 	 *
-	 * To construct a ConfigParameter use the ParamBuilder class.
-	 *
-	 * ./prog --help=<option_name> display longer description.
+	 * Refer to the clap docs for more complete example.
 	 */
 	class Clap {
 	public:
@@ -38,19 +34,39 @@ namespace clap {
 			  parameters(std::move(other.parameters)) {}
 
 		/**
-		 * Adds parameter to the Clap object. Positional arguments should come before named
-		 * arguments.
-		 * @param parameter
-		 * @return
+		 * Adds a named parameter to the Clap.
+		 * @param parameter A parameter constructed with clap::ParamBuilder.
+		 * @return A reference to self.
 		 */
 		Clap& add(Parameter&& parameter);
 
+		/**
+		 * Adds a positional parameter without a value to the Clap.
+		 * @param parameter Parameter's value parser created like: clap::StringParser::make().
+		 * @return A reference to self.
+		 */
 		Clap& addPositional(base::unique_ptr<ValueParser> parameter);
 
+		/**
+		 * Sets the default value parser for the Clap.
+		 * @param parser A value parses to be used.
+		 * @return A reference to self.
+		 */
 		Clap& setDefaultParser(base::unique_ptr<ValueParser> parser);
 
+		/**
+		 * Adds a standard help flag functionality.
+		 * If flag is passed raises clap::exceptions::HelpException.
+		 * @return A reference to self.
+		 */
 		Clap& addHelpFlag();
 
+		/**
+		 * Perform parsing.
+		 * @param argc Number of elements in argv.
+		 * @param argv A C-string array.
+		 * @return An object containing parsed command-line arguments.
+		 */
 		ParsingResult parse(usize argc, const char** argv);
 		ParsingResult parse(CLIArgs args);
 
