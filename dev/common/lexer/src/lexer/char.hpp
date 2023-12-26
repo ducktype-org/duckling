@@ -63,7 +63,7 @@ namespace lexer {
 
 		template<fs::Encoding encoding>
 		friend CharArray decode(base::RawView bytes);
-		friend CharArray;
+		friend class CharArray;
 
 	private:
 		Type           type_       = Empty;

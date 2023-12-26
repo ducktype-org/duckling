@@ -1,5 +1,5 @@
 /**
- * @file clap_parameter.hpp
+ * @file parameter.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
@@ -12,7 +12,8 @@
 
 namespace clap {
 
-	class ParsingResult;  // Forward declaration
+	// Forward declaration
+	class ParsingResult;
 
 	struct Optional {};
 
@@ -26,20 +27,42 @@ namespace clap {
 
 	using ParameterNecessity = std::variant<Optional, Required, Conditional>;
 
+	/**
+	 * Parameter class is used to store all the information about the parameter/flag inside
+	 * clap::Clap.
+	 */
 	class Parameter {
 		friend class ParamBuilder;
 
 	public:
+		/**
+		 * @return Optional short name of the parameter.
+		 */
 		[[nodiscard]]
 		const base::Optional<char>& getShortName() const;
+		/**
+		 * @return Optional long name of the parameter.
+		 */
 		[[nodiscard]]
 		const base::Optional<base::RawView>& getLongName() const;
+		/**
+		 * @return Short description of the parameter. Every parameter has a short description.
+		 */
 		[[nodiscard]]
 		const base::RawView& getShortDesc() const;
+		/**
+		 * @return Optional long description of the parameter.
+		 */
 		[[nodiscard]]
 		const base::Optional<base::RawView>& getLongDesc() const;
+		/**
+		 * @return Value parser pointer, that may be null.
+		 */
 		[[nodiscard]]
 		const ValueParser* getValueParser() const;
+		/**
+		 * @return Parameter necessity - std::variant<optional/required/conditional>.
+		 */
 		[[nodiscard]]
 		const ParameterNecessity& getParameterNecessity() const;
 

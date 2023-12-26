@@ -96,4 +96,12 @@ namespace clap::exceptions {
 	struct MissingConditionalParameter: public ClapException {
 		explicit MissingConditionalParameter(const std::string& name, std::string_view why = "");
 	};
+
+	/**
+	 * Raised when user has specified extra arguments, but Clap has defaultValueParser
+	 * set to nullptr.
+	 */
+	struct NoDefaultValueParser: public ClapException {
+		explicit NoDefaultValueParser(i32 at, std::string_view values);
+	};
 }

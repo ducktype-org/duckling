@@ -1,5 +1,5 @@
 /**
- * @file clap_class.h
+ * @file clap_class.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
@@ -18,9 +18,17 @@ namespace clap {
 	};
 
 	/**
-	 * Command-line argument parser.
+	 * Command-line Argument Parser.
 	 *
 	 * Use clap::ParamBuilder to construct clap::Parameter.
+	 *
+	 * This class is the place to specify the command-line input for your program. Clap's
+	 * specification consists of:
+	 * 	* named parameters and flags (built with clap::ParamBuilder)
+	 * 	* positional arguments (Always required, indexed from 0)
+	 * 	* extra arguments, if default value parser is not set to nullptr.
+	 *
+	 * After specifying the above you can perform parsing with parse(...) method.
 	 *
 	 * Refer to the clap docs for more complete example.
 	 */
@@ -48,8 +56,8 @@ namespace clap {
 		Clap& addPositional(base::unique_ptr<ValueParser> parameter);
 
 		/**
-		 * Sets the default value parser for the Clap.
-		 * @param parser A value parses to be used.
+		 * Sets the default value parser for the Clap. Might be null.
+		 * @param parser A value parser to be used.
 		 * @return A reference to self.
 		 */
 		Clap& setDefaultParser(base::unique_ptr<ValueParser> parser);
@@ -70,10 +78,25 @@ namespace clap {
 		ParsingResult parse(usize argc, const char** argv);
 		ParsingResult parse(CLIArgs args);
 
+		/**
+		 * A default value parser is used to parse values, that are not directly specified
+		 * in the Clap's specification.
+		 * @return A pointer to the parser. Might be nullptr.
+		 */
 		[[nodiscard]]
 		const ValueParser* getDefaultValueParser() const;
+
+		/**
+		 * Named parameters are built with clap::ParamBuilder. They are addressed with
+		 * "-${SHORT_NAME}" or "--${LONG_NAME}".
+		 * @return A list of named parameters.
+		 */
 		[[nodiscard]]
 		const std::vector<Parameter>& getParameters() const;
+		/**
+		 * Positional parameters are indexed from zero and they are always required.
+		 * @return A list of positional parameters (their value parsers).
+		 */
 		[[nodiscard]]
 		const std::vector<base::unique_ptr<ValueParser>>& getPositionalParameters() const;
 
@@ -82,6 +105,11 @@ namespace clap {
 		std::vector<base::unique_ptr<ValueParser>> positional_parameters;
 		std::vector<Parameter>                     parameters;
 
+		/**
+		 * Validates the result accordingly to the Clap's specification, invokes
+		 * conditionals' conditions, etc.
+		 * @param result ParsingResult which holds the parsed data.
+		 */
 		void validateParsing(ParsingResult& result) const;
 	};
 
