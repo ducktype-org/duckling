@@ -27,6 +27,9 @@ namespace clap {
 	 * This class contains data parsed by clap::Clap. If obtained via Clap::parse(...) (not through
 	 * an exception), it holds valid and correct data in terms of clap::Clap specification.
 	 * Otherwise, you can also access its data, but you cannot depend on clap::Clap's specification.
+	 *
+	 * Throughout the docs, "X was passed" is meant to suggest the user has typed "X" into the
+	 * command-line arguments of the program.
 	 */
 	class ParsingResult {
 	public:
@@ -160,30 +163,30 @@ namespace clap {
 
 		/**
 		 * Another way to check if a Parameter was passed.
-		 * @param parameter A Parameter object identified a value.
+		 * @param parameter A Parameter object.
 		 * @return True if the parameter was passed, false otherwise.
 		 */
 		[[nodiscard]]
 		bool hasParam(const Parameter& parameter);
 
 		/**
-		 * @return number of the positional parameters passed.
+		 * @return Number of the positional parameters passed.
 		 */
 		[[nodiscard]]
 		usize getPositionalParameterCount() const;
 		/**
-		 * @return number of the extra arguments passed.
+		 * @return Number of the extra arguments passed.
 		 */
 		[[nodiscard]]
 		usize getExtraParameterCount() const;
 		/**
-		 * @return number of the flags passed.
+		 * @return Number of the flags passed.
 		 */
 		[[nodiscard]]
 		usize getFlagCount() const;
 
 		/**
-		 * @return number of named parameters passed.
+		 * @return Number of named parameters passed.
 		 */
 		[[nodiscard]]
 		usize getNamedParameterCount() const;
