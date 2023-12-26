@@ -9,6 +9,9 @@ add_library(Base
 
 set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)
 
+
+# @TODO: unicode depdencdy might not be optinal. 
+# Think of a way to "break" it 
 make_module(Base USES Result::Result unicode)
 
 rift_add_test(base base_test_simple tests/test.cpp

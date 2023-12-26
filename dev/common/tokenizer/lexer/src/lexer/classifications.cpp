@@ -10,6 +10,22 @@
 #include <iostream>
 
 namespace lexer {
+
+	icu::UnicodeSet Classifications::name_start;
+	icu::UnicodeSet Classifications::name_continue;
+	icu::UnicodeSet Classifications::operator_start;
+	icu::UnicodeSet Classifications::operator_continue;
+	icu::UnicodeSet Classifications::vertical_space;
+	icu::UnicodeSet Classifications::newline;
+	icu::UnicodeSet Classifications::whitespace;
+	icu::UnicodeSet Classifications::format_control;
+	icu::UnicodeSet Classifications::special;
+	icu::UnicodeSet Classifications::syntax;
+	icu::UnicodeSet Classifications::open_bracket;
+	icu::UnicodeSet Classifications::close_bracket;
+	icu::UnicodeSet Classifications::end_of_file;
+
+
 	/**
 	 * @brief Create unicode set from an u8 pattern, handles the errorcode and freezes the set
 	 * 

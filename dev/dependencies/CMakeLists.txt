@@ -38,7 +38,9 @@ FetchContent_MakeAvailable(asio)
 set(ASIO_INCLUDE_DIR "${asio_SOURCE_DIR}/asio/include")
 
 FetchContent_MakeAvailable(crow)
+
 # Marks Crow include libraries as system
+# @CMAKE 25: change to usage of FetchContent_Declare SYSTEM parameter
 get_target_property(TEMP Crow INTERFACE_INCLUDE_DIRECTORIES)
 set_target_properties(Crow PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
 
