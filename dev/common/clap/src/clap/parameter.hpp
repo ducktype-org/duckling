@@ -61,7 +61,7 @@ namespace clap {
 		[[nodiscard]]
 		const ValueParser* getValueParser() const;
 		/**
-		 * @return Parameter necessity - std::variant<optional/required/conditional>.
+		 * @return The necessity of a parameter.
 		 */
 		[[nodiscard]]
 		const ParameterNecessity& getParameterNecessity() const;

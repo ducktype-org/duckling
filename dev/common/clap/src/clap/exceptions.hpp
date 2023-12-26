@@ -20,7 +20,8 @@ namespace clap::exceptions {
 	};
 
 	/**
-	 * Raised when user inputs a help flag with: "-h" / "--h"
+	 * Raised when passed ``-h`` / ``--h``.
+	 * It is not an exception per se.
 	 */
 	struct HelpException: public base::LogicError {
 		ParsingResult parsing_result;
@@ -42,14 +43,14 @@ namespace clap::exceptions {
 	};
 
 	/**
-	 * Raised by value parser clap::FileParser when passed file does not exist.
+	 * Raised by value parser clap::FileParser when a passed file does not exist.
 	 */
 	struct FileDoesNotExist: public ClapException {
 		explicit FileDoesNotExist(const std::filesystem::path& path);
 	};
 
 	/**
-	 * Raised when user did not specify a necessary positional argument.
+	 * Raised when user did not pass a necessary positional argument.
 	 */
 	struct PositionalParameterExpected: public ClapException {
 		PositionalParameterExpected(usize param_index, const std::string& param_type);
@@ -63,7 +64,7 @@ namespace clap::exceptions {
 	};
 
 	/**
-	 * Raised when parameter was specified twice.
+	 * Raised when parameter was passed twice.
 	 */
 	struct DuplicatedParameter: public ClapException {
 		explicit DuplicatedParameter(const std::string& name);
@@ -77,7 +78,7 @@ namespace clap::exceptions {
 	};
 
 	/**
-	 * Raised when user does not specify parameter name after "-" or "--".
+	 * Raised when user does not pass a parameter name after ``-`` or ``--``.
 	 */
 	struct ExpectedParameterIdentifier: public ClapException {
 		ExpectedParameterIdentifier(i32 at, std::string_view source);
@@ -98,7 +99,7 @@ namespace clap::exceptions {
 	};
 
 	/**
-	 * Raised when user has specified extra arguments, but Clap has defaultValueParser
+	 * Raised when user has specified extra arguments, but Clap has Clap::default_value_parser
 	 * set to nullptr.
 	 */
 	struct NoDefaultValueParser: public ClapException {

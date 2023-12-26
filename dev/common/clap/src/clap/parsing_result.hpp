@@ -24,7 +24,7 @@ namespace clap {
 	};
 
 	/**
-	 * This class contains data parsed by clap::Clap. If obtained via Clap::parse(...) (not through
+	 * This class contains data parsed by clap::Clap. If obtained via Clap::parse() (not through
 	 * an exception), it holds valid and correct data in terms of clap::Clap specification.
 	 * Otherwise, you can also access its data, but you cannot depend on clap::Clap's specification.
 	 *

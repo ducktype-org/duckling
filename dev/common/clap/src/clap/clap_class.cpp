@@ -90,7 +90,7 @@ namespace {
 	enum class NameType { EmptyName, ShortName, LongName };
 
 	/**
-	 * A helper class for the method clap::Clap::parse(...).
+	 * A helper class for the method clap::Clap::parse().
 	 */
 	class ParsingState {
 	public:

@@ -2,7 +2,7 @@
 Clap class
 ==========
 
-This is declaration of class clap::Clap with some template definitions.
+This is a declaration of a class clap::Clap with some template definitions.
 
 Class details
 =============

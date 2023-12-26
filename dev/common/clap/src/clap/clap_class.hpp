@@ -28,7 +28,7 @@ namespace clap {
 	 * 	* positional arguments (Always required, indexed from 0)
 	 * 	* extra arguments, if default value parser is not set to nullptr.
 	 *
-	 * After specifying the above you can perform parsing with parse(...) method.
+	 * After specifying the above you can perform parsing with parse() method.
 	 *
 	 * Refer to the clap docs for more complete example.
 	 */
@@ -49,14 +49,14 @@ namespace clap {
 		Clap& add(Parameter&& parameter);
 
 		/**
-		 * Adds a positional parameter without a value to the Clap.
-		 * @param parameter Parameter's value parser created like: clap::StringParser::make().
+		 * Adds a positional parameter without a name to the Clap.
+		 * @param parameter value parser created like: clap::StringParser::make().
 		 * @return A reference to self.
 		 */
 		Clap& addPositional(base::unique_ptr<ValueParser> parameter);
 
 		/**
-		 * Sets the default value parser for the Clap. Might be null.
+		 * Sets the default value parser for the Clap. Might be a nullptr.
 		 * @param parser A value parser to be used.
 		 * @return A reference to self.
 		 */
@@ -88,7 +88,7 @@ namespace clap {
 
 		/**
 		 * Named parameters are built with clap::ParamBuilder. They are addressed with
-		 * "-${SHORT_NAME}" or "--${LONG_NAME}".
+		 * ``-${SHORT_NAME}`` or ``--${LONG_NAME}``.
 		 * @return A list of named parameters.
 		 */
 		[[nodiscard]]

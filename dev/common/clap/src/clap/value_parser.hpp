@@ -20,9 +20,18 @@ namespace clap {
 	 * A result of a single value parsing.
 	 */
 	struct ValueParsingResult {
-		std::any    value;       // The value. It has to be cast back with base::anyCast.
-		std::string raw_source;  // Source chars from which the value was created
-		usize position;  // position is an index ONE AFTER the last character of the parsed value
+		/**
+		 * The value. It has to be cast back with base::anyCast.
+		 */
+		std::any value;
+		/**
+		 * Source chars from which the value was created.
+		 */
+		std::string raw_source;
+		/**
+		 * Position is an index ONE AFTER the last character of the parsed value.
+		 */
+		usize position;
 	};
 
 	/**
