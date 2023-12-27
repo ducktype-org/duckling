@@ -3,7 +3,7 @@
 #include <code_data/opcodes.hpp>
 #include <lexer/lexer.hpp>
 #include <lexer/classifications.hpp>
-#include <base/option.hpp>
+#include <base/optional.hpp>
 #include <rift_definitions/key_spec_op.hpp>
 #include <stdexcept>
 #include <token_parser_core/automatic.hpp>
@@ -852,8 +852,9 @@ namespace assemble {
 
 	// @TODO: this function returns errors as string, in the future `Console` like object should be
 	// returned, that can produce both human readable and json error output
-	result<vm::Code, std::string> getCode(CodeContainer& code, vm::TypeMetadata& type_metadata) {
-		if (!code.ok) return failure(code.error);
+	cpp::result<vm::Code, std::string>
+		getCode(CodeContainer& code, vm::TypeMetadata& type_metadata) {
+		if (!code.ok) return cpp::failure(code.error);
 
 		vm::Code instructions_code;
 
@@ -866,7 +867,7 @@ namespace assemble {
 			}
 		}
 
-		if (main_id == SIZE_MAX) return failure("error: No main.");
+		if (main_id == SIZE_MAX) return cpp::failure("error: No main.");
 		instructions_code.main_id = main_id;
 
 		for (auto& func: code.code->functions) {
@@ -878,17 +879,18 @@ namespace assemble {
 		return instructions_code;
 	}
 
-	result<vm::Code, std::string> assemble(fs::FilePath file, vm::TypeMetadata& type_metadata) {
+	cpp::result<vm::Code, std::string>
+		assemble(fs::FilePath file, vm::TypeMetadata& type_metadata) {
 		auto parsed_code = parseFile(file);
 
 		// @TODO:
 		// it is left, because JSON is broken
 		std::cerr << parsed_code.error;
 
-		if (!parsed_code.ok) return fail(parsed_code.error);
+		if (!parsed_code.ok) return cpp::fail(parsed_code.error);
 
 		bool status = defineTypes(parsed_code, type_metadata);
-		if (!status) return fail(parsed_code.error);
+		if (!status) return cpp::fail(parsed_code.error);
 
 		auto result = getCode(parsed_code, type_metadata);
 

@@ -10,7 +10,28 @@
 #include <exception>
 #include <string>
 #include <printer/printer.hpp>
-#include <config/config.hpp>
+#include <base/str_concat.hpp>
+#include <base/exceptions.hpp>
+
+#define ASSERT_EQUAL(expected, actual)         \
+	assertEqual(                               \
+		expected,                              \
+		actual,                                \
+		base::strConcat(                       \
+			"Values not equal:\n\t\tIn line ", \
+			__LINE__,                          \
+			": ",                              \
+			expected,                          \
+			" != ",                            \
+			#actual,                           \
+			"\n\t\tExpected:\t",               \
+			expected,                          \
+			"\n\t\tFound:  \t",                \
+			actual,                            \
+			" == ",                            \
+			#actual                            \
+		)                                      \
+	)
 
 class SimpleTesterTest;
 
@@ -79,6 +100,12 @@ namespace tester {
 			} catch (const Exception& e) { return; }
 			fail(error);
 		}
+
+		// rvalue reference to make sure the order is correct for the macro above.
+		template<class T, class U>
+		void assertEqual(const T& expected, const U& actual, std::string_view error) {
+			assert(expected == actual, error);
+		}
 	};
 
 #define TESTER_CLASS TESTER_CLASS_MUST_BE_DEFINED_BEFORE_ANY_TEST_CLASS
@@ -93,12 +120,12 @@ namespace tester {
  * @brief Only use this macro if single class test file
  * and after defining proper TESTER_CLASS
  */
-#define TESTER_COMMON_MAIN(test_path)                                        \
-	int main(int argc, char* argv[]) {                                       \
-		auto config = tester::testConfigFromArgs({ argc, argv }, test_path); \
-                                                                             \
-		TESTER_CLASS test(std::move(config));                                \
-		if (!test.run()) return 1;                                           \
+#define TESTER_COMMON_MAIN(test_path)                                                \
+	int main(int argc, const char* argv[]) {                                         \
+		auto config = tester::testConfigFromArgs({ (usize) argc, argv }, test_path); \
+                                                                                     \
+		TESTER_CLASS test(std::move(config));                                        \
+		if (!test.run()) return 1;                                                   \
 	}
 
 }

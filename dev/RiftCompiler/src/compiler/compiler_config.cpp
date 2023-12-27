@@ -1,53 +1,43 @@
 #include "compiler_config.hpp"
 
-#include <config/config.hpp>
+#include <clap/clap.hpp>
+#include <clap/param_builder.hpp>
+#include <clap/exceptions.hpp>
+#include <clap/help_message_generator.hpp>
 
 namespace compiler {
-	config::ConfigOptions compilerOptions() {
-		config::ConfigOptions out;
-		out.addOption("help", "h", "Displays help");
-		out.addOption(
-			"output",
-			"o",
-			config::ParamType::Always,
-			base::make_unique<config::StringParser>(),
-			"Set output file"
-		);
-		out.addOption(
-			"intTest",
-			config::ParamType::Always,
-			base::make_unique<config::IntParser>(),
-			"Test option"
-		);
-		return out;
+	clap::Clap compilerOptions() {
+		return clap::Clap()
+		    .addHelpFlag()
+		    .setDefaultParser(clap::FileParser::make())
+		    .add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		             .addShortName('o')
+		             .addLongName("output")
+		             .addShortDesc("Set output file")
+		             .build());
 	}
 
-	CompilerConfig fromArgs(config::CLIArgs args) {
-		auto parsed_args = config::parse(compilerOptions(), args);
+	CompilerConfig fromArgs(clap::CLIArgs args) {
+		auto parsed_args = compilerOptions().parse(args);
 
 		CompilerConfig out;
 
-		if (parsed_args.wasOption("help")) out.was_help = true;
-
-		if (parsed_args.wasOption("output")) {
+		auto output = parsed_args.getValue<std::string>("output");
+		if_opt_some(output, value) {
 			out.was_output = true;
-			out.output     = parsed_args.getValue<std::string>("output");
+			out.output     = value;
 		}
 
-		if (parsed_args.wasOption("intTest")) out.output = parsed_args.getValue<i32>("intTest");
-
-		for (auto file: parsed_args.getNonOptionValues())
-			out.file_names.emplace_back(file.stdString());
+		for (usize i = 0; i < parsed_args.getExtraParameterCount(); i++)
+			out.files.emplace_back(parsed_args.getExtra<fs::FilePath>(i).value());
 
 		return out;
 	}
 
-	printer::Message generateHelpMessage() {
+	printer::Message generateHelpMessage(const clap::exceptions::HelpException& e) {
 		auto             options = compilerOptions();
 		printer::Message out({ "" });
-		out.add("Usage: rift [options] files\n");
-		out.add("Options:\n");
-		options.generateOptionDesc(out);
+		out.add(clap::HelpMessageGenerator::generate(options, e.parsing_result));
 		return out;
 	}
 

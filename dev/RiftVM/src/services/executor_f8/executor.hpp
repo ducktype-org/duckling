@@ -66,10 +66,12 @@ namespace vm {
 		 * view to data pointed by pointer. This does not take into consideration possibility
 		 * of derefing only part of a block with given type from given offset.
 		 */
-		result<base::ModRawView, std::string> internalDerefPointer(Pointer);
+		cpp::result<base::ModRawView, std::string> internalDerefPointer(Pointer);
 
-		Frame internalInitFrame(option<Frame&>, const FuncData&, VLADataReference);
-		i64   internalCallFunction(option<Frame&>, const FuncData&, StandardFunctionArgs args);
+		Frame internalInitFrame(base::Optional<Frame&>, const FuncData&, VLADataReference);
+		i64   internalCallFunction(
+			  base::Optional<Frame&>, const FuncData&, StandardFunctionArgs args
+		  );
 
 		// @TODO add some thread data in the future
 

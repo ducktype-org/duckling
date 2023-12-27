@@ -14,7 +14,8 @@
 #include <base/raw_view.hpp>
 #include <base/smart_pointers.hpp>
 #include <base/maps.hpp>
-#include <base/option.hpp>
+#include <base/optional.hpp>
+#include <result.hpp>
 
 // Seams fixed:
 // #if __GNUC__ < 12 && (!defined(__clang__))
@@ -64,7 +65,6 @@ namespace fs {
 		friend struct ::std::hash<fs::FilePath>;
 
 	public:
-		FilePath() = delete;
 		FilePath(const FilePath&);
 		FilePath(FilePath&&) = default;
 		~FilePath()          = default;
@@ -77,7 +77,7 @@ namespace fs {
 		[[nodiscard]]
 		FileContent getContent() const;
 		[[nodiscard]]
-		result<FileContent, std::string> getContentSafe() const;
+		cpp::result<FileContent, std::string> getContentSafe() const;
 
 		[[nodiscard]]
 		std::string_view strView() const;

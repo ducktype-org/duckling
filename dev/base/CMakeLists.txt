@@ -29,5 +29,8 @@ rift_add_test(base stable_container_test_simple tests/stable_container_test.cpp
 rift_add_test(base test_smart_pointer tests/pointer_tests.cpp
 		USES Base)
 
-rift_add_test(base strimg_id_test_simple tests/string_id_test.cpp
+rift_add_test(base string_id_test_simple tests/string_id_test.cpp
 		USES Lexer Base)
+
+rift_add_test(base optional_tests tests/optional_test.cpp
+		USES Base Tester)
