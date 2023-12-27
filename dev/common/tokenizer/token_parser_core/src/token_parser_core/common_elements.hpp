@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/string_id.hpp>
-#include <optional>
+#include <base/optional.hpp>
 
 namespace tpc {
 	struct Identifier {
@@ -11,6 +11,6 @@ namespace tpc {
 	};
 
 	struct OptionalIdentifier {
-		std::optional<base::StrId> value;
+		base::Optional<base::StrId> value;
 	};
 }

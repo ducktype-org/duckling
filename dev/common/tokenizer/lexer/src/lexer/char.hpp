@@ -4,7 +4,6 @@
 #include <base/raw_view.hpp>
 #include <vector>
 #include <string>
-#include <optional>
 
 namespace lexer {
 	/**

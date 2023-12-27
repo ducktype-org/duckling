@@ -3,9 +3,9 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
-#include <optional>
 #include <iterator>
 #include <type_traits>
+#include "optional.hpp"
 #include "exceptions.hpp"
 
 namespace base {
@@ -61,7 +61,7 @@ namespace base {
 		bool is_copy = std::is_copy_constructible_v<DATA_T>>
 	class VectorMap {
 	private:
-		std::vector<std::optional<DATA_T>> map;
+		std::vector<base::Optional<DATA_T>> map;
 		usize                              element_count{};
 
 	public:
@@ -69,8 +69,8 @@ namespace base {
 		typedef KEY_T     IdType;
 		typedef DATA_T    DataType;
 
-		typedef typename std::vector<std::optional<DATA_T>>::iterator       iterator;
-		typedef typename std::vector<std::optional<DATA_T>>::const_iterator const_iterator;
+		typedef typename std::vector<base::Optional<DATA_T>>::iterator       iterator;
+		typedef typename std::vector<base::Optional<DATA_T>>::const_iterator const_iterator;
 
 		VectorMap() = default;
 

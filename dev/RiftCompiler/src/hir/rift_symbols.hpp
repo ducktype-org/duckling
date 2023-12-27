@@ -8,7 +8,7 @@
 
 #include <typesystem/typesystem.hpp>
 
-#include <optional>
+#include <base/optional.hpp>
 
 namespace hir {
 
@@ -64,7 +64,7 @@ namespace hir {
 	// magic_struct_value`. Perhaps merge them in the future
 	class StructSymbol: public symtable::Symbol {
 		PstRef<pst::Struct>          pst_element;
-		std::optional<ts::ClassInfo> value;
+		base::Optional<ts::ClassInfo> value;
 
 	public:
 		StructSymbol(
@@ -95,7 +95,7 @@ namespace hir {
 		ExpressionRef type_expr;
 		ExpressionRef value_expr;
 
-		std::optional<exec::CTV> value;
+		base::Optional<exec::CTV> value;
 
 	public:
 		ConstSymbol(
@@ -119,7 +119,7 @@ namespace hir {
 	protected:
 		// @TODO: this should be ChainLookupResult
 		// it is SymbolChain for now, because only SymbolChain can be dealiased
-		std::optional<symtable::SymbolChain> dealiased_lookup_result;
+		base::Optional<symtable::SymbolChain> dealiased_lookup_result;
 
 	public:
 		using symtable::Symbol::Symbol;

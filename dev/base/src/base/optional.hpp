@@ -98,14 +98,19 @@ namespace base {
 
 		Optional(const T& value): private_optional(value) {}
 
-		template<class... Args>
-		Optional(Args&&... args):
-			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
-
 		Optional(Optional&&)                 = default;
 		Optional(const Optional&)            = default;
 		Optional& operator=(Optional&&)      = default;
 		Optional& operator=(const Optional&) = default;
+
+		template<class... Args>
+		Optional(Args&&... args):
+			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
+
+		template< class... Args >
+		constexpr T& emplace( Args&&... args ) {
+			return private_optional.emplace(std::forward<Args>(args)...);
+		}
 
 		explicit constexpr operator bool() const { return has_value(); }
 
@@ -228,6 +233,18 @@ namespace base {
 		constexpr T&& expect(std::string_view message) && {
 			if (!has_value()) RIFT_PANIC(message);
 			return std::move(value());
+		}
+
+		[[nodiscard]]
+		constexpr const T* operator->() const {
+			_throwOnNoValue();
+			return private_optional.operator->();
+		}
+
+		[[nodiscard]]
+		constexpr T* operator->() {
+			_throwOnNoValue();
+			return private_optional.operator->();
 		}
 
 		/**

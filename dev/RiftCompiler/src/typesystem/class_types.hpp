@@ -11,7 +11,7 @@
 
 #include <hir/symtable/scope_symbol_id.hpp>
 #include <utility>
-#include <optional>
+#include <base/optional.hpp>
 #include <base/exceptions.hpp>
 
 namespace ts {
@@ -138,14 +138,14 @@ namespace ts {
 	struct MemberInfo {
 		// If there is a virtual in the inheritance path, this is the last one. Otherwise, it's
 		// an empty optional.
-		std::optional<ClassInfo> last_virtual_ancestor{};
+		base::Optional<ClassInfo> last_virtual_ancestor{};
 
-		std::optional<TypeDesc<>> desc{};
+		base::Optional<TypeDesc<>> desc{};
 
 		// If the member is in a virtual ancestor, this data is relative to the ancestor's start
 		// The exact offset of course needs to be looked up in the vtable at runtime
-		std::optional<usize> start_offset{};
-		std::optional<usize> end_offset{};
+		base::Optional<usize> start_offset{};
+		base::Optional<usize> end_offset{};
 
 		// If the field below is not equal to Standard or Virtual, the data structure will be
 		// full of empty optionals.
@@ -159,12 +159,12 @@ namespace ts {
 	struct AncestorInfo {
 		// If there is a virtual in the inheritance path, this is the last one. Otherwise, it's
 		// an empty optional.
-		std::optional<ClassInfo> last_virtual_ancestor{};
+		base::Optional<ClassInfo> last_virtual_ancestor{};
 
 		// If the member is in a virtual ancestor, this data is relative to the ancestor's start
 		// The exact offset of course needs to be looked up in the vtable at runtime
-		std::optional<usize> start_offset{};
-		std::optional<usize> end_offset{};
+		base::Optional<usize> start_offset{};
+		base::Optional<usize> end_offset{};
 
 		// If the field below is not equal to Standard or Virtual, this data structure will be
 		// full of empty optionals.
@@ -192,7 +192,7 @@ namespace ts {
 		TypeDesc<>         desc;
 		usize              offset;
 
-		std::optional<ClassInfo> last_virtual_ancestor{};
+		base::Optional<ClassInfo> last_virtual_ancestor{};
 
 		// MemberData(symtable::SymbolId symbol, TypeDesc<> desc, usize offset): symbol(symbol),
 		// desc(desc), offset(offset) {}
@@ -202,7 +202,7 @@ namespace ts {
 		ClassInfo info;
 		usize     offset;
 
-		std::optional<ClassInfo> last_virtual_ancestor{};
+		base::Optional<ClassInfo> last_virtual_ancestor{};
 
 		// AncestorData(ClassInfo class_info, usize offset): info(class_info), offset(offset) {}
 	};
