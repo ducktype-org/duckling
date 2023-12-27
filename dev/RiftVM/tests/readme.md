@@ -32,7 +32,11 @@
     ```
     sudo sysctl kernel.perf_event_paranoid=0
     ```
-    To make this setting persistent across reboots, you may create a sysctl rule:
+    **Note:** this setting can impose a risk of leaking sensitive data accessed
+    by monitored processes as described
+    [here](https://www.kernel.org/doc/html/latest/admin-guide/perf-security.html).
+    If you accept this risk and want to make this setting persistent across
+    reboots, you may create a sysctl rule:
     ```
     echo "kernel.perf_event_paranoid=0" | sudo tee -a /etc/10-perf.conf
     ```
@@ -46,11 +50,14 @@ following results:
 * hotspots (`hs`)
 * microarchitecture utilization (`ua`)
 
-Results after every run are stored in `/results/profile_xyz-aa` directory
-where `aa` is a shortcode of a given result. It is also possible to run all
-profiler targets at once by issuing `make profile_all`.
+**Note:** CMake will generate these targets only if it finds VTune in the path.
 
-**Note:** redoing a target overwrites the above directories. If you need the
+Results after every run are stored in
+`dev/{cmake_build_folder}/results/profile_xyz-aa` directory where `aa` is a
+shortcode of a given result. It is also possible to run all profiler targets at
+once by issuing `make profile_all`.
+
+**Note:** redoing a target overwrites above directories. If you need the
 results in the future, make sure to copy them somewhere else or rename it using
 `performance/scripts/rename_results.sh`.
 
