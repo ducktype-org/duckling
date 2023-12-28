@@ -7,6 +7,7 @@
 
 #include <optional>
 #include <functional>
+#include <concepts>
 
 #include "exceptions.hpp"
 #include "type_traits.hpp"
@@ -104,8 +105,12 @@ namespace base {
 		Optional& operator=(const Optional&) = default;
 
 		template<class... Args>
-		Optional(Args&&... args):
+		constexpr explicit Optional(Args&&... args):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
+
+		template < class U = T > requires std::is_constructible_v<T, U&&>
+		constexpr Optional( U&& value ):
+			private_optional(std::move(value)) {}
 
 		template< class... Args >
 		constexpr T& emplace( Args&&... args ) {
@@ -123,6 +128,16 @@ namespace base {
 			private_optional = other;
 			return *this;
 		}
+
+		template < class U = T > requires std::is_constructible_v<T, U>
+		constexpr Optional& operator=( U&& value ) {
+			private_optional = std::move(value);
+			return *this;
+		}
+
+		constexpr void reset() noexcept {
+			private_optional.reset();
+		}	
 
 		friend void swap(Optional& a, Optional& b) {
 			std::swap(a.private_optional, b.private_optional);
