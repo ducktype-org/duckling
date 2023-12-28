@@ -659,7 +659,7 @@ private:
 	}
 
 	void assert_sorted_members(ts::ClassInfo A, const std::vector<ts::MemberData>& members) {
-		std::optional<ts::ClassInfo> last_virtual_ancestor;
+		base::Optional<ts::ClassInfo> last_virtual_ancestor;
 		ssize_t                      last_offset = -1;
 		for (auto member_data: members) {
 			if (!last_virtual_ancestor.has_value()) {
@@ -689,7 +689,7 @@ private:
 	}
 
 	void assert_sorted_ancestors(ts::ClassInfo A, const std::vector<ts::AncestorData>& ancestors) {
-		std::optional<ts::ClassInfo> last_virtual_ancestor;
+		base::Optional<ts::ClassInfo> last_virtual_ancestor;
 		ssize_t                      last_offset = -1;
 		usize                        last_size   = 0;
 		for (auto ancestor_data: ancestors) {

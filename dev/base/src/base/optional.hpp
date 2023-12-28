@@ -119,16 +119,6 @@ namespace base {
 
 		explicit constexpr operator bool() const { return has_value(); }
 
-		Optional& operator=(T&& other) {
-			private_optional = std::move(other);
-			return *this;
-		}
-
-		Optional& operator=(const T& other) {
-			private_optional = other;
-			return *this;
-		}
-
 		template < class U = T > requires std::is_constructible_v<T, U>
 		constexpr Optional& operator=( U&& value ) {
 			private_optional = std::move(value);
@@ -489,4 +479,118 @@ namespace base {
 
 		Optional<std::reference_wrapper<T>> private_optional;
 	};
+
+	template <class U, class T>
+	constexpr bool operator==(const Optional<U>& one, const Optional<T>& other) {
+		return (one.has_value() && other.has_value() && one.value() == other.value())
+			|| (!one.has_value() && !other.has_value());
+	}
+
+	template <class U, class T>
+	constexpr bool operator!=(const Optional<U>& one, const Optional<T>& other) {
+		return !(one == other);
+	}
+
+	template <class U, class T>
+	constexpr bool operator<(const Optional<U>& one, const Optional<T>& other) {
+		return (one.has_value() && other.has_value() && one.value() < other.value())
+			|| (!one.has_value() && other.has_value());
+	}
+
+	template <class U, class T>
+	constexpr bool operator>(const Optional<U>& one, const Optional<T>& other) {
+		return (one.has_value() && other.has_value() && one.value() > other.value())
+			|| (one.has_value() && !other.has_value());
+	}
+
+	template <class U, class T>
+	constexpr bool operator<=(const Optional<U>& one, const Optional<T>& other) {
+		return (one.has_value() && other.has_value() && one.value() <= other.value())
+			|| other.has_value();
+	}
+
+	template <class U, class T>
+	constexpr bool operator>=(const Optional<U>& one, const Optional<T>& other) {
+		return (one.has_value() && other.has_value() && one.value() >= other.value())
+			|| one.has_value();
+	}
+
+	template <class T>
+	constexpr std::strong_ordering operator<=>(Optional<T>& obj, std::nullopt_t) {
+		if (obj.has_value()) {
+			return std::strong_ordering::greater;
+		} else {
+			return std::strong_ordering::equal;
+		}
+	}
+
+	template <class T>
+	constexpr std::strong_ordering operator<=>(std::nullopt_t, Optional<T>& obj) {
+		if (obj.has_value()) {
+			return std::strong_ordering::less;
+		} else {
+			return std::strong_ordering::equal;
+		}
+	}
+
+	template <class U, class T>
+	constexpr bool operator==(const Optional<U>& opt, const T& value) {
+		return opt.has_value()  && opt.value() == value;
+	}
+
+	template <class U, class T>
+	constexpr bool operator==(const T& value, const Optional<U>& opt) {
+		return opt.has_value() && opt.value() == value;
+	}
+
+	template <class U, class T>
+	constexpr bool operator!=(const Optional<U>& opt, const T& value) {
+		return !(opt == value);
+	}
+
+	template <class U, class T>
+	constexpr bool operator!=(const T& value, const Optional<U>& opt) {
+		return !(opt == value);
+	}
+
+	template <class U, class T>
+	constexpr bool operator<(const Optional<U>& opt, const T& value) {
+		return !opt.has_value() || opt.value() < value;
+	}
+
+	template <class U, class T>
+	constexpr bool operator<(const T& value, const Optional<U>& opt) {
+		return opt.has_value() && value < opt.value();
+	}
+
+	template <class U, class T>
+	constexpr bool operator>(const Optional<U>& opt, const T& value) {
+		return opt.has_value() && value < opt.value();
+	}
+
+	template <class U, class T>
+	constexpr bool operator>(const T& value, const Optional<U>& opt) {
+		return !opt.has_value() || opt.value() < value;
+	}
+
+	template <class U, class T>
+	constexpr bool operator<=(const Optional<U>& opt, const T& value) {
+		return !opt.has_value() || opt.value() <= value;
+	}
+
+	template <class U, class T>
+	constexpr bool operator<=(const T& value, const Optional<U>& opt) {
+		return opt.has_value() && value <= opt.value();
+	}
+
+	template <class U, class T>
+	constexpr bool operator>=(const Optional<U>& opt, const T& value) {
+		return opt.has_value() && value <= opt.value();
+	}
+
+	template <class U, class T>
+	constexpr bool operator>=(const T& value, const Optional<U>& opt) {
+		return !opt.has_value() || opt.value() <= value;
+	}
+
 }  // base
