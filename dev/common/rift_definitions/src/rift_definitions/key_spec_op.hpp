@@ -188,4 +188,8 @@ namespace rift_def {
 	base::StrId operatorToStr(Operator oper);
 
 	base::FlagType keywordFlags(Keyword key);
+
+	std::vector<Keyword> getKeywords();
+	std::vector<Special> getSpecials();
+	std::vector<Operator> getOperators();
 }

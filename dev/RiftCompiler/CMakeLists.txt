@@ -44,6 +44,11 @@ add_library(Operations
 		src/operations/create_default.cpp
 		src/operations/internal/builtin_operations.cpp)
 
+
+add_library(LSP
+	src/lsp_interface/export_keywords.cpp
+)
+
 # @FIXME: making modules like most likely allow importing from entire dev/src:
 # make modules:
 make_module(PstParser USES Lexer Printer TPC)
@@ -54,6 +59,7 @@ make_module(HIR USES Base SymbolTable PstParser TypeSystem)
 make_module(TypeSystem USES Base SymbolTable Exec)
 make_module(Exec USES Base Operations)
 make_module(Operations USES TypeSystem Exec Base)
+make_module(LSP USES Base Lexer)
 
 # Tests:
 
