@@ -12,10 +12,9 @@ namespace pst {
 		auto out = makeRef<ParamList>(position);
 		state.goDown();
 
-		constexpr auto isSentinel =
-			[](const RiftParserState& lstate, usize fwd) {
-				return lstate.ctokens().is(Token::Type::Sentinel, fwd);
-			};
+		constexpr auto isSentinel = [](const RiftParserState& lstate, usize fwd) {
+			return lstate.ctokens().is(Token::Type::Sentinel, fwd);
+		};
 
 		parseList<false>(state, out->params, Operator::Comma, isSentinel);
 

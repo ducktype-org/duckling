@@ -11,9 +11,10 @@ namespace lexer {
 
 	/**
 	 * @brief Class used to manage lexing
-	 * 
+	 *
 	 * @todo Add format string lexing
-	 * @todo Improve unicode support(soon: identifier normalization, at some point: ignorable format controls)
+	 * @todo Improve unicode support(soon: identifier normalization, at some point: ignorable format
+	 * controls)
 	 */
 	class Lexer {
 	public:
@@ -32,7 +33,7 @@ namespace lexer {
 
 	private:
 		/**
-		 * @name CharArray operations 
+		 * @name CharArray operations
 		 * @{
 		 */
 		void next();
@@ -43,7 +44,7 @@ namespace lexer {
 		bool tryRawValue(char rawValue, usize fwd = 0) const;
 		/**@}*/
 
-		/** 
+		/**
 		 * @name Top level parsers:
 		 * @{
 		 */
@@ -54,7 +55,7 @@ namespace lexer {
 		void parseSingleInto(Tokens& output);
 		/**@}*/
 
-		/** 
+		/**
 		 * @name tokens parsers:
 		 * @{
 		 */
@@ -97,7 +98,7 @@ namespace lexer {
 		[[nodiscard]]
 		dia::SourcePosition currentPostion() const;
 
-		usize                         where        = 0; ///< Current position in file
+		usize                         where  = 0;  ///< Current position in file
 		usize                         line   = 1;
 		usize                         column = 1;
 		std::shared_ptr<fs::FilePath> file;
@@ -106,17 +107,18 @@ namespace lexer {
 		Tokens                        tokens;
 
 		/**
-		 * @brief Informs whether to print messages about what tokens are created to the debug stream based on the PRINT_LOG define
+		 * @brief Informs whether to print messages about what tokens are created to the debug
+		 * stream based on the PRINT_LOG define
 		 */
 		static constexpr bool tokenMessages() {
-			#ifdef PRINT_LOG
+#ifdef PRINT_LOG
 			return true;
-			#else
+#else
 			return false;
-			#endif
+#endif
 		}
 
-		dia::ErrorState errorState;
+		dia::ErrorState  errorState;
 		printer::Console log;
 
 		void addTokenMsg(usize begin, usize end, std::string_view token_type);

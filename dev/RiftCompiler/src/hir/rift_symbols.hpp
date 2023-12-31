@@ -63,7 +63,7 @@ namespace hir {
 	// @TODO: StructSymbol should technically be isomorphic with `const a: type =
 	// magic_struct_value`. Perhaps merge them in the future
 	class StructSymbol: public symtable::Symbol {
-		PstRef<pst::Struct>          pst_element;
+		PstRef<pst::Struct>           pst_element;
 		base::Optional<ts::ClassInfo> value;
 
 	public:

@@ -175,7 +175,7 @@ namespace {
 			if (parsed.position > parsing_position) {
 				parsing_position = parsed.position;
 				skipWhitespace(parsing_position, args);
-				return {{ parsed.value, parsed.raw_source }};
+				return { { parsed.value, parsed.raw_source } };
 			}
 			return {};
 		}

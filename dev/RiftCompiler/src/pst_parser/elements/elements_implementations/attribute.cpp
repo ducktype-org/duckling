@@ -13,7 +13,8 @@ namespace pst {
 
 		parseAll(state, Special::AtSign, &out->name);
 
-		if (state.ctokens().isBracketGroup(Token::BracketType::Round)) out->args = ArgList::parse(state);
+		if (state.ctokens().isBracketGroup(Token::BracketType::Round))
+			out->args = ArgList::parse(state);
 
 		return out;
 	}

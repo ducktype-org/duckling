@@ -108,28 +108,25 @@ namespace base {
 		constexpr explicit Optional(Args&&... args):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
-		template < class U = T > 
+		template<class U = T>
 		requires std::is_constructible_v<T, U>
-		constexpr Optional( U&& value ):
-			private_optional(std::forward<U>(value)) {}
+		constexpr Optional(U&& value): private_optional(std::forward<U>(value)) {}
 
-		template< class... Args >
-		constexpr T& emplace( Args&&... args ) {
+		template<class... Args>
+		constexpr T& emplace(Args&&... args) {
 			return private_optional.emplace(std::forward<Args>(args)...);
 		}
 
 		explicit constexpr operator bool() const { return has_value(); }
 
-		template < class U = T > 
+		template<class U = T>
 		requires std::is_constructible_v<T, U>
-		constexpr Optional& operator=( U&& value ) {
+		constexpr Optional& operator=(U&& value) {
 			private_optional = std::forward<U>(value);
 			return *this;
 		}
 
-		constexpr void reset() noexcept {
-			private_optional.reset();
-		}	
+		constexpr void reset() noexcept { private_optional.reset(); }
 
 		friend void swap(Optional& a, Optional& b) {
 			std::swap(a.private_optional, b.private_optional);
@@ -243,13 +240,15 @@ namespace base {
 		}
 
 		[[nodiscard]]
-		constexpr const T* operator->() const {
+		constexpr const T*
+			operator->() const {
 			_throwOnNoValue();
 			return private_optional.operator->();
 		}
 
 		[[nodiscard]]
-		constexpr T* operator->() {
+		constexpr T*
+			operator->() {
 			_throwOnNoValue();
 			return private_optional.operator->();
 		}
@@ -482,115 +481,113 @@ namespace base {
 		Optional<std::reference_wrapper<T>> private_optional;
 	};
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator==(const Optional<U>& one, const Optional<T>& other) {
 		return (one.has_value() && other.has_value() && one.value() == other.value())
-			|| (!one.has_value() && !other.has_value());
+		    || (!one.has_value() && !other.has_value());
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator!=(const Optional<U>& one, const Optional<T>& other) {
 		return !(one == other);
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator<(const Optional<U>& one, const Optional<T>& other) {
 		return (one.has_value() && other.has_value() && one.value() < other.value())
-			|| (!one.has_value() && other.has_value());
+		    || (!one.has_value() && other.has_value());
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator>(const Optional<U>& one, const Optional<T>& other) {
 		return (one.has_value() && other.has_value() && one.value() > other.value())
-			|| (one.has_value() && !other.has_value());
+		    || (one.has_value() && !other.has_value());
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator<=(const Optional<U>& one, const Optional<T>& other) {
 		return (one.has_value() && other.has_value() && one.value() <= other.value())
-			|| other.has_value();
+		    || other.has_value();
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator>=(const Optional<U>& one, const Optional<T>& other) {
 		return (one.has_value() && other.has_value() && one.value() >= other.value())
-			|| one.has_value();
+		    || one.has_value();
 	}
 
-	template <class T>
+	template<class T>
 	constexpr std::strong_ordering operator<=>(Optional<T>& obj, std::nullopt_t) {
-		if (obj.has_value()) {
+		if (obj.has_value())
 			return std::strong_ordering::greater;
-		} else {
+		else
 			return std::strong_ordering::equal;
-		}
 	}
 
-	template <class T>
+	template<class T>
 	constexpr std::strong_ordering operator<=>(std::nullopt_t, Optional<T>& obj) {
-		if (obj.has_value()) {
+		if (obj.has_value())
 			return std::strong_ordering::less;
-		} else {
+		else
 			return std::strong_ordering::equal;
-		}
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator==(const Optional<U>& opt, const T& value) {
-		return opt.has_value()  && opt.value() == value;
+		return opt.has_value() && opt.value() == value;
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator==(const T& value, const Optional<U>& opt) {
 		return opt.has_value() && opt.value() == value;
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator!=(const Optional<U>& opt, const T& value) {
 		return !(opt == value);
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator!=(const T& value, const Optional<U>& opt) {
 		return !(opt == value);
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator<(const Optional<U>& opt, const T& value) {
 		return !opt.has_value() || opt.value() < value;
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator<(const T& value, const Optional<U>& opt) {
 		return opt.has_value() && value < opt.value();
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator>(const Optional<U>& opt, const T& value) {
 		return opt.has_value() && value < opt.value();
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator>(const T& value, const Optional<U>& opt) {
 		return !opt.has_value() || opt.value() < value;
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator<=(const Optional<U>& opt, const T& value) {
 		return !opt.has_value() || opt.value() <= value;
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator<=(const T& value, const Optional<U>& opt) {
 		return opt.has_value() && value <= opt.value();
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator>=(const Optional<U>& opt, const T& value) {
 		return opt.has_value() && value <= opt.value();
 	}
 
-	template <class U, class T>
+	template<class U, class T>
 	constexpr bool operator>=(const T& value, const Optional<U>& opt) {
 		return !opt.has_value() || opt.value() <= value;
 	}

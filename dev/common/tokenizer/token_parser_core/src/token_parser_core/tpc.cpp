@@ -5,7 +5,7 @@
 
 namespace tpc {
 	void init() {
-		RIFT_SIMPLE_INIT_GUARD_BEGIN		
+		RIFT_SIMPLE_INIT_GUARD_BEGIN
 		lexer::init();
 		RIFT_SIMPLE_INIT_GUARD_END
 	}

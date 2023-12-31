@@ -11,10 +11,9 @@ namespace pst {
 
 		parseAll(state, Keyword::Struct, &out->name);
 
-		constexpr auto isCurlyGroupStart = 
-			[](const RiftParserState& lstate, usize fwd){
-				return lstate.ctokens().isBracketGroup(Token::BracketType::Curly, fwd);
-			};
+		constexpr auto isCurlyGroupStart = [](const RiftParserState& lstate, usize fwd) {
+			return lstate.ctokens().isBracketGroup(Token::BracketType::Curly, fwd);
+		};
 
 		if (state.tryEat(Operator::Colon))
 			parseList<true>(state, out->bases, Operator::Comma, isCurlyGroupStart);

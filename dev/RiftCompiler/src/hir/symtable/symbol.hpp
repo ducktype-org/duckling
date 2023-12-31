@@ -65,7 +65,7 @@ namespace symtable {
 
 
 		base::Optional<ts::TypeDesc<>> type;
-		SymbolKind                    kind;
+		SymbolKind                     kind;
 
 		// lookup lock:
 		bool lock_lookup = false;

@@ -16,24 +16,35 @@ namespace lexer {
 		  str_id(value),
 		  source_position(std::move(position)) {}
 
-	Token::Token(Token::Type type, Tokens&& recursive, Token&& sentinel, dia::SourcePosition position, BracketType bracket_type):
+	Token::Token(
+		Token::Type         type,
+		Tokens&&            recursive,
+		Token&&             sentinel,
+		dia::SourcePosition position,
+		BracketType         bracket_type
+	):
 		  type(type),
 		  recursive(std::move(recursive)),
 		  sentinel(new Token(std::move(sentinel))),
 		  source_position(std::move(position)),
 		  bracket_type(bracket_type) {
-			RIFT_ASSERT(this->sentinel->getType() == Type::Sentinel, "non-sentinel token passed as sentinel");
-			RIFT_ASSERT(type == Type::BracketGroup, "non-bracket token created with bracket constructor");
+		RIFT_ASSERT(
+			this->sentinel->getType() == Type::Sentinel, "non-sentinel token passed as sentinel"
+		);
+		RIFT_ASSERT(
+			type == Type::BracketGroup, "non-bracket token created with bracket constructor"
+		);
 
-			// sets str_id of brackets to the pair of brackets for example "()"
-			std::string s;
-			icu::UnicodeString(bracket_type).append(u_getBidiPairedBracket(bracket_type)).toUTF8String(s);
-			str_id = base::StrId(base::RawView(s.data()));
-		  }
-
+		// sets str_id of brackets to the pair of brackets for example "()"
+		std::string s;
+		icu::UnicodeString(bracket_type)
+			.append(u_getBidiPairedBracket(bracket_type))
+			.toUTF8String(s);
+		str_id = base::StrId(base::RawView(s.data()));
+	}
 
 	Token Token::makeSentinelEnd(base::RawView view, const dia::SourcePosition& pos) {
-		return { Type::Sentinel, view, pos};
+		return { Type::Sentinel, view, pos };
 	}
 
 	Token Token::makeSentinelEof(const dia::SourcePosition& pos) {
@@ -50,7 +61,8 @@ namespace lexer {
 		return { Type::Operator, oper, position };
 	}
 
-	Token Token::makeIdentifier(const base::RawView identifier, const dia::SourcePosition& position) {
+	Token
+		Token::makeIdentifier(const base::RawView identifier, const dia::SourcePosition& position) {
 		if (rift_def::strAsKeyword(base::StrId(identifier)) != Keyword::NotAKeyword)
 			return makeKeyword(identifier, position);
 		return { Type::Identifier, identifier, position };
@@ -73,7 +85,11 @@ namespace lexer {
 	}
 
 	Token Token::makeBracketGroup(
-			BracketType groupType, Tokens&& tokens, Token&& sentinel, const dia::SourcePosition& position) {
+		BracketType                groupType,
+		Tokens&&                   tokens,
+		Token&&                    sentinel,
+		const dia::SourcePosition& position
+	) {
 		return { Type::BracketGroup, std::move(tokens), std::move(sentinel), position, groupType };
 	}
 
@@ -97,7 +113,9 @@ namespace lexer {
 		return *this;
 	}
 
-	Token::Token(Token&& other) noexcept: source_position(other.source_position) { swap(*this, other); }
+	Token::Token(Token&& other) noexcept: source_position(other.source_position) {
+		swap(*this, other);
+	}
 
 	Token::Type Token::getType() const { return type; }
 
@@ -109,15 +127,13 @@ namespace lexer {
 
 	const Tokens& Token::getRecursive() const { return recursive; }
 
-	const Token Token::getSentinel() const { 
-		RIFT_ASSERT(isRecursive(), "getSentinel called on non-recursive token"); 
-		RIFT_ASSERT(sentinel, "un assigned sentinel in recursive token"); 
-		return Token(*sentinel); 
+	const Token Token::getSentinel() const {
+		RIFT_ASSERT(isRecursive(), "getSentinel called on non-recursive token");
+		RIFT_ASSERT(sentinel, "un assigned sentinel in recursive token");
+		return Token(*sentinel);
 	}
 
-	bool Token::isBracketGroup() const {
-		return type == Type::BracketGroup;
-	}
+	bool Token::isBracketGroup() const { return type == Type::BracketGroup; }
 
 	bool Token::isBracketGroup(BracketType type) const {
 		return isBracketGroup() && bracket_type == type;

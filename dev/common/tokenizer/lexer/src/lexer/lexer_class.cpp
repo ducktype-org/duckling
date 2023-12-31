@@ -9,11 +9,11 @@ namespace lexer {
 		  file(std::make_shared<fs::FilePath>(file)),
 		  file_content(this->file->getContent()),
 		  char_array(std::move(decode<fs::Encoding::UTF8>(file_content.view(), errorState))) {
-			if (errorState.fail()) {
-				errorState.dumpLog(std::cerr);
-				throw base::LogicError("Error while decoding");
-			}
+		if (errorState.fail()) {
+			errorState.dumpLog(std::cerr);
+			throw base::LogicError("Error while decoding");
 		}
+	}
 
 	TokenData Lexer::tokenize() {
 		tokens.clear();
@@ -58,9 +58,7 @@ namespace lexer {
 		return "(" + std::to_string(line) + ":" + std::to_string(column) + ")";
 	}
 
-	void Lexer::addTokenMsg(
-		usize begin, usize end, std::string_view token_type
-	) {
+	void Lexer::addTokenMsg(usize begin, usize end, std::string_view token_type) {
 		if (tokenMessages()) {
 			log.add(printer::Message(
 				{ { "Add token: " },
@@ -76,13 +74,11 @@ namespace lexer {
 	void Lexer::codeblock() { parseCodeblockInto(tokens); }
 
 	void Lexer::parseUntil(Tokens& output, LexerCondition stop) {
-		while(!stop(*this)) parseSingleInto(output);
+		while (!stop(*this)) parseSingleInto(output);
 	}
 
 	void Lexer::parseCodeblockInto(Tokens& output) {
-		constexpr auto stopOnEOF = [](const Lexer& lexer){
-			return lexer.isEOF();
-		};
+		constexpr auto stopOnEOF = [](const Lexer& lexer) { return lexer.isEOF(); };
 		parseUntil(output, stopOnEOF);
 	}
 
@@ -109,22 +105,21 @@ namespace lexer {
 		} else if (peek().isDigit()) {
 			if (peek().is('0') && (peek(1).is('b') || peek(1).is('B')))
 				binLiteralHandler(output);
-			else if (peek().is('0') && peek(1).is('x')) 
+			else if (peek().is('0') && peek(1).is('x'))
 				hexLiteralHandler(output);
-			else 
+			else
 				decLiteralHandler(output);
 		} else {
-			if (not peek().is(Class::whitespace)) {
+			if (not peek().is(Class::whitespace))
 				errorState.failAndLog(sourceStart, "unexpected character starting token");
-			}
 			next();  // in else??
 		}
 	}
 
-	void Lexer::commentHandler([[maybe_unused]]Tokens& output) {
-		usize          begin = where;
-		usize          end = where;
-		auto sourceStart = currentPostion();
+	void Lexer::commentHandler([[maybe_unused]] Tokens& output) {
+		usize begin       = where;
+		usize end         = where;
+		auto  sourceStart = currentPostion();
 
 		skip(2);  // "//"
 		while (true) {
@@ -145,10 +140,10 @@ namespace lexer {
 		addTokenMsg(begin, end, "line comment");
 	}
 
-	void Lexer::blockCommentHandler([[maybe_unused]]Tokens& output) {
-		usize          begin = where;
-		usize end = where;
-		auto sourceStart = currentPostion();
+	void Lexer::blockCommentHandler([[maybe_unused]] Tokens& output) {
+		usize begin       = where;
+		usize end         = where;
+		auto  sourceStart = currentPostion();
 
 		skip(2);  // "/*"
 		while (true) {
@@ -156,8 +151,7 @@ namespace lexer {
 				errorState.failAndLog(sourceStart, "Unclosed block comment starting here");
 				end = where - 1;
 				break;
-			}
-			else if (isBlockCommentEnd()) {
+			} else if (isBlockCommentEnd()) {
 				skip(2);
 				end = where - 1;
 				break;
@@ -171,9 +165,9 @@ namespace lexer {
 	}
 
 	void Lexer::operatorHandler(Tokens& output) {
-		usize          begin = where;
-		usize end = where;
-		auto sourceStart = currentPostion();
+		usize begin       = where;
+		usize end         = where;
+		auto  sourceStart = currentPostion();
 
 		while (peek().is(Class::operator_continue)) next();
 		end = where - 1;
@@ -185,19 +179,17 @@ namespace lexer {
 	}
 
 	void Lexer::nameHandler(Tokens& output) {
-		usize          begin = where;
-		usize end = where;
-		auto sourceStart = currentPostion();
+		usize begin       = where;
+		usize end         = where;
+		auto  sourceStart = currentPostion();
 
 		next();  // first char - character
 		while (peek().is(Class::name_continue)) next();
 		end = where - 1;
 
 		dia::SourcePosition sourcePosition(sourceStart, end);
-		std::string message;
-		output.push_back(
-			Token::makeIdentifier(composeRaw(char_array, begin, end), sourcePosition)
-		);
+		std::string         message;
+		output.push_back(Token::makeIdentifier(composeRaw(char_array, begin, end), sourcePosition));
 		if (output.back().getType() == Token::Type::Identifier)
 			addTokenMsg(begin, end, "identifier");
 		else if (output.back().getType() == Token::Type::Keyword)
@@ -205,23 +197,21 @@ namespace lexer {
 	}
 
 	void Lexer::specialHandler(Tokens& output) {
-		usize          begin = where;
-		usize end = where;
-		auto sourceStart = currentPostion();
+		usize begin       = where;
+		usize end         = where;
+		auto  sourceStart = currentPostion();
 
 		next();
 
 		dia::SourcePosition sourcePosition(sourceStart, end);
 		addTokenMsg(begin, end, "special");
-		output.push_back(
-			Token::makeSpecial(composeRaw(char_array, begin, end), sourcePosition)
-		);
+		output.push_back(Token::makeSpecial(composeRaw(char_array, begin, end), sourcePosition));
 	}
 
 	void Lexer::binLiteralHandler(Tokens& output) {
-		usize          begin = where;
-		usize end = where;
-		auto sourceStart = currentPostion();
+		usize begin       = where;
+		usize end         = where;
+		auto  sourceStart = currentPostion();
 
 		skip(2);  // 0b
 		while (peek().isBinDigit()) next();
@@ -230,15 +220,13 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(
-			Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition)
-		);
+		output.push_back(Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition));
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {
-		usize          begin = where;
-		usize end = where;
-		auto sourceStart = currentPostion();
+		usize begin       = where;
+		usize end         = where;
+		auto  sourceStart = currentPostion();
 
 		skip(2);  // 0x
 		while (peek().isHexDigit()) next();
@@ -247,15 +235,13 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(
-			Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition)
-		);
+		output.push_back(Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition));
 	}
 
 	void Lexer::decLiteralHandler(Tokens& output) {
-		usize          begin = where;
-		usize end = where;
-		auto sourceStart = currentPostion();
+		usize begin       = where;
+		usize end         = where;
+		auto  sourceStart = currentPostion();
 
 		bool was_dot = false;
 		bool was_e   = false;
@@ -280,16 +266,14 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(
-			Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition)
-		);
+		output.push_back(Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition));
 	}
 
 	void Lexer::stringHandler(Tokens& output) {
-		usize          begin = where;
-		usize end = where;
-		auto sourceStart = currentPostion();
-		bool closed = true;
+		usize begin       = where;
+		usize end         = where;
+		auto  sourceStart = currentPostion();
+		bool  closed      = true;
 
 		next();
 		while (!peek().is('"')) {
@@ -297,11 +281,18 @@ namespace lexer {
 				next();
 				next();
 			} else if (isEOL()) {
-				errorState.failAndLog(dia::SourcePosition(sourceStart, where - 1), "Expected this string to end before the end of line at: " + generateLineColumnInfo());
+				errorState.failAndLog(
+					dia::SourcePosition(sourceStart, where - 1),
+					"Expected this string to end before the end of line at: "
+						+ generateLineColumnInfo()
+				);
 				closed = false;
 				break;
 			} else if (isEOF()) {
-				errorState.failAndLog(dia::SourcePosition(sourceStart, where - 1), "Expected this string to end before the end of file");
+				errorState.failAndLog(
+					dia::SourcePosition(sourceStart, where - 1),
+					"Expected this string to end before the end of file"
+				);
 				closed = false;
 				break;
 			} else {
@@ -314,19 +305,20 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "string");
-		output.push_back(
-			Token::makeString(composeRaw(char_array, begin + 1, end - usize(closed)), sourcePosition)
-		);
+		output.push_back(Token::makeString(
+			composeRaw(char_array, begin + 1, end - usize(closed)), sourcePosition
+		));
 	}
 
 	void Lexer::bracketHandler(Tokens& output) {
-		usize end = where;
-		auto sourceStart = currentPostion();
+		usize end         = where;
+		auto  sourceStart = currentPostion();
 
-		Token::BracketType bracket_type{peek().value};
-		auto group_end = peek().bracketPair();
+		Token::BracketType bracket_type{ peek().value };
+		auto               group_end = peek().bracketPair();
 		if (tokenMessages())
-			log.add({ { { base::strConcat("group begin(", line, ":", column, ")") } }, printer::MessageType::DEBUG });
+			log.add({ { { base::strConcat("group begin(", line, ":", column, ")") } },
+			          printer::MessageType::DEBUG });
 
 
 		Tokens inner_tokens;
@@ -338,36 +330,41 @@ namespace lexer {
 
 		end = where;
 
-		if (peek().is(group_end)) next(); // par close
+		if (peek().is(group_end))
+			next();  // par close
 		else if (isEOF()) {
-			errorState.failAndLog(dia::SourcePosition(sourceStart, where - 1), "Expected bracket to be closed before the end of file");
+			errorState.failAndLog(
+				dia::SourcePosition(sourceStart, where - 1),
+				"Expected bracket to be closed before the end of file"
+			);
 			end = where - 1;
 		} else {
-			errorState.failAndLog(dia::SourcePosition(sourceStart, where - 1), 
+			errorState.failAndLog(
+				dia::SourcePosition(sourceStart, where - 1),
 				base::strConcat(
-					"Expected brackets starting here to be closed with: `", 
-					icu::UnicodeString(group_end), 
-					"` but encountered `", 
-					icu::UnicodeString(peek().value), 
-					"` at position ", 
-					generateLineColumnInfo(), 
+					"Expected brackets starting here to be closed with: `",
+					icu::UnicodeString(group_end),
+					"` but encountered `",
+					icu::UnicodeString(peek().value),
+					"` at position ",
+					generateLineColumnInfo(),
 					" instead"
-			));
+				)
+			);
 			end = where - 1;
-		} 
+		}
 
 
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
-		dia::SourcePosition sentinelPosition(file, line, column, end); 
-		auto sentinelView = composeRaw(char_array, end, end);
-		Token sentinel = Token::makeSentinelEnd(sentinelView, sentinelPosition);
+		dia::SourcePosition sentinelPosition(file, line, column, end);
+		auto                sentinelView = composeRaw(char_array, end, end);
+		Token               sentinel     = Token::makeSentinelEnd(sentinelView, sentinelPosition);
 
-		output.push_back(
-			Token::makeBracketGroup(bracket_type, std::move(inner_tokens), std::move(sentinel), sourcePosition)
-		);
-		if (tokenMessages())
-			log.add({ { { "group end" } }, printer::MessageType::DEBUG });
+		output.push_back(Token::makeBracketGroup(
+			bracket_type, std::move(inner_tokens), std::move(sentinel), sourcePosition
+		));
+		if (tokenMessages()) log.add({ { { "group end" } }, printer::MessageType::DEBUG });
 	}
 
 	bool Lexer::isEOF() const { return peek().is(Class::end_of_file_value); }
@@ -382,7 +379,5 @@ namespace lexer {
 
 	bool Lexer::isStringBegin() const { return tryRawValue('"'); }
 
-	dia::SourcePosition Lexer::currentPostion() const {
-		return {file, line, column, where};
-	}
+	dia::SourcePosition Lexer::currentPostion() const { return { file, line, column, where }; }
 }

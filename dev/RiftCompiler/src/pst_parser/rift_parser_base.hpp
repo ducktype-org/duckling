@@ -14,8 +14,7 @@ namespace pst {
 
 	class RiftElement: public tpc::Element {
 	public:
-		explicit RiftElement(dia::SourcePosition position):
-			  source_position(std::move(position)){};
+		explicit RiftElement(dia::SourcePosition position): source_position(std::move(position)){};
 
 		[[nodiscard]]
 		const dia::SourcePosition& getSourcePosition() const;

@@ -11,17 +11,15 @@ namespace lexer {
 	 */
 	class Char {
 	public:
-
-		const UChar32 value;
-		const u8 size;
+		const UChar32        value;
+		const u8             size;
 		const base::RawArray raw_begin;
 
 		Char(UChar32, u8, base::RawArray);
 
 		[[nodiscard]]
-		bool is(icu::UnicodeSet&) const;
-		[[nodiscard]]
-		bool is(UChar32) const;
+		bool               is(icu::UnicodeSet&) const;
+		[[nodiscard]] bool is(UChar32) const;
 		[[nodiscard]]
 		bool isInRange(UChar32 begin, UChar32 end) const;
 
@@ -48,11 +46,12 @@ namespace lexer {
 	using CharArray = const std::vector<Char>;
 
 	/**
-	 * @brief Assembles a `base::RawView` pointing to the placement of the given range in source code.
-	 * 
+	 * @brief Assembles a `base::RawView` pointing to the placement of the given range in source
+	 * code.
+	 *
 	 * @param arr Array of characters in source code
-	 * @param begin First character index in `arr` 
-	 * @param end Last character index in `arr` 
+	 * @param begin First character index in `arr`
+	 * @param end Last character index in `arr`
 	 */
 	base::RawView composeRaw(CharArray& arr, usize begin, usize end);
 

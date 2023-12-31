@@ -27,7 +27,8 @@ namespace pst {
 	using lexer::Token;
 
 	/**
-	 * @brief A function which takes in the state of the parser and a distance as its arguments and returns whether a condition is met at the distance from the current position
+	 * @brief A function which takes in the state of the parser and a distance as its arguments and
+	 * returns whether a condition is met at the distance from the current position
 	 */
 	using StateCondition = std::function<bool(const RiftParserState&, usize)>;
 
@@ -35,7 +36,9 @@ namespace pst {
 	 * Set up to work on vector like containers with push_back and back
 	 */
 	template<bool NON_EMPTY, class Container, class Separator>
-	bool parseList(RiftParserState& state, Container& cont, Separator sep, StateCondition end_condition) {
+	bool parseList(
+		RiftParserState& state, Container& cont, Separator sep, StateCondition end_condition
+	) {
 		usize expr_length;
 		if (state.empty() || end_condition(state, 0)) {
 			if (!NON_EMPTY) return true;

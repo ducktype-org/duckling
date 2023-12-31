@@ -482,7 +482,7 @@ namespace pst {
 	};
 
 #define RIFT_TEST_CHILD_CONSTRUCTOR(class_name) \
-	class_name(dia::SourcePosition position): \
+	class_name(dia::SourcePosition position):   \
 		  RiftTestingStmt(StmtKind::class_name, std::move(position)) {}
 
 	class EagerLookup: public RiftTestingStmt {

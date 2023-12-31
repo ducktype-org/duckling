@@ -54,17 +54,13 @@ namespace tpc {
 		return peek(fwd).isOperator() and peek(fwd).isStr(oper);
 	}
 
-	bool TokenStream::isBracketGroup(usize fwd) const {
-		return peek(fwd).isBracketGroup();
-	}
+	bool TokenStream::isBracketGroup(usize fwd) const { return peek(fwd).isBracketGroup(); }
 
 	bool TokenStream::isBracketGroup(Token::BracketType bracket_type, usize fwd) const {
 		return peek(fwd).isBracketGroup(bracket_type);
 	}
 
-	bool TokenStream::isRecursive(usize fwd) const {
-		return peek(fwd).isRecursive();
-	}
+	bool TokenStream::isRecursive(usize fwd) const { return peek(fwd).isRecursive(); }
 
 	usize TokenStream::size() const { return (where >= to ? 0 : to - where); }
 

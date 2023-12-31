@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
 	auto         file_content = file.getContent();
 
 	dia::ErrorState errorState;
-	auto chars = lexer::decode<fs::UTF8>(file_content.view(), errorState);
+	auto            chars = lexer::decode<fs::UTF8>(file_content.view(), errorState);
 	if (errorState.fail()) {
 		errorState.dumpLog(std::cerr);
 		return 0;

@@ -62,7 +62,7 @@ namespace base {
 	class VectorMap {
 	private:
 		std::vector<base::Optional<DATA_T>> map;
-		usize                              element_count{};
+		usize                               element_count{};
 
 	public:
 		typedef VectorMap SelfType;

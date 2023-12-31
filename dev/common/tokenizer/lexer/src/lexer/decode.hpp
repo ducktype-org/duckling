@@ -7,13 +7,13 @@
 namespace lexer {
 	/**
 	 * Decode an array of bytes using the given encoding
-	 * 
+	 *
 	 * @tparam encoding Which encoding should the function use.
 	 * @param bytes View of the bytes to decode
 	 * @param err `dia::ErrorState` to store errors
-	 * 
+	 *
 	 * @return CharArray of decoded data
-	 * 
+	 *
 	 * @note We should probably stick to only decoding UTF-8 for now
 	 */
 	template<fs::Encoding encoding>
