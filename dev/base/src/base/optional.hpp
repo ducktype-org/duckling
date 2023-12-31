@@ -108,9 +108,10 @@ namespace base {
 		constexpr explicit Optional(Args&&... args):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
-		template < class U = T > requires std::is_constructible_v<T, U&&>
+		template < class U = T > 
+		requires std::is_constructible_v<T, U>
 		constexpr Optional( U&& value ):
-			private_optional(std::move(value)) {}
+			private_optional(std::forward<U>(value)) {}
 
 		template< class... Args >
 		constexpr T& emplace( Args&&... args ) {
@@ -119,9 +120,10 @@ namespace base {
 
 		explicit constexpr operator bool() const { return has_value(); }
 
-		template < class U = T > requires std::is_constructible_v<T, U>
+		template < class U = T > 
+		requires std::is_constructible_v<T, U>
 		constexpr Optional& operator=( U&& value ) {
-			private_optional = std::move(value);
+			private_optional = std::forward<U>(value);
 			return *this;
 		}
 

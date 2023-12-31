@@ -131,9 +131,7 @@ public:
 
 		std::string                 str1 = "str1", str2 = "str2";
 		base::Optional<std::string> b;
-		std::cerr << str1 << std::endl;
 		b = str1;
-		std::cerr << b.has_value() << " " << b.value() << " " << *b << " " << str1 << " " << (*b != str1) <<  std::endl;
 		assert(str1 == *b, "B not equal to str1");
 		b = str2;
 		assert(str2 == *b, "B not equal to str2");
