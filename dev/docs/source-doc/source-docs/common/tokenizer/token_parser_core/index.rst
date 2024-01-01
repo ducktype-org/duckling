@@ -2,8 +2,7 @@
 Token parser core
 =================
 
-.. @TODO
-.. brief module description
+Module implementing general tools and interfaces taking the output of lexer(recursive list of tokens) and preparing it for usage by a parser.
 
 .. toctree::
     :caption: Contents:
