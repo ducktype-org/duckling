@@ -27,7 +27,7 @@ namespace tpc {
 	}
 
 	void parseOne(ParserState& state, Identifier* ident) {
-		if (!state.ctokens().peek().isIdentifier()) state.fail(-1, "expected identifier");
+		if (!state.ctokens().peek().isIdentifier()) state.fail(-1, "expected identifier after here");
 		ident->value = state.tokens().next().getValue();
 	}
 

@@ -2,4 +2,4 @@
 Automatic
 =========
 
-.. @TODO
+.. doxygenfile:: automatic.hpp

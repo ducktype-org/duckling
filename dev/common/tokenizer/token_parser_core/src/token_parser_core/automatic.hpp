@@ -1,3 +1,17 @@
+/**
+ * @file automatic.hpp
+ * @brief Useful parsing abstractions for ParserState
+ * 
+ * ParseOne - has four modes depending on the type of second argument:
+ *  - for Specials, Keywords and Operators from `rift_def` it ensures that the next token has that value and skips it, otherwise it logs an error
+ *  - for Identifier* it ensures the next token is an identifier and parses it to the specified location and skips it, otherwise it logs an error
+ *  - for OptionalIdentifier* it parses an identifier into the specified location and skips. If There is no identifier next it doesn't do anything
+ *  - for ParserRef<T>* it calls the parser of T object into the specified location 
+ * 
+ * ParseAll takes the state and any number of additional arguments and calls parseOne on those arguments from left to right.
+ * 
+ * NullAwareDprint is a wrapper for element specific debug prints called on pointers that prints null if the pointer is null
+ */
 #pragma once
 
 #include "parser_state.hpp"
