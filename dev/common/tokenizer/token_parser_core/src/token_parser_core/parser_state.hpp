@@ -7,26 +7,55 @@
 
 namespace tpc {
 
+	/**
+	 * @brief Implements higher level token stream interactions
+	 */
 	class ParserState {
-		std::vector<TokenStream> stream_stack;
+		std::vector<TokenStream> stream_stack; ///< Internal storage of recursive strings
 
 	public:
+		/**
+		 * @brief provides mutable access to the current stream
+		 */
 		TokenStream&       tokens();
+		/**
+		 * @brief provides immutable access to the current stream
+		 */
 		const TokenStream& ctokens() const;
 
-		dia::ErrorState err;
+		dia::ErrorState err; ///< Stores parsing errors
 
 		ParserState(TokenStream&& tokens, dia::ErrorState&& err): err(std::move(err)) {
 			stream_stack.emplace_back(std::move(tokens));
 		}
 
+		/**
+		 * @return true If no tokens left in current stream
+		 * @return false If tokens left in current stream
+		 */
 		bool empty() const;
+		/**
+		 * @return true If tokens left in current stream
+		 * @return false If no tokens left in current stream
+		 */
 		bool notEmpty() const;
 
+		/**
+		 * @brief Creates a new stream from the current token in current stream and makes it the current stream
+		 */
 		void goDown();
+		/**
+		 * @brief deletes current stream and makes last stream the current stream
+		 */
 		void goUp();
+		/**
+		 * @brief deletes current stream and makes last stream the current stream then skips one token(the recursive token that was the source of the deleted stream)
+		 */
 		void goUpAndSkip();
 
+		/**
+		 * @brief Logs an error relatively to the current token
+		 */
 		void fail(usize rel_pos, std::string message) {
 			err.failAndLog(ctokens().peek(rel_pos).getPosition(), message);
 		}
@@ -43,6 +72,10 @@ namespace tpc {
 			return false;
 		}
 
+		/**
+		 * @return true if ate
+		 * @return false if didn't eat
+		 */
 		bool tryEat(Special spec) {
 			if (tokens().is(spec)) {
 				tokens().next();
@@ -51,6 +84,10 @@ namespace tpc {
 			return false;
 		}
 
+		/**
+		 * @return true if ate
+		 * @return false if didn't eat
+		 */
 		bool tryEat(Operator op) {
 			if (tokens().is(op)) {
 				tokens().next();
