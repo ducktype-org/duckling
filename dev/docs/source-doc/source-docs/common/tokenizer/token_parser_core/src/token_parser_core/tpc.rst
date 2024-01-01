@@ -2,4 +2,4 @@
 Tokem parser core
 =================
 
-.. @TODO
+.. doxygenfunction:: tpc::init
