@@ -22,7 +22,7 @@ All symbols are in namespace ``tpc``.
 
 This module can be conceptually divided into two parts:
 #. Classes ``tpc::TokenStream``, ``tpc::ParserState`` and functions in `automatic.hpp` offer higher level abstractions for interacting with a list of tokens that are useful for parsing.
-#. Class ``tpc::Element`` and everything from `parser_ref.hpp` and `base_element.hpp` define basic types and functions used as building blocks in abstract syntax tree
+#. Class ``tpc::Element`` and everything from `parser_ref.hpp` and `base_element.hpp` define basic types and functions used as building blocks in abstract syntax tree.
 
 init
 ^^^^
@@ -61,8 +61,29 @@ Higher level single token methods
 
 .. code-block:: cpp
 
-    if (state.tryEat(Operator::SingleArrow)) parseOne(state, &out->rets);
+    tpc::ParserState& state;
+    // during function parsing
+    if (state.tryEat(Operator::SingleArrow)) /* parse return type */;
 
 Parsing multiple expected elements in a row
 -------------------------------------------
+
+``parseOne`` and ``parseAll`` functions allow for parsing of expected elements/values. They generally handle unexpected tokens by adding relevant errors.
+
+``void parseOne(tpc::ParserState&, <Keyword|Special|Operator> value)`` skips if the current token is of the given value. Otherwise adds an error.
+
+``void parseOne(tpc::ParserState&, tpc::Identifier* result)`` parses an identifier into the result if possible. Otherwise adds an error.
+
+``void parseOne(tpc::ParserState&, tpc::OptionalIdentifier* result)`` parses an identifier into the result if possible.
+
+``void parseOne(tpc::ParserState&, tpc::ParserRef<T>* result)`` parses an object of type `T` into the result. Uses the ``parserRef<Element> T::parse(tpc::ParserState&)`` static method that should be implemented by parsable `Element` type objects.
+
+``void parseAll(tpc::ParserState&, ...)`` parses all of the input arguments using ``parseOne`` from left to right for example we can use:
+
+.. code-block:: cpp
+
+    tpc::ParserState& state;
+    parseAll(state, Keyword::Fun, /* Identifier* object */, /* list of arguments element parserRef */);
+
+to parse the beginning of a function.
 

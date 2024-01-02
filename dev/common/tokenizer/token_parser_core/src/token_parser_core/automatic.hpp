@@ -37,13 +37,13 @@ namespace tpc {
 
 	void parseOne(ParserState& state, Operator op);
 
-	void parseOne(ParserState& state, Identifier* ident);
+	void parseOne(ParserState& state, Identifier* result);
 
-	void parseOne(ParserState& state, OptionalIdentifier* ident);
+	void parseOne(ParserState& state, OptionalIdentifier* result);
 
 	template<typename State, typename T>
-	void parseOne(State& state, ParserRef<T>* t) {
-		*t = T::parse(state);
+	void parseOne(State& state, ParserRef<T>* result) {
+		*result = T::parse(state);
 	}
 
 	// parses all the given elements
