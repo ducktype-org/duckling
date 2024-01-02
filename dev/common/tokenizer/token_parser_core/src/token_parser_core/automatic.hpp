@@ -11,6 +11,8 @@
  * ParseAll takes the state and any number of additional arguments and calls parseOne on those arguments from left to right.
  * 
  * NullAwareDprint is a wrapper for element specific debug prints called on pointers that prints null if the pointer is null
+ * 
+ * @note ParseOne/ParseAll should be changed to be methods of `tpc::ParserState`
  */
 #pragma once
 
