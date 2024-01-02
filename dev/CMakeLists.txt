@@ -25,6 +25,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Configure assembly targets generation (*.s) to include Intel-style asm and source code/asm interleaving
 set(CMAKE_CXX_CREATE_ASSEMBLY_SOURCE "<CMAKE_CXX_COMPILER> $(CXX_DEFINES) $(CXX_INCLUDES) ${CMAKE_CXX_FLAGS} -S -masm=intel -fverbose-asm <SOURCE> -o <ASSEMBLY_SOURCE>")
 
 if (ENABLE_COVERAGE)
