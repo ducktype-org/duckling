@@ -333,6 +333,10 @@ namespace base {
 			return *this;
 		}
 
+		constexpr void reset() noexcept { private_optional.reset(); }
+
+		explicit constexpr operator bool() const { return has_value(); }
+
 		friend void swap(Optional& a, Optional& b) {
 			std::swap(a.private_optional, b.private_optional);
 		}
@@ -416,6 +420,21 @@ namespace base {
 		[[nodiscard]]
 		constexpr T&& operator*() && {
 			return std::move(value());
+		}
+
+
+		[[nodiscard]]
+		constexpr const T*
+		operator->() const {
+			_throwOnNoValue();
+			return private_optional.operator->();
+		}
+
+		[[nodiscard]]
+		constexpr T*
+		operator->() {
+			_throwOnNoValue();
+			return private_optional.operator->();
 		}
 
 		// clang-format on

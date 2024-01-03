@@ -7,6 +7,15 @@
 #include <base/optional.hpp>
 #include <queue>
 
+#define SPACESHIP_PASTE(o1, o2)               \
+	if (a < b) ASSERT_EQUAL(true, o1 < o2);   \
+	if (a == b) ASSERT_EQUAL(true, o1 == o2); \
+	if (a <= b) ASSERT_EQUAL(true, o1 <= o2); \
+	if (a > b) ASSERT_EQUAL(true, o1 > o2);   \
+	if (a != b) ASSERT_EQUAL(true, o1 != o2); \
+	if (a >= b) ASSERT_EQUAL(true, o1 >= o2);
+
+
 using base::Optional;
 
 class OptionalTest: public tester::TestSuite {
@@ -21,9 +30,11 @@ public:
 		TESTER_ADD_TEST(testReference);
 		TESTER_ADD_TEST(macroTest);
 		TESTER_ADD_TEST(throwTest);
-		TESTER_ADD_TEST(testAssign);
-		TESTER_ADD_TEST(testSwap);
-		TESTER_ADD_TEST(testNoDanglingPointer);
+		TESTER_ADD_TEST(assignTest);
+		TESTER_ADD_TEST(swapTest);
+		TESTER_ADD_TEST(danglingPointerTest);
+		TESTER_ADD_TEST(comparatorTest);
+		TESTER_ADD_TEST(boolAndResetTest);
 	}
 
 	void basicTest() {
@@ -122,7 +133,7 @@ public:
 		}
 	}
 
-	void testAssign() {
+	void assignTest() {
 		base::Optional<int> a;
 		a = 1;
 		assert(1 == *a, "A not equal to 1");
@@ -145,12 +156,12 @@ public:
 		assert(str2[0] == 'd', "C should start with a d");
 	}
 
-	void testSwap() {
+	void swapTest() {
 		base::Optional<std::string> a = "1";
 		base::Optional<std::string> b = "2";
 		std::swap(a, b);
 		assert("2" == *a, "a does not hold 2");
-		assert("1" == *b, "b does not hold 2");
+		assert("1" == *b, "b does not hold 1");
 
 		std::string                  str1 = "123";
 		std::string                  str2 = "321";
@@ -161,9 +172,44 @@ public:
 		assert(str1 == *d, "d does not hold str1");
 	}
 
-	void testNoDanglingPointer() {
+	void danglingPointerTest() {
 		// This would not compile if -Werror flag is on, and it would create a dangling pointer...
 		if_opt_some(Optional(1), val) { assert(val == 1, base::strConcat("val != 1, but: ", val)); }
+	}
+
+	void comparatorTest() {
+		int a = 1;
+		int b = 2;
+		// Reference
+		for (int i = 0; i < 3; i++) {
+			base::Optional<int&> o1 = a;
+			base::Optional<int&> o2 = b;
+			SPACESHIP_PASTE(o1, o2);
+			a++;
+		}
+
+		a = 1;
+		// No reference
+		for (int i = 0; i < 3; i++) {
+			base::Optional<int> o1 = a;
+			base::Optional<int> o2 = b;
+			SPACESHIP_PASTE(o1, o2);
+			a++;
+		}
+	}
+
+	void boolAndResetTest() {
+		base::Optional<int> o = 1;
+		ASSERT_EQUAL(true, o.has_value());
+		ASSERT_EQUAL(true, bool(o));
+		o.reset();
+		ASSERT_EQUAL(false, o.has_value());
+
+		base::Optional<int> o2 = 1;
+		ASSERT_EQUAL(true, o2.has_value());
+		ASSERT_EQUAL(true, bool(o2));
+		o2.reset();
+		ASSERT_EQUAL(false, o2.has_value());
 	}
 };
 
