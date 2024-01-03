@@ -27,12 +27,14 @@ namespace vm {
 	public:
 		BlockId makeTypeBlock(TypeCRef type, base::ModRawView data) {
 			auto block_id = memory.reserveBlockID();
+			std::memset(data.getBegin(), 0, data.size());
 			memory.makeBlock(block_id, Block(block_id, type, data));
 			return block_id;
 		}
 
 		BlockId makeArrayBlock(TypeCRef type, u64 length, base::ModRawView data) {
 			auto block_id = memory.reserveBlockID();
+			std::memset(data.getBegin(), 0, data.size() * length);
 			memory.makeBlock(block_id, Block(block_id, type, length, data));
 			return block_id;
 		}
