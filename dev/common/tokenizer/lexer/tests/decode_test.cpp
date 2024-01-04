@@ -5,12 +5,12 @@
 
 std::byte operator""_BT(unsigned long long x) {
 	RIFT_ASSERT(x < 256, "bad std::byte literal operator");
-	return std::byte{ x };
+	return std::byte(x);
 }
 
 std::byte operator""_BT(char x) {
 	RIFT_ASSERT(x >= 0, "bad std::byte literal operator");
-	return std::byte{ x };
+	return std::byte(x);
 }
 
 class DecodeTest: public tester::TestSuite {

@@ -128,7 +128,7 @@ namespace lexer {
 				continue;
 			}
 
-			out.emplace_back(value, u8{ size }, bytes.getBegin() + pos);
+			out.emplace_back(value, u8(size), bytes.getBegin() + pos);
 			pos += size;
 		}
 		// Add eof value
