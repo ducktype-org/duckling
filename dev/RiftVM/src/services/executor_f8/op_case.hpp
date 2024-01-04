@@ -19,10 +19,11 @@
 
 #define LABEL_PTR(opcode) (&&LABEL_##opcode)
 
-#define DISPATCH_OPCODE()                                                           \
-	{                                                                               \
-		nextInstruction(FRAME(bc), FRAME(instruction_pointer), opcode, arg0, arg1); \
-		goto* opcode_label[static_cast<u64>(opcode)];                               \
+#define DISPATCH_OPCODE()                                                            \
+	{                                                                                \
+		nextInstruction(FRAME(bc), FRAME(instruction_pointer), opcode, arg0, arg1);  \
+		if constexpr (!IGNORE_EXECUTION_STRATEGY) handleExecutionStrategyIfNeeded(); \
+		goto* opcode_label[static_cast<u64>(opcode)];                                \
 	}
 
 #define OP_CASE_HEADER(opcode)  case OpcodeFix8 ::opcode:

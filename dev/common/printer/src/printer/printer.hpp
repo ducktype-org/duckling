@@ -179,17 +179,12 @@ namespace printer {
 		usize                    generalMax;
 		minLevel_t               minLevel;
 		maxAmounts_t             maxAmounts;
-		bool ignore_instant_debug = false;
+		bool                     ignore_instant_debug = false;
 
 	public:
+		void ignoreInstantDebug() { ignore_instant_debug = true; }
 
-		void ignoreInstantDebug() {
-			ignore_instant_debug = true;
-		}
-
-		bool isIgnoreInstantDebug() {
-			return ignore_instant_debug;
-		}
+		bool isIgnoreInstantDebug() { return ignore_instant_debug; }
 
 		Console(
 			usize        generalMax = SIZE_MAX,
@@ -198,7 +193,7 @@ namespace printer {
 		):
 			  generalMax(generalMax),
 			  minLevel(minLevel),
-			  maxAmounts(maxAmounts){}
+			  maxAmounts(maxAmounts) {}
 
 		// @IDEA: make these sets constexpr (and implement them as such).
 		void setMinLevel(MessageType type, LevelType level);

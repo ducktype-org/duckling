@@ -3,13 +3,16 @@ add_library(Base
 		src/base/impl/exceptions.cpp
 		src/base/impl/raw_view.cpp
 		src/base/impl/string_id.cpp
-		src/base/optional.hpp
-		src/base/anycast.hpp
+		src/base/impl/str_concat.cpp
+		src/base/impl/convert.cpp
 )
 
 set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)
 
-make_module(Base USES Result::Result)
+
+# @TODO: unicode depdencdy might not be optinal. 
+# Think of a way to "break" it 
+make_module(Base USES Result::Result unicode)
 
 rift_add_test(base base_test_simple tests/test.cpp
 		USES Printer Base)

@@ -6,7 +6,7 @@ namespace pst {
 		auto out      = makeRef<Import>(position);
 
 		RIFT_ASSERT(
-			state.ctokens().is(Keyword::Import), position.genErrorMsg("bad statement choice")
+			state.ctokens().is(Keyword::Import), position.genErrorStr("bad statement choice")
 		);
 
 		parseOne(state, Keyword::Import);

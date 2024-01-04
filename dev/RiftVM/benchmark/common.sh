@@ -1,3 +1,5 @@
+#!/bin/bash
+
 . config.sh
 
 # Be strict:

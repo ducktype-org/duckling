@@ -1,3 +1,5 @@
+#!/bin/bash
+
 . common.sh
 
 test_timeout=210

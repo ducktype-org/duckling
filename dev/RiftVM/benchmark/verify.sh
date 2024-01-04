@@ -1,3 +1,5 @@
+#!/bin/bash
+
 . config.sh
 
 echo "First check that:"
