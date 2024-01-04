@@ -13,7 +13,7 @@ namespace compiler {
 
 		if (dprint) out_ref << "Parsing new file: `" << path.strView() << "`\n";
 
-		pst_map.put(path, std::move(pst::parse(path)));
+		pst_map.put(path, pst::parse(path));
 		pst::PST& new_pst = pst_map[path];
 
 		if (new_pst.getErrorState().fail()) {
@@ -27,7 +27,7 @@ namespace compiler {
 		auto& imports = new_pst.getImports();
 
 		if (dprint) {
-			if (imports.size() == 0) {
+			if (imports.empty()) {
 				out_ref << "  No imports. \n";
 			} else {
 				out_ref << "  Imports: \n";
@@ -40,7 +40,7 @@ namespace compiler {
 			}
 		}
 
-		// @TODO: we should handle different import syntaxes like .* or .function_name
+		// @TODO: we should handle different import syntax like .* or .function_name
 		for (auto& import: imports) {
 			auto import_path = modulesys::importToPath(path.parentPath().strView(), *import);
 			addFileRecursively(fs::FilePath(import_path), dprint, out);

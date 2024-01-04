@@ -4,8 +4,7 @@
 #include <vector>
 #include <span>
 
-#include <base/option.hpp>
-
+#include <base/optional.hpp>
 #include <memory_data/pointer.hpp>
 #include "code.hpp"
 
@@ -40,7 +39,7 @@ namespace vm {
 
 	struct Frame {
 		// Internal data:
-		option<Frame&> previous;
+		base::Optional<Frame&> previous;
 		// const FuncData& function;
 		const std::span<const Fix8Instruction>
 			bc;  // this is duplication of function.bc, but allows for faster access

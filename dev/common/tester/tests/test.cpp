@@ -62,8 +62,8 @@ private:
 	}
 };
 
-int main(int argc, char** argv) {
-	auto config = tester::testConfigFromArgs({ argc, argv }, "/common/tester/tests/");
+int main(int argc, const char** argv) {
+	auto config = tester::testConfigFromArgs({ (usize) argc, argv }, "/common/tester/tests/");
 
 	SimpleTesterTest passing_test(std::move(config), 0);
 	if (!passing_test.run()) return 1;
@@ -73,6 +73,7 @@ int main(int argc, char** argv) {
 	 * @TODO: change that when "expected to fail" is added
 	 */
 	for (i32 i = 1; i < 4; i++) {
+		// @TODO: Why is config moved in a loop? \/
 		SimpleTesterTest failing_test(std::move(config), i);
 		if (failing_test.run()) return 1;
 	}

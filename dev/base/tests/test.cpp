@@ -12,7 +12,7 @@ bool compareCstr(const char* const c1, const char* const c2) {
 }
 
 bool containsCstr(const char* const base, const char* const pattern) {
-	return std::strstr(base, pattern) != NULL;
+	return std::strstr(base, pattern) != nullptr;
 }
 
 class GeneralUtilsTest: public tester::TestSuite {

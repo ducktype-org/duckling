@@ -1,15 +1,13 @@
 #include <iomanip>
 
 #include <clap/clap.hpp>
+#include <printer/printer.hpp>
+
 #include <supervisor/supervisor.hpp>
 #include "cli.hpp"
 #include "server.hpp"
 
 #include <services/executor_f8/op_case_config.hpp>
-
-void initialise([[maybe_unused]] const clap::ParametersMap& params) {
-	// @TODO
-}
 
 void showVersion() {
 	std::cout << std::boolalpha;
@@ -20,34 +18,64 @@ void showVersion() {
 	std::cout << "USE_FLAT_FRAME: " << USE_FLAT_FRAME_VALUE << "\n";
 }
 
-int main(int argc, char** argv) {
-	clap::ParametersMap parameters
-		= clap::Config()
-	          .add(clap::ParameterConfig("server")
-	                   .short_name('s')
-	                   .description("Launch RiftVM as a http server")
-	                   .with_value("port", "5000"))
-	          .add(clap::ParameterConfig("file")
-	                   .short_name('f')
-	                   .description("Launch given file (only if not -serwer)")
-	                   .with_value("filename", "<@FIXME>"))
-	          .add(clap::ParameterConfig("version").short_name('v').description(
-				  "Shows version and config"
-			  ))
-	          .parse(clap::CLIArgs{ argc, argv });
+int main(int argc, const char** argv) {
+	auto clap
+		= clap::Clap()
+	          .addHelpFlag()
+	          .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
+	                   .addShortName('s')
+	                   .addLongName("server")
+	                   .addShortDesc("Launch RiftVM as a http server")
+	                   .build())
+	          .add(clap::ParamBuilder::ofValue(clap::FileParser::make(std::regex(".*\\.rift")))
+	                   .conditional(
+						   [](const clap::ParsingResult& result) {
+							   return !(result.isParam('f') && result.isParam('s'));
+						   },
+						   "File cannot be passed with -s/--server flag"
+					   )
+	                   .addShortName('f')
+	                   .addLongName("file")
+	                   .addShortDesc("Launch given file (only if not -s/--server)")
+	                   .build())
+	          .add(clap::ParamBuilder::ofFlag()
+	                   .addShortName('v')
+	                   .addLongName("version")
+	                   .addShortDesc("Shows version and config")
+	                   .build());
 
-	initialise(parameters);
+	clap::ParsingResult result;
+
+	try {
+		result = clap.parse(argc, argv);
+	} catch (clap::exceptions::ClapException& e) {
+		printer::Console console = printer::Console();
+		console.add({
+			{
+				{ "rift: ", printer::Color::DEFAULT },
+				{ "error: ", printer::Color::RED },
+				{ e.what(), printer::Color::DEFAULT },
+			},
+			printer::MessageType::ERROR,
+			0,
+		});
+		console.print(std::cerr);
+		return 1;
+	} catch (clap::exceptions::HelpException& e) {
+		std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);
+		std::cout << help_message << '\n';
+		return 0;
+	}
+
 	// Instantiate supervisor
 	vm::Supervisor::get();
 
-	if (parameters.contains('v')) {
+	if (result.isFlag('v'))
 		showVersion();
-	} else if (parameters.contains('s')) {
-		server(std::stoi(parameters.get('s').value().stdString()));
-	} else if (parameters.contains('f')) {
-		auto file = parameters.get('f').value().stdString();
-		cli(file);
-	} else {
+	else if (auto port = result.getValue<i64>("server"))
+		server(port.value());
+	else if (auto file = result.getValue<std::string>("file"))
+		cli(file.value());
+	else
 		cli();
-	}
 }

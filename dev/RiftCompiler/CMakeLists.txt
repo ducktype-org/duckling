@@ -54,7 +54,7 @@ add_library(LSP
 make_module(PstParser USES Lexer Printer TPC)
 make_module(ModuleSystem USES Base PstParser)
 make_module(SymbolTable USES Base PstParser)
-make_module(Compiler USES Base Printer Config PstParser ModuleSystem SymbolTable TypeSystem)
+make_module(Compiler USES Base Printer Clap PstParser ModuleSystem SymbolTable TypeSystem)
 make_module(HIR USES Base SymbolTable PstParser TypeSystem)
 make_module(TypeSystem USES Base SymbolTable Exec)
 make_module(Exec USES Base Operations)
@@ -72,26 +72,26 @@ rift_add_test(compiler module_system_test_simple src/module_system/tests/test.cp
 rift_add_test(compiler compiler_test_simple src/compiler/tests/test.cpp
 		USES Printer ModuleSystem PstParser Lexer Compiler)
 rift_add_test(compiler typesystem_test_simple src/typesystem/tests/simple_test.cpp
-		USES Base Config SymbolTable TypeSystem)
+		USES Base Clap SymbolTable TypeSystem)
 rift_add_test(compiler typesystem_test_new src/typesystem/tests/new_test.cpp
-		USES Base Config SymbolTable TypeSystem)
+		USES Base Clap SymbolTable TypeSystem)
 rift_add_test(compiler exec_ctv_test_simple src/exec/tests/simple_ctv_test.cpp
-		USES Exec Config TypeSystem)
+		USES Exec Clap TypeSystem)
 rift_add_test(compiler exec_defaults_test_simple src/exec/tests/simple_defaults_test.cpp
-		USES Exec Config TypeSystem)
+		USES Exec Clap TypeSystem)
 rift_add_test(compiler exec_constructor_test_simple src/exec/tests/simple_constructor_test.cpp
-		USES Exec Config TypeSystem)
+		USES Exec Clap TypeSystem)
 rift_add_test(compiler operations_test_simple src/operations/tests/simple_test.cpp
-		USES Base Config Operations TypeSystem)
+		USES Base Clap Operations TypeSystem)
 rift_add_test(compiler operation_constructor src/operations/tests/constructors_test.cpp
-		USES Base Config Operations TypeSystem)
+		USES Base Clap Operations TypeSystem)
 rift_add_test(compiler exec_operators_test_simple src/exec/tests/operators_test.cpp
-	  USES Exec Base Config Operations TypeSystem)
+		USES Exec Base Clap Operations TypeSystem)
 rift_add_test(compiler hir_test_simple src/hir/tests/test.cpp
-    USES Exec Base Config Operations TypeSystem TPC PstParser HIR)
+		USES Exec Base Clap Operations TypeSystem TPC PstParser HIR)
 
 # Main:
 add_executable(rift_main src/main.cpp)
-target_link_libraries(rift_main Compiler Printer Lexer PstParser Filesystem Config Base)
+target_link_libraries(rift_main Compiler Printer Lexer PstParser Filesystem Clap Base)
 
 add_subdirectory(playground)

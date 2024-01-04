@@ -4,32 +4,37 @@
 #include <supervisor/supervisor.hpp>
 #include "server.hpp"
 
+#include <result.hpp>
+
 crow::response convertError(const vm::api::ApiError& apiError) {
-	if (std::holds_alternative<vm::api::WrongResponse>(apiError))
-		return crow::response(500, "Wrong response");
-	return crow::response(
+	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return { 500, "Wrong response" };
+	return {
 		400,
 		std::visit(
 			[](const auto& v) {
 				return "JSON is broken\n";  // JS::serializeStruct(v);
 			},
 			apiError
-		)
-	);
+		),
+	};
 }
 
 template<class T, class E>
-crow::response toResponse(const result<T, E>& x) {
+crow::response toResponse(const cpp::result<T, E>& x) {
 	static auto convert = [](const auto& v) {
 		return crow::response(200, /*JS::serializeStruct(v)*/ "{OK, json is broken}");
 	};
-	return convertResult<T, E, crow::response>(x, convert, convertError);
+
+	if (x.has_value()) return convert(x.value());
+	return convertError(x.error());
 }
 
 template<class E>
-crow::response toResponse(const result<void, E>& x) {
+crow::response toResponse(const cpp::result<void, E>& x) {
 	static auto convert = []() { return crow::response(200, "{}"); };
-	return convertResult<E, crow::response>(x, convert, convertError);
+
+	if (x.has_value()) return convert();
+	return convertError(x.error());
 }
 
 void server(i32 port) {
@@ -81,7 +86,7 @@ void server(i32 port) {
 	});
 
 	CROW_ROUTE(app, "/data/type/<uint>/<string>")
-	([](vm::PID pid, std::string type_name) {
+	([](vm::PID pid, const std::string& type_name) {
 		return toResponse(vm::api::getType(pid, type_name).map([](const vm::TypeCRef& type_ptr) {
 			return *type_ptr;
 		}));
