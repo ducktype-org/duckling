@@ -3,18 +3,18 @@
 
 namespace pst {
 
-	Expr::GroupType fromTokenType(Token::Type type) {
+	Expr::GroupType fromTokenType(Token::BracketType type) {
 		switch (type) {
-		case Token::Type::RoundGroup:
+		case Token::BracketType::Round:
 			return Expr::GroupType::RoundGroup;
-		case Token::Type::AngleGroup:
+		case Token::BracketType::Angle:
 			return Expr::GroupType::AngleGroup;
-		case Token::Type::CurlyGroup:
+		case Token::BracketType::Curly:
 			return Expr::GroupType::CurlyGroup;
-		case Token::Type::SquareGroup:
+		case Token::BracketType::Square:
 			return Expr::GroupType::SquareGroup;
 		default:
-			throw std::logic_error("bad token type\n");
+			throw std::logic_error("unsupported bracket type\n");
 		}
 	}
 
@@ -48,8 +48,8 @@ namespace pst {
 		while (state.notEmpty() and i < len) {
 			i++;
 
-			if (state.ctokens().peek().isGroup()) {
-				auto type = fromTokenType(state.ctokens().peek().getType());
+			if (state.ctokens().peek().isBracketGroup()) {
+				auto type = fromTokenType(state.ctokens().peek().getBracketType());
 				state.goDown();
 				if (state.notEmpty()) {
 					out->elements.emplace_back(Group{ type, Expr::parse(state) });

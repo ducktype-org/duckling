@@ -32,6 +32,7 @@ public:
 		TESTER_ADD_TEST(testUsingErrors);
 		TESTER_ADD_TEST(testParamListErrors);
 		TESTER_ADD_TEST(testMissingSemiErr);
+
 		// TESTER_ADD_TEST(testParsingHandler);
 	}
 
@@ -52,8 +53,10 @@ private:
 		auto             correct_content = fs::getSimpleFileContent(json_file);
 		std::string_view correct_string  = correct_content.view().stringView();
 
-		if (no_errors)
+		if (no_errors) {
+			// if (pst.getErrorState().fail()) pst.getErrorState().dumpLog();
 			assert(pst.getErrorState().good(), "there are unexpected errors in rift source-code");
+		}
 
 		assert(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
 		// @TODO: Do we want to print some information about the differences or the bad output to a

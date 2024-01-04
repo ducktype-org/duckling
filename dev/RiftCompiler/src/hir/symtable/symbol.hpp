@@ -1,11 +1,11 @@
 #pragma once
 
 #include <vector>
-#include <optional>
-
 #include <typesystem/typesystem.hpp>
 #include <exec/ctv.hpp>
 #include <base/string_id.hpp>
+
+#include <base/optional.hpp>
 
 #include "scope_symbol_id.hpp"
 #include "symbol_ref.hpp"
@@ -54,7 +54,7 @@ namespace symtable {
 
 		// Scope the symbol represent in default lookup context:
 		// @TODO: should be `not yet done`/`done value`/`error error`
-		std::optional<ScopeRef> linked_lookup_scope;
+		base::Optional<ScopeRef> linked_lookup_scope;
 
 		// Symbol position relative to other symbols:
 		usize relative_position;
@@ -64,8 +64,8 @@ namespace symtable {
 		bool dependent = false;
 
 
-		std::optional<ts::TypeDesc<>> type;
-		SymbolKind                    kind;
+		base::Optional<ts::TypeDesc<>> type;
+		SymbolKind                     kind;
 
 		// lookup lock:
 		bool lock_lookup = false;

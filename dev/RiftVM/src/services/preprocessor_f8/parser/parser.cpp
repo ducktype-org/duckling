@@ -2,6 +2,7 @@
 #include "parser.hpp"
 #include <code_data/opcodes.hpp>
 #include <lexer/lexer.hpp>
+#include <lexer/classifications.hpp>
 #include <base/optional.hpp>
 #include <rift_definitions/key_spec_op.hpp>
 #include <stdexcept>
@@ -361,7 +362,7 @@ namespace assemble {
 
 		tpc::parseAll(state, rift_def::Keyword::BCFunction, &out->name);
 
-		if (!state.ctokens().is(lexer::Token::Type::CurlyGroup)) {
+		if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
 			state.err.setFail();
 			state.err.logError(state.ctokens().peek(-1).getPosition(), "expected `{` after here");
 			return nullptr;
@@ -461,7 +462,7 @@ namespace assemble {
 
 			case rift_def::Keyword::BCCode: {
 				tpc::parseOne(state, rift_def::Operator::Colon);
-				if (!state.ctokens().is(lexer::Token::Type::CurlyGroup)) {
+				if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
 					state.err.setFail();
 					state.err.logError(state.ctokens().peek().getPosition(), "no {} on code:");
 				}
@@ -562,7 +563,7 @@ namespace assemble {
 			break;
 		}
 		case rift_def::Keyword::BCData: {
-			if (!state.ctokens().is(lexer::Token::Type::CurlyGroup)) {
+			if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
 				state.err.setFail();
 				state.err.logError(
 					state.ctokens().peek(-1).getPosition(), "expected `{` after here"
@@ -593,7 +594,7 @@ namespace assemble {
 			break;
 		}
 		case rift_def::Keyword::BCVariant: {
-			if (!state.ctokens().is(lexer::Token::Type::CurlyGroup)) {
+			if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
 				state.err.setFail();
 				state.err.logError(
 					state.ctokens().peek(-1).getPosition(), "expected `{` after here"
@@ -622,7 +623,7 @@ namespace assemble {
 			break;
 		}
 		case rift_def::Keyword::BCFunType: {
-			if (!state.ctokens().is(lexer::Token::Type::CurlyGroup)) {
+			if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
 				state.err.setFail();
 				state.err.logError(
 					state.ctokens().peek(-1).getPosition(), "expected `{` after here"
@@ -697,11 +698,11 @@ namespace assemble {
 		auto maybeContent = path.getContentSafe();
 		if (maybeContent.has_error()) return CodeContainer{ false, maybeContent.error(), nullptr };
 
-		lexer::TokenData td = lexer::tokenizeFile(path, false);
+		lexer::TokenData td = lexer::tokenizeFile(path);
 
 		tpc::ParserState state(
 			tpc::TokenStream(td.tokens, tpc::Token(td.eof_sentinel), 0, td.tokens.size()),
-			tpc::ErrorState()
+			dia::ErrorState()
 		);
 
 		tpc::ParserRef<assemble::ParsedCode> out = ParsedCode::parse(state);
