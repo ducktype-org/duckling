@@ -110,20 +110,12 @@ namespace vm {
 		opcode = static_cast<OpcodeFix8>(instr.opcode);
 	}
 
-	__attribute__((always_inline)) void inline static nextInstruction(
-		const std::span<const vm::Fix8Instruction>& bc,
-		usize&                                      instruction_pointer,
-		OpcodeFix8&                                 opcode,
-		int_fast32_t&                               arg0,
-		int_fast32_t&                               arg1
-	) {
-		Fix8Instruction instr = bc[instruction_pointer];
-		instruction_pointer++;
-
-		opcode = static_cast<OpcodeFix8>(instr.opcode);
-		arg0   = instr.arg0;
-		arg1   = instr.arg1;
-	}
+#if defined(__clang__)
+	// @TODO: suppress code deduplication in Clang
+#elif defined(__GNUG__)
+	#pragma GCC push_options
+	#pragma GCC optimize("-fno-crossjumping")
+#endif
 
 	i64 Executor::internalCallFunction(
 		base::Optional<Frame&> previous_frame, const FuncData& function, StandardFunctionArgs args
@@ -161,12 +153,6 @@ namespace vm {
 #else
 		Frame frame = internalInitFrame(previous_frame, function, { local_stack });
 #endif
-
-		OpcodeFix8   opcode;
-		int_fast32_t arg0;
-		int_fast32_t arg1;
-		int_fast32_t arg2;
-		int_fast32_t arg3;
 
 // Computed gotos labales:
 #ifdef USE_COMPUTED_GOTO
@@ -226,96 +212,107 @@ namespace vm {
 #endif
 
 		IF_NOT_CG(while (true)) {
-			IF_NOT_CG(nextInstruction(FRAME(bc), FRAME(instruction_pointer), opcode, arg0, arg1));
 			IF_CG(DISPATCH_OPCODE());
 
 			if constexpr (!IGNORE_EXECUTION_STRATEGY) handleExecutionStrategyIfNeeded();
 
-			IF_NOT_CG(switch (opcode)) {
-				OP_CASE(mov_l64_imm, { derefStack<u64>(local_stack, arg0) = arg1; })
+			IF_NOT_CG(switch (static_cast<OpcodeFix8>(FRAME(bc)[FRAME(instruction_pointer)].opcode))
+			) {
+				OP_CASE(mov_l64_imm, { derefStack<u64>(local_stack, instr.arg0) = instr.arg1; })
 
 				OP_CASE(mov_l64_l64, {
-					derefStack<u64>(local_stack, arg0) = derefStack<u64>(local_stack, arg1);
+					derefStack<u64>(local_stack, instr.arg0)
+						= derefStack<u64>(local_stack, instr.arg1);
 				})
 
 				OP_CASE(cmov_l64_l64, {
 					if (FRAME_FLAGS(flag))
-						derefStack<u64>(local_stack, arg0) = derefStack<u64>(local_stack, arg1);
+						derefStack<u64>(local_stack, instr.arg0)
+							= derefStack<u64>(local_stack, instr.arg1);
 				})
 
-				OP_CASE(mov_l64_r0, { derefStack<u64>(local_stack, arg0) = FRAME_REGS(p64_reg_0); })
+				OP_CASE(mov_l64_r0, {
+					derefStack<u64>(local_stack, instr.arg0) = FRAME_REGS(p64_reg_0);
+				})
 
-				OP_CASE(mov_r0_l64, { FRAME_REGS(p64_reg_0) = derefStack<u64>(local_stack, arg0); })
+				OP_CASE(mov_r0_l64, {
+					FRAME_REGS(p64_reg_0) = derefStack<u64>(local_stack, instr.arg0);
+				})
 
-				OP_CASE(mov_l64_pFuncArg, { derefStack<u64>(local_stack, arg0) = args.p64_arg; })
+				OP_CASE(mov_l64_pFuncArg, {
+					derefStack<u64>(local_stack, instr.arg0) = args.p64_arg;
+				})
 
 				OP_CASE(mov_lptr_ptrFuncArg, {
-					derefStack<Pointer>(local_stack, arg0) = args.pointer_arg;
+					derefStack<Pointer>(local_stack, instr.arg0) = args.pointer_arg;
 				})
 
 				OP_CASE(add_l64_l64, {
-					derefStack<u64>(local_stack, arg0) += derefStack<u64>(local_stack, arg1);
+					derefStack<u64>(local_stack, instr.arg0)
+						+= derefStack<u64>(local_stack, instr.arg1);
 				})
 
-				OP_CASE(add_l64_imm, { derefStack<u64>(local_stack, arg0) += arg1; })
+				OP_CASE(add_l64_imm, { derefStack<u64>(local_stack, instr.arg0) += instr.arg1; })
 
 				OP_CASE(sub_l64_l64, {
-					derefStack<u64>(local_stack, arg0) -= derefStack<u64>(local_stack, arg1);
+					derefStack<u64>(local_stack, instr.arg0)
+						-= derefStack<u64>(local_stack, instr.arg1);
 				})
 
-				OP_CASE(sub_l64_imm, { derefStack<u64>(local_stack, arg0) -= arg1; })
+				OP_CASE(sub_l64_imm, { derefStack<u64>(local_stack, instr.arg0) -= instr.arg1; })
 
 				OP_CASE(mul_l64_imm, {
 					// @TODO: check types
-					derefStack<u64>(local_stack, arg0) *= arg1;
+					derefStack<u64>(local_stack, instr.arg0) *= instr.arg1;
 				})
 
-				OP_CASE(mod_l64_imm, { derefStack<u64>(local_stack, arg0) %= arg1; })
+				OP_CASE(mod_l64_imm, { derefStack<u64>(local_stack, instr.arg0) %= instr.arg1; })
 
 				OP_CASE(mod_l64_l64, {
-					derefStack<u64>(local_stack, arg0) %= derefStack<u64>(local_stack, arg1);
+					derefStack<u64>(local_stack, instr.arg0)
+						%= derefStack<u64>(local_stack, instr.arg1);
 				})
 
-				OP_CASE(div_l64_imm, { derefStack<u64>(local_stack, arg0) /= arg1; })
+				OP_CASE(div_l64_imm, { derefStack<u64>(local_stack, instr.arg0) /= instr.arg1; })
 
 				OP_CASE(cmpEq_l64_l64, {
-					FRAME_FLAGS(flag)
-						= derefStack<u64>(local_stack, arg0) == derefStack<u64>(local_stack, arg1);
+					FRAME_FLAGS(flag) = derefStack<u64>(local_stack, instr.arg0)
+					                 == derefStack<u64>(local_stack, instr.arg1);
 				})
 
 				OP_CASE(cmpEq_l64_imm, {
-					FRAME_FLAGS(flag) = derefStack<u64>(local_stack, arg0) == arg1;
+					FRAME_FLAGS(flag) = derefStack<u64>(local_stack, instr.arg0) == instr.arg1;
 				})
 
 				OP_CASE(cmpG_l64_l64, {
-					FRAME_FLAGS(flag)
-						= derefStack<u64>(local_stack, arg0) > derefStack<u64>(local_stack, arg1);
+					FRAME_FLAGS(flag) = derefStack<u64>(local_stack, instr.arg0)
+					                  > derefStack<u64>(local_stack, instr.arg1);
 				})
 
 				OP_CASE(cmpG_l64_imm, {
-					FRAME_FLAGS(flag) = derefStack<u64>(local_stack, arg0) > arg1;
+					FRAME_FLAGS(flag) = derefStack<u64>(local_stack, instr.arg0) > instr.arg1;
 				})
 
-				OP_CASE(jmpRel_label, { FRAME(instruction_pointer) += arg0; })
+				OP_CASE(jmpRel_label, { FRAME(instruction_pointer) += instr.arg0; })
 
 				OP_CASE(jmpRelIf_label, {
-					if (FRAME_FLAGS(flag)) FRAME(instruction_pointer) += arg0;
+					if (FRAME_FLAGS(flag)) FRAME(instruction_pointer) += instr.arg0;
 				})
 
 				OP_CASE(jmpRelNotIf_label, {
-					if (!FRAME_FLAGS(flag)) FRAME(instruction_pointer) += arg0;
+					if (!FRAME_FLAGS(flag)) FRAME(instruction_pointer) += instr.arg0;
 				})
 
 				OP_CASE(setPtrArg_lptr, {
-					FRAME(next_args.pointer_arg) = derefStack<Pointer>(local_stack, arg0);
+					FRAME(next_args.pointer_arg) = derefStack<Pointer>(local_stack, instr.arg0);
 				})
 
 				OP_CASE(setPArg_l64, {
-					FRAME(next_args.p64_arg) = derefStack<i64>(local_stack, arg0);
+					FRAME(next_args.p64_arg) = derefStack<i64>(local_stack, instr.arg0);
 				})
 
 				OP_CASE(call_func, {
-					auto function_id      = arg0;
+					auto function_id      = instr.arg0;
 					FRAME_REGS(p64_reg_0) = internalCallFunction(
 						// @TODO: this is not correct with flat frame
 						IF_NOT_FF(frame) IF_FF({}),
@@ -325,7 +322,7 @@ namespace vm {
 				})
 
 				OP_CASE(ret_l64, {
-					FRAME(ret_val) = derefStack<u64>(local_stack, arg0);
+					FRAME(ret_val) = derefStack<u64>(local_stack, instr.arg0);
 					goto End;
 				});
 
@@ -335,7 +332,7 @@ namespace vm {
 				});
 
 				OP_CASE(init_type, {
-					auto             type      = types.getType(vm::TypeId(arg0));
+					auto             type      = types.getType(vm::TypeId(instr.arg0));
 					auto             type_size = type->getSize();
 					base::ModRawView data(&local_stack[local_stack_head], type_size);
 					local_stack_head += type_size;
@@ -350,16 +347,18 @@ namespace vm {
 
 				OP_CASE(input_l64, {
 					setStatus(api::WaitingForInput{});
-					derefStack<i64>(local_stack, arg0) = vcpu.getInput<i64>();
+					derefStack<i64>(local_stack, instr.arg0) = vcpu.getInput<i64>();
 					setStatus(api::Running{});
 				});
 
-				OP_CASE(output_l64, { vcpu.writeOutput(derefStack<u64>(local_stack, arg0)); });
+				OP_CASE(output_l64, {
+					vcpu.writeOutput(derefStack<u64>(local_stack, instr.arg0));
+				});
 
 				OP_CASE(nop, {});
 
 				OP_CASE(alloc_lptr_type, {
-					auto    type = types.getType(vm::TypeId(arg1));
+					auto    type = types.getType(vm::TypeId(instr.arg1));
 					BlockId block;
 					if (type->getKind() == vm::Type::Kind::StaticTable) {
 						// @TODO: As noted in type.hpp, interface used below may change
@@ -372,58 +371,61 @@ namespace vm {
 					} else {
 						block = dynamic_allocator.makeTypeBlock(type);
 					}
-					derefStack<Pointer>(local_stack, arg0) = Pointer(block, 0);
+					derefStack<Pointer>(local_stack, instr.arg0) = Pointer(block, 0);
 				})
 
 				OP_CASE(free_lptr, {
-					dynamic_allocator.deleteBlock(derefStack<Pointer>(local_stack, arg0).getBlock()
+					dynamic_allocator.deleteBlock(
+						derefStack<Pointer>(local_stack, instr.arg0).getBlock()
 					);
 				})
 
 				OP_CASE(load_l64_lptr_ofs, {
-					auto pointer      = derefStack<Pointer>(local_stack, arg1);
+					auto pointer      = derefStack<Pointer>(local_stack, instr.arg1);
 					auto deref_result = internalDerefPointer(pointer);
 					if (deref_result.has_error()) {
 						// @TODO: executor error
 						// RIFT_PANIC("Bad deref access");
 					} else {
+						OpcodeFix8 opcode;
 						peekNextInstruction(FRAME(bc), FRAME(instruction_pointer), opcode);
 						u64 idx;
 						if (opcode == OpcodeFix8::ext_l64) {
-							nextInstruction(
-								FRAME(bc), FRAME(instruction_pointer), opcode, arg2, arg3
-							);
-							idx = derefStack<u64>(local_stack, arg2);
+							auto arg3 = FRAME(bc)[FRAME(instruction_pointer)++].arg0;
+							idx       = derefStack<u64>(local_stack, arg3);
 						} else
 							idx = 0;
 						auto view = deref_result.value();
 						RIFT_ASSERT(view.size() == 8, "bad type");
 						std::memcpy(
-							&local_stack[arg0], view.getBegin() + idx * view.size(), view.size()
+							&local_stack[instr.arg0],
+							view.getBegin() + idx * view.size(),
+							view.size()
 						);
 					}
 				})
 
 				OP_CASE(store_lptr_l64_ofs, {
-					auto pointer      = derefStack<Pointer>(local_stack, arg0);
+					auto pointer      = derefStack<Pointer>(local_stack, instr.arg0);
 					auto deref_result = internalDerefPointer(pointer);
 					if (deref_result.has_error()) {
 						// @TODO: executor error
 						// RIFT_PANIC("Bad deref access");
 					} else {
+						OpcodeFix8 opcode;
 						peekNextInstruction(FRAME(bc), FRAME(instruction_pointer), opcode);
 						u64 idx;
 						if (opcode == OpcodeFix8::ext_l64) {
-							nextInstruction(
-								FRAME(bc), FRAME(instruction_pointer), opcode, arg2, arg3
-							);
-							idx = derefStack<u64>(local_stack, arg2);
+							auto arg3 = FRAME(bc)[FRAME(instruction_pointer)++].arg0;
+							idx       = derefStack<u64>(local_stack, arg3);
 						} else
 							idx = 0;
 						auto view = deref_result.value();
 						RIFT_ASSERT(view.size() == 8, "bad type");
 						std::memcpy(
-							view.getBegin() + idx * view.size(), &local_stack[arg1], view.size()
+							view.getBegin() + idx * view.size(),
+							&local_stack[instr.arg1],
+							view.size()
 						);
 					}
 				})
@@ -439,6 +441,12 @@ namespace vm {
 
 		return FRAME(ret_val);
 	}
+
+#if defined(__clang__)
+	// @TODO: suppress code deduplication in Clang
+#elif defined(__GNUG__)
+	#pragma GCC pop_options
+#endif
 
 	void Executor::run(const Code& code) {
 		// @TODO: ensure correct status
