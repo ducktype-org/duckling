@@ -29,8 +29,7 @@ namespace dia {
 		/**
 		 * @brief Get a copy of the bytes in this position
 		 *
-		 * @return std::string containing a copy of the bytes in this position, if it fails it
-		 * returns error message instead
+		 * @return std::string containing a copy of the bytes in this position.
 		 */
 		[[nodiscard]]
 		std::string getSourceChars() const;

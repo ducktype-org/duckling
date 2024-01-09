@@ -33,3 +33,13 @@ Interface
 All symbols are in namespace ``dia``.
 
 ``SourcePosition`` are checked to be valid during construction and are immutable later.
+
+getSourceChars
+^^^^^^^^^^^^^^
+
+This method allows to extract a string containing the characters in the given position.
+
+genErrorStr and genErrorMsg
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These methods allow to construct an error string/message about this position in the source code with the reason passed as an argument.
