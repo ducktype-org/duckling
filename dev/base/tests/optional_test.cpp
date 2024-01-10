@@ -30,18 +30,13 @@ public:
 		TESTER_ADD_TEST(testReference);
 		TESTER_ADD_TEST(macroTest);
 		TESTER_ADD_TEST(throwTest);
-<<<<<<< HEAD
-		TESTER_ADD_TEST(testAssign);
-		TESTER_ADD_TEST(testSwap);
-		TESTER_ADD_TEST(testNoDanglingPointer);
 		TESTER_ADD_TEST(testFromDocs);
-=======
 		TESTER_ADD_TEST(assignTest);
 		TESTER_ADD_TEST(swapTest);
 		TESTER_ADD_TEST(danglingPointerTest);
 		TESTER_ADD_TEST(comparatorTest);
 		TESTER_ADD_TEST(boolAndResetTest);
->>>>>>> main
+		TESTER_ADD_TEST(arrowOperatorTest);
 	}
 
 	void basicTest() {
@@ -243,6 +238,17 @@ public:
 		ASSERT_EQUAL(true, bool(o2));
 		o2.reset();
 		ASSERT_EQUAL(false, o2.has_value());
+	}
+
+	void arrowOperatorTest() {
+		base::Optional<std::string> opt = "";
+		opt->push_back('c');
+		ASSERT_EQUAL("c", opt.value());
+
+		std::string                  str;
+		base::Optional<std::string&> opt_ref(str);
+		opt_ref->push_back('r');
+		ASSERT_EQUAL("r", opt_ref.value());
 	}
 };
 

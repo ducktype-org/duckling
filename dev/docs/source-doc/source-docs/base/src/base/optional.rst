@@ -2,10 +2,6 @@
 Optional
 ========
 
-.. contents::
-    :depth: 2
-    :local:
-
 ``base::Optional`` is our wrapper around ``std::optional``.
 
 Example

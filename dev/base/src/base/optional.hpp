@@ -266,6 +266,10 @@ namespace base {
 			return std::move(value());
 		}
 
+		/**
+		 * An operator that allows a direct data access.
+		 * @return Object T to perform an operation on.
+		 */
 		[[nodiscard]]
 		constexpr const T*
 			operator->() const {
@@ -449,19 +453,18 @@ namespace base {
 			return std::move(value());
 		}
 
-
 		[[nodiscard]]
 		constexpr const T*
 		operator->() const {
 			_throwOnNoValue();
-			return private_optional.operator->();
+			return &value();
 		}
 
 		[[nodiscard]]
 		constexpr T*
 		operator->() {
 			_throwOnNoValue();
-			return private_optional.operator->();
+			return &value();
 		}
 
 		// clang-format on
