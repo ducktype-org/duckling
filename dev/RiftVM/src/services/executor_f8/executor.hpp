@@ -23,9 +23,10 @@ namespace vm {
 
 	class Executor {
 	private:
-		Allocator&    dynamic_allocator;
-		Memory&       memory;
-		TypeMetadata& types;
+		Allocator&      dynamic_allocator;
+		StackAllocator& stack_allocator;
+		Memory&         memory;
+		TypeMetadata&   types;
 
 		VCPU& vcpu;
 
@@ -37,6 +38,7 @@ namespace vm {
 		template<class... DynamicServices>
 		Executor(ServiceManagerDef<DynamicServices...>& serviceManager):
 			  dynamic_allocator(serviceManager.template get<Allocator>()),
+			  stack_allocator(serviceManager.template get<StackAllocator>()),
 			  memory(serviceManager.getVCPU().getData().template get<Memory>()),
 			  types(serviceManager.getVCPU().getData().template get<TypeMetadata>()),
 			  vcpu(serviceManager.getVCPU()) {
@@ -47,6 +49,7 @@ namespace vm {
 		// This might change:
 		std::condition_variable pause_cv;
 		std::mutex              external_api_mutex;
+		std::atomic<bool>       isRunning          = false;
 		ExecutionStrategy       execution_strategy = ExecutionStrategy::Stoped;
 
 		/**
@@ -55,6 +58,7 @@ namespace vm {
 		 */
 		const Code* executing_code = nullptr;
 
+		void handleExecutionStrategyIfNeeded();
 		void handleExecutionStrategy();
 
 		/**

@@ -8,21 +8,19 @@
 namespace pst {
 	class Import;
 
-	using tpc::ErrorState;
 	using tpc::ParserBorrowRef;
 	using tpc::ParserCBorrowRef;
 	using tpc::ParserRef;
 
 	class RiftElement: public tpc::Element {
 	public:
-		explicit RiftElement(lexer::SourcePosition position):
-			  source_position(std::move(position)){};
+		explicit RiftElement(dia::SourcePosition position): source_position(std::move(position)){};
 
 		[[nodiscard]]
-		const lexer::SourcePosition& getSourcePosition() const;
+		const dia::SourcePosition& getSourcePosition() const;
 
 	private:
-		lexer::SourcePosition source_position;
+		dia::SourcePosition source_position;
 	};
 
 	class RiftParserState: public tpc::ParserState {
@@ -30,7 +28,7 @@ namespace pst {
 		typedef decltype(imports)                       ImportType;
 
 	public:
-		RiftParserState(tpc::TokenStream&& tokens, tpc::ErrorState&& err):
+		RiftParserState(tpc::TokenStream&& tokens, dia::ErrorState&& err):
 			  tpc::ParserState(std::move(tokens), std::move(err)) {}
 
 		void              addImport(tpc::ParserCBorrowRef<pst::Import> import);

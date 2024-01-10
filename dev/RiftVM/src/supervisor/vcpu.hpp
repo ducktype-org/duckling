@@ -30,6 +30,7 @@ namespace vm {
 		bool                                uses_stdio;
 		std::mutex                          input_mutex;
 		std::mutex                          output_mutex;
+		std::condition_variable             output_empty_cv;
 		base::unique_ptr<std::stringstream> input_stream  = nullptr;
 		base::unique_ptr<std::stringstream> output_stream = nullptr;
 
@@ -109,6 +110,7 @@ namespace vm {
 			} else {
 				std::unique_lock lock(output_mutex);
 				(*output_stream) << v;
+				output_empty_cv.notify_one();
 			}
 		}
 

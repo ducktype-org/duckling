@@ -6,7 +6,7 @@ namespace pst {
 		auto out      = makeRef<EagerLookup>(position);
 		RIFT_ASSERT(
 			state.ctokens().is(Keyword::RiftTestEagerLookup),
-			position.genErrorMsg("bad statement choice")
+			position.genErrorStr("bad statement choice")
 		);
 
 		parseAll(state, Keyword::RiftTestEagerLookup);

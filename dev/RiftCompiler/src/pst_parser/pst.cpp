@@ -13,7 +13,7 @@ namespace pst {
 				  0,
 				  token_data.tokens.size()
 			  ),
-			  ErrorState()
+			  dia::ErrorState()
 		  ) {
 		top_level = TopLevel::parse(parser_state);
 
@@ -24,7 +24,7 @@ namespace pst {
 		return parser_state.getImports();
 	}
 
-	const ErrorState& PST::getErrorState() const { return err; }
+	const dia::ErrorState& PST::getErrorState() const { return err; }
 
 	void PST::dprint(std::ostream& out) const { nullAwareDprint(top_level, out); }
 

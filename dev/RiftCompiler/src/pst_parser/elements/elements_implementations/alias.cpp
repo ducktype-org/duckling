@@ -6,7 +6,7 @@ namespace pst {
 		auto out      = makeRef<Alias>(position);
 
 		RIFT_ASSERT(
-			state.ctokens().is(Keyword::Alias), position.genErrorMsg("bad statement choice")
+			state.ctokens().is(Keyword::Alias), position.genErrorStr("bad statement choice")
 		);
 
 		parseAll(state, Keyword::Alias, &out->name);

@@ -7,7 +7,7 @@ namespace pst {
 		auto out      = makeRef<While>(position);
 
 		RIFT_ASSERT(
-			state.ctokens().is(Keyword::While), position.genErrorMsg("bad statement choice")
+			state.ctokens().is(Keyword::While), position.genErrorStr("bad statement choice")
 		);
 
 		parseAll(state, Keyword::While, &out->optional_name, &out->condition, &out->body);

@@ -33,6 +33,7 @@ MAKE_STRINGFYABLE_ENUM(
 	cmov_l64_l64,
 
 	mov_l64_r0,
+	mov_r0_l64,
 
 	mov_l64_pFuncArg,     // moves primitive function arg to local variable
 	mov_lptr_ptrFuncArg,  // moves pointer function arg to local variable
@@ -77,8 +78,10 @@ MAKE_STRINGFYABLE_ENUM(
 
 	nop,
 
-	alloc_lptr_type,  // allocates given type, stores pointer
-	free_lptr,        // frees block under pointer
-	load_l64_lptr,    // load 64-bit primitive value from given pointer
-	store_lptr_l64    // stores 64-bit primitive value under given pointer
+	alloc_lptr_type,     // allocates given type, stores pointer
+	free_lptr,           // frees block under pointer
+	load_l64_lptr_ofs,   // load 64-bit primitive value from lptr + ofs
+	store_lptr_l64_ofs,  // stores 64-bit primitive value under lptr + ofs
+
+	ext_l64              // passes additional argument to preceding opcode
 );

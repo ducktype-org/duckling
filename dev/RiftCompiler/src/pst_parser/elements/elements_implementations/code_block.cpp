@@ -3,7 +3,7 @@
 namespace pst {
 	ParserRef<CodeBlock> CodeBlock::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
-		if (!state.ctokens().is(Token::Type::CurlyGroup)) {
+		if (!state.ctokens().isBracketGroup(Token::BracketType::Curly)) {
 			state.fail(-1, "expected `{` after here");
 			return nullptr;
 		}

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Set correct values here:
 
 python_bin="python3.11"

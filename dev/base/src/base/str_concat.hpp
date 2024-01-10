@@ -2,6 +2,7 @@
 
 #include <string>
 #include <tuple>
+#include <unicode/unistr.h>
 #include "type_traits.hpp"
 #include "raw_view.hpp"
 
@@ -23,6 +24,8 @@ namespace base {
 		inline void strConcat(std::string& out, base::IsNumber auto v) {
 			out.append(std::to_string(v));
 		}
+
+		void strConcat(std::string& out, icu::UnicodeString unistr);
 
 		// This is forward declaration to prevent circular header dependency through:
 		// string_id.hpp -> maps.hpp -> exceptions.hpp -> str_concat.hpp
