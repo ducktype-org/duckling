@@ -48,13 +48,11 @@ namespace clap {
 		ParsingResult& operator=(const ParsingResult& other);
 
 		/**
-		 *
 		 * @return Full path to the executed file.
 		 */
 		[[nodiscard]]
 		const std::string& getFilePath() const;
 		/**
-		 *
 		 * @return Provided arguments as a single string.
 		 */
 		[[nodiscard]]

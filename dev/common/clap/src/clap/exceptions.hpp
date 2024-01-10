@@ -20,7 +20,7 @@ namespace clap::exceptions {
 	};
 
 	/**
-	 * Raised when passed ``-h`` / ``--h``.
+	 * Raised when passed ``-h`` / ``--help``.
 	 * It is not an exception per se.
 	 */
 	struct HelpException: public base::LogicError {

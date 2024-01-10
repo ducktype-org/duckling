@@ -22,7 +22,10 @@ namespace clap {
 	public:
 		explicit ParamBuilderException(std::string what_str): what_str(std::move(what_str)) {}
 
-		const char* what() const noexcept override { return what_str.c_str(); }
+		[[nodiscard]]
+		const char* what() const noexcept override {
+			return what_str.c_str();
+		}
 	};
 
 	/**

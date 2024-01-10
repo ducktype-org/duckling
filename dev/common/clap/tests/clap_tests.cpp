@@ -18,6 +18,7 @@ public:
 		TESTER_ADD_TEST(multipleFlagsTest);
 		TESTER_ADD_TEST(weirdCases);
 		TESTER_ADD_TEST(noDefaultValueParser);
+		TESTER_ADD_TEST(escapingTest);
 	}
 
 private:
@@ -160,6 +161,17 @@ private:
 			auto res2 = clap.parse(argv2.size(), argv2.begin());
 		} catch (clap::exceptions::NoDefaultValueParser& e) { caught = true; }
 		ASSERT_EQUAL(true, caught);
+	}
+
+	void escapingTest() {
+		auto clap = clap::Clap().add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		                                 .addShortName('f')
+		                                 .addShortDesc("test")
+		                                 .build());
+
+		std::array argv{ "./prog", "-f", "a \" b" };
+		auto       res = clap.parse(argv.size(), argv.begin());
+		ASSERT_EQUAL("a \" b", *res.getValue<std::string>('f'));
 	}
 };
 

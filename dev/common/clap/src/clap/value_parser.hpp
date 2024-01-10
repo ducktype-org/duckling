@@ -37,7 +37,7 @@ namespace clap {
 	/**
 	 * An interface class for all other parsers.
 	 * Each parser should be stored inside a base::unique_ptr and should accept
-	 * custom name as a parameter.
+	 * custom name as a constructor parameter.
 	 */
 	class ValueParser {
 	public:

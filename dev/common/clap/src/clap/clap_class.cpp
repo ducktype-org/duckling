@@ -14,6 +14,29 @@
  * Basic helper functions.
  */
 namespace {
+	// Thanks to: https://stackoverflow.com/a/3418285
+	bool replace(std::string& str, const std::string& from, const std::string& to) {
+		size_t start_pos = str.find(from);
+		if (start_pos == std::string::npos) return false;
+		str.replace(start_pos, from.length(), to);
+		return true;
+	}
+
+	/**
+	 * Replaces all occurrences of `from` with `to`
+	 * @param str source string
+	 * @param from pattern to be erased
+	 * @param to pattern to be put instead of `from`
+	 */
+	void replaceAll(std::string& str, const std::string& from, const std::string& to) {
+		if (from.empty()) return;
+		size_t start_pos = 0;
+		while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+			str.replace(start_pos, from.length(), to);
+			start_pos += to.length();  // In case 'to' contains 'from', like replacing 'x' with 'yx'
+		}
+	}
+
 	/**
 	 * Merges the arguments provided in a form of C-string array with spaces. If a C-string
 	 * contains a white space, then adds quotes around it.
@@ -21,7 +44,7 @@ namespace {
 	 * @param argv Argument vector - the array of C-strings.
 	 * @return Merged vector into a single string.
 	 */
-	std::string mergeArgs(usize argc, const char** argv) {
+	std::string mergeArgs(usize argc, const char* const* argv) {
 		// Merge args with spaces between.
 		std::string args;
 
@@ -31,6 +54,8 @@ namespace {
 			auto arg            = std::string(argv[i]);
 			for (auto c: arg)
 				if (std::isspace(c)) has_whitespace = true;
+
+			replaceAll(arg, "\"", "\\\"");
 
 			if (has_whitespace)
 				args += "\"" + arg + "\" ";
@@ -94,11 +119,11 @@ namespace {
 	 */
 	class ParsingState {
 	public:
-		usize               parsing_position = 0;  // Position in the args.
-		std::string         args;                  // Merged arguments.
-		clap::ParsingResult result;                // The result of the parsing.
+		usize               parsing_position = 0;  /// Position in the args.
+		std::string         args;                  /// Merged arguments.
+		clap::ParsingResult result;                /// The result of the parsing.
 
-		ParsingState(usize argc, const char** argv) {
+		ParsingState(usize argc, const char* const* argv) {
 			args = mergeArgs(argc, argv);
 			skipWhitespace(parsing_position, args);
 
@@ -254,7 +279,7 @@ namespace clap {
 
 	ParsingResult Clap::parse(CLIArgs args) { return parse(args.argc, args.argv); }
 
-	ParsingResult Clap::parse(usize argc, const char** argv) {
+	ParsingResult Clap::parse(usize argc, const char* const* argv) {
 		ParsingState st(argc, argv);
 
 		// Going left to right through chars in args.
@@ -287,7 +312,9 @@ namespace clap {
 		return st.result;
 	}
 
-	const ValueParser* Clap::getDefaultValueParser() const { return default_value_parser.get(); }
+	base::borrow_ptr<const ValueParser> Clap::getDefaultValueParser() const {
+		return base::borrow_ptr(default_value_parser.get());
+	}
 
 	const std::vector<Parameter>& Clap::getParameters() const { return parameters; }
 

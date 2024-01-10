@@ -13,8 +13,8 @@
 
 namespace clap {
 	struct CLIArgs {
-		usize        argc;  // Argument count
-		const char** argv;  // Pointer to an array of strings
+		usize        argc;  /// Argument count
+		const char** argv;  /// Pointer to an array of strings
 	};
 
 	/**
@@ -75,7 +75,7 @@ namespace clap {
 		 * @param argv A C-string array.
 		 * @return An object containing parsed command-line arguments.
 		 */
-		ParsingResult parse(usize argc, const char** argv);
+		ParsingResult parse(usize argc, const char* const* argv);
 		ParsingResult parse(CLIArgs args);
 
 		/**
@@ -84,7 +84,7 @@ namespace clap {
 		 * @return A pointer to the parser. Might be nullptr.
 		 */
 		[[nodiscard]]
-		const ValueParser* getDefaultValueParser() const;
+		base::borrow_ptr<const ValueParser> getDefaultValueParser() const;
 
 		/**
 		 * Named parameters are built with clap::ParamBuilder. They are addressed with

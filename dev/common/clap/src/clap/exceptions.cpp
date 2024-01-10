@@ -10,8 +10,9 @@
 
 namespace {
 	/**
-	 * Shortens the string in a form: "..."? + source[at-back..at+front - 1] + "..."? .
-	 * The "..." are inserted if text is longer than the shown part.
+	 * Shortens the string, leaving the important part and dots if necessary:
+	 * "..." + source[at-back..at+front - 1] + "...".
+	 * The "..." are inserted if text is longer than the shown part on a corresponding end.
 	 * @param at Current position in the source.
 	 * @param back Number of characters from the back to show.
 	 * @param front Number of characters in the front to show.
