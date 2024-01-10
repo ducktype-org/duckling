@@ -38,13 +38,6 @@ namespace tpc {
 		const Token& next();
 
 		/**
-		 * @brief Go into the recursive stream of the current token. If the current token doesn't have a recursive stream throws ``base::LogicError``.
-		 * 
-		 * @return TokenStream used to access the recursive tokens of the current token.
-		 */
-		TokenStream getRecursive() const;
-
-		/**
 		 * @brief Returns a token relative to the current position
 		 * 
 		 * @param fwd distance forward from the current position
@@ -55,6 +48,21 @@ namespace tpc {
 		 * @brief Increases the current position by `n`
 		 */
 		void         skip(usize n = 1);
+
+		/**
+		 * @brief Checks whether a token is recursive
+		 * 
+		 * @param fwd distance forward from the current position
+		 */
+		[[nodiscard]]
+		bool isRecursive(usize fwd = 0) const;
+
+		/**
+		 * @brief Go into the recursive stream of the current token. If the current token doesn't have a recursive stream throws ``base::LogicError``.
+		 * 
+		 * @return TokenStream used to access the recursive tokens of the current token.
+		 */
+		TokenStream getRecursive() const;
 
 		/**
 		 * @brief Checks whether a token is a keyword
@@ -107,14 +115,6 @@ namespace tpc {
 		 */
 		[[nodiscard]]
 		bool isBracketGroup(Token::BracketType type, usize fwd = 0) const;
-
-		/**
-		 * @brief Checks whether a token is recursive
-		 * 
-		 * @param fwd distance forward from the current position
-		 */
-		[[nodiscard]]
-		bool isRecursive(usize fwd = 0) const;
 
 		/**
 		 * @brief Allows for comparing a token with values of multiple different types

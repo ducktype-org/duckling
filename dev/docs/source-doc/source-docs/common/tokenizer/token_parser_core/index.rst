@@ -87,3 +87,71 @@ Parsing multiple expected elements in a row
 
 to parse the beginning of a function.
 
+TokenStream
+^^^^^^^^^^^
+
+This class implements lower level interactions with a single stream of tokens.
+
+It keeps an iterator on the current position in the stream and guarantees that it's always valid or the end of the stream. Most access methods of the ``TokenStream`` take position relative to the current position as last argument(``usize fwd = 0``).
+
+Token access and movement
+-------------------------
+
+``peek`` method allows to access the underlying token relative to the current position.
+
+.. code-block:: cpp
+
+	const Token& peek(usize fwd = 0) const;
+
+``skip`` method moves the iterator forward by the indicated amount.
+
+.. code-block:: cpp
+
+	void skip(usize n = 1);
+
+``next`` method moves the iterator forward by one and returns the token from the previous position. It 
+
+.. code-block:: cpp
+
+	const Token& next();
+
+``size`` method returns the amount of tokens left before the end of the stream including the current token.
+
+.. code-block:: cpp
+
+    usize size() const;
+
+Recursive access
+----------------
+
+``isRecursive`` method provides information if a token is recursive.
+
+.. code-block:: cpp
+
+	bool isRecursive(usize fwd = 0) const;
+
+``getRecursive`` method returns a new ``TokenStream`` that is iterating over the recursive sub-tokens of the current token.
+
+.. code-block:: cpp
+
+	TokenStream getRecursive() const;
+
+Token queries
+-------------
+
+``bool is<Special|Keyword|Operator|BracketGroup>(usize fwd = 0)`` methods provide a way to check if a particular token is of a particular ``lexer::Token::Type``.
+
+``asKeyword`` and ``asSpecial`` methods interpret underlying value of a token as ``rift_def::Keyword`` or ``rift_def::Special``.
+
+.. code-block::cpp
+
+	Keyword asKeyword(usize fwd = 0) const;
+	Special asSpecial(usize fwd = 0) const;
+
+``is``, ``isOperator(base::StrId, usize fwd)`` and ``isBracketGroup(lexer::Token::BracketType, usize fwd)`` methods provide ways to compare a particular token with a value or type
+
+.. code-block::cpp
+
+	bool isOperator(base::StrId oper, usize fwd = 0) const;
+	bool isBracketGroup(Token::BracketType type, usize fwd = 0) const;
+	bool is(<lexer::Token::Type|rift_def::Keyword|rift_def::Special|rift_def::Operator> t, usize fwd = 0) const;
