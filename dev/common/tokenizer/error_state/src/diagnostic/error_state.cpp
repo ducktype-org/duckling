@@ -1,5 +1,7 @@
 #include "error_state.hpp"
 
+#include <utility>
+
 namespace dia {
 	void ErrorState::logError(const SourcePosition& position, std::string_view message) {
 		err_count++;
@@ -11,14 +13,14 @@ namespace dia {
 		logError(position, message);
 	}
 
-	void ErrorState::logError(printer::Message message) {
+	void ErrorState::logError(const printer::Message& message) {
 		err_count++;
 		errorLog.add(message);
 	}
 
 	void ErrorState::failAndLog(printer::Message message) {
 		setFail();
-		logError(message);
+		logError(std::move(message));
 	}
 
 	void ErrorState::dumpLog(std::ostream& stream) const { errorLog.print(stream); }

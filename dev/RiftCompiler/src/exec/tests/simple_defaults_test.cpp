@@ -345,7 +345,7 @@ private:
 		operation::TypedOperation class_B_construct_empty{
 
 
-			[class_B, class_A, offset, b_member](std::vector<exec::CTV> ctvs) {
+			[class_B, b_member](std::vector<exec::CTV> ctvs) {
 				// @TODO: this code explicitly initializes A
 			    // the code below uses default empty contructor of B for that
 			    // This is shorter, but initialises B.b twice (once to zero, then to 42).

@@ -22,7 +22,7 @@ namespace vm {
 
 	cpp::result<api::Response, api::ApiError>
 		Supervisor::doRequest(const api::SupervisorRequest& request) {
-		return getProcess(request.pid).flat_map([&request](base::borrow_ptr<VCPU> process) {
+		return getProcess(request.pid).flat_map([&request](const base::borrow_ptr<VCPU>& process) {
 			return process->doRequest(request.request).map_error([](auto& x) {
 				return api::ApiError{ x };
 			});

@@ -8,7 +8,7 @@ namespace lexer {
 	Lexer::Lexer(const fs::FilePath& file):
 		  file(std::make_shared<fs::FilePath>(file)),
 		  file_content(this->file->getContent()),
-		  char_array(std::move(decode<fs::Encoding::UTF8>(file_content.view(), errorState))) {
+		  char_array(decode<fs::Encoding::UTF8>(file_content.view(), errorState)) {
 		if (errorState.fail()) {
 			errorState.dumpLog(std::cerr);
 			throw base::LogicError("Error while decoding");
@@ -73,7 +73,7 @@ namespace lexer {
 
 	void Lexer::codeblock() { parseCodeblockInto(tokens); }
 
-	void Lexer::parseUntil(Tokens& output, LexerCondition stop) {
+	void Lexer::parseUntil(Tokens& output, const LexerCondition& stop) {
 		while (!stop(*this)) parseSingleInto(output);
 	}
 

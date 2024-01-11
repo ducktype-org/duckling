@@ -100,7 +100,7 @@ namespace ts {
 		return pointers[underlying_type];
 	}
 
-	TypeDesc<> PointerInfo::getUnderlying() const { return ((CPimpl) pimpl)->getUnderlying(); }
+	TypeDesc<> PointerInfo::getUnderlying() const { return (dynamic_cast<CPimpl>( pimpl))->getUnderlying(); }
 
 	FunctionInfo FunctionInfo::create(
 		const std::vector<TypeDesc<>>& parameter_types, TypeDesc<> result_type, i32 flags
@@ -118,13 +118,13 @@ namespace ts {
 		return function_types[{ parameter_types, result_type, flags }];
 	}
 
-	base::FlagType FunctionInfo::getFlags() const { return ((CPimpl) pimpl)->getFlags(); }
+	base::FlagType FunctionInfo::getFlags() const { return (dynamic_cast<CPimpl>( pimpl))->getFlags(); }
 
 	std::vector<TypeDesc<>> FunctionInfo::getParameterTypeList() const {
-		return ((CPimpl) pimpl)->getParameterList();
+		return (dynamic_cast<CPimpl>( pimpl))->getParameterList();
 	}
 
-	TypeDesc<> FunctionInfo::getResultType() const { return ((CPimpl) pimpl)->getResult(); }
+	TypeDesc<> FunctionInfo::getResultType() const { return (dynamic_cast<CPimpl>( pimpl))->getResult(); }
 
 	EnumInfo EnumInfo::create(const IntegralInfo& type_info) {
 		auto enum_impl_p = base::make_unique<Impl>(type_info);
@@ -135,7 +135,7 @@ namespace ts {
 		return enum_impl;
 	}
 
-	IntegralInfo EnumInfo::getBaseType() const { return ((CPimpl) pimpl)->getBaseType(); }
+	IntegralInfo EnumInfo::getBaseType() const { return (dynamic_cast<CPimpl>( pimpl))->getBaseType(); }
 
 	FlagInfo FlagInfo::create(const IntegralInfo& type_info) {
 		auto flag_impl_p = base::make_unique<Impl>(type_info);
@@ -146,7 +146,7 @@ namespace ts {
 		return flag_impl;
 	}
 
-	IntegralInfo FlagInfo::getBaseType() const { return ((CPimpl) pimpl)->getBaseType(); }
+	IntegralInfo FlagInfo::getBaseType() const { return (dynamic_cast<CPimpl>( pimpl))->getBaseType(); }
 
 	OptionalInfo OptionalInfo::create(const TypeDesc<>& underlying_type) {
 		static base::Map<TypeDesc<>, OptionalInfo> optionals;
@@ -162,7 +162,7 @@ namespace ts {
 		return optionals[underlying_type];
 	}
 
-	TypeDesc<> OptionalInfo::getUnderlying() const { return ((CPimpl) pimpl)->getUnderlying(); }
+	TypeDesc<> OptionalInfo::getUnderlying() const { return (dynamic_cast<CPimpl>( pimpl))->getUnderlying(); }
 
 	// TODO: tupleInfo and variantInfo look nearly identical
 	TupleInfo TupleInfo::create(const std::vector<TypeDesc<>>& tuple_types) {
@@ -179,11 +179,11 @@ namespace ts {
 	}
 
 	const std::vector<TypeDesc<>>& TupleInfo::getUnderlyingTypes() const {
-		return ((CPimpl) pimpl)->getUnderlyingTypes();
+		return (dynamic_cast<CPimpl>( pimpl))->getUnderlyingTypes();
 	}
 
 	std::pair<TypeDesc<>, usize> TupleInfo::getMember(usize index) const {
-		return ((CPimpl) pimpl)->getMember(index);
+		return (dynamic_cast<CPimpl>( pimpl))->getMember(index);
 	}
 
 	VariantInfo VariantInfo::create(const std::vector<TypeDesc<>>& variant_types) {
@@ -212,7 +212,7 @@ namespace ts {
 	}
 
 	std::vector<TypeDesc<>> TemplateInfo::getParameterList() const {
-		return ((CPimpl) pimpl)->getParameterList();
+		return (dynamic_cast<CPimpl>( pimpl))->getParameterList();
 	}
 
 	NamespaceInfo NamespaceInfo::create() {

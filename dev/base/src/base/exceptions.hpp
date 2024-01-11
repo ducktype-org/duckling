@@ -37,7 +37,7 @@ namespace base {
 		std::string message;
 
 	public:
-		NotYetImplemented(std::string message);
+		NotYetImplemented(const std::string& message);
 		const char* what() const noexcept override;
 	};
 }

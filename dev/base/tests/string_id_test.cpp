@@ -9,11 +9,11 @@ class SimpleIdMapsTest;
 class A {
 private:
 	i32               x;
-	usize             count;
+	usize             count{0};
 	SimpleIdMapsTest& test;
 
 public:
-	A(i32 x, SimpleIdMapsTest& test): x(x), count(0), test(test) {}
+	A(i32 x, SimpleIdMapsTest& test): x(x),  test(test) {}
 
 	A(const A& other);
 
@@ -64,10 +64,10 @@ private:
 
 	struct MyIdName {};
 
-	typedef base::NamedId<MyIdName> MyId;
+	using MyId = base::NamedId<MyIdName>;
 
-	typedef base::NamedId<base::Number<123>> MyId2;
-	typedef base::NamedId<base::Number<124>> MyId3;
+	using MyId2 = base::NamedId<base::Number<123>>;
+	using MyId3 = base::NamedId<base::Number<124>>;
 
 	void simpleIdTest() {
 		MyId id_1 = MyId::next();

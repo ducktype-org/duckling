@@ -25,7 +25,7 @@ namespace dia {
 		void failAndLog(const SourcePosition& position, std::string_view message);
 		void logError(const SourcePosition& position, std::string_view message);
 		void failAndLog(printer::Message message);
-		void logError(printer::Message message);
+		void logError(const printer::Message& message);
 		void dumpLog(std::ostream& stream = std::cerr) const;
 
 		[[nodiscard]]

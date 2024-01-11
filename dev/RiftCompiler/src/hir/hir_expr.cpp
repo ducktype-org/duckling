@@ -7,6 +7,8 @@
 
 #include <exec/operators/builtinoperators.hpp>
 #include <operations/operation.hpp>
+#include <utility>
+#include <utility>
 
 namespace hir {
 
@@ -15,7 +17,7 @@ namespace hir {
 		std::optional<symtable::SymbolRef> symbol;
 
 	public:
-		SymbolExpr(symtable::ScopeRef scope, base::StrId name): Expression(scope), name(name) {}
+		SymbolExpr(symtable::ScopeRef scope, base::StrId name): Expression(std::move(scope)), name(std::move(name)) {}
 
 		void lookup(AnalysisState& state) final {
 			if (lookup_done) return;
@@ -64,7 +66,7 @@ namespace hir {
 		i32 value;
 
 	public:
-		LiteralIntExpr(symtable::ScopeRef scope, i32 value): Expression(scope), value(value) {}
+		LiteralIntExpr(symtable::ScopeRef scope, i32 value): Expression(std::move(scope)), value(value) {}
 
 		void lookup(AnalysisState& state) final { lookup_done = true; }
 
@@ -87,7 +89,7 @@ namespace hir {
 
 	public:
 		LiteralTypeExpr(symtable::ScopeRef scope, ts::TypeDesc<> type):
-			  Expression(scope),
+			  Expression(std::move(scope)),
 			  type_value(type) {}
 
 		void lookup(AnalysisState& state) final { lookup_done = true; }
@@ -115,10 +117,10 @@ namespace hir {
 		BinOperatorExpr(
 			symtable::ScopeRef scope, ExpressionRef lhs, ExpressionRef rhs, base::StrId oper
 		):
-			  Expression(scope),
+			  Expression(std::move(scope)),
 			  lhs(std::move(lhs)),
 			  rhs(std::move(rhs)),
-			  oper(oper) {}
+			  oper(std::move(oper)) {}
 
 		void lookup(AnalysisState& state) final {
 			if (lookup_done) return;
@@ -170,7 +172,7 @@ namespace hir {
 
 	// all other types like: lambda
 
-	ExpressionRef makeFromKeyword(symtable::ScopeRef scope, rift_def::Keyword keyword) {
+	ExpressionRef makeFromKeyword(const symtable::ScopeRef& scope, rift_def::Keyword keyword) {
 		switch (keyword) {
 		case rift_def::Keyword::i32:
 			// @TODO: signedness
@@ -184,7 +186,7 @@ namespace hir {
 		}
 	}
 
-	ExpressionRef makeFromSingle(symtable::ScopeRef scope, const pst::Expr::ExprElem& elem) {
+	ExpressionRef makeFromSingle(const symtable::ScopeRef& scope, const pst::Expr::ExprElem& elem) {
 		variant_match(elem) {
 			variant_case(pst::Expr::KeywordValue, key) {
 				return makeFromKeyword(scope, key.keyword);
@@ -212,7 +214,7 @@ namespace hir {
 	}
 
 	ExpressionRef
-		Expression::makeExpr(symtable::ScopeRef scope, pst::ParserCBorrowRef<pst::Expr> pst_expr) {
+		Expression::makeExpr(const symtable::ScopeRef& scope, const pst::ParserCBorrowRef<pst::Expr>& pst_expr) {
 		// temporary:
 		// @TODO: proper algorithm
 

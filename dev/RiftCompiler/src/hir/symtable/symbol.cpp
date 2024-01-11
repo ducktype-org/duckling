@@ -1,4 +1,8 @@
 #include "symbol.hpp"
+
+#include <utility>
+
+#include <utility>
 #include "../analysis_state.hpp"
 
 namespace symtable {
@@ -12,8 +16,8 @@ namespace symtable {
 		SymbolKind          kind
 	):
 		  analysis_state(state),
-		  scope(scope),
-		  name(name),
+		  scope(std::move(std::move(scope))),
+		  name(std::move(name)),
 		  anonymous(anonymous),
 		  is_static(is_static),
 		  relative_position(-1),

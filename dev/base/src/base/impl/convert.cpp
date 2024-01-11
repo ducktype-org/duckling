@@ -13,7 +13,7 @@ namespace base {
 		std::string out(length + 2, '0');
 		out[1]  = 'x';
 		usize i = 0;
-		usize rest;
+		usize rest = 0;
 		while (i < length && hex) {
 			rest                   = hex % 16;
 			out.at(length + 1 - i) = (rest > 9) ? ('A' + rest - 10) : ('0' + rest);

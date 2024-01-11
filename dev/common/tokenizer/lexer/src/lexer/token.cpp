@@ -11,22 +11,22 @@
 #include <unicode/uchar.h>
 
 namespace lexer {
-	Token::Token(Token::Type type, const base::RawView value, dia::SourcePosition position):
+	Token::Token(Token::Type type, const base::RawView value, const dia::SourcePosition& position):
 		  type(type),
 		  str_id(value),
-		  source_position(std::move(position)) {}
+		  source_position(position) {}
 
 	Token::Token(
 		Token::Type         type,
 		Tokens&&            recursive,
 		Token&&             sentinel,
-		dia::SourcePosition position,
+		const dia::SourcePosition& position,
 		BracketType         bracket_type
 	):
 		  type(type),
 		  recursive(std::move(recursive)),
 		  sentinel(new Token(std::move(sentinel))),
-		  source_position(std::move(position)),
+		  source_position(position),
 		  bracket_type(bracket_type) {
 		RIFT_ASSERT(
 			this->sentinel->getType() == Type::Sentinel, "non-sentinel token passed as sentinel"
@@ -108,7 +108,7 @@ namespace lexer {
 		swap(first.bracket_type, second.bracket_type);
 	}
 
-	Token& Token::operator=(Token&& other) {
+	Token& Token::operator=(Token&& other)  noexcept {
 		swap(*this, other);
 		return *this;
 	}

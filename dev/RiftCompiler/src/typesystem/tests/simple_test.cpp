@@ -3,6 +3,7 @@
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
 #include <base/string_id.hpp>
+#include <utility>
 
 class SimpleTypeSystemTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -252,7 +253,7 @@ private:
 		auto r0 = inheriting_class.getMemberInfo(symbol, hint);
 
 		assert(r0.isOk(), "Invalid result count");
-		usize begin_offset0, end_offset0;
+		usize begin_offset0 = 0, end_offset0 = 0;
 		if (r0.result_type == ts::ResultType::Virtual) {
 			usize ancestor_offset
 				= inheriting_class.getVirtualAncestorOffset(r0.last_virtual_ancestor.value());
@@ -289,8 +290,8 @@ private:
 		std::vector<usize>&        begin_offsets,
 		std::vector<usize>&        end_offsets
 	) {
-		usize begin_offset;
-		usize end_offset;
+		usize begin_offset = 0;
+		usize end_offset = 0;
 		if (inheriting_class == class_with_virtual_inh.back()) {
 			begin_offset = inheriting_class.getVtablePtrOffset();
 			end_offset   = begin_offset + ts::POINTER_SIZE;
@@ -322,7 +323,7 @@ private:
 		ts::ClassInfo inheriting_class, std::vector<ts::ClassInfo> class_with_virtual_inh
 	) {
 		std::vector<usize> v0, v1;
-		return get_vtable_ptr_offset(inheriting_class, class_with_virtual_inh, v0, v1);
+		return get_vtable_ptr_offset(inheriting_class, std::move(class_with_virtual_inh), v0, v1);
 	}
 
 	static std::pair<usize, usize> get_vtable_ptr_offset(

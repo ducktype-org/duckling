@@ -15,7 +15,7 @@ namespace fs {
 
 	FilePath::FilePath(const std::filesystem::path& path): path(std::filesystem::absolute(path)) {}
 
-	FilePath::FilePath(const FilePath& oth): path(oth.path) {}
+	FilePath::FilePath(const FilePath& oth) = default;
 
 	FileContent FilePath::getContent() const {
 		if (to_content.contains(path)) {

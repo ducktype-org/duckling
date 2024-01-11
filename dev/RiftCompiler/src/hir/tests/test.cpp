@@ -27,7 +27,7 @@ private:
 		return { std::move(parsed), file };
 	}
 
-	symtable::SymbolRef getSymbolFromLookupIn(symtable::SymbolRef symbol, base::StrId name) {
+	symtable::SymbolRef getSymbolFromLookupIn(const symtable::SymbolRef& symbol, base::StrId name) {
 		auto lookup_result = symbol->lookupIn(name);
 		assert(lookup_result.isSingle(), "Lookup result not a single symbol.");
 		auto dealiased_single = symtable::deAliasSymbolChain(lookup_result.getAsSingle());

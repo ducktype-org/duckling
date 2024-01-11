@@ -2,18 +2,19 @@
 #include <base/exceptions.hpp>
 #include <base/defer.hpp>
 #include <iostream>
+#include <utility>
 
 namespace symtable {
 
 	SymbolData::SymbolData() {
 		root_scope             = newScope(nullptr, base::StrId("ROOT_SCOPE"));
-		next_relative_position = 0;
+		
 	}
 
 	ScopeRef SymbolData::getRootScope() { return root_scope; }
 
 	ScopeRef SymbolData::newScope(ScopeRef parent, base::StrId name) {
-		auto id = scopes.pushBack(std::move(Scope(parent, name)));
+		auto id = scopes.pushBack(Scope(std::move(parent), name));
 		// scopes[id].id = id;
 		return scopes.last();
 	}
@@ -39,7 +40,7 @@ namespace symtable {
 
 	// @TODO: errors
 	ChainLookupResult SymbolData::lookupDottedNameInScopeAndParents(
-		ScopeRef initial, std::span<base::StrId> names
+		const ScopeRef& initial, std::span<base::StrId> names
 	) {
 		RIFT_ASSERT(names.size() > 0, "lookupDotted received zero names");
 

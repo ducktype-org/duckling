@@ -3,12 +3,14 @@
 #include "analysis_state.hpp"
 #include <base/exceptions.hpp>
 #include <base/defer.hpp>
+#include <utility>
+#include <utility>
 
 namespace hir {
 
 
 	base::unique_ptr<Symbol> makeSymbolFromStatement(
-		AnalysisState& state, symtable::ScopeRef scope, PstRef<pst::Stmt> stmt
+		AnalysisState& state, const symtable::ScopeRef& scope, const PstRef<pst::Stmt>& stmt
 	) {
 		switch (stmt->getKind()) {
 		// @TODO: cast check
@@ -55,7 +57,7 @@ namespace hir {
 	}
 
 	void goOverSymbols(
-		AnalysisState& state, ScopeRef scope, pst::ParserCBorrowRef<pst::CodeBlock> pst_element
+		AnalysisState& state, const ScopeRef& scope, const pst::ParserCBorrowRef<pst::CodeBlock>& pst_element
 	) {
 		// @FUTURE: somewhere here will happen macro expansion
 		for (auto& stmt: pst_element->getStatements()) {
@@ -71,8 +73,8 @@ namespace hir {
 		base::StrId           name,
 		PstRef<pst::TopLevel> pst_element
 	):
-		  Symbol(state, scope, name, false, true, SymbolKind::CompilationUnit),
-		  pst_element(pst_element) {}
+		  Symbol(state, std::move(scope), name, false, true, SymbolKind::CompilationUnit),
+		  pst_element(std::move(std::move(pst_element))) {}
 
 	void TopLevelSymbol::calculateType() {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::ModuleInfo::create());
@@ -159,8 +161,8 @@ namespace hir {
 	AliasSymbol::AliasSymbol(
 		hir::AnalysisState& state, ScopeRef scope, base::StrId name, PstRef<pst::Alias> pst_element
 	):
-		  GenericAlias(state, scope, name, false, true, SymbolKind::Alias),
-		  pst_element(pst_element) {
+		  GenericAlias(state, std::move(scope), name, false, true, SymbolKind::Alias),
+		  pst_element(std::move(std::move(pst_element))) {
 		is_alias = true;
 	}
 
@@ -197,7 +199,7 @@ namespace hir {
 		std::cerr << "\n";
 
 		linked_lookup_scope     = as_single.back()->getLinkedLookupScope();
-		dealiased_lookup_result = std::move(dealiased_single);
+		getDealiasedLookupResult() = std::move(dealiased_single);
 		// @TODO: some ok here?
 		// Or just ErrorSymbol propagation
 	}
@@ -210,8 +212,8 @@ namespace hir {
 	UsingSymbol::UsingSymbol(
 		hir::AnalysisState& state, ScopeRef scope, base::StrId name, PstRef<pst::Using> pst_element
 	):
-		  GenericAlias(state, scope, name, false, true, SymbolKind::Alias),
-		  pst_element(pst_element) {
+		  GenericAlias(state, std::move(scope), name, false, true, SymbolKind::Alias),
+		  pst_element(std::move(std::move(pst_element))) {
 		wildcard = true;
 		is_alias = true;
 	}
@@ -258,7 +260,7 @@ namespace hir {
 		std::cerr << "\n";
 
 		linked_lookup_scope     = as_single.back()->getLinkedLookupScope();
-		dealiased_lookup_result = std::move(dealiased_single);
+		getDealiasedLookupResult() = std::move(dealiased_single);
 	}
 
 }

@@ -33,7 +33,7 @@ void expect(cpp::result<void, E> r) {
 	}
 }
 
-void cli(std::string filepath) {
+void cli(const std::string& filepath) {
 	vm::PID pid = expect(vm::api::spawn(true)).pid;
 	expect(vm::api::loadFile(pid, fs::FilePath(filepath)));
 	expect(vm::api::run(pid));

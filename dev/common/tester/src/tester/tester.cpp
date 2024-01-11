@@ -19,9 +19,9 @@ namespace tester {
 	}
 
 	TestSuite::TestSuite(TestConfig&& config, std::string_view name):
-		  name(name),
+		  curr_global_res(nullptr), name(name),
 		  config(std::move(config)) {
-		curr_global_res = nullptr;
+		
 	}
 
 	void TestSuite::assert(bool v, std::string_view err, bool critical) {

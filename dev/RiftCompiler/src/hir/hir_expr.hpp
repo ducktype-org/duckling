@@ -30,7 +30,7 @@ namespace hir {
 
 		// in the future this will probably require some „grammar context”
 		// in the future this will require AnalysisState to log errors
-		static ExpressionRef makeExpr(symtable::ScopeRef scope, pst::ParserCBorrowRef<pst::Expr>);
+		static ExpressionRef makeExpr(const symtable::ScopeRef& scope, const pst::ParserCBorrowRef<pst::Expr>&);
 
 		// @TODO: this should receive some state:
 		virtual ts::TypeDesc<> evalAsType(AnalysisState&);

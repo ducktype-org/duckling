@@ -57,8 +57,8 @@ namespace ts::internal {
 		usize                                                         virtualMethods
 	):
 		  TypeInfoImpl(0),
-		  name(name) {
-		virt_method_count = virtualMethods;
+		  name(name), virt_method_count(virtualMethods) {
+		
 
 		// Initialise parents vector
 		std::vector<ClassInfo> parents;
@@ -71,7 +71,7 @@ namespace ts::internal {
 			std::deque<ClassInfo> temp;
 			if (inheritance_tag.is_virtual) temp.push_back(parent_id);
 			for (auto [ancestor_info, ancestor_offset]:
-			     ((const ClassInfoImpl*) parent_id.getPimpl())->virtual_layout) {
+			     (dynamic_cast<const ClassInfoImpl*>( parent_id.getPimpl()))->virtual_layout) {
 				temp.push_back(ancestor_info);
 			}
 			C3_linearisation_vector.push_back(std::move(temp));
@@ -90,7 +90,7 @@ namespace ts::internal {
 			AncestorData data{ .info = parent, .offset = reserved_space };
 			basic_parents.push_back(ancestors_data.size());
 			ancestors_data.push_back(data);
-			auto parent_pimpl = (const ClassInfoImpl*) parent.getPimpl();
+			auto parent_pimpl = dynamic_cast<const ClassInfoImpl*>( parent.getPimpl());
 			for (AncestorData parent_ancestor: parent_pimpl->ancestors_data) {
 				if (!parent_ancestor.last_virtual_ancestor.has_value()) {
 					parent_ancestor.offset += reserved_space;
@@ -104,7 +104,7 @@ namespace ts::internal {
 		for (usize parent_position: basic_parents) {
 			ClassInfo parent_info    = ancestors_data[parent_position].info;
 			usize     parent_offset  = ancestors_data[parent_position].offset;
-			auto      ancestor_pimpl = (const ClassInfoImpl*) parent_info.getPimpl();
+			auto      ancestor_pimpl = dynamic_cast<const ClassInfoImpl*>( parent_info.getPimpl());
 
 			for (MemberData member_data: ancestor_pimpl->members_data) {
 				if (!member_data.last_virtual_ancestor.has_value()) {
@@ -137,7 +137,7 @@ namespace ts::internal {
 		for (ClassInfo ancestor: linearised_ancestors) {
 			AncestorData data{ .info = ancestor, .offset = 0, .last_virtual_ancestor = ancestor };
 			ancestors_data.push_back(data);
-			auto parent_pimpl = (const ClassInfoImpl*) ancestor.getPimpl();
+			auto parent_pimpl = dynamic_cast<const ClassInfoImpl*>( ancestor.getPimpl());
 			for (AncestorData parent_ancestor: parent_pimpl->ancestors_data) {
 				if (!parent_ancestor.last_virtual_ancestor.has_value()) {
 					parent_ancestor.last_virtual_ancestor = ancestor;
@@ -234,11 +234,11 @@ namespace ts::internal {
 		ClassInfoImpl::getMemberInfo(symtable::SymbolId symbol, std::vector<ClassInfo> hint) const {
 		AncestorInfo ancestor_info = getAncestorInfo(hint);
 
-		const ClassInfoImpl* ancestor_to_look_from;
+		const ClassInfoImpl* ancestor_to_look_from = nullptr;
 		if (hint.empty())
 			ancestor_to_look_from = this;
 		else
-			ancestor_to_look_from = (const ClassInfoImpl*) hint.back().getPimpl();
+			ancestor_to_look_from = dynamic_cast<const ClassInfoImpl*>( hint.back().getPimpl());
 
 		MemberInfo member_info = ancestor_to_look_from->getMemberInfo(symbol);
 
@@ -284,7 +284,7 @@ namespace ts::internal {
 
 		for (auto ancestor_id: ancestor_ids) {
 			result ^= last_ancestor->getAncestorInfo(ancestor_id);
-			last_ancestor = (const ClassInfoImpl*) ancestor_id.getPimpl();
+			last_ancestor = dynamic_cast<const ClassInfoImpl*>( ancestor_id.getPimpl());
 		}
 		return result;
 	}
@@ -306,14 +306,14 @@ namespace ts::internal {
 		// @TODO: Fix this function
 		std::vector<std::pair<ClassInfo, usize>> result;
 
-		const ClassInfoImpl* parent_ptr;
+		const ClassInfoImpl* parent_ptr = nullptr;
 		if (!ancestor_ids.empty())
-			parent_ptr = ((const ClassInfoImpl*) ancestor_ids.back().getPimpl());
+			parent_ptr = (dynamic_cast<const ClassInfoImpl*>( ancestor_ids.back().getPimpl()));
 		else
 			parent_ptr = this;
 
 		auto  clueless_parent_info = getAncestorInfo(ancestor_ids);
-		usize parent_offset;
+		usize parent_offset = 0;
 
 		switch (clueless_parent_info.result_type) {
 			using enum ts::ResultType;

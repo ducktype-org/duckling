@@ -21,7 +21,7 @@ namespace dia {
 	SourcePosition::SourcePosition(
 		Source source_code, usize line, usize column, usize source_start
 	):
-		  SourcePosition(source_code, line, column, source_start, source_start) {}
+		  SourcePosition(std::move(source_code), line, column, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
 		Source source_code, usize line, usize column, usize source_start, usize source_end
@@ -43,12 +43,8 @@ namespace dia {
 		}
 	}
 
-	SourcePosition::SourcePosition(const SourcePosition& other):
-		  line(other.line),
-		  column(other.column),
-		  source_start(other.source_start),
-		  source_end(other.source_end),
-		  source_code(other.source_code) {}
+	SourcePosition::SourcePosition(const SourcePosition& other)
+		  = default;
 
 	SourcePosition::SourcePosition(const SourcePosition& other, usize source_end):
 		  SourcePosition(

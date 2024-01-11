@@ -8,7 +8,7 @@
 
 namespace symtable {
 
-	void Scope::addSymbol(SymbolRef symbol) {
+	void Scope::addSymbol(const SymbolRef& symbol) {
 		RIFT_ASSERT(state == ScopeState::Open, "Can not add symbols to closed scope");
 		symbols.push_back(symbol);
 	}

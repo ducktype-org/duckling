@@ -86,16 +86,16 @@ namespace lexer {
 
 		Token(const Token& other) = default;
 		Token(Token&& other) noexcept;
-		Token(Type type, base::RawView value, dia::SourcePosition position);
+		Token(Type type, base::RawView value, const dia::SourcePosition& position);
 		Token(
 			Type                type,
 			Tokens&&            recursive,
 			Token&&             sentinel,
-			dia::SourcePosition position,
+			const dia::SourcePosition& position,
 			BracketType         bracket
 		);
 		friend void swap(Token& first, Token& second);
-		Token&      operator=(Token&& other);
+		Token&      operator=(Token&& other) noexcept;
 
 		[[nodiscard]]
 		Type getType() const;

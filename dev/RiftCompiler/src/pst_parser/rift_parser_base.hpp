@@ -31,7 +31,7 @@ namespace pst {
 		RiftParserState(tpc::TokenStream&& tokens, dia::ErrorState&& err):
 			  tpc::ParserState(std::move(tokens), std::move(err)) {}
 
-		void              addImport(tpc::ParserCBorrowRef<pst::Import> import);
+		void              addImport(const tpc::ParserCBorrowRef<pst::Import>& import);
 		const ImportType& getImports() const;
 	};
 

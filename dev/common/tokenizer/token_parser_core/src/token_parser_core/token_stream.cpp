@@ -3,15 +3,16 @@
  */
 
 #include <base/exceptions.hpp>
+#include <utility>
 #include "token_stream.hpp"
 
 namespace tpc {
 
-	TokenStream::TokenStream(const Tokens& tokens, const Token& sentinel_end, usize from, usize to):
+	TokenStream::TokenStream(const Tokens& tokens, Token  sentinel_end, usize from, usize to):
 		  tokens(tokens),
 		  where(from),
 		  to(to),
-		  sentinel_end(sentinel_end) {
+		  sentinel_end(std::move(sentinel_end)) {
 		RIFT_ASSERT(tokens.size() >= to, "TokenStream received too few tokens.");
 		RIFT_ASSERT(from <= to, "TokenStream received illegal from-to values");
 	}

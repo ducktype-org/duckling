@@ -4,7 +4,7 @@
 #include <sstream>
 
 struct Wrapper {
-	i32 x;
+	i32 x{};
 
 	Wrapper() = default;
 
@@ -16,7 +16,7 @@ struct Wrapper {
 struct Derived: public Wrapper {
 	static i32 destructor_count;
 
-	virtual ~Derived() { destructor_count++; }
+	~Derived() override { destructor_count++; }
 };
 
 i32 Derived::destructor_count = 0;
@@ -76,7 +76,7 @@ private:
 		assert(Derived::destructor_count == d_count + 1, "Unique didn't destroy the object");
 	}
 
-	void increment_wrapper_using_borrow(base::borrow_ptr<Wrapper> b_ptr) { b_ptr->x++; }
+	void increment_wrapper_using_borrow(const base::borrow_ptr<Wrapper>& b_ptr) { b_ptr->x++; }
 };
 
 TESTER_COMMON_MAIN("/base/tests/");

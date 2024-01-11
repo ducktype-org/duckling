@@ -6,7 +6,7 @@ namespace vm {
 
 		// @TODO: too similar to code in type.cpp with witch its now incompatible
 		// See: https://github.com/rift-lang/rift-poc-zpp1/issues/91
-		bool typeAtOffset(TypeCRef type, u64 offset, TypeCRef searched) {
+		bool typeAtOffset(const TypeCRef& type, u64 offset, const TypeCRef& searched) {
 			if (offset == 0) {
 				if (searched->getSize() > type->getSize())
 					return false;
@@ -37,19 +37,19 @@ namespace vm {
 		}
 	}
 
-	Pointer Block::BasePointer() const { return Pointer(block_id, start); }
+	Pointer Block::BasePointer() const { return {block_id, start}; }
 
-	base::RawView Block::rawPointer() { return base::RawView(data, element_type->getSize()); }
+	base::RawView Block::rawPointer() { return {data, element_type->getSize()}; }
 
 	TypeCRef Block::innerType() const { return element_type; }
 
-	cpp::result<base::ModRawView, Block::error> Block::deref(TypeCRef u, u64 offset) {
+	cpp::result<base::ModRawView, Block::error> Block::deref(const TypeCRef& u, u64 offset) {
 		if (offset < start || offset > end) return cpp::fail("Tried to defer outside of a block");
 		if (end - offset < u->getSize()) return cpp::fail("Tried to defer too big of a type");
 		return base::ModRawView(data, u->getSize());
 	}
 
-	cpp::result<base::ModRawView, Block::error> Block::derefCheck(TypeCRef u, u64 offset) {
+	cpp::result<base::ModRawView, Block::error> Block::derefCheck(const TypeCRef& u, u64 offset) {
 		if (offset < start || offset > end) return cpp::fail("Tried to defer outside of a block");
 		if (end - offset < u->getSize()) return cpp::fail("Tried to defer too big of a type");
 		u64 element_offset = (offset - start) % element_type->getSize();

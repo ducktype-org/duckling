@@ -3,6 +3,7 @@
 #include <supervisor/supervisor.hpp>
 #include <base/variant.hpp>
 #include <base/defer.hpp>
+#include <utility>
 
 namespace vm {
 	// Type declaration:
@@ -28,7 +29,7 @@ namespace vm {
 
 		size      = PointerSize;
 		kind_type = Kind::Pointer;
-		kind      = kind::Pointer{ inner };
+		kind      = kind::Pointer{ std::move(inner) };
 	}
 
 	void Type::defineStaticTable(TypeRef inner, u64 table_size) {
@@ -36,7 +37,7 @@ namespace vm {
 		state = State::Defined;
 
 		kind_type = Kind::StaticTable;
-		kind      = kind::StaticTable{ inner, table_size };
+		kind      = kind::StaticTable{ std::move(inner), table_size };
 	}
 
 	void Type::defineDynamicTable(TypeRef inner) {
@@ -45,7 +46,7 @@ namespace vm {
 
 		size      = PointerSize;
 		kind_type = Kind::DynamicTable;
-		kind      = kind::DynamicTable{ inner };
+		kind      = kind::DynamicTable{ std::move(inner) };
 	}
 
 	void Type::defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions) {
@@ -68,7 +69,7 @@ namespace vm {
 
 		kind_type    = Kind::Variant;
 		auto variant = kind::Variant{};
-		for (auto type: variants_definitions) variant.alternatives.push_back(type);
+		for (const auto& type: variants_definitions) variant.alternatives.push_back(type);
 		kind = variant;
 	}
 
@@ -78,7 +79,7 @@ namespace vm {
 
 		size      = PointerSize;
 		kind_type = Kind::Function;
-		kind      = kind::Function{ parameters, result };
+		kind      = kind::Function{ std::move(parameters), std::move(result) };
 	}
 
 	void Type::finalize() {
@@ -222,7 +223,7 @@ namespace vm {
 
 	base::Optional<TypeCRef> Type::getFieldTypeByOffset(Offset offset) const {
 		return get<kind::Data>().flatMap([offset](const kind::Data& data) {
-			i64 begin = -1, end = data.fields.size(), middle;
+			i64 begin = -1, end = data.fields.size(), middle = 0;
 			while (end - begin > 1) {
 				middle = (begin + end) / 2;
 				if (data.fields[middle].offset <= offset)
@@ -236,8 +237,8 @@ namespace vm {
 	}
 
 	base::Optional<TypeCRef> Type::getFieldTypeByOffsetRecursive(Offset offset) const {
-		return get<kind::Data>().flatMap([this, offset](const kind::Data& data) {
-			i64 begin = -1, end = data.fields.size(), middle;
+		return get<kind::Data>().flatMap([ offset](const kind::Data& data) {
+			i64 begin = -1, end = data.fields.size(), middle = 0;
 			while (end - begin > 1) {
 				middle = (begin + end) / 2;
 				if (data.fields[middle].offset <= offset)

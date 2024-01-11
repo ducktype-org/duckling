@@ -56,7 +56,7 @@ namespace printer {
 	}
 
 	void Console::add(const MessagePack& pack) {
-		messagePacks.push_back(std::move(pack));
+		messagePacks.push_back(pack);
 		INSTANT_DEBUG_LOG(*this);
 	}
 
@@ -97,7 +97,7 @@ namespace printer {
 						out << "Limit for this type of message has been reached.\n";
 					} else {
 						for (const MessageContent& content: message.contents) {
-							ColorId foreground_color_id, background_color_id;
+							ColorId foreground_color_id = 0, background_color_id = 0;
 							if (content.foreground_color == Color::DEFAULT) {
 								foreground_color_id
 									= static_cast<ColorId>(message.foreground_color);

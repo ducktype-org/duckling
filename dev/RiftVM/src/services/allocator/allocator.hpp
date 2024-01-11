@@ -25,9 +25,9 @@ namespace vm {
 			  memory(getMemory(serviceManager.getVCPU())) {}
 
 	public:
-		BlockId makeTypeBlock(TypeCRef type);
+		BlockId makeTypeBlock(const TypeCRef& type);
 
-		BlockId makeArrayBlock(TypeCRef type, u64 length);
+		BlockId makeArrayBlock(const TypeCRef& type, u64 length);
 
 		void deleteBlock(BlockId block_id);
 

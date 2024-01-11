@@ -116,10 +116,15 @@ namespace hir {
 	};
 
 	class GenericAlias: public symtable::Symbol {
-	protected:
+	private:
 		// @TODO: this should be ChainLookupResult
 		// it is SymbolChain for now, because only SymbolChain can be dealiased
 		base::Optional<symtable::SymbolChain> dealiased_lookup_result;
+
+	protected:
+		auto& getDealiasedLookupResult() {
+			return dealiased_lookup_result;
+		}
 
 	public:
 		using symtable::Symbol::Symbol;

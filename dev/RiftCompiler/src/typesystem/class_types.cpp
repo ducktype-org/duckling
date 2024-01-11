@@ -130,7 +130,7 @@ namespace ts {
 		return getAncestorInfo(std::vector<ClassInfo>({ ancestor_id }));
 	}
 
-	AncestorInfo ClassInfo::getAncestorInfo(std::vector<ClassInfo> ancestor_ids) const {
+	AncestorInfo ClassInfo::getAncestorInfo(const std::vector<ClassInfo>& ancestor_ids) const {
 		const auto class_impl_ptr = (internal::ClassInfoImpl*) pimpl;
 		auto       result         = class_impl_ptr->getAncestorInfo(ancestor_ids);
 		return result;
@@ -154,7 +154,7 @@ namespace ts {
 	std::vector<std::pair<ClassInfo, usize>>
 		ClassInfo::getVirtualAncestorTable(std::vector<ClassInfo> ancestor_ids) const {
 		const auto kid = (internal::ClassInfoImpl*) pimpl;
-		return kid->getVirtualAncestorTable(ancestor_ids);
+		return kid->getVirtualAncestorTable(std::move(ancestor_ids));
 	}
 
 	usize ClassInfo::getVtablePtrOffset() const {

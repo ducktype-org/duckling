@@ -28,7 +28,7 @@ namespace symtable {
 		ScopesList                            scopes;
 		std::vector<base::unique_ptr<Symbol>> symbols;
 
-		usize next_relative_position;
+		usize next_relative_position{0};
 
 	public:
 		SymbolData();
@@ -47,6 +47,6 @@ namespace symtable {
 		// @TODO: add consts
 		// naive implementations for now:
 		ChainLookupResult
-			lookupDottedNameInScopeAndParents(ScopeRef initial, std::span<base::StrId> names);
+			lookupDottedNameInScopeAndParents(const ScopeRef& initial, std::span<base::StrId> names);
 	};
 }

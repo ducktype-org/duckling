@@ -31,14 +31,14 @@ namespace assemble {
 		base::StrId label_name;
 	};
 
-	typedef std::variant<OpCodeNumArg, OpCodeLabelArg> OpCodeAnyArg;
+	using OpCodeAnyArg = std::variant<OpCodeNumArg, OpCodeLabelArg>;
 
 	/// TODO: delete redundant using (the same as in type.hpp)
 	using TypeSize = u64;
 
 	struct PrimitiveType {
 		base::StrId name;
-		TypeSize    size;
+		TypeSize    size{};
 
 		void dprint(std::ostream& out) const {
 			out << "primitive {\n";
@@ -749,19 +749,22 @@ namespace assemble {
 				}
 				variant_case(DataType, data) {
 					std::vector<std::pair<base::StrId COMMA vm::TypeRef>> fields;
-					for (auto& field: data.fields)
+					fields.reserve(data.fields.size());
+for (auto& field: data.fields)
 						fields.emplace_back(field.name, type_map[field.type]);
 					type_map[data.name]->defineData(fields);
 				}
 				variant_case(VariantType, data) {
 					std::vector<vm::TypeRef> variants;
-					for (auto& variant: data.variant_alternatives)
+					variants.reserve(data.variant_alternatives.size());
+for (auto& variant: data.variant_alternatives)
 						variants.emplace_back(type_map[variant]);
 					type_map[data.name]->defineVariant(variants);
 				}
 				variant_case(FunctionType, data) {
 					std::vector<vm::TypeCRef> parameters;
-					for (auto& param: data.parameters) parameters.emplace_back(type_map[param]);
+					parameters.reserve(data.parameters.size());
+for (auto& param: data.parameters) parameters.emplace_back(type_map[param]);
 					type_map[data.name]->defineFunction(parameters, type_map[data.result]);
 				}
 				variant_default { RIFT_PANIC("bad type"); }
@@ -788,7 +791,7 @@ namespace assemble {
 		}
 	}
 
-	vm::FuncData changeFuncToFuncData(tpc::ParserCBorrowRef<Func> func, vm::TypeMetadata& types) {
+	vm::FuncData changeFuncToFuncData(const tpc::ParserCBorrowRef<Func>& func, vm::TypeMetadata& types) {
 		vm::FuncData funcData;
 		funcData.ret_size   = 0;
 		funcData.arg_size   = func->arg_size;
@@ -821,7 +824,7 @@ namespace assemble {
 				break;
 			}
 			case 1: {
-				i64 arg_0;
+				i64 arg_0 = 0;
 				std::visit([&arg_0](auto& arg) { arg_0 = arg.value; }, op->args[0]);
 				funcData.bc.emplace_back(vm::Fix8Instruction{ .opcode
 				                                              = nameToOpcodeValue(op->opcode_name),
@@ -830,8 +833,8 @@ namespace assemble {
 				break;
 			}
 			case 2: {
-				i64 arg_0;
-				i64 arg_1;
+				i64 arg_0 = 0;
+				i64 arg_1 = 0;
 				std::visit([&arg_0](auto& arg) { arg_0 = arg.value; }, op->args[0]);
 				std::visit([&arg_1](auto& arg) { arg_1 = arg.value; }, op->args[1]);
 				funcData.bc.emplace_back(vm::Fix8Instruction{ .opcode
@@ -880,7 +883,7 @@ namespace assemble {
 	}
 
 	cpp::result<vm::Code, std::string>
-		assemble(fs::FilePath file, vm::TypeMetadata& type_metadata) {
+		assemble(const fs::FilePath& file, vm::TypeMetadata& type_metadata) {
 		auto parsed_code = parseFile(file);
 
 		// @TODO:

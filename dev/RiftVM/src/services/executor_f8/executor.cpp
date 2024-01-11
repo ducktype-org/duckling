@@ -13,6 +13,7 @@
 
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
+#include <utility>
 
 namespace vm {
 
@@ -163,10 +164,10 @@ namespace vm {
 #endif
 
 		OpcodeFix8   opcode;
-		int_fast32_t arg0;
-		int_fast32_t arg1;
-		int_fast32_t arg2;
-		int_fast32_t arg3;
+		int_fast32_t arg0 = 0;
+		int_fast32_t arg1 = 0;
+		int_fast32_t arg2 = 0;
+		int_fast32_t arg3 = 0;
 
 // Computed gotos labales:
 #ifdef USE_COMPUTED_GOTO
@@ -511,7 +512,7 @@ namespace vm {
 
 	void Executor::setStatus(vm::api::ExecStatus status) {
 		// @TODO: check if change is legal
-		this->status = status;
+		this->status = std::move(status);
 		vcpu.onEvent(api::Executing(this->status));
 	}
 
