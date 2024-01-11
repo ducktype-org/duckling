@@ -24,9 +24,11 @@ namespace clap {
 	};
 
 	/**
-	 * This class contains data parsed by clap::Clap. If obtained via Clap::parse() (not through
-	 * an exception), it holds valid and correct data in terms of clap::Clap specification.
-	 * Otherwise, you can also access its data, but you cannot depend on clap::Clap's specification.
+	 * This class contains data parsed by clap::Clap. If obtained via Clap::parse() it holds valid
+	 * and correct data in terms of clap::Clap specification. It is also possible to obtain it
+	 * through some exceptions, like the HelpException, to gain some context during help message
+	 * generation. In this case, you can normally access its data, but you cannot depend on
+	 * clap::Clap's specification - user could have passed anything and a help flag.
 	 *
 	 * Throughout the docs, "X was passed" is meant to suggest the user has typed "X" into the
 	 * command-line arguments of the program.

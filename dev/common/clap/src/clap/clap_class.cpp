@@ -14,16 +14,9 @@
  * Basic helper functions.
  */
 namespace {
-	// Thanks to: https://stackoverflow.com/a/3418285
-	bool replace(std::string& str, const std::string& from, const std::string& to) {
-		size_t start_pos = str.find(from);
-		if (start_pos == std::string::npos) return false;
-		str.replace(start_pos, from.length(), to);
-		return true;
-	}
-
 	/**
 	 * Replaces all occurrences of `from` with `to`
+	 * Thanks to: https://stackoverflow.com/a/3418285.
 	 * @param str source string
 	 * @param from pattern to be erased
 	 * @param to pattern to be put instead of `from`

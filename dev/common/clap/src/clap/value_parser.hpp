@@ -151,7 +151,7 @@ namespace clap {
 	class FileParser: public ValueParser {
 		using ValueParser::ValueParser;
 
-		std::regex file_regex = std::regex(".*");
+		std::regex file_regex = std::regex(".*");  // The regex - default matches everything.
 
 	public:
 		explicit FileParser(std::regex regex): file_regex(std::move(regex)) {}
