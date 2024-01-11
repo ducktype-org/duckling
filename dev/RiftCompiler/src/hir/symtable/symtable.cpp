@@ -11,7 +11,7 @@ namespace symtable {
 	ScopeRef SymbolData::getRootScope() { return root_scope; }
 
 	ScopeRef SymbolData::newScope(ScopeRef parent, base::StrId name) {
-		/*auto id = */scopes.pushBack(Scope(std::move(parent), name));
+		/*auto id = */ scopes.pushBack(Scope(std::move(parent), name));
 		// scopes[id].id = id;
 		return scopes.last();
 	}
