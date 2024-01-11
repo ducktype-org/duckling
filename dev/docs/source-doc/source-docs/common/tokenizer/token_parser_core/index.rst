@@ -155,3 +155,46 @@ Token queries
 	bool isOperator(base::StrId oper, usize fwd = 0) const;
 	bool isBracketGroup(Token::BracketType type, usize fwd = 0) const;
 	bool is(<lexer::Token::Type|rift_def::Keyword|rift_def::Special|rift_def::Operator> t, usize fwd = 0) const;
+
+Element
+^^^^^^^
+
+``tpc::Element`` is a base class intended to be a building block for AST nodes.
+
+The destructor for derived classes has to be specified.
+
+Important methods requiring implementation
+------------------------------------------
+
+``Element::parse`` static method is supposed to be the implementation of parsing a given object. It returns an empty reference only on error and stores the error in ``state``.
+
+.. code-block::cpp
+
+    static ParserRef<Element> parse(ParserState& state);
+
+``trailingSemicolon`` method provides information whether this kind of element should end in a semicolon.
+
+.. code-block::cpp
+
+    bool trailingSemicolon();
+
+``dprint`` method prints elements recursively in a format similar to JSON to specified output stream.
+
+.. code-block::cpp
+
+    void dprint(std::ostream &out) const;
+
+Null aware debug print
+----------------------
+
+``nullAwareDprint`` is a helper function that uses ``T::dprint`` implementation to print a ``ParserRef<T>&`` object but handles null case correctly.
+
+.. code-block::cpp
+
+    template<class T>
+    void nullAwareDprint(const ParserRef<T> &ref, std::ostream &out)
+
+Identifiers
+^^^^^^^^^^^
+
+``Identifier`` and ``OptionalIdentifier`` structures provide easy to access ways of storing ``Element`` identifiers.
