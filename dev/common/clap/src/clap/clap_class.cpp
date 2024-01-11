@@ -7,6 +7,7 @@
 #include "param_builder.hpp"
 #include "exceptions.hpp"
 #include "base/variant.hpp"
+#include "base/str_replace.hpp"
 #include <cctype>
 #include <iostream>
 
@@ -14,22 +15,6 @@
  * Basic helper functions.
  */
 namespace {
-	/**
-	 * Replaces all occurrences of `from` with `to`
-	 * Thanks to: https://stackoverflow.com/a/3418285.
-	 * @param str source string
-	 * @param from pattern to be erased
-	 * @param to pattern to be put instead of `from`
-	 */
-	void replaceAll(std::string& str, const std::string& from, const std::string& to) {
-		if (from.empty()) return;
-		size_t start_pos = 0;
-		while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
-			str.replace(start_pos, from.length(), to);
-			start_pos += to.length();  // In case 'to' contains 'from', like replacing 'x' with 'yx'
-		}
-	}
-
 	/**
 	 * Merges the arguments provided in a form of C-string array with spaces. If a C-string
 	 * contains a white space, then adds quotes around it.
@@ -48,7 +33,7 @@ namespace {
 			for (auto c: arg)
 				if (std::isspace(c)) has_whitespace = true;
 
-			replaceAll(arg, "\"", "\\\"");
+			base::strReplaceAll(arg, "\"", "\\\"");
 
 			if (has_whitespace)
 				args += "\"" + arg + "\" ";
