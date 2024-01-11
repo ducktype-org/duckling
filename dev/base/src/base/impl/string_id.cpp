@@ -8,8 +8,8 @@ namespace base {
 	StrId::ToDataType StrId::to_data_map;
 	StrId::ToIdType   StrId::to_id_map;
 
-	constexpr usize                       default_buffer_size = 32'768;
-	using BufferList = std::vector<base::OwningView>;
+	constexpr usize default_buffer_size = 32'768;
+	using BufferList                    = std::vector<base::OwningView>;
 
 	namespace {
 		BufferList buffer_list;

@@ -43,8 +43,7 @@ namespace dia {
 		}
 	}
 
-	SourcePosition::SourcePosition(const SourcePosition& other)
-		  = default;
+	SourcePosition::SourcePosition(const SourcePosition& other) = default;
 
 	SourcePosition::SourcePosition(const SourcePosition& other, usize source_end):
 		  SourcePosition(

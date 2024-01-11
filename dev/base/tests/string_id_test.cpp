@@ -9,11 +9,11 @@ class SimpleIdMapsTest;
 class A {
 private:
 	i32               x;
-	usize             count{0};
+	usize             count{ 0 };
 	SimpleIdMapsTest& test;
 
 public:
-	A(i32 x, SimpleIdMapsTest& test): x(x),  test(test) {}
+	A(i32 x, SimpleIdMapsTest& test): x(x), test(test) {}
 
 	A(const A& other);
 

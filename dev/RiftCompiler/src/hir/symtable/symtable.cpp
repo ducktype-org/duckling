@@ -6,10 +6,7 @@
 
 namespace symtable {
 
-	SymbolData::SymbolData() {
-		root_scope             = newScope(nullptr, base::StrId("ROOT_SCOPE"));
-		
-	}
+	SymbolData::SymbolData() { root_scope = newScope(nullptr, base::StrId("ROOT_SCOPE")); }
 
 	ScopeRef SymbolData::getRootScope() { return root_scope; }
 

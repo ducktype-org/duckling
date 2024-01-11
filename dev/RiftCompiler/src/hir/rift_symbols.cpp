@@ -57,7 +57,9 @@ namespace hir {
 	}
 
 	void goOverSymbols(
-		AnalysisState& state, const ScopeRef& scope, const pst::ParserCBorrowRef<pst::CodeBlock>& pst_element
+		AnalysisState&                               state,
+		const ScopeRef&                              scope,
+		const pst::ParserCBorrowRef<pst::CodeBlock>& pst_element
 	) {
 		// @FUTURE: somewhere here will happen macro expansion
 		for (auto& stmt: pst_element->getStatements()) {
@@ -198,7 +200,7 @@ namespace hir {
 		symtable::dprintSymbolChain(symtable::deAliasSymbolChain(as_single), std::cerr);
 		std::cerr << "\n";
 
-		linked_lookup_scope     = as_single.back()->getLinkedLookupScope();
+		linked_lookup_scope        = as_single.back()->getLinkedLookupScope();
 		getDealiasedLookupResult() = std::move(dealiased_single);
 		// @TODO: some ok here?
 		// Or just ErrorSymbol propagation
@@ -259,7 +261,7 @@ namespace hir {
 		symtable::dprintSymbolChain(dealiased_single, std::cerr);
 		std::cerr << "\n";
 
-		linked_lookup_scope     = as_single.back()->getLinkedLookupScope();
+		linked_lookup_scope        = as_single.back()->getLinkedLookupScope();
 		getDealiasedLookupResult() = std::move(dealiased_single);
 	}
 

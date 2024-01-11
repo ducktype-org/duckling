@@ -88,11 +88,11 @@ namespace lexer {
 		Token(Token&& other) noexcept;
 		Token(Type type, base::RawView value, const dia::SourcePosition& position);
 		Token(
-			Type                type,
-			Tokens&&            recursive,
-			Token&&             sentinel,
+			Type                       type,
+			Tokens&&                   recursive,
+			Token&&                    sentinel,
 			const dia::SourcePosition& position,
-			BracketType         bracket
+			BracketType                bracket
 		);
 		friend void swap(Token& first, Token& second);
 		Token&      operator=(Token&& other) noexcept;

@@ -7,7 +7,6 @@ class SimpleTesterTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Tester Test", i32 test_no), test_no(test_no) {
-		
 		TESTER_ADD_TEST(choose);
 	}
 

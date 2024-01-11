@@ -17,11 +17,11 @@ namespace lexer {
 		  source_position(position) {}
 
 	Token::Token(
-		Token::Type         type,
-		Tokens&&            recursive,
-		Token&&             sentinel,
+		Token::Type                type,
+		Tokens&&                   recursive,
+		Token&&                    sentinel,
 		const dia::SourcePosition& position,
-		BracketType         bracket_type
+		BracketType                bracket_type
 	):
 		  type(type),
 		  recursive(std::move(recursive)),
@@ -108,7 +108,7 @@ namespace lexer {
 		swap(first.bracket_type, second.bracket_type);
 	}
 
-	Token& Token::operator=(Token&& other)  noexcept {
+	Token& Token::operator=(Token&& other) noexcept {
 		swap(*this, other);
 		return *this;
 	}

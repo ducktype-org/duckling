@@ -10,9 +10,10 @@ namespace base {
 
 	RawView RawView::subSuffix(usize from) const { return { begin + from, arr_size - from }; }
 
-	RawView::RawView(const char* const c_str): begin{ reinterpret_cast<RawArray>(c_str) }, arr_size(0) {
-		
-		i32 pos  = 0;
+	RawView::RawView(const char* const c_str):
+		  begin{ reinterpret_cast<RawArray>(c_str) },
+		  arr_size(0) {
+		i32 pos = 0;
 		while (c_str[pos] != '\0') {
 			arr_size++;
 			pos++;

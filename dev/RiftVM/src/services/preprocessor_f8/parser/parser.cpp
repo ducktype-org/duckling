@@ -750,21 +750,21 @@ namespace assemble {
 				variant_case(DataType, data) {
 					std::vector<std::pair<base::StrId COMMA vm::TypeRef>> fields;
 					fields.reserve(data.fields.size());
-for (auto& field: data.fields)
+					for (auto& field: data.fields)
 						fields.emplace_back(field.name, type_map[field.type]);
 					type_map[data.name]->defineData(fields);
 				}
 				variant_case(VariantType, data) {
 					std::vector<vm::TypeRef> variants;
 					variants.reserve(data.variant_alternatives.size());
-for (auto& variant: data.variant_alternatives)
+					for (auto& variant: data.variant_alternatives)
 						variants.emplace_back(type_map[variant]);
 					type_map[data.name]->defineVariant(variants);
 				}
 				variant_case(FunctionType, data) {
 					std::vector<vm::TypeCRef> parameters;
 					parameters.reserve(data.parameters.size());
-for (auto& param: data.parameters) parameters.emplace_back(type_map[param]);
+					for (auto& param: data.parameters) parameters.emplace_back(type_map[param]);
 					type_map[data.name]->defineFunction(parameters, type_map[data.result]);
 				}
 				variant_default { RIFT_PANIC("bad type"); }
@@ -791,7 +791,8 @@ for (auto& param: data.parameters) parameters.emplace_back(type_map[param]);
 		}
 	}
 
-	vm::FuncData changeFuncToFuncData(const tpc::ParserCBorrowRef<Func>& func, vm::TypeMetadata& types) {
+	vm::FuncData
+		changeFuncToFuncData(const tpc::ParserCBorrowRef<Func>& func, vm::TypeMetadata& types) {
 		vm::FuncData funcData;
 		funcData.ret_size   = 0;
 		funcData.arg_size   = func->arg_size;

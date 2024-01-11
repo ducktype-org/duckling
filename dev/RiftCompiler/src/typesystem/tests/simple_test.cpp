@@ -291,7 +291,7 @@ private:
 		std::vector<usize>&        end_offsets
 	) {
 		usize begin_offset = 0;
-		usize end_offset = 0;
+		usize end_offset   = 0;
 		if (inheriting_class == class_with_virtual_inh.back()) {
 			begin_offset = inheriting_class.getVtablePtrOffset();
 			end_offset   = begin_offset + ts::POINTER_SIZE;

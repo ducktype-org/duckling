@@ -8,7 +8,7 @@
 
 namespace tpc {
 
-	TokenStream::TokenStream(const Tokens& tokens, Token  sentinel_end, usize from, usize to):
+	TokenStream::TokenStream(const Tokens& tokens, Token sentinel_end, usize from, usize to):
 		  tokens(tokens),
 		  where(from),
 		  to(to),

@@ -122,9 +122,7 @@ namespace hir {
 		base::Optional<symtable::SymbolChain> dealiased_lookup_result;
 
 	protected:
-		auto& getDealiasedLookupResult() {
-			return dealiased_lookup_result;
-		}
+		auto& getDealiasedLookupResult() { return dealiased_lookup_result; }
 
 	public:
 		using symtable::Symbol::Symbol;

@@ -11,7 +11,7 @@ namespace symtable {
 		// @TODO: this does not handle non-unique symbols (overloaded)
 		SymbolChain out;
 		std::cerr << "     dealiasing... \n";
-		for (const auto & i : chain) {
+		for (const auto& i: chain) {
 			auto de_aliased = i->getUniqueDeAlias();
 			std::cerr << "           ";
 			dprintSymbolChain(de_aliased, std::cerr);
@@ -64,9 +64,13 @@ namespace symtable {
 		);
 	}
 
-	LookupNode LookupResult::toNode(SymbolRef node) & { return { std::move(node), {leaves, children} }; }
+	LookupNode LookupResult::toNode(SymbolRef node) & {
+		return { std::move(node), { leaves, children } };
+	}
 
-	LookupNode LookupResult::toNode(SymbolRef node) && { return { std::move(node), std::move(*this) }; }
+	LookupNode LookupResult::toNode(SymbolRef node) && {
+		return { std::move(node), std::move(*this) };
+	}
 
 	bool ChainLookupResult::isEmpty() const { return prefix.empty() && result.isEmpty(); }
 

@@ -55,8 +55,8 @@ namespace lexer {
 				continue;
 			}
 			// Figure out the size and value stored in the first byte
-			usize   size  = 1;
-			auto value = std::to_integer<UChar32>(bytes[pos]);
+			usize size  = 1;
+			auto  value = std::to_integer<UChar32>(bytes[pos]);
 			if ((bytes[pos] & byte{ 0b10000000u }) == byte{ 0 }) {
 				size = 1;
 				value &= 0b01111111;

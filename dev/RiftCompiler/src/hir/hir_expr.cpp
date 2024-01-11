@@ -17,7 +17,9 @@ namespace hir {
 		std::optional<symtable::SymbolRef> symbol;
 
 	public:
-		SymbolExpr(symtable::ScopeRef scope, base::StrId name): Expression(std::move(scope)), name(std::move(name)) {}
+		SymbolExpr(symtable::ScopeRef scope, base::StrId name):
+			  Expression(std::move(scope)),
+			  name(std::move(name)) {}
 
 		void lookup(AnalysisState& state) final {
 			if (lookup_done) return;
@@ -66,7 +68,9 @@ namespace hir {
 		i32 value;
 
 	public:
-		LiteralIntExpr(symtable::ScopeRef scope, i32 value): Expression(std::move(scope)), value(value) {}
+		LiteralIntExpr(symtable::ScopeRef scope, i32 value):
+			  Expression(std::move(scope)),
+			  value(value) {}
 
 		void lookup(AnalysisState& state) final { lookup_done = true; }
 
@@ -213,8 +217,9 @@ namespace hir {
 		RIFT_PANIC("Some case did not return");
 	}
 
-	ExpressionRef
-		Expression::makeExpr(const symtable::ScopeRef& scope, const pst::ParserCBorrowRef<pst::Expr>& pst_expr) {
+	ExpressionRef Expression::makeExpr(
+		const symtable::ScopeRef& scope, const pst::ParserCBorrowRef<pst::Expr>& pst_expr
+	) {
 		// temporary:
 		// @TODO: proper algorithm
 

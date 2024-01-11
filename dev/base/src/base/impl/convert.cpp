@@ -11,8 +11,8 @@ namespace base {
 			if (length == 0) length = 1;
 		}
 		std::string out(length + 2, '0');
-		out[1]  = 'x';
-		usize i = 0;
+		out[1]     = 'x';
+		usize i    = 0;
 		usize rest = 0;
 		while (i < length && hex) {
 			rest                   = hex % 16;

@@ -237,7 +237,7 @@ namespace vm {
 	}
 
 	base::Optional<TypeCRef> Type::getFieldTypeByOffsetRecursive(Offset offset) const {
-		return get<kind::Data>().flatMap([ offset](const kind::Data& data) {
+		return get<kind::Data>().flatMap([offset](const kind::Data& data) {
 			i64 begin = -1, end = data.fields.size(), middle = 0;
 			while (end - begin > 1) {
 				middle = (begin + end) / 2;

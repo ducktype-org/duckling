@@ -156,7 +156,7 @@ namespace operation {
 
 		std::vector<ts::TypeDesc<>> args = { type_info };
 
-		for (auto & call : calls) args.push_back(call.type);
+		for (auto& call: calls) args.push_back(call.type);
 
 		ts::FunctionInfo sig = ts::FunctionInfo::create(args, type_info);
 

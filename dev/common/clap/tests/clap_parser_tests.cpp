@@ -34,7 +34,8 @@ private:
 		return { val.begin, val.end };
 	}
 
-	static fs::FilePath parseFile(const std::string& str, const std::regex& regex = std::regex(".*")) {
+	static fs::FilePath
+		parseFile(const std::string& str, const std::regex& regex = std::regex(".*")) {
 		return std::any_cast<fs::FilePath>(clap::FileParser::make(regex)->parse(0, str).value);
 	}
 
