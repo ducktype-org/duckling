@@ -77,7 +77,7 @@ private:
 		*ref = 100;
 		assert(*ref == 100, "bad reference");
 
-		for (usize i = 0; i < 100; i++) list.pushBack(i);
+		for (usize i = 0; i < 100; i++) list.pushBack(int(i));
 
 		assert(*ref == 100, "bad reference");
 		*ref = 1'000;

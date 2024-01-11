@@ -651,12 +651,12 @@ private:
 		);
 
 		try {
-			nothingVirt.getVtablePtrOffset();
+			std::ignore = nothingVirt.getVtablePtrOffset();
 			fail("A class with no vtable returned a vtable pointer");
 		} catch (std::exception& e) {}
-		virtInh.getVtablePtrOffset();
-		virtMethod.getVtablePtrOffset();
-		doubleVirt.getVtablePtrOffset();
+		std::ignore = virtInh.getVtablePtrOffset();
+		std::ignore = virtMethod.getVtablePtrOffset();
+		std::ignore = doubleVirt.getVtablePtrOffset();
 	}
 
 	void assert_sorted_members(ts::ClassInfo A, const std::vector<ts::MemberData>& members) {

@@ -9,7 +9,9 @@
 
 namespace pst {
 
-	PST parse(lexer::TokenData&& td) { return PST(std::forward<lexer::TokenData>(td)); }
+	PST parse(lexer::TokenData&& td) { 
+		return {std::forward<lexer::TokenData>(td)}; 
+		}
 
 	PST parse(const fs::FilePath& path) {
 		lexer::TokenData td = lexer::tokenizeFile(path);

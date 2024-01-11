@@ -26,7 +26,7 @@ namespace tpc {
 	TokenStream TokenStream::getRecursive() const {
 		if (peek().isRecursive()) {
 			const auto& rec = peek().getRecursive();
-			return TokenStream(rec, peek().getSentinel(), 0, rec.size());
+			return {rec, peek().getSentinel(), 0, rec.size()};
 		} else {
 			// @TODO
 			throw base::LogicError("get recursive on non-recursive token");

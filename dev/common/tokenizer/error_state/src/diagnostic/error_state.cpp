@@ -18,7 +18,7 @@ namespace dia {
 		errorLog.add(message);
 	}
 
-	void ErrorState::failAndLog(printer::Message message) {
+	void ErrorState::failAndLog(const printer::Message& message) {
 		setFail();
 		logError(message);
 	}
