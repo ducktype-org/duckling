@@ -38,6 +38,7 @@ namespace base {
 
 	public:
 		NotYetImplemented(const std::string& message);
+		[[nodiscard]]
 		const char* what() const noexcept override;
 	};
 }

@@ -32,6 +32,7 @@ namespace pst {
 			  tpc::ParserState(std::move(tokens), std::move(err)) {}
 
 		void              addImport(const tpc::ParserCBorrowRef<pst::Import>& import);
+		[[nodiscard]]
 		const ImportType& getImports() const;
 	};
 

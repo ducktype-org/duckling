@@ -20,7 +20,7 @@ namespace dia {
 
 	void ErrorState::failAndLog(printer::Message message) {
 		setFail();
-		logError(std::move(message));
+		logError(message);
 	}
 
 	void ErrorState::dumpLog(std::ostream& stream) const { errorLog.print(stream); }
