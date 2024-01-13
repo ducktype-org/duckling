@@ -7,15 +7,14 @@
 
 #include "printer.hpp"
 
-
 namespace printer {
 	static inline void INSTANT_DEBUG_LOG(Console& console) {
-		#ifdef PRINT_LOG
+#ifdef PRINT_LOG
 		if (!console.isIgnoreInstantDebug()) {
 			console.print(std::cerr);
 			console.clear();
 		}
-		#endif
+#endif
 	}
 
 	// All background color escape codes are 10 above foregrounds colors.
@@ -56,18 +55,18 @@ namespace printer {
 			maxAmounts[printer::msgToInt(type)] = amount;
 	}
 
-	void Console::add(const MessagePack& pack) { 
-		messagePacks.push_back(std::move(pack)); 
+	void Console::add(const MessagePack& pack) {
+		messagePacks.push_back(std::move(pack));
 		INSTANT_DEBUG_LOG(*this);
 	}
 
-	void Console::add(MessagePack&& pack) { 
-		messagePacks.emplace_back(std::move(pack)); 
+	void Console::add(MessagePack&& pack) {
+		messagePacks.emplace_back(std::move(pack));
 		INSTANT_DEBUG_LOG(*this);
 	}
 
-	void Console::add(const Message& message) { 
-		messagePacks.push_back({ message }); 
+	void Console::add(const Message& message) {
+		messagePacks.push_back({ message });
 		INSTANT_DEBUG_LOG(*this);
 	}
 

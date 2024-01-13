@@ -6,11 +6,11 @@ namespace pst {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Fun>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Fun), position.genErrorMsg("bad statement choice"));
+		RIFT_ASSERT(state.ctokens().is(Keyword::Fun), position.genErrorStr("bad statement choice"));
 
 		parseAll(state, Keyword::Fun, &out->name, &out->params);
 		if (state.tryEat(Operator::SingleArrow)) parseOne(state, &out->rets);
-		while (state.notEmpty() and !state.ctokens().is(Token::Type::CurlyGroup))
+		while (state.notEmpty() and !state.ctokens().isBracketGroup(Token::BracketType::Curly))
 			state.tokens().skip();
 		parseOne(state, &out->body);
 		return out;

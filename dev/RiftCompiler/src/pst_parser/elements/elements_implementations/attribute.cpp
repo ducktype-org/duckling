@@ -8,12 +8,13 @@ namespace pst {
 		ParserRef<Attribute> out      = makeRef<Attribute>(position);
 
 		RIFT_ASSERT(
-			state.ctokens().is(Special::AtSign), position.genErrorMsg("bad statement choice")
+			state.ctokens().is(Special::AtSign), position.genErrorStr("bad statement choice")
 		);
 
 		parseAll(state, Special::AtSign, &out->name);
 
-		if (state.ctokens().is(Token::Type::RoundGroup)) out->args = ArgList::parse(state);
+		if (state.ctokens().isBracketGroup(Token::BracketType::Round))
+			out->args = ArgList::parse(state);
 
 		return out;
 	}

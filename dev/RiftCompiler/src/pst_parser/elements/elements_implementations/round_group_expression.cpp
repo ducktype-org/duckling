@@ -6,7 +6,7 @@ namespace pst {
 
 		auto out = makeRef<RoundGroupExpr>(position);
 
-		if (!state.ctokens().is(Token::Type::RoundGroup)) {
+		if (!state.ctokens().isBracketGroup(Token::BracketType::Round)) {
 			state.fail(-1, "expected a `(` after here");
 		} else {
 			state.goDown();

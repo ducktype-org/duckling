@@ -4,7 +4,7 @@
 namespace pst {
 	ParserRef<CodeBlockOrStmt> CodeBlockOrStmt::parse(RiftParserState& state) {
 		auto out = makeRef<CodeBlockOrStmt>(state.ctokens().peek().getPosition());
-		if (state.ctokens().is(Token::Type::CurlyGroup))
+		if (state.ctokens().isBracketGroup(Token::BracketType::Curly))
 			out->content = CodeBlock::parse(state);
 		else
 			out->content = Stmt::parse(state);

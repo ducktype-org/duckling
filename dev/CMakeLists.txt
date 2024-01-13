@@ -18,15 +18,18 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# @TODO: add -Werror=shadow=local, but "turn it off" for Crow and Asio
-set(CMAKE_CXX_FLAGS "-Werror=return-type -Werror=terminate -Wshadow=local -Wall -Wextra -Wno-sign-compare -O2")
+set(CMAKE_CXX_FLAGS "-Werror=return-type -Werror=terminate -Werror=shadow=local -Wall -Wextra -Wno-sign-compare -O2")
+
 # Wersja debug wypisuje na razie wszystkie możliwe informacje dynamicznie
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -O0")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Configure assembly targets generation (*.s) to include Intel-style asm and source code/asm interleaving
+set(CMAKE_CXX_CREATE_ASSEMBLY_SOURCE "<CMAKE_CXX_COMPILER> $(CXX_DEFINES) $(CXX_INCLUDES) ${CMAKE_CXX_FLAGS} -S -masm=intel -fverbose-asm <SOURCE> -o <ASSEMBLY_SOURCE>")
+
 if (ENABLE_COVERAGE)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -coverage")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
 	find_program(LCOV lcov REQUIRED)
 	find_program(GENHTML genhtml REQUIRED)
 
@@ -67,14 +70,17 @@ function(rift_add_test test_pack test_name source USES)
 	endif ()
 endfunction()
 
-function(make_module MODULE_NAME USES)
-	target_include_directories(${MODULE_NAME} PUBLIC src)
+function(make_module MODULE_NAME)
+	set(multiValueArgs USES INCLUDE)
+	cmake_parse_arguments(make_module "" "" "${multiValueArgs}" ${ARGN})
 
-	if (${USES} STREQUAL "USES")
-		target_link_libraries(${MODULE_NAME} ${ARGN}) # ARGN represents all arguemtns beyond defined
-	else ()
-		message(FATAL_ERROR "make_module lacks uses clause")
-	endif ()
+	# Checks if USES is used with 0 or more arguments
+	if ((NOT make_module_USES) AND (NOT ("USES" IN_LIST make_module_KEYWORDS_MISSING_VALUES)))
+		message(FATAL_ERROR "make_module lacks uses argument")
+	endif()
+
+	target_include_directories(${MODULE_NAME} PUBLIC src ${make_module_INCLUDE})
+	target_link_libraries(${MODULE_NAME} ${make_module_USES}) 
 endfunction()
 
 function(add_example exmaple_name source USES)

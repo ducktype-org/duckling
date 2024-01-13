@@ -5,7 +5,7 @@ namespace pst {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Const>(position);
 		RIFT_ASSERT(
-			state.ctokens().is(Keyword::Const), position.genErrorMsg("bad statement choice")
+			state.ctokens().is(Keyword::Const), position.genErrorStr("bad statement choice")
 		);
 
 		parseAll(state, Keyword::Const, &out->name, Operator::Colon);
