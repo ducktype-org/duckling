@@ -117,7 +117,7 @@ namespace lexer {
 	}
 
 	void Lexer::commentHandler([[maybe_unused]] Tokens& output) {
-		usize begin       = where;
+		usize begin = where;
 		usize end{};
 		auto  sourceStart = currentPostion();
 
@@ -141,7 +141,7 @@ namespace lexer {
 	}
 
 	void Lexer::blockCommentHandler([[maybe_unused]] Tokens& output) {
-		usize begin       = where;
+		usize begin = where;
 		usize end{};
 		auto  sourceStart = currentPostion();
 
@@ -165,7 +165,7 @@ namespace lexer {
 	}
 
 	void Lexer::operatorHandler(Tokens& output) {
-		usize begin       = where;
+		usize begin = where;
 		usize end{};
 		auto  sourceStart = currentPostion();
 
@@ -179,7 +179,7 @@ namespace lexer {
 	}
 
 	void Lexer::nameHandler(Tokens& output) {
-		usize begin       = where;
+		usize begin = where;
 		usize end{};
 		auto  sourceStart = currentPostion();
 
@@ -209,7 +209,7 @@ namespace lexer {
 	}
 
 	void Lexer::binLiteralHandler(Tokens& output) {
-		usize begin       = where;
+		usize begin = where;
 		usize end{};
 		auto  sourceStart = currentPostion();
 
@@ -224,7 +224,7 @@ namespace lexer {
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {
-		usize begin       = where;
+		usize begin = where;
 		usize end{};
 		auto  sourceStart = currentPostion();
 
@@ -239,7 +239,7 @@ namespace lexer {
 	}
 
 	void Lexer::decLiteralHandler(Tokens& output) {
-		usize begin       = where;
+		usize begin = where;
 		usize end{};
 		auto  sourceStart = currentPostion();
 
@@ -270,7 +270,7 @@ namespace lexer {
 	}
 
 	void Lexer::stringHandler(Tokens& output) {
-		usize begin       = where;
+		usize begin = where;
 		usize end{};
 		auto  sourceStart = currentPostion();
 		bool  closed      = true;

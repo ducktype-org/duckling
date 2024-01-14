@@ -13,11 +13,10 @@ namespace pst {
 	 * @brief Parse syntax tree
 	 */
 	class PST {
-		lexer::TokenData token_data;
-		RiftParserState  parser_state;
+		lexer::TokenData    token_data;
+		RiftParserState     parser_state;
 		ParserRef<TopLevel> top_level;
-		dia::ErrorState  err;
-
+		dia::ErrorState     err;
 
 
 	public:

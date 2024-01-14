@@ -184,7 +184,9 @@ namespace ts {
 		return vtable;
 	}
 
-	ClassInfo VTableInfo::getAssociatedClass() { return reinterpret_cast<CPimpl>(pimpl)->getAssociatedClass(); }
+	ClassInfo VTableInfo::getAssociatedClass() {
+		return reinterpret_cast<CPimpl>(pimpl)->getAssociatedClass();
+	}
 
 	usize VTableInfo::getMethodCount() { return reinterpret_cast<CPimpl>(pimpl)->getMethodCount(); }
 

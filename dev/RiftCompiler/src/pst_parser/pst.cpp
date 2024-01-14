@@ -13,10 +13,9 @@ namespace pst {
 				  token_data.tokens.size()
 			  ),
 			  dia::ErrorState()
-		  ), 
+		  ),
 		  top_level(TopLevel::parse(parser_state)),
-		  err(std::move(parser_state.err))
-		  {}
+		  err(std::move(parser_state.err)) {}
 
 	const std::vector<tpc::ParserCBorrowRef<Import>>& PST::getImports() const {
 		return parser_state.getImports();

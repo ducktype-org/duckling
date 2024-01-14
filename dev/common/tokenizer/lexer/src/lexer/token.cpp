@@ -94,7 +94,7 @@ namespace lexer {
 	}
 
 	Token Token::makeError(const dia::SourcePosition& position) {
-		return {Type::Error, base::RawView("<error>"), position};
+		return { Type::Error, base::RawView("<error>"), position };
 	}
 
 	void swap(Token& first, Token& second) {

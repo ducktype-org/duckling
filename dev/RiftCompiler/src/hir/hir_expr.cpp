@@ -21,7 +21,7 @@ namespace hir {
 			  Expression(std::move(scope)),
 			  name(std::move(name)) {}
 
-		void lookup([[maybe_unused]]AnalysisState& state) final {
+		void lookup([[maybe_unused]] AnalysisState& state) final {
 			if (lookup_done) return;
 			lookup_done = true;
 
@@ -47,7 +47,7 @@ namespace hir {
 			std::cerr << "   SYMBOL : " << symbol.value()->getName().strView() << "\n\n";
 		}
 
-		void determineType([[maybe_unused]]AnalysisState& state) final {
+		void determineType([[maybe_unused]] AnalysisState& state) final {
 			if (type_done) return;
 			type_done = true;
 
@@ -55,7 +55,7 @@ namespace hir {
 			type = symbol.value()->getType();
 		}
 
-		exec::CTV eval([[maybe_unused]]AnalysisState& state) final {
+		exec::CTV eval([[maybe_unused]] AnalysisState& state) final {
 			// @TODO: this should be called just once
 			determineType(state);
 			return symbol.value()->getValue();
@@ -72,9 +72,9 @@ namespace hir {
 			  Expression(std::move(scope)),
 			  value(value) {}
 
-		void lookup([[maybe_unused]]AnalysisState& state) final { lookup_done = true; }
+		void lookup([[maybe_unused]] AnalysisState& state) final { lookup_done = true; }
 
-		void determineType([[maybe_unused]]AnalysisState& state) final {
+		void determineType([[maybe_unused]] AnalysisState& state) final {
 			if (type_done) return;
 			type_done = true;
 			type      = ts::TypeDesc<>(ts::IntegralInfo::create(32));
@@ -96,9 +96,9 @@ namespace hir {
 			  Expression(std::move(scope)),
 			  type_value(type) {}
 
-		void lookup([[maybe_unused]]AnalysisState& state) final { lookup_done = true; }
+		void lookup([[maybe_unused]] AnalysisState& state) final { lookup_done = true; }
 
-		void determineType([[maybe_unused]]AnalysisState& state) final {
+		void determineType([[maybe_unused]] AnalysisState& state) final {
 			if (type_done) return;
 			type_done = true;
 			type      = ts::TypeDesc<>(ts::MetaInfo::create());
@@ -142,7 +142,7 @@ namespace hir {
 			lhs->determineType(state);
 			rhs->determineType(state);
 
-			exec::Operator exec_operator{0};
+			exec::Operator exec_operator{ 0 };
 			if (oper == base::StrId('+'))
 				exec_operator = exec::Operator::Plus;
 			else if (oper == base::StrId('-'))
@@ -250,19 +250,19 @@ namespace hir {
 		return *type;
 	}
 
-	void Expression::determineType([[maybe_unused]]AnalysisState& state) {
+	void Expression::determineType([[maybe_unused]] AnalysisState& state) {
 		RIFT_PANIC("Called determineType on expression not implementing it");
 	}
 
-	void Expression::lookup([[maybe_unused]]AnalysisState& state) {
+	void Expression::lookup([[maybe_unused]] AnalysisState& state) {
 		RIFT_PANIC("Called lookup on expression not implementing it");
 	}
 
-	ts::TypeDesc<> Expression::evalAsType([[maybe_unused]]AnalysisState& state) {
+	ts::TypeDesc<> Expression::evalAsType([[maybe_unused]] AnalysisState& state) {
 		RIFT_PANIC("Called evalAsType on expression not implementing it");
 	}
 
-	exec::CTV Expression::eval([[maybe_unused]]AnalysisState& state) {
+	exec::CTV Expression::eval([[maybe_unused]] AnalysisState& state) {
 		RIFT_PANIC("Called eval on expression not implementing it");
 	}
 
