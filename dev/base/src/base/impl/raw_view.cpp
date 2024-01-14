@@ -18,10 +18,10 @@ namespace base {
 		}
 	}
 
-	std::string_view RawView::stringView() const { return { (char*) begin, arr_size }; }
+	std::string_view RawView::stringView() const { return { reinterpret_cast<const char*>(begin), arr_size }; }
 
 	std::string RawView::stdString() const {
-		return std::string(std::string_view((char*) begin, arr_size));
+		return std::string(std::string_view(reinterpret_cast<const char*>(begin), arr_size));
 	}
 
 	bool RawView::operator==(const RawView& oth) const { return stringView() == oth.stringView(); }

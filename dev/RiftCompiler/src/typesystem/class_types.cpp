@@ -82,7 +82,7 @@ namespace ts {
 		return ts::ClassInfo::create(name, std::move(member_types), {}, 0);
 	}
 
-	base::StrId ClassInfo::getName() const { return ((Pimpl) pimpl)->getName(); }
+	base::StrId ClassInfo::getName() const { return reinterpret_cast<CPimpl>(pimpl)->getName(); }
 
 	[[nodiscard]]
 	const std::vector<AncestorData> ClassInfo::basicParents() const {
@@ -184,9 +184,9 @@ namespace ts {
 		return vtable;
 	}
 
-	ClassInfo VTableInfo::getAssociatedClass() { return ((Pimpl) pimpl)->getAssociatedClass(); }
+	ClassInfo VTableInfo::getAssociatedClass() { return reinterpret_cast<CPimpl>(pimpl)->getAssociatedClass(); }
 
-	usize VTableInfo::getMethodCount() { return ((Pimpl) pimpl)->getMethodCount(); }
+	usize VTableInfo::getMethodCount() { return reinterpret_cast<CPimpl>(pimpl)->getMethodCount(); }
 
-	usize VTableInfo::getParentCount() { return ((Pimpl) pimpl)->getParentCount(); }
+	usize VTableInfo::getParentCount() { return reinterpret_cast<CPimpl>(pimpl)->getParentCount(); }
 }

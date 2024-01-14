@@ -20,7 +20,7 @@ namespace printer {
 	// All background color escape codes are 10 above foregrounds colors.
 	ColorId calculateBackgroundColorId(ColorId color_id) {
 		constexpr int8_t background_font_color_offset = 10;
-		return color_id > 0 ? color_id + background_font_color_offset : color_id;
+		return ColorId(color_id > 0 ? color_id + background_font_color_offset : color_id);
 	}
 
 	void Message::add(const MessageContent& mc) { this->contents.push_back(mc); }
@@ -86,14 +86,14 @@ namespace printer {
 			for (const Message& message: pack) {
 				MessageTypeId messageType = msgToInt(message.type);
 				if (message.level >= minLevel[messageType]) {
-					if (currentAmounts[messageType] > maxAmounts[messageType]) continue;
+					if (currentAmounts.at(messageType) > maxAmounts.at(messageType)) continue;
 
 					if (currentCount == generalMax) {
 						out << "Limit for messages has been reached.\n";
 						return;
 					}
 
-					if (currentAmounts[messageType] == maxAmounts[messageType]) {
+					if (currentAmounts.at(messageType) == maxAmounts.at(messageType)) {
 						out << "Limit for this type of message has been reached.\n";
 					} else {
 						for (const MessageContent& content: message.contents) {
@@ -134,7 +134,7 @@ namespace printer {
 						out << "\033[0m\n";
 						currentCount++;
 					}
-					currentAmounts[messageType]++;
+					currentAmounts.at(messageType)++;
 				}
 			}
 		}

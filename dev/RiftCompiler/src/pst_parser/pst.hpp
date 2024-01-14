@@ -15,9 +15,9 @@ namespace pst {
 	class PST {
 		lexer::TokenData token_data;
 		RiftParserState  parser_state;
+		ParserRef<TopLevel> top_level;
 		dia::ErrorState  err;
 
-		ParserRef<TopLevel> top_level;
 
 
 	public:
@@ -31,8 +31,8 @@ namespace pst {
 		PST(PST&& other):
 			  token_data(std::move(other.token_data)),
 			  parser_state(std::move(other.parser_state)),
-			  err(std::move(other.err)),
-			  top_level(std::move(other.top_level)) {}
+			  top_level(std::move(other.top_level)),
+			  err(std::move(other.err)) {}
 
 		void dprint(std::ostream& out) const;
 	};

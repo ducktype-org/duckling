@@ -71,7 +71,7 @@ namespace vm {
 		VCPU::input(const api::request::Input& request) {
 		// TODO: add checking for stdio
 		std::unique_lock lock(input_mutex);
-		input_stream->write(request.input.c_str(), request.input.size());
+		input_stream->write(request.input.c_str(), std::streamsize(request.input.size()));
 		serviceManager.get<vm::Executor>().notifyPaused();
 		return api::Response(api::response::Empty());
 	}

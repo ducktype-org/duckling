@@ -15,16 +15,16 @@ namespace dia {
 		std::string_view source         = source_content.view().stringView();
 
 		if (source_end == source.size()) return "<EOF>";
-		return std::string(source.begin() + source_start, source.begin() + source_end + 1);
+		return { source.begin() + source_start, source.begin() + source_end + 1 };
 	}
 
 	SourcePosition::SourcePosition(
-		Source source_code, usize line, usize column, usize source_start
+		const Source& source_code, usize line, usize column, usize source_start
 	):
 		  SourcePosition(std::move(source_code), line, column, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
-		Source source_code, usize line, usize column, usize source_start, usize source_end
+		const Source& source_code, usize line, usize column, usize source_start, usize source_end
 	):
 		  line(line),
 		  column(column),
@@ -61,20 +61,18 @@ namespace dia {
 	SourcePosition::Source SourcePosition::getSource() const { return source_code; }
 
 	printer::Message SourcePosition::genErrorMsg(std::string_view reason) const {
-		return printer::Message(
-			{ { { "In file: " },
-		        { source_code->strView().data() },
-		        { ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
-		        { "error: ", printer::Color::BRIGHT_RED },
-		        { reason.data() },
-		        { "\n" },
-		        { "  |\n" },
-		        { std::to_string(line) },
-		        { " | " },
-		        { getSourceChars() + "\n" },
-		        { "  |\n" } },
-		      printer::MessageType::ERROR }
-		);
+		return { { { "In file: " },
+			       { source_code->strView().data() },
+			       { ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
+			       { "error: ", printer::Color::BRIGHT_RED },
+			       { reason.data() },
+			       { "\n" },
+			       { "  |\n" },
+			       { std::to_string(line) },
+			       { " | " },
+			       { getSourceChars() + "\n" },
+			       { "  |\n" } },
+			     printer::MessageType::ERROR };
 	}
 
 	std::string SourcePosition::genErrorStr(std::string_view reason) const {

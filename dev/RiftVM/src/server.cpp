@@ -11,7 +11,7 @@ crow::response convertError(const vm::api::ApiError& apiError) {
 	return {
 		400,
 		std::visit(
-			[](const auto& v) {
+			[]([[maybe_unused]]const auto& v) {
 				return "JSON is broken\n";  // JS::serializeStruct(v);
 			},
 			apiError
@@ -21,7 +21,7 @@ crow::response convertError(const vm::api::ApiError& apiError) {
 
 template<class T, class E>
 crow::response toResponse(const cpp::result<T, E>& x) {
-	static auto convert = [](const auto& v) {
+	static auto convert = []([[maybe_unused]]const auto& v) {
 		return crow::response(200, /*JS::serializeStruct(v)*/ "{OK, json is broken}");
 	};
 

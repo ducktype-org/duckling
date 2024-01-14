@@ -338,10 +338,6 @@ private:
 		);
 
 
-		usize offset = 0;
-		for (auto parent_data: class_B.basicParents())
-			if (parent_data.info == class_A) offset = parent_data.offset;
-
 		operation::TypedOperation class_B_construct_empty{
 
 
@@ -490,7 +486,7 @@ private:
 		exec::fillVtablePtr(ctv_a, A);
 
 
-		auto member = exec::getVirtualMember(ctv_a, A, symbol_z);
+		/*auto member = */exec::getVirtualMember(ctv_a, A, symbol_z);
 
 		// @TODO: constructors should construct virtual parents
 		// assert(member.getData<uint8_t>().front() == 7,

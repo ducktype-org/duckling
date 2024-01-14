@@ -27,7 +27,7 @@ namespace lexer {
 		out.emplace_back(
 			Classifications::end_of_file_value, u8{ 0 }, bytes.getBegin() + bytes.size()
 		);
-		return {std::move(out)};
+		return out;
 	}
 
 	template<>
@@ -137,6 +137,6 @@ namespace lexer {
 			Classifications::end_of_file_value, u8{ 0 }, bytes.getBegin() + bytes.size()
 		);
 
-		return {std::move(out)};
+		return out;
 	}
 }

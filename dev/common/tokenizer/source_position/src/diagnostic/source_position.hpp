@@ -21,10 +21,12 @@ namespace dia {
 
 		SourcePosition() = delete;
 
-		SourcePosition(Source source_code, usize line, usize column, usize start);
-		SourcePosition(Source source_code, usize line, usize column, usize start, usize end);
+		SourcePosition(const Source& source_code, usize line, usize column, usize start);
+		SourcePosition(const Source& source_code, usize line, usize column, usize start, usize end);
 		SourcePosition(const SourcePosition& other);
 		SourcePosition(const SourcePosition& other, usize end);
+
+		SourcePosition& operator=(const SourcePosition& other) = default;
 
 		/**
 		 * @brief Get a copy of the bytes in this position
