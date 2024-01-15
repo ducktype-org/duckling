@@ -21,7 +21,7 @@ namespace dia {
 	SourcePosition::SourcePosition(
 		const Source& source_code, usize line, usize column, usize source_start
 	):
-		  SourcePosition(std::move(source_code), line, column, source_start, source_start) {}
+		  SourcePosition(source_code, line, column, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
 		const Source& source_code, usize line, usize column, usize source_start, usize source_end

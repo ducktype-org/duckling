@@ -163,7 +163,7 @@ namespace vm {
 		Frame frame = internalInitFrame(previous_frame, function, { local_stack });
 #endif
 
-		OpcodeFix8   opcode;
+		OpcodeFix8   opcode{};
 		int_fast32_t arg0 = 0;
 		int_fast32_t arg1 = 0;
 		int_fast32_t arg2 = 0;

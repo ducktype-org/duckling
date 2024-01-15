@@ -15,7 +15,7 @@ namespace hir {
 		switch (stmt->getKind()) {
 		// @TODO: cast check
 		case pst::StmtKind::Fun: {
-			PstRef<pst::Fun> fun = stmt;
+			// PstRef<pst::Fun> fun = stmt;
 			break;
 		}
 		case pst::StmtKind::Namespace: {
@@ -52,7 +52,7 @@ namespace hir {
 			break;
 		}
 		RIFT_PANIC(
-			base::strConcat("makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt).name())
+			base::strConcat("makeSymbolFromStatement bad symbol kind, stmt: ", typeid(stmt).name())
 		);
 	}
 
