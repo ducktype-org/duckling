@@ -52,6 +52,16 @@ namespace ts::internal {
 		std::string representation = "UNNAMED";
 	};
 
+	class UnitInfoImpl: public TypeInfoImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return Kind::Unit;
+		}
+
+		UnitInfoImpl(): TypeInfoImpl(0) { representation = "unit"; }
+	};
+
 	class VoidInfoImpl: public TypeInfoImpl {
 	public:
 		[[nodiscard]]

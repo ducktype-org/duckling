@@ -28,6 +28,14 @@ namespace ts {
 		return pimpl->isInfoImplicitlyCoercible(to);
 	}
 
+	UnitInfo UnitInfo::create() {
+		// TODO: do we want to store unit_info on the vector as well?
+		static auto unit_impl = internal::UnitInfoImpl{};
+		static auto unit_info = UnitInfo{ &unit_impl };
+
+		return unit_info;
+	}
+
 	VoidInfo VoidInfo::create() {
 		// TODO: do we want to store void_info on the vector as well?
 		static auto void_impl = internal::VoidInfoImpl{};

@@ -40,6 +40,7 @@ namespace ts {
 
 	namespace internal {
 		class TypeInfoImpl;
+		class UnitInfoImpl;
 		class VoidInfoImpl;
 		class ByteInfoImpl;
 		class BoolInfoImpl;

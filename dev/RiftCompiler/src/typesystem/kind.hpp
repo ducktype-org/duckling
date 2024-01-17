@@ -7,6 +7,7 @@
 
 namespace ts {
 	enum class Kind {
+		Unit,
 		Void,
 		Byte,
 		Bool,

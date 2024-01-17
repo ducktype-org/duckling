@@ -7,6 +7,18 @@
 #include "type_info.hpp"
 
 namespace ts {
+	class UnitInfo: public TypeInfo {
+		SETUP_TYPE(UnitInfo, TypeInfo)
+
+	public:
+		static UnitInfo create();
+
+		CHECKED_CAST(UnitInfo)
+
+	protected:
+		CONSTRUCT_FROM_IMPLEMENTATION(UnitInfo)
+	};
+
 	class VoidInfo: public TypeInfo {
 		SETUP_TYPE(VoidInfo, TypeInfo)
 
