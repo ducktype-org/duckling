@@ -94,6 +94,8 @@ namespace symtable {
 		}
 
 	public:
+	// @TODO: here we need a vary clear separation of what can be used where
+	
 		friend class SymbolData;
 
 		// This delete is important, to prevent any copy of symbol data:
