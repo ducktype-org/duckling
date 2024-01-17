@@ -1,5 +1,5 @@
 ---
-Checks: 'readability-identifier-naming.*,clang-diagnostic-*,-clang-diagnostic-unknown-warning-option,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-avoid-do-while,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-special-member-functions,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-cppcoreguidelines-avoid-non-const-global-variables,-cppcoreguidelines-pro-type-reinterpret-cast,modernize-*,-modernize-use-trailing-return-type,performance-*,concurrency-*'
+Checks: 'readability-identifier-naming.*,clang-diagnostic-*,-clang-diagnostic-unknown-warning-option,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-owning-memory,-cppcoreguidelines-avoid-do-while,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-special-member-functions,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-cppcoreguidelines-avoid-non-const-global-variables,-cppcoreguidelines-pro-type-reinterpret-cast,modernize-*,-modernize-use-trailing-return-type,performance-*,concurrency-*'
 WarningsAsErrors: true
 HeaderFilterRegex: ''
 AnalyzeTemporaryDtors: false

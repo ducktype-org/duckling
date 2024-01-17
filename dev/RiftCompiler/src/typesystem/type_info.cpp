@@ -4,8 +4,11 @@
 #include "type_desc.hpp"
 #include <base/exceptions.hpp>
 
+// NOLINTBEGIN: linter assumes it's a function like macro
 #define INSTANTIATE_CHECKED_CAST(Type) \
 	template const internal::Type##InfoImpl* checkDynamicCast(const internal::TypeInfoImpl* p);
+
+// NOLINTEND
 
 namespace ts {
 	[[nodiscard]]

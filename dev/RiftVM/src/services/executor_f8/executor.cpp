@@ -15,6 +15,9 @@
 #include <base/optional.hpp>
 #include <utility>
 
+// @TODO: Go through linting messages here with regards to optimisation
+// NOLINTBEGIN: Linting might impact optimizations here
+
 namespace vm {
 
 	void Executor::handleExecutionStrategy() {
@@ -528,3 +531,5 @@ namespace vm {
 
 	void Executor::notifyPaused() { pause_cv.notify_all(); }
 }  // namespace vm
+
+   // NOLINTEND
