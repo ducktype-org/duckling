@@ -20,7 +20,7 @@ jobs:
         with:
           style: 'file'
           tidy-checks: ''
-          version: '16'
+          version: '17'
           #lines-changed-only: 'true'
           database: "dev"
           # The following value will only update a single comment

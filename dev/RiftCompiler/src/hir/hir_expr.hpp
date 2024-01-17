@@ -16,7 +16,7 @@ namespace hir {
 
 	class Expression {
 	protected:
-		Expression(symtable::ScopeRef scope): scope(scope){};
+		Expression(symtable::ScopeRef&& scope): scope(std::move(scope)){};
 
 		bool lookup_done = false;
 		bool type_done   = false;

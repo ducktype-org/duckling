@@ -18,6 +18,8 @@
  * For now only single threaded execution is suported
  */
 
+// NOLINTBEGIN(clang-diagnostic-error): errors because of our weird way of including services
+
 namespace vm {
 	enum class ExecutionStrategy { Normal, StepByStep, Paused, Stoped };
 
@@ -141,3 +143,5 @@ namespace vm {
 	};
 
 }
+
+// NOLINTEND(clang-diagnostic-error)
