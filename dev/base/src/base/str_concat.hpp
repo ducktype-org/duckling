@@ -14,7 +14,7 @@ namespace base {
 		template<typename T>
 		requires(!base::IsNumber<std::remove_reference_t<T>> && !std::is_same_v<icu::UnicodeString, std::remove_cvref_t<T>>)
 		void strConcat(std::string& out, T&& v) {
-			out.append(v);
+			out.append(std::forward<T>(v));
 		}
 
 		inline void strConcat(std::string& out, base::RawView view) {
