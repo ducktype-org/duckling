@@ -1,6 +1,6 @@
 #pragma once
 
-#include<string>
+#include <string>
 
 void cli(const std::string& filepath);
 void cli();
