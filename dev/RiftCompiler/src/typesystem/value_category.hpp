@@ -23,6 +23,8 @@ namespace ts {
 		base::FlagType  force_semantic{};
 
 	public:
+		// @TODO 
+		// Add constructor with predefined semantics?
 		[[nodiscard]]
 		bool contains(const ValueCategory& other) const {
 			return allows_semantic >= other.allows_semantic
