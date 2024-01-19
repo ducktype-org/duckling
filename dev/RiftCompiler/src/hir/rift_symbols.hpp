@@ -112,7 +112,7 @@ namespace hir {
 		void calculateType() override;
 		void analyzeAll() override;
 
-		exec::CTV getValue() final;
+		exec::CTV requestValue() final;
 	};
 
 	class GenericAlias: public symtable::Symbol {
@@ -124,8 +124,8 @@ namespace hir {
 	public:
 		using symtable::Symbol::Symbol;
 
-		symtable::SymbolChain       getUniqueDeAlias() override;
-		symtable::ChainLookupResult getDeAlias() override;
+		symtable::SymbolChain       requestUniqueDeAlias() override;
+		symtable::ChainLookupResult requestDeAlias() override;
 	};
 
 	class AliasSymbol: public GenericAlias {

@@ -88,8 +88,8 @@ namespace symtable {
 
 		void getAll() {
 			getKind();
-			getType();
-			getLinkedLookupScope();
+			requestType();
+			requestLinkedLookupScope();
 			getSymbolsIn();
 		}
 
@@ -105,35 +105,32 @@ namespace symtable {
 		Symbol& operator=(const Symbol&)  = default;
 		Symbol& operator=(Symbol&& other) = default;
 
+		// Get-s/Is-s are simple getters:
+
 		ScopeRef getScope() const { return scope; }
-
 		base::StrId getName() const { return name; }
-
 		bool getIsStatic() const { return is_static; }
-
 		usize getRelativePosition() const { return relative_position; }
-
 		bool isAnonymous() const { return anonymous; }
-
 		bool isWildcard() const { return wildcard; }
-
-		ScopeRef getLinkedLookupScope();
-
-		ts::TypeDesc<> getType();
-
 		SymbolKind getKind() const { return kind; }
 
+		// request are operations that can spawn entire compilation processes, and require cycle control
+
+		ScopeRef requestLinkedLookupScope();
+		ts::TypeDesc<> requestType();
+
+
 		// @TODO: decide if value should be kept in Symbol itself
-		virtual exec::CTV getValue();
+		virtual exec::CTV requestValue();
 
-		virtual SymbolChain       getUniqueDeAlias();
-		virtual ChainLookupResult getDeAlias();
-
-		virtual void analyzeAll() = 0;
-
-		virtual ~Symbol() = default;
+		virtual SymbolChain       requestUniqueDeAlias();
+		virtual ChainLookupResult requestDeAlias();
 
 		LookupResult lookupIn(base::StrId name);
+		
+		virtual void analyzeAll() = 0;
+		virtual ~Symbol() = default;
 
 		bool unlockedLookup() const;
 	};

@@ -2,7 +2,9 @@
 Compilation Process Overview
 ============================
 
-
+.. contents::
+    :depth: 2
+    :local:
 
 Single file situation
 =====================
@@ -10,7 +12,7 @@ Single file situation
 Source file phase
 -----------------
 
-At first we have a source file e.g. `abc.rift`. It is just a file.
+At first we have a source file e.g. :code:`abc.rift`. It is just a file.
 
 
 Lexer phase
@@ -28,7 +30,7 @@ Parser can take lexer output and return parse-tree (AST), without any semantical
 See: :doc:`/source-doc/source-docs/RiftCompiler/src/pst_parser/index`.
 
 
-**Everything bellow is experimental or theoretical!**
+.. attention:: **Everything bellow is experimental or theoretical!**
 
 
 HIR transformation
