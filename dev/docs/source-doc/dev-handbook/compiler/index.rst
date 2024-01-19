@@ -7,4 +7,5 @@ Compiler dev handbook
 	:maxdepth: 2
 
 	compilation_process.rst
+	hir.rst
 	
