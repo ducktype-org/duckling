@@ -7,10 +7,10 @@
 #include <memory_data/block.hpp>
 #include "services_data/memory/memory.hpp"
 
+// This is mostly so that cmake in the linter starting from this file doesn't break in executor.hpp
 namespace vm {
 	class Allocator;
 }
-
 #include "../services.hpp"
 
 namespace vm {
