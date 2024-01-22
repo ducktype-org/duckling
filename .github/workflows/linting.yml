@@ -27,7 +27,6 @@ jobs:
           # in a pull request's thread. Set it to false to disable the comment.
           # Set it to true to post a new comment (and delete the old comment).
           step-summary: true
-          extra-args: -Wclang-diagnostic-error
 
       - name: Fail fast?!
         if: steps.linter.outputs.checks-failed > 0

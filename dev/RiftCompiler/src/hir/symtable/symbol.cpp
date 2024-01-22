@@ -52,12 +52,12 @@ namespace symtable {
 	}
 
 	// @TODO: errors
-	LookupResult Symbol::lookupIn(base::StrId name) {
+	LookupResult Symbol::lookupIn(base::StrId pass_name) {
 		RIFT_ASSERT(unlockedLookup(), "Trying to lookupIn while in locked lookup state");
 
 		scope = getLinkedLookupScope();
 		getSymbolsIn();
-		return scope->lookup(name);
+		return scope->lookup(pass_name);
 	}
 
 	SymbolChain Symbol::getUniqueDeAlias() {

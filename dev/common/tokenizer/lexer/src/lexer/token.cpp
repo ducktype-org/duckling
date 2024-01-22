@@ -135,8 +135,8 @@ namespace lexer {
 
 	bool Token::isBracketGroup() const { return type == Type::BracketGroup; }
 
-	bool Token::isBracketGroup(BracketType type) const {
-		return isBracketGroup() && bracket_type == type;
+	bool Token::isBracketGroup(BracketType btype) const {
+		return isBracketGroup() && bracket_type == btype;
 	}
 
 	bool Token::isRecursive() const {
@@ -163,7 +163,7 @@ namespace lexer {
 
 	bool Token::isStr(base::StrId str) const { return getValue() == str; }
 
-	bool Token::is(Type type) const { return this->type == type; }
+	bool Token::is(Type qtype) const { return type == qtype; }
 
 	bool Token::is(Operator op) const { return rift_def::strAsOperator(str_id) == op; }
 

@@ -14,13 +14,13 @@ namespace vm {
 	}
 
 	// Type definition:
-	void Type::definePrimitive(TypeSize size) {
+	void Type::definePrimitive(TypeSize pass_size) {
 		RIFT_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type  = Kind::Primitive;
-		this->size = size;
-		kind       = kind::Primitive();
+		kind_type = Kind::Primitive;
+		size      = pass_size;
+		kind      = kind::Primitive();
 	}
 
 	void Type::definePointer(TypeCRef inner) {
@@ -55,10 +55,10 @@ namespace vm {
 
 		kind_type = Kind::Data;
 		auto data = kind::Data{};
-		for (auto [name, type]: fields_definitions) {
-			data.field_name_map[name] = data.fields.size();
+		for (auto [sub_name, sub_type]: fields_definitions) {
+			data.field_name_map[sub_name] = data.fields.size();
 			// offset is set during finalization
-			data.fields.emplace_back(0, type);
+			data.fields.emplace_back(0, sub_type);
 		}
 		kind = data;
 	}
@@ -130,8 +130,8 @@ namespace vm {
 
 	Type::Kind Type::getKind() const { return kind_type; }
 
-	bool Type::isPrimitive(TypeSize size) const {
-		return getKind() == Kind::Primitive and getSize() == size;
+	bool Type::isPrimitive(TypeSize pass_size) const {
+		return getKind() == Kind::Primitive and getSize() == pass_size;
 	}
 
 	/**

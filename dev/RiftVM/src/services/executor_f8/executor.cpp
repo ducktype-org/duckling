@@ -513,10 +513,10 @@ namespace vm {
 		return true;
 	}
 
-	void Executor::setStatus(vm::api::ExecStatus status) {
+	void Executor::setStatus(vm::api::ExecStatus new_status) {
 		// @TODO: check if change is legal
-		this->status = std::move(status);
-		vcpu.onEvent(api::Executing(this->status));
+		this->status = std::move(new_status);
+		vcpu.onEvent(api::Executing(status));
 	}
 
 	bool Executor::isPaused() {
