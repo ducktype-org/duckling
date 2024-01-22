@@ -24,7 +24,7 @@ namespace vm {
 
 	class Executor {
 	private:
-		Allocator&      dynamic_allocator;
+		vm::Allocator&      dynamic_allocator;
 		StackAllocator& stack_allocator;
 		Memory&         memory;
 		TypeMetadata&   types;
