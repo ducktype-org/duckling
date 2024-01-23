@@ -244,11 +244,11 @@ private:
 	}
 
 	std::pair<usize, usize> get_member_offsets(
-		ts::ClassInfo                inheriting_class,
-		symtable::SymbolId           symbol,
-		std::vector<usize>&          begin_vector,
-		std::vector<usize>&          end_vector,
-		std::vector<ts::ClassInfo>&& hint = {}
+		ts::ClassInfo              inheriting_class,
+		symtable::SymbolId         symbol,
+		std::vector<usize>&        begin_vector,
+		std::vector<usize>&        end_vector,
+		std::vector<ts::ClassInfo> hint = {}
 	) {
 		auto r0 = inheriting_class.getMemberInfo(symbol, hint);
 
@@ -375,7 +375,7 @@ private:
 		std::sort(end_offsets.begin(), end_offsets.end());
 
 		for (usize i = 0; i < begin_offsets.size(); i++)
-			std::cerr << begin_offsets[i] << " " << end_offsets[i] << std::endl;
+			std::cerr << begin_offsets[i] << " " << end_offsets[i] << "\n";
 
 		assert(begin_offsets[0] == 0, "First member's memory doesn't align with the class start");
 		for (usize i = 1; i < begin_offsets.size(); i++) {
@@ -466,13 +466,13 @@ private:
 		get_vtable_ptr_offset(A, { B, D }, begin_offsets, end_offsets);
 
 		for (usize i = 0; i < begin_offsets.size(); i++)
-			std::cout << begin_offsets[i] << " " << end_offsets[i] << std::endl;
+			std::cout << begin_offsets[i] << " " << end_offsets[i] << "\n";
 
 		std::sort(begin_offsets.begin(), begin_offsets.end());
 		std::sort(end_offsets.begin(), end_offsets.end());
 
 		for (usize i = 0; i < begin_offsets.size(); i++)
-			std::cout << begin_offsets[i] << " " << end_offsets[i] << std::endl;
+			std::cout << begin_offsets[i] << " " << end_offsets[i] << "\n";
 
 		assert(begin_offsets[0] == 0, "First member's memory doesn't align with the class start");
 		for (usize i = 1; i < begin_offsets.size(); i++) {

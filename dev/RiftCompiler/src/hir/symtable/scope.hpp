@@ -34,7 +34,7 @@ namespace symtable {
 
 		Scope() = default;
 
-		Scope(ScopeRef parent, base::StrId name): parent(std::move(parent)), name(name) {}
+		Scope(ScopeRef parent, const base::StrId& name): parent(std::move(parent)), name(name) {}
 
 	public:
 		// This delete is important, to prevent any copy of scope data:
@@ -52,7 +52,9 @@ namespace symtable {
 		LookupResult lookupMeAndParents(base::StrId name);
 
 		[[nodiscard]]
-		base::StrId getName() const { return name; }
+		base::StrId getName() const {
+			return name;
+		}
 
 		void close();
 	};

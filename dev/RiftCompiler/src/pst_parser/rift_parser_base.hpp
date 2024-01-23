@@ -14,7 +14,7 @@ namespace pst {
 
 	class RiftElement: public tpc::Element {
 	public:
-		explicit RiftElement(dia::SourcePosition position): source_position(std::move(position)){};
+		explicit RiftElement(const dia::SourcePosition& position): source_position(position){};
 
 		[[nodiscard]]
 		const dia::SourcePosition& getSourcePosition() const;
@@ -25,7 +25,7 @@ namespace pst {
 
 	class RiftParserState: public tpc::ParserState {
 		std::vector<tpc::ParserCBorrowRef<pst::Import>> imports;
-		typedef decltype(imports)                       ImportType;
+		using ImportType = decltype(imports);
 
 	public:
 		RiftParserState(tpc::TokenStream&& tokens, dia::ErrorState&& err):

@@ -25,8 +25,9 @@ namespace pst {
 		[[nodiscard]]
 		const std::vector<tpc::ParserCBorrowRef<Import>>& getImports() const;
 		[[nodiscard]]
-		const dia::ErrorState&                            getErrorState() const;
+		const dia::ErrorState& getErrorState() const;
 
+		[[nodiscard]]
 		ParserCBorrowRef<TopLevel> getTopLevelElement() const;
 
 		PST(PST&& other):
