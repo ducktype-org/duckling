@@ -11,6 +11,7 @@
 namespace vm {
 	class Allocator;
 }
+
 #include "../services.hpp"
 
 namespace vm {
