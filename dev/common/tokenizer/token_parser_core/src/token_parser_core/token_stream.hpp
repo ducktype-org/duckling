@@ -33,6 +33,7 @@ namespace tpc {
 
 		const Token& next();
 
+		[[nodiscard]]
 		TokenStream getRecursive() const;
 
 		[[nodiscard]]

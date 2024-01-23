@@ -41,18 +41,25 @@ namespace dia {
 		 *
 		 * @param reason contains the reason for the error
 		 */
+		[[nodiscard]]
 		printer::Message genErrorMsg(std::string_view reason) const;
 		/**
 		 * @brief generates formatted error string with a given reason
 		 *
 		 * @param reason contains the reason for the error
 		 */
+		[[nodiscard]]
 		std::string genErrorStr(std::string_view reason) const;
 
-		usize  getLine() const;
-		usize  getColumn() const;
-		usize  getStart() const;
-		usize  getEnd() const;
+		[[nodiscard]]
+		usize getLine() const;
+		[[nodiscard]]
+		usize getColumn() const;
+		[[nodiscard]]
+		usize getStart() const;
+		[[nodiscard]]
+		usize getEnd() const;
+		[[nodiscard]]
 		Source getSource() const;
 
 	private:

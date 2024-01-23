@@ -169,7 +169,7 @@ namespace lexer {
 		Token           eof_sentinel;
 		fs::FileContent file_content;
 
-		TokenData() = default;
+		TokenData() = delete;
 		TokenData(TokenData&&) noexcept;
 		TokenData(Tokens&& tokens, Token&& eof_sentinel, fs::FileContent file_content);
 
