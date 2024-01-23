@@ -16,7 +16,7 @@ namespace symtable {
 		SymbolKind          kind
 	):
 		  analysis_state(state),
-		  scope(std::move(std::move(scope))),
+		  scope(std::move(scope)),
 		  name(std::move(name)),
 		  anonymous(anonymous),
 		  is_static(is_static),

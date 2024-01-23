@@ -16,7 +16,9 @@ namespace base {
 	public:
 		Panic(std::string position, std::string reason);
 
+		[[nodiscard]]
 		const std::string& getPosition() const;
+		[[nodiscard]]
 		const char*        what() const noexcept final;
 
 		// @TODO: use Printer
@@ -30,6 +32,7 @@ namespace base {
 
 	public:
 		LogicError(std::string message);
+		[[nodiscard]]
 		const char* what() const noexcept override;
 	};
 

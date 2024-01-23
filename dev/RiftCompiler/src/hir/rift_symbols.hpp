@@ -104,8 +104,8 @@ namespace hir {
 			base::StrId         name,
 			PstRef<pst::Const>  pst_element
 		):
-			  Symbol(state, scope, name, false, true, SymbolKind::Const),
-			  pst_element(pst_element),
+			  Symbol(state, std::move(scope), name, false, true, SymbolKind::Const),
+			  pst_element(std::move(pst_element)),
 			  type_expr(Expression::makeExpr(scope, pst_element->getType())),
 			  value_expr(Expression::makeExpr(scope, pst_element->getValue())) {}
 
