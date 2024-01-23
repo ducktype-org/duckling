@@ -22,7 +22,9 @@ namespace pst {
 	public:
 		PST(lexer::TokenData&& td);
 
+		[[nodiscard]]
 		const std::vector<tpc::ParserCBorrowRef<Import>>& getImports() const;
+		[[nodiscard]]
 		const dia::ErrorState&                            getErrorState() const;
 
 		ParserCBorrowRef<TopLevel> getTopLevelElement() const;

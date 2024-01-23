@@ -4,7 +4,7 @@
 namespace pst {
 
 	PST::PST(lexer::TokenData&& td):
-		  token_data(std::forward<lexer::TokenData>(td)),
+		  token_data(std::move(td)),
 		  parser_state(
 			  tpc::TokenStream(
 				  token_data.tokens,

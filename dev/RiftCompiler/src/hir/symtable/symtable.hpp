@@ -39,8 +39,10 @@ namespace symtable {
 		// @TODO: This mechanism is a little bit weird:
 		SymbolRef newSymbol(base::unique_ptr<Symbol> symbol);
 
+		[[nodiscard]]
 		const decltype(symbols)& getSymbols() const;
 
+		[[nodiscard]]
 		usize symbolCount() const;
 
 

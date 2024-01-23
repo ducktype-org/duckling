@@ -50,6 +50,8 @@ namespace symtable {
 		return res;
 	}
 
+	// it's implicitly moved
+	// NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
 	void LookupResult::insert(LookupResult&& other) {
 		leaves.insert(
 			leaves.end(),
