@@ -89,8 +89,8 @@ namespace vm {
 		 */
 		template<class T>
 		T getInput() {
-			T         v;
-			Executor& exec = serviceManager.get<Executor>();
+			T     v;
+			auto& exec = serviceManager.get<Executor>();
 			if (uses_stdio) {
 				std::cin >> v;
 			} else {

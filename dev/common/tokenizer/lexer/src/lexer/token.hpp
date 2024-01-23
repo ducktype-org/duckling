@@ -83,6 +83,7 @@ namespace lexer {
 		/**@}*/
 
 		virtual ~Token() = default;
+		Token()          = delete;
 
 		Token(const Token& other) = default;
 		Token(Token&& other) noexcept;
@@ -150,8 +151,6 @@ namespace lexer {
 		dia::SourcePosition getPosition() const;
 
 	private:
-		Token() noexcept = default;
-
 		static Token makeError(const dia::SourcePosition&);
 
 		Type                         type = Type::Empty;

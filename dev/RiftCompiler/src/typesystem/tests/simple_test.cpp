@@ -276,12 +276,12 @@ private:
 	}
 
 	std::pair<usize, usize> get_member_offsets(
-		ts::ClassInfo                inheriting_class,
-		symtable::SymbolId           symbol,
-		std::vector<ts::ClassInfo>&& hint = {}
+		ts::ClassInfo                     inheriting_class,
+		symtable::SymbolId                symbol,
+		const std::vector<ts::ClassInfo>& hint = {}
 	) {
 		std::vector<usize> v0, v1;
-		return get_member_offsets(inheriting_class, symbol, v0, v1, std::move(hint));
+		return get_member_offsets(inheriting_class, symbol, v0, v1, hint);
 	}
 
 	static std::pair<usize, usize> get_vtable_ptr_offset(

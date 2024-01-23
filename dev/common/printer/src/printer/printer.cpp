@@ -8,7 +8,7 @@
 #include "printer.hpp"
 
 namespace printer {
-	static inline void INSTANT_DEBUG_LOG(Console& console) {
+	static inline void INSTANT_DEBUG_LOG([[maybe_unused]] Console& console) {
 #ifdef PRINT_LOG
 		if (!console.isIgnoreInstantDebug()) {
 			console.print(std::cerr);
@@ -43,7 +43,7 @@ namespace printer {
 		if (type == MessageType::ALL)
 			minLevel.fill(level);
 		else
-			minLevel[printer::msgToInt(type)] = level;
+			minLevel.at(printer::msgToInt(type)) = level;
 	}
 
 	void Console::setGeneralMax(usize max) { generalMax = max; }
@@ -52,7 +52,7 @@ namespace printer {
 		if (type == MessageType::ALL)
 			maxAmounts.fill(amount);
 		else
-			maxAmounts[printer::msgToInt(type)] = amount;
+			maxAmounts.at(printer::msgToInt(type)) = amount;
 	}
 
 	void Console::add(const MessagePack& pack) {
@@ -85,7 +85,7 @@ namespace printer {
 		for (const MessagePack& pack: messagePacks) {
 			for (const Message& message: pack) {
 				MessageTypeId messageType = msgToInt(message.type);
-				if (message.level >= minLevel[messageType]) {
+				if (message.level >= minLevel.at(messageType)) {
 					if (currentAmounts.at(messageType) > maxAmounts.at(messageType)) continue;
 
 					if (currentCount == generalMax) {

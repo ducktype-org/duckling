@@ -36,7 +36,7 @@ namespace base {
 		inline void strConcat(std::string& out, const char* v) { out.append(std::string(v)); }
 
 		template<typename U, typename V>
-		requires(std::is_trivially_copyable<U>::value && std::is_trivially_copyable<V>::value)
+		requires(std::is_trivially_copyable_v<U> && std::is_trivially_copyable_v<V>)
 		inline void strConcat(std::string& out, std::pair<U, V> pair) {
 			out += "<";
 			strConcat(out, pair.first);
