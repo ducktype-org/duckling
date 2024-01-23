@@ -244,11 +244,11 @@ private:
 	}
 
 	std::pair<usize, usize> get_member_offsets(
-		ts::ClassInfo              inheriting_class,
-		symtable::SymbolId         symbol,
-		std::vector<usize>&        begin_vector,
-		std::vector<usize>&        end_vector,
-		std::vector<ts::ClassInfo> hint = {}
+		ts::ClassInfo                     inheriting_class,
+		symtable::SymbolId                symbol,
+		std::vector<usize>&               begin_vector,
+		std::vector<usize>&               end_vector,
+		const std::vector<ts::ClassInfo>& hint = {}
 	) {
 		auto r0 = inheriting_class.getMemberInfo(symbol, hint);
 
