@@ -99,13 +99,13 @@ namespace hir {
 
 	public:
 		ConstSymbol(
-			hir::AnalysisState& state,
-			ScopeRef            scope,
-			base::StrId         name,
-			PstRef<pst::Const>  pst_element
+			hir::AnalysisState&       state,
+			const ScopeRef&           scope,
+			base::StrId               name,
+			const PstRef<pst::Const>& pst_element
 		):
-			  Symbol(state, std::move(scope), name, false, true, SymbolKind::Const),
-			  pst_element(std::move(pst_element)),
+			  Symbol(state, scope, name, false, true, SymbolKind::Const),
+			  pst_element(pst_element),
 			  type_expr(Expression::makeExpr(scope, pst_element->getType())),
 			  value_expr(Expression::makeExpr(scope, pst_element->getValue())) {}
 
