@@ -58,7 +58,7 @@ namespace symtable {
 		SymbolChain prefix = append_res_first.getAsSingle();
 
 		for (usize i = 1; i < names.size() - 1; i++) {
-			auto append_res = prefix.back()->lookupIn(names[i]);
+			auto append_res = prefix.back()->requestLookupIn(names[i]);
 			if (!append_res.isSingle()) {
 				// @TODO: error in state
 				// return some „ErrorSymbol”
@@ -71,7 +71,7 @@ namespace symtable {
 		}
 
 		// last symbol:
-		auto last_res = prefix.back()->lookupIn(names.back());
+		auto last_res = prefix.back()->requestLookupIn(names.back());
 
 		return { prefix, last_res };
 	}

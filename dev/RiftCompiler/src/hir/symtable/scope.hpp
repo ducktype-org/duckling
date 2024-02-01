@@ -12,6 +12,10 @@ namespace symtable {
 
 	enum class ScopeState { Open, Closed };
 
+	/**
+	 * @brief Scope represent single source-code scope
+	 * with list of symbols in it.
+	 */
 	class Scope {
 		// Update constructors when adding fields here:
 

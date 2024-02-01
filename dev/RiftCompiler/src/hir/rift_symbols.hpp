@@ -1,3 +1,8 @@
+/**
+ * @file rift_symbols.hpp
+ * @brief This file holds class definitions of all HIR-symbols.
+ */
+
 #pragma once
 
 #include "symtable/symbol.hpp"

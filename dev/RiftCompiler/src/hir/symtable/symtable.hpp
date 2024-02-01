@@ -22,6 +22,9 @@ namespace symtable {
 
 	// using detail::SymbolList;
 
+	/**
+	 * @brief SymbolData stores symbols and scope tree.
+	 */
 	class SymbolData {
 		ScopeRef root_scope;
 

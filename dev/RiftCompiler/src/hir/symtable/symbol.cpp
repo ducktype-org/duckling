@@ -48,7 +48,7 @@ namespace symtable {
 	}
 
 	// @TODO: errors
-	LookupResult Symbol::lookupIn(base::StrId name) {
+	LookupResult Symbol::requestLookupIn(base::StrId name) {
 		RIFT_ASSERT(unlockedLookup(), "Trying to lookupIn while in locked lookup state");
 
 		scope = requestLinkedLookupScope();

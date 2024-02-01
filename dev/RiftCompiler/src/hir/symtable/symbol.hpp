@@ -16,7 +16,7 @@ namespace hir {
 }
 
 namespace symtable {
-
+	
 	enum class SymbolKind {
 		Basic,
 		Namespace,
@@ -30,6 +30,28 @@ namespace symtable {
 		// ...
 	};
 
+	/**
+	 * @brief Symbol is a base class for implementation of all symbols.
+	 * It defines common interface and data of all HIR-symbols.
+	 * 
+	 * There are 3 types of operations on symbols:
+	 *  
+	 *  * calculateXYZ -- internal method used to alter symbols state.
+	 *    Usually used in request implementations.
+	 *  
+	 *  * requestXYZ -- external request to do/get something.
+	 *    May cause cascade of other operations.
+	 *    Will usually cause heavy computations only during first call.
+	 *    Will usually be implemented as: if (not available) calculate(); return access();
+	 *  
+	 *  * accessXYZ -- external request to do/get something, that will not spawn heavy computation.
+	 *    In particular accessXYZ may assert that value that you want to access is already available.
+	 *  
+	 *  * getXYZ, isXYZ -- simple getters, setters
+	 * 
+	 * In order to implement a new type of symbol,
+	 * one must create a new class inheriting from this one.
+	 */
 	class Symbol {
 		// Update constructors when adding fields here
 
@@ -127,7 +149,7 @@ namespace symtable {
 		virtual SymbolChain       requestUniqueDeAlias();
 		virtual ChainLookupResult requestDeAlias();
 
-		LookupResult lookupIn(base::StrId name);
+		LookupResult requestLookupIn(base::StrId name);
 		
 		virtual void analyzeAll() = 0;
 		virtual ~Symbol() = default;
