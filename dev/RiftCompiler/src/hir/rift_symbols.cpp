@@ -4,7 +4,6 @@
 #include <base/exceptions.hpp>
 #include <base/defer.hpp>
 #include <utility>
-#include <utility>
 
 namespace hir {
 
@@ -76,7 +75,7 @@ namespace hir {
 		PstRef<pst::TopLevel> pst_element
 	):
 		  Symbol(state, std::move(scope), name, false, true, SymbolKind::CompilationUnit),
-		  pst_element(std::move(std::move(pst_element))) {}
+		  pst_element(std::move(pst_element)) {}
 
 	void TopLevelSymbol::calculateType() {
 		type = ts::TypeDesc<ts::TypeInfo>(ts::ModuleInfo::create());
@@ -164,7 +163,7 @@ namespace hir {
 		hir::AnalysisState& state, ScopeRef scope, base::StrId name, PstRef<pst::Alias> pst_element
 	):
 		  GenericAlias(state, std::move(scope), name, false, true, SymbolKind::Alias),
-		  pst_element(std::move(std::move(pst_element))) {
+		  pst_element(std::move(pst_element)) {
 		is_alias = true;
 	}
 

@@ -337,6 +337,12 @@ private:
 			operation::Defaultable::ConstructEmpty, class_A, class_A_construct_empty
 		);
 
+		// This code seems to do nothing
+		/*
+		usize offset = 0;
+		for (auto parent_data: class_B.basicParents())
+			if (parent_data.info == class_A) offset = parent_data.offset;
+		*/
 
 		operation::TypedOperation class_B_construct_empty{
 

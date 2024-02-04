@@ -1,8 +1,6 @@
 #include "symbol.hpp"
 
 #include <utility>
-
-#include <utility>
 #include "../analysis_state.hpp"
 
 namespace symtable {
