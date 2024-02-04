@@ -11,7 +11,7 @@
 
 namespace pst {
 	PST parse(lexer::TokenData&& td);
-	PST parse(fs::FilePath);
+	PST parse(const fs::FilePath&);
 
 	void init();
 }

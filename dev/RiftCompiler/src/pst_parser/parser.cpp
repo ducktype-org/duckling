@@ -11,8 +11,8 @@ namespace pst {
 
 	PST parse(lexer::TokenData&& td) { return { std::move(td) }; }
 
-	PST parse(fs::FilePath path) {
-		lexer::TokenData td = lexer::tokenizeFile(std::move(path));
+	PST parse(const fs::FilePath& path) {
+		lexer::TokenData td = lexer::tokenizeFile(path);
 		return parse(std::move(td));
 	}
 
