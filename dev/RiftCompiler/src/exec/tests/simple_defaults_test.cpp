@@ -341,7 +341,7 @@ private:
 		/*
 		usize offset = 0;
 		for (auto parent_data: class_B.basicParents())
-			if (parent_data.info == class_A) offset = parent_data.offset;
+		    if (parent_data.info == class_A) offset = parent_data.offset;
 		*/
 
 		operation::TypedOperation class_B_construct_empty{
