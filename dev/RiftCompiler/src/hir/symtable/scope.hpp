@@ -8,9 +8,16 @@
 #include <set>
 
 namespace symtable {
-	enum class ConnectionType { ImportPublic, ImportPrivate, UsingPublic, UsingPrivate };
+	// @deprecated
+	// enum class ConnectionType { ImportPublic, ImportPrivate, UsingPublic, UsingPrivate };
 
-	enum class ScopeState { Open, Closed };
+	/**
+	 * @brief Stores current state of a scope
+	 */
+	enum class ScopeState {
+		Open, ///< Open state means that symbols can be added to the scope.
+		Closed, ///< Close state means that lookup can be performed inside the scope.
+	};
 
 	/**
 	 * @brief Scope represent single source-code scope
@@ -26,9 +33,10 @@ namespace symtable {
 		// This name is for debug only:
 		base::StrId name;
 
+		// List of symbols inside the cope
 		std::vector<SymbolRef> symbols;
 
-		// bool lookup_engaged = false;
+		// This is somewhat buggy way of preventing lookup cycles
 		std::set<base::StrId> engaged_names;
 
 		ScopeState state = ScopeState::Open;
@@ -57,6 +65,10 @@ namespace symtable {
 
 		base::StrId getName() const { return name; }
 
+		/**
+		 * @brief In order to perform lookup one must close the scope.
+		 * After the scope is closed no more symbols can be added to the scope.
+		 */
 		void close();
 	};
 

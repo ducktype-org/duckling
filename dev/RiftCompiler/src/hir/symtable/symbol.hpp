@@ -17,6 +17,10 @@ namespace hir {
 
 namespace symtable {
 	
+	/**
+	 * @brief SymbolKind stores general kind/type of a symbol.
+	 * Usually each implementation of SymbolInterface will have its unique kind.
+	 */
 	enum class SymbolKind {
 		Basic,
 		Namespace,
@@ -34,7 +38,7 @@ namespace symtable {
 	 * @brief Symbol is a base class for implementation of all symbols.
 	 * It defines common interface and data of all HIR-symbols.
 	 * 
-	 * There are 3 types of operations on symbols:
+	 * There are 4 types of operations on symbols:
 	 *  
 	 *  * calculateXYZ -- internal method used to alter symbols state.
 	 *    Usually used in request implementations.

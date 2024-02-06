@@ -6,7 +6,10 @@ namespace symtable {
 	class Scope;
 	class Symbol;
 
-	// Symbol ID is currently left only for TS (@TODO: substitute for SymbolRef?)
-	// @TODO: Once we remove SymbolId, does this should be removed.
+	/**
+	 * @brief Symbol ID is currently left only for TypeSystem (@TODO: substitute for SymbolRef)
+	 * @TODO: Once we remove SymbolId, does this should be removed.
+	 * @deprecated
+	 */
 	typedef base::NamedId<Symbol> SymbolId;
 }

@@ -24,6 +24,7 @@ namespace symtable {
 		// @TODO: For SymbolsList: StableList of pointers is needed (this is just vector of
 		// pointers) For ease of use UPtrStableList might be added
 	}
+	
 	/**
 	 * @brief Reference to HIR-scope
 	 */
