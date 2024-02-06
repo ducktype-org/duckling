@@ -8,9 +8,7 @@ namespace hir {
 
 	using symtable::Symbol;
 	using symtable::SymbolRef;
-
-	typedef std::vector<symtable::SymbolRef> LookupResult;
-
+	
 	/**
 	 * @brief Analysis state holds all information on
 	 * the state of HIR-transformation. 

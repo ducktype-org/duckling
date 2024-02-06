@@ -30,6 +30,9 @@ namespace hir {
 		Done,
 	};
 
+	/**
+	 * @brief Represent a "File"
+	 */
 	class TopLevelSymbol: public symtable::Symbol {
 		// symbol representing single file/compilation unit
 		PstRef<pst::TopLevel> pst_element;
@@ -47,6 +50,9 @@ namespace hir {
 		virtual void getSymbolsIn() override;
 	};
 
+	/**
+	 * @brief Represent a Namespace declaration
+	 */
 	class NamespaceSymbol: public symtable::Symbol {
 		PstRef<pst::Namespace> pst_element;
 
@@ -65,8 +71,10 @@ namespace hir {
 		virtual void getSymbolsIn() override;
 	};
 
-	// @TODO: StructSymbol should technically be isomorphic with `const a: type =
-	// magic_struct_value`. Perhaps merge them in the future
+	/**
+	 * @brief Represent a Structure declaration.
+	 * @TODO: StructSymbol should technically be isomorphic with `const a: type = magic_struct_value`. Perhaps merge them in the future
+	 */
 	class StructSymbol: public symtable::Symbol {
 		PstRef<pst::Struct>           pst_element;
 		base::Optional<ts::ClassInfo> value;
@@ -89,10 +97,16 @@ namespace hir {
 		ts::ClassInfo calculateValue();
 	};
 
+	/**
+	 * @brief Represents a global variable declaration.
+	 */
 	class GlobalVarSymbol: public symtable::Symbol {
 		// value?
 	};
 
+	/**
+	 * @brief Represents a constant declaration.
+	 */
 	class ConstSymbol: public symtable::Symbol {
 		// optional calculated Value
 		PstRef<pst::Const> pst_element;
@@ -120,6 +134,9 @@ namespace hir {
 		exec::CTV requestValue() final;
 	};
 
+	/**
+	 * @brief Super class for aliases.
+	 */
 	class GenericAlias: public symtable::Symbol {
 	protected:
 		// @TODO: this should be ChainLookupResult
@@ -133,6 +150,9 @@ namespace hir {
 		symtable::ChainLookupResult requestDeAlias() override;
 	};
 
+	/**
+	 * @brief Represents alias of form `alias x = y`
+	 */
 	class AliasSymbol: public GenericAlias {
 		PstRef<pst::Alias> pst_element;
 
@@ -149,6 +169,9 @@ namespace hir {
 		void calculateLinkedLookup() override;
 	};
 
+	/**
+	 * @brief Represents alias of form `using y.*`
+	 */
 	class UsingSymbol: public GenericAlias {
 		PstRef<pst::Using> pst_element;
 
@@ -164,13 +187,19 @@ namespace hir {
 		void analyzeAll() override;
 		void calculateLinkedLookup() override;
 	};
-
+	
+	/**
+	 * @brief Represents a function declaration.
+	 */
 	class FunSymbol: public symtable::Symbol {
 		// TypeInfo
 		// some more params/args?
 		// inner code
 	};
 
+	/**
+	 * @brief Represents an local variole declaration 
+	 */
 	class VarSymbol: public symtable::Symbol {
 		// TypeInfo
 		// value will be elsewhere
