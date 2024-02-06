@@ -98,7 +98,9 @@ namespace vm {
 				exec.waitUntilNotPausedAndCondition(lock, [this, &exec] {
 					return !exec.isAlive() || !input_stream->str().empty();
 				});
-				(*input_stream) >> v;
+				if (exec.isAlive()) {
+					(*input_stream) >> v;
+				}
 			}
 			return v;
 		}
