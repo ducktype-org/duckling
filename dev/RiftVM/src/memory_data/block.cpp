@@ -43,13 +43,13 @@ namespace vm {
 
 	TypeCRef Block::innerType() const { return element_type; }
 
-	cpp::result<base::ModRawView, Block::error> Block::deref(const TypeCRef& u, u64 offset) {
+	cpp::result<base::ModRawView, Block::error> Block::deref(TypeCRef u, u64 offset) {
 		if (offset < start || offset > end) return cpp::fail("Tried to defer outside of a block");
 		if (end - offset < u->getSize()) return cpp::fail("Tried to defer too big of a type");
 		return base::ModRawView(data, u->getSize());
 	}
 
-	cpp::result<base::ModRawView, Block::error> Block::derefCheck(const TypeCRef& u, u64 offset) {
+	cpp::result<base::ModRawView, Block::error> Block::derefCheck(TypeCRef u, u64 offset) {
 		if (offset < start || offset > end) return cpp::fail("Tried to defer outside of a block");
 		if (end - offset < u->getSize()) return cpp::fail("Tried to defer too big of a type");
 		u64 element_offset = (offset - start) % element_type->getSize();

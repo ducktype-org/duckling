@@ -54,7 +54,7 @@ namespace vm {
 		[[nodiscard]]
 		TypeCRef innerType() const;
 
-		cpp::result<base::ModRawView, error> deref(const TypeCRef& u, u64 offset);
-		cpp::result<base::ModRawView, error> derefCheck(const TypeCRef& u, u64 offset);
+		cpp::result<base::ModRawView, error> deref(TypeCRef u, u64 offset);
+		cpp::result<base::ModRawView, error> derefCheck(TypeCRef u, u64 offset);
 	};
 }
