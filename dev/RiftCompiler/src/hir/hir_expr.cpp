@@ -189,7 +189,7 @@ namespace hir {
 		}
 	}
 
-	ExpressionRef makeFromSingle(const symtable::ScopeRef& scope, const pst::Expr::ExprElem& elem) {
+	ExpressionRef makeFromSingle(symtable::ScopeRef scope, const pst::Expr::ExprElem& elem) {
 		variant_match(elem) {
 			variant_case(pst::Expr::KeywordValue, key) {
 				return makeFromKeyword(scope, key.keyword);
