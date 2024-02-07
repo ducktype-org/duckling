@@ -28,7 +28,7 @@ namespace base {
 
 		bool operator==(std::nullptr_t) const { return ptr == nullptr; }
 
-		borrow_ptr(const borrow_ptr<T>& other) noexcept: ptr(other.ptr) {}
+		borrow_ptr(const borrow_ptr<T>& other) noexcept = default;
 
 		borrow_ptr(borrow_ptr<T>&& other) noexcept: borrow_ptr() { swap(*this, other); }
 
