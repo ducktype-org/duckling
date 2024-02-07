@@ -13,10 +13,6 @@
 namespace fs {
 	FilePath::ContentMap FilePath::to_content;
 
-	FilePath::FilePath(const std::filesystem::path& path): path(std::filesystem::absolute(path)) {}
-
-	FilePath::FilePath(const FilePath& oth) = default;
-
 	FileContent FilePath::getContent() const {
 		if (to_content.contains(path)) {
 			auto weak_content = to_content[path];
