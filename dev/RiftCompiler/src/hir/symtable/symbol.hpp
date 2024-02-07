@@ -36,7 +36,7 @@ namespace symtable {
 
 	/**
 	 * @brief Symbol is a base class for implementation of all symbols.
-	 * It defines common interface and data of all HIR-symbols.
+	 * It defines a common interface and data of all HIR-symbols.
 	 * 
 	 * There are 4 types of operations on symbols:
 	 *  
@@ -133,12 +133,14 @@ namespace symtable {
 
 		// Get-s/Is-s are simple getters:
 
+		[[nodiscard]]
 		ScopeRef getScope() const { return scope; }
 		base::StrId getName() const { return name; }
 		bool getIsStatic() const { return is_static; }
 		usize getRelativePosition() const { return relative_position; }
 		bool isAnonymous() const { return anonymous; }
 		bool isWildcard() const { return wildcard; }
+		[[nodiscard]]
 		SymbolKind getKind() const { return kind; }
 
 		// request are operations that can spawn entire compilation processes, and require cycle control

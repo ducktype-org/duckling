@@ -142,7 +142,7 @@ namespace hir {
 	}
 
 	symtable::SymbolChain GenericAlias::requestUniqueDeAlias() {
-		std::cerr << "  > getUniqueDeAlias of " << getName().strView() << "\n";
+		std::cerr << "  > requestUniqueDeAlias of " << getName().strView() << "\n";
 		if (!dealiased_lookup_result.has_value()) {
 			std::cerr << "  > calculating...\n";
 			// this can be confusing:
@@ -153,7 +153,7 @@ namespace hir {
 	}
 
 	symtable::ChainLookupResult GenericAlias::requestDeAlias() {
-		throw base::NotYetImplemented("getDeAlias -- only require dealiasing any lookup results");
+		throw base::NotYetImplemented("requestDeAlias -- only require dealiasing any lookup results");
 	}
 
 	AliasSymbol::AliasSymbol(

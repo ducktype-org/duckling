@@ -20,8 +20,8 @@ namespace symtable {
 	};
 
 	/**
-	 * @brief Scope represent single source-code scope
-	 * with list of symbols in it.
+	 * @brief Scope represents a single source-code scope
+	 * with a list of symbols in it.
 	 */
 	class Scope {
 		// Update constructors when adding fields here:
@@ -33,7 +33,7 @@ namespace symtable {
 		// This name is for debug only:
 		base::StrId name;
 
-		// List of symbols inside the cope
+		// List of symbols inside the scope.
 		std::vector<SymbolRef> symbols;
 
 		// This is somewhat buggy way of preventing lookup cycles

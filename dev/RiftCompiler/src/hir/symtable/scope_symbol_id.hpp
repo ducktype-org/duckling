@@ -8,7 +8,7 @@ namespace symtable {
 
 	/**
 	 * @brief Symbol ID is currently left only for TypeSystem (@TODO: substitute for SymbolRef)
-	 * @TODO: Once we remove SymbolId, does this should be removed.
+	 * @TODO: Once we remove SymbolId, this should be removed.
 	 * @deprecated
 	 */
 	typedef base::NamedId<Symbol> SymbolId;

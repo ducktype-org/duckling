@@ -12,7 +12,7 @@ Single file situation
 Source file phase
 -----------------
 
-At first we have a source file e.g. :code:`abc.rift`. It is just a file.
+First we have a source file e.g. :code:`abc.rift`. It is just a file.
 
 
 Lexer phase
@@ -25,7 +25,7 @@ Implementation docs: :doc:`/source-doc/source-docs/common/tokenizer/lexer/index`
 Parser phase
 ------------
 
-Parser can take lexer output and return parse-tree (AST), without any semantically meaningful information.
+Parser can take lexer output and return a parse-tree (AST), without any semantically meaningful information.
 
 Implementation docs: :doc:`/source-doc/source-docs/RiftCompiler/src/pst_parser/index`.
 
@@ -38,7 +38,7 @@ HIR transformation and representation
 
 HIR ("High intermediate representation") is an representation and an algorithm responsible for:
 
-* Lookuping all symbols
+* Performing a lookup on each of the symbols.
 * Lowering to MIR
 * @TODO: what else?
 

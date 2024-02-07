@@ -2,7 +2,7 @@
 Symtable
 ========
 
-Symtable is a submodule of HIR responsible for storing symbols, storing scopes, providing symbol interface, providing lookup interface.
+Symtable is the submodule of HIR responsible for storing symbols and scopes and also providing symbol and  lookup interfaces.
 
 .. toctree::
     :caption: Contents:

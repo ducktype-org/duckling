@@ -28,7 +28,7 @@ namespace symtable {
 
 	ScopeRef Symbol::requestLinkedLookupScope() {
 		if (!linked_lookup_scope.has_value()) {
-			RIFT_ASSERT(unlockedLookup(), "Trying to calculateLinkedLookup while in lookup lock");
+			RIFT_ASSERT(unlockedLookup(), "Trying to requestLinkedLookup while in lookup lock");
 			calculateLinkedLookup();
 		}
 		return linked_lookup_scope.value();

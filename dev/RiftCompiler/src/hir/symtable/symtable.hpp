@@ -24,7 +24,7 @@ namespace symtable {
 
 	/**
 	 * @brief SymbolData stores all symbols and the scope tree.
-	 * Is also provide interface for creation of new scopes
+	 * Is also provides an interface for the creation of new scopes.
 	 */
 	class SymbolData {
 		ScopeRef root_scope;

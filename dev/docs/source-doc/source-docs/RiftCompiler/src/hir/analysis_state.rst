@@ -2,7 +2,7 @@
 Analysis state
 ==============
 
-Analysis state holds entire state of HIR.
+Analysis state holds the entire state of HIR.
 
 Analysis state class
 ====================

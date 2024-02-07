@@ -31,10 +31,9 @@ namespace hir {
 	};
 
 	/**
-	 * @brief Represent a "File"
+	 * @brief Represents a "File".
 	 */
 	class TopLevelSymbol: public symtable::Symbol {
-		// symbol representing single file/compilation unit
 		PstRef<pst::TopLevel> pst_element;
 
 	public:

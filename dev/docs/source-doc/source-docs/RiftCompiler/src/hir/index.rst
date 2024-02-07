@@ -3,7 +3,7 @@ High intermediate representation
 ================================
 
 .. attention::
- This is documentation of implementation of HIR. For general overview of HIR process see: :doc:`/source-doc/dev-handbook/compiler/hir`.
+ This is the documentation of the implementation of HIR. For general overview of HIR process see: :doc:`/source-doc/dev-handbook/compiler/hir`.
 
 .. toctree::
 	:caption: Code details:

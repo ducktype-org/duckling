@@ -2,8 +2,8 @@
 High intermediate representation 
 ================================
 
-This file implements a :code:`HIR` class that acts as an interface of entire HIR module.
-It stores all necessary data, and implements method representing high-level actions that can be performed on HIR.
+This file implements the :code:`HIR` class that acts as an interface of the entire HIR module.
+It stores all of the necessary data, and implements methods representing high-level actions that can be performed on the HIR.
 
 HIR class
 =========

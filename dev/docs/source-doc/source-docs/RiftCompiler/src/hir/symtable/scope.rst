@@ -2,7 +2,7 @@
 Scope
 =====
 
-This file define HIR-scope class.
+This file defines the HIR-scope class.
 
 Main Scope Class
 ================

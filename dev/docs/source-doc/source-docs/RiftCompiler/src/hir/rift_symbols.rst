@@ -2,14 +2,14 @@
 Rift symbols
 ============
 
-Rift Symbols file stores implementation of all HIR-symbols.
+Rift Symbols file stores the implementation of all HIR-symbols.
 
 Helper classes
 ==============
 
 .. doxygenclass:: hir::GenericAlias
 
-Symbols implementation
+Symbols implementations
 ======================
 
 .. doxygenclass:: hir::TopLevelSymbol

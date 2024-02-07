@@ -10,9 +10,9 @@ namespace hir {
 	using symtable::SymbolRef;
 	
 	/**
-	 * @brief Analysis state holds all information on
-	 * the state of HIR-transformation. 
-	 * That include: symbol data, scope data, queue of symbols to analyze.
+	 * @brief Analysis state holds all of the information on
+	 * the state of the HIR-transformation. 
+	 * This includes: symbol data, scope data, queue of symbols to analyze.
 	 */
 	class AnalysisState {
 		std::queue<symtable::SymbolRef> to_analyze;

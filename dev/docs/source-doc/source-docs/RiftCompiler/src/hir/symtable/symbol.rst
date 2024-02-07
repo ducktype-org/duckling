@@ -2,7 +2,7 @@
 Symbol
 ======
 
-This file define HIR-symbol interface.
+This file defines the HIR-symbol interface.
 
 Symbol Kind
 ===========

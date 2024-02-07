@@ -14,17 +14,17 @@ namespace symtable {
 	// be unifying all „same” namespace declarations into single symbol
 
 	/**
-	 * @brief A list of symbols
+	 * @brief A list of symbols.
 	 */
 	typedef std::vector<SymbolRef> SymbolChain;
 
 	/**
-	 * @brief Debug-Prints given SymbolChain to ostream
+	 * @brief Debug-Prints given SymbolChain to  an ostream.
 	 */
 	void dprintSymbolChain(const SymbolChain&, std::ostream&);
 
 	/**
-	 * @brief Calculated de-aliased SymbolChain, that is symbol chain where alias-symbols are replaced with their de-aliased counterparts.
+	 * @brief Calculate a de-aliased SymbolChain, that is a symbol chain where alias-symbols are replaced with their de-aliased counterparts.
 	 */
 	SymbolChain deAliasSymbolChain(const SymbolChain&);
 
