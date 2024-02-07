@@ -57,7 +57,7 @@ namespace hir {
 
 	void goOverSymbols(
 		AnalysisState&                               state,
-		ScopeRef                              scope,
+		ScopeRef                                     scope,
 		const pst::ParserCBorrowRef<pst::CodeBlock>& pst_element
 	) {
 		// @FUTURE: somewhere here will happen macro expansion
