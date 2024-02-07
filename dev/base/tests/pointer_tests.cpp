@@ -76,7 +76,7 @@ private:
 		assert(Derived::destructor_count == d_count + 1, "Unique didn't destroy the object");
 	}
 
-	void increment_wrapper_using_borrow(const base::borrow_ptr<Wrapper>& b_ptr) { b_ptr->x++; }
+	void increment_wrapper_using_borrow(base::borrow_ptr<Wrapper> b_ptr) { b_ptr->x++; }
 };
 
 TESTER_COMMON_MAIN("/base/tests/");
