@@ -30,7 +30,7 @@ namespace symtable {
 		ScopeState state = ScopeState::Open;
 
 		friend class SymbolData;
-		void addSymbol(const SymbolRef& symbol);
+		void addSymbol(SymbolRef symbol);
 
 		Scope() = default;
 

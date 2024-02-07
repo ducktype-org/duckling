@@ -33,9 +33,7 @@ namespace base {
 		borrow_ptr(borrow_ptr<T>&& other) noexcept: borrow_ptr() { swap(*this, other); }
 
 		template<class U>
-		borrow_ptr(const borrow_ptr<U>& other) noexcept: borrow_ptr() {
-			ptr = static_cast<T*>(other.ptr);
-		}
+		borrow_ptr(const borrow_ptr<U>& other) noexcept: ptr(static_cast<T*>(other.ptr)) {}
 
 		friend void swap(borrow_ptr<T>& first, borrow_ptr<T>& second) noexcept {
 			std::swap(first.ptr, second.ptr);

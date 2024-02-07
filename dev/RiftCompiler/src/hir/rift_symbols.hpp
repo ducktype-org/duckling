@@ -100,9 +100,9 @@ namespace hir {
 	public:
 		ConstSymbol(
 			hir::AnalysisState&       state,
-			const ScopeRef&           scope,
+			ScopeRef           scope,
 			base::StrId               name,
-			const PstRef<pst::Const>& pst_element
+			PstRef<pst::Const> pst_element
 		):
 			  Symbol(state, scope, name, false, true, SymbolKind::Const),
 			  pst_element(pst_element),

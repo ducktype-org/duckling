@@ -26,7 +26,7 @@ namespace vm {
 	public:
 		const BlockId block_id;
 
-		Block(BlockId block_id_, const TypeCRef& type, base::ModRawView data):
+		Block(BlockId block_id_, TypeCRef type, base::ModRawView data):
 			  end(type->getSize()),
 			  element_type(type),
 			  data(data.getBegin()),
@@ -34,7 +34,7 @@ namespace vm {
 			RIFT_ASSERT(type->getSize() == data.size(), "type size does not equal data size");
 		}
 
-		Block(BlockId block_id_, const TypeCRef& type, u64 length, base::ModRawView data):
+		Block(BlockId block_id_, TypeCRef type, u64 length, base::ModRawView data):
 			  end(length * type->getSize()),
 			  arr_length(length),
 			  element_type(type),

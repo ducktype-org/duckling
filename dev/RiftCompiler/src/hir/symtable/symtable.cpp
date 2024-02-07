@@ -37,7 +37,7 @@ namespace symtable {
 
 	// @TODO: errors
 	ChainLookupResult SymbolData::lookupDottedNameInScopeAndParents(
-		const ScopeRef& initial, std::span<base::StrId> names
+		ScopeRef initial, std::span<base::StrId> names
 	) {
 		RIFT_ASSERT(names.size() > 0, "lookupDotted received zero names");
 

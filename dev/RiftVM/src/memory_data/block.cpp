@@ -6,7 +6,7 @@ namespace vm {
 
 		// @TODO: too similar to code in type.cpp with witch its now incompatible
 		// See: https://github.com/rift-lang/rift-poc-zpp1/issues/91
-		bool typeAtOffset(const TypeCRef& type, u64 offset, const TypeCRef& searched) {
+		bool typeAtOffset(TypeCRef type, u64 offset, TypeCRef searched) {
 			if (offset == 0) {
 				if (searched->getSize() > type->getSize())
 					return false;

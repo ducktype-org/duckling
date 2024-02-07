@@ -49,7 +49,7 @@ namespace symtable {
 		// @TODO: add consts
 		// naive implementations for now:
 		ChainLookupResult lookupDottedNameInScopeAndParents(
-			const ScopeRef& initial, std::span<base::StrId> names
+			ScopeRef initial, std::span<base::StrId> names
 		);
 	};
 }

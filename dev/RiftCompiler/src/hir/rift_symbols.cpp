@@ -9,7 +9,7 @@ namespace hir {
 
 
 	base::unique_ptr<Symbol> makeSymbolFromStatement(
-		AnalysisState& state, const symtable::ScopeRef& scope, const PstRef<pst::Stmt>& stmt
+		AnalysisState& state, symtable::ScopeRef scope, PstRef<pst::Stmt> stmt
 	) {
 		switch (stmt->getKind()) {
 		// @TODO: cast check
@@ -57,7 +57,7 @@ namespace hir {
 
 	void goOverSymbols(
 		AnalysisState&                               state,
-		const ScopeRef&                              scope,
+		ScopeRef                              scope,
 		const pst::ParserCBorrowRef<pst::CodeBlock>& pst_element
 	) {
 		// @FUTURE: somewhere here will happen macro expansion
