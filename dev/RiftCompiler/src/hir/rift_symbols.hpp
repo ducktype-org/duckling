@@ -72,7 +72,8 @@ namespace hir {
 
 	/**
 	 * @brief Represent a Structure declaration.
-	 * @TODO: StructSymbol should technically be isomorphic with `const a: type = magic_struct_value`. Perhaps merge them in the future
+	 * @TODO: StructSymbol should technically be isomorphic with `const a: type =
+	 * magic_struct_value`. Perhaps merge them in the future
 	 */
 	class StructSymbol: public symtable::Symbol {
 		PstRef<pst::Struct>           pst_element;
@@ -186,7 +187,7 @@ namespace hir {
 		void analyzeAll() override;
 		void calculateLinkedLookup() override;
 	};
-	
+
 	/**
 	 * @brief Represents a function declaration.
 	 */
@@ -197,7 +198,7 @@ namespace hir {
 	};
 
 	/**
-	 * @brief Represents an local variole declaration 
+	 * @brief Represents an local variole declaration
 	 */
 	class VarSymbol: public symtable::Symbol {
 		// TypeInfo

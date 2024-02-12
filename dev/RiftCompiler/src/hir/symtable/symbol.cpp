@@ -24,7 +24,9 @@ namespace symtable {
 		return type.value();
 	}
 
-	exec::CTV Symbol::requestValue() { RIFT_PANIC("getValue called on Symbol not implementing it"); }
+	exec::CTV Symbol::requestValue() {
+		RIFT_PANIC("getValue called on Symbol not implementing it");
+	}
 
 	ScopeRef Symbol::requestLinkedLookupScope() {
 		if (!linked_lookup_scope.has_value()) {

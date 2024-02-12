@@ -51,7 +51,8 @@ namespace symtable {
 		/**
 		 * @note Naive implementations for now.
 		 * @TODO: add consts
-		 * @deprecated this should not be here. It should be one of: a function, member of Scope class, member of some agent responsible for "lookup".
+		 * @deprecated this should not be here. It should be one of: a function, member of Scope
+		 * class, member of some agent responsible for "lookup".
 		 */
 		ChainLookupResult
 			lookupDottedNameInScopeAndParents(ScopeRef initial, std::span<base::StrId> names);

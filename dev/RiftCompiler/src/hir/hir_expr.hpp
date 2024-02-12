@@ -15,9 +15,9 @@ namespace hir {
 	using ExpressionRef = base::unique_ptr<Expression>;
 
 	/**
-	 * @brief This is a temporary implementation of expression-ICR, 
+	 * @brief This is a temporary implementation of expression-ICR,
 	 * implemented for testing purposes.
-	 * 
+	 *
 	 * Ultimately full ICR/MIR should be created, and used.
 	 */
 	class Expression {

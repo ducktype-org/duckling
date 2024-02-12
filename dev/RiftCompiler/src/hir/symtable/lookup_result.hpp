@@ -24,7 +24,8 @@ namespace symtable {
 	void dprintSymbolChain(const SymbolChain&, std::ostream&);
 
 	/**
-	 * @brief Calculate a de-aliased SymbolChain, that is a symbol chain where alias-symbols are replaced with their de-aliased counterparts.
+	 * @brief Calculate a de-aliased SymbolChain, that is a symbol chain where alias-symbols are
+	 * replaced with their de-aliased counterparts.
 	 */
 	SymbolChain deAliasSymbolChain(const SymbolChain&);
 
@@ -34,7 +35,7 @@ namespace symtable {
 	 * @brief Tree like structure storing lookup result.
 	 * Actual results are always stored in "leaves", while
 	 * children are responsible for storing results hidden under some aliases.
-	 *  
+	 *
 	 * Intuitively LookupResult is a result of a single "." operator.
 	 */
 	struct LookupResult {
@@ -65,10 +66,9 @@ namespace symtable {
 		void dprint(std::ostream&);
 	};
 
-
 	/**
 	 * @brief ChainLookupResult stores standard LookupResult with a prefix.
-	 * 
+	 *
 	 * Intuitively ChainLookupResult is a result of a single "a.b.c"-like expression where,
 	 * all but the last symbol are uniquely defined.
 	 */

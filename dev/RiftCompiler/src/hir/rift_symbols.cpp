@@ -153,7 +153,8 @@ namespace hir {
 	}
 
 	symtable::ChainLookupResult GenericAlias::requestDeAlias() {
-		throw base::NotYetImplemented("requestDeAlias -- only require dealiasing any lookup results");
+		throw base::NotYetImplemented("requestDeAlias -- only require dealiasing any lookup results"
+		);
 	}
 
 	AliasSymbol::AliasSymbol(

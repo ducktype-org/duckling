@@ -8,10 +8,10 @@ namespace hir {
 
 	using symtable::Symbol;
 	using symtable::SymbolRef;
-	
+
 	/**
 	 * @brief Analysis state holds all of the information on
-	 * the state of the HIR-transformation. 
+	 * the state of the HIR-transformation.
 	 * This includes: symbol data, scope data, queue of symbols to analyze.
 	 */
 	class AnalysisState {

@@ -11,8 +11,8 @@ namespace symtable {
 	/**
 	 * @brief Reference to HIR-symbol
 	 */
-	using SymbolRef  = base::borrow_ptr<Symbol>;
-	
+	using SymbolRef = base::borrow_ptr<Symbol>;
+
 	/**
 	 * @brief Const reference to HIR-symbol
 	 */
@@ -24,12 +24,12 @@ namespace symtable {
 		// @TODO: For SymbolsList: StableList of pointers is needed (this is just vector of
 		// pointers) For ease of use UPtrStableList might be added
 	}
-	
+
 	/**
 	 * @brief Reference to HIR-scope
 	 */
-	using ScopeRef  = detail::ScopesList::Ref;
-	
+	using ScopeRef = detail::ScopesList::Ref;
+
 	/**
 	 * @brief Const reference to HIR-scope
 	 */

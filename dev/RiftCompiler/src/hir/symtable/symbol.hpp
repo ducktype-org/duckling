@@ -16,7 +16,7 @@ namespace hir {
 }
 
 namespace symtable {
-	
+
 	/**
 	 * @brief SymbolKind stores general kind/type of a symbol.
 	 * Usually each implementation of SymbolInterface will have its unique kind.
@@ -37,22 +37,23 @@ namespace symtable {
 	/**
 	 * @brief Symbol is a base class for implementation of all symbols.
 	 * It defines a common interface and data of all HIR-symbols.
-	 * 
+	 *
 	 * There are 4 types of operations on symbols:
-	 *  
+	 *
 	 *  * calculateXYZ -- internal method used to alter symbols state.
 	 *    Usually used in request implementations. Usually require cycle control.
-	 *  
+	 *
 	 *  * requestXYZ -- external request to do/get something.
 	 *    May cause cascade of other operations.
 	 *    Will usually cause heavy computations only during first call.
 	 *    Will usually be implemented as: if (not available) calculate(); return access();
-	 *  
+	 *
 	 *  * accessXYZ -- external request to do/get something, that will not spawn heavy computation.
-	 *    In particular accessXYZ may assert that value that you want to access is already available.
-	 *  
+	 *    In particular accessXYZ may assert that value that you want to access is already
+	 * available.
+	 *
 	 *  * getXYZ, isXYZ -- simple getters, setters
-	 * 
+	 *
 	 * In order to implement a new type of symbol,
 	 * one must create a new class inheriting from this one.
 	 */
@@ -119,7 +120,7 @@ namespace symtable {
 			getSymbolsIn();
 		}
 
-	public:	
+	public:
 		friend class SymbolData;
 
 		// This delete is important, to prevent any copy of symbol data:
@@ -130,17 +131,26 @@ namespace symtable {
 		Symbol& operator=(Symbol&& other) = default;
 
 		[[nodiscard]]
-		ScopeRef getScope() const { return scope; }
+		ScopeRef getScope() const {
+			return scope;
+		}
+
 		base::StrId getName() const { return name; }
+
 		bool getIsStatic() const { return is_static; }
+
 		usize getRelativePosition() const { return relative_position; }
+
 		bool isAnonymous() const { return anonymous; }
+
 		bool isWildcard() const { return wildcard; }
+
 		[[nodiscard]]
-		SymbolKind getKind() const { return kind; }
+		SymbolKind getKind() const {
+			return kind;
+		}
 
-
-		ScopeRef requestLinkedLookupScope();
+		ScopeRef       requestLinkedLookupScope();
 		ts::TypeDesc<> requestType();
 
 
@@ -151,9 +161,9 @@ namespace symtable {
 		virtual ChainLookupResult requestDeAlias();
 
 		LookupResult requestLookupIn(base::StrId name);
-		
+
 		virtual void analyzeAll() = 0;
-		virtual ~Symbol() = default;
+		virtual ~Symbol()         = default;
 
 		bool unlockedLookup() const;
 	};

@@ -15,8 +15,8 @@ namespace symtable {
 	 * @brief Stores current state of a scope
 	 */
 	enum class ScopeState {
-		Open, ///< Open state means that symbols can be added to the scope.
-		Closed, ///< Close state means that lookup can be performed inside the scope.
+		Open,    ///< Open state means that symbols can be added to the scope.
+		Closed,  ///< Close state means that lookup can be performed inside the scope.
 	};
 
 	/**
