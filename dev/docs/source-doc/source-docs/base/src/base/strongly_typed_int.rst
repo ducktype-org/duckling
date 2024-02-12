@@ -2,29 +2,20 @@
 Strongly typed int
 ==================
 
-.. simple-description::
-
 .. contents::
 	:depth: 2
 	:local:
 
-Strongly typed int is a library that provides macros that creates a class implementing strongly typed integer.
-
-Two variants are provided:
+Provides macros for creating a strongly typed integer. They are created as classes that generally behave the same as other integral types but can only be explicitly cast.
 
 Functionalities
 ===============
 
-:code:`STRONG_TYPEDEF_INT_DIMENSIONAL`
---------------------------------------
+Two variants are provided:
 
-Creates dimensional integral type.
+.. doxygendefine:: STRONG_TYPEDEF_INT_DIMENSIONAL
 
-
-:code:`STRONG_TYPEDEF_INT`
---------------------------
-
-Creates simple integral type.
+.. doxygendefine:: STRONG_TYPEDEF_INT
 
 Usage
 =====
