@@ -189,7 +189,7 @@ namespace ts {
 
 		const std::vector<TypeDesc<>>& getUnderlyingTypes() const;
 
-		std::pair<TypeDesc<>, usize> getMember(usize index) const;
+		TypeDesc<> getMember(usize index) const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(VariantInfo)
 

@@ -454,7 +454,7 @@ namespace ts::internal {
 
 		const std::vector<TypeDesc<>>& getUnderlyingTypes() const { return underlyingTypes; }
 
-		TypeDesc<> getType(usize idx) { return underlyingTypes[idx]; }
+		TypeDesc<> getMember(usize idx) const { return underlyingTypes[idx]; }
 	};
 
 	class ClassInfoImpl: public TypeInfoImpl {

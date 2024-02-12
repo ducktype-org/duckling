@@ -219,6 +219,10 @@ namespace ts {
 		return ((CPimpl) pimpl)->getUnderlyingTypes();
 	}
 
+	TypeDesc<> VariantInfo::getMember(usize index) const {
+		return ((CPimpl) pimpl)->getMember(index);
+	}
+
 	TypeTemplateInfo TypeTemplateInfo::create(std::vector<TypeDesc<>>& parameter_list) {
 		static base::Map<std::vector<TypeDesc<>>, TypeTemplateInfo> type_templates;
 		if (type_templates.contains(parameter_list)) return type_templates[parameter_list];
