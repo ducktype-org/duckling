@@ -67,8 +67,6 @@ rift_add_test(compiler compiler_test_simple src/compiler/tests/test.cpp
 		USES Printer ModuleSystem PstParser Lexer Compiler)
 rift_add_test(compiler typesystem_test_simple src/typesystem/tests/simple_test.cpp
 		USES Base Clap SymbolTable TypeSystem)
-rift_add_test(compiler typesystem_test_new src/typesystem/tests/new_test.cpp
-		USES Base Clap SymbolTable TypeSystem)
 rift_add_test(compiler exec_ctv_test_simple src/exec/tests/simple_ctv_test.cpp
 		USES Exec Clap TypeSystem)
 rift_add_test(compiler exec_defaults_test_simple src/exec/tests/simple_defaults_test.cpp

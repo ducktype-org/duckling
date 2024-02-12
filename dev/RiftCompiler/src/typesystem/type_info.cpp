@@ -1,11 +1,19 @@
 #include "type_info.hpp"
+
+#include <sstream>
+#include <concepts>
+
 #include "internal/type_info_impl.hpp"
 #include "templates.hpp"
 #include "type_desc.hpp"
 #include <base/exceptions.hpp>
 
-#define INSTANTIATE_CHECKED_CAST(Type) \
-	template const internal::Type##InfoImpl* checkDynamicCast(const internal::TypeInfoImpl* p);
+/**
+ * \brief Explicitly instantiate the `checkDynamicCast` template.
+ * \param ClassName The class name from the `TypeInfo` hierarchy.
+ */
+#define INSTANTIATE_CHECKED_CAST(ClassName) \
+	template ClassName::CPimpl checkDynamicCast(TypeInfo::CPimpl);
 
 namespace ts {
 	[[nodiscard]]
@@ -207,6 +215,10 @@ namespace ts {
 		return variants[variant_types];
 	}
 
+	const std::vector<TypeDesc<>>& VariantInfo::getUnderlyingTypes() const {
+		return ((CPimpl) pimpl)->getUnderlyingTypes();
+	}
+
 	TypeTemplateInfo TypeTemplateInfo::create(std::vector<TypeDesc<>>& parameter_list) {
 		static base::Map<std::vector<TypeDesc<>>, TypeTemplateInfo> type_templates;
 		if (type_templates.contains(parameter_list)) return type_templates[parameter_list];
@@ -249,35 +261,38 @@ namespace ts {
 		return MetaInfo{ &meta };
 	}
 
-	template<typename T>  // TODO enable_if or concept that this is from TypeInfo hierarchy
-	T checkDynamicCast(const internal::TypeInfoImpl* p) {
-		auto result = dynamic_cast<T>(p);
-		if (result == nullptr) throw base::LogicError{ "Type cast between TypeInfo kinds failed." };
+	template<std::derived_from<internal::TypeInfoImpl> T>
+	const T* checkDynamicCast(TypeInfo::CPimpl p) {
+		const T* result = dynamic_cast<const T*>(p);
+		std::stringstream ss;
+		ss << "Type cast between TypeInfo kinds failed. A cast from " << kindToString(p->getKind())
+		   << " to " << kindToString(T::getDefaultKind()) << " was attempted.";
+		if (result == nullptr) throw base::LogicError{ ss.str() };
 		return result;
 	}
 
-	INSTANTIATE_CHECKED_CAST(Type)  // For TypeInfo, not to be confused with Meta
-	INSTANTIATE_CHECKED_CAST(Unit)
-	INSTANTIATE_CHECKED_CAST(Void)
-	INSTANTIATE_CHECKED_CAST(Byte)
-	INSTANTIATE_CHECKED_CAST(Bool)
-	INSTANTIATE_CHECKED_CAST(Char)
-	INSTANTIATE_CHECKED_CAST(Integral)
-	INSTANTIATE_CHECKED_CAST(Float)
-	INSTANTIATE_CHECKED_CAST(RawPointer)
-	INSTANTIATE_CHECKED_CAST(Pointer)
-	INSTANTIATE_CHECKED_CAST(Function)
-	INSTANTIATE_CHECKED_CAST(Enum)
-	INSTANTIATE_CHECKED_CAST(Flag)
-	INSTANTIATE_CHECKED_CAST(Optional)
-	INSTANTIATE_CHECKED_CAST(Tuple)
-	INSTANTIATE_CHECKED_CAST(Variant)
-	INSTANTIATE_CHECKED_CAST(Template)
-	INSTANTIATE_CHECKED_CAST(TypeTemplate)
-	INSTANTIATE_CHECKED_CAST(Namespace)
-	INSTANTIATE_CHECKED_CAST(CodeBlock)
-	INSTANTIATE_CHECKED_CAST(Module)
-	INSTANTIATE_CHECKED_CAST(Class)
-	INSTANTIATE_CHECKED_CAST(Meta)
-	INSTANTIATE_CHECKED_CAST(VTable)
+	INSTANTIATE_CHECKED_CAST(TypeInfo)
+	INSTANTIATE_CHECKED_CAST(UnitInfo)
+	INSTANTIATE_CHECKED_CAST(VoidInfo)
+	INSTANTIATE_CHECKED_CAST(ByteInfo)
+	INSTANTIATE_CHECKED_CAST(BoolInfo)
+	INSTANTIATE_CHECKED_CAST(CharInfo)
+	INSTANTIATE_CHECKED_CAST(IntegralInfo)
+	INSTANTIATE_CHECKED_CAST(FloatInfo)
+	INSTANTIATE_CHECKED_CAST(RawPointerInfo)
+	INSTANTIATE_CHECKED_CAST(PointerInfo)
+	INSTANTIATE_CHECKED_CAST(FunctionInfo)
+	INSTANTIATE_CHECKED_CAST(EnumInfo)
+	INSTANTIATE_CHECKED_CAST(FlagInfo)
+	INSTANTIATE_CHECKED_CAST(OptionalInfo)
+	INSTANTIATE_CHECKED_CAST(TupleInfo)
+	INSTANTIATE_CHECKED_CAST(VariantInfo)
+	INSTANTIATE_CHECKED_CAST(TemplateInfo)
+	INSTANTIATE_CHECKED_CAST(TypeTemplateInfo)
+	INSTANTIATE_CHECKED_CAST(NamespaceInfo)
+	INSTANTIATE_CHECKED_CAST(CodeBlockInfo)
+	INSTANTIATE_CHECKED_CAST(ModuleInfo)
+	INSTANTIATE_CHECKED_CAST(ClassInfo)
+	INSTANTIATE_CHECKED_CAST(VTableInfo)
+	INSTANTIATE_CHECKED_CAST(MetaInfo)
 }

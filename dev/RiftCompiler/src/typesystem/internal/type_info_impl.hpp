@@ -25,6 +25,11 @@ namespace ts::internal {
 			= 0;
 
 		[[nodiscard]]
+		static Kind getDefaultKind() {
+			return Kind::Any;
+		}
+
+		[[nodiscard]]
 		usize getSize() const {
 			return size;
 		}
@@ -69,6 +74,11 @@ namespace ts::internal {
 			return Kind::Void;
 		}
 
+		[[nodiscard]]
+		static Kind getDefaultKind() {
+			return Kind::Void;
+		}
+
 		VoidInfoImpl(): TypeInfoImpl(0) { representation = "void"; }
 	};
 
@@ -76,6 +86,11 @@ namespace ts::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
+			return Kind::Byte;
+		}
+
+		[[nodiscard]]
+		static Kind getDefaultKind() {
 			return Kind::Byte;
 		}
 
@@ -95,6 +110,11 @@ namespace ts::internal {
 			return Kind::Bool;
 		}
 
+		[[nodiscard]]
+		static Kind getDefaultKind() {
+			return Kind::Bool;
+		}
+
 		explicit BoolInfoImpl(): TypeInfoImpl(ts::BOOL_SIZE) { representation = "bool"; }
 
 		[[nodiscard]]
@@ -108,6 +128,11 @@ namespace ts::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
+			return Kind::Char;
+		}
+
+		[[nodiscard]]
+		static Kind getDefaultKind() {
 			return Kind::Char;
 		}
 
@@ -126,6 +151,11 @@ namespace ts::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
+			return Kind::Integral;
+		}
+
+		[[nodiscard]]
+		static Kind getDefaultKind() {
 			return Kind::Integral;
 		}
 
@@ -158,6 +188,11 @@ namespace ts::internal {
 			return Kind::Float;
 		}
 
+		[[nodiscard]]
+		static Kind getDefaultKind() {
+			return Kind::Float;
+		}
+
 		explicit FloatInfoImpl(usize size): TypeInfoImpl(size) {
 			representation = base::strConcat("float_", size);
 		}
@@ -173,6 +208,11 @@ namespace ts::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
+			return Kind::RawPointer;
+		}
+
+		[[nodiscard]]
+		static Kind getDefaultKind() {
 			return Kind::RawPointer;
 		}
 
@@ -195,6 +235,11 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
+		static Kind getDefaultKind() {
+			return Kind::Pointer;
+		}
+
+		[[nodiscard]]
 		TypeDesc<> getUnderlying() const {
 			return underlying_type;
 		}
@@ -209,14 +254,6 @@ namespace ts::internal {
 		const TypeDesc<> underlying_type;
 	};
 
-	inline std::string showVector(const std::vector<TypeDesc<>>& types) {
-		std::string res = "(";
-		for (const auto& t: types) res += t.getType().show() + ",";
-		res += ")";
-
-		return res;
-	}
-
 	class FunctionInfoImpl: public TypeInfoImpl {
 		std::vector<TypeDesc<>> parameterTypes;
 		TypeDesc<>              resultType;
@@ -228,16 +265,14 @@ namespace ts::internal {
 			return Kind::Function;
 		}
 
+		[[nodiscard]]
+		static Kind getDefaultKind() {
+			return Kind::Function;
+		}
+
 		explicit FunctionInfoImpl(
 			std::vector<TypeDesc<>> parameterTypes, TypeDesc<> resultType, i32 flags = 0
-		):
-			  TypeInfoImpl(POINTER_SIZE),
-			  parameterTypes(std::move(parameterTypes)),
-			  resultType(resultType),
-			  flags(flags) {
-			representation = "Function " + showVector(this->parameterTypes) + " -> ("
-			               + resultType.getType().show() + ")";
-		}
+		);
 
 		[[nodiscard]]
 		std::vector<TypeDesc<>> getParameterList() const {
@@ -281,6 +316,11 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
+		static Kind getDefaultKind() {
+			return Kind::Enum;
+		}
+
+		[[nodiscard]]
 		IntegralInfo getBaseType() const {
 			return base_type;
 		}
@@ -303,6 +343,11 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
+		static Kind getDefaultKind() {
+			return Kind::Flag;
+		}
+
+		[[nodiscard]]
 		IntegralInfo getBaseType() const {
 			return base_type;
 		}
@@ -321,6 +366,11 @@ namespace ts::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
+			return Kind::Optional;
+		}
+
+		[[nodiscard]]
+		static Kind getDefaultKind() {
 			return Kind::Optional;
 		}
 
@@ -356,6 +406,11 @@ namespace ts::internal {
 			return Kind::Tuple;
 		}
 
+		[[nodiscard]]
+		static Kind getDefaultKind() {
+			return Kind::Tuple;
+		}
+
 		explicit TupleInfoImpl(const std::vector<TypeDesc<>>& underlyingTypes);
 
 		const std::vector<TypeDesc<>>& getUnderlyingTypes() const { return underlyingTypes; }
@@ -382,7 +437,7 @@ namespace ts::internal {
 	 * Sort variant types, so that var(A, B) = var(B, A)?
 	 */
 	class VariantInfoImpl: public TypeInfoImpl {
-		std::vector<TypeDesc<>> variant_types;
+		std::vector<TypeDesc<>> underlyingTypes;
 
 	public:
 		[[nodiscard]]
@@ -390,11 +445,16 @@ namespace ts::internal {
 			return Kind::Variant;
 		}
 
+		[[nodiscard]]
+		static Kind getDefaultKind() {
+			return Kind::Variant;
+		}
+
 		explicit VariantInfoImpl(const std::vector<TypeDesc<>>& variant_types);
 
-		std::vector<TypeDesc<>> getTypes() const { return variant_types; }
+		const std::vector<TypeDesc<>>& getUnderlyingTypes() const { return underlyingTypes; }
 
-		TypeDesc<> getType(usize idx) { return variant_types[idx]; }
+		TypeDesc<> getType(usize idx) { return underlyingTypes[idx]; }
 	};
 
 	class ClassInfoImpl: public TypeInfoImpl {
@@ -427,6 +487,11 @@ namespace ts::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
+			return Kind::Class;
+		}
+
+		[[nodiscard]]
+		static Kind getDefaultKind() {
 			return Kind::Class;
 		}
 
@@ -521,6 +586,11 @@ namespace ts::internal {
 			return Kind::TypeTemplate;
 		}
 
+		[[nodiscard]]
+		static Kind getDefaultKind() {
+			return Kind::TypeTemplate;
+		}
+
 		explicit TypeTemplateInfoImpl(const std::vector<TypeDesc<>>& parameter_list):
 			  TemplateInfoImpl(parameter_list) {}
 	};
@@ -529,6 +599,11 @@ namespace ts::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
+			return Kind::Namespace;
+		}
+
+		[[nodiscard]]
+		static Kind getDefaultKind() {
 			return Kind::Namespace;
 		}
 
@@ -542,6 +617,11 @@ namespace ts::internal {
 			return Kind::CodeBlock;
 		}
 
+		[[nodiscard]]
+		static Kind getDefaultKind() {
+			return Kind::CodeBlock;
+		}
+
 		CodeBlockInfoImpl(): TypeInfoImpl(0) {}
 	};
 
@@ -552,17 +632,12 @@ namespace ts::internal {
 			return Kind::Module;
 		}
 
-		ModuleInfoImpl(): TypeInfoImpl(0) {}
-	};
-
-	class MetaInfoImpl: public TypeInfoImpl {
-	public:
 		[[nodiscard]]
-		Kind getKind() const override {
-			return Kind::Meta;
+		static Kind getDefaultKind() {
+			return Kind::Module;
 		}
 
-		explicit MetaInfoImpl(): TypeInfoImpl(ts::META_SIZE) {}
+		ModuleInfoImpl(): TypeInfoImpl(0) {}
 	};
 
 	class VTableInfoImpl: public TypeInfoImpl {
@@ -571,6 +646,11 @@ namespace ts::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
+			return Kind::VTable;
+		}
+
+		[[nodiscard]]
+		static Kind getDefaultKind() {
 			return Kind::VTable;
 		}
 
@@ -584,5 +664,20 @@ namespace ts::internal {
 		explicit VTableInfoImpl(ClassInfo class_info):
 			  TypeInfoImpl(class_info.getVtableSize() * sizeof(usize) * 8),
 			  associated_class(class_info) {}
+	};
+
+	class MetaInfoImpl: public TypeInfoImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return Kind::Meta;
+		}
+
+		[[nodiscard]]
+		static Kind getDefaultKind() {
+			return Kind::Meta;
+		}
+
+		explicit MetaInfoImpl(): TypeInfoImpl(ts::META_SIZE) {}
 	};
 }

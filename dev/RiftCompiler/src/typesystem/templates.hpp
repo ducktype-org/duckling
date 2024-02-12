@@ -17,9 +17,8 @@ namespace ts {
 	}
 
 	class TemplateInfo: public TypeInfo {
-		SETUP_TYPE(TemplateInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(TemplateInfo, TypeInfo)
 		std::vector<TypeDesc<>> getParameterList() const;
 
 		external::TemplateSchematic* getTemplateSchematic() const;
@@ -27,19 +26,18 @@ namespace ts {
 		// @TODO: Change return type to baked template when it's created.
 		TypeInfo bake(std::vector<exec::CTV>& arg_list) const;
 
-		CHECKED_CAST(TemplateInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(TemplateInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(TemplateInfo)
 	};
 
 	class TypeTemplateInfo: public TemplateInfo {
-		SETUP_TYPE(TypeTemplateInfo, TemplateInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(TypeTemplateInfo, TemplateInfo)
 		static TypeTemplateInfo create(std::vector<TypeDesc<>>& parameter_list);
 
-		CHECKED_CAST(TypeTemplateInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(TypeTemplateInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(TypeTemplateInfo)

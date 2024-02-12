@@ -10,33 +10,52 @@
 #include <string>
 #include <vector>
 
-#define CHECKED_CAST(ClassName)                                        \
+/**
+ * \brief Template constructor from the TypeInfoImpl* hierarchy with a dynamic cast check.
+ * \param SomeTypeInfo The class name from the TypeInfo hierarchy.
+ */
+#define CONSTRUCT_WITH_CHECKED_CAST(SomeTypeInfo)                                        \
 	template<std::derived_from<TypeInfo> T>                            \
-	ClassName(const T& other): Base((const BPimpl) other.getPimpl()) { \
-		checkDynamicCast<CPimpl>(other.getPimpl());                    \
+	SomeTypeInfo(const T& other): Base((const BPimpl) other.getPimpl()) { \
+		checkDynamicCast<Impl>(other.getPimpl());                    \
 	}
 
+/**
+ * \brief Constructor from ClassName##Impl*.
+ * \param SomeTypeInfo The class name from the TypeInfo hierarchy.
+ */
+#define CONSTRUCT_FROM_IMPLEMENTATION(SomeTypeInfo) \
+	explicit SomeTypeInfo(const Pimpl pimpl): Base((BPimpl) pimpl) {}
 
-#define CONSTRUCT_FROM_IMPLEMENTATION(ClassName) \
-	explicit ClassName(const Pimpl pimpl): Base((BPimpl) pimpl) {}
-
-
-#define SETUP_TYPE(ClassName, BaseClass)       \
-	using Impl    = internal::ClassName##Impl; \
-	using BImpl   = internal::BaseClass##Impl; \
-	using Base    = BaseClass;                 \
+/**
+ * \brief Several type definitions for quick reference, like Impl=internal::ClassName##Impl and Pimpl=Impl*.
+ * \param SomeTypeInfo The class name from the `TypeInfo` hierarchy.
+ */
+#define SETUP_TYPE(SomeTypeInfo) \
+	using Impl    = internal::SomeTypeInfo##Impl; \
 	using Pimpl   = Impl*;                     \
 	using CPimpl  = const Impl*;               \
+
+/**
+ * \brief Several type definitions for quick reference, like Impl=internal::ClassName##Impl and Pimpl=Impl*.
+ * \param SomeTypeInfo The class name from the `TypeInfo` hierarchy.
+ * \param BaseTypeInfo The base class of `SomeTypeInfo`.
+ * Since `TypeInfo` itself does not have a base class, this macro should not be used in the definition of `TypeInfo`.
+ */
+#define SETUP_TYPE_WITH_BASE(SomeTypeInfo, BaseTypeInfo)       \
+	SETUP_TYPE(SomeTypeInfo) \
+	using BImpl   = internal::BaseTypeInfo##Impl; \
+	using Base    = BaseTypeInfo;                 \
 	using BPimpl  = BImpl*;                    \
 	using CBPimpl = const BImpl*;
 
 namespace ts {
 	// this is const, and not constexpr, because it might be defined during runtime in the future
-	const usize META_SIZE    = 64;
-	const usize POINTER_SIZE = 64;
-	const usize BYTE_SIZE    = 8;
-	const usize BOOL_SIZE    = BYTE_SIZE;
-	const usize CHAR_SIZE    = BYTE_SIZE;
+	constexpr usize META_SIZE    = 64;
+	constexpr usize POINTER_SIZE = 64;
+	constexpr usize BYTE_SIZE    = 8;
+	constexpr usize BOOL_SIZE    = BYTE_SIZE;
+	constexpr usize CHAR_SIZE    = BYTE_SIZE;
 
 	namespace internal {
 		class TypeInfoImpl;
@@ -65,22 +84,21 @@ namespace ts {
 		class VTableInfoImpl;
 	}
 
-	template<typename T>
-	T checkDynamicCast(const internal::TypeInfoImpl*);
-
 	class TypeInfo {
-		using Pimpl = internal::TypeInfoImpl*;
-
 	public:
+		SETUP_TYPE(TypeInfo)
+
 		[[nodiscard]]
 		Kind getKind() const;
 		[[nodiscard]]
 		usize getSize() const;
+		[[nodiscard]]
+		static Kind getDefaultKind() { return Kind::Any; }
 		TypeInfo() = delete;
 
 		template<std::derived_from<TypeInfo> T>
 		explicit TypeInfo(const T& other): pimpl(other.pimpl) {
-			checkDynamicCast<const internal::TypeInfoImpl*>(other.pimpl);
+			checkDynamicCast<Impl>(other.pimpl);
 		}
 
 		[[nodiscard]]
@@ -104,4 +122,7 @@ namespace ts {
 		// This is almost-const, but we need assignment operator on TypeInfo.
 		const internal::TypeInfoImpl* pimpl;
 	};
+
+	template</*std::derived_from<internal::TypeInfoImpl>*/ typename T>
+	const T* checkDynamicCast(TypeInfo::CPimpl);
 }

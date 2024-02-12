@@ -1,3 +1,16 @@
+/**
+* This test file contains tests checking the most basic and boring functionality of the typesystem.
+
+* In particular, each `ts::Kind` should be checked for correct dynamic casting of pImpl.
+
+* Other than that, type sizes and contents after construction are checked.
+
+* Additionally, if a kind of types is supposed to unify types under some condition
+* (e.g. tuples are structurally unified), this should be checked.
+
+* The converse (i.e. that two types are not unified when they shouldn't be) should also be checked.
+*/
+
 #include <algorithm>
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
@@ -7,7 +20,7 @@ class NewTypeSystemTest: public tester::TestSuite {
 #define TESTER_CLASS NewTypeSystemTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple TypeSystem Test new interface") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("TypeSystem simple interface test") {
 		TESTER_ADD_TEST(simple_void);
 		TESTER_ADD_TEST(simple_byte_sized);
 		TESTER_ADD_TEST(simple_ints);

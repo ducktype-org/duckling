@@ -8,119 +8,109 @@
 
 namespace ts {
 	class UnitInfo: public TypeInfo {
-		SETUP_TYPE(UnitInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(UnitInfo, TypeInfo)
 		static UnitInfo create();
 
-		CHECKED_CAST(UnitInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(UnitInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(UnitInfo)
 	};
 
 	class VoidInfo: public TypeInfo {
-		SETUP_TYPE(VoidInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(VoidInfo, TypeInfo)
 		static VoidInfo create();
 
-		CHECKED_CAST(VoidInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(VoidInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(VoidInfo)
 	};
 
 	class ByteInfo: public TypeInfo {
-		SETUP_TYPE(ByteInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(ByteInfo, TypeInfo)
 		static ByteInfo create();
 
-		CHECKED_CAST(ByteInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(ByteInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(ByteInfo)
 	};
 
 	class BoolInfo: public TypeInfo {
-		SETUP_TYPE(BoolInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(BoolInfo, TypeInfo)
 		static BoolInfo create();
 
-		CHECKED_CAST(BoolInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(BoolInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(BoolInfo)
 	};
 
 	class CharInfo: public TypeInfo {
-		SETUP_TYPE(CharInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(CharInfo, TypeInfo)
 		static CharInfo create();
 
-		CHECKED_CAST(CharInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(CharInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(CharInfo)
 	};
 
 	class IntegralInfo: public TypeInfo {
-		SETUP_TYPE(IntegralInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(IntegralInfo, TypeInfo)
 		static IntegralInfo create(usize size, bool signedness = true);
 
-		CHECKED_CAST(IntegralInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(IntegralInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(IntegralInfo)
 	};
 
 	class FloatInfo: public TypeInfo {
-		SETUP_TYPE(FloatInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(FloatInfo, TypeInfo)
 		static FloatInfo create(usize size);
 
-		CHECKED_CAST(FloatInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(FloatInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(FloatInfo)
 	};
 
 	class RawPointerInfo: public TypeInfo {
-		SETUP_TYPE(RawPointerInfo, TypeInfo);
-
 	public:
+		SETUP_TYPE_WITH_BASE(RawPointerInfo, TypeInfo)
 		static RawPointerInfo create();
 
-		CHECKED_CAST(RawPointerInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(RawPointerInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(RawPointerInfo)
 	};
 
 	class PointerInfo: public RawPointerInfo {
-		SETUP_TYPE(PointerInfo, RawPointerInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(PointerInfo, RawPointerInfo)
 		static PointerInfo create(const TypeDesc<>& underlying_type);
 
 		TypeDesc<> getUnderlying() const;
 
-		CHECKED_CAST(PointerInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(PointerInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(PointerInfo)
 	};
 
 	class FunctionInfo: public TypeInfo {
-		SETUP_TYPE(FunctionInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(FunctionInfo, TypeInfo)
 		static FunctionInfo create(
 			const std::vector<TypeDesc<>>& parameter_types, TypeDesc<> result_type, i32 flags = 0
 		);
@@ -134,123 +124,118 @@ namespace ts {
 		[[nodiscard]]
 		TypeDesc<> getResultType() const;
 
-		CHECKED_CAST(FunctionInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(FunctionInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(FunctionInfo)
 	};
 
 	class EnumInfo: public TypeInfo {
-		SETUP_TYPE(EnumInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(EnumInfo, TypeInfo)
 		static EnumInfo create(const IntegralInfo& base_type);
 		IntegralInfo    getBaseType() const;
 
-		CHECKED_CAST(EnumInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(EnumInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(EnumInfo)
 	};
 
 	class FlagInfo: public TypeInfo {
-		SETUP_TYPE(FlagInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(FlagInfo, TypeInfo)
 		static FlagInfo create(const IntegralInfo& base_type);
 		IntegralInfo    getBaseType() const;
 
-		CHECKED_CAST(FlagInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(FlagInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(FlagInfo)
 	};
 
 	class OptionalInfo: public TypeInfo {
-		SETUP_TYPE(OptionalInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(OptionalInfo, TypeInfo)
 		static OptionalInfo create(const TypeDesc<>& underlying_type);
 
 		TypeDesc<> getUnderlying() const;
 
-		CHECKED_CAST(OptionalInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(OptionalInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(OptionalInfo)
 	};
 
 	class TupleInfo: public TypeInfo {
-		SETUP_TYPE(TupleInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(TupleInfo, TypeInfo)
 		static TupleInfo create(const std::vector<TypeDesc<>>& variant_types);
 
 		const std::vector<TypeDesc<>>& getUnderlyingTypes() const;
 
 		std::pair<TypeDesc<>, usize> getMember(usize index) const;
 
-		CHECKED_CAST(TupleInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(TupleInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(TupleInfo)
 	};
 
 	class VariantInfo: public TypeInfo {
-		SETUP_TYPE(VariantInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(VariantInfo, TypeInfo)
 		static VariantInfo create(const std::vector<TypeDesc<>>& variant_types);
 
-		CHECKED_CAST(VariantInfo)
+		const std::vector<TypeDesc<>>& getUnderlyingTypes() const;
+
+		std::pair<TypeDesc<>, usize> getMember(usize index) const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(VariantInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(VariantInfo)
 	};
 
 	class NamespaceInfo: public TypeInfo {
-		SETUP_TYPE(NamespaceInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(NamespaceInfo, TypeInfo)
 		static NamespaceInfo create();
 
-		CHECKED_CAST(NamespaceInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(NamespaceInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(NamespaceInfo)
 	};
 
 	class CodeBlockInfo: public TypeInfo {
-		SETUP_TYPE(CodeBlockInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(CodeBlockInfo, TypeInfo)
 		static CodeBlockInfo create();
 
-		CHECKED_CAST(CodeBlockInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(CodeBlockInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(CodeBlockInfo)
 	};
 
 	class ModuleInfo: public TypeInfo {
-		SETUP_TYPE(ModuleInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(ModuleInfo, TypeInfo)
 		static ModuleInfo create();
 
-		CHECKED_CAST(ModuleInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(ModuleInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(ModuleInfo)
 	};
 
 	class MetaInfo: public TypeInfo {
-		SETUP_TYPE(MetaInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(MetaInfo, TypeInfo)
 		static MetaInfo create();
 
-		CHECKED_CAST(MetaInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(MetaInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(MetaInfo)
