@@ -15,8 +15,8 @@
  * \param SomeTypeInfo The class name from the TypeInfo hierarchy.
  */
 #define CONSTRUCT_WITH_CHECKED_CAST(SomeTypeInfo)                         \
-	template<std::derived_from<TypeInfo> T>                               \
-	SomeTypeInfo(const T& other): Base((const BPimpl) other.getPimpl()) { \
+	template<std::derived_from<TypeInfo> TYPE_INFO>                               \
+	SomeTypeInfo(const TYPE_INFO& other): Base((const BPimpl) other.getPimpl()) { \
 		checkDynamicCast<SomeTypeInfo>(other.getPimpl());                 \
 	}
 
@@ -84,6 +84,11 @@ namespace ts {
 		class VTableInfoImpl;
 	}
 
+	class TypeInfo;
+
+	template<std::derived_from<TypeInfo> TYPE_INFO>
+	typename TYPE_INFO::CPimpl checkDynamicCast(const internal::TypeInfoImpl *);
+
 	class TypeInfo {
 	public:
 		SETUP_TYPE(TypeInfo)
@@ -100,8 +105,8 @@ namespace ts {
 
 		TypeInfo() = delete;
 
-		template<std::derived_from<TypeInfo> T>
-		explicit TypeInfo(const T& other): pimpl(other.pimpl) {
+		template<std::derived_from<TypeInfo> TYPE_INFO>
+		explicit TypeInfo(const TYPE_INFO& other): pimpl(other.pimpl) {
 			checkDynamicCast<TypeInfo>(other.pimpl);
 		}
 
@@ -126,7 +131,4 @@ namespace ts {
 		// This is almost-const, but we need assignment operator on TypeInfo.
 		const internal::TypeInfoImpl* pimpl;
 	};
-
-	template<std::derived_from<TypeInfo> T>
-	typename T::CPimpl checkDynamicCast(TypeInfo::CPimpl);
 }
