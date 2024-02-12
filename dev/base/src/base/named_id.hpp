@@ -13,9 +13,7 @@
  * typedef NamedId<Number<1>> MyId;
  *
  * Provides id like type. Default Constructor
- */
-
-/**
+ * 
  * Number reserving - a place to allocate used numbers:
  * example:
  * 1             - SymbolId
