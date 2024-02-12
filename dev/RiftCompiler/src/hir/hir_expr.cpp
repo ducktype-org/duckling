@@ -216,9 +216,8 @@ namespace hir {
 		RIFT_PANIC("Some case did not return");
 	}
 
-	ExpressionRef Expression::makeExpr(
-		const symtable::ScopeRef& scope, const pst::ParserCBorrowRef<pst::Expr>& pst_expr
-	) {
+	ExpressionRef
+		Expression::makeExpr(symtable::ScopeRef scope, pst::ParserCBorrowRef<pst::Expr> pst_expr) {
 		// temporary:
 		// @TODO: proper algorithm
 
