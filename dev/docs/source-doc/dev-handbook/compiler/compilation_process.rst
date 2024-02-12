@@ -39,7 +39,7 @@ HIR transformation and representation
 HIR ("High intermediate representation") is an representation and an algorithm responsible for:
 
 * Performing a lookup on each of the symbols.
-* Lowering to MIR
+* Lowering to Middle Intermediate Representation
 * @TODO: what else?
 
 Details: :doc:`/source-doc/dev-handbook/compiler/hir`.
@@ -48,6 +48,9 @@ Implementation docs: :doc:`/source-doc/source-docs/RiftCompiler/src/hir/index`.
 
 Further compilation
 -------------------
+
+MIR representation
+------------------
 
 @TODO
 

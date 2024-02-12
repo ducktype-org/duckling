@@ -204,18 +204,4 @@ namespace hir {
 		// value will be elsewhere
 	};
 
-	/**
-	 * @brief Tests lookup made before scan of symbols inside
-	 * the scope.
-	 * Used by: early using statement
-	 */
-	// class TestEagerLookupSymbol: public symtable::Symbol {
-	// 	PstRef<pst::EagerLookup> pst_element;
-	// public:
-	// 	TestEagerLookupSymbol(ScopeId scope, base::StrId name,
-	// 	                      PstRef<pst::Const> pst_element);
-
-	// 	void calculateType() override;
-	// 	void analyzeAll() override;
-	// };
 }

@@ -2,7 +2,7 @@
 Scope
 =====
 
-This file defines the HIR-scope class.
+Scope.hpp defines the HIR-scope class.
 
 Main Scope Class
 ================

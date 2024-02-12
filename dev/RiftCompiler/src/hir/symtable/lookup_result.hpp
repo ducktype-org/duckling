@@ -54,6 +54,10 @@ namespace symtable {
 		void dprint(std::ostream&);
 	};
 
+	/**
+	 * @brief LookupNode is used as simple pair-like struct to
+	 * implement tree-like structure of LookupResult.
+	 */
 	struct LookupNode {
 		SymbolRef    node;  // node should always be alias-like of using-like thing
 		LookupResult inner;

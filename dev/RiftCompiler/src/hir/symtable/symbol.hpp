@@ -41,7 +41,7 @@ namespace symtable {
 	 * There are 4 types of operations on symbols:
 	 *  
 	 *  * calculateXYZ -- internal method used to alter symbols state.
-	 *    Usually used in request implementations.
+	 *    Usually used in request implementations. Usually require cycle control.
 	 *  
 	 *  * requestXYZ -- external request to do/get something.
 	 *    May cause cascade of other operations.
@@ -119,9 +119,7 @@ namespace symtable {
 			getSymbolsIn();
 		}
 
-	public:
-	// @TODO: here we need a vary clear separation of what can be used where
-	
+	public:	
 		friend class SymbolData;
 
 		// This delete is important, to prevent any copy of symbol data:
@@ -130,8 +128,6 @@ namespace symtable {
 		Symbol(Symbol&& other)            = default;
 		Symbol& operator=(const Symbol&)  = default;
 		Symbol& operator=(Symbol&& other) = default;
-
-		// Get-s/Is-s are simple getters:
 
 		[[nodiscard]]
 		ScopeRef getScope() const { return scope; }
@@ -143,7 +139,6 @@ namespace symtable {
 		[[nodiscard]]
 		SymbolKind getKind() const { return kind; }
 
-		// request are operations that can spawn entire compilation processes, and require cycle control
 
 		ScopeRef requestLinkedLookupScope();
 		ts::TypeDesc<> requestType();
