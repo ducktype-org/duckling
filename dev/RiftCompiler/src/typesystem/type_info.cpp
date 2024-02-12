@@ -13,7 +13,7 @@
  * \param ClassName The class name from the `TypeInfo` hierarchy.
  */
 #define INSTANTIATE_CHECKED_CAST(ClassName) \
-	template ClassName::CPimpl checkDynamicCast(TypeInfo::CPimpl);
+	template ClassName::CPimpl checkDynamicCast<ClassName>(TypeInfo::CPimpl);
 
 namespace ts {
 	[[nodiscard]]
@@ -265,9 +265,9 @@ namespace ts {
 		return MetaInfo{ &meta };
 	}
 
-	template<std::derived_from<internal::TypeInfoImpl> T>
-	const T* checkDynamicCast(TypeInfo::CPimpl p) {
-		const T* result = dynamic_cast<const T*>(p);
+	template<std::derived_from<TypeInfo> T>
+	typename T::CPimpl checkDynamicCast(TypeInfo::CPimpl p) {
+		auto result = dynamic_cast<typename T::CPimpl>(p);
 		std::stringstream ss;
 		ss << "Type cast between TypeInfo kinds failed. A cast from " << kindToString(p->getKind())
 		   << " to " << kindToString(T::getDefaultKind()) << " was attempted.";

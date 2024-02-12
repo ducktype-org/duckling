@@ -17,7 +17,7 @@
 #define CONSTRUCT_WITH_CHECKED_CAST(SomeTypeInfo)                                        \
 	template<std::derived_from<TypeInfo> T>                            \
 	SomeTypeInfo(const T& other): Base((const BPimpl) other.getPimpl()) { \
-		checkDynamicCast<Impl>(other.getPimpl());                    \
+		checkDynamicCast<SomeTypeInfo>(other.getPimpl());                    \
 	}
 
 /**
@@ -98,7 +98,7 @@ namespace ts {
 
 		template<std::derived_from<TypeInfo> T>
 		explicit TypeInfo(const T& other): pimpl(other.pimpl) {
-			checkDynamicCast<Impl>(other.pimpl);
+			checkDynamicCast<TypeInfo>(other.pimpl);
 		}
 
 		[[nodiscard]]
@@ -123,6 +123,6 @@ namespace ts {
 		const internal::TypeInfoImpl* pimpl;
 	};
 
-	template</*std::derived_from<internal::TypeInfoImpl>*/ typename T>
-	const T* checkDynamicCast(TypeInfo::CPimpl);
+	template<std::derived_from<TypeInfo> T>
+	typename T::CPimpl checkDynamicCast(TypeInfo::CPimpl);
 }
