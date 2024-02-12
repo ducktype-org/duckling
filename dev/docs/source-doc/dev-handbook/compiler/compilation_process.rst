@@ -18,7 +18,8 @@ First we have a source file e.g. :code:`abc.rift`. It is just a file.
 Lexer phase
 -----------
 
-Lexer can take single file and change in into :code:`TokenData`.
+Lexer can take single file and change in into list of tokens represented by :code:`TokenData`.
+Each token is the atomic unit of Rift source code. 
 
 Implementation docs: :doc:`/source-doc/source-docs/common/tokenizer/lexer/index`.
 
