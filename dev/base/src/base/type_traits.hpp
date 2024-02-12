@@ -18,9 +18,15 @@ namespace base {
 		struct IsOfSameClassImpl<U<T2>, U>: public std::true_type {};
 	}
 
+	/**
+	 * @brief Checks if type `T` is an instantiation of template `Template`.
+	 */
 	template<template<typename...> class Template, typename T>
 	concept IsInstantiationOf = detail::IsInstantiationOfImpl<Template, T>::value;
 
+	/**
+	 * @brief Checks if type `T` is an integral or floating point number.
+	 */
 	template<typename T>
 	concept IsNumber = std::is_floating_point_v<T> || std::is_integral_v<T>;
 
@@ -30,22 +36,23 @@ namespace base {
 	 * class.
 	 *
 	 * Example:
-	 * template<class T>
-	 * class A { ... };
+	 * @n template<class T>
+	 * @n class A { ... };
 	 *
 	 * template<class T>
-	 * class B { ... };
+	 * @n class B { ... };
 	 *
 	 * static_assert(IsOfSameClass<A<int>, A<bool>>); // passes
-	 * static_assert(IsOfSameClass<A<int>, B<int>>);  // fails
-	 *
-	 * @tparam TypeA
-	 * @tparam TypeB
+	 * @n static_assert(IsOfSameClass<A<int>, B<int>>);  // fails
 	 */
 	template<class TypeA, template<class> class TypeB>
 	concept IsOfSameClass = detail::IsOfSameClassImpl<TypeA, TypeB>::value;
 
-	// Thanks to https://stackoverflow.com/a/56766138
+	/** 
+	 * @brief Returns the name of the passed type `T`.
+	 * 
+	 * @note From https://stackoverflow.com/a/56766138
+	 */
 	template<class T>
 	constexpr auto typeName() {
 		std::string_view name, prefix, suffix;
