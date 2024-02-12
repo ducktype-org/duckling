@@ -268,10 +268,13 @@ namespace ts {
 	template<std::derived_from<TypeInfo> T>
 	typename T::CPimpl checkDynamicCast(TypeInfo::CPimpl p) {
 		auto result = dynamic_cast<typename T::CPimpl>(p);
-		std::stringstream ss;
-		ss << "Type cast between TypeInfo kinds failed. A cast from " << kindToString(p->getKind())
-		   << " to " << kindToString(T::getDefaultKind()) << " was attempted.";
-		if (result == nullptr) throw base::LogicError{ ss.str() };
+		if (result == nullptr) {
+			std::stringstream ss;
+			ss << "Type cast between TypeInfo kinds failed. A cast from "
+			   << kindToString(p->getKind()) << " to " << kindToString(T::getDefaultKind())
+			   << " was attempted.";
+			throw base::LogicError{ ss.str() };
+		}
 		return result;
 	}
 

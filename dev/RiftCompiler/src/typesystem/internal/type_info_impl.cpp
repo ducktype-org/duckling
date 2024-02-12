@@ -36,14 +36,14 @@ namespace ts::internal {
 	}
 
 	FunctionInfoImpl::FunctionInfoImpl(
-			std::vector<TypeDesc<>> parameterTypes, TypeDesc<> resultType, i32 flags
-		):
-			  TypeInfoImpl(POINTER_SIZE),
-			  parameterTypes(std::move(parameterTypes)),
-			  resultType(resultType),
-			  flags(flags) {
+		std::vector<TypeDesc<>> parameterTypes, TypeDesc<> resultType, i32 flags
+	):
+		  TypeInfoImpl(POINTER_SIZE),
+		  parameterTypes(std::move(parameterTypes)),
+		  resultType(resultType),
+		  flags(flags) {
 		representation = "Function " + showTypeVector(this->parameterTypes) + " -> ("
-					   + resultType.getType().show() + ")";
+		               + resultType.getType().show() + ")";
 	}
 
 	usize sumTypeVectorSizes(const std::vector<TypeDesc<>>& types) {
@@ -68,10 +68,10 @@ namespace ts::internal {
 	}
 
 	VariantInfoImpl::VariantInfoImpl(const std::vector<TypeDesc<>>& variant_types)
-	// 1 byte is for information which type is it. Maybe dynamic size in the future.
-		:
-		TypeInfoImpl(BYTE_SIZE + maxTypeVectorSizes(variant_types)),
-		underlyingTypes(variant_types) {
+		  // 1 byte is for information which type is it. Maybe dynamic size in the future.
+		  :
+		  TypeInfoImpl(BYTE_SIZE + maxTypeVectorSizes(variant_types)),
+		  underlyingTypes(variant_types) {
 		representation = "Variant" + showTypeVector(variant_types);
 	}
 

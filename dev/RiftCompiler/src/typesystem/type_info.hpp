@@ -14,10 +14,10 @@
  * \brief Template constructor from the TypeInfoImpl* hierarchy with a dynamic cast check.
  * \param SomeTypeInfo The class name from the TypeInfo hierarchy.
  */
-#define CONSTRUCT_WITH_CHECKED_CAST(SomeTypeInfo)                                        \
-	template<std::derived_from<TypeInfo> T>                            \
+#define CONSTRUCT_WITH_CHECKED_CAST(SomeTypeInfo)                         \
+	template<std::derived_from<TypeInfo> T>                               \
 	SomeTypeInfo(const T& other): Base((const BPimpl) other.getPimpl()) { \
-		checkDynamicCast<SomeTypeInfo>(other.getPimpl());                    \
+		checkDynamicCast<SomeTypeInfo>(other.getPimpl());                 \
 	}
 
 /**
@@ -28,25 +28,25 @@
 	explicit SomeTypeInfo(const Pimpl pimpl): Base((BPimpl) pimpl) {}
 
 /**
- * \brief Several type definitions for quick reference, like Impl=internal::ClassName##Impl and Pimpl=Impl*.
- * \param SomeTypeInfo The class name from the `TypeInfo` hierarchy.
+ * \brief Several type definitions for quick reference, like Impl=internal::ClassName##Impl and
+ * Pimpl=Impl*. \param SomeTypeInfo The class name from the `TypeInfo` hierarchy.
  */
-#define SETUP_TYPE(SomeTypeInfo) \
-	using Impl    = internal::SomeTypeInfo##Impl; \
-	using Pimpl   = Impl*;                     \
-	using CPimpl  = const Impl*;               \
+#define SETUP_TYPE(SomeTypeInfo)                 \
+	using Impl   = internal::SomeTypeInfo##Impl; \
+	using Pimpl  = Impl*;                        \
+	using CPimpl = const Impl*;
 
 /**
- * \brief Several type definitions for quick reference, like Impl=internal::ClassName##Impl and Pimpl=Impl*.
- * \param SomeTypeInfo The class name from the `TypeInfo` hierarchy.
- * \param BaseTypeInfo The base class of `SomeTypeInfo`.
- * Since `TypeInfo` itself does not have a base class, this macro should not be used in the definition of `TypeInfo`.
+ * \brief Several type definitions for quick reference, like Impl=internal::ClassName##Impl and
+ * Pimpl=Impl*. \param SomeTypeInfo The class name from the `TypeInfo` hierarchy. \param
+ * BaseTypeInfo The base class of `SomeTypeInfo`. Since `TypeInfo` itself does not have a base
+ * class, this macro should not be used in the definition of `TypeInfo`.
  */
-#define SETUP_TYPE_WITH_BASE(SomeTypeInfo, BaseTypeInfo)       \
-	SETUP_TYPE(SomeTypeInfo) \
-	using BImpl   = internal::BaseTypeInfo##Impl; \
-	using Base    = BaseTypeInfo;                 \
-	using BPimpl  = BImpl*;                    \
+#define SETUP_TYPE_WITH_BASE(SomeTypeInfo, BaseTypeInfo) \
+	SETUP_TYPE(SomeTypeInfo)                             \
+	using BImpl   = internal::BaseTypeInfo##Impl;        \
+	using Base    = BaseTypeInfo;                        \
+	using BPimpl  = BImpl*;                              \
 	using CBPimpl = const BImpl*;
 
 namespace ts {
@@ -92,8 +92,12 @@ namespace ts {
 		Kind getKind() const;
 		[[nodiscard]]
 		usize getSize() const;
+
 		[[nodiscard]]
-		static Kind getDefaultKind() { return Kind::Any; }
+		static Kind getDefaultKind() {
+			return Kind::Any;
+		}
+
 		TypeInfo() = delete;
 
 		template<std::derived_from<TypeInfo> T>

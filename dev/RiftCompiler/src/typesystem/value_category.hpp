@@ -18,19 +18,18 @@ namespace ts {
 	class ValueCategory {
 		PrimaryCategory category{ PrimaryCategory::Identifiable };
 		bool            is_mutable{ true };
-		bool 			is_pure { false };
+		bool            is_pure{ false };
 		base::FlagType  allows_semantic{ MOVE | COPY | FORWARD | REINIT };
 		base::FlagType  force_semantic{};
 
 	public:
-		// @TODO 
+		// @TODO
 		// Add constructor with predefined semantics?
 		[[nodiscard]]
 		bool contains(const ValueCategory& other) const {
 			return allows_semantic >= other.allows_semantic
-			    && force_semantic <= other.force_semantic
-				&& (is_mutable || !other.is_mutable)
-				&& (!is_pure || other.is_pure);
+			    && force_semantic <= other.force_semantic && (is_mutable || !other.is_mutable)
+			    && (!is_pure || other.is_pure);
 		}
 
 		auto operator<=>(const ValueCategory& other) const = default;
