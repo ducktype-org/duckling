@@ -56,11 +56,12 @@ namespace symtable {
 	};
 
 	/**
-	 * @brief LookupNode is used as simple pair-like struct to
-	 * implement tree-like structure of LookupResult.
+	 * @brief LookupNode is used to represent result of lookup that was hidden
+	 * behind some alias. "node" represent the alias, while "inner" represent
+	 * lookup result behind the alias.
 	 */
 	struct LookupNode {
-		SymbolRef    node;  // node should always be alias-like of using-like thing
+		SymbolRef    node;  ///< node should always be alias-like of using-like thing
 		LookupResult inner;
 
 		void dprint(std::ostream&);
