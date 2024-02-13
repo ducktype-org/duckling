@@ -25,7 +25,7 @@ public:
 	}
 
 private:
-	pst::PST prepare(std::string filename) {
+	pst::PST prepare(const std::string& filename) {
 		fs::FilePath file(filename);
 		auto         td = lexer::tokenizeFile(file);
 		return pst::parse(std::move(td));

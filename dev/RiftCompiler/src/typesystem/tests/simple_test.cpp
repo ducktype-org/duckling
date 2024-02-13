@@ -3,6 +3,7 @@
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
 #include <base/string_id.hpp>
+#include <utility>
 
 class SimpleTypeSystemTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -243,16 +244,16 @@ private:
 	}
 
 	std::pair<usize, usize> get_member_offsets(
-		ts::ClassInfo                inheriting_class,
-		symtable::SymbolId           symbol,
-		std::vector<usize>&          begin_vector,
-		std::vector<usize>&          end_vector,
-		std::vector<ts::ClassInfo>&& hint = {}
+		ts::ClassInfo                     inheriting_class,
+		symtable::SymbolId                symbol,
+		std::vector<usize>&               begin_vector,
+		std::vector<usize>&               end_vector,
+		const std::vector<ts::ClassInfo>& hint = {}
 	) {
 		auto r0 = inheriting_class.getMemberInfo(symbol, hint);
 
 		assert(r0.isOk(), "Invalid result count");
-		usize begin_offset0, end_offset0;
+		usize begin_offset0 = 0, end_offset0 = 0;
 		if (r0.result_type == ts::ResultType::Virtual) {
 			usize ancestor_offset
 				= inheriting_class.getVirtualAncestorOffset(r0.last_virtual_ancestor.value());
@@ -275,12 +276,12 @@ private:
 	}
 
 	std::pair<usize, usize> get_member_offsets(
-		ts::ClassInfo                inheriting_class,
-		symtable::SymbolId           symbol,
-		std::vector<ts::ClassInfo>&& hint = {}
+		ts::ClassInfo                     inheriting_class,
+		symtable::SymbolId                symbol,
+		const std::vector<ts::ClassInfo>& hint = {}
 	) {
 		std::vector<usize> v0, v1;
-		return get_member_offsets(inheriting_class, symbol, v0, v1, std::move(hint));
+		return get_member_offsets(inheriting_class, symbol, v0, v1, hint);
 	}
 
 	static std::pair<usize, usize> get_vtable_ptr_offset(
@@ -289,8 +290,8 @@ private:
 		std::vector<usize>&        begin_offsets,
 		std::vector<usize>&        end_offsets
 	) {
-		usize begin_offset;
-		usize end_offset;
+		usize begin_offset = 0;
+		usize end_offset   = 0;
 		if (inheriting_class == class_with_virtual_inh.back()) {
 			begin_offset = inheriting_class.getVtablePtrOffset();
 			end_offset   = begin_offset + ts::POINTER_SIZE;
@@ -322,7 +323,7 @@ private:
 		ts::ClassInfo inheriting_class, std::vector<ts::ClassInfo> class_with_virtual_inh
 	) {
 		std::vector<usize> v0, v1;
-		return get_vtable_ptr_offset(inheriting_class, class_with_virtual_inh, v0, v1);
+		return get_vtable_ptr_offset(inheriting_class, std::move(class_with_virtual_inh), v0, v1);
 	}
 
 	static std::pair<usize, usize> get_vtable_ptr_offset(
@@ -374,7 +375,7 @@ private:
 		std::sort(end_offsets.begin(), end_offsets.end());
 
 		for (usize i = 0; i < begin_offsets.size(); i++)
-			std::cerr << begin_offsets[i] << " " << end_offsets[i] << std::endl;
+			std::cerr << begin_offsets[i] << " " << end_offsets[i] << "\n";
 
 		assert(begin_offsets[0] == 0, "First member's memory doesn't align with the class start");
 		for (usize i = 1; i < begin_offsets.size(); i++) {
@@ -465,13 +466,13 @@ private:
 		get_vtable_ptr_offset(A, { B, D }, begin_offsets, end_offsets);
 
 		for (usize i = 0; i < begin_offsets.size(); i++)
-			std::cout << begin_offsets[i] << " " << end_offsets[i] << std::endl;
+			std::cout << begin_offsets[i] << " " << end_offsets[i] << "\n";
 
 		std::sort(begin_offsets.begin(), begin_offsets.end());
 		std::sort(end_offsets.begin(), end_offsets.end());
 
 		for (usize i = 0; i < begin_offsets.size(); i++)
-			std::cout << begin_offsets[i] << " " << end_offsets[i] << std::endl;
+			std::cout << begin_offsets[i] << " " << end_offsets[i] << "\n";
 
 		assert(begin_offsets[0] == 0, "First member's memory doesn't align with the class start");
 		for (usize i = 1; i < begin_offsets.size(); i++) {
@@ -650,12 +651,12 @@ private:
 		);
 
 		try {
-			nothingVirt.getVtablePtrOffset();
+			std::ignore = nothingVirt.getVtablePtrOffset();
 			fail("A class with no vtable returned a vtable pointer");
 		} catch (std::exception& e) {}
-		virtInh.getVtablePtrOffset();
-		virtMethod.getVtablePtrOffset();
-		doubleVirt.getVtablePtrOffset();
+		std::ignore = virtInh.getVtablePtrOffset();
+		std::ignore = virtMethod.getVtablePtrOffset();
+		std::ignore = doubleVirt.getVtablePtrOffset();
 	}
 
 	void assert_sorted_members(ts::ClassInfo A, const std::vector<ts::MemberData>& members) {

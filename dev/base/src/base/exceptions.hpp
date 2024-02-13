@@ -16,8 +16,10 @@ namespace base {
 	public:
 		Panic(std::string position, std::string reason);
 
+		[[nodiscard]]
 		const std::string& getPosition() const;
-		const char*        what() const noexcept final;
+		[[nodiscard]]
+		const char* what() const noexcept final;
 
 		// @TODO: use Printer
 		void print(std::ostream& out) const;
@@ -30,6 +32,7 @@ namespace base {
 
 	public:
 		LogicError(std::string message);
+		[[nodiscard]]
 		const char* what() const noexcept override;
 	};
 
@@ -37,7 +40,8 @@ namespace base {
 		std::string message;
 
 	public:
-		NotYetImplemented(std::string message);
+		NotYetImplemented(const std::string& message);
+		[[nodiscard]]
 		const char* what() const noexcept override;
 	};
 }

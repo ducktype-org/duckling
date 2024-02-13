@@ -83,19 +83,20 @@ namespace lexer {
 		/**@}*/
 
 		virtual ~Token() = default;
+		Token()          = delete;
 
 		Token(const Token& other) = default;
 		Token(Token&& other) noexcept;
-		Token(Type type, base::RawView value, dia::SourcePosition position);
+		Token(Type type, base::RawView value, const dia::SourcePosition& position);
 		Token(
-			Type                type,
-			Tokens&&            recursive,
-			Token&&             sentinel,
-			dia::SourcePosition position,
-			BracketType         bracket
+			Type                       type,
+			Tokens&&                   recursive,
+			Token&&                    sentinel,
+			const dia::SourcePosition& position,
+			BracketType                bracket
 		);
 		friend void swap(Token& first, Token& second);
-		Token&      operator=(Token&& other);
+		Token&      operator=(Token&& other) noexcept;
 
 		[[nodiscard]]
 		Type getType() const;
@@ -150,8 +151,6 @@ namespace lexer {
 		dia::SourcePosition getPosition() const;
 
 	private:
-		Token() noexcept = default;
-
 		static Token makeError(const dia::SourcePosition&);
 
 		Type                         type = Type::Empty;
@@ -170,7 +169,7 @@ namespace lexer {
 		Token           eof_sentinel;
 		fs::FileContent file_content;
 
-		TokenData() = default;
+		TokenData() = delete;
 		TokenData(TokenData&&) noexcept;
 		TokenData(Tokens&& tokens, Token&& eof_sentinel, fs::FileContent file_content);
 

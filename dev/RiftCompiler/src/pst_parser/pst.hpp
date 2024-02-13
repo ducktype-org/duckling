@@ -13,26 +13,28 @@ namespace pst {
 	 * @brief Parse syntax tree
 	 */
 	class PST {
-		lexer::TokenData token_data;
-		RiftParserState  parser_state;
-		dia::ErrorState  err;
-
+		lexer::TokenData    token_data;
+		RiftParserState     parser_state;
 		ParserRef<TopLevel> top_level;
+		dia::ErrorState     err;
 
 
 	public:
 		PST(lexer::TokenData&& td);
 
+		[[nodiscard]]
 		const std::vector<tpc::ParserCBorrowRef<Import>>& getImports() const;
-		const dia::ErrorState&                            getErrorState() const;
+		[[nodiscard]]
+		const dia::ErrorState& getErrorState() const;
 
+		[[nodiscard]]
 		ParserCBorrowRef<TopLevel> getTopLevelElement() const;
 
 		PST(PST&& other):
 			  token_data(std::move(other.token_data)),
 			  parser_state(std::move(other.parser_state)),
-			  err(std::move(other.err)),
-			  top_level(std::move(other.top_level)) {}
+			  top_level(std::move(other.top_level)),
+			  err(std::move(other.err)) {}
 
 		void dprint(std::ostream& out) const;
 	};

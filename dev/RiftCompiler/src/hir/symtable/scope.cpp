@@ -13,7 +13,7 @@ namespace symtable {
 		symbols.push_back(symbol);
 	}
 
-	LookupResult Scope::lookup(base::StrId name) {
+	LookupResult Scope::lookup(base::StrId pass_name) {
 		// go over local symbols
 		// go over local aliases (are aliases symbols? - yes)
 		// go over links -- wildcard alias -- static links can cutoff, dep links needs un-aliasing
@@ -21,8 +21,8 @@ namespace symtable {
 		//  wildcard_alias _ = a.b;
 		//  un aliasing then can perform proper un-aliasing
 
-		std::cerr << "     Simple lookup of " << name.strView();
-		std::cerr << " in " << this->name.strView();
+		std::cerr << "     Simple lookup of " << pass_name.strView();
+		std::cerr << " in " << name.strView();
 		std::cerr << "\n";
 
 		RIFT_ASSERT(state == ScopeState::Closed, "Can not perform lookup in open scope");
@@ -32,9 +32,9 @@ namespace symtable {
 
 		// @FIXME: this is probably a heuristic, and just a hotfix
 		// In the future something better has to be done
-		if (engaged_names.contains(name)) return result;
-		engaged_names.insert(name);
-		defer(engaged_names.erase(name));
+		if (engaged_names.contains(pass_name)) return result;
+		engaged_names.insert(pass_name);
+		defer(engaged_names.erase(pass_name));
 
 		std::cerr << "         lookup actually being done\n";
 
@@ -42,7 +42,7 @@ namespace symtable {
 			std::cerr << "        i see: " << symbol->getName().strView() << "\n";
 			if (symbol->isWildcard() and symbol->unlockedLookup()) {
 				std::cerr << "         looking in wildcard!\n";
-				auto wild_result = symbol->requestLookupIn(name);
+				auto wild_result = symbol->requestLookupIn(pass_name);
 				std::cerr << "        wild see res:";
 				wild_result.dprint(std::cerr);
 				std::cerr << "\n";
@@ -51,17 +51,17 @@ namespace symtable {
 					result.children.push_back(std::move(wild_result).toNode(symbol));
 				}
 			} else {
-				if (symbol->getName() == name) result.leaves.push_back(symbol);
+				if (symbol->getName() == pass_name) result.leaves.push_back(symbol);
 			}
 		}
 		return result;
 	}
 
-	LookupResult Scope::lookupMeAndParents(base::StrId name) {
-		auto result = lookup(name);
+	LookupResult Scope::lookupMeAndParents(base::StrId pass_name) {
+		auto result = lookup(pass_name);
 		if (parent != nullptr) {
 			// Reverse insertion order allow for linear result concatenation instead of quadratic
-			auto parent_result = parent->lookupMeAndParents(name);
+			auto parent_result = parent->lookupMeAndParents(pass_name);
 			parent_result.insert(std::move(result));
 			return parent_result;
 		} else {

@@ -1,4 +1,6 @@
 #include "symbol.hpp"
+
+#include <utility>
 #include "../analysis_state.hpp"
 
 namespace symtable {
@@ -12,8 +14,8 @@ namespace symtable {
 		SymbolKind          kind
 	):
 		  analysis_state(state),
-		  scope(scope),
-		  name(name),
+		  scope(std::move(scope)),
+		  name(std::move(name)),
 		  anonymous(anonymous),
 		  is_static(is_static),
 		  relative_position(-1),
@@ -50,12 +52,12 @@ namespace symtable {
 	}
 
 	// @TODO: errors
-	LookupResult Symbol::requestLookupIn(base::StrId name) {
+	LookupResult Symbol::requestLookupIn(base::StrId pass_name) {
 		RIFT_ASSERT(unlockedLookup(), "Trying to lookupIn while in locked lookup state");
 
 		scope = requestLinkedLookupScope();
 		getSymbolsIn();
-		return scope->lookup(name);
+		return scope->lookup(pass_name);
 	}
 
 	SymbolChain Symbol::requestUniqueDeAlias() {

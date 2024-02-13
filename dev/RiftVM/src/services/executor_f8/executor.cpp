@@ -13,6 +13,10 @@
 
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
+#include <utility>
+
+// @TODO: Go through linting messages here with regards to optimisation
+// NOLINTBEGIN: Linting might impact optimizations here
 
 namespace vm {
 
@@ -162,11 +166,11 @@ namespace vm {
 		Frame frame = internalInitFrame(previous_frame, function, { local_stack });
 #endif
 
-		OpcodeFix8   opcode;
-		int_fast32_t arg0;
-		int_fast32_t arg1;
-		int_fast32_t arg2;
-		int_fast32_t arg3;
+		OpcodeFix8   opcode{};
+		int_fast32_t arg0 = 0;
+		int_fast32_t arg1 = 0;
+		int_fast32_t arg2 = 0;
+		int_fast32_t arg3 = 0;
 
 // Computed gotos labales:
 #ifdef USE_COMPUTED_GOTO
@@ -509,10 +513,10 @@ namespace vm {
 		return true;
 	}
 
-	void Executor::setStatus(vm::api::ExecStatus status) {
+	void Executor::setStatus(vm::api::ExecStatus new_status) {
 		// @TODO: check if change is legal
-		this->status = status;
-		vcpu.onEvent(api::Executing(this->status));
+		this->status = std::move(new_status);
+		vcpu.onEvent(api::Executing(status));
 	}
 
 	bool Executor::isPaused() {
@@ -527,3 +531,5 @@ namespace vm {
 
 	void Executor::notifyPaused() { pause_cv.notify_all(); }
 }  // namespace vm
+
+   // NOLINTEND

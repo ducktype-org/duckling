@@ -8,7 +8,7 @@
 #include "printer.hpp"
 
 namespace printer {
-	static inline void INSTANT_DEBUG_LOG(Console& console) {
+	static inline void INSTANT_DEBUG_LOG([[maybe_unused]] Console& console) {
 #ifdef PRINT_LOG
 		if (!console.isIgnoreInstantDebug()) {
 			console.print(std::cerr);
@@ -20,7 +20,7 @@ namespace printer {
 	// All background color escape codes are 10 above foregrounds colors.
 	ColorId calculateBackgroundColorId(ColorId color_id) {
 		constexpr int8_t background_font_color_offset = 10;
-		return color_id > 0 ? color_id + background_font_color_offset : color_id;
+		return ColorId(color_id > 0 ? color_id + background_font_color_offset : color_id);
 	}
 
 	void Message::add(const MessageContent& mc) { this->contents.push_back(mc); }
@@ -43,7 +43,7 @@ namespace printer {
 		if (type == MessageType::ALL)
 			minLevel.fill(level);
 		else
-			minLevel[printer::msgToInt(type)] = level;
+			minLevel.at(printer::msgToInt(type)) = level;
 	}
 
 	void Console::setGeneralMax(usize max) { generalMax = max; }
@@ -52,11 +52,11 @@ namespace printer {
 		if (type == MessageType::ALL)
 			maxAmounts.fill(amount);
 		else
-			maxAmounts[printer::msgToInt(type)] = amount;
+			maxAmounts.at(printer::msgToInt(type)) = amount;
 	}
 
 	void Console::add(const MessagePack& pack) {
-		messagePacks.push_back(std::move(pack));
+		messagePacks.push_back(pack);
 		INSTANT_DEBUG_LOG(*this);
 	}
 
@@ -85,19 +85,19 @@ namespace printer {
 		for (const MessagePack& pack: messagePacks) {
 			for (const Message& message: pack) {
 				MessageTypeId messageType = msgToInt(message.type);
-				if (message.level >= minLevel[messageType]) {
-					if (currentAmounts[messageType] > maxAmounts[messageType]) continue;
+				if (message.level >= minLevel.at(messageType)) {
+					if (currentAmounts.at(messageType) > maxAmounts.at(messageType)) continue;
 
 					if (currentCount == generalMax) {
 						out << "Limit for messages has been reached.\n";
 						return;
 					}
 
-					if (currentAmounts[messageType] == maxAmounts[messageType]) {
+					if (currentAmounts.at(messageType) == maxAmounts.at(messageType)) {
 						out << "Limit for this type of message has been reached.\n";
 					} else {
 						for (const MessageContent& content: message.contents) {
-							ColorId foreground_color_id, background_color_id;
+							ColorId foreground_color_id = 0, background_color_id = 0;
 							if (content.foreground_color == Color::DEFAULT) {
 								foreground_color_id
 									= static_cast<ColorId>(message.foreground_color);
@@ -134,7 +134,7 @@ namespace printer {
 						out << "\033[0m\n";
 						currentCount++;
 					}
-					currentAmounts[messageType]++;
+					currentAmounts.at(messageType)++;
 				}
 			}
 		}
