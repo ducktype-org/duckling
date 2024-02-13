@@ -175,7 +175,7 @@ namespace hir {
 
 	// all other types like: lambda
 
-	ExpressionRef makeFromKeyword(const symtable::ScopeRef& scope, rift_def::Keyword keyword) {
+	ExpressionRef makeFromKeyword(symtable::ScopeRef scope, rift_def::Keyword keyword) {
 		switch (keyword) {
 		case rift_def::Keyword::i32:
 			// @TODO: signedness
