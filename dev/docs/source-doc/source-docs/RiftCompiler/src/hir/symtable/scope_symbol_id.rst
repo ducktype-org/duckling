@@ -2,4 +2,5 @@
 Scope symbol id
 ===============
 
-.. @TODO
+This file is **deprecated**. See source-code for details.
+

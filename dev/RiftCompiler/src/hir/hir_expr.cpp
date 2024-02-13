@@ -51,13 +51,13 @@ namespace hir {
 			type_done = true;
 
 			lookup(state);
-			type = symbol.value()->getType();
+			type = symbol.value()->requestType();
 		}
 
 		exec::CTV eval([[maybe_unused]] AnalysisState& state) final {
 			// @TODO: this should be called just once
 			determineType(state);
-			return symbol.value()->getValue();
+			return symbol.value()->requestValue();
 		}
 	};
 

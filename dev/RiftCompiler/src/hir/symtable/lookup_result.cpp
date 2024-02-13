@@ -12,7 +12,7 @@ namespace symtable {
 		SymbolChain out;
 		std::cerr << "     dealiasing... \n";
 		for (const auto& i: chain) {
-			auto de_aliased = i->getUniqueDeAlias();
+			auto de_aliased = i->requestUniqueDeAlias();
 			std::cerr << "           ";
 			dprintSymbolChain(de_aliased, std::cerr);
 			std::cerr << "\n";

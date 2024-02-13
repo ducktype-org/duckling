@@ -21,16 +21,18 @@ namespace symtable {
 		  relative_position(-1),
 		  kind(kind) {}
 
-	ts::TypeDesc<> Symbol::getType() {
+	ts::TypeDesc<> Symbol::requestType() {
 		if (!type.has_value()) calculateType();
 		return type.value();
 	}
 
-	exec::CTV Symbol::getValue() { RIFT_PANIC("getValue called on Symbol not implementing it"); }
+	exec::CTV Symbol::requestValue() {
+		RIFT_PANIC("getValue called on Symbol not implementing it");
+	}
 
-	ScopeRef Symbol::getLinkedLookupScope() {
+	ScopeRef Symbol::requestLinkedLookupScope() {
 		if (!linked_lookup_scope.has_value()) {
-			RIFT_ASSERT(unlockedLookup(), "Trying to calculateLinkedLookup while in lookup lock");
+			RIFT_ASSERT(unlockedLookup(), "Trying to requestLinkedLookup while in lookup lock");
 			calculateLinkedLookup();
 		}
 		return linked_lookup_scope.value();
@@ -50,20 +52,20 @@ namespace symtable {
 	}
 
 	// @TODO: errors
-	LookupResult Symbol::lookupIn(base::StrId pass_name) {
+	LookupResult Symbol::requestLookupIn(base::StrId pass_name) {
 		RIFT_ASSERT(unlockedLookup(), "Trying to lookupIn while in locked lookup state");
 
-		scope = getLinkedLookupScope();
+		scope = requestLinkedLookupScope();
 		getSymbolsIn();
 		return scope->lookup(pass_name);
 	}
 
-	SymbolChain Symbol::getUniqueDeAlias() {
+	SymbolChain Symbol::requestUniqueDeAlias() {
 		if (is_alias) RIFT_PANIC("de alias called on wildcard symbol not implementing deAlias");
 		return { SymbolRef(this) };
 	}
 
-	ChainLookupResult Symbol::getDeAlias() {
+	ChainLookupResult Symbol::requestDeAlias() {
 		if (is_alias) RIFT_PANIC("de alias called on alias symbol not implementing deAlias");
 		return { {}, { { SymbolRef(this) }, {} } };
 	}
