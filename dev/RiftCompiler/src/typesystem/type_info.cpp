@@ -270,8 +270,9 @@ namespace ts {
 		auto result = dynamic_cast<typename TYPE_INFO::CPimpl>(p);
 		if (result == nullptr) {
 			std::stringstream ss;
+			const Kind originalKind = p->getKind();  // Optimization-dependent mystery warning here.
 			ss << "Type cast between TypeInfo kinds failed. A cast from "
-			   << kindToString(p->getKind()) << " to " << kindToString(TYPE_INFO::getDefaultKind())
+			   << kindToString(originalKind) << " to " << kindToString(TYPE_INFO::getDefaultKind())
 			   << " was attempted.";
 			throw base::LogicError{ ss.str() };
 		}

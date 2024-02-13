@@ -14,10 +14,10 @@
  * \brief Template constructor from the TypeInfoImpl* hierarchy with a dynamic cast check.
  * \param SomeTypeInfo The class name from the TypeInfo hierarchy.
  */
-#define CONSTRUCT_WITH_CHECKED_CAST(SomeTypeInfo)                         \
+#define CONSTRUCT_WITH_CHECKED_CAST(SomeTypeInfo)                                 \
 	template<std::derived_from<TypeInfo> TYPE_INFO>                               \
 	SomeTypeInfo(const TYPE_INFO& other): Base((const BPimpl) other.getPimpl()) { \
-		checkDynamicCast<SomeTypeInfo>(other.getPimpl());                 \
+		checkDynamicCast<SomeTypeInfo>(other.getPimpl());                         \
 	}
 
 /**
@@ -87,7 +87,7 @@ namespace ts {
 	class TypeInfo;
 
 	template<std::derived_from<TypeInfo> TYPE_INFO>
-	typename TYPE_INFO::CPimpl checkDynamicCast(const internal::TypeInfoImpl *);
+	typename TYPE_INFO::CPimpl checkDynamicCast(const internal::TypeInfoImpl*);
 
 	class TypeInfo {
 	public:
