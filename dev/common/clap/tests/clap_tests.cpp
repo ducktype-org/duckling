@@ -17,6 +17,8 @@ public:
 		TESTER_ADD_TEST(flagTest);
 		TESTER_ADD_TEST(multipleFlagsTest);
 		TESTER_ADD_TEST(weirdCases);
+		TESTER_ADD_TEST(noDefaultValueParser);
+		TESTER_ADD_TEST(escapingTest);
 	}
 
 private:
@@ -140,6 +142,36 @@ private:
 			auto res = par.parse(argv.size(), argv.begin());
 		} catch (clap::exceptions::ExpectedParameterIdentifier& _) { exception = true; }
 		assertEqual(true, exception, "Should throw ExpectedParameterIdentifier exception.");
+	}
+
+	void noDefaultValueParser() {
+		auto clap = clap::Clap().addPositional(clap::IntParser::make()).setDefaultParser(nullptr);
+		ASSERT_EQUAL(true, nullptr == clap.getDefaultValueParser());  // Sketchy
+
+		std::array argv{ "./prog", "-123" };
+		auto       res = clap.parse(argv.size(), argv.begin());
+
+		ASSERT_EQUAL(0, res.getExtraParameterCount());
+		ASSERT_EQUAL(1, res.getPositionalParameterCount());
+		ASSERT_EQUAL(-123, res.getPositional<i64>(0));
+
+		std::array argv2{ "./prog", "-123", "1231", "test" };
+		bool       caught = false;
+		try {
+			auto res2 = clap.parse(argv2.size(), argv2.begin());
+		} catch (clap::exceptions::NoDefaultValueParser& e) { caught = true; }
+		ASSERT_EQUAL(true, caught);
+	}
+
+	void escapingTest() {
+		auto clap = clap::Clap().add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		                                 .addShortName('f')
+		                                 .addShortDesc("test")
+		                                 .build());
+
+		std::array argv{ "./prog", "-f", "a \" b" };
+		auto       res = clap.parse(argv.size(), argv.begin());
+		ASSERT_EQUAL("a \" b", *res.getValue<std::string>('f'));
 	}
 };
 

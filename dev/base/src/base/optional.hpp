@@ -86,10 +86,10 @@ namespace base {
 	 * Macros defined above may come in handy when dealing with these creatures.
 	 * Also methods - map and flatMap - are very useful.
 	 *
-	 * Optional does not inherit from std::optional, because std::optional doesn't throw on
+	 * base::Optional does not inherit from std::optional, because std::optional doesn't throw on
 	 * null-value access, but base::optional does.
 	 *
-	 * @tparam T
+	 * @tparam T type of stored value. It can be a reference.
 	 */
 	template<class T>
 	class Optional {
@@ -132,17 +132,29 @@ namespace base {
 			std::swap(a.private_optional, b.private_optional);
 		}
 
+		/**
+		 * Check if base::Optional hold a value.
+		 * @return True if holds, false otherwise
+		 */
 		[[nodiscard]]
 		constexpr bool has_value() const {
 			return private_optional.has_value();
 		}
 
+		/**
+		 * Check if base::Optional is empty.
+		 * @return True if empty, false otherwise
+		 */
 		[[nodiscard]]
 		constexpr bool empty() const {
 			return !has_value();
 		}
 
 		// Accessors.
+		/**
+		 * Get value from base::Optional. Throw on no value.
+		 * @return Value that it holds.
+		 */
 		[[nodiscard]]
 		constexpr const T& value() const& {
 			_throwOnNoValue();
@@ -167,6 +179,11 @@ namespace base {
 			return std::move(private_optional.value());
 		}
 
+		/**
+		 * Returns value or or_value depending if base::Optional is empty or not.
+		 * @param or_value value to be returned if empty
+		 * @return
+		 */
 		[[nodiscard]]
 		const T& value_or(const T& or_value) const& {
 			if (has_value()) return value();
@@ -193,6 +210,11 @@ namespace base {
 
 		// clang-format off
 		// Turning clang-format, because it cannot format the following functions correctly.
+
+		/**
+		 * Like *ptr - returns an object stored underneath. Throws on no value.
+		 * @return stored object
+		 */
 		[[nodiscard]]
 		constexpr const T& operator*() const& {
 			return value();
@@ -215,6 +237,11 @@ namespace base {
 
 		// clang-format on
 
+		/**
+		 * Get value or RIFT_PANIC with message.
+		 * @param message message to be passed to the panic
+		 * @return
+		 */
 		[[nodiscard]]
 		constexpr const T& expect(std::string_view message) const& {
 			if (!has_value()) RIFT_PANIC(message);
@@ -239,6 +266,10 @@ namespace base {
 			return std::move(value());
 		}
 
+		/**
+		 * An operator that allows a direct data access.
+		 * @return Object T to perform an operation on.
+		 */
 		[[nodiscard]]
 		constexpr const T*
 			operator->() const {
@@ -254,8 +285,8 @@ namespace base {
 		}
 
 		/**
-		 * Applies the passed function on the value and wraps in Optional if the object contains a
-		 * value, otherwise does nothing.
+		 * Applies the passed function on the value and wraps in base::Optional if the object
+		 * contains a value, otherwise does nothing.
 		 * @tparam Function
 		 * @param function Function to apply on the value. Function must take one argument which
 		 * type has to match the optional's type (auto works too). Function can return any type of
@@ -422,19 +453,18 @@ namespace base {
 			return std::move(value());
 		}
 
-
 		[[nodiscard]]
 		constexpr const T*
 		operator->() const {
 			_throwOnNoValue();
-			return private_optional.operator->();
+			return &value();
 		}
 
 		[[nodiscard]]
 		constexpr T*
 		operator->() {
 			_throwOnNoValue();
-			return private_optional.operator->();
+			return &value();
 		}
 
 		// clang-format on
@@ -469,7 +499,6 @@ namespace base {
 			return {};
 		}
 
-		// A non-const version.
 		template<typename Function>
 		auto map(const Function& function) -> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
@@ -483,7 +512,6 @@ namespace base {
 			return {};
 		}
 
-		// A non-const version.
 		template<typename Function>
 		auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
