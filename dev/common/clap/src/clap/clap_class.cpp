@@ -1,5 +1,5 @@
 /**
- * @file clap.cpp
+ * @file clap_class.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
@@ -7,12 +7,22 @@
 #include "param_builder.hpp"
 #include "exceptions.hpp"
 #include "base/variant.hpp"
+#include "base/str_replace.hpp"
 #include <cctype>
 #include <iostream>
 
-// Basic helper functions.
+/**
+ * Basic helper functions.
+ */
 namespace {
-	std::string mergeArgs(usize argc, const char** argv) {
+	/**
+	 * Merges the arguments provided in a form of C-string array with spaces. If a C-string
+	 * contains a white space, then adds quotes around it.
+	 * @param argc Argument count.
+	 * @param argv Argument vector - the array of C-strings.
+	 * @return Merged vector into a single string.
+	 */
+	std::string mergeArgs(usize argc, const char* const* argv) {
 		// Merge args with spaces between.
 		std::string args;
 
@@ -22,6 +32,8 @@ namespace {
 			auto arg            = std::string(argv[i]);
 			for (auto c: arg)
 				if (std::isspace(c)) has_whitespace = true;
+
+			base::strReplaceAll(arg, "\"", "\\\"");
 
 			if (has_whitespace)
 				args += "\"" + arg + "\" ";
@@ -33,10 +45,20 @@ namespace {
 		return args;
 	}
 
+	/**
+	 * Moves the index in the string until a whitespace under the index.
+	 * @param position A reference to the position's variable.
+	 * @param str A source of chars.
+	 */
 	void skipWhitespace(usize& position, std::string_view str) {
 		while (std::isspace(str[position])) position++;
 	}
 
+	/**
+	 * Returns a name of the parameter. A parameter is required to have at least one name.
+	 * @param param The parameter to get the name from.
+	 * @return The name of the parameter.
+	 */
 	std::string getParameterName(const clap::Parameter& param) {
 		if_opt_some(param.getLongName(), name) return name.stdString();
 
@@ -46,8 +68,14 @@ namespace {
 		throw clap::exceptions::ClapException("Parameter has no name!");
 	}
 
+	/**
+	 * When encountering "-" character in the input it might be a name or a number.
+	 * Performs checks for numbers of form: "-1" "-.5"
+	 * @param pos Position in the str.
+	 * @param str A source of chars.
+	 * @return True if it's a number, false otherwise.
+	 */
 	bool isNegativeNumber(usize pos, const std::string& str) {
-		// Performs checks for numbers of form: "-1" "-.5"
 		if (str[pos] != '-') return false;
 		if (pos + 1 >= str.size()) return false;
 		if (std::isdigit(str[pos + 1])) return true;
@@ -57,18 +85,23 @@ namespace {
 	}
 }
 
-// ParsingState related.
+/**
+ * ParsingState related.
+ */
 namespace {
 
 	enum class NameType { EmptyName, ShortName, LongName };
 
+	/**
+	 * A helper class for the method clap::Clap::parse().
+	 */
 	class ParsingState {
 	public:
-		usize               parsing_position = 0;
-		std::string         args;
-		clap::ParsingResult result;
+		usize               parsing_position = 0;  /// Position in the args.
+		std::string         args;                  /// Merged arguments.
+		clap::ParsingResult result;                /// The result of the parsing.
 
-		ParsingState(usize argc, const char** argv) {
+		ParsingState(usize argc, const char* const* argv) {
 			args = mergeArgs(argc, argv);
 			skipWhitespace(parsing_position, args);
 
@@ -79,6 +112,10 @@ namespace {
 			result = clap::ParsingResult(argv[0] + path_offset, args);
 		}
 
+		/**
+		 * Tries to perform parsing of a positional argument with a parser.
+		 * @param parser The parser to be used.
+		 */
 		void parsePositional(const clap::ValueParser& parser) {
 			match_optional(parseValueWithParser(parser)) {
 				opt_some(value) result.insertPositional(value);
@@ -88,6 +125,10 @@ namespace {
 			}
 		}
 
+		/**
+		 * Tires to perform parsing of an extra argument with a parser.
+		 * @param parser The parser to be used.
+		 */
 		void parseExtra(const clap::ValueParser& parser) {
 			match_optional(parseValueWithParser(parser)) {
 				opt_some(value) result.insertExtra(value);
@@ -97,6 +138,10 @@ namespace {
 			}
 		}
 
+		/**
+		 * Tries to perform parsing of a named parameter. It could be a flag or a value parameter.
+		 * @param parameters All the available parameters.
+		 */
 		void parseParameter(const std::vector<clap::Parameter>& parameters) {
 			auto [param_name, name_type] = parseName();
 			if (name_type == NameType::EmptyName)
@@ -109,6 +154,10 @@ namespace {
 		}
 
 	private:
+		/**
+		 * Tries to parse a name of the parameter.
+		 * @return The name and it's type: EmptyName, ShortName or LongName.
+		 */
 		std::pair<std::string, NameType> parseName() {
 			std::string name;
 			int         counter = 0;
@@ -129,6 +178,13 @@ namespace {
 			return { name, counter == 1 ? NameType::ShortName : NameType::LongName };
 		}
 
+		/**
+		 * Iterates over a collection of parameters and matches a name to the parameter,
+		 * then performs parsing using it's ValueParser if provided.
+		 * @param parameters All of the available parameters.
+		 * @param param_name The parsed name.
+		 * @param name_type Type of the parsed name.
+		 */
 		void findParameterAndParse(
 			const std::vector<clap::Parameter>& parameters,
 			const std::string&                  param_name,
@@ -153,6 +209,11 @@ namespace {
 			if (!found_parameter) throw clap::exceptions::InvalidParameterName(param_name);
 		}
 
+		/**
+		 * Parses the value or inserts a flag to the ParsingResult if no ValueParer provided.
+		 * @param parameter The parameter with mathing name.
+		 * @param name The name of the parameter.
+		 */
 		void parseWithParameter(const clap::Parameter& parameter, const std::string& name) {
 			if (parameter.getValueParser() == nullptr) {
 				// then it's a flag
@@ -170,6 +231,12 @@ namespace {
 			}
 		}
 
+		/**
+		 * Tries to perform parsing with a value parser. Returns an empty optional if no more
+		 * characters are left.
+		 * @param parser The parser to be used.
+		 * @return An optionally parsed value.
+		 */
 		base::Optional<clap::ParsedValue> parseValueWithParser(const clap::ValueParser& parser) {
 			clap::ValueParsingResult parsed = parser.parse(parsing_position, args);
 			if (parsed.position > parsing_position) {
@@ -190,7 +257,7 @@ namespace clap {
 
 	ParsingResult Clap::parse(CLIArgs args) { return parse(args.argc, args.argv); }
 
-	ParsingResult Clap::parse(usize argc, const char** argv) {
+	ParsingResult Clap::parse(usize argc, const char* const* argv) {
 		ParsingState st(argc, argv);
 
 		// Going left to right through chars in args.
@@ -209,7 +276,10 @@ namespace clap {
 					st.parsePositional(*param);
 				} else {
 					// So it's an extra argument.
-					st.parseExtra(*getDefaultValueParser());
+					auto parser = getDefaultValueParser();
+					if (parser == nullptr)
+						throw exceptions::NoDefaultValueParser((i32) st.parsing_position, st.args);
+					st.parseExtra(*parser);
 				}
 			}
 		}
@@ -220,7 +290,9 @@ namespace clap {
 		return st.result;
 	}
 
-	const ValueParser* Clap::getDefaultValueParser() const { return default_value_parser.get(); }
+	base::borrow_ptr<const ValueParser> Clap::getDefaultValueParser() const {
+		return base::borrow_ptr(default_value_parser.get());
+	}
 
 	const std::vector<Parameter>& Clap::getParameters() const { return parameters; }
 

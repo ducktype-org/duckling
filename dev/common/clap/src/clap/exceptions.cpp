@@ -8,6 +8,30 @@
 #include <utility>
 #include "parsing_result.hpp"
 
+namespace {
+	/**
+	 * Shortens the string, leaving the important part and dots if necessary:
+	 * "..." + source[at-back..at+front - 1] + "...".
+	 * The "..." are inserted if text is longer than the shown part on a corresponding end.
+	 * @param at Current position in the source.
+	 * @param back Number of characters from the back to show.
+	 * @param front Number of characters in the front to show.
+	 * @param source The source of characters.
+	 * @return The formatted text.
+	 */
+	std::string shorten(i32 at, i32 back, i32 front, std::string_view source) {
+		std::string shortened;
+		if (at - back > 0) shortened += "...";
+
+		shortened
+			+= source.substr(std::max(0, at - back), source.size() - std::max(0, at - front) + 1);
+
+		if (at + front < source.size() - 1) shortened += "...";
+
+		return shortened;
+	}
+}
+
 namespace clap::exceptions {
 	ClapException::ClapException(const std::string& message): base::LogicError(message) {}
 
@@ -47,8 +71,7 @@ namespace clap::exceptions {
 
 	ExpectedParameterIdentifier::ExpectedParameterIdentifier(i32 at, std::string_view source):
 		  ClapException(base::strConcat(
-			  source.substr(std::max(0, at - 20), source.size() - std::max(0, at - 20) + 1),
-			  "_<- Here expected parameter identifier."
+			  shorten(at, 20, 20, source), "_<- Here expected parameter identifier."
 		  )) {}
 
 	MissingRequiredParameter::MissingRequiredParameter(const std::string& name):
@@ -68,4 +91,11 @@ namespace clap::exceptions {
 
 	FileDoesNotExist::FileDoesNotExist(const std::filesystem::path& path):
 		  ClapException("File at \"" + absolute(path).string() + "\" does not exist.") {}
+
+	NoDefaultValueParser::NoDefaultValueParser(i32 at, std::string_view values):
+		  ClapException(base::strConcat(
+			  "Extra values provided, but no default value specified.\nExtra values: \"",
+			  shorten(at, 0, 20, values),
+			  "\""
+		  )) {}
 }
