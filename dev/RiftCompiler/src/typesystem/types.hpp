@@ -1,12 +1,39 @@
 /**
- * @file types.hpp
- * @brief Implementation of all non-class types
+ * @file type_info.hpp
+ * @brief Interfaces of the simpler kinds of types.
+ *
+ * The interface is not aware of the internal implementation hierarchy in any way other than its
+ * existence and name.
  */
 
 #pragma once
 #include "type_info.hpp"
 
 namespace ts {
+	namespace internal {
+		class UnitInfoImpl;
+		class VoidInfoImpl;
+		class ByteInfoImpl;
+		class BoolInfoImpl;
+		class CharInfoImpl;
+		class IntegralInfoImpl;
+		class FloatInfoImpl;
+		class RawPointerInfoImpl;
+		class PointerInfoImpl;
+		class FunctionInfoImpl;
+		class EnumInfoImpl;
+		class FlagInfoImpl;
+		class OptionalInfoImpl;
+		class TupleInfoImpl;
+		class VariantInfoImpl;
+		class TemplateInfoImpl;
+		class TypeTemplateInfoImpl;
+		class NamespaceInfoImpl;
+		class CodeBlockInfoImpl;
+		class ModuleInfoImpl;
+		class MetaInfoImpl;
+	}
+
 	class UnitInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(UnitInfo, TypeInfo)

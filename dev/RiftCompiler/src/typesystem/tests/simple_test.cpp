@@ -26,6 +26,7 @@ class SimpleTypeSystemTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("TypeSystem simple interface test") {
+		TESTER_ADD_TEST(trivial_cast);
 		TESTER_ADD_TEST(simple_void_and_unit);
 		TESTER_ADD_TEST(simple_byte_sized);
 		TESTER_ADD_TEST(simple_ints);
@@ -44,6 +45,16 @@ public:
 
 private:
 	using enum ts::Kind;
+
+	/**
+	 * Test that the specialized TypeInfo to TypeInfo dynamic cast works as intended.
+	 */
+	void trivial_cast() {
+		const ts::TypeInfo type_1{ts::VoidInfo::create()};
+		const ts::TypeInfo type_2 = type_1;
+		assert(type_1 == type_2, "The trivial dynamic cast should not change any objects.");
+		// fail("hey");
+	}
 
 	/**
 	 * Test that there is only one void and one unit type, and that they are correctly cast.
@@ -389,7 +400,7 @@ private:
 	}
 
 public:
-	~NewTypeSystemTest() override = default;
+	~SimpleTypeSystemTest() override = default;
 };
 
 TESTER_COMMON_MAIN("/RiftCompiler/src/typesystem/tests/")

@@ -15,6 +15,10 @@
 #include <base/exceptions.hpp>
 
 namespace ts {
+	namespace internal {
+		class ClassInfoImpl;
+		class VTableInfoImpl;
+	}
 
 	class C3LinearisationException: public base::Exception {
 		[[nodiscard]]

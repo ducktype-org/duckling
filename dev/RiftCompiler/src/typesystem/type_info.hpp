@@ -1,6 +1,9 @@
 /**
- * @file type_desc.hpp
- * @brief TypeInfo implementation
+ * @file type_info.hpp
+ * @brief Interface of the TypeInfo class.
+ *
+ * The interface is not aware of the internal implementation hierarchy in any way other than its
+ * existence and name.
  */
 
 #pragma once
@@ -8,7 +11,6 @@
 #include <base/ints.hpp>
 #include "kind.hpp"
 #include <string>
-#include <vector>
 
 /**
  * \brief Template constructor from the TypeInfoImpl* hierarchy with a dynamic cast check.
@@ -59,29 +61,6 @@ namespace ts {
 
 	namespace internal {
 		class TypeInfoImpl;
-		class UnitInfoImpl;
-		class VoidInfoImpl;
-		class ByteInfoImpl;
-		class BoolInfoImpl;
-		class CharInfoImpl;
-		class IntegralInfoImpl;
-		class FloatInfoImpl;
-		class RawPointerInfoImpl;
-		class PointerInfoImpl;
-		class FunctionInfoImpl;
-		class EnumInfoImpl;
-		class FlagInfoImpl;
-		class OptionalInfoImpl;
-		class TupleInfoImpl;
-		class VariantInfoImpl;
-		class ClassInfoImpl;
-		class TemplateInfoImpl;
-		class TypeTemplateInfoImpl;
-		class NamespaceInfoImpl;
-		class CodeBlockInfoImpl;
-		class ModuleInfoImpl;
-		class MetaInfoImpl;
-		class VTableInfoImpl;
 	}
 
 	class TypeInfo;
@@ -95,6 +74,7 @@ namespace ts {
 
 		[[nodiscard]]
 		Kind getKind() const;
+
 		[[nodiscard]]
 		usize getSize() const;
 

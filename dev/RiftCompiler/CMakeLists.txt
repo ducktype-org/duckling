@@ -17,6 +17,7 @@ add_library(SymbolTable
 add_library(TypeSystem
 		src/typesystem/class_types.cpp
 		src/typesystem/type_info.cpp
+		src/typesystem/types.cpp
 		src/typesystem/implicit_coercibility.cpp
 		src/typesystem/typesystem.cpp
 		src/typesystem/internal/type_info_impl.cpp
