@@ -1,5 +1,4 @@
 #include <api/api.hpp>
-#include <supervisor/supervisor.hpp>
 #include <json/json.hpp>
 #include "cli.hpp"
 
@@ -33,16 +32,16 @@ void expect(cpp::result<void, E> r) {
 	}
 }
 
-void cli(std::string filepath) {
-	vm::PID pid = expect(vm::api::spawn(true)).pid;
-	expect(vm::api::loadFile(pid, fs::FilePath(filepath)));
-	expect(vm::api::run(pid));
-	expect(vm::api::join(pid));
-}
-
 void cli() {
 	std::string filepath;
 	std::cout << "Path to file: ";
 	std::cin >> filepath;
-	cli(filepath);
+	cli(fs::FilePath(filepath));
+}
+
+void cli(const fs::FilePath& filepath) {
+	vm::PID pid = expect(vm::api::spawn(true)).pid;
+	expect(vm::api::loadFile(pid, filepath));
+	expect(vm::api::run(pid));
+	expect(vm::api::join(pid));
 }

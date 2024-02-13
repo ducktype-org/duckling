@@ -19,30 +19,29 @@ void showVersion() {
 }
 
 int main(int argc, const char** argv) {
-	auto clap
-		= clap::Clap()
-	          .addHelpFlag()
-	          .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
-	                   .addShortName('s')
-	                   .addLongName("server")
-	                   .addShortDesc("Launch RiftVM as a http server")
-	                   .build())
-	          .add(clap::ParamBuilder::ofValue(clap::FileParser::make(std::regex(".*\\.rift")))
-	                   .conditional(
-						   [](const clap::ParsingResult& result) {
-							   return !(result.isParam('f') && result.isParam('s'));
-						   },
-						   "File cannot be passed with -s/--server flag"
-					   )
-	                   .addShortName('f')
-	                   .addLongName("file")
-	                   .addShortDesc("Launch given file (only if not -s/--server)")
-	                   .build())
-	          .add(clap::ParamBuilder::ofFlag()
-	                   .addShortName('v')
-	                   .addLongName("version")
-	                   .addShortDesc("Shows version and config")
-	                   .build());
+	auto clap = clap::Clap()
+	                .addHelpFlag()
+	                .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
+	                         .addShortName('s')
+	                         .addLongName("server")
+	                         .addShortDesc("Launch RiftVM as a http server")
+	                         .build())
+	                .add(clap::ParamBuilder::ofValue(clap::FileParser::make(std::regex(".*\\.rbc")))
+	                         .conditional(
+								 [](const clap::ParsingResult& result) {
+									 return !(result.isParam('f') && result.isParam('s'));
+								 },
+								 "File cannot be passed with -s/--server flag"
+							 )
+	                         .addShortName('f')
+	                         .addLongName("file")
+	                         .addShortDesc("Launch given file (only if not -s/--server)")
+	                         .build())
+	                .add(clap::ParamBuilder::ofFlag()
+	                         .addShortName('v')
+	                         .addLongName("version")
+	                         .addShortDesc("Shows version and config")
+	                         .build());
 
 	clap::ParsingResult result;
 
@@ -74,7 +73,7 @@ int main(int argc, const char** argv) {
 		showVersion();
 	else if (auto port = result.getValue<i64>("server"))
 		server(port.value());
-	else if (auto file = result.getValue<std::string>("file"))
+	else if (auto file = result.getValue<fs::FilePath>("file"))
 		cli(file.value());
 	else
 		cli();

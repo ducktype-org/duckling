@@ -1,4 +1,6 @@
 #pragma once
 
-void cli(std::string filepath);
+#include <supervisor/supervisor.hpp>
+
+void cli(fs::FilePath filepath);
 void cli();
