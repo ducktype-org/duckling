@@ -50,10 +50,9 @@ private:
 	 * Test that the specialized TypeInfo to TypeInfo dynamic cast works as intended.
 	 */
 	void trivial_cast() {
-		const ts::TypeInfo type_1{ts::VoidInfo::create()};
+		const ts::TypeInfo type_1{ ts::VoidInfo::create() };
 		const ts::TypeInfo type_2 = type_1;
 		assert(type_1 == type_2, "The trivial dynamic cast should not change any objects.");
-		// fail("hey");
 	}
 
 	/**

@@ -1,6 +1,6 @@
 /**
- * @file type_info.hpp
- * @brief Interfaces of the simpler kinds of types.
+ * \file type_info.hpp
+ * \brief Interfaces of the simpler kinds of types.
  *
  * The interface is not aware of the internal implementation hierarchy in any way other than its
  * existence and name.
@@ -37,6 +37,11 @@ namespace ts {
 	class UnitInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(UnitInfo, TypeInfo)
+
+		/**
+		 * \brief Create and instance of the Unit type.
+		 * \return The Unit type.
+		 */
 		static UnitInfo create();
 
 		CONSTRUCT_WITH_CHECKED_CAST(UnitInfo)
@@ -48,6 +53,11 @@ namespace ts {
 	class VoidInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(VoidInfo, TypeInfo)
+
+		/**
+		 * \brief Create and instance of the Void type.
+		 * \return The Void type.
+		 */
 		static VoidInfo create();
 
 		CONSTRUCT_WITH_CHECKED_CAST(VoidInfo)
@@ -59,6 +69,11 @@ namespace ts {
 	class ByteInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(ByteInfo, TypeInfo)
+
+		/**
+		 * \brief Create and instance of the Byte type.
+		 * \return The Byte type.
+		 */
 		static ByteInfo create();
 
 		CONSTRUCT_WITH_CHECKED_CAST(ByteInfo)
@@ -70,6 +85,11 @@ namespace ts {
 	class BoolInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(BoolInfo, TypeInfo)
+
+		/**
+		 * \brief Create and instance of the Bool type.
+		 * \return The Bool type.
+		 */
 		static BoolInfo create();
 
 		CONSTRUCT_WITH_CHECKED_CAST(BoolInfo)
@@ -81,6 +101,11 @@ namespace ts {
 	class CharInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(CharInfo, TypeInfo)
+
+		/**
+		 * \brief Create and instance of the Char type.
+		 * \return The Char type.
+		 */
 		static CharInfo create();
 
 		CONSTRUCT_WITH_CHECKED_CAST(CharInfo)
@@ -92,6 +117,13 @@ namespace ts {
 	class IntegralInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(IntegralInfo, TypeInfo)
+
+		/**
+		 * \brief Create an instance of an Integral type.
+		 * \param size The size of the Integral type.
+		 * \param signedness The signedness of the Integral type.
+		 * \return The Integral Type.
+		 */
 		static IntegralInfo create(usize size, bool signedness = true);
 
 		CONSTRUCT_WITH_CHECKED_CAST(IntegralInfo)
@@ -103,6 +135,12 @@ namespace ts {
 	class FloatInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(FloatInfo, TypeInfo)
+
+		/**
+		 * \brief Create an instance of an Float type.
+		 * \param size The size of the Float type.
+		 * \return The Float Type.
+		 */
 		static FloatInfo create(usize size);
 
 		CONSTRUCT_WITH_CHECKED_CAST(FloatInfo)

@@ -1,6 +1,6 @@
 /**
- * @file type_info.cpp
- * @brief Implementation of TypeInfo.
+ * \file type_info.cpp
+ * \brief Implementation of TypeInfo.
  *
  * This file is not included outside the Type System module and can thus have full knowledge of the
  * underlying implementation hierarchy.
@@ -27,8 +27,8 @@ namespace ts {
 	}
 
 	[[nodiscard]]
-	bool TypeInfo::isInfoImplicitlyCoercible(const TypeInfo to) const {
-		return pimpl->isInfoImplicitlyCoercible(to);
+	bool TypeInfo::isInfoImplicitlyCoercible(const TypeInfo target) const {
+		return pimpl->isInfoImplicitlyCoercible(target);
 	}
 
 	// Specialized template definition and explicit instantiation.

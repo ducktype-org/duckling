@@ -1,6 +1,6 @@
 /**
- * @file types.cpp
- * @brief Implementation of the simpler kinds of types.
+ * \file types.cpp
+ * \brief Implementation of the simpler kinds of types.
  *
  * This file is not included outside the Type System module and can thus have full knowledge of the
  * underlying implementation hierarchy.
@@ -258,9 +258,10 @@ namespace ts {
 		auto result = dynamic_cast<typename TYPE_INFO::CPimpl>(p);
 		if (result == nullptr) {
 			std::stringstream ss;
-			const Kind originalKind = p->getKind();
+			const Kind        originalKind = p->getKind();
+			const Kind        targetKind   = TYPE_INFO::getStaticKind();
 			ss << "Type cast between TypeInfo kinds failed. A cast from "
-			   << kindToString(originalKind) << " to " << kindToString(TYPE_INFO::getDefaultKind())
+			   << kindToString(originalKind) << " to " << kindToString(targetKind)
 			   << " was attempted.";
 			throw base::LogicError{ ss.str() };
 		}
