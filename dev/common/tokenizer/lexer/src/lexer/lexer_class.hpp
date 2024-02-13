@@ -49,7 +49,7 @@ namespace lexer {
 		 * @{
 		 */
 		using LexerCondition = std::function<bool(const Lexer&)>;
-		void parseUntil(Tokens& output, LexerCondition);
+		void parseUntil(Tokens& output, const LexerCondition&);
 		void codeblock();
 		void parseCodeblockInto(Tokens& output);
 		void parseSingleInto(Tokens& output);

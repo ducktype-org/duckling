@@ -28,7 +28,7 @@ namespace symtable {
 		ScopesList                            scopes;
 		std::vector<base::unique_ptr<Symbol>> symbols;
 
-		usize next_relative_position;
+		usize next_relative_position{ 0 };
 
 	public:
 		SymbolData();
@@ -39,8 +39,10 @@ namespace symtable {
 		// @TODO: This mechanism is a little bit weird:
 		SymbolRef newSymbol(base::unique_ptr<Symbol> symbol);
 
+		[[nodiscard]]
 		const decltype(symbols)& getSymbols() const;
 
+		[[nodiscard]]
 		usize symbolCount() const;
 
 

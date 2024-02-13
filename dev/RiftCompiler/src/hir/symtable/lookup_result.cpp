@@ -3,6 +3,7 @@
 #include <hir/analysis_state.hpp>
 #include "symbol.hpp"
 #include <iostream>
+#include <utility>
 
 namespace symtable {
 
@@ -10,8 +11,8 @@ namespace symtable {
 		// @TODO: this does not handle non-unique symbols (overloaded)
 		SymbolChain out;
 		std::cerr << "     dealiasing... \n";
-		for (usize i = 0; i < chain.size(); i++) {
-			auto de_aliased = chain[i]->getUniqueDeAlias();
+		for (const auto& i: chain) {
+			auto de_aliased = i->getUniqueDeAlias();
 			std::cerr << "           ";
 			dprintSymbolChain(de_aliased, std::cerr);
 			std::cerr << "\n";
@@ -49,6 +50,8 @@ namespace symtable {
 		return res;
 	}
 
+	// it's implicitly moved
+	// NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
 	void LookupResult::insert(LookupResult&& other) {
 		leaves.insert(
 			leaves.end(),
@@ -63,9 +66,13 @@ namespace symtable {
 		);
 	}
 
-	LookupNode LookupResult::toNode(SymbolRef node) & { return { node, leaves, children }; }
+	LookupNode LookupResult::toNode(SymbolRef node) & {
+		return { std::move(node), { leaves, children } };
+	}
 
-	LookupNode LookupResult::toNode(SymbolRef node) && { return { node, std::move(*this) }; }
+	LookupNode LookupResult::toNode(SymbolRef node) && {
+		return { std::move(node), std::move(*this) };
+	}
 
 	bool ChainLookupResult::isEmpty() const { return prefix.empty() && result.isEmpty(); }
 
@@ -81,7 +88,7 @@ namespace symtable {
 	// dprints:
 	void dprintSymbolChain(const symtable::SymbolChain& chain, std::ostream& out) {
 		out << "[";
-		for (auto sym: chain) {
+		for (const auto& sym: chain) {
 			if (sym != nullptr)
 				out << sym->getName().strView();
 			else
@@ -95,7 +102,7 @@ namespace symtable {
 	void LookupResult::dprint(std::ostream& out) {
 		out << "Result { ";
 		out << "[";
-		for (auto leaf: leaves) out << leaf->getName().strView() << ", ";
+		for (const auto& leaf: leaves) out << leaf->getName().strView() << ", ";
 		out << "] , ";
 		out << "Children: [";
 		for (auto child: children) child.dprint(out);

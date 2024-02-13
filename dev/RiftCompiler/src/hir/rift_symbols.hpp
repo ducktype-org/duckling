@@ -52,8 +52,8 @@ namespace hir {
 			base::StrId            name,
 			PstRef<pst::Namespace> pst_element
 		):
-			  Symbol(state, scope, name, false, true, SymbolKind::Namespace),
-			  pst_element(pst_element) {}
+			  Symbol(state, std::move(scope), name, false, true, SymbolKind::Namespace),
+			  pst_element(std::move(pst_element)) {}
 
 		void         calculateType() override;
 		void         analyzeAll() override;
@@ -73,8 +73,8 @@ namespace hir {
 			base::StrId         name,
 			PstRef<pst::Struct> pst_element
 		):
-			  Symbol(state, scope, name, false, true, SymbolKind::Struct),
-			  pst_element(pst_element) {}
+			  Symbol(state, std::move(scope), name, false, true, SymbolKind::Struct),
+			  pst_element(std::move(pst_element)) {}
 
 		void         calculateType() override;
 		void         analyzeAll() override;
@@ -116,10 +116,13 @@ namespace hir {
 	};
 
 	class GenericAlias: public symtable::Symbol {
-	protected:
+	private:
 		// @TODO: this should be ChainLookupResult
 		// it is SymbolChain for now, because only SymbolChain can be dealiased
 		base::Optional<symtable::SymbolChain> dealiased_lookup_result;
+
+	protected:
+		auto& getDealiasedLookupResult() { return dealiased_lookup_result; }
 
 	public:
 		using symtable::Symbol::Symbol;

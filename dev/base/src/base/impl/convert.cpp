@@ -11,13 +11,16 @@ namespace base {
 			if (length == 0) length = 1;
 		}
 		std::string out(length + 2, '0');
-		out[1]  = 'x';
-		usize i = 0;
-		usize rest;
+		out[1]     = 'x';
+		usize i    = 0;
+		usize rest = 0;
 		while (i < length && hex) {
-			rest                   = hex % 16;
-			out.at(length + 1 - i) = (rest > 9) ? ('A' + rest - 10) : ('0' + rest);
-			hex                    = hex / 16;
+			rest = hex % 16;
+			if (rest > 9)
+				out.at(length + 1 - i) = char('A' + rest - 10);
+			else
+				out.at(length + 1 - i) = char('0' + rest);
+			hex = hex / 16;
 			i++;
 		}
 		return out;

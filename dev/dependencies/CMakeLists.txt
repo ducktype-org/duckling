@@ -44,9 +44,18 @@ FetchContent_MakeAvailable(crow)
 get_target_property(TEMP Crow INTERFACE_INCLUDE_DIRECTORIES)
 set_target_properties(Crow PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
 
-
 FetchContent_MakeAvailable(json_struct)
 
+# Marks JsonStruct include libraries as system
+# @CMAKE 25: change to usage of FetchContent_Declare SYSTEM parameter
+get_target_property(TEMP json_struct INTERFACE_INCLUDE_DIRECTORIES)
+set_target_properties(json_struct PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
+
 FetchContent_MakeAvailable(result)
+
+# Marks Result include libraries as system
+# @CMAKE 25: change to usage of FetchContent_Declare SYSTEM parameter
+get_target_property(TEMP Result INTERFACE_INCLUDE_DIRECTORIES)
+set_target_properties(Result PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
 
 FindOrBuildICU(VERSION 74.1 URL "${ICU_RELEASE}" URL_HASH "${ICU_CONTROL}")

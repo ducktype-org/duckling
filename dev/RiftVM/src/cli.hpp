@@ -1,4 +1,6 @@
 #pragma once
 
-void cli(std::string filepath);
+#include <string>
+
+void cli(const std::string& filepath);
 void cli();

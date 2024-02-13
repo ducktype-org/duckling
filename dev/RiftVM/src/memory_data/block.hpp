@@ -47,9 +47,11 @@ namespace vm {
 
 		using error = std::string;
 
+		[[nodiscard]]
 		Pointer       BasePointer() const;
 		base::RawView rawPointer();
 
+		[[nodiscard]]
 		TypeCRef innerType() const;
 
 		cpp::result<base::ModRawView, error> deref(TypeCRef u, u64 offset);

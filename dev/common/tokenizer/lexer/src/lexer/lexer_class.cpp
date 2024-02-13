@@ -8,7 +8,7 @@ namespace lexer {
 	Lexer::Lexer(const fs::FilePath& file):
 		  file(std::make_shared<fs::FilePath>(file)),
 		  file_content(this->file->getContent()),
-		  char_array(std::move(decode<fs::Encoding::UTF8>(file_content.view(), errorState))) {
+		  char_array(decode<fs::Encoding::UTF8>(file_content.view(), errorState)) {
 		if (errorState.fail()) {
 			errorState.dumpLog(std::cerr);
 			throw base::LogicError("Error while decoding");
@@ -73,7 +73,7 @@ namespace lexer {
 
 	void Lexer::codeblock() { parseCodeblockInto(tokens); }
 
-	void Lexer::parseUntil(Tokens& output, LexerCondition stop) {
+	void Lexer::parseUntil(Tokens& output, const LexerCondition& stop) {
 		while (!stop(*this)) parseSingleInto(output);
 	}
 
@@ -117,8 +117,8 @@ namespace lexer {
 	}
 
 	void Lexer::commentHandler([[maybe_unused]] Tokens& output) {
-		usize begin       = where;
-		usize end         = where;
+		usize begin = where;
+		usize end{};
 		auto  sourceStart = currentPostion();
 
 		skip(2);  // "//"
@@ -141,8 +141,8 @@ namespace lexer {
 	}
 
 	void Lexer::blockCommentHandler([[maybe_unused]] Tokens& output) {
-		usize begin       = where;
-		usize end         = where;
+		usize begin = where;
+		usize end{};
 		auto  sourceStart = currentPostion();
 
 		skip(2);  // "/*"
@@ -165,8 +165,8 @@ namespace lexer {
 	}
 
 	void Lexer::operatorHandler(Tokens& output) {
-		usize begin       = where;
-		usize end         = where;
+		usize begin = where;
+		usize end{};
 		auto  sourceStart = currentPostion();
 
 		while (peek().is(Class::operator_continue)) next();
@@ -179,8 +179,8 @@ namespace lexer {
 	}
 
 	void Lexer::nameHandler(Tokens& output) {
-		usize begin       = where;
-		usize end         = where;
+		usize begin = where;
+		usize end{};
 		auto  sourceStart = currentPostion();
 
 		next();  // first char - character
@@ -209,8 +209,8 @@ namespace lexer {
 	}
 
 	void Lexer::binLiteralHandler(Tokens& output) {
-		usize begin       = where;
-		usize end         = where;
+		usize begin = where;
+		usize end{};
 		auto  sourceStart = currentPostion();
 
 		skip(2);  // 0b
@@ -224,8 +224,8 @@ namespace lexer {
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {
-		usize begin       = where;
-		usize end         = where;
+		usize begin = where;
+		usize end{};
 		auto  sourceStart = currentPostion();
 
 		skip(2);  // 0x
@@ -239,8 +239,8 @@ namespace lexer {
 	}
 
 	void Lexer::decLiteralHandler(Tokens& output) {
-		usize begin       = where;
-		usize end         = where;
+		usize begin = where;
+		usize end{};
 		auto  sourceStart = currentPostion();
 
 		bool was_dot = false;
@@ -270,8 +270,8 @@ namespace lexer {
 	}
 
 	void Lexer::stringHandler(Tokens& output) {
-		usize begin       = where;
-		usize end         = where;
+		usize begin = where;
+		usize end{};
 		auto  sourceStart = currentPostion();
 		bool  closed      = true;
 
@@ -311,7 +311,7 @@ namespace lexer {
 	}
 
 	void Lexer::bracketHandler(Tokens& output) {
-		usize end         = where;
+		usize end{};
 		auto  sourceStart = currentPostion();
 
 		Token::BracketType bracket_type{ peek().value };

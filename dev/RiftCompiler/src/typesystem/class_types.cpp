@@ -82,16 +82,16 @@ namespace ts {
 		return ts::ClassInfo::create(name, std::move(member_types), {}, 0);
 	}
 
-	base::StrId ClassInfo::getName() const { return ((Pimpl) pimpl)->getName(); }
+	base::StrId ClassInfo::getName() const { return reinterpret_cast<CPimpl>(pimpl)->getName(); }
 
 	[[nodiscard]]
 	const std::vector<AncestorData> ClassInfo::basicParents() const {
-		const auto class_impl_ptr = (internal::ClassInfoImpl*) pimpl;
+		const auto class_impl_ptr = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		return class_impl_ptr->basicParents();
 	}
 
 	const std::vector<AncestorData>& ClassInfo::allAncestors() const {
-		const auto class_impl_ptr = (internal::ClassInfoImpl*) pimpl;
+		const auto class_impl_ptr = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		return class_impl_ptr->allAncestors();
 	}
 
@@ -100,29 +100,29 @@ namespace ts {
 	//	return class_impl_ptr->virtualParents();
 	//}
 	const std::vector<ClassInfo> ClassInfo::virtualAncestors() const {
-		const auto class_impl_ptr = (internal::ClassInfoImpl*) pimpl;
+		const auto class_impl_ptr = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		return class_impl_ptr->virtualAncestors();
 	}
 
 	const std::vector<MemberData> ClassInfo::members() const {
-		const auto class_impl_ptr = (internal::ClassInfoImpl*) pimpl;
+		const auto class_impl_ptr = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		return class_impl_ptr->members();
 	}
 
 	const std::vector<MemberData>& ClassInfo::allMembers() const {
-		const auto class_impl_ptr = (internal::ClassInfoImpl*) pimpl;
+		const auto class_impl_ptr = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		return class_impl_ptr->allMembers();
 	}
 
 	MemberInfo ClassInfo::getMemberInfo(symtable::SymbolId symbol) const {
-		const auto class_impl_ptr = (internal::ClassInfoImpl*) pimpl;
+		const auto class_impl_ptr = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		return class_impl_ptr->getMemberInfo(symbol);
 	}
 
 	MemberInfo ClassInfo::getMemberInfo(
 		symtable::SymbolId symbol, const std::vector<ClassInfo>& hint
 	) const {
-		const auto class_impl_ptr = (internal::ClassInfoImpl*) pimpl;
+		const auto class_impl_ptr = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		return class_impl_ptr->getMemberInfo(symbol, hint);
 	}
 
@@ -130,15 +130,15 @@ namespace ts {
 		return getAncestorInfo(std::vector<ClassInfo>({ ancestor_id }));
 	}
 
-	AncestorInfo ClassInfo::getAncestorInfo(std::vector<ClassInfo> ancestor_ids) const {
-		const auto class_impl_ptr = (internal::ClassInfoImpl*) pimpl;
+	AncestorInfo ClassInfo::getAncestorInfo(const std::vector<ClassInfo>& ancestor_ids) const {
+		const auto class_impl_ptr = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		auto       result         = class_impl_ptr->getAncestorInfo(ancestor_ids);
 		return result;
 	}
 
 	// Returns the offset of a single specific virtual ancestor
 	usize ClassInfo::getVirtualAncestorOffset(ClassInfo ancestor_id) const {
-		const auto class_ptr = (internal::ClassInfoImpl*) pimpl;
+		const auto class_ptr = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		return class_ptr->getVirtualAncestorOffset(ancestor_id);
 	}
 
@@ -147,33 +147,33 @@ namespace ts {
 	// positive.
 	std::vector<std::pair<ClassInfo, usize>>
 		ClassInfo::getVirtualAncestorTable(ClassInfo ancestor_id) const {
-		const auto kid = (internal::ClassInfoImpl*) pimpl;
+		const auto kid = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		return kid->getVirtualAncestorTable(ancestor_id);
 	}
 
 	std::vector<std::pair<ClassInfo, usize>>
 		ClassInfo::getVirtualAncestorTable(std::vector<ClassInfo> ancestor_ids) const {
-		const auto kid = (internal::ClassInfoImpl*) pimpl;
-		return kid->getVirtualAncestorTable(ancestor_ids);
+		const auto kid = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
+		return kid->getVirtualAncestorTable(std::move(ancestor_ids));
 	}
 
 	usize ClassInfo::getVtablePtrOffset() const {
-		const auto class_ptr = (internal::ClassInfoImpl*) pimpl;
+		const auto class_ptr = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		return class_ptr->getVtablePtrOffset();
 	}
 
 	usize ClassInfo::getVtableSize() const {
-		const auto class_ptr = (internal::ClassInfoImpl*) pimpl;
+		const auto class_ptr = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		return class_ptr->getVtableSize();
 	}
 
 	usize ClassInfo::getVtablePositionOf(ts::ClassInfo ancestor) const {
-		const auto class_ptr = (internal::ClassInfoImpl*) pimpl;
+		const auto class_ptr = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		return class_ptr->getVtablePositionOf(ancestor);
 	}
 
 	usize ClassInfo::getBaseSize() const {
-		const auto class_ptr = (internal::ClassInfoImpl*) pimpl;
+		const auto class_ptr = dynamic_cast<const internal::ClassInfoImpl*>(pimpl);
 		return class_ptr->getBaseSize();
 	}
 
@@ -184,9 +184,11 @@ namespace ts {
 		return vtable;
 	}
 
-	ClassInfo VTableInfo::getAssociatedClass() { return ((Pimpl) pimpl)->getAssociatedClass(); }
+	ClassInfo VTableInfo::getAssociatedClass() {
+		return reinterpret_cast<CPimpl>(pimpl)->getAssociatedClass();
+	}
 
-	usize VTableInfo::getMethodCount() { return ((Pimpl) pimpl)->getMethodCount(); }
+	usize VTableInfo::getMethodCount() { return reinterpret_cast<CPimpl>(pimpl)->getMethodCount(); }
 
-	usize VTableInfo::getParentCount() { return ((Pimpl) pimpl)->getParentCount(); }
+	usize VTableInfo::getParentCount() { return reinterpret_cast<CPimpl>(pimpl)->getParentCount(); }
 }
