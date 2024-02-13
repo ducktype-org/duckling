@@ -2,5 +2,5 @@
 
 #include <supervisor/supervisor.hpp>
 
-void cli(fs::FilePath filepath);
+void cli(const fs::FilePath& filepath);
 void cli();
