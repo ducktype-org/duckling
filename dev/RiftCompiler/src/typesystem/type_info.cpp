@@ -270,7 +270,7 @@ namespace ts {
 		auto result = dynamic_cast<typename TYPE_INFO::CPimpl>(p);
 		if (result == nullptr) {
 			std::stringstream ss;
-			const Kind originalKind = p->getKind();  // Optimization-dependent mystery warning here.
+			const Kind originalKind = p->getKind();
 			ss << "Type cast between TypeInfo kinds failed. A cast from "
 			   << kindToString(originalKind) << " to " << kindToString(TYPE_INFO::getDefaultKind())
 			   << " was attempted.";
@@ -278,6 +278,13 @@ namespace ts {
 		}
 		return result;
 	}
+
+	// Specialization needed to not trigger a nonnull warning in a corner case.
+	template<>
+	TypeInfo::CPimpl checkDynamicCast<TypeInfo>(TypeInfo::CPimpl p) {
+		return p;
+	}
+
 
 	INSTANTIATE_CHECKED_CAST(TypeInfo)
 	INSTANTIATE_CHECKED_CAST(UnitInfo)
