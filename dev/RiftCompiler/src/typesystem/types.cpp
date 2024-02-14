@@ -259,7 +259,7 @@ namespace ts {
 		if (result == nullptr) {
 			std::stringstream ss;
 			const Kind        originalKind = p->getKind();
-			const Kind        targetKind   = TYPE_INFO::getStaticKind();
+			const Kind        targetKind   = TYPE_INFO::Impl::staticKind;
 			ss << "Type cast between TypeInfo kinds failed. A cast from "
 			   << kindToString(originalKind) << " to " << kindToString(targetKind)
 			   << " was attempted.";

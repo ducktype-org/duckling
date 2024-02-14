@@ -1,6 +1,6 @@
 /**
  * @file value_category.hpp
- * @brief Value category definition
+ * @brief Value category definition.
  */
 
 #pragma once

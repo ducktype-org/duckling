@@ -2,6 +2,30 @@
 #include <queue>
 
 namespace ts::internal {
+	Kind TypeInfoImpl::staticKind         = Kind::Any;
+	Kind UnitInfoImpl::staticKind         = Kind::Unit;
+	Kind VoidInfoImpl::staticKind         = Kind::Void;
+	Kind ByteInfoImpl::staticKind         = Kind::Byte;
+	Kind BoolInfoImpl::staticKind         = Kind::Bool;
+	Kind CharInfoImpl::staticKind         = Kind::Char;
+	Kind IntegralInfoImpl::staticKind     = Kind::Integral;
+	Kind FloatInfoImpl::staticKind        = Kind::Float;
+	Kind RawPointerInfoImpl::staticKind   = Kind::RawPointer;
+	Kind PointerInfoImpl::staticKind      = Kind::Pointer;
+	Kind FunctionInfoImpl::staticKind     = Kind::Function;
+	Kind EnumInfoImpl::staticKind         = Kind::Enum;
+	Kind FlagInfoImpl::staticKind         = Kind::Flag;
+	Kind OptionalInfoImpl::staticKind     = Kind::Optional;
+	Kind TupleInfoImpl::staticKind        = Kind::Tuple;
+	Kind VariantInfoImpl::staticKind      = Kind::Variant;
+	Kind ClassInfoImpl::staticKind        = Kind::Class;
+	Kind TypeTemplateInfoImpl::staticKind = Kind::TypeTemplate;
+	Kind NamespaceInfoImpl::staticKind    = Kind::Namespace;
+	Kind CodeBlockInfoImpl::staticKind    = Kind::CodeBlock;
+	Kind ModuleInfoImpl::staticKind       = Kind::Module;
+	Kind VTableInfoImpl::staticKind       = Kind::VTable;
+	Kind MetaInfoImpl::staticKind         = Kind::Meta;
+
 	/**
 	 * \brief Gets the global TypeInfoImpl storage structure.
 	 * \return The global TypeInfoImpl storage structure.

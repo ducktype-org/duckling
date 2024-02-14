@@ -82,7 +82,7 @@ namespace ts {
 	 * forwarded to the pImpl, which makes them cost extra in terms of jumps.
 	 *
 	 * Note, that the TypeInfo hierarchy is visible to the rest of the compiler, while the
-	 * internal::TypeInfoImpl hierarchy is only visible in the typesystem module.
+	 * internal::TypeInfoImpl hierarchy is only visible in the .cpp file of the typesystem module.
 	 */
 	class TypeInfo {
 	public:
@@ -96,20 +96,11 @@ namespace ts {
 		Kind getKind() const;
 
 		/**
-		 * \brief Get the size of the type described by this object.
-		 * \return The size in bits of the type described by this object.
+		 * \brief Gets the size of a value of the type described by this object, in bits.
+		 * \return The size of a value of the type described by this object, in bits.
 		 */
 		[[nodiscard]]
 		usize getSize() const;
-
-		/**
-		 * \brief Get the Kind of types described by objects of this class.
-		 * \return The Kind of types described by objects of this class.
-		 */
-		[[nodiscard]]
-		static Kind getStaticKind() {
-			return Kind::Any;
-		}
 
 		/**
 		 * \brief The default constructor is deleted.
@@ -135,8 +126,11 @@ namespace ts {
 		}
 
 		/**
-		 * \brief Compare with another TypeInfo. The comparison is arbitrary and should
-		 * only be used for indexing ordered data structures or comparing for equality.
+		 * \brief Compare with another TypeInfo.
+		 *
+		 * The comparison is arbitrary and should only be used for
+		 * indexing ordered data structures or comparing for equality.
+		 *
 		 * \param other The other TypeInfo.
 		 * \return The result of comparison, dependent on the value of the pImpl pointer.
 		 */
@@ -154,13 +148,28 @@ namespace ts {
 		}
 
 		/**
-		 * \brief Whether a value of the type described with this TypeInfo object
-		 * is allowed to be implicitly coerced to a value of the target type.
+		 * \brief Determine whether it is legal to consider and implicit coercion
+		 * from a value described by this TypeDesc to one described by target.
+		 *
+		 * An implicit coercion is when, for example, a boolean is expected, but
+		 * and integer is given. A desirable (and common) behaviour may be to
+		 * convert the integer value to true if and only if it is non-zero.
+		 *
+		 * Another context in which implicit coercions are desirable is when
+		 * casting from subclass to superclass.
+		 *
+		 * This method does not determine how to perform a coercion.
+		 * It only determines whether one should be considered.
+		 * A coercion may thus be allowed but not implemented, or implemented
+		 * but not allowed to be used implicitly by the compiler, so the user
+		 * may define a coercion from class A to class B, but not want it
+		 * to ever be used implicitly (in C++ that is achieved by annotating a
+		 * single-argument constructor with the `explicit` keyword).
 		 *
 		 * This is typically determined by rules specific for the Kind of the source type.
 		 *
-		 * \param target The target type.
-		 * \return Whether implicit coercion from this target is allowed.
+		 * \param target The target of a hypothetical implicit coercion.
+		 * \return Whether the implicit coercion is allowed or not.
 		 */
 		[[nodiscard]]
 		bool isInfoImplicitlyCoercible(const TypeInfo target) const;

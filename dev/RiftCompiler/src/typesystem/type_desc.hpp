@@ -15,41 +15,131 @@ namespace ts {
 	class TypeInfo;
 
 	/**
-	 * @TODO: we need to think if value category should be here
+	 * \brief The TypeDesc class contains information about a type,
+	 * expanded with information about a value of that type.
+	 *
+	 * A TypeDesc<TypeInfo> object will contain information about any type,
+	 * while a TypeDesc<IntegralInfo> object is guaranteed to contain information
+	 * about some Integral type described with an IntegralInfo object.
+	 *
+	 * A TypeDesc object describes a value. That value has a type, but it
+	 * may have additional properties, like immutability. Information about
+	 * the type is held in the typeInfo field, and everything else is
+	 * stored in the valueCategory field.
+	 *
+	 * \tparam TYPE_INFO The underlying class from the TypeInfo hierarchy.
 	 */
-
 	template<std::derived_from<TypeInfo> TYPE_INFO = TypeInfo>
 	class TypeDesc {
 	public:
+		/**
+		 * \brief Constructs the TypeDesc from another TypeDesc.
+		 *
+		 * The source TypeDesc must hold a type description which is dynamically convertible
+		 * to the type description expected by the target TypeDesc. Otherwise,
+		 * the dynamic cast, and then the constructor, will fail.
+		 *
+		 * \tparam OTHER_TYPE_INFO The type of the source type description,
+		 * from the TypeInfo hierarchy.
+		 * \param other The source TypeDesc.
+		 */
 		template<std::derived_from<TypeInfo> OTHER_TYPE_INFO>
 		TypeDesc(TypeDesc<OTHER_TYPE_INFO> other):
 			  typeInfo(other.getType()),
 			  valueCategory(other.getValueCategory()) {}
 
-		TypeDesc(TYPE_INFO type_info, ValueCategory valueCategory = {}):
-			  typeInfo(type_info),
+		/**
+		 * \brief Constructs the TypeDesc directly from its contents.
+		 * \param typeInfo The source type description, from the TypeInfo hierarchy.
+		 * \param valueCategory The value category of the described value.
+		 */
+		TypeDesc(TYPE_INFO typeInfo, ValueCategory valueCategory = {}):
+			  typeInfo(typeInfo),
 			  valueCategory(valueCategory) {}
 
+		/**
+		 * \brief Gets the underlying type information.
+		 * \return The underlying type information.
+		 */
 		[[nodiscard]]
 		TYPE_INFO getType() const {
 			return typeInfo;
 		}
 
+		/**
+		 * \brief Gets the underlying value category.
+		 * \return The underlying value category.
+		 */
 		[[nodiscard]]
 		ValueCategory getValueCategory() const {
 			return valueCategory;
 		}
 
+		/**
+		 * \brief Three-way comparison with another TypeDesc.
+		 *
+		 * This comparison is arbitrary (in this case, lexicographical),
+		 * and just as is the case with TypeInfo and ValueCategory, should
+		 * only be used to index ordered data structures or compare for equality.
+		 *
+		 * \tparam OTHER_TYPE_INFO The type of the source type description,
+		 * from the TypeInfo hierarchy.
+		 * \param other The other TypeDesc.
+		 * \return Result of comparison, as std::strong_ordering.
+		 */
+		template<std::derived_from<TypeInfo> OTHER_TYPE_INFO>
+		[[nodiscard]]
+		auto operator<=>(const TypeDesc<OTHER_TYPE_INFO>& other) const {
+			if (typeInfo < other.getType()) return std::strong_ordering::less;
+			if (typeInfo > other.getType()) return std::strong_ordering::greater;
+			if (valueCategory < other.getValueCategory()) return std::strong_ordering::less;
+			if (valueCategory > other.getValueCategory()) return std::strong_ordering::greater;
+			return std::strong_ordering::equal;
+		}
+
+		/**
+		 * \brief Template equality operator for ease of use, because a template <=> operator
+		 * does not work very well for deducing other comparison operators.
+		 * \tparam OTHER_TYPE_INFO The type of the source type description,
+		 * from the TypeInfo hierarchy.
+		 * \param other The other TypeDesc.
+		 * \return Result of comparison, as bool.
+		 */
 		template<std::derived_from<TypeInfo> OTHER_TYPE_INFO>
 		[[nodiscard]]
 		bool operator==(const TypeDesc<OTHER_TYPE_INFO>& other) const {
-			return valueCategory == other.getValueCategory() && typeInfo == other.getType();
+			return *this <=> other == 0;
 		}
 
-		auto operator<=>(const TypeDesc<TYPE_INFO>& other) const = default;
-
+		/**
+		 * \brief Determine whether it is legal to consider and implicit coercion
+		 * from a value described by this TypeDesc to one described by target.
+		 *
+		 * An implicit coercion is when, for example, a boolean is expected, but
+		 * and integer is given. A desirable (and common) behaviour may be to
+		 * convert the integer value to true if and only if it is non-zero.
+		 *
+		 * Another context in which implicit coercions are desirable is when
+		 * casting from subclass to superclass.
+		 *
+		 * This method does not determine how to perform a coercion.
+		 * It only determines whether one should be considered.
+		 * A coercion may thus be allowed but not implemented, or implemented
+		 * but not allowed to be used implicitly by the compiler, so the user
+		 * may define a coercion from class A to class B, but not want it
+		 * to ever be used implicitly (in C++ that is achieved by annotating a
+		 * single-argument constructor with the `explicit` keyword).
+		 *
+		 * This method takes the implicit coercibility of the underlying TypeInfo
+		 * into consideration, but also of the ValueCategory. For example, a value may
+		 * not be implicitly coercible to another value if the source value is not
+		 * movable, but the target value needs to be movable for an efficient constructor.
+		 *
+		 * \param target The target of a hypothetical implicit coercion.
+		 * \return Whether the implicit coercion is allowed or not.
+		 */
 		[[nodiscard]]
-		bool isDescImplicitlyCoercible(const TypeDesc<>& to) const;
+		bool isDescImplicitlyCoercible(const TypeDesc<>& target) const;
 
 	private:
 		TYPE_INFO     typeInfo;

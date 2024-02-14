@@ -1,6 +1,6 @@
 /**
  * @file typesystem.hpp
- * @brief Aggregates type-system interface
+ * @brief Aggregates the interface of the Type System.
  */
 
 #pragma once
