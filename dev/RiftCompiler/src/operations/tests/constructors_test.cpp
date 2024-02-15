@@ -86,7 +86,7 @@ private:
 
 
 		operation::Constructor cons_inherit = operation::makeConstructorClass(inheriting_class);
-		auto                   ctv_inherit  = exec::alloc_new(inheriting_class);
+		/*auto                   ctv_inherit  = */ exec::alloc_new(inheriting_class);
 
 		// operation::execConstructor(cons_inherit, {ctv_int, ctv_parent}, ctv_inherit);
 	}

@@ -28,7 +28,7 @@ private:
 	}
 
 	symtable::SymbolRef getSymbolFromLookupIn(symtable::SymbolRef symbol, base::StrId name) {
-		auto lookup_result = symbol->lookupIn(name);
+		auto lookup_result = symbol->requestLookupIn(name);
 		assert(lookup_result.isSingle(), "Lookup result not a single symbol.");
 		auto dealiased_single = symtable::deAliasSymbolChain(lookup_result.getAsSingle());
 		return dealiased_single.back();
@@ -53,26 +53,26 @@ private:
 			= [&](auto name) { return getSymbolFromLookupIn(top_level_symbol, base::StrId(name)); };
 
 		auto C = get_symbol_from_top_level("C");
-		assert(C->getValue().getData<i32>().back() == 1, "Bad value of C");
+		assert(C->requestValue().getData<i32>().back() == 1, "Bad value of C");
 
 		auto A = get_symbol_from_top_level("A");
-		assert(A->getValue().getData<i32>().back() == 1, "Bad value of A");
+		assert(A->requestValue().getData<i32>().back() == 1, "Bad value of A");
 
 		auto B = get_symbol_from_top_level("B");
-		assert(B->getValue().getData<i32>().back() == -3, "Bad value of B");
+		assert(B->requestValue().getData<i32>().back() == -3, "Bad value of B");
 
 		auto D = get_symbol_from_top_level("D");
-		assert(D->getValue().getData<i32>().back() == -1, "Bad value of D");
+		assert(D->requestValue().getData<i32>().back() == -1, "Bad value of D");
 
 		auto H2 = get_symbol_from_top_level("H2");
-		assert(H2->getValue().getData<i32>().back() == 3, "Bad value of H2");
+		assert(H2->requestValue().getData<i32>().back() == 3, "Bad value of H2");
 
 		auto T0 = get_symbol_from_top_level("T0");
 		auto T1 = get_symbol_from_top_level("T1");
 		auto T2 = get_symbol_from_top_level("T2");
-		assert(T0->getValue().getData<i32>().back() == 1, "Bad value of T0");
-		assert(T1->getValue().getData<i32>().back() == 2, "Bad value of T1");
-		assert(T2->getValue().getData<i32>().back() == 3, "Bad value of T2");
+		assert(T0->requestValue().getData<i32>().back() == 1, "Bad value of T0");
+		assert(T1->requestValue().getData<i32>().back() == 2, "Bad value of T1");
+		assert(T2->requestValue().getData<i32>().back() == 3, "Bad value of T2");
 	}
 };
 

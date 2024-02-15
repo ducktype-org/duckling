@@ -7,15 +7,6 @@
 #include <base/optional.hpp>
 #include <queue>
 
-#define SPACESHIP_PASTE(o1, o2)               \
-	if (a < b) ASSERT_EQUAL(true, o1 < o2);   \
-	if (a == b) ASSERT_EQUAL(true, o1 == o2); \
-	if (a <= b) ASSERT_EQUAL(true, o1 <= o2); \
-	if (a > b) ASSERT_EQUAL(true, o1 > o2);   \
-	if (a != b) ASSERT_EQUAL(true, o1 != o2); \
-	if (a >= b) ASSERT_EQUAL(true, o1 >= o2);
-
-
 using base::Optional;
 
 class OptionalTest: public tester::TestSuite {
@@ -37,6 +28,16 @@ public:
 		TESTER_ADD_TEST(comparatorTest);
 		TESTER_ADD_TEST(boolAndResetTest);
 		TESTER_ADD_TEST(arrowOperatorTest);
+	}
+
+	template<class T, class U>
+	void spaceshipPaste(T& a, T& b, base::Optional<U>& o1, base::Optional<U>& o2) {
+		if (a < b) ASSERT_EQUAL(true, o1 < o2);
+		if (a == b) ASSERT_EQUAL(true, o1 == o2);
+		if (a <= b) ASSERT_EQUAL(true, o1 <= o2);
+		if (a > b) ASSERT_EQUAL(true, o1 > o2);
+		if (a != b) ASSERT_EQUAL(true, o1 != o2);
+		if (a >= b) ASSERT_EQUAL(true, o1 >= o2);
 	}
 
 	void basicTest() {
@@ -212,7 +213,7 @@ public:
 		for (int i = 0; i < 3; i++) {
 			base::Optional<int&> o1 = a;
 			base::Optional<int&> o2 = b;
-			SPACESHIP_PASTE(o1, o2);
+			spaceshipPaste(a, b, o1, o2);
 			a++;
 		}
 
@@ -221,7 +222,7 @@ public:
 		for (int i = 0; i < 3; i++) {
 			base::Optional<int> o1 = a;
 			base::Optional<int> o2 = b;
-			SPACESHIP_PASTE(o1, o2);
+			spaceshipPaste(a, b, o1, o2);
 			a++;
 		}
 	}

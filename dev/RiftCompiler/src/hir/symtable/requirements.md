@@ -1,3 +1,5 @@
+<!-- Deprecated -->
+
 ## Implementation of symbol table and scope data types
 
 Implements:

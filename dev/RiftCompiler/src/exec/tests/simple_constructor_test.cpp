@@ -28,7 +28,7 @@ private:
 
 		auto p_ctv = ctv.makePointer();
 
-		auto pointer = ((u32*) p_ctv.getData().data());
+		auto pointer = reinterpret_cast<u32*>(p_ctv.getData().data());
 		auto block   = pointer[0];
 		auto offset  = pointer[1];
 

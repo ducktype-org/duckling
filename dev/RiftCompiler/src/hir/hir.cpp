@@ -53,11 +53,11 @@ namespace hir {
 
 			symbol_ref->analyzeAll();
 
-			std::cerr << "    Type: " << symbol_ref->getType().getType().show() << "\n";
+			std::cerr << "    Type: " << symbol_ref->requestType().getType().show() << "\n";
 
 			std::cerr << "    Value: ";
 			if (symbol_ref->getKind() == SymbolKind::Const) {
-				auto val = symbol_ref->getValue();
+				auto val = symbol_ref->requestValue();
 				if (val.getType().getType().getKind() == ts::Kind::Integral) {
 					// @TODO: i32 here is temporary:
 					std::cerr << val.getData<i32>().front() << "\n";

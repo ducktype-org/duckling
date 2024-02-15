@@ -71,10 +71,10 @@ namespace clap {
 		Parameter parameter;
 		parameter.value_parser        = std::move(value_parser);
 		parameter.parameter_necessity = parameter_necessity.value();
-		parameter.long_name           = std::move(long_name);
-		parameter.short_name          = std::move(short_name);
+		parameter.long_name           = long_name;
+		parameter.short_name          = short_name;
 		parameter.short_description   = short_description.value();
-		parameter.long_description    = std::move(long_description);
+		parameter.long_description    = long_description;
 		return parameter;
 	}
 }

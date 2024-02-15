@@ -9,7 +9,7 @@ namespace tpc {
 
 	bool ParserState::notEmpty() const { return ctokens().size() > 0; }
 
-	void ParserState::goDown() { stream_stack.emplace_back(std::move(tokens().getRecursive())); }
+	void ParserState::goDown() { stream_stack.emplace_back(tokens().getRecursive()); }
 
 	void ParserState::goUp() { stream_stack.pop_back(); }
 

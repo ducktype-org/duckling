@@ -26,7 +26,7 @@ public:
 			variant_case_novalue(int) { fail("bad variant access"); }
 			variant_case(bool, v_b) {
 				fail("bad variant access");
-				v_b = 2;
+				v_b = true;
 			}
 			variant_case(char, v_c) {
 				assert(v_c == 'b', "something went wrong");

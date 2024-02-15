@@ -15,7 +15,7 @@ namespace dia {
 		std::string_view source         = source_content.view().stringView();
 
 		if (source_end == source.size()) return "<EOF>";
-		return std::string(source.begin() + source_start, source.begin() + source_end + 1);
+		return { source.begin() + source_start, source.begin() + source_end + 1 };
 	}
 
 	SourcePosition::SourcePosition(
@@ -43,12 +43,7 @@ namespace dia {
 		}
 	}
 
-	SourcePosition::SourcePosition(const SourcePosition& other):
-		  line(other.line),
-		  column(other.column),
-		  source_start(other.source_start),
-		  source_end(other.source_end),
-		  source_code(other.source_code) {}
+	SourcePosition::SourcePosition(const SourcePosition& other) = default;
 
 	SourcePosition::SourcePosition(const SourcePosition& other, usize source_end):
 		  SourcePosition(
@@ -66,20 +61,18 @@ namespace dia {
 	SourcePosition::Source SourcePosition::getSource() const { return source_code; }
 
 	printer::Message SourcePosition::genErrorMsg(std::string_view reason) const {
-		return printer::Message(
-			{ { { "In file: " },
-		        { source_code->strView().data() },
-		        { ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
-		        { "error: ", printer::Color::BRIGHT_RED },
-		        { reason.data() },
-		        { "\n" },
-		        { "  |\n" },
-		        { std::to_string(line) },
-		        { " | " },
-		        { getSourceChars() + "\n" },
-		        { "  |\n" } },
-		      printer::MessageType::ERROR }
-		);
+		return { { { "In file: " },
+			       { source_code->strView().data() },
+			       { ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
+			       { "error: ", printer::Color::BRIGHT_RED },
+			       { reason.data() },
+			       { "\n" },
+			       { "  |\n" },
+			       { std::to_string(line) },
+			       { " | " },
+			       { getSourceChars() + "\n" },
+			       { "  |\n" } },
+			     printer::MessageType::ERROR };
 	}
 
 	std::string SourcePosition::genErrorStr(std::string_view reason) const {
