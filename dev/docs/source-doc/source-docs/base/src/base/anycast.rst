@@ -10,7 +10,7 @@ Usage
 .. code-block:: cpp
 	:caption: Example
 
-	#include <anycast.hpp>
+	#include <base/anycast.hpp>
 	#include <iostream>
 
 	int main() {

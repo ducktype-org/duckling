@@ -6,6 +6,9 @@ namespace base {
 	template<class T>
 	class unique_ptr;
 
+	/**
+	 * @brief Borrow pointer observing a value of type `T` that is managed by a `base::unique_ptr`.
+	 */
 	template<class T>
 	class borrow_ptr {
 	private:
@@ -53,6 +56,9 @@ namespace base {
 		T* get() const noexcept { return ptr; }
 	};
 
+	/**
+	 * @brief Immutable version of `base::borrow_ptr<T>` that can't change the underlying value.
+	 */
 	template<class T>
 	using c_borrow_ptr = borrow_ptr<const T>;
 

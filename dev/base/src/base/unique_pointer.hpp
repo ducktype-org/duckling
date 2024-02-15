@@ -4,6 +4,9 @@
 #include "borrow_pointer.hpp"
 
 namespace base {
+	/**
+	 * @brief Owning pointer managing a value of type `T`
+	 */
 	template<class T>
 	class unique_ptr: public std::unique_ptr<T> {
 	public:
@@ -33,11 +36,20 @@ namespace base {
 
 		friend void swap(unique_ptr<T>& first, unique_ptr<T>& second) { first.swap(second); }
 
+		/**
+		 * @brief Creates a mutable `base::borrow_ptr<T>`.
+		 */
 		borrow_ptr<T> borrow_mut() noexcept { return borrow_ptr<T>(this->get()); }
 
+		/**
+		 * @brief Creates an immutable `base::borrow_ptr<T>`.
+		 */
 		c_borrow_ptr<T> borrow() const noexcept { return c_borrow_ptr<T>(this->get()); }
 	};
 
+	/**
+	 * @brief Creates a `base::unique_ptr` managing an object of type `T` with a value constructed from arguments.
+	 */
 	template<class T, class... Args>
 	inline unique_ptr<T> make_unique(Args&&... args) {
 		return unique_ptr<T>(new T(std::forward<Args>(args)...));
