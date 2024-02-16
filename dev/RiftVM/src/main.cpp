@@ -72,7 +72,7 @@ int main(int argc, const char** argv) {
 	if (result.isFlag('v'))
 		showVersion();
 	else if (auto port = result.getValue<i64>("server"))
-		server(port.value());
+		server(i32(port.value()));
 	else if (auto file = result.getValue<fs::FilePath>("file"))
 		cli(file.value());
 	else

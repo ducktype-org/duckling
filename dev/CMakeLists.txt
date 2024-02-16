@@ -18,7 +18,16 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-set(CMAKE_CXX_FLAGS "-Werror=return-type -Werror=terminate -Werror=shadow=local -Wall -Wextra -Wno-sign-compare -O2")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	message("-- GNU compiler")
+	add_compile_options(-Werror=return-type -Werror=terminate -Werror=shadow=local -Wall -Wextra -Wno-sign-compare -O2)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+	message("-- Clang compiler")
+	# I didn't find a good -Werror=terminate alternative
+	add_compile_options(-Werror=return-type -Werror=shadow-all -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare -O2)
+else()
+	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
+endif()
 
 # Wersja debug wypisuje na razie wszystkie możliwe informacje dynamicznie
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")

@@ -105,7 +105,7 @@ private:
 	}
 
 	void simple_floats() {
-		usize float_sizes[] = { 16, 32, 64, 80, 128 };
+		std::array<usize, 5> float_sizes{ 16, 32, 64, 80, 128 };
 		for (usize float_size: float_sizes) {
 			auto float_i  = ts::FloatInfo::create(float_size);
 			auto float_ii = ts::FloatInfo::create(float_size);

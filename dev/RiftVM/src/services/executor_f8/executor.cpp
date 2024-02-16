@@ -13,6 +13,10 @@
 
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
+#include <utility>
+
+// @TODO: Go through linting messages here with regards to optimisation
+// NOLINTBEGIN: Linting might impact optimizations here
 
 namespace vm {
 
@@ -517,10 +521,10 @@ namespace vm {
 		return true;
 	}
 
-	void Executor::setStatus(vm::api::ExecStatus status) {
+	void Executor::setStatus(vm::api::ExecStatus new_status) {
 		// @TODO: check if change is legal
-		this->status = status;
-		vcpu.onEvent(api::Executing(this->status));
+		this->status = std::move(new_status);
+		vcpu.onEvent(api::Executing(status));
 	}
 
 	bool Executor::isPaused() {
@@ -535,3 +539,5 @@ namespace vm {
 
 	void Executor::notifyPaused() { pause_cv.notify_all(); }
 }  // namespace vm
+
+   // NOLINTEND

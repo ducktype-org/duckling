@@ -59,7 +59,7 @@ namespace lexer {
 		icu::UnicodeString ustring;
 		uset.toPattern(ustring, true);
 		std::cerr << "pattern: " << ustring << "\n";
-		UChar32 rb, re;
+		UChar32 rb = 0, re = 0;
 		for (int32_t rangeid = 0; rangeid < uset.getRangeCount(); rangeid++) {
 			rb = uset.getRangeStart(rangeid);
 			re = uset.getRangeEnd(rangeid);

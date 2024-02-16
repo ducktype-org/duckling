@@ -17,6 +17,10 @@ namespace hir {
 
 namespace symtable {
 
+	/**
+	 * @brief SymbolKind stores general kind/type of a symbol.
+	 * Usually each implementation of SymbolInterface will have its unique kind.
+	 */
 	enum class SymbolKind {
 		Basic,
 		Namespace,
@@ -30,6 +34,29 @@ namespace symtable {
 		// ...
 	};
 
+	/**
+	 * @brief Symbol is a base class for implementation of all symbols.
+	 * It defines a common interface and data of all HIR-symbols.
+	 *
+	 * There are 4 types of operations on symbols:
+	 *
+	 *  * calculateXYZ -- internal method used to alter symbols state.
+	 *    Usually used in request implementations. Usually require cycle control.
+	 *
+	 *  * requestXYZ -- external request to do/get something.
+	 *    May cause cascade of other operations.
+	 *    Will usually cause heavy computations only during first call.
+	 *    Will usually be implemented as: if (not available) calculate(); return access();
+	 *
+	 *  * accessXYZ -- external request to do/get something, that will not spawn heavy computation.
+	 *    In particular accessXYZ may assert that value that you want to access is already
+	 * available.
+	 *
+	 *  * getXYZ, isXYZ -- simple getters, setters
+	 *
+	 * In order to implement a new type of symbol,
+	 * one must create a new class inheriting from this one.
+	 */
 	class Symbol {
 		// Update constructors when adding fields here
 
@@ -88,8 +115,8 @@ namespace symtable {
 
 		void getAll() {
 			getKind();
-			getType();
-			getLinkedLookupScope();
+			requestType();
+			requestLinkedLookupScope();
 			getSymbolsIn();
 		}
 
@@ -103,7 +130,10 @@ namespace symtable {
 		Symbol& operator=(const Symbol&)  = default;
 		Symbol& operator=(Symbol&& other) = default;
 
-		ScopeRef getScope() const { return scope; }
+		[[nodiscard]]
+		ScopeRef getScope() const {
+			return scope;
+		}
 
 		base::StrId getName() const { return name; }
 
@@ -115,23 +145,25 @@ namespace symtable {
 
 		bool isWildcard() const { return wildcard; }
 
-		ScopeRef getLinkedLookupScope();
+		[[nodiscard]]
+		SymbolKind getKind() const {
+			return kind;
+		}
 
-		ts::TypeDesc<> getType();
+		ScopeRef       requestLinkedLookupScope();
+		ts::TypeDesc<> requestType();
 
-		SymbolKind getKind() const { return kind; }
 
 		// @TODO: decide if value should be kept in Symbol itself
-		virtual exec::CTV getValue();
+		virtual exec::CTV requestValue();
 
-		virtual SymbolChain       getUniqueDeAlias();
-		virtual ChainLookupResult getDeAlias();
+		virtual SymbolChain       requestUniqueDeAlias();
+		virtual ChainLookupResult requestDeAlias();
+
+		LookupResult requestLookupIn(base::StrId name);
 
 		virtual void analyzeAll() = 0;
-
-		virtual ~Symbol() = default;
-
-		LookupResult lookupIn(base::StrId name);
+		virtual ~Symbol()         = default;
 
 		bool unlockedLookup() const;
 	};

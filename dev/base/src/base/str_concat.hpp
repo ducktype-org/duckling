@@ -12,9 +12,9 @@ namespace base {
 
 	namespace detail {
 		template<typename T>
-		requires(!base::IsNumber<std::remove_reference_t<T>>)
+		requires(!base::IsNumber<std::remove_reference_t<T>> && !std::is_same_v<icu::UnicodeString, std::remove_cvref_t<T>>)
 		void strConcat(std::string& out, T&& v) {
-			out.append(v);
+			out.append(std::forward<T>(v));
 		}
 
 		inline void strConcat(std::string& out, base::RawView view) {
@@ -25,7 +25,7 @@ namespace base {
 			out.append(std::to_string(v));
 		}
 
-		void strConcat(std::string& out, icu::UnicodeString unistr);
+		void strConcat(std::string& out, const icu::UnicodeString& unistr);
 
 		// This is forward declaration to prevent circular header dependency through:
 		// string_id.hpp -> maps.hpp -> exceptions.hpp -> str_concat.hpp
@@ -36,7 +36,7 @@ namespace base {
 		inline void strConcat(std::string& out, const char* v) { out.append(std::string(v)); }
 
 		template<typename U, typename V>
-		requires(std::is_trivially_copyable<U>::value && std::is_trivially_copyable<V>::value)
+		requires(std::is_trivially_copyable_v<U> && std::is_trivially_copyable_v<V>)
 		inline void strConcat(std::string& out, std::pair<U, V> pair) {
 			out += "<";
 			strConcat(out, pair.first);

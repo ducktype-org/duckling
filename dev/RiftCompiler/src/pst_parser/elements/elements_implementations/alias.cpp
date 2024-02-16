@@ -31,8 +31,8 @@ namespace pst {
 
 		out << R"("points_to": [)";
 
-		for (const auto& name: points_to.names) {
-			tpc::nullAwareDprint(name, out);
+		for (const auto& sub_name: points_to.names) {
+			tpc::nullAwareDprint(sub_name, out);
 			out << ", ";
 		}
 

@@ -9,8 +9,11 @@ namespace hir {
 	using symtable::Symbol;
 	using symtable::SymbolRef;
 
-	typedef std::vector<symtable::SymbolRef> LookupResult;
-
+	/**
+	 * @brief Analysis state holds all of the information on
+	 * the state of the HIR-transformation.
+	 * This includes: symbol data, scope data, queue of symbols to analyze.
+	 */
 	class AnalysisState {
 		std::queue<symtable::SymbolRef> to_analyze;
 		symtable::SymbolData            symbol_data;

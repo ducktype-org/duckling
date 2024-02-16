@@ -65,11 +65,11 @@ namespace fs {
 		friend struct ::std::hash<fs::FilePath>;
 
 	public:
-		FilePath(const FilePath&);
-		FilePath(FilePath&&) = default;
-		~FilePath()          = default;
+		FilePath(const FilePath&) = default;
+		FilePath(FilePath&&)      = default;
+		~FilePath()               = default;
 
-		FilePath(const std::filesystem::path& path);
+		FilePath(const std::filesystem::path& path): path(std::filesystem::absolute(path)) {}
 
 		// @TODO: this might not be perfect:
 		bool operator==(const FilePath& oth) const { return path == oth.path; }
