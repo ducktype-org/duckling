@@ -172,7 +172,7 @@ namespace ts {
 		 * \return Whether the implicit coercion is allowed or not.
 		 */
 		[[nodiscard]]
-		bool isInfoImplicitlyCoercible(const TypeInfo target) const;
+		bool isInfoImplicitlyCoercible(TypeInfo target) const;
 
 		/**
 		 * \brief Get the text representation of this type.
@@ -188,7 +188,10 @@ namespace ts {
 		 */
 		explicit TypeInfo(const internal::TypeInfoImpl* pimpl): pimpl(pimpl) {}
 
-		// This is almost-const, but we need assignment operator on TypeInfo.
+		/**
+		 * \brief The pointer to the (probably significantly heavier) object carrying
+		 * the implementation which describes the types represented by this object.
+		 */
 		const internal::TypeInfoImpl* pimpl;
 	};
 }

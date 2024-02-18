@@ -9,6 +9,9 @@
  * Another context in which implicit coercions are desirable is when
  * casting from subclass to superclass.
  *
+ * In other words, a coercion is the conversion of a value of one type, to a value of another
+ * type, be it with a no-op (cast, if upwards a class hierarchy) or otherwise (conversion).
+ *
  * These methods do not determine how to perform a coercion.
  * They only determine whether one should be considered.
  * A coercion may thus be allowed but not implemented; or implemented

@@ -40,7 +40,7 @@ namespace ts::internal {
 	class TypeInfoImpl {
 	public:
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -72,7 +72,7 @@ namespace ts::internal {
 			return representation;
 		}
 
-		explicit TypeInfoImpl(usize size): size(size) {}
+		explicit TypeInfoImpl(const usize size): size(size) {}
 
 		/**
 		 * \brief Determine whether it is legal to consider and implicit coercion
@@ -117,7 +117,7 @@ namespace ts::internal {
 		std::string representation = "UNNAMED";
 	};
 
-	class UnitInfoImpl: public TypeInfoImpl {
+	class UnitInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -125,14 +125,14 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
 		UnitInfoImpl(): TypeInfoImpl(0) { representation = "unit"; }
 	};
 
-	class VoidInfoImpl: public TypeInfoImpl {
+	class VoidInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -140,14 +140,14 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
 		VoidInfoImpl(): TypeInfoImpl(0) { representation = "void"; }
 	};
 
-	class ByteInfoImpl: public TypeInfoImpl {
+	class ByteInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -155,11 +155,11 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
-		explicit ByteInfoImpl(): TypeInfoImpl(ts::BYTE_SIZE) { representation = "byte"; }
+		explicit ByteInfoImpl(): TypeInfoImpl(BYTE_SIZE) { representation = "byte"; }
 
 		[[nodiscard]]
 		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
@@ -168,7 +168,7 @@ namespace ts::internal {
 		}
 	};
 
-	class BoolInfoImpl: public TypeInfoImpl {
+	class BoolInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -176,11 +176,11 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
-		explicit BoolInfoImpl(): TypeInfoImpl(ts::BOOL_SIZE) { representation = "bool"; }
+		explicit BoolInfoImpl(): TypeInfoImpl(BOOL_SIZE) { representation = "bool"; }
 
 		[[nodiscard]]
 		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
@@ -189,7 +189,7 @@ namespace ts::internal {
 		}
 	};
 
-	class CharInfoImpl: public TypeInfoImpl {
+	class CharInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -197,11 +197,11 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
-		explicit CharInfoImpl(): TypeInfoImpl(ts::CHAR_SIZE) { representation = "char"; }
+		explicit CharInfoImpl(): TypeInfoImpl(CHAR_SIZE) { representation = "char"; }
 
 		[[nodiscard]]
 		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
@@ -210,7 +210,7 @@ namespace ts::internal {
 		}
 	};
 
-	class IntegralInfoImpl: public TypeInfoImpl {
+	class IntegralInfoImpl final: public TypeInfoImpl {
 		bool signedness;
 
 	public:
@@ -220,7 +220,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -246,7 +246,7 @@ namespace ts::internal {
 		}
 	};
 
-	class FloatInfoImpl: public TypeInfoImpl {
+	class FloatInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -254,7 +254,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -277,22 +277,24 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
-		RawPointerInfoImpl(): TypeInfoImpl(ts::POINTER_SIZE) { representation = "raw_pointer"; }
+		RawPointerInfoImpl(): TypeInfoImpl(POINTER_SIZE) { representation = "raw_pointer"; }
 
 		[[nodiscard]]
 		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
 			// Implicit coercions allow checking against null pointer.
-			// We do not allow casting to a typed pointer, because we forbid implicit type
-			// specification.
+			// We do not allow casting to a typed pointer,
+			// because we forbid implicit type specification in this context.
 			return target.getKind() == Kind::Bool;
 		}
 	};
 
-	class PointerInfoImpl: public RawPointerInfoImpl {
+	class PointerInfoImpl final: public RawPointerInfoImpl {
+		const TypeDesc<> underlying_type;
+
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -300,29 +302,34 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
 		[[nodiscard]]
-		TypeDesc<> getUnderlying() const {
+		TypeDesc<> getUnderlyingType() const {
 			return underlying_type;
 		}
 
 		explicit PointerInfoImpl(const TypeDesc<>& underlying_type):
-			  RawPointerInfoImpl(),
 			  underlying_type(underlying_type) {
 			representation = base::strConcat("pointer(", underlying_type.getType().show(), ")");
 		}
 
-	protected:
-		const TypeDesc<> underlying_type;
+		[[nodiscard]]
+		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
+			// Explicit override without change in implementation to add comment.
+			// Implicit coercions allow checking against null pointer.
+			// We do not allow casting to another (raw) pointer type,
+			// because we forbid implicit type (de)specification in this context.
+			return target.getKind() == Kind::Bool;
+		}
 	};
 
-	class FunctionInfoImpl: public TypeInfoImpl {
-		std::vector<TypeDesc<>> parameterTypes;
-		TypeDesc<>              resultType;
-		base::FlagType          flags;  // like `pure` and others
+	class ReferenceInfoImpl final: public TypeInfoImpl {
+		const TypeInfo      underlying_type;
+		const ReferenceKind ref_kind;
+		const bool          leaking, nullable, unique;
 
 	public:
 		[[nodiscard]]
@@ -331,49 +338,132 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
-		explicit FunctionInfoImpl(
-			std::vector<TypeDesc<>> parameterTypes, TypeDesc<> resultType, i32 flags = 0
-		);
+		[[nodiscard]]
+		TypeInfo getUnderlyingType() const {
+			return underlying_type;
+		}
+
+		[[nodiscard]]
+		ReferenceKind getReferenceKind() const {
+			return ref_kind;
+		}
+
+		[[nodiscard]]
+		bool isLeaking() const {
+			return leaking;
+		}
+
+		[[nodiscard]]
+		bool isNullable() const {
+			return nullable;
+		}
+
+		[[nodiscard]]
+		bool isUnique() const {
+			return unique;
+		}
+
+		explicit ReferenceInfoImpl(
+			const TypeInfo      underlying_type,
+			const ReferenceKind ref_kind,
+			const bool          leaking,
+			const bool          nullable,
+			const bool          unique
+		):
+			  TypeInfoImpl(POINTER_SIZE),
+			  underlying_type(underlying_type),
+			  ref_kind(ref_kind),
+			  leaking(leaking),
+			  nullable(nullable),
+			  unique(unique) {}
+
+		[[nodiscard]]
+		bool isImplImplicitlyCoercible(const TypeInfo target
+		) const override {  // WARN -> see comment
+			// Unlike with pointers, we do not allow checking whether the reference is non-null by
+			// coercion, because this may conflict with the underlying type being coercible to bool.
+			// Instead, we would want to just forward coercibility.
+			// But we also anticipate the need to coerce `T` to `ref T` or the other way around.
+			// Does this mean that we need to coearce `(ref S)` to `ref (ref S)`?
+			// Does `ref ref S` even make sense?
+			// @TODO: resolve the above.
+			return false;
+		}
+	};
+
+	class FunctionInfoImpl final: public TypeInfoImpl {
+		const std::vector<TypeDesc<>> parameter_types;
+		const TypeDesc<>              result_type;
+		const bool                    pure, free;
+
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return staticKind;
+		}
+
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
 
 		[[nodiscard]]
 		std::vector<TypeDesc<>> getParameterList() const {
-			return parameterTypes;
+			return parameter_types;
 		}
 
 		[[nodiscard]]
 		TypeDesc<> getResult() const {
-			return resultType;
+			return result_type;
 		}
 
 		[[nodiscard]]
-		base::FlagType getFlags() const {
-			return flags;
+		bool isPure() const {
+			return pure;
+		}
+
+		[[nodiscard]]
+		bool isFree() const {
+			return free;
 		}
 
 		[[nodiscard]]
 		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
-			// A function type is convertible to another function type if and only if
+			// A function type is coercible to another function type if and only if
 			// the return type is coercible to the other return type and
 			// the other parameter types are coercible to the parameter types,
 			// similar to the rules of function subtyping.
+			//
+			// Additionally, only a pure function can be coerced to a pure function,
+			// and only a free function can be coerced to a free function.
+
 			if (target.getKind() != Kind::Function) return false;
 			const FunctionInfo toFunction = target;
-			if (!flags.contains(toFunction.getFlags())
-			    || parameterTypes.size() != toFunction.getParameterTypeList().size()) {
+			if ((!pure && toFunction.isPure()) || (!free && toFunction.isFree())
+			    || parameter_types.size() != toFunction.getParameterTypes().size()) {
 				return false;
 			}
-			for (usize i = 0; i < parameterTypes.size(); i++)
-				if (!isImplicitlyCoercible(toFunction.getParameterTypeList()[i], parameterTypes[i]))
+			for (usize i = 0; i < parameter_types.size(); i++)
+				if (!isImplicitlyCoercible(toFunction.getParameterTypes()[i], parameter_types[i]))
 					return false;
-			return isImplicitlyCoercible(resultType, toFunction.getResultType());
+			return isImplicitlyCoercible(result_type, toFunction.getResultType());
 		}
+
+		explicit FunctionInfoImpl(
+			std::vector<TypeDesc<>> parameter_types,
+			TypeDesc<>              result_type,
+			bool                    pure = false,
+			bool                    free = false
+		);
 	};
 
 	class EnumInfoImpl: public TypeInfoImpl {
+		IntegralInfo base_type;
+
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -381,7 +471,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -395,12 +485,11 @@ namespace ts::internal {
 			  base_type(base_type) {
 			representation = "Enum " + base_type.show();
 		}
-
-	private:
-		IntegralInfo base_type;
 	};
 
 	class FlagInfoImpl: public TypeInfoImpl {
+		IntegralInfo base_type;
+
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -408,7 +497,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -422,12 +511,11 @@ namespace ts::internal {
 			  base_type(base_type) {
 			representation = "Flag " + base_type.show();
 		}
-
-	private:
-		IntegralInfo base_type;
 	};
 
 	class OptionalInfoImpl: public TypeInfoImpl {
+		const TypeDesc<> underlying_type;
+
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -435,7 +523,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -456,9 +544,6 @@ namespace ts::internal {
 			const OptionalInfo toOptional = target;
 			return isImplicitlyCoercible(underlying_type, toOptional.getUnderlying());
 		}
-
-	protected:
-		const TypeDesc<> underlying_type;
 	};
 
 	class TupleInfoImpl: public TypeInfoImpl {
@@ -472,7 +557,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -511,7 +596,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -556,7 +641,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -652,7 +737,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -668,7 +753,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -683,7 +768,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -698,7 +783,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -715,7 +800,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 
@@ -739,7 +824,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by ocjects of this class.
+		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
 

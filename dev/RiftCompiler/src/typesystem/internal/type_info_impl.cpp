@@ -1,5 +1,6 @@
 #include "type_info_impl.hpp"
 #include <queue>
+#include <utility>
 
 namespace ts::internal {
 	Kind TypeInfoImpl::staticKind         = Kind::Any;
@@ -12,6 +13,7 @@ namespace ts::internal {
 	Kind FloatInfoImpl::staticKind        = Kind::Float;
 	Kind RawPointerInfoImpl::staticKind   = Kind::RawPointer;
 	Kind PointerInfoImpl::staticKind      = Kind::Pointer;
+	Kind ReferenceInfoImpl::staticKind    = Kind::Reference;
 	Kind FunctionInfoImpl::staticKind     = Kind::Function;
 	Kind EnumInfoImpl::staticKind         = Kind::Enum;
 	Kind FlagInfoImpl::staticKind         = Kind::Flag;
@@ -60,14 +62,18 @@ namespace ts::internal {
 	}
 
 	FunctionInfoImpl::FunctionInfoImpl(
-		std::vector<TypeDesc<>> parameterTypes, TypeDesc<> resultType, i32 flags
+		std::vector<TypeDesc<>> parameter_types,
+		TypeDesc<>              result_type,
+		const bool              pure,
+		const bool              free
 	):
-		  TypeInfoImpl(POINTER_SIZE),
-		  parameterTypes(std::move(parameterTypes)),
-		  resultType(resultType),
-		  flags(flags) {
-		representation = "Function " + showTypeVector(this->parameterTypes) + " -> ("
-		               + resultType.getType().show() + ")";
+		  TypeInfoImpl((1 + !free) * POINTER_SIZE),
+		  parameter_types(std::move(parameter_types)),
+		  result_type(result_type),
+		  pure(pure),
+		  free(free) {
+		representation = "Function " + showTypeVector(this->parameter_types) + " -> ("
+		               + result_type.getType().show() + ")";
 	}
 
 	usize sumTypeVectorSizes(const std::vector<TypeDesc<>>& types) {

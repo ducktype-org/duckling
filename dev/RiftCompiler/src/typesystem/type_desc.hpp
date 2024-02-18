@@ -57,6 +57,8 @@ namespace ts {
 			  typeInfo(typeInfo),
 			  valueCategory(valueCategory) {}
 
+		TypeDesc(const TypeDesc& other) = default;
+
 		/**
 		 * \brief Gets the underlying type information.
 		 * \return The underlying type information.

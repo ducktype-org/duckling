@@ -26,6 +26,7 @@ namespace ts {
 		Float,
 		RawPointer,
 		Pointer,
+		Reference,
 		Function,
 		Enum,
 		Flag,
@@ -45,10 +46,10 @@ namespace ts {
 		Meta,
 
 		/**
-		 * \brief The kind of the general TypeInfo(Impl). Must not be used in constructors or
-		 * non-static contexts.
+		 * \brief The kind of the general TypeInfo(Impl).
+		 * Must not be used in constructors or non-static contexts.
 		 */
-		Any = -1
+		Any = -1,
 	};
 
 	inline std::string kindToString(Kind kind) {
@@ -72,6 +73,8 @@ namespace ts {
 			return "RawPointer";
 		case Pointer:
 			return "Pointer";
+		case Reference:
+			return "Reference";
 		case Function:
 			return "Function";
 		case Enum:
@@ -94,12 +97,16 @@ namespace ts {
 			return "CodeBlock";
 		case Module:
 			return "Module";
-		case Meta:
-			return "Meta";
 		case VTable:
 			return "VTable";
+		case Meta:
+			return "Meta";
+
+
 		case Any:
 			return "Any";
+
+
 		default:
 			std::stringstream ss;
 			ss << "Tried to translate non-existent Kind with underlying value "

@@ -399,7 +399,7 @@ private:
 
 		std::cerr << "parameters:"
 				  << operation::getDefault(operation::Defaultable::ConstructFull, class_A)
-						 .signature.getParameterTypeList()
+						 .signature.getParameterTypes()
 						 .size()
 				  << "\n";
 
@@ -644,7 +644,7 @@ private:
 		const auto& construct_full = operation::getDefault(ConstructFull, tuple);
 
 		assert(
-			construct_full.signature.getParameterTypeList().size() == 3,
+			construct_full.signature.getParameterTypes().size() == 3,
 			"Construct full should take 3 arguments: value being constructed and values of fields"
 		);
 

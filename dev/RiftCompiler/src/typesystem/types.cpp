@@ -24,6 +24,11 @@
 	template ClassName::CPimpl checkDynamicCast<ClassName>(TypeInfo::CPimpl);
 
 namespace ts {
+
+	/******************\
+	|    BASIC TYPES   |
+	\******************/
+
 	UnitInfo UnitInfo::create() {
 		// TODO: do we want to store unit_info on the vector as well?
 		static auto unit_impl = internal::UnitInfoImpl{};
@@ -64,12 +69,12 @@ namespace ts {
 			{ { 128, true }, Impl{ 128, true } }, { { 128, false }, Impl{ 128, false } },
 		};
 
-		RIFT_ASSERT(ints.find({ size, signedness }) != ints.end(), "Incorrect simple int size");
+		RIFT_ASSERT(ints.contains({ size, signedness }), "Incorrect simple int size");
 
 		return IntegralInfo{ &ints.at({ size, signedness }) };
 	}
 
-	FloatInfo FloatInfo::create(usize size) {
+	FloatInfo FloatInfo::create(const usize size) {
 		static std::map<usize, Impl> floats = {
 			{ 16, Impl{ 16 } },  // For certain GPU applications
 			{ 32, Impl{ 32 } },  // Standard float
@@ -78,10 +83,14 @@ namespace ts {
 			{ 128, Impl{ 128 } },  // Quad precision
 		};
 
-		RIFT_ASSERT(floats.find(size) != floats.end(), "Incorrect simple float size");
+		RIFT_ASSERT(floats.contains(size), "Incorrect simple float size");
 
 		return FloatInfo{ &floats.at(size) };
 	}
+
+	/*******************\
+	|   POINTER TYPES   |
+	\*******************/
 
 	RawPointerInfo RawPointerInfo::create() {
 		static auto raw_pointer_impl = Impl{};
@@ -95,57 +104,123 @@ namespace ts {
 
 		if (!pointers.contains(underlying_type)) {
 			auto pointer = base::make_unique<Impl>(underlying_type);
-
 			pointers.put(underlying_type, PointerInfo{ pointer.get() });
-
-			internal::pushType(pointer.release());
+			pushType(pointer.release());
 		}
 
 		return pointers[underlying_type];
 	}
 
-	TypeDesc<> PointerInfo::getUnderlying() const { return ((CPimpl) pimpl)->getUnderlying(); }
-
-	FunctionInfo FunctionInfo::create(
-		const std::vector<TypeDesc<>>& parameter_types, TypeDesc<> result_type, i32 flags
-	) {
-		static base::Map<std::tuple<std::vector<TypeDesc<>>, TypeDesc<>, int>, FunctionInfo>
-			function_types;
-		if (function_types.contains({ parameter_types, result_type, flags }))
-			return function_types[{ parameter_types, result_type, flags }];
-		auto ptr = base::make_unique<Impl>(parameter_types, result_type, flags);
-
-		function_types.put({ parameter_types, result_type, flags }, FunctionInfo(ptr.get()));
-
-		internal::pushType(std::move(ptr));
-
-		return function_types[{ parameter_types, result_type, flags }];
+	TypeDesc<> PointerInfo::getUnderlyingType() const {
+		return ((CPimpl) pimpl)->getUnderlyingType();
 	}
 
-	base::FlagType FunctionInfo::getFlags() const { return ((CPimpl) pimpl)->getFlags(); }
+	struct ReferenceConstructionRecord {
+		TypeInfo      underlying_type;
+		ReferenceKind ref_kind;
+		bool          leaking, nullable, unique;
 
-	std::vector<TypeDesc<>> FunctionInfo::getParameterTypeList() const {
+		auto operator<=>(const ReferenceConstructionRecord&) const = default;
+	};
+
+	ReferenceInfo ReferenceInfo::create(
+		const TypeInfo      underlying_type,
+		const ReferenceKind ref_kind,
+		const bool          leaking,
+		const bool          nullable,
+		const bool          unique
+	) {
+		static base::Map<ReferenceConstructionRecord, ReferenceInfo> references;
+
+		const auto ref_record
+			= ReferenceConstructionRecord{ underlying_type, ref_kind, leaking, nullable, unique };
+
+		if (!references.contains(ref_record)) {
+			auto reference
+				= base::make_unique<Impl>(underlying_type, ref_kind, leaking, nullable, unique);
+			references.put(ref_record, ReferenceInfo(reference.get()));
+			pushType(reference.release());
+		}
+
+		return references[ref_record];
+	}
+
+	TypeInfo ReferenceInfo::getUnderlyingType() const {
+		return ((CPimpl) pimpl)->getUnderlyingType();
+	}
+
+	ReferenceKind ReferenceInfo::getReferenceKind() const {
+		return ((CPimpl) pimpl)->getReferenceKind();
+	}
+
+	bool ReferenceInfo::isLeaking() const { return ((CPimpl) pimpl)->isLeaking(); }
+
+	bool ReferenceInfo::isNullable() const { return ((CPimpl) pimpl)->isNullable(); }
+
+	bool ReferenceInfo::isUnique() const { return ((CPimpl) pimpl)->isUnique(); }
+
+	/*******************\
+	|  COMPOSITE TYPES  |
+	\*******************/
+
+	struct FunctionConstructionRecord {
+		std::vector<TypeDesc<>> parameter_types;
+		TypeDesc<>              result_type;
+		bool                    pure, free;
+
+		auto operator<=>(const FunctionConstructionRecord&) const = default;
+	};
+
+	FunctionInfo FunctionInfo::create(
+		const std::vector<TypeDesc<>>& parameter_types,
+		const TypeDesc<>               result_type,
+		const bool                     pure,
+		const bool                     free
+	) {
+		static base::Map<FunctionConstructionRecord, FunctionInfo> function_pointers;
+
+		const auto fptr_record
+			= FunctionConstructionRecord{ parameter_types, result_type, pure, free };
+
+		if (!function_pointers.contains(fptr_record)) {
+			auto fptr = base::make_unique<Impl>(parameter_types, result_type, pure);
+			function_pointers.put(fptr_record, FunctionInfo(fptr.get()));
+			pushType(std::move(fptr));
+		}
+
+		return function_pointers[fptr_record];
+	}
+
+	std::vector<TypeDesc<>> FunctionInfo::getParameterTypes() const {
 		return ((CPimpl) pimpl)->getParameterList();
 	}
 
 	TypeDesc<> FunctionInfo::getResultType() const { return ((CPimpl) pimpl)->getResult(); }
 
-	EnumInfo EnumInfo::create(const IntegralInfo& type_info) {
-		auto enum_impl_p = base::make_unique<Impl>(type_info);
-		auto enum_impl   = EnumInfo{ enum_impl_p.get() };
+	bool FunctionInfo::isPure() const { return ((CPimpl) pimpl)->isPure(); }
 
-		internal::pushType(std::move(enum_impl_p));
+	bool FunctionInfo::isFree() const { return ((CPimpl) pimpl)->isFree(); }
+
+	/*****************\
+	|  NOMINAL TYPES  |
+	\*****************/
+
+	EnumInfo EnumInfo::create(const IntegralInfo& base_type) {
+		auto       enum_impl_p = base::make_unique<Impl>(base_type);
+		const auto enum_impl   = EnumInfo{ enum_impl_p.get() };
+
+		pushType(std::move(enum_impl_p));
 
 		return enum_impl;
 	}
 
 	IntegralInfo EnumInfo::getBaseType() const { return ((CPimpl) pimpl)->getBaseType(); }
 
-	FlagInfo FlagInfo::create(const IntegralInfo& type_info) {
-		auto flag_impl_p = base::make_unique<Impl>(type_info);
-		auto flag_impl   = FlagInfo{ flag_impl_p.get() };
+	FlagInfo FlagInfo::create(const IntegralInfo& base_type) {
+		auto       flag_impl_p = base::make_unique<Impl>(base_type);
+		const auto flag_impl   = FlagInfo{ flag_impl_p.get() };
 
-		internal::pushType(std::move(flag_impl_p));
+		pushType(std::move(flag_impl_p));
 
 		return flag_impl;
 	}
@@ -157,10 +232,8 @@ namespace ts {
 
 		if (!optionals.contains(underlying_type)) {
 			auto optional = base::make_unique<Impl>(underlying_type);
-
 			optionals.put(underlying_type, OptionalInfo{ optional.get() });
-
-			internal::pushType(optional.release());
+			pushType(optional.release());
 		}
 
 		return optionals[underlying_type];
@@ -276,6 +349,7 @@ namespace ts {
 	INSTANTIATE_CHECKED_CAST(IntegralInfo)
 	INSTANTIATE_CHECKED_CAST(FloatInfo)
 	INSTANTIATE_CHECKED_CAST(RawPointerInfo)
+	INSTANTIATE_CHECKED_CAST(ReferenceInfo)
 	INSTANTIATE_CHECKED_CAST(PointerInfo)
 	INSTANTIATE_CHECKED_CAST(FunctionInfo)
 	INSTANTIATE_CHECKED_CAST(EnumInfo)
