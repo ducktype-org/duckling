@@ -11,7 +11,7 @@ namespace base {
 		std::ostringstream helper;
 
 		for (usize i = 0; i < len; i++)
-			if (isspace(va_arg[i]))
+			if (std::isspace(va_arg[i]))
 				continue;
 			else if (va_arg[i] == ',') {
 				out.push_back(helper.str());
