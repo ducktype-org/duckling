@@ -13,14 +13,31 @@ namespace symtable {
 	// Possible solution that will not modify this sections may
 	// be unifying all „same” namespace declarations into single symbol
 
+	/**
+	 * @brief A list of symbols.
+	 */
 	typedef std::vector<SymbolRef> SymbolChain;
 
+	/**
+	 * @brief Debug-Prints given SymbolChain to  an ostream.
+	 */
 	void dprintSymbolChain(const SymbolChain&, std::ostream&);
 
+	/**
+	 * @brief Calculate a de-aliased SymbolChain, that is a symbol chain where alias-symbols are
+	 * replaced with their de-aliased counterparts.
+	 */
 	SymbolChain deAliasSymbolChain(const SymbolChain&);
 
 	struct LookupNode;
 
+	/**
+	 * @brief Tree like structure storing lookup result.
+	 * Actual results are always stored in "leaves", while
+	 * children are responsible for storing results hidden under some aliases.
+	 *
+	 * Intuitively LookupResult is a result of a single "." operator.
+	 */
 	struct LookupResult {
 		std::vector<SymbolRef>  leaves;
 		std::vector<LookupNode> children;
@@ -38,13 +55,24 @@ namespace symtable {
 		void dprint(std::ostream&);
 	};
 
+	/**
+	 * @brief LookupNode is used to represent result of lookup that was hidden
+	 * behind some alias. "node" represent the alias, while "inner" represent
+	 * lookup result behind the alias.
+	 */
 	struct LookupNode {
-		SymbolRef    node;  // node should always be alias-like of using-like thing
+		SymbolRef    node;  ///< node should always be alias-like of using-like thing
 		LookupResult inner;
 
 		void dprint(std::ostream&);
 	};
 
+	/**
+	 * @brief ChainLookupResult stores standard LookupResult with a prefix.
+	 *
+	 * Intuitively ChainLookupResult is a result of a single "a.b.c"-like expression where,
+	 * all but the last symbol are uniquely defined.
+	 */
 	struct ChainLookupResult {
 		SymbolChain  prefix;
 		LookupResult result;

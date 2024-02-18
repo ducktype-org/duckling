@@ -2,7 +2,7 @@
 #include <base/exceptions.hpp>
 
 namespace tpc {
-	Element::~Element() {}
+	Element::~Element() = default;
 
 	bool Element::trailingSemicolon() {
 		// @IDEA: not Panic

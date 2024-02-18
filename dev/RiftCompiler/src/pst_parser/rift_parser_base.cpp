@@ -3,7 +3,7 @@
 #include <base/str_concat.hpp>
 
 namespace pst {
-	void RiftParserState::addImport(tpc::ParserCBorrowRef<pst::Import> import) {
+	void RiftParserState::addImport(const tpc::ParserCBorrowRef<pst::Import>& import) {
 		imports.push_back(import);
 	}
 

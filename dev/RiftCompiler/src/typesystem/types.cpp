@@ -16,12 +16,19 @@
 #include "type_desc.hpp"
 #include <base/exceptions.hpp>
 
+// NOLINTBEGIN: linter assumes it's a function like macro
 /**
  * \brief Explicitly instantiate the `checkDynamicCast` template.
  * \param ClassName The class name from the `TypeInfo` hierarchy.
  */
 #define INSTANTIATE_CHECKED_CAST(ClassName) \
 	template ClassName::CPimpl checkDynamicCast<ClassName>(TypeInfo::CPimpl);
+
+// NOLINTEND
+
+// NOLINTBEGIN(cppcoreguidelines-pro-type-cstyle-cast): We have a lot of C-style pointer casts
+// here by design. We could change them to dynamic_casts but that's less legible and slower.
+// We are reasonably confident that the pointer casts will never result in a bad cast.
 
 namespace ts {
 
@@ -366,3 +373,5 @@ namespace ts {
 	INSTANTIATE_CHECKED_CAST(VTableInfo)
 	INSTANTIATE_CHECKED_CAST(MetaInfo)
 }
+
+// NOLINTEND(cppcoreguidelines-pro-type-cstyle-cast)

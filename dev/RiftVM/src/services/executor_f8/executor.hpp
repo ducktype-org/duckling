@@ -18,6 +18,7 @@
  * For now only single threaded execution is suported
  */
 
+
 namespace vm {
 	enum class ExecutionStrategy { Normal, StepByStep, Paused, Stoped };
 

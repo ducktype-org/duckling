@@ -101,7 +101,7 @@ namespace ts {
 		[[nodiscard]]
 		AncestorInfo getAncestorInfo(ClassInfo ancestor_id) const;
 		[[nodiscard]]
-		AncestorInfo getAncestorInfo(std::vector<ClassInfo> ancestor_ids) const;
+		AncestorInfo getAncestorInfo(const std::vector<ClassInfo>& ancestor_ids) const;
 
 		// Returns the offset of a single specific virtual ancestor
 		[[nodiscard]]

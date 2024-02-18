@@ -29,10 +29,11 @@ namespace tpc {
 		TokenStream(TokenStream&) = delete;
 		TokenStream(TokenStream&&) noexcept;
 
-		TokenStream(const Tokens& tokens, const Token& sentinel_end, usize from, usize to);
+		TokenStream(const Tokens& tokens, Token sentinel_end, usize from, usize to);
 
 		const Token& next();
 
+		[[nodiscard]]
 		TokenStream getRecursive() const;
 
 		[[nodiscard]]

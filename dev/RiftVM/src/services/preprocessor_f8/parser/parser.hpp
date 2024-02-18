@@ -7,5 +7,6 @@
 #include <services_data/type_metadata/type_metadata.hpp>
 
 namespace assemble {
-	cpp::result<vm::Code, std::string> assemble(fs::FilePath file, vm::TypeMetadata& type_metadata);
+	cpp::result<vm::Code, std::string>
+		assemble(const fs::FilePath& file, vm::TypeMetadata& type_metadata);
 }

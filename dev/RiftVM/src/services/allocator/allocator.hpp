@@ -5,8 +5,14 @@
 #include <services_data/type_metadata/type_metadata.hpp>
 
 #include <memory_data/block.hpp>
-#include "../services.hpp"
 #include "services_data/memory/memory.hpp"
+
+// This is mostly so that cmake in the linter starting from this file doesn't break in executor.hpp
+namespace vm {
+	class Allocator;
+}
+
+#include "../services.hpp"
 
 namespace vm {
 	class VCPU;

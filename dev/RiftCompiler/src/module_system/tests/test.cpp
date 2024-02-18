@@ -23,7 +23,7 @@ private:
 	}
 
 	void testSingleImportToPath(
-		const pst::Import& import, std::string local_path, std::string expected_output
+		const pst::Import& import, const std::string& local_path, const std::string& expected_output
 	) {
 		assert(
 			modulesys::importToPath(local_path, import) == expected_output,
