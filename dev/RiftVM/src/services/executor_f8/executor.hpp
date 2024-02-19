@@ -2,6 +2,7 @@
 
 #include "../services.hpp"
 #include "kill_core_exception.hpp"
+#include "services/executor_f8/op_case.hpp"
 
 #include <code_data/code.hpp>
 #include <code_data/frame.hpp>
@@ -50,17 +51,23 @@ namespace vm {
 		// This might change:
 		std::condition_variable pause_cv;
 		std::mutex              external_api_mutex;
-		std::atomic<bool>       isRunning          = false;
 		ExecutionStrategy       execution_strategy = ExecutionStrategy::Stoped;
+		std::atomic<bool>       isRunning          = false;
+
+		// This function is marked as cold, because, well, it is cold, but
+		// the compiler did not figure this out on its own, hence the
+		// attribute. In short, this makes the compiler emit assembly with
+		// the assumption this method is rarely called. Testing has shown this
+		// speeds things up significantly.
+		[[gnu::cold]]
+		void handleExecutionStrategy();
+		void handleExecutionStrategyIfNeeded();
 
 		/**
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
 		 */
 		const Code* executing_code = nullptr;
-
-		void handleExecutionStrategyIfNeeded();
-		void handleExecutionStrategy();
 
 		/**
 		 * @TODO:
@@ -71,12 +78,12 @@ namespace vm {
 		 * view to data pointed by pointer. This does not take into consideration possibility
 		 * of derefing only part of a block with given type from given offset.
 		 */
-		cpp::result<base::ModRawView, std::string> internalDerefPointer(Pointer);
+		base::ModRawView internalDerefPointer(Pointer);
 
-		Frame internalInitFrame(base::Optional<Frame&>, const FuncData&, VLADataReference);
-		i64   internalCallFunction(
-			  base::Optional<Frame&>, const FuncData&, StandardFunctionArgs args
-		  );
+		/** Using raw Frame pointers seem to boost performance in function calls */
+		Frame
+			internalInitFrame(Frame*, const FuncData&, VLADataReference, BlockId*, StandardFunctionArgs&);
+		i64 internalCallFunction(Frame*, const FuncData&, StandardFunctionArgs args);
 
 		// @TODO add some thread data in the future
 
@@ -139,6 +146,7 @@ namespace vm {
 
 		template<class... DynamicServices>
 		friend class ServiceManagerDef;
-	};
 
+		friend class OpFuns;
+	};
 }

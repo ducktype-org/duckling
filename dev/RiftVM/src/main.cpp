@@ -7,7 +7,7 @@
 #include "cli.hpp"
 #include "server.hpp"
 
-#include <services/executor_f8/op_case_config.hpp>
+#include "config.hpp"
 
 void showVersion() {
 	std::cout << std::boolalpha;
