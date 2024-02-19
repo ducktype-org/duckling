@@ -337,15 +337,17 @@ private:
 			operation::Defaultable::ConstructEmpty, class_A, class_A_construct_empty
 		);
 
-
+		// This code seems to do nothing
+		/*
 		usize offset = 0;
 		for (auto parent_data: class_B.basicParents())
-			if (parent_data.info == class_A) offset = parent_data.offset;
+		    if (parent_data.info == class_A) offset = parent_data.offset;
+		*/
 
 		operation::TypedOperation class_B_construct_empty{
 
 
-			[class_B, class_A, offset, b_member](std::vector<exec::CTV> ctvs) {
+			[class_B, b_member](std::vector<exec::CTV> ctvs) {
 				// @TODO: this code explicitly initializes A
 			    // the code below uses default empty contructor of B for that
 			    // This is shorter, but initialises B.b twice (once to zero, then to 42).
@@ -490,7 +492,7 @@ private:
 		exec::fillVtablePtr(ctv_a, A);
 
 
-		auto member = exec::getVirtualMember(ctv_a, A, symbol_z);
+		/*auto member = */ exec::getVirtualMember(ctv_a, A, symbol_z);
 
 		// @TODO: constructors should construct virtual parents
 		// assert(member.getData<uint8_t>().front() == 7,

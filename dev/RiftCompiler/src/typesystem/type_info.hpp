@@ -18,7 +18,7 @@
 
 
 #define CONSTRUCT_FROM_IMPLEMENTATION(ClassName) \
-	explicit ClassName(const Pimpl pimpl): Base((BPimpl) pimpl) {}
+	explicit ClassName(const Pimpl pimpl): Base(reinterpret_cast<BPimpl>(pimpl)) {}
 
 
 #define SETUP_TYPE(ClassName, BaseClass)       \

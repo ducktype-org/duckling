@@ -1,5 +1,5 @@
 /**
- * @file clap_parameter.cpp
+ * @file parameter.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 

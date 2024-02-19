@@ -96,7 +96,8 @@ namespace clap {
 				start,
 				result.position,
 				raw_input,
-				"argument does not match regex"
+				"argument does not match regex"  // unluckily, there is no way to extract the regex
+			                                     // from file_regex.
 			);
 
 		std::filesystem::path path = str;

@@ -37,9 +37,9 @@ namespace vm {
 		}
 	}
 
-	Pointer Block::BasePointer() const { return Pointer(block_id, start); }
+	Pointer Block::BasePointer() const { return { block_id, start }; }
 
-	base::RawView Block::rawPointer() { return base::RawView(data, element_type->getSize()); }
+	base::RawView Block::rawPointer() { return { data, element_type->getSize() }; }
 
 	TypeCRef Block::innerType() const { return element_type; }
 

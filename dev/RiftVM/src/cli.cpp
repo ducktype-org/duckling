@@ -19,7 +19,7 @@ T expect(cpp::result<T, E> r) {
 	cpp::result<T, std::string> r1 = r.map_error(convertError);
 	if (r1.has_error()) {
 		std::cout << r1.error() << "\n";
-		std::exit(-1);
+		std::exit(-1);  // NOLINT: Potential exit race condition
 	}
 	return r.value();
 }
@@ -29,11 +29,11 @@ void expect(cpp::result<void, E> r) {
 	cpp::result<void, std::string> r1 = r.map_error(convertError);
 	if (r1.has_error()) {
 		std::cout << r1.error() << "\n";
-		std::exit(-1);
+		std::exit(-1);  // NOLINT: Potential exit race condition
 	}
 }
 
-void cli(std::string filepath) {
+void cli(const std::string& filepath) {
 	vm::PID pid = expect(vm::api::spawn(true)).pid;
 	expect(vm::api::loadFile(pid, fs::FilePath(filepath)));
 	expect(vm::api::run(pid));

@@ -22,13 +22,17 @@ namespace symtable {
 
 	// using detail::SymbolList;
 
+	/**
+	 * @brief SymbolData stores all symbols and the scope tree.
+	 * Is also provides an interface for the creation of new scopes.
+	 */
 	class SymbolData {
 		ScopeRef root_scope;
 
 		ScopesList                            scopes;
 		std::vector<base::unique_ptr<Symbol>> symbols;
 
-		usize next_relative_position;
+		usize next_relative_position{ 0 };
 
 	public:
 		SymbolData();
@@ -39,13 +43,19 @@ namespace symtable {
 		// @TODO: This mechanism is a little bit weird:
 		SymbolRef newSymbol(base::unique_ptr<Symbol> symbol);
 
+		[[nodiscard]]
 		const decltype(symbols)& getSymbols() const;
 
+		[[nodiscard]]
 		usize symbolCount() const;
 
 
-		// @TODO: add consts
-		// naive implementations for now:
+		/**
+		 * @note Naive implementations for now.
+		 * @TODO: add consts
+		 * @deprecated this should not be here. It should be one of: a function, member of Scope
+		 * class, member of some agent responsible for "lookup".
+		 */
 		ChainLookupResult
 			lookupDottedNameInScopeAndParents(ScopeRef initial, std::span<base::StrId> names);
 	};

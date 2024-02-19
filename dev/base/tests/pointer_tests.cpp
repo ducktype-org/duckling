@@ -4,7 +4,7 @@
 #include <sstream>
 
 struct Wrapper {
-	i32 x;
+	i32 x{};
 
 	Wrapper() = default;
 
@@ -16,7 +16,7 @@ struct Wrapper {
 struct Derived: public Wrapper {
 	static i32 destructor_count;
 
-	virtual ~Derived() { destructor_count++; }
+	~Derived() override { destructor_count++; }
 };
 
 i32 Derived::destructor_count = 0;
@@ -66,8 +66,8 @@ private:
 			base::unique_ptr<Derived> d_ptr(new Derived());
 
 			{
-				auto borrow   = d_ptr.borrow();
-				auto borrow_m = d_ptr.borrow_mut();
+				d_ptr.borrow();
+				d_ptr.borrow_mut();
 			}
 
 			assert(Derived::destructor_count == d_count, "Borrows destroy the object");

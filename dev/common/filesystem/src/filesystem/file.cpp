@@ -13,10 +13,6 @@
 namespace fs {
 	FilePath::ContentMap FilePath::to_content;
 
-	FilePath::FilePath(const std::filesystem::path& path): path(std::filesystem::absolute(path)) {}
-
-	FilePath::FilePath(const FilePath& oth): path(oth.path) {}
-
 	FileContent FilePath::getContent() const {
 		if (to_content.contains(path)) {
 			auto weak_content = to_content[path];
@@ -62,7 +58,7 @@ namespace fs {
 
 		// should read full file:
 		auto r_array = new byte[file_size];
-		file.read(reinterpret_cast<char*>(r_array), file_size);
+		file.read(reinterpret_cast<char*>(r_array), std::streamsize(file_size));
 
 		return { r_array, file_size };
 	}

@@ -2,6 +2,7 @@
 #include "classifications.hpp"
 
 #include <base/convert.hpp>
+#include <utility>
 
 namespace lexer {
 	template<>
@@ -26,7 +27,7 @@ namespace lexer {
 		out.emplace_back(
 			Classifications::end_of_file_value, u8{ 0 }, bytes.getBegin() + bytes.size()
 		);
-		return CharArray(std::move(out));
+		return out;
 	}
 
 	template<>
@@ -35,7 +36,7 @@ namespace lexer {
 
 		auto log_error = [&](std::string message) {
 			errorState.failAndLog({ { { "UTF-8 decoding error:", printer::Color::BRIGHT_RED },
-			                          message },
+			                          std::move(message) },
 			                        printer::MessageType::ERROR });
 		};
 
@@ -54,8 +55,8 @@ namespace lexer {
 				continue;
 			}
 			// Figure out the size and value stored in the first byte
-			usize   size  = 1;
-			UChar32 value = std::to_integer<UChar32>(bytes[pos]);
+			usize size  = 1;
+			auto  value = std::to_integer<UChar32>(bytes[pos]);
 			if ((bytes[pos] & byte{ 0b10000000u }) == byte{ 0 }) {
 				size = 1;
 				value &= 0b01111111;
@@ -136,6 +137,6 @@ namespace lexer {
 			Classifications::end_of_file_value, u8{ 0 }, bytes.getBegin() + bytes.size()
 		);
 
-		return CharArray(std::move(out));
+		return out;
 	}
 }
