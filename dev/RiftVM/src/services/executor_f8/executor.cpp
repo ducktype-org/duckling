@@ -123,7 +123,7 @@ namespace vm {
 	// call and may cause the stack to explode.
 
 	RETURN_TYPE OpFuns::op_handle_strategy(OPFUN_ARGS) {
-		{ FRAME(executor).handleExecutionStrategy(); }
+		{ frame.executor.handleExecutionStrategy(); }
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
@@ -139,7 +139,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_cmov_l64_l64(OPFUN_ARGS) {
 		{
-			if (FRAME_FLAGS(flag))
+			if (frame.flags.flag)
 				derefStack<u64>(local_stack, instr->arg0)
 					= derefStack<u64>(local_stack, instr->arg1);
 		}
@@ -147,22 +147,22 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::op_mov_l64_r0(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) = FRAME_REGS(p64_reg_0); }
+		{ derefStack<u64>(local_stack, instr->arg0) = frame.regs.p64_reg_0; }
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_mov_r0_l64(OPFUN_ARGS) {
-		{ FRAME_REGS(p64_reg_0) = derefStack<u64>(local_stack, instr->arg0); }
+		{ frame.regs.p64_reg_0 = derefStack<u64>(local_stack, instr->arg0); }
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_mov_l64_pFuncArg(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) = FRAME(args).p64_arg; }
+		{ derefStack<u64>(local_stack, instr->arg0) = frame.args.p64_arg; }
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_mov_lptr_ptrFuncArg(OPFUN_ARGS) {
-		{ derefStack<Pointer>(local_stack, instr->arg0) = FRAME(args).pointer_arg; }
+		{ derefStack<Pointer>(local_stack, instr->arg0) = frame.args.pointer_arg; }
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
@@ -211,43 +211,43 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_cmpEq_l64_l64(OPFUN_ARGS) {
 		{
-			FRAME_FLAGS(flag) = derefStack<u64>(local_stack, instr->arg0)
-			                 == derefStack<u64>(local_stack, instr->arg1);
+			frame.flags.flag = derefStack<u64>(local_stack, instr->arg0)
+			                == derefStack<u64>(local_stack, instr->arg1);
 		}
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_cmpEq_l64_imm(OPFUN_ARGS) {
-		{ FRAME_FLAGS(flag) = derefStack<u64>(local_stack, instr->arg0) == instr->arg1; }
+		{ frame.flags.flag = derefStack<u64>(local_stack, instr->arg0) == instr->arg1; }
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_cmpG_l64_l64(OPFUN_ARGS) {
 		{
-			FRAME_FLAGS(flag) = derefStack<u64>(local_stack, instr->arg0)
-			                  > derefStack<u64>(local_stack, instr->arg1);
+			frame.flags.flag = derefStack<u64>(local_stack, instr->arg0)
+			                 > derefStack<u64>(local_stack, instr->arg1);
 		}
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_cmpG_l64_imm(OPFUN_ARGS) {
-		{ FRAME_FLAGS(flag) = derefStack<u64>(local_stack, instr->arg0) > instr->arg1; }
+		{ frame.flags.flag = derefStack<u64>(local_stack, instr->arg0) > instr->arg1; }
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_jmpRel_label(OPFUN_ARGS) {
 		{
-			FRAME(instruction_pointer) += instr->arg0;
-			instr += instr->arg0;
+			IF_NOT_TC(frame.instruction_pointer += instr->arg0;)
+			IF_TC(instr += instr->arg0;)
 		}
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_jmpRelIf_label(OPFUN_ARGS) {
 		{
-			if (FRAME_FLAGS(flag)) {
-				FRAME(instruction_pointer) += instr->arg0;
-				instr += instr->arg0;
+			if (frame.flags.flag) {
+				IF_NOT_TC(frame.instruction_pointer += instr->arg0;)
+				IF_TC(instr += instr->arg0;)
 			}
 		}
 		OPFUN_CONT(1, r1, r2, r3);
@@ -255,8 +255,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_jmpRelNotIf_label(OPFUN_ARGS) {
 		{
-			if (!FRAME_FLAGS(flag)) {
-				FRAME(instruction_pointer) += instr->arg0;
+			if (!frame.flags.flag) {
+				frame.instruction_pointer += instr->arg0;
 				instr += instr->arg0;
 			}
 		}
@@ -264,69 +264,69 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::op_setPtrArg_lptr(OPFUN_ARGS) {
-		{ FRAME(next_args.pointer_arg) = derefStack<Pointer>(local_stack, instr->arg0); }
+		{ frame.next_args.pointer_arg = derefStack<Pointer>(local_stack, instr->arg0); }
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_setPArg_l64(OPFUN_ARGS) {
-		{ FRAME(next_args.p64_arg) = derefStack<i64>(local_stack, instr->arg0); }
+		{ frame.next_args.p64_arg = derefStack<i64>(local_stack, instr->arg0); }
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_call_func(OPFUN_ARGS) {
 		{
-			auto function_id      = instr->arg0;
-			FRAME_REGS(p64_reg_0) = FRAME(executor).internalCallFunction(
+			auto function_id     = instr->arg0;
+			frame.regs.p64_reg_0 = frame.executor.internalCallFunction(
 				// @TODO: this is not correct with flat frame
-				&IF_NOT_FF(frame) IF_FF({}),
-				FRAME(executor).executing_code->functions[function_id],
-				FRAME(next_args)
+				&frame,
+				frame.executor.executing_code->functions[function_id],
+				frame.next_args
 			);
 		}
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_ret_l64(OPFUN_ARGS) {
-		{ FRAME(ret_val) = derefStack<u64>(local_stack, instr->arg0); }
-		IF_TC(return FRAME(ret_val);)
+		{ frame.ret_val = derefStack<u64>(local_stack, instr->arg0); }
+		IF_TC(return frame.ret_val;)
 	}
 
 	RETURN_TYPE OpFuns::op_ret_imm(OPFUN_ARGS) {
-		{ FRAME(ret_val) = 0; }
-		IF_TC(return FRAME(ret_val);)
+		{ frame.ret_val = 0; }
+		IF_TC(return frame.ret_val;)
 	}
 
 	RETURN_TYPE OpFuns::op_init_type(OPFUN_ARGS) {
 		{
-			auto             type      = FRAME(executor).types.getType(vm::TypeId(instr->arg0));
+			auto             type      = frame.executor.types.getType(vm::TypeId(instr->arg0));
 			auto             type_size = type->getSize();
-			base::ModRawView data(&local_stack[FRAME(local_stack_head)], type_size);
-			FRAME(local_stack_head) += type_size;
-			auto block = FRAME(executor).stack_allocator.makeTypeBlock(type, data);
-			FRAME(block_id_stack)[FRAME(block_id_stack_head)++] = block;
+			base::ModRawView data(&local_stack[frame.local_stack_head], type_size);
+			frame.local_stack_head += type_size;
+			auto block = frame.executor.stack_allocator.makeTypeBlock(type, data);
+			frame.block_id_stack[frame.block_id_stack_head++] = block;
 		}
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_deinit(OPFUN_ARGS) {
 		{
-			auto block = FRAME(block_id_stack)[--FRAME(block_id_stack_head)];
-			FRAME(executor).stack_allocator.deleteBlock(block);
+			auto block = frame.block_id_stack[--frame.block_id_stack_head];
+			frame.executor.stack_allocator.deleteBlock(block);
 		}
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_input_l64(OPFUN_ARGS) {
 		{
-			FRAME(executor).setStatus(api::WaitingForInput{});
-			derefStack<i64>(local_stack, instr->arg0) = FRAME(executor).vcpu.getInput<i64>();
-			FRAME(executor).setStatus(api::Running{});
+			frame.executor.setStatus(api::WaitingForInput{});
+			derefStack<i64>(local_stack, instr->arg0) = frame.executor.vcpu.getInput<i64>();
+			frame.executor.setStatus(api::Running{});
 		}
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
 	RETURN_TYPE OpFuns::op_output_l64(OPFUN_ARGS) {
-		{ FRAME(executor).vcpu.writeOutput(derefStack<u64>(local_stack, instr->arg0)); }
+		{ frame.executor.vcpu.writeOutput(derefStack<u64>(local_stack, instr->arg0)); }
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
@@ -338,7 +338,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_alloc_lptr_type(OPFUN_ARGS) {
 		{
-			auto type = EXECUTOR(types).getType(vm::TypeId(instr->arg1));
+			auto type = frame.executor.types.getType(vm::TypeId(instr->arg1));
 			// This is disasbled, because we don't want to pay performance for initializing it
 			// NOLINTBEGIN(cppcoreguidelines-pro-type-member-init)
 			BlockId block;
@@ -350,9 +350,9 @@ namespace vm {
 
 				// @TODO: It is possible to access memory of the array via
 				// mov_l64_imm, which should be at least detected, if not illegal
-				block = EXECUTOR(dynamic_allocator).makeArrayBlock(inner_type, table_size);
+				block = frame.executor.dynamic_allocator.makeArrayBlock(inner_type, table_size);
 			} else {
-				block = EXECUTOR(dynamic_allocator).makeTypeBlock(type);
+				block = frame.executor.dynamic_allocator.makeTypeBlock(type);
 			}
 			derefStack<Pointer>(local_stack, instr->arg0) = Pointer(block, 0);
 		}
@@ -361,8 +361,9 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_free_lptr(OPFUN_ARGS) {
 		{
-			EXECUTOR(dynamic_allocator)
-				.deleteBlock(derefStack<Pointer>(local_stack, instr->arg0).getBlock());
+			frame.executor.dynamic_allocator.deleteBlock(
+				derefStack<Pointer>(local_stack, instr->arg0).getBlock()
+			);
 		}
 		OPFUN_CONT(1, r1, r2, r3);
 	}
@@ -372,7 +373,7 @@ namespace vm {
 		int                     next      = 1;
 		{
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg1);
-			auto view    = FRAME(executor).internalDerefPointer(pointer);
+			auto view    = frame.executor.internalDerefPointer(pointer);
 			u64  idx     = 0;
 #ifdef USE_TAIL_CALLS
 			if (instr[1].opfun == OpFuns::op_ext_l64) {
@@ -382,7 +383,7 @@ namespace vm {
 #else
 			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
-				FRAME(instruction_pointer)++;
+				frame.instruction_pointer++;
 			}
 #endif
 
@@ -399,7 +400,7 @@ namespace vm {
 		int                     next      = 1;
 		{
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
-			auto view    = FRAME(executor).internalDerefPointer(pointer);
+			auto view    = frame.executor.internalDerefPointer(pointer);
 			u64  idx     = 0;
 #ifdef USE_TAIL_CALLS
 			if (instr[1].opfun == OpFuns::op_ext_l64) {
@@ -409,7 +410,7 @@ namespace vm {
 #else
 			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
-				FRAME(instruction_pointer)++;
+				frame.instruction_pointer++;
 			}
 #endif
 
@@ -549,7 +550,7 @@ namespace vm {
 
 			if constexpr (!IGNORE_EXECUTION_STRATEGY) handleExecutionStrategyIfNeeded();
 
-			IF_NOT_CG(switch (static_cast<OpcodeFix8>(FRAME(bc)[FRAME(instruction_pointer)].opcode))
+			IF_NOT_CG(switch (static_cast<OpcodeFix8>(frame.bc[frame.instruction_pointer].opcode))
 			) {
 				OP_CASE(mov_l64_imm)
 
@@ -611,7 +612,7 @@ namespace vm {
 			}
 		}
 	End:
-		return FRAME(ret_val);
+		return frame.ret_val;
 #else
 		auto* instr = frame.bc.data();
 		return instr->opfun(instr, 0, 0, 0, local_stack, frame);

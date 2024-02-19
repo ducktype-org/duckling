@@ -15,7 +15,6 @@ void showVersion() {
 	std::cout << "Configuration: \n";
 	std::cout << "IGNORE_EXECUTION_STRATEGY: " << IGNORE_EXECUTION_STRATEGY << "\n";
 	std::cout << "USE_COMPUTED_GOTO: " << USE_COMPUTED_GOTO_VALUE << "\n";
-	std::cout << "USE_FLAT_FRAME: " << USE_FLAT_FRAME_VALUE << "\n";
 }
 
 int main(int argc, const char** argv) {
