@@ -4,6 +4,8 @@ project(Rift)
 cmake_policy(SET CMP0079 NEW)
 cmake_policy(SET CMP0054 NEW)
 
+set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+
 # This is ifed-out, because it is
 # avaiable only from CMAKE 3.24.
 # @FUTURE: un-if it.
@@ -80,6 +82,15 @@ function(rift_add_test test_pack test_name source USES)
 	endif ()
 endfunction()
 
+define_property(TARGET PROPERTY MODULE_DIRECTORIES)
+add_custom_target(clean-modules 
+				echo "Deleting following directories:"
+				COMMAND echo -e "$<JOIN:$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>,\\n>"
+				COMMAND rm -rfI "$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>" || "true"
+				USES_TERMINAL
+				COMMAND_EXPAND_LISTS
+				VERBATIM)
+
 function(make_module MODULE_NAME)
 	set(multiValueArgs USES INCLUDE)
 	cmake_parse_arguments(make_module "" "" "${multiValueArgs}" ${ARGN})
@@ -88,6 +99,8 @@ function(make_module MODULE_NAME)
 	if ((NOT make_module_USES) AND (NOT ("USES" IN_LIST make_module_KEYWORDS_MISSING_VALUES)))
 		message(FATAL_ERROR "make_module lacks uses argument")
 	endif()
+
+	set_property(TARGET clean-modules APPEND PROPERTY MODULE_DIRECTORIES ${CMAKE_CURRENT_BINARY_DIR})
 
 	target_include_directories(${MODULE_NAME} PUBLIC src ${make_module_INCLUDE})
 	target_link_libraries(${MODULE_NAME} ${make_module_USES}) 
@@ -153,4 +166,6 @@ option(BUILD_DOCS "Build test programs" ON)
 
 if (BUILD_DOCS)
 	add_subdirectory(docs)
+	# add_custom_target(docs-clean make -s -f CmakeFiles/Makefile2 docs/clean)
+	# add_custom_target(docs-clean ninja -t clean docs)
 endif (BUILD_DOCS)
