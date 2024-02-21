@@ -276,50 +276,44 @@ private:
 	}
 
 	void simple_value_category() {
-		constexpr base::FlagType MOVE(0);
-		constexpr base::FlagType COPY(1);
-		constexpr base::FlagType REINIT(2);
-		constexpr base::FlagType USE(3);
-		constexpr base::FlagType DESTROY(4);
-
-		auto vc = ValueCategory::create();
-		assert(vc.getCategory() == PrimaryCategory::Local, "Default PrimaryCategory is not Local");
-		assert(vc.isMutable() == true, "Default ValueCategory is not mutable");
-		assert(vc.isPure() == false, "Default ValueCategory is pure");
+		auto vc = ValueCategory();
+		assert(vc.getCategory() == PrimaryCategory::Local, "Default PrimaryCategory should be Local");
+		assert(vc.isMutable() == true, "Default ValueCategory should be mutable");
+		assert(vc.isPure() == false, "Default ValueCategory shouldn't be pure");
 		assert(vc.getAllowsSemantic() == (MOVE | COPY | REINIT | USE | DESTROY), "Default allows_semantic is incorrect");
-		assert(vc.getForceSemantic() == base::EmptyFlag, "Default force_semantic is not empty");
+		assert(vc.getForceSemantic() == base::EmptyFlag, "Default force_semantic should be empty");
 
-		auto temporary = ValueCategory::create(PrimaryCategory::Temporary);
-		assert(temporary.getCategory() == PrimaryCategory::Temporary, "Temporary category is not Temporary");
-		assert(temporary.isMutable() == false, "Temporary category is mutable");
-		assert(temporary.isPure() == true, "Temporary category is not pure");
+		auto temporary = ValueCategory(PrimaryCategory::Temporary);
+		assert(temporary.getCategory() == PrimaryCategory::Temporary, "Temporary category should be Temporary");
+		assert(temporary.isMutable() == false, "Temporary category should be immutable");
+		assert(temporary.isPure() == true, "Temporary category shouldn't be pure");
 		assert(temporary.getAllowsSemantic() == (MOVE | COPY | USE | DESTROY), "Temporary category allows_semantic is incorrect");
-		assert(temporary.getForceSemantic() == base::EmptyFlag, "Temporary category force_semantic is not empty");
+		assert(temporary.getForceSemantic() == base::EmptyFlag, "Temporary category force_semantic should be empty");
 
-		auto local = ValueCategory::create(PrimaryCategory::Local);
-		assert(local.getCategory() == PrimaryCategory::Local, "Local category is not Local");
-		assert(local.isMutable() == true, "Local category is not mutable");
-		assert(local.isPure() == false, "Local category is pure");
+		auto local = ValueCategory(PrimaryCategory::Local);
+		assert(local.getCategory() == PrimaryCategory::Local, "Local category should be Local");
+		assert(local.isMutable() == true, "Local category should be mutable");
+		assert(local.isPure() == false, "Local category shouldn't be pure");
 		assert(local.getAllowsSemantic() == (MOVE | COPY | REINIT | USE | DESTROY), "Local category allows_semantic is incorrect");
-		assert(local.getForceSemantic() == base::EmptyFlag, "Local category force_semantic is not empty");
+		assert(local.getForceSemantic() == base::EmptyFlag, "Local category force_semantic should be empty");
 
-		auto global = ValueCategory::create(PrimaryCategory::Global);
-		assert(global.getCategory() == PrimaryCategory::Global, "Global category is not Global");
-		assert(global.isMutable() == true, "Global category is not mutable");
-		assert(global.isPure() == false, "Global category is pure");
+		auto global = ValueCategory(PrimaryCategory::Global);
+		assert(global.getCategory() == PrimaryCategory::Global, "Global category should be Global");
+		assert(global.isMutable() == true, "Global category should be mutable");
+		assert(global.isPure() == false, "Global category shouldn't be pure");
 		assert(global.getAllowsSemantic() == (COPY | REINIT | USE), "Global category allows_semantic is incorrect");
-		assert(global.getForceSemantic() == base::EmptyFlag, "Global category force_semantic is not empty");
+		assert(global.getForceSemantic() == base::EmptyFlag, "Global category force_semantic should be empty");
 
-		auto literal = ValueCategory::create(PrimaryCategory::Literal);
-		assert(literal.getCategory() == PrimaryCategory::Literal, "Literal category is not Literal");
-		assert(literal.isMutable() == false, "Literal category is not mutable");
-		assert(literal.isPure() == true, "Literal category is pure");
+		auto literal = ValueCategory(PrimaryCategory::Literal);
+		assert(literal.getCategory() == PrimaryCategory::Literal, "Literal category should be Literal");
+		assert(literal.isMutable() == false, "Literal category shouldn't be mutable");
+		assert(literal.isPure() == true, "Literal category should be pure");
 		assert(literal.getAllowsSemantic() == (COPY | USE | DESTROY), "Literal category allows_semantic is incorrect");
-		assert(literal.getForceSemantic() == base::EmptyFlag, "Literal category force_semantic is not empty");
+		assert(literal.getForceSemantic() == base::EmptyFlag, "Literal category force_semantic should be empty");
 
-		assert(local == vc, "Default ValueCategory is different than Local ValueCategory");
+		assert(local == vc, "Default ValueCategory should be the same as Local ValueCategory");
 
-		assert(local.contains(global), "Local category does not contain global category");
+		assert(local.contains(global), "Local category should contain Global category");
 	}
 
 public:

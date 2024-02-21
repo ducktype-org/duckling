@@ -20,6 +20,7 @@ add_library(TypeSystem
 		src/typesystem/types.cpp
 		src/typesystem/implicit_coercibility.cpp
 		src/typesystem/typesystem.cpp
+		src/typesystem/value_category.cpp
 		src/typesystem/internal/type_info_impl.cpp
 		src/typesystem/internal/class_info_impl.cpp)
 

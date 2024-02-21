@@ -26,43 +26,11 @@ namespace ts {
 		base::FlagType  force_semantic{};
 
 	public:
-		static ValueCategory create() {
-			ValueCategory result;
-			return result;
-		}
+		ValueCategory() = default;
 
-		static ValueCategory create(const PrimaryCategory& pc) {
-			ValueCategory result;
-			// @TODO
-			// Default values might need some tweaking in the future
-			switch(pc) {
-				case PrimaryCategory::Temporary:
-					result.category = PrimaryCategory::Temporary;
-					result.is_mutable = false;
-					result.is_pure = true;
-					result.allows_semantic = MOVE | COPY | USE | DESTROY; // All but REINIT
-					break;
-				case PrimaryCategory::Local:
-					result.category = PrimaryCategory::Local;
-					result.is_mutable = true;
-					result.is_pure = false;
-					result.allows_semantic = MOVE | COPY | REINIT | USE | DESTROY; // All
-					break;
-				case PrimaryCategory::Global:
-					result.category = PrimaryCategory::Global;
-					result.is_mutable = true;
-					result.is_pure = false;
-					result.allows_semantic = COPY | REINIT | USE ; // All but MOVE and DESTROY
-					break;
-				case PrimaryCategory::Literal:
-					result.category = PrimaryCategory::Literal;
-					result.is_mutable = false;
-					result.is_pure = true;
-					result.allows_semantic = COPY | USE | DESTROY; // All but MOVE and REINIT
-					break;
-			}
-			return result;
-		}
+		ValueCategory(const PrimaryCategory&);
+
+		ValueCategory(PrimaryCategory, bool, bool, base::FlagType, base::FlagType);
 
 		PrimaryCategory getCategory() {
 			return category;
