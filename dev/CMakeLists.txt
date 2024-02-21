@@ -15,6 +15,15 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
 	cmake_policy(SET CMP0135 NEW)
 endif()
 
+# This works only with make and ninja:
+find_program(CCACHE "ccache")
+if(CCACHE)
+	message(STATUS "Ccache set!")
+    # set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE};namespace=myproject")
+endif(CCACHE)
+
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -81,7 +90,7 @@ function(rift_add_test test_pack test_name source USES)
 	endif ()
 endfunction()
 
-define_property(TARGET PROPERTY MODULE_DIRECTORIES)
+define_property(TARGET PROPERTY MODULE_DIRECTORIES BRIEF_DOCS "Used for clean-modules" FULL_DOCS "...")
 add_custom_target(clean-modules 
 				echo "Deleting following directories:"
 				COMMAND echo -e "$<JOIN:$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>,\\n>"
