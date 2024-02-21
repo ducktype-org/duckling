@@ -15,14 +15,16 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
 	cmake_policy(SET CMP0135 NEW)
 endif()
 
-# This works only with make and ninja:
-find_program(CCACHE "ccache")
-if(CCACHE)
-	message(STATUS "Ccache set!")
-    # set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE}")
-    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE};namespace=myproject")
-endif(CCACHE)
+option(USE_CCACHE "Use ccache" OFF)
 
+if (USE_CCACHE)
+	# This works only with make and ninja:
+	find_program(CCACHE "ccache" PATHS "scripts/ccache/ccache-4.9.1-linux-x86_64/" NO_DEFAULT_PATH REQUIRED)
+	if(CCACHE)
+		message(STATUS "Ccache set to: ${CCACHE}")
+		set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE};--config-path;./scripts/ccache/ccache.conf")
+	endif(CCACHE)
+endif (USE_CCACHE)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
