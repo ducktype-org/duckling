@@ -276,44 +276,18 @@ private:
 	}
 
 	void simple_value_category() {
-		auto vc = ValueCategory();
-		assert(vc.getCategory() == PrimaryCategory::Local, "Default PrimaryCategory should be Local");
-		assert(vc.isMutable() == true, "Default ValueCategory should be mutable");
-		assert(vc.isPure() == false, "Default ValueCategory shouldn't be pure");
-		assert(vc.getAllowsSemantic() == (MOVE | COPY | REINIT | USE | DESTROY), "Default allows_semantic is incorrect");
-		assert(vc.getForceSemantic() == base::EmptyFlag, "Default force_semantic should be empty");
+		auto vc = ValueCategory(PrimaryCategory::Local, true, false, (MOVE | COPY | REINIT | USE | DESTROY), base::EmptyFlag);
+		assert(vc.getCategory() == PrimaryCategory::Local, "ValueCategory constructor should initialize unchanged category value.");
+		assert(vc.isMutable() == true, "ValueCategory constructor should initialize unchanged is_mutable value.");
+		assert(vc.isPure() == false, "ValueCategory constructor should initialize unchanged is_pure value.");
+		assert(vc.getAllowsSemantic() == (MOVE | COPY | REINIT | USE | DESTROY), "ValueCategory constructor should initialize unchanged allowsSemantic value.");
+		assert(vc.getForceSemantic() == base::EmptyFlag, "ValueCategory constructor should initialize unchanged forceSemantic value.");
 
-		auto temporary = ValueCategory(PrimaryCategory::Temporary);
-		assert(temporary.getCategory() == PrimaryCategory::Temporary, "Temporary category should be Temporary");
-		assert(temporary.isMutable() == false, "Temporary category should be immutable");
-		assert(temporary.isPure() == true, "Temporary category shouldn't be pure");
-		assert(temporary.getAllowsSemantic() == (MOVE | COPY | USE | DESTROY), "Temporary category allows_semantic is incorrect");
-		assert(temporary.getForceSemantic() == base::EmptyFlag, "Temporary category force_semantic should be empty");
+		auto vc_1 = ValueCategory(PrimaryCategory::Local, true, false, (MOVE | COPY | REINIT | USE | DESTROY), base::EmptyFlag);
+		assert(vc == vc_1, "Value categories constructed the same way should be equal.");
 
-		auto local = ValueCategory(PrimaryCategory::Local);
-		assert(local.getCategory() == PrimaryCategory::Local, "Local category should be Local");
-		assert(local.isMutable() == true, "Local category should be mutable");
-		assert(local.isPure() == false, "Local category shouldn't be pure");
-		assert(local.getAllowsSemantic() == (MOVE | COPY | REINIT | USE | DESTROY), "Local category allows_semantic is incorrect");
-		assert(local.getForceSemantic() == base::EmptyFlag, "Local category force_semantic should be empty");
-
-		auto global = ValueCategory(PrimaryCategory::Global);
-		assert(global.getCategory() == PrimaryCategory::Global, "Global category should be Global");
-		assert(global.isMutable() == true, "Global category should be mutable");
-		assert(global.isPure() == false, "Global category shouldn't be pure");
-		assert(global.getAllowsSemantic() == (COPY | REINIT | USE), "Global category allows_semantic is incorrect");
-		assert(global.getForceSemantic() == base::EmptyFlag, "Global category force_semantic should be empty");
-
-		auto literal = ValueCategory(PrimaryCategory::Literal);
-		assert(literal.getCategory() == PrimaryCategory::Literal, "Literal category should be Literal");
-		assert(literal.isMutable() == false, "Literal category shouldn't be mutable");
-		assert(literal.isPure() == true, "Literal category should be pure");
-		assert(literal.getAllowsSemantic() == (COPY | USE | DESTROY), "Literal category allows_semantic is incorrect");
-		assert(literal.getForceSemantic() == base::EmptyFlag, "Literal category force_semantic should be empty");
-
-		assert(local == vc, "Default ValueCategory should be the same as Local ValueCategory");
-
-		assert(local.contains(global), "Local category should contain Global category");
+		auto vc_2 = ValueCategory(PrimaryCategory::Local, true, false, (COPY | REINIT | USE), base::EmptyFlag);
+		assert(vc_1.contains(vc_2), "Value category with full allows_semantic should contain same value category with subset of allowed semantics.");
 	}
 
 public:
