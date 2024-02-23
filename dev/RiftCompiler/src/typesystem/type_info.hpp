@@ -16,10 +16,10 @@
  * \brief Template constructor from the TypeInfoImpl* hierarchy with a dynamic cast check.
  * \param SomeTypeInfo The class name from the TypeInfo hierarchy.
  */
-#define CONSTRUCT_WITH_CHECKED_CAST(SomeTypeInfo)                                 \
-	template<std::derived_from<TypeInfo> TYPE_INFO>                               \
-	SomeTypeInfo(const TYPE_INFO& other): Base((const BPimpl) other.getPimpl()) { \
-		checkDynamicCast<SomeTypeInfo>(other.getPimpl());                         \
+#define CONSTRUCT_WITH_CHECKED_CAST(SomeTypeInfo)                                                 \
+	template<std::derived_from<TypeInfo> TYPE_INFO>                                               \
+	explicit(false) SomeTypeInfo(const TYPE_INFO& other): Base((const BPimpl) other.getPimpl()) { \
+		checkDynamicCast<SomeTypeInfo>(other.getPimpl());                                         \
 	}
 
 /**
@@ -27,7 +27,7 @@
  * \param SomeTypeInfo The class name from the TypeInfo hierarchy.
  */
 #define CONSTRUCT_FROM_IMPLEMENTATION(SomeTypeInfo) \
-	explicit SomeTypeInfo(const Pimpl pimpl): Base((BPimpl) pimpl) {}
+	explicit SomeTypeInfo(const CPimpl pimpl): Base((CBPimpl) pimpl) {}
 
 /**
  * \brief Several type definitions for quick reference,

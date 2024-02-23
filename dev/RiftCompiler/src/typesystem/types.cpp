@@ -10,9 +10,9 @@
 
 #include <sstream>
 #include <concepts>
+#include <ranges>
 
 #include "internal/type_info_impl.hpp"
-#include "templates.hpp"
 #include "type_desc.hpp"
 #include <base/exceptions.hpp>
 
@@ -26,8 +26,9 @@
 
 // NOLINTEND
 
-// NOLINTBEGIN(cppcoreguidelines-pro-type-cstyle-cast): We have a lot of C-style pointer casts
-// here by design. We could change them to dynamic_casts but that's less legible and slower.
+// NOLINTBEGIN(cppcoreguidelines-pro-type-cstyle-cast)
+// We have a lot of C-style pointer casts here by design.
+// We could change them to dynamic_casts but that's less legible and slower.
 // We are reasonably confident that the pointer casts will never result in a bad cast.
 
 namespace ts {
@@ -68,13 +69,17 @@ namespace ts {
 	}
 
 	IntegralInfo IntegralInfo::create(usize size, bool signedness) {
-		static std::map<std::pair<usize, bool>, Impl> ints = {
-			{ { 8, true }, Impl{ 8, true } },     { { 8, false }, Impl{ 8, false } },
-			{ { 16, true }, Impl{ 16, true } },   { { 16, false }, Impl{ 16, false } },
-			{ { 32, true }, Impl{ 32, true } },   { { 32, false }, Impl{ 32, false } },
-			{ { 64, true }, Impl{ 64, true } },   { { 64, false }, Impl{ 64, false } },
-			{ { 128, true }, Impl{ 128, true } }, { { 128, false }, Impl{ 128, false } },
-		};
+		static std::map<std::pair<usize, bool>, Impl> ints = [] {
+			std::map<std::pair<usize, bool>, Impl> result = {
+				{ { 8, true }, Impl{ 8, true } },     { { 8, false }, Impl{ 8, false } },
+				{ { 16, true }, Impl{ 16, true } },   { { 16, false }, Impl{ 16, false } },
+				{ { 32, true }, Impl{ 32, true } },   { { 32, false }, Impl{ 32, false } },
+				{ { 64, true }, Impl{ 64, true } },   { { 64, false }, Impl{ 64, false } },
+				{ { 128, true }, Impl{ 128, true } }, { { 128, false }, Impl{ 128, false } },
+			};
+			for (const auto& v: std::views::values(result)) pushType(base::make_unique<Impl>(v));
+			return result;
+		}();
 
 		RIFT_ASSERT(ints.contains({ size, signedness }), "Incorrect simple int size");
 
@@ -112,7 +117,7 @@ namespace ts {
 		if (!pointers.contains(underlying_type)) {
 			auto pointer = base::make_unique<Impl>(underlying_type);
 			pointers.put(underlying_type, PointerInfo{ pointer.get() });
-			pushType(pointer.release());
+			pushType(std::move(pointer));
 		}
 
 		return pointers[underlying_type];
@@ -146,7 +151,7 @@ namespace ts {
 			auto reference
 				= base::make_unique<Impl>(underlying_type, ref_kind, leaking, nullable, unique);
 			references.put(ref_record, ReferenceInfo(reference.get()));
-			pushType(reference.release());
+			pushType(std::move(reference));
 		}
 
 		return references[ref_record];
@@ -212,64 +217,6 @@ namespace ts {
 	|  NOMINAL TYPES  |
 	\*****************/
 
-	EnumInfo EnumInfo::create(const IntegralInfo& base_type) {
-		auto       enum_impl_p = base::make_unique<Impl>(base_type);
-		const auto enum_impl   = EnumInfo{ enum_impl_p.get() };
-
-		pushType(std::move(enum_impl_p));
-
-		return enum_impl;
-	}
-
-	IntegralInfo EnumInfo::getBaseType() const { return ((CPimpl) pimpl)->getBaseType(); }
-
-	FlagInfo FlagInfo::create(const IntegralInfo& base_type) {
-		auto       flag_impl_p = base::make_unique<Impl>(base_type);
-		const auto flag_impl   = FlagInfo{ flag_impl_p.get() };
-
-		pushType(std::move(flag_impl_p));
-
-		return flag_impl;
-	}
-
-	IntegralInfo FlagInfo::getBaseType() const { return ((CPimpl) pimpl)->getBaseType(); }
-
-	OptionalInfo OptionalInfo::create(const TypeDesc<>& underlying_type) {
-		static base::Map<TypeDesc<>, OptionalInfo> optionals;
-
-		if (!optionals.contains(underlying_type)) {
-			auto optional = base::make_unique<Impl>(underlying_type);
-			optionals.put(underlying_type, OptionalInfo{ optional.get() });
-			pushType(optional.release());
-		}
-
-		return optionals[underlying_type];
-	}
-
-	TypeDesc<> OptionalInfo::getUnderlying() const { return ((CPimpl) pimpl)->getUnderlying(); }
-
-	// TODO: tupleInfo and variantInfo look nearly identical
-	TupleInfo TupleInfo::create(const std::vector<TypeDesc<>>& tuple_types) {
-		static base::Map<std::vector<TypeDesc<>>, TupleInfo> tuples;
-		if (tuples.contains(tuple_types)) return tuples[tuple_types];
-
-		auto ptr = base::make_unique<Impl>(tuple_types);
-
-		tuples.put(tuple_types, TupleInfo{ ptr.get() });
-
-		internal::pushType(std::move(ptr));
-
-		return tuples[tuple_types];
-	}
-
-	const std::vector<TypeDesc<>>& TupleInfo::getUnderlyingTypes() const {
-		return ((CPimpl) pimpl)->getUnderlyingTypes();
-	}
-
-	std::pair<TypeDesc<>, usize> TupleInfo::getMember(usize index) const {
-		return ((CPimpl) pimpl)->getMember(index);
-	}
-
 	VariantInfo VariantInfo::create(const std::vector<TypeDesc<>>& variant_types) {
 		static base::Map<std::vector<TypeDesc<>>, VariantInfo> variants;
 		if (variants.contains(variant_types)) return variants[variant_types];
@@ -278,7 +225,7 @@ namespace ts {
 
 		variants.put(variant_types, VariantInfo{ ptr.get() });
 
-		internal::pushType(std::move(ptr));
+		pushType(std::move(ptr));
 
 		return variants[variant_types];
 	}
@@ -287,24 +234,8 @@ namespace ts {
 		return ((CPimpl) pimpl)->getUnderlyingTypes();
 	}
 
-	TypeDesc<> VariantInfo::getMember(usize index) const {
+	TypeDesc<> VariantInfo::getMember(const usize index) const {
 		return ((CPimpl) pimpl)->getMember(index);
-	}
-
-	TypeTemplateInfo TypeTemplateInfo::create(std::vector<TypeDesc<>>& parameter_list) {
-		static base::Map<std::vector<TypeDesc<>>, TypeTemplateInfo> type_templates;
-		if (type_templates.contains(parameter_list)) return type_templates[parameter_list];
-		auto ptr = base::make_unique<Impl>(parameter_list);
-
-		type_templates.put(parameter_list, TypeTemplateInfo{ ptr.get() });
-
-		internal::pushType(std::move(ptr));
-
-		return type_templates[parameter_list];
-	}
-
-	std::vector<TypeDesc<>> TemplateInfo::getParameterList() const {
-		return ((CPimpl) pimpl)->getParameterList();
 	}
 
 	NamespaceInfo NamespaceInfo::create() {
@@ -312,13 +243,6 @@ namespace ts {
 		static auto namespace_info = NamespaceInfo{ &namespace_impl };
 
 		return namespace_info;
-	}
-
-	CodeBlockInfo CodeBlockInfo::create() {
-		static auto code_block_impl = Impl{};
-		static auto code_block_info = CodeBlockInfo{ &code_block_impl };
-
-		return code_block_info;
 	}
 
 	ModuleInfo ModuleInfo::create() {
@@ -359,15 +283,8 @@ namespace ts {
 	INSTANTIATE_CHECKED_CAST(ReferenceInfo)
 	INSTANTIATE_CHECKED_CAST(PointerInfo)
 	INSTANTIATE_CHECKED_CAST(FunctionInfo)
-	INSTANTIATE_CHECKED_CAST(EnumInfo)
-	INSTANTIATE_CHECKED_CAST(FlagInfo)
-	INSTANTIATE_CHECKED_CAST(OptionalInfo)
-	INSTANTIATE_CHECKED_CAST(TupleInfo)
 	INSTANTIATE_CHECKED_CAST(VariantInfo)
-	INSTANTIATE_CHECKED_CAST(TemplateInfo)
-	INSTANTIATE_CHECKED_CAST(TypeTemplateInfo)
 	INSTANTIATE_CHECKED_CAST(NamespaceInfo)
-	INSTANTIATE_CHECKED_CAST(CodeBlockInfo)
 	INSTANTIATE_CHECKED_CAST(ModuleInfo)
 	INSTANTIATE_CHECKED_CAST(ClassInfo)
 	INSTANTIATE_CHECKED_CAST(VTableInfo)

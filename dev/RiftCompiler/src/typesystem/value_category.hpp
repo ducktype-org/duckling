@@ -9,7 +9,8 @@
 
 namespace ts {
 	// There used to be "Identifiable" category, but it is now replaced with "Local" and "Global"
-	// Maybe in the future we want to bring back "Identifiable" and make a struct to keed more information
+	// Maybe in the future we want to bring back "Identifiable" and make a struct to keed more
+	// information
 	enum class PrimaryCategory { Temporary, Local, Global, Literal };
 
 	constexpr base::FlagType MOVE(0);
@@ -28,35 +29,39 @@ namespace ts {
 	public:
 		ValueCategory() = default;
 
-		ValueCategory(const PrimaryCategory&);
+		explicit ValueCategory(const PrimaryCategory&);
 
 		ValueCategory(PrimaryCategory, bool, bool, base::FlagType, base::FlagType);
 
-		PrimaryCategory getCategory() {
+		[[nodiscard]]
+		PrimaryCategory getCategory() const {
 			return category;
 		}
 
-		bool isMutable() {
+		[[nodiscard]]
+		bool isMutable() const {
 			return is_mutable;
 		}
 
-		bool isPure() {
+		[[nodiscard]]
+		bool isPure() const {
 			return is_pure;
 		}
 
-		base::FlagType getAllowsSemantic() {
+		[[nodiscard]]
+		base::FlagType getAllowsSemantic() const {
 			return allows_semantic;
 		}
 
-		base::FlagType getForceSemantic() {
+		[[nodiscard]]
+		base::FlagType getForceSemantic() const {
 			return force_semantic;
 		}
 
 		[[nodiscard]]
 		bool contains(const ValueCategory& other) const {
 			return allows_semantic >= other.allows_semantic
-			    && force_semantic <= other.force_semantic
-				&& (is_mutable || !other.is_mutable)
+			    && force_semantic <= other.force_semantic && (is_mutable || !other.is_mutable)
 			    && (!is_pure || other.is_pure);
 		}
 

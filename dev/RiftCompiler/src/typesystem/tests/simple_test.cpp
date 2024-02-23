@@ -276,18 +276,51 @@ private:
 	}
 
 	void simple_value_category() {
-		auto vc = ValueCategory(PrimaryCategory::Local, true, false, (MOVE | COPY | REINIT | USE | DESTROY), base::EmptyFlag);
-		assert(vc.getCategory() == PrimaryCategory::Local, "ValueCategory constructor should initialize unchanged category value.");
-		assert(vc.isMutable() == true, "ValueCategory constructor should initialize unchanged is_mutable value.");
-		assert(vc.isPure() == false, "ValueCategory constructor should initialize unchanged is_pure value.");
-		assert(vc.getAllowsSemantic() == (MOVE | COPY | REINIT | USE | DESTROY), "ValueCategory constructor should initialize unchanged allowsSemantic value.");
-		assert(vc.getForceSemantic() == base::EmptyFlag, "ValueCategory constructor should initialize unchanged forceSemantic value.");
+		auto vc = ValueCategory(
+			PrimaryCategory::Local,
+			true,
+			false,
+			(MOVE | COPY | REINIT | USE | DESTROY),
+			base::EmptyFlag
+		);
+		assert(
+			vc.getCategory() == PrimaryCategory::Local,
+			"ValueCategory constructor should initialize unchanged category value."
+		);
+		assert(
+			vc.isMutable() == true,
+			"ValueCategory constructor should initialize unchanged is_mutable value."
+		);
+		assert(
+			vc.isPure() == false,
+			"ValueCategory constructor should initialize unchanged is_pure value."
+		);
+		assert(
+			vc.getAllowsSemantic() == (MOVE | COPY | REINIT | USE | DESTROY),
+			"ValueCategory constructor should initialize unchanged allowsSemantic value."
+		);
+		assert(
+			vc.getForceSemantic() == base::EmptyFlag,
+			"ValueCategory constructor should initialize unchanged forceSemantic value."
+		);
 
-		auto vc_1 = ValueCategory(PrimaryCategory::Local, true, false, (MOVE | COPY | REINIT | USE | DESTROY), base::EmptyFlag);
+		auto vc_1 = ValueCategory(
+			PrimaryCategory::Local,
+			true,
+			false,
+			(MOVE | COPY | REINIT | USE | DESTROY),
+			base::EmptyFlag
+		);
 		assert(vc == vc_1, "Value categories constructed the same way should be equal.");
 
-		auto vc_2 = ValueCategory(PrimaryCategory::Local, true, false, (COPY | REINIT | USE), base::EmptyFlag);
-		assert(vc_1.contains(vc_2), "Value category with full allows_semantic should contain same value category with subset of allowed semantics.");
+		auto vc_2 = ValueCategory(
+			PrimaryCategory::Local, true, false, (COPY | REINIT | USE), base::EmptyFlag
+		);
+		assert(
+			vc_1.contains(vc_2),
+			"Value category with full allows_semantic should contain same value category with "
+			"subset of allowed semantics."
+		);
 	}
 
 public:

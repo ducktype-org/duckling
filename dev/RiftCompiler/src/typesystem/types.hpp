@@ -22,17 +22,8 @@ namespace ts {
 		class PointerInfoImpl;
 		class ReferenceInfoImpl;
 		class FunctionInfoImpl;
-		class FunctionPointerInfoImpl;
-		class FunctionObjectInfoImpl;
-		class EnumInfoImpl;
-		class FlagInfoImpl;
-		class OptionalInfoImpl;
-		class TupleInfoImpl;
 		class VariantInfoImpl;
-		class TemplateInfoImpl;
-		class TypeTemplateInfoImpl;
 		class NamespaceInfoImpl;
-		class CodeBlockInfoImpl;
 		class ModuleInfoImpl;
 		class MetaInfoImpl;
 	}
@@ -451,58 +442,6 @@ namespace ts {
 		CONSTRUCT_FROM_IMPLEMENTATION(FunctionInfo)
 	};
 
-	class EnumInfo: public TypeInfo {
-	public:
-		SETUP_TYPE_WITH_BASE(EnumInfo, TypeInfo)
-		static EnumInfo create(const IntegralInfo& base_type);
-		IntegralInfo    getBaseType() const;
-
-		CONSTRUCT_WITH_CHECKED_CAST(EnumInfo)
-
-	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(EnumInfo)
-	};
-
-	class FlagInfo: public TypeInfo {
-	public:
-		SETUP_TYPE_WITH_BASE(FlagInfo, TypeInfo)
-		static FlagInfo create(const IntegralInfo& base_type);
-		IntegralInfo    getBaseType() const;
-
-		CONSTRUCT_WITH_CHECKED_CAST(FlagInfo)
-
-	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(FlagInfo)
-	};
-
-	class OptionalInfo: public TypeInfo {
-	public:
-		SETUP_TYPE_WITH_BASE(OptionalInfo, TypeInfo)
-		static OptionalInfo create(const TypeDesc<>& underlying_type);
-
-		TypeDesc<> getUnderlying() const;
-
-		CONSTRUCT_WITH_CHECKED_CAST(OptionalInfo)
-
-	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(OptionalInfo)
-	};
-
-	class TupleInfo: public TypeInfo {
-	public:
-		SETUP_TYPE_WITH_BASE(TupleInfo, TypeInfo)
-		static TupleInfo create(const std::vector<TypeDesc<>>& variant_types);
-
-		const std::vector<TypeDesc<>>& getUnderlyingTypes() const;
-
-		std::pair<TypeDesc<>, usize> getMember(usize index) const;
-
-		CONSTRUCT_WITH_CHECKED_CAST(TupleInfo)
-
-	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(TupleInfo)
-	};
-
 	class VariantInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(VariantInfo, TypeInfo)
@@ -527,17 +466,6 @@ namespace ts {
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(NamespaceInfo)
-	};
-
-	class CodeBlockInfo: public TypeInfo {
-	public:
-		SETUP_TYPE_WITH_BASE(CodeBlockInfo, TypeInfo)
-		static CodeBlockInfo create();
-
-		CONSTRUCT_WITH_CHECKED_CAST(CodeBlockInfo)
-
-	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(CodeBlockInfo)
 	};
 
 	class ModuleInfo: public TypeInfo {

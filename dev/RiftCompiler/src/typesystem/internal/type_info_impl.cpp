@@ -3,30 +3,24 @@
 #include <utility>
 
 namespace ts::internal {
-	Kind TypeInfoImpl::staticKind         = Kind::Any;
-	Kind UnitInfoImpl::staticKind         = Kind::Unit;
-	Kind VoidInfoImpl::staticKind         = Kind::Void;
-	Kind ByteInfoImpl::staticKind         = Kind::Byte;
-	Kind BoolInfoImpl::staticKind         = Kind::Bool;
-	Kind CharInfoImpl::staticKind         = Kind::Char;
-	Kind IntegralInfoImpl::staticKind     = Kind::Integral;
-	Kind FloatInfoImpl::staticKind        = Kind::Float;
-	Kind RawPointerInfoImpl::staticKind   = Kind::RawPointer;
-	Kind PointerInfoImpl::staticKind      = Kind::Pointer;
-	Kind ReferenceInfoImpl::staticKind    = Kind::Reference;
-	Kind FunctionInfoImpl::staticKind     = Kind::Function;
-	Kind EnumInfoImpl::staticKind         = Kind::Enum;
-	Kind FlagInfoImpl::staticKind         = Kind::Flag;
-	Kind OptionalInfoImpl::staticKind     = Kind::Optional;
-	Kind TupleInfoImpl::staticKind        = Kind::Tuple;
-	Kind VariantInfoImpl::staticKind      = Kind::Variant;
-	Kind ClassInfoImpl::staticKind        = Kind::Class;
-	Kind TypeTemplateInfoImpl::staticKind = Kind::TypeTemplate;
-	Kind NamespaceInfoImpl::staticKind    = Kind::Namespace;
-	Kind CodeBlockInfoImpl::staticKind    = Kind::CodeBlock;
-	Kind ModuleInfoImpl::staticKind       = Kind::Module;
-	Kind VTableInfoImpl::staticKind       = Kind::VTable;
-	Kind MetaInfoImpl::staticKind         = Kind::Meta;
+	Kind TypeInfoImpl::staticKind       = Kind::Any;
+	Kind UnitInfoImpl::staticKind       = Kind::Unit;
+	Kind VoidInfoImpl::staticKind       = Kind::Void;
+	Kind ByteInfoImpl::staticKind       = Kind::Byte;
+	Kind BoolInfoImpl::staticKind       = Kind::Bool;
+	Kind CharInfoImpl::staticKind       = Kind::Char;
+	Kind IntegralInfoImpl::staticKind   = Kind::Integral;
+	Kind FloatInfoImpl::staticKind      = Kind::Float;
+	Kind RawPointerInfoImpl::staticKind = Kind::RawPointer;
+	Kind PointerInfoImpl::staticKind    = Kind::Pointer;
+	Kind ReferenceInfoImpl::staticKind  = Kind::Reference;
+	Kind FunctionInfoImpl::staticKind   = Kind::Function;
+	Kind VariantInfoImpl::staticKind    = Kind::Variant;
+	Kind ClassInfoImpl::staticKind      = Kind::Class;
+	Kind NamespaceInfoImpl::staticKind  = Kind::Namespace;
+	Kind ModuleInfoImpl::staticKind     = Kind::Module;
+	Kind VTableInfoImpl::staticKind     = Kind::VTable;
+	Kind MetaInfoImpl::staticKind       = Kind::Meta;
 
 	/**
 	 * \brief Gets the global TypeInfoImpl storage structure.
@@ -80,21 +74,6 @@ namespace ts::internal {
 		usize sum = 0;
 		for (const auto& type: types) sum += type.getType().getSize();
 		return sum;
-	}
-
-	TupleInfoImpl::TupleInfoImpl(const std::vector<TypeDesc<>>& tuple_types)
-		  // @TODO: Padding (size)?
-		  :
-		  TypeInfoImpl(sumTypeVectorSizes(tuple_types)),
-		  underlyingTypes(tuple_types),
-		  offsets(tuple_types.size() + 1, 0) {
-		representation = "Tuple" + showTypeVector(tuple_types);
-		for (i32 i = 0; i < underlyingTypes.size(); i++)
-			offsets[i + 1] = offsets[i] + underlyingTypes[i].getType().getSize();
-	}
-
-	std::pair<TypeDesc<>, usize> TupleInfoImpl::getMember(usize index) const {
-		return { getType(index), offsets[index] };
 	}
 
 	VariantInfoImpl::VariantInfoImpl(const std::vector<TypeDesc<>>& variant_types)

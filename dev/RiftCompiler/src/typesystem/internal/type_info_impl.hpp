@@ -13,8 +13,8 @@
 namespace ts::internal {
 	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
 
-	template<typename T>
-	void pushType(T type) {
+	template<std::derived_from<TypeInfoImpl> T>
+	void pushType(base::unique_ptr<T>&& type) {
 		getTypes().emplace_back(base::unique_ptr<TypeInfoImpl>(std::move(type)));
 	}
 
@@ -224,13 +224,13 @@ namespace ts::internal {
 		 */
 		static Kind staticKind;
 
-		explicit IntegralInfoImpl(usize size, bool signedness):
+		explicit IntegralInfoImpl(const usize size, const bool signedness):
 			  TypeInfoImpl(size),
 			  signedness(signedness) {
 			if (signedness)
-				representation = base::strConcat("int_", (u64) (size));
+				representation = base::strConcat("int_", u64(size));
 			else
-				representation = base::strConcat("uint_", (u64) (size));
+				representation = base::strConcat("uint_", u64(size));
 		}
 
 		bool getSignedness() const { return signedness; }
@@ -382,8 +382,8 @@ namespace ts::internal {
 			  unique(unique) {}
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target
-		) const override {  // WARN -> see comment
+		bool isImplImplicitlyCoercible(const TypeInfo target  // WARN -> see comment
+		) const override {
 			// Unlike with pointers, we do not allow checking whether the reference is non-null by
 			// coercion, because this may conflict with the underlying type being coercible to bool.
 			// Instead, we would want to just forward coercibility.
@@ -461,132 +461,12 @@ namespace ts::internal {
 		);
 	};
 
-	class EnumInfoImpl: public TypeInfoImpl {
-		IntegralInfo base_type;
-
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return staticKind;
-		}
-
-		/**
-		 * \brief The Kind of types described by objects of this class.
-		 */
-		static Kind staticKind;
-
-		[[nodiscard]]
-		IntegralInfo getBaseType() const {
-			return base_type;
-		}
-
-		explicit EnumInfoImpl(IntegralInfo base_type):
-			  TypeInfoImpl(base_type.getSize()),
-			  base_type(base_type) {
-			representation = "Enum " + base_type.show();
-		}
-	};
-
-	class FlagInfoImpl: public TypeInfoImpl {
-		IntegralInfo base_type;
-
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return staticKind;
-		}
-
-		/**
-		 * \brief The Kind of types described by objects of this class.
-		 */
-		static Kind staticKind;
-
-		[[nodiscard]]
-		IntegralInfo getBaseType() const {
-			return base_type;
-		}
-
-		explicit FlagInfoImpl(TypeInfo base_type):
-			  TypeInfoImpl(base_type.getSize()),
-			  base_type(base_type) {
-			representation = "Flag " + base_type.show();
-		}
-	};
-
-	class OptionalInfoImpl: public TypeInfoImpl {
-		const TypeDesc<> underlying_type;
-
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return staticKind;
-		}
-
-		/**
-		 * \brief The Kind of types described by objects of this class.
-		 */
-		static Kind staticKind;
-
-		[[nodiscard]]
-		TypeDesc<> getUnderlying() const {
-			return underlying_type;
-		}
-
-		explicit OptionalInfoImpl(const TypeDesc<>& underlying_type):
-			  TypeInfoImpl(BYTE_SIZE + underlying_type.getType().getSize()),
-			  underlying_type(underlying_type) {
-			"Optional " + underlying_type.getType().show();
-		}
-
-		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
-			if (target.getKind() != Kind::Optional) return false;
-			const OptionalInfo toOptional = target;
-			return isImplicitlyCoercible(underlying_type, toOptional.getUnderlying());
-		}
-	};
-
-	class TupleInfoImpl: public TypeInfoImpl {
-		std::vector<TypeDesc<>> underlyingTypes;
-		std::vector<usize>      offsets;
-
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return staticKind;
-		}
-
-		/**
-		 * \brief The Kind of types described by objects of this class.
-		 */
-		static Kind staticKind;
-
-		explicit TupleInfoImpl(const std::vector<TypeDesc<>>& underlyingTypes);
-
-		const std::vector<TypeDesc<>>& getUnderlyingTypes() const { return underlyingTypes; }
-
-		std::pair<TypeDesc<>, usize> getMember(usize index) const;
-
-		TypeDesc<> getType(usize idx) const { return underlyingTypes[idx]; }
-
-		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
-			if (target.getKind() != Kind::Tuple) return false;
-			const TupleInfo toTuple = target;
-			if (underlyingTypes.size() != toTuple.getUnderlyingTypes().size()) return false;
-			for (usize i = 0; i < underlyingTypes.size(); i++)
-				if (!isImplicitlyCoercible(underlyingTypes[i], toTuple.getUnderlyingTypes()[i]))
-					return false;
-			return true;
-		}
-	};
-
 	/** @TODO:
 	 * Memory padding
 	 * Dynamic "what am I?" information size based on input vector
 	 * Sort variant types, so that var(A, B) = var(B, A)?
 	 */
-	class VariantInfoImpl: public TypeInfoImpl {
+	class VariantInfoImpl final: public TypeInfoImpl {
 		std::vector<TypeDesc<>> underlyingTypes;
 
 	public:
@@ -602,12 +482,18 @@ namespace ts::internal {
 
 		explicit VariantInfoImpl(const std::vector<TypeDesc<>>& variant_types);
 
-		const std::vector<TypeDesc<>>& getUnderlyingTypes() const { return underlyingTypes; }
+		[[nodiscard]]
+		const std::vector<TypeDesc<>>& getUnderlyingTypes() const {
+			return underlyingTypes;
+		}
 
-		TypeDesc<> getMember(usize idx) const { return underlyingTypes[idx]; }
+		[[nodiscard]]
+		TypeDesc<> getMember(const usize idx) const {
+			return underlyingTypes[idx];
+		}
 	};
 
-	class ClassInfoImpl: public TypeInfoImpl {
+	class ClassInfoImpl final: public TypeInfoImpl {
 		const base::StrId name;
 
 		// Stores the data of our ancestors, sorted by their offset
@@ -703,49 +589,13 @@ namespace ts::internal {
 		[[nodiscard]]
 		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
 			if (target.getKind() != Kind::Class) return false;
-			const ClassInfo toClass      = target;
-			AncestorInfo    ancestorInfo = getAncestorInfo(toClass);
-			return ancestorInfo.result_type == ResultType::Standard
-			    || ancestorInfo.result_type == ResultType::Virtual;
+			const ClassInfo toClass               = target;
+			const auto [lva, so, eo, result_type] = getAncestorInfo(toClass);
+			return result_type == ResultType::Standard || result_type == ResultType::Virtual;
 		}
 	};
 
-	// Information how to bake the template into another type and what argument
-	// lists were already baked is contained in the value of the template in exec.
-	class TemplateInfoImpl: public TypeInfoImpl {
-		// @TODO: Change to vector<TypeInfo> if TypeDescs end up not needed anywhere.
-		std::vector<TypeDesc<>> parameter_list;
-
-	public:
-		explicit TemplateInfoImpl(const std::vector<TypeDesc<>>& parameter_list)
-			  // @TODO: Change size to whatever StructTemplate or other value contained equals to.
-			  :
-			  TypeInfoImpl(0),
-			  parameter_list(parameter_list) {
-			// @TODO: this should have more information, probably name, and parameters
-			representation = "Template";
-		}
-
-		const std::vector<TypeDesc<>>& getParameterList() const { return parameter_list; }
-	};
-
-	class TypeTemplateInfoImpl: public TemplateInfoImpl {
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return staticKind;
-		}
-
-		/**
-		 * \brief The Kind of types described by objects of this class.
-		 */
-		static Kind staticKind;
-
-		explicit TypeTemplateInfoImpl(const std::vector<TypeDesc<>>& parameter_list):
-			  TemplateInfoImpl(parameter_list) {}
-	};
-
-	class NamespaceInfoImpl: public TypeInfoImpl {
+	class NamespaceInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -760,22 +610,7 @@ namespace ts::internal {
 		NamespaceInfoImpl(): TypeInfoImpl(0) {}
 	};
 
-	class CodeBlockInfoImpl: public TypeInfoImpl {
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return staticKind;
-		}
-
-		/**
-		 * \brief The Kind of types described by objects of this class.
-		 */
-		static Kind staticKind;
-
-		CodeBlockInfoImpl(): TypeInfoImpl(0) {}
-	};
-
-	class ModuleInfoImpl: public TypeInfoImpl {
+	class ModuleInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -790,7 +625,7 @@ namespace ts::internal {
 		ModuleInfoImpl(): TypeInfoImpl(0) {}
 	};
 
-	class VTableInfoImpl: public TypeInfoImpl {
+	class VTableInfoImpl final: public TypeInfoImpl {
 		ClassInfo associated_class;
 
 	public:
@@ -811,12 +646,12 @@ namespace ts::internal {
 		[[nodiscard]]
 		usize getMethodCount() const;
 
-		explicit VTableInfoImpl(ClassInfo class_info):
+		explicit VTableInfoImpl(const ClassInfo class_info):
 			  TypeInfoImpl(class_info.getVtableSize() * sizeof(usize) * 8),
 			  associated_class(class_info) {}
 	};
 
-	class MetaInfoImpl: public TypeInfoImpl {
+	class MetaInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -828,8 +663,6 @@ namespace ts::internal {
 		 */
 		static Kind staticKind;
 
-		explicit MetaInfoImpl(): TypeInfoImpl(ts::META_SIZE) {}
+		explicit MetaInfoImpl(): TypeInfoImpl(META_SIZE) {}
 	};
-
-
 }
