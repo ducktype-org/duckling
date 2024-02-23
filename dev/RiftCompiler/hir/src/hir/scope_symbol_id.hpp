@@ -1,3 +1,5 @@
+// this file is @deprecated
+
 #pragma once
 
 #include <base/named_id.hpp>
