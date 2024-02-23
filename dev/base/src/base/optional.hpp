@@ -14,8 +14,6 @@
 #include "forward_reference_type.hpp"
 #include "unique_pointer.hpp"
 
-#include <iostream>
-
 /* Some cool macros.
  *
  * Example use:
@@ -132,7 +130,6 @@ namespace base {
 
 		friend void swap(Optional& a, Optional& b) {
 			std::swap(a.private_optional, b.private_optional);
-			std::cerr << "reset"; 
 		}
 
 		/**
