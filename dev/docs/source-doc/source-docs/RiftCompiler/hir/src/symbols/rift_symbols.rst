@@ -10,7 +10,7 @@ Helper classes
 .. doxygenclass:: hir::GenericAlias
 
 Symbols implementations
-======================
+=======================
 
 .. doxygenclass:: hir::TopLevelSymbol
 .. doxygenclass:: hir::NamespaceSymbol
