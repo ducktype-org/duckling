@@ -10,7 +10,7 @@ add_library(HIR
 		
 		src/hir/lookup/lookup_result.cpp
 		
-		src/hir/code/hir_expr.cpp
+		src/hir/code_representation/hir_expr.cpp
 )
 
 make_module(HIR USES Base PstParser TypeSystem)

@@ -1,4 +1,4 @@
-#include <hir/code/hir_expr.hpp>
+#include "hir_expr.hpp"
 #include <hir/symbols/symbol_ref.hpp>
 
 #include <base/exceptions.hpp>
