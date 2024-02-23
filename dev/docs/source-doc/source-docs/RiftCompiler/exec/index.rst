@@ -9,5 +9,6 @@ Exec
     :titlesonly:
     :glob:
 
-    operators/index.rst
+    src/operators/index.rst
+    src/*
     *

@@ -9,4 +9,6 @@ Compiler
     :titlesonly:
     :glob:
 
+    src/*
     *
+

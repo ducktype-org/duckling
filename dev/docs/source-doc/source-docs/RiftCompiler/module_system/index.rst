@@ -9,4 +9,5 @@ Module system
     :titlesonly:
     :glob:
 
+    src/*
     *
