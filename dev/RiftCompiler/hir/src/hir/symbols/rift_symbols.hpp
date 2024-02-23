@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include "symtable/symbol.hpp"
-#include "symtable/symbol_ref.hpp"
-#include "hir_expr.hpp"
+#include <hir/symbols/symbol.hpp>
+#include <hir/symbols/symbol_ref.hpp>
+#include <hir/code/hir_expr.hpp>
 #include <pst_parser/rift_parser_base.hpp>
 #include <pst_parser/elements/elements.hpp>
 

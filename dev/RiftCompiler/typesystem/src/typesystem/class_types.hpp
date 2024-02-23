@@ -9,7 +9,7 @@
 #include "type_desc.tcpp"
 #include "type_info.hpp"
 
-#include <symtable/scope_symbol_id.hpp>
+#include <hir/scope_symbol_id.hpp>
 #include <utility>
 #include <base/optional.hpp>
 #include <base/exceptions.hpp>

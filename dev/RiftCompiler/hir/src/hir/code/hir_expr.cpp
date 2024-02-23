@@ -1,5 +1,6 @@
-#include "hir_expr.hpp"
-#include "symtable/symbol_ref.hpp"
+#include <hir/code/hir_expr.hpp>
+#include <hir/symbols/symbol_ref.hpp>
+
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 #include <base/str_to_int.hpp>

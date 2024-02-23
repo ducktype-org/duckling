@@ -1,11 +1,11 @@
 #pragma once
 
-#include "symtable/symtable.hpp"
+#include "symtable.hpp"
 #include <pst_parser/pst.hpp>
 #include <filesystem/file.hpp>
 #include <vector>
 
-#include "rift_symbols.hpp"
+#include "symbols/rift_symbols.hpp"
 
 namespace hir {
 

@@ -5,10 +5,10 @@
 #include <base/maps.hpp>
 #include <base/smart_pointers.hpp>
 #include "scope_symbol_id.hpp"
-#include "symbol.hpp"
-#include "scope.hpp"
-#include "symbol_ref.hpp"
-#include "lookup_result.hpp"
+#include "symbols/symbol.hpp"
+#include "scopes/scope.hpp"
+#include "symbols/symbol_ref.hpp"
+#include "lookup/lookup_result.hpp"
 
 #include <base/ints.hpp>
 #include <span>

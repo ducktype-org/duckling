@@ -3,7 +3,7 @@
 #include <pst_parser/pst.hpp>  // Expr, @TODO: separate expr from rest?
 #include <typesystem/typesystem.hpp>
 #include <exec/exec.hpp>
-#include "analysis_state.hpp"
+#include <hir/analysis_state.hpp>
 
 // This code is a temporary setup
 // @Placeholder

@@ -1,6 +1,6 @@
 #include <typesystem/typesystem.hpp>
 #include "rift_symbols.hpp"
-#include "analysis_state.hpp"
+#include <hir/analysis_state.hpp>
 #include <base/exceptions.hpp>
 #include <base/defer.hpp>
 #include <utility>

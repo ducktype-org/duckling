@@ -3,7 +3,7 @@
 
 #include <filesystem/file.hpp>
 #include <pst_parser/parser.hpp>
-#include <symtable/symtable.hpp>
+#include <hir/symtable.hpp>
 #include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>

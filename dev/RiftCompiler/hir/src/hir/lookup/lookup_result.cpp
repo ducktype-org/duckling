@@ -1,7 +1,7 @@
 #include "lookup_result.hpp"
 #include <base/exceptions.hpp>
 #include <hir/analysis_state.hpp>
-#include "symbol.hpp"
+#include <hir/symbols/symbol.hpp>
 #include <iostream>
 #include <utility>
 

@@ -2,7 +2,9 @@
 
 #include <base/smart_pointers.hpp>
 #include <base/stable_container.hpp>
-#include "scope_symbol_id.hpp"
+
+
+// @TODO: move scope_ref to: hir/scopes/scope_ref
 
 namespace symtable {
 	class Scope;

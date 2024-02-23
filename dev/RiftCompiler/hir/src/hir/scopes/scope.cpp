@@ -1,5 +1,5 @@
 #include "scope.hpp"
-#include "symbol.hpp"
+#include <hir/symbols/symbol.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/defer.hpp>

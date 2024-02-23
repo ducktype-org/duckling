@@ -1,5 +1,5 @@
 #pragma once
-#include "symbol_ref.hpp"
+#include <hir/symbols/symbol_ref.hpp>
 #include <variant>
 
 namespace hir {

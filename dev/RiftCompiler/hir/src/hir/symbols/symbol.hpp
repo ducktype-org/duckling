@@ -7,9 +7,8 @@
 
 #include <base/optional.hpp>
 
-#include "scope_symbol_id.hpp"
 #include "symbol_ref.hpp"
-#include "lookup_result.hpp"
+#include <hir/lookup/lookup_result.hpp>
 
 namespace hir {
 	class AnalysisState;

@@ -8,4 +8,4 @@ add_library(PstParser
 make_module(PstParser USES Lexer Printer TPC)
 
 rift_add_test(compiler parser_test_simple tests/test.cpp
-		USES SymbolTable PstParser)
+		USES PstParser)

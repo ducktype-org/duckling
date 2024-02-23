@@ -1,6 +1,6 @@
 #pragma once
 
-#include "symtable/symtable.hpp"
+#include "symtable.hpp"
 #include <queue>
 #include <span>
 

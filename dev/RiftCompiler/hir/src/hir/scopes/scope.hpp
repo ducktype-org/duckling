@@ -1,9 +1,8 @@
 #pragma once
 
 #include <vector>
-#include "scope_symbol_id.hpp"
-#include "symbol_ref.hpp"
-#include "lookup_result.hpp"
+#include <hir/symbols/symbol_ref.hpp>
+#include <hir/lookup/lookup_result.hpp>
 #include <base/string_id.hpp>
 #include <set>
 
