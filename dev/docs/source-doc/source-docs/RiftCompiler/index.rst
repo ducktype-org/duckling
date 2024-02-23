@@ -14,5 +14,4 @@ Implementation of main Rift language compiler.
 	:titlesonly:
 	:glob:
 
-	src/index.rst
 	*
