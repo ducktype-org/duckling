@@ -18,12 +18,19 @@ endif()
 option(USE_CCACHE "Use ccache" OFF)
 
 if (USE_CCACHE)
-	# This works only with make and ninja:
+	message(NOTICE "Ccache might not work with generators other then make or ninja!")
+
 	find_program(CCACHE "ccache" PATHS "scripts/ccache/ccache-4.9.1-linux-x86_64/" NO_DEFAULT_PATH REQUIRED)
+
 	if(CCACHE)
 		message(STATUS "Ccache set to: ${CCACHE}")
-		set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE};--config-path;./scripts/ccache/ccache.conf")
+		# As os 02.2024 there is not better way to set configuration other then listing it here:
+		# @FUTURE It might change in the future
+		set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE};cache_dir=${CMAKE_CURRENT_SOURCE_DIR}/.ccache_cache/;max_size=1")
+	else()
+		message(ERROR "CCACHE not found.")
 	endif(CCACHE)
+
 endif (USE_CCACHE)
 
 set(CMAKE_CXX_STANDARD 20)

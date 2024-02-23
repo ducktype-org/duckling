@@ -16,7 +16,6 @@
 
 #include <iostream>
 
-
 /* Some cool macros.
  *
  * Example use:
