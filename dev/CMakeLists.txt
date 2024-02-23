@@ -81,7 +81,7 @@ function(rift_add_test test_pack test_name source USES)
 	endif ()
 endfunction()
 
-define_property(TARGET PROPERTY MODULE_DIRECTORIES BRIEF_DOCS "Used for clean-modules target" FULL_DOCS  "Used for clean-modules target")
+define_property(TARGET PROPERTY MODULE_DIRECTORIES BRIEF_DOCS "Used for clean-modules target" FULL_DOCS "Used for clean-modules target")
 add_custom_target(clean-modules 
 				echo "Deleting following directories:"
 				COMMAND echo -e "$<JOIN:$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>,\\n>"
