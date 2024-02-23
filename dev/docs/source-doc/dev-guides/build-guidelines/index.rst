@@ -27,11 +27,10 @@ Compiling with CCACHE enabled
 	CCACHE does not have 100% guarantee to never alter compilation result. Therefor it should not be used when full certainity is needed.
 
 
-CCACHE is compiler cache that reuses object files if possible. During standard development it won't do much more then standard CMake. CCACHE can be much better then CMAKE in:
+CCACHE is compiler cache that reuses object files if possible. During standard development it won't do much more then standard CMake. CCACHE can be much better then CMAKE when:
 * Caching acros multiple build folders.
 * Caching between checkouts.
 * Caching compilation result from the past (useful when reverting and applying changes).
-* Detecting when change to a file will not change resulting object file (e.g. adding white space or comment).
 
 Is some cases having ccache enabled can be usefull.
 
