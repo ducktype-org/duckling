@@ -11,6 +11,9 @@
         "vscode": "^1.84.0"
     },
     "main": "./client/out/extension",
+    "activationEvents": [
+        "onLanguage:rift"
+    ],
     "contributes": {
         "languages": [
             {

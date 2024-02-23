@@ -36,3 +36,31 @@ It also includes an End-to-End test.
 To log from the Language Server you can simply use `console.log`. 
 
 To see the output from the Language Server you have to Run the configuration `Launch Client` and then `Attach`. The output will appear in the `Debug Console` after switching the tab to `Attach`.
+
+## Packaging The Extension
+
+To generate a `.vsix` file for your extension, follow these steps:
+
+1. Install `vsce` globally using npm. This tool is required for packaging and publishing extensions.
+
+    ```bash
+    npm install -g vsce
+    ```
+
+2. Package your extension. This command generates a `.vsix` file in your current directory. You can optionally specify a name for the output file using `--out`.
+
+    ```bash
+    vsce package
+    # Optionally, specify the output file name
+    vsce package --out my-extension.vsix
+    ```
+
+## Publishing Your Extension
+
+After packaging your extension, you can publish it to the Visual Studio Code Marketplace:
+
+1. Run the following command to publish your extension. Ensure you're logged in to `vsce` with your publisher account.
+
+    ```bash
+    vsce publish
+    ```

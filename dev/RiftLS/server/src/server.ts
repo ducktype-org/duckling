@@ -14,7 +14,9 @@ import {
 	CompletionItemKind,
 	TextDocumentPositionParams,
 	TextDocumentSyncKind,
-	InitializeResult
+	InitializeResult,
+	FoldingRange,
+	FoldingRangeKind
 } from 'vscode-languageserver/node';
 
 import {
@@ -55,7 +57,8 @@ connection.onInitialize((params: InitializeParams) => {
 			// Tell the client that this server supports code completion.
 			completionProvider: {
 				resolveProvider: true
-			}
+			},
+			foldingRangeProvider: true
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -221,6 +224,45 @@ connection.onCompletionResolve(
 		return item;
 	}
 );
+
+connection.onFoldingRanges((params) => {
+	const document = documents.get(params.textDocument.uri);
+	if (!document) {
+		return null;
+	}
+
+	const text = document.getText();
+	const foldingRanges: FoldingRange[] = [];
+
+	// Example logic: create a folding range for each block of consecutive comment lines
+	const lines = text.split(/\r?\n/);
+	let startLine = -1;
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i].trim();
+		if (line.startsWith('//') || line.startsWith('/*')) {
+			if (startLine === -1) startLine = i;
+		} else {
+			if (startLine !== -1) {
+				foldingRanges.push({
+					startLine,
+					endLine: i - 1,
+					kind: FoldingRangeKind.Comment
+				});
+				startLine = -1;
+			}
+		}
+	}
+	// Handle case where file ends with a comment block
+	if (startLine !== -1) {
+		foldingRanges.push({
+			startLine,
+			endLine: lines.length - 1,
+			kind: FoldingRangeKind.Comment
+		});
+	}
+
+	return foldingRanges;
+});
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events
