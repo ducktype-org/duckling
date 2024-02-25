@@ -37,7 +37,9 @@ Implementation docs: :doc:`/source-doc/source-docs/RiftCompiler/src/pst_parser/i
 HIR transformation and representation
 -------------------------------------
 
-HIR ("High intermediate representation") is an representation and an algorithm responsible for:
+:hoverxref:`Test <source-doc/dev-handbook/compiler/hir:HIR inner workings>`
+
+|HIR| ("High intermediate representation") is an representation and an algorithm responsible for:
 
 * Performing a lookup on each of the symbols.
 * Lowering to Middle Intermediate Representation
