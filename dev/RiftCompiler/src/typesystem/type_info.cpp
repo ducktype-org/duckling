@@ -17,6 +17,11 @@ namespace ts {
 	}
 
 	[[nodiscard]]
+	TypeInterface TypeInfo::getInterface() const {
+		return pimpl->getInterface();
+	}
+
+	[[nodiscard]]
 	usize TypeInfo::getSize() const {
 		return pimpl->getSize();
 	}

@@ -66,6 +66,7 @@ namespace ts {
 	}
 
 	class TypeInfo;
+	class TypeInterface;
 
 	template<std::derived_from<TypeInfo> TYPE_INFO>
 	typename TYPE_INFO::CPimpl checkDynamicCast(const internal::TypeInfoImpl*);
@@ -94,6 +95,13 @@ namespace ts {
 		 */
 		[[nodiscard]]
 		Kind getKind() const;
+
+		/**
+		 * \brief Get the TypeInterface of the type described by this object.
+		 * \return The TypeInterface of the type described by this object.
+		 */
+		[[nodiscard]]
+		TypeInterface getInterface() const;
 
 		/**
 		 * \brief Gets the size of a value of the type described by this object, in bits.
