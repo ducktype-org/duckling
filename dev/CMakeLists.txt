@@ -15,6 +15,9 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
 	cmake_policy(SET CMP0135 NEW)
 endif()
 
+set(CMAKE_COLOR_DIAGNOSTICS ON)
+set(CMAKE_COLOR_MAKEFILE ON)
+
 option(USE_CCACHE "Use ccache" OFF)
 
 if (USE_CCACHE)
@@ -24,7 +27,7 @@ if (USE_CCACHE)
 
 	if(CCACHE)
 		message(STATUS "Ccache set to: ${CCACHE}")
-		# As os 02.2024 there is not better way to set configuration other then listing it here:
+		# As of 02.2024 there is no better way to set configuration other then listing it here:
 		# @FUTURE It might change in the future
 		set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE};cache_dir=${CMAKE_CURRENT_SOURCE_DIR}/.ccache_cache/;max_size=1")
 	else()
