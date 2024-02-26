@@ -1,7 +1,10 @@
 #include "value_category.hpp"
 
 namespace ts {
-
+	/**
+	 * @brief Construct the value category with default attributes based on primary category.
+	 * @param pc The primary category.
+	 */
 	ValueCategory::ValueCategory(const PrimaryCategory& pc) {
 		// @TODO
 		// Default values might need some tweaking in the future
@@ -33,6 +36,9 @@ namespace ts {
 		}
 	}
 
+	/**
+	 * @brief Construct the value category with manually given values of all attributes.
+	 */
 	ValueCategory::ValueCategory(
 		const PrimaryCategory category,
 		const bool            is_mutable,

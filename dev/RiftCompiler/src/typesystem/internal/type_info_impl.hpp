@@ -8,6 +8,7 @@
 #include "../types.hpp"
 #include <base/string_id.hpp>
 #include <base/smart_pointers.hpp>
+#include <utility>
 #include <vector>
 
 namespace ts::internal {
@@ -40,7 +41,7 @@ namespace ts::internal {
 	class TypeInfoImpl {
 	public:
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * \brief The Kind of the type described by an object of this class.
 		 */
 		static Kind staticKind;
 
@@ -62,6 +63,15 @@ namespace ts::internal {
 		}
 
 		/**
+		 * \brief Gets the TypeInterface of the type described by this class.
+		 * \return The TypeInterface of the type described by this class.
+		 */
+		[[nodiscard]]
+		TypeInterface getInterface() const {
+			return interface;
+		}
+
+		/**
 		 * \brief Get the text representation of this type.
 		 * \return The text representation of this type.
 		 */
@@ -72,7 +82,18 @@ namespace ts::internal {
 			return representation;
 		}
 
-		explicit TypeInfoImpl(const usize size): size(size) {}
+		/**
+		 * \brief Construct a type, given its size and interface.
+		 *
+		 * This constructor should be used when everything about a type is known,
+		 * i.e. when the type is complete.
+		 * \param size The size of the type.
+		 * \param interface The interface of the type.
+		 */
+		// @TODO: remove the default for the interface. Each type should know its interface.
+		explicit TypeInfoImpl(const usize size, TypeInterface interface = {}):
+			  size(size),
+			  interface(std::move(interface)) {}
 
 		/**
 		 * \brief Determine whether it is legal to consider and implicit coercion
@@ -106,8 +127,15 @@ namespace ts::internal {
 		virtual ~TypeInfoImpl() = default;
 
 	protected:
-		// Size in bits.
+		/**
+		 * \brief Size in bits.
+		 */
 		usize size = 0;
+
+		/**
+		 * \brief The interface of the type described by an object of this class.
+		 */
+		const TypeInterface interface;
 
 		// @TODO set this for each type and make it const.
 		// @TODO make this a field in TypeInfoImpl, set in the constructor?
@@ -233,7 +261,10 @@ namespace ts::internal {
 				representation = base::strConcat("uint_", u64(size));
 		}
 
-		bool getSignedness() const { return signedness; }
+		[[nodiscard]]
+		bool getSignedness() const {
+			return signedness;
+		}
 
 		[[nodiscard]]
 		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
