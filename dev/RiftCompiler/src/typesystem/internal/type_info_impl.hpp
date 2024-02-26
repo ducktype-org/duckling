@@ -47,24 +47,12 @@ namespace ts::internal {
 		static Kind staticKind;
 
 		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface = TypeInterface();
-
-		/**
 		 * \brief Gets the Kind of the type described by this object.
 		 * \return The Kind of the type described by this object.
 		 */
 		[[nodiscard]]
 		virtual Kind getKind() const
 			= 0;
-
-		/**
-		 * \brief Gets the TypeInterface of the type described by this class.
-		 * \return The TypeInterface of the type described by this class.
-		 */
-		[[nodiscard]]
-		virtual TypeInterface getInterface() const;
 
 		/**
 		 * \brief Gets the size of a value of the type described by this object, in bits.
@@ -170,16 +158,6 @@ namespace ts::internal {
 		 */
 		static Kind staticKind;
 
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
-
 		UnitInfoImpl(): TypeInfoImpl(0) { representation = "unit"; }
 	};
 
@@ -195,16 +173,6 @@ namespace ts::internal {
 		 */
 		static Kind staticKind;
 
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
-
 		VoidInfoImpl(): TypeInfoImpl(0) { representation = "void"; }
 	};
 
@@ -219,16 +187,6 @@ namespace ts::internal {
 		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
-
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
 
 		explicit ByteInfoImpl(): TypeInfoImpl(BYTE_SIZE) { representation = "byte"; }
 
@@ -251,16 +209,6 @@ namespace ts::internal {
 		 */
 		static Kind staticKind;
 
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
-
 		explicit BoolInfoImpl(): TypeInfoImpl(BOOL_SIZE) { representation = "bool"; }
 
 		[[nodiscard]]
@@ -281,16 +229,6 @@ namespace ts::internal {
 		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
-
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
 
 		explicit CharInfoImpl(): TypeInfoImpl(CHAR_SIZE) { representation = "char"; }
 
@@ -315,23 +253,13 @@ namespace ts::internal {
 		 */
 		static Kind staticKind;
 
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
-
 		explicit IntegralInfoImpl(const usize size, const bool signedness):
 			  TypeInfoImpl(size),
 			  signedness(signedness) {
 			if (signedness)
-				representation = base::strConcat("int_", u64(size));
+				representation = base::strConcat("int_", size);
 			else
-				representation = base::strConcat("uint_", u64(size));
+				representation = base::strConcat("uint_", size);
 		}
 
 		[[nodiscard]]
@@ -362,16 +290,6 @@ namespace ts::internal {
 		 */
 		static Kind staticKind;
 
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
-
 		explicit FloatInfoImpl(usize size): TypeInfoImpl(size) {
 			representation = base::strConcat("float_", size);
 		}
@@ -394,16 +312,6 @@ namespace ts::internal {
 		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
-
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
 
 		RawPointerInfoImpl(): TypeInfoImpl(POINTER_SIZE) { representation = "raw_pointer"; }
 
@@ -429,16 +337,6 @@ namespace ts::internal {
 		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
-
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
 
 		[[nodiscard]]
 		TypeDesc<> getUnderlyingType() const {
@@ -475,16 +373,6 @@ namespace ts::internal {
 		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
-
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
 
 		[[nodiscard]]
 		TypeInfo getUnderlyingType() const {
@@ -556,16 +444,6 @@ namespace ts::internal {
 		static Kind staticKind;
 
 		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
-
-		[[nodiscard]]
 		std::vector<TypeDesc<>> getParameterList() const {
 			return parameter_types;
 		}
@@ -634,16 +512,6 @@ namespace ts::internal {
 		 */
 		static Kind staticKind;
 
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
-
 		explicit VariantInfoImpl(const std::vector<TypeDesc<>>& variant_types);
 
 		[[nodiscard]]
@@ -694,16 +562,6 @@ namespace ts::internal {
 		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
-
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
 
 		[[nodiscard]]
 		base::StrId getName() const {
@@ -781,16 +639,6 @@ namespace ts::internal {
 		 */
 		static Kind staticKind;
 
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
-
 		NamespaceInfoImpl(): TypeInfoImpl(0) {}
 	};
 
@@ -805,16 +653,6 @@ namespace ts::internal {
 		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
-
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
 
 		ModuleInfoImpl(): TypeInfoImpl(0) {}
 	};
@@ -832,16 +670,6 @@ namespace ts::internal {
 		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
-
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
 
 		[[nodiscard]]
 		ClassInfo getAssociatedClass() const;
@@ -866,16 +694,6 @@ namespace ts::internal {
 		 * \brief The Kind of types described by objects of this class.
 		 */
 		static Kind staticKind;
-
-		[[nodiscard]]
-		TypeInterface getInterface() const override {
-			return interface;
-		}
-
-		/**
-		 * \brief The TypeInterface of types described by objects of this class.
-		 */
-		TypeInterface interface;
 
 		explicit MetaInfoImpl(): TypeInfoImpl(META_SIZE) {}
 	};
