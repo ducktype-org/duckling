@@ -10,11 +10,7 @@ High intermediate representation
 	:titlesonly:
 	:glob:
 
-	src/code_representation/*
-	src/lookup/*
-	src/scopes/*
-	src/symbols/*
-	src/*
+	src/index.rst
 	*
 
 Usage

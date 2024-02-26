@@ -9,6 +9,5 @@ Compiler
     :titlesonly:
     :glob:
 
-    src/*
-    *
+    src/index.rst
 

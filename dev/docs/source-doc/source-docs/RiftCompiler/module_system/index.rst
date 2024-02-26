@@ -9,5 +9,5 @@ Module system
     :titlesonly:
     :glob:
 
-    src/*
+    src/index.rst
     *

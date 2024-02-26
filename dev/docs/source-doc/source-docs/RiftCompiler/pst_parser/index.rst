@@ -9,6 +9,5 @@ Pst parser
     :titlesonly:
     :glob:
 
-    src/elements/index.rst
-    src/*
+    src/index.rst
     *

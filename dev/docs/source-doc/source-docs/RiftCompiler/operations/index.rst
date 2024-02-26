@@ -9,6 +9,5 @@ Operations
     :titlesonly:
     :glob:
 
-    src/internal/index.rst
-    src/*
+    src/index.rst
     *

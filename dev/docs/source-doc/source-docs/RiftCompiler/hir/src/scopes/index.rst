@@ -1,13 +1,10 @@
-====
-Exec
-====
-
-.. @TODO
+======
+Scopes
+======
 
 .. toctree::
     :caption: Contents:
     :titlesonly:
     :glob:
 
-    src/index.rst
     *
