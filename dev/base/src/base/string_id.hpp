@@ -50,8 +50,6 @@ namespace base {
 			return view().stdString();
 		}
 
-
-
 		[[nodiscard]]
 		bool isBad() const {
 			return id.isBad();
