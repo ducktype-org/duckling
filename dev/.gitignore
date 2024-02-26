@@ -15,6 +15,7 @@ coverage.info
 # windows cmake
 out/build/
 build/
+build*/
 
 # bin:
 bin/
