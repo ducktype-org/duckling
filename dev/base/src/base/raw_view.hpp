@@ -67,12 +67,12 @@ namespace base {
 		ModRawView& operator=(const ModRawView&) = default;
 
 		[[nodiscard]]
-		inline usize size() const {
+		usize size() const {
 			return arr_size;
 		}
 
 		[[nodiscard]]
-		inline byte* getBegin() const {
+		byte* getBegin() const {
 			return begin;
 		}
 	};

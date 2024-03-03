@@ -38,16 +38,13 @@ namespace vm {
 
 	[[gnu::always_inline]]
 	inline Frame Executor::internalInitFrame(
-		Frame*                previous_frame,
-		const FuncData&       function,
-		VLADataReference      vla_ref,
-		BlockId*              block_id_stack,
-		StandardFunctionArgs& args
+		base::borrow_ptr<Frame> previous_frame,
+		VLADataReference        vla_ref,
+		BlockId*                block_id_stack,
+		StandardFunctionArgs&   args
 	) {
 		return Frame{
-			.previous = previous_frame,
-			// .function = function,
-			.bc                  = function.bc,
+			.previous            = previous_frame,
 			.continue_execution  = true,
 			.instruction_pointer = 0,
 
@@ -278,7 +275,7 @@ namespace vm {
 			auto function_id     = instr->arg0;
 			frame.regs.p64_reg_0 = frame.executor.internalCallFunction(
 				// @TODO: this is not correct with flat frame
-				&frame,
+				base::borrow_ptr(&frame),
 				frame.executor.executing_code->functions[function_id],
 				frame.next_args
 			);
@@ -442,7 +439,7 @@ namespace vm {
 #endif
 
 	i64 Executor::internalCallFunction(
-		Frame* previous_frame, const FuncData& function, StandardFunctionArgs args
+		base::borrow_ptr<Frame> previous_frame, const FuncData& function, StandardFunctionArgs args
 	) {
 		// @TODO: sanity check should be added to see if function.stack_size is sensible small
 		// @TODO: some generic code should be added to work with that does not support VLA
@@ -475,7 +472,6 @@ namespace vm {
 #else
 		Frame frame = internalInitFrame(
 			previous_frame,
-			function,
 			{ static_cast<std::byte*>(local_stack) },
 			static_cast<BlockId*>(block_id_stack),
 			args
@@ -550,8 +546,8 @@ namespace vm {
 
 			if constexpr (!IGNORE_EXECUTION_STRATEGY) handleExecutionStrategyIfNeeded();
 
-			IF_NOT_CG(switch (static_cast<OpcodeFix8>(frame.bc[frame.instruction_pointer].opcode))
-			) {
+			IF_NOT_CG(switch (static_cast<OpcodeFix8>(function.bc[frame.instruction_pointer].opcode)
+			)) {
 				OP_CASE(mov_l64_imm)
 
 				OP_CASE(mov_l64_l64)
@@ -614,7 +610,7 @@ namespace vm {
 	End:
 		return frame.ret_val;
 #else
-		auto* instr = frame.bc.data();
+		auto* instr = function.bc.data();
 		return instr->opfun(instr, 0, 0, 0, local_stack, frame);
 #endif
 	}

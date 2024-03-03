@@ -1,12 +1,9 @@
 #pragma once
 
 #include <base/ints.hpp>
-#include <vector>
-#include <span>
 
 #include <base/optional.hpp>
 #include <memory_data/pointer.hpp>
-#include "code.hpp"
 
 namespace vm {
 
@@ -39,10 +36,7 @@ namespace vm {
 
 	struct Frame {
 		// Internal data:
-		Frame* previous;
-		// const FuncData& function;
-		const std::span<const struct Fix8Instruction>
-			bc;  // this is duplication of function.bc, but allows for faster access
+    base::borrow_ptr<Frame> previous;
 
 		bool  continue_execution;
 		usize instruction_pointer;
@@ -67,7 +61,7 @@ namespace vm {
 		// Local stack:
 		VLADataReference vla_data_reference;
 
-		// clan-tidy complains about this, becasue having a reference
+		// clang-tidy complains about this, becasue having a reference
 		// memeber disables copy-assignment. This doesn't seem to be relevant to us
 		// though we would need to explicilt remove these ctors or use std::reference_wrapper
 		// NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)

@@ -1,10 +1,8 @@
 #pragma once
 
 #include "config.hpp"
-#include "code_data/frame.hpp"
-#include "opcodes.hpp"
 #include <base/ints.hpp>
-
+#include "frame.hpp"
 
 // #define USE_COMPACT_INSTRUCTION
 
