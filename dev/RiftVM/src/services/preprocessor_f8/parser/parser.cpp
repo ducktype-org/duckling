@@ -838,7 +838,7 @@ namespace assemble {
 
 #ifdef USE_TAIL_CALLS
 			funcData.bc.emplace_back(vm::Fix8Instruction{
-				.opfun = vm::OpFuns::opfuns[nameToOpcodeValue(op->opcode_name)],
+				.opfun = vm::OpFuns::opfuns.at(nameToOpcodeValue(op->opcode_name)),
 				.arg0  = static_cast<i32>(arg_0),
 				.arg1  = static_cast<i32>(arg_1) });
 
