@@ -83,7 +83,7 @@ namespace vm {
 		/** Using raw Frame pointers seem to boost performance in function calls */
 		Frame
 			internalInitFrame(base::borrow_ptr<Frame>, VLADataReference, BlockId*, StandardFunctionArgs&);
-		i64 internalCallFunction(base::borrow_ptr<Frame>, const FuncData&, StandardFunctionArgs);
+		u64 internalCallFunction(base::borrow_ptr<Frame>, const FuncData&, StandardFunctionArgs);
 
 		// @TODO add some thread data in the future
 

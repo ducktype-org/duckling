@@ -15,9 +15,6 @@
 #include <base/optional.hpp>
 #include <utility>
 
-// @TODO: Go through linting messages here with regards to optimisation
-// NOLINTBEGIN: Linting might impact optimizations here
-
 namespace vm {
 
 	void Executor::handleExecutionStrategy() {
@@ -100,7 +97,7 @@ namespace vm {
 	}
 
 	template<typename T>
-	__attribute__((always_inline)) inline static T& derefStack(std::byte stack[], i64 position) {
+	__attribute__((always_inline)) inline static T& derefStack(std::byte* stack, i64 position) {
 		return *(reinterpret_cast<T*>(&stack[position]));
 	}
 
@@ -438,17 +435,22 @@ namespace vm {
 	#pragma GCC optimize("-fno-crossjumping")
 #endif
 
-	i64 Executor::internalCallFunction(
+	u64 Executor::internalCallFunction(
 		base::borrow_ptr<Frame> previous_frame, const FuncData& function, StandardFunctionArgs args
 	) {
+		// NOLINTBEGIN(modernize-avoid-c-arrays)
+		// NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays)
 		// @TODO: sanity check should be added to see if function.stack_size is sensible small
 		// @TODO: some generic code should be added to work with that does not support VLA
 		std::byte local_stack[function.stack_size];
+
 
 		// @TODO: static code analysis could be done to determine the smallest
 		// possible stack size for block_ids of variables
 		BlockId block_id_stack[function.stack_size];
 
+		// NOLINTEND(cppcoreguidelines-avoid-c-arrays)
+		// NOLINTEND(modernize-avoid-c-arrays)
 		// @TODO: frame should hold pointers to data only, when
 		// USE_FLAT_FRAME is on
 		// This will be best made with code generation
@@ -611,7 +613,7 @@ namespace vm {
 		return frame.ret_val;
 #else
 		auto* instr = function.bc.data();
-		return instr->opfun(instr, 0, 0, 0, local_stack, frame);
+		return instr->opfun(instr, 0, 0, 0, reinterpret_cast<std::byte*>(local_stack), frame);
 #endif
 	}
 
@@ -706,5 +708,3 @@ namespace vm {
 
 	void Executor::notifyPaused() { pause_cv.notify_all(); }
 }  // namespace vm
-
-   // NOLINTEND
