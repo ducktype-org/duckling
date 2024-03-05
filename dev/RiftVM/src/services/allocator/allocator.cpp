@@ -25,7 +25,7 @@ namespace vm {
 	}
 
 	void Allocator::deleteBlock(BlockId block_id) {
-		delete[] memory.getBlock(block_id).value()->rawPointer().getBegin();
+		delete[] memory.getBlock(block_id)->rawPointer().getBegin();
 		memory.deleteBlock(block_id);
 		memory.returnBlockID(block_id);
 	}
