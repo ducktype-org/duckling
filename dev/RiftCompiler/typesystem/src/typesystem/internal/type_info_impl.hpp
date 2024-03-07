@@ -414,7 +414,7 @@ namespace ts::internal {
 			  unique(unique) {}
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target  // WARN -> see comment
+		bool isImplImplicitlyCoercible(const TypeInfo target
 		) const override {
 			// Unlike with pointers, we do not allow checking whether the reference is non-null by
 			// coercion, because this may conflict with the underlying type being coercible to bool.
@@ -423,6 +423,7 @@ namespace ts::internal {
 			// Does this mean that we need to coearce `(ref S)` to `ref (ref S)`?
 			// Does `ref ref S` even make sense?
 			// @TODO: resolve the above.
+			(void) target;
 			return false;
 		}
 	};

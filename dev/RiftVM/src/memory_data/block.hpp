@@ -51,10 +51,25 @@ namespace vm {
 		Pointer       BasePointer() const;
 		base::RawView rawPointer();
 
-		[[nodiscard]]
-		TypeCRef innerType() const;
+		[[gnu::always_inline]] [[nodiscard]]
+		inline TypeCRef innerType() const {
+			return element_type;
+		}
 
-		cpp::result<base::ModRawView, error> deref(TypeCRef u, u64 offset);
+		[[gnu::always_inline]]
+		inline base::ModRawView deref(const TypeCRef& u, [[maybe_unused]] u64 offset) {
+			// @NOTE: disabling these checks increases
+			// load/store performance in TC by eliminating
+			// 4 stack push-pops in asm
+			// @NOTE: In current VM implementation offset is always 0
+			// is offset actually used/will be used anywhere?
+			// if (offset < start || offset > end) [[unlikely]]
+			// 	RIFT_PANIC("Tried to defer outside of a block");
+			// if (end - offset < u->getSize()) [[unlikely]]
+			// 	RIFT_PANIC("Tried to defer too big of a type");
+			return { data, u->getSize() };
+		}
+
 		cpp::result<base::ModRawView, error> derefCheck(TypeCRef u, u64 offset);
 	};
 }

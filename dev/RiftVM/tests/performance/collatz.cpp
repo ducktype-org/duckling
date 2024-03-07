@@ -21,7 +21,7 @@ private:
 		auto run_response = vm::api::run(pid);
 		assert(run_response.has_value(), "Run failed (1)");
 
-		auto input_response = vm::api::input(pid, "424242");
+		auto input_response = vm::api::input(pid, "4242424");
 		assert(input_response.has_value(), "Input failed (1)");
 
 		auto join_response = vm::api::join(pid);
