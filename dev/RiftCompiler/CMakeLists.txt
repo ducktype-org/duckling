@@ -15,14 +15,14 @@ add_library(SymbolTable
 		src/hir/symtable/lookup_result.cpp)
 
 add_library(TypeSystem
-		src/typesystem/class_types.cpp
-		src/typesystem/type_info.cpp
-		src/typesystem/types.cpp
-		src/typesystem/implicit_coercibility.cpp
-		src/typesystem/typesystem.cpp
-		src/typesystem/value_category.cpp
-		src/typesystem/internal/type_info_impl.cpp
-		src/typesystem/internal/class_info_impl.cpp)
+		typesystem/src/typesystem/class_types.cpp
+		typesystem/src/typesystem/type_info.cpp
+		typesystem/src/typesystem/types.cpp
+		typesystem/src/typesystem/implicit_coercibility.cpp
+		typesystem/src/typesystem/typesystem.cpp
+		typesystem/src/typesystem/value_category.cpp
+		typesystem/src/typesystem/internal/type_info_impl.cpp
+		typesystem/src/typesystem/internal/class_info_impl.cpp)
 
 add_library(Compiler
 		src/compiler/compiler_config.cpp
@@ -67,7 +67,7 @@ rift_add_test(compiler module_system_test_simple src/module_system/tests/test.cp
 		USES Printer ModuleSystem PstParser Lexer)
 rift_add_test(compiler compiler_test_simple src/compiler/tests/test.cpp
 		USES Printer ModuleSystem PstParser Lexer Compiler)
-rift_add_test(compiler typesystem_test_simple src/typesystem/tests/simple_test.cpp
+rift_add_test(compiler typesystem_test_simple typesystem/src/typesystem/tests/simple_test.cpp
 		USES Base Clap SymbolTable TypeSystem)
 rift_add_test(compiler exec_ctv_test_simple src/exec/tests/simple_ctv_test.cpp
 		USES Exec Clap TypeSystem)
