@@ -10,18 +10,19 @@ import {
 	ProposedFeatures,
 	InitializeParams,
 	DidChangeConfigurationNotification,
-	CompletionItem,
-	CompletionItemKind,
-	TextDocumentPositionParams,
 	TextDocumentSyncKind,
 	InitializeResult,
-	FoldingRange,
-	FoldingRangeKind
+	SemanticTokenTypes,
+	SemanticTokenModifiers
 } from 'vscode-languageserver/node';
 
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
+import { handleSemanticTokensFull } from './semanticTokens';
+import { onCompletion, onCompletionResolve } from './completion';
+import { validateTextDocument } from './validation'; // Import the validation function
+
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -33,6 +34,12 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
+
+// Semantic tokens legend, only 'comment' token type for now
+const semanticTokensLegend = {
+	tokenTypes: Object.values(SemanticTokenTypes),
+	tokenModifiers: Object.values(SemanticTokenModifiers)
+};
 
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
@@ -54,11 +61,15 @@ connection.onInitialize((params: InitializeParams) => {
 	const result: InitializeResult = {
 		capabilities: {
 			textDocumentSync: TextDocumentSyncKind.Incremental,
-			// Tell the client that this server supports code completion.
+			// Tell the client that this server supports those options
+			// Tell the client that this server supports those options
 			completionProvider: {
 				resolveProvider: true
 			},
-			foldingRangeProvider: true
+			semanticTokensProvider: {
+				legend: semanticTokensLegend,
+				full: true,
+			},
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -83,6 +94,8 @@ connection.onInitialized(() => {
 	}
 });
 
+connection.onRequest('textDocument/semanticTokens/full', (params) => handleSemanticTokensFull(params, documents));
+
 // The example settings
 interface ExampleSettings {
 	maxNumberOfProblems: number;
@@ -106,12 +119,11 @@ connection.onDidChangeConfiguration(change => {
 			(change.settings.RiftLanguageServer || defaultSettings)
 		);
 	}
-
 	// Revalidate all open text documents
-	documents.all().forEach(validateTextDocument);
+	documents.all().forEach(document => validateTextDocument(document, connection));
 });
 
-function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
+export function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
 	if (!hasConfigurationCapability) {
 		return Promise.resolve(globalSettings);
 	}
@@ -134,135 +146,16 @@ documents.onDidClose(e => {
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
-	validateTextDocument(change.document);
+	validateTextDocument(change.document, connection);
 });
-
-async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-	// In this simple example we get the settings for every validate run.
-	const settings = await getDocumentSettings(textDocument.uri);
-
-	// The validator creates diagnostics for all uppercase words length 2 and more
-	const text = textDocument.getText();
-	const pattern = /\b[A-Z]{2,}\b/g;
-	let m: RegExpExecArray | null;
-
-	let problems = 0;
-	const diagnostics: Diagnostic[] = [];
-	while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
-		problems++;
-		const diagnostic: Diagnostic = {
-			severity: DiagnosticSeverity.Warning,
-			range: {
-				start: textDocument.positionAt(m.index),
-				end: textDocument.positionAt(m.index + m[0].length)
-			},
-			message: `${m[0]} is all uppercase.`,
-			source: 'ex'
-		};
-		if (hasDiagnosticRelatedInformationCapability) {
-			diagnostic.relatedInformation = [
-				{
-					location: {
-						uri: textDocument.uri,
-						range: Object.assign({}, diagnostic.range)
-					},
-					message: 'Spelling matters'
-				},
-				{
-					location: {
-						uri: textDocument.uri,
-						range: Object.assign({}, diagnostic.range)
-					},
-					message: 'Particularly for names'
-				}
-			];
-		}
-		diagnostics.push(diagnostic);
-	}
-
-	// Send the computed diagnostics to VSCode.
-	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
-}
 
 connection.onDidChangeWatchedFiles(_change => {
 	// Monitored files have change in VSCode
 	connection.console.log('We received an file change event');
 });
 
-// This handler provides the initial list of the completion items.
-connection.onCompletion(
-	(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
-		// The pass parameter contains the position of the text document in
-		// which code complete got requested. For the example we ignore this
-		// info and always provide the same completion items.
-		return [
-			{
-				label: 'Rift',
-				kind: CompletionItemKind.Text,
-				data: 1
-			},
-			{
-				label: 'JavaScript',
-				kind: CompletionItemKind.Text,
-				data: 2
-			}
-		];
-	}
-);
-
-// This handler resolves additional information for the item selected in
-// the completion list.
-connection.onCompletionResolve(
-	(item: CompletionItem): CompletionItem => {
-		if (item.data === 1) {
-			item.detail = 'Rift - najlepszy język programowania';
-			item.documentation = 'Kocham piwo';
-		} else if (item.data === 2) {
-			item.detail = 'JavaScript details';
-			item.documentation = 'JavaScript documentation';
-		}
-		return item;
-	}
-);
-
-connection.onFoldingRanges((params) => {
-	const document = documents.get(params.textDocument.uri);
-	if (!document) {
-		return null;
-	}
-
-	const text = document.getText();
-	const foldingRanges: FoldingRange[] = [];
-
-	// Example logic: create a folding range for each block of consecutive comment lines
-	const lines = text.split(/\r?\n/);
-	let startLine = -1;
-	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i].trim();
-		if (line.startsWith('//') || line.startsWith('/*')) {
-			if (startLine === -1) startLine = i;
-		} else {
-			if (startLine !== -1) {
-				foldingRanges.push({
-					startLine,
-					endLine: i - 1,
-					kind: FoldingRangeKind.Comment
-				});
-				startLine = -1;
-			}
-		}
-	}
-	// Handle case where file ends with a comment block
-	if (startLine !== -1) {
-		foldingRanges.push({
-			startLine,
-			endLine: lines.length - 1,
-			kind: FoldingRangeKind.Comment
-		});
-	}
-
-	return foldingRanges;
-});
+connection.onCompletion(onCompletion);
+connection.onCompletionResolve(onCompletionResolve);
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events
@@ -270,3 +163,4 @@ documents.listen(connection);
 
 // Listen on the connection
 connection.listen();
+
