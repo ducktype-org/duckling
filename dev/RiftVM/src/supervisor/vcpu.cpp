@@ -151,15 +151,8 @@ namespace vm {
 				}
 			}
 			variant_case(api::request::Block, block_request) {
-				response
-					= dataManager.get<vm::Memory>()
-				          .getBlock(block_request.block_id)
-				          .map([](Block* block_ptr) {
-							  return api::Response(api::response::Block{ block_ptr->rawPointer() });
-						  })
-				          .map_error([](auto& error) {
-							  return api::CoreOperationError{ api::OtherError(error) };
-						  });
+				response = api::Response(api::response::Block{
+					dataManager.get<vm::Memory>().getBlock(block_request.block_id)->rawPointer() });
 			}
 			variant_default { response = api::Response(api::response::Empty()); }
 		}
