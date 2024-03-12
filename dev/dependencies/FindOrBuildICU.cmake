@@ -35,7 +35,7 @@ function(FindOrBuildICU)
     find_package(ICU ${FindOrBuildICU_VERSION} COMPONENTS data i18n uc io)
   endif()
 
-  if (BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_EQUAL "${FindOrBuildICU_VERSION}")
+  if (BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL "${FindOrBuildICU_VERSION}")
     # for some reason, ICU_FOUND seems to always be set...
     if (BUILD_STATIC_ICU)
       message("-- Building a static ICU was forced")
@@ -133,15 +133,34 @@ function(FindOrBuildICU)
       add_dependencies(icuio ExternalICU)
       target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
 
-      add_library(unicode INTERFACE)
-      target_link_libraries(unicode INTERFACE icuio icuuc icui18n icudata)
-
-      set(ICU_LIBRARIES icui18n icuuc icudata icuio)
       set(ICU_IS_EXTERNAL TRUE PARENT_SCOPE)
     else()
       message(FATAL_ERROR "-- ICU building not supported for this platform")
     endif()
+  else()
+    message("-- Using local ICU")
+
+    add_library(icudata IMPORTED SHARED GLOBAL)
+    set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
+    target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
+
+    add_library(icu18n IMPORTED SHARED GLOBAL)
+    set_target_properties(icu18n PROPERTIES IMPORTED_LOCATION ${ICU_I18N_LIBRARY})
+    target_include_directories(icu18n INTERFACE ${ICU_INCLUDE_DIRS})
+
+    add_library(icuuc IMPORTED SHARED GLOBAL)
+    set_target_properties(icuuc PROPERTIES IMPORTED_LOCATION ${ICU_UC_LIBRARY})
+    target_include_directories(icuuc INTERFACE ${ICU_INCLUDE_DIRS})
+
+    add_library(icuio IMPORTED SHARED GLOBAL)
+    set_target_properties(icuio PROPERTIES IMPORTED_LOCATION ${ICU_IO_LIBRARY})
+    target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
+
   endif()
+
+  add_library(unicode INTERFACE)
+  target_link_libraries(unicode INTERFACE icuio icuuc icui18n icudata)
+  set(ICU_LIBRARIES icui18n icuuc icudata icuio)
 
   message("-- ICU include dirs: ${ICU_INCLUDE_DIRS}")
   message("-- ICU libraries: ${ICU_LIBRARIES}")

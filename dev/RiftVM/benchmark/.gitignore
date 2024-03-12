@@ -3,3 +3,6 @@
 *.exe
 __pychace__/
 
+results/*
+build/*
+rift_vm_bins/*

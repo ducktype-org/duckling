@@ -118,22 +118,6 @@ namespace vm {
 		}
 	}
 
-	// common
-	TypeId Type::getId() const { return id; }
-
-	base::StrId Type::getName() const { return name; }
-
-	TypeSize Type::getSize() const {
-		RIFT_ASSERT(size != TypeSize(-1), "getSize called before type finalization");
-		return size;
-	}
-
-	Type::Kind Type::getKind() const { return kind_type; }
-
-	bool Type::isPrimitive(TypeSize pass_size) const {
-		return getKind() == Kind::Primitive and getSize() == pass_size;
-	}
-
 	/**
 	 * @brief Returns lowest (smallest) type at given position
 	 * inside the type.
