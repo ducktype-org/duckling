@@ -22,6 +22,7 @@ import {
 import { handleSemanticTokensFull } from './semanticTokens';
 import { onCompletion, onCompletionResolve } from './completion';
 import { validateTextDocument } from './validation'; // Import the validation function
+import { getPST } from './compilerInterface'; // Import the compiler interface function
 
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -146,6 +147,9 @@ documents.onDidClose(e => {
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
+	getPST(change.document.uri).then((pst) => {
+		console.log(pst);
+	});
 	validateTextDocument(change.document, connection);
 });
 
