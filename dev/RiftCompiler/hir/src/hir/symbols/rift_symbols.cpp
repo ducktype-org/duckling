@@ -42,11 +42,6 @@ namespace hir {
 			return base::make_unique<UsingSymbol>(state, scope, base::StrId("wildcard"), using_);
 		}
 
-		case pst::StmtKind::EagerLookup: {
-			std::cerr << "skipping: EagerLookup \n";
-			return nullptr;
-		}
-
 		default:
 			break;
 		}

@@ -48,8 +48,6 @@ namespace pst {
 		Struct,
 		TopLevel,
 		Const,
-
-		EagerLookup,
 	};
 
 	class Stmt: public RiftElement {
@@ -475,6 +473,9 @@ namespace pst {
 		virtual ~While() = default;
 	};
 
+	/**
+	 * @brief Class designated to be the parent of non-functional statements that are only used internally for testing.
+	 */
 	class RiftTestingStmt: public Stmt {
 	public:
 		RiftTestingStmt(StmtKind kind, dia::SourcePosition position):
@@ -484,15 +485,4 @@ namespace pst {
 #define RIFT_TEST_CHILD_CONSTRUCTOR(class_name) \
 	class_name(dia::SourcePosition position):   \
 		  RiftTestingStmt(StmtKind::class_name, std::move(position)) {}
-
-	class EagerLookup: public RiftTestingStmt {
-		DottedName names;
-
-	public:
-		RIFT_TEST_CHILD_CONSTRUCTOR(EagerLookup);
-		static ParserRef<EagerLookup> parse(RiftParserState& state);
-		virtual void                  dprint(std::ostream& out) const final;
-		virtual ~EagerLookup() = default;
-	};
-
 }
