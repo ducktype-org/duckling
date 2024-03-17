@@ -86,9 +86,22 @@ namespace fs {
 		FilePath parentPath() const;
 
 		[[nodiscard]]
-		bool isFile(const std::string& ext = "") const noexcept;
+		const std::string& absolutePath() const;
+
+		[[nodiscard]]
+		std::string name() const;
+
+		[[nodiscard]]
+		std::filesystem::file_time_type getModifyTime() const;
+
+		[[nodiscard]]
+		bool isFile() const noexcept;
+
 		[[nodiscard]]
 		bool isDirectory() const noexcept;
+
+		[[nodiscard]]
+		const std::filesystem::path& getStdPath() const;
 	};
 
 	base::OwningView getSimpleFileContent(const std::string& file_name);

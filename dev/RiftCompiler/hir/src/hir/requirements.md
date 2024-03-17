@@ -25,17 +25,18 @@ Unl phare take
 `ScopeId... SymTable::getVisibleScopes(scope, position)`
 `SymbolId SymTable::unl(sym_name, position, scopes...)` -- just one step or all at the same time?
 
-
 ## Assumptions:
 
-`imports` and `using?` are using only QNames 
+`imports` and `using?` are using only QNames
 
 Rozwiązania:
+
 3. All static symbols at beginning of scope
 
-
 Rust:
+
 1. `int a = c; int c = 2;`? - works for static `c`
+
 ```rust
 fn Af(v: i32) -> i32 {
    if v < 0 {return 0;}

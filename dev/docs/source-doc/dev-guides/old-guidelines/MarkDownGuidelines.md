@@ -29,15 +29,15 @@
    ~~~
 
 1. Indentation  
-   To the level of parent element (with spaces) or 
+   To the level of parent element (with spaces) or
    double space if indenting to parent doesn't make sense or break things
    <!-- See https://github.com/github/markup/issues/1084 -->
 
 1. Inline code  
-  `code here`, `int a` <!-- Can't find working way of adding highlight to inline code -->
-                      <!-- see: https://github.com/vuejs/vuepress/issues/1212 -->
+   `code here`, `int a` <!-- Can't find working way of adding highlight to inline code -->
+   <!-- see: https://github.com/vuejs/vuepress/issues/1212 -->
 
-1. Code blocks  
+1. Code blocks
    ~~~~~
    code here
    ~~~~~

@@ -9,6 +9,7 @@
 #include <fstream>
 #include <iterator>
 #include <utility>
+#include <iostream>
 
 namespace fs {
 	FilePath::ContentMap FilePath::to_content;
@@ -43,6 +44,26 @@ namespace fs {
 	std::string_view FilePath::strView() const { return path.c_str(); }
 
 	FilePath FilePath::parentPath() const { return path.parent_path(); }
+
+	const std::string& FilePath::absolutePath() const {
+		static std::string absPth = std::string(path);
+		return absPth;
+	}
+
+	std::string FilePath::name() const {
+		if (isDirectory() && path.filename() == ".") return path.parent_path().filename();
+		return path.filename();
+	}
+
+	bool FilePath::isDirectory() const noexcept { return is_directory(path); }
+
+	std::filesystem::file_time_type FilePath::getModifyTime() const {
+		return last_write_time(path);
+	}
+
+	bool FilePath::isFile() const noexcept { return !isDirectory(); }
+
+	const std::filesystem::path& FilePath::getStdPath() const { return path; }
 
 	base::OwningView getSimpleFileContent(const std::string& file_name) {
 		std::ifstream file(file_name, std::ios::in | std::ios::binary);
