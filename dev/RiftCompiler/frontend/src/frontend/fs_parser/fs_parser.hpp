@@ -28,12 +28,12 @@ namespace compiler::frontend {
 		}
 
 		[[nodiscard]]
-		auto iterDirs() const {
+		const auto& getDirs() const {
 			return m_dirs;
 		}
 
 		[[nodiscard]]
-		auto iterFiles() const {
+		const auto& getFiles() const {
 			return m_files;
 		}
 
