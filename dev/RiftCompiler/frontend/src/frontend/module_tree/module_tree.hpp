@@ -12,8 +12,9 @@
 #include "frontend/fs_parser/fs_parser.hpp"
 
 namespace compiler::frontend {
-	constexpr std::string RIFT_SOURCE_FILE = ".rift";
-	constexpr std::string RIFT_MODULE_FILE = ".rmf";
+	constexpr std::string RIFT_SOURCE_FILE      = ".rift";
+	constexpr std::string RIFT_MODULE_FILE      = ".rmf";
+	constexpr std::string RIFT_MAIN_SOURCE_FILE = "mod.rift";
 
 	class ModuleTree {
 	public:
@@ -51,8 +52,13 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		std::string getName() const;
 
+		void prettyPrint(u32 indentation = 0) const;
+
+		const fs::FilePath& getMainSourceFile() const;
+
 	private:
 		ModuleTree() = default;
+
 		static void buildModuleTree(
 			const std::shared_ptr<ModuleTree>& moduleRoot, std::shared_ptr<FsTree> treeRoot
 		);
@@ -60,6 +66,8 @@ namespace compiler::frontend {
 		std::shared_ptr<ModuleTree> m_parent;
 		std::shared_ptr<FsTree>     m_fs_tree;
 
+		// Has to be unique_ptr, because fs::FilePath does not have a default constructor.
+		base::unique_ptr<fs::FilePath>                          m_main_source_file;
 		std::vector<fs::FilePath>                               m_source_files;
 		base::HashMap<std::string, std::shared_ptr<ModuleTree>> m_submodules;
 		base::HashMap<std::string, std::vector<fs::FilePath>>   m_other_files;
