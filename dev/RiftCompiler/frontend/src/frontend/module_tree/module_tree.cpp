@@ -8,45 +8,52 @@
 #include <utility>
 #include <iostream>
 
-bool compiler::frontend::ModuleTree::isEmpty() const {
-	return m_source_files.empty() && m_submodules.empty() && m_other_files.empty();
-}
+bool compiler::frontend::ModuleTree::isEmpty() const { return m_main_source_file == nullptr; }
 
 void compiler::frontend::ModuleTree::buildModuleTree(
 	const std::shared_ptr<ModuleTree>& module_root, std::shared_ptr<FsTree> tree_root
 ) {
 	module_root->m_fs_tree = std::move(tree_root);
-	for (const auto& file_iter: module_root->m_fs_tree->getFiles()) {
-		auto        std_path  = file_iter.second.getStdPath();
-		std::string stem      = std_path.stem();
-		std::string extension = std_path.extension();
 
-		if (extension == RIFT_SOURCE_FILE) {
-			if (std_path.filename() == RIFT_MAIN_SOURCE_FILE)
-				module_root->m_main_source_file = base::make_unique<fs::FilePath>(file_iter.second);
-			else
-				module_root->m_source_files.push_back(file_iter.second);
-		} else if (extension == RIFT_MODULE_FILE) {
-			auto submodule = std::shared_ptr<ModuleTree>(new ModuleTree());
-			module_root->m_submodules.put(stem, submodule);
-			submodule->m_main_source_file = base::make_unique<fs::FilePath>(file_iter.second);
-			submodule->m_parent           = module_root;
-		} else {
-			if (!module_root->m_other_files.contains(extension))
-				module_root->m_other_files.put(extension, std::vector<fs::FilePath>());
-			module_root->m_other_files[extension].push_back(file_iter.second);
-		}
-	}
+	// Process regular files.
+	for (const auto& file_iter: module_root->m_fs_tree->getFiles())
+		handleNewFile(module_root, file_iter.second);
 
+	// Add directory submodules.
 	for (const auto& dir_iter: module_root->m_fs_tree->getDirs()) {
 		auto submodule = ModuleTree::create(dir_iter.second);
 		if (!submodule->isEmpty()) module_root->m_submodules.put(dir_iter.first, submodule);
 	}
 
+	// Verify if the module is valid.
 	if (!module_root->isEmpty() && module_root->m_main_source_file == nullptr)
 		throw std::logic_error(base::strConcat(
 			"No main source file in: ", module_root->m_fs_tree->getRoot().absolutePath()
 		));
+}
+
+void compiler::frontend::ModuleTree::handleNewFile(
+	const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& file
+) {
+	const auto& std_path  = file.getStdPath();
+	std::string stem      = std_path.stem();
+	std::string extension = std_path.extension();
+
+	if (extension == RIFT_SOURCE_FILE) {
+		if (std_path.filename() == RIFT_MAIN_SOURCE_FILE)
+			module_root->m_main_source_file = base::make_unique<fs::FilePath>(file);
+		else
+			module_root->m_source_files.push_back(file);
+	} else if (extension == RIFT_MODULE_FILE) {
+		auto submodule = std::shared_ptr<ModuleTree>(new ModuleTree());
+		module_root->m_submodules.put(stem, submodule);
+		submodule->m_main_source_file = base::make_unique<fs::FilePath>(file);
+		submodule->m_parent           = module_root;
+	} else {
+		if (!module_root->m_other_files.contains(extension))
+			module_root->m_other_files.put(extension, std::vector<fs::FilePath>());
+		module_root->m_other_files[extension].push_back(file);
+	}
 }
 
 base::Optional<const compiler::frontend::ModuleTree&>

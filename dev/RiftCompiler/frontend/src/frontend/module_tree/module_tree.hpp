@@ -63,6 +63,9 @@ namespace compiler::frontend {
 			const std::shared_ptr<ModuleTree>& moduleRoot, std::shared_ptr<FsTree> treeRoot
 		);
 
+		static void
+			handleNewFile(const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& file);
+
 		std::shared_ptr<ModuleTree> m_parent;
 		std::shared_ptr<FsTree>     m_fs_tree;
 
