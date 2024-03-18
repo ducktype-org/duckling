@@ -9,6 +9,4 @@ namespace pst {
 
 	const dia::SourcePosition& RiftElement::getSourcePosition() const { return source_position; }
 
-	const RiftParserState::ImportType& RiftParserState::getImports() const { return imports; }
-
 }
