@@ -35,6 +35,9 @@ namespace compiler::frontend {
 		bool isEmpty() const;
 
 		[[nodiscard]]
+		const fs::FilePath& getMainSourceFile() const;
+
+		[[nodiscard]]
 		const auto& getSourceFiles() const {
 			return m_source_files;
 		}
@@ -54,7 +57,6 @@ namespace compiler::frontend {
 
 		void prettyPrint(u32 indentation = 0) const;
 
-		const fs::FilePath& getMainSourceFile() const;
 
 	private:
 		ModuleTree() = default;
