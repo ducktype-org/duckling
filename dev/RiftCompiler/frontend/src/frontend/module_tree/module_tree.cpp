@@ -5,7 +5,3 @@
 
 
 #include "module_tree.hpp"
-
-namespace compiler::frontend {
-	class ModuleTree {};
-}

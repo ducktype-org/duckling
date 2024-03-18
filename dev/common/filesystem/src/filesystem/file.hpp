@@ -69,7 +69,7 @@ namespace fs {
 		FilePath(FilePath&&)      = default;
 		~FilePath()               = default;
 
-		FilePath(const std::filesystem::path& path): path(std::filesystem::absolute(path)) {}
+		FilePath(const std::filesystem::path& path): path(canonical(absolute(path))) {}
 
 		// @TODO: this might not be perfect:
 		bool operator==(const FilePath& oth) const { return path == oth.path; }
@@ -86,7 +86,7 @@ namespace fs {
 		FilePath parentPath() const;
 
 		[[nodiscard]]
-		const std::string& absolutePath() const;
+		std::string absolutePath() const;
 
 		[[nodiscard]]
 		std::string name() const;

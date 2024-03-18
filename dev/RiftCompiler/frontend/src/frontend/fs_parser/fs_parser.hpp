@@ -7,6 +7,7 @@
 #include <string_view>
 #include <regex>
 #include <utility>
+#include <future>
 #include "filesystem/file.hpp"
 
 namespace compiler::frontend {
@@ -16,34 +17,13 @@ namespace compiler::frontend {
 		static std::regex default_reject_directory_regex;
 
 		static std::shared_ptr<FsTree> create(
-			const auto& root,
-			std::regex  reject_file_regex      = default_reject_file_regex,
-			std::regex  reject_directory_regex = default_reject_directory_regex
+			const auto&       root,
+			const std::regex& file_reject = default_reject_file_regex,
+			const std::regex& dir_reject  = default_reject_directory_regex
 		) {
-			auto ptr = std::shared_ptr<FsTree>(
-				new FsTree(root, std::move(reject_file_regex), std::move(reject_directory_regex))
-			);
-
-			for (const auto& path:
-			     std::filesystem::directory_iterator(ptr->getRoot().getStdPath())) {
-				if (path.is_directory()) {
-					auto child
-						= create(path, ptr->m_reject_file_regex, ptr->m_reject_directory_regex);
-					child->addParent(ptr);
-					auto child_name = child->getRoot().name();
-					if (ptr->m_dirs.contains(child_name))
-						throw std::logic_error(base::strConcat("Not unique name: ", child_name));
-					ptr->m_dirs.put(child_name, child);
-				} else {
-					auto file_path = fs::FilePath(path);
-					auto file_name = file_path.name();
-					if (ptr->m_files.contains(file_name))
-						throw std::logic_error(base::strConcat("Not unique file name: ", file_name)
-						);
-					ptr->m_files.put(file_name, file_path);
-				}
-			}
-
+			// Using `new` to access the private constructors.
+			auto ptr = std::shared_ptr<FsTree>(new FsTree(root, file_reject, dir_reject));
+			recursiveCreate(ptr);
 			return ptr;
 		}
 
@@ -63,9 +43,10 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		const fs::FilePath& getRoot() const;
 
-	private:
-		friend std::shared_ptr<FsTree>;
+		[[nodiscard]]
+		bool isEmpty() const;
 
+	private:
 		explicit FsTree(
 			fs::FilePath root,
 			std::regex   reject_file_regex      = default_reject_file_regex,
@@ -78,14 +59,21 @@ namespace compiler::frontend {
 			std::regex                   reject_directory_regex = default_reject_directory_regex
 		);
 
-		fs::FilePath m_root;
+		static void recursiveCreate(const std::shared_ptr<FsTree>& root);
 
 		std::regex m_reject_file_regex;
 		std::regex m_reject_directory_regex;
 
+		fs::FilePath                                        m_root;
 		std::shared_ptr<FsTree>                             m_parent;
 		base::HashMap<std::string, fs::FilePath>            m_files;
 		base::HashMap<std::string, std::shared_ptr<FsTree>> m_dirs;
+
+		[[nodiscard]]
+		bool isFileNameValid(const std::string& filename) const;
+
+		[[nodiscard]]
+		bool isDirectoryNameValid(const std::string& dirname) const;
 
 		void addParent(std::shared_ptr<FsTree> new_parent);
 	};

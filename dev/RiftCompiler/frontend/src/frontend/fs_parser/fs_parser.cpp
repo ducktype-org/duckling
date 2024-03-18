@@ -4,37 +4,87 @@
  */
 #include "fs_parser.hpp"
 
-#include <utility>
-#include <iostream>
+using std::regex;
+using std::filesystem::directory_iterator;
 
-namespace {}
+using namespace compiler::frontend;
 
 // The default regexes.
-std::regex compiler::frontend::FsTree::default_reject_directory_regex
-	= std::regex("(\\$.*|\\.git)");
-std::regex compiler::frontend::FsTree::default_reject_file_regex = std::regex("\\$.*");
+regex FsTree::default_reject_directory_regex = regex(R"((\$.*|\..*))");
+regex FsTree::default_reject_file_regex      = regex(R"((\$.*|\..*))");
 
-compiler::frontend::FsTree::FsTree(
+FsTree::FsTree(
 	const std::filesystem::path& root,
 	std::regex                   reject_file_regex,
 	std::regex                   reject_directory_regex
 ):
-	  FsTree(fs::FilePath(root), std::move(reject_file_regex), std::move(reject_directory_regex)) {}
+	  FsTree(
+		  fs::FilePath(canonical(root)),
+		  std::move(reject_file_regex),
+		  std::move(reject_directory_regex)
+	  ) {}
 
-compiler::frontend::FsTree::FsTree(
-	fs::FilePath root, std::regex reject_file_regex, std::regex reject_directory_regex
-):
+FsTree::FsTree(fs::FilePath root, std::regex reject_file_regex, std::regex reject_directory_regex):
 	  m_root(std::move(root)),
 	  m_reject_file_regex(std::move(reject_file_regex)),
 	  m_reject_directory_regex(std::move(reject_directory_regex)) {}
 
-auto compiler::frontend::FsTree::getParentTree() const -> base::Optional<const FsTree&> {
+auto FsTree::getParentTree() const -> base::Optional<const FsTree&> {
 	if (m_parent == nullptr) return {};
 	return *m_parent;
 }
 
 const fs::FilePath& compiler::frontend::FsTree::getRoot() const { return m_root; }
 
-void compiler::frontend::FsTree::addParent(std::shared_ptr<FsTree> new_parent) {
-	m_parent = std::move(new_parent);
+void FsTree::addParent(std::shared_ptr<FsTree> new_parent) { m_parent = std::move(new_parent); }
+
+void FsTree::recursiveCreate(const std::shared_ptr<FsTree>& root) {
+	for (const auto& path: directory_iterator(root->getRoot().getStdPath())) {
+		// If we don't check for this, then we might get some weird cycles.
+		if (path.is_symlink()) continue;
+
+		auto fs_path = fs::FilePath(path);
+		if (path.is_directory()) {
+			if (!root->isDirectoryNameValid(fs_path.name())) continue;
+			auto child = create(fs_path, root->m_reject_file_regex, root->m_reject_directory_regex);
+			child->addParent(root);
+			auto child_name = child->getRoot().name();
+			if (root->m_dirs.contains(child_name)) {
+				throw std::logic_error(base::strConcat(
+					"Not unique directory name: ",
+					child_name,
+					" at: ",
+					fs_path.absolutePath(),
+					" root: ",
+					root->getRoot().name()
+				));
+			}
+			root->m_dirs.put(child_name, child);
+		} else {
+			if (!root->isFileNameValid(fs_path.name())) continue;
+			auto file_name = fs_path.name();
+			if (root->m_files.contains(file_name))
+				throw std::logic_error(base::strConcat(
+					"Not unique file name: ",
+					file_name,
+					", at: ",
+					fs_path.absolutePath(),
+					", root: ",
+					root->getRoot().name()
+				));
+			root->m_files.put(file_name, fs_path);
+		}
+	}
 }
+
+bool FsTree::isFileNameValid(const std::string& filename) const {
+	std::smatch _match;
+	return !std::regex_match(filename, _match, m_reject_file_regex);
+}
+
+bool FsTree::isDirectoryNameValid(const std::string& dirname) const {
+	std::smatch _match;
+	return !std::regex_match(dirname, _match, m_reject_directory_regex);
+}
+
+bool FsTree::isEmpty() const { return m_files.empty() && m_dirs.empty(); }

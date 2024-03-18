@@ -8,8 +8,6 @@
 
 #include <fstream>
 #include <iterator>
-#include <utility>
-#include <iostream>
 
 namespace fs {
 	FilePath::ContentMap FilePath::to_content;
@@ -45,10 +43,7 @@ namespace fs {
 
 	FilePath FilePath::parentPath() const { return path.parent_path(); }
 
-	const std::string& FilePath::absolutePath() const {
-		static std::string absPth = std::string(path);
-		return absPth;
-	}
+	std::string FilePath::absolutePath() const { return path; }
 
 	std::string FilePath::name() const {
 		if (isDirectory() && path.filename() == ".") return path.parent_path().filename();

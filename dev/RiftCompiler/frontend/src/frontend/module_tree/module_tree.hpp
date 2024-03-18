@@ -4,3 +4,10 @@
  */
 
 #pragma once
+
+namespace compiler::frontend {
+	class ModuleTree {
+	public:
+		ModuleTree();
+	};
+}

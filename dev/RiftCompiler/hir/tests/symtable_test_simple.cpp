@@ -65,7 +65,7 @@ private:
 
 	        assert(symbol->getName().str() == "mysymbol", "incorrect name 0");
 	        assert(symbol_1->getName().str() == "mysymbol_1", "incorrect name 1");
-	        assert(symbol_2->name().str() == "mysymbol_2", "incorrect name 2");
+	        assert(symbol_2->getName().str() == "mysymbol_2", "incorrect name 2");
 
 	        assert(symbol->getIsStatic() == false, "incorrect isStatic 0");
 	        assert(symbol_1->getIsStatic() == true, "incorrect isStatic 1");
