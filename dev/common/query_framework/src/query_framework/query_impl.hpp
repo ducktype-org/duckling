@@ -21,16 +21,23 @@ namespace query {
 		
 		using Context = ::query::ContextType;
 
-		// static auto provider(QKey, Context&) -> PResult;
+		// static auto provide(QKey, Context&) -> PResult;
 		// static auto load(QKey key) -> base::Optional<QResult>;
 		// static auto store(QKey key, PResult) -> QResult;
 	};
 
 }
 
+// @TODO: proper context:
 #define IMPLEMENT_QUERY_OF(type) \
 	auto type::QueryType::query(type::QueryType::QKey key) -> type::QueryType::QResult { \
- \
-	}
+ 		if (auto v = type::load(key)) { return v.value(); } \
+		else { \
+			type::Context context; \
+			return type::store(key, type::provide(context, key));  \
+		} \
+	} \
+	// auto type::QueryType::id = 0; \
+	// auto type::QueryType::name = "abc";
 
 
