@@ -92,7 +92,7 @@ namespace fs {
 		std::string name() const;
 
 		[[nodiscard]]
-		std::filesystem::file_time_type getModifyTime() const;
+		std::chrono::file_clock::time_point getModifyTime() const;
 
 		[[nodiscard]]
 		bool isFile() const noexcept;
@@ -101,7 +101,12 @@ namespace fs {
 		bool isDirectory() const noexcept;
 
 		[[nodiscard]]
-		const std::filesystem::path& getStdPath() const;
+		auto directory_iterator() const {
+			return std::filesystem::directory_iterator(path);
+		}
+
+		std::string stem() const;
+		std::string extension() const;
 	};
 
 	base::OwningView getSimpleFileContent(const std::string& file_name);

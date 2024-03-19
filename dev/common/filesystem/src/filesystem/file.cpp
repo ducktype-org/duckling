@@ -52,13 +52,15 @@ namespace fs {
 
 	bool FilePath::isDirectory() const noexcept { return is_directory(path); }
 
-	std::filesystem::file_time_type FilePath::getModifyTime() const {
+	std::chrono::file_clock::time_point FilePath::getModifyTime() const {
 		return last_write_time(path);
 	}
 
 	bool FilePath::isFile() const noexcept { return !isDirectory(); }
 
-	const std::filesystem::path& FilePath::getStdPath() const { return path; }
+	std::string FilePath::stem() const { return path.stem(); }
+
+	std::string FilePath::extension() const { return path.extension(); }
 
 	base::OwningView getSimpleFileContent(const std::string& file_name) {
 		std::ifstream file(file_name, std::ios::in | std::ios::binary);

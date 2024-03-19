@@ -5,11 +5,12 @@
 
 #include "module_tree.hpp"
 
-#include <utility>
-#include <iostream>
-
 using fs::FsTree;
+using std::regex;
 using namespace compiler::frontend;
+
+regex ModuleTree::default_reject_file_regex      = regex(R"((\$.*|\..*))");
+regex ModuleTree::default_reject_directory_regex = regex(R"((\$.*|\..*))");
 
 bool ModuleTree::isEmpty() const { return m_main_source_file == nullptr; }
 
@@ -27,23 +28,18 @@ void ModuleTree::buildModuleTree(
 		auto submodule = ModuleTree::create(dir_iter.second);
 		if (!submodule->isEmpty()) module_root->m_submodules.put(dir_iter.first, submodule);
 	}
-
-	// Verify if the module is valid.
-	if (!module_root->isEmpty() && module_root->m_main_source_file == nullptr)
-		throw std::logic_error(base::strConcat(
-			"No main source file in: ", module_root->m_fs_tree->getRoot().absolutePath()
-		));
 }
 
 void ModuleTree::handleNewFile(
 	const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& file
 ) {
-	const auto& std_path  = file.getStdPath();
-	std::string stem      = std_path.stem();
-	std::string extension = std_path.extension();
+	if (file.isDirectory()) throw std::logic_error("File is not a file, but a directory!");
+
+	std::string stem      = file.stem();
+	std::string extension = file.extension();
 
 	if (extension == RIFT_SOURCE_FILE) {
-		if (std_path.filename() == RIFT_MAIN_SOURCE_FILE)
+		if (file.name() == RIFT_MAIN_SOURCE_FILE)
 			module_root->m_main_source_file = base::make_unique<fs::FilePath>(file);
 		else
 			module_root->m_source_files.push_back(file);
@@ -65,28 +61,44 @@ base::Optional<const ModuleTree&> ModuleTree::getParentModule() const {
 }
 
 std::string ModuleTree::getName() const {
-	if (m_fs_tree == nullptr) return getMainSourceFile().getStdPath().stem();
+	if (m_fs_tree == nullptr) return getMainSourceFile().stem();
 	return m_fs_tree->getRoot().name();
 }
 
-void ModuleTree::prettyPrint(u32 indentation) const {
+std::string ModuleTree::prettyPrint(u32 indentation) const {
+	std::stringstream output;
+
 	std::string indent;
-	for (u32 i = 0; i < indentation; i++) indent += (i % 3 == 0 ? "│" : " ");
+	for (u32 i = 0; i < indentation % 3; i++) indent += " ";
+	for (u32 i = 0; i < indentation - (indentation % 3); i++) indent += (i % 3 == 0 ? "│" : " ");
 
-	std::cout << indent << getName() << "/\n";
+	output << indent << getName() << "/\n";
 
-	std::cout << indent << "├> " << m_main_source_file->name() << '\n';
+	output << indent << "├> " << m_main_source_file->name() << '\n';
 	for (const auto& file_iter: getSourceFiles())
-		std::cout << indent << "├= " << file_iter.name() << '\n';
+		output << indent << "├= " << file_iter.name() << '\n';
 
 	for (const auto& file_iter: getOtherFiles())
 		for (const auto& file_name: file_iter.second)
-			std::cout << indent << "├─ " << file_name.name() << '\n';
+			output << indent << "├─ " << file_name.name() << '\n';
 
-	for (const auto& submodule: getSubmodules()) submodule.second->prettyPrint(indentation + 3);
+	for (const auto& submodule: getSubmodules())
+		output << submodule.second->prettyPrint(indentation + 3);
+
+	return output.str();
 }
 
 const fs::FilePath& ModuleTree::getMainSourceFile() const {
 	if (m_main_source_file == nullptr) throw std::logic_error("No main source file!");
 	return *m_main_source_file;
+}
+
+const std::vector<fs::FilePath>& ModuleTree::getSourceFiles() const { return m_source_files; }
+
+const base::HashMap<std::string, std::shared_ptr<ModuleTree>>& ModuleTree::getSubmodules() const {
+	return m_submodules;
+}
+
+const base::HashMap<std::string, std::vector<fs::FilePath>>& ModuleTree::getOtherFiles() const {
+	return m_other_files;
 }

@@ -22,9 +22,9 @@ FsTree::FsTree(
 	  ) {}
 
 FsTree::FsTree(fs::FilePath root, regex reject_file_regex, regex reject_directory_regex):
-	  m_root(std::move(root)),
 	  m_reject_file_regex(std::move(reject_file_regex)),
-	  m_reject_directory_regex(std::move(reject_directory_regex)) {}
+	  m_reject_directory_regex(std::move(reject_directory_regex)),
+	  m_root(std::move(root)) {}
 
 auto FsTree::getParentTree() const -> base::Optional<const FsTree&> {
 	if (m_parent == nullptr) return {};
@@ -36,7 +36,7 @@ const fs::FilePath& FsTree::getRoot() const { return m_root; }
 void FsTree::addParent(std::shared_ptr<FsTree> new_parent) { m_parent = std::move(new_parent); }
 
 void FsTree::recursiveCreate(const std::shared_ptr<FsTree>& root) {
-	for (const auto& path: directory_iterator(root->getRoot().getStdPath())) {
+	for (const auto& path: root->getRoot().directory_iterator()) {
 		// If we don't check for this, then we might get some weird cycles.
 		if (path.is_symlink()) continue;
 
