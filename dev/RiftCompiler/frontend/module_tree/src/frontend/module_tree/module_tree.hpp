@@ -9,7 +9,7 @@
 #include <utility>
 #include "base/maps.hpp"
 #include "filesystem/file.hpp"
-#include "filesystem/fs_parser.hpp"
+#include "filesystem/fs_tree.hpp"
 
 namespace compiler::frontend {
 

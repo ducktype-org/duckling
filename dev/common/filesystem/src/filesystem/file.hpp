@@ -101,11 +101,11 @@ namespace fs {
 		bool isDirectory() const noexcept;
 
 		[[nodiscard]]
-		auto directory_iterator() const {
-			return std::filesystem::directory_iterator(path);
-		}
+		std::filesystem::directory_iterator directory_iterator() const;
 
+		[[nodiscard]]
 		std::string stem() const;
+		[[nodiscard]]
 		std::string extension() const;
 	};
 

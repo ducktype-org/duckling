@@ -62,6 +62,10 @@ namespace fs {
 
 	std::string FilePath::extension() const { return path.extension(); }
 
+	std::filesystem::directory_iterator FilePath::directory_iterator() const {
+		return std::filesystem::directory_iterator(path);
+	}
+
 	base::OwningView getSimpleFileContent(const std::string& file_name) {
 		std::ifstream file(file_name, std::ios::in | std::ios::binary);
 		if (file.fail()) throw base::LogicError(std::string("file does not exist: ") + file_name);

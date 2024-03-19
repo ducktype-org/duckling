@@ -2,7 +2,7 @@
  * @file fs_parser.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
-#include "fs_parser.hpp"
+#include "fs_tree.hpp"
 
 using std::regex;
 using namespace std::filesystem;
@@ -93,10 +93,16 @@ std::string FsTree::prettyPrint(u32 indentation) const {
 	std::stringstream output;
 	output << indent << getRoot().name() << "/\n";
 
-	for (const auto& submodule: getDirs()) output << submodule.second->prettyPrint(indentation + 3);
+	for (const auto& subdir: getDirs()) output << subdir.second->prettyPrint(indentation + 3);
 
 	for (const auto& file_iter: getFiles())
 		output << indent << "├─ " << file_iter.second.name() << '\n';
 
 	return output.str();
 }
+
+const base::HashMap<std::string, std::shared_ptr<FsTree>>& FsTree::getDirs() const {
+	return m_dirs;
+}
+
+const base::HashMap<std::string, fs::FilePath>& FsTree::getFiles() const { return m_files; }
