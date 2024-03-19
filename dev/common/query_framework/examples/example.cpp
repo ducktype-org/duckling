@@ -26,7 +26,8 @@ struct Query1Impl: query::QueryImplementation<
 };
 IMPLEMENT_QUERY_OF(Query1Impl, "Query 1");
 
-decltype(Query1Impl::cache) Query1Impl::cache;
+decltype(Query1Impl::cache) Query1Impl::cache{};
+
 
 
 
