@@ -9,7 +9,7 @@
 #include <utility>
 #include "base/maps.hpp"
 #include "filesystem/file.hpp"
-#include "frontend/fs_parser/fs_parser.hpp"
+#include "filesystem/fs_parser.hpp"
 
 namespace compiler::frontend {
 	constexpr std::string RIFT_SOURCE_FILE      = ".rift";
@@ -19,10 +19,10 @@ namespace compiler::frontend {
 	class ModuleTree {
 	public:
 		static std::shared_ptr<ModuleTree> create(auto root) {
-			return ModuleTree::create(FsTree::create(root));
+			return ModuleTree::create(fs::FsTree::create(root));
 		}
 
-		static std::shared_ptr<ModuleTree> create(std::shared_ptr<FsTree> root) {
+		static std::shared_ptr<ModuleTree> create(std::shared_ptr<fs::FsTree> root) {
 			auto ptr = std::shared_ptr<ModuleTree>(new ModuleTree());
 			ModuleTree::buildModuleTree(ptr, std::move(root));
 			return ptr;
@@ -62,14 +62,14 @@ namespace compiler::frontend {
 		ModuleTree() = default;
 
 		static void buildModuleTree(
-			const std::shared_ptr<ModuleTree>& moduleRoot, std::shared_ptr<FsTree> treeRoot
+			const std::shared_ptr<ModuleTree>& moduleRoot, std::shared_ptr<fs::FsTree> treeRoot
 		);
 
 		static void
 			handleNewFile(const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& file);
 
 		std::shared_ptr<ModuleTree> m_parent;
-		std::shared_ptr<FsTree>     m_fs_tree;
+		std::shared_ptr<fs::FsTree> m_fs_tree;
 
 		// Has to be unique_ptr, because fs::FilePath does not have a default constructor.
 		base::unique_ptr<fs::FilePath>                          m_main_source_file;

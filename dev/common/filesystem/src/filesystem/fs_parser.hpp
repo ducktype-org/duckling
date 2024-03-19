@@ -10,7 +10,7 @@
 #include <future>
 #include "filesystem/file.hpp"
 
-namespace compiler::frontend {
+namespace fs {
 	class FsTree {
 	public:
 		static std::regex default_reject_file_regex;
@@ -45,6 +45,8 @@ namespace compiler::frontend {
 
 		[[nodiscard]]
 		bool isEmpty() const;
+
+		std::string prettyPrint(u32 indentation = 0) const;
 
 	private:
 		explicit FsTree(

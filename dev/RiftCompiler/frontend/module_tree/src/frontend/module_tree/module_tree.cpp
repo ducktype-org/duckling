@@ -8,9 +8,12 @@
 #include <utility>
 #include <iostream>
 
-bool compiler::frontend::ModuleTree::isEmpty() const { return m_main_source_file == nullptr; }
+using fs::FsTree;
+using namespace compiler::frontend;
 
-void compiler::frontend::ModuleTree::buildModuleTree(
+bool ModuleTree::isEmpty() const { return m_main_source_file == nullptr; }
+
+void ModuleTree::buildModuleTree(
 	const std::shared_ptr<ModuleTree>& module_root, std::shared_ptr<FsTree> tree_root
 ) {
 	module_root->m_fs_tree = std::move(tree_root);
@@ -32,7 +35,7 @@ void compiler::frontend::ModuleTree::buildModuleTree(
 		));
 }
 
-void compiler::frontend::ModuleTree::handleNewFile(
+void ModuleTree::handleNewFile(
 	const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& file
 ) {
 	const auto& std_path  = file.getStdPath();
@@ -56,18 +59,17 @@ void compiler::frontend::ModuleTree::handleNewFile(
 	}
 }
 
-base::Optional<const compiler::frontend::ModuleTree&>
-	compiler::frontend::ModuleTree::getParentModule() const {
+base::Optional<const ModuleTree&> ModuleTree::getParentModule() const {
 	if (m_parent == nullptr) return {};
 	return *m_parent;
 }
 
-std::string compiler::frontend::ModuleTree::getName() const {
+std::string ModuleTree::getName() const {
 	if (m_fs_tree == nullptr) return getMainSourceFile().getStdPath().stem();
 	return m_fs_tree->getRoot().name();
 }
 
-void compiler::frontend::ModuleTree::prettyPrint(u32 indentation) const {
+void ModuleTree::prettyPrint(u32 indentation) const {
 	std::string indent;
 	for (u32 i = 0; i < indentation; i++) indent += (i % 3 == 0 ? "│" : " ");
 
@@ -84,7 +86,7 @@ void compiler::frontend::ModuleTree::prettyPrint(u32 indentation) const {
 	for (const auto& submodule: getSubmodules()) submodule.second->prettyPrint(indentation + 3);
 }
 
-const fs::FilePath& compiler::frontend::ModuleTree::getMainSourceFile() const {
+const fs::FilePath& ModuleTree::getMainSourceFile() const {
 	if (m_main_source_file == nullptr) throw std::logic_error("No main source file!");
 	return *m_main_source_file;
 }

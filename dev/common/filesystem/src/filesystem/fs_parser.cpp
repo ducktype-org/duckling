@@ -5,18 +5,15 @@
 #include "fs_parser.hpp"
 
 using std::regex;
-using std::filesystem::directory_iterator;
-
-using namespace compiler::frontend;
+using namespace std::filesystem;
+using namespace fs;
 
 // The default regexes.
 regex FsTree::default_reject_directory_regex = regex(R"((\$.*|\..*))");
 regex FsTree::default_reject_file_regex      = regex(R"((\$.*|\..*))");
 
 FsTree::FsTree(
-	const std::filesystem::path& root,
-	std::regex                   reject_file_regex,
-	std::regex                   reject_directory_regex
+	const std::filesystem::path& root, regex reject_file_regex, regex reject_directory_regex
 ):
 	  FsTree(
 		  fs::FilePath(canonical(root)),
@@ -24,7 +21,7 @@ FsTree::FsTree(
 		  std::move(reject_directory_regex)
 	  ) {}
 
-FsTree::FsTree(fs::FilePath root, std::regex reject_file_regex, std::regex reject_directory_regex):
+FsTree::FsTree(fs::FilePath root, regex reject_file_regex, regex reject_directory_regex):
 	  m_root(std::move(root)),
 	  m_reject_file_regex(std::move(reject_file_regex)),
 	  m_reject_directory_regex(std::move(reject_directory_regex)) {}
@@ -34,7 +31,7 @@ auto FsTree::getParentTree() const -> base::Optional<const FsTree&> {
 	return *m_parent;
 }
 
-const fs::FilePath& compiler::frontend::FsTree::getRoot() const { return m_root; }
+const fs::FilePath& FsTree::getRoot() const { return m_root; }
 
 void FsTree::addParent(std::shared_ptr<FsTree> new_parent) { m_parent = std::move(new_parent); }
 
@@ -88,3 +85,18 @@ bool FsTree::isDirectoryNameValid(const std::string& dirname) const {
 }
 
 bool FsTree::isEmpty() const { return m_files.empty() && m_dirs.empty(); }
+
+std::string FsTree::prettyPrint(u32 indentation) const {
+	std::string indent;
+	for (u32 i = 0; i < indentation; i++) indent += (i % 3 == 0 ? "│" : " ");
+
+	std::stringstream output;
+	output << indent << getRoot().name() << "/\n";
+
+	for (const auto& submodule: getDirs()) output << submodule.second->prettyPrint(indentation + 3);
+
+	for (const auto& file_iter: getFiles())
+		output << indent << "├─ " << file_iter.second.name() << '\n';
+
+	return output.str();
+}
