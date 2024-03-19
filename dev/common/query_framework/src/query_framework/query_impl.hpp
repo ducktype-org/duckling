@@ -8,6 +8,15 @@ namespace query {
 
 	struct ContextType {
 
+		template<typename OthQuery>
+		auto query(typename OthQuery::QKey key) -> auto {
+			// ....
+			return OthQuery::query(key);
+		}
+
+		// @TODO: log
+
+		// @TODO: error
 	};
 
 	template<
