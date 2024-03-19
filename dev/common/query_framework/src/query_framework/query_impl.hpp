@@ -45,6 +45,7 @@ namespace query {
 }
 
 // @TODO: proper context:
+// @TODO: change macro body to template
 #define IMPLEMENT_QUERY_OF(type, pretty_name) \
 	auto type::QueryType::query(type::QueryType::QKey key) -> type::QueryType::QResult { \
  		if (auto v = type::load(key)) {  \
