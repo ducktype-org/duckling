@@ -20,6 +20,6 @@ namespace query {
 
 #define QUERY_INTERFACE_BOILERPLATE \
 	static auto query(QKey) -> QResult; \
-	const static std::string_view name;  \
-	const static uint64_t id;
+	static std::string_view name;  \
+	static uint64_t id;
 
