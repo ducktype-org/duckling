@@ -10,41 +10,6 @@
 		}
 	],
 	"repository": {
-		"keywords": {
-			"patterns": [
-				{
-					"name": "keyword.control.rift",
-					"match": "\\b(fun|struct|namespace|import|using|alias|var|let|const|while|for|loop|if|else|elif|block|with|try|catch|test|debug|switch|case|return|break|continue|redo|restart|defer|throw|assert|compile_assert|i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|float|char|bool|vec|set|dict|array|none|true|false|sizeof|not|and|or|xor|public|private|test_eager_lookup)\\b"
-				}
-			]
-		},
-		"operators": {
-			"patterns": [
-				{
-					"name": "operator.rift",
-					"match": "\\.|\\.*|,|:|=|\\?|->|=>|-|\\+|\\+\\+|--|\\*|/"
-				}
-			]
-		},
-		"specials": {
-			"patterns": [
-				{
-					"name": "special.character.rift",
-					"match": ";|@|#|\\$"
-				}
-			]
-		},
-		"strings": {
-			"name": "string.quoted.double.rift",
-			"begin": "\"",
-			"end": "\"",
-			"patterns": [
-				{
-					"name": "constant.character.escape.rift",
-					"match": "\\\\."
-				}
-			]
-		}
 	},
 	"scopeName": "source.rift"
 }

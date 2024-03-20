@@ -5,8 +5,6 @@
 import {
 	createConnection,
 	TextDocuments,
-	Diagnostic,
-	DiagnosticSeverity,
 	ProposedFeatures,
 	InitializeParams,
 	DidChangeConfigurationNotification,
@@ -14,15 +12,16 @@ import {
 	InitializeResult,
 	SemanticTokenTypes,
 	SemanticTokenModifiers
-} from 'vscode-languageserver/node';
+} from "vscode-languageserver/node";
 
 import {
 	TextDocument
-} from 'vscode-languageserver-textdocument';
-import { handleSemanticTokensFull } from './semanticTokens';
-import { onCompletion, onCompletionResolve } from './completion';
-import { validateTextDocument } from './validation'; // Import the validation function
-import { getPST } from './compilerInterface'; // Import the compiler interface function
+} from "vscode-languageserver-textdocument";
+import { handleSemanticTokensFull } from "./semanticTokens";
+import { onCompletion, onCompletionResolve } from "./completion";
+import { validateTextDocument } from "./validation"; // Import the validation function
+import { getPST } from "./compilerInterface"; // Import the compiler interface function
+require("./lsptree/elements/index");
 
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -90,12 +89,12 @@ connection.onInitialized(() => {
 	}
 	if (hasWorkspaceFolderCapability) {
 		connection.workspace.onDidChangeWorkspaceFolders(_event => {
-			connection.console.log('Workspace folder change event received.');
+			connection.console.log("Workspace folder change event received.");
 		});
 	}
 });
 
-connection.onRequest('textDocument/semanticTokens/full', (params) => handleSemanticTokensFull(params, documents));
+connection.onRequest("textDocument/semanticTokens/full", (params) => handleSemanticTokensFull(params, documents));
 
 // The example settings
 interface ExampleSettings {
@@ -132,7 +131,7 @@ export function getDocumentSettings(resource: string): Thenable<ExampleSettings>
 	if (!result) {
 		result = connection.workspace.getConfiguration({
 			scopeUri: resource,
-			section: 'RiftLanguageServer'
+			section: "RiftLanguageServer"
 		});
 		documentSettings.set(resource, result);
 	}
@@ -155,7 +154,7 @@ documents.onDidChangeContent(change => {
 
 connection.onDidChangeWatchedFiles(_change => {
 	// Monitored files have change in VSCode
-	connection.console.log('We received an file change event');
+	connection.console.log("We received an file change event");
 });
 
 connection.onCompletion(onCompletion);

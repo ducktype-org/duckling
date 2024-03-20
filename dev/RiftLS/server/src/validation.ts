@@ -2,9 +2,9 @@ import {
 	Diagnostic,
 	DiagnosticSeverity,
 	Connection
-} from 'vscode-languageserver';
-import { TextDocument } from 'vscode-languageserver-textdocument';
-import { getDocumentSettings } from './server';
+} from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
+import { getDocumentSettings } from "./server";
 
 export async function validateTextDocument(textDocument: TextDocument, connection: Connection): Promise<void> {
 	// Example validation logic
@@ -24,7 +24,7 @@ export async function validateTextDocument(textDocument: TextDocument, connectio
 				end: textDocument.positionAt(m.index + m[0].length)
 			},
 			message: `${m[0]} is all uppercase.`,
-			source: 'ex'
+			source: "ex"
 		};
 		diagnostics.push(diagnostic);
 	}
