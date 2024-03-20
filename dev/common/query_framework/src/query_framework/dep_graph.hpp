@@ -13,4 +13,10 @@ namespace query {
 		KeyHash hash;
 	};
 
+	struct Node;
+
+	
+	Node& resetNode(NodeId);
+	void addDependency();
+
 }

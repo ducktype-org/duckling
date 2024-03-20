@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include <string_view>
 
 namespace query {
-	constexpr bool LOG_QUERY_EVENTS = true;
-	// void log
+	
+	void log(std::string_view str);
 	
 }
 

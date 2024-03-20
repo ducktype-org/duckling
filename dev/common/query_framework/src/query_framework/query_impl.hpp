@@ -1,9 +1,12 @@
 #pragma once
 
 #include <base/optional.hpp>
+#include <base/str_concat.hpp>
 
 #include "acd.hpp"
 #include "query_int.hpp"
+#include "dep_graph.hpp"
+#include "logs.hpp"
 
 namespace query {
 
@@ -50,14 +53,20 @@ namespace query {
 
 	template<typename QueryImplType>
 	auto standardQueryEntry(typename QueryImplType::QKey key) -> QueryImplType::QResult {
+		log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Enter.\n"));
+		
 		if (auto v = QueryImplType::load(key)) {
 			/*@TODO: Add ACD check here...*/
+			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Cached. Done.\n"));
 			return v.value().data;
 		}
 		else {
 			typename QueryImplType::Context context;
 			ACD acd; /*@TODO: provide acd here*/
-			return QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Calculating.\n"));
+			auto result = QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Done.\n"));
+			return result;
 		}
 	}
 }

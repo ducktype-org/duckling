@@ -9,6 +9,7 @@ struct Query1: query::QueryInterface<
 	uint64_t   // val
 > { QUERY_INTERFACE_BOILERPLATE };
 
-
+// Is this better or worse?
+DECLARE_QUERY (Query2, uint64_t, uint64_t)
 
 
