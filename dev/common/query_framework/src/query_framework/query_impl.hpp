@@ -3,6 +3,7 @@
 #include <base/optional.hpp>
 
 #include "acd.hpp"
+#include "query_int.hpp"
 
 namespace query {
 
@@ -44,7 +45,7 @@ namespace query {
 	/**
 	 * @brief A simple counter for providing unique query id-s.
 	 */
-	uint64_t nextQueryId();
+	QueryID nextQueryId();
 
 
 	template<typename QueryImplType>

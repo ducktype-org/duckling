@@ -1,5 +1,4 @@
 add_library(QueryFramework
-        src/query_framework/query_helper.cpp
 		src/query_framework/query_impl.cpp)
 
 make_module(QueryFramework USES Base)

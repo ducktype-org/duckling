@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string_view>
+#include "query_id.hpp"
 
 namespace query {
 	
@@ -21,5 +22,5 @@ namespace query {
 #define QUERY_INTERFACE_BOILERPLATE \
 	static auto query(QKey) -> QResult; \
 	static std::string_view name;  \
-	static uint64_t id;
+	static ::query::QueryID id;
 
