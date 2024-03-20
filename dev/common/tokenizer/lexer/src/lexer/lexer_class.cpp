@@ -330,6 +330,8 @@ namespace lexer {
 
 		end = where;
 
+		usize fixed_line = line, fixed_column = column;
+
 		if (peek().is(group_end))
 			next();  // par close
 		else if (isEOF()) {
@@ -357,7 +359,7 @@ namespace lexer {
 
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
-		dia::SourcePosition sentinelPosition(file, line, column, end);
+		dia::SourcePosition sentinelPosition(file, fixed_line, fixed_column, end);
 		auto                sentinelView = composeRaw(char_array, end, end);
 		Token               sentinel     = Token::makeSentinelEnd(sentinelView, sentinelPosition);
 

@@ -86,10 +86,10 @@ namespace pst {
 	/**
 	 * @brief 
 	 * 
-	 * @tparam Element 
+	 * @tparam SubElements - kept Elements, has to have precise length parse like Expr
 	 * @tparam NON_EMPTY 
 	 * @tparam BRACKETS 
-	 * @tparam isSeparator - Separator should always be skippable
+	 * @tparam isSeparator - Separator should always be skippable with one skip
 	 * @tparam isEnding 
 	 * @tparam Container 
 	 */
@@ -103,8 +103,6 @@ namespace pst {
 	>
 	class List: public NotStmt {
 		Container elements;		
-
-		// using MyType = List<SubElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, Container>;
 	public:
 		explicit List(dia::SourcePosition position): NotStmt(std::move(position)) {}
 
@@ -113,7 +111,7 @@ namespace pst {
 
 			if constexpr (BRACKETS != lexer::Token::BracketType::None) {
 				if (!state.ctokens().isBracketGroup(BRACKETS)) {
-					state.fail(-1, "bracket " + std::string(1, char(BRACKETS)) + "expected after here");
+					state.fail(-1, "bracket " + std::string(1, char(BRACKETS)) + " expected after here");
 					return nullptr;
 				}
 				state.goDown();
@@ -121,11 +119,13 @@ namespace pst {
 
 			auto out = tpc::makeRef<List>(position);
 
+			bool success = true;
+
 			usize expr_length;
 			if (state.empty() || isEnding(state, 0)) {
 				if constexpr (NON_EMPTY) {
-					state.fail(-1, "empty list");
-					return nullptr;
+					state.fail(-1, "empty list where non-empty expected after here");
+					success = false;
 				}
 			} else {
 				while (true) {
@@ -136,13 +136,14 @@ namespace pst {
 						expr_length++;
 					}
 					if (expr_length == 0) {
-						if (state.empty()) {
-							if (isEnding(state, 0)) break;
-							state.fail(-1, "unexpected end to a list");
-							return nullptr;
+						if (state.empty() || isEnding(state, 0)) {
+							state.fail(0, "unexpected end to a list");
+							success = false;
+							break;
 						} else {
-							state.fail(-1, "empty field in a list");
-							return nullptr;
+							state.fail(0, "empty field in a list before here");
+							state.tokens().skip();
+							continue;
 						}
 					}
 					out->elements.emplace_back(SubElements::parse(state, expr_length, true));
@@ -187,6 +188,8 @@ namespace pst {
 
 	using ParamList = List<Expr, false, lexer::Token::BracketType::Round, Conditions::isComma, Conditions::isSentinel>;
 
+	using RetList = List<Expr, false, lexer::Token::BracketType::None, Conditions::isComma, Conditions::isCurlyGroup>;
+
 	/**
 	 * @note State conditions should be moved to separate file
 	 */
@@ -202,16 +205,16 @@ namespace pst {
 		// virtual ~ParamList() = default;
 	// };
 
-	class RetList: public NotStmt {
-		std::vector<ParserRef<Expr>> rets;
+	// class RetList: public NotStmt {
+		// std::vector<ParserRef<Expr>> rets;
 
-	public:
-		explicit RetList(dia::SourcePosition position): NotStmt(std::move(position)) {}
+	// public:
+		// explicit RetList(dia::SourcePosition position): NotStmt(std::move(position)) {}
 
-		static ParserRef<RetList> parse(RiftParserState& state);
-		virtual void              dprint(std::ostream& out) const final;
-		virtual ~RetList() = default;
-	};
+		// static ParserRef<RetList> parse(RiftParserState& state);
+		// virtual void              dprint(std::ostream& out) const final;
+		// virtual ~RetList() = default;
+	// };
 
 	class ArgList: public NotStmt {
 		// @TODO

@@ -103,7 +103,7 @@ private:
 
 	void testParamListErrors() {
 		pst::PST pst = prepare(path("snippets/params_err.rift"));
-		assert(pst.getErrorState().errCount() == 3, "Expected 3 errors");
+		assert(pst.getErrorState().errCount() == 7, "Expected 7 errors");
 	}
 
 	void testMissingSemiErr() {
