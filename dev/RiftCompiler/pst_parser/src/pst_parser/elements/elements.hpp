@@ -84,14 +84,14 @@ namespace pst {
 	using StateCondition = bool(const RiftParserState&, usize);
 
 	/**
-	 * @brief 
+	 * @brief General Element representing lists of Elements.
 	 * 
-	 * @tparam SubElements - kept Elements, has to have precise length parse like Expr
-	 * @tparam NON_EMPTY 
-	 * @tparam BRACKETS 
-	 * @tparam isSeparator - Separator should always be skippable with one skip
-	 * @tparam isEnding 
-	 * @tparam Container 
+	 * @tparam SubElements - Kept Elements, has to have precise length parse like Expr
+	 * @tparam NON_EMPTY - Should empty list be an error.
+	 * @tparam BRACKETS - expected brackets or None if not expected
+	 * @tparam isSeparator - Separator should always be skip-able with one skip.
+	 * @tparam isEnding - Check for successful ending.
+	 * @tparam Container - Vector-like container of SubElements with emplace_back.
 	 */
 	template <
 		class SubElements,
@@ -105,6 +105,13 @@ namespace pst {
 		Container elements;		
 	public:
 		explicit List(dia::SourcePosition position): NotStmt(std::move(position)) {}
+
+		Container::const_iterator cbegin() const {
+			return elements.cbegin();
+		}
+		Container::const_iterator cend() const {
+			return elements.cend();
+		}
 
 		static ParserRef<List> parse(RiftParserState& state);
 
@@ -139,17 +146,7 @@ namespace pst {
 
 	using InheritList = List<Expr, true, lexer::Token::BracketType::None, Conditions::isComma, Conditions::isCurlyGroup>;
 
-
-	class ArgList: public NotStmt {
-		// @TODO
-
-	public:
-		explicit ArgList(dia::SourcePosition position): NotStmt(std::move(position)) {}
-
-		static ParserRef<ArgList> parse(RiftParserState& state);
-		virtual ~ArgList() = default;
-		virtual void dprint(std::ostream& out) const final;
-	};
+	using ArgList = List<Expr, false, lexer::Token::BracketType::Round, Conditions::isComma, Conditions::isSentinel>;
 
 	class Attribute: public Stmt {
 		tpc::Identifier    name;
@@ -454,6 +451,9 @@ namespace pst {
 		virtual void dprint(std::ostream& out) const final;
 	};
 
+	/**
+	 * @note outdated with "current" syntax (one inherits then implemnets etc)
+	 */
 	class Struct: public Decl {
 		tpc::Identifier              name;
 		ParserRef<InheritList> bases = nullptr;
