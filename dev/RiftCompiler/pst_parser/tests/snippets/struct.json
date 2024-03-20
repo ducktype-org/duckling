@@ -5,22 +5,24 @@
 				"name": {
 					"Name": "aaa"
 				},
-				"base_classes": [
-					{
-						"Expr": [
-							{
-								"Identifier": "bbb"
-							}
-						]
-					},
-					{
-						"Expr": [
-							{
-								"Identifier": "cccc"
-							}
-						]
-					}
-				],
+				"base_classes": {
+					"List": [
+						{
+							"Expr": [
+								{
+									"Identifier": "bbb"
+								}
+							]
+						},
+						{
+							"Expr": [
+								{
+									"Identifier": "cccc"
+								}
+							]
+						}
+					]
+				},
 				"body": {
 					"CodeBlock": [
 						{

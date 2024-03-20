@@ -81,7 +81,7 @@ namespace pst {
 		bool trailingSemicolon() override;
 	};
 
-	using StateConditions = bool(const RiftParserState&, usize);
+	using StateCondition = bool(const RiftParserState&, usize);
 
 	/**
 	 * @brief 
@@ -97,8 +97,8 @@ namespace pst {
 		class SubElements,
 		bool NON_EMPTY, 
 		lexer::Token::BracketType BRACKETS, 
-		StateConditions isSeparator, 
-		StateConditions isEnding,
+		StateCondition isSeparator, 
+		StateCondition isEnding,
 		class Container = std::vector<ParserRef<SubElements>>
 	>
 	class List: public NotStmt {
@@ -135,7 +135,10 @@ namespace pst {
 
 	using ParamList = List<Expr, false, lexer::Token::BracketType::Round, Conditions::isComma, Conditions::isSentinel>;
 
-	using RetList = List<Expr, false, lexer::Token::BracketType::None, Conditions::isComma, Conditions::isCurlyGroup>;
+	using RetList = List<Expr, true, lexer::Token::BracketType::None, Conditions::isComma, Conditions::isCurlyGroup>;
+
+	using InheritList = List<Expr, true, lexer::Token::BracketType::None, Conditions::isComma, Conditions::isCurlyGroup>;
+
 
 	class ArgList: public NotStmt {
 		// @TODO
@@ -453,7 +456,7 @@ namespace pst {
 
 	class Struct: public Decl {
 		tpc::Identifier              name;
-		std::vector<ParserRef<Expr>> bases;
+		ParserRef<InheritList> bases = nullptr;
 		ParserRef<CodeBlock>         body = nullptr;
 
 	public:
@@ -526,8 +529,8 @@ namespace pst {
 		class SubElements,
 		bool NON_EMPTY, 
 		lexer::Token::BracketType BRACKETS, 
-		StateConditions isSeparator, 
-		StateConditions isEnding,
+		StateCondition isSeparator, 
+		StateCondition isEnding,
 		class Container
 	>
 	auto List<SubElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, Container>::parse(RiftParserState& state) -> ParserRef<List> {

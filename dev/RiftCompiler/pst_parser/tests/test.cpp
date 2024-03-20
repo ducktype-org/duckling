@@ -93,7 +93,7 @@ private:
 
 	void testListParsingErrors() {
 		pst::PST pst = prepare(path("snippets/lists_err.rift"));
-		assert(pst.getErrorState().errCount() == 4, "Expected 4 errors");
+		assert(pst.getErrorState().errCount() == 5, "Expected 5 errors");
 	}
 
 	void testUsingErrors() {
