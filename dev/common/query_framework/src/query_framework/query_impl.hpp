@@ -12,6 +12,8 @@ namespace query {
 
 	struct ContextType {
 
+		NodeID my_node;
+
 		template<typename OthQuery>
 		auto query(typename OthQuery::QKey key) -> auto {
 			// ....
@@ -61,11 +63,23 @@ namespace query {
 			return v.value().data;
 		}
 		else {
-			typename QueryImplType::Context context;
+			auto node_id = makeNodeID(QueryImplType::QueryType::id, key);
+
+			typename QueryImplType::Context context{node_id};
 			ACD acd; /*@TODO: provide acd here*/
+
+			// epilog:
+			dep_graph::setEntry(node_id);
 			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Calculating.\n"));
+			
+			// calculation:
 			auto result = QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+			
+			// prolog:
+			dep_graph::setExit(node_id);
 			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Done.\n"));
+			
+			
 			return result;
 		}
 	}
