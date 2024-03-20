@@ -106,61 +106,8 @@ namespace pst {
 	public:
 		explicit List(dia::SourcePosition position): NotStmt(std::move(position)) {}
 
-		static ParserRef<List> parse(RiftParserState& state) {
-			auto position = state.ctokens().peek().getPosition();
+		static ParserRef<List> parse(RiftParserState& state);
 
-			if constexpr (BRACKETS != lexer::Token::BracketType::None) {
-				if (!state.ctokens().isBracketGroup(BRACKETS)) {
-					state.fail(-1, "bracket " + std::string(1, char(BRACKETS)) + " expected after here");
-					return nullptr;
-				}
-				state.goDown();
-			}
-
-			auto out = tpc::makeRef<List>(position);
-
-			bool success = true;
-
-			usize expr_length;
-			if (state.empty() || isEnding(state, 0)) {
-				if constexpr (NON_EMPTY) {
-					state.fail(-1, "empty list where non-empty expected after here");
-					success = false;
-				}
-			} else {
-				while (true) {
-					expr_length = 0;
-					while (!state.ctokens().is(lexer::Token::Type::Sentinel, expr_length)
-				       	&& !isSeparator(state, expr_length)
-				       	&& !isEnding(state, expr_length)) {
-						expr_length++;
-					}
-					if (expr_length == 0) {
-						if (state.empty() || isEnding(state, 0)) {
-							state.fail(0, "unexpected end to a list");
-							success = false;
-							break;
-						} else {
-							state.fail(0, "empty field in a list before here");
-							state.tokens().skip();
-							continue;
-						}
-					}
-					out->elements.emplace_back(SubElements::parse(state, expr_length, true));
-					if (isEnding(state, 0)) break;
-					if (isSeparator(state, 0)) {
-						state.tokens().skip();
-					} else {
-						state.err.logError(state.ctokens().peek().getPosition(), "separator expected");
-					}
-				}
-			}
-
-			if constexpr (BRACKETS != lexer::Token::BracketType::None) {
-				state.goUpAndSkip();
-			}
-			return out;
-		}
 		virtual void dprint(std::ostream& out) const final {
 			out << "{\"List\" : [";
 			for (auto& x: elements) {
@@ -189,32 +136,6 @@ namespace pst {
 	using ParamList = List<Expr, false, lexer::Token::BracketType::Round, Conditions::isComma, Conditions::isSentinel>;
 
 	using RetList = List<Expr, false, lexer::Token::BracketType::None, Conditions::isComma, Conditions::isCurlyGroup>;
-
-	/**
-	 * @note State conditions should be moved to separate file
-	 */
-
-	// class ParamList: public NotStmt {
-		// std::vector<ParserRef<Expr>> params;
-
-	// public:
-		// explicit ParamList(dia::SourcePosition position): NotStmt(std::move(position)) {}
-
-		// static ParserRef<ParamList> parse(RiftParserState& state);
-		// virtual void                dprint(std::ostream& out) const final;
-		// virtual ~ParamList() = default;
-	// };
-
-	// class RetList: public NotStmt {
-		// std::vector<ParserRef<Expr>> rets;
-
-	// public:
-		// explicit RetList(dia::SourcePosition position): NotStmt(std::move(position)) {}
-
-		// static ParserRef<RetList> parse(RiftParserState& state);
-		// virtual void              dprint(std::ostream& out) const final;
-		// virtual ~RetList() = default;
-	// };
 
 	class ArgList: public NotStmt {
 		// @TODO
@@ -599,4 +520,71 @@ namespace pst {
 #define RIFT_TEST_CHILD_CONSTRUCTOR(class_name) \
 	class_name(dia::SourcePosition position):   \
 		  RiftTestingStmt(StmtKind::class_name, std::move(position)) {}
+
+
+	template <
+		class SubElements,
+		bool NON_EMPTY, 
+		lexer::Token::BracketType BRACKETS, 
+		StateConditions isSeparator, 
+		StateConditions isEnding,
+		class Container
+	>
+	auto List<SubElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, Container>::parse(RiftParserState& state) -> ParserRef<List> {
+		auto position = state.ctokens().peek().getPosition();
+
+		if constexpr (BRACKETS != lexer::Token::BracketType::None) {
+			if (!state.ctokens().isBracketGroup(BRACKETS)) {
+				state.fail(-1, "bracket " + std::string(1, char(BRACKETS)) + " expected after here");
+				return nullptr;
+			}
+			state.goDown();
+		}
+
+		auto out = tpc::makeRef<List>(position);
+
+		bool success = true;
+
+		usize expr_length;
+		if (state.empty() || isEnding(state, 0)) {
+			if constexpr (NON_EMPTY) {
+				state.fail(-1, "empty list where non-empty expected after here");
+				success = false;
+			}
+		} else {
+			while (true) {
+				expr_length = 0;
+				while (!state.ctokens().is(lexer::Token::Type::Sentinel, expr_length)
+				    && !isSeparator(state, expr_length)
+				    && !isEnding(state, expr_length)) {
+					expr_length++;
+				}
+				if (expr_length == 0) {
+					if (state.empty() || isEnding(state, 0)) {
+						state.fail(0, "unexpected end to a list");
+						success = false;
+						break;
+					} else {
+						state.fail(0, "empty field in a list before here");
+						state.tokens().skip();
+						continue;
+					}
+				}
+				out->elements.emplace_back(SubElements::parse(state, expr_length, true));
+				if (isEnding(state, 0)) break;
+				if (isSeparator(state, 0)) {
+					state.tokens().skip();
+				} else {
+					state.err.logError(state.ctokens().peek().getPosition(), "separator expected");
+				}
+			}
+		}
+
+		if constexpr (BRACKETS != lexer::Token::BracketType::None) {
+			state.goUpAndSkip();
+		}
+		return out;
+	}
+
 }
+
