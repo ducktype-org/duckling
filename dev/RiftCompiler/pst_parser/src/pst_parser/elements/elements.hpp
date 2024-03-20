@@ -6,6 +6,7 @@
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
+#include <token_parser_core/automatic.hpp>
 
 #include <base/string_id.hpp>
 
@@ -80,16 +81,126 @@ namespace pst {
 		bool trailingSemicolon() override;
 	};
 
-	class ParamList: public NotStmt {
-		std::vector<ParserRef<Expr>> params;
+	using StateConditions = bool(const RiftParserState&, usize);
 
+	/**
+	 * @brief 
+	 * 
+	 * @tparam Element 
+	 * @tparam NON_EMPTY 
+	 * @tparam BRACKETS 
+	 * @tparam isSeparator - Separator should always be skippable
+	 * @tparam isEnding 
+	 * @tparam Container 
+	 */
+	template <
+		class SubElements,
+		bool NON_EMPTY, 
+		lexer::Token::BracketType BRACKETS, 
+		StateConditions isSeparator, 
+		StateConditions isEnding,
+		class Container = std::vector<ParserRef<SubElements>>
+	>
+	class List: public NotStmt {
+		Container elements;		
+
+		// using MyType = List<SubElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, Container>;
 	public:
-		explicit ParamList(dia::SourcePosition position): NotStmt(std::move(position)) {}
+		explicit List(dia::SourcePosition position): NotStmt(std::move(position)) {}
 
-		static ParserRef<ParamList> parse(RiftParserState& state);
-		virtual void                dprint(std::ostream& out) const final;
-		virtual ~ParamList() = default;
+		static ParserRef<List> parse(RiftParserState& state) {
+			auto position = state.ctokens().peek().getPosition();
+
+			if constexpr (BRACKETS != lexer::Token::BracketType::None) {
+				if (!state.ctokens().isBracketGroup(BRACKETS)) {
+					state.fail(-1, "bracket " + std::string(1, char(BRACKETS)) + "expected after here");
+					return nullptr;
+				}
+				state.goDown();
+			}
+
+			auto out = tpc::makeRef<List>(position);
+
+			usize expr_length;
+			if (state.empty() || isEnding(state, 0)) {
+				if constexpr (NON_EMPTY) {
+					state.fail(-1, "empty list");
+					return nullptr;
+				}
+			} else {
+				while (true) {
+					expr_length = 0;
+					while (!state.ctokens().is(lexer::Token::Type::Sentinel, expr_length)
+				       	&& !isSeparator(state, expr_length)
+				       	&& !isEnding(state, expr_length)) {
+						expr_length++;
+					}
+					if (expr_length == 0) {
+						if (state.empty()) {
+							if (isEnding(state, 0)) break;
+							state.fail(-1, "unexpected end to a list");
+							return nullptr;
+						} else {
+							state.fail(-1, "empty field in a list");
+							return nullptr;
+						}
+					}
+					out->elements.emplace_back(SubElements::parse(state, expr_length, true));
+					if (isEnding(state, 0)) break;
+					if (isSeparator(state, 0)) {
+						state.tokens().skip();
+					} else {
+						state.err.logError(state.ctokens().peek().getPosition(), "separator expected");
+					}
+				}
+			}
+
+			if constexpr (BRACKETS != lexer::Token::BracketType::None) {
+				state.goUpAndSkip();
+			}
+			return out;
+		}
+		virtual void dprint(std::ostream& out) const final {
+			out << "{\"List\" : [";
+			for (auto& x: elements) {
+				tpc::nullAwareDprint(x, out);
+				out << ",";
+			}
+			out << "]}";
+		}
+		virtual ~List() = default;
 	};
+
+	class Conditions {
+		Conditions() = delete;
+	public:
+		static bool isComma(const RiftParserState& state, usize fwd) {
+			return state.ctokens().is(rift_def::Operator::Comma, fwd);
+		};
+		static bool isSentinel(const RiftParserState& state, usize fwd) {
+			return state.ctokens().is(lexer::Token::Type::Sentinel, fwd);
+		};
+		static bool isCurlyGroup(const RiftParserState& state, usize fwd) {
+			return state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly, fwd);
+		};
+	};
+
+	using ParamList = List<Expr, false, lexer::Token::BracketType::Round, Conditions::isComma, Conditions::isSentinel>;
+
+	/**
+	 * @note State conditions should be moved to separate file
+	 */
+
+	// class ParamList: public NotStmt {
+		// std::vector<ParserRef<Expr>> params;
+
+	// public:
+		// explicit ParamList(dia::SourcePosition position): NotStmt(std::move(position)) {}
+
+		// static ParserRef<ParamList> parse(RiftParserState& state);
+		// virtual void                dprint(std::ostream& out) const final;
+		// virtual ~ParamList() = default;
+	// };
 
 	class RetList: public NotStmt {
 		std::vector<ParserRef<Expr>> rets;

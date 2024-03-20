@@ -6,7 +6,7 @@
 					"Name": "A"
 				},
 				"params": {
-					"ParamList": []
+					"List": []
 				},
 				"rets": {
 					"RetList": [
@@ -32,7 +32,7 @@
 					"Name": "A"
 				},
 				"params": {
-					"ParamList": []
+					"List": []
 				},
 				"rets": {
 					"RetList": [
@@ -64,7 +64,7 @@
 					"Name": "A"
 				},
 				"params": {
-					"ParamList": []
+					"List": []
 				},
 				"rets": {
 					"RetList": [
@@ -97,7 +97,7 @@
 					"Name": "A"
 				},
 				"params": {
-					"ParamList": []
+					"List": []
 				},
 				"rets": {
 					"RetList": [
@@ -159,7 +159,7 @@
 					"Name": "A"
 				},
 				"params": {
-					"ParamList": []
+					"List": []
 				},
 				"rets": {
 					"RetList": [
