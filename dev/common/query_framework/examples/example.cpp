@@ -15,7 +15,7 @@ struct Query1Impl: query::QueryImplementation<
 	Query1,
 	uint64_t
 > {
-	static std::map<QKey, AddACD<QResult> > cache;
+	static std::map<QKey, query::AddACD<QResult> > cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		context.log("Some random log.");
@@ -26,7 +26,7 @@ struct Query1Impl: query::QueryImplementation<
 		if (cache.contains(key)) return cache.at(key);
 		else return {};
 	}
-	static auto store(QKey key, PResult res, ACD acd) -> QResult {
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
 		cache.insert({key, {res, acd}});
 		return res;
 	}
@@ -44,7 +44,7 @@ struct Query2Impl: query::QueryImplementation<
 	Query2,
 	uint64_t
 > {
-	static std::map<QKey, AddACD<QResult> > cache;
+	static std::map<QKey, query::AddACD<QResult> > cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		return key + context.query<Query1>(key + 1);
@@ -53,7 +53,7 @@ struct Query2Impl: query::QueryImplementation<
 		if (cache.contains(key)) return cache.at(key);
 		else return {};
 	}
-	static auto store(QKey key, PResult res, ACD acd) -> QResult {
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
 		cache.insert({key, {res, acd}});
 		return res;
 	}
@@ -69,7 +69,7 @@ struct CyclicQueryImpl: query::QueryImplementation<
 	CyclicQuery,
 	uint64_t
 > {
-	static std::map<QKey, AddACD<QResult> > cache;
+	static std::map<QKey, query::AddACD<QResult> > cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		return key + context.query<CyclicQuery>((key + 1) % 5);
@@ -78,7 +78,7 @@ struct CyclicQueryImpl: query::QueryImplementation<
 		if (cache.contains(key)) return cache.at(key);
 		else return {};
 	}
-	static auto store(QKey key, PResult res, ACD acd) -> QResult {
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
 		cache.insert({key, {res, acd}});
 		return res;
 	}

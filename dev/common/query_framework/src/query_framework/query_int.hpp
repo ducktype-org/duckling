@@ -6,8 +6,6 @@
 
 namespace query {
 
-	struct NodeID;
-	
 	/**
 	 * @brief Base class for defining query interface
 	 * 
@@ -19,8 +17,6 @@ namespace query {
 		typename QueryType_tp,
 		typename QKey_tp,
 		typename QResult_tp
-		// context?
-		// cache?
 	>
 	struct QueryInterface {
 		using QueryType = QueryType_tp;
@@ -34,7 +30,7 @@ namespace query {
  */
 #define QUERY_INTERFACE_BOILERPLATE \
 	static auto query(QKey, ::query::NodeID) -> QResult; \
-	static std::string_view name;  \
+	static ::std::string_view name;  \
 	static ::query::QueryID id;
 
 

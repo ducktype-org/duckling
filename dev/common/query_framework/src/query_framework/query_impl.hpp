@@ -34,7 +34,6 @@ namespace query {
 			::query::log(str);
 		}
 
-
 		// @FUTURE: this function should take some diagnostic object as a parameter
 		// Trivial implementation for now
 		void compilationError(std::string_view error);
@@ -68,13 +67,12 @@ namespace query {
 		log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Enter.\n"));
 		
 		if (auto v = QueryImplType::load(key)) {
-			/*@TODO: Add ACD check here...*/
+			// @FUTURE: Add ACD check here...
 			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Cached. Done.\n"));
 			return v.value().data;
 		}
 		else {
 			auto node_id = makeNodeID(QueryImplType::QueryType::id, key);
-
 			typename QueryImplType::Context context{node_id};
 			ACD acd; /*@TODO: provide acd here*/
 
@@ -88,7 +86,6 @@ namespace query {
 			// prolog:
 			dep_graph::setExit(node_id);
 			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Done.\n"));
-			
 			
 			return result;
 		}
