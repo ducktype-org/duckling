@@ -90,10 +90,10 @@ decltype(CyclicQueryImpl::cache) CyclicQueryImpl::cache{};
 
 int main() {
 
-	std::cout << queryEntryPoint<Query2>(2) << "\n";
+	std::cout << query::queryEntryPoint<Query2>(2) << "\n";
 	query::dep_graph::debugPrint();
 
-	std::cout << queryEntryPoint<CyclicQuery>(0) << "\n";
+	std::cout << query::queryEntryPoint<CyclicQuery>(0) << "\n";
 
 	return 0;
 }

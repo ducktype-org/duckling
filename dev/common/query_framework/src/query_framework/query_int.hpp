@@ -26,12 +26,20 @@ namespace query {
 	};
 }
 
+/**
+ * @brief Macro emitting body of query interface struct.
+ */
 #define QUERY_INTERFACE_BOILERPLATE \
 	static auto query(QKey) -> QResult; \
 	static std::string_view name;  \
 	static ::query::QueryID id;
 
 
+/**
+ * @brief Macro used do delcare queries.
+ * @example
+ * 	DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue) 
+ */
 #define DECLARE_QUERY(query_type, key, value) \
 	struct query_type: ::query::QueryInterface<   \
 		query_type,  \

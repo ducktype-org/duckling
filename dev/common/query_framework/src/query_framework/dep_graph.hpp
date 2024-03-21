@@ -4,6 +4,9 @@
 
 namespace query {
 	
+	/**
+	 * @brief Type representing hash value for all key-types.
+	 */
 	struct KeyHash {
 		u64 val;
 	};
@@ -20,11 +23,18 @@ namespace query {
 		return { std::hash<KeyType>()(key) };
 	}
 
+	/**
+	 * @brief Struct representing
+	 * dep_graph node of concrete query invocation.
+	 */
 	struct NodeID {
 		QueryID q_id;
 		KeyHash hash;
 	};
 
+	/**
+	 * @brief Helper function for construing NodeID.
+	 */
 	template<typename KeyType>
 	NodeID makeNodeID(QueryID id, const KeyType& key) {
 		return { id, hashKey(key) };	
