@@ -7,7 +7,7 @@ int file_counter = 0;
 int dir_counter  = 0;
 
 void countFiles(const fs::FsTree& tree) {
-	for (const auto& file_iter: tree.getFiles()) file_counter++;
+	file_counter += (int) tree.getFiles().size();
 	for (const auto& subdir: tree.getDirs()) {
 		countFiles(*subdir.second);
 		dir_counter++;

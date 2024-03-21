@@ -8,3 +8,5 @@ make_module(Filesystem USES Base)
 
 rift_add_test(common filesystem_test_simple tests/test.cpp
         USES Filesystem)
+rift_add_test(common filesystem_test_fstree tests/fs_tree_test.cpp
+        USES Filesystem)
