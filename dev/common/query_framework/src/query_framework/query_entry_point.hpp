@@ -6,11 +6,6 @@
  */
 template<typename QueryType>
 auto queryEntryPoint(typename QueryType::QKey key) -> auto {
-	// @TODO: proper way to do it
-	// @TODO: who creates context?
 	return QueryType::query(key);
 }
-
-
-
 

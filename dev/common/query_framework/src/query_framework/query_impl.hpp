@@ -23,9 +23,16 @@ namespace query {
 			return OthQuery::query(key);
 		}
 
-		// @TODO: log
+		void log(std::string_view str) {
+			// @TODO: arguments of this function should be evaluated only if logging is enabled
+			::query::log("[USER LOG]: ");
+			::query::log(str);
+		}
 
-		// @TODO: error
+
+		// @FUTURE: this function should take some diagnostic object as a parameter
+		// Trivial implementation for now
+		void compilationError(std::string_view error);
 	};
 
 	template<
@@ -43,7 +50,7 @@ namespace query {
 
 		using QResWithACD = AddACD<QResult>;
 
-		using LoadRes = base::Optional<QResWithACD >;
+		using LoadRes = base::Optional<QResWithACD>;
 
 		// static auto provide(QKey, Context&) -> PResult;
 		// static auto load(QKey key) -> base::Optional<QResult>;
@@ -88,8 +95,7 @@ namespace query {
 	}
 }
 
-// @TODO: proper context:
-#define IMPLEMENT_QUERY_OF(type, pretty_name) \
+#define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name) \
 	auto type::QueryType::query(type::QueryType::QKey key) -> type::QueryType::QResult { \
  		return ::query::standardQueryEntry<type>(key);                                   \
 	}                                                                                    \

@@ -18,6 +18,8 @@ struct Query1Impl: query::QueryImplementation<
 	static std::map<QKey, AddACD<QResult> > cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
+		context.log("Some random log.");
+		context.compilationError("Error at query1 -- example error.");
 		return key*key;
 	}
 	static auto load(QKey key) -> LoadRes {
@@ -29,7 +31,7 @@ struct Query1Impl: query::QueryImplementation<
 		return res;
 	}
 };
-IMPLEMENT_QUERY_OF(Query1Impl, "Query 1");
+QUERY_IMPLEMENTATION_BOILERPLATE(Query1Impl, "Query 1");
 decltype(Query1Impl::cache) Query1Impl::cache{};
 
 
@@ -56,7 +58,7 @@ struct Query2Impl: query::QueryImplementation<
 		return res;
 	}
 };
-IMPLEMENT_QUERY_OF(Query2Impl, "Query 2");
+QUERY_IMPLEMENTATION_BOILERPLATE(Query2Impl, "Query 2");
 decltype(Query2Impl::cache) Query2Impl::cache{};
 
 /*****************
@@ -81,7 +83,7 @@ struct CyclicQueryImpl: query::QueryImplementation<
 		return res;
 	}
 };
-IMPLEMENT_QUERY_OF(CyclicQueryImpl, "Cyclic query");
+QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQueryImpl, "Cyclic query");
 decltype(CyclicQueryImpl::cache) CyclicQueryImpl::cache{};
 
 
