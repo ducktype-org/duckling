@@ -12,7 +12,7 @@ using namespace compiler::frontend;
 regex ModuleTree::default_reject_file_regex      = regex(R"((\$.*|\..*))");
 regex ModuleTree::default_reject_directory_regex = regex(R"((\$.*|\..*))");
 
-bool ModuleTree::isEmpty() const { return m_main_source_file == nullptr; }
+bool ModuleTree::hasMainSourceFile() const { return m_main_source_file != nullptr; }
 
 void ModuleTree::buildModuleTree(
 	const std::shared_ptr<ModuleTree>& module_root, std::shared_ptr<FsTree> tree_root
@@ -26,7 +26,8 @@ void ModuleTree::buildModuleTree(
 	// Add directory submodules.
 	for (const auto& dir_iter: module_root->m_fs_tree->getDirs()) {
 		auto submodule = ModuleTree::create(dir_iter.second);
-		if (!submodule->isEmpty()) module_root->m_submodules.put(dir_iter.first, submodule);
+		if (submodule->hasMainSourceFile())
+			module_root->m_submodules.put(dir_iter.first, submodule);
 	}
 }
 

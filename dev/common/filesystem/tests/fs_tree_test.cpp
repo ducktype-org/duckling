@@ -1,4 +1,3 @@
-#include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 #include "filesystem/fs_tree.hpp"
 
@@ -27,9 +26,7 @@ private:
 		ASSERT_EQUAL(false, fst->getFiles().contains(".skipped_file"));
 		ASSERT_EQUAL(true, fst->getFiles().contains("file"));
 		ASSERT_EQUAL(true, fst->getFiles().contains("file.txt"));
-		ASSERT_EQUAL(
-			std::string("content\n"), fst->getFiles()["file.txt"].getContent().view().stdString()
-		);
+		ASSERT_EQUAL("content\n", fst->getFiles()["file.txt"].getContent().view());
 
 		auto another_directory = fst->getDirs()["another_directory"];
 		ASSERT_EQUAL(0, another_directory->getFiles().size());

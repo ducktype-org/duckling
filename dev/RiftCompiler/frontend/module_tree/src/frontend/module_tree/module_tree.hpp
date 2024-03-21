@@ -97,7 +97,7 @@ namespace compiler::frontend {
 		 * @return True if pointer is valid, false otherwise.
 		 */
 		[[nodiscard]]
-		bool isEmpty() const;
+		bool hasMainSourceFile() const;
 
 		/**
 		 * Accesses the main `RIFT_MAIN_SOURCE_FILE` - main source file of the module.
