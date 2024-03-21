@@ -8,6 +8,13 @@ namespace query {
 		u64 val;
 	};
 
+	/**
+	 * @brief Gets hash from key.
+	 * As of right now it is assumed that hashKey is collision less (per query).
+	 * It has to be ensured by a programmer.
+	 * For things like SymID / StrID / ints it is trivial.
+	 * For other types it might be necessary to increase hash size to 128 bits and use "legit hashing algorithm". 
+	 */
 	template<typename KeyType>
 	KeyHash hashKey(const KeyType& key) {
 		return { std::hash<KeyType>()(key) };
@@ -37,6 +44,8 @@ namespace query {
 		void setEntry(NodeID node);
 		DependencyStatus addDependency(NodeID from, NodeID to);
 		void setExit(NodeID node);
+
+		void debugPrint();
 
 	}
 }

@@ -13,3 +13,6 @@ struct Query1: query::QueryInterface<
 DECLARE_QUERY (Query2, uint64_t, uint64_t)
 
 
+DECLARE_QUERY (CyclicQuery, uint64_t, uint64_t)
+
+
