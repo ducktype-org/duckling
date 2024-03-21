@@ -51,7 +51,7 @@ namespace query {
 		// @TODO: some pretty printing should be supported
 		// @TODO: when cycle is detected "dep_graph" somehow "cycle" unwrap should happen, and all queries in the cycle should produce "CycleError" that will propagate into any query depending from them
 
-		void setEntry(NodeID node);
+		void setEntry(NodeID node, NodeID from);
 		DependencyStatus addDependency(NodeID from, NodeID to);
 		void setExit(NodeID node);
 

@@ -30,6 +30,13 @@ namespace query {
 		struct NodeData {
 			Color color;
 			std::vector<NodeID> dependencies;
+
+			/**
+			 * @brief NodeID of last node "calling" this query.
+			 * Should only hold value when color==Visiting.
+			 * Used for cycle recovery.
+			 */
+			NodeID parent;
 		};
 
 		namespace {
@@ -37,7 +44,7 @@ namespace query {
 		}
 
 
-		void setEntry(NodeID node) {
+		void setEntry(NodeID node, NodeID from) {
 			if (node_data.contains(node)) {
 				if (node_data.at(node).color == Color::Visiting) {
 					// @TODO: cycle mark
@@ -46,7 +53,7 @@ namespace query {
 					throw base::NotYetImplemented("Query Cycle!");
 				}
 			}
-			node_data.insert_or_assign(node, NodeData{Color::Visiting, {} });
+			node_data.insert_or_assign(node, NodeData{Color::Visiting, {}, from});
 		}
 		
 		DependencyStatus addDependency(NodeID from, NodeID to) {

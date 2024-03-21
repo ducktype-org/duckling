@@ -5,4 +5,7 @@
 namespace query {
 	// @Future: change to strongly typed id when possible
 	using QueryID = u64;
+
+	
 }
+

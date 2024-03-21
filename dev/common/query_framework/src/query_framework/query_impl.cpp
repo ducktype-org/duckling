@@ -1,9 +1,18 @@
 #include "query_impl.hpp"
 
 namespace query {
+
+	namespace {
+		QueryID next = 1;
+		constexpr QueryID outside_world_query = 0;
+	}
+
 	QueryID nextQueryId() {
-		static QueryID next = 0;
 		return next++;
+	}
+
+	QueryID outsideWorldQueryID() {
+		return outside_world_query;
 	}
 }
 

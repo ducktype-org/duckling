@@ -10,6 +10,13 @@
 
 namespace query {
 
+	/**
+	 * @brief Key used for queries without keys, input queries, and "outside world" query.
+	 */
+	struct EmptyKey {
+		// @TODO: hash?
+	};
+
 	struct ContextType {
 
 		NodeID my_node;
@@ -20,7 +27,7 @@ namespace query {
 			NodeID dep_id = makeNodeID(OthQuery::id, key);
 			dep_graph::addDependency(my_node, dep_id);
 
-			return OthQuery::query(key);
+			return OthQuery::query(key, my_node);
 		}
 
 		void log(std::string_view str) {
@@ -61,10 +68,11 @@ namespace query {
 	 * @brief A simple counter for providing unique query id-s.
 	 */
 	QueryID nextQueryId();
+	QueryID outsideWorldQueryID();
 
 
 	template<typename QueryImplType>
-	auto standardQueryEntry(typename QueryImplType::QKey key) -> QueryImplType::QResult {
+	auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) -> QueryImplType::QResult {
 		log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Enter.\n"));
 		
 		if (auto v = QueryImplType::load(key)) {
@@ -79,7 +87,7 @@ namespace query {
 			ACD acd; /*@TODO: provide acd here*/
 
 			// epilog:
-			dep_graph::setEntry(node_id);
+			dep_graph::setEntry(node_id, from);
 			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Calculating.\n"));
 			
 			// calculation:
@@ -96,8 +104,8 @@ namespace query {
 }
 
 #define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name) \
-	auto type::QueryType::query(type::QueryType::QKey key) -> type::QueryType::QResult { \
- 		return ::query::standardQueryEntry<type>(key);                                   \
+	auto type::QueryType::query(type::QueryType::QKey key, NodeID from) -> type::QueryType::QResult { \
+ 		return ::query::standardQueryEntry<type>(key, from);                             \
 	}                                                                                    \
 	decltype(type::QueryType::id) type::QueryType::id = ::query::nextQueryId();          \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
