@@ -1,15 +1,10 @@
 #pragma once
 
 #include "query_id.hpp"
+#include "node_id.hpp"
 
 namespace query {
 	
-	/**
-	 * @brief Type representing hash value for all key-types.
-	 */
-	struct KeyHash {
-		u64 val;
-	};
 
 	/**
 	 * @brief Gets hash from key.
@@ -23,14 +18,6 @@ namespace query {
 		return { std::hash<KeyType>()(key) };
 	}
 
-	/**
-	 * @brief Struct representing
-	 * dep_graph node of concrete query invocation.
-	 */
-	struct NodeID {
-		QueryID q_id;
-		KeyHash hash;
-	};
 
 	/**
 	 * @brief Helper function for construing NodeID.

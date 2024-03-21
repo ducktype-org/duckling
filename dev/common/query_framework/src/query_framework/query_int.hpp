@@ -2,6 +2,7 @@
 
 #include <string_view>
 #include "query_id.hpp"
+#include "node_id.hpp"
 
 namespace query {
 
@@ -32,7 +33,7 @@ namespace query {
  * @brief Macro emitting body of query interface struct.
  */
 #define QUERY_INTERFACE_BOILERPLATE \
-	static auto query(QKey, NodeID) -> QResult; \
+	static auto query(QKey, ::query::NodeID) -> QResult; \
 	static std::string_view name;  \
 	static ::query::QueryID id;
 

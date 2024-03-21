@@ -1,5 +1,7 @@
 #pragma once
 
+#include "dep_graph.hpp"
+
 namespace query {
 
 	/**
@@ -8,7 +10,7 @@ namespace query {
 	 */
 	template<typename QueryType>
 	auto queryEntryPoint(typename QueryType::QKey key) -> auto {
-		return QueryType::query(key);
+		return QueryType::query(key, makeNodeID(outsideWorldQueryID(), EmptyKey()));
 	}
 
 }

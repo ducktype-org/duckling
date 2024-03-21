@@ -13,9 +13,7 @@ namespace query {
 	/**
 	 * @brief Key used for queries without keys, input queries, and "outside world" query.
 	 */
-	struct EmptyKey {
-		// @TODO: hash?
-	};
+	struct EmptyKey { };
 
 	struct ContextType {
 
@@ -64,12 +62,6 @@ namespace query {
 		// static auto store(QKey key, PResult) -> QResult;
 	};
 
-	/**
-	 * @brief A simple counter for providing unique query id-s.
-	 */
-	QueryID nextQueryId();
-	QueryID outsideWorldQueryID();
-
 
 	template<typename QueryImplType>
 	auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) -> QueryImplType::QResult {
@@ -104,10 +96,17 @@ namespace query {
 }
 
 #define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name) \
-	auto type::QueryType::query(type::QueryType::QKey key, NodeID from) -> type::QueryType::QResult { \
+	auto type::QueryType::query(type::QueryType::QKey key, ::query::NodeID from) -> type::QueryType::QResult { \
  		return ::query::standardQueryEntry<type>(key, from);                             \
 	}                                                                                    \
 	decltype(type::QueryType::id) type::QueryType::id = ::query::nextQueryId();          \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
 
 
+// @TODO: why this has to be here..?
+template <>
+struct std::hash<::query::EmptyKey> {
+	std::size_t operator()([[maybe_unused]] const ::query::EmptyKey& key) const {
+		return 0;
+	}
+};

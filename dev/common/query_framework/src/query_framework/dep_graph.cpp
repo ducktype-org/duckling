@@ -1,4 +1,6 @@
 #include "dep_graph.hpp"
+#include "query_impl.hpp"
+
 #include <base/maps.hpp>
 #include <vector>
 #include <iostream>
@@ -13,6 +15,8 @@ struct std::hash<::query::NodeID> {
 		return l * 9223372036854775783UL + r;
 	}
 };
+
+
 
 namespace query {
 
