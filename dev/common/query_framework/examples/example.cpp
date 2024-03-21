@@ -15,7 +15,7 @@ struct Query1Impl: query::QueryImplementation<
 	Query1,
 	uint64_t
 > {
-	static std::map<QKey, query::AddACD<QResult> > cache;
+	inline static std::map<QKey, query::AddACD<QResult> > cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		context.log("Some random log.");
@@ -32,7 +32,6 @@ struct Query1Impl: query::QueryImplementation<
 	}
 };
 QUERY_IMPLEMENTATION_BOILERPLATE(Query1Impl, "Query 1");
-decltype(Query1Impl::cache) Query1Impl::cache{};
 
 
 
