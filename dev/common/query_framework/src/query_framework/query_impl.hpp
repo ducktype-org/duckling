@@ -11,8 +11,8 @@
 namespace query {
 
 	namespace detail {
-		struct ContextType {
 
+		struct ContextType {
 			NodeID my_node;
 
 			template<typename OthQuery>
@@ -72,26 +72,27 @@ namespace query {
 	>
 	struct QueryImplementation {
 		using QueryType = QueryType_tp;
-		using QKey = typename QueryType_tp::QKey;
-		
-		using QResult = typename QueryType_tp::QResult;
-		using PResult = PResult_tp;
+
+		using QKey        = typename QueryType_tp::QKey;
+		using QResult     = typename QueryType_tp::QResult;
+		using QResWithACD = AddACD<QResult>;
+		using PResult     = PResult_tp;
+		using LoadRes     = base::Optional<QResWithACD>;
 		
 		using Context = ::query::detail::ContextType;
 
-		using QResWithACD = AddACD<QResult>;
-
-		using LoadRes = base::Optional<QResWithACD>;
-
-		// static auto provide(QKey, Context&) -> PResult;
-		// static auto load(QKey key) -> base::Optional<QResult>;
-		// static auto store(QKey key, PResult) -> QResult;
+		/**
+		 * Standard query function signatures:
+		 *   static auto provide(QKey, Context&) -> PResult;
+		 *   static auto load(QKey key) -> base::Optional<QResult>;
+		 *   static auto store(QKey key, PResult) -> QResult;
+		 */
 	};
 
 }
 
 #define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name) \
-	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::NodeID from) -> type::QueryType::QResult { \
+	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from) -> type::QueryType::QResult { \
  		return ::query::detail::standardQueryEntry<type>(key, from);                     \
 	}                                                                                    \
 	decltype(type::QueryType::id) type::QueryType::id = ::query::nextQueryId();          \

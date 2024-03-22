@@ -25,7 +25,7 @@ namespace query {
 			using QKey = QKey_tp;
 		};
 	}
-	
+
 	/**
 	 * @brief Key used for queries without keys, input queries, and "outside world" query.
 	 */
@@ -36,7 +36,7 @@ namespace query {
  * @brief Macro emitting body of query interface struct.
  */
 #define QUERY_INTERFACE_BOILERPLATE \
-	static auto internal_query(QKey, ::query::NodeID) -> QResult; \
+	static auto internal_query(QKey, ::query::detail::NodeID) -> QResult; \
 	static ::std::string_view name;  \
 	static ::query::QueryID id;
 

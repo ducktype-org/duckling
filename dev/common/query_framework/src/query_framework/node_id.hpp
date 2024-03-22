@@ -2,13 +2,14 @@
 
 #include "query_id.hpp"
 
-namespace query {
+namespace query::detail {
 
 	/**
 	 * @brief Type representing hash value for all key-types.
 	 */
 	struct KeyHash {
 		u64 val;
+		constexpr bool operator==(const KeyHash& oth) const = default;
 	};
 
 	/**
@@ -18,6 +19,7 @@ namespace query {
 	struct NodeID {
 		QueryID q_id;
 		KeyHash hash;
+		constexpr bool operator==(const NodeID& oth) const = default;
 	};
 
 }

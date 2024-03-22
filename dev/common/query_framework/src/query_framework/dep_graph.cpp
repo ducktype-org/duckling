@@ -5,9 +5,11 @@
 #include <vector>
 #include <iostream>
 
+using query::detail::NodeID;
+
 template <>
-struct std::hash<::query::NodeID> {
-	std::size_t operator()(const ::query::NodeID& key) const {
+struct std::hash<NodeID> {
+	std::size_t operator()(const NodeID& key) const {
 		auto l = key.q_id;
 		auto r = key.hash.val;
 		
@@ -15,8 +17,6 @@ struct std::hash<::query::NodeID> {
 		return l.asInt() * 9223372036854775783UL + r;
 	}
 };
-
-
 
 namespace query {
 

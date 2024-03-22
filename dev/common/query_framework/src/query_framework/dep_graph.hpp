@@ -14,7 +14,7 @@ namespace query {
 	 * For other types it might be necessary to increase hash size to 128 bits and use "legit hashing algorithm". 
 	 */
 	template<typename KeyType>
-	KeyHash hashKey(const KeyType& key) {
+	detail::KeyHash hashKey(const KeyType& key) {
 		return { std::hash<KeyType>()(key) };
 	}
 
@@ -23,7 +23,7 @@ namespace query {
 	 * @brief Helper function for construing NodeID.
 	 */
 	template<typename KeyType>
-	NodeID makeNodeID(QueryID id, const KeyType& key) {
+	detail::NodeID makeNodeID(QueryID id, const KeyType& key) {
 		return { id, hashKey(key) };	
 	}
 
@@ -38,9 +38,9 @@ namespace query {
 		// @TODO: some pretty printing should be supported
 		// @TODO: when cycle is detected "dep_graph" somehow "cycle" unwrap should happen, and all queries in the cycle should produce "CycleError" that will propagate into any query depending from them
 
-		void setEntry(NodeID node, NodeID from);
-		DependencyStatus addDependency(NodeID from, NodeID to);
-		void setExit(NodeID node);
+		void setEntry(detail::NodeID node, detail::NodeID from);
+		DependencyStatus addDependency(detail::NodeID from, detail::NodeID to);
+		void setExit(detail::NodeID node);
 
 		void debugPrint();
 
