@@ -9,7 +9,6 @@ namespace query::detail {
 	 */
 	struct KeyHash {
 		u64 val;
-		constexpr bool operator==(const KeyHash& oth) const = default;
 	};
 
 	/**
