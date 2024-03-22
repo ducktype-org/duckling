@@ -18,7 +18,7 @@ struct std::hash<NodeID> {
 	}
 };
 
-namespace query {
+namespace query::detail {
 
 	constexpr bool operator==(const NodeID& l, const NodeID& r) {
 		return l.q_id.asInt() == r.q_id.asInt() and l.hash.val == r.hash.val;

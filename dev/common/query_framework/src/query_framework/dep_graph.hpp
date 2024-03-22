@@ -3,9 +3,8 @@
 #include "query_id.hpp"
 #include "node_id.hpp"
 
-namespace query {
+namespace query::detail {
 	
-
 	/**
 	 * @brief Gets hash from key.
 	 * As of right now it is assumed that hashKey is collision less (per query).
@@ -45,4 +44,8 @@ namespace query {
 		void debugPrint();
 
 	}
+}
+
+namespace query {
+	inline void debugPrintDependencyGraph() { detail::dep_graph::debugPrint(); }
 }

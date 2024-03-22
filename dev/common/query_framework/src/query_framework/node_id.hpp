@@ -19,7 +19,6 @@ namespace query::detail {
 	struct NodeID {
 		QueryID q_id;
 		KeyHash hash;
-		constexpr bool operator==(const NodeID& oth) const = default;
 	};
 
 }
