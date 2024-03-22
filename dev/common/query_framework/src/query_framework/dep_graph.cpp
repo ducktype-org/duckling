@@ -12,7 +12,7 @@ struct std::hash<::query::NodeID> {
 		auto r = key.hash.val;
 		
 		// this is questionable:
-		return l * 9223372036854775783UL + r;
+		return l.asInt() * 9223372036854775783UL + r;
 	}
 };
 
@@ -21,7 +21,7 @@ struct std::hash<::query::NodeID> {
 namespace query {
 
 	constexpr bool operator==(const NodeID& l, const NodeID& r) {
-		return l.q_id == r.q_id and l.hash.val == r.hash.val;
+		return l.q_id.asInt() == r.q_id.asInt() and l.hash.val == r.hash.val;
 	}
 
 	namespace dep_graph {
@@ -78,9 +78,9 @@ namespace query {
 			std::cerr << "Dep Graph: \n";
 			for (auto& [k, v]: node_data) {
 				std::cerr << "    ";
-				std::cerr << "Query " << k.q_id << ", Key " << k.hash.val << "  <--- ";
+				std::cerr << "Query " << k.q_id.asInt() << ", Key " << k.hash.val << "  <--- ";
 				for (auto& dep: v.dependencies) {
-					std::cerr << "(Q: " << dep.q_id << ", " << "K: " << dep.hash.val << ")"; 
+					std::cerr << "(Q: " << dep.q_id.asInt() << ", " << "K: " << dep.hash.val << ")"; 
 					std::cerr << ", ";
 				}
 				std::cerr << "\n";

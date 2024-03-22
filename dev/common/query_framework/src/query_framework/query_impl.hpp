@@ -25,7 +25,7 @@ namespace query {
 			NodeID dep_id = makeNodeID(OthQuery::id, key);
 			dep_graph::addDependency(my_node, dep_id);
 
-			return OthQuery::query(key, my_node);
+			return OthQuery::internal_query(key, my_node);
 		}
 
 		void log(std::string_view str) {
@@ -93,7 +93,7 @@ namespace query {
 }
 
 #define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name) \
-	auto type::QueryType::query(type::QueryType::QKey key, ::query::NodeID from) -> type::QueryType::QResult { \
+	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::NodeID from) -> type::QueryType::QResult { \
  		return ::query::standardQueryEntry<type>(key, from);                             \
 	}                                                                                    \
 	decltype(type::QueryType::id) type::QueryType::id = ::query::nextQueryId();          \

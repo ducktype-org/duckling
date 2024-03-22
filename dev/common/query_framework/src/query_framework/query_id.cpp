@@ -2,12 +2,14 @@
 
 namespace query {
 	namespace {
-		QueryID next = 1;
-		constexpr QueryID outside_world_query = 0;
+		QueryID next = {1};
+		constexpr QueryID outside_world_query = {0};
 	}
 
 	QueryID nextQueryId() {
-		return next++;
+		QueryID ret = next;
+		next.val++;
+		return ret;
 	}
 
 	QueryID outsideWorldQueryID() {

@@ -4,7 +4,7 @@
 #include "query_id.hpp"
 #include "node_id.hpp"
 
-namespace query {
+namespace query::detail {
 
 	/**
 	 * @brief Base class for defining query interface
@@ -29,7 +29,7 @@ namespace query {
  * @brief Macro emitting body of query interface struct.
  */
 #define QUERY_INTERFACE_BOILERPLATE \
-	static auto query(QKey, ::query::NodeID) -> QResult; \
+	static auto internal_query(QKey, ::query::NodeID) -> QResult; \
 	static ::std::string_view name;  \
 	static ::query::QueryID id;
 
@@ -40,7 +40,7 @@ namespace query {
  * 	DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue) 
  */
 #define DECLARE_QUERY(query_type, key, value) \
-	struct query_type: ::query::QueryInterface<   \
+	struct query_type: ::query::detail::QueryInterface<   \
 		query_type,  \
 		key,         \
 		value        \

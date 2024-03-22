@@ -10,7 +10,7 @@ namespace query {
 	 */
 	template<typename QueryType>
 	auto queryEntryPoint(typename QueryType::QKey key) -> auto {
-		return QueryType::query(key, makeNodeID(outsideWorldQueryID(), EmptyKey()));
+		return QueryType::internal_query(key, makeNodeID(outsideWorldQueryID(), EmptyKey()));
 	}
 
 }

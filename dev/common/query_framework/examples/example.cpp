@@ -17,6 +17,8 @@ struct Query1Impl: query::QueryImplementation<
 > {
 	inline static std::map<QKey, query::AddACD<QResult> > cache{};
 
+	// static auto provide(Context& context, QKey key) -> PResult;
+
 	static auto provide(Context& context, QKey key) -> PResult {
 		context.log("Some random log.");
 		context.compilationError("Error at query1 -- example error.");
