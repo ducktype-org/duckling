@@ -14,8 +14,6 @@
 #include <iostream>
 #include <span>
 
-// @TODO: AttrList
-
 // @TODO: make generic optional
 
 // forward for friend:
@@ -73,8 +71,6 @@ namespace pst {
 	class_name(dia::SourcePosition position): Stmt(StmtKind::class_name, std::move(position)) {}
 
 	class NotStmt: public RiftElement {
-		// @TODO:
-
 	public:
 		explicit NotStmt(dia::SourcePosition position): RiftElement(std::move(position)) {}
 
@@ -84,7 +80,7 @@ namespace pst {
 	using StateCondition = bool(const RiftParserState&, usize);
 
 	/**
-	 * @brief General Element representing lists of Elements.
+	 * @brief General Element representing a list of Elements.
 	 * 
 	 * @tparam SubElements - Kept Elements, has to have precise length parse like Expr
 	 * @tparam NON_EMPTY - Should empty list be an error.
@@ -170,8 +166,6 @@ namespace pst {
 		bool                     getStar() const;
 		virtual ~Import() = default;
 		virtual void dprint(std::ostream& out) const final;
-
-		// @TODO:
 	};
 
 	class Using: public Stmt {
@@ -255,7 +249,6 @@ namespace pst {
 			AngleGroup  = 3,
 		};
 
-		// @TODO: change StrId to Operator::, etc
 		struct Group;
 		struct Operator;
 		struct Identifier;
@@ -304,13 +297,15 @@ namespace pst {
 		virtual ~Expr() = default;
 	};
 
+	/**
+	 * @note Action assumes optional expression before the semicolon.
+	 */
 	class Action: public Stmt {
 	protected:
 		std::optional<ParserRef<Expr>> expr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action);
-		// @TODO: do different Actions than ones with 0 or 1 expressions following exist?
 		static ParserRef<Action> parse(RiftParserState& state);
 		virtual ~Action() = default;
 
@@ -365,7 +360,9 @@ namespace pst {
 		virtual ~Defer() = default;
 	};
 
-	// @TODO: should it be an action
+	/** 
+	 * @note Should throw be an action?
+	 */
 	class Throw: public Action {
 	public:
 		explicit Throw(dia::SourcePosition position): Action(std::move(position)) {}
@@ -393,7 +390,9 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 	};
 
-	// @TODO: should assert be an action
+	/**
+	 * @note should assert be an action
+	 */
 	class Decl: public Stmt {
 	public:
 		Decl(StmtKind kind, dia::SourcePosition position): Stmt(kind, std::move(position)) {}
