@@ -1,6 +1,6 @@
-#include "query_id.hpp"
+#include "query_id_provider.hpp"
 
-namespace query {
+namespace query::detail {
 	namespace {
 		QueryID next = {1};
 		constexpr QueryID outside_world_query = {0};

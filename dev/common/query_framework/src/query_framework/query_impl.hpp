@@ -6,6 +6,7 @@
 #include "acd.hpp"
 #include "query_int.hpp"
 #include "dep_graph.hpp"
+#include "query_id_provider.hpp"
 #include "logs.hpp"
 
 namespace query {
@@ -95,7 +96,7 @@ namespace query {
 	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from) -> type::QueryType::QResult { \
  		return ::query::detail::standardQueryEntry<type>(key, from);                     \
 	}                                                                                    \
-	decltype(type::QueryType::id) type::QueryType::id = ::query::nextQueryId();          \
+	decltype(type::QueryType::id) type::QueryType::id = ::query::detail::nextQueryId();          \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
 
 
