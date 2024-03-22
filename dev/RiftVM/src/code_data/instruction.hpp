@@ -84,6 +84,7 @@ namespace vm {
 		static OpFun op_setPtrArg_lptr;
 		static OpFun op_call_func;
 
+		static OpFun op_ret_tailcall;
 		static OpFun op_ret_l64;
 		static OpFun op_ret_imm;
 
@@ -140,6 +141,7 @@ namespace vm {
 			op_setPtrArg_lptr,
 			op_call_func,
 
+			op_ret_tailcall,
 			op_ret_l64,
 			op_ret_imm,
 

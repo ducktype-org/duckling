@@ -283,6 +283,15 @@ namespace vm {
 		OPFUN_CONT(1, r1, r2, r3);
 	}
 
+	RETURN_TYPE OpFuns::op_ret_tailcall(OPFUN_ARGS) {
+		{
+			auto function_id = instr->arg0;
+			auto function    = frame.executor.executing_code->functions[function_id];
+			instr            = function.bc.data();
+		}
+		OPFUN_CONT(1, r1, r2, r3);
+	}
+
 	RETURN_TYPE OpFuns::op_ret_l64(OPFUN_ARGS) {
 		{ frame.ret_val = derefStack<u64>(local_stack, instr->arg0); }
 		IF_TC(return frame.ret_val;)
