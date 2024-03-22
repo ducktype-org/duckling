@@ -96,6 +96,8 @@ int main() {
 
 	std::cout << query::queryEntryPoint<CyclicQuery>(0) << "\n";
 
+	// query::QueryID
+
 	return 0;
 }
 

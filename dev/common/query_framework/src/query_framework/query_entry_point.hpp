@@ -1,6 +1,5 @@
 #pragma once
 
-// #include "dep_graph.hpp"
 #include "query_id_provider.hpp"
 #include "node_making.hpp"
 
@@ -14,5 +13,4 @@ namespace query {
 	auto queryEntryPoint(typename QueryType::QKey key) -> auto {
 		return QueryType::internal_query(key, detail::makeNodeID(detail::outsideWorldQueryID(), EmptyKey()));
 	}
-
 }

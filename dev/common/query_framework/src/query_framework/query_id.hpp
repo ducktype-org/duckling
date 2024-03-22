@@ -2,7 +2,7 @@
 
 #include <base/ints.hpp>
 
-namespace query {
+namespace query::detail {
 	struct QueryID {
 	// private: @TODO
 		u64 val;
