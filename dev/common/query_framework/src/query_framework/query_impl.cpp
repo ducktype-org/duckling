@@ -3,7 +3,7 @@
 
 namespace query {
 
-	void ContextType::compilationError(std::string_view error) {
+	void detail::ContextType::compilationError(std::string_view error) {
 		std::cerr << "[COMPILATION ERROR]: " << error << "\n";
 	}
 

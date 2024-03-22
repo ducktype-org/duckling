@@ -4,25 +4,32 @@
 #include "query_id.hpp"
 #include "node_id.hpp"
 
-namespace query::detail {
+namespace query {
 
+	namespace detail {
+		/**
+		 * @brief Base class for defining query interface
+		 * 
+		 * @tparam QueryType_tp a type of a query
+		 * @tparam QKey_tp a type of a query ket
+		 * @tparam cache? a type returned by the query
+		 */
+		template<
+			typename QueryType_tp,
+			typename QKey_tp,
+			typename QResult_tp
+		>
+		struct QueryInterface {
+			using QueryType = QueryType_tp;
+			using QResult = QResult_tp;
+			using QKey = QKey_tp;
+		};
+	}
+	
 	/**
-	 * @brief Base class for defining query interface
-	 * 
-	 * @tparam QueryType_tp a type of a query
-	 * @tparam QKey_tp a type of a query ket
-	 * @tparam cache? a type returned by the query
+	 * @brief Key used for queries without keys, input queries, and "outside world" query.
 	 */
-	template<
-		typename QueryType_tp,
-		typename QKey_tp,
-		typename QResult_tp
-	>
-	struct QueryInterface {
-		using QueryType = QueryType_tp;
-		using QResult = QResult_tp;
-		using QKey = QKey_tp;
-	};
+	struct EmptyKey { };
 }
 
 /**
