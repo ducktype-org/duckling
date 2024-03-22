@@ -45,7 +45,7 @@ struct Query2Impl: query::QueryImplementation<
 	Query2,
 	uint64_t
 > {
-	static std::map<QKey, query::AddACD<QResult> > cache;
+	inline static std::map<QKey, query::AddACD<QResult> > cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		return key + context.query<Query1>(key + 1);
@@ -60,7 +60,6 @@ struct Query2Impl: query::QueryImplementation<
 	}
 };
 QUERY_IMPLEMENTATION_BOILERPLATE(Query2Impl, "Query 2");
-decltype(Query2Impl::cache) Query2Impl::cache{};
 
 /*****************
  * Cyclic Query: *
@@ -70,7 +69,7 @@ struct CyclicQueryImpl: query::QueryImplementation<
 	CyclicQuery,
 	uint64_t
 > {
-	static std::map<QKey, query::AddACD<QResult> > cache;
+	inline static std::map<QKey, query::AddACD<QResult> > cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		return key + context.query<CyclicQuery>((key + 1) % 5);
@@ -85,8 +84,6 @@ struct CyclicQueryImpl: query::QueryImplementation<
 	}
 };
 QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQueryImpl, "Cyclic query");
-decltype(CyclicQueryImpl::cache) CyclicQueryImpl::cache{};
-
 
 
 int main() {
@@ -95,8 +92,6 @@ int main() {
 	query::debugPrintDependencyGraph();
 
 	std::cout << query::queryEntryPoint<CyclicQuery>(0) << "\n";
-
-	// query::QueryID
 
 	return 0;
 }
