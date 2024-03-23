@@ -2,6 +2,7 @@
 
 #include "../rift_parser_base.hpp"
 
+#include <bits/iterator_concepts.h>
 #include <token_parser_core/token_stream.hpp>
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/base_element.hpp>
@@ -87,7 +88,7 @@ namespace pst {
 	 * @tparam BRACKETS - expected brackets or None if not expected
 	 * @tparam isSeparator - Separator should always be skip-able with one skip.
 	 * @tparam isEnding - Check for successful ending.
-	 * @tparam Container - Vector-like container of SubElements with emplace_back.
+	 * @tparam Container - Vector-like container of SubElements with emplace_back. Possibly with other condition because of iteration.
 	 */
 	template <
 		class SubElements,
@@ -100,14 +101,38 @@ namespace pst {
 	class List: public NotStmt {
 		Container elements;		
 	public:
-		explicit List(dia::SourcePosition position): NotStmt(std::move(position)) {}
+		class iterator {
+		private:
+			using internal_iterator = Container::const_iterator;
+			internal_iterator it;
+		public:
 
-		Container::const_iterator cbegin() const {
-			return elements.cbegin();
-		}
-		Container::const_iterator cend() const {
-			return elements.cend();
-		}
+			using value_type = ParserCBorrowRef<SubElements>;
+			using iterator_category = std::forward_iterator_tag;
+			using difference_type = internal_iterator::difference_type;
+			using reference = value_type;
+
+			iterator(): it() {}
+			iterator(const iterator& other): it(other.it) {}
+			iterator(const internal_iterator& other): it(other) {}
+
+			value_type operator*() const {
+				return it->borrow();
+			}
+
+			iterator& operator++() {
+				++it;
+				return this;
+			}
+			iterator operator++(int) {
+				return iterator(it++);
+			}
+
+			bool operator==(const iterator& other) const {
+				return it == other.it;
+			}
+		};
+		explicit List(dia::SourcePosition position): NotStmt(std::move(position)) {}
 
 		static ParserRef<List> parse(RiftParserState& state);
 
@@ -121,10 +146,11 @@ namespace pst {
 		}
 		virtual ~List() = default;
 	};
+	
 
 	class Conditions {
-		Conditions() = delete;
 	public:
+		Conditions() = delete;
 		static bool isComma(const RiftParserState& state, usize fwd) {
 			return state.ctokens().is(rift_def::Operator::Comma, fwd);
 		};
@@ -547,11 +573,10 @@ namespace pst {
 
 		bool success = true;
 
-		usize expr_length;
+		usize expr_length{};
 		if (state.empty() || isEnding(state, 0)) {
 			if constexpr (NON_EMPTY) {
 				state.fail(-1, "empty list where non-empty expected after here");
-				success = false;
 			}
 		} else {
 			while (true) {
@@ -564,7 +589,6 @@ namespace pst {
 				if (expr_length == 0) {
 					if (state.empty() || isEnding(state, 0)) {
 						state.fail(0, "unexpected end to a list");
-						success = false;
 						break;
 					} else {
 						state.fail(0, "empty field in a list before here");
