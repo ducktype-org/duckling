@@ -6,7 +6,7 @@ namespace query::detail {
 	struct QueryID {
 	// private: @TODO
 		u64 val;
-		constexpr u64 asInt() const { return val; }
+		[[nodiscard]] constexpr u64 asInt() const { return val; }
 	};
 }
 

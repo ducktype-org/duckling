@@ -29,6 +29,7 @@ namespace query {
 				// @TODO: arguments of this function should be evaluated only if logging is enabled
 				::query::log("[USER LOG]: ");
 				::query::log(str);
+				::query::log("\n");
 			}
 
 			// @FUTURE: this function should take some diagnostic object as a parameter

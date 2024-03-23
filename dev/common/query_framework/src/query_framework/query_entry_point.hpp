@@ -2,6 +2,7 @@
 
 #include "query_id_provider.hpp"
 #include "node_making.hpp"
+#include "query_int.hpp"
 
 namespace query {
 

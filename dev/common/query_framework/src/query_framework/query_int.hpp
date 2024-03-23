@@ -21,8 +21,8 @@ namespace query {
 		>
 		struct QueryInterface {
 			using QueryType = QueryType_tp;
-			using QResult = QResult_tp;
 			using QKey = QKey_tp;
+			using QResult = QResult_tp;
 		};
 	}
 
