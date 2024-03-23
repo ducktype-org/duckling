@@ -5,7 +5,7 @@ Query Framework
 This module provides implementation of Query Framework used in compiler.
 
 .. contents::
-    :depth: 2
+    :depth: 3
     :local:
 
 .. note:: In the future Query Framework might evolve, as architecture of the compiler becomes mature with features such as incremental compilation. As of today Query Framework has been designed in the way that make it easy to adapt existing concepts like "type table" or "symbol table" into it. That means that Query Framework deviates from "perfect model" in similar way that Rustc does (at least as of 2022). Some efforts has been made in order to validate that migration to more mature Query Framework will be possible in the future and that it will require reasonable amount of work. 
@@ -20,9 +20,43 @@ This module provides implementation of Query Framework used in compiler.
 General overview
 ================
 
+@TODO
+
+.. _s-psl-model:
+
+Side-effect Provide Load Store Model
+====================================
+
+In current implementation Query Framework implements co called "Side-effect Provide Load Store Model" (S-PSL).
+
+.. attention::
+    In S-SPL model, as the name suggest, we allow queries to have side-effects, although they should be controlled, and it is encouraged to write pure queries when possible.
+
+Each query in this model consist of following main components:
+
+* :code:`QKey` -- Query Key, a data type that will be the query argument. This type has to follow some rules described in: :ref:`qkey-requirements`.
+* :code:`QResult` -- Query Result, a data type returned from the query.
+* :code:`PResult` -- Provider Result, a data type returned from the query provider function. This type will more often then not be equal (or almost equal) to :code:`QResult`. Purpose of :code:`PResult` is just to simplify code of Query Providers.
+* :code:`provide` function -- Query Provider, a function with signature similar to :code:`QKey -> PResult`. This function performs actual computation that calculates query result and perform compilation steps.
+* :code:`store` function -- A function with signature similar to :code:`QKey, PResult -> QResult`. This function stores result of provider computation in some cache/table/database and returns final Query result.
+* :code:`load` function -- A function with signature similar to :code:`QKey -> QResult?`. Function that checks if Query result is not present in cache already. It returns optional holding Query Result.
+
+.. note:: Actual type of provide, load and store functions are slightly different and are explained in sections related to writing them.
+
+Existence of user defined store and load function means that each query can implement caching in its own unique way. From one point of view this can be bug prone, but from the other point this means that queries can be very easily adapted as interfaces of existing modules. For example Type System can treat "type tyble" as its internal cache shared among many queries.
+
+Deviation from ideal and pure query model means that programmes has to ensure by hand that some "laws" are always obeyed. List of those "laws" can be fount here: :ref:`all-requirements`.
+
+Other most important concepts
+-----------------------------
+
+@TODO
 
 How to write a query (with examples)
 ====================================
+
+.. attention::
+    This section assumes you read :ref:`s-psl-model`.
 
 In order to create the query two things need to be implemented:
 
@@ -55,12 +89,18 @@ Query implementation is were we will write actual query code.
 
 Full example is included bellow, here is a step by step guide:
 
+Including dependencies
+++++++++++++++++++++++
+
 In order to create such implementation one must first include the query declaration as well as :code:`query_framework/query_impl.hpp`:
 
 .. code-block:: cpp
 
     #include <query_framework/query_impl.hpp>
     #include "decl.hpp" // query declaration
+
+Writing implementation boilerplate
+++++++++++++++++++++++++++++++++++
 
 After that we can move to actual query implementation.
 This is archived by creating a :code:`struct` called "implementation struct" that will inherit from :code:`query::QueryImplementation`.
@@ -72,7 +112,8 @@ After the definition of implementation struct one must also write the magic line
 
 .. code-block:: cpp
 
-    struct PResult {/* ... */} // often the same as QResult
+    // Some type, often the same as QResult
+    struct PResult {/* ... */}
 
     struct ImplementationOf_MyQuery: query::QueryImplementation<
         Query2,
@@ -111,22 +152,112 @@ This is done by creating three static methods inside implementation struct will 
     }
     QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_MyQuery, "Query 2");
 
+.. hint::
+    It can be useful to define additional static variables inside implementation struct.
+    Assuming the code is in cpp-file it can be easily done by declaring :code:`inline static` members.
  
+Writing provide function
+++++++++++++++++++++++++
+
+Provide function can in general perform any computations, that should be as pure as is posable from practical point of view.
+
+Apart from user defined :code:`QKey`, provide function takes as an argument parameter :code:`Context& context`. This parameter is very important as it allows for 3 key functionalities, that should **NEVER** be achieved otherwise:
+
+* Calling other queries from inside a query.
+* Emitting logs from inside a query.
+* Reporting compilation errors from inside a query.
+
+.. note::
+    As of right now emitting logs and reporting errors is based of simply strings. In the future it will change after diagnostic framework will be created.
+
+
+.. code-block:: cpp
+    :caption: Provider function:
+
+        	static auto provide(Context& context, QKey key) -> PResult {
+                // ...
+                
+                // call other query:
+                auto result = context.query<OtherQueryName>(other_query_key);
+
+                // logging:
+                context.log("Some random log.");
+
+                // reporting errors:
+		        context.compilationError("Error -- example error.");
+            }
+
+How to write auxiliary functions?
+*********************************
+
+Sometimes provider function might grow large and we would like to separate it into smaller function.
+Fortunately that is not a problem. If the "auxiliary functions" does not need functionalities from :code:`Context& context`, then it can be just a standard function or static method (or any other code).
+If it does need functionalities from :code:`Context& context` then it can be just a standard function or method that takes :code:`Context&` as a parameter as well.
+As of right now this can be achieved by writing static method next to :code:`provide` function, like this:
+
+.. code-block:: cpp
+    :caption: Auxiliary function:
+
+            static auto auxiliary(Context& context, u32 a) -> u64 {...}
+        	static auto provide(Context& context, QKey key) -> PResult {
+                // ...
+                auto aux = auxiliary(context, 42);
+                // ...
+            }
+
+.. note::
+    as of today there is no nice way of writing auxiliary function with context parameter outside query implementation struct.
+    This can be however added in the future if the need arise.
+
+
+Writing load and store function
++++++++++++++++++++++++++++++++
+
+Load and store function should be kept as minimal as possible.
+
+There are two very simple  concepts to unravel before we can go into implementation:
+
+* :code:`LoadResult` type -- @TODO 
+* :code:`query::ACD` type -- @TODO 
+
+@TODO
+
+
 Full example
 ++++++++++++
 
-abc
+@TODO
+
+Running queries from outside the query framework
+================================================
+
+@TODO
 
 Important concepts
 ==================
 
+.. _all-requirements:
 
 Requirements of queries 
 =======================
 
+.. _general-requirements:
+
+General Requirements of Queries 
+-------------------------------
+
+@TODO
 
 .. _qkey-requirements:
 
 Requirements of Key types
 -------------------------
 
+@TODO
+
+.. _provider-requirements:
+
+Requirements of Provider functions
+----------------------------------
+
+@TODO
