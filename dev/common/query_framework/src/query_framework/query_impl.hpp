@@ -78,7 +78,7 @@ namespace query {
 		using QResult     = typename QueryType_tp::QResult;
 		using QResWithACD = AddACD<QResult>;
 		using PResult     = PResult_tp;
-		using LoadRes     = base::Optional<QResWithACD>;
+		using LoadResult     = base::Optional<QResWithACD>;
 		
 		using Context = ::query::detail::ContextType;
 

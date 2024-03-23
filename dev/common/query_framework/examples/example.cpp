@@ -24,7 +24,7 @@ struct Query1Impl: query::QueryImplementation<
 		context.compilationError("Error at query1 -- example error.");
 		return key*key;
 	}
-	static auto load(QKey key) -> LoadRes {
+	static auto load(QKey key) -> LoadResult {
 		if (cache.contains(key)) return cache.at(key);
 		else return {};
 	}
@@ -50,7 +50,7 @@ struct Query2Impl: query::QueryImplementation<
 	static auto provide(Context& context, QKey key) -> PResult {
 		return key + context.query<Query1>(key + 1);
 	}
-	static auto load(QKey key) -> LoadRes {
+	static auto load(QKey key) -> LoadResult {
 		if (cache.contains(key)) return cache.at(key);
 		else return {};
 	}
@@ -74,7 +74,7 @@ struct CyclicQueryImpl: query::QueryImplementation<
 	static auto provide(Context& context, QKey key) -> PResult {
 		return key + context.query<CyclicQuery>((key + 1) % 5);
 	}
-	static auto load(QKey key) -> LoadRes {
+	static auto load(QKey key) -> LoadResult {
 		if (cache.contains(key)) return cache.at(key);
 		else return {};
 	}
