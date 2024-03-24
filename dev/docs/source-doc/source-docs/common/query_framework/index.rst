@@ -130,7 +130,7 @@ After the definition of implementation struct one must also write the magic line
     QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_MyQuery, "Query 2");
 
 After all of the above is done the only thing left is to write query :code:`provide`, :code:`load` and :code:`store` functions.
-This is done by creating three static methods inside implementation struct will signatures exactly the same as in the example bellow:
+This is done by creating three static methods inside implementation struct with signatures exactly the same as in the example bellow:
 
 .. code-block:: cpp
 
