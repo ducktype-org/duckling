@@ -78,10 +78,6 @@ Existence of user defined store and load function means that each query can impl
 
 Deviation from ideal and pure query model means that programmes has to ensure by hand that some "laws" are always obeyed. List of those "laws" can be fount here: :ref:`all-requirements`.
 
-.. Other most important concepts
-.. -----------------------------
-
-.. @TODO
 
 How to write a query (with examples)
 ====================================
@@ -293,6 +289,19 @@ Full example
 ++++++++++++
 
 @TODO
+
+
+Other most important concepts
+-----------------------------
+
+Cycles
+++++++
+
+
+.. caution::
+    As of right now when Query Framework detects cycles it just throws a :ref:`panic <rift-panic-ref>`.
+    In future versions it will report a critical compilation error.
+    In even later future proper handling of cyclic queries will be added.
 
 Running queries from outside the query framework
 ================================================
