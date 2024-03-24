@@ -11,7 +11,7 @@ namespace query {
 		 * @brief Base class for defining query interface
 		 * 
 		 * @tparam QueryType_tp a type of a query
-		 * @tparam QKey_tp a type of a query ket
+		 * @tparam QKey_tp a type of a query key
 		 * @tparam cache? a type returned by the query
 		 */
 		template<
