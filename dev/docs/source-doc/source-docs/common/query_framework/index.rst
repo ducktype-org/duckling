@@ -141,14 +141,14 @@ After the definition of implementation struct one must also write the magic line
 .. code-block:: cpp
 
     // Some type, often the same as QResult
-    struct PResult {/* ... */}
+    struct PResult {/* ... */};
 
     struct ImplementationOf_MyQuery: query::QueryImplementation<
-        Query2,
+        MyQuery,
         PResult
     > {
         /* ... */
-    }
+    };
     /**
      * Magic line (important!):
      * First argument is the name of implementation struct.
@@ -168,15 +168,15 @@ This is done by creating three static methods inside implementation struct with 
         Query2,
         PResult
     > {
-            static auto provide(Context& context, QKey key) -> PResult {
-                /* ... */
-            }
-            static auto load(QKey key) -> LoadResult {
-                /* ... */
-            }
-            static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-                /* ... */
-            }
+        static auto provide(Context& context, QKey key) -> PResult {
+            /* ... */
+        }
+        static auto load(QKey key) -> LoadResult {
+            /* ... */
+        }
+        static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
+            /* ... */
+        }
     }
     QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_MyQuery, "Query 2");
 
@@ -189,31 +189,35 @@ Writing provide function
 
 Provide function can in general perform any computations, however programmer should make sure that it is as pure as is possible from practical point of view.
 
-Apart from user defined :code:`QKey`, provide function takes as an argument parameter :code:`Context& context`. This parameter is very important as it allows for 3 key functionalities, that should **NEVER** be achieved otherwise:
 
-* Calling other queries from inside a query.
-* Emitting logs from inside a query.
-* Reporting compilation errors from inside a query.
+Provide function takes two parameters:
 
-.. note::
-    As of right now emitting logs and reporting errors is based of simply strings. In the future it will change after diagnostic framework will be created.
+* :code:`QKey` -- Query Key of type defined in query declaration.
+* :code:`Context& context` -- Context, a parameter provided by the framework. This parameter is very important as it allows for 3 key functionalities, that should **NEVER** be achieved otherwise:
+
+  * Calling other queries from inside a query.
+  * Emitting logs from inside a query.
+  * Reporting compilation errors from inside a query.
+
+    .. note::
+        As of right now emitting logs and reporting errors is based of simply strings. In the future it will change after diagnostic framework will be created.
 
 
 .. code-block:: cpp
     :caption: Provider function:
 
-        	static auto provide(Context& context, QKey key) -> PResult {
-                // ...
-                
-                // call other query:
-                auto result = context.query<OtherQueryName>(other_query_key);
+        static auto provide(Context& context, QKey key) -> PResult {
+            // ...
+            
+            // call other query:
+            auto result = context.query<OtherQueryName>(other_query_key);
 
-                // logging:
-                context.log("Some random log.");
+            // logging:
+            context.log("Some random log.");
 
-                // reporting errors:
-		        context.compilationError("Error -- example error.");
-            }
+            // reporting errors:
+            context.compilationError("Error -- example error.");
+        }
 
 How to write auxiliary functions?
 *********************************
@@ -226,12 +230,12 @@ As of right now this can be achieved by writing static method next to :code:`pro
 .. code-block:: cpp
     :caption: Auxiliary function:
 
-            static auto auxiliary(Context& context, u32 a) -> u64 {...}
-        	static auto provide(Context& context, QKey key) -> PResult {
-                // ...
-                auto aux = auxiliary(context, 42);
-                // ...
-            }
+        static auto auxiliary(Context& context, u32 a) -> u64 {...}
+        static auto provide(Context& context, QKey key) -> PResult {
+            // ...
+            auto aux = auxiliary(context, 42);
+            // ...
+        }
 
 .. note::
     as of today there is no nice way of writing auxiliary function with context parameter outside query implementation struct.
@@ -252,32 +256,32 @@ Now we can finally write the functions:
 
 .. code-block:: cpp
 
-            static auto load(QKey key) -> LoadResult {
-                if (/* cache miss */) {
-                    return {}; // empty optional
-                }
-                if (/* cache hit */) {
-                    return { some_data, acd };
-                    // one can also use query::AddACD inside cache implementation
-                    // and simply retrieve that. 
-                }
+        static auto load(QKey key) -> LoadResult {
+            if (/* cache miss */) {
+                return {}; // empty optional
             }
-            static auto store(QKey key, PResult q_res, query::ACD acd) -> QResult {
-                // maybe perform some simple computation arising from the fact, that
-                // PResult != QResult:
-                
-                // for example:
-                QResult q_result = someStuff(res);
-
-                // store either PResult or QResult in cache along side with acd:
-
-                // for example:
-                some_cache.store(query::AddACD{ some_result, acd });
-
-                // return final result
-                // for example:
-                return q_result;
+            if (/* cache hit */) {
+                return { some_data, acd };
+                // one can also use query::AddACD inside cache implementation
+                // and simply retrieve that. 
             }
+        }
+        static auto store(QKey key, PResult q_res, query::ACD acd) -> QResult {
+            // maybe perform some simple computation arising from the fact, that
+            // PResult != QResult:
+            
+            // for example:
+            QResult q_result = someStuff(res);
+
+            // store either PResult or QResult in cache along side with acd:
+
+            // for example:
+            some_cache.store(query::AddACD{ some_result, acd });
+
+            // return final result
+            // for example:
+            return q_result;
+        }
 
 .. note::
     One can also create query that is not cached. In that case :code:`load` trivializes to :code:`return {};`
@@ -285,10 +289,12 @@ Now we can finally write the functions:
     One must however conform to :ref:`general-requirements`.
 
 
-Full example
-++++++++++++
+Full working example
+++++++++++++++++++++
 
-@TODO
+.. literalinclude:: example/decl.cpp
+    :caption: Query Implementation
+    :language: cpp
 
 
 Other most important concepts
