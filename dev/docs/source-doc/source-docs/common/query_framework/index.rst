@@ -245,8 +245,8 @@ Load and store function should be kept as minimal as possible.
 
 There are two very simple  concepts to unravel before we can go into implementation:
 
-* :code:`query::ACD` type -- This is just "additional cache data". Store function has to store value of this type along side every cache entry while load function has to retrieve it.
-* :code:`LoadResult` type -- This is a type that expands to :code:`base::Optional<query::AddACD<QResult> > `. :code:`Optional` comes from the fact that load function may find or not find cached value. :code:`query::AddACD<T>` is just a simple template that stores value of type :code:`T` and value of type :code:`query::ACD`. In other words :code:`LoadResult` type is just an optional of a pair :code:`QResult, query::ACD`.
+* :code:`query::ACD` type -- This is just "additional cache data". Store function has to store value of this type alongside every cache entry while load function has to retrieve it.
+* :code:`LoadResult` type -- This is a type that expands to :code:`base::Optional<query::AddACD<QResult> > `. :code:`Optional` comes from the fact that the load function may not find a cached value. :code:`query::AddACD<T>` is just a simple template that stores a value of type :code:`T` and a value of type :code:`query::ACD`. In other words :code:`LoadResult` type is just an optional of a pair :code:`QResult, query::ACD`.
 
 Now we can finally write the functions:
 
@@ -280,8 +280,8 @@ Now we can finally write the functions:
             }
 
 .. note::
-    One can also create query that is not cached. In that case :code:`load` trivialize to :code:`return {};`
-    ans store  trivialize to :code:`RIFT_PANIC`.
+    One can also create query that is not cached. In that case :code:`load` trivializes to :code:`return {};`
+    and store  trivializes to :code:`RIFT_PANIC`.
     One must however conform to :ref:`general-requirements`.
 
 
@@ -300,14 +300,14 @@ Cycles
 
 .. caution::
     As of right now when Query Framework detects cycles it just throws a :ref:`panic <rift-panic-ref>`.
-    In future versions it will report a critical compilation error.
-    In even later future proper handling of cyclic queries will be added.
+    In the future versions it will report a critical compilation error.
+    Even later proper handling of cyclic queries will be added.
 
 Running queries from outside the query framework
 ================================================
 
 
-In order to just a query from "outside" the framework one should use special function: :code:`queryEntryPoint`.
+In order to call a query from "outside" the framework one should use special function: :code:`queryEntryPoint`.
 See :doc:`src/query_framework/query_entry_point` for code details.
 
 .. code-block:: cpp
@@ -338,9 +338,9 @@ Consistency
 +++++++++++
 
 Since queries are in general not pure, programmer needs to guarantee that values returned by a query are consistent.
-That means that given query called on the same key will always produce identical result
-(identical meaning either strictly identical or not distinguishable by the rest of a compiler).
-In practice that means that will usually all non-pure queries are correctly cached.
+That means that a query called on the same key will always produce an identical result
+(identical meaning either strictly identical or not distinguishable by the rest of the compiler).
+In practice that means that usually all non-pure queries are correctly cached.
 
 .. _qkey-requirements:
 
@@ -351,7 +351,7 @@ Copyable
 ++++++++
 
 Every key type will be copied around by the framework.
-Programmer has to ensure that copy operation will compile and that it will not brake state of a key or of a compiler.
+Programmer has to ensure that copy operation will compile and that it will not brake the state of the key or of the compiler.
 
 
 Perfect Hashing
@@ -374,6 +374,6 @@ Requirements of Provider functions
 Almost Pureness
 +++++++++++++++
 
-It is not strict requirement, programmer should avoid side effects unless they are really needed.
+It is not strict requirement but side effects should be avoided unless they are really needed.
 
 .. note:: Caching itself is obviously a side effect, but it is an expected one. 
