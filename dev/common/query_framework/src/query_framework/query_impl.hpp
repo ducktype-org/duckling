@@ -12,7 +12,18 @@
 namespace query {
 
 	namespace detail {
-
+		
+		/**
+		 * @brief ContextType is type of a special object
+		 * that query implementation use to perform three key operations:
+		 * 	* call other query
+		 *  * log
+		 *  * report compiler error
+		 * 
+		 * @FUTURE: there exist a concept of "custom conext" types as 
+		 * a way to hack-in the query model. This however will most likely be
+		 * discarded.
+		 */
 		struct ContextType {
 			NodeID my_node;
 
@@ -37,6 +48,14 @@ namespace query {
 			void compilationError(std::string_view error);
 		};
 
+		/**
+		 * @brief Internal function implementing the call to a query.
+		 * 
+		 * @tparam QueryImplType Implementation Struct of a Query to call.
+		 * @param key Query key
+		 * @param from node id of caller
+		 * @return QueryImplType::QResult 
+		 */
 		template<typename QueryImplType>
 		auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) -> QueryImplType::QResult {
 			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Enter.\n"));
@@ -49,7 +68,8 @@ namespace query {
 			else {
 				auto node_id = makeNodeID(QueryImplType::QueryType::id, key);
 				typename QueryImplType::Context context{node_id};
-				ACD acd; /*@TODO: provide acd here*/
+				// @FUTURE: provide legit acd here
+				ACD acd;
 
 				// epilog:
 				dep_graph::setEntry(node_id, from);

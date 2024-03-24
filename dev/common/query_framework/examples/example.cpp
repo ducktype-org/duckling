@@ -11,7 +11,7 @@
 
 
 // make this link less bug-prone...:
-struct Query1Impl: query::QueryImplementation<
+struct ImplementationOf_Query1: query::QueryImplementation<
 	Query1,
 	uint64_t
 > {
@@ -33,7 +33,7 @@ struct Query1Impl: query::QueryImplementation<
 		return res;
 	}
 };
-QUERY_IMPLEMENTATION_BOILERPLATE(Query1Impl, "Query 1");
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Query1, "Query 1");
 
 
 
@@ -41,7 +41,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(Query1Impl, "Query 1");
  * QUERY 2: *
  ************/
 
-struct Query2Impl: query::QueryImplementation<
+struct ImplementationOf_Query2: query::QueryImplementation<
 	Query2,
 	uint64_t
 > {
@@ -59,13 +59,13 @@ struct Query2Impl: query::QueryImplementation<
 		return res;
 	}
 };
-QUERY_IMPLEMENTATION_BOILERPLATE(Query2Impl, "Query 2");
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Query2, "Query 2");
 
 /*****************
  * Cyclic Query: *
  *****************/
 
-struct CyclicQueryImpl: query::QueryImplementation<
+struct ImplementationOf_CyclicQuery: query::QueryImplementation<
 	CyclicQuery,
 	uint64_t
 > {
@@ -83,7 +83,7 @@ struct CyclicQueryImpl: query::QueryImplementation<
 		return res;
 	}
 };
-QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQueryImpl, "Cyclic query");
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_CyclicQuery, "Cyclic query");
 
 
 int main() {

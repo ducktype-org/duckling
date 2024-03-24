@@ -12,7 +12,7 @@ namespace query {
 		 * 
 		 * @tparam QueryType_tp a type of a query
 		 * @tparam QKey_tp a type of a query key
-		 * @tparam cache? a type returned by the query
+		 * @tparam QResult_tp a type of a query result
 		 */
 		template<
 			typename QueryType_tp,
