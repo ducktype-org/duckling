@@ -23,7 +23,7 @@ This module provides implementation of Query Framework used in compiler.
 General overview
 ================
 
-This framework is based of proposal that can be found here: @TODO.
+This framework is based on a proposal that can be found here: (@TODO: link once the proposal is merged into dev-space).
 
 Query Model is a way of writing a compiler. At the core of this model there are queries.
 Each query is somewhat independent piece of code that is responsible for given piece of compilation.
