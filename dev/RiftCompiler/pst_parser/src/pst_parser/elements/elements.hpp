@@ -14,7 +14,6 @@
 
 #include <variant>
 #include <iostream>
-#include <span>
 
 // @TODO: make generic optional
 
@@ -102,13 +101,7 @@ namespace pst {
 	class List final: public NotStmt {
 		Container elements;		
 	public:
-		using const_iterator = detail::forwardBorrowIterator<SubElements, Container>;
-		const_iterator cbegin() {
-			return elements.cbegin();
-		}
-		const_iterator cend() {
-			return elements.cend();
-		}
+		DECLARE_CONST_ELEMENT_ITERATOR(elements, SubElements)
 
 		explicit List(dia::SourcePosition position): NotStmt(std::move(position)) {}
 
@@ -222,14 +215,13 @@ namespace pst {
 		std::vector<ParserRef<Stmt>> statements;
 
 	public:
+		DECLARE_CONST_ELEMENT_ITERATOR(statements, Stmt)
+
 		explicit CodeBlock(const dia::SourcePosition& position): NotStmt(position) {}
 
 		static ParserRef<CodeBlock> parse(RiftParserState& state);
 		~CodeBlock() final = default;
 		void dprint(std::ostream& out) const final;
-
-		[[nodiscard]] 
-		std::span<const ParserRef<Stmt>> getStatements() const { return statements; }
 	};
 
 	class CodeBlockOrStmt final: public NotStmt {
@@ -242,8 +234,11 @@ namespace pst {
 		~CodeBlockOrStmt() final = default;
 		void dprint(std::ostream& out) const final;
 
+		using const_iterator = CodeBlock::const_iterator;
 		[[nodiscard]] 
-		std::span<const ParserRef<Stmt>> getStatements() const;
+		const_iterator begin() const;
+		[[nodiscard]] 
+		const_iterator end() const;
 	};
 
 	class RoundGroupExpr final: public NotStmt {

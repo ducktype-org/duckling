@@ -56,8 +56,8 @@ namespace hir {
 		const pst::ParserCBorrowRef<pst::CodeBlock>& pst_element
 	) {
 		// @FUTURE: somewhere here will happen macro expansion
-		for (auto& stmt: pst_element->getStatements()) {
-			auto sym = makeSymbolFromStatement(state, scope, stmt.borrow());
+		for (auto stmt: *pst_element) {
+			auto sym = makeSymbolFromStatement(state, scope, stmt);
 			// @TODO: error symbol
 			if (sym != nullptr) state.addSymbol(std::move(sym));
 		}
