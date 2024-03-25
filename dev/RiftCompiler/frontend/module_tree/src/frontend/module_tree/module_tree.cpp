@@ -12,7 +12,7 @@ using namespace compiler::frontend;
 regex ModuleTree::default_reject_file_regex      = regex(R"((\$.*|\..*))");
 regex ModuleTree::default_reject_directory_regex = regex(R"((\$.*|\..*))");
 
-bool ModuleTree::hasMainSourceFile() const { return m_main_source_file != nullptr; }
+bool ModuleTree::hasMainSourceFile() const { return !m_main_source_file.empty(); }
 
 void ModuleTree::buildModuleTree(
 	const std::shared_ptr<ModuleTree>& module_root, std::shared_ptr<FsTree> tree_root
@@ -41,14 +41,14 @@ void ModuleTree::handleNewFile(
 
 	if (extension == RIFT_SOURCE_FILE) {
 		if (file.name() == RIFT_MAIN_SOURCE_FILE)
-			module_root->m_main_source_file = base::make_unique<fs::FilePath>(file);
+			module_root->m_main_source_file.emplace(file);
 		else
 			module_root->m_source_files.push_back(file);
 	} else if (extension == RIFT_MODULE_FILE) {
 		auto submodule = std::shared_ptr<ModuleTree>(new ModuleTree());
 		module_root->m_submodules.put(stem, submodule);
-		submodule->m_main_source_file = base::make_unique<fs::FilePath>(file);
-		submodule->m_parent           = module_root;
+		submodule->m_main_source_file.emplace(file);
+		submodule->m_parent = module_root;
 	} else {
 		if (!module_root->m_other_files.contains(extension))
 			module_root->m_other_files.put(extension, std::vector<fs::FilePath>());
@@ -90,7 +90,7 @@ std::string ModuleTree::prettyPrint(u32 indentation) const {
 }
 
 const fs::FilePath& ModuleTree::getMainSourceFile() const {
-	if (m_main_source_file == nullptr) throw std::logic_error("No main source file!");
+	if (m_main_source_file.empty()) throw std::logic_error("No main source file!");
 	return *m_main_source_file;
 }
 

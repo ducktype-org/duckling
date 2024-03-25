@@ -17,19 +17,19 @@ namespace compiler::frontend {
 	 * If a filename is equal to this constant, then it is assumed it is
 	 * the `main source file` of the module.
 	 */
-	constexpr std::string RIFT_MAIN_SOURCE_FILE = "mod.rift";
+	const std::string RIFT_MAIN_SOURCE_FILE = "mod.rift";
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a source file of the module.
 	 */
-	constexpr std::string RIFT_SOURCE_FILE = ".rift";
+	const std::string RIFT_SOURCE_FILE = ".rift";
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a single file module.
 	 */
-	constexpr std::string RIFT_MODULE_FILE = ".rmf";
+	const std::string RIFT_MODULE_FILE = ".rmf";
 
 	/**
 	 * `ModuleTree` contains source files, modules and other
@@ -178,7 +178,7 @@ namespace compiler::frontend {
 		 * A link to the main source file.
 		 * Has to be unique_ptr, because fs::FilePath does not have a default constructor.
 		 */
-		base::unique_ptr<fs::FilePath> m_main_source_file;
+		base::Optional<fs::FilePath> m_main_source_file;
 		/**
 		 * All the source files in the module. Does not contain files of other submodules.
 		 */
