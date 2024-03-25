@@ -80,7 +80,7 @@ namespace compiler::frontend {
 		 */
 		static std::shared_ptr<ModuleTree> create(std::shared_ptr<fs::FsTree> root) {
 			auto ptr = std::shared_ptr<ModuleTree>(new ModuleTree());
-			ModuleTree::buildModuleTree(ptr, std::move(root));
+			buildModuleTree(ptr, std::move(root));
 			return ptr;
 		}
 
@@ -90,7 +90,7 @@ namespace compiler::frontend {
 		 * inside the base::Optional.
 		 */
 		[[nodiscard]]
-		base::Optional<const compiler::frontend::ModuleTree&> getParentModule() const;
+		base::Optional<const ModuleTree&> getParentModule() const;
 
 		/**
 		 * Checks if a module contains `RIFT_MAIN_SOURCE_FILE`.
@@ -168,7 +168,7 @@ namespace compiler::frontend {
 		/**
 		 * A pointer to the module's parent. Might be nullptr.
 		 */
-		std::shared_ptr<ModuleTree> m_parent;
+		std::weak_ptr<ModuleTree> m_parent;
 		/**
 		 * A pointer to the file system tree, that this structure is mapping.
 		 */

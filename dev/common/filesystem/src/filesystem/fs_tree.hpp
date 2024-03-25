@@ -4,9 +4,7 @@
  */
 
 #pragma once
-#include <string_view>
 #include <regex>
-#include <utility>
 #include <future>
 #include "filesystem/file.hpp"
 
@@ -59,7 +57,7 @@ namespace fs {
 		 * @return Map name -> file in the directory.
 		 */
 		[[nodiscard]]
-		const base::HashMap<std::string, fs::FilePath>& getFiles() const;
+		const base::HashMap<std::string, FilePath>& getFiles() const;
 
 		/**
 		 * Accessor to tree's parent tree. A tree might not have an link to parent tree.
@@ -74,7 +72,7 @@ namespace fs {
 		 * @return Path to the file.
 		 */
 		[[nodiscard]]
-		const fs::FilePath& getRoot() const;
+		const FilePath& getRoot() const;
 
 		/**
 		 * Checks if the tree has any files or directories inside.
@@ -92,9 +90,9 @@ namespace fs {
 
 	private:
 		explicit FsTree(
-			fs::FilePath root,
-			std::regex   reject_file_regex      = default_reject_file_regex,
-			std::regex   reject_directory_regex = default_reject_directory_regex
+			FilePath   root,
+			std::regex reject_file_regex      = default_reject_file_regex,
+			std::regex reject_directory_regex = default_reject_directory_regex
 		);
 
 		explicit FsTree(
@@ -106,6 +104,7 @@ namespace fs {
 		/**
 		 * Recursively construct the tree inplace of root.
 		 * @param root The tree to be used as a base.
+		 * @return The unique pointer that was initially passed to the function.
 		 */
 		static void recursiveCreate(const std::shared_ptr<FsTree>& root);
 
@@ -121,15 +120,15 @@ namespace fs {
 		/**
 		 * A link to the directory used as a root.
 		 */
-		fs::FilePath m_root;
+		FilePath m_root;
 		/**
 		 * A pointer to the tree's parent tree. Might be nullptr.
 		 */
-		std::shared_ptr<FsTree> m_parent;
+		std::weak_ptr<FsTree> m_parent;
 		/**
 		 * A map of filenames to the appropriate fs::FilePath from inside this directory.
 		 */
-		base::HashMap<std::string, fs::FilePath> m_files;
+		base::HashMap<std::string, FilePath> m_files;
 		/**
 		 * A map of directory names to the appropriate FsTrees from inside this directory.
 		 */
@@ -155,6 +154,6 @@ namespace fs {
 		 * Inserts a parent to the FsTree.
 		 * @param new_parent The parent to be inserted.
 		 */
-		void addParent(std::shared_ptr<FsTree> new_parent);
+		void addParent(const std::shared_ptr<FsTree>& new_parent);
 	};
 }

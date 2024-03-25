@@ -15,7 +15,7 @@ public:
 
 private:
 	void parseDirectory() {
-		auto fst = fs::FsTree::create(path("test_directory_tree"), test_regex, test_regex);
+		const auto fst = fs::FsTree::create(path("test_directory_tree"), test_regex, test_regex);
 
 		ASSERT_EQUAL(2, fst->getFiles().size());
 		ASSERT_EQUAL(1, fst->getDirs().size());
@@ -33,8 +33,8 @@ private:
 	}
 
 	void testOtherFeatures() {
-		auto root = fs::FilePath(path("test_directory_tree"));
-		auto fst  = fs::FsTree::create(root, test_regex, test_regex);
+		const auto root = fs::FilePath(path("test_directory_tree"));
+		const auto fst  = fs::FsTree::create(root, test_regex, test_regex);
 
 		ASSERT_EQUAL(false, fst->isEmpty());
 		ASSERT_EQUAL(true, fst->getRoot() == root);

@@ -57,8 +57,8 @@ void ModuleTree::handleNewFile(
 }
 
 base::Optional<const ModuleTree&> ModuleTree::getParentModule() const {
-	if (m_parent == nullptr) return {};
-	return *m_parent;
+	if (m_parent.expired()) return {};
+	return *m_parent.lock();
 }
 
 std::string ModuleTree::getName() const {
