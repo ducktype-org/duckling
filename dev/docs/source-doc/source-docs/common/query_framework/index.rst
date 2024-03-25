@@ -193,7 +193,7 @@ Provide function can in general perform any computations, however programmer sho
 Provide function takes two parameters:
 
 * :code:`QKey` -- Query Key of type defined in query declaration.
-* :code:`Context& context` -- Context, a parameter provided by the framework. This parameter is very important as it allows for 3 key functionalities, that should **NEVER** be achieved otherwise:
+* :code:`Context& context` -- Context, a parameter provided by the framework. This parameter is very important as it allows for 3 key functionalities, that should **NEVER** be done by other methods:
 
   * Calling other queries from inside a query.
   * Emitting logs from inside a query.
