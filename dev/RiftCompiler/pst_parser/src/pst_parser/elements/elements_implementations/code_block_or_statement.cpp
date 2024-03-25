@@ -33,24 +33,16 @@ namespace pst {
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {
 		variant_match(content) {
-			variant_case(ParserRef<Stmt>, stmt) {
-				return const_iterator(&stmt);
-			}
-			variant_case(ParserRef<CodeBlock>, code_block) { 
-				return code_block->begin(); 
-			}
+			variant_case(ParserRef<Stmt>, stmt) { return const_iterator(&stmt); }
+			variant_case(ParserRef<CodeBlock>, code_block) { return code_block->begin(); }
 		}
 		RIFT_PANIC("something went wrong");
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::end() const {
 		variant_match(content) {
-			variant_case(ParserRef<Stmt>, stmt) {
-				return const_iterator(&stmt) + 1;
-			}
-			variant_case(ParserRef<CodeBlock>, code_block) { 
-				return code_block->end(); 
-			}
+			variant_case(ParserRef<Stmt>, stmt) { return const_iterator(&stmt) + 1; }
+			variant_case(ParserRef<CodeBlock>, code_block) { return code_block->end(); }
 		}
 		RIFT_PANIC("something went wrong");
 	}

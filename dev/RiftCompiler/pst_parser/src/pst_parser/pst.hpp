@@ -13,9 +13,9 @@ namespace pst {
 	 * @brief Parse syntax tree
 	 */
 	class PST {
-		lexer::TokenData    token_data;
-		ParserRef<TopLevel> top_level;
-		dia::ErrorState     err;
+		lexer::TokenData             token_data;
+		ParserRef<TopLevel>          top_level;
+		dia::ErrorState              err;
 		std::vector<pst::ImportType> imports;
 
 

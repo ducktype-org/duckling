@@ -11,8 +11,7 @@ namespace pst {
 
 		parseAll(state, Keyword::Struct, &out->name);
 
-		if (state.tryEat(Operator::Colon))
-			parseOne(state, &out->bases);
+		if (state.tryEat(Operator::Colon)) parseOne(state, &out->bases);
 
 		parseOne(state, &out->body);
 

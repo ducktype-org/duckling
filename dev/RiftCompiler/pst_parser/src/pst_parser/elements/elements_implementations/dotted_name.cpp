@@ -8,9 +8,8 @@ namespace pst {
 		for (auto name: names) out.push_back(base::StrId(name));
 		return out;
 	}
-	bool DottedName::getStar() const {
-		return star;
-	}
+
+	bool DottedName::getStar() const { return star; }
 
 	ParserRef<DottedName> DottedName::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
