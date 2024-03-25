@@ -38,7 +38,7 @@ struct ImplementationOf_Fibonacci: query::QueryImplementation <
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		if (key.v == 0) return 0;
-		else if (key.v == 0) return 1;
+		else if (key.v == 1) return 1;
 		else return context.query<Fibonacci>({key.v-1}) + context.query<Fibonacci>({key.v-2});
 	}
 	static auto load(QKey key) -> LoadResult {
@@ -62,7 +62,7 @@ struct ImplementationOf_FibonacciSum: query::QueryImplementation <
 > {
 	static auto provide(Context& context, QKey key) -> PResult {
 		double res = 0;
-		for (uint64_t i = 0; i < key.v; i++) {
+		for (uint64_t i = 0; i <= key.v; i++) {
 			res += context.query<Fibonacci>(Key1(i));
 		}
 		return res;

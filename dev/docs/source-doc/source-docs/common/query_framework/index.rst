@@ -285,7 +285,7 @@ Now we can finally write the functions:
 
 .. note::
     One can also create query that is not cached. In that case :code:`load` trivializes to :code:`return {};`
-    and store  trivializes to :code:`RIFT_PANIC`.
+    and store  trivializes to simply transforming :code:`PResult` into :code:`QResult`.
     One must however conform to :ref:`general-requirements`.
 
 

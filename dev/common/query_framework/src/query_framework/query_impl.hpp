@@ -144,16 +144,3 @@ struct std::hash<::query::EmptyKey> {
 		return 0;
 	}
 };
-
-// /**
-//  * @brief Helper macro declaring store and load functions
-//  * without any cache.
-//  */
-// #define NO_CACHE_STORE_LOAD \
-// 	static auto load(QKey key) -> LoadResult {              \
-// 		return {};                                          \
-// 	}                                                       \
-// 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult { \
-// 		return QResult(res);     \
-// 	}
-
