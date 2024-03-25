@@ -20,7 +20,7 @@ namespace query {
 		 *  * log
 		 *  * report compiler error
 		 * 
-		 * @FUTURE: there exist a concept of "custom conext" types as 
+		 * @FUTURE: there exist a concept of "custom context" types as 
 		 * a way to hack-in the query model. This however will most likely be
 		 * discarded.
 		 */
@@ -88,6 +88,14 @@ namespace query {
 
 	}
 
+	/**
+	 * @brief Base class for Query implementation struct.
+	 * The reason PResult is defined here is that in some cases
+	 * it might allow to remove big dependencies from .hpp files.
+	 * 
+	 * @tparam QueryType_tp Query to implement
+	 * @tparam PResult_tp PResult of a query
+	 */
 	template<
 		typename QueryType_tp,
 		typename PResult_tp
@@ -105,14 +113,19 @@ namespace query {
 
 		/**
 		 * Standard query function signatures:
-		 *   static auto provide(QKey, Context&) -> PResult;
-		 *   static auto load(QKey key) -> base::Optional<QResult>;
-		 *   static auto store(QKey key, PResult) -> QResult;
+		 *  static auto provide(Context& context, QKey key) -> PResult;
+		 *  static auto load(QKey key) -> LoadResult;
+		 *  static auto store(QKey key, PResult res, query::ACD acd) -> QResult;
 		 */
 	};
 
 }
 
+/**
+ * @brief Macro used to define boilerplate implementation elements of given Query.
+ * @param type Name od Query Implementation Struct
+ * @param pretty_name Pretty name of a given query (that will for example be displayed in logs)
+ */
 #define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name) \
 	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from) -> type::QueryType::QResult { \
  		return ::query::detail::standardQueryEntry<type>(key, from);                     \
@@ -121,10 +134,26 @@ namespace query {
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
 
 
-// @TODO: why this has to be here..?
+/**
+ * @brief Hash implementation of EmptyKey.
+ * It has to be here because makeNodeID is using it. 
+ */
 template <>
 struct std::hash<::query::EmptyKey> {
 	std::size_t operator()([[maybe_unused]] const ::query::EmptyKey& key) const {
 		return 0;
 	}
 };
+
+// /**
+//  * @brief Helper macro declaring store and load functions
+//  * without any cache.
+//  */
+// #define NO_CACHE_STORE_LOAD \
+// 	static auto load(QKey key) -> LoadResult {              \
+// 		return {};                                          \
+// 	}                                                       \
+// 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult { \
+// 		return QResult(res);     \
+// 	}
+
