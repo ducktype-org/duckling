@@ -26,14 +26,6 @@ namespace pst {
 
 	class Expr;
 
-	struct DottedName {
-		std::vector<tpc::Identifier> names;
-		bool                         star = false;
-		[[nodiscard]]
-		std::vector<base::StrId> getNames() const;
-	};
-
-	void parseDottedName(tpc::ParserState& state, DottedName* d_name);
 
 	enum class StmtKind {
 		Attribute,
@@ -103,7 +95,7 @@ namespace pst {
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(elements, SubElements)
 
-		explicit List(dia::SourcePosition position): NotStmt(std::move(position)) {}
+		explicit List(const dia::SourcePosition& position): NotStmt(position) {}
 
 		static ParserRef<List> parse(RiftParserState& state);
 
@@ -150,6 +142,32 @@ namespace pst {
 		detail::Conditions::isSentinel
 	>;
 
+	class DottedName final: public NotStmt {
+		std::vector<tpc::Identifier> names;
+		bool                         star = false;
+	public:
+		[[nodiscard]] 
+		auto begin() const {
+			return names.cbegin();
+		}
+		[[nodiscard]] 
+		auto end() const {
+			return names.cend();
+		}
+
+		explicit DottedName(const dia::SourcePosition& position): NotStmt(position) {}	
+		static ParserRef<DottedName> parse(RiftParserState& state);
+
+		[[nodiscard]]
+		std::vector<base::StrId> getNames() const;
+		[[nodiscard]]
+		bool getStar() const;
+
+		void dprint(std::ostream& out) const final;
+		~DottedName() final = default;
+	};
+
+
 	class Attribute final: public Stmt {
 		tpc::Identifier    name;
 		ParserRef<ArgList> args = nullptr;
@@ -163,7 +181,7 @@ namespace pst {
 	};
 
 	class Import final: public Stmt {
-		DottedName names;
+		ParserRef<DottedName> names;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Import);
@@ -177,17 +195,17 @@ namespace pst {
 	};
 
 	class Using final: public Stmt {
-		DottedName names;
+		ParserRef<DottedName> names;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Using);
 		static ParserRef<Using> parse(RiftParserState& state);
 
 		[[nodiscard]] 
-		auto getPointed() const { return names.getNames(); }
+		auto getPointed() const { return names->getNames(); }
 
 		[[nodiscard]] 
-		bool isStar() const { return names.star; }
+		bool isStar() const { return names->getStar(); }
 
 		~Using() final = default;
 		void dprint(std::ostream& out) const final;
@@ -195,7 +213,7 @@ namespace pst {
 
 	class Alias final: public Stmt {
 		tpc::Identifier name;
-		DottedName      points_to;
+		ParserRef<DottedName> points_to;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Alias);
@@ -204,7 +222,7 @@ namespace pst {
 		base::StrId getName() const { return name.value; }
 
 		[[nodiscard]] 
-		auto getPointed() const { return points_to.getNames(); }
+		auto getPointed() const { return points_to->getNames(); }
 
 		static ParserRef<Alias> parse(RiftParserState& state);
 		~Alias() final = default;
