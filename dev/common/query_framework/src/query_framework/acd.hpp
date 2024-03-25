@@ -10,10 +10,10 @@ namespace query {
 		// ...
 	};
 
-	template <typename Data>
+	template<typename Data>
 	struct AddACD {
 		Data data;
-		ACD acd;
+		ACD  acd;
 	};
 
 }

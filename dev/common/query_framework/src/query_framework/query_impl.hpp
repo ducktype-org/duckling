@@ -12,15 +12,15 @@
 namespace query {
 
 	namespace detail {
-		
+
 		/**
 		 * @brief ContextType is type of a special object
 		 * that query implementation use to perform three key operations:
 		 * 	* call other query
 		 *  * log
 		 *  * report compiler error
-		 * 
-		 * @FUTURE: there exist a concept of "custom context" types as 
+		 *
+		 * @FUTURE: there exist a concept of "custom context" types as
 		 * a way to hack-in the query model. This however will most likely be
 		 * discarded.
 		 */
@@ -29,7 +29,6 @@ namespace query {
 
 			template<typename OthQuery>
 			auto query(typename OthQuery::QKey key) -> auto {
-				
 				NodeID dep_id = makeNodeID(OthQuery::id, key);
 				dep_graph::addDependency(my_node, dep_id);
 
@@ -50,38 +49,42 @@ namespace query {
 
 		/**
 		 * @brief Internal function implementing the call to a query.
-		 * 
+		 *
 		 * @tparam QueryImplType Implementation Struct of a Query to call.
 		 * @param key Query key
 		 * @param from node id of caller
-		 * @return QueryImplType::QResult 
+		 * @return QueryImplType::QResult
 		 */
 		template<typename QueryImplType>
-		auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) -> QueryImplType::QResult {
+		auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from)
+			-> QueryImplType::QResult {
 			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Enter.\n"));
-			
+
 			if (auto v = QueryImplType::load(key)) {
 				// @FUTURE: Add ACD check here...
-				log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Cached. Done.\n"));
+				log(base::strConcat(
+					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Cached. Done.\n"
+				));
 				return v.value().data;
-			}
-			else {
+			} else {
 				auto node_id = makeNodeID(QueryImplType::QueryType::id, key);
-				typename QueryImplType::Context context{node_id};
+				typename QueryImplType::Context context{ node_id };
 				// @FUTURE: provide legit acd here
 				ACD acd;
 
 				// epilog:
 				dep_graph::setEntry(node_id, from);
-				log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Calculating.\n"));
-				
+				log(base::strConcat(
+					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Calculating.\n"
+				));
+
 				// calculation:
 				auto result = QueryImplType::store(key, QueryImplType::provide(context, key), acd);
-				
+
 				// prolog:
 				dep_graph::setExit(node_id);
 				log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Done.\n"));
-				
+
 				return result;
 			}
 		}
@@ -92,14 +95,11 @@ namespace query {
 	 * @brief Base class for Query implementation struct.
 	 * The reason PResult is defined here is that in some cases
 	 * it might allow to remove big dependencies from .hpp files.
-	 * 
+	 *
 	 * @tparam QueryType_tp Query to implement
 	 * @tparam PResult_tp PResult of a query
 	 */
-	template<
-		typename QueryType_tp,
-		typename PResult_tp
-	>
+	template<typename QueryType_tp, typename PResult_tp>
 	struct QueryImplementation {
 		using QueryType = QueryType_tp;
 
@@ -107,8 +107,8 @@ namespace query {
 		using QResult     = typename QueryType_tp::QResult;
 		using QResWithACD = AddACD<QResult>;
 		using PResult     = PResult_tp;
-		using LoadResult     = base::Optional<QResWithACD>;
-		
+		using LoadResult  = base::Optional<QResWithACD>;
+
 		using Context = ::query::detail::ContextType;
 
 		/**
@@ -126,21 +126,19 @@ namespace query {
  * @param type Name od Query Implementation Struct
  * @param pretty_name Pretty name of a given query (that will for example be displayed in logs)
  */
-#define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name) \
-	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from) -> type::QueryType::QResult { \
- 		return ::query::detail::standardQueryEntry<type>(key, from);                     \
-	}                                                                                    \
-	decltype(type::QueryType::id) type::QueryType::id = ::query::detail::nextQueryId();          \
+#define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                       \
+	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from) \
+		-> type::QueryType::QResult {                                                             \
+		return ::query::detail::standardQueryEntry<type>(key, from);                              \
+	}                                                                                             \
+	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::nextQueryId();       \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
-
 
 /**
  * @brief Hash implementation of EmptyKey.
- * It has to be here because makeNodeID is using it. 
+ * It has to be here because makeNodeID is using it.
  */
-template <>
+template<>
 struct std::hash<::query::EmptyKey> {
-	std::size_t operator()([[maybe_unused]] const ::query::EmptyKey& key) const {
-		return 0;
-	}
+	std::size_t operator()([[maybe_unused]] const ::query::EmptyKey& key) const { return 0; }
 };

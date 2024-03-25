@@ -3,7 +3,6 @@
 #include <base/smart_pointers.hpp>
 #include <base/stable_container.hpp>
 
-
 // @TODO: move scope_ref to: hir/scopes/scope_ref
 
 namespace symtable {

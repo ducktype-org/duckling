@@ -7,14 +7,7 @@
 #include <string_view>
 
 namespace query {
-	
+
 	void log(std::string_view str);
-	
+
 }
-
-
-
-
-
-
-

@@ -12,6 +12,8 @@ namespace query {
 	 */
 	template<typename QueryType>
 	auto queryEntryPoint(typename QueryType::QKey key) -> auto {
-		return QueryType::internal_query(key, detail::makeNodeID(detail::outsideWorldQueryID(), EmptyKey()));
+		return QueryType::internal_query(
+			key, detail::makeNodeID(detail::outsideWorldQueryID(), EmptyKey())
+		);
 	}
 }

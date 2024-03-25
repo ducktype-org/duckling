@@ -3,10 +3,8 @@
 #include <query_framework/query_int.hpp>
 #include <cstdint>
 
-DECLARE_QUERY (Query1, uint64_t, uint64_t)
+DECLARE_QUERY(Query1, uint64_t, uint64_t)
 
-DECLARE_QUERY (Query2, uint64_t, uint64_t)
+DECLARE_QUERY(Query2, uint64_t, uint64_t)
 
-DECLARE_QUERY (CyclicQuery, uint64_t, uint64_t)
-
-
+DECLARE_QUERY(CyclicQuery, uint64_t, uint64_t)

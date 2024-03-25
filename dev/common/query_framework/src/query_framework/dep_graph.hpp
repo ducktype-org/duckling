@@ -5,21 +5,21 @@
 #include "node_making.hpp"
 
 namespace query::detail {
-	
-	enum class DependencyStatus {
-		OK, Cycle
-	};
+
+	enum class DependencyStatus { OK, Cycle };
 
 	namespace dep_graph {
 
 		// this interface is not all that smart:
 		// @TODO: make it better
 		// @TODO: some pretty printing should be supported
-		// @TODO: when cycle is detected "dep_graph" somehow "cycle" unwrap should happen, and all queries in the cycle should produce "CycleError" that will propagate into any query depending from them
+		// @TODO: when cycle is detected "dep_graph" somehow "cycle" unwrap should happen, and all
+		// queries in the cycle should produce "CycleError" that will propagate into any query
+		// depending from them
 
-		void setEntry(detail::NodeID node, detail::NodeID from);
+		void             setEntry(detail::NodeID node, detail::NodeID from);
 		DependencyStatus addDependency(detail::NodeID from, detail::NodeID to);
-		void setExit(detail::NodeID node);
+		void             setExit(detail::NodeID node);
 
 		void debugPrint();
 

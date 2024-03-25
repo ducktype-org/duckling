@@ -2,8 +2,8 @@
 
 namespace query::detail {
 	namespace {
-		QueryID next = {1};
-		constexpr QueryID outside_world_query = {0};
+		QueryID           next                = { 1 };
+		constexpr QueryID outside_world_query = { 0 };
 	}
 
 	QueryID nextQueryId() {
@@ -12,9 +12,6 @@ namespace query::detail {
 		return ret;
 	}
 
-	QueryID outsideWorldQueryID() {
-		return outside_world_query;
-	}
+	QueryID outsideWorldQueryID() { return outside_world_query; }
 
 }
-

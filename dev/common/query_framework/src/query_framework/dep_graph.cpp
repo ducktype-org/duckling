@@ -7,14 +7,14 @@
 
 using query::detail::NodeID;
 
-template <>
+template<>
 struct std::hash<NodeID> {
 	std::size_t operator()(const NodeID& key) const {
 		auto l = key.q_id;
 		auto r = key.hash.val;
-		
+
 		// this is questionable:
-		return l.asInt() * 9223372036854775783UL + r;
+		return l.asInt() * 9'223'372'036'854'775'783UL + r;
 	}
 };
 
@@ -32,7 +32,7 @@ namespace query::detail {
 		};
 
 		struct NodeData {
-			Color color;
+			Color               color;
 			std::vector<NodeID> dependencies;
 
 			/**
@@ -47,7 +47,6 @@ namespace query::detail {
 			base::HashMap<NodeID, NodeData> node_data;
 		}
 
-
 		void setEntry(NodeID node, NodeID from) {
 			if (node_data.contains(node)) {
 				if (node_data.at(node).color == Color::Visiting) {
@@ -57,20 +56,17 @@ namespace query::detail {
 					throw base::NotYetImplemented("Query Cycle!");
 				}
 			}
-			node_data.insert_or_assign(node, NodeData{Color::Visiting, {}, from});
+			node_data.insert_or_assign(node, NodeData{ Color::Visiting, {}, from });
 		}
-		
+
 		DependencyStatus addDependency(NodeID from, NodeID to) {
 			node_data.at(from).dependencies.emplace_back(to);
 
 			// @TODO: see if cycle was created inside dep and propagate as if I was cyclic
 			return DependencyStatus::OK;
 		}
-		
-		void setExit(NodeID node) {
-			node_data.at(node).color = Color::Done;
-		}
 
+		void setExit(NodeID node) { node_data.at(node).color = Color::Done; }
 
 		void debugPrint() {
 			// @TODO: optional pratty key printing
@@ -80,7 +76,8 @@ namespace query::detail {
 				std::cerr << "    ";
 				std::cerr << "Query " << k.q_id.asInt() << ", Key " << k.hash.val << "  <--- ";
 				for (auto& dep: v.dependencies) {
-					std::cerr << "(Q: " << dep.q_id.asInt() << ", " << "K: " << dep.hash.val << ")"; 
+					std::cerr << "(Q: " << dep.q_id.asInt() << ", "
+							  << "K: " << dep.hash.val << ")";
 					std::cerr << ", ";
 				}
 				std::cerr << "\n";

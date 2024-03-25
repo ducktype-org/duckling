@@ -4,9 +4,12 @@
 
 namespace query::detail {
 	struct QueryID {
-	// private: @TODO
+		// private: @TODO
 		u64 val;
-		[[nodiscard]] constexpr u64 asInt() const { return val; }
+
+		[[nodiscard]]
+		constexpr u64 asInt() const {
+			return val;
+		}
 	};
 }
-
