@@ -23,7 +23,9 @@ namespace base {
 }
 
 /**
- * @brief This macro has to be used in global namespace for technical reasons
+ * @brief Creates functions to convert an enum to/from string.
+ * 
+ * @note This macro has to be used in global namespace for technical reasons.
  */
 #define MAKE_STRINGFYABLE_ENUM(namespace_name, base_type, name, ...)                             \
                                                                                                  \

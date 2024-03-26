@@ -33,7 +33,7 @@ namespace base {
 #define COMMA ,
 
 /**
- * @brief If that can be used in 
+ * @brief If that can be used in macros
  */
 #define IF(cond, t, e) CONCAT(IF_, cond)(t, e)
 #define IF_false(t, e) e
