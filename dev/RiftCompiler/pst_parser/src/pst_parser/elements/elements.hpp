@@ -649,5 +649,4 @@ namespace pst {
 		if constexpr (BRACKETS != lexer::Token::BracketType::None) state.goUpAndSkip();
 		return out;
 	}
-
 }
