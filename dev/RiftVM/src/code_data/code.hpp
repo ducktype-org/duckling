@@ -6,7 +6,7 @@
 
 namespace vm {
 
-	typedef std::vector<Fix8Instruction> ByteCode;
+	using ByteCode = std::vector<struct Fix8Instruction>;
 
 	struct FuncData {
 		ByteCode bc;

@@ -34,7 +34,10 @@ namespace vm {
 
 		bool refCheck(BlockId block_id);
 
-		bool isUnowned(BlockId block_id);
+		[[gnu::always_inline]]
+		inline bool isUnowned(BlockId id) {
+			return id >= high_id || !blocks[usize(id)].owned;
+		}
 
 	public:
 		using error = std::string;
@@ -42,7 +45,17 @@ namespace vm {
 		BlockId reserveBlockID();
 		void    returnBlockID(BlockId);
 
-		cpp::result<Block*, error> getBlock(BlockId block_id);
+		[[gnu::always_inline]]
+		inline Block* getBlock(BlockId id) {
+			// @NOTE: disabling these checks increases
+			// load/store performance in TC by eliminating
+			// 4 stack push-pops in asm
+			if (isUnowned(id))
+				RIFT_PANIC("Tried accessing unowned block");
+			else if (!blocks[usize(id)].filled)
+				RIFT_PANIC("Tried accessing uninitialized block");
+			return blocks[usize(id)].block;
+		}
 
 		void makeBlock(BlockId block_id, Block&& block);
 		void deleteBlock(BlockId block_id);
@@ -51,6 +64,9 @@ namespace vm {
 		void destroyRef(BlockId block_id);
 
 		// @TODO: nullPtr deref errors, block ownership, etc
-		Pointer nullPtr() const;
+		[[nodiscard]]
+		inline Pointer nullPtr() const {
+			return Pointer{ null_block_id, 0 };
+		}
 	};
 }

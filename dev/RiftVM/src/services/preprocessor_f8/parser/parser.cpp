@@ -818,39 +818,37 @@ namespace assemble {
 				}
 			}
 
+			i64 arg_0 = 0;
+			i64 arg_1 = 0;
 			switch (op->args.size()) {
 			case 0: {
-				funcData.bc.emplace_back(vm::Fix8Instruction{
-					.opcode = nameToOpcodeValue(op->opcode_name), .arg0 = 0, .arg1 = 0 });
 				break;
 			}
 			case 1: {
-				i64 arg_0 = 0;
 				std::visit([&arg_0](auto& arg) { arg_0 = arg.value; }, op->args[0]);
-				funcData.bc.emplace_back(vm::Fix8Instruction{ .opcode
-				                                              = nameToOpcodeValue(op->opcode_name),
-				                                              .arg0 = static_cast<i32>(arg_0),
-				                                              .arg1 = 0 });
 				break;
 			}
 			case 2: {
-				i64 arg_0 = 0;
-				i64 arg_1 = 0;
 				std::visit([&arg_0](auto& arg) { arg_0 = arg.value; }, op->args[0]);
 				std::visit([&arg_1](auto& arg) { arg_1 = arg.value; }, op->args[1]);
-				funcData.bc.emplace_back(vm::Fix8Instruction{ .opcode
-				                                              = nameToOpcodeValue(op->opcode_name),
-				                                              .arg0 = static_cast<i32>(arg_0),
-				                                              .arg1 = static_cast<i32>(arg_1) });
 				break;
 			}
 			}
-		}
 
-		// this is a convention
-		// executor assumes it
-		funcData.bc.emplace_back(vm::Fix8Instruction{
-			.opcode = static_cast<u16>(vm::OpcodeFix8::nop), .arg0 = 0, .arg1 = 0 });
+
+#ifdef USE_TAIL_CALLS
+			funcData.bc.emplace_back(vm::Fix8Instruction{
+				.opfun = vm::OpFuns::opfuns.at(nameToOpcodeValue(op->opcode_name)),
+				.arg0  = static_cast<i32>(arg_0),
+				.arg1  = static_cast<i32>(arg_1) });
+
+#else
+			funcData.bc.emplace_back(vm::Fix8Instruction{
+				.opcode = static_cast<u16>(nameToOpcodeValue(op->opcode_name)),
+				.arg0   = static_cast<i32>(arg_0),
+				.arg1   = static_cast<i32>(arg_1) });
+#endif
+		}
 		return funcData;
 	}
 
