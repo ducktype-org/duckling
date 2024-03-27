@@ -57,7 +57,7 @@ struct ImplementationOf_Query2: query::QueryImplementation<Query2, std::string> 
 		return std::to_string(key);
 	}
 
-	static auto load(QKey key) -> LoadResult { return {}; }
+	static auto load([[maybe_unused]] QKey key) -> LoadResult { return {}; }
 
 	static auto store([[maybe_unused]] QKey key, PResult p_res, [[maybe_unused]] query::ACD acd)
 		-> QResult {
