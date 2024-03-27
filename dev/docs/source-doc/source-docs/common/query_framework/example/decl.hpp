@@ -1,6 +1,7 @@
 #pragma once
 
 #include <query_framework/query_int.hpp>
+#include <string> // std::string
 
 /**
  * Query Key.
@@ -33,4 +34,4 @@ DECLARE_QUERY(MyQuery, Key, Value)
 /**
  * This query just takes uint64_t as an argument and return std::string.
  */
-DECLARE_QUERY(Query2, uint64_t, uint64_t)
+DECLARE_QUERY(Query2, uint64_t, std::string)
