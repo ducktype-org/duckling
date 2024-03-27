@@ -6,6 +6,7 @@
 
 namespace query::detail {
 
+	// @OPT: pick good type size here 
 	enum class DependencyStatus { OK, Cycle };
 
 	namespace dep_graph {
