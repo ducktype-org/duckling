@@ -36,7 +36,7 @@ namespace vm {
 
 	struct Frame {
 		// Internal data:
-    base::borrow_ptr<Frame> previous;
+		base::borrow_ptr<Frame> previous;
 
 		bool  continue_execution;
 		usize instruction_pointer;
