@@ -20,8 +20,7 @@ struct ImplementationOf_MyQuery: query::QueryImplementation<MyQuery, PResult> {
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		// lets call Query2:
-		[[maybe_unused]]
-		auto result = context.query<Query2>(123);
+		[[maybe_unused]] auto result = context.query<Query2>(123);
 
 		// Normally we would do it because we need
 		// it in some computation.
@@ -54,13 +53,16 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_MyQuery, "MyQuery");
  */
 
 struct ImplementationOf_Query2: query::QueryImplementation<Query2, std::string> {
-	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult { return std::to_string(key); }
+	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
+		return std::to_string(key);
+	}
 
 	static auto load(QKey key) -> LoadResult { return {}; }
 
-	static auto store([[maybe_unused]] QKey key, PResult p_res, [[maybe_unused]] query::ACD acd) -> QResult {
+	static auto store([[maybe_unused]] QKey key, PResult p_res, [[maybe_unused]] query::ACD acd)
+		-> QResult {
 		// Here explicit conversion to QResult in not needed, but is left as an example:
-		return QResult{std::move(p_res)};
+		return QResult{ std::move(p_res) };
 	}
 };
 

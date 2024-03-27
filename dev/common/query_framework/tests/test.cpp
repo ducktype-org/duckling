@@ -62,15 +62,16 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Fibonacci, "Q1");
 struct ImplementationOf_FibonacciSum: query::QueryImplementation<FibonacciSum, double> {
 	static auto provide(Context& context, QKey key) -> PResult {
 		double res = 0;
-		for (uint64_t i = 0; i <= key.v; i++) {
-			res += double(context.query<Fibonacci>(Key1(i)));
-		}
+		for (uint64_t i = 0; i <= key.v; i++) res += double(context.query<Fibonacci>(Key1(i)));
 		return res;
 	}
 
 	static auto load([[maybe_unused]] QKey key) -> LoadResult { return {}; }
 
-	static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd) -> QResult { return QResult(res); }
+	static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd)
+		-> QResult {
+		return QResult(res);
+	}
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciSum, "Q2 a");

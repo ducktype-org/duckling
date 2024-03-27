@@ -1,7 +1,7 @@
 #pragma once
 
 #include <query_framework/query_int.hpp>
-#include <string> // std::string
+#include <string>  // std::string
 
 /**
  * Query Key.
