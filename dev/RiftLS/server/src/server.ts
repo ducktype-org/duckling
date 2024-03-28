@@ -11,16 +11,18 @@ import {
 	TextDocumentSyncKind,
 	InitializeResult,
 	SemanticTokenTypes,
-	SemanticTokenModifiers
-} from "vscode-languageserver/node";
+	SemanticTokenModifiers,
+	FoldingRangeParams,
+	FoldingRange
+} from 'vscode-languageserver/node';
 
-import {
-	TextDocument
-} from "vscode-languageserver-textdocument";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import { handleSemanticTokensFull } from "./semanticTokens";
 import { onCompletion, onCompletionResolve } from "./completion";
 import { validateTextDocument } from "./validation"; // Import the validation function
 import { getPST } from "./compilerInterface"; // Import the compiler interface function
+import { getFoldingRanges } from './foldingRanges';
+import { RiftElement } from './lsptree/elements/elements';
 require("./lsptree/elements/index");
 
 
@@ -34,6 +36,9 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
+
+// Storing PST for documents
+const pstCache: Map<string, RiftElement | undefined> = new Map();
 
 // Semantic tokens legend, only 'comment' token type for now
 const semanticTokensLegend = {
@@ -70,6 +75,7 @@ connection.onInitialize((params: InitializeParams) => {
 				legend: semanticTokensLegend,
 				full: true,
 			},
+			foldingRangeProvider: true,
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -94,7 +100,7 @@ connection.onInitialized(() => {
 	}
 });
 
-connection.onRequest("textDocument/semanticTokens/full", (params) => handleSemanticTokensFull(params, documents));
+connection.onRequest("textDocument/semanticTokens/full", (params) => handleSemanticTokensFull(params, documents, pstCache));
 
 // The example settings
 interface ExampleSettings {
@@ -147,10 +153,13 @@ documents.onDidClose(e => {
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
 	getPST(change.document.uri).then((pst) => {
+		pstCache.set(change.document.uri, pst);
 		console.log(pst);
 	});
+
 	validateTextDocument(change.document, connection);
 });
+
 
 connection.onDidChangeWatchedFiles(_change => {
 	// Monitored files have change in VSCode
@@ -159,6 +168,15 @@ connection.onDidChangeWatchedFiles(_change => {
 
 connection.onCompletion(onCompletion);
 connection.onCompletionResolve(onCompletionResolve);
+
+connection.onFoldingRanges((params: FoldingRangeParams): FoldingRange[] | null => {
+	const document = documents.get(params.textDocument.uri);
+	if (document) {
+		return getFoldingRanges(document);
+	}
+	return null;
+});
+
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events

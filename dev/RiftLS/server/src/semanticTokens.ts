@@ -1,10 +1,7 @@
 import { SemanticTokens, SemanticTokensBuilder, SemanticTokensParams, TextDocuments } from "vscode-languageserver";
 import { SemanticTokenTypes, SemanticTokenModifiers } from "vscode-languageserver/node";
-import {
-	TextDocument
-} from "vscode-languageserver-textdocument";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import { getPST } from "./compilerInterface";
-import { elements } from "./lsptree/elements/index";
 import { Token, getTokenTypeIndex, semanticTokensLegend, compareTokens } from "./semanticTokensDeclarations";
 
 // accepts a list of modifiers and return a bit flag representation
@@ -94,24 +91,25 @@ function computeCommentsTokens(document: TextDocument): Token[] {
 		}
 	}
 	return tokens;
-}
-
-async function computeCompiledTokens(document: TextDocument): Promise<Token[]>{
-	const LSPTreeString = await getPST(document.uri);
-	const LSPTreeJson = JSON.parse(LSPTreeString);
-	const LSPTree = elements.riftElementFactory.create(LSPTreeJson);
-	return LSPTree?.getSemanticTokens() ?? [];
 } 
 
 // The function that handles the 'textDocument/semanticTokens/full' request
-export async function handleSemanticTokensFull(params: SemanticTokensParams, documents: TextDocuments<TextDocument>): Promise<SemanticTokens> {
+export async function handleSemanticTokensFull(params: SemanticTokensParams, 
+											   documents: TextDocuments<TextDocument>, 
+											   pstCache: Map<string, any>): Promise<SemanticTokens> {
 	const document = documents.get(params.textDocument.uri);
 	if (!document) return { data: [] };
 
-	const commentTokens: Token[] = computeCommentsTokens(document);
-	const compiledTokens: Token[] = await computeCompiledTokens(document);
+	let LSPTree = pstCache.get(document.uri);
+	if (!LSPTree) {
+		LSPTree = await getPST(document.uri);
+		pstCache.set(document.uri, LSPTree);
+	}
 
+	const commentTokens: Token[] = computeCommentsTokens(document);
+	const compiledTokens: Token[] =  LSPTree?.getSemanticTokens() ?? [];
 	const tokens = compiledTokens.concat(commentTokens);
+
 	tokens.sort((a, b) => compareTokens(a, b));
 	const builder = new SemanticTokensBuilder();
 	tokens.forEach((token) => {

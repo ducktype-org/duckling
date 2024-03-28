@@ -1,8 +1,10 @@
 import { spawn } from "child_process";
+import { elements } from "./lsptree/elements/index";
+import { RiftElement } from "./lsptree/elements/elements";
 
 const BINARY_PATH = __dirname + "/../../../build/bin/";
 
-export function getPST(filePath: string): Promise<string> {
+export function getPST(filePath: string): Promise<RiftElement | undefined> {
 	const command: string = BINARY_PATH + "lsptree_test";
 	const args: string[] = [uriToPath(filePath)];
 
@@ -25,7 +27,9 @@ export function getPST(filePath: string): Promise<string> {
 
 		childProcess.on('close', (code: number) => {
 			if (code === 0) {
-				resolve(output);
+				const LSPTreeJson = JSON.parse(output);
+				const LSPTree = elements.riftElementFactory.create(LSPTreeJson);
+				resolve(LSPTree);
 			} else {
 				reject(new Error(`Process exited with code ${code}`));
 			}
