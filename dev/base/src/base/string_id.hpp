@@ -12,11 +12,11 @@
 namespace base {
 
 	class StrId {
-		typedef base::NamedId<base::RawView> InnerId;
+		using InnerId = base::NamedId<base::RawView>;
 		InnerId                              id;
 
-		typedef base::VectorMap<InnerId, base::RawView> ToDataType;
-		typedef base::HashMap<base::RawView, InnerId>   ToIdType;
+		using ToDataType = base::VectorMap<InnerId, base::RawView>;
+		using ToIdType = base::HashMap<base::RawView, InnerId>;
 
 		static ToDataType to_data_map;
 		static ToIdType   to_id_map;
@@ -32,7 +32,7 @@ namespace base {
 		explicit StrId(const base::RawView& data);
 		explicit StrId(const char* data);
 
-		void operator=(const StrId& oth) { id = oth.id; }
+		StrId& operator=(const StrId& oth) = default;
 
 		[[nodiscard]]
 		base::RawView view() const {

@@ -2,6 +2,7 @@
 
 #include <string>
 #include <tuple>
+#include <stdexcept>
 #include <unicode/unistr.h>
 #include "type_traits.hpp"
 #include "raw_view.hpp"
@@ -33,7 +34,9 @@ namespace base {
 
 		inline void strConcat(std::string& out, bool v) { out.append(v ? "true" : "false"); }
 
-		inline void strConcat(std::string& out, const char* v) { out.append(std::string(v)); }
+		inline void strConcat(std::string& out, const char* v) { 
+			if (v == nullptr) throw std::domain_error("strConcat called with nullptr");
+			out.append(std::string(v)); }
 
 		template<typename U, typename V>
 		requires(std::is_trivially_copyable_v<U> && std::is_trivially_copyable_v<V>)
@@ -59,7 +62,7 @@ namespace base {
 	 * RawView - uses RawView.str()
 	 * std::tuple - uses std::make_from_tuple<std::string>
 	 *
-	 * @FIXME nullptr causes an crash
+	 * Throws std::domain_error on nullptr argument
 	 */
 	template<typename... T>
 	std::string strConcat(T&&... elements) {

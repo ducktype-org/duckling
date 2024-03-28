@@ -4,6 +4,7 @@
 #include "smart_pointers.hpp"
 #include "optional.hpp"
 #include <concepts>
+#include <type_traits>
 #include <vector>
 
 namespace base {
@@ -22,15 +23,13 @@ namespace base {
 	 *
 	 * Right now StableList keys must be convertible to and from usize
 	 *
-	 * @TODO make concept to check it
 	 * @TODO add range based iteration
+	 * @TODO for now it is simple, naive implementation in the future change it to something better
 	 */
-	template<typename Key, typename Data>
+	template<typename Key, typename Data> 
+	requires std::constructible_from<Key, usize> && std::constructible_from<usize, Key>
 	class StableList {
 		/**
-		 * @brief @TODO
-		 * for now it is simple, naive implementation
-		 * in the future change it to something better
 		 */
 
 		std::vector<base::unique_ptr<Data>> data;
@@ -39,10 +38,13 @@ namespace base {
 		using Ref  = StableListRef<Data>;
 		using CRef = StableListCRef<Data>;
 
+		[[nodiscard]] 
 		constexpr usize size() const noexcept { return data.size(); }
 
+		[[nodiscard]] 
 		constexpr usize empty() const noexcept { return data.empty(); }
 
+		[[nodiscard]] 
 		constexpr usize notEmpty() const noexcept { return !data.empty(); }
 
 		/**

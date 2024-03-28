@@ -5,10 +5,15 @@
 #include <charconv>
 
 namespace base {
+	/**
+	 * @brief Converts a string to the value of the number it contains.
+	 * 
+	 * Raises exception on error.
+	 */
 	i64 strIdToNum(base::StrId str) {
 		auto view = str.strView();
 
-		i64                    out;
+		i64                    out{};
 		std::from_chars_result res = std::from_chars(view.data(), view.data() + view.size(), out);
 		if (res.ec == std::errc::invalid_argument)
 			throw std::invalid_argument{ "invalid_argument" };
