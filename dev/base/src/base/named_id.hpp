@@ -30,7 +30,7 @@
 #include <functional>
 
 namespace base {
-	typedef usize id_t;     //
+	using id_t = usize;     //
 
 	template<typename Par>  // parameter
 	class NamedId {
@@ -42,21 +42,24 @@ namespace base {
 		id_t id;
 
 	public:
-		typedef NamedId<Par> SelfType;
-		typedef Par          ParameterType;
+		using SelfType = NamedId<Par>;
+		using ParameterType = Par;
 		NamedId(): id(bad_val){};
 		NamedId(const SelfType& id) = default;
-		NamedId(SelfType&& id)      = default;
+		NamedId(SelfType&& id) noexcept = default;
 
 		inline SelfType& operator=(const SelfType&)             = default;
 		inline auto      operator<=>(const SelfType& oth) const = default;
 
 		inline bool operator==(const SelfType& oth) const { return id == oth.id; }
 
+		[[nodiscard]] 
 		inline id_t asInt() const { return id; }
 
+		[[nodiscard]] 
 		inline bool isBad() const { return id == bad_val; }
 
+		[[nodiscard]] 
 		inline bool isGood() const { return id != bad_val; }
 
 		explicit operator id_t() const { return asInt(); }

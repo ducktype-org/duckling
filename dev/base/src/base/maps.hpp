@@ -17,13 +17,13 @@ namespace base {
 		using ContainerType::insert;
 
 	public:
-		typedef MapWrapper                          SelfType;
-		typedef typename ContainerType::key_type    KEY_T;
-		typedef typename ContainerType::mapped_type DATA_T;
+		using SelfType = MapWrapper;
+		using KEY_T = typename ContainerType::key_type;
+		using DATA_T = typename ContainerType::mapped_type;
 
 		MapWrapper(): ContainerType(){};
 		MapWrapper(const MapWrapper& map): ContainerType(map){};
-		MapWrapper(MapWrapper&& map): ContainerType(std::move(map)){};
+		MapWrapper(MapWrapper&& map) noexcept : ContainerType(std::move(map)){};
 		~MapWrapper() = default;
 
 		// Change operator[] behaviour:
@@ -40,11 +40,7 @@ namespace base {
 			return ContainerType::emplace(std::forward<K>(key), std::forward<D>(data));
 		}
 
-		// @TODO: delete it, since we are using C++20:
-		bool contains(const KEY_T& key) const {
-			return ContainerType::find(key) != ContainerType::end();
-		}
-
+		[[nodiscard]] 
 		bool notEmpty() const { return !ContainerType::empty(); }
 	};
 
@@ -65,12 +61,12 @@ namespace base {
 		usize                               element_count{};
 
 	public:
-		typedef VectorMap SelfType;
-		typedef KEY_T     IdType;
-		typedef DATA_T    DataType;
+		using SelfType = VectorMap;
+		using IdType = KEY_T;
+		using DataType = DATA_T;
 
-		typedef typename std::vector<base::Optional<DATA_T>>::iterator       iterator;
-		typedef typename std::vector<base::Optional<DATA_T>>::const_iterator const_iterator;
+		using iterator = typename std::vector<base::Optional<DATA_T>>::iterator;
+		using const_iterator = typename std::vector<base::Optional<DATA_T>>::const_iterator;
 
 		VectorMap() = default;
 
@@ -129,10 +125,13 @@ namespace base {
 			return false;
 		}
 
+		[[nodiscard]] 
 		usize size() const { return element_count; }
 
+		[[nodiscard]] 
 		bool empty() const { return element_count == 0; }
 
+		[[nodiscard]] 
 		bool notEmpty() const { return !empty(); }
 
 		iterator begin() { return map.begin(); }
