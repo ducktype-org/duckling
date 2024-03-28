@@ -3,6 +3,7 @@
 #include <string>
 #include <tuple>
 #include <stdexcept>
+#include <type_traits>
 #include <unicode/unistr.h>
 #include "type_traits.hpp"
 #include "raw_view.hpp"
@@ -13,7 +14,7 @@ namespace base {
 
 	namespace detail {
 		template<typename T>
-		requires(!base::IsNumber<std::remove_reference_t<T>> && !std::is_same_v<icu::UnicodeString, std::remove_cvref_t<T>>)
+		requires(!base::IsNumber<std::remove_reference_t<T>> && !std::is_same_v<icu::UnicodeString, std::remove_cvref_t<T>> && !std::is_pointer<std::decay_t<T>>::value && !std::is_null_pointer<std::decay_t<T>>::value)
 		void strConcat(std::string& out, T&& v) {
 			out.append(std::forward<T>(v));
 		}

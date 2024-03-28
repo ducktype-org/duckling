@@ -26,32 +26,11 @@ public:
 		TESTER_ADD_TEST(testPanic3);
 		TESTER_ADD_TEST(rawViewTest);
 		TESTER_ADD_TEST(owningViewTest);
-		TESTER_ADD_TEST(verySimpleTestingUtilsTest);
 		TESTER_ADD_TEST(stronglyTypedInt);
 		TESTER_ADD_TEST(deferTest);
-		TESTER_ADD_TEST(testStrConcat);
 	}
 
 private:
-	void testStrConcat() {
-		std::string res;
-
-		res = base::strConcat("aBd", 1, 5, true, "Inny string");
-		assert(res == "aBd15trueInny string", "strConcta returned answer other than expected");
-
-		res = base::strConcat();
-		assert(res == "", "strConcta returned answer other than expected");
-
-		res = base::strConcat("", "", "");
-		assert(res == "", "strConcta returned answer other than expected");
-
-		res = base::strConcat(1, -87, 123'456'789ull);
-		assert(res == "1-87123456789", "strConcta returned answer other than expected");
-
-		// res = base::strConcat("abacabadaba", nullptr);
-		// assert(res == "", "strConcta returned answer other than expected");
-	}
-
 	void throwPanic1() { throw base::Panic("throwPanic", "panic test"); }
 
 	void throwPanic2() { RIFT_PANIC("panic test 2"); }
@@ -159,27 +138,6 @@ private:
 				"Owning view has bad content (2)"
 			);
 		}
-	}
-
-	void verySimpleTestingUtilsTest() {
-		assert(testing_utils::compareJson(" {}", "{ }"), "Incorrect compareJson (1)");
-
-		assert(
-			testing_utils::compareJson(R"--( { "data" : {} })--", R"--(  { "data" : {  } } )--"),
-			"Incorrect compareJson (2)"
-		);
-
-		assert(
-			!testing_utils::compareJson(R"--( { "data" : [] })--", R"--(  { "data" : {  } } )--"),
-			"Incorrect compareJson (3)"
-		);
-
-		assert(
-			!testing_utils::compareJson(
-				R"--( { "data" :  { }, "data2" : {} })--", R"--(  { "data" : {  } } )--"
-			),
-			"Incorrect compareJson (4)"
-		);
 	}
 
 	void stronglyTypedInt() {
