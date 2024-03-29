@@ -19,6 +19,8 @@ Functionalities
 
 .. doxygenfunction:: base::typeName
 
+.. doxygenconcept:: base::Implication
+
 Usage
 -----
 

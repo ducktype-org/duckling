@@ -48,6 +48,12 @@ namespace base {
 	template<class TypeA, template<class> class TypeB>
 	concept IsOfSameClass = detail::IsOfSameClassImpl<TypeA, TypeB>::value;
 
+	/**
+	 * @brief Checks if A implies B.
+	 */
+	template<bool A, bool B>
+	constexpr bool Implication = !A || B;
+
 	/** 
 	 * @brief Returns the name of the passed type `T`.
 	 * 
