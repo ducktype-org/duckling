@@ -9,10 +9,6 @@ namespace base {
 	}
 }
 
-/**
- * @brief 
- * 
- */
 #define FORWARD_TYPE(expr) decltype(base::forwardReferenceMaker(expr))
 
 #define DECL_FORWARDING_VAR(var, expr) FORWARD_TYPE(expr) var = (expr)

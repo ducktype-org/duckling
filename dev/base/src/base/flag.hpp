@@ -4,6 +4,9 @@
 #include <compare>
 
 namespace base {
+	/**
+	 * @brief Simple flag type. It stores up to 64 bits
+	 */
 	class FlagType {
 		u64 data = 0;
 
@@ -16,6 +19,7 @@ namespace base {
 	public:
 		constexpr FlagType() = default;
 
+		[[nodiscard]] 
 		constexpr bool contains(const FlagType& oth) const { return (data & oth.data) == oth.data; }
 
 		constexpr FlagType operator|(const FlagType& oth) const {
@@ -31,5 +35,8 @@ namespace base {
 		constexpr FlagType(u64 flag_id): data{ 1ull << flag_id } {}
 	};
 
+	/**
+	 * @brief Flag with everything set to 0.
+	 */
 	constexpr FlagType EmptyFlag;
 }

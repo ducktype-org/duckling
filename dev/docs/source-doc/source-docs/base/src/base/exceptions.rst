@@ -6,7 +6,6 @@ Exceptions
 	:depth: 2
 	:local:
 
-
 Exceptions is simple extension of standard C++ exception system.
 It should be used everywhere.
 
