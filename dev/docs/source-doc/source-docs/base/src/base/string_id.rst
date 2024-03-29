@@ -59,10 +59,3 @@ Additional functionalities
 * :code:`StrId` can be hashed using standard :code:`std::hash`.
 * :code:`StrId` works with :code:`base::strConcat` (:doc:`str_concat`).
 
-
-Usage
-=====
-
-.. @TOOD
-.. code-block:: cpp
-	:caption: Example

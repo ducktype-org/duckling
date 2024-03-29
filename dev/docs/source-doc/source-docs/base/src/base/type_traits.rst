@@ -2,6 +2,10 @@
 Type traits
 ===========
 
+.. contents::
+	:depth: 2
+	:local:
+
 Type traits provides a set of functionalities useful during metaprogramming with types.
 
 Functionalities

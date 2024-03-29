@@ -2,8 +2,6 @@
 Str concat
 ==========
 
-.. simple-description::
-
 .. contents::
 	:depth: 2
 	:local:
