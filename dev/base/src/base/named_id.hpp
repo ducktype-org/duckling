@@ -2,25 +2,6 @@
  * @file named_id.hpp
  * @author Andrzej
  * @brief Strongly typed Id-s (based on type parameter)
- *
- * usage:
- *
- * 1) independent:
- * struct MyIdName {};
- * typedef NamedId<MyIdName> MyId
- *
- * 2) dependent:
- * typedef NamedId<Number<1>> MyId;
- *
- * Provides id like type. Default Constructor
- * 
- * Number reserving - a place to allocate used numbers:
- * example:
- * 1             - SymbolId
- * 1000 -> 1099  - some strange meta programing
- *
- * Reserved space:
- *
  */
 
 #pragma once
@@ -30,8 +11,17 @@
 #include <functional>
 
 namespace base {
-	using id_t = usize;     //
+	using id_t = usize;
 
+	/**
+	 * @brief Id-like type that has valid values from 0 to number of items.
+	 * 
+	 * Different id types are created by using a different template parameter.
+	 * 
+	 * Custom id's can also be created using base::Number<[value]>.
+	 * 
+	 * Id's can be cast to `usize` and than used as keys for a VectorMap efficiently.
+	 */
 	template<typename Par>  // parameter
 	class NamedId {
 		static id_t bad_val;
@@ -81,23 +71,11 @@ namespace base {
 	template<typename par>
 	id_t NamedId<par>::bad_val = (id_t) (-1);  // ~ max int
 
+	/**
+	 * @brief Type for creating numbered Id's.
+	 */
 	template<i32 n>
 	struct Number {};
-
-	/**
-	 * @TODO: Not needed for now
-	 */
-	/* namespace aux {
-	    template<typename T>
-	    struct is_named_id : std::false_type { };
-
-	    template<typename p>
-	    struct is_named_id<NamedId<p>> : std::true_type { };
-	}
-
-	template<typename T>
-	concept NamedIdConcept = aux::is_named_id<T>::value;*/
-
 }
 
 namespace std {

@@ -81,7 +81,7 @@ namespace base {
 	class StrId;
 
 	/**
-	 * Owning byte array view
+	 * @brief Owning byte array view
 	 */
 	class OwningView {
 		byte* begin{ nullptr };
