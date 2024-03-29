@@ -31,12 +31,15 @@ rift_add_test(base test_smart_pointer tests/pointer_tests.cpp
         USES Base)
 
 rift_add_test(base string_id_test_simple tests/string_id_test.cpp
-        USES Lexer Base)
+        USES Base)
 
 rift_add_test(base optional_tests tests/optional_test.cpp
         USES Base)
 
 rift_add_test(base str_concat_tests tests/str_concat_test.cpp
+        USES Base)
+
+rift_add_test(base constexpr_cat_tests tests/constexpr_cat_test.cpp
         USES Base)
 
 rift_add_test(base view_tests tests/view_test.cpp

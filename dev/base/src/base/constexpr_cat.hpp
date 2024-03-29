@@ -1,7 +1,9 @@
 /**
  * @file constexpr_cat.hpp
  * @brief Constexpr concatenation of char, string literal and char sequence types. 
- * For a char sequence to work it needs std::array<char> with constexpr size() and data() free functions
+ * 
+ * @note For a char sequence to work it needs constexpr size() and data() methods.
+ * 
  * @date 2024-03-28
  * 
  */
@@ -11,10 +13,6 @@
 #include <array>
 
 namespace base {
-
-	// Constexpr concatenation of char, string literal and char sequence types
-	// such as std::array<char> with constexpr size() and data() free functions
-
 	namespace impl {
 		// Implement free size() and data() for char
 		// Specialize size() for string literal - override to ignore null terminator
@@ -45,7 +43,9 @@ namespace base {
 	}
 
 	/** 
-	 * @brief Returns std::array<char> concatenation with supplied length
+	 * @brief Returns std::array<char> concatenation with supplied length.
+	 * 
+	 * @note Unsafe when wrong length supplied.
 	 */
 	template<usize SIZE, typename... Cs>
 	constexpr auto cat(const Cs&... cs) {
