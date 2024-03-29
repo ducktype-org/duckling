@@ -5,7 +5,9 @@
 #include "str_concat.hpp"
 
 namespace base {
-	// @TODO: final?
+	/**
+	 * @brief Exception intended to replace c++ assert errors for additional functionalities.
+	 */
 	class Panic final: public std::exception {
 		std::string position;
 		std::string reason;
@@ -25,8 +27,14 @@ namespace base {
 		void print(std::ostream& out) const;
 	};
 
+	/**
+	 * @brief Exception intended to be the basis of all non-panic rift-specific exceptions.
+	 */
 	class Exception: public std::exception {};
 
+	/**
+	 * @brief Rift-specific logic error exception
+	 */
 	class LogicError: public Exception {
 		std::string message;
 
@@ -36,6 +44,9 @@ namespace base {
 		const char* what() const noexcept override;
 	};
 
+	/**
+	 * @brief Exception to throw in unimplemented segments.
+	 */
 	class NotYetImplemented: public Exception {
 		std::string message;
 
@@ -49,9 +60,15 @@ namespace base {
 #define DETAIL_RIFT_STR2(X) #X
 #define DETAIL_RIFT_STR(X)  DETAIL_RIFT_STR2(X)
 
+/**
+ * @brief base::Panic based assert that allows catching for testing purposes.
+ */
 #define RIFT_ASSERT(cond, what) \
 	if (!(cond)) _THROW_PANIC("    Assertion failed: `" #cond "`\n", what)
 
+/**
+ * @brief base::Panic based throw that allows catching for testing purposes
+ */
 #define RIFT_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what)
 
 #define _THROW_PANIC(panic_title, what...)                        \
