@@ -1,7 +1,5 @@
 #include "error_state.hpp"
 
-#include <utility>
-
 namespace dia {
 	void ErrorState::logError(const SourcePosition& position, std::string_view message) {
 		err_count++;

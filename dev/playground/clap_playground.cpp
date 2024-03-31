@@ -7,7 +7,7 @@
 #include <clap/param_builder.hpp>
 #include <clap/exceptions.hpp>
 #include <clap/help_message_generator.hpp>
-#include <printer/printer.hpp>
+#include <printer/printer_console.hpp>
 
 void greet(i64 n, const std::string& name) { std::cout << n << ": Hello " << name << "!\n"; }
 

@@ -6,7 +6,7 @@
 #pragma once
 
 #include <filesystem/file.hpp>
-#include <printer/printer.hpp>
+#include <printer/message.hpp>
 #include <string>
 
 namespace dia {

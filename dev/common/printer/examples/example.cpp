@@ -1,8 +1,8 @@
-#include <printer/printer.hpp>
+#include <printer/printer_console.hpp>
 #include <iostream>
 
 void testPrinter() {
-	printer::Console console = printer::Console();
+	auto console = printer::Console();
 	console.add(
 		{ { { { "Hello, World! This is the first message, " },
 	          { "So it will be the only one you see before error, when GeneralMax is set to 1." } },

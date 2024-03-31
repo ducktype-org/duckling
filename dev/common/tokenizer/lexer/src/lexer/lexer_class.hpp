@@ -1,6 +1,6 @@
 #pragma once
 
-#include <printer/printer.hpp>
+#include <printer/printer_console.hpp>
 #include <filesystem/file.hpp>
 #include <diagnostic/error_state.hpp>
 #include <vector>

@@ -1,20 +1,8 @@
-/**
- * @file printer.hpp
- * @brief
- * Module for outputting messages to console.
- *
- * Basic usage: playground/printer_test.hpp
- */
-
 #pragma once
 
 #include <base/ints.hpp>
-#include <string>
-#include <initializer_list>
-#include <vector>
-#include <array>
-#include <limits.h>
 #include <iostream>
+#include <utility>
 
 namespace printer {
 	// Important to update this value, when adding or removing MessageTypes.
@@ -84,7 +72,6 @@ namespace printer {
 	class Console;
 
 	class MessageContent {
-	private:
 		MessageContentText str;
 		Color              foreground_color;
 		Color              background_color;
@@ -99,8 +86,8 @@ namespace printer {
 
 		MessageContent(
 			const char* str,
-			Color       foreground_color = Color::DEFAULT,
-			Color       background_color = Color::DEFAULT
+			const Color foreground_color = Color::DEFAULT,
+			const Color background_color = Color::DEFAULT
 		):
 			  str(str),
 			  foreground_color(foreground_color),
@@ -108,16 +95,16 @@ namespace printer {
 
 		MessageContent(
 			MessageContentText str,
-			Color              foreground_color = Color::DEFAULT,
-			Color              background_color = Color::DEFAULT
+			const Color        foreground_color = Color::DEFAULT,
+			const Color        background_color = Color::DEFAULT
 		):
-			  str(str),
+			  str(std::move(str)),
 			  foreground_color(foreground_color),
 			  background_color(background_color) {}
 	};
 
+	// Not to be confused with diagnostic::Message
 	class Message {
-	private:
 		std::vector<MessageContent> contents;
 		MessageType                 type;
 		LevelType                   level;
@@ -125,18 +112,17 @@ namespace printer {
 		Color                       background_color;
 		friend Console;
 
-		Message() = delete;
-
 	public:
+		Message()               = delete;
 		Message(const Message&) = default;
 		Message(Message&& oth)  = default;
 
 		Message(
 			std::vector<MessageContent> list,
-			MessageType                 type             = MessageType::GENERAL,
-			LevelType                   level            = 0,
-			Color                       foreground_color = Color::RESET,
-			Color                       background_color = Color::RESET
+			const MessageType           type             = MessageType::GENERAL,
+			const LevelType             level            = 0,
+			const Color                 foreground_color = Color::RESET,
+			const Color                 background_color = Color::RESET
 		):
 			  contents(std::move(list)),
 			  type(type),
@@ -144,71 +130,17 @@ namespace printer {
 			  foreground_color(foreground_color),
 			  background_color(background_color) {}
 
-		void add(const MessageContent&);
-		void add(std::vector<MessageContent>);
+		void add(const MessageContent& mc) { contents.push_back(mc); }
 
-		void print(std::ostream& out = std::cerr);
+		void add(std::vector<MessageContent> mc) {
+			contents.insert(
+				contents.end(),
+				std::make_move_iterator(mc.begin()),
+				std::make_move_iterator(mc.end())
+			);
+		}
 	};
 
 	// @FIXME MessagePack and Message(init_list) constructors can be ambiguous
 	typedef std::vector<Message> MessagePack;
-
-	typedef std::array<LevelType, TYPE_COUNT> minLevel_t;
-	typedef std::array<usize, TYPE_COUNT>     maxAmounts_t;
-
-	namespace detail {
-		static constexpr minLevel_t constructDefaultMinLevel() {
-			minLevel_t res = {};
-			res.fill(0);
-			return res;
-		}
-
-		static constexpr maxAmounts_t constructDefaultMaxAmounts() {
-			maxAmounts_t res = {};
-			res.fill(SIZE_MAX);
-			return res;
-		}
-	}
-
-	class Console {
-	private:
-		static constexpr minLevel_t   defaultMinLevel   = detail::constructDefaultMinLevel();
-		static constexpr maxAmounts_t defaultMaxAmounts = detail::constructDefaultMaxAmounts();
-
-		std::vector<MessagePack> messagePacks;
-		usize                    generalMax;
-		minLevel_t               minLevel;
-		maxAmounts_t             maxAmounts;
-		bool                     ignore_instant_debug = false;
-
-	public:
-		void ignoreInstantDebug() { ignore_instant_debug = true; }
-
-		bool isIgnoreInstantDebug() { return ignore_instant_debug; }
-
-		Console(
-			usize        generalMax = SIZE_MAX,
-			minLevel_t   minLevel   = defaultMinLevel,
-			maxAmounts_t maxAmounts = defaultMaxAmounts
-		):
-			  generalMax(generalMax),
-			  minLevel(minLevel),
-			  maxAmounts(maxAmounts) {}
-
-		// @IDEA: make these sets constexpr (and implement them as such).
-		void setMinLevel(MessageType type, LevelType level);
-
-		void setGeneralMax(usize max);
-
-		void setMaxAmounts(MessageType type, usize amount);
-
-		void add(const MessagePack& pack);
-		void add(MessagePack&& pack);
-		void add(const Message& message);
-		void add(Message&& message);
-
-		void print(std::ostream& out = std::cerr) const;
-
-		void clear();
-	};
 }

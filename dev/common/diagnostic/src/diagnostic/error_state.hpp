@@ -6,7 +6,7 @@
 #pragma once
 
 #include <diagnostic/source_position.hpp>
-#include <printer/printer.hpp>
+#include <printer/printer_console.hpp>
 
 namespace dia {
 	/**

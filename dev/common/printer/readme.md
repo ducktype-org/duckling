@@ -14,12 +14,13 @@ This module provides functionality for outputting messages to console. Has tools
 
 ## Files:
 
-* [printer.hpp](printer.hpp) - all functionalities
-* [printer.cpp](printer.cpp) - implementation
+* [message.hpp](src/printer/message.hpp) - Description of Message objects.
+* [printer.hpp](src/printer/printer_console.hpp) - Interface of a printer to console (maybe other printers will appear in the future).
+* [printer.cpp](src/printer/printer.cpp) - Implementation of a printer to console.
 
 ## Symbols:
 
-All symbols are in namespace `printer` and come from [printer.hpp](printer.hpp).
+All symbols are in namespace `printer`.
 
 ### TYPE_COUNT
 
@@ -171,12 +172,6 @@ Prints the message to specified ostream (std::cerr by default).
 
 Code output:
 ![Example output](examples/exampleoutput.png)
-
-# File list
-
-* [printer.hpp](src/printer/printer.hpp) - interface
-* [printer.cpp](src/printer/printer.cpp) - implementation
-* [example.cpp](examples/example.cpp) - example usage
 
 # Notes
 

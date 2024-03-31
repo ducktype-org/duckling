@@ -47,7 +47,7 @@ int main(int argc, const char* argv[]) {
 		}
 
 	} catch (const clap::exceptions::HelpException& e) {
-		compiler::generateHelpMessage(e).print(std::cerr);
+		printer::Console().add(compiler::generateHelpMessage(e));
 	} catch (const base::Exception& e) {
 		std::cerr << "Compiler Exception was caught with message:\n";
 		std::cerr << e.what();

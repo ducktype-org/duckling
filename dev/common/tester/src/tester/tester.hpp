@@ -9,9 +9,7 @@
 
 #include <exception>
 #include <string>
-#include <printer/printer.hpp>
-#include <base/str_concat.hpp>
-#include <base/exceptions.hpp>
+#include <printer/printer_console.hpp>
 
 #define ASSERT_EQUAL(expected, actual)         \
 	assertEqual(                               \

@@ -1,6 +1,5 @@
 #include <lexer/decode.hpp>
 #include <filesystem/file.hpp>
-#include <printer/printer.hpp>
 #include <diagnostic/error_state.hpp>
 
 int main(int argc, char** argv) {

@@ -1,7 +1,7 @@
 #include <iomanip>
 
 #include <clap/clap.hpp>
-#include <printer/printer.hpp>
+#include <printer/printer_console.hpp>
 
 #include <supervisor/supervisor.hpp>
 #include "cli.hpp"

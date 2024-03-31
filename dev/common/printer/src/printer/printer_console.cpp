@@ -5,10 +5,10 @@
 #include <iostream>
 #include <cstdlib>
 
-#include "printer.hpp"
+#include "printer_console.hpp"
 
 namespace printer {
-	static inline void INSTANT_DEBUG_LOG([[maybe_unused]] Console& console) {
+	static void INSTANT_DEBUG_LOG([[maybe_unused]] Console& console) {
 #ifdef PRINT_LOG
 		if (!console.isIgnoreInstantDebug()) {
 			console.print(std::cerr);
@@ -23,58 +23,51 @@ namespace printer {
 		return ColorId(color_id > 0 ? color_id + background_font_color_offset : color_id);
 	}
 
-	void Message::add(const MessageContent& mc) { this->contents.push_back(mc); }
-
-	void Message::add(std::vector<MessageContent> mc) {
-		this->contents.insert(
-			this->contents.end(),
-			std::make_move_iterator(mc.begin()),
-			std::make_move_iterator(mc.end())
-		);
-	}
-
-	void Message::print(std::ostream& out) {
-		Console console;
-		console.add(*this);
-		console.print(out);
-	}
-
-	void Console::setMinLevel(MessageType type, LevelType level) {
+	Console& Console::setMinLevel(MessageType type, LevelType level) {
 		if (type == MessageType::ALL)
 			minLevel.fill(level);
 		else
-			minLevel.at(printer::msgToInt(type)) = level;
+			minLevel.at(msgToInt(type)) = level;
+		return *this;
 	}
 
-	void Console::setGeneralMax(usize max) { generalMax = max; }
+	Console& Console::setGeneralMax(usize max) {
+		generalMax = max;
+		return *this;
+	}
 
-	void Console::setMaxAmounts(MessageType type, usize amount) {
+	Console& Console::setMaxAmounts(MessageType type, usize amount) {
 		if (type == MessageType::ALL)
 			maxAmounts.fill(amount);
 		else
-			maxAmounts.at(printer::msgToInt(type)) = amount;
+			maxAmounts.at(msgToInt(type)) = amount;
+		return *this;
 	}
 
-	void Console::add(const MessagePack& pack) {
+	Console& Console::add(const MessagePack& pack) {
 		messagePacks.push_back(pack);
 		INSTANT_DEBUG_LOG(*this);
+		return *this;
 	}
 
-	void Console::add(MessagePack&& pack) {
+	Console& Console::add(MessagePack&& pack) {
 		messagePacks.emplace_back(std::move(pack));
 		INSTANT_DEBUG_LOG(*this);
+		return *this;
 	}
 
-	void Console::add(const Message& message) {
+	Console& Console::add(const Message& message) {
 		messagePacks.push_back({ message });
 		INSTANT_DEBUG_LOG(*this);
+		return *this;
 	}
 
-	void Console::add(Message&& message) {
+	Console& Console::add(Message&& message) {
 		MessagePack pack;
 		pack.emplace_back(std::move(message));
 		messagePacks.push_back(std::move(pack));
 		INSTANT_DEBUG_LOG(*this);
+		return *this;
 	}
 
 	void Console::print(std::ostream& out) const {
