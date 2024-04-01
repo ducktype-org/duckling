@@ -21,6 +21,7 @@ Interface
 All symbols are in namespace ``tpc``.
 
 This module can be conceptually divided into two parts:
+
 #. Classes ``tpc::TokenStream``, ``tpc::ParserState`` and functions in `automatic.hpp` offer higher level abstractions for interacting with a list of tokens that are useful for parsing.
 #. Class ``tpc::Element`` and everything from `parser_ref.hpp` and `base_element.hpp` define basic types and functions used as building blocks in abstract syntax tree.
 
@@ -50,6 +51,7 @@ Managing token streams
 ----------------------
 
 ``tpc::ParserState`` has a couple methods to handle its recursive streams:
+
 #. ``bool empty()`` and ``bool notEmpty()`` check whether the current ``tpc::TokenStream`` has any tokens left.
 #. ``goDown()`` adds the stream of the current recursive token to the stack as the new current stream.
 #. ``goUp()`` and ``goUpAndSkip()`` remove the current stream and go back to the previous one. ``goUpAndSkip()`` additionally skips one token so that after the operation the current token is no longer the recursive one. 

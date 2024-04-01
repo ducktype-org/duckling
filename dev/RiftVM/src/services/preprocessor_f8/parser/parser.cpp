@@ -190,8 +190,7 @@ namespace assemble {
 							OpCodeArgType::imm, base::strIdToNum(state.tokens().next().getValue()) }
 						);
 					} catch (std::logic_error& e) {
-						state.err.setFail();
-						state.err.logError(
+						state.err.failAndLog(
 							state.ctokens().peek().getPosition(),
 							base::strConcat("not a number: ", state.ctokens().peek().getValue())
 						);
@@ -199,8 +198,7 @@ namespace assemble {
 					}
 					break;
 				default:
-					state.err.setFail();
-					state.err.logError(
+					state.err.failAndLog(
 						state.ctokens().peek().getPosition(),
 						base::strConcat("incorrect token1: ", state.ctokens().peek().getValue())
 					);
@@ -215,8 +213,7 @@ namespace assemble {
 				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
 					tpc::parseOne(state, rift_def::Operator::Comma);
 				} else {
-					state.err.setFail();
-					state.err.logError(
+					state.err.failAndLog(
 						state.ctokens().peek().getPosition(),
 						base::strConcat("incorrect token2: ", state.ctokens().peek().getValue())
 					);
@@ -263,8 +260,7 @@ namespace assemble {
 					}
 
 					if (out->label_position.contains(label_name.value)) {
-						state.err.setFail();
-						state.err.logError(
+						state.err.failAndLog(
 							state.ctokens().peek(-1).getPosition(),
 							base::strConcat("repeated label: ", label_name.value)
 						);
@@ -289,8 +285,7 @@ namespace assemble {
 								// This setup should be changed in the future.
 								label.type_value = true;
 
-								// state.err.setFail();
-								// state.err.logError(
+								// state.err.failAndLog(
 								// 	state.ctokens().peek().getPosition(),
 								// 	base::strConcat("Nonexistent label: ",
 								//                      std::get<OpCodeLabelArg>(opcode).value));
@@ -363,8 +358,7 @@ namespace assemble {
 		tpc::parseAll(state, rift_def::Keyword::BCFunction, &out->name);
 
 		if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.err.setFail();
-			state.err.logError(state.ctokens().peek(-1).getPosition(), "expected `{` after here");
+			state.err.failAndLog(state.ctokens().peek(-1).getPosition(), "expected `{` after here");
 			return nullptr;
 		}
 
@@ -377,22 +371,19 @@ namespace assemble {
 			case rift_def::Keyword::BCArgSize: {
 				tpc::parseOne(state, rift_def::Operator::Colon);
 				if (out->arg_size != size_t_max) {
-					state.err.setFail();
-					state.err.logError(state.ctokens().peek().getPosition(), "arg_size duplicate");
+					state.err.failAndLog(state.ctokens().peek().getPosition(), "arg_size duplicate");
 				}
 				auto value = state.tokens().next();
 
 				if (!value.isNumLiteral()) {
-					state.err.setFail();
-					state.err.logError(
+					state.err.failAndLog(
 						state.ctokens().peek().getPosition(), "arg_size argument is not num-literal"
 					);
 				}
 				try {
 					out->arg_size = strIdToNum(value.getValue());
 				} catch (std::logic_error& e) {
-					state.err.setFail();
-					state.err.logError(
+					state.err.failAndLog(
 						state.ctokens().peek().getPosition(), "arg_size argument is not num-literal"
 					);
 				}
@@ -403,15 +394,13 @@ namespace assemble {
 			case rift_def::Keyword::BCLocalSize: {
 				tpc::parseOne(state, rift_def::Operator::Colon);
 				if (out->local_size != size_t_max) {
-					state.err.setFail();
-					state.err.logError(
+					state.err.failAndLog(
 						state.ctokens().peek().getPosition(), "local_size duplicate"
 					);
 				}
 				auto value = state.tokens().next();
 				if (!value.isNumLiteral()) {
-					state.err.setFail();
-					state.err.logError(
+					state.err.failAndLog(
 						state.ctokens().peek().getPosition(),
 						"local_size argument is not num-literal"
 					);
@@ -419,8 +408,7 @@ namespace assemble {
 				try {
 					out->local_size = strIdToNum(value.getValue());
 				} catch (std::logic_error& e) {
-					state.err.setFail();
-					state.err.logError(
+					state.err.failAndLog(
 						state.ctokens().peek().getPosition(),
 						"local_size argument is not num-literal"
 					);
@@ -433,21 +421,18 @@ namespace assemble {
 			case rift_def::Keyword::BCRetSize: {
 				tpc::parseOne(state, rift_def::Operator::Colon);
 				if (out->ret_size != size_t_max) {
-					state.err.setFail();
-					state.err.logError(state.ctokens().peek().getPosition(), "ret_size duplicate");
+					state.err.failAndLog(state.ctokens().peek().getPosition(), "ret_size duplicate");
 				}
 				auto value = state.tokens().next();
 				if (!value.isNumLiteral()) {
-					state.err.setFail();
-					state.err.logError(
+					state.err.failAndLog(
 						state.ctokens().peek().getPosition(), "ret_size argument is not num-literal"
 					);
 				}
 				try {
 					out->ret_size = base::strIdToNum(value.getValue());
 				} catch (std::logic_error& e) {
-					state.err.setFail();
-					state.err.logError(
+					state.err.failAndLog(
 						state.ctokens().peek().getPosition(), "ret_size argument is not num-literal"
 					);
 				}
@@ -463,8 +448,7 @@ namespace assemble {
 			case rift_def::Keyword::BCCode: {
 				tpc::parseOne(state, rift_def::Operator::Colon);
 				if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
-					state.err.setFail();
-					state.err.logError(state.ctokens().peek().getPosition(), "no {} on code:");
+					state.err.failAndLog(state.ctokens().peek().getPosition(), "no {} on code:");
 				}
 
 				state.goDown();
@@ -474,14 +458,12 @@ namespace assemble {
 			}
 
 			default:
-				state.err.setFail();
-				state.err.logError(state.ctokens().peek().getPosition(), "bad keyword in function");
+				state.err.failAndLog(state.ctokens().peek().getPosition(), "bad keyword in function");
 			}
 		}
 
 		if (state.notEmpty()) {
-			state.err.setFail();
-			state.err.logError(
+			state.err.failAndLog(
 				state.ctokens().peek(-1).getPosition(), "Unexpected function content!"
 			);
 
@@ -500,8 +482,7 @@ namespace assemble {
 
 	tpc::ParserRef<Type> Type::parse(tpc::ParserState& state) {
 		if (!state.tryEat(rift_def::Keyword::BCType)) {
-			state.err.setFail();
-			state.err.logError(state.ctokens().peek().getPosition(), "expected keyword 'type'");
+			state.err.failAndLog(state.ctokens().peek().getPosition(), "expected keyword 'type'");
 			return nullptr;
 		};
 		auto out = tpc::makeRef<Type>();
@@ -515,8 +496,7 @@ namespace assemble {
 		case rift_def::Keyword::BCPrimitive: {
 			auto value = state.tokens().next();
 			if (!value.isNumLiteral()) {
-				state.err.setFail();
-				state.err.logError(state.ctokens().peek().getPosition(), "expected number");
+				state.err.failAndLog(state.ctokens().peek().getPosition(), "expected number");
 			} else {
 				out->datatype
 					= PrimitiveType{ name, static_cast<TypeSize>(strIdToNum(value.getValue())) };
@@ -526,8 +506,7 @@ namespace assemble {
 		case rift_def::Keyword::BCPointer: {
 			auto pointered_type = state.tokens().next();
 			if (!pointered_type.isIdentifier()) {
-				state.err.setFail();
-				state.err.logError(state.ctokens().peek().getPosition(), "expected identifier");
+				state.err.failAndLog(state.ctokens().peek().getPosition(), "expected identifier");
 			} else {
 				out->datatype = PointerType{ name, pointered_type.getValue() };
 			}
@@ -536,13 +515,11 @@ namespace assemble {
 		case rift_def::Keyword::BCStaticTable: {
 			auto type_name = state.tokens().next();
 			if (!type_name.isIdentifier()) {
-				state.err.setFail();
-				state.err.logError(state.ctokens().peek().getPosition(), "expected identifier");
+				state.err.failAndLog(state.ctokens().peek().getPosition(), "expected identifier");
 			} else {
 				auto size = state.tokens().next();
 				if (!size.isNumLiteral()) {
-					state.err.setFail();
-					state.err.logError(state.ctokens().peek().getPosition(), "expected number");
+					state.err.failAndLog(state.ctokens().peek().getPosition(), "expected number");
 				} else {
 					out->datatype
 						= StaticTableType{ name,
@@ -555,8 +532,7 @@ namespace assemble {
 		case rift_def::Keyword::BCDynamicTable: {
 			const lexer::Token& type_name = state.tokens().next();
 			if (!type_name.isIdentifier()) {
-				state.err.setFail();
-				state.err.logError(state.ctokens().peek().getPosition(), "expected identifier");
+				state.err.failAndLog(state.ctokens().peek().getPosition(), "expected identifier");
 			} else {
 				out->datatype = DynamicTableType{ name, type_name.getValue() };
 			}
@@ -564,8 +540,7 @@ namespace assemble {
 		}
 		case rift_def::Keyword::BCData: {
 			if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.setFail();
-				state.err.logError(
+				state.err.failAndLog(
 					state.ctokens().peek(-1).getPosition(), "expected `{` after here"
 				);
 				return nullptr;
@@ -584,8 +559,7 @@ namespace assemble {
 				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
 					tpc::parseOne(state, rift_def::Operator::Comma);
 				} else {
-					state.err.setFail();
-					state.err.logError(state.ctokens().peek().getPosition(), "expected comma or }");
+					state.err.failAndLog(state.ctokens().peek().getPosition(), "expected comma or }");
 					state.tokens().skip();
 				}
 			}
@@ -595,8 +569,7 @@ namespace assemble {
 		}
 		case rift_def::Keyword::BCVariant: {
 			if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.setFail();
-				state.err.logError(
+				state.err.failAndLog(
 					state.ctokens().peek(-1).getPosition(), "expected `{` after here"
 				);
 				return nullptr;
@@ -613,8 +586,7 @@ namespace assemble {
 				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
 					tpc::parseOne(state, rift_def::Operator::Comma);
 				} else {
-					state.err.setFail();
-					state.err.logError(state.ctokens().peek().getPosition(), "expected comma or }");
+					state.err.failAndLog(state.ctokens().peek().getPosition(), "expected comma or }");
 					state.tokens().skip();
 				}
 			}
@@ -624,8 +596,7 @@ namespace assemble {
 		}
 		case rift_def::Keyword::BCFunType: {
 			if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.setFail();
-				state.err.logError(
+				state.err.failAndLog(
 					state.ctokens().peek(-1).getPosition(), "expected `{` after here"
 				);
 				return nullptr;
@@ -642,8 +613,7 @@ namespace assemble {
 				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
 					tpc::parseOne(state, rift_def::Operator::Comma);
 				} else {
-					state.err.setFail();
-					state.err.logError(state.ctokens().peek().getPosition(), "expected comma or }");
+					state.err.failAndLog(state.ctokens().peek().getPosition(), "expected comma or }");
 					state.tokens().skip();
 				}
 			}
@@ -654,8 +624,7 @@ namespace assemble {
 			break;
 		}
 		default: {
-			state.err.setFail();
-			state.err.logError(state.ctokens().peek().getPosition(), "expected variant of type");
+			state.err.failAndLog(state.ctokens().peek().getPosition(), "expected variant of type");
 			break;
 		}
 		}

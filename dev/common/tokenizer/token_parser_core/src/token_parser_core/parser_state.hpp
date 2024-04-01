@@ -61,8 +61,9 @@ namespace tpc {
 		}
 
 		/**
-		 * @return true if ate
-		 * @return false if didn't eat
+		 * @brief Skips current token if it's equal to @p key.
+		 * 
+		 * @return If the token was skipped.
 		 */
 		bool tryEat(Keyword key) {
 			if (tokens().is(key)) {
@@ -73,8 +74,9 @@ namespace tpc {
 		}
 
 		/**
-		 * @return true if ate
-		 * @return false if didn't eat
+		 * @brief Skips current token if it's equal to @p spec.
+		 * 
+		 * @return If the token was skipped.
 		 */
 		bool tryEat(Special spec) {
 			if (tokens().is(spec)) {
@@ -85,8 +87,9 @@ namespace tpc {
 		}
 
 		/**
-		 * @return true if ate
-		 * @return false if didn't eat
+		 * @brief Skips current token if it's equal to @p op.
+		 * 
+		 * @return If the token was skipped.
 		 */
 		bool tryEat(Operator op) {
 			if (tokens().is(op)) {

@@ -15,8 +15,7 @@ namespace pst {
 
 		if (out->points_to.star) {
 			out->points_to.star = false;
-			state.err.setFail();
-			state.err.logError(
+			state.err.failAndLog(
 				state.ctokens().peek(-1).getPosition(), "Alias declaration can not have `.*`"
 			);
 		}

@@ -40,7 +40,7 @@ namespace tpc {
 		/**
 		 * @brief Returns a token relative to the current position
 		 * 
-		 * @param fwd distance forward from the current position
+		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
 		const Token& peek(usize fwd = 0) const;
@@ -50,9 +50,9 @@ namespace tpc {
 		void         skip(usize n = 1);
 
 		/**
-		 * @brief Checks whether a token is recursive
+		 * @brief Checks whether a token is recursive (Contains another token stream i.e. brackets)
 		 * 
-		 * @param fwd distance forward from the current position
+		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
 		bool isRecursive(usize fwd = 0) const;
@@ -67,7 +67,7 @@ namespace tpc {
 		/**
 		 * @brief Checks whether a token is a keyword
 		 * 
-		 * @param fwd distance forward from the current position
+		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
 		bool isKeyword(usize fwd = 0) const;
@@ -77,7 +77,7 @@ namespace tpc {
 		/**
 		 * @brief Checks whether a token is a special
 		 * 
-		 * @param fwd distance forward from the current position
+		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
 		bool isSpecial(usize fwd = 0) const;
@@ -87,7 +87,7 @@ namespace tpc {
 		/**
 		 * @brief Checks whether a token is an operator
 		 * 
-		 * @param fwd distance forward from the current position
+		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
 		bool isOperator(usize fwd = 0) const;
@@ -95,7 +95,7 @@ namespace tpc {
 		 * @brief Checks whether a token is a particular operator
 		 * 
 		 * @param oper string with the chosen operator
-		 * @param fwd distance forward from the current position
+		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
 		bool isOperator(base::StrId oper, usize fwd = 0) const;
@@ -103,7 +103,7 @@ namespace tpc {
 		/**
 		 * @brief Checks whether a token is a bracket group
 		 * 
-		 * @param fwd distance forward from the current position
+		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
 		bool isBracketGroup(usize fwd = 0) const;
@@ -111,7 +111,7 @@ namespace tpc {
 		 * @brief Checks whether a token is a particular bracket group
 		 * 
 		 * @param type chosen bracket group type
-		 * @param fwd distance forward from the current position
+		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
 		bool isBracketGroup(Token::BracketType type, usize fwd = 0) const;
@@ -125,7 +125,7 @@ namespace tpc {
 		 *  - `rift_def::Special`
 		 *  - `rift_def::Operator`
 		 * 
-		 * @param fwd distance forward from the current position
+		 * @param fwd distance forward from the current position to checked token
 		 */
 		template<class T>
 		[[nodiscard]]

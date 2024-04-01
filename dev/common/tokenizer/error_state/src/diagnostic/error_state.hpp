@@ -19,15 +19,15 @@ namespace dia {
 		usize err_count = 0; ///< Number of encountered errors
 		printer::Console errorLog; ///< Error/Warning Log
 
-	public:
-		ErrorState()                        = default;
-		ErrorState(ErrorState&&)            = default;
-		ErrorState& operator=(ErrorState&&) = default;
-
 		/**
 		 * @brief Note that an error was encountered
 		 */
 		void setFail() { failbit = true; }
+
+	public:
+		ErrorState()                        = default;
+		ErrorState(ErrorState&&)            = default;
+		ErrorState& operator=(ErrorState&&) = default;
 
 		/**
 		 * @brief Add a positional error

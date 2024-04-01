@@ -17,12 +17,12 @@ namespace dia {
 	 */
 	class SourcePosition {
 	public:
-		using Source = std::shared_ptr<const fs::FilePath>;
+		using SourceFile = std::shared_ptr<const fs::FilePath>;
 
 		SourcePosition() = delete;
 
-		SourcePosition(Source source_code, usize line, usize column, usize start);
-		SourcePosition(Source source_code, usize line, usize column, usize start, usize end);
+		SourcePosition(SourceFile source_code, usize line, usize column, usize start);
+		SourcePosition(SourceFile source_code, usize line, usize column, usize start, usize end);
 		SourcePosition(const SourcePosition& other);
 		SourcePosition(const SourcePosition& other, usize end);
 
@@ -50,12 +50,12 @@ namespace dia {
 		usize  getColumn() const;
 		usize  getStart() const;
 		usize  getEnd() const;
-		Source getSource() const;
+		SourceFile getSource() const;
 
 	private:
 		usize line, column;  ///< #line, #column describe start position in code for the user
 		usize source_start,
 			source_end;      ///< #source_start, #source_end describe range of bytes in the file
-		Source source_code;  ///< pointer to source file data
+		SourceFile source_file;  ///< pointer to source file data
 	};
 }
