@@ -15,11 +15,11 @@ namespace base {
 
 	/**
 	 * @brief Id-like type that has valid values from 0 to number of items.
-	 * 
+	 *
 	 * Different id types are created by using a different template parameter.
-	 * 
+	 *
 	 * Custom id's can also be created using base::Number<[value]>.
-	 * 
+	 *
 	 * Id's can be cast to `usize` and than used as keys for a VectorMap efficiently.
 	 */
 	template<typename Par>  // parameter
@@ -32,10 +32,10 @@ namespace base {
 		id_t id;
 
 	public:
-		using SelfType = NamedId<Par>;
+		using SelfType      = NamedId<Par>;
 		using ParameterType = Par;
 		NamedId(): id(bad_val){};
-		NamedId(const SelfType& id) = default;
+		NamedId(const SelfType& id)     = default;
 		NamedId(SelfType&& id) noexcept = default;
 
 		inline SelfType& operator=(const SelfType&)             = default;
@@ -43,14 +43,20 @@ namespace base {
 
 		inline bool operator==(const SelfType& oth) const { return id == oth.id; }
 
-		[[nodiscard]] 
-		inline id_t asInt() const { return id; }
+		[[nodiscard]]
+		inline id_t asInt() const {
+			return id;
+		}
 
-		[[nodiscard]] 
-		inline bool isBad() const { return id == bad_val; }
+		[[nodiscard]]
+		inline bool isBad() const {
+			return id == bad_val;
+		}
 
-		[[nodiscard]] 
-		inline bool isGood() const { return id != bad_val; }
+		[[nodiscard]]
+		inline bool isGood() const {
+			return id != bad_val;
+		}
 
 		explicit operator id_t() const { return asInt(); }
 

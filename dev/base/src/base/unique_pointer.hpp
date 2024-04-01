@@ -48,7 +48,8 @@ namespace base {
 	};
 
 	/**
-	 * @brief Creates a `base::unique_ptr` managing an object of type `T` with a value constructed from arguments.
+	 * @brief Creates a `base::unique_ptr` managing an object of type `T` with a value constructed
+	 * from arguments.
 	 */
 	template<class T, class... Args>
 	inline unique_ptr<T> make_unique(Args&&... args) {

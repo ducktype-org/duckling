@@ -7,9 +7,7 @@ class ConcatTest: public tester::TestSuite {
 #define TESTER_CLASS ConcatTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Concat Test") {
-		TESTER_ADD_TEST(testStrConcat);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("Concat Test") { TESTER_ADD_TEST(testStrConcat); }
 
 	void testStrConcat() {
 		std::string res;
@@ -27,15 +25,21 @@ public:
 		assert(res == "1-87123456789", "strConcat returned answer other than expected");
 
 		assertThrows<std::domain_error>(
-			[](){base::strConcat("abacabadaba", nullptr);}, 
-			"strConcat of nullptr did not throw correctly");
+			[]() { base::strConcat("abacabadaba", nullptr); },
+			"strConcat of nullptr did not throw correctly"
+		);
 
 		assertThrows<std::domain_error>(
-			[](){char* ptr = nullptr; base::strConcat("abacabadaba", ptr);}, 
-			"strConcat of nullptr did not throw correctly");
+			[]() {
+				char* ptr = nullptr;
+				base::strConcat("abacabadaba", ptr);
+			},
+			"strConcat of nullptr did not throw correctly"
+		);
 	}
 
 	~ConcatTest() override = default;
+
 private:
 };
 

@@ -72,7 +72,10 @@ public:
 			throw base::NotYetImplemented("NotYetImplemented test");
 		} catch (base::NotYetImplemented& nyi) {
 			assert(
-				compareCstr(nyi.what(), "The feature is not implemented yet.\nNotYetImplemented test"), "Bad NotYetImplemented reason"
+				compareCstr(
+					nyi.what(), "The feature is not implemented yet.\nNotYetImplemented test"
+				),
+				"Bad NotYetImplemented reason"
 			);
 			return;
 		}
@@ -89,10 +92,9 @@ public:
 		fail("LogicError what not caught");
 	}
 
-
 	~ExceptionTest() override = default;
+
 private:
 };
 
 TESTER_COMMON_MAIN("/base/tests/");
-

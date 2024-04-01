@@ -13,10 +13,10 @@ namespace base {
 
 	class StrId {
 		using InnerId = base::NamedId<base::RawView>;
-		InnerId                              id;
+		InnerId id;
 
 		using ToDataType = base::VectorMap<InnerId, base::RawView>;
-		using ToIdType = base::HashMap<base::RawView, InnerId>;
+		using ToIdType   = base::HashMap<base::RawView, InnerId>;
 
 		static ToDataType to_data_map;
 		static ToIdType   to_id_map;

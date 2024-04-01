@@ -99,10 +99,10 @@ namespace base {
 
 		Optional(const T& value): private_optional(value) {}
 
-		Optional(Optional&&) noexcept = default;
-		Optional(const Optional&)            = default;
+		Optional(Optional&&) noexcept            = default;
+		Optional(const Optional&)                = default;
 		Optional& operator=(Optional&&) noexcept = default;
-		Optional& operator=(const Optional&) = default;
+		Optional& operator=(const Optional&)     = default;
 
 		template<class... Args>
 		constexpr explicit Optional(Args&&... args):
@@ -349,10 +349,10 @@ namespace base {
 
 		Optional(T& value): private_optional(std::ref(value)) {}
 
-		Optional(Optional&&) noexcept = default;
-		Optional(const Optional&)            = default;
+		Optional(Optional&&) noexcept            = default;
+		Optional(const Optional&)                = default;
 		Optional& operator=(Optional&&) noexcept = default;
-		Optional& operator=(const Optional&) = default;
+		Optional& operator=(const Optional&)     = default;
 
 		Optional& operator=(T&& other) {
 			private_optional = std::move(other);

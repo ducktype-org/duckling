@@ -12,7 +12,7 @@
 namespace base {
 	/**
 	 * @brief Map Wrapper that uses a non-inserting `[] operator`.
-	 * 
+	 *
 	 * Insertion of new elements is handled by the put method.
 	 */
 	template<class ContainerType>
@@ -24,12 +24,12 @@ namespace base {
 
 	public:
 		using SelfType = MapWrapper;
-		using KEY_T = typename ContainerType::key_type;
-		using DATA_T = typename ContainerType::mapped_type;
+		using KEY_T    = typename ContainerType::key_type;
+		using DATA_T   = typename ContainerType::mapped_type;
 
 		MapWrapper(): ContainerType(){};
 		MapWrapper(const MapWrapper& map): ContainerType(map){};
-		MapWrapper(MapWrapper&& map) noexcept : ContainerType(std::move(map)){};
+		MapWrapper(MapWrapper&& map) noexcept: ContainerType(std::move(map)){};
 		~MapWrapper() = default;
 
 		// Change operator[] behaviour:
@@ -46,8 +46,10 @@ namespace base {
 			return ContainerType::emplace(std::forward<K>(key), std::forward<D>(data));
 		}
 
-		[[nodiscard]] 
-		bool notEmpty() const { return !ContainerType::empty(); }
+		[[nodiscard]]
+		bool notEmpty() const {
+			return !ContainerType::empty();
+		}
 	};
 
 	/**
@@ -64,10 +66,10 @@ namespace base {
 
 	/**
 	 * @brief Vector based map that keeps O(max_used_key) memory but has constant time access.
-	 * 
+	 *
 	 * @tparam is_move Can be used to forbid operations that require to move a value.
 	 * @tparam is_copy Can be used to forbid operations that require to copy a value.
-	 * 
+	 *
 	 * @note Keys should be convertible to usize.
 	 */
 	template<
@@ -77,7 +79,7 @@ namespace base {
 		bool is_copy = std::is_copy_constructible_v<DATA_T>>
 	// Sanity check
 	requires base::Implication<is_move, std::is_move_constructible_v<DATA_T>>
-		&&  base::Implication<is_copy, std::is_copy_constructible_v<DATA_T>>
+	      && base::Implication<is_copy, std::is_copy_constructible_v<DATA_T>>
 	class VectorMap {
 	private:
 		std::vector<base::Optional<DATA_T>> map;
@@ -85,10 +87,10 @@ namespace base {
 
 	public:
 		using SelfType = VectorMap;
-		using IdType = KEY_T;
+		using IdType   = KEY_T;
 		using DataType = DATA_T;
 
-		using iterator = typename std::vector<base::Optional<DATA_T>>::iterator;
+		using iterator       = typename std::vector<base::Optional<DATA_T>>::iterator;
 		using const_iterator = typename std::vector<base::Optional<DATA_T>>::const_iterator;
 
 		VectorMap() = default;
@@ -100,8 +102,8 @@ namespace base {
 		~VectorMap() = default;
 
 		/**
-		 * @brief Non-inserting element access. 
-		 * 
+		 * @brief Non-inserting element access.
+		 *
 		 * Throws `base::LogicError` on bad element access.
 		 */
 		DATA_T& operator[](const KEY_T key) {
@@ -144,7 +146,7 @@ namespace base {
 
 		/**
 		 * @brief Constructs value from @p args at @p key position.
-		 * 
+		 *
 		 * @note I'm not sure this works properly with move disabled.
 		 * @note I'm not sure whether argument move shouldn't be a forward.
 		 */
@@ -175,14 +177,20 @@ namespace base {
 			return false;
 		}
 
-		[[nodiscard]] 
-		usize size() const { return element_count; }
+		[[nodiscard]]
+		usize size() const {
+			return element_count;
+		}
 
-		[[nodiscard]] 
-		bool empty() const { return element_count == 0; }
+		[[nodiscard]]
+		bool empty() const {
+			return element_count == 0;
+		}
 
-		[[nodiscard]] 
-		bool notEmpty() const { return !empty(); }
+		[[nodiscard]]
+		bool notEmpty() const {
+			return !empty();
+		}
 
 		iterator begin() { return map.begin(); }
 

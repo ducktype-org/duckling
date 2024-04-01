@@ -19,8 +19,10 @@ namespace base {
 	public:
 		constexpr FlagType() = default;
 
-		[[nodiscard]] 
-		constexpr bool contains(const FlagType& oth) const { return (data & oth.data) == oth.data; }
+		[[nodiscard]]
+		constexpr bool contains(const FlagType& oth) const {
+			return (data & oth.data) == oth.data;
+		}
 
 		constexpr FlagType operator|(const FlagType& oth) const {
 			return makeFlag(data | oth.data);

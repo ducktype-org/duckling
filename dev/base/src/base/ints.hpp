@@ -22,7 +22,7 @@ using i128 = __int128;
 
 using uchar = unsigned char;
 
-using byte = std::byte;
+using byte  = std::byte;
 using usize = std::size_t;
 
 // Code might break if following does not hold:

@@ -5,8 +5,9 @@
 
 namespace base {
 	/**
-	 * @brief Divides a list of arguments divided by commas into separate strings while ignoring any white spaces.
-	 * 
+	 * @brief Divides a list of arguments divided by commas into separate strings while ignoring any
+	 * white spaces.
+	 *
 	 * @note This solution is somewhat over engineered.
 	 */
 	std::vector<std::string> vaArgSplit(std::string_view va_arg);
@@ -15,8 +16,9 @@ namespace base {
 #define CONCAT(arg1, arg2) arg1##arg2
 /**
  * @brief Combines arguments after expanding them.
- * 
- * @note This is needed so arg1, arg2 will be expanded @n See: https://gcc.gnu.org/onlinedocs/cpp/Argument-Prescan.html
+ *
+ * @note This is needed so arg1, arg2 will be expanded @n See:
+ * https://gcc.gnu.org/onlinedocs/cpp/Argument-Prescan.html
  */
 #define CONCAT_2(arg1, arg2) CONCAT(arg1, arg2)
 

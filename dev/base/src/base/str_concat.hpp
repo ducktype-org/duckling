@@ -14,7 +14,12 @@ namespace base {
 
 	namespace detail {
 		template<typename T>
-		requires(!base::IsNumber<std::remove_reference_t<T>> && !std::is_same_v<icu::UnicodeString, std::remove_cvref_t<T>> && !std::is_pointer<std::decay_t<T>>::value && !std::is_null_pointer<std::decay_t<T>>::value)
+		requires(
+			!base::IsNumber<std::remove_reference_t<T>>
+			&& !std::is_same_v<icu::UnicodeString, std::remove_cvref_t<T>>
+			&& !std::is_pointer<std::decay_t<T>>::value
+			&& !std::is_null_pointer<std::decay_t<T>>::value
+		)
 		void strConcat(std::string& out, T&& v) {
 			out.append(std::forward<T>(v));
 		}
@@ -35,9 +40,10 @@ namespace base {
 
 		inline void strConcat(std::string& out, bool v) { out.append(v ? "true" : "false"); }
 
-		inline void strConcat(std::string& out, const char* v) { 
+		inline void strConcat(std::string& out, const char* v) {
 			if (v == nullptr) throw std::domain_error("strConcat called with nullptr");
-			out.append(std::string(v)); }
+			out.append(std::string(v));
+		}
 
 		template<typename U, typename V>
 		requires(std::is_trivially_copyable_v<U> && std::is_trivially_copyable_v<V>)

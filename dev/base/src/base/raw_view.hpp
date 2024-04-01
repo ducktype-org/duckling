@@ -5,7 +5,7 @@
 #include <string>
 
 namespace base {
-	using RawArray = const byte *;
+	using RawArray = const byte*;
 
 	class OwningView;
 
@@ -93,19 +93,15 @@ namespace base {
 
 		explicit OwningView(std::nullptr_t) {}
 
-		/** 
+		/**
 		 * @note Takes ownership, begin should be on heap.
 		 */
 		OwningView(byte* begin, usize size): begin{ begin }, size{ size } {}
 
 		// Makes copy
-		explicit OwningView(const char* const c_str) {
-			*this = RawView(c_str).memoryCopy();
-		}
+		explicit OwningView(const char* const c_str) { *this = RawView(c_str).memoryCopy(); }
 
-		OwningView static copy(RawView view) {
-			return view.memoryCopy();
-		}
+		OwningView static copy(RawView view) { return view.memoryCopy(); }
 
 		OwningView(const OwningView&) = delete;
 

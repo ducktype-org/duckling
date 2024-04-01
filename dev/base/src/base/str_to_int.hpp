@@ -7,7 +7,7 @@
 namespace base {
 	/**
 	 * @brief Converts a string to the value of the number it contains.
-	 * 
+	 *
 	 * Raises exception on error.
 	 */
 	i64 strIdToNum(base::StrId str) {

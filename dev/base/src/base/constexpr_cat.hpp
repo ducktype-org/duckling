@@ -1,11 +1,11 @@
 /**
  * @file constexpr_cat.hpp
- * @brief Constexpr concatenation of char, string literal and char sequence types. 
- * 
+ * @brief Constexpr concatenation of char, string literal and char sequence types.
+ *
  * @note For a char sequence to work it needs constexpr size() and data() methods.
- * 
+ *
  * @date 2024-03-28
- * 
+ *
  */
 #pragma once
 
@@ -42,9 +42,9 @@ namespace base {
 		}
 	}
 
-	/** 
+	/**
 	 * @brief Returns std::array<char> concatenation with supplied length.
-	 * 
+	 *
 	 * @note Unsafe when wrong length supplied.
 	 */
 	template<usize SIZE, typename... Cs>

@@ -54,9 +54,9 @@ namespace base {
 	template<bool A, bool B>
 	constexpr bool Implication = !A || B;
 
-	/** 
+	/**
 	 * @brief Returns the name of the passed type `T`.
-	 * 
+	 *
 	 * @note From https://stackoverflow.com/a/56766138
 	 */
 	template<class T>

@@ -57,6 +57,7 @@ public:
 	}
 
 	~ViewTest() override = default;
+
 private:
 };
 

@@ -7,12 +7,9 @@ class DeferTest: public tester::TestSuite {
 #define TESTER_CLASS DeferTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Defer Test") {
-		TESTER_ADD_TEST(deferTest);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("Defer Test") { TESTER_ADD_TEST(deferTest); }
 
 private:
-
 	void deferTest() {
 		i32 a = 0;
 		{ defer(a = 1); }
