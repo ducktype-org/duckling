@@ -16,22 +16,15 @@ namespace base {
 	using StableListCRef = base::c_borrow_ptr<Data>;
 
 	/**
-	 * @brief Key must be „standard” numeric value such as:
-	 * integer
-	 * strongly typed int
-	 * NamedID
-	 *
-	 * Right now StableList keys must be convertible to and from usize
-	 *
-	 * @TODO add range based iteration
-	 * @TODO for now it is simple, naive implementation in the future change it to something better
+	 * @brief Expandable list with stable references (References are valid after the addition of new elements).
+	 * 
+	 * @tparam Key must be convertible to and from usize.
+	 * 
+	 * @note Add stable range based iteration (Probably with indexes)
 	 */
 	template<typename Key, typename Data> 
 	requires std::constructible_from<Key, usize> && std::constructible_from<usize, Key>
 	class StableList {
-		/**
-		 */
-
 		std::vector<base::unique_ptr<Data>> data;
 
 	public:
@@ -47,14 +40,8 @@ namespace base {
 		[[nodiscard]] 
 		constexpr usize notEmpty() const noexcept { return !data.empty(); }
 
-		/**
-		 * @brief Quick, unsafe, constexpr access
-		 */
 		constexpr Data& operator[](Key pos) { return *data.at(usize(pos)); }
 
-		/**
-		 * @brief Quick, unsafe, constexpr access
-		 */
 		constexpr const Data& operator[](Key pos) const { return *data.at(usize(pos)); }
 
 		Optional<Ref> getRef(Key pos) noexcept {

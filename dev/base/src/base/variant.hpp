@@ -5,9 +5,7 @@
 
 #include "define_helper.hpp"
 
-// See usage in test
-
-namespace base {
+namespace base::detail {
 	template<typename... T>
 	struct VisitOverloaded: T... {
 		using T::operator()...;
@@ -63,7 +61,7 @@ namespace base {
 
 #define variant_case(type, name)                                                                  \
 	PUSH_DIAGNOSTIC NO_SHADOW break;                                                              \
-	case (base::alternative_index<decltype(internal_value), type>()):                             \
+	case (::base::detail::alternative_index<decltype(internal_value), type>()):                             \
 		if (bool variant_case_stop = true)                                                        \
 			for ([[maybe_unused]] auto& name = std::get<type>(internal_value); variant_case_stop; \
 			     variant_case_stop           = false)                                             \
@@ -71,7 +69,7 @@ namespace base {
 
 #define variant_case_novalue(type)                                    \
 	break;                                                            \
-	case (base::alternative_index<decltype(internal_value), type>()): \
+	case (::base::detail::alternative_index<decltype(internal_value), type>()): \
 		if (true)
 
 #define variant_default \
@@ -80,15 +78,15 @@ namespace base {
 		if (true)
 
 /**
- * @brief Use instead of `std::visit` with multiple choices
+ * @brief Use instead of `std::visit` with multiple choices.
  */
 #define VARIANT_VISIT(value, code) \
-	{ std::visit(::base::VisitOverloaded{ code }, (value)); }
+	{ std::visit(::base::detail::VisitOverloaded{ code }, (value)); }
 
 #define VISIT_CASE(type, name, code) [&](type name) { code; },
 
 
 /**
- * @brief Use instead of simple `std::visit`
+ * @brief Use instead of simple `std::visit`.
  */
 #define VISIT(variant_value, name, code) std::visit([&](auto&& name) { code; }, (variant_value))
