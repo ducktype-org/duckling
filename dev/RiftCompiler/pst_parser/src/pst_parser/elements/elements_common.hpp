@@ -25,7 +25,10 @@ namespace pst::detail {
 	};
 
 	/**
-	 * @brief Borrow Iterator for Containers of parserRef.
+	 * @brief Borrow Iterator for Containers of ParserRef (like std::vector<ParserRef<T> >).
+	 * It is needed because ParserRef beeing base::unique_ptr cannot be "copied".
+	 * This iterator returns ParserCBorrowRef when dereferenced
+	 * which is a wrapper for base::borrow_ptr.
 	 * 
 	 * @tparam ParserElement Element contained in the reference
 	 * @tparam Container Container that of parserRefs to the @p ParserElement .
