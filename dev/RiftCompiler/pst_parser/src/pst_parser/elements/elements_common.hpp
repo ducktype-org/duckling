@@ -1,6 +1,12 @@
 #include "../rift_parser_base.hpp"
 
 namespace pst::detail {
+
+	/**
+	 * @brief State conditions used for parsing lists.
+	 * 
+	 * @note They are defined in a class this way so that they can be template arguments.
+	 */
 	class Conditions {
 	public:
 		Conditions() = delete;
@@ -18,8 +24,14 @@ namespace pst::detail {
 		}
 	};
 
+	/**
+	 * @brief Borrow Iterator for Containers of parserRef.
+	 * 
+	 * @tparam ParserElement Element contained in the reference
+	 * @tparam Container Container that of parserRefs to the @p ParserElement .
+	 */
 	template<class ParserElement, class Container>
-	class forwardBorrowIterator {
+	class ForwardBorrowIterator {
 	private:
 		using internal_iterator = Container::const_iterator;
 		internal_iterator it;
@@ -30,62 +42,62 @@ namespace pst::detail {
 		using difference_type   = internal_iterator::difference_type;
 		using reference         = value_type;
 
-		explicit forwardBorrowIterator(): it() {}
+		explicit ForwardBorrowIterator(): it() {}
 
-		forwardBorrowIterator(const forwardBorrowIterator& other): it(other.it) {}
+		ForwardBorrowIterator(const ForwardBorrowIterator& other): it(other.it) {}
 
-		forwardBorrowIterator(const internal_iterator& other): it(other) {}
+		ForwardBorrowIterator(const internal_iterator& other): it(other) {}
 
-		explicit forwardBorrowIterator(const ParserRef<ParserElement>* ptr): it(ptr) {}
+		explicit ForwardBorrowIterator(const ParserRef<ParserElement>* ptr): it(ptr) {}
 
 		value_type operator*() const { return it->borrow(); }
 
 		value_type operator[](difference_type diff) const { return it[diff]->borrow(); }
 
-		forwardBorrowIterator& operator++() {
+		ForwardBorrowIterator& operator++() {
 			++it;
 			return *this;
 		}
 
-		forwardBorrowIterator operator++(int) { return iterator(it++); }
+		ForwardBorrowIterator operator++(int) { return iterator(it++); }
 
-		forwardBorrowIterator& operator--() {
+		ForwardBorrowIterator& operator--() {
 			--it;
 			return *this;
 		}
 
-		forwardBorrowIterator operator--(int) { return iterator(it--); }
+		ForwardBorrowIterator operator--(int) { return iterator(it--); }
 
-		forwardBorrowIterator& operator+=(difference_type diff) {
+		ForwardBorrowIterator& operator+=(difference_type diff) {
 			it += diff;
 			return *this;
 		}
 
-		forwardBorrowIterator operator+(const difference_type diff) const { return it + diff; }
+		ForwardBorrowIterator operator+(const difference_type diff) const { return it + diff; }
 
-		friend forwardBorrowIterator
-			operator+(const difference_type diff, const forwardBorrowIterator& iter) {
+		friend ForwardBorrowIterator
+			operator+(const difference_type diff, const ForwardBorrowIterator& iter) {
 			return iter.it + diff;
 		}
 
-		forwardBorrowIterator& operator-=(difference_type diff) {
+		ForwardBorrowIterator& operator-=(difference_type diff) {
 			it -= diff;
 			return *this;
 		}
 
-		forwardBorrowIterator operator-(const difference_type diff) const { return it - diff; }
+		ForwardBorrowIterator operator-(const difference_type diff) const { return it - diff; }
 
-		difference_type operator-(const forwardBorrowIterator& other) const {
+		difference_type operator-(const ForwardBorrowIterator& other) const {
 			return it - other.it;
 		}
 
-		bool operator==(const forwardBorrowIterator& other) const { return it == other.it; }
+		bool operator==(const ForwardBorrowIterator& other) const { return it == other.it; }
 
-		auto operator<=>(const forwardBorrowIterator& other) const { return it <=> other.it; }
+		auto operator<=>(const ForwardBorrowIterator& other) const { return it <=> other.it; }
 	};
 
 #define DECLARE_CONST_ELEMENT_ITERATOR(container, TypeOfElement)                              \
-	using const_iterator = detail::forwardBorrowIterator<TypeOfElement, decltype(container)>; \
+	using const_iterator = detail::ForwardBorrowIterator<TypeOfElement, decltype(container)>; \
 	const_iterator begin() const { return container.cbegin(); }                               \
 	const_iterator end() const { return container.cend(); }
 };

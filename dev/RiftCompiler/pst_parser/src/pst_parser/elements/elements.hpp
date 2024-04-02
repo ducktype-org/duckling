@@ -3,7 +3,6 @@
 #include "../rift_parser_base.hpp"
 #include "elements_common.hpp"
 
-#include <bits/iterator_concepts.h>
 #include <token_parser_core/token_stream.hpp>
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/base_element.hpp>
@@ -403,7 +402,7 @@ namespace pst {
 	};
 
 	/**
-	 * @note Should throw be an action?
+	 * @todo Should throw be an action?
 	 */
 	class Throw final: public Action {
 	public:
@@ -442,7 +441,7 @@ namespace pst {
 	};
 
 	/**
-	 * @note should assert be an action
+	 * @todo should assert be an action
 	 */
 	class Decl: public Stmt {
 	public:
