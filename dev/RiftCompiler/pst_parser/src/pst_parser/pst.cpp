@@ -11,7 +11,7 @@ namespace pst {
 			dia::ErrorState()
 		);
 		top_level              = TopLevel::parse(state);
-		std::tie(err, imports) = state.getState();
+		std::tie(err, imports) = state.extractState();
 	}
 
 	const std::vector<tpc::ParserCBorrowRef<Import>>& PST::getImports() const { return imports; }

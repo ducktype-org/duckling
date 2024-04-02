@@ -35,7 +35,7 @@ namespace pst {
 		void addImport(const tpc::ParserCBorrowRef<pst::Import>& import);
 
 		[[nodiscard]]
-		std::tuple<dia::ErrorState, std::vector<ImportType>> getState() {
+		auto extractState() -> std::tuple<dia::ErrorState, std::vector<ImportType>> {
 			return { std::move(err), std::move(imports) };
 		}
 	};
