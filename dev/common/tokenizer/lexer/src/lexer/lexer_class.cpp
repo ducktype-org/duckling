@@ -330,7 +330,8 @@ namespace lexer {
 
 		end = where;
 
-		usize fixed_line = line, fixed_column = column;
+		usize fixed_line   = line;
+		usize fixed_column = column;
 
 		if (peek().is(group_end))
 			next();  // par close
