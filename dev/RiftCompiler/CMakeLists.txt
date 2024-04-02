@@ -9,3 +9,4 @@ add_subdirectory(typesystem)
 add_subdirectory(main)
 
 add_subdirectory(playground)
+add_subdirectory(frontend)
