@@ -11,9 +11,9 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 # @FUTURE: un-if it.
 # Note: It is not that important for us (as of 11.2023).
 #       It is realated to dependecies. 
-if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0") 
 	cmake_policy(SET CMP0135 NEW)
-endif ()
+endif()
 
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_COLOR_MAKEFILE ON)
@@ -25,14 +25,14 @@ if (USE_CCACHE)
 
 	find_program(CCACHE "ccache" PATHS "scripts/ccache/ccache-4.9.1-linux-x86_64/" NO_DEFAULT_PATH REQUIRED)
 
-	if (CCACHE)
+	if(CCACHE)
 		message(STATUS "Ccache set to: ${CCACHE}")
 		# As of 02.2024 there is no better way to set configuration other then listing it here:
 		# @FUTURE It might change in the future
 		set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE};cache_dir=${CMAKE_CURRENT_SOURCE_DIR}/.ccache_cache/;max_size=1")
-	else ()
+	else()
 		message(ERROR "CCACHE not found.")
-	endif (CCACHE)
+	endif(CCACHE)
 
 endif (USE_CCACHE)
 
@@ -43,15 +43,15 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message("-- GNU compiler")
-	# '-std=c++20' is necessary for successful assembly target generation during RiftVM development
-	add_compile_options(-std=c++20 -Werror=return-type -Werror=terminate -Werror=shadow=local -Wall -Wextra -Wno-sign-compare -O2)
+  # '-std=c++20' is necessary for successful assembly target generation during RiftVM development
+  add_compile_options(-std=c++20 -Werror=return-type -Werror=terminate -Werror=shadow=local -Wall -Wextra -Wno-sign-compare -O2)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
 	# I didn't find a good -Werror=terminate alternative
 	add_compile_options(-Werror=return-type -Werror=shadow-all -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare -O2)
-else ()
+else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
-endif ()
+endif()
 
 # Wersja debug wypisuje na razie wszystkie możliwe informacje dynamicznie
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
@@ -104,13 +104,13 @@ function(rift_add_test test_pack test_name source USES)
 endfunction()
 
 define_property(TARGET PROPERTY MODULE_DIRECTORIES BRIEF_DOCS "Used for clean-modules target" FULL_DOCS "Used for clean-modules target")
-add_custom_target(clean-modules
-		echo "Deleting following directories:"
-		COMMAND echo -e "$<JOIN:$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>,\\n>"
-		COMMAND rm -rfI "$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>" || "true"
-		USES_TERMINAL
-		COMMAND_EXPAND_LISTS
-		VERBATIM)
+add_custom_target(clean-modules 
+				echo "Deleting following directories:"
+				COMMAND echo -e "$<JOIN:$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>,\\n>"
+				COMMAND rm -rfI "$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>" || "true"
+				USES_TERMINAL
+				COMMAND_EXPAND_LISTS
+				VERBATIM)
 
 function(make_module MODULE_NAME)
 	set(multiValueArgs USES INCLUDE)
@@ -119,12 +119,12 @@ function(make_module MODULE_NAME)
 	# Checks if USES is used with 0 or more arguments
 	if ((NOT make_module_USES) AND (NOT ("USES" IN_LIST make_module_KEYWORDS_MISSING_VALUES)))
 		message(FATAL_ERROR "make_module lacks uses argument")
-	endif ()
+	endif()
 
 	set_property(TARGET clean-modules APPEND PROPERTY MODULE_DIRECTORIES ${CMAKE_CURRENT_BINARY_DIR})
 
 	target_include_directories(${MODULE_NAME} PUBLIC src ${make_module_INCLUDE})
-	target_link_libraries(${MODULE_NAME} ${make_module_USES})
+	target_link_libraries(${MODULE_NAME} ${make_module_USES}) 
 endfunction()
 
 function(add_example exmaple_name source USES)
