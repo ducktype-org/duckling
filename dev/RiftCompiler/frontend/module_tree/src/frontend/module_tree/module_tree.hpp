@@ -14,12 +14,6 @@
 namespace compiler::frontend {
 
 	/**
-	 * If a filename is equal to this constant, then it is assumed it is
-	 * the `main source file` of the module.
-	 */
-	const std::string RIFT_MAIN_SOURCE_FILE = "mod.rift";
-
-	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a source file of the module.
 	 */
@@ -33,23 +27,26 @@ namespace compiler::frontend {
 
 	/**
 	 * `ModuleTree` contains source files, modules and other
-	 * files from a directory specified as root. If a module is
-	 * empty (does not contain `RIFT_MAIN_SOURCE_FILE`, then it is omitted)
+	 * files from a directory specified as root. If a module does not contain
+	 * a module file, then it is omitted.
+	 *
 	 * It is a recursive data structure.
 	 *
 	 * In order to construct ModuleTree use a factory: `ModuleTree::create(root)`.
 	 */
 	class ModuleTree {
 		/**
-		 * If a file matches to this regex, then it is omitted.
-		 * The value is set in module_tree.cpp.
+		 * If a file matches this regex, then it is omitted.
+		 * The value is set by fs::FsTree::default_reject_file_regex.
 		 */
-		static std::regex default_reject_file_regex;
+		constexpr static std::regex& default_reject_file_regex
+			= fs::FsTree::default_reject_file_regex;
 		/**
-		 * If a directory matches to this regex, then it is omitted.
-		 * The value is set in module_tree.cpp.
+		 * If a directory matches this regex, then it is omitted.
+		 * The value is set by fs::FsTree::default_reject_directory_regex.
 		 */
-		static std::regex default_reject_directory_regex;
+		constexpr static std::regex& default_reject_directory_regex
+			= fs::FsTree::default_reject_directory_regex;
 
 	public:
 		/**
@@ -158,12 +155,13 @@ namespace compiler::frontend {
 		);
 
 		/**
-		 * Adds the file to the module.
+		 * Adds the file to the module - inserts it
+		 * to m_main_source_file/m_source_files/m_submodules according to its type.
 		 * @param module_root A pointer to ModuleTree, where the file should be inserted.
-		 * @param file The file to add. It is assumed that file is a real file, not a directory.
 		 */
-		static void
-			handleNewFile(const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& file);
+		static void handleNewFile(
+			const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& filepath
+		);
 
 		/**
 		 * A pointer to the module's parent. Might be nullptr.
@@ -176,7 +174,9 @@ namespace compiler::frontend {
 
 		/**
 		 * A link to the main source file.
-		 * Has to be unique_ptr, because fs::FilePath does not have a default constructor.
+		 *
+		 * Has to be a container (like base::Optional), because fs::FilePath does
+		 * not have a default constructor.
 		 */
 		base::Optional<fs::FilePath> m_main_source_file;
 		/**

@@ -69,7 +69,8 @@ namespace fs {
 		FilePath(FilePath&&)      = default;
 		~FilePath()               = default;
 
-		FilePath(const std::filesystem::path& path): path(canonical(absolute(path))) {}
+		FilePath(const std::filesystem::path& path):
+			  path(std::filesystem::canonical(std::filesystem::absolute(path))) {}
 
 		// @TODO: this might not be perfect:
 		bool operator==(const FilePath& oth) const { return path == oth.path; }
@@ -101,7 +102,7 @@ namespace fs {
 		bool isDirectory() const noexcept;
 
 		[[nodiscard]]
-		std::filesystem::directory_iterator directory_iterator() const;
+		std::filesystem::directory_iterator directoryIterator() const;
 
 		[[nodiscard]]
 		std::string stem() const;

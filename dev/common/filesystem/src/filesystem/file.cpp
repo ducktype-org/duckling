@@ -62,7 +62,7 @@ namespace fs {
 
 	std::string FilePath::extension() const { return path.extension(); }
 
-	std::filesystem::directory_iterator FilePath::directory_iterator() const {
+	std::filesystem::directory_iterator FilePath::directoryIterator() const {
 		return std::filesystem::directory_iterator(path);
 	}
 

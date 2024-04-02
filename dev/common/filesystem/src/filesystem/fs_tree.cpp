@@ -8,7 +8,8 @@ using std::regex;
 using namespace std::filesystem;
 using namespace fs;
 
-// The default regexes.
+// These regexes catch anything, that starts with '.' or '$'.
+// These values are used by compiler::frontend::ModuleTree.
 regex FsTree::default_reject_directory_regex = regex(R"((\$.*|\..*))");
 regex FsTree::default_reject_file_regex      = regex(R"((\$.*|\..*))");
 
@@ -32,18 +33,19 @@ const fs::FilePath& FsTree::getRoot() const { return m_root; }
 void FsTree::addParent(const std::shared_ptr<FsTree>& new_parent) { m_parent = new_parent; }
 
 void FsTree::recursiveCreate(const std::shared_ptr<FsTree>& root) {
-	for (const auto& path: root->getRoot().directory_iterator()) {
+	for (const auto& path: root->getRoot().directoryIterator()) {
 		// If we don't check for this, then we might get some weird cycles.
 		if (path.is_symlink()) continue;
 
 		auto fs_path = FilePath(path);
 		if (path.is_directory()) {
+			// If a file is a directory, then instantiate a new FsTree with path as its root.
 			if (!root->isDirectoryNameValid(fs_path.name())) continue;
 			auto child = create(fs_path, root->m_reject_file_regex, root->m_reject_directory_regex);
 			child->addParent(root);
 			auto child_name = child->getRoot().name();
 			if (root->m_dirs.contains(child_name)) {
-				throw std::logic_error(base::strConcat(
+				throw base::LogicError(base::strConcat(
 					"Not unique directory name: ",
 					child_name,
 					" at: ",
@@ -54,10 +56,11 @@ void FsTree::recursiveCreate(const std::shared_ptr<FsTree>& root) {
 			}
 			root->m_dirs.put(child_name, child);
 		} else {
+			// If a file is not a directory, then add it to FsTree's files storage.
 			if (!root->isFileNameValid(fs_path.name())) continue;
 			auto file_name = fs_path.name();
 			if (root->m_files.contains(file_name))
-				throw std::logic_error(base::strConcat(
+				throw base::LogicError(base::strConcat(
 					"Not unique file name: ",
 					file_name,
 					", at: ",

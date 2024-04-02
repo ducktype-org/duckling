@@ -9,9 +9,6 @@ using fs::FsTree;
 using std::regex;
 using namespace compiler::frontend;
 
-regex ModuleTree::default_reject_file_regex      = regex(R"((\$.*|\..*))");
-regex ModuleTree::default_reject_directory_regex = regex(R"((\$.*|\..*))");
-
 bool ModuleTree::hasMainSourceFile() const { return !m_main_source_file.empty(); }
 
 void ModuleTree::buildModuleTree(
@@ -32,27 +29,40 @@ void ModuleTree::buildModuleTree(
 }
 
 void ModuleTree::handleNewFile(
-	const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& file
+	const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& filepath
 ) {
-	if (file.isDirectory()) throw std::logic_error("File is not a file, but a directory!");
+	if (filepath.isDirectory()) throw base::LogicError("File is not a file, but a directory!");
 
-	std::string stem      = file.stem();
-	std::string extension = file.extension();
+	std::string stem      = filepath.stem();
+	std::string extension = filepath.extension();
 
+	// There are 3 types of files: source files, module file, others - each if-branch handles other
+	// type.
 	if (extension == RIFT_SOURCE_FILE) {
-		if (file.name() == RIFT_MAIN_SOURCE_FILE)
-			module_root->m_main_source_file.emplace(file);
-		else
-			module_root->m_source_files.push_back(file);
+		// File contains regular source content.
+		module_root->m_source_files.push_back(filepath);
 	} else if (extension == RIFT_MODULE_FILE) {
-		auto submodule = std::shared_ptr<ModuleTree>(new ModuleTree());
-		module_root->m_submodules.put(stem, submodule);
-		submodule->m_main_source_file.emplace(file);
-		submodule->m_parent = module_root;
+		// File with a config of SOME module.
+		if (stem == module_root->getName()) {
+			// File with a config of CURRENT module.
+
+			// An assert for @aw5421 <3
+			if (module_root->m_main_source_file.has_value())
+				throw base::LogicError(base::strConcat("Module already has a main source file."));
+
+			module_root->m_main_source_file.emplace(filepath);
+		} else {
+			// Single-file module.
+			auto submodule = std::shared_ptr<ModuleTree>(new ModuleTree());
+			module_root->m_submodules.put(stem, submodule);
+			submodule->m_main_source_file.emplace(filepath);
+			submodule->m_parent = module_root;
+		}
 	} else {
+		// File contains content not related to the module.
 		if (!module_root->m_other_files.contains(extension))
 			module_root->m_other_files.put(extension, std::vector<fs::FilePath>());
-		module_root->m_other_files[extension].push_back(file);
+		module_root->m_other_files[extension].push_back(filepath);
 	}
 }
 
@@ -90,7 +100,7 @@ std::string ModuleTree::prettyPrint(u32 indentation) const {
 }
 
 const fs::FilePath& ModuleTree::getMainSourceFile() const {
-	if (m_main_source_file.empty()) throw std::logic_error("No main source file!");
+	if (m_main_source_file.empty()) throw base::LogicError("No main source file!");
 	return *m_main_source_file;
 }
 

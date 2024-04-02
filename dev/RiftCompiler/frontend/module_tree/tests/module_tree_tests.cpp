@@ -7,6 +7,7 @@ class ModuleTreeTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ModuleTreeTest
 
+	// This regex catches anything, that starts with '.' or '$'.
 	const std::regex test_regex = std::regex(R"(\..*|\$.*)");
 
 public:

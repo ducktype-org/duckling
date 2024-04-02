@@ -10,7 +10,7 @@
 
 namespace fs {
 	/**
-	 * A recursive structure, that holds information about a filesystem.
+	 * A recursive structure, that holds information about a given directory.
 	 * In order to construct this structure, use FsTree::create factory.
 	 */
 	class FsTree {
@@ -18,6 +18,9 @@ namespace fs {
 		/**
 		 * If a file matches to this regex, then it is omitted.
 		 * The value is set in module_tree.cpp.
+		 *
+		 * A note for the future: std::regex is not well optimized, so we could replace it with
+		 * some other library.
 		 */
 		static std::regex default_reject_file_regex;
 		/**
@@ -32,7 +35,7 @@ namespace fs {
 		 * std::string/fs::FilePath/std::filesystem::path.
 		 * @param file_reject A regex used to reject files.
 		 * @param dir_reject A regex used to reject directories.
-		 * @return
+		 * @return The newly-constructed FsTree.
 		 */
 		static std::shared_ptr<FsTree> create(
 			const auto&       root,
@@ -103,17 +106,21 @@ namespace fs {
 
 		/**
 		 * Recursively construct the tree inplace of root.
+		 *
+		 * This function implements the filling process of the tree.
+		 *
+		 * If a file in the root directory is a directory then creates a new FsTree
+		 * and it to m_dirs, else (when a file is a regular file) adds it to the m_files.
 		 * @param root The tree to be used as a base.
-		 * @return The unique pointer that was initially passed to the function.
 		 */
 		static void recursiveCreate(const std::shared_ptr<FsTree>& root);
 
 		/**
-		 * An owned by tree version of a regex for rejecting files.
+		 * A user-defined instance of a regex for rejecting files.
 		 */
 		std::regex m_reject_file_regex;
 		/**
-		 * An owned by tree version of a regex for rejecting directories.
+		 * A user-defined instance of a regex for rejecting directories.
 		 */
 		std::regex m_reject_directory_regex;
 
