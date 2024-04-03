@@ -69,7 +69,8 @@ namespace fs {
 		FilePath(FilePath&&)      = default;
 		~FilePath()               = default;
 
-		FilePath(const std::filesystem::path& path): path(std::filesystem::absolute(path)) {}
+		FilePath(const std::filesystem::path& path):
+			  path(std::filesystem::canonical(std::filesystem::absolute(path))) {}
 
 		// @TODO: this might not be perfect:
 		bool operator==(const FilePath& oth) const { return path == oth.path; }
@@ -86,9 +87,27 @@ namespace fs {
 		FilePath parentPath() const;
 
 		[[nodiscard]]
-		bool isFile(const std::string& ext = "") const noexcept;
+		std::string absolutePath() const;
+
+		[[nodiscard]]
+		std::string name() const;
+
+		[[nodiscard]]
+		std::chrono::file_clock::time_point getModifyTime() const;
+
+		[[nodiscard]]
+		bool isFile() const noexcept;
+
 		[[nodiscard]]
 		bool isDirectory() const noexcept;
+
+		[[nodiscard]]
+		std::filesystem::directory_iterator directoryIterator() const;
+
+		[[nodiscard]]
+		std::string stem() const;
+		[[nodiscard]]
+		std::string extension() const;
 	};
 
 	base::OwningView getSimpleFileContent(const std::string& file_name);
