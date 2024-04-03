@@ -5,7 +5,6 @@
 #pragma once
 
 #include <lexer/token.hpp>
-#include <base/string_id.hpp>
 
 namespace tpc {
 	using lexer::Keyword;
@@ -23,7 +22,7 @@ namespace tpc {
 		const Tokens& tokens; ///< Source list of tokens
 		usize         where = 0; ///< current position
 		usize to; ///< end position
-		lexer::Token sentinel_end; ///< Token to return if out of bounds
+		Token sentinel_end; ///< Token to return if out of bounds
 
 	public:
 		TokenStream()             = delete;
@@ -50,7 +49,7 @@ namespace tpc {
 		void         skip(usize n = 1);
 
 		/**
-		 * @brief Checks whether a token is recursive (Contains another token stream i.e. brackets)
+		 * @brief Checks whether a token is recursive (i.e. contains another token stream, e.g. brackets)
 		 * 
 		 * @param fwd distance forward from the current position to checked token
 		 */
@@ -125,11 +124,12 @@ namespace tpc {
 		 *  - `rift_def::Special`
 		 *  - `rift_def::Operator`
 		 * 
+		 * @param t the token
 		 * @param fwd distance forward from the current position to checked token
 		 */
 		template<class T>
 		[[nodiscard]]
-		bool is(T t, usize fwd = 0) const {
+		bool is(T t, const usize fwd = 0) const {
 			return peek(fwd).is(t);
 		}
 
