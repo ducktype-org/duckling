@@ -61,7 +61,7 @@ namespace tpc {
 		/**
 		 * @brief Logs an error relatively to the current token
 		 */
-		void fail(usize rel_pos, const std::string &message) {
+		void fail(usize rel_pos, const std::string& message) {
 			err.failAndLog(ctokens().peek(rel_pos).getPosition(), message);
 		}
 
