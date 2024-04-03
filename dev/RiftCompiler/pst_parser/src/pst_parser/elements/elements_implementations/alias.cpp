@@ -12,8 +12,7 @@ namespace pst {
 		parseAll(state, Keyword::Alias, &out->name, Operator::Assign, &out->points_to);
 
 		if (out->points_to->getStar()) {
-			state.err.setFail();
-			state.err.logError(
+			state.err.failAndLog(
 				state.ctokens().peek(-1).getPosition(), "Alias declaration can not have `.*`"
 			);
 		}
@@ -24,7 +23,7 @@ namespace pst {
 	void Alias::dprint(std::ostream& out) const {
 		out << "{\"Alias\": {";
 
-		out << base::strConcat(R"("name": ")", name.value, R"(",)");
+		out << strConcat(R"("name": ")", name.value, R"(",)");
 
 		out << R"("points_to": )";
 
