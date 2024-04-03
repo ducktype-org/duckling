@@ -116,8 +116,6 @@ namespace rift_def {
 		// Misc:
 
 		// Rift Test:
-		RiftTestEagerLookup,
-
 
 		// BC:
 		BCFunction,

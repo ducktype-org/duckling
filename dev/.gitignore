@@ -7,16 +7,15 @@ Testing/
 CTestTestfile.cmake
 DartConfiguration.tcl
 compile_commands.json
+CMakeUserPresets.json
  
 coverage/
 coverage.info
 
-# IDE configs
-compile_commands.json
-
 # windows cmake
 out/build/
 build/
+build*/
 
 # bin:
 bin/

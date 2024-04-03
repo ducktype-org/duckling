@@ -1,0 +1,219 @@
+{
+	"PST": [
+		{
+			"Fun": {
+				"name": {
+					"Name": "A"
+				},
+				"params": {
+					"List": []
+				},
+				"rets": {
+					"List": [
+						{
+							"Expr": [
+								{
+									"KeywordValue": "i32"
+								},
+							]
+						},
+					]
+				},
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": []
+					}
+				}
+			}
+		},
+		{
+			"Fun": {
+				"name": {
+					"Name": "A"
+				},
+				"params": {
+					"List": []
+				},
+				"rets": {
+					"List": [
+						{
+							"Expr": [
+								{
+									"NumLiteral": "1"
+								},
+								{
+									"Operator": "+"
+								},
+								{
+									"NumLiteral": "1"
+								},
+							]
+						},
+					]
+				},
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": []
+					}
+				}
+			}
+		},
+		{
+			"Fun": {
+				"name": {
+					"Name": "A"
+				},
+				"params": {
+					"List": []
+				},
+				"rets": {
+					"List": [
+						{
+							"Expr": [
+								{
+									"KeywordValue": "i32"
+								},
+							]
+						},
+						{
+							"Expr": [
+								{
+									"KeywordValue": "i32"
+								},
+							]
+						},
+					]
+				},
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": []
+					}
+				}
+			}
+		},
+		{
+			"Fun": {
+				"name": {
+					"Name": "A"
+				},
+				"params": {
+					"List": []
+				},
+				"rets": {
+					"List": [
+						{
+							"Expr": [
+								{
+									"KeywordValue": "i32"
+								},
+							]
+						},
+						{
+							"Expr": [
+								{
+									"NumLiteral": "1"
+								},
+								{
+									"Operator": "+"
+								},
+								{
+									"NumLiteral": "1"
+								},
+							]
+						},
+						{
+							"Expr": [
+								{
+									"Group": {
+										"type": "()",
+										"expr": {
+											"Expr": [
+												{
+													"Identifier": "abc"
+												},
+											]
+										}
+									}
+								},
+							]
+						},
+						{
+							"Expr": [
+								{
+									"Identifier": "x"
+								},
+							]
+						},
+					]
+				},
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": []
+					}
+				}
+			}
+		},
+		{
+			"Fun": {
+				"name": {
+					"Name": "A"
+				},
+				"params": {
+					"List": []
+				},
+				"rets": {
+					"List": [
+						{
+							"Expr": [
+								{
+									"KeywordValue": "i32"
+								},
+							]
+						},
+						{
+							"Expr": [
+								{
+									"NumLiteral": "1"
+								},
+								{
+									"Operator": "+"
+								},
+								{
+									"NumLiteral": "1"
+								},
+							]
+						},
+						{
+							"Expr": [
+								{
+									"Group": {
+										"type": "()",
+										"expr": {
+											"Expr": [
+												{
+													"Identifier": "abc"
+												},
+											]
+										}
+									}
+								},
+							]
+						},
+						{
+							"Expr": [
+								{
+									"Identifier": "x"
+								},
+							]
+						},
+					]
+				},
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": []
+					}
+				}
+			}
+		},
+	]
+}

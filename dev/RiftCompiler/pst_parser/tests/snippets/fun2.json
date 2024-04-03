@@ -1,0 +1,133 @@
+{
+	"PST": [
+		{
+			"Fun": {
+				"name": {
+					"Name": "foo"
+				},
+				"params": {
+					"List": [
+						{
+							"Expr": [
+								{
+									"Identifier": "a"
+								},
+							]
+						},
+						{
+							"Expr": [
+								{
+									"Identifier": "b"
+								},
+							]
+						},
+					]
+				},
+				"rets": "<nullptr>",
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": []
+					}
+				}
+			}
+		},
+		{
+			"Fun": {
+				"name": {
+					"Name": "foo"
+				},
+				"params": {
+					"List": [
+						{
+							"Expr": [
+								{
+									"Identifier": "a"
+								},
+								{
+									"Operator": ":"
+								},
+								{
+									"KeywordValue": "i32"
+								},
+							]
+						},
+						{
+							"Expr": [
+								{
+									"Identifier": "b"
+								},
+							]
+						},
+					]
+				},
+				"rets": "<nullptr>",
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": []
+					}
+				}
+			}
+		},
+		{
+			"Fun": {
+				"name": {
+					"Name": "foo"
+				},
+				"params": {
+					"List": [
+						{
+							"Expr": [
+								{
+									"Identifier": "a"
+								},
+							]
+						},
+						{
+							"Expr": [
+								{
+									"Identifier": "b"
+								},
+								{
+									"Operator": ":"
+								},
+								{
+									"KeywordValue": "i32"
+								},
+							]
+						},
+					]
+				},
+				"rets": "<nullptr>",
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": []
+					}
+				}
+			}
+		},
+		{
+			"Fun": {
+				"name": {
+					"Name": "foo"
+				},
+				"params": {
+					"List": [
+						{
+							"Expr": [
+								{
+									"Identifier": "a"
+								},
+							]
+						},
+					]
+				},
+				"rets": "<nullptr>",
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": []
+					}
+				}
+			}
+		},
+	]
+}

@@ -4,6 +4,8 @@ project(Rift)
 cmake_policy(SET CMP0079 NEW)
 cmake_policy(SET CMP0054 NEW)
 
+set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+
 # This is ifed-out, because it is
 # avaiable only from CMAKE 3.24.
 # @FUTURE: un-if it.
@@ -13,12 +15,43 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
 	cmake_policy(SET CMP0135 NEW)
 endif()
 
+set(CMAKE_COLOR_DIAGNOSTICS ON)
+set(CMAKE_COLOR_MAKEFILE ON)
+
+option(USE_CCACHE "Use ccache" OFF)
+
+if (USE_CCACHE)
+	message(NOTICE "Ccache might not work with generators other then make or ninja!")
+
+	find_program(CCACHE "ccache" PATHS "scripts/ccache/ccache-4.9.1-linux-x86_64/" NO_DEFAULT_PATH REQUIRED)
+
+	if(CCACHE)
+		message(STATUS "Ccache set to: ${CCACHE}")
+		# As of 02.2024 there is no better way to set configuration other then listing it here:
+		# @FUTURE It might change in the future
+		set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE};cache_dir=${CMAKE_CURRENT_SOURCE_DIR}/.ccache_cache/;max_size=1")
+	else()
+		message(ERROR "CCACHE not found.")
+	endif(CCACHE)
+
+endif (USE_CCACHE)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-set(CMAKE_CXX_FLAGS "-Werror=return-type -Werror=terminate -Werror=shadow=local -Wall -Wextra -Wno-sign-compare -O2")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	message("-- GNU compiler")
+  # '-std=c++20' is necessary for successful assembly target generation during RiftVM development
+  add_compile_options(-std=c++20 -Werror=return-type -Werror=terminate -Werror=shadow=local -Wall -Wextra -Wno-sign-compare -O2)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+	message("-- Clang compiler")
+	# I didn't find a good -Werror=terminate alternative
+	add_compile_options(-Werror=return-type -Werror=shadow-all -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare -O2)
+else()
+	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
+endif()
 
 # Wersja debug wypisuje na razie wszystkie możliwe informacje dynamicznie
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
@@ -70,6 +103,15 @@ function(rift_add_test test_pack test_name source USES)
 	endif ()
 endfunction()
 
+define_property(TARGET PROPERTY MODULE_DIRECTORIES BRIEF_DOCS "Used for clean-modules target" FULL_DOCS "Used for clean-modules target")
+add_custom_target(clean-modules 
+				echo "Deleting following directories:"
+				COMMAND echo -e "$<JOIN:$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>,\\n>"
+				COMMAND rm -rfI "$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>" || "true"
+				USES_TERMINAL
+				COMMAND_EXPAND_LISTS
+				VERBATIM)
+
 function(make_module MODULE_NAME)
 	set(multiValueArgs USES INCLUDE)
 	cmake_parse_arguments(make_module "" "" "${multiValueArgs}" ${ARGN})
@@ -78,6 +120,8 @@ function(make_module MODULE_NAME)
 	if ((NOT make_module_USES) AND (NOT ("USES" IN_LIST make_module_KEYWORDS_MISSING_VALUES)))
 		message(FATAL_ERROR "make_module lacks uses argument")
 	endif()
+
+	set_property(TARGET clean-modules APPEND PROPERTY MODULE_DIRECTORIES ${CMAKE_CURRENT_BINARY_DIR})
 
 	target_include_directories(${MODULE_NAME} PUBLIC src ${make_module_INCLUDE})
 	target_link_libraries(${MODULE_NAME} ${make_module_USES}) 
@@ -143,4 +187,6 @@ option(BUILD_DOCS "Build test programs" ON)
 
 if (BUILD_DOCS)
 	add_subdirectory(docs)
+	# add_custom_target(docs-clean make -s -f CmakeFiles/Makefile2 docs/clean)
+	# add_custom_target(docs-clean ninja -t clean docs)
 endif (BUILD_DOCS)

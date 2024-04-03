@@ -1,3 +1,4 @@
+#include <memory>
 #include <mutex>
 #include <base/variant.hpp>
 #include "vcpu.hpp"
@@ -43,7 +44,7 @@ namespace vm {
 			output_stream = base::make_unique<std::stringstream>(std::stringstream());
 		}
 		serviceManager.get<vm::Executor>().prestart();
-		coreThread.reset(new std::thread([this] {
+		coreThread = std::make_unique<std::thread>([this] {
 			try {
 				serviceManager.get<vm::Executor>().run(*loadedCode);
 
@@ -52,7 +53,7 @@ namespace vm {
 				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";
 				onEvent(api::VCPUStatus{ api::Panicked(e) });
 			}
-		}));
+		});
 		return api::Response(api::response::Empty());
 	}
 
@@ -70,7 +71,7 @@ namespace vm {
 		VCPU::input(const api::request::Input& request) {
 		// TODO: add checking for stdio
 		std::unique_lock lock(input_mutex);
-		input_stream->write(request.input.c_str(), request.input.size());
+		input_stream->write(request.input.c_str(), std::streamsize(request.input.size()));
 		serviceManager.get<vm::Executor>().notifyPaused();
 		return api::Response(api::response::Empty());
 	}
@@ -150,15 +151,8 @@ namespace vm {
 				}
 			}
 			variant_case(api::request::Block, block_request) {
-				response
-					= dataManager.get<vm::Memory>()
-				          .getBlock(block_request.block_id)
-				          .map([](Block* block_ptr) {
-							  return api::Response(api::response::Block{ block_ptr->rawPointer() });
-						  })
-				          .map_error([](auto& error) {
-							  return api::CoreOperationError{ api::OtherError(error) };
-						  });
+				response = api::Response(api::response::Block{
+					dataManager.get<vm::Memory>().getBlock(block_request.block_id)->rawPointer() });
 			}
 			variant_default { response = api::Response(api::response::Empty()); }
 		}

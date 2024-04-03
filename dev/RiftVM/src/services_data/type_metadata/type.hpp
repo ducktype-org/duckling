@@ -68,9 +68,21 @@ namespace vm {
 		void finalize();
 
 		// Type query:
-		TypeId      getId() const;
-		base::StrId getName() const;
-		TypeSize    getSize() const;
+		[[nodiscard]]
+		inline TypeId getId() const {
+			return id;
+		}
+
+		[[nodiscard]]
+		inline base::StrId getName() const {
+			return name;
+		}
+
+		[[nodiscard]]
+		inline TypeSize getSize() const {
+			RIFT_ASSERT(size != TypeSize(-1), "getSize called before type finalization");
+			return size;
+		}
 
 		template<class T>
 		base::Optional<const T&> get() const {
@@ -78,9 +90,15 @@ namespace vm {
 			return {};
 		}
 
-		Kind getKind() const;
+		[[nodiscard]]
+		inline Kind getKind() const {
+			return kind_type;
+		}
 
-		bool isPrimitive(TypeSize size) const;
+		[[nodiscard]]
+		inline bool isPrimitive(TypeSize qsize) const {
+			return getKind() == Kind::Primitive and getSize() == qsize;
+		}
 
 		base::Optional<TypeCRef> getLowestTypeAtPos(Offset pos) const;
 

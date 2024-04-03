@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+#include <ranges>
 
 namespace base {
 	template<class T>
@@ -28,14 +29,12 @@ namespace base {
 
 		bool operator==(std::nullptr_t) const { return ptr == nullptr; }
 
-		borrow_ptr(const borrow_ptr<T>& other) noexcept: ptr(other.ptr) {}
+		borrow_ptr(const borrow_ptr<T>& other) noexcept = default;
 
 		borrow_ptr(borrow_ptr<T>&& other) noexcept: borrow_ptr() { swap(*this, other); }
 
 		template<class U>
-		borrow_ptr(const borrow_ptr<U>& other) noexcept: borrow_ptr() {
-			ptr = static_cast<T*>(other.ptr);
-		}
+		borrow_ptr(const borrow_ptr<U>& other) noexcept: ptr(static_cast<T*>(other.ptr)) {}
 
 		friend void swap(borrow_ptr<T>& first, borrow_ptr<T>& second) noexcept {
 			std::swap(first.ptr, second.ptr);
@@ -53,6 +52,18 @@ namespace base {
 		T* operator->() const noexcept { return get(); }
 
 		T* get() const noexcept { return ptr; }
+
+		auto begin() const
+		requires std::ranges::range<T>
+		{
+			return (*this)->begin();
+		}
+
+		auto end() const
+		requires std::ranges::range<T>
+		{
+			return (*this)->end();
+		}
 	};
 
 	template<class T>

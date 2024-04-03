@@ -11,13 +11,13 @@
 namespace dia {
 	/**
 	 * @brief Class used to store whether there was no error and errors for later output
-	 * 
+	 *
 	 * @note We will later change to storing errors in a more structured way, not just a string
 	 */
 	class ErrorState {
-		bool  failbit   = false; ///< Whether an error was encountered
-		usize err_count = 0; ///< Number of encountered errors
-		printer::Console errorLog; ///< Error/Warning Log
+		bool             failbit   = false;  ///< Whether an error was encountered
+		usize            err_count = 0;      ///< Number of encountered errors
+		printer::Console errorLog;           ///< Error/Warning Log
 
 		/**
 		 * @brief Note that an error was encountered
@@ -31,33 +31,33 @@ namespace dia {
 
 		/**
 		 * @brief Add a positional error
-		 * 
+		 *
 		 * @param position position of the token from which the error originated
 		 * @param message custom message to include in the error
 		 */
 		void failAndLog(const SourcePosition& position, std::string_view message);
 		/**
 		 * @brief Add a non-fatal positional error
-		 * 
+		 *
 		 * @param position position of the token from which the error originated
 		 * @param message custom message to include in the error
 		 */
 		void logError(const SourcePosition& position, std::string_view message);
 		/**
 		 * @brief Add an error
-		 * 
+		 *
 		 * @param message custom message to include in the error
 		 */
-		void failAndLog(printer::Message message);
+		void failAndLog(const printer::Message& message);
 		/**
 		 * @brief Add a non-fatal error
-		 * 
+		 *
 		 * @param message custom message to include in the error
 		 */
-		void logError(printer::Message message);
+		void logError(const printer::Message& message);
 		/**
 		 * @brief Print current errors to output
-		 * 
+		 *
 		 * @param stream output stream
 		 */
 		void dumpLog(std::ostream& stream = std::cerr) const;

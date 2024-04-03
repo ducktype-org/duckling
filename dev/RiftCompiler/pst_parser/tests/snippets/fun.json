@@ -1,0 +1,55 @@
+{
+	"PST": [
+		{
+
+			"Attribute": {
+				"name": {
+					"Name": "ATRR"
+				}
+			}
+		},
+		{
+			"Fun": {
+				"name": {
+					"Name": "c"
+				},
+				"params": {
+					"List": []
+				},
+				"rets": "<nullptr>",
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": [
+							{
+								"Expr": [
+									{
+										"Identifier": "x"
+									},
+									{
+										"Operator": "="
+									},
+									{
+										"NumLiteral": "3"
+									}
+								]
+							},
+							{
+								"Expr": [
+									{
+										"Identifier": "y"
+									},
+									{
+										"Operator": "="
+									},
+									{
+										"NumLiteral": "4"
+									}
+								]
+							}
+						]
+					}
+				}
+			}
+		}
+	]
+}

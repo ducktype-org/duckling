@@ -30,6 +30,8 @@ Functionalities
 
 .. doxygendefine:: RIFT_ASSERT
 
+.. _rift-panic-ref:
+
 .. doxygendefine:: RIFT_PANIC
 
 

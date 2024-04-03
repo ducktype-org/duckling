@@ -1,0 +1,181 @@
+{
+	"PST": [
+		{
+			"Fun": {
+				"name": {
+					"Name": "foo"
+				},
+				"params": {
+					"List": []
+				},
+				"rets": "<nullptr>",
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": [
+							{
+								"Expr": [
+									{
+										"Identifier": "a"
+									},
+									{
+										"Operator": ":"
+									},
+									{
+										"Identifier": "T"
+									},
+								]
+							},
+							{
+								"Defer": {
+									"what": {
+										"Expr": [
+											{
+												"Identifier": "a"
+											},
+											{
+												"Operator": "."
+											},
+											{
+												"Identifier": "close"
+											},
+											{
+												"Group": {
+													"type": "()",
+													"expr": {
+														"Expr": []
+													}
+												}
+											},
+										]
+									}
+								}
+							},
+							{
+								"While": {
+									"name": {
+										"Name": "A"
+									},
+									"condition": {
+										"RoundGroupExpr": {
+											"Expr": [
+												{
+													"KeywordValue": "true"
+												},
+											]
+										}
+									},
+									"body": {
+										"CodeBlockOrStmt": {
+											"CodeBlock": [
+												{
+													"While": {
+														"name": {
+															"Name": "B"
+														},
+														"condition": {
+															"RoundGroupExpr": {
+																"Expr": [
+																	{
+																		"KeywordValue": "true"
+																	},
+																]
+															}
+														},
+														"body": {
+															"CodeBlockOrStmt": {
+																"CodeBlock": [
+																	{
+																		"Break": {
+																			"from": {
+																				"Expr": [
+																					{
+																						"Identifier": "A"
+																					},
+																				]
+																			}
+																		}
+																	},
+																	{
+																		"Break"
+																	},
+																	{
+																		"Continue": {
+																			"with": {
+																				"Expr": [
+																					{
+																						"Identifier": "B"
+																					},
+																				]
+																			}
+																		}
+																	},
+																	{
+																		"Continue"
+																	},
+																	{
+																		"Redo": {
+																			"what": {
+																				"Expr": [
+																					{
+																						"Identifier": "A"
+																					},
+																				]
+																			}
+																		}
+																	},
+																	{
+																		"Redo"
+																	},
+																	{
+																		"Restart": {
+																			"what": {
+																				"Expr": [
+																					{
+																						"Identifier": "B"
+																					},
+																				]
+																			}
+																		}
+																	},
+																	{
+																		"Restart"
+																	},
+																	{
+																		"Throw": {
+																			"exception": {
+																				"Expr": [
+																					{
+																						"NumLiteral": "123"
+																					},
+																				]
+																			}
+																		}
+																	},
+																]
+															}
+														}
+													}
+												},
+											]
+										}
+									}
+								}
+							},
+							{
+								"Return": {
+									"with": {
+										"Expr": [
+											{
+												"NumLiteral": "12"
+											},
+										]
+									}
+								}
+							},
+						]
+					}
+				}
+			}
+		},
+	]
+}

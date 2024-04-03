@@ -27,8 +27,9 @@ namespace tpc {
 
 	/**
 	 * @brief constructs a new `ParserRef<T>` from arguments
-	 * 
-	 * @note this function does slightly different thing than the other makeRef, so maybe change its name.
+	 *
+	 * @note this function does slightly different thing than the other makeRef, so maybe change its
+	 * name.
 	 */
 	template<class T, class... Args>
 	ParserRef<T> makeRef(Args&&... args) {

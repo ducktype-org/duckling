@@ -31,14 +31,14 @@ namespace assemble {
 		base::StrId label_name;
 	};
 
-	typedef std::variant<OpCodeNumArg, OpCodeLabelArg> OpCodeAnyArg;
+	using OpCodeAnyArg = std::variant<OpCodeNumArg, OpCodeLabelArg>;
 
 	/// TODO: delete redundant using (the same as in type.hpp)
 	using TypeSize = u64;
 
 	struct PrimitiveType {
 		base::StrId name;
-		TypeSize    size;
+		TypeSize    size{};
 
 		void dprint(std::ostream& out) const {
 			out << "primitive {\n";
@@ -371,7 +371,9 @@ namespace assemble {
 			case rift_def::Keyword::BCArgSize: {
 				tpc::parseOne(state, rift_def::Operator::Colon);
 				if (out->arg_size != size_t_max) {
-					state.err.failAndLog(state.ctokens().peek().getPosition(), "arg_size duplicate");
+					state.err.failAndLog(
+						state.ctokens().peek().getPosition(), "arg_size duplicate"
+					);
 				}
 				auto value = state.tokens().next();
 
@@ -421,7 +423,9 @@ namespace assemble {
 			case rift_def::Keyword::BCRetSize: {
 				tpc::parseOne(state, rift_def::Operator::Colon);
 				if (out->ret_size != size_t_max) {
-					state.err.failAndLog(state.ctokens().peek().getPosition(), "ret_size duplicate");
+					state.err.failAndLog(
+						state.ctokens().peek().getPosition(), "ret_size duplicate"
+					);
 				}
 				auto value = state.tokens().next();
 				if (!value.isNumLiteral()) {
@@ -447,9 +451,8 @@ namespace assemble {
 
 			case rift_def::Keyword::BCCode: {
 				tpc::parseOne(state, rift_def::Operator::Colon);
-				if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
+				if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly))
 					state.err.failAndLog(state.ctokens().peek().getPosition(), "no {} on code:");
-				}
 
 				state.goDown();
 				tpc::parseOne(state, &out->code);
@@ -458,7 +461,9 @@ namespace assemble {
 			}
 
 			default:
-				state.err.failAndLog(state.ctokens().peek().getPosition(), "bad keyword in function");
+				state.err.failAndLog(
+					state.ctokens().peek().getPosition(), "bad keyword in function"
+				);
 			}
 		}
 
@@ -505,11 +510,10 @@ namespace assemble {
 		}
 		case rift_def::Keyword::BCPointer: {
 			auto pointered_type = state.tokens().next();
-			if (!pointered_type.isIdentifier()) {
+			if (!pointered_type.isIdentifier())
 				state.err.failAndLog(state.ctokens().peek().getPosition(), "expected identifier");
-			} else {
+			else
 				out->datatype = PointerType{ name, pointered_type.getValue() };
-			}
 			break;
 		}
 		case rift_def::Keyword::BCStaticTable: {
@@ -531,11 +535,10 @@ namespace assemble {
 		}
 		case rift_def::Keyword::BCDynamicTable: {
 			const lexer::Token& type_name = state.tokens().next();
-			if (!type_name.isIdentifier()) {
+			if (!type_name.isIdentifier())
 				state.err.failAndLog(state.ctokens().peek().getPosition(), "expected identifier");
-			} else {
+			else
 				out->datatype = DynamicTableType{ name, type_name.getValue() };
-			}
 			break;
 		}
 		case rift_def::Keyword::BCData: {
@@ -559,7 +562,9 @@ namespace assemble {
 				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
 					tpc::parseOne(state, rift_def::Operator::Comma);
 				} else {
-					state.err.failAndLog(state.ctokens().peek().getPosition(), "expected comma or }");
+					state.err.failAndLog(
+						state.ctokens().peek().getPosition(), "expected comma or }"
+					);
 					state.tokens().skip();
 				}
 			}
@@ -586,7 +591,9 @@ namespace assemble {
 				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
 					tpc::parseOne(state, rift_def::Operator::Comma);
 				} else {
-					state.err.failAndLog(state.ctokens().peek().getPosition(), "expected comma or }");
+					state.err.failAndLog(
+						state.ctokens().peek().getPosition(), "expected comma or }"
+					);
 					state.tokens().skip();
 				}
 			}
@@ -613,7 +620,9 @@ namespace assemble {
 				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
 					tpc::parseOne(state, rift_def::Operator::Comma);
 				} else {
-					state.err.failAndLog(state.ctokens().peek().getPosition(), "expected comma or }");
+					state.err.failAndLog(
+						state.ctokens().peek().getPosition(), "expected comma or }"
+					);
 					state.tokens().skip();
 				}
 			}
@@ -718,18 +727,21 @@ namespace assemble {
 				}
 				variant_case(DataType, data) {
 					std::vector<std::pair<base::StrId COMMA vm::TypeRef>> fields;
+					fields.reserve(data.fields.size());
 					for (auto& field: data.fields)
 						fields.emplace_back(field.name, type_map[field.type]);
 					type_map[data.name]->defineData(fields);
 				}
 				variant_case(VariantType, data) {
 					std::vector<vm::TypeRef> variants;
+					variants.reserve(data.variant_alternatives.size());
 					for (auto& variant: data.variant_alternatives)
 						variants.emplace_back(type_map[variant]);
 					type_map[data.name]->defineVariant(variants);
 				}
 				variant_case(FunctionType, data) {
 					std::vector<vm::TypeCRef> parameters;
+					parameters.reserve(data.parameters.size());
 					for (auto& param: data.parameters) parameters.emplace_back(type_map[param]);
 					type_map[data.name]->defineFunction(parameters, type_map[data.result]);
 				}
@@ -757,7 +769,8 @@ namespace assemble {
 		}
 	}
 
-	vm::FuncData changeFuncToFuncData(tpc::ParserCBorrowRef<Func> func, vm::TypeMetadata& types) {
+	vm::FuncData
+		changeFuncToFuncData(const tpc::ParserCBorrowRef<Func>& func, vm::TypeMetadata& types) {
 		vm::FuncData funcData;
 		funcData.ret_size   = 0;
 		funcData.arg_size   = func->arg_size;
@@ -783,39 +796,37 @@ namespace assemble {
 				}
 			}
 
+			i64 arg_0 = 0;
+			i64 arg_1 = 0;
 			switch (op->args.size()) {
 			case 0: {
-				funcData.bc.emplace_back(vm::Fix8Instruction{
-					.opcode = nameToOpcodeValue(op->opcode_name), .arg0 = 0, .arg1 = 0 });
 				break;
 			}
 			case 1: {
-				i64 arg_0;
 				std::visit([&arg_0](auto& arg) { arg_0 = arg.value; }, op->args[0]);
-				funcData.bc.emplace_back(vm::Fix8Instruction{ .opcode
-				                                              = nameToOpcodeValue(op->opcode_name),
-				                                              .arg0 = static_cast<i32>(arg_0),
-				                                              .arg1 = 0 });
 				break;
 			}
 			case 2: {
-				i64 arg_0;
-				i64 arg_1;
 				std::visit([&arg_0](auto& arg) { arg_0 = arg.value; }, op->args[0]);
 				std::visit([&arg_1](auto& arg) { arg_1 = arg.value; }, op->args[1]);
-				funcData.bc.emplace_back(vm::Fix8Instruction{ .opcode
-				                                              = nameToOpcodeValue(op->opcode_name),
-				                                              .arg0 = static_cast<i32>(arg_0),
-				                                              .arg1 = static_cast<i32>(arg_1) });
 				break;
 			}
 			}
-		}
 
-		// this is a convention
-		// executor assumes it
-		funcData.bc.emplace_back(vm::Fix8Instruction{
-			.opcode = static_cast<u16>(vm::OpcodeFix8::nop), .arg0 = 0, .arg1 = 0 });
+
+#ifdef USE_TAIL_CALLS
+			funcData.bc.emplace_back(vm::Fix8Instruction{
+				.opfun = vm::OpFuns::opfuns.at(nameToOpcodeValue(op->opcode_name)),
+				.arg0  = static_cast<i32>(arg_0),
+				.arg1  = static_cast<i32>(arg_1) });
+
+#else
+			funcData.bc.emplace_back(vm::Fix8Instruction{
+				.opcode = static_cast<u16>(nameToOpcodeValue(op->opcode_name)),
+				.arg0 = static_cast<i32>(arg_0),
+				.arg1 = static_cast<i32>(arg_1) });
+#endif
+		}
 		return funcData;
 	}
 
@@ -849,7 +860,7 @@ namespace assemble {
 	}
 
 	cpp::result<vm::Code, std::string>
-		assemble(fs::FilePath file, vm::TypeMetadata& type_metadata) {
+		assemble(const fs::FilePath& file, vm::TypeMetadata& type_metadata) {
 		auto parsed_code = parseFile(file);
 
 		// @TODO:

@@ -14,4 +14,5 @@ It also contains old ``guidelines`` from ``rift-dev``.
 
     docs-guidelines/index.rst
     old-guidelines/index.rst
+    build-guidelines/index.rst
     *

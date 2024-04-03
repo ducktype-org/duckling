@@ -7,15 +7,6 @@
 #include <base/optional.hpp>
 #include <queue>
 
-#define SPACESHIP_PASTE(o1, o2)               \
-	if (a < b) ASSERT_EQUAL(true, o1 < o2);   \
-	if (a == b) ASSERT_EQUAL(true, o1 == o2); \
-	if (a <= b) ASSERT_EQUAL(true, o1 <= o2); \
-	if (a > b) ASSERT_EQUAL(true, o1 > o2);   \
-	if (a != b) ASSERT_EQUAL(true, o1 != o2); \
-	if (a >= b) ASSERT_EQUAL(true, o1 >= o2);
-
-
 using base::Optional;
 
 class OptionalTest: public tester::TestSuite {
@@ -30,11 +21,23 @@ public:
 		TESTER_ADD_TEST(testReference);
 		TESTER_ADD_TEST(macroTest);
 		TESTER_ADD_TEST(throwTest);
+		TESTER_ADD_TEST(testFromDocs);
 		TESTER_ADD_TEST(assignTest);
 		TESTER_ADD_TEST(swapTest);
 		TESTER_ADD_TEST(danglingPointerTest);
 		TESTER_ADD_TEST(comparatorTest);
 		TESTER_ADD_TEST(boolAndResetTest);
+		TESTER_ADD_TEST(arrowOperatorTest);
+	}
+
+	template<class T, class U>
+	void spaceshipPaste(T& a, T& b, base::Optional<U>& o1, base::Optional<U>& o2) {
+		if (a < b) ASSERT_EQUAL(true, o1 < o2);
+		if (a == b) ASSERT_EQUAL(true, o1 == o2);
+		if (a <= b) ASSERT_EQUAL(true, o1 <= o2);
+		if (a > b) ASSERT_EQUAL(true, o1 > o2);
+		if (a != b) ASSERT_EQUAL(true, o1 != o2);
+		if (a >= b) ASSERT_EQUAL(true, o1 >= o2);
 	}
 
 	void basicTest() {
@@ -177,6 +180,32 @@ public:
 		if_opt_some(Optional(1), val) { assert(val == 1, base::strConcat("val != 1, but: ", val)); }
 	}
 
+	void testFromDocs() {
+		// Create an empty optional
+		base::Optional<int> opt;
+
+		ASSERT_EQUAL(false, opt.has_value());
+		// or simply
+		ASSERT_EQUAL(true, opt.empty());
+
+		opt = 1;
+		ASSERT_EQUAL(1, *opt);
+		ASSERT_EQUAL(1, opt.value());
+
+		base::Optional<int> opt2(2);
+		// Mapping the value, and changing a type!
+		ASSERT_EQUAL(2.2, *opt2.map([](int v) { return v * 1.1; }));
+
+		// --------------------------------------------------
+
+		// base::Optional can also hold a reference!
+		std::string                  name = "Rift";
+		base::Optional<std::string&> opt_name(name);
+
+		opt_name.value().push_back('!');
+		ASSERT_EQUAL("Rift!", name);
+	}
+
 	void comparatorTest() {
 		int a = 1;
 		int b = 2;
@@ -184,7 +213,7 @@ public:
 		for (int i = 0; i < 3; i++) {
 			base::Optional<int&> o1 = a;
 			base::Optional<int&> o2 = b;
-			SPACESHIP_PASTE(o1, o2);
+			spaceshipPaste(a, b, o1, o2);
 			a++;
 		}
 
@@ -193,7 +222,7 @@ public:
 		for (int i = 0; i < 3; i++) {
 			base::Optional<int> o1 = a;
 			base::Optional<int> o2 = b;
-			SPACESHIP_PASTE(o1, o2);
+			spaceshipPaste(a, b, o1, o2);
 			a++;
 		}
 	}
@@ -210,6 +239,17 @@ public:
 		ASSERT_EQUAL(true, bool(o2));
 		o2.reset();
 		ASSERT_EQUAL(false, o2.has_value());
+	}
+
+	void arrowOperatorTest() {
+		base::Optional<std::string> opt = "";
+		opt->push_back('c');
+		ASSERT_EQUAL("c", opt.value());
+
+		std::string                  str;
+		base::Optional<std::string&> opt_ref(str);
+		opt_ref->push_back('r');
+		ASSERT_EQUAL("r", opt_ref.value());
 	}
 };
 

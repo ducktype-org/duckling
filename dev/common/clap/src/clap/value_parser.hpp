@@ -16,12 +16,29 @@
 
 namespace clap {
 
+	/**
+	 * A result of a single value parsing.
+	 */
 	struct ValueParsingResult {
-		std::any    value;
-		std::string raw_source;  // Source chars from which the value was created
-		usize position;  // position is an index ONE AFTER the last character of the parsed value
+		/**
+		 * The value. It has to be cast back with base::anyCast.
+		 */
+		std::any value;
+		/**
+		 * Source chars from which the value was created.
+		 */
+		std::string raw_source;
+		/**
+		 * Position is an index ONE AFTER the last character of the parsed value.
+		 */
+		usize position;
 	};
 
+	/**
+	 * An interface class for all other parsers.
+	 * Each parser should be stored inside a base::unique_ptr and should accept
+	 * custom name as a constructor parameter.
+	 */
 	class ValueParser {
 	public:
 		ValueParser() = default;
@@ -31,11 +48,17 @@ namespace clap {
 
 		virtual ~ValueParser() = default;
 
+		/**
+		 * Performs parsing of a value at the start index.
+		 * It is assumed that the raw_input[start] is a non-whitespace character.
+		 */
 		[[nodiscard]]
-		// It is assumed that the raw_input[start] is a non-whitespace character.
 		virtual ValueParsingResult parse(usize start, std::string_view raw_input) const
 			= 0;
 
+		/**
+		 * @return name of the type of a parsed value, or a custom name.
+		 */
 		[[nodiscard]]
 		virtual std::string getTypeName() const
 			= 0;
@@ -50,6 +73,10 @@ namespace clap {
 		base::Optional<std::string> custom_value_name;
 	};
 
+	/**
+	 * A value parser used for a string parsing.
+	 * Creates values of type std::string.
+	 */
 	class StringParser: public ValueParser {
 		using ValueParser::ValueParser;
 
@@ -68,6 +95,10 @@ namespace clap {
 		}
 	};
 
+	/**
+	 * A value parser used for an integer parsing.
+	 * Creates values of type i64.
+	 */
 	class IntParser: public ValueParser {
 		using ValueParser::ValueParser;
 
@@ -86,6 +117,10 @@ namespace clap {
 		}
 	};
 
+	/**
+	 * A value parser used for an integer range parsing. I.e. "-1..5".
+	 * Creates values of type RangeParser::Range.
+	 */
 	class RangeParser: public ValueParser {
 		using ValueParser::ValueParser;
 
@@ -108,10 +143,15 @@ namespace clap {
 		}
 	};
 
+	/**
+	 * A value parser used for a file parsing.
+	 * Creates values of type base::FilePath, which are links to valid files.
+	 * Additionally, it accepts std::regex to match only given file extensions or anything else.
+	 */
 	class FileParser: public ValueParser {
 		using ValueParser::ValueParser;
 
-		std::regex file_regex = std::regex(".*");
+		std::regex file_regex = std::regex(".*");  // The regex - default matches everything.
 
 	public:
 		explicit FileParser(std::regex regex): file_regex(std::move(regex)) {}

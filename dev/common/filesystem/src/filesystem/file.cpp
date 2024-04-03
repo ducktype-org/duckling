@@ -8,14 +8,9 @@
 
 #include <fstream>
 #include <iterator>
-#include <utility>
 
 namespace fs {
 	FilePath::ContentMap FilePath::to_content;
-
-	FilePath::FilePath(const std::filesystem::path& path): path(std::filesystem::absolute(path)) {}
-
-	FilePath::FilePath(const FilePath& oth): path(oth.path) {}
 
 	FileContent FilePath::getContent() const {
 		if (to_content.contains(path)) {
@@ -48,6 +43,29 @@ namespace fs {
 
 	FilePath FilePath::parentPath() const { return path.parent_path(); }
 
+	std::string FilePath::absolutePath() const { return path; }
+
+	std::string FilePath::name() const {
+		if (isDirectory() && path.filename() == ".") return path.parent_path().filename();
+		return path.filename();
+	}
+
+	bool FilePath::isDirectory() const noexcept { return is_directory(path); }
+
+	std::chrono::file_clock::time_point FilePath::getModifyTime() const {
+		return last_write_time(path);
+	}
+
+	bool FilePath::isFile() const noexcept { return !isDirectory(); }
+
+	std::string FilePath::stem() const { return path.stem(); }
+
+	std::string FilePath::extension() const { return path.extension(); }
+
+	std::filesystem::directory_iterator FilePath::directoryIterator() const {
+		return std::filesystem::directory_iterator(path);
+	}
+
 	base::OwningView getSimpleFileContent(const std::string& file_name) {
 		std::ifstream file(file_name, std::ios::in | std::ios::binary);
 		if (file.fail()) throw base::LogicError(std::string("file does not exist: ") + file_name);
@@ -62,7 +80,7 @@ namespace fs {
 
 		// should read full file:
 		auto r_array = new byte[file_size];
-		file.read(reinterpret_cast<char*>(r_array), file_size);
+		file.read(reinterpret_cast<char*>(r_array), std::streamsize(file_size));
 
 		return { r_array, file_size };
 	}

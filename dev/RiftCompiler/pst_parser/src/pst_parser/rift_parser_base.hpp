@@ -1,0 +1,43 @@
+#pragma once
+
+#include <token_parser_core/base_element.hpp>
+#include <token_parser_core/parser_ref.hpp>
+#include <token_parser_core/parser_state.hpp>
+#include <utility>
+
+namespace pst {
+	class Import;
+
+	using tpc::ParserBorrowRef;
+	using tpc::ParserCBorrowRef;
+	using tpc::ParserRef;
+
+	class RiftElement: public tpc::Element {
+	public:
+		explicit RiftElement(const dia::SourcePosition& position): source_position(position){};
+
+		[[nodiscard]]
+		const dia::SourcePosition& getSourcePosition() const;
+
+	private:
+		dia::SourcePosition source_position;
+	};
+
+	using ImportType = tpc::ParserCBorrowRef<pst::Import>;
+
+	class RiftParserState: public tpc::ParserState {
+		std::vector<ImportType> imports;
+
+	public:
+		RiftParserState(tpc::TokenStream&& tokens, dia::ErrorState&& err):
+			  tpc::ParserState(std::move(tokens), std::move(err)) {}
+
+		void addImport(const tpc::ParserCBorrowRef<pst::Import>& import);
+
+		[[nodiscard]]
+		auto extractState() && -> std::tuple<dia::ErrorState, std::vector<ImportType>> {
+			return { std::move(err), std::move(imports) };
+		}
+	};
+
+}

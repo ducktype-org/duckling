@@ -1,0 +1,46 @@
+{
+	"PST": [
+		{
+			"Struct": {
+				"name": {
+					"Name": "aaa"
+				},
+				"base_classes": {
+					"List": [
+						{
+							"Expr": [
+								{
+									"Identifier": "bbb"
+								}
+							]
+						},
+						{
+							"Expr": [
+								{
+									"Identifier": "cccc"
+								}
+							]
+						}
+					]
+				},
+				"body": {
+					"CodeBlock": [
+						{
+							"Expr": [
+								{
+									"Identifier": "a"
+								},
+								{
+									"Operator": "+"
+								},
+								{
+									"Identifier": "b"
+								}
+							]
+						}
+					]
+				}
+			}
+		}
+	]
+}

@@ -1,0 +1,104 @@
+{
+	"PST": [
+		{
+			"Import": {
+				"DottedName": {
+					"star" : "false",
+					"names" : [
+						{
+							"Name": "aaaa"
+						},
+						{
+							"Name": "bbb"
+						},
+						{
+							"Name": "c"
+						},
+					]
+				}
+			}
+		},
+		{
+			"Import": {
+				"DottedName": {
+					"star" : "true",
+					"names" : [
+						{
+							"Name": "dasdsa"
+						},
+						{
+							"Name": "dasd"
+						},
+					]
+				}
+			}
+		},
+		{
+			"Import": {
+				"DottedName": {
+					"star" : "false",
+					"names" : [
+						{
+							"Name": "aaaa"
+						},
+					]
+				}
+			}
+		},
+		{
+			"Import": {
+				"DottedName": {
+					"star" : "false",
+					"names" : [
+						{
+							"Name": "a"
+						},
+						{
+							"Name": "b"
+						},
+						{
+							"Name": "c"
+						},
+						{
+							"Name": "d"
+						},
+					]
+				}
+			}
+		},
+		{
+			"Import": {
+				"DottedName": {
+					"star" : "false",
+					"names" : [
+						{
+							"Name": "ἄλφα"
+						},
+						{
+							"Name": "βῆτα"
+						},
+						{
+							"Name": "γάμμα"
+						},
+					]
+				}
+			}
+		},
+		{
+			"Import": {
+				"DottedName": {
+					"star" : "true",
+					"names" : [
+						{
+							"Name": "ἄλφα"
+						},
+						{
+							"Name": "βῆτα"
+						},
+					]
+				}
+			}
+		},
+
+	]
+}

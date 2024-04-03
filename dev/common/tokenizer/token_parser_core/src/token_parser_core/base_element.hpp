@@ -6,7 +6,7 @@
 namespace tpc {
 	/**
 	 * @brief Base class for implementations of AST nodes
-	 * 
+	 *
 	 * Things that can parse themself should have this method:
 	 *  - static ParserRef<Element> parse(RiftParserState& state);
 	 */
@@ -20,7 +20,8 @@ namespace tpc {
 
 		// @IDEA: this might be just a const variable if it will be enough in the future
 		/**
-		 * @brief function providing information whether this kind of element should end in a semicolon
+		 * @brief function providing information whether this kind of element should end in a
+		 * semicolon
 		 */
 		[[noreturn]]
 		virtual bool trailingSemicolon();

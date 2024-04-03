@@ -23,8 +23,10 @@ namespace dia {
 
 		SourcePosition(SourceFile source_file, usize line, usize column, usize start);
 		SourcePosition(SourceFile source_file, usize line, usize column, usize start, usize end);
-		SourcePosition(const SourcePosition& other);
+		SourcePosition(const SourcePosition& other) = default;
 		SourcePosition(const SourcePosition& other, usize end);
+
+		SourcePosition& operator=(const SourcePosition& other) = default;
 
 		/**
 		 * @brief Get a copy of the bytes in this position
@@ -38,24 +40,31 @@ namespace dia {
 		 *
 		 * @param reason contains the reason for the error
 		 */
+		[[nodiscard]]
 		printer::Message genErrorMsg(std::string_view reason) const;
 		/**
 		 * @brief generates formatted error string with a given reason
 		 *
 		 * @param reason contains the reason for the error
 		 */
+		[[nodiscard]]
 		std::string genErrorStr(std::string_view reason) const;
 
-		usize  getLine() const;
-		usize  getColumn() const;
-		usize  getStart() const;
-		usize  getEnd() const;
+		[[nodiscard]]
+		usize getLine() const;
+		[[nodiscard]]
+		usize getColumn() const;
+		[[nodiscard]]
+		usize getStart() const;
+		[[nodiscard]]
+		usize getEnd() const;
+		[[nodiscard]]
 		SourceFile getSource() const;
 
 	private:
-		usize line, column;  ///< #line, #column describe start position in code for the user
+		usize line, column;      ///< #line, #column describe start position in code for the user
 		usize source_start,
-			source_end;      ///< #source_start, #source_end describe range of bytes in the file
+			source_end;          ///< #source_start, #source_end describe range of bytes in the file
 		SourceFile source_file;  ///< pointer to source file data
 	};
 }

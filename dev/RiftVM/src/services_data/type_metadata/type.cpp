@@ -3,6 +3,7 @@
 #include <supervisor/supervisor.hpp>
 #include <base/variant.hpp>
 #include <base/defer.hpp>
+#include <utility>
 
 namespace vm {
 	// Type declaration:
@@ -13,13 +14,13 @@ namespace vm {
 	}
 
 	// Type definition:
-	void Type::definePrimitive(TypeSize size) {
+	void Type::definePrimitive(TypeSize pass_size) {
 		RIFT_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type  = Kind::Primitive;
-		this->size = size;
-		kind       = kind::Primitive();
+		kind_type = Kind::Primitive;
+		size      = pass_size;
+		kind      = kind::Primitive();
 	}
 
 	void Type::definePointer(TypeCRef inner) {
@@ -28,7 +29,7 @@ namespace vm {
 
 		size      = PointerSize;
 		kind_type = Kind::Pointer;
-		kind      = kind::Pointer{ inner };
+		kind      = kind::Pointer{ std::move(inner) };
 	}
 
 	void Type::defineStaticTable(TypeRef inner, u64 table_size) {
@@ -36,7 +37,7 @@ namespace vm {
 		state = State::Defined;
 
 		kind_type = Kind::StaticTable;
-		kind      = kind::StaticTable{ inner, table_size };
+		kind      = kind::StaticTable{ std::move(inner), table_size };
 	}
 
 	void Type::defineDynamicTable(TypeRef inner) {
@@ -45,7 +46,7 @@ namespace vm {
 
 		size      = PointerSize;
 		kind_type = Kind::DynamicTable;
-		kind      = kind::DynamicTable{ inner };
+		kind      = kind::DynamicTable{ std::move(inner) };
 	}
 
 	void Type::defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions) {
@@ -54,10 +55,10 @@ namespace vm {
 
 		kind_type = Kind::Data;
 		auto data = kind::Data{};
-		for (auto [name, type]: fields_definitions) {
-			data.field_name_map[name] = data.fields.size();
+		for (auto [sub_name, sub_type]: fields_definitions) {
+			data.field_name_map[sub_name] = data.fields.size();
 			// offset is set during finalization
-			data.fields.emplace_back(0, type);
+			data.fields.emplace_back(0, sub_type);
 		}
 		kind = data;
 	}
@@ -68,7 +69,7 @@ namespace vm {
 
 		kind_type    = Kind::Variant;
 		auto variant = kind::Variant{};
-		for (auto type: variants_definitions) variant.alternatives.push_back(type);
+		for (const auto& type: variants_definitions) variant.alternatives.push_back(type);
 		kind = variant;
 	}
 
@@ -78,7 +79,7 @@ namespace vm {
 
 		size      = PointerSize;
 		kind_type = Kind::Function;
-		kind      = kind::Function{ parameters, result };
+		kind      = kind::Function{ std::move(parameters), std::move(result) };
 	}
 
 	void Type::finalize() {
@@ -115,22 +116,6 @@ namespace vm {
 				this->size = 16 + data_size;
 			}
 		}
-	}
-
-	// common
-	TypeId Type::getId() const { return id; }
-
-	base::StrId Type::getName() const { return name; }
-
-	TypeSize Type::getSize() const {
-		RIFT_ASSERT(size != TypeSize(-1), "getSize called before type finalization");
-		return size;
-	}
-
-	Type::Kind Type::getKind() const { return kind_type; }
-
-	bool Type::isPrimitive(TypeSize size) const {
-		return getKind() == Kind::Primitive and getSize() == size;
 	}
 
 	/**
@@ -222,7 +207,7 @@ namespace vm {
 
 	base::Optional<TypeCRef> Type::getFieldTypeByOffset(Offset offset) const {
 		return get<kind::Data>().flatMap([offset](const kind::Data& data) {
-			i64 begin = -1, end = data.fields.size(), middle;
+			i64 begin = -1, end = i64(data.fields.size()), middle = 0;
 			while (end - begin > 1) {
 				middle = (begin + end) / 2;
 				if (data.fields[middle].offset <= offset)
@@ -236,8 +221,8 @@ namespace vm {
 	}
 
 	base::Optional<TypeCRef> Type::getFieldTypeByOffsetRecursive(Offset offset) const {
-		return get<kind::Data>().flatMap([this, offset](const kind::Data& data) {
-			i64 begin = -1, end = data.fields.size(), middle;
+		return get<kind::Data>().flatMap([offset](const kind::Data& data) {
+			i64 begin = -1, end = i64(data.fields.size()), middle = 0;
 			while (end - begin > 1) {
 				middle = (begin + end) / 2;
 				if (data.fields[middle].offset <= offset)
