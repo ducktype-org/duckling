@@ -38,10 +38,15 @@ namespace base {
 
 		c_borrow_ptr<T> borrow() const noexcept { return c_borrow_ptr<T>(this->get()); }
 
-		auto begin() const requires std::ranges::range<T> {
+		auto begin() const
+		requires std::ranges::range<T>
+		{
 			return (*this)->begin();
 		}
-		auto end() const requires std::ranges::range<T> {
+
+		auto end() const
+		requires std::ranges::range<T>
+		{
 			return (*this)->end();
 		}
 	};

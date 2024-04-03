@@ -4,7 +4,7 @@ namespace pst::detail {
 
 	/**
 	 * @brief State conditions used for parsing lists.
-	 * 
+	 *
 	 * @note They are defined in a class this way so that they can be template arguments.
 	 */
 	class Conditions {
@@ -29,7 +29,7 @@ namespace pst::detail {
 	 * It is needed because ParserRef beeing base::unique_ptr cannot be "copied".
 	 * This iterator returns ParserCBorrowRef when dereferenced
 	 * which is a wrapper for base::borrow_ptr.
-	 * 
+	 *
 	 * @tparam ParserElement Element contained in the reference
 	 * @tparam Container Container that of parserRefs to the @p ParserElement .
 	 */

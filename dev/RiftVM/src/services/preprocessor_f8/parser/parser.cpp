@@ -845,8 +845,8 @@ namespace assemble {
 #else
 			funcData.bc.emplace_back(vm::Fix8Instruction{
 				.opcode = static_cast<u16>(nameToOpcodeValue(op->opcode_name)),
-				.arg0   = static_cast<i32>(arg_0),
-				.arg1   = static_cast<i32>(arg_1) });
+				.arg0 = static_cast<i32>(arg_0),
+				.arg1 = static_cast<i32>(arg_1) });
 #endif
 		}
 		return funcData;

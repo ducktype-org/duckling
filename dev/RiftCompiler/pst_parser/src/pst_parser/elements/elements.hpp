@@ -88,7 +88,7 @@ namespace pst {
 		lexer::Token::BracketType BRACKETS,
 		StateCondition            isSeparator,
 		StateCondition            isEnding,
-		class Container = std::vector<ParserRef<SubElements> > >
+		class Container = std::vector<ParserRef<SubElements>>>
 	class List final: public NotStmt {
 		Container elements;
 
