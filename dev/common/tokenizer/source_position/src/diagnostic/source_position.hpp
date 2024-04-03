@@ -21,8 +21,8 @@ namespace dia {
 
 		SourcePosition() = delete;
 
-		SourcePosition(SourceFile source_file, usize line, usize column, usize start);
-		SourcePosition(SourceFile source_file, usize line, usize column, usize start, usize end);
+		SourcePosition(const SourceFile &source_file, usize line, usize column, usize start);
+		SourcePosition(const SourceFile &source_file, usize line, usize column, usize start, usize end);
 		SourcePosition(const SourcePosition& other) = default;
 		SourcePosition(const SourcePosition& other, usize end);
 

@@ -21,6 +21,7 @@ namespace tpc {
 		/**
 		 * @brief provides immutable access to the current stream
 		 */
+		[[nodiscard]]
 		const TokenStream& ctokens() const;
 
 		dia::ErrorState err;  ///< Stores parsing errors
@@ -33,11 +34,13 @@ namespace tpc {
 		 * @return true If no tokens left in current stream
 		 * @return false If tokens left in current stream
 		 */
+		[[nodiscard]]
 		bool empty() const;
 		/**
 		 * @return true If tokens left in current stream
 		 * @return false If no tokens left in current stream
 		 */
+		[[nodiscard]]
 		bool notEmpty() const;
 
 		/**
@@ -58,7 +61,7 @@ namespace tpc {
 		/**
 		 * @brief Logs an error relatively to the current token
 		 */
-		void fail(usize rel_pos, std::string message) {
+		void fail(usize rel_pos, const std::string &message) {
 			err.failAndLog(ctokens().peek(rel_pos).getPosition(), message);
 		}
 

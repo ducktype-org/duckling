@@ -19,12 +19,12 @@ namespace dia {
 	}
 
 	SourcePosition::SourcePosition(
-		SourceFile source_file, usize line, usize column, usize source_start
+		const SourceFile &source_file, usize line, usize column, usize source_start
 	):
 		  SourcePosition(source_file, line, column, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
-		SourceFile source_file, usize line, usize column, usize source_start, usize source_end
+		const SourceFile &source_file, usize line, usize column, usize source_start, usize source_end
 	):
 		  line(line),
 		  column(column),
