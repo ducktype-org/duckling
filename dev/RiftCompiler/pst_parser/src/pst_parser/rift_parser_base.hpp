@@ -23,17 +23,21 @@ namespace pst {
 		dia::SourcePosition source_position;
 	};
 
+	using ImportType = tpc::ParserCBorrowRef<pst::Import>;
+
 	class RiftParserState: public tpc::ParserState {
-		std::vector<tpc::ParserCBorrowRef<pst::Import>> imports;
-		using ImportType = decltype(imports);
+		std::vector<ImportType> imports;
 
 	public:
 		RiftParserState(tpc::TokenStream&& tokens, dia::ErrorState&& err):
 			  tpc::ParserState(std::move(tokens), std::move(err)) {}
 
 		void addImport(const tpc::ParserCBorrowRef<pst::Import>& import);
+
 		[[nodiscard]]
-		const ImportType& getImports() const;
+		auto extractState() && -> std::tuple<dia::ErrorState, std::vector<ImportType>> {
+			return { std::move(err), std::move(imports) };
+		}
 	};
 
 }

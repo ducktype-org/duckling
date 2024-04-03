@@ -96,8 +96,8 @@ namespace vm {
 		}
 
 		[[nodiscard]]
-		inline bool isPrimitive(TypeSize size) const {
-			return getKind() == Kind::Primitive and getSize() == size;
+		inline bool isPrimitive(TypeSize qsize) const {
+			return getKind() == Kind::Primitive and getSize() == qsize;
 		}
 
 		base::Optional<TypeCRef> getLowestTypeAtPos(Offset pos) const;
