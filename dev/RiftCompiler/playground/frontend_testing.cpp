@@ -31,9 +31,9 @@ int main(int argc, const char* argv[]) {
 
 	using compiler::frontend::ModuleTree;
 
-// 	// First argument is some kind of a path to a module we want to parse.
-// 	// It returns a std::shared_ptr.
-// 	std::shared_ptr<ModuleTree> module_tree = ModuleTree::create(options.getValue<fs::FilePath>("p").value());
+	std::shared_ptr<ModuleTree> module_tree = ModuleTree::create(path_to_compile);
+
+	module_tree->prettyPrint();
 
 // 	// Print main source file's content.
 // 	if (module_tree->hasMainSourceFile())
