@@ -21,11 +21,13 @@ Usage
 .. code-block:: cpp
     :caption: Basic usage
 
-    dia::SourcePosition singleCharacter(<source-file>, <line>, <column>, <position-in-file>);
-    dia::SourcePosition multipleCharacters(<source-file>, <line>, <column>, <start-position>, <end-position>);
-    dia::SourcePosition rangeFromSingleCharacter(singleCharacter, <end-position>);
+    int main() {
+        dia::SourcePosition singleCharacter{<source-file>, <line>, <column>, <position-in-file>};
+        dia::SourcePosition multipleCharacters{<source-file>, <line>, <column>, <start-position>, <end-position>};
+        dia::SourcePosition rangeFromSingleCharacter{singleCharacter, <end-position>};
 
-    std::cerr << multipleCharacters.genErrorStr("some message") << "\n";
+        std::cerr << multipleCharacters.genErrorStr("some message") << "\n";
+    }
 
 Interface
 =========

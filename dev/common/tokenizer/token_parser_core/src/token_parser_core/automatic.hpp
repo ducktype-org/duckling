@@ -25,28 +25,64 @@
 #include "common_elements.hpp"
 #include <rift_definitions/key_spec_op.hpp>
 
+#include "base_element.hpp"
+
+#include <concepts>
+
 namespace tpc {
 	using rift_def::Keyword;
 	using rift_def::Operator;
 	using rift_def::Special;
 
+	// Useful for debugging:
+	//
 	// parses one of the available types
 	// template<class T>
 	// void parseOne([[maybe_unused]]ParserState& state, [[maybe_unused]]T t) {
 	// 	static_assert(sizeof(T) < 0, "parseOne for type `T` is not implemented\n");
 	// }
 
+	/**
+	 * @brief Parses the expected keyword. Skips on success, logs error on failure.
+	 * @param state The current ParserState.
+	 * @param key The expected keyword.
+	 */
 	void parseOne(ParserState& state, Keyword key);
 
+	/**
+	 * @brief Parses the expected Special token. Skips on success, logs error on failure.
+	 * @param state The current ParserState.
+	 * @param spec The expected special token.
+	 */
 	void parseOne(ParserState& state, Special spec);
 
+	/**
+	 * @brief Parses the expected operator. Skips on success, logs error on failure.
+	 * @param state The current ParserState.
+	 * @param op The expected operator.
+	 */
 	void parseOne(ParserState& state, Operator op);
 
+	/**
+	 * @brief Parses an identifier to @p result. Skips on success, logs error on failure.
+	 * @param state The current ParserState.
+	 * @param result The place to store the parsed identifier.
+	 */
 	void parseOne(ParserState& state, Identifier* result);
 
+	/**
+	 * @brief Parses an identifier to @p result. Skips on success, does nothing on failure.
+	 * @param state The current ParserState.
+	 * @param result The place to store the parsed identifier.
+	 */
 	void parseOne(ParserState& state, OptionalIdentifier* result);
 
-	template<typename State, typename T>
+	/**
+	 * @brief Parses an Element. Skips on success, logs error on failure.
+	 * @param state The current ParserState.
+	 * @param result The place to store the parsed element.
+	 */
+	template<typename State, std::derived_from<Element> T>
 	void parseOne(State& state, ParserRef<T>* result) {
 		*result = T::parse(state);
 	}
@@ -57,7 +93,7 @@ namespace tpc {
 		parseOne(state, t);
 	}
 
-	template<typename State, class T, class... Q>
+	template<typename State, typename T, typename... Q>
 	void parseAll(State& state, T t, Q... q) {
 		parseOne(state, t);
 		parseAll(state, q...);
@@ -66,7 +102,7 @@ namespace tpc {
 	void nullAwareDprint(Identifier, std::ostream& out);
 	void nullAwareDprint(OptionalIdentifier, std::ostream& out);
 
-	template<class T>
+	template<typename T>
 	void nullAwareDprint(const ParserRef<T>& ref, std::ostream& out) {
 		if (!ref)
 			out << "\"<nullptr>\"";

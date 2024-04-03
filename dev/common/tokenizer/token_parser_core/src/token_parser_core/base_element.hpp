@@ -22,6 +22,8 @@ namespace tpc {
 		/**
 		 * @brief function providing information whether this kind of element should end in a
 		 * semicolon
+		 *
+		 * @todo consider moving semicolon requirement to statement (Stmt) parsing.
 		 */
 		[[noreturn]]
 		virtual bool trailingSemicolon();
