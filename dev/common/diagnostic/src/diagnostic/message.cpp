@@ -1,8 +1,6 @@
 #include "message.hpp"
 
 namespace dia {
-	// @FIXME: The " ERR", "WARN", "INFO" raw strings are inconsistent with the style in
-	// SourcePosition::genErrorMsg.
 	printer::MessageContent Message::severityToMessageContent(const Severity s) {
 		using enum Severity;
 		switch (s) {
@@ -59,11 +57,29 @@ namespace dia {
 		}
 	}
 
+	// @FIXME: This is inconsistent with the style in SourcePosition::genErrorMsg.
 	printer::MessagePack Message::toPrinterMessagePack(const bool detailed) const {
-		Severity s = getSeverity();
-		Domain   d = getDomain();
+		// Prepare the leading message.
+		const Severity s = getSeverity();
+		const Domain   d = getDomain();
 
-		printer::MessagePack messages;
+		const auto messageType = severityToMessageType(s);
+		const auto severityTag = severityToMessageContent(s);
+		const auto domainTag   = domainToMessageContent(d);
+
+		auto contentsWithSource
+			= source_position.genPrinterMessageContents(getBaseMessageContent(detailed));
+		contentsWithSource.insert(
+			contentsWithSource.begin(), { severityTag, " [", domainTag, "]:\n" }
+		);
+
+		const auto           leadingMessage = printer::Message(contentsWithSource, messageType);
+		printer::MessagePack messages{ leadingMessage };
+
+		// Append the notes.
+		for (const auto& note: notes) messages.push_back(note->toPrinterMessage(detailed));
+
+		return messages;
 	}
 
 	// @FIXME: The "NOTE" raw string is inconsistent with the style in SourcePosition::genErrorMsg.

@@ -4,12 +4,12 @@
  *
  * All classes in this file are abstract, thus uninstantiable.
  * Any concrete Message subclasses should extend the Error, Warning, or Info abstract classes.
+ * They should be defined as locally as possible.
  */
 
 #pragma once
 
 #include <printer/message.hpp>
-#include <base/optional.hpp>
 
 #include "source_position.hpp"
 
@@ -27,13 +27,14 @@ namespace dia {
 	 * A Message can be either an Error, Warning, or Info. It must not be extended with
 	 * the exception of these three cases.
 	 *
-	 * A Message must be supplied with a SourcePosition. It may be supplied with a cause. It may
-	 * be supplied with an arbitrary number of Notes, which provide additional, helpful information.
+	 * A Message must be supplied with a SourcePosition. It may be supplied with
+	 * an arbitrary number of Notes, which provide additional, helpful information.
 	 */
 	class Message {
-		SourcePosition                         source_position;
-		base::Optional<base::unique_ptr<Note>> cause{};
-		std::vector<base::unique_ptr<Note>>    notes{};
+		SourcePosition                      source_position;
+		std::vector<base::unique_ptr<Note>> notes{};
+		// @FIXME: should we include a `cause` field here?
+		// Do we expect to detect when an error is caused by another error?
 
 	public:
 		/**
@@ -130,15 +131,6 @@ namespace dia {
 		 */
 		explicit Message(const SourcePosition& source_position): source_position(source_position) {}
 
-		/**
-		 * @brief Construct a Message from a relevant SourcePosition and cause.
-		 * @param source_position The SourcePosition relevant to this Message.
-		 * @param cause The cause of this Message, which is another Message.
-		 */
-		explicit Message(const SourcePosition& source_position, base::unique_ptr<Message> cause):
-			  source_position(source_position),
-			  cause(cause.release()) {}
-
 	public:
 		/**
 		 * @brief Get a printer::MessagePack ready to be printed for the user to view.
@@ -195,14 +187,6 @@ namespace dia {
 		 * @copydetails Message::Message
 		 */
 		explicit Error(const SourcePosition& source_position): Message(source_position) {}
-
-		/**
-		 * @brief Construct an Error from a relevant SourcePosition and cause.
-		 *
-		 * @copydetails Message::Message(const SourcePosition&, base::unique_ptr<Message>)
-		 */
-		Error(const SourcePosition& source_position, base::unique_ptr<Message> cause):
-			  Message(source_position, base::unique_ptr{cause.release()}) {}
 	};
 
 	/**
@@ -226,14 +210,6 @@ namespace dia {
 		 * @copydetails Message::Message
 		 */
 		explicit Warning(const SourcePosition& source_position): Message(source_position) {}
-
-		/**
-		 * @brief Construct a Warning from a relevant SourcePosition and cause.
-		 *
-		 * @copydetails Message::Message(const SourcePosition&, base::unique_ptr<Message>)
-		 */
-		Warning(const SourcePosition& source_position, base::unique_ptr<Message> cause):
-			  Message(source_position, base::unique_ptr{cause.release()}) {}
 	};
 
 	/**
@@ -258,14 +234,6 @@ namespace dia {
 		 * @copydetails Message::Message
 		 */
 		explicit Info(const SourcePosition& source_position): Message(source_position) {}
-
-		/**
-		 * @brief Construct an Info from a relevant SourcePosition and cause.
-		 *
-		 * @copydetails Message::Message(const SourcePosition&, base::unique_ptr<Message>)
-		 */
-		Info(const SourcePosition& source_position, base::unique_ptr<Message> cause):
-			  Message(source_position, base::unique_ptr{cause.release()}) {}
 	};
 
 	/**

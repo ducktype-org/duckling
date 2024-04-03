@@ -7,8 +7,6 @@
 #include "source_position.hpp"
 #include "base/exceptions.hpp"
 
-#include <utility>
-
 namespace dia {
 	std::string SourcePosition::getSourceChars() const {
 		auto             source_content = source_file->getContent();
@@ -19,16 +17,19 @@ namespace dia {
 	}
 
 	SourcePosition::SourcePosition(
-		const SourceFile& source_file, usize line, usize column, usize source_start
+		const SourceFile& source_file,
+		const usize       line,
+		const usize       column,
+		const usize       source_start
 	):
 		  SourcePosition(source_file, line, column, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
 		const SourceFile& source_file,
-		usize             line,
-		usize             column,
-		usize             source_start,
-		usize             source_end
+		const usize       line,
+		const usize       column,
+		const usize       source_start,
+		const usize       source_end
 	):
 		  line(line),
 		  column(column),
@@ -47,7 +48,7 @@ namespace dia {
 		}
 	}
 
-	SourcePosition::SourcePosition(const SourcePosition& other, usize source_end):
+	SourcePosition::SourcePosition(const SourcePosition& other, const usize source_end):
 		  SourcePosition(
 			  other.source_file, other.line, other.column, other.source_start, source_end
 		  ) {}
@@ -62,26 +63,24 @@ namespace dia {
 
 	SourcePosition::SourceFile SourcePosition::getSource() const { return source_file; }
 
-	printer::Message SourcePosition::genErrorMsg(std::string_view reason) const {
-		return { { { "In file: " },
-			       { source_file->strView().data() },
-			       { ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
-			       { "error: ", printer::Color::BRIGHT_RED },
-			       { reason.data() },
-			       { "\n" },
-			       { "  |\n" },
-			       { std::to_string(line) },
-			       { " | " },
-			       { getSourceChars() + "\n" },
-			       { "  |\n" } },
-			     printer::MessageType::ERROR };
+	std::vector<printer::MessageContent>
+		SourcePosition::genPrinterMessageContents(const printer::MessageContent& reason) const {
+		return { { "In file: " },
+			     { source_file->strView().data() },
+			     { ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
+			     reason,
+			     { "\n" },
+			     { "  |\n" },
+			     { std::to_string(line) },
+			     { " | " },
+			     { getSourceChars() + "\n" },
+			     { "  |\n" } };
 	}
 
-	std::string SourcePosition::genErrorStr(std::string_view reason) const {
+	std::string SourcePosition::genStr(const std::string_view reason) const {
 		std::string output = "In file: ";
 		output += source_file->strView();
 		output += ":" + std::to_string(line) + ":" + std::to_string(column) + "\n";
-		output += "error: ";
 		output += reason;
 		output += "\n";
 		output += "  |\n";

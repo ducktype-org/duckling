@@ -21,12 +21,16 @@ namespace dia {
 
 		SourcePosition() = delete;
 
-		SourcePosition(const SourceFile& source_file, usize line, usize column, usize start);
+		SourcePosition(const SourceFile& source_file, usize line, usize column, usize source_start);
 		SourcePosition(
-			const SourceFile& source_file, usize line, usize column, usize start, usize end
+			const SourceFile& source_file,
+			usize             line,
+			usize             column,
+			usize             source_start,
+			usize             source_end
 		);
 		SourcePosition(const SourcePosition& other) = default;
-		SourcePosition(const SourcePosition& other, usize end);
+		SourcePosition(const SourcePosition& other, usize source_end);
 
 		SourcePosition& operator=(const SourcePosition& other) = default;
 
@@ -37,20 +41,28 @@ namespace dia {
 		 */
 		[[nodiscard]]
 		std::string getSourceChars() const;
+
 		/**
-		 * @brief generates formatted error message with a given reason
+		 * @brief Get formatted message contents with a given reason.
 		 *
-		 * @param reason contains the reason for the error
+		 * This is given as message contents (multiple) so that
+		 * it can be conveniently decorated before wrapping in a printer::Message.
+		 *
+		 * @param reason The reason for the message.
+		 * @return Formatted message contents.
 		 */
 		[[nodiscard]]
-		printer::Message genErrorMsg(std::string_view reason) const;
+		std::vector<printer::MessageContent>
+			genPrinterMessageContents(const printer::MessageContent& reason) const;
+
 		/**
-		 * @brief generates formatted error string with a given reason
+		 * @brief Get formatted message string with a given reason.
 		 *
-		 * @param reason contains the reason for the error
+		 * @param reason The reason for the message.
+		 * @return Formatted message string.
 		 */
 		[[nodiscard]]
-		std::string genErrorStr(std::string_view reason) const;
+		std::string genStr(std::string_view reason) const;
 
 		[[nodiscard]]
 		usize getLine() const;

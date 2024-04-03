@@ -3,7 +3,7 @@
 namespace dia {
 	void ErrorState::logError(const SourcePosition& position, std::string_view message) {
 		err_count++;
-		errorLog.add(position.genErrorMsg(message));
+		errorLog.add(position.genPrinterMessageContents(message));
 	}
 
 	void ErrorState::failAndLog(const SourcePosition& position, std::string_view message) {
