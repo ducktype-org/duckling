@@ -13,6 +13,15 @@
 #include <pst_parser/pst.hpp>
 
 namespace compiler::frontend {
+	/**
+	 * @brief Structure holding FileID within SourceFile
+	 */
+	struct FileId {
+		static base::u64 nextId = 0;
+		base::u64 id;
+
+		FileId();
+	};
 
 	/**
 	 * @brief Structure holding SourceFile within Module Tree
@@ -20,6 +29,7 @@ namespace compiler::frontend {
 	struct SourceFile {
 		fs::FilePath path;
 		std::string rift_file_name; // or StrID?
+		FileId id;
 		base::Optional<pst::PST> parse_tree;
 
 		SourceFile(fs::FilePath);
@@ -31,6 +41,15 @@ namespace compiler::frontend {
 		const pst::PST& getPST();
 	};
 
+	/**
+	 * @brief Structure holding ModuleID within Module Tree
+	 */
+	struct ModuleId {
+		static base::u64 nextId = 0;
+		base::u64 id;
+
+		ModuleId();
+	};
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
@@ -158,7 +177,13 @@ namespace compiler::frontend {
 		 * @return std::string with the representation.
 		 */
 		std::string prettyPrint(u32 indentation = 0) const;
-
+		
+		/**
+		 * Fetches the id of the module.
+		 * @return compiler::frontend::ModuleId.
+		 */
+		[[nodiscard]]
+		ModuleId getId() const;
 
 	private:
 		ModuleTree() = default;
@@ -182,6 +207,10 @@ namespace compiler::frontend {
 			const std::shared_ptr<ModuleTree>& module_root, const fs::FilePath& filepath
 		);
 
+		/**
+		 * Id of the current root Module.
+		 */
+		ModuleId id;
 		/**
 		 * A pointer to the module's parent. Might be nullptr.
 		 */
