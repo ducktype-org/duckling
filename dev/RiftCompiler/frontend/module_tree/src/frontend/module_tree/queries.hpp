@@ -4,6 +4,8 @@
 #include <filesystem/file.hpp>
 #include "module_tree.hpp"
 
+namespace compiler::frontend {
 
-DECLARE_QUERY(GetModuleTreeQuery, fs::FilePath, compiler::frontend::ModuleID)
+	DECLARE_QUERY(GetModuleTreeQuery, fs::FilePath, ModuleId)
 
+}
