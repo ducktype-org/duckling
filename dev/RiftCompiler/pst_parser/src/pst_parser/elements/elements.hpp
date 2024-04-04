@@ -179,9 +179,17 @@ namespace pst {
 		bool trailingSemicolon() override;
 	};
 
+	/**
+	 * @note: Import allows for two syntaxes right now:
+	 * import A.B as D;
+	 * import A.B.* as D;
+	 * 
+	 * the optional "star" is ignored.
+	 */
 	class Import final: public Stmt {
 		ParserRef<DottedName> names;
-
+		tpc::Identifier       alias;
+		
 	public:
 		STMT_CHILD_CONSTRUCTOR(Import);
 		static ParserRef<Import> parse(RiftParserState& state);

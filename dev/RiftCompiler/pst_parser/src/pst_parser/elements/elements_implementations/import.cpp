@@ -10,7 +10,7 @@ namespace pst {
 			state.ctokens().is(Keyword::Import), position.genErrorStr("bad statement choice")
 		);
 
-		parseAll(state, Keyword::Import, &out->names);
+		parseAll(state, Keyword::Import, &out->names, Keyword::As, &out->alias);
 
 		state.addImport(out.borrow());
 
@@ -24,6 +24,8 @@ namespace pst {
 	void Import::dprint(std::ostream& out) const {
 		out << "{\"Import\": ";
 		nullAwareDprint(names, out);
+		out << ", ";
+		out << R"(Alias: ")" << alias.value.strView() << R"(")"; 
 		out << "}";
 	}
 }
