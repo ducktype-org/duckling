@@ -4,6 +4,7 @@
  */
 
 #include "module_tree.hpp"
+#include <pst_parser/parser.hpp>
 
 using fs::FsTree;
 using std::regex;
@@ -11,6 +12,16 @@ using namespace compiler::frontend;
 
 SourceFile::SourceFile(fs::FilePath path): path(path) {
 	rift_file_name = path.stem();
+}
+
+const pst::PST& SourceFile::getPST() {
+	if (parse_tree) {
+		return parse_tree.value();
+	}
+	else {
+		parse_tree.emplace(pst::parse(path));
+		return parse_tree.value();
+	}
 }
 
 bool ModuleTree::hasMainSourceFile() const { return !m_main_source_file.empty(); }
