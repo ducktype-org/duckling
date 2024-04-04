@@ -35,7 +35,7 @@ private:
 		ASSERT_EQUAL(2, another_module->getOtherFiles()[".txt"].size());
 		ASSERT_EQUAL(1, another_module->getOtherFiles()[""].size());
 		ASSERT_EQUAL(1, another_module->getSubmodules().size());
-		ASSERT_EQUAL("whoa.rift", another_module->getSourceFiles().front().name());
+		ASSERT_EQUAL("whoa.rift", another_module->getSourceFiles().front().path.name());
 
 		ASSERT_EQUAL(true, mt->getSubmodules().contains("awe"));
 		auto awe_module = mt->getSubmodules()["awe"];
@@ -43,7 +43,7 @@ private:
 		ASSERT_EQUAL(0, awe_module->getSourceFiles().size());
 		ASSERT_EQUAL(0, awe_module->getOtherFiles().size());
 		ASSERT_EQUAL(true, awe_module->hasMainSourceFile());
-		ASSERT_EQUAL("awe.rmf", awe_module->getMainSourceFile().name());
+		ASSERT_EQUAL("awe.rmf", awe_module->getMainSourceFile().path.name());
 	}
 
 	void testOtherFeatures() {
@@ -52,7 +52,7 @@ private:
 
 		ASSERT_EQUAL("test_module", mt->getName());
 		ASSERT_EQUAL(true, mt->hasMainSourceFile());
-		ASSERT_EQUAL("content123\n", mt->getMainSourceFile().getContent().view());
+		ASSERT_EQUAL("content123\n", mt->getMainSourceFile().path.getContent().view());
 		ASSERT_EQUAL(true, mt->getParentModule().empty());
 		ASSERT_EQUAL(mt->getName(), mt->getSubmodules()["awe"]->getParentModule()->getName());
 	}

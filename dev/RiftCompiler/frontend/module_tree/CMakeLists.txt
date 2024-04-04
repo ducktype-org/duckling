@@ -2,7 +2,7 @@ add_library(ModuleTree
 		src/frontend/module_tree/module_tree.cpp
 		src/frontend/module_tree/module_tree.hpp)
 
-make_module(ModuleTree USES Filesystem)
+make_module(ModuleTree USES Filesystem PstParser)
 
 add_example(module_tree_example ../../../docs/source-doc/source-docs/RiftCompiler/frontend/module_tree/module_tree_example.cpp USES ModuleTree)
 

@@ -7,23 +7,42 @@
 
 #include <string>
 #include <utility>
-#include "base/maps.hpp"
-#include "filesystem/file.hpp"
-#include "filesystem/fs_tree.hpp"
+#include <base/maps.hpp>
+#include <filesystem/file.hpp>
+#include <filesystem/fs_tree.hpp>
+#include <pst_parser/pst.hpp>
 
 namespace compiler::frontend {
+
+	/**
+	 * @brief Structure holding SourceFile within Module Tree
+	 */
+	struct SourceFile {
+		fs::FilePath path;
+		std::string rift_file_name; // or StrID?
+		base::Optional<pst::PST> parse_tree;
+
+		SourceFile(fs::FilePath);
+
+		/**
+		 * @brief Lazily parses the source file and returns PST
+		 * @return const pst::PST& 
+		 */
+		const pst::PST& getPST();
+	};
+
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a source file of the module.
 	 */
-	const std::string RIFT_SOURCE_FILE = ".rift";
+	constexpr std::string_view RIFT_SOURCE_FILE = ".rift";
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a single file module.
 	 */
-	const std::string RIFT_MODULE_FILE = ".rmf";
+	constexpr std::string_view RIFT_MODULE_FILE = ".rmf";
 
 	/**
 	 * `ModuleTree` contains source files, modules and other
@@ -102,14 +121,14 @@ namespace compiler::frontend {
 		 * @return A reference to the `RIFT_MAIN_SOURCE_FILE`.
 		 */
 		[[nodiscard]]
-		const fs::FilePath& getMainSourceFile() const;
+		const SourceFile& getMainSourceFile() const;
 
 		/**
 		 * Accesses the source files of the module.
-		 * @return A std::vector<fs::FilePath> with `RIFT_SOURCE_FILE` files to iterate over.
+		 * @return A std::vector<SourceFile> with `RIFT_SOURCE_FILE` files to iterate over.
 		 */
 		[[nodiscard]]
-		const std::vector<fs::FilePath>& getSourceFiles() const;
+		const std::vector<SourceFile>& getSourceFiles() const;
 
 		/**
 		 * Accesses the submodules located in this submodule. Submodules are indexed by their name.
@@ -178,11 +197,11 @@ namespace compiler::frontend {
 		 * Has to be a container (like base::Optional), because fs::FilePath does
 		 * not have a default constructor.
 		 */
-		base::Optional<fs::FilePath> m_main_source_file;
+		base::Optional<SourceFile> m_main_source_file;
 		/**
 		 * All the source files in the module. Does not contain files of other submodules.
 		 */
-		std::vector<fs::FilePath> m_source_files;
+		std::vector<SourceFile> m_source_files;
 		/**
 		 * Other direct submodules. Maps module's name to a pointer to it.
 		 */

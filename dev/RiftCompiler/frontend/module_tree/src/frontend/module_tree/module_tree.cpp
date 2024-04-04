@@ -9,6 +9,10 @@ using fs::FsTree;
 using std::regex;
 using namespace compiler::frontend;
 
+SourceFile::SourceFile(fs::FilePath path): path(path) {
+	rift_file_name = path.stem();
+}
+
 bool ModuleTree::hasMainSourceFile() const { return !m_main_source_file.empty(); }
 
 void ModuleTree::buildModuleTree(
@@ -75,7 +79,7 @@ base::Optional<const ModuleTree&> ModuleTree::getParentModule() const {
 }
 
 std::string ModuleTree::getName() const {
-	if (m_fs_tree == nullptr) return getMainSourceFile().stem();
+	if (m_fs_tree == nullptr) return getMainSourceFile().rift_file_name;
 	return m_fs_tree->getRoot().name();
 }
 
@@ -89,14 +93,14 @@ std::string ModuleTree::prettyPrint(u32 indentation) const {
 	output << indent << getName() << "/\n";
 
 	if (m_main_source_file.has_value()) {
-		output << indent << "├> " << m_main_source_file->name() << '\n';
+		output << indent << "├> " << m_main_source_file.value().path.name() << '\n';
 	}
 	else {
 		output << indent << "├> Missing main module file!\n";
 	}
 	
 	for (const auto& file_iter: getSourceFiles())
-		output << indent << "├= " << file_iter.name() << '\n';
+		output << indent << "├= " << file_iter.path.name() << '\n';
 
 	for (const auto& file_iter: getOtherFiles())
 		for (const auto& file_name: file_iter.second)
@@ -108,12 +112,12 @@ std::string ModuleTree::prettyPrint(u32 indentation) const {
 	return output.str();
 }
 
-const fs::FilePath& ModuleTree::getMainSourceFile() const {
+const SourceFile& ModuleTree::getMainSourceFile() const {
 	if (m_main_source_file.empty()) throw base::LogicError("No main source file!");
-	return *m_main_source_file;
+	return m_main_source_file.value();
 }
 
-const std::vector<fs::FilePath>& ModuleTree::getSourceFiles() const { return m_source_files; }
+const std::vector<SourceFile>& ModuleTree::getSourceFiles() const { return m_source_files; }
 
 const base::HashMap<std::string, std::shared_ptr<ModuleTree>>& ModuleTree::getSubmodules() const {
 	return m_submodules;
