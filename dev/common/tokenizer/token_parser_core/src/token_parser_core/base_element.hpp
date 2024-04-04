@@ -4,15 +4,27 @@
 #include <ostream>
 
 namespace tpc {
+	/**
+	 * @brief Base class for implementations of AST nodes
+	 *
+	 * Things that can parse themself should have this method:
+	 *  - static ParserRef<Element> parse(RiftParserState& state);
+	 */
 	class Element {
 	public:
-		/** Things that can parse themself have this method: */
-		// static ParserRef<Element> parse(RiftParserState& state);
-
+		/**
+		 * @brief Method used to print information from AST in a format similar to JSON
+		 */
 		virtual void dprint(std::ostream& out) const = 0;
 		virtual ~Element()                           = 0;
 
 		// @IDEA: this might be just a const variable if it will be enough in the future
+		/**
+		 * @brief function providing information whether this kind of element should end in a
+		 * semicolon
+		 *
+		 * @todo consider moving semicolon requirement to statement (Stmt) parsing.
+		 */
 		[[noreturn]]
 		virtual bool trailingSemicolon();
 

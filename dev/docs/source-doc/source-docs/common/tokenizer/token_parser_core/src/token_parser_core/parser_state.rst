@@ -2,4 +2,7 @@
 Parser state
 ============
 
-.. @TODO
+.. doxygenclass:: tpc::ParserState
+	:members:
+	:private-members:
+	:undoc-members:
