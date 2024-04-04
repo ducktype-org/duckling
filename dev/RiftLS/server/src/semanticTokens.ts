@@ -1,8 +1,9 @@
 import { SemanticTokens, SemanticTokensBuilder, SemanticTokensParams, TextDocuments } from "vscode-languageserver";
 import { SemanticTokenTypes, SemanticTokenModifiers } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { getPST } from "./compilerInterface";
+import { parseFile } from "./compilerInterface";
 import { Token, getTokenTypeIndex, semanticTokensLegend, compareTokens } from "./semanticTokensDeclarations";
+import { RiftElement } from "./lsptree/elements/elements";
 
 // accepts a list of modifiers and return a bit flag representation
 function encodeTokenModifiers(modifiers: any): number {
@@ -96,13 +97,14 @@ function computeCommentsTokens(document: TextDocument): Token[] {
 // The function that handles the 'textDocument/semanticTokens/full' request
 export async function handleSemanticTokensFull(params: SemanticTokensParams, 
 											   documents: TextDocuments<TextDocument>, 
-											   pstCache: Map<string, any>): Promise<SemanticTokens> {
+											   pstCache: Map<string, RiftElement | null>): Promise<SemanticTokens> {
 	const document = documents.get(params.textDocument.uri);
 	if (!document) return { data: [] };
 
 	let LSPTree = pstCache.get(document.uri);
 	if (!LSPTree) {
-		LSPTree = await getPST(document.uri);
+        let parseOutput = await parseFile(document.uri);
+		LSPTree = parseOutput[0];
 		pstCache.set(document.uri, LSPTree);
 	}
 

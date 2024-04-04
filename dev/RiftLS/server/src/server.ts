@@ -19,8 +19,8 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { handleSemanticTokensFull } from "./semanticTokens";
 import { onCompletion, onCompletionResolve } from "./completion";
-import { validateTextDocument } from "./validation"; // Import the validation function
-import { getPST } from "./compilerInterface"; // Import the compiler interface function
+import { validateRift } from "./validation"; // Import the validation function
+import { parseFile, RiftParserError } from "./compilerInterface"; // Import the compiler interface function
 import { getFoldingRanges } from './foldingRanges';
 import { RiftElement } from './lsptree/elements/elements';
 require("./lsptree/elements/index");
@@ -38,7 +38,8 @@ let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
 
 // Storing PST for documents
-const pstCache: Map<string, RiftElement | undefined> = new Map();
+const pstCache: Map<string, RiftElement | null> = new Map();
+const errorsCache: Map<string, RiftParserError[]> = new Map();
 
 // Semantic tokens legend, only 'comment' token type for now
 const semanticTokensLegend = {
@@ -126,7 +127,7 @@ connection.onDidChangeConfiguration(change => {
 		);
 	}
 	// Revalidate all open text documents
-	documents.all().forEach(document => validateTextDocument(document, connection));
+	documents.all().forEach(document => validateRift(document, connection, errorsCache));
 });
 
 export function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
@@ -152,12 +153,13 @@ documents.onDidClose(e => {
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
-	getPST(change.document.uri).then((pst) => {
-		pstCache.set(change.document.uri, pst);
-		console.log(pst);
+	parseFile(change.document.uri).then((parseOutput) => {
+		pstCache.set(change.document.uri, parseOutput[0]);
+		errorsCache.set(change.document.uri, parseOutput[1]);
+		console.log(parseOutput);
 	});
 
-	validateTextDocument(change.document, connection);
+	validateRift(change.document, connection, errorsCache);
 });
 
 

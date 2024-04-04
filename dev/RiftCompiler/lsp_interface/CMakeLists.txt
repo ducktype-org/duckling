@@ -1,4 +1,3 @@
-add_library(LSP
-		src/lsp_interface/export_keywords.cpp)
+add_executable(lsptree_interface src/lsp_interface/lsptree_interface.cpp)
 
-make_module(LSP USES Base Lexer)
+target_link_libraries(lsptree_interface Lexer PstParser)
