@@ -195,6 +195,13 @@ namespace pst {
 		static ParserRef<Import> parse(RiftParserState& state);
 		[[nodiscard]]
 		const decltype(names)& getNames() const;
+
+		/**
+		 * @note In the future this functionality will be done by HELIOS.
+		 * This functionality is needed to implement early import system for testing. 
+		 */
+		std::vector<base::StrId> getModulePath() const;
+
 		[[nodiscard]]
 		bool getStar() const;
 		~Import() final = default;

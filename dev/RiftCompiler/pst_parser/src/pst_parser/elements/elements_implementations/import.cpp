@@ -19,6 +19,14 @@ namespace pst {
 
 	const decltype(Import::names)& Import::getNames() const { return names; }
 
+	std::vector<base::StrId> Import::getModulePath() const {
+		std::vector<base::StrId> out;
+		for (auto& elem: names) {
+			out.emplace_back(elem.value);
+		}
+		return out;
+	}
+
 	bool Import::getStar() const { return names->getStar(); }
 
 	void Import::dprint(std::ostream& out) const {
