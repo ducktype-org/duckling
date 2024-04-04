@@ -11,15 +11,17 @@
 #include <filesystem/file.hpp>
 #include <filesystem/fs_tree.hpp>
 #include <pst_parser/pst.hpp>
+#include <base/ints.hpp>
 
 namespace compiler::frontend {
 	/**
 	 * @brief Structure holding FileID within SourceFile
 	 */
 	struct FileId {
-		static base::u64 nextId = 0;
-		base::u64 id;
-
+		u64 asInt() const { return id; }
+		static FileId nextID();
+	private:
+		u64 id;
 		FileId();
 	};
 
@@ -45,10 +47,11 @@ namespace compiler::frontend {
 	 * @brief Structure holding ModuleID within Module Tree
 	 */
 	struct ModuleId {
-		static base::u64 nextId = 0;
-		base::u64 id;
-
+		u64 asInt() const { return id; }
+		static ModuleId nextID();
+	private:
 		ModuleId();
+		u64 id;
 	};
 
 	/**
@@ -186,7 +189,7 @@ namespace compiler::frontend {
 		ModuleId getId() const;
 
 	private:
-		ModuleTree() = default;
+		ModuleTree(): id(ModuleId::nextID()) {};
 
 		/**
 		 * Recursively builds the ModuleTree inplace on the module_tree.

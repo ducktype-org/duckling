@@ -10,11 +10,29 @@ using fs::FsTree;
 using std::regex;
 using namespace compiler::frontend;
 
-FileId::FileId() {
-	id = nextId++;
+FileId::FileId() {}
+
+FileId FileId::nextID() {
+	// @OPT: move to global variable
+	static u64 nextId = 0;
+
+	FileId out;
+	out.id = nextId++;
+	return out;
 }
 
-SourceFile::SourceFile(fs::FilePath path): path(path) {
+ModuleId::ModuleId() {}
+
+ModuleId ModuleId::nextID() {
+	// @OPT: move to global variable
+	static u64 nextId = 0;
+
+	ModuleId out;
+	out.id = nextId++;
+	return out;
+}
+
+SourceFile::SourceFile(fs::FilePath path): path(path), id(FileId::nextID()) {
 	rift_file_name = path.stem();
 }
 
@@ -28,9 +46,6 @@ const pst::PST& SourceFile::getPST() {
 	}
 }
 
-ModuleId::ModuleId() {
-	id = nextId++;
-}
 
 bool ModuleTree::hasMainSourceFile() const { return !m_main_source_file.empty(); }
 
@@ -146,4 +161,4 @@ const base::HashMap<std::string, std::vector<fs::FilePath>>& ModuleTree::getOthe
 	return m_other_files;
 }
 
-const ModuleId ModuleTree::getId() const { return id; }
+ModuleId ModuleTree::getId() const { return id; }
