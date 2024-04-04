@@ -68,7 +68,6 @@ connection.onInitialize((params: InitializeParams) => {
 		capabilities: {
 			textDocumentSync: TextDocumentSyncKind.Incremental,
 			// Tell the client that this server supports those options
-			// Tell the client that this server supports those options
 			completionProvider: {
 				resolveProvider: true
 			},
@@ -109,8 +108,8 @@ interface ExampleSettings {
 }
 
 // The global settings, used when the `workspace/configuration` request is not supported by the client.
-// Please note that this is not the case when using this server with the client provided in this example
-// but could happen with other clients.
+// Please note that this is not the case for VSCode
+
 const defaultSettings: ExampleSettings = { maxNumberOfProblems: 1000 };
 let globalSettings: ExampleSettings = defaultSettings;
 
@@ -172,11 +171,7 @@ connection.onCompletion(onCompletion);
 connection.onCompletionResolve(onCompletionResolve);
 
 connection.onFoldingRanges((params: FoldingRangeParams): FoldingRange[] | null => {
-	const document = documents.get(params.textDocument.uri);
-	if (document) {
-		return getFoldingRanges(document);
-	}
-	return null;
+	return getFoldingRanges(params, documents, pstCache);
 });
 
 
