@@ -34,6 +34,7 @@ namespace rift_def {
 		Struct,
 		Namespace,
 		Import,
+		As,
 		Using,
 		Alias,
 
