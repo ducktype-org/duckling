@@ -23,6 +23,9 @@ void ModuleTree::buildModuleTree(
 	// Add directory submodules.
 	for (const auto& dir_iter: module_root->m_fs_tree->getDirs()) {
 		auto submodule = ModuleTree::create(dir_iter.second);
+
+		// Discards directories without main module file:
+		// @TODO: decide if this behavior is desirable
 		if (submodule->hasMainSourceFile())
 			module_root->m_submodules.put(dir_iter.first, submodule);
 	}
@@ -85,7 +88,13 @@ std::string ModuleTree::prettyPrint(u32 indentation) const {
 
 	output << indent << getName() << "/\n";
 
-	output << indent << "├> " << m_main_source_file->name() << '\n';
+	if (m_main_source_file.has_value()) {
+		output << indent << "├> " << m_main_source_file->name() << '\n';
+	}
+	else {
+		output << indent << "├> Missing main module file!\n";
+	}
+	
 	for (const auto& file_iter: getSourceFiles())
 		output << indent << "├= " << file_iter.name() << '\n';
 

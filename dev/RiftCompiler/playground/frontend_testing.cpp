@@ -16,24 +16,24 @@ int main(int argc, const char* argv[]) {
 	try {
 		options = clap.parse(argc, argv);
 	} catch (clap::exceptions::HelpException& e) {
-		std::cout << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
+		std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
 		return 1;
 	} catch (clap::exceptions::ClapException& e) {
-		std::cout << e.what() << '\n';
+		std::cerr << e.what() << '\n';
 		return 1;
 	}
 
 
 	auto path_to_compile = options.getValue<fs::FilePath>('p').value();
 
-	std::cout << "path_to_compile: " << path_to_compile.strView() << "\n";
+	std::cerr << "path_to_compile: " << path_to_compile.strView() << "\n";
 
 
 	using compiler::frontend::ModuleTree;
 
 	std::shared_ptr<ModuleTree> module_tree = ModuleTree::create(path_to_compile);
 
-	module_tree->prettyPrint();
+	std::cerr << module_tree->prettyPrint();
 
 // 	// Print main source file's content.
 // 	if (module_tree->hasMainSourceFile())
