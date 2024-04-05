@@ -4,7 +4,7 @@
 namespace dia {
 	void Logger::log(base::unique_ptr<Message> message_ptr) {
 		const int severity_id = static_cast<int>(message_ptr->getSeverity());
-		message_log[severity_id].emplace_back(message_ptr.release());
+		message_log.at(severity_id).emplace_back(message_ptr.release());
 	}
 
 	static void dumpMessages(
@@ -19,12 +19,12 @@ namespace dia {
 	void Logger::dumpLog(const bool detailed, std::ostream& stream) const {
 		auto console = printer::Console{};
 		for (int severity_id = 0; severity_id < Message::NUM_SEVERITIES; severity_id++)
-			dumpMessages(message_log[severity_id], console, detailed);
+			dumpMessages(message_log.at(severity_id), console, detailed);
 		console.print(stream);
 	}
 
 	usize Logger::messageCount(Message::Severity s) const {
-		return message_log[static_cast<int>(s)].size();
+		return message_log.at(static_cast<int>(s)).size();
 	}
 
 	usize Logger::messageCount() const {

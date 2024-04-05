@@ -19,7 +19,7 @@ namespace dia {
 		 * @brief Storage for messages of each severity.
 		 */
 		// @TODO: We may want to store a priority queue sorted by Message::Domain.
-		std::vector<base::unique_ptr<Message>> message_log[Message::NUM_SEVERITIES] = {};
+		std::array<std::vector<base::unique_ptr<Message>>, Message::NUM_SEVERITIES> message_log = {};
 
 	public:
 		Logger()                    = default;
