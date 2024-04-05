@@ -1,5 +1,5 @@
 /**
- * @file source_position.cpp
+ * @file message.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 

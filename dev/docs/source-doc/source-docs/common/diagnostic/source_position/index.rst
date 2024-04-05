@@ -34,7 +34,7 @@ Interface
 
 All symbols are in namespace ``dia``.
 
-``SourcePosition`` are checked to be valid during construction and are immutable later.
+``SourcePosition`` are checked to be valid during construction and are immutable afterwards.
 
 getSourceChars
 ^^^^^^^^^^^^^^

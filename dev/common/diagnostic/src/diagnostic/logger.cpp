@@ -45,8 +45,7 @@ namespace dia {
 			  message(message) {}
 
 	protected:
-		printer::MessageContent getBaseMessageContent([[maybe_unused]] bool detailed
-		) const override {
+		printer::MessageContent toMessageContentBrief() const override {
 			return printer::MessageContent(message);
 		}
 
@@ -71,8 +70,7 @@ namespace dia {
 		printer::MessageContent message;
 
 	protected:
-		printer::MessageContent getBaseMessageContent([[maybe_unused]] bool detailed
-		) const override {
+		printer::MessageContent toMessageContentBrief() const override {
 			return message;
 		}
 

@@ -114,6 +114,25 @@ namespace dia {
 
 	protected:
 		/**
+		 * @brief Convert the Message to a printer::MessageContent containing the diagnostic minimum.
+		 * @return The brief printer::MessageContent ready to be printed for the user.
+		 */
+		[[nodiscard]]
+		virtual printer::MessageContent toMessageContentBrief() const
+			= 0;
+
+		/**
+		 * @brief Convert the Note to a printer::MessageContent which possibly contains information
+		 * not included in the diagnostic minimum, thus not included in the brief message.
+		 * @return The detailed printer::MessageContent ready to be printed for the user.
+		 */
+		[[nodiscard]]
+		virtual printer::MessageContent toMessageContentDetailed() const {
+			// By default, the detailed version is the same as the brief version.
+			return toMessageContentBrief();
+		}
+
+		/**
 		 * @brief Get a printer::MessageContent ready to be printed for the user to view.
 		 *
 		 * Note: the MessageContent **must not** include the severity, domain, or notes.
@@ -124,8 +143,7 @@ namespace dia {
 		 * @return A printer::MessageContent ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::MessageContent getBaseMessageContent(bool detailed) const
-			= 0;
+		printer::MessageContent getBaseMessageContent(bool detailed) const;
 
 		/**
 		 * @brief Construct a Message from a relevant SourcePosition.

@@ -1,8 +1,8 @@
 ==============
-Error State
+SourcePosition
 ==============
 
-.. doxygenclass:: dia::ErrorState
+.. doxygenclass:: dia::SourcePosition
    :members:
    :private-members:
    :undoc-members:

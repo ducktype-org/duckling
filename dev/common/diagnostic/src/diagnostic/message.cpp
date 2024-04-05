@@ -57,6 +57,10 @@ namespace dia {
 		}
 	}
 
+	printer::MessageContent Message::getBaseMessageContent(const bool detailed) const {
+		return detailed ? toMessageContentBrief() : toMessageContentDetailed();
+	}
+
 	// @FIXME: This is inconsistent with the style in SourcePosition::genErrorMsg.
 	printer::MessagePack Message::toPrinterMessagePack(const bool detailed) const {
 		// Prepare the leading message.
