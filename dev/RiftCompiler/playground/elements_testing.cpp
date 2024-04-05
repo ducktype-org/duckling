@@ -14,8 +14,8 @@ int main(int argc, char** argv) {
 	auto tokens = lexer::tokenizeFile(file);
 	auto pst    = pst::parse(std::move(tokens));
 
-	if (pst.getErrorState().fail()) {
-		pst.getErrorState().dumpLog(std::cerr);
+	if (pst.getLogger().fail()) {
+		pst.getLogger().dumpLog(std::cerr);
 		std::cerr << "\nThere are errors, aborting.\n";
 		pst.dprint(std::cerr);
 		std::cerr << "\n";

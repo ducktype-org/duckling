@@ -8,7 +8,7 @@ namespace pst {
 			tpc::TokenStream(
 				token_data.tokens, tpc::Token(token_data.eof_sentinel), 0, token_data.tokens.size()
 			),
-			dia::ErrorState()
+			dia::Logger()
 		);
 		top_level              = TopLevel::parse(state);
 		std::tie(err, imports) = std::move(state).extractState();
@@ -16,7 +16,7 @@ namespace pst {
 
 	const std::vector<tpc::ParserCBorrowRef<Import>>& PST::getImports() const { return imports; }
 
-	const dia::ErrorState& PST::getErrorState() const { return err; }
+	const dia::Logger& PST::getLogger() const { return err; }
 
 	void PST::dprint(std::ostream& out) const { nullAwareDprint(top_level, out); }
 

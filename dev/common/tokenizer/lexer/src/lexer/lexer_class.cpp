@@ -9,8 +9,8 @@ namespace lexer {
 		  file(std::make_shared<fs::FilePath>(file)),
 		  file_content(this->file->getContent()),
 		  char_array(decode<fs::Encoding::UTF8>(file_content.view(), errorState)) {
-		if (errorState.fail()) {
-			errorState.dumpLog(std::cerr);
+		if (errorState.bad()) {
+			errorState.dumpLog(false, std::cerr);
 			throw base::LogicError("Error while decoding");
 		}
 	}
@@ -35,12 +35,7 @@ namespace lexer {
 				where++;
 			}
 		} else {
-			errorState.failAndLog(printer::Message(
-				{
-					{ "Tried to skip EOF" },
-				},
-				printer::MessageType::ERROR
-			));
+			errorState.failAndLog({ "Tried to skip EOF" });
 		}
 	}
 

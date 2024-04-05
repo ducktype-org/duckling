@@ -641,7 +641,9 @@ namespace pst {
 				if (isSeparator(state, 0))
 					state.tokens().skip();
 				else
-					state.err.logError(state.ctokens().peek().getPosition(), "separator expected");
+					state.err.failAndLog(
+						state.ctokens().peek().getPosition(), "separator expected"
+					);
 			}
 		}
 

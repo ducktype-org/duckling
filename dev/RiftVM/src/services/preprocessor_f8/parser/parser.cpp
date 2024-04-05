@@ -254,7 +254,7 @@ namespace assemble {
 					tpc::parseOne(state, &label_name);
 
 					if (!state.tryEat(rift_def::Special::Semicolon)) {
-						state.err.logError(
+						state.err.failAndLog(
 							state.ctokens().peek(-1).getPosition(), "semicolon expected"
 						);
 					}
@@ -680,13 +680,13 @@ namespace assemble {
 
 		tpc::ParserState state(
 			tpc::TokenStream(td.tokens, tpc::Token(td.eof_sentinel), 0, td.tokens.size()),
-			dia::ErrorState()
+			dia::Logger()
 		);
 
-		tpc::ParserRef<assemble::ParsedCode> out = ParsedCode::parse(state);
+		tpc::ParserRef<ParsedCode> out = ParsedCode::parse(state);
 
 		std::stringstream err_stream;
-		state.err.dumpLog(err_stream);
+		state.err.dumpLog(false, err_stream);
 
 		return { state.err.good(), err_stream.str(), std::move(out) };
 	}

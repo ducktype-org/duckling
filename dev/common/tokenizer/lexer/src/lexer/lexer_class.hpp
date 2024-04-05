@@ -2,7 +2,7 @@
 
 #include <printer/printer_console.hpp>
 #include <filesystem/file.hpp>
-#include <diagnostic/error_state.hpp>
+#include <diagnostic/logger.hpp>
 #include <vector>
 #include "char.hpp"
 #include "token.hpp"
@@ -27,7 +27,7 @@ namespace lexer {
 		TokenData tokenize();
 
 		[[nodiscard]]
-		const dia::ErrorState& getErrorState() const {
+		const dia::Logger& getErrorState() const {
 			return errorState;
 		}
 
@@ -118,7 +118,7 @@ namespace lexer {
 #endif
 		}
 
-		dia::ErrorState  errorState;
+		dia::Logger      errorState;
 		printer::Console log;
 
 		void addTokenMsg(usize begin, usize end, std::string_view token_type);
