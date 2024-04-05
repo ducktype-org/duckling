@@ -114,7 +114,7 @@ namespace dia {
 
 	protected:
 		/**
-		 * @brief Convert the Message to a printer::MessageContent containing the diagnostic minimum.
+		 * @brief Convert the Message to a printer::MessageContent with the diagnostic minimum.
 		 * @return The brief printer::MessageContent ready to be printed for the user.
 		 */
 		[[nodiscard]]

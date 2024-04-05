@@ -5,11 +5,11 @@ namespace dia {
 		using enum Severity;
 		switch (s) {
 		case Error:
-			return printer::MessageContent(" ERR", printer::Color::BRIGHT_RED);
+			return { " ERR", printer::Color::BRIGHT_RED };
 		case Warning:
-			return printer::MessageContent("WARN", printer::Color::BRIGHT_MAGENTA);
+			return { "WARN", printer::Color::BRIGHT_MAGENTA };
 		case Info:
-			return printer::MessageContent("INFO", printer::Color::BRIGHT_BLUE);
+			return { "INFO", printer::Color::BRIGHT_BLUE };
 		default:
 			RIFT_PANIC("Unknown message severity.");
 		}

@@ -45,11 +45,15 @@ namespace dia {
 			  message(message) {}
 
 	protected:
+		[[nodiscard]]
 		printer::MessageContent toMessageContentBrief() const override {
-			return printer::MessageContent(message);
+			return { message };
 		}
 
-		Domain getDomain() const override { return Domain::Misc; }
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Misc;
+		}
 	};
 
 	void Logger::failAndLog(const SourcePosition& position, std::string_view message) {
@@ -58,23 +62,27 @@ namespace dia {
 
 	class ObsoleteErrorWithPrinterMessage final: public Error {
 	public:
-		explicit ObsoleteErrorWithPrinterMessage(const printer::MessageContent& message):
+		explicit ObsoleteErrorWithPrinterMessage(printer::MessageContent message):
 			  // Had to pick a file that always exists and behaves somewhat normally.
-			  // /dev/zero does not work.
+		      // /dev/zero does not work.
 			  Error(
 				  { std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")), 1, 1, 1 }
 			  ),
-			  message(message) {}
+			  message(std::move(message)) {}
 
 	private:
 		printer::MessageContent message;
 
 	protected:
+		[[nodiscard]]
 		printer::MessageContent toMessageContentBrief() const override {
 			return message;
 		}
 
-		Domain getDomain() const override { return Domain::Misc; }
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Misc;
+		}
 	};
 
 	void Logger::failAndLog(const printer::MessageContent& message) {

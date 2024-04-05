@@ -16,8 +16,8 @@
 #include <iostream>
 
 namespace printer {
-	typedef std::array<LevelType, TYPE_COUNT> minLevel_t;
-	typedef std::array<usize, TYPE_COUNT>     maxAmounts_t;
+	using minLevel_t   = std::array<LevelType, TYPE_COUNT>;
+	using maxAmounts_t = std::array<usize, TYPE_COUNT>;
 
 	class Console {
 		static constexpr minLevel_t defaultMinLevel = [] {
