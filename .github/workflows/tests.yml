@@ -50,7 +50,7 @@ jobs:
 
     - name: Build
       working-directory: ${{env.WORKSPACE}}
-      run: cmake --build ${{env.WORKSPACE}} --target build_all_tests --config ${{env.BUILD_TYPE}}
+      run: cmake --build ${{env.WORKSPACE}} -j 2 --target build_all_tests --config ${{env.BUILD_TYPE}}
 
     - name: Test
       working-directory: ${{env.WORKSPACE}}
