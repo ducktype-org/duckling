@@ -830,7 +830,7 @@ namespace assemble {
 		return funcData;
 	}
 
-	// @TODO: this function returns errors as string, in the future `Console` like object should be
+	// @TODO: this function returns errors as string, in the future `StreamPrinter` like object should be
 	// returned, that can produce both human readable and json error output
 	cpp::result<vm::Code, std::string>
 		getCode(CodeContainer& code, vm::TypeMetadata& type_metadata) {

@@ -2,7 +2,7 @@
 #include <iostream>
 
 void testPrinter() {
-	auto console = printer::Console();
+	auto console = printer::StreamPrinter();
 	console.add(
 		{ { { { "Hello, World! This is the first message, " },
 	          { "So it will be the only one you see before error, when GeneralMax is set to 1." } },

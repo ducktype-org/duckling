@@ -69,13 +69,13 @@ namespace printer {
 		BRIGHT_WHITE   = 97,
 	};
 
-	class Console;
+	class StreamPrinter;
 
 	class MessageContent {
 		MessageContentText str;
 		Color              foreground_color;
 		Color              background_color;
-		friend Console;
+		friend StreamPrinter;
 
 	public:
 		MessageContent()                                 = delete;
@@ -110,7 +110,7 @@ namespace printer {
 		LevelType                   level;
 		Color                       foreground_color;
 		Color                       background_color;
-		friend Console;
+		friend StreamPrinter;
 
 	public:
 		Message()               = delete;

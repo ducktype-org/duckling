@@ -42,7 +42,7 @@ int main(int argc, const char** argv) {
 	try {
 		result = clap.parse(argc, argv);
 	} catch (clap::exceptions::ClapException& e) {
-		printer::Console console = printer::Console();
+		printer::StreamPrinter console = printer::StreamPrinter();
 		console.add({
 			{
 				{ "rift: ", printer::Color::DEFAULT },

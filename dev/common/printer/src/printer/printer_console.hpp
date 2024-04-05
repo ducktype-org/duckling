@@ -19,7 +19,7 @@ namespace printer {
 	using minLevel_t   = std::array<LevelType, TYPE_COUNT>;
 	using maxAmounts_t = std::array<usize, TYPE_COUNT>;
 
-	class Console {
+	class StreamPrinter {
 		static constexpr minLevel_t defaultMinLevel = [] {
 			minLevel_t res = {};
 			res.fill(0);
@@ -42,7 +42,7 @@ namespace printer {
 
 		bool isIgnoreInstantDebug() const { return ignore_instant_debug; }
 
-		Console(
+		StreamPrinter(
 			const usize         generalMax = SIZE_MAX,
 			const minLevel_t&   minLevel   = defaultMinLevel,
 			const maxAmounts_t& maxAmounts = defaultMaxAmounts
@@ -52,16 +52,16 @@ namespace printer {
 			  maxAmounts(maxAmounts) {}
 
 		// @IDEA: make these sets constexpr (and implement them as such).
-		Console& setMinLevel(MessageType type, LevelType level);
+		StreamPrinter& setMinLevel(MessageType type, LevelType level);
 
-		Console& setGeneralMax(usize max);
+		StreamPrinter& setGeneralMax(usize max);
 
-		Console& setMaxAmounts(MessageType type, usize amount);
+		StreamPrinter& setMaxAmounts(MessageType type, usize amount);
 
-		Console& add(const MessagePack& pack);
-		Console& add(MessagePack&& pack);
-		Console& add(const Message& message);
-		Console& add(Message&& message);
+		StreamPrinter& add(const MessagePack& pack);
+		StreamPrinter& add(MessagePack&& pack);
+		StreamPrinter& add(const Message& message);
+		StreamPrinter& add(Message&& message);
 
 		void print(std::ostream& out = std::cerr) const;
 

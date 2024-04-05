@@ -8,7 +8,7 @@
 #include "printer_console.hpp"
 
 namespace printer {
-	static void INSTANT_DEBUG_LOG([[maybe_unused]] Console& console) {
+	static void INSTANT_DEBUG_LOG([[maybe_unused]] StreamPrinter& console) {
 #ifdef PRINT_LOG
 		if (!console.isIgnoreInstantDebug()) {
 			console.print(std::cerr);
@@ -23,7 +23,7 @@ namespace printer {
 		return ColorId(color_id > 0 ? color_id + background_font_color_offset : color_id);
 	}
 
-	Console& Console::setMinLevel(MessageType type, LevelType level) {
+	StreamPrinter& StreamPrinter::setMinLevel(MessageType type, LevelType level) {
 		if (type == MessageType::ALL)
 			minLevel.fill(level);
 		else
@@ -31,12 +31,12 @@ namespace printer {
 		return *this;
 	}
 
-	Console& Console::setGeneralMax(usize max) {
+	StreamPrinter& StreamPrinter::setGeneralMax(usize max) {
 		generalMax = max;
 		return *this;
 	}
 
-	Console& Console::setMaxAmounts(MessageType type, usize amount) {
+	StreamPrinter& StreamPrinter::setMaxAmounts(MessageType type, usize amount) {
 		if (type == MessageType::ALL)
 			maxAmounts.fill(amount);
 		else
@@ -44,25 +44,25 @@ namespace printer {
 		return *this;
 	}
 
-	Console& Console::add(const MessagePack& pack) {
+	StreamPrinter& StreamPrinter::add(const MessagePack& pack) {
 		messagePacks.push_back(pack);
 		INSTANT_DEBUG_LOG(*this);
 		return *this;
 	}
 
-	Console& Console::add(MessagePack&& pack) {
+	StreamPrinter& StreamPrinter::add(MessagePack&& pack) {
 		messagePacks.emplace_back(std::move(pack));
 		INSTANT_DEBUG_LOG(*this);
 		return *this;
 	}
 
-	Console& Console::add(const Message& message) {
+	StreamPrinter& StreamPrinter::add(const Message& message) {
 		messagePacks.push_back({ message });
 		INSTANT_DEBUG_LOG(*this);
 		return *this;
 	}
 
-	Console& Console::add(Message&& message) {
+	StreamPrinter& StreamPrinter::add(Message&& message) {
 		MessagePack pack;
 		pack.emplace_back(std::move(message));
 		messagePacks.push_back(std::move(pack));
@@ -70,7 +70,7 @@ namespace printer {
 		return *this;
 	}
 
-	void Console::print(std::ostream& out) const {
+	void StreamPrinter::print(std::ostream& out) const {
 		std::array<usize, TYPE_COUNT> currentAmounts = {};
 		currentAmounts.fill(0);
 		usize currentCount = 0;
@@ -133,5 +133,5 @@ namespace printer {
 		}
 	}
 
-	void Console::clear() { messagePacks.resize(0); }
+	void StreamPrinter::clear() { messagePacks.resize(0); }
 }

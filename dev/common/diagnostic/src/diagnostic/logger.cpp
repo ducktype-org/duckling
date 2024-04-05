@@ -9,7 +9,7 @@ namespace dia {
 
 	static void dumpMessages(
 		const std::vector<base::unique_ptr<Message>>& messages,
-		printer::Console&                             console,
+		printer::StreamPrinter&                             console,
 		const bool                                    detailed
 	) {
 		for (const auto& message_ptr: messages)
@@ -17,7 +17,7 @@ namespace dia {
 	}
 
 	void Logger::dumpLog(const bool detailed, std::ostream& stream) const {
-		auto console = printer::Console{};
+		auto console = printer::StreamPrinter{};
 		for (int severity_id = 0; severity_id < Message::NUM_SEVERITIES; severity_id++)
 			dumpMessages(message_log.at(severity_id), console, detailed);
 		console.print(stream);
