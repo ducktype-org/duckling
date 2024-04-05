@@ -123,14 +123,14 @@ namespace tester {
 
 	void TestSuite::prolog() {
 		streamPrinter.add({ { std::string(beginEqualSignL(name.length() + 2), '='),
-		                " ",
-		                name,
-		                " ",
-		                std::string(endEqualSignL(name.length() + 2), '='),
-		                "\n",
-		                "Running ",
-		                std::to_string(tests.size()),
-		                " tests.\n" } });
+		                      " ",
+		                      name,
+		                      " ",
+		                      std::string(endEqualSignL(name.length() + 2), '='),
+		                      "\n",
+		                      "Running ",
+		                      std::to_string(tests.size()),
+		                      " tests.\n" } });
 		streamPrinter.print(std::cerr);
 		streamPrinter.clear();
 	}

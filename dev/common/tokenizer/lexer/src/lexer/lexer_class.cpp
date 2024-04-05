@@ -313,7 +313,7 @@ namespace lexer {
 		auto               group_end = peek().bracketPair();
 		if (tokenMessages())
 			streamPrinter.add({ { { base::strConcat("group begin(", line, ":", column, ")") } },
-			          printer::MessageType::DEBUG });
+			                    printer::MessageType::DEBUG });
 
 
 		Tokens inner_tokens;
@@ -362,7 +362,8 @@ namespace lexer {
 		output.push_back(Token::makeBracketGroup(
 			bracket_type, std::move(inner_tokens), std::move(sentinel), sourcePosition
 		));
-		if (tokenMessages()) streamPrinter.add({ { { "group end" } }, printer::MessageType::DEBUG });
+		if (tokenMessages())
+			streamPrinter.add({ { { "group end" } }, printer::MessageType::DEBUG });
 	}
 
 	bool Lexer::isEOF() const { return peek().is(Class::end_of_file_value); }

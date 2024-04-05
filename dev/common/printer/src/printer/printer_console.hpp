@@ -40,7 +40,10 @@ namespace printer {
 	public:
 		void ignoreInstantDebug() { ignore_instant_debug = true; }
 
-		bool isIgnoreInstantDebug() const { return ignore_instant_debug; }
+		[[nodiscard]]
+		bool isIgnoreInstantDebug() const {
+			return ignore_instant_debug;
+		}
 
 		StreamPrinter(
 			const usize         generalMax = SIZE_MAX,

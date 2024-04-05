@@ -18,9 +18,9 @@ private:
 	void test() {
 		auto mc = MessageContent("ms1", Color::DEFAULT, Color::RED);
 
-		Message     m({ mc });
-		MessagePack mp = { m };
-		StreamPrinter     c;
+		Message       m({ mc });
+		MessagePack   mp = { m };
+		StreamPrinter c;
 		c.ignoreInstantDebug();
 		c.add(mp);
 		c.add(std::move(mp));

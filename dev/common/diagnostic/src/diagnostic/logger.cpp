@@ -9,18 +9,18 @@ namespace dia {
 
 	static void dumpMessages(
 		const std::vector<base::unique_ptr<Message>>& messages,
-		printer::StreamPrinter&                             console,
+		printer::StreamPrinter&                       stream_printer,
 		const bool                                    detailed
 	) {
 		for (const auto& message_ptr: messages)
-			console.add(message_ptr->toPrinterMessagePack(detailed));
+			stream_printer.add(message_ptr->toPrinterMessagePack(detailed));
 	}
 
 	void Logger::dumpLog(const bool detailed, std::ostream& stream) const {
-		auto console = printer::StreamPrinter{};
+		auto stream_printer = printer::StreamPrinter{};
 		for (int severity_id = 0; severity_id < Message::NUM_SEVERITIES; severity_id++)
-			dumpMessages(message_log.at(severity_id), console, detailed);
-		console.print(stream);
+			dumpMessages(message_log.at(severity_id), stream_printer, detailed);
+		stream_printer.print(stream);
 	}
 
 	usize Logger::messageCount(Message::Severity s) const {

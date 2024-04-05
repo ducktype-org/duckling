@@ -118,7 +118,7 @@ namespace lexer {
 #endif
 		}
 
-		dia::Logger      errorState;
+		dia::Logger            errorState;
 		printer::StreamPrinter streamPrinter;
 
 		void addTokenMsg(usize begin, usize end, std::string_view token_type);
