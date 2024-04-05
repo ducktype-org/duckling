@@ -47,6 +47,8 @@ namespace dia {
 		 */
 		enum class Severity { Error, Warning, Info };
 
+		static constexpr int NUM_SEVERITIES = 3;
+
 	private:
 		/**
 		 * @brief Converts a message severity to a printable MessageContent.
@@ -160,8 +162,10 @@ namespace dia {
 
 		/**
 		 * @brief Add a Note to this Message.
+		 *
+		 * @param note_ptr A base::unique_ptr to the Note to be added.
 		 */
-		void addNote(base::unique_ptr<Note> note) { notes.emplace_back(note.release()); }
+		void addNote(base::unique_ptr<Note> note_ptr) { notes.emplace_back(note_ptr.release()); }
 
 		virtual ~Message() noexcept = default;
 	};
@@ -307,7 +311,7 @@ namespace dia {
 		 * This override adds a source location decoration to the printed message.
 		 */
 		// @FIXME: unimplemented. Pending decision on how to split responsibility between
-		// this method and SourcePosition::genErrorStr.
+		// this method and SourcePosition::genStr.
 		[[nodiscard]]
 		printer::Message toPrinterMessage(bool detailed) override
 			= 0;

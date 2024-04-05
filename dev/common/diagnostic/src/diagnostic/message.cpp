@@ -85,7 +85,7 @@ namespace dia {
 	// @FIXME: The "NOTE" raw string is inconsistent with the style in SourcePosition::genErrorMsg.
 	printer::Message Note::toPrinterMessage(const bool detailed) {
 		// Take the content of the note, then decorate it with a coloured "NOTE" prefix.
-		printer::MessageContent content = [=] {
+		printer::MessageContent content = [&, detailed] {
 			if (detailed) return toMessageContentDetailed();
 			return toMessageContentBrief();
 		}();
