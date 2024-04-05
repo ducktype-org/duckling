@@ -15,11 +15,11 @@ Module implementing a standardised compiler message interface.
     
     src/message/index.rst
 
-Usage
-=====
+Usage example
+=============
 
 .. code-block:: cpp
-    :caption: Basic usage
+    :caption: Basic usage example
 
     // Extend Error, Warning, or Info.
     class MyMessage: public Error {
@@ -38,8 +38,8 @@ Interface
 
 All symbols are in namespace ``dia``.
 
-Message
--------
+Message class
+-------------
 
 The ``Message`` is the base class for all compiler-generated messages.
 
@@ -65,10 +65,10 @@ Be careful not to override the (non-virtual) ``getBaseMessageContent(bool)`` met
 ``addNote``
 ^^^^^^^^^^^
 
-The ``Message`` class can also be supplied with instances of ``dia::Note`` via the ``addNote(Note) method.
+The ``Message`` class can also be supplied with instances of ``dia::Note`` via the ``addNote(Note)`` method.
 
-Note
-----
+Note class
+----------
 
 A ``Note`` is meant to supplement a ``Message`` with an additional helpful piece of information for the user.
 For example e.g. it could supplement a redeclaration error with "Previous declaration here.".

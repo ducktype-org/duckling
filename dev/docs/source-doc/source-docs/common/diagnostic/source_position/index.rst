@@ -15,11 +15,11 @@ Module implementing source position handling.
     
     src/source_position/index.rst
 
-Usage
-=====
+Usage example
+=============
 
 .. code-block:: cpp
-    :caption: Basic usage
+    :caption: Basic usage example
 
     int main() {
         dia::SourcePosition singleCharacter{<source-file>, <line>, <column>, <position-in-file>};

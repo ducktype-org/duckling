@@ -15,7 +15,7 @@ Module implementing logging for source code (with location, error structure, etc
 
     src/logger/index.rst
 
-Usage Example
+Usage example
 =============
 
 .. code-block:: cpp
