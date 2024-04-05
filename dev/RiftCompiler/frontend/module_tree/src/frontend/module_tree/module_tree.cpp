@@ -5,10 +5,15 @@
 
 #include "module_tree.hpp"
 #include <pst_parser/parser.hpp>
+#include <map>
 
 using fs::FsTree;
 using std::regex;
 using namespace compiler::frontend;
+
+inline static std::map<ModuleId, ModuleTree> modules{};
+inline static std::map<FileId, SourceFile> files{};
+inline static std::map<fs::FilePath, ModuleId> modulePaths{};
 
 FileId::FileId() {}
 
