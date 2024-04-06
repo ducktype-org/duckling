@@ -152,7 +152,8 @@ private:
 	 * and that they are correctly cast.
 	 */
 	void simple_floats() {
-		for (const std::array<usize, 5> float_sizes = { 16, 32, 64, 80, 128 }; const usize float_size: float_sizes) {
+		for (const std::array<usize, 5> float_sizes = { 16, 32, 64, 80, 128 };
+		     const usize                float_size: float_sizes) {
 			auto float_1 = FloatInfo::create(float_size);
 			auto float_2 = FloatInfo::create(float_size);
 

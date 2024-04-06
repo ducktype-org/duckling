@@ -19,8 +19,7 @@ namespace ts {
 			.desc                  = a.desc,
 			.start_offset          = a.start_offset.value() + start_offset.value(),
 			.end_offset            = a.end_offset.value() + start_offset.value(),
-			.result_type           = result_type
-		};
+			.result_type           = result_type };
 		return result;
 	}
 
