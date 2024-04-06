@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include "type_info.hpp"
 #include "value_category.hpp"
 
 #include <concepts>

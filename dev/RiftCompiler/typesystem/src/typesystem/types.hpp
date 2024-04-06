@@ -8,6 +8,7 @@
 
 #pragma once
 #include "type_info.hpp"
+#include "type_desc.hpp"
 
 namespace ts {
 	namespace internal {
@@ -449,6 +450,7 @@ namespace ts {
 
 		const std::vector<TypeDesc<>>& getUnderlyingTypes() const;
 
+		[[nodiscard]]
 		TypeDesc<> getMember(usize index) const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(VariantInfo)

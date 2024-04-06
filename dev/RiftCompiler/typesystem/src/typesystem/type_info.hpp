@@ -27,7 +27,7 @@
  * \param SomeTypeInfo The class name from the TypeInfo hierarchy.
  */
 #define CONSTRUCT_FROM_IMPLEMENTATION(SomeTypeInfo) \
-	explicit SomeTypeInfo(const CPimpl pimpl): Base((CBPimpl) pimpl) {}
+	explicit SomeTypeInfo(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
 
 /**
  * \brief Several type definitions for quick reference,

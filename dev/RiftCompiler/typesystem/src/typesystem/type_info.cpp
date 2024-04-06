@@ -41,6 +41,4 @@ namespace ts {
 	TypeInfo::CPimpl checkDynamicCast<TypeInfo>(TypeInfo::CPimpl p) {
 		return p;
 	}
-
-	template TypeInfo::CPimpl checkDynamicCast<TypeInfo>(TypeInfo::CPimpl);
 }
