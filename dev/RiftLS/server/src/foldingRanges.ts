@@ -4,7 +4,7 @@ import { RiftElement } from "./lsptree/elements/elements";
 
 export function getFoldingRanges(params: FoldingRangeParams,
     documents: TextDocuments<TextDocument>,
-    pstCache: Map<string, RiftElement | undefined>): FoldingRange[] {
+    pstCache: Map<string, RiftElement | null>): FoldingRange[] {
     const document = documents.get(params.textDocument.uri);
     if (!document) return [];
 
