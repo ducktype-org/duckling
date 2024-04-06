@@ -479,6 +479,9 @@ namespace ts {
 		CONSTRUCT_FROM_IMPLEMENTATION(ModuleInfo)
 	};
 
+	// The Meta type is the type which hold values being types.
+	// One could write, for example, `type myInt64 = i64;`.
+	// Might be useful for generic interfaces and compile time code execution.
 	class MetaInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(MetaInfo, TypeInfo)

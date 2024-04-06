@@ -16,10 +16,10 @@ namespace operation {
 	namespace internal {
 		Calls collectCalls(const ts::TypeInfo type_info, const Defaultable kind) {
 			switch (type_info.getKind()) {
-			// case ts::Kind::Class:
-			// 	return collectCallsClass(type_info, kind);
-			// case ts::Kind::Tuple:
-			// 	return collectCallsTuple(type_info, kind);
+			case ts::Kind::Class:
+				RIFT_PANIC("Unimplemented. See file history for details.");
+			case ts::Kind::Tuple:
+				RIFT_PANIC("Unimplemented. See file history for details.");
 			default:
 				(void) kind;
 				RIFT_PANIC("Cannot collect calls for type other than class or tuple.");

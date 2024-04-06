@@ -95,8 +95,10 @@ namespace ts {
 		 * \return The parameter types of this element.
 		 */
 		[[nodiscard]]
-		base::Optional<std::vector<TypeInfo>> getParameterTypes() const {
-			return parameter_types;
+		base::Optional<const std::vector<TypeInfo>&> getParameterTypes() const {
+			return parameter_types.has_value()
+			         ? base::Optional<const std::vector<TypeInfo>&>(parameter_types.value())
+			         : base::Optional<const std::vector<TypeInfo>&>();
 		}
 
 		/**

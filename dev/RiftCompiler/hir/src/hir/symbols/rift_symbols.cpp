@@ -130,7 +130,7 @@ namespace hir {
 	}
 
 	void StructSymbol::calculateType() {
-		// TODO type = ts::TypeDesc<ts::TupleInfo>(ts::MetaInfo::create());
+		// TODO
 	}
 
 	void StructSymbol::analyzeAll() {

@@ -17,13 +17,13 @@ namespace ts {
 			break;
 		case PrimaryCategory::Local:
 			category        = PrimaryCategory::Local;
-			is_mutable      = true;
+			is_mutable      = false;
 			is_pure         = false;
 			allows_semantic = MOVE | COPY | REINIT | USE | DESTROY;  // All
 			break;
 		case PrimaryCategory::Global:
 			category        = PrimaryCategory::Global;
-			is_mutable      = true;
+			is_mutable      = false;
 			is_pure         = false;
 			allows_semantic = COPY | REINIT | USE;  // All but MOVE and DESTROY
 			break;

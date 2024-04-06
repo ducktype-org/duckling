@@ -92,12 +92,13 @@ namespace ts::internal {
 		 * \param interface The interface of the type.
 		 */
 		// @TODO: remove the default for the interface. Each type should know its interface.
+		// The interface default is to be removed when interfaces for each type are determined.
 		explicit TypeInfoImpl(const usize size, TypeInterface interface = {}):
 			  size(size),
 			  interface(std::move(interface)) {}
 
 		/**
-		 * \brief Determine whether it is legal to consider and implicit coercion
+		 * \brief Determine whether it is legal to consider an implicit coercion
 		 * from a value described by this TypeDesc to one described by target.
 		 *
 		 * An implicit coercion is when, for example, a boolean is expected, but
@@ -140,6 +141,7 @@ namespace ts::internal {
 
 		// @TODO set this for each type and make it const.
 		// @TODO make this a field in TypeInfoImpl, set in the constructor?
+		// Should be done when text representation for types is determined.
 		/**
 		 * \brief The text representation of this type.
 		 */
@@ -414,16 +416,14 @@ namespace ts::internal {
 			  unique(unique) {}
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target
-		) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo) const override {
 			// Unlike with pointers, we do not allow checking whether the reference is non-null by
 			// coercion, because this may conflict with the underlying type being coercible to bool.
 			// Instead, we would want to just forward coercibility.
 			// But we also anticipate the need to coerce `T` to `ref T` or the other way around.
-			// Does this mean that we need to coearce `(ref S)` to `ref (ref S)`?
+			// Does this mean that we need to coerce `(ref S)` to `ref (ref S)`?
 			// Does `ref ref S` even make sense?
 			// @TODO: resolve the above.
-			(void) target;
 			return false;
 		}
 	};
@@ -445,7 +445,7 @@ namespace ts::internal {
 		static Kind staticKind;
 
 		[[nodiscard]]
-		std::vector<TypeDesc<>> getParameterList() const {
+		const std::vector<TypeDesc<>>& getParameterList() const {
 			return parameter_types;
 		}
 
@@ -624,6 +624,9 @@ namespace ts::internal {
 			if (target.getKind() != Kind::Class) return false;
 			const ClassInfo toClass               = target;
 			const auto [lva, so, eo, result_type] = getAncestorInfo(toClass);
+			// A class is convertible to another class when the other class is an unambiguous
+			// ancestor. The ancestor may be Standard (non-virtual) or Virtual, but it must exist
+			// (cannot be NoResult) and it cannot be Ambiguous.
 			return result_type == ResultType::Standard || result_type == ResultType::Virtual;
 		}
 	};

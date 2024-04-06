@@ -26,12 +26,9 @@
 
 // NOLINTEND
 
-// NOLINTBEGIN(cppcoreguidelines-pro-type-cstyle-cast)
-// We have a lot of C-style pointer casts here by design.
-// We could change them to dynamic_casts but that's less legible and slower.
-// We are reasonably confident that the pointer casts will never result in a bad cast.
-
 namespace ts {
+
+#define toCPimpl(pimpl) (reinterpret_cast<CPimpl>(pimpl))
 
 	/******************\
 	|    BASIC TYPES   |
@@ -69,17 +66,13 @@ namespace ts {
 	}
 
 	IntegralInfo IntegralInfo::create(usize size, bool signedness) {
-		static std::map<std::pair<usize, bool>, Impl> ints = [] {
-			std::map<std::pair<usize, bool>, Impl> result = {
-				{ { 8, true }, Impl{ 8, true } },     { { 8, false }, Impl{ 8, false } },
-				{ { 16, true }, Impl{ 16, true } },   { { 16, false }, Impl{ 16, false } },
-				{ { 32, true }, Impl{ 32, true } },   { { 32, false }, Impl{ 32, false } },
-				{ { 64, true }, Impl{ 64, true } },   { { 64, false }, Impl{ 64, false } },
-				{ { 128, true }, Impl{ 128, true } }, { { 128, false }, Impl{ 128, false } },
-			};
-			for (const auto& v: std::views::values(result)) pushType(base::make_unique<Impl>(v));
-			return result;
-		}();
+		static std::map<std::pair<usize, bool>, Impl> ints = {
+			{ { 8, true }, Impl{ 8, true } },     { { 8, false }, Impl{ 8, false } },
+			{ { 16, true }, Impl{ 16, true } },   { { 16, false }, Impl{ 16, false } },
+			{ { 32, true }, Impl{ 32, true } },   { { 32, false }, Impl{ 32, false } },
+			{ { 64, true }, Impl{ 64, true } },   { { 64, false }, Impl{ 64, false } },
+			{ { 128, true }, Impl{ 128, true } }, { { 128, false }, Impl{ 128, false } },
+		};
 
 		RIFT_ASSERT(ints.contains({ size, signedness }), "Incorrect simple int size");
 
@@ -124,7 +117,7 @@ namespace ts {
 	}
 
 	TypeDesc<> PointerInfo::getUnderlyingType() const {
-		return ((CPimpl) pimpl)->getUnderlyingType();
+		return toCPimpl(pimpl)->getUnderlyingType();
 	}
 
 	struct ReferenceConstructionRecord {
@@ -158,18 +151,18 @@ namespace ts {
 	}
 
 	TypeInfo ReferenceInfo::getUnderlyingType() const {
-		return ((CPimpl) pimpl)->getUnderlyingType();
+		return toCPimpl(pimpl)->getUnderlyingType();
 	}
 
 	ReferenceKind ReferenceInfo::getReferenceKind() const {
-		return ((CPimpl) pimpl)->getReferenceKind();
+		return toCPimpl(pimpl)->getReferenceKind();
 	}
 
-	bool ReferenceInfo::isLeaking() const { return ((CPimpl) pimpl)->isLeaking(); }
+	bool ReferenceInfo::isLeaking() const { return toCPimpl(pimpl)->isLeaking(); }
 
-	bool ReferenceInfo::isNullable() const { return ((CPimpl) pimpl)->isNullable(); }
+	bool ReferenceInfo::isNullable() const { return toCPimpl(pimpl)->isNullable(); }
 
-	bool ReferenceInfo::isUnique() const { return ((CPimpl) pimpl)->isUnique(); }
+	bool ReferenceInfo::isUnique() const { return toCPimpl(pimpl)->isUnique(); }
 
 	/*******************\
 	|  COMPOSITE TYPES  |
@@ -204,14 +197,14 @@ namespace ts {
 	}
 
 	std::vector<TypeDesc<>> FunctionInfo::getParameterTypes() const {
-		return ((CPimpl) pimpl)->getParameterList();
+		return toCPimpl(pimpl)->getParameterList();
 	}
 
-	TypeDesc<> FunctionInfo::getResultType() const { return ((CPimpl) pimpl)->getResult(); }
+	TypeDesc<> FunctionInfo::getResultType() const { return toCPimpl(pimpl)->getResult(); }
 
-	bool FunctionInfo::isPure() const { return ((CPimpl) pimpl)->isPure(); }
+	bool FunctionInfo::isPure() const { return toCPimpl(pimpl)->isPure(); }
 
-	bool FunctionInfo::isFree() const { return ((CPimpl) pimpl)->isFree(); }
+	bool FunctionInfo::isFree() const { return toCPimpl(pimpl)->isFree(); }
 
 	/*****************\
 	|  NOMINAL TYPES  |
@@ -231,11 +224,11 @@ namespace ts {
 	}
 
 	const std::vector<TypeDesc<>>& VariantInfo::getUnderlyingTypes() const {
-		return ((CPimpl) pimpl)->getUnderlyingTypes();
+		return toCPimpl(pimpl)->getUnderlyingTypes();
 	}
 
 	TypeDesc<> VariantInfo::getMember(const usize index) const {
-		return ((CPimpl) pimpl)->getMember(index);
+		return toCPimpl(pimpl)->getMember(index);
 	}
 
 	NamespaceInfo NamespaceInfo::create() {
@@ -290,5 +283,3 @@ namespace ts {
 	INSTANTIATE_CHECKED_CAST(VTableInfo)
 	INSTANTIATE_CHECKED_CAST(MetaInfo)
 }
-
-// NOLINTEND(cppcoreguidelines-pro-type-cstyle-cast)

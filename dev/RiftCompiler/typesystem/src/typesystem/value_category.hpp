@@ -1,7 +1,7 @@
 /**
  * @file value_category.hpp
  * @brief Value category definition.
- * 
+ *
  * Value category describes properties of the value that are not directly tied to its type.
  */
 
@@ -18,9 +18,9 @@ namespace ts {
 	 */
 	enum class PrimaryCategory {
 		Temporary, /**< Temporary values are product of expression evaluation. */
-		Local, /**< Local values correspond to local variables. */
-		Global, /**< Global values correspond to global variables. */
-		Literal /**< Literal values store values explicitly written in the code. */
+		Local,     /**< Local values correspond to local variables. */
+		Global,    /**< Global values correspond to global variables. */
+		Literal    /**< Literal values store values explicitly written in the code. */
 	};
 
 	constexpr base::FlagType MOVE(0);
@@ -39,27 +39,34 @@ namespace ts {
 		PrimaryCategory category{ PrimaryCategory::Local };
 		/**
 		 * If value is mutable it can be implicitly changed by the coder.
- 		 */
-		bool            is_mutable{ true };
+		 */
+		bool is_mutable{ false };
 		/**
 		 * If value is pure it is guaranteed to not be changed behind the scenes.
- 		 */
-		bool            is_pure{ false };
+		 */
+		bool is_pure{ false };
 		/**
 		 * Allowed semantics describe what can be done with a value.
- 		 */
-		base::FlagType  allows_semantic{ MOVE | COPY | REINIT | USE | DESTROY };
+		 */
+		base::FlagType allows_semantic{ MOVE | COPY | REINIT | USE | DESTROY };
 		/**
-		 * Forces semantics describe what must be done with a value. Note that it might be redundant because of information kept in allowed semantics.  
- 		 */
-		base::FlagType  force_semantic{};
+		 * Forces semantics describe what must be done with a value. Note that it might be redundant
+		 * because of information kept in allowed semantics.
+		 */
+		base::FlagType force_semantic{};
 
 	public:
 		ValueCategory() = default;
 
 		explicit ValueCategory(const PrimaryCategory&);
 
-		ValueCategory(PrimaryCategory, bool, bool, base::FlagType, base::FlagType);
+		ValueCategory(
+			PrimaryCategory category,
+			bool            is_mutable,
+			bool            is_pure,
+			base::FlagType  allows_semantic,
+			base::FlagType  force_semantic
+		);
 
 		/**
 		 * A simple getter for category.
@@ -102,7 +109,7 @@ namespace ts {
 		}
 
 		/**
-		 * Compares value categories in terms of waht might be done with values they describe.
+		 * Compares value categories in terms of what might be done with values they describe.
 		 * @param other Value category to compare
 		 * @return Weather the other value category is contained in this value category.
 		 */

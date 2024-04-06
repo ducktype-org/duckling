@@ -92,11 +92,8 @@ namespace ts {
 		template<std::derived_from<TypeInfo> OTHER_TYPE_INFO>
 		[[nodiscard]]
 		auto operator<=>(const TypeDesc<OTHER_TYPE_INFO>& other) const {
-			if (typeInfo < other.getType()) return std::strong_ordering::less;
-			if (typeInfo > other.getType()) return std::strong_ordering::greater;
-			if (valueCategory < other.getValueCategory()) return std::strong_ordering::less;
-			if (valueCategory > other.getValueCategory()) return std::strong_ordering::greater;
-			return std::strong_ordering::equal;
+			if (auto type_cmp = typeInfo <=> other.getType(); type_cmp != 0) return type_cmp;
+			return valueCategory <=> other.getValueCategory();
 		}
 
 		/**
