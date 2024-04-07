@@ -7,6 +7,9 @@
 #include <pst_parser/parser.hpp>
 #include <map>
 
+#include <query_framework/query_impl.hpp>
+#include "queries.hpp"
+
 using fs::FsTree;
 using std::regex;
 using namespace compiler::frontend;
@@ -52,6 +55,11 @@ const pst::PST& SourceFile::getPST() {
 	}
 }
 
+
+ModuleTree::ModuleTree(): id(ModuleId::nextID()) {
+	modules.insert{id, this};
+	modulePaths.insert(getMainSourceFile()->path, id);
+};
 
 bool ModuleTree::hasMainSourceFile() const { return !m_main_source_file.empty(); }
 
@@ -168,3 +176,107 @@ const base::HashMap<std::string, std::vector<fs::FilePath>>& ModuleTree::getOthe
 }
 
 ModuleId ModuleTree::getId() const { return id; }
+
+/*******************
+ * GetPatentModule *
+ *******************/
+struct ImplementationOf_GetPatentModuleQuery: query::QueryImplementation<GetPatentModuleQuery, compiler::frontend::ModuleId> {
+	inline static std::map<QKey, query::AddACD<QResult>> cache{};
+
+	static auto provide(Context& context, QKey key) -> PResult {
+		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
+
+		return module_tree->getParentModule()->getId();
+	}
+	static auto load(QKey key) -> LoadResult {
+		if (cache.contains(key))
+			return cache.at(key);
+		else
+			return {};
+	}
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
+		cache.insert({ key, { res, acd } });
+		return res;
+	}
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetPatentModuleQuery, "GetPatentModuleQuery");
+
+/*********************
+ * GetMainSourceFile *
+ *********************/
+struct ImplementationOf_GetMainSourceFileQuery: query::QueryImplementation<GetMainSourceFileQuery, compiler::frontend::FileId> {
+	inline static std::map<QKey, query::AddACD<QResult>> cache{};
+
+	static auto provide(Context& context, QKey key) -> PResult {
+		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
+
+		return module_tree->getMainSourceFile()->id;
+	}
+	static auto load(QKey key) -> LoadResult {
+		if (cache.contains(key))
+			return cache.at(key);
+		else
+			return {};
+	}
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
+		cache.insert({ key, { res, acd } });
+		return res;
+	}
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetMainSourceFileQuery, "GetMainSourceFileQuery");
+
+/******************
+ * GetSourceFiles *
+ ******************/
+struct ImplementationOf_GetSourceFilesQuery: query::QueryImplementation<GetSourceFilesQuery, compiler::frontend::FileId> {
+	inline static std::map<QKey, query::AddACD<QResult>> cache{};
+
+	static auto provide(Context& context, QKey key) -> PResult {
+		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
+		
+		std::vector<FileId>& out{};
+		for (auto file : module_tree->getSourceFiles()) {
+			out.push_back(file.id);
+		}
+		return out;
+	}
+	static auto load(QKey key) -> LoadResult {
+		if (cache.contains(key))
+			return cache.at(key);
+		else
+			return {};
+	}
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
+		cache.insert({ key, { res, acd } });
+		return res;
+	}
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetSourceFilesQuery, "GetSourceFilesQuery");
+
+
+/**************
+ * GetFilePST *
+ **************/
+struct ImplementationOf_GetFilePSTQuery: query::QueryImplementation<GetFilePSTQuery, pst::PST&> {
+	inline static std::map<QKey, query::AddACD<QResult>> cache{};
+
+	static auto provide(Context& context, QKey key) -> PResult {
+		SourceFile file = files.at(key);
+		return file.getPST();
+	}
+	static auto load(QKey key) -> LoadResult {
+		if (cache.contains(key))
+			return cache.at(key);
+		else
+			return {};
+	}
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
+		cache.insert({ key, { res, acd } });
+		return res;
+	}
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetFilePSTQuery, "GetFilePSTQuery");
