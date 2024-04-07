@@ -80,7 +80,7 @@ namespace query {
 				));
 
 				// calculation:
-				decltype(auto) result
+				auto&& result
 					= QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 
 				// prolog:

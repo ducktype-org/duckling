@@ -2,6 +2,8 @@
 
 #include <utility>
 
+// @TODO: this hole module can be changes to use of `auto&&` forward ref.
+
 namespace base {
 	template<typename T>
 	auto forwardReferenceMaker(T&& arg) -> decltype(std::forward<T>(arg)) {
