@@ -7,7 +7,8 @@ namespace compiler::frontend {
 	/*******************
 	 * QueryModuleTree *
 	 *******************/
-	struct ImplementationOf_QueryModuleTree: query::QueryImplementation<QueryModuleTree, compiler::frontend::ModuleId> {
+	struct ImplementationOf_QueryModuleTree:
+		  query::QueryImplementation<QueryModuleTree, compiler::frontend::ModuleId> {
 		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
 
 		static auto provide(Context& context, QKey key) -> PResult {
@@ -15,12 +16,14 @@ namespace compiler::frontend {
 
 			return module_tree->getId();
 		}
+
 		static auto load(QKey key) -> LoadResult {
 			if (cache.contains(key))
 				return cache.at(key);
 			else
 				return {};
 		}
+
 		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
 			cache.put(key, { res, acd });
 			return res;
@@ -32,7 +35,8 @@ namespace compiler::frontend {
 	/*******************
 	 * QuerySourceFile *
 	 *******************/
-	struct ImplementationOf_QuerySourceFile: query::QueryImplementation<QuerySourceFile, compiler::frontend::FileId> {
+	struct ImplementationOf_QuerySourceFile:
+		  query::QueryImplementation<QuerySourceFile, compiler::frontend::FileId> {
 		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
 
 		static auto provide(Context& context, QKey key) -> PResult {
@@ -40,12 +44,14 @@ namespace compiler::frontend {
 
 			return file.id;
 		}
+
 		static auto load(QKey key) -> LoadResult {
 			if (cache.contains(key))
 				return cache.at(key);
 			else
 				return {};
 		}
+
 		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
 			cache.put(key, { res, acd });
 			return res;
@@ -54,4 +60,3 @@ namespace compiler::frontend {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySourceFile, "QuerySourceFile");
 }
-

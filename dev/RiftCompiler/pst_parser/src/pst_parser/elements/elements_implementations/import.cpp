@@ -21,9 +21,7 @@ namespace pst {
 
 	std::vector<base::StrId> Import::getModulePath() const {
 		std::vector<base::StrId> out;
-		for (auto& elem: names) {
-			out.emplace_back(elem.value);
-		}
+		for (auto& elem: names) out.emplace_back(elem.value);
 		return out;
 	}
 
@@ -33,7 +31,7 @@ namespace pst {
 		out << "{\"Import\": ";
 		nullAwareDprint(names, out);
 		out << ", ";
-		out << R"("Alias": ")" << alias.value.strView() << R"(")"; 
+		out << R"("Alias": ")" << alias.value.strView() << R"(")";
 		out << "}";
 	}
 }

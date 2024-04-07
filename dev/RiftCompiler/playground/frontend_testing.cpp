@@ -4,13 +4,11 @@
 
 int main(int argc, const char* argv[]) {
 	auto clap
-		= clap::Clap()
-	          .addHelpFlag()
-	          .add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
-	                   .addShortName('p')
-	                   .addShortDesc("Path to Rift source root")
-					   .required()
-	                   .build());
+		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
+	                                         .addShortName('p')
+	                                         .addShortDesc("Path to Rift source root")
+	                                         .required()
+	                                         .build());
 
 	clap::ParsingResult options;
 	try {
@@ -35,20 +33,19 @@ int main(int argc, const char* argv[]) {
 
 	std::cerr << module_tree->prettyPrint();
 
-// 	// Print main source file's content.
-// 	if (module_tree->hasMainSourceFile())
-// 		std::cout << module_tree->getMainSourceFile().getContent().view().stringView() << '\n';
+	// 	// Print main source file's content.
+	// 	if (module_tree->hasMainSourceFile())
+	// 		std::cout << module_tree->getMainSourceFile().getContent().view().stringView() << '\n';
 
-// 	// Print content of source files.
-// 	for (const fs::FilePath& file: module_tree->getSourceFiles())
-// 		std::cout << file.getContent().view().stringView() << '\n';
+	// 	// Print content of source files.
+	// 	for (const fs::FilePath& file: module_tree->getSourceFiles())
+	// 		std::cout << file.getContent().view().stringView() << '\n';
 
-// 	// Print names of other modules.
-// 	//
-// 	// getSubmodules is an iterator:
-// 	// first  - name
-// 	// second - std::shared_ptr<ModuleTree>
-// 	for (const auto& submodule: module_tree->getSubmodules())
-// 		std::cout << submodule.first << " == " << submodule.second->getName() << '\n';
-
+	// 	// Print names of other modules.
+	// 	//
+	// 	// getSubmodules is an iterator:
+	// 	// first  - name
+	// 	// second - std::shared_ptr<ModuleTree>
+	// 	for (const auto& submodule: module_tree->getSubmodules())
+	// 		std::cout << submodule.first << " == " << submodule.second->getName() << '\n';
 }

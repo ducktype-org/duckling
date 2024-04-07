@@ -1,6 +1,6 @@
 #pragma once
 
-#include <functional> // std::hash
+#include <functional>  // std::hash
 
 namespace query {
 	/**

@@ -21,9 +21,13 @@ namespace compiler::frontend {
 	 */
 	struct FileId {
 		[[nodiscard]]
-		u64 asInt() const { return id; }
+		u64 asInt() const {
+			return id;
+		}
+
 		static FileId nextID();
-		bool operator==(const FileId&) const = default;
+		bool          operator==(const FileId&) const = default;
+
 	private:
 		u64 id;
 		FileId() = default;
@@ -33,16 +37,16 @@ namespace compiler::frontend {
 	 * @brief Structure holding SourceFile within Module Tree
 	 */
 	struct SourceFile {
-		fs::FilePath path;
-		std::string rift_file_name; // or StrID?
-		FileId id;
+		fs::FilePath             path;
+		std::string              rift_file_name;  // or StrID?
+		FileId                   id;
 		base::Optional<pst::PST> parse_tree;
 
 		SourceFile(fs::FilePath);
 
 		/**
 		 * @brief Lazily parses the source file and returns PST
-		 * @return const pst::PST& 
+		 * @return const pst::PST&
 		 */
 		const pst::PST& getPST();
 	};
@@ -52,9 +56,13 @@ namespace compiler::frontend {
 	 */
 	struct ModuleId {
 		[[nodiscard]]
-		u64 asInt() const { return id; }
+		u64 asInt() const {
+			return id;
+		}
+
 		static ModuleId nextID();
-		bool operator==(const ModuleId&) const = default;
+		bool            operator==(const ModuleId&) const = default;
+
 	private:
 		ModuleId() = default;
 		u64 id;
@@ -182,7 +190,7 @@ namespace compiler::frontend {
 		 * @return std::string with the representation.
 		 */
 		std::string prettyPrint(u32 indentation = 0) const;
-		
+
 		/**
 		 * Fetches the id of the module.
 		 * @return compiler::frontend::ModuleId.
@@ -247,21 +255,15 @@ namespace compiler::frontend {
 	};
 }
 
-
 // std::hash functor for ModuleID and FileID:
 namespace std {
 	template<>
 	struct hash<compiler::frontend::ModuleId> {
-		usize operator()(const compiler::frontend::ModuleId& k) const {
-			return k.asInt();
-		}
+		usize operator()(const compiler::frontend::ModuleId& k) const { return k.asInt(); }
 	};
 
 	template<>
 	struct hash<compiler::frontend::FileId> {
-		usize operator()(const compiler::frontend::FileId& k) const {
-			return k.asInt();
-		}
+		usize operator()(const compiler::frontend::FileId& k) const { return k.asInt(); }
 	};
 }
-

@@ -15,15 +15,8 @@ using std::regex;
 using namespace compiler::frontend;
 
 inline static base::HashMap<ModuleId, std::shared_ptr<ModuleTree>> modules{};
-inline static base::HashMap<FileId, SourceFile&> files{};
-inline static base::HashMap<fs::FilePath, ModuleId> modulePaths{};
-
-// FileId createSourceFile(fs::FilePath path) {
-// 	SourceFile out(path);
-// 	auto id = out.id;
-// 	files.put(id, std::move(out));
-// 	return id;
-// }
+inline static base::HashMap<FileId, SourceFile&>                   files{};
+inline static base::HashMap<fs::FilePath, ModuleId>                modulePaths{};
 
 FileId FileId::nextID() {
 	// @OPT: move to global variable
@@ -50,34 +43,29 @@ SourceFile::SourceFile(fs::FilePath path): path(std::move(path)), id(FileId::nex
 const pst::PST& SourceFile::getPST() {
 	if (parse_tree) {
 		return parse_tree.value();
-	}
-	else {
+	} else {
 		parse_tree.emplace(pst::parse(path));
 		return parse_tree.value();
 	}
 }
 
-
-ModuleTree::ModuleTree(): id(ModuleId::nextID()) { };
+ModuleTree::ModuleTree(): id(ModuleId::nextID()){};
 
 std::shared_ptr<ModuleTree> ModuleTree::create(std::shared_ptr<fs::FsTree> root) {
 	auto ptr = std::shared_ptr<ModuleTree>(new ModuleTree());
-	
+
 	buildModuleTree(ptr, std::move(root));
-	
+
 	modules.put(ptr->getId(), ptr);
-	if (ptr->hasMainSourceFile())
-		modulePaths.put(ptr->getMainSourceFile().path, ptr->getId());
+	if (ptr->hasMainSourceFile()) modulePaths.put(ptr->getMainSourceFile().path, ptr->getId());
 
 	// at this point references inside module tree are stable, so we can fill "files" map:
 	if (ptr->hasMainSourceFile()) {
 		auto& main = ptr->m_main_source_file.value();
 		files.put(main.id, main);
 	}
-	for (auto& file: ptr->m_source_files) {
-		files.put(file.id, file);
-	}
-	
+	for (auto& file: ptr->m_source_files) files.put(file.id, file);
+
 	return ptr;
 }
 
@@ -160,13 +148,11 @@ std::string ModuleTree::prettyPrint(u32 indentation) const {
 
 	output << indent << getName() << "/\n";
 
-	if (m_main_source_file.has_value()) {
+	if (m_main_source_file.has_value())
 		output << indent << "├> " << m_main_source_file.value().path.name() << '\n';
-	}
-	else {
+	else
 		output << indent << "├> Missing main module file!\n";
-	}
-	
+
 	for (const auto& file_iter: getSourceFiles())
 		output << indent << "├= " << file_iter.path.name() << '\n';
 
@@ -181,9 +167,8 @@ std::string ModuleTree::prettyPrint(u32 indentation) const {
 }
 
 const SourceFile& ModuleTree::getMainSourceFile() const {
-	if (m_main_source_file.empty()) throw base::LogicError(base::strConcat(
-		"No main source file! in module: ", getName()
-	));
+	if (m_main_source_file.empty())
+		throw base::LogicError(base::strConcat("No main source file! in module: ", getName()));
 
 	return m_main_source_file.value();
 }
@@ -208,10 +193,11 @@ struct ImplementationOf_QueryParentModule: query::QueryImplementation<QueryParen
 		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
 		return module_tree->getParentModule().value().getId();
 	}
-	static auto load([[maybe_unused]] QKey key) -> LoadResult {
-		return {};
-	}
-	static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd) -> QResult {
+
+	static auto load([[maybe_unused]] QKey key) -> LoadResult { return {}; }
+
+	static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd)
+		-> QResult {
 		return res;
 	}
 };
@@ -221,15 +207,17 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryParentModule, "QueryParen
 /***********************
  * QueryMainSourceFile *
  ***********************/
-struct ImplementationOf_QueryMainSourceFile: query::QueryImplementation<QueryMainSourceFile, FileId> {
+struct ImplementationOf_QueryMainSourceFile:
+	  query::QueryImplementation<QueryMainSourceFile, FileId> {
 	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
 		return module_tree->getMainSourceFile().id;
 	}
-	static auto load([[maybe_unused]] QKey key) -> LoadResult {
-		return {};
-	}
-	static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd) -> QResult {
+
+	static auto load([[maybe_unused]] QKey key) -> LoadResult { return {}; }
+
+	static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd)
+		-> QResult {
 		return res;
 	}
 };
@@ -239,30 +227,27 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryMainSourceFile, "QueryMai
 /********************
  * QuerySourceFiles *
  ********************/
-struct ImplementationOf_QuerySourceFiles: query::QueryImplementation<
-	QuerySourceFiles,
-	std::vector<FileId>>
-{
+struct ImplementationOf_QuerySourceFiles:
+	  query::QueryImplementation<QuerySourceFiles, std::vector<FileId>> {
 	inline static base::HashMap<QKey, base::unique_ptr<PResWithACD>> cache{};
 
 	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
-		
+
 		std::vector<FileId> out{};
-		for (const auto& file: module_tree->getSourceFiles()) {
-			out.push_back(file.id);
-		}
+		for (const auto& file: module_tree->getSourceFiles()) out.push_back(file.id);
 		return out;
 	}
+
 	static auto load(QKey key) -> LoadResult {
 		if (cache.contains(key)) {
 			auto entry = cache.at(key).borrow();
 			return QResWithACD{ entry->data, entry->acd };
-		}
-		else {
+		} else {
 			return {};
 		}
 	}
+
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
 		cache.put(key, base::make_unique<PResWithACD>(PResWithACD{ std::move(res), acd }));
 		return cache.at(key)->data;
@@ -274,30 +259,28 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySourceFiles, "QuerySource
 /*******************
  * QuerySubmodules *
  *******************/
-struct ImplementationOf_QuerySubmodules: query::QueryImplementation<
-	QuerySubmodules,
-	base::HashMap<std::string, ModuleId>>
-{	
+struct ImplementationOf_QuerySubmodules:
+	  query::QueryImplementation<QuerySubmodules, base::HashMap<std::string, ModuleId>> {
 	inline static base::HashMap<QKey, base::unique_ptr<PResWithACD>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
-		
+
 		PResult out{};
-		for (const auto& [name, module] : module_tree->getSubmodules()) {
+		for (const auto& [name, module]: module_tree->getSubmodules())
 			out.put(name, module->getId());
-		}
 		return out;
 	}
+
 	static auto load(QKey key) -> LoadResult {
 		if (cache.contains(key)) {
 			auto entry = cache.at(key).borrow();
 			return QResWithACD{ entry->data, entry->acd };
-		}
-		else {
+		} else {
 			return {};
 		}
 	}
+
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
 		cache.put(key, base::make_unique<PResWithACD>(PResWithACD{ std::move(res), acd }));
 		return cache.at(key)->data;
@@ -306,26 +289,24 @@ struct ImplementationOf_QuerySubmodules: query::QueryImplementation<
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySubmodules, "QuerySubmodules");
 
-
 /****************
  * QueryFilePST *
  ****************/
-struct ImplementationOf_QueryFilePST: query::QueryImplementation<
-	QueryFilePST,
-	const pst::PST&>
-{	
+struct ImplementationOf_QueryFilePST: query::QueryImplementation<QueryFilePST, const pst::PST&> {
 	inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		auto& file = files.at(key);
 		return file.getPST();
 	}
+
 	static auto load(QKey key) -> LoadResult {
 		if (cache.contains(key))
 			return cache.at(key);
 		else
 			return {};
 	}
+
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
 		cache.put(key, { res, acd });
 		return res;

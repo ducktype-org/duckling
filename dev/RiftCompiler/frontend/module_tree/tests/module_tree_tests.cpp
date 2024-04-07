@@ -61,15 +61,15 @@ private:
 	}
 
 	void testQueries() {
-		auto pth = fs::FilePath(path("test_module"));
+		auto pth  = fs::FilePath(path("test_module"));
 		auto root = query::queryEntryPoint<QueryModuleTree>(pth);
-		auto awe = query::queryEntryPoint<QuerySubmodules>(root).at("awe");
-		
+		auto awe  = query::queryEntryPoint<QuerySubmodules>(root).at("awe");
+
 		auto sources = query::queryEntryPoint<QuerySourceFiles>(root);
 		assert(sources.size() == 1, "Bad source count!");
-		
-		auto main_id = sources.at(0);
-		auto& pst = query::queryEntryPoint<QueryFilePST>(main_id);
+
+		auto  main_id = sources.at(0);
+		auto& pst     = query::queryEntryPoint<QueryFilePST>(main_id);
 	}
 };
 

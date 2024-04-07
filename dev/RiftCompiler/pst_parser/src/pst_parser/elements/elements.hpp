@@ -183,13 +183,13 @@ namespace pst {
 	 * @note: Import allows for two syntaxes right now:
 	 * import A.B as D;
 	 * import A.B.* as D;
-	 * 
+	 *
 	 * the optional "star" is ignored.
 	 */
 	class Import final: public Stmt {
 		ParserRef<DottedName> names;
 		tpc::Identifier       alias;
-		
+
 	public:
 		STMT_CHILD_CONSTRUCTOR(Import);
 		static ParserRef<Import> parse(RiftParserState& state);
@@ -198,7 +198,7 @@ namespace pst {
 
 		/**
 		 * @note In the future this functionality will be done by HELIOS.
-		 * This functionality is needed to implement early import system for testing. 
+		 * This functionality is needed to implement early import system for testing.
 		 */
 		[[nodiscard]]
 		std::vector<base::StrId> getModulePath() const;
