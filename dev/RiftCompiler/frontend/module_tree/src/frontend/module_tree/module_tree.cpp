@@ -177,10 +177,10 @@ const base::HashMap<std::string, std::vector<fs::FilePath>>& ModuleTree::getOthe
 
 ModuleId ModuleTree::getId() const { return id; }
 
-/*******************
- * GetPatentModule *
- *******************/
-struct ImplementationOf_GetPatentModuleQuery: query::QueryImplementation<GetPatentModuleQuery, ModuleId> {
+/*********************
+ * QueryParentModule *
+ *********************/
+struct ImplementationOf_QueryParentModule: query::QueryImplementation<QueryParentModule, ModuleId> {
 	inline static std::map<QKey, query::AddACD<QResult>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -200,12 +200,12 @@ struct ImplementationOf_GetPatentModuleQuery: query::QueryImplementation<GetPate
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetPatentModuleQuery, "GetPatentModuleQuery");
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryParentModule, "QueryParentModule");
 
-/*********************
- * GetMainSourceFile *
- *********************/
-struct ImplementationOf_GetMainSourceFileQuery: query::QueryImplementation<GetMainSourceFileQuery, FileId> {
+/***********************
+ * QueryMainSourceFile *
+ ***********************/
+struct ImplementationOf_QueryMainSourceFile: query::QueryImplementation<QueryMainSourceFile, FileId> {
 	inline static std::map<QKey, query::AddACD<QResult>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -225,12 +225,12 @@ struct ImplementationOf_GetMainSourceFileQuery: query::QueryImplementation<GetMa
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetMainSourceFileQuery, "GetMainSourceFileQuery");
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryMainSourceFile, "QueryMainSourceFile");
 
-/******************
- * GetSourceFiles *
- ******************/
-struct ImplementationOf_GetSourceFilesQuery: query::QueryImplementation<GetSourceFilesQuery, std::vector<FileId>&> {
+/********************
+ * QuerySourceFiles *
+ ********************/
+struct ImplementationOf_QuerySourceFiles: query::QueryImplementation<QuerySourceFiles, std::vector<FileId>&> {
 	inline static std::map<QKey, query::AddACD<QResult>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -254,12 +254,12 @@ struct ImplementationOf_GetSourceFilesQuery: query::QueryImplementation<GetSourc
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetSourceFilesQuery, "GetSourceFilesQuery");
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySourceFiles, "QuerySourceFiles");
 
-/*****************
- * GetSubmodules *
- *****************/
-struct ImplementationOf_GetSubmodulesQuery: query::QueryImplementation<GetSubmodulesQuery, base::HashMap<std::string, std::shared_ptr<ModuleId>>&> {
+/*******************
+ * QuerySubmodules *
+ *******************/
+struct ImplementationOf_QuerySubmodules: query::QueryImplementation<QuerySubmodules, base::HashMap<std::string, std::shared_ptr<ModuleId>>&> {
 	inline static std::map<QKey, query::AddACD<QResult>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -283,13 +283,13 @@ struct ImplementationOf_GetSubmodulesQuery: query::QueryImplementation<GetSubmod
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetSubmodulesQuery, "GetSubmodulesQuery");
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySubmodules, "QuerySubmodules");
 
 
-/**************
- * GetFilePST *
- **************/
-struct ImplementationOf_GetFilePSTQuery: query::QueryImplementation<GetFilePSTQuery, pst::PST&> {
+/****************
+ * QueryFilePST *
+ ****************/
+struct ImplementationOf_QueryFilePST: query::QueryImplementation<QueryFilePST, pst::PST&> {
 	inline static std::map<QKey, query::AddACD<QResult>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -308,4 +308,4 @@ struct ImplementationOf_GetFilePSTQuery: query::QueryImplementation<GetFilePSTQu
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetFilePSTQuery, "GetFilePSTQuery");
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryFilePST, "QueryFilePST");
