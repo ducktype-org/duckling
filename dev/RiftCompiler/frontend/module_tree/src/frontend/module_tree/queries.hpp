@@ -2,6 +2,7 @@
 
 #include <query_framework/query_int.hpp>
 #include <filesystem/file.hpp>
+#include <pst_parser/elements.hpp>
 #include "module_tree.hpp"
 
 namespace compiler::frontend {
@@ -21,5 +22,6 @@ namespace compiler::frontend {
 	 * 
 	 */
 	DECLARE_QUERY(GetModuleTreeQuery, fs::FilePath, ModuleId)
-
+	DECLARE_QUERY(GetSourceFileQuery, fs::FilePath, FileId)
+	DECLARE_QUERY(GetFilePSTQuery, FileId, pst::PST&)
 }

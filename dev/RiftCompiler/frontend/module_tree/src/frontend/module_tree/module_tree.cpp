@@ -11,7 +11,7 @@ using fs::FsTree;
 using std::regex;
 using namespace compiler::frontend;
 
-inline static std::map<ModuleId, ModuleTree> modules{};
+inline static std::map<ModuleId, std::shared_ptr<ModuleTree>> modules{};
 inline static std::map<FileId, SourceFile> files{};
 inline static std::map<fs::FilePath, ModuleId> modulePaths{};
 
@@ -39,6 +39,7 @@ ModuleId ModuleId::nextID() {
 
 SourceFile::SourceFile(fs::FilePath path): path(path), id(FileId::nextID()) {
 	rift_file_name = path.stem();
+	files.insert({id, this});
 }
 
 const pst::PST& SourceFile::getPST() {
