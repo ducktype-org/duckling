@@ -18,6 +18,13 @@ inline static base::HashMap<ModuleId, std::shared_ptr<ModuleTree>> modules{};
 inline static base::HashMap<FileId, SourceFile&> files{};
 inline static base::HashMap<fs::FilePath, ModuleId> modulePaths{};
 
+// FileId createSourceFile(fs::FilePath path) {
+// 	SourceFile out(path);
+// 	auto id = out.id;
+// 	files.put(id, std::move(out));
+// 	return id;
+// }
+
 FileId FileId::nextID() {
 	// @OPT: move to global variable
 	static u64 nextId = 0;
@@ -38,8 +45,6 @@ ModuleId ModuleId::nextID() {
 
 SourceFile::SourceFile(fs::FilePath path): path(std::move(path)), id(FileId::nextID()) {
 	rift_file_name = path.stem();
-	// fixme:
-	// files.put(id, *this);
 }
 
 const pst::PST& SourceFile::getPST() {
@@ -63,6 +68,15 @@ std::shared_ptr<ModuleTree> ModuleTree::create(std::shared_ptr<fs::FsTree> root)
 	modules.put(ptr->getId(), ptr);
 	if (ptr->hasMainSourceFile())
 		modulePaths.put(ptr->getMainSourceFile().path, ptr->getId());
+
+	// at this point references inside module tree are stable, so we can fill "files" map:
+	if (ptr->hasMainSourceFile()) {
+		auto& main = ptr->m_main_source_file.value();
+		files.put(main.id, main);
+	}
+	for (auto& file: ptr->m_source_files) {
+		files.put(file.id, file);
+	}
 	
 	return ptr;
 }
@@ -225,8 +239,11 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryMainSourceFile, "QueryMai
 /********************
  * QuerySourceFiles *
  ********************/
-struct ImplementationOf_QuerySourceFiles: query::QueryImplementation<QuerySourceFiles, std::vector<FileId>> {
-	inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
+struct ImplementationOf_QuerySourceFiles: query::QueryImplementation<
+	QuerySourceFiles,
+	std::vector<FileId>>
+{
+	inline static base::HashMap<QKey, base::unique_ptr<PResWithACD>> cache{};
 
 	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
@@ -238,14 +255,17 @@ struct ImplementationOf_QuerySourceFiles: query::QueryImplementation<QuerySource
 		return out;
 	}
 	static auto load(QKey key) -> LoadResult {
-		if (cache.contains(key))
-			return cache.at(key);
-		else
+		if (cache.contains(key)) {
+			auto entry = cache.at(key).borrow();
+			return QResWithACD{ entry->data, entry->acd };
+		}
+		else {
 			return {};
+		}
 	}
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-		cache.put(key, { res, acd });
-		return cache.at(key).data;
+		cache.put(key, base::make_unique<PResWithACD>(PResWithACD{ std::move(res), acd }));
+		return cache.at(key)->data;
 	}
 };
 
@@ -258,7 +278,7 @@ struct ImplementationOf_QuerySubmodules: query::QueryImplementation<
 	QuerySubmodules,
 	base::HashMap<std::string, ModuleId>>
 {	
-	inline static base::HashMap<QKey, query::AddACD<PResult>> cache{};
+	inline static base::HashMap<QKey, base::unique_ptr<PResWithACD>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
@@ -271,17 +291,16 @@ struct ImplementationOf_QuerySubmodules: query::QueryImplementation<
 	}
 	static auto load(QKey key) -> LoadResult {
 		if (cache.contains(key)) {
-			auto& entry = cache.at(key);
-			auto& data  = entry.data;
-			return query::AddACD<QResult>{ data, entry.acd };
+			auto entry = cache.at(key).borrow();
+			return QResWithACD{ entry->data, entry->acd };
 		}
 		else {
 			return {};
 		}
 	}
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-		cache.put(key, { res, acd });
-		return cache.at(key).data;
+		cache.put(key, base::make_unique<PResWithACD>(PResWithACD{ std::move(res), acd }));
+		return cache.at(key)->data;
 	}
 };
 
@@ -291,7 +310,10 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySubmodules, "QuerySubmodu
 /****************
  * QueryFilePST *
  ****************/
-struct ImplementationOf_QueryFilePST: query::QueryImplementation<QueryFilePST, const pst::PST&> {
+struct ImplementationOf_QueryFilePST: query::QueryImplementation<
+	QueryFilePST,
+	const pst::PST&>
+{	
 	inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {

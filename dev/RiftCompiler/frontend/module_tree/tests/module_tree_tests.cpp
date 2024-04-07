@@ -69,6 +69,7 @@ private:
 		assert(sources.size() == 1, "Bad source count!");
 		
 		auto main_id = sources.at(0);
+		auto& pst = query::queryEntryPoint<QueryFilePST>(main_id);
 	}
 };
 
