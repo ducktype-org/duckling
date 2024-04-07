@@ -39,7 +39,7 @@ namespace compiler::frontend {
 	 * QuerySourceFile *
 	 *******************/
 	struct ImplementationOf_QuerySourceFile:
-		  query::QueryImplementation<QuerySourceFile, compiler::frontend::FileId> {
+		  query::QueryImplementation<QueryFileID, compiler::frontend::FileId> {
 		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
 
 		static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
