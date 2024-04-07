@@ -193,7 +193,7 @@ namespace compiler::frontend {
 		ModuleId getId() const;
 
 	private:
-		ModuleTree(): id(ModuleId::nextID()) { };
+		ModuleTree();
 
 		/**
 		 * Recursively builds the ModuleTree inplace on the module_tree.
@@ -248,3 +248,22 @@ namespace compiler::frontend {
 		base::HashMap<std::string, std::vector<fs::FilePath>> m_other_files;
 	};
 }
+
+
+// std::hash functor for ModuleID and FileID:
+namespace std {
+	template<>
+	struct hash<compiler::frontend::ModuleId> {
+		usize operator()(const compiler::frontend::ModuleId& k) const {
+			return k.asInt();
+		}
+	};
+
+	template<>
+	struct hash<compiler::frontend::FileId> {
+		usize operator()(const compiler::frontend::FileId& k) const {
+			return k.asInt();
+		}
+	};
+}
+
