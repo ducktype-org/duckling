@@ -2,6 +2,9 @@
 #include <base/string_id.hpp>
 #include "queries.hpp"
 
+// @TODO: decide what we do with it
+// NOLINTBEGIN(performance-unnecessary-value-param)
+
 namespace compiler::frontend {
 
 	/*******************
@@ -11,7 +14,7 @@ namespace compiler::frontend {
 		  query::QueryImplementation<QueryModuleTree, compiler::frontend::ModuleId> {
 		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
 
-		static auto provide(Context& context, QKey key) -> PResult {
+		static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
 			std::shared_ptr<ModuleTree> module_tree = ModuleTree::create(key);
 
 			return module_tree->getId();
@@ -39,7 +42,7 @@ namespace compiler::frontend {
 		  query::QueryImplementation<QuerySourceFile, compiler::frontend::FileId> {
 		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
 
-		static auto provide(Context& context, QKey key) -> PResult {
+		static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
 			SourceFile file = SourceFile(key);
 
 			return file.id;
@@ -60,3 +63,5 @@ namespace compiler::frontend {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySourceFile, "QuerySourceFile");
 }
+
+// NOLINTEND(performance-unnecessary-value-param)
