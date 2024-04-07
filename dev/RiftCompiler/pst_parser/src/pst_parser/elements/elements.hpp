@@ -200,6 +200,7 @@ namespace pst {
 		 * @note In the future this functionality will be done by HELIOS.
 		 * This functionality is needed to implement early import system for testing. 
 		 */
+		[[nodiscard]]
 		std::vector<base::StrId> getModulePath() const;
 
 		[[nodiscard]]

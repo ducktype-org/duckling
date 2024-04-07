@@ -18,8 +18,6 @@ inline static std::map<ModuleId, std::shared_ptr<ModuleTree>> modules{};
 inline static std::map<FileId, SourceFile> files{};
 inline static std::map<fs::FilePath, ModuleId> modulePaths{};
 
-FileId::FileId() {}
-
 FileId FileId::nextID() {
 	// @OPT: move to global variable
 	static u64 nextId = 0;
@@ -28,8 +26,6 @@ FileId FileId::nextID() {
 	out.id = nextId++;
 	return out;
 }
-
-ModuleId::ModuleId() {}
 
 ModuleId ModuleId::nextID() {
 	// @OPT: move to global variable
@@ -40,7 +36,7 @@ ModuleId ModuleId::nextID() {
 	return out;
 }
 
-SourceFile::SourceFile(fs::FilePath path): path(path), id(FileId::nextID()) {
+SourceFile::SourceFile(fs::FilePath path): path(std::move(path)), id(FileId::nextID()) {
 	rift_file_name = path.stem();
 	files.insert({id, this});
 }
@@ -181,21 +177,14 @@ ModuleId ModuleTree::getId() const { return id; }
  * QueryParentModule *
  *********************/
 struct ImplementationOf_QueryParentModule: query::QueryImplementation<QueryParentModule, ModuleId> {
-	inline static std::map<QKey, query::AddACD<QResult>> cache{};
-
 	static auto provide(Context& context, QKey key) -> PResult {
 		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
-
 		return module_tree->getParentModule()->getId();
 	}
 	static auto load(QKey key) -> LoadResult {
-		if (cache.contains(key))
-			return cache.at(key);
-		else
-			return {};
+		return {};
 	}
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-		cache.insert({ key, { res, acd } });
 		return res;
 	}
 };
@@ -206,21 +195,14 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryParentModule, "QueryParen
  * QueryMainSourceFile *
  ***********************/
 struct ImplementationOf_QueryMainSourceFile: query::QueryImplementation<QueryMainSourceFile, FileId> {
-	inline static std::map<QKey, query::AddACD<QResult>> cache{};
-
 	static auto provide(Context& context, QKey key) -> PResult {
 		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
-
 		return module_tree->getMainSourceFile()->id;
 	}
 	static auto load(QKey key) -> LoadResult {
-		if (cache.contains(key))
-			return cache.at(key);
-		else
-			return {};
+		return {};
 	}
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-		cache.insert({ key, { res, acd } });
 		return res;
 	}
 };
@@ -230,13 +212,13 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryMainSourceFile, "QueryMai
 /********************
  * QuerySourceFiles *
  ********************/
-struct ImplementationOf_QuerySourceFiles: query::QueryImplementation<QuerySourceFiles, std::vector<FileId>&> {
+struct ImplementationOf_QuerySourceFiles: query::QueryImplementation<QuerySourceFiles, std::vector<FileId>> {
 	inline static std::map<QKey, query::AddACD<QResult>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
 		
-		std::vector<FileId>& out{};
+		std::vector<FileId> out{};
 		for (auto file : module_tree->getSourceFiles()) {
 			out.push_back(file.id);
 		}
@@ -250,7 +232,7 @@ struct ImplementationOf_QuerySourceFiles: query::QueryImplementation<QuerySource
 	}
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
 		cache.insert({ key, { res, acd } });
-		return res;
+		return cache.at(key);
 	}
 };
 

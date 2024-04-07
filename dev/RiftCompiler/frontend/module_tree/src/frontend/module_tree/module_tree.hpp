@@ -20,11 +20,12 @@ namespace compiler::frontend {
 	 * @brief Structure holding FileID within SourceFile
 	 */
 	struct FileId {
+		[[nodiscard]]
 		u64 asInt() const { return id; }
 		static FileId nextID();
 	private:
 		u64 id;
-		FileId();
+		FileId() = default;
 	};
 
 	/**
@@ -49,10 +50,11 @@ namespace compiler::frontend {
 	 * @brief Structure holding ModuleID within Module Tree
 	 */
 	struct ModuleId {
+		[[nodiscard]]
 		u64 asInt() const { return id; }
 		static ModuleId nextID();
 	private:
-		ModuleId();
+		ModuleId() = default;
 		u64 id;
 	};
 
