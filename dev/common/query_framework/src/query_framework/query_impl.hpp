@@ -134,12 +134,3 @@ namespace query {
 	}                                                                                             \
 	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::nextQueryId();       \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
-
-/**
- * @brief Hash implementation of EmptyKey.
- * It has to be here because makeNodeID is using it.
- */
-template<>
-struct std::hash<::query::EmptyKey> {
-	std::size_t operator()([[maybe_unused]] const ::query::EmptyKey& key) const { return 0; }
-};

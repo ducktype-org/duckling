@@ -1,5 +1,7 @@
 #include <tester/tester.hpp>
 #include "frontend/module_tree/module_tree.hpp"
+#include "frontend/module_tree/queries.hpp"
+#include <query_framework/query_entry_point.hpp>
 
 using namespace compiler::frontend;
 
@@ -14,6 +16,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("frontend::ModuleTree test") {
 		TESTER_ADD_TEST(parseModule);
 		TESTER_ADD_TEST(testOtherFeatures);
+		TESTER_ADD_TEST(testQueries);
 	}
 
 private:
@@ -55,6 +58,17 @@ private:
 		ASSERT_EQUAL("content123\n", mt->getMainSourceFile().path.getContent().view());
 		ASSERT_EQUAL(true, mt->getParentModule().empty());
 		ASSERT_EQUAL(mt->getName(), mt->getSubmodules()["awe"]->getParentModule()->getName());
+	}
+
+	void testQueries() {
+		auto pth = fs::FilePath(path("test_module"));
+		auto root = query::queryEntryPoint<QueryModuleTree>(pth);
+		auto awe = query::queryEntryPoint<QuerySubmodules>(root).at("awe");
+		
+		auto sources = query::queryEntryPoint<QuerySourceFiles>(root);
+		assert(sources.size() == 1, "Bad source count!");
+		
+		auto main_id = sources.at(0);
 	}
 };
 

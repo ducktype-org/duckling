@@ -3,6 +3,7 @@
 #include <string_view>
 #include "query_id.hpp"
 #include "node_id.hpp"
+#include "empty_key.hpp"
 
 namespace query {
 
@@ -21,11 +22,6 @@ namespace query {
 			using QResult   = QResult_tp;
 		};
 	}
-
-	/**
-	 * @brief Key used for queries without keys, input queries, and "outside world" query.
-	 */
-	struct EmptyKey {};
 }
 
 /**

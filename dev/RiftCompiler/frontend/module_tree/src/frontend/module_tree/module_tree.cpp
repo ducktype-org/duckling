@@ -192,7 +192,7 @@ ModuleId ModuleTree::getId() const { return id; }
 struct ImplementationOf_QueryParentModule: query::QueryImplementation<QueryParentModule, ModuleId> {
 	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
 		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
-		return module_tree->getParentModule()->getId();
+		return module_tree->getParentModule().value().getId();
 	}
 	static auto load([[maybe_unused]] QKey key) -> LoadResult {
 		return {};

@@ -3,6 +3,7 @@
 #include "query_id_provider.hpp"
 #include "node_making.hpp"
 #include "query_int.hpp"
+#include "empty_key.hpp"
 
 namespace query {
 
