@@ -33,7 +33,7 @@ namespace pst {
 		out << "{\"Import\": ";
 		nullAwareDprint(names, out);
 		out << ", ";
-		out << R"(Alias: ")" << alias.value.strView() << R"(")"; 
+		out << R"("Alias": ")" << alias.value.strView() << R"(")"; 
 		out << "}";
 	}
 }
