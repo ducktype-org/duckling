@@ -196,10 +196,7 @@ struct ImplementationOf_QueryParentModule: query::QueryImplementation<QueryParen
 
 	static auto load(QKey) -> LoadResult { return {}; }
 
-	static auto store(QKey, PResult res, query::ACD)
-		-> QResult {
-		return res;
-	}
+	static auto store(QKey, PResult res, query::ACD) -> QResult { return res; }
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryParentModule, "QueryParentModule");
@@ -216,10 +213,7 @@ struct ImplementationOf_QueryMainSourceFile:
 
 	static auto load(QKey) -> LoadResult { return {}; }
 
-	static auto store(QKey, PResult res, query::ACD)
-		-> QResult {
-		return res;
-	}
+	static auto store(QKey, PResult res, query::ACD) -> QResult { return res; }
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryMainSourceFile, "QueryMainSourceFile");

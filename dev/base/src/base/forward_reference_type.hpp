@@ -13,5 +13,5 @@ namespace base {
 
 // @TODO: see what uses can be changed to decltype(auto)
 // beware of difference between "(a)" and "a".
-// see example in: https://en.cppreference.com/w/cpp/language/auto 
+// see example in: https://en.cppreference.com/w/cpp/language/auto
 #define DECL_FORWARDING_VAR(var, expr) FORWARD_TYPE(expr) var = (expr)
