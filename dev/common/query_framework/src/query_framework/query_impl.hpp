@@ -2,6 +2,7 @@
 
 #include <base/optional.hpp>
 #include <base/str_concat.hpp>
+#include <base/forward_reference_type.hpp>
 
 #include "acd.hpp"
 #include "query_int.hpp"
@@ -79,7 +80,8 @@ namespace query {
 				));
 
 				// calculation:
-				auto result = QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+				auto&& result
+					= QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 
 				// prolog:
 				dep_graph::setExit(node_id);
@@ -107,6 +109,7 @@ namespace query {
 		using QResult     = typename QueryType_tp::QResult;
 		using QResWithACD = AddACD<QResult>;
 		using PResult     = PResult_tp;
+		using PResWithACD = AddACD<PResult>;
 		using LoadResult  = base::Optional<QResWithACD>;
 
 		using Context = ::query::detail::ContextType;
@@ -133,12 +136,3 @@ namespace query {
 	}                                                                                             \
 	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::nextQueryId();       \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
-
-/**
- * @brief Hash implementation of EmptyKey.
- * It has to be here because makeNodeID is using it.
- */
-template<>
-struct std::hash<::query::EmptyKey> {
-	std::size_t operator()([[maybe_unused]] const ::query::EmptyKey& key) const { return 0; }
-};

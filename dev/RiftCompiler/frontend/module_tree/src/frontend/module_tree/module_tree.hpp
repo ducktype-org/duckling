@@ -7,23 +7,78 @@
 
 #include <string>
 #include <utility>
-#include "base/maps.hpp"
-#include "filesystem/file.hpp"
-#include "filesystem/fs_tree.hpp"
+#include <base/maps.hpp>
+#include <filesystem/file.hpp>
+#include <filesystem/fs_tree.hpp>
+#include <pst_parser/pst.hpp>
+#include <base/ints.hpp>
+
+// @TODO: change std::string here to StrId
 
 namespace compiler::frontend {
+	/**
+	 * @brief Structure holding FileID within SourceFile
+	 */
+	struct FileId {
+		[[nodiscard]]
+		u64 asInt() const {
+			return id;
+		}
+
+		static FileId nextID();
+		bool          operator==(const FileId&) const = default;
+
+	private:
+		u64 id;
+		FileId() = default;
+	};
+
+	/**
+	 * @brief Structure holding SourceFile within Module Tree
+	 */
+	struct SourceFile {
+		fs::FilePath             path;
+		std::string              rift_file_name;  // or StrID?
+		FileId                   id;
+		base::Optional<pst::PST> parse_tree;
+
+		SourceFile(fs::FilePath);
+
+		/**
+		 * @brief Lazily parses the source file and returns PST
+		 * @return const pst::PST&
+		 */
+		const pst::PST& getPST();
+	};
+
+	/**
+	 * @brief Structure holding ModuleID within Module Tree
+	 */
+	struct ModuleId {
+		[[nodiscard]]
+		u64 asInt() const {
+			return id;
+		}
+
+		static ModuleId nextID();
+		bool            operator==(const ModuleId&) const = default;
+
+	private:
+		ModuleId() = default;
+		u64 id;
+	};
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a source file of the module.
 	 */
-	const std::string RIFT_SOURCE_FILE = ".rift";
+	constexpr std::string_view RIFT_SOURCE_FILE = ".rift";
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a single file module.
 	 */
-	const std::string RIFT_MODULE_FILE = ".rmf";
+	constexpr std::string_view RIFT_MODULE_FILE = ".rmf";
 
 	/**
 	 * `ModuleTree` contains source files, modules and other
@@ -75,11 +130,7 @@ namespace compiler::frontend {
 		 * @param root Pre-constructed std::shared_ptr<fs::FsTree> with a module structure.
 		 * @return A valid pointer with the root.
 		 */
-		static std::shared_ptr<ModuleTree> create(std::shared_ptr<fs::FsTree> root) {
-			auto ptr = std::shared_ptr<ModuleTree>(new ModuleTree());
-			buildModuleTree(ptr, std::move(root));
-			return ptr;
-		}
+		static std::shared_ptr<ModuleTree> create(std::shared_ptr<fs::FsTree> root);
 
 		/**
 		 * Accessor to module's parent module. A module might not have a parent module.
@@ -102,14 +153,14 @@ namespace compiler::frontend {
 		 * @return A reference to the `RIFT_MAIN_SOURCE_FILE`.
 		 */
 		[[nodiscard]]
-		const fs::FilePath& getMainSourceFile() const;
+		const SourceFile& getMainSourceFile() const;
 
 		/**
 		 * Accesses the source files of the module.
-		 * @return A std::vector<fs::FilePath> with `RIFT_SOURCE_FILE` files to iterate over.
+		 * @return A std::vector<SourceFile> with `RIFT_SOURCE_FILE` files to iterate over.
 		 */
 		[[nodiscard]]
-		const std::vector<fs::FilePath>& getSourceFiles() const;
+		const std::vector<SourceFile>& getSourceFiles() const;
 
 		/**
 		 * Accesses the submodules located in this submodule. Submodules are indexed by their name.
@@ -140,9 +191,15 @@ namespace compiler::frontend {
 		 */
 		std::string prettyPrint(u32 indentation = 0) const;
 
+		/**
+		 * Fetches the id of the module.
+		 * @return compiler::frontend::ModuleId.
+		 */
+		[[nodiscard]]
+		ModuleId getId() const;
 
 	private:
-		ModuleTree() = default;
+		ModuleTree();
 
 		/**
 		 * Recursively builds the ModuleTree inplace on the module_tree.
@@ -164,6 +221,10 @@ namespace compiler::frontend {
 		);
 
 		/**
+		 * Id of the current root Module.
+		 */
+		ModuleId id;
+		/**
 		 * A pointer to the module's parent. Might be nullptr.
 		 */
 		std::weak_ptr<ModuleTree> m_parent;
@@ -178,11 +239,11 @@ namespace compiler::frontend {
 		 * Has to be a container (like base::Optional), because fs::FilePath does
 		 * not have a default constructor.
 		 */
-		base::Optional<fs::FilePath> m_main_source_file;
+		base::Optional<SourceFile> m_main_source_file;
 		/**
 		 * All the source files in the module. Does not contain files of other submodules.
 		 */
-		std::vector<fs::FilePath> m_source_files;
+		std::vector<SourceFile> m_source_files;
 		/**
 		 * Other direct submodules. Maps module's name to a pointer to it.
 		 */
@@ -191,5 +252,18 @@ namespace compiler::frontend {
 		 * All other files inside this module. Indexed by their extension.
 		 */
 		base::HashMap<std::string, std::vector<fs::FilePath>> m_other_files;
+	};
+}
+
+// std::hash functor for ModuleID and FileID:
+namespace std {
+	template<>
+	struct hash<compiler::frontend::ModuleId> {
+		usize operator()(const compiler::frontend::ModuleId& k) const { return k.asInt(); }
+	};
+
+	template<>
+	struct hash<compiler::frontend::FileId> {
+		usize operator()(const compiler::frontend::FileId& k) const { return k.asInt(); }
 	};
 }

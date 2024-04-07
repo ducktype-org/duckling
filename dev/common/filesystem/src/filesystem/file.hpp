@@ -108,6 +108,8 @@ namespace fs {
 		std::string stem() const;
 		[[nodiscard]]
 		std::string extension() const;
+
+		bool operator<(const FilePath& oth) const { return path < oth.path; }
 	};
 
 	base::OwningView getSimpleFileContent(const std::string& file_name);
