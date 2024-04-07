@@ -1,25 +1,29 @@
 import { SemanticToken } from "./common";
-import { Stmt, stmtFactory } from "./elements";
+import { RiftElement, Stmt, stmtFactory } from "./elements";
 import { type Expr, exprFactory } from "./expression";
 import { SemanticTokenTypes } from "vscode-languageserver";
 
 abstract class Action extends Stmt {
 	expr?: Expr;
 
-	constructor (json: any, keyword: string) {
+	constructor(json: any, keyword: string) {
 		super(json);
 		if (json[keyword] !== undefined)
 			this.expr = exprFactory.create(json[keyword]);
 	}
 
-	getSemanticTokens (): SemanticToken[] {
+	getElements(): RiftElement[] {
+		return this.expr?.getElements() ?? [];
+	}
+
+	getSemanticTokens(): SemanticToken[] {
 		const tokens = [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.keyword, [])];
 		return tokens.concat(this.expr?.getSemanticTokens() ?? []);
 	}
 }
 
 class Return extends Action {
-	constructor (json: any) {
+	constructor(json: any) {
 		super(json, "with");
 	}
 }
@@ -27,7 +31,7 @@ class Return extends Action {
 stmtFactory.register("Return", Return);
 
 class Break extends Action {
-	constructor (json: any) {
+	constructor(json: any) {
 		super(json, "from");
 	}
 }
@@ -35,7 +39,7 @@ class Break extends Action {
 stmtFactory.register("Break", Break);
 
 class Continue extends Action {
-	constructor (json: any) {
+	constructor(json: any) {
 		super(json, "with");
 	}
 }
@@ -43,7 +47,7 @@ class Continue extends Action {
 stmtFactory.register("Continue", Continue);
 
 class Redo extends Action {
-	constructor (json: any) {
+	constructor(json: any) {
 		super(json, "what");
 	}
 }
@@ -51,7 +55,7 @@ class Redo extends Action {
 stmtFactory.register("Redo", Redo);
 
 class Restart extends Action {
-	constructor (json: any) {
+	constructor(json: any) {
 		super(json, "what");
 	}
 }
@@ -59,7 +63,7 @@ class Restart extends Action {
 stmtFactory.register("Restart", Restart);
 
 class Defer extends Action {
-	constructor (json: any) {
+	constructor(json: any) {
 		super(json, "statements");
 	}
 }
@@ -67,7 +71,7 @@ class Defer extends Action {
 stmtFactory.register("Defer", Defer);
 
 class Throw extends Action {
-	constructor (json: any) {
+	constructor(json: any) {
 		super(json, "exception");
 	}
 }

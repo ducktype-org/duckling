@@ -8,15 +8,15 @@ export class ElementException extends Error {
 }
 
 interface ElementJSON<ProductType> {
-    new (json: any): ProductType;
+	new(json: any): ProductType;
 }
 
 export interface IntElementFactory {
-    register(name: string, cls: ElementJSON<any>): void;
-    create(json: {[key: string]: any}, allow_unknown: boolean): any | undefined;
+	register(name: string, cls: ElementJSON<any>): void;
+	create(json: { [key: string]: any }, allow_unknown: boolean): any | undefined;
 }
 
-export class ParentlessElementFactory<ProductType> implements IntElementFactory{
+export class ParentlessElementFactory<ProductType> implements IntElementFactory {
 	public registry: Map<string, ElementJSON<ProductType>> = new Map<string, ElementJSON<ProductType>>();
 
 	constructor() {
@@ -27,7 +27,7 @@ export class ParentlessElementFactory<ProductType> implements IntElementFactory{
 		this.registry.set(name, cls);
 	}
 
-	create(json: {[key: string]: any}, allow_unknown: boolean=DEBUG): ProductType | undefined {
+	create(json: { [key: string]: any }, allow_unknown: boolean = DEBUG): ProductType | undefined {
 		const keys = Object.keys(json);
 		if (keys.length !== 1) {
 			throw new ElementException("Invalid JSON for RiftElement: " + JSON.stringify(json));
@@ -44,7 +44,7 @@ export class ParentlessElementFactory<ProductType> implements IntElementFactory{
 		return new cls(json[name]);
 	}
 
-	createDefined(json: {[key: string]: any}): ProductType {
+	createDefined(json: { [key: string]: any }): ProductType {
 		const result = this.create(json, false);
 		if (result === undefined) {
 			throw new ElementException("Unknown Element class: " + JSON.stringify(json));
@@ -52,7 +52,7 @@ export class ParentlessElementFactory<ProductType> implements IntElementFactory{
 		return result;
 	}
 
-	isObjectClassValid(json: {[key: string]: any}): boolean {
+	isObjectClassValid(json: { [key: string]: any }): boolean {
 		const keys = Object.keys(json);
 		if (keys.length !== 1) {
 			throw new ElementException("Invalid JSON for RiftElement: " + JSON.stringify(json));
@@ -62,7 +62,7 @@ export class ParentlessElementFactory<ProductType> implements IntElementFactory{
 	}
 }
 
-export class ElementFactory<ProductType, ParentFactory extends IntElementFactory> extends ParentlessElementFactory<ProductType>{
+export class ElementFactory<ProductType, ParentFactory extends IntElementFactory> extends ParentlessElementFactory<ProductType> {
 	public registry: Map<string, ElementJSON<ProductType>> = new Map<string, ElementJSON<ProductType>>();
 	private parentFactory: ParentFactory;
 

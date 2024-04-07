@@ -1,4 +1,4 @@
-import { NotStmt, notStmtFactory, NotStmtFactory } from "./elements";
+import { NotStmt, notStmtFactory, NotStmtFactory, RiftElement } from "./elements";
 import { exprFactory, Expr } from "./expression";
 import { ElementFactory } from "./element_factory";
 
@@ -8,10 +8,14 @@ export class RetList extends NotStmt {
 	constructor(json: any) {
 		super(json);
 		this.rets = [];
-		for (const ret_params of json["value"]){
+		for (const ret_params of json["value"]) {
 			const ret = exprFactory.create(ret_params);
 			if (ret) this.rets.push(ret);
 		}
+	}
+
+	getElements(): RiftElement[] {
+		return this.rets;
 	}
 
 	getSemanticTokens() {

@@ -1,4 +1,4 @@
-import { CodeDecl, codeDeclFactory } from "./elements";
+import { CodeDecl, codeDeclFactory, RiftElement } from "./elements";
 import { Identifier, OptionalIdentifier } from "./identifier";
 import { CodeBlock, codeBlockFactory } from "./code_block";
 import { SemanticToken } from "./common";
@@ -8,10 +8,17 @@ export class Block extends CodeDecl {
 	name?: Identifier;
 	code_block: CodeBlock;
 
-	constructor(json: {[key: string]: any}) {
+	constructor(json: { [key: string]: any }) {
 		super(json);
 		this.name = OptionalIdentifier.create(json["optional name"]);
 		this.code_block = codeBlockFactory.createDefined(json["code block"]);
+	}
+
+	getElements(): RiftElement[] {
+		const elements: RiftElement[] = [this.code_block];
+		if (this.name)
+			elements.push(this.name);
+		return elements;
 	}
 
 	getSemanticTokens() {

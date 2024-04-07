@@ -1,6 +1,7 @@
 import { SemanticTokenTypes } from "vscode-languageserver";
 import { SemanticToken } from "./common";
 import { ExprElem, exprElemFactory } from "./expression";
+import { RiftElement } from "./elements";
 
 
 export class NumLiteral extends ExprElem {
@@ -8,6 +9,10 @@ export class NumLiteral extends ExprElem {
 	constructor(json: any) {
 		super(json);
 		this.value = json["value"];
+	}
+
+	getElements(): RiftElement[] {
+		return [];
 	}
 
 	getSemanticTokens() {

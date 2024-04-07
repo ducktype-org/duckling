@@ -1,4 +1,4 @@
-import { Stmt, stmtFactory } from "./elements";
+import { RiftElement, Stmt, stmtFactory } from "./elements";
 import { Identifier } from "./identifier";
 import { unpackJSONObject } from "./utils";
 import { Expr, exprFactory } from "./expression";
@@ -16,6 +16,15 @@ export class Const extends Stmt {
 		this.name = identifierFactory.createDefined(json.get("name"));
 		this.type = exprFactory.create(json.get("type"));
 		this.value = exprFactory.create(json.get("value"));
+	}
+
+	getElements(): RiftElement[] {
+		const elements: RiftElement[] = [this.name];
+		if (this.type)
+			elements.push(this.type);
+		if (this.value)
+			elements.push(this.value);
+		return elements;
 	}
 
 	getSemanticTokens() {

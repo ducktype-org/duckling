@@ -12,15 +12,16 @@ export abstract class RiftElement {
 		this.source_position = new SourcePosition(json["position"]);
 	}
 
-    abstract getSemanticTokens(): SemanticToken[];
-}  
+	abstract getElements(): RiftElement[];
+	abstract getSemanticTokens(): SemanticToken[];
+}
 
 export abstract class Stmt extends RiftElement {
-    
+
 }
 
 interface StmtJSON {
-    new (json: any): Stmt;
+	new(json: any): Stmt;
 }
 
 export abstract class Decl extends Stmt {

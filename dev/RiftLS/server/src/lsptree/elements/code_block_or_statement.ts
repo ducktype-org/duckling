@@ -1,5 +1,5 @@
 import { CodeBlock } from "./code_block";
-import { NotStmt, Stmt, stmtFactory, NotStmtFactory, notStmtFactory } from "./elements";
+import { NotStmt, Stmt, stmtFactory, NotStmtFactory, notStmtFactory, RiftElement } from "./elements";
 import { ElementException, ElementFactory } from "./element_factory";
 import { codeBlockFactory } from "./code_block";
 
@@ -16,6 +16,10 @@ export class CodeBlockOrStmt extends NotStmt {
 		} else {
 			throw new ElementException("Invalid value for CodeBlockOrStmt: " + content + " is not a valid CodeBlock or Stmt.");
 		}
+	}
+
+	getElements(): RiftElement[] {
+		return [this.value];
 	}
 
 	getSemanticTokens() {

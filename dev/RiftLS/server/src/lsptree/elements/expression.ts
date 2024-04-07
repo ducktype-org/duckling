@@ -1,5 +1,5 @@
 import { Identifier } from "./identifier";
-import { RiftElement, Stmt, stmtFactory,riftElementFactory, RiftElementFactory, StmtFactory } from "./elements";
+import { RiftElement, Stmt, stmtFactory, riftElementFactory, RiftElementFactory, StmtFactory } from "./elements";
 import { ElementFactory } from "./element_factory";
 import { SemanticToken } from "./common";
 
@@ -12,7 +12,7 @@ export type ExprElemFactory = ElementFactory<ExprElem, RiftElementFactory>;
 export const exprElemFactory = new ElementFactory<ExprElem, RiftElementFactory>(riftElementFactory);
 
 export class Expr extends Stmt {
-    
+
 	elements: ExprElem[];
 
 	constructor(json: any) {
@@ -22,6 +22,10 @@ export class Expr extends Stmt {
 			const elem = exprElemFactory.create(elem_params);
 			if (elem) this.elements.push(elem);
 		}
+	}
+
+	getElements(): RiftElement[] {
+		return this.elements;
 	}
 
 	getSemanticTokens() {
@@ -41,6 +45,10 @@ export class Group extends ExprElem {
 	constructor(json: any) {
 		super(json);
 		this.expr = exprFactory.create(json["expr"]);
+	}
+
+	getElements(): RiftElement[] {
+		return this.expr?.getElements() ?? [];
 	}
 
 	getSemanticTokens(): SemanticToken[] {

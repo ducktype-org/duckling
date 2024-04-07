@@ -1,9 +1,9 @@
-import { Decl, declFactory, Stmt, stmtFactory } from "./elements";
+import { Decl, declFactory, RiftElement, Stmt, stmtFactory } from "./elements";
 
-export class LSPTree extends Decl{
+export class LSPTree extends Decl {
 	statements: Stmt[];
 
-    
+
 	constructor(json: any) {
 		super(json);
 		this.statements = [];
@@ -11,6 +11,10 @@ export class LSPTree extends Decl{
 			const stmt = stmtFactory.create(stmt_data);
 			if (stmt) this.statements.push(stmt);
 		}
+	}
+
+	getElements(): RiftElement[] {
+		return this.statements;
 	}
 
 	getSemanticTokens() {

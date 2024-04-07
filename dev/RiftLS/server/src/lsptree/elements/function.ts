@@ -1,4 +1,4 @@
-import {Decl, DeclFactory, declFactory} from "./elements";
+import { Decl, DeclFactory, declFactory, RiftElement } from "./elements";
 import { Identifier, identifierFactory } from "./identifier";
 import { ParamList, paramListFactory } from "./param_list";
 import { RetList, retListFactory } from "./ret_list";
@@ -26,6 +26,17 @@ export class Fun extends Decl {
 		if (json["body"] !== "<nullptr>") {
 			this.body = codeBlockOrStmtFactory.create(json["body"]);
 		}
+	}
+
+	getElements(): RiftElement[] {
+		const elements: RiftElement[] = [this.name];
+		if (this.params)
+			elements.push(this.params);
+		if (this.rets)
+			elements.push(this.rets);
+		if (this.body)
+			elements.push(this.body);
+		return elements;
 	}
 
 	getSemanticTokens() {

@@ -1,5 +1,5 @@
 import { Identifier, OptionalIdentifier, optionalIdentifierFactory } from "./identifier";
-import { CodeDecl, codeDeclFactory, notStmtFactory } from "./elements";
+import { CodeDecl, codeDeclFactory, notStmtFactory, RiftElement } from "./elements";
 import { RoundGroupExpr } from "./round_group_expr";
 import { CodeBlockOrStmt, codeBlockOrStmtFactory } from "./code_block_or_statement";
 import { SemanticToken } from "./common";
@@ -16,6 +16,17 @@ export class While extends CodeDecl {
 			this.condition = notStmtFactory.create(json["condition"]);
 		if (json["body"] !== "<nullptr>")
 			this.body = codeBlockOrStmtFactory.create(json["body"]);
+	}
+
+	getElements(): RiftElement[] {
+		const elements: RiftElement[] = [];
+		if (this.name)
+			elements.push(this.name);
+		if (this.condition)
+			elements.push(this.condition);
+		if (this.body)
+			elements.push(this.body);
+		return elements;
 	}
 
 	getSemanticTokens() {

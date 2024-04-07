@@ -1,5 +1,5 @@
 import { SemanticToken } from "./common";
-import { Stmt, stmtFactory } from "./elements";
+import { RiftElement, Stmt, stmtFactory } from "./elements";
 import { Identifier, identifierFactory } from "./identifier";
 import { SemanticTokenTypes } from "vscode-languageserver";
 
@@ -7,13 +7,17 @@ import { SemanticTokenTypes } from "vscode-languageserver";
 export class Import extends Stmt {
 	names: Identifier[];
 
-	constructor(json: any){
+	constructor(json: any) {
 		super(json);
 		this.names = [];
-		for (const name_params of json["names"]){
+		for (const name_params of json["names"]) {
 			const name = identifierFactory.create(name_params);
 			if (name) this.names.push(name);
 		}
+	}
+
+	getElements(): RiftElement[] {
+		return this.names;
 	}
 
 	getSemanticTokens(): SemanticToken[] {

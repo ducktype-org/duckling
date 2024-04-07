@@ -1,4 +1,4 @@
-import { Stmt, stmtFactory, StmtFactory } from "./elements";
+import { RiftElement, Stmt, stmtFactory, StmtFactory } from "./elements";
 import { ElementFactory } from "./element_factory";
 import { unpackJSONObject } from "./utils";
 import { exprElemFactory } from "./expression";
@@ -14,7 +14,11 @@ export class Identifier extends Stmt {
 
 	}
 
-	getSemanticTokens(): SemanticToken[]{
+	getElements(): RiftElement[] {
+		return [];
+	}
+
+	getSemanticTokens(): SemanticToken[] {
 		return [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.variable, [])];
 	}
 }
