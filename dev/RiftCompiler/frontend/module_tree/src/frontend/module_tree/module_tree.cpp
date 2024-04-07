@@ -61,7 +61,8 @@ std::shared_ptr<ModuleTree> ModuleTree::create(std::shared_ptr<fs::FsTree> root)
 	buildModuleTree(ptr, std::move(root));
 	
 	modules.put(ptr->getId(), ptr);
-	modulePaths.put(ptr->getMainSourceFile().path, ptr->getId());
+	if (ptr->hasMainSourceFile())
+		modulePaths.put(ptr->getMainSourceFile().path, ptr->getId());
 	
 	return ptr;
 }
