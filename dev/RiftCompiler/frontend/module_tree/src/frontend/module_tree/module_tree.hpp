@@ -191,7 +191,7 @@ namespace compiler::frontend {
 		ModuleId getId() const;
 
 	private:
-		ModuleTree(): id(ModuleId::nextID()) {};
+		ModuleTree(): id(ModuleId::nextID()) { };
 
 		/**
 		 * Recursively builds the ModuleTree inplace on the module_tree.
