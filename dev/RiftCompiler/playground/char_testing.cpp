@@ -1,6 +1,6 @@
 #include <lexer/decode.hpp>
 #include <filesystem/file.hpp>
-#include <diagnostic/error_state.hpp>
+#include <diagnostic/logger.hpp>
 
 int main(int argc, char** argv) {
 	if (argc != 2) {
@@ -10,10 +10,10 @@ int main(int argc, char** argv) {
 	fs::FilePath file(argv[1]);
 	auto         file_content = file.getContent();
 
-	dia::ErrorState errorState;
-	auto            chars = lexer::decode<fs::UTF8>(file_content.view(), errorState);
-	if (errorState.fail()) {
-		errorState.dumpLog(std::cerr);
+	dia::Logger logger;
+	auto            chars = lexer::decode<fs::UTF8>(file_content.view(), logger);
+	if (logger.bad()) {
+		logger.dumpLog(true, std::cerr);
 		return 0;
 	}
 
