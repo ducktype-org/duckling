@@ -21,12 +21,12 @@ namespace compiler::frontend {
 	 *    that could be easily defaulted to std::hash (or identity) for all obvious types.
 	 * 
 	 */
-	DECLARE_QUERY(GetModuleTreeQuery, fs::FilePath, ModuleId)
-	DECLARE_QUERY(GetParentModuleQuery, ModuleId, ModuleId)
-	DECLARE_QUERY(GetMainSourceFileQuery, ModuleId, FileId)
-	DECLARE_QUERY(GetSourceFilesQuery, ModuleId, std::vector<FileId>&)
-	DECLARE_QUERY(GetSubmodulesQuery, ModuleId, base::HashMap<std::string, std::shared_ptr<ModuleId>>&)
+	DECLARE_QUERY(QueryModuleTree,     fs::FilePath, ModuleId)
+	DECLARE_QUERY(QueryParentModule,   ModuleId,     ModuleId)
+	DECLARE_QUERY(QueryMainSourceFile, ModuleId,     FileId)
+	DECLARE_QUERY(QuerySourceFiles,    ModuleId,     std::vector<FileId>&)
+	DECLARE_QUERY(QuerySubmodules,     ModuleId,     base::HashMap<std::string, std::shared_ptr<ModuleId>>&)
 
-	DECLARE_QUERY(GetSourceFileQuery, fs::FilePath, FileId)
-	DECLARE_QUERY(GetFilePSTQuery, FileId, pst::PST&)
+	DECLARE_QUERY(QuerySourceFile, fs::FilePath, FileId)
+	DECLARE_QUERY(QueryFilePST,    FileId,       pst::PST&)
 }

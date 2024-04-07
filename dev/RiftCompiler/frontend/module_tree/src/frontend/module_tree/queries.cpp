@@ -4,10 +4,10 @@
 
 namespace compiler::frontend {
 
-	/*****************
-	 * GetModuleTree *
-	 *****************/
-	struct ImplementationOf_GetModuleTreeQuery: query::QueryImplementation<GetModuleTreeQuery, compiler::frontend::ModuleId> {
+	/*******************
+	 * QueryModuleTree *
+	 *******************/
+	struct ImplementationOf_QueryModuleTree: query::QueryImplementation<QueryModuleTree, compiler::frontend::ModuleId> {
 		inline static std::map<QKey, query::AddACD<QResult>> cache{};
 
 		static auto provide(Context& context, QKey key) -> PResult {
@@ -27,12 +27,12 @@ namespace compiler::frontend {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetModuleTreeQuery, "GetModuleTreeQuery");
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryModuleTree, "QueryModuleTree");
 
-	/*****************
-	 * GetSurceFile *
-	 *****************/
-	struct ImplementationOf_GetSourceFileQuery: query::QueryImplementation<GetSourceFileQuery, compiler::frontend::FileId> {
+	/*******************
+	 * QuerySourceFile *
+	 *******************/
+	struct ImplementationOf_QuerySourceFile: query::QueryImplementation<QuerySourceFile, compiler::frontend::FileId> {
 		inline static std::map<QKey, query::AddACD<QResult>> cache{};
 
 		static auto provide(Context& context, QKey key) -> PResult {
@@ -52,6 +52,6 @@ namespace compiler::frontend {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetSourceFileQuery, "GetSourceFileQuery");
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySourceFile, "QuerySourceFile");
 }
 
