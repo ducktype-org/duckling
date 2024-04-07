@@ -42,7 +42,7 @@ namespace compiler::frontend {
 		  query::QueryImplementation<QueryFileID, compiler::frontend::FileId> {
 		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
 
-		static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
+		static auto provide(Context&, QKey key) -> PResult {
 			SourceFile file = SourceFile(key);
 
 			return file.id;
