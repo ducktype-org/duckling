@@ -3,6 +3,8 @@
 #include <query_framework/query_int.hpp>
 #include <filesystem/file.hpp>
 #include <pst_parser/elements.hpp>
+
+// @TODO: this dependency can be relaxed by separating ModuleID and FileID
 #include "module_tree.hpp"
 
 namespace compiler::frontend {

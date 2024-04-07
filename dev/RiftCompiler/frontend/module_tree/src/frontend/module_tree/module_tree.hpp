@@ -13,6 +13,8 @@
 #include <pst_parser/pst.hpp>
 #include <base/ints.hpp>
 
+// @TODO: change std::string here to StrId
+
 namespace compiler::frontend {
 	/**
 	 * @brief Structure holding FileID within SourceFile
