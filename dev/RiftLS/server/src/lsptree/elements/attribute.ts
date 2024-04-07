@@ -1,4 +1,4 @@
-import { Stmt, stmtFactory } from "./elements";
+import { RiftElement, Stmt, stmtFactory } from "./elements";
 import { Identifier, identifierFactory } from "./identifier";
 import { ArgList } from "./argument_list";
 
@@ -8,6 +8,13 @@ export class Attribute extends Stmt {
 	constructor(json: any) {
 		super(json);
 		this.name = identifierFactory.createDefined(json["name"]);
+	}
+
+	getElements() {
+		const elements: RiftElement[] = [this.name];
+		if (this.args)
+			elements.push(this.args);
+		return elements;
 	}
 
 	getSemanticTokens() {

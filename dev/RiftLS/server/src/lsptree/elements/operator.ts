@@ -9,6 +9,10 @@ class Operator extends ExprElem {
 		this.operator = json["value"];
 	}
 
+	getElements() {
+		return [];
+	}
+
 	getSemanticTokens() {
 		return [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.operator, [])];
 	}

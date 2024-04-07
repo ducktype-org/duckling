@@ -22,6 +22,16 @@ export class Struct extends Decl {
 		this.body = codeBlockFactory.create(json["body"]);
 	}
 
+	getElements(): Decl[] {
+		const elements: Decl[] = [this.name];
+		this.bases.forEach( base => 
+			elements.push(base)  
+		);
+		if (this.body) 
+			elements.push(this.body);
+		return elements;
+	}
+
 	getSemanticTokens(): SemanticToken[] {
 		const tokens: SemanticToken[] = [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.keyword, [])];
 		this.bases.forEach( base => 

@@ -13,6 +13,10 @@ export class LSPTree extends Decl{
 		}
 	}
 
+	getElements() {
+		return this.statements;
+	}
+
 	getSemanticTokens() {
 		return this.statements.flatMap(stmt => stmt.getSemanticTokens());
 	}

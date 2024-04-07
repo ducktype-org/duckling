@@ -14,6 +14,10 @@ export class Identifier extends Stmt {
 
 	}
 
+	getElements(): Stmt[] {
+		return [];
+	}
+
 	getSemanticTokens(): SemanticToken[]{
 		return [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.variable, [])];
 	}

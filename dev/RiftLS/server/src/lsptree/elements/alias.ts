@@ -18,8 +18,12 @@ export class Alias extends Stmt {
 		}
 	}
 
+	getElements(): Stmt[] {
+		return this.points_to;
+	}
+
 	getSemanticTokens(): SemanticToken[] {
-		const tokens: SemanticToken[] = [];
+		const tokens: SemanticToken[] = [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.variable, [])];
 		this.points_to.forEach(element => {
 			tokens.push(...element.getSemanticTokens());
 		});

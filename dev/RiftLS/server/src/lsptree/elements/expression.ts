@@ -24,6 +24,10 @@ export class Expr extends Stmt {
 		}
 	}
 
+	getElements() {
+		return this.elements;
+	}
+
 	getSemanticTokens() {
 		return this.elements.flatMap(elem => elem.getSemanticTokens());
 	}
@@ -41,6 +45,10 @@ export class Group extends ExprElem {
 	constructor(json: any) {
 		super(json);
 		this.expr = exprFactory.create(json["expr"]);
+	}
+	
+	getElements(): RiftElement[] {
+		return this.expr?.getElements() ?? [];
 	}
 
 	getSemanticTokens(): SemanticToken[] {

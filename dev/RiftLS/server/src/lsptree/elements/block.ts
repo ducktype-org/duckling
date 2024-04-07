@@ -14,6 +14,14 @@ export class Block extends CodeDecl {
 		this.code_block = codeBlockFactory.createDefined(json["code block"]);
 	}
 
+	getElements() {
+		const elements: CodeDecl[] = [];
+		if (this.name)
+			elements.push(this.name);
+		elements.push(this.code_block);
+		return elements;
+	}
+
 	getSemanticTokens() {
 		const tokens: SemanticToken[] = [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.keyword, [])];
 		if (this.name)

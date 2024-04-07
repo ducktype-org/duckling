@@ -9,6 +9,10 @@ export class RoundGroupExpr extends NotStmt {
 			this.expr = exprFactory.create(json["expr"]);
 	}
 
+	getElements() {
+		return this.expr?.getElements() ?? [];
+	}
+
 	getSemanticTokens() {
 		return this.expr?.getSemanticTokens() ?? [];
 	}

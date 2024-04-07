@@ -18,6 +18,10 @@ export class CodeBlockOrStmt extends NotStmt {
 		}
 	}
 
+	getElements() {
+		return [this.value];
+	}
+
 	getSemanticTokens() {
 		return this.value.getSemanticTokens();
 	}

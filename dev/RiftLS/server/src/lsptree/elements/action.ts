@@ -12,6 +12,10 @@ abstract class Action extends Stmt {
 			this.expr = exprFactory.create(json[keyword]);
 	}
 
+	getElements (): Stmt[] {
+		return this.expr?.getElements() ?? [];
+	}
+
 	getSemanticTokens (): SemanticToken[] {
 		const tokens = [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.keyword, [])];
 		return tokens.concat(this.expr?.getSemanticTokens() ?? []);

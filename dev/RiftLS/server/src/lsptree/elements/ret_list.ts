@@ -14,6 +14,10 @@ export class RetList extends NotStmt {
 		}
 	}
 
+	getElements() {
+		return this.rets;
+	}
+
 	getSemanticTokens() {
 		return this.rets.flatMap(ret => ret.getSemanticTokens());
 	}

@@ -28,6 +28,17 @@ export class Fun extends Decl {
 		}
 	}
 
+	getElements() {
+		const elements: Decl[] = [this.name];
+		if (this.params)
+			elements.push(this.params);
+		if (this.rets)
+			elements.push(this.rets);
+		if (this.body)
+			elements.push(this.body);
+		return elements;
+	}
+
 	getSemanticTokens() {
 		const tokens = [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.keyword, [])];
 		tokens.push(...this.name.getSemanticTokens());

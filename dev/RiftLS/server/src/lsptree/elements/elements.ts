@@ -11,7 +11,7 @@ export abstract class RiftElement {
 	constructor(json: any) {
 		this.source_position = new SourcePosition(json["position"]);
 	}
-
+	abstract getElements(): RiftElement[];
     abstract getSemanticTokens(): SemanticToken[];
 }  
 

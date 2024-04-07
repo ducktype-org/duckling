@@ -10,6 +10,10 @@ export class NumLiteral extends ExprElem {
 		this.value = json["value"];
 	}
 
+	getElements() {
+		return [];
+	}
+
 	getSemanticTokens() {
 		return [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.number, [])];
 	}

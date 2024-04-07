@@ -14,6 +14,10 @@ export class CodeBlock extends NotStmt {
 		}
 	}
 
+	getElements() {
+		return this.statements;
+	}
+
 	getSemanticTokens() {
 		return this.statements.flatMap(stmt => stmt.getSemanticTokens());
 	}

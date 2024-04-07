@@ -1,4 +1,4 @@
-import { NotStmt, notStmtFactory, NotStmtFactory } from "./elements";
+import { NotStmt, notStmtFactory, NotStmtFactory, RiftElement } from "./elements";
 import { ElementFactory } from "./element_factory";
 import { SemanticToken } from "./common";
 
@@ -15,12 +15,16 @@ export class ArgList extends NotStmt {
 			}
 	}
     
+	getElements(): RiftElement[] {
+		return this.arguments;
+	}
+
 	getSemanticTokens(): SemanticToken[] {
 		return this.arguments.flatMap(arg => arg.getSemanticTokens());
 	}
 }
 
-type ArgListFactory = ElementFactory<ArgList, NotStmtFactory>;
+export type ArgListFactory = ElementFactory<ArgList, NotStmtFactory>;
 
 export const argListFactory = new ElementFactory<ArgList, NotStmtFactory>(notStmtFactory);
 

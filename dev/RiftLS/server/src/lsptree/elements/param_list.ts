@@ -14,6 +14,10 @@ export class ParamList extends NotStmt {
 		}
 	}
 
+	getElements() {
+		return this.params;
+	}
+
 	getSemanticTokens() {
 		return this.params.flatMap(param => param.getSemanticTokens());
 	}

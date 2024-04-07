@@ -9,6 +9,10 @@ export class KeywordValue extends ExprElem {
 		this.value = json["value"];
 	}
 
+	getElements() {
+		return [];
+	}
+
 	getSemanticTokens() {
 		return [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.keyword, [])];
 	}

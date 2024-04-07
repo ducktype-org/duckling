@@ -18,6 +18,9 @@ export class Using extends Stmt {
 		}
 	}
 
+	getElements(): Stmt[] {
+		return this.names;
+	}
 
 	getSemanticTokens(): SemanticToken[] {
 		const tokens = [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.keyword, [])];
