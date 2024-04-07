@@ -180,7 +180,7 @@ ModuleId ModuleTree::getId() const { return id; }
 /*******************
  * GetPatentModule *
  *******************/
-struct ImplementationOf_GetPatentModuleQuery: query::QueryImplementation<GetPatentModuleQuery, compiler::frontend::ModuleId> {
+struct ImplementationOf_GetPatentModuleQuery: query::QueryImplementation<GetPatentModuleQuery, ModuleId> {
 	inline static std::map<QKey, query::AddACD<QResult>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -205,7 +205,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetPatentModuleQuery, "GetPate
 /*********************
  * GetMainSourceFile *
  *********************/
-struct ImplementationOf_GetMainSourceFileQuery: query::QueryImplementation<GetMainSourceFileQuery, compiler::frontend::FileId> {
+struct ImplementationOf_GetMainSourceFileQuery: query::QueryImplementation<GetMainSourceFileQuery, FileId> {
 	inline static std::map<QKey, query::AddACD<QResult>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -230,7 +230,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetMainSourceFileQuery, "GetMa
 /******************
  * GetSourceFiles *
  ******************/
-struct ImplementationOf_GetSourceFilesQuery: query::QueryImplementation<GetSourceFilesQuery, compiler::frontend::FileId> {
+struct ImplementationOf_GetSourceFilesQuery: query::QueryImplementation<GetSourceFilesQuery, std::vector<FileId>&> {
 	inline static std::map<QKey, query::AddACD<QResult>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -255,6 +255,35 @@ struct ImplementationOf_GetSourceFilesQuery: query::QueryImplementation<GetSourc
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetSourceFilesQuery, "GetSourceFilesQuery");
+
+/*****************
+ * GetSubmodules *
+ *****************/
+struct ImplementationOf_GetSubmodulesQuery: query::QueryImplementation<GetSubmodulesQuery, base::HashMap<std::string, std::shared_ptr<ModuleId>>&> {
+	inline static std::map<QKey, query::AddACD<QResult>> cache{};
+
+	static auto provide(Context& context, QKey key) -> PResult {
+		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
+		
+		base::HashMap<std::string, std::shared_ptr<ModuleId>>& out{};
+		for (const auto& [name, module] : module_tree->getSourceFiles()) {
+			out.insert({name, module->getId()});
+		}
+		return out;
+	}
+	static auto load(QKey key) -> LoadResult {
+		if (cache.contains(key))
+			return cache.at(key);
+		else
+			return {};
+	}
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
+		cache.insert({ key, { res, acd } });
+		return res;
+	}
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_GetSubmodulesQuery, "GetSubmodulesQuery");
 
 
 /**************

@@ -25,6 +25,7 @@ namespace compiler::frontend {
 	DECLARE_QUERY(GetParentModuleQuery, ModuleId, ModuleId)
 	DECLARE_QUERY(GetMainSourceFileQuery, ModuleId, FileId)
 	DECLARE_QUERY(GetSourceFilesQuery, ModuleId, std::vector<FileId>&)
+	DECLARE_QUERY(GetSubmodulesQuery, ModuleId, base::HashMap<std::string, std::shared_ptr<ModuleId>>&)
 
 	DECLARE_QUERY(GetSourceFileQuery, fs::FilePath, FileId)
 	DECLARE_QUERY(GetFilePSTQuery, FileId, pst::PST&)
