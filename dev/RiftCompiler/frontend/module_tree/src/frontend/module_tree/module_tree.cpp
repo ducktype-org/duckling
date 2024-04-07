@@ -22,7 +22,7 @@ FileId FileId::nextID() {
 	// @OPT: move to global variable
 	static u64 nextId = 0;
 
-	FileId out;
+	FileId out{};
 	out.id = nextId++;
 	return out;
 }
@@ -31,13 +31,13 @@ ModuleId ModuleId::nextID() {
 	// @OPT: move to global variable
 	static u64 nextId = 0;
 
-	ModuleId out;
+	ModuleId out{};
 	out.id = nextId++;
 	return out;
 }
 
 SourceFile::SourceFile(fs::FilePath path): path(std::move(path)), id(FileId::nextID()) {
-	rift_file_name = path.stem();
+	rift_file_name = this->path.stem();
 }
 
 const pst::PST& SourceFile::getPST() {
@@ -263,7 +263,7 @@ struct ImplementationOf_QuerySubmodules:
 	  query::QueryImplementation<QuerySubmodules, base::HashMap<std::string, ModuleId>> {
 	inline static base::HashMap<QKey, base::unique_ptr<PResWithACD>> cache{};
 
-	static auto provide(Context& context, QKey key) -> PResult {
+	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
 
 		PResult out{};
@@ -295,7 +295,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySubmodules, "QuerySubmodu
 struct ImplementationOf_QueryFilePST: query::QueryImplementation<QueryFilePST, const pst::PST&> {
 	inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
 
-	static auto provide(Context& context, QKey key) -> PResult {
+	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
 		auto& file = files.at(key);
 		return file.getPST();
 	}
