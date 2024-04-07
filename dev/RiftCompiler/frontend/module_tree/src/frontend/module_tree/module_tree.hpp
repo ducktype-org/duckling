@@ -23,6 +23,7 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		u64 asInt() const { return id; }
 		static FileId nextID();
+		bool operator==(const FileId&) const = default;
 	private:
 		u64 id;
 		FileId() = default;
@@ -53,6 +54,7 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		u64 asInt() const { return id; }
 		static ModuleId nextID();
+		bool operator==(const ModuleId&) const = default;
 	private:
 		ModuleId() = default;
 		u64 id;
@@ -120,11 +122,7 @@ namespace compiler::frontend {
 		 * @param root Pre-constructed std::shared_ptr<fs::FsTree> with a module structure.
 		 * @return A valid pointer with the root.
 		 */
-		static std::shared_ptr<ModuleTree> create(std::shared_ptr<fs::FsTree> root) {
-			auto ptr = std::shared_ptr<ModuleTree>(new ModuleTree());
-			buildModuleTree(ptr, std::move(root));
-			return ptr;
-		}
+		static std::shared_ptr<ModuleTree> create(std::shared_ptr<fs::FsTree> root);
 
 		/**
 		 * Accessor to module's parent module. A module might not have a parent module.

@@ -8,7 +8,7 @@ namespace compiler::frontend {
 	 * QueryModuleTree *
 	 *******************/
 	struct ImplementationOf_QueryModuleTree: query::QueryImplementation<QueryModuleTree, compiler::frontend::ModuleId> {
-		inline static std::map<QKey, query::AddACD<QResult>> cache{};
+		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
 
 		static auto provide(Context& context, QKey key) -> PResult {
 			std::shared_ptr<ModuleTree> module_tree = ModuleTree::create(key);
@@ -22,7 +22,7 @@ namespace compiler::frontend {
 				return {};
 		}
 		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-			cache.insert({ key, { res, acd } });
+			cache.put(key, { res, acd });
 			return res;
 		}
 	};
@@ -33,7 +33,7 @@ namespace compiler::frontend {
 	 * QuerySourceFile *
 	 *******************/
 	struct ImplementationOf_QuerySourceFile: query::QueryImplementation<QuerySourceFile, compiler::frontend::FileId> {
-		inline static std::map<QKey, query::AddACD<QResult>> cache{};
+		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
 
 		static auto provide(Context& context, QKey key) -> PResult {
 			SourceFile file = SourceFile(key);
@@ -47,7 +47,7 @@ namespace compiler::frontend {
 				return {};
 		}
 		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-			cache.insert({ key, { res, acd } });
+			cache.put(key, { res, acd });
 			return res;
 		}
 	};

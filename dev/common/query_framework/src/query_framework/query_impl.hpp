@@ -2,6 +2,7 @@
 
 #include <base/optional.hpp>
 #include <base/str_concat.hpp>
+#include <base/forward_reference_type.hpp>
 
 #include "acd.hpp"
 #include "query_int.hpp"
@@ -79,7 +80,7 @@ namespace query {
 				));
 
 				// calculation:
-				auto result = QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+				DECL_FORWARDING_VAR(result, QueryImplType::store(key, QueryImplType::provide(context, key), acd));
 
 				// prolog:
 				dep_graph::setExit(node_id);

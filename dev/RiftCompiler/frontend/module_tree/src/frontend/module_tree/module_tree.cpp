@@ -5,7 +5,7 @@
 
 #include "module_tree.hpp"
 #include <pst_parser/parser.hpp>
-#include <map>
+#include <base/maps.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include "queries.hpp"
@@ -14,9 +14,9 @@ using fs::FsTree;
 using std::regex;
 using namespace compiler::frontend;
 
-inline static base::Map<ModuleId, std::shared_ptr<ModuleTree>> modules{};
-inline static base::Map<FileId, SourceFile&> files{};
-inline static base::Map<fs::FilePath, ModuleId> modulePaths{};
+inline static base::HashMap<ModuleId, std::shared_ptr<ModuleTree>> modules{};
+inline static base::HashMap<FileId, SourceFile&> files{};
+inline static base::HashMap<fs::FilePath, ModuleId> modulePaths{};
 
 FileId FileId::nextID() {
 	// @OPT: move to global variable
@@ -53,12 +53,18 @@ const pst::PST& SourceFile::getPST() {
 }
 
 
-ModuleTree::ModuleTree(): id(ModuleId::nextID()) {
-	// fixme
-	modules.insert{id, this};
-	// fixme
-	modulePaths.insert(getMainSourceFile()->path, id);
-};
+ModuleTree::ModuleTree(): id(ModuleId::nextID()) { };
+
+std::shared_ptr<ModuleTree> ModuleTree::create(std::shared_ptr<fs::FsTree> root) {
+	auto ptr = std::shared_ptr<ModuleTree>(new ModuleTree());
+	
+	buildModuleTree(ptr, std::move(root));
+	
+	modules.put(ptr->getId(), ptr);
+	modulePaths.put(ptr->getMainSourceFile().path, ptr->getId());
+	
+	return ptr;
+}
 
 bool ModuleTree::hasMainSourceFile() const { return !m_main_source_file.empty(); }
 
@@ -180,14 +186,14 @@ ModuleId ModuleTree::getId() const { return id; }
  * QueryParentModule *
  *********************/
 struct ImplementationOf_QueryParentModule: query::QueryImplementation<QueryParentModule, ModuleId> {
-	static auto provide(Context& context, QKey key) -> PResult {
+	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
 		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
 		return module_tree->getParentModule()->getId();
 	}
-	static auto load(QKey key) -> LoadResult {
+	static auto load([[maybe_unused]] QKey key) -> LoadResult {
 		return {};
 	}
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
+	static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd) -> QResult {
 		return res;
 	}
 };
@@ -198,14 +204,14 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryParentModule, "QueryParen
  * QueryMainSourceFile *
  ***********************/
 struct ImplementationOf_QueryMainSourceFile: query::QueryImplementation<QueryMainSourceFile, FileId> {
-	static auto provide(Context& context, QKey key) -> PResult {
+	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
 		return module_tree->getMainSourceFile().id;
 	}
-	static auto load(QKey key) -> LoadResult {
+	static auto load([[maybe_unused]] QKey key) -> LoadResult {
 		return {};
 	}
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
+	static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd) -> QResult {
 		return res;
 	}
 };
@@ -216,9 +222,9 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryMainSourceFile, "QueryMai
  * QuerySourceFiles *
  ********************/
 struct ImplementationOf_QuerySourceFiles: query::QueryImplementation<QuerySourceFiles, std::vector<FileId>> {
-	inline static std::map<QKey, query::AddACD<QResult>> cache{};
+	inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
 
-	static auto provide(Context& context, QKey key) -> PResult {
+	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
 		
 		std::vector<FileId> out{};
@@ -234,7 +240,7 @@ struct ImplementationOf_QuerySourceFiles: query::QueryImplementation<QuerySource
 			return {};
 	}
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-		cache.insert({ key, { res, acd } });
+		cache.put(key, { res, acd });
 		return cache.at(key).data;
 	}
 };
@@ -244,8 +250,11 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySourceFiles, "QuerySource
 /*******************
  * QuerySubmodules *
  *******************/
-struct ImplementationOf_QuerySubmodules: query::QueryImplementation<QuerySubmodules, base::HashMap<std::string, std::shared_ptr<ModuleId>>> {
-	inline static std::map<QKey, query::AddACD<PResult>> cache{};
+struct ImplementationOf_QuerySubmodules: query::QueryImplementation<
+	QuerySubmodules,
+	base::HashMap<std::string, ModuleId>>
+{	
+	inline static base::HashMap<QKey, query::AddACD<PResult>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
@@ -259,15 +268,16 @@ struct ImplementationOf_QuerySubmodules: query::QueryImplementation<QuerySubmodu
 	static auto load(QKey key) -> LoadResult {
 		if (cache.contains(key)) {
 			auto& entry = cache.at(key);
-			return query::AddACD<PResult>{ entry.data, entry.acd };
+			auto& data  = entry.data;
+			return query::AddACD<QResult>{ data, entry.acd };
 		}
 		else {
 			return {};
 		}
 	}
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-		cache.insert({ key, { res, acd } });
-		return res;
+		cache.put(key, { res, acd });
+		return cache.at(key).data;
 	}
 };
 
@@ -278,7 +288,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySubmodules, "QuerySubmodu
  * QueryFilePST *
  ****************/
 struct ImplementationOf_QueryFilePST: query::QueryImplementation<QueryFilePST, const pst::PST&> {
-	inline static std::map<QKey, query::AddACD<QResult>> cache{};
+	inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		auto& file = files.at(key);
@@ -291,7 +301,7 @@ struct ImplementationOf_QueryFilePST: query::QueryImplementation<QueryFilePST, c
 			return {};
 	}
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-		cache.insert({ key, { res, acd } });
+		cache.put(key, { res, acd });
 		return res;
 	}
 };
