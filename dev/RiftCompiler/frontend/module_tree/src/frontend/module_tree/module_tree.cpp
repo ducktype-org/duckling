@@ -166,7 +166,10 @@ std::string ModuleTree::prettyPrint(u32 indentation) const {
 }
 
 const SourceFile& ModuleTree::getMainSourceFile() const {
-	if (m_main_source_file.empty()) throw base::LogicError("No main source file!");
+	if (m_main_source_file.empty()) throw base::LogicError(base::strConcat(
+		"No main source file! in module: ", getName()
+	));
+
 	return m_main_source_file.value();
 }
 
