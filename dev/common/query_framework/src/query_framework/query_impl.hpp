@@ -80,9 +80,8 @@ namespace query {
 				));
 
 				// calculation:
-				DECL_FORWARDING_VAR(
-					result, QueryImplType::store(key, QueryImplType::provide(context, key), acd)
-				);
+				decltype(auto) result =
+					QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 
 				// prolog:
 				dep_graph::setExit(node_id);
