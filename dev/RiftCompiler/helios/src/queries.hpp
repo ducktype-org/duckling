@@ -1,6 +1,9 @@
 #pragma once
 
 #include <query_framework/query_int.hpp>
+#include <frontend/module_tree/queries.hpp>
+#include <vector>
+#include "hout/hout.hpp"
 
 namespace compiler::helios {
 	// what query we want:
@@ -29,5 +32,18 @@ namespace compiler::helios {
 	// additional structures:
 	// - HOUT
 	// - Lookup result
+
+	// for now: copy stuff around and leave @OPT for -- make stable cache here and return reference
+
+
+	/**
+	 * @brief Generates HOUTModule of single module
+	 */
+	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleId, HOUTModule)
+	
+	/**
+	 * @brief Generates HOUTModule of module and all its submodules recursively
+	 */
+	DECLARE_QUERY(QueryModuleHOUTRecursively, frontend::ModuleId, std::vector<HOUTModule>)
 }
 

@@ -12,6 +12,9 @@ namespace pst {
 	using tpc::ParserCBorrowRef;
 	using tpc::ParserRef;
 
+	// HMM ID
+	struct PSTElementID { };
+
 	class RiftElement: public tpc::Element {
 	public:
 		explicit RiftElement(const dia::SourcePosition& position): source_position(position){};
