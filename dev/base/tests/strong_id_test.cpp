@@ -23,15 +23,15 @@ public:
 		auto id0 = A::next();
 		ASSERT_EQUAL(id0.asInt(), 0);
 		ASSERT_EQUAL(u64(id0), 0);
-	
+
 		auto id1 = A::next();
 		ASSERT_EQUAL(id1.asInt(), 1);
 		ASSERT_EQUAL(u64(id1), 1);
 		assert(id1.isGood(), "Id is not good.");
-	
-		(void)B::next();
-		(void)B::next();
-		(void)B::next();
+
+		(void) B::next();
+		(void) B::next();
+		(void) B::next();
 
 		ASSERT_EQUAL(id0.asInt(), 0);
 		ASSERT_EQUAL(u64(id0), 0);
