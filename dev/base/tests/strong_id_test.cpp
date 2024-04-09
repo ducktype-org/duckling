@@ -50,6 +50,8 @@ public:
 
 		ASSERT_EQUAL(hash(id_copy_1_b), 1);
 		ASSERT_EQUAL(hash(id0), 0);
+
+		ASSERT_EQUAL(usize(id0), 0);
 	}
 };
 

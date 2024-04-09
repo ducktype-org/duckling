@@ -1,7 +1,6 @@
 #pragma once
 
 #include <base/string_id.hpp>
-#include <base/named_id.hpp>
 #include <base/maps.hpp>
 #include <base/smart_pointers.hpp>
 #include "scope_symbol_id.hpp"

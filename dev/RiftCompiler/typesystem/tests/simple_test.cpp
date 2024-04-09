@@ -35,7 +35,7 @@ private:
 		ts::TypeDesc<> desc_1(id_1);
 		ts::TypeDesc<> desc_2(id_2);
 
-		assert(desc_1.getType() == id_1, "wrong TypeNamedId");
+		assert(desc_1.getType() == id_1, "wrong Type ID");
 
 		auto          symbol0 = symtable::SymbolId::next();
 		ts::ClassInfo id_3    = ts::ClassInfo::create(base::StrId("3"), { { desc_1, symbol0 } });
