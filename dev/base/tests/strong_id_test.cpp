@@ -27,6 +27,7 @@ public:
 		auto id1 = A::next();
 		ASSERT_EQUAL(id1.asInt(), 1);
 		ASSERT_EQUAL(u64(id1), 1);
+		assert(id1.isGood(), "Id is not good.");
 	
 		(void)B::next();
 		(void)B::next();
@@ -52,6 +53,15 @@ public:
 		ASSERT_EQUAL(hash(id0), 0);
 
 		ASSERT_EQUAL(usize(id0), 0);
+
+		B bad_id_b;
+		A bad_id_a;
+		assert(bad_id_a.isBad(), "Bad BadID");
+		assert(bad_id_b.isBad(), "Bad BadID");
+		assert(id_copy_1_a.isGood(), "Bad BadID");
+
+		assertEqual(bad_id_b, B::bad(), "Bad not equal to bad");
+		assertEqual(id1, id_copy_1_a, "Good not equal to Good");
 	}
 };
 
