@@ -28,8 +28,10 @@ namespace dia {
 	}
 
 	usize Logger::messageCount() const {
-		return messageCount(Message::Severity::Error) + messageCount(Message::Severity::Warning)
-		     + messageCount(Message::Severity::Info);
+		usize result = 0;
+		for (int severity_id = 0; severity_id < Message::NUM_SEVERITIES; severity_id++)
+			result += messageCount(static_cast<Message::Severity>(severity_id));
+		return result;
 	}
 
 	// Behold, for what you see ahead is the land of the obsolete!

@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
 	auto         file_content = file.getContent();
 
 	dia::Logger logger;
-	auto            chars = lexer::decode<fs::UTF8>(file_content.view(), logger);
+	auto        chars = lexer::decode<fs::UTF8>(file_content.view(), logger);
 	if (logger.bad()) {
 		logger.dumpLog(true, std::cerr);
 		return 0;
