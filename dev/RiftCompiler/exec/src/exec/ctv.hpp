@@ -56,7 +56,7 @@ namespace exec {
 		Pointer shift(usize shift /* in bits */) const {
 			// @TODO: assert(offset + shift in block)
 
-			return Pointer(block, offset + shift);
+			return { block, offset + shift };
 		}
 
 		auto operator<=>(const Pointer& other) const = default;
@@ -91,7 +91,7 @@ namespace exec {
 				= ts::TypeDesc<>(ts::PointerInfo::create(type), type.getValueCategory());
 
 			auto    block = Block::create(ts::POINTER_SIZE);
-			Pointer data_(block, 0);
+			Pointer data_{ block, 0 };
 
 			CTV ctv(pointer_type, data_, ts::POINTER_SIZE);
 

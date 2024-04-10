@@ -22,11 +22,11 @@ namespace operation {
 
 		exec::CTV operator()(const std::vector<exec::CTV>& ctvs) const {
 			RIFT_ASSERT(
-				ctvs.size() == signature.getParameterTypeList().size(),
+				ctvs.size() == signature.getParameterTypes().size(),
 				base::strConcat(
 					"operation received incorrect number of arguments.",
 					"expected ",
-					signature.getParameterTypeList().size(),
+					signature.getParameterTypes().size(),
 					" got ",
 					ctvs.size()
 				)
@@ -36,8 +36,7 @@ namespace operation {
 				// @TODO: this should check if types are compatible.
 				// (possibly doing some conversion, or discarding consts?)
 				RIFT_ASSERT(
-					ctvs[i].type == signature.getParameterTypeList()[i],
-					"Argument has incorrect type"
+					ctvs[i].type == signature.getParameterTypes()[i], "Argument has incorrect type"
 				);
 			}
 

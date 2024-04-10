@@ -6,29 +6,76 @@
 #include "../type_desc.tcpp"
 #include "../type_info.hpp"
 #include "../types.hpp"
+#include "../type_interface.hpp"
 #include <base/string_id.hpp>
 #include <base/smart_pointers.hpp>
+#include <utility>
 #include <vector>
 
 namespace ts::internal {
 	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
 
-	template<typename T>
-	void pushType(T type) {
+	template<std::derived_from<TypeInfoImpl> T>
+	void pushType(base::unique_ptr<T>&& type) {
 		getTypes().emplace_back(base::unique_ptr<TypeInfoImpl>(std::move(type)));
 	}
 
+	/**
+	 * \brief The TypeInfoImpl class and its subclasses are a heavy type implementation hierarchy.
+	 *
+	 * An object from the TypeInfoImpl hierarchy, like IntegralInfoImpl, FunctionInfoImpl etc. hold
+	 * all the data describing a type (hence, they are heavy). This data includes:
+	 * - the Kind of the type,
+	 * - the size of a value of the type,
+	 * - the TypeInterface of the type (fields and methods associated with the type), and
+	 * - other kind-specific information, like
+	 *   - signedness (for integral types), and
+	 *   - member types (for tuples, functions, variants, and similar "composite" types).
+	 *
+	 * All methods of a TypeInfoImpl subclass which should be accessible to the rest of the compiler
+	 * must be forwarded in the corresponding TypeInfo subclass.
+	 *
+	 * The TypeInfoImpl hierarchy should not be included in any header files. It is the internal
+	 * representation used by the Type System and should only be used in source code files of the
+	 * Type System.
+	 */
 	class TypeInfoImpl {
 	public:
+		/**
+		 * \brief The Kind of the type described by an object of this class.
+		 */
+		static Kind staticKind;
+
+		/**
+		 * \brief Gets the Kind of the type described by this object.
+		 * \return The Kind of the type described by this object.
+		 */
 		[[nodiscard]]
 		virtual Kind getKind() const
 			= 0;
 
+		/**
+		 * \brief Gets the size of a value of the type described by this object, in bits.
+		 * \return The size of a value of the type described by this object, in bits.
+		 */
 		[[nodiscard]]
 		usize getSize() const {
 			return size;
 		}
 
+		/**
+		 * \brief Gets the TypeInterface of the type described by this class.
+		 * \return The TypeInterface of the type described by this class.
+		 */
+		[[nodiscard]]
+		TypeInterface getInterface() const {
+			return interface;
+		}
+
+		/**
+		 * \brief Get the text representation of this type.
+		 * \return The text representation of this type.
+		 */
 		[[nodiscard]]
 		virtual const std::string& show() const {
 			// @TODO: this is just a draft, in the future this method may
@@ -36,126 +83,223 @@ namespace ts::internal {
 			return representation;
 		}
 
-		explicit TypeInfoImpl(usize size): size(size) {}
+		/**
+		 * \brief Construct a type, given its size and interface.
+		 *
+		 * This constructor should be used when everything about a type is known,
+		 * i.e. when the type is complete.
+		 * \param size The size of the type.
+		 * \param interface The interface of the type.
+		 */
+		// @TODO: remove the default for the interface. Each type should know its interface.
+		// The interface default is to be removed when interfaces for each type are determined.
+		explicit TypeInfoImpl(const usize size, TypeInterface interface = {}):
+			  size(size),
+			  interface(std::move(interface)) {}
 
+		/**
+		 * \brief Determine whether it is legal to consider an implicit coercion
+		 * from a value described by this TypeDesc to one described by target.
+		 *
+		 * An implicit coercion is when, for example, a boolean is expected, but
+		 * and integer is given. A desirable (and common) behaviour may be to
+		 * convert the integer value to true if and only if it is non-zero.
+		 *
+		 * Another context in which implicit coercions are desirable is when
+		 * casting from subclass to superclass.
+		 *
+		 * This method does not determine how to perform a coercion.
+		 * It only determines whether one should be considered.
+		 * A coercion may thus be allowed but not implemented, or implemented
+		 * but not allowed to be used implicitly by the compiler, so the user
+		 * may define a coercion from class A to class B, but not want it
+		 * to ever be used implicitly (in C++ that is achieved by annotating a
+		 * single-argument constructor with the `explicit` keyword).
+		 *
+		 * This is typically determined by rules specific for the Kind of the source type.
+		 *
+		 * \param target The target of a hypothetical implicit coercion.
+		 * \return Whether the implicit coercion is allowed or not.
+		 */
 		[[nodiscard]]
-		virtual bool isInfoImplicitlyCoercible([[maybe_unused]] const TypeInfo to) const {
+		virtual bool isImplImplicitlyCoercible([[maybe_unused]] const TypeInfo target) const {
 			return false;
 		}
 
 		virtual ~TypeInfoImpl() = default;
 
 	protected:
-		// Size in bits.
+		/**
+		 * \brief Size in bits.
+		 */
 		usize size = 0;
+
+		/**
+		 * \brief The interface of the type described by an object of this class.
+		 */
+		const TypeInterface interface;
+
 		// @TODO set this for each type and make it const.
+		// @TODO make this a field in TypeInfoImpl, set in the constructor?
+		// Should be done when text representation for types is determined.
+		/**
+		 * \brief The text representation of this type.
+		 */
 		std::string representation = "UNNAMED";
 	};
 
-	class VoidInfoImpl: public TypeInfoImpl {
+	class UnitInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::Void;
+			return staticKind;
 		}
+
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
+
+		UnitInfoImpl(): TypeInfoImpl(0) { representation = "unit"; }
+	};
+
+	class VoidInfoImpl final: public TypeInfoImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return staticKind;
+		}
+
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
 
 		VoidInfoImpl(): TypeInfoImpl(0) { representation = "void"; }
 	};
 
-	class ByteInfoImpl: public TypeInfoImpl {
+	class ByteInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::Byte;
+			return staticKind;
 		}
 
-		explicit ByteInfoImpl(): TypeInfoImpl(ts::BYTE_SIZE) { representation = "byte"; }
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
+
+		explicit ByteInfoImpl(): TypeInfoImpl(BYTE_SIZE) { representation = "byte"; }
 
 		[[nodiscard]]
-		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
 			// Implicit coercions allow checking against null bytes.
-			return to.getKind() == Kind::Bool;
+			return target.getKind() == Kind::Bool;
 		}
 	};
 
-	class BoolInfoImpl: public TypeInfoImpl {
+	class BoolInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::Bool;
+			return staticKind;
 		}
 
-		explicit BoolInfoImpl(): TypeInfoImpl(ts::BOOL_SIZE) { representation = "bool"; }
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
+
+		explicit BoolInfoImpl(): TypeInfoImpl(BOOL_SIZE) { representation = "bool"; }
 
 		[[nodiscard]]
-		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
 			// Implicit coercions allow adding to an integral counter.
-			return to.getKind() == Kind::Integral;
+			return target.getKind() == Kind::Integral;
 		}
 	};
 
-	class CharInfoImpl: public TypeInfoImpl {
+	class CharInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::Char;
+			return staticKind;
 		}
 
-		explicit CharInfoImpl(): TypeInfoImpl(ts::CHAR_SIZE) { representation = "char"; }
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
+
+		explicit CharInfoImpl(): TypeInfoImpl(CHAR_SIZE) { representation = "char"; }
 
 		[[nodiscard]]
-		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
 			// Implicit coercions allow checking against null chars.
-			return to.getKind() == Kind::Bool;
+			return target.getKind() == Kind::Bool;
 		}
 	};
 
-	class IntegralInfoImpl: public TypeInfoImpl {
+	class IntegralInfoImpl final: public TypeInfoImpl {
 		bool signedness;
 
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::Integral;
+			return staticKind;
 		}
 
-		explicit IntegralInfoImpl(usize size, bool signedness):
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
+
+		explicit IntegralInfoImpl(const usize size, const bool signedness):
 			  TypeInfoImpl(size),
 			  signedness(signedness) {
 			if (signedness)
-				representation = base::strConcat("int_", (u64) (size));
+				representation = base::strConcat("int_", size);
 			else
-				representation = base::strConcat("uint_", (u64) (size));
+				representation = base::strConcat("uint_", size);
 		}
 
-		bool getSignedness() const { return signedness; }
+		[[nodiscard]]
+		bool getSignedness() const {
+			return signedness;
+		}
 
 		[[nodiscard]]
-		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
 			// Implicit coercions allow checking against zero,
 			// as well as promoting to greater sizes and to floating point
 			// numbers for physics simulations or similar
-			return to.getKind() == Kind::Bool
-			    || (to.getKind() == Kind::Integral && to.getSize() > size)
-			    || to.getKind() == Kind::Float;
+			return target.getKind() == Kind::Bool
+			    || (target.getKind() == Kind::Integral && target.getSize() > size)
+			    || target.getKind() == Kind::Float;
 		}
 	};
 
-	class FloatInfoImpl: public TypeInfoImpl {
+	class FloatInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::Float;
+			return staticKind;
 		}
+
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
 
 		explicit FloatInfoImpl(usize size): TypeInfoImpl(size) {
 			representation = base::strConcat("float_", size);
 		}
 
 		[[nodiscard]]
-		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
 			// Implicit coercions allow promoting to greater sizes
-			return to.getKind() == Kind::Float && FloatInfo(to).getSize() > size;
+			return target.getKind() == Kind::Float && FloatInfo(target).getSize() > size;
 		}
 	};
 
@@ -163,207 +307,191 @@ namespace ts::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::RawPointer;
+			return staticKind;
 		}
 
-		RawPointerInfoImpl(): TypeInfoImpl(ts::POINTER_SIZE) { representation = "raw_pointer"; }
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
+
+		RawPointerInfoImpl(): TypeInfoImpl(POINTER_SIZE) { representation = "raw_pointer"; }
 
 		[[nodiscard]]
-		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
 			// Implicit coercions allow checking against null pointer.
-			// We do not allow casting to a typed pointer, because we forbid implicit type
-			// specification.
-			return to.getKind() == Kind::Bool;
+			// We do not allow casting to a typed pointer,
+			// because we forbid implicit type specification in this context.
+			return target.getKind() == Kind::Bool;
 		}
 	};
 
-	class PointerInfoImpl: public RawPointerInfoImpl {
+	class PointerInfoImpl final: public RawPointerInfoImpl {
+		const TypeDesc<> underlying_type;
+
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::Pointer;
+			return staticKind;
 		}
 
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
+
 		[[nodiscard]]
-		TypeDesc<> getUnderlying() const {
+		TypeDesc<> getUnderlyingType() const {
 			return underlying_type;
 		}
 
 		explicit PointerInfoImpl(const TypeDesc<>& underlying_type):
-			  RawPointerInfoImpl(),
 			  underlying_type(underlying_type) {
 			representation = base::strConcat("pointer(", underlying_type.getType().show(), ")");
 		}
 
-	protected:
-		const TypeDesc<> underlying_type;
+		[[nodiscard]]
+		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
+			// Explicit override without change in implementation to add comment.
+			// Implicit coercions allow checking against null pointer.
+			// We do not allow casting to another (raw) pointer type,
+			// because we forbid implicit type (de)specification in this context.
+			return target.getKind() == Kind::Bool;
+		}
 	};
 
-	inline std::string showVector(const std::vector<TypeDesc<>>& types) {
-		std::string res = "(";
-		for (const auto& t: types) res += t.getType().show() + ",";
-		res += ")";
-
-		return res;
-	}
-
-	class FunctionInfoImpl: public TypeInfoImpl {
-		std::vector<TypeDesc<>> parameterTypes;
-		TypeDesc<>              resultType;
-		base::FlagType          flags;  // like `pure` and others
+	class ReferenceInfoImpl final: public TypeInfoImpl {
+		const TypeInfo      underlying_type;
+		const ReferenceKind ref_kind;
+		const bool          leaking, nullable, unique;
 
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::Function;
+			return staticKind;
 		}
 
-		explicit FunctionInfoImpl(
-			std::vector<TypeDesc<>> parameterTypes, TypeDesc<> resultType, i32 flags = 0
-		):
-			  TypeInfoImpl(POINTER_SIZE),
-			  parameterTypes(std::move(parameterTypes)),
-			  resultType(resultType),
-			  flags(flags) {
-			representation = "Function " + showVector(this->parameterTypes) + " -> ("
-			               + resultType.getType().show() + ")";
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
+
+		[[nodiscard]]
+		TypeInfo getUnderlyingType() const {
+			return underlying_type;
 		}
 
 		[[nodiscard]]
-		std::vector<TypeDesc<>> getParameterList() const {
-			return parameterTypes;
+		ReferenceKind getReferenceKind() const {
+			return ref_kind;
+		}
+
+		[[nodiscard]]
+		bool isLeaking() const {
+			return leaking;
+		}
+
+		[[nodiscard]]
+		bool isNullable() const {
+			return nullable;
+		}
+
+		[[nodiscard]]
+		bool isUnique() const {
+			return unique;
+		}
+
+		explicit ReferenceInfoImpl(
+			const TypeInfo      underlying_type,
+			const ReferenceKind ref_kind,
+			const bool          leaking,
+			const bool          nullable,
+			const bool          unique
+		):
+			  TypeInfoImpl(POINTER_SIZE),
+			  underlying_type(underlying_type),
+			  ref_kind(ref_kind),
+			  leaking(leaking),
+			  nullable(nullable),
+			  unique(unique) {}
+
+		[[nodiscard]]
+		bool isImplImplicitlyCoercible(const TypeInfo) const override {
+			// Unlike with pointers, we do not allow checking whether the reference is non-null by
+			// coercion, because this may conflict with the underlying type being coercible to bool.
+			// Instead, we would want to just forward coercibility.
+			// But we also anticipate the need to coerce `T` to `ref T` or the other way around.
+			// Does this mean that we need to coerce `(ref S)` to `ref (ref S)`?
+			// Does `ref ref S` even make sense?
+			// @TODO: resolve the above.
+			return false;
+		}
+	};
+
+	class FunctionInfoImpl final: public TypeInfoImpl {
+		const std::vector<TypeDesc<>> parameter_types;
+		const TypeDesc<>              result_type;
+		const bool                    pure, free;
+
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return staticKind;
+		}
+
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
+
+		[[nodiscard]]
+		const std::vector<TypeDesc<>>& getParameterList() const {
+			return parameter_types;
 		}
 
 		[[nodiscard]]
 		TypeDesc<> getResult() const {
-			return resultType;
+			return result_type;
 		}
 
 		[[nodiscard]]
-		base::FlagType getFlags() const {
-			return flags;
+		bool isPure() const {
+			return pure;
 		}
 
 		[[nodiscard]]
-		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
-			// A function type is convertible to another function type if and only if
+		bool isFree() const {
+			return free;
+		}
+
+		[[nodiscard]]
+		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
+			// A function type is coercible to another function type if and only if
 			// the return type is coercible to the other return type and
 			// the other parameter types are coercible to the parameter types,
 			// similar to the rules of function subtyping.
-			if (to.getKind() != Kind::Function) return false;
-			const FunctionInfo toFunction = to;
-			if (!flags.contains(toFunction.getFlags())
-			    || parameterTypes.size() != toFunction.getParameterTypeList().size()) {
+			//
+			// Additionally, only a pure function can be coerced to a pure function,
+			// and only a free function can be coerced to a free function.
+
+			if (target.getKind() != Kind::Function) return false;
+			const FunctionInfo toFunction = target;
+			if ((!pure && toFunction.isPure()) || (!free && toFunction.isFree())
+			    || parameter_types.size() != toFunction.getParameterTypes().size()) {
 				return false;
 			}
-			for (usize i = 0; i < parameterTypes.size(); i++)
-				if (!isImplicitlyCoercible(toFunction.getParameterTypeList()[i], parameterTypes[i]))
+			for (usize i = 0; i < parameter_types.size(); i++)
+				if (!isImplicitlyCoercible(toFunction.getParameterTypes()[i], parameter_types[i]))
 					return false;
-			return isImplicitlyCoercible(resultType, toFunction.getResultType());
-		}
-	};
-
-	class EnumInfoImpl: public TypeInfoImpl {
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return Kind::Enum;
+			return isImplicitlyCoercible(result_type, toFunction.getResultType());
 		}
 
-		[[nodiscard]]
-		IntegralInfo getBaseType() const {
-			return base_type;
-		}
-
-		explicit EnumInfoImpl(IntegralInfo base_type):
-			  TypeInfoImpl(base_type.getSize()),
-			  base_type(base_type) {
-			representation = "Enum " + base_type.show();
-		}
-
-	private:
-		IntegralInfo base_type;
-	};
-
-	class FlagInfoImpl: public TypeInfoImpl {
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return Kind::Flag;
-		}
-
-		[[nodiscard]]
-		IntegralInfo getBaseType() const {
-			return base_type;
-		}
-
-		explicit FlagInfoImpl(TypeInfo base_type):
-			  TypeInfoImpl(base_type.getSize()),
-			  base_type(base_type) {
-			representation = "Flag " + base_type.show();
-		}
-
-	private:
-		IntegralInfo base_type;
-	};
-
-	class OptionalInfoImpl: public TypeInfoImpl {
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return Kind::Optional;
-		}
-
-		[[nodiscard]]
-		TypeDesc<> getUnderlying() const {
-			return underlying_type;
-		}
-
-		explicit OptionalInfoImpl(const TypeDesc<>& underlying_type):
-			  TypeInfoImpl(BYTE_SIZE + underlying_type.getType().getSize()),
-			  underlying_type(underlying_type) {
-			"Optional " + underlying_type.getType().show();
-		}
-
-		[[nodiscard]]
-		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
-			if (to.getKind() != Kind::Optional) return false;
-			const OptionalInfo toOptional = to;
-			return isImplicitlyCoercible(underlying_type, toOptional.getUnderlying());
-		}
-
-	protected:
-		const TypeDesc<> underlying_type;
-	};
-
-	class TupleInfoImpl: public TypeInfoImpl {
-		std::vector<TypeDesc<>> underlyingTypes;
-		std::vector<usize>      offsets;
-
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return Kind::Tuple;
-		}
-
-		explicit TupleInfoImpl(const std::vector<TypeDesc<>>& underlyingTypes);
-
-		const std::vector<TypeDesc<>>& getUnderlyingTypes() const { return underlyingTypes; }
-
-		std::pair<TypeDesc<>, usize> getMember(usize index) const;
-
-		TypeDesc<> getType(usize idx) const { return underlyingTypes[idx]; }
-
-		[[nodiscard]]
-		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
-			if (to.getKind() != Kind::Tuple) return false;
-			const TupleInfo toTuple = to;
-			if (underlyingTypes.size() != toTuple.getUnderlyingTypes().size()) return false;
-			for (usize i = 0; i < underlyingTypes.size(); i++)
-				if (!isImplicitlyCoercible(underlyingTypes[i], toTuple.getUnderlyingTypes()[i]))
-					return false;
-			return true;
-		}
+		explicit FunctionInfoImpl(
+			std::vector<TypeDesc<>> parameter_types,
+			TypeDesc<>              result_type,
+			bool                    pure = false,
+			bool                    free = false
+		);
 	};
 
 	/** @TODO:
@@ -371,23 +499,34 @@ namespace ts::internal {
 	 * Dynamic "what am I?" information size based on input vector
 	 * Sort variant types, so that var(A, B) = var(B, A)?
 	 */
-	class VariantInfoImpl: public TypeInfoImpl {
-		std::vector<TypeDesc<>> variant_types;
+	class VariantInfoImpl final: public TypeInfoImpl {
+		std::vector<TypeDesc<>> underlyingTypes;
 
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::Variant;
+			return staticKind;
 		}
+
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
 
 		explicit VariantInfoImpl(const std::vector<TypeDesc<>>& variant_types);
 
-		std::vector<TypeDesc<>> getTypes() const { return variant_types; }
+		[[nodiscard]]
+		const std::vector<TypeDesc<>>& getUnderlyingTypes() const {
+			return underlyingTypes;
+		}
 
-		TypeDesc<> getType(usize idx) { return variant_types[idx]; }
+		[[nodiscard]]
+		TypeDesc<> getMember(const usize idx) const {
+			return underlyingTypes[idx];
+		}
 	};
 
-	class ClassInfoImpl: public TypeInfoImpl {
+	class ClassInfoImpl final: public TypeInfoImpl {
 		const base::StrId name;
 
 		// Stores the data of our ancestors, sorted by their offset
@@ -417,8 +556,13 @@ namespace ts::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::Class;
+			return staticKind;
 		}
+
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
 
 		[[nodiscard]]
 		base::StrId getName() const {
@@ -476,93 +620,60 @@ namespace ts::internal {
 		);
 
 		[[nodiscard]]
-		bool isInfoImplicitlyCoercible(const TypeInfo to) const override {
-			if (to.getKind() != Kind::Class) return false;
-			const ClassInfo toClass      = to;
-			AncestorInfo    ancestorInfo = getAncestorInfo(toClass);
-			return ancestorInfo.result_type == ResultType::Standard
-			    || ancestorInfo.result_type == ResultType::Virtual;
+		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
+			if (target.getKind() != Kind::Class) return false;
+			const ClassInfo toClass               = target;
+			const auto [lva, so, eo, result_type] = getAncestorInfo(toClass);
+			// A class is convertible to another class when the other class is an unambiguous
+			// ancestor. The ancestor may be Standard (non-virtual) or Virtual, but it must exist
+			// (cannot be NoResult) and it cannot be Ambiguous.
+			return result_type == ResultType::Standard || result_type == ResultType::Virtual;
 		}
 	};
 
-	// Information how to bake the template into another type and what argument
-	// lists were already baked is contained in the value of the template in exec.
-	class TemplateInfoImpl: public TypeInfoImpl {
-		// @TODO: Change to vector<TypeInfo> if TypeDescs end up not needed anywhere.
-		std::vector<TypeDesc<>> parameter_list;
-
-	public:
-		explicit TemplateInfoImpl(const std::vector<TypeDesc<>>& parameter_list)
-			  // @TODO: Change size to whatever StructTemplate or other value contained equals to.
-			  :
-			  TypeInfoImpl(0),
-			  parameter_list(parameter_list) {
-			// @TODO: this should have more information, probably name, and parameters
-			representation = "Template";
-		}
-
-		const std::vector<TypeDesc<>>& getParameterList() const { return parameter_list; }
-	};
-
-	class TypeTemplateInfoImpl: public TemplateInfoImpl {
+	class NamespaceInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::TypeTemplate;
+			return staticKind;
 		}
 
-		explicit TypeTemplateInfoImpl(const std::vector<TypeDesc<>>& parameter_list):
-			  TemplateInfoImpl(parameter_list) {}
-	};
-
-	class NamespaceInfoImpl: public TypeInfoImpl {
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return Kind::Namespace;
-		}
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
 
 		NamespaceInfoImpl(): TypeInfoImpl(0) {}
 	};
 
-	class CodeBlockInfoImpl: public TypeInfoImpl {
+	class ModuleInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::CodeBlock;
+			return staticKind;
 		}
 
-		CodeBlockInfoImpl(): TypeInfoImpl(0) {}
-	};
-
-	class ModuleInfoImpl: public TypeInfoImpl {
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return Kind::Module;
-		}
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
 
 		ModuleInfoImpl(): TypeInfoImpl(0) {}
 	};
 
-	class MetaInfoImpl: public TypeInfoImpl {
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return Kind::Meta;
-		}
-
-		explicit MetaInfoImpl(): TypeInfoImpl(ts::META_SIZE) {}
-	};
-
-	class VTableInfoImpl: public TypeInfoImpl {
+	class VTableInfoImpl final: public TypeInfoImpl {
 		ClassInfo associated_class;
 
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return Kind::VTable;
+			return staticKind;
 		}
+
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
 
 		[[nodiscard]]
 		ClassInfo getAssociatedClass() const;
@@ -571,8 +682,23 @@ namespace ts::internal {
 		[[nodiscard]]
 		usize getMethodCount() const;
 
-		explicit VTableInfoImpl(ClassInfo class_info):
+		explicit VTableInfoImpl(const ClassInfo class_info):
 			  TypeInfoImpl(class_info.getVtableSize() * sizeof(usize) * 8),
 			  associated_class(class_info) {}
+	};
+
+	class MetaInfoImpl final: public TypeInfoImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return staticKind;
+		}
+
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
+
+		explicit MetaInfoImpl(): TypeInfoImpl(META_SIZE) {}
 	};
 }

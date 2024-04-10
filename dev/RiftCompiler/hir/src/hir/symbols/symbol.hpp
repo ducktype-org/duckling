@@ -113,7 +113,6 @@ namespace symtable {
 		virtual void calculateLinkedLookup();
 
 		void getAll() {
-			getKind();
 			requestType();
 			requestLinkedLookupScope();
 			getSymbolsIn();
