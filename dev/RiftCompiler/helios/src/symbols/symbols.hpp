@@ -11,6 +11,28 @@
 namespace compiler::helios {
 
 	/**
+	 * @brief SymbolKind stores general kind/type of a symbol.
+	 */
+	enum class SymbolKind {
+		Basic,
+		Namespace,
+		Function,
+		CompilationUnit,
+		Const,
+		Struct,
+		Alias,
+
+		TestSymbol,
+		// ...
+	};
+
+
+	// here:
+	// - get kind getter
+	// - get name getter
+
+
+	/**
 	 * @brief Construct a new declare query object
 	 * 
 	 */

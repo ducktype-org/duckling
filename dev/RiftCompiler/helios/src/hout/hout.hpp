@@ -1,12 +1,9 @@
 #pragma once
 
 #include <base/stable_container.hpp>
+#include "forward.hpp"
 
 namespace compiler::helios {
-
-	// Forward:
-	struct SymbolData;
-	struct ScopeData;
 
 	/**
 	 * @brief Reference to HELIOS-symbol

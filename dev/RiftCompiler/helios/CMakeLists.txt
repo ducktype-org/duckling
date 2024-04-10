@@ -1,5 +1,5 @@
 add_library(HELIOS
-	keep.cpp
+	symbols/symbols.cpp
 )
 
 make_module(HELIOS USES Base)

@@ -8,9 +8,34 @@ namespace compiler::helios {
 	// imports are just symbols that will require lookup inside different module that will build itself from different PST. Simple!
 	// We will just need query for import lookup cached by (globally) unique PstID
 
+
 	struct SymbolData {
-		// all the stuff from original HIR
+		// adapted from hir:
+
+		// created on startup:
+		ScopeRef    scope;
+		base::StrId name;
+		bool        anonymous;
+		bool wildcard = false;
+		bool is_alias = false;
+		bool dependent = false;
+		SymbolKind kind;
+		// pst link? -- what about down casting...
+
+
+		// cached: linked_lookup_scope ?
+		// cached: type
+		// cached: value?
+		
+
+
+
 	};
+
+	// do we want internal inheritance?
+	// query: lookupIn
+	// query: dealias
+	
 
 	namespace {
 		// global table:
@@ -32,6 +57,6 @@ namespace compiler::helios {
 		}
 	};
 
-
+	// if somewhere then here it is needed to handle cycles somehow
 
 }

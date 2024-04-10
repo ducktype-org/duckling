@@ -35,6 +35,8 @@ namespace compiler::helios {
 
 	// for now: copy stuff around and leave @OPT for -- make stable cache here and return reference
 
+	// we migth want to refactor lookup result..
+
 
 	/**
 	 * @brief Generates HOUTModule of single module
