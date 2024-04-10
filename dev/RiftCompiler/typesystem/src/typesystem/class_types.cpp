@@ -14,12 +14,11 @@ namespace ts {
 		if (result_type == ResultType::Ambiguous) return { .result_type = ResultType::Ambiguous };
 		if (a.result_type == ResultType::Ambiguous) return a;
 		if (a.result_type == ResultType::Virtual) return a;
-		const MemberInfo result{
-			.last_virtual_ancestor = last_virtual_ancestor,
-			.desc                  = a.desc,
-			.start_offset          = a.start_offset.value() + start_offset.value(),
-			.end_offset            = a.end_offset.value() + start_offset.value(),
-			.result_type           = result_type };
+		const MemberInfo result{ .last_virtual_ancestor = last_virtual_ancestor,
+			                     .desc                  = a.desc,
+			                     .start_offset = a.start_offset.value() + start_offset.value(),
+			                     .end_offset   = a.end_offset.value() + start_offset.value(),
+			                     .result_type  = result_type };
 		return result;
 	}
 
