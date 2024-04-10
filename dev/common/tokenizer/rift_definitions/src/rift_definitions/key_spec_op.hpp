@@ -34,6 +34,7 @@ namespace rift_def {
 		Struct,
 		Namespace,
 		Import,
+		As,
 		Using,
 		Alias,
 
@@ -116,8 +117,6 @@ namespace rift_def {
 		// Misc:
 
 		// Rift Test:
-		RiftTestEagerLookup,
-
 
 		// BC:
 		BCFunction,

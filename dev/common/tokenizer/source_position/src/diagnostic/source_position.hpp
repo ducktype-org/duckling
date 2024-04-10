@@ -17,13 +17,15 @@ namespace dia {
 	 */
 	class SourcePosition {
 	public:
-		using Source = std::shared_ptr<const fs::FilePath>;
+		using SourceFile = std::shared_ptr<const fs::FilePath>;
 
 		SourcePosition() = delete;
 
-		SourcePosition(Source source_code, usize line, usize column, usize start);
-		SourcePosition(Source source_code, usize line, usize column, usize start, usize end);
-		SourcePosition(const SourcePosition& other);
+		SourcePosition(const SourceFile& source_file, usize line, usize column, usize start);
+		SourcePosition(
+			const SourceFile& source_file, usize line, usize column, usize start, usize end
+		);
+		SourcePosition(const SourcePosition& other) = default;
 		SourcePosition(const SourcePosition& other, usize end);
 
 		SourcePosition& operator=(const SourcePosition& other) = default;
@@ -31,8 +33,7 @@ namespace dia {
 		/**
 		 * @brief Get a copy of the bytes in this position
 		 *
-		 * @return std::string containing a copy of the bytes in this position, if it fails it
-		 * returns error message instead
+		 * @return std::string containing a copy of the bytes in this position.
 		 */
 		[[nodiscard]]
 		std::string getSourceChars() const;
@@ -60,12 +61,12 @@ namespace dia {
 		[[nodiscard]]
 		usize getEnd() const;
 		[[nodiscard]]
-		Source getSource() const;
+		SourceFile getSource() const;
 
 	private:
-		usize line, column;  ///< #line, #column describe start position in code for the user
+		usize line, column;      ///< #line, #column describe start position in code for the user
 		usize source_start,
-			source_end;      ///< #source_start, #source_end describe range of bytes in the file
-		Source source_code;  ///< pointer to source file data
+			source_end;          ///< #source_start, #source_end describe range of bytes in the file
+		SourceFile source_file;  ///< pointer to source file data
 	};
 }

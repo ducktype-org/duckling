@@ -1,5 +1,5 @@
 /**
- * @file parser_testing.cpp
+ * @file clap_playground.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 #include <iostream>

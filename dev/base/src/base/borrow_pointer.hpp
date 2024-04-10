@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+#include <ranges>
 
 namespace base {
 	template<class T>
@@ -51,6 +52,18 @@ namespace base {
 		T* operator->() const noexcept { return get(); }
 
 		T* get() const noexcept { return ptr; }
+
+		auto begin() const
+		requires std::ranges::range<T>
+		{
+			return (*this)->begin();
+		}
+
+		auto end() const
+		requires std::ranges::range<T>
+		{
+			return (*this)->end();
+		}
 	};
 
 	template<class T>

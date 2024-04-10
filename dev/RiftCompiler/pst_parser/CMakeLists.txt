@@ -2,7 +2,6 @@ file(GLOB ElementImplementationFiles "src/pst_parser/elements/elements_implement
 
 add_library(PstParser
 		src/pst_parser/parser.cpp
-		src/pst_parser/elements/elements.cpp
 		src/pst_parser/pst.cpp
 		src/pst_parser/rift_parser_base.cpp
 		${ElementImplementationFiles})

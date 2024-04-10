@@ -9,27 +9,14 @@ namespace pst {
 			state.ctokens().is(Keyword::Using), position.genErrorStr("bad statement choice")
 		);
 
-		parseOne(state, Keyword::Using);
-		parseDottedName(state, &out->names);
+		parseAll(state, Keyword::Using, &out->names);
 
 		return out;
 	}
 
 	void Using::dprint(std::ostream& out) const {
-		out << "{\"Using\": {";
-
-		if (names.star)
-			out << R"("star": "true",)";
-		else
-			out << R"("star": "false",)";
-
-		out << R"("names": [)";
-
-		for (const auto& name: names.names) {
-			tpc::nullAwareDprint(name, out);
-			out << ", ";
-		}
-
-		out << "]}}";
+		out << "{\"Using\": ";
+		nullAwareDprint(names, out);
+		out << "}";
 	}
 }

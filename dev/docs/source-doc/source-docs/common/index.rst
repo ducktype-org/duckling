@@ -16,5 +16,6 @@ Common
     json/index.rst
     listener/index.rst
     printer/index.rst
+    query_framework/index.rst
     tester/index.rst
     tokenizer/index.rst
