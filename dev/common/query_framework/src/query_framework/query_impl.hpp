@@ -126,7 +126,7 @@ namespace query {
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query.
- * @param type Name od Query Implementation Struct
+ * @param type Name of Query Implementation Struct
  * @param pretty_name Pretty name of a given query (that will for example be displayed in logs)
  */
 #define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                       \

@@ -5,7 +5,7 @@
 
 /**
  * Query Key.
- * note that is does not have to declared here.
+ * note that it does not have to declared here.
  */
 struct Key {
 	/* ... */
@@ -16,7 +16,7 @@ struct Key {
 
 /**
  * Query Value.
- * note that is does not have to declared here.
+ * note that it does not have to declared here.
  */
 struct Value {
 	/*...*/
@@ -32,6 +32,6 @@ struct Value {
 DECLARE_QUERY(MyQuery, Key, Value)
 
 /**
- * This query just takes uint64_t as an argument and return std::string.
+ * This query just takes uint64_t as an argument and returns std::string.
  */
 DECLARE_QUERY(Query2, uint64_t, std::string)
