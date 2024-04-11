@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
+#include "../lookup_result.hpp"
+#include <base/string_id.hpp>
 #include <query_framework/query_int.hpp>
 
 // @TODO: relax this dependency
@@ -21,6 +23,10 @@ namespace compiler::helios {
 	};
 	DECLARE_QUERY(QueryCodeScope, KeyOf_QueryCodeScope, ScopeID);
 
-	// @TODO: Query Lookup in Scope
+	struct KeyOf_Lookup {
+		ScopeID scope;
+		base::StrId name;
+	};
+	DECLARE_QUERY(QueryLookup, KeyOf_Lookup, LookupResult);
 
 }
