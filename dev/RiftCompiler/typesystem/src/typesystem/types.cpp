@@ -39,9 +39,7 @@ namespace ts {
 	|   POINTER TYPES   |
 	\*******************/
 
-	TypeInfo PointerInfo::getUnderlyingType() const {
-		return toCPimpl(pimpl)->getUnderlyingType();
-	}
+	TypeInfo PointerInfo::getUnderlyingType() const { return toCPimpl(pimpl)->getUnderlyingType(); }
 
 	struct ReferenceConstructionRecord {
 		TypeInfo      underlying_type;

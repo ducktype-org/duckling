@@ -30,7 +30,7 @@
  *
  * \param KindOfType The class name from the TypeInfo hierarchy, without "Info".
  */
-#define CONSTRUCT_FROM_IMPLEMENTATION(KindOfType) \
+#define CONSTRUCT_FROM_IMPLEMENTATION(KindOfType)           \
 	friend struct ImplementationOf_Query##KindOfType##Type; \
 	explicit KindOfType##Info(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
 

@@ -71,8 +71,7 @@ namespace operation {
 		};
 
 		const ts::FunctionInfo sig = ts::FunctionInfo::create(
-			{ { type_info }, { type_info } },
-			query::queryEntryPoint<ts::QueryIntegralType>({ 8 })
+			{ { type_info }, { type_info } }, query::queryEntryPoint<ts::QueryIntegralType>({ 8 })
 		);
 
 		return { op, sig };

@@ -43,7 +43,7 @@ namespace ts {
 		/**
 		 * @brief Whether the Integral type is signed or not.
 		 */
-		bool signedness{true};
+		bool signedness{ true };
 	};
 
 	/**
@@ -73,10 +73,11 @@ namespace ts {
 		/**
 		 * @brief Whether the data under the pointer is mutable or not.
 		 */
-		bool is_mutable{false};
+		bool is_mutable{ false };
 
 		[[nodiscard]]
-		auto operator<=>(const KeyFor_QueryPointerType& other) const = default;
+		auto operator<=>(const KeyFor_QueryPointerType& other) const
+			= default;
 	};
 
 	/**
