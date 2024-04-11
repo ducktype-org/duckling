@@ -21,9 +21,9 @@ namespace base {
 		typedef typename ContainerType::key_type    KEY_T;
 		typedef typename ContainerType::mapped_type DATA_T;
 
-		MapWrapper(): ContainerType(){};
-		MapWrapper(const MapWrapper& map): ContainerType(map){};
-		MapWrapper(MapWrapper&& map): ContainerType(std::move(map)){};
+		 MapWrapper(): ContainerType(){};
+		 MapWrapper(const MapWrapper& map): ContainerType(map){};
+		 MapWrapper(MapWrapper&& map): ContainerType(std::move(map)){};
 		~MapWrapper() = default;
 
 		// Change operator[] behaviour:
@@ -38,11 +38,6 @@ namespace base {
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& data) {
 			return ContainerType::emplace(std::forward<K>(key), std::forward<D>(data));
-		}
-
-		// @TODO: delete it, since we are using C++20:
-		bool contains(const KEY_T& key) const {
-			return ContainerType::find(key) != ContainerType::end();
 		}
 
 		bool notEmpty() const { return !ContainerType::empty(); }
@@ -60,9 +55,8 @@ namespace base {
 		bool is_move = std::is_move_constructible_v<DATA_T>,
 		bool is_copy = std::is_copy_constructible_v<DATA_T>>
 	class VectorMap {
-	private:
-		std::vector<base::Optional<DATA_T>> map;
-		usize                               element_count{};
+		std::vector<Optional<DATA_T>> map;
+		usize                         element_count{};
 
 	public:
 		typedef VectorMap SelfType;

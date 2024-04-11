@@ -6,7 +6,6 @@
 #pragma once
 
 #include "maps.hpp"
-#include "stable_container.hpp"
 
 namespace base {
 	/**
@@ -25,7 +24,7 @@ namespace base {
 		 * @param key Data key
 		 * @return A const reference to the data.
 		 */
-		const DATA_T& at(const KEY_T& key) const { return data.at(key); }
+		const DATA_T& at(const KEY_T& key) const { return *data.at(key); }
 
 		/**
 		 * Returns a reference to the data. If the data identified by the key does not exist throws
@@ -33,7 +32,7 @@ namespace base {
 		 * @param key Data key
 		 * @return A reference to the data.
 		 */
-		DATA_T& at(const KEY_T& key) { return data.at(key); }
+		DATA_T& at(const KEY_T& key) { return *data.at(key); }
 
 		/**
 		 * Returns a reference to the data inside an optional. If the data identified by the key
@@ -42,6 +41,17 @@ namespace base {
 		 * @return An optional with a reference to the data.
 		 */
 		Optional<DATA_T&> atMaybe(const KEY_T& key) {
+			if (contains(key)) return at(key);
+			return {};
+		}
+
+		/**
+		 * Returns a const reference to the data inside an optional. If the data identified by the
+		 * key does not exist returns an empty optional.
+		 * @param key Data key
+		 * @return An optional with a const reference to the data.
+		 */
+		Optional<const DATA_T&> atMaybe(const KEY_T& key) const {
 			if (contains(key)) return at(key);
 			return {};
 		}
@@ -88,6 +98,7 @@ namespace base {
 		}
 
 	private:
-		base::HashMap<KEY_T, unique_ptr<DATA_T>> data;
+		// @TODO: Replace this with base::HashMap.
+		std::unordered_map<KEY_T, unique_ptr<DATA_T>> data;
 	};
 }

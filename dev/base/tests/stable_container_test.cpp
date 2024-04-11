@@ -94,6 +94,10 @@ private:
 		ASSERT_EQUAL("test", map["lol"]);
 		ASSERT_EQUAL(1, map.size());
 
+		ASSERT_EQUAL("test", map["lol"]);
+		ASSERT_EQUAL("test", map.at("lol"));
+		ASSERT_EQUAL(true, map.atMaybe("lol2").empty());
+
 		map.clear();
 		ASSERT_EQUAL(0, map.size());
 	}
