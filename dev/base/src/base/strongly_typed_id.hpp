@@ -13,12 +13,13 @@ namespace base::detail {
  * 	STRONG_TYPEDEF_ID(TypeName)
  * 
  *  Created type has following interface:
- * 	* Type() -- default constructor creating bad ID
- *  * Type::next() -- get next id
- *  * Type::bad() -- get bad id
- *  * id.isBad(), id.idGood() -- check if given ID is good/bad
- *  * id.asInt() -- get underlying integer
- * 	* <=>, <, ==, etc -- all standard comparision operators 
+ *  
+ *  * Type() - default constructor creating bad ID
+ *  * Type::next() - get next id
+ *  * Type::bad() - get bad id
+ *  * id.isBad(), id.idGood() - check if given ID is good/bad
+ *  * id.asInt() - get underlying integer
+ *  * <=>, <, ==, etc - all standard comparision operators
  * 
  * @note it creates normal class, it can be used in namespace
  */

@@ -10,4 +10,4 @@ Strongly typed ID
 
 Strongly typed id is a library that provides macros that creates a class implementing strongly typed ID type.
 
-.. doxygenfile:: base/strongly_types_id.hpp
+.. doxygenfile:: base/strongly_typed_id.hpp
