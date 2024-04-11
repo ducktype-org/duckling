@@ -34,4 +34,7 @@ rift_add_test(base string_id_test_simple tests/string_id_test.cpp
 		USES Lexer Base)
 
 rift_add_test(base optional_tests tests/optional_test.cpp
-		USES Base Tester)
+    USES Base Tester)
+
+rift_add_test(base strong_id_test tests/strong_id_test.cpp
+        USES Base Tester)

@@ -2,4 +2,4 @@
 Kind
 ====
 
-.. @TODO
+.. doxygenfile:: src/typesystem/kind.hpp

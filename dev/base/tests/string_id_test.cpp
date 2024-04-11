@@ -27,7 +27,6 @@ class SimpleIdMapsTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple FileSystem Test") {
 		TESTER_ADD_TEST(basicMapTest);
-		TESTER_ADD_TEST(simpleIdTest);
 		TESTER_ADD_TEST(strIdTest);
 	}
 
@@ -60,26 +59,6 @@ private:
 
 		map3.put(5, 5);
 		assert(map3.erase(5), "Map element not erased 2");
-	}
-
-	struct MyIdName {};
-
-	using MyId = base::NamedId<MyIdName>;
-
-	using MyId2 = base::NamedId<base::Number<123>>;
-	using MyId3 = base::NamedId<base::Number<124>>;
-
-	void simpleIdTest() {
-		MyId id_1 = MyId::next();
-		MyId id_2 = MyId::next();
-		MyId id_3;
-		assert(id_1 != id_2, "!= error");
-		assert(id_1 == id_1, "== error");
-		assert(!(id_1 == id_2), "== error");
-		assert(id_1 < id_2, "< error");
-		assert(id_3.isBad(), "isBad error");
-		assert(!(id_1 > id_2), "> error");
-		assert(id_1.range() == 2, "range error");
 	}
 
 	static base::RawView make_view(std::string_view view) {

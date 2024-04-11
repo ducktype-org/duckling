@@ -16,7 +16,7 @@ namespace base {
 	 * @brief Key must be „standard” numeric value such as:
 	 * integer
 	 * strongly typed int
-	 * NamedID
+	 * strongly typed id
 	 *
 	 * Right now StableVector keys must be convertible to and from usize
 	 *
