@@ -24,11 +24,15 @@
 	}
 
 /**
- * \brief Constructor from SomeTypeInfo##Impl*.
- * \param SomeTypeInfo The class name from the TypeInfo hierarchy.
+ * \brief Constructor from KindOfType##InfoImpl*.
+ *
+ * Marks respective query as a friend for exclusive construction access.
+ *
+ * \param KindOfType The class name from the TypeInfo hierarchy, without "Info".
  */
-#define CONSTRUCT_FROM_IMPLEMENTATION(SomeTypeInfo) \
-	explicit SomeTypeInfo(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
+#define CONSTRUCT_FROM_IMPLEMENTATION(KindOfType) \
+	friend struct ImplementationOf_Query##KindOfType##Type; \
+	explicit KindOfType##Info(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
 
 /**
  * \brief Several type definitions for quick reference,

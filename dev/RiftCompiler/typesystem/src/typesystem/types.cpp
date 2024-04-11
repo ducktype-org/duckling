@@ -34,89 +34,13 @@ namespace ts {
 	|    BASIC TYPES   |
 	\******************/
 
-	UnitInfo UnitInfo::create() {
-		// TODO: do we want to store unit_info on the vector as well?
-		static auto unit_impl = internal::UnitInfoImpl{};
-		static auto unit_info = UnitInfo{ &unit_impl };
-
-		return unit_info;
-	}
-
-	VoidInfo VoidInfo::create() {
-		// TODO: do we want to store void_info on the vector as well?
-		static auto void_impl = internal::VoidInfoImpl{};
-		static auto void_info = VoidInfo{ &void_impl };
-
-		return void_info;
-	}
-
-	ByteInfo ByteInfo::create() {
-		static auto byteImpl = Impl{};
-		return ByteInfo{ &byteImpl };
-	}
-
-	BoolInfo BoolInfo::create() {
-		static auto boolImpl = Impl{};
-		return BoolInfo{ &boolImpl };
-	}
-
-	CharInfo CharInfo::create() {
-		static auto charImpl = Impl{};
-		return CharInfo{ &charImpl };
-	}
-
-	IntegralInfo IntegralInfo::create(usize size, bool signedness) {
-		static std::map<std::pair<usize, bool>, Impl> ints = {
-			{ { 8, true }, Impl{ 8, true } },     { { 8, false }, Impl{ 8, false } },
-			{ { 16, true }, Impl{ 16, true } },   { { 16, false }, Impl{ 16, false } },
-			{ { 32, true }, Impl{ 32, true } },   { { 32, false }, Impl{ 32, false } },
-			{ { 64, true }, Impl{ 64, true } },   { { 64, false }, Impl{ 64, false } },
-			{ { 128, true }, Impl{ 128, true } }, { { 128, false }, Impl{ 128, false } },
-		};
-
-		RIFT_ASSERT(ints.contains({ size, signedness }), "Incorrect simple int size");
-
-		return IntegralInfo{ &ints.at({ size, signedness }) };
-	}
-
-	FloatInfo FloatInfo::create(const usize size) {
-		static std::map<usize, Impl> floats = {
-			{ 16, Impl{ 16 } },  // For certain GPU applications
-			{ 32, Impl{ 32 } },  // Standard float
-			{ 64, Impl{ 64 } },  // Double precision
-			{ 80, Impl{ 80 } },  // Long double, covers sum of ranges of int64 and uint64 precisely
-			{ 128, Impl{ 128 } },  // Quad precision
-		};
-
-		RIFT_ASSERT(floats.contains(size), "Incorrect simple float size");
-
-		return FloatInfo{ &floats.at(size) };
-	}
+	// All creation methods were moved to queries.cpp.
 
 	/*******************\
 	|   POINTER TYPES   |
 	\*******************/
 
-	RawPointerInfo RawPointerInfo::create() {
-		static auto raw_pointer_impl = Impl{};
-		static auto raw_pointer      = RawPointerInfo{ &raw_pointer_impl };
-
-		return raw_pointer;
-	}
-
-	PointerInfo PointerInfo::create(const TypeDesc<>& underlying_type) {
-		static base::Map<TypeDesc<>, PointerInfo> pointers;
-
-		if (!pointers.contains(underlying_type)) {
-			auto pointer = base::make_unique<Impl>(underlying_type);
-			pointers.put(underlying_type, PointerInfo{ pointer.get() });
-			pushType(std::move(pointer));
-		}
-
-		return pointers[underlying_type];
-	}
-
-	TypeDesc<> PointerInfo::getUnderlyingType() const {
+	TypeInfo PointerInfo::getUnderlyingType() const {
 		return toCPimpl(pimpl)->getUnderlyingType();
 	}
 
