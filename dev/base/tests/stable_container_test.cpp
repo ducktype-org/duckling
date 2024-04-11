@@ -1,7 +1,7 @@
 #include <tester/tester.hpp>
-#include <base/stable_container.hpp>
+#include "base/stable_container.hpp"
+#include "base/stable_hashmap.hpp"
 #include <base/strongly_typed_int.hpp>
-#include <filesystem/file.hpp>
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(SomeId, usize);
 
@@ -21,7 +21,7 @@ private:
 	void simpleTest() {
 		message("Parts of this state only make sense under valgrind");
 
-		base::StableIntVector<i32> vector;
+		base::StableVector<i32> vector;
 
 		assert(vector.empty(), "bad list empty");
 		assert(!vector.notEmpty(), "bad list not empty");
@@ -63,7 +63,7 @@ private:
 	}
 
 	void customKeyTest() {
-		base::StableVector<SomeId, int> list;
+		base::StableVector<int, SomeId> list;
 
 		assert(list.empty(), "bad list empty");
 

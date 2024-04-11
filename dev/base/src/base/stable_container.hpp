@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ints.hpp"
-#include "smart_pointers.hpp"
 #include "optional.hpp"
 #include <vector>
 
@@ -24,7 +23,7 @@ namespace base {
 	 * @TODO make concept to check it
 	 * @TODO add range based iteration
 	 */
-	template<typename Key, typename Data>
+	template<typename Data, typename Key = usize>
 	class StableVector {
 		/**
 		 * @brief @TODO
@@ -97,77 +96,5 @@ namespace base {
 		}
 	};
 
-	template<typename T>
-	using StableIntVector = StableVector<usize, T>;
-
-	/**
-	 * A wrapper around std::unordered_map, that keeps references (memory addresses) valid.
-	 * @tparam Key Indentifies data
-	 * @tparam Data The datatype to store
-	 */
-	template<typename Key, typename Data>
-	class StableHashMap {
-	public:
-		StableHashMap() = default;
-
-		/**
-		 * Returns a const reference to data. If the data identified by the key does not exist
-		 * throws std::out_of_range exception.
-		 * @param key Data key
-		 * @return A const reference to the data.
-		 */
-		const Data& at(const Key& key) const { return data.at(key); }
-
-		/**
-		 * Returns a reference to the data. If the data identified by the key does not exist throws
-		 * std::out_of_range exception.
-		 * @param key Data key
-		 * @return A reference to the data.
-		 */
-		Data& at(const Key& key) { return data.at(key); }
-
-		/**
-		 * Returns the data identified by the key. If needed, allocates space for the key and data.
-		 * @param key Data key
-		 * @return A reference to the data.
-		 */
-		Data& operator[](const Key& key) {
-			if (!contains(key)) data[key] = make_unique<Data>();
-			return *data[key];
-		}
-
-		/**
-		 * If the container doesn't store the key yet, then inserts value identified by the key.
-		 * @param key Data key
-		 * @param value The data
-		 */
-		void put(const Key& key, Data value) {
-			if (!contains(key)) data[key] = make_unique<Data>(value);
-		}
-
-		/**
-		 * Clears all data from the data structure.
-		 */
-		void clear() { data.clear(); }
-
-		/**
-		 * Check if key is stored in the container.
-		 * @param key The key to query
-		 * @return True if containers already stores the key, false otherwise.
-		 */
-		bool contains(const Key& key) const { return data.contains(key); }
-
-		/**
-		 * Query the number of pairs stored in the container.
-		 * @return Number of pairs
-		 */
-		[[nodiscard]]
-		usize size() const {
-			return data.size();
-		}
-
-	private:
-		std::unordered_map<Key, unique_ptr<Data>> data;
-	};
 
 }
