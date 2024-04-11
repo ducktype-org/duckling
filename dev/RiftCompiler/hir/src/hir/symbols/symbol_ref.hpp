@@ -20,7 +20,7 @@ namespace symtable {
 	using SymbolCRef = base::c_borrow_ptr<Symbol>;
 
 	namespace detail {
-		using ScopesList = base::StableIntList<Scope>;
+		using ScopesList = base::StableVector<Scope>;
 
 		// @TODO: For SymbolsList: StableList of pointers is needed (this is just vector of
 		// pointers) For ease of use UPtrStableList might be added

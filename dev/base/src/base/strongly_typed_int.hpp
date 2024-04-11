@@ -55,7 +55,7 @@
 		inline constexpr explicit(EXPLICIT_BASE) operator const BASE&() const noexcept {           \
 			return value;                                                                          \
 		}                                                                                          \
-		inline constexpr explicit(EXPLICIT_BASE) operator BASE&() noexcept { return value; }       \
+		inline constexpr explicit(EXPLICIT_BASE) operator BASE() noexcept { return value; }        \
 		inline constexpr NAME  operator+() const noexcept { return NAME(+value); }                 \
 		inline constexpr NAME  operator-() const noexcept { return NAME(-value); }                 \
 		inline constexpr NAME& operator++() noexcept {                                             \
