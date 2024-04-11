@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
+#include <vector>
 
 namespace compiler::helios {
 
@@ -18,6 +19,10 @@ namespace compiler::helios {
 		// * defined templates
 		// * vector/references to hout of submodules? -- not necessarily needed
 		// * what else?
+		
+		// @TODO: do we need separation:
+		std::vector<SymID> first_class_citizens;
+
 	};
 
 }
