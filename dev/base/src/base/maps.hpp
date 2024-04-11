@@ -20,9 +20,10 @@ namespace base {
 		typedef typename ContainerType::key_type    KEY_T;
 		typedef typename ContainerType::mapped_type DATA_T;
 
-		 MapWrapper(): ContainerType(){};
-		 MapWrapper(const MapWrapper& map): ContainerType(map){};
-		 MapWrapper(MapWrapper&& map) noexcept: ContainerType(std::move(map)){};
+		MapWrapper(): ContainerType(){};
+		MapWrapper(const MapWrapper& map): ContainerType(map){};
+		MapWrapper(MapWrapper&& map) noexcept: ContainerType(std::move(map)){};
+
 		~MapWrapper() = default;
 
 		// Change operator[] behaviour:
