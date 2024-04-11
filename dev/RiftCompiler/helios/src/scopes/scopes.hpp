@@ -21,4 +21,6 @@ namespace compiler::helios {
 	};
 	DECLARE_QUERY(QueryCodeScope, KeyOf_QueryCodeScope, ScopeID);
 
+	// @TODO: Query Lookup in Scope
+
 }

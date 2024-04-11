@@ -28,23 +28,5 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryModuleSymbol, frontend::ModuleId, std::vector<HOUTModule>)
 
 
-
-	// Scopes:
-	// - [SymID] -> ScopeID
-	// - lookup in ScopeID (Str, ScopeID -> LookupResult)
-
-	// inside will be:
-	// - symbols stable container
-	// - scopes stable container
-	// will operate on ScopeRef SymbolRef (stuff hidden from end user, looks like ID)
-
-	// additional structures:
-	// - HOUT
-	// - Lookup result
-
-	// for now: copy stuff around and leave @OPT for -- make stable cache here and return reference
-
-	// we might want to refactor lookup result..
-
 }
 
