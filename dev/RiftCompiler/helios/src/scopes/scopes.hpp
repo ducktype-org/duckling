@@ -8,6 +8,6 @@ namespace compiler::helios {
 	// - new root scope
 	// - new scope
 	// 
-	// unlike in old-hir, here queries will have to have some kind of link to Pst to it can caluclate its symbols
+	// unlike in old-hir, here queries will have to have some kind of link to Pst to it can calculate its symbols
 
 }
