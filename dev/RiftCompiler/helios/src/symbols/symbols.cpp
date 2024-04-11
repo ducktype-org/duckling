@@ -1,6 +1,6 @@
 #include "symbols.hpp"
 #include <query_framework/query_impl.hpp>
-#include <stable_container.hpp>
+#include <base/stable_container.hpp>
 
 namespace compiler::helios {
 
@@ -48,12 +48,13 @@ namespace compiler::helios {
 	{
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// generate new symbol
+			throw "TODO";
 		}
 
 		static auto load([[maybe_unused]] QKey key) -> LoadResult { return {}; }
 
 		static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd) {
-
+			throw "TODO";
 		}
 	};
 
