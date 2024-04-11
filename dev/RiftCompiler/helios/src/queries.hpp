@@ -35,7 +35,7 @@ namespace compiler::helios {
 
 	// for now: copy stuff around and leave @OPT for -- make stable cache here and return reference
 
-	// we migth want to refactor lookup result..
+	// we might want to refactor lookup result..
 
 
 	/**
