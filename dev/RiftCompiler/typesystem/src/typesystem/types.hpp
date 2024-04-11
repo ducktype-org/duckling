@@ -430,7 +430,6 @@ namespace ts {
 	class MetaInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(MetaInfo, TypeInfo)
-		static MetaInfo create();
 
 		CONSTRUCT_WITH_CHECKED_CAST(MetaInfo)
 

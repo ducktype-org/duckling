@@ -83,6 +83,11 @@ namespace ts {
 	 * @brief Query to get a (typed) Pointer type.
 	 */
 	DECLARE_QUERY(QueryPointerType, KeyFor_QueryPointerType, PointerInfo)
+
+	/**
+	 * @brief Query to get the Meta type.
+	 */
+	DECLARE_QUERY(QueryMetaType, query::EmptyKey, MetaInfo)
 }
 
 template<>

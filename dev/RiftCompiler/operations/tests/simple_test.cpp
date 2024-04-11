@@ -15,10 +15,10 @@ public:
 
 private:
 	void simple_operation() {
-		ts::TypeDesc<> td(ts::IntegralInfo::create(8));
+		ts::TypeDesc<> td(query::queryEntryPoint<ts::QueryIntegralType>({ 8 }));
 		exec::CTV      ctv = exec::alloc_new(td, 8);
 
-		auto int_16 = ts::IntegralInfo::create(16);
+		auto int_16 = query::queryEntryPoint<ts::QueryIntegralType>({ 16 });
 
 		auto fun_sig = ts::FunctionInfo::create({ int_16 }, int_16);
 
@@ -39,10 +39,10 @@ private:
 	}
 
 	void simple_default() {
-		ts::TypeDesc<> td(ts::IntegralInfo::create(8));
+		ts::TypeDesc<> td(query::queryEntryPoint<ts::QueryIntegralType>({ 8 }));
 		exec::CTV      ctv = exec::alloc_new(td, 8);
 
-		auto int16  = ts::IntegralInfo::create(16);
+		auto int16  = query::queryEntryPoint<ts::QueryIntegralType>({ 16 });
 		auto int_16 = ts::TypeDesc<>(int16);
 
 		auto fun_sig = ts::FunctionInfo::create({ int_16 }, int_16);

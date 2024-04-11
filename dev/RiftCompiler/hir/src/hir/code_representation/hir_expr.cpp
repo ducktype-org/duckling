@@ -101,7 +101,7 @@ namespace hir {
 		void determineType([[maybe_unused]] AnalysisState& state) final {
 			if (type_done) return;
 			type_done = true;
-			type      = ts::TypeDesc<>(ts::MetaInfo::create());
+			type      = ts::TypeDesc<>(query::queryEntryPoint<ts::QueryMetaType>({}));
 		}
 
 		ts::TypeDesc<> evalAsType(AnalysisState& state) final {

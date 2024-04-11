@@ -10,7 +10,6 @@
 
 #include <sstream>
 #include <concepts>
-#include <ranges>
 
 #include "internal/type_info_impl.hpp"
 #include "type_desc.hpp"
@@ -167,11 +166,6 @@ namespace ts {
 		static auto module_info = ModuleInfo{ &module_impl };
 
 		return module_info;
-	}
-
-	MetaInfo MetaInfo::create() {
-		static auto meta = Impl{};
-		return MetaInfo{ &meta };
 	}
 
 	template<std::derived_from<TypeInfo> TYPE_INFO>

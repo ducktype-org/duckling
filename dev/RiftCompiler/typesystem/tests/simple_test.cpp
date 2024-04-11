@@ -246,8 +246,8 @@ private:
 	}
 
 	void simple_meta() {
-		const auto meta   = MetaInfo::create();
-		const auto meta_2 = MetaInfo::create();
+		const auto meta   = query::queryEntryPoint<QueryMetaType>({});
+		const auto meta_2 = query::queryEntryPoint<QueryMetaType>({});
 
 		assert(meta == meta_2, "There shouldn't be multiple different 'type' types");
 		assert(meta.getSize() == META_SIZE, "MetaType should have size META_SIZE");

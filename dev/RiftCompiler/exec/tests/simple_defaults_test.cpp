@@ -214,7 +214,7 @@ private:
 	void simple_int_test() {
 		static_assert(SIZE == sizeof(T) * 8);
 		// @TODO use the T and SIZE
-		auto           int_type = query::queryEntryPoint<ts::QueryIntegralType>({ SIZE, false });
+		auto           int_type = query::queryEntryPoint<ts::QueryIntegralType>({ SIZE });
 		ts::TypeDesc<> int_desc{ int_type };
 		ts::TypeDesc<> bool_desc{ query::queryEntryPoint<ts::QueryBoolType>({}) };
 
@@ -265,7 +265,7 @@ private:
 	}
 
 	void class_test() {
-		auto           int_type = query::queryEntryPoint<ts::QueryIntegralType>({ 8, false });
+		auto           int_type = query::queryEntryPoint<ts::QueryIntegralType>({ 8 });
 		ts::TypeDesc<> int_desc{ int_type };
 		ts::TypeDesc<> bool_desc{ query::queryEntryPoint<ts::QueryBoolType>({}) };
 

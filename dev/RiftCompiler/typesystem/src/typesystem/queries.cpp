@@ -163,7 +163,7 @@ namespace ts {
 
 	struct ImplementationOf_QueryPointerType:
 		  query::QueryImplementation<QueryPointerType, PointerInfo::Pimpl> {
-		static base::Map<QKey, query::AddACD<PointerInfo>> cache;
+		static inline base::Map<QKey, query::AddACD<PointerInfo>> cache;
 
 		static auto provide(Context&, const QKey key) -> PResult {
 			const auto [underlying_type, is_mutable] = key;
@@ -185,4 +185,20 @@ namespace ts {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryPointerType, "QueryPointerType");
+
+	struct ImplementationOf_QueryMetaType:
+		  query::QueryImplementation<QueryMetaType, MetaInfo::Pimpl> {
+		static auto provide(Context&, QKey) -> PResult {
+			static auto meta_impl = internal::MetaInfoImpl{};
+			return &meta_impl;
+		}
+
+		static auto load(QKey) -> LoadResult { return {}; }
+
+		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
+			return QResult{ p_res };
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryMetaType, "QueryMetaType");
 }
