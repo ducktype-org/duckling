@@ -4,16 +4,20 @@
 
 #pragma once
 
-#include "named_id.hpp"
+#include "strongly_typed_id.hpp"
 #include "maps.hpp"
 #include "raw_view.hpp"
 #include <string>
 
 namespace base {
 
+	namespace detail {
+		STRONG_TYPEDEF_ID(StrInnerID);
+	}
+
 	class StrId {
-		typedef base::NamedId<base::RawView> InnerId;
-		InnerId                              id;
+		using InnerId = detail::StrInnerID;
+		InnerId id;
 
 		typedef base::VectorMap<InnerId, base::RawView> ToDataType;
 		typedef base::HashMap<base::RawView, InnerId>   ToIdType;

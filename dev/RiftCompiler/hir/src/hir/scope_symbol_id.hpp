@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <base/named_id.hpp>
+#include <base/strongly_typed_id.hpp>
 
 namespace symtable {
 	class Scope;
@@ -13,5 +13,5 @@ namespace symtable {
 	 * @TODO: Once we remove SymbolId, this should be removed.
 	 * @deprecated
 	 */
-	typedef base::NamedId<Symbol> SymbolId;
+	STRONG_TYPEDEF_ID(SymbolId);
 }
