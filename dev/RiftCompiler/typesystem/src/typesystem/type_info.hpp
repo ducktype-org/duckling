@@ -8,9 +8,10 @@
 
 #pragma once
 
-#include <base/ints.hpp>
-#include "kind.hpp"
 #include <string>
+#include <base/ints.hpp>
+
+#include "kind.hpp"
 
 /**
  * \brief Template constructor from the TypeInfoImpl* hierarchy with a dynamic cast check.
