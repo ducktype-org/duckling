@@ -85,4 +85,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/common/stable_list/tests/");
+TESTER_COMMON_MAIN("/base/tests/");
