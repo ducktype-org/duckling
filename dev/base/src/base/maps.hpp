@@ -11,7 +11,6 @@
 namespace base {
 	template<typename ContainerType>
 	class MapWrapper: public ContainerType {
-	private:
 		// hiding base member:
 		using ContainerType::operator[];
 		using ContainerType::insert;
@@ -23,7 +22,8 @@ namespace base {
 
 		MapWrapper(): ContainerType(){};
 		MapWrapper(const MapWrapper& map): ContainerType(map){};
-		MapWrapper(MapWrapper&& map): ContainerType(std::move(map)){};
+		MapWrapper(MapWrapper&& map) noexcept: ContainerType(std::move(map)){};
+
 		~MapWrapper() = default;
 
 		// Change operator[] behaviour:
@@ -40,12 +40,10 @@ namespace base {
 			return ContainerType::emplace(std::forward<K>(key), std::forward<D>(data));
 		}
 
-		// @TODO: delete it, since we are using C++20:
-		bool contains(const KEY_T& key) const {
-			return ContainerType::find(key) != ContainerType::end();
+		[[nodiscard]]
+		bool notEmpty() const {
+			return !ContainerType::empty();
 		}
-
-		bool notEmpty() const { return !ContainerType::empty(); }
 	};
 
 	template<typename KEY_T, typename DATA_T>
@@ -60,9 +58,8 @@ namespace base {
 		bool is_move = std::is_move_constructible_v<DATA_T>,
 		bool is_copy = std::is_copy_constructible_v<DATA_T>>
 	class VectorMap {
-	private:
-		std::vector<base::Optional<DATA_T>> map;
-		usize                               element_count{};
+		std::vector<Optional<DATA_T>> map;
+		usize                         element_count{};
 
 	public:
 		typedef VectorMap SelfType;
@@ -129,11 +126,20 @@ namespace base {
 			return false;
 		}
 
-		usize size() const { return element_count; }
+		[[nodiscard]]
+		usize size() const {
+			return element_count;
+		}
 
-		bool empty() const { return element_count == 0; }
+		[[nodiscard]]
+		bool empty() const {
+			return element_count == 0;
+		}
 
-		bool notEmpty() const { return !empty(); }
+		[[nodiscard]]
+		bool notEmpty() const {
+			return !empty();
+		}
 
 		iterator begin() { return map.begin(); }
 
