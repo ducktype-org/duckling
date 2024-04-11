@@ -77,10 +77,10 @@ namespace exec::operators {
 	}
 
 // For initializing simple binary operations on ints.
-#define INT_BIN_ENTRY_SIMPLE(size, op_name)                              \
-	{                                                                    \
-		auto info = IntegralInfo::create(size);                          \
-		BIN_ENTRY_SIMPLE_INFO(info, op_name, bin_##op_name##_int_##size) \
+#define INT_BIN_ENTRY_SIMPLE(size, op_name)                                        \
+	{                                                                              \
+		auto info = query::queryEntryPoint<ts::QueryIntegralType>({ size }); \
+		BIN_ENTRY_SIMPLE_INFO(info, op_name, bin_##op_name##_int_##size)           \
 	}
 
 #define INT_BIN_ENTRIES_SIMPLE(op_name) \
@@ -91,11 +91,10 @@ namespace exec::operators {
 	INT_BIN_ENTRY_SIMPLE(128, op_name)
 
 // For initializing simple binary operations on uints.
-#define UINT_BIN_ENTRY_SIMPLE(size, op_name)                              \
-	{                                                                     \
-		/* @TODO: Replace with unsigned int info. */                      \
-		auto info = IntegralInfo::create(size);                           \
-		BIN_ENTRY_SIMPLE_INFO(info, op_name, bin_##op_name##_uint_##size) \
+#define UINT_BIN_ENTRY_SIMPLE(size, op_name)                                        \
+	{                                                                               \
+		auto info = query::queryEntryPoint<ts::QueryIntegralType>({ size }); \
+		BIN_ENTRY_SIMPLE_INFO(info, op_name, bin_##op_name##_uint_##size)           \
 	}
 
 #define UINT_BIN_ENTRIES_SIMPLE(op_name) \

@@ -14,6 +14,8 @@
 #include <base/exceptions.hpp>
 #include <base/named_id.hpp>
 #include <vector>
+#include <query_framework/query_entry_point.hpp>
+#include <typesystem/queries.hpp>
 
 namespace exec {
 
@@ -87,8 +89,9 @@ namespace exec {
 		}
 
 		CTV makePointer() const {
-			auto pointer_type
-				= ts::TypeDesc<>(ts::PointerInfo::create(type), type.getValueCategory());
+			auto pointer_type = ts::TypeDesc<>(query::queryEntryPoint<ts::QueryPointerType>(
+				{ type.getType(), type.getValueCategory().isMutable() }
+			));
 
 			auto    block = Block::create(ts::POINTER_SIZE);
 			Pointer data_{ block, 0 };

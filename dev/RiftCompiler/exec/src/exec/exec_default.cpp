@@ -20,7 +20,7 @@ namespace exec {
 			if (!res) break;
 		}
 
-		CTV ctvResult                     = alloc_new(ts::TypeDesc<>(ts::BoolInfo::create()), 8);
+		CTV ctvResult                     = alloc_new(query::queryEntryPoint<ts::QueryBoolType>({}), 8);
 		ctvResult.getData<bool>().front() = res;
 		return ctvResult;
 	}
@@ -28,7 +28,7 @@ namespace exec {
 	CTV defaultEqualityVirtual(ts::ClassInfo class_info, const CTV& a, const CTV& b) {
 		bool res = true;
 
-		auto vtable = ts::PointerInfo::create(ts::VTableInfo::create(class_info));
+		auto vtable = query::queryEntryPoint<ts::QueryPointerType>({ts::VTableInfo::create(class_info)});
 
 		usize vtable_offset = class_info.getVtablePtrOffset();
 
@@ -63,7 +63,7 @@ namespace exec {
 			if (!res) break;
 		}
 
-		CTV ctvResult                     = alloc_new(ts::TypeDesc<>(ts::BoolInfo::create()), 8);
+		CTV ctvResult                     = alloc_new(query::queryEntryPoint<ts::QueryBoolType>({}), 8);
 		ctvResult.getData<bool>().front() = res;
 		return ctvResult;
 	}
@@ -83,7 +83,7 @@ namespace exec {
 			if (res != 0) break;
 		}
 
-		CTV ctvResult = alloc_new(ts::TypeDesc<>(ts::IntegralInfo::create(8)), 8);
+		CTV ctvResult = alloc_new(query::queryEntryPoint<ts::QueryIntegralType>({ 8 }), 8);
 		ctvResult.getData<int8_t>().front() = res;
 		return ctvResult;
 	}

@@ -165,7 +165,7 @@ namespace hir {
 
 	void AliasSymbol::calculateType() {
 		// @TODO
-		type = ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
+		type = query::queryEntryPoint<ts::QueryIntegralType>({ 64 });
 	}
 
 	void AliasSymbol::calculateLinkedLookup() {
@@ -217,7 +217,7 @@ namespace hir {
 
 	void UsingSymbol::calculateType() {
 		// @TODO
-		type = ts::TypeDesc<ts::TypeInfo>(ts::IntegralInfo::create(64));
+		type = query::queryEntryPoint<ts::QueryIntegralType>({ 64 });
 	}
 
 	void UsingSymbol::analyzeAll() {
