@@ -6,7 +6,6 @@ add_library(Base
 		src/base/impl/str_concat.cpp
 		src/base/impl/convert.cpp
 		src/base/str_replace.hpp
-		src/base/stable_hashmap.hpp
 )
 
 set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)

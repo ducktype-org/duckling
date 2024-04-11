@@ -62,7 +62,7 @@ namespace base {
 		 * @param value The data
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
-		auto put(KEY_T&& key, DATA_T&& value) {
+		auto put(K&& key, D&& value) {
 			return data.put(std::forward<K>(key), std::forward<D>(value));
 		}
 
