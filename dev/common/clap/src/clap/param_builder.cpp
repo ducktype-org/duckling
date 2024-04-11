@@ -57,7 +57,7 @@ namespace clap {
 	ParamBuilder& ParamBuilder::conditional(
 		Conditional::Condition&& condition, const std::string& description
 	) {
-		parameter_necessity = ParameterNecessity(Conditional(std::move(condition), description));
+		parameter_necessity = ParameterNecessity(Conditional{std::move(condition), description});
 		return *this;
 	}
 

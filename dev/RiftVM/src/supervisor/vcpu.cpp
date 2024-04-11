@@ -29,15 +29,15 @@ namespace vm {
 			loadedCode = base::Optional(code_result.value());
 			return api::Response(api::response::Empty());
 		} else {
-			return cpp::failure(api::LoadProgramError(code_result.error()));
+			return cpp::failure(api::LoadProgramError{code_result.error()});
 		}
 	}
 
 	cpp::result<api::Response, api::CoreOperationError> VCPU::run() {
 		std::unique_lock lock(rwGlobal);
 		if (coreThread)
-			return cpp::failure(api::RunError{});  // @TODO: change to more verbose error handling
-		if (!loadedCode.has_value()) return cpp::failure(api::RunError{});
+			return cpp::failure(api::CoreOperationError{api::RunError{}});  // @TODO: change to more verbose error handling
+		if (!loadedCode.has_value()) return cpp::failure(api::CoreOperationError{api::RunError{}});
 		// @TODO: check VCPU status for loaded code
 		if (!uses_stdio) {
 			input_stream  = base::make_unique<std::stringstream>(std::stringstream());
@@ -51,7 +51,7 @@ namespace vm {
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
 				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";
-				onEvent(api::VCPUStatus{ api::Panicked(e) });
+				onEvent(api::VCPUStatus{ api::Panicked{e} });
 			}
 		});
 		return api::Response(api::response::Empty());
@@ -63,7 +63,7 @@ namespace vm {
 		if (coreThread && coreThread->joinable())
 			coreThread->join();
 		else
-			return cpp::failure(api::JoinError{});
+			return cpp::failure(api::CoreOperationError{api::JoinError{}});
 		return api::Response(api::response::Empty());
 	}
 
@@ -129,13 +129,13 @@ namespace vm {
 			if (std::holds_alternative<api::Parsing>(status)
 			    || std::holds_alternative<api::TypeAnalysis>(status)) {
 				return cpp::fail(
-					api::OtherError("Cannot do memory request while parsing or analyzing types")
+					api::CoreOperationError{api::OtherError{"Cannot do memory request while parsing or analyzing types"}}
 				);
 			}
 		}
 		api::ExecStatus execStatus = std::get<api::Executing>(status).exec_status;
 		if (std::holds_alternative<api::Running>(execStatus))
-			return cpp::fail(api::OtherError("Cannot do memory request while program is running"));
+			return cpp::fail(api::CoreOperationError{api::OtherError{"Cannot do memory request while program is running"}});
 		cpp::result<api::Response, api::CoreOperationError> response;
 		variant_match(request) {
 			variant_case(api::request::TypeMetadata, type_request) {
@@ -146,7 +146,7 @@ namespace vm {
 					opt_some(value) { response = value; }
 					opt_none {
 						response = cpp::failure(api::CoreOperationError{
-							api::OtherError("Type not found") });
+							api::OtherError{"Type not found"} });
 					}
 				}
 			}

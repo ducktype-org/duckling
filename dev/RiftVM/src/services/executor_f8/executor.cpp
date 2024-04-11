@@ -691,7 +691,7 @@ namespace vm {
 	void Executor::setStatus(vm::api::ExecStatus new_status) {
 		// @TODO: check if change is legal
 		this->status = std::move(new_status);
-		vcpu.onEvent(api::Executing(status));
+		vcpu.onEvent(api::Executing{status});
 	}
 
 	bool Executor::isPaused() {
