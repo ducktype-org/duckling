@@ -11,7 +11,6 @@
 namespace base {
 	template<typename ContainerType>
 	class MapWrapper: public ContainerType {
-	private:
 		// hiding base member:
 		using ContainerType::operator[];
 		using ContainerType::insert;
@@ -23,7 +22,7 @@ namespace base {
 
 		 MapWrapper(): ContainerType(){};
 		 MapWrapper(const MapWrapper& map): ContainerType(map){};
-		 MapWrapper(MapWrapper&& map): ContainerType(std::move(map)){};
+		 MapWrapper(MapWrapper&& map) noexcept: ContainerType(std::move(map)){};
 		~MapWrapper() = default;
 
 		// Change operator[] behaviour:
@@ -40,7 +39,10 @@ namespace base {
 			return ContainerType::emplace(std::forward<K>(key), std::forward<D>(data));
 		}
 
-		bool notEmpty() const { return !ContainerType::empty(); }
+		[[nodiscard]]
+		bool notEmpty() const {
+			return !ContainerType::empty();
+		}
 	};
 
 	template<typename KEY_T, typename DATA_T>
@@ -123,11 +125,20 @@ namespace base {
 			return false;
 		}
 
-		usize size() const { return element_count; }
+		[[nodiscard]]
+		usize size() const {
+			return element_count;
+		}
 
-		bool empty() const { return element_count == 0; }
+		[[nodiscard]]
+		bool empty() const {
+			return element_count == 0;
+		}
 
-		bool notEmpty() const { return !empty(); }
+		[[nodiscard]]
+		bool notEmpty() const {
+			return !empty();
+		}
 
 		iterator begin() { return map.begin(); }
 
