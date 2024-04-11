@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 #include <filesystem>
+#include <fstream>
 #include <unordered_map>
 #include <memory>
 #include <base/raw_view.hpp>
@@ -65,15 +66,25 @@ namespace fs {
 		friend struct ::std::hash<fs::FilePath>;
 
 	public:
-		FilePath(const FilePath&) = default;
-		FilePath(FilePath&&)      = default;
-		~FilePath()               = default;
+		 FilePath(const FilePath&) = default;
+		 FilePath(FilePath&&)      = default;
+		~FilePath()                = default;
 
 		FilePath(const std::filesystem::path& path):
 			  path(std::filesystem::canonical(std::filesystem::absolute(path))) {}
 
 		// @TODO: this might not be perfect:
 		bool operator==(const FilePath& oth) const { return path == oth.path; }
+
+		static FilePath createTempFile(const std::string& content) {
+			const std::string name = std::tmpnam(nullptr);
+
+			std::fstream temp_file(name, std::ios::out | std::ios::app);
+			temp_file << content;
+			temp_file.close();
+
+			return { std::filesystem::temp_directory_path() / name };
+		}
 
 		[[nodiscard]]
 		FileContent getContent() const;
