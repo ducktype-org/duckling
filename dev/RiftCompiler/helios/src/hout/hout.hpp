@@ -1,24 +1,8 @@
 #pragma once
 
-#include <base/stable_container.hpp>
-#include "forward.hpp"
+#include "../scope_symbol_id.hpp"
 
 namespace compiler::helios {
-
-	/**
-	 * @brief Reference to HELIOS-symbol
-	 */
-	using SymbolRef = base::borrow_ptr<SymbolData>;
-	using ScopeRef = base::borrow_ptr<ScopeData>;
-
-	struct SymID {
-	private:
-		SymbolRef ref;
-	};
-	struct ScopeID {
-	private:
-		ScopeRef ref;
-	};
 
 	// placeholder for functions, methods, etc
 	struct HOUTFunction { };

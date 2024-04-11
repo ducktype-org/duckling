@@ -26,11 +26,9 @@ namespace compiler::helios {
 		// ...
 	};
 
-
-	// here:
-	// - get kind getter
-	// - get name getter
-
+	// Such functions can probably be just functions:
+	base::StrId name(SymID);
+	SymbolKind kind(SymID);
 
 	/**
 	 * @brief Construct a new declare query object
@@ -38,10 +36,25 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QuerySymbolOfSTMT, PstRef<pst::Stmt>, SymID);
 
-	// Such functions can probably be just functions:
-	base::StrId name(SymID);
-
 	DECLARE_QUERY(QueryLookupIn, SymID, LookupResult);
 
+	// @TODO: get type from type-system
+	struct Type {};
+	DECLARE_QUERY(QueryTypeOF, SymID, Type);
+
+	// @TODO: query symbol value (some CTV?) for execution somewhere
+	// There is a good chance that logic behind it will be elsewhere
+	// but HELIOS does need to somehow access at least some results of comp-time evaluation
+
+	// @TODO: some proper hout type
+	struct SomeHOUT {};
+	/**
+	 * @brief This query is effectively responsible for compilation of symbols.
+	 * @TODO: is it recursive?
+	 */
+	DECLARE_QUERY(QueryHOUT, SymID, base::Optional<SomeHOUT>);
+
+
+	// @TODO: dealias query
 
 }

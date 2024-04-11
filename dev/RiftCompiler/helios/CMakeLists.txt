@@ -1,5 +1,6 @@
 add_library(HELIOS
-	symbols/symbols.cpp
+	src/symbols/symbols.cpp
+	src/scopes/scopes.cpp
 )
 
 make_module(HELIOS USES Base)
