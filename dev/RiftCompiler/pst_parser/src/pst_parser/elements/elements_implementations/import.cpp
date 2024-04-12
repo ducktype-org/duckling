@@ -8,7 +8,7 @@ namespace pst {
 
 		RIFT_ASSERT(state.ctokens().is(Keyword::Import), position.genStr("bad statement choice"));
 
-		parseAll(state, Keyword::Import, &out->names);
+		parseAll(state, Keyword::Import, &out->names, Keyword::As, &out->alias);
 
 		state.addImport(out.borrow());
 
@@ -17,11 +17,19 @@ namespace pst {
 
 	const decltype(Import::names)& Import::getNames() const { return names; }
 
+	std::vector<base::StrId> Import::getModulePath() const {
+		std::vector<base::StrId> out;
+		for (auto& elem: names) out.emplace_back(elem.value);
+		return out;
+	}
+
 	bool Import::getStar() const { return names->getStar(); }
 
 	void Import::dprint(std::ostream& out) const {
 		out << "{\"Import\": ";
 		nullAwareDprint(names, out);
+		out << ", ";
+		out << R"("Alias": ")" << alias.value.strView() << R"(")";
 		out << "}";
 	}
 }

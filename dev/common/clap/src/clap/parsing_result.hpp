@@ -86,6 +86,7 @@ namespace clap {
 
 		/**
 		 * The main way to retrieve a value of a parameter from ParsingResult.
+		 * @TODO: better explanation
 		 * @tparam T Type of the returned value.
 		 * @tparam N Type of the name. (std::string/char)
 		 * @param name Name of the parameter identifying the value.

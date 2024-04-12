@@ -15,7 +15,7 @@ namespace query::detail {
 	 */
 	template<typename KeyType>
 	detail::KeyHash hashKey(const KeyType& key) {
-		return { std::hash<KeyType>()(key) };
+		return { std::hash<std::remove_cvref_t<KeyType>>()(key) };
 	}
 
 	/**

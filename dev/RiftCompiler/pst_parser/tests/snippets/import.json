@@ -3,8 +3,8 @@
 		{
 			"Import": {
 				"DottedName": {
-					"star" : "false",
-					"names" : [
+					"star": "false",
+					"names": [
 						{
 							"Name": "aaaa"
 						},
@@ -16,13 +16,14 @@
 						},
 					]
 				}
-			}
+			},
+			"Alias": "D"
 		},
 		{
 			"Import": {
 				"DottedName": {
-					"star" : "true",
-					"names" : [
+					"star": "true",
+					"names": [
 						{
 							"Name": "dasdsa"
 						},
@@ -31,25 +32,27 @@
 						},
 					]
 				}
-			}
+			},
+			"Alias": "F"
 		},
 		{
 			"Import": {
 				"DottedName": {
-					"star" : "false",
-					"names" : [
+					"star": "false",
+					"names": [
 						{
 							"Name": "aaaa"
 						},
 					]
 				}
-			}
+			},
+			"Alias": "σααα"
 		},
 		{
 			"Import": {
 				"DottedName": {
-					"star" : "false",
-					"names" : [
+					"star": "false",
+					"names": [
 						{
 							"Name": "a"
 						},
@@ -64,13 +67,14 @@
 						},
 					]
 				}
-			}
+			},
+			"Alias": "XX"
 		},
 		{
 			"Import": {
 				"DottedName": {
-					"star" : "false",
-					"names" : [
+					"star": "false",
+					"names": [
 						{
 							"Name": "ἄλφα"
 						},
@@ -82,13 +86,14 @@
 						},
 					]
 				}
-			}
+			},
+			"Alias": "U"
 		},
 		{
 			"Import": {
 				"DottedName": {
-					"star" : "true",
-					"names" : [
+					"star": "true",
+					"names": [
 						{
 							"Name": "ἄλφα"
 						},
@@ -97,8 +102,8 @@
 						},
 					]
 				}
-			}
+			},
+			"Alias": "_1"
 		},
-
 	]
 }

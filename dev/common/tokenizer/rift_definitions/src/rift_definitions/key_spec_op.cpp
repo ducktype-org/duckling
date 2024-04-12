@@ -19,12 +19,13 @@ namespace rift_def {
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
-	constexpr std::array<std::tuple<Keyword, std::string_view, base::FlagType>, 59>
+	constexpr std::array<std::tuple<Keyword, std::string_view, base::FlagType>, 60>
 		rift_keywords_array{ {
 			{ Keyword::Fun, "fun", base::EmptyFlag },
 			{ Keyword::Struct, "struct", base::EmptyFlag },
 			{ Keyword::Namespace, "namespace", base::EmptyFlag },
 			{ Keyword::Import, "import", base::EmptyFlag },
+			{ Keyword::As, "as", base::EmptyFlag },
 			{ Keyword::Using, "using", base::EmptyFlag },
 			{ Keyword::Alias, "alias", base::EmptyFlag },
 

@@ -1,6 +1,6 @@
-import cyclic;
-import subfolder.subfile;
-import A;
+import cyclic as cyclic;
+import subfolder.subfile as subfile;
+import A as A;
 
 fun main() {
 	
