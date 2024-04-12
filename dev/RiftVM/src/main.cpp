@@ -1,7 +1,7 @@
 #include <iomanip>
 
 #include <clap/clap.hpp>
-#include <printer/printer.hpp>
+#include <printer/printer_console.hpp>
 
 #include <supervisor/supervisor.hpp>
 #include "cli.hpp"
@@ -47,7 +47,7 @@ int main(int argc, const char** argv) {
 	try {
 		result = clap.parse(argc, argv);
 	} catch (clap::exceptions::ClapException& e) {
-		printer::Console console = printer::Console();
+		printer::StreamPrinter console = printer::StreamPrinter();
 		console.add({
 			{
 				{ "rift: ", printer::Color::DEFAULT },

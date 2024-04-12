@@ -253,4 +253,4 @@ public:
 	}
 };
 
-TESTER_COMMON_MAIN("/common/base/tests/");
+TESTER_COMMON_MAIN("/base/tests/");

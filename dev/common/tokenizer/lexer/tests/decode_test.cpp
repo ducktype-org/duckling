@@ -36,10 +36,10 @@ public:
 private:
 	template<fs::Encoding encoding = fs::Encoding::UTF8>
 	void assumeBadDecode(base::RawView view) {
-		dia::ErrorState state;
+		dia::Logger state;
 		lexer::decode<encoding>(view, state);
 		// state.dumpLog();
-		assert(state.fail(), "Encoding error not found");
+		assert(state.bad(), "Encoding error not found");
 	}
 
 	void badContinuations() {
@@ -99,7 +99,7 @@ private:
 	void goodAscii() {
 		std::vector<std::byte> in = {};
 		for (uchar c = 0; c < 128; c++) in.push_back(std::byte{ c });
-		dia::ErrorState err;
+		dia::Logger err;
 		auto res = lexer::decode<fs::Encoding::US_ASCII>(base::RawView(in.data(), in.size()), err);
 		assert(err.good(), "Valid Ascii not accepted");
 	}

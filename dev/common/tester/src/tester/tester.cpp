@@ -106,37 +106,37 @@ namespace tester {
 	}
 
 	void TestSuite::resultHandler(const TestData& test, const TestResult& res) {
-		console.add({ {
+		streamPrinter.add({ {
 			test.name,
 			": ",
 			res.success ? printer::MessageContent("OK", printer::Color::GREEN)
 						: printer::MessageContent("FAIL", printer::Color::RED),
 		} });
-		for (auto& mess: res.output) console.add(mess);
+		for (auto& mess: res.output) streamPrinter.add(mess);
 		if (res.output.empty()) {
 			// @TODO: .newLine or something similar
-			console.add({ { "" } });
+			streamPrinter.add({ { "" } });
 		}
-		console.print(std::cerr);
-		console.clear();
+		streamPrinter.print(std::cerr);
+		streamPrinter.clear();
 	}
 
 	void TestSuite::prolog() {
-		console.add({ { std::string(beginEqualSignL(name.length() + 2), '='),
-		                " ",
-		                name,
-		                " ",
-		                std::string(endEqualSignL(name.length() + 2), '='),
-		                "\n",
-		                "Running ",
-		                std::to_string(tests.size()),
-		                " tests.\n" } });
-		console.print(std::cerr);
-		console.clear();
+		streamPrinter.add({ { std::string(beginEqualSignL(name.length() + 2), '='),
+		                      " ",
+		                      name,
+		                      " ",
+		                      std::string(endEqualSignL(name.length() + 2), '='),
+		                      "\n",
+		                      "Running ",
+		                      std::to_string(tests.size()),
+		                      " tests.\n" } });
+		streamPrinter.print(std::cerr);
+		streamPrinter.clear();
 	}
 
 	void TestSuite::epilog(usize passed, usize failed, double time) {
-		console.add({ {
+		streamPrinter.add({ {
 			"\n",
 			std::string(fullEqualSignL(name.length() + 2), '='),
 			"\n",
@@ -151,7 +151,7 @@ namespace tester {
 			std::string(fullEqualSignL(name.length() + 2), '='),
 			"\n",
 		} });
-		console.print(std::cerr);
-		console.clear();
+		streamPrinter.print(std::cerr);
+		streamPrinter.clear();
 	}
 }

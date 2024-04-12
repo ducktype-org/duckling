@@ -29,6 +29,8 @@
 
 #include <concepts>
 
+#include "parser_ref.hpp"
+
 namespace tpc {
 	using rift_def::Keyword;
 	using rift_def::Operator;

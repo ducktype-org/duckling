@@ -11,9 +11,9 @@ namespace vm {
 	private:
 		enum class TypeMetadataState { AddingTypes, Finalized };
 
-		base::StableList<TypeId, Type> types;
-		std::vector<TypeId>            types_ids;
-		base::Map<base::StrId, TypeId> names_to_type;
+		base::StableVector<Type, TypeId> types;
+		std::vector<TypeId>              types_ids;
+		base::Map<base::StrId, TypeId>   names_to_type;
 
 		TypeMetadataState state;
 

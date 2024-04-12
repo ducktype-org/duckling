@@ -1,31 +1,28 @@
 #pragma once
 
-#include "elements/elements_forward.hpp"
-
 #include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better
 
 #include "rift_parser_base.hpp"
-#include <token_parser_core/parser_state.hpp>
-#include <diagnostic/error_state.hpp>
+#include <diagnostic/logger.hpp>
 
 namespace pst {
 	/**
 	 * @brief Parse syntax tree
 	 */
 	class PST {
-		lexer::TokenData             token_data;
-		ParserRef<TopLevel>          top_level;
-		dia::ErrorState              err;
-		std::vector<pst::ImportType> imports;
+		lexer::TokenData        token_data;
+		ParserRef<TopLevel>     top_level;
+		dia::Logger             err;
+		std::vector<ImportType> imports;
 
 
 	public:
 		PST(lexer::TokenData&& td);
 
 		[[nodiscard]]
-		const std::vector<tpc::ParserCBorrowRef<Import>>& getImports() const;
+		const std::vector<ParserCBorrowRef<Import>>& getImports() const;
 		[[nodiscard]]
-		const dia::ErrorState& getErrorState() const;
+		const dia::Logger& getLogger() const;
 
 		[[nodiscard]]
 		ParserCBorrowRef<TopLevel> getTopLevelElement() const;
