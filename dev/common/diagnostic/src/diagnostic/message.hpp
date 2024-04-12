@@ -344,6 +344,17 @@ namespace dia {
 		= std::same_as<BASE_MESSAGE_CLASS, Error> || std::same_as<BASE_MESSAGE_CLASS, Warning>
 	   || std::same_as<BASE_MESSAGE_CLASS, Info>;
 
+	/**
+	 * @brief Placeholder message class for when you need to log a message but are
+	 * not yet decided on how to implement a proper message class in the given context.
+	 *
+	 * @deprecated Make your own, specialised message class by inheriting after Error, Warning, or
+	 * Info, picking an appropriate name, choosing appropriate data which describe the message and
+	 * implementing user-facing message contents.
+	 *
+	 * @tparam BASE_MESSAGE_CLASS The base class of the message, either Error, Warning, or Info.
+	 * @tparam DOMAIN The domain of the message. Pick Message::Domain::Misc if unsure.
+	 */
 	template<ValidBaseMessageClass BASE_MESSAGE_CLASS, Message::Domain DOMAIN>
 	class PlaceholderMessage final: public BASE_MESSAGE_CLASS {
 		std::string message;
