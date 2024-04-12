@@ -334,4 +334,31 @@ namespace dia {
 		printer::Message toPrinterMessage(bool detailed) override
 			= 0;
 	};
+
+	/***************************
+	|   PLACEHOLDER MESSAGES   |
+	***************************/
+
+	template<typename BASE_MESSAGE_CLASS>
+	concept ValidBaseMessageClass
+		= std::same_as<BASE_MESSAGE_CLASS, Error> || std::same_as<BASE_MESSAGE_CLASS, Warning>
+	   || std::same_as<BASE_MESSAGE_CLASS, Info>;
+
+	template<ValidBaseMessageClass BASE_MESSAGE_CLASS, Message::Domain DOMAIN>
+	class PlaceholderMessage final: public BASE_MESSAGE_CLASS {
+		std::string message;
+
+	public:
+		Message::Domain getDomain() const override { return DOMAIN; }
+
+		[[deprecated(
+			"Placeholder message should not be instantiated. "
+			"Make your own, specialised message class."
+		)]]
+		PlaceholderMessage(const SourcePosition& source_position, const std::string& message):
+			  BASE_MESSAGE_CLASS(source_position),
+			  message(message) {}
+
+		printer::MessageContent toMessageContentBrief() const override { return message; }
+	};
 }

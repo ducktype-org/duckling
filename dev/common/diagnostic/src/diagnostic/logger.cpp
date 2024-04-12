@@ -18,6 +18,12 @@ namespace dia {
 
 	void Logger::dumpLog(const bool detailed, std::ostream& stream) const {
 		auto stream_printer = printer::StreamPrinter{};
+		// Currently, errors are dumped first, then warnings, then infos.
+		// It is not determined whether this is how we want it to stay.
+		// This is a temporary, "good enough" solution.
+		// Perhaps we will change it to showing all messages in order of appearance
+		// in the source code, or maybe we will choose a completely separate strategy.
+		// @TODO: resolve the above.
 		for (int severity_id = 0; severity_id < Message::NUM_SEVERITIES; severity_id++)
 			dumpMessages(message_log.at(severity_id), stream_printer, detailed);
 		stream_printer.print(stream);
