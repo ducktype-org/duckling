@@ -157,8 +157,8 @@ private:
 	void simple_floats() {
 		for (const std::array<usize, 5> float_sizes = { 16, 32, 64, 80, 128 };
 		     const usize                float_size: float_sizes) {
-			auto float_1 = query::queryEntryPoint<QueryFloatType>({ float_size });
-			auto float_2 = query::queryEntryPoint<QueryFloatType>({ float_size });
+			auto float_1 = query::queryEntryPoint<QueryFloatType>(float_size);
+			auto float_2 = query::queryEntryPoint<QueryFloatType>(float_size);
 
 			assert(float_1.getSize() == float_size, "Size of Float should be as constructed.");
 			assert(float_1 == float_2, "Floats of the same size should be the same.");
@@ -170,8 +170,8 @@ private:
 		}
 
 		assert(
-			query::queryEntryPoint<QueryFloatType>({ 32 })
-				!= query::queryEntryPoint<QueryFloatType>({ 64 }),
+			query::queryEntryPoint<QueryFloatType>(32)
+				!= query::queryEntryPoint<QueryFloatType>(64),
 			"Floats of different sizes should be different."
 		);
 	}

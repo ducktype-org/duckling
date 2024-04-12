@@ -44,6 +44,13 @@ namespace ts {
 		 * @brief Whether the Integral type is signed or not.
 		 */
 		bool signedness{ true };
+
+		// These constructor definitions are to force giving at least the first argument.
+		KeyFor_QueryIntegralType() = delete;
+
+		KeyFor_QueryIntegralType(const usize size, const bool signedness = true):
+			  size(size),
+			  signedness(signedness) {}
 	};
 
 	/**
@@ -75,9 +82,18 @@ namespace ts {
 		 */
 		bool is_mutable{ false };
 
+		// This spaceship definition is required because TypeInfo has a spaceship definition.
 		[[nodiscard]]
 		auto operator<=>(const KeyFor_QueryPointerType& other) const
 			= default;
+
+		// These constructor definitions are to force giving at least the first argument.
+		// Initializer lists still work.
+		KeyFor_QueryPointerType() = delete;
+
+		KeyFor_QueryPointerType(const TypeInfo underlying_type, const bool is_mutable = false):
+			  underlying_type(underlying_type),
+			  is_mutable(is_mutable) {}
 	};
 
 	/**
