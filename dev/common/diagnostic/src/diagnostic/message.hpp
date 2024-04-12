@@ -360,16 +360,17 @@ namespace dia {
 		std::string message;
 
 	public:
+		[[nodiscard]]
 		Message::Domain getDomain() const override { return DOMAIN; }
 
 		[[deprecated(
 			"Placeholder message should not be instantiated. "
 			"Make your own, specialised message class."
-		)]]
-		PlaceholderMessage(const SourcePosition& source_position, const std::string& message):
+		)]] PlaceholderMessage(const SourcePosition& source_position, std::string message):
 			  BASE_MESSAGE_CLASS(source_position),
-			  message(message) {}
+			  message(std::move(message)) {}
 
+		[[nodiscard]]
 		printer::MessageContent toMessageContentBrief() const override { return message; }
 	};
 }
