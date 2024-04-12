@@ -12,5 +12,3 @@ Tokenizer is a subset of Common modules that together transform source code into
     lexer/index.rst
     rift_definitions/index.rst
     token_parser_core/index.rst
-    source_position/index.rst
-    error_state/index.rst
