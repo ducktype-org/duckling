@@ -361,7 +361,9 @@ namespace dia {
 
 	public:
 		[[nodiscard]]
-		Message::Domain getDomain() const override { return DOMAIN; }
+		Message::Domain getDomain() const override {
+			return DOMAIN;
+		}
 
 		[[deprecated(
 			"Placeholder message should not be instantiated. "
@@ -371,6 +373,8 @@ namespace dia {
 			  message(std::move(message)) {}
 
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override { return message; }
+		printer::MessageContent toMessageContentBrief() const override {
+			return message;
+		}
 	};
 }
