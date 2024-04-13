@@ -38,12 +38,11 @@
  * }
  *
  */
-#define match_optional(optional)                                                \
-	PUSH_DIAGNOSTIC                                                             \
-	NO_SHADOW                                                                   \
-	if (bool _perform_match = true)                                             \
-		for (auto&& _internal_optional = (optional); _perform_match; \
-		     _perform_match = false)                                            \
+#define match_optional(optional)                                                             \
+	PUSH_DIAGNOSTIC                                                                          \
+	NO_SHADOW                                                                                \
+	if (bool _perform_match = true)                                                          \
+		for (auto&& _internal_optional = (optional); _perform_match; _perform_match = false) \
 	POP_DIAGNOSTIC
 
 #define opt_some(_value_name)                                                   \
@@ -63,7 +62,7 @@
 	PUSH_DIAGNOSTIC                                                                 \
 	NO_SHADOW                                                                       \
 	if (bool _perform_if = optional.has_value())                                    \
-		for (auto&& _internal_optional = (optional); _perform_if;)       \
+		for (auto&& _internal_optional = (optional); _perform_if;)                  \
 			for (const auto& _value_name = _internal_optional.value(); _perform_if; \
 			     _perform_if             = false)                                   \
 	POP_DIAGNOSTIC
