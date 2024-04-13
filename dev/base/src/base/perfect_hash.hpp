@@ -9,9 +9,9 @@ namespace base {
 
 	/**
 	 * @brief perfectHash for type u64
-	 * 
-	 * @param v 
-	 * @return HashT 
+	 *
+	 * @param v
+	 * @return HashT
 	 */
 	static HashT customPerfectHash(u64 v) { return v; }
 
@@ -19,11 +19,11 @@ namespace base {
 		/**
 		 * @brief Concept to check if given type
 		 * has .perfectHash() method returning HashT
-		 * 
-		 * @tparam T 
+		 *
+		 * @tparam T
 		 */
 		template<typename T>
-      	concept MemberHash = requires(T& t) {
+		concept MemberHash = requires(T& t) {
 			{ t.customPerfectHash() } -> std::same_as<HashT>;
 		};
 
@@ -32,25 +32,23 @@ namespace base {
 		 * .perfectHash method if proper one exists or
 		 * perfectHash function.
 		 * The perfectHash function has to available via ADL of predefined here
-		 * 
+		 *
 		 * @tparam T - type to hash
 		 * @param key - value to hash
-		 * @return HashT 
+		 * @return HashT
 		 */
 		template<class T>
 		HashT perfectHashCPO(const T& key) {
-			if constexpr (MemberHash<T>) {
+			if constexpr (MemberHash<T>)
 				return key.customPerfectHash();
-			}
-			else {
+			else
 				return customPerfectHash(key);
-			}
 		}
 	}
 
 	/**
 	 * @brief Obtain perfectHash of a value.
-	 * 
+	 *
 	 * @tparam T - type to hash
 	 */
 	template<class T>
@@ -58,4 +56,3 @@ namespace base {
 		return ::base::detail::perfectHashCPO(key);
 	}
 }
-

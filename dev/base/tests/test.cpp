@@ -16,23 +16,17 @@ bool containsCstr(const char* const base, const char* const pattern) {
 	return std::strstr(base, pattern) != nullptr;
 }
 
-
-
 struct TypeWithHash {
 	u64 a;
 
-	base::HashT customPerfectHash() const {
-		return a;
-	}
+	base::HashT customPerfectHash() const { return a; }
 };
 
 struct TypeWithoutHash {
 	u64 a;
 };
 
-base::HashT customPerfectHash(const TypeWithoutHash& key) {
-	return key.a;
-}
+base::HashT customPerfectHash(const TypeWithoutHash& key) { return key.a; }
 
 class GeneralUtilsTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -257,8 +251,8 @@ private:
 	}
 
 	void testPerfectHash() {
-		TypeWithHash to_hash_1{1};
-		TypeWithoutHash to_hash_2{2};
+		TypeWithHash    to_hash_1{ 1 };
+		TypeWithoutHash to_hash_2{ 2 };
 
 		ASSERT_EQUAL(base::perfectHash(to_hash_1), 1);
 		ASSERT_EQUAL(base::perfectHash(to_hash_2), 2);
