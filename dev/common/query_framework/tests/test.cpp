@@ -62,7 +62,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Fibonacci, "Q1");
 struct ImplementationOf_FibonacciSum: query::QueryImplementation<FibonacciSum, double> {
 	static auto provide(Context& context, QKey key) -> PResult {
 		double res = 0;
-		for (uint64_t i = 0; i <= key.v; i++) res += double(context.query<Fibonacci>(Key1(i)));
+		for (uint64_t i = 0; i <= key.v; i++) res += double(context.query<Fibonacci>(Key1{ i }));
 		return res;
 	}
 
@@ -86,10 +86,10 @@ public:
 
 private:
 	void simpleTest() {
-		assert(query::queryEntryPoint<Fibonacci>(Key1(10)) == 55, "Bad query output (1)");
-		assert(query::queryEntryPoint<Fibonacci>(Key1(10)) == 55, "Bad query output (2)");
-		assert(query::queryEntryPoint<Fibonacci>(Key1(0)) == 0, "Bad query output (3)");
-		assert(query::queryEntryPoint<FibonacciSum>(Key2(4)) == 7, "Bad query output (4)");
+		assert(query::queryEntryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (1)");
+		assert(query::queryEntryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (2)");
+		assert(query::queryEntryPoint<Fibonacci>(Key1{ 0 }) == 0, "Bad query output (3)");
+		assert(query::queryEntryPoint<FibonacciSum>(Key2{ 4 }) == 7, "Bad query output (4)");
 	}
 };
 
