@@ -133,7 +133,7 @@ namespace ts {
 		/**
 		 * \brief The collection of elements of the interface of a type.
 		 */
-		const std::map<std::string, std::set<InterfaceElement>> elements;
+		const std::map<std::string, std::set<InterfaceElement>> elements{};
 
 	public:
 		TypeInterface() = default;

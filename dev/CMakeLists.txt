@@ -48,7 +48,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
 	# I didn't find a good -Werror=terminate alternative
-	add_compile_options(-Werror=return-type -Werror=shadow-all -Werror=return-local-addr -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare -O2)
+	add_compile_options(-Werror=return-type -Werror=shadow-all -Werror=return-stack-address -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare -O2)
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()
