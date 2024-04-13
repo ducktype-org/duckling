@@ -26,8 +26,8 @@ namespace base {
 		borrow_ptr(const borrow_ptr<U>& other) noexcept: ptr(other.get()) {}
 
 		template<class U>
-		bool operator==(const borrow_ptr<U>& oth) const {
-			return ptr == oth.get();
+		bool operator==(const borrow_ptr<U>& other) const {
+			return ptr == other.get();
 		}
 
 		bool operator==(std::nullptr_t) const { return ptr == nullptr; }
@@ -46,8 +46,8 @@ namespace base {
 		}
 
 		template<class U>
-		borrow_ptr& operator=(const borrow_ptr<U>& oth) noexcept {
-			ptr = oth.ptr;
+		borrow_ptr& operator=(const borrow_ptr<U>& other) noexcept {
+			ptr = other.ptr;
 			return *this;
 		}
 
