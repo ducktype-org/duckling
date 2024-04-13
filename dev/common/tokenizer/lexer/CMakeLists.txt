@@ -6,7 +6,7 @@ add_library(Lexer
 		src/lexer/decode.cpp
 		src/lexer/lexer_class.cpp)
 
-make_module(Lexer USES Filesystem Printer RiftDefinitions unicode Result::Result SourcePosition ErrorState)
+make_module(Lexer USES Filesystem Printer RiftDefinitions unicode Result::Result Diagnostic)
 
 rift_add_test(common lexer_test_simple tests/test.cpp
 		USES Lexer RiftDefinitions)
