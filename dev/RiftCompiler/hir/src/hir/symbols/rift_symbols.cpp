@@ -1,5 +1,4 @@
 #include <typesystem/typesystem.hpp>
-#include "pst_parser/elements/elements.hpp"
 #include "rift_symbols.hpp"
 #include <hir/analysis_state.hpp>
 #include <base/exceptions.hpp>
