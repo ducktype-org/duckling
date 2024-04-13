@@ -2,6 +2,7 @@
 
 #include <variant>
 #include <json/json.hpp>
+#include "load_program_error.hpp"
 
 namespace vm::api {
 	struct ResumeError {};
