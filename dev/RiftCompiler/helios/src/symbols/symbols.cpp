@@ -1,4 +1,6 @@
 #include "symbols.hpp"
+#include "pst_parser/elements/elements.hpp"
+#include <memory>
 #include <query_framework/query_impl.hpp>
 #include <base/stable_container.hpp>
 
@@ -39,8 +41,58 @@ namespace compiler::helios {
 
 	namespace {
 		// global table:
-		base::StableIntList<SymbolData> symbol_table;
+		base::StableVector<SymbolData> symbol_table;
 	}
+
+
+	// Symbol Factory:
+	base::borrow_ptr<SymbolData> makeSymbolFromStatement(
+		ScopeID scope, PstRef<pst::Stmt> stmt
+	) {
+		PstRef<pst::Fun> fun = stmt;
+		const pst::Fun* f = static_cast<const pst::Fun*>(stmt.get());
+
+		std::unique_ptr<int> a;
+
+		switch (stmt->getKind()) {
+		// @TODO: cast check
+		case pst::StmtKind::Fun: {
+			// PstRef<pst::Fun> fun = stmt;
+			break;
+		}
+		case pst::StmtKind::Namespace: {
+			// PstRef<pst::Namespace> namespace_ = stmt;
+			// return base::make_unique<NamespaceSymbol>(
+			// 	state, scope, namespace_->getName(), namespace_
+			// );
+		}
+		case pst::StmtKind::Const: {
+			// PstRef<pst::Const> const_ = stmt;
+			// return base::make_unique<ConstSymbol>(state, scope, const_->getName(), const_);
+		}
+		case pst::StmtKind::Struct: {
+			// PstRef<pst::Struct> struct_ = stmt;
+			// return base::make_unique<StructSymbol>(state, scope, struct_->getName(), struct_);
+		}
+
+		case pst::StmtKind::Alias: {
+			// PstRef<pst::Alias> alias = stmt;
+			// return base::make_unique<AliasSymbol>(state, scope, alias->getName(), alias);
+		}
+
+		case pst::StmtKind::Using: {
+			// PstRef<pst::Using> using_ = stmt;
+			// return base::make_unique<UsingSymbol>(state, scope, base::StrId("wildcard"), using_);
+		}
+
+		default:
+			break;
+		}
+		RIFT_PANIC(
+			base::strConcat("makeSymbolFromStatement bad symbol kind, stmt: ", typeid(stmt).name())
+		);
+	}
+
 
 
 	struct ImplementationOf_QuerySymbolOfSTMT:
