@@ -19,7 +19,10 @@ bool containsCstr(const char* const base, const char* const pattern) {
 struct TypeWithHash {
 	u64 a;
 
-	base::HashT customPerfectHash() const { return a; }
+	[[nodiscard]]
+	base::HashT customPerfectHash() const {
+		return a;
+	}
 };
 
 struct TypeWithoutHash {

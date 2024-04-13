@@ -13,7 +13,7 @@ namespace base {
 	 * @param v
 	 * @return HashT
 	 */
-	static HashT customPerfectHash(u64 v) { return v; }
+	inline HashT customPerfectHash(u64 v) { return v; }
 
 	namespace detail {
 		/**
