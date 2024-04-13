@@ -9,7 +9,7 @@
 #include <functional>
 #include <typesystem/typesystem.hpp>
 #include <base/maps.hpp>
-#include <base/named_id.hpp>
+#include <base/strongly_typed_id.hpp>
 
 namespace operation {
 	using Operation = std::function<exec::CTV(const std::vector<exec::CTV>&)>;
@@ -44,7 +44,7 @@ namespace operation {
 		}
 	};
 
-	using OperationId = base::NamedId<TypedOperation>;
+	STRONG_TYPEDEF_ID(OperationId);
 
 	using OperationMap = base::VectorMap<OperationId, TypedOperation>;
 

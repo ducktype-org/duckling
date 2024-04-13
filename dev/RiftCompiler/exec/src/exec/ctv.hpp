@@ -12,7 +12,6 @@
 #include <typesystem/type_desc.hpp>
 #include <typesystem/types.hpp>
 #include <base/exceptions.hpp>
-#include <base/named_id.hpp>
 #include <vector>
 
 namespace exec {

@@ -1,9 +1,8 @@
 #pragma once
 
 #include "token_stream.hpp"
-#include "parser_ref.hpp"
 
-#include <diagnostic/error_state.hpp>
+#include <diagnostic/logger.hpp>
 
 namespace tpc {
 
@@ -24,9 +23,9 @@ namespace tpc {
 		[[nodiscard]]
 		const TokenStream& ctokens() const;
 
-		dia::ErrorState err;  ///< Stores parsing errors
+		dia::Logger err;  ///< Stores parsing errors
 
-		ParserState(TokenStream&& tokens, dia::ErrorState&& err): err(std::move(err)) {
+		ParserState(TokenStream&& tokens, dia::Logger&& err): err(std::move(err)) {
 			stream_stack.emplace_back(std::move(tokens));
 		}
 
