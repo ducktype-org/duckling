@@ -31,30 +31,26 @@ def cli():
     pass
 
 
-def active_venv_impl():
+def with_venv(cmd):
     if not os.path.exists(".venv"):
         exit_with_error(".venv does not exits. Use ./toolbox.py setup_venv")
     sh = get_shell()
     if sh == ShellType.FISH:
-        os.system("source .venv/bin/activate.fish")
+        os.system(f"source .venv/bin/activate.fish && {cmd}")
     else:
-        os.system("source .venv/bin/activate")
-
-
-@cli.command()
-def active_venv():
-    """Activates a python's virtual environment"""
-    active_venv_impl()
+        os.system(f"source .venv/bin/activate && {cmd}")
 
 
 def build_impl(name, build_system, type, docs, compiler):
     """Makes a build folder"""
+
+    cmd = f"cmake -G {build_system} -B {name}-{type.lower()} -D CMAKE_BUILD_TYPE={type}"
+    f" -D BUILD_DOCS={'ON' if docs else 'OFF'} -D CMAKE_CXX_COMPILER={compiler}"
+
     if docs:
-        active_venv_impl()
-    os.system(
-        f"cmake -G {build_system} -B {name}-{type.lower()} -D CMAKE_BUILD_TYPE={type}"
-        f" -D BUILD_DOCS={'ON' if docs else 'OFF'} -D CMAKE_CXX_COMPILER={compiler}"
-    )
+        with_venv(cmd)
+    else:
+        os.system(cmd)
 
 
 @cli.command()
@@ -108,8 +104,7 @@ def build(*args, **kwargs):
 def setup_venv_impl():
     if not os.path.exists(".venv"):
         os.system("python3 -m venv .venv")
-        active_venv_impl()
-        os.system("python3 -m pip install -r docs/doc-config/requirements.txt")
+        with_venv("python3 -m pip install -r docs/doc-config/requirements.txt")
 
 
 @cli.command()
@@ -122,7 +117,7 @@ def setup_venv():
 def init():
     """A general repo setup, performs downloading of submodules and binaries, creates a python venv, etc.."""
     os.system("git submodule update --init")
-    active_venv_impl()
+    setup_venv_impl()
 
 
 if __name__ == "__main__":
