@@ -36,6 +36,7 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QuerySymbolOfSTMT, PstRef<pst::Stmt>, SymID);
 
+	// @TODO str
 	DECLARE_QUERY(QueryLookupIn, SymID, LookupResult);
 
 	// @TODO: get type from type-system

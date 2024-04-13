@@ -5,6 +5,11 @@
 
 namespace compiler::helios {
 
+
+	struct HOUTCode {
+
+	};
+
 	// placeholder for functions, methods, etc
 	struct HOUTFunction { };
 

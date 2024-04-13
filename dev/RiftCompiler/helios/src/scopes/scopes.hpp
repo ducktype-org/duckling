@@ -27,6 +27,6 @@ namespace compiler::helios {
 		ScopeID scope;
 		base::StrId name;
 	};
-	DECLARE_QUERY(QueryLookup, KeyOf_Lookup, LookupResult);
+	DECLARE_QUERY(QueryLookupInScope, KeyOf_Lookup, LookupResult);
 
 }

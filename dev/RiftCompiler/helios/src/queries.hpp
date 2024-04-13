@@ -25,7 +25,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query SymbolID of given module
 	 */
-	DECLARE_QUERY(QueryModuleSymbol, frontend::ModuleId, std::vector<HOUTModule>)
+	DECLARE_QUERY(QueryModuleSymbol, frontend::ModuleId, SymID)
 
 
 }

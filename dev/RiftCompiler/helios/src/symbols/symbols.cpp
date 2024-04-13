@@ -13,7 +13,7 @@ namespace compiler::helios {
 		// adapted from hir:
 
 		// created on startup:
-		ScopeRef    scope;
+		ScopeID     scope;
 		base::StrId name;
 		bool        anonymous;
 		bool wildcard = false;
