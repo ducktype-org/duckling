@@ -56,8 +56,8 @@ namespace query {
 		 * @return QueryImplType::QResult
 		 */
 		template<typename QueryImplType>
-		auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from)
-			-> QueryImplType::QResult {
+		auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) ->
+			typename QueryImplType::QResult {
 			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Enter.\n"));
 
 			if (auto v = QueryImplType::load(key)) {

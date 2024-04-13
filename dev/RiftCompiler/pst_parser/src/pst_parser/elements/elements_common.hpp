@@ -36,13 +36,13 @@ namespace pst::detail {
 	template<class ParserElement, class Container>
 	class ForwardBorrowIterator {
 	private:
-		using internal_iterator = Container::const_iterator;
+		using internal_iterator = typename Container::const_iterator;
 		internal_iterator it;
 
 	public:
 		using value_type        = ParserCBorrowRef<ParserElement>;
 		using iterator_category = std::random_access_iterator_tag;
-		using difference_type   = internal_iterator::difference_type;
+		using difference_type   = typename internal_iterator::difference_type;
 		using reference         = value_type;
 
 		explicit ForwardBorrowIterator(): it() {}
