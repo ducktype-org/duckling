@@ -1,9 +1,0 @@
-{
-    "name": "crow",
-    "version-string": "master",
-    "dependencies": [
-        "asio",
-        "openssl",
-        "zlib"
-    ]
-}
