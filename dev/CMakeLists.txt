@@ -142,7 +142,7 @@ add_custom_target(build_all_tests)
 function(add_custom_test_pack NAME)
 	set(BUILD_PACK_TARGET "build_${NAME}_tests")
 	add_custom_target("${BUILD_PACK_TARGET}")
-	add_test(NAME ${BUILD_PACK_TARGET} COMMAND "${CMAKE_COMMAND}" --build ${CMAKE_BINARY_DIR} --target ${BUILD_PACK_TARGET})
+	add_test(NAME ${BUILD_PACK_TARGET} COMMAND "${CMAKE_COMMAND}" --build ${CMAKE_BINARY_DIR} --target ${BUILD_PACK_TARGET} -j ${CMAKE_BUILD_PARALLEL_LEVEL})
 	set_property(TEST ${BUILD_PACK_TARGET} PROPERTY LABELS "${NAME}")
 
 	add_custom_target("test_${NAME}"

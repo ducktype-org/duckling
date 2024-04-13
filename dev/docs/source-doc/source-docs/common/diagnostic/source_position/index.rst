@@ -15,11 +15,11 @@ Module implementing source position handling.
     
     src/source_position/index.rst
 
-Usage
-=====
+Usage example
+=============
 
 .. code-block:: cpp
-    :caption: Basic usage
+    :caption: Basic usage example
 
     int main() {
         dia::SourcePosition singleCharacter{<source-file>, <line>, <column>, <position-in-file>};
@@ -34,7 +34,7 @@ Interface
 
 All symbols are in namespace ``dia``.
 
-``SourcePosition`` are checked to be valid during construction and are immutable later.
+``SourcePosition`` are checked to be valid during construction and are immutable afterwards.
 
 getSourceChars
 ^^^^^^^^^^^^^^
