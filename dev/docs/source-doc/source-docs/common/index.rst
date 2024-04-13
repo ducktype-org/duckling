@@ -11,7 +11,7 @@ Common
     :titlesonly:
 
     clap/index.rst
-    config/index.rst
+    diagnostic/index.rst
     filesystem/index.rst
     json/index.rst
     listener/index.rst
