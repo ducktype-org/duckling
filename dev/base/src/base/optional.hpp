@@ -11,7 +11,6 @@
 
 #include "exceptions.hpp"
 #include "type_traits.hpp"
-#include "forward_reference_type.hpp"
 #include "unique_pointer.hpp"
 
 /* Some cool macros.
@@ -43,7 +42,7 @@
 	PUSH_DIAGNOSTIC                                                             \
 	NO_SHADOW                                                                   \
 	if (bool _perform_match = true)                                             \
-		for (DECL_FORWARDING_VAR(_internal_optional, optional); _perform_match; \
+		for (auto&& _internal_optional = (optional); _perform_match; \
 		     _perform_match = false)                                            \
 	POP_DIAGNOSTIC
 
@@ -64,7 +63,7 @@
 	PUSH_DIAGNOSTIC                                                                 \
 	NO_SHADOW                                                                       \
 	if (bool _perform_if = optional.has_value())                                    \
-		for (DECL_FORWARDING_VAR(_internal_optional, optional); _perform_if;)       \
+		for (auto&& _internal_optional = (optional); _perform_if;)       \
 			for (const auto& _value_name = _internal_optional.value(); _perform_if; \
 			     _perform_if             = false)                                   \
 	POP_DIAGNOSTIC
