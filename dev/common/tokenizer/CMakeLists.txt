@@ -1,5 +1,3 @@
 add_subdirectory(token_parser_core)
 add_subdirectory(rift_definitions)
 add_subdirectory(lexer)
-add_subdirectory(source_position)
-add_subdirectory(error_state)

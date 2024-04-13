@@ -9,8 +9,8 @@ namespace lexer {
 		  file(std::make_shared<fs::FilePath>(file)),
 		  file_content(this->file->getContent()),
 		  char_array(decode<fs::Encoding::UTF8>(file_content.view(), errorState)) {
-		if (errorState.fail()) {
-			errorState.dumpLog(std::cerr);
+		if (errorState.bad()) {
+			errorState.dumpLog(false, std::cerr);
 			throw base::LogicError("Error while decoding");
 		}
 	}
@@ -35,12 +35,7 @@ namespace lexer {
 				where++;
 			}
 		} else {
-			errorState.failAndLog(printer::Message(
-				{
-					{ "Tried to skip EOF" },
-				},
-				printer::MessageType::ERROR
-			));
+			errorState.failAndLog({ "Tried to skip EOF" });
 		}
 	}
 
@@ -60,7 +55,7 @@ namespace lexer {
 
 	void Lexer::addTokenMsg(usize begin, usize end, std::string_view token_type) {
 		if (tokenMessages()) {
-			log.add(printer::Message(
+			streamPrinter.add(printer::Message(
 				{ { "Add token: " },
 			      { std::string(token_type) },
 			      { "(" },
@@ -317,8 +312,8 @@ namespace lexer {
 		Token::BracketType bracket_type{ peek().value };
 		auto               group_end = peek().bracketPair();
 		if (tokenMessages())
-			log.add({ { { base::strConcat("group begin(", line, ":", column, ")") } },
-			          printer::MessageType::DEBUG });
+			streamPrinter.add({ { { base::strConcat("group begin(", line, ":", column, ")") } },
+			                    printer::MessageType::DEBUG });
 
 
 		Tokens inner_tokens;
@@ -367,7 +362,8 @@ namespace lexer {
 		output.push_back(Token::makeBracketGroup(
 			bracket_type, std::move(inner_tokens), std::move(sentinel), sourcePosition
 		));
-		if (tokenMessages()) log.add({ { { "group end" } }, printer::MessageType::DEBUG });
+		if (tokenMessages())
+			streamPrinter.add({ { { "group end" } }, printer::MessageType::DEBUG });
 	}
 
 	bool Lexer::isEOF() const { return peek().is(Class::end_of_file_value); }

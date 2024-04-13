@@ -35,7 +35,8 @@ namespace vm::api {
 	}
 
 	cpp::result<ProcessInfo, ApiError> spawn(bool usesStdio) {
-		return Supervisor::get().newProcess(usesStdio).map([](auto& x) { return ProcessInfo(x); });
+		return Supervisor::get().newProcess(usesStdio).map([](auto& x) { return ProcessInfo{ x }; }
+		);
 	}
 
 	cpp::result<void, ApiError> loadFile(PID pid, const fs::FilePath& path) {
