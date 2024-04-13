@@ -1,0 +1,12 @@
+# This is a generated file and its contents are an internal implementation detail.
+# The download step will be re-executed if anything in this file changes.
+# No other meaning or use of this file is supported.
+
+method=url
+command=/usr/bin/cmake;-P;/home/mateusz/code/rift/rift-dev/dev/name/_deps/json_struct-subbuild/json_struct-populate-prefix/src/json_struct-populate-stamp/download-json_struct-populate.cmake;COMMAND;/usr/bin/cmake;-P;/home/mateusz/code/rift/rift-dev/dev/name/_deps/json_struct-subbuild/json_struct-populate-prefix/src/json_struct-populate-stamp/verify-json_struct-populate.cmake;COMMAND;/usr/bin/cmake;-P;/home/mateusz/code/rift/rift-dev/dev/name/_deps/json_struct-subbuild/json_struct-populate-prefix/src/json_struct-populate-stamp/extract-json_struct-populate.cmake
+source_dir=/home/mateusz/code/rift/rift-dev/dev/name/_deps/json_struct-src
+work_dir=/home/mateusz/code/rift/rift-dev/dev/name/_deps
+url(s)=https://github.com/jorgen/json_struct/archive/e3045af90ff331c97cc8f71374f558ae13409d9f.zip
+hash=
+no_extract=
+

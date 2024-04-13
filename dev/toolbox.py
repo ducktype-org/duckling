@@ -6,7 +6,9 @@ import enum
 
 
 def exit_with_error(msg):
-    click.echo(msg, fg="red")
+    click.echo(click.style("ERROR: ", fg="red", bold=True), nl=False)
+    click.echo(click.style(msg, fg="red"))
+
     exit(1)
 
 
@@ -14,6 +16,9 @@ class ShellType(enum.Enum):
     BASH = 1
     FISH = 2
     ZSH = 3
+
+
+BUILD_SYSTEMS = click.Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
 
 
 def get_shell() -> ShellType:
@@ -44,7 +49,7 @@ def with_venv(cmd):
 def build_impl(name, build_system, type, docs, compiler):
     """Makes a build folder"""
 
-    cmd = f"cmake -G {build_system} -B {name}-{type.lower()} -D CMAKE_BUILD_TYPE={type}"
+    cmd = f'cmake -G "{build_system}" -B {name} -D CMAKE_BUILD_TYPE={type}'
     f" -D BUILD_DOCS={'ON' if docs else 'OFF'} -D CMAKE_CXX_COMPILER={compiler}"
 
     if docs:
@@ -59,7 +64,6 @@ def build_impl(name, build_system, type, docs, compiler):
     "--name",
     prompt="name",
     help="The name of the directory.",
-    type=str,
     default="build",
 )
 @click.option(
@@ -67,7 +71,7 @@ def build_impl(name, build_system, type, docs, compiler):
     "--build-system",
     prompt="Build system",
     help="The build system to use",
-    type=click.Choice(["Ninja", "Unix Makefiles"], case_sensitive=False),
+    type=BUILD_SYSTEMS,
     default="Ninja",
 )
 @click.option(
@@ -118,6 +122,39 @@ def init():
     """A general repo setup, performs downloading of submodules and binaries, creates a python venv, etc.."""
     os.system("git submodule update --init")
     setup_venv_impl()
+
+
+@cli.command()
+@click.option(
+    "-n",
+    "--name",
+    prompt="name",
+    help="The name of the directory.",
+    default="build",
+)
+@click.option(
+    "-b",
+    "--build-system",
+    prompt="Build system",
+    help="The build system to use",
+    type=BUILD_SYSTEMS,
+    default="Ninja",
+)
+def coverage(name, build_system):
+    if not os.path.exists(name):
+        exit_with_error(f"Given build folder does not exist: {name}.")
+
+    with_venv(f"cmake -D ENABLE_COVERAGE=true -B {name}")
+    os.chdir(name)
+    os.system(f"cmake --build . -j 5 -- test")
+
+    build_system = build_system.lower()
+    if 'ninja' in build_system:
+        os.system('ninja coverage')
+    if 'makefile' in build_system:
+        os.system('make coverage')
+
+    os.system("xdg-open coverage/index.html")
 
 
 if __name__ == "__main__":
