@@ -136,3 +136,6 @@ namespace query {
 	}                                                                                             \
 	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::nextQueryId();       \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
+
+
+
