@@ -37,7 +37,7 @@ private:
 		ts::ClassInfo memberClass       = ts::ClassInfo::create(base::StrId("Member"), {});
 		auto          member_class_desc = ts::TypeDesc<>(memberClass);
 
-		auto bool_desc = ts::TypeDesc<>(ts::BoolInfo::create());
+		auto bool_desc = ts::TypeDesc<>(query::queryEntryPoint<ts::QueryBoolType>({}));
 
 		usize     parent_counter    = 0;
 		exec::CTV parent_result_ctv = exec::alloc_new(bool_desc, bool_desc.getType().getSize());
@@ -127,7 +127,7 @@ private:
 		ts::ClassInfo memberClass       = ts::ClassInfo::create(base::StrId("member"), {});
 		auto          member_class_desc = ts::TypeDesc<>(memberClass);
 
-		auto int_desc = ts::TypeDesc<>(ts::IntegralInfo::create(8));
+		auto int_desc = ts::TypeDesc<>(query::queryEntryPoint<ts::QueryIntegralType>({ 8 }));
 
 		usize     parent_counter    = 0;
 		exec::CTV parent_result_ctv = exec::alloc_new(int_desc, int_desc.getType().getSize());
@@ -214,9 +214,9 @@ private:
 	void simple_int_test() {
 		static_assert(SIZE == sizeof(T) * 8);
 		// @TODO use the T and SIZE
-		auto           int_type = ts::IntegralInfo::create(SIZE);
+		auto           int_type = query::queryEntryPoint<ts::QueryIntegralType>({ SIZE });
 		ts::TypeDesc<> int_desc{ int_type };
-		ts::TypeDesc<> bool_desc{ ts::BoolInfo::create() };
+		ts::TypeDesc<> bool_desc{ query::queryEntryPoint<ts::QueryBoolType>({}) };
 
 
 		/*			INT TESTS 		*/
@@ -265,9 +265,9 @@ private:
 	}
 
 	void class_test() {
-		auto           int_type = ts::IntegralInfo::create(8);
+		auto           int_type = query::queryEntryPoint<ts::QueryIntegralType>({ 8 });
 		ts::TypeDesc<> int_desc{ int_type };
-		ts::TypeDesc<> bool_desc{ ts::BoolInfo::create() };
+		ts::TypeDesc<> bool_desc{ query::queryEntryPoint<ts::QueryBoolType>({}) };
 
 		/*		CLASS SETUP */
 		/*
@@ -427,7 +427,7 @@ private:
 		        A			B
 		*/
 
-		ts::TypeDesc<> int_desc(ts::IntegralInfo::create(8));
+		ts::TypeDesc<> int_desc(query::queryEntryPoint<ts::QueryIntegralType>({ 8 }));
 		auto           symbol_z = symtable::SymbolId::next();
 		auto           Z = ts::ClassInfo::create(base::StrId("Z"), { { int_desc, symbol_z } });
 

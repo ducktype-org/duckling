@@ -113,7 +113,7 @@ Declaring the query is very simple and requires programmer to provide three thin
 Query Implementation
 --------------------
 
-Query implementation is were we will write actual query code.
+Query implementation is where we will write actual query code.
 
 Full example is included bellow, here is a step by step guide:
 
@@ -131,7 +131,7 @@ Writing implementation boilerplate
 ++++++++++++++++++++++++++++++++++
 
 After that we can move to actual query implementation.
-This is archived by creating a :code:`struct` called "implementation struct" that will inherit from :code:`query::QueryImplementation`.
+This is achieved by creating a :code:`struct` called "implementation struct" that will inherit from :code:`query::QueryImplementation`.
 :code:`query::QueryImplementation` is a template that takes two arguments: query to implement and :code:`PResult`.
 After the definition of implementation struct one must also write the magic line presented in the example bellow.
 

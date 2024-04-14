@@ -132,7 +132,7 @@ namespace ts {
 		CONSTRUCT_WITH_CHECKED_CAST(ClassInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(ClassInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Class)
 	};
 
 
@@ -221,7 +221,7 @@ namespace ts {
 		CONSTRUCT_WITH_CHECKED_CAST(VTableInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(VTableInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(VTable)
 	};
 
 }
