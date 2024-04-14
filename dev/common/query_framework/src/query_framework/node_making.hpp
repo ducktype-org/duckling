@@ -2,6 +2,7 @@
 
 #include "query_id.hpp"
 #include "node_id.hpp"
+#include <base/perfect_hash.hpp>
 
 namespace query::detail {
 
@@ -15,7 +16,7 @@ namespace query::detail {
 	 */
 	template<typename KeyType>
 	detail::KeyHash hashKey(const KeyType& key) {
-		return { std::hash<std::remove_cvref_t<KeyType>>()(key) };
+		return { base::perfectHash<std::remove_cvref_t<KeyType>>(key) };
 	}
 
 	/**

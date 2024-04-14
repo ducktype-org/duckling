@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/perfect_hash.hpp"
 #include <query_framework/query_int.hpp>
 #include <string>  // std::string
 
@@ -12,6 +13,7 @@ struct Key {
 
 	// for example:
 	uint64_t v;
+	base::HashT customPerfectHash() { return v; }
 };
 
 /**
@@ -34,4 +36,4 @@ DECLARE_QUERY(MyQuery, Key, Value)
 /**
  * This query just takes uint64_t as an argument and return std::string.
  */
-DECLARE_QUERY(Query2, uint64_t, std::string)
+DECLARE_QUERY(Query2, u64, std::string)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ints.hpp"
+#include <cstddef>
 #include <type_traits>
 
 namespace base {
@@ -28,6 +29,17 @@ namespace base {
 		};
 
 		/**
+		 * @brief Concept to check if given type
+		 * has perfectHash() function returning HashT
+		 *
+		 * @tparam T
+		 */
+		template<typename T>
+		concept FunctionHash = requires(T& t) {
+			{ customPerfectHash(t) } -> std::same_as<HashT>;
+		};
+
+		/**
 		 * @brief Customization point that calls
 		 * .perfectHash method if proper one exists or
 		 * perfectHash function.
@@ -41,8 +53,12 @@ namespace base {
 		HashT perfectHashCPO(const T& key) {
 			if constexpr (MemberHash<T>)
 				return key.customPerfectHash();
-			else
+			else if constexpr(FunctionHash<T>)
 				return customPerfectHash(key);
+			else {
+				static_assert(!sizeof(T), "Actual error: Perfect hash for type T does not exist!");
+				return 0;
+			}
 		}
 	}
 

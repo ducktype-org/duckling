@@ -6,21 +6,14 @@
 struct Key1 {
 	uint64_t       v;
 	constexpr auto operator<=>(const Key1& oth) const = default;
-};
-
-template<>
-struct std::hash<Key1> {
-	std::size_t operator()([[maybe_unused]] const Key1& key) const { return key.v; }
+	base::HashT customPerfectHash() { return v; }
 };
 
 struct Key2 {
 	uint64_t v;
+	base::HashT customPerfectHash() { return v; }
 };
 
-template<>
-struct std::hash<Key2> {
-	std::size_t operator()([[maybe_unused]] const Key2& key) const { return key.v; }
-};
 
 DECLARE_QUERY(Fibonacci, Key1, uint64_t);
 DECLARE_QUERY(FibonacciSum, Key2, uint64_t);
