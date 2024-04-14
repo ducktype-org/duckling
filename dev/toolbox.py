@@ -72,11 +72,19 @@ def with_venv(cmd):
         bash_command(f"source .venv/bin/activate && {cmd}")
 
 
-def setup_build_impl(name, build_system, type, docs, compiler):
+def setup_build_impl(name, build_system, type, docs, compiler, ccache):
     """Makes a build folder"""
 
-    cmd = f'cmake -G "{build_system}" -B {name} -D CMAKE_BUILD_TYPE={type}'
-    f" -D BUILD_DOCS={'ON' if docs else 'OFF'} -D CMAKE_CXX_COMPILER={compiler}"
+    cmd = f"""
+        cmake
+         -G "{build_system}"
+         -B {name}
+         -D CMAKE_BUILD_TYPE={type}
+         -D BUILD_DOCS={'ON' if docs else 'OFF'}
+         -D CMAKE_CXX_COMPILER={compiler}
+         -D USE_CCACHE={'ON' if ccache else 'OFF'}
+    """
+    cmd = cmd.replace("\n", " ")
 
     click.echo("Setting up a build folder...")
     if docs:
@@ -126,6 +134,14 @@ def setup_build_impl(name, build_system, type, docs, compiler):
     prompt="Compiler path",
     help="A path to the complier to compile with",
     default="g++",
+)
+@click.option(
+    "--ccache",
+    prompt="Use ccache",
+    help="Whether or not to use ccache.",
+    type=bool,
+    default=False,
+    is_flag=True,
 )
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
