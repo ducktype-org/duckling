@@ -78,8 +78,8 @@ namespace base {
 		typedef KEY_T     IdType;
 		typedef DATA_T    DataType;
 
-		typedef typename std::vector<Optional<DATA_T>>::iterator       iterator;
-		typedef typename std::vector<Optional<DATA_T>>::const_iterator const_iterator;
+		using iterator       = typename std::vector<Optional<DATA_T>>::iterator;
+		using const_iterator = typename std::vector<Optional<DATA_T>>::const_iterator;
 
 		VectorMap() = default;
 
@@ -107,7 +107,6 @@ namespace base {
 			if (contains(key)) operator[](std::forward<K>(key));
 			return {};
 		}
-
 
 		void put(KEY_T key) {
 			if (usize(key) >= map.size()) map.resize(key + 1);
