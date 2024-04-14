@@ -62,7 +62,7 @@ namespace base {
 		 * @return A reference to the data.
 		 */
 		DATA_T& operator[](const KEY_T& key) {
-			if (!contains(key)) data[key] = make_unique<DATA_T>();
+			if (!contains(key)) data.emplace(key, make_unique<DATA_T>());
 			return *data[key];
 		}
 
@@ -98,7 +98,6 @@ namespace base {
 		}
 
 	private:
-		// @TODO: Replace this with base::HashMap.
-		std::unordered_map<KEY_T, unique_ptr<DATA_T>> data;
+		HashMap<KEY_T, unique_ptr<DATA_T>> data;
 	};
 }

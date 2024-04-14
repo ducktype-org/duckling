@@ -31,6 +31,18 @@ namespace base {
 
 		DATA_T& operator[](KEY_T&& key) { return ContainerType::at(key); }
 
+		template<class K = KEY_T>
+		Optional<DATA_T&> atMaybe(K&& key) {
+			if (contains(key)) operator[](std::forward<K>(key));
+			return {};
+		}
+
+		template<class K = KEY_T>
+		Optional<const DATA_T&> atMaybe(K&& key) const {
+			if (contains(key)) operator[](std::forward<K>(key));
+			return {};
+		}
+
 		const DATA_T& operator[](const KEY_T& key) const { return ContainerType::at(key); }
 
 		auto put(const KEY_T& key) { return ContainerType::emplace(key, DATA_T()); }
@@ -66,8 +78,8 @@ namespace base {
 		typedef KEY_T     IdType;
 		typedef DATA_T    DataType;
 
-		typedef typename std::vector<base::Optional<DATA_T>>::iterator       iterator;
-		typedef typename std::vector<base::Optional<DATA_T>>::const_iterator const_iterator;
+		typedef typename std::vector<Optional<DATA_T>>::iterator       iterator;
+		typedef typename std::vector<Optional<DATA_T>>::const_iterator const_iterator;
 
 		VectorMap() = default;
 
@@ -82,6 +94,16 @@ namespace base {
 				return *map.at(usize(key));
 			else
 				throw base::LogicError("No value assigned to key in VectorMap");
+		}
+
+		Optional<DATA_T&> atMaybe(const KEY_T& key) {
+			if (contains(key)) operator[](key);
+			return {};
+		}
+
+		Optional<const DATA_T&> atMaybe(const KEY_T& key) const {
+			if (contains(key)) operator[](key);
+			return {};
 		}
 
 		void put(KEY_T key) {
