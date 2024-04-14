@@ -1,15 +1,10 @@
 #!/usr/bin/python3
 
+from dataclasses import dataclass
 import click
 import os
 import enum
-
-
-def exit_with_error(msg):
-    click.echo(click.style("ERROR: ", fg="red", bold=True), nl=False)
-    click.echo(click.style(msg, fg="red"))
-
-    exit(1)
+import urllib.request
 
 
 class ShellType(enum.Enum):
@@ -19,6 +14,32 @@ class ShellType(enum.Enum):
 
 
 BUILD_SYSTEMS = click.Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
+
+
+@dataclass
+class InternetFile:
+    path: str
+    resource_url: str
+
+    def download(self, force=False):
+        if not force and os.path.exists(os.path.join(self.path)):
+            return
+        urllib.request.urlretrieve(self.resource_url, self.path)
+
+
+FILES_TO_DOWNLOAD: list[InternetFile] = [
+    InternetFile(
+        "scripts/formatting/clang-format",
+        "https://static.ducktype.org/bin/clang-format",
+    )
+]
+
+
+def exit_with_error(msg):
+    click.echo(click.style("ERROR: ", fg="red", bold=True), nl=False)
+    click.echo(click.style(msg, fg="red"))
+
+    exit(1)
 
 
 def get_shell() -> ShellType:
@@ -38,20 +59,21 @@ def cli():
 
 def with_venv(cmd):
     if not os.path.exists(".venv"):
-        exit_with_error(".venv does not exits. Use ./toolbox.py setup_venv")
-    sh = get_shell()
-    if sh == ShellType.FISH:
+        exit_with_error('.venv does not exits. Use "./toolbox.py setup-venv"')
+
+    if get_shell() == ShellType.FISH:
         os.system(f"source .venv/bin/activate.fish && {cmd}")
     else:
         os.system(f"source .venv/bin/activate && {cmd}")
 
 
-def build_impl(name, build_system, type, docs, compiler):
+def setup_build_impl(name, build_system, type, docs, compiler):
     """Makes a build folder"""
 
     cmd = f'cmake -G "{build_system}" -B {name} -D CMAKE_BUILD_TYPE={type}'
     f" -D BUILD_DOCS={'ON' if docs else 'OFF'} -D CMAKE_CXX_COMPILER={compiler}"
 
+    click.echo("Setting up a build folder...")
     if docs:
         with_venv(cmd)
     else:
@@ -100,14 +122,16 @@ def build_impl(name, build_system, type, docs, compiler):
     help="A path to the complier to compile with",
     default="g++",
 )
-def build(*args, **kwargs):
+def setup_build(*args, **kwargs):
     """Makes a build folder"""
-    build_impl(*args, **kwargs)
+    setup_build_impl(*args, **kwargs)
 
 
 def setup_venv_impl():
     if not os.path.exists(".venv"):
+        click.echo("Creating venv...")
         os.system("python3 -m venv .venv")
+        click.echo("Downloading venv dependencies...")
         with_venv("python3 -m pip install -r docs/doc-config/requirements.txt")
 
 
@@ -117,11 +141,25 @@ def setup_venv():
     setup_venv_impl()
 
 
+def download_binaries_impl(force=False):
+    click.echo("Downloading binary files...")
+    for file in FILES_TO_DOWNLOAD:
+        file.download(force)
+
+
+@cli.command()
+def download_binaries():
+    """Download binary files from the internet"""
+    download_binaries_impl(True)
+
+
 @cli.command()
 def init():
     """A general repo setup, performs downloading of submodules and binaries, creates a python venv, etc.."""
+    click.echo("Initializing git submodules...")
     os.system("git submodule update --init")
     setup_venv_impl()
+    download_binaries_impl(False)
 
 
 @cli.command()
@@ -149,13 +187,14 @@ def coverage(name, build_system):
     os.system(f"cmake --build . -j 5 -- test")
 
     build_system = build_system.lower()
-    if 'ninja' in build_system:
-        os.system('ninja coverage')
-    if 'makefile' in build_system:
-        os.system('make coverage')
+    if "ninja" in build_system:
+        os.system("ninja coverage")
+    if "makefile" in build_system:
+        os.system("make coverage")
 
     os.system("xdg-open coverage/index.html")
 
 
 if __name__ == "__main__":
+    # TODO: Chdir to root.
     cli()
