@@ -7,6 +7,6 @@ namespace query {
 	 * @brief Key used for queries without keys, input queries, and "outside world" query.
 	 */
 	struct EmptyKey {
-		base::HashT customPerfectHash() { return 0; }
+		base::HashT customPerfectHash() const { return 0; }
 	};
 }
