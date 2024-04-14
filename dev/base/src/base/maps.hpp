@@ -96,15 +96,18 @@ namespace base {
 				throw base::LogicError("No value assigned to key in VectorMap");
 		}
 
-		Optional<DATA_T&> atMaybe(const KEY_T& key) {
-			if (contains(key)) operator[](key);
+		template<class K = KEY_T>
+		Optional<DATA_T&> atMaybe(K&& key) {
+			if (contains(key)) operator[](std::forward<K>(key));
 			return {};
 		}
 
-		Optional<const DATA_T&> atMaybe(const KEY_T& key) const {
-			if (contains(key)) operator[](key);
+		template<class K = KEY_T>
+		Optional<const DATA_T&> atMaybe(K&& key) const {
+			if (contains(key)) operator[](std::forward<K>(key));
 			return {};
 		}
+
 
 		void put(KEY_T key) {
 			if (usize(key) >= map.size()) map.resize(key + 1);
