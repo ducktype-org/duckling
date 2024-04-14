@@ -101,7 +101,7 @@ Declaring the query is very simple and requires programmer to provide three thin
 
 .. attention::
     Query keys need to have two critical functionalities: they need to be copyable,
-    they need to implement :code:`std::hash` in the way that is per-query-collision free.
+    they need to implement :code:`customPerfectHash` (see: :doc:`Perfect hash </source-doc/source-docs/base/src/base/perfect_hash.rst>`) in the way that is per-query-collision free.
     See: :ref:`qkey-requirements` for more details.
 
 .. literalinclude:: example/decl.hpp
