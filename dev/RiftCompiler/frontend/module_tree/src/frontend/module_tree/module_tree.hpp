@@ -12,6 +12,7 @@
 #include <filesystem/fs_tree.hpp>
 #include <pst_parser/pst.hpp>
 #include <base/ints.hpp>
+#include <base/perfect_hash.hpp>
 
 // @TODO: change std::string here to StrId
 
@@ -27,6 +28,7 @@ namespace compiler::frontend {
 
 		static FileId nextID();
 		bool          operator==(const FileId&) const = default;
+		base::HashT   customPerfectHash() const { return asInt(); }
 
 	private:
 		u64 id;
@@ -62,7 +64,7 @@ namespace compiler::frontend {
 
 		static ModuleId nextID();
 		bool            operator==(const ModuleId&) const = default;
-
+		base::HashT     customPerfectHash() const { return asInt(); }
 	private:
 		ModuleId() = default;
 		u64 id;

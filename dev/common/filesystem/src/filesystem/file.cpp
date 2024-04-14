@@ -4,6 +4,8 @@
  */
 
 #include "file.hpp"
+#include "base/maps.hpp"
+#include "base/perfect_hash.hpp"
 #include <base/exceptions.hpp>
 
 #include <fstream>
@@ -83,5 +85,20 @@ namespace fs {
 		file.read(reinterpret_cast<char*>(r_array), std::streamsize(file_size));
 
 		return { r_array, file_size };
+	}
+
+	base::HashT FilePath::customPerfectHash() const {
+		static base::HashT next_hash = 0;
+		static base::HashMap<FilePath, base::HashT> hash_map;
+		
+		// @Future: use atMaybe
+		if (hash_map.contains(*this)) {
+			return hash_map.at(*this);
+		}
+
+		auto hash = next_hash++;
+
+		hash_map.put(*this, hash);
+		return hash;
 	}
 }

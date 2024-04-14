@@ -56,7 +56,7 @@ namespace base {
 			else if constexpr(FunctionHash<T>)
 				return customPerfectHash(key);
 			else {
-				static_assert(!sizeof(T), "Actual error: Perfect hash for type T does not exist!");
+				static_assert(!sizeof(T), "Actual error: Perfect hash for type T does not exist! T should be printed somewhere in the note bellow");
 				return 0;
 			}
 		}
