@@ -7,7 +7,10 @@ struct Key1 {
 	uint64_t       v;
 	constexpr auto operator<=>(const Key1& oth) const = default;
 
-	base::HashT customPerfectHash() const { return v; }
+	[[nodiscard]]
+	base::HashT customPerfectHash() const {
+		return v;
+	}
 };
 
 struct Key2 {
