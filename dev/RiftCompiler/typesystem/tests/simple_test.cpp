@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <base/constexpr_cat.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>

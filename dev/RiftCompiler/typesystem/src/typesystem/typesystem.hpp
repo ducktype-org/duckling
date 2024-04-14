@@ -15,4 +15,6 @@
 
 namespace ts {
 	void init();  // if needed
+
+	void reset();
 }

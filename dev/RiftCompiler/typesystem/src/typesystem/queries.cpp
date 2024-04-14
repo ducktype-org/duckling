@@ -168,19 +168,20 @@ namespace ts {
 		static auto provide(Context&, const QKey key) -> PResult {
 			const auto [underlying_type, is_mutable] = key;
 			const auto pointer_pimpl = new internal::PointerInfoImpl{ underlying_type, is_mutable };
+			pushType(base::unique_ptr(pointer_pimpl));
 			return pointer_pimpl;
-		}
-
-		static auto load(const QKey key) -> LoadResult {
-			if (const auto cache_iter = cache.find(key); cache_iter != cache.end())
-				return base::Optional{ cache_iter->second };
-			return {};
 		}
 
 		static auto store(const QKey key, const PResult p_res, const query::ACD acd) -> QResult {
 			const auto q_res = QResult{ p_res };
 			cache.emplace(key, query::AddACD<QResult>{ q_res, acd });
 			return q_res;
+		}
+
+		static auto load(const QKey key) -> LoadResult {
+			if (const auto cache_iter = cache.find(key); cache_iter != cache.end())
+				return base::Optional{ cache_iter->second };
+			return {};
 		}
 	};
 
