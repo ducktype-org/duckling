@@ -18,27 +18,28 @@ namespace hir {
 			break;
 		}
 		case pst::StmtKind::Namespace: {
-			PstRef<pst::Namespace> namespace_ = stmt;
+			auto namespace_
+				= PstRef<pst::Namespace>(dynamic_cast<const pst::Namespace*>(stmt.get()));
 			return base::make_unique<NamespaceSymbol>(
 				state, scope, namespace_->getName(), namespace_
 			);
 		}
 		case pst::StmtKind::Const: {
-			PstRef<pst::Const> const_ = stmt;
+			auto const_ = PstRef<pst::Const>(dynamic_cast<const pst::Const*>(stmt.get()));
 			return base::make_unique<ConstSymbol>(state, scope, const_->getName(), const_);
 		}
 		case pst::StmtKind::Struct: {
-			PstRef<pst::Struct> struct_ = stmt;
+			auto struct_ = PstRef<pst::Struct>(dynamic_cast<const pst::Struct*>(stmt.get()));
 			return base::make_unique<StructSymbol>(state, scope, struct_->getName(), struct_);
 		}
 
 		case pst::StmtKind::Alias: {
-			PstRef<pst::Alias> alias = stmt;
+			auto alias = PstRef<pst::Alias>(dynamic_cast<const pst::Alias*>(stmt.get()));
 			return base::make_unique<AliasSymbol>(state, scope, alias->getName(), alias);
 		}
 
 		case pst::StmtKind::Using: {
-			PstRef<pst::Using> using_ = stmt;
+			auto using_ = PstRef<pst::Using>(dynamic_cast<const pst::Using*>(stmt.get()));
 			return base::make_unique<UsingSymbol>(state, scope, base::StrId("wildcard"), using_);
 		}
 
