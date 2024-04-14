@@ -2,6 +2,7 @@
 
 #include <query_framework/query_int.hpp>
 
+#include "base/perfect_hash.hpp"
 #include "type_info.hpp"
 #include "types.hpp"
 
@@ -51,6 +52,12 @@ namespace ts {
 		KeyFor_QueryIntegralType(const usize size, const bool signedness = true):
 			  size(size),
 			  signedness(signedness) {}
+
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			return size + signedness;
+		}
 	};
 
 	/**
@@ -94,6 +101,11 @@ namespace ts {
 		KeyFor_QueryPointerType(const TypeInfo underlying_type, const bool is_mutable = false):
 			  underlying_type(underlying_type),
 			  is_mutable(is_mutable) {}
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			return reinterpret_cast<std::size_t>(underlying_type.getPimpl()) + is_mutable;
+		}
 	};
 
 	/**
@@ -107,16 +119,4 @@ namespace ts {
 	DECLARE_QUERY(QueryMetaType, query::EmptyKey, MetaInfo)
 }
 
-template<>
-struct std::hash<ts::KeyFor_QueryIntegralType> {
-	std::size_t operator()(const ts::KeyFor_QueryIntegralType& key) const noexcept {
-		return key.size + key.signedness;
-	}
-};
 
-template<>
-struct std::hash<ts::KeyFor_QueryPointerType> {
-	std::size_t operator()(const ts::KeyFor_QueryPointerType& key) const noexcept {
-		return reinterpret_cast<std::size_t>(key.underlying_type.getPimpl()) + key.is_mutable;
-	}
-};
