@@ -1,5 +1,6 @@
 #include "symbols.hpp"
 #include "pst_parser/elements/elements.hpp"
+#include "pst_ref.hpp"
 #include <memory>
 #include <query_framework/query_impl.hpp>
 #include <base/stable_container.hpp>
@@ -17,12 +18,15 @@ namespace compiler::helios {
 		// created on startup:
 		ScopeID     scope;
 		base::StrId name;
-		bool        anonymous;
-		bool wildcard = false;
-		bool is_alias = false;
-		bool dependent = false;
-		SymbolKind kind;
+		bool        anonymous = false;
+		bool        wildcard = false;
+		bool        is_alias = false;
+		bool        dependent = false;
+		SymbolKind  kind;
 		// pst link? -- what about down casting...
+
+		// we will need to cast it:
+		PstRef<pst::Stmt> pst_stmt;
 
 
 		// cached: linked_lookup_scope ?
@@ -42,6 +46,12 @@ namespace compiler::helios {
 	namespace {
 		// global table:
 		base::StableVector<SymbolData> symbol_table;
+
+		template<class... T>
+		auto putInSymtable(T&&... args) {
+			auto key = symbol_table.emplaceBack(std::forward<T>(args)...);
+			return symbol_table.getRef(key).value();
+		}
 	}
 
 
@@ -49,40 +59,36 @@ namespace compiler::helios {
 	base::borrow_ptr<SymbolData> makeSymbolFromStatement(
 		ScopeID scope, PstRef<pst::Stmt> stmt
 	) {
-		PstRef<pst::Fun> fun = stmt;
-		const pst::Fun* f = static_cast<const pst::Fun*>(stmt.get());
-
-		std::unique_ptr<int> a;
-
 		switch (stmt->getKind()) {
-		// @TODO: cast check
 		case pst::StmtKind::Fun: {
-			// PstRef<pst::Fun> fun = stmt;
 			break;
 		}
 		case pst::StmtKind::Namespace: {
-			// PstRef<pst::Namespace> namespace_ = stmt;
-			// return base::make_unique<NamespaceSymbol>(
-			// 	state, scope, namespace_->getName(), namespace_
-			// );
+			auto namespace_ = dynamic_cast<const pst::Namespace*>(stmt.get());
+			return putInSymtable(SymbolData{
+				.scope    = scope,
+				.name     = namespace_->getName(),
+				.kind     = SymbolKind::Namespace,
+				.pst_stmt = stmt,
+			});
 		}
 		case pst::StmtKind::Const: {
-			// PstRef<pst::Const> const_ = stmt;
-			// return base::make_unique<ConstSymbol>(state, scope, const_->getName(), const_);
+			auto const_ = dynamic_cast<const pst::Const*>(stmt.get());
+			return putInSymtable(SymbolData{
+				.scope    = scope,
+				.name     = const_->getName(),
+				.kind     = SymbolKind::Namespace,
+				.pst_stmt = stmt,
+			});
 		}
 		case pst::StmtKind::Struct: {
-			// PstRef<pst::Struct> struct_ = stmt;
-			// return base::make_unique<StructSymbol>(state, scope, struct_->getName(), struct_);
+			break;
 		}
-
 		case pst::StmtKind::Alias: {
-			// PstRef<pst::Alias> alias = stmt;
-			// return base::make_unique<AliasSymbol>(state, scope, alias->getName(), alias);
+			break;
 		}
-
 		case pst::StmtKind::Using: {
-			// PstRef<pst::Using> using_ = stmt;
-			// return base::make_unique<UsingSymbol>(state, scope, base::StrId("wildcard"), using_);
+			break;
 		}
 
 		default:
@@ -94,13 +100,11 @@ namespace compiler::helios {
 	}
 
 
-
 	struct ImplementationOf_QuerySymbolOfSTMT:
 		public query::QueryImplementation<QuerySymbolOfSTMT, SymID>
 	{
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			// generate new symbol
-			throw "TODO";
+		static auto provide(Context&, QKey key) -> PResult {
+			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
 		}
 
 		static auto load([[maybe_unused]] QKey key) -> LoadResult { return {}; }

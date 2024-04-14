@@ -11,6 +11,8 @@ namespace compiler::helios {
 	struct SymID {
 	private:
 		base::borrow_ptr<SymbolData> ref;
+		SymID(base::borrow_ptr<SymbolData> ref): ref(ref) {}
+		friend struct ImplementationOf_QuerySymbolOfSTMT;
 	};
 	struct ScopeID {
 	private:

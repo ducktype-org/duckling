@@ -30,11 +30,15 @@ namespace compiler::helios {
 	base::StrId name(SymID);
 	SymbolKind kind(SymID);
 
+	struct KeyOf_QuerySymbolOfSTMT {
+		ScopeID scope;
+		PstRef<pst::Stmt> stmt;
+	};
+
 	/**
 	 * @brief Construct a new declare query object
-	 * 
 	 */
-	DECLARE_QUERY(QuerySymbolOfSTMT, PstRef<pst::Stmt>, SymID);
+	DECLARE_QUERY(QuerySymbolOfSTMT, KeyOf_QuerySymbolOfSTMT, SymID);
 
 	// @TODO str
 	DECLARE_QUERY(QueryLookupIn, SymID, LookupResult);
