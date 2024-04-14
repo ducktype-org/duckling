@@ -6,14 +6,15 @@
 struct Key1 {
 	uint64_t       v;
 	constexpr auto operator<=>(const Key1& oth) const = default;
+
 	base::HashT customPerfectHash() { return v; }
 };
 
 struct Key2 {
 	uint64_t v;
+
 	base::HashT customPerfectHash() { return v; }
 };
-
 
 DECLARE_QUERY(Fibonacci, Key1, uint64_t);
 DECLARE_QUERY(FibonacciSum, Key2, uint64_t);

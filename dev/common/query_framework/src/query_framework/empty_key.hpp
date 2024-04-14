@@ -10,4 +10,3 @@ namespace query {
 		base::HashT customPerfectHash() { return 0; }
 	};
 }
-

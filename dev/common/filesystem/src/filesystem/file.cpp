@@ -88,13 +88,11 @@ namespace fs {
 	}
 
 	base::HashT FilePath::customPerfectHash() const {
-		static base::HashT next_hash = 0;
+		static base::HashT                          next_hash = 0;
 		static base::HashMap<FilePath, base::HashT> hash_map;
-		
+
 		// @Future: use atMaybe
-		if (hash_map.contains(*this)) {
-			return hash_map.at(*this);
-		}
+		if (hash_map.contains(*this)) return hash_map.at(*this);
 
 		auto hash = next_hash++;
 

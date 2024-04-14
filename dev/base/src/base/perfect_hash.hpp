@@ -53,10 +53,14 @@ namespace base {
 		HashT perfectHashCPO(const T& key) {
 			if constexpr (MemberHash<T>)
 				return key.customPerfectHash();
-			else if constexpr(FunctionHash<T>)
+			else if constexpr (FunctionHash<T>)
 				return customPerfectHash(key);
 			else {
-				static_assert(!sizeof(T), "Actual error: Perfect hash for type T does not exist! T should be printed somewhere in the note bellow");
+				static_assert(
+					!sizeof(T),
+					"Actual error: Perfect hash for type T does not exist! T should be printed "
+				    "somewhere in the note bellow"
+				);
 				return 0;
 			}
 		}

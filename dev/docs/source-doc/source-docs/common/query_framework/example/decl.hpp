@@ -13,6 +13,7 @@ struct Key {
 
 	// for example:
 	uint64_t v;
+
 	base::HashT customPerfectHash() { return v; }
 };
 
