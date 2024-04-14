@@ -112,6 +112,7 @@ namespace fs {
 
 		bool operator<(const FilePath& oth) const { return path < oth.path; }
 
+		[[nodiscard]]
 		base::HashT customPerfectHash() const;
 	};
 

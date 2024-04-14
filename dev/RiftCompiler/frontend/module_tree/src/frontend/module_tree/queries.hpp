@@ -6,7 +6,6 @@
 #include <base/maps.hpp>
 
 // @TODO: this dependency can be relaxed by separating ModuleID and FileID
-#include "base/perfect_hash.hpp"
 #include "module_tree.hpp"
 
 namespace compiler::frontend {

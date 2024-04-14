@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ints.hpp"
-#include <cstddef>
 #include <type_traits>
 
 namespace base {
