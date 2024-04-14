@@ -13,7 +13,10 @@ struct Key1 {
 struct Key2 {
 	uint64_t v;
 
-	base::HashT customPerfectHash() const { return v; }
+	[[nodiscard]]
+	base::HashT customPerfectHash() const {
+		return v;
+	}
 };
 
 DECLARE_QUERY(Fibonacci, Key1, uint64_t);
