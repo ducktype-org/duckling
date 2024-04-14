@@ -44,11 +44,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message("-- GNU compiler")
   # '-std=c++20' is necessary for successful assembly target generation during RiftVM development
-  add_compile_options(-std=c++20 -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Wall -Wextra -Wno-sign-compare -O2)
+  add_compile_options(-std=c++20 -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare -O2)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
 	# I didn't find a good -Werror=terminate alternative
-	add_compile_options(-Werror=return-type -Werror=shadow-all -Werror=return-local-addr -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare -O2)
+	add_compile_options(-Werror=return-type -Werror=shadow-all -Werror=return-stack-address -Werror=free-nonheap-object -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare -O2)
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()
@@ -142,7 +142,7 @@ add_custom_target(build_all_tests)
 function(add_custom_test_pack NAME)
 	set(BUILD_PACK_TARGET "build_${NAME}_tests")
 	add_custom_target("${BUILD_PACK_TARGET}")
-	add_test(NAME ${BUILD_PACK_TARGET} COMMAND "${CMAKE_COMMAND}" --build ${CMAKE_BINARY_DIR} --target ${BUILD_PACK_TARGET})
+	add_test(NAME ${BUILD_PACK_TARGET} COMMAND "${CMAKE_COMMAND}" --build ${CMAKE_BINARY_DIR} --target ${BUILD_PACK_TARGET} -j ${CMAKE_BUILD_PARALLEL_LEVEL})
 	set_property(TEST ${BUILD_PACK_TARGET} PROPERTY LABELS "${NAME}")
 
 	add_custom_target("test_${NAME}"

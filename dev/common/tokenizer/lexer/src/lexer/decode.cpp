@@ -6,19 +6,18 @@
 
 namespace lexer {
 	template<>
-	CharArray decode<fs::US_ASCII>(base::RawView bytes, dia::ErrorState& errorState) {
+	CharArray decode<fs::US_ASCII>(base::RawView bytes, dia::Logger& errorState) {
 		std::vector<Char> out;
 		for (usize i = 0; i < bytes.size(); i++) {
 			// Check if valid ascii byte
 			if ((bytes[i] & byte{ 0b10000000u }) != byte{ 0 }) {
-				errorState.failAndLog({ { { "ASCII decoding error:", printer::Color::BRIGHT_RED },
-				                          base::strConcat(
-											  "undefined ASCII byte ",
-											  base::toHexString(usize(bytes[i]), 2),
-											  " encountered at position ",
-											  i + 1
-										  ) },
-				                        printer::MessageType::ERROR });
+				errorState.failAndLog({ base::strConcat(
+					"ASCII decoding error:",
+					"undefined ASCII byte ",
+					base::toHexString(usize(bytes[i]), 2),
+					" encountered at position ",
+					i + 1
+				) });
 				continue;
 			}
 			out.emplace_back(UChar32(bytes[i]), u8{ 1 }, bytes.getBegin() + i);
@@ -31,13 +30,11 @@ namespace lexer {
 	}
 
 	template<>
-	CharArray decode<fs::UTF8>(base::RawView bytes, dia::ErrorState& errorState) {
+	CharArray decode<fs::UTF8>(base::RawView bytes, dia::Logger& errorState) {
 		std::vector<Char> out;
 
 		auto log_error = [&](std::string message) {
-			errorState.failAndLog({ { { "UTF-8 decoding error:", printer::Color::BRIGHT_RED },
-			                          std::move(message) },
-			                        printer::MessageType::ERROR });
+			errorState.failAndLog({ "UTF-8 decoding error:" + message });
 		};
 
 		usize pos = 0;
