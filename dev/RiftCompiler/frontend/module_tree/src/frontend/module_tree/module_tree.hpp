@@ -29,7 +29,10 @@ namespace compiler::frontend {
 		static FileId nextID();
 		bool          operator==(const FileId&) const = default;
 
-		base::HashT customPerfectHash() const { return asInt(); }
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			return asInt();
+		}
 
 	private:
 		u64 id;
@@ -66,7 +69,10 @@ namespace compiler::frontend {
 		static ModuleId nextID();
 		bool            operator==(const ModuleId&) const = default;
 
-		base::HashT customPerfectHash() const { return asInt(); }
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			return asInt();
+		}
 
 	private:
 		ModuleId() = default;
