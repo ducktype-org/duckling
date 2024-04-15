@@ -3,7 +3,12 @@
 import pathlib
 import click
 
-from scripts.toolbox.helpers import bash_command, exit_with_error, log_info, log_new_line
+from scripts.toolbox.helpers import (
+    bash_command,
+    exit_with_error,
+    log_info,
+    log_new_line,
+)
 from scripts.toolbox.internet_file import (
     InternetFile,
     callback_chmod,
@@ -197,27 +202,23 @@ def init():
     default="Ninja",
 )
 def coverage(name, build_system):
-    if not os.path.exists(name):
+    if not pathlib.Path(name).exists():
         exit_with_error(f"Given build folder does not exist: {name}.")
 
     with_venv(f"cmake -D ENABLE_COVERAGE=true -B {name}")
-    os.chdir(name)
-    bash_command(f"cmake --build . -j 5 -- test")
+    bash_command(f"cmake --build name -j 5 -- test")
 
     build_system = build_system.lower()
     if "ninja" in build_system:
-        bash_command("ninja coverage")
+        bash_command("ninja coverage", cwd=name)
     if "makefile" in build_system:
-        bash_command("make coverage")
+        bash_command("make coverage", cwd=name)
 
-    bash_command("xdg-open coverage/index.html")
+    bash_command("xdg-open coverage/index.html", cwd=name)
 
 
 if __name__ == "__main__":
-    # @TODO: this is kind of stupid solution
-    # I for example run `python3 toolbox.py` and it broke
-    if not "dev/./toolbox.py" in __file__:
-        click.echo(click.style("Error: Toolbox should be  called from the root of the project", fg="red"))
-        exit(1)
-        
+    if pathlib.Path.cwd() != pathlib.Path(__file__).parent.absolute():
+        exit_with_error("Toolbox should be called from the root of the project")
+
     cli()
