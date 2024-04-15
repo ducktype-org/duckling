@@ -9,8 +9,8 @@ Usage
 
 In order to define perfect hash for given type :code:`T` you have to do one of:
 
-* write :code:`t.customPerfectHash() -> base::HashT` method.
-* write :code:`customPerfectHash(T) -> base::HashT` function declared in the same scope as type :code:`T`.
+* write :code:`t.customPerfectHash() const -> base::HashT` method.
+* write :code:`customPerfectHash(const T& /*or T*/) -> base::HashT` function declared in the same scope as type :code:`T`.
 
 In order to get perfect hash of any type use :code:`base::perfectHash`.
 
