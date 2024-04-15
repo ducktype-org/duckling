@@ -137,7 +137,7 @@ def setup_venv_impl():
         bash_command("python3 -m venv .venv")
         log_info("Downloading venv dependencies...")
         with_venv("python3 -m pip install -r docs/doc-config/requirements.txt")
-        log_info("Venv done.")
+        log_info("Done creating venv.")
     else:
         log_info("Venv already exits. Skip.")
 
@@ -172,9 +172,10 @@ def download_binaries(force):
     download_binaries_impl(force)
 
 
-@cli.command()
-def init():
-    """A general repo setup, performs downloading of submodules and binaries, creates a python venv, etc.."""
+def init_impl():
+    log_info("Initializing the REPO!...")
+    log_new_line()
+
     log_info("Initializing git submodules...")
     bash_command("git submodule update --init")
     log_new_line()
@@ -184,6 +185,12 @@ def init():
 
     download_binaries_impl(False)
     log_new_line()
+
+
+@cli.command()
+def init():
+    """A general repo setup, performs downloading of submodules and binaries, creates a python venv, etc.."""
+    init_impl()
 
 
 @cli.command()
@@ -236,12 +243,14 @@ def coverage(name, build_system):
     prompt="This operation deletes files, are you sure?",
 )
 def clean_init(name):
-    log_info("Removing .venv...")
+    """Removes things done by init and inits them again"""
+    log_info("Removing .venv, build folder and downloaded binaries...")
     bash_command(f"rm -rf {name}")
     bash_command("rm -rf .venv")
-    # Enable extended globbing
-    bash_command("shopt -s extglob")
-    bash_command("rm -- !(.gitignore)", cwd="scripts/downloads/")
+    bash_command(
+        "find . ! -name '.gitignore' -type f -exec rm -r {} +", cwd="scripts/downloads/"
+    )
+    init_impl()
 
 
 if __name__ == "__main__":
