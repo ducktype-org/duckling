@@ -45,12 +45,11 @@
 		for (auto&& _internal_optional = (optional); _perform_match; _perform_match = false) \
 	POP_DIAGNOSTIC
 
-#define opt_some(_value_name)                                                   \
-	PUSH_DIAGNOSTIC                                                             \
-	NO_SHADOW                                                                   \
-	if (bool _perform_if = _internal_optional.has_value())                      \
-		for (const auto& _value_name = _internal_optional.value(); _perform_if; \
-		     _perform_if             = false)                                   \
+#define opt_some(_value_name)                                                                   \
+	PUSH_DIAGNOSTIC                                                                             \
+	NO_SHADOW                                                                                   \
+	if (bool _perform_if = _internal_optional.has_value())                                      \
+		for (auto&& _value_name = _internal_optional.value(); _perform_if; _perform_if = false) \
 	POP_DIAGNOSTIC
 
 #define opt_none    \
@@ -58,13 +57,13 @@
 	NO_SHADOW       \
 	if (!_internal_optional.has_value()) POP_DIAGNOSTIC
 
-#define if_opt_some(optional, _value_name)                                          \
-	PUSH_DIAGNOSTIC                                                                 \
-	NO_SHADOW                                                                       \
-	if (bool _perform_if = optional.has_value())                                    \
-		for (auto&& _internal_optional = (optional); _perform_if;)                  \
-			for (const auto& _value_name = _internal_optional.value(); _perform_if; \
-			     _perform_if             = false)                                   \
+#define if_opt_some(optional, _value_name)                                     \
+	PUSH_DIAGNOSTIC                                                            \
+	NO_SHADOW                                                                  \
+	if (bool _perform_if = optional.has_value())                               \
+		for (auto&& _internal_optional = (optional); _perform_if;)             \
+			for (auto&& _value_name = _internal_optional.value(); _perform_if; \
+			     _perform_if        = false)                                   \
 	POP_DIAGNOSTIC
 
 
