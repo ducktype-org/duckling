@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
+import pathlib
 import click
-import os
 
 from scripts.toolbox.helpers import bash_command, exit_with_error, log_info
 from scripts.toolbox.internet_file import (
@@ -9,7 +9,7 @@ from scripts.toolbox.internet_file import (
     callback_chmod,
     callback_move,
     callback_remove,
-    callback_unTARXZ,
+    callback_unTAR,
 )
 
 
@@ -29,7 +29,7 @@ FILES_TO_DOWNLOAD: list[InternetFile] = [
         "scripts/downloads/ccache.tar.xz",
         "https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz",
         after_download=[
-            (callback_unTARXZ,),
+            (callback_unTAR,),
             (callback_move, "ccache-4.9.1-linux-x86_64/ccache", "ccache"),
             (callback_remove, "ccache-4.9.1-linux-x86_64"),
         ],
@@ -43,7 +43,7 @@ def cli():
 
 
 def with_venv(cmd):
-    if not os.path.exists(".venv"):
+    if not pathlib.Path(".venv").exists():
         exit_with_error('.venv does not exits. Use "./toolbox.py setup-venv"')
 
     bash_command(f"source .venv/bin/activate && {cmd}")
@@ -126,7 +126,7 @@ def setup_build(*args, **kwargs):
 
 
 def setup_venv_impl():
-    if not os.path.exists(".venv"):
+    if not pathlib.Path(".venv").exists():
         log_info("Creating venv...")
         bash_command("python3 -m venv .venv")
         log_info("Downloading venv dependencies...")
