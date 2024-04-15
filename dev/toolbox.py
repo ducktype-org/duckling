@@ -55,7 +55,7 @@ def with_venv(cmd):
     bash_command(f"source .venv/bin/activate && {cmd}")
 
 
-def setup_build_impl(name, build_system, type, docs, compiler, ccache):
+def setup_build_impl(name, build_system, type, docs, compiler, ccache, coverage):
     """Makes a build folder"""
 
     cmd = f"""
@@ -66,6 +66,7 @@ def setup_build_impl(name, build_system, type, docs, compiler, ccache):
          -D BUILD_DOCS={'ON' if docs else 'OFF'}
          -D CMAKE_CXX_COMPILER={compiler}
          -D USE_CCACHE={'ON' if ccache else 'OFF'}
+         -D ENABLE_COVERAGE={'true' if coverage else 'false'}
     """
     cmd = cmd.replace("\n", " ")
 
@@ -122,6 +123,14 @@ def setup_build_impl(name, build_system, type, docs, compiler, ccache):
     "--ccache",
     prompt="Use ccache",
     help="Whether or not to use ccache.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@click.option(
+    "--coverage",
+    prompt="Enable coverage",
+    help="Whether or not to enable coverage",
     type=bool,
     default=False,
     is_flag=True,
@@ -202,36 +211,25 @@ def init():
     default="build",
 )
 @click.option(
-    "-b",
-    "--build-system",
-    prompt="Build system",
-    help="The build system to use",
-    type=BUILD_SYSTEMS,
-    default="Ninja",
-)
-@click.option(
     "-j",
     "--thread-count",
-    prompt="Thread count used when building",
-    help="The build system to use",
+    prompt="Number of threads used when building",
+    help="Number of threads used when building",
     type=int,
     default="1",
 )
-def coverage(name, build_system, threads):
-    """Builds and runs coverage on inside given directory"""
+def coverage(name, thread_count):
+    """Builds and runs coverage on inside given build directory.
+    This directory has to have coverage enabled"""
+   
     log_info("Running coverage...")
     if not pathlib.Path(name).exists():
         exit_with_error(f"Given build folder does not exist: {name}.")
 
-    with_venv(f"cmake -D ENABLE_COVERAGE=true -B {name}")
-    bash_command(f"cmake --build {name} -j {threads} -- build_all_tests")
-    bash_command(f"cmake --build {name} -j {threads} -- test")
+    bash_command(f"cmake --build {name} -j {thread_count} -- build_all_tests")
+    bash_command(f"cmake --build {name} -j {thread_count} -- test")
 
-    build_system = build_system.lower()
-    if "ninja" in build_system:
-        bash_command("ninja coverage", cwd=name)
-    if "makefile" in build_system:
-        bash_command("make coverage", cwd=name)
+    bash_command(f"cmake --build {name} -- coverage")
 
     bash_command("xdg-open coverage/index.html", cwd=name)
 
