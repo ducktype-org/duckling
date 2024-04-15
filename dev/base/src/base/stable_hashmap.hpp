@@ -41,7 +41,8 @@ namespace base {
 		 * @return An optional with a reference to the data.
 		 */
 		Optional<DATA_T&> atMaybe(const KEY_T& key) {
-			return data.atMaybe(key).map([](auto& value) { return *value; });
+			if_opt_some(data.atMaybe(key), ptr) { return *ptr; }
+			return {};
 		}
 
 		/**
@@ -51,7 +52,8 @@ namespace base {
 		 * @return An optional with a const reference to the data.
 		 */
 		Optional<const DATA_T&> atMaybe(const KEY_T& key) const {
-			return data.atMaybe(key).map([](const auto& value) { return *value; });
+			if_opt_some(data.atMaybe(key), ptr) { return *ptr; }
+			return {};
 		}
 
 		/**
