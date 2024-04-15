@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 import click
+import subprocess
 import os
 import enum
 import urllib.request
@@ -15,6 +16,10 @@ class ShellType(enum.Enum):
 
 BUILD_SYSTEMS = click.Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
 
+def bash_command(cmd):
+    click.echo(click.style(f"Running: {cmd}", fg="yellow"))
+    proc = subprocess.Popen(['/bin/bash', '-c', cmd])
+    proc.wait()
 
 @dataclass
 class InternetFile:
@@ -66,22 +71,30 @@ def with_venv(cmd):
         exit_with_error('.venv does not exits. Use "./toolbox.py setup-venv"')
 
     if get_shell() == ShellType.FISH:
-        os.system(f"source .venv/bin/activate.fish && {cmd}")
+        bash_command(f"source .venv/bin/activate.fish && {cmd}")
     else:
-        os.system(f"source .venv/bin/activate && {cmd}")
+        bash_command(f"source .venv/bin/activate && {cmd}")
 
 
-def setup_build_impl(name, build_system, type, docs, compiler):
+def setup_build_impl(name, build_system, type, docs, compiler, ccache):
     """Makes a build folder"""
 
-    cmd = f'cmake -G "{build_system}" -B {name} -D CMAKE_BUILD_TYPE={type}'
-    f" -D BUILD_DOCS={'ON' if docs else 'OFF'} -D CMAKE_CXX_COMPILER={compiler}"
+    cmd = f"""
+        cmake
+         -G "{build_system}"
+         -B {name}
+         -D CMAKE_BUILD_TYPE={type}
+         -D BUILD_DOCS={'ON' if docs else 'OFF'}
+         -D CMAKE_CXX_COMPILER={compiler}
+         -D USE_CCACHE={'ON' if ccache else 'OFF'}
+    """
+    cmd = cmd.replace("\n", " ")
 
     click.echo("Setting up a build folder...")
     if docs:
         with_venv(cmd)
     else:
-        os.system(cmd)
+        bash_command(cmd)
 
 
 @cli.command()
@@ -126,6 +139,14 @@ def setup_build_impl(name, build_system, type, docs, compiler):
     help="A path to the complier to compile with",
     default="g++",
 )
+@click.option(
+    "--ccache",
+    prompt="Use ccache",
+    help="Whether or not to use ccache.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
     setup_build_impl(*args, **kwargs)
@@ -134,7 +155,7 @@ def setup_build(*args, **kwargs):
 def setup_venv_impl():
     if not os.path.exists(".venv"):
         click.echo("Creating venv...")
-        os.system("python3 -m venv .venv")
+        bash_command("python3 -m venv .venv")
         click.echo("Downloading venv dependencies...")
         with_venv("python3 -m pip install -r docs/doc-config/requirements.txt")
 
@@ -161,7 +182,7 @@ def download_binaries():
 def init():
     """A general repo setup, performs downloading of submodules and binaries, creates a python venv, etc.."""
     click.echo("Initializing git submodules...")
-    os.system("git submodule update --init")
+    bash_command("git submodule update --init")
     setup_venv_impl()
     download_binaries_impl(False)
 
@@ -188,15 +209,15 @@ def coverage(name, build_system):
 
     with_venv(f"cmake -D ENABLE_COVERAGE=true -B {name}")
     os.chdir(name)
-    os.system(f"cmake --build . -j 5 -- test")
+    bash_command(f"cmake --build . -j 5 -- test")
 
     build_system = build_system.lower()
     if "ninja" in build_system:
-        os.system("ninja coverage")
+        bash_command("ninja coverage")
     if "makefile" in build_system:
-        os.system("make coverage")
+        bash_command("make coverage")
 
-    os.system("xdg-open coverage/index.html")
+    bash_command("xdg-open coverage/index.html")
 
 
 if __name__ == "__main__":
