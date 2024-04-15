@@ -30,7 +30,11 @@ class InternetFile:
 FILES_TO_DOWNLOAD: list[InternetFile] = [
     InternetFile(
         "scripts/formatting/clang-format",
-        "https://static.ducktype.org/bin/clang-format",
+        "https://internal:1Aasjviedhvo=@static.ducktype.org/bin/clang-format",
+    ),
+    InternetFile(
+        "scripts/ccache/ccache",
+        "https://internal:1Aasjviedhvo=@static.ducktype.org/bin/ccache",
     )
 ]
 
