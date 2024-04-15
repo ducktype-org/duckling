@@ -3,7 +3,7 @@
 import pathlib
 import click
 
-from scripts.toolbox.helpers import bash_command, exit_with_error, log_info
+from scripts.toolbox.helpers import bash_command, exit_with_error, log_info, log_new_line
 from scripts.toolbox.internet_file import (
     InternetFile,
     callback_chmod,
@@ -131,6 +131,9 @@ def setup_venv_impl():
         bash_command("python3 -m venv .venv")
         log_info("Downloading venv dependencies...")
         with_venv("python3 -m pip install -r docs/doc-config/requirements.txt")
+        log_info("Venv done.")
+    else:
+        log_info("Venv already exits. Skip.")
 
 
 @cli.command()
@@ -146,18 +149,20 @@ def download_binaries_impl(force=False):
     for file in FILES_TO_DOWNLOAD:
         file.download(force)
 
+    log_info("Download done")
+
 
 @cli.command()
 @click.option(
     "-f",
     "--force",
-    help="Whether or not to force the download",
+    help="Whether or not to force the download of files that already exits",
     is_flag=True,
     type=bool,
     default=False,
 )
 def download_binaries(force):
-    """Download binary files from the internet"""
+    """Download necessary binary files from the internet"""
     download_binaries_impl(force)
 
 
@@ -166,8 +171,13 @@ def init():
     """A general repo setup, performs downloading of submodules and binaries, creates a python venv, etc.."""
     log_info("Initializing git submodules...")
     bash_command("git submodule update --init")
+    log_new_line()
+
     setup_venv_impl()
+    log_new_line()
+
     download_binaries_impl(False)
+    log_new_line()
 
 
 @cli.command()
@@ -204,7 +214,10 @@ def coverage(name, build_system):
 
 
 if __name__ == "__main__":
+    # @TODO: this is kind of stupid solution
+    # I for example run `python3 toolbox.py` and it broke
     if not "dev/./toolbox.py" in __file__:
-        raise RuntimeError("Toolbox should be called from the root of the project")
-
+        click.echo(click.style("Error: Toolbox should be  called from the root of the project", fg="red"))
+        exit(1)
+        
     cli()

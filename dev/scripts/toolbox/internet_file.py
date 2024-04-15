@@ -36,6 +36,8 @@ class InternetFile:
 
             except requests.exceptions.HTTPError as e:
                 exit_with_error(e)
+        else:
+            log_info(f"File {self.path} already exits. Skiped.")
 
 
 def callback_unTAR(res: InternetFile):
