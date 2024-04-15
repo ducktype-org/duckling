@@ -13,7 +13,7 @@ class InternetFile:
         self.resource_url = resource_url
         self.auth = auth
         self.after_download_callbacks = after_download
-        self.parent_dir = pathlib.Path(self.path).parent.absolute()
+        self.parent_dir = self.path.parent.absolute()
 
     def download(self, force=False):
         if force or not self.path.exists():
