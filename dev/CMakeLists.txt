@@ -10,8 +10,8 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 # avaiable only from CMAKE 3.24.
 # @FUTURE: un-if it.
 # Note: It is not that important for us (as of 11.2023).
-#       It is realated to dependecies.
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
+#       It is realated to dependecies. 
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0") 
 	cmake_policy(SET CMP0135 NEW)
 endif()
 
@@ -23,7 +23,7 @@ option(USE_CCACHE "Use ccache" OFF)
 if (USE_CCACHE)
 	message(NOTICE "Ccache might not work with generators other then make or ninja!")
 
-	find_program(CCACHE "ccache" PATHS "scripts/downloads/ccache-4.9.1-linux-x86_64/" NO_DEFAULT_PATH REQUIRED)
+	find_program(CCACHE "ccache" PATHS "scripts/ccache/ccache-4.9.1-linux-x86_64/" NO_DEFAULT_PATH REQUIRED)
 
 	if(CCACHE)
 		message(STATUS "Ccache set to: ${CCACHE}")
@@ -104,7 +104,7 @@ function(rift_add_test test_pack test_name source USES)
 endfunction()
 
 define_property(TARGET PROPERTY MODULE_DIRECTORIES BRIEF_DOCS "Used for clean-modules target" FULL_DOCS "Used for clean-modules target")
-add_custom_target(clean-modules
+add_custom_target(clean-modules 
 				echo "Deleting following directories:"
 				COMMAND echo -e "$<JOIN:$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>,\\n>"
 				COMMAND rm -rfI "$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>" || "true"
@@ -124,7 +124,7 @@ function(make_module MODULE_NAME)
 	set_property(TARGET clean-modules APPEND PROPERTY MODULE_DIRECTORIES ${CMAKE_CURRENT_BINARY_DIR})
 
 	target_include_directories(${MODULE_NAME} PUBLIC src ${make_module_INCLUDE})
-	target_link_libraries(${MODULE_NAME} ${make_module_USES})
+	target_link_libraries(${MODULE_NAME} ${make_module_USES}) 
 endfunction()
 
 function(add_example exmaple_name source USES)
