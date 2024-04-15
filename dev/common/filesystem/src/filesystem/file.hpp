@@ -66,9 +66,9 @@ namespace fs {
 		friend struct ::std::hash<fs::FilePath>;
 
 	public:
-		 FilePath(const FilePath&) = default;
-		 FilePath(FilePath&&)      = default;
-		~FilePath()                = default;
+		FilePath(const FilePath&) = default;
+		FilePath(FilePath&&)      = default;
+		~FilePath()               = default;
 
 		FilePath(const std::filesystem::path& path):
 			  path(std::filesystem::canonical(std::filesystem::absolute(path))) {}
