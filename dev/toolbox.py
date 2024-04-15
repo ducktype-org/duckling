@@ -209,14 +209,23 @@ def init():
     type=BUILD_SYSTEMS,
     default="Ninja",
 )
-def coverage(name, build_system):
+@click.option(
+    "-j",
+    "--thread-count",
+    prompt="Thread count used when building",
+    help="The build system to use",
+    type=int,
+    default="1",
+)
+def coverage(name, build_system, threads):
     """Builds and runs coverage on inside given directory"""
     log_info("Running coverage...")
     if not pathlib.Path(name).exists():
         exit_with_error(f"Given build folder does not exist: {name}.")
 
     with_venv(f"cmake -D ENABLE_COVERAGE=true -B {name}")
-    bash_command(f"cmake --build name -j 5 -- test")
+    bash_command(f"cmake --build {name} -j {threads} -- build_all_tests")
+    bash_command(f"cmake --build {name} -j {threads} -- test")
 
     build_system = build_system.lower()
     if "ninja" in build_system:
