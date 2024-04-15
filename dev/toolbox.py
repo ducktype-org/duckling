@@ -4,7 +4,13 @@ import click
 import os
 
 from scripts.toolbox.helpers import bash_command, exit_with_error, log_info
-from scripts.toolbox.internet_file import InternetFile, callback_unTARXZ_and_remove
+from scripts.toolbox.internet_file import (
+    InternetFile,
+    callback_chmod,
+    callback_move,
+    callback_remove,
+    callback_unTARXZ,
+)
 
 
 DATA_USER = "internal"
@@ -17,11 +23,16 @@ FILES_TO_DOWNLOAD: list[InternetFile] = [
         "scripts/downloads/clang-format",
         "https://static.ducktype.org/bin/clang-format",
         auth=(DATA_USER, DATA_PASS),
+        after_download=[(callback_chmod, "clang-format", "u+x")],
     ),
     InternetFile(
         "scripts/downloads/ccache.tar.xz",
         "https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz",
-        after_download=callback_unTARXZ_and_remove,
+        after_download=[
+            (callback_unTARXZ,),
+            (callback_move, "ccache-4.9.1-linux-x86_64/ccache", "ccache"),
+            (callback_remove, "ccache-4.9.1-linux-x86_64"),
+        ],
     ),
 ]
 

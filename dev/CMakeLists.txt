@@ -23,7 +23,7 @@ option(USE_CCACHE "Use ccache" OFF)
 if(USE_CCACHE)
 	message(NOTICE "Ccache might not work with generators other then make or ninja!")
 
-	find_program(CCACHE "ccache" PATHS "scripts/downloads/ccache-4.9.1-linux-x86_64/" NO_DEFAULT_PATH REQUIRED)
+	find_program(CCACHE "ccache" PATHS "scripts/downloads/" NO_DEFAULT_PATH REQUIRED)
 
 	if(CCACHE)
 		message(STATUS "Ccache set to: ${CCACHE}")
