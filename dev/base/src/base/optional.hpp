@@ -91,13 +91,13 @@ namespace base {
 	template<class T>
 	class Optional {
 	public:
-		 Optional() = default;
+		Optional()  = default;
 		~Optional() = default;
 
 		Optional(const T& value): private_optional(value) {}
 
-				  Optional(Optional&&)       = default;
-				  Optional(const Optional&)  = default;
+		Optional(Optional&&)                 = default;
+		Optional(const Optional&)            = default;
 		Optional& operator=(Optional&&)      = default;
 		Optional& operator=(const Optional&) = default;
 
@@ -346,8 +346,8 @@ namespace base {
 
 		Optional(T& value): private_optional(std::ref(value)) {}
 
-				  Optional(Optional&&)       = default;
-				  Optional(const Optional&)  = default;
+		Optional(Optional&&)                 = default;
+		Optional(const Optional&)            = default;
 		Optional& operator=(Optional&&)      = default;
 		Optional& operator=(const Optional&) = default;
 
