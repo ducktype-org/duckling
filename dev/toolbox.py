@@ -1,64 +1,29 @@
 #!/usr/bin/python3
 
-from dataclasses import dataclass
 import click
-import subprocess
 import os
-import enum
-import urllib.request
+
+from scripts.toolbox.helpers import bash_command, exit_with_error, log_info
+from scripts.toolbox.internet_file import InternetFile, callback_unTARXZ_and_remove
 
 
-class ShellType(enum.Enum):
-    BASH = 1
-    FISH = 2
-    ZSH = 3
-
-
+DATA_USER = "internal"
+DATA_PASS = "1Aasjviedhvo="
 BUILD_SYSTEMS = click.Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
-
-def bash_command(cmd):
-    click.echo(click.style(f"Running: {cmd}", fg="yellow"))
-    proc = subprocess.Popen(['/bin/bash', '-c', cmd])
-    proc.wait()
-
-@dataclass
-class InternetFile:
-    path: str
-    resource_url: str
-
-    def download(self, force=False):
-        if not force and os.path.exists(os.path.join(self.path)):
-            return
-        urllib.request.urlretrieve(self.resource_url, self.path)
 
 
 FILES_TO_DOWNLOAD: list[InternetFile] = [
     InternetFile(
-        "scripts/formatting/clang-format",
-        "https://internal:1Aasjviedhvo=@static.ducktype.org/bin/clang-format",
+        "scripts/downloads/clang-format",
+        "https://static.ducktype.org/bin/clang-format",
+        auth=(DATA_USER, DATA_PASS),
     ),
     InternetFile(
-        "scripts/ccache/ccache",
-        "https://internal:1Aasjviedhvo=@static.ducktype.org/bin/ccache",
-    )
+        "scripts/downloads/ccache.tar.xz",
+        "https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz",
+        after_download=callback_unTARXZ_and_remove,
+    ),
 ]
-
-
-def exit_with_error(msg):
-    click.echo(click.style("ERROR: ", fg="red", bold=True), nl=False)
-    click.echo(click.style(msg, fg="red"))
-
-    exit(1)
-
-
-def get_shell() -> ShellType:
-    if "bash" in os.environ["SHELL"]:
-        return ShellType.BASH
-    if "fish" in os.environ["SHELL"]:
-        return ShellType.FISH
-    if "zsh" in os.environ["SHELL"]:
-        return ShellType.ZSH
-    return ShellType.BASH
 
 
 @click.group()
@@ -70,10 +35,7 @@ def with_venv(cmd):
     if not os.path.exists(".venv"):
         exit_with_error('.venv does not exits. Use "./toolbox.py setup-venv"')
 
-    if get_shell() == ShellType.FISH:
-        bash_command(f"source .venv/bin/activate.fish && {cmd}")
-    else:
-        bash_command(f"source .venv/bin/activate && {cmd}")
+    bash_command(f"source .venv/bin/activate && {cmd}")
 
 
 def setup_build_impl(name, build_system, type, docs, compiler, ccache):
@@ -90,7 +52,7 @@ def setup_build_impl(name, build_system, type, docs, compiler, ccache):
     """
     cmd = cmd.replace("\n", " ")
 
-    click.echo("Setting up a build folder...")
+    log_info("Setting up a build folder...")
     if docs:
         with_venv(cmd)
     else:
@@ -154,9 +116,9 @@ def setup_build(*args, **kwargs):
 
 def setup_venv_impl():
     if not os.path.exists(".venv"):
-        click.echo("Creating venv...")
+        log_info("Creating venv...")
         bash_command("python3 -m venv .venv")
-        click.echo("Downloading venv dependencies...")
+        log_info("Downloading venv dependencies...")
         with_venv("python3 -m pip install -r docs/doc-config/requirements.txt")
 
 
@@ -167,21 +129,31 @@ def setup_venv():
 
 
 def download_binaries_impl(force=False):
-    click.echo("Downloading binary files...")
+    log_info(
+        f"Downloading binary files {'WITH force' if force else 'WITHOUT force'}..."
+    )
     for file in FILES_TO_DOWNLOAD:
         file.download(force)
 
 
 @cli.command()
-def download_binaries():
+@click.option(
+    "-f",
+    "--force",
+    help="Whether or not to force the download",
+    is_flag=True,
+    type=bool,
+    default=False,
+)
+def download_binaries(force):
     """Download binary files from the internet"""
-    download_binaries_impl(True)
+    download_binaries_impl(force)
 
 
 @cli.command()
 def init():
     """A general repo setup, performs downloading of submodules and binaries, creates a python venv, etc.."""
-    click.echo("Initializing git submodules...")
+    log_info("Initializing git submodules...")
     bash_command("git submodule update --init")
     setup_venv_impl()
     download_binaries_impl(False)
@@ -221,5 +193,7 @@ def coverage(name, build_system):
 
 
 if __name__ == "__main__":
-    # TODO: Chdir to root.
+    if not "dev/./toolbox.py" in __file__:
+        raise RuntimeError("Toolbox should be called from the root of the project")
+
     cli()
