@@ -4,6 +4,7 @@ import pathlib
 import click
 
 from scripts.toolbox.helpers import (
+    abort_if_false,
     bash_command,
     exit_with_error,
     log_info,
@@ -202,6 +203,8 @@ def init():
     default="Ninja",
 )
 def coverage(name, build_system):
+    """Builds and runs coverage on inside given directory"""
+    log_info("Running coverage...")
     if not pathlib.Path(name).exists():
         exit_with_error(f"Given build folder does not exist: {name}.")
 
@@ -215,6 +218,30 @@ def coverage(name, build_system):
         bash_command("make coverage", cwd=name)
 
     bash_command("xdg-open coverage/index.html", cwd=name)
+
+
+@cli.command()
+@click.option(
+    "-n",
+    "--name",
+    prompt="build directory",
+    help="The name of the build directory.",
+    default="build",
+)
+@click.option(
+    "--yes",
+    is_flag=True,
+    callback=abort_if_false,
+    expose_value=False,
+    prompt="This operation deletes files, are you sure?",
+)
+def clean_init(name):
+    log_info("Removing .venv...")
+    bash_command(f"rm -rf {name}")
+    bash_command("rm -rf .venv")
+    # Enable extended globbing
+    bash_command("shopt -s extglob")
+    bash_command("rm -- !(.gitignore)", cwd="scripts/downloads/")
 
 
 if __name__ == "__main__":

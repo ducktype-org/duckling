@@ -41,7 +41,7 @@ class InternetFile:
 
 
 def callback_unTAR(res: InternetFile):
-    log_info(f"Untarrxzing {res.path}...")
+    log_info(f"Untarring {res.path}...")
     bash_command(f"tar -xf {res.path} --directory={res.parent_dir}")
 
 
