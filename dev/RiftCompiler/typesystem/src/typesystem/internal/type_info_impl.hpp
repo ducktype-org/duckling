@@ -327,7 +327,8 @@ namespace ts::internal {
 	};
 
 	class PointerInfoImpl final: public RawPointerInfoImpl {
-		const TypeDesc<> underlying_type;
+		const TypeInfo underlying_type;
+		const bool     is_mutable;
 
 	public:
 		[[nodiscard]]
@@ -341,13 +342,21 @@ namespace ts::internal {
 		static Kind staticKind;
 
 		[[nodiscard]]
-		TypeDesc<> getUnderlyingType() const {
+		TypeInfo getUnderlyingType() const {
 			return underlying_type;
 		}
 
-		explicit PointerInfoImpl(const TypeDesc<>& underlying_type):
-			  underlying_type(underlying_type) {
-			representation = base::strConcat("pointer(", underlying_type.getType().show(), ")");
+		[[nodiscard]]
+		bool isMutable() const {
+			return is_mutable;
+		}
+
+		explicit PointerInfoImpl(const TypeInfo underlying_type, const bool is_mutable):
+			  underlying_type(underlying_type),
+			  is_mutable(is_mutable) {
+			representation = base::strConcat(
+				"pointer(", is_mutable ? "" : "const", underlying_type.show(), ")"
+			);
 		}
 
 		[[nodiscard]]

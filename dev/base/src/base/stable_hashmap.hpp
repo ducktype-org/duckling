@@ -41,7 +41,7 @@ namespace base {
 		 * @return An optional with a reference to the data.
 		 */
 		Optional<DATA_T&> atMaybe(const KEY_T& key) {
-			if (contains(key)) return at(key);
+			if_opt_some(data.atMaybe(key), ptr) { return *ptr; }
 			return {};
 		}
 
@@ -52,7 +52,7 @@ namespace base {
 		 * @return An optional with a const reference to the data.
 		 */
 		Optional<const DATA_T&> atMaybe(const KEY_T& key) const {
-			if (contains(key)) return at(key);
+			if_opt_some(data.atMaybe(key), ptr) { return *ptr; }
 			return {};
 		}
 
@@ -62,7 +62,7 @@ namespace base {
 		 * @return A reference to the data.
 		 */
 		DATA_T& operator[](const KEY_T& key) {
-			if (!contains(key)) data[key] = make_unique<DATA_T>();
+			if (!contains(key)) data.emplace(key, make_unique<DATA_T>());
 			return *data[key];
 		}
 
@@ -98,7 +98,6 @@ namespace base {
 		}
 
 	private:
-		// @TODO: Replace this with base::HashMap.
-		std::unordered_map<KEY_T, unique_ptr<DATA_T>> data;
+		HashMap<KEY_T, unique_ptr<DATA_T>> data;
 	};
 }
