@@ -7,9 +7,7 @@ namespace pst {
 		auto                 position = state.ctokens().peek().getPosition();
 		ParserRef<Attribute> out      = makeRef<Attribute>(position);
 
-		RIFT_ASSERT(
-			state.ctokens().is(Special::AtSign), position.genErrorStr("bad statement choice")
-		);
+		RIFT_ASSERT(state.ctokens().is(Special::AtSign), position.genStr("bad statement choice"));
 
 		parseAll(state, Special::AtSign, &out->name);
 

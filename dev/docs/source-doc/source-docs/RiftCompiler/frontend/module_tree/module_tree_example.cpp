@@ -10,11 +10,11 @@ int main() {
 
 	// Print main source file's content.
 	if (module_tree->hasMainSourceFile())
-		std::cout << module_tree->getMainSourceFile().getContent().view().stringView() << '\n';
+		std::cout << module_tree->getMainSourceFile().path.getContent().view().stringView() << '\n';
 
 	// Print content of source files.
-	for (const fs::FilePath& file: module_tree->getSourceFiles())
-		std::cout << file.getContent().view().stringView() << '\n';
+	for (auto&& file: module_tree->getSourceFiles())
+		std::cout << file.path.getContent().view().stringView() << '\n';
 
 	// Print names of other modules.
 	//

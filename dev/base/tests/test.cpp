@@ -3,6 +3,7 @@
 #include <tester/testing_utils.hpp>
 #include <base/strongly_typed_int.hpp>
 #include <base/defer.hpp>
+#include <base/perfect_hash.hpp>
 #include <cstring>
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(Meters, i64);
@@ -14,6 +15,21 @@ bool compareCstr(const char* const c1, const char* const c2) {
 bool containsCstr(const char* const base, const char* const pattern) {
 	return std::strstr(base, pattern) != nullptr;
 }
+
+struct TypeWithHash {
+	u64 a;
+
+	[[nodiscard]]
+	base::HashT customPerfectHash() const {
+		return a;
+	}
+};
+
+struct TypeWithoutHash {
+	u64 a;
+};
+
+base::HashT customPerfectHash(const TypeWithoutHash& key) { return key.a; }
 
 class GeneralUtilsTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -30,6 +46,9 @@ public:
 		TESTER_ADD_TEST(stronglyTypedInt);
 		TESTER_ADD_TEST(deferTest);
 		TESTER_ADD_TEST(testStrConcat);
+		TESTER_ADD_TEST(testPerfectHash);
+		TESTER_ADD_TEST(testMapAtMaybe);
+		TESTER_ADD_TEST(testVectorMapAtMaybe);
 	}
 
 private:
@@ -234,6 +253,35 @@ private:
 			a = 4;
 		}
 		assert(a == 3, "Defer didn't execute in correct order");
+	}
+
+	void testPerfectHash() {
+		TypeWithHash    to_hash_1{ 1 };
+		TypeWithoutHash to_hash_2{ 2 };
+
+		ASSERT_EQUAL(base::perfectHash(to_hash_1), 1);
+		ASSERT_EQUAL(base::perfectHash(to_hash_2), 2);
+		ASSERT_EQUAL(base::perfectHash(123), 123);
+	}
+
+	void testMapAtMaybe() {
+		base::HashMap<int, std::string> m;
+		m.put(1, "one");
+		m.put(2, "two");
+		ASSERT_EQUAL(true, m.contains(1));
+		ASSERT_EQUAL("one", m.atMaybe(1).value());
+		ASSERT_EQUAL("two", m.atMaybe(2).value());
+		ASSERT_EQUAL(false, m.atMaybe(3).has_value());
+	}
+
+	void testVectorMapAtMaybe() {
+		base::VectorMap<int, std::string> m;
+		m.put(1, "one");
+		m.put(2, "two");
+		ASSERT_EQUAL(true, m.contains(1));
+		ASSERT_EQUAL("one", m.atMaybe(1).value());
+		ASSERT_EQUAL("two", m.atMaybe(2).value());
+		ASSERT_EQUAL(false, m.atMaybe(3).has_value());
 	}
 };
 

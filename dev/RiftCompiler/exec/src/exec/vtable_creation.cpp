@@ -7,8 +7,10 @@ namespace exec {
 
 		auto table = child.getVirtualAncestorTable(parent);
 
-		auto ctv
-			= alloc_new(ts::IntegralInfo::create(64), parent.getVtableSize() * sizeof(usize) * 8);
+		auto ctv = alloc_new(
+			query::queryEntryPoint<ts::QueryIntegralType>({ 64 }),
+			parent.getVtableSize() * sizeof(usize) * 8
+		);
 		//							^^^ TO UWZGLĘDNIA METODY WIRTUALNE
 
 		for (usize i = 0; i < table.size(); i++) ctv.getData<usize>()[i] = table[i].second;
@@ -23,7 +25,8 @@ namespace exec {
 		usize         vtable_ptr_offset = baseClass.getVtablePtrOffset();
 
 		auto vtable_ptr_ctv = ctv.subCTV(
-			ts::PointerInfo::create(ts::VTableInfo::create(baseClass)),
+			query::queryEntryPoint<ts::QueryPointerType>({ ts::VTableInfo::create(baseClass),
+		                                                   false }),
 			vtable_ptr_offset,
 			ts::POINTER_SIZE
 		);
@@ -37,8 +40,11 @@ namespace exec {
 		ts::ClassInfo our_info = ctv.type.getType();
 		if (our_info.getVtableSize() > 0) {
 			usize vtable_ptr_offset = our_info.getVtablePtrOffset();
-			auto  vtable_ptr_ctv
-				= ctv.subCTV(ts::RawPointerInfo::create(), vtable_ptr_offset, ts::POINTER_SIZE);
+			auto  vtable_ptr_ctv    = ctv.subCTV(
+                query::queryEntryPoint<ts::QueryRawPointerType>({}),
+                vtable_ptr_offset,
+                ts::POINTER_SIZE
+            );
 
 			// @TODO: Make this a normal memcopy
 			vtable_ptr_ctv.getData<usize>().front()
