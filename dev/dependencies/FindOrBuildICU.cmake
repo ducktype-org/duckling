@@ -70,26 +70,31 @@ function(FindOrBuildICU)
 
       set(ICU_INCLUDE_DIRS ${ICU_PREFIX}/include)
 
-      set(ICU_DATA_LIBRARY ${ICU_PREFIX}/lib/libicudata.so)
-      set(ICU_I18N_LIBRARY ${ICU_PREFIX}/lib/libicui18n.so)
-      set(ICU_UC_LIBRARY ${ICU_PREFIX}/lib/libicuuc.so)
-      set(ICU_IO_LIBRARY ${ICU_PREFIX}/lib/libicuio.so)
+      set(ICU_DATA_LIBRARY ${ICU_PREFIX}/lib/libicudata.so.74)
+      set(ICU_I18N_LIBRARY ${ICU_PREFIX}/lib/libicui18n.so.74)
+      set(ICU_UC_LIBRARY ${ICU_PREFIX}/lib/libicuuc.so.74)
+      set(ICU_IO_LIBRARY ${ICU_PREFIX}/lib/libicuio.so.74)
 
-      add_library(icudata IMPORTED SHARED GLOBAL)
+      message(" >>>>>>>>>>  ${ICU_I18N_LIBRARY}")
+
+      add_library(icudata IMPORTED STATIC GLOBAL)
       set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
       target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
 
-      add_library(icu18n IMPORTED SHARED GLOBAL)
+      add_library(icu18n IMPORTED STATIC GLOBAL)
       set_target_properties(icu18n PROPERTIES IMPORTED_LOCATION ${ICU_I18N_LIBRARY})
       target_include_directories(icu18n INTERFACE ${ICU_INCLUDE_DIRS})
 
-      add_library(icuuc IMPORTED SHARED GLOBAL)
+      add_library(icuuc IMPORTED STATIC GLOBAL)
       set_target_properties(icuuc PROPERTIES IMPORTED_LOCATION ${ICU_UC_LIBRARY})
       target_include_directories(icuuc INTERFACE ${ICU_INCLUDE_DIRS})
 
-      add_library(icuio IMPORTED SHARED GLOBAL)
+      add_library(icuio IMPORTED STATIC GLOBAL)
       set_target_properties(icuio PROPERTIES IMPORTED_LOCATION ${ICU_IO_LIBRARY})
       target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
+      target_link_libraries(icuio INTERFACE icu18n)
+
+
     elseif(UNIX)
       set(ICU_CFLAGS "-w")
       set(ICU_CXXFLAGS "-w")
@@ -198,8 +203,12 @@ function(FindOrBuildICU)
   endif()
 
   add_library(unicode INTERFACE)
-  target_link_libraries(unicode INTERFACE icuio icuuc icui18n icudata)
+  target_link_libraries(unicode INTERFACE icui18n icuio icuuc icudata)
   set(ICU_LIBRARIES icui18n icuuc icudata icuio)
+
+  # Experimets:
+  # set_target_properties(unicode PROPERTIES LINK_FLAGS "-rpath")
+  target_link_options(unicode INTERFACE "-Wl,-rpath-link,.")
 
   message("-- ICU include dirs: ${ICU_INCLUDE_DIRS}")
   message("-- ICU libraries: ${ICU_LIBRARIES}")
