@@ -237,28 +237,19 @@ def coverage(name, thread_count):
 
 @cli.command()
 @click.option(
-    "-n",
-    "--name",
-    prompt="build directory",
-    help="The name of the build directory.",
-    default="build",
-)
-@click.option(
     "--yes",
     is_flag=True,
     callback=abort_if_false,
     expose_value=False,
     prompt="This operation deletes files, are you sure?",
 )
-def clean_init(name):
-    """Removes things done by init and inits them again"""
-    log_info("Removing .venv, build folder and downloaded binaries...")
-    bash_command(f"rm -rf {name}")
+def clean_init():
+    """Removes things created by init."""
+    log_info("Removing .venv and downloaded binaries...")
     bash_command("rm -rf .venv")
     bash_command(
         "find . ! -name '.gitignore' -type f -exec rm -r {} +", cwd="scripts/downloads/"
     )
-    init_impl()
 
 
 if __name__ == "__main__":
