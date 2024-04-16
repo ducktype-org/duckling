@@ -220,7 +220,7 @@ def init():
     default="default",
 )
 def coverage(name, thread_count):
-    """Builds and runs coverage on inside given build directory.
+    """Builds and runs coverage inside given build directory.
     This directory has to have coverage enabled"""
 
     log_info("Running coverage...")
