@@ -216,19 +216,30 @@ def init():
     "--thread-count",
     prompt="Number of threads used when building",
     help="Number of threads used when building",
-    type=int,
-    default="1",
+    type=str,
+    default="default",
 )
 def coverage(name, thread_count):
     """Builds and runs coverage on inside given build directory.
     This directory has to have coverage enabled"""
-   
+
     log_info("Running coverage...")
     if not pathlib.Path(name).exists():
         exit_with_error(f"Given build folder does not exist: {name}.")
 
-    bash_command(f"cmake --build {name} -j {thread_count} -- build_all_tests")
-    bash_command(f"cmake --build {name} -j {thread_count} -- test")
+
+    thread_option = ""
+
+    if thread_count == "default":
+        pass
+    elif thread_count.isdigit():
+        thread_option = f"-j {int(thread_count)}"
+    else:
+        exit_with_error(f"Incorrect thread parameter: `{thread_count}`. Legal values are: numbers and \"default\".")
+   
+
+    bash_command(f"cmake --build {name} {thread_option} -- build_all_tests")
+    bash_command(f"cmake --build {name} {thread_option} -- test")
 
     bash_command(f"cmake --build {name} -- coverage")
 
