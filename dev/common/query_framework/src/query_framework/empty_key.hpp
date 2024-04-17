@@ -1,19 +1,15 @@
 #pragma once
 
-#include <functional>  // std::hash
+#include <base/perfect_hash.hpp>
 
 namespace query {
 	/**
 	 * @brief Key used for queries without keys, input queries, and "outside world" query.
 	 */
-	struct EmptyKey {};
+	struct EmptyKey {
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			return 0;
+		}
+	};
 }
-
-/**
- * @brief Hash implementation of EmptyKey.
- * It has to be here because makeNodeID is using it.
- */
-template<>
-struct std::hash<::query::EmptyKey> {
-	std::size_t operator()([[maybe_unused]] const ::query::EmptyKey& key) const { return 0; }
-};

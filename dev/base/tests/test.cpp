@@ -47,6 +47,8 @@ public:
 		TESTER_ADD_TEST(deferTest);
 		TESTER_ADD_TEST(testStrConcat);
 		TESTER_ADD_TEST(testPerfectHash);
+		TESTER_ADD_TEST(testMapAtMaybe);
+		TESTER_ADD_TEST(testVectorMapAtMaybe);
 	}
 
 private:
@@ -260,6 +262,26 @@ private:
 		ASSERT_EQUAL(base::perfectHash(to_hash_1), 1);
 		ASSERT_EQUAL(base::perfectHash(to_hash_2), 2);
 		ASSERT_EQUAL(base::perfectHash(123), 123);
+	}
+
+	void testMapAtMaybe() {
+		base::HashMap<int, std::string> m;
+		m.put(1, "one");
+		m.put(2, "two");
+		ASSERT_EQUAL(true, m.contains(1));
+		ASSERT_EQUAL("one", m.atMaybe(1).value());
+		ASSERT_EQUAL("two", m.atMaybe(2).value());
+		ASSERT_EQUAL(false, m.atMaybe(3).has_value());
+	}
+
+	void testVectorMapAtMaybe() {
+		base::VectorMap<int, std::string> m;
+		m.put(1, "one");
+		m.put(2, "two");
+		ASSERT_EQUAL(true, m.contains(1));
+		ASSERT_EQUAL("one", m.atMaybe(1).value());
+		ASSERT_EQUAL("two", m.atMaybe(2).value());
+		ASSERT_EQUAL(false, m.atMaybe(3).has_value());
 	}
 };
 

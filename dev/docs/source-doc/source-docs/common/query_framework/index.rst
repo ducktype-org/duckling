@@ -101,7 +101,7 @@ Declaring the query is very simple and requires programmer to provide three thin
 
 .. attention::
     Query keys need to have two critical functionalities: they need to be copyable,
-    they need to implement :code:`std::hash` in the way that is per-query-collision free.
+    they need to implement :code:`customPerfectHash` (see: :doc:`Perfect hash </source-doc/source-docs/base/src/base/perfect_hash>`) in the way that is per-query-collision free.
     See: :ref:`qkey-requirements` for more details.
 
 .. literalinclude:: example/decl.hpp
@@ -113,7 +113,7 @@ Declaring the query is very simple and requires programmer to provide three thin
 Query Implementation
 --------------------
 
-Query implementation is were we will write actual query code.
+Query implementation is where we will write actual query code.
 
 Full example is included bellow, here is a step by step guide:
 
@@ -131,7 +131,7 @@ Writing implementation boilerplate
 ++++++++++++++++++++++++++++++++++
 
 After that we can move to actual query implementation.
-This is archived by creating a :code:`struct` called "implementation struct" that will inherit from :code:`query::QueryImplementation`.
+This is achieved by creating a :code:`struct` called "implementation struct" that will inherit from :code:`query::QueryImplementation`.
 :code:`query::QueryImplementation` is a template that takes two arguments: query to implement and :code:`PResult`.
 After the definition of implementation struct one must also write the magic line presented in the example bellow.
 
@@ -363,14 +363,11 @@ Programmer has to ensure that copy operation will compile and that it will not b
 Perfect Hashing
 +++++++++++++++
 
-Every key type need to implement :code:`std::hash` that is collision less.
+Every key type need to implement :code:`base::customPerfectHash` (see: :doc:`Perfect hash </source-doc/source-docs/base/src/base/perfect_hash>`) that is collision less.
 
 .. attention::
-    Use of :code:`std::hash` might not be the best here.
-    In the future either custom "hash" system will be created or "collision less" requirement will be dropped
-    (though it does greatly simplify dependency tracking).
-    For ID like keys this condition is somewhat trivial to fulfill.
-    It is not known how often non-ids keys will appear.
+    For ID like keys perfect hashing is trivial to implement.
+    For more complex situation a trick can be used. One can use :code:`base::HashMap` to hash-map keys to ID-s.
 
 .. _provider-requirements:
 

@@ -14,7 +14,7 @@ public:
 
 private:
 	void simple() {
-		ts::TypeDesc<> td(ts::IntegralInfo::create(8));
+		ts::TypeDesc<> td(query::queryEntryPoint<ts::QueryIntegralType>({ 8 }));
 
 		for (i32 i = 0; i < 4; i++) exec::alloc_new(td, 8);
 
