@@ -23,6 +23,7 @@ import { validateRift } from "./validation"; // Import the validation function
 import { parseFile, RiftParserError } from "./compilerInterface"; // Import the compiler interface function
 import { getFoldingRanges } from './foldingRanges';
 import { RiftElement } from './lsptree/elements/elements';
+import { preloadKeywords } from './completion';
 require("./lsptree/elements/index");
 
 
@@ -75,7 +76,7 @@ connection.onInitialize((params: InitializeParams) => {
 				legend: semanticTokensLegend,
 				full: true,
 			},
-			foldingRangeProvider: true,
+			// foldingRangeProvider: true,
 		}
 	};
 	if (hasWorkspaceFolderCapability) {
@@ -85,6 +86,7 @@ connection.onInitialize((params: InitializeParams) => {
 			}
 		};
 	}
+	preloadKeywords();
 	return result;
 });
 
