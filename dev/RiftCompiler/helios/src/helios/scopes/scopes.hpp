@@ -15,9 +15,6 @@
 namespace compiler::helios {
 	using StmtList = std::vector<PstRef<pst::Stmt>>;
 
-	// @TODO: hmm?
-	DECLARE_QUERY(QuerySuperRootScope, /*Top level module*/ frontend::ModuleId, ScopeID);
-	
 	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleId, ScopeID);
 
 
@@ -57,6 +54,10 @@ namespace compiler::helios {
 		base::HashT customPerfectHash() const;
 	};
 	DECLARE_QUERY(QueryLookupInScope, KeyOf_Lookup, LookupResult);
+
+
+	// @TODO:
+	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, std::vector<SymID>);
 
 	// DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_Lookup, LookupResult);
 
