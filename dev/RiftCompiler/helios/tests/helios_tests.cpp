@@ -14,25 +14,27 @@ public:
 		pst::init();
 		ts::init();
 
-		TESTER_ADD_TEST(testI32Consts);
+		TESTER_ADD_TEST(testQuerySymbolOfSTMT);
 	}
 
 private:
-	hir::SourceUnit prepare(const fs::FilePath& file) {
+	std::pair<pst::PST, const fs::FilePath&> prepare(const fs::FilePath& file) {
 		auto td     = lexer::tokenizeFile(file);
 		auto parsed = pst::parse(std::move(td));
 		assert(parsed.getLogger().good(), "there are unexpected errors in rift source-code");
 		return { std::move(parsed), file };
 	}
 
-	symtable::SymbolRef getSymbolFromLookupIn(symtable::SymbolRef symbol, base::StrId name) {
-		auto lookup_result = symbol->requestLookupIn(name);
-		assert(lookup_result.isSingle(), "Lookup result not a single symbol.");
-		auto dealiased_single = symtable::deAliasSymbolChain(lookup_result.getAsSingle());
-		return dealiased_single.back();
+	void testQuerySymbolOfSTMT() {
+		auto [pst, file]  = prepare(fs::FilePath(path("constants.rift")));
+		auto   root_scope = pst.getTopLevelElement();
+		auto&& stmts      = root_scope->getStatements();
+		// @TODO: Write a QuerySymbolOfSTMT test here.
+		// for (const auto& stmt: stmts)
+		// 	std::cerr << stmt->getSourcePosition().getSourceChars().c_str() << '\n';
 	}
 
-	// @TODO: This can be adapted to use
+	// @NEARFUTURE: This can be adapted to use HELIOS
 	// void testI32Consts() {
 	// 	hir::HIR hir;
 	// 	{

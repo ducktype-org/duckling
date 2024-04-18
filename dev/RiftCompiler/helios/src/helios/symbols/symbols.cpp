@@ -43,18 +43,14 @@ namespace compiler::helios {
 	struct GetSymRef_Functor {
 		static auto get(SymID id) { return id.ref; }
 	};
-	auto getSymRef(SymID id) { return GetSymRef_Functor::get(id); }
-	
-	base::StrId name(SymID id) {
-		return getSymRef(id)->name;
-	}
-	SymbolKind kind(SymID id) {
-		return getSymRef(id)->kind;
-	}
-	ScopeID scope(SymID id) {
-		return getSymRef(id)->scope;
-	}
 
+	auto getSymRef(SymID id) { return GetSymRef_Functor::get(id); }
+
+	base::StrId name(SymID id) { return getSymRef(id)->name; }
+
+	SymbolKind kind(SymID id) { return getSymRef(id)->kind; }
+
+	ScopeID scope(SymID id) { return getSymRef(id)->scope; }
 
 	namespace {
 		// global table:
@@ -112,9 +108,9 @@ namespace compiler::helios {
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = alias_->getName(),
+				.is_alias = true,
 				.kind     = SymbolKind::Alias,
 				.pst_stmt = stmt,
-				.is_alias = true,
 			});
 		}
 		case pst::StmtKind::Using: {
@@ -122,10 +118,10 @@ namespace compiler::helios {
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = base::StrId("<USING>"),  // @FIX: I feel like it's not ok.
-				.kind     = SymbolKind::Using,
-				.pst_stmt = stmt,
 				.wildcard = true,
 				.is_alias = true,
+				.kind     = SymbolKind::Using,
+				.pst_stmt = stmt,
 			});
 		}
 
@@ -138,14 +134,7 @@ namespace compiler::helios {
 	}
 
 	struct ImplementationOf_QuerySymbolOfSTMT:
-<<<<<<< HEAD:dev/RiftCompiler/helios/src/symbols/symbols.cpp
 		  query::QueryImplementation<QuerySymbolOfSTMT, SymID> {
-=======
-		public query::QueryImplementation<QuerySymbolOfSTMT, SymID>
-	{
-		
-
->>>>>>> 69d6de7cd351f446f707ddb39001ea8d1fade47b:dev/RiftCompiler/helios/src/helios/symbols/symbols.cpp
 		static auto provide(Context&, QKey key) -> PResult {
 			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
 		}
@@ -160,7 +149,8 @@ namespace compiler::helios {
 			return {};
 		}
 
-		static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd) -> QResult {
+		static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd)
+			-> QResult {
 			throw "TODO";
 		}
 	};
@@ -169,16 +159,11 @@ namespace compiler::helios {
 
 	// if somewhere then here it is needed to handle cycles somehow
 
-<<<<<<< HEAD:dev/RiftCompiler/helios/src/symbols/symbols.cpp
-}
-=======
 	base::HashT KeyOf_QuerySymbolOfSTMT::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(scope);
 		auto hash_2 = stmt->getID().asInt();
 
 		// @FIXME: this does not work:
-		return hash_1*143 + hash_2*7;
+		return hash_1 * 143 + hash_2 * 7;
 	}
-
 }
->>>>>>> 69d6de7cd351f446f707ddb39001ea8d1fade47b:dev/RiftCompiler/helios/src/helios/symbols/symbols.cpp
