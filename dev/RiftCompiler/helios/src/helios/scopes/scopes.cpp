@@ -95,6 +95,7 @@ namespace compiler::helios {
 
 	struct ImplementationOf_QueryPrimaryCodeScopeFor: query::QueryImplementation<QueryPrimaryCodeScopeFor, ScopeID> {
 
+		// @FIXME: this cache allows for inconsistency
 		static inline base::HashMap<pst::PstID, query::AddACD<ScopeID>> cache;
 		
 		static auto provide(Context& ctx, QKey element) -> PResult {

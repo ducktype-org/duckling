@@ -21,7 +21,7 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleId, ScopeID);
 
 	struct KeyOf_QueryPrimaryCodeScopeFor {
-		/// @TODO is this needed?
+		// @TODO is this needed?
 		ScopeID parent;
 
 		// Stmt here makes no sense with getChildStmtsOf

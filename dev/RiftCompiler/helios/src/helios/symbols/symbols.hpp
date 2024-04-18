@@ -32,9 +32,11 @@ namespace compiler::helios {
 	ScopeID     scope(SymID);
 
 	struct KeyOf_QuerySymbolOfSTMT {
+		// @TODO: is this needed? -- it ads inconsistency
 		ScopeID scope;
+
 		PstRef<pst::Stmt> stmt;
-		// @TODO:
+		
 		base::HashT customPerfectHash() const;
 	};
 
