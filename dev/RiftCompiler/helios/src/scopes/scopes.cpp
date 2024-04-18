@@ -60,7 +60,25 @@ namespace compiler::helios {
 		}
 	};
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySuperRootScope, "Query Super Root scope");
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySuperRootScope, "Query Super Root scope");
+
+
+	struct ImplementationOf_QueryPrimaryCodeScopeFor: query::QueryImplementation<QueryPrimaryCodeScopeFor, ScopeID> {
+		
+		static auto provide(Context&, QKey) -> PResult {
+			
+		}
+
+		static auto load(QKey) -> LoadResult {
+		}
+
+		static auto store(QKey, PResult res, query::ACD acd) -> QResult {
+			
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryPrimaryCodeScopeFor, "Query Scope Of");
+
 
 	// impl of simple getters ("non-query query"):
 	// get name
