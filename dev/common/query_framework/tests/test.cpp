@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <tester/tester.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_impl.hpp>
@@ -28,7 +29,7 @@ DECLARE_QUERY(FibonacciSum, Key2, uint64_t);
 /* * * *
  * Q1: *
  * * * */
-struct ImplementationOf_Fibonacci: query::QueryImplementation<Fibonacci, uint64_t> {
+struct ImplementationOf_Fibonacci: query::QueryImplementation<Fibonacci, u64> {
 	inline static std::map<QKey, query::AddACD<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -56,6 +57,20 @@ struct ImplementationOf_Fibonacci: query::QueryImplementation<Fibonacci, uint64_
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Fibonacci, "Q1");
 
+
+DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, std::string);
+
+struct ImplementationOf_FibonacciStringAutoCache:
+	  query::QueryImplementation<FibonacciStringAutoCache, std::string> {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
+	}
+
+	QUERY_AUTO_CACHE_PRESULT
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciStringAutoCache, "Auto cache");
+
 /* * * * *
  * Q2 a: *
  * * * * */
@@ -82,7 +97,10 @@ class QueryTest: public tester::TestSuite {
 
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Query Test") { TESTER_ADD_TEST(simpleTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("Query Test") {
+		TESTER_ADD_TEST(simpleTest);
+		TESTER_ADD_TEST(autoCacheTest);
+	}
 
 private:
 	void simpleTest() {
@@ -90,6 +108,15 @@ private:
 		assert(query::queryEntryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (2)");
 		assert(query::queryEntryPoint<Fibonacci>(Key1{ 0 }) == 0, "Bad query output (3)");
 		assert(query::queryEntryPoint<FibonacciSum>(Key2{ 4 }) == 7, "Bad query output (4)");
+	}
+
+	void autoCacheTest() {
+		assert(
+			query::queryEntryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (5)"
+		);
+		assert(
+			query::queryEntryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (6)"
+		);
 	}
 };
 

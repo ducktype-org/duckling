@@ -56,6 +56,11 @@ namespace base {
 			return {};
 		}
 
+		Optional<DATA_T> atMaybeCopy(const KEY_T& key) const {
+			if_opt_some(data.atMaybe(key), ptr) { return *ptr; }
+			return {};
+		}
+
 		/**
 		 * Returns the data identified by the key. If needed, allocates space for the key and data.
 		 * @param key Data key
