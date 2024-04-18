@@ -46,7 +46,7 @@ namespace base {
 		}
 
 		template<class K = KEY_T>
-		Optional<DATA_T> atMaybeCopy(K&& key) {
+		Optional<DATA_T> atMaybeCopy(K&& key) const {
 			auto&& key_val = ContainerType::find(std::forward<K>(key));
 			if (key_val != ContainerType::end()) return key_val->second;
 			return {};
