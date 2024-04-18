@@ -1,5 +1,5 @@
 #include <frontend/module_tree/queries.hpp>
-// #include <helios/>
+#include <helios/symbols/symbols.hpp>
 #include <clap/clap.hpp>
 #include <iostream>
 #include <query_framework/query_entry_point.hpp>

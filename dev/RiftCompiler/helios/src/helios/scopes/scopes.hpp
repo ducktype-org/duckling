@@ -22,7 +22,12 @@ namespace compiler::helios {
 
 
 	struct KeyOf_QueryPrimaryCodeScopeFor {
-		PstRef<pst::RiftElement> base_element;
+		/// @TODO is this needed?
+		ScopeID parent;
+
+		// Stmt here makes no sense with getChildStmtsOf
+		// The overall idea is fine, but needs some polishing 
+		PstRef<pst::Stmt> base_element;
 		// StmtList stmts;
 
 		// @TODO:
@@ -48,6 +53,8 @@ namespace compiler::helios {
 	struct KeyOf_Lookup {
 		ScopeID scope;
 		base::StrId name;
+		// @TODO:
+		base::HashT customPerfectHash() const;
 	};
 	DECLARE_QUERY(QueryLookupInScope, KeyOf_Lookup, LookupResult);
 

@@ -2,11 +2,13 @@
 #include "../hout/hout.hpp"
 #include "base/maps.hpp"
 #include "base/stable_container.hpp"
+#include "../lookup_result.hpp"
 #include "pst_parser/rift_parser_base.hpp"
 #include "query_framework/acd.hpp"
 #include <base/string_id.hpp>
 #include <query_framework/query_impl.hpp>
 #include "../pst_walkers.hpp"
+#include "../symbols/symbols.hpp"
 
 namespace compiler::helios {
 
@@ -15,8 +17,9 @@ namespace compiler::helios {
 		
 		// created on startup:
 		ScopeID parent;
-		base::StrId name; ///< for debug
+		// base::StrId name; ///< for debug
 		bool is_root = false;
+		StmtList stmt_list;
 
 		// cache entries:
 		// in the future we might need separation for: direct symbols, expanded symbols
@@ -48,8 +51,10 @@ namespace compiler::helios {
 		static auto provide(Context&, QKey) -> PResult {
 			return putInScopeTable(ScopeData{
 				.parent = ScopeID{nullptr},
-				.name = base::StrId("ROOT"),
+				// .name = base::StrId("ROOT"),
 				.is_root = true,
+				.stmt_list = {}, //<< TODO
+				.symbols = {},
 			});
 		}
 
@@ -70,10 +75,14 @@ namespace compiler::helios {
 
 		static inline base::HashMap<pst::PstID, query::AddACD<ScopeID>> cache;
 		
-		static auto provide(Context&, QKey element) -> PResult {
+		static auto provide(Context& ctx, QKey element) -> PResult {
 			auto list_of_stmt = getChildStmtsOf(element.base_element);
-			// return putInScopeTable(...)
-			throw "TODO";
+			auto parent = scope(ctx.query<QuerySymbolOfSTMT>({element.parent, element.base_element}));
+			return putInScopeTable(ScopeData{
+				.parent = parent,
+				.stmt_list = list_of_stmt,
+				.symbols = {},
+			});
 		}
 
 		static auto load(QKey key) -> LoadResult {

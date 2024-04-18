@@ -19,6 +19,7 @@ namespace compiler::helios {
 		base::borrow_ptr<ScopeData> ref;
 		ScopeID(base::borrow_ptr<ScopeData> ref): ref(ref) {}
 		friend struct ImplementationOf_QuerySuperRootScope;
+		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;
 	};
 
 	

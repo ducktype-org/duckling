@@ -1,6 +1,6 @@
 #include "symbols.hpp"
 #include "pst_parser/elements/elements.hpp"
-#include "pst_ref.hpp"
+#include "../pst_ref.hpp"
 #include <memory>
 #include <query_framework/query_impl.hpp>
 #include <base/stable_container.hpp>
