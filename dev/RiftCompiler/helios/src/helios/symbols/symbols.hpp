@@ -29,10 +29,16 @@ namespace compiler::helios {
 	// Such functions can probably be just functions:
 	base::StrId name(SymID);
 	SymbolKind  kind(SymID);
+	ScopeID     scope(SymID);
 
 	struct KeyOf_QuerySymbolOfSTMT {
-		ScopeID           scope;
+		// @TODO: is this needed? -- it ads inconsistency
+		ScopeID scope;
+
 		PstRef<pst::Stmt> stmt;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
 	};
 
 	/**

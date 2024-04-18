@@ -17,4 +17,10 @@ int main(int argc, char** argv) {
 	lexer::init();
 	FilePath file(argv[1]);
 	auto     tokens = lexer::tokenizeFile(file);
+
+	std::cerr << "Got Tokens: \n";
+	for (auto&& token: tokens.tokens) {
+		std::cerr << token.getStrValue() << ", ";
+	}
+	std::cerr << "\n";
 }

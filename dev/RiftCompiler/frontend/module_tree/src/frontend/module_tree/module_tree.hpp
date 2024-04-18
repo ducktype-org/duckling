@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "base/strongly_typed_id.hpp"
 #include <string>
 #include <utility>
 #include <base/maps.hpp>
@@ -57,27 +58,10 @@ namespace compiler::frontend {
 		const pst::PST& getPST();
 	};
 
-	/**
-	 * @brief Structure holding ModuleID within Module Tree
-	 */
-	struct ModuleId {
-		[[nodiscard]]
-		u64 asInt() const {
-			return id;
-		}
 
-		static ModuleId nextID();
-		bool            operator==(const ModuleId&) const = default;
-
-		[[nodiscard]]
-		base::HashT customPerfectHash() const {
-			return asInt();
-		}
-
-	private:
-		ModuleId() = default;
-		u64 id;
-	};
+	STRONG_TYPEDEF_ID(ModuleId);
+	// @TODO: move to STRONG_TYPEDEF_ID?
+	inline base::HashT customPerfectHash(ModuleId id) { return id.asInt(); }
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed

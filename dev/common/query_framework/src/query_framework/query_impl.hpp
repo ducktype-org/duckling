@@ -28,7 +28,7 @@ namespace query {
 			NodeID my_node;
 
 			template<typename OthQuery>
-			auto query(typename OthQuery::QKey key) -> auto {
+			auto query(typename OthQuery::QKey key) -> decltype(auto) {
 				NodeID dep_id = makeNodeID(OthQuery::id, key);
 				dep_graph::addDependency(my_node, dep_id);
 
