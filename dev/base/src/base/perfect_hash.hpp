@@ -74,4 +74,9 @@ namespace base {
 	HashT perfectHash(const T& key) {
 		return ::base::detail::perfectHashCPO(key);
 	}
+
+	template<class T>
+	struct PerfectHashFunctor {
+		std::size_t operator()(const T& key) const { return ::base::perfectHash<T>(key); }
+	};
 }

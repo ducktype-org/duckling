@@ -135,3 +135,17 @@ namespace query {
 	}                                                                                             \
 	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::nextQueryId();       \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
+
+
+/**
+ * @brief Macro defining typical hash based cache for fast prototyping.
+ * @future: change it to component, when proper query-component system will be introduced
+ */
+#define QUERY_AUTO_CACHE_PRESULT                                                                \
+	static inline base::HashMap<QKey, query::AddACD<PResult>, ::base::PerfectHashFunctor<QKey>> \
+				cache;                                                                          \
+	static auto load(QKey key) -> LoadResult { return cache.atMaybeCopy(key); }                 \
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                       \
+		cache.put(key, { std::move(res), acd });                                                \
+		return cache.at(key).data;                                                              \
+	}
