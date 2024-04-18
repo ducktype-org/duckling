@@ -75,22 +75,21 @@ function(FindOrBuildICU)
       set(ICU_UC_LIBRARY ${ICU_PREFIX}/lib/libicuuc.so.74)
       set(ICU_IO_LIBRARY ${ICU_PREFIX}/lib/libicuio.so.74)
 
-      add_library(icudata IMPORTED STATIC GLOBAL)
+      add_library(icudata IMPORTED SHARED GLOBAL)
       set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
       target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
 
-      add_library(icu18n IMPORTED STATIC GLOBAL)
+      add_library(icu18n IMPORTED SHARED GLOBAL)
       set_target_properties(icu18n PROPERTIES IMPORTED_LOCATION ${ICU_I18N_LIBRARY})
       target_include_directories(icu18n INTERFACE ${ICU_INCLUDE_DIRS})
 
-      add_library(icuuc IMPORTED STATIC GLOBAL)
+      add_library(icuuc IMPORTED SHARED GLOBAL)
       set_target_properties(icuuc PROPERTIES IMPORTED_LOCATION ${ICU_UC_LIBRARY})
       target_include_directories(icuuc INTERFACE ${ICU_INCLUDE_DIRS})
 
-      add_library(icuio IMPORTED STATIC GLOBAL)
+      add_library(icuio IMPORTED SHARED GLOBAL)
       set_target_properties(icuio PROPERTIES IMPORTED_LOCATION ${ICU_IO_LIBRARY})
       target_include_directories(icuio INTERFACE ${ICU_INCLUDE_DIRS})
-      target_link_libraries(icuio INTERFACE icu18n)
 
 
     elseif(UNIX)
