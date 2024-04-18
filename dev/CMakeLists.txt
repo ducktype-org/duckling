@@ -11,7 +11,7 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 # @FUTURE: un-if it.
 # Note: It is not that important for us (as of 11.2023).
 #       It is realated to dependecies. 
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0") 
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
 	cmake_policy(SET CMP0135 NEW)
 endif()
 
@@ -44,11 +44,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message("-- GNU compiler")
   # '-std=c++20' is necessary for successful assembly target generation during RiftVM development
-  add_compile_options(-std=c++20 -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare -O2)
+  add_compile_options(-std=c++20 -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
 	# I didn't find a good -Werror=terminate alternative
-	add_compile_options(-Werror=return-type -Werror=shadow-all -Werror=return-stack-address -Werror=free-nonheap-object -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare -O2)
+	add_compile_options(-Werror=return-type -Werror=shadow-all -Werror=return-stack-address -Werror=free-nonheap-object -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare)
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()
@@ -112,7 +112,7 @@ function(rift_add_test test_pack test_name source USES)
 endfunction()
 
 define_property(TARGET PROPERTY MODULE_DIRECTORIES BRIEF_DOCS "Used for clean-modules target" FULL_DOCS "Used for clean-modules target")
-add_custom_target(clean-modules 
+add_custom_target(clean-modules
 				echo "Deleting following directories:"
 				COMMAND echo -e "$<JOIN:$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>,\\n>"
 				COMMAND rm -rfI "$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>" || "true"
@@ -132,7 +132,7 @@ function(make_module MODULE_NAME)
 	set_property(TARGET clean-modules APPEND PROPERTY MODULE_DIRECTORIES ${CMAKE_CURRENT_BINARY_DIR})
 
 	target_include_directories(${MODULE_NAME} PUBLIC src ${make_module_INCLUDE})
-	target_link_libraries(${MODULE_NAME} ${make_module_USES}) 
+	target_link_libraries(${MODULE_NAME} ${make_module_USES})
 endfunction()
 
 function(add_example exmaple_name source USES)

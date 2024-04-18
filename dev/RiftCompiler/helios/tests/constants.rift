@@ -1,0 +1,29 @@
+const D: i32 = A + (B + C);
+
+const C: i32 = X;
+
+namespace N {
+	alias X = A;
+}
+
+alias H = NN.NNN.A;
+const H2: i32 = H;
+
+const A: i32 = 1;
+
+const B: i32 = (X - 6) + (1 + A);
+
+using N.*;
+
+namespace NN {
+	namespace NNN {
+		const A: i32 = D + 4;
+	}
+	alias A = NNN.A;
+	// const Amb: i32 = A; // this is ambiguity error
+}
+
+const T0: i32 = 1;
+const T1: i32 = T0 + 1;
+const T2: i32 = T1 + 1;
+

@@ -8,8 +8,9 @@
 namespace compiler::helios {
 
 	// scopes will look more or the less the same!
-	// imports are just symbols that will require lookup inside different module that will build itself from different PST. Simple!
-	// We will just need query for import lookup cached by (globally) unique PstID
+	// imports are just symbols that will require lookup inside different module that will build
+	// itself from different PST. Simple! We will just need query for import lookup cached by
+	// (globally) unique PstID
 
 
 	struct SymbolData {
@@ -19,8 +20,8 @@ namespace compiler::helios {
 		ScopeID     scope;
 		base::StrId name;
 		bool        anonymous = false;
-		bool        wildcard = false;
-		bool        is_alias = false;
+		bool        wildcard  = false;
+		bool        is_alias  = false;
 		bool        dependent = false;
 		SymbolKind  kind;
 		// pst link? -- what about down casting...
@@ -32,16 +33,12 @@ namespace compiler::helios {
 		// cached: linked_lookup_scope ?
 		// cached: type
 		// cached: value?
-		
-
-
-
 	};
 
 	// do we want internal inheritance?
 	// query: lookupIn
 	// query: dealias
-	
+
 
 	namespace {
 		// global table:
@@ -54,17 +51,21 @@ namespace compiler::helios {
 		}
 	}
 
-
 	// Symbol Factory:
-	base::borrow_ptr<SymbolData> makeSymbolFromStatement(
-		ScopeID scope, PstRef<pst::Stmt> stmt
-	) {
+	base::borrow_ptr<SymbolData>
+		makeSymbolFromStatement(const ScopeID& scope, PstRef<pst::Stmt> stmt) {
 		switch (stmt->getKind()) {
 		case pst::StmtKind::Fun: {
-			break;
+			auto&& function_ = dynamic_cast<const pst::Fun*>(stmt.get());
+			return putInSymtable(SymbolData{
+				.scope    = scope,
+				.name     = function_->getName(),
+				.kind     = SymbolKind::Function,
+				.pst_stmt = stmt,
+			});
 		}
 		case pst::StmtKind::Namespace: {
-			auto namespace_ = dynamic_cast<const pst::Namespace*>(stmt.get());
+			auto&& namespace_ = dynamic_cast<const pst::Namespace*>(stmt.get());
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = namespace_->getName(),
@@ -73,22 +74,43 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Const: {
-			auto const_ = dynamic_cast<const pst::Const*>(stmt.get());
+			auto&& const_ = dynamic_cast<const pst::Const*>(stmt.get());
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = const_->getName(),
-				.kind     = SymbolKind::Namespace,
+				.kind     = SymbolKind::Const,
 				.pst_stmt = stmt,
 			});
 		}
 		case pst::StmtKind::Struct: {
-			break;
+			auto&& struct_ = dynamic_cast<const pst::Struct*>(stmt.get());
+			return putInSymtable(SymbolData{
+				.scope    = scope,
+				.name     = struct_->getName(),
+				.kind     = SymbolKind::Struct,
+				.pst_stmt = stmt,
+			});
 		}
 		case pst::StmtKind::Alias: {
-			break;
+			auto&& alias_ = dynamic_cast<const pst::Alias*>(stmt.get());
+			return putInSymtable(SymbolData{
+				.scope    = scope,
+				.name     = alias_->getName(),
+				.kind     = SymbolKind::Alias,
+				.pst_stmt = stmt,
+				.is_alias = true,
+			});
 		}
 		case pst::StmtKind::Using: {
-			break;
+			auto&& using_ = dynamic_cast<const pst::Using*>(stmt.get());
+			return putInSymtable(SymbolData{
+				.scope    = scope,
+				.name     = base::StrId("<USING>"),  // @FIX: I feel like it's not ok.
+				.kind     = SymbolKind::Using,
+				.pst_stmt = stmt,
+				.wildcard = true,
+				.is_alias = true,
+			});
 		}
 
 		default:
@@ -99,15 +121,21 @@ namespace compiler::helios {
 		);
 	}
 
-
 	struct ImplementationOf_QuerySymbolOfSTMT:
-		public query::QueryImplementation<QuerySymbolOfSTMT, SymID>
-	{
+		  query::QueryImplementation<QuerySymbolOfSTMT, SymID> {
 		static auto provide(Context&, QKey key) -> PResult {
 			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
 		}
 
-		static auto load([[maybe_unused]] QKey key) -> LoadResult { return {}; }
+		static auto load([[maybe_unused]] QKey key) -> LoadResult {
+			// return {
+			// 	if (cache.contains(key))
+			// 		return cache.at(key);
+			// 	else
+			// 		return {};
+			// }
+			return {};
+		}
 
 		static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd) {
 			throw "TODO";

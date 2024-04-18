@@ -7,7 +7,6 @@
 #include "../hout/hout.hpp"
 #include "../lookup_result.hpp"
 
-
 namespace compiler::helios {
 
 	/**
@@ -21,6 +20,7 @@ namespace compiler::helios {
 		Const,
 		Struct,
 		Alias,
+		Using,
 
 		TestSymbol,
 		// ...
@@ -28,10 +28,10 @@ namespace compiler::helios {
 
 	// Such functions can probably be just functions:
 	base::StrId name(SymID);
-	SymbolKind kind(SymID);
+	SymbolKind  kind(SymID);
 
 	struct KeyOf_QuerySymbolOfSTMT {
-		ScopeID scope;
+		ScopeID           scope;
 		PstRef<pst::Stmt> stmt;
 	};
 
@@ -45,6 +45,7 @@ namespace compiler::helios {
 
 	// @TODO: get type from type-system
 	struct Type {};
+
 	DECLARE_QUERY(QueryTypeOF, SymID, Type);
 
 	// @TODO: query symbol value (some CTV?) for execution somewhere
@@ -53,6 +54,7 @@ namespace compiler::helios {
 
 	// @TODO: some proper hout type
 	struct SomeHOUT {};
+
 	/**
 	 * @brief This query is effectively responsible for compilation of symbols.
 	 * @TODO: is it recursive?
