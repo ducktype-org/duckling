@@ -54,4 +54,8 @@ jobs:
 
     - name: Test
       working-directory: ${{env.WORKSPACE}}
-      run: ctest -C ${{env.BUILD_TYPE}}
+      # "export LD_LIBRARY_PATH" because DOWNLOAD_UBUNTU_ICU_BUILD downloads
+      # binary SO files that need to find other binary SO files
+      run: |
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./_deps/ubuntu-icu-src/usr/local/lib/ 
+        ctest -C ${{env.BUILD_TYPE}}
