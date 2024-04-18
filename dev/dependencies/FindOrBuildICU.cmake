@@ -75,8 +75,6 @@ function(FindOrBuildICU)
       set(ICU_UC_LIBRARY ${ICU_PREFIX}/lib/libicuuc.so.74)
       set(ICU_IO_LIBRARY ${ICU_PREFIX}/lib/libicuio.so.74)
 
-      message(" >>>>>>>>>>  ${ICU_I18N_LIBRARY}")
-
       add_library(icudata IMPORTED STATIC GLOBAL)
       set_target_properties(icudata PROPERTIES IMPORTED_LOCATION ${ICU_DATA_LIBRARY})
       target_include_directories(icudata INTERFACE ${ICU_INCLUDE_DIRS})
@@ -203,12 +201,8 @@ function(FindOrBuildICU)
   endif()
 
   add_library(unicode INTERFACE)
-  target_link_libraries(unicode INTERFACE icui18n icuio icuuc icudata)
+  target_link_libraries(unicode INTERFACE icuio icuuc icui18n icudata)
   set(ICU_LIBRARIES icui18n icuuc icudata icuio)
-
-  # Experimets:
-  # set_target_properties(unicode PROPERTIES LINK_FLAGS "-rpath")
-  target_link_options(unicode INTERFACE "-Wl,-rpath-link,.")
 
   message("-- ICU include dirs: ${ICU_INCLUDE_DIRS}")
   message("-- ICU libraries: ${ICU_LIBRARIES}")
