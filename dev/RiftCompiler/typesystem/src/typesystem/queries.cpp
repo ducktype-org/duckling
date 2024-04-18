@@ -187,6 +187,65 @@ namespace ts {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryPointerType, "QueryPointerType");
 
+	struct ImplementationOf_QueryFunctionType:
+		  query::QueryImplementation<QueryFunctionType, FunctionInfo::Pimpl> {
+		static inline base::Map<QKey, query::AddACD<FunctionInfo>> cache;
+
+		static auto provide(Context&, const QKey& key) -> PResult {
+			const auto [params, result, pure, free] = key;
+			const auto function_pimpl
+				= new internal::FunctionInfoImpl{ params, result, pure, free };
+			pushType(base::unique_ptr(function_pimpl));
+			return function_pimpl;
+		}
+
+		static auto store(const QKey& key, const PResult p_res, const query::ACD acd) -> QResult {
+			const auto q_res = QResult{ p_res };
+			cache.emplace(key, query::AddACD<QResult>{ q_res, acd });
+			return q_res;
+		}
+
+		static auto load(const QKey& key) -> LoadResult {
+			if (const auto cache_iter = cache.find(key); cache_iter != cache.end())
+				return base::Optional{ cache_iter->second };
+			return {};
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryFunctionType, "QueryFunctionType");
+
+	struct ImplementationOf_QueryNamespaceType:
+		  query::QueryImplementation<QueryNamespaceType, NamespaceInfo::Pimpl> {
+		static auto provide(Context&, QKey) -> PResult {
+			static auto namespace_impl = internal::NamespaceInfoImpl{};
+			return &namespace_impl;
+		}
+
+		static auto load(QKey) -> LoadResult { return {}; }
+
+		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
+			return QResult{ p_res };
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryNamespaceType, "QueryNamespaceType");
+
+	struct ImplementationOf_QueryModuleType:
+		  query::QueryImplementation<QueryModuleType, ModuleInfo::Pimpl> {
+		static auto provide(Context&, QKey) -> PResult {
+			static auto module_impl = internal::ModuleInfoImpl{};
+			return &module_impl;
+		}
+
+		static auto load(QKey) -> LoadResult { return {}; }
+
+		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
+			return QResult{ p_res };
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryModuleType, "QueryModuleType");
+
 	struct ImplementationOf_QueryMetaType:
 		  query::QueryImplementation<QueryMetaType, MetaInfo::Pimpl> {
 		static auto provide(Context&, QKey) -> PResult {

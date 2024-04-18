@@ -438,9 +438,9 @@ namespace ts::internal {
 	};
 
 	class FunctionInfoImpl final: public TypeInfoImpl {
-		const std::vector<TypeDesc<>> parameter_types;
-		const TypeDesc<>              result_type;
-		const bool                    pure, free;
+		const std::vector<TypeInfo> parameter_types;
+		const TypeInfo              result_type;
+		const bool                  pure, free;
 
 	public:
 		[[nodiscard]]
@@ -454,12 +454,12 @@ namespace ts::internal {
 		static Kind staticKind;
 
 		[[nodiscard]]
-		const std::vector<TypeDesc<>>& getParameterList() const {
+		const std::vector<TypeInfo>& getParameterList() const {
 			return parameter_types;
 		}
 
 		[[nodiscard]]
-		TypeDesc<> getResult() const {
+		TypeInfo getResult() const {
 			return result_type;
 		}
 
@@ -495,11 +495,11 @@ namespace ts::internal {
 			return isImplicitlyCoercible(result_type, toFunction.getResultType());
 		}
 
-		explicit FunctionInfoImpl(
-			std::vector<TypeDesc<>> parameter_types,
-			TypeDesc<>              result_type,
-			bool                    pure = false,
-			bool                    free = false
+		FunctionInfoImpl(
+			std::vector<TypeInfo> parameter_types,
+			TypeInfo              result_type,
+			bool                  pure = false,
+			bool                  free = false
 		);
 	};
 
