@@ -23,7 +23,9 @@ namespace pst {
 		const dia::SourcePosition& getSourcePosition() const;
 
 		[[nodiscard]]
-		PstID getID() const { return id; }
+		PstID getID() const {
+			return id;
+		}
 
 	private:
 		dia::SourcePosition source_position;
