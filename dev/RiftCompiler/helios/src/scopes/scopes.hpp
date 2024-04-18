@@ -5,6 +5,7 @@
 #include <base/string_id.hpp>
 #include <query_framework/query_int.hpp>
 #include "../pst_ref.hpp"
+#include "base/perfect_hash.hpp"
 #include "pst_parser/elements/elements.hpp"
 #include "pst_parser/rift_parser_base.hpp"
 
@@ -34,6 +35,9 @@ namespace compiler::helios {
 	struct KeyOf_QueryPrimaryCodeScopeFor {
 		PstRef<pst::RiftElement> base_element;
 		StmtList stmts;
+
+		// @TODO:
+		base::HashT customPerfectHash() const;
 	};
 	/**
 	 * @brief Construct a Scope that has following properties:
