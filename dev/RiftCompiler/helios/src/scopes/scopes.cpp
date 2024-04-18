@@ -1,5 +1,7 @@
 #include "scopes.hpp"
 #include "../hout/hout.hpp"
+#include "base/stable_container.hpp"
+#include "query_framework/acd.hpp"
 #include <base/string_id.hpp>
 #include <query_framework/query_impl.hpp>
 
@@ -11,6 +13,7 @@ namespace compiler::helios {
 		// created on startup:
 		ScopeID parent;
 		base::StrId name; ///< for debug
+		bool is_root = false;
 
 		// cache entries:
 		// in the future we might need separation for: direct symbols, expanded symbols
@@ -20,20 +23,44 @@ namespace compiler::helios {
 
 
 		// This delete is important, to prevent any copy of scope data:
-		ScopeData(const ScopeData&)            = delete;
-		ScopeData& operator=(const ScopeData&) = delete;
+		// ScopeData(const ScopeData&)            = delete;
+		// ScopeData& operator=(const ScopeData&) = delete;
 
 	};
 
 
 	namespace {
-		// stable list of ScopeData
+		base::StableVector<ScopeData> scope_table;
+
+		template<class... T>
+		auto putInScopeTable(T&&... args) {
+			auto key = scope_table.emplaceBack(std::forward<T>(args)...);
+			return scope_table.getRef(key).value();
+		}
 	}
 
-	// query impl of:
-	// - lookup in scope:                   ScopeRef, StrID -> LookupResult
-	// - lookup in scope and scope parents: ScopeRef, StrID -> LookupResult
+	struct ImplementationOf_QuerySuperRootScope: query::QueryImplementation<QuerySuperRootScope, ScopeID> {
+		inline static base::Optional<query::AddACD<ScopeID>> cache;
+		
+		static auto provide(Context&, QKey) -> PResult {
+			return putInScopeTable(ScopeData{
+				.parent = ScopeID{nullptr},
+				.name = base::StrId("ROOT"),
+				.is_root = true,
+			});
+		}
 
+		static auto load(QKey) -> LoadResult {
+			return cache;
+		}
+
+		static auto store(QKey, PResult res, query::ACD acd) -> QResult {
+			cache = {res, acd};
+			return cache.value().data;
+		}
+	};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySuperRootScope, "Query Super Root scope");
 
 	// impl of simple getters ("non-query query"):
 	// get name
