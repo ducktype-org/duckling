@@ -3,6 +3,7 @@
 #include "base/maps.hpp"
 #include "base/stable_container.hpp"
 #include "../lookup_result.hpp"
+#include "base/str_concat.hpp"
 #include "frontend/module_tree/module_tree.hpp"
 #include "frontend/module_tree/queries.hpp"
 #include "pst_parser/rift_parser_base.hpp"
@@ -37,6 +38,20 @@ namespace compiler::helios {
 
 	};
 
+	struct GetScopeRef_Functor {
+		static auto get(ScopeID id) { return id.ref; }
+	};
+	auto getScopeRef(ScopeID id) { return GetScopeRef_Functor::get(id); }
+
+	std::string dprint(ScopeID id) {
+		auto ref = getScopeRef(id);
+		std::string out = base::strConcat(
+			"Stmt count: ",
+			ref->stmt_list.size(),
+			"\n"
+		);
+		return out;
+	}
 
 	namespace {
 		base::StableVector<ScopeData> scope_table;
@@ -60,7 +75,7 @@ namespace compiler::helios {
 				.parent = ScopeID{nullptr},
 				// .name = base::StrId("ROOT"),
 				.is_root = true,
-				.stmt_list = {},//getChildStmtsOf(), //<< TODO
+				.stmt_list = getChildStmtsOf(module_pst.getTopLevelElement()),
 				.symbols = {},
 			});
 		}
@@ -111,6 +126,15 @@ namespace compiler::helios {
 	// etc 
 
 	// if somewhere then here it is needed to handle cycles somehow
+
+
+	base::HashT KeyOf_QueryPrimaryCodeScopeFor::customPerfectHash() const {
+		auto hash_1 = base::perfectHash(parent);
+		auto hash_2 = base_element->getID().asInt();
+
+		// @FIXME: this does not work:
+		return hash_1*143 + hash_2*7;
+	}
 }
 
 

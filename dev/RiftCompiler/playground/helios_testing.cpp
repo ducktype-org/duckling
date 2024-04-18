@@ -1,3 +1,6 @@
+#include "helios/scopes/scopes.hpp"
+#include "lexer/lexer.hpp"
+#include "pst_parser/parser.hpp"
 #include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/symbols.hpp>
 #include <clap/clap.hpp>
@@ -6,6 +9,14 @@
 
 
 int main(int argc, const char* argv[]) {
+	// @TODO: add to helios init
+	lexer::init();
+	pst::init();
+	// @FUTURE: record all inits somewhere..
+	
+	// parser::init();
+
+
 	auto clap
 		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
 	                                         .addShortName('p')
@@ -30,10 +41,14 @@ int main(int argc, const char* argv[]) {
 	std::cerr << "path_to_compile: " << path_to_compile.strView() << "\n";
 
 
-	using namespace compiler::frontend;
+	using namespace compiler;
 
-	auto root = query::queryEntryPoint<QueryModuleTree>(path_to_compile);
+	auto root = query::queryEntryPoint<frontend::QueryModuleTree>(path_to_compile);
 
 	// @TODO: add helios here...
+	// thats the wrong way to do it:...
+	auto root_scope = query::queryEntryPoint<helios::QueryRootScopeOf>(root);
+
+	std::cerr << dprint(root_scope);
 
 }

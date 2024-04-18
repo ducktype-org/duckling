@@ -15,8 +15,10 @@
 namespace compiler::helios {
 	using StmtList = std::vector<PstRef<pst::Stmt>>;
 
-	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleId, ScopeID);
+	// this is just a mock:
+	std::string dprint(ScopeID);
 
+	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleId, ScopeID);
 
 	struct KeyOf_QueryPrimaryCodeScopeFor {
 		/// @TODO is this needed?
@@ -27,7 +29,6 @@ namespace compiler::helios {
 		PstRef<pst::Stmt> base_element;
 		// StmtList stmts;
 
-		// @TODO:
 		base::HashT customPerfectHash() const;
 	};
 	/**

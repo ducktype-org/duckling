@@ -1,4 +1,5 @@
 #include "symbols.hpp"
+#include "base/perfect_hash.hpp"
 #include "pst_parser/elements/elements.hpp"
 #include "../pst_ref.hpp"
 #include <memory>
@@ -32,16 +33,28 @@ namespace compiler::helios {
 		// cached: linked_lookup_scope ?
 		// cached: type
 		// cached: value?
-		
-
-
-
 	};
 
 	// do we want internal inheritance?
 	// query: lookupIn
 	// query: dealias
+
+	struct GetSymRef_Functor {
+		static auto get(SymID id) { return id.ref; }
+	};
+	auto getSymRef(SymID id) { return GetSymRef_Functor::get(id); }
 	
+
+	base::StrId name(SymID id) {
+		return getSymRef(id)->name;
+	}
+	SymbolKind kind(SymID id) {
+		return getSymRef(id)->kind;
+	}
+	ScopeID scope(SymID id) {
+		return getSymRef(id)->scope;
+	}
+
 
 	namespace {
 		// global table:
@@ -109,11 +122,21 @@ namespace compiler::helios {
 
 		static auto load([[maybe_unused]] QKey key) -> LoadResult { return {}; }
 
-		static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd) {
+		static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd) -> QResult {
 			throw "TODO";
 		}
 	};
 
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySymbolOfSTMT, "Query Symbol of Stmt");
+
 	// if somewhere then here it is needed to handle cycles somehow
+
+	base::HashT KeyOf_QuerySymbolOfSTMT::customPerfectHash() const {
+		auto hash_1 = base::perfectHash(scope);
+		auto hash_2 = stmt->getID().asInt();
+
+		// @FIXME: this does not work:
+		return hash_1*143 + hash_2*7;
+	}
 
 }
