@@ -1,9 +1,12 @@
 #include "scopes.hpp"
 #include "../hout/hout.hpp"
+#include "base/maps.hpp"
 #include "base/stable_container.hpp"
+#include "pst_parser/rift_parser_base.hpp"
 #include "query_framework/acd.hpp"
 #include <base/string_id.hpp>
 #include <query_framework/query_impl.hpp>
+#include "../pst_walkers.hpp"
 
 namespace compiler::helios {
 
@@ -64,16 +67,25 @@ namespace compiler::helios {
 
 
 	struct ImplementationOf_QueryPrimaryCodeScopeFor: query::QueryImplementation<QueryPrimaryCodeScopeFor, ScopeID> {
+
+		static inline base::HashMap<pst::PstID, query::AddACD<ScopeID>> cache;
 		
-		static auto provide(Context&, QKey) -> PResult {
-			
+		static auto provide(Context&, QKey element) -> PResult {
+			auto list_of_stmt = getChildStmtsOf(element.base_element);
+			// return putInScopeTable(...)
+			throw "TODO";
 		}
 
-		static auto load(QKey) -> LoadResult {
+		static auto load(QKey key) -> LoadResult {
+			if (auto data = cache.atMaybe(key.base_element->getID())) {
+				return QResWithACD{ data->data, data->acd };
+			}
+			return {};
 		}
 
-		static auto store(QKey, PResult res, query::ACD acd) -> QResult {
-			
+		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
+			cache.put(key.base_element->getID(), {res, acd});
+			return res;
 		}
 	};
 
