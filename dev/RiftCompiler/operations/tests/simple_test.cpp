@@ -20,7 +20,7 @@ private:
 
 		auto int_16 = query::queryEntryPoint<ts::QueryIntegralType>({ 16 });
 
-		auto fun_sig = ts::FunctionInfo::create({ int_16 }, int_16);
+		auto fun_sig = query::queryEntryPoint<ts::QueryFunctionType>({ { int_16 }, int_16 });
 
 		operation::Operation      fun = [](std::vector<exec::CTV> a) { return a[0]; };
 		operation::TypedOperation op  = { fun, fun_sig };
@@ -42,17 +42,16 @@ private:
 		ts::TypeDesc<> td(query::queryEntryPoint<ts::QueryIntegralType>({ 8 }));
 		exec::CTV      ctv = exec::alloc_new(td, 8);
 
-		auto int16  = query::queryEntryPoint<ts::QueryIntegralType>({ 16 });
-		auto int_16 = ts::TypeDesc<>(int16);
+		auto int_16 = query::queryEntryPoint<ts::QueryIntegralType>({ 16 });
 
-		auto fun_sig = ts::FunctionInfo::create({ int_16 }, int_16);
+		auto fun_sig = query::queryEntryPoint<ts::QueryFunctionType>({ { int_16 }, int_16 });
 
 		operation::Operation      fun = [](std::vector<exec::CTV> a) { return a[0]; };
 		operation::TypedOperation op  = { fun, fun_sig };
 
-		auto id = operation::addDefault(operation::Defaultable::Compare, int16, op);
+		auto id = operation::addDefault(operation::Defaultable::Compare, int_16, op);
 
-		auto def_id = operation::getIdDefault(operation::Defaultable::Compare, int16);
+		auto def_id = operation::getIdDefault(operation::Defaultable::Compare, int_16);
 
 
 		assert(id == def_id, "Ids of the same operation do not match.");
@@ -68,7 +67,7 @@ private:
 		assert(res.size == ctv.size, "Wrong CTV size.");
 
 		const operation::TypedOperation& get_op2
-			= operation::getDefault(operation::Defaultable::Compare, int16);
+			= operation::getDefault(operation::Defaultable::Compare, int_16);
 
 		auto res2 = get_op2.function(std::vector<exec::CTV>{ ctv });
 

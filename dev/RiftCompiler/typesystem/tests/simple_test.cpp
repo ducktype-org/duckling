@@ -205,13 +205,14 @@ private:
 	 * and that they are correctly cast.
 	 */
 	void simple_function() {
-		const auto int_16 = TypeDesc<>(query::queryEntryPoint<QueryIntegralType>({ 16 }));
-		const auto int_32 = TypeDesc<>(query::queryEntryPoint<QueryIntegralType>({ 32 }));
+		const auto int_16 = query::queryEntryPoint<QueryIntegralType>({ 16 });
+		const auto int_32 = query::queryEntryPoint<QueryIntegralType>({ 32 });
 
-		const auto fun_1 = FunctionInfo::create({ int_16, int_32 }, int_32);
+		const auto fun_1
+			= query::queryEntryPoint<QueryFunctionType>({ { int_16, int_32 }, int_32 });
 
 		assert(
-			fun_1.getParameterTypes() == std::vector({ int_16, int_32 }),
+			fun_1.getParameterTypes() == std::vector<TypeInfo>({ int_16, int_32 }),
 			"Parameter types should be as constructed."
 		);
 		assert(fun_1.getResultType() == int_32, "Result type should be as constructed.");
@@ -222,19 +223,22 @@ private:
 		const FunctionInfo fun2     = type_fun;
 		assert(fun2.getKind() == Function, "Function should survive casting.");
 
-		const auto fun_identical = FunctionInfo::create({ int_16, int_32 }, int_32);
+		const auto fun_identical
+			= query::queryEntryPoint<QueryFunctionType>({ { int_16, int_32 }, int_32 });
 		assert(fun_1 == fun_identical, "Function types constructed the same way should be equal.");
-		const auto fun_different_input = FunctionInfo::create({ int_32, int_32 }, int_32);
+		const auto fun_different_input
+			= query::queryEntryPoint<QueryFunctionType>({ { int_32, int_32 }, int_32 });
 		assert(
 			fun_1 != fun_different_input, "Functions of different input types should be different."
 		);
-		const auto fun_different_output = FunctionInfo::create({ int_16, int_32 }, int_16);
+		const auto fun_different_output
+			= query::queryEntryPoint<QueryFunctionType>({ { int_16, int_32 }, int_16 });
 		assert(
 			fun_1 != fun_different_output,
 			"Functions of different output types should be different."
 		);
 		const auto fun_different_flags
-			= FunctionInfo::create({ int_16, int_32 }, int_32, true, true);
+			= query::queryEntryPoint<QueryFunctionType>({ { int_16, int_32 }, int_32, true, true });
 		assert(fun_1 != fun_different_flags, "Functions with different flags should be different.");
 
 		const TypeInfo     type_fun_different_flags = fun_different_flags;
@@ -324,6 +328,34 @@ private:
 			"Value category with full allows_semantic should contain same value category with "
 			"subset of allowed semantics."
 		);
+	}
+
+	/**
+	 * Test that there are two unique macro element types, and that they are correctly cast.
+	 */
+	void simple_macro_elements() {
+		const auto namespace_1 = query::queryEntryPoint<QueryNamespaceType>({});
+		assert(namespace_1.getKind() == Namespace, "Namespace type should have kind Namespace.");
+		const auto module_1 = query::queryEntryPoint<QueryModuleType>({});
+		assert(module_1.getKind() == Module, "Module type should have kind Module.");
+
+		assert(namespace_1 != module_1, "All macro element types should be different.");
+
+		const auto namespace_2 = query::queryEntryPoint<QueryNamespaceType>({});
+		const auto module_2    = query::queryEntryPoint<QueryModuleType>({});
+
+		assert(
+			namespace_1 == namespace_2 && module_1 == module_2,
+			"Macro element types of the same kind should be equal."
+		);
+
+		const TypeInfo      type_namespace = namespace_1;
+		const NamespaceInfo namespace_3    = type_namespace;
+		assert(namespace_3.getKind() == Namespace, "Namespace should survive casting.");
+
+		const TypeInfo   type_module = module_1;
+		const ModuleInfo module_3    = type_module;
+		assert(module_3.getKind() == Module, "Module should survive casting.");
 	}
 
 public:

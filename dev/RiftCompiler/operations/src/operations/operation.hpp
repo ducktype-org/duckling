@@ -36,7 +36,8 @@ namespace operation {
 				// @TODO: this should check if types are compatible.
 				// (possibly doing some conversion, or discarding consts?)
 				RIFT_ASSERT(
-					ctvs[i].type == signature.getParameterTypes()[i], "Argument has incorrect type"
+					ctvs[i].type.getType() == signature.getParameterTypes()[i],
+					"Argument has incorrect type"
 				);
 			}
 
