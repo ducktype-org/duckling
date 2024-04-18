@@ -1,4 +1,3 @@
-#include <cstdint>
 #include <tester/tester.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_impl.hpp>
