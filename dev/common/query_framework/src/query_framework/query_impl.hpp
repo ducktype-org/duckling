@@ -146,6 +146,6 @@ namespace query {
 				cache;                                                                          \
 	static auto load(QKey key) -> LoadResult { return cache.atMaybeCopy(key); }                 \
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                       \
-		cache.put(key, { res, acd });                                                           \
+		cache.put(key, { std::move(res), acd });                                                \
 		return cache.at(key).data;                                                              \
 	}
