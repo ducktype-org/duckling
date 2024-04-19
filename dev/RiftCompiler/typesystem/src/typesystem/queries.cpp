@@ -1,6 +1,7 @@
 #include <query_framework/query_impl.hpp>
 #include "internal/type_info_impl.hpp"
 #include "queries.hpp"
+#include "implicit_coercibility.hpp"
 
 namespace ts {
 	struct ImplementationOf_QueryUnitType:
@@ -260,5 +261,55 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryMetaType, "QueryMetaType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryImplicitCoercibility, "QueryImplicitCoercibility");
+
+	struct ImplementationOf_QueryImplicitCoercibility:
+		  query::QueryImplementation<QueryImplicitCoercibility, bool> {
+		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
+
+		static auto provide(Context&, QKey) -> PResult {
+			return (
+				(getUserDefinedCoertions().contains(QKey.source)
+				&& getUserDefinedCoertions()[QKey.source].contains(QKey.target))
+				|| source.isInfoImplicitlyCoercible(QKey.target)
+			);
+		}
+
+		static auto load(QKey key) -> LoadResult {
+			if (cache.contains(key))
+				return cache.at(key);
+			else
+				return {};
+		}
+
+		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
+			cache.put(key, { res, acd });
+			return res;
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryImplicitCoercibility, "QueryImplicitCoercibility");
+
+	struct ImplementationOf_QueryImplicitCoercibilityDefinition:
+		  query::QueryImplementation<QueryImplicitCoercibilityDefinition, void> {
+		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
+
+		static auto provide(Context&, QKey) -> PResult {
+			getUserDefinedCoertions()[QKey.source].insert(QKey.target);
+		}
+
+		static auto load(QKey key) -> LoadResult {
+			if (cache.contains(key))
+				return cache.at(key);
+			else
+				return {};
+		}
+
+		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
+			cache.put(key, { res, acd });
+			return res;
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryImplicitCoercibilityDefinition, "QueryImplicitCoercibilityDefinition");
 }

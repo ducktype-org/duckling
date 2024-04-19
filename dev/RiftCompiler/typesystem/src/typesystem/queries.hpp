@@ -192,4 +192,58 @@ namespace ts {
 	 * @brief Query to get the Module type.
 	 */
 	DECLARE_QUERY(QueryModuleType, query::EmptyKey, ModuleInfo)
+
+	/**
+	 * @brief Key for QueryImplicitCoercibility.
+	 */
+	struct KeyFor_ImplicitCoercibility {
+		/**
+		 * @brief Source type of the coerction.
+		 */
+		const TypeInfo& source;
+
+		/**
+		 * @brief Target type of the coerction.
+		 */
+		const TypeInfo& target;
+
+		KeyFor_ImplicitCoercibility(
+			const TypeInfo& source,
+			const TypeInfo& target
+		):
+			  source(source)
+			  target(target) {}
+
+		KeyFor_ImplicitCoercibility(
+			const TypeDesc<>& source,
+			const TypeDesc<>& target
+		):
+			  source(source.getType())
+			  target(target.getType()) {}
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			static base::Map<KeyFor_ImplicitCoercibility, u64> hashes{};
+
+			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+
+			u64 result = hashes.size();
+			hashes.put(*this, result);
+			return result;
+		}
+	};
+
+	/**
+	 * @brief Query to get check weather the implicit coerction from one type to another is allowed.
+	 */
+	DECLARE_QUERY(QueryImplicitCoercibility, KeyFor_ImplicitCoercibility, bool)
+
+	/* @TODO
+	 * it is not pure at all
+	 * ant it can't be
+	 */
+	/**
+	 * @brief Query to declare a implicit coerction between two types.
+	 */
+	DECLARE_QUERY(QueryImplicitCoercibilityDefinition, KeyFor_ImplicitCoercibility, void)
 }

@@ -7,10 +7,12 @@
 #include "../type_info.hpp"
 #include "../types.hpp"
 #include "../type_interface.hpp"
+#include "../queries.hpp"
 #include <base/string_id.hpp>
 #include <base/smart_pointers.hpp>
 #include <utility>
 #include <vector>
+#include <query_framework/query_entry_point.hpp>
 
 namespace ts::internal {
 	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
@@ -489,10 +491,11 @@ namespace ts::internal {
 			    || parameter_types.size() != toFunction.getParameterTypes().size()) {
 				return false;
 			}
+			
 			for (usize i = 0; i < parameter_types.size(); i++)
-				if (!isImplicitlyCoercible(toFunction.getParameterTypes()[i], parameter_types[i]))
+				if (!query::queryEntryPoint<QueryImplicitCoercibility>(KeyFor_ImplicitCoercibility(toFunction.getParameterTypes()[i], parameter_types[i])))
 					return false;
-			return isImplicitlyCoercible(result_type, toFunction.getResultType());
+			return query::queryEntryPoint<QueryImplicitCoercibility>(KeyFor_ImplicitCoercibility(result_type, toFunction.getResultType()));
 		}
 
 		FunctionInfoImpl(

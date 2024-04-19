@@ -31,33 +31,38 @@
 #include "type_desc.hpp"
 #include "type_info.hpp"
 
+#include <map>
+#include <set>
+
 // In the future, coercibility could work significantly differently.
 // For example, these functions could also return the OperationID of the coercion operation.
 // The current coercion implementation has not yet been tested.
 // @TODO: Consider the above and add tests
 
 namespace ts {
+	std::map<TypeInfo, std::set<TypeInfo>>& getUserDefinedCoertions();
+
 	/**
-	 * \brief Declare that an implicit coercion between two types should be considered.
-	 * \param source The source type.
-	 * \param target The target type.
+	 * @brief Declare that an implicit coercion between two types should be considered.
+	 * @param source The source type.
+	 * @param target The target type.
 	 */
 	void addUserDefinedImplicitCoercion(const TypeInfo& source, const TypeInfo& target);
 
 	/**
-	 * \brief Check whether an implicit coercion from one type to another is allowed.
-	 * \param source The source type.
-	 * \param target The target type.
-	 * \return Whether an implicit coercion is allowed for the given types.
+	 * @brief Check whether an implicit coercion from one type to another is allowed.
+	 * @param source The source type.
+	 * @param target The target type.
+	 * @return Whether an implicit coercion is allowed for the given types.
 	 */
 	[[nodiscard]]
 	bool isImplicitlyCoercible(const TypeInfo& source, const TypeInfo& target);
 
 	/**
-	 * \brief Check whether an implicit coercion from one value to another is allowed.
-	 * \param source The source value description.
-	 * \param target The target value description.
-	 * \return Whether an implicit coercion is allowed for the given values.
+	 * @brief Check whether an implicit coercion from one value to another is allowed.
+	 * @param source The source value description.
+	 * @param target The target value description.
+	 * @return Whether an implicit coercion is allowed for the given values.
 	 */
 	[[nodiscard]]
 	bool isImplicitlyCoercible(const TypeDesc<>& source, const TypeDesc<>& target);

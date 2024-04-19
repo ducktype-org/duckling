@@ -5,10 +5,13 @@
 #include <set>
 
 namespace ts {
-	std::map<TypeInfo, std::set<TypeInfo>> userDefinedImplicitCoercions{};
+	std::map<TypeInfo, std::set<TypeInfo>>& getUserDefinedCoertions() {
+		static std::map<TypeInfo, std::set<TypeInfo>> userDefinedImplicitCoercions{};
+		return userDefinedImplicitCoercions;
+	}
 
 	void addUserDefinedImplicitCoercion(const TypeInfo& source, const TypeInfo& target) {
-		userDefinedImplicitCoercions[source].insert(target);
+		getUserDefinedCoertions()[source].insert(target);
 	}
 
 	bool isImplicitlyCoercible(const TypeInfo& source, const TypeInfo& target) {
@@ -16,8 +19,8 @@ namespace ts {
 		// or if the type kind knows to implicitly coerce to the target type,
 		// often of the same kind, e.g. integer promotion or upwards a class hierarchy.
 		return (
-			(userDefinedImplicitCoercions.contains(source)
-		     && userDefinedImplicitCoercions[source].contains(target))
+			(getUserDefinedCoertions().contains(source)
+		     && getUserDefinedCoertions()[source].contains(target))
 			|| source.isInfoImplicitlyCoercible(target)
 		);
 	}
