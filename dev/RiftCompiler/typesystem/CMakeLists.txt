@@ -12,3 +12,5 @@ add_library(TypeSystem
 make_module(TypeSystem USES Base HIR Exec QueryFramework)
 
 rift_add_test(compiler typesystem_test_simple tests/simple_test.cpp USES TypeSystem)
+
+rift_add_test(compiler typesystem_test_error tests/error_test.cpp USES TypeSystem)

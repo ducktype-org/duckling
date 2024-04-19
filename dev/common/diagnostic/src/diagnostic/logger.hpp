@@ -95,5 +95,14 @@ namespace dia {
 		 * @todo remove
 		 */
 		void failAndLog(const printer::MessageContent& message);
+
+		/**
+		 * @brief Clear all logs. Restore to default state.
+		 */
+		void clear() {
+			for (auto & log_for_severity: message_log) {
+				log_for_severity.clear();
+			}
+		}
 	};
 }

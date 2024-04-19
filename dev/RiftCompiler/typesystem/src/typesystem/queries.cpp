@@ -86,7 +86,39 @@ namespace ts {
 
 	struct ImplementationOf_QueryIntegralType:
 		  query::QueryImplementation<QueryIntegralType, IntegralInfo::Pimpl> {
-		static auto provide(Context&, const QKey key) -> PResult {
+		class ErrorBadIntegralSize final: public dia::Error {
+			usize requested_size;
+
+		protected:
+			[[nodiscard]]
+			printer::MessageContent toMessageContentBrief() const override {
+				std::stringstream ss;
+				ss << "Invalid size of integral type: " << requested_size;
+				return ss.str();
+			}
+
+			[[nodiscard]]
+			printer::MessageContent toMessageContentDetailed() const override {
+				std::stringstream ss;
+				ss << "Invalid size of integral type: " << requested_size << "\n"
+				   << "The only allowed sizes are 8, 16, 32, 64, and 128.";
+				return ss.str();
+			}
+
+		public:
+			[[nodiscard]]
+			Domain getDomain() const override {
+				return Domain::TypeCheck;
+			}
+
+			explicit ErrorBadIntegralSize(
+				const dia::SourcePosition& source_position, const usize requested_size
+			):
+				  Error(source_position),
+				  requested_size(requested_size) {}
+		};
+
+		static auto provide(Context& context, const QKey key) -> PResult {
 			using Impl = IntegralInfo::Impl;
 
 			static std::map<std::pair<usize, bool>, Impl> cache = {
@@ -99,10 +131,19 @@ namespace ts {
 
 			const auto [size, signedness] = key;
 
-			// @FIXME: This probably should be a properly logged compiler error,
-			// waiting for diagnostics merge. Maybe we want to syntactically allow stuff like
-			// i42 as a type, but reject it at the TS level?
-			RIFT_ASSERT(cache.contains({ size, signedness }), "Incorrect simple int size");
+			if (!cache.contains({ size, signedness })) {
+				// @FIXME: provide proper SourcePosition.
+				context.log(base::make_unique<ErrorBadIntegralSize>(
+					dia::SourcePosition{
+						std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")),
+						1,
+						1,
+						1 },
+					size
+				));
+				// @TODO: maybe change to some ErrorType, instead of a "best guess".
+				return &cache.at({ 128, signedness });
+			}
 
 			return &cache.at({ size, signedness });
 		}
@@ -118,7 +159,39 @@ namespace ts {
 
 	struct ImplementationOf_QueryFloatType:
 		  query::QueryImplementation<QueryFloatType, FloatInfo::Pimpl> {
-		static auto provide(Context&, const QKey size) -> PResult {
+		class ErrorBadFloatSize final: public dia::Error {
+			usize requested_size;
+
+		protected:
+			[[nodiscard]]
+			printer::MessageContent toMessageContentBrief() const override {
+				std::stringstream ss;
+				ss << "Invalid size of float type: " << requested_size;
+				return ss.str();
+			}
+
+			[[nodiscard]]
+			printer::MessageContent toMessageContentDetailed() const override {
+				std::stringstream ss;
+				ss << "Invalid size of float type: " << requested_size << "\n"
+				   << "The only allowed sizes are 16, 32, 64, 80, and 128.";
+				return ss.str();
+			}
+
+		public:
+			[[nodiscard]]
+			Domain getDomain() const override {
+				return Domain::TypeCheck;
+			}
+
+			explicit ErrorBadFloatSize(
+				const dia::SourcePosition& source_position, const usize requested_size
+			):
+				  Error(source_position),
+				  requested_size(requested_size) {}
+		};
+
+		static auto provide(Context& context, const QKey size) -> PResult {
 			using Impl = FloatInfo::Impl;
 
 			static std::map<usize, Impl> cache = {
@@ -129,10 +202,19 @@ namespace ts {
 				{ 128, Impl{ 128 } },  // Quad precision
 			};
 
-			// @FIXME: This probably should be a properly logged compiler error,
-			// waiting for diagnostics merge. Maybe we want to syntactically allow stuff like
-			// f42 as a type, but reject it at the TS level?
-			RIFT_ASSERT(cache.contains(size), "Incorrect simple float size");
+			if (!cache.contains(size)) {
+				// @FIXME: provide proper SourcePosition.
+				context.log(base::make_unique<ErrorBadFloatSize>(
+					dia::SourcePosition{
+						std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")),
+						1,
+						1,
+						1 },
+					size
+				));
+				// @TODO: maybe change to some ErrorType, instead of a "best guess".
+				return &cache.at(128);
+			}
 
 			return &cache.at(size);
 		}

@@ -12,13 +12,49 @@
 
 // make this link less bug-prone...:
 struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
+	struct InfoInQuery1 final: dia::Info {
+		explicit InfoInQuery1(const dia::SourcePosition& source_position): Info(source_position) {}
+
+	protected:
+		[[nodiscard]]
+		printer::MessageContent toMessageContentBrief() const override {
+			return { "Some random log from Query1." };
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Misc;
+		}
+	};
+
+	struct ErrorInQuery1 final: dia::Error {
+		explicit ErrorInQuery1(const dia::SourcePosition& source_position):
+			  Error(source_position) {}
+
+	protected:
+		[[nodiscard]]
+		printer::MessageContent toMessageContentBrief() const override {
+			return { "An example error in Query1." };
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Misc;
+		}
+	};
+
 	inline static std::map<QKey, query::AddACD<QResult>> cache{};
 
 	// static auto provide(Context& context, QKey key) -> PResult;
 
 	static auto provide(Context& context, QKey key) -> PResult {
-		context.log("Some random log.");
-		context.compilationError("Error at query1 -- example error.");
+		// Log something, with example file path.
+		context.log(base::make_unique<InfoInQuery1>(dia::SourcePosition{
+			std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")), 1, 1, 1 }));
+		context.log(base::make_unique<ErrorInQuery1>(dia::SourcePosition{
+			std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")), 1, 1, 1 }));
 		return key * key;
 	}
 
@@ -92,6 +128,9 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_CyclicQuery, "Cyclic query");
 int main() {
 	std::cout << query::queryEntryPoint<Query2>(2) << "\n";
 	query::debugPrintDependencyGraph();
+	std::cout << "\n";
+
+	query::detail::ContextType::logger.dumpLog(true);
 
 	std::cout << query::queryEntryPoint<CyclicQuery>(0) << "\n";
 
