@@ -57,10 +57,9 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
 # Debug version uses O0 and prints all logs. 
-# -g flag is used by default.
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
 
-# Release version uses O2, not O3.
+# Release version uses O2, not O3. It might change.
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
