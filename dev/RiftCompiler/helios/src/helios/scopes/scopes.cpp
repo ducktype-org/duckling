@@ -156,6 +156,7 @@ namespace compiler::helios {
 		}
 	};
 
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySymbolsInScope, "Query symbols in Scope");
 
 	base::HashT KeyOf_QueryPrimaryCodeScopeFor::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(parent);

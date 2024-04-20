@@ -51,4 +51,9 @@ int main(int argc, const char* argv[]) {
 
 	std::cerr << dprint(root_scope);
 
+	auto symbols_in_root = query::queryEntryPoint<helios::QuerySymbolsInScope>(root_scope);
+
+	
+	std::cerr << "symbol count other: " << symbols_in_root.size() << "\n";
+
 }
