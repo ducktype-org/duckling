@@ -343,7 +343,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryImplicitCoercibility, "QueryImplicitCoercibility");
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryMetaType, "QueryMetaType");
 
 	struct ImplementationOf_QueryImplicitCoercibility:
 		  query::QueryImplementation<QueryImplicitCoercibility, bool> {
