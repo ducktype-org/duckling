@@ -39,4 +39,4 @@ public:
 	}
 };
 
-TESTER_COMMON_MAIN("/common/flag_type/tests/");
+TESTER_COMMON_MAIN("/base/tests/");

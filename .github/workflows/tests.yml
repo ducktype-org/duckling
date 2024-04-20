@@ -17,7 +17,7 @@ jobs:
     # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
     # You can convert this to a matrix build if you need cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     timeout-minutes: 8
 
@@ -46,11 +46,11 @@ jobs:
 
     - name: Configure CMake
       working-directory: ${{env.WORKSPACE}}
-      run: cmake -B ${{env.WORKSPACE}} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -B ${{env.WORKSPACE}} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON
 
     - name: Build
       working-directory: ${{env.WORKSPACE}}
-      run: cmake --build ${{env.WORKSPACE}} -j --target build_all_tests --config ${{env.BUILD_TYPE}}
+      run: cmake --build ${{env.WORKSPACE}} -j 2 --target build_all_tests --config ${{env.BUILD_TYPE}}
 
     - name: Test
       working-directory: ${{env.WORKSPACE}}

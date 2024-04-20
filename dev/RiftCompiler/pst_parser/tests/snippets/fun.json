@@ -14,7 +14,7 @@
 					"Name": "c"
 				},
 				"params": {
-					"ParamList": []
+					"List": []
 				},
 				"rets": "<nullptr>",
 				"body": {

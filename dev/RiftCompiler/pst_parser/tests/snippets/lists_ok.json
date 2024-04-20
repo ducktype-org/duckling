@@ -6,10 +6,10 @@
 					"Name": "A"
 				},
 				"params": {
-					"ParamList": []
+					"List": []
 				},
 				"rets": {
-					"RetList": [
+					"List": [
 						{
 							"Expr": [
 								{
@@ -32,10 +32,10 @@
 					"Name": "A"
 				},
 				"params": {
-					"ParamList": []
+					"List": []
 				},
 				"rets": {
-					"RetList": [
+					"List": [
 						{
 							"Expr": [
 								{
@@ -64,10 +64,10 @@
 					"Name": "A"
 				},
 				"params": {
-					"ParamList": []
+					"List": []
 				},
 				"rets": {
-					"RetList": [
+					"List": [
 						{
 							"Expr": [
 								{
@@ -97,10 +97,10 @@
 					"Name": "A"
 				},
 				"params": {
-					"ParamList": []
+					"List": []
 				},
 				"rets": {
-					"RetList": [
+					"List": [
 						{
 							"Expr": [
 								{
@@ -159,10 +159,10 @@
 					"Name": "A"
 				},
 				"params": {
-					"ParamList": []
+					"List": []
 				},
 				"rets": {
-					"RetList": [
+					"List": [
 						{
 							"Expr": [
 								{

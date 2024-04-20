@@ -6,7 +6,7 @@ namespace modulesys {
 		std::string result(local_path);
 		if (result[result.length() - 1] == '/') result.pop_back();
 		auto& names = import.getNames();
-		for (auto& name: names.names) result += "/" + name.value.str();
+		for (auto& name: names) result += "/" + name.value.str();
 		if (import.getStar()) result += "/*";
 		result += ".rift";
 		return result;

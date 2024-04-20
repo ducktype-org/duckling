@@ -24,3 +24,4 @@ Implementation of main Rift language compiler.
     pst_parser/index.rst
     rift_snippets/index.rst
     typesystem/index.rst
+    frontend/index.rst

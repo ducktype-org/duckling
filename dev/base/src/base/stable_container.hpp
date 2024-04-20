@@ -1,68 +1,77 @@
 #pragma once
 
 #include "ints.hpp"
-#include "smart_pointers.hpp"
 #include "optional.hpp"
-#include <concepts>
 #include <vector>
 
 namespace base {
 
 	template<typename Data>
-	using StableListRef = base::borrow_ptr<Data>;
+	using StableVectorRef = borrow_ptr<Data>;
 
 	template<typename Data>
-	using StableListCRef = base::c_borrow_ptr<Data>;
+	using StableVectorCRef = c_borrow_ptr<Data>;
 
 	/**
 	 * @brief Key must be „standard” numeric value such as:
 	 * integer
 	 * strongly typed int
-	 * NamedID
+	 * strongly typed id
 	 *
-	 * Right now StableList keys must be convertible to and from usize
+	 * Right now StableVector keys must be convertible to and from usize
 	 *
 	 * @TODO make concept to check it
 	 * @TODO add range based iteration
 	 */
-	template<typename Key, typename Data>
-	class StableList {
+	template<typename Data, typename Key = usize>
+	class StableVector {
 		/**
 		 * @brief @TODO
 		 * for now it is simple, naive implementation
 		 * in the future change it to something better
 		 */
 
-		std::vector<base::unique_ptr<Data>> data;
+		std::vector<unique_ptr<Data>> data;
 
 	public:
-		using Ref  = StableListRef<Data>;
-		using CRef = StableListCRef<Data>;
+		using Ref  = StableVectorRef<Data>;
+		using CRef = StableVectorCRef<Data>;
 
-		constexpr usize size() const noexcept { return data.size(); }
+		[[nodiscard]]
+		constexpr usize size() const noexcept {
+			return data.size();
+		}
 
-		constexpr usize empty() const noexcept { return data.empty(); }
+		[[nodiscard]]
+		constexpr usize empty() const noexcept {
+			return data.empty();
+		}
 
-		constexpr usize notEmpty() const noexcept { return !data.empty(); }
+		[[nodiscard]]
+		constexpr usize notEmpty() const noexcept {
+			return !data.empty();
+		}
 
 		/**
 		 * @brief Quick, unsafe, constexpr access
 		 */
-		constexpr Data& operator[](Key pos) { return *data.at(usize(pos)); }
+		constexpr Data& operator[](Key pos) { return *data.at(static_cast<usize>(pos)); }
 
 		/**
 		 * @brief Quick, unsafe, constexpr access
 		 */
-		constexpr const Data& operator[](Key pos) const { return *data.at(usize(pos)); }
+		constexpr const Data& operator[](Key pos) const {
+			return *data.at(static_cast<usize>(pos));
+		}
 
 		Optional<Ref> getRef(Key pos) noexcept {
-			if (usize(pos) >= size()) return {};
-			return data[usize(pos)].borrow_mut();
+			if (static_cast<usize>(pos) >= size()) return {};
+			return data[static_cast<usize>(pos)].borrow_mut();
 		}
 
 		Optional<CRef> getCRef(Key pos) const noexcept {
-			if (usize(pos) >= size()) return {};
-			return data[usize(pos)].borrow();
+			if (static_cast<usize>(pos) >= size()) return {};
+			return data[static_cast<usize>(pos)].borrow();
 		}
 
 		constexpr Key pushBack(const Data& value) {
@@ -83,11 +92,9 @@ namespace base {
 
 		template<class... Args>
 		constexpr Key emplaceBack(Args&&... args) {
-			return pushBack(Data(std::forward<Args...>(args...)));
+			return pushBack(Data(std::forward<Args>(args)...));
 		}
 	};
 
-	template<typename T>
-	using StableIntList = StableList<usize, T>;
 
 }

@@ -2,91 +2,108 @@
 	"PST": [
 		{
 			"Import": {
-				"star" : "false",
-				"names" : [
-					{
-						"Name": "aaaa"
-					},
-					{
-						"Name": "bbb"
-					},
-					{
-						"Name": "c"
-					},
-				]
-			}
+				"DottedName": {
+					"star": "false",
+					"names": [
+						{
+							"Name": "aaaa"
+						},
+						{
+							"Name": "bbb"
+						},
+						{
+							"Name": "c"
+						},
+					]
+				}
+			},
+			"Alias": "D"
 		},
 		{
 			"Import": {
-				"star" : "true",
-				"names" : [
-					{
-						"Name": "dasdsa"
-					},
-					{
-						"Name": "dasd"
-					},
-				]
-			}
+				"DottedName": {
+					"star": "true",
+					"names": [
+						{
+							"Name": "dasdsa"
+						},
+						{
+							"Name": "dasd"
+						},
+					]
+				}
+			},
+			"Alias": "F"
 		},
 		{
 			"Import": {
-				"star" : "false",
-				"names" : [
-					{
-						"Name": "aaaa"
-					},
-				]
-			}
+				"DottedName": {
+					"star": "false",
+					"names": [
+						{
+							"Name": "aaaa"
+						},
+					]
+				}
+			},
+			"Alias": "σααα"
 		},
 		{
 			"Import": {
-				"star" : "false",
-				"names" : [
-					{
-						"Name": "a"
-					},
-					{
-						"Name": "b"
-					},
-					{
-						"Name": "c"
-					},
-					{
-						"Name": "d"
-					},
-				]
-			}
+				"DottedName": {
+					"star": "false",
+					"names": [
+						{
+							"Name": "a"
+						},
+						{
+							"Name": "b"
+						},
+						{
+							"Name": "c"
+						},
+						{
+							"Name": "d"
+						},
+					]
+				}
+			},
+			"Alias": "XX"
 		},
 		{
 			"Import": {
-				"star" : "false",
-				"names" : [
-					{
-						"Name": "ἄλφα"
-					},
-					{
-						"Name": "βῆτα"
-					},
-					{
-						"Name": "γάμμα"
-					},
-				]
-			}
+				"DottedName": {
+					"star": "false",
+					"names": [
+						{
+							"Name": "ἄλφα"
+						},
+						{
+							"Name": "βῆτα"
+						},
+						{
+							"Name": "γάμμα"
+						},
+					]
+				}
+			},
+			"Alias": "U"
 		},
 		{
 			"Import": {
-				"star" : "true",
-				"names" : [
-					{
-						"Name": "ἄλφα"
-					},
-					{
-						"Name": "βῆτα"
-					},
-				]
-			}
+				"DottedName": {
+					"star": "true",
+					"names": [
+						{
+							"Name": "ἄλφα"
+						},
+						{
+							"Name": "βῆτα"
+						},
+					]
+				}
+			},
+			"Alias": "_1"
 		},
-
 	]
 }

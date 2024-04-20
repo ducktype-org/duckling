@@ -1,19 +1,18 @@
 #pragma once
 
 #include "../rift_parser_base.hpp"
+#include "elements_common.hpp"
 
 #include <token_parser_core/token_stream.hpp>
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
+#include <token_parser_core/automatic.hpp>
 
 #include <base/string_id.hpp>
 
 #include <variant>
 #include <iostream>
-#include <span>
-
-// @TODO: AttrList
 
 // @TODO: make generic optional
 
@@ -26,14 +25,6 @@ namespace pst {
 
 	class Expr;
 
-	struct DottedName {
-		std::vector<tpc::Identifier> names;
-		bool                         star = false;
-		[[nodiscard]]
-		std::vector<base::StrId> getNames() const;
-	};
-
-	void parseDottedName(tpc::ParserState& state, DottedName* d_name);
 
 	enum class StmtKind {
 		Attribute,
@@ -48,16 +39,14 @@ namespace pst {
 		Struct,
 		TopLevel,
 		Const,
-
-		EagerLookup,
 	};
 
 	class Stmt: public RiftElement {
 		StmtKind kind;
 
 	protected:
-		Stmt(StmtKind kind, dia::SourcePosition position):
-			  RiftElement(std::move(position)),
+		Stmt(StmtKind kind, const dia::SourcePosition& position):
+			  RiftElement(position),
 			  kind(kind) {}
 
 	public:
@@ -71,145 +60,240 @@ namespace pst {
 	};
 
 #define STMT_CHILD_CONSTRUCTOR(class_name) \
-	class_name(dia::SourcePosition position): Stmt(StmtKind::class_name, std::move(position)) {}
+	class_name(const dia::SourcePosition& position): Stmt(StmtKind::class_name, position) {}
 
 	class NotStmt: public RiftElement {
-		// @TODO:
-
 	public:
-		explicit NotStmt(dia::SourcePosition position): RiftElement(std::move(position)) {}
+		explicit NotStmt(const dia::SourcePosition& position): RiftElement(position) {}
 
 		bool trailingSemicolon() override;
 	};
 
-	class ParamList: public NotStmt {
-		std::vector<ParserRef<Expr>> params;
+	using StateCondition = bool(const RiftParserState&, usize);
+
+	/**
+	 * @brief General Element representing a list of Elements.
+	 *
+	 * @tparam SubElements - Kept Elements, has to have precise length parse like Expr
+	 * @tparam NON_EMPTY - Should empty list be an error.
+	 * @tparam BRACKETS - expected brackets or None if not expected
+	 * @tparam isSeparator - Separator should always be skip-able with one skip.
+	 * @tparam isEnding - Check for successful ending.
+	 * @tparam Container - Vector-like container of SubElements with emplace_back. Possibly with
+	 * other condition because of iteration.
+	 */
+	template<
+		class SubElements,
+		bool                      NON_EMPTY,
+		lexer::Token::BracketType BRACKETS,
+		StateCondition            isSeparator,
+		StateCondition            isEnding,
+		class Container = std::vector<ParserRef<SubElements>>>
+	class List final: public NotStmt {
+		Container elements;
 
 	public:
-		explicit ParamList(dia::SourcePosition position): NotStmt(std::move(position)) {}
+		DECLARE_CONST_ELEMENT_ITERATOR(elements, SubElements)
 
-		static ParserRef<ParamList> parse(RiftParserState& state);
-		virtual void                dprint(std::ostream& out) const final;
-		virtual ~ParamList() = default;
+		explicit List(const dia::SourcePosition& position): NotStmt(position) {}
+
+		static ParserRef<List> parse(RiftParserState& state);
+
+		void dprint(std::ostream& out) const final {
+			out << "{\"List\" : [";
+			for (auto& x: elements) {
+				tpc::nullAwareDprint(x, out);
+				out << ",";
+			}
+			out << "]}";
+		}
+
+		~List() final = default;
 	};
 
-	class RetList: public NotStmt {
-		std::vector<ParserRef<Expr>> rets;
+	using ParamList = List<
+		Expr,
+		false,
+		lexer::Token::BracketType::Round,
+		detail::Conditions::isComma,
+		detail::Conditions::isSentinel>;
+
+	using RetList = List<
+		Expr,
+		true,
+		lexer::Token::BracketType::None,
+		detail::Conditions::isComma,
+		detail::Conditions::isCurlyGroup>;
+
+	using InheritList = List<
+		Expr,
+		true,
+		lexer::Token::BracketType::None,
+		detail::Conditions::isComma,
+		detail::Conditions::isCurlyGroup>;
+
+	using ArgList = List<
+		Expr,
+		false,
+		lexer::Token::BracketType::Round,
+		detail::Conditions::isComma,
+		detail::Conditions::isSentinel>;
+
+	class DottedName final: public NotStmt {
+		std::vector<tpc::Identifier> names;
+		bool                         star = false;
 
 	public:
-		explicit RetList(dia::SourcePosition position): NotStmt(std::move(position)) {}
+		[[nodiscard]]
+		auto begin() const {
+			return names.cbegin();
+		}
 
-		static ParserRef<RetList> parse(RiftParserState& state);
-		virtual void              dprint(std::ostream& out) const final;
-		virtual ~RetList() = default;
+		[[nodiscard]]
+		auto end() const {
+			return names.cend();
+		}
+
+		explicit DottedName(const dia::SourcePosition& position): NotStmt(position) {}
+
+		static ParserRef<DottedName> parse(RiftParserState& state);
+
+		[[nodiscard]]
+		std::vector<base::StrId> getNames() const;
+		[[nodiscard]]
+		bool getStar() const;
+
+		void dprint(std::ostream& out) const final;
+		~DottedName() final = default;
 	};
 
-	class ArgList: public NotStmt {
-		// @TODO
-
-	public:
-		explicit ArgList(dia::SourcePosition position): NotStmt(std::move(position)) {}
-
-		static ParserRef<ArgList> parse(RiftParserState& state);
-		virtual ~ArgList() = default;
-		virtual void dprint(std::ostream& out) const final;
-	};
-
-	class Attribute: public Stmt {
+	class Attribute final: public Stmt {
 		tpc::Identifier    name;
 		ParserRef<ArgList> args = nullptr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Attribute);
 		static ParserRef<Attribute> parse(RiftParserState& state);
-		virtual ~Attribute() = default;
-		virtual void dprint(std::ostream& out) const final;
-		bool         trailingSemicolon() override;
+		~Attribute() final = default;
+		void dprint(std::ostream& out) const final;
+		bool trailingSemicolon() override;
 	};
 
-	class Import: public Stmt {
-		DottedName names;
+	/**
+	 * @note: Import allows for two syntaxes right now:
+	 * import A.B as D;
+	 * import A.B.* as D;
+	 *
+	 * the optional "star" is ignored.
+	 */
+	class Import final: public Stmt {
+		ParserRef<DottedName> names;
+		tpc::Identifier       alias;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Import);
 		static ParserRef<Import> parse(RiftParserState& state);
-		const decltype(names)&   getNames() const;
-		bool                     getStar() const;
-		virtual ~Import() = default;
-		virtual void dprint(std::ostream& out) const final;
+		[[nodiscard]]
+		const decltype(names)& getNames() const;
 
-		// @TODO:
+		/**
+		 * @note In the future this functionality will be done by HELIOS.
+		 * This functionality is needed to implement early import system for testing.
+		 */
+		[[nodiscard]]
+		std::vector<base::StrId> getModulePath() const;
+
+		[[nodiscard]]
+		bool getStar() const;
+		~Import() final = default;
+		void dprint(std::ostream& out) const final;
 	};
 
-	class Using: public Stmt {
-		DottedName names;
+	class Using final: public Stmt {
+		ParserRef<DottedName> names;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Using);
 		static ParserRef<Using> parse(RiftParserState& state);
 
-		auto getPointed() const { return names.getNames(); }
+		[[nodiscard]]
+		auto getPointed() const {
+			return names->getNames();
+		}
 
-		bool isStar() const { return names.star; }
+		[[nodiscard]]
+		bool isStar() const {
+			return names->getStar();
+		}
 
-		virtual ~Using() = default;
-		virtual void dprint(std::ostream& out) const final;
+		~Using() final = default;
+		void dprint(std::ostream& out) const final;
 	};
 
-	class Alias: public Stmt {
-		tpc::Identifier name;
-		DottedName      points_to;
+	class Alias final: public Stmt {
+		tpc::Identifier       name;
+		ParserRef<DottedName> points_to;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Alias);
 
-		base::StrId getName() const { return name.value; }
+		[[nodiscard]]
+		base::StrId getName() const {
+			return name.value;
+		}
 
-		auto getPointed() const { return points_to.getNames(); }
+		[[nodiscard]]
+		auto getPointed() const {
+			return points_to->getNames();
+		}
 
 		static ParserRef<Alias> parse(RiftParserState& state);
-		virtual ~Alias() = default;
-		virtual void dprint(std::ostream& out) const final;
+		~Alias() final = default;
+		void dprint(std::ostream& out) const final;
 	};
 
-	class CodeBlock: public NotStmt {
+	class CodeBlock final: public NotStmt {
 		std::vector<ParserRef<Stmt>> statements;
 
 	public:
-		explicit CodeBlock(dia::SourcePosition position): NotStmt(std::move(position)) {}
+		DECLARE_CONST_ELEMENT_ITERATOR(statements, Stmt)
+
+		explicit CodeBlock(const dia::SourcePosition& position): NotStmt(position) {}
 
 		static ParserRef<CodeBlock> parse(RiftParserState& state);
-		virtual ~CodeBlock() = default;
-		virtual void dprint(std::ostream& out) const final;
-
-		std::span<const ParserRef<Stmt>> getStatements() const { return statements; }
+		~CodeBlock() final = default;
+		void dprint(std::ostream& out) const final;
 	};
 
-	class CodeBlockOrStmt: public NotStmt {
+	class CodeBlockOrStmt final: public NotStmt {
 		std::variant<ParserRef<Stmt>, ParserRef<CodeBlock>> content;
 
 	public:
-		explicit CodeBlockOrStmt(dia::SourcePosition position): NotStmt(std::move(position)) {}
+		explicit CodeBlockOrStmt(const dia::SourcePosition& position): NotStmt(position) {}
 
 		static ParserRef<CodeBlockOrStmt> parse(RiftParserState& state);
-		virtual ~CodeBlockOrStmt() = default;
-		virtual void dprint(std::ostream& out) const final;
+		~CodeBlockOrStmt() final = default;
+		void dprint(std::ostream& out) const final;
 
-		std::span<const ParserRef<Stmt>> getStatements() const;
+		using const_iterator = CodeBlock::const_iterator;
+		[[nodiscard]]
+		const_iterator begin() const;
+		[[nodiscard]]
+		const_iterator end() const;
 	};
 
-	class RoundGroupExpr: public NotStmt {
+	class RoundGroupExpr final: public NotStmt {
 		ParserRef<Expr> expr = nullptr;
 
 	public:
-		explicit RoundGroupExpr(dia::SourcePosition position): NotStmt(std::move(position)) {}
+		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {}
 
 		static ParserRef<RoundGroupExpr> parse(RiftParserState& state);
-		virtual ~RoundGroupExpr() = default;
-		virtual void dprint(std::ostream& out) const final;
+		~RoundGroupExpr() final = default;
+		void dprint(std::ostream& out) const final;
 	};
 
-	class Expr: public Stmt {
+	class Expr final: public Stmt {
 	private:
 		// @TODO: this friend should probably be removed, and some stuff just should be public
 		friend ::hir::Expression;
@@ -222,7 +306,6 @@ namespace pst {
 			AngleGroup  = 3,
 		};
 
-		// @TODO: change StrId to Operator::, etc
 		struct Group;
 		struct Operator;
 		struct Identifier;
@@ -232,7 +315,7 @@ namespace pst {
 			rift_def::Keyword keyword;
 		};
 
-		typedef std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue> ExprElem;
+		using ExprElem = std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue>;
 
 		struct Group {
 			GroupType       type;
@@ -268,80 +351,84 @@ namespace pst {
 		 */
 		static ParserRef<Expr> parse(RiftParserState& state, usize len, bool exact_len = true);
 		void                   dprint(std::ostream& out) const final;
-		virtual ~Expr() = default;
+		~Expr() final = default;
 	};
 
+	/**
+	 * @note Action assumes optional expression before the semicolon.
+	 */
 	class Action: public Stmt {
 	protected:
 		std::optional<ParserRef<Expr>> expr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action);
-		// @TODO: do different Actions than ones with 0 or 1 expressions following exist?
 		static ParserRef<Action> parse(RiftParserState& state);
-		virtual ~Action() = default;
+		~Action() override = default;
 
 		// TODO:
 	};
 
-	class Return: public Action {
+	class Return final: public Action {
 	public:
-		explicit Return(dia::SourcePosition position): Action(std::move(position)) {}
+		explicit Return(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		virtual ~Return() = default;
+		~Return() final = default;
 	};
 
-	class Break: public Action {
+	class Break final: public Action {
 	public:
-		explicit Break(dia::SourcePosition position): Action(std::move(position)) {}
+		explicit Break(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		virtual ~Break() = default;
+		~Break() final = default;
 	};
 
-	class Continue: public Action {
+	class Continue final: public Action {
 	public:
-		explicit Continue(dia::SourcePosition position): Action(std::move(position)) {}
+		explicit Continue(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		virtual ~Continue() = default;
+		~Continue() final = default;
 	};
 
-	class Redo: public Action {
+	class Redo final: public Action {
 	public:
-		explicit Redo(dia::SourcePosition position): Action(std::move(position)) {}
+		explicit Redo(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		virtual ~Redo() = default;
+		~Redo() final = default;
 	};
 
-	class Restart: public Action {
+	class Restart final: public Action {
 	public:
-		explicit Restart(dia::SourcePosition position): Action(std::move(position)) {}
+		explicit Restart(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		virtual ~Restart() = default;
+		~Restart() final = default;
 	};
 
-	class Defer: public Action {
+	class Defer final: public Action {
 	public:
-		explicit Defer(dia::SourcePosition position): Action(std::move(position)) {}
+		explicit Defer(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		virtual ~Defer() = default;
+		~Defer() final = default;
 	};
 
-	// @TODO: should it be an action
-	class Throw: public Action {
+	/**
+	 * @todo Should throw be an action?
+	 */
+	class Throw final: public Action {
 	public:
-		explicit Throw(dia::SourcePosition position): Action(std::move(position)) {}
+		explicit Throw(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		virtual ~Throw() = default;
+		~Throw() final = default;
 	};
 
-	class Const: public Stmt {
+	class Const final: public Stmt {
 		tpc::Identifier name;
 		ParserRef<Expr> type;
 		ParserRef<Expr> value;
@@ -350,27 +437,38 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Const);
 		static ParserRef<Const> parse(RiftParserState& state);
 
-		base::StrId getName() const { return name.value; }
+		[[nodiscard]]
+		base::StrId getName() const {
+			return name.value;
+		}
 
-		ParserCBorrowRef<Expr> getType() const { return type.borrow(); }
+		[[nodiscard]]
+		ParserCBorrowRef<Expr> getType() const {
+			return type.borrow();
+		}
 
-		ParserCBorrowRef<Expr> getValue() const { return value.borrow(); }
+		[[nodiscard]]
+		ParserCBorrowRef<Expr> getValue() const {
+			return value.borrow();
+		}
 
 		~Const() final = default;
 		void dprint(std::ostream& out) const final;
 	};
 
-	// @TODO: should assert be an action
+	/**
+	 * @todo should assert be an action
+	 */
 	class Decl: public Stmt {
 	public:
-		Decl(StmtKind kind, dia::SourcePosition position): Stmt(kind, std::move(position)) {}
+		Decl(StmtKind kind, const dia::SourcePosition& position): Stmt(kind, position) {}
 
 		static ParserRef<Decl> parse(RiftParserState& state);
 		bool                   trailingSemicolon() override;
 	};
 
 #define DECL_CHILD_CONSTRUCTOR(class_name) \
-	class_name(dia::SourcePosition position): Decl(StmtKind::class_name, std::move(position)) {}
+	class_name(const dia::SourcePosition& position): Decl(StmtKind::class_name, position) {}
 
 	class CodeDecl: public Decl {
 	public:
@@ -384,56 +482,71 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(TopLevel);
 		static ParserRef<TopLevel> parse(RiftParserState& state);
 
-		~TopLevel() final = default;
+		~TopLevel() override = default;
 		void dprint(std::ostream& out) const final;
 
-		const auto& getStatements() const { return statements; }
+		[[nodiscard]]
+		const auto& getStatements() const {
+			return statements;
+		}
 	};
 
-	class Block: public CodeDecl {
+	class Block final: public CodeDecl {
 		tpc::OptionalIdentifier optional_name;
 		ParserRef<CodeBlock>    code_block = nullptr;
 
 	public:
-		explicit Block(dia::SourcePosition position): CodeDecl(std::move(position)) {}
+		explicit Block(const dia::SourcePosition& position): CodeDecl(position) {}
 
 		static ParserRef<Block> parse(RiftParserState& state);
-		virtual ~Block() = default;
-		virtual void dprint(std::ostream& out) const final;
+		~Block() final = default;
+		void dprint(std::ostream& out) const final;
 	};
 
-	class Namespace: public Decl {
+	class Namespace final: public Decl {
 		tpc::Identifier      name;
 		ParserRef<CodeBlock> body = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Namespace);
 
-		base::StrId getName() const { return name.value; }
+		[[nodiscard]]
+		base::StrId getName() const {
+			return name.value;
+		}
 
-		ParserCBorrowRef<CodeBlock> getBody() const { return body.borrow(); }
+		[[nodiscard]]
+		ParserCBorrowRef<CodeBlock> getBody() const {
+			return body.borrow();
+		}
 
 		static ParserRef<Namespace> parse(RiftParserState& state);
-		virtual ~Namespace() = default;
-		virtual void dprint(std::ostream& out) const final;
+		~Namespace() final = default;
+		void dprint(std::ostream& out) const final;
 	};
 
-	class Struct: public Decl {
-		tpc::Identifier              name;
-		std::vector<ParserRef<Expr>> bases;
-		ParserRef<CodeBlock>         body = nullptr;
+	/**
+	 * @note outdated with "current" syntax (one inherits then implemnets etc)
+	 */
+	class Struct final: public Decl {
+		tpc::Identifier        name;
+		ParserRef<InheritList> bases = nullptr;
+		ParserRef<CodeBlock>   body  = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Struct);
 
-		base::StrId getName() const { return name.value; }
+		[[nodiscard]]
+		base::StrId getName() const {
+			return name.value;
+		}
 
 		static ParserRef<Struct> parse(RiftParserState& state);
-		virtual ~Struct() = default;
-		virtual void dprint(std::ostream& out) const final;
+		~Struct() final = default;
+		void dprint(std::ostream& out) const final;
 	};
 
-	class Fun: public Decl {
+	class Fun final: public Decl {
 		tpc::Identifier            name;
 		ParserRef<ParamList>       params = nullptr;
 		ParserRef<RetList>         rets   = nullptr;
@@ -442,57 +555,115 @@ namespace pst {
 	public:
 		DECL_CHILD_CONSTRUCTOR(Fun);
 
-		base::StrId getName() const { return name.value; }
+		[[nodiscard]]
+		base::StrId getName() const {
+			return name.value;
+		}
 
 		static ParserRef<Fun> parse(RiftParserState& state);
-		virtual void          dprint(std::ostream& out) const final;
-		virtual ~Fun() = default;
+		void                  dprint(std::ostream& out) const final;
+		~Fun() final = default;
 	};
 
-	class If: public CodeDecl {
+	class If final: public CodeDecl {
 		ParserRef<RoundGroupExpr>  condition = nullptr;
 		tpc::OptionalIdentifier    optional_name;
 		ParserRef<CodeBlockOrStmt> body = nullptr;
 
 	public:
-		explicit If(dia::SourcePosition position): CodeDecl(std::move(position)) {}
+		explicit If(const dia::SourcePosition& position): CodeDecl(position) {}
 
 		static ParserRef<If> parse(RiftParserState& state);
-		virtual void         dprint(std::ostream& out) const final;
-		virtual ~If() = default;
+		void                 dprint(std::ostream& out) const final;
+		~If() final = default;
 	};
 
-	class While: public CodeDecl {
+	class While final: public CodeDecl {
 		ParserRef<RoundGroupExpr>  condition = nullptr;
 		tpc::OptionalIdentifier    optional_name;
 		ParserRef<CodeBlockOrStmt> body = nullptr;
 
 	public:
-		explicit While(dia::SourcePosition position): CodeDecl(std::move(position)) {}
+		explicit While(const dia::SourcePosition& position): CodeDecl(position) {}
 
 		static ParserRef<While> parse(RiftParserState& state);
-		virtual void            dprint(std::ostream& out) const final;
-		virtual ~While() = default;
+		void                    dprint(std::ostream& out) const final;
+		~While() final = default;
 	};
 
+	/**
+	 * @brief Class designated to be the parent of non-functional statements that are only used
+	 * internally for testing.
+	 */
 	class RiftTestingStmt: public Stmt {
 	public:
-		RiftTestingStmt(StmtKind kind, dia::SourcePosition position):
-			  Stmt(kind, std::move(position)) {}
+		RiftTestingStmt(StmtKind kind, const dia::SourcePosition& position): Stmt(kind, position) {}
 	};
 
-#define RIFT_TEST_CHILD_CONSTRUCTOR(class_name) \
-	class_name(dia::SourcePosition position):   \
-		  RiftTestingStmt(StmtKind::class_name, std::move(position)) {}
+#define RIFT_TEST_CHILD_CONSTRUCTOR(class_name)      \
+	class_name(const dia::SourcePosition& position): \
+		  RiftTestingStmt(StmtKind::class_name, position) {}
 
-	class EagerLookup: public RiftTestingStmt {
-		DottedName names;
+	/**
+	 * @note We might want to move it outside and allow only for specific instances to be cleaner.
+	 */
+	template<
+		class SubElements,
+		bool                      NON_EMPTY,
+		lexer::Token::BracketType BRACKETS,
+		StateCondition            isSeparator,
+		StateCondition            isEnding,
+		class Container>
+	auto List<SubElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, Container>::parse(
+		RiftParserState& state
+	) -> ParserRef<List> {
+		auto position = state.ctokens().peek().getPosition();
 
-	public:
-		RIFT_TEST_CHILD_CONSTRUCTOR(EagerLookup);
-		static ParserRef<EagerLookup> parse(RiftParserState& state);
-		virtual void                  dprint(std::ostream& out) const final;
-		virtual ~EagerLookup() = default;
-	};
+		if constexpr (BRACKETS != lexer::Token::BracketType::None) {
+			if (!state.ctokens().isBracketGroup(BRACKETS)) {
+				state.fail(
+					-1, "bracket " + std::string(1, char(BRACKETS)) + " expected after here"
+				);
+				return nullptr;
+			}
+			state.goDown();
+		}
 
+		auto out = tpc::makeRef<List>(position);
+
+		usize expr_length{};
+		if (state.empty() || isEnding(state, 0)) {
+			if constexpr (NON_EMPTY)
+				state.fail(-1, "empty list where non-empty expected after here");
+		} else {
+			while (true) {
+				expr_length = 0;
+				while (!state.ctokens().is(lexer::Token::Type::Sentinel, expr_length)
+				       && !isSeparator(state, expr_length) && !isEnding(state, expr_length)) {
+					expr_length++;
+				}
+				if (expr_length == 0) {
+					if (state.empty() || isEnding(state, 0)) {
+						state.fail(0, "unexpected end to a list");
+						break;
+					} else {
+						state.fail(0, "empty field in a list before here");
+						state.tokens().skip();
+						continue;
+					}
+				}
+				out->elements.emplace_back(SubElements::parse(state, expr_length, true));
+				if (isEnding(state, 0)) break;
+				if (isSeparator(state, 0))
+					state.tokens().skip();
+				else
+					state.err.failAndLog(
+						state.ctokens().peek().getPosition(), "separator expected"
+					);
+			}
+		}
+
+		if constexpr (BRACKETS != lexer::Token::BracketType::None) state.goUpAndSkip();
+		return out;
+	}
 }

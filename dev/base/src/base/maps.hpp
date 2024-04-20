@@ -11,7 +11,6 @@
 namespace base {
 	template<typename ContainerType>
 	class MapWrapper: public ContainerType {
-	private:
 		// hiding base member:
 		using ContainerType::operator[];
 		using ContainerType::insert;
@@ -23,13 +22,35 @@ namespace base {
 
 		MapWrapper(): ContainerType(){};
 		MapWrapper(const MapWrapper& map): ContainerType(map){};
-		MapWrapper(MapWrapper&& map): ContainerType(std::move(map)){};
+		MapWrapper(MapWrapper&& map) noexcept: ContainerType(std::move(map)){};
+
 		~MapWrapper() = default;
 
 		// Change operator[] behaviour:
 		DATA_T& operator[](const KEY_T& key) { return ContainerType::at(key); }
 
 		DATA_T& operator[](KEY_T&& key) { return ContainerType::at(key); }
+
+		template<class K = KEY_T>
+		Optional<DATA_T&> atMaybe(K&& key) {
+			auto&& key_val = ContainerType::find(std::forward<K>(key));
+			if (key_val != ContainerType::end()) return key_val->second;
+			return {};
+		}
+
+		template<class K = KEY_T>
+		Optional<const DATA_T&> atMaybe(K&& key) const {
+			auto&& key_val = ContainerType::find(std::forward<K>(key));
+			if (key_val != ContainerType::end()) return key_val->second;
+			return {};
+		}
+
+		template<class K = KEY_T>
+		Optional<DATA_T> atMaybeCopy(K&& key) const {
+			auto&& key_val = ContainerType::find(std::forward<K>(key));
+			if (key_val != ContainerType::end()) return key_val->second;
+			return {};
+		}
 
 		const DATA_T& operator[](const KEY_T& key) const { return ContainerType::at(key); }
 
@@ -40,12 +61,10 @@ namespace base {
 			return ContainerType::emplace(std::forward<K>(key), std::forward<D>(data));
 		}
 
-		// @TODO: delete it, since we are using C++20:
-		bool contains(const KEY_T& key) const {
-			return ContainerType::find(key) != ContainerType::end();
+		[[nodiscard]]
+		bool notEmpty() const {
+			return !ContainerType::empty();
 		}
-
-		bool notEmpty() const { return !ContainerType::empty(); }
 	};
 
 	template<typename KEY_T, typename DATA_T>
@@ -60,17 +79,16 @@ namespace base {
 		bool is_move = std::is_move_constructible_v<DATA_T>,
 		bool is_copy = std::is_copy_constructible_v<DATA_T>>
 	class VectorMap {
-	private:
-		std::vector<base::Optional<DATA_T>> map;
-		usize                               element_count{};
+		std::vector<Optional<DATA_T>> map;
+		usize                         element_count{};
 
 	public:
 		typedef VectorMap SelfType;
 		typedef KEY_T     IdType;
 		typedef DATA_T    DataType;
 
-		typedef typename std::vector<base::Optional<DATA_T>>::iterator       iterator;
-		typedef typename std::vector<base::Optional<DATA_T>>::const_iterator const_iterator;
+		using iterator       = typename std::vector<Optional<DATA_T>>::iterator;
+		using const_iterator = typename std::vector<Optional<DATA_T>>::const_iterator;
 
 		VectorMap() = default;
 
@@ -83,8 +101,17 @@ namespace base {
 		DATA_T& operator[](const KEY_T key) {
 			if (usize(key) < map.size() and map.at(usize(key)).has_value())
 				return *map.at(usize(key));
-			else
-				throw base::LogicError("No value assigned to key in VectorMap");
+			throw LogicError("No value assigned to key in VectorMap");
+		}
+
+		Optional<DATA_T&> atMaybe(KEY_T key) {
+			if (static_cast<usize>(key) < map.size()) return *map.at(static_cast<usize>(key));
+			return {};
+		}
+
+		Optional<const DATA_T&> atMaybe(KEY_T key) const {
+			if (static_cast<usize>(key) < map.size()) return *map.at(static_cast<usize>(key));
+			return {};
 		}
 
 		void put(KEY_T key) {
@@ -129,11 +156,20 @@ namespace base {
 			return false;
 		}
 
-		usize size() const { return element_count; }
+		[[nodiscard]]
+		usize size() const {
+			return element_count;
+		}
 
-		bool empty() const { return element_count == 0; }
+		[[nodiscard]]
+		bool empty() const {
+			return element_count == 0;
+		}
 
-		bool notEmpty() const { return !empty(); }
+		[[nodiscard]]
+		bool notEmpty() const {
+			return !empty();
+		}
 
 		iterator begin() { return map.begin(); }
 

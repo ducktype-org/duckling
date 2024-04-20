@@ -1,5 +1,5 @@
 =================
-Tokem parser core
+Token parser core
 =================
 
-.. @TODO
+.. doxygenfunction:: tpc::init

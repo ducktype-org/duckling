@@ -10,3 +10,4 @@ add_subdirectory(lsp_interface)
 add_subdirectory(main)
 
 add_subdirectory(playground)
+add_subdirectory(frontend)

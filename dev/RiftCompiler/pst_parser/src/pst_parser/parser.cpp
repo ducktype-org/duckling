@@ -4,6 +4,7 @@
  */
 
 #include "parser.hpp"
+#include <base/init_guard.hpp>
 #include <lexer/lexer.hpp>
 #include <token_parser_core/tpc.hpp>
 
@@ -17,10 +18,9 @@ namespace pst {
 	}
 
 	void init() {
-		static bool was_init = false;
-		if (was_init) return;
+		RIFT_SIMPLE_INIT_GUARD_BEGIN
 		tpc::init();
 		lexer::init();
-		was_init = true;
+		RIFT_SIMPLE_INIT_GUARD_END
 	}
 }
