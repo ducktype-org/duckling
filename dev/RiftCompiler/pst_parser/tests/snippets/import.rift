@@ -1,11 +1,11 @@
-import aaaa.bbb.c;
+import aaaa.bbb.c as D;
 
-import dasdsa.dasd.*;
+import dasdsa.dasd.* as F;
 
-import aaaa;
+import aaaa as σααα;
 
-import a.b.c.d;
+import a.b.c.d as XX;
 
-import ἄλφα.βῆτα.γάμμα;
+import ἄλφα.βῆτα.γάμμα as U;
 
-import ἄλφα.βῆτα.*;
+import ἄλφα.βῆτα.* as _1;

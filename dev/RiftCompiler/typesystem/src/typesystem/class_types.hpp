@@ -15,6 +15,10 @@
 #include <base/exceptions.hpp>
 
 namespace ts {
+	namespace internal {
+		class ClassInfoImpl;
+		class VTableInfoImpl;
+	}
 
 	class C3LinearisationException: public base::Exception {
 		[[nodiscard]]
@@ -44,9 +48,8 @@ namespace ts {
 	struct AncestorData;
 
 	class ClassInfo: public TypeInfo {
-		SETUP_TYPE(ClassInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(ClassInfo, TypeInfo)
 		// These function will take more params in the future
 		// Constructors for classes
 		static ClassInfo create(
@@ -126,10 +129,10 @@ namespace ts {
 		[[nodiscard]]
 		usize getBaseSize() const;
 
-		CHECKED_CAST(ClassInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(ClassInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(ClassInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Class)
 	};
 
 
@@ -208,18 +211,17 @@ namespace ts {
 	};
 
 	class VTableInfo: public TypeInfo {
-		SETUP_TYPE(VTableInfo, TypeInfo)
-
 	public:
+		SETUP_TYPE_WITH_BASE(VTableInfo, TypeInfo)
 		static VTableInfo create(ClassInfo class_info);
 		ClassInfo         getAssociatedClass();
 		usize             getParentCount();
 		usize             getMethodCount();
 
-		CHECKED_CAST(VTableInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(VTableInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(VTableInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(VTable)
 	};
 
 }

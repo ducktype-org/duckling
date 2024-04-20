@@ -2,4 +2,7 @@
 Base element
 ============
 
-.. @TODO
+.. doxygenclass:: tpc::Element
+	:members:
+	:private-members:
+	:undoc-members:

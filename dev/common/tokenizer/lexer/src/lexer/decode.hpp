@@ -1,7 +1,7 @@
 #pragma once
 
 #include "char.hpp"
-#include <diagnostic/error_state.hpp>
+#include <diagnostic/logger.hpp>
 #include <filesystem/encoding.hpp>
 
 namespace lexer {
@@ -10,18 +10,18 @@ namespace lexer {
 	 *
 	 * @tparam encoding Which encoding should the function use.
 	 * @param bytes View of the bytes to decode
-	 * @param err `dia::ErrorState` to store errors
+	 * @param err `dia::Logger` to store errors
 	 *
 	 * @return CharArray of decoded data
 	 *
 	 * @note We should probably stick to only decoding UTF-8 for now
 	 */
 	template<fs::Encoding encoding>
-	CharArray decode(base::RawView bytes, dia::ErrorState& err);
+	CharArray decode(base::RawView bytes, dia::Logger& err);
 
 	template<>
-	CharArray decode<fs::US_ASCII>(base::RawView bytes, dia::ErrorState&);
+	CharArray decode<fs::US_ASCII>(base::RawView bytes, dia::Logger&);
 
 	template<>
-	CharArray decode<fs::UTF8>(base::RawView bytes, dia::ErrorState&);
+	CharArray decode<fs::UTF8>(base::RawView bytes, dia::Logger&);
 }

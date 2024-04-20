@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <ranges>
 #include "borrow_pointer.hpp"
 
 namespace base {
@@ -36,6 +37,18 @@ namespace base {
 		borrow_ptr<T> borrow_mut() noexcept { return borrow_ptr<T>(this->get()); }
 
 		c_borrow_ptr<T> borrow() const noexcept { return c_borrow_ptr<T>(this->get()); }
+
+		auto begin() const
+		requires std::ranges::range<T>
+		{
+			return (*this)->begin();
+		}
+
+		auto end() const
+		requires std::ranges::range<T>
+		{
+			return (*this)->end();
+		}
 	};
 
 	template<class T, class... Args>

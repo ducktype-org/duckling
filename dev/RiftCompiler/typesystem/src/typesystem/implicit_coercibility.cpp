@@ -7,23 +7,23 @@
 namespace ts {
 	std::map<TypeInfo, std::set<TypeInfo>> userDefinedImplicitCoercions{};
 
-	void addUserDefinedImplicitCoercion(const TypeInfo& from, const TypeInfo& to) {
-		userDefinedImplicitCoercions[from].insert(to);
+	void addUserDefinedImplicitCoercion(const TypeInfo& source, const TypeInfo& target) {
+		userDefinedImplicitCoercions[source].insert(target);
 	}
 
-	bool isImplicitlyCoercible(const TypeInfo& from, const TypeInfo& to) {
+	bool isImplicitlyCoercible(const TypeInfo& source, const TypeInfo& target) {
 		// Implicit coercion is possible when either the user defined it,
 		// or if the type kind knows to implicitly coerce to the target type,
 		// often of the same kind, e.g. integer promotion or upwards a class hierarchy.
 		return (
-			(userDefinedImplicitCoercions.contains(from)
-		     && userDefinedImplicitCoercions[from].contains(to))
-			|| from.isInfoImplicitlyCoercible(to)
+			(userDefinedImplicitCoercions.contains(source)
+		     && userDefinedImplicitCoercions[source].contains(target))
+			|| source.isInfoImplicitlyCoercible(target)
 		);
 	}
 
-	bool isImplicitlyCoercible(const TypeDesc<>& from, const TypeDesc<>& to) {
+	bool isImplicitlyCoercible(const TypeDesc<>& source, const TypeDesc<>& target) {
 		// Implicit coercibility between TypeDescs is decided by the TypeDesc we are coercing from.
-		return from.isDescImplicitlyCoercible(to);
+		return source.isDescImplicitlyCoercible(target);
 	}
 }

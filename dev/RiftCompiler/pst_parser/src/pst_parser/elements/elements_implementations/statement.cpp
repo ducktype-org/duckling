@@ -49,9 +49,6 @@ namespace pst {
 		case Keyword::Alias:
 			return detail::parseStmt<Alias>(state);
 
-		case Keyword::RiftTestEagerLookup:
-			return detail::parseStmt<EagerLookup>(state);
-
 		default:
 			break;
 		}

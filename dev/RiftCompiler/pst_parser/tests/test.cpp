@@ -55,7 +55,7 @@ private:
 
 		if (no_errors) {
 			// if (pst.getErrorState().fail()) pst.getErrorState().dumpLog();
-			assert(pst.getErrorState().good(), "there are unexpected errors in rift source-code");
+			assert(pst.getLogger().good(), "there are unexpected errors in rift source-code");
 		}
 
 		assert(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
@@ -93,22 +93,30 @@ private:
 
 	void testListParsingErrors() {
 		pst::PST pst = prepare(path("snippets/lists_err.rift"));
-		assert(pst.getErrorState().errCount() == 4, "Expected 4 errors");
+		assert(
+			pst.getLogger().messageCount(dia::Message::Severity::Error) == 5, "Expected 5 errors"
+		);
 	}
 
 	void testUsingErrors() {
 		pst::PST pst = prepare(path("snippets/using_err.rift"));
-		assert(pst.getErrorState().errCount() == 3, "Expected 3 errors");
+		assert(
+			pst.getLogger().messageCount(dia::Message::Severity::Error) == 3, "Expected 3 errors"
+		);
 	}
 
 	void testParamListErrors() {
 		pst::PST pst = prepare(path("snippets/params_err.rift"));
-		assert(pst.getErrorState().errCount() == 3, "Expected 3 errors");
+		assert(
+			pst.getLogger().messageCount(dia::Message::Severity::Error) == 7, "Expected 7 errors"
+		);
 	}
 
 	void testMissingSemiErr() {
 		pst::PST pst = prepare(path("snippets/missing_semicolon_err.rift"));
-		assert(pst.getErrorState().errCount() == 4, "Expected 4 errors");
+		assert(
+			pst.getLogger().messageCount(dia::Message::Severity::Error) == 4, "Expected 4 errors"
+		);
 	}
 
 
