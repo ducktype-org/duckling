@@ -139,20 +139,8 @@ namespace compiler::helios {
 			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
 		}
 
-		static auto load([[maybe_unused]] QKey key) -> LoadResult {
-			// return {
-			// 	if (cache.contains(key))
-			// 		return cache.at(key);
-			// 	else
-			// 		return {};
-			// }
-			return {};
-		}
-
-		static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd)
-			-> QResult {
-			throw "TODO";
-		}
+		// @OPT: opt it?
+		QUERY_AUTO_CACHE_PRESULT
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySymbolOfSTMT, "Query Symbol of Stmt");

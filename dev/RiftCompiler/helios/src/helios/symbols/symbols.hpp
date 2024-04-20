@@ -39,6 +39,8 @@ namespace compiler::helios {
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
+
+		bool operator==(const KeyOf_QuerySymbolOfSTMT&) const = default;
 	};
 
 	/**
