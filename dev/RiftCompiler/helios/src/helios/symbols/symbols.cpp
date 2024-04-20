@@ -140,7 +140,7 @@ namespace compiler::helios {
 		}
 
 		// @OPT: opt it?
-		QUERY_AUTO_CACHE_PRESULT
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySymbolOfSTMT, "Query Symbol of Stmt");

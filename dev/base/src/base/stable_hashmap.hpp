@@ -13,7 +13,7 @@ namespace base {
 	 * @tparam DATA_T The datatype to store
 	 * @tparam KEY_T Indentifies data
 	 */
-	template<typename KEY_T, typename DATA_T>
+	template<typename KEY_T, typename DATA_T, typename HASH_T = std::hash<KEY_T>>
 	class StableHashMap {
 	public:
 		StableHashMap() = default;
@@ -103,6 +103,6 @@ namespace base {
 		}
 
 	private:
-		HashMap<KEY_T, unique_ptr<DATA_T>> data;
+		HashMap<KEY_T, unique_ptr<DATA_T>, HASH_T> data;
 	};
 }

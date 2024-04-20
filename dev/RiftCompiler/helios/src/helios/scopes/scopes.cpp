@@ -13,6 +13,7 @@
 #include <query_framework/query_impl.hpp>
 #include "../pst_walkers.hpp"
 #include "../symbols/symbols.hpp"
+#include <base/stable_hashmap.hpp>
 
 namespace compiler::helios {
 
@@ -127,6 +128,13 @@ namespace compiler::helios {
 	// etc 
 
 	// if somewhere then here it is needed to handle cycles somehow
+
+
+	struct ImplementationOf_QuerySymbolsInScope: public query::QueryImplementation<QuerySymbolsInScope, std::vector<SymID>> {
+
+	                                                           
+		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+	};
 
 
 	base::HashT KeyOf_QueryPrimaryCodeScopeFor::customPerfectHash() const {

@@ -65,7 +65,7 @@ struct ImplementationOf_FibonacciStringAutoCache:
 		return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
 	}
 
-	QUERY_AUTO_CACHE_PRESULT
+	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciStringAutoCache, "Auto cache");

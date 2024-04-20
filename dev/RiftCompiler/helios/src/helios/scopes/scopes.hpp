@@ -57,8 +57,7 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryLookupInScope, KeyOf_Lookup, LookupResult);
 
 
-	// @TODO:
-	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, std::vector<SymID>);
+	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, const std::vector<SymID>&);
 
 	// DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_Lookup, LookupResult);
 
