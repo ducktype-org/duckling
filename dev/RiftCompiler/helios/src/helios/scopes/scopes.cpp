@@ -131,9 +131,29 @@ namespace compiler::helios {
 
 
 	struct ImplementationOf_QuerySymbolsInScope: public query::QueryImplementation<QuerySymbolsInScope, std::vector<SymID>> {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::vector<SymID> out;
+			for (const auto& stmt: key.ref->stmt_list) {
+				auto sym_id = ctx.query<QuerySymbolOfSTMT>({key, stmt});
+				out.emplace_back(sym_id);
+			}
+			return out;
+		}
 
-	                                                           
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+
+		// @OPT: use cache in ScopeData for super fast lookup    
+		static auto load(QKey key) -> LoadResult { 
+			if (auto&& cache = key.ref->symbols) {
+				return QResWithACD{ cache->data, cache->acd };
+			}
+			return {};
+		}
+
+		static auto store([[maybe_unused]] QKey key, PResult p_res, [[maybe_unused]] query::ACD acd)
+			-> QResult {
+			key.ref->symbols.emplace(PResWithACD{ std::move(p_res), acd });
+			return key.ref->symbols.value().data;
+		}
 	};
 
 

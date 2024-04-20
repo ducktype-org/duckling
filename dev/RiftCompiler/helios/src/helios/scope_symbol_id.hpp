@@ -19,6 +19,7 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
 		friend struct GetSymRef_Functor;
 	};
+	
 	struct ScopeID {
 		// @FUTURE: add some mangling, so valgrind will not get confused
 		base::HashT customPerfectHash() const { return reinterpret_cast<u64>(ref.get()); };
@@ -28,6 +29,7 @@ namespace compiler::helios {
 		ScopeID(base::borrow_ptr<ScopeData> ref): ref(ref) {}
 		friend struct ImplementationOf_QuerySuperRootScope;
 		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;
+		friend struct ImplementationOf_QuerySymbolsInScope;
 		friend struct GetScopeRef_Functor;
 	};
 
