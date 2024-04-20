@@ -42,19 +42,26 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	message("-- GNU compiler")
-  # '-std=c++20' is necessary for successful assembly target generation during RiftVM development
-  add_compile_options(-std=c++20 -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare -O2)
+    message("-- GNU compiler")
+      # '-std=c++20' is necessary for successful assembly target generation during RiftVM development
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	message("-- Clang compiler")
-	# I didn't find a good -Werror=terminate alternative
-	add_compile_options(-Werror=return-type -Werror=shadow-all -Werror=return-stack-address -Werror=free-nonheap-object -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare -O2)
+    message("-- Clang compiler")
+    # I didn't find a good -Werror=terminate alternative for Clang.
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=shadow-all -Werror=return-stack-address -Werror=free-nonheap-object -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare")
 else()
-	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
+    message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()
 
-# Wersja debug wypisuje na razie wszystkie możliwe informacje dynamicznie
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
+# Standard compilation uses optimization O2.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+
+# Debug version uses O0 and prints all logs. 
+# -g flag is used by default.
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -Og")
+
+# Release version uses O2, not O3.
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -96,14 +103,6 @@ function(rift_add_test test_pack test_name source USES)
 		set_target_properties(${test_name} PROPERTIES DEPENDS build_${test_pack}_tests)
 		add_dependencies(build_${test_pack}_tests ${test_name})
 		set_property(TEST "${test_name}" PROPERTY LABELS "${test_pack}")
-
-		# This adds LD_LIBRARY_PATH pointing to downloaded ICU when using DOWNLOAD_UBUNTU_ICU_BUILD.
-		# In general it should be only used in workflows.
-		if (DOWNLOAD_UBUNTU_ICU_BUILD STREQUAL "ON")
-			set_property(TEST "${test_name}"
-						 PROPERTY ENVIRONMENT
-						 "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/_deps/ubuntu-icu-src/usr/local/lib/")
-		endif ()
 
 		set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
 	else ()
