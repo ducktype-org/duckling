@@ -376,8 +376,11 @@ namespace ts {
 		  query::QueryImplementation<QueryImplicitCoercibilityOnDesc, bool> {
 		inline static base::Map<QKey, query::AddACD<QResult>> cache;
 
-		static auto provide(Context&, QKey key) -> PResult {
-			return key.source.isDescImplicitlyCoercible(key.target);
+		static auto provide(Context& context, QKey key) -> PResult {
+			return (
+				context.query<QueryImplicitCoercibilityOnInfo>(KeyFor_QueryImplicitCoercibilityOnInfo(key.source.getType(), key.target.getType()))
+				&& key.source.getValueCategory().contains(key.target.getValueCategory())
+			);
 		}
 
 		static auto load(QKey key) -> LoadResult {

@@ -40,6 +40,9 @@
 // @TODO: Consider the above and add tests
 
 namespace ts {
+	/**
+	* @brief Get all implicit coercions allowed by the user.
+	*/
 	std::map<TypeInfo, std::set<TypeInfo>>& getUserDefinedImplicitCoercions();
 
 	/**
