@@ -40,7 +40,7 @@
 // @TODO: Consider the above and add tests
 
 namespace ts {
-	std::map<TypeInfo, std::set<TypeInfo>>& getUserDefinedCoertions();
+	std::map<TypeInfo, std::set<TypeInfo>>& getUserDefinedImplicitCoercions();
 
 	/**
 	 * @brief Declare that an implicit coercion between two types should be considered.

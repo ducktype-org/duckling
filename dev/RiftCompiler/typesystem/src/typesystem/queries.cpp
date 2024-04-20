@@ -345,15 +345,15 @@ namespace ts {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryMetaType, "QueryMetaType");
 
-	struct ImplementationOf_QueryImplicitCoercibility:
-		  query::QueryImplementation<QueryImplicitCoercibility, bool> {
-		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
+	struct ImplementationOf_QueryImplicitCoercibilityOnInfo:
+		  query::QueryImplementation<QueryImplicitCoercibilityOnInfo, bool> {
+		inline static base::Map<QKey, query::AddACD<QResult>> cache;
 
-		static auto provide(Context&, QKey) -> PResult {
+		static auto provide(Context&, QKey key) -> PResult {
 			return (
-				(getUserDefinedCoertions().contains(QKey.source)
-				&& getUserDefinedCoertions()[QKey.source].contains(QKey.target))
-				|| source.isInfoImplicitlyCoercible(QKey.target)
+				(getUserDefinedImplicitCoercions().contains(key.source)
+				&& getUserDefinedImplicitCoercions()[key.source].contains(key.target))
+				|| key.source.isInfoImplicitlyCoercible(key.target)
 			);
 		}
 
@@ -370,14 +370,14 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryImplicitCoercibility, "QueryImplicitCoercibility");
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryImplicitCoercibilityOnInfo, "QueryImplicitCoercibilityOnInfo");
 
-	struct ImplementationOf_QueryImplicitCoercibilityDefinition:
-		  query::QueryImplementation<QueryImplicitCoercibilityDefinition, void> {
-		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
+	struct ImplementationOf_QueryImplicitCoercibilityOnDesc:
+		  query::QueryImplementation<QueryImplicitCoercibilityOnDesc, bool> {
+		inline static base::Map<QKey, query::AddACD<QResult>> cache;
 
-		static auto provide(Context&, QKey) -> PResult {
-			getUserDefinedCoertions()[QKey.source].insert(QKey.target);
+		static auto provide(Context&, QKey key) -> PResult {
+			return key.source.isDescImplicitlyCoercible(key.target);
 		}
 
 		static auto load(QKey key) -> LoadResult {
@@ -390,6 +390,25 @@ namespace ts {
 		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
 			cache.put(key, { res, acd });
 			return res;
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryImplicitCoercibilityOnDesc, "QueryImplicitCoercibilityOnDesc");
+
+	struct ImplementationOf_QueryImplicitCoercibilityDefinition:
+		  query::QueryImplementation<QueryImplicitCoercibilityDefinition, bool> {
+
+		static auto provide(Context&, QKey key) -> PResult {
+			getUserDefinedImplicitCoercions()[key.source].insert(key.target);
+			return true;
+		}
+
+		static auto load(QKey) -> LoadResult {
+			return {};
+		}
+
+		static auto store(QKey, PResult res, query::ACD) -> QResult {
+			return QResult{ res };
 		}
 	};
 

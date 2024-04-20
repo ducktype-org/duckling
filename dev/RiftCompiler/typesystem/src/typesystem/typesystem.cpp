@@ -11,6 +11,6 @@ namespace ts {
 
 	void reset() {
 		internal::getTypes().clear();
-		getUserDefinedCoertions().clear();
+		getUserDefinedImplicitCoercions().clear();
 	}
 }

@@ -194,36 +194,33 @@ namespace ts {
 	DECLARE_QUERY(QueryModuleType, query::EmptyKey, ModuleInfo)
 
 	/**
-	 * @brief Key for QueryImplicitCoercibility.
+	 * @brief Key for QueryImplicitCoercibilityOnInfo.
 	 */
-	struct KeyFor_ImplicitCoercibility {
+	struct KeyFor_QueryImplicitCoercibilityOnInfo {
 		/**
-		 * @brief Source type of the coerction.
+		 * @brief Source type of the coercion.
 		 */
-		const TypeInfo& source;
+		const TypeInfo source;
 
 		/**
-		 * @brief Target type of the coerction.
+		 * @brief Target type of the coercion.
 		 */
-		const TypeInfo& target;
+		const TypeInfo target;
 
-		KeyFor_ImplicitCoercibility(
+		KeyFor_QueryImplicitCoercibilityOnInfo(
 			const TypeInfo& source,
 			const TypeInfo& target
 		):
-			  source(source)
+			  source(source),
 			  target(target) {}
 
-		KeyFor_ImplicitCoercibility(
-			const TypeDesc<>& source,
-			const TypeDesc<>& target
-		):
-			  source(source.getType())
-			  target(target.getType()) {}
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryImplicitCoercibilityOnInfo&) const
+			= default;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
-			static base::Map<KeyFor_ImplicitCoercibility, u64> hashes{};
+			static base::Map<KeyFor_QueryImplicitCoercibilityOnInfo, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
 
@@ -234,16 +231,58 @@ namespace ts {
 	};
 
 	/**
-	 * @brief Query to get check weather the implicit coerction from one type to another is allowed.
+	 * @brief Query to get check weather the implicit coercion from one type described by TypeInfo to another is allowed.
 	 */
-	DECLARE_QUERY(QueryImplicitCoercibility, KeyFor_ImplicitCoercibility, bool)
+	DECLARE_QUERY(QueryImplicitCoercibilityOnInfo, KeyFor_QueryImplicitCoercibilityOnInfo, bool)
+
+	/**
+	 * @brief Key for QueryImplicitCoercibilityOnInfo.
+	 */
+	struct KeyFor_QueryImplicitCoercibilityOnDesc {
+		/**
+		 * @brief Source type of the coercion.
+		 */
+		const TypeDesc<> source;
+
+		/**
+		 * @brief Target type of the coercion.
+		 */
+		const TypeDesc<> target;
+
+		KeyFor_QueryImplicitCoercibilityOnDesc(
+			const TypeDesc<>& source,
+			const TypeDesc<>& target
+		):
+			  source(source),
+			  target(target) {}
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryImplicitCoercibilityOnDesc&) const
+			= default;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			static base::Map<KeyFor_QueryImplicitCoercibilityOnDesc, u64> hashes{};
+
+			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+
+			u64 result = hashes.size();
+			hashes.put(*this, result);
+			return result;
+		}
+	};
+
+	/**
+	 * @brief Query to get check weather the implicit coercion from one type described by TypeDesc to another is allowed.
+	 */
+	DECLARE_QUERY(QueryImplicitCoercibilityOnDesc, KeyFor_QueryImplicitCoercibilityOnDesc, bool)
 
 	/* @TODO
 	 * it is not pure at all
 	 * ant it can't be
 	 */
 	/**
-	 * @brief Query to declare a implicit coerction between two types.
+	 * @brief Query to declare a implicit coercion between two types.
 	 */
-	DECLARE_QUERY(QueryImplicitCoercibilityDefinition, KeyFor_ImplicitCoercibility, void)
+	DECLARE_QUERY(QueryImplicitCoercibilityDefinition, KeyFor_QueryImplicitCoercibilityOnInfo, bool)
 }

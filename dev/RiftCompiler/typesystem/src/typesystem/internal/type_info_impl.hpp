@@ -493,9 +493,9 @@ namespace ts::internal {
 			}
 			
 			for (usize i = 0; i < parameter_types.size(); i++)
-				if (!query::queryEntryPoint<QueryImplicitCoercibility>(KeyFor_ImplicitCoercibility(toFunction.getParameterTypes()[i], parameter_types[i])))
+				if (!isImplicitlyCoercible(toFunction.getParameterTypes()[i], parameter_types[i]))
 					return false;
-			return query::queryEntryPoint<QueryImplicitCoercibility>(KeyFor_ImplicitCoercibility(result_type, toFunction.getResultType()));
+			return isImplicitlyCoercible(result_type, toFunction.getResultType());
 		}
 
 		FunctionInfoImpl(
