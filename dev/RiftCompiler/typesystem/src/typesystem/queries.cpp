@@ -349,11 +349,11 @@ namespace ts {
 		  query::QueryImplementation<QueryImplicitCoercibilityOnInfo, bool> {
 		inline static base::Map<QKey, query::AddACD<QResult>> cache;
 
-		static auto provide(Context&, QKey key) -> PResult {
+		static auto provide(Context& context, QKey key) -> PResult {
 			return (
 				(getUserDefinedImplicitCoercions().contains(key.source)
 				&& getUserDefinedImplicitCoercions()[key.source].contains(key.target))
-				|| key.source.isInfoImplicitlyCoercible(key.target)
+				|| key.source.isInfoImplicitlyCoercible(key.target, context)
 			);
 		}
 
