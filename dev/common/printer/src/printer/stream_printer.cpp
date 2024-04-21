@@ -1,29 +1,16 @@
-/**
- * @file printer.cpp
- */
-
 #include <iostream>
 #include <cstdlib>
 
 #include "stream_printer.hpp"
 
 namespace printer {
-	static void INSTANT_DEBUG_LOG([[maybe_unused]] StreamPrinter& console) {
-#ifdef PRINT_LOG
-		if (!console.isIgnoreInstantDebug()) {
-			console.print(std::cerr);
-			console.clear();
-		}
-#endif
-	}
-
 	// All background color escape codes are 10 above foregrounds colors.
-	ColorId calculateBackgroundColorId(ColorId color_id) {
+	ColorId calculateBackgroundColorId(const ColorId color_id) {
 		constexpr int8_t background_font_color_offset = 10;
-		return ColorId(color_id > 0 ? color_id + background_font_color_offset : color_id);
+		return color_id > 0 ? color_id + background_font_color_offset : color_id;
 	}
 
-	StreamPrinter& StreamPrinter::setMinLevel(MessageType type, LevelType level) {
+	StreamPrinter& StreamPrinter::setMinLevel(const MessageType type, const LevelType level) {
 		if (type == MessageType::ALL)
 			minLevel.fill(level);
 		else
@@ -31,12 +18,12 @@ namespace printer {
 		return *this;
 	}
 
-	StreamPrinter& StreamPrinter::setGeneralMax(usize max) {
+	StreamPrinter& StreamPrinter::setGeneralMax(const usize max) {
 		generalMax = max;
 		return *this;
 	}
 
-	StreamPrinter& StreamPrinter::setMaxAmounts(MessageType type, usize amount) {
+	StreamPrinter& StreamPrinter::setMaxAmounts(const MessageType type, const usize amount) {
 		if (type == MessageType::ALL)
 			maxAmounts.fill(amount);
 		else
@@ -46,19 +33,16 @@ namespace printer {
 
 	StreamPrinter& StreamPrinter::add(const MessagePack& pack) {
 		messagePacks.push_back(pack);
-		INSTANT_DEBUG_LOG(*this);
 		return *this;
 	}
 
 	StreamPrinter& StreamPrinter::add(MessagePack&& pack) {
 		messagePacks.emplace_back(std::move(pack));
-		INSTANT_DEBUG_LOG(*this);
 		return *this;
 	}
 
 	StreamPrinter& StreamPrinter::add(const Message& message) {
 		messagePacks.push_back({ message });
-		INSTANT_DEBUG_LOG(*this);
 		return *this;
 	}
 
@@ -66,7 +50,6 @@ namespace printer {
 		MessagePack pack;
 		pack.emplace_back(std::move(message));
 		messagePacks.push_back(std::move(pack));
-		INSTANT_DEBUG_LOG(*this);
 		return *this;
 	}
 
@@ -77,8 +60,8 @@ namespace printer {
 
 		for (const MessagePack& pack: messagePacks) {
 			for (const Message& message: pack) {
-				MessageTypeId messageType = msgToInt(message.type);
-				if (message.level >= minLevel.at(messageType)) {
+				if (const MessageTypeId messageType = msgToInt(message.type);
+				    message.level >= minLevel.at(messageType)) {
 					if (currentAmounts.at(messageType) > maxAmounts.at(messageType)) continue;
 
 					if (currentCount == generalMax) {
@@ -90,7 +73,7 @@ namespace printer {
 						out << "Limit for this type of message has been reached.\n";
 					} else {
 						for (const MessageContent& content: message.contents) {
-							ColorId foreground_color_id = 0, background_color_id = 0;
+							ColorId foreground_color_id, background_color_id;
 							if (content.foreground_color == Color::DEFAULT) {
 								foreground_color_id
 									= static_cast<ColorId>(message.foreground_color);

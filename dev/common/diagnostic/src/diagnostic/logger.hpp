@@ -23,16 +23,35 @@ namespace dia {
 			= {};
 
 	public:
-		Logger()                    = default;
-		Logger(Logger&&)            = default;
+				Logger()            = default;
+				Logger(Logger&&)    = default;
 		Logger& operator=(Logger&&) = default;
+
+		/**
+		 * @brief Whether or not to immediately dump a logged message to std::cerr by default.
+		 *
+		 * Immediately dumping logged messages may be useful when debugging.
+		 */
+		static constexpr bool IMMEDIATELY_DUMP =
+#ifdef PRINT_LOG
+			true
+#else
+			false
+#endif
+			;
+
 
 		/**
 		 * @brief Log a message.
 		 *
 		 * @param message_ptr A base::unique_ptr to the Message to be logged.
+		 * @param immediately_dump Whether to immediately dump the log to std::cerr.
+		 * @param detailed Whether to dump detailed logs if immediately dumping.
 		 */
-		void log(base::unique_ptr<Message> message_ptr);
+		void
+			log(base::unique_ptr<Message> message_ptr,
+		        bool                      immediately_dump = IMMEDIATELY_DUMP,
+		        bool                      detailed         = true);
 
 		/**
 		 * @brief Print all logged messages to a stream.
@@ -99,10 +118,16 @@ namespace dia {
 		/**
 		 * @brief Clear all logs. Restore to default state.
 		 */
-		void clear() {
-			for (auto & log_for_severity: message_log) {
-				log_for_severity.clear();
-			}
-		}
+		void clear();
+
+		/**
+		 * @brief Print all logged messages to a stream. Then, clear all logs.
+		 *
+		 * Equivalent to calling dumpLog() and clear().
+		 *
+		 * @param detailed Whether to print detailed messages.
+		 * @param stream The stream to print to.
+		 */
+		void dumpLogAndClear(bool detailed, std::ostream& stream);
 	};
 }
