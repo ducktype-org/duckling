@@ -1,4 +1,4 @@
-add_library(Printer src/printer/printer_console.cpp)
+add_library(Printer src/printer/stream_printer.cpp)
 
 make_module(Printer USES Base)
 

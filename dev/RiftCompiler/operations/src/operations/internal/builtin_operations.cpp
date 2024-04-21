@@ -11,7 +11,6 @@ namespace operation {
 			static_assert(SIZE == 8 * (sizeof(T)));
 
 			auto int_type  = query::queryEntryPoint<ts::QueryIntegralType>({ SIZE });
-			auto bool_type = query::queryEntryPoint<ts::QueryBoolType>({});
 
 			operation::Operation comp_int            = exec::compareBuiltin<T>;
 			operation::Operation eq_int              = exec::equalityBuiltin<T>;

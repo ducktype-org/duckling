@@ -5,7 +5,7 @@
 #include <iostream>
 #include <cstdlib>
 
-#include "printer_console.hpp"
+#include "stream_printer.hpp"
 
 namespace printer {
 	static void INSTANT_DEBUG_LOG([[maybe_unused]] StreamPrinter& console) {
