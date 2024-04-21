@@ -39,6 +39,7 @@ public:
 		TESTER_ADD_TEST(simple_type_desc);
 		TESTER_ADD_TEST(simple_function);
 		TESTER_ADD_TEST(simple_value_category);
+		TESTER_ADD_TEST(simple_implicit_coercibility);
 	}
 
 private:
@@ -356,6 +357,20 @@ private:
 		const TypeInfo   type_module = module_1;
 		const ModuleInfo module_3    = type_module;
 		assert(module_3.getKind() == Module, "Module should survive casting.");
+	}
+
+	void simple_implicit_coercibility() {
+		const auto int_2 = query::queryEntryPoint<QueryIntegralType>({ 8U * (1 << 2) });
+		const auto int_3 = query::queryEntryPoint<QueryIntegralType>({ 8U * (1 << 3) });
+		assert(
+			query::queryEntryPoint<QueryImplicitCoercibilityOnInfo>({int_2, int_3}),
+			"Smaller int should be coercible into a biger one."
+		);
+
+		assert(
+			!query::queryEntryPoint<QueryImplicitCoercibilityOnInfo>({int_3, int_2}),
+			"Bigger int should not be coercible into a smaller one."
+		);
 	}
 
 public:
