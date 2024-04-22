@@ -209,21 +209,21 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_jmpRel_label(OPFUN_ARGS) {
 		{ instr += instr->arg0; }
-		OPFUN_CONT(1);
+		OPFUN_CONT_CHECK_STRATEGY(1);
 	}
 
 	RETURN_TYPE OpFuns::op_jmpRelIf_label(OPFUN_ARGS) {
 		{
 			if (frame->flags.flag) instr += instr->arg0;
 		}
-		OPFUN_CONT(1);
+		OPFUN_CONT_CHECK_STRATEGY(1);
 	}
 
 	RETURN_TYPE OpFuns::op_jmpRelNotIf_label(OPFUN_ARGS) {
 		{
 			if (!frame->flags.flag) instr += instr->arg0;
 		}
-		OPFUN_CONT(1);
+		OPFUN_CONT_CHECK_STRATEGY(1);
 	}
 
 	RETURN_TYPE OpFuns::op_setPtrArg_lptr(OPFUN_ARGS) {
@@ -262,7 +262,7 @@ namespace vm {
 				RIFT_PANIC("RiftVM stack overflow.");
 			memset(local_stack, 0, local_stack_size);
 		}
-		OPFUN_CONT(0);
+		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
 
 	// @TODO: refactor op_rets to reduce code duplication
@@ -280,7 +280,7 @@ namespace vm {
 				RIFT_PANIC("RiftVM stack overflow.");
 			memset(local_stack, 0, local_stack_size);
 		}
-		OPFUN_CONT(0);
+		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
 
 	RETURN_TYPE OpFuns::op_ret_l64(OPFUN_ARGS) {
@@ -296,7 +296,7 @@ namespace vm {
 			instr       = frame->instr;  // This is already a pointer to next instr
 			local_stack = frame->local_stack;
 		}
-		OPFUN_CONT(0);
+		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
 
 	RETURN_TYPE OpFuns::op_ret_imm(OPFUN_ARGS) {
@@ -310,7 +310,7 @@ namespace vm {
 			instr       = frame->instr;  // This is already a pointer to next instr
 			local_stack = frame->local_stack;
 		}
-		OPFUN_CONT(0);
+		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
 
 	RETURN_TYPE OpFuns::op_init_type(OPFUN_ARGS) {
