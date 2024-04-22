@@ -5,28 +5,22 @@
 #include "node_id.hpp"
 #include "empty_key.hpp"
 
-namespace query {
-
-	namespace detail {
-		/**
-		 * @brief Base class for defining query interface
-		 *
-		 * @tparam QueryType_tp a type of a query
-		 * @tparam QKey_tp a type of a query key
-		 * @tparam QResult_tp a type of a query result
-		 */
-		template<typename QueryType_tp, typename QKey_tp, typename QResult_tp>
-		struct QueryInterface {
-			using QueryType = QueryType_tp;
-			using QKey      = QKey_tp;
-			using QResult   = QResult_tp;
-		};
-	}
+namespace query::detail {
+	/**
+	 * @brief Base class for defining query interface
+	 *
+	 * @tparam QueryType_tp a type of a query
+	 * @tparam QKey_tp a type of a query key
+	 * @tparam QResult_tp a type of a query result
+	 */
+	template<typename QueryType_tp, typename QKey_tp, typename QResult_tp>
+	struct QueryInterface {
+		using QueryType = QueryType_tp;
+		using QKey      = QKey_tp;
+		using QResult   = QResult_tp;
+	};
 }
 
-/**
- * @brief Macro emitting body of query interface struct.
- */
 #define INTERNAL_QUERY_INTERFACE_BOILERPLATE                                                  \
 	static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
 	static ::std::string_view       name;                                                     \

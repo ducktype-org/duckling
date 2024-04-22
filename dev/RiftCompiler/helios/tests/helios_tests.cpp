@@ -30,8 +30,23 @@ private:
 		auto   root_scope = pst.getTopLevelElement();
 		auto&& stmts      = root_scope->getStatements();
 		// @TODO: Write a QuerySymbolOfSTMT test here.
-		// for (const auto& stmt: stmts)
-		// 	std::cerr << stmt->getSourcePosition().getSourceChars().c_str() << '\n';
+		for (const auto& stmt: stmts) {
+			switch (stmt->getKind()) {
+			case pst::StmtKind::Attribute:
+			case pst::StmtKind::Import:
+			case pst::StmtKind::Using:
+			case pst::StmtKind::Alias:
+			case pst::StmtKind::Fun:
+			case pst::StmtKind::Namespace:
+			case pst::StmtKind::CodeDecl:
+			case pst::StmtKind::Action:
+			case pst::StmtKind::Expr:
+			case pst::StmtKind::Struct:
+			case pst::StmtKind::TopLevel:
+			case pst::StmtKind::Const:
+				break;
+			}
+		}
 	}
 
 	// @NEARFUTURE: This can be adapted to use HELIOS

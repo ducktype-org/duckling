@@ -2,6 +2,7 @@
 #include "query_impl.hpp"
 
 #include <base/maps.hpp>
+#include <iomanip>
 #include <vector>
 #include <iostream>
 
@@ -69,18 +70,19 @@ namespace query::detail {
 		void setExit(NodeID node) { node_data.at(node).color = Color::Done; }
 
 		void debugPrint() {
-			// @TODO: optional pratty key printing
-
 			std::cerr << "Dep Graph: \n";
+			std::string spacing(25, ' ');
 			for (auto& [k, v]: node_data) {
 				std::cerr << "    ";
-				std::cerr << "Query " << k.q_id.asInt() << ", Key " << k.hash.val << "  <--- ";
+				std::cerr << "> Query - " << std::setw(5) << std::left;
+				std::cerr << k.q_id.asInt() << std::setw(30) << std::left
+						  << "\"" + k.q_id.getName() + "\"";
+				std::cerr << " Key " << k.hash.val << " :=>\n";
 				for (auto& dep: v.dependencies) {
-					std::cerr << "(Q: " << dep.q_id.asInt() << ", "
-							  << "K: " << dep.hash.val << ")";
-					std::cerr << ", ";
+					std::cerr << spacing << "(Q: " << "\"" << dep.q_id.getName() << "\", "
+							  << "K: " << dep.hash.val << "),\n";
 				}
-				std::cerr << "\n";
+				if(!v.dependencies.empty()) std::cerr << '\n';
 			}
 		}
 
