@@ -6,12 +6,10 @@
 namespace compiler::helios {
 
 
-	struct HOUTCode {
-
-	};
+	struct HOUTCode {};
 
 	// placeholder for functions, methods, etc
-	struct HOUTFunction { };
+	struct HOUTFunction {};
 
 	/**
 	 * @brief Structure representing HOUT of single module
@@ -24,13 +22,11 @@ namespace compiler::helios {
 		// * defined templates
 		// * vector/references to hout of submodules? -- not necessarily needed
 		// * what else?
-		
+
 		// @TODO: do we need separation:
 		std::vector<SymID> first_class_citizens;
-
 	};
 
 }
 
 // @TODO std hash..
-

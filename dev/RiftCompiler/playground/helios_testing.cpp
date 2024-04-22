@@ -8,13 +8,12 @@
 #include <iostream>
 #include <query_framework/query_entry_point.hpp>
 
-
 int main(int argc, const char* argv[]) {
 	// @TODO: add to helios init
 	lexer::init();
 	pst::init();
 	// @FUTURE: record all inits somewhere..
-	
+
 	// parser::init();
 
 
@@ -54,10 +53,8 @@ int main(int argc, const char* argv[]) {
 
 	auto symbols_in_root = query::queryEntryPoint<helios::QuerySymbolsInScope>(root_scope);
 
-	
 	std::cerr << "symbol count other: " << symbols_in_root.size() << "\n";
 
 	std::cerr << "graph:\n";
 	query::debugPrintDependencyGraph();
-
 }

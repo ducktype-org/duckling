@@ -1,3 +1,6 @@
+#include "helios/scope_symbol_id.hpp"
+#include "helios/symbols/symbols.hpp"
+#include "query_framework/query_entry_point.hpp"
 #include <tester/tester.hpp>
 #include <pst_parser/parser.hpp>
 #include <filesystem/file.hpp>
@@ -30,23 +33,15 @@ private:
 		auto   root_scope = pst.getTopLevelElement();
 		auto&& stmts      = root_scope->getStatements();
 		// @TODO: Write a QuerySymbolOfSTMT test here.
-		for (const auto& stmt: stmts) {
-			switch (stmt->getKind()) {
-			case pst::StmtKind::Attribute:
-			case pst::StmtKind::Import:
-			case pst::StmtKind::Using:
-			case pst::StmtKind::Alias:
-			case pst::StmtKind::Fun:
-			case pst::StmtKind::Namespace:
-			case pst::StmtKind::CodeDecl:
-			case pst::StmtKind::Action:
-			case pst::StmtKind::Expr:
-			case pst::StmtKind::Struct:
-			case pst::StmtKind::TopLevel:
-			case pst::StmtKind::Const:
-				break;
-			}
-		}
+		// EDIT: I don't know how to construct ScopeID for QuerySymbolOfSTMT key...
+		// for (const auto& stmt: stmts) {
+		// 	ASSERT_EQUAL(
+		// 		stmt->getKind(),
+		// 		query::queryEntryPoint<compiler::helios::QuerySymbolOfSTMT>(
+		// 			compiler::helios::KeyOf_QuerySymbolOfSTMT{ .stmt = stmt.borrow(), .scope = pst. }
+		// 		)
+		// 	);
+		// }
 	}
 
 	// @NEARFUTURE: This can be adapted to use HELIOS

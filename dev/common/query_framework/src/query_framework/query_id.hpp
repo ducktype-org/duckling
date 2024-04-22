@@ -14,7 +14,7 @@ namespace query::detail {
 		}
 
 		[[nodiscard]]
-		constexpr const std::string& getName() const {
+		const std::string& getName() const {
 			return name_map.at(val);
 		}
 
