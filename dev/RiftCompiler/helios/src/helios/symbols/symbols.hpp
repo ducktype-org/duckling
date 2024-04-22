@@ -31,6 +31,7 @@ namespace compiler::helios {
 	};
 
 	// Such functions can probably be just functions:
+	bool        isWildcard(SymID);
 	base::StrId name(SymID);
 	SymbolKind  kind(SymID);
 	ScopeID     scope(SymID);

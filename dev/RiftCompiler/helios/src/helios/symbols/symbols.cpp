@@ -21,10 +21,10 @@ namespace compiler::helios {
 		// created on startup:
 		ScopeID     scope;
 		base::StrId name;
-		bool        anonymous = false;
-		bool        wildcard  = false;
-		bool        is_alias  = false;
-		bool        dependent = false;
+		bool        anonymous    = false;
+		bool        is_wildcard  = false;
+		bool        is_alias     = false;
+		bool        dependent    = false;
 		SymbolKind  kind;
 		// pst link? -- what about down casting...
 
@@ -48,6 +48,8 @@ namespace compiler::helios {
 
 	auto getSymRef(SymID id) { return GetSymRef_Functor::get(id); }
 
+	bool isWildcard(SymID id) { return getSymRef(id)->is_wildcard; }
+	
 	base::StrId name(SymID id) { return getSymRef(id)->name; }
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->kind; }
@@ -120,7 +122,7 @@ namespace compiler::helios {
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = base::StrId("<USING>"),  // @FIX: I feel like it's not ok.
-				.wildcard = true,
+				.is_wildcard = true,
 				.is_alias = true,
 				.kind     = SymbolKind::Using,
 				.pst_stmt = stmt,

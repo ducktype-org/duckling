@@ -60,7 +60,7 @@ namespace compiler::helios {
 		}
 	}
 
-	struct ImplementationOf_QuerySuperRootScope:
+	struct ImplementationOf_QueryRootScopeOf:
 		  query::QueryImplementation<QueryRootScopeOf, ScopeID> {
 		inline static base::Map<frontend::ModuleId, query::AddACD<ScopeID>> cache;
 
@@ -87,7 +87,7 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(
-		ImplementationOf_QuerySuperRootScope, "Query Super Root scope"
+		ImplementationOf_QueryRootScopeOf, "Query Super Root scope"
 	);
 
 	struct ImplementationOf_QueryPrimaryCodeScopeFor:
@@ -153,6 +153,32 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(
 		ImplementationOf_QuerySymbolsInScope, "Query symbols in Scope"
 	);
+
+
+	struct ImplementationOf_QueryLookupInScope: public query::QueryImplementation<QueryLookupInScope, LookupResult> {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto&& symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
+
+			LookupResult result{ {}, {} };
+
+			for (auto&& sym: symbol_list) {
+				if (isWildcard(sym)) {
+					ctx.log("@TODO: wildcard lookup");
+				}
+				else if (name(sym) == key.name) {
+					result.leaves.push_back(sym);
+				}
+				else {
+
+				}
+			}
+
+			throw result;
+		}
+		
+		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+	};
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLookupInScope, "QueryLookupInScope");
 
 	base::HashT KeyOf_QueryPrimaryCodeScopeFor::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(parent);
