@@ -4,48 +4,50 @@
 
 #define LABEL_PTR(opcode) (&&LABEL_##opcode)
 
-#define DISPATCH_OPCODE()                                                                 \
-	{                                                                                     \
-		if constexpr (!IGNORE_EXECUTION_STRATEGY)                                         \
-			frame.executor.handleExecutionStrategyIfNeeded();                             \
-		goto* opcode_label[static_cast<u64>(function.bc[frame.instruction_pointer].opcode)]; \
+#define DISPATCH_OPCODE()                                                            \
+	{                                                                                \
+		if constexpr (!IGNORE_EXECUTION_STRATEGY) handleExecutionStrategyIfNeeded(); \
+		/* NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)) */        \
+		goto* opcode_label[static_cast<u64>(instr->opcode)];                         \
+		/* NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)) */          \
 	}
 
 #define OP_CASE_HEADER(opcode)  case OpcodeFix8 ::opcode:
 #define OP_LABEL_HEADER(opcode) LABEL_##opcode:
 
-#define OP_CASE(opcode)                                                            \
-	IF_NOT_CG(OP_CASE_HEADER(opcode))                                              \
-	IF_CG(OP_LABEL_HEADER(opcode)) {                                               \
-		{                                                                          \
-			const Fix8Instruction* instr = &function.bc[frame.instruction_pointer++]; \
-			vm::OpFuns::op_##opcode(instr, r1, r2, r3, local_stack, frame);        \
-			{                                                                      \
-				IF_CG(DISPATCH_OPCODE())                                           \
-				IF_NOT_CG(break;)                                                  \
-			}                                                                      \
-		}                                                                          \
+#define OP_CASE(opcode)                                                \
+	IF_NOT_CG(OP_CASE_HEADER(opcode))                                  \
+	IF_CG(OP_LABEL_HEADER(opcode)) {                                   \
+		{                                                              \
+			vm::OpFuns::op_##opcode(instr, local_stack, frame, *this); \
+			{                                                          \
+				IF_CG(DISPATCH_OPCODE())                               \
+				IF_NOT_CG(break;)                                      \
+			}                                                          \
+		}                                                              \
 	}
 
-#define OP_CASE_END(opcode)                                                        \
-	IF_NOT_CG(OP_CASE_HEADER(opcode))                                              \
-	IF_CG(OP_LABEL_HEADER(opcode)) {                                               \
-		{                                                                          \
-			const Fix8Instruction* instr = &function.bc[frame.instruction_pointer++]; \
-			vm::OpFuns::op_##opcode(instr, r1, r2, r3, local_stack, frame);        \
-			goto End;                                                              \
-		}                                                                          \
+#define OP_CASE_END(opcode)                                            \
+	IF_NOT_CG(OP_CASE_HEADER(opcode))                                  \
+	IF_CG(OP_LABEL_HEADER(opcode)) {                                   \
+		{                                                              \
+			vm::OpFuns::op_##opcode(instr, local_stack, frame, *this); \
+			/* NOLINTBEGIN(cppcoreguidelines-avoid-goto) */            \
+			goto End;                                                  \
+			/* NOLINTEND(cppcoreguidelines-avoid-goto) */              \
+		}                                                              \
 	}
 
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define OPFUN_CONT(i, r1, r2, r3)                                                         \
-	IF_TC({                                                                               \
-		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                                       \
-			if (!frame.executor.isRunning)                                                \
-				return op_handle_strategy(&instr[i - 1], r1, r2, r3, local_stack, frame); \
-		}                                                                                 \
-		return instr[i].opfun(&instr[i], r1, r2, r3, local_stack, frame);                 \
-	})
+#define OPFUN_CONT(i)                                                                   \
+	IF_TC({                                                                             \
+		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                                     \
+			if (!executor.is_running)                                                   \
+				return op_handle_strategy(&instr[i - 1], local_stack, frame, executor); \
+		}                                                                               \
+		return instr[i].opfun(&instr[i], local_stack, frame, executor);                 \
+	})                                                                                  \
+	IF_NOT_TC({ instr += i; })
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 
 // Prevent \ warning

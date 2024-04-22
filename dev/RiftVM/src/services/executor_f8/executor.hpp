@@ -1,11 +1,12 @@
 #pragma once
 
 #include "../services.hpp"
+#include "code_data/instruction.hpp"
+#include "code_data/code.hpp"
 #include "kill_core_exception.hpp"
 #include "services/executor_f8/op_case.hpp"
 
 #include <code_data/code.hpp>
-#include <code_data/frame.hpp>
 #include <api/data/request.hpp>
 #include <api/data/status.hpp>
 
@@ -22,6 +23,25 @@
 
 namespace vm {
 	enum class ExecutionStrategy { Normal, StepByStep, Paused, Stoped };
+	struct Frame;
+
+	const u64 FRAMES_LENGTH = 16'384;
+	const u64 STACK_LENGTH  = FRAMES_LENGTH * 256;
+
+	struct RuntimeData {
+		Frame*     frame_stack_base;
+		Frame*     frame_stack_end;
+		std::byte* local_stack_base;
+		std::byte* local_stack_top;
+		std::byte* local_stack_end;
+
+		RuntimeData(std::vector<Frame>& frame_stack, std::vector<std::byte>& local_stack):
+			  frame_stack_base(frame_stack.data()),
+			  frame_stack_end(frame_stack.data() + FRAMES_LENGTH),
+			  local_stack_base(local_stack.data()),
+			  local_stack_top(local_stack.data()),
+			  local_stack_end(local_stack.data() + STACK_LENGTH) {}
+	};
 
 	class Executor {
 	private:
@@ -31,6 +51,10 @@ namespace vm {
 		TypeMetadata&   types;
 
 		VCPU& vcpu;
+
+		std::vector<Frame>     frame_stack;
+		std::vector<std::byte> local_stack;
+		RuntimeData            runtime_data;
 
 		/**
 		 * This is currently duplicated inside VCPUStatus
@@ -43,7 +67,10 @@ namespace vm {
 			  stack_allocator(serviceManager.template get<StackAllocator>()),
 			  memory(serviceManager.getVCPU().getData().template get<Memory>()),
 			  types(serviceManager.getVCPU().getData().template get<TypeMetadata>()),
-			  vcpu(serviceManager.getVCPU()) {
+			  vcpu(serviceManager.getVCPU()),
+			  frame_stack(FRAMES_LENGTH, internalInitFrame()),
+			  local_stack(STACK_LENGTH),
+			  runtime_data(frame_stack, local_stack) {
 			// @TODO: not loaded status
 			setStatus(api::NotStarted{});
 		}
@@ -52,7 +79,7 @@ namespace vm {
 		std::condition_variable pause_cv;
 		std::mutex              external_api_mutex;
 		ExecutionStrategy       execution_strategy = ExecutionStrategy::Stoped;
-		std::atomic<bool>       isRunning          = false;
+		std::atomic<bool>       is_running         = false;
 
 		// This function is marked as cold, because, well, it is cold, but
 		// the compiler did not figure this out on its own, hence the
@@ -80,10 +107,10 @@ namespace vm {
 		 */
 		base::ModRawView internalDerefPointer(Pointer);
 
+		inline void initNextFrame(Frame*, StandardFunctionArgs& args);
 		/** Using raw Frame pointers seem to boost performance in function calls */
-		Frame
-			internalInitFrame(base::borrow_ptr<Frame>, VLADataReference, BlockId*, StandardFunctionArgs&);
-		u64 internalCallFunction(base::borrow_ptr<Frame>, const FuncData&, StandardFunctionArgs);
+		Frame internalInitFrame();
+		u64   internalCallMain(const FuncData&);
 
 		// @TODO add some thread data in the future
 

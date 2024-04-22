@@ -1,26 +1,30 @@
 #pragma once
 
+#include "frame.hpp"
 #include "config.hpp"
 #include <base/ints.hpp>
-#include "frame.hpp"
+#include <array>
 
 // #define USE_COMPACT_INSTRUCTION
 
-#define OPFUN_ARGS                                                                                 \
-	const Fix8Instruction *instr [[maybe_unused]], u64 r1 [[maybe_unused]],                        \
-		u64 r2 [[maybe_unused]], u64 r3 [[maybe_unused]], std::byte *local_stack [[maybe_unused]], \
-		Frame &frame [[maybe_unused]]
+#define OPFUN_ARGS                                                    \
+	const Fix8Instruction *IF_NOT_TC(&) instr [[maybe_unused]],       \
+		std::byte *        IF_NOT_TC(&) local_stack [[maybe_unused]], \
+		Frame *IF_NOT_TC(&) frame [[maybe_unused]], Executor &executor [[maybe_unused]]
 
-#define RETURN_TYPE IF_TC(u64) IF_NOT_TC([[gnu::always_inline]] void)
+#define RETURN_TYPE IF_NOT_TC([[gnu::always_inline]]) void
 
 namespace vm {
-
+	class Executor;
 	struct Fix8Instruction;
 
 	class OpFuns;
-	using OpFun = IF_NOT_TC(void) IF_TC(u64)(OPFUN_ARGS);
+	using OpFun = void(OPFUN_ARGS);
 
-	constexpr const u16 OpFunsCount = 37;
+	// Describes number of RiftBC opcodes + meta-opcodes recognized by Executor.
+	// This constant is relevant for `vm::Opfuns::opfuns[]` (instructions.hpp) and `opcode_label[]`
+	// (CG, executor.cpp)
+	constexpr const u16 OpCasesCount = 39;
 
 #ifdef USE_TAIL_CALLS
 	struct Fix8Instruction {
@@ -44,7 +48,6 @@ namespace vm {
 
 	class OpFuns {
 	public:
-		static OpFun op_handle_strategy;
 		static OpFun op_mov_l64_imm;
 
 		static OpFun op_mov_l64_l64;
@@ -99,8 +102,14 @@ namespace vm {
 		static OpFun op_store_lptr_l64_ofs;
 
 		static OpFun op_ext_l64;
+		static OpFun op_exit;
 
-		static constexpr std::array<OpFun*, OpFunsCount> opfuns{
+		// Meta-opcodes, that are not a part of BC
+		static OpFun op_handle_strategy;
+
+		// A mapping between opcode ids and function pointers.
+		// WARN: Ordering of elements must stay the same as in vm::OpcodeFix8
+		static constexpr std::array<OpFun*, OpCasesCount> opfuns{
 			op_mov_l64_imm,
 
 			op_mov_l64_l64,
@@ -155,7 +164,9 @@ namespace vm {
 			op_store_lptr_l64_ofs,
 
 			op_ext_l64,
+			op_exit,
+
+			op_handle_strategy,
 		};
 	};
-
 }  // namespace vm
