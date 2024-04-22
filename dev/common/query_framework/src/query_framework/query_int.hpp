@@ -21,6 +21,9 @@ namespace query::detail {
 	};
 }
 
+/**
+ * @brief Macro emitting body of query interface struct.
+ */
 #define INTERNAL_QUERY_INTERFACE_BOILERPLATE                                                  \
 	static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
 	static ::std::string_view       name;                                                     \
