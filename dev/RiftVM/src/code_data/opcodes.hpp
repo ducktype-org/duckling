@@ -67,6 +67,7 @@ MAKE_STRINGIFYABLE_ENUM(
 	setPtrArg_lptr,  // set pointer argument
 	call_func,
 
+	ret_tailcall,
 	ret_l64,
 	ret_imm,
 
