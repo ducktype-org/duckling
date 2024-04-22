@@ -11,6 +11,8 @@
 		u64 r2 [[maybe_unused]], u64 r3 [[maybe_unused]], std::byte *local_stack [[maybe_unused]], \
 		Frame &frame [[maybe_unused]]
 
+#define RETURN_TYPE IF_TC(u64) IF_NOT_TC([[gnu::always_inline]] void)
+
 namespace vm {
 
 	struct Fix8Instruction;
@@ -18,14 +20,14 @@ namespace vm {
 	class OpFuns;
 	using OpFun = IF_NOT_TC(void) IF_TC(u64)(OPFUN_ARGS);
 
-#ifdef USE_TAIL_CALLS
+	constexpr const u16 OpFunsCount = 37;
 
+#ifdef USE_TAIL_CALLS
 	struct Fix8Instruction {
 		OpFun* opfun;
 		i32    arg0;
 		i32    arg1;
 	};
-
 #else
 	#ifdef USE_COMPACT_INSTRUCTION
 	struct Fix8Instruction {
@@ -39,10 +41,6 @@ namespace vm {
 	};
 	#endif
 #endif
-
-	constexpr const u16 OpFunsCount = 37;
-
-#define RETURN_TYPE IF_TC(u64) IF_NOT_TC([[gnu::always_inline]] void)
 
 	class OpFuns {
 	public:
