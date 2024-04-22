@@ -8,5 +8,5 @@ add_library(HELIOS
 
 make_module(HELIOS USES Base QueryFramework PstParser ModuleTree)
 
-rift_add_test(compiler HeliosTests tests/helios_tests.cpp
+rift_add_test(compiler helios_test tests/helios_tests.cpp
         USES Base TypeSystem PstParser HELIOS)

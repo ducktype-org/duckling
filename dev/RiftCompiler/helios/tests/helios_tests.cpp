@@ -29,7 +29,7 @@ private:
 	}
 
 	void testQuerySymbolOfSTMT() {
-		auto [pst, file]  = prepare(fs::FilePath(path("constants.rift")));
+		auto [pst, file]  = prepare(fs::FilePath(path("constants/constants.rmf")));
 		auto   root_scope = pst.getTopLevelElement();
 		auto&& stmts      = root_scope->getStatements();
 		// @TODO: Write a QuerySymbolOfSTMT test here.
