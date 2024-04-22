@@ -27,4 +27,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/RiftVM/tests/");
+TESTER_COMMON_MAIN("/RiftVM/tests/basic/");
