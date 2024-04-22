@@ -53,7 +53,7 @@ namespace vm {
 		VCPU& vcpu;
 
 		std::vector<Frame>     frame_stack;
-		std::vector<std::byte> local_stack;
+		std::vector<std::byte> local_stack_reserved;
 		RuntimeData            runtime_data;
 
 		/**
@@ -69,8 +69,8 @@ namespace vm {
 			  types(serviceManager.getVCPU().getData().template get<TypeMetadata>()),
 			  vcpu(serviceManager.getVCPU()),
 			  frame_stack(FRAMES_LENGTH, internalInitFrame()),
-			  local_stack(STACK_LENGTH),
-			  runtime_data(frame_stack, local_stack) {
+			  local_stack_reserved(STACK_LENGTH),
+			  runtime_data(frame_stack, local_stack_reserved) {
 			// @TODO: not loaded status
 			setStatus(api::NotStarted{});
 		}
