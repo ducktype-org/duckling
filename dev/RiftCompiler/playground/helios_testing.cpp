@@ -1,6 +1,7 @@
 #include "helios/scopes/scopes.hpp"
 #include "lexer/lexer.hpp"
 #include "pst_parser/parser.hpp"
+#include "query_framework/dep_graph.hpp"
 #include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/symbols.hpp>
 #include <clap/clap.hpp>
@@ -55,5 +56,8 @@ int main(int argc, const char* argv[]) {
 
 	
 	std::cerr << "symbol count other: " << symbols_in_root.size() << "\n";
+
+	std::cerr << "graph:\n";
+	query::debugPrintDependencyGraph();
 
 }
