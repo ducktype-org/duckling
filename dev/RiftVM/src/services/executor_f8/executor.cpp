@@ -250,8 +250,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::op_jmpRelNotIf_label(OPFUN_ARGS) {
 		{
 			if (!frame.flags.flag) {
-				frame.instruction_pointer += instr->arg0;
-				instr += instr->arg0;
+				IF_NOT_TC(frame.instruction_pointer += instr->arg0;)
+				IF_TC(instr += instr->arg0;)
 			}
 		}
 		OPFUN_CONT(1, r1, r2, r3);
@@ -286,7 +286,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::op_ret_imm(OPFUN_ARGS) {
-		{ frame.ret_val = 0; }
+		{ frame.ret_val = instr->arg0; }
 		IF_TC(return frame.ret_val;)
 	}
 
