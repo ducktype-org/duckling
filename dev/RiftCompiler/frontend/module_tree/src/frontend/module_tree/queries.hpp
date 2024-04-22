@@ -10,7 +10,7 @@
 
 namespace compiler::frontend {
 
-	
+
 	// clang-format off
 	DECLARE_QUERY(QueryModuleTree,     fs::FilePath, ModuleId)
 	DECLARE_QUERY(QueryParentModule,   ModuleId,     ModuleId)

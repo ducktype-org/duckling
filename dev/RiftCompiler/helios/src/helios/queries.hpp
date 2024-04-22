@@ -10,13 +10,14 @@
 #include "hout/hout.hpp"
 
 namespace compiler::helios {
-	// @FUTURE: paraph we will need to add more granularity to HOUT generation for efficient incremental compilation
+	// @FUTURE: paraph we will need to add more granularity to HOUT generation for efficient
+	// incremental compilation
 
 	/**
 	 * @brief Query FULL HOUTModule of single module
 	 */
 	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleId, const HOUTModule&)
-	
+
 	/**
 	 * @brief Query FULL HOUTModule of module and all its submodules recursively
 	 */
@@ -30,4 +31,3 @@ namespace compiler::helios {
 
 
 }
-

@@ -58,8 +58,8 @@ namespace compiler::frontend {
 		const pst::PST& getPST();
 	};
 
-
 	STRONG_TYPEDEF_ID(ModuleId);
+
 	// @TODO: move to STRONG_TYPEDEF_ID?
 	inline base::HashT customPerfectHash(ModuleId id) { return id.asInt(); }
 

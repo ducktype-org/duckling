@@ -23,7 +23,8 @@ namespace query::detail {
 		}
 
 	private:
-		// @TODO: does it have one definition? Also we can probably put it in cpp anyway for faster compilation/recompilation
+		// @TODO: does it have one definition? Also we can probably put it in cpp anyway for faster
+		// compilation/recompilation
 		static inline base::HashMap<VAL_T, std::string> name_map;
 	};
 }

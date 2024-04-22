@@ -79,10 +79,11 @@ namespace query::detail {
 						  << "\"" + k.q_id.getName() + "\"";
 				std::cerr << " Key " << k.hash.val << " :=>\n";
 				for (auto& dep: v.dependencies) {
-					std::cerr << spacing << "(Q: " << "\"" << dep.q_id.getName() << "\", "
+					std::cerr << spacing << "(Q: "
+							  << "\"" << dep.q_id.getName() << "\", "
 							  << "K: " << dep.hash.val << "),\n";
 				}
-				if(!v.dependencies.empty()) std::cerr << '\n';
+				if (!v.dependencies.empty()) std::cerr << '\n';
 			}
 		}
 

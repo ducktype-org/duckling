@@ -128,12 +128,12 @@ namespace query {
  * @param type Name of Query Implementation Struct
  * @param pretty_name Pretty name of a given query (that will for example be displayed in logs)
  */
-#define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                       \
-	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from) \
-		-> type::QueryType::QResult {                                                             \
-		return ::query::detail::standardQueryEntry<type>(key, from);                              \
-	}                                                                                             \
-	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::newQueryId(pretty_name);       \
+#define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                         \
+	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from)   \
+		-> type::QueryType::QResult {                                                               \
+		return ::query::detail::standardQueryEntry<type>(key, from);                                \
+	}                                                                                               \
+	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryId(pretty_name); \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
 
 
@@ -141,7 +141,7 @@ namespace query {
  * @brief Macro defining typical hash based cache for fast prototyping.
  * @future: change it to component, when proper query-component system will be introduced
  */
-#define QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF                                                                \
+#define QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF                                                   \
 	static inline base::HashMap<QKey, query::AddACD<PResult>, ::base::PerfectHashFunctor<QKey>> \
 				cache;                                                                          \
 	static auto load(QKey key) -> LoadResult { return cache.atMaybeCopy(key); }                 \
@@ -151,21 +151,19 @@ namespace query {
 	}
 
 
-
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
  * @future: change it to component, when proper query-component system will be introduced
  */
-#define QUERY_AUTO_CACHE_PRESULT_STABLE_REF                                                                \
-	static inline base::StableHashMap<QKey, query::AddACD<PResult>, ::base::PerfectHashFunctor<QKey>> \
-				cache;                                                                          \
-	static auto load(QKey key) -> LoadResult {  \
-		if (auto&& copy = cache.atMaybeCopy(key)) {\
-			return QResWithACD{copy->data, copy->acd};\
-		} \
-		return {}; \
-	 }                 \
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                       \
-		cache.put(key, query::AddACD<PResult>{ std::move(res), acd });                                                \
-		return cache.at(key).data;                                                              \
+#define QUERY_AUTO_CACHE_PRESULT_STABLE_REF                                                        \
+	static inline base::                                                                           \
+		StableHashMap<QKey, query::AddACD<PResult>, ::base::PerfectHashFunctor<QKey>>              \
+				cache;                                                                             \
+	static auto load(QKey key) -> LoadResult {                                                     \
+		if (auto&& copy = cache.atMaybeCopy(key)) { return QResWithACD{ copy->data, copy->acd }; } \
+		return {};                                                                                 \
+	}                                                                                              \
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                          \
+		cache.put(key, query::AddACD<PResult>{ std::move(res), acd });                             \
+		return cache.at(key).data;                                                                 \
 	}

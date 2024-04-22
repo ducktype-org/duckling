@@ -11,10 +11,13 @@ namespace compiler::helios {
 
 	struct SymID {
 		// @FUTURE: add some mangling, so valgrind will not get confused
-		base::HashT customPerfectHash() const { return reinterpret_cast<u64>(ref.get()); };
+		base::HashT customPerfectHash() const { return reinterpret_cast<u64>(ref.get()); }
+
 		bool operator==(const SymID&) const = default;
+
 	private:
 		base::borrow_ptr<SymbolData> ref;
+
 		SymID(base::borrow_ptr<SymbolData> ref): ref(ref) {}
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
 		friend struct GetSymRef_Functor;
@@ -22,10 +25,13 @@ namespace compiler::helios {
 
 	struct ScopeID {
 		// @FUTURE: add some mangling, so valgrind will not get confused
-		base::HashT customPerfectHash() const { return reinterpret_cast<u64>(ref.get()); };
+		base::HashT customPerfectHash() const { return reinterpret_cast<u64>(ref.get()); }
+
 		bool operator==(const ScopeID&) const = default;
+
 	private:
 		base::borrow_ptr<ScopeData> ref;
+
 		ScopeID(base::borrow_ptr<ScopeData> ref): ref(ref) {}
 		friend struct ImplementationOf_QueryRootScopeOf;
 		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;

@@ -38,7 +38,8 @@ private:
 		// 	ASSERT_EQUAL(
 		// 		stmt->getKind(),
 		// 		query::queryEntryPoint<compiler::helios::QuerySymbolOfSTMT>(
-		// 			compiler::helios::KeyOf_QuerySymbolOfSTMT{ .stmt = stmt.borrow(), .scope = pst. }
+		// 			compiler::helios::KeyOf_QuerySymbolOfSTMT{ .stmt = stmt.borrow(), .scope = pst.
+		// }
 		// 		)
 		// 	);
 		// }

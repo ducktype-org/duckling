@@ -21,16 +21,15 @@ namespace compiler::helios {
 		// created on startup:
 		ScopeID     scope;
 		base::StrId name;
-		bool        anonymous    = false;
-		bool        is_wildcard  = false;
-		bool        is_alias     = false;
-		bool        dependent    = false;
+		bool        anonymous   = false;
+		bool        is_wildcard = false;
+		bool        is_alias    = false;
+		bool        dependent   = false;
 		SymbolKind  kind;
 		// pst link? -- what about down casting...
 
 		// we will need to cast it:
 		PstRef<pst::Stmt> pst_stmt;
-		
 
 
 		// cached: linked_lookup_scope ?
@@ -49,7 +48,7 @@ namespace compiler::helios {
 	auto getSymRef(SymID id) { return GetSymRef_Functor::get(id); }
 
 	bool isWildcard(SymID id) { return getSymRef(id)->is_wildcard; }
-	
+
 	base::StrId name(SymID id) { return getSymRef(id)->name; }
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->kind; }
@@ -120,12 +119,12 @@ namespace compiler::helios {
 		case pst::StmtKind::Using: {
 			auto&& using_ = dynamic_cast<const pst::Using*>(stmt.get());
 			return putInSymtable(SymbolData{
-				.scope    = scope,
-				.name     = base::StrId("<USING>"),  // @FIX: I feel like it's not ok.
+				.scope       = scope,
+				.name        = base::StrId("<USING>"),  // @FIX: I feel like it's not ok.
 				.is_wildcard = true,
-				.is_alias = true,
-				.kind     = SymbolKind::Using,
-				.pst_stmt = stmt,
+				.is_alias    = true,
+				.kind        = SymbolKind::Using,
+				.pst_stmt    = stmt,
 			});
 		}
 

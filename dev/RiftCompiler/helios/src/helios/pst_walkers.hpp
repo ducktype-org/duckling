@@ -6,7 +6,7 @@
 #include <vector>
 
 namespace compiler::helios {
-	// @TODO: 
+	// @TODO:
 	// * future: walkers for class and stuff?
 	// * ???
 

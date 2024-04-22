@@ -53,9 +53,8 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QuerySymbolOfSTMT, KeyOf_QuerySymbolOfSTMT, SymID);
 
-
 	struct KeyOf_LookupIn {
-		SymID symbol;
+		SymID       symbol;
 		base::StrId name;
 
 		[[nodiscard]]
@@ -63,6 +62,7 @@ namespace compiler::helios {
 
 		bool operator==(const KeyOf_LookupIn&) const = default;
 	};
+
 	DECLARE_QUERY(QueryLookupIn, KeyOf_LookupIn, LookupResult);
 
 	// @TODO: get type from type-system

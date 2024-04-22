@@ -1,6 +1,6 @@
 /**
  * @file lookup_result.hpp
- * 
+ *
  * @note Current lookup system assumes that every rhs of "." operator is
  * well looked-up single symbol.
  */
@@ -43,7 +43,6 @@ namespace compiler::helios {
 		SymID        node;  ///< node should always be alias-like of using-like thing
 		LookupResult inner;
 	};
-
 
 	// @TODO: do we want ChainLookupResult for stuff like aliases, usings etc?
 

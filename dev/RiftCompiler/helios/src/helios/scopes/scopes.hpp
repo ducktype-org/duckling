@@ -25,12 +25,13 @@ namespace compiler::helios {
 		ScopeID parent;
 
 		// Stmt here makes no sense with getChildStmtsOf
-		// The overall idea is fine, but needs some polishing 
+		// The overall idea is fine, but needs some polishing
 		PstRef<pst::Stmt> base_element;
 		// StmtList stmts;
 
 		base::HashT customPerfectHash() const;
 	};
+
 	/**
 	 * @brief Construct a Scope that has following properties:
 	 *   * parent of the scope is the scope in which the RiftElement is
@@ -49,12 +50,13 @@ namespace compiler::helios {
 	// DECLARE_QUERY(QueryNthScopeIn, KeyOf_QueryNthScopeIn, ScopeID);
 
 	struct KeyOf_LookupInScope {
-		ScopeID scope;
+		ScopeID     scope;
 		base::StrId name;
 
 		base::HashT customPerfectHash() const;
-		bool operator==(const KeyOf_LookupInScope&) const = default;
+		bool        operator==(const KeyOf_LookupInScope&) const = default;
 	};
+
 	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, const LookupResult&);
 
 
