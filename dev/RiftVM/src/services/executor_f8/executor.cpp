@@ -370,12 +370,12 @@ namespace vm {
 			auto view    = frame.executor.internalDerefPointer(pointer);
 			u64  idx     = 0;
 #ifdef USE_TAIL_CALLS
-			if (instr[1].opfun == OpFuns::op_ext_l64) {
+			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				next++;
 			}
 #else
-			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) {
+			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) [[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				frame.instruction_pointer++;
 			}
@@ -397,12 +397,12 @@ namespace vm {
 			auto view    = frame.executor.internalDerefPointer(pointer);
 			u64  idx     = 0;
 #ifdef USE_TAIL_CALLS
-			if (instr[1].opfun == OpFuns::op_ext_l64) {
+			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				next++;
 			}
 #else
-			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) {
+			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) [[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				frame.instruction_pointer++;
 			}
