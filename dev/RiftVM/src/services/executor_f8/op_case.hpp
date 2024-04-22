@@ -8,7 +8,7 @@
 	{                                                                                     \
 		if constexpr (!IGNORE_EXECUTION_STRATEGY)                                         \
 			frame.executor.handleExecutionStrategyIfNeeded();                             \
-		goto* opcode_label[static_cast<u64>(frame.bc[frame.instruction_pointer].opcode)]; \
+		goto* opcode_label[static_cast<u64>(function.bc[frame.instruction_pointer].opcode)]; \
 	}
 
 #define OP_CASE_HEADER(opcode)  case OpcodeFix8 ::opcode:
@@ -18,7 +18,7 @@
 	IF_NOT_CG(OP_CASE_HEADER(opcode))                                              \
 	IF_CG(OP_LABEL_HEADER(opcode)) {                                               \
 		{                                                                          \
-			const Fix8Instruction* instr = &frame.bc[frame.instruction_pointer++]; \
+			const Fix8Instruction* instr = &function.bc[frame.instruction_pointer++]; \
 			vm::OpFuns::op_##opcode(instr, r1, r2, r3, local_stack, frame);        \
 			{                                                                      \
 				IF_CG(DISPATCH_OPCODE())                                           \
@@ -31,7 +31,7 @@
 	IF_NOT_CG(OP_CASE_HEADER(opcode))                                              \
 	IF_CG(OP_LABEL_HEADER(opcode)) {                                               \
 		{                                                                          \
-			const Fix8Instruction* instr = &frame.bc[frame.instruction_pointer++]; \
+			const Fix8Instruction* instr = &function.bc[frame.instruction_pointer++]; \
 			vm::OpFuns::op_##opcode(instr, r1, r2, r3, local_stack, frame);        \
 			goto End;                                                              \
 		}                                                                          \

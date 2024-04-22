@@ -1,7 +1,9 @@
 #include <base/ints.hpp>
 #include <chrono>
+#include <span>
 
 #include <code_data/instruction.hpp>
+#include <code_data/opcodes.hpp>
 #include <code_data/code.hpp>
 #include <code_data/frame.hpp>
 #include <services_data/type_metadata/type.hpp>
