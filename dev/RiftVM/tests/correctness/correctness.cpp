@@ -10,6 +10,7 @@ public:
 		TESTER_ADD_TEST(test_collatz);
 		TESTER_ADD_TEST(test_fib_iter);
 		TESTER_ADD_TEST(test_fib_rec);
+		TESTER_ADD_TEST(test_tailcall);
 	}
 
 private:
@@ -22,6 +23,8 @@ private:
 	void test_fib_iter() { runTestOnVm("fib_iter.rbc", "1000000 10000", "6875"); }
 
 	void test_fib_rec() { runTestOnVm("fib_rec.rbc", "32", "2178309"); }
+
+	void test_tailcall() { runTestOnVm("tailcall.rbc", "1000000", "0"); }
 };
 
 TESTER_COMMON_MAIN("/RiftVM/tests/correctness/");

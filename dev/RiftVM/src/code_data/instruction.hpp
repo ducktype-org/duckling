@@ -24,7 +24,7 @@ namespace vm {
 	// Describes number of RiftBC opcodes + meta-opcodes recognized by Executor.
 	// This constant is relevant for `vm::Opfuns::opfuns[]` (instructions.hpp) and `opcode_label[]`
 	// (CG, executor.cpp)
-	constexpr const u16 OpCasesCount = 39;
+	constexpr const u16 OpCasesCount = 40;
 
 #ifdef USE_TAIL_CALLS
 	struct Fix8Instruction {
@@ -85,6 +85,7 @@ namespace vm {
 		static OpFun op_setPtrArg_lptr;
 		static OpFun op_call_func;
 
+		static OpFun op_ret_tailcall;
 		static OpFun op_ret_l64;
 		static OpFun op_ret_imm;
 
@@ -147,6 +148,7 @@ namespace vm {
 			op_setPtrArg_lptr,
 			op_call_func,
 
+			op_ret_tailcall,
 			op_ret_l64,
 			op_ret_imm,
 

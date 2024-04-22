@@ -37,8 +37,8 @@ namespace vm {
 		frame->regs      = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = memory.nullPtr() };
 		frame->flags     = FlagData{ .flag = false };
 		frame->ret_val   = 0;
-		frame->next_args = { 0, memory.nullPtr() };
 		frame->args      = args;
+		frame->next_args = { 0, memory.nullPtr() };
 		// if (!frame->block_id_stack.empty() || frame->local_stack_head != 0)
 		//   RIFT_PANIC("init/deinits not paired");
 	}
@@ -266,6 +266,22 @@ namespace vm {
 	}
 
 	// @TODO: refactor op_rets to reduce code duplication
+	RETURN_TYPE OpFuns::op_ret_tailcall(OPFUN_ARGS) {
+		{
+			auto& runtime_data = executor.runtime_data;
+
+			auto function_id = instr->arg0;
+			executor.initNextFrame(frame, frame->next_args);
+			instr = executor.executing_code->functions[function_id].bc.data();
+
+			auto local_stack_size = executor.executing_code->functions[function_id].stack_size;
+			runtime_data.local_stack_top = local_stack + local_stack_size;
+			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
+				RIFT_PANIC("RiftVM stack overflow.");
+			memset(local_stack, 0, local_stack_size);
+		}
+		OPFUN_CONT(0);
+	}
 
 	RETURN_TYPE OpFuns::op_ret_l64(OPFUN_ARGS) {
 		{
@@ -502,6 +518,7 @@ namespace vm {
 			    LABEL_PTR(setPtrArg_lptr),
 			    LABEL_PTR(call_func),
 
+			    LABEL_PTR(ret_tailcall),
 			    LABEL_PTR(ret_l64),
 			    LABEL_PTR(ret_imm),
 
@@ -565,6 +582,7 @@ namespace vm {
 				OP_CASE(setPArg_l64)
 				OP_CASE(call_func)
 
+				OP_CASE(ret_tailcall)
 				OP_CASE(ret_l64)
 				OP_CASE(ret_imm)
 
