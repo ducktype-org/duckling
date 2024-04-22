@@ -168,7 +168,7 @@ namespace compiler::helios {
 				}
 			}
 
-			throw result;
+			return result;
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
@@ -179,6 +179,14 @@ namespace compiler::helios {
 	base::HashT KeyOf_QueryPrimaryCodeScopeFor::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(parent);
 		auto hash_2 = base_element->getID().asInt();
+
+		// @FIXME: this does not work:
+		return hash_1 * 143 + hash_2 * 7;
+	}
+
+	base::HashT KeyOf_LookupInScope::customPerfectHash() const {
+		auto hash_1 = base::perfectHash(scope);
+		auto hash_2 = std::hash<base::StrId>()(name);
 
 		// @FIXME: this does not work:
 		return hash_1 * 143 + hash_2 * 7;

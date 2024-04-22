@@ -117,6 +117,8 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Using: {
+			// @TODO: hmm
+			[[maybe_unused]]
 			auto&& using_ = dynamic_cast<const pst::Using*>(stmt.get());
 			return putInSymtable(SymbolData{
 				.scope       = scope,

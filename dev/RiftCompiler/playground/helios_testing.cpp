@@ -1,3 +1,4 @@
+#include "base/string_id.hpp"
 #include "helios/scopes/scopes.hpp"
 #include "lexer/lexer.hpp"
 #include "pst_parser/parser.hpp"
@@ -55,6 +56,14 @@ int main(int argc, const char* argv[]) {
 
 	std::cerr << "symbol count other: " << symbols_in_root.size() << "\n";
 
-	std::cerr << "graph:\n";
 	query::debugPrintDependencyGraph();
+
+	std::cerr << "Some lookup:\n";
+	
+	auto&& lookup_result_0 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("abc") });
+
+	std::cerr << "found abc times: " << lookup_result_0.leaves.size() << "\n";
+	
+	auto&& lookup_result_1 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("H2") });
+	std::cerr << "found H2 times: " << lookup_result_1.leaves.size() << "\n";
 }
