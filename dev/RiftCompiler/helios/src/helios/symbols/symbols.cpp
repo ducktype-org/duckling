@@ -1,5 +1,6 @@
 #include "symbols.hpp"
 #include "base/perfect_hash.hpp"
+#include "base/raw_view.hpp"
 #include "pst_parser/elements/elements.hpp"
 #include "../pst_ref.hpp"
 #include <memory>
@@ -29,6 +30,7 @@ namespace compiler::helios {
 
 		// we will need to cast it:
 		PstRef<pst::Stmt> pst_stmt;
+		
 
 
 		// cached: linked_lookup_scope ?
@@ -150,6 +152,14 @@ namespace compiler::helios {
 	base::HashT KeyOf_QuerySymbolOfSTMT::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(scope);
 		auto hash_2 = stmt->getID().asInt();
+
+		// @FIXME: this does not work:
+		return hash_1 * 143 + hash_2 * 7;
+	}
+
+	base::HashT KeyOf_LookupIn::customPerfectHash() const {
+		auto hash_1 = base::perfectHash(symbol);
+		auto hash_2 = std::hash<base::StrId>()(name);
 
 		// @FIXME: this does not work:
 		return hash_1 * 143 + hash_2 * 7;

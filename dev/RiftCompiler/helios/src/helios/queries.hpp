@@ -15,7 +15,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query FULL HOUTModule of single module
 	 */
-	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleId, HOUTModule)
+	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleId, const HOUTModule&)
 	
 	/**
 	 * @brief Query FULL HOUTModule of module and all its submodules recursively
@@ -24,6 +24,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query SymbolID of given module
+	 *	@TODO: do we want module symbols?
 	 */
 	DECLARE_QUERY(QueryModuleSymbol, frontend::ModuleId, SymID)
 

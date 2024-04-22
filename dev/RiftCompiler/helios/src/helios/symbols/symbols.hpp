@@ -3,9 +3,13 @@
 #include <query_framework/query_int.hpp>
 #include <pst_parser/elements/elements.hpp>
 
+// @TODO: relax this dependency
+#include <frontend/module_tree/queries.hpp>
+
 #include "../pst_ref.hpp"
 #include "../hout/hout.hpp"
 #include "../lookup_result.hpp"
+#include "base/string_id.hpp"
 
 namespace compiler::helios {
 
@@ -48,8 +52,17 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QuerySymbolOfSTMT, KeyOf_QuerySymbolOfSTMT, SymID);
 
-	// @TODO str
-	DECLARE_QUERY(QueryLookupIn, SymID, LookupResult);
+
+	struct KeyOf_LookupIn {
+		SymID symbol;
+		base::StrId name;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
+
+		bool operator==(const KeyOf_LookupIn&) const = default;
+	};
+	DECLARE_QUERY(QueryLookupIn, KeyOf_LookupIn, LookupResult);
 
 	// @TODO: get type from type-system
 	struct Type {};
