@@ -58,7 +58,7 @@ namespace vm {
 		for (auto [sub_name, sub_type]: fields_definitions) {
 			data.field_name_map[sub_name] = data.fields.size();
 			// offset is set during finalization
-			data.fields.emplace_back(0, sub_type);
+			data.fields.emplace_back(kind::FieldDesc{ 0, sub_type });
 		}
 		kind = data;
 	}

@@ -55,18 +55,18 @@ namespace base {
  */
 #define variant_match(value)                                                                    \
 	PUSH_DIAGNOSTIC                                                                             \
-	NO_SHADOW if (bool variant_match_stop = true) for (auto& internal_value = (value);          \
+	NO_SHADOW if (bool variant_match_stop = true) for (auto&& internal_value = (value);         \
 	                                                   variant_match_stop;                      \
 	                                                   variant_match_stop                       \
 	                                                   = false) switch (internal_value.index()) \
 		POP_DIAGNOSTIC
 
-#define variant_case(type, name)                                                                  \
-	PUSH_DIAGNOSTIC NO_SHADOW break;                                                              \
-	case (base::alternative_index<decltype(internal_value), type>()):                             \
-		if (bool variant_case_stop = true)                                                        \
-			for ([[maybe_unused]] auto& name = std::get<type>(internal_value); variant_case_stop; \
-			     variant_case_stop           = false)                                             \
+#define variant_case(type, name)                                                                   \
+	PUSH_DIAGNOSTIC NO_SHADOW break;                                                               \
+	case (base::alternative_index<decltype(internal_value), type>()):                              \
+		if (bool variant_case_stop = true)                                                         \
+			for ([[maybe_unused]] auto&& name = std::get<type>(internal_value); variant_case_stop; \
+			     variant_case_stop            = false)                                             \
 		POP_DIAGNOSTIC
 
 #define variant_case_novalue(type)                                    \

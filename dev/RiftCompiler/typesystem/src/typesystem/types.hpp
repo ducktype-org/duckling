@@ -42,16 +42,10 @@ namespace ts {
 	public:
 		SETUP_TYPE_WITH_BASE(UnitInfo, TypeInfo)
 
-		/**
-		 * \brief Create an instance of the Unit type.
-		 * \return The Unit type.
-		 */
-		static UnitInfo create();
-
 		CONSTRUCT_WITH_CHECKED_CAST(UnitInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(UnitInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Unit)
 	};
 
 	/**
@@ -67,16 +61,10 @@ namespace ts {
 	public:
 		SETUP_TYPE_WITH_BASE(VoidInfo, TypeInfo)
 
-		/**
-		 * \brief Create an instance of the Void type.
-		 * \return The Void type.
-		 */
-		static VoidInfo create();
-
 		CONSTRUCT_WITH_CHECKED_CAST(VoidInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(VoidInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Void)
 	};
 
 	/**
@@ -91,16 +79,10 @@ namespace ts {
 	public:
 		SETUP_TYPE_WITH_BASE(ByteInfo, TypeInfo)
 
-		/**
-		 * \brief Create an instance of the Byte type.
-		 * \return The Byte type.
-		 */
-		static ByteInfo create();
-
 		CONSTRUCT_WITH_CHECKED_CAST(ByteInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(ByteInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Byte)
 	};
 
 	/**
@@ -113,16 +95,10 @@ namespace ts {
 	public:
 		SETUP_TYPE_WITH_BASE(BoolInfo, TypeInfo)
 
-		/**
-		 * \brief Create an instance of the Bool type.
-		 * \return The Bool type.
-		 */
-		static BoolInfo create();
-
 		CONSTRUCT_WITH_CHECKED_CAST(BoolInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(BoolInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Bool)
 	};
 
 	/**
@@ -135,16 +111,10 @@ namespace ts {
 	public:
 		SETUP_TYPE_WITH_BASE(CharInfo, TypeInfo)
 
-		/**
-		 * \brief Create an instance of the Char type.
-		 * \return The Char type.
-		 */
-		static CharInfo create();
-
 		CONSTRUCT_WITH_CHECKED_CAST(CharInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(CharInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Char)
 	};
 
 	/**
@@ -157,18 +127,10 @@ namespace ts {
 	public:
 		SETUP_TYPE_WITH_BASE(IntegralInfo, TypeInfo)
 
-		/**
-		 * \brief Create an instance of an Integral type.
-		 * \param size The size of the Integral type.
-		 * \param signedness The signedness of the Integral type.
-		 * \return The Integral Type.
-		 */
-		static IntegralInfo create(usize size, bool signedness = true);
-
 		CONSTRUCT_WITH_CHECKED_CAST(IntegralInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(IntegralInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Integral)
 	};
 
 	/**
@@ -181,17 +143,10 @@ namespace ts {
 	public:
 		SETUP_TYPE_WITH_BASE(FloatInfo, TypeInfo)
 
-		/**
-		 * \brief Create an instance of a Float type.
-		 * \param size The size of the Float type.
-		 * \return The Float Type.
-		 */
-		static FloatInfo create(usize size);
-
 		CONSTRUCT_WITH_CHECKED_CAST(FloatInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(FloatInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Float)
 	};
 
 	/*******************\
@@ -206,16 +161,11 @@ namespace ts {
 	class RawPointerInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(RawPointerInfo, TypeInfo)
-		/**
-		 * \brief Create the (single) instance of a RawPointer type.
-		 * \return The RawPointer type.
-		 */
-		static RawPointerInfo create();
 
 		CONSTRUCT_WITH_CHECKED_CAST(RawPointerInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(RawPointerInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(RawPointer)
 	};
 
 	/**
@@ -229,23 +179,16 @@ namespace ts {
 		SETUP_TYPE_WITH_BASE(PointerInfo, RawPointerInfo)
 
 		/**
-		 * \brief Create an instance of a Pointer type.
-		 * \param underlying_type The underlying type of the Pointer type.
-		 * \return The Pointer type.
-		 */
-		static PointerInfo create(const TypeDesc<>& underlying_type);
-
-		/**
 		 * \brief Gets the underlying type of the Pointer type.
 		 * \return The underlying type.
 		 */
 		[[nodiscard]]
-		TypeDesc<> getUnderlyingType() const;
+		TypeInfo getUnderlyingType() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(PointerInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(PointerInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Pointer)
 	};
 
 	/**
@@ -348,7 +291,7 @@ namespace ts {
 		CONSTRUCT_WITH_CHECKED_CAST(ReferenceInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(ReferenceInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Reference)
 	};
 
 	/*******************\
@@ -440,7 +383,7 @@ namespace ts {
 		CONSTRUCT_WITH_CHECKED_CAST(FunctionInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(FunctionInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Function)
 	};
 
 	class VariantInfo: public TypeInfo {
@@ -456,7 +399,7 @@ namespace ts {
 		CONSTRUCT_WITH_CHECKED_CAST(VariantInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(VariantInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Variant)
 	};
 
 	class NamespaceInfo: public TypeInfo {
@@ -467,7 +410,7 @@ namespace ts {
 		CONSTRUCT_WITH_CHECKED_CAST(NamespaceInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(NamespaceInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Namespace)
 	};
 
 	class ModuleInfo: public TypeInfo {
@@ -478,7 +421,7 @@ namespace ts {
 		CONSTRUCT_WITH_CHECKED_CAST(ModuleInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(ModuleInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Module)
 	};
 
 	// The Meta type is the type which hold values being types.
@@ -487,11 +430,10 @@ namespace ts {
 	class MetaInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(MetaInfo, TypeInfo)
-		static MetaInfo create();
 
 		CONSTRUCT_WITH_CHECKED_CAST(MetaInfo)
 
 	protected:
-		CONSTRUCT_FROM_IMPLEMENTATION(MetaInfo)
+		CONSTRUCT_FROM_IMPLEMENTATION(Meta)
 	};
 }

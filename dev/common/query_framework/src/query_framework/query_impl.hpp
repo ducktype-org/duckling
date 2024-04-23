@@ -2,7 +2,6 @@
 
 #include <base/optional.hpp>
 #include <base/str_concat.hpp>
-#include <base/forward_reference_type.hpp>
 
 #include "acd.hpp"
 #include "query_int.hpp"
@@ -57,8 +56,8 @@ namespace query {
 		 * @return QueryImplType::QResult
 		 */
 		template<typename QueryImplType>
-		auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from)
-			-> QueryImplType::QResult {
+		auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) ->
+			typename QueryImplType::QResult {
 			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Enter.\n"));
 
 			if (auto v = QueryImplType::load(key)) {
@@ -126,7 +125,7 @@ namespace query {
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query.
- * @param type Name od Query Implementation Struct
+ * @param type Name of Query Implementation Struct
  * @param pretty_name Pretty name of a given query (that will for example be displayed in logs)
  */
 #define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                       \
@@ -136,3 +135,17 @@ namespace query {
 	}                                                                                             \
 	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::nextQueryId();       \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
+
+
+/**
+ * @brief Macro defining typical hash based cache for fast prototyping.
+ * @future: change it to component, when proper query-component system will be introduced
+ */
+#define QUERY_AUTO_CACHE_PRESULT                                                                \
+	static inline base::HashMap<QKey, query::AddACD<PResult>, ::base::PerfectHashFunctor<QKey>> \
+				cache;                                                                          \
+	static auto load(QKey key) -> LoadResult { return cache.atMaybeCopy(key); }                 \
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                       \
+		cache.put(key, { std::move(res), acd });                                                \
+		return cache.at(key).data;                                                              \
+	}

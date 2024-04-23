@@ -6,20 +6,20 @@
 struct Key1 {
 	uint64_t       v;
 	constexpr auto operator<=>(const Key1& oth) const = default;
-};
 
-template<>
-struct std::hash<Key1> {
-	std::size_t operator()([[maybe_unused]] const Key1& key) const { return key.v; }
+	[[nodiscard]]
+	base::HashT customPerfectHash() const {
+		return v;
+	}
 };
 
 struct Key2 {
 	uint64_t v;
-};
 
-template<>
-struct std::hash<Key2> {
-	std::size_t operator()([[maybe_unused]] const Key2& key) const { return key.v; }
+	[[nodiscard]]
+	base::HashT customPerfectHash() const {
+		return v;
+	}
 };
 
 DECLARE_QUERY(Fibonacci, Key1, uint64_t);
@@ -28,7 +28,7 @@ DECLARE_QUERY(FibonacciSum, Key2, uint64_t);
 /* * * *
  * Q1: *
  * * * */
-struct ImplementationOf_Fibonacci: query::QueryImplementation<Fibonacci, uint64_t> {
+struct ImplementationOf_Fibonacci: query::QueryImplementation<Fibonacci, u64> {
 	inline static std::map<QKey, query::AddACD<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -56,13 +56,27 @@ struct ImplementationOf_Fibonacci: query::QueryImplementation<Fibonacci, uint64_
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Fibonacci, "Q1");
 
+
+DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, std::string);
+
+struct ImplementationOf_FibonacciStringAutoCache:
+	  query::QueryImplementation<FibonacciStringAutoCache, std::string> {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
+	}
+
+	QUERY_AUTO_CACHE_PRESULT
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciStringAutoCache, "Auto cache");
+
 /* * * * *
  * Q2 a: *
  * * * * */
 struct ImplementationOf_FibonacciSum: query::QueryImplementation<FibonacciSum, double> {
 	static auto provide(Context& context, QKey key) -> PResult {
 		double res = 0;
-		for (uint64_t i = 0; i <= key.v; i++) res += double(context.query<Fibonacci>(Key1(i)));
+		for (uint64_t i = 0; i <= key.v; i++) res += double(context.query<Fibonacci>(Key1{ i }));
 		return res;
 	}
 
@@ -82,14 +96,26 @@ class QueryTest: public tester::TestSuite {
 
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Query Test") { TESTER_ADD_TEST(simpleTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("Query Test") {
+		TESTER_ADD_TEST(simpleTest);
+		TESTER_ADD_TEST(autoCacheTest);
+	}
 
 private:
 	void simpleTest() {
-		assert(query::queryEntryPoint<Fibonacci>(Key1(10)) == 55, "Bad query output (1)");
-		assert(query::queryEntryPoint<Fibonacci>(Key1(10)) == 55, "Bad query output (2)");
-		assert(query::queryEntryPoint<Fibonacci>(Key1(0)) == 0, "Bad query output (3)");
-		assert(query::queryEntryPoint<FibonacciSum>(Key2(4)) == 7, "Bad query output (4)");
+		assert(query::queryEntryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (1)");
+		assert(query::queryEntryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (2)");
+		assert(query::queryEntryPoint<Fibonacci>(Key1{ 0 }) == 0, "Bad query output (3)");
+		assert(query::queryEntryPoint<FibonacciSum>(Key2{ 4 }) == 7, "Bad query output (4)");
+	}
+
+	void autoCacheTest() {
+		assert(
+			query::queryEntryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (5)"
+		);
+		assert(
+			query::queryEntryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (6)"
+		);
 	}
 };
 

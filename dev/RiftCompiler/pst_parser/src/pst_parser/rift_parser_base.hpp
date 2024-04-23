@@ -3,6 +3,7 @@
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/parser_ref.hpp>
 #include <token_parser_core/parser_state.hpp>
+#include <base/strongly_typed_id.hpp>
 #include <utility>
 
 namespace pst {
@@ -12,6 +13,8 @@ namespace pst {
 	using tpc::ParserCBorrowRef;
 	using tpc::ParserRef;
 
+	STRONG_TYPEDEF_ID(PstID);
+
 	class RiftElement: public tpc::Element {
 	public:
 		explicit RiftElement(const dia::SourcePosition& position): source_position(position){};
@@ -19,8 +22,15 @@ namespace pst {
 		[[nodiscard]]
 		const dia::SourcePosition& getSourcePosition() const;
 
+		[[nodiscard]]
+		PstID getID() const {
+			return id;
+		}
+
 	private:
 		dia::SourcePosition source_position;
+
+		PstID id = PstID::next();
 	};
 
 	using ImportType = tpc::ParserCBorrowRef<pst::Import>;
@@ -29,13 +39,13 @@ namespace pst {
 		std::vector<ImportType> imports;
 
 	public:
-		RiftParserState(tpc::TokenStream&& tokens, dia::ErrorState&& err):
+		RiftParserState(tpc::TokenStream&& tokens, dia::Logger&& err):
 			  tpc::ParserState(std::move(tokens), std::move(err)) {}
 
 		void addImport(const tpc::ParserCBorrowRef<pst::Import>& import);
 
 		[[nodiscard]]
-		auto extractState() && -> std::tuple<dia::ErrorState, std::vector<ImportType>> {
+		auto extractState() && -> std::tuple<dia::Logger, std::vector<ImportType>> {
 			return { std::move(err), std::move(imports) };
 		}
 	};

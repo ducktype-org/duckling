@@ -16,6 +16,7 @@
 #include <base/smart_pointers.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
+#include <base/perfect_hash.hpp>
 #include <result.hpp>
 
 // Seams fixed:
@@ -121,6 +122,9 @@ namespace fs {
 		std::string extension() const;
 
 		bool operator<(const FilePath& oth) const { return path < oth.path; }
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
 	};
 
 	base::OwningView getSimpleFileContent(const std::string& file_name);

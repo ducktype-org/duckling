@@ -31,6 +31,27 @@ namespace base {
 
 		DATA_T& operator[](KEY_T&& key) { return ContainerType::at(key); }
 
+		template<class K = KEY_T>
+		Optional<DATA_T&> atMaybe(K&& key) {
+			auto&& key_val = ContainerType::find(std::forward<K>(key));
+			if (key_val != ContainerType::end()) return key_val->second;
+			return {};
+		}
+
+		template<class K = KEY_T>
+		Optional<const DATA_T&> atMaybe(K&& key) const {
+			auto&& key_val = ContainerType::find(std::forward<K>(key));
+			if (key_val != ContainerType::end()) return key_val->second;
+			return {};
+		}
+
+		template<class K = KEY_T>
+		Optional<DATA_T> atMaybeCopy(K&& key) const {
+			auto&& key_val = ContainerType::find(std::forward<K>(key));
+			if (key_val != ContainerType::end()) return key_val->second;
+			return {};
+		}
+
 		const DATA_T& operator[](const KEY_T& key) const { return ContainerType::at(key); }
 
 		auto put(const KEY_T& key) { return ContainerType::emplace(key, DATA_T()); }
@@ -66,8 +87,8 @@ namespace base {
 		typedef KEY_T     IdType;
 		typedef DATA_T    DataType;
 
-		typedef typename std::vector<base::Optional<DATA_T>>::iterator       iterator;
-		typedef typename std::vector<base::Optional<DATA_T>>::const_iterator const_iterator;
+		using iterator       = typename std::vector<Optional<DATA_T>>::iterator;
+		using const_iterator = typename std::vector<Optional<DATA_T>>::const_iterator;
 
 		VectorMap() = default;
 
@@ -80,8 +101,17 @@ namespace base {
 		DATA_T& operator[](const KEY_T key) {
 			if (usize(key) < map.size() and map.at(usize(key)).has_value())
 				return *map.at(usize(key));
-			else
-				throw base::LogicError("No value assigned to key in VectorMap");
+			throw LogicError("No value assigned to key in VectorMap");
+		}
+
+		Optional<DATA_T&> atMaybe(KEY_T key) {
+			if (static_cast<usize>(key) < map.size()) return *map.at(static_cast<usize>(key));
+			return {};
+		}
+
+		Optional<const DATA_T&> atMaybe(KEY_T key) const {
+			if (static_cast<usize>(key) < map.size()) return *map.at(static_cast<usize>(key));
+			return {};
 		}
 
 		void put(KEY_T key) {

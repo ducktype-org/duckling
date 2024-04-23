@@ -1,4 +1,5 @@
 #include "typesystem.hpp"
+#include "internal/type_info_impl.hpp"
 
 namespace ts {
 	static bool was_init = false;
@@ -7,4 +8,6 @@ namespace ts {
 		if (was_init) return;
 		was_init = true;
 	}
+
+	void reset() { internal::getTypes().clear(); }
 }
