@@ -25,6 +25,8 @@ namespace compiler::helios {
 
 		// @TODO: do we need separation:
 		std::vector<SymID> first_class_citizens;
+
+		std::vector<frontend::ModuleId> imported_modules;
 	};
 
 }

@@ -1,7 +1,15 @@
 #include "lookup_result.hpp"
 
+#include <bits/ranges_algo.h>
 
 namespace compiler::helios {
+	auto LookupResult::isEmpty() const -> bool {
+		if (!leaves.empty()) return false;
+		for (auto&& child: children)
+			if (!child.inner.isEmpty()) return false;
+		return true;
+	}
+
 	void LookupResult::insert(LookupResult other) {
 		leaves.insert(
 			leaves.end(),
