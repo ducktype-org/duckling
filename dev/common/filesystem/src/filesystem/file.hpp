@@ -77,6 +77,7 @@ namespace fs {
 		// @TODO: this might not be perfect:
 		bool operator==(const FilePath& oth) const { return path == oth.path; }
 
+		// NOLINTBEGIN(concurrency-mt-unsafe)
 		static FilePath createTempFile(const std::string& content) {
 			const std::string name = std::tmpnam(nullptr);
 
@@ -86,6 +87,7 @@ namespace fs {
 
 			return { std::filesystem::temp_directory_path() / name };
 		}
+		// NOLINTEND(concurrency-mt-unsafe)
 
 		[[nodiscard]]
 		FileContent getContent() const;
