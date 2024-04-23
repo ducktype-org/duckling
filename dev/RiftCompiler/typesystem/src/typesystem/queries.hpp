@@ -53,7 +53,6 @@ namespace ts {
 			  size(size),
 			  signedness(signedness) {}
 
-
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
 			return size + signedness;
@@ -118,5 +117,3 @@ namespace ts {
 	 */
 	DECLARE_QUERY(QueryMetaType, query::EmptyKey, MetaInfo)
 }
-
-
