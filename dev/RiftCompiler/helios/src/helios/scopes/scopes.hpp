@@ -26,10 +26,11 @@ namespace compiler::helios {
 
 		// Stmt here makes no sense with getChildStmtsOf
 		// The overall idea is fine, but needs some polishing
-		PstRef<pst::Stmt> base_element;
+		PstRef<pst::RiftElement> base_element;
 		// StmtList stmts;
 
-		base::HashT customPerfectHash() const;
+		[[nodiscard]] base::HashT customPerfectHash() const;
+		bool operator==(const KeyOf_QueryPrimaryCodeScopeFor&) const = default;
 	};
 
 	/**

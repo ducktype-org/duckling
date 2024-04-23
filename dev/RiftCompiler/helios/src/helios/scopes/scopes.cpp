@@ -90,28 +90,19 @@ namespace compiler::helios {
 
 	struct ImplementationOf_QueryPrimaryCodeScopeFor:
 		  query::QueryImplementation<QueryPrimaryCodeScopeFor, ScopeID> {
-		// @FIXME: this cache allows for inconsistency
-		static inline base::HashMap<pst::PstID, query::AddACD<ScopeID>> cache;
 
 		static auto provide(Context& ctx, QKey element) -> PResult {
 			auto list_of_stmt = getChildStmtsOf(element.base_element);
-			auto parent
-				= scope(ctx.query<QuerySymbolOfSTMT>({ element.parent, element.base_element }));
+			// auto parent
+				// = scope(ctx.query<QuerySymbolOfSTMT>({ element.parent, element.base_element }));
 			return putInScopeTable(ScopeData{
-				.parent    = parent,
+				.parent    = element.parent,
 				.stmt_list = list_of_stmt,
 				.symbols   = {},
 			});
 		}
 
-		static auto load(QKey key) -> LoadResult {
-			return cache.atMaybeCopy(key.base_element->getID());
-		}
-
-		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-			cache.put(key.base_element->getID(), { res, acd });
-			return res;
-		}
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryPrimaryCodeScopeFor, "Query Scope Of");

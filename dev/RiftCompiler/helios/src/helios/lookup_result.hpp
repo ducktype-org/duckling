@@ -36,6 +36,11 @@ namespace compiler::helios {
 		SymbolList getAsSingle();
 		void       insert(LookupResult other);
 
+		[[nodiscard]]
+		NestedResult toNode(SymID node) const;
+
+		[[nodiscard]]
+		u64 symbolCount() const;
 
 		[[nodiscard]]
 		NestedResult toNode(SymID node) const;

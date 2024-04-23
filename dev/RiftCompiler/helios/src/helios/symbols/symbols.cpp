@@ -3,9 +3,9 @@
 #include "base/perfect_hash.hpp"
 #include "base/raw_view.hpp"
 #include "helios/lookup_result.hpp"
+#include "helios/scopes/scopes.hpp"
 #include "pst_parser/elements/elements.hpp"
 #include "../pst_ref.hpp"
-#include <memory>
 #include <query_framework/query_impl.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
@@ -38,6 +38,9 @@ namespace compiler::helios {
 		// cached: linked_lookup_scope ?
 		// cached: type
 		// cached: value?
+
+		// Adapted from hir, think if this makes sense:
+		// base::Optional<ScopeID> linked_scope;
 	};
 
 	// do we want internal inheritance?
@@ -157,7 +160,7 @@ namespace compiler::helios {
 
 
 	struct ImplementationOf_QueryLookupInSymbol: public query::QueryImplementation<QueryLookupInSymbol, LookupResult> {
-		static auto provide(Context&, QKey key) -> PResult {
+		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.symbol.ref->kind) {
 				case SymbolKind::Using: {
 					// @TODO: calculate linked scope...
@@ -165,7 +168,8 @@ namespace compiler::helios {
 					throw base::NotYetImplemented("Lookup in symbol.. Using");
 				}
 				case SymbolKind::Namespace: {
-					throw base::NotYetImplemented("Lookup in symbol.. Namespace");
+					auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
+					return ctx.query<QueryLookupInScope>({ linked_scope, key.name });
 				}
 				// @note: here case for variables will be calling TS
 				default:
@@ -176,8 +180,34 @@ namespace compiler::helios {
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 	};
-
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLookupInSymbol, "QueryLookupInSymbol")
+
+
+	struct ImplementationOf_QueryLinkedScope: public query::QueryImplementation<QueryLinkedScope, ScopeID> {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			switch (key.ref->kind) {
+				// case SymbolKind::Using: {
+				// 	// @TODO: calculate linked scope...
+				// 	// lookup in that scope
+				// 	throw base::NotYetImplemented("Lookup in symbol.. Using");
+				// }
+				case SymbolKind::Namespace: {
+					auto namespace_stmt = dynamic_cast<const pst::Namespace*>(key.ref->pst_stmt.get());
+					auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>({
+						scope(key), 
+						namespace_stmt->getBody(),
+					});
+					return inner_scope;
+				}
+				default:
+					throw base::NotYetImplemented("Getting linked scope...");
+			}
+		}
+		
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLinkedScope, "QueryLookupInSymbol")
 
 
 	base::HashT KeyOf_QuerySymbolOfSTMT::customPerfectHash() const {
