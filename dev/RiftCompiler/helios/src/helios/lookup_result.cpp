@@ -11,7 +11,11 @@ namespace compiler::helios {
 		return true;
 	}
 
-	SymbolList LookupResult::getAsSingle() {
+	bool LookupResult::isSingle() const {
+		return symbolCount() == 1;
+	}
+
+	SymbolList LookupResult::getAsSingle() const {
 		RIFT_ASSERT(!isEmpty(), "Empty lookup");
 		RIFT_ASSERT(symbolCount() > 1, "Ambiguity");
 		SymbolList path;

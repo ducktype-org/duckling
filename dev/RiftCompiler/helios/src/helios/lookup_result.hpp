@@ -33,7 +33,7 @@ namespace compiler::helios {
 
 		[[nodiscard]]
 		bool       isSingle() const;
-		SymbolList getAsSingle();
+		[[nodiscard]] SymbolList getAsSingle() const;
 		void       insert(LookupResult other);
 
 		[[nodiscard]]

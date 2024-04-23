@@ -1,3 +1,4 @@
+#include "base/exceptions.hpp"
 #include "base/string_id.hpp"
 #include "helios/scopes/scopes.hpp"
 #include "lexer/lexer.hpp"
@@ -70,9 +71,11 @@ int main(int argc, const char* argv[]) {
 
 	auto&& lookup_result_2 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("NN") });
 	
-	auto NN_symbol = lookup_result_2.getSingle();
+	auto NN_symbol = lookup_result_2.getAsSingle();
 	
-	auto&& lookup_result_NN_A = query::queryEntryPoint<helios::QueryLookupInSymbol>({ NN_symbol, base::StrId("A") });
+	RIFT_ASSERT(NN_symbol.size() > 0, "idk what");
+
+	auto&& lookup_result_NN_A = query::queryEntryPoint<helios::QueryLookupInSymbol>({ NN_symbol.back(), base::StrId("A") });
 
 	std::cerr << "Found NN.A: " << lookup_result_NN_A.symbolCount() << "\n";
 

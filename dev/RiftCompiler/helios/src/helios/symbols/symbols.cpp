@@ -196,11 +196,9 @@ namespace compiler::helios {
 			RIFT_PANIC("ambiguity in lookupChain");
 		}
 
-		// @FIXME: getAsSingle
-		if (names.size() == 1) return { first.getSingle() };
+		if (names.size() == 1) return first.getAsSingle();
 
-		// @FIXME: getAsSingle;
-		SymbolList result = { first.getSingle() };
+		SymbolList result = first.getAsSingle();
 
 		for (usize i = 1; i < names.size(); i++) {
 			auto append_res = ctx.query<QueryLookupInSymbol>({ result.back(), names[i] });
@@ -210,11 +208,8 @@ namespace compiler::helios {
 				RIFT_PANIC("ambiguity in lookup");
 			}
 
-			// @FIXME: getAsSingle
-			auto single_append_res = append_res.getSingle();
-
-			// result.insert(result.end(), single_append_res.begin(), single_append_res.end());
-			result.emplace_back(single_append_res);
+			auto single_append_res = append_res.getAsSingle();
+			result.insert(result.end(), single_append_res.begin(), single_append_res.end());
 		}
 		return result;
 	}
