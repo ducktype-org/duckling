@@ -126,9 +126,9 @@ namespace compiler::helios {
 			return out;
 		}
 
-		// @OPT: use cache in ScopeData for super fast lookup
+
 		static auto load(QKey key) -> LoadResult {
-			if (auto&& cache = key.ref->symbols) return QResWithACD{ cache->data, cache->acd };
+			if (const auto& cache = key.ref->symbols) return QResWithACD{ cache->data, cache->acd };
 			return {};
 		}
 
@@ -146,14 +146,14 @@ namespace compiler::helios {
 	struct ImplementationOf_QueryLookupInScope:
 		  public query::QueryImplementation<QueryLookupInScope, LookupResult> {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto&& symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
+			const auto& symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
 
 			LookupResult result{ {}, {} };
 
-			for (auto&& sym: symbol_list) {
+			for (const auto& sym: symbol_list) {
 				if (isWildcard(sym)) {
 					if (key.with_wildcards) {
-						auto&& wild_result = ctx.query<QueryLookupInSymbol>({sym, key.name, false});
+						auto& wild_result = ctx.query<QueryLookupInSymbol>({sym, key.name, false});
 						if (!wild_result.isEmpty()) {
 							result.children.push_back(wild_result.toNode(sym));
 						}
@@ -178,7 +178,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			LookupResult result = ctx.query<QueryLookupInScope>(key);
 
-			if (key.scope.ref != nullptr) {
+			if (key.scope.ref->parent.ref != nullptr) {
 				auto parent = key.scope.ref->parent;
 
 				// Reverse insertion order allow for linear result concatenation instead of quadratic
