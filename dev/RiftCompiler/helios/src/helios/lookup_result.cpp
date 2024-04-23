@@ -11,9 +11,7 @@ namespace compiler::helios {
 		return true;
 	}
 
-	bool LookupResult::isSingle() const {
-		return symbolCount() == 1;
-	}
+	bool LookupResult::isSingle() const { return symbolCount() == 1; }
 
 	SymbolList LookupResult::getAsSingle() const {
 		RIFT_ASSERT(!isEmpty(), "Empty lookup");
@@ -21,19 +19,20 @@ namespace compiler::helios {
 		SymbolList path;
 		if (!leaves.empty()) {
 			RIFT_ASSERT(leaves.size() == 1, "More than one direct lookup succeded");
-			path.push_back(leaves[0]);
+			return { leaves[0] };
 		}
 
-		SymbolList children_path;
 		for (auto&& child: children) {
 			auto&& child_path = child.inner.getAsSingle();
 			if (!child_path.empty()) {
-				child_path.push_back(child.node);
-				children_path.insert(children_path.end(), child_path.begin(), child_path.end());
+				SymbolList result;
+				result.push_back(child.node);
+				result.insert(result.end(), child_path.begin(), child_path.end());
+				return result;
 			}
 		}
 
-		return path;
+		RIFT_PANIC("Error");
 	}
 
 	u64 LookupResult::symbolCount() const {
