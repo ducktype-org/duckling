@@ -168,7 +168,7 @@ namespace compiler::helios {
 				case SymbolKind::Using:
 				case SymbolKind::Namespace: {
 					auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
-					return ctx.query<QueryLookupInScope>({ linked_scope, key.name });
+					return ctx.query<QueryLookupInScope>({ linked_scope, key.name, key.follow_wildcards });
 				}
 
 				// @note: here case for variables will be calling TS
@@ -184,12 +184,12 @@ namespace compiler::helios {
 
 
 	// @FIXME: make this legit
-	SymbolList lookupChain(query::detail::ContextType& ctx, std::vector<base::StrId> names, ScopeID begin_scope) {
+	SymbolList lookupChain(query::detail::ContextType& ctx, std::vector<base::StrId> names, ScopeID begin_scope, bool follow_wildcards) {
 
 		RIFT_ASSERT(names.size() > 0, "lookupDotted received zero names");
 
 		// initial symbol:
-		auto first = ctx.query<QueryLookupInScopeAndParents>({ begin_scope, names[0] });
+		auto first = ctx.query<QueryLookupInScopeAndParents>({ begin_scope, names[0], follow_wildcards });
 	
 		if (not first.isSingle()) {
 			// @TODO: error in state
@@ -201,7 +201,7 @@ namespace compiler::helios {
 		SymbolList result = first.getAsSingle();
 
 		for (usize i = 1; i < names.size(); i++) {
-			auto append_res = ctx.query<QueryLookupInSymbol>({ result.back(), names[i] });
+			auto append_res = ctx.query<QueryLookupInSymbol>({ result.back(), names[i], follow_wildcards });
 			
 			if (!append_res.isSingle()) {
 				// @TODO: error in state
@@ -221,7 +221,7 @@ namespace compiler::helios {
 				case SymbolKind::Using: {
 					auto using_stmt = dynamic_cast<const pst::Using*>(key.ref->pst_stmt.get());
 					auto names = using_stmt->getPointed();
-					auto lookup_res = lookupChain(ctx, names, scope(key));
+					auto lookup_res = lookupChain(ctx, names, scope(key), false);
 					RIFT_ASSERT(not lookup_res.empty(), "Well, i honestly don't know what that means, good luck");
 					return ctx.query<QueryLinkedScope>({ lookup_res.back() });
 				}
@@ -257,6 +257,6 @@ namespace compiler::helios {
 		auto hash_2 = std::hash<base::StrId>()(name);
 
 		// @FIXME: this does not work:
-		return hash_1 * 143 + hash_2 * 7;
+		return (hash_1 * 143 + hash_2 * 7)*2 + follow_wildcards;
 	}
 }

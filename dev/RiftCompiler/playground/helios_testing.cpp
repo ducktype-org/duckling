@@ -61,21 +61,21 @@ int main(int argc, const char* argv[]) {
 
 	std::cerr << "Some lookup:\n";
 	
-	auto&& lookup_result_0 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("abc") });
+	auto&& lookup_result_0 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("abc"), true });
 
 	std::cerr << "found abc times: " << lookup_result_0.leaves.size() << "\n";
 	
-	auto&& lookup_result_1 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("H2") });
+	auto&& lookup_result_1 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("H2"), true });
 	std::cerr << "found H2 times: " << lookup_result_1.leaves.size() << "\n";
 
 
-	auto&& lookup_result_2 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("NN") });
+	auto&& lookup_result_2 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("NN"), true });
 	
 	auto NN_symbol = lookup_result_2.getAsSingle();
 	
 	RIFT_ASSERT(NN_symbol.size() > 0, "idk what");
 
-	auto&& lookup_result_NN_A = query::queryEntryPoint<helios::QueryLookupInSymbol>({ NN_symbol.back(), base::StrId("A") });
+	auto&& lookup_result_NN_A = query::queryEntryPoint<helios::QueryLookupInSymbol>({ NN_symbol.back(), base::StrId("A"), true });
 
 	std::cerr << "Found NN.A: " << lookup_result_NN_A.symbolCount() << "\n";
 

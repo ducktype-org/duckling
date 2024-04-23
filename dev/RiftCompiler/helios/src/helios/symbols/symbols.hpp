@@ -56,6 +56,7 @@ namespace compiler::helios {
 	struct KeyOf_LookupInSymbol {
 		SymID       symbol;
 		base::StrId name;
+		bool follow_wildcards;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;

@@ -53,7 +53,7 @@ namespace compiler::helios {
 	struct KeyOf_LookupInScope {
 		ScopeID     scope;
 		base::StrId name;
-		bool        with_wildcards = true;
+		bool        with_wildcards;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
