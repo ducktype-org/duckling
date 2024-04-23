@@ -23,4 +23,8 @@ namespace compiler::helios {
 			std::make_move_iterator(other.children.end())
 		);
 	}
+
+	NestedResult LookupResult::toNode(SymID node) const {
+		return { node, { leaves, children } };
+	}
 }
