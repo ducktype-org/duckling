@@ -2,13 +2,16 @@
 #include "base/exceptions.hpp"
 #include "base/perfect_hash.hpp"
 #include "base/raw_view.hpp"
+#include "base/string_id.hpp"
 #include "helios/lookup_result.hpp"
+#include "helios/scope_symbol_id.hpp"
 #include "helios/scopes/scopes.hpp"
 #include "pst_parser/elements/elements.hpp"
 #include "../pst_ref.hpp"
 #include <query_framework/query_impl.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
+#include <vector>
 
 namespace compiler::helios {
 
@@ -162,15 +165,12 @@ namespace compiler::helios {
 	struct ImplementationOf_QueryLookupInSymbol: public query::QueryImplementation<QueryLookupInSymbol, LookupResult> {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.symbol.ref->kind) {
-				case SymbolKind::Using: {
-					// @TODO: calculate linked scope...
-					// lookup in that scope
-					throw base::NotYetImplemented("Lookup in symbol.. Using");
-				}
+				case SymbolKind::Using:
 				case SymbolKind::Namespace: {
 					auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
 					return ctx.query<QueryLookupInScope>({ linked_scope, key.name });
 				}
+
 				// @note: here case for variables will be calling TS
 				default:
 					throw base::NotYetImplemented("Lookup in symbol...");
@@ -183,14 +183,53 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLookupInSymbol, "QueryLookupInSymbol")
 
 
+	// @FIXME: make this legit
+	SymbolList lookupChain(query::detail::ContextType& ctx, std::vector<base::StrId> names, ScopeID begin_scope) {
+
+		RIFT_ASSERT(names.size() > 0, "lookupDotted received zero names");
+
+		// initial symbol:
+		auto first = ctx.query<QueryLookupInScopeAndParents>({ begin_scope, names[0] });
+	
+		if (not first.isSingle()) {
+			// @TODO: error in state
+			RIFT_PANIC("ambiguity in lookupChain");
+		}
+
+		// @FIXME: getAsSingle
+		if (names.size() == 1) return { first.getSingle() };
+
+		// @FIXME: getAsSingle;
+		SymbolList result = { first.getSingle() };
+
+		for (usize i = 1; i < names.size(); i++) {
+			auto append_res = ctx.query<QueryLookupInSymbol>({ result.back(), names[i] });
+			
+			if (!append_res.isSingle()) {
+				// @TODO: error in state
+				RIFT_PANIC("ambiguity in lookup");
+			}
+
+			// @FIXME: getAsSingle
+			auto single_append_res = append_res.getSingle();
+
+			// result.insert(result.end(), single_append_res.begin(), single_append_res.end());
+			result.emplace_back(single_append_res);
+		}
+		return result;
+	}
+
+
 	struct ImplementationOf_QueryLinkedScope: public query::QueryImplementation<QueryLinkedScope, ScopeID> {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.ref->kind) {
-				// case SymbolKind::Using: {
-				// 	// @TODO: calculate linked scope...
-				// 	// lookup in that scope
-				// 	throw base::NotYetImplemented("Lookup in symbol.. Using");
-				// }
+				case SymbolKind::Using: {
+					auto using_stmt = dynamic_cast<const pst::Using*>(key.ref->pst_stmt.get());
+					auto names = using_stmt->getPointed();
+					auto lookup_res = lookupChain(ctx, names, scope(key));
+					RIFT_ASSERT(not lookup_res.empty(), "Well, i honestly don't know what that means, good luck");
+					return ctx.query<QueryLinkedScope>({ lookup_res.back() });
+				}
 				case SymbolKind::Namespace: {
 					auto namespace_stmt = dynamic_cast<const pst::Namespace*>(key.ref->pst_stmt.get());
 					auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>({
