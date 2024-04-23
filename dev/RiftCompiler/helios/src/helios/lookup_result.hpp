@@ -36,6 +36,7 @@ namespace compiler::helios {
 		void       insert(LookupResult other);
 
 		// @TODO: this is partial function for debug mostly
+		// @Attention: this does not de-alias
 		[[nodiscard]] SymID getSingle() const;
 
 		[[nodiscard]] u64 symbolCount() const;
