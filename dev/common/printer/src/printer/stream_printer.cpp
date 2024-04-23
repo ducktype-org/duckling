@@ -7,7 +7,9 @@ namespace printer {
 	// All background color escape codes are 10 above foregrounds colors.
 	ColorId calculateBackgroundColorId(const ColorId color_id) {
 		constexpr int8_t background_font_color_offset = 10;
-		return color_id > 0 ? color_id + background_font_color_offset : color_id;
+		return static_cast<ColorId>(
+			color_id > 0 ? color_id + background_font_color_offset : color_id
+		);
 	}
 
 	StreamPrinter& StreamPrinter::setMinLevel(const MessageType type, const LevelType level) {
@@ -73,7 +75,7 @@ namespace printer {
 						out << "Limit for this type of message has been reached.\n";
 					} else {
 						for (const MessageContent& content: message.contents) {
-							ColorId foreground_color_id, background_color_id;
+							ColorId foreground_color_id{}, background_color_id{};
 							if (content.foreground_color == Color::DEFAULT) {
 								foreground_color_id
 									= static_cast<ColorId>(message.foreground_color);

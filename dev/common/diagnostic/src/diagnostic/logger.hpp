@@ -59,7 +59,7 @@ namespace dia {
 		 * @param detailed Whether to print detailed messages.
 		 * @param stream The stream to print to.
 		 */
-		void dumpLog(bool detailed, std::ostream& stream) const;
+		void dumpLog(bool detailed, std::ostream& stream = std::cerr) const;
 
 		/**
 		 * @return true If no errors were encountered.
