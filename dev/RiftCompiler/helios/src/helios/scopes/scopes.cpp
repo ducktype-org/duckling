@@ -153,7 +153,7 @@ namespace compiler::helios {
 			for (const auto& sym: symbol_list) {
 				if (isWildcard(sym)) {
 					if (key.with_wildcards) {
-						auto& wild_result = ctx.query<QueryLookupInSymbol>({sym, key.name, false});
+						auto& wild_result = ctx.query<QueryLookupInSymbol>({sym, key.name, true});
 						if (!wild_result.isEmpty()) {
 							result.children.push_back(wild_result.toNode(sym));
 						}

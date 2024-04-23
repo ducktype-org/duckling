@@ -27,18 +27,3 @@ const T0: i32 = 1;
 const T1: i32 = T0 + 1;
 const T2: i32 = T1 + 1;
 
-
-
-
-
-
-
-
-namespace Inner {
-	const Inner_X: i32 = 123; 
-}
-using Inner.*;
-
-
-
-
