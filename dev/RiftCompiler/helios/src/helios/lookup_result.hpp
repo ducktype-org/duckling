@@ -41,9 +41,6 @@ namespace compiler::helios {
 
 		[[nodiscard]]
 		u64 symbolCount() const;
-
-		[[nodiscard]]
-		NestedResult toNode(SymID node) const;
 	};
 
 	/**
