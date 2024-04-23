@@ -1,8 +1,6 @@
 #include "lookup_result.hpp"
 #include "base/exceptions.hpp"
 
-#include <bits/ranges_algo.h>
-
 namespace compiler::helios {
 	auto LookupResult::isEmpty() const -> bool {
 		if (!leaves.empty()) return false;
@@ -15,7 +13,7 @@ namespace compiler::helios {
 
 	SymbolList LookupResult::getAsSingle() const {
 		RIFT_ASSERT(!isEmpty(), "Empty lookup");
-		RIFT_ASSERT(symbolCount() > 1, "Ambiguity");
+		RIFT_ASSERT(isSingle(), "Ambiguity");
 		SymbolList path;
 		if (!leaves.empty()) {
 			RIFT_ASSERT(leaves.size() == 1, "More than one direct lookup succeded");

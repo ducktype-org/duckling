@@ -61,9 +61,9 @@ int main(int argc, const char* argv[]) {
 
 	std::cerr << "Some lookup:\n";
 	
-	// auto&& lookup_result_0 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("abc"), true });
+	auto&& lookup_result_0 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("abc"), true });
 
-	// std::cerr << "found abc times: " << lookup_result_0.leaves.size() << "\n";
+	std::cerr << "found abc times: " << lookup_result_0.leaves.size() << "\n";
 	
 	auto&& lookup_result_1 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("H2"), true });
 	std::cerr << "found H2 times: " << lookup_result_1.leaves.size() << "\n";
