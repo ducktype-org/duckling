@@ -87,5 +87,6 @@ int main(int argc, const char* argv[]) {
 
 	// std::cerr << "Found NN.A: " << lookup_result_NN_A.symbolCount() << "\n";
 
-	// query::debugPrintDependencyGraph();
+	query::debugPrintDependencyGraph();
+	query::debugPrintDependencyGraphForDrawing();
 }

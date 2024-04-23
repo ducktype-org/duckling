@@ -25,6 +25,11 @@ namespace query::detail {
 		return l.q_id.asInt() == r.q_id.asInt() and l.hash.val == r.hash.val;
 	}
 
+	constexpr bool operator<(const NodeID& l, const NodeID& r) {
+		if (l.q_id.asInt() == r.q_id.asInt()) return l.hash.val < r.hash.val;
+		return l.q_id.asInt() < r.q_id.asInt();
+	}
+
 	namespace dep_graph {
 
 		enum class Color {
@@ -85,6 +90,23 @@ namespace query::detail {
 				}
 				if (!v.dependencies.empty()) std::cerr << '\n';
 			}
+		}
+
+		void debugPrintForDrawing() {
+			std::cerr << "Dep Graph: \n";
+			std::cerr << node_data.size() << "\n";
+
+			std::map<NodeID, u64> index;
+			u64 id = 0;
+			for (auto& [k, v]: node_data) {
+				index[k] = id++;
+			}
+			for (auto& [k, v]: node_data) {
+				for (auto& dep: v.dependencies) {
+					std::cerr << index[k] << " " << index[dep] << "\n";
+				}
+			}
+
 		}
 
 	}
