@@ -47,9 +47,7 @@ namespace query {
 			 * Log message to be shown to the user.
 			 * @param message The dia::Message to be logged.
 			 */
-			void log(base::unique_ptr<dia::Message> message) {
-				logger.log(std::move(message));
-			}
+			void log(base::unique_ptr<dia::Message> message) { logger.log(std::move(message)); }
 		};
 
 		inline dia::Logger ContextType::logger{};

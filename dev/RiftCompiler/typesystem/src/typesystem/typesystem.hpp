@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include "implicit_coercibility.hpp"
 #include "kind.hpp"
 #include "queries.hpp"
 #include "type_desc.hpp"

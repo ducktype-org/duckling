@@ -23,8 +23,8 @@ namespace dia {
 			= {};
 
 	public:
-				Logger()            = default;
-				Logger(Logger&&)    = default;
+		Logger()                    = default;
+		Logger(Logger&&)            = default;
 		Logger& operator=(Logger&&) = default;
 
 		/**

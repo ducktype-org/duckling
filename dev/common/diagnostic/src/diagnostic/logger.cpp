@@ -11,7 +11,9 @@ namespace dia {
 			stream_printer.add(message_ptr->toPrinterMessagePack(detailed));
 	}
 
-	void Logger::log(base::unique_ptr<Message> message_ptr, const bool immediately_dump, const bool detailed) {
+	void Logger::log(
+		base::unique_ptr<Message> message_ptr, const bool immediately_dump, const bool detailed
+	) {
 		if (immediately_dump) {
 			auto stream_printer = printer::StreamPrinter{};
 			stream_printer.add(message_ptr->toPrinterMessagePack(detailed));

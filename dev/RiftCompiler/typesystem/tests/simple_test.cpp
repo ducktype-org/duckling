@@ -363,12 +363,12 @@ private:
 		const auto int_2 = query::queryEntryPoint<QueryIntegralType>({ 8U * (1 << 2) });
 		const auto int_3 = query::queryEntryPoint<QueryIntegralType>({ 8U * (1 << 3) });
 		assert(
-			query::queryEntryPoint<QueryImplicitCoercibilityOnInfo>({int_2, int_3}),
+			query::queryEntryPoint<QueryImplicitCoercibilityOnInfo>({ int_2, int_3 }),
 			"Smaller int should be coercible into a biger one."
 		);
 
 		assert(
-			!query::queryEntryPoint<QueryImplicitCoercibilityOnInfo>({int_3, int_2}),
+			!query::queryEntryPoint<QueryImplicitCoercibilityOnInfo>({ int_3, int_2 }),
 			"Bigger int should not be coercible into a smaller one."
 		);
 	}

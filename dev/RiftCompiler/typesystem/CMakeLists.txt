@@ -1,7 +1,7 @@
 add_library(TypeSystem
 		src/typesystem/class_types.cpp
-		src/typesystem/implicit_coercibility.cpp
-		src/typesystem/queries.cpp
+		src/typesystem/queries/implicit_coercibility.cpp
+		src/typesystem/queries/types.cpp
 		src/typesystem/type_info.cpp
 		src/typesystem/types.cpp
 		src/typesystem/typesystem.cpp

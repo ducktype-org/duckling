@@ -32,7 +32,9 @@ namespace ts {
 	}
 
 	[[nodiscard]]
-	bool TypeInfo::isInfoImplicitlyCoercible(const TypeInfo target, query::detail::ContextType& context) const {
+	bool TypeInfo::isInfoImplicitlyCoercible(
+		const TypeInfo target, query::detail::ContextType& context
+	) const {
 		return pimpl->isImplImplicitlyCoercible(target, context);
 	}
 

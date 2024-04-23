@@ -9,8 +9,5 @@ namespace ts {
 		was_init = true;
 	}
 
-	void reset() {
-		internal::getTypes().clear();
-		getUserDefinedImplicitCoercions().clear();
-	}
+	void reset() { internal::getTypes().clear(); }
 }
