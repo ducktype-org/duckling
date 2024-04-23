@@ -1,4 +1,5 @@
 #include "helios/scope_symbol_id.hpp"
+#include "helios/scopes/scopes.hpp"
 #include "helios/symbols/symbols.hpp"
 #include "query_framework/query_entry_point.hpp"
 #include <tester/tester.hpp>
@@ -45,47 +46,53 @@ private:
 		// }
 	}
 
-	// @NEARFUTURE: This can be adapted to use HELIOS
-	// void testI32Consts() {
-	// 	hir::HIR hir;
-	// 	{
-	// 		auto source = prepare(fs::FilePath(path("constants.rift")));
-	// 		hir.addUnit(std::move(source));
-	// 	}
-	// 	hir.doMagicStuff();
-	//
-	// 	auto root_scope = hir.getState().symTable().getRootScope();
-	// 	assert(
-	// 		root_scope->getSymbols().size() == 1, "Root scope does not has single sub root scope"
-	// 	);
-	//
-	// 	auto top_level_symbol = root_scope->getSymbols()[0];
-	//
-	// 	auto get_symbol_from_top_level
-	// 		= [&](auto name) { return getSymbolFromLookupIn(top_level_symbol, base::StrId(name)); };
-	//
-	// 	auto C = get_symbol_from_top_level("C");
-	// 	assert(C->requestValue().getData<i32>().back() == 1, "Bad value of C");
-	//
-	// 	auto A = get_symbol_from_top_level("A");
-	// 	assert(A->requestValue().getData<i32>().back() == 1, "Bad value of A");
-	//
-	// 	auto B = get_symbol_from_top_level("B");
-	// 	assert(B->requestValue().getData<i32>().back() == -3, "Bad value of B");
-	//
-	// 	auto D = get_symbol_from_top_level("D");
-	// 	assert(D->requestValue().getData<i32>().back() == -1, "Bad value of D");
-	//
-	// 	auto H2 = get_symbol_from_top_level("H2");
-	// 	assert(H2->requestValue().getData<i32>().back() == 3, "Bad value of H2");
-	//
-	// 	auto T0 = get_symbol_from_top_level("T0");
-	// 	auto T1 = get_symbol_from_top_level("T1");
-	// 	auto T2 = get_symbol_from_top_level("T2");
-	// 	assert(T0->requestValue().getData<i32>().back() == 1, "Bad value of T0");
-	// 	assert(T1->requestValue().getData<i32>().back() == 2, "Bad value of T1");
-	// 	assert(T2->requestValue().getData<i32>().back() == 3, "Bad value of T2");
-	// }
+	void testI32Consts() {
+		auto constants_module = query::queryEntryPoint<compiler::frontend::QueryModuleTree>(
+			fs::FilePath(path("constants"))
+		);
+
+		auto root_scope
+			= query::queryEntryPoint<compiler::helios::QueryRootScopeOf>(constants_module);
+
+		auto symbols_in_module
+			= query::queryEntryPoint<compiler::helios::QuerySymbolsInScope>(root_scope);
+
+		auto get_symbol = [&](auto&& name) {
+			auto&& q = query::queryEntryPoint<compiler::helios::QueryLookupInScope>(
+				{ name, base::StrId(name) }
+			);
+			ASSERT_EQUAL(true, q.isSingle());
+			return q.getAsSingle();
+		};
+
+		// auto get_value =
+		// 	[&](auto&& name) {
+		// 		return query::queryEntryPoint<QueryLookupConstValueInScope>();
+		// 	}
+		//
+		// auto C
+		// 	= get_symbol("C");
+		// ASSERT_EQUAL(1, C->requestValue().getData<i32>().back() == 1);
+		//
+		// auto A = get_symbol("A");
+		// ASSERT_EQUAL(1, A->requestValue().getData<i32>().back());
+		//
+		// auto B = get_symbol("B");
+		// ASSERT_EQUAL(-3, B->requestValue().getData<i32>().back());
+		//
+		// auto D = get_symbol("D");
+		// ASSERT_EQUAL(-1, D->requestValue().getData<i32>().back());
+		//
+		// auto H2 = get_symbol("H2");
+		// ASSERT_EQUAL(3, H2->requestValue().getData<i32>().back());
+		//
+		// auto T0 = get_symbol("T0");
+		// auto T1 = get_symbol("T1");
+		// auto T2 = get_symbol("T2");
+		// ASSERT_EQUAL(1, T0->requestValue().getData<i32>().back() == 1);
+		// ASSERT_EQUAL(2, T1->requestValue().getData<i32>().back() == 2);
+		// ASSERT_EQUAL(3, T2->requestValue().getData<i32>().back() == 3);
+	}
 };
 
 TESTER_COMMON_MAIN("/RiftCompiler/helios/tests/");

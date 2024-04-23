@@ -5,9 +5,26 @@
 namespace compiler::helios {
 	auto LookupResult::isEmpty() const -> bool {
 		if (!leaves.empty()) return false;
-		for (auto&& child: children)
-			if (!child.inner.isEmpty()) return false;
+		for (auto&& [node, inner]: children)
+			if (!inner.isEmpty()) return false;
 		return true;
+	}
+
+	SymbolList LookupResult::getAsSingle() {
+		RIFT_ASSERT(!isEmpty(), "Empty lookup");
+		RIFT_ASSERT(getSymbolCount() > 1, "Ambiguity");
+		SymbolList path;
+		if (!leaves.empty()) {
+			RIFT_ASSERT(leaves.size() == 1, "More than one direct lookup succeded");
+			path.push_back(leaves[0]);
+		}
+
+		SymbolList children_path;
+		for (auto&& child: children) {}
+
+		RIFT_ASSERT(!path.empty() && !children.empty(), "Ambiguity");
+
+		return path;
 	}
 
 	void LookupResult::insert(LookupResult other) {
@@ -24,7 +41,5 @@ namespace compiler::helios {
 		);
 	}
 
-	NestedResult LookupResult::toNode(SymID node) const {
-		return { node, { leaves, children } };
-	}
+	NestedResult LookupResult::toNode(SymID node) const { return { node, { leaves, children } }; }
 }
