@@ -84,6 +84,12 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryHOUT, SymID, base::Optional<SomeHOUT>);
 
 
+	/**
+	 * @brief Partial function probably
+	 */
+	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID);
+
+
 	// @TODO: dealias query
 
 }

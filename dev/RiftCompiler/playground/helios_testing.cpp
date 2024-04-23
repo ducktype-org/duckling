@@ -66,4 +66,14 @@ int main(int argc, const char* argv[]) {
 	
 	auto&& lookup_result_1 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("H2") });
 	std::cerr << "found H2 times: " << lookup_result_1.leaves.size() << "\n";
+
+
+	auto&& lookup_result_2 = query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope , base::StrId("NN") });
+	
+	auto NN_symbol = lookup_result_2.getSingle();
+	
+	auto&& lookup_result_NN_A = query::queryEntryPoint<helios::QueryLookupInSymbol>({ NN_symbol, base::StrId("A") });
+
+	std::cerr << "Found NN.A: " << lookup_result_NN_A.symbolCount() << "\n";
+
 }

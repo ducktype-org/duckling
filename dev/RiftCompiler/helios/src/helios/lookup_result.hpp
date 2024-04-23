@@ -29,10 +29,16 @@ namespace compiler::helios {
 
 		[[nodiscard]] bool isEmpty() const;
 
-		[[nodiscard]] bool       isSingle() const;
+		[[nodiscard]]
+		bool       isSingle() const;
 		SymbolList getAsSingle();
 		SymbolList getAsSingleReverse();
 		void       insert(LookupResult other);
+
+		// @TODO: this is partial function for debug mostly
+		[[nodiscard]] SymID getSingle() const;
+
+		[[nodiscard]] u64 symbolCount() const;
 		
 		[[nodiscard]] NestedResult toNode(SymID node) const;
 	};
