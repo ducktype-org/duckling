@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 #include <filesystem>
+#include <fstream>
 #include <unordered_map>
 #include <memory>
 #include <base/raw_view.hpp>
@@ -75,6 +76,19 @@ namespace fs {
 
 		// @TODO: this might not be perfect:
 		bool operator==(const FilePath& oth) const { return path == oth.path; }
+
+		// NOLINTBEGIN(concurrency-mt-unsafe)
+		static FilePath createTempFile(const std::string& content) {
+			const std::string name = std::tmpnam(nullptr);
+
+			std::fstream temp_file(name, std::ios::out | std::ios::app);
+			temp_file << content;
+			temp_file.close();
+
+			return { std::filesystem::temp_directory_path() / name };
+		}
+
+		// NOLINTEND(concurrency-mt-unsafe)
 
 		[[nodiscard]]
 		FileContent getContent() const;
