@@ -1,7 +1,9 @@
 import { spawn } from "child_process";
-import { DiagnosticSeverity } from "vscode-languageserver";
+import { CompletionItem, DiagnosticSeverity } from "vscode-languageserver";
 import { elements } from "./lsptree/elements/index";
 import { RiftElement } from "./lsptree/elements/elements";
+import { pstCache, connection } from "./server";
+import { Identifier } from "./lsptree/elements/identifier";
 
 const BINARY_PATH = __dirname + "/../../../build/bin/";
 
@@ -118,4 +120,28 @@ export function getKeywords(): Promise<any> {
 			}
 		});
 	});
+}
+
+export function getIdentifierCompletionItems(): CompletionItem[] {
+	let acc: CompletionItem[] = [];
+	connection.console.log("getting indentifiers");
+	pstCache.forEach((value, key) => {
+	connection.console.log(key + " " + value);
+	// Each value is a LSPT node, we want to extract identifiers from those
+		value?.getElements().forEach((element) => {
+			let resElem = element.getIdentifierName();
+			if (resElem) {
+				connection.console.log("identifier found");
+					let res: CompletionItem = {
+						label: resElem,
+						kind: 1,
+						detail: key,
+						documentation: "STRICTLY SPEAKING DEBUG",
+						insertText: resElem
+					}
+					acc.concat(res);
+			}
+		})
+	});
+	return acc;
 }

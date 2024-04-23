@@ -18,6 +18,10 @@ export class Identifier extends Stmt {
 		return [];
 	}
 
+	getIdentifierName(): string | null {
+		return Identifier.name;
+	};
+
 	getSemanticTokens(): SemanticToken[] {
 		return [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.variable, [])];
 	}

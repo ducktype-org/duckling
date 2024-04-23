@@ -29,17 +29,17 @@ require("./lsptree/elements/index");
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
-const connection = createConnection(ProposedFeatures.all);
+export const connection = createConnection(ProposedFeatures.all);
 
 // Create a simple text document manager.
-const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
+export const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
 
 // Storing PST for documents
-const pstCache: Map<string, RiftElement | null> = new Map();
+export const pstCache: Map<string, RiftElement | null> = new Map();
 const errorsCache: Map<string, RiftParserError[]> = new Map();
 
 // Semantic tokens legend, only 'comment' token type for now
@@ -70,7 +70,8 @@ connection.onInitialize((params: InitializeParams) => {
 			textDocumentSync: TextDocumentSyncKind.Incremental,
 			// Tell the client that this server supports those options
 			completionProvider: {
-				resolveProvider: true
+				resolveProvider: true,
+				triggerCharacters: ['.']
 			},
 			semanticTokensProvider: {
 				legend: semanticTokensLegend,

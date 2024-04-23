@@ -13,6 +13,9 @@ export abstract class RiftElement {
 	}
 
 	abstract getElements(): RiftElement[];
+	getIdentifierName(): string | null {
+		return null;
+	};
 	abstract getSemanticTokens(): SemanticToken[];
 }
 

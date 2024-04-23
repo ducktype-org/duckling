@@ -1,5 +1,6 @@
-import { CompletionItem, CompletionItemKind, TextDocumentPositionParams } from "vscode-languageserver";
-import { getKeywords } from './compilerInterface';
+import { CompletionItem, CompletionItemKind, TextDocumentPositionParams, TextDocuments } from "vscode-languageserver";
+import { documents } from "./server";
+import { getKeywords, getIdentifierCompletionItems } from './compilerInterface';
 
 interface LSPKeywordData {
 	keywords: string[];
@@ -27,25 +28,53 @@ export async function preloadKeywords() {
 	}
 }
 
-// This handler provides the initial list of the completion items.
-export function onCompletion(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] {
-	// The pass parameter contains the position of the text document in
-	// which code complete got requested. For the example we ignore this
-	// info and always provide the same completion items.
-	return [
-		...cachedKeywords,
-		{
-			label: "Rift",
-			kind: CompletionItemKind.Text,
-			data: 1
-		},
-		{
-			label: "JavaScript",
-			kind: CompletionItemKind.Text,
-			data: 2
-		}
-	];
+
+export function onCompletion(textDocumentPosition: TextDocumentPositionParams): CompletionItem[] {
+    const document = documents.get(textDocumentPosition.textDocument.uri);//TODO
+    const position = textDocumentPosition.position;
+	if (!document) {
+		return [];
+	}
+    const text = document.getText();
+    const lineText = text.split('\n')[position.line].substring(0, position.character);
+	// return [{
+	// 	label: lineText.substring(lineText.length - 1, lineText.length),
+	// 	kind: CompletionItemKind.Text,
+	// 	data: lineText.substring(lineText.length - 1, lineText.length)
+	// }];
+    // Check if the preceding character or text is a '.'
+    if (lineText.endsWith('.')) {
+        // Fetch and return identifiers if the last character is a dot
+        return getIdentifierCompletionItems();
+    } else {
+        // Return both keywords and identifiers otherwise
+        return [
+            ...cachedKeywords.concat(getIdentifierCompletionItems())
+        ];
+    }
 }
+
+
+
+// // This handler provides the initial list of the completion items.
+// export function onCompletion(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] {
+// 	// The pass parameter contains the position of the text document in
+// 	// which code complete got requested. For the example we ignore this
+// 	// info and always provide the same completion items.
+// 	return [
+// 		...cachedKeywords,
+// 		{
+// 			label: "Rift",
+// 			kind: CompletionItemKind.Text,
+// 			data: 1
+// 		},
+// 		{
+// 			label: "JavaScript",
+// 			kind: CompletionItemKind.Text,
+// 			data: 2
+// 		}
+// 	];
+// }
 
 // This handler resolves additional information for the item selected in
 // the completion list.
