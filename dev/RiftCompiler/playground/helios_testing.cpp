@@ -65,7 +65,7 @@ int main(int argc, const char* argv[]) {
 		{ root_scope, base::StrId("Inner_X"), true }
 	);
 
-	std::cerr << "found Inner_X times: " << lookup_result_0.leaves.size() << "\n";
+	std::cerr << "found Inner_X times: " << lookup_result_0.symbolCount() << "\n";
 
 	// auto&& lookup_result_1
 	// 	= query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope, base::StrId("H2"), true }
@@ -86,4 +86,6 @@ int main(int argc, const char* argv[]) {
 	// );
 
 	// std::cerr << "Found NN.A: " << lookup_result_NN_A.symbolCount() << "\n";
+
+	// query::debugPrintDependencyGraph();
 }
