@@ -161,10 +161,13 @@ namespace compiler::helios {
 
 			for (auto&& sym: symbol_list) {
 				if (isWildcard(sym)) {
-					ctx.log("@TODO: wildcard lookup");
+					if (key.with_wildcards) {
+						ctx.log("@TODO: wildcard lookup");
+					}
 				} else if (name(sym) == key.name) {
 					result.leaves.push_back(sym);
 				} else {
+					// nothing?
 				}
 			}
 
@@ -175,6 +178,30 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLookupInScope, "QueryLookupInScope");
+
+	struct ImplementationOf_QueryLookupInScopeAndParents:
+		  public query::QueryImplementation<QueryLookupInScopeAndParents, LookupResult> {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			LookupResult result = ctx.query<QueryLookupInScope>(key);
+
+			if (key.scope.ref != nullptr) {
+				auto parent = key.scope.ref->parent;
+
+				// Reverse insertion order allow for linear result concatenation instead of quadratic
+				auto parent_result = ctx.query<QueryLookupInScopeAndParents>({ parent, key.name, key.with_wildcards });
+				parent_result.insert(std::move(result));
+				
+				return parent_result;
+			}
+			else {
+				return result;
+			}
+		}
+
+		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLookupInScopeAndParents, "QueryLookupInScopeAndParents");
 
 	base::HashT KeyOf_QueryPrimaryCodeScopeFor::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(parent);
@@ -189,6 +216,6 @@ namespace compiler::helios {
 		auto hash_2 = std::hash<base::StrId>()(name);
 
 		// @FIXME: this does not work:
-		return hash_1 * 143 + hash_2 * 7;
+		return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;
 	}
 }

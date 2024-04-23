@@ -52,12 +52,16 @@ namespace compiler::helios {
 	struct KeyOf_LookupInScope {
 		ScopeID     scope;
 		base::StrId name;
+		bool        with_wildcards = true;
 
 		base::HashT customPerfectHash() const;
 		bool        operator==(const KeyOf_LookupInScope&) const = default;
 	};
 
 	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, const LookupResult&);
+
+	// @TODO: implement it
+	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, const LookupResult&);
 
 
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, const std::vector<SymID>&);

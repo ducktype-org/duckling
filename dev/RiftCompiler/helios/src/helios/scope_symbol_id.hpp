@@ -20,6 +20,7 @@ namespace compiler::helios {
 
 		SymID(base::borrow_ptr<SymbolData> ref): ref(ref) {}
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
+		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct GetSymRef_Functor;
 	};
 
@@ -36,6 +37,7 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QueryRootScopeOf;
 		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;
 		friend struct ImplementationOf_QuerySymbolsInScope;
+		friend struct ImplementationOf_QueryLookupInScopeAndParents;
 		friend struct GetScopeRef_Functor;
 	};
 

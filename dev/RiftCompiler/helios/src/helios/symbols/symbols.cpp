@@ -1,11 +1,14 @@
 #include "symbols.hpp"
+#include "base/exceptions.hpp"
 #include "base/perfect_hash.hpp"
 #include "base/raw_view.hpp"
+#include "helios/lookup_result.hpp"
 #include "pst_parser/elements/elements.hpp"
 #include "../pst_ref.hpp"
 #include <memory>
 #include <query_framework/query_impl.hpp>
 #include <base/stable_container.hpp>
+#include <base/stable_hashmap.hpp>
 
 namespace compiler::helios {
 
@@ -152,6 +155,31 @@ namespace compiler::helios {
 
 	// if somewhere then here it is needed to handle cycles somehow
 
+
+	struct ImplementationOf_QueryLookupInSymbol: public query::QueryImplementation<QueryLookupInSymbol, LookupResult> {
+		static auto provide(Context&, QKey key) -> PResult {
+			switch (key.symbol.ref->kind) {
+				case SymbolKind::Using: {
+					// @TODO: calculate linked scope...
+					// lookup in that scope
+					throw base::NotYetImplemented("Lookup in symbol.. Using");
+				}
+				case SymbolKind::Namespace: {
+					throw base::NotYetImplemented("Lookup in symbol.. Namespace");
+				}
+				// @note: here case for variables will be calling TS
+				default:
+					throw base::NotYetImplemented("Lookup in symbol...");
+			}
+
+		}
+
+		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLookupInSymbol, "QueryLookupInSymbol")
+
+
 	base::HashT KeyOf_QuerySymbolOfSTMT::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(scope);
 		auto hash_2 = stmt->getID().asInt();
@@ -160,7 +188,7 @@ namespace compiler::helios {
 		return hash_1 * 143 + hash_2 * 7;
 	}
 
-	base::HashT KeyOf_LookupIn::customPerfectHash() const {
+	base::HashT KeyOf_LookupInSymbol::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(symbol);
 		auto hash_2 = std::hash<base::StrId>()(name);
 

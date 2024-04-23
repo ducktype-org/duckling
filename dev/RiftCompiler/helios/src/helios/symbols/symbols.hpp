@@ -53,17 +53,17 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QuerySymbolOfSTMT, KeyOf_QuerySymbolOfSTMT, SymID);
 
-	struct KeyOf_LookupIn {
+	struct KeyOf_LookupInSymbol {
 		SymID       symbol;
 		base::StrId name;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
 
-		bool operator==(const KeyOf_LookupIn&) const = default;
+		bool operator==(const KeyOf_LookupInSymbol&) const = default;
 	};
 
-	DECLARE_QUERY(QueryLookupIn, KeyOf_LookupIn, LookupResult);
+	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, const LookupResult&);
 
 	// @TODO: get type from type-system
 	struct Type {};

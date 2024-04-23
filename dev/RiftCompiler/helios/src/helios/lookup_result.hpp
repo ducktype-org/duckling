@@ -32,6 +32,7 @@ namespace compiler::helios {
 		bool       isSingle() const;
 		SymbolList getAsSingle();
 		SymbolList getAsSingleReverse();
+		void       insert(LookupResult other);
 	};
 
 	/**
