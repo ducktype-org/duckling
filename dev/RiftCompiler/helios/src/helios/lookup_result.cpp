@@ -38,17 +38,6 @@ namespace compiler::helios {
 		return res;
 	}
 
-	SymID LookupResult::getSingle() const {
-		RIFT_ASSERT(symbolCount() == 1, "getSingle called on non single symbol");
-		if (leaves.size() == 1)
-			return leaves[0];
-		else {
-			for (auto&& child: children)
-				if (child.inner.symbolCount() == 1) return child.inner.getSingle();
-		}
-		RIFT_PANIC("Something went wrong in LookupResult::getSingle()");
-	}
-
 	void LookupResult::insert(LookupResult other) {
 		leaves.insert(
 			leaves.end(),
