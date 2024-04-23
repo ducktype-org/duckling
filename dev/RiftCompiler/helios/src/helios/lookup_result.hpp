@@ -27,12 +27,14 @@ namespace compiler::helios {
 		std::vector<SymID>        leaves;
 		std::vector<NestedResult> children;
 
-		bool isEmpty() const;
+		[[nodiscard]] bool isEmpty() const;
 
-		bool       isSingle() const;
+		[[nodiscard]] bool       isSingle() const;
 		SymbolList getAsSingle();
 		SymbolList getAsSingleReverse();
 		void       insert(LookupResult other);
+		
+		[[nodiscard]] NestedResult toNode(SymID node) const;
 	};
 
 	/**

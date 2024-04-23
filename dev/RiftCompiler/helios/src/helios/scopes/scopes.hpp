@@ -54,6 +54,7 @@ namespace compiler::helios {
 		base::StrId name;
 		bool        with_wildcards = true;
 
+		[[nodiscard]]
 		base::HashT customPerfectHash() const;
 		bool        operator==(const KeyOf_LookupInScope&) const = default;
 	};

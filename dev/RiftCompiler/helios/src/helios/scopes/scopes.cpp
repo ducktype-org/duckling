@@ -162,7 +162,10 @@ namespace compiler::helios {
 			for (auto&& sym: symbol_list) {
 				if (isWildcard(sym)) {
 					if (key.with_wildcards) {
-						ctx.log("@TODO: wildcard lookup");
+						auto&& wild_result = ctx.query<QueryLookupInSymbol>({sym, key.name});
+						if (!wild_result.isEmpty()) {
+							result.children.push_back(wild_result.toNode(sym));
+						}
 					}
 				} else if (name(sym) == key.name) {
 					result.leaves.push_back(sym);
