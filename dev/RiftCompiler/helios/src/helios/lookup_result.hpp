@@ -9,6 +9,7 @@
 
 #include "scope_symbol_id.hpp"
 #include <vector>
+#include <query_framework/query_int.hpp>
 
 namespace compiler::helios {
 
@@ -27,21 +28,22 @@ namespace compiler::helios {
 		std::vector<SymID>        leaves;
 		std::vector<NestedResult> children;
 
-		[[nodiscard]] bool isEmpty() const;
+		[[nodiscard]]
+		bool isEmpty() const;
 
 		[[nodiscard]]
 		bool       isSingle() const;
 		SymbolList getAsSingle();
-		SymbolList getAsSingleReverse();
 		void       insert(LookupResult other);
 
-		// @TODO: this is partial function for debug mostly
-		// @Attention: this does not de-alias
-		[[nodiscard]] SymID getSingle() const;
+		[[nodiscard]]
+		NestedResult toNode(SymID node) const;
 
-		[[nodiscard]] u64 symbolCount() const;
-		
-		[[nodiscard]] NestedResult toNode(SymID node) const;
+		[[nodiscard]]
+		u64 symbolCount() const;
+
+		[[nodiscard]]
+		NestedResult toNode(SymID node) const;
 	};
 
 	/**
@@ -55,6 +57,5 @@ namespace compiler::helios {
 	};
 
 	// @TODO: do we want ChainLookupResult for stuff like aliases, usings etc?
-
 
 }
