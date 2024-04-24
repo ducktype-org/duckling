@@ -11,7 +11,7 @@ add_library(Base
 set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)
 
 
-# @TODO: unicode depdencdy might not be optinal. 
+# @TODO: unicode dependency might not be optional.
 # Think of a way to "break" it 
 make_module(Base USES Result::Result unicode)
 
@@ -53,3 +53,9 @@ rift_add_test(base defer_tests tests/defer_test.cpp
 
 rift_add_test(base strong_id_test tests/strong_id_test.cpp
         USES Base Tester)
+
+rift_add_test(base at_maybe_test tests/at_maybe_test.cpp
+        USES Base)
+
+rift_add_test(base perfect_hash_test tests/perfect_hash_test.cpp
+        USES Base)
