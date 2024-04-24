@@ -61,8 +61,8 @@ namespace base::detail {
 
 #define variant_case(type, name)                                                                   \
 	PUSH_DIAGNOSTIC NO_SHADOW break;                                                               \
-	case (::base::detail::alternative_index<decltype(internal_value), type>()):                   \
-		if (bool variant_case_stop = true)                                                        \
+	case (::base::detail::alternative_index<decltype(internal_value), type>()):                    \
+		if (bool variant_case_stop = true)                                                         \
 			for ([[maybe_unused]] auto&& name = std::get<type>(internal_value); variant_case_stop; \
 			     variant_case_stop            = false)                                             \
 		POP_DIAGNOSTIC

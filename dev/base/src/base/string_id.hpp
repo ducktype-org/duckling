@@ -89,9 +89,7 @@ namespace base {
 	};
 
 	namespace detail {
-		inline void strConcat(std::string& out, StrId str_id) {
-			out.append(str_id.strView());
-		}
+		inline void strConcat(std::string& out, StrId str_id) { out.append(str_id.strView()); }
 	}
 }
 
