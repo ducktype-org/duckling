@@ -3,7 +3,6 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
-#include <iterator>
 #include <type_traits>
 #include "base/type_traits.hpp"
 #include "optional.hpp"
@@ -17,7 +16,6 @@ namespace base {
 	 */
 	template<class ContainerType>
 	class MapWrapper: public ContainerType {
-	private:
 		// hiding base member:
 		using ContainerType::operator[];
 		using ContainerType::insert;
@@ -37,6 +35,27 @@ namespace base {
 
 		DATA_T& operator[](KEY_T&& key) { return ContainerType::at(key); }
 
+		template<class K = KEY_T>
+		Optional<DATA_T&> atMaybe(K&& key) {
+			auto&& key_val = ContainerType::find(std::forward<K>(key));
+			if (key_val != ContainerType::end()) return key_val->second;
+			return {};
+		}
+
+		template<class K = KEY_T>
+		Optional<const DATA_T&> atMaybe(K&& key) const {
+			auto&& key_val = ContainerType::find(std::forward<K>(key));
+			if (key_val != ContainerType::end()) return key_val->second;
+			return {};
+		}
+
+		template<class K = KEY_T>
+		Optional<DATA_T> atMaybeCopy(K&& key) const {
+			auto&& key_val = ContainerType::find(std::forward<K>(key));
+			if (key_val != ContainerType::end()) return key_val->second;
+			return {};
+		}
+
 		const DATA_T& operator[](const KEY_T& key) const { return ContainerType::at(key); }
 
 		auto put(const KEY_T& key) { return ContainerType::emplace(key, DATA_T()); }
@@ -55,13 +74,13 @@ namespace base {
 	/**
 	 * @brief Wrapped std::map for use in our code.
 	 */
-	template<class KEY_T, class DATA_T>
+	template<typename KEY_T, typename DATA_T>
 	using Map = MapWrapper<std::map<KEY_T, DATA_T>>;
 
 	/**
 	 * @brief Wrapped std::unordered_map for use in our code.
 	 */
-	template<class KEY_T, class DATA_T, class HashT = std::hash<KEY_T>>
+	template<typename KEY_T, typename DATA_T, class HashT = std::hash<KEY_T>>
 	using HashMap = MapWrapper<std::unordered_map<KEY_T, DATA_T, HashT>>;
 
 	/**
@@ -73,25 +92,24 @@ namespace base {
 	 * @note Keys should be convertible to usize.
 	 */
 	template<
-		class KEY_T,
-		class DATA_T,
+		typename KEY_T,
+		typename DATA_T,
 		bool is_move = std::is_move_constructible_v<DATA_T>,
 		bool is_copy = std::is_copy_constructible_v<DATA_T>>
 	// Sanity check
 	requires base::Implication<is_move, std::is_move_constructible_v<DATA_T>>
 	      && base::Implication<is_copy, std::is_copy_constructible_v<DATA_T>>
 	class VectorMap {
-	private:
-		std::vector<base::Optional<DATA_T>> map;
-		usize                               element_count{};
+		std::vector<Optional<DATA_T>> map;
+		usize                         element_count{};
 
 	public:
 		using SelfType = VectorMap;
 		using IdType   = KEY_T;
 		using DataType = DATA_T;
 
-		using iterator       = typename std::vector<base::Optional<DATA_T>>::iterator;
-		using const_iterator = typename std::vector<base::Optional<DATA_T>>::const_iterator;
+		using iterator       = typename std::vector<Optional<DATA_T>>::iterator;
+		using const_iterator = typename std::vector<Optional<DATA_T>>::const_iterator;
 
 		VectorMap() = default;
 
@@ -109,8 +127,17 @@ namespace base {
 		DATA_T& operator[](const KEY_T key) {
 			if (usize(key) < map.size() and map.at(usize(key)).has_value())
 				return *map.at(usize(key));
-			else
-				throw base::LogicError("No value assigned to key in VectorMap");
+			throw LogicError("No value assigned to key in VectorMap");
+		}
+
+		Optional<DATA_T&> atMaybe(KEY_T key) {
+			if (static_cast<usize>(key) < map.size()) return *map.at(static_cast<usize>(key));
+			return {};
+		}
+
+		Optional<const DATA_T&> atMaybe(KEY_T key) const {
+			if (static_cast<usize>(key) < map.size()) return *map.at(static_cast<usize>(key));
+			return {};
 		}
 
 		/**

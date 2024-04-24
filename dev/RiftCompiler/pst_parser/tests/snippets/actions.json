@@ -6,7 +6,7 @@
 					"Name": "foo"
 				},
 				"params": {
-					"ParamList": []
+					"List": []
 				},
 				"rets": "<nullptr>",
 				"body": {

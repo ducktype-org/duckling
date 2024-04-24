@@ -1,19 +1,16 @@
 #pragma once
 
 #include "ints.hpp"
-#include "smart_pointers.hpp"
 #include "optional.hpp"
-#include <concepts>
-#include <type_traits>
 #include <vector>
 
 namespace base {
 
 	template<typename Data>
-	using StableListRef = base::borrow_ptr<Data>;
+	using StableVectorRef = borrow_ptr<Data>;
 
 	template<typename Data>
-	using StableListCRef = base::c_borrow_ptr<Data>;
+	using StableVectorCRef = c_borrow_ptr<Data>;
 
 	/**
 	 * @brief Expandable list with stable references (References are valid after the addition of new
@@ -23,14 +20,14 @@ namespace base {
 	 *
 	 * @note Add stable range based iteration (Probably with indexes)
 	 */
-	template<typename Key, typename Data>
+	template<typename Data, typename Key = usize>
 	requires std::constructible_from<Key, usize> && std::constructible_from<usize, Key>
-	class StableList {
-		std::vector<base::unique_ptr<Data>> data;
+	class StableVector {
+		std::vector<unique_ptr<Data>> data;
 
 	public:
-		using Ref  = StableListRef<Data>;
-		using CRef = StableListCRef<Data>;
+		using Ref  = StableVectorRef<Data>;
+		using CRef = StableVectorCRef<Data>;
 
 		[[nodiscard]]
 		constexpr usize size() const noexcept {
@@ -47,18 +44,20 @@ namespace base {
 			return !data.empty();
 		}
 
-		constexpr Data& operator[](Key pos) { return *data.at(usize(pos)); }
+		constexpr Data& operator[](Key pos) { return *data.at(static_cast<usize>(pos)); }
 
-		constexpr const Data& operator[](Key pos) const { return *data.at(usize(pos)); }
+		constexpr const Data& operator[](Key pos) const {
+			return *data.at(static_cast<usize>(pos));
+		}
 
 		Optional<Ref> getRef(Key pos) noexcept {
-			if (usize(pos) >= size()) return {};
-			return data[usize(pos)].borrow_mut();
+			if (static_cast<usize>(pos) >= size()) return {};
+			return data[static_cast<usize>(pos)].borrow_mut();
 		}
 
 		Optional<CRef> getCRef(Key pos) const noexcept {
-			if (usize(pos) >= size()) return {};
-			return data[usize(pos)].borrow();
+			if (static_cast<usize>(pos) >= size()) return {};
+			return data[static_cast<usize>(pos)].borrow();
 		}
 
 		constexpr Key pushBack(const Data& value) {
@@ -79,11 +78,9 @@ namespace base {
 
 		template<class... Args>
 		constexpr Key emplaceBack(Args&&... args) {
-			return pushBack(Data(std::forward<Args...>(args...)));
+			return pushBack(Data(std::forward<Args>(args)...));
 		}
 	};
 
-	template<typename T>
-	using StableIntList = StableList<usize, T>;
 
 }

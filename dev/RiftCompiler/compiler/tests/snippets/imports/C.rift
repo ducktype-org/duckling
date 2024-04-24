@@ -1,1 +1,1 @@
-import D;
+import D as D;

@@ -1,2 +1,2 @@
-import C;
-import D;
+import C as C;
+import D as D;

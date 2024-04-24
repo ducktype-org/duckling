@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/elements/elements.hpp"
 #include <base/variant.hpp>
 
 namespace pst {
@@ -30,14 +31,19 @@ namespace pst {
 		out << "}";
 	}
 
-	std::span<const ParserRef<Stmt>> CodeBlockOrStmt::getStatements() const {
+	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {
 		variant_match(content) {
-			variant_case(ParserRef<Stmt>, stmt) {
-				return std::span<const ParserRef<Stmt>, 1>{ std::addressof(stmt), 1 };
-			}
-			variant_case(ParserRef<CodeBlock>, code_block) { return code_block->getStatements(); }
+			variant_case(ParserRef<Stmt>, stmt) { return const_iterator(&stmt); }
+			variant_case(ParserRef<CodeBlock>, code_block) { return code_block->begin(); }
 		}
 		RIFT_PANIC("something went wrong");
 	}
 
+	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::end() const {
+		variant_match(content) {
+			variant_case(ParserRef<Stmt>, stmt) { return const_iterator(&stmt) + 1; }
+			variant_case(ParserRef<CodeBlock>, code_block) { return code_block->end(); }
+		}
+		RIFT_PANIC("something went wrong");
+	}
 }

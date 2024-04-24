@@ -12,7 +12,7 @@
 namespace hir {
 
 	void HIR::addUnit(SourceUnit&& unit) {
-		if (unit.pst.getErrorState().fail()) unit.pst.getErrorState().dumpLog(std::cerr);
+		if (unit.pst.getLogger().bad()) unit.pst.getLogger().dumpLog(false, std::cerr);
 		sources.emplace_back(std::move(unit));
 	}
 

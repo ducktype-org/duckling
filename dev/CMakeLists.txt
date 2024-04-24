@@ -23,7 +23,7 @@ option(USE_CCACHE "Use ccache" OFF)
 if (USE_CCACHE)
 	message(NOTICE "Ccache might not work with generators other then make or ninja!")
 
-	find_program(CCACHE "ccache" PATHS "scripts/ccache/ccache-4.9.1-linux-x86_64/" NO_DEFAULT_PATH REQUIRED)
+	find_program(CCACHE "ccache" PATHS "scripts/downloads/" NO_DEFAULT_PATH REQUIRED)
 
 	if(CCACHE)
 		message(STATUS "Ccache set to: ${CCACHE}")
@@ -42,24 +42,30 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	# @TODO: decide of std++20 vs gnu++20
 	message("-- GNU compiler")
-  # '-std=c++20' is necessary for successful assembly target generation during RiftVM development
-  add_compile_options(-std=c++20 -Werror=return-type -Werror=terminate -Werror=shadow=local -Wall -Wextra -Wno-sign-compare -O2)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
-	# I didn't find a good -Werror=terminate alternative
-	add_compile_options(-Werror=return-type -Werror=shadow-all -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare -O2)
+	# I didn't find a good -Werror=terminate alternative for Clang.
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=shadow-all -Werror=return-stack-address -Werror=free-nonheap-object -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare")
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()
 
-# Wersja debug wypisuje na razie wszystkie możliwe informacje dynamicznie
+# "-O2" here is needed so standard "cmake .." is compiled with O2.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+
+# Debug version uses O0 and prints all logs. 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
+
+# Release version uses O2, not O3. It might change.
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Configure assembly targets generation (*.s) to include Intel-style asm and source code/asm interleaving
-set(CMAKE_CXX_CREATE_ASSEMBLY_SOURCE "<CMAKE_CXX_COMPILER> $(CXX_DEFINES) $(CXX_INCLUDES) ${CMAKE_CXX_FLAGS} -S -masm=intel -fverbose-asm <SOURCE> -o <ASSEMBLY_SOURCE>")
+# Configure assembly targets generation (*.s) to include Intel-style asm and source code/asm interleaving. std=c++20 is needed for some reason.
+set(CMAKE_CXX_CREATE_ASSEMBLY_SOURCE "<CMAKE_CXX_COMPILER> $(CXX_DEFINES) $(CXX_INCLUDES) ${CMAKE_CXX_FLAGS} -S -masm=intel -fverbose-asm <SOURCE> -o <ASSEMBLY_SOURCE> -std=c++20")
 
 if (ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
@@ -96,6 +102,14 @@ function(rift_add_test test_pack test_name source USES)
 		set_target_properties(${test_name} PROPERTIES DEPENDS build_${test_pack}_tests)
 		add_dependencies(build_${test_pack}_tests ${test_name})
 		set_property(TEST "${test_name}" PROPERTY LABELS "${test_pack}")
+
+		# This adds LD_LIBRARY_PATH pointing to downloaded ICU when using DOWNLOAD_UBUNTU_ICU_BUILD.
+		# In general it should be only used in workflows.
+		if (DOWNLOAD_UBUNTU_ICU_BUILD STREQUAL "ON")
+			set_property(TEST "${test_name}"
+						PROPERTY ENVIRONMENT
+						"LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/_deps/ubuntu-icu-src/usr/local/lib/")
+		endif ()
 
 		set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
 	else ()
@@ -142,7 +156,7 @@ add_custom_target(build_all_tests)
 function(add_custom_test_pack NAME)
 	set(BUILD_PACK_TARGET "build_${NAME}_tests")
 	add_custom_target("${BUILD_PACK_TARGET}")
-	add_test(NAME ${BUILD_PACK_TARGET} COMMAND "${CMAKE_COMMAND}" --build ${CMAKE_BINARY_DIR} --target ${BUILD_PACK_TARGET})
+	add_test(NAME ${BUILD_PACK_TARGET} COMMAND "${CMAKE_COMMAND}" --build ${CMAKE_BINARY_DIR} --target ${BUILD_PACK_TARGET} -j ${CMAKE_BUILD_PARALLEL_LEVEL})
 	set_property(TEST ${BUILD_PACK_TARGET} PROPERTY LABELS "${NAME}")
 
 	add_custom_target("test_${NAME}"

@@ -26,13 +26,14 @@ namespace tpc {
 		}
 	}
 
-	void parseOne(ParserState& state, Identifier* ident) {
-		if (!state.ctokens().peek().isIdentifier()) state.fail(-1, "expected identifier");
-		ident->value = state.tokens().next().getValue();
+	void parseOne(ParserState& state, Identifier* result) {
+		if (!state.ctokens().peek().isIdentifier())
+			state.fail(-1, "expected identifier after here");
+		result->value = state.tokens().next().getValue();
 	}
 
-	void parseOne(ParserState& state, OptionalIdentifier* ident) {
-		if (state.ctokens().peek().isIdentifier()) ident->value = state.tokens().next().getValue();
+	void parseOne(ParserState& state, OptionalIdentifier* result) {
+		if (state.ctokens().peek().isIdentifier()) result->value = state.tokens().next().getValue();
 	}
 
 	void identifierDprint(base::StrId value, std::ostream& out) {

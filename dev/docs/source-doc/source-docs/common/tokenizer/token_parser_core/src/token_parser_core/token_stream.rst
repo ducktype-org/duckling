@@ -2,4 +2,7 @@
 Token stream
 ============
 
-.. @TODO
+.. doxygenclass:: tpc::TokenStream
+	:members:
+	:private-members:
+	:undoc-members:

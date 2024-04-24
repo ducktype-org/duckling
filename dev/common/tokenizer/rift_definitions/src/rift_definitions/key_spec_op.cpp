@@ -25,6 +25,7 @@ namespace rift_def {
 			{ Keyword::Struct, "struct", base::EmptyFlag },
 			{ Keyword::Namespace, "namespace", base::EmptyFlag },
 			{ Keyword::Import, "import", base::EmptyFlag },
+			{ Keyword::As, "as", base::EmptyFlag },
 			{ Keyword::Using, "using", base::EmptyFlag },
 			{ Keyword::Alias, "alias", base::EmptyFlag },
 
@@ -91,8 +92,6 @@ namespace rift_def {
 
 			{ Keyword::Public, "public", base::EmptyFlag },
 			{ Keyword::Private, "private", base::EmptyFlag },
-
-			{ Keyword::RiftTestEagerLookup, "test_eager_lookup", base::EmptyFlag },
 		} };
 
 	constexpr std::array<std::tuple<Keyword, std::string_view, base::FlagType>, 16>

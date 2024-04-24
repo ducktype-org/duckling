@@ -1,12 +1,11 @@
 #include <tester/tester.hpp>
-#include <tester/testing_utils.hpp>
-#include <printer/printer.hpp>
+#include <printer/printer_console.hpp>
 #include <utility>
 #include <sstream>
 
 using namespace printer;
 
-class PrinterTest: public tester::TestSuite {
+class PrinterTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS PrinterTest
 
@@ -17,11 +16,11 @@ private:
 	// @TODO: add more tests.
 
 	void test() {
-		MessageContent mc = MessageContent("ms1", Color::DEFAULT, Color::RED);
+		auto mc = MessageContent("ms1", Color::DEFAULT, Color::RED);
 
-		Message     m({ mc });
-		MessagePack mp = { m };
-		Console     c;
+		Message       m({ mc });
+		MessagePack   mp = { m };
+		StreamPrinter c;
 		c.ignoreInstantDebug();
 		c.add(mp);
 		c.add(std::move(mp));

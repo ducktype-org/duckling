@@ -8,7 +8,7 @@ CTestTestfile.cmake
 DartConfiguration.tcl
 compile_commands.json
 CMakeUserPresets.json
- 
+
 coverage/
 coverage.info
 

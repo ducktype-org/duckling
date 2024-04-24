@@ -50,3 +50,6 @@ rift_add_test(base exception_tests tests/exception_test.cpp
 
 rift_add_test(base defer_tests tests/defer_test.cpp
         USES Base)
+
+rift_add_test(base strong_id_test tests/strong_id_test.cpp
+        USES Base Tester)

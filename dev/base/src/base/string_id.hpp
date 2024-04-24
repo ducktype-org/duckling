@@ -4,19 +4,23 @@
 
 #pragma once
 
-#include "named_id.hpp"
+#include "strongly_typed_id.hpp"
 #include "maps.hpp"
 #include "raw_view.hpp"
 #include <string>
 
 namespace base {
 
+	namespace detail {
+		STRONG_TYPEDEF_ID(StrInnerID);
+	}
+
 	class StrId {
-		using InnerId = base::NamedId<base::RawView>;
+		using InnerId = detail::StrInnerID;
 		InnerId id;
 
-		using ToDataType = base::VectorMap<InnerId, base::RawView>;
-		using ToIdType   = base::HashMap<base::RawView, InnerId>;
+		using ToDataType = VectorMap<InnerId, RawView>;
+		using ToIdType   = HashMap<RawView, InnerId>;
 
 		static ToDataType to_data_map;
 		static ToIdType   to_id_map;
@@ -29,7 +33,7 @@ namespace base {
 		explicit StrId(char character);
 
 		// Makes copy
-		explicit StrId(const base::RawView& data);
+		explicit StrId(const RawView& data);
 		explicit StrId(const char* data);
 
 		StrId& operator=(const StrId& oth) = default;
@@ -62,7 +66,7 @@ namespace base {
 
 		bool operator==(const StrId& oth) const { return id == oth.id; }
 
-		bool operator==(base::RawView oth) const { return view().stringView() == oth.stringView(); }
+		bool operator==(RawView oth) const { return view().stringView() == oth.stringView(); }
 
 		bool operator!=(const StrId& oth) const { return id != oth.id; }
 
@@ -81,11 +85,11 @@ namespace base {
 		 */
 		static void dumpData(std::ostream& out);
 
-		friend class std::hash<base::StrId>;
+		friend class std::hash<StrId>;
 	};
 
 	namespace detail {
-		inline void strConcat(std::string& out, base::StrId str_id) {
+		inline void strConcat(std::string& out, StrId str_id) {
 			out.append(str_id.strView());
 		}
 	}

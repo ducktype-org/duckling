@@ -16,9 +16,9 @@ namespace compiler {
 		pst_map.put(path, pst::parse(path));
 		pst::PST& new_pst = pst_map[path];
 
-		if (new_pst.getErrorState().fail()) {
+		if (new_pst.getLogger().bad()) {
 			if (dprint) {
-				new_pst.getErrorState().dumpLog(out_ref);
+				new_pst.getLogger().dumpLog(false, out_ref);
 				out_ref << "\nThere were errors while parsing file: " << path.strView() << "\n";
 			}
 			return;
