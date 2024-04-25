@@ -1,4 +1,4 @@
-const DEBUG = true;
+const DEBUG = false;
 
 export class ElementException extends Error {
 	constructor(message: string) {

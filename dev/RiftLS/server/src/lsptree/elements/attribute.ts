@@ -1,13 +1,16 @@
 import { RiftElement, Stmt, stmtFactory } from "./elements";
+import { Expr } from "./expression";
 import { Identifier, identifierFactory } from "./identifier";
-import { ArgList } from "./argument_list";
+import { exprListFactory, List } from "./list";
 
 export class Attribute extends Stmt {
 	name: Identifier;
-	args?: ArgList; // TODO in compiler
+	args?: List<Expr>;
 	constructor(json: any) {
 		super(json);
 		this.name = identifierFactory.createDefined(json["name"]);
+		if (json["args"])
+			this.args = exprListFactory.createDefined(json["args"]);
 	}
 
 	getElements(): RiftElement[] {

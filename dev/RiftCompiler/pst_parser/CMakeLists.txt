@@ -4,6 +4,8 @@ add_library(PstParser
 		src/pst_parser/parser.cpp
 		src/pst_parser/pst.cpp
 		src/pst_parser/rift_parser_base.cpp
+		src/pst_parser/lsp_elements/lsp_elements.cpp
+		src/pst_parser/lsp_elements/lsp_constructors.cpp
 		${ElementImplementationFiles})
 
 make_module(PstParser USES Lexer Printer TPC)

@@ -11,7 +11,7 @@ export class Namespace extends Decl {
 	constructor(json: any) {
 		super(json);
 		this.name = identifierFactory.create(json["name"]);
-		this.body = codeBlockFactory.create(json["block"]);
+		this.body = codeBlockFactory.create(json["body"]);
 	}
 
 	getElements(): RiftElement[] {

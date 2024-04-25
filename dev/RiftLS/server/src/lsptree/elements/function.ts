@@ -1,27 +1,27 @@
 import { Decl, DeclFactory, declFactory, RiftElement } from "./elements";
 import { Identifier, identifierFactory } from "./identifier";
-import { ParamList, paramListFactory } from "./param_list";
-import { RetList, retListFactory } from "./ret_list";
 import { CodeBlockOrStmt, codeBlockOrStmtFactory } from "./code_block_or_statement";
 import { ElementFactory } from "./element_factory";
 import { SemanticToken } from "./common";
 import { SemanticTokenTypes } from "vscode-languageserver";
+import { exprListFactory, List } from "./list";
+import { Expr } from "./expression";
 
 
 export class Fun extends Decl {
 	name: Identifier;
-	params?: ParamList;
-	rets?: RetList;
+	params?: List<Expr>;
+	rets?: List<Expr>;
 	body?: CodeBlockOrStmt;
 
 	constructor(json: any) {
 		super(json);
 		this.name = identifierFactory.createDefined(json["name"]);
 		if (json["params"] !== "<nullptr>") {
-			this.params = paramListFactory.create(json["params"]);
+			this.params = exprListFactory.create(json["params"]);
 		}
 		if (json["rets"] !== "<nullptr>") {
-			this.rets = retListFactory.create(json["rets"]);
+			this.rets = exprListFactory.create(json["rets"]);
 		}
 		if (json["body"] !== "<nullptr>") {
 			this.body = codeBlockOrStmtFactory.create(json["body"]);

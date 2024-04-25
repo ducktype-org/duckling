@@ -10,7 +10,7 @@ export class Identifier extends Stmt {
 
 	constructor(json: any) {
 		super(json);
-		this.name = json["value"];
+		this.name = json["indent_id"];
 
 	}
 

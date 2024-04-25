@@ -10,8 +10,8 @@ export class Block extends CodeDecl {
 
 	constructor(json: { [key: string]: any }) {
 		super(json);
-		this.name = OptionalIdentifier.create(json["optional name"]);
-		this.code_block = codeBlockFactory.createDefined(json["code block"]);
+		this.name = OptionalIdentifier.create(json["name"]);
+		this.code_block = codeBlockFactory.createDefined(json["code_block"]);
 	}
 
 	getElements(): RiftElement[] {

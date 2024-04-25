@@ -3,6 +3,8 @@
 
 namespace pst {
 
+	using lsp::LSPTopLevel;
+
 	PST::PST(lexer::TokenData&& td): token_data(std::move(td)) {
 		RiftParserState state(
 			tpc::TokenStream(
@@ -19,6 +21,11 @@ namespace pst {
 	const dia::Logger& PST::getLogger() const { return err; }
 
 	void PST::dprint(std::ostream& out) const { nullAwareDprint(top_level, out); }
+
+	void PST::getLSP(std::ostream& out) const {
+		ParserRef<LSPTopLevel> lspTopLevel = top_level->topLevelFromPST();
+		lspTopLevel->lsp_print(out);
+	}
 
 	ParserCBorrowRef<TopLevel> PST::getTopLevelElement() const { return top_level.borrow(); }
 }

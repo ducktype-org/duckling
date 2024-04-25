@@ -75,6 +75,9 @@ namespace dia {
 		[[nodiscard]]
 		SourceFile getSource() const;
 
+		// @TODO: this is a temporary solution:
+		static SourcePosition getBadPosition() { return { nullptr, 0, 0, 0, 0 }; }
+
 	private:
 		usize line, column;      ///< #line, #column describe start position in code for the user
 		usize source_start,

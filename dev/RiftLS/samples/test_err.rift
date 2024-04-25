@@ -4,3 +4,17 @@ fun c() {
 	y = 5;
 	err
 }
+
+@ATTR
+fun c() {
+	x = 4;
+	y = 5;
+	err
+}
+
+@ATTR
+fun c() {
+	x = 4;
+	y = 5;
+	err
+}

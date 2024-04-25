@@ -1,6 +1,5 @@
 import { RiftElement, Stmt, stmtFactory } from "./elements";
 import { Identifier } from "./identifier";
-import { unpackJSONObject } from "./utils";
 import { Expr, exprFactory } from "./expression";
 import { identifierFactory } from "./identifier";
 import { SemanticToken } from "./common";
@@ -13,9 +12,9 @@ export class Const extends Stmt {
 
 	constructor(json: any) {
 		super(json);
-		this.name = identifierFactory.createDefined(json.get("name"));
-		this.type = exprFactory.create(json.get("type"));
-		this.value = exprFactory.create(json.get("value"));
+		this.name = identifierFactory.createDefined(json["name"]);
+		this.type = exprFactory.create(json["type"]);
+		this.value = exprFactory.create(json["value"]);
 	}
 
 	getElements(): RiftElement[] {

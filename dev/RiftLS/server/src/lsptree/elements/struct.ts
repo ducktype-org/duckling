@@ -15,7 +15,7 @@ export class Struct extends Decl {
 	constructor(json: any) {
 		super(json);
 		this.name = identifierFactory.createDefined(json["name"]);
-		for (const base_class_params of json["base_classes"]) {
+		for (const base_class_params of json["bases"]) {
 			const base_class = exprFactory.create(base_class_params);
 			if (base_class) this.bases.push(base_class);
 		}

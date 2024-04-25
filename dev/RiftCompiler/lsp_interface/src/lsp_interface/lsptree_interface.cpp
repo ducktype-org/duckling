@@ -14,6 +14,6 @@ int main(int argc, char** argv) {
 	auto tokens = lexer::tokenizeFile(file);
 	auto pst    = pst::parse(std::move(tokens));
 
-	if (pst.getErrorState().fail()) pst.getErrorState().dumpLog(std::cerr);
-	pst.dprint(std::cout);
+	if (pst.getLogger().bad()) pst.getLogger().dumpLog(true);
+	pst.getLSP(std::cout);
 }

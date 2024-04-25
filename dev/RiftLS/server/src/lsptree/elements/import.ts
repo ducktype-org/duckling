@@ -2,29 +2,41 @@ import { SemanticToken } from "./common";
 import { RiftElement, Stmt, stmtFactory } from "./elements";
 import { Identifier, identifierFactory } from "./identifier";
 import { SemanticTokenTypes } from "vscode-languageserver";
-
+import { DottedName, dottedNameFactory } from "./dotted_name";
 
 export class Import extends Stmt {
-	names: Identifier[];
+	names?: DottedName;
+	alias?: Identifier;
+	star: boolean = false;
 
 	constructor(json: any) {
 		super(json);
-		this.names = [];
-		for (const name_params of json["names"]) {
-			const name = identifierFactory.create(name_params);
-			if (name) this.names.push(name);
+		this.star = json["star"];
+		this.alias = identifierFactory.create(json["alias"]);
+		if (json["names"]) {
+			this.names = dottedNameFactory.createDefined(json["names"]);
 		}
 	}
 
 	getElements(): RiftElement[] {
-		return this.names;
+		const elements = [];
+		if (this.alias !== undefined) {
+			elements.push(this.alias);
+		}
+		if (this.names !== undefined) {
+			elements.push(this.names);
+		}
+		return elements;
 	}
 
 	getSemanticTokens(): SemanticToken[] {
 		const tokens = [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.keyword, [])];
-		this.names.forEach(
-			name => tokens.push(...name.getSemanticTokens())
-		);
+		if (this.alias !== undefined) {
+			tokens.push(...this.alias.getSemanticTokens());
+		}
+		if (this.names !== undefined) {
+			tokens.push(...this.names.getSemanticTokens());
+		}
 		return tokens;
 	}
 }

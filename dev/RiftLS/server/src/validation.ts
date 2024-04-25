@@ -26,7 +26,7 @@ export async function validateRift(textDocument: TextDocument,
 				end: { line: error.line - 1, character: error.column }
 			},
 			message: error.message,
-			source: "rift"
+			source: "Rift " + error.type
 		};
 		diagnostics.push(diagnostic);
 

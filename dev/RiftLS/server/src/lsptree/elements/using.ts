@@ -4,29 +4,28 @@ import { SemanticToken } from "./common";
 import { RiftElement, Stmt, stmtFactory } from "./elements";
 import { exprFactory } from "./expression";
 import { Identifier, identifierFactory } from "./identifier";
+import { DottedName, dottedNameFactory } from "./dotted_name";
 
 
 export class Using extends Stmt {
-	names: Identifier[] = [];
+	names?: DottedName;
 
 	constructor(json: any) {
 		super(json);
-
-		for (const name_params of json["names"]) {
-			const name = identifierFactory.create(name_params);
-			if (name) this.names.push(name);
+		if (json["names"]) {
+			this.names = dottedNameFactory.createDefined(json["names"]);
 		}
 	}
 
 	getElements(): RiftElement[] {
-		return this.names;
+		return this.names !== undefined ? [this.names] : [];
 	}
 
 	getSemanticTokens(): SemanticToken[] {
 		const tokens = [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.keyword, [])];
-		this.names.forEach(name =>
-			tokens.push(...name.getSemanticTokens())
-		);
+		if (this.names !== undefined) {
+			tokens.push(...this.names.getSemanticTokens());
+		}
 		return tokens;
 	}
 }
