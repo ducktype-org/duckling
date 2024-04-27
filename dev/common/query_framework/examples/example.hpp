@@ -9,4 +9,4 @@ DECLARE_QUERY(Query2, uint64_t, uint64_t)
 
 DECLARE_QUERY(CyclicQuery, uint64_t, uint64_t)
 
-QUERY_EXTENSION(DoubleValue, uint64_t, uint64_t)
+QUERY_EXTENSION(SquareValue, uint64_t, uint64_t)

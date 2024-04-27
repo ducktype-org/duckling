@@ -19,7 +19,7 @@ struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
 	static auto provide(Context& context, QKey key) -> PResult {
 		context.log("Some random log.");
 		context.compilationError("Error at query1 -- example error.");
-		return key * key;
+		return context.extend<SquareValue>(key);
 	}
 
 	static auto load(QKey key) -> LoadResult {
@@ -90,8 +90,8 @@ struct ImplementationOf_CyclicQuery: query::QueryImplementation<CyclicQuery, uin
 QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_CyclicQuery, "Cyclic query");
 
 // implement extension:
-uint64_t DoubleValue(query::Context&, uint64_t v) {
-	return v * 2;
+uint64_t SquareValue(query::Context&, uint64_t v) {
+	return v * v;
 }
 
 int main() {
