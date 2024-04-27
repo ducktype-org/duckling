@@ -8,6 +8,8 @@
 namespace query {
 
 	namespace detail {
+		struct ContextType;
+
 		/**
 		 * @brief Base class for defining query interface
 		 *
@@ -42,3 +44,12 @@ namespace query {
 	struct query_type: ::query::detail::QueryInterface<query_type, key, value> { \
 		INTERNAL_QUERY_INTERFACE_BOILERPLATE                                     \
 	};
+
+
+/**
+ * @brief This is done this way, instead of just beeing a simple function,
+ * so we can easily identify all extension function in the future
+ */
+#define QUERY_EXTENSION(name, input, output) \
+	output name(::query::detail::ContextType&, input);
+

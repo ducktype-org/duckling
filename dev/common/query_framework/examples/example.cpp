@@ -89,6 +89,11 @@ struct ImplementationOf_CyclicQuery: query::QueryImplementation<CyclicQuery, uin
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_CyclicQuery, "Cyclic query");
 
+// implement extension:
+uint64_t DoubleValue(query::Context&, uint64_t v) {
+	return v * 2;
+}
+
 int main() {
 	std::cout << query::queryEntryPoint<Query2>(2) << "\n";
 	query::debugPrintDependencyGraph();
