@@ -47,7 +47,8 @@ namespace query {
 
 
 /**
- * @brief This is done this way, instead of just beeing a simple function,
+ * @brief Macro used to declare query extensions
+ * @note This is done this way, instead of just beeing a simple function,
  * so we can easily identify all extension function in the future
  */
 #define QUERY_EXTENSION(name, input, output) \
