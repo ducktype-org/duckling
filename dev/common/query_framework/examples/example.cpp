@@ -90,9 +90,7 @@ struct ImplementationOf_CyclicQuery: query::QueryImplementation<CyclicQuery, uin
 QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_CyclicQuery, "Cyclic query");
 
 // implement extension:
-uint64_t SquareValue(query::Context&, uint64_t v) {
-	return v * v;
-}
+uint64_t SquareValue(query::Context&, uint64_t v) { return v * v; }
 
 int main() {
 	std::cout << query::queryEntryPoint<Query2>(2) << "\n";
