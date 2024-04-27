@@ -45,15 +45,15 @@ int main(int argc, const char* argv[]) {
 
 	using namespace compiler;
 
-	auto root = query::queryEntryPoint<frontend::QueryModuleTree>(path_to_compile);
+	auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
 	// @TODO: add helios here...
 	// thats the wrong way to do it:...
-	auto root_scope = query::queryEntryPoint<helios::QueryRootScopeOf>(root);
+	auto root_scope = query::entryPoint<helios::QueryRootScopeOf>(root);
 
 	std::cerr << dprint(root_scope);
 
-	auto symbols_in_root = query::queryEntryPoint<helios::QuerySymbolsInScope>(root_scope);
+	auto symbols_in_root = query::entryPoint<helios::QuerySymbolsInScope>(root_scope);
 
 	std::cerr << "symbol count other: " << symbols_in_root.size() << "\n";
 
@@ -61,27 +61,27 @@ int main(int argc, const char* argv[]) {
 
 	std::cerr << "Some lookup:\n";
 
-	auto&& lookup_result_0 = query::queryEntryPoint<helios::QueryLookupInScope>(
-		{ root_scope, base::StrId("Inner_X"), true }
-	);
+	auto&& lookup_result_0
+		= query::entryPoint<helios::QueryLookupInScope>({ root_scope, base::StrId("Inner_X"), true }
+	    );
 
 	std::cerr << "found Inner_X times: " << lookup_result_0.symbolCount() << "\n";
 
 	// auto&& lookup_result_1
-	// 	= query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope, base::StrId("H2"), true }
+	// 	= query::entryPoint<helios::QueryLookupInScope>({ root_scope, base::StrId("H2"), true }
 	//     );
 	// std::cerr << "found H2 times: " << lookup_result_1.leaves.size() << "\n";
 
 
 	// auto&& lookup_result_2
-	// 	= query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope, base::StrId("NN"), true }
+	// 	= query::entryPoint<helios::QueryLookupInScope>({ root_scope, base::StrId("NN"), true }
 	//     );
 
 	// auto NN_symbol = lookup_result_2.getAsSingle();
 
 	// RIFT_ASSERT(NN_symbol.size() > 0, "idk what");
 
-	// auto&& lookup_result_NN_A = query::queryEntryPoint<helios::QueryLookupInSymbol>(
+	// auto&& lookup_result_NN_A = query::entryPoint<helios::QueryLookupInSymbol>(
 	// 	{ NN_symbol.back(), base::StrId("A"), true }
 	// );
 

@@ -28,7 +28,10 @@ namespace compiler::helios {
 
 	struct ScopeID {
 		// @FUTURE: add some mangling, so valgrind will not get confused
-		[[nodiscard]] base::HashT customPerfectHash() const { return reinterpret_cast<u64>(ref.get()); }
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			return reinterpret_cast<u64>(ref.get());
+		}
 
 		bool operator==(const ScopeID&) const = default;
 

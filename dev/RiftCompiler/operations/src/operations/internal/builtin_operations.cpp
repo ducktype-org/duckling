@@ -10,9 +10,9 @@ namespace operation {
 		void addIntegral() {
 			static_assert(SIZE == 8 * (sizeof(T)));
 
-			auto           int_type = query::queryEntryPoint<ts::QueryIntegralType>({ SIZE });
+			auto           int_type = query::entryPoint<ts::QueryIntegralType>({ SIZE });
 			ts::TypeDesc<> int_desc{ int_type };
-			ts::TypeDesc<> bool_desc{ query::queryEntryPoint<ts::QueryBoolType>({}) };
+			ts::TypeDesc<> bool_desc{ query::entryPoint<ts::QueryBoolType>({}) };
 
 			operation::Operation comp_int            = exec::compareBuiltin<T>;
 			operation::Operation eq_int              = exec::equalityBuiltin<T>;

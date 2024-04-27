@@ -4,6 +4,7 @@
 #include "../lookup_result.hpp"
 #include <base/string_id.hpp>
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_impl.hpp>
 #include "../pst_ref.hpp"
 #include "base/perfect_hash.hpp"
 #include "pst_parser/elements/elements.hpp"
@@ -29,8 +30,9 @@ namespace compiler::helios {
 		PstRef<pst::RiftElement> base_element;
 		// StmtList stmts;
 
-		[[nodiscard]] base::HashT customPerfectHash() const;
-		bool operator==(const KeyOf_QueryPrimaryCodeScopeFor&) const = default;
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
+		bool        operator==(const KeyOf_QueryPrimaryCodeScopeFor&) const = default;
 	};
 
 	/**

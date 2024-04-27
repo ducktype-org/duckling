@@ -38,4 +38,10 @@ namespace query::detail {
 #define DECLARE_QUERY(query_type, key, value)                                    \
 	struct query_type: ::query::detail::QueryInterface<query_type, key, value> { \
 		INTERNAL_QUERY_INTERFACE_BOILERPLATE                                     \
-	};
+	};                                                                           \
+	struct InternalImplOf##query_type: public query::QueryImplementation<query_type, value> {};
+
+#define IMPLEMENT_QUERY(query_type) \
+	struct ImplementationOf_##query_type: public InternalImplOf##query_type
+
+// IMPLEMENT_QUERY(x, ) {}

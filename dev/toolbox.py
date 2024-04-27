@@ -18,12 +18,10 @@ from scripts.toolbox.internet_file import (
     callback_unTAR,
 )
 
-
 DATA_USER = "dev"
 # @FUTURE: change this password and hide it:
 DATA_PASS = "7ocwXWOAwg="
 BUILD_SYSTEMS = click.Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
-
 
 FILES_TO_DOWNLOAD: list[InternetFile] = [
     InternetFile(
@@ -227,7 +225,6 @@ def coverage(name, thread_count):
     if not pathlib.Path(name).exists():
         exit_with_error(f"Given build folder does not exist: {name}.")
 
-
     thread_option = ""
 
     if thread_count == "default":
@@ -235,8 +232,9 @@ def coverage(name, thread_count):
     elif thread_count.isdigit():
         thread_option = f"-j {int(thread_count)}"
     else:
-        exit_with_error(f"Incorrect thread parameter: `{thread_count}`. Legal values are: numbers and \"default\".")
-   
+        exit_with_error(
+            f'Incorrect thread parameter: `{thread_count}`. Legal values are: numbers and "default".'
+        )
 
     bash_command(f"cmake --build {name} {thread_option} -- build_all_tests")
     bash_command(f"cmake --build {name} {thread_option} -- test")
@@ -261,6 +259,23 @@ def clean_init():
     bash_command(
         "find . ! -name '.gitignore' -type f -exec rm -r {} +", cwd="scripts/downloads/"
     )
+
+
+def docs_impl(name):
+    bash_command(f"cmake --build {name} -- docs")
+    bash_command("xdg-open docs/sphinx/index.html", cwd=name)
+
+
+@cli.command()
+@click.option(
+    "-n",
+    "--name",
+    prompt="build directory with docs enabled",
+    help="The name of the build directory with enabled docs.",
+    default="build",
+)
+def docs(*args, **kwargs):
+    docs_impl(*args, **kwargs)
 
 
 if __name__ == "__main__":

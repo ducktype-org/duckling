@@ -77,7 +77,7 @@ namespace hir {
 		void determineType([[maybe_unused]] AnalysisState& state) final {
 			if (type_done) return;
 			type_done = true;
-			type      = query::queryEntryPoint<ts::QueryIntegralType>({ 32 });
+			type      = query::entryPoint<ts::QueryIntegralType>({ 32 });
 		}
 
 		exec::CTV eval(AnalysisState& state) final {
@@ -101,7 +101,7 @@ namespace hir {
 		void determineType([[maybe_unused]] AnalysisState& state) final {
 			if (type_done) return;
 			type_done = true;
-			type      = ts::TypeDesc<>(query::queryEntryPoint<ts::QueryMetaType>({}));
+			type      = ts::TypeDesc<>(query::entryPoint<ts::QueryMetaType>({}));
 		}
 
 		ts::TypeDesc<> evalAsType(AnalysisState& state) final {
@@ -181,7 +181,7 @@ namespace hir {
 		case rift_def::Keyword::i32:
 			// @TODO: signedness
 			return base::make_unique<LiteralTypeExpr>(
-				scope, query::queryEntryPoint<ts::QueryIntegralType>({ 32 })
+				scope, query::entryPoint<ts::QueryIntegralType>({ 32 })
 			);
 
 		default:

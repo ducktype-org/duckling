@@ -90,10 +90,10 @@ struct ImplementationOf_CyclicQuery: query::QueryImplementation<CyclicQuery, uin
 QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_CyclicQuery, "Cyclic query");
 
 int main() {
-	std::cout << query::queryEntryPoint<Query2>(2) << "\n";
+	std::cout << query::entryPoint<Query2>(2) << "\n";
 	query::debugPrintDependencyGraph();
 
-	std::cout << query::queryEntryPoint<CyclicQuery>(0) << "\n";
+	std::cout << query::entryPoint<CyclicQuery>(0) << "\n";
 
 	return 0;
 }

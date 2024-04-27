@@ -32,8 +32,9 @@ namespace compiler::helios {
 		bool isEmpty() const;
 
 		[[nodiscard]]
-		bool       isSingle() const;
-		[[nodiscard]] SymbolList getAsSingle() const;
+		bool isSingle() const;
+		[[nodiscard]]
+		SymbolList getAsSingle() const;
 		void       insert(LookupResult other);
 
 		[[nodiscard]]
@@ -55,4 +56,5 @@ namespace compiler::helios {
 
 	// @TODO: do we want ChainLookupResult for stuff like aliases, usings etc?
 
+	// DECLARE_QUERY(QueryConstValueOf, SymID, ...);
 }

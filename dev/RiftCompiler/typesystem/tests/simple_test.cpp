@@ -49,10 +49,10 @@ private:
 	 * Also, test that assignment works.
 	 */
 	void trivial_cast_and_assignment() {
-		const TypeInfo type_1{ query::queryEntryPoint<QueryVoidType>({}) };
+		const TypeInfo type_1{ query::entryPoint<QueryVoidType>({}) };
 		TypeInfo       type_2 = type_1;
 		assert(type_1 == type_2, "The trivial dynamic cast should not change any objects.");
-		type_2 = query::queryEntryPoint<QueryUnitType>({});
+		type_2 = query::entryPoint<QueryUnitType>({});
 		assert(type_1 != type_2, "Assignment on TypeInfo should change the target object.");
 	}
 
@@ -60,13 +60,13 @@ private:
 	 * Test that there is only one void and one unit type, and that they are correctly cast.
 	 */
 	void simple_void_and_unit() {
-		const auto void_1 = query::queryEntryPoint<QueryVoidType>({});
-		const auto void_2 = query::queryEntryPoint<QueryVoidType>({});
+		const auto void_1 = query::entryPoint<QueryVoidType>({});
+		const auto void_2 = query::entryPoint<QueryVoidType>({});
 		assert(void_1 == void_2, "There should only be one Void type.");
 		assert(void_1.getKind() == Void, "Void type should have kind Void.");
 
-		const auto unit_1 = query::queryEntryPoint<QueryUnitType>({});
-		const auto unit_2 = query::queryEntryPoint<QueryUnitType>({});
+		const auto unit_1 = query::entryPoint<QueryUnitType>({});
+		const auto unit_2 = query::entryPoint<QueryUnitType>({});
 		assert(unit_1 == unit_2, "There should only be one Unit type.");
 		assert(unit_1.getKind() == Unit, "Unit type should have kind Unit.");
 
@@ -85,11 +85,11 @@ private:
 	 * Test that there are three unique byte-sized types, and that they are correctly cast.
 	 */
 	void simple_byte_sized() {
-		const auto byte_1 = query::queryEntryPoint<QueryByteType>({});
+		const auto byte_1 = query::entryPoint<QueryByteType>({});
 		assert(byte_1.getKind() == Byte, "Byte type should have kind Byte.");
-		const auto bool_1 = query::queryEntryPoint<QueryBoolType>({});
+		const auto bool_1 = query::entryPoint<QueryBoolType>({});
 		assert(bool_1.getKind() == Bool, "Bool type should have kind Bool.");
-		const auto char_1 = query::queryEntryPoint<QueryCharType>({});
+		const auto char_1 = query::entryPoint<QueryCharType>({});
 		assert(char_1.getKind() == Char, "Char type should have kind Char.");
 
 		assert(
@@ -97,9 +97,9 @@ private:
 			"All byte-sized types should be different."
 		);
 
-		const auto byte_2 = query::queryEntryPoint<QueryByteType>({});
-		const auto bool_2 = query::queryEntryPoint<QueryBoolType>({});
-		const auto char_2 = query::queryEntryPoint<QueryCharType>({});
+		const auto byte_2 = query::entryPoint<QueryByteType>({});
+		const auto bool_2 = query::entryPoint<QueryBoolType>({});
+		const auto char_2 = query::entryPoint<QueryCharType>({});
 
 		assert(
 			byte_1 == byte_2 && bool_1 == bool_2 && char_1 == char_2,
@@ -125,9 +125,9 @@ private:
 	 */
 	void simple_ints() {
 		for (usize i = 0; i < 5; i++) {
-			const auto int_1 = query::queryEntryPoint<QueryIntegralType>({ 8U * (1 << i) });
-			const auto int_2 = query::queryEntryPoint<QueryIntegralType>({ 8U * (1 << i) });
-			const auto int_u = query::queryEntryPoint<QueryIntegralType>({ 8U * (1 << i), false });
+			const auto int_1 = query::entryPoint<QueryIntegralType>({ 8U * (1 << i) });
+			const auto int_2 = query::entryPoint<QueryIntegralType>({ 8U * (1 << i) });
+			const auto int_u = query::entryPoint<QueryIntegralType>({ 8U * (1 << i), false });
 			assert(int_1.getKind() == Integral, "Int should have kind Integral.");
 
 			assert(int_1.getSize() == 8 * (1 << i), "Size of Int should be as constructed.");
@@ -143,8 +143,8 @@ private:
 		}
 
 		assert(
-			query::queryEntryPoint<QueryIntegralType>({ 8 })
-				!= query::queryEntryPoint<QueryIntegralType>({ 16 }),
+			query::entryPoint<QueryIntegralType>({ 8 })
+				!= query::entryPoint<QueryIntegralType>({ 16 }),
 			"Ints of different sizes should be different."
 		);
 	}
@@ -156,8 +156,8 @@ private:
 	void simple_floats() {
 		for (const std::array<usize, 5> float_sizes = { 16, 32, 64, 80, 128 };
 		     const usize                float_size: float_sizes) {
-			auto float_1 = query::queryEntryPoint<QueryFloatType>(float_size);
-			auto float_2 = query::queryEntryPoint<QueryFloatType>(float_size);
+			auto float_1 = query::entryPoint<QueryFloatType>(float_size);
+			auto float_2 = query::entryPoint<QueryFloatType>(float_size);
 
 			assert(float_1.getSize() == float_size, "Size of Float should be as constructed.");
 			assert(float_1 == float_2, "Floats of the same size should be the same.");
@@ -169,8 +169,7 @@ private:
 		}
 
 		assert(
-			query::queryEntryPoint<QueryFloatType>(32)
-				!= query::queryEntryPoint<QueryFloatType>(64),
+			query::entryPoint<QueryFloatType>(32) != query::entryPoint<QueryFloatType>(64),
 			"Floats of different sizes should be different."
 		);
 	}
@@ -180,16 +179,16 @@ private:
 	 * between each other and retain informaiton as expected.
 	 */
 	void simple_pointer() {
-		const auto raw_1 = query::queryEntryPoint<QueryRawPointerType>({});
+		const auto raw_1 = query::entryPoint<QueryRawPointerType>({});
 		assert(raw_1.getKind() == RawPointer, "Raw Pointer should have kind RawPointer.");
-		const auto raw_2 = query::queryEntryPoint<QueryRawPointerType>({});
+		const auto raw_2 = query::entryPoint<QueryRawPointerType>({});
 		assert(raw_1 == raw_2, "There should be only Raw Pointer.");
 
 		const TypeInfo       type_raw = raw_1;
 		const RawPointerInfo raw_3    = type_raw;
 		assert(raw_3.getKind() == RawPointer, "Raw Pointer should survive casting.");
 
-		const auto ptr_1 = query::queryEntryPoint<QueryPointerType>({ raw_1 });
+		const auto ptr_1 = query::entryPoint<QueryPointerType>({ raw_1 });
 		assert(ptr_1.getKind() == Pointer, "Pointer should have kind Pointer.");
 
 		const RawPointerInfo raw_ptr = ptr_1;
@@ -205,8 +204,8 @@ private:
 	 * and that they are correctly cast.
 	 */
 	void simple_function() {
-		const auto int_16 = TypeDesc<>(query::queryEntryPoint<QueryIntegralType>({ 16 }));
-		const auto int_32 = TypeDesc<>(query::queryEntryPoint<QueryIntegralType>({ 32 }));
+		const auto int_16 = TypeDesc<>(query::entryPoint<QueryIntegralType>({ 16 }));
+		const auto int_32 = TypeDesc<>(query::entryPoint<QueryIntegralType>({ 32 }));
 
 		const auto fun_1 = FunctionInfo::create({ int_16, int_32 }, int_32);
 
@@ -245,8 +244,8 @@ private:
 	}
 
 	void simple_meta() {
-		const auto meta   = query::queryEntryPoint<QueryMetaType>({});
-		const auto meta_2 = query::queryEntryPoint<QueryMetaType>({});
+		const auto meta   = query::entryPoint<QueryMetaType>({});
+		const auto meta_2 = query::entryPoint<QueryMetaType>({});
 
 		assert(meta == meta_2, "There shouldn't be multiple different 'type' types");
 		assert(meta.getSize() == META_SIZE, "MetaType should have size META_SIZE");
@@ -255,8 +254,8 @@ private:
 	}
 
 	void simple_type_desc() {
-		const auto void_i = query::queryEntryPoint<QueryVoidType>({});
-		const auto int_i  = query::queryEntryPoint<QueryIntegralType>({ 8 });
+		const auto void_i = query::entryPoint<QueryVoidType>({});
+		const auto int_i  = query::entryPoint<QueryIntegralType>({ 8 });
 
 		const TypeDesc int_desc(int_i);
 

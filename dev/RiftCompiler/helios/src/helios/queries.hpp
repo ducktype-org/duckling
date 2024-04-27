@@ -1,6 +1,7 @@
 #pragma once
 
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_impl.hpp>
 
 // @TODO: relax this dependency
 #include <frontend/module_tree/queries.hpp>
@@ -28,6 +29,5 @@ namespace compiler::helios {
 	 *	@TODO: do we want module symbols?
 	 */
 	DECLARE_QUERY(QueryModuleSymbol, frontend::ModuleId, SymID)
-
 
 }

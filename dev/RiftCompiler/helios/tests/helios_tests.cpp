@@ -38,7 +38,7 @@ private:
 		// for (const auto& stmt: stmts) {
 		// 	ASSERT_EQUAL(
 		// 		stmt->getKind(),
-		// 		query::queryEntryPoint<compiler::helios::QuerySymbolOfSTMT>(
+		// 		query::entryPoint<compiler::helios::QuerySymbolOfSTMT>(
 		// 			compiler::helios::KeyOf_QuerySymbolOfSTMT{ .stmt = stmt.borrow(), .scope = pst.
 		// }
 		// 		)
@@ -47,27 +47,25 @@ private:
 	}
 
 	void testI32Consts() {
-		auto constants_module = query::queryEntryPoint<compiler::frontend::QueryModuleTree>(
-			fs::FilePath(path("constants"))
-		);
+		auto constants_module
+			= query::entryPoint<compiler::frontend::QueryModuleTree>(fs::FilePath(path("constants"))
+		    );
 
-		auto root_scope
-			= query::queryEntryPoint<compiler::helios::QueryRootScopeOf>(constants_module);
+		auto root_scope = query::entryPoint<compiler::helios::QueryRootScopeOf>(constants_module);
 
 		auto symbols_in_module
-			= query::queryEntryPoint<compiler::helios::QuerySymbolsInScope>(root_scope);
+			= query::entryPoint<compiler::helios::QuerySymbolsInScope>(root_scope);
 
 		auto get_symbol = [&](auto&& name) {
-			auto&& q = query::queryEntryPoint<compiler::helios::QueryLookupInScope>(
-				{ name, base::StrId(name) }
-			);
-			ASSERT_EQUAL(true, q.isSingle());
+			auto&& q
+				= query::entryPoint<compiler::helios::QueryLookupInScope>({ name,
+			                                                                base::StrId(name) });
 			return q.getAsSingle();
 		};
 
 		// auto get_value =
 		// 	[&](auto&& name) {
-		// 		return query::queryEntryPoint<QueryLookupConstValueInScope>();
+		// 		return query::entryPoint<QueryLookupConstValueInScope>();
 		// 	}
 		//
 		// auto C

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_impl.hpp>
 #include <pst_parser/elements/elements.hpp>
 
 // @TODO: relax this dependency
@@ -56,7 +57,7 @@ namespace compiler::helios {
 	struct KeyOf_LookupInSymbol {
 		SymID       symbol;
 		base::StrId name;
-		bool follow_wildcards;
+		bool        follow_wildcards;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
