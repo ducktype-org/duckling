@@ -2,7 +2,7 @@
 
 ## Before start
 
-Run `./toolbox.py init` to initialize the repository (fetches library dependencies, setupus virtual environment, download binaries, etc...)
+Run `./toolbox.py init` to initialize the repository (fetches library dependencies, setups virtual environment, downloads binaries, etc...)
 
 ## File structure
 
