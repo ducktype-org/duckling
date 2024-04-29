@@ -24,52 +24,93 @@ namespace compiler::helios {
 		Basic,
 		Namespace,
 		Function,
-		CompilationUnit,
 		Const,
 		Struct,
 		Alias,
 		Using,
 
-		TestSymbol,
 		// ...
 	};
 
-	// Such functions can probably be just functions:
+	// Following functions are left as functions:
+	// in the future once Query System implementation will mature
+	// they will probably be have to be converted into queries
+	// from DefID to given Data:
+
+	/**
+	 * @return is symbol a wildcard symbol (e.g. using a.*)
+	 */
 	bool        isWildcard(SymID);
+	
+	/**
+	 * @return name of given symbol
+	 */
 	base::StrId name(SymID);
+
+	/**
+	 * @return kind of given symbol
+	 */
 	SymbolKind  kind(SymID);
+	
+	/**
+	 * @return scope given symbol was defined within
+	 */
 	ScopeID     scope(SymID);
 
 	struct KeyOf_QuerySymbolOfSTMT {
-		// @TODO: is this needed? -- it ads inconsistency
+		/**
+		 * @brief scope to create symbol in
+		 * 
+		 * @TODO: is this needed? -- now you can create two symbols from the same pst element.
+		 * It might be better to derive scope structure directly from PST structure.
+		 */
 		ScopeID scope;
 
+		/**
+		 * @brief Statement to change to symbol
+		 */
 		PstRef<pst::Stmt> stmt;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
-
 		bool operator==(const KeyOf_QuerySymbolOfSTMT&) const = default;
 	};
 
 	/**
-	 * @brief Construct a new declare query object
+	 * @brief Returns symbols associated with given element in PST
 	 */
 	DECLARE_QUERY(QuerySymbolOfSTMT, KeyOf_QuerySymbolOfSTMT, SymID);
 
 	struct KeyOf_LookupInSymbol {
+		/**
+		 * @brief Symbol to lookup in
+		 */
 		SymID       symbol;
+
+		/**
+		 * @brief Name to lookup
+		 */
 		base::StrId name;
+
+		/**
+		 * @brief Should wildcards be included in lookup
+		 */
 		bool        follow_wildcards;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
-
 		bool operator==(const KeyOf_LookupInSymbol&) const = default;
 	};
 
+	/**
+	 * @brief Returns result of "symbol.name" operation.
+	 */
 	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, const LookupResult&);
 
+	/**
+	 * @brief Returns type of given symbol.
+	 * @note: not implemented yet
+	 */
 	DECLARE_QUERY(QueryTypeOF, SymID, ts::TypeInfo);
 
 	// @TODO: query symbol value (some CTV?) for execution somewhere
@@ -80,14 +121,20 @@ namespace compiler::helios {
 	struct SomeHOUT {};
 
 	/**
-	 * @brief This query is effectively responsible for compilation of symbols.
+	 * @brief Returns HOUT of given symbol
+	 * @note This query is effectively responsible for compilation of symbols.
+	 * @note not yet implemented
 	 * @TODO: is it recursive?
 	 */
 	DECLARE_QUERY(QueryHOUT, SymID, base::Optional<SomeHOUT>);
 
 
 	/**
-	 * @brief Partial function probably
+	 * @brief Retuns scope to lookup in
+	 * when looking up in given symbol.
+	 * 
+	 * @note For HELIOS internal use only
+	 * @note It is a partial Query it for example does not necessary
 	 */
 	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID);
 
