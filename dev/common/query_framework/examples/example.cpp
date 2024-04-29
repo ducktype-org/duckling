@@ -19,7 +19,7 @@ struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
 	static auto provide(Context& context, QKey key) -> PResult {
 		context.log("Some random log.");
 		context.compilationError("Error at query1 -- example error.");
-		return context.extend<SquareValue>(key);
+		return context.callExt<SquareValue>(key);
 	}
 
 	static auto load(QKey key) -> LoadResult {

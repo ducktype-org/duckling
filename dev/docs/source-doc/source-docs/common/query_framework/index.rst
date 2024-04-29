@@ -261,7 +261,7 @@ Second way is to write "Query Extension":
     
     // ...
         static auto provide(Context& context, QKey key) -> PResult {
-            auto output = context.extend<NameOfExtension>(input);
+            auto output = context.callExt<NameOfExtension>(input);
         }
     // ...
 

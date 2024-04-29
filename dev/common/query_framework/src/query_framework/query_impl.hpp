@@ -36,8 +36,16 @@ namespace query {
 				return OthQuery::internal_query(key, my_node);
 			}
 
+			/**
+			 * @brief Calls query extension passes as template argument.
+			 * 
+			 * @tparam Query Extension 
+			 * @tparam Arguments of query extension
+			 * @param args 
+			 * @return Return value of query extension
+			 */
 			template<auto Extension, typename... Args>
-			auto extend(Args&&... args) {
+			auto callExt(Args&&... args) {
 				return Extension(*this, std::forward<Args>(args)...);
 			}
 
