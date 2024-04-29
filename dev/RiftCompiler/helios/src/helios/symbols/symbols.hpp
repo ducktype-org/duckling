@@ -10,6 +10,10 @@
 #include "../hout/hout.hpp"
 #include "../lookup_result.hpp"
 #include "base/string_id.hpp"
+#include "typesystem/type_info.hpp"
+
+
+#include <typesystem/typesystem.hpp>
 
 namespace compiler::helios {
 
@@ -66,10 +70,7 @@ namespace compiler::helios {
 
 	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, const LookupResult&);
 
-	// @TODO: get type from type-system
-	struct Type {};
-
-	DECLARE_QUERY(QueryTypeOF, SymID, Type);
+	DECLARE_QUERY(QueryTypeOF, SymID, ts::TypeInfo);
 
 	// @TODO: query symbol value (some CTV?) for execution somewhere
 	// There is a good chance that logic behind it will be elsewhere

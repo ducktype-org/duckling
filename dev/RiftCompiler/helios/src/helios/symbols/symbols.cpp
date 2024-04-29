@@ -291,9 +291,7 @@ namespace compiler::helios {
 			return result;
 		}
 
-		static auto load(QKey key) -> LoadResult { return {}; }
-
-		static auto store(QKey key, PResult res, query::ACD acd) -> QResult { return res; }
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryDealias, "QueryDealias");

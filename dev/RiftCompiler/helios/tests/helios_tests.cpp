@@ -58,7 +58,7 @@ private:
 		auto symbols_in_module
 			= query::queryEntryPoint<compiler::helios::QuerySymbolsInScope>(root_scope);
 
-		auto get_symbol = [&](auto&& name) {
+		auto get_symbol = [&](auto name) {
 			auto&& q = query::queryEntryPoint<compiler::helios::QueryLookupInScopeAndParents>(
 				{ root_scope, base::StrId(name), true }
 			);

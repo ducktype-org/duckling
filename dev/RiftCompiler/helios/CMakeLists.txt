@@ -7,7 +7,7 @@ add_library(HELIOS
         src/helios/lookup_result.cpp
 )
 
-make_module(HELIOS USES Base QueryFramework PstParser ModuleTree)
+make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystem)
 
 rift_add_test(compiler helios_test tests/helios_tests.cpp
         USES Base TypeSystem PstParser HELIOS)
