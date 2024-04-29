@@ -15,16 +15,22 @@
 
 namespace compiler::helios {
 
-	// scopes will look more or the less the same!
-	// imports are just symbols that will require lookup inside different module that will build
-	// itself from different PST. Simple! We will just need query for import lookup cached by
-	// (globally) unique PstID
+	/**
+	 * @TODO: move to some docs
+	 *  * imports are just symbols that we will "lookup in" just like usings.
+	 *    They will link to different modules.
+	 *  * Scopes trees of different modules are independent to relax dependency
+	 *  
+	 *  @TODO: what about lookup cycles -- we will need to probably refactor queries a bit
+	 *  in the future
+	 */
 
 
+	/**
+	 * @brief Stores generic symbol data
+	 */
 	struct SymbolData {
-		// adapted from hir:
-
-		// created on startup:
+		// created when creating SymbolData:
 		ScopeID     scope;
 		base::StrId name;
 		bool        anonymous   = false;
@@ -32,24 +38,14 @@ namespace compiler::helios {
 		bool        is_alias    = false;
 		bool        dependent   = false;
 		SymbolKind  kind;
-		// pst link? -- what about down casting...
 
 		// we will need to cast it:
 		PstRef<pst::Stmt> pst_stmt;
-
-
-		// cached: linked_lookup_scope ?
-		// cached: type
-		// cached: value?
-
-		// Adapted from hir, think if this makes sense:
-		// base::Optional<ScopeID> linked_scope;
 	};
 
-	// do we want internal inheritance?
-	// query: lookupIn
-	// query: dealias
-
+	/**
+	 * @brief Helper struct used to access private SymID data.
+	 */
 	struct GetSymRef_Functor {
 		static auto get(SymID id) { return id.ref; }
 	};
@@ -65,7 +61,11 @@ namespace compiler::helios {
 	ScopeID scope(SymID id) { return getSymRef(id)->scope; }
 
 	namespace {
-		// global table:
+		/**
+		 * @brief Global Symbol Table
+		 * @note: in the future it might not be needed once
+		 * we will move toward more pure Query Model
+		 */
 		base::StableVector<SymbolData> symbol_table;
 
 		template<class... T>
@@ -75,7 +75,13 @@ namespace compiler::helios {
 		}
 	}
 
-	// Symbol Factory:
+	/**
+	 * @brief SymbolData Factory
+	 * 
+	 * @param scope 
+	 * @param stmt 
+	 * @return base::borrow_ptr<SymbolData> 
+	 */
 	base::borrow_ptr<SymbolData>
 		makeSymbolFromStatement(const ScopeID& scope, PstRef<pst::Stmt> stmt) {
 		switch (stmt->getKind()) {
@@ -158,8 +164,6 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySymbolOfSTMT, "Query Symbol of Stmt");
 
-	// if somewhere then here it is needed to handle cycles somehow
-
 
 	struct ImplementationOf_QueryLookupInSymbol:
 		  public query::QueryImplementation<QueryLookupInSymbol, LookupResult> {
@@ -182,6 +186,7 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLookupInSymbol, "QueryLookupInSymbol")
+
 
 	// @FIXME: make this legit
 	SymbolList lookupChain(
