@@ -126,12 +126,11 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Using: {
-			// @TODO: hmm
-			[[maybe_unused]]
 			auto&& using_ = dynamic_cast<const pst::Using*>(stmt.get());
 			return putInSymtable(SymbolData{
-				.scope       = scope,
-				.name        = base::StrId("<USING>"),  // @FIX: I feel like it's not ok.
+				.scope = scope,
+				.name
+				= base::StrId(base::strConcat("<USING> ", using_->getPointed().front()).c_str()),
 				.is_wildcard = true,
 				.is_alias    = true,
 				.kind        = SymbolKind::Using,
@@ -162,35 +161,41 @@ namespace compiler::helios {
 	// if somewhere then here it is needed to handle cycles somehow
 
 
-	struct ImplementationOf_QueryLookupInSymbol: public query::QueryImplementation<QueryLookupInSymbol, LookupResult> {
+	struct ImplementationOf_QueryLookupInSymbol:
+		  public query::QueryImplementation<QueryLookupInSymbol, LookupResult> {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.symbol.ref->kind) {
-				case SymbolKind::Using:
-				case SymbolKind::Namespace: {
-					auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
-					return ctx.query<QueryLookupInScope>({ linked_scope, key.name, key.follow_wildcards });
-				}
-
-				// @note: here case for variables will be calling TS
-				default:
-					throw base::NotYetImplemented("Lookup in symbol...");
+			case SymbolKind::Using:
+			case SymbolKind::Namespace: {
+				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
+				return ctx.query<QueryLookupInScope>(
+					{ linked_scope, key.name, key.follow_wildcards }
+				);
 			}
 
+			// @note: here case for variables will be calling TS
+			default:
+				throw base::NotYetImplemented("Lookup in symbol...");
+			}
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLookupInSymbol, "QueryLookupInSymbol")
 
-
 	// @FIXME: make this legit
-	SymbolList lookupChain(query::detail::ContextType& ctx, std::vector<base::StrId> names, ScopeID begin_scope, bool follow_wildcards) {
-
+	SymbolList lookupChain(
+		query::detail::ContextType& ctx,
+		std::vector<base::StrId>    names,
+		ScopeID                     begin_scope,
+		bool                        follow_wildcards
+	) {
 		RIFT_ASSERT(names.size() > 0, "lookupDotted received zero names");
 
 		// initial symbol:
-		auto first = ctx.query<QueryLookupInScopeAndParents>({ begin_scope, names[0], follow_wildcards });
-	
+		auto first
+			= ctx.query<QueryLookupInScopeAndParents>({ begin_scope, names[0], follow_wildcards });
+
 		if (not first.isSingle()) {
 			// @TODO: error in state
 			RIFT_PANIC("ambiguity in lookupChain");
@@ -201,8 +206,9 @@ namespace compiler::helios {
 		SymbolList result = first.getAsSingle();
 
 		for (usize i = 1; i < names.size(); i++) {
-			auto append_res = ctx.query<QueryLookupInSymbol>({ result.back(), names[i], follow_wildcards });
-			
+			auto append_res
+				= ctx.query<QueryLookupInSymbol>({ result.back(), names[i], follow_wildcards });
+
 			if (!append_res.isSingle()) {
 				// @TODO: error in state
 				RIFT_PANIC("ambiguity in lookup");
@@ -214,35 +220,36 @@ namespace compiler::helios {
 		return result;
 	}
 
-
-	struct ImplementationOf_QueryLinkedScope: public query::QueryImplementation<QueryLinkedScope, ScopeID> {
+	struct ImplementationOf_QueryLinkedScope:
+		  public query::QueryImplementation<QueryLinkedScope, ScopeID> {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.ref->kind) {
-				case SymbolKind::Using: {
-					auto using_stmt = dynamic_cast<const pst::Using*>(key.ref->pst_stmt.get());
-					auto names = using_stmt->getPointed();
-					auto lookup_res = lookupChain(ctx, names, scope(key), false);
-					RIFT_ASSERT(not lookup_res.empty(), "Well, i honestly don't know what that means, good luck");
-					return ctx.query<QueryLinkedScope>({ lookup_res.back() });
-				}
-				case SymbolKind::Namespace: {
-					auto namespace_stmt = dynamic_cast<const pst::Namespace*>(key.ref->pst_stmt.get());
-					auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>({
-						scope(key), 
-						namespace_stmt->getBody(),
-					});
-					return inner_scope;
-				}
-				default:
-					throw base::NotYetImplemented("Getting linked scope...");
+			case SymbolKind::Using: {
+				auto using_stmt = dynamic_cast<const pst::Using*>(key.ref->pst_stmt.get());
+				auto names      = using_stmt->getPointed();
+				auto lookup_res = lookupChain(ctx, names, scope(key), false);
+				RIFT_ASSERT(
+					not lookup_res.empty(), "Well, i honestly don't know what that means, good luck"
+				);
+				return ctx.query<QueryLinkedScope>({ lookup_res.back() });
+			}
+			case SymbolKind::Namespace: {
+				auto namespace_stmt = dynamic_cast<const pst::Namespace*>(key.ref->pst_stmt.get());
+				auto inner_scope    = ctx.query<QueryPrimaryCodeScopeFor>({
+                    scope(key),
+                    namespace_stmt->getBody(),
+                });
+				return inner_scope;
+			}
+			default:
+				throw base::NotYetImplemented("Getting linked scope...");
 			}
 		}
-		
+
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLinkedScope, "QueryLookupInSymbol")
-
 
 	base::HashT KeyOf_QuerySymbolOfSTMT::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(scope);
@@ -257,6 +264,37 @@ namespace compiler::helios {
 		auto hash_2 = std::hash<base::StrId>()(name);
 
 		// @FIXME: this does not work:
-		return (hash_1 * 143 + hash_2 * 7)*2 + follow_wildcards;
+		return (hash_1 * 143 + hash_2 * 7) * 2 + follow_wildcards;
 	}
+
+	struct ImplementationOf_QueryDealias: query::QueryImplementation<QueryDealias, SymbolList> {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			if (kind(key) != SymbolKind::Alias) return { key };
+
+			auto&& x         = dynamic_cast<const pst::Alias*>(getSymRef(key)->pst_stmt.get());
+			auto&& key_scope = scope(key);
+
+			bool       first_symbol = true;
+			SymbolList result;
+			for (auto&& pointed: x->getPointed()) {
+				auto&& pointed_symbol_lookup
+					= first_symbol
+				        ? ctx.query<QueryLookupInScopeAndParents>({ key_scope, pointed, false })
+				        : ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false });
+
+				for (auto&& path = pointed_symbol_lookup.getAsSingle(); auto&& path_symbol: path)
+					result.push_back(path_symbol);
+
+				first_symbol = false;
+			}
+
+			return result;
+		}
+
+		static auto load(QKey key) -> LoadResult { return {}; }
+
+		static auto store(QKey key, PResult res, query::ACD acd) -> QResult { return res; }
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryDealias, "QueryDealias");
 }

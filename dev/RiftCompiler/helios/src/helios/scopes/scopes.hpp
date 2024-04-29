@@ -29,8 +29,9 @@ namespace compiler::helios {
 		PstRef<pst::RiftElement> base_element;
 		// StmtList stmts;
 
-		[[nodiscard]] base::HashT customPerfectHash() const;
-		bool operator==(const KeyOf_QueryPrimaryCodeScopeFor&) const = default;
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
+		bool        operator==(const KeyOf_QueryPrimaryCodeScopeFor&) const = default;
 	};
 
 	/**
@@ -69,5 +70,6 @@ namespace compiler::helios {
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, const std::vector<SymID>&);
 
 	// DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_Lookup, LookupResult);
+
 
 }

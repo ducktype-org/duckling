@@ -56,7 +56,7 @@ namespace compiler::helios {
 	struct KeyOf_LookupInSymbol {
 		SymID       symbol;
 		base::StrId name;
-		bool follow_wildcards;
+		bool        follow_wildcards;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
@@ -91,6 +91,8 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID);
 
 
-	// @TODO: dealias query
-
+	/**
+	 * A query that returns an "absolute path" to the symbol without aliases.
+	 */
+	DECLARE_QUERY(QueryDealias, SymID, SymbolList);
 }

@@ -32,7 +32,3 @@ namespace Inner {
 	const Inner_X: i32 = 123; 
 }
 using Inner.*;
-
-
-
-

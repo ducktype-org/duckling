@@ -19,6 +19,7 @@ public:
 		ts::init();
 
 		TESTER_ADD_TEST(testQuerySymbolOfSTMT);
+		TESTER_ADD_TEST(testI32Consts);
 	}
 
 private:
@@ -58,12 +59,27 @@ private:
 			= query::queryEntryPoint<compiler::helios::QuerySymbolsInScope>(root_scope);
 
 		auto get_symbol = [&](auto&& name) {
-			auto&& q = query::queryEntryPoint<compiler::helios::QueryLookupInScope>(
-				{ name, base::StrId(name) }
+			auto&& q = query::queryEntryPoint<compiler::helios::QueryLookupInScopeAndParents>(
+				{ root_scope, base::StrId(name), true }
 			);
 			ASSERT_EQUAL(true, q.isSingle());
-			return q.getAsSingle();
+
+			auto path      = q.getAsSingle();
+			auto dealiased = query::queryEntryPoint<compiler::helios::QueryDealias>(path.back());
+
+			compiler::helios::SymbolList result;
+			result.insert(result.end(), path.begin(), path.end() - 1);
+			result.insert(result.end(), dealiased.begin(), dealiased.end());
+
+			return result;
 		};
+
+		auto symb = get_symbol("X");
+		for (auto&& sym_id: symb) std::cout << compiler::helios::name(sym_id).str() << '\n';
+
+		// auto symb = get_symbol("H");
+		// std::cout << "Path: \n";
+		// for (const auto& sym_id: symb) std::cout << compiler::helios::name(sym_id).str() << '\n';
 
 		// auto get_value =
 		// 	[&](auto&& name) {
