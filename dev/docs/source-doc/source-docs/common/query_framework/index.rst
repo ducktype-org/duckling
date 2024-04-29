@@ -224,11 +224,15 @@ How to write auxiliary functions?
 
 Sometimes provider function might grow large and we would like to separate it into smaller function.
 Fortunately that is not a problem. If the "auxiliary functions" does not need functionalities from :code:`Context& context`, then it can be just a standard function or static method (or any other code).
+
 If it does need functionalities from :code:`Context& context` then it can be just a standard function or method that takes :code:`Context&` as a parameter as well.
-As of right now this can be achieved by writing static method next to :code:`provide` function, like this:
+
+There are two ways of achieving this:
+
+First way is to write static method next to :code:`provide` function, like this:
 
 .. code-block:: cpp
-    :caption: Auxiliary function:
+    :caption: Auxiliary function inside Query Implementation struct
 
         static auto auxiliary(Context& context, u32 a) -> u64 {...}
         static auto provide(Context& context, QKey key) -> PResult {
@@ -237,9 +241,37 @@ As of right now this can be achieved by writing static method next to :code:`pro
             // ...
         }
 
+
+Second way is to write "Query Extension":
+
+.. code-block:: cpp
+    :caption: Query Extension
+
+    // hpp:
+    QUERY_EXTENSION(NameOfExtension, input_t, output_t)
+
+    // cpp:
+    output_t NameOfExtension(query::Context& ctx, input_t in) {
+        // ...
+        // use can use "ctx" here
+    }
+
+
+    // how to use it:
+    
+    // ...
+        static auto provide(Context& context, QKey key) -> PResult {
+            auto output = context.callExt<NameOfExtension>(input);
+        }
+    // ...
+
+.. attention::
+    One can technically write Query Extension as just a function, but
+    it is forbidden. The reason for that is to easily identify all extensions in
+    the future during refactors.
+
 .. note::
-    as of today there is no nice way of writing auxiliary function with context parameter outside query implementation struct.
-    This can be however added in the future if the need arise.
+    Query Extensions can be used by multiple queries which can help reduce code repetitions. 
 
 
 Writing load and store function
@@ -380,3 +412,4 @@ Almost Pureness
 It is not strict requirement but side effects should be avoided unless they are really needed.
 
 .. note:: Caching itself is obviously a side effect, but it is an expected one. 
+

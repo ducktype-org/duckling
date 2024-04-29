@@ -6,13 +6,16 @@
 #include "empty_key.hpp"
 
 namespace query::detail {
+
+	struct ContextType;
+
 	/**
-	 * @brief Base class for defining query interface
-	 *
-	 * @tparam QueryType_tp a type of a query
-	 * @tparam QKey_tp a type of a query key
-	 * @tparam QResult_tp a type of a query result
-	 */
+		* @brief Base class for defining query interface
+		*
+		* @tparam QueryType_tp a type of a query
+		* @tparam QKey_tp a type of a query key
+		* @tparam QResult_tp a type of a query result
+		*/
 	template<typename QueryType_tp, typename QKey_tp, typename QResult_tp>
 	struct QueryInterface {
 		using QueryType = QueryType_tp;
@@ -39,3 +42,11 @@ namespace query::detail {
 	struct query_type: ::query::detail::QueryInterface<query_type, key, value> { \
 		INTERNAL_QUERY_INTERFACE_BOILERPLATE                                     \
 	};
+
+
+/**
+ * @brief Macro used to declare query extensions
+ * @note This is done this way, instead of just beeing a simple function,
+ * so we can easily identify all extension function in the future
+ */
+#define QUERY_EXTENSION(name, input, output) output name(::query::detail::ContextType&, input);
