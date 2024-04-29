@@ -188,31 +188,31 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLookupInSymbol, "QueryLookupInSymbol")
 
 
-	// @FIXME: make this legit
-	SymbolList lookupChain(
-		query::detail::ContextType& ctx,
-		std::vector<base::StrId>    names,
-		ScopeID                     begin_scope,
-		bool                        follow_wildcards
-	) {
-		RIFT_ASSERT(names.size() > 0, "lookupDotted received zero names");
+	struct LookupChainKey {
+		std::vector<base::StrId>    names;
+		ScopeID                     begin_scope;
+		bool                        follow_wildcards;
+	};
+	QUERY_EXTENSION(lookupChain, LookupChainKey, SymbolList);
+	SymbolList lookupChain(query::Context& ctx, LookupChainKey key) {
+		RIFT_ASSERT(key.names.size() > 0, "lookupDotted received zero names");
 
 		// initial symbol:
 		auto first
-			= ctx.query<QueryLookupInScopeAndParents>({ begin_scope, names[0], follow_wildcards });
+			= ctx.query<QueryLookupInScopeAndParents>({ key.begin_scope, key.names[0], key.follow_wildcards });
 
 		if (not first.isSingle()) {
 			// @TODO: error in state
 			RIFT_PANIC("ambiguity in lookupChain");
 		}
 
-		if (names.size() == 1) return first.getAsSingle();
+		if (key.names.size() == 1) return first.getAsSingle();
 
 		SymbolList result = first.getAsSingle();
 
-		for (usize i = 1; i < names.size(); i++) {
+		for (usize i = 1; i < key.names.size(); i++) {
 			auto append_res
-				= ctx.query<QueryLookupInSymbol>({ result.back(), names[i], follow_wildcards });
+				= ctx.query<QueryLookupInSymbol>({ result.back(), key.names[i], key.follow_wildcards });
 
 			if (!append_res.isSingle()) {
 				// @TODO: error in state
@@ -232,9 +232,9 @@ namespace compiler::helios {
 			case SymbolKind::Using: {
 				auto using_stmt = dynamic_cast<const pst::Using*>(key.ref->pst_stmt.get());
 				auto names      = using_stmt->getPointed();
-				auto lookup_res = lookupChain(ctx, names, scope(key), false);
+				auto lookup_res = ctx.callExt<lookupChain>(LookupChainKey{ names, scope(key), false });
 				RIFT_ASSERT(
-					not lookup_res.empty(), "Well, i honestly don't know what that means, good luck"
+					not lookup_res.empty(), "Using points to something that does not exists or is empty"
 				);
 				return ctx.query<QueryLinkedScope>({ lookup_res.back() });
 			}
@@ -276,8 +276,8 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			if (kind(key) != SymbolKind::Alias) return { key };
 
-			auto&& x         = dynamic_cast<const pst::Alias*>(getSymRef(key)->pst_stmt.get());
-			auto&& key_scope = scope(key);
+			auto    x         = dynamic_cast<const pst::Alias*>(getSymRef(key)->pst_stmt.get());
+			ScopeID key_scope = scope(key);
 
 			bool       first_symbol = true;
 			SymbolList result;
