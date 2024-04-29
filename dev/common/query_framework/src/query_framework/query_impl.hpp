@@ -38,10 +38,10 @@ namespace query {
 
 			/**
 			 * @brief Calls query extension passes as template argument.
-			 * 
-			 * @tparam Query Extension 
+			 *
+			 * @tparam Query Extension
 			 * @tparam Arguments of query extension
-			 * @param args 
+			 * @param args
 			 * @return Return value of query extension
 			 */
 			template<auto Extension, typename... Args>
