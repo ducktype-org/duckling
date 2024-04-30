@@ -7,7 +7,7 @@
 namespace lexer {
 	template<>
 	CharArray decode<fs::US_ASCII>(base::RawView bytes, dia::Logger& errorState) {
-		std::vector<Char> out;
+		CharArray out;
 		for (usize i = 0; i < bytes.size(); i++) {
 			// Check if valid ascii byte
 			if ((bytes[i] & byte{ 0b10000000u }) != byte{ 0 }) {
@@ -31,7 +31,7 @@ namespace lexer {
 
 	template<>
 	CharArray decode<fs::UTF8>(base::RawView bytes, dia::Logger& errorState) {
-		std::vector<Char> out;
+		CharArray out;
 
 		auto log_error = [&](std::string message) {
 			errorState.failAndLog({ "UTF-8 decoding error:" + message });

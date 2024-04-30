@@ -4,4 +4,4 @@ add_library(Diagnostic
         src/diagnostic/message.cpp
 )
 
-make_module(Diagnostic USES Printer Filesystem)
+make_module(Diagnostic USES Printer Filesystem TokenFile)

@@ -43,7 +43,7 @@ namespace lexer {
 	/**
 	 * @brief Type used to store all characters decoded from a single source code
 	 */
-	using CharArray = const std::vector<Char>;
+	using CharArray = std::vector<Char>;
 
 	/**
 	 * @brief Assembles a `base::RawView` pointing to the placement of the given range in source
