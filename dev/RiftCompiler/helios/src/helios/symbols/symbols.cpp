@@ -20,7 +20,7 @@ namespace compiler::helios {
 	 *  * imports are just symbols that we will "lookup in" just like usings.
 	 *    They will link to different modules.
 	 *  * Scopes trees of different modules are independent to relax dependency
-	 *  
+	 *
 	 *  @TODO: what about lookup cycles -- we will need to probably refactor queries a bit
 	 *  in the future
 	 */
@@ -77,10 +77,10 @@ namespace compiler::helios {
 
 	/**
 	 * @brief SymbolData Factory
-	 * 
-	 * @param scope 
-	 * @param stmt 
-	 * @return base::borrow_ptr<SymbolData> 
+	 *
+	 * @param scope
+	 * @param stmt
+	 * @return base::borrow_ptr<SymbolData>
 	 */
 	base::borrow_ptr<SymbolData>
 		makeSymbolFromStatement(const ScopeID& scope, PstRef<pst::Stmt> stmt) {
@@ -164,7 +164,6 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySymbolOfSTMT, "Query Symbol of Stmt");
 
-
 	struct ImplementationOf_QueryLookupInSymbol:
 		  public query::QueryImplementation<QueryLookupInSymbol, LookupResult> {
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -187,19 +186,21 @@ namespace compiler::helios {
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLookupInSymbol, "QueryLookupInSymbol")
 
-
 	struct LookupChainKey {
-		std::vector<base::StrId>    names;
-		ScopeID                     begin_scope;
-		bool                        follow_wildcards;
+		std::vector<base::StrId> names;
+		ScopeID                  begin_scope;
+		bool                     follow_wildcards;
 	};
+
 	QUERY_EXTENSION(lookupChain, LookupChainKey, SymbolList);
+
 	SymbolList lookupChain(query::Context& ctx, LookupChainKey key) {
 		RIFT_ASSERT(key.names.size() > 0, "lookupDotted received zero names");
 
 		// initial symbol:
-		auto first
-			= ctx.query<QueryLookupInScopeAndParents>({ key.begin_scope, key.names[0], key.follow_wildcards });
+		auto first = ctx.query<QueryLookupInScopeAndParents>(
+			{ key.begin_scope, key.names[0], key.follow_wildcards }
+		);
 
 		if (not first.isSingle()) {
 			// @TODO: error in state
@@ -211,8 +212,9 @@ namespace compiler::helios {
 		SymbolList result = first.getAsSingle();
 
 		for (usize i = 1; i < key.names.size(); i++) {
-			auto append_res
-				= ctx.query<QueryLookupInSymbol>({ result.back(), key.names[i], key.follow_wildcards });
+			auto append_res = ctx.query<QueryLookupInSymbol>(
+				{ result.back(), key.names[i], key.follow_wildcards }
+			);
 
 			if (!append_res.isSingle()) {
 				// @TODO: error in state
@@ -232,9 +234,11 @@ namespace compiler::helios {
 			case SymbolKind::Using: {
 				auto using_stmt = dynamic_cast<const pst::Using*>(key.ref->pst_stmt.get());
 				auto names      = using_stmt->getPointed();
-				auto lookup_res = ctx.callExt<lookupChain>(LookupChainKey{ names, scope(key), false });
+				auto lookup_res
+					= ctx.callExt<lookupChain>(LookupChainKey{ names, scope(key), false });
 				RIFT_ASSERT(
-					not lookup_res.empty(), "Using points to something that does not exists or is empty"
+					not lookup_res.empty(),
+					"Using points to something that does not exists or is empty"
 				);
 				return ctx.query<QueryLinkedScope>({ lookup_res.back() });
 			}
@@ -276,19 +280,21 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			if (kind(key) != SymbolKind::Alias) return { key };
 
-			auto    x         = dynamic_cast<const pst::Alias*>(getSymRef(key)->pst_stmt.get());
-			ScopeID key_scope = scope(key);
+			auto&& alias_definition
+				= dynamic_cast<const pst::Alias*>(getSymRef(key)->pst_stmt.get());
 
 			bool       first_symbol = true;
 			SymbolList result;
-			for (auto&& pointed: x->getPointed()) {
+			for (auto&& pointed: alias_definition->getPointed()) {
 				auto&& pointed_symbol_lookup
 					= first_symbol
-				        ? ctx.query<QueryLookupInScopeAndParents>({ key_scope, pointed, false })
+				        ? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
 				        : ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false });
 
-				for (auto&& path = pointed_symbol_lookup.getAsSingle(); auto&& path_symbol: path)
-					result.push_back(path_symbol);
+				for (auto&& path = pointed_symbol_lookup.getAsSingle(); auto&& path_symbol: path) {
+					auto&& dealiased = ctx.query<QueryDealias>(path_symbol);
+					result.insert(result.end(), dealiased.begin(), dealiased.end());
+				}
 
 				first_symbol = false;
 			}
@@ -296,8 +302,22 @@ namespace compiler::helios {
 			return result;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF  // TODO: Change it to stable, so that the result does
+		                                       // not get copied
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryDealias, "QueryDealias");
+
+	struct ImplementationOf_QueryConstValueOf:
+		  public query::QueryImplementation<QueryConstValueOf, i32> {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			RIFT_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
+			auto&& alias_definition
+				= dynamic_cast<const pst::Alias*>(getSymRef(key)->pst_stmt.get());
+		}
+
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryConstValueOf, "QueryConstValueOf");
 }

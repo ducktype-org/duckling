@@ -3,7 +3,7 @@
 
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
-#include <base/str_to_int.hpp>
+#include <base/str_utils.hpp>
 #include <typesystem/typesystem.hpp>
 
 #include <exec/operators/builtinoperators.hpp>

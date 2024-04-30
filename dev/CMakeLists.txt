@@ -20,7 +20,7 @@ set(CMAKE_COLOR_MAKEFILE ON)
 
 option(USE_CCACHE "Use ccache" OFF)
 
-if (USE_CCACHE)
+if(USE_CCACHE)
 	message(NOTICE "Ccache might not work with generators other then make or ninja!")
 
 	find_program(CCACHE "ccache" PATHS "scripts/downloads/" NO_DEFAULT_PATH REQUIRED)
@@ -34,21 +34,21 @@ if (USE_CCACHE)
 		message(ERROR "CCACHE not found.")
 	endif(CCACHE)
 
-endif (USE_CCACHE)
+endif(USE_CCACHE)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	# @TODO: decide of std++20 vs gnu++20
 	message("-- GNU compiler")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare")
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
 	# I didn't find a good -Werror=terminate alternative for Clang.
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=shadow-all -Werror=return-stack-address -Werror=free-nonheap-object -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=shadow-all -Werror=return-stack-address -Werror=free-nonheap-object -Wno-shadow-field-in-constructor -O0 -Wno-shadow-field -Wall -Wextra -Wno-sign-compare")
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()
@@ -57,7 +57,7 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
 # Debug version uses O0 and prints all logs. 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
+#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
 
 # Release version uses O2, not O3. It might change.
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
@@ -67,7 +67,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Configure assembly targets generation (*.s) to include Intel-style asm and source code/asm interleaving. std=c++20 is needed for some reason.
 set(CMAKE_CXX_CREATE_ASSEMBLY_SOURCE "<CMAKE_CXX_COMPILER> $(CXX_DEFINES) $(CXX_INCLUDES) ${CMAKE_CXX_FLAGS} -S -masm=intel -fverbose-asm <SOURCE> -o <ASSEMBLY_SOURCE> -std=c++20")
 
-if (ENABLE_COVERAGE)
+if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
 	find_program(LCOV lcov REQUIRED)
 	find_program(GENHTML genhtml REQUIRED)
@@ -76,7 +76,7 @@ if (ENABLE_COVERAGE)
 			COMMAND ${LCOV} --directory . --capture --output-file coverage.info
 			COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
 			WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-endif ()
+endif()
 
 set(MEMORYCHECK_COMMAND_OPTIONS "--error-exitcode=1 --leak-check=full")
 include(CTest)
@@ -92,7 +92,7 @@ set(SRC_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 # Common functions:
 function(rift_add_test test_pack test_name source USES)
-	if (${USES} STREQUAL "USES")
+	if(${USES} STREQUAL "USES")
 		add_executable(${test_name} ${CMAKE_CURRENT_LIST_DIR}/${source})
 		target_link_libraries(${test_name} Tester ${ARGN})
 
@@ -105,33 +105,33 @@ function(rift_add_test test_pack test_name source USES)
 
 		# This adds LD_LIBRARY_PATH pointing to downloaded ICU when using DOWNLOAD_UBUNTU_ICU_BUILD.
 		# In general it should be only used in workflows.
-		if (DOWNLOAD_UBUNTU_ICU_BUILD STREQUAL "ON")
+		if(DOWNLOAD_UBUNTU_ICU_BUILD STREQUAL "ON")
 			set_property(TEST "${test_name}"
-						PROPERTY ENVIRONMENT
-						"LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/_deps/ubuntu-icu-src/usr/local/lib/")
-		endif ()
+					PROPERTY ENVIRONMENT
+					"LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/_deps/ubuntu-icu-src/usr/local/lib/")
+		endif()
 
 		set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
-	else ()
+	else()
 		message(FATAL_ERROR "rift_add_test lacks uses clause")
-	endif ()
+	endif()
 endfunction()
 
 define_property(TARGET PROPERTY MODULE_DIRECTORIES BRIEF_DOCS "Used for clean-modules target" FULL_DOCS "Used for clean-modules target")
 add_custom_target(clean-modules
-				echo "Deleting following directories:"
-				COMMAND echo -e "$<JOIN:$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>,\\n>"
-				COMMAND rm -rfI "$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>" || "true"
-				USES_TERMINAL
-				COMMAND_EXPAND_LISTS
-				VERBATIM)
+		echo "Deleting following directories:"
+		COMMAND echo -e "$<JOIN:$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>,\\n>"
+		COMMAND rm -rfI "$<TARGET_PROPERTY:clean-modules,MODULE_DIRECTORIES>" || "true"
+		USES_TERMINAL
+		COMMAND_EXPAND_LISTS
+		VERBATIM)
 
 function(make_module MODULE_NAME)
 	set(multiValueArgs USES INCLUDE)
 	cmake_parse_arguments(make_module "" "" "${multiValueArgs}" ${ARGN})
 
 	# Checks if USES is used with 0 or more arguments
-	if ((NOT make_module_USES) AND (NOT ("USES" IN_LIST make_module_KEYWORDS_MISSING_VALUES)))
+	if((NOT make_module_USES) AND (NOT ("USES" IN_LIST make_module_KEYWORDS_MISSING_VALUES)))
 		message(FATAL_ERROR "make_module lacks uses argument")
 	endif()
 
@@ -142,13 +142,13 @@ function(make_module MODULE_NAME)
 endfunction()
 
 function(add_example exmaple_name source USES)
-	if (${USES} STREQUAL "USES")
+	if(${USES} STREQUAL "USES")
 		add_executable(${exmaple_name} ${source})
 		target_link_libraries(${exmaple_name} ${ARGN})
 		set_target_properties(${exmaple_name} PROPERTIES EXCLUDE_FROM_ALL true)
-	else ()
+	else()
 		message(FATAL_ERROR "add_example lacks uses clause")
-	endif ()
+	endif()
 endfunction()
 
 add_custom_target(build_all_tests)
@@ -199,8 +199,8 @@ add_subdirectory(scripts/cmake)
 # Add `-D BUILD_DOCS=OFF` option to CMake to ignore docs
 option(BUILD_DOCS "Build test programs" ON)
 
-if (BUILD_DOCS)
+if(BUILD_DOCS)
 	add_subdirectory(docs)
 	# add_custom_target(docs-clean make -s -f CmakeFiles/Makefile2 docs/clean)
 	# add_custom_target(docs-clean ninja -t clean docs)
-endif (BUILD_DOCS)
+endif(BUILD_DOCS)

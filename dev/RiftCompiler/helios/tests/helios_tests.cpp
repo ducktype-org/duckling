@@ -1,3 +1,4 @@
+#include "base/str_utils.hpp"
 #include "helios/scope_symbol_id.hpp"
 #include "helios/scopes/scopes.hpp"
 #include "helios/symbols/symbols.hpp"
@@ -18,7 +19,6 @@ public:
 		pst::init();
 		ts::init();
 
-		TESTER_ADD_TEST(testQuerySymbolOfSTMT);
 		TESTER_ADD_TEST(testI32Consts);
 	}
 
@@ -28,23 +28,6 @@ private:
 		auto parsed = pst::parse(std::move(td));
 		assert(parsed.getLogger().good(), "there are unexpected errors in rift source-code");
 		return { std::move(parsed), file };
-	}
-
-	void testQuerySymbolOfSTMT() {
-		auto [pst, file]  = prepare(fs::FilePath(path("constants/constants.rmf")));
-		auto   root_scope = pst.getTopLevelElement();
-		auto&& stmts      = root_scope->getStatements();
-		// @TODO: Write a QuerySymbolOfSTMT test here.
-		// EDIT: I don't know how to construct ScopeID for QuerySymbolOfSTMT key...
-		// for (const auto& stmt: stmts) {
-		// 	ASSERT_EQUAL(
-		// 		stmt->getKind(),
-		// 		query::queryEntryPoint<compiler::helios::QuerySymbolOfSTMT>(
-		// 			compiler::helios::KeyOf_QuerySymbolOfSTMT{ .stmt = stmt.borrow(), .scope = pst.
-		// }
-		// 		)
-		// 	);
-		// }
 	}
 
 	void testI32Consts() {
@@ -58,28 +41,53 @@ private:
 		auto symbols_in_module
 			= query::queryEntryPoint<compiler::helios::QuerySymbolsInScope>(root_scope);
 
-		auto get_symbol = [&](auto name) {
+		auto get_symbol = [&](const std::string& name) {
 			auto&& q = query::queryEntryPoint<compiler::helios::QueryLookupInScopeAndParents>(
-				{ root_scope, base::StrId(name), true }
+				{ root_scope, base::StrId(name.c_str()), true }
 			);
 			ASSERT_EQUAL(true, q.isSingle());
 
-			auto path      = q.getAsSingle();
-			auto dealiased = query::queryEntryPoint<compiler::helios::QueryDealias>(path.back());
-
 			compiler::helios::SymbolList result;
-			result.insert(result.end(), path.begin(), path.end() - 1);
-			result.insert(result.end(), dealiased.begin(), dealiased.end());
+			for (auto&& path = q.getAsSingle(); auto&& elem: path) {
+				auto&& dealiased = query::queryEntryPoint<compiler::helios::QueryDealias>(elem);
+				result.insert(result.end(), dealiased.begin(), dealiased.end());
+			}
 
 			return result;
 		};
 
+		auto get_chain = [&](auto chain) {
+			auto                         symbols = base::split(chain, ".");
+			compiler::helios::SymbolList result;
+			bool                         first_symbol = true;
+			for (auto&& sym: symbols) {
+				auto symbol
+					= first_symbol
+				        ? query::queryEntryPoint<compiler::helios::QueryLookupInScopeAndParents>(
+							{ root_scope, base::StrId(sym.c_str()), true }
+						)
+				        : query::queryEntryPoint<compiler::helios::QueryLookupInSymbol>({
+							result.back(),
+							base::StrId(sym.c_str()),
+							false,
+						});
+				for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
+					auto&& dealiased = query::queryEntryPoint<compiler::helios::QueryDealias>(elem);
+					result.insert(result.end(), dealiased.begin(), dealiased.end());
+				}
+				first_symbol = false;
+			}
+			return result;
+		};
+
 		auto symb = get_symbol("X");
+		std::cout << "Path: \n";
 		for (auto&& sym_id: symb) std::cout << compiler::helios::name(sym_id).str() << '\n';
 
-		// auto symb = get_symbol("H");
-		// std::cout << "Path: \n";
-		// for (const auto& sym_id: symb) std::cout << compiler::helios::name(sym_id).str() << '\n';
+		auto absolute_path = get_chain("NN.A");
+		std::cout << "Path: \n";
+		for (auto&& sym_id: absolute_path)
+			std::cout << compiler::helios::name(sym_id).str() << '\n';
 
 		// auto get_value =
 		// 	[&](auto&& name) {

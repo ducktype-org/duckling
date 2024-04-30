@@ -40,8 +40,8 @@ namespace compiler::helios {
 	/**
 	 * @return is symbol a wildcard symbol (e.g. using a.*)
 	 */
-	bool        isWildcard(SymID);
-	
+	bool isWildcard(SymID);
+
 	/**
 	 * @return name of given symbol
 	 */
@@ -50,17 +50,17 @@ namespace compiler::helios {
 	/**
 	 * @return kind of given symbol
 	 */
-	SymbolKind  kind(SymID);
-	
+	SymbolKind kind(SymID);
+
 	/**
 	 * @return scope given symbol was defined within
 	 */
-	ScopeID     scope(SymID);
+	ScopeID scope(SymID);
 
 	struct KeyOf_QuerySymbolOfSTMT {
 		/**
 		 * @brief scope to create symbol in
-		 * 
+		 *
 		 * @TODO: is this needed? -- now you can create two symbols from the same pst element.
 		 * It might be better to derive scope structure directly from PST structure.
 		 */
@@ -73,7 +73,7 @@ namespace compiler::helios {
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
-		bool operator==(const KeyOf_QuerySymbolOfSTMT&) const = default;
+		bool        operator==(const KeyOf_QuerySymbolOfSTMT&) const = default;
 	};
 
 	/**
@@ -85,7 +85,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Symbol to lookup in
 		 */
-		SymID       symbol;
+		SymID symbol;
 
 		/**
 		 * @brief Name to lookup
@@ -95,11 +95,11 @@ namespace compiler::helios {
 		/**
 		 * @brief Should wildcards be included in lookup
 		 */
-		bool        follow_wildcards;
+		bool follow_wildcards;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
-		bool operator==(const KeyOf_LookupInSymbol&) const = default;
+		bool        operator==(const KeyOf_LookupInSymbol&) const = default;
 	};
 
 	/**
@@ -132,7 +132,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Retuns scope to lookup in
 	 * when looking up in given symbol.
-	 * 
+	 *
 	 * @note For HELIOS internal use only
 	 * @note It is a partial Query it for example does not necessary
 	 */
@@ -142,5 +142,10 @@ namespace compiler::helios {
 	/**
 	 * A query that returns an "absolute path" to the symbol without aliases.
 	 */
-	DECLARE_QUERY(QueryDealias, SymID, SymbolList);
+	DECLARE_QUERY(QueryDealias, SymID, const SymbolList&);
+
+	/**
+	 * Calculates a value of a contant.
+	 */
+	DECLARE_QUERY(QueryConstValueOf, SymID, i32);
 }

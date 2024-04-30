@@ -13,7 +13,7 @@
 #include <base/maps.hpp>
 #include <variant>
 #include <base/variant.hpp>
-#include <base/str_to_int.hpp>
+#include <base/str_utils.hpp>
 #include <services_data/type_metadata/type_metadata.hpp>
 
 namespace assemble {
@@ -823,8 +823,8 @@ namespace assemble {
 #else
 			funcData.bc.emplace_back(vm::Fix8Instruction{
 				.opcode = static_cast<u16>(nameToOpcodeValue(op->opcode_name)),
-				.arg0   = static_cast<i32>(arg_0),
-				.arg1   = static_cast<i32>(arg_1) });
+				.arg0 = static_cast<i32>(arg_0),
+				.arg1 = static_cast<i32>(arg_1) });
 #endif
 		}
 		return funcData;
