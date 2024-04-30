@@ -89,10 +89,9 @@ private:
 		for (auto&& sym_id: absolute_path)
 			std::cout << compiler::helios::name(sym_id).str() << '\n';
 
-		// auto get_value =
-		// 	[&](auto&& name) {
-		// 		return query::queryEntryPoint<QueryLookupConstValueInScope>();
-		// 	}
+		// auto get_value = [&](auto&& name) {
+		// 	return query::queryEntryPoint<compiler::helios::QueryConstValueOf>(get_s);
+		// }
 		//
 		// auto C
 		// 	= get_symbol("C");

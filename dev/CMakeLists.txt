@@ -56,8 +56,8 @@ endif()
 # "-O2" here is needed so standard "cmake .." is compiled with O2.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
-# Debug version uses O0 and prints all logs. 
-#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
+# Debug version uses O0 and prints all logs.
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
 
 # Release version uses O2, not O3. It might change.
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")

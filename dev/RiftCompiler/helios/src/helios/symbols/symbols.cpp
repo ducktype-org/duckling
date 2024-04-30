@@ -312,8 +312,7 @@ namespace compiler::helios {
 		  public query::QueryImplementation<QueryConstValueOf, i32> {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			RIFT_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
-			auto&& alias_definition
-				= dynamic_cast<const pst::Alias*>(getSymRef(key)->pst_stmt.get());
+			return 0;
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
