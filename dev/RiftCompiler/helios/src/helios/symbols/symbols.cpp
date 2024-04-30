@@ -318,7 +318,7 @@ namespace compiler::helios {
 		case '/':
 		case '%':
 			return 2;
-		case '#':  // Power ;D
+		case '^':  // Power ;D
 			return 3;
 		default:
 			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
@@ -335,7 +335,7 @@ namespace compiler::helios {
 					auto&& sym_id = ctx.query<QueryLookupInScopeAndParents>(
 						{ key.expr_scope, idt.indent_id, true }
 					);
-					rpn.emplace_back(rpn::Identifier{ sym_id.getAsSingle() });
+					rpn.emplace_back(Identifier{ sym_id.getAsSingle() });
 				}
 				variant_case(pst::Expr::Operator, oper) {
 					auto      new_op   = Operator{ oper.oper_id };
@@ -410,7 +410,7 @@ namespace compiler::helios {
 		case '%':
 			value = b_value % a_value;
 			break;
-		case '#':
+		case '^':
 			// TODO: Make this quickPower - O(log(b_value))
 			{
 				value = 1;

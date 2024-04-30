@@ -13,6 +13,9 @@ const A: i32 = 1;
 
 const B: i32 = (X - 6) + (1 + A);
 
+const E: i32 = 2 + 2 * 2;
+const MAX_I32: i32 = 2 ^ 31 - 1;
+
 using N.*;
 
 namespace NN {
@@ -32,3 +35,7 @@ namespace Inner {
 	const Inner_X: i32 = 123; 
 }
 using Inner.*;
+
+// This does not work yet, as it requires evaluating the "." operator.
+// const F: i32 = ((A + 1) / 2 + (E + 2) / 2) ^ 2 * NN.A;
+const F: i32 = ((A + 1) / 2 + (E + 2) / 2) ^ 2 * H;

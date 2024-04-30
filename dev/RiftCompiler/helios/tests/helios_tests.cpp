@@ -74,10 +74,13 @@ private:
 		ASSERT_EQUAL(1, get_value("A"));
 		ASSERT_EQUAL(-3, get_value("B"));
 		ASSERT_EQUAL(-1, get_value("D"));
+		ASSERT_EQUAL(6, get_value("E"));
+		ASSERT_EQUAL(std::numeric_limits<i32>::max(), get_value("MAX_I32"));
 		ASSERT_EQUAL(3, get_value("H2"));
 		ASSERT_EQUAL(1, get_value("T0"));
 		ASSERT_EQUAL(2, get_value("T1"));
 		ASSERT_EQUAL(3, get_value("T2"));
+		ASSERT_EQUAL(75, get_value("F"));
 	}
 };
 
