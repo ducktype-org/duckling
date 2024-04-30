@@ -33,8 +33,8 @@ include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureCompileOptions.cmake
 set(CMAKE_CXX_CREATE_ASSEMBLY_SOURCE "<CMAKE_CXX_COMPILER> $(CXX_DEFINES) $(CXX_INCLUDES) ${CMAKE_CXX_FLAGS} -S -masm=intel -fverbose-asm <SOURCE> -o <ASSEMBLY_SOURCE> -std=c++20")
 
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureTests.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigrureGlobalCleanTargets.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigrureModules.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureGlobalCleanTargets.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureModules.cmake)
 
 
 # The first test is building tests.
