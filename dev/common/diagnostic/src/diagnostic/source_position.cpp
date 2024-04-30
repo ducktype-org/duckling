@@ -36,16 +36,16 @@ namespace dia {
 		  source_start(source_start),
 		  source_end(source_end),
 		  source_file(source_file) {
-		if (!source_file) throw base::LogicError("Invalid SourcePosition: No such file");
-		if (line == 0) throw base::LogicError("Invalid SourcePosition: line = 0");
-		if (column == 0) throw base::LogicError("Invalid SourcePosition: column = 0");
+		//		if (!source_file) throw base::LogicError("Invalid SourcePosition: No such file");
+		//		if (line == 0) throw base::LogicError("Invalid SourcePosition: line = 0");
+		//		if (column == 0) throw base::LogicError("Invalid SourcePosition: column = 0");
 		if (source_end < source_start)
 			throw base::LogicError("Invalid SourcePosition: source end before source start");
 		// allow EOF position
-		if (not(source_end == source_start and source_end == source_file->getContent().size())) {
-			if (source_end >= source_file->getContent().size())
-				throw base::LogicError("Invalid SourcePosition: source end outside the file");
-		}
+		/* if (not(source_end == source_start and source_end == source_file->getContent().size())) {
+		    if (source_end >= source_file->getContent().size())
+		        throw base::LogicError("Invalid SourcePosition: source end outside the file");
+		} */
 	}
 
 	SourcePosition::SourcePosition(const SourcePosition& other, const usize source_end):

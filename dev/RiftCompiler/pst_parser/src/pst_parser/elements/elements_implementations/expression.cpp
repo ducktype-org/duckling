@@ -48,29 +48,30 @@ namespace pst {
 		while (state.notEmpty() and i < len) {
 			i++;
 
+			auto position = state.ctokens().peek().getPosition();
 			if (state.ctokens().peek().isBracketGroup()) {
 				auto type = fromTokenType(state.ctokens().peek().getBracketType());
 				state.goDown();
 				if (state.notEmpty()) {
-					out->elements.emplace_back(Group{ type, Expr::parse(state) });
+					out->elements.emplace_back(Group{ type, Expr::parse(state), position });
 				} else {
 					out->elements.emplace_back(Group{
-						type, makeRef<Expr>(state.ctokens().peek().getPosition()) });
+						type, makeRef<Expr>(state.ctokens().peek().getPosition()), position });
 				}
 				state.goUpAndSkip();
 			} else if (state.ctokens().isOperator()) {
 				auto token = state.tokens().next();
-				out->elements.emplace_back(Operator({ token.getValue() }));
+				out->elements.emplace_back(Operator({ token.getValue(), position }));
 			} else if (state.ctokens().peek().isIdentifier()) {
 				auto token = state.tokens().next();
-				out->elements.emplace_back(Identifier({ token.getValue() }));
+				out->elements.emplace_back(Identifier({ token.getValue(), position }));
 			} else if (state.ctokens().isKeyword()) {
 				// @TODO: check if keyword is legal in expr and proceed accordingly
 				auto token = state.tokens().next();
-				out->elements.emplace_back(KeywordValue({ token.asKeyword() }));
+				out->elements.emplace_back(KeywordValue({ token.asKeyword(), position }));
 			} else if (state.ctokens().peek().isNumLiteral()) {
 				auto token = state.tokens().next();
-				out->elements.emplace_back(NumLiteral({ token.getValue() }));
+				out->elements.emplace_back(NumLiteral({ token.getValue(), position }));
 			} else if (state.ctokens().is(Special::Semicolon)) {
 				break;
 			}

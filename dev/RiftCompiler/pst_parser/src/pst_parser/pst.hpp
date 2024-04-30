@@ -34,5 +34,7 @@ namespace pst {
 			  imports(std::move(other.imports)) {}
 
 		void dprint(std::ostream& out) const;
+
+		void getLSP(std::ostream& out) const;
 	};
 }
