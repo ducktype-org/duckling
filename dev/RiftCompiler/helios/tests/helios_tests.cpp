@@ -41,21 +41,6 @@ private:
 		auto symbols_in_module
 			= query::queryEntryPoint<compiler::helios::QuerySymbolsInScope>(root_scope);
 
-		auto get_symbol = [&](const std::string& name) {
-			auto&& q = query::queryEntryPoint<compiler::helios::QueryLookupInScopeAndParents>(
-				{ root_scope, base::StrId(name.c_str()), true }
-			);
-			ASSERT_EQUAL(true, q.isSingle());
-
-			compiler::helios::SymbolList result;
-			for (auto&& path = q.getAsSingle(); auto&& elem: path) {
-				auto&& dealiased = query::queryEntryPoint<compiler::helios::QueryDealias>(elem);
-				result.insert(result.end(), dealiased.begin(), dealiased.end());
-			}
-
-			return result;
-		};
-
 		auto get_chain = [&](auto chain) {
 			auto                         symbols = base::split(chain, ".");
 			compiler::helios::SymbolList result;
@@ -80,41 +65,19 @@ private:
 			return result;
 		};
 
-		auto symb = get_symbol("X");
-		std::cout << "Path: \n";
-		for (auto&& sym_id: symb) std::cout << compiler::helios::name(sym_id).str() << '\n';
-
-		auto absolute_path = get_chain("NN.A");
-		std::cout << "Path: \n";
-		for (auto&& sym_id: absolute_path)
-			std::cout << compiler::helios::name(sym_id).str() << '\n';
-
-		// auto get_value = [&](auto&& name) {
-		// 	return query::queryEntryPoint<compiler::helios::QueryConstValueOf>(get_s);
-		// }
+		auto get_value = [&](auto&& name) {
+			return query::queryEntryPoint<compiler::helios::QueryConstValueOf>(get_chain(name).back(
+			));
+		};
 		//
-		// auto C
-		// 	= get_symbol("C");
-		// ASSERT_EQUAL(1, C->requestValue().getData<i32>().back() == 1);
-		//
-		// auto A = get_symbol("A");
-		// ASSERT_EQUAL(1, A->requestValue().getData<i32>().back());
-		//
-		// auto B = get_symbol("B");
-		// ASSERT_EQUAL(-3, B->requestValue().getData<i32>().back());
-		//
-		// auto D = get_symbol("D");
-		// ASSERT_EQUAL(-1, D->requestValue().getData<i32>().back());
-		//
-		// auto H2 = get_symbol("H2");
-		// ASSERT_EQUAL(3, H2->requestValue().getData<i32>().back());
-		//
-		// auto T0 = get_symbol("T0");
-		// auto T1 = get_symbol("T1");
-		// auto T2 = get_symbol("T2");
-		// ASSERT_EQUAL(1, T0->requestValue().getData<i32>().back() == 1);
-		// ASSERT_EQUAL(2, T1->requestValue().getData<i32>().back() == 2);
-		// ASSERT_EQUAL(3, T2->requestValue().getData<i32>().back() == 3);
+		ASSERT_EQUAL(1, get_value("N.X"));
+		ASSERT_EQUAL(1, get_value("A"));
+		ASSERT_EQUAL(-3, get_value("B"));
+		ASSERT_EQUAL(-1, get_value("D"));
+		ASSERT_EQUAL(3, get_value("H2"));
+		ASSERT_EQUAL(1, get_value("T0"));
+		ASSERT_EQUAL(2, get_value("T1"));
+		ASSERT_EQUAL(3, get_value("T2"));
 	}
 };
 

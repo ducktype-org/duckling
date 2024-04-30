@@ -12,6 +12,7 @@
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <vector>
+#include <base/variant.hpp>
 
 namespace compiler::helios {
 
@@ -308,11 +309,177 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryDealias, "QueryDealias");
 
+	int getPriority(const rpn::Operator& op) {
+		switch (static_cast<char>(op.oper_id.view()[0])) {
+		case '+':
+		case '-':
+			return 1;
+		case '*':
+		case '/':
+		case '%':
+			return 2;
+		case '#':  // Power ;D
+			return 3;
+		default:
+			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
+		}
+	}
+
+	std::vector<rpn::ExprElem>
+		rpn::ExtensionMakeRPN(query::detail::ContextType& ctx, KeyOf_ExtensionMakeRPN key) {
+		std::vector<ExprElem> rpn;
+		std::stack<ExprElem>  st;
+		for (auto&& e: key.expr) {
+			variant_match(e) {
+				variant_case(pst::Expr::Identifier, idt) {
+					auto&& sym_id = ctx.query<QueryLookupInScopeAndParents>(
+						{ key.expr_scope, idt.indent_id, true }
+					);
+					rpn.emplace_back(rpn::Identifier{ sym_id.getAsSingle() });
+				}
+				variant_case(pst::Expr::Operator, oper) {
+					auto      new_op   = Operator{ oper.oper_id };
+					const int priority = getPriority(new_op);
+					while (!st.empty() && getPriority(std::get<Operator>(st.top())) > priority) {
+						rpn.emplace_back(st.top());
+						st.pop();
+					}
+					st.emplace(new_op);
+				}
+				variant_case(pst::Expr::NumLiteral, num) {
+					rpn.emplace_back(NumLiteral{ num.num_id });
+				}
+				variant_case(pst::Expr::Group, group) {
+					auto&& res = ctx.callExt<ExtensionMakeRPN>(KeyOf_ExtensionMakeRPN{
+						group.expr->elements, key.expr_scope });
+					rpn.insert(rpn.end(), res.begin(), res.end());
+				}
+				variant_case(pst::Expr::KeywordValue, keyword_val) {
+					rpn.emplace_back(KeywordValue{ keyword_val.keyword });
+				}
+				variant_default { RIFT_PANIC("Bad Expr alternative"); }
+			}
+		}
+		while (!st.empty()) {
+			rpn.push_back(st.top());
+			st.pop();
+		}
+
+		return rpn;
+	}
+
+	i32 rpn::ExtenstionRPNValue(
+		query::detail::ContextType& ctx, const KeyOf_ExtensionRPNValue& key
+	) {
+		variant_match(key.expr) {
+			variant_case(rpn::Identifier, idt) {
+				// .back() works for constants only.
+				auto&& sym_id = ctx.query<QueryDealias>(idt.symbol_list.back());
+				return ctx.query<QueryConstValueOf>(sym_id.back());
+			}
+			variant_case(rpn::Operator, op) { RIFT_PANIC("Cannot get a value from rpn::Operator"); }
+			variant_case(rpn::KeywordValue, keyword_value) {
+				throw base::NotYetImplemented("Value of KeywordValue is not yet implemented");
+			}
+			variant_case(rpn::NumLiteral, literal) { return std::stoi(literal.num_id.str()); }
+			variant_default { RIFT_PANIC("Bad Expr alternative"); }
+		}
+		RIFT_PANIC("Error in RPNValue expr...");
+	}
+
+	rpn::ExprElem
+		rpn::ExtensionRPNEval(query::detail::ContextType& ctx, const KeyOf_ExtensionRPNEval& key) {
+		auto&& [a, op, b, expr_scope] = key;
+		i32 a_value = ctx.callExt<ExtenstionRPNValue>(KeyOf_ExtensionRPNValue{ a, expr_scope });
+		i32 b_value = ctx.callExt<ExtenstionRPNValue>(KeyOf_ExtensionRPNValue{ b, expr_scope });
+
+		i32 value;
+		switch (static_cast<char>(op.oper_id.view()[0])) {
+		case '+':
+			value = b_value + a_value;
+			break;
+		case '-':
+			value = b_value - a_value;
+			break;
+		case '*':
+			value = b_value * a_value;
+			break;
+		case '/':
+			value = b_value / a_value;
+			break;
+		case '%':
+			value = b_value % a_value;
+			break;
+		case '#':
+			// TODO: Make this quickPower - O(log(b_value))
+			{
+				value = 1;
+				while (a_value-- > 0) value *= b_value;
+			}
+			break;
+		default:
+			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
+		}
+		return NumLiteral{ base::StrId(std::to_string(value).c_str()) };
+	}
+
 	struct ImplementationOf_QueryConstValueOf:
 		  public query::QueryImplementation<QueryConstValueOf, i32> {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			RIFT_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
-			return 0;
+
+			auto&& const_symbol = dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
+			auto&& key_scope    = scope(key);
+
+			auto&& expr = ctx.callExt<rpn::ExtensionMakeRPN>(rpn::KeyOf_ExtensionMakeRPN{
+				const_symbol->getValue()->elements,
+				key_scope,
+			});
+
+			// This is a nice RPN debug print.
+			// std::cout << "RPN: \n";
+			// for (auto&& e: expr) {
+			// 	std::cout << "expr: ";
+			// 	variant_match(e) {
+			// 		variant_case(rpn::Identifier, idt) {
+			// 			for (auto&& s: idt.symbol_list) std::cout << name(s).str() << '.';
+			// 		}
+			// 		variant_case(rpn::Operator, op) { std::cout << op.oper_id.str(); }
+			// 		variant_case(rpn::KeywordValue, keyword_value) {
+			// 			std::cout << keywordToStr(keyword_value.keyword).str();
+			// 		}
+			// 		variant_case(rpn::NumLiteral, literal) { std::cout << literal.num_id.str(); }
+			// 		variant_default { RIFT_PANIC("Bad Expr alternative"); }
+			// 	}
+			// 	std::cout << '\n';
+			// }
+
+			// Here we will evaluate the RPN.
+			std::stack<rpn::ExprElem> st;
+			for (auto&& e: expr) {
+				variant_match(e) {
+					variant_case(rpn::Identifier, idt) {
+						// Assuming idt is NOT A FUNCTION.
+						st.emplace(idt);
+					}
+					variant_case(rpn::Operator, oper) {
+						const auto a = st.top();
+						st.pop();
+						const auto b = st.top();
+						st.pop();
+
+						st.push(ctx.callExt<rpn::ExtensionRPNEval>(rpn::KeyOf_ExtensionRPNEval{
+							a, oper, b, key_scope }));
+					}
+					variant_case(rpn::NumLiteral, num) { st.emplace(num); }
+					variant_default { RIFT_PANIC("Bad Expr alternative"); }
+				}
+			}
+			RIFT_ASSERT(st.size() == 1, "Expression stack should have 1 element");
+			return ctx.callExt<rpn::ExtenstionRPNValue>(rpn::KeyOf_ExtensionRPNValue{
+				st.top(),
+				key_scope,
+			});
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF

@@ -148,4 +148,48 @@ namespace compiler::helios {
 	 * Calculates a value of a contant.
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, i32);
+
+	namespace rpn {
+		struct Operator {
+			base::StrId oper_id;
+		};
+
+		struct Identifier {
+			SymbolList symbol_list;
+		};
+
+		struct NumLiteral {
+			// This can be replaced with type-system type and value
+			base::StrId num_id;
+		};
+
+		struct KeywordValue {
+			rift_def::Keyword keyword;
+		};
+
+		using ExprElem = std::variant<Operator, Identifier, NumLiteral, KeywordValue>;
+
+		struct KeyOf_ExtensionMakeRPN {
+			const std::vector<pst::Expr::ExprElem>& expr;
+			ScopeID                                 expr_scope;
+		};
+
+		QUERY_EXTENSION(ExtensionMakeRPN, KeyOf_ExtensionMakeRPN, std::vector<ExprElem>);
+
+		struct KeyOf_ExtensionRPNEval {
+			ExprElem a;
+			Operator op;
+			ExprElem b;
+			ScopeID  expr_scope;
+		};
+
+		QUERY_EXTENSION(ExtensionRPNEval, const KeyOf_ExtensionRPNEval&, ExprElem);
+
+		struct KeyOf_ExtensionRPNValue {
+			ExprElem expr;
+			ScopeID  expr_scope;
+		};
+
+		QUERY_EXTENSION(ExtenstionRPNValue, const KeyOf_ExtensionRPNValue&, i32);
+	}
 }
