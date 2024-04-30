@@ -1,14 +1,22 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
+
+// @TODO: relax this dependency
+#include <frontend/module_tree/module_tree.hpp> // ModuleId
+
 #include <vector>
 
 namespace compiler::helios {
 
-
+	/**
+	 * @brief placeholder for code that can execute (expressions, function body, etc)
+	 */
 	struct HOUTCode {};
 
-	// placeholder for functions, methods, etc
+	/**
+	 * @brief placeholder for functions, methods, etc
+	 */
 	struct HOUTFunction {};
 
 	/**
@@ -23,12 +31,10 @@ namespace compiler::helios {
 		// * vector/references to hout of submodules? -- not necessarily needed
 		// * what else?
 
-		// @TODO: do we need separation:
+		// @FUTURE: we will probably need separation:
 		std::vector<SymID> first_class_citizens;
 
 		std::vector<frontend::ModuleId> imported_modules;
 	};
 
 }
-
-// @TODO std hash..
