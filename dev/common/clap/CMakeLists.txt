@@ -13,7 +13,8 @@ add_library(Clap
 	src/clap/exceptions.hpp
 	src/clap/help_message_generator.cpp
 	src/clap/help_message_generator.hpp
-	src/clap/clap_class.hpp)
+	src/clap/clap_class.hpp
+)
 
 make_module(Clap USES Base Filesystem)
 

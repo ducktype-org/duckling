@@ -4,7 +4,8 @@ add_library(Lexer
 	src/lexer/lexer.cpp
 	src/lexer/classifications.cpp
 	src/lexer/decode.cpp
-	src/lexer/lexer_class.cpp)
+	src/lexer/lexer_class.cpp
+)
 
 make_module(Lexer USES Filesystem Printer RiftDefinitions unicode Result::Result Diagnostic)
 

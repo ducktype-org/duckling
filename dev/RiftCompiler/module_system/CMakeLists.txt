@@ -1,5 +1,6 @@
 add_library(ModuleSystem
-	src/module_system/import_to_path.cpp)
+	src/module_system/import_to_path.cpp
+)
 
 make_module(ModuleSystem USES Base PstParser)
 

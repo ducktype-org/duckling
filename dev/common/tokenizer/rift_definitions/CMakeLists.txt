@@ -1,6 +1,7 @@
 add_library(RiftDefinitions
 	src/rift_definitions/key_spec_op.cpp
-	src/rift_definitions/operator_precedence.cpp)
+	src/rift_definitions/operator_precedence.cpp
+)
 
 make_module(RiftDefinitions USES Base)
 

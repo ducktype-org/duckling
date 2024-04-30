@@ -1,7 +1,8 @@
 add_library(Operations
 	src/operations/operation.cpp
 	src/operations/create_default.cpp
-	src/operations/internal/builtin_operations.cpp)
+	src/operations/internal/builtin_operations.cpp
+)
 
 make_module(Operations USES TypeSystem Exec Base)
 

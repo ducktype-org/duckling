@@ -3,7 +3,8 @@ add_library(Exec
 	src/exec/ctv.cpp
 	src/exec/operators/builtinoperators.cpp
 	src/exec/vtable_creation.cpp
-	src/exec/exec_default.cpp)
+	src/exec/exec_default.cpp
+)
 
 make_module(Exec USES Base Operations)
 
