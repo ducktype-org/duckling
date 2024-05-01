@@ -120,9 +120,9 @@ namespace query {
 
 		using QKey        = typename QueryType_tp::QKey;
 		using QResult     = typename QueryType_tp::QResult;
-		using QResWithACD = AddACD<QResult>;
+		using QResWithACD = CacheEntry<QResult>;
 		using PResult     = PResult_tp;
-		using PResWithACD = AddACD<PResult>;
+		using PResWithACD = CacheEntry<PResult>;
 		using LoadResult  = base::Optional<QResWithACD>;
 
 		using Context = ::query::detail::ContextType;
@@ -158,7 +158,7 @@ namespace query {
  * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_PRESULT                                                                \
-	static inline base::HashMap<QKey, query::AddACD<PResult>, ::base::PerfectHashFunctor<QKey>> \
+	static inline base::HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>> \
 				cache;                                                                          \
 	static auto load(QKey key) -> LoadResult { return cache.atMaybeCopy(key); }                 \
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                       \

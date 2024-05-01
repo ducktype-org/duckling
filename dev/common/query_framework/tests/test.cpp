@@ -29,7 +29,7 @@ DECLARE_QUERY(FibonacciSum, Key2, uint64_t);
  * Q1: *
  * * * */
 struct ImplementationOf_Fibonacci: query::QueryImplementation<Fibonacci, u64> {
-	inline static std::map<QKey, query::AddACD<QResult>> cache;
+	inline static std::map<QKey, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		if (key.v == 0)
