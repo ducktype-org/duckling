@@ -5,13 +5,15 @@
 
 #pragma once
 
-#include <base/borrow_pointer.hpp>
+#include <filesystem/file.hpp>
+//#include <base/borrow_pointer.hpp>
+#include <memory>
 #include <printer/message.hpp>
 #include <string>
 
-namespace tokenizer {
-	class TokenFile;
-}
+// namespace tokenizer {
+	// class TokenFile;
+// }
 
 namespace dia {
 	/**
@@ -21,13 +23,16 @@ namespace dia {
 	 */
 	class SourcePosition {
 	public:
-		using SourceFile = base::borrow_ptr<tokenizer::TokenFile>;
+		//using SourceFile = base::borrow_ptr<tokenizer::TokenFile>;
+		using SourceFile = std::shared_ptr<const fs::FilePath>;
 
 		SourcePosition() = delete;
 
-		SourcePosition(SourceFile source_file, usize line, usize column, usize source_start);
+		//SourcePosition(SourceFile source_file, usize line, usize column, usize source_start);
+		SourcePosition(const SourceFile& source_file, usize line, usize column, usize source_start);
 		SourcePosition(
-			SourceFile source_file,
+			//SourceFile source_file,
+			const SourceFile& source_file,
 			usize             line,
 			usize             column,
 			usize             source_start,

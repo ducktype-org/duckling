@@ -1,6 +1,7 @@
 
-#include "base/borrow_pointer.hpp"
+#include <base/borrow_pointer.hpp>
 #include <base/unique_pointer.hpp>
+#include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/token.hpp>
 
@@ -13,6 +14,7 @@ namespace tokenizer {
 	class TokenFile {
 	private:
 		fs::FilePath path;	
+		dia::Logger log;
 		base::Optional<fs::FileContent> content;
 		base::Optional<lexer::CharArray> decoded;
 		base::Optional<lexer::TokenData> token_data;
@@ -22,7 +24,7 @@ namespace tokenizer {
 		 */
 		std::vector<std::pair<usize, usize>> lines;
 		/**
-		 * @brief Stores pairs (source file index, line number)
+		 * @brief Stores pairs (Character index, line number)
 		 */
 		std::set<std::pair<usize, usize>> line_begins;
 
@@ -55,6 +57,18 @@ namespace tokenizer {
 		fs::FileContent getContent();		
 
 		lexer::TokenData& getTokenData();
+
+		void decode();
+
+		void countLines();
+
+		void runLexer();
+
+		void tokenize() {
+			decode();
+			countLines();
+			runLexer();
+		}
 	};
 
 	template <class... Ts>

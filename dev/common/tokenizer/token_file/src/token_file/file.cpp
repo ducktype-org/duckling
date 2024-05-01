@@ -1,10 +1,10 @@
+#include "file.hpp"
 #include <base/exceptions.hpp>
 #include <lexer/classifications.hpp>
 #include "base/raw_view.hpp"
-#include "diagnostic/logger.hpp"
-#include "file.hpp"
 #include "filesystem/encoding.hpp"
 #include "lexer/decode.hpp"
+#include "lexer/lexer_class.hpp"
 
 namespace tokenizer {
 	usize isNewLine(const std::span<lexer::Char> where) {
@@ -20,24 +20,33 @@ namespace tokenizer {
 
 	TokenFile::TokenFile(fs::FilePath&& path): path(std::move(path)) {
 		content = path.getContent();
-		auto log = dia::Logger();
+	}
+	void TokenFile::decode() {
 		decoded = lexer::decode<fs::UTF8>(content->view(), log);
+	}
 
+	void TokenFile::countLines() {
 		usize line = 1;
 		usize start = 0;
 		usize newline{};
+		
 		line_begins.insert({0, 1});
 		for(usize i = 0; i < content->size(); i++) {
 			newline = isNewLine({decoded->begin() + (long)i, decoded->end()});
 			if (newline) {
-				usize end = (*decoded)[i + newline].raw_begin - (*decoded)[]
-				lines.emplace_back(start, );
+				lines.emplace_back(start, i + newline - 1);
 				line++;
-				start = i + newline;
+				start = i + 1;
 				line_begins.insert({i + newline, line});
 			}
 		}
-		lines.emplace_back()
+		// Last line without EOF
+		lines.emplace_back(start, content->size() - 2);
+	}
+
+	void TokenFile::runLexer() {
+		lexer::Lexer lexer{path};
+		token_data = lexer.tokenize();
 	}
 
 	fs::FileContent TokenFile::getContent() {
