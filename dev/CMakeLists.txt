@@ -42,24 +42,35 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	# @TODO: decide of std++20 vs gnu++20
 	message("-- GNU compiler")
-  # '-std=c++20' is necessary for successful assembly target generation during RiftVM development
-  add_compile_options(-std=c++20 -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare -O2)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare")
+
+	# Debug version uses Og and prints all logs. 
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
+
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
-	# I didn't find a good -Werror=terminate alternative
-	add_compile_options(-Werror=return-type -Werror=shadow-all -Werror=return-stack-address -Werror=free-nonheap-object -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare -O2)
+	# I didn't find a good -Werror=terminate alternative for Clang.
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=shadow-all -Werror=return-stack-address -Werror=free-nonheap-object -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare")
+
+	# Debug version uses O0 and prints all logs. 
+	# For some reason -Og does not work in clang
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -O0")
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()
 
-# Wersja debug wypisuje na razie wszystkie możliwe informacje dynamicznie
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
+# "-O2" here is needed so standard "cmake .." is compiled with O2.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+
+# Release version uses O2, not O3. It might change.
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Configure assembly targets generation (*.s) to include Intel-style asm and source code/asm interleaving
-set(CMAKE_CXX_CREATE_ASSEMBLY_SOURCE "<CMAKE_CXX_COMPILER> $(CXX_DEFINES) $(CXX_INCLUDES) ${CMAKE_CXX_FLAGS} -S -masm=intel -fverbose-asm <SOURCE> -o <ASSEMBLY_SOURCE>")
+# Configure assembly targets generation (*.s) to include Intel-style asm and source code/asm interleaving. std=c++20 is needed for some reason.
+set(CMAKE_CXX_CREATE_ASSEMBLY_SOURCE "<CMAKE_CXX_COMPILER> $(CXX_DEFINES) $(CXX_INCLUDES) ${CMAKE_CXX_FLAGS} -S -masm=intel -fverbose-asm <SOURCE> -o <ASSEMBLY_SOURCE> -std=c++20")
 
 if (ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
@@ -101,8 +112,8 @@ function(rift_add_test test_pack test_name source USES)
 		# In general it should be only used in workflows.
 		if (DOWNLOAD_UBUNTU_ICU_BUILD STREQUAL "ON")
 			set_property(TEST "${test_name}"
-						 PROPERTY ENVIRONMENT
-						 "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/_deps/ubuntu-icu-src/usr/local/lib/")
+						PROPERTY ENVIRONMENT
+						"LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/_deps/ubuntu-icu-src/usr/local/lib/")
 		endif ()
 
 		set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)

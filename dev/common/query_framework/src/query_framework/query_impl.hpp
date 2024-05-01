@@ -2,6 +2,7 @@
 
 #include <base/optional.hpp>
 #include <base/str_concat.hpp>
+#include <utility>
 
 #include "acd.hpp"
 #include "query_int.hpp"
@@ -33,6 +34,19 @@ namespace query {
 				dep_graph::addDependency(my_node, dep_id);
 
 				return OthQuery::internal_query(key, my_node);
+			}
+
+			/**
+			 * @brief Calls query extension passes as template argument.
+			 *
+			 * @tparam Query Extension
+			 * @tparam Arguments of query extension
+			 * @param args
+			 * @return Return value of query extension
+			 */
+			template<auto Extension, typename... Args>
+			auto callExt(Args&&... args) {
+				return Extension(*this, std::forward<Args>(args)...);
 			}
 
 			void log(std::string_view str) {
@@ -120,6 +134,8 @@ namespace query {
 		 *  static auto store(QKey key, PResult res, query::ACD acd) -> QResult;
 		 */
 	};
+
+	using Context = detail::ContextType;
 
 }
 
