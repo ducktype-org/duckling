@@ -16,8 +16,9 @@ namespace {
 		random_name(const std::filesystem::path& prefix_path, const size_t name_len = 16) {
 		static std::random_device device;
 		static std::mt19937       rng(device());
-		static char name_chars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPRQSTUVWXYZ";
-		static std::uniform_int_distribution<size_t> dist(0, sizeof(name_chars) - 2);  // -2 = ^ \0
+		static std::string        name_chars
+			= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPRQSTUVWXYZ";
+		static std::uniform_int_distribution<size_t> dist(0, name_chars.length() - 1);
 
 		// This is 64, but usually it will not loop more than once.
 		for (size_t try_no = 0; try_no < 64; try_no++) {
