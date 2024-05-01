@@ -66,29 +66,28 @@ namespace fs {
 
 		friend struct ::std::hash<fs::FilePath>;
 
+
+		bool            is_temporary = false;
+		static FilePath getDefaultTempPath();
+
 	public:
 		FilePath(const FilePath&) = default;
 		FilePath(FilePath&&)      = default;
 		~FilePath()               = default;
 
-		FilePath(const std::filesystem::path& path):
-			  path(std::filesystem::canonical(std::filesystem::absolute(path))) {}
+		FilePath(const std::filesystem::path& path): path(canonical(absolute(path))) {}
 
 		// @TODO: this might not be perfect:
 		bool operator==(const FilePath& oth) const { return path == oth.path; }
 
-		// NOLINTBEGIN(concurrency-mt-unsafe)
-		static FilePath createTempFile(const std::string& content) {
-			const std::string name = std::tmpnam(nullptr);
+		static FilePath createTempDirectory();
+		FilePath        createTempDirectoryIn(const std::string& custom_name = "") const;
 
-			std::fstream temp_file(name, std::ios::out | std::ios::app);
-			temp_file << content;
-			temp_file.close();
+		static FilePath createTempFile(const std::string& content);
+		FilePath        createTempFileIn(
+				   const std::string& new_file_content, const std::string& custom_name = ""
+			   ) const;
 
-			return { std::filesystem::temp_directory_path() / name };
-		}
-
-		// NOLINTEND(concurrency-mt-unsafe)
 
 		[[nodiscard]]
 		FileContent getContent() const;

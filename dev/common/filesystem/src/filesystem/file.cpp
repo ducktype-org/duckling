@@ -9,10 +9,90 @@
 #include <base/exceptions.hpp>
 
 #include <fstream>
-#include <iterator>
+#include <random>
+
+namespace {
+	std::filesystem::path
+		random_name(const std::filesystem::path& prefix_path, const size_t name_len = 16) {
+		static std::random_device device;
+		static std::mt19937       rng(device());
+		static char name_chars[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPRQSTUVWXYZ";
+		static std::uniform_int_distribution<size_t> dist(0, sizeof(name_chars) - 2);  // -2 = ^ \0
+
+		// This is 64, but in reality it will not loop more than once.
+		for (size_t try_no = 0; try_no < 64; try_no++) {
+			std::string name;
+			for (int i = 0; i < name_len; i++) name.push_back(name_chars[dist(rng)]);
+			if (!exists(prefix_path / name)) return prefix_path / name;
+		}
+		throw base::LogicError("Couldn't create a new name in: " + absolute(prefix_path).string());
+	}
+}
 
 namespace fs {
 	FilePath::ContentMap FilePath::to_content;
+
+	FilePath FilePath::getDefaultTempPath() {
+		static FilePath tempDirectoryPath(std::filesystem::temp_directory_path());
+		tempDirectoryPath.is_temporary = true;
+		return tempDirectoryPath;
+	}
+
+	FilePath FilePath::createTempFile(const std::string& content) {
+		return getDefaultTempPath().createTempFileIn(content);
+	}
+
+	FilePath FilePath::createTempDirectory() {
+		return getDefaultTempPath().createTempDirectoryIn();
+	}
+
+	FilePath FilePath::createTempDirectoryIn(const std::string& custom_name) const {
+		if (!is_temporary) throw base::LogicError("Parent is not temporary");
+
+		std::filesystem::path file_name;
+		if (custom_name.empty())
+			file_name = random_name(path);
+		else {
+			file_name = path / custom_name;
+			if (exists(file_name))
+				throw base::LogicError(
+					"Cannot create a directory with name \"" + custom_name
+					+ "\", because there already is a directory with this name in " + absolutePath()
+				);
+		}
+
+		create_directory(file_name);
+		FilePath result(file_name);
+		result.is_temporary = true;
+		return result;
+	}
+
+	FilePath FilePath::createTempFileIn(
+		const std::string& new_file_content, const std::string& custom_name
+	) const {
+		if (!is_temporary) throw base::LogicError("Parent is not temporary");
+
+		std::filesystem::path file_name;
+		if (custom_name.empty())
+			file_name = random_name(path);
+		else {
+			file_name = path / custom_name;
+			if (exists(file_name))
+				throw base::LogicError(
+					"Cannot create a file with name \"" + custom_name
+					+ "\", because there already is a file with this name in " + absolutePath()
+				);
+		}
+
+
+		std::fstream temp_file(file_name, std::ios::out | std::ios::app);
+		temp_file << new_file_content;
+		temp_file.close();
+
+		FilePath result(file_name);
+		result.is_temporary = true;
+		return result;
+	}
 
 	FileContent FilePath::getContent() const {
 		if (to_content.contains(path)) {
@@ -33,7 +113,7 @@ namespace fs {
 	}
 
 	cpp::result<FileContent, std::string> FilePath::getContentSafe() const {
-		if (!std::filesystem::exists(path)) {
+		if (!exists(path)) {
 			return cpp::fail(base::strConcat(
 				"Error: cannot get content of file `", path, "` - file does not exist"
 			));
