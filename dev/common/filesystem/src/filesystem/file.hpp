@@ -64,11 +64,15 @@ namespace fs {
 		static ContentMap     to_content;
 		std::filesystem::path path;
 
-		friend struct ::std::hash<fs::FilePath>;
+		friend struct std::hash<FilePath>;
 
+		static FilePath getDefaultTempPath();
 
 		bool            is_temporary = false;
-		static FilePath getDefaultTempPath();
+		static FilePath createTempFilePathObj(const std::filesystem::path& path);
+
+		[[nodiscard]]
+		std::filesystem::path genTempPathInMe(const std::string& custom_name = "") const;
 
 	public:
 		FilePath(const FilePath&) = default;
@@ -80,13 +84,16 @@ namespace fs {
 		// @TODO: this might not be perfect:
 		bool operator==(const FilePath& oth) const { return path == oth.path; }
 
-		static FilePath createTempDirectory();
+		[[nodiscard]]
 		FilePath        createTempDirectoryIn(const std::string& custom_name = "") const;
+		static FilePath createTempDirectory();
 
+
+		[[nodiscard]]
+		FilePath createTempFileIn(
+			const std::string& new_file_content, const std::string& custom_name = ""
+		) const;
 		static FilePath createTempFile(const std::string& content);
-		FilePath        createTempFileIn(
-				   const std::string& new_file_content, const std::string& custom_name = ""
-			   ) const;
 
 
 		[[nodiscard]]
