@@ -1,19 +1,22 @@
 #include "scopes.hpp"
-#include "../hout/hout.hpp"
-#include "base/maps.hpp"
-#include "base/stable_container.hpp"
-#include "../lookup_result.hpp"
-#include "base/str_concat.hpp"
-#include "frontend/module_tree/module_tree.hpp"
-#include "frontend/module_tree/queries.hpp"
-#include "pst_parser/rift_parser_base.hpp"
-#include "../pst_walkers.hpp"
-#include "query_framework/acd.hpp"
+
+#include <base/maps.hpp>
+#include <base/stable_container.hpp>
+#include <base/stable_hashmap.hpp>
+#include <base/str_concat.hpp>
 #include <base/string_id.hpp>
+
 #include <query_framework/query_impl.hpp>
+
+#include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/queries.hpp>
+
+#include <pst_parser/rift_parser_base.hpp>
+
+#include "../hout/hout.hpp"
+#include "../lookup_result.hpp"
 #include "../pst_walkers.hpp"
 #include "../symbols/symbols.hpp"
-#include <base/stable_hashmap.hpp>
 
 namespace compiler::helios {
 
