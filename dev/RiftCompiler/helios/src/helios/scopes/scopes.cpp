@@ -30,7 +30,7 @@ namespace compiler::helios {
 		// in the future we might need separation for: direct symbols, expanded symbols
 		// in this system scope is no longer closed/open as we think of it as a pure-value object
 		// any lookup in the scope requires calculation of symbols witch itself is done only once!
-		base::Optional<query::AddACD<SymbolList>> symbols;
+		base::Optional<query::CacheEntry<SymbolList>> symbols;
 
 
 		// This delete is important, to prevent any copy of scope data:
@@ -62,7 +62,7 @@ namespace compiler::helios {
 
 	struct ImplementationOf_QueryRootScopeOf:
 		  query::QueryImplementation<QueryRootScopeOf, ScopeID> {
-		inline static base::Map<frontend::ModuleId, query::AddACD<ScopeID>> cache;
+		inline static base::Map<frontend::ModuleId, query::CacheEntry<ScopeID>> cache;
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO: dont just ignore other files...

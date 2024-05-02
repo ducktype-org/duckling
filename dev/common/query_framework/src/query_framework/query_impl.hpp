@@ -120,9 +120,9 @@ namespace query {
 
 		using QKey        = typename QueryType_tp::QKey;
 		using QResult     = typename QueryType_tp::QResult;
-		using QResWithACD = AddACD<QResult>;
+		using QResWithACD = CacheEntry<QResult>;
 		using PResult     = PResult_tp;
-		using PResWithACD = AddACD<PResult>;
+		using PResWithACD = CacheEntry<PResult>;
 		using LoadResult  = base::Optional<QResWithACD>;
 
 		using Context = ::query::detail::ContextType;
@@ -158,7 +158,7 @@ namespace query {
  * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF                                                   \
-	static inline base::HashMap<QKey, query::AddACD<PResult>, ::base::PerfectHashFunctor<QKey>> \
+	static inline base::HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>> \
 				cache;                                                                          \
 	static auto load(QKey key) -> LoadResult {                                                 \
 		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
@@ -176,13 +176,13 @@ namespace query {
  */
 #define QUERY_AUTO_CACHE_PRESULT_STABLE_REF                                                        \
 	static inline base::                                                                           \
-		StableHashMap<QKey, query::AddACD<PResult>, ::base::PerfectHashFunctor<QKey>>              \
+		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>              \
 				cache;                                                                             \
 	static auto load(QKey key) -> LoadResult {                                                     \
 		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; }     \
 		return {};                                                                                 \
 	}                                                                                              \
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                          \
-		cache.put(key, query::AddACD<PResult>{ std::move(res), acd });                             \
+		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                             \
 		return cache.at(key).data;                                                                 \
 	}

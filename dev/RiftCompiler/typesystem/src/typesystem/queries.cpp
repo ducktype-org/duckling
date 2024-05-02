@@ -163,7 +163,7 @@ namespace ts {
 
 	struct ImplementationOf_QueryPointerType:
 		  query::QueryImplementation<QueryPointerType, PointerInfo::Pimpl> {
-		static inline base::Map<QKey, query::AddACD<PointerInfo>> cache;
+		static inline base::Map<QKey, query::CacheEntry<PointerInfo>> cache;
 
 		static auto provide(Context&, const QKey key) -> PResult {
 			const auto [underlying_type, is_mutable] = key;
@@ -174,7 +174,7 @@ namespace ts {
 
 		static auto store(const QKey key, const PResult p_res, const query::ACD acd) -> QResult {
 			const auto q_res = QResult{ p_res };
-			cache.emplace(key, query::AddACD<QResult>{ q_res, acd });
+			cache.emplace(key, query::CacheEntry<QResult>{ q_res, acd });
 			return q_res;
 		}
 

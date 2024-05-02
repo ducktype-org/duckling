@@ -278,7 +278,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySubmodules, "QuerySubmodu
  * QueryFilePST *
  ****************/
 struct ImplementationOf_QueryFilePST: query::QueryImplementation<QueryFilePST, const pst::PST&> {
-	inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
+	inline static base::HashMap<QKey, query::CacheEntry<QResult>> cache{};
 
 	static auto provide(Context&, QKey key) -> PResult {
 		auto& file = files.at(key);
