@@ -1,6 +1,5 @@
 #include <query_framework/query_impl.hpp>
 #include "decl.hpp"             // query declaration
-#include "query_framework/acd.hpp"
 
 #include <base/str_concat.hpp>  // base::strConcat
 #include <base/optional.hpp>    // base::Optional
