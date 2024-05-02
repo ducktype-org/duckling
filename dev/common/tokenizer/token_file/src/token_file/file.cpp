@@ -51,13 +51,24 @@ namespace tokenizer {
 
 	void TokenFile::runLexer() {
 		if (log.bad()) return;
-		lexer::Lexer lexer{path, log};
+		lexer::Lexer lexer{self};
 		token_data = lexer.tokenize();
 	}
 
 	fs::FileContent TokenFile::getContent() {
 		if (content) return content.value();
 		return path.getContent();
+	}
+
+	fs::FilePath TokenFile::getPath() {
+		return path;
+	}
+
+	lexer::CharArray& TokenFile::getChars() {
+		if (!decoded) {
+			RIFT_PANIC("Tried to access nonexistant Character data.");
+		}
+		return decoded.value();
 	}
 
 	lexer::TokenData& TokenFile::getTokenData() {

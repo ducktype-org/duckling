@@ -73,8 +73,9 @@ namespace dia {
 		explicit ObsoleteErrorWithPrinterMessage(printer::MessageContent message):
 			  // Had to pick a file that always exists and behaves somewhat normally.
 		      // /dev/zero does not work.
+			  // @TODO
 			  Error(
-				  { std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")), 1, 1, 1 }
+				  { nullptr, 1, 1, 1 }
 			  ),
 			  message(std::move(message)) {}
 

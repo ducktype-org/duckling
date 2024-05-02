@@ -11,9 +11,10 @@
 #include <printer/message.hpp>
 #include <string>
 
-// namespace tokenizer {
-	// class TokenFile;
-// }
+namespace tokenizer {
+	class TokenFile;
+	using File = base::borrow_ptr<TokenFile>;
+}
 
 namespace dia {
 	/**
@@ -23,16 +24,11 @@ namespace dia {
 	 */
 	class SourcePosition {
 	public:
-		//using SourceFile = base::borrow_ptr<tokenizer::TokenFile>;
-		using SourceFile = std::shared_ptr<const fs::FilePath>;
-
 		SourcePosition() = delete;
 
-		//SourcePosition(SourceFile source_file, usize line, usize column, usize source_start);
-		SourcePosition(const SourceFile& source_file, usize line, usize column, usize source_start);
+		SourcePosition(tokenizer::File source_file, usize line, usize column, usize source_start);
 		SourcePosition(
-			//SourceFile source_file,
-			const SourceFile& source_file,
+			tokenizer::File source_file,
 			usize             line,
 			usize             column,
 			usize             source_start,
@@ -82,12 +78,12 @@ namespace dia {
 		[[nodiscard]]
 		usize getEnd() const;
 		[[nodiscard]]
-		SourceFile getSource() const;
+		tokenizer::File getSource() const;
 
 	private:
 		usize line, column;      ///< #line, #column describe start position in code for the user
 		usize source_start,
 			source_end;          ///< #source_start, #source_end describe range of bytes in the file
-		SourceFile source_file;  ///< pointer to source file data
+		tokenizer::File source_file;  ///< pointer to source file data
 	};
 }

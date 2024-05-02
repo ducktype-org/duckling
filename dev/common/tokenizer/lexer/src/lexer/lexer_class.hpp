@@ -6,6 +6,7 @@
 #include <vector>
 #include "char.hpp"
 #include "token.hpp"
+#include "token_file/file.hpp"
 
 namespace lexer {
 
@@ -21,7 +22,7 @@ namespace lexer {
 		/**
 		 * @note if file decoding fails outputs the reason to cerr and throws LogicError
 		 */
-		explicit Lexer(const fs::FilePath& file, dia::Logger& log);
+		explicit Lexer(tokenizer::File);
 
 		[[nodiscard]]
 		TokenData tokenize();
@@ -101,10 +102,10 @@ namespace lexer {
 		usize                         where  = 0;  ///< Current position in file
 		usize                         line   = 1;
 		usize                         column = 1;
-		std::shared_ptr<fs::FilePath> file;
+		tokenizer::File file;
 		fs::FileContent               file_content;
 		dia::Logger&            errorState;
-		CharArray                     char_array;
+		CharArray&                     char_array;
 		Tokens                        tokens;
 
 		/**

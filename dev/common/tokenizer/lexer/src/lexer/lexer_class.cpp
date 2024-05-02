@@ -6,14 +6,14 @@
 namespace lexer {
 	using Class = Classifications;
 
-	Lexer::Lexer(const fs::FilePath& file, dia::Logger& log):
-		  file(std::make_shared<fs::FilePath>(file)),
-		  file_content(this->file->getContent()),
-		  errorState(log),
-		  char_array(decode<fs::Encoding::UTF8>(file_content.view(), errorState)) {
+	Lexer::Lexer(tokenizer::File file):
+		  file(file),
+		  file_content(file->getContent()),
+		  errorState(file->getLogger()),
+		  char_array(file->getChars()) {
 		if (errorState.bad()) {
 			errorState.dumpLog(false, std::cerr);
-			throw base::LogicError("Error while decoding");
+			throw base::LogicError("Lexer initialized with existing error");
 		}
 	}
 

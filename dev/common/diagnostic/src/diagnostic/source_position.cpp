@@ -5,7 +5,8 @@
 
 
 #include "source_position.hpp"
-#include "base/exceptions.hpp"
+#include <token_file/file.hpp>
+#include <base/exceptions.hpp>
 
 namespace dia {
 	std::string SourcePosition::getSourceChars() const {
@@ -17,7 +18,7 @@ namespace dia {
 	}
 
 	SourcePosition::SourcePosition(
-		const SourceFile& source_file,
+		tokenizer::File source_file,
 		const usize       line,
 		const usize       column,
 		const usize       source_start
@@ -25,7 +26,7 @@ namespace dia {
 		  SourcePosition(source_file, line, column, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
-		const SourceFile& source_file,
+		tokenizer::File source_file,
 		const usize       line,
 		const usize       column,
 		const usize       source_start,
@@ -36,7 +37,8 @@ namespace dia {
 		  source_start(source_start),
 		  source_end(source_end),
 		  source_file(source_file) {
-		if (!source_file) throw base::LogicError("Invalid SourcePosition: No such file");
+		// Potentially allow for special circumstances
+		if (source_file == nullptr) throw base::LogicError("Invalid SourcePosition: No such file");
 		if (line == 0) throw base::LogicError("Invalid SourcePosition: line = 0");
 		if (column == 0) throw base::LogicError("Invalid SourcePosition: column = 0");
 		if (source_end < source_start)
@@ -61,12 +63,12 @@ namespace dia {
 
 	usize SourcePosition::getEnd() const { return source_end; }
 
-	SourcePosition::SourceFile SourcePosition::getSource() const { return source_file; }
+	tokenizer::File SourcePosition::getSource() const { return source_file; }
 
 	std::vector<printer::MessageContent>
 		SourcePosition::genPrinterMessageContents(const printer::MessageContent& reason) const {
 		return { { "In file: " },
-			     { source_file->strView().data() },
+			     { source_file->getPath().strView().data() },
 			     { ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
 			     reason,
 			     { "\n" },
@@ -79,7 +81,7 @@ namespace dia {
 
 	std::string SourcePosition::genStr(const std::string_view reason) const {
 		std::string output = "In file: ";
-		output += source_file->strView();
+		output += source_file->getPath().strView();
 		output += ":" + std::to_string(line) + ":" + std::to_string(column) + "\n";
 		output += reason;
 		output += "\n";

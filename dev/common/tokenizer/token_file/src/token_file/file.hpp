@@ -1,4 +1,6 @@
+#pragma once
 
+#include "lexer/char.hpp"
 #include <base/borrow_pointer.hpp>
 #include <base/unique_pointer.hpp>
 #include <diagnostic/logger.hpp>
@@ -8,6 +10,9 @@
 #include <set>
 
 namespace tokenizer {
+	class TokenFile;
+	using File = base::borrow_ptr<TokenFile>;
+
 	/**
 	 * @brief Class managing source file data access and token metadata
 	 */
@@ -56,9 +61,13 @@ namespace tokenizer {
 
 		fs::FileContent getContent();		
 
+		lexer::CharArray& getChars();		
+
 		lexer::TokenData& getTokenData();
 
 		dia::Logger& getLogger();
+
+		fs::FilePath getPath();
 
 		void decode();
 
