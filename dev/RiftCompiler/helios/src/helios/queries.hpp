@@ -6,6 +6,7 @@
 #include <frontend/module_tree/queries.hpp>
 
 #include <vector>
+
 #include "scope_symbol_id.hpp"
 #include "hout/hout.hpp"
 

@@ -1,18 +1,21 @@
 #include "symbols.hpp"
-#include "base/exceptions.hpp"
-#include "base/perfect_hash.hpp"
-#include "base/raw_view.hpp"
-#include "base/string_id.hpp"
-#include "helios/lookup_result.hpp"
-#include "helios/scope_symbol_id.hpp"
-#include "helios/scopes/scopes.hpp"
-#include "pst_parser/elements/elements.hpp"
-#include "../pst_ref.hpp"
-#include <query_framework/query_impl.hpp>
-#include <base/stable_container.hpp>
+
+#include <base/exceptions.hpp>
+#include <base/string_id.hpp>
 #include <base/stable_hashmap.hpp>
-#include <vector>
+#include <base/stable_container.hpp>
 #include <base/variant.hpp>
+
+#include <query_framework/query_impl.hpp>
+#include <pst_parser/elements/elements.hpp>
+
+#include <vector>
+
+#include "../lookup_result.hpp"
+#include "../scope_symbol_id.hpp"
+#include "../scopes/scopes.hpp"
+#include "../pst_ref.hpp"
+
 
 namespace compiler::helios {
 

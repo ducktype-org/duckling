@@ -1,7 +1,7 @@
 #pragma once
 
-#include "base/perfect_hash.hpp"
-#include <base/stable_container.hpp>
+#include <base/perfect_hash.hpp>
+#include <base/smart_pointers.hpp>
 #include <utility>
 
 namespace compiler::helios {
@@ -23,7 +23,7 @@ namespace compiler::helios {
 	private:
 		base::borrow_ptr<SymbolData> ref;
 
-		SymID(base::borrow_ptr<SymbolData> ref): ref(ref) {}
+		SymID(base::borrow_ptr<SymbolData> ref): ref(std::move(ref)) {}
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
 		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct GetSymRef_Functor;

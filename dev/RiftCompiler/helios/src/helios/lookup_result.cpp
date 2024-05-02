@@ -1,5 +1,5 @@
 #include "lookup_result.hpp"
-#include "base/exceptions.hpp"
+#include <base/exceptions.hpp>
 
 namespace compiler::helios {
 	auto LookupResult::isEmpty() const -> bool {

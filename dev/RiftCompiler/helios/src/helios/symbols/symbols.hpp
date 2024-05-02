@@ -9,11 +9,10 @@
 #include "../pst_ref.hpp"
 #include "../hout/hout.hpp"
 #include "../lookup_result.hpp"
-#include "base/string_id.hpp"
-#include "typesystem/type_info.hpp"
 
-
+#include <base/string_id.hpp>
 #include <typesystem/typesystem.hpp>
+
 
 namespace compiler::helios {
 

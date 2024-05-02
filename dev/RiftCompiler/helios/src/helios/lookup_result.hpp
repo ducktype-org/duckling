@@ -8,6 +8,7 @@
 #pragma once
 
 #include "scope_symbol_id.hpp"
+
 #include <vector>
 #include <query_framework/query_int.hpp>
 
