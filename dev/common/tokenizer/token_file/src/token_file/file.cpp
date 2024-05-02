@@ -18,7 +18,7 @@ namespace tokenizer {
 		return 0;
 	}
 
-	TokenFile::TokenFile(fs::FilePath&& path): path(std::move(path)) {
+	TokenFile::TokenFile(const fs::FilePath& path): path(path) {
 		content = path.getContent();
 	}
 	void TokenFile::decode() {
@@ -26,6 +26,7 @@ namespace tokenizer {
 	}
 
 	void TokenFile::countLines() {
+		if (log.bad()) return;
 		usize line = 1;
 		usize start = 0;
 		usize newline{};
@@ -44,8 +45,13 @@ namespace tokenizer {
 		lines.emplace_back(start, content->size() - 2);
 	}
 
+	dia::Logger& TokenFile::getLogger() {
+		return log;	
+	}
+
 	void TokenFile::runLexer() {
-		lexer::Lexer lexer{path};
+		if (log.bad()) return;
+		lexer::Lexer lexer{path, log};
 		token_data = lexer.tokenize();
 	}
 

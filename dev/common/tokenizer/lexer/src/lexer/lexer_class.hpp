@@ -21,7 +21,7 @@ namespace lexer {
 		/**
 		 * @note if file decoding fails outputs the reason to cerr and throws LogicError
 		 */
-		explicit Lexer(const fs::FilePath& file);
+		explicit Lexer(const fs::FilePath& file, dia::Logger& log);
 
 		[[nodiscard]]
 		TokenData tokenize();
@@ -103,6 +103,7 @@ namespace lexer {
 		usize                         column = 1;
 		std::shared_ptr<fs::FilePath> file;
 		fs::FileContent               file_content;
+		dia::Logger&            errorState;
 		CharArray                     char_array;
 		Tokens                        tokens;
 
@@ -118,7 +119,6 @@ namespace lexer {
 #endif
 		}
 
-		dia::Logger            errorState;
 		printer::StreamPrinter streamPrinter;
 
 		void addTokenMsg(usize begin, usize end, std::string_view token_type);

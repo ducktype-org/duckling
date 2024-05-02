@@ -41,11 +41,11 @@ namespace tokenizer {
 
 		base::borrow_ptr<TokenFile> self;
 
-		TokenFile(fs::FilePath&&);
-
 		template <class... Ts>
 		friend base::unique_ptr<TokenFile> makeTokenFile(Ts&&... args);
 	public:
+		explicit TokenFile(const fs::FilePath&);
+
 		TokenFile(const TokenFile&) = delete;
 		TokenFile() = delete;
 
@@ -57,6 +57,8 @@ namespace tokenizer {
 		fs::FileContent getContent();		
 
 		lexer::TokenData& getTokenData();
+
+		dia::Logger& getLogger();
 
 		void decode();
 
@@ -73,7 +75,7 @@ namespace tokenizer {
 
 	template <class... Ts>
 	base::unique_ptr<TokenFile> makeTokenFile(Ts&&... args) {
-		auto ptr = base::make_unique<TokenFile>(std::forward(args...));
+		auto ptr = base::make_unique<TokenFile>(std::forward<Ts...>(args...));
 		ptr->self = ptr.borrow_mut();
 		return ptr;
 	}

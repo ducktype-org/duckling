@@ -4,6 +4,7 @@
  */
 
 #include "classifications.hpp"
+#include "diagnostic/logger.hpp"
 #include "lexer.hpp"
 #include "lexer_class.hpp"
 #include <rift_definitions/key_spec_op.hpp>
@@ -20,7 +21,8 @@ namespace lexer {
 	}
 
 	TokenData tokenizeFile(const fs::FilePath& file) {
-		Lexer lexer(file);
+		dia::Logger log;
+		Lexer lexer(file, log);
 		auto  result = lexer.tokenize();
 		if (lexer.getErrorState().bad()) {
 			lexer.getErrorState().dumpLog(false, std::cerr);

@@ -1,13 +1,15 @@
 #include "lexer_class.hpp"
 #include "classifications.hpp"
 #include "decode.hpp"
+#include "diagnostic/logger.hpp"
 
 namespace lexer {
 	using Class = Classifications;
 
-	Lexer::Lexer(const fs::FilePath& file):
+	Lexer::Lexer(const fs::FilePath& file, dia::Logger& log):
 		  file(std::make_shared<fs::FilePath>(file)),
 		  file_content(this->file->getContent()),
+		  errorState(log),
 		  char_array(decode<fs::Encoding::UTF8>(file_content.view(), errorState)) {
 		if (errorState.bad()) {
 			errorState.dumpLog(false, std::cerr);

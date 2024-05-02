@@ -9,7 +9,7 @@ add_executable(frontend_testing frontend_testing.cpp)
 
 target_link_libraries(file_testing Filesystem)
 target_link_libraries(char_testing Lexer Diagnostic)
-target_link_libraries(lexer_testing Lexer)
+target_link_libraries(lexer_testing Lexer TokenFile)
 target_compile_options(lexer_testing PRIVATE "-DPRINT_LOG")
 target_link_libraries(elements_testing Lexer PstParser)
 target_link_libraries(parsing_hanlder_testing PstParser Compiler)
