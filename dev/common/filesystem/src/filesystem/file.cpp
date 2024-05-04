@@ -48,10 +48,11 @@ namespace fs {
 		else {
 			file_name = path / custom_name;
 			if (exists(file_name))
-				throw base::LogicError(
-					"Cannot create a file/dir with name \"" + custom_name
-					+ "\", because there already is a file/dir with this name in " + absolutePath()
-				);
+				throw base::LogicError(base::strConcat(
+					"Cannot create a file/dir with name \"",
+					custom_name,
+					"\", because there already is a file/dir with this name in " + absolutePath()
+				));
 		}
 		return file_name;
 	}
