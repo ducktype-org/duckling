@@ -423,17 +423,17 @@ hash-map based caching for fast prototyping.
 In order to use it two requirements must be met:
 
 * Query key type must implement perfect hash (already an requirement of the Query Framework)
-* Query key type must implement :code:`operator==` same as :code:`base::HashMap`.
+* Query key type must implement :code:`operator==` (same as for :code:`base::HashMap`).
 
 There are currently two automatic-cache mechanism:
 
-* :code:`QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF` -- it will cache :code:`PResult`-s in a way that reference to them is unstable.
-* :code:`QUERY_AUTO_CACHE_PRESULT_STABLE_REF` -- it will cache :code:`PResult`s in a way that reference to them is stable.
+* :code:`QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF` -- it will cache :code:`PResult`-s in a way that references to them are unstable.
+* :code:`QUERY_AUTO_CACHE_PRESULT_STABLE_REF` -- it will cache :code:`PResult`s in a way that references to them are stable.
 
 In both cases function :code:`store` will really on implicit cast/conversion from :code:`PResult` to :code:`QResult`.
 
 .. code-block:: cpp
-    :caption: Auto cache example unstable ref
+    :caption: Auto cache example: unstable reference
 
     #include <query_framework/query_impl.hpp>
     
@@ -451,7 +451,7 @@ In both cases function :code:`store` will really on implicit cast/conversion fro
     QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciStringAutoCache, "Auto cache");
 
 .. code-block:: cpp
-    :caption: Auto cache example stable ref
+    :caption: Auto cache example: stable reference
 
     #include <query_framework/query_impl.hpp>
     
