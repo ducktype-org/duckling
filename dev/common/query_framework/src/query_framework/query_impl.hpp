@@ -29,7 +29,7 @@ namespace query {
 			NodeID my_node;
 
 			template<typename OthQuery>
-			auto query(typename OthQuery::QKey key) -> decltype(auto) {
+			auto query(typename OthQuery::QKey key) -> auto {
 				NodeID dep_id = makeNodeID(OthQuery::id, key);
 				dep_graph::addDependency(my_node, dep_id);
 
@@ -144,45 +144,46 @@ namespace query {
  * @param type Name of Query Implementation Struct
  * @param pretty_name Pretty name of a given query (that will for example be displayed in logs)
  */
-#define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                         \
-	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from)   \
-		-> type::QueryType::QResult {                                                               \
-		return ::query::detail::standardQueryEntry<type>(key, from);                                \
-	}                                                                                               \
-	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryId(pretty_name); \
+#define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                       \
+	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from) \
+		-> type::QueryType::QResult {                                                             \
+		return ::query::detail::standardQueryEntry<type>(key, from);                              \
+	}                                                                                             \
+	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::nextQueryId();       \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
-
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
+ * It caches PResults using base::HashMap in a way that references to them are unstable.
  * @future: change it to component, when proper query-component system will be introduced
  */
-#define QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF                                                   \
-	static inline base::HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>> \
-				cache;                                                                          \
+#define QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF                                                  \
+	static inline base::                                                                       \
+		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>            \
+				cache;                                                                         \
 	static auto load(QKey key) -> LoadResult {                                                 \
 		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
 		return {};                                                                             \
 	}                                                                                          \
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                       \
-		cache.put(key, { std::move(res), acd });                                                \
-		return cache.at(key).data;                                                              \
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                      \
+		cache.put(key, { std::move(res), acd });                                               \
+		return cache.at(key).data;                                                             \
 	}
 
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
+ * It caches PResults using base::StableHashMap in a way that references to them are stable.
  * @future: change it to component, when proper query-component system will be introduced
  */
-#define QUERY_AUTO_CACHE_PRESULT_STABLE_REF                                                        \
-	static inline base::                                                                           \
-		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>              \
-				cache;                                                                             \
-	static auto load(QKey key) -> LoadResult {                                                     \
-		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; }     \
-		return {};                                                                                 \
-	}                                                                                              \
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                          \
-		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                             \
-		return cache.at(key).data;                                                                 \
-	}
+#define QUERY_AUTO_CACHE_PRESULT_STABLE_REF                                                    \
+	static inline base::                                                                       \
+		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>      \
+				cache;                                                                         \
+	static auto load(QKey key) -> LoadResult {                                                 \
+		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
+		return {};                                                                             \
+	}                                                                                          \
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                      \
+		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
+		return cache.at(key).data;
