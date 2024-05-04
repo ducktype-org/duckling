@@ -312,7 +312,8 @@ if __name__ == "__main__":
     if pathlib.Path.cwd() != pathlib.Path(__file__).parent.absolute():
         exit_with_error("Toolbox should be called from the root of the project")
 
-    # Disable traceback for shorter error messages
+    # Disable traceback for shorter error messages.
+    # Comment this line when debugging.
     sys.tracebacklimit = 0
 
     cli()
