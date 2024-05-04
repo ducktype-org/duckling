@@ -149,7 +149,7 @@ namespace query {
 		-> type::QueryType::QResult {                                                             \
 		return ::query::detail::standardQueryEntry<type>(key, from);                              \
 	}                                                                                             \
-	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::nextQueryId();       \
+	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::newQueryId(pretty_name);       \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
 
 /**
