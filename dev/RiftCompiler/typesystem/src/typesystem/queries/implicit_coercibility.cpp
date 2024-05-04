@@ -7,7 +7,7 @@
 namespace ts {
 	struct ImplementationOf_QueryImplicitCoercibilityOnInfo:
 		  query::QueryImplementation<QueryImplicitCoercibilityOnInfo, bool> {
-		inline static base::Map<QKey, query::AddACD<QResult>> cache;
+		inline static base::Map<QKey, query::CacheEntry<QResult>> cache;
 
 		static auto provide(Context& context, const QKey key) -> PResult {
 			return getImplicitConversionsFrom(key.source, context).contains(key.target)
@@ -46,7 +46,7 @@ namespace ts {
 
 	struct ImplementationOf_QueryImplicitCoercibilityOnDesc:
 		  query::QueryImplementation<QueryImplicitCoercibilityOnDesc, bool> {
-		inline static base::Map<QKey, query::AddACD<QResult>> cache;
+		inline static base::Map<QKey, query::CacheEntry<QResult>> cache;
 
 		static auto provide(Context& context, const QKey& key) -> PResult {
 			return context.query<QueryImplicitCoercibilityOnInfo>(
