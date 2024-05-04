@@ -5,6 +5,7 @@ add_library(Base
         src/base/impl/string_id.cpp
         src/base/impl/str_concat.cpp
         src/base/impl/convert.cpp
+        src/base/impl/str_utils.cpp
 )
 
 set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)
