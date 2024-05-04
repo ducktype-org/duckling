@@ -71,7 +71,7 @@ struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Query1, "Query 1");
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Query1, "Query 1")
 
 /************
  * QUERY 2: *
@@ -97,7 +97,7 @@ struct ImplementationOf_Query2: query::QueryImplementation<Query2, uint64_t> {
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Query2, "Query 2");
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Query2, "Query 2")
 
 /*****************
  * Cyclic Query: *
@@ -123,7 +123,7 @@ struct ImplementationOf_CyclicQuery: query::QueryImplementation<CyclicQuery, uin
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_CyclicQuery, "Cyclic query");
+QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_CyclicQuery, "Cyclic query")
 
 // implement extension:
 uint64_t SquareValue(query::Context&, uint64_t v) { return v * v; }
