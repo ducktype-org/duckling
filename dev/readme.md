@@ -23,11 +23,7 @@ $ ./toolbox.py test -m # run tests under valgrind
 ### Testing coverage
 
 ```shell
-$ cmake -DENABLE_COVERAGE=true .
-$ make -j
-$ make test
-$ make coverage
-$ xdg-open coverage/index.html
+$ ./toolbox.py coverage 
 ```
 
 ## Code structure
