@@ -1,4 +1,4 @@
-Main development folder
+# Main development folder
 
 ## File structure
 
@@ -8,23 +8,6 @@ Main development folder
 * [guidelines](guidelines/) - guidelines related to development
 * [miscellaneous](miscellaneous/) - for files without any specific location
 * [libs](libs/) - for external libraries
-
-## Compilation and tests
-
-### Compilation
-
-### Running tests
-
-```shell
-$ ./toolbox.py test # regular tests
-$ ./toolbox.py test -m # run tests under valgrind
-````
-
-### Testing coverage
-
-```shell
-$ ./toolbox.py coverage 
-```
 
 ## Code structure
 

@@ -27,7 +27,7 @@ To begin, enter the `dev/` directory and then:
 ./toolbox.py init
 ```
 
-to initialize the repository (fetches library dependencies, setups virtual environment, downloads binaries, etc...)
+This fetches library dependencies, setups virtual environment, downloads binaries, etc...
 
 #### Create a build folder
 
@@ -35,7 +35,7 @@ to initialize the repository (fetches library dependencies, setups virtual envir
 ./toolbox.py setup-build
 ```
 
-to create a build folder. Press enter on every prompt to leave default options.
+Press enter on every prompt to leave default options.
 
 #### Building the docs
 
@@ -43,7 +43,26 @@ to create a build folder. Press enter on every prompt to leave default options.
 ./toolbox.py docs
 ```
 
-to build docs and open them in your favorite browser. Leave default if you chose defaults in previous step.
+This builds the docs and opens them in your favorite browser. Leave defaults if you chose defaults in previous step.
+
+#### Running tests
+
+```shell
+./toolbox.py test     # regular tests
+./toolbox.py test -m  # run tests under valgrind
+```
+
+#### Testing coverage
+
+Before running this command make sure you build folder has enabled coverage.
+
+```shell
+# This is only needed if build folder was not prepared for coverage.
+./toolbox.py setup-build --coverage
+
+./toolbox.py coverage
+```
+
 
 ___
 
