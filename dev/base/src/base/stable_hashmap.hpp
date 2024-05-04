@@ -12,6 +12,7 @@ namespace base {
 	 * A wrapper around base::HashMap, that keeps references (memory addresses) valid.
 	 * @tparam DATA_T The datatype to store
 	 * @tparam KEY_T Indentifies data
+	 * @tparam HASH_T Hash functor for hashing keys
 	 */
 	template<typename KEY_T, typename DATA_T, typename HASH_T = std::hash<KEY_T>>
 	class StableHashMap {
