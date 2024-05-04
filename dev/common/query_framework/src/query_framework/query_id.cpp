@@ -6,6 +6,8 @@
 
 #include "query_id.hpp"
 
+#include <base/maps.hpp>
+
 namespace query::detail {
 	namespace {
 		using NameMap = base::HashMap<QueryID::VAL_T, std::string>;

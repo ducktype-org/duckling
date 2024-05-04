@@ -1,6 +1,5 @@
 #pragma once
 
-#include <base/maps.hpp>
 #include <base/ints.hpp>
 
 namespace query::detail {
