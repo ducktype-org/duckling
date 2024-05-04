@@ -28,5 +28,6 @@ namespace query::detail {
 
 namespace query {
 	inline void debugPrintDependencyGraph() { detail::dep_graph::debugPrint(); }
+
 	inline void debugPrintDependencyGraphForDrawing() { detail::dep_graph::debugPrintForDrawing(); }
 }

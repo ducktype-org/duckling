@@ -1,7 +1,7 @@
 /**
  * @file query_id.cpp
  * @author Mateusz
- * 
+ *
  */
 
 #include "query_id.hpp"
@@ -11,6 +11,7 @@
 namespace query::detail {
 	namespace {
 		using NameMap = base::HashMap<QueryID::VAL_T, std::string>;
+
 		NameMap& nameMap() {
 			static base::HashMap<QueryID::VAL_T, std::string> name_map{};
 			return name_map;
