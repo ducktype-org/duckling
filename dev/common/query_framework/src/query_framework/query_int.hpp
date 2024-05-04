@@ -5,23 +5,25 @@
 #include "node_id.hpp"
 #include "empty_key.hpp"
 
-namespace query::detail {
+namespace query {
 
-	struct ContextType;
+	namespace detail {
+		struct ContextType;
 
-	/**
-		* @brief Base class for defining query interface
-		*
-		* @tparam QueryType_tp a type of a query
-		* @tparam QKey_tp a type of a query key
-		* @tparam QResult_tp a type of a query result
-		*/
-	template<typename QueryType_tp, typename QKey_tp, typename QResult_tp>
-	struct QueryInterface {
-		using QueryType = QueryType_tp;
-		using QKey      = QKey_tp;
-		using QResult   = QResult_tp;
-	};
+		/**
+		 * @brief Base class for defining query interface
+		 *
+		 * @tparam QueryType_tp a type of a query
+		 * @tparam QKey_tp a type of a query key
+		 * @tparam QResult_tp a type of a query result
+		 */
+		template<typename QueryType_tp, typename QKey_tp, typename QResult_tp>
+		struct QueryInterface {
+			using QueryType = QueryType_tp;
+			using QKey      = QKey_tp;
+			using QResult   = QResult_tp;
+		};
+	}
 }
 
 /**

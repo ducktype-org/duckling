@@ -1,6 +1,7 @@
 #include "query_id_provider.hpp"
-#include "base/maps.hpp"
-#include "query_framework/query_id.hpp"
+
+#include <base/maps.hpp>
+#include <query_framework/query_id.hpp>
 
 namespace query::detail {
 	namespace {
@@ -8,8 +9,8 @@ namespace query::detail {
 		constexpr QueryID outside_world_query = { 0 };
 	}
 
-	QueryID newQueryId(const std::string& pretty_name) {
-		QueryID ret = next;
+	QueryID newQueryId(const std::string_view pretty_name) {
+		const QueryID ret = next;
 		QueryID::setName(ret, pretty_name);
 
 		next.val++;
