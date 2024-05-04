@@ -22,7 +22,6 @@ namespace query::detail {
 
 		void debugPrint();
 		void debugPrintForDrawing();
-
 	}
 }
 
