@@ -23,10 +23,12 @@ namespace query::detail {
 		void             setExit(detail::NodeID node);
 
 		void debugPrint();
+		void debugPrintForDrawing();
 
 	}
 }
 
 namespace query {
 	inline void debugPrintDependencyGraph() { detail::dep_graph::debugPrint(); }
+	inline void debugPrintDependencyGraphForDrawing() { detail::dep_graph::debugPrintForDrawing(); }
 }
