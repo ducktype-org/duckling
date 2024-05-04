@@ -10,6 +10,7 @@
 #include "dep_graph.hpp"
 #include "query_id_provider.hpp"
 #include "logs.hpp"
+#include "node_making.hpp"
 
 #include <base/defer.hpp>
 
