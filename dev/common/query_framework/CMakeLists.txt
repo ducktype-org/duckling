@@ -6,7 +6,7 @@ add_library(QueryFramework
 	src/query_framework/query_id.cpp
 )
 
-make_module(QueryFramework USES Base)
+make_module(QueryFramework USES Base Diagnostic)
 
 add_example(query_example examples/example.cpp USES QueryFramework)
 

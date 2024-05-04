@@ -44,24 +44,25 @@ namespace operation {
 		return to;
 	}
 
-	inline TypedOperation comparison(const Operation& op, ts::TypeDesc<> ty) {
+	inline TypedOperation comparison(const Operation& op, ts::TypeInfo ty) {
 		return { op,
-			     ts::FunctionInfo::create(
-					 { ty, ty }, query::queryEntryPoint<ts::QueryIntegralType>({ 8 })
+			     query::queryEntryPoint<ts::QueryFunctionType>(
+					 { { ty, ty }, query::queryEntryPoint<ts::QueryIntegralType>({ 8 }) }
 				 ) };
 	}
 
-	inline TypedOperation equality(const Operation& op, ts::TypeDesc<> ty) {
-		return {
-			op, ts::FunctionInfo::create({ ty, ty }, query::queryEntryPoint<ts::QueryBoolType>({}))
-		};
+	inline TypedOperation equality(const Operation& op, ts::TypeInfo ty) {
+		return { op,
+			     query::queryEntryPoint<ts::QueryFunctionType>(
+					 { { ty, ty }, query::queryEntryPoint<ts::QueryBoolType>({}) }
+				 ) };
 	}
 
-	inline TypedOperation assign(const Operation& op, ts::TypeDesc<> ty) {
-		return { op, ts::FunctionInfo::create({ ty, ty }, ty) };
+	inline TypedOperation assign(const Operation& op, ts::TypeInfo ty) {
+		return { op, query::queryEntryPoint<ts::QueryFunctionType>({ { ty, ty }, ty }) };
 	}
 
-	inline TypedOperation construct(const Operation& op, ts::TypeDesc<> ty) {
-		return { op, ts::FunctionInfo::create({ ty }, ty) };
+	inline TypedOperation construct(const Operation& op, ts::TypeInfo ty) {
+		return { op, query::queryEntryPoint<ts::QueryFunctionType>({ { ty }, ty }) };
 	}
 }

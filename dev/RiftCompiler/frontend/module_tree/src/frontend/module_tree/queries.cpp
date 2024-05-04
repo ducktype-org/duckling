@@ -14,7 +14,7 @@ namespace compiler::frontend {
 		  query::QueryImplementation<QueryModuleTree, compiler::frontend::ModuleId> {
 		inline static base::HashMap<QKey, query::CacheEntry<QResult>> cache{};
 
-		static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
+		static auto provide(Context&, QKey key) -> PResult {
 			std::shared_ptr<ModuleTree> module_tree = ModuleTree::create(key);
 
 			return module_tree->getId();
