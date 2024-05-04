@@ -72,7 +72,7 @@ namespace fs {
 		static FilePath createTempFilePathObj(const std::filesystem::path& path);
 
 		[[nodiscard]]
-		std::filesystem::path genTempPathInMe(const std::string& custom_name = "") const;
+		std::filesystem::path genTempPathInMe(std::string_view custom_name = "") const;
 
 	public:
 		FilePath(const FilePath&) = default;
@@ -85,15 +85,15 @@ namespace fs {
 		bool operator==(const FilePath& oth) const { return path == oth.path; }
 
 		[[nodiscard]]
-		FilePath        createTempDirectoryIn(const std::string& custom_name = "") const;
+		FilePath        createTempDirectoryIn(std::string_view custom_name = "") const;
 		static FilePath createTempDirectory();
 
 
 		[[nodiscard]]
 		FilePath createTempFileIn(
-			const std::string& new_file_content, const std::string& custom_name = ""
+			std::string_view new_file_content, std::string_view custom_name = ""
 		) const;
-		static FilePath createTempFile(const std::string& content);
+		static FilePath createTempFile(std::string_view content);
 
 
 		[[nodiscard]]

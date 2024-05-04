@@ -39,7 +39,7 @@ namespace fs {
 		return tempDirectoryPath;
 	}
 
-	std::filesystem::path FilePath::genTempPathInMe(const std::string& custom_name) const {
+	std::filesystem::path FilePath::genTempPathInMe(std::string_view custom_name) const {
 		if (!is_temporary) throw base::LogicError("Parent is not temporary");
 
 		std::filesystem::path file_name;
@@ -62,7 +62,7 @@ namespace fs {
 		return obj;
 	}
 
-	FilePath FilePath::createTempFile(const std::string& content) {
+	FilePath FilePath::createTempFile(std::string_view content) {
 		return getDefaultTempPath().createTempFileIn(content);
 	}
 
@@ -70,17 +70,17 @@ namespace fs {
 		return getDefaultTempPath().createTempDirectoryIn();
 	}
 
-	FilePath FilePath::createTempDirectoryIn(const std::string& custom_name) const {
+	FilePath FilePath::createTempDirectoryIn(std::string_view custom_name) const {
 		auto&& new_temp_dir = genTempPathInMe(custom_name);
 		create_directory(new_temp_dir);
 		return createTempFilePathObj(new_temp_dir);
 	}
 
 	FilePath FilePath::createTempFileIn(
-		const std::string& new_file_content, const std::string& custom_name
+		std::string_view new_file_content, std::string_view custom_name
 	) const {
-		auto&&       new_temp_file = genTempPathInMe(custom_name);
-		std::fstream temp_file(new_temp_file, std::ios::out | std::ios::app);
+		auto&&        new_temp_file = genTempPathInMe(custom_name);
+		std::ofstream temp_file(new_temp_file);
 		temp_file << new_file_content;
 		temp_file.close();
 		return createTempFilePathObj(new_temp_file);
