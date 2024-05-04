@@ -154,19 +154,20 @@ namespace query {
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
- * It caches PResults using base::HashMap in a way that references to them are unstable. 
+ * It caches PResults using base::HashMap in a way that references to them are unstable.
  * @future: change it to component, when proper query-component system will be introduced
  */
-#define QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF                                                   \
-	static inline base::HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>> \
-				cache;                                                                          \
+#define QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF                                                  \
+	static inline base::                                                                       \
+		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>            \
+				cache;                                                                         \
 	static auto load(QKey key) -> LoadResult {                                                 \
 		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
 		return {};                                                                             \
 	}                                                                                          \
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                       \
-		cache.put(key, { std::move(res), acd });                                                \
-		return cache.at(key).data;                                                              \
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                      \
+		cache.put(key, { std::move(res), acd });                                               \
+		return cache.at(key).data;                                                             \
 	}
 
 
@@ -175,14 +176,15 @@ namespace query {
  * It caches PResults using base::StableHashMap in a way that references to them are stable.
  * @future: change it to component, when proper query-component system will be introduced
  */
-#define QUERY_AUTO_CACHE_PRESULT_STABLE_REF                                                        \
-	static inline base::                                                                           \
-		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>              \
-				cache;                                                                             \
-	static auto load(QKey key) -> LoadResult {                                                     \
-		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; }     \
-		return {};                                                                                 \
-	}                                                                                              \
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                          \
-		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                             \
-		return cache.at(key).data;                                                                 \
+#define QUERY_AUTO_CACHE_PRESULT_STABLE_REF                                                    \
+	static inline base::                                                                       \
+		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>      \
+				cache;                                                                         \
+	static auto load(QKey key) -> LoadResult {                                                 \
+		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
+		return {};                                                                             \
+	}                                                                                          \
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                      \
+		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
+		return cache.at(key).data;
+\
