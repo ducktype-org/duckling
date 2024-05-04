@@ -263,7 +263,7 @@ def clean_init():
 
 def docs_impl(build_dir):
     bash_command(f"cmake --build {build_dir} -- docs")
-    bash_command("xdg-open docs/sphinx/index.html", cwd=build_dir)
+    bash_command(f"cmake --build {build_dir} -- open-sphinx-docs")
 
 
 @cli.command()
