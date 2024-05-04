@@ -413,3 +413,59 @@ It is not strict requirement but side effects should be avoided unless they are 
 
 .. note:: Caching itself is obviously a side effect, but it is an expected one. 
 
+
+Auto caching
+============
+
+Query Framework provides a way to automatically create :code:`load` and :code:`store` method with
+hash-map based caching for fast prototyping.
+
+In order to use it two requirements must be met:
+
+* Query key type must implement perfect hash (already an requirement of the Query Framework)
+* Query key type must implement :code:`operator==` same as :code:`base::HashMap`.
+
+There are currently two automatic-cache mechanism:
+
+* :code:`QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF` -- it will cache :code:`PResult`-s in a way that reference to them is unstable.
+* :code:`QUERY_AUTO_CACHE_PRESULT_STABLE_REF` -- it will cache :code:`PResult`s in a way that reference to them is stable.
+
+In both cases function :code:`store` will really on implicit cast/conversion from :code:`PResult` to :code:`QResult`.
+
+.. code-block:: cpp
+    :caption: Auto cache example unstable ref
+
+    #include <query_framework/query_impl.hpp>
+    
+    DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, std::string);
+
+    struct ImplementationOf_FibonacciStringAutoCache:
+	  query::QueryImplementation<FibonacciStringAutoCache, std::string> {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
+	}
+
+        QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+    };
+
+    QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciStringAutoCache, "Auto cache");
+
+.. code-block:: cpp
+    :caption: Auto cache example stable ref
+
+    #include <query_framework/query_impl.hpp>
+    
+    // Here we can return reference as it is stable:
+    DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, const std::string&);
+
+    struct ImplementationOf_FibonacciStringAutoCache:
+	  query::QueryImplementation<FibonacciStringAutoCache, std::string> {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
+	}
+
+        QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+    };
+
+    QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciStringAutoCache, "Auto cache");
+

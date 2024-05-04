@@ -152,17 +152,35 @@ namespace query {
 	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::nextQueryId();       \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
 
+/**
+ * @brief Macro defining typical hash based cache for fast prototyping.
+ * @future: change it to component, when proper query-component system will be introduced
+ */
+#define QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF                                                   \
+	static inline base::HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>> \
+				cache;                                                                          \
+	static auto load(QKey key) -> LoadResult {                                                 \
+		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
+		return {};                                                                             \
+	}                                                                                          \
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                       \
+		cache.put(key, { std::move(res), acd });                                                \
+		return cache.at(key).data;                                                              \
+	}
+
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
  * @future: change it to component, when proper query-component system will be introduced
  */
-#define QUERY_AUTO_CACHE_PRESULT                                                    \
-	static inline base::                                                            \
-		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>> \
-				cache;                                                              \
-	static auto load(QKey key) -> LoadResult { return cache.atMaybeCopy(key); }     \
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {           \
-		cache.put(key, { std::move(res), acd });                                    \
-		return cache.at(key).data;                                                  \
-	}
+#define QUERY_AUTO_CACHE_PRESULT_STABLE_REF                                                        \
+	static inline base::                                                                           \
+		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>              \
+				cache;                                                                             \
+	static auto load(QKey key) -> LoadResult {                                                     \
+		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; }     \
+		return {};                                                                                 \
+	}                                                                                              \
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                          \
+		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                             \
+		return cache.at(key).data;                                                                 \
