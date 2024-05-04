@@ -12,9 +12,9 @@ namespace query {
 	 * It should never be used to invoke query from within query.
 	 */
 	template<typename QueryType>
-	auto queryEntryPoint(typename QueryType::QKey key) -> decltype(auto) {
+	auto entryPoint(typename QueryType::QKey key) -> decltype(auto) {
 		return QueryType::internal_query(
-			key, detail::makeNodeID(detail::outsideWorldQueryID(), EmptyKey())
+			key, makeNodeID(detail::outsideWorldQueryID(), EmptyKey())
 		);
 	}
 }

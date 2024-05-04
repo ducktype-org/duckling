@@ -2,12 +2,10 @@
 
 #include <base/optional.hpp>
 #include <base/str_concat.hpp>
-#include <utility>
 
 #include "acd.hpp"
 #include "query_int.hpp"
 #include "dep_graph.hpp"
-#include "query_id_provider.hpp"
 #include "logs.hpp"
 
 namespace query {
@@ -34,19 +32,6 @@ namespace query {
 				dep_graph::addDependency(my_node, dep_id);
 
 				return OthQuery::internal_query(key, my_node);
-			}
-
-			/**
-			 * @brief Calls query extension passes as template argument.
-			 *
-			 * @tparam Query Extension
-			 * @tparam Arguments of query extension
-			 * @param args
-			 * @return Return value of query extension
-			 */
-			template<auto Extension, typename... Args>
-			auto callExt(Args&&... args) {
-				return Extension(*this, std::forward<Args>(args)...);
 			}
 
 			void log(std::string_view str) {
@@ -135,8 +120,6 @@ namespace query {
 		 */
 	};
 
-	using Context = detail::ContextType;
-
 }
 
 /**
@@ -144,17 +127,19 @@ namespace query {
  * @param type Name of Query Implementation Struct
  * @param pretty_name Pretty name of a given query (that will for example be displayed in logs)
  */
-#define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                       \
-	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from) \
-		-> type::QueryType::QResult {                                                             \
-		return ::query::detail::standardQueryEntry<type>(key, from);                              \
-	}                                                                                             \
-	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::nextQueryId();       \
-	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
+#define QUERY_IMPLEMENTATION_BOILERPLATE(query_type)                       \
+	auto query_type ::QueryType::internal_query(                           \
+		query_type::QueryType::QKey key, ::query::detail::NodeID from      \
+	) -> query_type::QueryType::QResult {                                  \
+		return ::query::detail::standardQueryEntry<query_type>(key, from); \
+	}                                                                      \
+	decltype(query_type::QueryType::id) query_type::QueryType::id          \
+		= ::query::detail::newQueryId(#query_type);                        \
+	decltype(query_type::QueryType::name) query_type::QueryType::name = #query_type;
+
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
- * It caches PResults using base::HashMap in a way that references to them are unstable.
  * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF                                                  \
@@ -173,17 +158,17 @@ namespace query {
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
- * It caches PResults using base::StableHashMap in a way that references to them are stable.
  * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_PRESULT_STABLE_REF                                                    \
 	static inline base::                                                                       \
-		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>      \
+		StableHashMap<QKey, query::AddACD<PResult>, ::base::PerfectHashFunctor<QKey>>          \
 				cache;                                                                         \
 	static auto load(QKey key) -> LoadResult {                                                 \
 		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
 		return {};                                                                             \
 	}                                                                                          \
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                      \
-		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
-		return cache.at(key).data;
+		cache.put(key, query::AddACD<PResult>{ std::move(res), acd });                         \
+		return cache.at(key).data;                                                             \
+	}

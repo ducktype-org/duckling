@@ -40,7 +40,7 @@ namespace operation {
 
 		// @TODO: Add flags (const) to the type desc in all the default operations
 		const ts::FunctionInfo sig = ts::FunctionInfo::create(
-			{ { type_info }, { type_info } }, query::queryEntryPoint<ts::QueryBoolType>({})
+			{ { type_info }, { type_info } }, query::entryPoint<ts::QueryBoolType>({})
 		);
 
 		return TypedOperation{ op, sig };
@@ -55,7 +55,7 @@ namespace operation {
 
 		// @TODO: Add flags (const) to the type desc in all the default operations
 		const ts::FunctionInfo sig = ts::FunctionInfo::create(
-			{ { class_info }, { class_info } }, query::queryEntryPoint<ts::QueryBoolType>({})
+			{ { class_info }, { class_info } }, query::entryPoint<ts::QueryBoolType>({})
 		);
 
 		return TypedOperation{ op, sig };
@@ -71,7 +71,7 @@ namespace operation {
 		};
 
 		const ts::FunctionInfo sig = ts::FunctionInfo::create(
-			{ { type_info }, { type_info } }, query::queryEntryPoint<ts::QueryIntegralType>({ 8 })
+			{ { type_info }, { type_info } }, query::entryPoint<ts::QueryIntegralType>({ 8 })
 		);
 
 		return { op, sig };

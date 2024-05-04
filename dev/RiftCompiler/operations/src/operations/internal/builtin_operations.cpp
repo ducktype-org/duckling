@@ -12,7 +12,7 @@ namespace operation {
 
 			auto           int_type = query::queryEntryPoint<ts::QueryIntegralType>({ SIZE });
 			ts::TypeDesc<> int_desc{ int_type };
-			ts::TypeDesc<> bool_desc{ query::queryEntryPoint<ts::QueryBoolType>({}) };
+			ts::TypeDesc<> bool_desc{ query::entryPoint<ts::QueryBoolType>({}) };
 
 			operation::Operation comp_int            = exec::compareBuiltin<T>;
 			operation::Operation eq_int              = exec::equalityBuiltin<T>;

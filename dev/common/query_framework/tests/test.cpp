@@ -103,19 +103,15 @@ public:
 
 private:
 	void simpleTest() {
-		assert(query::queryEntryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (1)");
-		assert(query::queryEntryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (2)");
-		assert(query::queryEntryPoint<Fibonacci>(Key1{ 0 }) == 0, "Bad query output (3)");
-		assert(query::queryEntryPoint<FibonacciSum>(Key2{ 4 }) == 7, "Bad query output (4)");
+		assert(query::entryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (1)");
+		assert(query::entryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (2)");
+		assert(query::entryPoint<Fibonacci>(Key1{ 0 }) == 0, "Bad query output (3)");
+		assert(query::entryPoint<FibonacciSum>(Key2{ 4 }) == 7, "Bad query output (4)");
 	}
 
 	void autoCacheTest() {
-		assert(
-			query::queryEntryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (5)"
-		);
-		assert(
-			query::queryEntryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (6)"
-		);
+		assert(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (5)");
+		assert(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (6)");
 	}
 };
 
