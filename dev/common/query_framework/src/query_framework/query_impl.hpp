@@ -154,6 +154,7 @@ namespace query {
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
+ * It caches PResults using base::HashMap in a way that references to them are unstable. 
  * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF                                                   \
@@ -171,6 +172,7 @@ namespace query {
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
+ * It caches PResults using base::StableHashMap in a way that references to them are stable.
  * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_PRESULT_STABLE_REF                                                        \
