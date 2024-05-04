@@ -74,7 +74,7 @@ namespace hir {
 		  pst_element(std::move(pst_element)) {}
 
 	void TopLevelSymbol::calculateType() {
-		type = ts::TypeDesc<ts::TypeInfo>(ts::ModuleInfo::create());
+		type = ts::TypeDesc(query::queryEntryPoint<ts::QueryModuleType>({}));
 	}
 
 	void TopLevelSymbol::analyzeAll() { getAll(); }
@@ -95,7 +95,7 @@ namespace hir {
 	}
 
 	void NamespaceSymbol::calculateType() {
-		type = ts::TypeDesc<ts::TypeInfo>(ts::NamespaceInfo::create());
+		type = ts::TypeDesc(query::queryEntryPoint<ts::QueryNamespaceType>({}));
 	}
 
 	void NamespaceSymbol::analyzeAll() { getAll(); }

@@ -32,8 +32,10 @@ namespace ts {
 	}
 
 	[[nodiscard]]
-	bool TypeInfo::isInfoImplicitlyCoercible(const TypeInfo target) const {
-		return pimpl->isImplImplicitlyCoercible(target);
+	bool TypeInfo::isInfoImplicitlyCoercible(
+		const TypeInfo target, query::detail::ContextType& context
+	) const {
+		return pimpl->isImplImplicitlyCoercible(target, context);
 	}
 
 	// Specialized template definition and explicit instantiation.
