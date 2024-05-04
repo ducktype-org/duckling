@@ -45,7 +45,7 @@ struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
 		}
 	};
 
-	inline static std::map<QKey, query::AddACD<QResult>> cache{};
+	inline static std::map<QKey, query::CacheEntry<QResult>> cache{};
 
 	// static auto provide(Context& context, QKey key) -> PResult;
 
@@ -55,7 +55,7 @@ struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
 			std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")), 1, 1, 1 }));
 		context.log(base::make_unique<ErrorInQuery1>(dia::SourcePosition{
 			std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")), 1, 1, 1 }));
-		return key * key;
+		return context.callExt<SquareValue>(key);
 	}
 
 	static auto load(QKey key) -> LoadResult {
@@ -78,7 +78,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Query1, "Query 1");
  ************/
 
 struct ImplementationOf_Query2: query::QueryImplementation<Query2, uint64_t> {
-	inline static std::map<QKey, query::AddACD<QResult>> cache;
+	inline static std::map<QKey, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		return key + context.query<Query1>(key + 1);
@@ -104,7 +104,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Query2, "Query 2");
  *****************/
 
 struct ImplementationOf_CyclicQuery: query::QueryImplementation<CyclicQuery, uint64_t> {
-	inline static std::map<QKey, query::AddACD<QResult>> cache;
+	inline static std::map<QKey, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		return key + context.query<CyclicQuery>((key + 1) % 5);
@@ -124,6 +124,9 @@ struct ImplementationOf_CyclicQuery: query::QueryImplementation<CyclicQuery, uin
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_CyclicQuery, "Cyclic query");
+
+// implement extension:
+uint64_t SquareValue(query::Context&, uint64_t v) { return v * v; }
 
 int main() {
 	std::cout << query::queryEntryPoint<Query2>(2) << "\n";

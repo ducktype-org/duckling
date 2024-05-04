@@ -224,11 +224,15 @@ How to write auxiliary functions?
 
 Sometimes provider function might grow large and we would like to separate it into smaller function.
 Fortunately that is not a problem. If the "auxiliary functions" does not need functionalities from :code:`Context& context`, then it can be just a standard function or static method (or any other code).
+
 If it does need functionalities from :code:`Context& context` then it can be just a standard function or method that takes :code:`Context&` as a parameter as well.
-As of right now this can be achieved by writing static method next to :code:`provide` function, like this:
+
+There are two ways of achieving this:
+
+First way is to write static method next to :code:`provide` function, like this:
 
 .. code-block:: cpp
-    :caption: Auxiliary function:
+    :caption: Auxiliary function inside Query Implementation struct
 
         static auto auxiliary(Context& context, u32 a) -> u64 {...}
         static auto provide(Context& context, QKey key) -> PResult {
@@ -237,9 +241,37 @@ As of right now this can be achieved by writing static method next to :code:`pro
             // ...
         }
 
+
+Second way is to write "Query Extension":
+
+.. code-block:: cpp
+    :caption: Query Extension
+
+    // hpp:
+    QUERY_EXTENSION(NameOfExtension, input_t, output_t)
+
+    // cpp:
+    output_t NameOfExtension(query::Context& ctx, input_t in) {
+        // ...
+        // use can use "ctx" here
+    }
+
+
+    // how to use it:
+    
+    // ...
+        static auto provide(Context& context, QKey key) -> PResult {
+            auto output = context.callExt<NameOfExtension>(input);
+        }
+    // ...
+
+.. attention::
+    One can technically write Query Extension as just a function, but
+    it is forbidden. The reason for that is to easily identify all extensions in
+    the future during refactors.
+
 .. note::
-    as of today there is no nice way of writing auxiliary function with context parameter outside query implementation struct.
-    This can be however added in the future if the need arise.
+    Query Extensions can be used by multiple queries which can help reduce code repetitions. 
 
 
 Writing load and store function
@@ -250,7 +282,7 @@ Load and store function should be kept as minimal as possible.
 There are two very simple  concepts to unravel before we can go into implementation:
 
 * :code:`query::ACD` type -- This is just "additional cache data". Store function has to store value of this type alongside every cache entry while load function has to retrieve it.
-* :code:`LoadResult` type -- This is a type that expands to :code:`base::Optional<query::AddACD<QResult> >`. :code:`Optional` comes from the fact that the load function may not find a cached value. :code:`query::AddACD<T>` is just a simple template that stores a value of type :code:`T` and a value of type :code:`query::ACD`. In other words :code:`LoadResult` type is just an optional of a pair :code:`QResult, query::ACD`.
+* :code:`LoadResult` type -- This is a type that expands to :code:`base::Optional<query::CacheEntry<QResult> >`. :code:`Optional` comes from the fact that the load function may not find a cached value. :code:`query::CacheEntry<T>` is just a simple template that stores a value of type :code:`T` and a value of type :code:`query::ACD`. In other words :code:`LoadResult` type is just an optional of a pair :code:`QResult, query::ACD`.
 
 Now we can finally write the functions:
 
@@ -262,7 +294,7 @@ Now we can finally write the functions:
             }
             if (/* cache hit */) {
                 return { some_data, acd };
-                // one can also use query::AddACD inside cache implementation
+                // one can also use query::CacheEntry inside cache implementation
                 // and simply retrieve that. 
             }
         }
@@ -276,7 +308,7 @@ Now we can finally write the functions:
             // store either PResult or QResult in cache along side with acd:
 
             // for example:
-            some_cache.store(query::AddACD{ some_result, acd });
+            some_cache.store(query::CacheEntry{ some_result, acd });
 
             // return final result
             // for example:
@@ -380,3 +412,60 @@ Almost Pureness
 It is not strict requirement but side effects should be avoided unless they are really needed.
 
 .. note:: Caching itself is obviously a side effect, but it is an expected one. 
+
+
+Auto caching
+============
+
+Query Framework provides a way to automatically create :code:`load` and :code:`store` method with
+hash-map based caching for fast prototyping.
+
+In order to use it two requirements must be met:
+
+* Query key type must implement perfect hash (already an requirement of the Query Framework)
+* Query key type must implement :code:`operator==` (same as for :code:`base::HashMap`).
+
+There are currently two automatic-cache mechanism:
+
+* :code:`QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF` -- it will cache :code:`PResult`-s in a way that references to them are unstable.
+* :code:`QUERY_AUTO_CACHE_PRESULT_STABLE_REF` -- it will cache :code:`PResult`s in a way that references to them are stable.
+
+In both cases function :code:`store` will really on implicit cast/conversion from :code:`PResult` to :code:`QResult`.
+
+.. code-block:: cpp
+    :caption: Auto cache example: unstable reference
+
+    #include <query_framework/query_impl.hpp>
+    
+    DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, std::string);
+
+    struct ImplementationOf_FibonacciStringAutoCache:
+	  query::QueryImplementation<FibonacciStringAutoCache, std::string> {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
+	}
+
+        QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+    };
+
+    QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciStringAutoCache, "Auto cache");
+
+.. code-block:: cpp
+    :caption: Auto cache example: stable reference
+
+    #include <query_framework/query_impl.hpp>
+    
+    // Here we can return reference as it is stable:
+    DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, const std::string&);
+
+    struct ImplementationOf_FibonacciStringAutoCache:
+	  query::QueryImplementation<FibonacciStringAutoCache, std::string> {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
+	}
+
+        QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+    };
+
+    QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciStringAutoCache, "Auto cache");
+

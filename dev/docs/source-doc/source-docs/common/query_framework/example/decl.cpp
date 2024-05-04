@@ -16,7 +16,7 @@ struct ImplementationOf_MyQuery: query::QueryImplementation<MyQuery, PResult> {
 	/**
 	 * Lets define some cache:
 	 */
-	inline static base::Map<QKey, query::AddACD<QResult>> cache;
+	inline static base::Map<QKey, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		// lets call Query2:
