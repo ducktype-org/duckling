@@ -44,7 +44,7 @@ namespace query::detail {
 	};
 
 #define IMPLEMENT_QUERY(query_type, PResult) \
-	final ImplementationOf_##query_type: public query::QueryImplementation<query_type, PResult>
+	ImplementationOf_##query_type final: public query::QueryImplementation<query_type, PResult>
 
 /**
  * @brief Macro used to declare query extensions

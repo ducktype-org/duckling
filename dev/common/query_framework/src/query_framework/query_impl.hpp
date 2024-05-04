@@ -139,20 +139,20 @@ namespace query {
 
 }
 
+#define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                \
+	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from)   \
+		-> type::QueryType::QResult {                                                               \
+		return ::query::detail::standardQueryEntry<type>(key, from);                                \
+	}                                                                                               \
+	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryId(pretty_name); \
+	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
+
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query.
- * @param type Name of Query Implementation Struct
- * @param pretty_name Pretty name of a given query (that will for example be displayed in logs)
+ * @param query_type Name of Query
  */
-#define QUERY_IMPLEMENTATION_BOILERPLATE(query_type)                       \
-	auto query_type ::QueryType::internal_query(                           \
-		query_type::QueryType::QKey key, ::query::detail::NodeID from      \
-	) -> query_type::QueryType::QResult {                                  \
-		return ::query::detail::standardQueryEntry<query_type>(key, from); \
-	}                                                                      \
-	decltype(query_type::QueryType::id) query_type::QueryType::id          \
-		= ::query::detail::newQueryId(#query_type);                        \
-	decltype(query_type::QueryType::name) query_type::QueryType::name = #query_type;
+#define QUERY_IMPLEMENTATION_BOILERPLATE(query_type) \
+	INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_##query_type, #query_type)
 
 
 /**

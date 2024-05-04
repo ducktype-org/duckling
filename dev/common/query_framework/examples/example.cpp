@@ -67,7 +67,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(Query2);
  * Cyclic Query: *
  *****************/
 
-struct ImplementationOf_CyclicQuery: query::QueryImplementation<CyclicQuery, uint64_t> {
+struct IMPLEMENT_QUERY(CyclicQuery, uint64_t) {
 	inline static std::map<QKey, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {

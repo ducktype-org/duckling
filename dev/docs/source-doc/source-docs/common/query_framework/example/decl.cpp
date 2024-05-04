@@ -12,7 +12,7 @@ struct PResult {
 	uint64_t v;
 };
 
-struct ImplementationOf_MyQuery: query::QueryImplementation<MyQuery, PResult> {
+struct IMPLEMENT_QUERY(MyQuery, PResult) {
 	/**
 	 * Lets define some cache:
 	 */
@@ -46,13 +46,13 @@ struct ImplementationOf_MyQuery: query::QueryImplementation<MyQuery, PResult> {
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_MyQuery, "MyQuery");
+QUERY_IMPLEMENTATION_BOILERPLATE(MyQuery);
 
 /**
  * Lets also implement Query2 as a very simple query without any caching:
  */
 
-struct ImplementationOf_Query2: query::QueryImplementation<Query2, std::string> {
+struct IMPLEMENT_QUERY(Query2, std::string) {
 	static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
 		return std::to_string(key);
 	}
@@ -66,4 +66,4 @@ struct ImplementationOf_Query2: query::QueryImplementation<Query2, std::string> 
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Query2, "Query 2");
+QUERY_IMPLEMENTATION_BOILERPLATE(Query2);
