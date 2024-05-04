@@ -7,7 +7,7 @@
 #include "param_builder.hpp"
 #include "exceptions.hpp"
 #include "base/variant.hpp"
-#include "base/str_replace.hpp"
+#include "base/str_utils.hpp"
 #include <cctype>
 #include <iostream>
 
