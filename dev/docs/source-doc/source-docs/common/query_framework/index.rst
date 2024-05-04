@@ -282,7 +282,7 @@ Load and store function should be kept as minimal as possible.
 There are two very simple  concepts to unravel before we can go into implementation:
 
 * :code:`query::ACD` type -- This is just "additional cache data". Store function has to store value of this type alongside every cache entry while load function has to retrieve it.
-* :code:`LoadResult` type -- This is a type that expands to :code:`base::Optional<query::AddACD<QResult> >`. :code:`Optional` comes from the fact that the load function may not find a cached value. :code:`query::AddACD<T>` is just a simple template that stores a value of type :code:`T` and a value of type :code:`query::ACD`. In other words :code:`LoadResult` type is just an optional of a pair :code:`QResult, query::ACD`.
+* :code:`LoadResult` type -- This is a type that expands to :code:`base::Optional<query::CacheEntry<QResult> >`. :code:`Optional` comes from the fact that the load function may not find a cached value. :code:`query::CacheEntry<T>` is just a simple template that stores a value of type :code:`T` and a value of type :code:`query::ACD`. In other words :code:`LoadResult` type is just an optional of a pair :code:`QResult, query::ACD`.
 
 Now we can finally write the functions:
 
@@ -294,7 +294,7 @@ Now we can finally write the functions:
             }
             if (/* cache hit */) {
                 return { some_data, acd };
-                // one can also use query::AddACD inside cache implementation
+                // one can also use query::CacheEntry inside cache implementation
                 // and simply retrieve that. 
             }
         }
@@ -308,7 +308,7 @@ Now we can finally write the functions:
             // store either PResult or QResult in cache along side with acd:
 
             // for example:
-            some_cache.store(query::AddACD{ some_result, acd });
+            some_cache.store(query::CacheEntry{ some_result, acd });
 
             // return final result
             // for example:
