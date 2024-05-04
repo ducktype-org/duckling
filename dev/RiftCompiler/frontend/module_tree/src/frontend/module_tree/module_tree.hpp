@@ -5,15 +5,15 @@
 
 #pragma once
 
-#include "base/strongly_typed_id.hpp"
-#include <string>
-#include <utility>
+#include <base/strongly_typed_id.hpp>
 #include <base/maps.hpp>
+#include <base/perfect_hash.hpp>
+#include <base/ints.hpp>
 #include <filesystem/file.hpp>
 #include <filesystem/fs_tree.hpp>
 #include <pst_parser/pst.hpp>
-#include <base/ints.hpp>
-#include <base/perfect_hash.hpp>
+
+#include <string>
 
 // @TODO: change std::string here to StrId
 

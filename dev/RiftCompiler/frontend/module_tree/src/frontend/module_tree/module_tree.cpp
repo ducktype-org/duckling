@@ -4,10 +4,11 @@
  */
 
 #include "module_tree.hpp"
+
 #include <pst_parser/parser.hpp>
 #include <base/maps.hpp>
-
 #include <query_framework/query_impl.hpp>
+
 #include "queries.hpp"
 
 using fs::FsTree;

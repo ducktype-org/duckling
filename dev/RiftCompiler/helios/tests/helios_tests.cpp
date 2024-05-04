@@ -1,8 +1,8 @@
-#include "base/str_utils.hpp"
-#include "helios/scope_symbol_id.hpp"
-#include "helios/scopes/scopes.hpp"
-#include "helios/symbols/symbols.hpp"
-#include "query_framework/query_entry_point.hpp"
+#include <base/str_utils.hpp>
+#include <helios/scope_symbol_id.hpp>
+#include <helios/scopes/scopes.hpp>
+#include <helios/symbols/symbols.hpp>
+#include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 #include <pst_parser/parser.hpp>
 #include <filesystem/file.hpp>
