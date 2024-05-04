@@ -2,7 +2,7 @@
 
 ## Before start
 
-Run `git submodule update --init` to fetch library dependencies. 
+Run `./toolbox.py init` to initialize the repository (fetches library dependencies, setups virtual environment, downloads binaries, etc...)
 
 ## File structure
 

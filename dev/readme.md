@@ -13,36 +13,22 @@ Main development folder
 
 ### Compilation
 
-## Downloading local dependencies
-
-We are currently using three external libraries: asio, crow, result.
-They are set up as git-submodules and can be installed by:
-~~~shell
-$ git submodule update --init
-~~~
-
-~~~shell
-$ cmake optional_flags
-$ make # or `make target`
-~~~
-
 ### Running tests
 
-~~~shell
-$ make build_test # compiles tests
-$ make test # run tests, alternatively `ctest`
-$ make memcheck_test # run tests under valgrind
-~~~
+```shell
+$ ./toolbox.py test # regular tests
+$ ./toolbox.py test -m # run tests under valgrind
+````
 
 ### Testing coverage
 
-~~~shell
+```shell
 $ cmake -DENABLE_COVERAGE=true .
 $ make -j
 $ make test
 $ make coverage
 $ xdg-open coverage/index.html
-~~~
+```
 
 ## Code structure
 
