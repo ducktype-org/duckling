@@ -5,16 +5,37 @@
 
 
 #include "source_position.hpp"
+#include "printer/message.hpp"
+#include <cmath>
+#include <format>
+#include <string>
 #include <token_file/file.hpp>
 #include <base/exceptions.hpp>
 
 namespace dia {
-	std::string SourcePosition::getSourceChars() const {
-		auto             source_content = source_file->getContent();
-		std::string_view source         = source_content.view().stringView();
+	std::vector<std::string> SourcePosition::getSourceLines() const {
+		if (source_end == source_file->getChars().size() - 1) return {"<EOF>"};
 
-		if (source_end == source.size()) return "<EOF>";
-		return { source.begin() + source_start, source.begin() + source_end + 1 };
+		auto start = source_file->getLineColumn(source_start);
+		auto end = source_file->getLineColumn(source_end);
+		usize first_line = std::max((usize)2, start.first) - 1;
+		usize last_line = std::min(source_file->getLines().size(), end.first + 1);
+		usize length = std::to_string(last_line).size();
+		std::string str_len = std::to_string(length);
+
+		std::vector<std::string> res;
+		res.emplace_back(std::string(length + 1, ' ') + "|\n");
+		for(usize i = first_line; i <= last_line; i++) {
+			res.emplace_back(std::vformat("{:>" + str_len + "} | ", std::make_format_args(i)));
+			auto lineChars = source_file->getLine(i);
+			auto line_begin = lineChars.front().raw_begin;
+			auto line_end = lineChars.end()->raw_begin;
+			res.emplace_back(reinterpret_cast<const char*>(line_begin), reinterpret_cast<const char*>(line_end));
+			res.emplace_back("\n");
+		}
+		res.emplace_back(std::string(length + 1, ' ') + "|\n");
+
+		return res;
 	}
 
 	SourcePosition::SourcePosition(
@@ -44,8 +65,8 @@ namespace dia {
 		if (source_end < source_start)
 			throw base::LogicError("Invalid SourcePosition: source end before source start");
 		// allow EOF position
-		if (not(source_end == source_start and source_end == source_file->getContent().size())) {
-			if (source_end >= source_file->getContent().size())
+		if (not(source_end == source_start and source_end == source_file->getChars().size())) {
+			if (source_end >= source_file->getChars().size())
 				throw base::LogicError("Invalid SourcePosition: source end outside the file");
 		}
 	}
@@ -67,16 +88,17 @@ namespace dia {
 
 	std::vector<printer::MessageContent>
 		SourcePosition::genPrinterMessageContents(const printer::MessageContent& reason) const {
-		return { { "In file: " },
+		std::vector<printer::MessageContent> res =  
+				{ { "In file: " },
 			     { source_file->getPath().strView().data() },
 			     { ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
 			     reason,
 			     { "\n" },
-			     { "  |\n" },
-			     { std::to_string(line) },
-			     { " | " },
-			     { getSourceChars() + "\n" },
-			     { "  |\n" } };
+		};
+		for (auto el: getSourceLines()) {
+			res.emplace_back(std::move(el));
+		}
+		return res;
 	}
 
 	std::string SourcePosition::genStr(const std::string_view reason) const {
@@ -85,11 +107,9 @@ namespace dia {
 		output += ":" + std::to_string(line) + ":" + std::to_string(column) + "\n";
 		output += reason;
 		output += "\n";
-		output += "  |\n";
-		output += std::to_string(line);
-		output += " | ";
-		output += getSourceChars() + "\n";
-		output += "  |\n";
+		for(const auto& el: getSourceLines()) {
+			output += el;
+		}
 		return output;
 	}
 }

@@ -45,7 +45,7 @@ namespace dia {
 		 * @return std::string containing a copy of the bytes in this position.
 		 */
 		[[nodiscard]]
-		std::string getSourceChars() const;
+		std::vector<std::string> getSourceLines() const;
 
 		/**
 		 * @brief Get formatted message contents with a given reason.

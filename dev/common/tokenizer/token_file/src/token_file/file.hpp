@@ -59,6 +59,16 @@ namespace tokenizer {
 		[[nodiscard]] 
 		std::pair<usize, usize> getLineColumn(usize source_pos);
 
+		auto& getLines() {
+			return lines;
+		}
+
+		auto getLine(usize line) {
+			usize start = lines[line - 1].first;
+			usize len = lines[line - 1].second - start;
+			return std::span(*decoded).subspan(start, len);
+		}
+
 		fs::FileContent getContent();		
 
 		lexer::CharArray& getChars();		
@@ -75,11 +85,7 @@ namespace tokenizer {
 
 		void runLexer();
 
-		void tokenize() {
-			decode();
-			countLines();
-			runLexer();
-		}
+		void tokenize();
 	};
 
 	template <class... Ts>
