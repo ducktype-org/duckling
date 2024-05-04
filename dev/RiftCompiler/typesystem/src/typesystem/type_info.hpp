@@ -10,6 +10,7 @@
 
 #include <string>
 #include <base/ints.hpp>
+#include <query_framework/query_impl.hpp>
 
 #include "kind.hpp"
 
@@ -182,10 +183,11 @@ namespace ts {
 		 * This is typically determined by rules specific for the Kind of the source type.
 		 *
 		 * \param target The target of a hypothetical implicit coercion.
+		 * \param context Context needed fo the query call.
 		 * \return Whether the implicit coercion is allowed or not.
 		 */
 		[[nodiscard]]
-		bool isInfoImplicitlyCoercible(TypeInfo target) const;
+		bool isInfoImplicitlyCoercible(TypeInfo target, query::detail::ContextType& context) const;
 
 		/**
 		 * \brief Get the text representation of this type.

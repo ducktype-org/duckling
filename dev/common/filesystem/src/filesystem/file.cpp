@@ -9,10 +9,83 @@
 #include <base/exceptions.hpp>
 
 #include <fstream>
-#include <iterator>
+#include <random>
+
+namespace {
+	std::filesystem::path
+		random_name(const std::filesystem::path& prefix_path, const size_t name_len = 16) {
+		static std::random_device device;
+		static std::mt19937       rng(device());
+		static std::string        name_chars
+			= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPRQSTUVWXYZ";
+		static std::uniform_int_distribution<size_t> dist(0, name_chars.length() - 1);
+
+		// This is 64, but usually it will not loop more than once.
+		for (size_t try_no = 0; try_no < 64; try_no++) {
+			std::string name;
+			for (int i = 0; i < name_len; i++) name.push_back(name_chars[dist(rng)]);
+			if (!exists(prefix_path / name)) return prefix_path / name;
+		}
+		throw base::LogicError("Couldn't create a new name in: " + absolute(prefix_path).string());
+	}
+}
 
 namespace fs {
 	FilePath::ContentMap FilePath::to_content;
+
+	FilePath FilePath::getDefaultTempPath() {
+		static FilePath tempDirectoryPath
+			= createTempFilePathObj(std::filesystem::temp_directory_path());
+		return tempDirectoryPath;
+	}
+
+	std::filesystem::path FilePath::genTempPathInMe(std::string_view custom_name) const {
+		if (!is_temporary) throw base::LogicError("Parent is not temporary");
+
+		std::filesystem::path file_name;
+		if (custom_name.empty())
+			file_name = random_name(path);
+		else {
+			file_name = path / custom_name;
+			if (exists(file_name))
+				throw base::LogicError(base::strConcat(
+					"Cannot create a file/dir with name \"",
+					custom_name,
+					"\", because there already is a file/dir with this name in " + absolutePath()
+				));
+		}
+		return file_name;
+	}
+
+	FilePath FilePath::createTempFilePathObj(const std::filesystem::path& path) {
+		auto&& obj       = FilePath(path);
+		obj.is_temporary = true;
+		return obj;
+	}
+
+	FilePath FilePath::createTempFile(std::string_view content) {
+		return getDefaultTempPath().createTempFileIn(content);
+	}
+
+	FilePath FilePath::createTempDirectory() {
+		return getDefaultTempPath().createTempDirectoryIn();
+	}
+
+	FilePath FilePath::createTempDirectoryIn(std::string_view custom_name) const {
+		auto&& new_temp_dir = genTempPathInMe(custom_name);
+		create_directory(new_temp_dir);
+		return createTempFilePathObj(new_temp_dir);
+	}
+
+	FilePath FilePath::createTempFileIn(
+		std::string_view new_file_content, std::string_view custom_name
+	) const {
+		auto&&        new_temp_file = genTempPathInMe(custom_name);
+		std::ofstream temp_file(new_temp_file);
+		temp_file << new_file_content;
+		temp_file.close();
+		return createTempFilePathObj(new_temp_file);
+	}
 
 	FileContent FilePath::getContent() const {
 		if (to_content.contains(path)) {
@@ -33,7 +106,7 @@ namespace fs {
 	}
 
 	cpp::result<FileContent, std::string> FilePath::getContentSafe() const {
-		if (!std::filesystem::exists(path)) {
+		if (!exists(path)) {
 			return cpp::fail(base::strConcat(
 				"Error: cannot get content of file `", path, "` - file does not exist"
 			));

@@ -345,26 +345,19 @@ namespace ts {
 	public:
 		SETUP_TYPE_WITH_BASE(FunctionInfo, TypeInfo)
 
-		static FunctionInfo create(
-			const std::vector<TypeDesc<>>& parameter_types,
-			TypeDesc<>                     result_type,
-			bool                           pure = false,
-			bool                           free = false
-		);
-
 		/**
 		 * \brief Gets the parameter types of the function type.
 		 * \return The parameter types of the function type.
 		 */
 		[[nodiscard]]
-		std::vector<TypeDesc<>> getParameterTypes() const;
+		std::vector<TypeInfo> getParameterTypes() const;
 
 		/**
 		 * \brief Gets the result type of the function type.
 		 * \return The result type of the function type.
 		 */
 		[[nodiscard]]
-		TypeDesc<> getResultType() const;
+		TypeInfo getResultType() const;
 
 		/**
 		 * \brief Check whether the function type is pure or not.
@@ -405,7 +398,6 @@ namespace ts {
 	class NamespaceInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(NamespaceInfo, TypeInfo)
-		static NamespaceInfo create();
 
 		CONSTRUCT_WITH_CHECKED_CAST(NamespaceInfo)
 
@@ -416,7 +408,6 @@ namespace ts {
 	class ModuleInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(ModuleInfo, TypeInfo)
-		static ModuleInfo create();
 
 		CONSTRUCT_WITH_CHECKED_CAST(ModuleInfo)
 

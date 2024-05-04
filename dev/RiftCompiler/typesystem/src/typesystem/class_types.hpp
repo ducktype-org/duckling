@@ -6,7 +6,6 @@
 #pragma once
 
 #include "type_desc.hpp"
-#include "type_desc.tcpp"
 #include "type_info.hpp"
 
 #include <hir/scope_symbol_id.hpp>

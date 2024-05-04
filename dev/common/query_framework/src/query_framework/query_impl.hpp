@@ -1,13 +1,17 @@
 #pragma once
 
+#include <utility>
 #include <base/optional.hpp>
 #include <base/str_concat.hpp>
+#include <diagnostic/logger.hpp>
 
 #include "acd.hpp"
 #include "query_int.hpp"
 #include "dep_graph.hpp"
 #include "query_id_provider.hpp"
 #include "logs.hpp"
+
+#include <base/defer.hpp>
 
 namespace query {
 
@@ -27,6 +31,11 @@ namespace query {
 		struct ContextType {
 			NodeID my_node;
 
+			// @TODO: Make the context (and thus the logger) be propagated through query calls,
+			// so that all queries run on the same file / in the same compilation thread / whatever
+			// use a single, *non-static* logger object.
+			static dia::Logger logger;
+
 			template<typename OthQuery>
 			auto query(typename OthQuery::QKey key) -> auto {
 				NodeID dep_id = makeNodeID(OthQuery::id, key);
@@ -35,17 +44,27 @@ namespace query {
 				return OthQuery::internal_query(key, my_node);
 			}
 
-			void log(std::string_view str) {
-				// @TODO: arguments of this function should be evaluated only if logging is enabled
-				::query::log("[USER LOG]: ");
-				::query::log(str);
-				::query::log("\n");
+			/**
+			 * @brief Calls query extension passes as template argument.
+			 *
+			 * @tparam Query Extension
+			 * @tparam Arguments of query extension
+			 * @param args
+			 * @return Return value of query extension
+			 */
+			template<auto Extension, typename... Args>
+			auto callExt(Args&&... args) {
+				return Extension(*this, std::forward<Args>(args)...);
 			}
 
-			// @FUTURE: this function should take some diagnostic object as a parameter
-			// Trivial implementation for now
-			void compilationError(std::string_view error);
+			/**
+			 * Log message to be shown to the user.
+			 * @param message The dia::Message to be logged.
+			 */
+			void log(base::unique_ptr<dia::Message> message) { logger.log(std::move(message)); }
 		};
+
+		inline dia::Logger ContextType::logger{};
 
 		/**
 		 * @brief Internal function implementing the call to a query.
@@ -106,9 +125,9 @@ namespace query {
 
 		using QKey        = typename QueryType_tp::QKey;
 		using QResult     = typename QueryType_tp::QResult;
-		using QResWithACD = AddACD<QResult>;
+		using QResWithACD = CacheEntry<QResult>;
 		using PResult     = PResult_tp;
-		using PResWithACD = AddACD<PResult>;
+		using PResWithACD = CacheEntry<PResult>;
 		using LoadResult  = base::Optional<QResWithACD>;
 
 		using Context = ::query::detail::ContextType;
@@ -121,6 +140,8 @@ namespace query {
 		 */
 	};
 
+	using Context = detail::ContextType;
+
 }
 
 /**
@@ -131,21 +152,43 @@ namespace query {
 #define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                       \
 	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from) \
 		-> type::QueryType::QResult {                                                             \
-		return ::query::detail::standardQueryEntry<type>(key, from);                              \
+		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                   \
 	}                                                                                             \
 	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::nextQueryId();       \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
 
+/**
+ * @brief Macro defining typical hash based cache for fast prototyping.
+ * It caches PResults using base::HashMap in a way that references to them are unstable.
+ * @future: change it to component, when proper query-component system will be introduced
+ */
+#define QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF                                                  \
+	static inline base::                                                                       \
+		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>            \
+				cache;                                                                         \
+	static auto load(QKey key) -> LoadResult {                                                 \
+		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
+		return {};                                                                             \
+	}                                                                                          \
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                      \
+		cache.put(key, { std::move(res), acd });                                               \
+		return cache.at(key).data;                                                             \
+	}
+
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
+ * It caches PResults using base::StableHashMap in a way that references to them are stable.
  * @future: change it to component, when proper query-component system will be introduced
  */
-#define QUERY_AUTO_CACHE_PRESULT                                                                \
-	static inline base::HashMap<QKey, query::AddACD<PResult>, ::base::PerfectHashFunctor<QKey>> \
-				cache;                                                                          \
-	static auto load(QKey key) -> LoadResult { return cache.atMaybeCopy(key); }                 \
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                       \
-		cache.put(key, { std::move(res), acd });                                                \
-		return cache.at(key).data;                                                              \
-	}
+#define QUERY_AUTO_CACHE_PRESULT_STABLE_REF                                                    \
+	static inline base::                                                                       \
+		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>      \
+				cache;                                                                         \
+	static auto load(QKey key) -> LoadResult {                                                 \
+		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
+		return {};                                                                             \
+	}                                                                                          \
+	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                      \
+		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
+		return cache.at(key).data;

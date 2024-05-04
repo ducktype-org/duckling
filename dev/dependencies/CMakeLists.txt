@@ -13,26 +13,24 @@ set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74
 set(ICU_CONTROL "SHA512=32c28270aa5d94c58d2b1ef46d4ab73149b5eaa2e0621d4a4c11597b71d146812f5e66db95f044e8aaa11b94e99edd4a48ab1aa8efbe3d72a73870cd56b564c2")
 
 FetchContent_Declare(
-		json_struct
-		URL "https://github.com/jorgen/json_struct/archive/${JSON_STRUCT_COMMIT}.zip"
+	json_struct
+	URL "https://github.com/jorgen/json_struct/archive/${JSON_STRUCT_COMMIT}.zip"
 )
 
 FetchContent_Declare(
-		result
-		URL "https://github.com/bitwizeshift/result/archive/${RESULT_COMMIT}.zip"
-)
-
-
-FetchContent_Declare(
-		asio
-		URL "https://github.com/chriskohlhoff/asio/archive/${ASIO_COMMIT}.zip"
+	result
+	URL "https://github.com/bitwizeshift/result/archive/${RESULT_COMMIT}.zip"
 )
 
 FetchContent_Declare(
-		crow
-		URL "https://github.com/CrowCpp/Crow/archive/${CROW_COMMIT}.zip"
+	asio
+	URL "https://github.com/chriskohlhoff/asio/archive/${ASIO_COMMIT}.zip"
 )
 
+FetchContent_Declare(
+	crow
+	URL "https://github.com/CrowCpp/Crow/archive/${CROW_COMMIT}.zip"
+)
 
 FetchContent_MakeAvailable(asio)
 set(ASIO_INCLUDE_DIR "${asio_SOURCE_DIR}/asio/include")

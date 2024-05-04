@@ -5,14 +5,13 @@ add_library(Base
         src/base/impl/string_id.cpp
         src/base/impl/str_concat.cpp
         src/base/impl/convert.cpp
-        src/base/str_replace.hpp
+        src/base/impl/str_utils.cpp
 )
 
 set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)
 
-
 # @TODO: unicode dependency might not be optional.
-# Think of a way to "break" it 
+# Think of a way to "break" it
 make_module(Base USES Result::Result unicode)
 
 rift_add_test(base strongly_typed_int_tests tests/strongly_typed_int_test.cpp
