@@ -1,18 +1,23 @@
-//
-// Created by mateusz on 04.05.24.
-//
-#include "query_id.hpp"
+/**
+ * @file query_id.cpp
+ * @author Mateusz
+ * 
+ */
 
-#include <iostream>
+#include "query_id.hpp"
 
 namespace query::detail {
 	namespace {
-		base::HashMap<QueryID::VAL_T, std::string> name_map{};
+		using NameMap = base::HashMap<QueryID::VAL_T, std::string>;
+		NameMap& nameMap() {
+			static base::HashMap<QueryID::VAL_T, std::string> name_map{};
+			return name_map;
+		}
 	}
 
-	const std::string& QueryID::getName() const { return name_map.at(val); }
+	const std::string& QueryID::getName() const { return nameMap().at(val); }
 
 	void QueryID::setName(const QueryID& query, const std::string_view name) {
-		name_map.put(query.val, name);
+		nameMap().put(query.val, name);
 	}
 }
