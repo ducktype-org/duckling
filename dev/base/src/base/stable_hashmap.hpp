@@ -12,8 +12,9 @@ namespace base {
 	 * A wrapper around base::HashMap, that keeps references (memory addresses) valid.
 	 * @tparam DATA_T The datatype to store
 	 * @tparam KEY_T Indentifies data
+	 * @tparam HASH_T Hash functor for hashing keys
 	 */
-	template<typename KEY_T, typename DATA_T>
+	template<typename KEY_T, typename DATA_T, typename HASH_T = std::hash<KEY_T>>
 	class StableHashMap {
 	public:
 		StableHashMap() = default;
@@ -78,7 +79,7 @@ namespace base {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& value) {
-			return data.put(std::forward<K>(key), std::forward<D>(value));
+			return data.put(std::forward<K>(key), make_unique<DATA_T>(std::forward<D>(value)));
 		}
 
 		/**
@@ -103,6 +104,6 @@ namespace base {
 		}
 
 	private:
-		HashMap<KEY_T, unique_ptr<DATA_T>> data;
+		HashMap<KEY_T, unique_ptr<DATA_T>, HASH_T> data;
 	};
 }
