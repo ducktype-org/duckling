@@ -10,6 +10,7 @@
 #include "dep_graph.hpp"
 #include "query_id_provider.hpp"
 #include "logs.hpp"
+#include "node_making.hpp"
 
 #include <base/defer.hpp>
 
@@ -149,12 +150,12 @@ namespace query {
  * @param type Name of Query Implementation Struct
  * @param pretty_name Pretty name of a given query (that will for example be displayed in logs)
  */
-#define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                       \
-	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from) \
-		-> type::QueryType::QResult {                                                             \
-		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                   \
-	}                                                                                             \
-	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::nextQueryId();       \
+#define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                         \
+	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from)   \
+		-> type::QueryType::QResult {                                                               \
+		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                     \
+	}                                                                                               \
+	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryId(pretty_name); \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
 
 /**
