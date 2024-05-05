@@ -6,12 +6,14 @@ namespace query::detail {
 		constexpr QueryID outside_world_query = { 0 };
 	}
 
-	QueryID nextQueryId() {
-		QueryID ret = next;
+	QueryID newQueryId(const std::string_view pretty_name) {
+		const QueryID ret = next;
+		QueryID::setName(ret, pretty_name);
+
 		next.val++;
+
 		return ret;
 	}
 
 	QueryID outsideWorldQueryID() { return outside_world_query; }
-
 }

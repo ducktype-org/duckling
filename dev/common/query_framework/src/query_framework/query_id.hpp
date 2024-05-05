@@ -4,12 +4,17 @@
 
 namespace query::detail {
 	struct QueryID {
-		// private: @TODO
-		u64 val;
+		using VAL_T = u64;
+		VAL_T val;
 
 		[[nodiscard]]
 		constexpr u64 asInt() const {
 			return val;
 		}
+
+		static void setName(const QueryID& query, std::string_view name);
+
+		[[nodiscard]]
+		const std::string& getName() const;
 	};
 }

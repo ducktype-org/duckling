@@ -2,11 +2,9 @@
 Defer
 =====
 
-.. simple-description::
-
 Defer is a macro that postpones execution of expression till the end of scope.
 
-.. attention:: Multiple defer statements can not be used in the same line.
+.. note:: Multiple defer statements cannot be used in the same line.
 
 .. contents::
 	:depth: 2
@@ -20,15 +18,34 @@ Usage
 	#include <base/defer.hpp>
 
 	int main() {
+		int a = 3;
+		// a = 3
 		{
+			// a = 3
+			a += 2;
+			// a = 5
 			defer (a++);
+			// a = 5
+			a--;
+			// a = 4
 		}
+		// a = 5
+		{
+			defer (a = 4);
+			defer (a--);
+			// a = 5
+		}
+		// a = 4;
+		{
+			defer (a--);
+			defer (a = 3);
+			// a = 4
+		}
+		// a = 2
 	}
 
 
 Code doc 
 ========
-
-.. This should be moved to different file probably
 
 .. doxygendefine:: defer
