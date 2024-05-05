@@ -23,8 +23,15 @@ namespace dia {
 	 * It always stores a valid position with the position (end() + 1, end() + 1) being EOF
 	 */
 	class SourcePosition {
+	private:
+		explicit SourcePosition(): line(1), column(1), source_start(0), source_end(0), source_file(nullptr) {}
 	public:
-		SourcePosition() = delete;
+		/**
+		 * @brief Constructs a fake source position that should never be used except as an unused placeholder.
+		 */
+		static SourcePosition fakePosition() {
+			return SourcePosition();
+		}
 
 		SourcePosition(tokenizer::File source_file, usize line, usize column, usize source_start);
 		SourcePosition(

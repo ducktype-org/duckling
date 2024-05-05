@@ -1,5 +1,6 @@
 #include "logger.hpp"
 #include <filesystem/file.hpp>
+#include <token_file/file.hpp>
 
 namespace dia {
 	void Logger::log(base::unique_ptr<Message> message_ptr) {
@@ -71,12 +72,7 @@ namespace dia {
 	class ObsoleteErrorWithPrinterMessage final: public Error {
 	public:
 		explicit ObsoleteErrorWithPrinterMessage(printer::MessageContent message):
-			  // Had to pick a file that always exists and behaves somewhat normally.
-		      // /dev/zero does not work.
-			  // @TODO
-			  Error(
-				  { nullptr, 1, 1, 1 }
-			  ),
+			  Error(dia::SourcePosition::fakePosition()),
 			  message(std::move(message)) {}
 
 	private:

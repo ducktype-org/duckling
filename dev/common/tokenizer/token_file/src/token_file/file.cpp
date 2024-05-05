@@ -21,9 +21,6 @@ namespace tokenizer {
 	TokenFile::TokenFile(const fs::FilePath& path): path(path) {
 		content = path.getContent();
 	}
-	void TokenFile::decode() {
-		decoded = lexer::decode<fs::UTF8>(content->view(), log);
-	}
 
 	void TokenFile::countLines() {
 		if (log.bad()) return;
@@ -84,12 +81,5 @@ namespace tokenizer {
 			RIFT_PANIC("Tried to access nonexistant token data.");
 		}
 		return token_data.value();
-	}
-
-	void TokenFile::tokenize() {
-		lexer::Classifications::init();
-		decode();
-		countLines();
-		runLexer();
 	}
 }

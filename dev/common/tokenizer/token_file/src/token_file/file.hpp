@@ -5,7 +5,10 @@
 #include <base/unique_pointer.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
+#include <filesystem/encoding.hpp>
 #include <lexer/token.hpp>
+#include <lexer/decode.hpp>
+#include <lexer/lexer.hpp>
 
 #include <set>
 
@@ -79,13 +82,22 @@ namespace tokenizer {
 
 		fs::FilePath getPath();
 
-		void decode();
+		template<fs::Encoding encoding = fs::Encoding::UTF8>
+		void decode() {
+			decoded = lexer::decode<encoding>(content->view(), log);
+		}
 
 		void countLines();
 
 		void runLexer();
 
-		void tokenize();
+		template<fs::Encoding encoding = fs::Encoding::UTF8>
+		void tokenize() {
+			lexer::init();
+			decode<encoding>();
+			countLines();
+			runLexer();
+		}
 	};
 
 	template <class... Ts>

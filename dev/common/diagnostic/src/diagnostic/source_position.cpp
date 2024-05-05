@@ -65,8 +65,8 @@ namespace dia {
 		if (source_end < source_start)
 			throw base::LogicError("Invalid SourcePosition: source end before source start");
 		// allow EOF position
-		if (not(source_end == source_start and source_end == source_file->getChars().size())) {
-			if (source_end >= source_file->getChars().size())
+		if (not(source_end == source_start and source_end == source_file->getChars().size() - 1)) {
+			if (source_end >= source_file->getChars().size() - 1)
 				throw base::LogicError("Invalid SourcePosition: source end outside the file");
 		}
 	}

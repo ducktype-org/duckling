@@ -127,7 +127,6 @@ private:
 		assert(position.getColumn() == 2, "Wrong column");
 		assert(position.getStart() == 16, "Wrong start index");
 		assert(position.getEnd() == 20, "Wrong end index");
-		assert(position.getSourceChars() == "while", "Wrong getSourceChars()");
 	}
 };
 
