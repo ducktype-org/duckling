@@ -191,4 +191,5 @@ namespace query {
 	}                                                                                          \
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                      \
 		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
-		return cache.at(key).data;
+		return cache.at(key).data;                                                             \
+	}

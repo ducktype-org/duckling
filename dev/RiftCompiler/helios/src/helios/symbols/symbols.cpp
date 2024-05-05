@@ -330,6 +330,7 @@ namespace compiler::helios {
 
 	std::vector<rpn::ExprElem>
 		rpn::ExtensionMakeRPN(query::detail::ContextType& ctx, KeyOf_ExtensionMakeRPN key) {
+			
 		std::vector<ExprElem> rpn;
 		std::stack<ExprElem>  st;
 		for (auto&& e: key.expr) {
