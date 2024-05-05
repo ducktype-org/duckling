@@ -16,7 +16,9 @@ namespace compiler::helios {
 	struct SymID {
 		// @FUTURE: add some mangling, so valgrind will not get confused
 		[[nodiscard]]
-		base::HashT customPerfectHash() const { return reinterpret_cast<u64>(ref.get()); }
+		base::HashT customPerfectHash() const {
+			return reinterpret_cast<u64>(ref.get());
+		}
 
 		bool operator==(const SymID&) const = default;
 
@@ -29,13 +31,16 @@ namespace compiler::helios {
 		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QueryLinkedScope;
 	};
-	
+
 	/**
 	 * @brief Scope Identifier. Used to represent HELIOS Scope across the compiler.
 	 */
 	struct ScopeID {
 		// @FUTURE: add some mangling, so valgrind will not get confused
-		[[nodiscard]] base::HashT customPerfectHash() const { return reinterpret_cast<u64>(ref.get()); }
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			return reinterpret_cast<u64>(ref.get());
+		}
 
 		bool operator==(const ScopeID&) const = default;
 

@@ -33,8 +33,9 @@ namespace compiler::helios {
 		bool isEmpty() const;
 
 		[[nodiscard]]
-		bool       isSingle() const;
-		[[nodiscard]] SymbolList getAsSingle() const;
+		bool isSingle() const;
+		[[nodiscard]]
+		SymbolList getAsSingle() const;
 		void       insert(LookupResult other);
 
 		[[nodiscard]]

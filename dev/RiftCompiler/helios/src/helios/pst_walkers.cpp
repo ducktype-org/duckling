@@ -6,7 +6,7 @@
 namespace compiler::helios {
 
 	// @TODO: in the future: make some base for all elements that can be used here
-	
+
 	StmtList getChildStmtsOf(PstRef<pst::RiftElement> elem) {
 		if (auto* ptr = dynamic_cast<const pst::CodeBlock*>(elem.get())) {
 			StmtList out;

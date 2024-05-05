@@ -7,7 +7,6 @@
 
 #include "scopes/scopes.hpp"
 
-
 namespace compiler::helios {
 
 

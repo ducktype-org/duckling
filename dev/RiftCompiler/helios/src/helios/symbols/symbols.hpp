@@ -13,7 +13,6 @@
 #include <base/string_id.hpp>
 #include <typesystem/typesystem.hpp>
 
-
 namespace compiler::helios {
 
 	/**

@@ -3,9 +3,7 @@
 #include <query_framework/query_entry_point.hpp>
 #include <frontend/module_tree/queries.hpp>
 
-
 int main(int argc, const char* argv[]) {
-	
 	// clang-format off
 	auto clap
 		= clap::Clap()
@@ -39,10 +37,9 @@ int main(int argc, const char* argv[]) {
 	using namespace compiler;
 
 	std::cerr << "Getting module tree... ";
-	
-	[[maybe_unused]]
-	auto module_tree = query::queryEntryPoint<frontend::QueryModuleTree>(path_to_compile);
+
+	[[maybe_unused]] auto module_tree
+		= query::queryEntryPoint<frontend::QueryModuleTree>(path_to_compile);
 
 	std::cerr << "Done.\n";
-
 }

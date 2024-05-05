@@ -1,6 +1,6 @@
 /**
  * @file pst_walkers.hpp
- * @brief Functions that perform some walks over PST 
+ * @brief Functions that perform some walks over PST
  * @TODO: decide if this should be in some separate module.
  */
 
@@ -24,8 +24,8 @@ namespace compiler::helios {
 	 *  * For CodeBlockOrStmt return Stmt in the code block
 	 *  * For TopLevel return top level Stmt in the PST
 	 *  * For other it panics
-	 * 
-	 * @return StmtList 
+	 *
+	 * @return StmtList
 	 */
 	StmtList getChildStmtsOf(PstRef<pst::RiftElement>);
 

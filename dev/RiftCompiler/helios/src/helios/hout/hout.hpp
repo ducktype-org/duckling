@@ -3,7 +3,7 @@
 #include "../scope_symbol_id.hpp"
 
 // @TODO: relax this dependency
-#include <frontend/module_tree/module_tree.hpp> // ModuleId
+#include <frontend/module_tree/module_tree.hpp>  // ModuleId
 
 #include <vector>
 

@@ -69,7 +69,7 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO: dont just ignore other files...
-			auto main_file  = ctx.query<frontend::QueryMainSourceFile>(key);
+			auto   main_file  = ctx.query<frontend::QueryMainSourceFile>(key);
 			auto&& module_pst = ctx.query<frontend::QueryFilePST>(main_file);
 
 			return putInScopeTable(ScopeData{
@@ -93,11 +93,10 @@ namespace compiler::helios {
 
 	struct ImplementationOf_QueryPrimaryCodeScopeFor:
 		  query::QueryImplementation<QueryPrimaryCodeScopeFor, ScopeID> {
-
 		static auto provide(Context&, QKey element) -> PResult {
 			auto list_of_stmt = getChildStmtsOf(element.base_element);
 			// auto parent
-				// = scope(ctx.query<QuerySymbolOfSTMT>({ element.parent, element.base_element }));
+			// = scope(ctx.query<QuerySymbolOfSTMT>({ element.parent, element.base_element }));
 			return putInScopeTable(ScopeData{
 				.parent    = element.parent,
 				.stmt_list = list_of_stmt,
@@ -129,7 +128,6 @@ namespace compiler::helios {
 			return out;
 		}
 
-
 		static auto load(QKey key) -> LoadResult {
 			if (const auto& cache = key.ref->symbols) return QResWithACD{ cache->data, cache->acd };
 			return {};
@@ -156,10 +154,9 @@ namespace compiler::helios {
 			for (const auto& sym: symbol_list) {
 				if (isWildcard(sym)) {
 					if (key.with_wildcards) {
-						auto& wild_result = ctx.query<QueryLookupInSymbol>({sym, key.name, true});
-						if (!wild_result.isEmpty()) {
+						auto& wild_result = ctx.query<QueryLookupInSymbol>({ sym, key.name, true });
+						if (!wild_result.isEmpty())
 							result.children.push_back(wild_result.toNode(sym));
-						}
 					}
 				} else if (name(sym) == key.name) {
 					result.leaves.push_back(sym);
@@ -184,13 +181,15 @@ namespace compiler::helios {
 			if (key.scope.ref->parent.ref != nullptr) {
 				auto parent = key.scope.ref->parent;
 
-				// Reverse insertion order allow for linear result concatenation instead of quadratic
-				auto parent_result = ctx.query<QueryLookupInScopeAndParents>({ parent, key.name, key.with_wildcards });
+				// Reverse insertion order allow for linear result concatenation instead of
+				// quadratic
+				auto parent_result = ctx.query<QueryLookupInScopeAndParents>(
+					{ parent, key.name, key.with_wildcards }
+				);
 				parent_result.insert(std::move(result));
-				
+
 				return parent_result;
-			}
-			else {
+			} else {
 				return result;
 			}
 		}
@@ -198,7 +197,9 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLookupInScopeAndParents, "QueryLookupInScopeAndParents");
+	QUERY_IMPLEMENTATION_BOILERPLATE(
+		ImplementationOf_QueryLookupInScopeAndParents, "QueryLookupInScopeAndParents"
+	);
 
 	base::HashT KeyOf_QueryPrimaryCodeScopeFor::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(parent);
