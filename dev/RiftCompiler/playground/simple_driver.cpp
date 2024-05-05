@@ -39,7 +39,10 @@ int main(int argc, const char* argv[]) {
 	using namespace compiler;
 
 	std::cerr << "Getting module tree... ";
+	
+	[[maybe_unused]]
 	auto module_tree = query::queryEntryPoint<frontend::QueryModuleTree>(path_to_compile);
+
 	std::cerr << "Done.\n";
 
 }

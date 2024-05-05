@@ -13,7 +13,7 @@ namespace compiler::helios {
 
 	struct ImplementationOf_QueryModuleHOUT:
 		  public query::QueryImplementation<QueryModuleHOUT, HOUTModule> {
-		static auto provide(Context& ctx, QKey key) -> PResult {
+		static auto provide(Context&, QKey key) -> PResult {
 			// go over all to level symbols and get theirs hout
 			// store it in some vector or something
 			// lookup all and stuff
@@ -32,7 +32,8 @@ namespace compiler::helios {
 			auto&& symbols_in_submodule
 				= query::queryEntryPoint<QuerySymbolsInScope>(module_root_scope_id);
 
-			return { symbols_in_submodule };
+			// @TODO: set imported modules here
+			return { symbols_in_submodule, {} };
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF

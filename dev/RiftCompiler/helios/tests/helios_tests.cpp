@@ -65,7 +65,7 @@ private:
 			return result;
 		};
 
-		auto get_value = [&](auto&& name) {
+		auto get_value = [&](auto name) {
 			return query::queryEntryPoint<compiler::helios::QueryConstValueOf>(get_chain(name).back(
 			));
 		};

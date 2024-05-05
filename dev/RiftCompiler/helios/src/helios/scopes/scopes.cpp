@@ -94,7 +94,7 @@ namespace compiler::helios {
 	struct ImplementationOf_QueryPrimaryCodeScopeFor:
 		  query::QueryImplementation<QueryPrimaryCodeScopeFor, ScopeID> {
 
-		static auto provide(Context& ctx, QKey element) -> PResult {
+		static auto provide(Context&, QKey element) -> PResult {
 			auto list_of_stmt = getChildStmtsOf(element.base_element);
 			// auto parent
 				// = scope(ctx.query<QuerySymbolOfSTMT>({ element.parent, element.base_element }));

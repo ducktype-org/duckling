@@ -330,7 +330,7 @@ namespace compiler::helios {
 
 	std::vector<rpn::ExprElem>
 		rpn::ExtensionMakeRPN(query::detail::ContextType& ctx, KeyOf_ExtensionMakeRPN key) {
-			
+
 		std::vector<ExprElem> rpn;
 		std::stack<ExprElem>  st;
 		for (auto&& e: key.expr) {
@@ -397,7 +397,8 @@ namespace compiler::helios {
 		i32 a_value = ctx.callExt<ExtenstionRPNValue>(KeyOf_ExtensionRPNValue{ a, expr_scope });
 		i32 b_value = ctx.callExt<ExtenstionRPNValue>(KeyOf_ExtensionRPNValue{ b, expr_scope });
 
-		i32 value;
+		i32 value{};
+		
 		switch (static_cast<char>(op.oper_id.view()[0])) {
 		case '+':
 			value = b_value + a_value;
