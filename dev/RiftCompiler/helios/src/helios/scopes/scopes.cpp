@@ -69,7 +69,7 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO: dont just ignore other files...
-			auto&& main_file  = ctx.query<frontend::QueryMainSourceFile>(key);
+			auto main_file  = ctx.query<frontend::QueryMainSourceFile>(key);
 			auto&& module_pst = ctx.query<frontend::QueryFilePST>(main_file);
 
 			return putInScopeTable(ScopeData{

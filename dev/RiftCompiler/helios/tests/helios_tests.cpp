@@ -42,7 +42,7 @@ private:
 			= query::queryEntryPoint<compiler::helios::QuerySymbolsInScope>(root_scope);
 
 		auto get_chain = [&](auto chain) {
-			auto                         symbols = base::split(chain, ".");
+			auto                         symbols = base::strSplit(chain, ".");
 			compiler::helios::SymbolList result;
 			bool                         first_symbol = true;
 			for (auto&& sym: symbols) {
