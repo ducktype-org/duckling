@@ -2,7 +2,7 @@
 #include <cstring>
 
 namespace base {
-	RawView RawView::memoryCopy() const {
+	OwningView RawView::memoryCopy() const {
 		auto new_data = new byte[arr_size];
 		std::memcpy(new_data, begin, arr_size);
 		return { new_data, arr_size };

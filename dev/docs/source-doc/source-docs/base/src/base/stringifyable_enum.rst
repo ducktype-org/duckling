@@ -11,13 +11,13 @@ This library provides a simple way of creating :code:`enum class` types, that ca
 Functionalities
 ===============
 
-MAKE_STRINGFYABLE_ENUM
-----------------------
+MAKE_STRINGIFYABLE_ENUM
+-----------------------
 
 Macro generating enum. It takes three main parameters: namespace, base type, enum name. All other parameters are treated as enum members.
 
 .. important::
-	For technical reasons :code:`MAKE_STRINGFYABLE_ENUM` must be used in top-level code only. That is why :code:`namespace` parameter exist. It states in what namespace enum will be created.
+	For technical reasons :code:`MAKE_STRINGIFYABLE_ENUM` must be used in top-level code only. That is why :code:`namespace` parameter exist. It states in what namespace enum will be created.
 
 Conversion to and from :code:`StrId`
 ------------------------------------
@@ -44,7 +44,7 @@ Usage
 	
 	#include <iostream>
 
-	MAKE_STRINGFYABLE_ENUM(N, u16, MyEnum, 
+	MAKE_STRINGIFYABLE_ENUM(N, u16, MyEnum,
 		A, B, C
 	)
 

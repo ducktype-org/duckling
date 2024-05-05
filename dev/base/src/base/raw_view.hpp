@@ -5,18 +5,19 @@
 #include <string>
 
 namespace base {
-	typedef const byte* RawArray;
+	using RawArray = const byte*;
+
+	class OwningView;
 
 	/**
-	 * @brief Non owning byte array view
-	 *
+	 * @brief Non owning immutable byte array view
 	 */
 	class RawView {
 	private:
 		friend class OwningView;
 
 		[[nodiscard]]
-		RawView memoryCopy() const;
+		OwningView memoryCopy() const;
 
 		RawArray begin    = nullptr;
 		usize    arr_size = 0;
@@ -50,7 +51,7 @@ namespace base {
 	};
 
 	/**
-	 * Non owning byte array view
+	 * @brief Non owning mutable byte array view
 	 */
 	class ModRawView {
 	private:
@@ -80,35 +81,27 @@ namespace base {
 	class StrId;
 
 	/**
-	 * Owning byte array view
+	 * @brief Owning byte array view
 	 */
 	class OwningView {
-		byte* begin{};
-		usize size{};
+		byte* begin{ nullptr };
+		usize size{ 0 };
 		friend class base::StrId;
 
 	public:
-		OwningView(): begin(nullptr), size{ 0 } {}
+		OwningView() = default;
 
-		explicit OwningView(std::nullptr_t): begin(nullptr), size{ 0 } {}
+		explicit OwningView(std::nullptr_t) {}
 
-		// Takes ownership, begin should be on heap
+		/**
+		 * @note Takes ownership, begin should be on heap.
+		 */
 		OwningView(byte* begin, usize size): begin{ begin }, size{ size } {}
 
 		// Makes copy
-		explicit OwningView(const char* const c_str) {
-			auto aux = RawView(c_str).memoryCopy();
-			begin    = const_cast<byte*>(aux.begin);
-			size     = aux.arr_size;
-		}
+		explicit OwningView(const char* const c_str) { *this = RawView(c_str).memoryCopy(); }
 
-		OwningView static copy(RawView view) {
-			OwningView out;
-			auto       aux = view.memoryCopy();
-			out.begin      = const_cast<byte*>(aux.begin);
-			out.size       = aux.arr_size;
-			return out;
-		}
+		OwningView static copy(RawView view) { return view.memoryCopy(); }
 
 		OwningView(const OwningView&) = delete;
 
