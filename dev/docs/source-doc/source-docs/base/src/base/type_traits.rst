@@ -19,7 +19,7 @@ Functionalities
 
 .. doxygenfunction:: base::typeName
 
-.. doxygenconcept:: base::Implication
+.. doxygenvariable:: base::Implication
 
 Usage
 -----

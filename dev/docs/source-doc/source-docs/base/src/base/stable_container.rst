@@ -11,11 +11,8 @@ Provides a simple expandable container with stable references.
 Code Doc
 ========
 
-.. doxygenclass:: base::StableList
+.. doxygenclass:: base::StableVector
 
-.. doxygentypedef:: base::StableListRef
+.. doxygentypedef:: base::StableVectorRef
 
-.. doxygentypedef:: base::StableListCRef
-
-.. doxygentypedef:: base::StableIntList
-
+.. doxygentypedef:: base::StableVectorCRef

@@ -11,8 +11,8 @@ Provides byte array views.
 Code Doc
 ========
 
-.. doxygenclass:: RawView
+.. doxygenclass:: base::RawView
 
-.. doxygenclass:: ModRawView
+.. doxygenclass:: base::ModRawView
 
-.. doxygenclass:: OwningView
+.. doxygenclass:: base::OwningView

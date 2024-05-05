@@ -1,6 +1,6 @@
 #include <tester/tester.hpp>
 #include <filesystem/file.hpp>
-#include <base/str_concat.hpp>
+#include <base/str_utils.hpp>
 #include <cstring>
 
 bool compareCstr(const char* const c1, const char* const c2) {

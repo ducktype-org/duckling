@@ -22,7 +22,7 @@
  * Opcodes not following this convention have additional description
  */
 
-MAKE_STRINGFYABLE_ENUM(
+MAKE_STRINGIFYABLE_ENUM(
 	vm,
 	u16,
 	OpcodeFix8,

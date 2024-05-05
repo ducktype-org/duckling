@@ -3,7 +3,6 @@ add_library(Base
         src/base/impl/exceptions.cpp
         src/base/impl/raw_view.cpp
         src/base/impl/string_id.cpp
-        src/base/impl/str_concat.cpp
         src/base/impl/convert.cpp
         src/base/impl/str_utils.cpp
 )

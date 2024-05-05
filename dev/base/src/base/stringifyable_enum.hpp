@@ -27,7 +27,7 @@ namespace base {
  *
  * @note This macro has to be used in global namespace for technical reasons.
  */
-#define MAKE_STRINGFYABLE_ENUM(namespace_name, base_type, name, ...)                             \
+#define MAKE_STRINGIFYABLE_ENUM(namespace_name, base_type, name, ...)                            \
                                                                                                  \
 	namespace namespace_name {                                                                   \
 		enum class name : base_type { __VA_ARGS__, COUNT };                                      \

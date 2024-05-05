@@ -8,6 +8,7 @@
 #include "maps.hpp"
 #include "raw_view.hpp"
 #include <string>
+#include <charconv>
 
 namespace base {
 
@@ -87,6 +88,13 @@ namespace base {
 
 		friend class std::hash<StrId>;
 	};
+
+	/**
+	 * @brief Converts a string to the value of the number it contains.
+	 *
+	 * Raises exception on error.
+	 */
+	i64 strIdToNum(base::StrId str);
 
 	namespace detail {
 		inline void strConcat(std::string& out, StrId str_id) { out.append(str_id.strView()); }

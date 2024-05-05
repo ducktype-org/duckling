@@ -1,6 +1,6 @@
 #include "rift_parser_base.hpp"
 #include <base/exceptions.hpp>
-#include <base/str_concat.hpp>
+#include <base/str_utils.hpp>
 
 namespace pst {
 	void RiftParserState::addImport(const tpc::ParserCBorrowRef<pst::Import>& import) {

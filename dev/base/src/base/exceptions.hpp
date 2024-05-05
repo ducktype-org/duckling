@@ -2,7 +2,7 @@
 
 #include <exception>
 #include <string>
-#include "str_concat.hpp"
+#include "str_utils.hpp"
 
 namespace base {
 	/**
