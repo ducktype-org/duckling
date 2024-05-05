@@ -39,8 +39,8 @@ namespace operation {
 		};
 
 		// @TODO: Add flags (const) to the type desc in all the default operations
-		const ts::FunctionInfo sig = ts::FunctionInfo::create(
-			{ { type_info }, { type_info } }, query::queryEntryPoint<ts::QueryBoolType>({})
+		const ts::FunctionInfo sig = query::queryEntryPoint<ts::QueryFunctionType>(
+			{ { type_info, type_info }, query::queryEntryPoint<ts::QueryBoolType>({}) }
 		);
 
 		return TypedOperation{ op, sig };
@@ -54,8 +54,8 @@ namespace operation {
 		};
 
 		// @TODO: Add flags (const) to the type desc in all the default operations
-		const ts::FunctionInfo sig = ts::FunctionInfo::create(
-			{ { class_info }, { class_info } }, query::queryEntryPoint<ts::QueryBoolType>({})
+		const ts::FunctionInfo sig = query::queryEntryPoint<ts::QueryFunctionType>(
+			{ { class_info, class_info }, query::queryEntryPoint<ts::QueryBoolType>({}) }
 		);
 
 		return TypedOperation{ op, sig };
@@ -70,8 +70,8 @@ namespace operation {
 			return defaultCompare(type_info, calls, input[0], input[1]);
 		};
 
-		const ts::FunctionInfo sig = ts::FunctionInfo::create(
-			{ { type_info }, { type_info } }, query::queryEntryPoint<ts::QueryIntegralType>({ 8 })
+		const ts::FunctionInfo sig = query::queryEntryPoint<ts::QueryFunctionType>(
+			{ { type_info, type_info }, query::queryEntryPoint<ts::QueryIntegralType>({ 8 }) }
 		);
 
 		return { op, sig };
@@ -86,7 +86,8 @@ namespace operation {
 		};
 
 		const ts::FunctionInfo sig
-			= ts::FunctionInfo::create({ { type_info }, { type_info } }, type_info);
+			= query::queryEntryPoint<ts::QueryFunctionType>({ { type_info, type_info }, type_info }
+		    );
 
 		return { op, sig };
 	}
@@ -99,7 +100,8 @@ namespace operation {
 			return defaultConstructEmpty(type_info, calls, input[0]);
 		};
 
-		const ts::FunctionInfo sig = ts::FunctionInfo::create({ { type_info } }, type_info);
+		const ts::FunctionInfo sig
+			= query::queryEntryPoint<ts::QueryFunctionType>({ { type_info }, type_info });
 
 		return { op, sig };
 	}
@@ -113,11 +115,12 @@ namespace operation {
 			return defaultConstructFull(type_info, calls, input);
 		};
 
-		std::vector<ts::TypeDesc<>> args = { type_info };
+		std::vector args = { type_info };
 
-		for (auto& [op_id, type, offset, size]: calls) args.push_back(type);
+		for (auto& [op_id, type, offset, size]: calls) args.push_back(type.getType());
 
-		const ts::FunctionInfo sig = ts::FunctionInfo::create(args, type_info);
+		const ts::FunctionInfo sig
+			= query::queryEntryPoint<ts::QueryFunctionType>({ args, type_info });
 
 		return { op, sig };
 	}

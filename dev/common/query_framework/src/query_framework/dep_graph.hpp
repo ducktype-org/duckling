@@ -1,8 +1,6 @@
 #pragma once
 
-#include "query_id.hpp"
 #include "node_id.hpp"
-#include "node_making.hpp"
 
 namespace query::detail {
 
@@ -24,7 +22,6 @@ namespace query::detail {
 
 		void debugPrint();
 		void debugPrintForDrawing();
-
 	}
 }
 

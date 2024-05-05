@@ -1,14 +1,18 @@
 #pragma once
 
+#include <utility>
 #include <base/optional.hpp>
 #include <base/str_concat.hpp>
-#include <utility>
+#include <diagnostic/logger.hpp>
 
 #include "acd.hpp"
 #include "query_int.hpp"
 #include "dep_graph.hpp"
 #include "query_id_provider.hpp"
 #include "logs.hpp"
+#include "node_making.hpp"
+
+#include <base/defer.hpp>
 
 namespace query {
 
@@ -27,6 +31,11 @@ namespace query {
 		 */
 		struct ContextType {
 			NodeID my_node;
+
+			// @TODO: Make the context (and thus the logger) be propagated through query calls,
+			// so that all queries run on the same file / in the same compilation thread / whatever
+			// use a single, *non-static* logger object.
+			static dia::Logger logger;
 
 			template<typename OthQuery>
 			auto query(typename OthQuery::QKey key) -> auto {
@@ -49,17 +58,14 @@ namespace query {
 				return Extension(*this, std::forward<Args>(args)...);
 			}
 
-			void log(std::string_view str) {
-				// @TODO: arguments of this function should be evaluated only if logging is enabled
-				::query::log("[USER LOG]: ");
-				::query::log(str);
-				::query::log("\n");
-			}
-
-			// @FUTURE: this function should take some diagnostic object as a parameter
-			// Trivial implementation for now
-			void compilationError(std::string_view error);
+			/**
+			 * Log message to be shown to the user.
+			 * @param message The dia::Message to be logged.
+			 */
+			void log(base::unique_ptr<dia::Message> message) { logger.log(std::move(message)); }
 		};
+
+		inline dia::Logger ContextType::logger{};
 
 		/**
 		 * @brief Internal function implementing the call to a query.
@@ -144,12 +150,12 @@ namespace query {
  * @param type Name of Query Implementation Struct
  * @param pretty_name Pretty name of a given query (that will for example be displayed in logs)
  */
-#define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                       \
-	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from) \
-		-> type::QueryType::QResult {                                                             \
-		return ::query::detail::standardQueryEntry<type>(key, from);                              \
-	}                                                                                             \
-	decltype(type::QueryType::id)   type::QueryType::id   = ::query::detail::nextQueryId();       \
+#define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                         \
+	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from)   \
+		-> type::QueryType::QResult {                                                               \
+		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                     \
+	}                                                                                               \
+	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryId(pretty_name); \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
 
 /**

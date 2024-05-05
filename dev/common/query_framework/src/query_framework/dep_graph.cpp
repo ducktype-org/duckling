@@ -1,5 +1,4 @@
 #include "dep_graph.hpp"
-#include "query_impl.hpp"
 
 #include <base/maps.hpp>
 #include <iomanip>
@@ -97,16 +96,10 @@ namespace query::detail {
 			std::cerr << node_data.size() << "\n";
 
 			std::map<NodeID, u64> index;
-			u64 id = 0;
-			for (auto& [k, v]: node_data) {
-				index[k] = id++;
-			}
-			for (auto& [k, v]: node_data) {
-				for (auto& dep: v.dependencies) {
-					std::cerr << index[k] << " " << index[dep] << "\n";
-				}
-			}
-
+			u64                   id = 0;
+			for (auto& [k, v]: node_data) index[k] = id++;
+			for (auto& [k, v]: node_data)
+				for (auto& dep: v.dependencies) std::cerr << index[k] << " " << index[dep] << "\n";
 		}
 
 	}

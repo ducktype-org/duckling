@@ -1,4 +1,4 @@
-#include <printer/printer_console.hpp>
+#include <printer/stream_printer.hpp>
 #include <iostream>
 
 void testPrinter() {
