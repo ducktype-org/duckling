@@ -13,7 +13,7 @@
 #include <base/maps.hpp>
 #include <variant>
 #include <base/variant.hpp>
-#include <base/str_utils.hpp>
+#include <base/str_to_int.hpp>
 #include <services_data/type_metadata/type_metadata.hpp>
 
 namespace assemble {
