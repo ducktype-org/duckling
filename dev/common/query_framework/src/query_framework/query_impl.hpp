@@ -12,7 +12,6 @@
 #include "logs.hpp"
 #include "node_making.hpp"
 
-#include <base/defer.hpp>
 
 namespace query {
 

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "base/maps.hpp"
+#include <base/maps.hpp>
+
 #include "query_id.hpp"
 
 namespace query::detail {

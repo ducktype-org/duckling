@@ -1,6 +1,7 @@
+#include <base/maps.hpp>
+
 #include "query_id_provider.hpp"
-#include "base/maps.hpp"
-#include "query_framework/query_id.hpp"
+#include "query_id.hpp"
 
 namespace query::detail {
 	namespace {
