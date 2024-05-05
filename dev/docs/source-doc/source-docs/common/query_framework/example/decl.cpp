@@ -13,6 +13,26 @@ struct PResult {
 };
 
 struct ImplementationOf_MyQuery: query::QueryImplementation<MyQuery, PResult> {
+	struct InfoInMyQuery final: dia::Info {
+		std::string str;
+
+		explicit InfoInMyQuery(const dia::SourcePosition& source_position, std::string str):
+			  Info(source_position),
+			  str(std::move(str)) {}
+
+	protected:
+		[[nodiscard]]
+		printer::MessageContent toMessageContentBrief() const override {
+			return { "Some random log from Query1." };
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Misc;
+		}
+	};
+
 	/**
 	 * Lets define some cache:
 	 */
@@ -20,12 +40,19 @@ struct ImplementationOf_MyQuery: query::QueryImplementation<MyQuery, PResult> {
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		// lets call Query2:
-		[[maybe_unused]] auto result = context.query<Query2>(123);
+		[[maybe_unused]]
+		auto result
+			= context.query<Query2>(123);
 
 		// Normally we would do it because we need
 		// it in some computation.
 		// Here we will just log it:
-		context.log(base::strConcat("Result of query 2 : ", result));
+		std::string str_to_log = base::strConcat("Result of query 2 : ", result);
+		// Dummy source position:
+		dia::SourcePosition source_position = dia::SourcePosition{
+			std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")), 1, 1, 1
+		};
+		context.log(base::make_unique<InfoInMyQuery>(source_position, str_to_log));
 
 		// some trivial implementation:
 		return PResult{ key.v };
