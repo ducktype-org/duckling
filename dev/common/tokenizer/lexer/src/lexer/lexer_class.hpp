@@ -22,7 +22,7 @@ namespace lexer {
 		/**
 		 * @note if file decoding fails outputs the reason to cerr and throws LogicError
 		 */
-		explicit Lexer(tokenizer::File);
+		explicit Lexer(tokenizer::BorrowFile);
 
 		[[nodiscard]]
 		TokenData tokenize();
@@ -102,7 +102,7 @@ namespace lexer {
 		usize                         where  = 0;  ///< Current position in file
 		usize                         line   = 1;
 		usize                         column = 1;
-		tokenizer::File file;
+		tokenizer::BorrowFile file;
 		fs::FileContent               file_content;
 		dia::Logger&            errorState;
 		CharArray&                     char_array;

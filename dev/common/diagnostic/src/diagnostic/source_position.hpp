@@ -13,7 +13,7 @@
 
 namespace tokenizer {
 	class TokenFile;
-	using File = base::borrow_ptr<TokenFile>;
+	using BorrowFile = base::borrow_ptr<TokenFile>;
 }
 
 namespace dia {
@@ -33,9 +33,9 @@ namespace dia {
 			return SourcePosition();
 		}
 
-		SourcePosition(tokenizer::File source_file, usize source_start);
+		SourcePosition(tokenizer::BorrowFile source_file, usize source_start);
 		SourcePosition(
-			tokenizer::File source_file,
+			tokenizer::BorrowFile source_file,
 			usize             source_start,
 			usize             source_end
 		);
@@ -83,11 +83,11 @@ namespace dia {
 		[[nodiscard]]
 		usize getEnd() const;
 		[[nodiscard]]
-		tokenizer::File getSource() const;
+		tokenizer::BorrowFile getSource() const;
 
 	private:
 		usize source_start,
 			source_end;          ///< #source_start, #source_end describe range of characters in the file
-		tokenizer::File source_file;  ///< pointer to source file data
+		tokenizer::BorrowFile source_file;  ///< pointer to source file data
 	};
 }

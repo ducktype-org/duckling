@@ -6,7 +6,7 @@
 namespace lexer {
 	using Class = Classifications;
 
-	Lexer::Lexer(tokenizer::File file):
+	Lexer::Lexer(tokenizer::BorrowFile file):
 		  file(file),
 		  file_content(file->getContent()),
 		  errorState(file->getLogger()),

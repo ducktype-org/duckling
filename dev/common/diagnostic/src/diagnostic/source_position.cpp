@@ -41,13 +41,13 @@ namespace dia {
 	}
 
 	SourcePosition::SourcePosition(
-		tokenizer::File source_file,
+		tokenizer::BorrowFile source_file,
 		const usize       source_start
 	):
 		  SourcePosition(source_file, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
-		tokenizer::File source_file,
+		tokenizer::BorrowFile source_file,
 		const usize       source_start,
 		const usize       source_end
 	):
@@ -78,7 +78,7 @@ namespace dia {
 
 	usize SourcePosition::getEnd() const { return source_end; }
 
-	tokenizer::File SourcePosition::getSource() const { return source_file; }
+	tokenizer::BorrowFile SourcePosition::getSource() const { return source_file; }
 
 	std::vector<printer::MessageContent>
 		SourcePosition::genPrinterMessageContents(const printer::MessageContent& reason) const {
