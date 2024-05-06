@@ -8,7 +8,6 @@ namespace lexer {
 
 	Lexer::Lexer(tokenizer::BorrowFile file):
 		  file(file),
-		  file_content(file->getContent()),
 		  errorState(file->getLogger()),
 		  char_array(file->getChars()) {
 		if (errorState.bad()) {

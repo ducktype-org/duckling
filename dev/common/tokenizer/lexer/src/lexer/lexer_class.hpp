@@ -103,7 +103,6 @@ namespace lexer {
 		usize                         line   = 1;
 		usize                         column = 1;
 		tokenizer::BorrowFile file;
-		fs::FileContent               file_content;
 		dia::Logger&            errorState;
 		CharArray&                     char_array;
 		Tokens                        tokens;
