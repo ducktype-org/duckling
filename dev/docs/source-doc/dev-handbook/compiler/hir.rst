@@ -2,6 +2,8 @@
 HIR inner workings
 ==================
 
+.. @TODO: change to HELIOS (or ADD it)!
+
 .. attention:: This section will need to be expanded in the future.
 
 .. contents::
