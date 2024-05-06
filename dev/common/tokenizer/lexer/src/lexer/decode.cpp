@@ -20,11 +20,11 @@ namespace lexer {
 				) });
 				continue;
 			}
-			out.emplace_back(UChar32(bytes[i]), u8{ 1 }, bytes.getBegin() + i);
+			out.emplace_back(UChar32(bytes[i]), u8{ 1 }, i);
 		}
 		// Add eof value
 		out.emplace_back(
-			Classifications::end_of_file_value, u8{ 0 }, bytes.getBegin() + bytes.size()
+			Classifications::end_of_file_value, u8{ 0 }, bytes.size()
 		);
 		return out;
 	}
@@ -126,12 +126,12 @@ namespace lexer {
 				continue;
 			}
 
-			out.emplace_back(value, u8(size), bytes.getBegin() + pos);
+			out.emplace_back(value, u8(size), pos);
 			pos += size;
 		}
 		// Add eof value
 		out.emplace_back(
-			Classifications::end_of_file_value, u8{ 0 }, bytes.getBegin() + bytes.size()
+			Classifications::end_of_file_value, u8{ 0 }, bytes.size()
 		);
 
 		return out;

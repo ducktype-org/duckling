@@ -29,10 +29,8 @@ namespace dia {
 		res.emplace_back(std::string(length + 1, ' ') + "|\n");
 		for(usize i = first_line; i <= last_line; i++) {
 			res.emplace_back(std::vformat("{:>" + str_len + "} | ", std::make_format_args(i)));
-			auto lineChars = source_file->getLine(i);
-			auto line_begin = lineChars.front().raw_begin;
-			auto line_end = lineChars.end()->raw_begin;
-			res.emplace_back(reinterpret_cast<const char*>(line_begin), reinterpret_cast<const char*>(line_end));
+			auto [begin, end] = source_file->getLine(i);
+			res.emplace_back(source_file->getCharRange(begin, end).stringView());
 			res.emplace_back("\n");
 		}
 		res.emplace_back(std::string(length + 1, ' ') + "|\n");

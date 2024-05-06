@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/raw_view.hpp"
 #include "lexer/char.hpp"
 #include <base/borrow_pointer.hpp>
 #include <base/unique_pointer.hpp>
@@ -67,10 +68,8 @@ namespace tokenizer {
 			return lines;
 		}
 
-		auto getLine(usize line) {
-			usize start = lines[line - 1].first;
-			usize len = lines[line - 1].second - start;
-			return std::span(*decoded).subspan(start, len);
+		std::pair<usize, usize> getLine(usize line) {
+			return lines[line];
 		}
 
 		fs::FileContent getContent();		
@@ -82,6 +81,8 @@ namespace tokenizer {
 		dia::Logger& getLogger();
 
 		fs::FilePath getPath();
+
+		base::RawView getCharRange(usize begin_char, usize end_char);
 
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {

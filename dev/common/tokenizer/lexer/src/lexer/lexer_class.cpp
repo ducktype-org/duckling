@@ -60,7 +60,7 @@ namespace lexer {
 				{ { "Add token: " },
 			      { std::string(token_type) },
 			      { "(" },
-			      { std::string(composeRaw(char_array, begin, end).stringView()) },
+			      { std::string(file->getCharRange(begin, end).stringView()) },
 			      { ")" } },
 				printer::MessageType::DEBUG
 			));
@@ -171,7 +171,7 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "operator");
-		output.push_back(Token::makeOperator(composeRaw(char_array, begin, end), sourcePosition));
+		output.push_back(Token::makeOperator(file->getCharRange(begin, end), sourcePosition));
 	}
 
 	void Lexer::nameHandler(Tokens& output) {
@@ -185,7 +185,7 @@ namespace lexer {
 
 		dia::SourcePosition sourcePosition(sourceStart, end);
 		std::string         message;
-		output.push_back(Token::makeIdentifier(composeRaw(char_array, begin, end), sourcePosition));
+		output.push_back(Token::makeIdentifier(file->getCharRange(begin, end), sourcePosition));
 		if (output.back().getType() == Token::Type::Identifier)
 			addTokenMsg(begin, end, "identifier");
 		else if (output.back().getType() == Token::Type::Keyword)
@@ -201,7 +201,7 @@ namespace lexer {
 
 		dia::SourcePosition sourcePosition(sourceStart, end);
 		addTokenMsg(begin, end, "special");
-		output.push_back(Token::makeSpecial(composeRaw(char_array, begin, end), sourcePosition));
+		output.push_back(Token::makeSpecial(file->getCharRange(begin, end), sourcePosition));
 	}
 
 	void Lexer::binLiteralHandler(Tokens& output) {
@@ -216,7 +216,7 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition));
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end), sourcePosition));
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {
@@ -231,7 +231,7 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition));
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end), sourcePosition));
 	}
 
 	void Lexer::decLiteralHandler(Tokens& output) {
@@ -262,7 +262,7 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition));
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end), sourcePosition));
 	}
 
 	void Lexer::stringHandler(Tokens& output) {
@@ -302,7 +302,7 @@ namespace lexer {
 
 		addTokenMsg(begin, end, "string");
 		output.push_back(Token::makeString(
-			composeRaw(char_array, begin + 1, end - usize(closed)), sourcePosition
+			file->getCharRange(begin + 1, end - usize(closed)), sourcePosition
 		));
 	}
 
@@ -355,7 +355,7 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		dia::SourcePosition sentinelPosition(file, end);
-		auto                sentinelView = composeRaw(char_array, end, end);
+		auto                sentinelView = file->getCharRange(end, end);
 		Token               sentinel     = Token::makeSentinelEnd(sentinelView, sentinelPosition);
 
 		output.push_back(Token::makeBracketGroup(
