@@ -20,11 +20,11 @@ namespace dia {
 	/**
 	 * @brief  Type used for storing token position in a source file
 	 *
-	 * It always stores a valid position with the position (end() + 1, end() + 1) being EOF
+	 * It always stores a valid position with the position (EOF, EOF) being EOF
 	 */
 	class SourcePosition {
 	private:
-		explicit SourcePosition(): line(1), column(1), source_start(0), source_end(0), source_file(nullptr) {}
+		explicit SourcePosition(): source_start(0), source_end(0), source_file(nullptr) {}
 	public:
 		/**
 		 * @brief Constructs a fake source position that should never be used except as an unused placeholder.
@@ -33,11 +33,9 @@ namespace dia {
 			return SourcePosition();
 		}
 
-		SourcePosition(tokenizer::File source_file, usize line, usize column, usize source_start);
+		SourcePosition(tokenizer::File source_file, usize source_start);
 		SourcePosition(
 			tokenizer::File source_file,
-			usize             line,
-			usize             column,
 			usize             source_start,
 			usize             source_end
 		);
@@ -77,9 +75,9 @@ namespace dia {
 		std::string genStr(std::string_view reason) const;
 
 		[[nodiscard]]
-		usize getLine() const;
+		std::pair<usize, usize> getStartLineColumn() const;
 		[[nodiscard]]
-		usize getColumn() const;
+		std::pair<usize, usize> getEndLineColumn() const;
 		[[nodiscard]]
 		usize getStart() const;
 		[[nodiscard]]
@@ -88,9 +86,8 @@ namespace dia {
 		tokenizer::File getSource() const;
 
 	private:
-		usize line, column;      ///< #line, #column describe start position in code for the user
 		usize source_start,
-			source_end;          ///< #source_start, #source_end describe range of bytes in the file
+			source_end;          ///< #source_start, #source_end describe range of characters in the file
 		tokenizer::File source_file;  ///< pointer to source file data
 	};
 }

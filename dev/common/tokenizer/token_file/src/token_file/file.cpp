@@ -7,6 +7,13 @@
 #include "lexer/lexer_class.hpp"
 
 namespace tokenizer {
+	/**
+	 * @brief Checks for newline at the beginning of a set of characters.
+	 * 
+	 * @note It's only CR + LF that combined are only a single newline
+	 * 
+	 * @return usize - 0 if there is new line, otherwise number of characters that together form a newline
+	 */
 	usize isNewLine(const std::span<lexer::Char> where) {
 		auto& newline = lexer::Classifications::newline;
 		if (where.size() > 0 && where[0].is(newline)) {
@@ -29,6 +36,7 @@ namespace tokenizer {
 		usize newline{};
 		
 		line_begins.insert({0, 1});
+		std::cerr << "counted" << std::endl;
 		for(usize i = 0; i < decoded->size(); i++) {
 			newline = isNewLine({decoded->begin() + (long)i, decoded->end()});
 			if (newline) {
@@ -36,10 +44,12 @@ namespace tokenizer {
 				line++;
 				start = i + newline;
 				line_begins.insert({i + newline, line});
+				i += newline - 1;
 			}
 		}
 		// Last line without EOF
 		lines.emplace_back(start, decoded->size() - 1);
+		std::cerr << line_begins.size() << " lines" << std::endl;
 	}
 
 	std::pair<usize, usize> TokenFile::getLineColumn(usize source_pos) {

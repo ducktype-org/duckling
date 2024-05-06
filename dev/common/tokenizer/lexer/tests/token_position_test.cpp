@@ -19,8 +19,9 @@ void print(const lexer::Tokens& tokens, std::ostream& out, const std::string& in
 		else
 			out << "\"<EMPTY>\", ";
 
-		out << R"("line": ")" << position.getLine() << "\",";
-		out << R"("column": ")" << position.getColumn() << "\",";
+		auto [line, column] = position.getStartLineColumn();
+		out << R"("line": ")" << line << "\",";
+		out << R"("column": ")" << column << "\",";
 		out << R"("raw_start": ")" << position.getStart() << "\",";
 		out << R"("raw_end": ")" << position.getEnd() << "\",";
 

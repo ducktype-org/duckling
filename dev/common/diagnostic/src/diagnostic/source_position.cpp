@@ -16,10 +16,12 @@ namespace dia {
 	std::vector<std::string> SourcePosition::getSourceLines() const {
 		if (source_end == source_file->getChars().size() - 1) return {"<EOF>"};
 
-		auto start = source_file->getLineColumn(source_start);
-		auto end = source_file->getLineColumn(source_end);
-		usize first_line = std::max((usize)2, start.first) - 1;
-		usize last_line = std::min(source_file->getLines().size(), end.first + 1);
+		usize start_line = getStartLineColumn().first;
+		usize end_line = getEndLineColumn().first;
+
+		usize first_line = std::max((usize)2, start_line) - 1;
+		usize last_line = std::min(source_file->getLines().size(), end_line + 1);
+
 		usize length = std::to_string(last_line).size();
 		std::string str_len = std::to_string(length);
 
@@ -40,28 +42,20 @@ namespace dia {
 
 	SourcePosition::SourcePosition(
 		tokenizer::File source_file,
-		const usize       line,
-		const usize       column,
 		const usize       source_start
 	):
-		  SourcePosition(source_file, line, column, source_start, source_start) {}
+		  SourcePosition(source_file, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
 		tokenizer::File source_file,
-		const usize       line,
-		const usize       column,
 		const usize       source_start,
 		const usize       source_end
 	):
-		  line(line),
-		  column(column),
 		  source_start(source_start),
 		  source_end(source_end),
 		  source_file(source_file) {
 		// Potentially allow for special circumstances
 		if (source_file == nullptr) throw base::LogicError("Invalid SourcePosition: No such file");
-		if (line == 0) throw base::LogicError("Invalid SourcePosition: line = 0");
-		if (column == 0) throw base::LogicError("Invalid SourcePosition: column = 0");
 		if (source_end < source_start)
 			throw base::LogicError("Invalid SourcePosition: source end before source start");
 		// allow EOF position
@@ -73,12 +67,12 @@ namespace dia {
 
 	SourcePosition::SourcePosition(const SourcePosition& other, const usize source_end):
 		  SourcePosition(
-			  other.source_file, other.line, other.column, other.source_start, source_end
+			  other.source_file, other.source_start, source_end
 		  ) {}
 
-	usize SourcePosition::getColumn() const { return column; }
+	std::pair<usize, usize> SourcePosition::getStartLineColumn() const { return source_file->getLineColumn(source_start); }
 
-	usize SourcePosition::getLine() const { return line; }
+	std::pair<usize, usize> SourcePosition::getEndLineColumn() const { return source_file->getLineColumn(source_end); }
 
 	usize SourcePosition::getStart() const { return source_start; }
 
@@ -88,6 +82,7 @@ namespace dia {
 
 	std::vector<printer::MessageContent>
 		SourcePosition::genPrinterMessageContents(const printer::MessageContent& reason) const {
+		auto [line, column] = getStartLineColumn();
 		std::vector<printer::MessageContent> res =  
 				{ { "In file: " },
 			     { source_file->getPath().strView().data() },
@@ -102,6 +97,7 @@ namespace dia {
 	}
 
 	std::string SourcePosition::genStr(const std::string_view reason) const {
+		auto [line, column] = getStartLineColumn();
 		std::string output = "In file: ";
 		output += source_file->getPath().strView();
 		output += ":" + std::to_string(line) + ":" + std::to_string(column) + "\n";
