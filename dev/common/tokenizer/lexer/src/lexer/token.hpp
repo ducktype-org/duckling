@@ -167,11 +167,10 @@ namespace lexer {
 	struct TokenData {
 		Tokens          tokens;
 		Token           eof_sentinel;
-		fs::FileContent file_content;
 
 		TokenData() = delete;
 		TokenData(TokenData&&) noexcept;
-		TokenData(Tokens&& tokens, Token&& eof_sentinel, fs::FileContent file_content);
+		TokenData(Tokens&& tokens, Token&& eof_sentinel);
 
 		void       operator=(const TokenData&) = delete;
 		TokenData& operator=(TokenData&&)      = default;

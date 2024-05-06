@@ -21,7 +21,7 @@ namespace lexer {
 		tokens.clear();
 		codeblock();
 		dia::SourcePosition eof_pos(file, where);
-		return { std::move(tokens), Token::makeSentinelEof(eof_pos), file_content };
+		return { std::move(tokens), Token::makeSentinelEof(eof_pos)};
 	}
 
 	void Lexer::next() {
