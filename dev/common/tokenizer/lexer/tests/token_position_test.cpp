@@ -1,4 +1,5 @@
 #include <filesystem/file.hpp>
+#include <token_file/file.hpp>
 #include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
@@ -36,7 +37,7 @@ class LexerPositionTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS LexerPositionTest
 
-	std::optional<lexer::TokenData> td;
+	tokenizer::OwnFile td;
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Lexer: Token Position Tests") {
@@ -50,7 +51,7 @@ private:
 		td = lexer::tokenizeFile(file);
 
 		std::stringstream result_stream;
-		print(td->tokens, result_stream);
+		print(td->getTokenData().tokens, result_stream);
 		std::cout << result_stream.str() << std::endl;
 
 		auto corr_json = fs::getSimpleFileContent(path("fun_position.json"));

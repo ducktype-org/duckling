@@ -14,7 +14,8 @@
 
 namespace tokenizer {
 	class TokenFile;
-	using File = base::borrow_ptr<TokenFile>;
+	using BorrowFile = base::borrow_ptr<TokenFile>;
+	using OwnFile = base::unique_ptr<TokenFile>;
 
 	/**
 	 * @brief Class managing source file data access and token metadata
@@ -47,7 +48,7 @@ namespace tokenizer {
 		 */
 		bool lock = true;
 
-		base::borrow_ptr<TokenFile> self;
+		BorrowFile self;
 
 		template <class... Ts>
 		friend base::unique_ptr<TokenFile> makeTokenFile(Ts&&... args);

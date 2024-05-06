@@ -2,6 +2,7 @@
 #include "parser.hpp"
 #include <code_data/opcodes.hpp>
 #include <lexer/lexer.hpp>
+#include <token_file/file.hpp>
 #include <lexer/classifications.hpp>
 #include <base/optional.hpp>
 #include <rift_definitions/key_spec_op.hpp>
@@ -676,7 +677,9 @@ namespace assemble {
 		auto maybeContent = path.getContentSafe();
 		if (maybeContent.has_error()) return CodeContainer{ false, maybeContent.error(), nullptr };
 
-		lexer::TokenData td = lexer::tokenizeFile(path);
+		tokenizer::OwnFile file = lexer::tokenizeFile(path);
+
+		lexer::TokenData& td = file->getTokenData();
 
 		tpc::ParserState state(
 			tpc::TokenStream(td.tokens, tpc::Token(td.eof_sentinel), 0, td.tokens.size()),

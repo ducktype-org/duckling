@@ -1,12 +1,13 @@
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
+#include <token_file/file.hpp>
 #include <tester/tester.hpp>
 
 class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleLexerTest
 
-	std::optional<lexer::TokenData> td;
+	tokenizer::OwnFile td;
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Lexer Test") {
@@ -35,16 +36,16 @@ private:
 	};
 
 	void testBasicStructure() {
-		assert(td->tokens.size() == 8, "Wrong amount of top-level token groups");
+		assert(td->getTokenData().tokens.size() == 8, "Wrong amount of top-level token groups");
 	}
 
 	void checkTokenIsBracketGroup(usize index) {
-		assert(td->tokens[index].isBracketGroup(), "Token is not a bracket group");
+		assert(td->getTokenData().tokens[index].isBracketGroup(), "Token is not a bracket group");
 	}
 
 	void testGroup0() {
 		checkTokenIsBracketGroup(0);
-		const auto& inner_tokens = td->tokens[0].getRecursive();
+		const auto& inner_tokens = td->getTokenData().tokens[0].getRecursive();
 
 		assert(
 			inner_tokens.size() == 3,
@@ -77,7 +78,7 @@ private:
 	template<usize index, lexer::Token::Type token_type, bool (lexer::Token::*isTokenType)() const>
 	void testTokenGroup() {
 		checkTokenIsBracketGroup(index);
-		auto& inner_tokens = td->tokens[index].getRecursive();
+		auto& inner_tokens = td->getTokenData().tokens[index].getRecursive();
 		message("got " + std::to_string(inner_tokens.size()) + " tokens");
 		for (const auto& token: inner_tokens) {
 			assert(
@@ -122,7 +123,7 @@ private:
 	void testGroup7() { testTokenGroup<7, lexer::Token::Type::String, &lexer::Token::isString>(); }
 
 	void testSourcePosition() {
-		const auto& position = td->tokens[1].getRecursive().front().getPosition();
+		const auto& position = td->getTokenData().tokens[1].getRecursive().front().getPosition();
 		auto [line, column] = position.getStartLineColumn();
 		assert(line == 5, "Wrong line number");
 		assert(column == 2, "Wrong column");

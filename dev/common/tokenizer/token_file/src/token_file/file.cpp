@@ -36,7 +36,6 @@ namespace tokenizer {
 		usize newline{};
 		
 		line_begins.insert({0, 1});
-		std::cerr << "counted" << std::endl;
 		for(usize i = 0; i < decoded->size(); i++) {
 			newline = isNewLine({decoded->begin() + (long)i, decoded->end()});
 			if (newline) {
@@ -49,7 +48,6 @@ namespace tokenizer {
 		}
 		// Last line without EOF
 		lines.emplace_back(start, decoded->size() - 1);
-		std::cerr << line_begins.size() << " lines" << std::endl;
 	}
 
 	std::pair<usize, usize> TokenFile::getLineColumn(usize source_pos) {

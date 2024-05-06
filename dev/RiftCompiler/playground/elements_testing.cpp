@@ -11,8 +11,8 @@ int main(int argc, char** argv) {
 	pst::init();
 	fs::FilePath file(argv[1]);
 
-	auto tokens = lexer::tokenizeFile(file);
-	auto pst    = pst::parse(std::move(tokens));
+	auto token_file = lexer::tokenizeFile(file);
+	auto pst    = pst::parse(std::move(token_file));
 
 	if (pst.getLogger().bad()) {
 		pst.getLogger().dumpLog(false, std::cerr);

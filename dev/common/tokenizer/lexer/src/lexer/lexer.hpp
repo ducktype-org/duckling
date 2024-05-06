@@ -8,6 +8,11 @@
 #include <filesystem/file.hpp>
 #include "token.hpp"
 
+namespace tokenizer {
+	class TokenFile;
+	using OwnFile = base::unique_ptr<TokenFile>;
+}
+
 namespace lexer {
 	/**
 	 * @brief Initializes the whole module
@@ -23,5 +28,5 @@ namespace lexer {
 	 * @param file File to tokenize
 	 * @return lexer::TokenData Containing the Tokens
 	 */
-	lexer::TokenData tokenizeFile(const fs::FilePath& file);
+	tokenizer::OwnFile tokenizeFile(const fs::FilePath& file);
 }

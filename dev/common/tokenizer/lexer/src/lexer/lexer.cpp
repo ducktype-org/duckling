@@ -21,7 +21,7 @@ namespace lexer {
 		RIFT_SIMPLE_INIT_GUARD_END
 	}
 
-	TokenData tokenizeFile(const fs::FilePath& path) {
+	tokenizer::OwnFile tokenizeFile(const fs::FilePath& path) {
 		// @TODO
 		auto file = tokenizer::makeTokenFile(path);
 		file->tokenize();
@@ -29,7 +29,7 @@ namespace lexer {
 			file->getLogger().dumpLog(false, std::cerr);
 			throw base::LogicError("syntax error during lexing");
 		}
-		return std::move(file->getTokenData());
+		return file;
 	}
 
 }
