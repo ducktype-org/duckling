@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
 	fs::FilePath file(argv[1]);
 
 	auto token_file = lexer::tokenizeFile(file);
-	auto pst    = pst::parse(std::move(token_file));
+	auto pst        = pst::parse(std::move(token_file));
 
 	if (pst.getLogger().bad()) {
 		pst.getLogger().dumpLog(false, std::cerr);

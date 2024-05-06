@@ -165,8 +165,8 @@ namespace lexer {
 	 * @brief A basic wrapper for tokenization result
 	 */
 	struct TokenData {
-		Tokens          tokens;
-		Token           eof_sentinel;
+		Tokens tokens;
+		Token  eof_sentinel;
 
 		TokenData() = delete;
 		TokenData(TokenData&&) noexcept;

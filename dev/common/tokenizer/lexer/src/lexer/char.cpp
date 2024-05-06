@@ -8,10 +8,7 @@
 
 namespace lexer {
 
-	Char::Char(UChar32 value, u8 size, usize index):
-		  value(value),
-		  size(size),
-		  index(index) {
+	Char::Char(UChar32 value, u8 size, usize index): value(value), size(size), index(index) {
 		if (size == u8{ 0 }) {
 			RIFT_ASSERT(
 				value == Classifications::end_of_file_value, "non-EOF Char created with size 0"

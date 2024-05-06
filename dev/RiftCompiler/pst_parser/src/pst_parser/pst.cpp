@@ -4,7 +4,8 @@
 namespace pst {
 
 	PST::PST(tokenizer::OwnFile&& file):
-			file(std::move(file)), token_data(this->file->getTokenData()) {
+		  file(std::move(file)),
+		  token_data(this->file->getTokenData()) {
 		RiftParserState state(
 			tpc::TokenStream(
 				token_data.tokens, tpc::Token(token_data.eof_sentinel), 0, token_data.tokens.size()

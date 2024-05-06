@@ -6,7 +6,7 @@
 #pragma once
 
 #include <filesystem/file.hpp>
-//#include <base/borrow_pointer.hpp>
+// #include <base/borrow_pointer.hpp>
 #include <memory>
 #include <printer/message.hpp>
 #include <string>
@@ -25,20 +25,16 @@ namespace dia {
 	class SourcePosition {
 	private:
 		explicit SourcePosition(): source_start(0), source_end(0), source_file(nullptr) {}
+
 	public:
 		/**
-		 * @brief Constructs a fake source position that should never be used except as an unused placeholder.
+		 * @brief Constructs a fake source position that should never be used except as an unused
+		 * placeholder.
 		 */
-		static SourcePosition fakePosition() {
-			return SourcePosition();
-		}
+		static SourcePosition fakePosition() { return SourcePosition(); }
 
 		SourcePosition(tokenizer::BorrowFile source_file, usize source_start);
-		SourcePosition(
-			tokenizer::BorrowFile source_file,
-			usize             source_start,
-			usize             source_end
-		);
+		SourcePosition(tokenizer::BorrowFile source_file, usize source_start, usize source_end);
 		SourcePosition(const SourcePosition& other) = default;
 		SourcePosition(const SourcePosition& other, usize source_end);
 
@@ -87,7 +83,7 @@ namespace dia {
 
 	private:
 		usize source_start,
-			source_end;          ///< #source_start, #source_end describe range of characters in the file
+			source_end;  ///< #source_start, #source_end describe range of characters in the file
 		tokenizer::BorrowFile source_file;  ///< pointer to source file data
 	};
 }

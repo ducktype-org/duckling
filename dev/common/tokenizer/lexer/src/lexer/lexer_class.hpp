@@ -99,13 +99,13 @@ namespace lexer {
 		[[nodiscard]]
 		dia::SourcePosition currentPostion() const;
 
-		usize                         where  = 0;  ///< Current position in file
-		usize                         line   = 1;
-		usize                         column = 1;
+		usize                 where  = 0;  ///< Current position in file
+		usize                 line   = 1;
+		usize                 column = 1;
 		tokenizer::BorrowFile file;
-		dia::Logger&            errorState;
-		CharArray&                     char_array;
-		Tokens                        tokens;
+		dia::Logger&          errorState;
+		CharArray&            char_array;
+		Tokens                tokens;
 
 		/**
 		 * @brief Informs whether to print messages about what tokens are created to the debug

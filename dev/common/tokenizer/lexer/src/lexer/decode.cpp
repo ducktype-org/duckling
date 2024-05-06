@@ -23,9 +23,7 @@ namespace lexer {
 			out.emplace_back(UChar32(bytes[i]), u8{ 1 }, i);
 		}
 		// Add eof value
-		out.emplace_back(
-			Classifications::end_of_file_value, u8{ 0 }, bytes.size()
-		);
+		out.emplace_back(Classifications::end_of_file_value, u8{ 0 }, bytes.size());
 		return out;
 	}
 
@@ -130,9 +128,7 @@ namespace lexer {
 			pos += size;
 		}
 		// Add eof value
-		out.emplace_back(
-			Classifications::end_of_file_value, u8{ 0 }, bytes.size()
-		);
+		out.emplace_back(Classifications::end_of_file_value, u8{ 0 }, bytes.size());
 
 		return out;
 	}

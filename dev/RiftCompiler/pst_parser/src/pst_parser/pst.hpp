@@ -11,8 +11,8 @@ namespace pst {
 	 * @brief Parse syntax tree
 	 */
 	class PST {
-		tokenizer::OwnFile file;
-		lexer::TokenData&        token_data;
+		tokenizer::OwnFile      file;
+		lexer::TokenData&       token_data;
 		ParserRef<TopLevel>     top_level;
 		dia::Logger             err;
 		std::vector<ImportType> imports;
@@ -30,7 +30,7 @@ namespace pst {
 		ParserCBorrowRef<TopLevel> getTopLevelElement() const;
 
 		PST(PST&& other):
-				file(std::move(other.file)),
+			  file(std::move(other.file)),
 			  token_data(other.token_data),
 			  top_level(std::move(other.top_level)),
 			  err(std::move(other.err)),

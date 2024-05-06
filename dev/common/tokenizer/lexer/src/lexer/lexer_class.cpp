@@ -20,7 +20,7 @@ namespace lexer {
 		tokens.clear();
 		codeblock();
 		dia::SourcePosition eof_pos(file, where);
-		return { std::move(tokens), Token::makeSentinelEof(eof_pos)};
+		return { std::move(tokens), Token::makeSentinelEof(eof_pos) };
 	}
 
 	void Lexer::next() {
@@ -301,9 +301,9 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "string");
-		output.push_back(Token::makeString(
-			file->getCharRange(begin + 1, end - usize(closed)), sourcePosition
-		));
+		output.push_back(
+			Token::makeString(file->getCharRange(begin + 1, end - usize(closed)), sourcePosition)
+		);
 	}
 
 	void Lexer::bracketHandler(Tokens& output) {

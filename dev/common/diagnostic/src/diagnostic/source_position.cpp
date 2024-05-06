@@ -14,20 +14,20 @@
 
 namespace dia {
 	std::vector<std::string> SourcePosition::getSourceLines() const {
-		if (source_end == source_file->getChars().size() - 1) return {"<EOF>"};
+		if (source_end == source_file->getChars().size() - 1) return { "<EOF>" };
 
 		usize start_line = getStartLineColumn().first;
-		usize end_line = getEndLineColumn().first;
+		usize end_line   = getEndLineColumn().first;
 
-		usize first_line = std::max((usize)2, start_line) - 1;
-		usize last_line = std::min(source_file->getLines().size(), end_line + 1);
+		usize first_line = std::max((usize) 2, start_line) - 1;
+		usize last_line  = std::min(source_file->getLines().size(), end_line + 1);
 
-		usize length = std::to_string(last_line).size();
+		usize       length  = std::to_string(last_line).size();
 		std::string str_len = std::to_string(length);
 
 		std::vector<std::string> res;
 		res.emplace_back(std::string(length + 1, ' ') + "|\n");
-		for(usize i = first_line; i <= last_line; i++) {
+		for (usize i = first_line; i <= last_line; i++) {
 			res.emplace_back(std::vformat("{:>" + str_len + "} | ", std::make_format_args(i)));
 			auto [begin, end] = source_file->getLine(i);
 			res.emplace_back(source_file->getCharRange(begin, end).stringView());
@@ -38,16 +38,11 @@ namespace dia {
 		return res;
 	}
 
-	SourcePosition::SourcePosition(
-		tokenizer::BorrowFile source_file,
-		const usize       source_start
-	):
+	SourcePosition::SourcePosition(tokenizer::BorrowFile source_file, const usize source_start):
 		  SourcePosition(source_file, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
-		tokenizer::BorrowFile source_file,
-		const usize       source_start,
-		const usize       source_end
+		tokenizer::BorrowFile source_file, const usize source_start, const usize source_end
 	):
 		  source_start(source_start),
 		  source_end(source_end),
@@ -64,13 +59,15 @@ namespace dia {
 	}
 
 	SourcePosition::SourcePosition(const SourcePosition& other, const usize source_end):
-		  SourcePosition(
-			  other.source_file, other.source_start, source_end
-		  ) {}
+		  SourcePosition(other.source_file, other.source_start, source_end) {}
 
-	std::pair<usize, usize> SourcePosition::getStartLineColumn() const { return source_file->getLineColumn(source_start); }
+	std::pair<usize, usize> SourcePosition::getStartLineColumn() const {
+		return source_file->getLineColumn(source_start);
+	}
 
-	std::pair<usize, usize> SourcePosition::getEndLineColumn() const { return source_file->getLineColumn(source_end); }
+	std::pair<usize, usize> SourcePosition::getEndLineColumn() const {
+		return source_file->getLineColumn(source_end);
+	}
 
 	usize SourcePosition::getStart() const { return source_start; }
 
@@ -80,30 +77,26 @@ namespace dia {
 
 	std::vector<printer::MessageContent>
 		SourcePosition::genPrinterMessageContents(const printer::MessageContent& reason) const {
-		auto [line, column] = getStartLineColumn();
-		std::vector<printer::MessageContent> res =  
-				{ { "In file: " },
-			     { source_file->getPath().strView().data() },
-			     { ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
-			     reason,
-			     { "\n" },
+		auto [line, column]                      = getStartLineColumn();
+		std::vector<printer::MessageContent> res = {
+			{ "In file: " },
+			{ source_file->getPath().strView().data() },
+			{ ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
+			reason,
+			{ "\n" },
 		};
-		for (auto el: getSourceLines()) {
-			res.emplace_back(std::move(el));
-		}
+		for (auto el: getSourceLines()) res.emplace_back(std::move(el));
 		return res;
 	}
 
 	std::string SourcePosition::genStr(const std::string_view reason) const {
 		auto [line, column] = getStartLineColumn();
-		std::string output = "In file: ";
+		std::string output  = "In file: ";
 		output += source_file->getPath().strView();
 		output += ":" + std::to_string(line) + ":" + std::to_string(column) + "\n";
 		output += reason;
 		output += "\n";
-		for(const auto& el: getSourceLines()) {
-			output += el;
-		}
+		for (const auto& el: getSourceLines()) output += el;
 		return output;
 	}
 }

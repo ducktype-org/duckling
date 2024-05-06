@@ -16,16 +16,16 @@
 namespace tokenizer {
 	class TokenFile;
 	using BorrowFile = base::borrow_ptr<TokenFile>;
-	using OwnFile = base::unique_ptr<TokenFile>;
+	using OwnFile    = base::unique_ptr<TokenFile>;
 
 	/**
 	 * @brief Class managing source file data access and token metadata
 	 */
 	class TokenFile {
 	private:
-		fs::FilePath path;	
-		dia::Logger log;
-		base::Optional<fs::FileContent> content;
+		fs::FilePath                     path;
+		dia::Logger                      log;
+		base::Optional<fs::FileContent>  content;
 		base::Optional<lexer::CharArray> decoded;
 		base::Optional<lexer::TokenData> token_data;
 
@@ -40,10 +40,10 @@ namespace tokenizer {
 
 		/**
 		 * @brief Controls manual file locking
-		 * 
+		 *
 		 * When true the file content is kept in memory.
 		 * When false the file content is loaded to memory when needed.
-		 * 
+		 *
 		 * @note For now we leave the content available the whole time.
 		 * @note For now false is not completely implemented.
 		 */
@@ -51,30 +51,27 @@ namespace tokenizer {
 
 		BorrowFile self;
 
-		template <class... Ts>
+		template<class... Ts>
 		friend base::unique_ptr<TokenFile> makeTokenFile(Ts&&... args);
+
 	public:
 		explicit TokenFile(const fs::FilePath&);
 
 		TokenFile(const TokenFile&) = delete;
-		TokenFile() = delete;
+		TokenFile()                 = delete;
 
 		TokenFile(TokenFile&&) = default;
 
-		[[nodiscard]] 
+		[[nodiscard]]
 		std::pair<usize, usize> getLineColumn(usize source_pos);
 
-		auto& getLines() {
-			return lines;
-		}
+		auto& getLines() { return lines; }
 
-		std::pair<usize, usize> getLine(usize line) {
-			return lines[line];
-		}
+		std::pair<usize, usize> getLine(usize line) { return lines[line]; }
 
-		fs::FileContent getContent();		
+		fs::FileContent getContent();
 
-		lexer::CharArray& getChars();		
+		lexer::CharArray& getChars();
 
 		lexer::TokenData& getTokenData();
 
@@ -102,9 +99,9 @@ namespace tokenizer {
 		}
 	};
 
-	template <class... Ts>
+	template<class... Ts>
 	base::unique_ptr<TokenFile> makeTokenFile(Ts&&... args) {
-		auto ptr = base::make_unique<TokenFile>(std::forward<Ts...>(args...));
+		auto ptr  = base::make_unique<TokenFile>(std::forward<Ts...>(args...));
 		ptr->self = ptr.borrow_mut();
 		return ptr;
 	}
