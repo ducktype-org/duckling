@@ -301,9 +301,9 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "string");
-		output.push_back(
-			Token::makeString(file->getCharRange(begin + 1, end + 1 - usize(closed)), sourcePosition)
-		);
+		output.push_back(Token::makeString(
+			file->getCharRange(begin + 1, end + 1 - usize(closed)), sourcePosition
+		));
 	}
 
 	void Lexer::bracketHandler(Tokens& output) {
