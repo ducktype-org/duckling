@@ -67,7 +67,7 @@ namespace tokenizer {
 
 		auto& getLines() { return lines; }
 
-		std::pair<usize, usize> getLine(usize line) { return lines[line]; }
+		std::pair<usize, usize> getLine(usize line) { return lines.at(line - 1); }
 
 		fs::FileContent getContent();
 
