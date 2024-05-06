@@ -1,7 +1,8 @@
+import http
 import http.client
 import pathlib
+
 import requests
-import http
 
 from scripts.toolbox.helpers import bash_command, exit_with_error, log_info
 
@@ -18,7 +19,7 @@ class InternetFile:
     def download(self, force=False):
         if force or not self.path.exists():
             try:
-                print(f"Downloading {self.path}...")
+                log_info(f"Downloading {self.path}...")
                 res = requests.get(self.resource_url, stream=True, auth=self.auth)
 
                 if res.status_code != 200:
@@ -29,7 +30,7 @@ class InternetFile:
                 with open(self.path, "wb") as f:
                     for chunk in res.iter_content(chunk_size=8192):
                         f.write(chunk)
-                print(f"Done downloading {self.path} from {self.resource_url}")
+                log_info(f"Done downloading {self.path} from {self.resource_url}")
 
                 for callback in self.after_download_callbacks:
                     callback[0](self, *callback[1:])
@@ -47,14 +48,14 @@ def callback_unTAR(res: InternetFile):
 
 def callback_remove(res: InternetFile, file_path: str):
     log_info(f"Removing {file_path}...")
-    bash_command(f"rm -r {res.parent_dir/file_path}")
+    bash_command(f"rm -r {res.parent_dir / file_path}")
 
 
 def callback_move(res: InternetFile, path_from: str, path_to: str):
-    log_info(f"Moving {res.parent_dir/path_from} to {res.parent_dir/path_to}...")
-    bash_command(f"mv {res.parent_dir/path_from} {res.parent_dir/path_to}")
+    log_info(f"Moving {res.parent_dir / path_from} to {res.parent_dir / path_to}...")
+    bash_command(f"mv {res.parent_dir / path_from} {res.parent_dir / path_to}")
 
 
 def callback_chmod(res: InternetFile, path, mode):
-    log_info(f"Chmoding {res.parent_dir/path} to {mode}...")
-    bash_command(f"chmod {mode} {res.parent_dir/path}")
+    log_info(f"Chmoding {res.parent_dir / path} to {mode}...")
+    bash_command(f"chmod {mode} {res.parent_dir / path}")

@@ -2,12 +2,28 @@
 Maps
 ====
 
-.. simple-description::
+.. contents::
+	:depth: 2
+	:local:
 
-Maps are extension/improvement of :code:`std::map` and `std::unordered_map`.
+Provides utility classes for maps.
 
-.. note::
-	Maps were created when working with C++17.
-	Some updates/adjustments/simplifications should be performed after `std::map` update in C++20.
+Code doc 
+========
+
+WrappedMaps
+^^^^^^^^^^^
+
+.. doxygenclass:: base::MapWrapper
+
+.. doxygentypedef:: base::Map
+
+.. doxygentypedef:: base::HashMap
+
+VectorMap
+^^^^^^^^^^^
+
+.. doxygenclass:: base::VectorMap
+	:members:
 
 

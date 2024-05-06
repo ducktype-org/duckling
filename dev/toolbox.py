@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 import pathlib
+import sys
+
 import click
 
 from scripts.toolbox.helpers import (
@@ -18,12 +20,10 @@ from scripts.toolbox.internet_file import (
     callback_unTAR,
 )
 
-
 DATA_USER = "dev"
 # @FUTURE: change this password and hide it:
 DATA_PASS = "7ocwXWOAwg="
 BUILD_SYSTEMS = click.Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
-
 
 FILES_TO_DOWNLOAD: list[InternetFile] = [
     InternetFile(
@@ -56,13 +56,11 @@ def with_venv(cmd):
     bash_command(f"source .venv/bin/activate && {cmd}")
 
 
-def setup_build_impl(name, build_system, type, docs, compiler, ccache, coverage):
-    """Makes a build folder"""
-
+def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, coverage):
     cmd = f"""
         cmake
          -G "{build_system}"
-         -B {name}
+         -B {build_dir}
          -D CMAKE_BUILD_TYPE={type}
          -D BUILD_DOCS={'ON' if docs else 'OFF'}
          -D CMAKE_CXX_COMPILER={compiler}
@@ -80,14 +78,14 @@ def setup_build_impl(name, build_system, type, docs, compiler, ccache, coverage)
 
 @cli.command()
 @click.option(
-    "-n",
-    "--name",
-    prompt="name",
+    "-b",
+    "--build_dir",
+    prompt="Build dir name",
     help="The name of the directory.",
     default="build",
 )
 @click.option(
-    "-b",
+    "-s",
     "--build-system",
     prompt="Build system",
     help="The build system to use",
@@ -199,15 +197,15 @@ def init_impl():
 
 @cli.command()
 def init():
-    """A general repo setup, performs downloading of submodules and binaries, creates a python venv, etc.."""
+    """A general repo setup, performs downloading of submodules and binaries, creates a python venv, etc..."""
     init_impl()
 
 
 @cli.command()
 @click.option(
-    "-n",
-    "--name",
-    prompt="name",
+    "-b",
+    "--build_dir",
+    prompt="Build directory",
     help="The name of the directory.",
     default="build",
 )
@@ -219,14 +217,13 @@ def init():
     type=str,
     default="default",
 )
-def coverage(name, thread_count):
+def coverage(build_dir, thread_count):
     """Builds and runs coverage inside given build directory.
     This directory has to have coverage enabled"""
 
     log_info("Running coverage...")
-    if not pathlib.Path(name).exists():
-        exit_with_error(f"Given build folder does not exist: {name}.")
-
+    if not pathlib.Path(build_dir).exists():
+        exit_with_error(f"Given build folder does not exist: {build_dir}.")
 
     thread_option = ""
 
@@ -235,15 +232,16 @@ def coverage(name, thread_count):
     elif thread_count.isdigit():
         thread_option = f"-j {int(thread_count)}"
     else:
-        exit_with_error(f"Incorrect thread parameter: `{thread_count}`. Legal values are: numbers and \"default\".")
-   
+        exit_with_error(
+            f'Incorrect thread parameter: `{thread_count}`. Legal values are: numbers and "default".'
+        )
 
-    bash_command(f"cmake --build {name} {thread_option} -- build_all_tests")
-    bash_command(f"cmake --build {name} {thread_option} -- test")
+    bash_command(f"cmake --build {build_dir} {thread_option} -- build_all_tests")
+    bash_command(f"cmake --build {build_dir} {thread_option} -- test")
 
-    bash_command(f"cmake --build {name} -- coverage")
+    bash_command(f"cmake --build {build_dir} -- coverage")
 
-    bash_command("xdg-open coverage/index.html", cwd=name)
+    bash_command("xdg-open coverage/index.html", cwd=build_dir)
 
 
 @cli.command()
@@ -263,8 +261,59 @@ def clean_init():
     )
 
 
+def docs_impl(build_dir):
+    bash_command(f"cmake --build {build_dir} -- docs")
+    bash_command(f"cmake --build {build_dir} -- open-sphinx-docs")
+
+
+@cli.command()
+@click.option(
+    "-b",
+    "--build_dir",
+    prompt="build directory with docs enabled",
+    help="The name of the build directory with enabled docs.",
+    default="build",
+)
+def docs(*args, **kwargs):
+    """Build a documentation for the project and opens it in the browser"""
+    docs_impl(*args, **kwargs)
+
+
+def test_impl(build_dir, memcheck):
+    if memcheck:
+        bash_command(f"cmake --build {build_dir} -- memcheck_test")
+    else:
+        bash_command(f"cmake --build {build_dir} -- test")
+
+
+@cli.command()
+@click.option(
+    "-b",
+    "--build_dir",
+    prompt="build directory with docs enabled",
+    help="The name of the build directory with enabled docs.",
+    default="build",
+)
+@click.option(
+    "-m",
+    "--memcheck",
+    prompt="Memcheck",
+    help="Whether or not to perform memcheck with valgrind",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+def test(*args, **kwargs):
+    """Performs tests of the code"""
+    test_impl(*args, **kwargs)
+
+
 if __name__ == "__main__":
     if pathlib.Path.cwd() != pathlib.Path(__file__).parent.absolute():
         exit_with_error("Toolbox should be called from the root of the project")
+
+    # Disable traceback for shorter error messages.
+    # Comment this line when debugging.
+    sys.tracebacklimit = 0
 
     cli()

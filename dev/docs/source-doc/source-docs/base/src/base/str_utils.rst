@@ -1,22 +1,31 @@
-==========
-Str concat
-==========
-
-.. simple-description::
+=========
+Str utils
+=========
 
 .. contents::
 	:depth: 2
 	:local:
 
-Provides an convenient way of concatenating string of various representations into one.
+Provides a convenient set of utilities for concatenating string of various representations into one,
+splitting strings, and replacing strings.
 
 Functionalities
 ===============
 
-:code:`base::strConcat`
------------------------
+``base::strConcat``
+-------------------
 
 .. doxygenfunction:: base::strConcat
+
+``base::strReplaceAll``
+-----------------------
+
+.. doxygenfunction:: base::strReplaceAll
+
+``base::strSplit``
+------------------
+
+.. doxygenfunction:: base::strSplit
 
 Usage
 =====
@@ -34,6 +43,3 @@ Usage
 		// prints: abc4def true
 		std::cout << base::strConcat("abc", 4, str, " ", true, "\n");
 	}
-
-
-

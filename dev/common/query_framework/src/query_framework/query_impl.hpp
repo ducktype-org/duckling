@@ -2,7 +2,7 @@
 
 #include <utility>
 #include <base/optional.hpp>
-#include <base/str_concat.hpp>
+#include <base/str_utils.hpp>
 #include <diagnostic/logger.hpp>
 
 #include "acd.hpp"
