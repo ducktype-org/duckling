@@ -3,27 +3,31 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
-#include <iterator>
 #include <type_traits>
+#include "base/type_traits.hpp"
 #include "optional.hpp"
 #include "exceptions.hpp"
 
 namespace base {
-	template<typename ContainerType>
+	/**
+	 * @brief Map Wrapper that uses a non-inserting `[] operator`.
+	 *
+	 * Insertion of new elements is handled by the put method.
+	 */
+	template<class ContainerType>
 	class MapWrapper: public ContainerType {
 		// hiding base member:
 		using ContainerType::operator[];
 		using ContainerType::insert;
 
 	public:
-		typedef MapWrapper                          SelfType;
-		typedef typename ContainerType::key_type    KEY_T;
-		typedef typename ContainerType::mapped_type DATA_T;
+		using SelfType = MapWrapper;
+		using KEY_T    = typename ContainerType::key_type;
+		using DATA_T   = typename ContainerType::mapped_type;
 
 		MapWrapper(): ContainerType(){};
 		MapWrapper(const MapWrapper& map): ContainerType(map){};
 		MapWrapper(MapWrapper&& map) noexcept: ContainerType(std::move(map)){};
-
 		~MapWrapper() = default;
 
 		// Change operator[] behaviour:
@@ -67,25 +71,42 @@ namespace base {
 		}
 	};
 
+	/**
+	 * @brief Wrapped std::map for use in our code.
+	 */
 	template<typename KEY_T, typename DATA_T>
 	using Map = MapWrapper<std::map<KEY_T, DATA_T>>;
 
-	template<typename KEY_T, typename DATA_T, typename HashT = std::hash<KEY_T>>
+	/**
+	 * @brief Wrapped std::unordered_map for use in our code.
+	 */
+	template<typename KEY_T, typename DATA_T, class HashT = std::hash<KEY_T>>
 	using HashMap = MapWrapper<std::unordered_map<KEY_T, DATA_T, HashT>>;
 
+	/**
+	 * @brief Vector based map that keeps O(max_used_key) memory but has constant time access.
+	 *
+	 * @tparam is_move Can be used to forbid operations that require to move a value.
+	 * @tparam is_copy Can be used to forbid operations that require to copy a value.
+	 *
+	 * @note Keys should be convertible to usize.
+	 */
 	template<
 		typename KEY_T,
 		typename DATA_T,
 		bool is_move = std::is_move_constructible_v<DATA_T>,
 		bool is_copy = std::is_copy_constructible_v<DATA_T>>
+	// Sanity check
+	requires base::Implication<is_move, std::is_move_constructible_v<DATA_T>>
+	      && base::Implication<is_copy, std::is_copy_constructible_v<DATA_T>>
 	class VectorMap {
 		std::vector<Optional<DATA_T>> map;
 		usize                         element_count{};
 
 	public:
-		typedef VectorMap SelfType;
-		typedef KEY_T     IdType;
-		typedef DATA_T    DataType;
+		using SelfType = VectorMap;
+		using IdType   = KEY_T;
+		using DataType = DATA_T;
 
 		using iterator       = typename std::vector<Optional<DATA_T>>::iterator;
 		using const_iterator = typename std::vector<Optional<DATA_T>>::const_iterator;
@@ -98,6 +119,11 @@ namespace base {
 
 		~VectorMap() = default;
 
+		/**
+		 * @brief Non-inserting element access.
+		 *
+		 * Throws `base::LogicError` on bad element access.
+		 */
 		DATA_T& operator[](const KEY_T key) {
 			if (usize(key) < map.size() and map.at(usize(key)).has_value())
 				return *map.at(usize(key));
@@ -114,12 +140,18 @@ namespace base {
 			return {};
 		}
 
+		/**
+		 * @brief Inserts empty value at @p key
+		 */
 		void put(KEY_T key) {
 			if (usize(key) >= map.size()) map.resize(key + 1);
 			if (!map.at(usize(key)).has_value()) element_count++;
 			map.at(usize(key)) = DATA_T();
 		}
 
+		/**
+		 * @brief Moves @p data value to @p key position.
+		 */
 		void put(KEY_T key, DATA_T&& data)
 		requires is_move
 		{
@@ -128,6 +160,9 @@ namespace base {
 			map.at(usize(key)).emplace(std::move(data));
 		}
 
+		/**
+		 * @brief Copies @p data value to @p key position.
+		 */
 		void put(KEY_T key, const DATA_T& data)
 		requires is_copy
 		{
@@ -136,16 +171,29 @@ namespace base {
 			map.at(usize(key)).emplace(data);
 		}
 
+		/**
+		 * @brief Constructs value from @p args at @p key position.
+		 *
+		 * @note I'm not sure this works properly with move disabled.
+		 * @note I'm not sure whether argument move shouldn't be a forward.
+		 */
 		template<class... Args>
 		void emplace(KEY_T key, Args&&... args) {
 			put(key, std::move(DATA_T(std::move(&args...))));
 		}
 
+		/**
+		 * @brief Checks whether the map has an element on @p key position.
+		 */
 		bool contains(KEY_T key) const {
 			if (usize(key) >= map.size()) return false;
 			return map.at(usize(key)).has_value();
 		}
 
+		/**
+		 * @brief Erases value at @p key position if it exists.
+		 * @returns Whether a value was erased.
+		 */
 		bool erase(KEY_T key) {
 			if (usize(key) >= map.size()) return false;
 			if (map.at(usize(key)).has_value()) {

@@ -2,8 +2,6 @@
 Define helper
 =============
 
-.. simple-description::
-
 .. contents::
 	:depth: 2
 	:local:
@@ -39,13 +37,12 @@ If a diagnostic option is changed using :code:`_Pragma` inside push/pop pair, it
 
 .. note:: Doxygen does not see those macros for some reason. Probably because they are inside if-s.
 
-PUSH_DIAGNOSTIC
+Usage
 ^^^^^^^^^^^^^^^
 
-POP_DIAGNOSTIC
-^^^^^^^^^^^^^^
+.. code-block:: cpp
 
-:code:`NO_SHADOW` disables shadow diagnostics.
-
-NO_SHADOW
-^^^^^^^^^
+	PUSH_DIAGNOSTIC
+	NO_SHADOW	
+	// shadowed declarations are ignored here
+	POP_DIAGNOSTIC

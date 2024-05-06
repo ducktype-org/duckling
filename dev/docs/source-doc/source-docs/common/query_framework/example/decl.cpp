@@ -1,9 +1,9 @@
 #include <query_framework/query_impl.hpp>
-#include "decl.hpp"             // query declaration
+#include "decl.hpp"            // query declaration
 
-#include <base/str_concat.hpp>  // base::strConcat
-#include <base/optional.hpp>    // base::Optional
-#include <base/maps.hpp>        // base::Map
+#include <base/str_utils.hpp>  // base::strConcat
+#include <base/optional.hpp>   // base::Optional
+#include <base/maps.hpp>       // base::Map
 
 /**
  * PResult type for MyQuery
@@ -13,6 +13,26 @@ struct PResult {
 };
 
 struct ImplementationOf_MyQuery: query::QueryImplementation<MyQuery, PResult> {
+	struct InfoInMyQuery final: dia::Info {
+		std::string str;
+
+		explicit InfoInMyQuery(const dia::SourcePosition& source_position, std::string str):
+			  Info(source_position),
+			  str(std::move(str)) {}
+
+	protected:
+		[[nodiscard]]
+		printer::MessageContent toMessageContentBrief() const override {
+			return { "Some random log from Query1." };
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Misc;
+		}
+	};
+
 	/**
 	 * Lets define some cache:
 	 */
@@ -25,7 +45,12 @@ struct ImplementationOf_MyQuery: query::QueryImplementation<MyQuery, PResult> {
 		// Normally we would do it because we need
 		// it in some computation.
 		// Here we will just log it:
-		context.log(base::strConcat("Result of query 2 : ", result));
+		std::string str_to_log = base::strConcat("Result of query 2 : ", result);
+		// Dummy source position:
+		dia::SourcePosition source_position = dia::SourcePosition{
+			std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")), 1, 1, 1
+		};
+		context.log(base::make_unique<InfoInMyQuery>(source_position, str_to_log));
 
 		// some trivial implementation:
 		return PResult{ key.v };
