@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/ints.hpp>
-#include <base/stringifyable_enum.hpp>
+#include <map>
 
 /**
  * Opcodes names conventions:
@@ -22,68 +22,17 @@
  * Opcodes not following this convention have additional description
  */
 
-MAKE_STRINGIFYABLE_ENUM(
-	vm,
-	u16,
-	OpcodeFix8,
 
-	mov_l64_imm,
-
-	mov_l64_l64,
-	cmov_l64_l64,
-
-	mov_l64_r0,
-	mov_r0_l64,
-
-	mov_l64_pFuncArg,     // moves primitive function arg to local variable
-	mov_lptr_ptrFuncArg,  // moves pointer function arg to local variable
-
-	add_l64_l64,
-	add_l64_imm,
-
-	// sub_l64_l64,
-	sub_l64_l64,
-	sub_l64_imm,
-
-	// mul_l64_l64,
-	mul_l64_imm,
-
-	mod_l64_l64,
-	mod_l64_imm,
-
-	// div_l64_l64,
-	div_l64_imm,
-
-	cmpEq_l64_l64,
-	cmpEq_l64_imm,
-	cmpG_l64_l64,
-	cmpG_l64_imm,
-
-	jmpRel_label,
-	jmpRelIf_label,
-	jmpRelNotIf_label,
-
-	setPArg_l64,     // set primitive argument
-	setPtrArg_lptr,  // set pointer argument
-	call_func,
-
-	ret_tailcall,
-	ret_l64,
-	ret_imm,
-
-	init_type,  // initialize local variable on local stack with given type
-	deinit,     // pops variable from local stack
-
-	input_l64,
-	output_l64,
-
-	nop,
-
-	alloc_lptr_type,     // allocates given type, stores pointer
-	free_lptr,           // frees block under pointer
-	load_l64_lptr_ofs,   // load 64-bit primitive value from lptr + ofs
-	store_lptr_l64_ofs,  // stores 64-bit primitive value under lptr + ofs
-
-	ext_l64,             // passes additional argument to preceding opcode
-	exit
-);
+namespace vm {
+	enum class OpcodeFix8 : u16 {
+#define DEF_OPCODE(opcode) opcode,
+#include "opcodes_list.hpp"
+#undef DEF_OPCODE
+		COUNT,
+	};
+	const std::map<std::string, OpcodeFix8> str_to_OpcodeFix8{
+#define DEF_OPCODE(opcode) { #opcode, OpcodeFix8::opcode },
+#include "opcodes_list.hpp"
+#undef DEF_OPCODE
+	};
+}

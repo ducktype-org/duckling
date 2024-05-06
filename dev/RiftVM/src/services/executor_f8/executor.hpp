@@ -25,8 +25,8 @@ namespace vm {
 	enum class ExecutionStrategy { Normal, StepByStep, Paused, Stoped };
 	struct Frame;
 
-	const u64 FRAMES_LENGTH = 16'384;
-	const u64 STACK_LENGTH  = FRAMES_LENGTH * 256;
+	constexpr u64 FRAMES_LENGTH = 16'384;
+	constexpr u64 STACK_LENGTH  = FRAMES_LENGTH * 256;
 
 	struct RuntimeData {
 		Frame*     frame_stack_base;

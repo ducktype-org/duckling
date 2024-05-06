@@ -479,64 +479,11 @@ namespace vm {
 #else
 	// Computed gotos labels:
 	#ifdef USE_COMPUTED_GOTO
-		constexpr static std::array<void*, OpCasesCount> opcode_label
-			= { LABEL_PTR(mov_l64_imm),
-
-			    LABEL_PTR(mov_l64_l64),
-			    LABEL_PTR(cmov_l64_l64),
-
-			    LABEL_PTR(mov_l64_r0),
-			    LABEL_PTR(mov_r0_l64),
-
-			    LABEL_PTR(mov_l64_pFuncArg),
-			    LABEL_PTR(mov_lptr_ptrFuncArg),
-
-			    LABEL_PTR(add_l64_l64),
-			    LABEL_PTR(add_l64_imm),
-
-			    LABEL_PTR(sub_l64_l64),
-			    LABEL_PTR(sub_l64_imm),
-
-			    // LABEL_PTR(mul_l64_l64),
-			    LABEL_PTR(mul_l64_imm),
-
-			    LABEL_PTR(mod_l64_l64),
-			    LABEL_PTR(mod_l64_imm),
-
-			    LABEL_PTR(div_l64_imm),
-
-			    LABEL_PTR(cmpEq_l64_l64),
-			    LABEL_PTR(cmpEq_l64_imm),
-			    LABEL_PTR(cmpG_l64_l64),
-			    LABEL_PTR(cmpG_l64_imm),
-
-			    LABEL_PTR(jmpRel_label),
-			    LABEL_PTR(jmpRelIf_label),
-			    LABEL_PTR(jmpRelNotIf_label),
-
-			    LABEL_PTR(setPArg_l64),
-			    LABEL_PTR(setPtrArg_lptr),
-			    LABEL_PTR(call_func),
-
-			    LABEL_PTR(ret_tailcall),
-			    LABEL_PTR(ret_l64),
-			    LABEL_PTR(ret_imm),
-
-			    LABEL_PTR(init_type),
-			    LABEL_PTR(deinit),
-
-			    LABEL_PTR(input_l64),
-			    LABEL_PTR(output_l64),
-
-			    LABEL_PTR(nop),
-
-			    LABEL_PTR(alloc_lptr_type),
-			    LABEL_PTR(free_lptr),
-			    LABEL_PTR(load_l64_lptr_ofs),
-			    LABEL_PTR(store_lptr_l64_ofs),
-
-			    LABEL_PTR(ext_l64),
-			    LABEL_PTR(exit) };
+		constexpr static std::array<void*, OpCasesCount> opcode_label = {
+		#define DEF_OPCODE(opcode) LABEL_PTR(opcode),
+		#include <code_data/opcodes_list.hpp>
+		#undef DEF_OPCODE
+		};
 	#endif
 
 		IF_NOT_CG(while (true)) {
@@ -545,67 +492,12 @@ namespace vm {
 			if constexpr (!IGNORE_EXECUTION_STRATEGY) handleExecutionStrategyIfNeeded();
 
 			IF_NOT_CG(switch (static_cast<OpcodeFix8>(instr->opcode))) {
-				OP_CASE(mov_l64_imm)
-
-				OP_CASE(mov_l64_l64)
-				OP_CASE(cmov_l64_l64)
-
-				OP_CASE(mov_l64_r0)
-				OP_CASE(mov_r0_l64)
-
-				OP_CASE(mov_l64_pFuncArg)
-				OP_CASE(mov_lptr_ptrFuncArg)
-
-				OP_CASE(add_l64_l64)
-				OP_CASE(add_l64_imm)
-
-				OP_CASE(sub_l64_l64)
-				OP_CASE(sub_l64_imm)
-
-				OP_CASE(mul_l64_imm)
-
-				OP_CASE(mod_l64_imm)
-				OP_CASE(mod_l64_l64)
-
-				OP_CASE(div_l64_imm)
-
-				OP_CASE(cmpEq_l64_l64)
-				OP_CASE(cmpEq_l64_imm)
-				OP_CASE(cmpG_l64_l64)
-				OP_CASE(cmpG_l64_imm)
-
-				OP_CASE(jmpRel_label)
-				OP_CASE(jmpRelIf_label)
-				OP_CASE(jmpRelNotIf_label)
-
-				OP_CASE(setPtrArg_lptr)
-				OP_CASE(setPArg_l64)
-				OP_CASE(call_func)
-
-				OP_CASE(ret_tailcall)
-				OP_CASE(ret_l64)
-				OP_CASE(ret_imm)
-
-				OP_CASE(init_type)
-				OP_CASE(deinit)
-
-				OP_CASE(input_l64)
-				OP_CASE(output_l64)
-
-				OP_CASE(nop)
-
-				OP_CASE(alloc_lptr_type)
-				OP_CASE(free_lptr)
-				OP_CASE(load_l64_lptr_ofs)
-				OP_CASE(store_lptr_l64_ofs)
-
-				OP_CASE(ext_l64)
-				OP_CASE_END(exit)
-
-				IF_NOT_CG(default
-				          : {
-							  // RIFT_PANIC("Unknown operator:", u64(instr.opcode));
-						  })
+	#define DEF_OPCODE(opcode)     OP_CASE(opcode)
+	#define DEF_OPCODE_END(opcode) OP_CASE_END(opcode)
+	#include <code_data/opcodes_list.hpp>
+	#undef DEF_OPCODE
+	#undef DEF_OPCODE_END
+				IF_NOT_CG(default : { RIFT_PANIC("Unknown operator:", u64(instr->opcode)); })
 			}
 		}
 	End:
