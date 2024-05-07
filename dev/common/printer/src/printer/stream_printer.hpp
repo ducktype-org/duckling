@@ -1,5 +1,5 @@
 /**
- * @file printer_console.hpp
+ * @file stream_printer.hpp
  * @brief Module for outputting messages to console.
  *
  * Basic usage: playground/printer_test.hpp

@@ -3,14 +3,15 @@
 #include "../class_types.hpp"
 #include "../kind.hpp"
 #include "../type_desc.hpp"
-#include "../type_desc.tcpp"
 #include "../type_info.hpp"
 #include "../types.hpp"
 #include "../type_interface.hpp"
+#include "../queries/implicit_coercibility.hpp"
 #include <base/string_id.hpp>
 #include <base/smart_pointers.hpp>
 #include <utility>
 #include <vector>
+#include <query_framework/query_impl.hpp>
 
 namespace ts::internal {
 	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
@@ -122,7 +123,10 @@ namespace ts::internal {
 		 * \return Whether the implicit coercion is allowed or not.
 		 */
 		[[nodiscard]]
-		virtual bool isImplImplicitlyCoercible([[maybe_unused]] const TypeInfo target) const {
+		virtual bool isImplImplicitlyCoercible(
+			[[maybe_unused]] const TypeInfo              target,
+			[[maybe_unused]] query::detail::ContextType& context
+		) const {
 			return false;
 		}
 
@@ -193,7 +197,8 @@ namespace ts::internal {
 		explicit ByteInfoImpl(): TypeInfoImpl(BYTE_SIZE) { representation = "byte"; }
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+			const override {
 			// Implicit coercions allow checking against null bytes.
 			return target.getKind() == Kind::Bool;
 		}
@@ -214,7 +219,8 @@ namespace ts::internal {
 		explicit BoolInfoImpl(): TypeInfoImpl(BOOL_SIZE) { representation = "bool"; }
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+			const override {
 			// Implicit coercions allow adding to an integral counter.
 			return target.getKind() == Kind::Integral;
 		}
@@ -235,7 +241,8 @@ namespace ts::internal {
 		explicit CharInfoImpl(): TypeInfoImpl(CHAR_SIZE) { representation = "char"; }
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+			const override {
 			// Implicit coercions allow checking against null chars.
 			return target.getKind() == Kind::Bool;
 		}
@@ -270,7 +277,8 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+			const override {
 			// Implicit coercions allow checking against zero,
 			// as well as promoting to greater sizes and to floating point
 			// numbers for physics simulations or similar
@@ -297,7 +305,8 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+			const override {
 			// Implicit coercions allow promoting to greater sizes
 			return target.getKind() == Kind::Float && FloatInfo(target).getSize() > size;
 		}
@@ -318,7 +327,8 @@ namespace ts::internal {
 		RawPointerInfoImpl(): TypeInfoImpl(POINTER_SIZE) { representation = "raw_pointer"; }
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+			const override {
 			// Implicit coercions allow checking against null pointer.
 			// We do not allow casting to a typed pointer,
 			// because we forbid implicit type specification in this context.
@@ -360,7 +370,8 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+			const override {
 			// Explicit override without change in implementation to add comment.
 			// Implicit coercions allow checking against null pointer.
 			// We do not allow casting to another (raw) pointer type,
@@ -425,7 +436,7 @@ namespace ts::internal {
 			  unique(unique) {}
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo, query::detail::ContextType&) const override {
 			// Unlike with pointers, we do not allow checking whether the reference is non-null by
 			// coercion, because this may conflict with the underlying type being coercible to bool.
 			// Instead, we would want to just forward coercibility.
@@ -438,9 +449,9 @@ namespace ts::internal {
 	};
 
 	class FunctionInfoImpl final: public TypeInfoImpl {
-		const std::vector<TypeDesc<>> parameter_types;
-		const TypeDesc<>              result_type;
-		const bool                    pure, free;
+		const std::vector<TypeInfo> parameter_types;
+		const TypeInfo              result_type;
+		const bool                  pure, free;
 
 	public:
 		[[nodiscard]]
@@ -454,12 +465,12 @@ namespace ts::internal {
 		static Kind staticKind;
 
 		[[nodiscard]]
-		const std::vector<TypeDesc<>>& getParameterList() const {
+		const std::vector<TypeInfo>& getParameterList() const {
 			return parameter_types;
 		}
 
 		[[nodiscard]]
-		TypeDesc<> getResult() const {
+		TypeInfo getResult() const {
 			return result_type;
 		}
 
@@ -474,7 +485,8 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType& context)
+			const override {
 			// A function type is coercible to another function type if and only if
 			// the return type is coercible to the other return type and
 			// the other parameter types are coercible to the parameter types,
@@ -489,17 +501,24 @@ namespace ts::internal {
 			    || parameter_types.size() != toFunction.getParameterTypes().size()) {
 				return false;
 			}
+
 			for (usize i = 0; i < parameter_types.size(); i++)
-				if (!isImplicitlyCoercible(toFunction.getParameterTypes()[i], parameter_types[i]))
+				if (!context.query<QueryImplicitCoercibilityOnInfo>({
+						toFunction.getParameterTypes()[i],
+						parameter_types[i],
+					}))
 					return false;
-			return isImplicitlyCoercible(result_type, toFunction.getResultType());
+			return context.query<QueryImplicitCoercibilityOnInfo>({
+				result_type,
+				toFunction.getResultType(),
+			});
 		}
 
-		explicit FunctionInfoImpl(
-			std::vector<TypeDesc<>> parameter_types,
-			TypeDesc<>              result_type,
-			bool                    pure = false,
-			bool                    free = false
+		FunctionInfoImpl(
+			std::vector<TypeInfo> parameter_types,
+			TypeInfo              result_type,
+			bool                  pure = false,
+			bool                  free = false
 		);
 	};
 
@@ -629,7 +648,8 @@ namespace ts::internal {
 		);
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target) const override {
+		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+			const override {
 			if (target.getKind() != Kind::Class) return false;
 			const ClassInfo toClass               = target;
 			const auto [lva, so, eo, result_type] = getAncestorInfo(toClass);

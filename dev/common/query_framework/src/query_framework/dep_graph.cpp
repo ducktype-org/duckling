@@ -1,7 +1,7 @@
 #include "dep_graph.hpp"
-#include "query_impl.hpp"
 
 #include <base/maps.hpp>
+#include <iomanip>
 #include <vector>
 #include <iostream>
 
@@ -22,6 +22,11 @@ namespace query::detail {
 
 	constexpr bool operator==(const NodeID& l, const NodeID& r) {
 		return l.q_id.asInt() == r.q_id.asInt() and l.hash.val == r.hash.val;
+	}
+
+	constexpr bool operator<(const NodeID& l, const NodeID& r) {
+		if (l.q_id.asInt() == r.q_id.asInt()) return l.hash.val < r.hash.val;
+		return l.q_id.asInt() < r.q_id.asInt();
 	}
 
 	namespace dep_graph {
@@ -69,19 +74,32 @@ namespace query::detail {
 		void setExit(NodeID node) { node_data.at(node).color = Color::Done; }
 
 		void debugPrint() {
-			// @TODO: optional pratty key printing
-
 			std::cerr << "Dep Graph: \n";
+			std::string spacing(25, ' ');
 			for (auto& [k, v]: node_data) {
 				std::cerr << "    ";
-				std::cerr << "Query " << k.q_id.asInt() << ", Key " << k.hash.val << "  <--- ";
+				std::cerr << "> Query - " << std::setw(5) << std::left;
+				std::cerr << k.q_id.asInt() << std::setw(30) << std::left
+						  << "\"" + k.q_id.getName() + "\"";
+				std::cerr << " Key " << k.hash.val << " :=>\n";
 				for (auto& dep: v.dependencies) {
-					std::cerr << "(Q: " << dep.q_id.asInt() << ", "
-							  << "K: " << dep.hash.val << ")";
-					std::cerr << ", ";
+					std::cerr << spacing << "(Q: "
+							  << "\"" << dep.q_id.getName() << "\", "
+							  << "K: " << dep.hash.val << "),\n";
 				}
-				std::cerr << "\n";
+				if (!v.dependencies.empty()) std::cerr << '\n';
 			}
+		}
+
+		void debugPrintForDrawing() {
+			std::cerr << "Dep Graph: \n";
+			std::cerr << node_data.size() << "\n";
+
+			std::map<NodeID, u64> index;
+			u64                   id = 0;
+			for (auto& [k, v]: node_data) index[k] = id++;
+			for (auto& [k, v]: node_data)
+				for (auto& dep: v.dependencies) std::cerr << index[k] << " " << index[dep] << "\n";
 		}
 
 	}
