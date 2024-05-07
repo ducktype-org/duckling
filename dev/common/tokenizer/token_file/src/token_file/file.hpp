@@ -20,6 +20,8 @@ namespace tokenizer {
 
 	/**
 	 * @brief Class managing source file data access and token metadata
+	 * 
+	 * @note For now it's very minimal
 	 */
 	class TokenFile {
 	private:
@@ -30,24 +32,15 @@ namespace tokenizer {
 		base::Optional<lexer::TokenData> token_data;
 
 		/**
-		 * @brief Stores line bounds in file.
+		 * @brief Stores line bounds (first character of the line, character after last character) in file.
 		 */
 		std::vector<std::pair<usize, usize>> lines;
 		/**
-		 * @brief Stores pairs (Character index, line number)
+		 * @brief Stores pairs (Character index, line number) that represent beginnings of lines .
+		 * 
+		 * Used for quick mapping (character index -> line).
 		 */
 		std::set<std::pair<usize, usize>> line_begins;
-
-		/**
-		 * @brief Controls manual file locking
-		 *
-		 * When true the file content is kept in memory.
-		 * When false the file content is loaded to memory when needed.
-		 *
-		 * @note For now we leave the content available the whole time.
-		 * @note For now false is not completely implemented.
-		 */
-		bool lock = true;
 
 		BorrowFile self;
 
@@ -62,24 +55,28 @@ namespace tokenizer {
 
 		TokenFile(TokenFile&&) = default;
 
+		/**
+		 * @brief Compute pair (line, column) from character index.
+		 */
 		[[nodiscard]]
 		std::pair<usize, usize> getLineColumn(usize source_pos);
 
-		auto& getLines() { return lines; }
-
+		/**
+		 * @brief Get line bounds (first, last + 1).
+		 */
 		std::pair<usize, usize> getLine(usize line) { return lines.at(line - 1); }
 
-		fs::FileContent getContent();
-
-		lexer::CharArray& getChars();
-
-		lexer::TokenData& getTokenData();
-
-		dia::Logger& getLogger();
-
-		fs::FilePath getPath();
-
+		/**
+		 * @brief Returns a view containing the source characters in bounds [@p begin_char,@p end_char).
+		 */
 		base::RawView getCharRange(usize begin_char, usize end_char);
+
+		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
+		fs::FileContent getContent();
+		lexer::CharArray& getChars();
+		lexer::TokenData& getTokenData();
+		dia::Logger& getLogger();
+		fs::FilePath getPath();
 
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {
@@ -90,6 +87,9 @@ namespace tokenizer {
 
 		void runLexer();
 
+		/**
+		 * @brief Run the whole lexer.
+		 */
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void tokenize() {
 			lexer::init();
