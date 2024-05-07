@@ -109,36 +109,6 @@ namespace ts {
 			return *this <=> other == 0;
 		}
 
-		/**
-		 * \brief Determine whether it is legal to consider and implicit coercion
-		 * from a value described by this TypeDesc to one described by target.
-		 *
-		 * An implicit coercion is when, for example, a boolean is expected, but
-		 * and integer is given. A desirable (and common) behaviour may be to
-		 * convert the integer value to true if and only if it is non-zero.
-		 *
-		 * Another context in which implicit coercions are desirable is when
-		 * casting from subclass to superclass.
-		 *
-		 * This method does not determine how to perform a coercion.
-		 * It only determines whether one should be considered.
-		 * A coercion may thus be allowed but not implemented, or implemented
-		 * but not allowed to be used implicitly by the compiler, so the user
-		 * may define a coercion from class A to class B, but not want it
-		 * to ever be used implicitly (in C++ that is achieved by annotating a
-		 * single-argument constructor with the `explicit` keyword).
-		 *
-		 * This method takes the implicit coercibility of the underlying TypeInfo
-		 * into consideration, but also of the ValueCategory. For example, a value may
-		 * not be implicitly coercible to another value if the source value is not
-		 * movable, but the target value needs to be movable for an efficient constructor.
-		 *
-		 * \param target The target of a hypothetical implicit coercion.
-		 * \return Whether the implicit coercion is allowed or not.
-		 */
-		[[nodiscard]]
-		bool isDescImplicitlyCoercible(const TypeDesc<>& target) const;
-
 	private:
 		TYPE_INFO     typeInfo;
 		ValueCategory valueCategory;

@@ -4,7 +4,81 @@ This repository contains code for ZPP 2.1 Rift development. It introduces Langua
 
 ## Before start
 
-Run `git submodule update --init` to fetch library dependencies. 
+### Installing dependencies
+
+#### Debian/Ubuntu
+
+```bash
+sudo apt update -y && \
+sudo apt install python3 doxygen graphviz -y
+```
+
+#### Arch linux
+
+```bash
+sudo pacman -Sy python python-pip doxygen graphviz --noconfirm
+```
+
+### Setting up the repo
+
+To begin, enter the `dev/` directory and then:
+
+#### Initialize the repository with toolbox
+
+```bash
+./toolbox.py init
+```
+
+This fetches library dependencies, setups virtual environment, downloads binaries, etc...
+
+#### Create a build folder
+
+```bash
+./toolbox.py setup-build
+```
+
+Press enter on every prompt to leave default options.
+
+#### Building the docs
+
+```bash
+./toolbox.py docs
+```
+
+This builds the docs and opens them in your favorite browser. Leave defaults if you chose defaults in previous step.
+
+#### Running tests
+
+```shell
+./toolbox.py test     # regular tests
+./toolbox.py test -m  # run tests under valgrind
+```
+
+#### Testing coverage
+
+Before running this command make sure you build folder has enabled coverage.
+
+```shell
+# This is only needed if build folder was not prepared for coverage.
+./toolbox.py setup-build --coverage
+
+./toolbox.py coverage
+```
+
+
+___
+
+You can read more about toolbox'es useful features at:
+
+```bash
+./toolbox.py --help
+```
+
+or for more specific information about a command:
+
+```bash
+./toolbox.py setup-build --help
+```
 
 ## File structure
 
@@ -14,4 +88,3 @@ Run `git submodule update --init` to fetch library dependencies.
 
 * See docs
 * [dev/guidelines](guidelines/) - guidelines dedicated to writing code
-

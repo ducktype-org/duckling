@@ -15,8 +15,8 @@ This module provides functionality for outputting messages to console. Has tools
 ## Files:
 
 * [message.hpp](src/printer/message.hpp) - Description of Message objects.
-* [printer.hpp](src/printer/printer_console.hpp) - Interface of a printer to console (maybe other printers will appear in the future).
-* [printer.cpp](src/printer/printer.cpp) - Implementation of a printer to console.
+* [printer.hpp](src/printer/stream_printer.hpp) - Interface of a printer to console (maybe other printers will appear in the future).
+* [printer.cpp](src/printer/stream_printer.cpp) - Implementation of a printer to console.
 
 ## Symbols:
 

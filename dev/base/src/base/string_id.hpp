@@ -8,6 +8,7 @@
 #include "maps.hpp"
 #include "raw_view.hpp"
 #include <string>
+#include <charconv>
 
 namespace base {
 
@@ -19,8 +20,8 @@ namespace base {
 		using InnerId = detail::StrInnerID;
 		InnerId id;
 
-		typedef base::VectorMap<InnerId, base::RawView> ToDataType;
-		typedef base::HashMap<base::RawView, InnerId>   ToIdType;
+		using ToDataType = VectorMap<InnerId, RawView>;
+		using ToIdType   = HashMap<RawView, InnerId>;
 
 		static ToDataType to_data_map;
 		static ToIdType   to_id_map;
@@ -33,10 +34,10 @@ namespace base {
 		explicit StrId(char character);
 
 		// Makes copy
-		explicit StrId(const base::RawView& data);
+		explicit StrId(const RawView& data);
 		explicit StrId(const char* data);
 
-		void operator=(const StrId& oth) { id = oth.id; }
+		StrId& operator=(const StrId& oth) = default;
 
 		[[nodiscard]]
 		base::RawView view() const {
@@ -66,7 +67,7 @@ namespace base {
 
 		bool operator==(const StrId& oth) const { return id == oth.id; }
 
-		bool operator==(base::RawView oth) const { return view().stringView() == oth.stringView(); }
+		bool operator==(RawView oth) const { return view().stringView() == oth.stringView(); }
 
 		bool operator!=(const StrId& oth) const { return id != oth.id; }
 
@@ -85,13 +86,18 @@ namespace base {
 		 */
 		static void dumpData(std::ostream& out);
 
-		friend class std::hash<base::StrId>;
+		friend class std::hash<StrId>;
 	};
 
+	/**
+	 * @brief Converts a string to the value of the number it contains.
+	 *
+	 * Raises exception on error.
+	 */
+	i64 strIdToNum(base::StrId str);
+
 	namespace detail {
-		inline void strConcat(std::string& out, base::StrId str_id) {
-			out.append(str_id.strView());
-		}
+		inline void strConcat(std::string& out, StrId str_id) { out.append(str_id.strView()); }
 	}
 }
 

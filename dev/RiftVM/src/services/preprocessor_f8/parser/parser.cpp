@@ -2,7 +2,6 @@
 #include "parser.hpp"
 #include <code_data/opcodes.hpp>
 #include <lexer/lexer.hpp>
-#include <lexer/classifications.hpp>
 #include <base/optional.hpp>
 #include <rift_definitions/key_spec_op.hpp>
 #include <stdexcept>
@@ -13,8 +12,7 @@
 #include <base/maps.hpp>
 #include <variant>
 #include <base/variant.hpp>
-#include <base/str_to_int.hpp>
-#include <services_data/type_metadata/type_metadata.hpp>
+#include <base/string_id.hpp>
 
 namespace assemble {
 

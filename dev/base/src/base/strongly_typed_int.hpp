@@ -106,18 +106,18 @@
 /**
  * @brief This macro is intended to create strongly typed
  * numeric types that are dimensional, ex kg, m, bytes.
- * Usage: STRONG_TYPEDEF_INT_DIMENSIONAL(Meters, i64), created new type Meters,
- * that behave exactly like i64 but can only by explicitly casted to it.
+ * Usage: STRONG_TYPEDEF_INT_DIMENSIONAL(Meters, i64), creates new type Meters,
+ * that behaves exactly like i64 but can only be explicitly cast to it.
  *
- * Allows for operations like 2kg * 2, but not for 2kg*2kg
+ * Allows for operations like 2kg * 2, but not for 2kg*2kg.
  */
 #define STRONG_TYPEDEF_INT_DIMENSIONAL(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, true)
 
 /**
  * @brief This macro is intended to create strongly typed
  * numeric types that are dimensionless, ex better ints.
- * Usage: STRONG_TYPEDEF_INT(MyOwnI32, i32), created new type MyOwnI32,
- * that behave exactly like i32 but can only by explicitly casted to it.
+ * Usage: STRONG_TYPEDEF_INT(MyOwnI32, i32), creates new type MyOwnI32,
+ * that behaves exactly like i32 but can only be explicitly cast to it.
  *
  * Allows for operations like MyOwnI32 * MyOwnI32
  */

@@ -13,24 +13,16 @@ namespace base {
 	using StableVectorCRef = c_borrow_ptr<Data>;
 
 	/**
-	 * @brief Key must be „standard” numeric value such as:
-	 * integer
-	 * strongly typed int
-	 * strongly typed id
+	 * @brief Expandable list with stable references (References are valid after the addition of new
+	 * elements).
 	 *
-	 * Right now StableVector keys must be convertible to and from usize
+	 * @tparam Key must be convertible to and from usize.
 	 *
-	 * @TODO make concept to check it
-	 * @TODO add range based iteration
+	 * @note Add stable range based iteration (Probably with indexes)
 	 */
 	template<typename Data, typename Key = usize>
+	requires std::constructible_from<Key, usize> && std::constructible_from<usize, Key>
 	class StableVector {
-		/**
-		 * @brief @TODO
-		 * for now it is simple, naive implementation
-		 * in the future change it to something better
-		 */
-
 		std::vector<unique_ptr<Data>> data;
 
 	public:
@@ -52,14 +44,8 @@ namespace base {
 			return !data.empty();
 		}
 
-		/**
-		 * @brief Quick, unsafe, constexpr access
-		 */
 		constexpr Data& operator[](Key pos) { return *data.at(static_cast<usize>(pos)); }
 
-		/**
-		 * @brief Quick, unsafe, constexpr access
-		 */
 		constexpr const Data& operator[](Key pos) const {
 			return *data.at(static_cast<usize>(pos));
 		}
