@@ -103,7 +103,7 @@ export async function handleSemanticTokensFull(params: SemanticTokensParams,
 
 	let LSPTree = pstCache.get(document.uri);
 	if (!LSPTree) {
-        let parseOutput = await parseFile(document.uri);
+        let parseOutput = await parseFile(document.getText());
 		LSPTree = parseOutput[0];
 		pstCache.set(document.uri, LSPTree);
 	}

@@ -27,9 +27,9 @@ export class RiftParserError {
 	}
 }
 
-export function parseFile(filePath: string): Promise<[RiftElement | null, RiftParserError[]]> {
+export function parseFile(fileContent: string): Promise<[RiftElement | null, RiftParserError[]]> {
 	const command: string = BINARY_PATH + "lsptree_interface";
-	const args: string[] = [uriToPath(filePath)];
+	const args: string[] = [fileContent];
 
 	return new Promise((resolve, reject) => {
 		const childProcess = spawn(command, args);
@@ -65,10 +65,6 @@ export function parseFile(filePath: string): Promise<[RiftElement | null, RiftPa
 			}
 		});
 	});
-}
-
-function uriToPath(uri: string): string {
-	return uri.replace("file://", "");
 }
 
 function toErrors(output: string): RiftParserError[] {

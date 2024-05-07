@@ -12,7 +12,7 @@ export async function validateRift(textDocument: TextDocument,
 	
 	let errors = errorsCache.get(textDocument.uri);
 	if (!errors) {
-		let parseOutput = await parseFile(textDocument.uri);
+		let parseOutput = await parseFile(textDocument.getText());
 		errors = parseOutput[1];
 		errorsCache.set(textDocument.uri, errors);
 	}

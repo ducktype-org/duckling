@@ -153,7 +153,7 @@ documents.onDidClose(e => {
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
-	parseFile(change.document.uri).then((parseOutput) => {
+	parseFile(change.document.getText()).then((parseOutput) => {
 		pstCache.set(change.document.uri, parseOutput[0]);
 		errorsCache.set(change.document.uri, parseOutput[1]);
 		console.log(parseOutput);
