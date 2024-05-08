@@ -39,12 +39,12 @@ namespace tokenizer {
 		 */
 		std::set<std::pair<usize, usize>> line_begins;
 
-		template<class... Ts>
-		friend base::unique_ptr<TokenFile> makeTokenFile(Ts&&... args);
-
-	public:
 		explicit TokenFile(const fs::FilePath&);
 
+		template<class T, class... Ts>
+		friend base::unique_ptr<T> base::make_unique(Ts&&... args);
+
+	public:
 		TokenFile(const TokenFile&) = delete;
 		TokenFile()                 = delete;
 
@@ -105,7 +105,6 @@ namespace tokenizer {
 
 	template<class... Ts>
 	base::unique_ptr<TokenFile> makeTokenFile(Ts&&... args) {
-		auto ptr = base::make_unique<TokenFile>(std::forward<Ts...>(args...));
-		return ptr;
+		return base::make_unique<TokenFile>(std::forward<Ts...>(args...));
 	}
 }
