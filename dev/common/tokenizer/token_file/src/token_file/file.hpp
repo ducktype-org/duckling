@@ -1,6 +1,7 @@
 #pragma once
 
 #include <set>
+#include <span>
 
 #include <base/raw_view.hpp>
 #include <lexer/char.hpp>

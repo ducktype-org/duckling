@@ -134,8 +134,7 @@ namespace ts {
 			if (!cache.contains({ size, signedness })) {
 				// @FIXME: provide proper SourcePosition.
 				context.log(base::make_unique<ErrorBadIntegralSize>(
-					dia::SourcePosition::fakePosition(),
-					size
+					dia::SourcePosition::fakePosition(), size
 				));
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
 				return &cache.at({ 128, signedness });
@@ -200,10 +199,9 @@ namespace ts {
 
 			if (!cache.contains(size)) {
 				// @FIXME: provide proper SourcePosition.
-				context.log(base::make_unique<ErrorBadFloatSize>(
-					dia::SourcePosition::fakePosition(),
-					size
-				));
+				context.log(
+					base::make_unique<ErrorBadFloatSize>(dia::SourcePosition::fakePosition(), size)
+				);
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
 				return &cache.at(128);
 			}

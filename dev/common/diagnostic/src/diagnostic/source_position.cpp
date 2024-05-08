@@ -148,7 +148,7 @@ namespace dia {
 
 	std::string SourcePosition::genStr(const std::string_view reason) const {
 		if (source_file == nullptr) {
-			std::string output  = "In unknown file: ";
+			std::string output = "In unknown file: ";
 			output += reason;
 			output += "\n";
 			return output;

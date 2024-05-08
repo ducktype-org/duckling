@@ -39,9 +39,9 @@ private:
 	void assumeBadDecode(base::RawView view) {
 		std::string content{ view.stringView() };
 		std::cerr << "about to create temp file" << std::endl;
-		auto        path = fs::FilePath::createTempFile(content);
+		auto path = fs::FilePath::createTempFile(content);
 		std::cerr << "created temp file" << std::endl;
-		auto        file = tokenizer::makeTokenFile(path);
+		auto file = tokenizer::makeTokenFile(path);
 		file->decode();
 		assert(file->getLogger().bad(), "Encoding error not found");
 	}
