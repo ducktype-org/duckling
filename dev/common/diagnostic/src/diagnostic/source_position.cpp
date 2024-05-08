@@ -23,13 +23,13 @@ namespace dia {
 		usize begin_char = source_file->getLine(first_line).first;
 		usize end_char   = source_file->getLine(last_line).second;
 
-		usize       length  = std::to_string(last_line).size();
+		usize length = std::to_string(last_line).size();
 
 		std::vector<std::string> res;
 		res.emplace_back(std::string(length + 1, ' ') + "|\n");
 		for (auto [line, view]: source_file->viewSplitRange(begin_char, end_char)) {
 			std::stringstream number;
-			number << std::setw((int)length) << line << " | ";
+			number << std::setw((int) length) << line << " | ";
 			res.emplace_back(number.view());
 			res.emplace_back(view.stringView());
 			res.emplace_back("\n");
@@ -61,7 +61,7 @@ namespace dia {
 
 		auto linePref = [&](usize line) {
 			std::stringstream number;
-			number << std::setw((int)length) << line << " | ";
+			number << std::setw((int) length) << line << " | ";
 			res.emplace_back(number.str());
 		};
 		usize prev_line = -1;

@@ -52,7 +52,6 @@ private:
 
 		std::stringstream result_stream;
 		print(td->getTokenData().tokens, result_stream);
-		std::cout << result_stream.str() << std::endl;
 
 		auto corr_json = fs::getSimpleFileContent(path("fun_position.json"));
 		auto corr      = corr_json.view().stringView();
