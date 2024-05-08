@@ -5,15 +5,11 @@
 
 #pragma once
 
+#include <token_file/forward.hpp>
 #include <filesystem/file.hpp>
 #include <memory>
 #include <printer/message.hpp>
 #include <string>
-
-namespace tokenizer {
-	class TokenFile;
-	using BorrowFile = base::borrow_ptr<TokenFile>;
-}
 
 namespace dia {
 	/**

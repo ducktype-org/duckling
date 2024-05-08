@@ -5,13 +5,9 @@
 
 #pragma once
 
+#include <token_file/forward.hpp>
 #include <filesystem/file.hpp>
 #include "token.hpp"
-
-namespace tokenizer {
-	class TokenFile;
-	using OwnFile = base::unique_ptr<TokenFile>;
-}
 
 namespace lexer {
 	/**

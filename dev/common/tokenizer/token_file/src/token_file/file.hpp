@@ -1,9 +1,9 @@
 #pragma once
 
-#include "base/raw_view.hpp"
-#include "lexer/char.hpp"
-#include <base/borrow_pointer.hpp>
-#include <base/unique_pointer.hpp>
+#include <set>
+
+#include <base/raw_view.hpp>
+#include <lexer/char.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <filesystem/encoding.hpp>
@@ -11,13 +11,9 @@
 #include <lexer/decode.hpp>
 #include <lexer/lexer.hpp>
 
-#include <set>
+#include "forward.hpp"
 
 namespace tokenizer {
-	class TokenFile;
-	using BorrowFile = base::borrow_ptr<TokenFile>;
-	using OwnFile    = base::unique_ptr<TokenFile>;
-
 	/**
 	 * @brief Class managing source file data access and token metadata
 	 *
