@@ -20,7 +20,7 @@ namespace tokenizer {
 
 	/**
 	 * @brief Class managing source file data access and token metadata
-	 * 
+	 *
 	 * @note For now it's very minimal
 	 */
 	class TokenFile {
@@ -32,12 +32,13 @@ namespace tokenizer {
 		base::Optional<lexer::TokenData> token_data;
 
 		/**
-		 * @brief Stores line bounds (first character of the line, character after last character) in file.
+		 * @brief Stores line bounds (first character of the line, character after last character)
+		 * in file.
 		 */
 		std::vector<std::pair<usize, usize>> lines;
 		/**
 		 * @brief Stores pairs (Character index, line number) that represent beginnings of lines .
-		 * 
+		 *
 		 * Used for quick mapping (character index -> line).
 		 */
 		std::set<std::pair<usize, usize>> line_begins;
@@ -67,16 +68,18 @@ namespace tokenizer {
 		std::pair<usize, usize> getLine(usize line) { return lines.at(line - 1); }
 
 		/**
-		 * @brief Returns a view containing the source characters in bounds [@p begin_char,@p end_char).
+		 * @brief Returns a view containing the source characters in bounds [@p begin_char,@p
+		 * end_char).
 		 */
 		base::RawView getCharRange(usize begin_char, usize end_char);
 
 		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
-		fs::FileContent getContent();
+
+		fs::FileContent   getContent();
 		lexer::CharArray& getChars();
 		lexer::TokenData& getTokenData();
-		dia::Logger& getLogger();
-		fs::FilePath getPath();
+		dia::Logger&      getLogger();
+		fs::FilePath      getPath();
 
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {

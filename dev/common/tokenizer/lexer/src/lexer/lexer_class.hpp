@@ -94,14 +94,12 @@ namespace lexer {
 		 * @return std::string in format `(<line number>:<column number>)`
 		 */
 		[[nodiscard]]
-		std::string generateLineColumnInfo() const;
+		std::string generateLineColumnInfo(usize fwd = 0) const;
 
 		[[nodiscard]]
 		dia::SourcePosition currentPostion() const;
 
-		usize                 where  = 0;  ///< Current position in file
-		usize                 line   = 1;
-		usize                 column = 1;
+		usize                 where = 0;  ///< Current position in file
 		tokenizer::BorrowFile file;
 		dia::Logger&          errorState;
 		CharArray&            char_array;

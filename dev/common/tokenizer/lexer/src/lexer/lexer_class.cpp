@@ -28,11 +28,8 @@ namespace lexer {
 			if (isEOL()) {
 				// handling of CR+LF as one newline
 				if (peek().is(0x0D) && peek(1).is(0x0A)) where++;
-				line++;
-				column = 1;
 				where++;
 			} else {
-				column++;
 				where++;
 			}
 		} else {
@@ -50,7 +47,8 @@ namespace lexer {
 
 	const Char& Lexer::peek(usize fwd) const { return char_array.at(where + fwd); }
 
-	std::string Lexer::generateLineColumnInfo() const {
+	std::string Lexer::generateLineColumnInfo(usize fwd) const {
+		auto [line, column] = file->getLineColumn(where + fwd);
 		return "(" + std::to_string(line) + ":" + std::to_string(column) + ")";
 	}
 
@@ -313,7 +311,7 @@ namespace lexer {
 		Token::BracketType bracket_type{ peek().value };
 		auto               group_end = peek().bracketPair();
 		if (tokenMessages())
-			streamPrinter.add({ { { base::strConcat("group begin(", line, ":", column, ")") } },
+			streamPrinter.add({ { { base::strConcat("group begin", generateLineColumnInfo()) } },
 			                    printer::MessageType::DEBUG });
 
 

@@ -5,15 +5,17 @@ namespace pst {
 
 	PST::PST(tokenizer::OwnFile&& file):
 		  file(std::move(file)),
-		  token_data(this->file->getTokenData()) {
+		  lexer_err(this->file->getLogger()),
+		  token_data(this->file->getTokenData()),
+		  err() {
 		RiftParserState state(
 			tpc::TokenStream(
 				token_data.tokens, tpc::Token(token_data.eof_sentinel), 0, token_data.tokens.size()
 			),
-			dia::Logger()
+			err
 		);
-		top_level              = TopLevel::parse(state);
-		std::tie(err, imports) = std::move(state).extractState();
+		top_level = TopLevel::parse(state);
+		imports   = std::move(state).extractState();
 	}
 
 	const std::vector<tpc::ParserCBorrowRef<Import>>& PST::getImports() const { return imports; }
