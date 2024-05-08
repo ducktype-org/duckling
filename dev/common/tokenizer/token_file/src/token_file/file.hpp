@@ -106,6 +106,6 @@ namespace tokenizer {
 
 	template<class... Ts>
 	base::unique_ptr<TokenFile> makeTokenFile(Ts&&... args) {
-		return base::make_unique<TokenFile>(std::forward<Ts...>(args...));
+		return base::make_unique<TokenFile>(std::forward<Ts>(args)...);
 	}
 }
