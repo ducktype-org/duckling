@@ -7,7 +7,7 @@
 #include "source_position.hpp"
 #include "printer/message.hpp"
 #include <cmath>
-#include <format>
+#include <cstdio>
 #include <string>
 #include <token_file/file.hpp>
 #include <base/exceptions.hpp>
@@ -24,12 +24,13 @@ namespace dia {
 		usize end_char   = source_file->getLine(last_line).second;
 
 		usize       length  = std::to_string(last_line).size();
-		std::string str_len = std::to_string(length);
 
 		std::vector<std::string> res;
 		res.emplace_back(std::string(length + 1, ' ') + "|\n");
 		for (auto [line, view]: source_file->viewSplitRange(begin_char, end_char)) {
-			res.emplace_back(std::vformat("{:>" + str_len + "} | ", std::make_format_args(line)));
+			std::stringstream number;
+			number << std::setw((int)length) << line << " | ";
+			res.emplace_back(number.view());
 			res.emplace_back(view.stringView());
 			res.emplace_back("\n");
 		}
@@ -59,7 +60,9 @@ namespace dia {
 		auto after  = source_file->viewSplitRange(source_end + 1, end_char);
 
 		auto linePref = [&](usize line) {
-			res.emplace_back(std::vformat("\n{:>" + str_len + "} | ", std::make_format_args(line)));
+			std::stringstream number;
+			number << std::setw((int)length) << line << " | ";
+			res.emplace_back(number.str());
 		};
 		usize prev_line = -1;
 
