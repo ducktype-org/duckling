@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../services.hpp"
-#include "code_data/instruction.hpp"
-#include "code_data/code.hpp"
+#include <code_data/instruction.hpp>
+#include <code_data/code.hpp>
 #include "kill_core_exception.hpp"
 #include "services/executor_f8/op_case.hpp"
 
@@ -28,12 +28,19 @@ namespace vm {
 	constexpr u64 FRAMES_LENGTH = 16'384;
 	constexpr u64 STACK_LENGTH  = FRAMES_LENGTH * 256;
 
+	// This structure holds pointers to `frame_stack` and `local_stack_reserved`
+	// vectors for fast access during runtime. `frame_stack` is a vector of frames,
+	// that we use like a stack. Top of the stack is saved in the `frame` argument
+	// passed inside opcode functions, which is also the current frame. `local_stack_reserved` is
+	// one continous block of memory, from which every function gets it's own chunk. It also
+	// behaves like a stack, but can be moved forward by many bytes, so `local_stack_top`
+	// is kept to remember where the top of the stack currently is.
 	struct RuntimeData {
-		Frame*     frame_stack_base;
-		Frame*     frame_stack_end;
-		std::byte* local_stack_base;
-		std::byte* local_stack_top;
-		std::byte* local_stack_end;
+		Frame*     frame_stack_base;  // Pointer to the first frame from `frame_stack` vector.
+		Frame*     frame_stack_end;   // Pointer to the first value not allocated.
+		std::byte* local_stack_base;  // Pointer to the start of `local_stack_reserved`.
+		std::byte* local_stack_top;   // Pointer to the place, where new stack should start.
+		std::byte* local_stack_end;   // Pointer to the first value not allocated.
 
 		RuntimeData(std::vector<Frame>& frame_stack, std::vector<std::byte>& local_stack):
 			  frame_stack_base(frame_stack.data()),

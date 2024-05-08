@@ -6,7 +6,8 @@ import argparse
 import tempfile
 
 HELP_MESS = """
-Smart assembler diff.
+Smart differ of assembly changes between two versions of a binary. Example usage:
+    python3 binary_differ.py --diff-view=column file1 file2
 """
 
 DIFF_OPTIONS = "diff -i -E -b -B"

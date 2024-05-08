@@ -4,6 +4,9 @@
 
 #define LABEL_PTR(opcode) (&&LABEL_##opcode)
 
+/**
+ * @brief Jump to next bytecode instruction in CG style main loop.
+ */
 #define DISPATCH_OPCODE()                                                     \
 	{                                                                         \
 		/* NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)) */ \
@@ -14,6 +17,11 @@
 #define OP_CASE_HEADER(opcode)  case OpcodeFix8 ::opcode:
 #define OP_LABEL_HEADER(opcode) LABEL_##opcode:
 
+/**
+ * @brief Define a case for an opcode in swith-case for SC variant,
+ * or CG instruction dispatch label for CG variant. After opcode execution,
+ * continues the execution loop.
+ */
 #define OP_CASE(opcode)                                                \
 	IF_NOT_CG(OP_CASE_HEADER(opcode))                                  \
 	IF_CG(OP_LABEL_HEADER(opcode)) {                                   \
@@ -26,6 +34,10 @@
 		}                                                              \
 	}
 
+/**
+ * @brief Same as #OP_CASE, but terminates the execution loop instead of
+ * continuing.
+ */
 #define OP_CASE_END(opcode)                                            \
 	IF_NOT_CG(OP_CASE_HEADER(opcode))                                  \
 	IF_CG(OP_LABEL_HEADER(opcode)) {                                   \
@@ -37,13 +49,20 @@
 		}                                                              \
 	}
 
-
+/**
+ * @brief Execute next instruction of the bytecode.
+ * @param i indicates that the i-th next instruction will be executed,
+ * with `0` being the current instruction.
+ */
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
 #define OPFUN_CONT(i)                                                                              \
 	IF_TC({ [[clang::musttail]] return instr[i].opfun(&instr[i], local_stack, frame, executor); }) \
 	IF_NOT_TC({ instr += i; })
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 
+/**
+ * @brief Same as #OPFUN_CONT, but this also handles execution strategy check.
+ */
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
 #define OPFUN_CONT_CHECK_STRATEGY(i)                                                \
 	IF_TC({                                                                         \

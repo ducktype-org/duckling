@@ -92,6 +92,14 @@ namespace vm {
 	// the body after the next tail call, which then becomes a regular function
 	// call and may cause the stack to explode.
 
+	// `op_exit` is the only opcode without the `OPFUN_CONT` or `OPFUN_CONT_CHECK_STRATEGY` macro.
+	// This means, every other will jump to the next instruction at the end of it with
+	// `OPFUN_CONT`/`OPFUN_CONT_CHECK_STRATEGY`, so the the only way to end execution is to use this
+	// opcode. It also requires different macro surrounding the function call in the computed goto's
+	// and switch case, because in those approaches we can't end execution from within the function,
+	// but we have to add some instructions on the outside of it. Hence we use the `OP_CASE_END`
+	// macro that adds `goto End` instruction, residing after opcode function, inside interpeter
+	// loop.
 	RETURN_TYPE OpFuns::op_exit(OPFUN_ARGS) { IF_TC(return;) }
 
 	RETURN_TYPE OpFuns::op_handle_strategy(OPFUN_ARGS) {
@@ -238,6 +246,11 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_call_func(OPFUN_ARGS) {
 		{
+			// We have to change variables passed in the arguments (OPFUN_ARGS). After this
+			// function: `instr` should be pointer to the instruction in the new function, `frame`
+			// should be pointer to the next frame, `local_stack` should be pointer to the local
+			// stack of the new function. Old values of `instr` nad `local_stack` should be saved on
+			// the frame of the caller.
 			auto& runtime_data = executor.runtime_data;
 
 			// Save current registers and flow.
@@ -262,10 +275,15 @@ namespace vm {
 				RIFT_PANIC("RiftVM stack overflow.");
 			memset(local_stack, 0, local_stack_size);
 		}
+		// After acquiring the `executing_code` of the new function we have instruction pointer
+		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
+		// would mean that we skipped the first instruction. That's why we move forward zero
+		// instructions. For future returns, the first instruction that should be executed after
+		// call is saved on frame so that op_ret's have to move forward zero instructions after
+		// restoring `instr` from frame.
 		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
 
-	// @TODO: refactor op_rets to reduce code duplication
 	RETURN_TYPE OpFuns::op_ret_tailcall(OPFUN_ARGS) {
 		{
 			auto& runtime_data = executor.runtime_data;
@@ -285,6 +303,14 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_ret_l64(OPFUN_ARGS) {
 		{
+			// @TODO: refactor op_rets to reduce code duplication
+
+			// We have to update values passed in arguments.
+			// Old `instr` and `local_stack` are stored on the previous frame.
+			// Previous frame is just before current frame in the array, so that
+			// substracting one from the pointer will give us the previous frame.
+			// The `instr`, `local_stack` and `frame` values should be restored from the previous
+			// call stack frame.
 			u64 ret_val = derefStack<u64>(local_stack, instr->arg0);
 
 			frame--;
@@ -296,11 +322,13 @@ namespace vm {
 			instr       = frame->instr;  // This is already a pointer to next instr
 			local_stack = frame->local_stack;
 		}
+		// Here the argument is `0` becasue of the convention defined in the op_call_func.
 		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
 
 	RETURN_TYPE OpFuns::op_ret_imm(OPFUN_ARGS) {
 		{
+			// For explanation go to op_ret_l64.
 			frame--;
 
 			frame->regs.p64_reg_0                 = instr->arg0;
@@ -310,6 +338,7 @@ namespace vm {
 			instr       = frame->instr;  // This is already a pointer to next instr
 			local_stack = frame->local_stack;
 		}
+		// Here the argument is `0` becasue of the convention defined in the op_call_func.
 		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
 
@@ -479,7 +508,7 @@ namespace vm {
 #else
 	// Computed gotos labels:
 	#ifdef USE_COMPUTED_GOTO
-		constexpr static std::array<void*, OpCasesCount> opcode_label = {
+		constexpr static std::array<void*, OP_CASES_COUNT> opcode_label = {
 		#define DEF_OPCODE(opcode) LABEL_PTR(opcode),
 		#include <code_data/opcodes_list.hpp>
 		#undef DEF_OPCODE

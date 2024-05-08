@@ -48,8 +48,10 @@ DEF_OPCODE(cmov_l64_l64)
 DEF_OPCODE(mov_l64_r0)
 DEF_OPCODE(mov_r0_l64)
 
-DEF_OPCODE(mov_l64_pFuncArg)     // moves primitive function arg to local variable
-DEF_OPCODE(mov_lptr_ptrFuncArg)  // moves pointer function arg to local variable
+// move primitive function arg to local variable
+DEF_OPCODE(mov_l64_pFuncArg)
+// move pointer function arg to local variable
+DEF_OPCODE(mov_lptr_ptrFuncArg)
 
 DEF_OPCODE(add_l64_l64)
 DEF_OPCODE(add_l64_imm)
@@ -76,28 +78,43 @@ DEF_OPCODE(jmpRel_label)
 DEF_OPCODE(jmpRelIf_label)
 DEF_OPCODE(jmpRelNotIf_label)
 
-DEF_OPCODE(setPArg_l64)     // set primitive argument
-DEF_OPCODE(setPtrArg_lptr)  // set pointer argument
+// set primitive argument
+DEF_OPCODE(setPArg_l64)
+// set pointer argument
+DEF_OPCODE(setPtrArg_lptr)
 DEF_OPCODE(call_func)
 
+// return while performing a tail call
 DEF_OPCODE(ret_tailcall)
+// return 64-bit primitive value
 DEF_OPCODE(ret_l64)
+// return immediate value
 DEF_OPCODE(ret_imm)
 
-DEF_OPCODE(init_type)  // initialize local variable on local stack with given type
-DEF_OPCODE(deinit)     // pops variable from local stack
+// initialize local variable on local stack with given type
+DEF_OPCODE(init_type)
+// pop variable from local stack
+DEF_OPCODE(deinit)
 
 DEF_OPCODE(input_l64)
 DEF_OPCODE(output_l64)
 
 DEF_OPCODE(nop)
 
-DEF_OPCODE(alloc_lptr_type)     // allocates given type, stores pointer
-DEF_OPCODE(free_lptr)           // frees block under pointer
-DEF_OPCODE(load_l64_lptr_ofs)   // load 64-bit primitive value from lptr + ofs
-DEF_OPCODE(store_lptr_l64_ofs)  // stores 64-bit primitive value under lptr + ofs
+// allocates given type, stores pointer
+DEF_OPCODE(alloc_lptr_type)
+// frees block under pointer
+DEF_OPCODE(free_lptr)
+// load 64-bit primitive value from `lptr + ofs`
+// expects `ext_l64` to be the next instruction
+DEF_OPCODE(load_l64_lptr_ofs)
+// stores 64-bit primitive value under `lptr + ofs`
+// expects `ext_l64` to be the next instruction
+DEF_OPCODE(store_lptr_l64_ofs)
+// passes additional argument to preceding opcode
+DEF_OPCODE(ext_l64)
 
-DEF_OPCODE(ext_l64)             // passes additional argument to preceding opcode
+// terminates execution
 DEF_OPCODE_END(exit)
 
 DEF_OPCODE(handle_strategy)
