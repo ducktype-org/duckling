@@ -1,4 +1,5 @@
 #include <tester/tester.hpp>
+#include <tester/testing_utils.hpp>
 
 class SimpleTesterTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -8,6 +9,7 @@ class SimpleTesterTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Tester Test", i32 test_no), test_no(test_no) {
 		TESTER_ADD_TEST(choose);
+		TESTER_ADD_TEST(verySimpleTestingUtilsTest);
 	}
 
 	~SimpleTesterTest() override = default;
@@ -57,6 +59,27 @@ private:
 		message("Expected to fail: checks that assertThrows fails when wrong exception is caught.");
 		assertThrows<std::logic_error>(
 			[&]() { throw std::exception(); }, "expected failure: Wrong exception was thrown"
+		);
+	}
+
+	void verySimpleTestingUtilsTest() {
+		assert(testing_utils::compareJson(" {}", "{ }"), "Incorrect compareJson (1)");
+
+		assert(
+			testing_utils::compareJson(R"--( { "data" : {} })--", R"--(  { "data" : {  } } )--"),
+			"Incorrect compareJson (2)"
+		);
+
+		assert(
+			!testing_utils::compareJson(R"--( { "data" : [] })--", R"--(  { "data" : {  } } )--"),
+			"Incorrect compareJson (3)"
+		);
+
+		assert(
+			!testing_utils::compareJson(
+				R"--( { "data" :  { }, "data2" : {} })--", R"--(  { "data" : {  } } )--"
+			),
+			"Incorrect compareJson (4)"
 		);
 	}
 };

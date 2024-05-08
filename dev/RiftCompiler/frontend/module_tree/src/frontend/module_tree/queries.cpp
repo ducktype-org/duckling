@@ -12,9 +12,9 @@ namespace compiler::frontend {
 	 *******************/
 	struct ImplementationOf_QueryModuleTree:
 		  query::QueryImplementation<QueryModuleTree, compiler::frontend::ModuleId> {
-		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
+		inline static base::HashMap<QKey, query::CacheEntry<QResult>> cache{};
 
-		static auto provide([[maybe_unused]] Context& context, QKey key) -> PResult {
+		static auto provide(Context&, QKey key) -> PResult {
 			std::shared_ptr<ModuleTree> module_tree = ModuleTree::create(key);
 
 			return module_tree->getId();
@@ -40,7 +40,7 @@ namespace compiler::frontend {
 	 *******************/
 	struct ImplementationOf_QuerySourceFile:
 		  query::QueryImplementation<QueryFileID, compiler::frontend::FileId> {
-		inline static base::HashMap<QKey, query::AddACD<QResult>> cache{};
+		inline static base::HashMap<QKey, query::CacheEntry<QResult>> cache{};
 
 		static auto provide(Context&, QKey key) -> PResult {
 			SourceFile file = SourceFile(key);

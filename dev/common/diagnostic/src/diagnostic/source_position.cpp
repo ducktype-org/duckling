@@ -128,6 +128,12 @@ namespace dia {
 
 	std::vector<printer::MessageContent>
 		SourcePosition::genPrinterMessageContents(const printer::MessageContent& reason) const {
+		if (source_file == nullptr) {
+			return {
+				{ "In unknown file: " },
+				reason,
+			};
+		}
 		auto [line, column]                      = getStartLineColumn();
 		std::vector<printer::MessageContent> res = {
 			{ "In file: " },
@@ -141,6 +147,12 @@ namespace dia {
 	}
 
 	std::string SourcePosition::genStr(const std::string_view reason) const {
+		if (source_file == nullptr) {
+			std::string output  = "In unknown file: ";
+			output += reason;
+			output += "\n";
+			return output;
+		}
 		auto [line, column] = getStartLineColumn();
 		std::string output  = "In file: ";
 		output += source_file->getPath().strView();

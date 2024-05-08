@@ -2,19 +2,27 @@
 Constexpr cat
 =============
 
-.. simple-description::
-
 .. contents::
 	:depth: 2
 	:local:
 
 
 Constexpr cat implements a way to concatenate strings during compile time.
-Is is extremely specific and strange, ans should not be used under standard circumstances.
+Is is extremely specific and strange, and should not be used under standard circumstances.
 
 .. note:: It is currently only used by Json library.
 
-.. note:: For concatenation in runtime use `base::strConcat`.
+.. note:: For concatenation at runtime use `base::strConcat`.
+
+Code doc 
+========
+
+.. doxygenfile:: constexpr_cat.hpp
+	:sections: briefdescription detaileddescription
+
+.. doxygenfunction:: base::cat
+
+.. doxygendefine:: CONSTEXPR_CAT
 
 Usage
 =====
@@ -27,5 +35,6 @@ Usage
 	#include <iostream>
 	
 	int main() {
-		std::cout << CONSTEXPR_CAT("A", "B", "C");
+		constexpr a = CONSTEXPR_CAT("A", "B", "C");
+		std::cout << a;
 	}

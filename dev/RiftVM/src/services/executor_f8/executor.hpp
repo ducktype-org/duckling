@@ -1,11 +1,12 @@
 #pragma once
 
 #include "../services.hpp"
+#include <code_data/instruction.hpp>
+#include <code_data/code.hpp>
 #include "kill_core_exception.hpp"
 #include "services/executor_f8/op_case.hpp"
 
 #include <code_data/code.hpp>
-#include <code_data/frame.hpp>
 #include <api/data/request.hpp>
 #include <api/data/status.hpp>
 
@@ -22,6 +23,32 @@
 
 namespace vm {
 	enum class ExecutionStrategy { Normal, StepByStep, Paused, Stoped };
+	struct Frame;
+
+	constexpr u64 FRAMES_LENGTH = 16'384;
+	constexpr u64 STACK_LENGTH  = FRAMES_LENGTH * 256;
+
+	// This structure holds pointers to `frame_stack` and `local_stack_reserved`
+	// vectors for fast access during runtime. `frame_stack` is a vector of frames,
+	// that we use like a stack. Top of the stack is saved in the `frame` argument
+	// passed inside opcode functions, which is also the current frame. `local_stack_reserved` is
+	// one continous block of memory, from which every function gets it's own chunk. It also
+	// behaves like a stack, but can be moved forward by many bytes, so `local_stack_top`
+	// is kept to remember where the top of the stack currently is.
+	struct RuntimeData {
+		Frame*     frame_stack_base;  // Pointer to the first frame from `frame_stack` vector.
+		Frame*     frame_stack_end;   // Pointer to the first value not allocated.
+		std::byte* local_stack_base;  // Pointer to the start of `local_stack_reserved`.
+		std::byte* local_stack_top;   // Pointer to the place, where new stack should start.
+		std::byte* local_stack_end;   // Pointer to the first value not allocated.
+
+		RuntimeData(std::vector<Frame>& frame_stack, std::vector<std::byte>& local_stack):
+			  frame_stack_base(frame_stack.data()),
+			  frame_stack_end(frame_stack.data() + FRAMES_LENGTH),
+			  local_stack_base(local_stack.data()),
+			  local_stack_top(local_stack.data()),
+			  local_stack_end(local_stack.data() + STACK_LENGTH) {}
+	};
 
 	class Executor {
 	private:
@@ -31,6 +58,10 @@ namespace vm {
 		TypeMetadata&   types;
 
 		VCPU& vcpu;
+
+		std::vector<Frame>     frame_stack;
+		std::vector<std::byte> local_stack_reserved;
+		RuntimeData            runtime_data;
 
 		/**
 		 * This is currently duplicated inside VCPUStatus
@@ -43,7 +74,10 @@ namespace vm {
 			  stack_allocator(serviceManager.template get<StackAllocator>()),
 			  memory(serviceManager.getVCPU().getData().template get<Memory>()),
 			  types(serviceManager.getVCPU().getData().template get<TypeMetadata>()),
-			  vcpu(serviceManager.getVCPU()) {
+			  vcpu(serviceManager.getVCPU()),
+			  frame_stack(FRAMES_LENGTH, internalInitFrame()),
+			  local_stack_reserved(STACK_LENGTH),
+			  runtime_data(frame_stack, local_stack_reserved) {
 			// @TODO: not loaded status
 			setStatus(api::NotStarted{});
 		}
@@ -52,7 +86,7 @@ namespace vm {
 		std::condition_variable pause_cv;
 		std::mutex              external_api_mutex;
 		ExecutionStrategy       execution_strategy = ExecutionStrategy::Stoped;
-		std::atomic<bool>       isRunning          = false;
+		std::atomic<bool>       is_running         = false;
 
 		// This function is marked as cold, because, well, it is cold, but
 		// the compiler did not figure this out on its own, hence the
@@ -80,10 +114,10 @@ namespace vm {
 		 */
 		base::ModRawView internalDerefPointer(Pointer);
 
+		inline void initNextFrame(Frame*, StandardFunctionArgs& args);
 		/** Using raw Frame pointers seem to boost performance in function calls */
-		Frame
-			internalInitFrame(base::borrow_ptr<Frame>, VLADataReference, BlockId*, StandardFunctionArgs&);
-		i64 internalCallFunction(base::borrow_ptr<Frame>, const FuncData&, StandardFunctionArgs);
+		Frame internalInitFrame();
+		u64   internalCallMain(const FuncData&);
 
 		// @TODO add some thread data in the future
 

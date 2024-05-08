@@ -2,20 +2,61 @@
 Variant
 =======
 
-.. simple-description::
+.. contents::
+	:depth: 2
+	:local:
 
-This is a wrapper for :code:`std::variant` with additional functionalities.
+Implements additional ``std::variant`` functionalities. 
 
 Functionalities
 ===============
 
-:code:`std::variant`
---------------------
+Variant visit
+-------------
+
+Variant visit provides macros that simplify ``std::visit`` calls.
+
+.. doxygendefine:: VARIANT_VISIT
+
+.. doxygendefine:: VISIT_CASE
+
+.. doxygendefine:: VISIT
+
+Usage
+^^^^^
+
+.. code-block:: cpp
+
+	#include <base/variant.hpp>
+
+	int main() {
+		std::variant<int, bool, char> variant;
+		
+		std::cout << VARIANT_VISIT(variant,
+			VARIANT_CASE(int&, i, return i++)
+			VARIANT_CASE(bool, b, return int(b))
+			VARIANT_CASE(char, c, return int(c))
+		) << "\n";
+
+		std::cout << VISIT(variant, aut, return int(aut)) << "\n";
+	}
 
 Variant match
 -------------
 
+.. note::
+	This functionality is macro based. Braces are very important for it to work properly.
+
 Variant match is a macro that allows to match over :code:`std::variant` types.
+
+.. doxygendefine:: variant_match
+	:outline:
+
+.. doxygendefine:: variant_case
+
+.. doxygendefine:: variant_case_novalue
+
+.. doxygendefine:: variant_default
 
 Usage
 ^^^^^
@@ -34,7 +75,7 @@ Usage
 			variant_case_novalue (char) {
 				// do some stuff if variant holds char
 			}
-			variant_default_case {
+			variant_default {
 				// executes if non other does
 			}
 		}

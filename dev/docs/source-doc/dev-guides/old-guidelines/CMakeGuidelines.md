@@ -6,8 +6,9 @@ Top level [CMakeLists.txt](../../../../CMakeLists.txt) only provides common opti
 ```cmake
 # Create module:
 add_library(ModuleName
-            path/to/src/some_file.cpp
-            ...)
+    path/to/src/some_file.cpp
+    ...
+)
 
 make_module(ModuleName USES Module1 Module2 ... [INCLUDE path/to/directory1 path/to/directory2])
 

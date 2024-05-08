@@ -9,7 +9,6 @@
 #include <base/ints.hpp>
 #include "parameter.hpp"
 #include "value_parser.hpp"
-#include <memory>
 
 namespace clap {
 	struct CLIArgs {

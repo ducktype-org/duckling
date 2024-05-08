@@ -5,9 +5,25 @@ constexpr bool IGNORE_EXECUTION_STRATEGY = false;
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
 
+// WARN: Do not undefine this macro on your own!
+// Selecting SC or CG will unselect it for you
+#define USE_TAIL_CALLS
+
+#if !defined(USE_TAIL_CALLS)
+	#error "USE_TAIL_CALLS: Do NOT undefine me like this!"
+#endif
+
+// #define USE_SWITCH_CASE
+
 // #define USE_COMPUTED_GOTO
 
-#define USE_TAIL_CALLS
+#if defined(USE_SWITCH_CASE) || defined(USE_COMPUTED_GOTO)
+	#undef USE_TAIL_CALLS
+#endif
+
+#if defined(USE_SWITCH_CASE) && defined(USE_COMPUTED_GOTO)
+	#error "USE_SWITCH_CASE and USE_COMPUTED_GOTO are mutually exclusive. Choose only one"
+#endif
 
 #ifdef USE_COMPUTED_GOTO
 	#define IF_NOT_CG(arg)

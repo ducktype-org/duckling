@@ -11,7 +11,7 @@ namespace query {
 	};
 
 	template<typename Data>
-	struct AddACD {
+	struct CacheEntry {
 		Data data;
 		ACD  acd;
 	};

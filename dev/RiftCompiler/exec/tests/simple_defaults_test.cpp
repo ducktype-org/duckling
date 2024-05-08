@@ -31,20 +31,18 @@ public:
 
 private:
 	void default_equality_test() {
-		ts::ClassInfo parentClass       = ts::ClassInfo::create(base::StrId("Parent"), {});
-		auto          parent_class_desc = ts::TypeDesc<>(parentClass);
+		ts::ClassInfo parent_class = ts::ClassInfo::create(base::StrId("Parent"), {});
 
-		ts::ClassInfo memberClass       = ts::ClassInfo::create(base::StrId("Member"), {});
-		auto          member_class_desc = ts::TypeDesc<>(memberClass);
+		ts::ClassInfo member_class = ts::ClassInfo::create(base::StrId("Member"), {});
 
-		auto bool_desc = ts::TypeDesc<>(query::queryEntryPoint<ts::QueryBoolType>({}));
+		auto bool_type = query::queryEntryPoint<ts::QueryBoolType>({});
 
-		usize     parent_counter    = 0;
-		exec::CTV parent_result_ctv = exec::alloc_new(bool_desc, bool_desc.getType().getSize());
+		usize     parent_counter                  = 0;
+		exec::CTV parent_result_ctv               = exec::alloc_new(bool_type, bool_type.getSize());
 		parent_result_ctv.getData<bool>().front() = true;
 
-		usize     member_counter    = 0;
-		exec::CTV member_result_ctv = exec::alloc_new(bool_desc, bool_desc.getType().getSize());
+		usize     member_counter                  = 0;
+		exec::CTV member_result_ctv               = exec::alloc_new(bool_type, bool_type.getSize());
 		member_result_ctv.getData<bool>().front() = true;
 
 		auto fun = [&parent_counter,
@@ -52,25 +50,27 @@ private:
 			parent_counter++;
 			return parent_result_ctv;
 		};
-		operation::TypedOperation parent_eq{
-			fun, ts::FunctionInfo::create({ parent_class_desc, parent_class_desc }, bool_desc)
-		};
-		operation::addDefault(operation::Defaultable::Equality, parentClass, parent_eq);
+		operation::TypedOperation parent_eq{ fun,
+			                                 query::queryEntryPoint<ts::QueryFunctionType>(
+												 { { parent_class, parent_class }, bool_type }
+											 ) };
+		operation::addDefault(operation::Defaultable::Equality, parent_class, parent_eq);
 
 		auto fun2 = [&member_counter,
 		             &member_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
 			member_counter++;
 			return member_result_ctv;
 		};
-		operation::TypedOperation member_eq{
-			fun2, ts::FunctionInfo::create({ member_class_desc, member_class_desc }, bool_desc)
-		};
-		operation::addDefault(operation::Defaultable::Equality, memberClass, member_eq);
+		operation::TypedOperation member_eq{ fun2,
+			                                 query::queryEntryPoint<ts::QueryFunctionType>(
+												 { { member_class, member_class }, bool_type }
+											 ) };
+		operation::addDefault(operation::Defaultable::Equality, member_class, member_eq);
 
 		ts::ClassInfo customClass = ts::ClassInfo::create(
 			base::StrId("custom"),
-			{ { member_class_desc, symtable::SymbolId::next() } },
-			{ { parentClass, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
+			{ { member_class, symtable::SymbolId::next() } },
+			{ { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
 		ts::TypeDesc<> custom_class_desc(customClass);
@@ -121,20 +121,18 @@ private:
 	}
 
 	void default_comparison_test() {
-		ts::ClassInfo parentClass       = ts::ClassInfo::create(base::StrId("parent"), {});
-		auto          parent_class_desc = ts::TypeDesc<>(parentClass);
+		ts::ClassInfo parent_class = ts::ClassInfo::create(base::StrId("parent"), {});
 
-		ts::ClassInfo memberClass       = ts::ClassInfo::create(base::StrId("member"), {});
-		auto          member_class_desc = ts::TypeDesc<>(memberClass);
+		ts::ClassInfo member_class = ts::ClassInfo::create(base::StrId("member"), {});
 
-		auto int_desc = ts::TypeDesc<>(query::queryEntryPoint<ts::QueryIntegralType>({ 8 }));
+		auto int_type = query::queryEntryPoint<ts::QueryIntegralType>({ 8 });
 
-		usize     parent_counter    = 0;
-		exec::CTV parent_result_ctv = exec::alloc_new(int_desc, int_desc.getType().getSize());
+		usize     parent_counter                    = 0;
+		exec::CTV parent_result_ctv                 = exec::alloc_new(int_type, int_type.getSize());
 		parent_result_ctv.getData<int8_t>().front() = 0;
 
-		usize     member_counter    = 0;
-		exec::CTV member_result_ctv = exec::alloc_new(int_desc, int_desc.getType().getSize());
+		usize     member_counter                    = 0;
+		exec::CTV member_result_ctv                 = exec::alloc_new(int_type, int_type.getSize());
 		member_result_ctv.getData<int8_t>().front() = 0;
 
 		auto fun = [&parent_counter,
@@ -142,25 +140,27 @@ private:
 			parent_counter++;
 			return parent_result_ctv;
 		};
-		operation::TypedOperation parent_comp{
-			fun, ts::FunctionInfo::create({ parent_class_desc, parent_class_desc }, int_desc)
-		};
-		operation::addDefault(operation::Defaultable::Compare, parentClass, parent_comp);
+		operation::TypedOperation parent_comp{ fun,
+			                                   query::queryEntryPoint<ts::QueryFunctionType>(
+												   { { parent_class, parent_class }, int_type }
+											   ) };
+		operation::addDefault(operation::Defaultable::Compare, parent_class, parent_comp);
 
 		auto fun2 = [&member_counter,
 		             &member_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
 			member_counter++;
 			return member_result_ctv;
 		};
-		operation::TypedOperation member_comp{
-			fun2, ts::FunctionInfo::create({ member_class_desc, member_class_desc }, int_desc)
-		};
-		operation::addDefault(operation::Defaultable::Compare, memberClass, member_comp);
+		operation::TypedOperation member_comp{ fun2,
+			                                   query::queryEntryPoint<ts::QueryFunctionType>(
+												   { { member_class, member_class }, int_type }
+											   ) };
+		operation::addDefault(operation::Defaultable::Compare, member_class, member_comp);
 
 		ts::ClassInfo customClass = ts::ClassInfo::create(
 			base::StrId("custom"),
-			{ { member_class_desc, symtable::SymbolId::next() } },
-			{ { parentClass, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
+			{ { member_class, symtable::SymbolId::next() } },
+			{ { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
 		ts::TypeDesc<> custom_class_desc(customClass);
@@ -295,9 +295,6 @@ private:
 			0
 		);
 
-		ts::TypeDesc<> class_A_desc{ class_A };
-		ts::TypeDesc<> class_B_desc{ class_B };
-
 		namespace op = operation;
 
 		operation::TypedOperation class_A_compare
@@ -330,7 +327,7 @@ private:
 				ctvs[0].getData<int8_t>().front() = 27;
 				return ctvs[0];
 			},
-			ts::FunctionInfo::create({ class_A_desc }, class_A_desc)
+			query::queryEntryPoint<ts::QueryFunctionType>({ { class_A }, class_A })
 		};
 
 		operation::addDefault(
@@ -362,7 +359,7 @@ private:
 
 				return ctvs[0];
 			},
-			ts::FunctionInfo::create({ class_B_desc }, class_B_desc)
+			query::queryEntryPoint<ts::QueryFunctionType>({ { class_B }, class_B })
 		};
 
 		operation::addDefault(
@@ -370,7 +367,7 @@ private:
 		);
 
 
-		auto b1 = exec::alloc_new(class_B_desc, class_B.getSize());
+		auto b1 = exec::alloc_new(class_B, class_B.getSize());
 
 		operation::getDefault(operation::Defaultable::ConstructEmpty, class_B)({ b1 });
 
@@ -382,7 +379,7 @@ private:
 		assert(b1.getData<int8_t>()[1] == 42, "b1.b != 42");
 
 
-		auto a1 = exec::alloc_new(class_A_desc, class_A.getSize());
+		auto a1 = exec::alloc_new(class_A, class_A.getSize());
 		operation::getDefault(operation::Defaultable::ConstructEmpty, class_A)({ a1 });
 		assert(a1.getData<int8_t>().front() == 27, "a1.a != 27");
 
@@ -396,7 +393,7 @@ private:
 		int2.getData<int8_t>().front() = 10;
 
 
-		auto b2 = exec::alloc_new(class_B_desc, class_B.getSize());
+		auto b2 = exec::alloc_new(class_B, class_B.getSize());
 
 
 		std::cerr << "parameters:"
@@ -436,7 +433,9 @@ private:
 			return ctvs[0];
 		};
 
-		operation::TypedOperation construct_z_t{ construct_z, ts::FunctionInfo::create({ Z }, Z) };
+		operation::TypedOperation construct_z_t{
+			construct_z, query::queryEntryPoint<ts::QueryFunctionType>({ { Z }, Z })
+		};
 
 		operation::addDefault(operation::Defaultable::ConstructEmpty, Z, construct_z_t);
 

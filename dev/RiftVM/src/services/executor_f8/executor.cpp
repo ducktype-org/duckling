@@ -1,9 +1,8 @@
 #include <base/ints.hpp>
-#include <chrono>
-
 #include <code_data/instruction.hpp>
+#include <code_data/opcodes.hpp>
 #include <code_data/code.hpp>
-#include <code_data/frame.hpp>
+#include <cstring>
 #include <services_data/type_metadata/type.hpp>
 #include <supervisor/vcpu.hpp>
 #include "op_case.hpp"
@@ -14,9 +13,6 @@
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 #include <utility>
-
-// @TODO: Go through linting messages here with regards to optimisation
-// NOLINTBEGIN: Linting might impact optimizations here
 
 namespace vm {
 
@@ -32,59 +28,35 @@ namespace vm {
 
 	[[gnu::always_inline]]
 	inline void Executor::handleExecutionStrategyIfNeeded() {
-		if (isRunning) return;
+		if (is_running) return;
 		handleExecutionStrategy();
 	}
 
 	[[gnu::always_inline]]
-	inline Frame Executor::internalInitFrame(
-		base::borrow_ptr<Frame> previous_frame,
-		VLADataReference        vla_ref,
-		BlockId*                block_id_stack,
-		StandardFunctionArgs&   args
-	) {
-		return Frame{
-			.previous            = previous_frame,
-			.continue_execution  = true,
-			.instruction_pointer = 0,
-
-			.regs      = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = memory.nullPtr() },
-			.flags     = FlagData{ .flag = false },
-			.ret_val   = 0,
-			.next_args = { 0, memory.nullPtr() },
-
-			.local_stack_head    = 0,
-			.block_id_stack      = block_id_stack,
-			.block_id_stack_head = 0,
-
-			.args = args,
-
-			.vla_data_reference = vla_ref,
-			.executor           = *this,
-		};
+	inline void Executor::initNextFrame(Frame* frame, StandardFunctionArgs& args) {
+		frame->regs      = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = memory.nullPtr() };
+		frame->flags     = FlagData{ .flag = false };
+		frame->ret_val   = 0;
+		frame->args      = args;
+		frame->next_args = { 0, memory.nullPtr() };
+		// if (!frame->block_id_stack.empty() || frame->local_stack_head != 0)
+		//   RIFT_PANIC("init/deinits not paired");
 	}
 
-	// arguments can be passed in temp values in caller
-	// return values must somehow be passed to caller
-	// Idea:
-	// Stack works like this:
-	// [locals][temp]
-	// locals are stack-like independently
-	// temp are stack-like independently
-	// when function call happens, following stuff happen:
-	// r := callee ret size
-	// a := callee a size
-	// R := temp reserve r-bytes
-	// A := temp reserve a-bytes
-	// set arguments
-	// callee receives pointer temp [R|A]
-	// callee does its stuff, and puts stuff into R (memcpy to local if needed)
-	// callee returns
-	// temp pop A
-	// temp use R
-	//
-	// Or stack like this:
-	// [rets][args][locals][temp] + memcpy between callee and caller
+	Frame Executor::internalInitFrame() {
+		return Frame{
+			.instr       = nullptr,
+			.local_stack = nullptr,
+			.regs        = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = memory.nullPtr() },
+			.flags       = FlagData{ .flag = false },
+			.ret_val     = 0,
+			.next_args   = { 0, memory.nullPtr() },
+			.args        = { 0, memory.nullPtr() },
+
+			.block_id_stack   = std::vector<BlockId>(),
+			.local_stack_head = 0,
+		};
+	}
 
 	[[gnu::always_inline]]
 	inline base::ModRawView Executor::internalDerefPointer(Pointer pointer) {
@@ -100,7 +72,8 @@ namespace vm {
 	}
 
 	template<typename T>
-	__attribute__((always_inline)) inline static T& derefStack(std::byte stack[], i64 position) {
+	[[gnu::always_inline]]
+	inline static T& derefStack(std::byte* stack, i64 position) {
 		return *(reinterpret_cast<T*>(&stack[position]));
 	}
 
@@ -110,7 +83,7 @@ namespace vm {
 	//  {
 	//    <function_body>
 	//  }
-	//  OPFUN_CONT(<step>, r1, r2, r3);
+	//  OPFUN_CONT(<step>);
 	// }
 	//
 	// Function body must be seperated from the scope of OPFUN_CONT to make sure
@@ -119,68 +92,78 @@ namespace vm {
 	// the body after the next tail call, which then becomes a regular function
 	// call and may cause the stack to explode.
 
+	// `op_exit` is the only opcode without the `OPFUN_CONT` or `OPFUN_CONT_CHECK_STRATEGY` macro.
+	// This means, every other will jump to the next instruction at the end of it with
+	// `OPFUN_CONT`/`OPFUN_CONT_CHECK_STRATEGY`, so the the only way to end execution is to use this
+	// opcode. It also requires different macro surrounding the function call in the computed goto's
+	// and switch case, because in those approaches we can't end execution from within the function,
+	// but we have to add some instructions on the outside of it. Hence we use the `OP_CASE_END`
+	// macro that adds `goto End` instruction, residing after opcode function, inside interpeter
+	// loop.
+	RETURN_TYPE OpFuns::op_exit(OPFUN_ARGS) { IF_TC(return;) }
+
 	RETURN_TYPE OpFuns::op_handle_strategy(OPFUN_ARGS) {
-		{ frame.executor.handleExecutionStrategy(); }
-		OPFUN_CONT(1, r1, r2, r3);
+		{ executor.handleExecutionStrategy(); }
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_mov_l64_imm(OPFUN_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) = instr->arg1; }
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_mov_l64_l64(OPFUN_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) = derefStack<u64>(local_stack, instr->arg1); }
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_cmov_l64_l64(OPFUN_ARGS) {
 		{
-			if (frame.flags.flag)
+			if (frame->flags.flag)
 				derefStack<u64>(local_stack, instr->arg0)
 					= derefStack<u64>(local_stack, instr->arg1);
 		}
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_mov_l64_r0(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) = frame.regs.p64_reg_0; }
-		OPFUN_CONT(1, r1, r2, r3);
+		{ derefStack<u64>(local_stack, instr->arg0) = frame->regs.p64_reg_0; }
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_mov_r0_l64(OPFUN_ARGS) {
-		{ frame.regs.p64_reg_0 = derefStack<u64>(local_stack, instr->arg0); }
-		OPFUN_CONT(1, r1, r2, r3);
+		{ frame->regs.p64_reg_0 = derefStack<u64>(local_stack, instr->arg0); }
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_mov_l64_pFuncArg(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) = frame.args.p64_arg; }
-		OPFUN_CONT(1, r1, r2, r3);
+		{ derefStack<u64>(local_stack, instr->arg0) = frame->args.p64_arg; }
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_mov_lptr_ptrFuncArg(OPFUN_ARGS) {
-		{ derefStack<Pointer>(local_stack, instr->arg0) = frame.args.pointer_arg; }
-		OPFUN_CONT(1, r1, r2, r3);
+		{ derefStack<Pointer>(local_stack, instr->arg0) = frame->args.pointer_arg; }
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_add_l64_l64(OPFUN_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) += derefStack<u64>(local_stack, instr->arg1); }
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_add_l64_imm(OPFUN_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) += instr->arg1; }
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_sub_l64_l64(OPFUN_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) -= derefStack<u64>(local_stack, instr->arg1); }
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_sub_l64_imm(OPFUN_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) -= instr->arg1; }
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_mul_l64_imm(OPFUN_ARGS) {
@@ -188,146 +171,216 @@ namespace vm {
 			// @TODO: check types
 			derefStack<u64>(local_stack, instr->arg0) *= instr->arg1;
 		}
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_mod_l64_imm(OPFUN_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) %= instr->arg1; }
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_mod_l64_l64(OPFUN_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) %= derefStack<u64>(local_stack, instr->arg1); }
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_div_l64_imm(OPFUN_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) /= instr->arg1; }
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_cmpEq_l64_l64(OPFUN_ARGS) {
 		{
-			frame.flags.flag = derefStack<u64>(local_stack, instr->arg0)
-			                == derefStack<u64>(local_stack, instr->arg1);
+			frame->flags.flag = derefStack<u64>(local_stack, instr->arg0)
+			                 == derefStack<u64>(local_stack, instr->arg1);
 		}
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_cmpEq_l64_imm(OPFUN_ARGS) {
-		{ frame.flags.flag = derefStack<u64>(local_stack, instr->arg0) == instr->arg1; }
-		OPFUN_CONT(1, r1, r2, r3);
+		{ frame->flags.flag = derefStack<u64>(local_stack, instr->arg0) == instr->arg1; }
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_cmpG_l64_l64(OPFUN_ARGS) {
 		{
-			frame.flags.flag = derefStack<u64>(local_stack, instr->arg0)
-			                 > derefStack<u64>(local_stack, instr->arg1);
+			frame->flags.flag = derefStack<u64>(local_stack, instr->arg0)
+			                  > derefStack<u64>(local_stack, instr->arg1);
 		}
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_cmpG_l64_imm(OPFUN_ARGS) {
-		{ frame.flags.flag = derefStack<u64>(local_stack, instr->arg0) > instr->arg1; }
-		OPFUN_CONT(1, r1, r2, r3);
+		{ frame->flags.flag = derefStack<u64>(local_stack, instr->arg0) > instr->arg1; }
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_jmpRel_label(OPFUN_ARGS) {
-		{
-			IF_NOT_TC(frame.instruction_pointer += instr->arg0;)
-			IF_TC(instr += instr->arg0;)
-		}
-		OPFUN_CONT(1, r1, r2, r3);
+		{ instr += instr->arg0; }
+		OPFUN_CONT_CHECK_STRATEGY(1);
 	}
 
 	RETURN_TYPE OpFuns::op_jmpRelIf_label(OPFUN_ARGS) {
 		{
-			if (frame.flags.flag) {
-				IF_NOT_TC(frame.instruction_pointer += instr->arg0;)
-				IF_TC(instr += instr->arg0;)
-			}
+			if (frame->flags.flag) instr += instr->arg0;
 		}
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT_CHECK_STRATEGY(1);
 	}
 
 	RETURN_TYPE OpFuns::op_jmpRelNotIf_label(OPFUN_ARGS) {
 		{
-			if (!frame.flags.flag) {
-				frame.instruction_pointer += instr->arg0;
-				instr += instr->arg0;
-			}
+			if (!frame->flags.flag) instr += instr->arg0;
 		}
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT_CHECK_STRATEGY(1);
 	}
 
 	RETURN_TYPE OpFuns::op_setPtrArg_lptr(OPFUN_ARGS) {
-		{ frame.next_args.pointer_arg = derefStack<Pointer>(local_stack, instr->arg0); }
-		OPFUN_CONT(1, r1, r2, r3);
+		{ frame->next_args.pointer_arg = derefStack<Pointer>(local_stack, instr->arg0); }
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_setPArg_l64(OPFUN_ARGS) {
-		{ frame.next_args.p64_arg = derefStack<i64>(local_stack, instr->arg0); }
-		OPFUN_CONT(1, r1, r2, r3);
+		{ frame->next_args.p64_arg = derefStack<i64>(local_stack, instr->arg0); }
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_call_func(OPFUN_ARGS) {
 		{
-			auto function_id     = instr->arg0;
-			frame.regs.p64_reg_0 = frame.executor.internalCallFunction(
-				// @TODO: this is not correct with flat frame
-				base::borrow_ptr(&frame),
-				frame.executor.executing_code->functions[function_id],
-				frame.next_args
-			);
+			// We have to change variables passed in the arguments (OPFUN_ARGS). After this
+			// function: `instr` should be pointer to the instruction in the new function, `frame`
+			// should be pointer to the next frame, `local_stack` should be pointer to the local
+			// stack of the new function. Old values of `instr` nad `local_stack` should be saved on
+			// the frame of the caller.
+			auto& runtime_data = executor.runtime_data;
+
+			// Save current registers and flow.
+			frame->instr       = instr + 1;
+			frame->local_stack = local_stack;
+
+			// Prepare new frame.
+			auto* prev_frame = frame;
+			frame++;
+			i32 function_id = instr->arg0;
+			if (frame + 1 > runtime_data.frame_stack_end) RIFT_PANIC("RiftVM stack overflow.");
+			executor.initNextFrame(frame, prev_frame->next_args);
+
+			// Update values passed as arguments.
+			instr = executor.executing_code->functions[function_id].bc.data();
+
+			u64 local_stack_size = executor.executing_code->functions[function_id].stack_size;
+			local_stack          = runtime_data.local_stack_top;
+
+			runtime_data.local_stack_top += local_stack_size;
+			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
+				RIFT_PANIC("RiftVM stack overflow.");
+			memset(local_stack, 0, local_stack_size);
 		}
-		OPFUN_CONT(1, r1, r2, r3);
+		// After acquiring the `executing_code` of the new function we have instruction pointer
+		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
+		// would mean that we skipped the first instruction. That's why we move forward zero
+		// instructions. For future returns, the first instruction that should be executed after
+		// call is saved on frame so that op_ret's have to move forward zero instructions after
+		// restoring `instr` from frame.
+		OPFUN_CONT_CHECK_STRATEGY(0);
+	}
+
+	RETURN_TYPE OpFuns::op_ret_tailcall(OPFUN_ARGS) {
+		{
+			auto& runtime_data = executor.runtime_data;
+
+			auto function_id = instr->arg0;
+			executor.initNextFrame(frame, frame->next_args);
+			instr = executor.executing_code->functions[function_id].bc.data();
+
+			auto local_stack_size = executor.executing_code->functions[function_id].stack_size;
+			runtime_data.local_stack_top = local_stack + local_stack_size;
+			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
+				RIFT_PANIC("RiftVM stack overflow.");
+			memset(local_stack, 0, local_stack_size);
+		}
+		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
 
 	RETURN_TYPE OpFuns::op_ret_l64(OPFUN_ARGS) {
-		{ frame.ret_val = derefStack<u64>(local_stack, instr->arg0); }
-		IF_TC(return frame.ret_val;)
+		{
+			// @TODO: refactor op_rets to reduce code duplication
+
+			// We have to update values passed in arguments.
+			// Old `instr` and `local_stack` are stored on the previous frame.
+			// Previous frame is just before current frame in the array, so that
+			// substracting one from the pointer will give us the previous frame.
+			// The `instr`, `local_stack` and `frame` values should be restored from the previous
+			// call stack frame.
+			u64 ret_val = derefStack<u64>(local_stack, instr->arg0);
+
+			frame--;
+
+			frame->regs.p64_reg_0                 = ret_val;
+			executor.runtime_data.local_stack_top = local_stack;
+
+			// Load previous frame
+			instr       = frame->instr;  // This is already a pointer to next instr
+			local_stack = frame->local_stack;
+		}
+		// Here the argument is `0` becasue of the convention defined in the op_call_func.
+		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
 
 	RETURN_TYPE OpFuns::op_ret_imm(OPFUN_ARGS) {
-		{ frame.ret_val = 0; }
-		IF_TC(return frame.ret_val;)
+		{
+			// For explanation go to op_ret_l64.
+			frame--;
+
+			frame->regs.p64_reg_0                 = instr->arg0;
+			executor.runtime_data.local_stack_top = local_stack;
+
+			// Load previous frame
+			instr       = frame->instr;  // This is already a pointer to next instr
+			local_stack = frame->local_stack;
+		}
+		// Here the argument is `0` becasue of the convention defined in the op_call_func.
+		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
 
 	RETURN_TYPE OpFuns::op_init_type(OPFUN_ARGS) {
 		{
-			auto             type      = frame.executor.types.getType(vm::TypeId(instr->arg0));
+			auto             type      = executor.types.getType(vm::TypeId(instr->arg0));
 			auto             type_size = type->getSize();
-			base::ModRawView data(&local_stack[frame.local_stack_head], type_size);
-			frame.local_stack_head += type_size;
-			auto block = frame.executor.stack_allocator.makeTypeBlock(type, data);
-			frame.block_id_stack[frame.block_id_stack_head++] = block;
+			base::ModRawView data(&local_stack[frame->local_stack_head], type_size);
+			frame->local_stack_head += type_size;
+			auto block = executor.stack_allocator.makeTypeBlock(type, data);
+			frame->block_id_stack.push_back(block);
 		}
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_deinit(OPFUN_ARGS) {
 		{
-			auto block = frame.block_id_stack[--frame.block_id_stack_head];
-			frame.executor.stack_allocator.deleteBlock(block);
+			auto block_id  = frame->block_id_stack.back();
+			auto type_size = executor.memory.getBlock(block_id)->rawPointer().size();
+			// if (type_size < frame->local_stack_head) RIFT_PANIC("init/deinits not paired");
+			frame->local_stack_head -= type_size;
+			executor.stack_allocator.deleteBlock(block_id);
+			frame->block_id_stack.pop_back();
 		}
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_input_l64(OPFUN_ARGS) {
 		{
-			frame.executor.setStatus(api::WaitingForInput{});
-			derefStack<i64>(local_stack, instr->arg0) = frame.executor.vcpu.getInput<i64>();
-			frame.executor.setStatus(api::Running{});
+			executor.setStatus(api::WaitingForInput{});
+			derefStack<i64>(local_stack, instr->arg0) = executor.vcpu.getInput<i64>();
+			executor.setStatus(api::Running{});
 		}
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_output_l64(OPFUN_ARGS) {
-		{ frame.executor.vcpu.writeOutput(derefStack<u64>(local_stack, instr->arg0)); }
-		OPFUN_CONT(1, r1, r2, r3);
+		{ executor.vcpu.writeOutput(derefStack<u64>(local_stack, instr->arg0)); }
+		OPFUN_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_nop(OPFUN_ARGS) { OPFUN_CONT(1, r1, r2, r3); }
+	RETURN_TYPE OpFuns::op_nop(OPFUN_ARGS) { OPFUN_CONT(1); }
 
 	RETURN_TYPE OpFuns::op_ext_l64(OPFUN_ARGS) {
 		RIFT_PANIC("ext_l64 not consumed by previous instruction");
@@ -335,7 +388,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_alloc_lptr_type(OPFUN_ARGS) {
 		{
-			auto type = frame.executor.types.getType(vm::TypeId(instr->arg1));
+			auto type = executor.types.getType(vm::TypeId(instr->arg1));
 			// This is disasbled, because we don't want to pay performance for initializing it
 			// NOLINTBEGIN(cppcoreguidelines-pro-type-member-init)
 			BlockId block;
@@ -347,22 +400,22 @@ namespace vm {
 
 				// @TODO: It is possible to access memory of the array via
 				// mov_l64_imm, which should be at least detected, if not illegal
-				block = frame.executor.dynamic_allocator.makeArrayBlock(inner_type, table_size);
+				block = executor.dynamic_allocator.makeArrayBlock(inner_type, table_size);
 			} else {
-				block = frame.executor.dynamic_allocator.makeTypeBlock(type);
+				block = executor.dynamic_allocator.makeTypeBlock(type);
 			}
 			derefStack<Pointer>(local_stack, instr->arg0) = Pointer(block, 0);
 		}
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_free_lptr(OPFUN_ARGS) {
 		{
-			frame.executor.dynamic_allocator.deleteBlock(
+			executor.dynamic_allocator.deleteBlock(
 				derefStack<Pointer>(local_stack, instr->arg0).getBlock()
 			);
 		}
-		OPFUN_CONT(1, r1, r2, r3);
+		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_load_l64_lptr_ofs(OPFUN_ARGS) {
@@ -370,17 +423,17 @@ namespace vm {
 		int                     next      = 1;
 		{
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg1);
-			auto view    = frame.executor.internalDerefPointer(pointer);
+			auto view    = executor.internalDerefPointer(pointer);
 			u64  idx     = 0;
 #ifdef USE_TAIL_CALLS
-			if (instr[1].opfun == OpFuns::op_ext_l64) {
+			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				next++;
 			}
 #else
-			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) {
+			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) [[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
-				frame.instruction_pointer++;
+				next++;
 			}
 #endif
 
@@ -389,7 +442,7 @@ namespace vm {
 
 			std::memcpy(&local_stack[instr->arg0], view.getBegin() + idx * view_size, view_size);
 		}
-		OPFUN_CONT(next, r1, r2, r3);
+		OPFUN_CONT(next);
 	}
 
 	RETURN_TYPE OpFuns::op_store_lptr_l64_ofs(OPFUN_ARGS) {
@@ -397,17 +450,17 @@ namespace vm {
 		int                     next      = 1;
 		{
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
-			auto view    = frame.executor.internalDerefPointer(pointer);
+			auto view    = executor.internalDerefPointer(pointer);
 			u64  idx     = 0;
 #ifdef USE_TAIL_CALLS
-			if (instr[1].opfun == OpFuns::op_ext_l64) {
+			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				next++;
 			}
 #else
-			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) {
+			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) [[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
-				frame.instruction_pointer++;
+				next++;
 			}
 #endif
 
@@ -416,20 +469,8 @@ namespace vm {
 
 			std::memcpy(view.getBegin() + idx * view_size, &local_stack[instr->arg1], view_size);
 		}
-		OPFUN_CONT(next, r1, r2, r3);
+		OPFUN_CONT(next);
 	}
-
-#ifndef USE_TAIL_CALLS
-	__attribute__((always_inline)) void inline static peekNextInstruction(
-		const std::span<const vm::Fix8Instruction>& bc,
-		usize&                                      instruction_pointer,
-		OpcodeFix8&                                 opcode
-	) {
-		Fix8Instruction instr = bc[instruction_pointer];
-
-		opcode = static_cast<OpcodeFix8>(instr.opcode);
-	}
-#endif
 
 #if defined(__clang__)
 // @TODO: suppress code deduplication in Clang
@@ -438,180 +479,58 @@ namespace vm {
 	#pragma GCC optimize("-fno-crossjumping")
 #endif
 
-	i64 Executor::internalCallFunction(
-		base::borrow_ptr<Frame> previous_frame, const FuncData& function, StandardFunctionArgs args
-	) {
-		// @TODO: sanity check should be added to see if function.stack_size is sensible small
-		// @TODO: some generic code should be added to work with that does not support VLA
-		std::byte local_stack[function.stack_size];
+	u64 Executor::internalCallMain(const FuncData& main_func) {
+		// We create one artificial "pre" frame, that when main function returns
+		// it will go to it and end execution.
+		Frame* pre_frame = runtime_data.frame_stack_base;
 
-		// @TODO: static code analysis could be done to determine the smallest
-		// possible stack size for block_ids of variables
-		BlockId block_id_stack[function.stack_size];
-
-		// @TODO: frame should hold pointers to data only, when
-		// USE_FLAT_FRAME is on
-		// This will be best made with code generation
-
-#ifdef USE_FLAT_FRAME
-		// Keeping these lines in, even if USE_FLAT_FRAME is off
-		// for some very strange reason speeds up program by 10-20 %
-		// It probably pokes compiler optimization in just the right way
-
-		// @TODO: this should be autogenerated
-
-		// Flat frame should technically allow for better compiler optimizations
-		// but in practice are slower for some reason
-		u64                  p64_reg_0           = 0;
-		Pointer              pointer_reg_0       = memory.nullPtr();
-		bool                 flag                = false;
-		const auto           bc                  = function.bc;
-		usize                instruction_pointer = 0;
-		u64                  ret_val             = 0;
-		StandardFunctionArgs next_args           = { 0, memory.nullPtr() };
+#ifdef USE_TAIL_CALLS
+		Fix8Instruction exit_instr{ .opfun = OpFuns::op_exit, .arg0 = 0, .arg1 = 0 };
 #else
-		Frame frame = internalInitFrame(
-			previous_frame,
-			{ static_cast<std::byte*>(local_stack) },
-			static_cast<BlockId*>(block_id_stack),
-			args
-		);
+		Fix8Instruction exit_instr{ .opcode = static_cast<u16>(OpcodeFix8::exit),
+			                        .arg0   = 0,
+			                        .arg1   = 0 };
 #endif
 
-#ifndef USE_TAIL_CALLS
+		pre_frame->instr       = &exit_instr;
+		pre_frame->local_stack = runtime_data.local_stack_top;
 
-	// Computed gotos labales:
+		// Frame of the main function.
+		Frame*     frame       = runtime_data.frame_stack_base + 1;
+		std::byte* local_stack = runtime_data.local_stack_top;
+		runtime_data.local_stack_top += main_func.stack_size;
+
+		auto* instr = main_func.bc.data();
+
+#ifdef USE_TAIL_CALLS
+		instr->opfun(instr, local_stack, frame, *this);
+		return runtime_data.frame_stack_base->regs.p64_reg_0;
+#else
+	// Computed gotos labels:
 	#ifdef USE_COMPUTED_GOTO
-		constexpr static void* opcode_label[] = { LABEL_PTR(mov_l64_imm),
-
-			                                      LABEL_PTR(mov_l64_l64),
-			                                      LABEL_PTR(cmov_l64_l64),
-
-			                                      LABEL_PTR(mov_l64_r0),
-			                                      LABEL_PTR(mov_r0_l64),
-
-			                                      LABEL_PTR(mov_l64_pFuncArg),
-			                                      LABEL_PTR(mov_lptr_ptrFuncArg),
-
-			                                      LABEL_PTR(add_l64_l64),
-			                                      LABEL_PTR(add_l64_imm),
-
-			                                      LABEL_PTR(sub_l64_l64),
-			                                      LABEL_PTR(sub_l64_imm),
-
-			                                      // LABEL_PTR(mul_l64_l64),
-			                                      LABEL_PTR(mul_l64_imm),
-
-			                                      LABEL_PTR(mod_l64_l64),
-			                                      LABEL_PTR(mod_l64_imm),
-
-			                                      LABEL_PTR(div_l64_imm),
-
-			                                      LABEL_PTR(cmpEq_l64_l64),
-			                                      LABEL_PTR(cmpEq_l64_imm),
-			                                      LABEL_PTR(cmpG_l64_l64),
-			                                      LABEL_PTR(cmpG_l64_imm),
-
-			                                      LABEL_PTR(jmpRel_label),
-			                                      LABEL_PTR(jmpRelIf_label),
-			                                      LABEL_PTR(jmpRelNotIf_label),
-
-			                                      LABEL_PTR(setPArg_l64),
-			                                      LABEL_PTR(setPtrArg_lptr),
-			                                      LABEL_PTR(call_func),
-
-			                                      LABEL_PTR(ret_l64),
-			                                      LABEL_PTR(ret_imm),
-
-			                                      LABEL_PTR(init_type),
-			                                      LABEL_PTR(deinit),
-
-			                                      LABEL_PTR(input_l64),
-			                                      LABEL_PTR(output_l64),
-
-			                                      LABEL_PTR(nop),
-
-			                                      LABEL_PTR(alloc_lptr_type),
-			                                      LABEL_PTR(free_lptr),
-			                                      LABEL_PTR(load_l64_lptr_ofs),
-			                                      LABEL_PTR(store_lptr_l64_ofs) };
+		constexpr static std::array<void*, OP_CASES_COUNT> opcode_label = {
+		#define DEF_OPCODE(opcode) LABEL_PTR(opcode),
+		#include <code_data/opcodes_list.hpp>
+		#undef DEF_OPCODE
+		};
 	#endif
-
-		u64 r1 = 0;
-		u64 r2 = 0;
-		u64 r3 = 0;
 
 		IF_NOT_CG(while (true)) {
 			IF_CG(DISPATCH_OPCODE());
 
 			if constexpr (!IGNORE_EXECUTION_STRATEGY) handleExecutionStrategyIfNeeded();
 
-			IF_NOT_CG(switch (static_cast<OpcodeFix8>(function.bc[frame.instruction_pointer].opcode)
-			)) {
-				OP_CASE(mov_l64_imm)
-
-				OP_CASE(mov_l64_l64)
-				OP_CASE(cmov_l64_l64)
-
-				OP_CASE(mov_l64_r0)
-				OP_CASE(mov_r0_l64)
-
-				OP_CASE(mov_l64_pFuncArg)
-				OP_CASE(mov_lptr_ptrFuncArg)
-
-				OP_CASE(add_l64_l64)
-				OP_CASE(add_l64_imm)
-
-				OP_CASE(sub_l64_l64)
-				OP_CASE(sub_l64_imm)
-
-				OP_CASE(mul_l64_imm)
-
-				OP_CASE(mod_l64_imm)
-				OP_CASE(mod_l64_l64)
-
-				OP_CASE(div_l64_imm)
-
-				OP_CASE(cmpEq_l64_l64)
-				OP_CASE(cmpEq_l64_imm)
-				OP_CASE(cmpG_l64_l64)
-				OP_CASE(cmpG_l64_imm)
-
-				OP_CASE(jmpRel_label)
-				OP_CASE(jmpRelIf_label)
-				OP_CASE(jmpRelNotIf_label)
-
-				OP_CASE(setPtrArg_lptr)
-				OP_CASE(setPArg_l64)
-				OP_CASE(call_func)
-
-				OP_CASE_END(ret_l64)
-				OP_CASE_END(ret_imm)
-
-				OP_CASE(init_type)
-				OP_CASE(deinit)
-
-				OP_CASE(input_l64)
-				OP_CASE(output_l64)
-
-				OP_CASE(nop)
-
-				OP_CASE(alloc_lptr_type)
-				OP_CASE(free_lptr)
-				OP_CASE(load_l64_lptr_ofs)
-				OP_CASE(store_lptr_l64_ofs)
-
-				IF_NOT_CG(default
-				          : {
-							  // RIFT_PANIC("Unknown operator:", u64(instr.opcode));
-						  })
+			IF_NOT_CG(switch (static_cast<OpcodeFix8>(instr->opcode))) {
+	#define DEF_OPCODE(opcode)     OP_CASE(opcode)
+	#define DEF_OPCODE_END(opcode) OP_CASE_END(opcode)
+	#include <code_data/opcodes_list.hpp>
+	#undef DEF_OPCODE
+	#undef DEF_OPCODE_END
+				IF_NOT_CG(default : { RIFT_PANIC("Unknown operator:", u64(instr->opcode)); })
 			}
 		}
 	End:
-		return frame.ret_val;
-#else
-		auto* instr = function.bc.data();
-		return instr->opfun(instr, 0, 0, 0, local_stack, frame);
+		return runtime_data.frame_stack_base->regs.p64_reg_0;
 #endif
 	}
 
@@ -628,9 +547,7 @@ namespace vm {
 
 		executing_code = &code;
 		try {
-			internalCallFunction(
-				nullptr, executing_code->functions[code.main_id], { 0, memory.nullPtr() }
-			);
+			internalCallMain(executing_code->functions[code.main_id]);
 			setStatus(api::NotStarted{});
 		} catch (KillCoreException) { setStatus(api::NotStarted{}); }
 	}
@@ -638,14 +555,14 @@ namespace vm {
 	void Executor::prestart() {
 		std::unique_lock lock(external_api_mutex);
 		if (execution_strategy == ExecutionStrategy::Stoped) {
-			isRunning          = true;
+			is_running         = true;
 			execution_strategy = ExecutionStrategy::Normal;
 		}
 	}
 
 	void Executor::stop() {
 		std::unique_lock lock(external_api_mutex);
-		isRunning          = false;
+		is_running         = false;
 		execution_strategy = ExecutionStrategy::Stoped;
 		pause_cv.notify_all();
 	}
@@ -656,7 +573,7 @@ namespace vm {
 		    || execution_strategy == ExecutionStrategy::Normal) {
 			return false;
 		}
-		isRunning          = true;
+		is_running         = true;
 		execution_strategy = ExecutionStrategy::Normal;
 		pause_cv.notify_all();
 		return true;
@@ -670,7 +587,7 @@ namespace vm {
 		} else if (execution_strategy == ExecutionStrategy::StepByStep) {
 			return true;
 		}
-		isRunning          = false;
+		is_running         = false;
 		execution_strategy = ExecutionStrategy::Paused;
 		std::cout << "Set strategy to paused\n";
 		return true;
@@ -682,7 +599,7 @@ namespace vm {
 			return false;
 		else if (execution_strategy != ExecutionStrategy::Paused)
 			return true;
-		isRunning          = false;
+		is_running         = false;
 		execution_strategy = ExecutionStrategy::StepByStep;
 		pause_cv.notify_all();
 		return true;
@@ -706,5 +623,3 @@ namespace vm {
 
 	void Executor::notifyPaused() { pause_cv.notify_all(); }
 }  // namespace vm
-
-   // NOLINTEND

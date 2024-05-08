@@ -1,4 +1,4 @@
-Main development folder
+# Main development folder
 
 ## File structure
 
@@ -8,41 +8,6 @@ Main development folder
 * [guidelines](guidelines/) - guidelines related to development
 * [miscellaneous](miscellaneous/) - for files without any specific location
 * [libs](libs/) - for external libraries
-
-## Compilation and tests
-
-### Compilation
-
-## Downloading local dependencies
-
-We are currently using three external libraries: asio, crow, result.
-They are set up as git-submodules and can be installed by:
-~~~shell
-$ git submodule update --init
-~~~
-
-~~~shell
-$ cmake optional_flags
-$ make # or `make target`
-~~~
-
-### Running tests
-
-~~~shell
-$ make build_test # compiles tests
-$ make test # run tests, alternatively `ctest`
-$ make memcheck_test # run tests under valgrind
-~~~
-
-### Testing coverage
-
-~~~shell
-$ cmake -DENABLE_COVERAGE=true .
-$ make -j
-$ make test
-$ make coverage
-$ xdg-open coverage/index.html
-~~~
 
 ## Code structure
 

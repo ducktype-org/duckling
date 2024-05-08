@@ -97,31 +97,11 @@ namespace ts {
 		auto operator<=>(const FunctionConstructionRecord&) const = default;
 	};
 
-	FunctionInfo FunctionInfo::create(
-		const std::vector<TypeDesc<>>& parameter_types,
-		const TypeDesc<>               result_type,
-		const bool                     pure,
-		const bool                     free
-	) {
-		static base::Map<FunctionConstructionRecord, FunctionInfo> function_pointers;
-
-		const auto fptr_record
-			= FunctionConstructionRecord{ parameter_types, result_type, pure, free };
-
-		if (!function_pointers.contains(fptr_record)) {
-			auto fptr = base::make_unique<Impl>(parameter_types, result_type, pure);
-			function_pointers.put(fptr_record, FunctionInfo(fptr.get()));
-			pushType(std::move(fptr));
-		}
-
-		return function_pointers[fptr_record];
-	}
-
-	std::vector<TypeDesc<>> FunctionInfo::getParameterTypes() const {
+	std::vector<TypeInfo> FunctionInfo::getParameterTypes() const {
 		return toCPimpl(pimpl)->getParameterList();
 	}
 
-	TypeDesc<> FunctionInfo::getResultType() const { return toCPimpl(pimpl)->getResult(); }
+	TypeInfo FunctionInfo::getResultType() const { return toCPimpl(pimpl)->getResult(); }
 
 	bool FunctionInfo::isPure() const { return toCPimpl(pimpl)->isPure(); }
 
@@ -150,20 +130,6 @@ namespace ts {
 
 	TypeDesc<> VariantInfo::getMember(const usize index) const {
 		return toCPimpl(pimpl)->getMember(index);
-	}
-
-	NamespaceInfo NamespaceInfo::create() {
-		static auto namespace_impl = Impl{};
-		static auto namespace_info = NamespaceInfo{ &namespace_impl };
-
-		return namespace_info;
-	}
-
-	ModuleInfo ModuleInfo::create() {
-		static auto module_impl = Impl{};
-		static auto module_info = ModuleInfo{ &module_impl };
-
-		return module_info;
 	}
 
 	template<std::derived_from<TypeInfo> TYPE_INFO>

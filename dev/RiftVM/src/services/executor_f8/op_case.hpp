@@ -4,47 +4,81 @@
 
 #define LABEL_PTR(opcode) (&&LABEL_##opcode)
 
-#define DISPATCH_OPCODE()                                                                 \
-	{                                                                                     \
-		if constexpr (!IGNORE_EXECUTION_STRATEGY)                                         \
-			frame.executor.handleExecutionStrategyIfNeeded();                             \
-		goto* opcode_label[static_cast<u64>(frame.bc[frame.instruction_pointer].opcode)]; \
+/**
+ * @brief Jump to next bytecode instruction in CG style main loop.
+ */
+#define DISPATCH_OPCODE()                                                     \
+	{                                                                         \
+		/* NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)) */ \
+		goto* opcode_label[static_cast<u64>(instr->opcode)];                  \
+		/* NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)) */   \
 	}
 
 #define OP_CASE_HEADER(opcode)  case OpcodeFix8 ::opcode:
 #define OP_LABEL_HEADER(opcode) LABEL_##opcode:
 
-#define OP_CASE(opcode)                                                            \
-	IF_NOT_CG(OP_CASE_HEADER(opcode))                                              \
-	IF_CG(OP_LABEL_HEADER(opcode)) {                                               \
-		{                                                                          \
-			const Fix8Instruction* instr = &frame.bc[frame.instruction_pointer++]; \
-			vm::OpFuns::op_##opcode(instr, r1, r2, r3, local_stack, frame);        \
-			{                                                                      \
-				IF_CG(DISPATCH_OPCODE())                                           \
-				IF_NOT_CG(break;)                                                  \
-			}                                                                      \
-		}                                                                          \
+/**
+ * @brief Define a case for an opcode in swith-case for SC variant,
+ * or CG instruction dispatch label for CG variant. After opcode execution,
+ * continues the execution loop.
+ */
+#define OP_CASE(opcode)                                                \
+	IF_NOT_CG(OP_CASE_HEADER(opcode))                                  \
+	IF_CG(OP_LABEL_HEADER(opcode)) {                                   \
+		{                                                              \
+			vm::OpFuns::op_##opcode(instr, local_stack, frame, *this); \
+			{                                                          \
+				IF_CG(DISPATCH_OPCODE())                               \
+				IF_NOT_CG(break;)                                      \
+			}                                                          \
+		}                                                              \
 	}
 
-#define OP_CASE_END(opcode)                                                        \
-	IF_NOT_CG(OP_CASE_HEADER(opcode))                                              \
-	IF_CG(OP_LABEL_HEADER(opcode)) {                                               \
-		{                                                                          \
-			const Fix8Instruction* instr = &frame.bc[frame.instruction_pointer++]; \
-			vm::OpFuns::op_##opcode(instr, r1, r2, r3, local_stack, frame);        \
-			goto End;                                                              \
-		}                                                                          \
+/**
+ * @brief Same as #OP_CASE, but terminates the execution loop instead of
+ * continuing.
+ */
+#define OP_CASE_END(opcode)                                            \
+	IF_NOT_CG(OP_CASE_HEADER(opcode))                                  \
+	IF_CG(OP_LABEL_HEADER(opcode)) {                                   \
+		{                                                              \
+			vm::OpFuns::op_##opcode(instr, local_stack, frame, *this); \
+			/* NOLINTBEGIN(cppcoreguidelines-avoid-goto) */            \
+			goto End;                                                  \
+			/* NOLINTEND(cppcoreguidelines-avoid-goto) */              \
+		}                                                              \
 	}
 
+/**
+ * @brief Execute next instruction of the bytecode.
+ * @param i indicates that the i-th next instruction will be executed,
+ * with `0` being the current instruction.
+ */
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define OPFUN_CONT(i, r1, r2, r3)                                                         \
-	IF_TC({                                                                               \
-		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                                       \
-			if (!frame.executor.isRunning)                                                \
-				return op_handle_strategy(&instr[i - 1], r1, r2, r3, local_stack, frame); \
-		}                                                                                 \
-		return instr[i].opfun(&instr[i], r1, r2, r3, local_stack, frame);                 \
+#define OPFUN_CONT(i)                                                                              \
+	IF_TC({ [[clang::musttail]] return instr[i].opfun(&instr[i], local_stack, frame, executor); }) \
+	IF_NOT_TC({ instr += i; })
+// NOLINTEND(cppcoreguidelines-pro-type-union-access)
+
+/**
+ * @brief Same as #OPFUN_CONT, but this also handles execution strategy check.
+ */
+// NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
+#define OPFUN_CONT_CHECK_STRATEGY(i)                                                \
+	IF_TC({                                                                         \
+		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                                 \
+			if (!executor.is_running)                                               \
+				return op_handle_strategy(&instr[i], local_stack, frame, executor); \
+		}                                                                           \
+		return instr[i].opfun(&instr[i], local_stack, frame, executor);             \
+	})                                                                              \
+	IF_NOT_TC({                                                                     \
+		instr += i;                                                                 \
+		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                                 \
+			if (!executor.is_running) [[unlikely]] {                                \
+				return op_handle_strategy(instr, local_stack, frame, executor);     \
+			}                                                                       \
+		}                                                                           \
 	})
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 

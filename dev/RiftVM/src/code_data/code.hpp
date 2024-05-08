@@ -2,11 +2,9 @@
 
 #include "instruction.hpp"
 #include <vector>
-#include <string>
 
 namespace vm {
-
-	using ByteCode = std::vector<struct Fix8Instruction>;
+	using ByteCode = std::vector<Fix8Instruction>;
 
 	struct FuncData {
 		ByteCode bc;

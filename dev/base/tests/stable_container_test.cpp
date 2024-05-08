@@ -101,6 +101,18 @@ private:
 
 		map.clear();
 		ASSERT_EQUAL(0, map.size());
+
+		map.put("lol", "test 1");
+		map.put("a", "test 2");
+		map.put("b", "test 3");
+		auto put_res = map.put("lol", "test");
+
+		assert(put_res.second == false, "Value was wrongly inserted");
+
+		ASSERT_EQUAL(3, map.size());
+		ASSERT_EQUAL(map["a"], "test 2");
+		ASSERT_EQUAL(map["b"], "test 3");
+		ASSERT_EQUAL(map["lol"], "test 1");
 	}
 
 	void stableHashMapTestStability() {

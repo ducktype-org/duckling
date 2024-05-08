@@ -23,8 +23,8 @@ namespace ts::internal {
 	Kind MetaInfoImpl::staticKind       = Kind::Meta;
 
 	/**
-	 * \brief Gets the global TypeInfoImpl storage structure.
-	 * \return The global TypeInfoImpl storage structure.
+	 * @brief Gets the global TypeInfoImpl storage structure.
+	 * @return The global TypeInfoImpl storage structure.
 	 */
 	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes() {
 		static std::vector<base::unique_ptr<const TypeInfoImpl>> type_info_impl_storage{};
@@ -32,9 +32,9 @@ namespace ts::internal {
 	}
 
 	/**
-	 * \brief Gets the maximum size of a type in a vector.
-	 * \param types Vector of types to aggregate over.
-	 * \return The maximum size of a type in the vector.
+	 * @brief Gets the maximum size of a type in a vector.
+	 * @param types Vector of types to aggregate over.
+	 * @return The maximum size of a type in the vector.
 	 */
 	usize maxTypeVectorSizes(const std::vector<TypeDesc<>>& types) {
 		usize max = 0;
@@ -43,9 +43,10 @@ namespace ts::internal {
 	}
 
 	/**
-	 * \brief Creates a human-readable string representation of a vector of types.
-	 * \param types Vector of types to stringify.
-	 * \return A human-readable string representing a sequence of types.
+	 * @brief Creates a human-readable string representation of a vector of types.
+	 * @param types Vector of types to stringify.
+	 * @return A human-readable string representing a sequence of types.
+	 * @todo Remove when all types stop using TypeDesc for member types.
 	 */
 	std::string showTypeVector(const std::vector<TypeDesc<>>& types) {
 		std::string res = "(";
@@ -55,11 +56,24 @@ namespace ts::internal {
 		return res;
 	}
 
+	/**
+	 * @brief Creates a human-readable string representation of a vector of types.
+	 * @param types Vector of types to stringify.
+	 * @return A human-readable string representing a sequence of types.
+	 */
+	std::string showTypeVector(const std::vector<TypeInfo>& types) {
+		std::string res = "(";
+		for (const auto& t: types) res += t.show() + ",";
+		res += ")";
+
+		return res;
+	}
+
 	FunctionInfoImpl::FunctionInfoImpl(
-		std::vector<TypeDesc<>> parameter_types,
-		TypeDesc<>              result_type,
-		const bool              pure,
-		const bool              free
+		std::vector<TypeInfo> parameter_types,
+		const TypeInfo        result_type,
+		const bool            pure,
+		const bool            free
 	):
 		  TypeInfoImpl((1 + !free) * POINTER_SIZE),
 		  parameter_types(std::move(parameter_types)),
@@ -67,7 +81,7 @@ namespace ts::internal {
 		  pure(pure),
 		  free(free) {
 		representation = "Function " + showTypeVector(this->parameter_types) + " -> ("
-		               + result_type.getType().show() + ")";
+		               + result_type.show() + ")";
 	}
 
 	usize sumTypeVectorSizes(const std::vector<TypeDesc<>>& types) {
