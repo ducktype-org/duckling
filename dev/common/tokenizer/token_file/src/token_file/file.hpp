@@ -21,7 +21,7 @@ namespace tokenizer {
 	/**
 	 * @brief Class managing source file data access and token metadata
 	 *
-	 * @note For now it's very minimal
+	 * @note For now it's very minimal and doesn't check proper usage.
 	 */
 	class TokenFile {
 	private:
@@ -42,8 +42,6 @@ namespace tokenizer {
 		 * Used for quick mapping (character index -> line).
 		 */
 		std::set<std::pair<usize, usize>> line_begins;
-
-		BorrowFile self;
 
 		template<class... Ts>
 		friend base::unique_ptr<TokenFile> makeTokenFile(Ts&&... args);
@@ -73,13 +71,19 @@ namespace tokenizer {
 		 */
 		base::RawView getCharRange(usize begin_char, usize end_char);
 
-		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
+		/**
+		 * @brief Returns views of a [) range split by lines.
+		 */
+		std::vector<std::pair<usize, base::RawView>>
+			viewSplitRange(usize begin_char, usize end_char);
 
 		fs::FileContent   getContent();
 		lexer::CharArray& getChars();
 		lexer::TokenData& getTokenData();
 		dia::Logger&      getLogger();
 		fs::FilePath      getPath();
+
+		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
 
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {
@@ -97,6 +101,7 @@ namespace tokenizer {
 		void tokenize() {
 			lexer::init();
 			decode<encoding>();
+			RIFT_ASSERT(log.good(), "found errors decoding");
 			countLines();
 			runLexer();
 		}
@@ -104,8 +109,7 @@ namespace tokenizer {
 
 	template<class... Ts>
 	base::unique_ptr<TokenFile> makeTokenFile(Ts&&... args) {
-		auto ptr  = base::make_unique<TokenFile>(std::forward<Ts...>(args...));
-		ptr->self = ptr.borrow_mut();
+		auto ptr = base::make_unique<TokenFile>(std::forward<Ts...>(args...));
 		return ptr;
 	}
 }

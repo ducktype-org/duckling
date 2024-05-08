@@ -14,26 +14,77 @@
 
 namespace dia {
 	std::vector<std::string> SourcePosition::getSourceLines() const {
-		if (source_end == source_file->getChars().size() - 1) return { "<EOF>" };
-
 		usize start_line = getStartLineColumn().first;
 		usize end_line   = getEndLineColumn().first;
 
 		usize first_line = std::max((usize) 2, start_line) - 1;
 		usize last_line  = std::min(source_file->getLines().size(), end_line + 1);
 
+		usize begin_char = source_file->getLine(first_line).first;
+		usize end_char   = source_file->getLine(last_line).second;
+
 		usize       length  = std::to_string(last_line).size();
 		std::string str_len = std::to_string(length);
 
 		std::vector<std::string> res;
 		res.emplace_back(std::string(length + 1, ' ') + "|\n");
-		for (usize i = first_line; i <= last_line; i++) {
-			res.emplace_back(std::vformat("{:>" + str_len + "} | ", std::make_format_args(i)));
-			auto [begin, end] = source_file->getLine(i);
-			res.emplace_back(source_file->getCharRange(begin, end).stringView());
+		for (auto [line, view]: source_file->viewSplitRange(begin_char, end_char)) {
+			res.emplace_back(std::vformat("{:>" + str_len + "} | ", std::make_format_args(line)));
+			res.emplace_back(view.stringView());
 			res.emplace_back("\n");
 		}
 		res.emplace_back(std::string(length + 1, ' ') + "|");
+
+		return res;
+	}
+
+	std::vector<printer::MessageContent> SourcePosition::getPrettySourceLines() const {
+		usize start_line = getStartLineColumn().first;
+		usize end_line   = getEndLineColumn().first;
+
+		usize first_line = std::max((usize) 2, start_line) - 1;
+		usize last_line  = std::min(source_file->getLines().size(), end_line + 1);
+
+		usize begin_char = source_file->getLine(first_line).first;
+		usize end_char   = source_file->getLine(last_line).second;
+
+		usize       length  = std::to_string(last_line).size();
+		std::string str_len = std::to_string(length);
+
+		std::vector<printer::MessageContent> res;
+		res.emplace_back(std::string(length + 1, ' ') + "|");
+
+		auto before = source_file->viewSplitRange(begin_char, source_start);
+		auto error  = source_file->viewSplitRange(source_start, source_end + 1);
+		auto after  = source_file->viewSplitRange(source_end + 1, end_char);
+
+		auto linePref = [&](usize line) {
+			res.emplace_back(std::vformat("\n{:>" + str_len + "} | ", std::make_format_args(line)));
+		};
+		usize prev_line = -1;
+
+		for (auto [line, view]: before) {
+			if (line != prev_line) {
+				prev_line = line;
+				linePref(line);
+			}
+			res.emplace_back(view.stdString());
+		}
+		for (auto [line, view]: error) {
+			if (line != prev_line) {
+				prev_line = line;
+				linePref(line);
+			}
+			res.emplace_back(view.stdString(), printer::Color::BRIGHT_RED);
+		}
+		for (auto [line, view]: after) {
+			if (line != prev_line) {
+				prev_line = line;
+				linePref(line);
+			}
+			res.emplace_back(view.stdString());
+		}
+		res.emplace_back("\n" + std::string(length + 1, ' ') + "|");
 
 		return res;
 	}
@@ -85,7 +136,7 @@ namespace dia {
 			reason,
 			{ "\n" },
 		};
-		for (auto el: getSourceLines()) res.emplace_back(std::move(el));
+		for (auto el: getPrettySourceLines()) res.push_back(std::move(el));
 		return res;
 	}
 

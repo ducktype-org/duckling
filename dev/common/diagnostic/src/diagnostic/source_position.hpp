@@ -6,7 +6,6 @@
 #pragma once
 
 #include <filesystem/file.hpp>
-// #include <base/borrow_pointer.hpp>
 #include <memory>
 #include <printer/message.hpp>
 #include <string>
@@ -41,12 +40,16 @@ namespace dia {
 		SourcePosition& operator=(const SourcePosition& other) = default;
 
 		/**
-		 * @brief Get a copy of the bytes in this position
-		 *
-		 * @return std::string containing a copy of the bytes in this position.
+		 * @brief Get lines surrounding formatted for printing.
 		 */
 		[[nodiscard]]
 		std::vector<std::string> getSourceLines() const;
+
+		/**
+		 * @brief Get lines surrounding with error colored.
+		 */
+		[[nodiscard]]
+		std::vector<printer::MessageContent> getPrettySourceLines() const;
 
 		/**
 		 * @brief Get formatted message contents with a given reason.

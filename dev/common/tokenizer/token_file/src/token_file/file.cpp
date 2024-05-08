@@ -61,11 +61,30 @@ namespace tokenizer {
 		return { begin, size };
 	}
 
+	std::vector<std::pair<usize, base::RawView>>
+		TokenFile::viewSplitRange(usize begin_char, usize end_char) {
+		usize                                        begin_line = getLineColumn(begin_char).first;
+		usize                                        end_line   = getLineColumn(end_char).first;
+		std::vector<std::pair<usize, base::RawView>> res;
+
+		for (usize line = begin_line; line <= end_line; line++) {
+			auto view = getCharRange(
+				std::max(begin_char, getLine(line).first), std::min(end_char, getLine(line).second)
+			);
+			if (begin_line != end_line && view.size() == 0
+			    && getLine(line).first != getLine(line).second) {
+				continue;
+			}
+			res.emplace_back(line, view);
+		}
+		return res;
+	}
+
 	dia::Logger& TokenFile::getLogger() { return log; }
 
 	void TokenFile::runLexer() {
 		if (log.bad()) return;
-		lexer::Lexer lexer{ self };
+		lexer::Lexer lexer{ base::borrow_ptr(this) };
 		token_data = lexer.tokenize();
 	}
 
