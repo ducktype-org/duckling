@@ -24,7 +24,7 @@ namespace vm {
 	// Describes number of RiftBC opcodes + meta-opcodes recognized by Executor.
 	// This constant is relevant for `vm::Opfuns::opfuns[]` (instructions.hpp) and `opcode_label[]`
 	// (CG, executor.cpp)
-	constexpr const u16 OpCasesCount = 40;
+	constexpr u16 OP_CASES_COUNT = 40;
 
 #ifdef USE_TAIL_CALLS
 	struct Fix8Instruction {
@@ -54,7 +54,7 @@ namespace vm {
 
 		// A mapping between opcode ids and function pointers.
 		// WARN: Ordering of elements must stay the same as in vm::OpcodeFix8
-		static constexpr std::array<OpFun*, OpCasesCount> opfuns{
+		static constexpr std::array<OpFun*, OP_CASES_COUNT> opfuns{
 #define DEF_OPCODE(opcode) op_##opcode,
 #include "opcodes_list.hpp"
 #undef DEF_OPCODE
