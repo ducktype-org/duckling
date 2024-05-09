@@ -147,47 +147,114 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, i32);
 
+	/**
+	 * RPN - Reverse Polish Notation.
+	 * This namespace contains transformed `pst::ExprElem`s, but without groups and with
+	 * looked-up symbols.
+	 * These structs are used to form a RPN expression.
+	 */
 	namespace rpn {
+		/**
+		 * Operator - any operator.
+		 */
 		struct Operator {
+			/**
+			 * A string representing the operator.
+			 */
 			base::StrId oper_id;
 		};
 
+		/**
+		 * A symbol identifier.
+		 */
 		struct Identifier {
+			/**
+			 * A SymbolList returned by a lookup.
+			 */
 			SymbolList symbol_list;
 		};
 
+		/**
+		 * A literal value.
+		 */
 		struct NumLiteral {
-			// This can be replaced with type-system type and value
+			/**
+			 * @TODO: Replace it with TypeSystem's value.
+			 * A value of the literal.
+			 */
 			base::StrId num_id;
 		};
 
+		/**
+		 * A keyword value, like `None`.
+		 */
 		struct KeywordValue {
+			/**
+			 * The keyword.
+			 */
 			rift_def::Keyword keyword;
 		};
 
 		using ExprElem = std::variant<Operator, Identifier, NumLiteral, KeywordValue>;
 
 		struct KeyOf_ExtensionMakeRPN {
+			/**
+			 * The expression to parse from pst.
+			 */
 			const std::vector<pst::Expr::ExprElem>& expr;
-			ScopeID                                 expr_scope;
+			/**
+			 * A scope that the expression was written.
+			 */
+			ScopeID expr_scope;
 		};
 
+		/**
+		 * Parses an expression from PST into RPN.
+		 */
 		QUERY_EXTENSION(ExtensionMakeRPN, KeyOf_ExtensionMakeRPN, std::vector<ExprElem>);
 
 		struct KeyOf_ExtensionRPNEval {
+			/**
+			 * Symbol on the left.
+			 */
 			ExprElem a;
+			/**
+			 * Operator to make a operation with.
+			 */
 			Operator op;
+			/**
+			 * Symbol on the right.
+			 */
 			ExprElem b;
-			ScopeID  expr_scope;
+			/**
+			 * A scope, where the expression was written.
+			 */
+			ScopeID expr_scope;
 		};
 
+		/**
+		 * Evaluates an operation `a (op) b`.
+		 */
 		QUERY_EXTENSION(ExtensionRPNEval, const KeyOf_ExtensionRPNEval&, ExprElem);
 
 		struct KeyOf_ExtensionRPNValue {
+			/**
+			 * The expression the parse.
+			 */
 			ExprElem expr;
-			ScopeID  expr_scope;
+			/**
+			 * A scope, where the expression was written.
+			 */
+			ScopeID expr_scope;
 		};
 
+		/**
+		 * @TODO: Change this from i32 to typesystem's value.
+		 * Parses a value from rpn::ExprElem.
+		 *
+		 * For example, if we pass here a rpn::NumLiteral(5), then it will return 5 or if we pass
+		 * rpn::Identifier([C]), then a value of a C will be returned (if it's a constant).
+		 */
 		QUERY_EXTENSION(ExtensionRPNValue, const KeyOf_ExtensionRPNValue&, i32);
 	}
 }

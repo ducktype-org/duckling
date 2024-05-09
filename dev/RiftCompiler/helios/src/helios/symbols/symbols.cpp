@@ -305,8 +305,7 @@ namespace compiler::helios {
 			return result;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF  // TODO: Change it to stable, so that the result does
-		                                       // not get copied
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryDealias, "QueryDealias");
@@ -376,8 +375,8 @@ namespace compiler::helios {
 		variant_match(key.expr) {
 			variant_case(rpn::Identifier, idt) {
 				// .back() works for constants only.
-				auto&& sym_id = ctx.query<QueryDealias>(idt.symbol_list.back());
-				return ctx.query<QueryConstValueOf>(sym_id.back());
+				auto&& sym_list = ctx.query<QueryDealias>(idt.symbol_list.back());
+				return ctx.query<QueryConstValueOf>(sym_list.back());
 			}
 			variant_case(rpn::Operator, op) { RIFT_PANIC("Cannot get a value from rpn::Operator"); }
 			variant_case(rpn::KeywordValue, keyword_value) {
@@ -399,25 +398,25 @@ namespace compiler::helios {
 
 		switch (static_cast<char>(op.oper_id.view()[0])) {
 		case '+':
-			value = b_value + a_value;
+			value = a_value + b_value;
 			break;
 		case '-':
-			value = b_value - a_value;
+			value = a_value - b_value;
 			break;
 		case '*':
-			value = b_value * a_value;
+			value = a_value * b_value;
 			break;
 		case '/':
-			value = b_value / a_value;
+			value = a_value / b_value;
 			break;
 		case '%':
-			value = b_value % a_value;
+			value = a_value % b_value;
 			break;
 		case '^':
 			// TODO: Make this quickPower - O(log(b_value))
 			{
 				value = 1;
-				while (a_value-- > 0) value *= b_value;
+				while (b_value-- > 0) value *= a_value;
 			}
 			break;
 		default:
@@ -431,8 +430,8 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			RIFT_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
-			auto const_symbol = dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
-			ScopeID key_scope = scope(key);
+			auto    const_symbol = dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
+			ScopeID key_scope    = scope(key);
 
 			const auto& expr = ctx.callExt<rpn::ExtensionMakeRPN>(rpn::KeyOf_ExtensionMakeRPN{
 				const_symbol->getValue()->elements,
@@ -466,13 +465,17 @@ namespace compiler::helios {
 						st.emplace(idt);
 					}
 					variant_case(rpn::Operator, oper) {
-						const auto a = st.top();
+						const auto first = st.top();
 						st.pop();
-						const auto b = st.top();
+						const auto second = st.top();
 						st.pop();
 
 						st.push(ctx.callExt<rpn::ExtensionRPNEval>(rpn::KeyOf_ExtensionRPNEval{
-							a, oper, b, key_scope }));
+							second,
+							oper,
+							first,
+							key_scope,
+						}));
 					}
 					variant_case(rpn::NumLiteral, num) { st.emplace(num); }
 					variant_default { RIFT_PANIC("Bad Expr alternative"); }

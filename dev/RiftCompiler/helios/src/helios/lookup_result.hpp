@@ -26,21 +26,50 @@ namespace compiler::helios {
 	 * Intuitively LookupResult is a result of a single "." operator.
 	 */
 	struct LookupResult {
-		std::vector<SymID>        leaves;
+		/**
+		 * Direct symbols found.
+		 */
+		std::vector<SymID> leaves;
+		/**
+		 * Symbols through which results were found.
+		 */
 		std::vector<NestedResult> children;
 
+		/**
+		 * Check if lookup actually found something.
+		 * @return True if it has found something, false otherwise.
+		 */
 		[[nodiscard]]
 		bool isEmpty() const;
 
+		/**
+		 * Check if lookup has found exactly one symbol.
+		 * @return True if exactly one, false otherwise.
+		 */
 		[[nodiscard]]
 		bool isSingle() const;
+
+		/**
+		 * Returns a path to the symbol.
+		 * Panics on ambiguity.
+		 * @return A SymbolList representing a path to the symbol.
+		 */
 		[[nodiscard]]
 		SymbolList getAsSingle() const;
 		void       insert(LookupResult other);
 
+		/**
+		 * Turns LookupResult into NestedResult referencing node.
+		 * @param node SymId, that the NestedResult represents.
+		 * @return New NestedResult from self with node.
+		 */
 		[[nodiscard]]
 		NestedResult toNode(SymID node) const;
 
+		/**
+		 * Count the number of found symbols.
+		 * @return The number of found symbols.
+		 */
 		[[nodiscard]]
 		u64 symbolCount() const;
 	};
