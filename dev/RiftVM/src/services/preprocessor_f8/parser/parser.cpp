@@ -759,7 +759,7 @@ namespace assemble {
 
 	u16 nameToOpcodeValue(base::StrId str) {
 		try {
-			return static_cast<u16>(base::strToEnum<vm::OpcodeFix8>(str));
+			return static_cast<u16>(vm::str_to_OpcodeFix8.at(str.str()));
 		} catch (std::out_of_range& err) {
 			// @TODO: better errors
 			RIFT_PANIC(base::strConcat("Incorrect opcode: ", str));
@@ -817,8 +817,10 @@ namespace assemble {
 				.opfun = vm::OpFuns::opfuns.at(nameToOpcodeValue(op->opcode_name)),
 				.arg0  = static_cast<i32>(arg_0),
 				.arg1  = static_cast<i32>(arg_1) });
+#endif
 
-#else
+// #else breaks clang-format for some reason (?)
+#ifndef USE_TAIL_CALLS
 			funcData.bc.emplace_back(vm::Fix8Instruction{
 				.opcode = static_cast<u16>(nameToOpcodeValue(op->opcode_name)),
 				.arg0   = static_cast<i32>(arg_0),

@@ -1,0 +1,46 @@
+
+function collatz {
+  arg_size: 8;
+  ret_size: 8;
+
+  local_size: 8;
+
+  code: {
+    // n := argument
+    mov_l64_pFuncArg   0;
+
+    // if n == 0: end
+    cmpEq_l64_imm      0, 0;
+    jmpRelIf_label     End;
+
+    sub_l64_imm        0, 1;
+    setPArg_l64        0;
+    ret_tailcall       0;
+
+    label End;
+
+    ret_l64            0;
+  }
+}
+
+
+function main {
+  arg_size: 0;
+  ret_size: 8;
+
+  local_size: 8;
+
+  code: {
+    // n := input
+    input_l64          0;
+
+    setPArg_l64        0;
+    call_func          0;
+
+    mov_l64_r0         0;
+    output_l64         0;
+
+    ret_l64            0;
+  }
+
+}
