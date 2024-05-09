@@ -370,7 +370,7 @@ namespace compiler::helios {
 		return rpn;
 	}
 
-	i32 rpn::ExtenstionRPNValue(
+	i32 rpn::ExtensionRPNValue(
 		query::detail::ContextType& ctx, const KeyOf_ExtensionRPNValue& key
 	) {
 		variant_match(key.expr) {
@@ -392,8 +392,8 @@ namespace compiler::helios {
 	rpn::ExprElem
 		rpn::ExtensionRPNEval(query::detail::ContextType& ctx, const KeyOf_ExtensionRPNEval& key) {
 		auto&& [a, op, b, expr_scope] = key;
-		i32 a_value = ctx.callExt<ExtenstionRPNValue>(KeyOf_ExtensionRPNValue{ a, expr_scope });
-		i32 b_value = ctx.callExt<ExtenstionRPNValue>(KeyOf_ExtensionRPNValue{ b, expr_scope });
+		i32 a_value = ctx.callExt<ExtensionRPNValue>(KeyOf_ExtensionRPNValue{ a, expr_scope });
+		i32 b_value = ctx.callExt<ExtensionRPNValue>(KeyOf_ExtensionRPNValue{ b, expr_scope });
 
 		i32 value{};
 
@@ -431,10 +431,10 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			RIFT_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
-			auto&& const_symbol = dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
-			auto&& key_scope    = scope(key);
+			auto const_symbol = dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
+			ScopeID key_scope = scope(key);
 
-			auto&& expr = ctx.callExt<rpn::ExtensionMakeRPN>(rpn::KeyOf_ExtensionMakeRPN{
+			const auto& expr = ctx.callExt<rpn::ExtensionMakeRPN>(rpn::KeyOf_ExtensionMakeRPN{
 				const_symbol->getValue()->elements,
 				key_scope,
 			});
@@ -479,7 +479,7 @@ namespace compiler::helios {
 				}
 			}
 			RIFT_ASSERT(st.size() == 1, "Expression stack should have 1 element");
-			return ctx.callExt<rpn::ExtenstionRPNValue>(rpn::KeyOf_ExtensionRPNValue{
+			return ctx.callExt<rpn::ExtensionRPNValue>(rpn::KeyOf_ExtensionRPNValue{
 				st.top(),
 				key_scope,
 			});

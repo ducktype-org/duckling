@@ -188,6 +188,6 @@ namespace compiler::helios {
 			ScopeID  expr_scope;
 		};
 
-		QUERY_EXTENSION(ExtenstionRPNValue, const KeyOf_ExtensionRPNValue&, i32);
+		QUERY_EXTENSION(ExtensionRPNValue, const KeyOf_ExtensionRPNValue&, i32);
 	}
 }
