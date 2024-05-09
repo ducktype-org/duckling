@@ -46,16 +46,12 @@ int main(int argc, const char* argv[]) {
 	using namespace compiler;
 
 	auto root = query::queryEntryPoint<frontend::QueryModuleTree>(path_to_compile);
-
-	// @TODO: add helios here...
-	// thats the wrong way to do it:...
 	auto root_scope = query::queryEntryPoint<helios::QueryRootScopeOf>(root);
 
-	std::cerr << dprint(root_scope);
 
 	auto symbols_in_root = query::queryEntryPoint<helios::QuerySymbolsInScope>(root_scope);
 
-	std::cerr << "symbol count other: " << symbols_in_root.size() << "\n";
+	std::cerr << "Symbol count: " << symbols_in_root.size() << "\n";
 
 	query::debugPrintDependencyGraph();
 
