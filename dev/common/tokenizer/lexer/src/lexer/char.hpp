@@ -41,7 +41,7 @@ namespace lexer {
 	};
 
 	/**
-	 * @brief Type used to store all characters decoded from a single source code.
+	 * @brief Type used to store all characters decoded from a single source code file.
 	 */
 	using CharArray = std::vector<Char>;
 }

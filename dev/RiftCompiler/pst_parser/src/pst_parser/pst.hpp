@@ -12,9 +12,8 @@ namespace pst {
 	 */
 	class PST {
 		tokenizer::OwnFile      file;
-		dia::Logger&            lexer_err;
 		lexer::TokenData&       token_data;
-		dia::Logger             err;
+		dia::Logger&             err;
 		ParserRef<TopLevel>     top_level;
 		std::vector<ImportType> imports;
 
@@ -32,9 +31,8 @@ namespace pst {
 
 		PST(PST&& other):
 			  file(std::move(other.file)),
-			  lexer_err(file->getLogger()),
 			  token_data(file->getTokenData()),
-			  err(std::move(other.err)),
+			  err(file->getLogger()),
 			  top_level(std::move(other.top_level)),
 			  imports(std::move(other.imports)) {}
 

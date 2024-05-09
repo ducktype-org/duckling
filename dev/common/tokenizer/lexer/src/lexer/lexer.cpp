@@ -22,7 +22,6 @@ namespace lexer {
 	}
 
 	tokenizer::OwnFile tokenizeFile(const fs::FilePath& path) {
-		// @TODO
 		auto file = tokenizer::makeTokenFile(path);
 		file->tokenize();
 		if (file->getLogger().bad()) {
