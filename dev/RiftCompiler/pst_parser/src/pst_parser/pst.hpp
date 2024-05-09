@@ -13,7 +13,7 @@ namespace pst {
 	class PST {
 		tokenizer::OwnFile      file;
 		lexer::TokenData&       token_data;
-		dia::Logger&             err;
+		dia::Logger&            err;
 		ParserRef<TopLevel>     top_level;
 		std::vector<ImportType> imports;
 

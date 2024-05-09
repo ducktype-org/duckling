@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	FilePath path(argv[1]);
-	auto tokenFile = tokenizer::makeTokenFile(path);
+	auto     tokenFile = tokenizer::makeTokenFile(path);
 	tokenFile->tokenize();
 	if (tokenFile->getLogger().bad()) tokenFile->getLogger().dumpLog(true);
 }
