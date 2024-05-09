@@ -23,13 +23,6 @@ public:
 	}
 
 private:
-	std::pair<pst::PST, const fs::FilePath&> prepare(const fs::FilePath& file) {
-		auto td     = lexer::tokenizeFile(file);
-		auto parsed = pst::parse(std::move(td));
-		assert(parsed.getLogger().good(), "there are unexpected errors in rift source-code");
-		return { std::move(parsed), file };
-	}
-
 	void testI32Consts() {
 		auto constants_module = query::queryEntryPoint<compiler::frontend::QueryModuleTree>(
 			fs::FilePath(path("constants"))
