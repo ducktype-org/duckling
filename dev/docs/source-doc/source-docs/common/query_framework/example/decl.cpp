@@ -47,9 +47,7 @@ struct ImplementationOf_MyQuery: query::QueryImplementation<MyQuery, PResult> {
 		// Here we will just log it:
 		std::string str_to_log = base::strConcat("Result of query 2 : ", result);
 		// Dummy source position:
-		dia::SourcePosition source_position = dia::SourcePosition{
-			std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")), 1, 1, 1
-		};
+		dia::SourcePosition source_position = dia::SourcePosition::fakePosition();
 		context.log(base::make_unique<InfoInMyQuery>(source_position, str_to_log));
 
 		// some trivial implementation:
