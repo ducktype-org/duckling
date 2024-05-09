@@ -2,14 +2,7 @@
 Helios Scopes
 =============
 
-Header
-======
+This file defines Queries responsible for creation of Scopes and operations on them.
 
 .. doxygenfile:: helios/scopes/scopes.hpp
-
-
-Source
-======
-
-.. doxygenfile:: helios/scopes/scopes.cpp
 
