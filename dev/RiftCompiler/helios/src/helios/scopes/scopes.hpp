@@ -16,9 +16,9 @@
 namespace compiler::helios {
 	using StmtList = std::vector<PstRef<pst::Stmt>>;
 
-	// this is just a mock:
-	std::string dprint(ScopeID);
-
+	/**
+	 * @brief Query root scope for given module.
+	 */
 	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleId, ScopeID);
 
 	struct KeyOf_QueryPrimaryCodeScopeFor {
@@ -36,21 +36,13 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Construct a Scope that has following properties:
-	 *   * parent of the scope is the scope in which the RiftElement is
-	 *   * is unique for that symbol
+	 * @brief Query Scope for given PST element that will be the child of scope from the key.
+	 *
+	 * @note: this is not perfect and might be changed in the future.
+	 * there is currently no association between parent and base_element
+	 * values inside the key.      
 	 */
 	DECLARE_QUERY(QueryPrimaryCodeScopeFor, KeyOf_QueryPrimaryCodeScopeFor, ScopeID);
-
-	// struct KeyOf_QueryNthScopeIn {
-	// 	ScopeID parent;
-	// 	u64 number;
-	// };
-	// /**
-	//  * @brief Construct a Scope that is n-th generic child of parent.
-	//  * It might be necessary for construction of auxilary scopes
-	//  */
-	// DECLARE_QUERY(QueryNthScopeIn, KeyOf_QueryNthScopeIn, ScopeID);
 
 	struct KeyOf_LookupInScope {
 		ScopeID     scope;
@@ -62,15 +54,18 @@ namespace compiler::helios {
 		bool        operator==(const KeyOf_LookupInScope&) const = default;
 	};
 
+	/**
+	 * @brief Performs lookup of single name inside given scope.
+	 */
 	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, const LookupResult&);
 
-	// @TODO: implement it
+	/**
+	 * @brief Performs lookup of single name inside given scope and its parents.
+	 */
 	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, const LookupResult&);
 
-
+	/**
+	 * @brief Query all symbols that are directly inside given scope.
+	 */
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, const std::vector<SymID>&);
-
-	// DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_Lookup, LookupResult);
-
-
 }

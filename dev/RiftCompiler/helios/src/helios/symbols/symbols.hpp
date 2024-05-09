@@ -16,7 +16,7 @@
 namespace compiler::helios {
 
 	/**
-	 * @brief SymbolKind stores general kind/type of a symbol.
+	 * @brief Stores general kind/type of a symbol.
 	 */
 	enum class SymbolKind {
 		Basic,
@@ -30,28 +30,28 @@ namespace compiler::helios {
 		// ...
 	};
 
-	// Following functions are left as functions:
+	// Following functions are left as functions (instead of beeing a query):
 	// in the future once Query System implementation will mature
 	// they will probably be have to be converted into queries
-	// from DefID to given Data:
+	// from DefID/PstID to appropriate data:
 
 	/**
-	 * @return is symbol a wildcard symbol (e.g. using a.*)
+	 * @return is given symbol a wildcard symbol (e.g. using a.*)
 	 */
 	bool isWildcard(SymID);
 
 	/**
-	 * @return name of given symbol
+	 * @return name of the symbol
 	 */
 	base::StrId name(SymID);
 
 	/**
-	 * @return kind of given symbol
+	 * @return kind of the symbol
 	 */
 	SymbolKind kind(SymID);
 
 	/**
-	 * @return scope given symbol was defined within
+	 * @return scope that given symbol was defined within
 	 */
 	ScopeID scope(SymID);
 
@@ -75,7 +75,7 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Returns symbols associated with given element in PST
+	 * @brief Query symbols associated with given element in PST
 	 */
 	DECLARE_QUERY(QuerySymbolOfSTMT, KeyOf_QuerySymbolOfSTMT, SymID);
 
@@ -101,40 +101,27 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Returns result of "symbol.name" operation.
+	 * @brief Query result of lookup of single name within the symbol.
+	 * It essentially implements "symbol.name" operation.
 	 */
 	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, const LookupResult&);
 
 	/**
-	 * @brief Returns type of given symbol.
+	 * @brief Query type of the symbol.
 	 * @note: not implemented yet
 	 */
 	DECLARE_QUERY(QueryTypeOF, SymID, ts::TypeInfo);
 
-	// @TODO: query symbol value (some CTV?) for execution somewhere
-	// There is a good chance that logic behind it will be elsewhere
-	// but HELIOS does need to somehow access at least some results of comp-time evaluation
 
 	// @TODO: some proper hout type
 	struct SomeHOUT {};
 
 	/**
-	 * @brief Returns HOUT of given symbol
+	 * @brief Query HOUT of given symbol
 	 * @note This query is effectively responsible for compilation of symbols.
 	 * @note not yet implemented
-	 * @TODO: is it recursive?
 	 */
 	DECLARE_QUERY(QueryHOUT, SymID, base::Optional<SomeHOUT>);
-
-
-	/**
-	 * @brief Retuns scope to lookup in
-	 * when looking up in given symbol.
-	 *
-	 * @note For HELIOS internal use only
-	 * @note It is a partial Query it for example does not necessary
-	 */
-	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID);
 
 
 	/**
@@ -155,27 +142,27 @@ namespace compiler::helios {
 	 */
 	namespace rpn {
 		/**
-		 * Operator - any operator.
+		 * @brief Operator - any operator.
 		 */
 		struct Operator {
 			/**
-			 * A string representing the operator.
+			 * @brief A string representing the operator.
 			 */
 			base::StrId oper_id;
 		};
 
 		/**
-		 * A symbol identifier.
+		 * @brief A symbol identifier.
 		 */
 		struct Identifier {
 			/**
-			 * A SymbolList returned by a lookup.
+			 * @brief A SymbolList returned by a lookup.
 			 */
 			SymbolList symbol_list;
 		};
 
 		/**
-		 * A literal value.
+		 * @brief A literal value.
 		 */
 		struct NumLiteral {
 			/**
@@ -186,12 +173,9 @@ namespace compiler::helios {
 		};
 
 		/**
-		 * A keyword value, like `None`.
+		 * @brief A keyword value, like `None`.
 		 */
 		struct KeywordValue {
-			/**
-			 * The keyword.
-			 */
 			rift_def::Keyword keyword;
 		};
 
@@ -199,51 +183,51 @@ namespace compiler::helios {
 
 		struct KeyOf_ExtensionMakeRPN {
 			/**
-			 * The expression to parse from pst.
+			 * @brief The expression to parse from pst.
 			 */
 			const std::vector<pst::Expr::ExprElem>& expr;
 			/**
-			 * A scope that the expression was written.
+			 * @brief A scope that the expression was written.
 			 */
 			ScopeID expr_scope;
 		};
 
 		/**
-		 * Parses an expression from PST into RPN.
+		 * @brief Parses an expression from PST into RPN.
 		 */
 		QUERY_EXTENSION(ExtensionMakeRPN, KeyOf_ExtensionMakeRPN, std::vector<ExprElem>);
 
 		struct KeyOf_ExtensionRPNEval {
 			/**
-			 * Symbol on the left.
+			 * @brief Symbol on the left.
 			 */
 			ExprElem a;
 			/**
-			 * Operator to make a operation with.
+			 * @brief Operator to make a operation with.
 			 */
 			Operator op;
 			/**
-			 * Symbol on the right.
+			 * @brief Symbol on the right.
 			 */
 			ExprElem b;
 			/**
-			 * A scope, where the expression was written.
+			 * @brief A scope, where the expression was written.
 			 */
 			ScopeID expr_scope;
 		};
 
 		/**
-		 * Evaluates an operation `a (op) b`.
+		 * @brief Evaluates an operation `a (op) b`.
 		 */
 		QUERY_EXTENSION(ExtensionRPNEval, const KeyOf_ExtensionRPNEval&, ExprElem);
 
 		struct KeyOf_ExtensionRPNValue {
 			/**
-			 * The expression the parse.
+			 * @brief The expression to parse.
 			 */
 			ExprElem expr;
 			/**
-			 * A scope, where the expression was written.
+			 * @brief A scope, where the expression was written.
 			 */
 			ScopeID expr_scope;
 		};

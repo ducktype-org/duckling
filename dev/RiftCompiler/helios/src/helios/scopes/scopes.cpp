@@ -47,12 +47,6 @@ namespace compiler::helios {
 
 	auto getScopeRef(ScopeID id) { return GetScopeRef_Functor::get(id); }
 
-	std::string dprint(ScopeID id) {
-		auto        ref = getScopeRef(id);
-		std::string out = base::strConcat("Stmt count: ", ref->stmt_list.size(), "\n");
-		return out;
-	}
-
 	namespace {
 		base::StableVector<ScopeData> scope_table;
 

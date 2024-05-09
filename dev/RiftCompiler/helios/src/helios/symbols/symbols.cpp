@@ -30,6 +30,16 @@ namespace compiler::helios {
 
 
 	/**
+	 * @brief Query "linked-scope", that is scope
+	 * that "lookup in" operation will perform lookup.
+	 *
+	 * @note For HELIOS internal use only
+	 * @note It is a partial-Query. It won't work for all symbol
+	 */
+	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID);
+
+
+	/**
 	 * @brief Stores generic symbol data
 	 */
 	struct SymbolData {
