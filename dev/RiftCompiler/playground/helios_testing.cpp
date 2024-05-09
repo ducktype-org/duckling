@@ -45,7 +45,7 @@ int main(int argc, const char* argv[]) {
 
 	using namespace compiler;
 
-	auto root = query::queryEntryPoint<frontend::QueryModuleTree>(path_to_compile);
+	auto root       = query::queryEntryPoint<frontend::QueryModuleTree>(path_to_compile);
 	auto root_scope = query::queryEntryPoint<helios::QueryRootScopeOf>(root);
 
 
