@@ -38,7 +38,6 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID);
 
-
 	/**
 	 * @brief Stores generic symbol data
 	 */

@@ -1,7 +1,7 @@
 /**
  * @file hout.hpp
  * @note This file is a placeholder for HOUT structures
- * that will be added in the future. 
+ * that will be added in the future.
  */
 
 #pragma once

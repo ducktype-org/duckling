@@ -112,7 +112,6 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryTypeOF, SymID, ts::TypeInfo);
 
-
 	// @TODO: some proper hout type
 	struct SomeHOUT {};
 

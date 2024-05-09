@@ -40,7 +40,7 @@ namespace compiler::helios {
 	 *
 	 * @note: this is not perfect and might be changed in the future.
 	 * there is currently no association between parent and base_element
-	 * values inside the key.      
+	 * values inside the key.
 	 */
 	DECLARE_QUERY(QueryPrimaryCodeScopeFor, KeyOf_QueryPrimaryCodeScopeFor, ScopeID);
 
