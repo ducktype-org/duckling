@@ -18,7 +18,7 @@ namespace compiler::helios {
 	using StmtList = std::vector<PstRef<pst::Stmt>>;
 
 	/**
-	 * @brief Returns all child statements of given RiftElement
+	 * @brief Returns all children statements of given RiftElement
 	 * Currently:
 	 *  * For CodeBlock return Stmt in the code block
 	 *  * For CodeBlockOrStmt return Stmt in the code block
