@@ -1,7 +1,7 @@
 #include "message.hpp"
 
 namespace dia {
-	printer::MessageContent Message::severityToMessageContent(const Severity s) {
+	printer::PrinterContent Message::severityToMessageContent(const Severity s) {
 		using enum Severity;
 		switch (s) {
 		case Error:
@@ -15,21 +15,7 @@ namespace dia {
 		}
 	}
 
-	printer::MessageType Message::severityToMessageType(const Severity s) {
-		using enum Severity;
-		switch (s) {
-		case Error:
-			return printer::MessageType::ERROR;
-		case Warning:
-			return printer::MessageType::WARNING;
-		case Info:
-			return printer::MessageType::DEBUG;
-		default:
-			RIFT_PANIC("Unknown message severity.");
-		}
-	}
-
-	printer::MessageContent Message::domainToMessageContent(const Domain d) {
+	printer::PrinterContent Message::domainToMessageContent(const Domain d) {
 		using enum Domain;
 		switch (d) {
 		case Lexer:
@@ -57,45 +43,39 @@ namespace dia {
 		}
 	}
 
-	printer::MessageContent Message::getBaseMessageContent(const bool detailed) const {
+	printer::PrinterContent Message::getBaseMessageContent(const bool detailed) const {
 		return detailed ? toMessageContentBrief() : toMessageContentDetailed();
 	}
 
-	// @FIXME: This is inconsistent with the style in SourcePosition::genErrorMsg.
-	printer::MessagePack Message::toPrinterMessagePack(const bool detailed) const {
+	printer::PrinterContentsSeq Message::toPrinterContents(const bool detailed) const {
 		// Prepare the leading message.
 		const Severity s = getSeverity();
 		const Domain   d = getDomain();
 
-		const auto messageType = severityToMessageType(s);
 		const auto severityTag = severityToMessageContent(s);
 		const auto domainTag   = domainToMessageContent(d);
 
-		auto contentsWithSource
-			= source_position.genPrinterMessageContents(getBaseMessageContent(detailed));
-		contentsWithSource.insert(
-			contentsWithSource.begin(), { severityTag, " [", domainTag, "]:\n" }
-		);
-
-		const auto           leadingMessage = printer::Message(contentsWithSource, messageType);
-		printer::MessagePack messages{ leadingMessage };
+		auto resultContents = source_position.genPrinterContents(getBaseMessageContent(detailed));
+		resultContents.insert(resultContents.begin(), { severityTag, " [", domainTag, "]:\n" });
 
 		// Append the notes.
-		for (const auto& note: notes) messages.push_back(note->toPrinterMessage(detailed));
+		for (const auto& note: notes) {
+			auto noteContents = note->toPrinterContents(detailed);
+			for (auto& noteContent: note->toPrinterContents(detailed))
+				resultContents.emplace_back(std::move(noteContent));
+		}
+		// messages.push_back(note->toPrinterMessage(detailed));
 
-		return messages;
+		return resultContents;
 	}
 
 	// @FIXME: The "NOTE" raw string is inconsistent with the style in SourcePosition::genErrorMsg.
-	printer::Message Note::toPrinterMessage(const bool detailed) {
+	printer::PrinterContentsSeq Note::toPrinterContents(const bool detailed) {
 		// Take the content of the note, then decorate it with a coloured "NOTE" prefix.
-		printer::MessageContent content = [&, detailed] {
+		printer::PrinterContent content = [&, detailed] {
 			if (detailed) return toMessageContentDetailed();
 			return toMessageContentBrief();
 		}();
-		return printer::Message(
-			{ printer::MessageContent{ "NOTE", printer::Color::BRIGHT_CYAN }, ":\n", content },
-			printer::MessageType::NOTE
-		);
+		return { printer::PrinterContent{ "NOTE", printer::Color::BRIGHT_CYAN }, ":\n", content };
 	}
 }

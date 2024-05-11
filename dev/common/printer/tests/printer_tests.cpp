@@ -16,47 +16,25 @@ private:
 	// @TODO: add more tests.
 
 	void test() {
-		auto mc = MessageContent("ms1", Color::DEFAULT, Color::RED);
-
-		Message       m({ mc });
-		MessagePack   mp = { m };
-		StreamPrinter c;
-		c.ignoreInstantDebug();
-		c.add(mp);
-		c.add(std::move(mp));
-
-		c.setMaxAmounts(MessageType::ERROR, 0);
-		c.setMinLevel(MessageType::ERROR, 1);
+		auto              mc1 = PrinterContent("ms1", Color::DEFAULT, Color::RED);
 		std::stringstream ss1;
-		c.print(ss1);
+		printer::StreamPrinter::print(mc1, ss1);
+		std::string expected1 = "\033[41mms1\033[0m";
 		assert(
-			ss1.str() == "\033[0m\033[41mms1\033[0m\n\033[0m\033[41mms1\033[0m\n",
-			"Full print wrong output (" + ss1.str() + ").",
+			ss1.str() == expected1,
+			"Full print wrong output (" + ss1.str() + "), expected: (" + expected1 + ").",
 			false
 		);
 
-		c.setMaxAmounts(MessageType::ALL, 0);
+		auto              mc2 = PrinterContent("ms2", Color::RED, Color::DEFAULT);
 		std::stringstream ss2;
-		c.print(ss2);
+		printer::StreamPrinter::print({ mc1, mc2 }, ss2);
+		std::string expected2 = "\033[41mms1\033[0m\033[31mms2\033[0m";
 		assert(
-			ss2.str() == "Limit for this type of message has been reached.\n",
-			"Message type limit print wrong output (" + ss2.str() + ").",
+			ss2.str() == expected2,
+			"Full print wrong output (" + ss2.str() + "), expected (" + expected2 + ").",
 			false
 		);
-
-		c.setGeneralMax(0);
-		std::stringstream ss3;
-		c.print(ss3);
-		assert(
-			ss3.str() == "Limit for messages has been reached.\n",
-			"General limit print wrong output (" + ss3.str() + ").",
-			false
-		);
-
-		c.setMinLevel(MessageType::ALL, 1);
-		std::stringstream ss4;
-		c.print(ss4);
-		assert(ss4.str() == "", "Min level print wrong output (" + ss4.str() + ").", false);
 	}
 };
 

@@ -113,7 +113,7 @@ namespace dia {
 		 * @deprecated Use custom Message subclasses instead.
 		 * @todo remove
 		 */
-		void failAndLog(const printer::MessageContent& message);
+		void failAndLog(const printer::PrinterContent& message);
 
 		/**
 		 * @brief Clear all logs. Restore to default state.

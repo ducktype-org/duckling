@@ -1,39 +1,28 @@
 #include "logger.hpp"
 
 namespace dia {
-	static void dump_messages(
-		const std::vector<base::unique_ptr<Message>>& messages,
-		printer::StreamPrinter&                       stream_printer,
-		const bool                                    detailed
-	) {
-		for (const auto& message_ptr: messages)
-			stream_printer.add(message_ptr->toPrinterMessagePack(detailed));
-	}
-
 	void Logger::log(
 		base::unique_ptr<Message> message_ptr, const bool immediately_dump, const bool detailed
 	) {
-		if (immediately_dump) {
-			auto stream_printer = printer::StreamPrinter{};
-			stream_printer.add(message_ptr->toPrinterMessagePack(detailed));
-			stream_printer.print(std::cerr);
-		}
+		if (immediately_dump)
+			printer::StreamPrinter::print(message_ptr->toPrinterContents(detailed));
 
 		const int severity_id = static_cast<int>(message_ptr->getSeverity());
 		message_log.at(severity_id).emplace_back(std::move(message_ptr));
 	}
 
 	void Logger::dumpLog(const bool detailed, std::ostream& stream) const {
-		auto stream_printer = printer::StreamPrinter{};
 		// Currently, errors are dumped first, then warnings, then infos.
 		// It is not determined whether this is how we want it to stay.
 		// This is a temporary, "good enough" solution.
 		// Perhaps we will change it to showing all messages in order of appearance
 		// in the source code, or maybe we will choose a completely separate strategy.
 		// @TODO: resolve the above.
-		for (int severity_id = 0; severity_id < Message::NUM_SEVERITIES; severity_id++)
-			dump_messages(message_log.at(severity_id), stream_printer, detailed);
-		stream_printer.print(stream);
+		for (int severity_id = 0; severity_id < Message::NUM_SEVERITIES; severity_id++) {
+			for (auto& message: message_log.at(severity_id))
+				printer::StreamPrinter::print(message->toPrinterContents(detailed), stream);
+			printer::StreamPrinter::newline(stream);
+		}
 	}
 
 	usize Logger::messageCount(Message::Severity s) const {
@@ -61,7 +50,7 @@ namespace dia {
 
 	protected:
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override {
+		printer::PrinterContent toMessageContentBrief() const override {
 			return { message };
 		}
 
@@ -77,16 +66,16 @@ namespace dia {
 
 	class ObsoleteErrorWithPrinterMessage final: public Error {
 	public:
-		explicit ObsoleteErrorWithPrinterMessage(printer::MessageContent message):
+		explicit ObsoleteErrorWithPrinterMessage(printer::PrinterContent message):
 			  Error(dia::SourcePosition::fakePosition()),
 			  message(std::move(message)) {}
 
 	private:
-		printer::MessageContent message;
+		printer::PrinterContent message;
 
 	protected:
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override {
+		printer::PrinterContent toMessageContentBrief() const override {
 			return message;
 		}
 
@@ -96,7 +85,7 @@ namespace dia {
 		}
 	};
 
-	void Logger::failAndLog(const printer::MessageContent& message) {
+	void Logger::failAndLog(const printer::PrinterContent& message) {
 		log(base::make_unique<ObsoleteErrorWithPrinterMessage>(message));
 	}
 

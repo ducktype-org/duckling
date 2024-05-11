@@ -17,7 +17,7 @@ struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
 
 	protected:
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override {
+		printer::PrinterContent toMessageContentBrief() const override {
 			return { "Some random log from Query1." };
 		}
 
@@ -34,7 +34,7 @@ struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
 
 	protected:
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override {
+		printer::PrinterContent toMessageContentBrief() const override {
 			return { "An example error in Query1." };
 		}
 

@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <string>
-#include <printer/message.hpp>
+#include <printer/printer_content.hpp>
 #include <clap/clap.hpp>
 #include "filesystem/file.hpp"
 
@@ -16,6 +16,6 @@ namespace compiler {
 	};
 
 	CompilerConfig   fromArgs(clap::CLIArgs args);
-	printer::Message generateHelpMessage(const clap::exceptions::HelpException& e);
+	printer::PrinterContentsSeq generateHelpMessage(const clap::exceptions::HelpException& e);
 
 }

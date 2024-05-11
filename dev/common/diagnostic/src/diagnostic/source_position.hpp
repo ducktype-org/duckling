@@ -8,7 +8,7 @@
 #include <token_file/forward.hpp>
 #include <filesystem/file.hpp>
 #include <memory>
-#include <printer/message.hpp>
+#include <printer/printer_content.hpp>
 #include <string>
 
 namespace dia {
@@ -45,7 +45,7 @@ namespace dia {
 		 * @brief Get lines surrounding with error colored.
 		 */
 		[[nodiscard]]
-		std::vector<printer::MessageContent> getPrettySourceLines() const;
+		std::vector<printer::PrinterContent> getPrettySourceLines() const;
 
 		/**
 		 * @brief Get formatted message contents with a given reason.
@@ -57,8 +57,8 @@ namespace dia {
 		 * @return Formatted message contents.
 		 */
 		[[nodiscard]]
-		std::vector<printer::MessageContent>
-			genPrinterMessageContents(const printer::MessageContent& reason) const;
+		std::vector<printer::PrinterContent>
+			genPrinterContents(const printer::PrinterContent& reason) const;
 
 		/**
 		 * @brief Get formatted message string with a given reason.

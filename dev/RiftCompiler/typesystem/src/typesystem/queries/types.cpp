@@ -91,14 +91,14 @@ namespace ts {
 
 		protected:
 			[[nodiscard]]
-			printer::MessageContent toMessageContentBrief() const override {
+			printer::PrinterContent toMessageContentBrief() const override {
 				std::stringstream ss;
 				ss << "Invalid size of integral type: " << requested_size;
 				return ss.str();
 			}
 
 			[[nodiscard]]
-			printer::MessageContent toMessageContentDetailed() const override {
+			printer::PrinterContent toMessageContentDetailed() const override {
 				std::stringstream ss;
 				ss << "Invalid size of integral type: " << requested_size << "\n"
 				   << "The only allowed sizes are 8, 16, 32, 64, and 128.";
@@ -159,14 +159,14 @@ namespace ts {
 
 		protected:
 			[[nodiscard]]
-			printer::MessageContent toMessageContentBrief() const override {
+			printer::PrinterContent toMessageContentBrief() const override {
 				std::stringstream ss;
 				ss << "Invalid size of float type: " << requested_size;
 				return ss.str();
 			}
 
 			[[nodiscard]]
-			printer::MessageContent toMessageContentDetailed() const override {
+			printer::PrinterContent toMessageContentDetailed() const override {
 				std::stringstream ss;
 				ss << "Invalid size of float type: " << requested_size << "\n"
 				   << "The only allowed sizes are 16, 32, 64, 80, and 128.";

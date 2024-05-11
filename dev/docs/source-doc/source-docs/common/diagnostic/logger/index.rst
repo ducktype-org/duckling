@@ -28,7 +28,7 @@ Usage example
     protected:
         dia::Message::Domain getDomain() const override { /* ... */ }
 
-        printer::MessageContent toMessageContentBrief() const override {
+        printer::PrinterContent toMessageContentBrief() const override {
             // ...
         }
     };

@@ -6,7 +6,7 @@
 
 #include <cmath>
 #include <string>
-#include <printer/message.hpp>
+#include <printer/printer_content.hpp>
 #include <token_file/file.hpp>
 #include <base/exceptions.hpp>
 
@@ -39,7 +39,7 @@ namespace dia {
 		return res;
 	}
 
-	std::vector<printer::MessageContent> SourcePosition::getPrettySourceLines() const {
+	std::vector<printer::PrinterContent> SourcePosition::getPrettySourceLines() const {
 		usize start_line = getStartLineColumn().first;
 		usize end_line   = getEndLineColumn().first;
 
@@ -52,7 +52,7 @@ namespace dia {
 		usize       length  = std::to_string(last_line).size();
 		std::string str_len = std::to_string(length);
 
-		std::vector<printer::MessageContent> res;
+		std::vector<printer::PrinterContent> res;
 		res.emplace_back(std::string(length + 1, ' ') + "|");
 
 		auto before = source_file->viewSplitRange(begin_char, source_start);
@@ -129,8 +129,8 @@ namespace dia {
 
 	tokenizer::BorrowFile SourcePosition::getSource() const { return source_file; }
 
-	std::vector<printer::MessageContent>
-		SourcePosition::genPrinterMessageContents(const printer::MessageContent& reason) const {
+	printer::PrinterContentsSeq
+		SourcePosition::genPrinterContents(const printer::PrinterContent& reason) const {
 		if (source_file == nullptr) {
 			return {
 				{ "In unknown file: " },
@@ -138,7 +138,7 @@ namespace dia {
 			};
 		}
 		auto [line, column]                      = getStartLineColumn();
-		std::vector<printer::MessageContent> res = {
+		std::vector<printer::PrinterContent> res = {
 			{ "In file: " },
 			{ source_file->getPath().strView().data() },
 			{ ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },

@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <printer/message.hpp>
+#include <printer/printer_content.hpp>
 
 #include "source_position.hpp"
 
@@ -51,20 +51,12 @@ namespace dia {
 
 	private:
 		/**
-		 * @brief Converts a message severity to a printable MessageContent.
+		 * @brief Converts a message severity to a printable PrinterContent.
 		 * @param s The severity of the message.
 		 * @return The stringified severity. All outputs are of equal length.
 		 */
 		[[nodiscard]]
-		static printer::MessageContent severityToMessageContent(Severity s);
-
-		/**
-		 * @brief Converts a message severity to MessageType.
-		 * @param s The severity of the message.
-		 * @return The corresponding MessageType.
-		 */
-		[[nodiscard]]
-		static printer::MessageType severityToMessageType(Severity s);
+		static printer::PrinterContent severityToMessageContent(Severity s);
 
 	public:
 		/**
@@ -105,45 +97,45 @@ namespace dia {
 
 	private:
 		/**
-		 * @brief Converts a message domain to a printable MessageContent.
+		 * @brief Converts a message domain to a printable PrinterContent.
 		 * @param d The domain of the message.
 		 * @return The stringified domain.
 		 */
 		[[nodiscard]]
-		static printer::MessageContent domainToMessageContent(Domain d);
+		static printer::PrinterContent domainToMessageContent(Domain d);
 
 	protected:
 		/**
-		 * @brief Convert the Message to a printer::MessageContent with the diagnostic minimum.
-		 * @return The brief printer::MessageContent ready to be printed for the user.
+		 * @brief Convert the Message to a printer::PrinterContent with the diagnostic minimum.
+		 * @return The brief printer::PrinterContent ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::MessageContent toMessageContentBrief() const
+		virtual printer::PrinterContent toMessageContentBrief() const
 			= 0;
 
 		/**
-		 * @brief Convert the Note to a printer::MessageContent which possibly contains information
+		 * @brief Convert the Note to a printer::PrinterContent which possibly contains information
 		 * not included in the diagnostic minimum, thus not included in the brief message.
-		 * @return The detailed printer::MessageContent ready to be printed for the user.
+		 * @return The detailed printer::PrinterContent ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::MessageContent toMessageContentDetailed() const {
+		virtual printer::PrinterContent toMessageContentDetailed() const {
 			// By default, the detailed version is the same as the brief version.
 			return toMessageContentBrief();
 		}
 
 		/**
-		 * @brief Get a printer::MessageContent ready to be printed for the user to view.
+		 * @brief Get a printer::PrinterContent ready to be printed for the user to view.
 		 *
-		 * Note: the MessageContent **must not** include the severity, domain, or notes.
+		 * Note: the PrinterContent **must not** include the severity, domain, or notes.
 		 *
 		 * @param detailed Whether to include more details than the diagnostic minimum. These
 		 * details may include extra information about the source or nature of the message and
 		 * may be used to explain the message to beginners.
-		 * @return A printer::MessageContent ready to be printed for the user.
+		 * @return A printer::PrinterContent ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		printer::MessageContent getBaseMessageContent(bool detailed) const;
+		printer::PrinterContent getBaseMessageContent(bool detailed) const;
 
 		/**
 		 * @brief Construct a Message from a relevant SourcePosition.
@@ -153,14 +145,14 @@ namespace dia {
 
 	public:
 		/**
-		 * @brief Get a printer::MessagePack ready to be printed for the user to view.
+		 * @brief Get a printer::MessageContent sequence ready to be printed for the user to view.
 		 * @param detailed Whether to include more details than the diagnostic minimum. These
 		 * details may include extra information about the source or nature of the error and may be
 		 * used to explain the error to beginners.
-		 * @return A printer::MessagePack ready to be printed for the user.
+		 * @return An std::vector<printer::PrinterContent> ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		printer::MessagePack toPrinterMessagePack(bool detailed) const;
+		std::vector<printer::PrinterContent> toPrinterContents(bool detailed) const;
 
 		/**
 		 * @brief Get the Severity of the Message.
@@ -270,27 +262,27 @@ namespace dia {
 	class Note {
 	protected:
 		/**
-		 * @brief Convert the Note to a printer::Message containing the diagnostic minimum.
-		 * @return The brief printer::Message ready to be printed for the user.
+		 * @brief Convert the Note to a printer::PrinterContent containing the diagnostic minimum.
+		 * @return The brief printer::PrinterContent ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::MessageContent toMessageContentBrief()
+		virtual printer::PrinterContent toMessageContentBrief()
 			= 0;
 
 		/**
-		 * @brief Convert the Note to a printer::Message which possibly contains information
+		 * @brief Convert the Note to a printer::PrinterContent which possibly contains information
 		 * not included in the diagnostic minimum, thus not included in the brief message.
-		 * @return The detailed printer::Message ready to be printed for the user.
+		 * @return The detailed printer::PrinterContent ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::MessageContent toMessageContentDetailed() {
+		virtual printer::PrinterContent toMessageContentDetailed() {
 			// By default, the detailed version is the same as the brief version.
 			return toMessageContentBrief();
 		}
 
 	public:
 		/**
-		 * @brief Convert the Note to a printer::Message.
+		 * @brief Convert the Note to a sequence of printer::PrinterContent.
 		 *
 		 * Typically, this takes the content of the note, then decorates it with a coloured "NOTE"
 		 * prefix.
@@ -299,10 +291,10 @@ namespace dia {
 		 * Unlike a Message, a Note is not required to contain a SourcePosition.
 		 *
 		 * @param detailed Whether to include more details than the diagnostic minimum.
-		 * @return The printer::Message ready to be printed for the user.
+		 * @return The printer::PrinterContentsSeq ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::Message toPrinterMessage(bool detailed);
+		virtual printer::PrinterContentsSeq toPrinterContents(bool detailed);
 
 		virtual ~Note() noexcept = default;
 	};
@@ -331,7 +323,7 @@ namespace dia {
 		// @FIXME: unimplemented. Pending decision on how to split responsibility between
 		// this method and SourcePosition::genStr.
 		[[nodiscard]]
-		printer::Message toPrinterMessage(bool detailed) override
+		printer::PrinterContentsSeq toPrinterContents(bool detailed) override
 			= 0;
 	};
 
@@ -373,7 +365,7 @@ namespace dia {
 			  message(std::move(message)) {}
 
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override {
+		printer::PrinterContent toMessageContentBrief() const override {
 			return message;
 		}
 	};

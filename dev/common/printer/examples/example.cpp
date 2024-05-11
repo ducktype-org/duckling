@@ -8,8 +8,8 @@ void testPrinter() {
 	          { "So it will be the only one you see before error, when GeneralMax is set to 1." } },
 	        printer::MessageType::HINT,
 	        0,
-	        printer::Color::RESET,
-	        printer::Color::RESET },
+	        printer::Color::DEFAULT,
+	        printer::Color::DEFAULT },
 	      { { { "R", printer::Color::BRIGHT_RED },
 	          { "A", printer::Color::YELLOW },
 	          { "I", printer::Color::BRIGHT_YELLOW },
@@ -37,7 +37,7 @@ void testPrinter() {
 	          { ", so it's the only one that appears when printing with MinLevel 4 on ALL." } },
 	        printer::MessageType::DEBUG,
 	        4,
-	        printer::Color::RESET,
+	        printer::Color::DEFAULT,
 	        printer::Color::GRAY } }
 	);
 	std::cout << "Full pass:\n";
