@@ -11,11 +11,11 @@ namespace lexer {
 	 */
 	class Char {
 	public:
-		const UChar32        value;
-		const u8             size;
-		const base::RawArray raw_begin;
+		const UChar32 value;
+		const u8      size;
+		const usize   index;
 
-		Char(UChar32, u8, base::RawArray);
+		Char(UChar32, u8, usize);
 
 		[[nodiscard]]
 		bool               is(icu::UnicodeSet&) const;
@@ -41,18 +41,7 @@ namespace lexer {
 	};
 
 	/**
-	 * @brief Type used to store all characters decoded from a single source code
+	 * @brief Type used to store all characters decoded from a single source code file.
 	 */
-	using CharArray = const std::vector<Char>;
-
-	/**
-	 * @brief Assembles a `base::RawView` pointing to the placement of the given range in source
-	 * code.
-	 *
-	 * @param arr Array of characters in source code
-	 * @param begin First character index in `arr`
-	 * @param end Last character index in `arr`
-	 */
-	base::RawView composeRaw(CharArray& arr, usize begin, usize end);
-
+	using CharArray = std::vector<Char>;
 }

@@ -4,90 +4,165 @@
  */
 
 
+#include <cmath>
+#include <string>
+#include <printer/message.hpp>
+#include <token_file/file.hpp>
+#include <base/exceptions.hpp>
+
 #include "source_position.hpp"
-#include "base/exceptions.hpp"
 
 namespace dia {
-	std::string SourcePosition::getSourceChars() const {
-		auto             source_content = source_file->getContent();
-		std::string_view source         = source_content.view().stringView();
+	std::vector<std::string> SourcePosition::getSourceLines() const {
+		usize start_line = getStartLineColumn().first;
+		usize end_line   = getEndLineColumn().first;
 
-		if (source_end == source.size()) return "<EOF>";
-		return { source.begin() + source_start, source.begin() + source_end + 1 };
+		usize first_line = std::max((usize) 2, start_line) - 1;
+		usize last_line  = std::min(source_file->getLines().size(), end_line + 1);
+
+		usize begin_char = source_file->getLine(first_line).first;
+		usize end_char   = source_file->getLine(last_line).second;
+
+		usize length = std::to_string(last_line).size();
+
+		std::vector<std::string> res;
+		res.emplace_back(std::string(length + 1, ' ') + "|\n");
+		for (auto [line, view]: source_file->viewSplitRange(begin_char, end_char)) {
+			std::stringstream number;
+			number << std::setw((int) length) << line << " | ";
+			res.emplace_back(number.view());
+			res.emplace_back(view.stringView());
+			res.emplace_back("\n");
+		}
+		res.emplace_back(std::string(length + 1, ' ') + "|");
+
+		return res;
 	}
 
-	SourcePosition::SourcePosition(
-		const SourceFile& source_file,
-		const usize       line,
-		const usize       column,
-		const usize       source_start
-	):
-		  SourcePosition(source_file, line, column, source_start, source_start) {}
+	std::vector<printer::MessageContent> SourcePosition::getPrettySourceLines() const {
+		usize start_line = getStartLineColumn().first;
+		usize end_line   = getEndLineColumn().first;
+
+		usize first_line = std::max((usize) 2, start_line) - 1;
+		usize last_line  = std::min(source_file->getLines().size(), end_line + 1);
+
+		usize begin_char = source_file->getLine(first_line).first;
+		usize end_char   = source_file->getLine(last_line).second;
+
+		usize       length  = std::to_string(last_line).size();
+		std::string str_len = std::to_string(length);
+
+		std::vector<printer::MessageContent> res;
+		res.emplace_back(std::string(length + 1, ' ') + "|");
+
+		auto before = source_file->viewSplitRange(begin_char, source_start);
+		auto error  = source_file->viewSplitRange(source_start, source_end + 1);
+		auto after  = source_file->viewSplitRange(source_end + 1, end_char);
+
+		auto linePref = [&](usize line) {
+			std::stringstream number;
+			number << std::setw((int) length) << line << " | ";
+			res.emplace_back(number.str());
+		};
+		usize prev_line = -1;
+
+		for (auto [line, view]: before) {
+			if (line != prev_line) {
+				prev_line = line;
+				linePref(line);
+			}
+			res.emplace_back(view.stdString());
+		}
+		for (auto [line, view]: error) {
+			if (line != prev_line) {
+				prev_line = line;
+				linePref(line);
+			}
+			res.emplace_back(view.stdString(), printer::Color::BRIGHT_RED);
+		}
+		for (auto [line, view]: after) {
+			if (line != prev_line) {
+				prev_line = line;
+				linePref(line);
+			}
+			res.emplace_back(view.stdString());
+		}
+		res.emplace_back("\n" + std::string(length + 1, ' ') + "|");
+
+		return res;
+	}
+
+	SourcePosition::SourcePosition(tokenizer::BorrowFile source_file, const usize source_start):
+		  SourcePosition(source_file, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
-		const SourceFile& source_file,
-		const usize       line,
-		const usize       column,
-		const usize       source_start,
-		const usize       source_end
+		tokenizer::BorrowFile source_file, const usize source_start, const usize source_end
 	):
-		  line(line),
-		  column(column),
 		  source_start(source_start),
 		  source_end(source_end),
 		  source_file(source_file) {
-		if (!source_file) throw base::LogicError("Invalid SourcePosition: No such file");
-		if (line == 0) throw base::LogicError("Invalid SourcePosition: line = 0");
-		if (column == 0) throw base::LogicError("Invalid SourcePosition: column = 0");
+		// Potentially allow for special circumstances
+		if (source_file == nullptr) throw base::LogicError("Invalid SourcePosition: No such file");
 		if (source_end < source_start)
 			throw base::LogicError("Invalid SourcePosition: source end before source start");
 		// allow EOF position
-		if (not(source_end == source_start and source_end == source_file->getContent().size())) {
-			if (source_end >= source_file->getContent().size())
+		if (not(source_end == source_start and source_end == source_file->getChars().size() - 1)) {
+			if (source_end >= source_file->getChars().size() - 1)
 				throw base::LogicError("Invalid SourcePosition: source end outside the file");
 		}
 	}
 
 	SourcePosition::SourcePosition(const SourcePosition& other, const usize source_end):
-		  SourcePosition(
-			  other.source_file, other.line, other.column, other.source_start, source_end
-		  ) {}
+		  SourcePosition(other.source_file, other.source_start, source_end) {}
 
-	usize SourcePosition::getColumn() const { return column; }
+	std::pair<usize, usize> SourcePosition::getStartLineColumn() const {
+		return source_file->getLineColumn(source_start);
+	}
 
-	usize SourcePosition::getLine() const { return line; }
+	std::pair<usize, usize> SourcePosition::getEndLineColumn() const {
+		return source_file->getLineColumn(source_end);
+	}
 
 	usize SourcePosition::getStart() const { return source_start; }
 
 	usize SourcePosition::getEnd() const { return source_end; }
 
-	SourcePosition::SourceFile SourcePosition::getSource() const { return source_file; }
+	tokenizer::BorrowFile SourcePosition::getSource() const { return source_file; }
 
 	std::vector<printer::MessageContent>
 		SourcePosition::genPrinterMessageContents(const printer::MessageContent& reason) const {
-		return { { "In file: " },
-			     { source_file->strView().data() },
-			     { ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
-			     reason,
-			     { "\n" },
-			     { "  |\n" },
-			     { std::to_string(line) },
-			     { " | " },
-			     { getSourceChars() + "\n" },
-			     { "  |\n" } };
+		if (source_file == nullptr) {
+			return {
+				{ "In unknown file: " },
+				reason,
+			};
+		}
+		auto [line, column]                      = getStartLineColumn();
+		std::vector<printer::MessageContent> res = {
+			{ "In file: " },
+			{ source_file->getPath().strView().data() },
+			{ ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
+			reason,
+			{ "\n" },
+		};
+		for (auto el: getPrettySourceLines()) res.push_back(std::move(el));
+		return res;
 	}
 
 	std::string SourcePosition::genStr(const std::string_view reason) const {
-		std::string output = "In file: ";
-		output += source_file->strView();
+		if (source_file == nullptr) {
+			std::string output = "In unknown file: ";
+			output += reason;
+			output += "\n";
+			return output;
+		}
+		auto [line, column] = getStartLineColumn();
+		std::string output  = "In file: ";
+		output += source_file->getPath().strView();
 		output += ":" + std::to_string(line) + ":" + std::to_string(column) + "\n";
 		output += reason;
 		output += "\n";
-		output += "  |\n";
-		output += std::to_string(line);
-		output += " | ";
-		output += getSourceChars() + "\n";
-		output += "  |\n";
+		for (const auto& el: getSourceLines()) output += el;
 		return output;
 	}
 }

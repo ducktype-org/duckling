@@ -10,11 +10,11 @@
 
 namespace pst {
 
-	PST parse(lexer::TokenData&& td) { return { std::move(td) }; }
+	PST parse(tokenizer::OwnFile&& file) { return { std::move(file) }; }
 
 	PST parse(const fs::FilePath& path) {
-		lexer::TokenData td = lexer::tokenizeFile(path);
-		return parse(std::move(td));
+		tokenizer::OwnFile file = lexer::tokenizeFile(path);
+		return parse(std::move(file));
 	}
 
 	void init() {

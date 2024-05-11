@@ -1,9 +1,11 @@
 #pragma once
 
-#include <printer/stream_printer.hpp>
-#include <filesystem/file.hpp>
 #include <diagnostic/logger.hpp>
+#include <filesystem/file.hpp>
+#include <printer/stream_printer.hpp>
+#include <token_file/file.hpp>
 #include <vector>
+
 #include "char.hpp"
 #include "token.hpp"
 
@@ -21,7 +23,7 @@ namespace lexer {
 		/**
 		 * @note if file decoding fails outputs the reason to cerr and throws LogicError
 		 */
-		explicit Lexer(const fs::FilePath& file);
+		explicit Lexer(tokenizer::BorrowFile);
 
 		[[nodiscard]]
 		TokenData tokenize();
@@ -93,18 +95,16 @@ namespace lexer {
 		 * @return std::string in format `(<line number>:<column number>)`
 		 */
 		[[nodiscard]]
-		std::string generateLineColumnInfo() const;
+		std::string generateLineColumnInfo(usize fwd = 0) const;
 
 		[[nodiscard]]
 		dia::SourcePosition currentPostion() const;
 
-		usize                         where  = 0;  ///< Current position in file
-		usize                         line   = 1;
-		usize                         column = 1;
-		std::shared_ptr<fs::FilePath> file;
-		fs::FileContent               file_content;
-		CharArray                     char_array;
-		Tokens                        tokens;
+		usize                 where = 0;  ///< Current position in file
+		tokenizer::BorrowFile file;
+		dia::Logger&          errorState;
+		CharArray&            char_array;
+		Tokens                tokens;
 
 		/**
 		 * @brief Informs whether to print messages about what tokens are created to the debug
@@ -118,7 +118,6 @@ namespace lexer {
 #endif
 		}
 
-		dia::Logger            errorState;
 		printer::StreamPrinter streamPrinter;
 
 		void addTokenMsg(usize begin, usize end, std::string_view token_type);

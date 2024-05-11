@@ -1,25 +1,27 @@
-#include "lexer_class.hpp"
+#include <diagnostic/logger.hpp>
+
 #include "classifications.hpp"
 #include "decode.hpp"
+#include "lexer_class.hpp"
 
 namespace lexer {
 	using Class = Classifications;
 
-	Lexer::Lexer(const fs::FilePath& file):
-		  file(std::make_shared<fs::FilePath>(file)),
-		  file_content(this->file->getContent()),
-		  char_array(decode<fs::Encoding::UTF8>(file_content.view(), errorState)) {
+	Lexer::Lexer(tokenizer::BorrowFile file):
+		  file(file),
+		  errorState(file->getLogger()),
+		  char_array(file->getChars()) {
 		if (errorState.bad()) {
 			errorState.dumpLog(false, std::cerr);
-			throw base::LogicError("Error while decoding");
+			throw base::LogicError("Lexer initialized with existing error");
 		}
 	}
 
 	TokenData Lexer::tokenize() {
 		tokens.clear();
 		codeblock();
-		dia::SourcePosition eof_pos(file, line, column, where);
-		return { std::move(tokens), Token::makeSentinelEof(eof_pos), file_content };
+		dia::SourcePosition eof_pos(file, where);
+		return { std::move(tokens), Token::makeSentinelEof(eof_pos) };
 	}
 
 	void Lexer::next() {
@@ -27,11 +29,8 @@ namespace lexer {
 			if (isEOL()) {
 				// handling of CR+LF as one newline
 				if (peek().is(0x0D) && peek(1).is(0x0A)) where++;
-				line++;
-				column = 1;
 				where++;
 			} else {
-				column++;
 				where++;
 			}
 		} else {
@@ -49,7 +48,8 @@ namespace lexer {
 
 	const Char& Lexer::peek(usize fwd) const { return char_array.at(where + fwd); }
 
-	std::string Lexer::generateLineColumnInfo() const {
+	std::string Lexer::generateLineColumnInfo(usize fwd) const {
+		auto [line, column] = file->getLineColumn(where + fwd);
 		return "(" + std::to_string(line) + ":" + std::to_string(column) + ")";
 	}
 
@@ -59,7 +59,7 @@ namespace lexer {
 				{ { "Add token: " },
 			      { std::string(token_type) },
 			      { "(" },
-			      { std::string(composeRaw(char_array, begin, end).stringView()) },
+			      { std::string(file->getCharRange(begin, end + 1).stringView()) },
 			      { ")" } },
 				printer::MessageType::DEBUG
 			));
@@ -78,7 +78,7 @@ namespace lexer {
 	}
 
 	void Lexer::parseSingleInto(Tokens& output) {
-		dia::SourcePosition sourceStart(file, line, column, where);
+		dia::SourcePosition sourceStart(file, where);
 		if (isEOF()) {
 			RIFT_PANIC("EOF encountered inside parseSingleInto");
 		}
@@ -170,7 +170,7 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "operator");
-		output.push_back(Token::makeOperator(composeRaw(char_array, begin, end), sourcePosition));
+		output.push_back(Token::makeOperator(file->getCharRange(begin, end + 1), sourcePosition));
 	}
 
 	void Lexer::nameHandler(Tokens& output) {
@@ -184,7 +184,7 @@ namespace lexer {
 
 		dia::SourcePosition sourcePosition(sourceStart, end);
 		std::string         message;
-		output.push_back(Token::makeIdentifier(composeRaw(char_array, begin, end), sourcePosition));
+		output.push_back(Token::makeIdentifier(file->getCharRange(begin, end + 1), sourcePosition));
 		if (output.back().getType() == Token::Type::Identifier)
 			addTokenMsg(begin, end, "identifier");
 		else if (output.back().getType() == Token::Type::Keyword)
@@ -200,7 +200,7 @@ namespace lexer {
 
 		dia::SourcePosition sourcePosition(sourceStart, end);
 		addTokenMsg(begin, end, "special");
-		output.push_back(Token::makeSpecial(composeRaw(char_array, begin, end), sourcePosition));
+		output.push_back(Token::makeSpecial(file->getCharRange(begin, end + 1), sourcePosition));
 	}
 
 	void Lexer::binLiteralHandler(Tokens& output) {
@@ -215,7 +215,7 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition));
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), sourcePosition));
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {
@@ -230,7 +230,7 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition));
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), sourcePosition));
 	}
 
 	void Lexer::decLiteralHandler(Tokens& output) {
@@ -261,7 +261,7 @@ namespace lexer {
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(composeRaw(char_array, begin, end), sourcePosition));
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), sourcePosition));
 	}
 
 	void Lexer::stringHandler(Tokens& output) {
@@ -301,7 +301,7 @@ namespace lexer {
 
 		addTokenMsg(begin, end, "string");
 		output.push_back(Token::makeString(
-			composeRaw(char_array, begin + 1, end - usize(closed)), sourcePosition
+			file->getCharRange(begin + 1, end + 1 - usize(closed)), sourcePosition
 		));
 	}
 
@@ -312,7 +312,7 @@ namespace lexer {
 		Token::BracketType bracket_type{ peek().value };
 		auto               group_end = peek().bracketPair();
 		if (tokenMessages())
-			streamPrinter.add({ { { base::strConcat("group begin(", line, ":", column, ")") } },
+			streamPrinter.add({ { { base::strConcat("group begin", generateLineColumnInfo()) } },
 			                    printer::MessageType::DEBUG });
 
 
@@ -325,8 +325,6 @@ namespace lexer {
 
 		end = where;
 
-		usize fixed_line   = line;
-		usize fixed_column = column;
 
 		if (peek().is(group_end))
 			next();  // par close
@@ -355,8 +353,8 @@ namespace lexer {
 
 		dia::SourcePosition sourcePosition(sourceStart, end);
 
-		dia::SourcePosition sentinelPosition(file, fixed_line, fixed_column, end);
-		auto                sentinelView = composeRaw(char_array, end, end);
+		dia::SourcePosition sentinelPosition(file, end);
+		auto                sentinelView = file->getCharRange(end, end + 1);
 		Token               sentinel     = Token::makeSentinelEnd(sentinelView, sentinelPosition);
 
 		output.push_back(Token::makeBracketGroup(
@@ -378,5 +376,5 @@ namespace lexer {
 
 	bool Lexer::isStringBegin() const { return tryRawValue('"'); }
 
-	dia::SourcePosition Lexer::currentPostion() const { return { file, line, column, where }; }
+	dia::SourcePosition Lexer::currentPostion() const { return { file, where }; }
 }

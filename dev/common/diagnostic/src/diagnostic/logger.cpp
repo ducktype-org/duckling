@@ -1,5 +1,4 @@
 #include "logger.hpp"
-#include <filesystem/file.hpp>
 
 namespace dia {
 	static void dump_messages(
@@ -79,11 +78,7 @@ namespace dia {
 	class ObsoleteErrorWithPrinterMessage final: public Error {
 	public:
 		explicit ObsoleteErrorWithPrinterMessage(printer::MessageContent message):
-			  // Had to pick a file that always exists and behaves somewhat normally.
-		      // /dev/zero does not work.
-			  Error(
-				  { std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")), 1, 1, 1 }
-			  ),
+			  Error(dia::SourcePosition::fakePosition()),
 			  message(std::move(message)) {}
 
 	private:

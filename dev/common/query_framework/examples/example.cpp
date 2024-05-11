@@ -51,10 +51,8 @@ struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		// Log something, with example file path.
-		context.log(base::make_unique<InfoInQuery1>(dia::SourcePosition{
-			std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")), 1, 1, 1 }));
-		context.log(base::make_unique<ErrorInQuery1>(dia::SourcePosition{
-			std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")), 1, 1, 1 }));
+		context.log(base::make_unique<InfoInQuery1>(dia::SourcePosition::fakePosition()));
+		context.log(base::make_unique<ErrorInQuery1>(dia::SourcePosition::fakePosition()));
 		return context.callExt<SquareValue>(key);
 	}
 

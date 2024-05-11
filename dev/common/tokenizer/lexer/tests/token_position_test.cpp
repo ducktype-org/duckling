@@ -1,4 +1,5 @@
 #include <filesystem/file.hpp>
+#include <token_file/file.hpp>
 #include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
@@ -19,8 +20,9 @@ void print(const lexer::Tokens& tokens, std::ostream& out, const std::string& in
 		else
 			out << "\"<EMPTY>\", ";
 
-		out << R"("line": ")" << position.getLine() << "\",";
-		out << R"("column": ")" << position.getColumn() << "\",";
+		auto [line, column] = position.getStartLineColumn();
+		out << R"("line": ")" << line << "\",";
+		out << R"("column": ")" << column << "\",";
 		out << R"("raw_start": ")" << position.getStart() << "\",";
 		out << R"("raw_end": ")" << position.getEnd() << "\",";
 
@@ -35,7 +37,7 @@ class LexerPositionTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS LexerPositionTest
 
-	std::optional<lexer::TokenData> td;
+	tokenizer::OwnFile td;
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Lexer: Token Position Tests") {
@@ -49,8 +51,7 @@ private:
 		td = lexer::tokenizeFile(file);
 
 		std::stringstream result_stream;
-		print(td->tokens, result_stream);
-		std::cout << result_stream.str() << std::endl;
+		print(td->getTokenData().tokens, result_stream);
 
 		auto corr_json = fs::getSimpleFileContent(path("fun_position.json"));
 		auto corr      = corr_json.view().stringView();

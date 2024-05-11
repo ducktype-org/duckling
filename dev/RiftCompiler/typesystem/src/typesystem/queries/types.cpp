@@ -134,12 +134,7 @@ namespace ts {
 			if (!cache.contains({ size, signedness })) {
 				// @FIXME: provide proper SourcePosition.
 				context.log(base::make_unique<ErrorBadIntegralSize>(
-					dia::SourcePosition{
-						std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")),
-						1,
-						1,
-						1 },
-					size
+					dia::SourcePosition::fakePosition(), size
 				));
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
 				return &cache.at({ 128, signedness });
@@ -204,14 +199,9 @@ namespace ts {
 
 			if (!cache.contains(size)) {
 				// @FIXME: provide proper SourcePosition.
-				context.log(base::make_unique<ErrorBadFloatSize>(
-					dia::SourcePosition{
-						std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")),
-						1,
-						1,
-						1 },
-					size
-				));
+				context.log(
+					base::make_unique<ErrorBadFloatSize>(dia::SourcePosition::fakePosition(), size)
+				);
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
 				return &cache.at(128);
 			}
