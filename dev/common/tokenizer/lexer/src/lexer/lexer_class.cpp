@@ -1,7 +1,8 @@
-#include "lexer_class.hpp"
+#include <diagnostic/logger.hpp>
+
 #include "classifications.hpp"
 #include "decode.hpp"
-#include "diagnostic/logger.hpp"
+#include "lexer_class.hpp"
 
 namespace lexer {
 	using Class = Classifications;
