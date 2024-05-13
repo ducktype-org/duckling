@@ -17,7 +17,7 @@ struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
 
 	protected:
 		[[nodiscard]]
-		printer::PrinterContent toMessageContentBrief() const override {
+		printer::PrinterContent toPrinterContentBrief() const override {
 			return { "Some random log from Query1." };
 		}
 
@@ -34,7 +34,7 @@ struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
 
 	protected:
 		[[nodiscard]]
-		printer::PrinterContent toMessageContentBrief() const override {
+		printer::PrinterContent toPrinterContentBrief() const override {
 			return { "An example error in Query1." };
 		}
 
@@ -127,6 +127,9 @@ QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_CyclicQuery, "Cyclic query")
 uint64_t SquareValue(query::Context&, uint64_t v) { return v * v; }
 
 int main() {
+	// The instant logs may be printed in a different order than when they are dumped,
+	// because the instant logging is instant, while the dumping is ordered.
+
 	std::cout << query::queryEntryPoint<Query2>(2) << "\n";
 	query::debugPrintDependencyGraph();
 	std::cout << "\n";

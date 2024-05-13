@@ -9,6 +9,7 @@
 #include <printer/stream_printer.hpp>
 
 #include "message.hpp"
+#include "diagnostic_converters.hpp"
 
 namespace dia {
 	/**
@@ -50,15 +51,17 @@ namespace dia {
 		 */
 		void
 			log(base::unique_ptr<Message> message_ptr,
-		        bool                      immediately_dump = IMMEDIATELY_DUMP,
-		        bool                      detailed         = true);
+		        bool                      detailed         = true,
+		        bool                      immediately_dump = IMMEDIATELY_DUMP);
 
 		/**
 		 * @brief Print all logged messages to a stream.
 		 *
+		 * @tparam Converter The DiagnosticToStringConverter instance to use when dumping.
 		 * @param detailed Whether to print detailed messages.
 		 * @param stream The stream to print to.
 		 */
+		template<DiagnosticToStringConverter Converter = DiagnosticToUserConverter>
 		void dumpLog(bool detailed, std::ostream& stream = std::cerr) const;
 
 		/**

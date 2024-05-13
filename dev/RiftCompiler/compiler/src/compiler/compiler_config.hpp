@@ -15,7 +15,7 @@ namespace compiler {
 		std::string output;
 	};
 
-	CompilerConfig   fromArgs(clap::CLIArgs args);
+	CompilerConfig              fromArgs(clap::CLIArgs args);
 	printer::PrinterContentsSeq generateHelpMessage(const clap::exceptions::HelpException& e);
 
 }

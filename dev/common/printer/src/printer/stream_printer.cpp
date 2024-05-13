@@ -11,7 +11,7 @@ namespace printer {
 		);
 	}
 
-	void StreamPrinter::print(const std::vector<PrinterContent> & contents, std::ostream& out) {
+	void StreamPrinter::print(const std::vector<PrinterContent>& contents, std::ostream& out) {
 		for (auto& c: contents) print(c, out);
 	}
 
@@ -29,5 +29,7 @@ namespace printer {
 		out << "\033[0m";
 	}
 
-	void StreamPrinter::newline(std::ostream& out) { print("\n", out); }
+	void StreamPrinter::newline(int times, std::ostream& out) {
+		print(std::string(times, '\n'), out);
+	}
 }

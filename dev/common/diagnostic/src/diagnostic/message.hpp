@@ -47,18 +47,11 @@ namespace dia {
 		 */
 		enum class Severity { Error, Warning, Info };
 
+		/**
+		 * @brief The number of different Severity options.
+		 */
 		static constexpr int NUM_SEVERITIES = 3;
 
-	private:
-		/**
-		 * @brief Converts a message severity to a printable PrinterContent.
-		 * @param s The severity of the message.
-		 * @return The stringified severity. All outputs are of equal length.
-		 */
-		[[nodiscard]]
-		static printer::PrinterContent severityToMessageContent(Severity s);
-
-	public:
 		/**
 		 * @brief The domain, or thematic focus of the error.
 		 *
@@ -81,12 +74,12 @@ namespace dia {
 			                       ///< immutability rules, reference uniqueness rules, etc.
 
 			/* Warning domains */
-			Unused,     ///< For warnings about dead, unused code, like unused variables.
-			Unoptimal,  ///< For warnings about code that can be optimised or shortened.
-			TooLax,     ///< For warnings about missing annotations improving safety,
-			            ///< e.g. missing "final" in class declaration, or unused
-			            ///< annotations decreasing safety, e.g. var instead of let
-			            ///< in a variable declaration that is not mutated.
+			Unused,      ///< For warnings about dead, unused code, like unused variables.
+			Suboptimal,  ///< For warnings about code that can be optimised or shortened.
+			TooLax,      ///< For warnings about missing annotations improving safety,
+			             ///< e.g. missing "final" in class declaration, or unused
+			             ///< annotations decreasing safety, e.g. var instead of let
+			             ///< in a variable declaration that is not mutated.
 
 			/* Info domains */
 			// Currently none
@@ -95,22 +88,13 @@ namespace dia {
 			Misc,  ///< For everything else.
 		};
 
-	private:
-		/**
-		 * @brief Converts a message domain to a printable PrinterContent.
-		 * @param d The domain of the message.
-		 * @return The stringified domain.
-		 */
-		[[nodiscard]]
-		static printer::PrinterContent domainToMessageContent(Domain d);
-
 	protected:
 		/**
 		 * @brief Convert the Message to a printer::PrinterContent with the diagnostic minimum.
 		 * @return The brief printer::PrinterContent ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::PrinterContent toMessageContentBrief() const
+		virtual printer::PrinterContent toPrinterContentBrief() const
 			= 0;
 
 		/**
@@ -119,11 +103,18 @@ namespace dia {
 		 * @return The detailed printer::PrinterContent ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::PrinterContent toMessageContentDetailed() const {
+		virtual printer::PrinterContent toPrinterContentDetailed() const {
 			// By default, the detailed version is the same as the brief version.
-			return toMessageContentBrief();
+			return toPrinterContentBrief();
 		}
 
+		/**
+		 * @brief Construct a Message from a relevant SourcePosition.
+		 * @param source_position The SourcePosition relevant to this Message.
+		 */
+		explicit Message(const SourcePosition& source_position): source_position(source_position) {}
+
+	public:
 		/**
 		 * @brief Get a printer::PrinterContent ready to be printed for the user to view.
 		 *
@@ -135,24 +126,9 @@ namespace dia {
 		 * @return A printer::PrinterContent ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		printer::PrinterContent getBaseMessageContent(bool detailed) const;
-
-		/**
-		 * @brief Construct a Message from a relevant SourcePosition.
-		 * @param source_position The SourcePosition relevant to this Message.
-		 */
-		explicit Message(const SourcePosition& source_position): source_position(source_position) {}
-
-	public:
-		/**
-		 * @brief Get a printer::MessageContent sequence ready to be printed for the user to view.
-		 * @param detailed Whether to include more details than the diagnostic minimum. These
-		 * details may include extra information about the source or nature of the error and may be
-		 * used to explain the error to beginners.
-		 * @return An std::vector<printer::PrinterContent> ready to be printed for the user.
-		 */
-		[[nodiscard]]
-		std::vector<printer::PrinterContent> toPrinterContents(bool detailed) const;
+		printer::PrinterContent getPrinterContent(bool detailed) const {
+			return detailed ? toPrinterContentBrief() : toPrinterContentDetailed();
+		}
 
 		/**
 		 * @brief Get the Severity of the Message.
@@ -171,6 +147,24 @@ namespace dia {
 			= 0;
 
 		/**
+		 * @brief Get the SourcePosition relevant to this Message.
+		 * @return The SourcePosition relevant to this Message.
+		 */
+		[[nodiscard]]
+		SourcePosition getSourcePosition() const {
+			return source_position;
+		}
+
+		/**
+		 * @brief Get the notes added to this Message.
+		 * @return The notes added to this Message.
+		 */
+		[[nodiscard]]
+		const std::vector<base::unique_ptr<Note>>& getNotes() const {
+			return notes;
+		}
+
+		/**
 		 * @brief Add a Note to this Message.
 		 *
 		 * @param note_ptr A base::unique_ptr to the Note to be added.
@@ -178,6 +172,26 @@ namespace dia {
 		void addNote(base::unique_ptr<Note> note_ptr) { notes.emplace_back(note_ptr.release()); }
 
 		virtual ~Message() noexcept = default;
+	};
+
+	/**
+	 * @brief Concept for a type which supports converting a Message to a string representation.
+	 *
+	 * Examples include DiagnosticToUserConverter and DiagnosticToJSONConverter.
+	 *
+	 * @note This is a concept instead of an abstract base class because the methods are static,
+	 * and C++ does not support static virtual methods.
+	 */
+	template<typename Converter>
+	concept DiagnosticToStringConverter = requires(
+		base::c_borrow_ptr<Message> message, base::c_borrow_ptr<Note> note, bool detailed
+	) {
+		{
+			Converter::toPrinterContents(message, detailed)
+		} -> std::same_as<printer::PrinterContentsSeq>;
+		{
+			Converter::toPrinterContents(note, detailed)
+		} -> std::same_as<printer::PrinterContentsSeq>;
 	};
 
 	/**
@@ -266,7 +280,7 @@ namespace dia {
 		 * @return The brief printer::PrinterContent ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::PrinterContent toMessageContentBrief()
+		virtual printer::PrinterContent toPrinterContentBrief() const
 			= 0;
 
 		/**
@@ -275,26 +289,33 @@ namespace dia {
 		 * @return The detailed printer::PrinterContent ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::PrinterContent toMessageContentDetailed() {
+		virtual printer::PrinterContent toPrinterContentDetailed() const {
 			// By default, the detailed version is the same as the brief version.
-			return toMessageContentBrief();
+			return toPrinterContentBrief();
 		}
 
 	public:
 		/**
-		 * @brief Convert the Note to a sequence of printer::PrinterContent.
-		 *
-		 * Typically, this takes the content of the note, then decorates it with a coloured "NOTE"
-		 * prefix.
-		 *
-		 * This method is virtual, because one may want to add other decorations, like a location.
-		 * Unlike a Message, a Note is not required to contain a SourcePosition.
-		 *
-		 * @param detailed Whether to include more details than the diagnostic minimum.
-		 * @return The printer::PrinterContentsSeq ready to be printed for the user.
+		 * @brief Get the SourcePosition relevant to this Note, if it exists.
+		 * @return The SourcePosition relevant to this Note.
 		 */
 		[[nodiscard]]
-		virtual printer::PrinterContentsSeq toPrinterContents(bool detailed);
+		virtual base::Optional<SourcePosition> getSourcePosition() const {
+			return {};
+		}
+
+		/**
+		 * @brief Get a printer::PrinterContent ready to be printed for the user to view.
+		 *
+		 * @param detailed Whether to include more details than the diagnostic minimum. These
+		 * details may include extra information about the source or nature of the message and
+		 * may be used to explain the message to beginners.
+		 * @return A printer::PrinterContent ready to be printed for the user.
+		 */
+		[[nodiscard]]
+		printer::PrinterContent getPrinterContent(bool detailed) const {
+			return detailed ? toPrinterContentBrief() : toPrinterContentDetailed();
+		}
 
 		virtual ~Note() noexcept = default;
 	};
@@ -316,15 +337,12 @@ namespace dia {
 
 	public:
 		/**
-		 * @copydoc Note
-		 *
-		 * This override adds a source location decoration to the printed message.
+		 * @copydoc Note::getSourcePosition
 		 */
-		// @FIXME: unimplemented. Pending decision on how to split responsibility between
-		// this method and SourcePosition::genStr.
 		[[nodiscard]]
-		printer::PrinterContentsSeq toPrinterContents(bool detailed) override
-			= 0;
+		base::Optional<SourcePosition> getSourcePosition() const override {
+			return { source_position };
+		}
 	};
 
 	/***************************

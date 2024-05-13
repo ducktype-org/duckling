@@ -28,7 +28,7 @@ Usage example
     protected:
         dia::Message::Domain getDomain() const override { /* ... */ }
 
-        printer::PrinterContent toMessageContentBrief() const override {
+        printer::PrinterContent toPrinterContentBrief() const override {
             // ...
         }
     };
@@ -53,14 +53,14 @@ inherit after the ``Error``, ``Warning``, or ``Info`` abstract classes. Then, tw
 First, is the ``getDomain()`` method. It's straight forward. Simply indicate which ``dia::Message::Domain`` the message
 pertains to. If no domain suits your needs and it is reasonable to add a new domain, feel free to do so.
 
-Second, is the ``toMessageContentBrief()`` method. It describes the cause of the message as briefly as possible, while
+Second, is the ``toPrinterContentBrief()`` method. It describes the cause of the message as briefly as possible, while
 providing the user with enough information to eliminate the error, e.g. "Redeclaration of symbol <symbol_name>."
 
-Third, is the optionally overridable ``toMessageContentDetailed()`` method. It behaves similarly to the ``toMessageContentBrief()``
+Third, is the optionally overridable ``toPrinterContentDetailed()`` method. It behaves similarly to the ``toPrinterContentBrief()``
 method, but attempts to give more context, for example information useful to beginners, or examples of when the message may be thrown.
 By default, it is implemented to return the exact same information as its brief counterpart.
 
-Be careful not to override the (non-virtual) ``getBaseMessageContent(bool)`` method.
+Be careful not to override the (non-virtual) ``getPrinterContent(bool)`` method.
 
 ``addNote``
 ^^^^^^^^^^^

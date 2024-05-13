@@ -1,16 +1,22 @@
 #include "logger.hpp"
+#include "diagnostic_converters.hpp"
 
 namespace dia {
 	void Logger::log(
 		base::unique_ptr<Message> message_ptr, const bool immediately_dump, const bool detailed
 	) {
-		if (immediately_dump)
-			printer::StreamPrinter::print(message_ptr->toPrinterContents(detailed));
+		if (immediately_dump) {
+			printer::StreamPrinter::print(
+				DiagnosticToUserConverter::toPrinterContents(message_ptr.borrow(), detailed)
+			);
+			printer::StreamPrinter::newline(2);
+		}
 
 		const int severity_id = static_cast<int>(message_ptr->getSeverity());
 		message_log.at(severity_id).emplace_back(std::move(message_ptr));
 	}
 
+	template<DiagnosticToStringConverter Converter>
 	void Logger::dumpLog(const bool detailed, std::ostream& stream) const {
 		// Currently, errors are dumped first, then warnings, then infos.
 		// It is not determined whether this is how we want it to stay.
@@ -19,11 +25,16 @@ namespace dia {
 		// in the source code, or maybe we will choose a completely separate strategy.
 		// @TODO: resolve the above.
 		for (int severity_id = 0; severity_id < Message::NUM_SEVERITIES; severity_id++) {
-			for (auto& message: message_log.at(severity_id))
-				printer::StreamPrinter::print(message->toPrinterContents(detailed), stream);
-			printer::StreamPrinter::newline(stream);
+			for (auto& message: message_log.at(severity_id)) {
+				printer::StreamPrinter::print(
+					Converter::toPrinterContents(message.borrow(), detailed), stream
+				);
+				printer::StreamPrinter::newline(2, stream);
+			}
 		}
 	}
+
+	template void Logger::dumpLog<DiagnosticToUserConverter>(bool, std::ostream&) const;
 
 	usize Logger::messageCount(Message::Severity s) const {
 		return message_log.at(static_cast<int>(s)).size();
@@ -50,7 +61,7 @@ namespace dia {
 
 	protected:
 		[[nodiscard]]
-		printer::PrinterContent toMessageContentBrief() const override {
+		printer::PrinterContent toPrinterContentBrief() const override {
 			return { message };
 		}
 
@@ -75,7 +86,7 @@ namespace dia {
 
 	protected:
 		[[nodiscard]]
-		printer::PrinterContent toMessageContentBrief() const override {
+		printer::PrinterContent toPrinterContentBrief() const override {
 			return message;
 		}
 
