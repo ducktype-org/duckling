@@ -3,7 +3,7 @@
  * @brief This file describes the abstractions and interface of diagnostic messages in the compiler.
  *
  * All classes in this file are abstract, thus uninstantiable.
- * Any concrete Message subclasses should extend the Error, Warning, or Info abstract classes.
+ * Any concrete Message subclasses should extend the Error, Warning, Info, or Hint abstract classes.
  * They should be defined as locally as possible.
  */
 
@@ -20,12 +20,11 @@ namespace dia {
 	 * @brief Abstract base class for storing diagnostic messages generated during the compilation
 	 * process.
 	 *
-	 * Not to be confused with printer::Message.
+	 * Each dia::Message can be converted to a printer::printerContentsSeq via the method
+	 * toPrinterContents of a DiagnosticToPrinterConverter.
 	 *
-	 * Each dia::Message can be converted to a printer::MessagePack via the method toMessagePack.
-	 *
-	 * A Message can be either an Error, Warning, or Info. It must not be extended with
-	 * the exception of these three cases.
+	 * A Message can be either an Error, Warning, Info, or Hint. It must not be extended with
+	 * the exception of these four cases.
 	 *
 	 * A Message must be supplied with a SourcePosition. It may be supplied with
 	 * an arbitrary number of Notes, which provide additional, helpful information.
@@ -45,12 +44,12 @@ namespace dia {
 		 * This enum may seem redundant, but together with Message::getSeverity, it is a convenient
 		 * way to type-match.
 		 */
-		enum class Severity { Error, Warning, Info };
+		enum class Severity { Error, Warning, Info, Hint };
 
 		/**
 		 * @brief The number of different Severity options.
 		 */
-		static constexpr int NUM_SEVERITIES = 3;
+		static constexpr int NUM_SEVERITIES = 4;
 
 		/**
 		 * @brief The domain, or thematic focus of the error.
@@ -60,8 +59,9 @@ namespace dia {
 		 *
 		 * There are no requirements put upon the set of domains, other than to use common sense.
 		 *
-		 * The domains for all message types (Error, Warning, and Info) are defined in the top-level
-		 * Message class, so as to make it easier to guarantee consistency in implementation.
+		 * The domains for all message types (Error, Warning, Info, and Hint)
+		 * are defined in the top-level Message class, so as to make it easier
+		 * to guarantee consistency in implementation.
 		 */
 		enum class Domain {
 			/* Error domains */
@@ -183,7 +183,7 @@ namespace dia {
 	 * and C++ does not support static virtual methods.
 	 */
 	template<typename Converter>
-	concept DiagnosticToStringConverter = requires(
+	concept DiagnosticToPrinterConverter = requires(
 		base::c_borrow_ptr<Message> message, base::c_borrow_ptr<Note> note, bool detailed
 	) {
 		{
@@ -197,7 +197,8 @@ namespace dia {
 	/**
 	 * @brief Abstract base class for storing errors generated during the compilation process.
 	 *
-	 * Each Error can be converted to a printer::MessagePack via the method toMessagePack.
+	 * Each Error can be converted to a printer::printerContentsSeq via the method
+	 * toPrinterContents of a DiagnosticToPrinterConverter.
 	 *
 	 * An Error must be supplied with a SourcePosition. It may be supplied with an arbitrary
 	 * number of Notes, which provide additional, helpful information.
@@ -220,7 +221,8 @@ namespace dia {
 	/**
 	 * @brief Abstract base class for storing warnings generated during the compilation process.
 	 *
-	 * Each Warning can be converted to a printer::MessagePack via the method toMessagePack.
+	 * Each Warning can be converted to a printer::printerContentsSeq via the method
+	 * toPrinterContents of a DiagnosticToPrinterConverter.
 	 *
 	 * An Warning must be supplied with a SourcePosition. It may be supplied with an arbitrary
 	 * number of Notes, which provide additional, helpful information.
@@ -244,7 +246,8 @@ namespace dia {
 	 * @brief Abstract base class for storing auxiliary diagnostic information generated during the
 	 * compilation process.
 	 *
-	 * Each Info can be converted to a printer::MessagePack via the method toMessagePack.
+	 * Each Info can be converted to a printer::printerContentsSeq via the method
+	 * toPrinterContents of a DiagnosticToPrinterConverter.
 	 *
 	 * An Info must be supplied with a SourcePosition. It may be supplied with an arbitrary
 	 * number of Notes, which provide additional, helpful information.
@@ -265,9 +268,37 @@ namespace dia {
 	};
 
 	/**
+	 * @brief Abstract base class for storing auxiliary diagnostic information generated during the
+	 * compilation process.
+	 *
+	 * Each Hint can be converted to a printer::printerContentsSeq via the method
+	 * toPrinterContents of a DiagnosticToPrinterConverter.
+	 *
+	 * A Hint must be supplied with a SourcePosition. It may be supplied with an arbitrary
+	 * number of Notes, which provide additional, helpful information.
+	 */
+	class Hint: public Message {
+		[[nodiscard]]
+		Severity getSeverity() const final {
+			return Severity::Hint;
+		}
+
+	protected:
+		/**
+		 * @brief Construct a Hint from a relevant SourcePosition.
+		 *
+		 * @copydetails Message::Message
+		 */
+		explicit Hint(const SourcePosition& source_position): Message(source_position) {}
+	};
+
+	/**
 	 * @brief A supplementary piece of information aimed to enhance a dia::Message.
 	 *
 	 * Examples of a Note include "note: previous declaration here" in a redeclaration message.
+	 *
+	 * Each Note can be converted to a printer::printerContentsSeq via the method
+	 * toPrinterContents of a DiagnosticToPrinterConverter.
 	 *
 	 * Each Note has two (not necessarily different) printable messages. One brief,
 	 * and one detailed. The latter may contain extra information about the source
@@ -352,7 +383,7 @@ namespace dia {
 	template<typename BASE_MESSAGE_CLASS>
 	concept ValidBaseMessageClass
 		= std::same_as<BASE_MESSAGE_CLASS, Error> || std::same_as<BASE_MESSAGE_CLASS, Warning>
-	   || std::same_as<BASE_MESSAGE_CLASS, Info>;
+	   || std::same_as<BASE_MESSAGE_CLASS, Info> || std::same_as<BASE_MESSAGE_CLASS, Hint>;
 
 	/**
 	 * @brief Placeholder message class for when you need to log a message but are
