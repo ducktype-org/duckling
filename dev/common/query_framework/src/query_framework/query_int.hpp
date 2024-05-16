@@ -43,6 +43,11 @@ namespace query::detail {
 		INTERNAL_QUERY_INTERFACE_BOILERPLATE                                     \
 	};
 
+/**
+ * @brief Macro to be used as a struct signature when implementing a query.
+ * @param query_type Name of the query
+ * @param PResult Type returned by the Provide method
+ */
 #define IMPLEMENT_QUERY(query_type, PResult) \
 	ImplementationOf_##query_type final: public query::QueryImplementation<query_type, PResult>
 
