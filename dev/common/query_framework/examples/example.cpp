@@ -127,13 +127,13 @@ QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQuery);
 uint64_t SquareValue(query::Context&, uint64_t v) { return v * v; }
 
 int main() {
-	std::cout << query::queryEntryPoint<Query2>(2) << "\n";
+	std::cout << query::entryPoint<Query2>(2) << "\n";
 	query::debugPrintDependencyGraph();
 	std::cout << "\n";
 
 	query::detail::ContextType::logger.dumpLog(true);
 
-	std::cout << query::queryEntryPoint<CyclicQuery>(0) << "\n";
+	std::cout << query::entryPoint<CyclicQuery>(0) << "\n";
 
 	return 0;
 }

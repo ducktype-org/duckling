@@ -74,7 +74,7 @@ namespace hir {
 		  pst_element(std::move(pst_element)) {}
 
 	void TopLevelSymbol::calculateType() {
-		type = ts::TypeDesc(query::queryEntryPoint<ts::QueryModuleType>({}));
+		type = ts::TypeDesc(query::entryPoint<ts::QueryModuleType>({}));
 	}
 
 	void TopLevelSymbol::analyzeAll() { getAll(); }
@@ -95,7 +95,7 @@ namespace hir {
 	}
 
 	void NamespaceSymbol::calculateType() {
-		type = ts::TypeDesc(query::queryEntryPoint<ts::QueryNamespaceType>({}));
+		type = ts::TypeDesc(query::entryPoint<ts::QueryNamespaceType>({}));
 	}
 
 	void NamespaceSymbol::analyzeAll() { getAll(); }
@@ -166,7 +166,7 @@ namespace hir {
 
 	void AliasSymbol::calculateType() {
 		// @TODO
-		type = query::queryEntryPoint<ts::QueryIntegralType>({ 64 });
+		type = query::entryPoint<ts::QueryIntegralType>({ 64 });
 	}
 
 	void AliasSymbol::calculateLinkedLookup() {
@@ -218,7 +218,7 @@ namespace hir {
 
 	void UsingSymbol::calculateType() {
 		// @TODO
-		type = query::queryEntryPoint<ts::QueryIntegralType>({ 64 });
+		type = query::entryPoint<ts::QueryIntegralType>({ 64 });
 	}
 
 	void UsingSymbol::analyzeAll() {

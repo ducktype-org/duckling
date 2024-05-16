@@ -35,7 +35,7 @@ private:
 
 		ts::ClassInfo member_class = ts::ClassInfo::create(base::StrId("Member"), {});
 
-		auto bool_type = query::queryEntryPoint<ts::QueryBoolType>({});
+		auto bool_type = query::entryPoint<ts::QueryBoolType>({});
 
 		usize     parent_counter                  = 0;
 		exec::CTV parent_result_ctv               = exec::alloc_new(bool_type, bool_type.getSize());
@@ -51,7 +51,7 @@ private:
 			return parent_result_ctv;
 		};
 		operation::TypedOperation parent_eq{ fun,
-			                                 query::queryEntryPoint<ts::QueryFunctionType>(
+			                                 query::entryPoint<ts::QueryFunctionType>(
 												 { { parent_class, parent_class }, bool_type }
 											 ) };
 		operation::addDefault(operation::Defaultable::Equality, parent_class, parent_eq);
@@ -62,7 +62,7 @@ private:
 			return member_result_ctv;
 		};
 		operation::TypedOperation member_eq{ fun2,
-			                                 query::queryEntryPoint<ts::QueryFunctionType>(
+			                                 query::entryPoint<ts::QueryFunctionType>(
 												 { { member_class, member_class }, bool_type }
 											 ) };
 		operation::addDefault(operation::Defaultable::Equality, member_class, member_eq);
@@ -125,7 +125,7 @@ private:
 
 		ts::ClassInfo member_class = ts::ClassInfo::create(base::StrId("member"), {});
 
-		auto int_type = query::queryEntryPoint<ts::QueryIntegralType>({ 8 });
+		auto int_type = query::entryPoint<ts::QueryIntegralType>({ 8 });
 
 		usize     parent_counter                    = 0;
 		exec::CTV parent_result_ctv                 = exec::alloc_new(int_type, int_type.getSize());
@@ -141,7 +141,7 @@ private:
 			return parent_result_ctv;
 		};
 		operation::TypedOperation parent_comp{ fun,
-			                                   query::queryEntryPoint<ts::QueryFunctionType>(
+			                                   query::entryPoint<ts::QueryFunctionType>(
 												   { { parent_class, parent_class }, int_type }
 											   ) };
 		operation::addDefault(operation::Defaultable::Compare, parent_class, parent_comp);
@@ -152,7 +152,7 @@ private:
 			return member_result_ctv;
 		};
 		operation::TypedOperation member_comp{ fun2,
-			                                   query::queryEntryPoint<ts::QueryFunctionType>(
+			                                   query::entryPoint<ts::QueryFunctionType>(
 												   { { member_class, member_class }, int_type }
 											   ) };
 		operation::addDefault(operation::Defaultable::Compare, member_class, member_comp);
@@ -214,9 +214,9 @@ private:
 	void simple_int_test() {
 		static_assert(SIZE == sizeof(T) * 8);
 		// @TODO use the T and SIZE
-		auto           int_type = query::queryEntryPoint<ts::QueryIntegralType>({ SIZE });
+		auto           int_type = query::entryPoint<ts::QueryIntegralType>({ SIZE });
 		ts::TypeDesc<> int_desc{ int_type };
-		ts::TypeDesc<> bool_desc{ query::queryEntryPoint<ts::QueryBoolType>({}) };
+		ts::TypeDesc<> bool_desc{ query::entryPoint<ts::QueryBoolType>({}) };
 
 
 		/*			INT TESTS 		*/
@@ -265,9 +265,9 @@ private:
 	}
 
 	void class_test() {
-		auto           int_type = query::queryEntryPoint<ts::QueryIntegralType>({ 8 });
+		auto           int_type = query::entryPoint<ts::QueryIntegralType>({ 8 });
 		ts::TypeDesc<> int_desc{ int_type };
-		ts::TypeDesc<> bool_desc{ query::queryEntryPoint<ts::QueryBoolType>({}) };
+		ts::TypeDesc<> bool_desc{ query::entryPoint<ts::QueryBoolType>({}) };
 
 		/*		CLASS SETUP */
 		/*
@@ -327,7 +327,7 @@ private:
 				ctvs[0].getData<int8_t>().front() = 27;
 				return ctvs[0];
 			},
-			query::queryEntryPoint<ts::QueryFunctionType>({ { class_A }, class_A })
+			query::entryPoint<ts::QueryFunctionType>({ { class_A }, class_A })
 		};
 
 		operation::addDefault(
@@ -359,7 +359,7 @@ private:
 
 				return ctvs[0];
 			},
-			query::queryEntryPoint<ts::QueryFunctionType>({ { class_B }, class_B })
+			query::entryPoint<ts::QueryFunctionType>({ { class_B }, class_B })
 		};
 
 		operation::addDefault(
@@ -424,7 +424,7 @@ private:
 		        A			B
 		*/
 
-		ts::TypeDesc<> int_desc(query::queryEntryPoint<ts::QueryIntegralType>({ 8 }));
+		ts::TypeDesc<> int_desc(query::entryPoint<ts::QueryIntegralType>({ 8 }));
 		auto           symbol_z = symtable::SymbolId::next();
 		auto           Z = ts::ClassInfo::create(base::StrId("Z"), { { int_desc, symbol_z } });
 
@@ -434,7 +434,7 @@ private:
 		};
 
 		operation::TypedOperation construct_z_t{
-			construct_z, query::queryEntryPoint<ts::QueryFunctionType>({ { Z }, Z })
+			construct_z, query::entryPoint<ts::QueryFunctionType>({ { Z }, Z })
 		};
 
 		operation::addDefault(operation::Defaultable::ConstructEmpty, Z, construct_z_t);

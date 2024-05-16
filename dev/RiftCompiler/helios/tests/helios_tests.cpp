@@ -24,15 +24,15 @@ public:
 
 private:
 	void testI32Consts() {
-		auto constants_module = query::queryEntryPoint<compiler::frontend::QueryModuleTree>(
+		auto constants_module = query::entryPoint<compiler::frontend::QueryModuleTree>(
 			fs::FilePath(path("constants"))
 		);
 
 		auto root_scope
-			= query::queryEntryPoint<compiler::helios::QueryRootScopeOf>(constants_module);
+			= query::entryPoint<compiler::helios::QueryRootScopeOf>(constants_module);
 
 		auto symbols_in_module
-			= query::queryEntryPoint<compiler::helios::QuerySymbolsInScope>(root_scope);
+			= query::entryPoint<compiler::helios::QuerySymbolsInScope>(root_scope);
 
 		auto get_chain = [&](auto chain) {
 			auto                         symbols = base::strSplit(chain, ".");
@@ -41,16 +41,16 @@ private:
 			for (auto&& sym: symbols) {
 				auto symbol
 					= first_symbol
-				        ? query::queryEntryPoint<compiler::helios::QueryLookupInScopeAndParents>(
+				        ? query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
 							{ root_scope, base::StrId(sym.c_str()), true }
 						)
-				        : query::queryEntryPoint<compiler::helios::QueryLookupInSymbol>({
+				        : query::entryPoint<compiler::helios::QueryLookupInSymbol>({
 							result.back(),
 							base::StrId(sym.c_str()),
 							false,
 						});
 				for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
-					auto&& dealiased = query::queryEntryPoint<compiler::helios::QueryDealias>(elem);
+					auto&& dealiased = query::entryPoint<compiler::helios::QueryDealias>(elem);
 					result.insert(result.end(), dealiased.begin(), dealiased.end());
 				}
 				first_symbol = false;
@@ -59,7 +59,7 @@ private:
 		};
 
 		auto get_value = [&](auto name) {
-			return query::queryEntryPoint<compiler::helios::QueryConstValueOf>(get_chain(name).back(
+			return query::entryPoint<compiler::helios::QueryConstValueOf>(get_chain(name).back(
 			));
 		};
 		//
