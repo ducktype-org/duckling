@@ -35,9 +35,9 @@ namespace compiler::frontend {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleTree);
 
 	/*******************
-	 * QuerySourceFile *
+	 * QueryFileID *
 	 *******************/
-	struct IMPLEMENT_QUERY(QuerySourceFile, compiler::frontend::FileId) {
+	struct IMPLEMENT_QUERY(QueryFileID, compiler::frontend::FileId) {
 		inline static base::HashMap<QKey, query::CacheEntry<QResult>> cache{};
 
 		static auto provide(Context&, QKey key) -> PResult {
@@ -59,7 +59,7 @@ namespace compiler::frontend {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFile);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFileID);
 }
 
 // NOLINTEND(performance-unnecessary-value-param)
