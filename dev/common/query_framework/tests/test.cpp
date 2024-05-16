@@ -28,7 +28,7 @@ DECLARE_QUERY(FibonacciSum, Key2, uint64_t);
 /* * * *
  * Q1: *
  * * * */
-struct ImplementationOf_Fibonacci: query::QueryImplementation<Fibonacci, u64> {
+struct IMPLEMENT_QUERY(Fibonacci, u64) {
 	inline static std::map<QKey, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -54,7 +54,7 @@ struct ImplementationOf_Fibonacci: query::QueryImplementation<Fibonacci, u64> {
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Fibonacci, "Q1");
+QUERY_IMPLEMENTATION_BOILERPLATE(Fibonacci);
 
 
 DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, std::string);
@@ -68,12 +68,12 @@ struct ImplementationOf_FibonacciStringAutoCache:
 	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciStringAutoCache, "Auto cache");
+QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciStringAutoCache);
 
 /* * * * *
  * Q2 a: *
  * * * * */
-struct ImplementationOf_FibonacciSum: query::QueryImplementation<FibonacciSum, double> {
+struct IMPLEMENT_QUERY(FibonacciSum, double) {
 	static auto provide(Context& context, QKey key) -> PResult {
 		double res = 0;
 		for (uint64_t i = 0; i <= key.v; i++) res += double(context.query<Fibonacci>(Key1{ i }));
@@ -88,7 +88,7 @@ struct ImplementationOf_FibonacciSum: query::QueryImplementation<FibonacciSum, d
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciSum, "Q2 a");
+QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciSum);
 
 class QueryTest: public tester::TestSuite {
 #undef TESTER_CLASS

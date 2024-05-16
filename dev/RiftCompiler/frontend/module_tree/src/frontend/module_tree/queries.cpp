@@ -33,7 +33,7 @@ namespace compiler::frontend {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryModuleTree, "QueryModuleTree");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleTree);
 
 	/*******************
 	 * QuerySourceFile *
@@ -61,7 +61,7 @@ namespace compiler::frontend {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySourceFile, "QuerySourceFile");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFile);
 }
 
 // NOLINTEND(performance-unnecessary-value-param)

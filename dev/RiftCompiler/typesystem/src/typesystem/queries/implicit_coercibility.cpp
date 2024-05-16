@@ -40,9 +40,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(
-		ImplementationOf_QueryImplicitCoercibilityOnInfo, "QueryImplicitCoercibilityOnInfo"
-	);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnInfo);
 
 	struct ImplementationOf_QueryImplicitCoercibilityOnDesc:
 		  query::QueryImplementation<QueryImplicitCoercibilityOnDesc, bool> {
@@ -68,7 +66,5 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(
-		ImplementationOf_QueryImplicitCoercibilityOnDesc, "QueryImplicitCoercibilityOnDesc"
-	);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnDesc);
 }

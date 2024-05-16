@@ -1,4 +1,6 @@
 #include "lookup_result.hpp"
+
+#include <algorithm>
 #include <base/exceptions.hpp>
 #include <hir/analysis_state.hpp>
 #include <hir/symbols/symbol.hpp>

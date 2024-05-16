@@ -18,7 +18,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryUnitType, "QueryUnitType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryUnitType);
 
 	struct ImplementationOf_QueryVoidType:
 		  query::QueryImplementation<QueryVoidType, VoidInfo::Pimpl> {
@@ -34,7 +34,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryVoidType, "QueryVoidType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVoidType);
 
 	struct ImplementationOf_QueryByteType:
 		  query::QueryImplementation<QueryByteType, ByteInfo::Pimpl> {
@@ -50,7 +50,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryByteType, "QueryByteType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryByteType);
 
 	struct ImplementationOf_QueryBoolType:
 		  query::QueryImplementation<QueryBoolType, BoolInfo::Pimpl> {
@@ -66,7 +66,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryBoolType, "QueryBoolType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryBoolType);
 
 	struct ImplementationOf_QueryCharType:
 		  query::QueryImplementation<QueryCharType, CharInfo::Pimpl> {
@@ -82,7 +82,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryCharType, "QueryCharType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCharType);
 
 	struct ImplementationOf_QueryIntegralType:
 		  query::QueryImplementation<QueryIntegralType, IntegralInfo::Pimpl> {
@@ -150,7 +150,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryIntegralType, "QueryIntegralType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIntegralType);
 
 	struct ImplementationOf_QueryFloatType:
 		  query::QueryImplementation<QueryFloatType, FloatInfo::Pimpl> {
@@ -216,7 +216,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryFloatType, "QueryFloatType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFloatType);
 
 	struct ImplementationOf_QueryRawPointerType:
 		  query::QueryImplementation<QueryRawPointerType, RawPointerInfo::Pimpl> {
@@ -232,7 +232,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryRawPointerType, "QueryRawPointerType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRawPointerType);
 
 	struct ImplementationOf_QueryPointerType:
 		  query::QueryImplementation<QueryPointerType, PointerInfo::Pimpl> {
@@ -258,7 +258,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryPointerType, "QueryPointerType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType);
 
 	struct ImplementationOf_QueryFunctionType:
 		  query::QueryImplementation<QueryFunctionType, FunctionInfo::Pimpl> {
@@ -285,7 +285,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryFunctionType, "QueryFunctionType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType);
 
 	struct ImplementationOf_QueryNamespaceType:
 		  query::QueryImplementation<QueryNamespaceType, NamespaceInfo::Pimpl> {
@@ -301,7 +301,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryNamespaceType, "QueryNamespaceType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryNamespaceType);
 
 	struct ImplementationOf_QueryModuleType:
 		  query::QueryImplementation<QueryModuleType, ModuleInfo::Pimpl> {
@@ -317,7 +317,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryModuleType, "QueryModuleType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleType);
 
 	struct ImplementationOf_QueryMetaType:
 		  query::QueryImplementation<QueryMetaType, MetaInfo::Pimpl> {
@@ -333,5 +333,5 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryMetaType, "QueryMetaType");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMetaType);
 }
