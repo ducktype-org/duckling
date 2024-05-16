@@ -37,4 +37,10 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryTopLevelFunctions, frontend::ModuleId, HOUTUnit)
 
 
+	/**
+	 * @brief Query code of a function.
+	 * @note Works only for SymID-s that actually represent a function
+	 */
+	DECLARE_QUERY(QueryCodeOFFun, SymID, HOUTFunction);
+
 }
