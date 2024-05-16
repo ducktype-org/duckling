@@ -4,10 +4,11 @@
  */
 
 #include "module_tree.hpp"
+
 #include <pst_parser/parser.hpp>
 #include <base/maps.hpp>
-
 #include <query_framework/query_impl.hpp>
+
 #include "queries.hpp"
 
 using fs::FsTree;
@@ -27,15 +28,6 @@ FileId FileId::nextID() {
 	return out;
 }
 
-ModuleId ModuleId::nextID() {
-	// @OPT: move to global variable
-	static u64 nextId = 0;
-
-	ModuleId out{};
-	out.id = nextId++;
-	return out;
-}
-
 SourceFile::SourceFile(fs::FilePath path): path(std::move(path)), id(FileId::nextID()) {
 	rift_file_name = this->path.stem();
 }
@@ -49,7 +41,7 @@ const pst::PST& SourceFile::getPST() {
 	}
 }
 
-ModuleTree::ModuleTree(): id(ModuleId::nextID()){};
+ModuleTree::ModuleTree(): id(ModuleId::next()){};
 
 std::shared_ptr<ModuleTree> ModuleTree::create(std::shared_ptr<fs::FsTree> root) {
 	auto ptr = std::shared_ptr<ModuleTree>(new ModuleTree());

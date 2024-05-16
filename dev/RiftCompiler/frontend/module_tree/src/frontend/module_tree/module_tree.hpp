@@ -5,14 +5,15 @@
 
 #pragma once
 
-#include <string>
-#include <utility>
+#include <base/strongly_typed_id.hpp>
 #include <base/maps.hpp>
+#include <base/perfect_hash.hpp>
+#include <base/ints.hpp>
 #include <filesystem/file.hpp>
 #include <filesystem/fs_tree.hpp>
 #include <pst_parser/pst.hpp>
-#include <base/ints.hpp>
-#include <base/perfect_hash.hpp>
+
+#include <string>
 
 // @TODO: change std::string here to StrId
 
@@ -57,27 +58,10 @@ namespace compiler::frontend {
 		const pst::PST& getPST();
 	};
 
-	/**
-	 * @brief Structure holding ModuleID within Module Tree
-	 */
-	struct ModuleId {
-		[[nodiscard]]
-		u64 asInt() const {
-			return id;
-		}
+	STRONG_TYPEDEF_ID(ModuleId);
 
-		static ModuleId nextID();
-		bool            operator==(const ModuleId&) const = default;
-
-		[[nodiscard]]
-		base::HashT customPerfectHash() const {
-			return asInt();
-		}
-
-	private:
-		ModuleId() = default;
-		u64 id;
-	};
+	// @TODO: move to STRONG_TYPEDEF_ID?
+	inline base::HashT customPerfectHash(ModuleId id) { return id.asInt(); }
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed

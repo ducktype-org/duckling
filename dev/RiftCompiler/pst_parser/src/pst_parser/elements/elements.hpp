@@ -294,10 +294,6 @@ namespace pst {
 	};
 
 	class Expr final: public Stmt {
-	private:
-		// @TODO: this friend should probably be removed, and some stuff just should be public
-		friend ::hir::Expression;
-
 	public:
 		enum class GroupType {
 			RoundGroup  = 0,
@@ -334,10 +330,8 @@ namespace pst {
 			base::StrId num_id;
 		};
 
-	private:
 		std::vector<ExprElem> elements;
 
-	public:
 		STMT_CHILD_CONSTRUCTOR(Expr);
 		/**
 		 * @brief parses the expression until its over

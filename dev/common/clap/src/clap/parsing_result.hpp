@@ -121,7 +121,7 @@ namespace clap {
 		template<class T>
 		[[nodiscard]]
 		T getPositional(usize position) const {
-			return base::anyCast<T>(positional_values[position].value);
+			return base::anyCast<T>(positional_values.at(position).value);
 		}
 
 		/**

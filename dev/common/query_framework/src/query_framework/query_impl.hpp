@@ -12,8 +12,6 @@
 #include "logs.hpp"
 #include "node_making.hpp"
 
-#include <base/defer.hpp>
-
 namespace query {
 
 	namespace detail {
@@ -38,7 +36,7 @@ namespace query {
 			static dia::Logger logger;
 
 			template<typename OthQuery>
-			auto query(typename OthQuery::QKey key) -> auto {
+			auto query(typename OthQuery::QKey key) -> decltype(auto) {
 				NodeID dep_id = makeNodeID(OthQuery::id, key);
 				dep_graph::addDependency(my_node, dep_id);
 
@@ -192,4 +190,5 @@ namespace query {
 	}                                                                                          \
 	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                      \
 		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
-		return cache.at(key).data;
+		return cache.at(key).data;                                                             \
+	}

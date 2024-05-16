@@ -51,3 +51,5 @@ namespace pst {
 	};
 
 }
+
+ID_STD_HASH(::pst::PstID);
