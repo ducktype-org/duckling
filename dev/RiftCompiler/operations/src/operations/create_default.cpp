@@ -86,8 +86,7 @@ namespace operation {
 		};
 
 		const ts::FunctionInfo sig
-			= query::entryPoint<ts::QueryFunctionType>({ { type_info, type_info }, type_info }
-		    );
+			= query::entryPoint<ts::QueryFunctionType>({ { type_info, type_info }, type_info });
 
 		return { op, sig };
 	}
@@ -119,8 +118,7 @@ namespace operation {
 
 		for (auto& [op_id, type, offset, size]: calls) args.push_back(type.getType());
 
-		const ts::FunctionInfo sig
-			= query::entryPoint<ts::QueryFunctionType>({ args, type_info });
+		const ts::FunctionInfo sig = query::entryPoint<ts::QueryFunctionType>({ args, type_info });
 
 		return { op, sig };
 	}

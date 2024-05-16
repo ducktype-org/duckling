@@ -57,9 +57,9 @@ int main(int argc, const char* argv[]) {
 
 	std::cerr << "Some lookup:\n";
 
-	auto&& lookup_result_0 = query::entryPoint<helios::QueryLookupInScope>(
-		{ root_scope, base::StrId("Inner_X"), true }
-	);
+	auto&& lookup_result_0
+		= query::entryPoint<helios::QueryLookupInScope>({ root_scope, base::StrId("Inner_X"), true }
+	    );
 
 	std::cerr << "found Inner_X times: " << lookup_result_0.symbolCount() << "\n";
 

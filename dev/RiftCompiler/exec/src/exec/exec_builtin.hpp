@@ -20,8 +20,7 @@ namespace exec {
 		if (val_a > val_b) res = -1;
 
 
-		exec::CTV ctvResult
-			= exec::alloc_new(query::entryPoint<ts::QueryIntegralType>({ 8 }), 8);
+		exec::CTV ctvResult = exec::alloc_new(query::entryPoint<ts::QueryIntegralType>({ 8 }), 8);
 		ctvResult.getData<int8_t>().front() = res;
 		return ctvResult;
 	}

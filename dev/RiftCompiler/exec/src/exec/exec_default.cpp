@@ -20,7 +20,7 @@ namespace exec {
 			if (!res) break;
 		}
 
-		CTV ctvResult = alloc_new(query::entryPoint<ts::QueryBoolType>({}), 8);
+		CTV ctvResult                     = alloc_new(query::entryPoint<ts::QueryBoolType>({}), 8);
 		ctvResult.getData<bool>().front() = res;
 		return ctvResult;
 	}
@@ -64,7 +64,7 @@ namespace exec {
 			if (!res) break;
 		}
 
-		CTV ctvResult = alloc_new(query::entryPoint<ts::QueryBoolType>({}), 8);
+		CTV ctvResult                     = alloc_new(query::entryPoint<ts::QueryBoolType>({}), 8);
 		ctvResult.getData<bool>().front() = res;
 		return ctvResult;
 	}

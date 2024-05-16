@@ -50,10 +50,10 @@ private:
 			parent_counter++;
 			return parent_result_ctv;
 		};
-		operation::TypedOperation parent_eq{ fun,
-			                                 query::entryPoint<ts::QueryFunctionType>(
-												 { { parent_class, parent_class }, bool_type }
-											 ) };
+		operation::TypedOperation parent_eq{
+			fun,
+			query::entryPoint<ts::QueryFunctionType>({ { parent_class, parent_class }, bool_type })
+		};
 		operation::addDefault(operation::Defaultable::Equality, parent_class, parent_eq);
 
 		auto fun2 = [&member_counter,
@@ -61,10 +61,10 @@ private:
 			member_counter++;
 			return member_result_ctv;
 		};
-		operation::TypedOperation member_eq{ fun2,
-			                                 query::entryPoint<ts::QueryFunctionType>(
-												 { { member_class, member_class }, bool_type }
-											 ) };
+		operation::TypedOperation member_eq{
+			fun2,
+			query::entryPoint<ts::QueryFunctionType>({ { member_class, member_class }, bool_type })
+		};
 		operation::addDefault(operation::Defaultable::Equality, member_class, member_eq);
 
 		ts::ClassInfo customClass = ts::ClassInfo::create(
@@ -140,10 +140,10 @@ private:
 			parent_counter++;
 			return parent_result_ctv;
 		};
-		operation::TypedOperation parent_comp{ fun,
-			                                   query::entryPoint<ts::QueryFunctionType>(
-												   { { parent_class, parent_class }, int_type }
-											   ) };
+		operation::TypedOperation parent_comp{
+			fun,
+			query::entryPoint<ts::QueryFunctionType>({ { parent_class, parent_class }, int_type })
+		};
 		operation::addDefault(operation::Defaultable::Compare, parent_class, parent_comp);
 
 		auto fun2 = [&member_counter,
@@ -151,10 +151,10 @@ private:
 			member_counter++;
 			return member_result_ctv;
 		};
-		operation::TypedOperation member_comp{ fun2,
-			                                   query::entryPoint<ts::QueryFunctionType>(
-												   { { member_class, member_class }, int_type }
-											   ) };
+		operation::TypedOperation member_comp{
+			fun2,
+			query::entryPoint<ts::QueryFunctionType>({ { member_class, member_class }, int_type })
+		};
 		operation::addDefault(operation::Defaultable::Compare, member_class, member_comp);
 
 		ts::ClassInfo customClass = ts::ClassInfo::create(

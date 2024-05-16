@@ -170,8 +170,7 @@ private:
 		}
 
 		assert(
-			query::entryPoint<QueryFloatType>(32)
-				!= query::entryPoint<QueryFloatType>(64),
+			query::entryPoint<QueryFloatType>(32) != query::entryPoint<QueryFloatType>(64),
 			"Floats of different sizes should be different."
 		);
 	}
@@ -209,8 +208,7 @@ private:
 		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
 		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
 
-		const auto fun_1
-			= query::entryPoint<QueryFunctionType>({ { int_16, int_32 }, int_32 });
+		const auto fun_1 = query::entryPoint<QueryFunctionType>({ { int_16, int_32 }, int_32 });
 
 		assert(
 			fun_1.getParameterTypes() == std::vector<TypeInfo>({ int_16, int_32 }),

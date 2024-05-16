@@ -110,12 +110,8 @@ private:
 	}
 
 	void autoCacheTest() {
-		assert(
-			query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (5)"
-		);
-		assert(
-			query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (6)"
-		);
+		assert(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (5)");
+		assert(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (6)");
 	}
 };
 
