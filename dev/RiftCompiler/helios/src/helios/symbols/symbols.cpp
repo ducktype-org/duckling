@@ -196,6 +196,7 @@ namespace compiler::helios {
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 	};
+
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
 
 	struct LookupChainKey {
@@ -288,7 +289,7 @@ namespace compiler::helios {
 		return (hash_1 * 143 + hash_2 * 7) * 2 + follow_wildcards;
 	}
 
-	struct IMPLEMENT_QUERY(QueryDealias, SymbolList)  {
+	struct IMPLEMENT_QUERY(QueryDealias, SymbolList) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			if (kind(key) != SymbolKind::Alias) return { key };
 

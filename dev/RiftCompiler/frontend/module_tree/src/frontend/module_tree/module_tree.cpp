@@ -180,7 +180,7 @@ ModuleId ModuleTree::getId() const { return id; }
 /*********************
  * QueryParentModule *
  *********************/
-struct IMPLEMENT_QUERY(QueryParentModule, ModuleId)  {
+struct IMPLEMENT_QUERY(QueryParentModule, ModuleId) {
 	static auto provide(Context&, QKey key) -> PResult {
 		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
 		return module_tree->getParentModule().value().getId();
@@ -278,7 +278,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
 /****************
  * QueryFilePST *
  ****************/
-struct IMPLEMENT_QUERY(QueryFilePST, const pst::PST&)  {
+struct IMPLEMENT_QUERY(QueryFilePST, const pst::PST&) {
 	inline static base::HashMap<QKey, query::CacheEntry<QResult>> cache{};
 
 	static auto provide(Context&, QKey key) -> PResult {

@@ -11,7 +11,7 @@
 
 
 // make this link less bug-prone...:
-struct IMPLEMENT_QUERY(Query1, uint64_t)  {
+struct IMPLEMENT_QUERY(Query1, uint64_t) {
 	struct InfoInQuery1 final: dia::Info {
 		explicit InfoInQuery1(const dia::SourcePosition& source_position): Info(source_position) {}
 
@@ -75,7 +75,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(Query1);
  * QUERY 2: *
  ************/
 
-struct IMPLEMENT_QUERY(Query2, uint64_t)  {
+struct IMPLEMENT_QUERY(Query2, uint64_t) {
 	inline static std::map<QKey, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -101,7 +101,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(Query2);
  * Cyclic Query: *
  *****************/
 
-struct IMPLEMENT_QUERY(CyclicQuery, uint64_t)  {
+struct IMPLEMENT_QUERY(CyclicQuery, uint64_t) {
 	inline static std::map<QKey, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
