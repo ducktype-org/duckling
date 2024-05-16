@@ -48,4 +48,18 @@ namespace compiler::helios {
 	};
 
 
+	struct ImplementationOf_QueryCodeOFFun:
+		  public query::QueryImplementation<QueryCodeOFFun, HOUTFunction> {
+
+		
+		static auto provide(Context& ctx, QKey key) -> PResult {
+
+			throw "Well @todo";
+
+		}
+
+		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+	};
+
+
 }
