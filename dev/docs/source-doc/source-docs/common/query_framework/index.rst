@@ -133,29 +133,25 @@ Writing implementation boilerplate
 After that we can move to actual query implementation.
 This is achieved by creating a :code:`struct` called "implementation struct" that will inherit from :code:`query::QueryImplementation`.
 :code:`query::QueryImplementation` is a template that takes two arguments: query to implement and :code:`PResult`.
+These steps are simplified by a macro :code:`IMPLEMENT_QUERY`.
 After the definition of implementation struct one must also write the magic line presented in the example bellow.
 
 .. note::
-    Name the implementation :code:`struct` can be arbitrary but as a convention one should use: :code:`ImplementationOf_QUERY-NAME`.
+    The implementation :code:`struct` can be accessed somewhere else in code by name :code:`ImplementationOf_{QUERY_NAME}`.
 
 .. code-block:: cpp
 
     // Some type, often the same as QResult
     struct PResult {/* ... */};
 
-    struct ImplementationOf_MyQuery: query::QueryImplementation<
-        MyQuery,
-        PResult
-    > {
+    struct IMPLEMENT_QUERY(MyQuery, PResult) {
         /* ... */
     };
     /**
      * Magic line (important!):
-     * First argument is the name of implementation struct.
-     * Second argument is the "pretty name" of the query, that will be used in logs
-     * and similar places.
+     * As an argument it takes the name of the query.
     */
-    QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_MyQuery, "Query 2");
+    QUERY_IMPLEMENTATION_BOILERPLATE(MyQuery);
 
 After all of the above is done the only thing left is to write query :code:`provide`, :code:`load` and :code:`store` functions.
 This is done by creating three static methods inside implementation struct with signatures exactly the same as in the example bellow:
@@ -164,10 +160,7 @@ This is done by creating three static methods inside implementation struct with 
 
     struct PResult {/* ... */} // often the same as QResult
 
-    struct ImplementationOf_MyQuery: query::QueryImplementation<
-        Query2,
-        PResult
-    > {
+    struct IMPLEMENT_QUERY(Query2, PResult) {
         static auto provide(Context& context, QKey key) -> PResult {
             /* ... */
         }
@@ -178,7 +171,7 @@ This is done by creating three static methods inside implementation struct with 
             /* ... */
         }
     }
-    QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_MyQuery, "Query 2");
+    QUERY_IMPLEMENTATION_BOILERPLATE(Query2);
 
 .. hint::
     It can be useful to define additional static variables inside implementation struct.
@@ -439,16 +432,15 @@ In both cases function :code:`store` will really on implicit cast/conversion fro
     
     DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, std::string);
 
-    struct ImplementationOf_FibonacciStringAutoCache:
-	  query::QueryImplementation<FibonacciStringAutoCache, std::string> {
-	static auto provide(Context& ctx, QKey key) -> PResult {
-		return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
-	}
+    struct IMPLEMENT_QUERY(FibonacciStringAutoCache, std::string) {
+        static auto provide(Context& ctx, QKey key) -> PResult {
+            return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
+        }
 
         QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
     };
 
-    QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciStringAutoCache, "Auto cache");
+    QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciStringAutoCache);
 
 .. code-block:: cpp
     :caption: Auto cache example: stable reference
@@ -458,14 +450,12 @@ In both cases function :code:`store` will really on implicit cast/conversion fro
     // Here we can return reference as it is stable:
     DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, const std::string&);
 
-    struct ImplementationOf_FibonacciStringAutoCache:
-	  query::QueryImplementation<FibonacciStringAutoCache, std::string> {
-	static auto provide(Context& ctx, QKey key) -> PResult {
-		return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
-	}
+    struct IMPLEMENT_QUERY(FibonacciStringAutoCache, std::string) {
+        static auto provide(Context& ctx, QKey key) -> PResult {
+            return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
+        }
 
         QUERY_AUTO_CACHE_PRESULT_STABLE_REF
     };
 
-    QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciStringAutoCache, "Auto cache");
-
+    QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciStringAutoCache);
