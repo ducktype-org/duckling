@@ -173,15 +173,13 @@ namespace lexer {
 
 	dia::SourcePosition Token::getPosition() const { return source_position; }
 
-	TokenData::TokenData(Tokens&& tokens, Token&& eof_sentinel, fs::FileContent file_content):
+	TokenData::TokenData(Tokens&& tokens, Token&& eof_sentinel):
 		  tokens(std::move(tokens)),
-		  eof_sentinel(std::move(eof_sentinel)),
-		  file_content(std::move(file_content)) {}
+		  eof_sentinel(std::move(eof_sentinel)) {}
 
 	TokenData::TokenData(TokenData&& oth) noexcept:
 		  tokens(std::move(oth.tokens)),
-		  eof_sentinel(std::move(oth.eof_sentinel)),
-		  file_content(std::move(oth.file_content)){};
+		  eof_sentinel(std::move(oth.eof_sentinel)){};
 
 	TokenData::~TokenData() = default;
 }

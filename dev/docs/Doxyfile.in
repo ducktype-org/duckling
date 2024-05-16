@@ -42,3 +42,12 @@ EXTRACT_PRIVATE        = YES
 # The default value is: NO.
 
 EXTRACT_STATIC         = YES
+
+
+# For doxygen-awesome:
+
+GENERATE_TREEVIEW = YES # optional. Also works without treeview
+DISABLE_INDEX     = NO
+FULL_SIDEBAR      = NO
+HTML_EXTRA_STYLESHEET  = "@CMAKE_CURRENT_SOURCE_DIR@/doxygen-awesome-css/doxygen-awesome.css"
+HTML_COLORSTYLE        = LIGHT

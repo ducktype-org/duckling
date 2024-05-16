@@ -2,6 +2,8 @@
 #include "parser.hpp"
 #include <code_data/opcodes.hpp>
 #include <lexer/lexer.hpp>
+#include <token_file/file.hpp>
+#include <lexer/classifications.hpp>
 #include <base/optional.hpp>
 #include <rift_definitions/key_spec_op.hpp>
 #include <stdexcept>
@@ -674,19 +676,22 @@ namespace assemble {
 		auto maybeContent = path.getContentSafe();
 		if (maybeContent.has_error()) return CodeContainer{ false, maybeContent.error(), nullptr };
 
-		lexer::TokenData td = lexer::tokenizeFile(path);
+		tokenizer::OwnFile file = lexer::tokenizeFile(path);
+
+		lexer::TokenData& td = file->getTokenData();
+
+		auto log = dia::Logger();
 
 		tpc::ParserState state(
-			tpc::TokenStream(td.tokens, tpc::Token(td.eof_sentinel), 0, td.tokens.size()),
-			dia::Logger()
+			tpc::TokenStream(td.tokens, tpc::Token(td.eof_sentinel), 0, td.tokens.size()), log
 		);
 
 		tpc::ParserRef<ParsedCode> out = ParsedCode::parse(state);
 
 		std::stringstream err_stream;
-		state.err.dumpLog(false, err_stream);
+		log.dumpLog(false, err_stream);
 
-		return { state.err.good(), err_stream.str(), std::move(out) };
+		return { log.good(), err_stream.str(), std::move(out) };
 	}
 
 	// returns true if was successfully
