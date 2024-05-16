@@ -356,13 +356,18 @@ namespace compiler::helios {
 								// This means we have to perform a lookup.
 								variant_match(rpn.back()) {
 									variant_case(rpn::Identifier, idt2) {
-										idt2.symbol_list = ctx
-										                       .query<QueryLookupInSymbol>({
-																   idt2.symbol_list.back(),
-																   idt.indent_id,
-																   true,
-															   })
-										                       .getAsSingle();
+										auto&& new_symbols = ctx
+										                         .query<QueryLookupInSymbol>({
+																	 idt2.symbol_list.back(),
+																	 idt.indent_id,
+																	 true,
+																 })
+										                         .getAsSingle();
+										idt2.symbol_list.insert(
+											idt2.symbol_list.end(),
+											new_symbols.begin(),
+											new_symbols.end()
+										);
 										performed_dot_operator = true;
 									}
 									variant_default { RIFT_PANIC("Not implemented yet!"); }
