@@ -26,9 +26,9 @@ namespace compiler::helios {
 	struct HOUTFunction {};
 
 	/**
-	 * @brief Structure representing HOUT of single module
+	 * @brief Structure representing single HOUTUnit
 	 */
-	struct HOUTModule {
+	struct HOUTUnit {
 		// all first class citizens of module should be here:
 		// * types (in some way?)
 		// * required baked template list?
@@ -37,10 +37,7 @@ namespace compiler::helios {
 		// * vector/references to hout of submodules? -- not necessarily needed
 		// * what else?
 
-		// @FUTURE: we will probably need separation:
-		std::vector<SymID> first_class_citizens;
-
-		std::vector<frontend::ModuleId> imported_modules;
+		std::vector<HOUTFunction> functions;
 	};
 
 }

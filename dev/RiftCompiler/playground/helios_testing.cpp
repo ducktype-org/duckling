@@ -48,20 +48,24 @@ int main(int argc, const char* argv[]) {
 	auto root       = query::queryEntryPoint<frontend::QueryModuleTree>(path_to_compile);
 	auto root_scope = query::queryEntryPoint<helios::QueryRootScopeOf>(root);
 
+	auto main_file = query::queryEntryPoint<frontend::QueryMainSourceFile>(root);
+
+	query::queryEntryPoint<frontend::QueryFilePST>(main_file).dprint(std::cerr);
+
 
 	auto symbols_in_root = query::queryEntryPoint<helios::QuerySymbolsInScope>(root_scope);
 
-	std::cerr << "Symbol count: " << symbols_in_root.size() << "\n";
+	// std::cerr << "Symbol count: " << symbols_in_root.size() << "\n";
 
-	query::debugPrintDependencyGraph();
+	// query::debugPrintDependencyGraph();
 
 	std::cerr << "Some lookup:\n";
 
-	auto&& lookup_result_0 = query::queryEntryPoint<helios::QueryLookupInScope>(
-		{ root_scope, base::StrId("Inner_X"), true }
-	);
+	// auto&& lookup_result_0 = query::queryEntryPoint<helios::QueryLookupInScope>(
+	// 	{ root_scope, base::StrId("Inner_X"), true }
+	// );
 
-	std::cerr << "found Inner_X times: " << lookup_result_0.symbolCount() << "\n";
+	// std::cerr << "found Inner_X times: " << lookup_result_0.symbolCount() << "\n";
 
 	// auto&& lookup_result_1
 	// 	= query::queryEntryPoint<helios::QueryLookupInScope>({ root_scope, base::StrId("H2"), true }
@@ -83,6 +87,6 @@ int main(int argc, const char* argv[]) {
 
 	// std::cerr << "Found NN.A: " << lookup_result_NN_A.symbolCount() << "\n";
 
-	query::debugPrintDependencyGraph();
-	query::debugPrintDependencyGraphForDrawing();
+	// query::debugPrintDependencyGraph();
+	// query::debugPrintDependencyGraphForDrawing();
 }
