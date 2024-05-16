@@ -32,17 +32,6 @@ namespace vm {
 		handleExecutionStrategy();
 	}
 
-	[[gnu::always_inline]]
-	inline void Executor::initNextFrame(Frame* frame, StandardFunctionArgs& args) {
-		frame->regs      = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = memory.nullPtr() };
-		frame->flags     = FlagData{ .flag = false };
-		frame->ret_val   = 0;
-		frame->args      = args;
-		frame->next_args = { 0, memory.nullPtr() };
-		// if (!frame->block_id_stack.empty() || frame->local_stack_head != 0)
-		//   RIFT_PANIC("init/deinits not paired");
-	}
-
 	Frame Executor::internalInitFrame() {
 		return Frame{
 			.instr       = nullptr,
@@ -262,7 +251,7 @@ namespace vm {
 			frame++;
 			i32 function_id = instr->arg0;
 			if (frame + 1 > runtime_data.frame_stack_end) RIFT_PANIC("RiftVM stack overflow.");
-			executor.initNextFrame(frame, prev_frame->next_args);
+			frame->args = prev_frame->next_args;
 
 			// Update values passed as arguments.
 			instr = executor.executing_code->functions[function_id].bc.data();
@@ -273,7 +262,6 @@ namespace vm {
 			runtime_data.local_stack_top += local_stack_size;
 			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
 				RIFT_PANIC("RiftVM stack overflow.");
-			memset(local_stack, 0, local_stack_size);
 		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
@@ -289,14 +277,13 @@ namespace vm {
 			auto& runtime_data = executor.runtime_data;
 
 			auto function_id = instr->arg0;
-			executor.initNextFrame(frame, frame->next_args);
-			instr = executor.executing_code->functions[function_id].bc.data();
+			frame->args      = frame->next_args;
+			instr            = executor.executing_code->functions[function_id].bc.data();
 
 			auto local_stack_size = executor.executing_code->functions[function_id].stack_size;
 			runtime_data.local_stack_top = local_stack + local_stack_size;
 			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
 				RIFT_PANIC("RiftVM stack overflow.");
-			memset(local_stack, 0, local_stack_size);
 		}
 		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
