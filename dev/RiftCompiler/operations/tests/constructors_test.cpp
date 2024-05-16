@@ -27,7 +27,7 @@ private:
 		operation::execConstructor(cons, {}, ctv);
 
 
-		ts::TypeDesc<> int_desc(query::queryEntryPoint<ts::QueryIntegralType>({ 8 }));
+		ts::TypeDesc<> int_desc(query::entryPoint<ts::QueryIntegralType>({ 8 }));
 		auto           symbol0 = symtable::SymbolId::next();
 
 		ts::ClassInfo parent_class(

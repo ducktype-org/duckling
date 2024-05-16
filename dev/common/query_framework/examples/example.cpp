@@ -11,7 +11,7 @@
 
 
 // make this link less bug-prone...:
-struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
+struct IMPLEMENT_QUERY(Query1, uint64_t) {
 	struct InfoInQuery1 final: dia::Info {
 		explicit InfoInQuery1(const dia::SourcePosition& source_position): Info(source_position) {}
 
@@ -69,13 +69,13 @@ struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Query1, "Query 1")
+QUERY_IMPLEMENTATION_BOILERPLATE(Query1);
 
 /************
  * QUERY 2: *
  ************/
 
-struct ImplementationOf_Query2: query::QueryImplementation<Query2, uint64_t> {
+struct IMPLEMENT_QUERY(Query2, uint64_t) {
 	inline static std::map<QKey, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -95,13 +95,13 @@ struct ImplementationOf_Query2: query::QueryImplementation<Query2, uint64_t> {
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Query2, "Query 2")
+QUERY_IMPLEMENTATION_BOILERPLATE(Query2);
 
 /*****************
  * Cyclic Query: *
  *****************/
 
-struct ImplementationOf_CyclicQuery: query::QueryImplementation<CyclicQuery, uint64_t> {
+struct IMPLEMENT_QUERY(CyclicQuery, uint64_t) {
 	inline static std::map<QKey, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -121,19 +121,19 @@ struct ImplementationOf_CyclicQuery: query::QueryImplementation<CyclicQuery, uin
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_CyclicQuery, "Cyclic query")
+QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQuery);
 
 // implement extension:
 uint64_t SquareValue(query::Context&, uint64_t v) { return v * v; }
 
 int main() {
-	std::cout << query::queryEntryPoint<Query2>(2) << "\n";
+	std::cout << query::entryPoint<Query2>(2) << "\n";
 	query::debugPrintDependencyGraph();
 	std::cout << "\n";
 
 	query::detail::ContextType::logger.dumpLog(true);
 
-	std::cout << query::queryEntryPoint<CyclicQuery>(0) << "\n";
+	std::cout << query::entryPoint<CyclicQuery>(0) << "\n";
 
 	return 0;
 }
