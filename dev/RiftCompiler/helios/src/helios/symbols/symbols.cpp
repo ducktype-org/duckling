@@ -330,6 +330,8 @@ namespace compiler::helios {
 			return 2;
 		case '^':  // Power ;D
 			return 3;
+		case '.':
+			return 5;
 		default:
 			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
 		}
@@ -342,10 +344,39 @@ namespace compiler::helios {
 		for (auto&& e: key.expr) {
 			variant_match(e) {
 				variant_case(pst::Expr::Identifier, idt) {
-					auto&& sym_id = ctx.query<QueryLookupInScopeAndParents>(
-						{ key.expr_scope, idt.indent_id, true }
-					);
-					rpn.emplace_back(Identifier{ sym_id.getAsSingle() });
+					// Here zaślepka begins
+					// If stack contains a "." operator and there is a indentifier at rpn.back(),
+					// then perform a lookup in it.
+					bool performed_dot_operator = false;
+					if (!st.empty()) {
+						auto&& op_expr = st.top();
+						if (std::holds_alternative<Operator>(op_expr)) {
+							auto&& op = std::get<Operator>(op_expr);
+							if (op.oper_id.strView() == ".") {
+								// This means we have to perform a lookup.
+								variant_match(rpn.back()) {
+									variant_case(rpn::Identifier, idt2) {
+										idt2.symbol_list = ctx
+										                       .query<QueryLookupInSymbol>({
+																   idt2.symbol_list.back(),
+																   idt.indent_id,
+																   true,
+															   })
+										                       .getAsSingle();
+										performed_dot_operator = true;
+									}
+									variant_default { RIFT_PANIC("Not implemented yet!"); }
+								}
+							}
+						}
+					}
+					// Here it ends...
+					if (!performed_dot_operator) {
+						auto&& sym_id = ctx.query<QueryLookupInScopeAndParents>(
+							{ key.expr_scope, idt.indent_id, true }
+						);
+						rpn.emplace_back(Identifier{ sym_id.getAsSingle() });
+					}
 				}
 				variant_case(pst::Expr::Operator, oper) {
 					auto      new_op   = Operator{ oper.oper_id };
