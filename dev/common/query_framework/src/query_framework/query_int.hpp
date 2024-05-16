@@ -43,6 +43,8 @@ namespace query::detail {
 		INTERNAL_QUERY_INTERFACE_BOILERPLATE                                     \
 	};
 
+#define IMPLEMENT_QUERY(query_type, PResult) \
+	ImplementationOf_##query_type final: public query::QueryImplementation<query_type, PResult>
 
 /**
  * @brief Macro used to declare query extensions
