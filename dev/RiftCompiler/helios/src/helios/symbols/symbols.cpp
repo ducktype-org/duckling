@@ -353,6 +353,7 @@ namespace compiler::helios {
 						if (std::holds_alternative<Operator>(op_expr)) {
 							auto&& op = std::get<Operator>(op_expr);
 							if (op.oper_id.strView() == ".") {
+								st.pop();
 								// This means we have to perform a lookup.
 								variant_match(rpn.back()) {
 									variant_case(rpn::Identifier, idt2) {
