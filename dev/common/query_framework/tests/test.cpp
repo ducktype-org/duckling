@@ -59,8 +59,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(Fibonacci);
 
 DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, std::string);
 
-struct ImplementationOf_FibonacciStringAutoCache:
-	  query::QueryImplementation<FibonacciStringAutoCache, std::string> {
+struct IMPLEMENT_QUERY(FibonacciStringAutoCache, std::string) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
 		return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
 	}

@@ -57,8 +57,7 @@ namespace compiler::helios {
 		}
 	}
 
-	struct ImplementationOf_QueryRootScopeOf:
-		  query::QueryImplementation<QueryRootScopeOf, ScopeID> {
+	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeID) {
 		inline static base::Map<frontend::ModuleId, query::CacheEntry<ScopeID>> cache;
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -85,8 +84,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
 
-	struct ImplementationOf_QueryPrimaryCodeScopeFor:
-		  query::QueryImplementation<QueryPrimaryCodeScopeFor, ScopeID> {
+	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
 		static auto provide(Context&, QKey element) -> PResult {
 			auto list_of_stmt = getChildStmtsOf(element.base_element);
 			// auto parent

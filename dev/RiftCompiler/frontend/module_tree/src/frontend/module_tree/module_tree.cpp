@@ -196,8 +196,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QueryParentModule);
 /***********************
  * QueryMainSourceFile *
  ***********************/
-struct ImplementationOf_QueryMainSourceFile:
-	  query::QueryImplementation<QueryMainSourceFile, FileId> {
+struct IMPLEMENT_QUERY(QueryMainSourceFile, FileId) {
 	static auto provide(Context&, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
 		return module_tree->getMainSourceFile().id;
@@ -213,8 +212,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QueryMainSourceFile);
 /********************
  * QuerySourceFiles *
  ********************/
-struct ImplementationOf_QuerySourceFiles:
-	  query::QueryImplementation<QuerySourceFiles, std::vector<FileId>> {
+struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileId>) {
 	inline static base::HashMap<QKey, base::unique_ptr<PResWithACD>> cache{};
 
 	static auto provide(Context&, QKey key) -> PResult {
@@ -245,8 +243,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
 /*******************
  * QuerySubmodules *
  *******************/
-struct ImplementationOf_QuerySubmodules:
-	  query::QueryImplementation<QuerySubmodules, base::HashMap<std::string, ModuleId>> {
+struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<std::string COMMA ModuleId>) {
 	inline static base::HashMap<QKey, base::unique_ptr<PResWithACD>> cache{};
 
 	static auto provide(Context&, QKey key) -> PResult {
