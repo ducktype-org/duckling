@@ -10,7 +10,7 @@ namespace operation {
 		void addIntegral() {
 			static_assert(SIZE == 8 * (sizeof(T)));
 
-			auto int_type = query::queryEntryPoint<ts::QueryIntegralType>({ SIZE });
+			auto int_type = query::entryPoint<ts::QueryIntegralType>({ SIZE });
 
 			operation::Operation comp_int            = exec::compareBuiltin<T>;
 			operation::Operation eq_int              = exec::equalityBuiltin<T>;

@@ -28,7 +28,7 @@ DECLARE_QUERY(FibonacciSum, Key2, uint64_t);
 /* * * *
  * Q1: *
  * * * */
-struct ImplementationOf_Fibonacci: query::QueryImplementation<Fibonacci, u64> {
+struct IMPLEMENT_QUERY(Fibonacci, u64) {
 	inline static std::map<QKey, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -54,13 +54,12 @@ struct ImplementationOf_Fibonacci: query::QueryImplementation<Fibonacci, u64> {
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Fibonacci, "Q1");
+QUERY_IMPLEMENTATION_BOILERPLATE(Fibonacci);
 
 
 DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, std::string);
 
-struct ImplementationOf_FibonacciStringAutoCache:
-	  query::QueryImplementation<FibonacciStringAutoCache, std::string> {
+struct IMPLEMENT_QUERY(FibonacciStringAutoCache, std::string) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
 		return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
 	}
@@ -68,12 +67,12 @@ struct ImplementationOf_FibonacciStringAutoCache:
 	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciStringAutoCache, "Auto cache");
+QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciStringAutoCache);
 
 /* * * * *
  * Q2 a: *
  * * * * */
-struct ImplementationOf_FibonacciSum: query::QueryImplementation<FibonacciSum, double> {
+struct IMPLEMENT_QUERY(FibonacciSum, double) {
 	static auto provide(Context& context, QKey key) -> PResult {
 		double res = 0;
 		for (uint64_t i = 0; i <= key.v; i++) res += double(context.query<Fibonacci>(Key1{ i }));
@@ -88,7 +87,7 @@ struct ImplementationOf_FibonacciSum: query::QueryImplementation<FibonacciSum, d
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_FibonacciSum, "Q2 a");
+QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciSum);
 
 class QueryTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -103,19 +102,15 @@ public:
 
 private:
 	void simpleTest() {
-		assert(query::queryEntryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (1)");
-		assert(query::queryEntryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (2)");
-		assert(query::queryEntryPoint<Fibonacci>(Key1{ 0 }) == 0, "Bad query output (3)");
-		assert(query::queryEntryPoint<FibonacciSum>(Key2{ 4 }) == 7, "Bad query output (4)");
+		assert(query::entryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (1)");
+		assert(query::entryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (2)");
+		assert(query::entryPoint<Fibonacci>(Key1{ 0 }) == 0, "Bad query output (3)");
+		assert(query::entryPoint<FibonacciSum>(Key2{ 4 }) == 7, "Bad query output (4)");
 	}
 
 	void autoCacheTest() {
-		assert(
-			query::queryEntryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (5)"
-		);
-		assert(
-			query::queryEntryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (6)"
-		);
+		assert(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (5)");
+		assert(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (6)");
 	}
 };
 
