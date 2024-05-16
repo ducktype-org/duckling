@@ -1,5 +1,6 @@
 #include "type_info_impl.hpp"
 #include <deque>
+#include <algorithm>
 
 namespace ts::internal {
 

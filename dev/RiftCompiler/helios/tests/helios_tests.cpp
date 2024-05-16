@@ -42,11 +42,9 @@ private:
 				                ? query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
 									{ root_scope, base::StrId(sym.c_str()), true }
 								)
-				                : query::entryPoint<compiler::helios::QueryLookupInSymbol>({
-									result.back(),
-									base::StrId(sym.c_str()),
-									false,
-								});
+				                : query::entryPoint<compiler::helios::QueryLookupInSymbol>(
+									{ result.back(), base::StrId(sym.c_str()), false }
+								);
 				for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
 					auto&& dealiased = query::entryPoint<compiler::helios::QueryDealias>(elem);
 					result.insert(result.end(), dealiased.begin(), dealiased.end());

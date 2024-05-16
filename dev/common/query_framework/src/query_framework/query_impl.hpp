@@ -144,7 +144,9 @@ namespace query {
 }
 
 /**
- * @brief This is an internal query, and shouldn't be used directly.
+ * @brief This is an internal query, and shouldn't be used directly. It used by
+ * `QUERY_IMPLEMENTATION_BOILERPLATE` macro and creates necessary components for
+ * macro-implementation structs.
  * @param type Name of a struct with query implementation
  * @param pretty_name Pretty name of the Query
  */
