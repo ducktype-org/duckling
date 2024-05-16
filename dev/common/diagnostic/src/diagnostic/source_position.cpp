@@ -61,7 +61,7 @@ namespace dia {
 
 		auto linePref = [&](usize line) {
 			std::stringstream number;
-			number << std::setw((int) length) << line << " | ";
+			number << "\n" << std::setw((int) length) << line << " | ";
 			res.emplace_back(number.str());
 		};
 		usize prev_line = -1;
