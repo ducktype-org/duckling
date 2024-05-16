@@ -7,23 +7,39 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
+#include "element_ref.hpp"
 
 // @TODO: relax this dependency
 #include <frontend/module_tree/module_tree.hpp>  // ModuleId
 
 #include <vector>
 
+
 namespace compiler::helios {
+
+	namespace code {
+		struct CodeBlock;
+		struct Expr;
+	}
 
 	/**
 	 * @brief placeholder for code that can execute (expressions, function body, etc)
 	 */
-	struct HOUTCode {};
+	struct HOUTCode {
+		code::ElementRef<code::CodeBlock> body;
+	};
 
 	/**
 	 * @brief placeholder for functions, methods, etc
 	 */
-	struct HOUTFunction {};
+	struct HOUTFunction {
+		// @TODO:
+		// - args
+		// - rets
+		// - some other stuff from proposal
+
+		HOUTCode body;
+	};
 
 	/**
 	 * @brief Structure representing single HOUTUnit
