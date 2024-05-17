@@ -81,8 +81,8 @@ namespace dia {
 		tokenizer::BorrowFile getSource() const;
 
 	private:
-		usize source_start,
-			source_end;  ///< #source_start, #source_end describe range of characters in the file
-		tokenizer::BorrowFile source_file;  ///< pointer to source file data
+		usize                 source_start;  ///< Start of the range of characters in the file.
+		usize                 source_end;    ///< End of the range of characters in the file.
+		tokenizer::BorrowFile source_file;   ///< Pointer to source file data.
 	};
 }

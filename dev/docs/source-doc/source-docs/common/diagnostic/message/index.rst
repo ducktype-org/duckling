@@ -28,7 +28,7 @@ Usage example
     protected:
         dia::Message::Domain getDomain() const override { /* ... */ }
 
-        printer::PrinterContent toPrinterContentBrief() const override {
+        printer::PrinterContent toStringBrief() const override {
             // ...
         }
     };
@@ -48,19 +48,19 @@ The compiler reports errors via the ``dia::Logger``, which consumes ``Message`` 
 Each ``Message`` must be supplied with a ``dia::SourcePosition``.
 
 The ``Message`` class is abstract, but one should not derive from it directly. Instead, one should always
-inherit after the ``Error``, ``Warning``, or ``Info`` abstract classes. Then, two or three methods need to be implemented.
+inherit after the ``Error``, ``Warning``, ``Info``, or ``Hint`` abstract classes. Then, two or three methods need to be implemented.
 
 First, is the ``getDomain()`` method. It's straight forward. Simply indicate which ``dia::Message::Domain`` the message
 pertains to. If no domain suits your needs and it is reasonable to add a new domain, feel free to do so.
 
-Second, is the ``toPrinterContentBrief()`` method. It describes the cause of the message as briefly as possible, while
+Second, is the ``toStringBrief()`` method. It describes the cause of the message as briefly as possible, while
 providing the user with enough information to eliminate the error, e.g. "Redeclaration of symbol <symbol_name>."
 
-Third, is the optionally overridable ``toPrinterContentDetailed()`` method. It behaves similarly to the ``toPrinterContentBrief()``
+Third, is the optionally overridable ``toStringDetailed()`` method. It behaves similarly to the ``toStringBrief()``
 method, but attempts to give more context, for example information useful to beginners, or examples of when the message may be thrown.
 By default, it is implemented to return the exact same information as its brief counterpart.
 
-Be careful not to override the (non-virtual) ``getPrinterContent(bool)`` method.
+Be careful not to override the (non-virtual) ``toString(bool)`` method.
 
 ``addNote``
 ^^^^^^^^^^^

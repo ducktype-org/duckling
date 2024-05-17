@@ -90,22 +90,22 @@ namespace dia {
 
 	protected:
 		/**
-		 * @brief Convert the Message to a printer::PrinterContent with the diagnostic minimum.
-		 * @return The brief printer::PrinterContent ready to be printed for the user.
+		 * @brief Convert the Message to a std::string with the diagnostic minimum.
+		 * @return The brief std::string ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::PrinterContent toPrinterContentBrief() const
+		virtual std::string toStringBrief() const
 			= 0;
 
 		/**
-		 * @brief Convert the Note to a printer::PrinterContent which possibly contains information
+		 * @brief Convert the Note to an std::string which possibly contains information
 		 * not included in the diagnostic minimum, thus not included in the brief message.
-		 * @return The detailed printer::PrinterContent ready to be printed for the user.
+		 * @return The detailed std::string ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::PrinterContent toPrinterContentDetailed() const {
+		virtual std::string toStringDetailed() const {
 			// By default, the detailed version is the same as the brief version.
-			return toPrinterContentBrief();
+			return toStringBrief();
 		}
 
 		/**
@@ -116,18 +116,18 @@ namespace dia {
 
 	public:
 		/**
-		 * @brief Get a printer::PrinterContent ready to be printed for the user to view.
+		 * @brief Get am std::string ready to be printed for the user to view.
 		 *
-		 * Note: the PrinterContent **must not** include the severity, domain, or notes.
+		 * Note: the string **must not** include the severity, domain, or notes.
 		 *
 		 * @param detailed Whether to include more details than the diagnostic minimum. These
 		 * details may include extra information about the source or nature of the message and
 		 * may be used to explain the message to beginners.
-		 * @return A printer::PrinterContent ready to be printed for the user.
+		 * @return An std::string ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		printer::PrinterContent getPrinterContent(bool detailed) const {
-			return detailed ? toPrinterContentBrief() : toPrinterContentDetailed();
+		std::string toString(bool detailed) const {
+			return detailed ? toStringBrief() : toStringDetailed();
 		}
 
 		/**
@@ -307,22 +307,22 @@ namespace dia {
 	class Note {
 	protected:
 		/**
-		 * @brief Convert the Note to a printer::PrinterContent containing the diagnostic minimum.
-		 * @return The brief printer::PrinterContent ready to be printed for the user.
+		 * @brief Convert the Note to an std::string containing the diagnostic minimum.
+		 * @return The brief std::string ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::PrinterContent toPrinterContentBrief() const
+		virtual std::string toStringBrief() const
 			= 0;
 
 		/**
-		 * @brief Convert the Note to a printer::PrinterContent which possibly contains information
+		 * @brief Convert the Note to an std::string which possibly contains information
 		 * not included in the diagnostic minimum, thus not included in the brief message.
-		 * @return The detailed printer::PrinterContent ready to be printed for the user.
+		 * @return The detailed std::string ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		virtual printer::PrinterContent toPrinterContentDetailed() const {
+		virtual std::string toStringDetailed() const {
 			// By default, the detailed version is the same as the brief version.
-			return toPrinterContentBrief();
+			return toStringBrief();
 		}
 
 	public:
@@ -336,16 +336,16 @@ namespace dia {
 		}
 
 		/**
-		 * @brief Get a printer::PrinterContent ready to be printed for the user to view.
+		 * @brief Get an std::string ready to be printed for the user to view.
 		 *
 		 * @param detailed Whether to include more details than the diagnostic minimum. These
 		 * details may include extra information about the source or nature of the message and
 		 * may be used to explain the message to beginners.
-		 * @return A printer::PrinterContent ready to be printed for the user.
+		 * @return An std::string ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		printer::PrinterContent getPrinterContent(bool detailed) const {
-			return detailed ? toPrinterContentBrief() : toPrinterContentDetailed();
+		std::string toString(bool detailed) const {
+			return detailed ? toStringBrief() : toStringDetailed();
 		}
 
 		virtual ~Note() noexcept = default;

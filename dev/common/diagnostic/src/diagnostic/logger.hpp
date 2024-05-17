@@ -61,7 +61,7 @@ namespace dia {
 		 * @param detailed Whether to print detailed messages.
 		 * @param stream The stream to print to.
 		 */
-		template<DiagnosticToStringConverter Converter = DiagnosticToUserConverter>
+		template<DiagnosticToPrinterConverter Converter = DiagnosticToUserConverter>
 		void dumpLog(bool detailed, std::ostream& stream = std::cerr) const;
 
 		/**
@@ -116,7 +116,7 @@ namespace dia {
 		 * @deprecated Use custom Message subclasses instead.
 		 * @todo remove
 		 */
-		void failAndLog(const printer::PrinterContent& message);
+		void failAndLog(const std::string& message);
 
 		/**
 		 * @brief Clear all logs. Restore to default state.

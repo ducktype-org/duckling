@@ -16,7 +16,7 @@ namespace dia {
 		message_log.at(severity_id).emplace_back(std::move(message_ptr));
 	}
 
-	template<DiagnosticToStringConverter Converter>
+	template<DiagnosticToPrinterConverter Converter>
 	void Logger::dumpLog(const bool detailed, std::ostream& stream) const {
 		// Currently, errors are dumped first, then warnings, then infos.
 		// It is not determined whether this is how we want it to stay.
@@ -35,6 +35,8 @@ namespace dia {
 	}
 
 	template void Logger::dumpLog<DiagnosticToUserConverter>(bool, std::ostream&) const;
+
+	template void Logger::dumpLog<DiagnosticToJSONConverter>(bool, std::ostream&) const;
 
 	usize Logger::messageCount(Message::Severity s) const {
 		return message_log.at(static_cast<int>(s)).size();
@@ -61,8 +63,8 @@ namespace dia {
 
 	protected:
 		[[nodiscard]]
-		printer::PrinterContent toPrinterContentBrief() const override {
-			return { message };
+		std::string toStringBrief() const override {
+			return message;
 		}
 
 		[[nodiscard]]
@@ -75,18 +77,18 @@ namespace dia {
 		log(base::make_unique<ObsoleteErrorWithPositionAndString>(position, message));
 	}
 
-	class ObsoleteErrorWithPrinterMessage final: public Error {
+	class ObsoleteErrorWithString final: public Error {
 	public:
-		explicit ObsoleteErrorWithPrinterMessage(printer::PrinterContent message):
+		explicit ObsoleteErrorWithString(std::string message):
 			  Error(dia::SourcePosition::fakePosition()),
 			  message(std::move(message)) {}
 
 	private:
-		printer::PrinterContent message;
+		std::string message;
 
 	protected:
 		[[nodiscard]]
-		printer::PrinterContent toPrinterContentBrief() const override {
+		std::string toStringBrief() const override {
 			return message;
 		}
 
@@ -96,8 +98,8 @@ namespace dia {
 		}
 	};
 
-	void Logger::failAndLog(const printer::PrinterContent& message) {
-		log(base::make_unique<ObsoleteErrorWithPrinterMessage>(message));
+	void Logger::failAndLog(const std::string& message) {
+		log(base::make_unique<ObsoleteErrorWithString>(message));
 	}
 
 	void Logger::clear() {
