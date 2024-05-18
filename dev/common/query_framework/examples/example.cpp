@@ -1,4 +1,5 @@
 #include "example.hpp"
+#include <diagnostic/diagnostic_converters.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_entry_point.hpp>
 
@@ -17,8 +18,8 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 
 	protected:
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override {
-			return { "Some random log from Query1." };
+		std::string toStringBrief() const override {
+			return "Some random log from Query1.";
 		}
 
 	public:
@@ -29,13 +30,21 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 	};
 
 	struct ErrorInQuery1 final: dia::Error {
-		explicit ErrorInQuery1(const dia::SourcePosition& source_position):
-			  Error(source_position) {}
+		struct NoteInQuery1 final: dia::Note {
+			[[nodiscard]]
+			std::string toStringBrief() const override {
+				return "A useless note in an example error in Query1.";
+			}
+		};
+
+		explicit ErrorInQuery1(const dia::SourcePosition& source_position): Error(source_position) {
+			addNote(base::make_unique<NoteInQuery1>());
+		}
 
 	protected:
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override {
-			return { "An example error in Query1." };
+		std::string toStringBrief() const override {
+			return "An example error in Query1.";
 		}
 
 	public:
@@ -127,13 +136,20 @@ QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQuery);
 uint64_t SquareValue(query::Context&, uint64_t v) { return v * v; }
 
 int main() {
-	std::cout << query::entryPoint<Query2>(2) << "\n";
-	query::debugPrintDependencyGraph();
-	std::cout << "\n";
+	// The instant logs may be printed in a different order than when they are dumped,
+	// because the instant logging is instant, while the dumping is ordered.
 
+	std::cerr << query::entryPoint<Query2>(2) << "\n";
+	query::debugPrintDependencyGraph();
+	std::cerr << "\n";
+
+	std::cerr << "Here are the logs in user readable form:\n";
 	query::detail::ContextType::logger.dumpLog(true);
 
-	std::cout << query::entryPoint<CyclicQuery>(0) << "\n";
+	std::cerr << "And here are the logs in JSON:\n";
+	query::detail::ContextType::logger.dumpLog<dia::DiagnosticToJSONConverter>(true);
+
+	std::cerr << query::entryPoint<CyclicQuery>(0) << "\n";
 
 	return 0;
 }
