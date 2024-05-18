@@ -9,7 +9,6 @@
 
 #include "printer_content.hpp"
 
-#include <vector>
 #include <iostream>
 
 namespace printer {
@@ -18,5 +17,15 @@ namespace printer {
 		static void print(const PrinterContent& content, std::ostream& out = std::cerr);
 		static void print(const PrinterContentsSeq& contents, std::ostream& out = std::cerr);
 		static void newline(int times = 1, std::ostream& out = std::cerr);
+
+		static void printNL(const PrinterContent& content, std::ostream& out = std::cerr) {
+			print(content, out);
+			newline(1, out);
+		}
+
+		static void printNL(const PrinterContentsSeq& contents, std::ostream& out = std::cerr) {
+			print(contents, out);
+			newline(1, out);
+		}
 	};
 }

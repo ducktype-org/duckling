@@ -1,7 +1,6 @@
 #include <diagnostic/logger.hpp>
 
 #include "classifications.hpp"
-#include "decode.hpp"
 #include "lexer_class.hpp"
 
 namespace lexer {
@@ -55,7 +54,7 @@ namespace lexer {
 
 	void Lexer::addTokenMsg(usize begin, usize end, std::string_view token_type) {
 		if (tokenMessages()) {
-			printer::StreamPrinter::print({
+			printer::StreamPrinter::printNL({
 				"Add token: ",
 				std::string(token_type),
 				"(",
@@ -311,7 +310,8 @@ namespace lexer {
 		Token::BracketType bracket_type{ peek().value };
 		auto               group_end = peek().bracketPair();
 		if (tokenMessages())
-			printer::StreamPrinter::print(base::strConcat("group begin", generateLineColumnInfo()));
+			printer::StreamPrinter::printNL(base::strConcat("group begin", generateLineColumnInfo())
+			);
 
 
 		Tokens inner_tokens;
@@ -358,7 +358,7 @@ namespace lexer {
 		output.push_back(Token::makeBracketGroup(
 			bracket_type, std::move(inner_tokens), std::move(sentinel), sourcePosition
 		));
-		if (tokenMessages()) printer::StreamPrinter::print("group end");
+		if (tokenMessages()) printer::StreamPrinter::printNL("group end");
 	}
 
 	bool Lexer::isEOF() const { return peek().is(Class::end_of_file_value); }
