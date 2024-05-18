@@ -36,12 +36,6 @@ namespace dia {
 		SourcePosition& operator=(const SourcePosition& other) = default;
 
 		/**
-		 * @brief Get lines surrounding formatted for printing.
-		 */
-		[[nodiscard]]
-		std::vector<std::string> getSourceLines() const;
-
-		/**
 		 * @brief Get lines surrounding with error colored.
 		 */
 		[[nodiscard]]
