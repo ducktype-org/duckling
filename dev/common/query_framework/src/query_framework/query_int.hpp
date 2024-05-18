@@ -5,25 +5,23 @@
 #include "node_id.hpp"
 #include "empty_key.hpp"
 
-namespace query {
+namespace query::detail {
 
-	namespace detail {
-		struct ContextType;
+	struct ContextType;
 
-		/**
-		 * @brief Base class for defining query interface
-		 *
-		 * @tparam QueryType_tp a type of a query
-		 * @tparam QKey_tp a type of a query key
-		 * @tparam QResult_tp a type of a query result
-		 */
-		template<typename QueryType_tp, typename QKey_tp, typename QResult_tp>
-		struct QueryInterface {
-			using QueryType = QueryType_tp;
-			using QKey      = QKey_tp;
-			using QResult   = QResult_tp;
-		};
-	}
+	/**
+	 * @brief Base class for defining query interface
+	 *
+	 * @tparam QueryType_tp a type of a query
+	 * @tparam QKey_tp a type of a query key
+	 * @tparam QResult_tp a type of a query result
+	 */
+	template<typename QueryType_tp, typename QKey_tp, typename QResult_tp>
+	struct QueryInterface {
+		using QueryType = QueryType_tp;
+		using QKey      = QKey_tp;
+		using QResult   = QResult_tp;
+	};
 }
 
 /**
@@ -45,6 +43,13 @@ namespace query {
 		INTERNAL_QUERY_INTERFACE_BOILERPLATE                                     \
 	};
 
+/**
+ * @brief Macro to be used as a struct signature when implementing a query.
+ * @param query_type Name of the query
+ * @param PResult Type returned by the Provide method
+ */
+#define IMPLEMENT_QUERY(query_type, PResult) \
+	ImplementationOf_##query_type final: public query::QueryImplementation<query_type, PResult>
 
 /**
  * @brief Macro used to declare query extensions

@@ -15,6 +15,7 @@ int main(int argc, char** argv) {
 		std::cerr << "usage: ./lexer_testing file_name\n";
 		return 1;
 	}
+
 	FilePath path(argv[1]);
 	auto     tokenFile = tokenizer::makeTokenFile(path);
 	tokenFile->tokenize();

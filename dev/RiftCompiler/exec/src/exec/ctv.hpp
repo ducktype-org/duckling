@@ -88,7 +88,7 @@ namespace exec {
 		}
 
 		CTV makePointer() const {
-			auto pointer_type = ts::TypeDesc<>(query::queryEntryPoint<ts::QueryPointerType>(
+			auto pointer_type = ts::TypeDesc<>(query::entryPoint<ts::QueryPointerType>(
 				{ type.getType(), type.getValueCategory().isMutable() }
 			));
 

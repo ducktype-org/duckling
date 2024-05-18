@@ -61,7 +61,7 @@ namespace dia {
 
 		auto linePref = [&](usize line) {
 			std::stringstream number;
-			number << std::setw((int) length) << line << " | ";
+			number << "\n" << std::setw((int) length) << line << " | ";
 			res.emplace_back(number.str());
 		};
 		usize prev_line = -1;
@@ -116,13 +116,13 @@ namespace dia {
 		  SourcePosition(other.source_file, other.source_start, source_end) {}
 
 	std::pair<usize, usize> SourcePosition::getStartLineColumn() const {
-		return source_start ? source_file->getLineColumn(source_start)
-		                    : std::make_pair(usize(0), usize(0));
+		return source_file.get() ? source_file->getLineColumn(source_start)
+		                         : std::make_pair(usize(0), usize(0));
 	}
 
 	std::pair<usize, usize> SourcePosition::getEndLineColumn() const {
-		return source_end ? source_file->getLineColumn(source_end)
-		                  : std::make_pair(usize(0), usize(0));
+		return source_file.get() ? source_file->getLineColumn(source_end)
+		                         : std::make_pair(usize(0), usize(0));
 	}
 
 	usize SourcePosition::getStart() const { return source_start; }

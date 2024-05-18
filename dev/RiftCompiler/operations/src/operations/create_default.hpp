@@ -46,23 +46,23 @@ namespace operation {
 
 	inline TypedOperation comparison(const Operation& op, ts::TypeInfo ty) {
 		return { op,
-			     query::queryEntryPoint<ts::QueryFunctionType>(
-					 { { ty, ty }, query::queryEntryPoint<ts::QueryIntegralType>({ 8 }) }
+			     query::entryPoint<ts::QueryFunctionType>(
+					 { { ty, ty }, query::entryPoint<ts::QueryIntegralType>({ 8 }) }
 				 ) };
 	}
 
 	inline TypedOperation equality(const Operation& op, ts::TypeInfo ty) {
 		return { op,
-			     query::queryEntryPoint<ts::QueryFunctionType>(
-					 { { ty, ty }, query::queryEntryPoint<ts::QueryBoolType>({}) }
+			     query::entryPoint<ts::QueryFunctionType>(
+					 { { ty, ty }, query::entryPoint<ts::QueryBoolType>({}) }
 				 ) };
 	}
 
 	inline TypedOperation assign(const Operation& op, ts::TypeInfo ty) {
-		return { op, query::queryEntryPoint<ts::QueryFunctionType>({ { ty, ty }, ty }) };
+		return { op, query::entryPoint<ts::QueryFunctionType>({ { ty, ty }, ty }) };
 	}
 
 	inline TypedOperation construct(const Operation& op, ts::TypeInfo ty) {
-		return { op, query::queryEntryPoint<ts::QueryFunctionType>({ { ty }, ty }) };
+		return { op, query::entryPoint<ts::QueryFunctionType>({ { ty }, ty }) };
 	}
 }

@@ -5,8 +5,7 @@
 #include <set>
 
 namespace ts {
-	struct ImplementationOf_QueryImplicitCoercibilityOnInfo:
-		  query::QueryImplementation<QueryImplicitCoercibilityOnInfo, bool> {
+	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnInfo, bool) {
 		inline static base::Map<QKey, query::CacheEntry<QResult>> cache;
 
 		static auto provide(Context& context, const QKey key) -> PResult {
@@ -40,12 +39,9 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(
-		ImplementationOf_QueryImplicitCoercibilityOnInfo, "QueryImplicitCoercibilityOnInfo"
-	);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnInfo);
 
-	struct ImplementationOf_QueryImplicitCoercibilityOnDesc:
-		  query::QueryImplementation<QueryImplicitCoercibilityOnDesc, bool> {
+	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnDesc, bool) {
 		inline static base::Map<QKey, query::CacheEntry<QResult>> cache;
 
 		static auto provide(Context& context, const QKey& key) -> PResult {
@@ -68,7 +64,5 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(
-		ImplementationOf_QueryImplicitCoercibilityOnDesc, "QueryImplicitCoercibilityOnDesc"
-	);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnDesc);
 }

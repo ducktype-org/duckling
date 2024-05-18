@@ -17,6 +17,7 @@ Implementation of main Rift language compiler.
     compiler/index.rst
     exec/index.rst
     hir/index.rst
+    helios/index.rst
     main/index.rst
     module_system/index.rst
     operations/index.rst

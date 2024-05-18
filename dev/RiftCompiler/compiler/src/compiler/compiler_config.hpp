@@ -15,7 +15,11 @@ namespace compiler {
 		std::string output;
 	};
 
-	CompilerConfig              fromArgs(clap::CLIArgs args);
+	CompilerConfig fromArgs(clap::CLIArgs args);
+
+	// clang-format off
+	// @FIXME: this does not pass CI.
 	printer::PrinterContentsSeq generateHelpMessage(const clap::exceptions::HelpException& e);
+	//clang-format on
 
 }

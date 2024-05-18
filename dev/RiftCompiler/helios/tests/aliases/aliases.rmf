@@ -1,0 +1,16 @@
+const x: i32 = 2137;
+alias a = x;
+namespace N2 {
+  alias b = a;
+}
+alias n1 = N2;
+alias n2 = N2;
+using n1.*;
+
+struct T {
+  var x;
+  using x.*;
+}
+
+var t: T;
+// t.z; dealias to t.x.z
