@@ -28,7 +28,7 @@ Usage example
     protected:
         dia::Message::Domain getDomain() const override { /* ... */ }
 
-        printer::MessageContent toMessageContentBrief() const override {
+        printer::PrinterContent toStringBrief() const override {
             // ...
         }
     };
@@ -66,7 +66,7 @@ Adding errors
 ^^^^^^^^^^^^^
 
 New errors are added using the ``log()`` method.
-Every message must extend the ``Error``, ``Warning``, or ``Info`` class and implement the ``getDomain()`` and ``getBaseMessageContent()`` methods.
+Every message must extend the ``Error``, ``Warning``, ``Info``, or ``Hint`` class and implement the ``getDomain()`` and ``toStringBrief()`` methods.
 The first one treats it as a fatal error while the second treats it more like a warning. There are two versions for both. One takes position and message while the other takes only message.
 
 Printing errors

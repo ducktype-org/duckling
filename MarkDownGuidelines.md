@@ -3,7 +3,7 @@
 1. Use GitHub docs  
    <https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax>
 
-1. Put new lines after headers and before lists, tables, ...  
+2. Put new lines after headers and before lists, tables, ...  
    Example:
    ~~~markdown
    # Header
@@ -14,11 +14,11 @@
     * Second
    ~~~
 
-1. Use `**Bold**`, **Bold**
-1. Use `_Italic_`, _Italic_
-1. Use `**_BoldItalic_**`, **_BoldItalic_**
+3. Use `**Bold**`, **Bold**
+4. Use `_Italic_`, _Italic_
+5. Use `**_BoldItalic_**`, **_BoldItalic_**
 
-1. Adding new line  
+6. Adding new line  
    Double space at the end of line or `<br>` anywhere else.  
    Example:
    ~~~markdown  
@@ -28,16 +28,16 @@
    <br> <!-- It will break things like lists -->
    ~~~
 
-1. Indentation  
+7. Indentation  
    To the level of parent element (with spaces) or 
    double space if indenting to parent doesn't make sense or break things
    <!-- See https://github.com/github/markup/issues/1084 -->
 
-1. Inline code  
+8. Inline code  
   `code here`, `int a` <!-- Can't find working way of adding highlight to inline code -->
                       <!-- see: https://github.com/vuejs/vuepress/issues/1212 -->
 
-1. Code blocks  
+9. Code blocks  
    ~~~~~
    code here
    ~~~~~
@@ -45,7 +45,7 @@
    int a;
    ~~~~~
 
-1. Links  
-   <https://github.com/rift-lang/>  
-   [Rift Lang](https://github.com/rift-lang/)  
-   [How to write .md](#how-to-write-md-for-github)
+10. Links  
+    <https://github.com/rift-lang/>  
+    [Rift Lang](https://github.com/rift-lang/)  
+    [How to write .md](#how-to-write-md-for-github)

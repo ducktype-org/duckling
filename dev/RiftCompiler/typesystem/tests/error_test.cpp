@@ -29,7 +29,8 @@ private:
 		query::detail::ContextType::logger.dumpLog(false, dumped_logs);
 		const auto dumped_logs_str = dumped_logs.str();
 		assert(
-			dumped_logs_str.find("Invalid size of integral type") != dumped_logs_str.npos,
+			dumped_logs_str.find("Invalid size of integral type")
+				!= decltype(dumped_logs_str)::npos,
 			"Logs should contain mention of invalid integral size."
 		);
 	}
@@ -47,7 +48,7 @@ private:
 		query::detail::ContextType::logger.dumpLog(false, dumped_logs);
 		const auto dumped_logs_str = dumped_logs.str();
 		assert(
-			dumped_logs_str.find("Invalid size of float type") != dumped_logs_str.npos,
+			dumped_logs_str.find("Invalid size of float type") != decltype(dumped_logs_str)::npos,
 			"Logs should contain mention of invalid float size."
 		);
 	}

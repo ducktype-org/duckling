@@ -39,7 +39,7 @@ namespace tester {
 
 	void TestSuite::message(std::string_view mess) {
 		std::string indent_mess = std::string("       ") + std::string(mess);
-		curr_global_res->output.push_back(printer::Message({
+		curr_global_res->output.push_back(printer::PrinterContent({
 			indent_mess,
 		}));
 	}
@@ -106,37 +106,33 @@ namespace tester {
 	}
 
 	void TestSuite::resultHandler(const TestData& test, const TestResult& res) {
-		streamPrinter.add({ {
+		printer::StreamPrinter::print({ {
 			test.name,
 			": ",
-			res.success ? printer::MessageContent("OK", printer::Color::GREEN)
-						: printer::MessageContent("FAIL", printer::Color::RED),
+			res.success ? printer::PrinterContent("OK", printer::Color::GREEN)
+						: printer::PrinterContent("FAIL", printer::Color::RED),
+			"\n",
 		} });
-		for (auto& mess: res.output) streamPrinter.add(mess);
-		if (res.output.empty()) {
-			// @TODO: .newLine or something similar
-			streamPrinter.add({ { "" } });
-		}
-		streamPrinter.print(std::cerr);
-		streamPrinter.clear();
+		for (auto& mess: res.output) printer::StreamPrinter::print(mess);
+		if (res.output.empty()) printer::StreamPrinter::newline();
 	}
 
 	void TestSuite::prolog() {
-		streamPrinter.add({ { std::string(beginEqualSignL(name.length() + 2), '='),
-		                      " ",
-		                      name,
-		                      " ",
-		                      std::string(endEqualSignL(name.length() + 2), '='),
-		                      "\n",
-		                      "Running ",
-		                      std::to_string(tests.size()),
-		                      " tests.\n" } });
-		streamPrinter.print(std::cerr);
-		streamPrinter.clear();
+		printer::StreamPrinter::print({ {
+			std::string(beginEqualSignL(name.length() + 2), '='),
+			" ",
+			name,
+			" ",
+			std::string(endEqualSignL(name.length() + 2), '='),
+			"\n",
+			"Running ",
+			std::to_string(tests.size()),
+			" tests.\n",
+		} });
 	}
 
 	void TestSuite::epilog(usize passed, usize failed, double time) {
-		streamPrinter.add({ {
+		streamPrinter.print({ {
 			"\n",
 			std::string(fullEqualSignL(name.length() + 2), '='),
 			"\n",
@@ -145,13 +141,11 @@ namespace tester {
 			" s",
 			{ "\nPassed:       ", printer::Color::GREEN },
 			{ std::to_string(passed), printer::Color::GREEN },
-			{ "\nFailed:       ", failed ? printer::Color::RED : printer::Color::RESET },
-			{ std::to_string(failed), failed ? printer::Color::RED : printer::Color::RESET },
+			{ "\nFailed:       ", failed ? printer::Color::RED : printer::Color::DEFAULT },
+			{ std::to_string(failed), failed ? printer::Color::RED : printer::Color::DEFAULT },
 			"\n",
 			std::string(fullEqualSignL(name.length() + 2), '='),
 			"\n",
 		} });
-		streamPrinter.print(std::cerr);
-		streamPrinter.clear();
 	}
 }
