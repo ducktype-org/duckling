@@ -336,10 +336,6 @@ namespace pst {
 	};
 
 	class Expr final: public Stmt {
-	private:
-		// @TODO: this friend should probably be removed, and some stuff just should be public
-		friend ::hir::Expression;
-
 	public:
 		enum class GroupType {
 			RoundGroup  = 0,
@@ -357,6 +353,8 @@ namespace pst {
 			rift_def::Keyword   keyword;
 			dia::SourcePosition position;
 		};
+
+		using ExprElem = std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue>;
 
 		struct Group {
 			GroupType           type;
@@ -379,12 +377,8 @@ namespace pst {
 			dia::SourcePosition position;
 		};
 
-		using ExprElem = std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue>;
-
-	private:
 		std::vector<ExprElem> elements;
 
-	public:
 		STMT_CHILD_CONSTRUCTOR(Expr);
 		/**
 		 * @brief parses the expression until its over

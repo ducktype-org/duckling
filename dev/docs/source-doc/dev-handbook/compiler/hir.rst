@@ -2,6 +2,11 @@
 HIR inner workings
 ==================
 
+.. deprecated:: 9.05.2024
+    THIS entire file contains LEGACY information.
+    It will be updated as a follow-up to mission 36.
+
+
 .. attention:: This section will need to be expanded in the future.
 
 .. contents::

@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <token_file/forward.hpp>
 #include <filesystem/file.hpp>
 #include "token.hpp"
 
@@ -23,5 +24,5 @@ namespace lexer {
 	 * @param file File to tokenize
 	 * @return lexer::TokenData Containing the Tokens
 	 */
-	lexer::TokenData tokenizeFile(const fs::FilePath& file);
+	tokenizer::OwnFile tokenizeFile(const fs::FilePath& file);
 }

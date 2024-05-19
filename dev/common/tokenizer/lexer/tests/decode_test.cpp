@@ -2,6 +2,7 @@
 #include <lexer/decode.hpp>
 #include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
+#include <token_file/file.hpp>
 
 std::byte operator""_BT(unsigned long long x) {
 	RIFT_ASSERT(x < 256, "bad std::byte literal operator");
@@ -36,10 +37,11 @@ public:
 private:
 	template<fs::Encoding encoding = fs::Encoding::UTF8>
 	void assumeBadDecode(base::RawView view) {
-		dia::Logger state;
-		lexer::decode<encoding>(view, state);
-		// state.dumpLog();
-		assert(state.bad(), "Encoding error not found");
+		std::string content{ view.stringView() };
+		auto        path = fs::FilePath::createTempFile(content);
+		auto        file = tokenizer::makeTokenFile(path);
+		file->decode();
+		assert(file->getLogger().bad(), "Encoding error not found");
 	}
 
 	void badContinuations() {

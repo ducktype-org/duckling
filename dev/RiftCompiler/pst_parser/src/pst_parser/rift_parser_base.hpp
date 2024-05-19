@@ -39,15 +39,17 @@ namespace pst {
 		std::vector<ImportType> imports;
 
 	public:
-		RiftParserState(tpc::TokenStream&& tokens, dia::Logger&& err):
-			  tpc::ParserState(std::move(tokens), std::move(err)) {}
+		RiftParserState(tpc::TokenStream&& tokens, dia::Logger& err):
+			  tpc::ParserState(std::move(tokens), err) {}
 
 		void addImport(const tpc::ParserCBorrowRef<pst::Import>& import);
 
 		[[nodiscard]]
-		auto extractState() && -> std::tuple<dia::Logger, std::vector<ImportType>> {
-			return { std::move(err), std::move(imports) };
+		auto extractState() && -> std::vector<ImportType> {
+			return std::move(imports);
 		}
 	};
 
 }
+
+ID_STD_HASH(::pst::PstID);

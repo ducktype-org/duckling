@@ -23,9 +23,9 @@ namespace tpc {
 		[[nodiscard]]
 		const TokenStream& ctokens() const;
 
-		dia::Logger err;  ///< Stores parsing errors
+		dia::Logger& err;  ///< Stores parsing errors
 
-		ParserState(TokenStream&& tokens, dia::Logger&& err): err(std::move(err)) {
+		ParserState(TokenStream&& tokens, dia::Logger& err): err(err) {
 			stream_stack.emplace_back(std::move(tokens));
 		}
 

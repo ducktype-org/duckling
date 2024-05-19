@@ -22,7 +22,7 @@ private:
 	void initialization() { assert(getBuiltInOps().notEmpty(), "Built in operator map is empty."); }
 
 	void simple_int_test() {
-		auto           int_type = query::queryEntryPoint<ts::QueryIntegralType>({ 8 });
+		auto           int_type = query::entryPoint<ts::QueryIntegralType>({ 8 });
 		ts::TypeDesc<> int_desc{ int_type };
 
 		auto eq_int = [](std::vector<exec::CTV> ctvs) {

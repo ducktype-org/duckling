@@ -5,6 +5,7 @@
 
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
+#include <token_file/file.hpp>
 #include <iostream>
 
 using namespace fs;
@@ -14,7 +15,9 @@ int main(int argc, char** argv) {
 		std::cerr << "usage: ./lexer_testing file_name\n";
 		return 1;
 	}
-	lexer::init();
-	FilePath file(argv[1]);
-	auto     tokens = lexer::tokenizeFile(file);
+
+	FilePath path(argv[1]);
+	auto     tokenFile = tokenizer::makeTokenFile(path);
+	tokenFile->tokenize();
+	if (tokenFile->getLogger().bad()) tokenFile->getLogger().dumpLog(true);
 }

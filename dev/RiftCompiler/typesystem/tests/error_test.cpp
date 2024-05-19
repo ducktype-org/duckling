@@ -19,7 +19,7 @@ private:
 	void integral_size_error_test() {
 		query::detail::ContextType::logger.clear();
 		assert(query::detail::ContextType::logger.good(), "Test should begin without errors.");
-		query::queryEntryPoint<QueryIntegralType>({ 42 });
+		query::entryPoint<QueryIntegralType>({ 42 });
 
 		std::stringstream dumped_logs;
 		assert(
@@ -29,7 +29,8 @@ private:
 		query::detail::ContextType::logger.dumpLog(false, dumped_logs);
 		const auto dumped_logs_str = dumped_logs.str();
 		assert(
-			dumped_logs_str.find("Invalid size of integral type") != dumped_logs_str.npos,
+			dumped_logs_str.find("Invalid size of integral type")
+				!= decltype(dumped_logs_str)::npos,
 			"Logs should contain mention of invalid integral size."
 		);
 	}
@@ -37,7 +38,7 @@ private:
 	void float_size_error_test() {
 		query::detail::ContextType::logger.clear();
 		assert(query::detail::ContextType::logger.good(), "Test should begin without errors.");
-		query::queryEntryPoint<QueryFloatType>(42);
+		query::entryPoint<QueryFloatType>(42);
 
 		std::stringstream dumped_logs;
 		assert(
@@ -47,7 +48,7 @@ private:
 		query::detail::ContextType::logger.dumpLog(false, dumped_logs);
 		const auto dumped_logs_str = dumped_logs.str();
 		assert(
-			dumped_logs_str.find("Invalid size of float type") != dumped_logs_str.npos,
+			dumped_logs_str.find("Invalid size of float type") != decltype(dumped_logs_str)::npos,
 			"Logs should contain mention of invalid float size."
 		);
 	}

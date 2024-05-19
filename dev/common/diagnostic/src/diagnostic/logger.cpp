@@ -1,41 +1,42 @@
 #include "logger.hpp"
-#include <filesystem/file.hpp>
+#include "diagnostic_converters.hpp"
 
 namespace dia {
-	static void dump_messages(
-		const std::vector<base::unique_ptr<Message>>& messages,
-		printer::StreamPrinter&                       stream_printer,
-		const bool                                    detailed
-	) {
-		for (const auto& message_ptr: messages)
-			stream_printer.add(message_ptr->toPrinterMessagePack(detailed));
-	}
-
 	void Logger::log(
 		base::unique_ptr<Message> message_ptr, const bool immediately_dump, const bool detailed
 	) {
 		if (immediately_dump) {
-			auto stream_printer = printer::StreamPrinter{};
-			stream_printer.add(message_ptr->toPrinterMessagePack(detailed));
-			stream_printer.print(std::cerr);
+			printer::StreamPrinter::print(
+				DiagnosticToUserConverter::toPrinterContents(message_ptr.borrow(), detailed)
+			);
+			printer::StreamPrinter::newline(2);
 		}
 
 		const int severity_id = static_cast<int>(message_ptr->getSeverity());
 		message_log.at(severity_id).emplace_back(std::move(message_ptr));
 	}
 
+	template<DiagnosticToPrinterConverter Converter>
 	void Logger::dumpLog(const bool detailed, std::ostream& stream) const {
-		auto stream_printer = printer::StreamPrinter{};
 		// Currently, errors are dumped first, then warnings, then infos.
 		// It is not determined whether this is how we want it to stay.
 		// This is a temporary, "good enough" solution.
 		// Perhaps we will change it to showing all messages in order of appearance
 		// in the source code, or maybe we will choose a completely separate strategy.
 		// @TODO: resolve the above.
-		for (int severity_id = 0; severity_id < Message::NUM_SEVERITIES; severity_id++)
-			dump_messages(message_log.at(severity_id), stream_printer, detailed);
-		stream_printer.print(stream);
+		for (int severity_id = 0; severity_id < Message::NUM_SEVERITIES; severity_id++) {
+			for (auto& message: message_log.at(severity_id)) {
+				printer::StreamPrinter::print(
+					Converter::toPrinterContents(message.borrow(), detailed), stream
+				);
+				printer::StreamPrinter::newline(2, stream);
+			}
+		}
 	}
+
+	template void Logger::dumpLog<DiagnosticToUserConverter>(bool, std::ostream&) const;
+
+	template void Logger::dumpLog<DiagnosticToJSONConverter>(bool, std::ostream&) const;
 
 	usize Logger::messageCount(Message::Severity s) const {
 		return message_log.at(static_cast<int>(s)).size();
@@ -62,8 +63,8 @@ namespace dia {
 
 	protected:
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override {
-			return { message };
+		std::string toStringBrief() const override {
+			return message;
 		}
 
 		[[nodiscard]]
@@ -76,22 +77,18 @@ namespace dia {
 		log(base::make_unique<ObsoleteErrorWithPositionAndString>(position, message));
 	}
 
-	class ObsoleteErrorWithPrinterMessage final: public Error {
+	class ObsoleteErrorWithString final: public Error {
 	public:
-		explicit ObsoleteErrorWithPrinterMessage(printer::MessageContent message):
-			  // Had to pick a file that always exists and behaves somewhat normally.
-		      // /dev/zero does not work.
-			  Error(
-				  { std::make_shared<fs::FilePath>(std::filesystem::path("/usr/bin/cat")), 1, 1, 1 }
-			  ),
+		explicit ObsoleteErrorWithString(std::string message):
+			  Error(dia::SourcePosition::fakePosition()),
 			  message(std::move(message)) {}
 
 	private:
-		printer::MessageContent message;
+		std::string message;
 
 	protected:
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override {
+		std::string toStringBrief() const override {
 			return message;
 		}
 
@@ -101,8 +98,8 @@ namespace dia {
 		}
 	};
 
-	void Logger::failAndLog(const printer::MessageContent& message) {
-		log(base::make_unique<ObsoleteErrorWithPrinterMessage>(message));
+	void Logger::failAndLog(const std::string& message) {
+		log(base::make_unique<ObsoleteErrorWithString>(message));
 	}
 
 	void Logger::clear() {

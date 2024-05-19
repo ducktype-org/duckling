@@ -44,6 +44,7 @@ namespace tester {
 	private:
 		class CritTestError: public std::exception {
 		public:
+			[[nodiscard]]
 			const char* what() const noexcept final;
 		};
 
@@ -55,9 +56,9 @@ namespace tester {
 		};
 
 		struct TestResult {
-			bool                 success = true;
-			bool                 stop    = false;
-			printer::MessagePack output;
+			bool                        success = true;
+			bool                        stop    = false;
+			printer::PrinterContentsSeq output;
 		};
 
 		void resultHandler(const TestData& test, const TestResult& res);

@@ -1,10 +1,12 @@
+option(USE_MARCH_NATIVE "Use -march=native. This should be disabled for portable builds" OFF)
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	# @TODO: decide of std++20 vs gnu++20
 	message("-- GNU compiler")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare")
 
 	# Debug version uses Og and prints all logs. 
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g -Og")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DPRINT_LOG -g")
 
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
@@ -18,6 +20,10 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()
+
+if (USE_MARCH_NATIVE)
+	add_compile_options(-march=native)
+endif (USE_MARCH_NATIVE)
 
 # "-O2" here is needed so standard "cmake .." is compiled with O2.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")

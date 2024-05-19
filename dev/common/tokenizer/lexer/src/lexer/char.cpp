@@ -8,11 +8,7 @@
 
 namespace lexer {
 
-	Char::Char(UChar32 value, u8 size, base::RawArray raw_begin):
-		  value(value),
-		  size(size),
-		  raw_begin(raw_begin) {
-		RIFT_ASSERT(raw_begin != nullptr, "Char constructed without raw pointer");
+	Char::Char(UChar32 value, u8 size, usize index): value(value), size(size), index(index) {
 		if (size == u8{ 0 }) {
 			RIFT_ASSERT(
 				value == Classifications::end_of_file_value, "non-EOF Char created with size 0"
@@ -44,11 +40,5 @@ namespace lexer {
 		std::string res;
 		icu::UnicodeString(value).toUTF8String(res);
 		return res;
-	}
-
-	base::RawView composeRaw(CharArray& array, usize from, usize to) {
-		base::RawArray begin = array.at(from).raw_begin;
-		usize          size  = array.at(to + 1).raw_begin - begin;
-		return { begin, size };
 	}
 }

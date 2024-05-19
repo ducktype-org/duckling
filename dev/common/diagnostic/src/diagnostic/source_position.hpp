@@ -5,42 +5,41 @@
 
 #pragma once
 
+#include <token_file/forward.hpp>
 #include <filesystem/file.hpp>
-#include <printer/message.hpp>
+#include <memory>
+#include <printer/printer_content.hpp>
 #include <string>
 
 namespace dia {
 	/**
 	 * @brief  Type used for storing token position in a source file
 	 *
-	 * It always stores a valid position with the position (end() + 1, end() + 1) being EOF
+	 * It always stores a valid position with the position (EOF, EOF) being EOF
 	 */
 	class SourcePosition {
+	private:
+		explicit SourcePosition(): source_start(0), source_end(0), source_file(nullptr) {}
+
 	public:
-		using SourceFile = std::shared_ptr<const fs::FilePath>;
+		/**
+		 * @brief Constructs a fake source position that should never be used except as an unused
+		 * placeholder.
+		 */
+		static SourcePosition fakePosition() { return SourcePosition(); }
 
-		SourcePosition() = delete;
-
-		SourcePosition(const SourceFile& source_file, usize line, usize column, usize source_start);
-		SourcePosition(
-			const SourceFile& source_file,
-			usize             line,
-			usize             column,
-			usize             source_start,
-			usize             source_end
-		);
+		SourcePosition(tokenizer::BorrowFile source_file, usize source_start);
+		SourcePosition(tokenizer::BorrowFile source_file, usize source_start, usize source_end);
 		SourcePosition(const SourcePosition& other) = default;
 		SourcePosition(const SourcePosition& other, usize source_end);
 
 		SourcePosition& operator=(const SourcePosition& other) = default;
 
 		/**
-		 * @brief Get a copy of the bytes in this position
-		 *
-		 * @return std::string containing a copy of the bytes in this position.
+		 * @brief Get lines surrounding with error colored.
 		 */
 		[[nodiscard]]
-		std::string getSourceChars() const;
+		std::vector<printer::PrinterContent> getPrettySourceLines() const;
 
 		/**
 		 * @brief Get formatted message contents with a given reason.
@@ -52,8 +51,8 @@ namespace dia {
 		 * @return Formatted message contents.
 		 */
 		[[nodiscard]]
-		std::vector<printer::MessageContent>
-			genPrinterMessageContents(const printer::MessageContent& reason) const;
+		std::vector<printer::PrinterContent>
+			genPrinterContents(const printer::PrinterContent& reason) const;
 
 		/**
 		 * @brief Get formatted message string with a given reason.
@@ -65,23 +64,22 @@ namespace dia {
 		std::string genStr(std::string_view reason) const;
 
 		[[nodiscard]]
-		usize getLine() const;
+		std::pair<usize, usize> getStartLineColumn() const;
 		[[nodiscard]]
-		usize getColumn() const;
+		std::pair<usize, usize> getEndLineColumn() const;
 		[[nodiscard]]
 		usize getStart() const;
 		[[nodiscard]]
 		usize getEnd() const;
 		[[nodiscard]]
-		SourceFile getSource() const;
+		tokenizer::BorrowFile getSource() const;
 
 		// @TODO: this is a temporary solution:
-		static SourcePosition getBadPosition() { return { nullptr, 0, 0, 0, 0 }; }
+		static SourcePosition getBadPosition() { return { nullptr, 0, 0 }; }
 
 	private:
-		usize line, column;      ///< #line, #column describe start position in code for the user
-		usize source_start,
-			source_end;          ///< #source_start, #source_end describe range of bytes in the file
-		SourceFile source_file;  ///< pointer to source file data
+		usize                 source_start;  ///< Start of the range of characters in the file.
+		usize                 source_end;    ///< End of the range of characters in the file.
+		tokenizer::BorrowFile source_file;   ///< Pointer to source file data.
 	};
 }

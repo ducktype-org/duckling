@@ -1,0 +1,49 @@
+// Tests for recurrence, but also for many function aspects
+// (passing arguments, results, whether stacks are seperate).
+// input = n
+// output = n * (n + 1) / 2
+
+function sum {
+	arg_size: 0;
+	ret_size: 0;
+	local_size: 16;
+
+	code: {
+        mov_l64_pFuncArg    0;
+        cmpEq_l64_imm       0,  0;
+        jmpRelIf_label      ret_label;
+        // if arg != 0:
+            mov_l64_l64         8,  0;
+            sub_l64_imm         0,  1;
+            setPArg_l64         0;
+            
+            call_func           0;
+            
+            mov_l64_r0          0;
+            add_l64_l64         0,  8;
+        
+        label ret_label;
+		ret_l64 		    0;
+	}
+}
+
+
+function main {
+	arg_size: 0;
+	ret_size: 0;
+
+	local_size: 8;
+
+	code: {
+        input_l64           0;
+        setPArg_l64         0;
+		
+        call_func          	0;
+        
+        mov_l64_r0          0;
+        output_l64          0;
+
+		ret_imm             0;
+	}
+
+}

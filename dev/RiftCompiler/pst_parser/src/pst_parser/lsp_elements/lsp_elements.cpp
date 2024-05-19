@@ -1,6 +1,7 @@
 #include <token_parser_core/parser_ref.hpp>
 
 #include "lsp_elements.hpp"
+#include "../../../../../base/src/base/ints.hpp"
 
 namespace lsp {
 
@@ -13,9 +14,13 @@ namespace lsp {
 	}
 
 	void positionPrint(std::ostream& out, const dia::SourcePosition& pos) {
+		std::pair<usize, usize> startLineColumn = pos.getStartLineColumn();
+		std::pair<usize, usize> endLineColumn   = pos.getEndLineColumn();
+
+
 		out << "\"position\": {";
-		out << "\"line\": " << pos.getLine();
-		out << ",\"column\": " << pos.getColumn();
+		out << "\"line\": " << startLineColumn.first;
+		out << ",\"column\": " << startLineColumn.second;
 		out << ",\"start\": " << pos.getStart();
 		out << ",\"end\": " << pos.getEnd();
 		out << "}";

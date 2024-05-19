@@ -3,12 +3,14 @@
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
  */
 
-#include "classifications.hpp"
-#include "lexer.hpp"
-#include "lexer_class.hpp"
+#include <diagnostic/logger.hpp>
+#include <token_file/file.hpp>
 #include <rift_definitions/key_spec_op.hpp>
 #include <base/exceptions.hpp>
 #include <base/init_guard.hpp>
+
+#include "lexer.hpp"
+#include "classifications.hpp"
 
 namespace lexer {
 	void init() {
@@ -19,14 +21,14 @@ namespace lexer {
 		RIFT_SIMPLE_INIT_GUARD_END
 	}
 
-	TokenData tokenizeFile(const fs::FilePath& file) {
-		Lexer lexer(file);
-		auto  result = lexer.tokenize();
-		if (lexer.getErrorState().bad()) {
-			lexer.getErrorState().dumpLog(false, std::cerr);
+	tokenizer::OwnFile tokenizeFile(const fs::FilePath& path) {
+		auto file = tokenizer::makeTokenFile(path);
+		file->tokenize();
+		if (file->getLogger().bad()) {
+			file->getLogger().dumpLog(false, std::cerr);
 			throw base::LogicError("syntax error during lexing");
 		}
-		return result;
+		return file;
 	}
 
 }

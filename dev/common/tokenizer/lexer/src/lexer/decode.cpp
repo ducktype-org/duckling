@@ -7,7 +7,7 @@
 namespace lexer {
 	template<>
 	CharArray decode<fs::US_ASCII>(base::RawView bytes, dia::Logger& errorState) {
-		std::vector<Char> out;
+		CharArray out;
 		for (usize i = 0; i < bytes.size(); i++) {
 			// Check if valid ascii byte
 			if ((bytes[i] & byte{ 0b10000000u }) != byte{ 0 }) {
@@ -20,18 +20,16 @@ namespace lexer {
 				) });
 				continue;
 			}
-			out.emplace_back(UChar32(bytes[i]), u8{ 1 }, bytes.getBegin() + i);
+			out.emplace_back(UChar32(bytes[i]), u8{ 1 }, i);
 		}
 		// Add eof value
-		out.emplace_back(
-			Classifications::end_of_file_value, u8{ 0 }, bytes.getBegin() + bytes.size()
-		);
+		out.emplace_back(Classifications::end_of_file_value, u8{ 0 }, bytes.size());
 		return out;
 	}
 
 	template<>
 	CharArray decode<fs::UTF8>(base::RawView bytes, dia::Logger& errorState) {
-		std::vector<Char> out;
+		CharArray out;
 
 		auto log_error = [&](std::string message) {
 			errorState.failAndLog({ "UTF-8 decoding error:" + message });
@@ -126,13 +124,11 @@ namespace lexer {
 				continue;
 			}
 
-			out.emplace_back(value, u8(size), bytes.getBegin() + pos);
+			out.emplace_back(value, u8(size), pos);
 			pos += size;
 		}
 		// Add eof value
-		out.emplace_back(
-			Classifications::end_of_file_value, u8{ 0 }, bytes.getBegin() + bytes.size()
-		);
+		out.emplace_back(Classifications::end_of_file_value, u8{ 0 }, bytes.size());
 
 		return out;
 	}

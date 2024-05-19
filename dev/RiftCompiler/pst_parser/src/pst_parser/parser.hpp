@@ -10,7 +10,7 @@
 #include "pst.hpp"
 
 namespace pst {
-	PST parse(lexer::TokenData&& td);
+	PST parse(tokenizer::OwnFile&& td);
 	PST parse(const fs::FilePath&);
 
 	void init();

@@ -7,7 +7,7 @@ Due to printer nature as a module it's hard to test its functionality, since it'
 Test
 ====
 
-| Test constructs a simple :code:`MessageContent` and adds it to a :code:`Console` twice testing multiple constructors and methods along the way.
+| Test constructs a simple :code:`PrinterContent` and adds it to a :code:`Console` twice testing multiple constructors and methods along the way.
 | First it tests whether outputting printing the full message yields the right result.
 | Then it tests reaching maximum amount for a type of message. 
 | Then reaching maximum amount of all messages. 

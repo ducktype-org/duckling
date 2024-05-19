@@ -2,6 +2,8 @@
 #include "parser.hpp"
 #include <code_data/opcodes.hpp>
 #include <lexer/lexer.hpp>
+#include <token_file/file.hpp>
+#include <lexer/classifications.hpp>
 #include <base/optional.hpp>
 #include <rift_definitions/key_spec_op.hpp>
 #include <stdexcept>
@@ -674,19 +676,22 @@ namespace assemble {
 		auto maybeContent = path.getContentSafe();
 		if (maybeContent.has_error()) return CodeContainer{ false, maybeContent.error(), nullptr };
 
-		lexer::TokenData td = lexer::tokenizeFile(path);
+		tokenizer::OwnFile file = lexer::tokenizeFile(path);
+
+		lexer::TokenData& td = file->getTokenData();
+
+		auto log = dia::Logger();
 
 		tpc::ParserState state(
-			tpc::TokenStream(td.tokens, tpc::Token(td.eof_sentinel), 0, td.tokens.size()),
-			dia::Logger()
+			tpc::TokenStream(td.tokens, tpc::Token(td.eof_sentinel), 0, td.tokens.size()), log
 		);
 
 		tpc::ParserRef<ParsedCode> out = ParsedCode::parse(state);
 
 		std::stringstream err_stream;
-		state.err.dumpLog(false, err_stream);
+		log.dumpLog(false, err_stream);
 
-		return { state.err.good(), err_stream.str(), std::move(out) };
+		return { log.good(), err_stream.str(), std::move(out) };
 	}
 
 	// returns true if was successfully
@@ -759,7 +764,7 @@ namespace assemble {
 
 	u16 nameToOpcodeValue(base::StrId str) {
 		try {
-			return static_cast<u16>(base::strToEnum<vm::OpcodeFix8>(str));
+			return static_cast<u16>(vm::str_to_OpcodeFix8.at(str.str()));
 		} catch (std::out_of_range& err) {
 			// @TODO: better errors
 			RIFT_PANIC(base::strConcat("Incorrect opcode: ", str));
@@ -817,8 +822,10 @@ namespace assemble {
 				.opfun = vm::OpFuns::opfuns.at(nameToOpcodeValue(op->opcode_name)),
 				.arg0  = static_cast<i32>(arg_0),
 				.arg1  = static_cast<i32>(arg_1) });
+#endif
 
-#else
+// #else breaks clang-format for some reason (?)
+#ifndef USE_TAIL_CALLS
 			funcData.bc.emplace_back(vm::Fix8Instruction{
 				.opcode = static_cast<u16>(nameToOpcodeValue(op->opcode_name)),
 				.arg0   = static_cast<i32>(arg_0),
