@@ -2,12 +2,14 @@
 
 #include "../rift_parser_base.hpp"
 #include "elements_common.hpp"
+#include "../lsp_elements/lsp_elements.hpp"
 
 #include <token_parser_core/token_stream.hpp>
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/automatic.hpp>
+#include <token_parser_core/parser_ref.hpp>
 
 #include <base/string_id.hpp>
 
@@ -57,6 +59,8 @@ namespace pst {
 
 		static ParserRef<Stmt> parse(RiftParserState& state);
 		bool                   trailingSemicolon() override;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPStmt> stmtFromPST() const;
 	};
 
 #define STMT_CHILD_CONSTRUCTOR(class_name) \
@@ -67,6 +71,8 @@ namespace pst {
 		explicit NotStmt(const dia::SourcePosition& position): RiftElement(position) {}
 
 		bool trailingSemicolon() override;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPNotStmt> notStmtFromPST() const;
 	};
 
 	using StateCondition = bool(const RiftParserState&, usize);
@@ -140,10 +146,11 @@ namespace pst {
 		detail::Conditions::isSentinel>;
 
 	class DottedName final: public NotStmt {
-		std::vector<tpc::Identifier> names;
-		bool                         star = false;
+		bool star = false;
 
 	public:
+		std::vector<tpc::Identifier> names;
+
 		[[nodiscard]]
 		auto begin() const {
 			return names.cbegin();
@@ -163,6 +170,13 @@ namespace pst {
 		[[nodiscard]]
 		bool getStar() const;
 
+
+		[[nodiscard]]
+		ParserRef<lsp::LSPDottedName> dottedNameFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPNotStmt> notStmtFromPST() const override;
+
+
 		void dprint(std::ostream& out) const final;
 		~DottedName() final = default;
 	};
@@ -177,6 +191,10 @@ namespace pst {
 		~Attribute() final = default;
 		void dprint(std::ostream& out) const final;
 		bool trailingSemicolon() override;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPAttribute> attributeFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
 	};
 
 	/**
@@ -207,6 +225,10 @@ namespace pst {
 		bool getStar() const;
 		~Import() final = default;
 		void dprint(std::ostream& out) const final;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPImport> importFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
 	};
 
 	class Using final: public Stmt {
@@ -228,6 +250,10 @@ namespace pst {
 
 		~Using() final = default;
 		void dprint(std::ostream& out) const final;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPUsing> usingFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
 	};
 
 	class Alias final: public Stmt {
@@ -250,6 +276,10 @@ namespace pst {
 		static ParserRef<Alias> parse(RiftParserState& state);
 		~Alias() final = default;
 		void dprint(std::ostream& out) const final;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPAlias> aliasFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
 	};
 
 	class CodeBlock final: public NotStmt {
@@ -263,6 +293,10 @@ namespace pst {
 		static ParserRef<CodeBlock> parse(RiftParserState& state);
 		~CodeBlock() final = default;
 		void dprint(std::ostream& out) const final;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPCodeBlock> codeBlockFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPNotStmt> notStmtFromPST() const override;
 	};
 
 	class CodeBlockOrStmt final: public NotStmt {
@@ -280,6 +314,10 @@ namespace pst {
 		const_iterator begin() const;
 		[[nodiscard]]
 		const_iterator end() const;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPCodeBlockOrStmt> codeBlockOrStmtFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPNotStmt> notStmtFromPST() const override;
 	};
 
 	class RoundGroupExpr final: public NotStmt {
@@ -291,6 +329,10 @@ namespace pst {
 		static ParserRef<RoundGroupExpr> parse(RiftParserState& state);
 		~RoundGroupExpr() final = default;
 		void dprint(std::ostream& out) const final;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPRoundGroupExpr> roundGroupExprFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPNotStmt> notStmtFromPST() const override;
 	};
 
 	class Expr final: public Stmt {
@@ -308,26 +350,31 @@ namespace pst {
 		struct NumLiteral;
 
 		struct KeywordValue {
-			rift_def::Keyword keyword;
+			rift_def::Keyword   keyword;
+			dia::SourcePosition position;
 		};
 
 		using ExprElem = std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue>;
 
 		struct Group {
-			GroupType       type;
-			ParserRef<Expr> expr;
+			GroupType           type;
+			ParserRef<Expr>     expr;
+			dia::SourcePosition position;
 		};
 
 		struct Operator {
-			base::StrId oper_id;
+			base::StrId         oper_id;
+			dia::SourcePosition position;
 		};
 
 		struct Identifier {
-			base::StrId indent_id;
+			base::StrId         indent_id;
+			dia::SourcePosition position;
 		};
 
 		struct NumLiteral {
-			base::StrId num_id;
+			base::StrId         num_id;
+			dia::SourcePosition position;
 		};
 
 		std::vector<ExprElem> elements;
@@ -346,6 +393,10 @@ namespace pst {
 		static ParserRef<Expr> parse(RiftParserState& state, usize len, bool exact_len = true);
 		void                   dprint(std::ostream& out) const final;
 		~Expr() final = default;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPExpr> exprFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
 	};
 
 	/**
@@ -359,8 +410,10 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Action);
 		static ParserRef<Action> parse(RiftParserState& state);
 		~Action() override = default;
-
-		// TODO:
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPAction> actionFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
 	};
 
 	class Return final: public Action {
@@ -369,6 +422,10 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Return() final = default;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPReturn> returnFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPAction> actionFromPST() const override;
 	};
 
 	class Break final: public Action {
@@ -377,6 +434,10 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Break() final = default;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPBreak> breakFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPAction> actionFromPST() const override;
 	};
 
 	class Continue final: public Action {
@@ -385,6 +446,10 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Continue() final = default;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPContinue> continueFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPAction> actionFromPST() const override;
 	};
 
 	class Redo final: public Action {
@@ -393,6 +458,10 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Redo() final = default;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPRedo> redoFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPAction> actionFromPST() const override;
 	};
 
 	class Restart final: public Action {
@@ -401,6 +470,10 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Restart() final = default;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPRestart> restartFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPAction> actionFromPST() const override;
 	};
 
 	class Defer final: public Action {
@@ -409,6 +482,10 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Defer() final = default;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPDefer> deferFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPAction> actionFromPST() const override;
 	};
 
 	/**
@@ -420,6 +497,10 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Throw() final = default;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPThrow> throwFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPAction> actionFromPST() const override;
 	};
 
 	class Const final: public Stmt {
@@ -448,6 +529,10 @@ namespace pst {
 
 		~Const() final = default;
 		void dprint(std::ostream& out) const final;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPConst> constFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
 	};
 
 	/**
@@ -459,6 +544,10 @@ namespace pst {
 
 		static ParserRef<Decl> parse(RiftParserState& state);
 		bool                   trailingSemicolon() override;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPDecl> declFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
 	};
 
 #define DECL_CHILD_CONSTRUCTOR(class_name) \
@@ -467,6 +556,10 @@ namespace pst {
 	class CodeDecl: public Decl {
 	public:
 		DECL_CHILD_CONSTRUCTOR(CodeDecl);
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPCodeDecl> codeDeclFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPDecl> declFromPST() const override;
 	};
 
 	class TopLevel: public Decl {
@@ -483,6 +576,11 @@ namespace pst {
 		const auto& getStatements() const {
 			return statements;
 		}
+
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPTopLevel> topLevelFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPDecl> declFromPST() const override;
 	};
 
 	class Block final: public CodeDecl {
@@ -495,6 +593,10 @@ namespace pst {
 		static ParserRef<Block> parse(RiftParserState& state);
 		~Block() final = default;
 		void dprint(std::ostream& out) const final;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPBlock> blockFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPCodeDecl> codeDeclFromPST() const override;
 	};
 
 	class Namespace final: public Decl {
@@ -517,6 +619,10 @@ namespace pst {
 		static ParserRef<Namespace> parse(RiftParserState& state);
 		~Namespace() final = default;
 		void dprint(std::ostream& out) const final;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPNamespace> namespaceFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPDecl> declFromPST() const override;
 	};
 
 	/**
@@ -538,6 +644,10 @@ namespace pst {
 		static ParserRef<Struct> parse(RiftParserState& state);
 		~Struct() final = default;
 		void dprint(std::ostream& out) const final;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPStruct> structFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPDecl> declFromPST() const override;
 	};
 
 	class Fun final: public Decl {
@@ -557,6 +667,10 @@ namespace pst {
 		static ParserRef<Fun> parse(RiftParserState& state);
 		void                  dprint(std::ostream& out) const final;
 		~Fun() final = default;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPFun> funFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPDecl> declFromPST() const override;
 	};
 
 	class If final: public CodeDecl {
@@ -570,6 +684,10 @@ namespace pst {
 		static ParserRef<If> parse(RiftParserState& state);
 		void                 dprint(std::ostream& out) const final;
 		~If() final = default;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPIf> ifFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPCodeDecl> codeDeclFromPST() const override;
 	};
 
 	class While final: public CodeDecl {
@@ -583,6 +701,10 @@ namespace pst {
 		static ParserRef<While> parse(RiftParserState& state);
 		void                    dprint(std::ostream& out) const final;
 		~While() final = default;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPWhile> whileFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPCodeDecl> codeDeclFromPST() const override;
 	};
 
 	/**

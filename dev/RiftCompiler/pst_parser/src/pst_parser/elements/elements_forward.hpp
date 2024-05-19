@@ -6,4 +6,5 @@ namespace pst {
 	class Expr;
 	class Import;
 	class CodeBlockOrStmt;
+	class Action;
 }

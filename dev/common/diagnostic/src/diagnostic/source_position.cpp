@@ -83,7 +83,7 @@ namespace dia {
 		if (not(source_end == source_start and source_end == source_file->getChars().size() - 1)) {
 			if (source_end >= source_file->getChars().size() - 1)
 				throw base::LogicError("Invalid SourcePosition: source end outside the file");
-		}
+		} // TODO : zpp21 maybe suppress those errors
 	}
 
 	SourcePosition::SourcePosition(const SourcePosition& other, const usize source_end):

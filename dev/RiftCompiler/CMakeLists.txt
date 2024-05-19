@@ -6,6 +6,7 @@ add_subdirectory(operations)
 add_subdirectory(pst_parser)
 add_subdirectory(typesystem)
 add_subdirectory(helios)
+add_subdirectory(lsp_interface)
 
 add_subdirectory(main)
 
