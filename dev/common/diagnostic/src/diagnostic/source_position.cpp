@@ -76,14 +76,14 @@ namespace dia {
 		  source_end(source_end),
 		  source_file(source_file) {
 		// Potentially allow for special circumstances
-		if (source_file == nullptr) throw base::LogicError("Invalid SourcePosition: No such file");
-		if (source_end < source_start)
-			throw base::LogicError("Invalid SourcePosition: source end before source start");
-		// allow EOF position
-		if (not(source_end == source_start and source_end == source_file->getChars().size() - 1)) {
-			if (source_end >= source_file->getChars().size() - 1)
-				throw base::LogicError("Invalid SourcePosition: source end outside the file");
-		} // TODO : zpp21 maybe suppress those errors
+		// if (source_file == nullptr) throw base::LogicError("Invalid SourcePosition: No such file");
+//		if (source_end < source_start)
+//			throw base::LogicError("Invalid SourcePosition: source end before source start");
+//		// allow EOF position
+//		if (not(source_end == source_start and source_end == source_file->getChars().size() - 1)) {
+//			if (source_end >= source_file->getChars().size() - 1)
+//				throw base::LogicError("Invalid SourcePosition: source end outside the file");
+//		}
 	}
 
 	SourcePosition::SourcePosition(const SourcePosition& other, const usize source_end):

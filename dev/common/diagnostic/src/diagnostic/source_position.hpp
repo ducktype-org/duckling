@@ -75,7 +75,7 @@ namespace dia {
 		tokenizer::BorrowFile getSource() const;
 
 		// @TODO: this is a temporary solution:
-		static SourcePosition getBadPosition() { return { nullptr, 0, 0, 0, 0 }; }
+		static SourcePosition getBadPosition() { return { nullptr, 0, 0 }; }
 
 	private:
 		usize                 source_start;  ///< Start of the range of characters in the file.
