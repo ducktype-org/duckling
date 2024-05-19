@@ -3,7 +3,6 @@
 #include "lsp_elements.hpp"
 #include "../../../../../base/src/base/ints.hpp"
 
-
 namespace lsp {
 
 	template<class T>
@@ -15,8 +14,8 @@ namespace lsp {
 	}
 
 	void positionPrint(std::ostream& out, const dia::SourcePosition& pos) {
-        std::pair<usize, usize> startLineColumn = pos.getStartLineColumn();
-        std::pair<usize, usize> endLineColumn = pos.getEndLineColumn();
+		std::pair<usize, usize> startLineColumn = pos.getStartLineColumn();
+		std::pair<usize, usize> endLineColumn   = pos.getEndLineColumn();
 
 
 		out << "\"position\": {";
