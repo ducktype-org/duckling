@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<Block> Block::parse(RiftParserState& state) {
@@ -21,4 +22,6 @@ namespace pst {
 		nullAwareDprint(code_block, out);
 		out << "}}";
 	}
+
+	void Block::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitBlock(*this); }
 }

@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	bool Attribute::trailingSemicolon() { return false; }
@@ -27,4 +28,7 @@ namespace pst {
 		}
 		out << "}}";
 	}
+
+	void Attribute::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitAttribute(*this); }
+
 }
