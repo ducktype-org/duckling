@@ -84,7 +84,7 @@ namespace tokenizer {
 
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {
-			decoded = lexer::decode<encoding>(content->view(), log);
+			decoded = lexer::decode<encoding>(BorrowFile{ this }, log);
 		}
 
 		void countLines();

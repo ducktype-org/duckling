@@ -10,6 +10,7 @@
 #pragma once
 
 #include <printer/printer_content.hpp>
+#include <type_traits>
 
 #include "source_position.hpp"
 
