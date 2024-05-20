@@ -109,99 +109,94 @@ namespace compiler::helios {
 	// if somewhere then here it is needed to handle cycles somehow
 
 
-	struct ImplementationOf_QuerySymbolsInScope:
-		  public query::QueryImplementation<QuerySymbolsInScope, std::vector<SymID>> {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::vector<SymID> out;
-			for (const auto& stmt: key.ref->stmt_list) {
-				auto sym_id = ctx.query<QuerySymbolOfSTMT>({ key, stmt });
-				out.emplace_back(sym_id);
-			}
-			return out;
-		}
+	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector < SymID)
+		> { static auto provide(Context & ctx, QKey key)->PResult{ std::vector<SymID> out;
+	for (const auto& stmt: key.ref->stmt_list) {
+		auto sym_id = ctx.query<QuerySymbolOfSTMT>({ key, stmt });
+		out.emplace_back(sym_id);
+	}
+	return out;
+}
 
-		static auto load(QKey key) -> LoadResult {
-			if (const auto& cache = key.ref->symbols) return QResWithACD{ cache->data, cache->acd };
-			return {};
-		}
+static auto load(QKey key) -> LoadResult {
+	if (const auto& cache = key.ref->symbols) return QResWithACD{ cache->data, cache->acd };
+	return {};
+}
 
-		static auto store([[maybe_unused]] QKey key, PResult p_res, [[maybe_unused]] query::ACD acd)
-			-> QResult {
-			key.ref->symbols.emplace(PResWithACD{ std::move(p_res), acd });
-			return key.ref->symbols.value().data;
-		}
-	};
+static auto store([[maybe_unused]] QKey key, PResult p_res, [[maybe_unused]] query::ACD acd)
+	-> QResult {
+	key.ref->symbols.emplace(PResWithACD{ std::move(p_res), acd });
+	return key.ref->symbols.value().data;
+}
+}
+;
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolsInScope);
+QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolsInScope);
 
-	struct ImplementationOf_QueryLookupInScope:
-		  public query::QueryImplementation<QueryLookupInScope, LookupResult> {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			const auto& symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
+struct IMPLEMENT_QUERY(QueryLookupInScope, LookupResult) {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		const auto& symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
 
-			LookupResult result{ {}, {} };
+		LookupResult result{ {}, {} };
 
-			for (const auto& sym: symbol_list) {
-				if (isWildcard(sym)) {
-					if (key.with_wildcards) {
-						auto& wild_result = ctx.query<QueryLookupInSymbol>({ sym, key.name, true });
-						if (!wild_result.isEmpty())
-							result.children.push_back(wild_result.toNode(sym));
-					}
-				} else if (name(sym) == key.name) {
-					result.leaves.push_back(sym);
-				} else {
-					// nothing?
+		for (const auto& sym: symbol_list) {
+			if (isWildcard(sym)) {
+				if (key.with_wildcards) {
+					auto& wild_result = ctx.query<QueryLookupInSymbol>({ sym, key.name, true });
+					if (!wild_result.isEmpty()) result.children.push_back(wild_result.toNode(sym));
 				}
+			} else if (name(sym) == key.name) {
+				result.leaves.push_back(sym);
+			} else {
+				// nothing?
 			}
+		}
 
+		return result;
+	}
+
+	QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
+
+struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, LookupResult) {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		LookupResult result = ctx.query<QueryLookupInScope>(key);
+
+		if (key.scope.ref->parent.ref != nullptr) {
+			auto parent = key.scope.ref->parent;
+
+			// Reverse insertion order allow for linear result concatenation instead of
+			// quadratic
+			auto parent_result
+				= ctx.query<QueryLookupInScopeAndParents>({ parent, key.name, key.with_wildcards });
+			parent_result.insert(std::move(result));
+
+			return parent_result;
+		} else {
 			return result;
 		}
-
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
-
-	struct ImplementationOf_QueryLookupInScopeAndParents:
-		  public query::QueryImplementation<QueryLookupInScopeAndParents, LookupResult> {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			LookupResult result = ctx.query<QueryLookupInScope>(key);
-
-			if (key.scope.ref->parent.ref != nullptr) {
-				auto parent = key.scope.ref->parent;
-
-				// Reverse insertion order allow for linear result concatenation instead of
-				// quadratic
-				auto parent_result = ctx.query<QueryLookupInScopeAndParents>(
-					{ parent, key.name, key.with_wildcards }
-				);
-				parent_result.insert(std::move(result));
-
-				return parent_result;
-			} else {
-				return result;
-			}
-		}
-
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
-
-	base::HashT KeyOf_QueryPrimaryCodeScopeFor::customPerfectHash() const {
-		auto hash_1 = base::perfectHash(parent);
-		auto hash_2 = base_element->getID().asInt();
-
-		// @FIXME: this does not work:
-		return hash_1 * 143 + hash_2 * 7;
 	}
 
-	base::HashT KeyOf_LookupInScope::customPerfectHash() const {
-		auto hash_1 = base::perfectHash(scope);
-		auto hash_2 = std::hash<base::StrId>()(name);
+	QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+};
 
-		// @FIXME: this does not work:
-		return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;
-	}
+QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
+
+base::HashT KeyOf_QueryPrimaryCodeScopeFor::customPerfectHash() const {
+	auto hash_1 = base::perfectHash(parent);
+	auto hash_2 = base_element->getID().asInt();
+
+	// @FIXME: this does not work:
+	return hash_1 * 143 + hash_2 * 7;
+}
+
+base::HashT KeyOf_LookupInScope::customPerfectHash() const {
+	auto hash_1 = base::perfectHash(scope);
+	auto hash_2 = std::hash<base::StrId>()(name);
+
+	// @FIXME: this does not work:
+	return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;
+}
 }
