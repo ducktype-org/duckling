@@ -43,7 +43,6 @@ namespace vm {
 		Registers            regs;
 		FlagData             flags;
 		u64                  ret_val;
-		StandardFunctionArgs next_args;
 		StandardFunctionArgs args;
 
 		std::vector<BlockID> block_id_stack;
