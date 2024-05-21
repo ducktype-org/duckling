@@ -2,11 +2,45 @@
 #include <fstream>
 #include <iostream>
 #include <pst_parser/parser.hpp>
-// #include <rift_parser/parsing_handler.hpp>
+#include "pst_parser/pst_visitor.hpp"
+
+
 #include <lexer/lexer.hpp>
 #include <sstream>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
+
+#define SPACE
+
+
+#define PSTVISITOR_METHOD(name)                        \
+	void visit##name(const pst::name& stmt) override { \
+		static bool visited = false;                   \
+		if (!visited) {                                \
+			visited = true;                            \
+			counter++;                                 \
+		}                                              \
+		std::cout << "Visited " << #name << '\n';      \
+		PstStmtVisitorPanicing::visit##name(stmt);     \
+	}
+
+class PstStmtVisitorTester final: public pst::PstStmtVisitorPanicing {
+public:
+	int counter = 0;
+
+	PSTVISITOR_METHOD(Attribute)
+	PSTVISITOR_METHOD(Import)
+	PSTVISITOR_METHOD(Using)
+	PSTVISITOR_METHOD(Alias)
+	PSTVISITOR_METHOD(Expr)
+	PSTVISITOR_METHOD(Action)
+	PSTVISITOR_METHOD(Const)
+	PSTVISITOR_METHOD(Decl)
+	PSTVISITOR_METHOD(Block)
+	PSTVISITOR_METHOD(Namespace)
+	PSTVISITOR_METHOD(Struct)
+	PSTVISITOR_METHOD(Fun)
+};
 
 class SimpleParserTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -32,8 +66,9 @@ public:
 		TESTER_ADD_TEST(testUsingErrors);
 		TESTER_ADD_TEST(testParamListErrors);
 		TESTER_ADD_TEST(testMissingSemiErr);
+		TESTER_ADD_TEST(testVisitor);
 
-		// TESTER_ADD_TEST(testParsingHandler);
+		// TESTER_ADD_TEST(testParsingHandler)
 	}
 
 private:
@@ -41,6 +76,18 @@ private:
 		fs::FilePath file(filename);
 		auto         td = lexer::tokenizeFile(file);
 		return pst::parse(std::move(td));
+	}
+
+	void testVisitor() {
+		auto&& pst           = prepare(path("snippets/all_statements.txt"));
+		auto&& top_level     = pst.getTopLevelElement();
+		auto&& panicy_vistor = PstStmtVisitorTester();
+		for (auto&& stmt: top_level->getStatements()) {
+			assertThrows<base::Panic>(
+				[&] { stmt->acceptVistior(panicy_vistor); }, "Stmt did not call it\'s visitor"
+			);
+		}
+		ASSERT_EQUAL(12, panicy_vistor.counter);
 	}
 
 	void testJson(
