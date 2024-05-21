@@ -21,10 +21,12 @@
 			counter++;                                 \
 		}                                              \
 		std::cout << "Visited " << #name << '\n';      \
-		PstStmtVisitorPanicing::visit##name(stmt);     \
+		T::visit##name(stmt);                          \
 	}
 
-class PstStmtVisitorTester final: public pst::PstStmtVisitorPanicing {
+template<class T>
+requires std::is_base_of_v<pst::PstStmtVisitor, T>
+class PstStmtVisitorTester final: public T {
 public:
 	int counter = 0;
 
@@ -79,15 +81,17 @@ private:
 	}
 
 	void testVisitor() {
-		auto&& pst           = prepare(path("snippets/all_statements.txt"));
-		auto&& top_level     = pst.getTopLevelElement();
-		auto&& panicy_vistor = PstStmtVisitorTester();
-		for (auto&& stmt: top_level->getStatements()) {
+		auto pst            = prepare(path("snippets/all_statements.txt"));
+		auto panicky_vistor = PstStmtVisitorTester<pst::PstStmtVisitorPanicky>();
+		auto empty_vistor   = PstStmtVisitorTester<pst::PstStmtVisitorEmpty>();
+		for (auto&& stmt: pst.getTopLevelElement()) {
 			assertThrows<base::Panic>(
-				[&] { stmt->acceptVistior(panicy_vistor); }, "Stmt did not call it\'s visitor"
+				[&] { stmt->acceptVistior(panicky_vistor); }, "Stmt did not call it\'s visitor"
 			);
+			stmt->acceptVistior(empty_vistor);
 		}
-		ASSERT_EQUAL(12, panicy_vistor.counter);
+		ASSERT_EQUAL(12, panicky_vistor.counter);
+		ASSERT_EQUAL(12, empty_vistor.counter);
 	}
 
 	void testJson(

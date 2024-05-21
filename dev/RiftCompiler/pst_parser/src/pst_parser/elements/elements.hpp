@@ -357,7 +357,6 @@ namespace pst {
 		void                   dprint(std::ostream& out) const final;
 		~Expr() final = default;
 
-
 		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
 
