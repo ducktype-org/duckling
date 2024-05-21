@@ -39,7 +39,6 @@ namespace vm {
 			.regs        = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = memory.nullPtr() },
 			.flags       = FlagData{ .flag = false },
 			.ret_val     = 0,
-			.next_args   = { 0, memory.nullPtr() },
 			.args        = { 0, memory.nullPtr() },
 
 			.block_id_stack   = std::vector<BlockID>(),
@@ -224,12 +223,12 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::op_setPtrArg_lptr(OPFUN_ARGS) {
-		{ frame->next_args.pointer_arg = derefStack<Pointer>(local_stack, instr->arg0); }
+		{ (frame + 1)->args.pointer_arg = derefStack<Pointer>(local_stack, instr->arg0); }
 		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_setPArg_l64(OPFUN_ARGS) {
-		{ frame->next_args.p64_arg = derefStack<i64>(local_stack, instr->arg0); }
+		{ (frame + 1)->args.p64_arg = derefStack<i64>(local_stack, instr->arg0); }
 		OPFUN_CONT(1);
 	}
 
@@ -246,12 +245,9 @@ namespace vm {
 			frame->instr       = instr + 1;
 			frame->local_stack = local_stack;
 
-			// Prepare new frame.
-			auto* prev_frame = frame;
 			frame++;
 			i32 function_id = instr->arg0;
-			if (frame + 1 > runtime_data.frame_stack_end) RIFT_PANIC("RiftVM stack overflow.");
-			frame->args = prev_frame->next_args;
+			if (frame + 1 >= runtime_data.frame_stack_end) RIFT_PANIC("RiftVM stack overflow.");
 
 			// Update values passed as arguments.
 			instr = executor.executing_code->functions[function_id].bc.data();
@@ -277,7 +273,7 @@ namespace vm {
 			auto& runtime_data = executor.runtime_data;
 
 			auto function_id = instr->arg0;
-			frame->args      = frame->next_args;
+			frame->args      = (frame + 1)->args;
 			instr            = executor.executing_code->functions[function_id].bc.data();
 
 			auto local_stack_size = executor.executing_code->functions[function_id].stack_size;
