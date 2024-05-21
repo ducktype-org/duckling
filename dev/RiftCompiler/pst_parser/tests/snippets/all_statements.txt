@@ -2,6 +2,9 @@
 
 throw 123;
 
+// Duplicate statement to test the tester
+throw 123;
+
 import X as x;
 
 using X;
