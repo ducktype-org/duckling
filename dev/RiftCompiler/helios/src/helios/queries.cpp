@@ -10,8 +10,7 @@
 namespace compiler::helios {
 
 
-	struct ImplementationOf_QueryModuleHOUT:
-		  public query::QueryImplementation<QueryModuleHOUT, HOUTModule> {
+	struct IMPLEMENT_QUERY(QueryModuleHOUT, HOUTModule) {
 		static auto provide(Context&, QKey key) -> PResult {
 			// go over all to level symbols and get theirs hout
 			// store it in some vector or something
