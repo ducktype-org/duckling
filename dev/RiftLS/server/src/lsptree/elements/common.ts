@@ -2,15 +2,19 @@ import { SemanticTokenTypes, SemanticTokenModifiers, SemanticTokens } from "vsco
 import { Token, getTokenTypeIndex } from "../../semanticTokensDeclarations";
 
 export class SourcePosition {
-	line: number;
-	column: number;
-	begin: number;
+	startLine: number;
+	startColumn: number;
+	endLine: number;
+	endColumn: number;
+	start: number;
 	end: number;
 	path: string;
 	constructor(position: { [key: string]: number }, path: string = "") {
-		this.line = position["line"];
-		this.column = position["column"];
-		this.begin = position["start"];
+		this.startLine = position["startLine"];
+		this.startColumn = position["startColumn"];
+		this.endLine = position["endLine"];
+		this.endColumn = position["endColumn"];
+		this.start = position["start"];
 		this.end = position["end"];
 
 		this.path = path;
@@ -33,6 +37,6 @@ export class SemanticToken implements Token {
 	}
 
 	static fromPosition(position: SourcePosition, tokenType: SemanticTokenTypes, tokenModifiers: SemanticTokenModifiers[]) {
-		return new SemanticToken(position.line, position.column, position.end - position.begin + 1, tokenType, tokenModifiers);
+		return new SemanticToken(position.startLine, position.startColumn, position.end - position.start + 1, tokenType, tokenModifiers);
 	}
 }

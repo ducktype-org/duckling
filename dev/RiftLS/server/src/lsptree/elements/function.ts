@@ -6,6 +6,7 @@ import { SemanticToken } from "./common";
 import { SemanticTokenTypes } from "vscode-languageserver";
 import { exprListFactory, List } from "./list";
 import { Expr } from "./expression";
+import { getTokenTypeIndex } from "../../semanticTokensDeclarations";
 
 
 export class Fun extends Decl {
@@ -40,8 +41,12 @@ export class Fun extends Decl {
 	}
 
 	getSemanticTokens() {
-		const tokens = [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.keyword, [])];
-		tokens.push(...this.name.getSemanticTokens());
+		const tokens: SemanticToken[] = [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.keyword, [])];
+		const nameToken : SemanticToken[] = this.name.getSemanticTokens();
+		if (nameToken) {
+			nameToken[0].tokenType = getTokenTypeIndex(SemanticTokenTypes.decorator);
+			tokens.push(...nameToken);
+		}
 		if (this.params)
 			tokens.push(...this.params.getSemanticTokens());
 		if (this.rets)

@@ -19,8 +19,10 @@ namespace lsp {
 
 
 		out << "\"position\": {";
-		out << "\"line\": " << startLineColumn.first;
-		out << ",\"column\": " << startLineColumn.second;
+		out << "\"startLine\": " << startLineColumn.first;
+		out << ",\"startColumn\": " << startLineColumn.second;
+		out << ",\"endLine\": " << endLineColumn.first;
+		out << ",\"endColumn\": " << endLineColumn.second;
 		out << ",\"start\": " << pos.getStart();
 		out << ",\"end\": " << pos.getEnd();
 		out << "}";

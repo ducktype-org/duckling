@@ -1,5 +1,6 @@
 import { NotStmt, Stmt, stmtFactory, notStmtFactory, NotStmtFactory, RiftElement } from "./elements";
 import { ElementFactory } from "./element_factory";
+import { FoldingRange, FoldingRangeKind } from "vscode-languageserver";
 
 export class CodeBlock extends NotStmt {
 	statements: Stmt[];
@@ -20,6 +21,27 @@ export class CodeBlock extends NotStmt {
 
 	getSemanticTokens() {
 		return this.statements.flatMap(stmt => stmt.getSemanticTokens());
+	}
+
+	
+	getFoldingRanges(): FoldingRange[] {
+		if (this.statements.length === 0) {
+			return [];
+		}
+		
+		const lastStmt = this.statements[this.statements.length - 1];
+
+		const blockFoldingRange: FoldingRange = {
+			startLine: this.source_position.startLine - 1, // because the folding range is 0-indexed
+			startCharacter: this.source_position.startColumn,
+			endLine: this.source_position.endLine - 1, // same here
+			endCharacter: this.source_position.endColumn,
+			kind: FoldingRangeKind.Region,
+		};
+
+		const childFoldingRanges = this.statements.flatMap(stmt => stmt.getFoldingRanges());
+
+		return [blockFoldingRange, ...childFoldingRanges];
 	}
 }
 

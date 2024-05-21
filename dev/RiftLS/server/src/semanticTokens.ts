@@ -97,7 +97,8 @@ function computeCommentsTokens(document: TextDocument): Token[] {
 // The function that handles the 'textDocument/semanticTokens/full' request
 export async function handleSemanticTokensFull(params: SemanticTokensParams, 
 											   documents: TextDocuments<TextDocument>, 
-											   pstCache: Map<string, RiftElement | null>): Promise<SemanticTokens> {
+											   pstCache: Map<string, RiftElement | null>,
+											   semanticTokensCache: Map<string, Token[]>): Promise<SemanticTokens> {
 	const document = documents.get(params.textDocument.uri);
 	if (!document) return { data: [] };
 
@@ -113,6 +114,7 @@ export async function handleSemanticTokensFull(params: SemanticTokensParams,
 	const tokens = compiledTokens.concat(commentTokens);
 
 	tokens.sort((a, b) => compareTokens(a, b));
+	semanticTokensCache.set(document.uri, tokens);
 	const builder = new SemanticTokensBuilder();
 	tokens.forEach((token) => {
 		builder.push(token.line, token.startCharacter, token.length, token.tokenType, token.tokenModifiers);

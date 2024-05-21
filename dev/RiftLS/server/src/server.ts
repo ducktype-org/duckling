@@ -23,6 +23,7 @@ import { validateRift } from "./validation"; // Import the validation function
 import { parseFile, RiftParserError } from "./compilerInterface"; // Import the compiler interface function
 import { getFoldingRanges } from './foldingRanges';
 import { RiftElement } from './lsptree/elements/elements';
+import { Token } from './semanticTokensDeclarations';
 require("./lsptree/elements/index");
 
 
@@ -40,6 +41,7 @@ let hasDiagnosticRelatedInformationCapability = false;
 // Storing PST for documents
 const pstCache: Map<string, RiftElement | null> = new Map();
 const errorsCache: Map<string, RiftParserError[]> = new Map();
+const semanticTokensCache: Map<string, Token[]> = new Map();
 
 // Semantic tokens legend, only 'comment' token type for now
 const semanticTokensLegend = {
@@ -67,7 +69,6 @@ connection.onInitialize((params: InitializeParams) => {
 	const result: InitializeResult = {
 		capabilities: {
 			textDocumentSync: TextDocumentSyncKind.Incremental,
-			// Tell the client that this server supports those options
 			// Tell the client that this server supports those options
 			completionProvider: {
 				resolveProvider: true
@@ -101,7 +102,7 @@ connection.onInitialized(() => {
 	}
 });
 
-connection.onRequest("textDocument/semanticTokens/full", (params) => handleSemanticTokensFull(params, documents, pstCache));
+connection.onRequest("textDocument/semanticTokens/full", (params) => handleSemanticTokensFull(params, documents, pstCache, semanticTokensCache));
 
 // The example settings
 interface ExampleSettings {
@@ -156,7 +157,6 @@ documents.onDidChangeContent(change => {
 	parseFile(change.document.uri).then((parseOutput) => {
 		pstCache.set(change.document.uri, parseOutput[0]);
 		errorsCache.set(change.document.uri, parseOutput[1]);
-		console.log(parseOutput);
 	});
 
 	validateRift(change.document, connection, errorsCache);
@@ -172,11 +172,7 @@ connection.onCompletion(onCompletion);
 connection.onCompletionResolve(onCompletionResolve);
 
 connection.onFoldingRanges((params: FoldingRangeParams): FoldingRange[] | null => {
-	const document = documents.get(params.textDocument.uri);
-	if (document) {
-		return getFoldingRanges(document);
-	}
-	return null;
+	return getFoldingRanges(params, documents, semanticTokensCache, pstCache);
 });
 
 

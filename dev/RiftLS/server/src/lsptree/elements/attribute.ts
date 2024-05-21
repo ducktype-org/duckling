@@ -1,7 +1,10 @@
+import { SemanticTokenTypes } from "vscode-languageserver";
+import { SemanticToken } from "./common";
 import { RiftElement, Stmt, stmtFactory } from "./elements";
 import { Expr } from "./expression";
 import { Identifier, identifierFactory } from "./identifier";
 import { exprListFactory, List } from "./list";
+import { getTokenTypeIndex } from "../../semanticTokensDeclarations";
 
 export class Attribute extends Stmt {
 	name: Identifier;
@@ -21,7 +24,12 @@ export class Attribute extends Stmt {
 	}
 
 	getSemanticTokens() {
-		const tokens = this.name.getSemanticTokens();
+		const tokens: SemanticToken[] = [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.decorator, [])];
+		const nameToken : SemanticToken[] = this.name.getSemanticTokens();
+		if (nameToken) {
+			nameToken[0].tokenType = getTokenTypeIndex(SemanticTokenTypes.decorator);
+			tokens.push(...nameToken);
+		}
 		if (this.args)
 			tokens.push(...this.args.getSemanticTokens());
 		return tokens;

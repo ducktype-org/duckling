@@ -1,5 +1,6 @@
 import { ElementFactory, ParentlessElementFactory } from "./element_factory";
 import { SourcePosition, SemanticToken } from "./common";
+import { FoldingRange } from "vscode-languageserver";
 
 enum StmtType {
 }
@@ -14,6 +15,9 @@ export abstract class RiftElement {
 
 	abstract getElements(): RiftElement[];
 	abstract getSemanticTokens(): SemanticToken[];
+	getFoldingRanges(): FoldingRange[] {
+		return this.getElements().flatMap(element => element.getFoldingRanges());
+	}
 }
 
 export abstract class Stmt extends RiftElement {
