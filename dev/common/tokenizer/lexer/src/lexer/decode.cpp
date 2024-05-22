@@ -36,7 +36,7 @@ namespace lexer {
 		[[nodiscard]]
 		std::string toStringBrief() const override {
 			std::stringstream res;
-			res << "In file:" << file->getPath().strView() << "\nAt byte " << byte << ": "
+			res << "In file: " << file->getPath().strView() << "\nAt byte " << byte << ": "
 				<< reason;
 			return res.str();
 		}

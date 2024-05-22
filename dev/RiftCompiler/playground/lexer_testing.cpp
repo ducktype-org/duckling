@@ -19,5 +19,6 @@ int main(int argc, char** argv) {
 	FilePath path(argv[1]);
 	auto     tokenFile = tokenizer::makeTokenFile(path);
 	tokenFile->tokenize();
-	if (tokenFile->getLogger().bad()) tokenFile->getLogger().dumpLog(true);
+	// Right now all the lexer messages are immediately dumped.
+	// if (tokenFile->getLogger().bad()) tokenFile->getLogger().dumpLog(true);
 }

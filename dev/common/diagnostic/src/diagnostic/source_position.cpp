@@ -34,9 +34,11 @@ namespace dia {
 		auto after  = source_file->viewSplitRange(source_end + 1, end_char);
 
 		auto linePref = [&](usize line) {
+			res.emplace_back("\n");
 			std::stringstream number;
-			number << "\n" << std::setw((int) length) << line << " | ";
-			res.emplace_back(number.str());
+			number << std::setw((int) length) << line;
+			res.emplace_back(number.str(), printer::Color::BRIGHT_BLUE);
+			res.emplace_back(" | ");
 		};
 		usize prev_line = -1;
 
@@ -109,7 +111,6 @@ namespace dia {
 		SourcePosition::genPrinterContents(const printer::PrinterContent& reason) const {
 		if (source_file == nullptr) {
 			return {
-				{ "In unknown file: " },
 				reason,
 			};
 		}
@@ -117,7 +118,11 @@ namespace dia {
 		std::vector<printer::PrinterContent> res = {
 			{ "In file: " },
 			{ source_file->getPath().strView().data() },
-			{ ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
+			{ ":\n" }, 
+			{ std::to_string(line), printer::Color::BRIGHT_BLUE }, 
+			{ ":" }, 
+			{ std::to_string(column), printer::Color::BRIGHT_BLUE }, 
+			{ ": " },
 			reason,
 			{ "\n" },
 		};

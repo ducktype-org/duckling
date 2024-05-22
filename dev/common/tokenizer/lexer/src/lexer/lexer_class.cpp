@@ -1,10 +1,138 @@
 #include <diagnostic/logger.hpp>
 
+#include "base/unique_pointer.hpp"
 #include "classifications.hpp"
+#include "diagnostic/message.hpp"
 #include "lexer_class.hpp"
 
 namespace lexer {
 	using Class = Classifications;
+
+	class TokenStartError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			std::stringstream res;
+			res << "Illegal character at the beginning of a token.";
+			return res.str();
+		}
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Lexer;
+		}
+
+		TokenStartError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class UnclosedCommentError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			std::stringstream res;
+			res << "Unclosed block comment starting here.";
+			return res.str();
+		}
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Lexer;
+		}
+
+		UnclosedCommentError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class UnclosedStringEolError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			std::stringstream res;
+			res << "String unclosed before end of line.";
+			return res.str();
+		}
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Lexer;
+		}
+
+		UnclosedStringEolError(dia::SourcePosition pos): dia::Error(pos) {}
+
+		class EolLocationNote final: public dia::NoteWithPosition {
+		protected:
+			[[nodiscard]]
+			std::string toStringBrief() const override {
+				std::stringstream res;
+				res << "This end of line.";
+				return res.str();
+			}
+		public:
+			EolLocationNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+		};
+	};
+
+	class UnclosedStringEofError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			std::stringstream res;
+			res << "String unclosed before end of file.";
+			return res.str();
+		}
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Lexer;
+		}
+
+		UnclosedStringEofError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class UnclosedBracketEofError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			std::stringstream res;
+			res << "Bracket unclosed before end of file.";
+			return res.str();
+		}
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Lexer;
+		}
+
+		UnclosedBracketEofError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class UnclosedBracketError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			std::stringstream res;
+			res << "Bracket closed with wrong type of bracket.";
+			return res.str();
+		}
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Lexer;
+		}
+
+		UnclosedBracketError(dia::SourcePosition pos): dia::Error(pos) {}
+
+		class EndBlock final: public dia::NoteWithPosition {
+		protected:
+			[[nodiscard]]
+			std::string toStringBrief() const override {
+				std::stringstream res;
+				res << "Closed here.";
+				return res.str();
+			}
+		public:
+			EndBlock(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+		};
+	};
 
 	Lexer::Lexer(tokenizer::BorrowFile file):
 		  file(file),
@@ -33,7 +161,7 @@ namespace lexer {
 				where++;
 			}
 		} else {
-			errorState.failAndLog({ "Tried to skip EOF" });
+			throw base::LogicError("Tried to skip EOF");
 		}
 	}
 
@@ -104,8 +232,8 @@ namespace lexer {
 				decLiteralHandler(output);
 		} else {
 			if (not peek().is(Class::whitespace))
-				errorState.failAndLog(sourceStart, "unexpected character starting token");
-			next();  // in else??
+				errorState.log(base::make_unique<TokenStartError>(sourceStart));
+			next();
 		}
 	}
 
@@ -137,11 +265,12 @@ namespace lexer {
 		usize begin = where;
 		usize end{};
 		auto  sourceStart = currentPostion();
+		dia::SourcePosition opening(sourceStart, begin + 1);
 
 		skip(2);  // "/*"
 		while (true) {
 			if (isEOF()) {
-				errorState.failAndLog(sourceStart, "Unclosed block comment starting here");
+				errorState.log(base::make_unique<UnclosedCommentError>(opening));
 				end = where - 1;
 				break;
 			} else if (isBlockCommentEnd()) {
@@ -271,21 +400,18 @@ namespace lexer {
 		next();
 		while (!peek().is('"')) {
 			if (peek().is('\\')) {
-				next();
-				next();
+				skip(2);
 			} else if (isEOL()) {
-				errorState.failAndLog(
-					dia::SourcePosition(sourceStart, where - 1),
-					"Expected this string to end before the end of line at: "
-						+ generateLineColumnInfo()
-				);
+				dia::SourcePosition errPos(sourceStart, where - 1);
+				dia::SourcePosition eolPos = currentPostion();
+				auto error = base::make_unique<UnclosedStringEolError>(errPos);
+				error->addNote(base::make_unique<UnclosedStringEolError::EolLocationNote>(eolPos));
+				errorState.log(std::move(error));
 				closed = false;
 				break;
 			} else if (isEOF()) {
-				errorState.failAndLog(
-					dia::SourcePosition(sourceStart, where - 1),
-					"Expected this string to end before the end of file"
-				);
+				dia::SourcePosition errPos(sourceStart, where - 1);
+				errorState.log(base::make_unique<UnclosedStringEofError>(errPos));
 				closed = false;
 				break;
 			} else {
@@ -327,24 +453,13 @@ namespace lexer {
 		if (peek().is(group_end))
 			next();  // par close
 		else if (isEOF()) {
-			errorState.failAndLog(
-				dia::SourcePosition(sourceStart, where - 1),
-				"Expected bracket to be closed before the end of file"
-			);
+			errorState.log(base::make_unique<UnclosedBracketEofError>(sourceStart));
 			end = where - 1;
 		} else {
-			errorState.failAndLog(
-				dia::SourcePosition(sourceStart, where - 1),
-				base::strConcat(
-					"Expected brackets starting here to be closed with: `",
-					icu::UnicodeString(group_end),
-					"` but encountered `",
-					icu::UnicodeString(peek().value),
-					"` at position ",
-					generateLineColumnInfo(),
-					" instead"
-				)
-			);
+			dia::SourcePosition endPos = currentPostion();
+			auto error = base::make_unique<UnclosedBracketError>(sourceStart);
+			error->addNote(base::make_unique<UnclosedBracketError::EndBlock>(endPos));
+			errorState.log(std::move(error));
 			end = where - 1;
 		}
 
