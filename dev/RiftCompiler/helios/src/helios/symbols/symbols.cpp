@@ -175,8 +175,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
 
-	struct ImplementationOf_QueryLookupInSymbol:
-		  public query::QueryImplementation<QueryLookupInSymbol, LookupResult> {
+	struct IMPLEMENT_QUERY(QueryLookupInSymbol, LookupResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.symbol.ref->kind) {
 			case SymbolKind::Using:
@@ -239,8 +238,7 @@ namespace compiler::helios {
 		return result;
 	}
 
-	struct ImplementationOf_QueryLinkedScope:
-		  public query::QueryImplementation<QueryLinkedScope, ScopeID> {
+	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.ref->kind) {
 			case SymbolKind::Using: {
@@ -471,8 +469,7 @@ namespace compiler::helios {
 		return NumLiteral{ base::StrId(std::to_string(value).c_str()) };
 	}
 
-	struct ImplementationOf_QueryConstValueOf:
-		  public query::QueryImplementation<QueryConstValueOf, i32> {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, i32) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			RIFT_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 

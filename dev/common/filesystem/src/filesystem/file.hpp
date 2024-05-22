@@ -154,6 +154,9 @@ namespace fs {
 		std::string absolutePath() const;
 
 		[[nodiscard]]
+		std::string uri() const;
+
+		[[nodiscard]]
 		std::string name() const;
 
 		[[nodiscard]]
