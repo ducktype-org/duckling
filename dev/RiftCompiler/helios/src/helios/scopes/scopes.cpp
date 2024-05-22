@@ -109,8 +109,7 @@ namespace compiler::helios {
 	// if somewhere then here it is needed to handle cycles somehow
 
 
-	struct ImplementationOf_QuerySymbolsInScope:
-		  public query::QueryImplementation<QuerySymbolsInScope, std::vector<SymID>> {
+	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<SymID> out;
 			for (const auto& stmt: key.ref->stmt_list) {
@@ -134,8 +133,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolsInScope);
 
-	struct ImplementationOf_QueryLookupInScope:
-		  public query::QueryImplementation<QueryLookupInScope, LookupResult> {
+	struct IMPLEMENT_QUERY(QueryLookupInScope, LookupResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			const auto& symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
 
@@ -163,8 +161,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
-	struct ImplementationOf_QueryLookupInScopeAndParents:
-		  public query::QueryImplementation<QueryLookupInScopeAndParents, LookupResult> {
+	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, LookupResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			LookupResult result = ctx.query<QueryLookupInScope>(key);
 
