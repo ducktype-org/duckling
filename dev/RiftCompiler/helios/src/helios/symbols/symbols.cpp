@@ -407,6 +407,7 @@ namespace compiler::helios {
 		auto&& [a, op, b, expr_scope] = key;
 
 		if (op.oper_id == ".") {
+			// @TODO: Add a compiler log or some kind of information if lookup failes.
 			SymbolList looked_up_symbol;
 			variant_match(a) {
 				variant_case(rpn::Identifier, idt) { looked_up_symbol = idt.symbol_list; }
@@ -417,8 +418,8 @@ namespace compiler::helios {
 					looked_up_symbol = sym_list.getAsSingle();
 				}
 				variant_default {
-					// @TODO: Add a compiler log or some kind of information.
-					RIFT_PANIC("Cannot make a lookup on non-indentifier.");
+					throw base::NotYetImplemented("Lookup on non-identifier is not yet implemented"
+					);
 				}
 			}
 			variant_match(b) {
