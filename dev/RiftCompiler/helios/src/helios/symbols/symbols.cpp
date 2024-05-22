@@ -346,7 +346,7 @@ namespace compiler::helios {
 				variant_case(pst::Expr::Operator, oper) {
 					auto      new_op   = Operator{ oper.oper_id };
 					const int priority = getPriority(new_op);
-					while (!st.empty() && getPriority(std::get<Operator>(st.top())) > priority) {
+					while (!st.empty() && getPriority(std::get<Operator>(st.top())) >= priority) {
 						rpn.emplace_back(st.top());
 						st.pop();
 					}
@@ -483,25 +483,25 @@ namespace compiler::helios {
 			});
 
 			// This is a nice RPN debug print.
-			std::cout << "RPN: \n";
-			for (auto&& e: expr) {
-				std::cout << "expr: ";
-				variant_match(e) {
-					variant_case(rpn::Identifier, idt) {
-						for (auto&& s: idt.symbol_list) std::cout << name(s).str() << '.';
-					}
-					variant_case(rpn::NamedIdentifier, idt) {
-						std::cout << idt.symbol_name.str() << '.';
-					}
-					variant_case(rpn::Operator, op) { std::cout << op.oper_id.str(); }
-					variant_case(rpn::KeywordValue, keyword_value) {
-						std::cout << keywordToStr(keyword_value.keyword).str();
-					}
-					variant_case(rpn::NumValue, literal) { std::cout << literal.num_id.str(); }
-					variant_default { RIFT_PANIC("Bad Expr alternative"); }
-				}
-				std::cout << '\n';
-			}
+			// std::cout << "RPN: \n";
+			// for (auto&& e: expr) {
+			// 	std::cout << "expr: ";
+			// 	variant_match(e) {
+			// 		variant_case(rpn::Identifier, idt) {
+			// 			for (auto&& s: idt.symbol_list) std::cout << name(s).str() << '.';
+			// 		}
+			// 		variant_case(rpn::NamedIdentifier, idt) {
+			// 			std::cout << idt.symbol_name.str() << '.';
+			// 		}
+			// 		variant_case(rpn::Operator, op) { std::cout << op.oper_id.str(); }
+			// 		variant_case(rpn::KeywordValue, keyword_value) {
+			// 			std::cout << keywordToStr(keyword_value.keyword).str();
+			// 		}
+			// 		variant_case(rpn::NumValue, literal) { std::cout << literal.num_id.str(); }
+			// 		variant_default { RIFT_PANIC("Bad Expr alternative"); }
+			// 	}
+			// 	std::cout << '\n';
+			// }
 
 			// Here we will evaluate the RPN.
 			std::stack<rpn::ExprElem> st;

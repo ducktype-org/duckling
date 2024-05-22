@@ -37,3 +37,10 @@ namespace Inner {
 using Inner.*;
 
 const F: i32 = ((A + 1) / 2 + (E + 2) / 2) ^ 2 * NN.A;
+
+const M: i32 = (A + A * 2) * NN.NNN.A * Inner.Inner_X;
+
+const M1: i32 = 10 / 2 / 5;
+const M2: i32 = 120 / 5 / 4;
+
+const M3: i32 = 1 * -1;

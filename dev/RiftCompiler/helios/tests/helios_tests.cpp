@@ -46,7 +46,7 @@ private:
 									{ result.back(), base::StrId(sym.c_str()), false }
 								);
 				for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
-					auto&& dealiased = query::entryPoint<compiler::helios::QueryDealias>(elem);
+					auto dealiased = query::entryPoint<compiler::helios::QueryDealias>(elem);
 					result.insert(result.end(), dealiased.begin(), dealiased.end());
 				}
 				first_symbol = false;
@@ -57,7 +57,9 @@ private:
 		auto get_value = [&](auto name) {
 			return query::entryPoint<compiler::helios::QueryConstValueOf>(get_chain(name).back());
 		};
-		//
+		ASSERT_EQUAL(1'107, get_value("M"));
+		ASSERT_EQUAL(1, get_value("M1"));
+		ASSERT_EQUAL(6, get_value("M2"));
 		ASSERT_EQUAL(1, get_value("N.X"));
 		ASSERT_EQUAL(1, get_value("A"));
 		ASSERT_EQUAL(-3, get_value("B"));
