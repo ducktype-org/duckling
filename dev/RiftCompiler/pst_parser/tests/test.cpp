@@ -84,7 +84,7 @@ private:
 		auto pst            = prepare(path("snippets/all_statements.txt"));
 		auto panicky_vistor = PstStmtVisitorTester<pst::PstStmtVisitorPanicky>();
 		auto empty_vistor   = PstStmtVisitorTester<pst::PstStmtVisitorEmpty>();
-		for (auto&& stmt: pst.getTopLevelElement()) {
+		for (auto&& stmt: pst.getTopLevelElement()->getStatements()) {
 			assertThrows<base::Panic>(
 				[&] { stmt->acceptVistior(panicky_vistor); }, "Stmt did not call it\'s visitor"
 			);
