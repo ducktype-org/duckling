@@ -16,6 +16,7 @@ namespace lexer {
 			res << "Illegal character at the beginning of a token.";
 			return res.str();
 		}
+
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
@@ -33,6 +34,7 @@ namespace lexer {
 			res << "Unclosed block comment starting here.";
 			return res.str();
 		}
+
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
@@ -50,6 +52,7 @@ namespace lexer {
 			res << "String unclosed before end of line.";
 			return res.str();
 		}
+
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
@@ -66,6 +69,7 @@ namespace lexer {
 				res << "This end of line.";
 				return res.str();
 			}
+
 		public:
 			EolLocationNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 		};
@@ -79,6 +83,7 @@ namespace lexer {
 			res << "String unclosed before end of file.";
 			return res.str();
 		}
+
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
@@ -96,6 +101,7 @@ namespace lexer {
 			res << "Bracket unclosed before end of file.";
 			return res.str();
 		}
+
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
@@ -113,6 +119,7 @@ namespace lexer {
 			res << "Bracket closed with wrong type of bracket.";
 			return res.str();
 		}
+
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
@@ -129,6 +136,7 @@ namespace lexer {
 				res << "Closed here.";
 				return res.str();
 			}
+
 		public:
 			EndBlock(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 		};
@@ -262,9 +270,9 @@ namespace lexer {
 	}
 
 	void Lexer::blockCommentHandler([[maybe_unused]] Tokens& output) {
-		usize begin = where;
-		usize end{};
-		auto  sourceStart = currentPostion();
+		usize               begin = where;
+		usize               end{};
+		auto                sourceStart = currentPostion();
 		dia::SourcePosition opening(sourceStart, begin + 1);
 
 		skip(2);  // "/*"
@@ -404,7 +412,7 @@ namespace lexer {
 			} else if (isEOL()) {
 				dia::SourcePosition errPos(sourceStart, where - 1);
 				dia::SourcePosition eolPos = currentPostion();
-				auto error = base::make_unique<UnclosedStringEolError>(errPos);
+				auto                error  = base::make_unique<UnclosedStringEolError>(errPos);
 				error->addNote(base::make_unique<UnclosedStringEolError::EolLocationNote>(eolPos));
 				errorState.log(std::move(error));
 				closed = false;
@@ -457,7 +465,7 @@ namespace lexer {
 			end = where - 1;
 		} else {
 			dia::SourcePosition endPos = currentPostion();
-			auto error = base::make_unique<UnclosedBracketError>(sourceStart);
+			auto                error  = base::make_unique<UnclosedBracketError>(sourceStart);
 			error->addNote(base::make_unique<UnclosedBracketError::EndBlock>(endPos));
 			errorState.log(std::move(error));
 			end = where - 1;
