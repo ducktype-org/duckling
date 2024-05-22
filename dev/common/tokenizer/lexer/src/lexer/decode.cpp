@@ -24,7 +24,7 @@ namespace lexer {
 
 		DecodingError(tokenizer::BorrowFile file, usize byte, std::string&& reason):
 			  dia::Error(dia::SourcePosition::fakePosition()),
-			  file(file),
+			  file(std::move(file)),
 			  byte(byte),
 			  reason(std::move(reason)) {}
 
