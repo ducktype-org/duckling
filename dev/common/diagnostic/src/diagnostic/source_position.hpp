@@ -8,7 +8,7 @@
 #include <token_file/forward.hpp>
 #include <filesystem/file.hpp>
 #include <memory>
-#include <printer/message.hpp>
+#include <printer/printer_content.hpp>
 #include <string>
 
 namespace dia {
@@ -36,16 +36,10 @@ namespace dia {
 		SourcePosition& operator=(const SourcePosition& other) = default;
 
 		/**
-		 * @brief Get lines surrounding formatted for printing.
-		 */
-		[[nodiscard]]
-		std::vector<std::string> getSourceLines() const;
-
-		/**
 		 * @brief Get lines surrounding with error colored.
 		 */
 		[[nodiscard]]
-		std::vector<printer::MessageContent> getPrettySourceLines() const;
+		std::vector<printer::PrinterContent> getPrettySourceLines() const;
 
 		/**
 		 * @brief Get formatted message contents with a given reason.
@@ -57,8 +51,8 @@ namespace dia {
 		 * @return Formatted message contents.
 		 */
 		[[nodiscard]]
-		std::vector<printer::MessageContent>
-			genPrinterMessageContents(const printer::MessageContent& reason) const;
+		std::vector<printer::PrinterContent>
+			genPrinterContents(const printer::PrinterContent& reason) const;
 
 		/**
 		 * @brief Get formatted message string with a given reason.
@@ -81,8 +75,8 @@ namespace dia {
 		tokenizer::BorrowFile getSource() const;
 
 	private:
-		usize source_start,
-			source_end;  ///< #source_start, #source_end describe range of characters in the file
-		tokenizer::BorrowFile source_file;  ///< pointer to source file data
+		usize                 source_start;  ///< Start of the range of characters in the file.
+		usize                 source_end;    ///< End of the range of characters in the file.
+		tokenizer::BorrowFile source_file;   ///< Pointer to source file data.
 	};
 }

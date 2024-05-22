@@ -1,7 +1,6 @@
 #include <diagnostic/logger.hpp>
 
 #include "classifications.hpp"
-#include "decode.hpp"
 #include "lexer_class.hpp"
 
 namespace lexer {
@@ -55,14 +54,13 @@ namespace lexer {
 
 	void Lexer::addTokenMsg(usize begin, usize end, std::string_view token_type) {
 		if (tokenMessages()) {
-			streamPrinter.add(printer::Message(
-				{ { "Add token: " },
-			      { std::string(token_type) },
-			      { "(" },
-			      { std::string(file->getCharRange(begin, end + 1).stringView()) },
-			      { ")" } },
-				printer::MessageType::DEBUG
-			));
+			printer::StreamPrinter::printNL({
+				"Add token: ",
+				std::string(token_type),
+				"(",
+				std::string(file->getCharRange(begin, end + 1).stringView()),
+				")",
+			});
 		}
 	}
 
@@ -312,8 +310,8 @@ namespace lexer {
 		Token::BracketType bracket_type{ peek().value };
 		auto               group_end = peek().bracketPair();
 		if (tokenMessages())
-			streamPrinter.add({ { { base::strConcat("group begin", generateLineColumnInfo()) } },
-			                    printer::MessageType::DEBUG });
+			printer::StreamPrinter::printNL(base::strConcat("group begin", generateLineColumnInfo())
+			);
 
 
 		Tokens inner_tokens;
@@ -360,8 +358,7 @@ namespace lexer {
 		output.push_back(Token::makeBracketGroup(
 			bracket_type, std::move(inner_tokens), std::move(sentinel), sourcePosition
 		));
-		if (tokenMessages())
-			streamPrinter.add({ { { "group end" } }, printer::MessageType::DEBUG });
+		if (tokenMessages()) printer::StreamPrinter::printNL("group end");
 	}
 
 	bool Lexer::isEOF() const { return peek().is(Class::end_of_file_value); }

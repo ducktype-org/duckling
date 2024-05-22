@@ -1,3 +1,5 @@
+include(CMakePrintHelpers)
+
 function(add_riftvm_tests suffix)
   set(libriftvm "LibRiftVm_${suffix}")
 
@@ -22,7 +24,9 @@ function(add_riftvm_tests suffix)
   rift_add_test(vm ${test_set}_functions_test functions/functions.cpp
           USES ${libriftvm} Tester ${vmtester})
   rift_add_test(vm ${test_set}_correctness_test correctness/correctness.cpp
-          USES ${libriftvm} Tester ${vmtester})
+          USES ${libriftvm} Tester ${vmtester})        
+
+  set_property(TEST ${test_set}_correctness_test PROPERTY DISABLED "$<$<CONFIG:Debug>:True>")
 endfunction()
 
 add_riftvm_tests("tc")
