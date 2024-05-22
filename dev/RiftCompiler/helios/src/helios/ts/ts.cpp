@@ -21,4 +21,7 @@ namespace compiler::helios::ts {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStructSymbolsInScope);
+
+	struct IMPLEMENT_QUERY(QueryTypeOf, ts::TypeInfo) {}
+
 }
