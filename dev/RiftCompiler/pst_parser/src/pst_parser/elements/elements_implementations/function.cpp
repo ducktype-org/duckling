@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	// @TODO: make better
@@ -28,4 +29,6 @@ namespace pst {
 		nullAwareDprint(body, out);
 		out << " } }";
 	}
+
+	void Fun::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitFun(*this); }
 }

@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<Namespace> Namespace::parse(RiftParserState& state) {
@@ -25,5 +26,7 @@ namespace pst {
 		nullAwareDprint(body, out);
 		out << "}}";
 	}
+
+	void Namespace::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitNamespace(*this); }
 
 }
