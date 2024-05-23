@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 #include "token_parser_core/automatic.hpp"
 
 namespace pst {
@@ -32,4 +33,6 @@ namespace pst {
 		out << R"("Alias": ")" << alias.value.strView() << R"(")";
 		out << "}";
 	}
+
+	void Import::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitImport(*this); }
 }

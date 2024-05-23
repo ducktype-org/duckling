@@ -1,0 +1,26 @@
+@ATRR
+
+throw 123;
+
+// Duplicate statement to test the tester
+throw 123;
+
+import X as x;
+
+using X;
+
+alias X = X;
+
+1 + 5;
+
+const X: W = 5;
+
+while (x);
+
+block B {}
+
+namespace X {}
+
+struct X {}
+
+fun X() {}

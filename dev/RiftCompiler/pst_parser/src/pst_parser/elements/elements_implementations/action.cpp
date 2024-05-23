@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<Action> Action::parse(RiftParserState& state) {
@@ -79,4 +80,6 @@ namespace pst {
 	void Throw::dprint(std::ostream& out) const {
 		simpleActionDprint(out, expr, "Throw", "exception");
 	}
+
+	void Action::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitAction(*this); }
 }
