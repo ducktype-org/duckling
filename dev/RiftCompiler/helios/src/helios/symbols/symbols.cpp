@@ -443,7 +443,7 @@ namespace compiler::helios {
 		i32 a_value = ctx.callExt<ExtensionRPNValue>(KeyOf_ExtensionRPNValue{ a, expr_scope });
 		i32 b_value = ctx.callExt<ExtensionRPNValue>(KeyOf_ExtensionRPNValue{ b, expr_scope });
 
-		i32 value;
+		i32 value{};
 
 		switch (static_cast<char>(op.oper_id.view()[0])) {
 		case '+':
