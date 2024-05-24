@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<Alias> Alias::parse(RiftParserState& state) {
@@ -29,4 +30,6 @@ namespace pst {
 
 		out << "}}";
 	}
+
+	void Alias::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitAlias(*this); }
 }
