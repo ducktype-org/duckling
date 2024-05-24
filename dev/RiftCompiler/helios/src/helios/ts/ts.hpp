@@ -13,5 +13,5 @@ namespace compiler::helios::ts {
 	 * @brief Query type of the symbol.
 	 * @note: not implemented yet
 	 */
-	DECLARE_QUERY(QueryTypeOf, SymID, ts::TypeInfo);
+	DECLARE_QUERY(QueryTypeOf, SymID, ::ts::TypeInfo);
 }

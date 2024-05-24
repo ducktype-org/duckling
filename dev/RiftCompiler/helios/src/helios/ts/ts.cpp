@@ -22,6 +22,12 @@ namespace compiler::helios::ts {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStructSymbolsInScope);
 
-	struct IMPLEMENT_QUERY(QueryTypeOf, ts::TypeInfo) {}
+	struct IMPLEMENT_QUERY(QueryTypeOf, ::ts::TypeInfo) {
+		static auto provide(Context& ctx, QKey key) -> PResult { return {}; }
+
+		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOf);
 
 }
