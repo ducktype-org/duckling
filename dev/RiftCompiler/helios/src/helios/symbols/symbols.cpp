@@ -185,7 +185,7 @@ namespace compiler::helios {
 				);
 			}
 
-				// @note: here case for variables will be calling TS
+			// @note: here case for variables will be calling TS
 			default:
 				throw base::NotYetImplemented("Lookup in symbol...");
 			}
@@ -435,7 +435,11 @@ namespace compiler::helios {
 					);
 					return Identifier{ looked_up_symbol };
 				}
-				variant_default { RIFT_PANIC("Not implemented yet!"); }
+				variant_default {
+					throw base::NotYetImplemented(
+						"Lookup of other things than identifiers is not yet supported"
+					);
+				}
 			}
 			RIFT_PANIC("Something strange has happended during .operator evaluation...");
 		}
