@@ -1,9 +1,5 @@
-import { spawn } from "child_process";
 import { DiagnosticSeverity } from "vscode-languageserver";
-import { elements } from "./lsptree/elements/index";
-import { RiftElement } from "./lsptree/elements/elements";
 
-const BINARY_PATH = __dirname + "/../../../build/bin/";
 const ERR_DELIMITER = /(ERR|WARN|INFO)/g;
 const SEVERITY_MAP: { [key: string]: DiagnosticSeverity } = {
 	"ERR": DiagnosticSeverity.Error,
@@ -27,51 +23,7 @@ export class RiftParserError {
 	}
 }
 
-export function parseFile(filePath: string): Promise<[RiftElement | null, RiftParserError[]]> {
-	const command: string = BINARY_PATH + "lsptree_interface";
-	const args: string[] = [uriToPath(filePath)];
-
-	return new Promise((resolve, reject) => {
-		const childProcess = spawn(command, args);
-		let treeOutput: string = '';
-		let errorsOutput: string = '';
-
-		childProcess.stdout.on('data', (data: Buffer) => {
-			treeOutput += data.toString();
-		});
-
-		childProcess.stderr.on('data', (data: Buffer) => {
-			errorsOutput += data.toString();
-		});
-
-		childProcess.on('error', (error: Error) => {
-			console.error(`error: ${error.message}`);
-			reject(error);
-		});
-
-		childProcess.on('close', (code: number) => {
-			if (code === 0) {
-				const errors = toErrors(errorsOutput);
-				try {
-					const LSPTreeJson = JSON.parse(treeOutput);
-					const LSPTree = elements.riftElementFactory.createDefined(LSPTreeJson);
-					resolve([LSPTree, errors]);
-				} catch (error) {
-					console.error(`error: ${error}`);
-					resolve([null, errors]);
-				}
-			} else {
-				reject(new Error(`Process exited with code ${code}`));
-			}
-		});
-	});
-}
-
-function uriToPath(uri: string): string {
-	return uri.replace("file://", "");
-}
-
-function toErrors(output: string): RiftParserError[] {
+export function toErrors(output: string): RiftParserError[] {
 	const errors: RiftParserError[] = [];
 	const errorsDesc = concatenatePairs(removeANSIEscapeCodes(output).split(ERR_DELIMITER));
 	

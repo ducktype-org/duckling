@@ -11,9 +11,13 @@ namespace lsp {
 	class LspInterface {
 	public:
 		LspInterface();
-		std::string getKeywordListJson();
-		std::string getSpecialListJson();
-		std::string getOperatorListJson();
-		std::string getAllJson();
+		[[nodiscard]]
+		std::string getKeywordListJson() const;
+		[[nodiscard]]
+		std::string getSpecialListJson() const;
+		[[nodiscard]]
+		std::string getOperatorListJson() const;
+		[[nodiscard]]
+		std::string getAllJson() const;
 	};
 }

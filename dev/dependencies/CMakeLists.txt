@@ -7,6 +7,7 @@ set(JSON_STRUCT_COMMIT "e3045af90ff331c97cc8f71374f558ae13409d9f")
 set(RESULT_COMMIT "a97e66bc66f140132619fd5f5cdffc30127f4220")
 set(ASIO_COMMIT "89b0a4138a92883ae2514be68018a6c837a5b65f")
 set(CROW_COMMIT "4f3f5deaaa01825c63c83431bfa96ccec195f741")
+set(BASE64_COMMIT "387b32f337b83d358ac1ffe574e596ba99c41d31")
 
 # ICU supporting Unicode 15.1
 set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-1/icu4c-74_1-src.tgz")
@@ -30,6 +31,11 @@ FetchContent_Declare(
 FetchContent_Declare(
 	crow
 	URL "https://github.com/CrowCpp/Crow/archive/${CROW_COMMIT}.zip"
+)
+
+FetchContent_Declare(
+	base64
+	URL "https://github.com/tobiaslocker/base64/archive/${BASE64_COMMIT}.zip"
 )
 
 FetchContent_MakeAvailable(asio)
@@ -57,3 +63,14 @@ get_target_property(TEMP Result INTERFACE_INCLUDE_DIRECTORIES)
 set_target_properties(Result PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
 
 FindOrBuildICU(VERSION 74.1 URL "${ICU_RELEASE}" URL_HASH "${ICU_CONTROL}")
+
+FetchContent_MakeAvailable(base64)
+add_library(base64 INTERFACE)
+target_include_directories(base64 INTERFACE "${base64_SOURCE_DIR}/include" "${base64_SOURCE_DIR}/test")
+FetchContent_GetProperties(base64)
+if(NOT base64_POPULATED)
+    FetchContent_Populate(base64)
+    add_subdirectory("${base64_SOURCE_DIR}" "${base64_BINARY_DIR}")
+endif()
+
+add_dependencies(build_all_tests base64_tests roundtrip_test)

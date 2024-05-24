@@ -20,7 +20,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { handleSemanticTokensFull } from "./semanticTokens";
 import { onCompletion, onCompletionResolve } from "./completion";
 import { validateRift } from "./validation"; // Import the validation function
-import { parseFile, RiftParserError } from "./compilerInterface"; // Import the compiler interface function
+import { RiftParserError } from "./errors"; 
+import { CompilerDaemonClient } from "./compilerDaemonClient";
 import { getFoldingRanges } from './foldingRanges';
 import { RiftElement } from './lsptree/elements/elements';
 import { Token } from './semanticTokensDeclarations';
@@ -30,6 +31,10 @@ require("./lsptree/elements/index");
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 const connection = createConnection(ProposedFeatures.all);
+connection.sendNotification('window/showMessage', {type: 3, message: 'RiftLS started!'});
+
+// Create a compiler daemon client
+const compilerDaemonClient = new CompilerDaemonClient();
 
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
@@ -39,7 +44,7 @@ let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
 
 // Storing PST for documents
-const pstCache: Map<string, RiftElement | null> = new Map();
+const lsptCache: Map<string, RiftElement | null> = new Map();
 const errorsCache: Map<string, RiftParserError[]> = new Map();
 const semanticTokensCache: Map<string, Token[]> = new Map();
 
@@ -102,7 +107,9 @@ connection.onInitialized(() => {
 	}
 });
 
-connection.onRequest("textDocument/semanticTokens/full", (params) => handleSemanticTokensFull(params, documents, pstCache, semanticTokensCache));
+connection.onRequest("textDocument/semanticTokens/full", (params) => 
+	handleSemanticTokensFull(params, documents, lsptCache, semanticTokensCache, compilerDaemonClient, connection)
+);
 
 // The example settings
 interface ExampleSettings {
@@ -128,7 +135,7 @@ connection.onDidChangeConfiguration(change => {
 		);
 	}
 	// Revalidate all open text documents
-	documents.all().forEach(document => validateRift(document, connection, errorsCache));
+	documents.all().forEach(document => validateRift(document, connection, errorsCache, compilerDaemonClient));
 });
 
 export function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
@@ -154,12 +161,19 @@ documents.onDidClose(e => {
 // The content of a text document has changed. This event is emitted
 // when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
-	parseFile(change.document.uri).then((parseOutput) => {
-		pstCache.set(change.document.uri, parseOutput[0]);
-		errorsCache.set(change.document.uri, parseOutput[1]);
-	});
+	compilerDaemonClient.putFile(change.document.uri, change.document.getText(), connection).then(() => {
+		compilerDaemonClient.getLSPT(change.document.uri, connection).then((LSPTree) => {
+			lsptCache.set(change.document.uri, LSPTree);
+			console.log(LSPTree);
+		});
 
-	validateRift(change.document, connection, errorsCache);
+		compilerDaemonClient.getErrors(change.document.uri, connection).then((errors) => {
+			errorsCache.set(change.document.uri, errors);
+			console.log(errors);
+		});
+
+		validateRift(change.document, connection, errorsCache, compilerDaemonClient);
+	});
 });
 
 
@@ -172,9 +186,12 @@ connection.onCompletion(onCompletion);
 connection.onCompletionResolve(onCompletionResolve);
 
 connection.onFoldingRanges((params: FoldingRangeParams): FoldingRange[] | null => {
-	return getFoldingRanges(params, documents, semanticTokensCache, pstCache);
+	return getFoldingRanges(params, documents, semanticTokensCache, lsptCache);
 });
 
+connection.onExit(() => {
+	compilerDaemonClient.exit();
+});
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events

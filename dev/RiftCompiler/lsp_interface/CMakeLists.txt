@@ -1,5 +1,3 @@
-add_executable(lsptree_interface src/lsp_interface/lsptree_interface.cpp)
-add_executable(export_keywords src/lsp_interface/main.cpp src/lsp_interface/export_keywords.cpp)
+add_executable(lsp_daemon src/lsp_interface/lsp_daemon.cpp src/lsp_interface/export_keywords.cpp)
 
-target_link_libraries(lsptree_interface Lexer PstParser)
-target_link_libraries(export_keywords Base Lexer PstParser Clap)
+target_link_libraries(lsp_daemon PUBLIC base64 Base Lexer PstParser Crow Clap LibRiftVm)

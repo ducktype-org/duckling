@@ -1,19 +1,22 @@
 import { Diagnostic, Connection } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { getDocumentSettings } from "./server";
-import { RiftParserError, parseFile } from "./compilerInterface";
+import { RiftParserError } from "./errors";
+import { CompilerDaemonClient } from "./compilerDaemonClient";
 
-export async function validateRift(textDocument: TextDocument, 
-								   connection: Connection, 
-								   errorsCache: Map<String, RiftParserError[]>): Promise<void> {
+export async function validateRift(
+	textDocument: TextDocument, 
+	connection: Connection, 
+	errorsCache: Map<String, RiftParserError[]>,
+	compilerDaemonClient: CompilerDaemonClient
+): Promise<void> {
 	const settings = await getDocumentSettings(textDocument.uri);
 	let problems = 0;
 	const diagnostics: Diagnostic[] = [];
 	
 	let errors = errorsCache.get(textDocument.uri);
 	if (!errors) {
-		let parseOutput = await parseFile(textDocument.uri);
-		errors = parseOutput[1];
+		errors = await compilerDaemonClient.getErrors(textDocument.uri, connection);
 		errorsCache.set(textDocument.uri, errors);
 	}
 
