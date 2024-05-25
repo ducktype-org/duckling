@@ -1,4 +1,5 @@
 #include "example.hpp"
+#include <diagnostic/diagnostic_converters.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_entry_point.hpp>
 
@@ -11,14 +12,14 @@
 
 
 // make this link less bug-prone...:
-struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
+struct IMPLEMENT_QUERY(Query1, uint64_t) {
 	struct InfoInQuery1 final: dia::Info {
 		explicit InfoInQuery1(const dia::SourcePosition& source_position): Info(source_position) {}
 
 	protected:
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override {
-			return { "Some random log from Query1." };
+		std::string toStringBrief() const override {
+			return "Some random log from Query1.";
 		}
 
 	public:
@@ -29,13 +30,21 @@ struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
 	};
 
 	struct ErrorInQuery1 final: dia::Error {
-		explicit ErrorInQuery1(const dia::SourcePosition& source_position):
-			  Error(source_position) {}
+		struct NoteInQuery1 final: dia::Note {
+			[[nodiscard]]
+			std::string toStringBrief() const override {
+				return "A useless note in an example error in Query1.";
+			}
+		};
+
+		explicit ErrorInQuery1(const dia::SourcePosition& source_position): Error(source_position) {
+			addNote(base::make_unique<NoteInQuery1>());
+		}
 
 	protected:
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override {
-			return { "An example error in Query1." };
+		std::string toStringBrief() const override {
+			return "An example error in Query1.";
 		}
 
 	public:
@@ -69,13 +78,13 @@ struct ImplementationOf_Query1: query::QueryImplementation<Query1, uint64_t> {
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Query1, "Query 1")
+QUERY_IMPLEMENTATION_BOILERPLATE(Query1);
 
 /************
  * QUERY 2: *
  ************/
 
-struct ImplementationOf_Query2: query::QueryImplementation<Query2, uint64_t> {
+struct IMPLEMENT_QUERY(Query2, uint64_t) {
 	inline static std::map<QKey, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -95,13 +104,13 @@ struct ImplementationOf_Query2: query::QueryImplementation<Query2, uint64_t> {
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_Query2, "Query 2")
+QUERY_IMPLEMENTATION_BOILERPLATE(Query2);
 
 /*****************
  * Cyclic Query: *
  *****************/
 
-struct ImplementationOf_CyclicQuery: query::QueryImplementation<CyclicQuery, uint64_t> {
+struct IMPLEMENT_QUERY(CyclicQuery, uint64_t) {
 	inline static std::map<QKey, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
@@ -121,19 +130,26 @@ struct ImplementationOf_CyclicQuery: query::QueryImplementation<CyclicQuery, uin
 	}
 };
 
-QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_CyclicQuery, "Cyclic query")
+QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQuery);
 
 // implement extension:
 uint64_t SquareValue(query::Context&, uint64_t v) { return v * v; }
 
 int main() {
-	std::cout << query::queryEntryPoint<Query2>(2) << "\n";
-	query::debugPrintDependencyGraph();
-	std::cout << "\n";
+	// The instant logs may be printed in a different order than when they are dumped,
+	// because the instant logging is instant, while the dumping is ordered.
 
+	std::cerr << query::entryPoint<Query2>(2) << "\n";
+	query::debugPrintDependencyGraph();
+	std::cerr << "\n";
+
+	std::cerr << "Here are the logs in user readable form:\n";
 	query::detail::ContextType::logger.dumpLog(true);
 
-	std::cout << query::queryEntryPoint<CyclicQuery>(0) << "\n";
+	std::cerr << "And here are the logs in JSON:\n";
+	query::detail::ContextType::logger.dumpLog<dia::DiagnosticToJSONConverter>(true);
+
+	std::cerr << query::entryPoint<CyclicQuery>(0) << "\n";
 
 	return 0;
 }

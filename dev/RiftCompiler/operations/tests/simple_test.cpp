@@ -15,12 +15,12 @@ public:
 
 private:
 	void simple_operation() {
-		ts::TypeDesc<> td(query::queryEntryPoint<ts::QueryIntegralType>({ 8 }));
+		ts::TypeDesc<> td(query::entryPoint<ts::QueryIntegralType>({ 8 }));
 		exec::CTV      ctv = exec::alloc_new(td, 8);
 
-		auto int_16 = query::queryEntryPoint<ts::QueryIntegralType>({ 16 });
+		auto int_16 = query::entryPoint<ts::QueryIntegralType>({ 16 });
 
-		auto fun_sig = query::queryEntryPoint<ts::QueryFunctionType>({ { int_16 }, int_16 });
+		auto fun_sig = query::entryPoint<ts::QueryFunctionType>({ { int_16 }, int_16 });
 
 		operation::Operation      fun = [](std::vector<exec::CTV> a) { return a[0]; };
 		operation::TypedOperation op  = { fun, fun_sig };
@@ -39,12 +39,12 @@ private:
 	}
 
 	void simple_default() {
-		ts::TypeDesc<> td(query::queryEntryPoint<ts::QueryIntegralType>({ 8 }));
+		ts::TypeDesc<> td(query::entryPoint<ts::QueryIntegralType>({ 8 }));
 		exec::CTV      ctv = exec::alloc_new(td, 8);
 
-		auto int_16 = query::queryEntryPoint<ts::QueryIntegralType>({ 16 });
+		auto int_16 = query::entryPoint<ts::QueryIntegralType>({ 16 });
 
-		auto fun_sig = query::queryEntryPoint<ts::QueryFunctionType>({ { int_16 }, int_16 });
+		auto fun_sig = query::entryPoint<ts::QueryFunctionType>({ { int_16 }, int_16 });
 
 		operation::Operation      fun = [](std::vector<exec::CTV> a) { return a[0]; };
 		operation::TypedOperation op  = { fun, fun_sig };

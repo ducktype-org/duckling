@@ -154,31 +154,31 @@ Clears all messages from the console. Does not change settings.
 Color
 -----
 
-Enumerates colors for characters and backgrounds. Important to note that colors are inconsistent across terminals. More about it and preview of colors in different terminals `here <https://en.wikipedia.org/wiki/ANSI_escape_code#Colors>`_. There are two special colors - :code:`DEFAULT` and :code:`RESET`. :code:`DEFAULT` is used for :code:`MessageContent` only and sets the color to :code:`Message`'s default. Don't set :code:`Message`'s color to :code:`DEFAULT`. :code:`RESET` resets color setting to terminal's default.
+Enumerates colors for characters and backgrounds. Important to note that colors are inconsistent across terminals. More about it and preview of colors in different terminals `here <https://en.wikipedia.org/wiki/ANSI_escape_code#Colors>`_. There are two special colors - :code:`DEFAULT` and :code:`DEFAULT`. :code:`DEFAULT` is used for :code:`PrinterContent` only and sets the color to :code:`Message`'s default. Don't set :code:`Message`'s color to :code:`DEFAULT`. :code:`DEFAULT` resets color setting to terminal's default.
 
-MessageContent class
+PrinterContent class
 --------------------
 
 Text with color information. Constructors:
 
 .. code-block:: cpp
 
-    MessageContent(
+    PrinterContent(
         const char* str, 
         Color foreground_color  = Color::DEFAULT, 
         Color background_color = Color::DEFAULT);
 
-    MessageContent(
-        MessageContentText str, 
+    PrinterContent(
+        PrinterContentText str,
         Color foreground_color  = Color::DEFAULT, 
         Color background_color = Color::DEFAULT);
 
-:code:`MessageContentText` is just :code:`std::string`. First color is the character color, second one is the background color. If color is omitted not specified, it defaults to :code:`Message`'s default color.
+:code:`PrinterContentText` is just :code:`std::string`. First color is the character color, second one is the background color. If color is omitted not specified, it defaults to :code:`Message`'s default color.
 
 Message class
 -------------
 
-Combines multiple :code:`MessageContent` together into a message.
+Combines multiple :code:`PrinterContent` together into a message.
 
 Constructor
 ^^^^^^^^^^^
@@ -186,23 +186,23 @@ Constructor
 .. code-block:: cpp
 
     Message(
-        std::vector<MessageContent> list,
+        std::vector<PrinterContent> list,
         MessageType type = MessageType::GENERAL,
         LevelType level = 0,
-        Color foreground_color = Color::RESET,
-        Color background_color = Color::RESET)
+        Color foreground_color = Color::DEFAULT,
+        Color background_color = Color::DEFAULT)
 
-You can read more about :code:`MessageType` :ref:`here <source-doc/source-docs/common/printer/index:MessageType>`. If omitted defaults to :code:`GENERAL`. :code:`LevelType` is typedef of :code:`int32_t` and notes message's importance to console. If omitted defaults to :code:`0`. First color is :code:`Message`'s default character color, second is :code:`Message`'s default background color. If omitted both default to :code:`RESET` - terminal's default.
+You can read more about :code:`MessageType` :ref:`here <source-doc/source-docs/common/printer/index:MessageType>`. If omitted defaults to :code:`GENERAL`. :code:`LevelType` is typedef of :code:`int32_t` and notes message's importance to console. If omitted defaults to :code:`0`. First color is :code:`Message`'s default character color, second is :code:`Message`'s default background color. If omitted both default to :code:`DEFAULT` - terminal's default.
 
 add
 ^^^
 
-Adds :code:`MessageContent` to the message.
+Adds :code:`PrinterContent` to the message.
 
 .. code-block:: cpp
 
-    void add(MessageContent);
-    void add(std::vector<MessageContent>);
+    void add(PrinterContent);
+    void add(std::vector<PrinterContent>);
 
 print
 ^^^^^

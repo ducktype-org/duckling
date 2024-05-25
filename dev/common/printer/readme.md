@@ -14,7 +14,7 @@ This module provides functionality for outputting messages to console. Has tools
 
 ## Files:
 
-* [message.hpp](src/printer/message.hpp) - Description of Message objects.
+* [message.hpp](src/printer/printer_content.hpp) - Description of Message objects.
 * [printer.hpp](src/printer/stream_printer.hpp) - Interface of a printer to console (maybe other printers will appear in the future).
 * [printer.cpp](src/printer/stream_printer.cpp) - Implementation of a printer to console.
 
@@ -111,51 +111,51 @@ void clear();
 
 ### Color
 
-Enumerates colors for characters and backgrounds. Important to note that colors are inconsistent across terminals. More about it and preview of colors in different terminals [here](https://en.wikipedia.org/wiki/ANSI_escape_code#Colors). There are two special colors - `DEFAULT` and `RESET`. `DEFAULT` is used for `MessageContent` only and sets the color to `Message`'s default. Don't set `Message`'s color to `DEFAULT`. `RESET` resets color setting to terminal's default.
+Enumerates colors for characters and backgrounds. Important to note that colors are inconsistent across terminals. More about it and preview of colors in different terminals [here](https://en.wikipedia.org/wiki/ANSI_escape_code#Colors). There are two special colors - `DEFAULT` and `DEFAULT`. `DEFAULT` is used for `PrinterContent` only and sets the color to `Message`'s default. Don't set `Message`'s color to `DEFAULT`. `DEFAULT` resets color setting to terminal's default.
 ~~~~~cpp
 enum class Color;
 ~~~~~
 
-### MessageContent class
+### PrinterContent class
 
 Text with color information. Constructors:
 ~~~~~cpp
-		MessageContent(
+		PrinterContent(
 			const char* str, 
 			Color foreground_color  = Color::DEFAULT, 
 			Color background_color = Color::DEFAULT);
 
-		MessageContent(
-			MessageContentText str, 
+		PrinterContent(
+			PrinterContentText str, 
 			Color foreground_color  = Color::DEFAULT, 
 			Color background_color = Color::DEFAULT);
 ~~~~~
-MessageContentText is just `std::string`. First color is the character color, second one is the background color. If color is omitted not specified, it defaults to `Message`'s default color.
+PrinterContentText is just `std::string`. First color is the character color, second one is the background color. If color is omitted not specified, it defaults to `Message`'s default color.
 
 ### Message class
 
-Combines `MessageContent`s together into a message.
+Combines `PrinterContent`s together into a message.
 
 #### Constructor
 ~~~~~cpp
 		Message(
-			std::vector<MessageContent> list,
+			std::vector<PrinterContent> list,
 			MessageType type = MessageType::GENERAL,
 			LevelType level = 0,
-			Color foreground_color = Color::RESET,
-			Color background_color = Color::RESET)
+			Color foreground_color = Color::DEFAULT,
+			Color background_color = Color::DEFAULT)
 ~~~~~
 You can read more about `MessageType` [here](#MessageType). If omitted defaults to `GENERAL`.
 `LevelType` is typedef of `int32_t` and notes message's importance to console. If omitted defaults to 0.
-First color is `Message`'s default character color, second is `Message`'s default background color. If omitted both default to `RESET` - terminal's default.
+First color is `Message`'s default character color, second is `Message`'s default background color. If omitted both default to `DEFAULT` - terminal's default.
 
 #### add
 
-Adds `MessageContent`(s) to the message.
+Adds `PrinterContent`(s) to the message.
 
 ~~~~~cpp
-		void add(MessageContent);
-		void add(std::vector<MessageContent>);
+		void add(PrinterContent);
+		void add(std::vector<PrinterContent>);
 ~~~~~
 
 #### print

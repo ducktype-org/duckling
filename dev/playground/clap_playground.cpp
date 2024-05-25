@@ -42,17 +42,11 @@ int main(int argc, const char** argv) {
 	try {
 		result = clap.parse(argc, argv);
 	} catch (clap::exceptions::ClapException& e) {
-		printer::StreamPrinter console = printer::StreamPrinter();
-		console.add({
-			{
-				{ "rift: ", printer::Color::DEFAULT },
-				{ "error: ", printer::Color::RED },
-				{ e.what(), printer::Color::DEFAULT },
-			},
-			printer::MessageType::ERROR,
-			0,
+		printer::StreamPrinter::print({
+			{ "rift: ", printer::Color::DEFAULT },
+			{ "error: ", printer::Color::RED },
+			{ e.what(), printer::Color::DEFAULT },
 		});
-		console.print(std::cerr);
 		return 1;
 	} catch (clap::exceptions::HelpException& e) {
 		std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);

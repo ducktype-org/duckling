@@ -164,8 +164,7 @@ namespace compiler::helios {
 		);
 	}
 
-	struct ImplementationOf_QuerySymbolOfSTMT:
-		  query::QueryImplementation<QuerySymbolOfSTMT, SymID> {
+	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymID) {
 		static auto provide(Context&, QKey key) -> PResult {
 			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
 		}
@@ -174,10 +173,9 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QuerySymbolOfSTMT, "Query Symbol of Stmt");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
 
-	struct ImplementationOf_QueryLookupInSymbol:
-		  public query::QueryImplementation<QueryLookupInSymbol, LookupResult> {
+	struct IMPLEMENT_QUERY(QueryLookupInSymbol, LookupResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.symbol.ref->kind) {
 			case SymbolKind::Using:
@@ -196,7 +194,8 @@ namespace compiler::helios {
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 	};
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLookupInSymbol, "QueryLookupInSymbol")
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
 
 	struct LookupChainKey {
 		std::vector<base::StrId> names;
@@ -239,8 +238,7 @@ namespace compiler::helios {
 		return result;
 	}
 
-	struct ImplementationOf_QueryLinkedScope:
-		  public query::QueryImplementation<QueryLinkedScope, ScopeID> {
+	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.ref->kind) {
 			case SymbolKind::Using: {
@@ -270,7 +268,7 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryLinkedScope, "QueryLookupInSymbol")
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLinkedScope);
 
 	base::HashT KeyOf_QuerySymbolOfSTMT::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(scope);
@@ -288,7 +286,7 @@ namespace compiler::helios {
 		return (hash_1 * 143 + hash_2 * 7) * 2 + follow_wildcards;
 	}
 
-	struct ImplementationOf_QueryDealias: query::QueryImplementation<QueryDealias, SymbolList> {
+	struct IMPLEMENT_QUERY(QueryDealias, SymbolList) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			if (kind(key) != SymbolKind::Alias) return { key };
 
@@ -317,7 +315,7 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryDealias, "QueryDealias");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
 	int getPriority(const rpn::Operator& op) {
 		switch (static_cast<char>(op.oper_id.view()[0])) {
@@ -434,8 +432,7 @@ namespace compiler::helios {
 		return NumLiteral{ base::StrId(std::to_string(value).c_str()) };
 	}
 
-	struct ImplementationOf_QueryConstValueOf:
-		  public query::QueryImplementation<QueryConstValueOf, i32> {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, i32) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			RIFT_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
@@ -500,5 +497,5 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_QueryConstValueOf, "QueryConstValueOf");
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 }

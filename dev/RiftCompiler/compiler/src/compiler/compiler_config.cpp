@@ -34,11 +34,9 @@ namespace compiler {
 		return out;
 	}
 
-	printer::Message generateHelpMessage(const clap::exceptions::HelpException& e) {
-		auto             options = compilerOptions();
-		printer::Message out({ "" });
-		out.add(clap::HelpMessageGenerator::generate(options, e.parsing_result));
-		return out;
+	printer::PrinterContentsSeq generateHelpMessage(const clap::exceptions::HelpException& e) {
+		auto options{ compilerOptions() };
+		return { { clap::HelpMessageGenerator::generate(options, e.parsing_result) } };
 	}
 
 }

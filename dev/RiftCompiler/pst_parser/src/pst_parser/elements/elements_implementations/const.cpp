@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<Const> Const::parse(RiftParserState& state) {
@@ -22,4 +23,6 @@ namespace pst {
 		nullAwareDprint(type, out);
 		out << "}}";
 	}
+
+	void Const::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitConst(*this); }
 }

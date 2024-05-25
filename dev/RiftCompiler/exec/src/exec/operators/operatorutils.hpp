@@ -62,12 +62,11 @@ namespace exec::operators {
 	UINT_BIN_SIMPLE_OPS(operation, name)
 
 // For built in operator map initialization of binary operators.
-#define BIN_ENTRY(arg_info_1, arg_info_2, res_info, op_name, fun_name)                          \
-	operation::TypedOperation typed_op = {                                                      \
-		fun_name,                                                                               \
-		query::queryEntryPoint<ts::QueryFunctionType>({ { arg_info_1, arg_info_2 }, res_info }) \
-	};                                                                                          \
-	operation::OperationId id = operation::addOperation(typed_op);                              \
+#define BIN_ENTRY(arg_info_1, arg_info_2, res_info, op_name, fun_name)                            \
+	operation::TypedOperation typed_op                                                            \
+		= { fun_name,                                                                             \
+		    query::entryPoint<ts::QueryFunctionType>({ { arg_info_1, arg_info_2 }, res_info }) }; \
+	operation::OperationId id = operation::addOperation(typed_op);                                \
 	getBuiltInOps().put({ Operator::op_name, { arg_info_1, arg_info_2 } }, id);
 
 #define BIN_ENTRY_SIMPLE(info, op_name, fun_name) BIN_ENTRY(info, info, info, op_name, fun_name)
@@ -76,10 +75,10 @@ namespace exec::operators {
 	{ BIN_ENTRY_SIMPLE(info, op_name, operators::fun_name) }
 
 // For initializing simple binary operations on ints.
-#define INT_BIN_ENTRY_SIMPLE(size, op_name)                                  \
-	{                                                                        \
-		auto info = query::queryEntryPoint<ts::QueryIntegralType>({ size }); \
-		BIN_ENTRY_SIMPLE_INFO(info, op_name, bin_##op_name##_int_##size)     \
+#define INT_BIN_ENTRY_SIMPLE(size, op_name)                              \
+	{                                                                    \
+		auto info = query::entryPoint<ts::QueryIntegralType>({ size });  \
+		BIN_ENTRY_SIMPLE_INFO(info, op_name, bin_##op_name##_int_##size) \
 	}
 
 #define INT_BIN_ENTRIES_SIMPLE(op_name) \
@@ -90,10 +89,10 @@ namespace exec::operators {
 	INT_BIN_ENTRY_SIMPLE(128, op_name)
 
 // For initializing simple binary operations on uints.
-#define UINT_BIN_ENTRY_SIMPLE(size, op_name)                                        \
-	{                                                                               \
-		auto info = query::queryEntryPoint<ts::QueryIntegralType>({ size, false }); \
-		BIN_ENTRY_SIMPLE_INFO(info, op_name, bin_##op_name##_uint_##size)           \
+#define UINT_BIN_ENTRY_SIMPLE(size, op_name)                                   \
+	{                                                                          \
+		auto info = query::entryPoint<ts::QueryIntegralType>({ size, false }); \
+		BIN_ENTRY_SIMPLE_INFO(info, op_name, bin_##op_name##_uint_##size)      \
 	}
 
 #define UINT_BIN_ENTRIES_SIMPLE(op_name) \

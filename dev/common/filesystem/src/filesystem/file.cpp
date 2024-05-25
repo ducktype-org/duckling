@@ -120,6 +120,8 @@ namespace fs {
 
 	std::string FilePath::absolutePath() const { return path; }
 
+	std::string FilePath::uri() const { return "file://" + absolutePath(); }
+
 	std::string FilePath::name() const {
 		if (isDirectory() && path.filename() == ".") return path.parent_path().filename();
 		return path.filename();

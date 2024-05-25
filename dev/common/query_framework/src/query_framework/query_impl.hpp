@@ -144,17 +144,27 @@ namespace query {
 }
 
 /**
- * @brief Macro used to define boilerplate implementation elements of given Query.
- * @param type Name of Query Implementation Struct
- * @param pretty_name Pretty name of a given query (that will for example be displayed in logs)
+ * @brief This is an internal query, and shouldn't be used directly. It used by
+ * `QUERY_IMPLEMENTATION_BOILERPLATE` macro and creates necessary components for
+ * macro-implementation structs.
+ * @param type Name of a struct with query implementation
+ * @param pretty_name Pretty name of the Query
  */
-#define QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                         \
+#define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                \
 	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from)   \
 		-> type::QueryType::QResult {                                                               \
 		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                     \
 	}                                                                                               \
 	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryId(pretty_name); \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
+
+/**
+ * @brief Macro used to define boilerplate implementation elements of given Query. This is
+ * something, that should be inserted right after query-implementation struct declaration.
+ * @param type Name of the Query
+ */
+#define QUERY_IMPLEMENTATION_BOILERPLATE(query_type) \
+	INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_##query_type, #query_type)
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.

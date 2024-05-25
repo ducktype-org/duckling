@@ -12,8 +12,7 @@
 namespace compiler::helios {
 
 
-	struct ImplementationOf_QueryTopLevelFunctions:
-		  public query::QueryImplementation<QueryTopLevelFunctions, HOUTUnit> {
+	struct IMPLEMENT_QUERY(QueryTopLevelFunctions, HOUTUnit) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// go over all to level symbols and get theirs hout
 			// store it in some vector or something
@@ -48,8 +47,7 @@ namespace compiler::helios {
 	};
 
 
-	struct ImplementationOf_QueryCodeOFFun:
-		  public query::QueryImplementation<QueryCodeOFFun, HOUTFunction> {
+	struct IMPLEMENT_QUERY(QueryCodeOFFun, HOUTFunction) {
 
 		
 		static auto provide(Context& ctx, QKey key) -> PResult {

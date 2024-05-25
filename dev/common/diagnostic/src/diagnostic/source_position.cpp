@@ -6,40 +6,14 @@
 
 #include <cmath>
 #include <string>
-#include <printer/message.hpp>
+#include <printer/printer_content.hpp>
 #include <token_file/file.hpp>
 #include <base/exceptions.hpp>
 
 #include "source_position.hpp"
 
 namespace dia {
-	std::vector<std::string> SourcePosition::getSourceLines() const {
-		usize start_line = getStartLineColumn().first;
-		usize end_line   = getEndLineColumn().first;
-
-		usize first_line = std::max((usize) 2, start_line) - 1;
-		usize last_line  = std::min(source_file->getLines().size(), end_line + 1);
-
-		usize begin_char = source_file->getLine(first_line).first;
-		usize end_char   = source_file->getLine(last_line).second;
-
-		usize length = std::to_string(last_line).size();
-
-		std::vector<std::string> res;
-		res.emplace_back(std::string(length + 1, ' ') + "|\n");
-		for (auto [line, view]: source_file->viewSplitRange(begin_char, end_char)) {
-			std::stringstream number;
-			number << std::setw((int) length) << line << " | ";
-			res.emplace_back(number.view());
-			res.emplace_back(view.stringView());
-			res.emplace_back("\n");
-		}
-		res.emplace_back(std::string(length + 1, ' ') + "|");
-
-		return res;
-	}
-
-	std::vector<printer::MessageContent> SourcePosition::getPrettySourceLines() const {
+	std::vector<printer::PrinterContent> SourcePosition::getPrettySourceLines() const {
 		usize start_line = getStartLineColumn().first;
 		usize end_line   = getEndLineColumn().first;
 
@@ -52,7 +26,7 @@ namespace dia {
 		usize       length  = std::to_string(last_line).size();
 		std::string str_len = std::to_string(length);
 
-		std::vector<printer::MessageContent> res;
+		std::vector<printer::PrinterContent> res;
 		res.emplace_back(std::string(length + 1, ' ') + "|");
 
 		auto before = source_file->viewSplitRange(begin_char, source_start);
@@ -61,7 +35,7 @@ namespace dia {
 
 		auto linePref = [&](usize line) {
 			std::stringstream number;
-			number << std::setw((int) length) << line << " | ";
+			number << "\n" << std::setw((int) length) << line << " | ";
 			res.emplace_back(number.str());
 		};
 		usize prev_line = -1;
@@ -116,11 +90,13 @@ namespace dia {
 		  SourcePosition(other.source_file, other.source_start, source_end) {}
 
 	std::pair<usize, usize> SourcePosition::getStartLineColumn() const {
-		return source_file->getLineColumn(source_start);
+		return source_file.get() ? source_file->getLineColumn(source_start)
+		                         : std::make_pair(usize(0), usize(0));
 	}
 
 	std::pair<usize, usize> SourcePosition::getEndLineColumn() const {
-		return source_file->getLineColumn(source_end);
+		return source_file.get() ? source_file->getLineColumn(source_end)
+		                         : std::make_pair(usize(0), usize(0));
 	}
 
 	usize SourcePosition::getStart() const { return source_start; }
@@ -129,8 +105,8 @@ namespace dia {
 
 	tokenizer::BorrowFile SourcePosition::getSource() const { return source_file; }
 
-	std::vector<printer::MessageContent>
-		SourcePosition::genPrinterMessageContents(const printer::MessageContent& reason) const {
+	printer::PrinterContentsSeq
+		SourcePosition::genPrinterContents(const printer::PrinterContent& reason) const {
 		if (source_file == nullptr) {
 			return {
 				{ "In unknown file: " },
@@ -138,7 +114,7 @@ namespace dia {
 			};
 		}
 		auto [line, column]                      = getStartLineColumn();
-		std::vector<printer::MessageContent> res = {
+		std::vector<printer::PrinterContent> res = {
 			{ "In file: " },
 			{ source_file->getPath().strView().data() },
 			{ ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
@@ -150,19 +126,9 @@ namespace dia {
 	}
 
 	std::string SourcePosition::genStr(const std::string_view reason) const {
-		if (source_file == nullptr) {
-			std::string output = "In unknown file: ";
-			output += reason;
-			output += "\n";
-			return output;
-		}
-		auto [line, column] = getStartLineColumn();
-		std::string output  = "In file: ";
-		output += source_file->getPath().strView();
-		output += ":" + std::to_string(line) + ":" + std::to_string(column) + "\n";
-		output += reason;
-		output += "\n";
-		for (const auto& el: getSourceLines()) output += el;
-		return output;
+		auto              content = genPrinterContents({ reason.data() });
+		std::stringstream res;
+		printer::StreamPrinter::printNL(content, res);
+		return res.str();
 	}
 }
