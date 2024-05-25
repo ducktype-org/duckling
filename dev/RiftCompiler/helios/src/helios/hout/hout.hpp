@@ -31,7 +31,10 @@ namespace compiler::helios {
 	 * @brief placeholder for code that can execute (expressions, function body, etc)
 	 */
 	struct HOUTCode {
-		code::ElementRef<code::CodeBlock> body;
+		// @NOTE: as of right now HOUTCode structure can be based on shared ptr, to avoid a lot of boilerplate, and copying 
+
+
+		std::shared_ptr<const code::CodeBlock> body;
 	};
 
 	/**
@@ -44,7 +47,8 @@ namespace compiler::helios {
 		// - some other stuff from proposal
 
 		// @TODO:
-		HOUTFunction(const HOUTFunction&);
+		HOUTFunction(HOUTFunction&&) = default;
+		HOUTFunction(const HOUTFunction&) = default;
 
 		HOUTCode body;
 

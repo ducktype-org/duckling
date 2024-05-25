@@ -46,6 +46,8 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 	};
 
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelFunctions);
+
 
 	struct IMPLEMENT_QUERY(QueryCodeOFFun, HOUTFunction) {
 
@@ -58,6 +60,8 @@ namespace compiler::helios {
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCodeOFFun);
 
 
 }
