@@ -18,8 +18,13 @@
 namespace compiler::helios {
 
 	namespace code {
-		struct CodeBlock;
-		struct Expr;
+		struct CodeBlock {
+			// @TODO
+		};
+
+		struct Expr {
+			// @TODO
+		};
 	}
 
 	/**
@@ -37,6 +42,9 @@ namespace compiler::helios {
 		// - args
 		// - rets
 		// - some other stuff from proposal
+
+		// @TODO:
+		HOUTFunction(const HOUTFunction&);
 
 		HOUTCode body;
 	};
