@@ -47,6 +47,9 @@ namespace compiler::helios {
 		HOUTFunction(const HOUTFunction&);
 
 		HOUTCode body;
+
+		[[nodiscard]]
+		std::string debugPrint() const;
 	};
 
 	/**
@@ -62,6 +65,10 @@ namespace compiler::helios {
 		// * what else?
 
 		std::vector<HOUTFunction> functions;
+
+
+		[[nodiscard]]
+		std::string debugPrint() const;
 	};
 
 }
