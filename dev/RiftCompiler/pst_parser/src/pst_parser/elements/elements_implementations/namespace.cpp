@@ -27,8 +27,6 @@ namespace pst {
 		out << "}}";
 	}
 
-	void Namespace::acceptVisitor(PstStmtVisitor& visitor) const {
-		visitor.visitNamespace(*this);
-	}
+	void Namespace::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitNamespace(*this); }
 
 }
