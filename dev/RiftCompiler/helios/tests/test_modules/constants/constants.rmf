@@ -36,6 +36,6 @@ namespace Inner {
 }
 using Inner.*;
 
-// This does not work yet, as it requires evaluating the "." operator.
-// const F: i32 = ((A + 1) / 2 + (E + 2) / 2) ^ 2 * NN.A;
-const F: i32 = ((A + 1) / 2 + (E + 2) / 2) ^ 2 * H;
+const F: i32 = ((A + 1) / 2 + (E + 2) / 2) ^ 2 * NN.A;
+
+const M: i32 = (A + A * 2) * NN.NNN.A * Inner.Inner_X;
