@@ -1,0 +1,10 @@
+const SimpleInt: i32 = 1;
+const SimpleFloat: f32 = 2.0;
+
+
+// const TupleII: (i32, i32) = (1, 2);
+
+struct FirstStructEver {
+    m_i32: i32;
+    m_f32: f32;
+}

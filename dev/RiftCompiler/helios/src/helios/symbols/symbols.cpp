@@ -561,6 +561,22 @@ namespace compiler::helios {
 
 			void visitConst(const pst::Const& stmt) override {
 				type_of_thing = stmt.getType();
+				variant_match(type_of_thing.value()->elements.front()) {
+					variant_case(pst::Expr::Identifier, idt) {
+						std::cout << "IDT: " << idt.indent_id.str() << '\n';
+					}
+					variant_case(pst::Expr::Operator, oper) {
+						std::cout << "OPER: " << oper.oper_id.str() << '\n';
+					}
+					variant_case(pst::Expr::NumLiteral, num) {
+						std::cout << "NUMLIT: " << num.num_id.str() << '\n';
+					}
+					variant_case(pst::Expr::Group, group) { std::cout << "GRP: ..." << '\n'; }
+					variant_case(pst::Expr::KeywordValue, keyword_val) {
+						std::cout << "KeywordValue: " << keywordToStr(keyword_val.keyword).str()
+								  << '\n';
+					}
+				}
 				//
 			}
 
@@ -572,8 +588,26 @@ namespace compiler::helios {
 
 			// void visitBlock(const pst::Block& stmt) override;
 			// void visitNamespace(const pst::Namespace& stmt) override;
-			// void visitStruct(const pst::Struct& stmt) override;
-			// void visitFun(const pst::Fun& stmt) override;
+			void visitStruct(const pst::Struct& stmt) override {
+				stmt.dprint(std::cout);
+				// variant_match(type_of_thing.value()->elements.front()) {
+				// 	variant_case(pst::Expr::Identifier, idt) {
+				// 		std::cout << "IDT: " << idt.indent_id.str() << '\n';
+				// 	}
+				// 	variant_case(pst::Expr::Operator, oper) {
+				// 		std::cout << "OPER: " << oper.oper_id.str() << '\n';
+				// 	}
+				// 	variant_case(pst::Expr::NumLiteral, num) {
+				// 		std::cout << "NUMLIT: " << num.num_id.str() << '\n';
+				// 	}
+				// 	variant_case(pst::Expr::Group, group) { std::cout << "GRP: ..." << '\n'; }
+				// 	variant_case(pst::Expr::KeywordValue, keyword_val) {
+				// 		std::cout << "KeywordValue: " << keywordToStr(keyword_val.keyword).str()
+				// 				  << '\n';
+				// 	}
+				// }
+				// void visitFun(const pst::Fun& stmt) override;
+			}
 		};
 	}
 
@@ -586,7 +620,9 @@ namespace compiler::helios {
 				opt_some(type_of) {
 					RIFT_ASSERT(type_of->elements.size() == 1, "Invalid number of tokens in type");
 					variant_match(type_of->elements[0]) {
-						variant_case();
+						// variant_case() {
+						//
+						// }
 					}
 				}
 				opt_none { RIFT_PANIC("Couldn't get type"); }

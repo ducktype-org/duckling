@@ -22,6 +22,7 @@ public:
 
 		TESTER_ADD_TEST(testI32Consts);
 		TESTER_ADD_TEST(testEdgeEvals);
+		TESTER_ADD_TEST(testTypeOf);
 	}
 
 private:
@@ -50,6 +51,10 @@ private:
 		return query::entryPoint<compiler::helios::QueryConstValueOf>(getChain(name, scope).back());
 	}
 
+	static auto getTypeOf(auto name, auto scope) {
+		return query::entryPoint<compiler::helios::QueryTypeOf>(getChain(name, scope).back());
+	}
+
 	void testI32Consts() {
 		auto constants_module = query::entryPoint<compiler::frontend::QueryModuleTree>(
 			fs::FilePath(path("test_modules/constants"))
@@ -69,30 +74,23 @@ private:
 		ASSERT_EQUAL(2, getValue("T1", root_scope));
 		ASSERT_EQUAL(3, getValue("T2", root_scope));
 		ASSERT_EQUAL(75, getValue("F", root_scope));
+	}
 
-		auto get_value = [&](auto name) {
-			return query::entryPoint<compiler::helios::QueryConstValueOf>(get_chain(name).back());
-		};
-		//
-		ASSERT_EQUAL(1, get_value("N.X"));
-		ASSERT_EQUAL(1, get_value("A"));
-		ASSERT_EQUAL(-3, get_value("B"));
-		ASSERT_EQUAL(-1, get_value("D"));
-		ASSERT_EQUAL(6, get_value("E"));
-		ASSERT_EQUAL(std::numeric_limits<i32>::max(), get_value("MAX_I32"));
-		ASSERT_EQUAL(3, get_value("H2"));
-		ASSERT_EQUAL(1, get_value("T0"));
-		ASSERT_EQUAL(2, get_value("T1"));
-		ASSERT_EQUAL(3, get_value("T2"));
-		ASSERT_EQUAL(75, get_value("F"));
+	void testTypeOf() {
+		auto structs_and_types_modules = query::entryPoint<compiler::frontend::QueryModuleTree>(
+			fs::FilePath(path("test_modules/structs_and_types"))
+		);
 
-		// @TODO: Move this to new test testTypeOf().
-		auto get_type_of = [&](auto name) {
-			return query::entryPoint<compiler::helios::QueryTypeOf>(get_chain(name).back());
-		};
+		auto root_scope
+			= query::entryPoint<compiler::helios::QueryRootScopeOf>(structs_and_types_modules);
 
 		auto INT32_TYPE = query::entryPoint<ts::QueryIntegralType>({ 32, true });
-		ASSERT_EQUAL(true, INT32_TYPE == get_type_of("T0"));
+		auto F32_TYPE   = query::entryPoint<ts::QueryFloatType>(32);
+		// auto STRUCT_FIRST = query::entryPoint<ts::>()
+
+		getTypeOf("FirstStructEver", root_scope);
+		ASSERT_EQUAL(true, INT32_TYPE == getTypeOf("SimpleInt", root_scope));
+		ASSERT_EQUAL(true, F32_TYPE == getTypeOf("SimpleFloat", root_scope));
 	}
 
 	void testEdgeEvals() {
