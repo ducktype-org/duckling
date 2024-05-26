@@ -52,14 +52,46 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryCodeOFFun, HOUTFunction) {
 
-		struct FunctionMaker: public pst::PstStmtVisitorPanicky {
+		struct HoutStmtMaker: public pst::PstStmtVisitorPanicky {
+			query::Context& ctx;
+			ScopeID parent_scope;
+
+			base::Optional<code::ElementRef<code::Stmt>> out;
+
+			HoutStmtMaker(query::Context& ctx, ScopeID scope): ctx(ctx), parent_scope(scope) {}
+
+			// @TODO: visits for all valid stmt-s
+
+		};
+
+		struct HOUTCodeMaker: public pst::PstStmtVisitorPanicky {
+			query::Context& ctx;
+			ScopeID parent_scope;
+
+			base::Optional<HOUTCode> out;
+
+			HOUTCodeMaker(query::Context& ctx, ScopeID scope): ctx(ctx), parent_scope(scope) {}
+
+			// @TODO: visits
+		};
+
+		struct HOUTFunctionMaker: public pst::PstStmtVisitorPanicky {
 			query::Context& ctx;
 			ScopeID parent_scope;
 			
 			base::Optional<HOUTFunction> out;
 
-			FunctionMaker(query::Context& ctx, ScopeID scope): ctx(ctx), parent_scope(scope) {}
+			HOUTFunctionMaker(query::Context& ctx, ScopeID scope): ctx(ctx), parent_scope(scope) {}
 
+			void visitFun(const pst::Fun& stmt) final {
+				// @TODO: create function here...
+				// - create types, attributes, flags, ...
+				// - crete code via additional visitor
+
+				// @TODO: crete inner scope and run FunctionCodeMaker on function body
+
+				out.emplace(HOUTFunction());
+			}
 		};
 		
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -69,7 +101,7 @@ namespace compiler::helios {
 			// RIFT_ASSERT(fun_stmt != nullptr, "Function symbol is not actually a function");
 			auto parent_scope = scope(key);
 
-			FunctionMaker func_maker(ctx, parent_scope);
+			HOUTFunctionMaker func_maker(ctx, parent_scope);
 
 			stmt(key)->acceptVistior(func_maker);
 

@@ -18,6 +18,10 @@
 namespace compiler::helios {
 
 	namespace code {
+		struct Stmt {
+			// @TODO
+		};
+	
 		struct CodeBlock {
 			// @TODO
 		};
