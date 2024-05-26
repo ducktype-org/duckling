@@ -6,8 +6,7 @@
 
 #pragma once
 
-#include "../scope_symbol_id.hpp"
-#include "element_ref.hpp"
+#include "elements.hpp"
 
 // @TODO: relax this dependency
 #include <frontend/module_tree/module_tree.hpp>  // ModuleId
@@ -16,20 +15,6 @@
 
 
 namespace compiler::helios {
-
-	namespace code {
-		struct Stmt {
-			// @TODO
-		};
-	
-		struct CodeBlock {
-			// @TODO
-		};
-
-		struct Expr {
-			// @TODO
-		};
-	}
 
 	/**
 	 * @brief placeholder for code that can execute (expressions, function body, etc)

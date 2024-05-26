@@ -8,9 +8,13 @@ namespace compiler::helios::code {
 
 	// @TODO: source positions
 	
-	struct Stmt { };
+	struct Stmt {
+		// @TODO
+	};
 
-	struct Expr { };
+	struct Expr { 
+		// @TODO
+	};
 	
 	struct CodeBlock final {
 		std::vector<ElementRef<Stmt>> statements;
