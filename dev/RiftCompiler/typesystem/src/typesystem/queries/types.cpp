@@ -231,7 +231,7 @@ namespace ts {
 		static inline base::Map<QKey, query::CacheEntry<PointerInfo>> cache;
 
 		static auto provide(Context&, const QKey key) -> PResult {
-			const auto pointer_pimpl = new internal::PointerInfoImpl{key};
+			const auto pointer_pimpl = new internal::PointerInfoImpl{ key };
 			pushType(base::unique_ptr(pointer_pimpl));
 			return pointer_pimpl;
 		}
