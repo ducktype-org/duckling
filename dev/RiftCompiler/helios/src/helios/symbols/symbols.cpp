@@ -335,7 +335,7 @@ namespace compiler::helios {
 	}
 
 	std::vector<rpn::ExprElem>
-		rpn::ExtensionMakeRPN(query::detail::ContextType& ctx, KeyOf_ExtensionMakeRPN key) {
+		rpn::ExtensionMakeRPN(query::Context& ctx, KeyOf_ExtensionMakeRPN key) {
 		std::vector<ExprElem> rpn;
 		std::stack<ExprElem>  st;
 		for (auto&& e: key.expr) {
@@ -374,9 +374,7 @@ namespace compiler::helios {
 		return rpn;
 	}
 
-	i32 rpn::ExtensionRPNValue(
-		query::detail::ContextType& ctx, const KeyOf_ExtensionRPNValue& key
-	) {
+	i32 rpn::ExtensionRPNValue(query::Context& ctx, const KeyOf_ExtensionRPNValue& key) {
 		variant_match(key.expr) {
 			variant_case(rpn::Identifier, idt) {
 				// .back() works for constants only.
@@ -402,8 +400,7 @@ namespace compiler::helios {
 		RIFT_PANIC("Error in RPNValue expr...");
 	}
 
-	rpn::ExprElem
-		rpn::ExtensionRPNEval(query::detail::ContextType& ctx, const KeyOf_ExtensionRPNEval& key) {
+	rpn::ExprElem rpn::ExtensionRPNEval(query::Context& ctx, const KeyOf_ExtensionRPNEval& key) {
 		auto&& [a, op, b, expr_scope] = key;
 
 		if (op.oper_id == ".") {
