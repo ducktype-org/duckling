@@ -6,6 +6,7 @@
 #include <tester/tester.hpp>
 #include <pst_parser/parser.hpp>
 #include <filesystem/file.hpp>
+#include <helios/ts/ts.hpp>
 #include <lexer/lexer.hpp>
 #include <typesystem/typesystem.hpp>
 
@@ -69,6 +70,14 @@ private:
 		ASSERT_EQUAL(2, get_value("T1"));
 		ASSERT_EQUAL(3, get_value("T2"));
 		ASSERT_EQUAL(75, get_value("F"));
+
+		// @TODO: Move this to new test testTypeOf().
+		auto get_type_of = [&](auto name) {
+			return query::entryPoint<compiler::helios::QueryTypeOf>(get_chain(name).back());
+		};
+
+		auto INT32_TYPE = query::entryPoint<ts::QueryIntegralType>({ 32, true });
+		ASSERT_EQUAL(true, INT32_TYPE == get_type_of("T0"));
 	}
 };
 

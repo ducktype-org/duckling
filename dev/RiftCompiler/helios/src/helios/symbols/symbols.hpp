@@ -234,4 +234,11 @@ namespace compiler::helios {
 		 */
 		QUERY_EXTENSION(ExtensionRPNValue, const KeyOf_ExtensionRPNValue&, i32);
 	}
+
+	// @TODO: move this to helios::ts
+	/**
+	 * @brief Query type of the symbol.
+	 * @note: not implemented yet
+	 */
+	DECLARE_QUERY(QueryTypeOf, SymID, ::ts::TypeInfo);
 }

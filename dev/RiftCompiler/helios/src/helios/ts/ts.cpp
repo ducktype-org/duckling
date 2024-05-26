@@ -1,6 +1,7 @@
 #include "ts.hpp"
 
 #include "helios/scopes/scopes.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 #include <query_framework/query_impl.hpp>
 #include <base/stable_hashmap.hpp>
@@ -17,17 +18,10 @@ namespace compiler::helios::ts {
 			return structs;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF;
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStructSymbolsInScope);
 
-	struct IMPLEMENT_QUERY(QueryTypeOf, ::ts::TypeInfo) {
-		static auto provide(Context& ctx, QKey key) -> PResult { return {}; }
-
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOf);
 
 }

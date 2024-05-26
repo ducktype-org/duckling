@@ -15,6 +15,7 @@
 #include "../scope_symbol_id.hpp"
 #include "../scopes/scopes.hpp"
 #include "../pst_ref.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace compiler::helios {
 
@@ -498,4 +499,58 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
+
+	namespace {
+		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
+		public:
+			base::Optional<tpc::ParserCBorrowRef<pst::Expr>> type_of_thing;
+
+			// void visitAttribute(const pst::Attribute& stmt) override;
+			// void visitImport(const pst::Import& stmt) override;
+			// void visitUsing(const pst::Using& stmt) override;
+			// void visitAlias(const pst::Alias& stmt) override;
+			// void visitExpr(const pst::Expr& stmt) override;
+			// void visitAction(const pst::Action& stmt) override;
+
+			void visitConst(const pst::Const& stmt) override {
+				type_of_thing = stmt.getType();
+				//
+			}
+
+			void visitDecl(const pst::Decl& stmt) override {
+				auto&& data = stmt.getID();
+				// 	a;
+				// else {}
+			}
+
+			// void visitBlock(const pst::Block& stmt) override;
+			// void visitNamespace(const pst::Namespace& stmt) override;
+			// void visitStruct(const pst::Struct& stmt) override;
+			// void visitFun(const pst::Fun& stmt) override;
+		};
+	}
+
+	struct IMPLEMENT_QUERY(QueryTypeOf, ::ts::TypeInfo) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto&&                          symbol_ref = getSymRef(key);
+			static PstStmtVisitor_GetTypeOf visitor;
+			symbol_ref->pst_stmt->acceptVistior(visitor);
+			match_optional(visitor.type_of_thing) {
+				opt_some(type_of) {
+					RIFT_ASSERT(type_of->elements.size() == 1, "Invalid number of tokens in type");
+					variant_match(type_of->elements[0]) {
+						variant_case();
+					}
+				}
+				opt_none { RIFT_PANIC("Couldn't get type"); }
+			}
+			return ctx.query<::ts::QueryIntegralType>({ 32, true });
+		}
+
+		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOf);
+
+
 }
