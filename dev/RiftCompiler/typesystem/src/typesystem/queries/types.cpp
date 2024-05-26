@@ -1,7 +1,6 @@
 #include <query_framework/query_impl.hpp>
 #include "../internal/type_info_impl.hpp"
 #include "types.hpp"
-#include "implicit_coercibility.hpp"
 
 namespace ts {
 	struct IMPLEMENT_QUERY(QueryUnitType, UnitInfo::Pimpl) {
@@ -17,7 +16,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryUnitType);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryUnitType)
 
 	struct IMPLEMENT_QUERY(QueryVoidType, VoidInfo::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
@@ -32,7 +31,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVoidType);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVoidType)
 
 	struct IMPLEMENT_QUERY(QueryByteType, ByteInfo::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
@@ -47,7 +46,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryByteType);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryByteType)
 
 	struct IMPLEMENT_QUERY(QueryBoolType, BoolInfo::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
@@ -62,7 +61,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryBoolType);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryBoolType)
 
 	struct IMPLEMENT_QUERY(QueryCharType, CharInfo::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
@@ -77,7 +76,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCharType);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCharType)
 
 	struct IMPLEMENT_QUERY(QueryIntegralType, IntegralInfo::Pimpl) {
 		class ErrorBadIntegralSize final: public dia::Error {
@@ -144,7 +143,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIntegralType);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIntegralType)
 
 	struct IMPLEMENT_QUERY(QueryFloatType, FloatInfo::Pimpl) {
 		class ErrorBadFloatSize final: public dia::Error {
@@ -209,12 +208,14 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFloatType);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFloatType)
 
 	struct IMPLEMENT_QUERY(QueryRawPointerType, RawPointerInfo::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto rawPointer_impl = internal::RawPointerInfoImpl{};
-			return &rawPointer_impl;
+		static auto provide(Context&, QKey key) -> PResult {
+			static auto rawPointer_impl = std::array<internal::RawPointerInfoImpl, 2>{
+				internal::RawPointerInfoImpl{ false }, internal::RawPointerInfoImpl{ true }
+			};
+			return &rawPointer_impl[key];
 		}
 
 		static auto load(QKey) -> LoadResult { return {}; }
@@ -224,14 +225,13 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRawPointerType);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRawPointerType)
 
 	struct IMPLEMENT_QUERY(QueryPointerType, PointerInfo::Pimpl) {
 		static inline base::Map<QKey, query::CacheEntry<PointerInfo>> cache;
 
 		static auto provide(Context&, const QKey key) -> PResult {
-			const auto [underlying_type, is_mutable] = key;
-			const auto pointer_pimpl = new internal::PointerInfoImpl{ underlying_type, is_mutable };
+			const auto pointer_pimpl = new internal::PointerInfoImpl{key};
 			pushType(base::unique_ptr(pointer_pimpl));
 			return pointer_pimpl;
 		}
@@ -249,7 +249,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
 
 	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionInfo::Pimpl) {
 		static inline base::Map<QKey, query::CacheEntry<FunctionInfo>> cache;
@@ -275,7 +275,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType)
 
 	struct IMPLEMENT_QUERY(QueryNamespaceType, NamespaceInfo::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
@@ -290,7 +290,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryNamespaceType);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryNamespaceType)
 
 	struct IMPLEMENT_QUERY(QueryModuleType, ModuleInfo::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
@@ -305,7 +305,7 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleType);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleType)
 
 	struct IMPLEMENT_QUERY(QueryMetaType, MetaInfo::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
@@ -320,5 +320,5 @@ namespace ts {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMetaType);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMetaType)
 }

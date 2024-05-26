@@ -68,45 +68,12 @@ namespace ts {
 	/**
 	 * @brief Query to get a RawPointer type.
 	 */
-	DECLARE_QUERY(QueryRawPointerType, query::EmptyKey, RawPointerInfo)
+	DECLARE_QUERY(QueryRawPointerType, bool, RawPointerInfo)
 
 	/**
-	 * @brief Key for QueryPointerType.
+	 * @brief Query to get a typed Pointer type.
 	 */
-	struct KeyFor_QueryPointerType {
-		/**
-		 * @brief The underlying type of the pointer.
-		 */
-		TypeInfo underlying_type;
-
-		/**
-		 * @brief Whether the data under the pointer is mutable or not.
-		 */
-		bool is_mutable{ false };
-
-		// This spaceship definition is required because TypeInfo has a spaceship definition.
-		[[nodiscard]]
-		auto operator<=>(const KeyFor_QueryPointerType& other) const
-			= default;
-
-		// These constructor definitions are to force giving at least the first argument.
-		// Initializer lists still work.
-		KeyFor_QueryPointerType() = delete;
-
-		KeyFor_QueryPointerType(const TypeInfo underlying_type, const bool is_mutable = false):
-			  underlying_type(underlying_type),
-			  is_mutable(is_mutable) {}
-
-		[[nodiscard]]
-		base::HashT customPerfectHash() const {
-			return reinterpret_cast<std::size_t>(underlying_type.getPimpl()) + is_mutable;
-		}
-	};
-
-	/**
-	 * @brief Query to get a (typed) Pointer type.
-	 */
-	DECLARE_QUERY(QueryPointerType, KeyFor_QueryPointerType, PointerInfo)
+	DECLARE_QUERY(QueryPointerType, ComponentType, PointerInfo)
 
 	/**
 	 * @brief Key for QueryFunctionType.

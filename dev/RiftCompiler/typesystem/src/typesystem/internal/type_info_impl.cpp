@@ -14,6 +14,7 @@ namespace ts::internal {
 	Kind RawPointerInfoImpl::staticKind = Kind::RawPointer;
 	Kind PointerInfoImpl::staticKind    = Kind::Pointer;
 	Kind ReferenceInfoImpl::staticKind  = Kind::Reference;
+	Kind TupleInfoImpl::staticKind      = Kind::Tuple;
 	Kind FunctionInfoImpl::staticKind   = Kind::Function;
 	Kind VariantInfoImpl::staticKind    = Kind::Variant;
 	Kind ClassInfoImpl::staticKind      = Kind::Class;
@@ -29,6 +30,17 @@ namespace ts::internal {
 	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes() {
 		static std::vector<base::unique_ptr<const TypeInfoImpl>> type_info_impl_storage{};
 		return type_info_impl_storage;
+	}
+
+	/**
+	 * @brief Gets the sum of the sizes of the types in a vector.
+	 * @param types Vector of types to aggregate over.
+	 * @return The total size od the types in the vector.
+	 */
+	usize sumTypeVectorSizes(const std::vector<ComponentType>& types) {
+		usize sum = 0;
+		for (const auto& type: types) sum += type.type.getSize();
+		return sum;
 	}
 
 	/**
@@ -57,16 +69,36 @@ namespace ts::internal {
 	}
 
 	/**
+	 * @brief Creates a human-readable string representation of a vector of component types.
+	 * @param types Vector of component types to stringify.
+	 * @return A human-readable string representing a sequence of component types.
+	 */
+	std::string showTypeVector(const std::vector<ComponentType>& types) {
+		std::stringstream res;
+		res << "(";
+		if (!types.empty()) res << (types[0].is_mutable ? "mut " : "") << types[0].type.show();
+		for (int i = 1; i < types.size(); i++)
+			res << ", " << (types[i].is_mutable ? "mut " : "") << types[i].type.show();
+		res << ")";
+
+		return res.str();
+	}
+
+	/**
 	 * @brief Creates a human-readable string representation of a vector of types.
 	 * @param types Vector of types to stringify.
 	 * @return A human-readable string representing a sequence of types.
 	 */
 	std::string showTypeVector(const std::vector<TypeInfo>& types) {
-		std::string res = "(";
-		for (const auto& t: types) res += t.show() + ",";
-		res += ")";
+		std::vector<ComponentType> immutableTypes;
+		for (const auto& t: types) immutableTypes.push_back({ t, false });
+		return showTypeVector(immutableTypes);
+	}
 
-		return res;
+	TupleInfoImpl::TupleInfoImpl(std::vector<ComponentType> components):
+		  TypeInfoImpl(sumTypeVectorSizes(components)),
+		  components(std::move(components)) {
+		representation = showTypeVector(components);
 	}
 
 	FunctionInfoImpl::FunctionInfoImpl(
@@ -82,12 +114,6 @@ namespace ts::internal {
 		  free(free) {
 		representation = "Function " + showTypeVector(this->parameter_types) + " -> ("
 		               + result_type.show() + ")";
-	}
-
-	usize sumTypeVectorSizes(const std::vector<TypeDesc<>>& types) {
-		usize sum = 0;
-		for (const auto& type: types) sum += type.getType().getSize();
-		return sum;
 	}
 
 	VariantInfoImpl::VariantInfoImpl(const std::vector<TypeDesc<>>& variant_types)
