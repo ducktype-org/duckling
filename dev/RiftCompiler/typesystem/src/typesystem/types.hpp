@@ -22,6 +22,7 @@ namespace ts {
 		class RawPointerInfoImpl;
 		class PointerInfoImpl;
 		class ReferenceInfoImpl;
+		class TupleInfoImpl;
 		class FunctionInfoImpl;
 		class VariantInfoImpl;
 		class NamespaceInfoImpl;
@@ -154,13 +155,57 @@ namespace ts {
 	\*******************/
 
 	/**
+	 * \brief A type supplied with mutability information.
+	 *
+	 * It's called "Component Type" because it is used in types which are composed of other types.
+	 * For example, a typed pointer may point to an immutable value. Or a tuple may have some
+	 * of its components locked in as immutable.
+	 */
+	struct ComponentType {
+		/**
+		 * \brief The actual type of the component.
+		 */
+		const TypeInfo type;
+
+		/**
+		 * \brief Whether the component is mutable or not.
+		 */
+		const bool is_mutable = false;
+
+		/**
+		 * \brief Create a string representation of the component type.
+		 */
+		[[nodiscard]]
+		std::string toString() const;
+
+		/**
+		 * Check whether a component type is implicitly coercible to another component type.
+		 * @param target The target component.
+		 * @param ctx The query context required f
+		 * @return
+		 */
+		[[nodiscard]]
+		bool isImplicitlyCoercible(ComponentType target, query::detail::ContextType& ctx) const;
+
+		[[nodiscard]]
+		std::strong_ordering
+			operator<=>(const ComponentType& other) const;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
+	};
+
+	/**
 	 * \brief The Raw Pointer type.
 	 *
 	 * A value of this type is simply a memory address.
 	 */
-	class RawPointerInfo: public TypeInfo {
+	class RawPointerInfo final: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(RawPointerInfo, TypeInfo)
+
+		[[nodiscard]]
+		bool isMutable() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(RawPointerInfo)
 
@@ -174,9 +219,16 @@ namespace ts {
 	 * A value of this type is simply a memory address.
 	 * However, it is statically known what the type of the pointee is.
 	 */
-	class PointerInfo final: public RawPointerInfo {
+	class PointerInfo final: public TypeInfo {
 	public:
-		SETUP_TYPE_WITH_BASE(PointerInfo, RawPointerInfo)
+		SETUP_TYPE_WITH_BASE(PointerInfo, TypeInfo)
+
+		/**
+		 * \brief Gets the underlying component of the Pointer type.
+		 * @return The underlying component of the Pointer type.
+		 */
+		[[nodiscard]]
+		ComponentType getComponent() const;
 
 		/**
 		 * \brief Gets the underlying type of the Pointer type.
@@ -184,6 +236,13 @@ namespace ts {
 		 */
 		[[nodiscard]]
 		TypeInfo getUnderlyingType() const;
+
+		/**
+		 * \brief Checks whether the data under the pointer is mutable.
+		 * \return Whether the data under the pointer is mutable.
+		 */
+		[[nodiscard]]
+		bool isMutable() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(PointerInfo)
 
@@ -240,10 +299,13 @@ namespace ts {
 		 * \brief Create a new reference type with the given parameters.
 		 * \param underlying_type The underlying type of the reference.
 		 * \param ref_kind The kind of a reference.
-		 * \param leaking Whether the reference can leak its value. By default, references are
-		 * non-leaking. \param nullable Whether the reference can be empty. By default, references
-		 * cannot be empty. \param unique Whether the reference is unique. By default, references
-		 * can be copied and shared. \return The created reference type.
+		 * \param leaking Whether the reference can leak its value.
+		 * By default, references are non-leaking.
+		 * \param nullable Whether the reference can be empty.
+		 * By default, references cannot be empty.
+		 * \param unique Whether the reference is unique.
+		 * By default, references can be copied and shared.
+		 * \return The created reference type.
 		 */
 		static ReferenceInfo create(
 			TypeInfo      underlying_type,
@@ -299,6 +361,29 @@ namespace ts {
 	\*******************/
 
 	/**
+	 * \brief The Tuple types.
+	 *
+	 * Each Tuple type is simply a tuple of elements, with additional specification
+	 * about whether these elements are mutable or not.
+	 *
+	 * For example, (A, B) and (A, mut B) are two different tuple types.
+	 * Nota bene, the former is implicitly coercible to the latter.
+	 */
+
+	class TupleInfo: public TypeInfo {
+	public:
+		SETUP_TYPE_WITH_BASE(TupleInfo, TypeInfo)
+
+		[[nodiscard]]
+		const std::vector<ComponentType>& getComponents() const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(TupleInfo)
+
+	protected:
+		CONSTRUCT_FROM_IMPLEMENTATION(Tuple)
+	};
+
+	/**
 	 * \brief The Function types.
 	 *
 	 * Each function type has a list of parameter types and a return type.
@@ -350,7 +435,7 @@ namespace ts {
 		 * \return The parameter types of the function type.
 		 */
 		[[nodiscard]]
-		std::vector<TypeInfo> getParameterTypes() const;
+		const std::vector<TypeInfo>& getParameterTypes() const;
 
 		/**
 		 * \brief Gets the result type of the function type.
