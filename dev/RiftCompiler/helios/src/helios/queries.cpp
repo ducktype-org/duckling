@@ -4,6 +4,7 @@
 #include <query_framework/query_impl.hpp>
 
 #include <base/stable_hashmap.hpp>
+#include <pst_parser/pst_visitor.hpp>
 
 #include "scopes/scopes.hpp"
 
@@ -51,19 +52,27 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryCodeOFFun, HOUTFunction) {
 
+		struct FunctionMaker: public pst::PstStmtVisitorPanicky {
+			query::Context& ctx;
+			ScopeID parent_scope;
+			
+			base::Optional<HOUTFunction> out;
+
+			FunctionMaker(query::Context& ctx, ScopeID scope): ctx(ctx), parent_scope(scope) {}
+
+		};
 		
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			RIFT_ASSERT(kind(key) == SymbolKind::Function, "Function creation called on non-function symbol");
 
-			auto fun_stmt = dynamic_cast<const pst::Fun*>(stmt(key).get());
-			RIFT_ASSERT(fun_stmt != nullptr, "Function symbol is not actually a function");
-
+			// auto fun_stmt = dynamic_cast<const pst::Fun*>(stmt(key).get());
+			// RIFT_ASSERT(fun_stmt != nullptr, "Function symbol is not actually a function");
 			auto parent_scope = scope(key);
 
-			// @TODO
+			FunctionMaker func_maker(ctx, parent_scope);
 
+			stmt(key)->acceptVistior(func_maker);
 
-			HOUTFunction out;
 
 			return out;
 		}
