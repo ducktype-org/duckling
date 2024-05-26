@@ -17,7 +17,6 @@
 #include "../pst_ref.hpp"
 
 namespace compiler::helios {
-
 	/**
 	 * @TODO: move to some docs
 	 *  * imports are just symbols that we will "lookup in" just like usings.
@@ -328,34 +327,33 @@ namespace compiler::helios {
 			return 2;
 		case '^':  // Power ;D
 			return 3;
+		case '.':
+			return 5;
 		default:
 			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
 		}
 	}
 
 	std::vector<rpn::ExprElem>
-		rpn::ExtensionMakeRPN(query::detail::ContextType& ctx, KeyOf_ExtensionMakeRPN key) {
+		rpn::ExtensionMakeRPN(query::Context& ctx, KeyOf_ExtensionMakeRPN key) {
 		std::vector<ExprElem> rpn;
 		std::stack<ExprElem>  st;
 		for (auto&& e: key.expr) {
 			variant_match(e) {
 				variant_case(pst::Expr::Identifier, idt) {
-					auto&& sym_id = ctx.query<QueryLookupInScopeAndParents>(
-						{ key.expr_scope, idt.indent_id, true }
-					);
-					rpn.emplace_back(Identifier{ sym_id.getAsSingle() });
+					rpn.emplace_back(NamedIdentifier{ idt.indent_id });
 				}
 				variant_case(pst::Expr::Operator, oper) {
 					auto      new_op   = Operator{ oper.oper_id };
 					const int priority = getPriority(new_op);
-					while (!st.empty() && getPriority(std::get<Operator>(st.top())) > priority) {
+					while (!st.empty() && getPriority(std::get<Operator>(st.top())) >= priority) {
 						rpn.emplace_back(st.top());
 						st.pop();
 					}
 					st.emplace(new_op);
 				}
 				variant_case(pst::Expr::NumLiteral, num) {
-					rpn.emplace_back(NumLiteral{ num.num_id });
+					rpn.emplace_back(NumValue{ num.num_id });
 				}
 				variant_case(pst::Expr::Group, group) {
 					auto&& res = ctx.callExt<ExtensionMakeRPN>(KeyOf_ExtensionMakeRPN{
@@ -376,28 +374,73 @@ namespace compiler::helios {
 		return rpn;
 	}
 
-	i32 rpn::ExtensionRPNValue(
-		query::detail::ContextType& ctx, const KeyOf_ExtensionRPNValue& key
-	) {
+	i32 rpn::ExtensionRPNValue(query::Context& ctx, const KeyOf_ExtensionRPNValue& key) {
 		variant_match(key.expr) {
 			variant_case(rpn::Identifier, idt) {
 				// .back() works for constants only.
 				auto&& sym_list = ctx.query<QueryDealias>(idt.symbol_list.back());
 				return ctx.query<QueryConstValueOf>(sym_list.back());
 			}
+			variant_case(rpn::NamedIdentifier, idt) {
+				auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+					{ key.expr_scope, idt.symbol_name, true }
+				);
+				return ctx.callExt<ExtensionRPNValue>(KeyOf_ExtensionRPNValue{
+					Identifier{ sym_list.getAsSingle() },
+					key.expr_scope,
+				});
+			}
 			variant_case(rpn::Operator, op) { RIFT_PANIC("Cannot get a value from rpn::Operator"); }
 			variant_case(rpn::KeywordValue, keyword_value) {
 				throw base::NotYetImplemented("Value of KeywordValue is not yet implemented");
 			}
-			variant_case(rpn::NumLiteral, literal) { return std::stoi(literal.num_id.str()); }
+			variant_case(rpn::NumValue, literal) { return std::stoi(literal.num_id.str()); }
 			variant_default { RIFT_PANIC("Bad Expr alternative"); }
 		}
 		RIFT_PANIC("Error in RPNValue expr...");
 	}
 
-	rpn::ExprElem
-		rpn::ExtensionRPNEval(query::detail::ContextType& ctx, const KeyOf_ExtensionRPNEval& key) {
+	rpn::ExprElem rpn::ExtensionRPNEval(query::Context& ctx, const KeyOf_ExtensionRPNEval& key) {
 		auto&& [a, op, b, expr_scope] = key;
+
+		if (op.oper_id == ".") {
+			// @TODO: Add a compiler log or some kind of information if lookup failes.
+			SymbolList looked_up_symbol;
+			variant_match(a) {
+				variant_case(rpn::Identifier, idt) { looked_up_symbol = idt.symbol_list; }
+				variant_case(rpn::NamedIdentifier, idt) {
+					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+						{ key.expr_scope, idt.symbol_name, true }
+					);
+					looked_up_symbol = sym_list.getAsSingle();
+				}
+				variant_default {
+					throw base::NotYetImplemented("Lookup on non-identifier is not yet implemented"
+					);
+				}
+			}
+			variant_match(b) {
+				variant_case(rpn::NamedIdentifier, idt_right) {
+					auto&& new_symbols = ctx.query<QueryLookupInSymbol>({
+																			looked_up_symbol.back(),
+																			idt_right.symbol_name,
+																			true,
+																		})
+					                         .getAsSingle();
+					looked_up_symbol.insert(
+						looked_up_symbol.end(), new_symbols.begin(), new_symbols.end()
+					);
+					return Identifier{ looked_up_symbol };
+				}
+				variant_default {
+					throw base::NotYetImplemented(
+						"Lookup of other things than identifiers is not yet supported"
+					);
+				}
+			}
+			RIFT_PANIC("Something strange has happended during .operator evaluation...");
+		}
+
 		i32 a_value = ctx.callExt<ExtensionRPNValue>(KeyOf_ExtensionRPNValue{ a, expr_scope });
 		i32 b_value = ctx.callExt<ExtensionRPNValue>(KeyOf_ExtensionRPNValue{ b, expr_scope });
 
@@ -419,17 +462,14 @@ namespace compiler::helios {
 		case '%':
 			value = a_value % b_value;
 			break;
-		case '^':
-			// TODO: Make this quickPower - O(log(b_value))
-			{
-				value = 1;
-				while (b_value-- > 0) value *= a_value;
-			}
-			break;
+		case '^': {
+			value = 1;
+			while (b_value-- > 0) value *= a_value;
+		} break;
 		default:
 			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
 		}
-		return NumLiteral{ base::StrId(std::to_string(value).c_str()) };
+		return NumValue{ base::StrId(std::to_string(value).c_str()) };
 	}
 
 	struct IMPLEMENT_QUERY(QueryConstValueOf, i32) {
@@ -452,11 +492,14 @@ namespace compiler::helios {
 			// 		variant_case(rpn::Identifier, idt) {
 			// 			for (auto&& s: idt.symbol_list) std::cout << name(s).str() << '.';
 			// 		}
+			// 		variant_case(rpn::NamedIdentifier, idt) {
+			// 			std::cout << idt.symbol_name.str() << '.';
+			// 		}
 			// 		variant_case(rpn::Operator, op) { std::cout << op.oper_id.str(); }
 			// 		variant_case(rpn::KeywordValue, keyword_value) {
 			// 			std::cout << keywordToStr(keyword_value.keyword).str();
 			// 		}
-			// 		variant_case(rpn::NumLiteral, literal) { std::cout << literal.num_id.str(); }
+			// 		variant_case(rpn::NumValue, literal) { std::cout << literal.num_id.str(); }
 			// 		variant_default { RIFT_PANIC("Bad Expr alternative"); }
 			// 	}
 			// 	std::cout << '\n';
@@ -467,6 +510,10 @@ namespace compiler::helios {
 			for (auto&& e: expr) {
 				variant_match(e) {
 					variant_case(rpn::Identifier, idt) {
+						// Assuming idt is NOT A FUNCTION.
+						st.emplace(idt);
+					}
+					variant_case(rpn::NamedIdentifier, idt) {
 						// Assuming idt is NOT A FUNCTION.
 						st.emplace(idt);
 					}
@@ -483,7 +530,7 @@ namespace compiler::helios {
 							key_scope,
 						}));
 					}
-					variant_case(rpn::NumLiteral, num) { st.emplace(num); }
+					variant_case(rpn::NumValue, num) { st.emplace(num); }
 					variant_default { RIFT_PANIC("Bad Expr alternative"); }
 				}
 			}
