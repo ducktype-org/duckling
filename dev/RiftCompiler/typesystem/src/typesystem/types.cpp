@@ -39,7 +39,9 @@ namespace ts {
 	|   POINTER TYPES   |
 	\*******************/
 
-	std::string ComponentType::toString() const { return (is_mutable ? "mut " : "") + type.toString(); }
+	std::string ComponentType::toString() const {
+		return (is_mutable ? "mut " : "") + type.toString();
+	}
 
 	bool ComponentType::isImplicitlyCoercible(
 		const ComponentType target, query::detail::ContextType& ctx
