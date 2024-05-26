@@ -215,7 +215,7 @@ namespace ts {
 			static auto rawPointer_impl = std::array<internal::RawPointerInfoImpl, 2>{
 				internal::RawPointerInfoImpl{ false }, internal::RawPointerInfoImpl{ true }
 			};
-			return &rawPointer_impl[key];
+			return &rawPointer_impl.at(key);
 		}
 
 		static auto load(QKey) -> LoadResult { return {}; }

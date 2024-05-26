@@ -91,7 +91,8 @@ namespace ts::internal {
 	 */
 	std::string showTypeVector(const std::vector<TypeInfo>& types) {
 		std::vector<ComponentType> immutableTypes;
-		for (const auto& t: types) immutableTypes.push_back({ t, false });
+		immutableTypes.reserve(types.size());
+		for (const auto& t: types) immutableTypes.emplace_back(t, false);
 		return showTypeVector(immutableTypes);
 	}
 
