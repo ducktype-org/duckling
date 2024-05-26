@@ -53,7 +53,7 @@ namespace hir {
 
 			symbol_ref->analyzeAll();
 
-			std::cerr << "    Type: " << symbol_ref->requestType().getType().show() << "\n";
+			std::cerr << "    Type: " << symbol_ref->requestType().getType().toString() << "\n";
 
 			std::cerr << "    Value: ";
 			if (symbol_ref->getKind() == SymbolKind::Const) {

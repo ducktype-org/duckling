@@ -176,7 +176,7 @@ namespace ts {
 		 * \brief Create a string representation of the component type.
 		 */
 		[[nodiscard]]
-		std::string show() const;
+		std::string toString() const;
 
 		/**
 		 * Check whether a component type is implicitly coercible to another component type.

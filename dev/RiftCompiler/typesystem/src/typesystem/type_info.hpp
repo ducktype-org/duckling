@@ -195,7 +195,7 @@ namespace ts {
 		 * \return The text representation of this type.
 		 */
 		[[nodiscard]]
-		const std::string& show() const;
+		const std::string& toString() const;
 
 	protected:
 		/**

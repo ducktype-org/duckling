@@ -67,6 +67,7 @@ namespace ts {
 
 	/**
 	 * @brief Query to get a RawPointer type.
+	 * The boolean key denotes whether the raw pointer points to mutable data.
 	 */
 	DECLARE_QUERY(QueryRawPointerType, bool, RawPointerInfo)
 

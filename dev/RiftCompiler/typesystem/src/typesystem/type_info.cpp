@@ -27,8 +27,8 @@ namespace ts {
 	}
 
 	[[nodiscard]]
-	const std::string& TypeInfo::show() const {
-		return pimpl->show();
+	const std::string& TypeInfo::toString() const {
+		return pimpl->toString();
 	}
 
 	[[nodiscard]]

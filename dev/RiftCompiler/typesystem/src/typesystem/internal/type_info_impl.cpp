@@ -60,9 +60,9 @@ namespace ts::internal {
 	 * @return A human-readable string representing a sequence of types.
 	 * @todo Remove when all types stop using TypeDesc for member types.
 	 */
-	std::string showTypeVector(const std::vector<TypeDesc<>>& types) {
+	std::string stringifyTypeVector(const std::vector<TypeDesc<>>& types) {
 		std::string res = "(";
-		for (const auto& t: types) res += t.getType().show() + ",";
+		for (const auto& t: types) res += t.getType().toString() + ",";
 		res += ")";
 
 		return res;
@@ -73,12 +73,12 @@ namespace ts::internal {
 	 * @param types Vector of component types to stringify.
 	 * @return A human-readable string representing a sequence of component types.
 	 */
-	std::string showTypeVector(const std::vector<ComponentType>& types) {
+	std::string stringifyTypeVector(const std::vector<ComponentType>& types) {
 		std::stringstream res;
 		res << "(";
-		if (!types.empty()) res << (types[0].is_mutable ? "mut " : "") << types[0].type.show();
+		if (!types.empty()) res << (types[0].is_mutable ? "mut " : "") << types[0].type.toString();
 		for (int i = 1; i < types.size(); i++)
-			res << ", " << (types[i].is_mutable ? "mut " : "") << types[i].type.show();
+			res << ", " << (types[i].is_mutable ? "mut " : "") << types[i].type.toString();
 		res << ")";
 
 		return res.str();
@@ -89,17 +89,17 @@ namespace ts::internal {
 	 * @param types Vector of types to stringify.
 	 * @return A human-readable string representing a sequence of types.
 	 */
-	std::string showTypeVector(const std::vector<TypeInfo>& types) {
+	std::string stringifyTypeVector(const std::vector<TypeInfo>& types) {
 		std::vector<ComponentType> immutableTypes;
 		immutableTypes.reserve(types.size());
 		for (const auto& t: types) immutableTypes.emplace_back(t, false);
-		return showTypeVector(immutableTypes);
+		return stringifyTypeVector(immutableTypes);
 	}
 
 	TupleInfoImpl::TupleInfoImpl(std::vector<ComponentType> components):
 		  TypeInfoImpl(sumTypeVectorSizes(components)),
 		  components(std::move(components)) {
-		representation = showTypeVector(components);
+		representation = stringifyTypeVector(components);
 	}
 
 	FunctionInfoImpl::FunctionInfoImpl(
@@ -113,8 +113,8 @@ namespace ts::internal {
 		  result_type(result_type),
 		  pure(pure),
 		  free(free) {
-		representation = "Function " + showTypeVector(this->parameter_types) + " -> ("
-		               + result_type.show() + ")";
+		representation = "Function " + stringifyTypeVector(this->parameter_types) + " -> ("
+		               + result_type.toString() + ")";
 	}
 
 	VariantInfoImpl::VariantInfoImpl(const std::vector<TypeDesc<>>& variant_types)
@@ -122,7 +122,7 @@ namespace ts::internal {
 		  :
 		  TypeInfoImpl(BYTE_SIZE + maxTypeVectorSizes(variant_types)),
 		  underlyingTypes(variant_types) {
-		representation = "Variant" + showTypeVector(variant_types);
+		representation = "Variant" + stringifyTypeVector(variant_types);
 	}
 
 	[[nodiscard]]
