@@ -145,6 +145,16 @@ namespace compiler::helios {
 		};
 
 		/**
+		 * @brief A not-yet looked up identifier.
+		 */
+		struct NamedIdentifier {
+			/**
+			 * @brief A name to lookup when needed..
+			 */
+			base::StrId symbol_name;
+		};
+
+		/**
 		 * @brief A symbol identifier.
 		 */
 		struct Identifier {
@@ -155,12 +165,12 @@ namespace compiler::helios {
 		};
 
 		/**
-		 * @brief A literal value.
+		 * @brief A numerical value.
 		 */
-		struct NumLiteral {
+		struct NumValue {
 			/**
 			 * @TODO: Replace it with TypeSystem's value.
-			 * A value of the literal.
+			 * The value representation.
 			 */
 			base::StrId num_id;
 		};
@@ -172,7 +182,8 @@ namespace compiler::helios {
 			rift_def::Keyword keyword;
 		};
 
-		using ExprElem = std::variant<Operator, Identifier, NumLiteral, KeywordValue>;
+		using ExprElem
+			= std::variant<Operator, NamedIdentifier, Identifier, NumValue, KeywordValue>;
 
 		struct KeyOf_ExtensionMakeRPN {
 			/**
