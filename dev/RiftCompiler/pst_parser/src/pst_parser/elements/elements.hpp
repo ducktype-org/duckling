@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../rift_parser_base.hpp"
+#include "base/unique_pointer.hpp"
+#include "diagnostic/source_position.hpp"
 #include "elements_common.hpp"
 
 #include <token_parser_core/token_stream.hpp>
@@ -11,6 +13,7 @@
 
 #include <base/string_id.hpp>
 
+#include <unicode/unistr.h>
 #include <variant>
 #include <iostream>
 
@@ -71,6 +74,8 @@ namespace pst {
 
 	using StateCondition = bool(const RiftParserState&, usize);
 
+	using GetName = std::string();
+
 	/**
 	 * @brief General Element representing a list of Elements.
 	 *
@@ -88,6 +93,7 @@ namespace pst {
 		lexer::Token::BracketType BRACKETS,
 		StateCondition            isSeparator,
 		StateCondition            isEnding,
+		GetName getName,
 		class Container = std::vector<ParserRef<SubElements>>>
 	class List final: public NotStmt {
 		Container elements;
@@ -116,28 +122,32 @@ namespace pst {
 		false,
 		lexer::Token::BracketType::Round,
 		detail::Conditions::isComma,
-		detail::Conditions::isSentinel>;
+		detail::Conditions::isSentinel,
+		detail::NameGetters::parameterList>;
 
 	using RetList = List<
 		Expr,
 		true,
 		lexer::Token::BracketType::None,
 		detail::Conditions::isComma,
-		detail::Conditions::isCurlyGroup>;
+		detail::Conditions::isCurlyGroup,
+		detail::NameGetters::returnList>;
 
 	using InheritList = List<
 		Expr,
 		true,
 		lexer::Token::BracketType::None,
 		detail::Conditions::isComma,
-		detail::Conditions::isCurlyGroup>;
+		detail::Conditions::isCurlyGroup,
+		detail::NameGetters::inheritanceList>;
 
 	using ArgList = List<
 		Expr,
 		false,
 		lexer::Token::BracketType::Round,
 		detail::Conditions::isComma,
-		detail::Conditions::isSentinel>;
+		detail::Conditions::isSentinel,
+		detail::NameGetters::argumentList>;
 
 	class DottedName final: public NotStmt {
 		std::vector<tpc::Identifier> names;
@@ -598,6 +608,86 @@ namespace pst {
 	class_name(const dia::SourcePosition& position): \
 		  RiftTestingStmt(StmtKind::class_name, position) {}
 
+	template<GetName type>
+	class OpeningBracketMissingError final: public dia::Error {
+	private:
+		lexer::Token::BracketType bracket;
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			std::string str_bracket{};
+			icu_74::UnicodeString(bracket).toUTF8String(str_bracket);
+			std::stringstream ss;	
+			ss << "Opening bracket " << str_bracket << " of a " << type() << " list expected after here.";
+			return ss.str();
+		}
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		OpeningBracketMissingError(
+			dia::SourcePosition pos,
+			lexer::Token::BracketType bracket
+		): dia::Error(pos),
+			bracket(bracket) {}
+	};
+
+	template<GetName type>
+	class EmptyListError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "This " + type() + " list shouldn't be empty.";
+		}
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		EmptyListError(
+			dia::SourcePosition pos
+		): dia::Error(pos) {}
+	};
+
+	template<GetName type>
+	class EmptyListElementError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "This " + type() + " list element shouldn't be empty.";
+		}
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		EmptyListElementError(
+			dia::SourcePosition pos
+		): dia::Error(pos) {}
+	};
+
+	template<GetName type>
+	class EndListError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Unexpected end to the " + type() + " list.";
+		}
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		EndListError(
+			dia::SourcePosition pos
+		): dia::Error(pos) {}
+	};
+
 	/**
 	 * @note We might want to move it outside and allow only for specific instances to be cleaner.
 	 */
@@ -607,17 +697,18 @@ namespace pst {
 		lexer::Token::BracketType BRACKETS,
 		StateCondition            isSeparator,
 		StateCondition            isEnding,
+		GetName getName,
 		class Container>
-	auto List<SubElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, Container>::parse(
+	auto List<SubElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, getName, Container>::parse(
 		RiftParserState& state
 	) -> ParserRef<List> {
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 
 		if constexpr (BRACKETS != lexer::Token::BracketType::None) {
 			if (!state.ctokens().isBracketGroup(BRACKETS)) {
-				state.fail(
-					-1, "bracket " + std::string(1, char(BRACKETS)) + " expected after here"
-				);
+				state.fail(base::make_unique<OpeningBracketMissingError<getName>>(
+					state.getPosition(-1), BRACKETS
+				));
 				return nullptr;
 			}
 			state.goDown();
@@ -628,7 +719,9 @@ namespace pst {
 		usize expr_length{};
 		if (state.empty() || isEnding(state, 0)) {
 			if constexpr (NON_EMPTY)
-				state.fail(-1, "empty list where non-empty expected after here");
+				state.fail(base::make_unique<EmptyListError<getName>>(
+					state.getPosition(-1)
+				));
 		} else {
 			while (true) {
 				expr_length = 0;
@@ -638,7 +731,9 @@ namespace pst {
 				}
 				if (expr_length == 0) {
 					if (state.empty() || isEnding(state, 0)) {
-						state.fail(0, "unexpected end to a list");
+						state.fail(base::make_unique<EndListError<getName>>(
+							state.getPosition(-1, 0)
+						));
 						break;
 					} else {
 						state.fail(0, "empty field in a list before here");

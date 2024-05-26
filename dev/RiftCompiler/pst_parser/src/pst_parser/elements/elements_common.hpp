@@ -24,6 +24,24 @@ namespace pst::detail {
 		}
 	};
 
+	class NameGetters {
+	public:
+		NameGetters() = delete;
+
+		static std::string parameterList() {
+			return "function parameter";
+		}
+		static std::string returnList() {
+			return "function return";
+		}
+		static std::string inheritanceList() {
+			return "inheritance";
+		}
+		static std::string argumentList() {
+			return "attribute argument";
+		}
+	};
+
 	/**
 	 * @brief Borrow Iterator for Containers of ParserRef (like std::vector<ParserRef<T> >).
 	 * It is needed because ParserRef beeing base::unique_ptr cannot be "copied".

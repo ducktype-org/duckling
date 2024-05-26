@@ -4,7 +4,6 @@
  */
 
 
-#include <cmath>
 #include <string>
 #include <printer/printer_content.hpp>
 #include <token_file/file.hpp>
@@ -29,9 +28,14 @@ namespace dia {
 		std::vector<printer::PrinterContent> res;
 		res.emplace_back(std::string(length + 1, ' ') + "|");
 
+		usize fixed_end = source_end;
+		if (end_char == source_end) {
+			fixed_end--;
+		}
+
 		auto before = source_file->viewSplitRange(begin_char, source_start);
-		auto error  = source_file->viewSplitRange(source_start, source_end + 1);
-		auto after  = source_file->viewSplitRange(source_end + 1, end_char);
+		auto error  = source_file->viewSplitRange(source_start, fixed_end + 1);
+		auto after  = source_file->viewSplitRange(fixed_end + 1, end_char);
 
 		auto linePref = [&](usize line) {
 			res.emplace_back("\n");

@@ -1,8 +1,8 @@
+#include <base/unique_pointer.hpp>
 #include <diagnostic/logger.hpp>
+#include <diagnostic/message.hpp>
 
-#include "base/unique_pointer.hpp"
 #include "classifications.hpp"
-#include "diagnostic/message.hpp"
 #include "lexer_class.hpp"
 
 namespace lexer {
