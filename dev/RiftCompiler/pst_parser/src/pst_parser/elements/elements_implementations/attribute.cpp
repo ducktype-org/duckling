@@ -29,6 +29,6 @@ namespace pst {
 		out << "}}";
 	}
 
-	void Attribute::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitAttribute(*this); }
+	void Attribute::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAttribute(*this); }
 
 }

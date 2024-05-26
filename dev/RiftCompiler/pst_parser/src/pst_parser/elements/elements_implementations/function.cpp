@@ -30,5 +30,5 @@ namespace pst {
 		out << " } }";
 	}
 
-	void Fun::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitFun(*this); }
+	void Fun::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitFun(*this); }
 }
