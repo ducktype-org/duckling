@@ -73,8 +73,7 @@ namespace compiler::helios {
 
 			stmt(key)->acceptVistior(func_maker);
 
-
-			return out;
+			return func_maker.out.value();
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
