@@ -46,9 +46,8 @@ namespace compiler::helios {
 		// - rets
 		// - some other stuff from proposal
 
-		// @TODO:
-		HOUTFunction(HOUTFunction&&) = default;
-		HOUTFunction(const HOUTFunction&) = default;
+		// HOUTFunction(HOUTFunction&&) = default;
+		// HOUTFunction(const HOUTFunction&) = default;
 
 		HOUTCode body;
 

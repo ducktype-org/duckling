@@ -53,9 +53,19 @@ namespace compiler::helios {
 
 		
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			RIFT_ASSERT(kind(key) == SymbolKind::Function, "Function creation called on non-function symbol");
 
-			throw "Well @todo";
+			auto fun_stmt = dynamic_cast<const pst::Fun*>(stmt(key).get());
+			RIFT_ASSERT(fun_stmt != nullptr, "Function symbol is not actually a function");
 
+			auto parent_scope = scope(key);
+
+			// @TODO
+
+
+			HOUTFunction out;
+
+			return out;
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF

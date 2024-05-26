@@ -55,6 +55,11 @@ namespace compiler::helios {
 	 */
 	ScopeID scope(SymID);
 
+	/**
+	 * @return Pst element symbol was created from
+	 */
+	PstRef<pst::Stmt> stmt(SymID);
+
 	struct KeyOf_QuerySymbolOfSTMT {
 		/**
 		 * @brief scope to create symbol in
@@ -129,7 +134,7 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryDealias, SymID, const SymbolList&);
 
 	/**
-	 * Calculates a value of a contant.
+	 * Calculates a value of a constant.
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, i32);
 

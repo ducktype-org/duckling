@@ -72,6 +72,8 @@ namespace compiler::helios {
 
 	ScopeID scope(SymID id) { return getSymRef(id)->scope; }
 
+	PstRef<pst::Stmt> stmt(SymID id) { return getSymRef(id)->pst_stmt; }
+
 	namespace {
 		/**
 		 * @brief Global Symbol Table
