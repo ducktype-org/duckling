@@ -7,7 +7,7 @@ functions=( "vm::OpFuns::op_nop"            "vm::OpFuns::op_jmpRel_label" \
             "vm::OpFuns::op_sub_l64_l64"    "vm::OpFuns::op_mul_l64_imm" \
             "vm::OpFuns::op_cmpG_l64_l64"   "vm::OpFuns::op_call_func" \
             "vm::OpFuns::op_ret_imm"        "vm::OpFuns::op_free_lptr" \
-            "vm::OpFuns::op_setPArg_l64")
+            "vm::OpFuns::op_setFstArg_l64")
 
 echo "Disassembling functions and saving results to results.txt..."
 echo "" > $result_file
