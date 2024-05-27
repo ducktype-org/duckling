@@ -6,6 +6,7 @@ add_library(HELIOS
 	src/helios/queries.cpp
 	src/helios/lookup_result.cpp
 	src/helios/hout/hout.cpp
+	src/helios/hout/elements.cpp
 )
 
 make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystem)

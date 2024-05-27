@@ -22,7 +22,7 @@ namespace compiler::helios {
 		out += original_name.strView();
 		out += " ( @TODO ) -> @TODO {\n";
 		for (auto&& stmt: body.body->statements) {
-			out += stmt->debugPrint();
+			stmt->debugPrint(1, out);
 		}
 		out += "}\n";
 		return out;

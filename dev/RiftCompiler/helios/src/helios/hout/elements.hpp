@@ -1,8 +1,10 @@
 #pragma once
 
 #include <vector>
+#include <base/ints.hpp>
 
 #include "element_ref.hpp"
+
 
 namespace compiler::helios::code {
 
@@ -12,7 +14,7 @@ namespace compiler::helios::code {
 		// @TODO
 
 		virtual ~Stmt() = default;
-		virtual std::string debugPrint() = 0;
+		virtual void debugPrint(usize indent, std::string& out) const = 0;
 	};
 
 	struct Expr { 
@@ -28,16 +30,11 @@ namespace compiler::helios::code {
 	struct ReturnStmt final: public Stmt {
 		ElementRef<Expr> value;
 
-
-		std::string debugPrint() final {
-			return "return [@TODO]\n";
-		}
+		void debugPrint(usize indent, std::string& out) const final;
 	};
 
 	struct VReturnStmt final: public Stmt {
-		std::string debugPrint() final {
-			return "void-return\n";
-		}
+		void debugPrint(usize indent, std::string& out) const final;
 	};
 }
 
