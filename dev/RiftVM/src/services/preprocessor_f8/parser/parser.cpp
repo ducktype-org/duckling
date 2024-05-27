@@ -316,9 +316,10 @@ namespace assemble {
 
 	struct Func: AsmElement {
 		tpc::Identifier          name;
-		usize                    arg_size   = size_t_max;
-		usize                    local_size = size_t_max;
-		usize                    ret_size   = size_t_max;
+		usize                    arg_size      = size_t_max;
+		usize                    next_arg_size = size_t_max;
+		usize                    local_size    = size_t_max;
+		usize                    ret_size      = size_t_max;
 		tpc::ParserRef<ByteCode> code;
 
 		static tpc::ParserRef<Func> parse(F8ParserState& state);
@@ -392,6 +393,32 @@ namespace assemble {
 					);
 				}
 				state.parse().one(rift_def::Special::Semicolon);
+				break;
+			}
+			case rift_def::Keyword::BCNextArgSize: {
+				tpc::parseOne(state, rift_def::Operator::Colon);
+				if (out->next_arg_size != size_t_max) {
+					state.err.failAndLog(
+						state.ctokens().peek().getPosition(), "next_arg_size duplicate"
+					);
+				}
+				auto value = state.tokens().next();
+
+				if (!value.isNumLiteral()) {
+					state.err.failAndLog(
+						state.ctokens().peek().getPosition(),
+						"next_arg_size argument is not num-literal"
+					);
+				}
+				try {
+					out->next_arg_size = strIdToNum(value.getValue());
+				} catch (std::logic_error& e) {
+					state.err.failAndLog(
+						state.ctokens().peek().getPosition(),
+						"next_arg_size argument is not num-literal"
+					);
+				}
+				tpc::parseOne(state, rift_def::Special::Semicolon);
 				break;
 			}
 
@@ -470,6 +497,7 @@ namespace assemble {
 
 		if (out->local_size == size_t_max) state.fail(0, "Local size not set");
 		if (out->arg_size == size_t_max) state.fail(0, "Arg size not set");
+		if (out->next_arg_size == size_t_max) state.fail(0, "Next arg size not set");
 		if (out->ret_size == size_t_max) state.fail(0, "Ret size not set");
 
 		return out;
@@ -750,13 +778,50 @@ namespace assemble {
 		}
 	}
 
+	void assertTailcallsSignatures(std::vector<vm::FuncData>& functions) {
+		for (const auto& func: functions) {
+			for (const auto& op: func.bc) {
+#ifdef USE_TAIL_CALLS
+				if (op.opfun
+				    == vm::OpFuns::opfuns.at(static_cast<uint16_t>(vm::OpcodeFix8::ret_tailcall))) {
+#else
+				if (static_cast<vm::OpcodeFix8>(op.opcode) == vm::OpcodeFix8::ret_tailcall) {
+#endif
+					RIFT_ASSERT(
+						func.arg_size == func.next_arg_size,
+						"Invalid Tailcall! Caller signature must have arg_size equal to "
+						"next_arg_size"
+					);
+					RIFT_ASSERT(
+						functions[op.arg0].arg_size == functions[op.arg0].next_arg_size,
+						"Invalid Tailcall! Called function signature must have arg_size == "
+						"next_arg_size"
+					);
+					RIFT_ASSERT(
+						func.arg_size == functions[op.arg0].arg_size,
+						"Invalid Tailcall! Caller and called arg size unmatched"
+					);
+					RIFT_ASSERT(
+						func.stack_size == functions[op.arg0].stack_size,
+						"Invalid Tailcall! Caller and called stack size unmatched"
+					);
+					RIFT_ASSERT(
+						func.ret_size == functions[op.arg0].ret_size,
+						"Invalid Tailcall! Caller and called ret size unmatched"
+					);
+				}
+			}
+		}
+	}
+
 	vm::FuncData
 		changeFuncToFuncData(const tpc::ParserCBorrowRef<Func>& func, vm::TypeMetadata& types) {
 		vm::FuncData funcData;
-		funcData.ret_size   = 0;
-		funcData.arg_size   = func->arg_size;
-		funcData.stack_size = func->local_size;
-		funcData.ret_size   = func->ret_size;
+		funcData.ret_size      = 0;
+		funcData.arg_size      = func->arg_size;
+		funcData.next_arg_size = func->next_arg_size;
+		funcData.stack_size    = func->local_size;
+		funcData.ret_size      = func->ret_size;
 
 		for (auto& op: func->code->opcodes) {
 			// calculate type arguments:
@@ -838,6 +903,7 @@ namespace assemble {
 				changeFuncToFuncData(func.borrow(), type_metadata)
 			);
 		}
+		assertTailcallsSignatures(instructions_code.functions);
 
 		return instructions_code;
 	}
@@ -861,5 +927,4 @@ namespace assemble {
 
 		return result;
 	}
-
 }

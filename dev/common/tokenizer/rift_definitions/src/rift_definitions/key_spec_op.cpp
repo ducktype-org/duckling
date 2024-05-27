@@ -94,12 +94,13 @@ namespace rift_def {
 			{ Keyword::Private, "private", base::EmptyFlag },
 		} };
 
-	constexpr std::array<std::tuple<Keyword, std::string_view, base::FlagType>, 16>
+	constexpr std::array<std::tuple<Keyword, std::string_view, base::FlagType>, 17>
 		bc_keywords_array{ {
 			{ Keyword::BCFunction, "function", base::EmptyFlag },
 			{ Keyword::BCLocalSize, "local_size", base::EmptyFlag },
 			{ Keyword::BCRetSize, "ret_size", base::EmptyFlag },
 			{ Keyword::BCArgSize, "arg_size", base::EmptyFlag },
+			{ Keyword::BCNextArgSize, "next_arg_size", base::EmptyFlag },
 			{ Keyword::BCDefine, "define", base::EmptyFlag },
 			{ Keyword::BCLabel, "label", base::EmptyFlag },
 			{ Keyword::BCArg, "arg", base::EmptyFlag },

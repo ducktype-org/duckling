@@ -3,6 +3,7 @@ type static_table: tableint64 int64 8000000
 
 function main {
   arg_size: 0;
+	next_arg_size: 0;
   ret_size: 0;
 
   // x - 0

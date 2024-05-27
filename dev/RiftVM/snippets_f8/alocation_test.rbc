@@ -2,6 +2,7 @@ type primitive: int64 8
 
 function modify_pointer {
 	arg_size: 0;
+	next_arg_size: 0;
 	local_size: 100;
 	ret_size: 0;
 
@@ -20,6 +21,7 @@ function modify_pointer {
 
 function main {
 	arg_size: 0;
+	next_arg_size: 8;
 	local_size: 100;
 	ret_size: 0;
 
@@ -32,7 +34,7 @@ function main {
 		store_lptr_l64     0, 16;
 		
 		// modify
-		setPtrArg_lptr     0;
+		setFstArg_lptr     0;
 		call_func          0;
 		
 		load_l64_lptr      16, 0;

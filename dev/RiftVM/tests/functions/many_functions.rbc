@@ -3,28 +3,30 @@
 // output = input + 1110
 
 function add1000 {
-	arg_size: 0;
+	arg_size: 8;
+	next_arg_size: 0;
 	ret_size: 0;
 	local_size: 16;
 
 	code: {
         mov_l64_imm    0,   1000;
-        mov_l64_pFuncArg    8;
+        getFstArg_l64    		8;
         add_l64_l64         0, 8;
 		ret_l64 		    0;
 	}
 }
 
 function add1100 {
-	arg_size: 0;
+	arg_size: 8;
+	next_arg_size: 8;
 	ret_size: 0;
 	local_size: 16;
 
 	code: {
         mov_l64_imm    0,   100;
-        mov_l64_pFuncArg    8;
+        getFstArg_l64    		8;
         
-        setPArg_l64         8;
+        setFstArg_l64       8;
         call_func           0;
         mov_l64_r0          8;
 
@@ -34,15 +36,16 @@ function add1100 {
 }
 
 function add1110 {
-	arg_size: 0;
+	arg_size: 8;
+	next_arg_size: 8;
 	ret_size: 0;
 	local_size: 16;
 
 	code: {
         mov_l64_imm    0,   10;
-        mov_l64_pFuncArg    8;
+        getFstArg_l64    		8;
         
-        setPArg_l64         8;
+        setFstArg_l64       8;
         call_func           1;
         mov_l64_r0          8;
 
@@ -54,13 +57,14 @@ function add1110 {
 
 function main {
 	arg_size: 0;
+	next_arg_size: 8;
 	ret_size: 0;
 
 	local_size: 8;
 
 	code: {
         input_l64           0;
-        setPArg_l64         0;
+        setFstArg_l64       0;
 		
         call_func          	2;
         

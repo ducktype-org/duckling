@@ -2,13 +2,14 @@ type primitive: int64 8
 
 function ackermann {
     arg_size: 24;
+    next_arg_size: 24;
     ret_size: 8;
 
     // m, n, nPtr
     local_size: 32;
     code: {
-        mov_l64_pFuncArg    0;
-        mov_lptr_ptrFuncArg 16;
+        getFstArg_l64       0;
+        mov_lptr_argptr     16, 8;
         load_l64_lptr_ofs   8, 16;
 
         cmpEq_l64_imm       0, 0;
@@ -20,18 +21,18 @@ function ackermann {
         // m, n > 0
         // return A(m-1, A(m, n-1))
         sub_l64_imm         8, 1;
-        setPArg_l64         0;
+        setFstArg_l64       0;
         alloc_lptr_type     16, int64;
         store_lptr_l64_ofs  16, 8;
-        setPtrArg_lptr      16;
+        mov_argptr_lptr 8, 16;
         call_func           0; // A(m, n-1)
         free_lptr           16;
         mov_l64_r0          8;
         sub_l64_imm         0, 1;
-        setPArg_l64         0;
+        setFstArg_l64       0;
         alloc_lptr_type     16, int64;
         store_lptr_l64_ofs  16, 8;
-        setPtrArg_lptr      16;
+        mov_argptr_lptr 8, 16;
         call_func           0;  // A(m-1, A(m, n-1))
         free_lptr           16;
         mov_l64_r0          0;
@@ -40,11 +41,11 @@ function ackermann {
         label N0;
         // return A(m-1, 1)
         sub_l64_imm         0, 1;
-        setPArg_l64         0;
+        setFstArg_l64       0;
         mov_l64_imm         8, 1;    
         alloc_lptr_type     16, int64;
         store_lptr_l64_ofs  16, 8;
-        setPtrArg_lptr      16;
+        mov_argptr_lptr 8, 16;
         call_func           0;
         free_lptr           16;
         mov_l64_r0          0;
@@ -59,6 +60,7 @@ function ackermann {
 
 function main {
     arg_size: 0;
+    next_arg_size: 24;
     ret_size: 8;
     
     // m, n
@@ -67,12 +69,12 @@ function main {
     
     code: {
         input_l64           0;
-        setPArg_l64         0;
+        setFstArg_l64       0;
         
         input_l64           8;
         alloc_lptr_type     16, int64;
         store_lptr_l64_ofs  16, 8;
-        setPtrArg_lptr      16;
+        mov_argptr_lptr  8, 16;
         call_func           0;
         free_lptr           16;
         mov_l64_r0          0;
