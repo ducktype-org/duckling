@@ -374,12 +374,17 @@ namespace pst {
 	 */
 	class Action: public Stmt {
 	protected:
-		std::optional<ParserRef<Expr>> expr;
+		base::Optional<ParserRef<Expr>> expr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action);
 		static ParserRef<Action> parse(RiftParserState& state);
 		~Action() override = default;
+
+		[[nodiscard]]
+		base::Optional<ParserCBorrowRef<Expr>> getValue() const {
+			return expr.map([](const auto& e){ return e.borrow(); });
+		}
 	};
 
 	class Return final: public Action {

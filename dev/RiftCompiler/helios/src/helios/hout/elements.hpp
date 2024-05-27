@@ -30,13 +30,13 @@ namespace compiler::helios::code {
 
 
 		std::string debugPrint() final {
-			return "return [@TODO]";
+			return "return [@TODO]\n";
 		}
 	};
 
 	struct VReturnStmt final: public Stmt {
 		std::string debugPrint() final {
-			return "void-return";
+			return "void-return\n";
 		}
 	};
 }

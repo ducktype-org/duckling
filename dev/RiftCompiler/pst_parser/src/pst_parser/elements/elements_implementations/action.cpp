@@ -44,10 +44,10 @@ namespace pst {
 
 	namespace {
 		void simpleActionDprint(
-			std::ostream&                         out,
-			const std::optional<ParserRef<Expr>>& action,
-			const std::string_view                name,
-			std::string                           preposition
+			std::ostream&                          out,
+			const base::Optional<ParserRef<Expr>>& action,
+			const std::string_view                 name,
+			const std::string_view                 preposition
 		) {
 			out << "{\"" << name << "\"";
 			if (action) {

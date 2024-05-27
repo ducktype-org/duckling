@@ -62,6 +62,15 @@ namespace compiler::helios {
 
 			// @TODO: visits for all valid stmt-s
 
+			void visitReturn(const pst::Return& stmt) override {
+				if (auto val = stmt.getValue()) {
+					throw base::NotYetImplemented("Hout return with value");
+				}
+				else {
+					this->out.emplace(base::make_unique<code::VReturnStmt>());
+				}
+			}
+
 		};
 
 		struct HOUTFunctionMaker: public pst::PstStmtVisitorPanicky {
