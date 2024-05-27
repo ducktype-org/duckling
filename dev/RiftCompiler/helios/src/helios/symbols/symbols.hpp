@@ -117,17 +117,6 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryTypeOF, SymID, ts::TypeInfo);
 
-	// @TODO: some proper hout type
-	struct SomeHOUT {};
-
-	/**
-	 * @brief Query HOUT of given symbol
-	 * @note This query is effectively responsible for compilation of symbols.
-	 * @note not yet implemented
-	 */
-	DECLARE_QUERY(QueryHOUT, SymID, base::Optional<SomeHOUT>);
-
-
 	/**
 	 * A query that returns an "absolute path" to the symbol without aliases.
 	 */

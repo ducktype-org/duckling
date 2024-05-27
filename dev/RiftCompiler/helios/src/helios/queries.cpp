@@ -7,6 +7,7 @@
 #include <pst_parser/pst_visitor.hpp>
 
 #include "scopes/scopes.hpp"
+#include "hout/elements.hpp"
 
 #include "symbols/symbols.hpp"
 
@@ -64,7 +65,10 @@ namespace compiler::helios {
 
 			void visitReturn(const pst::Return& stmt) override {
 				if (auto val = stmt.getValue()) {
-					throw base::NotYetImplemented("Hout return with value");
+					auto expr = ctx.query<QueryHoutOfExpr>({
+						 parent_scope, val.value() 
+					});
+					this->out.emplace(base::make_unique<code::ReturnStmt>(std::move(expr)));
 				}
 				else {
 					this->out.emplace(base::make_unique<code::VReturnStmt>());

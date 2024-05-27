@@ -27,8 +27,8 @@ namespace compiler::helios {
 	/**
 	 * @brief HoutOfExpr for expression that contain only one element
 	 */
-	QUERY_EXTENSION(houtOfSingleExpr, KeyOf_HoutOfExpr, code::ElementRef<code::Expr>);
-	auto houtOfSingleExpr(query::Context&, KeyOf_HoutOfExpr key) -> code::ElementRef<code::Expr> {
+	QUERY_EXTENSION(houtOfSingleExpr, KeyOf_QueryHoutOfExpr, code::ElementRef<code::Expr>);
+	auto houtOfSingleExpr(query::Context&, KeyOf_QueryHoutOfExpr key) -> code::ElementRef<code::Expr> {
 		RIFT_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single expression");
 		auto&& elem = key.expr->elements.at(1);
 
@@ -53,7 +53,7 @@ namespace compiler::helios {
 		RIFT_PANIC("No match in variant");
 	}
 
-	struct IMPLEMENT_QUERY(HoutOfExpr, code::ElementRef<code::Expr>) {
+	struct IMPLEMENT_QUERY(QueryHoutOfExpr, code::ElementRef<code::Expr>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			if (key.expr->elements.size() == 1) {
 				return ctx.callExt<houtOfSingleExpr>(key);
@@ -71,4 +71,6 @@ namespace compiler::helios {
 			return res;
 		}
 	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr);
 };

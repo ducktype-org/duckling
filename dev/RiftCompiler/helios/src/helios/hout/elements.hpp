@@ -5,6 +5,7 @@
 
 #include <query_framework/query_int.hpp>
 #include <pst_parser/elements/elements.hpp>
+#include <base/perfect_hash.hpp>
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
@@ -39,6 +40,8 @@ namespace compiler::helios::code {
 	struct ReturnStmt final: public Stmt {
 		ElementRef<Expr> value;
 
+		ReturnStmt(ElementRef<Expr> value): value(std::move(value)) {}
+
 		void debugPrint(usize indent, std::string& out) const final;
 	};
 
@@ -53,20 +56,24 @@ namespace compiler::helios::code {
 	struct ConstIntExpr final: public Expr {
 		// @TODO: ctv + type for consts?
 		i64 value;
+		ConstIntExpr(i64 value): value{value} {}
 	};
 }
 
 
 namespace compiler::helios {
-	struct KeyOf_HoutOfExpr {
+	struct KeyOf_QueryHoutOfExpr {
 		ScopeID scope;
 		PstRef<pst::Expr> expr;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
 	};
 	
 	/**
 	 * @brief Construct HOUT Expr from Pst Expr, "within" given scope 
 	 * @TODO: perhaps add cache
 	 */
-	DECLARE_QUERY(HoutOfExpr, KeyOf_HoutOfExpr, code::ElementRef<code::Expr>);
+	DECLARE_QUERY(QueryHoutOfExpr, KeyOf_QueryHoutOfExpr, code::ElementRef<code::Expr>);
 }
 
