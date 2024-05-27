@@ -12,7 +12,7 @@ function collatz {
 	code: {
 
 		# n := argument
-		getFstArg_l64					0;
+		getFstArg_l64	         0;
 
 		# j := 0
 		mov_l64_imm           8, 0;

@@ -398,7 +398,7 @@ namespace assemble {
 				break;
 			}
 			case rift_def::Keyword::BCNextArgSize: {
-				tpc::parseOne(state, rift_def::Operator::Colon);
+				state.parse().one(rift_def::Operator::Colon);
 				if (out->next_arg_size != size_t_max) {
 					state.err.failAndLog(
 						state.ctokens().peek().getPosition(), "next_arg_size duplicate"
@@ -420,7 +420,7 @@ namespace assemble {
 						"next_arg_size argument is not num-literal"
 					);
 				}
-				tpc::parseOne(state, rift_def::Special::Semicolon);
+				state.parse().one(rift_def::Special::Semicolon);
 				break;
 			}
 
