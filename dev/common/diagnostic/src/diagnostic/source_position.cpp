@@ -29,9 +29,7 @@ namespace dia {
 		res.emplace_back(std::string(length + 1, ' ') + "|");
 
 		usize fixed_end = source_end;
-		if (end_char == source_end) {
-			fixed_end--;
-		}
+		if (end_char == source_end) fixed_end--;
 
 		auto before = source_file->viewSplitRange(begin_char, source_start);
 		auto error  = source_file->viewSplitRange(source_start, fixed_end + 1);

@@ -97,28 +97,28 @@ namespace lexer {
 		}
 
 		UnmatchedBracketError(
-			dia::SourcePosition start_pos,
-			dia::SourcePosition expected_pos,
-			UChar32 closing_bracket
-		): dia::Error(start_pos){
+			dia::SourcePosition start_pos, dia::SourcePosition expected_pos, UChar32 closing_bracket
+		):
+			  dia::Error(start_pos) {
 			addNote(base::make_unique<EndBlock>(expected_pos, closing_bracket));
 		}
 
 		class EndBlock final: public dia::NoteWithPosition {
 		private:
 			UChar32 closing_bracket;
+
 		protected:
 			[[nodiscard]]
 			std::string toStringBrief() const override {
-			std::string str_bracket{};
-			icu_74::UnicodeString(closing_bracket).toUTF8String(str_bracket);
+				std::string str_bracket{};
+				icu_74::UnicodeString(closing_bracket).toUTF8String(str_bracket);
 				return "Expected to be closed with " + str_bracket + ".";
 			}
 
 		public:
-			EndBlock(dia::SourcePosition pos, UChar32 closing_bracket): 
-				dia::NoteWithPosition(pos),
-				closing_bracket(closing_bracket) {}
+			EndBlock(dia::SourcePosition pos, UChar32 closing_bracket):
+				  dia::NoteWithPosition(pos),
+				  closing_bracket(closing_bracket) {}
 		};
 	};
 
@@ -441,14 +441,14 @@ namespace lexer {
 		if (peek().is(group_end))
 			next();  // par close
 		else if (isEOF()) {
-			errorState.log(base::make_unique<UnmatchedBracketError>(
-				sourceStart, currentPostion(), group_end
-			));
+			errorState.log(
+				base::make_unique<UnmatchedBracketError>(sourceStart, currentPostion(), group_end)
+			);
 			end = where - 1;
 		} else {
-			errorState.log(base::make_unique<UnmatchedBracketError>(
-				sourceStart, currentPostion(), group_end
-			));
+			errorState.log(
+				base::make_unique<UnmatchedBracketError>(sourceStart, currentPostion(), group_end)
+			);
 			end = where - 1;
 		}
 

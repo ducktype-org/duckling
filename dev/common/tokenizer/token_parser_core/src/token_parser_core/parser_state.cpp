@@ -9,22 +9,20 @@ namespace tpc {
 
 	bool ParserState::notEmpty() const { return ctokens().size() > 0; }
 
-	bool ParserState::isEOF(i64 fwd) const { 
-		return stream_stack.size() == 1 && ctokens().size() <= fwd; 
+	bool ParserState::isEOF(i64 fwd) const {
+		return stream_stack.size() == 1 && ctokens().size() <= fwd;
 	}
 
 	dia::SourcePosition ParserState::getPosition(i64 fwd_from, i64 fwd_to) {
-		fwd_from = std::min(fwd_from, (i64)ctokens().size());
-		fwd_to = std::min(fwd_to, (i64)ctokens().size());
+		fwd_from = std::min(fwd_from, (i64) ctokens().size());
+		fwd_to   = std::min(fwd_to, (i64) ctokens().size());
 		if (fwd_from == fwd_to) return getPosition(fwd_from);
 
 		auto base = ctokens().peek(fwd_from).getPosition();
-			
+
 		usize end = ctokens().peek(fwd_to).getPosition().getEnd();
-		if (isEOF(fwd_to)) {
-			end = ctokens().peek(fwd_to - 1).getPosition().getEnd();
-		}
-		return {base, end};
+		if (isEOF(fwd_to)) end = ctokens().peek(fwd_to - 1).getPosition().getEnd();
+		return { base, end };
 	}
 
 	void ParserState::goDown() { stream_stack.emplace_back(tokens().getRecursive()); }

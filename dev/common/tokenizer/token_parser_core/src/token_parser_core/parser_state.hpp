@@ -76,21 +76,17 @@ namespace tpc {
 		/**
 		 * @brief Logs an error relatively to the current token
 		 */
-		void fail(base::unique_ptr<dia::Message> message) {
-			err.log(std::move(message));
-		}
+		void fail(base::unique_ptr<dia::Message> message) { err.log(std::move(message)); }
 
 		/**
 		 * @brief Get position relative to the current token.
 		 */
-		dia::SourcePosition getPosition(i64 fwd = 0) {
-			return ctokens().peek(fwd).getPosition();
-		}
+		dia::SourcePosition getPosition(i64 fwd = 0) { return ctokens().peek(fwd).getPosition(); }
 
 		/**
 		 * @brief Get position range relative to the current token.
 		 */
-		dia::SourcePosition getPosition(i64 fwd_from, i64 fwd_to); 
+		dia::SourcePosition getPosition(i64 fwd_from, i64 fwd_to);
 
 		/**
 		 * @brief Skips current token if it's equal to @p key.

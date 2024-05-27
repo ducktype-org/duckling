@@ -93,7 +93,7 @@ namespace pst {
 		lexer::Token::BracketType BRACKETS,
 		StateCondition            isSeparator,
 		StateCondition            isEnding,
-		GetName getName,
+		GetName                   getName,
 		class Container = std::vector<ParserRef<SubElements>>>
 	class List final: public NotStmt {
 		Container elements;
@@ -612,26 +612,27 @@ namespace pst {
 	class OpeningBracketMissingError final: public dia::Error {
 	private:
 		lexer::Token::BracketType bracket;
+
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
 			std::string str_bracket{};
 			icu_74::UnicodeString(bracket).toUTF8String(str_bracket);
-			std::stringstream ss;	
-			ss << "Opening bracket " << str_bracket << " of a " << type() << " list expected after here.";
+			std::stringstream ss;
+			ss << "Opening bracket " << str_bracket << " of a " << type()
+			   << " list expected after here.";
 			return ss.str();
 		}
+
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
 			return Domain::Parser;
 		}
 
-		OpeningBracketMissingError(
-			dia::SourcePosition pos,
-			lexer::Token::BracketType bracket
-		): dia::Error(pos),
-			bracket(bracket) {}
+		OpeningBracketMissingError(dia::SourcePosition pos, lexer::Token::BracketType bracket):
+			  dia::Error(pos),
+			  bracket(bracket) {}
 	};
 
 	template<GetName type>
@@ -641,15 +642,14 @@ namespace pst {
 		std::string toStringBrief() const override {
 			return "This " + type() + " list shouldn't be empty.";
 		}
+
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
 			return Domain::Parser;
 		}
 
-		EmptyListError(
-			dia::SourcePosition pos
-		): dia::Error(pos) {}
+		EmptyListError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	template<GetName type>
@@ -659,15 +659,14 @@ namespace pst {
 		std::string toStringBrief() const override {
 			return "This " + type() + " list element shouldn't be empty.";
 		}
+
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
 			return Domain::Parser;
 		}
 
-		EmptyListElementError(
-			dia::SourcePosition pos
-		): dia::Error(pos) {}
+		EmptyListElementError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	template<GetName type>
@@ -677,15 +676,14 @@ namespace pst {
 		std::string toStringBrief() const override {
 			return "Unexpected end to the " + type() + " list.";
 		}
+
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
 			return Domain::Parser;
 		}
 
-		EndListError(
-			dia::SourcePosition pos
-		): dia::Error(pos) {}
+		EndListError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	/**
@@ -697,7 +695,7 @@ namespace pst {
 		lexer::Token::BracketType BRACKETS,
 		StateCondition            isSeparator,
 		StateCondition            isEnding,
-		GetName getName,
+		GetName                   getName,
 		class Container>
 	auto List<SubElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, getName, Container>::parse(
 		RiftParserState& state
@@ -719,9 +717,7 @@ namespace pst {
 		usize expr_length{};
 		if (state.empty() || isEnding(state, 0)) {
 			if constexpr (NON_EMPTY)
-				state.fail(base::make_unique<EmptyListError<getName>>(
-					state.getPosition(-1)
-				));
+				state.fail(base::make_unique<EmptyListError<getName>>(state.getPosition(-1)));
 		} else {
 			while (true) {
 				expr_length = 0;
@@ -731,8 +727,7 @@ namespace pst {
 				}
 				if (expr_length == 0) {
 					if (state.empty() || isEnding(state, 0)) {
-						state.fail(base::make_unique<EndListError<getName>>(
-							state.getPosition(-1, 0)
+						state.fail(base::make_unique<EndListError<getName>>(state.getPosition(-1, 0)
 						));
 						break;
 					} else {
