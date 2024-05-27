@@ -380,9 +380,6 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Action);
 		static ParserRef<Action> parse(RiftParserState& state);
 		~Action() override = default;
-
-		// TODO:
-		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
 
 	class Return final: public Action {
@@ -391,6 +388,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Return() final = default;
+
+		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
 
 	class Break final: public Action {
@@ -399,6 +398,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Break() final = default;
+		
+		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
 
 	class Continue final: public Action {
@@ -407,6 +408,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Continue() final = default;
+
+		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
 
 	class Redo final: public Action {
@@ -415,6 +418,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Redo() final = default;
+		
+		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
 
 	class Restart final: public Action {
@@ -423,6 +428,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Restart() final = default;
+		
+		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
 
 	class Defer final: public Action {
@@ -431,6 +438,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Defer() final = default;
+
+		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -442,6 +451,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Throw() final = default;
+		
+		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
 
 	class Const final: public Stmt {
