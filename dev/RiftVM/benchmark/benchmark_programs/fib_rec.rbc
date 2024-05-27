@@ -1,5 +1,6 @@
 function fib {
     arg_size: 8;
+	next_arg_size: 8;
     ret_size: 8;
     
     # n - 0
@@ -9,7 +10,7 @@ function fib {
     
     code: {
         # n := argument
-        mov_l64_pFuncArg    0;
+        getFstArg_l64       0;
 
         # if !(n > 1): end
         cmpG_l64_imm        0, 1;
@@ -17,13 +18,13 @@ function fib {
 
         # tmp1 = fib(n - 1)
         sub_l64_imm         0, 1;
-        setPArg_l64         0;
+        setFstArg_l64       0;
         call_func           0;
         mov_l64_r0          8;
         
         # tmp2 = fib(n - 2)
         sub_l64_imm         0, 1;
-        setPArg_l64         0;
+        setFstArg_l64       0;
         call_func           0;
         mov_l64_r0          0;
         
@@ -40,6 +41,7 @@ function fib {
 
 function main {
     arg_size: 0;
+	next_arg_size: 8;
     ret_size: 8;
     
     # n - 0
@@ -51,7 +53,7 @@ function main {
         input_l64          0;
         
         # fib(n)
-        setPArg_l64        0;
+        setFstArg_l64      0;
         call_func          0;
         mov_l64_r0         8;
 
