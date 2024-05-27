@@ -11,7 +11,7 @@ fun foo(a: i32) -> i32 {
 	// }
 	// return 2;
 
-	return;
+	// return;
 }
 
 

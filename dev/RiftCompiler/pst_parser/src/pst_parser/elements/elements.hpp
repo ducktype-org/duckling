@@ -59,6 +59,9 @@ namespace pst {
 		static ParserRef<Stmt> parse(RiftParserState& state);
 		bool                   trailingSemicolon() override;
 		virtual void           acceptVistior(PstStmtVisitor& visitor) const = 0;
+
+		[[nodiscard]]
+		bool isStatement() const final { return true; };
 	};
 
 #define STMT_CHILD_CONSTRUCTOR(class_name) \
@@ -273,6 +276,9 @@ namespace pst {
 		static ParserRef<CodeBlock> parse(RiftParserState& state);
 		~CodeBlock() final = default;
 		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final { return true; }
 	};
 
 	class CodeBlockOrStmt final: public NotStmt {
@@ -290,6 +296,9 @@ namespace pst {
 		const_iterator begin() const;
 		[[nodiscard]]
 		const_iterator end() const;
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final { return true; }
 	};
 
 	class RoundGroupExpr final: public NotStmt {
@@ -486,7 +495,7 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(CodeDecl);
 	};
 
-	class TopLevel: public Decl {
+	class TopLevel final: public Decl {
 		std::vector<tpc::ParserRef<Stmt>> statements;
 
 	public:
@@ -500,6 +509,9 @@ namespace pst {
 		const auto& getStatements() const {
 			return statements;
 		}
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final { return true; }
 	};
 
 	class Block final: public CodeDecl {

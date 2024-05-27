@@ -84,18 +84,18 @@ namespace compiler::helios {
 
 				// @TODO: params, rest, flags, attributes, etc
 
-				// @TODO: creation of scope for function and filling it with
-				// parameters symbols require slight refactor of how the
-				// scope "gets" its symbol list.
-
-				// auto outer_scope = ctx.query<QueryPrimaryCodeScopeFor>(
-				// 	{ parent_scope, PstRef<pst::RiftElement>(&stmt) }
-				// );
+				// Scope of function itself:
+				// this scope will contain all "function declaration" symbols like parameters
+				// @TODO: document somewhere how do scopes behave depending on what they are looking at
+				auto outer_scope = ctx.query<QueryPrimaryCodeScopeFor>(
+					{ parent_scope, PstRef<pst::RiftElement>(&stmt) }
+				);
 
 				auto fun_body = stmt.getBody();
 
+				// Scope of function body:
 				auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>(
-					{ /*outer_scope*/ parent_scope, PstRef<pst::RiftElement>(fun_body) }
+					{ outer_scope, PstRef<pst::RiftElement>(fun_body) }
 				);
 
 				// HOUTCode out;

@@ -23,7 +23,7 @@ namespace compiler::helios {
 			for (auto&& e: ptr->getStatements()) out.emplace_back(e.borrow());
 			return out;
 		} else {
-			RIFT_PANIC("Bad Rift Element in `getChildStmtsOf`.");
+			RIFT_PANIC(base::strConcat("Bad Rift Element in `getChildStmtsOf`: ", typeid(*elem.get()).name()));
 		}
 	}
 

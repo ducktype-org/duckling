@@ -26,7 +26,9 @@ namespace compiler::helios {
 		ScopeID parent;
 		// base::StrId name; ///< for debug
 		bool     is_root = false;
-		StmtList stmt_list;
+		// StmtList stmt_list;
+
+		PstRef<pst::RiftElement> related_pst_element;
 
 		// cache entries:
 		// in the future we might need separation for: direct symbols, expanded symbols
@@ -68,7 +70,7 @@ namespace compiler::helios {
 				.parent = ScopeID{ nullptr },
 				// .name = base::StrId("ROOT"),
 				.is_root   = true,
-				.stmt_list = getChildStmtsOf(module_pst.getTopLevelElement()),
+				.related_pst_element = module_pst.getTopLevelElement(),
 				.symbols   = {},
 			});
 		}
@@ -85,12 +87,11 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
 		static auto provide(Context&, QKey element) -> PResult {
-			auto list_of_stmt = getChildStmtsOf(element.base_element);
 			// auto parent
 			// = scope(ctx.query<QuerySymbolOfSTMT>({ element.parent, element.base_element }));
 			return putInScopeTable(ScopeData{
 				.parent    = element.parent,
-				.stmt_list = list_of_stmt,
+				.related_pst_element = element.base_element,
 				.symbols   = {},
 			});
 		}
@@ -100,22 +101,32 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);
 
-	// impl of simple getters ("non-query query"):
-	// get name
-	// debug print
-	// etc
-
 	// if somewhere then here it is needed to handle cycles somehow
 
 
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<SymID> out;
-			for (const auto& stmt: key.ref->stmt_list) {
-				auto sym_id = ctx.query<QuerySymbolOfSTMT>({ key, stmt });
-				out.emplace_back(sym_id);
+
+			// @TODO: expand macros?
+
+			auto base_element = key.ref->related_pst_element;
+			
+			if (base_element->isStatementAggregate()) {
+				for (const auto& stmt: getChildStmtsOf(base_element)) {
+					auto sym_id = ctx.query<QuerySymbolOfSTMT>({ key, stmt });
+					out.emplace_back(sym_id);
+				}
+				return out;
 			}
-			return out;
+			else if (base_element->isStatement()) {
+				// @TODO
+				// throw base::NotYetImplemented("Taking symbols from statement");
+				return {};
+			}
+			else {
+				RIFT_PANIC("Creating scope for non-statement and non-codeblock");
+			}
 		}
 
 		static auto load(QKey key) -> LoadResult {

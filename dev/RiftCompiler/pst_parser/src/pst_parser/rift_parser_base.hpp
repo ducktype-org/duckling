@@ -27,6 +27,12 @@ namespace pst {
 			return id;
 		}
 
+		[[nodiscard]]
+		virtual bool isStatementAggregate() const { return false; };
+		
+		[[nodiscard]]
+		virtual bool isStatement() const { return false; };
+
 	private:
 		dia::SourcePosition source_position;
 
