@@ -14,6 +14,18 @@
 
 #define RETURN_TYPE IF_NOT_TC([[gnu::always_inline]] inline) void
 
+namespace {
+	// Returns number of opcodes recognized by Executor in a compile-time.
+	// Used for `vm::OP_CASES_COUNT`.
+	constexpr u16 count_op_cases() {
+		u16 count = 0;
+#define DEF_OPCODE(opcode) count++;
+#include "opcodes_list.hpp"
+#undef DEF_OPCODE
+		return count;
+	}
+}
+
 namespace vm {
 	class Executor;
 	struct Fix8Instruction;
@@ -21,10 +33,11 @@ namespace vm {
 	class OpFuns;
 	using OpFun = void(OPFUN_ARGS);
 
+
 	// Describes number of RiftBC opcodes + meta-opcodes recognized by Executor.
 	// This constant is relevant for `vm::Opfuns::opfuns[]` (instructions.hpp) and `opcode_label[]`
 	// (CG, executor.cpp)
-	constexpr u16 OP_CASES_COUNT = 44;
+	constexpr u16 OP_CASES_COUNT = count_op_cases();
 
 #ifdef USE_TAIL_CALLS
 	struct Fix8Instruction {
