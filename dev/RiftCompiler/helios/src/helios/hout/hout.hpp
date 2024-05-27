@@ -38,6 +38,8 @@ namespace compiler::helios {
 		// HOUTFunction(HOUTFunction&&) = default;
 		// HOUTFunction(const HOUTFunction&) = default;
 
+		base::StrId original_name;
+
 		HOUTCode body;
 
 		[[nodiscard]]

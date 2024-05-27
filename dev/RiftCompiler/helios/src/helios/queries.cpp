@@ -90,7 +90,23 @@ namespace compiler::helios {
 
 				// @TODO: crete inner scope and run FunctionCodeMaker on function body
 
-				out.emplace(HOUTFunction());
+				HOUTFunction output;
+				output.original_name = stmt.getName();
+
+				// @TODO: params, rest, flags, attributes, etc
+
+				auto outer_scope = ctx.query<QueryPrimaryCodeScopeFor>(
+					{ parent_scope, PstRef<pst::RiftElement>(&stmt) }
+				);
+
+				HOUTCodeMaker code_maker(ctx, outer_scope);
+				auto fun_body = stmt.getBody();
+
+				auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>(
+					{ outer_scope, PstRef<pst::RiftElement>(fun_body) }
+				);
+
+				out.emplace(output);
 			}
 		};
 		

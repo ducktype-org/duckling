@@ -17,8 +17,12 @@ namespace compiler::helios {
 	std::string HOUTFunction::debugPrint() const {
 		std::string out;
 		// @TODO
-		out += "@TODO\n";
 
+		out += "fun ";
+		out += original_name.strView();
+		out += " ( @TODO ) -> @TODO {\n";
+		out += "    @TODO\n";
+		out += "}\n";
 		return out;
 	}
 

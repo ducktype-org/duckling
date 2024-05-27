@@ -577,6 +577,9 @@ namespace pst {
 			return name.value;
 		}
 
+		[[nodiscard]]
+		auto getBody() const { return body.borrow(); }
+
 		static ParserRef<Fun> parse(RiftParserState& state);
 		void                  dprint(std::ostream& out) const final;
 		~Fun() final = default;
