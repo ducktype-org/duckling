@@ -65,7 +65,7 @@ def filter_results(output: str, search_for_function):
         function_name = function_names[0]
         if "OpFuns" in function_name:
             output += prettify_function_body(lines) + "\n\n"
-        if "internalCallMain" in function_name:
+        if "internalCall" in function_name:
             output = prettify_function_body(lines) + "\n\n" + output
         if search_for_function and search_for_function in function_name:
             return prettify_function_body(lines)
