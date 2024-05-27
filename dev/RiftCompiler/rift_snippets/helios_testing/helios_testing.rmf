@@ -9,7 +9,7 @@ fun foo(a: i32) -> i32 {
 	// if (true) {
 		
 	// }
-	// return 2;
+	return 2;
 
 	return;
 }

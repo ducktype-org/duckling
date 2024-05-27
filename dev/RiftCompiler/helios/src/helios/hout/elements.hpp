@@ -3,12 +3,17 @@
 #include <vector>
 #include <base/ints.hpp>
 
+#include <query_framework/query_int.hpp>
+#include <pst_parser/elements/elements.hpp>
+
+#include "../pst_ref.hpp"
+#include "../scope_symbol_id.hpp"
 #include "element_ref.hpp"
 
 
 namespace compiler::helios::code {
 
-	// @TODO: source positions
+	// @TODO: Add source positions
 	
 	struct Stmt {
 		// @TODO
@@ -27,6 +32,10 @@ namespace compiler::helios::code {
 		std::vector<ElementRef<Stmt>> statements;
 	};
 
+	/* * * * * * * *
+	 * Statements: *
+	 * * * * * * * */
+
 	struct ReturnStmt final: public Stmt {
 		ElementRef<Expr> value;
 
@@ -36,5 +45,28 @@ namespace compiler::helios::code {
 	struct VReturnStmt final: public Stmt {
 		void debugPrint(usize indent, std::string& out) const final;
 	};
+
+	/* * * * * * * * *
+	 * Expressions:  *
+	 * * * * * * * * */
+
+	struct ConstIntExpr final: public Expr {
+		// @TODO: ctv + type for consts?
+		i64 value;
+	};
+}
+
+
+namespace compiler::helios {
+	struct KeyOf_HoutOfExpr {
+		ScopeID scope;
+		PstRef<pst::Expr> expr;
+	};
+	
+	/**
+	 * @brief Construct HOUT Expr from Pst Expr, "within" given scope 
+	 * @TODO: perhaps add cache
+	 */
+	DECLARE_QUERY(HoutOfExpr, KeyOf_HoutOfExpr, code::ElementRef<code::Expr>);
 }
 
