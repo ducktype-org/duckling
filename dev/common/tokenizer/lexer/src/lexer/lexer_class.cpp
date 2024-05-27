@@ -12,9 +12,7 @@ namespace lexer {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			std::stringstream res;
-			res << "Illegal character at the beginning of a token.";
-			return res.str();
+			return "Illegal character at the beginning of a token.";
 		}
 
 	public:
@@ -30,9 +28,7 @@ namespace lexer {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			std::stringstream res;
-			res << "Unclosed block comment starting here.";
-			return res.str();
+			return "Unclosed block comment starting here.";
 		}
 
 	public:
@@ -48,9 +44,7 @@ namespace lexer {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			std::stringstream res;
-			res << "String unclosed before end of line.";
-			return res.str();
+			return "String unclosed before end of line.";
 		}
 
 	public:
@@ -65,9 +59,7 @@ namespace lexer {
 		protected:
 			[[nodiscard]]
 			std::string toStringBrief() const override {
-				std::stringstream res;
-				res << "This end of line.";
-				return res.str();
+				return "This end of line.";
 			}
 
 		public:
@@ -79,9 +71,7 @@ namespace lexer {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			std::stringstream res;
-			res << "String unclosed before end of file.";
-			return res.str();
+			return "String unclosed before end of file.";
 		}
 
 	public:
@@ -93,13 +83,11 @@ namespace lexer {
 		UnclosedStringEofError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	class UnclosedBracketEofError final: public dia::Error {
+	class UnmatchedBracketError final: public dia::Error {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			std::stringstream res;
-			res << "Bracket unclosed before end of file.";
-			return res.str();
+			return "Unmatched Bracket.";
 		}
 
 	public:
@@ -108,37 +96,29 @@ namespace lexer {
 			return Domain::Lexer;
 		}
 
-		UnclosedBracketEofError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class UnclosedBracketError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			std::stringstream res;
-			res << "Bracket closed with wrong type of bracket.";
-			return res.str();
+		UnmatchedBracketError(
+			dia::SourcePosition start_pos,
+			dia::SourcePosition expected_pos,
+			UChar32 closing_bracket
+		): dia::Error(start_pos){
+			addNote(base::make_unique<EndBlock>(expected_pos, closing_bracket));
 		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Lexer;
-		}
-
-		UnclosedBracketError(dia::SourcePosition pos): dia::Error(pos) {}
 
 		class EndBlock final: public dia::NoteWithPosition {
+		private:
+			UChar32 closing_bracket;
 		protected:
 			[[nodiscard]]
 			std::string toStringBrief() const override {
-				std::stringstream res;
-				res << "Closed here.";
-				return res.str();
+			std::string str_bracket{};
+			icu_74::UnicodeString(closing_bracket).toUTF8String(str_bracket);
+				return "Expected to be closed with " + str_bracket + ".";
 			}
 
 		public:
-			EndBlock(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+			EndBlock(dia::SourcePosition pos, UChar32 closing_bracket): 
+				dia::NoteWithPosition(pos),
+				closing_bracket(closing_bracket) {}
 		};
 	};
 
@@ -461,13 +441,14 @@ namespace lexer {
 		if (peek().is(group_end))
 			next();  // par close
 		else if (isEOF()) {
-			errorState.log(base::make_unique<UnclosedBracketEofError>(sourceStart));
+			errorState.log(base::make_unique<UnmatchedBracketError>(
+				sourceStart, currentPostion(), group_end
+			));
 			end = where - 1;
 		} else {
-			dia::SourcePosition endPos = currentPostion();
-			auto                error  = base::make_unique<UnclosedBracketError>(sourceStart);
-			error->addNote(base::make_unique<UnclosedBracketError::EndBlock>(endPos));
-			errorState.log(std::move(error));
+			errorState.log(base::make_unique<UnmatchedBracketError>(
+				sourceStart, currentPostion(), group_end
+			));
 			end = where - 1;
 		}
 
