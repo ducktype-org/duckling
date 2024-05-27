@@ -27,6 +27,7 @@ namespace compiler::helios::code {
 		// @TODO
 
 		virtual ~Expr() = default;
+		virtual void debugPrint(std::string& out) const = 0;
 	};
 	
 	struct CodeBlock final {
@@ -57,6 +58,7 @@ namespace compiler::helios::code {
 		// @TODO: ctv + type for consts?
 		i64 value;
 		ConstIntExpr(i64 value): value{value} {}
+		void debugPrint(std::string& out) const final;
 	};
 }
 

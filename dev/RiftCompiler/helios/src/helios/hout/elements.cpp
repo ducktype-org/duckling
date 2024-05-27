@@ -11,12 +11,18 @@ namespace compiler::helios::code {
 
 	void ReturnStmt::debugPrint(usize indent, std::string& out) const {
 		addIndent(indent, out);
-		out += "return [@TODO]\n";
+		out += "return ";
+		this->value->debugPrint(out);
+		out += "\n";
 	}
 
 	void VReturnStmt::debugPrint(usize indent, std::string& out) const {
 		addIndent(indent, out);
 		out += "void return\n";
+	}
+
+	void ConstIntExpr::debugPrint(std::string& out) const {
+		out += std::to_string(value);
 	}
 }
 
@@ -30,7 +36,7 @@ namespace compiler::helios {
 	QUERY_EXTENSION(houtOfSingleExpr, KeyOf_QueryHoutOfExpr, code::ElementRef<code::Expr>);
 	auto houtOfSingleExpr(query::Context&, KeyOf_QueryHoutOfExpr key) -> code::ElementRef<code::Expr> {
 		RIFT_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single expression");
-		auto&& elem = key.expr->elements.at(1);
+		auto&& elem = key.expr->elements.at(0);
 
 		variant_match(elem) {
 			variant_case(pst::Expr::KeywordValue, key) {
@@ -73,4 +79,13 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr);
+
+	base::HashT KeyOf_QueryHoutOfExpr::customPerfectHash() const {
+		auto hash_1 = base::perfectHash(scope);
+		auto hash_2 = this->expr->getID().asInt();
+
+		// @FIXME: this does not work:
+		return (hash_1 * 143 + hash_2 * 7);
+	}
+
 };
