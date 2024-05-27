@@ -4,6 +4,7 @@
 
 function check {
 	arg_size: 0;
+	next_arg_size: 0;
 	ret_size: 0;
 	local_size: 8;
 
@@ -15,6 +16,7 @@ function check {
 
 function main {
 	arg_size: 0;
+	next_arg_size: 0;
 	ret_size: 0;
 
 	local_size: 8;

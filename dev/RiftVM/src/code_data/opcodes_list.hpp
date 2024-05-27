@@ -48,10 +48,6 @@ DEF_OPCODE(cmov_l64_l64)
 DEF_OPCODE(mov_l64_r0)
 DEF_OPCODE(mov_r0_l64)
 
-// move primitive function arg to local variable
-DEF_OPCODE(mov_l64_pFuncArg)
-// move pointer function arg to local variable
-DEF_OPCODE(mov_lptr_ptrFuncArg)
 
 DEF_OPCODE(add_l64_l64)
 DEF_OPCODE(add_l64_imm)
@@ -78,10 +74,19 @@ DEF_OPCODE(jmpRel_label)
 DEF_OPCODE(jmpRelIf_label)
 DEF_OPCODE(jmpRelNotIf_label)
 
-// set primitive argument
-DEF_OPCODE(setPArg_l64)
-// set pointer argument
-DEF_OPCODE(setPtrArg_lptr)
+DEF_OPCODE(getFstArg_l64)
+DEF_OPCODE(getFstArg_lptr)
+
+DEF_OPCODE(mov_l64_arg64)
+DEF_OPCODE(mov_lptr_argptr)
+
+DEF_OPCODE(setFstArg_l64)
+DEF_OPCODE(setFstArg_lptr)
+
+DEF_OPCODE(mov_arg64_l64)
+DEF_OPCODE(mov_argptr_lptr)
+
+
 DEF_OPCODE(call_func)
 
 // return while performing a tail call

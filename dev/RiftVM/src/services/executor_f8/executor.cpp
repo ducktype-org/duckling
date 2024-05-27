@@ -39,7 +39,8 @@ namespace vm {
 			.regs        = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = memory.nullPtr() },
 			.flags       = FlagData{ .flag = false },
 			.ret_val     = 0,
-			.args        = { 0, memory.nullPtr() },
+			.next_args   = nullptr,
+			.args        = nullptr,
 
 			.block_id_stack   = std::vector<BlockId>(),
 			.local_stack_head = 0,
@@ -121,16 +122,6 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_mov_r0_l64(OPFUN_ARGS) {
 		{ frame->regs.p64_reg_0 = derefStack<u64>(local_stack, instr->arg0); }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mov_l64_pFuncArg(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) = frame->args.p64_arg; }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mov_lptr_ptrFuncArg(OPFUN_ARGS) {
-		{ derefStack<Pointer>(local_stack, instr->arg0) = frame->args.pointer_arg; }
 		OPFUN_CONT(1);
 	}
 
@@ -222,13 +213,55 @@ namespace vm {
 		OPFUN_CONT_CHECK_STRATEGY(1);
 	}
 
-	RETURN_TYPE OpFuns::op_setPtrArg_lptr(OPFUN_ARGS) {
-		{ (frame + 1)->args.pointer_arg = derefStack<Pointer>(local_stack, instr->arg0); }
+	RETURN_TYPE OpFuns::op_mov_l64_arg64(OPFUN_ARGS) {
+		{ derefStack<i64>(local_stack, instr->arg0) = derefStack<i64>(frame->args, instr->arg1); }
 		OPFUN_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_setPArg_l64(OPFUN_ARGS) {
-		{ (frame + 1)->args.p64_arg = derefStack<i64>(local_stack, instr->arg0); }
+	RETURN_TYPE OpFuns::op_mov_lptr_argptr(OPFUN_ARGS) {
+		{
+			derefStack<Pointer>(local_stack, instr->arg0)
+				= derefStack<Pointer>(frame->args, instr->arg1);
+		}
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::op_getFstArg_l64(OPFUN_ARGS) {
+		{ derefStack<i64>(local_stack, instr->arg0) = derefStack<i64>(frame->args, 0); }
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::op_getFstArg_lptr(OPFUN_ARGS) {
+		{ derefStack<Pointer>(local_stack, instr->arg0) = derefStack<Pointer>(frame->args, 0); }
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::op_setFstArg_l64(OPFUN_ARGS) {
+		{ derefStack<i64>(frame->next_args, 0) = derefStack<i64>(local_stack, instr->arg0); }
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::op_setFstArg_lptr(OPFUN_ARGS) {
+		{
+			derefStack<Pointer>(frame->next_args, 0)
+				= derefStack<Pointer>(local_stack, instr->arg0);
+		}
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::op_mov_arg64_l64(OPFUN_ARGS) {
+		{
+			derefStack<i64>(frame->next_args, instr->arg0)
+				= derefStack<i64>(local_stack, instr->arg1);
+		}
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::op_mov_argptr_lptr(OPFUN_ARGS) {
+		{
+			derefStack<Pointer>(frame->next_args, instr->arg0)
+				= derefStack<Pointer>(local_stack, instr->arg1);
+		}
 		OPFUN_CONT(1);
 	}
 
@@ -245,17 +278,24 @@ namespace vm {
 			frame->instr       = instr + 1;
 			frame->local_stack = local_stack;
 
+			// Prepare new frame.
+			auto* prev_frame = frame;
 			frame++;
 			i32 function_id = instr->arg0;
 			if (frame + 1 >= runtime_data.frame_stack_end) RIFT_PANIC("RiftVM stack overflow.");
+			frame->args = prev_frame->next_args;
 
 			// Update values passed as arguments.
 			instr = executor.executing_code->functions[function_id].bc.data();
 
 			u64 local_stack_size = executor.executing_code->functions[function_id].stack_size;
 			local_stack          = runtime_data.local_stack_top;
-
 			runtime_data.local_stack_top += local_stack_size;
+
+			frame->next_args = runtime_data.local_stack_top;
+			runtime_data.local_stack_top
+				+= executor.executing_code->functions[function_id].next_arg_size;
+
 			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
 				RIFT_PANIC("RiftVM stack overflow.");
 		}
@@ -270,16 +310,11 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_ret_tailcall(OPFUN_ARGS) {
 		{
-			auto& runtime_data = executor.runtime_data;
-
 			auto function_id = instr->arg0;
-			frame->args      = (frame + 1)->args;
-			instr            = executor.executing_code->functions[function_id].bc.data();
 
-			auto local_stack_size = executor.executing_code->functions[function_id].stack_size;
-			runtime_data.local_stack_top = local_stack + local_stack_size;
-			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
-				RIFT_PANIC("RiftVM stack overflow.");
+			instr = executor.executing_code->functions[function_id].bc.data();
+
+			swap(frame->args, frame->next_args);
 		}
 		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
@@ -482,6 +517,9 @@ namespace vm {
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
 		std::byte* local_stack = runtime_data.local_stack_top;
 		runtime_data.local_stack_top += main_func.stack_size;
+
+		frame->next_args = runtime_data.local_stack_top;
+		runtime_data.local_stack_top += main_func.next_arg_size;
 
 		auto* instr = main_func.bc.data();
 
