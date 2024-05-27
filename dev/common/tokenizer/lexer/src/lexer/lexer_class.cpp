@@ -111,7 +111,7 @@ namespace lexer {
 			[[nodiscard]]
 			std::string toStringBrief() const override {
 				std::string str_bracket{};
-				icu_74::UnicodeString(closing_bracket).toUTF8String(str_bracket);
+				icu::UnicodeString(closing_bracket).toUTF8String(str_bracket);
 				return "Expected to be closed with " + str_bracket + ".";
 			}
 

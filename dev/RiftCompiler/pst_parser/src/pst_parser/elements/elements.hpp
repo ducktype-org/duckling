@@ -617,7 +617,7 @@ namespace pst {
 		[[nodiscard]]
 		std::string toStringBrief() const override {
 			std::string str_bracket{};
-			icu_74::UnicodeString(bracket).toUTF8String(str_bracket);
+			icu::UnicodeString(bracket).toUTF8String(str_bracket);
 			std::stringstream ss;
 			ss << "Opening bracket " << str_bracket << " of a " << type()
 			   << " list expected after here.";
