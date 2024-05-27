@@ -6,10 +6,10 @@ const b: i32 = 20;
 
 fun foo(a: i32) -> i32 {
 
-	if (true) {
+	// if (true) {
 		
-	}
-	return 2;
+	// }
+	// return 2;
 }
 
 

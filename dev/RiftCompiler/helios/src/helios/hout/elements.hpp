@@ -10,10 +10,15 @@ namespace compiler::helios::code {
 	
 	struct Stmt {
 		// @TODO
+
+		virtual ~Stmt() = default;
+		virtual std::string debugPrint() = 0;
 	};
 
 	struct Expr { 
 		// @TODO
+
+		virtual ~Expr() = default;
 	};
 	
 	struct CodeBlock final {
@@ -22,8 +27,17 @@ namespace compiler::helios::code {
 
 	struct ReturnStmt final: public Stmt {
 		ElementRef<Expr> value;
+
+
+		std::string debugPrint() final {
+			return "return [@TODO]";
+		}
 	};
 
-	struct VReturnStmt final: public Stmt {	};
+	struct VReturnStmt final: public Stmt {
+		std::string debugPrint() final {
+			return "void-return";
+		}
+	};
 }
 

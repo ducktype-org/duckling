@@ -21,7 +21,9 @@ namespace compiler::helios {
 		out += "fun ";
 		out += original_name.strView();
 		out += " ( @TODO ) -> @TODO {\n";
-		out += "    @TODO\n";
+		for (auto&& stmt: body.body->statements) {
+			out += stmt->debugPrint();
+		}
 		out += "}\n";
 		return out;
 	}

@@ -64,17 +64,6 @@ namespace compiler::helios {
 
 		};
 
-		struct HOUTCodeMaker: public pst::PstStmtVisitorPanicky {
-			query::Context& ctx;
-			ScopeID parent_scope;
-
-			base::Optional<HOUTCode> out;
-
-			HOUTCodeMaker(query::Context& ctx, ScopeID scope): ctx(ctx), parent_scope(scope) {}
-
-			// @TODO: visits
-		};
-
 		struct HOUTFunctionMaker: public pst::PstStmtVisitorPanicky {
 			query::Context& ctx;
 			ScopeID parent_scope;
@@ -95,18 +84,31 @@ namespace compiler::helios {
 
 				// @TODO: params, rest, flags, attributes, etc
 
-				auto outer_scope = ctx.query<QueryPrimaryCodeScopeFor>(
-					{ parent_scope, PstRef<pst::RiftElement>(&stmt) }
-				);
+				// @TODO: creation of scope for function and filling it with
+				// parameters symbols require slight refactor of how the
+				// scope "gets" its symbol list.
 
-				HOUTCodeMaker code_maker(ctx, outer_scope);
+				// auto outer_scope = ctx.query<QueryPrimaryCodeScopeFor>(
+				// 	{ parent_scope, PstRef<pst::RiftElement>(&stmt) }
+				// );
+
 				auto fun_body = stmt.getBody();
 
 				auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>(
-					{ outer_scope, PstRef<pst::RiftElement>(fun_body) }
+					{ /*outer_scope*/ parent_scope, PstRef<pst::RiftElement>(fun_body) }
 				);
 
-				out.emplace(output);
+				// HOUTCode out;
+				code::CodeBlock function_body;
+				for (const auto& code_stmt: fun_body) {
+					HoutStmtMaker stmt_maker(ctx, inner_scope);
+					code_stmt->acceptVistior(stmt_maker);
+					function_body.statements.emplace_back(std::move(stmt_maker.out.value()));
+				}
+
+				output.body.body = std::make_shared<const code::CodeBlock>(std::move(function_body));
+
+				this->out.emplace(output);
 			}
 		};
 		
