@@ -20,9 +20,7 @@ int main(int argc, char** argv) {
 	if (token_file->getLogger().bad()) {
 		printJson(token_file->getLogger());
 	} else {
-		auto pst        = pst::parse(std::move(token_file));
-		if (pst.getLogger().bad()) {
-			printJson(pst.getLogger());
-		}
+		auto pst = pst::parse(std::move(token_file));
+		if (pst.getLogger().bad()) printJson(pst.getLogger());
 	}
 }
