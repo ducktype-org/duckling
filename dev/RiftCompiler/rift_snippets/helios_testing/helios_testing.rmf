@@ -16,3 +16,11 @@ fun foo(a: i32) -> i32 {
 namespace N {
 	const abc: i32 = a+b+c;
 }
+
+const strange: i32 = N.abc + a1;
+
+namespace NN {
+	const a1: i32 = N.abc;
+}
+
+using NN.*;
