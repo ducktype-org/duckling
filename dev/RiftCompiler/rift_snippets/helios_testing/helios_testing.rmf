@@ -1,17 +1,20 @@
-const a: i32 = 0;
-const b: i32 = 2;
-const b: i32 = 20;
-const b: i32 = 20;
 
+namespace N {
+	const a: i32 = 0;
+}
+
+// const b: i32 = 2;
+// const b: i32 = 20;
+// const b: i32 = 20;
+
+
+const c: i32 = N.a + 30;
 
 fun foo(a: i32) -> i32 {
 
-	// if (true) {
-		
-	// }
 	return 2;
 
-	return;
+	// return;
 }
 
 

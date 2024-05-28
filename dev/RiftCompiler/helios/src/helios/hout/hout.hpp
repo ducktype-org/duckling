@@ -47,6 +47,21 @@ namespace compiler::helios {
 	};
 
 	/**
+	 * @brief Represents a constant
+	 * @TODO: make it represent more general stuff
+	 */
+	struct HOUTGlobalData {
+		base::StrId original_name;
+		// @TODO: types
+
+		// @TODO: CTV from TS:
+		i64 value;
+
+		[[nodiscard]]
+		std::string debugPrint() const;
+	};
+
+	/**
 	 * @brief Structure representing single HOUTUnit
 	 */
 	struct HOUTUnit {
@@ -57,6 +72,8 @@ namespace compiler::helios {
 		// * defined templates
 		// * vector/references to hout of submodules? -- not necessarily needed
 		// * what else?
+
+		std::vector<HOUTGlobalData> glob_data;
 
 		std::vector<HOUTFunction> functions;
 

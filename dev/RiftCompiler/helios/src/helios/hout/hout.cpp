@@ -6,6 +6,12 @@ namespace compiler::helios {
 		std::string out;
 
 		out += "HOUT UNIT:\n";
+
+		out += "Constants:\n";
+		for (auto& const_: glob_data) {
+			out += const_.debugPrint();
+		}
+
 		out += "Functions:\n";
 		for (auto& func: functions) {
 			out += func.debugPrint();
@@ -26,6 +32,16 @@ namespace compiler::helios {
 		}
 		out += "}\n";
 		return out;
+	}
+
+	std::string HOUTGlobalData::debugPrint() const {
+		return base::strConcat(
+			"const ",
+			original_name,
+			" := ",
+			value,
+			"\n"
+		);
 	}
 
 

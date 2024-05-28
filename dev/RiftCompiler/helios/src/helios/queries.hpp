@@ -34,7 +34,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Debug/testing query for extracting top-level functions from module
 	 */
-	DECLARE_QUERY(QueryTopLevelFunctions, frontend::ModuleId, HOUTUnit)
+	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleId, HOUTUnit)
 
 
 	/**

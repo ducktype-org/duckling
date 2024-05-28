@@ -14,7 +14,7 @@
 namespace compiler::helios {
 
 
-	struct IMPLEMENT_QUERY(QueryTopLevelFunctions, HOUTUnit) {
+	struct IMPLEMENT_QUERY(QueryTopLevelEntities, HOUTUnit) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// go over all to level symbols and get theirs hout
 			// store it in some vector or something
@@ -35,6 +35,18 @@ namespace compiler::helios {
 
 			HOUTUnit out;
 
+			// grab constants:
+			for (auto sym: symbols_in_submodule) {
+				if (kind(sym) == SymbolKind::Const) {
+					auto original_name = name(sym);
+					auto value = ctx.query<QueryConstValueOf>(sym);
+
+					out.glob_data.push_back(HOUTGlobalData{
+						original_name, value
+					});
+				}
+			}
+
 			// grab functions:
 			for (auto sym: symbols_in_submodule) {
 				if (kind(sym) == SymbolKind::Function) {
@@ -48,7 +60,7 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelFunctions);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
 
 
 	struct IMPLEMENT_QUERY(QueryCodeOFFun, HOUTFunction) {
