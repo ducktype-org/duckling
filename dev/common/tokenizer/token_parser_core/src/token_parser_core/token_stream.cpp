@@ -9,7 +9,9 @@
 
 namespace tpc {
 
-	TokenStream::TokenStream(const Tokens& tokens, Token sentinel_begin, Token sentinel_end, usize from, usize to):
+	TokenStream::TokenStream(
+		const Tokens& tokens, Token sentinel_begin, Token sentinel_end, usize from, usize to
+	):
 		  tokens(tokens),
 		  where(from),
 		  to(to),
@@ -39,7 +41,7 @@ namespace tpc {
 	const Token& TokenStream::next() { return (where >= to ? sentinel_end : tokens[where++]); }
 
 	const Token& TokenStream::peek(i64 fwd) const {
-		if (std::max(-fwd, (i64)0) > where) return sentinel_begin;
+		if (std::max(-fwd, (i64) 0) > where) return sentinel_begin;
 		return (where + fwd >= to ? sentinel_end : tokens[where + fwd]);
 	}
 

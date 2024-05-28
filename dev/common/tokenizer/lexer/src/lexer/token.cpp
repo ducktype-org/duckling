@@ -31,7 +31,8 @@ namespace lexer {
 		  source_position(position),
 		  bracket_type(bracket_type) {
 		RIFT_ASSERT(
-			this->sentinel_begin->getType() == Type::Sentinel, "non-sentinel token passed as sentinel"
+			this->sentinel_begin->getType() == Type::Sentinel,
+			"non-sentinel token passed as sentinel"
 		);
 		RIFT_ASSERT(
 			this->sentinel_end->getType() == Type::Sentinel, "non-sentinel token passed as sentinel"
@@ -100,7 +101,8 @@ namespace lexer {
 		Token&&                    sentinel_end,
 		const dia::SourcePosition& position
 	) {
-		return { Type::BracketGroup, std::move(tokens), std::move(sentinel_begin), std::move(sentinel_end), position, groupType };
+		return { Type::BracketGroup,      std::move(tokens), std::move(sentinel_begin),
+			     std::move(sentinel_end), position,          groupType };
 	}
 
 	Token Token::makeError(const dia::SourcePosition& position) {

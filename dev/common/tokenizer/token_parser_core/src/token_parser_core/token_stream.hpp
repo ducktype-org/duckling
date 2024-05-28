@@ -20,10 +20,10 @@ namespace tpc {
 	 * @note We might need to add sentinel_begin if we implement going backwards
 	 */
 	class TokenStream {
-		const Tokens& tokens;        ///< Source list of tokens
-		usize         where = 0;     ///< current position
-		usize         to;            ///< end position
-		Token         sentinel_end;  ///< Token to return if out of bounds forward
+		const Tokens& tokens;          ///< Source list of tokens
+		usize         where = 0;       ///< current position
+		usize         to;              ///< end position
+		Token         sentinel_end;    ///< Token to return if out of bounds forward
 		Token         sentinel_begin;  ///< Token to return if out of bounds backwards
 
 	public:
@@ -31,7 +31,9 @@ namespace tpc {
 		TokenStream(TokenStream&) = delete;
 		TokenStream(TokenStream&&) noexcept;
 
-		TokenStream(const Tokens& tokens, Token sentinel_begin, Token sentinel_end, usize from, usize to);
+		TokenStream(
+			const Tokens& tokens, Token sentinel_begin, Token sentinel_end, usize from, usize to
+		);
 
 		/**
 		 * @brief Returns token at current position then increases the current position

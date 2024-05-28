@@ -137,7 +137,9 @@ namespace lexer {
 		codeblock();
 		dia::SourcePosition eof_pos(file, where);
 		dia::SourcePosition bof_pos(file, 0);
-		return { std::move(tokens), Token::makeSentinelBof(bof_pos), Token::makeSentinelEof(eof_pos) };
+		return { std::move(tokens),
+			     Token::makeSentinelBof(bof_pos),
+			     Token::makeSentinelEof(eof_pos) };
 	}
 
 	void Lexer::next() {
@@ -423,9 +425,9 @@ namespace lexer {
 		auto  source_start = currentPostion();
 
 		Token::BracketType bracket_type{ peek().value };
-		auto               group_end = peek().bracketPair();
-		auto sentinel_begin_view = file->getCharRange(where, where + 1);
-		Token               sentinel_begin     = Token::makeSentinel(sentinel_begin_view, source_start);
+		auto               group_end           = peek().bracketPair();
+		auto               sentinel_begin_view = file->getCharRange(where, where + 1);
+		Token              sentinel_begin = Token::makeSentinel(sentinel_begin_view, source_start);
 		if (tokenMessages())
 			printer::StreamPrinter::printNL(base::strConcat("group begin", generateLineColumnInfo())
 			);
@@ -460,10 +462,14 @@ namespace lexer {
 
 		dia::SourcePosition sentinel_end_position(file, end);
 		auto                sentinel_end_view = file->getCharRange(end, end + 1);
-		Token               sentinel_end     = Token::makeSentinel(sentinel_end_view, sentinel_end_position);
+		Token sentinel_end = Token::makeSentinel(sentinel_end_view, sentinel_end_position);
 
 		output.push_back(Token::makeBracketGroup(
-			bracket_type, std::move(inner_tokens), std::move(sentinel_begin), std::move(sentinel_end), source_position
+			bracket_type,
+			std::move(inner_tokens),
+			std::move(sentinel_begin),
+			std::move(sentinel_end),
+			source_position
 		));
 		if (tokenMessages()) printer::StreamPrinter::printNL("group end");
 	}

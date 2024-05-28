@@ -670,23 +670,6 @@ namespace pst {
 	};
 
 	template<GetName type>
-	class EndListError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unexpected end to the " + type() + " list.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		EndListError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	template<GetName type>
 	class EmptyFieldError final: public dia::Error {
 	protected:
 		[[nodiscard]]
@@ -755,7 +738,7 @@ namespace pst {
 		} else {
 			while (true) {
 				expr_length = 0;
-				while (!state.ctokens().is(lexer::Token::Type::Sentinel, expr_length)
+				while (!state.ctokens().is(lexer::Token::Type::Sentinel, (i64) expr_length)
 				       && !isSeparator(state, expr_length) && !isEnding(state, expr_length)) {
 					expr_length++;
 				}
@@ -764,14 +747,14 @@ namespace pst {
 						auto pos = state.getPosition(-1);
 						if (!state.isEOF()) {
 							auto other = state.getPosition();
-							pos = dia::SourcePosition(pos, other.getStart());
+							pos        = dia::SourcePosition(pos, other.getStart());
 						}
-						state.fail(base::make_unique<EndListError<getName>>(pos));
+						state.fail(base::make_unique<EmptyFieldError<getName>>(pos));
 						break;
 					} else {
-						state.fail(base::make_unique<EmptyFieldError<getName>>(
-							state.getPosition(-1, 0)
-						));
+						state.fail(
+							base::make_unique<EmptyFieldError<getName>>(state.getPosition(-1, 0))
+						);
 						state.tokens().skip();
 						continue;
 					}
