@@ -23,14 +23,15 @@ namespace tpc {
 		const Tokens& tokens;        ///< Source list of tokens
 		usize         where = 0;     ///< current position
 		usize         to;            ///< end position
-		Token         sentinel_end;  ///< Token to return if out of bounds
+		Token         sentinel_end;  ///< Token to return if out of bounds forward
+		Token         sentinel_begin;  ///< Token to return if out of bounds backwards
 
 	public:
 		TokenStream()             = delete;
 		TokenStream(TokenStream&) = delete;
 		TokenStream(TokenStream&&) noexcept;
 
-		TokenStream(const Tokens& tokens, Token sentinel_end, usize from, usize to);
+		TokenStream(const Tokens& tokens, Token sentinel_begin, Token sentinel_end, usize from, usize to);
 
 		/**
 		 * @brief Returns token at current position then increases the current position
@@ -43,7 +44,7 @@ namespace tpc {
 		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
-		const Token& peek(usize fwd = 0) const;
+		const Token& peek(i64 fwd = 0) const;
 		/**
 		 * @brief Increases the current position by `n`
 		 */
@@ -56,7 +57,7 @@ namespace tpc {
 		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
-		bool isRecursive(usize fwd = 0) const;
+		bool isRecursive(i64 fwd = 0) const;
 
 		/**
 		 * @brief Go into the recursive stream of the current token. If the current token doesn't
@@ -73,9 +74,9 @@ namespace tpc {
 		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
-		bool isKeyword(usize fwd = 0) const;
+		bool isKeyword(i64 fwd = 0) const;
 		[[nodiscard]]
-		Keyword asKeyword(usize fwd = 0) const;
+		Keyword asKeyword(i64 fwd = 0) const;
 
 		/**
 		 * @brief Checks whether a token is a special
@@ -83,9 +84,9 @@ namespace tpc {
 		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
-		bool isSpecial(usize fwd = 0) const;
+		bool isSpecial(i64 fwd = 0) const;
 		[[nodiscard]]
-		Special asSpecial(usize fwd = 0) const;
+		Special asSpecial(i64 fwd = 0) const;
 
 		/**
 		 * @brief Checks whether a token is an operator
@@ -93,7 +94,7 @@ namespace tpc {
 		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
-		bool isOperator(usize fwd = 0) const;
+		bool isOperator(i64 fwd = 0) const;
 		/**
 		 * @brief Checks whether a token is a particular operator
 		 *
@@ -101,7 +102,7 @@ namespace tpc {
 		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
-		bool isOperator(base::StrId oper, usize fwd = 0) const;
+		bool isOperator(base::StrId oper, i64 fwd = 0) const;
 
 		/**
 		 * @brief Checks whether a token is a bracket group
@@ -109,7 +110,7 @@ namespace tpc {
 		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
-		bool isBracketGroup(usize fwd = 0) const;
+		bool isBracketGroup(i64 fwd = 0) const;
 		/**
 		 * @brief Checks whether a token is a particular bracket group
 		 *
@@ -117,7 +118,7 @@ namespace tpc {
 		 * @param fwd distance forward from the current position to checked token
 		 */
 		[[nodiscard]]
-		bool isBracketGroup(Token::BracketType type, usize fwd = 0) const;
+		bool isBracketGroup(Token::BracketType type, i64 fwd = 0) const;
 
 		/**
 		 * @brief Allows for comparing a token with values of multiple different types
@@ -133,7 +134,7 @@ namespace tpc {
 		 */
 		template<class T>
 		[[nodiscard]]
-		bool is(T t, const usize fwd = 0) const {
+		bool is(T t, const i64 fwd = 0) const {
 			return peek(fwd).is(t);
 		}
 

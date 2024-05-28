@@ -26,7 +26,7 @@ namespace pst {
 	ParserRef<Expr> Expr::parseUntil(RiftParserState& state, rift_def::Operator until) {
 		// look ahead:
 		usize count = 0;
-		while (!state.ctokens().is(until, count)) {
+		while (!state.ctokens().is(until, (i64)count)) {
 			if (state.ctokens().size() < count) {
 				state.fail(0, "Bad expression end");
 				break;

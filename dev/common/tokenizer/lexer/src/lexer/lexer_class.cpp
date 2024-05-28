@@ -136,7 +136,8 @@ namespace lexer {
 		tokens.clear();
 		codeblock();
 		dia::SourcePosition eof_pos(file, where);
-		return { std::move(tokens), Token::makeSentinelEof(eof_pos) };
+		dia::SourcePosition bof_pos(file, 0);
+		return { std::move(tokens), Token::makeSentinelBof(bof_pos), Token::makeSentinelEof(eof_pos) };
 	}
 
 	void Lexer::next() {
@@ -419,10 +420,12 @@ namespace lexer {
 
 	void Lexer::bracketHandler(Tokens& output) {
 		usize end{};
-		auto  sourceStart = currentPostion();
+		auto  source_start = currentPostion();
 
 		Token::BracketType bracket_type{ peek().value };
 		auto               group_end = peek().bracketPair();
+		auto sentinel_begin_view = file->getCharRange(where, where + 1);
+		Token               sentinel_begin     = Token::makeSentinel(sentinel_begin_view, source_start);
 		if (tokenMessages())
 			printer::StreamPrinter::printNL(base::strConcat("group begin", generateLineColumnInfo())
 			);
@@ -442,25 +445,25 @@ namespace lexer {
 			next();  // par close
 		else if (isEOF()) {
 			errorState.log(
-				base::make_unique<UnmatchedBracketError>(sourceStart, currentPostion(), group_end)
+				base::make_unique<UnmatchedBracketError>(source_start, currentPostion(), group_end)
 			);
 			end = where - 1;
 		} else {
 			errorState.log(
-				base::make_unique<UnmatchedBracketError>(sourceStart, currentPostion(), group_end)
+				base::make_unique<UnmatchedBracketError>(source_start, currentPostion(), group_end)
 			);
 			end = where - 1;
 		}
 
 
-		dia::SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition source_position(source_start, end);
 
-		dia::SourcePosition sentinelPosition(file, end);
-		auto                sentinelView = file->getCharRange(end, end + 1);
-		Token               sentinel     = Token::makeSentinelEnd(sentinelView, sentinelPosition);
+		dia::SourcePosition sentinel_end_position(file, end);
+		auto                sentinel_end_view = file->getCharRange(end, end + 1);
+		Token               sentinel_end     = Token::makeSentinel(sentinel_end_view, sentinel_end_position);
 
 		output.push_back(Token::makeBracketGroup(
-			bracket_type, std::move(inner_tokens), std::move(sentinel), sourcePosition
+			bracket_type, std::move(inner_tokens), std::move(sentinel_begin), std::move(sentinel_end), source_position
 		));
 		if (tokenMessages()) printer::StreamPrinter::printNL("group end");
 	}

@@ -686,6 +686,40 @@ namespace pst {
 		EndListError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
+	template<GetName type>
+	class EmptyFieldError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Empty field in the " + type() + " list.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		EmptyFieldError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	template<GetName type>
+	class NoSeparatorError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return type() + " list separator expected.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		NoSeparatorError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	/**
 	 * @note We might want to move it outside and allow only for specific instances to be cleaner.
 	 */
@@ -727,11 +761,17 @@ namespace pst {
 				}
 				if (expr_length == 0) {
 					if (state.empty() || isEnding(state, 0)) {
-						state.fail(base::make_unique<EndListError<getName>>(state.getPosition(-1, 0)
-						));
+						auto pos = state.getPosition(-1);
+						if (!state.isEOF()) {
+							auto other = state.getPosition();
+							pos = dia::SourcePosition(pos, other.getStart());
+						}
+						state.fail(base::make_unique<EndListError<getName>>(pos));
 						break;
 					} else {
-						state.fail(0, "empty field in a list before here");
+						state.fail(base::make_unique<EmptyFieldError<getName>>(
+							state.getPosition(-1, 0)
+						));
 						state.tokens().skip();
 						continue;
 					}
@@ -741,9 +781,7 @@ namespace pst {
 				if (isSeparator(state, 0))
 					state.tokens().skip();
 				else
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "separator expected"
-					);
+					state.fail(base::make_unique<NoSeparatorError<getName>>(state.getPosition()));
 			}
 		}
 
