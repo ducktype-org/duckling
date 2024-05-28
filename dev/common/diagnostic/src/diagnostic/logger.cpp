@@ -3,7 +3,7 @@
 
 namespace dia {
 	void Logger::log(
-		base::unique_ptr<Message> message_ptr, const bool immediately_dump, const bool detailed
+		base::unique_ptr<Message> message_ptr, const bool detailed, const bool immediately_dump
 	) {
 		if (immediately_dump) {
 			printer::StreamPrinter::print(
@@ -16,6 +16,9 @@ namespace dia {
 		message_log.at(severity_id).emplace_back(std::move(message_ptr));
 	}
 
+	/**
+	 * @todo This should be done by the converter (look json toplevel list)
+	 */
 	template<DiagnosticToPrinterConverter Converter>
 	void Logger::dumpLog(const bool detailed, std::ostream& stream) const {
 		// Currently, errors are dumped first, then warnings, then infos.

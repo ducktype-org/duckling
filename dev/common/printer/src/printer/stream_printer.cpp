@@ -26,7 +26,9 @@ namespace printer {
 
 		out << content.str;
 		// Reset color settings after message ends.
-		out << "\033[0m";
+		if (foreground_color_id > 0 || background_color_id > 0) {
+			out << "\033[0m";
+		}
 	}
 
 	void StreamPrinter::newline(int times, std::ostream& out) {
