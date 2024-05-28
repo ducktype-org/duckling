@@ -20,23 +20,16 @@ namespace compiler::helios {
 			// store it in some vector or something
 			// lookup all and stuff
 
-			auto&& root_scope = ctx.query<QueryRootScopeOf>(key);
-			auto&& module_file = ctx.query<frontend::QueryMainSourceFile>(key);
+			auto root_scope = ctx.query<QueryRootScopeOf>(key);
 
-			auto&& main_pst = ctx.query<frontend::QueryFilePST>(module_file);
-
-			auto&& module_root_scope_id = ctx.query<QueryPrimaryCodeScopeFor>(
-				{ root_scope, main_pst.getTopLevelElement() }
-			);
-
-			auto&& symbols_in_submodule
-				= ctx.query<QuerySymbolsInScope>(module_root_scope_id);
+			auto symbols_in_module_root
+				= ctx.query<QuerySymbolsInScope>(root_scope);
 
 
 			HOUTUnit out;
 
 			// grab constants:
-			for (auto sym: symbols_in_submodule) {
+			for (auto sym: symbols_in_module_root) {
 				if (kind(sym) == SymbolKind::Const) {
 					auto original_name = name(sym);
 					auto value = ctx.query<QueryConstValueOf>(sym);
@@ -48,7 +41,7 @@ namespace compiler::helios {
 			}
 
 			// grab functions:
-			for (auto sym: symbols_in_submodule) {
+			for (auto sym: symbols_in_module_root) {
 				if (kind(sym) == SymbolKind::Function) {
 					out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
 				}

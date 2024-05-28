@@ -23,6 +23,7 @@ namespace compiler::helios {
 
 	struct KeyOf_QueryPrimaryCodeScopeFor {
 		// @TODO is this needed?
+		// @TODO: delete it somehow???
 		ScopeID parent;
 
 		// Stmt here makes no sense with getChildStmtsOf

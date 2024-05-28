@@ -1,33 +1,18 @@
+const x: i32 = nabc;
 
-// namespace N {
-// 	const a: i32 = 0;
-// }
+alias nabc = N.abc;
 
-// const b: i32 = 2;
-// const b: i32 = 20;
-// const b: i32 = 20;
-
-
-// const c: i32 = N.a + 30;
-
-// fun foo(a: i32) -> i32 {
-
-// 	return 2;
-
-// 	// return;
-// }
-
-
-
-// fun foo2( ) {
-
-// }
-
-
+const b: i32 = 0;
 const a: i32 = 2;
 
-namespace N {
-	const b: i32 = a;
+const c: i32 = a + b;
+
+
+fun foo(a: i32) -> i32 {
+
+	return 2;
 }
 
-
+namespace N {
+	const abc: i32 = a+b+c;
+}
