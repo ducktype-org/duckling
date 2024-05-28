@@ -27,15 +27,14 @@ namespace ts {
 	}
 
 	[[nodiscard]]
-	const std::string& TypeInfo::show() const {
-		return pimpl->show();
+	const std::string& TypeInfo::toString() const {
+		return pimpl->toString();
 	}
 
 	[[nodiscard]]
-	bool TypeInfo::isInfoImplicitlyCoercible(
-		const TypeInfo target, query::detail::ContextType& context
-	) const {
-		return pimpl->isImplImplicitlyCoercible(target, context);
+	bool TypeInfo::isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType& ctx)
+		const {
+		return pimpl->isImplicitlyCoercible(target, ctx);
 	}
 
 	// Specialized template definition and explicit instantiation.
