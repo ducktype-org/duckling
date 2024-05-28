@@ -25,13 +25,6 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryModuleHOUTRecursively, frontend::ModuleId, std::vector<HOUTUnit>)
 
 	/**
-	 * @brief Query SymbolID of given module
-	 *	@TODO: do we want module symbols?
-	 */
-	DECLARE_QUERY(QueryModuleSymbol, frontend::ModuleId, SymID)
-
-
-	/**
 	 * @brief Debug/testing query for extracting top-level functions from module
 	 */
 	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleId, HOUTUnit)

@@ -25,7 +25,6 @@ namespace compiler::helios {
 			auto symbols_in_module_root
 				= ctx.query<QuerySymbolsInScope>(root_scope);
 
-
 			HOUTUnit out;
 
 			// grab constants:
@@ -68,6 +67,9 @@ namespace compiler::helios {
 
 			// @TODO: visits for all valid stmt-s
 
+			// @krzyś
+			// Na teraz: deklaracja zmiennej, if-y, expression
+
 			void visitReturn(const pst::Return& stmt) override {
 				if (auto val = stmt.getValue()) {
 					auto expr = ctx.query<QueryHoutOfExpr>({
@@ -79,6 +81,7 @@ namespace compiler::helios {
 					this->out.emplace(base::make_unique<code::VReturnStmt>());
 				}
 			}
+
 
 		};
 
@@ -93,14 +96,10 @@ namespace compiler::helios {
 			void visitFun(const pst::Fun& stmt) final {
 				// @TODO: create function here...
 				// - create types, attributes, flags, ...
-				// - crete code via additional visitor
-
-				// @TODO: crete inner scope and run FunctionCodeMaker on function body
+				// @TODO: params, rest, flags, attributes, etc
 
 				HOUTFunction output;
 				output.original_name = stmt.getName();
-
-				// @TODO: params, rest, flags, attributes, etc
 
 				// Scope of function itself:
 				// this scope will contain all "function declaration" symbols like parameters
@@ -138,7 +137,6 @@ namespace compiler::helios {
 			auto parent_scope = scope(key);
 
 			HOUTFunctionMaker func_maker(ctx, parent_scope);
-
 			stmt(key)->acceptVistior(func_maker);
 
 			return func_maker.out.value();

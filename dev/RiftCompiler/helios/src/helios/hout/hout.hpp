@@ -35,9 +35,6 @@ namespace compiler::helios {
 		// - rets
 		// - some other stuff from proposal
 
-		// HOUTFunction(HOUTFunction&&) = default;
-		// HOUTFunction(const HOUTFunction&) = default;
-
 		base::StrId original_name;
 
 		HOUTCode body;
@@ -48,6 +45,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Represents a constant
+	 * @note: this is a mock
 	 * @TODO: make it represent more general stuff
 	 */
 	struct HOUTGlobalData {

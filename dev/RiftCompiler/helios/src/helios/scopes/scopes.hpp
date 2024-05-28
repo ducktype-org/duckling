@@ -44,21 +44,7 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryPrimaryCodeScopeFor, KeyOf_QueryPrimaryCodeScopeFor, ScopeID);
 
-	// struct KeyOf_QueryCodeScope {
-	// 	ScopeID parent;
-	// 	PstRef<pst::RiftElement> base_element;
-	// 	std::vector<SymID> symbols;
-	// };
 
-	// /**
-	//  * @brief Query Scope for given PST element that will be the child of scope from the key, with * fixed symbol list.
-	//  * @TODO: It is currently used for HOUT generation, but ultimately QueryCodeScope and
-	//  *        QueryPrimaryCodeScopeFor should probably be unified
-	//  *        Also: is is effectively a constructor witch is against query "way of thinking".
-	//  *        ultimately the problem comes down to differences in logic related to compilation of *        namespaces and executable code. 
-	//  *        But on the other hand there are enough similarities, that  
-	//  */
-	// DECLARE_QUERY(QueryCodeScope, KeyOf_QueryCodeScope, ScopeID);
 
 	struct KeyOf_LookupInScope {
 		ScopeID     scope;

@@ -19,7 +19,6 @@ namespace compiler::helios {
 	 * @brief Stores general kind/type of a symbol.
 	 */
 	enum class SymbolKind {
-		Basic,
 		Namespace,
 		Function,
 		Const,

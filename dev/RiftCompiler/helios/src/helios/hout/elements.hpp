@@ -56,8 +56,16 @@ namespace compiler::helios::code {
 
 	struct ConstIntExpr final: public Expr {
 		// @TODO: ctv + type for consts?
+		// @note: this is a mock
 		i64 value;
 		ConstIntExpr(i64 value): value{value} {}
+		void debugPrint(std::string& out) const final;
+	};
+
+	struct IdentifierExpresion final: public Expr {
+		// @note: this is a mock
+		SymID symbol;
+		IdentifierExpresion(SymID symbol): symbol{symbol} {}
 		void debugPrint(std::string& out) const final;
 	};
 }

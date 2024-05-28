@@ -2,6 +2,7 @@
 
 #include <query_framework/query_impl.hpp>
 #include <base/variant.hpp>
+#include "../scopes/scopes.hpp"
 
 namespace compiler::helios::code {
 
@@ -34,9 +35,9 @@ namespace compiler::helios {
 	 * @brief HoutOfExpr for expression that contain only one element
 	 */
 	QUERY_EXTENSION(houtOfSingleExpr, KeyOf_QueryHoutOfExpr, code::ElementRef<code::Expr>);
-	auto houtOfSingleExpr(query::Context&, KeyOf_QueryHoutOfExpr key) -> code::ElementRef<code::Expr> {
+	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key) -> code::ElementRef<code::Expr> {
 		RIFT_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single expression");
-		auto&& elem = key.expr->elements.at(0);
+		const auto& elem = key.expr->elements.at(0);
 
 		variant_match(elem) {
 			variant_case(pst::Expr::KeywordValue, key) {
@@ -47,7 +48,15 @@ namespace compiler::helios {
 				return base::make_unique<code::ConstIntExpr>(val);
 			}
 			variant_case(pst::Expr::Identifier, identifier) {
-				throw base::NotYetImplemented("Identifier expressions");
+				// @andrzej todo
+
+				auto lookup = ctx.query<QueryLookupInScopeAndParents>(KeyOf_LookupInScope{
+					 key.scope, identifier.indent_id, true
+				});
+
+				auto symbol = lookup.
+
+				return base::make_unique<code::IdentifierExpresion>(symbol);
 			}
 			variant_case(pst::Expr::Group, group) {
 				throw base::NotYetImplemented("Expr from group");
