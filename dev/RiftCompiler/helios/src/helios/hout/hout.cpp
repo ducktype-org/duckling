@@ -5,14 +5,14 @@ namespace compiler::helios {
 	std::string HOUTUnit::debugPrint() const {
 		std::string out;
 
-		out += "HOUT UNIT:\n";
+		out += "HOUT UNIT:\n\n";
 
 		out += "Constants:\n";
 		for (auto& const_: glob_data) {
 			out += const_.debugPrint();
 		}
 
-		out += "Functions:\n";
+		out += "\nFunctions:\n";
 		for (auto& func: functions) {
 			out += func.debugPrint();
 		}
