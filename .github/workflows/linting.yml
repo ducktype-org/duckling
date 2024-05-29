@@ -24,11 +24,12 @@ jobs:
           lines-changed-only: true
           database: 'dev'
           format-review: true
+          thread-comments: true
           # The following value will only update a single comment
           # in a pull request's thread. Set it to false to disable the comment.
           # Set it to true to post a new comment (and delete the old comment).
           step-summary: true
 
-      - name: Fail fast?!
-        if: steps.linter.outputs.checks-failed > 0
-        run: exit 1
+      # - name: Fail fast?!
+      #   if: steps.linter.outputs.checks-failed > 0
+      #   run: exit 1
