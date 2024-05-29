@@ -245,6 +245,9 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVistior(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final { return true; }
 	};
 
 	class Alias final: public Stmt {
@@ -270,7 +273,8 @@ namespace pst {
 
 		void acceptVistior(PstStmtVisitor& visitor) const override;
 
-		
+		[[nodiscard]]
+		bool isDeclaration() const final { return true; }		
 	};
 
 	class CodeBlock final: public NotStmt {

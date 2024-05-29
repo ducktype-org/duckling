@@ -61,6 +61,7 @@ namespace compiler::helios {
 			query::Context& ctx;
 			ScopeID parent_scope;
 
+			bool empty = false;
 			base::Optional<code::ElementRef<code::Stmt>> out;
 
 			HoutStmtMaker(query::Context& ctx, ScopeID scope): ctx(ctx), parent_scope(scope) {}
@@ -82,7 +83,8 @@ namespace compiler::helios {
 				}
 			}
 
-
+			void visitAlias(const pst::Alias&) override { empty = true; }
+			void visitUsing(const pst::Using&) override { empty = true; }
 		};
 
 		struct HOUTFunctionMaker: public pst::PstStmtVisitorPanicky {
@@ -120,7 +122,9 @@ namespace compiler::helios {
 				for (const auto& code_stmt: fun_body) {
 					HoutStmtMaker stmt_maker(ctx, inner_scope);
 					code_stmt->acceptVistior(stmt_maker);
-					function_body.statements.emplace_back(std::move(stmt_maker.out.value()));
+					if (not stmt_maker.empty) {
+						function_body.statements.emplace_back(std::move(stmt_maker.out.value()));
+					}
 				}
 
 				output.body.body = std::make_shared<const code::CodeBlock>(std::move(function_body));
