@@ -36,7 +36,7 @@ namespace compiler::helios {
 		// - some other stuff from proposal
 
 		base::StrId original_name;
-
+		
 		HOUTCode body;
 
 		[[nodiscard]]
@@ -49,8 +49,12 @@ namespace compiler::helios {
 	 * @TODO: make it represent more general stuff
 	 */
 	struct HOUTGlobalData {
-		base::StrId original_name;
 		// @TODO: types
+		
+		// @TODO: should it be here -- it is now for pretty printing, but it is not so clear?
+		SymID helios_symbol;
+		
+		base::StrId original_name;
 
 		// @TODO: CTV from TS:
 		i64 value;

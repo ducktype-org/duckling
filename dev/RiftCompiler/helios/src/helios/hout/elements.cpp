@@ -3,6 +3,7 @@
 #include <query_framework/query_impl.hpp>
 #include <base/variant.hpp>
 #include "../scopes/scopes.hpp"
+#include "../symbols/symbols.hpp"
 
 namespace compiler::helios::code {
 
@@ -24,6 +25,10 @@ namespace compiler::helios::code {
 
 	void ConstIntExpr::debugPrint(std::string& out) const {
 		out += std::to_string(value);
+	}
+
+	void IdentifierExpresion::debugPrint(std::string& out) const {
+		out += base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
 	}
 }
 
@@ -48,15 +53,24 @@ namespace compiler::helios {
 				return base::make_unique<code::ConstIntExpr>(val);
 			}
 			variant_case(pst::Expr::Identifier, identifier) {
-				// @andrzej todo
-
-				auto lookup = ctx.query<QueryLookupInScopeAndParents>(KeyOf_LookupInScope{
+				auto lookup_result = ctx.query<QueryLookupInScopeAndParents>(KeyOf_LookupInScope{
 					 key.scope, identifier.indent_id, true
 				});
 
-				auto symbol = lookup.
+				compiler::helios::SymbolList lookup_dealiased;
 
-				return base::make_unique<code::IdentifierExpresion>(symbol);
+				// @TODO: multi lookup!
+				auto symbol_path = lookup_result.getAsSingle();
+
+				for (auto single_sym: symbol_path) {
+					auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym);
+					lookup_dealiased.insert(lookup_dealiased.end(), dealiased.begin(), dealiased.end());
+				}
+
+				RIFT_ASSERT(lookup_dealiased.size() > 0, "Empty lookup result");
+
+				// @TODO: dont just ignore everything before last symbol
+				return base::make_unique<code::IdentifierExpresion>(lookup_dealiased.back());
 			}
 			variant_case(pst::Expr::Group, group) {
 				throw base::NotYetImplemented("Expr from group");

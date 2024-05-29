@@ -38,6 +38,10 @@ namespace compiler::helios {
 		return base::strConcat(
 			"const ",
 			original_name,
+			" (",
+			"Symbol ",
+			helios_symbol.customPerfectHash(),
+			")"
 			" := ",
 			value,
 			"\n"

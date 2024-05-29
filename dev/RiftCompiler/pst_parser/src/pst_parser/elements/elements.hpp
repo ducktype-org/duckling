@@ -62,6 +62,9 @@ namespace pst {
 
 		[[nodiscard]]
 		bool isStatement() const final { return true; };
+		
+		[[nodiscard]]
+		virtual bool isDeclaration() const { return false; }
 	};
 
 #define STMT_CHILD_CONSTRUCTOR(class_name) \
@@ -216,6 +219,9 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVistior(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final { return true; }
 	};
 
 	class Using final: public Stmt {
@@ -263,6 +269,8 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVistior(PstStmtVisitor& visitor) const override;
+
+		
 	};
 
 	class CodeBlock final: public NotStmt {
@@ -488,6 +496,9 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVistior(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final { return true; }
 	};
 
 	/**
@@ -497,10 +508,13 @@ namespace pst {
 	public:
 		Decl(StmtKind kind, const dia::SourcePosition& position): Stmt(kind, position) {}
 
-		static ParserRef<Decl> parse(RiftParserState& state);
+		// static ParserRef<Decl> parse(RiftParserState& state);
 		bool                   trailingSemicolon() override;
 
 		void acceptVistior(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const override { return true; }
 	};
 
 #define DECL_CHILD_CONSTRUCTOR(class_name) \
@@ -509,6 +523,9 @@ namespace pst {
 	class CodeDecl: public Decl {
 	public:
 		DECL_CHILD_CONSTRUCTOR(CodeDecl);
+
+		[[nodiscard]]
+		bool isDeclaration() const final { return false; }
 	};
 
 	class TopLevel final: public Decl {

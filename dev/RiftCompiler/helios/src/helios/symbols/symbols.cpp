@@ -161,7 +161,7 @@ namespace compiler::helios {
 			break;
 		}
 		RIFT_PANIC(
-			base::strConcat("makeSymbolFromStatement bad symbol kind, stmt: ", typeid(stmt).name())
+			base::strConcat("makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt.get()).name())
 		);
 	}
 

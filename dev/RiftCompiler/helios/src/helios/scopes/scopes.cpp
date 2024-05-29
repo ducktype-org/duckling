@@ -114,8 +114,10 @@ namespace compiler::helios {
 			
 			if (base_element->isStatementAggregate()) {
 				for (const auto& stmt: getChildStmtsOf(base_element)) {
-					auto sym_id = ctx.query<QuerySymbolOfSTMT>({ key, stmt });
-					out.emplace_back(sym_id);
+					if (stmt->isDeclaration()) {
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>({ key, stmt });
+						out.emplace_back(sym_id);
+					}
 				}
 				return out;
 			}

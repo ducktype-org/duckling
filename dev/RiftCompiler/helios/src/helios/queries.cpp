@@ -34,7 +34,7 @@ namespace compiler::helios {
 					auto value = ctx.query<QueryConstValueOf>(sym);
 
 					out.glob_data.push_back(HOUTGlobalData{
-						original_name, value
+						sym, original_name, value
 					});
 				}
 			}
