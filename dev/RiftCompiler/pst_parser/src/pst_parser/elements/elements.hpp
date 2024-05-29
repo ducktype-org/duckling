@@ -627,6 +627,11 @@ namespace pst {
 		}
 
 		[[nodiscard]]
+		auto getParams() const {
+			return params.borrow();
+		}
+
+		[[nodiscard]]
 		auto getBody() const { return body.borrow(); }
 
 		static ParserRef<Fun> parse(RiftParserState& state);

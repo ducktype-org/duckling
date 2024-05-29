@@ -12,6 +12,7 @@
 #include <frontend/module_tree/queries.hpp>
 
 #include <pst_parser/rift_parser_base.hpp>
+#include <pst_parser/pst_visitor.hpp>
 
 #include "../lookup_result.hpp"
 #include "../pst_walkers.hpp"
@@ -105,6 +106,24 @@ namespace compiler::helios {
 
 
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
+
+		struct SymbolGrabVisitor: public pst::PstStmtVisitorPanicky {
+			// @note: codeblock, CodeBlockOrStmt, topLevel are currently handled 
+			// separately, as they are not stmts
+
+			base::Optional<std::vector<SymID>> out;
+
+			void visitFun(const pst::Fun& fun) override {
+				// take all params:
+				for (const auto& param: fun.getParams()) {
+					// @TODO:....
+					// param is currently an expression, that probably has to change..
+				}
+			}
+
+		};
+
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<SymID> out;
 
@@ -122,12 +141,13 @@ namespace compiler::helios {
 				return out;
 			}
 			else if (base_element->isStatement()) {
-				// @TODO
-				// throw base::NotYetImplemented("Taking symbols from statement");
-				return {};
+				SymbolGrabVisitor symbol_grab;
+				auto as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());
+				as_stmt->acceptVistior(symbol_grab);
+				return std::move(symbol_grab.out.value());
 			}
 			else {
-				RIFT_PANIC("Creating scope for non-statement and non-codeblock");
+				RIFT_PANIC("Query symbols from scope of non-statement and non-codeblock");
 			}
 		}
 

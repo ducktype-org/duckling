@@ -1,16 +1,24 @@
-
-namespace N {
-	const x: i32 = 123;
-}
-
 fun foo(a: i32) -> i32 {
 	alias x = N.x;
-
 	return x;
 }
 
 fun foo2(a: i32) -> i32 {
 	using N.*;
-
 	return x;
 }
+
+fun foo3(a: i32) -> i32 {
+	return y;
+	
+}
+
+namespace N {
+	const x: i32 = 123;
+}
+
+alias y = N.x;
+
+alias function = foo3;
+
+
