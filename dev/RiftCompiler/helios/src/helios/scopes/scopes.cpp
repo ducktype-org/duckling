@@ -116,7 +116,7 @@ namespace compiler::helios {
 				// @TODO: iterate function parameters and create symbols out of them
 				// The problem is that currently function parameters are Expr in Pst -- this has to change
 				// Variable declaration or custom element is probably a better choice
-				this->out = {};
+				this->out.emplace(std::vector<SymID>{});
 			}
 
 		};
