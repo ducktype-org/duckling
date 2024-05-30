@@ -64,7 +64,7 @@ namespace compiler::helios {
 			bool empty = false;
 			base::Optional<code::ElementRef<code::Stmt>> out;
 
-			HoutStmtMaker(query::Context& ctx, ScopeID scope): ctx(ctx), parent_scope(scope) {}
+			HoutStmtMaker(query::Context& ctx, ScopeID scope): ctx(ctx), parent_scope(std::move(scope)) {}
 
 			// @TODO: visits for all valid stmt-s
 

@@ -25,7 +25,7 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryModuleHOUTRecursively, frontend::ModuleId, std::vector<HOUTUnit>)
 
 	/**
-	 * @brief Debug/testing query for extracting top-level functions from module
+	 * @brief Debug/testing query for extracting top-level functions and constants from module
 	 */
 	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleId, HOUTUnit)
 

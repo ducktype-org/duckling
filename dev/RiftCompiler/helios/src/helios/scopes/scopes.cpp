@@ -27,8 +27,10 @@ namespace compiler::helios {
 		ScopeID parent;
 		// base::StrId name; ///< for debug
 		bool     is_root = false;
-		// StmtList stmt_list;
 
+		/**
+		 * @brief PST element for which the scope was created.
+		 */
 		PstRef<pst::RiftElement> related_pst_element;
 
 		// cache entries:
@@ -69,7 +71,6 @@ namespace compiler::helios {
 
 			return putInScopeTable(ScopeData{
 				.parent = ScopeID{ nullptr },
-				// .name = base::StrId("ROOT"),
 				.is_root   = true,
 				.related_pst_element = module_pst.getTopLevelElement(),
 				.symbols   = {},
@@ -88,6 +89,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
 		static auto provide(Context&, QKey element) -> PResult {
+			// Potential way of eliminating dependency on parent:
 			// auto parent
 			// = scope(ctx.query<QuerySymbolOfSTMT>({ element.parent, element.base_element }));
 			return putInScopeTable(ScopeData{
@@ -102,23 +104,19 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);
 
-	// if somewhere then here it is needed to handle cycles somehow
-
-
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
-
+		
+		/**
+		 * @brief Gets symbols for scopes of varius statements
+		 */
 		struct SymbolGrabVisitor: public pst::PstStmtVisitorPanicky {
-			// @note: codeblock, CodeBlockOrStmt, topLevel are currently handled 
-			// separately, as they are not stmts
-
 			base::Optional<std::vector<SymID>> out;
 
-			void visitFun(const pst::Fun& fun) override {
-				// take all params:
-				for (const auto& param: fun.getParams()) {
-					// @TODO:....
-					// param is currently an expression, that probably has to change..
-				}
+			void visitFun(const pst::Fun&) override {
+				// @TODO: iterate function parameters and create symbols out of them
+				// The problem is that currently function parameters are Expr in Pst -- this has to change
+				// Variable declaration or custom element is probably a better choice
+				this->out = {};
 			}
 
 		};

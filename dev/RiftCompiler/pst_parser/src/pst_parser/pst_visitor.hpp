@@ -96,7 +96,9 @@ namespace pst {
 		void visitFun([[maybe_unused]] const Fun& stmt) override {}
 	};
 
-
+	/**
+	 * @brief Macro used to define PstStmtVisitor methods
+	 */
 	#define PANIC_VISITOR_VISIT_METHOD(type) \
 	void visit ## type([[maybe_unused]] const type& stmt) override { \
 		RIFT_PANIC("PstStmtVisitorPanicky visited " #type); \

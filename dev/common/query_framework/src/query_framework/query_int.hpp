@@ -47,7 +47,6 @@ namespace query::detail {
  * @brief Macro to be used as a struct signature when implementing a query.
  * @param query_type Name of the query
  * @param PResult Type returned by the Provide method
- * //@TODO: move to impl.hpp  
  */
 #define IMPLEMENT_QUERY(query_type, PResult) \
 	ImplementationOf_##query_type final: public query::QueryImplementation<query_type, PResult>

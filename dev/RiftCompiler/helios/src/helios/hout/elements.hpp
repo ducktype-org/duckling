@@ -66,7 +66,7 @@ namespace compiler::helios::code {
 	struct IdentifierExpresion final: public Expr {
 		// @note: this is a mock
 		SymID symbol;
-		IdentifierExpresion(SymID symbol): symbol{symbol} {}
+		IdentifierExpresion(SymID symbol): symbol{std::move(symbol)} {}
 		void debugPrint(std::string& out) const final;
 	};
 }

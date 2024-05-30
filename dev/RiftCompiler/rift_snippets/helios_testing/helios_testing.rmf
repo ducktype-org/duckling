@@ -10,7 +10,7 @@ fun foo2(a: i32) -> i32 {
 
 fun foo3(a: i32) -> i32 {
 	return y;
-	
+	return a;
 }
 
 namespace N {
@@ -20,5 +20,7 @@ namespace N {
 alias y = N.x;
 
 alias function = foo3;
+
+const z: i32 = y;
 
 

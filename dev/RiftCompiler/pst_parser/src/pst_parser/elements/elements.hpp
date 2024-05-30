@@ -63,6 +63,24 @@ namespace pst {
 		[[nodiscard]]
 		bool isStatement() const final { return true; };
 		
+		/**
+		 * @brief Determines if given statement is a declaration.
+		 * Declaration is everything that is considered a unique symbol in HELIOS.
+		 * For example declarations are:
+		 * * functions
+		 * * classes
+		 * * aliases and usings
+		 * * ifs, whiles with a name
+		 * * variable declaration
+		 * 
+		 * For example declarations are not:
+		 * * expressions
+		 * * ifs, whiles without name
+		 * * return, break
+		 *
+		 * @note: this definition of declaration might not
+		 * always be equivalent to intuitive thinking about declarations.
+		 */
 		[[nodiscard]]
 		virtual bool isDeclaration() const { return false; }
 	};
@@ -512,8 +530,7 @@ namespace pst {
 	public:
 		Decl(StmtKind kind, const dia::SourcePosition& position): Stmt(kind, position) {}
 
-		// static ParserRef<Decl> parse(RiftParserState& state);
-		bool                   trailingSemicolon() override;
+		bool trailingSemicolon() override;
 
 		void acceptVistior(PstStmtVisitor& visitor) const override;
 
