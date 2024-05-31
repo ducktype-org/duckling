@@ -31,17 +31,14 @@ namespace dia {
 		// in the source code, or maybe we will choose a completely separate strategy.
 		// @TODO: resolve the above.
 		// Converter::dumpAll(std::ranges::join_view(message_log));
-		constexpr auto borrower = [](const base::unique_ptr<Message>& message) -> base::c_borrow_ptr<Message> {return message.borrow();};
+		constexpr auto borrower = [](const base::unique_ptr<Message>& message
+		                          ) -> base::c_borrow_ptr<Message> { return message.borrow(); };
 
-		auto messages = std::ranges::join_view(message_log);
+		auto                                     messages = std::ranges::join_view(message_log);
 		std::vector<base::c_borrow_ptr<Message>> borrowed;
 		std::ranges::transform(messages, std::back_inserter(borrowed), borrower);
 
-		printer::StreamPrinter::print(
-			Converter::listToPrinterContents(
-				borrowed, detailed
-			), stream
-		);
+		printer::StreamPrinter::print(Converter::listToPrinterContents(borrowed, detailed), stream);
 	}
 
 	template void Logger::dumpLog<DiagnosticToUserConverter>(bool, std::ostream&) const;
