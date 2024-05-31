@@ -24,7 +24,11 @@ namespace compiler::helios::code {
 	};
 
 	struct Expr { 
-		// @TODO
+		// @TODO: Fix this
+
+		auto value;
+
+		Expr(auto value): value(std::move(value)) {}
 
 		virtual ~Expr() = default;
 		virtual void debugPrint(std::string& out) const = 0;

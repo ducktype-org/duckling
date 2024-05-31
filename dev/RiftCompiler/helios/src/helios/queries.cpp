@@ -85,6 +85,13 @@ namespace compiler::helios {
 
 			void visitAlias(const pst::Alias&) override { empty = true; }
 			void visitUsing(const pst::Using&) override { empty = true; }
+
+			void visitExpr(const pst::Expr& stmt) override {
+				auto expr = ctx.query<QueryHoutOfExpr>({
+					parent_scope, stmt
+				});
+				this->out.emplace(base:make_unique<code::Expr>(std::move(expr)));
+			}
 		};
 
 		struct HOUTFunctionMaker: public pst::PstStmtVisitorPanicky {
