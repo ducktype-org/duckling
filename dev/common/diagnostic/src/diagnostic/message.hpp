@@ -194,10 +194,7 @@ namespace dia {
 			Converter::toPrinterContents(note, detailed)
 		} -> std::same_as<printer::PrinterContentsSeq>;
 		{
-			Converter::listToPrinterContents(
-				std::ranges::join_view(std::vector<std::vector<base::c_borrow_ptr<Message>>>()),
-				detailed
-			)
+			Converter::listToPrinterContents(std::vector<base::c_borrow_ptr<Message>>(), detailed)
 		} -> std::same_as<printer::PrinterContentsSeq>;
 	};
 
