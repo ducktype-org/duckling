@@ -1,6 +1,9 @@
 #include "logger.hpp"
 #include "diagnostic_converters.hpp"
 
+#include <ranges>
+#include <algorithm>
+
 namespace dia {
 	void Logger::log(
 		base::unique_ptr<Message> message_ptr, const bool detailed, const bool immediately_dump
@@ -27,14 +30,18 @@ namespace dia {
 		// Perhaps we will change it to showing all messages in order of appearance
 		// in the source code, or maybe we will choose a completely separate strategy.
 		// @TODO: resolve the above.
-		for (int severity_id = 0; severity_id < Message::NUM_SEVERITIES; severity_id++) {
-			for (auto& message: message_log.at(severity_id)) {
-				printer::StreamPrinter::print(
-					Converter::toPrinterContents(message.borrow(), detailed), stream
-				);
-				printer::StreamPrinter::newline(2, stream);
-			}
-		}
+		// Converter::dumpAll(std::ranges::join_view(message_log));
+		constexpr auto borrower = [](const base::unique_ptr<Message>& message) -> base::c_borrow_ptr<Message> {return message.borrow();};
+
+		auto messages = std::ranges::join_view(message_log);
+		std::vector<base::c_borrow_ptr<Message>> borrowed;
+		std::ranges::transform(messages, std::back_inserter(borrowed), borrower);
+
+		printer::StreamPrinter::print(
+			Converter::listToPrinterContents(
+				borrowed, detailed
+			), stream
+		);
 	}
 
 	template void Logger::dumpLog<DiagnosticToUserConverter>(bool, std::ostream&) const;
