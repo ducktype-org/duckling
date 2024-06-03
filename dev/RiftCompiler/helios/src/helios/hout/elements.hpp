@@ -17,19 +17,11 @@ namespace compiler::helios::code {
 	// @TODO: Add source positions
 	
 	struct Stmt {
-		// @TODO
-
 		virtual ~Stmt() = default;
 		virtual void debugPrint(usize indent, std::string& out) const = 0;
 	};
 
-	struct Expr { 
-		// @TODO: Fix this
-
-		auto value;
-
-		Expr(auto value): value(std::move(value)) {}
-
+	struct Expr {
 		virtual ~Expr() = default;
 		virtual void debugPrint(std::string& out) const = 0;
 	};
@@ -51,6 +43,12 @@ namespace compiler::helios::code {
 	};
 
 	struct VReturnStmt final: public Stmt {
+		void debugPrint(usize indent, std::string& out) const final;
+	};
+
+	struct ExprStmt final: public Stmt {
+		ElementRef<Expr> expr;
+		ExprStmt(ElementRef<Expr> expr): expr(std::move(expr)) {}
 		void debugPrint(usize indent, std::string& out) const final;
 	};
 

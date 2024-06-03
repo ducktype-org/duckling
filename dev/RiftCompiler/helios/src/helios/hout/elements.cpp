@@ -23,6 +23,13 @@ namespace compiler::helios::code {
 		out += "void return\n";
 	}
 
+	void ExprStmt::debugPrint(usize indent, std::string& out) const {
+		addIndent(indent, out);
+		out += "do ";
+		expr->debugPrint(out);
+		out += "\n";
+	}
+
 	void ConstIntExpr::debugPrint(std::string& out) const {
 		out += std::to_string(value);
 	}
@@ -30,6 +37,7 @@ namespace compiler::helios::code {
 	void IdentifierExpresion::debugPrint(std::string& out) const {
 		out += base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
 	}
+
 }
 
 namespace compiler::helios {
