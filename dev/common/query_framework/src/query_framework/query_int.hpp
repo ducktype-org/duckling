@@ -44,14 +44,6 @@ namespace query::detail {
 	};
 
 /**
- * @brief Macro to be used as a struct signature when implementing a query.
- * @param query_type Name of the query
- * @param PResult Type returned by the Provide method
- */
-#define IMPLEMENT_QUERY(query_type, PResult) \
-	ImplementationOf_##query_type final: public query::QueryImplementation<query_type, PResult>
-
-/**
  * @brief Macro used to declare query extensions
  * @note This is done this way, instead of just beeing a simple function,
  * so we can easily identify all extension function in the future

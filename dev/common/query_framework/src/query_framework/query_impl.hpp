@@ -144,6 +144,14 @@ namespace query {
 }
 
 /**
+ * @brief Macro to be used as a struct signature when implementing a query.
+ * @param query_type Name of the query
+ * @param PResult Type returned by the Provide method
+ */
+#define IMPLEMENT_QUERY(query_type, PResult) \
+	ImplementationOf_##query_type final: public query::QueryImplementation<query_type, PResult>
+
+/**
  * @brief This is an internal query, and shouldn't be used directly. It used by
  * `QUERY_IMPLEMENTATION_BOILERPLATE` macro and creates necessary components for
  * macro-implementation structs.
