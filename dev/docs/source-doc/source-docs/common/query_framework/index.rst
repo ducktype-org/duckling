@@ -241,10 +241,10 @@ Second way is to write "Query Extension" function/method or some other code taki
     :caption: Query Extension
 
     // hpp:
-    output_t NameOfExtension(query::Context&, input_t);
+    output_t nameOfExtension(query::Context&, input_t);
 
     // cpp:
-    output_t NameOfExtension(query::Context& ctx, input_t in) {
+    output_t nameOfExtension(query::Context& ctx, input_t in) {
         // ...
         // use can use "ctx" here
     }
@@ -254,7 +254,8 @@ Second way is to write "Query Extension" function/method or some other code taki
     
     // ...
         static auto provide(Context& context, QKey key) -> PResult {
-            auto output = context.callExt<NameOfExtension>(input);
+            // beware to never pass context that is not from your query:
+            auto output = nameOfExtension(context, input);
         }
     // ...
 

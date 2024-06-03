@@ -34,6 +34,8 @@ namespace query {
 			ContextType(NodeID my_node): my_node(my_node) {};
 			friend struct ContextMaker;
 		public:
+			// @TODO: add currently engaged query sanity check to context operations
+
 			// @TODO: Make the context (and thus the logger) be propagated through query calls,
 			// so that all queries run on the same file / in the same compilation thread / whatever
 			// use a single, *non-static* logger object.
@@ -48,19 +50,6 @@ namespace query {
 				dep_graph::addDependency(my_node, dep_id);
 
 				return OthQuery::internal_query(key, my_node);
-			}
-
-			/**
-			 * @brief Calls query extension passes as template argument.
-			 *
-			 * @tparam Query Extension
-			 * @tparam Arguments of query extension
-			 * @param args
-			 * @return Return value of query extension
-			 */
-			template<auto Extension, typename... Args>
-			auto callExt(Args&&... args) {
-				return Extension(*this, std::forward<Args>(args)...);
 			}
 
 			/**
