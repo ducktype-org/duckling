@@ -53,6 +53,10 @@ namespace query::detail {
 			constinit u64                   query_stack_size = 0;
 		}
 
+		u64 queryStackSize() {
+			return query_stack_size;
+		}
+
 		void setEntry(NodeID node, NodeID from) {
 			query_stack_size++;
 
@@ -77,7 +81,7 @@ namespace query::detail {
 		void setExit(NodeID node) {
 			RIFT_ASSERT(query_stack_size > 0, "Query exit called on empty call stack");
 			query_stack_size--;
-			
+
 			node_data.at(node).color = Color::Done;
 		}
 

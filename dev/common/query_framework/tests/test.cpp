@@ -4,7 +4,7 @@
 #include <query_framework/query_entry_point.hpp>
 
 struct Key1 {
-	uint64_t       v;
+	u64            v;
 	constexpr auto operator<=>(const Key1& oth) const = default;
 
 	[[nodiscard]]
@@ -22,8 +22,8 @@ struct Key2 {
 	}
 };
 
-DECLARE_QUERY(Fibonacci, Key1, uint64_t);
-DECLARE_QUERY(FibonacciSum, Key2, uint64_t);
+DECLARE_QUERY(Fibonacci, Key1, u64);
+DECLARE_QUERY(FibonacciSum, Key2, u64);
 
 /* * * *
  * Q1: *
@@ -89,6 +89,17 @@ struct IMPLEMENT_QUERY(FibonacciSum, double) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciSum);
 
+
+DECLARE_QUERY(CallingEntryPoint, u64, u64);
+struct IMPLEMENT_QUERY(CallingEntryPoint, u64) {
+	static auto provide(Context&, QKey key) -> PResult {
+		// call another query without context:
+		return query::entryPoint<Fibonacci>({key});
+	}
+	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+};
+QUERY_IMPLEMENTATION_BOILERPLATE(CallingEntryPoint);
+
 class QueryTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS QueryTest
@@ -98,6 +109,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Query Test") {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(autoCacheTest);
+		TESTER_ADD_TEST(entryPointSanityTest);
 	}
 
 private:
@@ -111,6 +123,13 @@ private:
 	void autoCacheTest() {
 		assert(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (5)");
 		assert(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (6)");
+	}
+
+	void entryPointSanityTest() {
+		assertThrows<base::Panic>(
+			[&](){ query::entryPoint<CallingEntryPoint>(1); },
+			"Calling entry point from query did not panicked."
+		);
 	}
 };
 
