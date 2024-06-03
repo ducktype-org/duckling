@@ -11,7 +11,7 @@ namespace ts {
 		static auto provide(Context& context, const QKey key) -> PResult {
 			return getImplicitConversionsFrom(key.source, context).contains(key.target)
 			    || getImplicitConstructorsOf(key.target, context).contains(key.source)
-			    || key.source.isInfoImplicitlyCoercible(key.target, context);
+			    || key.source.isImplicitlyCoercible(key.target, context);
 		}
 
 		static auto load(const QKey key) -> LoadResult { return cache.atMaybeCopy(key); }
