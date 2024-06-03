@@ -61,13 +61,15 @@ namespace compiler::helios {
 				return base::make_unique<code::ConstIntExpr>(val);
 			}
 			variant_case(pst::Expr::Identifier, identifier) {
+				// @note: this does not handle overload
+				// @note: this does not handle "." operation
+
 				auto lookup_result = ctx.query<QueryLookupInScopeAndParents>(KeyOf_LookupInScope{
 					 key.scope, identifier.indent_id, true
 				});
 
 				compiler::helios::SymbolList lookup_dealiased;
 
-				// @TODO: multi lookup!
 				auto symbol_path = lookup_result.getAsSingle();
 
 				for (auto single_sym: symbol_path) {
@@ -92,6 +94,9 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryHoutOfExpr, code::ElementRef<code::Expr>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			// @NOTE: this is simplest, mock implementation
+			// A proper Expr parsing will be added as new mission/PR
+
 			if (key.expr->elements.size() == 1) {
 				return ctx.callExt<houtOfSingleExpr>(key);
 			}
@@ -99,6 +104,8 @@ namespace compiler::helios {
 				throw base::NotYetImplemented("Complicated HOUT expressions");
 			}
 		}
+
+		// @TODO: perhaps add cache
 
 		static auto load(QKey) -> LoadResult {
 			return {};

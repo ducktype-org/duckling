@@ -13,16 +13,13 @@
 
 #include <vector>
 
-
 namespace compiler::helios {
 
 	/**
 	 * @brief placeholder for code that can execute (expressions, function body, etc)
 	 */
 	struct HOUTCode {
-		// @NOTE: as of right now HOUTCode structure can be based on shared ptr, to avoid a lot of boilerplate, and copying 
-
-
+		// @NOTE: as of right now HOUTCode contains shared ptr, to avoid a lot of boilerplate, and copying 
 		std::shared_ptr<const code::CodeBlock> body;
 	};
 
@@ -31,9 +28,11 @@ namespace compiler::helios {
 	 */
 	struct HOUTFunction {
 		// @TODO:
-		// - args
-		// - rets
-		// - some other stuff from proposal
+		// - arguments
+		// - return values
+		// - flags like "pure", "thread safe", "shared-thread-function", etc
+
+		// @TODO: decide if HOUT functions should contain its HELIOS SymID
 
 		base::StrId original_name;
 		
@@ -51,7 +50,8 @@ namespace compiler::helios {
 	struct HOUTGlobalData {
 		// @TODO: types
 		
-		// @TODO: should it be here -- it is now for pretty printing, but it is not so clear?
+		// @TODO: decide if HOUT functions global data contain its HELIOS SymID
+		// Currently it is here for pretty printing
 		SymID helios_symbol;
 		
 		base::StrId original_name;

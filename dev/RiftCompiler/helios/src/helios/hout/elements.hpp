@@ -16,16 +16,25 @@ namespace compiler::helios::code {
 
 	// @TODO: Add source positions
 	
+	/**
+	 * @brief Base class for all HOUT statements
+	 */
 	struct Stmt {
 		virtual ~Stmt() = default;
 		virtual void debugPrint(usize indent, std::string& out) const = 0;
 	};
 
+	/**
+	 * @brief Base class for all HOUT expressions
+	 */
 	struct Expr {
 		virtual ~Expr() = default;
 		virtual void debugPrint(std::string& out) const = 0;
 	};
 	
+	/**
+	 * @brief A block of HOUT statements
+	 */
 	struct CodeBlock final {
 		std::vector<ElementRef<Stmt>> statements;
 	};
@@ -34,6 +43,9 @@ namespace compiler::helios::code {
 	 * Statements: *
 	 * * * * * * * */
 
+	/**
+	 * @brief Represents `return [expr];` in HOUT
+	 */
 	struct ReturnStmt final: public Stmt {
 		ElementRef<Expr> value;
 
@@ -42,10 +54,16 @@ namespace compiler::helios::code {
 		void debugPrint(usize indent, std::string& out) const final;
 	};
 
+	/**
+	 * @brief Represents `return;` in HOUT
+	 */
 	struct VReturnStmt final: public Stmt {
 		void debugPrint(usize indent, std::string& out) const final;
 	};
 
+	/**
+	 * @brief Represents expression statement in HOUT
+	 */
 	struct ExprStmt final: public Stmt {
 		ElementRef<Expr> expr;
 		ExprStmt(ElementRef<Expr> expr): expr(std::move(expr)) {}
@@ -57,6 +75,9 @@ namespace compiler::helios::code {
 	 * Expressions:  *
 	 * * * * * * * * */
 
+	/**
+	 * @brief Represents integer constant in HOUT
+	 */
 	struct ConstIntExpr final: public Expr {
 		// @TODO: ctv + type for consts?
 		// @note: this is a mock
@@ -65,6 +86,12 @@ namespace compiler::helios::code {
 		void debugPrint(std::string& out) const final;
 	};
 
+	/**
+	 * @brief Represents integer constant in HOUT
+	 * @note: This will have to be improved,
+	 * when more complex expressions involving "." operator, local variables, etc
+	 * will be introduced. 
+	 */
 	struct IdentifierExpresion final: public Expr {
 		// @note: this is a mock
 		SymID symbol;
@@ -84,8 +111,7 @@ namespace compiler::helios {
 	};
 	
 	/**
-	 * @brief Construct HOUT Expr from Pst Expr, "within" given scope 
-	 * @TODO: perhaps add cache
+	 * @brief Construct HOUT Expr from Pst Expr, "within" given scope
 	 */
 	DECLARE_QUERY(QueryHoutOfExpr, KeyOf_QueryHoutOfExpr, code::ElementRef<code::Expr>);
 }
