@@ -8,14 +8,10 @@ namespace compiler::helios {
 		out += "HOUT UNIT:\n\n";
 
 		out += "Constants:\n";
-		for (auto& const_: glob_data) {
-			out += const_.debugPrint();
-		}
+		for (auto& const_: glob_data) out += const_.debugPrint();
 
 		out += "\nFunctions:\n";
-		for (auto& func: functions) {
-			out += func.debugPrint();
-		}
+		for (auto& func: functions) out += func.debugPrint();
 
 		return out;
 	}
@@ -27,9 +23,7 @@ namespace compiler::helios {
 		out += "fun ";
 		out += original_name.strView();
 		out += " ( @TODO ) -> @TODO {\n";
-		for (auto&& stmt: body.body->statements) {
-			stmt->debugPrint(1, out);
-		}
+		for (auto&& stmt: body.body->statements) stmt->debugPrint(1, out);
 		out += "}\n";
 		return out;
 	}
@@ -50,4 +44,3 @@ namespace compiler::helios {
 
 
 }
-

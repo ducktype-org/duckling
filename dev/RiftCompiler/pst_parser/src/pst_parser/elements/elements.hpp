@@ -61,8 +61,10 @@ namespace pst {
 		virtual void           acceptVistior(PstStmtVisitor& visitor) const = 0;
 
 		[[nodiscard]]
-		bool isStatement() const final { return true; };
-		
+		bool isStatement() const final {
+			return true;
+		}
+
 		/**
 		 * @brief Determines if given statement is a declaration.
 		 * Declaration is everything that is considered a unique symbol in HELIOS.
@@ -72,7 +74,7 @@ namespace pst {
 		 * * aliases and usings
 		 * * ifs, whiles with a name
 		 * * variable declaration
-		 * 
+		 *
 		 * For example declarations are not:
 		 * * expressions
 		 * * ifs, whiles without name
@@ -82,7 +84,9 @@ namespace pst {
 		 * always be equivalent to intuitive thinking about declarations.
 		 */
 		[[nodiscard]]
-		virtual bool isDeclaration() const { return false; }
+		virtual bool isDeclaration() const {
+			return false;
+		}
 	};
 
 #define STMT_CHILD_CONSTRUCTOR(class_name) \
@@ -239,7 +243,9 @@ namespace pst {
 		void acceptVistior(PstStmtVisitor& visitor) const override;
 
 		[[nodiscard]]
-		bool isDeclaration() const final { return true; }
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	class Using final: public Stmt {
@@ -265,7 +271,9 @@ namespace pst {
 		void acceptVistior(PstStmtVisitor& visitor) const override;
 
 		[[nodiscard]]
-		bool isDeclaration() const final { return true; }
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	class Alias final: public Stmt {
@@ -292,7 +300,9 @@ namespace pst {
 		void acceptVistior(PstStmtVisitor& visitor) const override;
 
 		[[nodiscard]]
-		bool isDeclaration() const final { return true; }		
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	class CodeBlock final: public NotStmt {
@@ -308,7 +318,9 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		[[nodiscard]]
-		bool isStatementAggregate() const final { return true; }
+		bool isStatementAggregate() const final {
+			return true;
+		}
 	};
 
 	class CodeBlockOrStmt final: public NotStmt {
@@ -328,7 +340,9 @@ namespace pst {
 		const_iterator end() const;
 
 		[[nodiscard]]
-		bool isStatementAggregate() const final { return true; }
+		bool isStatementAggregate() const final {
+			return true;
+		}
 	};
 
 	class RoundGroupExpr final: public NotStmt {
@@ -413,7 +427,7 @@ namespace pst {
 
 		[[nodiscard]]
 		base::Optional<ParserCBorrowRef<Expr>> getValue() const {
-			return expr.map([](const auto& e){ return e.borrow(); });
+			return expr.map([](const auto& e) { return e.borrow(); });
 		}
 	};
 
@@ -433,7 +447,7 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Break() final = default;
-		
+
 		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
 
@@ -453,7 +467,7 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Redo() final = default;
-		
+
 		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
 
@@ -463,7 +477,7 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Restart() final = default;
-		
+
 		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
 
@@ -486,7 +500,7 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Throw() final = default;
-		
+
 		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
 
@@ -520,7 +534,9 @@ namespace pst {
 		void acceptVistior(PstStmtVisitor& visitor) const override;
 
 		[[nodiscard]]
-		bool isDeclaration() const final { return true; }
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	/**
@@ -535,7 +551,9 @@ namespace pst {
 		void acceptVistior(PstStmtVisitor& visitor) const override;
 
 		[[nodiscard]]
-		bool isDeclaration() const override { return true; }
+		bool isDeclaration() const override {
+			return true;
+		}
 	};
 
 #define DECL_CHILD_CONSTRUCTOR(class_name) \
@@ -546,7 +564,9 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(CodeDecl);
 
 		[[nodiscard]]
-		bool isDeclaration() const final { return false; }
+		bool isDeclaration() const final {
+			return false;
+		}
 	};
 
 	class TopLevel final: public Decl {
@@ -565,7 +585,9 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isStatementAggregate() const final { return true; }
+		bool isStatementAggregate() const final {
+			return true;
+		}
 	};
 
 	class Block final: public CodeDecl {
@@ -649,7 +671,9 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		auto getBody() const { return body.borrow(); }
+		auto getBody() const {
+			return body.borrow();
+		}
 
 		static ParserRef<Fun> parse(RiftParserState& state);
 		void                  dprint(std::ostream& out) const final;

@@ -7,9 +7,7 @@
 
 namespace compiler::helios::code {
 
-	void addIndent(usize indent, std::string& out) {
-		out.append(indent * 4, ' ');
-	}
+	void addIndent(usize indent, std::string& out) { out.append(indent * 4, ' '); }
 
 	void ReturnStmt::debugPrint(usize indent, std::string& out) const {
 		addIndent(indent, out);
@@ -30,9 +28,7 @@ namespace compiler::helios::code {
 		out += "\n";
 	}
 
-	void ConstIntExpr::debugPrint(std::string& out) const {
-		out += std::to_string(value);
-	}
+	void ConstIntExpr::debugPrint(std::string& out) const { out += std::to_string(value); }
 
 	void IdentifierExpresion::debugPrint(std::string& out) const {
 		out += base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
@@ -41,14 +37,16 @@ namespace compiler::helios::code {
 }
 
 namespace compiler::helios {
-	
+
 	// @NOTE: code for creating HoutOfExpr is adapted from HIR, and is generally temporary
 
 	/**
 	 * @brief HoutOfExpr for expression that contain only one element
 	 */
 	QUERY_EXTENSION(houtOfSingleExpr, KeyOf_QueryHoutOfExpr, code::ElementRef<code::Expr>);
-	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key) -> code::ElementRef<code::Expr> {
+
+	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key)
+		-> code::ElementRef<code::Expr> {
 		RIFT_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single expression");
 		const auto& elem = key.expr->elements.at(0);
 
@@ -65,8 +63,7 @@ namespace compiler::helios {
 				// @note: this does not handle "." operation
 
 				auto lookup_result = ctx.query<QueryLookupInScopeAndParents>(KeyOf_LookupInScope{
-					 key.scope, identifier.indent_id, true
-				});
+					key.scope, identifier.indent_id, true });
 
 				compiler::helios::SymbolList lookup_dealiased;
 
@@ -74,7 +71,9 @@ namespace compiler::helios {
 
 				for (auto single_sym: symbol_path) {
 					auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym);
-					lookup_dealiased.insert(lookup_dealiased.end(), dealiased.begin(), dealiased.end());
+					lookup_dealiased.insert(
+						lookup_dealiased.end(), dealiased.begin(), dealiased.end()
+					);
 				}
 
 				RIFT_ASSERT(lookup_dealiased.size() > 0, "Empty lookup result");
@@ -97,23 +96,17 @@ namespace compiler::helios {
 			// @NOTE: this is simplest, mock implementation
 			// A proper Expr parsing will be added as new mission/PR
 
-			if (key.expr->elements.size() == 1) {
+			if (key.expr->elements.size() == 1)
 				return ctx.callExt<houtOfSingleExpr>(key);
-			}
-			else {
+			else
 				throw base::NotYetImplemented("Complicated HOUT expressions");
-			}
 		}
 
 		// @TODO: perhaps add cache
 
-		static auto load(QKey) -> LoadResult {
-			return {};
-		}
+		static auto load(QKey) -> LoadResult { return {}; }
 
-		static auto store(QKey, PResult res, query::ACD) -> QResult {
-			return res;
-		}
+		static auto store(QKey, PResult res, query::ACD) -> QResult { return res; }
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr);

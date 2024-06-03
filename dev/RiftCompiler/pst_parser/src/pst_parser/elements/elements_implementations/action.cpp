@@ -82,11 +82,17 @@ namespace pst {
 	}
 
 	void Return::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitReturn(*this); }
+
 	void Break::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitBreak(*this); }
+
 	void Continue::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitContinue(*this); }
+
 	void Redo::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitRedo(*this); }
+
 	void Restart::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitRestart(*this); }
+
 	void Defer::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitDefer(*this); }
+
 	void Throw::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitThrow(*this); }
 
 

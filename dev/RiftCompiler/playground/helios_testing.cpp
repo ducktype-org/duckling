@@ -10,7 +10,7 @@ int main(int argc, const char* argv[]) {
 	// @TODO: add to helios init
 	lexer::init();
 	pst::init();
-	
+
 	// @FUTURE: record all inits somewhere..
 
 	auto clap
@@ -36,10 +36,9 @@ int main(int argc, const char* argv[]) {
 
 	using namespace compiler;
 
-	auto root      = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+	auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 
-	std::cerr << top_level.debugPrint();		
-
+	std::cerr << top_level.debugPrint();
 }

@@ -35,13 +35,17 @@ namespace pst {
 		 * * TopLevel
 		 */
 		[[nodiscard]]
-		virtual bool isStatementAggregate() const { return false; };
-		
+		virtual bool isStatementAggregate() const {
+			return false;
+		}
+
 		/**
 		 * @return if element is a statements
 		 */
 		[[nodiscard]]
-		virtual bool isStatement() const { return false; };
+		virtual bool isStatement() const {
+			return false;
+		}
 
 	private:
 		dia::SourcePosition source_position;

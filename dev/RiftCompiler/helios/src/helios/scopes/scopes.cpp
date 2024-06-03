@@ -26,7 +26,7 @@ namespace compiler::helios {
 		// created on startup:
 		ScopeID parent;
 		// base::StrId name; ///< for debug
-		bool     is_root = false;
+		bool is_root = false;
 
 		/**
 		 * @brief PST element for which the scope was created.
@@ -70,10 +70,10 @@ namespace compiler::helios {
 			auto&& module_pst = ctx.query<frontend::QueryFilePST>(main_file);
 
 			return putInScopeTable(ScopeData{
-				.parent = ScopeID{ nullptr },
-				.is_root   = true,
+				.parent              = ScopeID{ nullptr },
+				.is_root             = true,
 				.related_pst_element = module_pst.getTopLevelElement(),
-				.symbols   = {},
+				.symbols             = {},
 			});
 		}
 
@@ -93,9 +93,9 @@ namespace compiler::helios {
 			// auto parent
 			// = scope(ctx.query<QuerySymbolOfSTMT>({ element.parent, element.base_element }));
 			return putInScopeTable(ScopeData{
-				.parent    = element.parent,
+				.parent              = element.parent,
 				.related_pst_element = element.base_element,
-				.symbols   = {},
+				.symbols             = {},
 			});
 		}
 
@@ -105,7 +105,6 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);
 
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
-		
 		/**
 		 * @brief Gets symbols for scopes of varius statements
 		 */
@@ -114,13 +113,11 @@ namespace compiler::helios {
 
 			void visitFun(const pst::Fun&) override {
 				// @TODO: iterate function parameters and create symbols out of them
-				// The problem is that currently function parameters are Expr in Pst -- this has to change
-				// Variable declaration or custom element is probably a better choice
+				// The problem is that currently function parameters are Expr in Pst -- this has to
+				// change Variable declaration or custom element is probably a better choice
 				this->out.emplace(std::vector<SymID>{});
 			}
-
 		};
-
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<SymID> out;
@@ -128,7 +125,7 @@ namespace compiler::helios {
 			// @TODO: expand macros?
 
 			auto base_element = key.ref->related_pst_element;
-			
+
 			if (base_element->isStatementAggregate()) {
 				for (const auto& stmt: getChildStmtsOf(base_element)) {
 					if (stmt->isDeclaration()) {
@@ -137,14 +134,12 @@ namespace compiler::helios {
 					}
 				}
 				return out;
-			}
-			else if (base_element->isStatement()) {
+			} else if (base_element->isStatement()) {
 				SymbolGrabVisitor symbol_grab;
-				auto as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());
+				auto              as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());
 				as_stmt->acceptVistior(symbol_grab);
 				return std::move(symbol_grab.out.value());
-			}
-			else {
+			} else {
 				RIFT_PANIC("Query symbols from scope of non-statement and non-codeblock");
 			}
 		}

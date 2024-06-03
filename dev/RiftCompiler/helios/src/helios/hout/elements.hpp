@@ -11,16 +11,15 @@
 #include "../scope_symbol_id.hpp"
 #include "element_ref.hpp"
 
-
 namespace compiler::helios::code {
 
 	// @TODO: Add source positions
-	
+
 	/**
 	 * @brief Base class for all HOUT statements
 	 */
 	struct Stmt {
-		virtual ~Stmt() = default;
+		virtual ~Stmt()                                               = default;
 		virtual void debugPrint(usize indent, std::string& out) const = 0;
 	};
 
@@ -28,10 +27,10 @@ namespace compiler::helios::code {
 	 * @brief Base class for all HOUT expressions
 	 */
 	struct Expr {
-		virtual ~Expr() = default;
+		virtual ~Expr()                                 = default;
 		virtual void debugPrint(std::string& out) const = 0;
 	};
-	
+
 	/**
 	 * @brief A block of HOUT statements
 	 */
@@ -66,10 +65,11 @@ namespace compiler::helios::code {
 	 */
 	struct ExprStmt final: public Stmt {
 		ElementRef<Expr> expr;
+
 		ExprStmt(ElementRef<Expr> expr): expr(std::move(expr)) {}
+
 		void debugPrint(usize indent, std::string& out) const final;
 	};
-
 
 	/* * * * * * * * *
 	 * Expressions:  *
@@ -82,7 +82,9 @@ namespace compiler::helios::code {
 		// @TODO: ctv + type for consts?
 		// @note: this is a mock
 		i64 value;
-		ConstIntExpr(i64 value): value{value} {}
+
+		ConstIntExpr(i64 value): value{ value } {}
+
 		void debugPrint(std::string& out) const final;
 	};
 
@@ -90,29 +92,29 @@ namespace compiler::helios::code {
 	 * @brief Represents integer constant in HOUT
 	 * @note: This will have to be improved,
 	 * when more complex expressions involving "." operator, local variables, etc
-	 * will be introduced. 
+	 * will be introduced.
 	 */
 	struct IdentifierExpresion final: public Expr {
 		// @note: this is a mock
 		SymID symbol;
-		IdentifierExpresion(SymID symbol): symbol{std::move(symbol)} {}
+
+		IdentifierExpresion(SymID symbol): symbol{ std::move(symbol) } {}
+
 		void debugPrint(std::string& out) const final;
 	};
 }
 
-
 namespace compiler::helios {
 	struct KeyOf_QueryHoutOfExpr {
-		ScopeID scope;
+		ScopeID           scope;
 		PstRef<pst::Expr> expr;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
 	};
-	
+
 	/**
 	 * @brief Construct HOUT Expr from Pst Expr, "within" given scope
 	 */
 	DECLARE_QUERY(QueryHoutOfExpr, KeyOf_QueryHoutOfExpr, code::ElementRef<code::Expr>);
 }
-

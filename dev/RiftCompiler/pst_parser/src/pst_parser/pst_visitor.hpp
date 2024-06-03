@@ -25,15 +25,15 @@ namespace pst {
 		virtual void visitExpr([[maybe_unused]] const Expr& stmt) = 0;
 
 		virtual void visitReturn([[maybe_unused]] const Return& stmt) = 0;
-		
+
 		virtual void visitDefer([[maybe_unused]] const Defer& stmt) = 0;
-		
+
 		virtual void visitRestart([[maybe_unused]] const Restart& stmt) = 0;
-		
+
 		virtual void visitBreak([[maybe_unused]] const Break& stmt) = 0;
-		
+
 		virtual void visitContinue([[maybe_unused]] const Continue& stmt) = 0;
-		
+
 		virtual void visitRedo([[maybe_unused]] const Redo& stmt) = 0;
 
 		virtual void visitThrow([[maybe_unused]] const Throw& stmt) = 0;
@@ -70,19 +70,19 @@ namespace pst {
 		void visitExpr([[maybe_unused]] const Expr& stmt) override {}
 
 		void visitReturn([[maybe_unused]] const Return& stmt) override {}
-		
+
 		void visitDefer([[maybe_unused]] const Defer& stmt) override {}
-		
+
 		void visitRestart([[maybe_unused]] const Restart& stmt) override {}
 
 		void visitBreak([[maybe_unused]] const Break& stmt) override {}
-		
+
 		void visitContinue([[maybe_unused]] const Continue& stmt) override {}
 
 		void visitRedo([[maybe_unused]] const Redo& stmt) override {}
 
 		void visitThrow([[maybe_unused]] const Throw& stmt) override {}
-		
+
 		void visitConst([[maybe_unused]] const Const& stmt) override {}
 
 		void visitDecl([[maybe_unused]] const Decl& stmt) override {}
@@ -96,14 +96,13 @@ namespace pst {
 		void visitFun([[maybe_unused]] const Fun& stmt) override {}
 	};
 
-	/**
-	 * @brief Macro used to define PstStmtVisitor methods
-	 */
-	#define PANIC_VISITOR_VISIT_METHOD(type) \
-	void visit ## type([[maybe_unused]] const type& stmt) override { \
-		RIFT_PANIC("PstStmtVisitorPanicky visited " #type); \
+/**
+ * @brief Macro used to define PstStmtVisitor methods
+ */
+#define PANIC_VISITOR_VISIT_METHOD(type)                           \
+	void visit##type([[maybe_unused]] const type& stmt) override { \
+		RIFT_PANIC("PstStmtVisitorPanicky visited " #type);        \
 	}
-
 
 	/**
 	 * A simple implementation for PstStmtVisitor, that by default does RIFT_PANIC.
