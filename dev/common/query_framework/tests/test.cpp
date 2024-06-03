@@ -91,13 +91,16 @@ QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciSum);
 
 
 DECLARE_QUERY(CallingEntryPoint, u64, u64);
+
 struct IMPLEMENT_QUERY(CallingEntryPoint, u64) {
 	static auto provide(Context&, QKey key) -> PResult {
 		// call another query without context:
-		return query::entryPoint<Fibonacci>({key});
+		return query::entryPoint<Fibonacci>({ key });
 	}
+
 	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 };
+
 QUERY_IMPLEMENTATION_BOILERPLATE(CallingEntryPoint);
 
 class QueryTest: public tester::TestSuite {
@@ -127,7 +130,7 @@ private:
 
 	void entryPointSanityTest() {
 		assertThrows<base::Panic>(
-			[&](){ query::entryPoint<CallingEntryPoint>(1); },
+			[&]() { query::entryPoint<CallingEntryPoint>(1); },
 			"Calling entry point from query did not panicked."
 		);
 	}

@@ -17,17 +17,17 @@ namespace query::detail {
 		// depending from them
 
 		/**
-		* @brief Returns size of current query stack size
-		*/
+		 * @brief Returns size of current query stack size
+		 */
 		u64 queryStackSize();
 
 		/**
 		 * @brief Marks beginning of new query
 		 */
 		void setEntry(detail::NodeID node, detail::NodeID from);
-		
+
 		DependencyStatus addDependency(detail::NodeID from, detail::NodeID to);
-		
+
 		/**
 		 * @brief Marks exit of a query
 		 */

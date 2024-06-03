@@ -53,9 +53,7 @@ namespace query::detail {
 			constinit u64                   query_stack_size = 0;
 		}
 
-		u64 queryStackSize() {
-			return query_stack_size;
-		}
+		u64 queryStackSize() { return query_stack_size; }
 
 		void setEntry(NodeID node, NodeID from) {
 			query_stack_size++;

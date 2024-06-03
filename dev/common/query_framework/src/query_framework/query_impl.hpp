@@ -31,8 +31,9 @@ namespace query {
 		private:
 			NodeID my_node;
 
-			ContextType(NodeID my_node): my_node(my_node) {};
+			ContextType(NodeID my_node): my_node(my_node){};
 			friend struct ContextMaker;
+
 		public:
 			// @TODO: add currently engaged query sanity check to context operations
 
@@ -42,7 +43,7 @@ namespace query {
 			static dia::Logger logger;
 
 			ContextType(const ContextType&) = delete;
-			ContextType(ContextType&&) = delete;
+			ContextType(ContextType&&)      = delete;
 
 			template<typename OthQuery>
 			auto query(typename OthQuery::QKey key) -> decltype(auto) {
@@ -65,9 +66,7 @@ namespace query {
 		 * @brief Internal helper struct used to create context
 		 */
 		struct ContextMaker {
-			static auto make(NodeID my_node) {
-				return ContextType(my_node);
-			}
+			static auto make(NodeID my_node) { return ContextType(my_node); }
 		};
 
 		/**
