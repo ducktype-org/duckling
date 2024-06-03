@@ -50,9 +50,12 @@ namespace query::detail {
 
 		namespace {
 			base::HashMap<NodeID, NodeData> node_data;
+			constinit u64                   query_stack_size = 0;
 		}
 
 		void setEntry(NodeID node, NodeID from) {
+			query_stack_size++;
+
 			if (node_data.contains(node)) {
 				if (node_data.at(node).color == Color::Visiting) {
 					// @TODO: cycle mark
@@ -71,7 +74,12 @@ namespace query::detail {
 			return DependencyStatus::OK;
 		}
 
-		void setExit(NodeID node) { node_data.at(node).color = Color::Done; }
+		void setExit(NodeID node) {
+			RIFT_ASSERT(query_stack_size > 0, "Query exit called on empty call stack");
+			query_stack_size--;
+			
+			node_data.at(node).color = Color::Done;
+		}
 
 		void debugPrint() {
 			std::cerr << "Dep Graph: \n";
