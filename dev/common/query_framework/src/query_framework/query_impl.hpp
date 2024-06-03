@@ -28,12 +28,19 @@ namespace query {
 		 * discarded.
 		 */
 		struct ContextType {
+		private:
 			NodeID my_node;
 
+			ContextType(NodeID my_node): my_node(my_node) {};
+			friend struct ContextMaker;
+		public:
 			// @TODO: Make the context (and thus the logger) be propagated through query calls,
 			// so that all queries run on the same file / in the same compilation thread / whatever
 			// use a single, *non-static* logger object.
 			static dia::Logger logger;
+
+			ContextType(const ContextType&) = delete;
+			ContextType(ContextType&&) = delete;
 
 			template<typename OthQuery>
 			auto query(typename OthQuery::QKey key) -> decltype(auto) {
@@ -66,6 +73,15 @@ namespace query {
 		inline dia::Logger ContextType::logger{};
 
 		/**
+		 * @brief Internal helper struct used to create context
+		 */
+		struct ContextMaker {
+			static auto make(NodeID my_node) {
+				return ContextType(my_node);
+			}
+		};
+
+		/**
 		 * @brief Internal function implementing the call to a query.
 		 *
 		 * @tparam QueryImplType Implementation Struct of a Query to call.
@@ -86,7 +102,8 @@ namespace query {
 				return v.value().data;
 			} else {
 				auto node_id = makeNodeID(QueryImplType::QueryType::id, key);
-				typename QueryImplType::Context context{ node_id };
+				auto context = ContextMaker::make(node_id);
+
 				// @FUTURE: provide legit acd here
 				ACD acd;
 
