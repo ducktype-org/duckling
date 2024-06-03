@@ -202,7 +202,10 @@ namespace compiler::helios {
 		bool                     follow_wildcards;
 	};
 
-	QUERY_EXTENSION(lookupChain, LookupChainKey, SymbolList);
+	/**
+	 * @brief Query extension for looking-up chain of names
+	 */
+	SymbolList lookupChain(query::Context&, LookupChainKey);
 
 	SymbolList lookupChain(query::Context& ctx, LookupChainKey key) {
 		RIFT_ASSERT(key.names.size() > 0, "lookupDotted received zero names");

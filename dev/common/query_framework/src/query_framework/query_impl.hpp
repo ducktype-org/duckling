@@ -155,9 +155,6 @@ namespace query {
 		 *  static auto store(QKey key, PResult res, query::ACD acd) -> QResult;
 		 */
 	};
-
-	using Context = detail::ContextType;
-
 }
 
 /**
