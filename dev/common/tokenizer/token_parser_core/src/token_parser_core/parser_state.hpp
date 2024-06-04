@@ -89,6 +89,7 @@ namespace tpc {
 		/**
 		 * @brief Get position relative to the current token.
 		 */
+		[[nodiscard]]
 		dia::SourcePosition getPosition(i64 fwd = 0) const {
 			return ctokens().peek(fwd).getPosition();
 		}
@@ -96,6 +97,7 @@ namespace tpc {
 		/**
 		 * @brief Get position range relative to the current token.
 		 */
+		[[nodiscard]]
 		dia::SourcePosition getPosition(i64 fwd_from, i64 fwd_to) const;
 
 		/**
