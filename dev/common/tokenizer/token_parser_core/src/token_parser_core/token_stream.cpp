@@ -47,28 +47,6 @@ namespace tpc {
 
 	void TokenStream::skip(usize n) { where += n; }
 
-	bool TokenStream::isKeyword(i64 fwd) const { return peek(fwd).isKeyword(); }
-
-	Keyword TokenStream::asKeyword(i64 fwd) const { return peek(fwd).asKeyword(); }
-
-	bool TokenStream::isSpecial(i64 fwd) const { return peek(fwd).isSpecial(); }
-
-	Special TokenStream::asSpecial(i64 fwd) const { return peek(fwd).asSpecial(); }
-
-	bool TokenStream::isOperator(i64 fwd) const { return peek(fwd).isOperator(); }
-
-	bool TokenStream::isOperator(base::StrId oper, i64 fwd) const {
-		return peek(fwd).isOperator() and peek(fwd).isStr(oper);
-	}
-
-	bool TokenStream::isBracketGroup(i64 fwd) const { return peek(fwd).isBracketGroup(); }
-
-	bool TokenStream::isBracketGroup(Token::BracketType bracket_type, i64 fwd) const {
-		return peek(fwd).isBracketGroup(bracket_type);
-	}
-
-	bool TokenStream::isRecursive(i64 fwd) const { return peek(fwd).isRecursive(); }
-
 	usize TokenStream::size() const { return (where >= to ? 0 : to - where); }
 
 }

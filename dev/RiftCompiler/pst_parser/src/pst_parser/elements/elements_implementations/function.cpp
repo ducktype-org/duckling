@@ -3,14 +3,14 @@
 namespace pst {
 	// @TODO: make better
 	ParserRef<Fun> Fun::parse(RiftParserState& state) {
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 		auto out      = makeRef<Fun>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Fun), position.genStr("bad statement choice"));
+		RIFT_ASSERT(state[0].is(Keyword::Fun), position.genStr("bad statement choice"));
 
 		parseAll(state, Keyword::Fun, &out->name, &out->params);
 		if (state.tryEat(Operator::SingleArrow)) parseOne(state, &out->rets);
-		while (state.notEmpty() and !state.ctokens().isBracketGroup(Token::BracketType::Curly))
+		while (state.notEmpty() and !state[0].isBracketGroup(Token::BracketType::Curly))
 			state.tokens().skip();
 		parseOne(state, &out->body);
 		return out;

@@ -13,7 +13,7 @@ namespace tpc {
 		return stream_stack.size() == 1 && ctokens().size() <= fwd;
 	}
 
-	dia::SourcePosition ParserState::getPosition(i64 fwd_from, i64 fwd_to) {
+	dia::SourcePosition ParserState::getPosition(i64 fwd_from, i64 fwd_to) const {
 		fwd_from = std::min(fwd_from, (i64) ctokens().size());
 		fwd_to   = std::min(fwd_to, (i64) ctokens().size());
 		if (fwd_from == fwd_to) return getPosition(fwd_from);

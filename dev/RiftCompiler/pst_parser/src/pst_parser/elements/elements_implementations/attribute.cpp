@@ -4,15 +4,14 @@ namespace pst {
 	bool Attribute::trailingSemicolon() { return false; }
 
 	ParserRef<Attribute> Attribute::parse(RiftParserState& state) {
-		auto                 position = state.ctokens().peek().getPosition();
+		auto                 position = state.getPosition();
 		ParserRef<Attribute> out      = makeRef<Attribute>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Special::AtSign), position.genStr("bad statement choice"));
+		RIFT_ASSERT(state[0].is(Special::AtSign), position.genStr("bad statement choice"));
 
 		parseAll(state, Special::AtSign, &out->name);
 
-		if (state.ctokens().isBracketGroup(Token::BracketType::Round))
-			out->args = ArgList::parse(state);
+		if (state[0].isBracketGroup(Token::BracketType::Round)) out->args = ArgList::parse(state);
 
 		out->setLastToken(state.getPosition(-1));
 

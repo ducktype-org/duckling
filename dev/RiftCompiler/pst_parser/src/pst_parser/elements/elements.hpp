@@ -72,7 +72,7 @@ namespace pst {
 		bool trailingSemicolon() override;
 	};
 
-	using StateCondition = bool(const RiftParserState&, usize);
+	using StateCondition = bool(const RiftParserState&, i64);
 
 	using GetName = std::string();
 
@@ -720,7 +720,7 @@ namespace pst {
 		auto position = state.getPosition();
 
 		if constexpr (BRACKETS != lexer::Token::BracketType::None) {
-			if (!state.ctokens().isBracketGroup(BRACKETS)) {
+			if (!state[0].isBracketGroup(BRACKETS)) {
 				state.fail(base::make_unique<OpeningBracketMissingError<getName>>(
 					state.getPosition(-1), BRACKETS
 				));
@@ -738,8 +738,9 @@ namespace pst {
 		} else {
 			while (true) {
 				expr_length = 0;
-				while (!state.ctokens().is(lexer::Token::Type::Sentinel, (i64) expr_length)
-				       && !isSeparator(state, expr_length) && !isEnding(state, expr_length)) {
+				while (!state[(i64) expr_length].is(lexer::Token::Type::Sentinel)
+				       && !isSeparator(state, (i64) expr_length)
+				       && !isEnding(state, (i64) expr_length)) {
 					expr_length++;
 				}
 				if (expr_length == 0) {

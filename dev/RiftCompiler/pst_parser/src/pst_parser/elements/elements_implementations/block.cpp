@@ -2,12 +2,12 @@
 
 namespace pst {
 	ParserRef<Block> Block::parse(RiftParserState& state) {
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 		auto out      = makeRef<Block>(position);
 
 		out->addKeyword(state.getPosition());
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Block), position.genStr("bad statement choice"));
+		RIFT_ASSERT(state[0].is(Keyword::Block), position.genStr("bad statement choice"));
 
 		parseAll(state, Keyword::Block, &out->optional_name, &out->code_block);
 

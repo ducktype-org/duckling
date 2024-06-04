@@ -3,10 +3,10 @@
 
 namespace pst {
 	ParserRef<Import> Import::parse(RiftParserState& state) {
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 		auto out      = makeRef<Import>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Import), position.genStr("bad statement choice"));
+		RIFT_ASSERT(state[0].is(Keyword::Import), position.genStr("bad statement choice"));
 
 		parseAll(state, Keyword::Import, &out->names, Keyword::As, &out->alias);
 

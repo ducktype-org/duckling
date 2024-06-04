@@ -15,8 +15,8 @@ namespace pst {
 	bool Stmt::trailingSemicolon() { return true; }
 
 	ParserRef<Stmt> Stmt::parse(RiftParserState& state) {
-		auto as_keyword = state.ctokens().peek().asKeyword();
-		auto as_special = state.ctokens().peek().asSpecial();
+		auto as_keyword = state[0].asKeyword();
+		auto as_special = state[0].asSpecial();
 
 		switch (as_keyword) {
 		case Keyword::If:

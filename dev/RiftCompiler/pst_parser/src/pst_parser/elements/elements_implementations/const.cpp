@@ -4,7 +4,7 @@ namespace pst {
 	ParserRef<Const> Const::parse(RiftParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Const>(position);
-		RIFT_ASSERT(state.ctokens().is(Keyword::Const), position.genStr("bad statement choice"));
+		RIFT_ASSERT(state[0].is(Keyword::Const), position.genStr("bad statement choice"));
 
 		out->addKeyword(state.getPosition());
 

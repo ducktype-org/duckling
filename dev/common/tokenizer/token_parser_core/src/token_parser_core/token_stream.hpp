@@ -53,15 +53,6 @@ namespace tpc {
 		void skip(usize n = 1);
 
 		/**
-		 * @brief Checks whether a token is recursive (i.e. contains another token stream, e.g.
-		 * brackets)
-		 *
-		 * @param fwd distance forward from the current position to checked token
-		 */
-		[[nodiscard]]
-		bool isRecursive(i64 fwd = 0) const;
-
-		/**
 		 * @brief Go into the recursive stream of the current token. If the current token doesn't
 		 * have a recursive stream throws ``base::LogicError``.
 		 *
@@ -69,76 +60,6 @@ namespace tpc {
 		 */
 		[[nodiscard]]
 		TokenStream getRecursive() const;
-
-		/**
-		 * @brief Checks whether a token is a keyword
-		 *
-		 * @param fwd distance forward from the current position to checked token
-		 */
-		[[nodiscard]]
-		bool isKeyword(i64 fwd = 0) const;
-		[[nodiscard]]
-		Keyword asKeyword(i64 fwd = 0) const;
-
-		/**
-		 * @brief Checks whether a token is a special
-		 *
-		 * @param fwd distance forward from the current position to checked token
-		 */
-		[[nodiscard]]
-		bool isSpecial(i64 fwd = 0) const;
-		[[nodiscard]]
-		Special asSpecial(i64 fwd = 0) const;
-
-		/**
-		 * @brief Checks whether a token is an operator
-		 *
-		 * @param fwd distance forward from the current position to checked token
-		 */
-		[[nodiscard]]
-		bool isOperator(i64 fwd = 0) const;
-		/**
-		 * @brief Checks whether a token is a particular operator
-		 *
-		 * @param oper string with the chosen operator
-		 * @param fwd distance forward from the current position to checked token
-		 */
-		[[nodiscard]]
-		bool isOperator(base::StrId oper, i64 fwd = 0) const;
-
-		/**
-		 * @brief Checks whether a token is a bracket group
-		 *
-		 * @param fwd distance forward from the current position to checked token
-		 */
-		[[nodiscard]]
-		bool isBracketGroup(i64 fwd = 0) const;
-		/**
-		 * @brief Checks whether a token is a particular bracket group
-		 *
-		 * @param type chosen bracket group type
-		 * @param fwd distance forward from the current position to checked token
-		 */
-		[[nodiscard]]
-		bool isBracketGroup(Token::BracketType type, i64 fwd = 0) const;
-
-		/**
-		 * @brief Allows for comparing a token with values of multiple different types
-		 *
-		 * The possible types are:
-		 *  - `lexer::Token::Type`
-		 *  - `rift_def::Keyword`
-		 *  - `rift_def::Special`
-		 *  - `rift_def::Operator`
-		 *
-		 * @param t the token
-		 * @param fwd distance forward from the current position to checked token
-		 */
-		template<class T>
-		[[nodiscard]]
-		bool is(T t, const i64 fwd = 0) const {
-			return peek(fwd).is(t);
-		}
 
 		/**
 		 * @brief Calculates the amount of tokens left including the current one

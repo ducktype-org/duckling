@@ -26,7 +26,7 @@ namespace pst {
 	ParserRef<Expr> Expr::parseUntil(RiftParserState& state, rift_def::Operator until) {
 		// look ahead:
 		usize count = 0;
-		while (!state.ctokens().is(until, (i64) count)) {
+		while (!state[(i64) count].is(until)) {
 			if (state.ctokens().size() < count) {
 				state.fail(0, "Bad expression end");
 				break;
@@ -42,36 +42,34 @@ namespace pst {
 	 * @TODO: lambda, todo-s
 	 */
 	ParserRef<Expr> Expr::parse(RiftParserState& state, usize len, bool exact_len) {
-		auto  out = makeRef<Expr>(state.ctokens().peek().getPosition());
+		auto  out = makeRef<Expr>(state.getPosition());
 		usize i   = 0;
 
 		while (state.notEmpty() and i < len) {
 			i++;
 
-			if (state.ctokens().peek().isBracketGroup()) {
-				auto type = fromTokenType(state.ctokens().peek().getBracketType());
+			if (state[0].isBracketGroup()) {
+				auto type = fromTokenType(state[0].getBracketType());
 				state.goDown();
-				if (state.notEmpty()) {
+				if (state.notEmpty())
 					out->elements.emplace_back(Group{ type, Expr::parse(state) });
-				} else {
-					out->elements.emplace_back(Group{
-						type, makeRef<Expr>(state.ctokens().peek().getPosition()) });
-				}
+				else
+					out->elements.emplace_back(Group{ type, makeRef<Expr>(state.getPosition()) });
 				state.goUpAndSkip();
-			} else if (state.ctokens().isOperator()) {
+			} else if (state[0].isOperator()) {
 				auto token = state.tokens().next();
 				out->elements.emplace_back(Operator({ token.getValue() }));
-			} else if (state.ctokens().peek().isIdentifier()) {
+			} else if (state[0].isIdentifier()) {
 				auto token = state.tokens().next();
 				out->elements.emplace_back(Identifier({ token.getValue() }));
-			} else if (state.ctokens().isKeyword()) {
+			} else if (state[0].isKeyword()) {
 				// @TODO: check if keyword is legal in expr and proceed accordingly
 				auto token = state.tokens().next();
 				out->elements.emplace_back(KeywordValue({ token.asKeyword() }));
-			} else if (state.ctokens().peek().isNumLiteral()) {
+			} else if (state[0].isNumLiteral()) {
 				auto token = state.tokens().next();
 				out->elements.emplace_back(NumLiteral({ token.getValue() }));
-			} else if (state.ctokens().is(Special::Semicolon)) {
+			} else if (state[0].is(Special::Semicolon)) {
 				break;
 			}
 			// @TODO: Add support for strings

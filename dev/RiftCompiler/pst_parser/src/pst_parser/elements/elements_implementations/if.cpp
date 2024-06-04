@@ -3,10 +3,10 @@
 namespace pst {
 	ParserRef<If> If::parse(RiftParserState& state) {
 		// @TODO: attr list
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 		auto out      = makeRef<If>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::If), position.genStr("bad statement choice"));
+		RIFT_ASSERT(state[0].is(Keyword::If), position.genStr("bad statement choice"));
 
 		parseAll(state, Keyword::If, &out->optional_name, &out->condition, &out->body);
 

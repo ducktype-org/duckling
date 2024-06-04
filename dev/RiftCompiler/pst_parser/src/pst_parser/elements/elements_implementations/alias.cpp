@@ -18,10 +18,10 @@ namespace pst {
 	};
 
 	ParserRef<Alias> Alias::parse(RiftParserState& state) {
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 		auto out      = makeRef<Alias>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Alias), position.genStr("bad statement choice"));
+		RIFT_ASSERT(state[0].is(Keyword::Alias), position.genStr("bad statement choice"));
 
 		out->addKeyword(state.getPosition());
 

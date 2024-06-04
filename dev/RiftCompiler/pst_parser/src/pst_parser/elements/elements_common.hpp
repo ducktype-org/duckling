@@ -11,16 +11,16 @@ namespace pst::detail {
 	public:
 		Conditions() = delete;
 
-		static bool isComma(const RiftParserState& state, usize fwd) {
-			return state.ctokens().is(rift_def::Operator::Comma, fwd);
+		static bool isComma(const RiftParserState& state, i64 fwd) {
+			return state[fwd].is(rift_def::Operator::Comma);
 		}
 
-		static bool isSentinel(const RiftParserState& state, usize fwd) {
-			return state.ctokens().is(lexer::Token::Type::Sentinel, fwd);
+		static bool isSentinel(const RiftParserState& state, i64 fwd) {
+			return state[fwd].is(lexer::Token::Type::Sentinel);
 		}
 
-		static bool isCurlyGroup(const RiftParserState& state, usize fwd) {
-			return state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly, fwd);
+		static bool isCurlyGroup(const RiftParserState& state, i64 fwd) {
+			return state[fwd].isBracketGroup(lexer::Token::BracketType::Curly);
 		}
 	};
 

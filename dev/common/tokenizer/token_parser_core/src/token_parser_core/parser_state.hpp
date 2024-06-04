@@ -25,11 +25,13 @@ namespace tpc {
 		[[nodiscard]]
 		const TokenStream& ctokens() const;
 
+		// clang-format off
 		[[nodiscard]]
-		inline const Token&
-			operator[](i64 fwd) const {
+		inline const Token& operator[](i64 fwd) const {
 			return ctokens().peek(fwd);
 		}
+
+		// clang-format on
 
 		dia::Logger& err;  ///< Stores parsing errors
 
@@ -87,51 +89,27 @@ namespace tpc {
 		/**
 		 * @brief Get position relative to the current token.
 		 */
-		dia::SourcePosition getPosition(i64 fwd = 0) { return ctokens().peek(fwd).getPosition(); }
+		dia::SourcePosition getPosition(i64 fwd = 0) const {
+			return ctokens().peek(fwd).getPosition();
+		}
 
 		/**
 		 * @brief Get position range relative to the current token.
 		 */
-		dia::SourcePosition getPosition(i64 fwd_from, i64 fwd_to);
+		dia::SourcePosition getPosition(i64 fwd_from, i64 fwd_to) const;
 
 		/**
-		 * @brief Skips current token if it's equal to @p key.
+		 * @brief Skips current token if is equal to @p t.
 		 *
 		 * @return If the token was skipped.
 		 */
-		bool tryEat(Keyword key) {
-			if (tokens().is(key)) {
-				tokens().next();
-				return true;
-			}
-			return false;
-		}
-
-		/**
-		 * @brief Skips current token if it's equal to @p spec.
-		 *
-		 * @return If the token was skipped.
-		 */
-		bool tryEat(Special spec) {
-			if (tokens().is(spec)) {
-				tokens().next();
-				return true;
-			}
-			return false;
-		}
-
-		/**
-		 * @brief Skips current token if it's equal to @p op.
-		 *
-		 * @return If the token was skipped.
-		 */
-		bool tryEat(Operator op) {
-			if (tokens().is(op)) {
+		template<typename T>
+		bool tryEat(T t) {
+			if (ctokens().peek().is(t)) {
 				tokens().next();
 				return true;
 			}
 			return false;
 		}
 	};
-
 }
