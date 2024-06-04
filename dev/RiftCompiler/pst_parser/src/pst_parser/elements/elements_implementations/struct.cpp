@@ -32,5 +32,4 @@ namespace pst {
 	}
 
 	void Struct::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitStruct(*this); }
-
 }
