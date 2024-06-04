@@ -303,6 +303,22 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 	};
 
+	class EmptyExprError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected a non-empty expression.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		EmptyExprError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	class Expr final: public Stmt {
 	public:
 		enum class GroupType {
@@ -347,7 +363,48 @@ namespace pst {
 		 * @brief parses the expression until its over
 		 */
 		static ParserRef<Expr> parse(RiftParserState& state);
-		static ParserRef<Expr> parseUntil(RiftParserState& state, rift_def::Operator until);
+
+		/**
+		 * @brief parses the expression until a condition is met or end of token stream.
+		 *
+		 * @tparam until Condition to end the parsing.
+		 * @tparam positiveEnd Condition for positive parsing end.
+		 * @tparam badEndMessage Message if the @p positiveEnd condition is not met.
+		 *
+		 * @return ParserRef<Expr>
+		 */
+		template<
+			StateCondition                  until,
+			StateCondition                  positiveEnd,
+			std::derived_from<dia::Message> badEndMessage>
+		requires std::constructible_from<badEndMessage, dia::SourcePosition>
+		static ParserRef<Expr> parseUntil(RiftParserState& state) {
+			// look ahead:
+			usize count = 0;
+			while (!until(state, (i64) count) && state.notEmpty()) count++;
+			if (!positiveEnd(state, (i64) count)) {
+				auto pos = state.getPosition(-1);
+				if (count != 0) {
+					pos = state.getPosition(0, (i64) count - 1);
+				} else if (!state.isEOF()) {
+					auto other = state.getPosition(0);
+					pos        = dia::SourcePosition(pos, other.getStart());
+				}
+				state.fail(base::make_unique<badEndMessage>(pos));
+			} else if (count == 0) {
+				auto pos = state.getPosition(-1);
+				if (!state.isEOF()) {
+					auto other = state.getPosition(0);
+					pos        = dia::SourcePosition(pos, other.getStart());
+				}
+				state.fail(base::make_unique<EmptyExprError>(pos));
+			}
+
+			if (count == 0) return nullptr;
+
+			return Expr::parse(state, count, true);
+		}
+
 		/**
 		 * @p exact_len = false: parses the expression until its over or until it parses @p len
 		 * tokens

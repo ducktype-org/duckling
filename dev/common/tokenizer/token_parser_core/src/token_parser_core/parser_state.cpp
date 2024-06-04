@@ -16,7 +16,7 @@ namespace tpc {
 	dia::SourcePosition ParserState::getPosition(i64 fwd_from, i64 fwd_to) const {
 		fwd_from = std::min(fwd_from, (i64) ctokens().size());
 		fwd_to   = std::min(fwd_to, (i64) ctokens().size());
-		if (fwd_from == fwd_to) return getPosition(fwd_from);
+		if (fwd_from >= fwd_to) return getPosition(fwd_from);
 
 		auto base = ctokens().peek(fwd_from).getPosition();
 

@@ -2,6 +2,51 @@
 #include <base/variant.hpp>
 
 namespace pst {
+	class BadTokenError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Unexpected token in expression.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		BadTokenError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class UnexpectedExprEndError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Unexpected end to an expression.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		UnexpectedExprEndError(dia::SourcePosition pos, dia::SourcePosition expected):
+			  dia::Error(pos) {
+			addNote(base::make_unique<ExpectedEnd>(expected));
+		}
+
+		class ExpectedEnd final: public dia::NoteWithPosition {
+		protected:
+			[[nodiscard]]
+			std::string toStringBrief() const override {
+				return "Expected it to end here.";
+			}
+
+		public:
+			ExpectedEnd(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+		};
+	};
 
 	Expr::GroupType fromTokenType(Token::BracketType type) {
 		switch (type) {
@@ -23,27 +68,28 @@ namespace pst {
 		return Expr::parse(state, 1e18, false);
 	}
 
-	ParserRef<Expr> Expr::parseUntil(RiftParserState& state, rift_def::Operator until) {
-		// look ahead:
-		usize count = 0;
-		while (!state[(i64) count].is(until)) {
-			if (state.ctokens().size() < count) {
-				state.fail(0, "Bad expression end");
-				break;
-			}
-			count++;
-		}
-
-		return Expr::parse(state, count, true);
-	}
-
 	/**
 	 * It is left in this state for now, as a lot will depend on semantical analysis
 	 * @TODO: lambda, todo-s
 	 */
 	ParserRef<Expr> Expr::parse(RiftParserState& state, usize len, bool exact_len) {
-		auto  out = makeRef<Expr>(state.getPosition());
-		usize i   = 0;
+		auto  out          = makeRef<Expr>(state.getPosition());
+		usize i            = 0;
+		auto  expected_end = state.getPosition((i64) len);
+
+		RIFT_ASSERT(
+			len > 0, state.getPosition().genStr("Expr parse should have positive expected length.")
+		);
+
+		if (state.empty()) {
+			state.fail(base::make_unique<EmptyExprError>(state.getPosition()));
+			return nullptr;
+		}
+		if (state[0].is(Special::Semicolon)) {
+			auto err_pos = state.getPosition(-1, 0);
+			state.fail(base::make_unique<EmptyExprError>(err_pos));
+			return nullptr;
+		}
 
 		while (state.notEmpty() and i < len) {
 			i++;
@@ -74,17 +120,14 @@ namespace pst {
 			}
 			// @TODO: Add support for strings
 			else {
-				state.fail(-1, "unexpected token in expression after here");
+				state.fail(base::make_unique<BadTokenError>(state.getPosition()));
+				if (i == 1) return nullptr;
 				break;
 			}
 		}
 		if (exact_len and i != len) {
-			state.fail(-1, "expression unexpectedly ended here");
-		} else if (out->elements.empty()) {
-			// @IDEA: maybe we add a flag for this check, sometimes it's unnecessary
-			state.fail(-1, "no expression where expression expected");
-			// we have to skip because we might loop
-			state.tokens().skip();
+			auto bad_end = state.getPosition(-1);
+			state.fail(base::make_unique<UnexpectedExprEndError>(bad_end, expected_end));
 		}
 		return out;
 	}
@@ -106,7 +149,7 @@ namespace pst {
 					constexpr static std::array<std::string_view, 4> gr_strings
 						= { "()", "[]", "{}", "  " };
 					out << "{ \"Group\": { \"type\": \"";
-					out << gr_strings[int(group.type)];
+					out << gr_strings.at(int(group.type));
 					out << "\", \"expr\": ";
 					nullAwareDprint(group.expr, out);
 					out << "} }";
