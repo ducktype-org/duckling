@@ -7,18 +7,12 @@ import { CompilerDaemonClient } from "./compilerDaemonClient";
 export async function validateRift(
 	textDocument: TextDocument, 
 	connection: Connection, 
-	errorsCache: Map<String, RiftParserError[]>,
 	compilerDaemonClient: CompilerDaemonClient
 ): Promise<void> {
 	const settings = await getDocumentSettings(textDocument.uri);
 	let problems = 0;
 	const diagnostics: Diagnostic[] = [];
-	
-	let errors = errorsCache.get(textDocument.uri);
-	if (!errors) {
-		errors = await compilerDaemonClient.getErrors(textDocument.uri, connection);
-		errorsCache.set(textDocument.uri, errors);
-	}
+	let errors = await compilerDaemonClient.getErrors(textDocument.uri, connection);
 
 	for (const error of errors) {
 		problems++;

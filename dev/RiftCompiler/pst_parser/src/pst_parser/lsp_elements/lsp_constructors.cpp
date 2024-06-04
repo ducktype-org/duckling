@@ -283,7 +283,8 @@ namespace pst {
 		lsp::LSPStruct& res = *new lsp::LSPStruct;
 		res.position        = this->getSourcePosition();
 		res.name            = this->name;
-		for (const auto& base: this->bases) res.bases.push_back(base->exprFromPST());
+		if (this->bases)
+			for (const auto& base: this->bases) res.bases.push_back(base->exprFromPST());
 		if (this->body) res.body = this->body->codeBlockFromPST();
 		res.kind = lsp::StmtKind::Struct;
 		return makeRef<lsp::LSPStruct>(&res);

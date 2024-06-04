@@ -47,7 +47,6 @@ let hasDiagnosticRelatedInformationCapability = false;
 
 // Storing PST for documents
 const lsptCache: Map<string, RiftElement | null> = new Map();
-const errorsCache: Map<string, RiftParserError[]> = new Map();
 const semanticTokensCache: Map<string, Token[]> = new Map();
 
 // Semantic tokens legend, only 'comment' token type for now
@@ -139,7 +138,7 @@ connection.onDidChangeConfiguration(change => {
 		);
 	}
 	// Revalidate all open text documents
-	documents.all().forEach(document => validateRift(document, connection, errorsCache, compilerDaemonClient));
+	documents.all().forEach(document => validateRift(document, connection, compilerDaemonClient));
 });
 
 export function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
@@ -171,12 +170,7 @@ documents.onDidChangeContent(change => {
 			console.log(LSPTree);
 		});
 
-		compilerDaemonClient.getErrors(change.document.uri, connection).then((errors) => {
-			errorsCache.set(change.document.uri, errors);
-			console.log(errors);
-		});
-
-		validateRift(change.document, connection, errorsCache, compilerDaemonClient);
+		validateRift(change.document, connection, compilerDaemonClient);
 	});
 });
 

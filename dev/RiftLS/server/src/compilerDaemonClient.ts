@@ -11,7 +11,7 @@ export class CompilerDaemonClient {
 	private process: ChildProcess;
 
 	constructor() {
-		this.process = spawn(BINARY_PATH + "lsp_daemon", ["-p", DAEMON_PORT]);
+		this.process = spawn(BINARY_PATH + "lsp_daemon", ["-p", DAEMON_PORT], {stdio: 'inherit'});
 	}
 
 	public async exit(): Promise<void> {
