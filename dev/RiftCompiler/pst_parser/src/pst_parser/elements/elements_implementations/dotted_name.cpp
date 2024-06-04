@@ -12,20 +12,24 @@ namespace pst {
 	bool DottedName::getStar() const { return star; }
 
 	ParserRef<DottedName> DottedName::parse(RiftParserState& state) {
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 		auto out      = makeRef<DottedName>(position);
 		do {
-			if (state.ctokens().peek().isIdentifier()) {
-				tpc::Identifier next;
-				tpc::parseOne(state, &next);
-				out->names.push_back(next);
-			} else {
-				state.fail(-1, "expected identifier after here");
-				break;
+			bool            is_id = state[0].isIdentifier();
+			tpc::Identifier next;
+			tpc::parseOne(state, &next, true);
+			if (is_id) out->names.push_back(next);
+			// If not special meaning, assume wrong type
+			else if(!state[0].is(rift_def::Operator::Period) && 
+					!state[0].is(rift_def::Operator::PeriodStar) && 
+					!state[0].is(rift_def::Special::Semicolon)) {
+				state.tokens().next();
 			}
 		} while (state.tryEat(rift_def::Operator::Period));
 
 		if (state.tryEat(rift_def::Operator::PeriodStar)) out->star = true;
+
+		out->setLastToken(state.getPosition(-1));
 
 		return out;
 	}

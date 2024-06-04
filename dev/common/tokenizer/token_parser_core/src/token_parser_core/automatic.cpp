@@ -2,37 +2,120 @@
 
 namespace tpc {
 
-	void parseOne(ParserState& state, Keyword key) {
+	class BadKeywordError final: public dia::Error {
+	private:
+		Keyword expected;
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected keyword `" + rift_def::keywordToStr(expected).str() + "` here.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		BadKeywordError(dia::SourcePosition pos, Keyword key): dia::Error(pos), expected(key) {}
+	};
+
+	class BadSpecialError final: public dia::Error {
+	private:
+		Special expected;
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected special `" + rift_def::specialToStr(expected).str() + "` here.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		BadSpecialError(dia::SourcePosition pos, Special spec): dia::Error(pos), expected(spec) {}
+	};
+
+	class BadOperatorError final: public dia::Error {
+	private:
+		Operator expected;
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected operator `" + rift_def::operatorToStr(expected).str() + "` here.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		BadOperatorError(dia::SourcePosition pos, Operator opr): dia::Error(pos), expected(opr) {}
+	};
+
+	class NoIdentifierError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected an identifier here.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		NoIdentifierError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	void parseOne(ParserState& state, Keyword key, bool ignorable) {
 		if (!state.tryEat(key)) {
-			state.fail(
-				-1, "expected keyword `" + rift_def::keywordToStr(key).str() + "` after here"
-			);
+			state.fail(base::make_unique<BadKeywordError>(state.getPosition(), key));
+			if (!ignorable) state.tokens().next();
 		}
 	}
 
-	void parseOne(ParserState& state, Special spec) {
+	void parseOne(ParserState& state, KeywordWrapper key, bool ignorable) {
+		if (!state.tryEat(key.what)) {
+			state.fail(base::make_unique<BadKeywordError>(state.getPosition(), key.what));
+			if (!ignorable) state.tokens().next();
+		} else {
+			key.pos = state.getPosition(-1);
+		}
+	}
+
+	void parseOne(ParserState& state, Special spec, bool ignorable) {
 		if (!state.tryEat(spec)) {
-			state.fail(
-				-1, "expected special `" + rift_def::specialToStr(spec).str() + "` after here"
-			);
+			state.fail(base::make_unique<BadSpecialError>(state.getPosition(), spec));
+			if (!ignorable) state.tokens().next();
 		}
 	}
 
-	void parseOne(ParserState& state, Operator op) {
+	void parseOne(ParserState& state, Operator op, bool ignorable) {
 		if (!state.tryEat(op)) {
-			state.fail(
-				-1, "expected operator `" + rift_def::operatorToStr(op).str() + "` after here"
-			);
+			state.fail(base::make_unique<BadOperatorError>(state.getPosition(), op));
+			if (!ignorable) state.tokens().next();
 		}
 	}
 
-	void parseOne(ParserState& state, Identifier* result) {
-		if (!state.ctokens().peek().isIdentifier())
-			state.fail(-1, "expected identifier after here");
+	void parseOne(ParserState& state, Identifier* result, bool ignorable) {
+		if (!state.ctokens().peek().isIdentifier()) {
+			state.fail(base::make_unique<NoIdentifierError>(state.getPosition()));
+			result->value = base::StrId("<error>");
+			if (!ignorable) state.tokens().next();
+			return;
+		}
 		result->value = state.tokens().next().getValue();
 	}
 
-	void parseOne(ParserState& state, OptionalIdentifier* result) {
+	void parseOne(ParserState& state, OptionalIdentifier* result, bool) {
 		if (state.ctokens().peek().isIdentifier()) result->value = state.tokens().next().getValue();
 	}
 

@@ -2,12 +2,13 @@
 
 namespace pst {
 	ParserRef<Action> Action::parse(RiftParserState& state) {
-		dia::SourcePosition position = state.ctokens().peek().getPosition();
+		dia::SourcePosition position = state.getPosition();
 
 		RIFT_ASSERT(state.ctokens().isKeyword(), position.genStr("bad statement choice"));
 
 		ParserRef<Action> out;
-		auto              keyword = state.ctokens().peek().asKeyword();
+		auto              keyword = state[0].asKeyword();
+
 		switch (keyword) {
 		case Keyword::Return:
 			out = makeRef<Return>(position);
@@ -33,10 +34,13 @@ namespace pst {
 		default:
 			RIFT_PANIC("bad statement choice");
 		}
+		out->addKeyword(state.getPosition());
 		state.tokens().skip();
 
 		// @TODO: for now we assume if there is no expression there is a semicolon
 		if (!state.ctokens().is(Special::Semicolon)) out->expr = Expr::parse(state);
+
+		out->setLastToken(state.getPosition());
 
 		return out;
 	}

@@ -25,6 +25,12 @@ namespace tpc {
 		[[nodiscard]]
 		const TokenStream& ctokens() const;
 
+		[[nodiscard]]
+		inline const Token&
+			operator[](i64 fwd) const {
+			return ctokens().peek(fwd);
+		}
+
 		dia::Logger& err;  ///< Stores parsing errors
 
 		ParserState(TokenStream&& tokens, dia::Logger& err): err(err) {

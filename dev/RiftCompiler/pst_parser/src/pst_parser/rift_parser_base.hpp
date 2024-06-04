@@ -23,13 +23,21 @@ namespace pst {
 		const dia::SourcePosition& getSourcePosition() const;
 
 		[[nodiscard]]
+		const std::vector<dia::SourcePosition>& getKeywordPositions() const;
+
+		[[nodiscard]]
 		PstID getID() const {
 			return id;
 		}
 
-	private:
-		dia::SourcePosition source_position;
+	protected:
+		dia::SourcePosition              source_position;
+		std::vector<dia::SourcePosition> keyword_positions;
 
+		void setLastToken(dia::SourcePosition pos);
+		void addKeyword(dia::SourcePosition pos);
+
+	private:
 		PstID id = PstID::next();
 	};
 
