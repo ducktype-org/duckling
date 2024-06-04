@@ -17,6 +17,14 @@ namespace pst {
 		ConstTypeEndError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
+	namespace detail {
+		bool isTypeEnd(const RiftParserState& st, i64 fwd) {
+			return st[fwd].is(Operator::Assign) || st[fwd].is(Special::Semicolon);
+		}
+
+		bool isAssign(const RiftParserState& st, i64 fwd) { return st[fwd].is(Operator::Assign); }
+	}
+
 	ParserRef<Const> Const::parse(RiftParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Const>(position);
@@ -24,15 +32,8 @@ namespace pst {
 
 		out->addKeyword(state.getPosition());
 
-		constexpr auto isTypeEnd = [](const RiftParserState& st, i64 fwd) {
-			return st[fwd].is(Operator::Assign) || st[fwd].is(Special::Semicolon);
-		};
-
-		constexpr auto isAssign
-			= [](const RiftParserState& st, i64 fwd) { return st[fwd].is(Operator::Assign); };
-
 		parseAll(state, Keyword::Const, &out->name, Operator::Colon);
-		out->type = Expr::parseUntil<isTypeEnd, isAssign, ConstTypeEndError>(state);
+		out->type = Expr::parseUntil<detail::isTypeEnd, detail::isAssign, ConstTypeEndError>(state);
 
 		state.tryEat(Operator::Assign);
 
