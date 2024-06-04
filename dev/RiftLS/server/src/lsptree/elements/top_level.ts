@@ -13,6 +13,12 @@ export class LSPTree extends Decl {
 		}
 	}
 
+	getIdentifiers(): RiftElement[] {
+		let res: RiftElement[] = [];
+		this.statements.forEach((element) => res.concat(element.getIdentifiers()));
+		return res;
+	}
+
 	getElements(): RiftElement[] {
 		return this.statements;
 	}

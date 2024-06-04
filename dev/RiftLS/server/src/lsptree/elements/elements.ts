@@ -13,6 +13,13 @@ export abstract class RiftElement {
 		this.source_position = new SourcePosition(json["position"]);
 	}
 
+	getIdentifiers(): RiftElement[] {
+		let acc = new Set<RiftElement>();
+		for (const element of this.getElements()) {
+			element.getIdentifiers().forEach((element1) => acc.add(element1));
+		}
+		return [...acc.values()];
+	}
 	abstract getElements(): RiftElement[];
 	abstract getSemanticTokens(): SemanticToken[];
 	getFoldingRanges(): FoldingRange[] {

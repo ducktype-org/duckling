@@ -91,13 +91,40 @@ export class CompilerDaemonClient {
 			return toErrors(text);
 		}
 
-		function handleCatch(error: any) : RiftParserError[] {
+		function handleCatch(error: any): RiftParserError[] {
 			console.error(error);
 			return [];
 		}
 
 		return response.then(handleResponse).then(handleJSON).catch(handleCatch);
 	}
+
+	public async getKeywords(connection: Connection): Promise<LSPKeywordData> {
+		this.waitForReady(connection);
+
+		const response = fetch(`${DAEMON_ADRESS}/export_keywords`);
+
+		function handleResponse(res: Response) {
+			return res.text();
+		}
+
+		function handleJSON(text: string): LSPKeywordData {
+			return JSON.parse(text);
+		}
+
+		function handleCatch(error: any): LSPKeywordData {
+			console.error(error);
+			return {keywords: [], operators: [], specials: []};
+		}
+
+		return response.then(handleResponse).then(handleJSON).catch(handleCatch);
+	}
+}
+
+export interface LSPKeywordData {
+	keywords: string[];
+	operators: string[];
+	specials: string[];
 }
 
 function uriToFilePath(uri: string): string {

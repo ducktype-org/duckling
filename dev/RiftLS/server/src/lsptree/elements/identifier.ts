@@ -14,6 +14,10 @@ export class Identifier extends Stmt {
 
 	}
 
+	getIdentifiers(): RiftElement[] {
+		return [this];
+	}
+
 	getElements(): RiftElement[] {
 		return [];
 	}

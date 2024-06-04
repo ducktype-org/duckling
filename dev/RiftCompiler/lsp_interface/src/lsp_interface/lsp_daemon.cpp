@@ -56,7 +56,7 @@ void server(i32 port) {
 	([]() { return crow::response(200, "OK"); });
 
 	CROW_ROUTE(app, "/export_keywords")
-	([lsp]() { return crow::response(200, lsp.getKeywordListJson()); });
+	([lsp]() { return crow::response(200, lsp.getAllJson()); });
 
 	CROW_ROUTE(app, "/put_file/<string>/<string>")
 	([&files](const std::string& base64_path, const std::string& base64_content) {

@@ -13,12 +13,14 @@ import {
 	SemanticTokenTypes,
 	SemanticTokenModifiers,
 	FoldingRangeParams,
-	FoldingRange
+	FoldingRange,
+	TextDocumentPositionParams,
+	CompletionItem
 } from 'vscode-languageserver/node';
 
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { handleSemanticTokensFull } from "./semanticTokens";
-import { onCompletion, onCompletionResolve } from "./completion";
+import { getCompletionItems, onCompletionResolve, preloadKeywords } from "./completion";
 import { validateRift } from "./validation"; // Import the validation function
 import { RiftParserError } from "./errors"; 
 import { CompilerDaemonClient } from "./compilerDaemonClient";
@@ -76,7 +78,8 @@ connection.onInitialize((params: InitializeParams) => {
 			textDocumentSync: TextDocumentSyncKind.Incremental,
 			// Tell the client that this server supports those options
 			completionProvider: {
-				resolveProvider: true
+				resolveProvider: true,
+				triggerCharacters: ['.']
 			},
 			semanticTokensProvider: {
 				legend: semanticTokensLegend,
@@ -92,6 +95,7 @@ connection.onInitialize((params: InitializeParams) => {
 			}
 		};
 	}
+	preloadKeywords(compilerDaemonClient, connection);
 	return result;
 });
 
@@ -182,7 +186,9 @@ connection.onDidChangeWatchedFiles(_change => {
 	connection.console.log("We received an file change event");
 });
 
-connection.onCompletion(onCompletion);
+connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
+	return getCompletionItems(_textDocumentPosition, documents, lsptCache);
+});
 connection.onCompletionResolve(onCompletionResolve);
 
 connection.onFoldingRanges((params: FoldingRangeParams): FoldingRange[] | null => {
