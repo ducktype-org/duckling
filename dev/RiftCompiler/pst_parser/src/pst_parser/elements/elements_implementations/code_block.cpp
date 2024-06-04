@@ -1,15 +1,31 @@
 #include "elements_implementation.hpp"
 
 namespace pst {
-	ParserRef<CodeBlock> CodeBlock::parse(RiftParserState& state) {
-		auto position = state.getPosition();
-		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
-			state.fail(-1, "expected `{` after here");
-			return nullptr;
+	class BlockStartError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected a code block starting with `{`.";
 		}
 
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
 
-		auto out = makeRef<CodeBlock>(position);
+		BlockStartError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	ParserRef<CodeBlock> CodeBlock::parse(RiftParserState& state) {
+		auto position = state.getPosition();
+		auto out      = makeRef<CodeBlock>(position);
+
+		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
+			state.fail(base::make_unique<BlockStartError>(state.getPosition()));
+			return out;
+		}
+
 		state.goDown();
 
 		// @TODO: this may not work in case of compilation error

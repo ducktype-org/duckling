@@ -8,9 +8,12 @@ namespace pst {
 
 		RIFT_ASSERT(state[0].is(Keyword::Import), position.genStr("bad statement choice"));
 
+		out->addKeyword(state.getPosition());
+
 		parseAll(state, Keyword::Import, &out->names, Keyword::As, &out->alias);
 
 		state.addImport(out.borrow());
+		out->setLastToken(state.getPosition(-1));
 
 		return out;
 	}

@@ -7,7 +7,11 @@ namespace pst {
 
 		RIFT_ASSERT(state[0].is(Keyword::Namespace), position.genStr("bad statement choice"));
 
+		out->addKeyword(state.getPosition());
+
 		parseAll(state, Keyword::Namespace, &out->name, &out->body);
+
+		out->setLastToken(state.getPosition(-1));
 
 		return out;
 	}

@@ -11,6 +11,8 @@ namespace pst {
 
 		parseAll(state, Keyword::Block, &out->optional_name, &out->code_block);
 
+		out->setLastToken(state.getPosition(-1));
+
 		return out;
 	}
 

@@ -1,7 +1,7 @@
 #include "elements_implementation.hpp"
 
 namespace pst {
-	class AliasStar final: public dia::Error {
+	class AliasStarError final: public dia::Error {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
@@ -14,7 +14,7 @@ namespace pst {
 			return Domain::Parser;
 		}
 
-		AliasStar(dia::SourcePosition pos): dia::Error(pos) {}
+		AliasStarError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	ParserRef<Alias> Alias::parse(RiftParserState& state) {
@@ -30,7 +30,7 @@ namespace pst {
 		out->setLastToken(state.getPosition(-1));
 
 		if (out->points_to->getStar())
-			state.fail(base::make_unique<AliasStar>(out->source_position));
+			state.fail(base::make_unique<AliasStarError>(out->source_position));
 
 		return out;
 	}

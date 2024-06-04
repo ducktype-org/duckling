@@ -32,7 +32,7 @@ namespace pst {
 			out = makeRef<Throw>(position);
 			break;
 		default:
-			RIFT_PANIC("bad statement choice");
+			RIFT_PANIC(position.genStr("bad statement choice"));
 		}
 		out->addKeyword(state.getPosition());
 		state.tokens().skip();

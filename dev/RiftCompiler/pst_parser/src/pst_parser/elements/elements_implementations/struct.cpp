@@ -7,11 +7,15 @@ namespace pst {
 
 		RIFT_ASSERT(state[0].is(Keyword::Struct), position.genStr("bad statement choice"));
 
+		out->addKeyword(state.getPosition());
+
 		parseAll(state, Keyword::Struct, &out->name);
 
 		if (state.tryEat(Operator::Colon)) parseOne(state, &out->bases);
 
 		parseOne(state, &out->body);
+
+		out->setLastToken(state.getPosition(-1));
 
 		return out;
 	}

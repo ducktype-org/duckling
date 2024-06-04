@@ -8,7 +8,11 @@ namespace pst {
 
 		RIFT_ASSERT(state[0].is(Keyword::If), position.genStr("bad statement choice"));
 
+		out->addKeyword(state.getPosition());
+
 		parseAll(state, Keyword::If, &out->optional_name, &out->condition, &out->body);
+
+		out->setLastToken(state.getPosition(-1));
 
 		return out;
 	}

@@ -2,6 +2,22 @@
 
 namespace pst {
 
+	class StmtSemicolonError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Unexpected special `;` at the beginning of a statement.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		StmtSemicolonError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	namespace detail {
 
 		template<class T>
@@ -58,7 +74,7 @@ namespace pst {
 			return detail::parseStmt<Action>(state);
 
 		if (as_special == Special::Semicolon) {
-			state.fail(0, "unexpected special `;`");
+			state.fail(base::make_unique<StmtSemicolonError>(state.getPosition()));
 			state.tokens().skip();
 			return nullptr;
 		}
