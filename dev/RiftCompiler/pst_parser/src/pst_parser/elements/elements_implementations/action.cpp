@@ -81,5 +81,5 @@ namespace pst {
 		simpleActionDprint(out, expr, "Throw", "exception");
 	}
 
-	void Action::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitAction(*this); }
+	void Action::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAction(*this); }
 }

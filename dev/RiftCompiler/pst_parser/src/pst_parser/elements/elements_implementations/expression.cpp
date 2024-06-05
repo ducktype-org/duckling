@@ -126,5 +126,5 @@ namespace pst {
 		out << "]}";
 	}
 
-	void Expr::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitExpr(*this); }
+	void Expr::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitExpr(*this); }
 }
