@@ -31,5 +31,5 @@ namespace pst {
 		out << "}}";
 	}
 
-	void Alias::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitAlias(*this); }
+	void Alias::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAlias(*this); }
 }

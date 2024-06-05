@@ -58,7 +58,7 @@ namespace pst {
 
 		static ParserRef<Stmt> parse(RiftParserState& state);
 		bool                   trailingSemicolon() override;
-		virtual void           acceptVistior(PstStmtVisitor& visitor) const = 0;
+		virtual void           acceptVisitor(PstStmtVisitor& visitor) const = 0;
 	};
 
 #define STMT_CHILD_CONSTRUCTOR(class_name) \
@@ -180,7 +180,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		bool trailingSemicolon() override;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -212,7 +212,7 @@ namespace pst {
 		~Import() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Using final: public Stmt {
@@ -235,7 +235,7 @@ namespace pst {
 		~Using() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Alias final: public Stmt {
@@ -259,7 +259,7 @@ namespace pst {
 		~Alias() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class CodeBlock final: public NotStmt {
@@ -357,7 +357,7 @@ namespace pst {
 		void                   dprint(std::ostream& out) const final;
 		~Expr() final = default;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -373,7 +373,7 @@ namespace pst {
 		~Action() override = default;
 
 		// TODO:
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Return final: public Action {
@@ -462,7 +462,7 @@ namespace pst {
 		~Const() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -475,7 +475,7 @@ namespace pst {
 		static ParserRef<Decl> parse(RiftParserState& state);
 		bool                   trailingSemicolon() override;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 #define DECL_CHILD_CONSTRUCTOR(class_name) \
@@ -513,7 +513,7 @@ namespace pst {
 		~Block() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Namespace final: public Decl {
@@ -537,7 +537,7 @@ namespace pst {
 		~Namespace() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -560,7 +560,7 @@ namespace pst {
 		~Struct() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Fun final: public Decl {
@@ -581,7 +581,7 @@ namespace pst {
 		void                  dprint(std::ostream& out) const final;
 		~Fun() final = default;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class If final: public CodeDecl {
