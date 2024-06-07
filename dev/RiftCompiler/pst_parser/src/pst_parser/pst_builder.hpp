@@ -81,8 +81,7 @@ namespace pst {
 		[[nodiscard]]
 		ParserCBorrowRef<Element> getTopLevelElement() const { return element.borrow(); }
 
-		template<std::derived_from<Element> OtherElement>
-		PSTBuilder(PSTBuilder<OtherElement>&& other):
+		PSTBuilder(PSTBuilder&& other) noexcept:
 			  file(std::move(other.file)),
 			  element(std::move(other.element)),
 			  imports(std::move(other.imports)) {}
