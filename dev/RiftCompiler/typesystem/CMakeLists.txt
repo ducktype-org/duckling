@@ -1,5 +1,5 @@
 add_library(TypeSystem
-	src/typesystem/class_types.cpp
+#	src/typesystem/class_types.cpp
 	src/typesystem/queries/implicit_coercibility.cpp
 	src/typesystem/queries/types.cpp
 	src/typesystem/type_info.cpp
@@ -7,7 +7,8 @@ add_library(TypeSystem
 	src/typesystem/typesystem.cpp
 	src/typesystem/value_category.cpp
 	src/typesystem/internal/type_info_impl.cpp
-	src/typesystem/internal/class_info_impl.cpp
+#	src/typesystem/internal/class_info_impl.cpp
+	src/typesystem/internal/queries.cpp
 )
 
 make_module(TypeSystem USES Base QueryFramework)

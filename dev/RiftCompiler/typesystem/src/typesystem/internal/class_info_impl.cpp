@@ -57,7 +57,6 @@ namespace ts::internal {
 		const std::vector<std::pair<ClassInfo, InheritanceTag>>&      inheritance_classes,
 		usize                                                         virtualMethods
 	):
-		  TypeInfoImpl(0),
 		  name(name),
 		  virt_method_count(virtualMethods) {
 		// Initialise parents vector
@@ -120,7 +119,7 @@ namespace ts::internal {
 			MemberData data{ .symbol = symbol, .desc = desc, .offset = reserved_space };
 			direct_members.push_back(members_data.size());
 			members_data.push_back(data);
-			reserved_space += desc.getType().getSize();
+			reserved_space += 0; //desc.getType().getSize();
 		}
 
 		if (virt_method_count > 0 || !linearised_ancestors.empty()) reserved_space += POINTER_SIZE;
@@ -219,12 +218,12 @@ namespace ts::internal {
 			return { .last_virtual_ancestor = data.last_virtual_ancestor,
 				     .desc                  = data.desc,
 				     .start_offset          = data.offset,
-				     .end_offset            = data.offset + data.desc.getType().getSize(),
+				     .end_offset            = data.offset + 0, // data.desc.getType().getSize(),
 				     .result_type           = ResultType::Virtual };
 		}
 		return { .desc         = data.desc,
 			     .start_offset = data.offset,
-			     .end_offset   = data.offset + data.desc.getType().getSize(),
+			     .end_offset   = data.offset + 0, // data.desc.getType().getSize(),
 			     .result_type  = ResultType::Standard };
 	}
 

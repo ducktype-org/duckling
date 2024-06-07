@@ -137,8 +137,8 @@ namespace ts {
 	|  NOMINAL TYPES  |
 	\*****************/
 
-	VariantInfo VariantInfo::create(const std::vector<TypeDesc<>>& variant_types) {
-		static base::Map<std::vector<TypeDesc<>>, VariantInfo> variants;
+	VariantInfo VariantInfo::create(const std::vector<TypeInfo>& variant_types) {
+		static base::Map<std::vector<TypeInfo>, VariantInfo> variants;
 		if (variants.contains(variant_types)) return variants[variant_types];
 
 		auto ptr = base::make_unique<Impl>(variant_types);
@@ -150,7 +150,7 @@ namespace ts {
 		return variants[variant_types];
 	}
 
-	const std::vector<TypeDesc<>>& VariantInfo::getUnderlyingTypes() const {
+	const std::vector<TypeInfo>& VariantInfo::getUnderlyingTypes() const {
 		return toCPimpl(pimpl)->getUnderlyingTypes();
 	}
 
@@ -188,7 +188,7 @@ namespace ts {
 	INSTANTIATE_CHECKED_CAST(VariantInfo)
 	INSTANTIATE_CHECKED_CAST(NamespaceInfo)
 	INSTANTIATE_CHECKED_CAST(ModuleInfo)
-	INSTANTIATE_CHECKED_CAST(ClassInfo)
-	INSTANTIATE_CHECKED_CAST(VTableInfo)
+//	INSTANTIATE_CHECKED_CAST(ClassInfo)
+//	INSTANTIATE_CHECKED_CAST(VTableInfo)
 	INSTANTIATE_CHECKED_CAST(MetaInfo)
 }

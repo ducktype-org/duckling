@@ -139,8 +139,6 @@ namespace query {
 		 */
 	};
 
-	using Context = detail::ContextType;
-
 }
 
 /**

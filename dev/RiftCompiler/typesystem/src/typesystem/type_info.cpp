@@ -9,6 +9,7 @@
 #include "type_info.hpp"
 
 #include "internal/type_info_impl.hpp"
+#include "internal/queries.hpp"
 
 namespace ts {
 	[[nodiscard]]
@@ -17,13 +18,13 @@ namespace ts {
 	}
 
 	[[nodiscard]]
-	TypeInterface TypeInfo::getInterface() const {
-		return pimpl->getInterface();
+	TypeInterface TypeInfo::getInterface(query::Context& ctx) const {
+		return pimpl->getInterface(ctx);
 	}
 
 	[[nodiscard]]
-	usize TypeInfo::getSize() const {
-		return pimpl->getSize();
+	usize TypeInfo::getSize(query::Context& ctx) const {
+		return pimpl->getSize(ctx);
 	}
 
 	[[nodiscard]]
@@ -32,7 +33,7 @@ namespace ts {
 	}
 
 	[[nodiscard]]
-	bool TypeInfo::isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType& ctx)
+	bool TypeInfo::isImplicitlyCoercible(const TypeInfo target, query::Context& ctx)
 		const {
 		return pimpl->isImplicitlyCoercible(target, ctx);
 	}

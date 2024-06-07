@@ -10,7 +10,8 @@
 
 #include <string>
 #include <base/ints.hpp>
-#include <query_framework/query_impl.hpp>
+
+#include <query_framework/query_int.hpp>
 
 #include "kind.hpp"
 
@@ -104,17 +105,19 @@ namespace ts {
 
 		/**
 		 * \brief Get the TypeInterface of the type described by this object.
+		 * \param ctx The Query Context necessary to deduce interfaces.
 		 * \return The TypeInterface of the type described by this object.
 		 */
 		[[nodiscard]]
-		TypeInterface getInterface() const;
+		TypeInterface getInterface(query::Context& ctx) const;
 
 		/**
 		 * \brief Gets the size of a value of the type described by this object, in bits.
+		 * \param ctx The Query Context necessary to deduce composite type sizes.
 		 * \return The size of a value of the type described by this object, in bits.
 		 */
 		[[nodiscard]]
-		usize getSize() const;
+		usize getSize(query::Context& ctx) const;
 
 		/**
 		 * \brief The default constructor is deleted.
@@ -188,7 +191,7 @@ namespace ts {
 		 */
 		[[nodiscard]]
 		bool
-			isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType& context) const;
+			isImplicitlyCoercible(TypeInfo target, query::detail::ContextType& context) const;
 
 		/**
 		 * \brief Get the text representation of this type.

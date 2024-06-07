@@ -24,6 +24,10 @@ namespace query::detail {
 	};
 }
 
+namespace query {
+	using Context = detail::ContextType;
+}
+
 /**
  * @brief Macro emitting body of query interface struct.
  */

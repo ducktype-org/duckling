@@ -188,8 +188,7 @@ namespace ts {
 		bool isImplicitlyCoercible(ComponentType target, query::detail::ContextType& ctx) const;
 
 		[[nodiscard]]
-		std::strong_ordering
-			operator<=>(const ComponentType& other) const;
+		std::strong_ordering operator<=>(const ComponentType& other) const;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
@@ -467,9 +466,10 @@ namespace ts {
 	class VariantInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(VariantInfo, TypeInfo)
-		static VariantInfo create(const std::vector<TypeDesc<>>& variant_types);
+		static VariantInfo create(const std::vector<TypeInfo>& variant_types);
 
-		const std::vector<TypeDesc<>>& getUnderlyingTypes() const;
+		[[nodiscard]]
+		const std::vector<TypeInfo>& getUnderlyingTypes() const;
 
 		[[nodiscard]]
 		TypeDesc<> getMember(usize index) const;
