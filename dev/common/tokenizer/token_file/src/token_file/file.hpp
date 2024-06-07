@@ -95,12 +95,13 @@ namespace tokenizer {
 		 * @brief Run the whole lexer.
 		 */
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
-		void tokenize() {
+		bool tokenize() {
 			lexer::init();
 			decode<encoding>();
-			RIFT_ASSERT(log.good(), "found errors decoding");
+			if(log.bad()) return false;
 			countLines();
 			runLexer();
+			return log.good();
 		}
 	};
 
