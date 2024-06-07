@@ -2,7 +2,6 @@
 
 #include <base/maps.hpp>
 #include <filesystem/file.hpp>
-#include <hir/symtable.hpp>
 #include <pst_parser/pst.hpp>
 
 #include <ostream>
