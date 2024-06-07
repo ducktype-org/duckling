@@ -1,6 +1,4 @@
 #include <filesystem/file.hpp>
-#include <fstream>
-#include <iostream>
 #include <pst_parser/parser.hpp>
 #include <pst_parser/pst_builder.hpp>
 #include <pst_parser/pst_visitor.hpp>
@@ -16,22 +14,14 @@ class PSTBuilderTest: public tester::TestSuite {
 #define TESTER_CLASS PSTBuilderTest
 
 	std::vector<std::string> paths = {
-		"snippets/actions.rift",
-		"snippets/all_statements.txt",
-		"snippets/block.rift",
-		"snippets/fun.rift",
-		"snippets/fun2.rift",
-		"snippets/if.rift",
-		"snippets/import.rift",
-		"snippets/lists_err.rift",
-		"snippets/lists_ok.rift",
-		"snippets/missing_semicolon_err.rift",
-		"snippets/namespace.rift",
-		"snippets/params_err.rift",
-		"snippets/struct.rift",
-		"snippets/using_err.rift",
-		"snippets/using.rift",
-		"snippets/while.rift",
+		"snippets/actions.rift",   "snippets/all_statements.txt",
+		"snippets/block.rift",     "snippets/fun.rift",
+		"snippets/fun2.rift",      "snippets/if.rift",
+		"snippets/import.rift",    "snippets/lists_err.rift",
+		"snippets/lists_ok.rift",  "snippets/missing_semicolon_err.rift",
+		"snippets/namespace.rift", "snippets/params_err.rift",
+		"snippets/struct.rift",    "snippets/using_err.rift",
+		"snippets/using.rift",     "snippets/while.rift",
 	};
 
 	template<typename Element, bool good = true>
@@ -48,7 +38,7 @@ class PSTBuilderTest: public tester::TestSuite {
 			std::stringstream ss;
 			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
 			ss << base::typeName<Element>();
-			ss << " expected parsing to" << (good ? "succeed": "fail") << ".";
+			ss << " expected parsing to" << (good ? "succeed" : "fail") << ".";
 			return ss.str();
 		}
 	};
@@ -58,12 +48,15 @@ class PSTBuilderTest: public tester::TestSuite {
 		assert(example(), example.message());
 	}
 
-	Example<pst::TopLevel, true> emptyTopLevel{""};
-	Example<pst::Block, true> emptyBlock{"block {}"};
+	Example<pst::TopLevel, true>   emptyTopLevel{ "" };
+	Example<pst::Block, true>      emptyBlock{ "block {}" };
+	Example<pst::While, false>     badChoice{ "block {}" };
+	Example<pst::CodeBlock, false> noBrackets{ "const x:i32=3;" };
 
 	void exampleTests() {
 		testExample(emptyTopLevel);
 		testExample(emptyBlock);
+		testExample(badChoice);
 	}
 
 public:
@@ -86,7 +79,7 @@ private:
 
 	template<typename Element>
 	pst::PSTBuilder<Element> fromContents(const std::string& filename) {
-		std::string contents{fs::getSimpleFileContent(filename).view().stringView()};
+		std::string contents{ fs::getSimpleFileContent(filename).view().stringView() };
 		return pst::PSTBuilder<Element>::fromContents(contents);
 	}
 
@@ -94,35 +87,33 @@ private:
 	pst::PSTBuilder<Element> fromFilename(const std::string& filename) {
 		return { fs::FilePath(filename) };
 	}
-	
-	template <typename Element>
+
+	template<typename Element>
 	std::string stringDprint(const pst::PSTBuilder<Element>& pst) {
 		std::stringstream ss;
 		pst.dprint(ss);
 		return ss.str();
 	}
 
-	template <typename Element>
+	template<typename Element>
 	void signgleEquivalency(const std::string& local_path) {
-		const std::string error = "outputs from parsing on file " + local_path + "differ.";
-		const std::string filepath = path(local_path);
-		pst::PSTBuilder<Element> PSTmanual = manualSteps<Element>(filepath);
-		pst::PSTBuilder<Element> PSTcontent = fromContents<Element>(filepath);
+		const std::string        error = "outputs from parsing on file " + local_path + "differ.";
+		const std::string        filepath    = path(local_path);
+		pst::PSTBuilder<Element> PSTmanual   = manualSteps<Element>(filepath);
+		pst::PSTBuilder<Element> PSTcontent  = fromContents<Element>(filepath);
 		pst::PSTBuilder<Element> PSTfilename = fromFilename<Element>(filepath);
 		assert(PSTmanual.getLogger().good() == PSTcontent.getLogger().good(), error);
 		assert(PSTmanual.getLogger().good() == PSTfilename.getLogger().good(), error);
-		std::string manualPrint = stringDprint(PSTmanual);
-		std::string contentPrint = stringDprint(PSTcontent);
+		std::string manualPrint   = stringDprint(PSTmanual);
+		std::string contentPrint  = stringDprint(PSTcontent);
 		std::string filenamePrint = stringDprint(PSTfilename);
 		assert(manualPrint == contentPrint, error);
 		assert(manualPrint == filenamePrint, error);
 	}
 
-	template <typename Element>
+	template<typename Element>
 	void equivalencyTest() {
-		for(const auto& local_path: paths) {
-			signgleEquivalency<Element>(local_path);
-		}
+		for (const auto& local_path: paths) signgleEquivalency<Element>(local_path);
 	}
 
 public:
