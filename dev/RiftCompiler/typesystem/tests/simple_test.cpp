@@ -5,6 +5,8 @@
 
 #include <query_framework/query_impl.hpp>
 
+#include "queries.hpp"
+
 using namespace ts;
 
 /**
@@ -133,8 +135,10 @@ private:
 			const auto int_u = query::entryPoint<QueryIntegralType>({ 8U * (1 << i), false });
 			assert(int_1.getKind() == Integral, "Int should have kind Integral.");
 
-			auto ctx = query::Context{};
-			assert(int_1.getSize(ctx) == 8 * (1 << i), "Size of Int should be as constructed.");
+			assert(
+				query::entryPoint<QuerySizeOfType>(int_1) == 8 * (1 << i),
+				"Size of Int should be as constructed."
+			);
 			assert(int_1 == int_2, "Ints of the same size and signedness should be the same.");
 			assert(
 				int_1 != int_u,
@@ -163,8 +167,10 @@ private:
 			auto float_1 = query::entryPoint<QueryFloatType>(float_size);
 			auto float_2 = query::entryPoint<QueryFloatType>(float_size);
 
-			auto ctx = query::Context{};
-			assert(float_1.getSize(ctx) == float_size, "Size of Float should be as constructed.");
+			assert(
+				query::entryPoint<QuerySizeOfType>(float_1) == float_size,
+				"Size of Float should be as constructed."
+			);
 			assert(float_1 == float_2, "Floats of the same size should be the same.");
 			assert(float_1.getKind() == Float, "Floats should have float kind.");
 
@@ -267,9 +273,11 @@ private:
 		const auto meta   = query::entryPoint<QueryMetaType>({});
 		const auto meta_2 = query::entryPoint<QueryMetaType>({});
 
-		auto ctx = query::Context{};
 		assert(meta == meta_2, "There shouldn't be multiple different 'type' types");
-		assert(meta.getSize(ctx) == META_SIZE, "MetaType should have size META_SIZE");
+		assert(
+			query::entryPoint<QuerySizeOfType>(meta) == META_SIZE,
+			"MetaType should have size META_SIZE"
+		);
 
 		assert(meta.getKind() == Meta, "MetaType should have kind Meta");
 	}

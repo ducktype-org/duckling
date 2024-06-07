@@ -200,6 +200,9 @@ namespace ts {
 		[[nodiscard]]
 		const std::string& toString() const;
 
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
+
 	protected:
 		/**
 		 * \brief Construct from an object from the internal::TypeInfoImpl hierarchy.

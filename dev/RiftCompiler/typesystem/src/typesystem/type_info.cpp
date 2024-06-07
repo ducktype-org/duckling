@@ -28,15 +28,16 @@ namespace ts {
 	}
 
 	[[nodiscard]]
+	bool TypeInfo::isImplicitlyCoercible(const TypeInfo target, query::Context& ctx) const {
+		return pimpl->isImplicitlyCoercible(target, ctx);
+	}
+
+	[[nodiscard]]
 	const std::string& TypeInfo::toString() const {
 		return pimpl->toString();
 	}
 
-	[[nodiscard]]
-	bool TypeInfo::isImplicitlyCoercible(const TypeInfo target, query::Context& ctx)
-		const {
-		return pimpl->isImplicitlyCoercible(target, ctx);
-	}
+	base::HashT TypeInfo::customPerfectHash() const { return base::HashT(pimpl); }
 
 	// Specialized template definition and explicit instantiation.
 	template<>
