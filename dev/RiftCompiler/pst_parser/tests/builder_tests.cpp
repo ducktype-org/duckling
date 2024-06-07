@@ -34,6 +34,38 @@ class PSTBuilderTest: public tester::TestSuite {
 		"snippets/while.rift",
 	};
 
+	template<typename Element, bool good = true>
+	struct Example {
+		std::string code;
+
+		bool operator()() {
+			auto parsed = pst::PSTBuilder<Element>::fromContents(code);
+			return parsed.getLogger().good() == good;
+		}
+
+		[[nodiscard]]
+		std::string message() const {
+			std::stringstream ss;
+			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
+			ss << base::typeName<Element>();
+			ss << " expected parsing to" << (good ? "succeed": "fail") << ".";
+			return ss.str();
+		}
+	};
+
+	template<typename Element, bool good>
+	void testExample(Example<Element, good>& example) {
+		assert(example(), example.message());
+	}
+
+	Example<pst::TopLevel, true> emptyTopLevel{""};
+	Example<pst::Block, true> emptyBlock{"block {}"};
+
+	void exampleTests() {
+		testExample(emptyTopLevel);
+		testExample(emptyBlock);
+	}
+
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("PST Builder Tests") {
 		lexer::init();
@@ -41,6 +73,7 @@ public:
 
 		TESTER_ADD_TEST(equivalencyTest<pst::TopLevel>);
 		TESTER_ADD_TEST(equivalencyTest<pst::CodeBlockOrStmt>);
+		TESTER_ADD_TEST(exampleTests);
 	}
 
 private:

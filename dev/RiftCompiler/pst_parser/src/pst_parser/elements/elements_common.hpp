@@ -1,4 +1,5 @@
 #include "../rift_parser_base.hpp"
+#include <diagnostic/message.hpp>
 
 namespace pst::detail {
 
