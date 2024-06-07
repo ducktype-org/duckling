@@ -98,7 +98,7 @@ namespace tokenizer {
 		bool tokenize() {
 			lexer::init();
 			decode<encoding>();
-			if(log.bad()) return false;
+			if (log.bad()) return false;
 			countLines();
 			runLexer();
 			return log.good();

@@ -1,5 +1,6 @@
 #include <token_file/file.hpp>
 #include "rift_parser_base.hpp"
+#include "parser.hpp"
 
 namespace pst {
 	template<typename T>
@@ -10,6 +11,7 @@ namespace pst {
 
 	template <std::derived_from<RiftElement> Element>
 	class PSTBuilder {
+	private:
 		tokenizer::OwnFile      file;
 		ParserRef<Element>     element;
 		std::vector<ImportType> imports;
@@ -29,6 +31,17 @@ namespace pst {
 			element = Element::parse(state);
 			imports   = std::move(state).extractState();
 		}
+
+		/**
+		 * @brief Construct a new Pst from text content
+		 */
+		explicit PSTBuilder(std::string_view content)
+		requires ParseAble<Element>:
+		  		file(tokenizer::makeTokenFile(fs::FilePath::createTempFile(content))) {
+			pst::init();
+			if(!file->tokenize()) return;
+			parse();
+		}
 	public:
 
 		/**
@@ -37,6 +50,7 @@ namespace pst {
 		PSTBuilder(tokenizer::OwnFile&& file)
 		requires ParseAble<Element>:
 		  		file(std::move(file)) {
+			pst::init();
 			if(getLogger().bad()) return;
 			parse();
 		}
@@ -47,20 +61,14 @@ namespace pst {
 		PSTBuilder(const fs::FilePath& path)
 		requires ParseAble<Element>:
 		  		file(tokenizer::makeTokenFile(path)) {
+			pst::init();
 			if(!file->tokenize()) return;
 			parse();
 		}
 
-		/**
-		 * @brief Construct a new Pst from text content
-		 */
-		PSTBuilder(std::string_view content)
-		requires ParseAble<Element>:
-		  		file(tokenizer::makeTokenFile(fs::FilePath::createTempFile(content))) {
-			// Tokenize and stop if errors are found.
-			if(!file->tokenize()) return;
-			// Parse
-			parse();
+		static PSTBuilder fromContents(std::string_view contents)
+		requires ParseAble<Element> {
+			return PSTBuilder(contents);
 		}
 
 		[[nodiscard]]

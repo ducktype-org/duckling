@@ -21,8 +21,7 @@ public:
 
 private:
 	hir::SourceUnit prepare(const fs::FilePath& file) {
-		auto td     = lexer::tokenizeFile(file);
-		auto parsed = pst::parse(std::move(td));
+		pst::PST parsed(file);
 		assert(parsed.getLogger().good(), "there are unexpected errors in rift source-code");
 		return { std::move(parsed), file };
 	}

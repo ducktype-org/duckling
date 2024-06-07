@@ -1,7 +1,7 @@
 ﻿#include <filesystem/file.hpp>
 #include <fstream>
 #include <iostream>
-#include <pst_parser/parser.hpp>
+#include <pst_parser/pst.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
 
@@ -74,11 +74,7 @@ public:
 	}
 
 private:
-	pst::PST prepare(const std::string& filename) {
-		fs::FilePath file(filename);
-		auto         td = lexer::tokenizeFile(file);
-		return pst::parse(std::move(td));
-	}
+	pst::PST prepare(const std::string& filename) { return { fs::FilePath(filename) }; }
 
 	void testVisitor() {
 		auto pst            = prepare(path("snippets/all_statements.txt"));

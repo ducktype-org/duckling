@@ -36,7 +36,7 @@ const pst::PST& SourceFile::getPST() {
 	if (parse_tree) {
 		return parse_tree.value();
 	} else {
-		parse_tree.emplace(pst::parse(path));
+		parse_tree.emplace(pst::PST(path));
 		return parse_tree.value();
 	}
 }

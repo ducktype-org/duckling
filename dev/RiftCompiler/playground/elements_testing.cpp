@@ -1,6 +1,6 @@
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
-#include <pst_parser/parser.hpp>
+#include <pst_parser/pst.hpp>
 #include <iostream>
 
 int main(int argc, char** argv) {
@@ -10,9 +10,7 @@ int main(int argc, char** argv) {
 	}
 	pst::init();
 	fs::FilePath file(argv[1]);
-
-	auto token_file = lexer::tokenizeFile(file);
-	auto pst        = pst::parse(std::move(token_file));
+	pst::PST     pst(file);
 
 	if (pst.getLogger().bad()) {
 		pst.getLogger().dumpLog(false, std::cerr);
