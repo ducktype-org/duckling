@@ -88,7 +88,9 @@ namespace compiler::helios {
 
 			base::Optional<HOUTFunction> out;
 
-			HOUTFunctionMaker(query::Context& ctx, ScopeID scope): ctx(ctx), parent_scope(scope) {}
+			HOUTFunctionMaker(query::Context& ctx, ScopeID scope):
+				  ctx(ctx),
+				  parent_scope(std::move(scope)) {}
 
 			void visitFun(const pst::Fun& stmt) final {
 				// @TODO: create function here...
@@ -148,6 +150,4 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCodeOFFun);
-
-
 }

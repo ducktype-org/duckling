@@ -160,8 +160,9 @@ namespace compiler::helios {
 		default:
 			break;
 		}
+		auto stmt_ptr = stmt.get();
 		RIFT_PANIC(base::strConcat(
-			"makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt.get()).name()
+			"makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
 		));
 	}
 
