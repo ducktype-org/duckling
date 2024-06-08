@@ -29,12 +29,13 @@ namespace compiler::helios {
 		 * On the other hand it is not trivial to eliminate it.
 		 * Solution would be to either eliminate it or to add smart sanity checks, that
 		 * can prevent at least some of potential bugs.
+		 * For now a simple assertion is added to disallow "double parent" situation
 		 */
 		ScopeID parent;
 
 		/**
 		 * @brief Element for which the scope is created.
-		 * @note: scopes of varius elements behave differently
+		 * @note: scopes of various elements behave differently
 		 * For now scope of StatementAggravates and Functions are possible.
 		 * Scope behaviour for:
 		 * * StatementAggravates -- a scope of aggregated statements

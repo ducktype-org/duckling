@@ -5,6 +5,7 @@
 #include <base/stable_hashmap.hpp>
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
+#include <base/exceptions.hpp>
 
 #include <query_framework/query_impl.hpp>
 
@@ -88,10 +89,22 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
 
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
+
+		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
+
 		static auto provide(Context&, QKey element) -> PResult {
 			// Potential way of eliminating dependency on parent:
 			// auto parent
 			// = scope(ctx.query<QuerySymbolOfSTMT>({ element.parent, element.base_element }));
+
+			// simple parent sanity check:
+			if (parent_map.contains(element.base_element->getID())) {
+				RIFT_ASSERT(parent_map.at(element.base_element->getID()) == element.parent, "Parent mismatch in QueryPrimaryCodeScopeFor");
+			}
+			else {
+				parent_map.put(element.base_element->getID(), element.parent);
+			}
+
 			return putInScopeTable(ScopeData{
 				.parent              = element.parent,
 				.related_pst_element = element.base_element,
