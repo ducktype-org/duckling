@@ -24,3 +24,11 @@ namespace X {}
 struct X {}
 
 fun X() {}
+
+redo;
+
+break;
+
+continue A;
+
+defer a+2;
