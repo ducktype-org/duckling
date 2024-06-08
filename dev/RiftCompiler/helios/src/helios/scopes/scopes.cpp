@@ -151,7 +151,7 @@ namespace compiler::helios {
 			} else if (base_element->isStatement()) {
 				SymbolGrabVisitor symbol_grab;
 				auto              as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());
-				as_stmt->acceptVistior(symbol_grab);
+				as_stmt->acceptVisitor(symbol_grab);
 				return std::move(symbol_grab.out.value());
 			} else {
 				RIFT_PANIC("Query symbols from scope of non-statement and non-codeblock");

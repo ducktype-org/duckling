@@ -91,9 +91,9 @@ private:
 		auto empty_vistor   = PstStmtVisitorTester<pst::PstStmtVisitorEmpty>();
 		for (auto&& stmt: pst.getTopLevelElement()->getStatements()) {
 			assertThrows<base::Panic>(
-				[&] { stmt->acceptVistior(panicky_vistor); }, "Stmt did not call it\'s visitor"
+				[&] { stmt->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
 			);
-			stmt->acceptVistior(empty_vistor);
+			stmt->acceptVisitor(empty_vistor);
 		}
 		ASSERT_EQUAL(16, panicky_vistor.counter);
 		ASSERT_EQUAL(16, empty_vistor.counter);

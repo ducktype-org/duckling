@@ -58,7 +58,7 @@ namespace pst {
 
 		static ParserRef<Stmt> parse(RiftParserState& state);
 		bool                   trailingSemicolon() override;
-		virtual void           acceptVistior(PstStmtVisitor& visitor) const = 0;
+		virtual void           acceptVisitor(PstStmtVisitor& visitor) const = 0;
 
 		[[nodiscard]]
 		bool isStatement() const final {
@@ -208,7 +208,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		bool trailingSemicolon() override;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -240,7 +240,7 @@ namespace pst {
 		~Import() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 
 		[[nodiscard]]
 		bool isDeclaration() const final {
@@ -268,7 +268,7 @@ namespace pst {
 		~Using() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 
 		[[nodiscard]]
 		bool isDeclaration() const final {
@@ -297,7 +297,7 @@ namespace pst {
 		~Alias() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 
 		[[nodiscard]]
 		bool isDeclaration() const final {
@@ -410,7 +410,7 @@ namespace pst {
 		void                   dprint(std::ostream& out) const final;
 		~Expr() final = default;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -438,7 +438,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Return() final = default;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Break final: public Action {
@@ -448,7 +448,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Break() final = default;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Continue final: public Action {
@@ -458,7 +458,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Continue() final = default;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Redo final: public Action {
@@ -468,7 +468,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Redo() final = default;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Restart final: public Action {
@@ -478,7 +478,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Restart() final = default;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Defer final: public Action {
@@ -488,7 +488,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Defer() final = default;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -501,7 +501,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Throw() final = default;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Const final: public Stmt {
@@ -531,7 +531,7 @@ namespace pst {
 		~Const() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 
 		[[nodiscard]]
 		bool isDeclaration() const final {
@@ -548,7 +548,7 @@ namespace pst {
 
 		bool trailingSemicolon() override;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 
 		[[nodiscard]]
 		bool isDeclaration() const override {
@@ -601,7 +601,7 @@ namespace pst {
 		~Block() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Namespace final: public Decl {
@@ -625,7 +625,7 @@ namespace pst {
 		~Namespace() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -648,7 +648,7 @@ namespace pst {
 		~Struct() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Fun final: public Decl {
@@ -679,7 +679,7 @@ namespace pst {
 		void                  dprint(std::ostream& out) const final;
 		~Fun() final = default;
 
-		void acceptVistior(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class If final: public CodeDecl {

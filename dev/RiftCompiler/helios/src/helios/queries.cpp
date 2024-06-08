@@ -119,7 +119,7 @@ namespace compiler::helios {
 				code::CodeBlock function_body;
 				for (const auto& code_stmt: fun_body) {
 					HoutStmtMaker stmt_maker(ctx, inner_scope);
-					code_stmt->acceptVistior(stmt_maker);
+					code_stmt->acceptVisitor(stmt_maker);
 					if (not stmt_maker.empty)
 						function_body.statements.emplace_back(std::move(stmt_maker.out.value()));
 				}
@@ -141,7 +141,7 @@ namespace compiler::helios {
 			auto parent_scope = scope(key);
 
 			HOUTFunctionMaker func_maker(ctx, parent_scope);
-			stmt(key)->acceptVistior(func_maker);
+			stmt(key)->acceptVisitor(func_maker);
 
 			return func_maker.out.value();
 		}
