@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "elements.hpp"
+#include "../scope_symbol_id.hpp"
 
 // @TODO: relax this dependency
 #include <frontend/module_tree/module_tree.hpp>  // ModuleId
@@ -14,6 +14,11 @@
 #include <vector>
 
 namespace compiler::helios {
+
+	namespace code {
+		// Forward declaration:
+		struct CodeBlock;
+	}
 
 	/**
 	 * @brief placeholder for code that can execute (expressions, function body, etc)

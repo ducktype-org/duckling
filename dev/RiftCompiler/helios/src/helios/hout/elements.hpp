@@ -56,7 +56,7 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Represents `return;` in HOUT
 	 */
-	struct VReturnStmt final: public Stmt {
+	struct VoidReturnStmt final: public Stmt {
 		void debugPrint(usize indent, std::string& out) const final;
 	};
 
@@ -89,7 +89,7 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents integer constant in HOUT
+	 * @brief Represents expression made of single identifier in HOUT
 	 * @note: This will have to be improved,
 	 * when more complex expressions involving "." operator, local variables, etc
 	 * will be introduced.

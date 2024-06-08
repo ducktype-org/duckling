@@ -16,7 +16,7 @@ namespace compiler::helios::code {
 		out += "\n";
 	}
 
-	void VReturnStmt::debugPrint(usize indent, std::string& out) const {
+	void VoidReturnStmt::debugPrint(usize indent, std::string& out) const {
 		addIndent(indent, out);
 		out += "void return\n";
 	}
@@ -103,6 +103,9 @@ namespace compiler::helios {
 		}
 
 		// @TODO: perhaps add cache
+		// Right now its not that simple since QueryHoutOfExpr
+		// has to return different expresion tree (unique_ptr).
+		// It might not be a problem in the future, so for now it is left without cache.
 
 		static auto load(QKey) -> LoadResult { return {}; }
 

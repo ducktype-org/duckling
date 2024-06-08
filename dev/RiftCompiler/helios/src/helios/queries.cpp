@@ -63,15 +63,12 @@ namespace compiler::helios {
 
 			// @TODO: visits for all valid stmt-s
 
-			// @krzyś
-			// Na teraz: deklaracja zmiennej, if-y, expression
-
 			void visitReturn(const pst::Return& stmt) override {
 				if (auto val = stmt.getValue()) {
 					auto expr = ctx.query<QueryHoutOfExpr>({ parent_scope, val.value() });
 					this->out.emplace(base::make_unique<code::ReturnStmt>(std::move(expr)));
 				} else {
-					this->out.emplace(base::make_unique<code::VReturnStmt>());
+					this->out.emplace(base::make_unique<code::VoidReturnStmt>());
 				}
 			}
 
@@ -85,7 +82,7 @@ namespace compiler::helios {
 			}
 		};
 
-		struct HOUTFunctionMaker: public pst::PstStmtVisitorPanicky {
+		struct HOUTFunctionMaker final: public pst::PstStmtVisitorPanicky {
 			query::Context& ctx;
 			ScopeID         parent_scope;
 
