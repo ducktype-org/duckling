@@ -28,7 +28,7 @@ namespace compiler::helios::code {
 		out += "\n";
 	}
 
-	void ConstIntExpr::debugPrint(std::string& out) const { out += std::to_string(value); }
+	void ConstIntExprMock::debugPrint(std::string& out) const { out += std::to_string(value); }
 
 	void IdentifierExpresion::debugPrint(std::string& out) const {
 		out += base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
@@ -56,7 +56,7 @@ namespace compiler::helios {
 			}
 			variant_case(pst::Expr::NumLiteral, num) {
 				auto val = base::strIdToNum(num.num_id);
-				return base::make_unique<code::ConstIntExpr>(val);
+				return base::make_unique<code::ConstIntExprMock>(val);
 			}
 			variant_case(pst::Expr::Identifier, identifier) {
 				// @note: this does not handle overload

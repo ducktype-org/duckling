@@ -78,12 +78,12 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Represents integer constant in HOUT
 	 */
-	struct ConstIntExpr final: public Expr {
+	struct ConstIntExprMock final: public Expr {
 		// @TODO: ctv + type for consts?
 		// @note: this is a mock
 		i64 value;
 
-		ConstIntExpr(i64 value): value{ value } {}
+		ConstIntExprMock(i64 value): value{ value } {}
 
 		void debugPrint(std::string& out) const final;
 	};
