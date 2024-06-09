@@ -78,7 +78,7 @@ namespace ts::internal {
 		 * \return The text representation of this type.
 		 */
 		[[nodiscard]]
-		virtual const std::string& show() const {
+		virtual const std::string& toString() const {
 			// @TODO: this is just a draft, in the future this method may
 			// have verbosity / depth given as parameter
 			return representation;
@@ -120,10 +120,11 @@ namespace ts::internal {
 		 * This is typically determined by rules specific for the Kind of the source type.
 		 *
 		 * \param target The target of a hypothetical implicit coercion.
+		 * \param context The query context necessary for checking user defined coercions.
 		 * \return Whether the implicit coercion is allowed or not.
 		 */
 		[[nodiscard]]
-		virtual bool isImplImplicitlyCoercible(
+		virtual bool isImplicitlyCoercible(
 			[[maybe_unused]] const TypeInfo              target,
 			[[maybe_unused]] query::detail::ContextType& context
 		) const {
@@ -197,7 +198,7 @@ namespace ts::internal {
 		explicit ByteInfoImpl(): TypeInfoImpl(BYTE_SIZE) { representation = "byte"; }
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+		bool isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
 			const override {
 			// Implicit coercions allow checking against null bytes.
 			return target.getKind() == Kind::Bool;
@@ -219,7 +220,7 @@ namespace ts::internal {
 		explicit BoolInfoImpl(): TypeInfoImpl(BOOL_SIZE) { representation = "bool"; }
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+		bool isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
 			const override {
 			// Implicit coercions allow adding to an integral counter.
 			return target.getKind() == Kind::Integral;
@@ -241,7 +242,7 @@ namespace ts::internal {
 		explicit CharInfoImpl(): TypeInfoImpl(CHAR_SIZE) { representation = "char"; }
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+		bool isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
 			const override {
 			// Implicit coercions allow checking against null chars.
 			return target.getKind() == Kind::Bool;
@@ -277,7 +278,7 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+		bool isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
 			const override {
 			// Implicit coercions allow checking against zero,
 			// as well as promoting to greater sizes and to floating point
@@ -305,40 +306,15 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+		bool isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
 			const override {
 			// Implicit coercions allow promoting to greater sizes
 			return target.getKind() == Kind::Float && FloatInfo(target).getSize() > size;
 		}
 	};
 
-	class RawPointerInfoImpl: public TypeInfoImpl {
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return staticKind;
-		}
-
-		/**
-		 * \brief The Kind of types described by objects of this class.
-		 */
-		static Kind staticKind;
-
-		RawPointerInfoImpl(): TypeInfoImpl(POINTER_SIZE) { representation = "raw_pointer"; }
-
-		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
-			const override {
-			// Implicit coercions allow checking against null pointer.
-			// We do not allow casting to a typed pointer,
-			// because we forbid implicit type specification in this context.
-			return target.getKind() == Kind::Bool;
-		}
-	};
-
-	class PointerInfoImpl final: public RawPointerInfoImpl {
-		const TypeInfo underlying_type;
-		const bool     is_mutable;
+	class RawPointerInfoImpl final: public TypeInfoImpl {
+		const bool is_mutable;
 
 	public:
 		[[nodiscard]]
@@ -351,9 +327,10 @@ namespace ts::internal {
 		 */
 		static Kind staticKind;
 
-		[[nodiscard]]
-		TypeInfo getUnderlyingType() const {
-			return underlying_type;
+		explicit RawPointerInfoImpl(const bool is_mutable):
+			  TypeInfoImpl(POINTER_SIZE),
+			  is_mutable(is_mutable) {
+			representation = "raw_pointer";
 		}
 
 		[[nodiscard]]
@@ -361,22 +338,66 @@ namespace ts::internal {
 			return is_mutable;
 		}
 
-		explicit PointerInfoImpl(const TypeInfo underlying_type, const bool is_mutable):
-			  underlying_type(underlying_type),
-			  is_mutable(is_mutable) {
+		[[nodiscard]]
+		bool isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+			const override {
+			// Implicit coercions allow checking against null pointer and dropping mutability.
+			// We do not allow casting to a typed pointer,
+			// because we forbid implicit type specification in this context.
+			return target.getKind() == Kind::Bool
+			    || (target.getKind() == Kind::RawPointer
+			        && (is_mutable || !RawPointerInfo(target).isMutable()));
+		}
+	};
+
+	class PointerInfoImpl final: public TypeInfoImpl {
+		ComponentType component;
+
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return staticKind;
+		}
+
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
+
+		[[nodiscard]]
+		ComponentType getComponent() const {
+			return component;
+		}
+
+		[[nodiscard]]
+		TypeInfo getUnderlyingType() const {
+			return component.type;
+		}
+
+		[[nodiscard]]
+		bool isMutable() const {
+			return component.is_mutable;
+		}
+
+		explicit PointerInfoImpl(const ComponentType component):
+			  TypeInfoImpl(POINTER_SIZE),
+			  component(component) {
 			representation = base::strConcat(
-				"pointer(", is_mutable ? "" : "const", underlying_type.show(), ")"
+				"pointer(", component.is_mutable ? "" : "const", component.type.toString(), ")"
 			);
 		}
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+		bool isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
 			const override {
 			// Explicit override without change in implementation to add comment.
 			// Implicit coercions allow checking against null pointer.
 			// We do not allow casting to another (raw) pointer type,
 			// because we forbid implicit type (de)specification in this context.
-			return target.getKind() == Kind::Bool;
+			// We only allow dropping mutability.
+			return target.getKind() == Kind::Bool
+			    || (target.getKind() == Kind::Pointer
+			        && (isMutable() || !PointerInfo(target).isMutable()));
 		}
 	};
 
@@ -436,7 +457,7 @@ namespace ts::internal {
 			  unique(unique) {}
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo, query::detail::ContextType&) const override {
+		bool isImplicitlyCoercible(const TypeInfo, query::detail::ContextType&) const override {
 			// Unlike with pointers, we do not allow checking whether the reference is non-null by
 			// coercion, because this may conflict with the underlying type being coercible to bool.
 			// Instead, we would want to just forward coercibility.
@@ -446,6 +467,49 @@ namespace ts::internal {
 			// @TODO: resolve the above.
 			return false;
 		}
+	};
+
+	class TupleInfoImpl final: public TypeInfoImpl {
+		const std::vector<ComponentType> components;
+
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return staticKind;
+		}
+
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
+
+		[[nodiscard]]
+		const std::vector<ComponentType>& getComponents() const {
+			return components;
+		}
+
+		[[nodiscard]]
+		bool isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType& ctx)
+			const override {
+			// Implicit coercions are allowed to other tuples of the same size,
+			// where each component can be coerced independently.
+
+			if (target.getKind() != Kind::Tuple) return false;
+			TupleInfo targetTuple = target;
+
+			const std::vector<ComponentType>& targetComponents = targetTuple.getComponents();
+			if (targetComponents.size() != components.size()) return false;
+
+			for (usize i = 0; i < components.size(); i++) {
+				ComponentType component       = components[i];
+				ComponentType targetComponent = targetComponents[i];
+				if (!component.isImplicitlyCoercible(targetComponent, ctx)) return false;
+			}
+
+			return true;
+		}
+
+		TupleInfoImpl(std::vector<ComponentType> components);
 	};
 
 	class FunctionInfoImpl final: public TypeInfoImpl {
@@ -465,7 +529,7 @@ namespace ts::internal {
 		static Kind staticKind;
 
 		[[nodiscard]]
-		const std::vector<TypeInfo>& getParameterList() const {
+		const std::vector<TypeInfo>& getParameterTypes() const {
 			return parameter_types;
 		}
 
@@ -485,7 +549,7 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType& context)
+		bool isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType& context)
 			const override {
 			// A function type is coercible to another function type if and only if
 			// the return type is coercible to the other return type and
@@ -496,21 +560,21 @@ namespace ts::internal {
 			// and only a free function can be coerced to a free function.
 
 			if (target.getKind() != Kind::Function) return false;
-			const FunctionInfo toFunction = target;
-			if ((!pure && toFunction.isPure()) || (!free && toFunction.isFree())
-			    || parameter_types.size() != toFunction.getParameterTypes().size()) {
+			const FunctionInfo targetFunction = target;
+			if ((!pure && targetFunction.isPure()) || (!free && targetFunction.isFree())
+			    || parameter_types.size() != targetFunction.getParameterTypes().size()) {
 				return false;
 			}
 
 			for (usize i = 0; i < parameter_types.size(); i++)
 				if (!context.query<QueryImplicitCoercibilityOnInfo>({
-						toFunction.getParameterTypes()[i],
+						targetFunction.getParameterTypes()[i],
 						parameter_types[i],
 					}))
 					return false;
 			return context.query<QueryImplicitCoercibilityOnInfo>({
 				result_type,
-				toFunction.getResultType(),
+				targetFunction.getResultType(),
 			});
 		}
 
@@ -648,7 +712,7 @@ namespace ts::internal {
 		);
 
 		[[nodiscard]]
-		bool isImplImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
+		bool isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
 			const override {
 			if (target.getKind() != Kind::Class) return false;
 			const ClassInfo toClass               = target;

@@ -32,11 +32,11 @@ SourceFile::SourceFile(fs::FilePath path): path(std::move(path)), id(FileId::nex
 	rift_file_name = this->path.stem();
 }
 
-const pst::PST& SourceFile::getPST() {
+const pst::PST<>& SourceFile::getPST() {
 	if (parse_tree) {
 		return parse_tree.value();
 	} else {
-		parse_tree.emplace(pst::parse(path));
+		parse_tree.emplace(pst::PST(path));
 		return parse_tree.value();
 	}
 }
@@ -275,7 +275,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
 /****************
  * QueryFilePST *
  ****************/
-struct IMPLEMENT_QUERY(QueryFilePST, const pst::PST&) {
+struct IMPLEMENT_QUERY(QueryFilePST, const pst::PST<>&) {
 	inline static base::HashMap<QKey, query::CacheEntry<QResult>> cache{};
 
 	static auto provide(Context&, QKey key) -> PResult {

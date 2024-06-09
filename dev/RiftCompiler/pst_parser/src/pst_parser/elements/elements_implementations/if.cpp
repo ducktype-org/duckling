@@ -6,7 +6,7 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeRef<If>(position);
 
-		RIFT_ASSERT(state[0].is(Keyword::If), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<If>(state, state[0].is(Keyword::If))) return nullptr;
 
 		out->addKeyword(state.getPosition());
 

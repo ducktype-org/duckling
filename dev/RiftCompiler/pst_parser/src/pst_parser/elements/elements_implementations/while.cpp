@@ -6,7 +6,7 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeRef<While>(position);
 
-		RIFT_ASSERT(state[0].is(Keyword::While), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<While>(state, state[0].is(Keyword::While))) return nullptr;
 
 		out->addKeyword(state.getPosition());
 

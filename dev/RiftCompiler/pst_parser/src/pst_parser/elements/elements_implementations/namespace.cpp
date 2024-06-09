@@ -1,11 +1,12 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<Namespace> Namespace::parse(RiftParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Namespace>(position);
 
-		RIFT_ASSERT(state[0].is(Keyword::Namespace), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Namespace>(state, state[0].is(Keyword::Namespace))) return nullptr;
 
 		out->addKeyword(state.getPosition());
 
@@ -28,4 +29,5 @@ namespace pst {
 		out << "}}";
 	}
 
+	void Namespace::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitNamespace(*this); }
 }

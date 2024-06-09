@@ -69,7 +69,7 @@ namespace compiler::helios {
 				.parent = ScopeID{ nullptr },
 				// .name = base::StrId("ROOT"),
 				.is_root   = true,
-				.stmt_list = getChildStmtsOf(module_pst.getTopLevelElement()),
+				.stmt_list = getChildStmtsOf(module_pst.getRootElement()),
 				.symbols   = {},
 			});
 		}

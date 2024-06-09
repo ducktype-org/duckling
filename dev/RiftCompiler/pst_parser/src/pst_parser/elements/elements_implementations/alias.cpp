@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	class AliasStarError final: public dia::Error {
@@ -21,7 +22,7 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeRef<Alias>(position);
 
-		RIFT_ASSERT(state[0].is(Keyword::Alias), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Alias>(state, state[0].is(Keyword::Alias))) return nullptr;
 
 		out->addKeyword(state.getPosition());
 
@@ -46,4 +47,6 @@ namespace pst {
 
 		out << "}}";
 	}
+
+	void Alias::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAlias(*this); }
 }

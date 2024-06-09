@@ -1,4 +1,6 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
+
 #include <base/variant.hpp>
 
 namespace pst {
@@ -164,4 +166,6 @@ namespace pst {
 		}
 		out << "]}";
 	}
+
+	void Expr::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitExpr(*this); }
 }

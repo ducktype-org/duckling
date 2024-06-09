@@ -1,11 +1,12 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<Struct> Struct::parse(RiftParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Struct>(position);
 
-		RIFT_ASSERT(state[0].is(Keyword::Struct), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Struct>(state, state[0].is(Keyword::Struct))) return nullptr;
 
 		out->addKeyword(state.getPosition());
 
@@ -34,4 +35,5 @@ namespace pst {
 		out << "}}";
 	}
 
+	void Struct::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitStruct(*this); }
 }

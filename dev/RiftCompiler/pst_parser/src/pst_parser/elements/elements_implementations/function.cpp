@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	// @TODO: make better
@@ -6,7 +7,7 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeRef<Fun>(position);
 
-		RIFT_ASSERT(state[0].is(Keyword::Fun), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		out->addKeyword(state.getPosition());
 
@@ -33,4 +34,6 @@ namespace pst {
 		nullAwareDprint(body, out);
 		out << " } }";
 	}
+
+	void Fun::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitFun(*this); }
 }

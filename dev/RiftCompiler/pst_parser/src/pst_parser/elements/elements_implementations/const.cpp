@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	class ConstTypeEndError final: public dia::Error {
@@ -28,9 +29,11 @@ namespace pst {
 	ParserRef<Const> Const::parse(RiftParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Const>(position);
-		RIFT_ASSERT(state[0].is(Keyword::Const), position.genStr("bad statement choice"));
+
+		if (!assertStmtChoice<Const>(state, state[0].is(Keyword::Const))) return nullptr;
 
 		out->addKeyword(state.getPosition());
+
 
 		parseAll(state, Keyword::Const, &out->name, Operator::Colon);
 		out->type = Expr::parseUntil<detail::isTypeEnd, detail::isAssign, ConstTypeEndError>(state);
@@ -53,4 +56,6 @@ namespace pst {
 		nullAwareDprint(type, out);
 		out << "}}";
 	}
+
+	void Const::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitConst(*this); }
 }

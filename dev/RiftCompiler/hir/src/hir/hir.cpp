@@ -30,7 +30,7 @@ namespace hir {
 		// macro can't delete symbol
 		// perhaps go top to to bottom with use/usings/expands
 
-		pst::PST& pst = sources[0].pst;
+		pst::PST<>& pst = sources[0].pst;
 
 		// @TODO: this should be sub_root_scope, but it is root_scope for now, so tests can work
 		// Right now we can't lookup into sub root scopes
@@ -38,7 +38,7 @@ namespace hir {
 		symtable::ScopeRef root_scope = analysis_state.symTable().getRootScope();
 
 		analysis_state.emplaceSymbol<TopLevelSymbol>(
-			analysis_state, root_scope, base::StrId("TopLevel"), pst.getTopLevelElement()
+			analysis_state, root_scope, base::StrId("TopLevel"), pst.getRootElement()
 		);
 
 		root_scope->close();
@@ -53,7 +53,7 @@ namespace hir {
 
 			symbol_ref->analyzeAll();
 
-			std::cerr << "    Type: " << symbol_ref->requestType().getType().show() << "\n";
+			std::cerr << "    Type: " << symbol_ref->requestType().getType().toString() << "\n";
 
 			std::cerr << "    Value: ";
 			if (symbol_ref->getKind() == SymbolKind::Const) {

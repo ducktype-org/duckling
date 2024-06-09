@@ -1,10 +1,11 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<Action> Action::parse(RiftParserState& state) {
 		dia::SourcePosition position = state.getPosition();
 
-		RIFT_ASSERT(state[0].isKeyword(), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Action>(state, state[0].isKeyword())) return nullptr;
 
 		ParserRef<Action> out;
 		auto              keyword = state[0].asKeyword();
@@ -32,7 +33,8 @@ namespace pst {
 			out = makeRef<Throw>(position);
 			break;
 		default:
-			RIFT_PANIC(position.genStr("bad statement choice"));
+			assertStmtChoice<Action>(state, false);
+			return nullptr;
 		}
 		out->addKeyword(state.getPosition());
 		state.tokens().skip();
@@ -83,4 +85,6 @@ namespace pst {
 	void Throw::dprint(std::ostream& out) const {
 		simpleActionDprint(out, expr, "Throw", "exception");
 	}
+
+	void Action::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAction(*this); }
 }

@@ -1,13 +1,14 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<Block> Block::parse(RiftParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Block>(position);
 
-		out->addKeyword(state.getPosition());
+		if (!assertStmtChoice<Block>(state, state[0].is(Keyword::Block))) return nullptr;
 
-		RIFT_ASSERT(state[0].is(Keyword::Block), position.genStr("bad statement choice"));
+		out->addKeyword(state.getPosition());
 
 		parseAll(state, Keyword::Block, &out->optional_name, &out->code_block);
 
@@ -25,4 +26,6 @@ namespace pst {
 		nullAwareDprint(code_block, out);
 		out << "}}";
 	}
+
+	void Block::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitBlock(*this); }
 }
