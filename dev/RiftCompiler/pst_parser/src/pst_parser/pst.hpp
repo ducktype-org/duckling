@@ -9,8 +9,9 @@
 namespace pst {
 	/**
 	 * @brief PST generation class. Parses on construction if possible.
-	 * 
-	 * @note The Element is only required to be derived from RiftElement and not necessarily parsable to allow to manage already parsed generic PST<RiftElement>.
+	 *
+	 * @note The Element is only required to be derived from RiftElement and not necessarily
+	 * parsable to allow to manage already parsed generic PST<RiftElement>.
 	 *
 	 * @tparam Element Root Element to parse.
 	 */
