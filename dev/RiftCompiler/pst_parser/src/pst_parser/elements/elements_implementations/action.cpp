@@ -5,7 +5,7 @@ namespace pst {
 	ParserRef<Action> Action::parse(RiftParserState& state) {
 		dia::SourcePosition position = state.ctokens().peek().getPosition();
 
-		RIFT_ASSERT(state.ctokens().isKeyword(), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Action>(state, state.ctokens().isKeyword())) return nullptr;
 
 		ParserRef<Action> out;
 		auto              keyword = state.ctokens().peek().asKeyword();

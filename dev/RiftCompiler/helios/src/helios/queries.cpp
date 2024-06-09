@@ -25,7 +25,7 @@ namespace compiler::helios {
 
 			auto&& module_root_scope_id
 				= query::entryPoint<QueryPrimaryCodeScopeFor>({ root_scope,
-			                                                    main_pst.getTopLevelElement() });
+			                                                    main_pst.getRootElement() });
 
 			auto&& symbols_in_submodule
 				= query::entryPoint<QuerySymbolsInScope>(module_root_scope_id);

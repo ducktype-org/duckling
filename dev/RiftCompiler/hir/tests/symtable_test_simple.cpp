@@ -2,7 +2,7 @@
 // deleted for now
 
 #include <filesystem/file.hpp>
-#include <pst_parser/parser.hpp>
+#include <pst_parser/pst.hpp>
 #include <hir/symtable.hpp>
 #include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
@@ -25,11 +25,7 @@ public:
 	}
 
 private:
-	pst::PST prepare(const std::string& filename) {
-		fs::FilePath file(filename);
-		auto         td = lexer::tokenizeFile(file);
-		return pst::parse(std::move(td));
-	}
+	pst::PST<> prepare(const std::string& filename) { return { fs::FilePath(filename) }; }
 
 	/*
 	    void simple() {
@@ -140,7 +136,7 @@ private:
 	    }
 
 	    void simpleSymtableFillingTest() {
-	        pst::PST pst = prepare(path("snippets/lot_of_symbols.rift"));
+	        pst::PST<> pst = prepare(path("snippets/lot_of_symbols.rift"));
 	        assert(pst.getErrorState().good(), "there are unexpected errors in rift source-code");
 
 	        symtable::SymbolTable sym_table;
@@ -157,7 +153,7 @@ private:
 	    @deprecated
 	    void lookupTestOnRealFile() {
 
-	        pst::PST pst = prepare(path("snippets/symbol_in_namespaces.rift"));
+	        pst::PST<> pst = prepare(path("snippets/symbol_in_namespaces.rift"));
 	        assert(pst.getErrorState().good(), "there are unexpected errors in rift source-code");
 	        symtable::SymbolTable sym_table;
 	        pst.fillSymTable(sym_table);
