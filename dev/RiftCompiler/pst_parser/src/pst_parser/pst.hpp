@@ -7,6 +7,13 @@
 #include "parser.hpp"
 
 namespace pst {
+	/**
+	 * @brief PST generation class. Parses on construction if possible.
+	 * 
+	 * @note The Element is only required to be derived from RiftElement and not necessarily parsable to allow to manage already parsed generic PST<RiftElement>.
+	 *
+	 * @tparam Element Root Element to parse.
+	 */
 	template<std::derived_from<RiftElement> Element = TopLevel>
 	class PST {
 	public:
@@ -18,7 +25,7 @@ namespace pst {
 		std::vector<ImportType> imports;
 
 		/**
-		 * @brief Requires that the file was successfully tokenized.
+		 * @note Requires that the file was successfully tokenized.
 		 */
 		void parse()
 		requires ParseAble
