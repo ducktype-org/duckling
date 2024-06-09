@@ -14,7 +14,7 @@ namespace compiler {
 	// It should perform only top-level operations, and
 	// details should be moved elsewhere to this module or other
 	class CompilationHandler {
-		base::HashMap<fs::FilePath, pst::PST> pst_map;
+		base::HashMap<fs::FilePath, pst::PST<>> pst_map;
 
 	public:
 		CompilationHandler() = default;

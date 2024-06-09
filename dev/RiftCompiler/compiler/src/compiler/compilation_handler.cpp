@@ -14,7 +14,7 @@ namespace compiler {
 		if (dprint) out_ref << "Parsing new file: `" << path.strView() << "`\n";
 
 		pst_map.put(path, pst::PST(path));
-		pst::PST& new_pst = pst_map[path];
+		pst::PST<>& new_pst = pst_map[path];
 
 		if (new_pst.getLogger().bad()) {
 			if (dprint) {

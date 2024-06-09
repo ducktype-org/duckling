@@ -74,13 +74,13 @@ public:
 	}
 
 private:
-	pst::PST prepare(const std::string& filename) { return { fs::FilePath(filename) }; }
+	pst::PST<> prepare(const std::string& filename) { return { fs::FilePath(filename) }; }
 
 	void testVisitor() {
 		auto pst            = prepare(path("snippets/all_statements.txt"));
 		auto panicky_vistor = PstStmtVisitorTester<pst::PstStmtVisitorPanicky>();
 		auto empty_vistor   = PstStmtVisitorTester<pst::PstStmtVisitorEmpty>();
-		for (auto&& stmt: pst.getTopLevelElement()->getStatements()) {
+		for (auto&& stmt: pst.getRootElement()->getStatements()) {
 			assertThrows<base::Panic>(
 				[&] { stmt->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
 			);
@@ -93,7 +93,7 @@ private:
 	void testJson(
 		const std::string& rift_file, const std::string& json_file, bool no_errors = true
 	) {
-		pst::PST          pst = prepare(rift_file);
+		pst::PST<>        pst = prepare(rift_file);
 		std::stringstream ss;
 		pst.dprint(ss);
 
@@ -139,28 +139,28 @@ private:
 	void testListParsing() { testJsonRelativePath("lists_ok.rift", "lists_ok.json"); }
 
 	void testListParsingErrors() {
-		pst::PST pst = prepare(path("snippets/lists_err.rift"));
+		pst::PST<> pst = prepare(path("snippets/lists_err.rift"));
 		assert(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 5, "Expected 5 errors"
 		);
 	}
 
 	void testUsingErrors() {
-		pst::PST pst = prepare(path("snippets/using_err.rift"));
+		pst::PST<> pst = prepare(path("snippets/using_err.rift"));
 		assert(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 3, "Expected 3 errors"
 		);
 	}
 
 	void testParamListErrors() {
-		pst::PST pst = prepare(path("snippets/params_err.rift"));
+		pst::PST<> pst = prepare(path("snippets/params_err.rift"));
 		assert(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 7, "Expected 7 errors"
 		);
 	}
 
 	void testMissingSemiErr() {
-		pst::PST pst = prepare(path("snippets/missing_semicolon_err.rift"));
+		pst::PST<> pst = prepare(path("snippets/missing_semicolon_err.rift"));
 		assert(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 4, "Expected 4 errors"
 		);

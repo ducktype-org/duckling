@@ -1,6 +1,5 @@
 #include <filesystem/file.hpp>
-#include <pst_parser/parser.hpp>
-#include <pst_parser/pst_builder.hpp>
+#include <pst_parser/pst.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
 
@@ -29,7 +28,7 @@ class PSTBuilderTest: public tester::TestSuite {
 		std::string code;
 
 		bool operator()() {
-			auto parsed = pst::PSTBuilder<Element>::fromContents(code);
+			auto parsed = pst::PST<Element>::fromContents(code);
 			return parsed.getLogger().good() == good;
 		}
 
@@ -57,6 +56,9 @@ class PSTBuilderTest: public tester::TestSuite {
 		testExample(emptyTopLevel);
 		testExample(emptyBlock);
 		testExample(badChoice);
+
+		// Should work with new errors part 2 changes:
+		// testExample(noBrackets);
 	}
 
 public:
@@ -71,25 +73,25 @@ public:
 
 private:
 	template<typename Element>
-	pst::PSTBuilder<Element> manualSteps(const std::string& filename) {
+	pst::PST<Element> manualSteps(const std::string& filename) {
 		auto file = tokenizer::makeTokenFile(fs::FilePath(filename));
 		file->tokenize();
 		return { std::move(file) };
 	}
 
 	template<typename Element>
-	pst::PSTBuilder<Element> fromContents(const std::string& filename) {
+	pst::PST<Element> fromContents(const std::string& filename) {
 		std::string contents{ fs::getSimpleFileContent(filename).view().stringView() };
-		return pst::PSTBuilder<Element>::fromContents(contents);
+		return pst::PST<Element>::fromContents(contents);
 	}
 
 	template<typename Element>
-	pst::PSTBuilder<Element> fromFilename(const std::string& filename) {
+	pst::PST<Element> fromFilename(const std::string& filename) {
 		return { fs::FilePath(filename) };
 	}
 
 	template<typename Element>
-	std::string stringDprint(const pst::PSTBuilder<Element>& pst) {
+	std::string stringDprint(const pst::PST<Element>& pst) {
 		std::stringstream ss;
 		pst.dprint(ss);
 		return ss.str();
@@ -97,11 +99,11 @@ private:
 
 	template<typename Element>
 	void signgleEquivalency(const std::string& local_path) {
-		const std::string        error = "outputs from parsing on file " + local_path + "differ.";
-		const std::string        filepath    = path(local_path);
-		pst::PSTBuilder<Element> PSTmanual   = manualSteps<Element>(filepath);
-		pst::PSTBuilder<Element> PSTcontent  = fromContents<Element>(filepath);
-		pst::PSTBuilder<Element> PSTfilename = fromFilename<Element>(filepath);
+		const std::string error       = "outputs from parsing on file " + local_path + "differ.";
+		const std::string filepath    = path(local_path);
+		pst::PST<Element> PSTmanual   = manualSteps<Element>(filepath);
+		pst::PST<Element> PSTcontent  = fromContents<Element>(filepath);
+		pst::PST<Element> PSTfilename = fromFilename<Element>(filepath);
 		assert(PSTmanual.getLogger().good() == PSTcontent.getLogger().good(), error);
 		assert(PSTmanual.getLogger().good() == PSTfilename.getLogger().good(), error);
 		std::string manualPrint   = stringDprint(PSTmanual);

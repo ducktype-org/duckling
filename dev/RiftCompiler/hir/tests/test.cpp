@@ -21,7 +21,7 @@ public:
 
 private:
 	hir::SourceUnit prepare(const fs::FilePath& file) {
-		pst::PST parsed(file);
+		pst::PST<> parsed(file);
 		assert(parsed.getLogger().good(), "there are unexpected errors in rift source-code");
 		return { std::move(parsed), file };
 	}
