@@ -31,8 +31,8 @@ namespace pst {
 		void parse()
 		requires ParseAble
 		{
-			lexer::TokenData& token_data = file->getTokenData();
-			RiftParserState   state(
+			const lexer::TokenData& token_data = file->getTokenData();
+			RiftParserState         state(
                 tpc::TokenStream(
                     token_data.tokens,
                     tpc::Token(token_data.bof_sentinel),

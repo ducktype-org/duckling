@@ -648,7 +648,7 @@ namespace assemble {
 
 		tokenizer::OwnFile file = lexer::tokenizeFile(path);
 
-		lexer::TokenData& td = file->getTokenData();
+		const lexer::TokenData& td = file->getTokenData();
 
 		auto log = dia::Logger();
 
