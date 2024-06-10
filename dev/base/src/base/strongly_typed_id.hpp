@@ -7,13 +7,7 @@
  * Usage:
  * 	STRONG_TYPEDEF_ID(TypeName)
  *
- *  Created type has following interface:			std::cerr << base::strConcat(
-				"######### Crating scope for: \n  Element: ",
-					"ID: ", element.base_element->getID().asInt(), ", ",
-				element_dprint.str(), "\n  Parent:",
-				base::perfectHash(element.parent), "\n"
-			);
-
+ *  Created type has following interface:
  *
  *  * Type() - default constructor creating bad ID
  *  * Type::next() - get next id
