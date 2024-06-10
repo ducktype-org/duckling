@@ -91,8 +91,8 @@ private:
 			);
 			stmt->acceptVisitor(empty_vistor);
 		}
-		ASSERT_EQUAL(16, panicky_vistor.counter);
-		ASSERT_EQUAL(16, empty_vistor.counter);
+		ASSERT_EQUAL(17, panicky_vistor.counter);
+		ASSERT_EQUAL(17, empty_vistor.counter);
 	}
 
 	void testJson(

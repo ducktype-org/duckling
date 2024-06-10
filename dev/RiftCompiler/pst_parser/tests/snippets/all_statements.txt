@@ -32,3 +32,6 @@ break;
 continue A;
 
 defer a+2;
+
+return 2;
+
