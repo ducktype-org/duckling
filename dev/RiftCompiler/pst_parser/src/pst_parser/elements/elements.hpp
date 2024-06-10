@@ -59,6 +59,34 @@ namespace pst {
 		static ParserRef<Stmt> parse(RiftParserState& state);
 		bool                   trailingSemicolon() override;
 		virtual void           acceptVisitor(PstStmtVisitor& visitor) const = 0;
+
+		[[nodiscard]]
+		bool isStatement() const final {
+			return true;
+		}
+
+		/**
+		 * @brief Determines if given statement is a declaration.
+		 * Declaration is everything that is considered a unique symbol in HELIOS.
+		 * For example declarations are:
+		 * * functions
+		 * * classes
+		 * * aliases and usings
+		 * * ifs, whiles with a name
+		 * * variable declaration
+		 *
+		 * For example declarations are not:
+		 * * expressions
+		 * * ifs, whiles without name
+		 * * return, break
+		 *
+		 * @note: this definition of declaration might not
+		 * always be equivalent to intuitive thinking about declarations.
+		 */
+		[[nodiscard]]
+		virtual bool isDeclaration() const {
+			return false;
+		}
 	};
 
 #define STMT_CHILD_CONSTRUCTOR(class_name) \
@@ -213,6 +241,11 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	class Using final: public Stmt {
@@ -236,6 +269,11 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	class Alias final: public Stmt {
@@ -260,6 +298,11 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	class CodeBlock final: public NotStmt {
@@ -273,6 +316,11 @@ namespace pst {
 		static ParserRef<CodeBlock> parse(RiftParserState& state);
 		~CodeBlock() final = default;
 		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
 	};
 
 	class CodeBlockOrStmt final: public NotStmt {
@@ -290,6 +338,11 @@ namespace pst {
 		const_iterator begin() const;
 		[[nodiscard]]
 		const_iterator end() const;
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
 	};
 
 	class RoundGroupExpr final: public NotStmt {
@@ -365,15 +418,17 @@ namespace pst {
 	 */
 	class Action: public Stmt {
 	protected:
-		std::optional<ParserRef<Expr>> expr;
+		base::Optional<ParserRef<Expr>> expr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action);
 		static ParserRef<Action> parse(RiftParserState& state);
 		~Action() override = default;
 
-		// TODO:
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		[[nodiscard]]
+		base::Optional<ParserCBorrowRef<Expr>> getValue() const {
+			return expr.map([](const auto& e) { return e.borrow(); });
+		}
 	};
 
 	class Return final: public Action {
@@ -382,6 +437,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Return() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Break final: public Action {
@@ -390,6 +447,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Break() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Continue final: public Action {
@@ -398,6 +457,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Continue() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Redo final: public Action {
@@ -406,6 +467,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Redo() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Restart final: public Action {
@@ -414,6 +477,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Restart() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Defer final: public Action {
@@ -422,6 +487,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Defer() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -433,6 +500,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Throw() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Const final: public Stmt {
@@ -463,6 +532,11 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	/**
@@ -472,10 +546,14 @@ namespace pst {
 	public:
 		Decl(StmtKind kind, const dia::SourcePosition& position): Stmt(kind, position) {}
 
-		static ParserRef<Decl> parse(RiftParserState& state);
-		bool                   trailingSemicolon() override;
+		bool trailingSemicolon() override;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const override {
+			return true;
+		}
 	};
 
 #define DECL_CHILD_CONSTRUCTOR(class_name) \
@@ -484,9 +562,14 @@ namespace pst {
 	class CodeDecl: public Decl {
 	public:
 		DECL_CHILD_CONSTRUCTOR(CodeDecl);
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return false;
+		}
 	};
 
-	class TopLevel: public Decl {
+	class TopLevel final: public Decl {
 		std::vector<tpc::ParserRef<Stmt>> statements;
 
 	public:
@@ -499,6 +582,11 @@ namespace pst {
 		[[nodiscard]]
 		const auto& getStatements() const {
 			return statements;
+		}
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
 		}
 	};
 
@@ -575,6 +663,16 @@ namespace pst {
 		[[nodiscard]]
 		base::StrId getName() const {
 			return name.value;
+		}
+
+		[[nodiscard]]
+		auto getParams() const {
+			return params.borrow();
+		}
+
+		[[nodiscard]]
+		auto getBody() const {
+			return body.borrow();
 		}
 
 		static ParserRef<Fun> parse(RiftParserState& state);

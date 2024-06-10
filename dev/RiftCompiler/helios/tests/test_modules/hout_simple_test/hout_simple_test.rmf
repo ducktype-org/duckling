@@ -1,0 +1,13 @@
+fun foo(var a: i32) {}
+
+fun foo2() { return 2; }
+
+const M: i32 = 123 + A_alias;
+
+fun foo3() { return A; }
+
+const A: i32 = 2;
+
+alias foo2_alias = foo2;
+alias A_alias = A;
+

@@ -35,7 +35,12 @@ public:
 	PSTVISITOR_METHOD(Using)
 	PSTVISITOR_METHOD(Alias)
 	PSTVISITOR_METHOD(Expr)
-	PSTVISITOR_METHOD(Action)
+	PSTVISITOR_METHOD(Return)
+	PSTVISITOR_METHOD(Redo)
+	PSTVISITOR_METHOD(Break)
+	PSTVISITOR_METHOD(Continue)
+	PSTVISITOR_METHOD(Defer)
+	PSTVISITOR_METHOD(Throw)
 	PSTVISITOR_METHOD(Const)
 	PSTVISITOR_METHOD(Decl)
 	PSTVISITOR_METHOD(Block)
@@ -86,8 +91,8 @@ private:
 			);
 			stmt->acceptVisitor(empty_vistor);
 		}
-		ASSERT_EQUAL(12, panicky_vistor.counter);
-		ASSERT_EQUAL(12, empty_vistor.counter);
+		ASSERT_EQUAL(17, panicky_vistor.counter);
+		ASSERT_EQUAL(17, empty_vistor.counter);
 	}
 
 	void testJson(

@@ -2,6 +2,7 @@
 #include <helios/scope_symbol_id.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
+#include <helios/queries.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 #include <pst_parser/parser.hpp>
@@ -21,6 +22,7 @@ public:
 
 		TESTER_ADD_TEST(testI32Consts);
 		TESTER_ADD_TEST(testEdgeEvals);
+		TESTER_ADD_TEST(simpleHOUTTest);
 	}
 
 private:
@@ -82,6 +84,17 @@ private:
 		ASSERT_EQUAL(7, getValue("O2", root_scope));
 		ASSERT_EQUAL(7, getValue("O3", root_scope));
 		ASSERT_EQUAL(7, getValue("O4", root_scope));
+	}
+
+	void simpleHOUTTest() {
+		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
+			fs::FilePath(path("test_modules/hout_simple_test"))
+		);
+
+		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		ASSERT_EQUAL(hout.functions.size(), 3);
+		ASSERT_EQUAL(hout.glob_data.size(), 2);
 	}
 };
 

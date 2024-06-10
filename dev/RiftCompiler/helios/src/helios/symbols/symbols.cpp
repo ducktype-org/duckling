@@ -71,6 +71,8 @@ namespace compiler::helios {
 
 	ScopeID scope(SymID id) { return getSymRef(id)->scope; }
 
+	PstRef<pst::Stmt> stmt(SymID id) { return getSymRef(id)->pst_stmt; }
+
 	namespace {
 		/**
 		 * @brief Global Symbol Table
@@ -158,9 +160,10 @@ namespace compiler::helios {
 		default:
 			break;
 		}
-		RIFT_PANIC(
-			base::strConcat("makeSymbolFromStatement bad symbol kind, stmt: ", typeid(stmt).name())
-		);
+		auto stmt_ptr = stmt.get();
+		RIFT_PANIC(base::strConcat(
+			"makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
+		));
 	}
 
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymID) {
