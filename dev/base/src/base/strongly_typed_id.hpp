@@ -2,11 +2,6 @@
 
 #include "ints.hpp"
 
-namespace base::detail {
-	template<class ID>
-	static i64 NEXT_ID = 0;
-}
-
 /**
  * @brief Macro used to create Strong ID types.
  * Usage:
@@ -26,6 +21,7 @@ namespace base::detail {
 #define STRONG_TYPEDEF_ID(NAME)                                          \
 	class NAME final {                                                   \
 	private:                                                             \
+		inline static    u64 NEXT_ID = 0;                                \
 		constexpr static u64 BAD_ID = u64(-1);                           \
 		u64                  id     = BAD_ID;                            \
 		inline constexpr NAME(u64 id): id{ id } {}                       \
@@ -39,7 +35,7 @@ namespace base::detail {
 		[[nodiscard]]                                                    \
 		static NAME next() {                                             \
 			NAME out;                                                    \
-			out.id = ::base::detail::NEXT_ID<NAME> ++;                   \
+			out.id = Name::NEXT_ID<NAME> ++;                             \
 			return out;                                                  \
 		}                                                                \
 		static NAME bad() { return NAME{ BAD_ID }; }                     \
