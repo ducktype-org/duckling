@@ -52,6 +52,16 @@ namespace compiler::helios {
 
 	auto getScopeRef(ScopeID id) { return GetScopeRef_Functor::get(id); }
 
+	base::Optional<ScopeID> parent(ScopeID id) {
+		auto ref = getScopeRef(id);
+		if (ref->is_root) {
+			return {};
+		} else {
+			RIFT_ASSERT(getScopeRef(ref->parent) != nullptr, "Non root scope has no parent.");
+			return ref->parent;
+		}
+	}
+
 	namespace {
 		base::StableVector<ScopeData> scope_table;
 
@@ -96,21 +106,66 @@ namespace compiler::helios {
 			// auto parent
 			// = scope(ctx.query<QuerySymbolOfSTMT>({ element.parent, element.base_element }));
 
+
+			// @TODO: delete this code
+			std::stringstream element_dprint;
+			element.base_element->dprint(element_dprint);
+
+			std::cerr << base::strConcat(
+				"######### Crating scope for: \n  Element: ",
+					"ID: ", element.base_element->getID().asInt(), ", ",
+				element_dprint.str(), "\n  Parent:",
+				base::perfectHash(element.parent), "\n"
+			);
+
+
 			// simple parent sanity check:
 			if (parent_map.contains(element.base_element->getID())) {
+				
+				// @TODO: delete this code
+				
+				std::string curr_parent_step;
+				std::string new_parent_step;
+				
+				base::Optional<ScopeID> cur_parent = parent_map.at(element.base_element->getID());
+				while (cur_parent) {
+					curr_parent_step += base::strConcat(
+						reinterpret_cast<intptr_t>(getScopeRef(cur_parent.value()).get()),
+						" -> "
+					);
+					cur_parent = parent(cur_parent.value());
+				}
+
+				base::Optional<ScopeID> new_parent = element.parent;
+				while (new_parent) {
+					new_parent_step += base::strConcat(
+						reinterpret_cast<intptr_t>(getScopeRef(new_parent.value()).get()),
+						" -> "
+					);
+					new_parent = parent(new_parent.value());
+				}
+
+				
 				RIFT_ASSERT(
 					parent_map.at(element.base_element->getID()) == element.parent,
-					"Parent mismatch in QueryPrimaryCodeScopeFor"
+					base::strConcat(
+						"Parent mismatch in QueryPrimaryCodeScopeFor: pst element: ",
+						element_dprint.str(), "\n   ",
+						curr_parent_step,     "\n   ",
+						new_parent_step,      "\n   "
+					)
 				);
 			} else {
 				parent_map.put(element.base_element->getID(), element.parent);
 			}
 
-			return putInScopeTable(ScopeData{
+			auto scope_data = putInScopeTable(ScopeData{
 				.parent              = element.parent,
 				.related_pst_element = element.base_element,
 				.symbols             = {},
 			});
+
+			return scope_data;
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF

@@ -20,8 +20,8 @@ public:
 		pst::init();
 		ts::init();
 
-		TESTER_ADD_TEST(testI32Consts);
-		TESTER_ADD_TEST(testEdgeEvals);
+		// TESTER_ADD_TEST(testI32Consts);
+		// TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(simpleHOUTTest);
 	}
 

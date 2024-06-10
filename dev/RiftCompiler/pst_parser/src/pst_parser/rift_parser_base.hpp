@@ -17,7 +17,7 @@ namespace pst {
 
 	class RiftElement: public tpc::Element {
 	public:
-		explicit RiftElement(const dia::SourcePosition& position): source_position(position){};
+		explicit RiftElement(const dia::SourcePosition& position): source_position(position), id(PstID::next()) {}
 
 		[[nodiscard]]
 		const dia::SourcePosition& getSourcePosition() const;
@@ -50,7 +50,7 @@ namespace pst {
 	private:
 		dia::SourcePosition source_position;
 
-		PstID id = PstID::next();
+		PstID id;
 	};
 
 	using ImportType = tpc::ParserCBorrowRef<pst::Import>;

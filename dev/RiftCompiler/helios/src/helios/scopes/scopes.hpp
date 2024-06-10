@@ -16,6 +16,8 @@
 namespace compiler::helios {
 	using StmtList = std::vector<PstRef<pst::Stmt>>;
 
+	base::Optional<ScopeID> parent(ScopeID);
+
 	/**
 	 * @brief Query root scope for given module.
 	 */
