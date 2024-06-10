@@ -35,7 +35,7 @@
 		[[nodiscard]]                                                    \
 		static NAME next() {                                             \
 			NAME out;                                                    \
-			out.id = Name::NEXT_ID<NAME> ++;                             \
+			out.id = NAME::NEXT_ID++;                                    \
 			return out;                                                  \
 		}                                                                \
 		static NAME bad() { return NAME{ BAD_ID }; }                     \
