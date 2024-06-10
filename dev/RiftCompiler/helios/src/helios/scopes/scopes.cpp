@@ -111,9 +111,7 @@ namespace compiler::helios {
 				
 				RIFT_ASSERT(
 					parent_map.at(element.base_element->getID()) == element.parent,
-					base::strConcat(
-						"Parent mismatch in QueryPrimaryCodeScopeFor"
-					)
+					"Parent mismatch in QueryPrimaryCodeScopeFor"
 				);
 			} else {
 				parent_map.put(element.base_element->getID(), element.parent);
