@@ -6,8 +6,7 @@
 
 hir::SourceUnit prepare(std::string_view filename) {
 	fs::FilePath file(filename);
-	auto         td = lexer::tokenizeFile(file);
-	return { pst::parse(std::move(td)), file };
+	return { { file }, file };
 }
 
 int main(int argc, char** argv) {

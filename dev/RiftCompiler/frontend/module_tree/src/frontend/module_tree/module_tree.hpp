@@ -44,10 +44,10 @@ namespace compiler::frontend {
 	 * @brief Structure holding SourceFile within Module Tree
 	 */
 	struct SourceFile {
-		fs::FilePath             path;
-		std::string              rift_file_name;  // or StrID?
-		FileId                   id;
-		base::Optional<pst::PST> parse_tree;
+		fs::FilePath               path;
+		std::string                rift_file_name;  // or StrID?
+		FileId                     id;
+		base::Optional<pst::PST<>> parse_tree;
 
 		SourceFile(fs::FilePath);
 
@@ -55,7 +55,7 @@ namespace compiler::frontend {
 		 * @brief Lazily parses the source file and returns PST
 		 * @return const pst::PST&
 		 */
-		const pst::PST& getPST();
+		const pst::PST<>& getPST();
 	};
 
 	STRONG_TYPEDEF_ID(ModuleId);

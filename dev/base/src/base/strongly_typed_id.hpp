@@ -21,9 +21,9 @@
 #define STRONG_TYPEDEF_ID(NAME)                                          \
 	class NAME final {                                                   \
 	private:                                                             \
-		static inline        u64 NEXT_ID = 0;                            \
-		constexpr static u64 BAD_ID = u64(-1);                           \
-		u64                  id     = BAD_ID;                            \
+		inline static u64    NEXT_ID = 0;                                \
+		constexpr static u64 BAD_ID  = u64(-1);                          \
+		u64                  id      = BAD_ID;                           \
 		inline constexpr NAME(u64 id): id{ id } {}                       \
                                                                          \
 	public:                                                              \
@@ -35,7 +35,7 @@
 		[[nodiscard]]                                                    \
 		static NAME next() {                                             \
 			NAME out;                                                    \
-			out.id = NAME::NEXT_ID ++;                                   \
+			out.id = NAME::NEXT_ID++;                                    \
 			return out;                                                  \
 		}                                                                \
 		static NAME bad() { return NAME{ BAD_ID }; }                     \

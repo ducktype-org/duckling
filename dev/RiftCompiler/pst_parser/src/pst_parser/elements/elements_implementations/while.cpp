@@ -6,7 +6,7 @@ namespace pst {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<While>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::While), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<While>(state, state.ctokens().is(Keyword::While))) return nullptr;
 
 		parseAll(state, Keyword::While, &out->optional_name, &out->condition, &out->body);
 

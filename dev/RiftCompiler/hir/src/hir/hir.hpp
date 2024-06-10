@@ -10,7 +10,7 @@
 namespace hir {
 
 	struct SourceUnit {
-		pst::PST     pst;
+		pst::PST<>   pst;
 		fs::FilePath file_path;
 	};
 

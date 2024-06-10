@@ -83,7 +83,7 @@ namespace compiler::helios {
 			return putInScopeTable(ScopeData{
 				.parent              = ScopeID{ nullptr },
 				.is_root             = true,
-				.related_pst_element = module_pst.getTopLevelElement(),
+				.related_pst_element = module_pst.getRootElement(),
 				.symbols             = {},
 			});
 		}
