@@ -108,7 +108,6 @@ namespace compiler::helios {
 
 			// simple parent sanity check:
 			if (parent_map.contains(element.base_element->getID())) {
-				
 				RIFT_ASSERT(
 					parent_map.at(element.base_element->getID()) == element.parent,
 					"Parent mismatch in QueryPrimaryCodeScopeFor"
