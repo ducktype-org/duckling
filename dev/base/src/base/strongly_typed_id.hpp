@@ -2,17 +2,18 @@
 
 #include "ints.hpp"
 
-namespace base::detail {
-	template<class ID>
-	static i64 NEXT_ID = 0;
-}
-
 /**
  * @brief Macro used to create Strong ID types.
  * Usage:
  * 	STRONG_TYPEDEF_ID(TypeName)
  *
- *  Created type has following interface:
+ *  Created type has following interface:			std::cerr << base::strConcat(
+				"######### Crating scope for: \n  Element: ",
+					"ID: ", element.base_element->getID().asInt(), ", ",
+				element_dprint.str(), "\n  Parent:",
+				base::perfectHash(element.parent), "\n"
+			);
+
  *
  *  * Type() - default constructor creating bad ID
  *  * Type::next() - get next id
@@ -26,6 +27,7 @@ namespace base::detail {
 #define STRONG_TYPEDEF_ID(NAME)                                          \
 	class NAME final {                                                   \
 	private:                                                             \
+		static inline        u64 NEXT_ID = 0;                            \
 		constexpr static u64 BAD_ID = u64(-1);                           \
 		u64                  id     = BAD_ID;                            \
 		inline constexpr NAME(u64 id): id{ id } {}                       \
@@ -39,7 +41,7 @@ namespace base::detail {
 		[[nodiscard]]                                                    \
 		static NAME next() {                                             \
 			NAME out;                                                    \
-			out.id = ::base::detail::NEXT_ID<NAME> ++;                   \
+			out.id = NAME::NEXT_ID ++;                                   \
 			return out;                                                  \
 		}                                                                \
 		static NAME bad() { return NAME{ BAD_ID }; }                     \
