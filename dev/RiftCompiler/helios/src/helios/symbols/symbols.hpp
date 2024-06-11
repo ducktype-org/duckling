@@ -19,7 +19,6 @@ namespace compiler::helios {
 	 * @brief Stores general kind/type of a symbol.
 	 */
 	enum class SymbolKind {
-		Basic,
 		Namespace,
 		Function,
 		Const,
@@ -54,6 +53,11 @@ namespace compiler::helios {
 	 * @return scope that given symbol was defined within
 	 */
 	ScopeID scope(SymID);
+
+	/**
+	 * @return Pst element symbol was created from
+	 */
+	PstRef<pst::Stmt> stmt(SymID);
 
 	struct KeyOf_QuerySymbolOfSTMT {
 		/**
@@ -112,24 +116,13 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryTypeOF, SymID, ts::TypeInfo);
 
-	// @TODO: some proper hout type
-	struct SomeHOUT {};
-
-	/**
-	 * @brief Query HOUT of given symbol
-	 * @note This query is effectively responsible for compilation of symbols.
-	 * @note not yet implemented
-	 */
-	DECLARE_QUERY(QueryHOUT, SymID, base::Optional<SomeHOUT>);
-
-
 	/**
 	 * A query that returns an "absolute path" to the symbol without aliases.
 	 */
 	DECLARE_QUERY(QueryDealias, SymID, const SymbolList&);
 
 	/**
-	 * Calculates a value of a contant.
+	 * Calculates a value of a constant.
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, i32);
 

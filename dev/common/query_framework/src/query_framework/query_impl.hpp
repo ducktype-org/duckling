@@ -87,7 +87,7 @@ namespace query {
 				log(base::strConcat(
 					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Cached. Done.\n"
 				));
-				return v.value().data;
+				return std::move(v.value().data);
 			} else {
 				auto node_id = makeNodeID(QueryImplType::QueryType::id, key);
 				auto context = ContextMaker::make(node_id);

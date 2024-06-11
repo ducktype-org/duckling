@@ -6,7 +6,7 @@ namespace pst {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Alias>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Alias), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Alias>(state, state.ctokens().is(Keyword::Alias))) return nullptr;
 
 		parseAll(state, Keyword::Alias, &out->name, Operator::Assign, &out->points_to);
 
