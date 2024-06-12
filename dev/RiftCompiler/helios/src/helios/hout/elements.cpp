@@ -43,8 +43,6 @@ namespace compiler::helios {
 	/**
 	 * @brief HoutOfExpr for expression that contain only one element
 	 */
-	QUERY_EXTENSION(houtOfSingleExpr, KeyOf_QueryHoutOfExpr, code::ElementRef<code::Expr>);
-
 	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key)
 		-> code::ElementRef<code::Expr> {
 		RIFT_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single expression");
@@ -97,7 +95,7 @@ namespace compiler::helios {
 			// A proper Expr parsing will be added as new mission/PR
 
 			if (key.expr->elements.size() == 1)
-				return ctx.callExt<houtOfSingleExpr>(key);
+				return houtOfSingleExpr(ctx, key);
 			else
 				throw base::NotYetImplemented("Complicated HOUT expressions");
 		}

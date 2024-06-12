@@ -16,9 +16,22 @@ namespace query::detail {
 		// queries in the cycle should produce "CycleError" that will propagate into any query
 		// depending from them
 
-		void             setEntry(detail::NodeID node, detail::NodeID from);
+		/**
+		 * @brief Returns size of current query stack size
+		 */
+		u64 queryStackSize();
+
+		/**
+		 * @brief Marks beginning of new query
+		 */
+		void setEntry(detail::NodeID node, detail::NodeID from);
+
 		DependencyStatus addDependency(detail::NodeID from, detail::NodeID to);
-		void             setExit(detail::NodeID node);
+
+		/**
+		 * @brief Marks exit of a query
+		 */
+		void setExit(detail::NodeID node);
 
 		void debugPrint();
 		void debugPrintForDrawing();

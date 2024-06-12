@@ -198,7 +198,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Parses an expression from PST into RPN.
 		 */
-		QUERY_EXTENSION(ExtensionMakeRPN, KeyOf_ExtensionMakeRPN, std::vector<ExprElem>);
+		std::vector<ExprElem> ExtensionMakeRPN(query::Context&, KeyOf_ExtensionMakeRPN);
 
 		struct KeyOf_ExtensionRPNEval {
 			/**
@@ -222,7 +222,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Evaluates an operation `a (op) b`.
 		 */
-		QUERY_EXTENSION(ExtensionRPNEval, const KeyOf_ExtensionRPNEval&, ExprElem);
+		ExprElem ExtensionRPNEval(query::Context&, const KeyOf_ExtensionRPNEval&);
 
 		struct KeyOf_ExtensionRPNValue {
 			/**
@@ -242,6 +242,6 @@ namespace compiler::helios {
 		 * For example, if we pass here a rpn::NumLiteral(5), then it will return 5 or if we pass
 		 * rpn::Identifier([C]), then a value of a C will be returned (if it's a constant).
 		 */
-		QUERY_EXTENSION(ExtensionRPNValue, const KeyOf_ExtensionRPNValue&, i32);
+		i32 ExtensionRPNValue(query::Context&, const KeyOf_ExtensionRPNValue&);
 	}
 }

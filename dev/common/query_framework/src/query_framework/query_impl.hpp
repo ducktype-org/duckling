@@ -28,12 +28,22 @@ namespace query {
 		 * discarded.
 		 */
 		struct ContextType {
+		private:
 			NodeID my_node;
+
+			ContextType(NodeID my_node): my_node(my_node){};
+			friend struct ContextMaker;
+
+		public:
+			// @TODO: add currently engaged query sanity check to context operations
 
 			// @TODO: Make the context (and thus the logger) be propagated through query calls,
 			// so that all queries run on the same file / in the same compilation thread / whatever
 			// use a single, *non-static* logger object.
 			static dia::Logger logger;
+
+			ContextType(const ContextType&) = delete;
+			ContextType(ContextType&&)      = delete;
 
 			template<typename OthQuery>
 			auto query(typename OthQuery::QKey key) -> decltype(auto) {
@@ -44,19 +54,6 @@ namespace query {
 			}
 
 			/**
-			 * @brief Calls query extension passes as template argument.
-			 *
-			 * @tparam Query Extension
-			 * @tparam Arguments of query extension
-			 * @param args
-			 * @return Return value of query extension
-			 */
-			template<auto Extension, typename... Args>
-			auto callExt(Args&&... args) {
-				return Extension(*this, std::forward<Args>(args)...);
-			}
-
-			/**
 			 * Log message to be shown to the user.
 			 * @param message The dia::Message to be logged.
 			 */
@@ -64,6 +61,13 @@ namespace query {
 		};
 
 		inline dia::Logger ContextType::logger{};
+
+		/**
+		 * @brief Internal helper struct used to create context
+		 */
+		struct ContextMaker {
+			static auto make(NodeID my_node) { return ContextType(my_node); }
+		};
 
 		/**
 		 * @brief Internal function implementing the call to a query.
@@ -86,7 +90,8 @@ namespace query {
 				return std::move(v.value().data);
 			} else {
 				auto node_id = makeNodeID(QueryImplType::QueryType::id, key);
-				typename QueryImplType::Context context{ node_id };
+				auto context = ContextMaker::make(node_id);
+
 				// @FUTURE: provide legit acd here
 				ACD acd;
 
@@ -138,10 +143,15 @@ namespace query {
 		 *  static auto store(QKey key, PResult res, query::ACD acd) -> QResult;
 		 */
 	};
-
-	using Context = detail::ContextType;
-
 }
+
+/**
+ * @brief Macro to be used as a struct signature when implementing a query.
+ * @param query_type Name of the query
+ * @param PResult Type returned by the Provide method
+ */
+#define IMPLEMENT_QUERY(query_type, PResult) \
+	ImplementationOf_##query_type final: public query::QueryImplementation<query_type, PResult>
 
 /**
  * @brief This is an internal query, and shouldn't be used directly. It used by
