@@ -3,7 +3,7 @@ import { DucklingElement, ducklingElementFactory } from "./lsptree/elements/elem
 import { DucklingParserError, toErrors } from "./errors";
 import { Connection } from "vscode-languageserver";
 
-const BINARY_PATH = __dirname + "/../../../build/bin/";
+const BINARY_PATH = __dirname + "/../../bin/";
 const DAEMON_PORT = "42069";
 const DAEMON_ADRESS = "http://localhost:" + DAEMON_PORT;
 

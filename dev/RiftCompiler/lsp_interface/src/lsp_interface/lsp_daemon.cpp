@@ -110,7 +110,7 @@ void server(i32 port) {
 
 void showVersion() {
 	std::cout << std::boolalpha;
-	std::cout << "RiftLS daemon version 0.0.\n";
+	std::cout << "DucklingLS daemon version 0.0.\n";
 }
 
 int main(int argc, const char** argv) {

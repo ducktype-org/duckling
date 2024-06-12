@@ -8,6 +8,7 @@ const tokenFamilies: { [key: number]: number } = {
 	[getTokenTypeIndex('keyword')]: 1,
 	[getTokenTypeIndex('variable')]: 1,
 	[getTokenTypeIndex('operator')]: 1,
+	[getTokenTypeIndex('number')]: 1,
 	[getTokenTypeIndex('comment')]: 2,
 	[getTokenTypeIndex('string')]: 3,
 	[getTokenTypeIndex('decorator')]: 4,

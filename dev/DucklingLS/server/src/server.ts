@@ -1,7 +1,3 @@
-/* --------------------------------------------------------------------------------------------
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for license information.
- * ------------------------------------------------------------------------------------------ */
 import {
 	createConnection,
 	TextDocuments,
@@ -22,7 +18,6 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { handleSemanticTokensFull } from "./semanticTokens";
 import { getCompletionItems, onCompletionResolve, preloadKeywords } from "./completion";
 import { validateDuckling } from "./validation"; // Import the validation function
-import { DucklingParserError } from "./errors"; 
 import { CompilerDaemonClient } from "./compilerDaemonClient";
 import { getFoldingRanges } from './foldingRanges';
 import { DucklingElement } from './lsptree/elements/elements';
@@ -30,15 +25,10 @@ import { Token } from './semanticTokensDeclarations';
 require("./lsptree/elements/index");
 
 
-// Create a connection for the server, using Node's IPC as a transport.
-// Also include all preview / proposed LSP features.
 const connection = createConnection(ProposedFeatures.all);
 connection.sendNotification('window/showMessage', {type: 3, message: 'DucklingLS started!'});
 
-// Create a compiler daemon client
 const compilerDaemonClient = new CompilerDaemonClient();
-
-// Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 let hasConfigurationCapability = false;
@@ -49,7 +39,7 @@ let hasDiagnosticRelatedInformationCapability = false;
 const lsptCache: Map<string, DucklingElement | null> = new Map();
 const semanticTokensCache: Map<string, Token[]> = new Map();
 
-// Semantic tokens legend, only 'comment' token type for now
+// Semantic tokens legend
 const semanticTokensLegend = {
 	tokenTypes: Object.values(SemanticTokenTypes),
 	tokenModifiers: Object.values(SemanticTokenModifiers)
@@ -161,8 +151,6 @@ documents.onDidClose(e => {
 	documentSettings.delete(e.document.uri);
 });
 
-// The content of a text document has changed. This event is emitted
-// when the text document first opened or when its content has changed.
 documents.onDidChangeContent(change => {
 	compilerDaemonClient.putFile(change.document.uri, change.document.getText(), connection).then(() => {
 		compilerDaemonClient.getLSPT(change.document.uri, connection).then((LSPTree) => {
@@ -176,7 +164,6 @@ documents.onDidChangeContent(change => {
 
 
 connection.onDidChangeWatchedFiles(_change => {
-	// Monitored files have change in VSCode
 	connection.console.log("We received an file change event");
 });
 
