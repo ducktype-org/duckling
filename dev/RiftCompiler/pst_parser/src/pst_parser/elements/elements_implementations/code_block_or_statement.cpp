@@ -6,14 +6,17 @@ namespace pst {
 	ParserRef<CodeBlockOrStmt> CodeBlockOrStmt::parse(RiftParserState& state) {
 		auto out = makeRef<CodeBlockOrStmt>(state.getPosition());
 		if (state[0].isBracketGroup(Token::BracketType::Curly)) {
-			auto block = CodeBlock::parse(state);
+			ParserRef<CodeBlock> block;
+			state.parse().one(&block);
 			if (block == nullptr) return nullptr;
 			out->source_position = block->getSourcePosition();
 			out->content         = std::move(block);
 		} else {
-			auto stmt = Stmt::parse(state);
+			ParserRef<Stmt> stmt;
+			state.parse().one(&stmt);
 			if (stmt == nullptr) return nullptr;
 			out->source_position = stmt->getSourcePosition();
+			out->addChild(stmt);
 			out->content         = std::move(stmt);
 		}
 

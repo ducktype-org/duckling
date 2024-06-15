@@ -32,15 +32,17 @@ namespace pst {
 
 		if (!assertStmtChoice<Const>(state, state[0].is(Keyword::Const))) return nullptr;
 
-		out->addKeyword(state.getPosition());
 
+		state.parse().all(Keyword::Const, &out->name, Operator::Colon);
 
-		parseAll(state, Keyword::Const, &out->name, Operator::Colon);
 		out->type = Expr::parseUntil<detail::isTypeEnd, detail::isAssign, ConstTypeEndError>(state);
+		out->addChild(out->type);
 
-		state.tryEat(Operator::Assign);
+		if (state.tryEat(Operator::Assign)) {
+			out->addToken(state[-1]);
+		}
 
-		parseOne(state, &out->value, true);
+		state.parse().one(&out->value, true);
 
 		out->setLastToken(state.getPosition(-1));
 

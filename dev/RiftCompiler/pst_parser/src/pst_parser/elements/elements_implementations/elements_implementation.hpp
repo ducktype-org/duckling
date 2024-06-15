@@ -17,8 +17,6 @@
 
 namespace pst {
 	using tpc::makeRef;
-	using tpc::parseAll;
-	using tpc::parseOne;
 
 	using rift_def::Keyword;
 	using rift_def::Operator;

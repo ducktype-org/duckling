@@ -75,39 +75,54 @@ namespace tpc {
 		NoIdentifierError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	void parseOne(ParserState& state, Keyword key, bool ignorable) {
+	MaybeToken parseOne(ParserState& state, Keyword key, bool ignorable) {
+		auto current = &state[0];
 		if (!state.tryEat(key)) {
 			state.fail(base::make_unique<BadKeywordError>(state.getPosition(), key));
 			if (!ignorable) state.tokens().next();
+			return {};
 		}
+		return {base::borrow_ptr(current)};
 	}
 
-	void parseOne(ParserState& state, Special spec, bool ignorable) {
+	MaybeToken parseOne(ParserState& state, Special spec, bool ignorable) {
+		auto current = &state[0];
 		if (!state.tryEat(spec)) {
 			state.fail(base::make_unique<BadSpecialError>(state.getPosition(), spec));
 			if (!ignorable) state.tokens().next();
+			return {};
 		}
+		return {base::borrow_ptr(current)};
 	}
 
-	void parseOne(ParserState& state, Operator op, bool ignorable) {
+	MaybeToken parseOne(ParserState& state, Operator op, bool ignorable) {
+		auto current = &state[0];
 		if (!state.tryEat(op)) {
 			state.fail(base::make_unique<BadOperatorError>(state.getPosition(), op));
 			if (!ignorable) state.tokens().next();
 		}
+		return {base::borrow_ptr(current)};
 	}
 
-	void parseOne(ParserState& state, Identifier* result, bool ignorable) {
+	MaybeToken parseOne(ParserState& state, Identifier* result, bool ignorable) {
 		if (!state.ctokens().peek().isIdentifier()) {
 			state.fail(base::make_unique<NoIdentifierError>(state.getPosition()));
 			result->value = base::StrId("<error>");
 			if (!ignorable) state.tokens().next();
-			return;
+			return {};
 		}
+		auto current = &state[0];
 		result->value = state.tokens().next().getValue();
+		return {base::borrow_ptr(current)};
 	}
 
-	void parseOne(ParserState& state, OptionalIdentifier* result, bool) {
-		if (state.ctokens().peek().isIdentifier()) result->value = state.tokens().next().getValue();
+	MaybeToken parseOne(ParserState& state, OptionalIdentifier* result, bool) {
+		if (state.ctokens().peek().isIdentifier()) {
+			auto current = &state[0];
+			result->value = state.tokens().next().getValue();
+			return {base::borrow_ptr(current)};
+		}
+		return {};
 	}
 
 	void identifierDprint(base::StrId value, std::ostream& out) {

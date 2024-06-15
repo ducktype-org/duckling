@@ -653,14 +653,7 @@ namespace assemble {
 		auto log = dia::Logger();
 
 		tpc::ParserState state(
-			tpc::TokenStream(
-				td.tokens,
-				tpc::Token(td.bof_sentinel),
-				tpc::Token(td.eof_sentinel),
-				0,
-				td.tokens.size()
-			),
-			log
+			tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()), log
 		);
 
 		tpc::ParserRef<ParsedCode> out = ParsedCode::parse(state);

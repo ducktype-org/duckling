@@ -9,11 +9,20 @@ namespace pst {
 
 	const dia::SourcePosition& RiftElement::getSourcePosition() const { return source_position; }
 
-	const std::vector<dia::SourcePosition>& RiftElement::getKeywordPositions() const {
-		return keyword_positions;
+	void RiftElement::addToken(base::c_borrow_ptr<tpc::Token> t) { 
+		RIFT_ASSERT(t != nullptr, "All tokens that are part of an element should exist.");
+		tokens.push_back(t);
+	}
+	void RiftElement::addToken(const base::unique_ptr<tpc::Token>& t) { 
+		addToken(t.borrow());
+	}
+	void RiftElement::addToken(const tpc::Token& t) { 
+		addToken(base::borrow_ptr(&t));
 	}
 
-	void RiftElement::addKeyword(dia::SourcePosition pos) { keyword_positions.push_back(pos); }
+	void RiftElement::addChild(ParserCBorrowRef<RiftElement> el) { 
+		children.push_back(el);
+	}
 
 	void RiftElement::setLastToken(dia::SourcePosition pos) {
 		if (pos.getEnd() > source_position.getEnd())

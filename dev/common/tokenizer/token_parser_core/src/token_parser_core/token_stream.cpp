@@ -10,13 +10,17 @@
 namespace tpc {
 
 	TokenStream::TokenStream(
-		const Tokens& tokens, Token sentinel_begin, Token sentinel_end, usize from, usize to
+		const Tokens& tokens,
+		const Token&  sentinel_begin,
+		const Token&  sentinel_end,
+		usize         from,
+		usize         to
 	):
 		  tokens(tokens),
 		  where(from),
 		  to(to),
-		  sentinel_end(std::move(sentinel_end)),
-		  sentinel_begin(std::move(sentinel_begin)) {
+		  sentinel_end(sentinel_end),
+		  sentinel_begin(sentinel_begin) {
 		RIFT_ASSERT(tokens.size() >= to, "TokenStream received too few tokens.");
 		RIFT_ASSERT(from <= to, "TokenStream received illegal from-to values");
 	}
@@ -25,8 +29,8 @@ namespace tpc {
 		  tokens(stream.tokens),
 		  where(stream.where),
 		  to(stream.to),
-		  sentinel_end(std::move(stream.sentinel_end)),
-		  sentinel_begin(std::move(stream.sentinel_begin)) {}
+		  sentinel_end(stream.sentinel_end),
+		  sentinel_begin(stream.sentinel_begin) {}
 
 	TokenStream TokenStream::getRecursive() const {
 		if (peek().isRecursive()) {

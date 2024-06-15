@@ -432,7 +432,7 @@ namespace pst {
 	 */
 	class Action: public Stmt {
 	protected:
-		std::optional<ParserRef<Expr>> expr;
+		base::Optional<ParserRef<Expr>> expr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action);

@@ -29,7 +29,11 @@ namespace pst {
 		state.goDown();
 
 		// @TODO: this may not work in case of compilation error
-		while (state.notEmpty()) out->statements.emplace_back(Stmt::parse(state));
+		while (state.notEmpty()) {
+			ParserRef<Stmt> stmt;
+			state.parse().one(&stmt);
+			out->statements.emplace_back(std::move(stmt));
+		}
 
 		state.goUpAndSkip();
 		return out;

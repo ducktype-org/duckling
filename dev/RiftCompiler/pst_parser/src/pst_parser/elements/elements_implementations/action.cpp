@@ -36,11 +36,10 @@ namespace pst {
 			assertStmtChoice<Action>(state, false);
 			return nullptr;
 		}
-		out->addKeyword(state.getPosition());
 		state.tokens().skip();
 
 		// @TODO: for now we assume if there is no expression there is a semicolon
-		if (!state[0].is(Special::Semicolon)) out->expr = Expr::parse(state);
+		if (!state[0].is(Special::Semicolon)) state.parse().one(&out->expr);
 
 		out->setLastToken(state.getPosition(-1));
 
@@ -50,7 +49,7 @@ namespace pst {
 	namespace {
 		void simpleActionDprint(
 			std::ostream&                         out,
-			const std::optional<ParserRef<Expr>>& action,
+			const base::Optional<ParserRef<Expr>>& action,
 			const std::string_view                name,
 			std::string                           preposition
 		) {
