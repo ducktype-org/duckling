@@ -17,10 +17,10 @@ namespace ts::internal {
 	Kind TupleInfoImpl::staticKind      = Kind::Tuple;
 	Kind FunctionInfoImpl::staticKind   = Kind::Function;
 	Kind VariantInfoImpl::staticKind    = Kind::Variant;
-	Kind ClassInfoImpl::staticKind      = Kind::Class;
+//	Kind ClassInfoImpl::staticKind      = Kind::Class;
 	Kind NamespaceInfoImpl::staticKind  = Kind::Namespace;
 	Kind ModuleInfoImpl::staticKind     = Kind::Module;
-	Kind VTableInfoImpl::staticKind     = Kind::VTable;
+//	Kind VTableInfoImpl::staticKind     = Kind::VTable;
 	Kind MetaInfoImpl::staticKind       = Kind::Meta;
 
 	/**
@@ -30,28 +30,6 @@ namespace ts::internal {
 	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes() {
 		static std::vector<base::unique_ptr<const TypeInfoImpl>> type_info_impl_storage{};
 		return type_info_impl_storage;
-	}
-
-	/**
-	 * @brief Gets the sum of the sizes of the types in a vector.
-	 * @param types Vector of types to aggregate over.
-	 * @return The total size od the types in the vector.
-	 */
-	usize sumTypeVectorSizes(const std::vector<ComponentType>& types) {
-		usize sum = 0;
-		for (const auto& type: types) sum += type.type.getSize();
-		return sum;
-	}
-
-	/**
-	 * @brief Gets the maximum size of a type in a vector.
-	 * @param types Vector of types to aggregate over.
-	 * @return The maximum size of a type in the vector.
-	 */
-	usize maxTypeVectorSizes(const std::vector<TypeDesc<>>& types) {
-		usize max = 0;
-		for (const auto& type: types) max = std::max(max, type.getType().getSize());
-		return max;
 	}
 
 	/**
@@ -97,7 +75,6 @@ namespace ts::internal {
 	}
 
 	TupleInfoImpl::TupleInfoImpl(std::vector<ComponentType> components):
-		  TypeInfoImpl(sumTypeVectorSizes(components)),
 		  components(std::move(components)) {
 		representation = stringifyTypeVector(components);
 	}
@@ -108,7 +85,6 @@ namespace ts::internal {
 		const bool            pure,
 		const bool            free
 	):
-		  TypeInfoImpl((1 + !free) * POINTER_SIZE),
 		  parameter_types(std::move(parameter_types)),
 		  result_type(result_type),
 		  pure(pure),
@@ -117,15 +93,12 @@ namespace ts::internal {
 		               + result_type.toString() + ")";
 	}
 
-	VariantInfoImpl::VariantInfoImpl(const std::vector<TypeDesc<>>& variant_types)
-		  // 1 byte is for information which type is it. Maybe dynamic size in the future.
-		  :
-		  TypeInfoImpl(BYTE_SIZE + maxTypeVectorSizes(variant_types)),
-		  underlyingTypes(variant_types) {
+	VariantInfoImpl::VariantInfoImpl(const std::vector<TypeInfo>& variant_types):
+		  underlying_types(variant_types) {
 		representation = "Variant" + stringifyTypeVector(variant_types);
 	}
 
-	[[nodiscard]]
+	/*[[nodiscard]]
 	ClassInfo VTableInfoImpl::getAssociatedClass() const {
 		return associated_class;
 	}
@@ -138,5 +111,5 @@ namespace ts::internal {
 	[[nodiscard]]
 	usize VTableInfoImpl::getMethodCount() const {
 		return associated_class.getVtableSize() - getParentCount();
-	}
+	}*/
 }
