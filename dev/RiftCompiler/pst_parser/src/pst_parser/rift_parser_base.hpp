@@ -17,7 +17,9 @@ namespace pst {
 
 	class RiftElement: public tpc::Element {
 	public:
-		explicit RiftElement(const dia::SourcePosition& position): source_position(position){};
+		explicit RiftElement(const dia::SourcePosition& position):
+			  source_position(position),
+			  id(PstID::next()) {}
 
 		[[nodiscard]]
 		const dia::SourcePosition& getSourcePosition() const;
@@ -27,10 +29,30 @@ namespace pst {
 			return id;
 		}
 
+		/**
+		 * @return Whether an element is just a statement aggregate.
+		 * As of 30.05.2024 there are 3 statement aggregates:
+		 * * CodeBlock
+		 * * CodeBlockOrStmt
+		 * * TopLevel
+		 */
+		[[nodiscard]]
+		virtual bool isStatementAggregate() const {
+			return false;
+		}
+
+		/**
+		 * @return if element is a statements
+		 */
+		[[nodiscard]]
+		virtual bool isStatement() const {
+			return false;
+		}
+
 	private:
 		dia::SourcePosition source_position;
 
-		PstID id = PstID::next();
+		PstID id;
 	};
 
 	using ImportType = tpc::ParserCBorrowRef<pst::Import>;

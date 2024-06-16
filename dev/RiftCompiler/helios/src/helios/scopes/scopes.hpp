@@ -16,19 +16,34 @@
 namespace compiler::helios {
 	using StmtList = std::vector<PstRef<pst::Stmt>>;
 
+	base::Optional<ScopeID> parent(ScopeID);
+
 	/**
 	 * @brief Query root scope for given module.
 	 */
 	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleId, ScopeID);
 
 	struct KeyOf_QueryPrimaryCodeScopeFor {
-		// @TODO is this needed?
+		/**
+		 * @brief scope that queries scope will be contained within
+		 * @fixme: it is highly bug prone, as one can create many scopes with arbitrary parent
+		 * scopes for singular element, and it has already lead to crucial errors.
+		 * On the other hand it is not trivial to eliminate it.
+		 * Solution would be to either eliminate it or to add smart sanity checks, that
+		 * can prevent at least some of potential bugs.
+		 * For now a simple assertion is added to disallow "double parent" situation
+		 */
 		ScopeID parent;
 
-		// Stmt here makes no sense with getChildStmtsOf
-		// The overall idea is fine, but needs some polishing
+		/**
+		 * @brief Element for which the scope is created.
+		 * @note: scopes of various elements behave differently
+		 * For now scope of StatementAggravates and Functions are possible.
+		 * Scope behaviour for:
+		 * * StatementAggravates -- a scope of aggregated statements
+		 * * Function -- a scope of function arguments (@todo: function scopes are currently empty)
+		 */
 		PstRef<pst::RiftElement> base_element;
-		// StmtList stmts;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;

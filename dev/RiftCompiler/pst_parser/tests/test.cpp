@@ -1,7 +1,7 @@
 ﻿#include <filesystem/file.hpp>
 #include <fstream>
 #include <iostream>
-#include <pst_parser/parser.hpp>
+#include <pst_parser/pst.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
 
@@ -35,7 +35,12 @@ public:
 	PSTVISITOR_METHOD(Using)
 	PSTVISITOR_METHOD(Alias)
 	PSTVISITOR_METHOD(Expr)
-	PSTVISITOR_METHOD(Action)
+	PSTVISITOR_METHOD(Return)
+	PSTVISITOR_METHOD(Redo)
+	PSTVISITOR_METHOD(Break)
+	PSTVISITOR_METHOD(Continue)
+	PSTVISITOR_METHOD(Defer)
+	PSTVISITOR_METHOD(Throw)
 	PSTVISITOR_METHOD(Const)
 	PSTVISITOR_METHOD(Decl)
 	PSTVISITOR_METHOD(Block)
@@ -74,30 +79,26 @@ public:
 	}
 
 private:
-	pst::PST prepare(const std::string& filename) {
-		fs::FilePath file(filename);
-		auto         td = lexer::tokenizeFile(file);
-		return pst::parse(std::move(td));
-	}
+	pst::PST<> prepare(const std::string& filename) { return { fs::FilePath(filename) }; }
 
 	void testVisitor() {
 		auto pst            = prepare(path("snippets/all_statements.txt"));
 		auto panicky_vistor = PstStmtVisitorTester<pst::PstStmtVisitorPanicky>();
 		auto empty_vistor   = PstStmtVisitorTester<pst::PstStmtVisitorEmpty>();
-		for (auto&& stmt: pst.getTopLevelElement()->getStatements()) {
+		for (auto&& stmt: pst.getRootElement()->getStatements()) {
 			assertThrows<base::Panic>(
-				[&] { stmt->acceptVistior(panicky_vistor); }, "Stmt did not call it\'s visitor"
+				[&] { stmt->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
 			);
-			stmt->acceptVistior(empty_vistor);
+			stmt->acceptVisitor(empty_vistor);
 		}
-		ASSERT_EQUAL(12, panicky_vistor.counter);
-		ASSERT_EQUAL(12, empty_vistor.counter);
+		ASSERT_EQUAL(17, panicky_vistor.counter);
+		ASSERT_EQUAL(17, empty_vistor.counter);
 	}
 
 	void testJson(
 		const std::string& rift_file, const std::string& json_file, bool no_errors = true
 	) {
-		pst::PST          pst = prepare(rift_file);
+		pst::PST<>        pst = prepare(rift_file);
 		std::stringstream ss;
 		pst.dprint(ss);
 
@@ -143,28 +144,28 @@ private:
 	void testListParsing() { testJsonRelativePath("lists_ok.rift", "lists_ok.json"); }
 
 	void testListParsingErrors() {
-		pst::PST pst = prepare(path("snippets/lists_err.rift"));
+		pst::PST<> pst = prepare(path("snippets/lists_err.rift"));
 		assert(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 5, "Expected 5 errors"
 		);
 	}
 
 	void testUsingErrors() {
-		pst::PST pst = prepare(path("snippets/using_err.rift"));
+		pst::PST<> pst = prepare(path("snippets/using_err.rift"));
 		assert(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 3, "Expected 3 errors"
 		);
 	}
 
 	void testParamListErrors() {
-		pst::PST pst = prepare(path("snippets/params_err.rift"));
+		pst::PST<> pst = prepare(path("snippets/params_err.rift"));
 		assert(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 7, "Expected 7 errors"
 		);
 	}
 
 	void testMissingSemiErr() {
-		pst::PST pst = prepare(path("snippets/missing_semicolon_err.rift"));
+		pst::PST<> pst = prepare(path("snippets/missing_semicolon_err.rift"));
 		assert(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 4, "Expected 4 errors"
 		);

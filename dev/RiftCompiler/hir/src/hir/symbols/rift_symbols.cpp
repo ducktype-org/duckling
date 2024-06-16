@@ -43,8 +43,10 @@ namespace hir {
 			return base::make_unique<UsingSymbol>(state, scope, base::StrId("wildcard"), using_);
 		}
 		case pst::StmtKind::Variable: {
-			auto variable_ = PstRef(dynamic_cast<const pst::Variable*>(stmt.get()));
-			return base::make_unique<UsingSymbol>(state, scope, base::StrId("variable"), variable_);
+			throw base::NotYetImplemented("Variable is not yet implemented.");
+			// auto variable_ = PstRef<pst::Variable>(dynamic_cast<const
+			// pst::Variable*>(stmt.get())); return base::make_unique<VariableSymbol>(state, scope,
+			// base::StrId("variable"), variable_);
 		}
 
 		default:

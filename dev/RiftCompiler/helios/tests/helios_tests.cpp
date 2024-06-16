@@ -75,9 +75,7 @@ private:
 		ASSERT_EQUAL(75, getValue("F", root_scope));
 	}
 
-	void testStructInfo() {
-
-	}
+	void testStructInfo() {}
 
 	void testTypeOf() {
 		auto structs_and_types_modules = query::entryPoint<compiler::frontend::QueryModuleTree>(

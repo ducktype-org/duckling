@@ -5,7 +5,7 @@ namespace pst {
 	ParserRef<Action> Action::parse(RiftParserState& state) {
 		dia::SourcePosition position = state.ctokens().peek().getPosition();
 
-		RIFT_ASSERT(state.ctokens().isKeyword(), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Action>(state, state.ctokens().isKeyword())) return nullptr;
 
 		ParserRef<Action> out;
 		auto              keyword = state.ctokens().peek().asKeyword();
@@ -44,10 +44,10 @@ namespace pst {
 
 	namespace {
 		void simpleActionDprint(
-			std::ostream&                         out,
-			const std::optional<ParserRef<Expr>>& action,
-			const std::string_view                name,
-			std::string                           preposition
+			std::ostream&                          out,
+			const base::Optional<ParserRef<Expr>>& action,
+			const std::string_view                 name,
+			const std::string_view                 preposition
 		) {
 			out << "{\"" << name << "\"";
 			if (action) {
@@ -81,5 +81,19 @@ namespace pst {
 		simpleActionDprint(out, expr, "Throw", "exception");
 	}
 
-	void Action::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitAction(*this); }
+	void Return::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitReturn(*this); }
+
+	void Break::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitBreak(*this); }
+
+	void Continue::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitContinue(*this); }
+
+	void Redo::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitRedo(*this); }
+
+	void Restart::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitRestart(*this); }
+
+	void Defer::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitDefer(*this); }
+
+	void Throw::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitThrow(*this); }
+
+
 }

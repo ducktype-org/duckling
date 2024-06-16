@@ -8,7 +8,8 @@ namespace pst {
 		auto                 position = state.ctokens().peek().getPosition();
 		ParserRef<Attribute> out      = makeRef<Attribute>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Special::AtSign), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Attribute>(state, state.ctokens().is(Special::AtSign)))
+			return nullptr;
 
 		parseAll(state, Special::AtSign, &out->name);
 
@@ -29,6 +30,5 @@ namespace pst {
 		out << "}}";
 	}
 
-	void Attribute::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitAttribute(*this); }
-
+	void Attribute::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAttribute(*this); }
 }

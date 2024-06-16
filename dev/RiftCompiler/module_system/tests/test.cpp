@@ -1,6 +1,6 @@
 #include <tester/tester.hpp>
 #include <module_system/import_to_path.hpp>
-#include <pst_parser/parser.hpp>
+#include <pst_parser/pst.hpp>
 #include <lexer/lexer.hpp>
 
 class ModuleSystemTest: public tester::TestSuite {
@@ -16,11 +16,7 @@ public:
 	}
 
 private:
-	pst::PST prepare(const std::string& filename) {
-		fs::FilePath file(filename);
-		auto         td = lexer::tokenizeFile(file);
-		return pst::parse(std::move(td));
-	}
+	pst::PST<> prepare(const std::string& filename) { return { fs::FilePath(filename) }; }
 
 	void testSingleImportToPath(
 		const pst::Import& import, const std::string& local_path, const std::string& expected_output
@@ -34,8 +30,8 @@ private:
 	}
 
 	void testImportToPath() {
-		pst::PST pst     = prepare(path("snippets/import.rift"));
-		auto     imports = pst.getImports();
+		pst::PST<> pst     = prepare(path("snippets/import.rift"));
+		auto       imports = pst.getImports();
 		assert(imports.size() == 6, "wrong number of imports");
 		testSingleImportToPath(*imports[0], "/", "/aaaa/bbb/c.rift");
 		testSingleImportToPath(*imports[1], "./", "./dasdsa/dasd/*.rift");

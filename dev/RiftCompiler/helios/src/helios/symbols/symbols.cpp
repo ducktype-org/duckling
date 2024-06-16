@@ -72,6 +72,8 @@ namespace compiler::helios {
 
 	ScopeID scope(SymID id) { return getSymRef(id)->scope; }
 
+	PstRef<pst::Stmt> stmt(SymID id) { return getSymRef(id)->pst_stmt; }
+
 	namespace {
 		/**
 		 * @brief Global Symbol Table
@@ -170,9 +172,10 @@ namespace compiler::helios {
 		default:
 			break;
 		}
-		RIFT_PANIC(
-			base::strConcat("makeSymbolFromStatement bad symbol kind, stmt: ", typeid(stmt).name())
-		);
+		auto stmt_ptr = stmt.get();
+		RIFT_PANIC(base::strConcat(
+			"makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
+		));
 	}
 
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymID) {
@@ -214,7 +217,10 @@ namespace compiler::helios {
 		bool                     follow_wildcards;
 	};
 
-	QUERY_EXTENSION(lookupChain, LookupChainKey, SymbolList);
+	/**
+	 * @brief Query extension for looking-up chain of names
+	 */
+	SymbolList lookupChain(query::Context&, LookupChainKey);
 
 	SymbolList lookupChain(query::Context& ctx, LookupChainKey key) {
 		RIFT_ASSERT(key.names.size() > 0, "lookupDotted received zero names");
@@ -255,8 +261,7 @@ namespace compiler::helios {
 			case SymbolKind::Using: {
 				auto using_stmt = dynamic_cast<const pst::Using*>(key.ref->pst_stmt.get());
 				auto names      = using_stmt->getPointed();
-				auto lookup_res
-					= ctx.callExt<lookupChain>(LookupChainKey{ names, scope(key), false });
+				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
 				RIFT_ASSERT(
 					not lookup_res.empty(),
 					"Using points to something that does not exists or is empty"
@@ -368,8 +373,9 @@ namespace compiler::helios {
 					rpn.emplace_back(NumValue{ num.num_id });
 				}
 				variant_case(pst::Expr::Group, group) {
-					auto&& res = ctx.callExt<ExtensionMakeRPN>(KeyOf_ExtensionMakeRPN{
-						group.expr->elements, key.expr_scope });
+					auto&& res = ExtensionMakeRPN(
+						ctx, KeyOf_ExtensionMakeRPN{ group.expr->elements, key.expr_scope }
+					);
 					rpn.insert(rpn.end(), res.begin(), res.end());
 				}
 				variant_case(pst::Expr::KeywordValue, keyword_val) {
@@ -397,10 +403,13 @@ namespace compiler::helios {
 				auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
 					{ key.expr_scope, idt.symbol_name, true }
 				);
-				return ctx.callExt<ExtensionRPNValue>(KeyOf_ExtensionRPNValue{
-					Identifier{ sym_list.getAsSingle() },
-					key.expr_scope,
-				});
+				return ExtensionRPNValue(
+					ctx,
+					KeyOf_ExtensionRPNValue{
+						Identifier{ sym_list.getAsSingle() },
+						key.expr_scope,
+					}
+				);
 			}
 			variant_case(rpn::Operator, op) { RIFT_PANIC("Cannot get a value from rpn::Operator"); }
 			variant_case(rpn::KeywordValue, keyword_value) {
@@ -453,8 +462,8 @@ namespace compiler::helios {
 			RIFT_PANIC("Something strange has happended during .operator evaluation...");
 		}
 
-		i32 a_value = ctx.callExt<ExtensionRPNValue>(KeyOf_ExtensionRPNValue{ a, expr_scope });
-		i32 b_value = ctx.callExt<ExtensionRPNValue>(KeyOf_ExtensionRPNValue{ b, expr_scope });
+		i32 a_value = ExtensionRPNValue(ctx, KeyOf_ExtensionRPNValue{ a, expr_scope });
+		i32 b_value = ExtensionRPNValue(ctx, KeyOf_ExtensionRPNValue{ b, expr_scope });
 
 		i32 value{};
 
@@ -491,10 +500,13 @@ namespace compiler::helios {
 			auto    const_symbol = dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
 			ScopeID key_scope    = scope(key);
 
-			const auto& expr = ctx.callExt<rpn::ExtensionMakeRPN>(rpn::KeyOf_ExtensionMakeRPN{
-				const_symbol->getValue()->elements,
-				key_scope,
-			});
+			const auto& expr = rpn::ExtensionMakeRPN(
+				ctx,
+				rpn::KeyOf_ExtensionMakeRPN{
+					const_symbol->getValue()->elements,
+					key_scope,
+				}
+			);
 
 			// This is a nice RPN debug print.
 			// std::cout << "RPN: \n";
@@ -535,22 +547,28 @@ namespace compiler::helios {
 						const auto second = st.top();
 						st.pop();
 
-						st.push(ctx.callExt<rpn::ExtensionRPNEval>(rpn::KeyOf_ExtensionRPNEval{
-							second,
-							oper,
-							first,
-							key_scope,
-						}));
+						st.push(rpn::ExtensionRPNEval(
+							ctx,
+							rpn::KeyOf_ExtensionRPNEval{
+								second,
+								oper,
+								first,
+								key_scope,
+							}
+						));
 					}
 					variant_case(rpn::NumValue, num) { st.emplace(num); }
 					variant_default { RIFT_PANIC("Bad Expr alternative"); }
 				}
 			}
 			RIFT_ASSERT(st.size() == 1, "Expression stack should have 1 element");
-			return ctx.callExt<rpn::ExtensionRPNValue>(rpn::KeyOf_ExtensionRPNValue{
-				st.top(),
-				key_scope,
-			});
+			return rpn::ExtensionRPNValue(
+				ctx,
+				rpn::KeyOf_ExtensionRPNValue{
+					st.top(),
+					key_scope,
+				}
+			);
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
@@ -634,7 +652,7 @@ namespace compiler::helios {
 			};
 
 			static PstStmtVisitor_GetTypeOf visitor(BUILTINS, ctx);
-			symbol_ref->pst_stmt->acceptVistior(visitor);
+			symbol_ref->pst_stmt->acceptVisitor(visitor);
 			return visitor.type_of_thing.value();
 		}
 
@@ -654,8 +672,6 @@ namespace compiler::helios {
 			StructInfo struct_info;
 			for (auto&& sym: struct_symbols) {
 				switch (kind(sym)) {
-				case SymbolKind::Basic:
-					break;
 				case SymbolKind::Namespace:
 					throw base::NotYetImplemented(
 						"Namespace inside a struct is not yet implemented."

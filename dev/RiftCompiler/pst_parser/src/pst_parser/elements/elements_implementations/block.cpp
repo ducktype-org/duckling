@@ -6,7 +6,7 @@ namespace pst {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Block>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Block), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Block>(state, state.ctokens().is(Keyword::Block))) return nullptr;
 
 		parseAll(state, Keyword::Block, &out->optional_name, &out->code_block);
 
@@ -23,5 +23,5 @@ namespace pst {
 		out << "}}";
 	}
 
-	void Block::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitBlock(*this); }
+	void Block::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitBlock(*this); }
 }

@@ -30,7 +30,7 @@ namespace pst {
 		out << "}}";
 	}
 
-	void Variable::acceptVistior(PstStmtVisitor& visitor) const { visitor.visitVariable(*this); }
+	void Variable::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitVariable(*this); }
 
 	bool Variable::trailingSemicolon() { return true; }
 }

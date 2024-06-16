@@ -19,7 +19,6 @@ namespace compiler::helios {
 	 * @brief Stores general kind/type of a symbol.
 	 */
 	enum class SymbolKind {
-		Basic,
 		Namespace,
 		Function,
 		Const,
@@ -55,6 +54,11 @@ namespace compiler::helios {
 	 * @return scope that given symbol was defined within
 	 */
 	ScopeID scope(SymID);
+
+	/**
+	 * @return Pst element symbol was created from
+	 */
+	PstRef<pst::Stmt> stmt(SymID);
 
 	struct KeyOf_QuerySymbolOfSTMT {
 		/**
@@ -107,16 +111,6 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, const LookupResult&);
 
-	// @TODO: some proper hout type
-	struct SomeHOUT {};
-
-	/**
-	 * @brief Query HOUT of given symbol
-	 * @note This query is effectively responsible for compilation of symbols.
-	 * @note not yet implemented
-	 */
-	DECLARE_QUERY(QueryHOUT, SymID, base::Optional<SomeHOUT>);
-
 
 	/**
 	 * A query that returns an "absolute path" to the symbol without aliases.
@@ -124,7 +118,7 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryDealias, SymID, const SymbolList&);
 
 	/**
-	 * Calculates a value of a contant.
+	 * Calculates a value of a constant.
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, i32);
 
@@ -200,7 +194,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Parses an expression from PST into RPN.
 		 */
-		QUERY_EXTENSION(ExtensionMakeRPN, KeyOf_ExtensionMakeRPN, std::vector<ExprElem>);
+		std::vector<ExprElem> ExtensionMakeRPN(query::Context&, KeyOf_ExtensionMakeRPN);
 
 		struct KeyOf_ExtensionRPNEval {
 			/**
@@ -224,7 +218,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Evaluates an operation `a (op) b`.
 		 */
-		QUERY_EXTENSION(ExtensionRPNEval, const KeyOf_ExtensionRPNEval&, ExprElem);
+		ExprElem ExtensionRPNEval(query::Context&, const KeyOf_ExtensionRPNEval&);
 
 		struct KeyOf_ExtensionRPNValue {
 			/**
@@ -244,7 +238,7 @@ namespace compiler::helios {
 		 * For example, if we pass here a rpn::NumLiteral(5), then it will return 5 or if we pass
 		 * rpn::Identifier([C]), then a value of a C will be returned (if it's a constant).
 		 */
-		QUERY_EXTENSION(ExtensionRPNValue, const KeyOf_ExtensionRPNValue&, i32);
+		i32 ExtensionRPNValue(query::Context&, const KeyOf_ExtensionRPNValue&);
 	}
 
 	// @TODO: move this to helios::ts
