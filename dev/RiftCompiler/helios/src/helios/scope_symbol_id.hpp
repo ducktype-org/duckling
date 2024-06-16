@@ -10,10 +10,6 @@ namespace compiler::helios {
 	struct SymbolData;
 	struct ScopeData;
 
-	namespace ts {
-		struct ImplementationOf_QueryTypeOf;
-	}
-
 	/**
 	 * @brief Symbol Identifier. Used to represent HELIOS Symbol across the compiler.
 	 */
@@ -34,6 +30,7 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QueryLinkedScope;
+		friend struct ImplementationOf_QueryStructInfo;
 	};
 
 	/**

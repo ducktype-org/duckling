@@ -18,6 +18,8 @@ namespace compiler::helios {
 			for (auto&& e: *ptr) out.emplace_back(e);
 			return out;
 		}
+		if (auto* ptr = dynamic_cast<const pst::Struct*>(elem.get()))
+			return getChildStmtsOf(ptr->getBody());
 		if (auto* ptr = dynamic_cast<const pst::TopLevel*>(elem.get())) {
 			StmtList out;
 			for (auto&& e: ptr->getStatements()) out.emplace_back(e.borrow());

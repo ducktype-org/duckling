@@ -5,6 +5,13 @@ const SimpleFloat: f32 = 2.0;
 // const TupleII: (i32, i32) = (1, 2);
 
 struct FirstStructEver {
-    m_i32: i32;
-    m_f32: f32;
+    var a: i32 = 0;
+    var b: f32 = 0;
+
+    fun getA() -> i32 {
+        return a;
+    }
+    fun setA(new_a: i32) {
+        a = new_a;
+    }
 }

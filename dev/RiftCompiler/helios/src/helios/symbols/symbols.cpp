@@ -155,6 +155,17 @@ namespace compiler::helios {
 				.pst_stmt    = stmt,
 			});
 		}
+		case pst::StmtKind::Variable: {
+			auto&& variable_ = dynamic_cast<const pst::Variable*>(stmt.get());
+			return putInSymtable(SymbolData{
+				.scope       = scope,
+				.name        = variable_->getName(),
+				.is_wildcard = false,
+				.is_alias    = false,
+				.kind        = SymbolKind::Variable,
+				.pst_stmt    = stmt,
+			});
+		}
 
 		default:
 			break;
@@ -547,87 +558,84 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
-	namespace {
-		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
-		public:
-			base::Optional<tpc::ParserCBorrowRef<pst::Expr>> type_of_thing;
+	struct IMPLEMENT_QUERY(QueryTypeOf, ::ts::TypeInfo) {
+		using BuiltinMap = std::unordered_map<base::StrId, ts::TypeInfo>;
 
-			// void visitAttribute(const pst::Attribute& stmt) override;
-			// void visitImport(const pst::Import& stmt) override;
-			// void visitUsing(const pst::Using& stmt) override;
-			// void visitAlias(const pst::Alias& stmt) override;
-			// void visitExpr(const pst::Expr& stmt) override;
-			// void visitAction(const pst::Action& stmt) override;
+		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
+			BuiltinMap& builtins;
+			Context&    ctx;
+
+		public:
+			PstStmtVisitor_GetTypeOf(BuiltinMap& builtins, Context& ctx):
+				  builtins(builtins),
+				  ctx(ctx) {}
+
+			base::Optional<ts::TypeInfo> type_of_thing;
 
 			void visitConst(const pst::Const& stmt) override {
-				type_of_thing = stmt.getType();
-				variant_match(type_of_thing.value()->elements.front()) {
+				auto&& type_of = stmt.getType();
+				if (type_of->elements.size() != 1)
+					throw base::NotYetImplemented(
+						"Parsing types from complex expressions is not yet implemented."
+					);
+				variant_match(type_of->elements[0]) {
 					variant_case(pst::Expr::Identifier, idt) {
-						std::cout << "IDT: " << idt.indent_id.str() << '\n';
+						const auto it = builtins.find(idt.indent_id);
+						if (it == builtins.end()) {
+							throw base::NotYetImplemented(base::strConcat(
+								"Identifier is not yet handled by the QueryTypeOf: ",
+								idt.indent_id.str()
+							));
+						}
+						type_of_thing = it->second;
 					}
 					variant_case(pst::Expr::Operator, oper) {
-						std::cout << "OPER: " << oper.oper_id.str() << '\n';
+						RIFT_PANIC(base::strConcat("Type cannot be an opeartor: ", oper.oper_id));
 					}
 					variant_case(pst::Expr::NumLiteral, num) {
-						std::cout << "NUMLIT: " << num.num_id.str() << '\n';
+						RIFT_PANIC(base::strConcat("Type cannot be a LiteralValue: ", num.num_id));
 					}
-					variant_case(pst::Expr::Group, group) { std::cout << "GRP: ..." << '\n'; }
+					variant_case(pst::Expr::Group, group) {
+						throw base::NotYetImplemented(
+							"Parsing type from groups is not yet implemented"
+						);
+					}
 					variant_case(pst::Expr::KeywordValue, keyword_val) {
-						std::cout << "KeywordValue: " << keywordToStr(keyword_val.keyword).str()
-								  << '\n';
+						const auto it = builtins.find(keywordToStr(keyword_val.keyword));
+						if (it == builtins.end()) {
+							throw base::NotYetImplemented(strConcat(
+								"KeywordValue is not yet handled by the QueryTypeOf: ",
+								keywordToStr(keyword_val.keyword)
+							));
+						}
+						type_of_thing = it->second;
 					}
 				}
-				//
 			}
 
-			void visitDecl(const pst::Decl& stmt) override {
-				auto&& data = stmt.getID();
-				// 	a;
-				// else {}
-			}
-
-			// void visitBlock(const pst::Block& stmt) override;
-			// void visitNamespace(const pst::Namespace& stmt) override;
 			void visitStruct(const pst::Struct& stmt) override {
-				stmt.dprint(std::cout);
-				// variant_match(type_of_thing.value()->elements.front()) {
-				// 	variant_case(pst::Expr::Identifier, idt) {
-				// 		std::cout << "IDT: " << idt.indent_id.str() << '\n';
-				// 	}
-				// 	variant_case(pst::Expr::Operator, oper) {
-				// 		std::cout << "OPER: " << oper.oper_id.str() << '\n';
-				// 	}
-				// 	variant_case(pst::Expr::NumLiteral, num) {
-				// 		std::cout << "NUMLIT: " << num.num_id.str() << '\n';
-				// 	}
-				// 	variant_case(pst::Expr::Group, group) { std::cout << "GRP: ..." << '\n'; }
-				// 	variant_case(pst::Expr::KeywordValue, keyword_val) {
-				// 		std::cout << "KeywordValue: " << keywordToStr(keyword_val.keyword).str()
-				// 				  << '\n';
-				// 	}
-				// }
-				// void visitFun(const pst::Fun& stmt) override;
+				throw base::NotYetImplemented("Cannot parse struct type yet.");
+				// auto&& struct_info = ctx.query<QueryStructInfo>();
 			}
 		};
-	}
 
-	struct IMPLEMENT_QUERY(QueryTypeOf, ::ts::TypeInfo) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto&&                          symbol_ref = getSymRef(key);
-			static PstStmtVisitor_GetTypeOf visitor;
+			auto&& symbol_ref = getSymRef(key);
+
+			static auto BUILTINS = BuiltinMap{
+				{ base::StrId("f32"), ctx.query<::ts::QueryFloatType>(32) },
+				{ base::StrId("f16"), ctx.query<::ts::QueryFloatType>(16) },
+
+				{ base::StrId("i32"), ctx.query<::ts::QueryIntegralType>({ 32, true }) },
+				{ base::StrId("i16"), ctx.query<::ts::QueryIntegralType>({ 16, true }) },
+
+				{ base::StrId("u32"), ctx.query<::ts::QueryIntegralType>({ 32, false }) },
+				{ base::StrId("u16"), ctx.query<::ts::QueryIntegralType>({ 16, false }) }
+			};
+
+			static PstStmtVisitor_GetTypeOf visitor(BUILTINS, ctx);
 			symbol_ref->pst_stmt->acceptVistior(visitor);
-			match_optional(visitor.type_of_thing) {
-				opt_some(type_of) {
-					RIFT_ASSERT(type_of->elements.size() == 1, "Invalid number of tokens in type");
-					variant_match(type_of->elements[0]) {
-						// variant_case() {
-						//
-						// }
-					}
-				}
-				opt_none { RIFT_PANIC("Couldn't get type"); }
-			}
-			return ctx.query<::ts::QueryIntegralType>({ 32, true });
+			return visitor.type_of_thing.value();
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
@@ -635,5 +643,48 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOf);
 
+	struct IMPLEMENT_QUERY(QueryStructInfo, StructInfo) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			RIFT_ASSERT(kind(key) == SymbolKind::Struct, "Symbol is not a struct");
 
+			auto&& struct_scope
+				= ctx.query<QueryPrimaryCodeScopeFor>({ scope(key), key.ref->pst_stmt });
+			auto&& struct_symbols = ctx.query<QuerySymbolsInScope>(struct_scope);
+
+			StructInfo struct_info;
+			for (auto&& sym: struct_symbols) {
+				switch (kind(sym)) {
+				case SymbolKind::Basic:
+					break;
+				case SymbolKind::Namespace:
+					throw base::NotYetImplemented(
+						"Namespace inside a struct is not yet implemented."
+					);
+				case SymbolKind::Function:
+					struct_info.methods.push_back(sym);
+					break;
+				case SymbolKind::Const:
+					struct_info.fields.push_back(sym);
+					break;
+				case SymbolKind::Struct:
+					throw base::NotYetImplemented("Struct inside a struct is not yet implemented.");
+					break;
+				case SymbolKind::Alias:
+					throw base::NotYetImplemented("Alias inside a struct is not yet implemented.");
+					break;
+				case SymbolKind::Using:
+					throw base::NotYetImplemented("Using inside a struct is not yet implemented.");
+					break;
+				case SymbolKind::Variable:
+					struct_info.fields.push_back(sym);
+					break;
+				}
+			}
+			return struct_info;
+		}
+
+		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStructInfo)
 }

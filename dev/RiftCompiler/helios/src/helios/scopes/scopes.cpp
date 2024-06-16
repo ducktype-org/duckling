@@ -201,4 +201,19 @@ namespace compiler::helios {
 		// @FIXME: this does not work:
 		return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;
 	}
+
+	struct IMPLEMENT_QUERY(QueryStructSymbolsInScope, std::vector<SymID>) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::vector<SymID> structs;
+			for (auto&& symbols_in_scope = ctx.query<QuerySymbolsInScope>(key);
+			     auto&& symbol: symbols_in_scope) {
+				if (kind(symbol) == SymbolKind::Struct) structs.push_back(symbol);
+			}
+			return structs;
+		}
+
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF;
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStructSymbolsInScope);
 }

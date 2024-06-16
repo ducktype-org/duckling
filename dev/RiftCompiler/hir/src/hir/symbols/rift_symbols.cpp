@@ -42,6 +42,10 @@ namespace hir {
 			auto using_ = PstRef<pst::Using>(dynamic_cast<const pst::Using*>(stmt.get()));
 			return base::make_unique<UsingSymbol>(state, scope, base::StrId("wildcard"), using_);
 		}
+		case pst::StmtKind::Variable: {
+			auto variable_ = PstRef(dynamic_cast<const pst::Variable*>(stmt.get()));
+			return base::make_unique<UsingSymbol>(state, scope, base::StrId("variable"), variable_);
+		}
 
 		default:
 			break;

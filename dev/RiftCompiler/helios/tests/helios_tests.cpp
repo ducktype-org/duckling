@@ -6,7 +6,6 @@
 #include <tester/tester.hpp>
 #include <pst_parser/parser.hpp>
 #include <filesystem/file.hpp>
-#include <helios/ts/ts.hpp>
 #include <lexer/lexer.hpp>
 #include <typesystem/typesystem.hpp>
 
@@ -76,6 +75,10 @@ private:
 		ASSERT_EQUAL(75, getValue("F", root_scope));
 	}
 
+	void testStructInfo() {
+
+	}
+
 	void testTypeOf() {
 		auto structs_and_types_modules = query::entryPoint<compiler::frontend::QueryModuleTree>(
 			fs::FilePath(path("test_modules/structs_and_types"))
@@ -86,11 +89,12 @@ private:
 
 		auto INT32_TYPE = query::entryPoint<ts::QueryIntegralType>({ 32, true });
 		auto F32_TYPE   = query::entryPoint<ts::QueryFloatType>(32);
-		// auto STRUCT_FIRST = query::entryPoint<ts::>()
 
-		getTypeOf("FirstStructEver", root_scope);
 		ASSERT_EQUAL(true, INT32_TYPE == getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(true, F32_TYPE == getTypeOf("SimpleFloat", root_scope));
+		auto&& first_struct = getChain("FirstStructEver", root_scope);
+		auto&& first_struct_info
+			= query::entryPoint<compiler::helios::QueryStructInfo>(first_struct.back());
 	}
 
 	void testEdgeEvals() {

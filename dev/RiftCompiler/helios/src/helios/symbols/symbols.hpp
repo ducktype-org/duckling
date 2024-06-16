@@ -26,6 +26,7 @@ namespace compiler::helios {
 		Struct,
 		Alias,
 		Using,
+		Variable,
 
 		// ...
 	};
@@ -252,4 +253,12 @@ namespace compiler::helios {
 	 * @note: not implemented yet
 	 */
 	DECLARE_QUERY(QueryTypeOf, SymID, ::ts::TypeInfo);
+
+	struct StructInfo {
+		base::StrId        name;
+		std::vector<SymID> methods;
+		std::vector<SymID> fields;
+	};
+
+	DECLARE_QUERY(QueryStructInfo, SymID, const StructInfo&);
 }

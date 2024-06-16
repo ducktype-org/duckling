@@ -40,6 +40,7 @@ namespace pst {
 		Struct,
 		TopLevel,
 		Const,
+		Variable
 	};
 
 	class Stmt: public RiftElement {
@@ -435,6 +436,7 @@ namespace pst {
 		~Throw() final = default;
 	};
 
+	// TODO: Merge it with variable. Or perhaps make a new class DataStorage.
 	class Const final: public Stmt {
 		tpc::Identifier name;
 		ParserRef<Expr> type;
@@ -556,6 +558,11 @@ namespace pst {
 			return name.value;
 		}
 
+		[[nodiscard]]
+		ParserCBorrowRef<CodeBlock> getBody() const {
+			return body.borrow();
+		}
+
 		static ParserRef<Struct> parse(RiftParserState& state);
 		~Struct() final = default;
 		void dprint(std::ostream& out) const final;
@@ -580,6 +587,29 @@ namespace pst {
 		static ParserRef<Fun> parse(RiftParserState& state);
 		void                  dprint(std::ostream& out) const final;
 		~Fun() final = default;
+
+		void acceptVistior(PstStmtVisitor& visitor) const override;
+	};
+
+	class Variable final: public Decl {
+		tpc::Identifier name;
+		ParserRef<Expr> type     = nullptr;
+		ParserRef<Expr> value    = nullptr;
+		bool            is_const = true;
+
+	public:
+		explicit DECL_CHILD_CONSTRUCTOR(Variable);
+
+		[[nodiscard]]
+		base::StrId getName() const {
+			return name.value;
+		}
+
+		bool trailingSemicolon() override;
+
+		static ParserRef<Variable> parse(RiftParserState& state);
+		void                       dprint(std::ostream& out) const final;
+		~Variable() final = default;
 
 		void acceptVistior(PstStmtVisitor& visitor) const override;
 	};
