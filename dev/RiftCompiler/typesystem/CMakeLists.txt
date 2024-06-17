@@ -11,7 +11,8 @@ add_library(TypeSystem
 	src/typesystem/internal/queries.cpp
 )
 
-make_module(TypeSystem USES Base QueryFramework)
+# For review: adding HELIOS dependency for SymID introduces cyclic dependency (but all compiles).
+make_module(TypeSystem USES Base HELIOS QueryFramework)
 
 rift_add_test(compiler typesystem_test_simple tests/simple_test.cpp USES TypeSystem)
 

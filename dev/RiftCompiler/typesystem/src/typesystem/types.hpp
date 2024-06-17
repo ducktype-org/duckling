@@ -9,6 +9,7 @@
 #pragma once
 #include "type_info.hpp"
 #include "type_desc.hpp"
+#include <helios/scope_symbol_id.hpp>
 
 namespace ts {
 	namespace internal {
@@ -25,6 +26,7 @@ namespace ts {
 		class TupleInfoImpl;
 		class FunctionInfoImpl;
 		class VariantInfoImpl;
+		class ClassInfoImpl;
 		class NamespaceInfoImpl;
 		class ModuleInfoImpl;
 		class MetaInfoImpl;
@@ -472,13 +474,66 @@ namespace ts {
 		const std::vector<TypeInfo>& getUnderlyingTypes() const;
 
 		[[nodiscard]]
-		TypeDesc<> getMember(usize index) const;
+		TypeInfo getMember(usize index) const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(VariantInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Variant)
 	};
+
+	class ClassInfo: public TypeInfo {
+	public:
+		SETUP_TYPE_WITH_BASE(ClassInfo, TypeInfo)
+
+		/**
+		 * Gets the SymID of the class type.
+		 * @return The SymID of the class type.
+		 */
+		[[nodiscard]]
+		compiler::helios::SymID getSymbol() const;
+
+		/**
+		 * Gets the symbol of the base class.
+		 * @param ctx The Query Context necessary to refer to the definition of the class.
+		 * @return The symbol of the base class.
+		 */
+		[[nodiscard]]
+		base::Optional<compiler::helios::SymID> getBaseClassSymbol(query::Context ctx) const;
+
+		/**
+		 * Gets the type of the base class.
+		 * @return The type of the base class.
+		 */
+		[[nodiscard]]
+		base::Optional<ClassInfo> getBaseClassType() const;
+
+		/**
+		 * Gets the symbols of implemented interfaces.
+		 * @return The symbols of implemented interfaces.
+		 */
+		[[nodiscard]]
+		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols() const;
+
+		// @TODO: getImplementedInterfaceTypes when interface type is created.
+
+		/**
+		 * Gets the type of a member.
+		 * @param sym The member, the type of which is requested.
+		 * @return The type of the member.
+		 */
+		[[nodiscard]]
+		TypeInfo getMemberType(compiler::helios::SymID sym) const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(ClassInfo)
+
+	protected:
+		CONSTRUCT_FROM_IMPLEMENTATION(Class)
+	};
+
+	/***********************\
+	|  MISCELLANEOUS TYPES  |
+	\***********************/
 
 	class NamespaceInfo: public TypeInfo {
 	public:

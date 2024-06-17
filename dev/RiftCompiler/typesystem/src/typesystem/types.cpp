@@ -13,6 +13,8 @@
 
 #include "internal/type_info_impl.hpp"
 #include "type_desc.hpp"
+#include "types.hpp"
+
 #include <base/exceptions.hpp>
 
 // NOLINTBEGIN: linter assumes it's a function like macro
@@ -154,8 +156,26 @@ namespace ts {
 		return toCPimpl(pimpl)->getUnderlyingTypes();
 	}
 
-	TypeDesc<> VariantInfo::getMember(const usize index) const {
+	TypeInfo VariantInfo::getMember(const usize index) const {
 		return toCPimpl(pimpl)->getMember(index);
+	}
+
+	compiler::helios::SymID ClassInfo::getSymbol() const { return toCPimpl(pimpl)->getSymbol(); }
+
+	base::Optional<compiler::helios::SymID> ClassInfo::getBaseClassSymbol(query::Context ctx) const {
+		return toCPimpl(pimpl)->getBaseClassSymbol(ctx);
+	}
+
+	base::Optional<ClassInfo> ClassInfo::getBaseClassType() const {
+		return toCPimpl(pimpl)->getBaseClassType();
+	}
+
+	std::vector<compiler::helios::SymID> ClassInfo::getImplementedInterfaceSymbols() const {
+		return toCPimpl(pimpl)->getImplementedInterfaceSymbols();
+	}
+
+	TypeInfo ClassInfo::getMemberType(compiler::helios::SymID sym) const {
+		return toCPimpl(pimpl)->getMemberType(sym);
 	}
 
 	template<std::derived_from<TypeInfo> TYPE_INFO>
@@ -186,9 +206,9 @@ namespace ts {
 	INSTANTIATE_CHECKED_CAST(TupleInfo)
 	INSTANTIATE_CHECKED_CAST(FunctionInfo)
 	INSTANTIATE_CHECKED_CAST(VariantInfo)
+	INSTANTIATE_CHECKED_CAST(ClassInfo)
 	INSTANTIATE_CHECKED_CAST(NamespaceInfo)
 	INSTANTIATE_CHECKED_CAST(ModuleInfo)
-//	INSTANTIATE_CHECKED_CAST(ClassInfo)
-//	INSTANTIATE_CHECKED_CAST(VTableInfo)
+	//	INSTANTIATE_CHECKED_CAST(VTableInfo)
 	INSTANTIATE_CHECKED_CAST(MetaInfo)
 }

@@ -651,6 +651,32 @@ namespace ts::internal {
 		}
 	};
 
+	class ClassInfoImpl final: public TypeInfoImpl {
+		compiler::helios::SymID symbol;
+
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return staticKind;
+		}
+
+		/**
+		 * \brief The Kind of types described by objects of this class.
+		 */
+		static Kind staticKind;
+
+		[[nodiscard]]
+		usize getSize(query::Context& ctx) const override {
+			return ctx.query<QuerySizeOfClass>({ this });
+		}
+
+		explicit ClassInfoImpl(compiler::helios::SymID symbol);
+
+		base::Optional<compiler::helios::SymID> getBaseClassSymbol(query::Context ctx) const {
+			ctx.query<Query>()
+		}
+	};
+
 	/*class ClassInfoImpl final: public TypeInfoImpl {
 		usize             size;
 		const base::StrId name;
