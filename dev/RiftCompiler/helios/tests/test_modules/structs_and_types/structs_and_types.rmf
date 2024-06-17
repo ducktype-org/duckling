@@ -15,3 +15,5 @@ struct FirstStructEver {
         a = new_a;
     }
 }
+
+struct SecondStruct : FirstStructEver {}

@@ -651,6 +651,11 @@ namespace pst {
 			return body.borrow();
 		}
 
+		[[nodiscard]]
+		ParserCBorrowRef<InheritList> getBases() const {
+			return bases.borrow();
+		}
+
 		static ParserRef<Struct> parse(RiftParserState& state);
 		~Struct() final = default;
 		void dprint(std::ostream& out) const final;

@@ -576,84 +576,78 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
-	struct IMPLEMENT_QUERY(QueryTypeOf, ::ts::TypeInfo) {
-		using BuiltinMap = std::unordered_map<base::StrId, ts::TypeInfo>;
+	ts::TypeInfo parseTypeFromExpr(query::Context& ctx, tpc::ParserCBorrowRef<pst::Expr> expr) {
+		static auto BUILTINS = std::unordered_map<base::StrId, ts::TypeInfo>{
+			{ base::StrId("f32"), ctx.query<::ts::QueryFloatType>(32) },
+			{ base::StrId("f16"), ctx.query<::ts::QueryFloatType>(16) },
 
+			{ base::StrId("i32"), ctx.query<::ts::QueryIntegralType>({ 32, true }) },
+			{ base::StrId("i16"), ctx.query<::ts::QueryIntegralType>({ 16, true }) },
+
+			{ base::StrId("u32"), ctx.query<::ts::QueryIntegralType>({ 32, false }) },
+			{ base::StrId("u16"), ctx.query<::ts::QueryIntegralType>({ 16, false }) }
+		};
+		if (expr->elements.size() != 1)
+			throw base::NotYetImplemented(
+				"Parsing types from complex expressions is not yet implemented."
+			);
+		variant_match(expr->elements[0]) {
+			variant_case(pst::Expr::Identifier, idt) {
+				const auto it = BUILTINS.find(idt.indent_id);
+				if (it == BUILTINS.end()) {
+					throw base::NotYetImplemented(base::strConcat(
+						"Identifier is not yet handled by the QueryTypeOf: ", idt.indent_id.str()
+					));
+				}
+				return it->second;
+			}
+			variant_case(pst::Expr::Operator, oper) {
+				RIFT_PANIC(base::strConcat("Type cannot be an opeartor: ", oper.oper_id));
+			}
+			variant_case(pst::Expr::NumLiteral, num) {
+				RIFT_PANIC(base::strConcat("Type cannot be a LiteralValue: ", num.num_id));
+			}
+			variant_case(pst::Expr::Group, group) {
+				throw base::NotYetImplemented("Parsing type from groups is not yet implemented");
+			}
+			variant_case(pst::Expr::KeywordValue, keyword_val) {
+				const auto it = BUILTINS.find(keywordToStr(keyword_val.keyword));
+				if (it == BUILTINS.end()) {
+					throw base::NotYetImplemented(strConcat(
+						"KeywordValue is not yet handled by the QueryTypeOf: ",
+						keywordToStr(keyword_val.keyword)
+					));
+				}
+				return it->second;
+			}
+		}
+		RIFT_PANIC("Couldn't parse the type.");
+	}
+
+	struct IMPLEMENT_QUERY(QueryTypeOf, ::ts::TypeInfo) {
 		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
-			BuiltinMap& builtins;
 			Context&    ctx;
 			const QKey& key;
 
 		public:
-			PstStmtVisitor_GetTypeOf(BuiltinMap& builtins, Context& ctx, const QKey& key):
-				  builtins(builtins),
-				  ctx(ctx),
-				  key(key) {}
+			PstStmtVisitor_GetTypeOf(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
 			base::Optional<ts::TypeInfo> type_of_thing;
 
 			void visitConst(const pst::Const& stmt) override {
-				auto&& type_of = stmt.getType();
-				if (type_of->elements.size() != 1)
-					throw base::NotYetImplemented(
-						"Parsing types from complex expressions is not yet implemented."
-					);
-				variant_match(type_of->elements[0]) {
-					variant_case(pst::Expr::Identifier, idt) {
-						const auto it = builtins.find(idt.indent_id);
-						if (it == builtins.end()) {
-							throw base::NotYetImplemented(base::strConcat(
-								"Identifier is not yet handled by the QueryTypeOf: ",
-								idt.indent_id.str()
-							));
-						}
-						type_of_thing = it->second;
-					}
-					variant_case(pst::Expr::Operator, oper) {
-						RIFT_PANIC(base::strConcat("Type cannot be an opeartor: ", oper.oper_id));
-					}
-					variant_case(pst::Expr::NumLiteral, num) {
-						RIFT_PANIC(base::strConcat("Type cannot be a LiteralValue: ", num.num_id));
-					}
-					variant_case(pst::Expr::Group, group) {
-						throw base::NotYetImplemented(
-							"Parsing type from groups is not yet implemented"
-						);
-					}
-					variant_case(pst::Expr::KeywordValue, keyword_val) {
-						const auto it = builtins.find(keywordToStr(keyword_val.keyword));
-						if (it == builtins.end()) {
-							throw base::NotYetImplemented(strConcat(
-								"KeywordValue is not yet handled by the QueryTypeOf: ",
-								keywordToStr(keyword_val.keyword)
-							));
-						}
-						type_of_thing = it->second;
-					}
-				}
+				type_of_thing = parseTypeFromExpr(ctx, stmt.getType());
 			}
 
 			void visitStruct(const pst::Struct& stmt) override {
-				auto&& struct_info = ctx.query<QueryStructInfo>(key);
-				throw base::NotYetImplemented("Querying TypeOf Struct is not yet implemented.");
+				// Here, a TS query call will happen: QueryStructType or something similar.
+				throw base::NotYetImplemented("Querying type of struct is not yet implemented.");
 			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto&& symbol_ref = getSymRef(key);
 
-			static auto BUILTINS = BuiltinMap{
-				{ base::StrId("f32"), ctx.query<::ts::QueryFloatType>(32) },
-				{ base::StrId("f16"), ctx.query<::ts::QueryFloatType>(16) },
-
-				{ base::StrId("i32"), ctx.query<::ts::QueryIntegralType>({ 32, true }) },
-				{ base::StrId("i16"), ctx.query<::ts::QueryIntegralType>({ 16, true }) },
-
-				{ base::StrId("u32"), ctx.query<::ts::QueryIntegralType>({ 32, false }) },
-				{ base::StrId("u16"), ctx.query<::ts::QueryIntegralType>({ 16, false }) }
-			};
-
-			static PstStmtVisitor_GetTypeOf visitor(BUILTINS, ctx);
+			static PstStmtVisitor_GetTypeOf visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
 			return visitor.type_of_thing.value();
 		}
@@ -664,10 +658,14 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOf);
 
 	struct IMPLEMENT_QUERY(QueryStructInfo, StructInfo) {
-		struct StructNameParser final: pst::PstStmtVisitorPanicky {
-			base::Optional<base::StrId> name;
+		struct StructDataParser final: pst::PstStmtVisitorPanicky {
+			base::Optional<base::StrId>                             name;
+			base::Optional<tpc::ParserCBorrowRef<pst::InheritList>> base_classes;
 
-			void visitStruct(const pst::Struct& stmt) override { name = stmt.getName(); }
+			void visitStruct(const pst::Struct& stmt) override {
+				name = stmt.getName();
+				if (auto&& bases = stmt.getBases(); bases != nullptr) base_classes = bases;
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -697,9 +695,13 @@ namespace compiler::helios {
 				}
 			}
 			// Find the name
-			auto struct_name_parser = StructNameParser();
-			struct_stmt->acceptVisitor(struct_name_parser);
-			struct_info.name = struct_name_parser.name.value();
+			auto struct_data_parser = StructDataParser();
+			struct_stmt->acceptVisitor(struct_data_parser);
+			struct_info.name = struct_data_parser.name.value();
+
+			if_opt_some(struct_data_parser.base_classes, bases) {
+				for (auto&& base: bases) struct_info.bases.push_back(parseTypeFromExpr(ctx, base));
+			}
 
 			return struct_info;
 		}

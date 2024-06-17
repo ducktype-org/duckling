@@ -85,13 +85,24 @@ private:
 	void testStructInfo() {
 		auto [_, root_scope] = getModule("structs_and_types");
 
-		auto&& first_struct = getChain("FirstStructEver", root_scope);
+		auto   first_struct = getChain("FirstStructEver", root_scope).back();
 		auto&& first_struct_info
-			= query::entryPoint<compiler::helios::QueryStructInfo>(first_struct.back());
+			= query::entryPoint<compiler::helios::QueryStructInfo>(first_struct);
 
 		ASSERT_EQUAL(2, first_struct_info.fields.size());
 		ASSERT_EQUAL(2, first_struct_info.methods.size());
+		ASSERT_EQUAL(0, first_struct_info.bases.size());
 		ASSERT_EQUAL("FirstStructEver", first_struct_info.name);
+
+		auto   second_struct = getChain("SecondStruct", root_scope).back();
+		auto&& second_struct_info
+			= query::entryPoint<compiler::helios::QueryStructInfo>(second_struct);
+
+		ASSERT_EQUAL(0, second_struct_info.fields.size());
+		ASSERT_EQUAL(0, second_struct_info.methods.size());
+		ASSERT_EQUAL(1, second_struct_info.bases.size());
+		ASSERT_EQUAL(true, first_struct == second_struct_info.bases.front());
+		ASSERT_EQUAL("SecondStruct", second_struct_info.name);
 	}
 
 	void testTypeOf() {

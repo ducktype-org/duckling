@@ -241,7 +241,6 @@ namespace compiler::helios {
 		i32 ExtensionRPNValue(query::Context&, const KeyOf_ExtensionRPNValue&);
 	}
 
-	// @TODO: move this to helios::ts
 	/**
 	 * @brief Query type of the symbol.
 	 * @note: not implemented yet
@@ -252,6 +251,7 @@ namespace compiler::helios {
 		base::StrId        name;
 		std::vector<SymID> methods;
 		std::vector<SymID> fields;
+		std::vector<SymID> bases;
 	};
 
 	DECLARE_QUERY(QueryStructInfo, SymID, const StructInfo&);
