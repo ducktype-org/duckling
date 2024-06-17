@@ -22,6 +22,7 @@ public:
 		TESTER_ADD_TEST(testI32Consts);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testTypeOf);
+		TESTER_ADD_TEST(testStructInfo);
 	}
 
 private:
@@ -54,12 +55,18 @@ private:
 		return query::entryPoint<compiler::helios::QueryTypeOf>(getChain(name, scope).back());
 	}
 
-	void testI32Consts() {
-		auto constants_module = query::entryPoint<compiler::frontend::QueryModuleTree>(
-			fs::FilePath(path("test_modules/constants"))
+	std::pair<compiler::frontend::ModuleId, compiler::helios::ScopeID>
+		getModule(const std::string& name) {
+		auto&& constants_module = query::entryPoint<compiler::frontend::QueryModuleTree>(
+			fs::FilePath(path("test_modules/" + name))
 		);
 
-		auto root_scope = query::entryPoint<compiler::helios::QueryRootScopeOf>(constants_module);
+		auto&& root_scope = query::entryPoint<compiler::helios::QueryRootScopeOf>(constants_module);
+		return { constants_module, root_scope };
+	}
+
+	void testI32Consts() {
+		auto [_, root_scope] = getModule("constants");
 
 		ASSERT_EQUAL(1'107, getValue("M", root_scope));
 		ASSERT_EQUAL(1, getValue("N.X", root_scope));
@@ -75,31 +82,31 @@ private:
 		ASSERT_EQUAL(75, getValue("F", root_scope));
 	}
 
-	void testStructInfo() {}
+	void testStructInfo() {
+		auto [_, root_scope] = getModule("structs_and_types");
+
+		auto&& first_struct = getChain("FirstStructEver", root_scope);
+		auto&& first_struct_info
+			= query::entryPoint<compiler::helios::QueryStructInfo>(first_struct.back());
+
+		ASSERT_EQUAL(2, first_struct_info.fields.size());
+		ASSERT_EQUAL(2, first_struct_info.methods.size());
+		ASSERT_EQUAL("FirstStructEver", first_struct_info.name);
+	}
 
 	void testTypeOf() {
-		auto structs_and_types_modules = query::entryPoint<compiler::frontend::QueryModuleTree>(
-			fs::FilePath(path("test_modules/structs_and_types"))
-		);
-
-		auto root_scope
-			= query::entryPoint<compiler::helios::QueryRootScopeOf>(structs_and_types_modules);
+		auto [_, root_scope] = getModule("structs_and_types");
 
 		auto INT32_TYPE = query::entryPoint<ts::QueryIntegralType>({ 32, true });
 		auto F32_TYPE   = query::entryPoint<ts::QueryFloatType>(32);
 
 		ASSERT_EQUAL(true, INT32_TYPE == getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(true, F32_TYPE == getTypeOf("SimpleFloat", root_scope));
-		auto&& first_struct = getChain("FirstStructEver", root_scope);
-		auto&& first_struct_info
-			= query::entryPoint<compiler::helios::QueryStructInfo>(first_struct.back());
 	}
 
 	void testEdgeEvals() {
-		auto edge_evals = query::entryPoint<compiler::frontend::QueryModuleTree>(
-			fs::FilePath(path("test_modules/edge_evals"))
-		);
-		auto root_scope = query::entryPoint<compiler::helios::QueryRootScopeOf>(edge_evals);
+		auto [_, root_scope] = getModule("edge_evals");
+
 		ASSERT_EQUAL(1, getValue("M1", root_scope));
 		ASSERT_EQUAL(6, getValue("M2", root_scope));
 		ASSERT_EQUAL(7, getValue("O1", root_scope));

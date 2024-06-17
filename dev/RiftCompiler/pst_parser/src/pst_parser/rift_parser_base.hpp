@@ -31,10 +31,11 @@ namespace pst {
 
 		/**
 		 * @return Whether an element is just a statement aggregate.
-		 * As of 30.05.2024 there are 3 statement aggregates:
+		 * As of 17.06.2024 there are 3 statement aggregates:
 		 * * CodeBlock
 		 * * CodeBlockOrStmt
 		 * * TopLevel
+		 * * Struct
 		 */
 		[[nodiscard]]
 		virtual bool isStatementAggregate() const {

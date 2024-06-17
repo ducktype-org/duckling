@@ -655,6 +655,8 @@ namespace pst {
 		~Struct() final = default;
 		void dprint(std::ostream& out) const final;
 
+		bool isStatementAggregate() const override { return true; }
+
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 

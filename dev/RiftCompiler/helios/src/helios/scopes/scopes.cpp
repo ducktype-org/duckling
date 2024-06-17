@@ -132,7 +132,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Gets symbols for scopes of varius statements
 		 */
-		struct SymbolGrabVisitor: public pst::PstStmtVisitorPanicky {
+		struct SymbolGrabVisitor final: pst::PstStmtVisitorPanicky {
 			base::Optional<std::vector<SymID>> out;
 
 			void visitFun(const pst::Fun&) override {
