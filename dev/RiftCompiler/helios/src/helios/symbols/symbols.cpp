@@ -582,11 +582,13 @@ namespace compiler::helios {
 		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
 			BuiltinMap& builtins;
 			Context&    ctx;
+			const QKey& key;
 
 		public:
-			PstStmtVisitor_GetTypeOf(BuiltinMap& builtins, Context& ctx):
+			PstStmtVisitor_GetTypeOf(BuiltinMap& builtins, Context& ctx, const QKey& key):
 				  builtins(builtins),
-				  ctx(ctx) {}
+				  ctx(ctx),
+				  key(key) {}
 
 			base::Optional<ts::TypeInfo> type_of_thing;
 
@@ -632,8 +634,8 @@ namespace compiler::helios {
 			}
 
 			void visitStruct(const pst::Struct& stmt) override {
-				throw base::NotYetImplemented("Cannot parse struct type yet.");
-				// auto&& struct_info = ctx.query<QueryStructInfo>();
+				auto&& struct_info = ctx.query<QueryStructInfo>(key);
+				throw base::NotYetImplemented("Querying TypeOf Struct is not yet implemented.");
 			}
 		};
 
@@ -662,40 +664,43 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOf);
 
 	struct IMPLEMENT_QUERY(QueryStructInfo, StructInfo) {
+		struct StructNameParser final: pst::PstStmtVisitorPanicky {
+			base::Optional<base::StrId> name;
+
+			void visitStruct(const pst::Struct& stmt) override { name = stmt.getName(); }
+		};
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			RIFT_ASSERT(kind(key) == SymbolKind::Struct, "Symbol is not a struct");
 
-			auto&& struct_scope
-				= ctx.query<QueryPrimaryCodeScopeFor>({ scope(key), key.ref->pst_stmt });
+			auto struct_stmt = getSymRef(key)->pst_stmt;
+
+			auto&& struct_scope = ctx.query<QueryPrimaryCodeScopeFor>({ scope(key), struct_stmt });
 			auto&& struct_symbols = ctx.query<QuerySymbolsInScope>(struct_scope);
 
 			StructInfo struct_info;
 			for (auto&& sym: struct_symbols) {
 				switch (kind(sym)) {
-				case SymbolKind::Namespace:
-					throw base::NotYetImplemented(
-						"Namespace inside a struct is not yet implemented."
-					);
 				case SymbolKind::Function:
 					struct_info.methods.push_back(sym);
 					break;
 				case SymbolKind::Const:
-					struct_info.fields.push_back(sym);
-					break;
-				case SymbolKind::Struct:
-					throw base::NotYetImplemented("Struct inside a struct is not yet implemented.");
-					break;
-				case SymbolKind::Alias:
-					throw base::NotYetImplemented("Alias inside a struct is not yet implemented.");
-					break;
-				case SymbolKind::Using:
-					throw base::NotYetImplemented("Using inside a struct is not yet implemented.");
-					break;
 				case SymbolKind::Variable:
 					struct_info.fields.push_back(sym);
 					break;
+				default:
+					throw base::NotYetImplemented(base::strConcat(
+						"Using ",
+						typeid(kind(sym)).name(),
+						" inside a struct is not yet implemented."
+					));
 				}
 			}
+			// Find the name
+			auto struct_name_parser = StructNameParser();
+			struct_stmt->acceptVisitor(struct_name_parser);
+			struct_info.name = struct_name_parser.name.value();
+
 			return struct_info;
 		}
 
