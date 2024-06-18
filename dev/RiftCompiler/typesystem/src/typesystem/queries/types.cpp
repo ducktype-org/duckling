@@ -255,8 +255,7 @@ namespace ts {
 		static inline base::Map<QKey, query::CacheEntry<TupleInfo>> cache;
 
 		static auto provide(Context&, const QKey& key) -> PResult {
-			const auto tuple_pimpl
-				= new internal::TupleInfoImpl{ key.components };
+			const auto tuple_pimpl = new internal::TupleInfoImpl{ key.components };
 			pushType(base::unique_ptr(tuple_pimpl));
 			return tuple_pimpl;
 		}

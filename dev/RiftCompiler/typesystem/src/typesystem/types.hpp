@@ -191,7 +191,8 @@ namespace ts {
 		bool isImplicitlyCoercible(ComponentType target, query::detail::ContextType& ctx) const;
 
 		[[nodiscard]]
-		auto operator<=>(const ComponentType& other) const = default;
+		auto operator<=>(const ComponentType& other) const
+			= default;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;

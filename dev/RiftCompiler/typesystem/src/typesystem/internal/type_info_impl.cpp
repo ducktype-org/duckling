@@ -84,16 +84,16 @@ namespace ts::internal {
 
 	/*[[nodiscard]]
 	ClassInfo VTableInfoImpl::getAssociatedClass() const {
-		return associated_class;
+	    return associated_class;
 	}
 
 	[[nodiscard]]
 	usize VTableInfoImpl::getParentCount() const {
-		return associated_class.virtualAncestors().size();
+	    return associated_class.virtualAncestors().size();
 	}
 
 	[[nodiscard]]
 	usize VTableInfoImpl::getMethodCount() const {
-		return associated_class.getVtableSize() - getParentCount();
+	    return associated_class.getVtableSize() - getParentCount();
 	}*/
 }

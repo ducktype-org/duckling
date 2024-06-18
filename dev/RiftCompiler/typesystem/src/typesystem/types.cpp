@@ -169,8 +169,7 @@ namespace ts {
 		return toCPimpl(pimpl)->getBaseClassSymbol(ctx);
 	}
 
-	std::vector<ClassInfo>
-		ClassInfo::getImplementedInterfaceTypes(query::Context& ctx) const {
+	std::vector<ClassInfo> ClassInfo::getImplementedInterfaceTypes(query::Context& ctx) const {
 		return toCPimpl(pimpl)->getImplementedInterfaceTypes(ctx);
 	}
 

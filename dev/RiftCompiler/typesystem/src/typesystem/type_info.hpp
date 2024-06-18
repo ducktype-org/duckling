@@ -190,8 +190,7 @@ namespace ts {
 		 * \return Whether the implicit coercion is allowed or not.
 		 */
 		[[nodiscard]]
-		bool
-			isImplicitlyCoercible(TypeInfo target, query::detail::ContextType& context) const;
+		bool isImplicitlyCoercible(TypeInfo target, query::detail::ContextType& context) const;
 
 		/**
 		 * \brief Get the text representation of this type.
