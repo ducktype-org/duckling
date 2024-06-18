@@ -576,7 +576,9 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
-	ts::TypeInfo parseTypeFromExpr(query::Context& ctx, tpc::ParserCBorrowRef<pst::Expr> expr) {
+	ts::TypeInfo parseTypeFromExpr(
+		query::Context& ctx, const tpc::ParserCBorrowRef<pst::Expr>& expr, const ScopeID& expr_scope
+	) {
 		static auto BUILTINS = std::unordered_map<base::StrId, ts::TypeInfo>{
 			{ base::StrId("f32"), ctx.query<::ts::QueryFloatType>(32) },
 			{ base::StrId("f16"), ctx.query<::ts::QueryFloatType>(16) },
@@ -595,9 +597,11 @@ namespace compiler::helios {
 			variant_case(pst::Expr::Identifier, idt) {
 				const auto it = BUILTINS.find(idt.indent_id);
 				if (it == BUILTINS.end()) {
-					throw base::NotYetImplemented(base::strConcat(
-						"Identifier is not yet handled by the QueryTypeOf: ", idt.indent_id.str()
-					));
+					const auto symbol = ctx.query<QueryLookupInScopeAndParents>(
+											   { expr_scope, idt.indent_id, true }
+					)
+					                        .leaves.back();
+					return ctx.query<QueryTypeOf>(symbol);
 				}
 				return it->second;
 			}
@@ -635,19 +639,18 @@ namespace compiler::helios {
 			base::Optional<ts::TypeInfo> type_of_thing;
 
 			void visitConst(const pst::Const& stmt) override {
-				type_of_thing = parseTypeFromExpr(ctx, stmt.getType());
+				type_of_thing = parseTypeFromExpr(ctx, stmt.getType(), scope(key));
 			}
 
 			void visitStruct(const pst::Struct& stmt) override {
-				// Here, a TS query call will happen: QueryStructType or something similar.
-				throw base::NotYetImplemented("Querying type of struct is not yet implemented.");
+				type_of_thing = ctx.query<ts::QueryClassType>(key);
 			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto&& symbol_ref = getSymRef(key);
 
-			static PstStmtVisitor_GetTypeOf visitor(ctx, key);
+			PstStmtVisitor_GetTypeOf visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
 			return visitor.type_of_thing.value();
 		}
@@ -700,7 +703,8 @@ namespace compiler::helios {
 			struct_info.name = struct_data_parser.name.value();
 
 			if_opt_some(struct_data_parser.base_classes, bases) {
-				for (auto&& base: bases) struct_info.bases.push_back(parseTypeFromExpr(ctx, base));
+				for (auto&& base: bases)
+					struct_info.bases.push_back(parseTypeFromExpr(ctx, base, scope(key)));
 			}
 
 			return struct_info;
