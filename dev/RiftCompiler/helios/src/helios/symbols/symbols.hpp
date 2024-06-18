@@ -245,7 +245,7 @@ namespace compiler::helios {
 	 * @brief Query type of the symbol.
 	 * @note: not implemented yet
 	 */
-	DECLARE_QUERY(QueryTypeOf, SymID, ::ts::TypeInfo)
+	DECLARE_QUERY(QueryTypeOf, SymID, ts::TypeInfo)
 
 	struct StructInfo {
 		base::StrId               name;
