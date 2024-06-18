@@ -248,10 +248,10 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryTypeOf, SymID, ::ts::TypeInfo);
 
 	struct StructInfo {
-		base::StrId        name;
-		std::vector<SymID> methods;
-		std::vector<SymID> fields;
-		std::vector<SymID> bases;
+		base::StrId               name;
+		std::vector<SymID>        methods;
+		std::vector<SymID>        fields;
+		std::vector<ts::TypeInfo> bases;
 	};
 
 	DECLARE_QUERY(QueryStructInfo, SymID, const StructInfo&);
