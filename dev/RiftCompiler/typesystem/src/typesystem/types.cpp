@@ -51,8 +51,6 @@ namespace ts {
 		return type.isImplicitlyCoercible(target.type, ctx) && (is_mutable || !target.is_mutable);
 	}
 
-	std::strong_ordering ComponentType::operator<=>(const ComponentType& other) const = default;
-
 	base::HashT ComponentType::customPerfectHash() const {
 		return reinterpret_cast<std::size_t>(type.getPimpl()) + is_mutable;
 	}

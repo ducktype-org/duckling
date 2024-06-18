@@ -39,9 +39,10 @@ public:
 		TESTER_ADD_TEST(simple_ints);
 		TESTER_ADD_TEST(simple_floats);
 		TESTER_ADD_TEST(simple_pointer);
+		TESTER_ADD_TEST(simple_tuple);
+		TESTER_ADD_TEST(simple_function);
 		TESTER_ADD_TEST(simple_meta);
 		TESTER_ADD_TEST(simple_type_desc);
-		TESTER_ADD_TEST(simple_function);
 		TESTER_ADD_TEST(simple_value_category);
 		TESTER_ADD_TEST(simple_implicit_coercibility);
 	}
@@ -220,6 +221,42 @@ private:
 				&& ptr_5.isMutable() == ptr_4.isMutable(),
 			"Pointer should survive casting."
 		);
+	}
+
+	/**
+	 * Test that tuples with different components are treated as different types
+	 * and that they are correctly cast.
+	 */
+	void simple_tuple() {
+		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
+		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
+
+		const auto tup_1 = query::entryPoint<QueryTupleType>({ { { int_16 }, { int_32 } } });
+
+		assert(
+			tup_1.getComponents() == std::vector<ComponentType>({ { int_16 }, { int_32 } }),
+			"Component types should be as constructed."
+		);
+		assert(
+			query::entryPoint<QuerySizeOfType>(tup_1)
+				== query::entryPoint<QuerySizeOfType>(int_16)
+					   + query::entryPoint<QuerySizeOfType>(int_32),
+			"Size should be equal to sum of component sizes."
+		);
+		assert(tup_1.getKind() == Tuple, "Tuple should have kind Tuple.");
+
+		const TypeInfo  type_tup = tup_1;
+		const TupleInfo tup_2    = type_tup;
+		assert(tup_2.getKind() == Tuple, "Tuple should survive casting.");
+
+		const auto tup_3 = query::entryPoint<QueryTupleType>({ { { int_16 }, { int_32 } } });
+		assert(tup_1 == tup_3, "Tuples constructed the same way should be equal.");
+
+		const auto tup_4 = query::entryPoint<QueryTupleType>({ { { int_32 }, { int_32 } } });
+		assert(tup_1 != tup_4, "Tuples with different types should be different.");
+
+		const auto tup_5 = query::entryPoint<QueryTupleType>({ { { int_16, true }, { int_32 } } });
+		assert(tup_1 != tup_5, "Tuples with different mutability should be different.");
 	}
 
 	/**

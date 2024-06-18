@@ -15,7 +15,7 @@ namespace ts {
 				.type       = source,
 				.is_mutable = true,
 			}));
-			for (const auto& p_type: getParameterTypes().value())
+			for (const auto& p_type: parameter_types.value())
 				all_parameter_types.push_back(p_type);
 			return ctx.query<QueryFunctionType>({
 				.parameter_types = all_parameter_types,
