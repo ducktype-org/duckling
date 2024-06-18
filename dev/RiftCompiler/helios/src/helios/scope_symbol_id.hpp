@@ -22,6 +22,8 @@ namespace compiler::helios {
 
 		bool operator==(const SymID&) const = default;
 
+		auto operator<=>(const SymID& other) const { return ref.get() <=> other.ref.get(); }
+
 	private:
 		base::borrow_ptr<SymbolData> ref;
 

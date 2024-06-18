@@ -10,6 +10,7 @@
 #include "type_info.hpp"
 #include "type_desc.hpp"
 #include <helios/scope_symbol_id.hpp>
+#include <base/optional.hpp>
 
 namespace ts {
 	namespace internal {
@@ -494,36 +495,42 @@ namespace ts {
 		compiler::helios::SymID getSymbol() const;
 
 		/**
+		 * Gets the type of the base class.
+		 * @param ctx The Query Context necessary to refer to the definition of the class.
+		 * @return The type of the base class.
+		 */
+		[[nodiscard]]
+		base::Optional<ClassInfo> getBaseClassType(query::Context& ctx) const;
+
+		/**
 		 * Gets the symbol of the base class.
 		 * @param ctx The Query Context necessary to refer to the definition of the class.
 		 * @return The symbol of the base class.
 		 */
 		[[nodiscard]]
-		base::Optional<compiler::helios::SymID> getBaseClassSymbol(query::Context ctx) const;
-
-		/**
-		 * Gets the type of the base class.
-		 * @return The type of the base class.
-		 */
-		[[nodiscard]]
-		base::Optional<ClassInfo> getBaseClassType() const;
+		base::Optional<compiler::helios::SymID> getBaseClassSymbol(query::Context& ctx) const;
 
 		/**
 		 * Gets the symbols of implemented interfaces.
+		 * @param ctx The Query Context necessary to refer to the definition of the class.
 		 * @return The symbols of implemented interfaces.
 		 */
 		[[nodiscard]]
-		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols() const;
+		std::vector<ClassInfo> getImplementedInterfaceTypes(query::Context& ctx) const;
+		// @TODO: change return type to InterfaceInfo when interface type is created.
 
-		// @TODO: getImplementedInterfaceTypes when interface type is created.
+		[[nodiscard]]
+		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols(query::Context& ctx
+		) const;
 
 		/**
 		 * Gets the type of a member.
 		 * @param sym The member, the type of which is requested.
+		 * @param ctx The Query Context necessary to refer to the definition of the class.
 		 * @return The type of the member.
 		 */
 		[[nodiscard]]
-		TypeInfo getMemberType(compiler::helios::SymID sym) const;
+		TypeInfo getMemberType(compiler::helios::SymID sym, query::Context& ctx) const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(ClassInfo)
 

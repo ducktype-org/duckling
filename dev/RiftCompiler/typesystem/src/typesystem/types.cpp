@@ -162,20 +162,27 @@ namespace ts {
 
 	compiler::helios::SymID ClassInfo::getSymbol() const { return toCPimpl(pimpl)->getSymbol(); }
 
-	base::Optional<compiler::helios::SymID> ClassInfo::getBaseClassSymbol(query::Context ctx) const {
+	base::Optional<ClassInfo> ClassInfo::getBaseClassType(query::Context& ctx) const {
+		return toCPimpl(pimpl)->getBaseClassType(ctx);
+	}
+
+	base::Optional<compiler::helios::SymID> ClassInfo::getBaseClassSymbol(query::Context& ctx
+	) const {
 		return toCPimpl(pimpl)->getBaseClassSymbol(ctx);
 	}
 
-	base::Optional<ClassInfo> ClassInfo::getBaseClassType() const {
-		return toCPimpl(pimpl)->getBaseClassType();
+	std::vector<ClassInfo>
+		ClassInfo::getImplementedInterfaceTypes(query::Context& ctx) const {
+		return toCPimpl(pimpl)->getImplementedInterfaceTypes(ctx);
 	}
 
-	std::vector<compiler::helios::SymID> ClassInfo::getImplementedInterfaceSymbols() const {
-		return toCPimpl(pimpl)->getImplementedInterfaceSymbols();
+	std::vector<compiler::helios::SymID>
+		ClassInfo::getImplementedInterfaceSymbols(query::Context& ctx) const {
+		return toCPimpl(pimpl)->getImplementedInterfaceSymbols(ctx);
 	}
 
-	TypeInfo ClassInfo::getMemberType(compiler::helios::SymID sym) const {
-		return toCPimpl(pimpl)->getMemberType(sym);
+	TypeInfo ClassInfo::getMemberType(compiler::helios::SymID sym, query::Context& ctx) const {
+		return toCPimpl(pimpl)->getMemberType(sym, ctx);
 	}
 
 	template<std::derived_from<TypeInfo> TYPE_INFO>

@@ -277,6 +277,30 @@ namespace ts {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType)
 
+	struct IMPLEMENT_QUERY(QueryClassType, ClassInfo::Pimpl) {
+		static inline base::Map<QKey, query::CacheEntry<ClassInfo>> cache;
+
+		static auto provide(Context&, QKey key) -> PResult {
+			const auto class_pimpl = new internal::ClassInfoImpl{ key };
+			pushType(base::unique_ptr(class_pimpl));
+			return class_pimpl;
+		}
+
+		static auto store(QKey key, const PResult p_res, query::ACD acd) -> QResult {
+			const auto q_res = QResult{ p_res };
+			cache.emplace(key, query::CacheEntry<QResult>{ q_res, acd });
+			return q_res;
+		}
+
+		static auto load(QKey key) -> LoadResult {
+			if (const auto cache_iter = cache.find(key); cache_iter != cache.end())
+				return base::Optional{ cache_iter->second };
+			return {};
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassType)
+
 	struct IMPLEMENT_QUERY(QueryNamespaceType, NamespaceInfo::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
 			static auto namespace_impl = internal::NamespaceInfoImpl{};

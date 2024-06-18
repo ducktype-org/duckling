@@ -8,8 +8,10 @@
 #include <query_framework/query_impl.hpp>
 
 #include "../typesystem.hpp"
-//#include "../class_types.hpp"
+// #include "../class_types.hpp"
 #include "queries.hpp"
+
+#include <helios/symbols/symbols.hpp>
 
 namespace ts::internal {
 	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
@@ -43,7 +45,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of the type described by an object of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Any;
 
 		/**
 		 * \brief Gets the Kind of the type described by this object.
@@ -73,8 +75,9 @@ namespace ts::internal {
 		// The interface default is to be removed when interfaces for each type are determined.
 		// Then, this definition should become pure virtual.
 		[[nodiscard]]
-		virtual TypeInterface getInterface(query::Context&) const {
-			return {};
+		virtual TypeInterface& getInterface(query::Context&) const {
+			static TypeInterface empty{};
+			return empty;
 		}
 
 		/**
@@ -142,7 +145,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Unit;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -162,7 +165,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Void;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -182,7 +185,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Byte;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -208,7 +211,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Bool;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -234,7 +237,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Char;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -263,7 +266,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Integral;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -307,7 +310,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Float;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -337,7 +340,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::RawPointer;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -376,7 +379,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Pointer;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -431,7 +434,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Reference;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -501,7 +504,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Tuple;
 
 		[[nodiscard]]
 		usize getSize(query::Context& ctx) const override {
@@ -550,7 +553,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Function;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -631,7 +634,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Variant;
 
 		[[nodiscard]]
 		usize getSize(query::Context& ctx) const override {
@@ -663,7 +666,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static inline Kind staticKind = Kind::Class;
 
 		[[nodiscard]]
 		usize getSize(query::Context& ctx) const override {
@@ -672,121 +675,57 @@ namespace ts::internal {
 
 		explicit ClassInfoImpl(compiler::helios::SymID symbol);
 
-		base::Optional<compiler::helios::SymID> getBaseClassSymbol(query::Context ctx) const {
-			ctx.query<Query>()
+		[[nodiscard]]
+		compiler::helios::SymID getSymbol() const {
+			return symbol;
+		}
+
+		[[nodiscard]]
+		base::Optional<ClassInfo> getBaseClassType(query::Context& ctx) const {
+			auto& bases = ctx.query<compiler::helios::QueryStructInfo>(symbol).bases;
+			if (bases.empty())
+				return {};
+			else
+				return { ClassInfo(bases.at(0)) };
+		}
+
+		[[nodiscard]]
+		base::Optional<compiler::helios::SymID> getBaseClassSymbol(query::Context& ctx) const {
+			return getBaseClassType(ctx).map([](ClassInfo classInfo) {
+				return classInfo.getSymbol();
+			});
+		}
+
+		// @TODO: change return type to InterfaceInfo when interface type is created.
+		[[nodiscard]]
+		std::vector<ClassInfo> getImplementedInterfaceTypes(query::Context& ctx) const {
+			auto& bases = ctx.query<compiler::helios::QueryStructInfo>(symbol).bases;
+			std::vector<ClassInfo> result;
+			result.reserve(std::max(0UL, bases.size() - 1));
+			for (int i = 1; i < bases.size(); i++) result.emplace_back(bases.at(i));
+			return result;
+		}
+
+		[[nodiscard]]
+		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols(query::Context& ctx
+		) const {
+			auto& bases = ctx.query<compiler::helios::QueryStructInfo>(symbol).bases;
+			std::vector<compiler::helios::SymID> result;
+			result.reserve(std::max(0UL, bases.size() - 1));
+			for (int i = 1; i < bases.size(); i++)
+				// @TODO: change cast type to InterfaceInfo when interface type is created.
+				result.push_back(ClassInfo(bases.at(i)).getSymbol());
+			return result;
+		}
+
+		[[nodiscard]]
+		TypeInfo getMemberType(compiler::helios::SymID sym, query::Context& ctx) const {
+			const auto& elements_with_same_name = getInterface(ctx).getElements().at(name(sym));
+			for (const auto& element: elements_with_same_name)
+				if (element.getSymbol() == sym) return element.getType(ctx);
+			RIFT_PANIC("Element not found.");
 		}
 	};
-
-	/*class ClassInfoImpl final: public TypeInfoImpl {
-		usize             size;
-		const base::StrId name;
-
-		// Stores the data of our ancestors, sorted by their offset
-		std::vector<AncestorData> ancestors_data;
-		// Stores the data of our members, could be sorted in the future
-		std::vector<MemberData> members_data;
-
-		// Indexes for looking up positions
-		// If they contain something, it's not an empty vector
-		base::Map<symtable::SymbolId, std::vector<usize>> members_positions;
-		base::Map<ClassInfo, std::vector<usize>>          ancestors_positions;
-
-		// Positions of our parents in the ancestors vector, sorted by their order
-		std::vector<usize> basic_parents;
-		// @TODO: they are a connected subsequence, maybe just remember first and last index in
-		// members_data? Positions of our members in the members vector, sorted by their order
-		std::vector<usize> direct_members;
-		// Layout of virtual ancestors, sorted by their offset
-		std::vector<std::pair<ClassInfo, usize>> virtual_layout;
-
-		usize virt_method_count;
-		usize base_size;
-
-		[[nodiscard]]
-		bool hasVtable() const;
-
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return staticKind;
-		}
-
-		*//**
-		 * \brief The Kind of types described by objects of this class.
-		 *//*
-		static Kind staticKind;
-
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return size;
-		}
-
-		[[nodiscard]]
-		base::StrId getName() const {
-			return name;
-		}
-
-		[[nodiscard]]
-		const std::vector<AncestorData>& allAncestors() const;
-		[[nodiscard]]
-		const std::vector<AncestorData> basicParents() const;
-		[[nodiscard]]
-		const std::vector<ClassInfo> virtualAncestors() const;
-		[[nodiscard]]
-		const std::vector<MemberData> members() const;
-		[[nodiscard]]
-		const std::vector<MemberData>& allMembers() const;
-
-		[[nodiscard]]
-		MemberInfo getMemberInfo(symtable::SymbolId symbol) const;
-		[[nodiscard]]
-		MemberInfo getMemberInfo(symtable::SymbolId symbol, std::vector<ClassInfo> hint) const;
-
-		[[nodiscard]]
-		AncestorInfo getAncestorInfo(ClassInfo ancestor_id) const;
-		[[nodiscard]]
-		AncestorInfo getAncestorInfo(const std::vector<ClassInfo>& ancestor_ids) const;
-
-		// Returns the offset of a single specific virtual ancestor
-		[[nodiscard]]
-		usize getVirtualAncestorOffset(ClassInfo ancestor_id) const;
-		// Returns all the offsets of virtual members of the clueless parent, assuming it's been
-		// created as a part of us. Since the virtual members are put at the end of the kid, they
-		// will all be positive.
-		[[nodiscard]]
-		std::vector<std::pair<ClassInfo, usize>> getVirtualAncestorTable(ClassInfo ancestor_id
-		) const;
-		[[nodiscard]]
-		std::vector<std::pair<ClassInfo, usize>>
-			getVirtualAncestorTable(std::vector<ClassInfo> ancestor_ids) const;
-
-		[[nodiscard]]
-		usize getBaseSize() const;
-		[[nodiscard]]
-		usize getVtablePtrOffset() const;
-		[[nodiscard]]
-		usize getVtableSize() const;
-		[[nodiscard]]
-		usize getVtablePositionOf(ClassInfo ancestor) const;
-
-		ClassInfoImpl(
-			base::StrId                                                   name,
-			const std::vector<std::pair<TypeDesc<>, symtable::SymbolId>>& member_types,
-			const std::vector<std::pair<ClassInfo, InheritanceTag>>&      inheritance,
-			usize                                                         virtualMethods
-		);
-
-		[[nodiscard]]
-		bool isImplicitlyCoercible(const TypeInfo target, query::Context&) const override {
-			if (target.getKind() != Kind::Class) return false;
-			const ClassInfo toClass               = target;
-			const auto [lva, so, eo, result_type] = getAncestorInfo(toClass);
-			// A class is convertible to another class when the other class is an unambiguous
-			// ancestor. The ancestor may be Standard (non-virtual) or Virtual, but it must exist
-			// (cannot be NoResult) and it cannot be Ambiguous.
-			return result_type == ResultType::Standard || result_type == ResultType::Virtual;
-		}
-	};*/
 
 	class NamespaceInfoImpl final: public TypeInfoImpl {
 	public:
@@ -798,7 +737,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Namespace;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -818,7 +757,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Module;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -829,15 +768,15 @@ namespace ts::internal {
 	};
 
 	/*class VTableInfoImpl final: public TypeInfoImpl {
-		ClassInfo associated_class;
+	    ClassInfo associated_class;
 
 	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return staticKind;
-		}
+	    [[nodiscard]]
+	    Kind getKind() const override {
+	        return staticKind;
+	    }
 
-		*//**
+	    *//**
 		 * \brief The Kind of types described by objects of this class.
 		 *//*
 		static Kind staticKind;
@@ -867,7 +806,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static Kind staticKind;
+		static const Kind staticKind = Kind::Meta;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {

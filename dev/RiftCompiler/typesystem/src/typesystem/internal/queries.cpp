@@ -74,4 +74,31 @@ namespace ts::internal {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySizeOfVariant)
+
+	struct IMPLEMENT_QUERY(QuerySizeOfClass, usize) {
+		static inline base::Map<QKey, query::CacheEntry<QResult>> cache;
+
+		static auto provide(Context& ctx, const QKey key) -> PResult {
+			auto& interface = key.value->getInterface(ctx);
+			usize result    = 0;
+			for (auto& [k, elems]: interface.getElements()) {
+				for (auto& elem: elems)
+					if (elem.isField()) result += elem.getResultType().getSize(ctx);
+			}
+			return result;
+		}
+
+		static auto store(const QKey key, const PResult p_res, const query::ACD acd) -> QResult {
+			cache.emplace(key, query::CacheEntry<QResult>{ p_res, acd });
+			return p_res;
+		}
+
+		static auto load(const QKey key) -> LoadResult {
+			if (const auto cache_iter = cache.find(key); cache_iter != cache.end())
+				return base::Optional{ cache_iter->second };
+			return {};
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySizeOfClass)
 }

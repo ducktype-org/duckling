@@ -3,26 +3,6 @@
 #include <utility>
 
 namespace ts::internal {
-	Kind TypeInfoImpl::staticKind       = Kind::Any;
-	Kind UnitInfoImpl::staticKind       = Kind::Unit;
-	Kind VoidInfoImpl::staticKind       = Kind::Void;
-	Kind ByteInfoImpl::staticKind       = Kind::Byte;
-	Kind BoolInfoImpl::staticKind       = Kind::Bool;
-	Kind CharInfoImpl::staticKind       = Kind::Char;
-	Kind IntegralInfoImpl::staticKind   = Kind::Integral;
-	Kind FloatInfoImpl::staticKind      = Kind::Float;
-	Kind RawPointerInfoImpl::staticKind = Kind::RawPointer;
-	Kind PointerInfoImpl::staticKind    = Kind::Pointer;
-	Kind ReferenceInfoImpl::staticKind  = Kind::Reference;
-	Kind TupleInfoImpl::staticKind      = Kind::Tuple;
-	Kind FunctionInfoImpl::staticKind   = Kind::Function;
-	Kind VariantInfoImpl::staticKind    = Kind::Variant;
-//	Kind ClassInfoImpl::staticKind      = Kind::Class;
-	Kind NamespaceInfoImpl::staticKind  = Kind::Namespace;
-	Kind ModuleInfoImpl::staticKind     = Kind::Module;
-//	Kind VTableInfoImpl::staticKind     = Kind::VTable;
-	Kind MetaInfoImpl::staticKind       = Kind::Meta;
-
 	/**
 	 * @brief Gets the global TypeInfoImpl storage structure.
 	 * @return The global TypeInfoImpl storage structure.
@@ -95,7 +75,11 @@ namespace ts::internal {
 
 	VariantInfoImpl::VariantInfoImpl(const std::vector<TypeInfo>& variant_types):
 		  underlying_types(variant_types) {
-		representation = "Variant" + stringifyTypeVector(variant_types);
+		representation = "Variant " + stringifyTypeVector(variant_types);
+	}
+
+	ClassInfoImpl::ClassInfoImpl(compiler::helios::SymID symbol): symbol(symbol) {
+		representation = "Class " + name(symbol).str();
 	}
 
 	/*[[nodiscard]]

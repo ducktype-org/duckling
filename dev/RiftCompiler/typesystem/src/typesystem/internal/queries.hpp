@@ -32,4 +32,18 @@ namespace ts::internal {
 	};
 
 	DECLARE_QUERY(QuerySizeOfVariant, KeyFor_QuerySizeOfVariant, usize)
+
+	class ClassInfoImpl;
+
+	struct KeyFor_QuerySizeOfClass {
+		const ts::internal::ClassInfoImpl* value;
+		KeyFor_QuerySizeOfClass() = delete;
+		KeyFor_QuerySizeOfClass(const ts::internal::ClassInfoImpl* value): value(value) {}
+		auto operator<=>(const KeyFor_QuerySizeOfClass& other) const = default;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const { return base::HashT(value); }
+	};
+
+	DECLARE_QUERY(QuerySizeOfClass, KeyFor_QuerySizeOfClass, usize)
 }
