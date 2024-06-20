@@ -1,9 +1,3 @@
-const SimpleInt: i32 = 1;
-const SimpleFloat: f32 = 2.0;
-
-
-// const TupleII: (i32, i32) = (1, 2);
-
 struct FirstStructEver {
     var a: i32 = 0;
     var b: f32 = 0;

@@ -8,6 +8,7 @@
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <typesystem/typesystem.hpp>
+#include <typesystem/internal/queries.hpp>
 
 class HeliosTests: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -83,10 +84,10 @@ private:
 	}
 
 	void testStructInfo() {
-		auto [_, root_scope] = getModule("structs_and_types");
+		auto [_, root_scope] = getModule("structs");
 
-		auto   first_struct = getChain("FirstStructEver", root_scope).back();
-		auto&& first_struct_info
+		const auto first_struct = getChain("FirstStructEver", root_scope).back();
+		auto&&     first_struct_info
 			= query::entryPoint<compiler::helios::QueryStructInfo>(first_struct);
 		auto&& first_struct_typeinfo
 			= query::entryPoint<compiler::helios::QueryTypeOf>(first_struct);
@@ -108,13 +109,16 @@ private:
 	}
 
 	void testTypeOf() {
-		auto [_, root_scope] = getModule("structs_and_types");
+		auto [_, root_scope] = getModule("types");
 
-		auto INT32_TYPE = query::entryPoint<ts::QueryIntegralType>({ 32, true });
-		auto F32_TYPE   = query::entryPoint<ts::QueryFloatType>(32);
+		const auto INT32_TYPE = query::entryPoint<ts::QueryIntegralType>({ 32, true });
+		const auto F32_TYPE   = query::entryPoint<ts::QueryFloatType>(32);
 
 		ASSERT_EQUAL(true, INT32_TYPE == getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(true, F32_TYPE == getTypeOf("SimpleFloat", root_scope));
+
+		// auto tuple_int_int = getTypeOf("TypeII", root_scope);
+		// auto tuple_int_int_type_info = query::entryPoint<>();
 	}
 
 	void testEdgeEvals() {

@@ -589,6 +589,9 @@ namespace compiler::helios {
 			{ base::StrId("u32"), ctx.query<::ts::QueryIntegralType>({ 32, false }) },
 			{ base::StrId("u16"), ctx.query<::ts::QueryIntegralType>({ 16, false }) }
 		};
+		expr->dprint(std::cerr);
+		std::cerr << std::endl;
+		auto rpn_expr = rpn::ExtensionMakeRPN(ctx, { expr->elements, expr_scope });
 		if (expr->elements.size() != 1)
 			throw base::NotYetImplemented(
 				"Parsing types from complex expressions is not yet implemented."
