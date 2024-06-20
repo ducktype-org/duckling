@@ -6,7 +6,7 @@ namespace vm::api {
 	struct LoadProgramError {
 		std::string why;
 
-		JS_OBJ(why);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(LoadProgramError, why);
 	};
 }
 

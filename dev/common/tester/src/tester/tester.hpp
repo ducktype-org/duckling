@@ -11,6 +11,8 @@
 #include <string>
 #include <printer/stream_printer.hpp>
 
+#undef assert
+
 #define ASSERT_EQUAL(expected, actual)         \
 	assertEqual(                               \
 		expected,                              \

@@ -5,9 +5,10 @@
 std::string convertError(const vm::api::ApiError& apiError) {
 	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return "Wrong response";
 	return std::visit(
-		[](const auto&) {
-			return "Error, json does not work\n";
-			// return JS::serializeStruct(v); @TODO: issue #72
+		[](const auto& v) {
+			nlohmann::json json;
+			nlohmann::to_json(json, v);
+			return json;
 		},
 		apiError
 	);

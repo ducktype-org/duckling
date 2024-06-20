@@ -15,7 +15,7 @@ namespace vm::api {
 
 	struct OtherError {
 		std::string error;
-		JS_OBJ(error);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(OtherError, error);
 	};
 
 	using CoreOperationErrorVariant
@@ -23,7 +23,7 @@ namespace vm::api {
 
 	struct CoreOperationError {
 		CoreOperationErrorVariant error;
-		JS_OBJ(error);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(CoreOperationError, error);
 	};
 }
 

@@ -1,39 +1,21 @@
 #pragma once
 
-#include <json_struct/json_struct.h>
-#include "helper.hpp"
-
-namespace JS {
+namespace nlohmann {
 	template<class T>
 	struct IsEmptySerialization {
-		static constexpr const bool value = false;
+		static constexpr bool value = false;
 	};
 }
 
-namespace JS {
-	template<>
-	struct IsEmptySerialization<void> {
-		static constexpr const bool value = false;
-	};
-}
-
-#define JS_EMPTY(T)                                                                          \
-	namespace JS {                                                                           \
-		template<>                                                                           \
-		class TypeHandler<T> {                                                               \
-		public:                                                                              \
-			static inline Error                                                              \
-				to([[maybe_unused]] T& to, [[maybe_unused]] ParseContext& context) {         \
-				return Error::NoError;                                                       \
-			}                                                                                \
-                                                                                             \
-			static void                                                                      \
-				from([[maybe_unused]] const T& from, Token& token, Serializer& serializer) { \
-				impl::emptyObject(token, serializer);                                        \
-			}                                                                                \
-		};                                                                                   \
-		template<>                                                                           \
-		struct IsEmptySerialization<T> {                                                     \
-			static constexpr const bool value = true;                                        \
-		};                                                                                   \
+#define NLOHMANN_EMPTY_STRUCT(T)                  \
+	template<>                                    \
+	struct nlohmann::adl_serializer<T> {          \
+		static void to_json(json&, const T&) {}   \
+		static void from_json(const json&, T&) {} \
+	};                                            \
+	namespace nlohmann {                          \
+		template<>                                \
+		struct IsEmptySerialization<T> {          \
+			static constexpr bool value = true;   \
+		};                                        \
 	}

@@ -1,8 +1,5 @@
-add_library(JSON
-	src/json/helper.hpp
-	src/json/helper.cpp
-)
+add_library(JSON INTERFACE)
 
-make_module(JSON USES Base json_struct)
+target_include_directories(JSON INTERFACE src)
 
 add_example(json_example examples/example.cpp USES JSON)

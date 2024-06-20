@@ -12,7 +12,7 @@ namespace vm::api {
 
 	struct Panicked {
 		std::exception exception;
-		JS_OBJ(exception);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Panicked, exception);
 	};
 
 	struct Paused {};
@@ -21,7 +21,7 @@ namespace vm::api {
 
 	struct PausedOnError {
 		std::string reason;
-		JS_OBJ(reason);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(PausedOnError, reason);
 	};
 
 	struct WaitingForInput {};
@@ -33,7 +33,7 @@ namespace vm::api {
 
 	struct Executing {
 		ExecStatus exec_status;
-		JS_OBJ(exec_status);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Executing, exec_status);
 	};
 
 	using VCPUStatus

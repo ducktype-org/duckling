@@ -12,10 +12,10 @@ set(CROW_COMMIT "4f3f5deaaa01825c63c83431bfa96ccec195f741")
 set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-1/icu4c-74_1-src.tgz")
 set(ICU_CONTROL "SHA512=32c28270aa5d94c58d2b1ef46d4ab73149b5eaa2e0621d4a4c11597b71d146812f5e66db95f044e8aaa11b94e99edd4a48ab1aa8efbe3d72a73870cd56b564c2")
 
-FetchContent_Declare(
-	json_struct
-	URL "https://github.com/jorgen/json_struct/archive/${JSON_STRUCT_COMMIT}.zip"
-)
+#FetchContent_Declare(
+#	json_struct
+#	URL "https://github.com/jorgen/json_struct/archive/${JSON_STRUCT_COMMIT}.zip"
+#)
 
 FetchContent_Declare(
 	result
@@ -42,12 +42,12 @@ FetchContent_MakeAvailable(crow)
 get_target_property(TEMP Crow INTERFACE_INCLUDE_DIRECTORIES)
 set_target_properties(Crow PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
 
-FetchContent_MakeAvailable(json_struct)
+#FetchContent_MakeAvailable(json_struct)
 
 # Marks JsonStruct include libraries as system
 # @CMAKE 25: change to usage of FetchContent_Declare SYSTEM parameter
-get_target_property(TEMP json_struct INTERFACE_INCLUDE_DIRECTORIES)
-set_target_properties(json_struct PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
+#get_target_property(TEMP json_struct INTERFACE_INCLUDE_DIRECTORIES)
+#set_target_properties(json_struct PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
 
 FetchContent_MakeAvailable(result)
 

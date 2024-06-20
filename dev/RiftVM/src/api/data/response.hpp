@@ -10,12 +10,12 @@ namespace vm::api {
 
 		struct Output {
 			std::string output;
-			JS_OBJ(output);
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Output, output);
 		};
 
 		struct Block {
 			base::RawView data;
-			JS_OBJ(data);
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Block, data);
 		};
 	}
 

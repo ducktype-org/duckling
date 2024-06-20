@@ -2,7 +2,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <tuple>
 #include <array>
 #include <json/json.hpp>
 
@@ -11,7 +10,7 @@ struct Foo {
 	char        b;
 	std::string s;
 
-	JS_OBJ(a, b, s);
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE(Foo, a, b, s);
 };
 
 struct Bar {
@@ -20,26 +19,21 @@ struct Bar {
 	char             b;
 	float            s;
 
-	JS_OBJ(a, g, b, s);
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE(Bar, a, g, b, s);
 };
 
 struct Empty {};
 
-REGISTER_PARSE_TYPE(Foo);
-REGISTER_PARSE_TYPE(Bar);
-REGISTER_PARSE_TYPE(Empty);
+NLOHMANN_EMPTY_STRUCT(Empty);
 
 struct Fiz {
 	int x;
 
-	JS_OBJ(x);
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE(Fiz, x);
 };
-
-REGISTER_PARSE_TYPE(Fiz);
 
 int main() {
 	using MyVar = std::variant<Foo, Bar, Empty>;
-
 
 	Foo   foo{ 5, 'a', "abc" };
 	Bar   bar{ "abc", { 3, 4 }, 'b', 4.1f };
@@ -47,11 +41,14 @@ int main() {
 	MyVar y{ foo };
 	MyVar z{ bar };
 
-	std::cout << JS::serializeStruct(x) << "\n";
-	std::cout << JS::serializeStruct(y) << "\n";
-	std::cout << JS::serializeStruct(z) << "\n";
+	nlohmann::json j;
+	nlohmann::to_json(j, x);
+
+	// std::cout << j << "\n";
+	// std::cout << JS::serializeStruct(y) << "\n";
+	// std::cout << JS::serializeStruct(z) << "\n";
 
 	std::exception* e = new std::runtime_error("error");
 
-	std::cout << JS::serializeStruct(*e) << "\n";
+	// std::cout << JS::serializeStruct(*e) << "\n";
 }

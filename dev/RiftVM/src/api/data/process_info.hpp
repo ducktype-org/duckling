@@ -10,7 +10,7 @@ namespace vm {
 		struct ProcessInfo {
 			PID pid;
 
-			JS_OBJ(pid);
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(ProcessInfo, pid);
 		};
 	}
 }
