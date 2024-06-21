@@ -376,7 +376,8 @@ namespace pst {
 			rift_def::Keyword keyword;
 		};
 
-		using ExprElem = std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue, CommaSeparated>;
+		using ExprElem
+			= std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue, CommaSeparated>;
 
 		struct CommaSeparated {
 			std::vector<ParserRef<Expr>> expr;
@@ -406,14 +407,17 @@ namespace pst {
 		 * @brief parses the expression until its over
 		 */
 		static ParserRef<Expr> parse(RiftParserState& state, bool allow_comma = false);
-		static ParserRef<Expr> parseUntil(RiftParserState& state, rift_def::Operator until, bool allow_comma = false);
+		static ParserRef<Expr>
+			parseUntil(RiftParserState& state, rift_def::Operator until, bool allow_comma = false);
 		/**
 		 * @p exact_len = false: parses the expression until its over or until it parses @p len
 		 * tokens
 		 * @p exact_len = true: parses the expression until it parses @p len tokens
 		 */
-		static ParserRef<Expr> parse(RiftParserState& state, usize len, bool exact_len = true, bool allow_comma = false);
-		void                   dprint(std::ostream& out) const final;
+		static ParserRef<Expr> parse(
+			RiftParserState& state, usize len, bool exact_len = true, bool allow_comma = false
+		);
+		void dprint(std::ostream& out) const final;
 		~Expr() final = default;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
@@ -714,6 +718,11 @@ namespace pst {
 		}
 
 		bool trailingSemicolon() override;
+
+		[[nodiscard]]
+		ParserCBorrowRef<Expr> getType() const {
+			return type.borrow();
+		}
 
 		static ParserRef<Variable> parse(RiftParserState& state);
 		void                       dprint(std::ostream& out) const override;

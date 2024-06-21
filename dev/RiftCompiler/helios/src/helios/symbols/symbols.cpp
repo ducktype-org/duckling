@@ -341,6 +341,7 @@ namespace compiler::helios {
 		case '*':
 		case '/':
 		case '%':
+		case '|':
 			return 2;
 		case '^':  // Power ;D
 			return 3;
@@ -688,6 +689,10 @@ namespace compiler::helios {
 			base::Optional<ts::TypeInfo> type_of_thing;
 
 			void visitConst(const pst::Const& stmt) override {
+				type_of_thing = parseTypeFromExpr(ctx, stmt.getType(), scope(key));
+			}
+
+			void visitVariable(const pst::Variable& stmt) override {
 				type_of_thing = parseTypeFromExpr(ctx, stmt.getType(), scope(key));
 			}
 

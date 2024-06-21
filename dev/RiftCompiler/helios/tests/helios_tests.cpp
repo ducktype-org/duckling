@@ -122,6 +122,12 @@ private:
 			{ { { INT32_TYPE, false }, { INT32_TYPE, false } } }
 		);
 		ASSERT_EQUAL(true, tuple_int_int == tuple_int_int_type_info);
+
+		auto first_variant = getTypeOf("first_variant", root_scope);
+
+		const auto structA = getTypeOf("A", root_scope);
+		const auto structB = getTypeOf("B", root_scope);
+		const auto structC = getTypeOf("C", root_scope);
 	}
 
 	void testEdgeEvals() {
