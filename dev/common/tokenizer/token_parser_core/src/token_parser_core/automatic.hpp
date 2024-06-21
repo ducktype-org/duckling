@@ -37,14 +37,6 @@ namespace tpc {
 	using rift_def::Operator;
 	using rift_def::Special;
 
-	// Useful for debugging:
-	//
-	// parses one of the available types
-	// template<class T>
-	// void parseOne([[maybe_unused]]ParserState& state, [[maybe_unused]]T t) {
-	// 	static_assert(sizeof(T) < 0, "parseOne for type `T` is not implemented\n");
-	// }
-
 
 	void nullAwareDprint(Identifier, std::ostream& out);
 	void nullAwareDprint(OptionalIdentifier, std::ostream& out);
@@ -56,4 +48,204 @@ namespace tpc {
 		else
 			ref->dprint(out);
 	}
+
+	class BadKeywordError;
+	class BadSpecialError;
+	class BadOperatorError;
+	class NoIdentifierError;
+
+	template<typename State>
+	class GenericAutomatic {
+	protected:
+		State& state;
+	public:
+		GenericAutomatic(State& state):state(state) {}
+		GenericAutomatic(const GenericAutomatic&) = delete;
+
+		// Useful for debugging:
+		//
+		// parses one of the available types
+		// template<class T>
+		// void one([[maybe_unused]]T t, [[maybe_unused]]bool) {
+		// 	static_assert(sizeof(T) < 0, "parseOne for type `T` is not implemented\n");
+		// }
+
+		/**
+	 	* @brief Parses the expected keyword. Skips on success, logs error on failure.
+	 	* @param state The current ParserState.
+	 	* @param key The expected keyword.
+	 	*/
+		void one(Keyword key, bool ignorable = false) {
+			if (!state.tryEat(key)) {
+				state.fail(base::make_unique<BadKeywordError>(state.getPosition(), key));
+				if (!ignorable) state.tokens().next();
+			}
+		}
+
+		/**
+	 	* @brief Parses the expected Special token. Skips on success, logs error on failure.
+	 	* @param state The current ParserState.
+	 	* @param spec The expected special token.
+	 	*/
+		void one(Special spec, bool ignorable = false) {
+			if (!state.tryEat(spec)) {
+				state.fail(base::make_unique<BadSpecialError>(state.getPosition(), spec));
+				if (!ignorable) state.tokens().next();
+			}
+		}
+
+		/**
+	 	* @brief Parses the expected operator. Skips on success, logs error on failure.
+	 	* @param state The current ParserState.
+	 	* @param op The expected operator.
+	 	*/
+		void one(Operator op, bool ignorable = false) {
+			if (!state.tryEat(op)) {
+				state.fail(base::make_unique<BadOperatorError>(state.getPosition(), op));
+				if (!ignorable) state.tokens().next();
+			}
+		}
+
+		/**
+	 	* @brief Parses an identifier to @p result. Skips on success, logs error on failure.
+	 	* @param state The current ParserState.
+	 	* @param result The place to store the parsed identifier.
+	 	*/
+		void one(Identifier* result, bool ignorable = false) {
+			if (!state.ctokens().peek().isIdentifier()) {
+				state.fail(base::make_unique<NoIdentifierError>(state.getPosition()));
+				result->value = base::StrId("<error>");
+				if (!ignorable) state.tokens().next();
+				return;
+			}
+			result->value = state.tokens().next().getValue();
+		}
+
+		/**
+	 	* @brief Parses an identifier to @p result. Skips on success, does nothing on failure.
+	 	* @param state The current ParserState.
+	 	* @param result The place to store the parsed identifier.
+	 	*/
+		void one(OptionalIdentifier* result, bool = false) {
+			if (state.ctokens().peek().isIdentifier()) result->value = state.tokens().next().getValue();
+		}
+
+		/**
+	 	* @brief Parses an Element. Skips on success, logs error on failure.
+	 	* @param state The current ParserState.
+	 	* @param result The place to store the parsed element.
+	 	*/
+		template<std::derived_from<Element> T>
+		void one(ParserRef<T>* result, bool = false) {
+			*result = T::parse(state);
+		}
+
+		/**
+	 	* @brief Parses an Element. Skips on success, logs error on failure.
+	 	* @param state The current ParserState.
+	 	* @param result The place to store the parsed element.
+	 	*/
+		template<std::derived_from<Element> T>
+		void one(base::Optional<ParserRef<T>>* result, bool = false) {
+			*result = T::parse(state);
+		}
+
+		// parses all the given elements
+		template<typename T>
+		void all(T t) {
+			one(t);
+		}
+
+		template<typename T, typename... Q>
+		void all(T t, Q... q) {
+			one(t);
+			parseRest(q...);
+		}
+
+	private:
+		// parses all the given elements
+		template<typename T>
+		void parseRest(T t) {
+			one(t, true);
+		}
+
+		template<typename T, typename... Q>
+		void parseRest(T t, Q... q) {
+			one(t, true);
+			parseRest(q...);
+		}
+	};
+
+	class BadKeywordError final: public dia::Error {
+	private:
+		Keyword expected;
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected keyword `" + rift_def::keywordToStr(expected).str() + "` here.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		BadKeywordError(dia::SourcePosition pos, Keyword key): dia::Error(pos), expected(key) {}
+	};
+
+	class BadSpecialError final: public dia::Error {
+	private:
+		Special expected;
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected special `" + rift_def::specialToStr(expected).str() + "` here.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		BadSpecialError(dia::SourcePosition pos, Special spec): dia::Error(pos), expected(spec) {}
+	};
+
+	class BadOperatorError final: public dia::Error {
+	private:
+		Operator expected;
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected operator `" + rift_def::operatorToStr(expected).str() + "` here.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		BadOperatorError(dia::SourcePosition pos, Operator opr): dia::Error(pos), expected(opr) {}
+	};
+
+	class NoIdentifierError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected an identifier here.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		NoIdentifierError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
 }

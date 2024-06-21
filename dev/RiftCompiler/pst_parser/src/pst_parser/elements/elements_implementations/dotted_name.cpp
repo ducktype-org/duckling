@@ -17,7 +17,7 @@ namespace pst {
 		do {
 			bool            is_id = state[0].isIdentifier();
 			tpc::Identifier next;
-			tpc::parseOne(state, &next, true);
+			state.parse().one(&next, true);
 			if (is_id) out->names.push_back(next);
 			// If not special meaning, assume wrong type
 			else if(!state[0].is(rift_def::Operator::Period) && 

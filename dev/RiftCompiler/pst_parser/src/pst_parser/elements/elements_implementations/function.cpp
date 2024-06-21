@@ -9,13 +9,13 @@ namespace pst {
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
-		out->addKeyword(state.getPosition());
-
-		parseAll(state, Keyword::Fun, &out->name, &out->params);
-		if (state.tryEat(Operator::SingleArrow)) parseOne(state, &out->rets);
+		state.parse().all(Keyword::Fun, &out->name, &out->params);
+		if (state.tryEat(Operator::SingleArrow))  {
+			state.parse().one(&out->rets);
+		}
 		while (state.notEmpty() and !state[0].isBracketGroup(Token::BracketType::Curly))
 			state.tokens().skip();
-		parseOne(state, &out->body);
+		state.parse().one(&out->body);
 
 		out->setLastToken(state.getPosition(-1));
 

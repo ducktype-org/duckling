@@ -76,12 +76,13 @@ namespace pst {
 
 	using ImportType = tpc::ParserCBorrowRef<pst::Import>;
 
-	class RiftParserState final: public tpc::AutomatedParserState<tpc::GenericAutomatic<RiftParserState>> {
+	class RiftParserState final: 
+	public tpc::ParserState {
 		std::vector<ImportType> imports;
 
 	public:
 		RiftParserState(tpc::TokenStream&& tokens, dia::Logger& err):
-			  tpc::AutomatedParserState<tpc::GenericAutomatic<RiftParserState>>(std::move(tokens), err) {}
+			  tpc::ParserState(std::move(tokens), err) {}
 
 		void addImport(const tpc::ParserCBorrowRef<pst::Import>& import);
 
@@ -90,7 +91,7 @@ namespace pst {
 			return std::move(imports);
 		}
 
-		tpc::GenericAutomatic<RiftParserState> parse() override {
+		tpc::GenericAutomatic<RiftParserState> parse() {
 			return {*this};
 		}
 	};
