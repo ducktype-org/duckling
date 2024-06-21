@@ -3,7 +3,6 @@
 #include "ints.hpp"
 #include <string_view>
 #include <string>
-#include <nlohmann/json.hpp>
 
 namespace base {
 	using RawArray = const byte*;
