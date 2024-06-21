@@ -1,5 +1,5 @@
-#include <tester/tester.hpp>
 #include <api/api.hpp>
+#include <tester/tester.hpp>
 
 class SimpleVmTest: public tester::TestSuite {
 #undef TESTER_CLASS

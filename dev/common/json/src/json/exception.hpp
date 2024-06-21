@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <exception>
 #include <nlohmann/json.hpp>
 
@@ -10,4 +9,6 @@ struct nlohmann::adl_serializer<std::exception> {
 		j["name"] = typeid(e).name();  // It is not perfect, but there is nothing better.
 		j["what"] = e.what();
 	}
+
+	static void from_json(const json&, std::exception&) {}
 };

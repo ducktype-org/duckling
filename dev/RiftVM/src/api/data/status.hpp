@@ -33,12 +33,21 @@ namespace vm::api {
 
 	struct Executing {
 		ExecStatus exec_status;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Executing, exec_status);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(vm::api::Executing, exec_status);
 	};
 
 	using VCPUStatus
 		= std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Panicked, Executing>;
 }
+
+NLOHMANN_EMPTY_STRUCT(vm::api::ExecutionNotStarted);
+NLOHMANN_EMPTY_STRUCT(vm::api::Parsing);
+NLOHMANN_EMPTY_STRUCT(vm::api::TypeAnalysis);
+NLOHMANN_EMPTY_STRUCT(vm::api::Paused);
+NLOHMANN_EMPTY_STRUCT(vm::api::Running);
+NLOHMANN_EMPTY_STRUCT(vm::api::WaitingForInput);
+NLOHMANN_EMPTY_STRUCT(vm::api::NotStarted);
+
 
 REGISTER_PARSE_TYPE_ALIAS(vm::api::ExecutionNotStarted, "ExecutionNotStarted")
 REGISTER_PARSE_TYPE_ALIAS(vm::api::Parsing, "Parsing")

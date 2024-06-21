@@ -4,6 +4,13 @@
 #include <services_data/type_metadata/type.hpp>
 #include <memory_data/block.hpp>
 
+template<>
+struct nlohmann::adl_serializer<base::RawView> {
+	static void to_json(json& j, const base::RawView& e) { j = e.stringView(); }
+
+	static void from_json(const json&, const base::RawView&) {}
+};
+
 namespace vm::api {
 	namespace response {
 		struct Empty {};

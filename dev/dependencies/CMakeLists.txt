@@ -3,7 +3,7 @@ include(FindOrBuildICU.cmake)
 
 # It's nice to get stripped-down release zips instead of cloning
 # a repo and checking out a tag
-set(NLOHMANN_JSON_COMMIT "9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03")
+set(NLOHMANN_JSON_COMMIT "9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03")  # 3.11.3
 set(RESULT_COMMIT "a97e66bc66f140132619fd5f5cdffc30127f4220")
 set(ASIO_COMMIT "89b0a4138a92883ae2514be68018a6c837a5b65f")
 set(CROW_COMMIT "4f3f5deaaa01825c63c83431bfa96ccec195f741")
