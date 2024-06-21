@@ -3,7 +3,9 @@
 #include <string>
 #include <vector>
 #include <array>
+
 #include <json/json.hpp>
+#include <json/type_parse.hpp>
 
 struct Foo {
 	int         a;
@@ -25,6 +27,10 @@ struct Bar {
 struct Empty {};
 
 NLOHMANN_EMPTY_STRUCT(Empty);
+
+REGISTER_PARSE_TYPE(Foo);
+REGISTER_PARSE_TYPE(Bar);
+REGISTER_PARSE_TYPE(Empty);
 
 struct Fiz {
 	int x;
@@ -50,6 +56,6 @@ int main() {
 	std::cout << j << "\n";
 
 	std::exception* e = new std::runtime_error("error");
-
 	std::cout << nlohmann::json(*e) << "\n";
+	delete e;
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 namespace nlohmann {
-	template<class T>
+	template<class>
 	struct IsEmptySerialization {
 		static constexpr bool value = false;
 	};
