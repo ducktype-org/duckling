@@ -142,6 +142,7 @@ namespace rift_def {
 		NotASpecial,
 		Semicolon,
 		AtSign,
+		Comma,
 		DolarSign,
 		HashSign,
 		//...
@@ -152,7 +153,6 @@ namespace rift_def {
 		NotAnOperator,
 		Period,
 		PeriodStar,
-		Comma,
 		Colon,
 		Assign,
 		QuestionMark,

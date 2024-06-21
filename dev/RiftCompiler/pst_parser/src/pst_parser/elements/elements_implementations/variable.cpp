@@ -13,8 +13,9 @@ namespace pst {
 
 		// Todo: Add a possibility for type deduction from assigned value and no initial value.
 		parseAll(state, is_var ? Keyword::Var : Keyword::Let, &out->name, Operator::Colon);
-		out->type = Expr::parseUntil(state, Operator::Assign);
-		parseAll(state, Operator::Assign, &out->value);
+		out->type = Expr::parseUntil(state, Operator::Assign, true);
+		parseAll(state, Operator::Assign);
+		out->value = Expr::parse(state, true);
 
 		return out;
 	}

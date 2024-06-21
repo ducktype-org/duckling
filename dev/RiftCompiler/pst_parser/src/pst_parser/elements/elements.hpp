@@ -367,6 +367,7 @@ namespace pst {
 		};
 
 		struct Group;
+		struct CommaSeparated;
 		struct Operator;
 		struct Identifier;
 		struct NumLiteral;
@@ -375,7 +376,11 @@ namespace pst {
 			rift_def::Keyword keyword;
 		};
 
-		using ExprElem = std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue>;
+		using ExprElem = std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue, CommaSeparated>;
+
+		struct CommaSeparated {
+			std::vector<ParserRef<Expr>> expr;
+		};
 
 		struct Group {
 			GroupType       type;
@@ -400,14 +405,14 @@ namespace pst {
 		/**
 		 * @brief parses the expression until its over
 		 */
-		static ParserRef<Expr> parse(RiftParserState& state);
-		static ParserRef<Expr> parseUntil(RiftParserState& state, rift_def::Operator until);
+		static ParserRef<Expr> parse(RiftParserState& state, bool allow_comma = false);
+		static ParserRef<Expr> parseUntil(RiftParserState& state, rift_def::Operator until, bool allow_comma = false);
 		/**
 		 * @p exact_len = false: parses the expression until its over or until it parses @p len
 		 * tokens
 		 * @p exact_len = true: parses the expression until it parses @p len tokens
 		 */
-		static ParserRef<Expr> parse(RiftParserState& state, usize len, bool exact_len = true);
+		static ParserRef<Expr> parse(RiftParserState& state, usize len, bool exact_len = true, bool allow_comma = false);
 		void                   dprint(std::ostream& out) const final;
 		~Expr() final = default;
 
