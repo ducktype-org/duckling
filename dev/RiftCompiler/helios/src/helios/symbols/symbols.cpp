@@ -381,6 +381,15 @@ namespace compiler::helios {
 				variant_case(pst::Expr::KeywordValue, keyword_val) {
 					rpn.emplace_back(KeywordValue{ keyword_val.keyword });
 				}
+				variant_case(pst::Expr::CommaSeparated, tuple) {
+					for (auto&& type_expr: tuple.expr) {
+						auto&& res = ExtensionMakeRPN(
+							ctx, KeyOf_ExtensionMakeRPN{ type_expr->elements, key.expr_scope }
+						);
+						rpn.insert(rpn.end(), res.begin(), res.end());
+					}
+					rpn.emplace_back(TupleConstructor{ tuple.expr.size() });
+				}
 				variant_default { RIFT_PANIC("Bad Expr alternative"); }
 			}
 		}
@@ -421,7 +430,86 @@ namespace compiler::helios {
 		RIFT_PANIC("Error in RPNValue expr...");
 	}
 
-	rpn::ExprElem rpn::ExtensionRPNEval(query::Context& ctx, const KeyOf_ExtensionRPNEval& key) {
+	rpn::ExprElem rpn::ExtensionRPNEvalRPNExpr(
+		query::Context& ctx, const KeyOf_ExtensionRPNEvalRPNExpr& key
+	) {
+		// This is a nice RPN debug print.
+		std::cout << "RPN: \n";
+		for (auto&& e: key.rpn_expression) {
+			std::cout << "expr: ";
+			variant_match(e) {
+				variant_case(rpn::Identifier, idt) {
+					for (auto&& s: idt.symbol_list) std::cout << name(s).str() << '.';
+				}
+				variant_case(rpn::NamedIdentifier, idt) {
+					std::cout << idt.symbol_name.str() << '.';
+				}
+				variant_case(rpn::Operator, op) { std::cout << op.oper_id.str(); }
+				variant_case(rpn::KeywordValue, keyword_value) {
+					std::cout << keywordToStr(keyword_value.keyword).str();
+				}
+				variant_case(rpn::NumValue, literal) { std::cout << literal.num_id.str(); }
+				variant_case(rpn::TupleConstructor, tuple_constructor) {
+					std::cout << "Tuple constructor of num elemenents: "
+							  << tuple_constructor.num_elements;
+				}
+				variant_default { RIFT_PANIC("Bad Expr alternative"); }
+			}
+			std::cout << '\n';
+		}
+
+		// Here we will evaluate the RPN.
+		std::stack<ExprElem> st;
+		for (auto&& e: key.rpn_expression) {
+			variant_match(e) {
+				variant_case(rpn::Identifier, idt) {
+					// Assuming idt is NOT A FUNCTION.
+					st.emplace(idt);
+				}
+				variant_case(rpn::NamedIdentifier, idt) {
+					// Assuming idt is NOT A FUNCTION.
+					st.emplace(idt);
+				}
+				variant_case(rpn::KeywordValue, keyword) { st.emplace(keyword); }
+				variant_case(rpn::Operator, oper) {
+					const auto first = st.top();
+					st.pop();
+					const auto second = st.top();
+					st.pop();
+
+					st.push(ExtensionRPNEvalOperator(
+						ctx,
+						KeyOf_ExtensionRPNEvalOperator{
+							second,
+							oper,
+							first,
+							key.expr_scope,
+						}
+					));
+				}
+				variant_case(rpn::NumValue, num) { st.emplace(num); }
+				variant_case(rpn::TupleConstructor, tuple) {
+					TupleType tuple_type;
+					for (usize i = 0; i < tuple.num_elements; i++) {
+						RIFT_ASSERT(
+							!st.empty(), "Logic error during tuple creation, not enough elements"
+						);
+						auto tuple_element = st.top();
+						st.pop();
+						tuple_type.elements.push_back(tuple_element);
+					}
+					st.emplace(tuple_type);
+				}
+				variant_default { RIFT_PANIC("Bad Expr alternative"); }
+			}
+		}
+		RIFT_ASSERT(st.size() == 1, "Expression stack should have 1 element");
+		return st.top();
+	}
+
+	rpn::ExprElem rpn::ExtensionRPNEvalOperator(
+		query::Context& ctx, const KeyOf_ExtensionRPNEvalOperator& key
+	) {
 		auto&& [a, op, b, expr_scope] = key;
 
 		if (op.oper_id == ".") {
@@ -497,75 +585,21 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			RIFT_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
-			auto    const_symbol = dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
-			ScopeID key_scope    = scope(key);
+			const auto const_symbol
+				= dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
+			const ScopeID key_scope = scope(key);
 
-			const auto& expr = rpn::ExtensionMakeRPN(
+			const auto& expr = ExtensionMakeRPN(
 				ctx,
 				rpn::KeyOf_ExtensionMakeRPN{
 					const_symbol->getValue()->elements,
 					key_scope,
 				}
 			);
-
-			// This is a nice RPN debug print.
-			// std::cout << "RPN: \n";
-			// for (auto&& e: expr) {
-			// 	std::cout << "expr: ";
-			// 	variant_match(e) {
-			// 		variant_case(rpn::Identifier, idt) {
-			// 			for (auto&& s: idt.symbol_list) std::cout << name(s).str() << '.';
-			// 		}
-			// 		variant_case(rpn::NamedIdentifier, idt) {
-			// 			std::cout << idt.symbol_name.str() << '.';
-			// 		}
-			// 		variant_case(rpn::Operator, op) { std::cout << op.oper_id.str(); }
-			// 		variant_case(rpn::KeywordValue, keyword_value) {
-			// 			std::cout << keywordToStr(keyword_value.keyword).str();
-			// 		}
-			// 		variant_case(rpn::NumValue, literal) { std::cout << literal.num_id.str(); }
-			// 		variant_default { RIFT_PANIC("Bad Expr alternative"); }
-			// 	}
-			// 	std::cout << '\n';
-			// }
-
-			// Here we will evaluate the RPN.
-			std::stack<rpn::ExprElem> st;
-			for (auto&& e: expr) {
-				variant_match(e) {
-					variant_case(rpn::Identifier, idt) {
-						// Assuming idt is NOT A FUNCTION.
-						st.emplace(idt);
-					}
-					variant_case(rpn::NamedIdentifier, idt) {
-						// Assuming idt is NOT A FUNCTION.
-						st.emplace(idt);
-					}
-					variant_case(rpn::Operator, oper) {
-						const auto first = st.top();
-						st.pop();
-						const auto second = st.top();
-						st.pop();
-
-						st.push(rpn::ExtensionRPNEval(
-							ctx,
-							rpn::KeyOf_ExtensionRPNEval{
-								second,
-								oper,
-								first,
-								key_scope,
-							}
-						));
-					}
-					variant_case(rpn::NumValue, num) { st.emplace(num); }
-					variant_default { RIFT_PANIC("Bad Expr alternative"); }
-				}
-			}
-			RIFT_ASSERT(st.size() == 1, "Expression stack should have 1 element");
-			return rpn::ExtensionRPNValue(
+			return ExtensionRPNValue(
 				ctx,
 				rpn::KeyOf_ExtensionRPNValue{
-					st.top(),
+					rpn::ExtensionRPNEvalRPNExpr(ctx, { expr, key_scope }),
 					key_scope,
 				}
 			);
@@ -577,7 +611,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
 	ts::TypeInfo parseTypeFromExpr(
-		query::Context& ctx, const tpc::ParserCBorrowRef<pst::Expr>& expr, const ScopeID& expr_scope
+		query::Context& ctx, const rpn::ExprElem& expr, const ScopeID& expr_scope
 	) {
 		static auto BUILTINS = std::unordered_map<base::StrId, ts::TypeInfo>{
 			{ base::StrId("f32"), ctx.query<::ts::QueryFloatType>(32) },
@@ -589,35 +623,25 @@ namespace compiler::helios {
 			{ base::StrId("u32"), ctx.query<::ts::QueryIntegralType>({ 32, false }) },
 			{ base::StrId("u16"), ctx.query<::ts::QueryIntegralType>({ 16, false }) }
 		};
-		expr->dprint(std::cerr);
-		std::cerr << std::endl;
-		auto rpn_expr = rpn::ExtensionMakeRPN(ctx, { expr->elements, expr_scope });
-		if (expr->elements.size() != 1)
-			throw base::NotYetImplemented(
-				"Parsing types from complex expressions is not yet implemented."
-			);
-		variant_match(expr->elements[0]) {
-			variant_case(pst::Expr::Identifier, idt) {
-				const auto it = BUILTINS.find(idt.indent_id);
+		variant_match(expr) {
+			variant_case(rpn::Identifier, idt) {
+				return ctx.query<QueryTypeOf>(idt.symbol_list.back());
+			}
+			variant_case(rpn::Operator, oper) {
+				RIFT_PANIC(base::strConcat("Type cannot be an opeartor: ", oper.oper_id));
+			}
+			variant_case(rpn::NamedIdentifier, named_identifier) {
+				const auto it = BUILTINS.find(named_identifier.symbol_name);
 				if (it == BUILTINS.end()) {
 					const auto symbol = ctx.query<QueryLookupInScopeAndParents>(
-											   { expr_scope, idt.indent_id, true }
+											   { expr_scope, named_identifier.symbol_name, true }
 					)
 					                        .leaves.back();
 					return ctx.query<QueryTypeOf>(symbol);
 				}
 				return it->second;
 			}
-			variant_case(pst::Expr::Operator, oper) {
-				RIFT_PANIC(base::strConcat("Type cannot be an opeartor: ", oper.oper_id));
-			}
-			variant_case(pst::Expr::NumLiteral, num) {
-				RIFT_PANIC(base::strConcat("Type cannot be a LiteralValue: ", num.num_id));
-			}
-			variant_case(pst::Expr::Group, group) {
-				throw base::NotYetImplemented("Parsing type from groups is not yet implemented");
-			}
-			variant_case(pst::Expr::KeywordValue, keyword_val) {
+			variant_case(rpn::KeywordValue, keyword_val) {
 				const auto it = BUILTINS.find(keywordToStr(keyword_val.keyword));
 				if (it == BUILTINS.end()) {
 					throw base::NotYetImplemented(strConcat(
@@ -627,8 +651,30 @@ namespace compiler::helios {
 				}
 				return it->second;
 			}
+			variant_case(rpn::NumValue, num_value) {
+				RIFT_PANIC("Numerical value is not a type: ", num_value.num_id);
+			}
+			variant_case(rpn::TupleType, tuple_type) {
+				std::vector<ts::ComponentType> tuple_components;
+
+				tuple_components.reserve(tuple_type.elements.size());
+				for (auto&& tuple_subtype: tuple_type.elements)
+					tuple_components.push_back({ parseTypeFromExpr(ctx, tuple_subtype, expr_scope),
+					                             false });
+
+				return ctx.query<ts::QueryTupleType>({ tuple_components });
+			}
+			variant_default { RIFT_PANIC("Unhandlable type during parsing type from expr..."); }
 		}
 		RIFT_PANIC("Couldn't parse the type.");
+	}
+
+	ts::TypeInfo parseTypeFromExpr(
+		query::Context& ctx, const tpc::ParserCBorrowRef<pst::Expr>& expr, const ScopeID& expr_scope
+	) {
+		const auto rpn_expr   = rpn::ExtensionMakeRPN(ctx, { expr->elements, expr_scope });
+		const auto final_type = rpn::ExtensionRPNEvalRPNExpr(ctx, { rpn_expr, expr_scope });
+		return parseTypeFromExpr(ctx, final_type, expr_scope);
 	}
 
 	struct IMPLEMENT_QUERY(QueryTypeOf, ::ts::TypeInfo) {

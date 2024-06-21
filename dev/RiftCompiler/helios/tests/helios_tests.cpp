@@ -22,8 +22,8 @@ public:
 
 		TESTER_ADD_TEST(testI32Consts);
 		TESTER_ADD_TEST(testEdgeEvals);
-		TESTER_ADD_TEST(testTypeOf);
 		TESTER_ADD_TEST(testStructInfo);
+		TESTER_ADD_TEST(testTypeOf);
 	}
 
 private:
@@ -117,8 +117,11 @@ private:
 		ASSERT_EQUAL(true, INT32_TYPE == getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(true, F32_TYPE == getTypeOf("SimpleFloat", root_scope));
 
-		// auto tuple_int_int = getTypeOf("TypeII", root_scope);
-		// auto tuple_int_int_type_info = query::entryPoint<>();
+		const auto tuple_int_int           = getTypeOf("TupleII", root_scope);
+		const auto tuple_int_int_type_info = query::entryPoint<ts::QueryTupleType>(
+			{ { { INT32_TYPE, false }, { INT32_TYPE, false } } }
+		);
+		ASSERT_EQUAL(true, tuple_int_int == tuple_int_int_type_info);
 	}
 
 	void testEdgeEvals() {

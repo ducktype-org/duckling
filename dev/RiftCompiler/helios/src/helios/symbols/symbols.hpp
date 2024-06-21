@@ -177,8 +177,32 @@ namespace compiler::helios {
 			rift_def::Keyword keyword;
 		};
 
-		using ExprElem
-			= std::variant<Operator, NamedIdentifier, Identifier, NumValue, KeywordValue>;
+		/**
+		 * @brief A tuple call. It's meant as a information for parser to take `num_elements` from
+		 * the stack as tuple elements.
+		 */
+		struct TupleConstructor {
+			usize num_elements;
+		};
+
+		struct TupleType;
+
+		using ExprElem = std::variant<
+			Operator,
+			NamedIdentifier,
+			Identifier,
+			NumValue,
+			KeywordValue,
+			TupleConstructor,
+			TupleType>;
+
+		/**
+		 * @brief A constructed tuple. It differs from the TupleConstructor in a way that
+		 * this is something created during RPN expression evaluation, not creation.
+		 */
+		struct TupleType {
+			std::vector<ExprElem> elements;
+		};
 
 		struct KeyOf_ExtensionMakeRPN {
 			/**
@@ -196,7 +220,7 @@ namespace compiler::helios {
 		 */
 		std::vector<ExprElem> ExtensionMakeRPN(query::Context&, KeyOf_ExtensionMakeRPN);
 
-		struct KeyOf_ExtensionRPNEval {
+		struct KeyOf_ExtensionRPNEvalOperator {
 			/**
 			 * @brief Symbol on the left.
 			 */
@@ -218,7 +242,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Evaluates an operation `a (op) b`.
 		 */
-		ExprElem ExtensionRPNEval(query::Context&, const KeyOf_ExtensionRPNEval&);
+		ExprElem ExtensionRPNEvalOperator(query::Context&, const KeyOf_ExtensionRPNEvalOperator&);
 
 		struct KeyOf_ExtensionRPNValue {
 			/**
@@ -239,6 +263,13 @@ namespace compiler::helios {
 		 * rpn::Identifier([C]), then a value of a C will be returned (if it's a constant).
 		 */
 		i32 ExtensionRPNValue(query::Context&, const KeyOf_ExtensionRPNValue&);
+
+		struct KeyOf_ExtensionRPNEvalRPNExpr {
+			std::vector<ExprElem> rpn_expression;
+			ScopeID               expr_scope;
+		};
+
+		ExprElem ExtensionRPNEvalRPNExpr(query::Context&, const KeyOf_ExtensionRPNEvalRPNExpr&);
 	}
 
 	/**
