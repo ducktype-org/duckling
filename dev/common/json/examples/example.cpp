@@ -41,14 +41,15 @@ int main() {
 	MyVar y{ foo };
 	MyVar z{ bar };
 
-	nlohmann::json j;
-	nlohmann::to_json(j, x);
 
-	// std::cout << j << "\n";
-	// std::cout << JS::serializeStruct(y) << "\n";
-	// std::cout << JS::serializeStruct(z) << "\n";
+	nlohmann::json j(x);
+	std::cout << j << "\n";
+	j = y;
+	std::cout << j << "\n";
+	j = z;
+	std::cout << j << "\n";
 
 	std::exception* e = new std::runtime_error("error");
 
-	// std::cout << JS::serializeStruct(*e) << "\n";
+	std::cout << nlohmann::json(*e) << "\n";
 }

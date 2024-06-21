@@ -54,15 +54,13 @@
 // }
 
 
-using json = nlohmann::json;
-
 template<typename... Args>
 struct nlohmann::adl_serializer<std::variant<Args...>> {
 	static void to_json(json& j, const std::variant<Args...>& v) {
 		std::visit(
-			[&](auto&& value) {
-				using T = std::decay_t<decltype(value)>;
-				// j["name"] = std::string(TypeParseTraits<T>::name.data());
+			[&]<typename T2>(T2&& value) {
+				using T = std::decay_t<T2>;
+				// j["index"] = std::string(TypeParseTraits<T>::name.data());
 				if constexpr (std::is_empty_v<T> || IsEmptySerialization<T>::value) {
 				} else {
 					j["data"] = value;
@@ -71,6 +69,4 @@ struct nlohmann::adl_serializer<std::variant<Args...>> {
 			v
 		);
 	}
-
-	static void from_json(const json&, std::variant<Args...>&) {}
 };
