@@ -40,6 +40,7 @@ public:
 		TESTER_ADD_TEST(simple_floats);
 		TESTER_ADD_TEST(simple_pointer);
 		TESTER_ADD_TEST(simple_tuple);
+		TESTER_ADD_TEST(simple_variant);
 		TESTER_ADD_TEST(simple_function);
 		TESTER_ADD_TEST(simple_meta);
 		TESTER_ADD_TEST(simple_type_desc);
@@ -257,6 +258,41 @@ private:
 
 		const auto tup_5 = query::entryPoint<QueryTupleType>({ { { int_16, true }, { int_32 } } });
 		assert(tup_1 != tup_5, "Tuples with different mutability should be different.");
+	}
+
+	/**
+	 * Test that variants with different components are treated as different types
+	 * and that they are correctly cast.
+	 */
+	void simple_variant() {
+		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
+		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
+
+		const auto var_1 = query::entryPoint<QueryVariantType>({ { int_16, int_32 } });
+
+		assert(
+			var_1.getUnderlyingTypes() == std::vector<TypeInfo>({ int_16, int_32 }),
+			"Underlying types should be as constructed."
+		);
+		assert(
+			query::entryPoint<QuerySizeOfType>(var_1)
+				== std::max(
+					   query::entryPoint<QuerySizeOfType>(int_16),
+					   query::entryPoint<QuerySizeOfType>(int_32)
+				   ) + BYTE_SIZE,
+			"Size should be equal to max of underlying type sizes, plus discriminant."
+		);
+		assert(var_1.getKind() == Variant, "Variant should have kind Variant.");
+
+		const TypeInfo    type_var = var_1;
+		const VariantInfo var_2    = type_var;
+		assert(var_2.getKind() == Variant, "Tuple should survive casting.");
+
+		const auto var_3 = query::entryPoint<QueryVariantType>({ { int_16, int_32 } });
+		assert(var_1 == var_3, "Variants constructed the same way should be equal.");
+
+		const auto var_4 = query::entryPoint<QueryVariantType>({ { int_32, int_32 } });
+		assert(var_1 != var_4, "Variants with different underlying types should be different.");
 	}
 
 	/**

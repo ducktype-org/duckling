@@ -274,6 +274,30 @@ namespace ts {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleType)
+	
+	struct IMPLEMENT_QUERY(QueryVariantType, VariantInfo::Pimpl) {
+		static inline base::Map<QKey, query::CacheEntry<VariantInfo>> cache;
+		
+		static auto provide(Context&, const QKey& key) -> PResult {
+			const auto Variant_pimpl = new internal::VariantInfoImpl{ key.underlying_types };
+			pushType(base::unique_ptr(Variant_pimpl));
+			return Variant_pimpl;
+		}
+
+		static auto store(const QKey& key, const PResult p_res, const query::ACD acd) -> QResult {
+			const auto q_res = QResult{ p_res };
+			cache.emplace(key, query::CacheEntry<QResult>{ q_res, acd });
+			return q_res;
+		}
+
+		static auto load(const QKey& key) -> LoadResult {
+			if (const auto cache_iter = cache.find(key); cache_iter != cache.end())
+				return base::Optional{ cache_iter->second };
+			return {};
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVariantType)
 
 	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionInfo::Pimpl) {
 		static inline base::Map<QKey, query::CacheEntry<FunctionInfo>> cache;

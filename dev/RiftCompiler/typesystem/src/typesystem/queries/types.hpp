@@ -103,6 +103,30 @@ namespace ts {
 	DECLARE_QUERY(QueryTupleType, KeyFor_QueryTupleType, TupleInfo)
 
 	/**
+	 * @brief Key for QueryVariantType.
+	 */
+	struct KeyFor_QueryVariantType {
+		std::vector<TypeInfo> underlying_types;
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryVariantType&) const
+			= default;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			static base::Map<KeyFor_QueryVariantType, u64> hashes{};
+
+			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+
+			u64 result = hashes.size();
+			hashes.put(*this, result);
+			return result;
+		}
+	};
+
+	DECLARE_QUERY(QueryVariantType, KeyFor_QueryVariantType, VariantInfo)
+
+	/**
 	 * @brief Key for QueryFunctionType.
 	 */
 	struct KeyFor_QueryFunctionType {
