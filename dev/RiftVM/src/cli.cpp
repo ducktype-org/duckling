@@ -1,17 +1,9 @@
 #include <api/api.hpp>
-#include <json/json.hpp>
 #include "cli.hpp"
 
 std::string convertError(const vm::api::ApiError& apiError) {
 	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return "Wrong response";
-	return std::visit(
-		[](const auto& v) {
-			nlohmann::json json;
-			nlohmann::to_json(json, v);
-			return json;
-		},
-		apiError
-	);
+	return std::visit([](const auto& v) { return nlohmann::json(v); }, apiError);
 }
 
 template<class T, class E>

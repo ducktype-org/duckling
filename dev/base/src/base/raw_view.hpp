@@ -131,10 +131,3 @@ namespace std {
 		}
 	};
 }
-
-template<>
-struct nlohmann::adl_serializer<base::RawView> {
-	static void to_json(json& j, const base::RawView& v) { j = v.stringView(); }
-
-	static void from_json(const json&, const base::RawView&) {}
-};
