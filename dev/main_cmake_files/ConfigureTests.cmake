@@ -25,7 +25,6 @@ function(rift_add_test test_pack test_name source USES)
 
 		# It is needed in case tests are run on multiple threads.
 		set_target_properties(${test_name} PROPERTIES DEPENDS build_${test_pack}_tests)
-		target_include_directories(${test_name} PUBLIC tests)
 		add_dependencies(build_${test_pack}_tests ${test_name})
 		set_property(TEST "${test_name}" PROPERTY LABELS "${test_pack}")
 
