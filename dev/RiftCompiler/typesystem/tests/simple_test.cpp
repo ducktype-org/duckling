@@ -3,7 +3,7 @@
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
 
-#include "queries.hpp"
+#include <queries.hpp>
 
 using namespace ts;
 
