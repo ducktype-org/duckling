@@ -56,7 +56,7 @@ namespace ts::internal {
 
 	TupleInfoImpl::TupleInfoImpl(std::vector<ComponentType> components):
 		  components(std::move(components)) {
-		representation = stringifyTypeVector(components);
+		representation = stringifyTypeVector(this->components);
 	}
 
 	FunctionInfoImpl::FunctionInfoImpl(
