@@ -145,7 +145,7 @@ namespace compiler::helios {
 		 * @brief Gets symbols for scopes of varius statements
 		 */
 		struct SymbolGrabVisitor final: pst::PstStmtVisitorPanicky {
-			SymbolGrabVisitor(Context& ctx, QKey key): ctx(ctx), key(key) {}
+			SymbolGrabVisitor(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
 			base::Optional<std::vector<SymID>> out;
 			Context&                           ctx;

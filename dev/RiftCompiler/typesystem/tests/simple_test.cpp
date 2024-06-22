@@ -3,8 +3,6 @@
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
 
-#include <query_framework/query_impl.hpp>
-
 #include "queries.hpp"
 
 using namespace ts;
