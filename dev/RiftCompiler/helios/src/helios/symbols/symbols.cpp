@@ -220,10 +220,10 @@ namespace compiler::helios {
 	/**
 	 * @brief Query extension for looking-up chain of names
 	 */
-	SymbolList lookupChain(query::Context&, LookupChainKey);
+	SymbolList lookupChain(query::Context&, const LookupChainKey&);
 
-	SymbolList lookupChain(query::Context& ctx, LookupChainKey key) {
-		RIFT_ASSERT(key.names.size() > 0, "lookupDotted received zero names");
+	SymbolList lookupChain(query::Context& ctx, const LookupChainKey& key) {
+		RIFT_ASSERT(!key.names.empty(), "lookupDotted received zero names");
 
 		// initial symbol:
 		auto first = ctx.query<QueryLookupInScopeAndParents>(
@@ -511,7 +511,7 @@ namespace compiler::helios {
 	rpn::ExprElem rpn::ExtensionRPNEvalOperator(
 		query::Context& ctx, const KeyOf_ExtensionRPNEvalOperator& key
 	) {
-		auto&& [a, op, b, expr_scope] = key;
+		auto [a, op, b, expr_scope] = key;
 
 		if (op.oper_id == ".") {
 			// @TODO: Add a compiler log or some kind of information if lookup failes.
@@ -549,6 +549,41 @@ namespace compiler::helios {
 				}
 			}
 			RIFT_PANIC("Something strange has happended during .operator evaluation...");
+		}
+		if (op.oper_id == "|") {
+			// @TODO: Check if A and B are types.
+
+			static auto is_variant
+				= [](auto&& expr_elem) { return std::holds_alternative<Variant>(expr_elem); };
+
+			const auto is_variant_a = is_variant(a);
+			const auto is_variant_b = is_variant(b);
+
+			if (!(is_variant_a || is_variant_b)) {
+				// If neither A nor B are variants, then create a new variant type
+				// with two types: A and B
+				return Variant{ { a, b } };
+			}
+
+			// Now, `a` will be a variant.
+			if (is_variant_b) std::swap(a, b);
+
+			variant_match(a) {
+				variant_case(rpn::Variant, a_variant) {
+					variant_match(b) {
+						variant_case(rpn::Variant, b_variant) {
+							a_variant.elements.insert(
+								a_variant.elements.begin(),
+								b_variant.elements.begin(),
+								b_variant.elements.end()
+							);
+						}
+						variant_default { a_variant.elements.push_back(b); }
+					}
+				}
+				variant_default { RIFT_PANIC("A is not a variant, but it should be."); }
+			}
+			return a;
 		}
 
 		i32 a_value = ExtensionRPNValue(ctx, KeyOf_ExtensionRPNValue{ a, expr_scope });
@@ -665,6 +700,15 @@ namespace compiler::helios {
 
 				return ctx.query<ts::QueryTupleType>({ tuple_components });
 			}
+			variant_case(rpn::Variant, variant_type) {
+				std::vector<ts::TypeInfo> variant_types;
+
+				variant_types.reserve(variant_type.elements.size());
+				for (auto&& tuple_subtype: variant_type.elements)
+					variant_types.push_back(parseTypeFromExpr(ctx, tuple_subtype, expr_scope));
+
+				return ctx.query<ts::QueryVariantType>({ variant_types });
+			}
 			variant_default { RIFT_PANIC("Unhandlable type during parsing type from expr..."); }
 		}
 		RIFT_PANIC("Couldn't parse the type.");
@@ -696,7 +740,7 @@ namespace compiler::helios {
 				type_of_thing = parseTypeFromExpr(ctx, stmt.getType(), scope(key));
 			}
 
-			void visitStruct(const pst::Struct& stmt) override {
+			void visitStruct(const pst::Struct&) override {
 				type_of_thing = ctx.query<ts::QueryClassType>(key);
 			}
 		};

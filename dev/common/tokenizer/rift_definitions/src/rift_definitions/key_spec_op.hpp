@@ -155,6 +155,7 @@ namespace rift_def {
 		PeriodStar,
 		Colon,
 		Assign,
+		Pipe,  // | for variants and bitwise or.
 		QuestionMark,
 		SingleArrow,
 		DoubleArrow,

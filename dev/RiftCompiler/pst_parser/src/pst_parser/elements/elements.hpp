@@ -12,14 +12,8 @@
 #include <base/string_id.hpp>
 
 #include <variant>
-#include <iostream>
 
 // @TODO: make generic optional
-
-// forward for friend:
-namespace hir {
-	class Expression;
-}
 
 namespace pst {
 

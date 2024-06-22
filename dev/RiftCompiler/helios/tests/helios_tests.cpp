@@ -123,11 +123,23 @@ private:
 		);
 		ASSERT_EQUAL(true, tuple_int_int == tuple_int_int_type_info);
 
-		auto first_variant = getTypeOf("first_variant", root_scope);
+		const auto first_variant = getTypeOf("first_variant", root_scope);
+		const auto first_variant_type_info
+			= query::entryPoint<ts::QueryVariantType>({ { INT32_TYPE, F32_TYPE } });
+		ASSERT_EQUAL(true, first_variant == first_variant_type_info);
 
-		const auto structA = getTypeOf("A", root_scope);
-		const auto structB = getTypeOf("B", root_scope);
-		const auto structC = getTypeOf("C", root_scope);
+		const auto weird_variant = getTypeOf("weird_variant", root_scope);
+
+		const auto structA     = getTypeOf("A", root_scope);
+		const auto structB     = getTypeOf("B", root_scope);
+		const auto structC     = getTypeOf("C", root_scope);
+		auto       right_tuple = query::entryPoint<ts::QueryTupleType>(
+            { { { structA, false },
+		              { query::entryPoint<ts::QueryVariantType>({ { structB, structC } }), false } } }
+        );
+		const auto weird_variant_type
+			= query::entryPoint<ts::QueryVariantType>({ { structA, right_tuple } });
+		ASSERT_EQUAL(true, weird_variant == weird_variant_type);
 	}
 
 	void testEdgeEvals() {

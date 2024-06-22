@@ -3,9 +3,6 @@
 #include <query_framework/query_int.hpp>
 #include <pst_parser/elements/elements.hpp>
 
-// @TODO: relax this dependency
-#include <frontend/module_tree/queries.hpp>
-
 #include "../pst_ref.hpp"
 #include "../hout/hout.hpp"
 #include "../lookup_result.hpp"
@@ -186,6 +183,7 @@ namespace compiler::helios {
 		};
 
 		struct TupleType;
+		struct Variant;
 
 		using ExprElem = std::variant<
 			Operator,
@@ -194,13 +192,18 @@ namespace compiler::helios {
 			NumValue,
 			KeywordValue,
 			TupleConstructor,
-			TupleType>;
+			TupleType,
+			Variant>;
 
 		/**
 		 * @brief A constructed tuple. It differs from the TupleConstructor in a way that
 		 * this is something created during RPN expression evaluation, not creation.
 		 */
 		struct TupleType {
+			std::vector<ExprElem> elements;
+		};
+
+		struct Variant {
 			std::vector<ExprElem> elements;
 		};
 

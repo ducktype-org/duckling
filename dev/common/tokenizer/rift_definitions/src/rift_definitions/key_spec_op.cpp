@@ -127,12 +127,13 @@ namespace rift_def {
 		{ Special::DolarSign, "$" },
 	} };
 
-	constexpr std::array<std::pair<Operator, std::string_view>, 14> operator_array{ {
+	constexpr std::array<std::pair<Operator, std::string_view>, 15> operator_array{ {
 		{ Operator::NotAnOperator, "NotAnOperator" },
 		{ Operator::Period, "." },
 		{ Operator::PeriodStar, ".*" },
 		{ Operator::Colon, ":" },
 		{ Operator::Assign, "=" },
+		{ Operator::Pipe, "|" },
 		{ Operator::QuestionMark, "?" },
 		{ Operator::SingleArrow, "->" },
 		{ Operator::DoubleArrow, "=>" },
