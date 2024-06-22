@@ -691,14 +691,22 @@ namespace compiler::helios {
 				RIFT_PANIC("Numerical value is not a type: ", num_value.num_id);
 			}
 			variant_case(rpn::TupleType, tuple_type) {
-				std::vector<ts::ComponentType> tuple_components;
+				std::stack<ts::ComponentType> tuple_components;
 
-				tuple_components.reserve(tuple_type.elements.size());
 				for (auto&& tuple_subtype: tuple_type.elements)
-					tuple_components.push_back({ parseTypeFromExpr(ctx, tuple_subtype, expr_scope),
-					                             false });
+					tuple_components.push({ parseTypeFromExpr(ctx, tuple_subtype, expr_scope),
+					                        false });
 
-				return ctx.query<ts::QueryTupleType>({ tuple_components });
+				// Reverse, so because currently tuple elements are inversed.
+				// Cannot use std::reverse, because it uses std::swap, and ts::Component has const
+				// members.
+				std::vector<ts::ComponentType> tuple_components_reversed;
+				while (!tuple_components.empty()) {
+					tuple_components_reversed.emplace_back(tuple_components.top());
+					tuple_components.pop();
+				}
+
+				return ctx.query<ts::QueryTupleType>({ tuple_components_reversed });
 			}
 			variant_case(rpn::Variant, variant_type) {
 				std::vector<ts::TypeInfo> variant_types;
