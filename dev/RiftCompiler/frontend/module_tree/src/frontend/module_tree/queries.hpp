@@ -21,4 +21,11 @@ namespace compiler::frontend {
 	DECLARE_QUERY(QueryFileID,         fs::FilePath, FileId)
 	DECLARE_QUERY(QueryFilePST,        FileId,       const pst::PST<>&)
 	// clang-format on
+
+
+	/**
+	 * @brief Query extension used to 
+	 * determine ModuleID of relative import
+	 */
+	ModuleId getRelativeModule(ModuleId from, const std::vector<base::StrId>& path);
 }

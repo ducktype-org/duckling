@@ -193,7 +193,11 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.symbol.ref->kind) {
 			case SymbolKind::Using:
-			case SymbolKind::Namespace: {
+			case SymbolKind::Namespace:
+			case SymbolKind::Import: {
+				// @NOTE: for now imports are done via linked scope that looks at root module scope,
+				// but in the future it might be changed to custom code
+
 				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
 				return ctx.query<QueryLookupInScope>(
 					{ linked_scope, key.name, key.follow_wildcards }
@@ -275,6 +279,14 @@ namespace compiler::helios {
                     namespace_stmt->getBody(),
                 });
 				return inner_scope;
+			}
+			case SymbolKind::Import: {
+				auto import_stmt = dynamic_cast<const pst::Import*>(key.ref->pst_stmt.get());
+				auto imported_module = frontend::getRelativeModule(
+					module(scope(key)),
+					import_stmt->getModulePath()
+				);
+				return ctx.query<QueryRootScopeOf>(imported_module);
 			}
 			default:
 				throw base::NotYetImplemented("Getting linked scope...");
