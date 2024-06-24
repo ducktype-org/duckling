@@ -5,7 +5,7 @@ original_location=$(pwd)
 cd "$(dirname "$0")" || exit 1
 
 # Gather files
-files=$(find "../../" -mindepth 1 -iname ".*" -prune -or \( -type d -and -iregex '\.\./\.\./build[^/]*' \) -prune -or -ipath "../../out/build" -prune -or -iname "debug" -prune -or -iname "release" -prune -or -iname "libs" -prune -or -iname "docs" -prune -or -iname "*.*pp" -print)
+files=$(find "../../" -mindepth 1 -iname ".*" -prune -or \( -type d -and -iregex '\.\./\.\./[^/]*build[^/]*' \) -prune -or -ipath "../../out/build" -prune -or -iname "debug" -prune -or -iname "release" -prune -or -iname "libs" -prune -or -iname "docs" -prune -or -iname "*.*pp" -print)
 
 # Run the formatting
 echo "$files" | xargs ./../downloads/clang-format --Werror --style=file:"../../.clang-format" -i --verbose
