@@ -10,10 +10,11 @@
 
 namespace compiler::frontend {
 
+	base::StrId moduleName(ModuleId);
 
 	// clang-format off
 	DECLARE_QUERY(QueryModuleTree,     fs::FilePath, ModuleId)
-	DECLARE_QUERY(QueryParentModule,   ModuleId,     ModuleId)
+	DECLARE_QUERY(QueryParentModule,   ModuleId,     base::Optional<ModuleId>)
 	DECLARE_QUERY(QueryMainSourceFile, ModuleId,     FileId)
 	DECLARE_QUERY(QuerySourceFiles,    ModuleId,     const std::vector<FileId>&)
 	DECLARE_QUERY(QuerySubmodules,     ModuleId,     const base::HashMap<std::string COMMA ModuleId>&)
@@ -25,7 +26,8 @@ namespace compiler::frontend {
 
 	/**
 	 * @brief Query extension used to 
-	 * determine ModuleID of relative import
+	 * determine ModuleID of relative import.
+	 * Return none if no module was found.
 	 */
-	ModuleId getRelativeModule(ModuleId from, const std::vector<base::StrId>& path);
+	base::Optional<ModuleId> getRelativeModule(query::Context&, ModuleId from, const std::vector<base::StrId>& path);
 }

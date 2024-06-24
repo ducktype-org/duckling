@@ -282,10 +282,14 @@ namespace compiler::helios {
 			}
 			case SymbolKind::Import: {
 				auto import_stmt = dynamic_cast<const pst::Import*>(key.ref->pst_stmt.get());
+				
+				// @TODO: proper error handling via ErrorScope
 				auto imported_module = frontend::getRelativeModule(
+					ctx,
 					module(scope(key)),
 					import_stmt->getModulePath()
-				);
+				).value();
+
 				return ctx.query<QueryRootScopeOf>(imported_module);
 			}
 			default:

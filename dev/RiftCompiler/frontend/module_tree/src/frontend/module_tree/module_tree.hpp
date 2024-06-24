@@ -247,6 +247,8 @@ namespace compiler::frontend {
 		 * All other files inside this module. Indexed by their extension.
 		 */
 		base::HashMap<std::string, std::vector<fs::FilePath>> m_other_files;
+
+		// @TODO: change strings here to string-ids
 	};
 }
 

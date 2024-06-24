@@ -177,13 +177,20 @@ const base::HashMap<std::string, std::vector<fs::FilePath>>& ModuleTree::getOthe
 
 ModuleId ModuleTree::getId() const { return id; }
 
+base::StrId compiler::frontend::moduleName(ModuleId module) {
+	return base::StrId(modules.at(module)->getName().c_str());
+}
+
 /*********************
  * QueryParentModule *
  *********************/
-struct IMPLEMENT_QUERY(QueryParentModule, ModuleId) {
+struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleId>) {
 	static auto provide(Context&, QKey key) -> PResult {
 		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
-		return module_tree->getParentModule().value().getId();
+		if (module_tree->getParentModule()) {
+			return module_tree->getParentModule().value().getId();
+		}
+		return {};
 	}
 
 	static auto load(QKey) -> LoadResult { return {}; }
