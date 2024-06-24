@@ -25,7 +25,8 @@ namespace pst {
 		return Expr::parse(state, 1e18, false, allow_comma);
 	}
 
-	ParserRef<Expr> Expr::parseUntil(RiftParserState& state, rift_def::Operator until, bool allow_comma) {
+	ParserRef<Expr>
+		Expr::parseUntil(RiftParserState& state, rift_def::Operator until, bool allow_comma) {
 		// look ahead:
 		usize count = 0;
 		while (!state.ctokens().is(until, count)) {
@@ -43,9 +44,10 @@ namespace pst {
 	 * It is left in this state for now, as a lot will depend on semantical analysis
 	 * @TODO: lambda, todo-s
 	 */
-	ParserRef<Expr> Expr::parse(RiftParserState& state, usize len, bool exact_len, bool allow_comma) {
+	ParserRef<Expr>
+		Expr::parse(RiftParserState& state, usize len, bool exact_len, bool allow_comma) {
 		auto  res = makeRef<Expr>(state.ctokens().peek().getPosition());
-		auto out = res.borrow_mut();
+		auto  out = res.borrow_mut();
 		usize i   = 0;
 
 		while (state.notEmpty() and i < len) {
@@ -77,17 +79,19 @@ namespace pst {
 			} else if (state.ctokens().is(Special::Semicolon)) {
 				break;
 			} else if (state.ctokens().is(Special::Comma) && allow_comma) {
-				if (res->elements.size() != 1 
-					|| !std::holds_alternative<CommaSeparated>(res->elements.front())) {
+				if (res->elements.size() != 1
+				    || !std::holds_alternative<CommaSeparated>(res->elements.front())) {
 					auto sep = makeRef<Expr>(res->getSourcePosition());
 					sep->elements.emplace_back(CommaSeparated{});
-					std::get<CommaSeparated>(sep->elements.front()).expr.emplace_back(std::move(res));
-					res = std::move(sep);	
+					std::get<CommaSeparated>(sep->elements.front())
+						.expr.emplace_back(std::move(res));
+					res = std::move(sep);
 				}
 				state.tokens().skip(1);
 				auto new_exp = makeRef<Expr>(state.ctokens().peek().getPosition());
-				out = new_exp.borrow_mut();
-				std::get<CommaSeparated>(res->elements.front()).expr.emplace_back(std::move(new_exp));
+				out          = new_exp.borrow_mut();
+				std::get<CommaSeparated>(res->elements.front())
+					.expr.emplace_back(std::move(new_exp));
 			}
 			// @TODO: Add support for strings
 			else {
@@ -131,9 +135,11 @@ namespace pst {
 				variant_case(CommaSeparated, sep) {
 					out << "{ \"Comma separated\": [";
 					bool comma = false;
-					for(const auto& expr: sep.expr) {
-						if (comma) out << ", ";
-						else comma = true;
+					for (const auto& expr: sep.expr) {
+						if (comma)
+							out << ", ";
+						else
+							comma = true;
 						tpc::nullAwareDprint(expr, out);
 					}
 					out << "] }";
