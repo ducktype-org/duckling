@@ -188,7 +188,7 @@ namespace ts {
 		 */
 		[[nodiscard]]
 		bool
-			isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType& context) const;
+			isImplicitlyCoercible(TypeInfo target, query::detail::ContextType& context) const;
 
 		/**
 		 * \brief Get the text representation of this type.
