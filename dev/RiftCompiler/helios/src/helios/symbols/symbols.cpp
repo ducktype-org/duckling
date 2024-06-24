@@ -793,7 +793,7 @@ namespace compiler::helios {
 					break;
 				case SymbolKind::Const:
 				case SymbolKind::Variable:
-					struct_info.fields.push_back(sym);
+					struct_info.members.push_back(sym);
 					break;
 				default:
 					throw base::NotYetImplemented(base::strConcat(

@@ -175,8 +175,8 @@ namespace compiler::helios {
 		};
 
 		/**
-		 * @brief A tuple call. It's meant as a information for parser to take `num_elements` from
-		 * the stack as tuple elements.
+		 * @brief A tuple call. It's meant as a information for the evaluator
+         * to take `num_elements` expressions from the stack as tuple elements.
 		 */
 		struct TupleConstructor {
 			usize num_elements;
@@ -203,6 +203,9 @@ namespace compiler::helios {
 			std::vector<ExprElem> elements;
 		};
 
+        /**
+         * @brief A variant constructed from other expressions (types).
+         */
 		struct Variant {
 			std::vector<ExprElem> elements;
 		};
@@ -268,25 +271,54 @@ namespace compiler::helios {
 		i32 ExtensionRPNValue(query::Context&, const KeyOf_ExtensionRPNValue&);
 
 		struct KeyOf_ExtensionRPNEvalRPNExpr {
+            /**
+             * @brief RPN expression returned by `ExtensionMakeRPN`.
+             */
 			std::vector<ExprElem> rpn_expression;
+            /**
+             * @brief Scope, where the expression was expressed in.
+             */
 			ScopeID               expr_scope;
 		};
 
+		/**
+		 * @brief Evaluates RPN expression. Expects a single element to be
+		 * left and the end of the evaluation and returns it. Panics if otherwise.
+		 */
 		ExprElem ExtensionRPNEvalRPNExpr(query::Context&, const KeyOf_ExtensionRPNEvalRPNExpr&);
 	}
 
 	/**
 	 * @brief Query type of the symbol.
-	 * @note: not implemented yet
 	 */
 	DECLARE_QUERY(QueryTypeOf, SymID, ts::TypeInfo)
 
+	/**
+	 * @brief Struct returned by the `QueryStructInfo` query.
+	 */
 	struct StructInfo {
-		base::StrId               name;
-		std::vector<SymID>        methods;
-		std::vector<SymID>        fields;
+		/**
+		 * @brief Name of the struct in the soure code.
+		 */
+		base::StrId name;
+		/**
+		 * @brief Struct's declared methods.
+		 */
+		std::vector<SymID> methods;
+		/**
+		 * @brief Struct's declared member variables.
+		 */
+		std::vector<SymID> members;
+		/**
+		 * @brief Struct's base classes.
+		 */
 		std::vector<ts::TypeInfo> bases;
 	};
 
+	/**
+	 * @brief Query all the information about a struct definition.
+     * Panics if the given `SymID` is not a struct.
+	 * More information on `StructInfo` in it's definition.
+	 */
 	DECLARE_QUERY(QueryStructInfo, SymID, const StructInfo&)
 }

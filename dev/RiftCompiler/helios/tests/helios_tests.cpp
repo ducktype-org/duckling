@@ -90,7 +90,7 @@ private:
 		auto first_struct_info = query::entryPoint<compiler::helios::QueryStructInfo>(first_struct);
 		auto first_struct_typeinfo = query::entryPoint<compiler::helios::QueryTypeOf>(first_struct);
 
-		ASSERT_EQUAL(2, first_struct_info.fields.size());
+		ASSERT_EQUAL(2, first_struct_info.members.size());
 		ASSERT_EQUAL(2, first_struct_info.methods.size());
 		ASSERT_EQUAL(0, first_struct_info.bases.size());
 		ASSERT_EQUAL("FirstStructEver", first_struct_info.name);
@@ -99,7 +99,7 @@ private:
 		auto       second_struct_info
 			= query::entryPoint<compiler::helios::QueryStructInfo>(second_struct);
 
-		ASSERT_EQUAL(0, second_struct_info.fields.size());
+		ASSERT_EQUAL(0, second_struct_info.members.size());
 		ASSERT_EQUAL(0, second_struct_info.methods.size());
 		ASSERT_EQUAL(1, second_struct_info.bases.size());
 		ASSERT_EQUAL(true, first_struct_typeinfo == second_struct_info.bases.front());
