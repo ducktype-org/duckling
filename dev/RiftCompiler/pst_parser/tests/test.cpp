@@ -47,6 +47,7 @@ public:
 	PSTVISITOR_METHOD(Namespace)
 	PSTVISITOR_METHOD(Struct)
 	PSTVISITOR_METHOD(Fun)
+	PSTVISITOR_METHOD(Variable)
 };
 
 class SimpleParserTest: public tester::TestSuite {
@@ -91,8 +92,8 @@ private:
 			);
 			stmt->acceptVisitor(empty_vistor);
 		}
-		ASSERT_EQUAL(16, panicky_vistor.counter);
-		ASSERT_EQUAL(16, empty_vistor.counter);
+		ASSERT_EQUAL(17, panicky_vistor.counter);
+		ASSERT_EQUAL(17, empty_vistor.counter);
 	}
 
 	void testJson(

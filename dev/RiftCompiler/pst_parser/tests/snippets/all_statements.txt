@@ -32,3 +32,5 @@ continue A;
 defer a+2;
 
 return 2;
+
+var x: i32 = 5;
