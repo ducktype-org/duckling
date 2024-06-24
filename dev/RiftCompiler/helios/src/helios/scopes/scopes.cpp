@@ -128,21 +128,25 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);
 
-	std::vector<SymID>
-		makeSymbolsFromStmtList(query::Context& ctx, const ScopeID& scope, const StmtList& list) {
-		std::vector<SymID> symbols;
-		for (const auto& stmt: list) {
-			if (stmt->isDeclaration()) {
-				auto sym_id = ctx.query<QuerySymbolOfSTMT>({ scope, stmt });
-				symbols.emplace_back(sym_id);
-			}
-		}
-		return symbols;
-	}
-
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
 		/**
-		 * @brief Gets symbols for scopes of varius statements
+		 * @brief Filters out non declarations from the StmtList.
+		 */
+		static std::vector<SymID> makeSymbolsFromStmtList(
+			query::Context& ctx, const ScopeID& scope, const StmtList& list
+		) {
+			std::vector<SymID> symbols;
+			for (const auto& stmt: list) {
+				if (stmt->isDeclaration()) {
+					auto sym_id = ctx.query<QuerySymbolOfSTMT>({ scope, stmt });
+					symbols.emplace_back(sym_id);
+				}
+			}
+			return symbols;
+		}
+
+		/**
+		 * @brief Gets symbols for scopes of various statements.
 		 */
 		struct SymbolGrabVisitor final: pst::PstStmtVisitorPanicky {
 			SymbolGrabVisitor(Context& ctx, const QKey& key): ctx(ctx), key(key) {}

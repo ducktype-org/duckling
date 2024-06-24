@@ -649,7 +649,9 @@ namespace compiler::helios {
 	ts::TypeInfo parseTypeFromExpr(
 		query::Context& ctx, const rpn::ExprElem& expr, const ScopeID& expr_scope
 	) {
-		static auto BUILTINS = std::unordered_map<base::StrId, ts::TypeInfo>{
+		// This is a std::unordered_map, not base::HashMap, because base::HashMap
+		// does not support this constructor.
+		const static auto BUILTINS = std::unordered_map<base::StrId, ts::TypeInfo>{
 			{ base::StrId("f32"), ctx.query<::ts::QueryFloatType>(32) },
 			{ base::StrId("f16"), ctx.query<::ts::QueryFloatType>(16) },
 

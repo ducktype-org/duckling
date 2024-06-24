@@ -176,7 +176,7 @@ namespace compiler::helios {
 
 		/**
 		 * @brief A tuple call. It's meant as a information for the evaluator
-         * to take `num_elements` expressions from the stack as tuple elements.
+		 * to take `num_elements` expressions from the stack as tuple elements.
 		 */
 		struct TupleConstructor {
 			usize num_elements;
@@ -203,9 +203,9 @@ namespace compiler::helios {
 			std::vector<ExprElem> elements;
 		};
 
-        /**
-         * @brief A variant constructed from other expressions (types).
-         */
+		/**
+		 * @brief A variant constructed from other expressions (types).
+		 */
 		struct Variant {
 			std::vector<ExprElem> elements;
 		};
@@ -271,14 +271,14 @@ namespace compiler::helios {
 		i32 ExtensionRPNValue(query::Context&, const KeyOf_ExtensionRPNValue&);
 
 		struct KeyOf_ExtensionRPNEvalRPNExpr {
-            /**
-             * @brief RPN expression returned by `ExtensionMakeRPN`.
-             */
+			/**
+			 * @brief RPN expression returned by `ExtensionMakeRPN`.
+			 */
 			std::vector<ExprElem> rpn_expression;
-            /**
-             * @brief Scope, where the expression was expressed in.
-             */
-			ScopeID               expr_scope;
+			/**
+			 * @brief Scope, where the expression was expressed in.
+			 */
+			ScopeID expr_scope;
 		};
 
 		/**
@@ -317,7 +317,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query all the information about a struct definition.
-     * Panics if the given `SymID` is not a struct.
+	 * Panics if the given `SymID` is not a struct.
 	 * More information on `StructInfo` in it's definition.
 	 */
 	DECLARE_QUERY(QueryStructInfo, SymID, const StructInfo&)
