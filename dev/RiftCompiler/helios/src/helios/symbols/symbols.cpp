@@ -156,6 +156,18 @@ namespace compiler::helios {
 				.pst_stmt    = stmt,
 			});
 		}
+		case pst::StmtKind::Import: {
+			// For now only non-wildcard import exist
+			auto&& import = dynamic_cast<const pst::Import*>(stmt.get());
+			return putInSymtable(SymbolData{
+				.scope = scope,
+				.name  = import->getAlias(),
+				.is_wildcard = false,
+				.is_alias    = false,
+				.kind        = SymbolKind::Import,
+				.pst_stmt    = stmt,
+			});
+		}
 
 		default:
 			break;

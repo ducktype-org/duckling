@@ -111,11 +111,11 @@ namespace lexer {
 		 * stream based on the PRINT_LOG define
 		 */
 		static constexpr bool tokenMessages() {
-#ifdef PRINT_LOG
-			return true;
-#else
+// #ifdef PRINT_LOG
+			// return true;
+// #else
 			return false;
-#endif
+// #endif
 		}
 
 		printer::StreamPrinter streamPrinter;

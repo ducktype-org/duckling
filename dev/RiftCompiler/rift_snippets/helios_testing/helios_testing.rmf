@@ -1,3 +1,5 @@
+import submodule as SM;
+
 fun foo(a: i32) -> i32 {
 	alias x = N.x;
 	return x;
@@ -23,4 +25,5 @@ alias function = foo3;
 
 const z: i32 = y;
 
+const other_module: i32 = SM.a;
 
