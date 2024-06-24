@@ -9,8 +9,9 @@ namespace pst {
 		if (!assertStmtChoice<Const>(state, state.ctokens().is(Keyword::Const))) return nullptr;
 
 		parseAll(state, Keyword::Const, &out->name, Operator::Colon);
-		out->type = Expr::parseUntil(state, Operator::Assign);
-		parseAll(state, Operator::Assign, &out->value);
+		out->type = Expr::parseUntil(state, Operator::Assign, true);
+		parseAll(state, Operator::Assign);
+		out->value = Expr::parse(state, true);
 
 		return out;
 	}
@@ -22,6 +23,8 @@ namespace pst {
 		nullAwareDprint(name, out);
 		out << R"(, "type": )";
 		nullAwareDprint(type, out);
+		out << R"(, "value": )";
+		nullAwareDprint(value, out);
 		out << "}}";
 	}
 

@@ -12,14 +12,8 @@
 #include <base/string_id.hpp>
 
 #include <variant>
-#include <iostream>
 
 // @TODO: make generic optional
-
-// forward for friend:
-namespace hir {
-	class Expression;
-}
 
 namespace pst {
 
@@ -40,6 +34,7 @@ namespace pst {
 		Struct,
 		TopLevel,
 		Const,
+		Variable
 	};
 
 	class Stmt: public RiftElement {
@@ -366,6 +361,7 @@ namespace pst {
 		};
 
 		struct Group;
+		struct CommaSeparated;
 		struct Operator;
 		struct Identifier;
 		struct NumLiteral;
@@ -374,7 +370,12 @@ namespace pst {
 			rift_def::Keyword keyword;
 		};
 
-		using ExprElem = std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue>;
+		using ExprElem
+			= std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue, CommaSeparated>;
+
+		struct CommaSeparated {
+			std::vector<ParserRef<Expr>> expr;
+		};
 
 		struct Group {
 			GroupType       type;
@@ -399,15 +400,18 @@ namespace pst {
 		/**
 		 * @brief parses the expression until its over
 		 */
-		static ParserRef<Expr> parse(RiftParserState& state);
-		static ParserRef<Expr> parseUntil(RiftParserState& state, rift_def::Operator until);
+		static ParserRef<Expr> parse(RiftParserState& state, bool allow_comma = false);
+		static ParserRef<Expr>
+			parseUntil(RiftParserState& state, rift_def::Operator until, bool allow_comma = false);
 		/**
 		 * @p exact_len = false: parses the expression until its over or until it parses @p len
 		 * tokens
 		 * @p exact_len = true: parses the expression until it parses @p len tokens
 		 */
-		static ParserRef<Expr> parse(RiftParserState& state, usize len, bool exact_len = true);
-		void                   dprint(std::ostream& out) const final;
+		static ParserRef<Expr> parse(
+			RiftParserState& state, usize len, bool exact_len = true, bool allow_comma = false
+		);
+		void dprint(std::ostream& out) const final;
 		~Expr() final = default;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
@@ -504,6 +508,7 @@ namespace pst {
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
+	// TODO: Merge it with variable. Or perhaps make a new class DataStorage.
 	class Const final: public Stmt {
 		tpc::Identifier name;
 		ParserRef<Expr> type;
@@ -548,12 +553,12 @@ namespace pst {
 
 		bool trailingSemicolon() override;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
-
 		[[nodiscard]]
 		bool isDeclaration() const override {
 			return true;
 		}
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 #define DECL_CHILD_CONSTRUCTOR(class_name) \
@@ -644,6 +649,16 @@ namespace pst {
 			return name.value;
 		}
 
+		[[nodiscard]]
+		ParserCBorrowRef<CodeBlock> getBody() const {
+			return body.borrow();
+		}
+
+		[[nodiscard]]
+		ParserCBorrowRef<InheritList> getBases() const {
+			return bases.borrow();
+		}
+
 		static ParserRef<Struct> parse(RiftParserState& state);
 		~Struct() final = default;
 		void dprint(std::ostream& out) const final;
@@ -678,6 +693,34 @@ namespace pst {
 		static ParserRef<Fun> parse(RiftParserState& state);
 		void                  dprint(std::ostream& out) const final;
 		~Fun() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
+	};
+
+	class Variable final: public Decl {
+		tpc::Identifier name;
+		ParserRef<Expr> type     = nullptr;
+		ParserRef<Expr> value    = nullptr;
+		bool            is_const = true;
+
+	public:
+		DECL_CHILD_CONSTRUCTOR(Variable);
+
+		[[nodiscard]]
+		base::StrId getName() const {
+			return name.value;
+		}
+
+		bool trailingSemicolon() override;
+
+		[[nodiscard]]
+		ParserCBorrowRef<Expr> getType() const {
+			return type.borrow();
+		}
+
+		static ParserRef<Variable> parse(RiftParserState& state);
+		void                       dprint(std::ostream& out) const override;
+		~Variable() override = default;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};

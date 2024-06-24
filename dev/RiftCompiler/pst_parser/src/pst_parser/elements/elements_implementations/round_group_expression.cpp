@@ -10,7 +10,7 @@ namespace pst {
 			state.fail(-1, "expected a `(` after here");
 		} else {
 			state.goDown();
-			if (state.notEmpty()) out->expr = Expr::parse(state);
+			if (state.notEmpty()) out->expr = Expr::parse(state, true);
 			state.goUpAndSkip();
 		}
 

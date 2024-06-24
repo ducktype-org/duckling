@@ -49,6 +49,8 @@ namespace pst {
 		virtual void visitStruct([[maybe_unused]] const Struct& stmt) = 0;
 
 		virtual void visitFun([[maybe_unused]] const Fun& stmt) = 0;
+
+		virtual void visitVariable([[maybe_unused]] const Variable& stmt) = 0;
 	};
 
 	/**
@@ -94,6 +96,8 @@ namespace pst {
 		void visitStruct([[maybe_unused]] const Struct& stmt) override {}
 
 		void visitFun([[maybe_unused]] const Fun& stmt) override {}
+
+		void visitVariable([[maybe_unused]] const Variable& stmt) override {}
 	};
 
 /**
@@ -130,5 +134,6 @@ namespace pst {
 		PANIC_VISITOR_VISIT_METHOD(Namespace);
 		PANIC_VISITOR_VISIT_METHOD(Struct);
 		PANIC_VISITOR_VISIT_METHOD(Fun);
+		PANIC_VISITOR_VISIT_METHOD(Variable);
 	};
 }

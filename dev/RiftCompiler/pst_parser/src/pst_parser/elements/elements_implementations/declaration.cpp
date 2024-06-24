@@ -4,5 +4,9 @@
 namespace pst {
 	bool Decl::trailingSemicolon() { return false; }
 
-	void Decl::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitDecl(*this); }
+	void Decl::acceptVisitor(PstStmtVisitor&) const {
+		throw base::NotYetImplemented(
+			"Called visit on pst::Decl's subclass, that does not support visiting."
+		);
+	}
 }
