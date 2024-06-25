@@ -128,13 +128,13 @@ namespace fs {
 		 * A link to the directory used as a root.
 		 */
 		FilePath m_root;
-		
+
 		/**
 		 * A pointer to the tree's parent tree.
 		 * Empty if tree is a root.
 		 */
 		base::Optional<std::weak_ptr<FsTree>> m_parent;
-		
+
 		/**
 		 * A map of filenames to the appropriate fs::FilePath from inside this directory.
 		 */
