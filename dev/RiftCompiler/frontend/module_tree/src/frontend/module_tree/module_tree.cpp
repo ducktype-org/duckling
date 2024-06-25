@@ -74,7 +74,7 @@ void ModuleTree::buildModuleTree(
 
 	// Add directory submodules.
 	for (const auto& dir_iter: module_root->m_fs_tree->getDirs()) {
-		auto submodule = ModuleTree::create(dir_iter.second);
+		auto submodule      = ModuleTree::create(dir_iter.second);
 		submodule->m_parent = module_root;
 
 		// Discards directories without main module file:
@@ -92,7 +92,7 @@ void ModuleTree::handleNewFile(
 	std::string stem      = filepath.stem();
 	std::string extension = filepath.extension();
 
-	auto stem_id = base::StrId(stem.c_str());
+	auto stem_id      = base::StrId(stem.c_str());
 	auto extension_id = base::StrId(extension.c_str());
 
 	// There are 3 types of files: source files, module file, others - each if-branch handles other

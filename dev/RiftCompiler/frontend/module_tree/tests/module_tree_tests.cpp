@@ -57,7 +57,9 @@ private:
 		ASSERT_EQUAL(true, mt->hasMainSourceFile());
 		ASSERT_EQUAL("content123\n", mt->getMainSourceFile().path.getContent().view());
 		ASSERT_EQUAL(true, mt->getParentModule().empty());
-		ASSERT_EQUAL(mt->getName(), mt->getSubmodules()[base::StrId("awe")]->getParentModule()->getName());
+		ASSERT_EQUAL(
+			mt->getName(), mt->getSubmodules()[base::StrId("awe")]->getParentModule()->getName()
+		);
 	}
 
 	void testQueries() {

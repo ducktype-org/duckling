@@ -217,7 +217,7 @@ namespace compiler::frontend {
 		 * Id of the current root Module.
 		 */
 		ModuleId id;
-		
+
 		/**
 		 * A pointer to the module's parent.
 		 * Empty if module is a root module.
