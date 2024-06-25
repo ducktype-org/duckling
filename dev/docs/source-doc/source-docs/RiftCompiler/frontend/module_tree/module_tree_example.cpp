@@ -22,5 +22,5 @@ int main() {
 	// first  - name
 	// second - std::shared_ptr<ModuleTree>
 	for (const auto& submodule: module_tree->getSubmodules())
-		std::cout << submodule.first << " == " << submodule.second->getName() << '\n';
+		std::cout << submodule.first.strView() << " == " << submodule.second->getName().strView() << '\n';
 }

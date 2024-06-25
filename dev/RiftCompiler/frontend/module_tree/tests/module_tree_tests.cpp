@@ -29,19 +29,19 @@ private:
 		ASSERT_EQUAL(1, mt->getOtherFiles().size());
 		ASSERT_EQUAL(1, mt->getSourceFiles().size());
 
-		auto another_module = mt->getSubmodules()["another"];
+		auto another_module = mt->getSubmodules()[base::StrId("another")];
 		ASSERT_EQUAL(1, another_module->getSourceFiles().size());
 		ASSERT_EQUAL(true, another_module->hasMainSourceFile());
 		ASSERT_EQUAL(
 			2, another_module->getOtherFiles().size()
 		);  // 2, because there are 2 different file extensions
-		ASSERT_EQUAL(2, another_module->getOtherFiles()[".txt"].size());
-		ASSERT_EQUAL(1, another_module->getOtherFiles()[""].size());
+		ASSERT_EQUAL(2, another_module->getOtherFiles()[base::StrId(".txt")].size());
+		ASSERT_EQUAL(1, another_module->getOtherFiles()[base::StrId("")].size());
 		ASSERT_EQUAL(1, another_module->getSubmodules().size());
 		ASSERT_EQUAL("whoa.rift", another_module->getSourceFiles().front().path.name());
 
-		ASSERT_EQUAL(true, mt->getSubmodules().contains("awe"));
-		auto awe_module = mt->getSubmodules()["awe"];
+		ASSERT_EQUAL(true, mt->getSubmodules().contains(base::StrId("awe")));
+		auto awe_module = mt->getSubmodules()[base::StrId("awe")];
 		ASSERT_EQUAL(0, awe_module->getSubmodules().size());
 		ASSERT_EQUAL(0, awe_module->getSourceFiles().size());
 		ASSERT_EQUAL(0, awe_module->getOtherFiles().size());
@@ -57,14 +57,14 @@ private:
 		ASSERT_EQUAL(true, mt->hasMainSourceFile());
 		ASSERT_EQUAL("content123\n", mt->getMainSourceFile().path.getContent().view());
 		ASSERT_EQUAL(true, mt->getParentModule().empty());
-		ASSERT_EQUAL(mt->getName(), mt->getSubmodules()["awe"]->getParentModule()->getName());
+		ASSERT_EQUAL(mt->getName(), mt->getSubmodules()[base::StrId("awe")]->getParentModule()->getName());
 	}
 
 	void testQueries() {
 		auto pth  = fs::FilePath(path("test_module"));
 		auto root = query::entryPoint<QueryModuleTree>(pth);
 
-		[[maybe_unused]] auto awe = query::entryPoint<QuerySubmodules>(root).at("awe");
+		[[maybe_unused]] auto awe = query::entryPoint<QuerySubmodules>(root).at(base::StrId("awe"));
 
 		auto sources = query::entryPoint<QuerySourceFiles>(root);
 		assert(sources.size() == 1, "Bad source count!");

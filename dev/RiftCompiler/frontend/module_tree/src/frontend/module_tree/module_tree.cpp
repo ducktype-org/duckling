@@ -29,7 +29,7 @@ FileId FileId::nextID() {
 }
 
 SourceFile::SourceFile(fs::FilePath path): path(std::move(path)), id(FileId::nextID()) {
-	rift_file_name = this->path.stem();
+	rift_file_name = base::StrId(this->path.stem().c_str());
 }
 
 const pst::PST<>& SourceFile::getPST() {
@@ -79,7 +79,7 @@ void ModuleTree::buildModuleTree(
 		// Discards directories without main module file:
 		// @TODO: decide if this behavior is desirable
 		if (submodule->hasMainSourceFile())
-			module_root->m_submodules.put(dir_iter.first, submodule);
+			module_root->m_submodules.put(base::StrId(dir_iter.first.c_str()), submodule);
 	}
 }
 
@@ -91,6 +91,9 @@ void ModuleTree::handleNewFile(
 	std::string stem      = filepath.stem();
 	std::string extension = filepath.extension();
 
+	auto stem_id = base::StrId(stem.c_str());
+	auto extension_id = base::StrId(extension.c_str());
+
 	// There are 3 types of files: source files, module file, others - each if-branch handles other
 	// type.
 	if (extension == RIFT_SOURCE_FILE) {
@@ -98,7 +101,7 @@ void ModuleTree::handleNewFile(
 		module_root->m_source_files.push_back(filepath);
 	} else if (extension == RIFT_MODULE_FILE) {
 		// File with a config of SOME module.
-		if (stem == module_root->getName()) {
+		if (stem_id == module_root->getName()) {
 			// File with a config of CURRENT module.
 
 			// An assert for @aw5421 <3
@@ -109,15 +112,15 @@ void ModuleTree::handleNewFile(
 		} else {
 			// Single-file module.
 			auto submodule = std::shared_ptr<ModuleTree>(new ModuleTree());
-			module_root->m_submodules.put(stem, submodule);
+			module_root->m_submodules.put(stem_id, submodule);
 			submodule->m_main_source_file.emplace(filepath);
 			submodule->m_parent = module_root;
 		}
 	} else {
 		// File contains content not related to the module.
-		if (!module_root->m_other_files.contains(extension))
-			module_root->m_other_files.put(extension, std::vector<fs::FilePath>());
-		module_root->m_other_files[extension].push_back(filepath);
+		if (!module_root->m_other_files.contains(extension_id))
+			module_root->m_other_files.put(extension_id, std::vector<fs::FilePath>());
+		module_root->m_other_files[extension_id].push_back(filepath);
 	}
 }
 
@@ -126,9 +129,10 @@ base::Optional<const ModuleTree&> ModuleTree::getParentModule() const {
 	return *m_parent.lock();
 }
 
-std::string ModuleTree::getName() const {
+base::StrId ModuleTree::getName() const {
+	// @OPT: store this value as a module tree field
 	if (m_fs_tree == nullptr) return getMainSourceFile().rift_file_name;
-	return m_fs_tree->getRoot().name();
+	return base::StrId(m_fs_tree->getRoot().name().c_str());
 }
 
 std::string ModuleTree::prettyPrint(u32 indentation) const {
@@ -138,7 +142,7 @@ std::string ModuleTree::prettyPrint(u32 indentation) const {
 	for (u32 i = 0; i < indentation % 3; i++) indent += " ";
 	for (u32 i = 0; i < indentation - (indentation % 3); i++) indent += (i % 3 == 0 ? "│" : " ");
 
-	output << indent << getName() << "/\n";
+	output << indent << getName().strView() << "/\n";
 
 	if (m_main_source_file.has_value())
 		output << indent << "├> " << m_main_source_file.value().path.name() << '\n';
@@ -167,11 +171,11 @@ const SourceFile& ModuleTree::getMainSourceFile() const {
 
 const std::vector<SourceFile>& ModuleTree::getSourceFiles() const { return m_source_files; }
 
-const base::HashMap<std::string, std::shared_ptr<ModuleTree>>& ModuleTree::getSubmodules() const {
+const base::HashMap<base::StrId, std::shared_ptr<ModuleTree>>& ModuleTree::getSubmodules() const {
 	return m_submodules;
 }
 
-const base::HashMap<std::string, std::vector<fs::FilePath>>& ModuleTree::getOtherFiles() const {
+const base::HashMap<base::StrId, std::vector<fs::FilePath>>& ModuleTree::getOtherFiles() const {
 	return m_other_files;
 }
 
@@ -243,7 +247,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
 /*******************
  * QuerySubmodules *
  *******************/
-struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<std::string COMMA ModuleId>) {
+struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrId COMMA ModuleId>) {
 	inline static base::HashMap<QKey, base::unique_ptr<PResWithACD>> cache{};
 
 	static auto provide(Context&, QKey key) -> PResult {

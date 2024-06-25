@@ -16,7 +16,7 @@ namespace compiler::frontend {
 	DECLARE_QUERY(QueryParentModule,   ModuleId,     ModuleId)
 	DECLARE_QUERY(QueryMainSourceFile, ModuleId,     FileId)
 	DECLARE_QUERY(QuerySourceFiles,    ModuleId,     const std::vector<FileId>&)
-	DECLARE_QUERY(QuerySubmodules,     ModuleId,     const base::HashMap<std::string COMMA ModuleId>&)
+	DECLARE_QUERY(QuerySubmodules,     ModuleId,     const base::HashMap<base::StrId COMMA ModuleId>&)
 
 	DECLARE_QUERY(QueryFileID,         fs::FilePath, FileId)
 	DECLARE_QUERY(QueryFilePST,        FileId,       const pst::PST<>&)
