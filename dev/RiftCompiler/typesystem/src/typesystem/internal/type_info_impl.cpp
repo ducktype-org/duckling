@@ -17,10 +17,8 @@ namespace ts::internal {
 	Kind TupleInfoImpl::staticKind      = Kind::Tuple;
 	Kind FunctionInfoImpl::staticKind   = Kind::Function;
 	Kind VariantInfoImpl::staticKind    = Kind::Variant;
-	Kind ClassInfoImpl::staticKind      = Kind::Class;
 	Kind NamespaceInfoImpl::staticKind  = Kind::Namespace;
 	Kind ModuleInfoImpl::staticKind     = Kind::Module;
-	Kind VTableInfoImpl::staticKind     = Kind::VTable;
 	Kind MetaInfoImpl::staticKind       = Kind::Meta;
 
 	/**
@@ -125,18 +123,4 @@ namespace ts::internal {
 		representation = "Variant" + stringifyTypeVector(variant_types);
 	}
 
-	[[nodiscard]]
-	ClassInfo VTableInfoImpl::getAssociatedClass() const {
-		return associated_class;
-	}
-
-	[[nodiscard]]
-	usize VTableInfoImpl::getParentCount() const {
-		return associated_class.virtualAncestors().size();
-	}
-
-	[[nodiscard]]
-	usize VTableInfoImpl::getMethodCount() const {
-		return associated_class.getVtableSize() - getParentCount();
-	}
 }

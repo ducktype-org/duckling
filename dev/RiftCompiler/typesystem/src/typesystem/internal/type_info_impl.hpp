@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../class_types.hpp"
 #include "../kind.hpp"
 #include "../type_desc.hpp"
 #include "../type_info.hpp"
@@ -618,112 +617,6 @@ namespace ts::internal {
 		}
 	};
 
-	class ClassInfoImpl final: public TypeInfoImpl {
-		const base::StrId name;
-
-		// Stores the data of our ancestors, sorted by their offset
-		std::vector<AncestorData> ancestors_data;
-		// Stores the data of our members, could be sorted in the future
-		std::vector<MemberData> members_data;
-
-		// Indexes for looking up positions
-		// If they contain something, it's not an empty vector
-		base::Map<symtable::SymbolId, std::vector<usize>> members_positions;
-		base::Map<ClassInfo, std::vector<usize>>          ancestors_positions;
-
-		// Positions of our parents in the ancestors vector, sorted by their order
-		std::vector<usize> basic_parents;
-		// @TODO: they are a connected subsequence, maybe just remember first and last index in
-		// members_data? Positions of our members in the members vector, sorted by their order
-		std::vector<usize> direct_members;
-		// Layout of virtual ancestors, sorted by their offset
-		std::vector<std::pair<ClassInfo, usize>> virtual_layout;
-
-		usize virt_method_count;
-		usize base_size;
-
-		[[nodiscard]]
-		bool hasVtable() const;
-
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return staticKind;
-		}
-
-		/**
-		 * \brief The Kind of types described by objects of this class.
-		 */
-		static Kind staticKind;
-
-		[[nodiscard]]
-		base::StrId getName() const {
-			return name;
-		}
-
-		[[nodiscard]]
-		const std::vector<AncestorData>& allAncestors() const;
-		[[nodiscard]]
-		const std::vector<AncestorData> basicParents() const;
-		[[nodiscard]]
-		const std::vector<ClassInfo> virtualAncestors() const;
-		[[nodiscard]]
-		const std::vector<MemberData> members() const;
-		[[nodiscard]]
-		const std::vector<MemberData>& allMembers() const;
-
-		[[nodiscard]]
-		MemberInfo getMemberInfo(symtable::SymbolId symbol) const;
-		[[nodiscard]]
-		MemberInfo getMemberInfo(symtable::SymbolId symbol, std::vector<ClassInfo> hint) const;
-
-		[[nodiscard]]
-		AncestorInfo getAncestorInfo(ClassInfo ancestor_id) const;
-		[[nodiscard]]
-		AncestorInfo getAncestorInfo(const std::vector<ClassInfo>& ancestor_ids) const;
-
-		// Returns the offset of a single specific virtual ancestor
-		[[nodiscard]]
-		usize getVirtualAncestorOffset(ClassInfo ancestor_id) const;
-		// Returns all the offsets of virtual members of the clueless parent, assuming it's been
-		// created as a part of us. Since the virtual members are put at the end of the kid, they
-		// will all be positive.
-		[[nodiscard]]
-		std::vector<std::pair<ClassInfo, usize>> getVirtualAncestorTable(ClassInfo ancestor_id
-		) const;
-		[[nodiscard]]
-		std::vector<std::pair<ClassInfo, usize>>
-			getVirtualAncestorTable(std::vector<ClassInfo> ancestor_ids) const;
-
-		[[nodiscard]]
-		usize getBaseSize() const;
-		[[nodiscard]]
-		usize getVtablePtrOffset() const;
-		[[nodiscard]]
-		usize getVtableSize() const;
-		[[nodiscard]]
-		usize getVtablePositionOf(ClassInfo ancestor) const;
-
-		ClassInfoImpl(
-			base::StrId                                                   name,
-			const std::vector<std::pair<TypeDesc<>, symtable::SymbolId>>& member_types,
-			const std::vector<std::pair<ClassInfo, InheritanceTag>>&      inheritance,
-			usize                                                         virtualMethods
-		);
-
-		[[nodiscard]]
-		bool isImplicitlyCoercible(const TypeInfo target, query::detail::ContextType&)
-			const override {
-			if (target.getKind() != Kind::Class) return false;
-			const ClassInfo toClass               = target;
-			const auto [lva, so, eo, result_type] = getAncestorInfo(toClass);
-			// A class is convertible to another class when the other class is an unambiguous
-			// ancestor. The ancestor may be Standard (non-virtual) or Virtual, but it must exist
-			// (cannot be NoResult) and it cannot be Ambiguous.
-			return result_type == ResultType::Standard || result_type == ResultType::Virtual;
-		}
-	};
-
 	class NamespaceInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
@@ -752,32 +645,6 @@ namespace ts::internal {
 		static Kind staticKind;
 
 		ModuleInfoImpl(): TypeInfoImpl(0) {}
-	};
-
-	class VTableInfoImpl final: public TypeInfoImpl {
-		ClassInfo associated_class;
-
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return staticKind;
-		}
-
-		/**
-		 * \brief The Kind of types described by objects of this class.
-		 */
-		static Kind staticKind;
-
-		[[nodiscard]]
-		ClassInfo getAssociatedClass() const;
-		[[nodiscard]]
-		usize getParentCount() const;
-		[[nodiscard]]
-		usize getMethodCount() const;
-
-		explicit VTableInfoImpl(const ClassInfo class_info):
-			  TypeInfoImpl(class_info.getVtableSize() * sizeof(usize) * 8),
-			  associated_class(class_info) {}
 	};
 
 	class MetaInfoImpl final: public TypeInfoImpl {
