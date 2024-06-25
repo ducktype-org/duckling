@@ -75,6 +75,7 @@ void ModuleTree::buildModuleTree(
 	// Add directory submodules.
 	for (const auto& dir_iter: module_root->m_fs_tree->getDirs()) {
 		auto submodule = ModuleTree::create(dir_iter.second);
+		submodule->m_parent = module_root;
 
 		// Discards directories without main module file:
 		// @TODO: decide if this behavior is desirable
@@ -125,8 +126,11 @@ void ModuleTree::handleNewFile(
 }
 
 base::Optional<const ModuleTree&> ModuleTree::getParentModule() const {
-	if (m_parent.expired()) return {};
-	return *m_parent.lock();
+	if (m_parent.has_value()) {
+		RIFT_ASSERT(not m_parent.value().expired(), "Parent of a module is expired!");
+		return *m_parent->lock();
+	}
+	return {};
 }
 
 base::StrId ModuleTree::getName() const {

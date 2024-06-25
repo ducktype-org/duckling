@@ -217,10 +217,13 @@ namespace compiler::frontend {
 		 * Id of the current root Module.
 		 */
 		ModuleId id;
+		
 		/**
-		 * A pointer to the module's parent. Might be nullptr.
+		 * A pointer to the module's parent.
+		 * Empty if module is a root module.
 		 */
-		std::weak_ptr<ModuleTree> m_parent;
+		base::Optional<std::weak_ptr<ModuleTree>> m_parent;
+
 		/**
 		 * A pointer to the file system tree, that this structure is mapping.
 		 */
