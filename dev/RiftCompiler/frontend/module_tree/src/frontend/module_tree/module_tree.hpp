@@ -15,8 +15,6 @@
 
 #include <string>
 
-// @TODO: change std::string here to StrId
-
 namespace compiler::frontend {
 	/**
 	 * @brief Structure holding FileID within SourceFile
@@ -45,7 +43,7 @@ namespace compiler::frontend {
 	 */
 	struct SourceFile {
 		fs::FilePath               path;
-		std::string                rift_file_name;  // or StrID?
+		base::StrId                rift_file_name;
 		FileId                     id;
 		base::Optional<pst::PST<>> parse_tree;
 
@@ -162,7 +160,7 @@ namespace compiler::frontend {
 		 * @return base::HashMap that maps a name of the submodule to the pointer to the submodule.
 		 */
 		[[nodiscard]]
-		const base::HashMap<std::string, std::shared_ptr<ModuleTree>>& getSubmodules() const;
+		const base::HashMap<base::StrId, std::shared_ptr<ModuleTree>>& getSubmodules() const;
 
 		/**
 		 * Accesses all the other files that are located inside the module.
@@ -170,14 +168,14 @@ namespace compiler::frontend {
 		 * with files with this extension.
 		 */
 		[[nodiscard]]
-		const base::HashMap<std::string, std::vector<fs::FilePath>>& getOtherFiles() const;
+		const base::HashMap<base::StrId, std::vector<fs::FilePath>>& getOtherFiles() const;
 
 		/**
 		 * Parses the name of the module.
-		 * @return std::string with the name. `A.rmf -> A`, `/.../module/ -> module`.
+		 * @return base::StrId with the name. `A.rmf -> A`, `/.../module/ -> module`.
 		 */
 		[[nodiscard]]
-		std::string getName() const;
+		base::StrId getName() const;
 
 		/**
 		 * Creates a nice, human-readable representation of this module tree.
@@ -219,10 +217,13 @@ namespace compiler::frontend {
 		 * Id of the current root Module.
 		 */
 		ModuleId id;
+
 		/**
-		 * A pointer to the module's parent. Might be nullptr.
+		 * A pointer to the module's parent.
+		 * Empty if module is a root module.
 		 */
-		std::weak_ptr<ModuleTree> m_parent;
+		base::Optional<std::weak_ptr<ModuleTree>> m_parent;
+
 		/**
 		 * A pointer to the file system tree, that this structure is mapping.
 		 */
@@ -242,11 +243,11 @@ namespace compiler::frontend {
 		/**
 		 * Other direct submodules. Maps module's name to a pointer to it.
 		 */
-		base::HashMap<std::string, std::shared_ptr<ModuleTree>> m_submodules;
+		base::HashMap<base::StrId, std::shared_ptr<ModuleTree>> m_submodules;
 		/**
 		 * All other files inside this module. Indexed by their extension.
 		 */
-		base::HashMap<std::string, std::vector<fs::FilePath>> m_other_files;
+		base::HashMap<base::StrId, std::vector<fs::FilePath>> m_other_files;
 	};
 }
 
