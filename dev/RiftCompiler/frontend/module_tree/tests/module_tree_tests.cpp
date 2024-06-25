@@ -67,15 +67,29 @@ private:
 		auto mod_module     = awesome_module->getSubmodules()[base::StrId("mod")];
 
 		assert(not mt->getParentModule().has_value(), "Root module has a parent");
-		assert(awe_module->getParentModule().has_value(), "Non-root module does not have a parent (1)");
-		assert(another_module->getParentModule().has_value(), "Non-root module does not have a parent (2)");
-		assert(awesome_module->getParentModule().has_value(), "Non-root module does not have a parent (3)");
-		assert(mod_module->getParentModule().has_value(), "Non-root module does not have a parent (4)");
+		assert(
+			awe_module->getParentModule().has_value(), "Non-root module does not have a parent (1)"
+		);
+		assert(
+			another_module->getParentModule().has_value(),
+			"Non-root module does not have a parent (2)"
+		);
+		assert(
+			awesome_module->getParentModule().has_value(),
+			"Non-root module does not have a parent (3)"
+		);
+		assert(
+			mod_module->getParentModule().has_value(), "Non-root module does not have a parent (4)"
+		);
 
 		ASSERT_EQUAL_NO_PRINT(mt->getId(), awe_module->getParentModule().value().getId());
 		ASSERT_EQUAL_NO_PRINT(mt->getId(), another_module->getParentModule().value().getId());
-		ASSERT_EQUAL_NO_PRINT(another_module->getId(), awesome_module->getParentModule().value().getId());
-		ASSERT_EQUAL_NO_PRINT(awesome_module->getId(), mod_module->getParentModule().value().getId());
+		ASSERT_EQUAL_NO_PRINT(
+			another_module->getId(), awesome_module->getParentModule().value().getId()
+		);
+		ASSERT_EQUAL_NO_PRINT(
+			awesome_module->getId(), mod_module->getParentModule().value().getId()
+		);
 	}
 
 	void testQueries() {
@@ -91,8 +105,6 @@ private:
 
 		[[maybe_unused]] auto& pst = query::entryPoint<QueryFilePST>(main_id);
 	}
-
-
 };
 
 TESTER_COMMON_MAIN("/RiftCompiler/frontend/module_tree/tests/");

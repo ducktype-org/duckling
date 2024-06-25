@@ -11,7 +11,7 @@
 #include <string>
 #include <printer/stream_printer.hpp>
 
-// @TODO: error message here is weird: 
+// @TODO: error message here is weird:
 
 #define ASSERT_EQUAL(expected, actual)         \
 	assertEqual(                               \
@@ -33,18 +33,13 @@
 		)                                      \
 	)
 
-#define ASSERT_EQUAL_NO_PRINT(expected, actual) \
-	assertEqual(                                \
-		expected,                               \
-		actual,                                \
-		base::strConcat(                       \
-			"Values not equal:\n\t\tIn line ", \
-			__LINE__,                          \
-			": ",                              \
-			#expected,                          \
-			" != ",                            \
-			#actual                           \
-		)                                      \
+#define ASSERT_EQUAL_NO_PRINT(expected, actual)                                           \
+	assertEqual(                                                                          \
+		expected,                                                                         \
+		actual,                                                                           \
+		base::strConcat(                                                                  \
+			"Values not equal:\n\t\tIn line ", __LINE__, ": ", #expected, " != ", #actual \
+		)                                                                                 \
 	)
 
 
