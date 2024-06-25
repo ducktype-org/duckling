@@ -122,6 +122,7 @@ void ModuleTree::handleNewFile(
 }
 
 base::Optional<const ModuleTree&> ModuleTree::getParentModule() const {
+	std::cerr << " >> getParentModule: " << m_parent.use_count() << "\n";
 	if (m_parent.expired()) return {};
 	return *m_parent.lock();
 }

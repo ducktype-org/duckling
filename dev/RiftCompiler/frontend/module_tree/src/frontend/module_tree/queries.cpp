@@ -64,6 +64,9 @@ namespace compiler::frontend {
 
 
 	base::Optional<ModuleId> getRelativeModule(query::Context& ctx, ModuleId from, const std::vector<base::StrId>& path) {
+		std::cerr <<"\n---\n";
+		std::cerr << "looking from: " << frontend::moduleName(from).strView() << "\n";
+		
 		RIFT_ASSERT(path.size() >= 1, "Empty module path");
 
 		// @TODO: ambiguities
@@ -75,6 +78,7 @@ namespace compiler::frontend {
 		base::Optional<ModuleId> current_module;
 
 		for (const auto& [name, submodule]: ctx.query<QuerySubmodules>(from)) {
+			std::cerr << "Looking at: " << name << "\n";
 			if (base::StrId(name.c_str()) == path.at(0)) {
 				current_module = submodule;
 				break;
@@ -83,6 +87,7 @@ namespace compiler::frontend {
 		if (not current_module.has_value()) {
 			base::Optional<ModuleId> ancestor = ctx.query<QueryParentModule>(from);
 			while (ancestor) {
+				std::cerr << "Looking at: " << frontend::moduleName(ancestor.value()).strView() << "\n";
 				if (frontend::moduleName(ancestor.value()) == path.at(0)) {
 					current_module = ancestor.value();
 					break;
