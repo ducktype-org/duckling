@@ -7,7 +7,6 @@
 
 namespace compiler::frontend {
 
-
 	/*******************
 	 * QueryModuleTree *
 	 *******************/

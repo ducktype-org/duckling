@@ -15,7 +15,12 @@ namespace compiler::frontend {
 
 	// clang-format off
 	DECLARE_QUERY(QueryModuleTree,     fs::FilePath, ModuleId)
+
+	/**
+	 * @brief Return none for root-module
+	 */
 	DECLARE_QUERY(QueryParentModule,   ModuleId,     base::Optional<ModuleId>)
+	
 	DECLARE_QUERY(QueryMainSourceFile, ModuleId,     FileId)
 	DECLARE_QUERY(QuerySourceFiles,    ModuleId,     const std::vector<FileId>&)
 	DECLARE_QUERY(QuerySubmodules,     ModuleId,     const base::HashMap<base::StrId COMMA ModuleId>&)

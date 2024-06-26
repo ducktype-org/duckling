@@ -20,4 +20,3 @@ const it_through_alias: i32 = sm11.it_in_sm11;
 const sm1_through_sm11: i32 = sm11.sm1_in_sm11;
 const sm2_v: i32 = sm2.my_value;
 const cyclic_final: i32 = c1.a6;
-
