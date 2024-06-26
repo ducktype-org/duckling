@@ -24,7 +24,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Return module the scope was defined in
 	 */
-	frontend::ModuleId      module(ScopeID id);
+	frontend::ModuleId module(ScopeID id);
 
 	/**
 	 * @brief Query root scope for given module.

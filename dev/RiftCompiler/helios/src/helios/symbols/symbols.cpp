@@ -160,8 +160,8 @@ namespace compiler::helios {
 			// For now only non-wildcard import exist
 			auto&& import = dynamic_cast<const pst::Import*>(stmt.get());
 			return putInSymtable(SymbolData{
-				.scope = scope,
-				.name  = import->getAlias(),
+				.scope       = scope,
+				.name        = import->getAlias(),
 				.is_wildcard = false,
 				.is_alias    = false,
 				.kind        = SymbolKind::Import,
@@ -282,13 +282,12 @@ namespace compiler::helios {
 			}
 			case SymbolKind::Import: {
 				auto import_stmt = dynamic_cast<const pst::Import*>(key.ref->pst_stmt.get());
-				
+
 				// @TODO: proper error handling via ErrorScope
 				auto imported_module = frontend::getRelativeModule(
-					ctx,
-					module(scope(key)),
-					import_stmt->getModulePath()
-				).value();
+										   ctx, module(scope(key)), import_stmt->getModulePath()
+				)
+				                           .value();
 
 				return ctx.query<QueryRootScopeOf>(imported_module);
 			}

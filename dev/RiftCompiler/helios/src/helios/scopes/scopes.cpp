@@ -67,9 +67,7 @@ namespace compiler::helios {
 		}
 	}
 
-	frontend::ModuleId module(ScopeID id) {
-		return getScopeRef(id)->parent_module;
-	}
+	frontend::ModuleId module(ScopeID id) { return getScopeRef(id)->parent_module; }
 
 	namespace {
 		base::StableVector<ScopeData> scope_table;

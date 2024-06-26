@@ -227,8 +227,11 @@ namespace pst {
 		static ParserRef<Import> parse(RiftParserState& state);
 		[[nodiscard]]
 		const decltype(names)& getNames() const;
+
 		[[nodiscard]]
-		base::StrId getAlias() const { return alias.value; };
+		base::StrId getAlias() const {
+			return alias.value;
+		}
 
 		/**
 		 * @note In the future this functionality will be done by HELIOS.

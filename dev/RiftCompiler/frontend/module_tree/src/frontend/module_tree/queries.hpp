@@ -31,9 +31,10 @@ namespace compiler::frontend {
 
 
 	/**
-	 * @brief Query extension used to 
+	 * @brief Query extension used to
 	 * determine ModuleID of relative import.
 	 * Return none if no module was found.
 	 */
-	base::Optional<ModuleId> getRelativeModule(query::Context&, ModuleId from, const std::vector<base::StrId>& path);
+	base::Optional<ModuleId>
+		getRelativeModule(query::Context&, ModuleId from, const std::vector<base::StrId>& path);
 }

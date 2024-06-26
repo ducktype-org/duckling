@@ -27,14 +27,14 @@ inline static base::HashMap<ModuleId, std::shared_ptr<ModuleTree>> modules{};
 
 /**
  * @brief Holds global map of all Source files
- * @TODO: this holding a reference is dangerous: 
+ * @TODO: this holding a reference is dangerous:
  */
-inline static base::HashMap<FileId, SourceFile&>                   files{};
+inline static base::HashMap<FileId, SourceFile&> files{};
 
 /**
  * @brief Holds global map of module path to module id
  */
-inline static base::HashMap<fs::FilePath, ModuleId>                modulePaths{};
+inline static base::HashMap<fs::FilePath, ModuleId> modulePaths{};
 
 FileId FileId::nextID() {
 	// @OPT: move to global variable
@@ -134,7 +134,9 @@ void ModuleTree::handleNewFile(
 			module_root->m_submodules.put(stem_id, submodule);
 			submodule->m_main_source_file.emplace(filepath);
 			submodule->m_parent = module_root;
-			files.put(submodule->m_main_source_file.value().id, submodule->m_main_source_file.value());
+			files.put(
+				submodule->m_main_source_file.value().id, submodule->m_main_source_file.value()
+			);
 		}
 	} else {
 		// File contains content not related to the module.
@@ -218,9 +220,7 @@ std::string compiler::frontend::printModuleTree(ModuleId module) {
 struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleId>) {
 	static auto provide(Context&, QKey key) -> PResult {
 		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
-		if (module_tree->getParentModule()) {
-			return module_tree->getParentModule().value().getId();
-		}
+		if (module_tree->getParentModule()) return module_tree->getParentModule().value().getId();
 		return {};
 	}
 

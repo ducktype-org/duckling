@@ -91,7 +91,9 @@ namespace base {
 		 * Get internal ID
 		 */
 		[[nodiscard]]
-		InnerId innerID() const { return this->id; }
+		InnerId innerID() const {
+			return this->id;
+		}
 
 		friend class std::hash<StrId>;
 	};

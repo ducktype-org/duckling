@@ -61,8 +61,9 @@ namespace compiler::frontend {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFileID);
 
-
-	base::Optional<ModuleId> getRelativeModule(query::Context& ctx, ModuleId from, const std::vector<base::StrId>& path) {
+	base::Optional<ModuleId> getRelativeModule(
+		query::Context& ctx, ModuleId from, const std::vector<base::StrId>& path
+	) {
 		RIFT_ASSERT(path.size() >= 1, "Empty module path");
 
 		// @TODO: ambiguities

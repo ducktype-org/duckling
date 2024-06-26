@@ -116,11 +116,11 @@ private:
 			this->fail(base::strConcat("No constant of name: ", name.strView()));
 		};
 
-		test_value("sm1_v", 123123);
-		test_value("sm11_v", 7812313);
-		test_value("it_through_alias", 19923);
-		test_value("sm1_through_sm11", 123123);
-		test_value("sm2_v", 777666);
+		test_value("sm1_v", 123'123);
+		test_value("sm11_v", 7'812'313);
+		test_value("it_through_alias", 19'923);
+		test_value("sm1_through_sm11", 123'123);
+		test_value("sm2_v", 777'666);
 		test_value("cyclic_final", 6);
 	}
 };
