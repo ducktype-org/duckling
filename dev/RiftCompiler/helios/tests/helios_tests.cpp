@@ -102,7 +102,6 @@ private:
 		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
 			fs::FilePath(path("test_modules/import_tests"))
 		);
-		std::cerr << compiler::frontend::printModuleTree(module);
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
@@ -122,8 +121,7 @@ private:
 		test_value("it_through_alias", 19923);
 		test_value("sm1_through_sm11", 123123);
 		test_value("sm2_v", 777666);
-
-
+		test_value("cyclic_final", 6);
 	}
 };
 

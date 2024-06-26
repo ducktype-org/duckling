@@ -15,9 +15,25 @@ using fs::FsTree;
 using std::regex;
 using namespace compiler::frontend;
 
+// @TODO: creation points of module tree shared objects
+// as well as filling of modules, files global lists
+// should be centralized to single methods/functions
+// the current situation is hard to maintain
+
+/**
+ * @brief Holds global map of all modules
+ */
 inline static base::HashMap<ModuleId, std::shared_ptr<ModuleTree>> modules{};
-// @TODO: this holding a reference is dangerous:
+
+/**
+ * @brief Holds global map of all Source files
+ * @TODO: this holding a reference is dangerous: 
+ */
 inline static base::HashMap<FileId, SourceFile&>                   files{};
+
+/**
+ * @brief Holds global map of module path to module id
+ */
 inline static base::HashMap<fs::FilePath, ModuleId>                modulePaths{};
 
 FileId FileId::nextID() {
@@ -41,11 +57,6 @@ const pst::PST<>& SourceFile::getPST() {
 		return parse_tree.value();
 	}
 }
-
-// @TODO: creation points of module tree shared objects
-// as well as filling of modules, files global lists
-// should be centralized to single methods/functions
-// the current situation is hard to maintain
 
 ModuleTree::ModuleTree(): id(ModuleId::next()){};
 
