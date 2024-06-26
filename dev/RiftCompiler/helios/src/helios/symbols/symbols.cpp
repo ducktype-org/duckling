@@ -671,10 +671,13 @@ namespace compiler::helios {
 			variant_case(rpn::NamedIdentifier, named_identifier) {
 				const auto it = BUILTINS.find(named_identifier.symbol_name);
 				if (it == BUILTINS.end()) {
-					const auto symbol = ctx.query<QueryLookupInScopeAndParents>(
-											   { expr_scope, named_identifier.symbol_name, true }
-					)
-					                        .leaves.back();
+					const auto symbol
+						= ctx.query<QueryLookupInScopeAndParents>({
+																	  expr_scope,
+																	  named_identifier.symbol_name,
+																	  true,
+																  })
+					          .leaves.back();
 					return ctx.query<QueryTypeOf>(symbol);
 				}
 				return it->second;
@@ -693,22 +696,15 @@ namespace compiler::helios {
 				RIFT_PANIC("Numerical value is not a type: ", num_value.num_id);
 			}
 			variant_case(rpn::TupleType, tuple_type) {
-				std::stack<ts::ComponentType> tuple_components;
+				std::vector<ts::ComponentType> tuple_components;
 
 				for (auto&& tuple_subtype: tuple_type.elements)
-					tuple_components.push({ parseTypeFromExpr(ctx, tuple_subtype, expr_scope),
-					                        false });
+					tuple_components.emplace_back(
+						parseTypeFromExpr(ctx, tuple_subtype, expr_scope), false
+					);
+				std::reverse(tuple_components.begin(), tuple_components.end());
 
-				// Reverse, so because currently tuple elements are inversed.
-				// Cannot use std::reverse, because it uses std::swap, and ts::Component has const
-				// members.
-				std::vector<ts::ComponentType> tuple_components_reversed;
-				while (!tuple_components.empty()) {
-					tuple_components_reversed.emplace_back(tuple_components.top());
-					tuple_components.pop();
-				}
-
-				return ctx.query<ts::QueryTupleType>({ tuple_components_reversed });
+				return ctx.query<ts::QueryTupleType>({ tuple_components });
 			}
 			variant_case(rpn::Variant, variant_type) {
 				std::vector<ts::TypeInfo> variant_types;

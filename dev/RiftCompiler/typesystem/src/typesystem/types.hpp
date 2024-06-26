@@ -168,12 +168,12 @@ namespace ts {
 		/**
 		 * \brief The actual type of the component.
 		 */
-		const TypeInfo type;
+		TypeInfo type;
 
 		/**
 		 * \brief Whether the component is mutable or not.
 		 */
-		const bool is_mutable = false;
+		bool is_mutable = false;
 
 		/**
 		 * \brief Create a string representation of the component type.
