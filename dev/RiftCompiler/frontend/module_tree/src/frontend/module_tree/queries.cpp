@@ -78,8 +78,8 @@ namespace compiler::frontend {
 		base::Optional<ModuleId> current_module;
 
 		for (const auto& [name, submodule]: ctx.query<QuerySubmodules>(from)) {
-			std::cerr << "Looking at: " << name << "\n";
-			if (base::StrId(name.c_str()) == path.at(0)) {
+			std::cerr << "Looking at: " << name.strView() << "\n";
+			if (name == path.at(0)) {
 				current_module = submodule;
 				break;
 			}
@@ -101,7 +101,7 @@ namespace compiler::frontend {
 		for (usize i = 1; i < path.size() and current_module.has_value(); i++) {
 			auto curr_children = ctx.query<QuerySubmodules>(current_module.value());
 			for (const auto& [name, submodule]: curr_children) {
-				if (base::StrId(name.c_str()) == path.at(0)) {
+				if (name == path.at(0)) {
 					current_module = submodule;
 					break;
 				}
