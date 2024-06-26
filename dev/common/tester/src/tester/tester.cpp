@@ -98,11 +98,12 @@ namespace tester {
 				"TestSuite."
 			);
 			message(exception.what());
-		} catch (const std::exception& exception) {
-			curr_global_res->success = false;
-			message("std::exception was thrown. This was not expected.");
-			message(exception.what());
-		}
+		} 
+		// catch (const std::exception& exception) {
+		// 	curr_global_res->success = false;
+		// 	message("std::exception was thrown. This was not expected.");
+		// 	message(exception.what());
+		// }
 	}
 
 	void TestSuite::resultHandler(const TestData& test, const TestResult& res) {

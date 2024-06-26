@@ -11,6 +11,7 @@
 namespace compiler::frontend {
 
 	base::StrId moduleName(ModuleId);
+	std::string printModuleTree(ModuleId);
 
 	// clang-format off
 	DECLARE_QUERY(QueryModuleTree,     fs::FilePath, ModuleId)

@@ -20,7 +20,7 @@ fun foo3(a: i32) -> i32 {
 }
 
 namespace N {
-	const x: i32 = 123;
+	const x: i32 = 124;
 }
 
 alias y = N.x;

@@ -23,6 +23,7 @@ public:
 		TESTER_ADD_TEST(testI32Consts);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(simpleHOUTTest);
+		TESTER_ADD_TEST(importTest);
 	}
 
 private:
@@ -95,6 +96,34 @@ private:
 
 		ASSERT_EQUAL(hout.functions.size(), 3);
 		ASSERT_EQUAL(hout.glob_data.size(), 2);
+	}
+
+	void importTest() {
+		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
+			fs::FilePath(path("test_modules/import_tests"))
+		);
+		std::cerr << compiler::frontend::printModuleTree(module);
+
+		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		auto test_value = [&](auto str, i64 val) {
+			auto name = base::StrId(str);
+			for (auto& gb: hout.glob_data) {
+				if (gb.original_name == name) {
+					this->assert(gb.value == val, "Bad constant value");
+					return;
+				}
+			}
+			this->fail(base::strConcat("No constant of name: ", name.strView()));
+		};
+
+		test_value("sm1_v", 123123);
+		test_value("sm11_v", 7812313);
+		test_value("it_through_alias", 19923);
+		test_value("sm1_through_sm11", 123123);
+		test_value("sm2_v", 777666);
+
+
 	}
 };
 

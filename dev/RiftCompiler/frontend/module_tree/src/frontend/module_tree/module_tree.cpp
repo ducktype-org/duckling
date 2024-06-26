@@ -16,6 +16,7 @@ using std::regex;
 using namespace compiler::frontend;
 
 inline static base::HashMap<ModuleId, std::shared_ptr<ModuleTree>> modules{};
+// @TODO: this holding a reference is dangerous:
 inline static base::HashMap<FileId, SourceFile&>                   files{};
 inline static base::HashMap<fs::FilePath, ModuleId>                modulePaths{};
 
@@ -40,6 +41,11 @@ const pst::PST<>& SourceFile::getPST() {
 		return parse_tree.value();
 	}
 }
+
+// @TODO: creation points of module tree shared objects
+// as well as filling of modules, files global lists
+// should be centralized to single methods/functions
+// the current situation is hard to maintain
 
 ModuleTree::ModuleTree(): id(ModuleId::next()){};
 
@@ -113,9 +119,11 @@ void ModuleTree::handleNewFile(
 		} else {
 			// Single-file module.
 			auto submodule = std::shared_ptr<ModuleTree>(new ModuleTree());
+			modules.put(submodule->getId(), submodule);
 			module_root->m_submodules.put(stem_id, submodule);
 			submodule->m_main_source_file.emplace(filepath);
 			submodule->m_parent = module_root;
+			files.put(submodule->m_main_source_file.value().id, submodule->m_main_source_file.value());
 		}
 	} else {
 		// File contains content not related to the module.
@@ -187,6 +195,10 @@ ModuleId ModuleTree::getId() const { return id; }
 
 base::StrId compiler::frontend::moduleName(ModuleId module) {
 	return modules.at(module)->getName();
+}
+
+std::string compiler::frontend::printModuleTree(ModuleId module) {
+	return modules.at(module)->prettyPrint();
 }
 
 /*********************
