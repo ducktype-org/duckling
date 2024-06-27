@@ -238,6 +238,7 @@ namespace compiler::frontend {
 		base::Optional<SourceFile> m_main_source_file;
 		/**
 		 * All the source files in the module. Does not contain files of other submodules.
+		 * Does not include main source file.
 		 */
 		std::vector<SourceFile> m_source_files;
 		/**
