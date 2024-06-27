@@ -21,7 +21,7 @@ namespace compiler::frontend {
 
 	/**
 	 * @brief Query parent of a module.
-	 * Return none for root-module.
+	 * @return parent module, none for root-module.
 	 */
 	DECLARE_QUERY(QueryParentModule, ModuleId, base::Optional<ModuleId>)
 
@@ -70,7 +70,8 @@ namespace compiler::frontend {
 	 *
 	 * @note @todo: it currently will return some module even if
 	 * there is an ambiguity.
-	 * Return none if no matching module was found.
+	 *
+	 * @return Found module, none if no matching module was found.
 	 */
 	base::Optional<ModuleId>
 		getRelativeModule(query::Context&, ModuleId from, const std::vector<base::StrId>& path);
