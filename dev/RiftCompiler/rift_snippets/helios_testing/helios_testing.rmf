@@ -1,3 +1,9 @@
+import submodule as SM;
+
+const other_module: i32 = SM.a;
+const other_module_2: i32 = SM.a + SM.b;
+
+
 fun foo(a: i32) -> i32 {
 	alias x = N.x;
 	return x;
@@ -14,7 +20,7 @@ fun foo3(a: i32) -> i32 {
 }
 
 namespace N {
-	const x: i32 = 123;
+	const x: i32 = 124;
 }
 
 alias y = N.x;

@@ -34,6 +34,11 @@ namespace compiler::helios {
 		 */
 		PstRef<pst::RiftElement> related_pst_element;
 
+		/**
+		 * @brief Module, the scope was defined in
+		 */
+		frontend::ModuleId parent_module;
+
 		// cache entries:
 		// in the future we might need separation for: direct symbols, expanded symbols
 		// in this system scope is no longer closed/open as we think of it as a pure-value object
@@ -62,6 +67,8 @@ namespace compiler::helios {
 		}
 	}
 
+	frontend::ModuleId module(ScopeID id) { return getScopeRef(id)->parent_module; }
+
 	namespace {
 		base::StableVector<ScopeData> scope_table;
 
@@ -84,6 +91,7 @@ namespace compiler::helios {
 				.parent              = ScopeID{ nullptr },
 				.is_root             = true,
 				.related_pst_element = module_pst.getRootElement(),
+				.parent_module       = key,
 				.symbols             = {},
 			});
 		}
@@ -119,6 +127,7 @@ namespace compiler::helios {
 			return putInScopeTable(ScopeData{
 				.parent              = element.parent,
 				.related_pst_element = element.base_element,
+				.parent_module       = module(element.parent),
 				.symbols             = {},
 			});
 		}
