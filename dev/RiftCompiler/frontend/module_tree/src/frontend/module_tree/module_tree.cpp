@@ -134,9 +134,9 @@ void ModuleTree::handleNewFile(
 			module_root->m_submodules.put(stem_id, submodule);
 			submodule->m_main_source_file.emplace(filepath);
 			submodule->m_parent = module_root;
-			files.put(
-				submodule->m_main_source_file.value().id, submodule->m_main_source_file.value()
-			);
+			if_opt_some(submodule->m_main_source_file, main_file) {
+				files.put(main_file.id, main_file);
+			}
 		}
 	} else {
 		// File contains content not related to the module.
@@ -220,8 +220,9 @@ std::string compiler::frontend::printModuleTree(ModuleId module) {
 struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleId>) {
 	static auto provide(Context&, QKey key) -> PResult {
 		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
-		if (module_tree->getParentModule()) return module_tree->getParentModule().value().getId();
-		return {};
+		return module_tree->getParentModule().map([](const auto& parent){
+			return parent.getId();
+		});
 	}
 
 	static auto load(QKey) -> LoadResult { return {}; }
