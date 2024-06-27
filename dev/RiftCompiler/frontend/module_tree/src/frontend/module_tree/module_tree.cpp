@@ -220,9 +220,8 @@ std::string compiler::frontend::printModuleTree(ModuleId module) {
 struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleId>) {
 	static auto provide(Context&, QKey key) -> PResult {
 		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
-		return module_tree->getParentModule().map([](const auto& parent){
-			return parent.getId();
-		});
+		return module_tree->getParentModule().map([](const auto& parent) { return parent.getId(); }
+		);
 	}
 
 	static auto load(QKey) -> LoadResult { return {}; }
