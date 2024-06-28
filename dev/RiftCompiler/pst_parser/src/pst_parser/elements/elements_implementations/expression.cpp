@@ -120,25 +120,25 @@ namespace pst {
 		for (auto& e: elements) {
 			variant_match(e) {
 				variant_case(Identifier, idt) {
-					out << "{\"Identifier\": \"" << idt.indent_id.strView() << "\"}";
+					out << R"({"Identifier": ")" << idt.indent_id.strView() << "\"}";
 				}
 				variant_case(Operator, oper) {
-					out << "{\"Operator\": \"" << oper.oper_id.strView() << "\"}";
+					out << R"({"Operator": ")" << oper.oper_id.strView() << "\"}";
 				}
 				variant_case(NumLiteral, num) {
-					out << "{\"NumLiteral\": \"" << num.num_id.strView() << "\"}";
+					out << R"({"NumLiteral": ")" << num.num_id.strView() << "\"}";
 				}
 				variant_case(Group, group) {
 					constexpr static std::array<std::string_view, 4> gr_strings
 						= { "()", "[]", "{}", "  " };
-					out << "{ \"Group\": { \"type\": \"";
+					out << R"({ "Group": { "type": ")";
 					out << gr_strings[int(group.type)];
-					out << "\", \"expr\": ";
+					out << R"(", "expr": )";
 					nullAwareDprint(group.expr, out);
 					out << "} }";
 				}
 				variant_case(CommaSeparated, sep) {
-					out << "{ \"Comma separated\": [";
+					out << R"({ "Comma separated": [)";
 					bool comma = false;
 					for (const auto& expr: sep.expr) {
 						if (comma)
@@ -150,7 +150,7 @@ namespace pst {
 					out << "] }";
 				}
 				variant_case(KeywordValue, key) {
-					out << "{\"KeywordValue\": \"" << rift_def::keywordToStr(key.keyword).strView()
+					out << R"({"KeywordValue": ")" << rift_def::keywordToStr(key.keyword).strView()
 						<< "\"}";
 				}
 				variant_default { RIFT_PANIC("Bad Expr alternative"); }
