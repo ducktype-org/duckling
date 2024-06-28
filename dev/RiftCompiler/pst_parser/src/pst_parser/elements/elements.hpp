@@ -557,8 +557,6 @@ namespace pst {
 		bool isDeclaration() const override {
 			return true;
 		}
-
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 #define DECL_CHILD_CONSTRUCTOR(class_name) \
@@ -593,6 +591,8 @@ namespace pst {
 		bool isStatementAggregate() const final {
 			return true;
 		}
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Block final: public CodeDecl {
@@ -736,6 +736,9 @@ namespace pst {
 		static ParserRef<If> parse(RiftParserState& state);
 		void                 dprint(std::ostream& out) const final;
 		~If() final = default;
+
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class While final: public CodeDecl {
@@ -749,6 +752,9 @@ namespace pst {
 		static ParserRef<While> parse(RiftParserState& state);
 		void                    dprint(std::ostream& out) const final;
 		~While() final = default;
+
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**

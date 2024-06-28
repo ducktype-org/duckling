@@ -10,14 +10,11 @@
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 
-#define SPACE
-
-
 #define PSTVISITOR_METHOD(name)                        \
+	bool visited_##name = false;                       \
 	void visit##name(const pst::name& stmt) override { \
-		static bool visited = false;                   \
-		if (!visited) {                                \
-			visited = true;                            \
+		if (!visited_##name) {                         \
+			visited_##name = true;                     \
 			counter++;                                 \
 		}                                              \
 		std::cout << "Visited " << #name << '\n';      \
@@ -42,12 +39,13 @@ public:
 	PSTVISITOR_METHOD(Defer)
 	PSTVISITOR_METHOD(Throw)
 	PSTVISITOR_METHOD(Const)
-	PSTVISITOR_METHOD(Decl)
 	PSTVISITOR_METHOD(Block)
 	PSTVISITOR_METHOD(Namespace)
 	PSTVISITOR_METHOD(Struct)
 	PSTVISITOR_METHOD(Fun)
 	PSTVISITOR_METHOD(Variable)
+	PSTVISITOR_METHOD(If)
+	PSTVISITOR_METHOD(While)
 };
 
 class SimpleParserTest: public tester::TestSuite {
@@ -75,6 +73,7 @@ public:
 		TESTER_ADD_TEST(testParamListErrors);
 		TESTER_ADD_TEST(testMissingSemiErr);
 		TESTER_ADD_TEST(testVisitor);
+		TESTER_ADD_TEST(testVisitorAlternative);
 
 		// TESTER_ADD_TEST(testParsingHandler)
 	}
@@ -82,8 +81,8 @@ public:
 private:
 	pst::PST<> prepare(const std::string& filename) { return { fs::FilePath(filename) }; }
 
-	void testVisitor() {
-		auto pst            = prepare(path("snippets/all_statements.txt"));
+	void testVisitorImpl(const std::string& filename, usize expected_counter) {
+		auto pst            = prepare(path(filename));
 		auto panicky_vistor = PstStmtVisitorTester<pst::PstStmtVisitorPanicky>();
 		auto empty_vistor   = PstStmtVisitorTester<pst::PstStmtVisitorEmpty>();
 		for (auto&& stmt: pst.getRootElement()->getStatements()) {
@@ -92,9 +91,13 @@ private:
 			);
 			stmt->acceptVisitor(empty_vistor);
 		}
-		ASSERT_EQUAL(17, panicky_vistor.counter);
-		ASSERT_EQUAL(17, empty_vistor.counter);
+		ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
+		ASSERT_EQUAL(expected_counter, empty_vistor.counter);
 	}
+
+	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 19); }
+
+	void testVisitorAlternative() { testVisitorImpl("snippets/alternative_statements.txt", 1); }
 
 	void testJson(
 		const std::string& rift_file, const std::string& json_file, bool no_errors = true
