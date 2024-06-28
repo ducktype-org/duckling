@@ -366,7 +366,8 @@ namespace pst {
 		};
 
 		struct Group;
-		// Represents multiple comma separated expressions. Used for things like `a, b = c` or  `a = b, c`
+		// Represents multiple comma separated expressions. Used for things like `a, b = c` or  `a =
+		// b, c`
 		struct CommaSeparated;
 		struct Operator;
 		struct Identifier;
@@ -409,8 +410,9 @@ namespace pst {
 		 */
 		static ParserRef<Expr> parse(RiftParserState& state, bool allow_comma = false);
 		/**
-		 * @brief Parses the expression until a particular operator is encountered(outside of parenthesis).
-		 * 
+		 * @brief Parses the expression until a particular operator is encountered(outside of
+		 * parenthesis).
+		 *
 		 * @param allow_comma whether the expression can be a set of comma separated expressions.
 		 */
 		static ParserRef<Expr>

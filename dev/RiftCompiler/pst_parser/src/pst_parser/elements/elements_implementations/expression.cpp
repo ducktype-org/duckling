@@ -46,10 +46,10 @@ namespace pst {
 	 */
 	ParserRef<Expr>
 		Expr::parse(RiftParserState& state, usize len, bool exact_len, bool allow_comma) {
-		auto  result = makeRef<Expr>(state.ctokens().peek().getPosition());
+		auto result = makeRef<Expr>(state.ctokens().peek().getPosition());
 		// Currently parsed expression
 		auto  back = result.borrow_mut();
-		usize i   = 0;
+		usize i    = 0;
 
 		while (state.notEmpty() and i < len) {
 			i++;
@@ -83,7 +83,8 @@ namespace pst {
 				// Check if the expression isn't comma separated yet
 				if (result->elements.size() != 1
 				    || !std::holds_alternative<CommaSeparated>(result->elements.front())) {
-					// Change expression to a comma separated one containing previously parsed expression as the first element
+					// Change expression to a comma separated one containing previously parsed
+					// expression as the first element
 					auto sep = makeRef<Expr>(result->getSourcePosition());
 					sep->elements.emplace_back(CommaSeparated{});
 					std::get<CommaSeparated>(sep->elements.front())
@@ -93,7 +94,7 @@ namespace pst {
 				// Setup the next expression to add tokens to
 				state.tokens().skip(1);
 				auto new_exp = makeRef<Expr>(state.ctokens().peek().getPosition());
-				back          = new_exp.borrow_mut();
+				back         = new_exp.borrow_mut();
 				std::get<CommaSeparated>(result->elements.front())
 					.expr.emplace_back(std::move(new_exp));
 			}
