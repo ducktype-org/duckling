@@ -46,5 +46,4 @@ namespace pst {
 		}
 		RIFT_PANIC("something went wrong");
 	}
-
 }

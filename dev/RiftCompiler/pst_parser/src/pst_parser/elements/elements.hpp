@@ -223,6 +223,11 @@ namespace pst {
 		[[nodiscard]]
 		const decltype(names)& getNames() const;
 
+		[[nodiscard]]
+		base::StrId getAlias() const {
+			return alias.value;
+		}
+
 		/**
 		 * @note In the future this functionality will be done by HELIOS.
 		 * This functionality is needed to implement early import system for testing.
@@ -351,6 +356,9 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 	};
 
+	/**
+	 * @TODO: improve comma separated expressions and expression parse options in general.
+	 */
 	class Expr final: public Stmt {
 	public:
 		enum class GroupType {
@@ -361,6 +369,9 @@ namespace pst {
 		};
 
 		struct Group;
+		/** @brief Represents multiple comma separated expressions.
+		 * For example `a, b` in `a, b = c` or `b, c` in `a = (b, c)`
+		 */
 		struct CommaSeparated;
 		struct Operator;
 		struct Identifier;
@@ -399,14 +410,22 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Expr);
 		/**
 		 * @brief parses the expression until its over
+		 * @param allow_comma whether the expression can be a set of comma separated expressions.
 		 */
 		static ParserRef<Expr> parse(RiftParserState& state, bool allow_comma = false);
+		/**
+		 * @brief Parses the expression until a particular operator is encountered(outside of
+		 * parenthesis).
+		 *
+		 * @param allow_comma whether the expression can be a set of comma separated expressions.
+		 */
 		static ParserRef<Expr>
 			parseUntil(RiftParserState& state, rift_def::Operator until, bool allow_comma = false);
 		/**
 		 * @p exact_len = false: parses the expression until its over or until it parses @p len
 		 * tokens
 		 * @p exact_len = true: parses the expression until it parses @p len tokens
+		 * @param allow_comma whether the expression can be a set of comma separated expressions.
 		 */
 		static ParserRef<Expr> parse(
 			RiftParserState& state, usize len, bool exact_len = true, bool allow_comma = false

@@ -25,6 +25,7 @@ namespace compiler::helios {
 		Struct,
 		Alias,
 		Using,
+		Import
 
 		// ...
 	};
