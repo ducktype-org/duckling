@@ -366,6 +366,7 @@ namespace pst {
 		};
 
 		struct Group;
+		// Represents multiple comma separated expressions. Used for things like `a, b = c` or  `a = b, c`
 		struct CommaSeparated;
 		struct Operator;
 		struct Identifier;
@@ -404,14 +405,21 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Expr);
 		/**
 		 * @brief parses the expression until its over
+		 * @param allow_comma whether the expression can be a set of comma separated expressions.
 		 */
 		static ParserRef<Expr> parse(RiftParserState& state, bool allow_comma = false);
+		/**
+		 * @brief Parses the expression until a particular operator is encountered(outside of parenthesis).
+		 * 
+		 * @param allow_comma whether the expression can be a set of comma separated expressions.
+		 */
 		static ParserRef<Expr>
 			parseUntil(RiftParserState& state, rift_def::Operator until, bool allow_comma = false);
 		/**
 		 * @p exact_len = false: parses the expression until its over or until it parses @p len
 		 * tokens
 		 * @p exact_len = true: parses the expression until it parses @p len tokens
+		 * @param allow_comma whether the expression can be a set of comma separated expressions.
 		 */
 		static ParserRef<Expr> parse(
 			RiftParserState& state, usize len, bool exact_len = true, bool allow_comma = false
