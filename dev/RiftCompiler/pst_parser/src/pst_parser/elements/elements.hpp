@@ -356,6 +356,9 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 	};
 
+	/**
+	 * @TODO: improve comma separated expressions and expression parse options in general.
+	 */
 	class Expr final: public Stmt {
 	public:
 		enum class GroupType {
@@ -366,8 +369,9 @@ namespace pst {
 		};
 
 		struct Group;
-		// Represents multiple comma separated expressions. Used for things like `a, b = c` or  `a =
-		// b, c`
+		/** @brief Represents multiple comma separated expressions.
+		 * For example `a, b` in `a, b = c` or `b, c` in `a = (b, c)`
+		 */
 		struct CommaSeparated;
 		struct Operator;
 		struct Identifier;
