@@ -11,7 +11,7 @@ namespace pst {
 		RIFT_ASSERT(is_var ^ is_let, position.genStr("bad statement choice"));
 		out->is_const = is_let;
 
-		// Todo: Add a possibility for type deduction from assigned value and no initial value.
+		// @TODO: Add a possibility for type deduction from assigned value and no initial value.
 		parseAll(state, is_var ? Keyword::Var : Keyword::Let, &out->name, Operator::Colon);
 		out->type = Expr::parseUntil(state, Operator::Assign, true);
 		parseAll(state, Operator::Assign);
