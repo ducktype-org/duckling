@@ -132,7 +132,7 @@ namespace pst {
 					constexpr static std::array<std::string_view, 4> gr_strings
 						= { "()", "[]", "{}", "  " };
 					out << R"({ "Group": { "type": ")";
-					out << gr_strings[int(group.type)];
+					out << gr_strings.at(int(group.type));
 					out << R"(", "expr": )";
 					nullAwareDprint(group.expr, out);
 					out << "} }";
