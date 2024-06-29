@@ -17,6 +17,8 @@ jobs:
       timeout-minutes: 8
       runs-on: ubuntu-22.04
       steps:
+        - uses: actions/checkout@v4
+
         # Install a coverage tool
         - run: sudo apt-get -y install lcov
 
