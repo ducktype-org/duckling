@@ -43,6 +43,8 @@ jobs:
     #       ${{env.WORKSPACE}}/CTestTestfile.cmake
     #     key: ${{ runner.os }}-cache-build
 
+    # Install a coverage tool
+    - run: sudo apt-get -y install lcov
 
     - name: Configure CMake
       working-directory: ${{env.WORKSPACE}}
@@ -60,6 +62,5 @@ jobs:
     #   working-directory: ${{env.WORKSPACE}}
     #   run: cmake --build ${{env.WORKSPACE}} -- coverage
 
-    - run: sudo apt-get -y install lcov
     - name: Generate a code coverage report
       uses: threeal/gcovr-action@v1.0.0
