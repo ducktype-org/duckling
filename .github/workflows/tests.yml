@@ -46,7 +46,7 @@ jobs:
 
     - name: Configure CMake
       working-directory: ${{env.WORKSPACE}}
-      run: cmake -B ${{env.WORKSPACE}} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON
+      run: cmake -B ${{env.WORKSPACE}} -G Ninja -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON -D ENABLE_COVERAGE=true
 
     - name: Build
       working-directory: ${{env.WORKSPACE}}
@@ -55,3 +55,10 @@ jobs:
     - name: Test
       working-directory: ${{env.WORKSPACE}}
       run: ctest -C ${{env.BUILD_TYPE}}
+
+    # - name: Coverage
+    #   working-directory: ${{env.WORKSPACE}}
+    #   run: cmake --build ${{env.WORKSPACE}} -- coverage
+
+    - name: Generate a code coverage report
+      uses: threeal/gcovr-action@v1.0.0
