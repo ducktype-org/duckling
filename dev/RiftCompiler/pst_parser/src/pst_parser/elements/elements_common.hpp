@@ -12,7 +12,7 @@ namespace pst::detail {
 		Conditions() = delete;
 
 		static bool isComma(const RiftParserState& state, usize fwd) {
-			return state.ctokens().is(rift_def::Operator::Comma, fwd);
+			return state.ctokens().is(rift_def::Special::Comma, fwd);
 		}
 
 		static bool isSentinel(const RiftParserState& state, usize fwd) {

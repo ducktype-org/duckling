@@ -37,7 +37,7 @@ namespace pst {
 		state.tokens().skip();
 
 		// @TODO: for now we assume if there is no expression there is a semicolon
-		if (!state.ctokens().is(Special::Semicolon)) out->expr = Expr::parse(state);
+		if (!state.ctokens().is(Special::Semicolon)) out->expr = Expr::parse(state, true);
 
 		return out;
 	}
