@@ -22,11 +22,11 @@ jobs:
         # Install a coverage tool
         - run: sudo apt-get -y install lcov
 
-        - name: Set the value
-          id: step_one
-          run: echo "::set-output name=FOO::BAR"
-        - name: Use it
-          run: echo ${{ steps.step_one.outputs.FOO }}
+        - name: Save state
+          run: echo "{name321}={value321}" >> $GITHUB_STATE
+
+        - name: Set output
+          run: echo "name123=value123" >> $GITHUB_OUTPUT
 
         - name: Configure CMake
           working-directory: ${{env.WORKSPACE}}
