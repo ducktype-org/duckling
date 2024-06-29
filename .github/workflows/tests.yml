@@ -20,8 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Install a coverage tool
-      - run: sudo apt-get -y install lcov
+        # Install a coverage tool
+        run: sudo apt-get -y install lcov
 
     # @FIXME: Caching does not work, cmake rebuilds everything anyway
     # Perhaps use https://cristianadam.eu/20200113/speeding-up-c-plus-plus-github-actions-using-ccache/
