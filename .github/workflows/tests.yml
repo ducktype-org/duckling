@@ -54,13 +54,14 @@ jobs:
       working-directory: ${{env.WORKSPACE}}
       run: cmake --build ${{env.WORKSPACE}} -j 2 --target build_all_tests --config ${{env.BUILD_TYPE}}
 
+      # - name: Coverage
+      #   working-directory: ${{env.WORKSPACE}}
+      #   run: cmake --build ${{env.WORKSPACE}} -- coverage
+
+    - name: Generate a code coverage report
+      uses: threeal/gcovr-action@v1.0.0
+
     - name: Test
       working-directory: ${{env.WORKSPACE}}
       run: ctest -C ${{env.BUILD_TYPE}}
 
-    # - name: Coverage
-    #   working-directory: ${{env.WORKSPACE}}
-    #   run: cmake --build ${{env.WORKSPACE}} -- coverage
-
-    - name: Generate a code coverage report
-      uses: threeal/gcovr-action@v1.0.0
