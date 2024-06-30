@@ -1,11 +1,15 @@
+/**
+ * @file main.cpp
+ * @note This code is a legacy code, but is left for adaptation
+ * to "global-compiler options" and future compiler handler
+ */
+
 #include <filesystem/file.hpp>
 #include <pst_parser/parser.hpp>
-#include <compiler/compilation_handler.hpp>
 #include <lexer/lexer.hpp>
 #include <compiler/compiler_config.hpp>
 #include <base/exceptions.hpp>
 #include <iostream>
-#include <fstream>
 #include <clap/clap.hpp>
 
 void init() {
@@ -35,19 +39,10 @@ int main(int argc, const char* argv[]) {
 		std::stringstream out;
 		fs::FilePath      main_file = config.files[0];
 
-		compiler::CompilationHandler comp_handler;
-
-		for (const auto& file: config.files) comp_handler.addFileRecursively(file, true, &out);
-
-		if (!config.was_output) {
-			std::cerr << out.str();
-		} else {
-			std::ofstream output(config.output);
-			output << out.str();
-		}
+	
 
 	} catch (const clap::exceptions::HelpException& e) {
-		printer::StreamPrinter::print(compiler::generateHelpMessage(e));
+		// @TODO
 	} catch (const base::Exception& e) {
 		std::cerr << "Compiler Exception was caught with message:\n";
 		std::cerr << e.what();
