@@ -23,7 +23,7 @@ namespace compiler::helios {
 		Alias,
 		Using,
 		Variable,
-
+		Import
 		// ...
 	};
 

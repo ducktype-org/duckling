@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<If> If::parse(RiftParserState& state) {
@@ -23,4 +24,5 @@ namespace pst {
 		out << "}}";
 	}
 
+	void If::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitIf(*this); }
 }

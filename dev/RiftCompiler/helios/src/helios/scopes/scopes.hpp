@@ -16,7 +16,15 @@
 namespace compiler::helios {
 	using StmtList = std::vector<PstRef<pst::Stmt>>;
 
+	/**
+	 * @brief Return parent scope or none for root-scopes.
+	 */
 	base::Optional<ScopeID> parent(ScopeID);
+
+	/**
+	 * @brief Return module the scope was defined in
+	 */
+	frontend::ModuleId module(ScopeID id);
 
 	/**
 	 * @brief Query root scope for given module.
