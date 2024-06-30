@@ -38,9 +38,6 @@ int main(int argc, const char* argv[]) {
 
 		std::stringstream out;
 		fs::FilePath      main_file = config.files[0];
-
-	
-
 	} catch (const clap::exceptions::HelpException& e) {
 		// @TODO
 	} catch (const base::Exception& e) {
