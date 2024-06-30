@@ -29,4 +29,6 @@ alias function = foo3;
 
 const z: i32 = y;
 
+var a: i32 = 2;
+
 
