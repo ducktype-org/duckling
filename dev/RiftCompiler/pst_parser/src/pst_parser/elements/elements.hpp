@@ -576,8 +576,6 @@ namespace pst {
 		bool isDeclaration() const override {
 			return true;
 		}
-
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 #define DECL_CHILD_CONSTRUCTOR(class_name) \
