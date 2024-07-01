@@ -21,16 +21,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-        # Install a coverage tool
       - name: Install lcov
         run: sudo apt-get -y install lcov
 
-      - name: Install toolbox binaries
+      - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py download-binaries -s ccache
 
+      - name: Prepare ccache timestamp
+        id: ccache_cache_timestamp
+        shell: cmake -P {0}
+        run: |
+          string(TIMESTAMP current_date "%Y-%m-%d-%H;%M;%S" UTC)
+          file(APPEND "$ENV{GITHUB_OUTPUT}" "timestamp=${current_date}")
 
-      # Idea - cache local branch and fallback to cache main.
+      # Idea - cache local branch and fallback to main ccache.
       - name: Cache build folder
         id: cache-build
         uses: actions/cache@v4
@@ -61,6 +66,13 @@ jobs:
       needs: build
       steps:
         - uses: actions/checkout@v4
+
+        - name: Install lcov
+          run: sudo apt-get -y install lcov
+
+        - name: Install ccache
+          working-directory: ${{ env.WORKSPACE }}
+          run: ./toolbox.py download-binaries -s ccache
 
         - name: Cache build folder
           id: cache-build
