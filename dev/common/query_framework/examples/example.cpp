@@ -62,7 +62,7 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 		// Log something, with example file path.
 		context.log(base::make_unique<InfoInQuery1>(dia::SourcePosition::fakePosition()));
 		context.log(base::make_unique<ErrorInQuery1>(dia::SourcePosition::fakePosition()));
-		return context.callExt<SquareValue>(key);
+		return SquareValue(context, key);
 	}
 
 	static auto load(QKey key) -> LoadResult {

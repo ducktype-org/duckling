@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<While> While::parse(RiftParserState& state) {
@@ -26,4 +27,6 @@ namespace pst {
 		nullAwareDprint(body, out);
 		out << "}}";
 	}
+
+	void While::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitWhile(*this); }
 }

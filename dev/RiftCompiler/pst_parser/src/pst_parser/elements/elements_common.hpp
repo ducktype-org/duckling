@@ -12,7 +12,7 @@ namespace pst::detail {
 		Conditions() = delete;
 
 		static bool isComma(const RiftParserState& state, i64 fwd) {
-			return state[fwd].is(rift_def::Operator::Comma);
+			return state[fwd].is(rift_def::Special::Comma);
 		}
 
 		static bool isSentinel(const RiftParserState& state, i64 fwd) {
@@ -21,6 +21,14 @@ namespace pst::detail {
 
 		static bool isCurlyGroup(const RiftParserState& state, i64 fwd) {
 			return state[fwd].isBracketGroup(lexer::Token::BracketType::Curly);
+		}
+
+		static bool isAssignOrSemicolon(const RiftParserState& st, i64 fwd) {
+			return st[fwd].is(rift_def::Operator::Assign) || st[fwd].is(rift_def::Special::Semicolon);
+		}
+
+		static bool isAssign(const RiftParserState& st, i64 fwd) { 
+			return st[fwd].is(rift_def::Operator::Assign); 
 		}
 	};
 

@@ -32,10 +32,16 @@ const T2: i32 = T1 + 1;
 
 
 namespace Inner {
-	const Inner_X: i32 = 123; 
+	const Inner_X: i32 = 123;
 }
 using Inner.*;
 
 const F: i32 = ((A + 1) / 2 + (E + 2) / 2) ^ 2 * NN.A;
 
 const M: i32 = (A + A * 2) * NN.NNN.A * Inner.Inner_X;
+
+
+
+fun foo(var a: i32) {
+	
+}

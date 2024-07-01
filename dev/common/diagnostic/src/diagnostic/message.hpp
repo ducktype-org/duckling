@@ -421,10 +421,4 @@ namespace dia {
 			return message;
 		}
 	};
-
-	static_assert(
-		sizeof(PlaceholderMessage<Error, Message::Domain::Lexer>(SourcePosition::fakePosition(), "")
-	    ),
-		"Placeholder message check"
-	);
 }

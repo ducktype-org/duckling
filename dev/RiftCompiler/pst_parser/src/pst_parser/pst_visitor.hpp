@@ -24,11 +24,21 @@ namespace pst {
 
 		virtual void visitExpr([[maybe_unused]] const Expr& stmt) = 0;
 
-		virtual void visitAction([[maybe_unused]] const Action& stmt) = 0;
+		virtual void visitReturn([[maybe_unused]] const Return& stmt) = 0;
+
+		virtual void visitDefer([[maybe_unused]] const Defer& stmt) = 0;
+
+		virtual void visitRestart([[maybe_unused]] const Restart& stmt) = 0;
+
+		virtual void visitBreak([[maybe_unused]] const Break& stmt) = 0;
+
+		virtual void visitContinue([[maybe_unused]] const Continue& stmt) = 0;
+
+		virtual void visitRedo([[maybe_unused]] const Redo& stmt) = 0;
+
+		virtual void visitThrow([[maybe_unused]] const Throw& stmt) = 0;
 
 		virtual void visitConst([[maybe_unused]] const Const& stmt) = 0;
-
-		virtual void visitDecl([[maybe_unused]] const Decl& stmt) = 0;
 
 		virtual void visitBlock([[maybe_unused]] const Block& stmt) = 0;
 
@@ -37,6 +47,12 @@ namespace pst {
 		virtual void visitStruct([[maybe_unused]] const Struct& stmt) = 0;
 
 		virtual void visitFun([[maybe_unused]] const Fun& stmt) = 0;
+
+		virtual void visitVariable([[maybe_unused]] const Variable& stmt) = 0;
+
+		virtual void visitIf([[maybe_unused]] const If& stmt) {}
+
+		virtual void visitWhile([[maybe_unused]] const While& stmt) {}
 	};
 
 	/**
@@ -57,11 +73,21 @@ namespace pst {
 
 		void visitExpr([[maybe_unused]] const Expr& stmt) override {}
 
-		void visitAction([[maybe_unused]] const Action& stmt) override {}
+		void visitReturn([[maybe_unused]] const Return& stmt) override {}
+
+		void visitDefer([[maybe_unused]] const Defer& stmt) override {}
+
+		void visitRestart([[maybe_unused]] const Restart& stmt) override {}
+
+		void visitBreak([[maybe_unused]] const Break& stmt) override {}
+
+		void visitContinue([[maybe_unused]] const Continue& stmt) override {}
+
+		void visitRedo([[maybe_unused]] const Redo& stmt) override {}
+
+		void visitThrow([[maybe_unused]] const Throw& stmt) override {}
 
 		void visitConst([[maybe_unused]] const Const& stmt) override {}
-
-		void visitDecl([[maybe_unused]] const Decl& stmt) override {}
 
 		void visitBlock([[maybe_unused]] const Block& stmt) override {}
 
@@ -70,7 +96,21 @@ namespace pst {
 		void visitStruct([[maybe_unused]] const Struct& stmt) override {}
 
 		void visitFun([[maybe_unused]] const Fun& stmt) override {}
+
+		void visitVariable([[maybe_unused]] const Variable& stmt) override {}
+
+		void visitIf([[maybe_unused]] const If& stmt) override {}
+
+		void visitWhile([[maybe_unused]] const While& stmt) override {}
 	};
+
+/**
+ * @brief Macro used to define PstStmtVisitor methods
+ */
+#define PANIC_VISITOR_VISIT_METHOD(type)                           \
+	void visit##type([[maybe_unused]] const type& stmt) override { \
+		RIFT_PANIC("PstStmtVisitorPanicky visited " #type);        \
+	}
 
 	/**
 	 * A simple implementation for PstStmtVisitor, that by default does RIFT_PANIC.
@@ -80,52 +120,25 @@ namespace pst {
 	public:
 		~PstStmtVisitorPanicky() override = default;
 
-		void visitAttribute([[maybe_unused]] const Attribute& stmt) override {
-			RIFT_PANIC("PstStmtVisitorPanicky visited Attribute");
-		}
-
-		void visitImport([[maybe_unused]] const Import& stmt) override {
-			RIFT_PANIC("PstStmtVisitorPanicky visited Import");
-		}
-
-		void visitUsing([[maybe_unused]] const Using& stmt) override {
-			RIFT_PANIC("PstStmtVisitorPanicky visited Using");
-		}
-
-		void visitAlias([[maybe_unused]] const Alias& stmt) override {
-			RIFT_PANIC("PstStmtVisitorPanicky visited Alias");
-		}
-
-		void visitExpr([[maybe_unused]] const Expr& stmt) override {
-			RIFT_PANIC("PstStmtVisitorPanicky visited Expr");
-		}
-
-		void visitAction([[maybe_unused]] const Action& stmt) override {
-			RIFT_PANIC("PstStmtVisitorPanicky visited Action");
-		}
-
-		void visitConst([[maybe_unused]] const Const& stmt) override {
-			RIFT_PANIC("PstStmtVisitorPanicky visited Const");
-		}
-
-		void visitDecl([[maybe_unused]] const Decl& stmt) override {
-			RIFT_PANIC("PstStmtVisitorPanicky visited Decl");
-		}
-
-		void visitBlock([[maybe_unused]] const Block& stmt) override {
-			RIFT_PANIC("PstStmtVisitorPanicky visited Block");
-		}
-
-		void visitNamespace([[maybe_unused]] const Namespace& stmt) override {
-			RIFT_PANIC("PstStmtVisitorPanicky visited Namespace");
-		}
-
-		void visitStruct([[maybe_unused]] const Struct& stmt) override {
-			RIFT_PANIC("PstStmtVisitorPanicky visited Struct");
-		}
-
-		void visitFun([[maybe_unused]] const Fun& stmt) override {
-			RIFT_PANIC("PstStmtVisitorPanicky visited Fun");
-		}
+		PANIC_VISITOR_VISIT_METHOD(Attribute);
+		PANIC_VISITOR_VISIT_METHOD(Import);
+		PANIC_VISITOR_VISIT_METHOD(Using);
+		PANIC_VISITOR_VISIT_METHOD(Alias);
+		PANIC_VISITOR_VISIT_METHOD(Expr);
+		PANIC_VISITOR_VISIT_METHOD(Return);
+		PANIC_VISITOR_VISIT_METHOD(Defer);
+		PANIC_VISITOR_VISIT_METHOD(Restart);
+		PANIC_VISITOR_VISIT_METHOD(Break);
+		PANIC_VISITOR_VISIT_METHOD(Redo);
+		PANIC_VISITOR_VISIT_METHOD(Continue);
+		PANIC_VISITOR_VISIT_METHOD(Throw);
+		PANIC_VISITOR_VISIT_METHOD(Const);
+		PANIC_VISITOR_VISIT_METHOD(Block);
+		PANIC_VISITOR_VISIT_METHOD(Namespace);
+		PANIC_VISITOR_VISIT_METHOD(Struct);
+		PANIC_VISITOR_VISIT_METHOD(Fun);
+		PANIC_VISITOR_VISIT_METHOD(Variable);
+		PANIC_VISITOR_VISIT_METHOD(If);
+		PANIC_VISITOR_VISIT_METHOD(While);
 	};
 }

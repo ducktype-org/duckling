@@ -3,6 +3,4 @@
 
 namespace pst {
 	bool Decl::trailingSemicolon() { return false; }
-
-	void Decl::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitDecl(*this); }
 }

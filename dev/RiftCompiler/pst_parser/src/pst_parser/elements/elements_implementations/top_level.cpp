@@ -8,6 +8,10 @@ namespace pst {
 		return out;
 	}
 
+	void TopLevel::acceptVisitor(PstStmtVisitor&) const {
+		RIFT_PANIC("Visitng TopLevel statement");
+	}
+
 	void TopLevel::dprint(std::ostream& out) const {
 		// @TODO: PST?
 		out << "{\"PST\" : [";

@@ -5,6 +5,7 @@
 #include <base/stable_hashmap.hpp>
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
+#include <base/exceptions.hpp>
 
 #include <query_framework/query_impl.hpp>
 
@@ -12,8 +13,8 @@
 #include <frontend/module_tree/queries.hpp>
 
 #include <pst_parser/rift_parser_base.hpp>
+#include <pst_parser/pst_visitor.hpp>
 
-#include "../hout/hout.hpp"
 #include "../lookup_result.hpp"
 #include "../pst_walkers.hpp"
 #include "../symbols/symbols.hpp"
@@ -26,8 +27,17 @@ namespace compiler::helios {
 		// created on startup:
 		ScopeID parent;
 		// base::StrId name; ///< for debug
-		bool     is_root = false;
-		StmtList stmt_list;
+		bool is_root = false;
+
+		/**
+		 * @brief PST element for which the scope was created.
+		 */
+		PstRef<pst::RiftElement> related_pst_element;
+
+		/**
+		 * @brief Module, the scope was defined in
+		 */
+		frontend::ModuleId parent_module;
 
 		// cache entries:
 		// in the future we might need separation for: direct symbols, expanded symbols
@@ -46,6 +56,18 @@ namespace compiler::helios {
 	};
 
 	auto getScopeRef(ScopeID id) { return GetScopeRef_Functor::get(id); }
+
+	base::Optional<ScopeID> parent(ScopeID id) {
+		auto ref = getScopeRef(id);
+		if (ref->is_root) {
+			return {};
+		} else {
+			RIFT_ASSERT(getScopeRef(ref->parent) != nullptr, "Non root scope has no parent.");
+			return ref->parent;
+		}
+	}
+
+	frontend::ModuleId module(ScopeID id) { return getScopeRef(id)->parent_module; }
 
 	namespace {
 		base::StableVector<ScopeData> scope_table;
@@ -66,11 +88,11 @@ namespace compiler::helios {
 			auto&& module_pst = ctx.query<frontend::QueryFilePST>(main_file);
 
 			return putInScopeTable(ScopeData{
-				.parent = ScopeID{ nullptr },
-				// .name = base::StrId("ROOT"),
-				.is_root   = true,
-				.stmt_list = getChildStmtsOf(module_pst.getRootElement()),
-				.symbols   = {},
+				.parent              = ScopeID{ nullptr },
+				.is_root             = true,
+				.related_pst_element = module_pst.getRootElement(),
+				.parent_module       = key,
+				.symbols             = {},
 			});
 		}
 
@@ -85,14 +107,28 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
 
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
+		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
+
 		static auto provide(Context&, QKey element) -> PResult {
-			auto list_of_stmt = getChildStmtsOf(element.base_element);
+			// Potential way of eliminating dependency on parent:
 			// auto parent
 			// = scope(ctx.query<QuerySymbolOfSTMT>({ element.parent, element.base_element }));
+
+			// simple parent sanity check:
+			if (parent_map.contains(element.base_element->getID())) {
+				RIFT_ASSERT(
+					parent_map.at(element.base_element->getID()) == element.parent,
+					"Parent mismatch in QueryPrimaryCodeScopeFor"
+				);
+			} else {
+				parent_map.put(element.base_element->getID(), element.parent);
+			}
+
 			return putInScopeTable(ScopeData{
-				.parent    = element.parent,
-				.stmt_list = list_of_stmt,
-				.symbols   = {},
+				.parent              = element.parent,
+				.related_pst_element = element.base_element,
+				.parent_module       = module(element.parent),
+				.symbols             = {},
 			});
 		}
 
@@ -101,22 +137,44 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);
 
-	// impl of simple getters ("non-query query"):
-	// get name
-	// debug print
-	// etc
-
-	// if somewhere then here it is needed to handle cycles somehow
-
-
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
+		/**
+		 * @brief Gets symbols for scopes of varius statements
+		 */
+		struct SymbolGrabVisitor: public pst::PstStmtVisitorPanicky {
+			base::Optional<std::vector<SymID>> out;
+
+			void visitFun(const pst::Fun&) override {
+				// @TODO: iterate function parameters and create symbols out of them
+				// The problem is that currently function parameters are Expr in Pst -- this has to
+				// change Variable declaration or custom element is probably a better choice
+				this->out.emplace(std::vector<SymID>{});
+			}
+		};
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<SymID> out;
-			for (const auto& stmt: key.ref->stmt_list) {
-				auto sym_id = ctx.query<QuerySymbolOfSTMT>({ key, stmt });
-				out.emplace_back(sym_id);
+
+			// @TODO: expand macros?
+
+			auto base_element = key.ref->related_pst_element;
+
+			if (base_element->isStatementAggregate()) {
+				for (const auto& stmt: getChildStmtsOf(base_element)) {
+					if (stmt->isDeclaration()) {
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>({ key, stmt });
+						out.emplace_back(sym_id);
+					}
+				}
+				return out;
+			} else if (base_element->isStatement()) {
+				SymbolGrabVisitor symbol_grab;
+				auto              as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());
+				as_stmt->acceptVisitor(symbol_grab);
+				return std::move(symbol_grab.out.value());
+			} else {
+				RIFT_PANIC("Query symbols from scope of non-statement and non-codeblock");
 			}
-			return out;
 		}
 
 		static auto load(QKey key) -> LoadResult {
