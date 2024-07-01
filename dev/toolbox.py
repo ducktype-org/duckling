@@ -162,7 +162,7 @@ def download_binaries_impl(force, single):
     )
 
     if single:
-        log_info(f"Searching for file called \'{single}\'...")
+        log_info(f"Searching for file called '{single}'...")
 
         found = False
         for file in FILES_TO_DOWNLOAD:
@@ -172,7 +172,7 @@ def download_binaries_impl(force, single):
                 found = True
                 break
         if not found:
-            exit_with_error("Couldn't find a requested file")
+            exit_with_error(f"Couldn't find a file with '{single}' in resource url")
 
     else:
         log_info(f"Downloading all supported files")
