@@ -543,18 +543,18 @@ namespace compiler::helios {
 		if (op.oper_id == ".") {
 			// @TODO: Add a compiler log or some kind of information if lookup failes.
 			SymbolList looked_up_symbol;
-			variant_match(a) {
-				variant_case(rpn::Identifier, idt) { looked_up_symbol = idt.symbol_list; }
-				variant_case(rpn::NamedIdentifier, idt) {
-					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
-						{ key.expr_scope, idt.symbol_name, true }
-					);
-					looked_up_symbol = sym_list.getAsSingle();
-				}
-				variant_default {
-					throw base::NotYetImplemented("Lookup on non-identifier is not yet implemented"
-					);
-				}
+					   variant_match(a) {
+                variant_case(rpn::Identifier, idt) { looked_up_symbol = idt.symbol_list; }
+                variant_case(rpn::NamedIdentifier, idt) {
+                    auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+                        { key.expr_scope, idt.symbol_name, true }
+                    );
+                    looked_up_symbol = sym_list.getAsSingle();
+                }
+                variant_default {
+                    throw base::NotYetImplemented("Lookup on non-identifier is not yet implemented"
+                    );
+                }
 			}
 			variant_match(b) {
 				variant_case(rpn::NamedIdentifier, idt_right) {
@@ -705,7 +705,7 @@ namespace compiler::helios {
 																	  true,
 																  })
 					          .leaves.back();
-					return ctx.query<QueryTypeOf>(symbol);
+					return ctx.query<QueryTypeFromDefinition>(symbol);
 				}
 				return it->second;
 			}
@@ -760,21 +760,19 @@ namespace compiler::helios {
 			Context&    ctx;
 			const QKey& key;
 
+			void setTypeOfSymbol(const pst::ParserCBorrowRef<pst::Expr>& expr) {
+				symbol_type_info = parseTypeFromExpr(ctx, expr, scope(key));
+			}
+
 		public:
 			PstStmtVisitor_GetTypeOf(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
-			base::Optional<ts::TypeInfo> type_of_thing;
+			base::Optional<ts::TypeInfo> symbol_type_info;
 
-			void visitConst(const pst::Const& stmt) override {
-				type_of_thing = parseTypeFromExpr(ctx, stmt.getType(), scope(key));
-			}
+			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getType()); }
 
 			void visitVariable(const pst::Variable& stmt) override {
-				type_of_thing = parseTypeFromExpr(ctx, stmt.getType(), scope(key));
-			}
-
-			void visitStruct(const pst::Struct&) override {
-				type_of_thing = ctx.query<ts::QueryClassType>(key);
+				setTypeOfSymbol(stmt.getType());
 			}
 		};
 
@@ -783,13 +781,42 @@ namespace compiler::helios {
 
 			PstStmtVisitor_GetTypeOf visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
-			return visitor.type_of_thing.value();
+			return visitor.symbol_type_info.value();
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOf);
+
+	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, ::ts::TypeInfo) {
+		class PstStmtVisitor_GetTypeFromDefinition final: public pst::PstStmtVisitorPanicky {
+			Context&    ctx;
+			const QKey& key;
+
+		public:
+			PstStmtVisitor_GetTypeFromDefinition(Context& ctx, const QKey& key):
+				  ctx(ctx),
+				  key(key) {}
+
+			base::Optional<ts::TypeInfo> definition_type_info;
+
+			void visitStruct(const pst::Struct&) override {
+				definition_type_info = ctx.query<ts::QueryClassType>(key);
+			}
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto&& symbol_ref = getSymRef(key);
+
+			PstStmtVisitor_GetTypeFromDefinition visitor(ctx, key);
+			symbol_ref->pst_stmt->acceptVisitor(visitor);
+			return visitor.definition_type_info.value();
+		}
+
+		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+	};
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
 
 	struct IMPLEMENT_QUERY(QueryStructInfo, StructInfo) {
 		struct StructDataParser final: pst::PstStmtVisitorPanicky {
@@ -843,6 +870,5 @@ namespace compiler::helios {
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
 	};
-
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStructInfo)
 }

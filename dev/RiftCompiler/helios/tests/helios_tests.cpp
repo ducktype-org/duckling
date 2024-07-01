@@ -37,11 +37,11 @@ private:
 		for (auto&& sym: symbols) {
 			auto symbol = first_symbol
 			                ? query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
-								{ scope, base::StrId(sym.c_str()), true }
-							)
+								  { scope, base::StrId(sym.c_str()), true }
+							  )
 			                : query::entryPoint<compiler::helios::QueryLookupInSymbol>(
-								{ result.back(), base::StrId(sym.c_str()), false }
-							);
+								  { result.back(), base::StrId(sym.c_str()), false }
+							  );
 			for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<compiler::helios::QueryDealias>(elem);
 				result.insert(result.end(), dealiased.begin(), dealiased.end());
@@ -57,6 +57,12 @@ private:
 
 	static auto getTypeOf(auto name, auto scope) {
 		return query::entryPoint<compiler::helios::QueryTypeOf>(getChain(name, scope).back());
+	}
+
+	static auto getTypeFromDefintion(auto name, auto scope) {
+		return query::entryPoint<compiler::helios::QueryTypeFromDefinition>(
+			getChain(name, scope).back()
+		);
 	}
 
 	std::pair<compiler::frontend::ModuleId, compiler::helios::ScopeID>
@@ -90,8 +96,10 @@ private:
 		auto [_, root_scope] = getModule("structs");
 
 		const auto first_struct = getChain("FirstStructEver", root_scope).back();
-		auto first_struct_info = query::entryPoint<compiler::helios::QueryStructInfo>(first_struct);
-		auto first_struct_typeinfo = query::entryPoint<compiler::helios::QueryTypeOf>(first_struct);
+		const auto first_struct_info
+			= query::entryPoint<compiler::helios::QueryStructInfo>(first_struct);
+		const auto first_struct_typeinfo
+			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_struct);
 
 		ASSERT_EQUAL(2, first_struct_info.members.size());
 		ASSERT_EQUAL(2, first_struct_info.methods.size());
@@ -131,9 +139,9 @@ private:
 
 		const auto weird_variant = getTypeOf("weird_variant", root_scope);
 
-		const auto structA     = getTypeOf("A", root_scope);
-		const auto structB     = getTypeOf("B", root_scope);
-		const auto structC     = getTypeOf("C", root_scope);
+		const auto structA     = getTypeFromDefintion("A", root_scope);
+		const auto structB     = getTypeFromDefintion("B", root_scope);
+		const auto structC     = getTypeFromDefintion("C", root_scope);
 		auto       right_tuple = query::entryPoint<ts::QueryTupleType>(
             { { { structA, false },
 		              { query::entryPoint<ts::QueryVariantType>({ { structB, structC } }), false } } }
