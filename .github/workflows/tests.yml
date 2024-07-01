@@ -45,7 +45,7 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
-        run: cmake -B ${{ env.BUILD_FOLDER }} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON -D ENABLE_COVERAGE=true
+        run: cmake -B ${{ env.BUILD_FOLDER }} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON -D ENABLE_COVERAGE=true -D USE_CCACHE=ON
 
       - name: Build
         working-directory: ${{ env.WORKSPACE }}
