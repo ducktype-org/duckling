@@ -7,6 +7,7 @@ namespace pst {
 		std::string toStringBrief() const override {
 			return "Expected an expression starting with `(`.";
 		}
+
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {

@@ -32,7 +32,10 @@ namespace pst {
 
 		// @TODO: Add a possibility for type deduction from assigned value and no initial value.
 		parseAll(state, is_var ? Keyword::Var : Keyword::Let, &out->name, Operator::Colon);
-		out->type = Expr::parseUntil<detail::Conditions::isAssignOrSemicolon, detail::Conditions::isAssign, VariableTypeEndError>(state, true);
+		out->type = Expr::parseUntil<
+			detail::Conditions::isAssignOrSemicolon,
+			detail::Conditions::isAssign,
+			VariableTypeEndError>(state, true);
 
 		parseOne(state, Operator::Assign, true);
 		out->value = Expr::parse(state, true);

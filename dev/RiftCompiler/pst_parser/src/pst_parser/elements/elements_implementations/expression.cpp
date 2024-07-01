@@ -78,7 +78,7 @@ namespace pst {
 		Expr::parse(RiftParserState& state, usize len, bool exact_len, bool allow_comma) {
 		auto result = makeRef<Expr>(state.getPosition());
 		// Currently parsed expression
-		auto  back = result.borrow_mut();
+		auto  back         = result.borrow_mut();
 		auto  out          = makeRef<Expr>(state.getPosition());
 		usize i            = 0;
 		auto  expected_end = state.getPosition((i64) len);
@@ -103,12 +103,10 @@ namespace pst {
 			if (state[0].isBracketGroup()) {
 				auto type = fromTokenType(state[0].getBracketType());
 				state.goDown();
-				if (state.notEmpty()) {
+				if (state.notEmpty())
 					back->elements.emplace_back(Group{ type, Expr::parse(state, true) });
-				} else {
-					back->elements.emplace_back(Group{
-						type, makeRef<Expr>(state.getPosition()) });
-				}
+				else
+					back->elements.emplace_back(Group{ type, makeRef<Expr>(state.getPosition()) });
 				state.goUpAndSkip();
 			} else if (state[0].isOperator()) {
 				auto token = state.tokens().next();

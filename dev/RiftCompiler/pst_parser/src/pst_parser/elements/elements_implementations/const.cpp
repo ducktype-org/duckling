@@ -28,7 +28,10 @@ namespace pst {
 
 
 		parseAll(state, Keyword::Const, &out->name, Operator::Colon);
-		out->type = Expr::parseUntil<detail::Conditions::isAssignOrSemicolon, detail::Conditions::isAssign, ConstTypeEndError>(state, true);
+		out->type = Expr::parseUntil<
+			detail::Conditions::isAssignOrSemicolon,
+			detail::Conditions::isAssign,
+			ConstTypeEndError>(state, true);
 
 		state.tryEat(Operator::Assign);
 

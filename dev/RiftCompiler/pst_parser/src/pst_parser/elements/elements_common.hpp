@@ -24,11 +24,12 @@ namespace pst::detail {
 		}
 
 		static bool isAssignOrSemicolon(const RiftParserState& st, i64 fwd) {
-			return st[fwd].is(rift_def::Operator::Assign) || st[fwd].is(rift_def::Special::Semicolon);
+			return st[fwd].is(rift_def::Operator::Assign)
+			    || st[fwd].is(rift_def::Special::Semicolon);
 		}
 
-		static bool isAssign(const RiftParserState& st, i64 fwd) { 
-			return st[fwd].is(rift_def::Operator::Assign); 
+		static bool isAssign(const RiftParserState& st, i64 fwd) {
+			return st[fwd].is(rift_def::Operator::Assign);
 		}
 	};
 
