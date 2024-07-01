@@ -10,7 +10,9 @@ on:
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
-  WORKSPACE: ${{github.workspace}}/dev/
+  WORKSPACE: ${{ github.workspace }}/dev/
+  BUILD_FOLDER: ${{ github.workspace }}/dev/build
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
   build:
@@ -23,50 +25,31 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get -y install lcov
 
-    # @FIXME: Caching does not work, cmake rebuilds everything anyway
-    # Perhaps use https://cristianadam.eu/20200113/speeding-up-c-plus-plus-github-actions-using-ccache/
-    # - name: CacheBuild
-    #   id: cache-build
-    #   uses: actions/cache@v3
-    #   with:
-    #     path: |
-    #       ${{env.WORKSPACE}}/lib/*
-    #       ${{env.WORKSPACE}}/bin/*
-    #       ${{env.WORKSPACE}}/CMakeFiles/*
-    #       ${{env.WORKSPACE}}/CMakeLists.txt
-    #       ${{env.WORKSPACE}}/Makefile
-    #       ${{env.WORKSPACE}}/CMakeCache.txt
-    #       ${{env.WORKSPACE}}/cmake_install.cmake
-    #       ${{env.WORKSPACE}}/CTestTestfile.cmake
-    #     key: ${{ runner.os }}-cache-build
-
-
-      - name: Save state
-        run: echo "{name321}={value321}" >> $GITHUB_STATE
-
-      - name: Set output
-        run: echo "name123=value123" >> $GITHUB_OUTPUT
+      # Idea - cache local branch and fallback to cache main.
+      - name: Cache build folder
+        id: cache-build
+        uses: actions/cache@v4
+        with:
+          path: ${{env.BUILD_FOLDER}}
+          key: ${{ runner.os }}-build-${{ env.BRANCH_NAME }}-${{ hashFiles('**/*.*pp', '**/CMakeLists.txt') }}
+          # This is interesting. If no match happens to the key, then it tries to partially
+          # match with any of restore-keys, and if matches, then the most recent cache is used.
+          restore-keys : |
+            ${{ runner.os }}-build-main-
 
       - name: Configure CMake
         working-directory: ${{env.WORKSPACE}}
-        run: cmake -B ${{env.WORKSPACE}} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON -D ENABLE_COVERAGE=true
+        run: cmake -B ${{env.BUILD_FOLDER}} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON -D ENABLE_COVERAGE=true
 
       - name: Build
         working-directory: ${{env.WORKSPACE}}
-        run: cmake --build ${{env.WORKSPACE}} -j 2 --target build_all_tests --config ${{env.BUILD_TYPE}}
+        run: cmake --build ${{env.BUILD_FOLDER}} -j 2 --target build_all_tests --config ${{env.BUILD_TYPE}}
 
-  test:
-    runs-on: ubuntu-22.04
-    needs: build
-    steps:
-    - uses: actions/checkout@v4
-    - working-directory: ${{env.WORKSPACE}}
-      run: ctest -C ${{env.BUILD_TYPE}}
 
-  test-coverage:
-    runs-on: ubuntu-22.04
-    needs: build
-    steps:
-    - uses: actions/checkout@v4
-    - working-directory: ${{env.WORKSPACE}}
-      run: cmake --build ${{env.WORKSPACE}} -- coverage
+      - name: Test
+        working-directory: ${{env.BUILD_FOLDER}}
+        run: ctest -C ${{env.BUILD_TYPE}}
+
+      - name: Test Coverage
+        working-directory: ${{env.WORKSPACE}}
+        run: cmake --build ${{env.BUILD_FOLDER}} -- coverage
