@@ -11,7 +11,6 @@ env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
   WORKSPACE: ${{github.workspace}}/dev/
-  BUILD_DIR: ${{env.WORKSPACE}}/build
 
 jobs:
   build:
@@ -50,19 +49,18 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{env.WORKSPACE}}
-        run: cmake -B ${{env.BUILD_DIR}} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON -D ENABLE_COVERAGE=true
-
+        run: cmake -B ${{env.WORKSPACE}} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON -D ENABLE_COVERAGE=true
 
       - name: Build
         working-directory: ${{env.WORKSPACE}}
-        run: cmake --build ${{env.BUILD_DIR}} -j 2 --target build_all_tests --config ${{env.BUILD_TYPE}}
+        run: cmake --build ${{env.WORKSPACE}} -j 2 --target build_all_tests --config ${{env.BUILD_TYPE}}
 
   test:
     runs-on: ubuntu-22.04
     needs: build
     steps:
     - uses: actions/checkout@v4
-      working-directory: ${{env.BUILD_DIR}}
+    - working-directory: ${{env.WORKSPACE}}
       run: ctest -C ${{env.BUILD_TYPE}}
 
   test-coverage:
@@ -70,5 +68,5 @@ jobs:
     needs: build
     steps:
     - uses: actions/checkout@v4
-      working-directory: ${{env.WORKSPACE}}
-      run: cmake --build ${{env.BUILD_DIR}} -- coverage
+    - working-directory: ${{env.WORKSPACE}}
+      run: cmake --build ${{env.WORKSPACE}} -- coverage
