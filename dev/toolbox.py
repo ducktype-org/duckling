@@ -156,12 +156,28 @@ def setup_venv():
     setup_venv_impl()
 
 
-def download_binaries_impl(force=False):
+def download_binaries_impl(force, single):
     log_info(
         f"Downloading binary files {'WITH force' if force else 'WITHOUT force'}..."
     )
-    for file in FILES_TO_DOWNLOAD:
-        file.download(force)
+
+    if single:
+        log_info(f"Searching for file called \'{single}\'...")
+
+        found = False
+        for file in FILES_TO_DOWNLOAD:
+            if single in file.resource_url:
+                log_info(f"Found file: {file.resource_url}")
+                file.download(force)
+                found = True
+                break
+        if not found:
+            exit_with_error("Couldn't find a requested file")
+
+    else:
+        log_info(f"Downloading all supported files")
+        for file in FILES_TO_DOWNLOAD:
+            file.download(force)
 
     log_info("Download done")
 
@@ -175,9 +191,16 @@ def download_binaries_impl(force=False):
     type=bool,
     default=False,
 )
-def download_binaries(force):
+@click.option(
+    "-s",
+    "--single",
+    help="Download a single file, that is fuzzily named as passed in this flag",
+    type=str,
+    default="",
+)
+def download_binaries(*args, **kwargs):
     """Download necessary binary files from the internet"""
-    download_binaries_impl(force)
+    download_binaries_impl(*args, **kwargs)
 
 
 def init_impl():

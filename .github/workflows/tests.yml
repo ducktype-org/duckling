@@ -25,9 +25,9 @@ jobs:
       - name: Install lcov
         run: sudo apt-get -y install lcov
 
-      - name: Install ccache
+      - name: Install toolbox binaries
         working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py download-binaries
+        run: ./toolbox.py download-binaries -s ccache
 
 
       # Idea - cache local branch and fallback to cache main.
