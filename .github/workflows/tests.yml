@@ -38,6 +38,11 @@ jobs:
             ${{ runner.os }}-build-${{ env.BRANCH_NAME }}-
             ${{ runner.os }}-build-main-
 
+      - if: ${{ steps.cache-build.outputs.cache-hit == 'true' }}
+        name: List contents of build
+        continue-on-error: true
+        run: ls -la ${{ env.BUILD_FOLDER }}
+
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
         run: cmake -B ${{ env.BUILD_FOLDER }} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON -D ENABLE_COVERAGE=true
