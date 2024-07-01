@@ -12,7 +12,7 @@ namespace pst {
 
 		parseAll(state, Special::AtSign, &out->name);
 
-		if (state[0].isBracketGroup(Token::BracketType::Round)) out->args = ArgList::parse(state);
+		if (state[0].isBracketGroup(Token::BracketType::Round)) out->args = AtrArgList::parse(state);
 
 		out->setLastToken(state.getPosition(-1));
 

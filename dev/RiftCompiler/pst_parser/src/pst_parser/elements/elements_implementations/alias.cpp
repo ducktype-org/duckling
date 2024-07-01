@@ -31,7 +31,7 @@ namespace pst {
 		out->setLastToken(state.getPosition(-1));
 
 		if (out->points_to->getStar())
-			state.fail(base::make_unique<AliasStarError>(out->source_position));
+			state.log(base::make_unique<AliasStarError>(out->source_position));
 
 		return out;
 	}

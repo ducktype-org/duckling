@@ -84,12 +84,12 @@ namespace pst {
 		);
 
 		if (state.empty()) {
-			state.fail(base::make_unique<EmptyExprError>(state.getPosition()));
+			state.log(base::make_unique<EmptyExprError>(state.getPosition()));
 			return nullptr;
 		}
 		if (state[0].is(Special::Semicolon)) {
 			auto err_pos = state.getPosition(-1, 0);
-			state.fail(base::make_unique<EmptyExprError>(err_pos));
+			state.log(base::make_unique<EmptyExprError>(err_pos));
 			return nullptr;
 		}
 
@@ -122,14 +122,14 @@ namespace pst {
 			}
 			// @TODO: Add support for strings
 			else {
-				state.fail(base::make_unique<BadTokenError>(state.getPosition()));
+				state.log(base::make_unique<BadTokenError>(state.getPosition()));
 				if (i == 1) return nullptr;
 				break;
 			}
 		}
 		if (exact_len and i != len) {
 			auto bad_end = state.getPosition(-1);
-			state.fail(base::make_unique<UnexpectedExprEndError>(bad_end, expected_end));
+			state.log(base::make_unique<UnexpectedExprEndError>(bad_end, expected_end));
 		}
 		return out;
 	}

@@ -30,11 +30,11 @@ namespace pst::detail {
 
 		static std::string parameterList() { return "function parameter"; }
 
-		static std::string returnList() { return "function return"; }
+		static std::string returnList() { return "function return type"; }
 
 		static std::string inheritanceList() { return "inheritance"; }
 
-		static std::string argumentList() { return "attribute argument"; }
+		static std::string attributeArgList() { return "attribute argument"; }
 	};
 
 	/**

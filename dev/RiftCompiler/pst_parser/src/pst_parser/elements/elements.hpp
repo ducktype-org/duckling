@@ -144,13 +144,13 @@ namespace pst {
 		detail::Conditions::isCurlyGroup,
 		detail::NameGetters::inheritanceList>;
 
-	using ArgList = List<
+	using AtrArgList = List<
 		Expr,
 		false,
 		lexer::Token::BracketType::Round,
 		detail::Conditions::isComma,
 		detail::Conditions::isSentinel,
-		detail::NameGetters::argumentList>;
+		detail::NameGetters::attributeArgList>;
 
 	class DottedName final: public NotStmt {
 		std::vector<tpc::Identifier> names;
@@ -182,7 +182,7 @@ namespace pst {
 
 	class Attribute final: public Stmt {
 		tpc::Identifier    name;
-		ParserRef<ArgList> args = nullptr;
+		ParserRef<AtrArgList> args = nullptr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Attribute);
@@ -403,7 +403,7 @@ namespace pst {
 					auto other = state.getPosition(0);
 					pos        = dia::SourcePosition(pos, other.getStart());
 				}
-				state.fail(base::make_unique<badEndMessage>(pos));
+				state.log(base::make_unique<badEndMessage>(pos));
 			} else if (count == 0) {
 				// Handle empty expression:
 				auto pos = state.getPosition(-1);
@@ -411,7 +411,7 @@ namespace pst {
 					auto other = state.getPosition(0);
 					pos        = dia::SourcePosition(pos, other.getStart());
 				}
-				state.fail(base::make_unique<EmptyExprError>(pos));
+				state.log(base::make_unique<EmptyExprError>(pos));
 			}
 
 			// Don't parse empty expression:
@@ -809,7 +809,7 @@ namespace pst {
 		// Handle opening brackets:
 		if constexpr (BRACKETS != lexer::Token::BracketType::None) {
 			if (!state[0].isBracketGroup(BRACKETS)) {
-				state.fail(base::make_unique<OpeningBracketMissingError<getName>>(
+				state.log(base::make_unique<OpeningBracketMissingError<getName>>(
 					state.getPosition(-1), BRACKETS
 				));
 				return nullptr;
@@ -823,7 +823,7 @@ namespace pst {
 		if (state.empty() || isEnding(state, 0)) {
 			// Handle empty expression
 			if constexpr (NON_EMPTY)
-				state.fail(base::make_unique<EmptyListError<getName>>(state.getPosition(-1)));
+				state.log(base::make_unique<EmptyListError<getName>>(state.getPosition(-1)));
 		} else {
 			while (true) {
 				expr_length = 0;
@@ -842,10 +842,10 @@ namespace pst {
 							auto other = state.getPosition();
 							pos        = dia::SourcePosition(pos, other.getStart());
 						}
-						state.fail(base::make_unique<EmptyFieldError<getName>>(pos));
+						state.log(base::make_unique<EmptyFieldError<getName>>(pos));
 						break;
 					} else {
-						state.fail(
+						state.log(
 							base::make_unique<EmptyFieldError<getName>>(state.getPosition(-1, 0))
 						);
 						state.tokens().skip();
@@ -859,7 +859,7 @@ namespace pst {
 				if (isSeparator(state, 0))
 					state.tokens().skip();
 				else
-					state.fail(base::make_unique<NoSeparatorError<getName>>(state.getPosition()));
+					state.log(base::make_unique<NoSeparatorError<getName>>(state.getPosition()));
 			}
 		}
 

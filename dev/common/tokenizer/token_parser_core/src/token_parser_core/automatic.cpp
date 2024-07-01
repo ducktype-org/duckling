@@ -77,14 +77,14 @@ namespace tpc {
 
 	void parseOne(ParserState& state, Keyword key, bool ignorable) {
 		if (!state.tryEat(key)) {
-			state.fail(base::make_unique<BadKeywordError>(state.getPosition(), key));
+			state.log(base::make_unique<BadKeywordError>(state.getPosition(), key));
 			if (!ignorable) state.tokens().next();
 		}
 	}
 
 	void parseOne(ParserState& state, KeywordWrapper key, bool ignorable) {
 		if (!state.tryEat(key.what)) {
-			state.fail(base::make_unique<BadKeywordError>(state.getPosition(), key.what));
+			state.log(base::make_unique<BadKeywordError>(state.getPosition(), key.what));
 			if (!ignorable) state.tokens().next();
 		} else {
 			key.pos = state.getPosition(-1);
@@ -93,21 +93,21 @@ namespace tpc {
 
 	void parseOne(ParserState& state, Special spec, bool ignorable) {
 		if (!state.tryEat(spec)) {
-			state.fail(base::make_unique<BadSpecialError>(state.getPosition(), spec));
+			state.log(base::make_unique<BadSpecialError>(state.getPosition(), spec));
 			if (!ignorable) state.tokens().next();
 		}
 	}
 
 	void parseOne(ParserState& state, Operator op, bool ignorable) {
 		if (!state.tryEat(op)) {
-			state.fail(base::make_unique<BadOperatorError>(state.getPosition(), op));
+			state.log(base::make_unique<BadOperatorError>(state.getPosition(), op));
 			if (!ignorable) state.tokens().next();
 		}
 	}
 
 	void parseOne(ParserState& state, Identifier* result, bool ignorable) {
 		if (!state.ctokens().peek().isIdentifier()) {
-			state.fail(base::make_unique<NoIdentifierError>(state.getPosition()));
+			state.log(base::make_unique<NoIdentifierError>(state.getPosition()));
 			result->value = base::StrId("<error>");
 			if (!ignorable) state.tokens().next();
 			return;

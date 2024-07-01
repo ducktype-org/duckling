@@ -74,7 +74,7 @@ namespace pst {
 			return detail::parseStmt<Action>(state);
 
 		if (as_special == Special::Semicolon) {
-			state.fail(base::make_unique<StmtSemicolonError>(state.getPosition()));
+			state.log(base::make_unique<StmtSemicolonError>(state.getPosition()));
 			state.tokens().skip();
 			return nullptr;
 		}
