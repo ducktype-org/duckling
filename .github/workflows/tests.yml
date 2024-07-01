@@ -23,7 +23,7 @@ jobs:
 
         # Install a coverage tool
       - name: Install dependencies
-        run: sudo apt-get -y install lcov
+        run: sudo apt-get -y install lcov && ./toolbox.py download-binaries
 
       # Idea - cache local branch and fallback to cache main.
       - name: Cache build folder
