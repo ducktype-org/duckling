@@ -112,7 +112,7 @@ namespace lexer {
 			std::stringstream ss;
 			ss << "UTF-8 decoding error: non-continuation byte ";
 			ss << base::toHexString(bad_byte, 2);
-			ss << " where continuation byte from code-point starting at at position ";
+			ss << " where continuation byte from code-point starting at position ";
 			ss << code_point_start << " was expected.";
 			return ss.str();
 		}

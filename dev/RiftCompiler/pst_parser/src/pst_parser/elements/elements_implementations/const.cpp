@@ -6,7 +6,7 @@ namespace pst {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected type expression ending with `=`.";
+			return "Expected type expression followed by `=`.";
 		}
 
 	public:
