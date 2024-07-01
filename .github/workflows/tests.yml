@@ -30,20 +30,21 @@ jobs:
         id: cache-build
         uses: actions/cache@v4
         with:
-          path: ${{env.BUILD_FOLDER}}
+          path: ${{ env.BUILD_FOLDER }}
           key: ${{ runner.os }}-build-${{ env.BRANCH_NAME }}-${{ hashFiles('**/*.*pp', '**/CMakeLists.txt') }}
           # This is interesting. If no match happens to the key, then it tries to partially
           # match with any of restore-keys, and if matches, then the most recent cache is used.
           restore-keys : |
+            ${{ runner.os }}-build-${{ env.BRANCH_NAME }}-
             ${{ runner.os }}-build-main-
 
       - name: Configure CMake
-        working-directory: ${{env.WORKSPACE}}
-        run: cmake -B ${{env.BUILD_FOLDER}} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON -D ENABLE_COVERAGE=true
+        working-directory: ${{ env.WORKSPACE }}
+        run: cmake -B ${{ env.BUILD_FOLDER }} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON -D ENABLE_COVERAGE=true
 
       - name: Build
-        working-directory: ${{env.WORKSPACE}}
-        run: cmake --build ${{env.BUILD_FOLDER}} -j 2 --target build_all_tests --config ${{env.BUILD_TYPE}}
+        working-directory: ${{ env.WORKSPACE }}
+        run: cmake --build ${{ env.BUILD_FOLDER }} -j -1 --target build_all_tests --config ${{ env.BUILD_TYPE }}
 
   test:
       runs-on: ubuntu-22.04
@@ -55,13 +56,16 @@ jobs:
           id: cache-build
           uses: actions/cache@v4
           with:
-            path: ${{env.BUILD_FOLDER}}
+            path: ${{ env.BUILD_FOLDER }}
             key: ${{ runner.os }}-build-${{ env.BRANCH_NAME }}-${{ hashFiles('**/*.*pp', '**/CMakeLists.txt') }}
+            restore-keys : |
+              ${{ runner.os }}-build-${{ env.BRANCH_NAME }}-
+              ${{ runner.os }}-build-main-
 
         - name: Test
-          working-directory: ${{env.BUILD_FOLDER}}
-          run: ctest -C ${{env.BUILD_TYPE}}
+          working-directory: ${{ env.BUILD_FOLDER }}
+          run: ctest -C ${{ env.BUILD_TYPE }}
 
         - name: Test Coverage
-          working-directory: ${{env.WORKSPACE}}
-          run: cmake --build ${{env.BUILD_FOLDER}} -- coverage
+          working-directory: ${{ env.WORKSPACE }}
+          run: cmake --build ${{ env.BUILD_FOLDER }} -- coverage
