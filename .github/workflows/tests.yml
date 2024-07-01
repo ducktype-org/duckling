@@ -37,8 +37,6 @@ jobs:
           restore-keys : |
             ${{ runner.os }}-build-main-
 
-      - name: Print cache hit info
-        run: echo "Cache hit::" ${{steps.cache-build.outputs.cache-hit}}
       - name: Configure CMake
         working-directory: ${{env.WORKSPACE}}
         run: cmake -B ${{env.BUILD_FOLDER}} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON -D ENABLE_COVERAGE=true
@@ -47,11 +45,23 @@ jobs:
         working-directory: ${{env.WORKSPACE}}
         run: cmake --build ${{env.BUILD_FOLDER}} -j 2 --target build_all_tests --config ${{env.BUILD_TYPE}}
 
+  test:
+      runs-on: ubuntu-22.04
+      needs: build
+      steps:
+        - uses: actions/checkout@v4
 
-      - name: Test
-        working-directory: ${{env.BUILD_FOLDER}}
-        run: ctest -C ${{env.BUILD_TYPE}}
+        - name: Cache build folder
+          id: cache-build
+          uses: actions/cache@v4
+          with:
+            path: ${{env.BUILD_FOLDER}}
+            key: ${{ runner.os }}-build-${{ env.BRANCH_NAME }}-${{ hashFiles('**/*.*pp', '**/CMakeLists.txt') }}
 
-      - name: Test Coverage
-        working-directory: ${{env.WORKSPACE}}
-        run: cmake --build ${{env.BUILD_FOLDER}} -- coverage
+        - name: Test
+          working-directory: ${{env.BUILD_FOLDER}}
+          run: ctest -C ${{env.BUILD_TYPE}}
+
+        - name: Test Coverage
+          working-directory: ${{env.WORKSPACE}}
+          run: cmake --build ${{env.BUILD_FOLDER}} -- coverage
