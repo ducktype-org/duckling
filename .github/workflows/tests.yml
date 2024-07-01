@@ -44,7 +44,7 @@ jobs:
 
       - name: Build
         working-directory: ${{ env.WORKSPACE }}
-        run: cmake --build ${{ env.BUILD_FOLDER }} -j -1 --target build_all_tests --config ${{ env.BUILD_TYPE }}
+        run: cmake --build ${{ env.BUILD_FOLDER }} -j 5 --target build_all_tests --config ${{ env.BUILD_TYPE }}
 
   test:
       runs-on: ubuntu-22.04
