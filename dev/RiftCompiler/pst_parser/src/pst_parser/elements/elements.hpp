@@ -86,6 +86,7 @@ namespace pst {
 	 * @tparam BRACKETS - expected brackets or None if not expected
 	 * @tparam isSeparator - Separator should always be skip-able with one skip.
 	 * @tparam isEnding - Check for successful ending.
+	 * @tparam getName - List name getter for errors.
 	 * @tparam Container - Vector-like container of SubElements with emplace_back. Possibly with
 	 * other condition because of iteration.
 	 */
@@ -392,7 +393,9 @@ namespace pst {
 			// look ahead:
 			usize count = 0;
 			while (!until(state, (i64) count) && state.notEmpty()) count++;
+			
 			if (!positiveEnd(state, (i64) count)) {
+				// Handle negative end:
 				auto pos = state.getPosition(-1);
 				if (count != 0) {
 					pos = state.getPosition(0, (i64) count - 1);
@@ -402,6 +405,7 @@ namespace pst {
 				}
 				state.fail(base::make_unique<badEndMessage>(pos));
 			} else if (count == 0) {
+				// Handle empty expression:
 				auto pos = state.getPosition(-1);
 				if (!state.isEOF()) {
 					auto other = state.getPosition(0);
@@ -410,6 +414,7 @@ namespace pst {
 				state.fail(base::make_unique<EmptyExprError>(pos));
 			}
 
+			// Don't parse empty expression:
 			if (count == 0) return nullptr;
 
 			return Expr::parse(state, count, true);
@@ -801,6 +806,7 @@ namespace pst {
 	) -> ParserRef<List> {
 		auto position = state.getPosition();
 
+		// Handle opening brackets:
 		if constexpr (BRACKETS != lexer::Token::BracketType::None) {
 			if (!state[0].isBracketGroup(BRACKETS)) {
 				state.fail(base::make_unique<OpeningBracketMissingError<getName>>(
@@ -815,17 +821,21 @@ namespace pst {
 
 		usize expr_length{};
 		if (state.empty() || isEnding(state, 0)) {
+			// Handle empty expression
 			if constexpr (NON_EMPTY)
 				state.fail(base::make_unique<EmptyListError<getName>>(state.getPosition(-1)));
 		} else {
 			while (true) {
 				expr_length = 0;
+
+				// Find next separator or end
 				while (!state[(i64) expr_length].is(lexer::Token::Type::Sentinel)
 				       && !isSeparator(state, (i64) expr_length)
 				       && !isEnding(state, (i64) expr_length)) {
 					expr_length++;
 				}
 				if (expr_length == 0) {
+					// Handle empty field errors with sensible ranges
 					if (state.empty() || isEnding(state, 0)) {
 						auto pos = state.getPosition(-1);
 						if (!state.isEOF()) {
@@ -842,7 +852,9 @@ namespace pst {
 						continue;
 					}
 				}
+
 				out->elements.emplace_back(SubElements::parse(state, expr_length, true));
+
 				if (isEnding(state, 0)) break;
 				if (isSeparator(state, 0))
 					state.tokens().skip();
@@ -851,7 +863,9 @@ namespace pst {
 			}
 		}
 
+		// Handle closing brackets
 		if constexpr (BRACKETS != lexer::Token::BracketType::None) state.goUpAndSkip();
+
 		return out;
 	}
 }
