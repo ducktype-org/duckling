@@ -13,7 +13,8 @@
  *
  * The optional argument ignorable additionally allows to control behaviour in case of error.
  * If it's set to true then simple parse-able entities(not parser ref) will not be skipped on error.
- * It works as a kind of assumption that is something simple doesn't fit then it's missing not wrong.
+ * It works as a kind of assumption that is something simple doesn't fit then it's missing not
+ * wrong.
  *
  * ParseAll takes the state and any number of additional arguments and calls parseOne on those
  * arguments from left to right. Additionally it makes the first parsed thing non-ignorable and the

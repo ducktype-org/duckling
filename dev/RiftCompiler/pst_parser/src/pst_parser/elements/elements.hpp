@@ -181,7 +181,7 @@ namespace pst {
 	};
 
 	class Attribute final: public Stmt {
-		tpc::Identifier    name;
+		tpc::Identifier       name;
 		ParserRef<AtrArgList> args = nullptr;
 
 	public:
@@ -393,7 +393,7 @@ namespace pst {
 			// look ahead:
 			usize count = 0;
 			while (!until(state, (i64) count) && state.notEmpty()) count++;
-			
+
 			if (!positiveEnd(state, (i64) count)) {
 				// Handle negative end:
 				auto pos = state.getPosition(-1);

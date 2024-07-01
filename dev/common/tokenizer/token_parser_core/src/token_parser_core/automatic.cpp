@@ -28,7 +28,8 @@ namespace tpc {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected special character `" + rift_def::specialToStr(expected).str() + "` here.";
+			return "Expected special character `" + rift_def::specialToStr(expected).str()
+			     + "` here.";
 		}
 
 	public:
