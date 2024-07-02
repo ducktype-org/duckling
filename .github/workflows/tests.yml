@@ -35,13 +35,16 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py download-binaries -s ccache
 
-      - name: Get Date
-        id: get-date
+      # Timestamps - they are used for caching, so each cache has a unique key.
+      - name: Prepare cache timestamp
+        id: cache_timestamp
+        shell: cmake -P {0}
         run: |
-          echo "date=$(/bin/date -u "+%Y%m%d")" >> $GITHUB_OUTPUT
-        shell: bash
+          string(TIMESTAMP current_date "%Y-%m-%d-%H::%M::%S" UTC)
+          file(APPEND "$ENV{GITHUB_OUTPUT}" "timestamp=${current_date}")
 
-      # Idea - cache local branch and fallback to main ccache.
+      # Cache local branch and on miss fallback to main branch's cache. In case
+      # main branch misses, fallback to any branch's cache.
       - name: Cache build folder
         id: cache-build
         uses: actions/cache@v4
@@ -49,7 +52,7 @@ jobs:
           path: |
             ${{ env.BUILD_DIR }}
             ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.get-date.outputs.date }}
+          key: ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache_timestamp.outputs.timestamp }}
           # This is interesting. If no match happens to the key, then it tries to partially
           # match with any of restore-keys, and if matches, then the most recent cache is used.
           restore-keys : |
@@ -57,6 +60,7 @@ jobs:
             ${{ runner.os }}-build-${{ matrix.build-type }}-main
             ${{ runner.os }}-build-${{ matrix.build-type }}
 
+      # Enables coverage only in case of Debug build.
       - name: Additional CMake flags
         id: cmake-flags
         env:
@@ -80,4 +84,3 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
-          cat ${{ env.BUILD_DIR }}/compile_commands.json
