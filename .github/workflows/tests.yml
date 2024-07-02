@@ -78,19 +78,25 @@ jobs:
         run: cmake --build ${{ env.BUILD_DIR }} -- test
 
       - name: Test Coverage
-        id: test_coverage
+        id: test-coverage
         if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
-          echo coverage_percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
+          echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
       # - name: Main branch save coverage
-      #   if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE  && env.BRANCH_NAME == 'main' }}
+      #   if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE && env.BRANCH_NAME == 'main' }}
       #   working-directory: ${{ env.BUILD_DIR }}
       #   run: |
+
+      - name: Check coverage status
+        id: check-coverage-status
+        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE && steps.test-coverage.outputs.coverage-percent < 75 }}
+        run: echo success=${{ steps.test-coverage.outputs.coverage-percent < 75 }} > $GITHUB_OUTPUT
+
       - uses: actions/github-script@v7
-        if: ${{ matrix.build-type == 'Debug' }}
+        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
         with:
           github-token: ${{ secrets.KEY_FOR_MAURYC }}
           script: |
@@ -99,7 +105,11 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: '👋 Coverage ran successfully!\n \
-                     ✨ Lines covered on the **current** branch: ${{ steps.test_coverage.outputs.coverage_percent }}% \n \
-                     ✨ Lines covered on the main branch: ${{ steps.test_coverage.outputs.coverage_percent }}% \n \
-                     ${{ steps.test_coverage.outputs.coverage_percent < 75 && '❌❌❌ - **You have to write some more tests!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` and check your status' || '✅✅✅ **Great job writing tests!**'}}'
+                     ✨ Lines covered on the **current** branch: ${{ steps.test-coverage.outputs.coverage-percent }}% \n \
+                     ✨ Lines covered on the main branch: ${{ steps.test-coverage.outputs.coverage-percent }}% \n \n \
+                     ${{ steps.check-coverage-status.outputs.success != 'true' && '❌❌❌ - **You have to write some more tests!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` and check your status' || '✅✅✅ **Great job writing tests!**'}}'
             })
+
+      - name: Fail if bad coverage
+        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE && steps.check-coverage-status.outputs.success != 'true' }}
+        run: exit 1
