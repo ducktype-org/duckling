@@ -99,7 +99,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: '👋 Coverage ran successfully!\n \
-                     ✨ Lines covered on the current branch: ${{ steps.test_coverage.outputs.coverage_percent }}% \n \
-                     ✨ Lines covered on the main branch: ${{ steps.test_coverage.outputs.coverage_percent }}% \n\n \
+                     ✨ Lines covered on the **current** branch: ${{ steps.test_coverage.outputs.coverage_percent }}% \n \
+                     ✨ Lines covered on the main branch: ${{ steps.test_coverage.outputs.coverage_percent }}% \n \
                      ${{ steps.test_coverage.outputs.coverage_percent < 75 && '❌❌❌ - **You have to write some more tests!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` and check your status' || '✅✅✅ **Great job writing tests!**'}}'
             })
