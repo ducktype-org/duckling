@@ -82,7 +82,7 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
-          ./${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html
+          python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html
 
       # - name: Main branch save coverage
       #   if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE  && env.BRANCH_NAME == 'main' }}
