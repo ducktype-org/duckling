@@ -94,6 +94,7 @@ jobs:
           access_token: ${{ secrets.KEY_FOR_MAURYC }}
 
       - name: Read main coverage percentage
+        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
         id: read-main-coverage
         uses: aaimio/get-persistent-value@v1.2.1
         with:
