@@ -85,15 +85,25 @@ jobs:
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
-      # - name: Main branch save coverage
-      #   if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE && env.BRANCH_NAME == 'main' }}
-      #   working-directory: ${{ env.BUILD_DIR }}
-      #   run: |
+      - name: Save main coverage percentage
+        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE && env.BRANCH_NAME == 'main' }}
+        uses: aaimio/set-persistent-value@v1.2.1
+        with:
+          key: main_coverage
+          value: ${{ steps.test-coverage.outputs.coverage-percent }}
+          access_token: ${{ secrets.KEY_FOR_MAURYC }}
+
+      - name: Read main coverage percentage
+        id: read-main-coverage
+        uses: aaimio/get-persistent-value@v1.2.1
+        with:
+          key: foo
+          access_token: ${{ secrets.KEY_FOR_MAURYC }}
 
       - name: Check coverage status
         id: check-coverage-status
-        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE && steps.test-coverage.outputs.coverage-percent < 75 }}
-        run: echo success=${{ steps.test-coverage.outputs.coverage-percent >= 75 }} > $GITHUB_OUTPUT
+        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
+        run: echo success=${{ steps.test-coverage.outputs.coverage-percent >= steps.read-main-coverage.outputs.value }} > $GITHUB_OUTPUT
 
       - uses: actions/github-script@v7
         if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
