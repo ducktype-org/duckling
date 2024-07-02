@@ -105,9 +105,9 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: '👋 Coverage ran successfully!\n \
-                     ✨ Lines covered on the **current** branch: ${{ steps.test-coverage.outputs.coverage-percent }}% \n \
-                     ✨ Lines covered on the main branch: ${{ steps.test-coverage.outputs.coverage-percent }}% \n \n \
-                     ${{ steps.check-coverage-status.outputs.success != 'true' && '❌❌❌ - **You have to write some more tests!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` and check your status' || '✅✅✅ **Great job writing tests!**'}}'
+                     ✨ Lines covered on the **current** branch: **${{ steps.test-coverage.outputs.coverage-percent }}%** \n \
+                     ✨ Lines covered on the main branch: ${{ steps.test-coverage.outputs.coverage-percent }}% \n \
+                     ${{ steps.check-coverage-status.outputs.success != 'true' && '❌❌❌ - **You have to write some more tests!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information' || '✅✅✅ **Great job writing tests!**'}}'
             })
 
       - name: Fail if bad coverage
