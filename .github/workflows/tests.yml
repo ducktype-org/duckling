@@ -24,9 +24,10 @@ jobs:
       - name: Install lcov
         run: sudo apt-get -y install lcov
 
-      # - name: Install ccache
-      #   working-directory: ${{ env.WORKSPACE }}
-      #   run: ./toolbox.py download-binaries -s ccache
+      - name: Install ccache
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py download-binaries -s ccache
+
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
