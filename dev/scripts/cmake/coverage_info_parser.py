@@ -15,10 +15,13 @@ good_lines = contents[1].split("\n")[:3]
 
 info = []
 for line in good_lines:
-    info.append(line.split(">")[1].split("<")[0])
+    data = line.split(">")[1].split("<")[0]
+    if "%" not in data:
+        info.append(int(data))
 
+info.sort()
 print(good_lines)
 print(info)
+hit = int(info[0])
 total = int(info[1])
-hit = int(info[2])
 print(hit / total * 100)

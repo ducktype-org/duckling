@@ -78,11 +78,12 @@ jobs:
         run: cmake --build ${{ env.BUILD_DIR }} -- test
 
       - name: Test Coverage
+        id: test_coverage
         if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
-          python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html
+          echo coverage_percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
       # - name: Main branch save coverage
       #   if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE  && env.BRANCH_NAME == 'main' }}
@@ -96,5 +97,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '👋 Thanks for reporting!'
+              body: '👋 Tests ran successfully!\n ✨ Coverage: ${{ steps.test_coverage.outputs.coverage_percent }}'
             })
