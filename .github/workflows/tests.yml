@@ -90,6 +90,7 @@ jobs:
       #   working-directory: ${{ env.BUILD_DIR }}
       #   run: |
       - uses: actions/github-script@v7
+        if: ${{ matrix.build-type == 'Debug' }}
         with:
           github-token: ${{ secrets.KEY_FOR_MAURYC }}
           script: |
@@ -97,5 +98,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '👋 Tests ran successfully!\n ✨ Coverage: ${{ steps.test_coverage.outputs.coverage_percent }}'
+              body: '👋 Coverage ran successfully!\n ✨ Lines covered: ${{ steps.test_coverage.outputs.coverage_percent }}'
             })

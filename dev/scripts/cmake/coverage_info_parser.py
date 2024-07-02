@@ -20,8 +20,6 @@ for line in good_lines:
         info.append(int(data))
 
 info.sort()
-print(good_lines)
-print(info)
 hit = int(info[0])
 total = int(info[1])
 print(hit / total * 100)
