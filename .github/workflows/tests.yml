@@ -86,7 +86,7 @@ jobs:
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
       - name: Save main coverage percentage
-        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
+        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE && env.BRANCH_NAME == 'main' }}
         uses: aaimio/set-persistent-value@v1.2.1
         with:
           key: main_coverage
