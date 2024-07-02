@@ -8,27 +8,25 @@ on:
   workflow_dispatch:
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   WORKSPACE: ${{ github.workspace }}/dev/
   BUILD_DIR: ${{ github.workspace }}/dev/build
   CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-  TEST_BUILD_TYPE: Debug
-  COVERAGE_BUILD_TYPE: Release
+  ENABLE_COVERAGE: true
 
 jobs:
   build:
     strategy:
       matrix:
-        build-type: [Debug, Release]
+        build-type: [Debug, Release]  # (Release, Debug, RelWithDebInfo, etc.)
       fail-fast: false
-    timeout-minutes: 8
+    timeout-minutes: 8  # (Per matrix run)
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Install lcov
-        if: ${{ matrix.build-type == 'Debug' }}
+        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
         run: sudo apt-get -y install lcov
 
       - name: Install ccache
@@ -71,7 +69,7 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: cmake -B ${{ env.BUILD_DIR }} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON -D USE_CCACHE=ON ${{ steps.cmake-flags.outputs.flags }}
 
-      - name: Build
+      - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
         run: cmake --build ${{ env.BUILD_DIR }} -j 5 -- build_all_tests
 
@@ -80,7 +78,7 @@ jobs:
         run: cmake --build ${{ env.BUILD_DIR }} -- test
 
       - name: Test Coverage
-        if: ${{ matrix.build-type == 'Debug' }}
+        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
