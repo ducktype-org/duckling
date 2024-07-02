@@ -90,10 +90,11 @@ jobs:
       #   run: |
       - uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.KEY_FOR_MAURYC }}
           script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '👋 Testing!'
+              body: '👋 Thanks for reporting!'
             })
