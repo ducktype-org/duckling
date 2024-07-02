@@ -98,5 +98,8 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '👋 Coverage ran successfully!\n ✨ Lines covered: ${{ steps.test_coverage.outputs.coverage_percent }}'
+              body: '👋 Coverage ran successfully!\n \
+                     ✨ Lines covered on the current branch: ${{ steps.test_coverage.outputs.coverage_percent }}% \n \
+                     ✨ Lines covered on the main branch: ${{ steps.test_coverage.outputs.coverage_percent }}% \n \
+                     ${{ steps.test_coverage.outputs.coverage_percent < 75 && '❌❌❌ - You have to write some more tests!' || '✅✅✅ Great job writing tests!'}}'
             })

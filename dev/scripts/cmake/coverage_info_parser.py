@@ -22,4 +22,4 @@ for line in good_lines:
 info.sort()
 hit = int(info[0])
 total = int(info[1])
-print(hit / total * 100)
+print(round(hit / total * 100, 2))
