@@ -9,7 +9,7 @@ on:
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
+  BUILD_TYPE: Debug
   WORKSPACE: ${{ github.workspace }}/dev/
   BUILD_FOLDER: ${{ github.workspace }}/dev/build
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
