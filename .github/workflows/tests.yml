@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  WORKSPACE: ${{ github.workspace }}/dev/
+  WORKSPACE: ${{ github.workspace }}/dev
   BUILD_DIR: ${{ github.workspace }}/dev/build
   CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
