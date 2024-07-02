@@ -17,6 +17,8 @@ info = []
 for line in good_lines:
     info.append(line.split(">")[1].split("<")[0])
 
+print(good_lines)
+print(info)
 total = int(info[1])
 hit = int(info[2])
 print(hit / total * 100)
