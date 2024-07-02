@@ -111,5 +111,5 @@ jobs:
             })
 
       - name: Fail if bad coverage
-        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE && steps.check-coverage-status.outputs.success != 'true' }}
+        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE && steps.check-coverage-status.outputs.success }}
         run: exit 1
