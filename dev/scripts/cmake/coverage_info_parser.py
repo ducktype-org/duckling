@@ -7,7 +7,7 @@ coverage_html_path = sys.argv[1]
 assert coverage_html_path.endswith("index.html")
 
 contents = None
-with open(sys.argv[1], "r") as file:
+with open(coverage_html_path, "r") as file:
     contents = file.read()
 
 contents = contents.split('<td class="headerItem">Lines:</td>\n')
