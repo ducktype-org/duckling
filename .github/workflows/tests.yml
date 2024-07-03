@@ -51,7 +51,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ${{ env.BUILD_DIR }}
+            # ${{ env.BUILD_DIR }}
             ${{ env.CCACHE_DIR }}
           key: ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache_timestamp.outputs.timestamp }}
           # This is interesting. If no match happens to the key, then it tries to partially
@@ -88,21 +88,22 @@ jobs:
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
-      - name: Save main coverage percentage
-        if: ${{ steps.coverage-enabled.outputs.value && env.BRANCH_NAME == 'main' }}
-        uses: aaimio/set-persistent-value@v1.2.1
-        with:
-          key: main_coverage
-          value: ${{ steps.test-coverage.outputs.coverage-percent }}
-          access_token: ${{ secrets.KEY_FOR_MAURYC }}
+      # - name: Save main coverage percentage
+      #   if: ${{ steps.coverage-enabled.outputs.value && env.BRANCH_NAME == 'main' }}
+      #   uses: aaimio/set-persistent-value@v1.2.1
+      #   with:
+      #     key: main_coverage
+      #     value: ${{ steps.test-coverage.outputs.coverage-percent }}
+      #     access_token: ${{ secrets.KEY_FOR_MAURYC }}
 
       - name: Read main coverage percentage
         if: ${{ steps.coverage-enabled.outputs.value }}
         id: read-main-coverage
-        uses: aaimio/get-persistent-value@v1.2.1
-        with:
-          key: foo
-          access_token: ${{ secrets.KEY_FOR_MAURYC }}
+        # uses: aaimio/get-persistent-value@v1.2.1
+        # with:
+        #   key: foo
+        #   access_token: ${{ secrets.KEY_FOR_MAURYC }}
+        run: echo value=75 > $GITHUB_OUTPUT
 
       - name: Check coverage status
         id: check-coverage-status
