@@ -299,7 +299,7 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryTypeFromDefinition, SymID, ts::TypeInfo);
 
 	/**
-	 * @brief Struct returned by the `QueryStructInfo` query.
+	 * @brief Struct returned by the `QueryStructSymbolData` query.
 	 */
 	struct StructSymbolData {
 		/**
@@ -323,7 +323,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query all the information about a struct definition.
 	 * Panics if the given `SymID` is not a struct.
-	 * More information on `StructInfo` in it's definition.
+	 * More information on `StructSymbolData` in it's definition.
 	 */
 	DECLARE_QUERY(QueryStructSymbolData, SymID, const StructSymbolData&)
 }

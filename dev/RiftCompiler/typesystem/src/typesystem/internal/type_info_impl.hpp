@@ -682,7 +682,7 @@ namespace ts::internal {
 
 		[[nodiscard]]
 		base::Optional<ClassInfo> getBaseClassType(query::Context& ctx) const {
-			auto& bases = ctx.query<compiler::helios::QueryStructInfo>(symbol).bases;
+			auto& bases = ctx.query<compiler::helios::QueryStructSymbolData>(symbol).bases;
 			if (bases.empty())
 				return {};
 			else
@@ -699,7 +699,7 @@ namespace ts::internal {
 		// @TODO: change return type to InterfaceInfo when interface type is created.
 		[[nodiscard]]
 		std::vector<ClassInfo> getImplementedInterfaceTypes(query::Context& ctx) const {
-			auto& bases = ctx.query<compiler::helios::QueryStructInfo>(symbol).bases;
+			auto& bases = ctx.query<compiler::helios::QueryStructSymbolData>(symbol).bases;
 			std::vector<ClassInfo> result;
 			result.reserve(std::max(0UL, bases.size() - 1));
 			for (int i = 1; i < bases.size(); i++) result.emplace_back(bases.at(i));
@@ -709,7 +709,7 @@ namespace ts::internal {
 		[[nodiscard]]
 		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols(query::Context& ctx
 		) const {
-			auto& bases = ctx.query<compiler::helios::QueryStructInfo>(symbol).bases;
+			auto& bases = ctx.query<compiler::helios::QueryStructSymbolData>(symbol).bases;
 			std::vector<compiler::helios::SymID> result;
 			result.reserve(std::max(0UL, bases.size() - 1));
 			for (int i = 1; i < bases.size(); i++)
