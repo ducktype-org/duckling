@@ -541,18 +541,18 @@ namespace compiler::helios {
 		if (op.oper_id == ".") {
 			// @TODO: Add a compiler log or some kind of information if lookup failes.
 			SymbolList looked_up_symbol;
-					   variant_match(a) {
-                variant_case(rpn::Identifier, idt) { looked_up_symbol = idt.symbol_list; }
-                variant_case(rpn::NamedIdentifier, idt) {
-                    auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
-                        { key.expr_scope, idt.symbol_name, true }
-                    );
-                    looked_up_symbol = sym_list.getAsSingle();
-                }
-                variant_default {
-                    throw base::NotYetImplemented("Lookup on non-identifier is not yet implemented"
-                    );
-                }
+			variant_match(a) {
+				variant_case(rpn::Identifier, idt) { looked_up_symbol = idt.symbol_list; }
+				variant_case(rpn::NamedIdentifier, idt) {
+					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+						{ key.expr_scope, idt.symbol_name, true }
+					);
+					looked_up_symbol = sym_list.getAsSingle();
+				}
+				variant_default {
+					throw base::NotYetImplemented("Lookup on non-identifier is not yet implemented"
+					);
+				}
 			}
 			variant_match(b) {
 				variant_case(rpn::NamedIdentifier, idt_right) {
