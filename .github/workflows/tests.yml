@@ -26,7 +26,11 @@ jobs:
 
       - name: Check if should build with coverage
         id: coverage-enabled
-        run: echo value=${{ matrix.build-type == 'Debug' }} > $GITHUB_OUTPUT
+        if: ${{ matrix.build-type == 'Debug' }}
+        # This might be a little missleading.
+        # When we don't want to build coverage, value will be empty,
+        # and following if statements will fail.
+        run: echo value=1 > $GITHUB_OUTPUT
 
       - name: Install lcov
         if: ${{ steps.coverage-enabled.outputs.value }}
@@ -46,12 +50,12 @@ jobs:
 
       # Cache local branch and on miss fallback to main branch's cache. In case
       # main branch misses, fallback to any branch's cache.
+      # ${{ env.BUILD_DIR }}
       - name: Cache build folder
         id: cache-build
         uses: actions/cache@v4
         with:
           path: |
-            # ${{ env.BUILD_DIR }}
             ${{ env.CCACHE_DIR }}
           key: ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache_timestamp.outputs.timestamp }}
           # This is interesting. If no match happens to the key, then it tries to partially
@@ -103,7 +107,7 @@ jobs:
         # with:
         #   key: foo
         #   access_token: ${{ secrets.KEY_FOR_MAURYC }}
-        run: echo value=75 > $GITHUB_OUTPUT
+        run: echo value=74 > $GITHUB_OUTPUT
 
       - name: Check coverage status
         id: check-coverage-status
@@ -111,7 +115,7 @@ jobs:
         run: echo success=${{ steps.test-coverage.outputs.coverage-percent >= steps.read-main-coverage.outputs.value }} > $GITHUB_OUTPUT
 
       - uses: actions/github-script@v7
-        # Possible, we'll need to ad
+        # Possibly, we'll need to a check env.BRANCH_NAME != 'main'
         if: ${{ steps.coverage-enabled.outputs.value }}
         with:
           github-token: ${{ secrets.KEY_FOR_MAURYC }}
