@@ -131,5 +131,5 @@ jobs:
             })
 
       - name: Fail if bad coverage
-        if: ${{ steps.coverage-enabled.outputs.value && steps.check-coverage-status.outputs.success }}
+        if: ${{ steps.coverage-enabled.outputs.value && steps.check-coverage-status.outputs.success != 'true' }}
         run: exit 1
