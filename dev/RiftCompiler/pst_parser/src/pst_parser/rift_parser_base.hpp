@@ -16,8 +16,6 @@ namespace pst {
 	STRONG_TYPEDEF_ID(PstID);
 
 	class RiftElement: public tpc::Element {
-		int a;
-
 	public:
 		explicit RiftElement(const dia::SourcePosition& position):
 			  source_position(position),
