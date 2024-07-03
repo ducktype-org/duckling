@@ -12,7 +12,6 @@ env:
   BUILD_DIR: ${{ github.workspace }}/dev/build
   CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-  ENABLE_COVERAGE: true
 
 jobs:
   build:
@@ -22,11 +21,15 @@ jobs:
       fail-fast: false
     timeout-minutes: 8  # (Per matrix run)
     runs-on: ubuntu-22.04
+    env:
+      ENABLE_COVERAGE: ${{ matrix.build-type == 'Debug' }}
+
     steps:
+
       - uses: actions/checkout@v4
 
       - name: Install lcov
-        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
+        if: ${{ env.ENABLE_COVERAGE }}
         run: sudo apt-get -y install lcov
 
       - name: Install ccache
@@ -62,7 +65,7 @@ jobs:
       - name: Additional CMake flags
         id: cmake-flags
         env:
-          flags: ${{ matrix.build-type == 'Debug' && '-D ENABLE_COVERAGE=ON' || '' }}
+          flags: ${{ env.ENABLE_COVERAGE && '-D ENABLE_COVERAGE=ON' || '' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
       - name: Configure CMake
@@ -79,14 +82,14 @@ jobs:
 
       - name: Test Coverage
         id: test-coverage
-        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
+        if: ${{ env.ENABLE_COVERAGE }}
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
       - name: Save main coverage percentage
-        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE && env.BRANCH_NAME == 'main' }}
+        if: ${{ env.ENABLE_COVERAGE && env.BRANCH_NAME == 'main' }}
         uses: aaimio/set-persistent-value@v1.2.1
         with:
           key: main_coverage
@@ -94,7 +97,7 @@ jobs:
           access_token: ${{ secrets.KEY_FOR_MAURYC }}
 
       - name: Read main coverage percentage
-        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
+        if: ${{ env.ENABLE_COVERAGE }}
         id: read-main-coverage
         uses: aaimio/get-persistent-value@v1.2.1
         with:
@@ -103,11 +106,12 @@ jobs:
 
       - name: Check coverage status
         id: check-coverage-status
-        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
+        if: ${{ env.ENABLE_COVERAGE }}
         run: echo success=${{ steps.test-coverage.outputs.coverage-percent >= steps.read-main-coverage.outputs.value }} > $GITHUB_OUTPUT
 
       - uses: actions/github-script@v7
-        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE }}
+        # Possible, we'll need to ad
+        if: ${{ env.ENABLE_COVERAGE }}
         with:
           github-token: ${{ secrets.KEY_FOR_MAURYC }}
           script: |
@@ -122,5 +126,5 @@ jobs:
             })
 
       - name: Fail if bad coverage
-        if: ${{ matrix.build-type == 'Debug' && env.ENABLE_COVERAGE && steps.check-coverage-status.outputs.success }}
+        if: ${{ env.ENABLE_COVERAGE && steps.check-coverage-status.outputs.success }}
         run: exit 1
