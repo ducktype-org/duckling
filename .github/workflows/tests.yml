@@ -93,7 +93,7 @@ jobs:
 
       - name: Save main coverage percentage
         uses: action-pack/set-variable@v1
-        if: ${{ steps.coverage-enabled.outputs.value }}
+        if: ${{ steps.coverage-enabled.outputs.value && env.BRANCH_NAME == 'main' }}
         with:
           name: 'MAIN_COVERAGE_VALUE'
           value: ${{ steps.test-coverage.outputs.coverage-percent }}
