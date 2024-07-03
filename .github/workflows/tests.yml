@@ -29,7 +29,7 @@ jobs:
         if: ${{ matrix.build-type == 'Debug' }}
         # This might be a little missleading.
         # When we don't want to build coverage, value will be empty,
-        # and following if statements will fail.
+        # and if statements will fail.
         run: echo value=1 > $GITHUB_OUTPUT
 
       - name: Install lcov
@@ -115,7 +115,7 @@ jobs:
         if: ${{ steps.coverage-enabled.outputs.value }}
         env:
           FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
-          SUCC_MSG: '✅✅✅ **Great job writing tests!**'
+          SUCC_MSG: '✅✅✅ - **Great job writing tests!**'
         with:
           github-token: ${{ secrets.QUACKER_PAT }}
           script: |
