@@ -91,9 +91,4 @@ namespace compiler::helios {
 	 * @brief Query all symbols that are directly inside given scope.
 	 */
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, const std::vector<SymID>&);
-
-	/**
-	 * @brief Query struct symbols that are directly inside given scope.
-	 */
-	DECLARE_QUERY(QueryStructSymbolsInScope, ScopeID, const std::vector<SymID>&);
 }

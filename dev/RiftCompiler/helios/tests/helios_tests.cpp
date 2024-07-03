@@ -23,7 +23,7 @@ public:
 
 		TESTER_ADD_TEST(testI32Consts);
 		TESTER_ADD_TEST(testEdgeEvals);
-		TESTER_ADD_TEST(testStructInfo);
+		TESTER_ADD_TEST(testStructSymbolData);
 		TESTER_ADD_TEST(testTypeOf);
 		TESTER_ADD_TEST(simpleHOUTTest);
 		TESTER_ADD_TEST(importTest);
@@ -67,12 +67,12 @@ private:
 
 	std::pair<compiler::frontend::ModuleId, compiler::helios::ScopeID>
 		getModule(const std::string& name) {
-		auto&& constants_module = query::entryPoint<compiler::frontend::QueryModuleTree>(
+		auto&& module = query::entryPoint<compiler::frontend::QueryModuleTree>(
 			fs::FilePath(path("test_modules/" + name))
 		);
 
-		auto&& root_scope = query::entryPoint<compiler::helios::QueryRootScopeOf>(constants_module);
-		return { constants_module, root_scope };
+		auto&& root_scope = query::entryPoint<compiler::helios::QueryRootScopeOf>(module);
+		return { module, root_scope };
 	}
 
 	void testI32Consts() {
@@ -92,12 +92,12 @@ private:
 		ASSERT_EQUAL(75, getValue("F", root_scope));
 	}
 
-	void testStructInfo() {
+	void testStructSymbolData() {
 		auto [_, root_scope] = getModule("structs");
 
 		const auto first_struct = getChain("FirstStructEver", root_scope).back();
 		const auto first_struct_info
-			= query::entryPoint<compiler::helios::QueryStructInfo>(first_struct);
+			= query::entryPoint<compiler::helios::QueryStructSymbolData>(first_struct);
 		const auto first_struct_typeinfo
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_struct);
 
@@ -108,7 +108,7 @@ private:
 
 		const auto second_struct = getChain("SecondStruct", root_scope).back();
 		auto       second_struct_info
-			= query::entryPoint<compiler::helios::QueryStructInfo>(second_struct);
+			= query::entryPoint<compiler::helios::QueryStructSymbolData>(second_struct);
 
 		ASSERT_EQUAL(0, second_struct_info.members.size());
 		ASSERT_EQUAL(0, second_struct_info.methods.size());

@@ -301,7 +301,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Struct returned by the `QueryStructInfo` query.
 	 */
-	struct StructInfo {
+	struct StructSymbolData {
 		/**
 		 * @brief Name of the struct in the soure code.
 		 */
@@ -325,5 +325,5 @@ namespace compiler::helios {
 	 * Panics if the given `SymID` is not a struct.
 	 * More information on `StructInfo` in it's definition.
 	 */
-	DECLARE_QUERY(QueryStructInfo, SymID, const StructInfo&)
+	DECLARE_QUERY(QueryStructSymbolData, SymID, const StructSymbolData&)
 }

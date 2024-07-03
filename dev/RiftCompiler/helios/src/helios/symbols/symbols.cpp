@@ -8,6 +8,7 @@
 
 #include <query_framework/query_impl.hpp>
 #include <pst_parser/elements/elements.hpp>
+#include <pst_parser/pst_visitor.hpp>
 
 #include <vector>
 
@@ -15,7 +16,6 @@
 #include "../scope_symbol_id.hpp"
 #include "../scopes/scopes.hpp"
 #include "../pst_ref.hpp"
-#include "pst_parser/pst_visitor.hpp"
 
 namespace compiler::helios {
 	/**
@@ -236,8 +236,6 @@ namespace compiler::helios {
 	/**
 	 * @brief Query extension for looking-up chain of names
 	 */
-	SymbolList lookupChain(query::Context&, const LookupChainKey&);
-
 	SymbolList lookupChain(query::Context& ctx, const LookupChainKey& key) {
 		RIFT_ASSERT(!key.names.empty(), "lookupDotted received zero names");
 
@@ -673,9 +671,15 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
-	ts::TypeInfo parseTypeFromExpr(
-		query::Context& ctx, const rpn::ExprElem& expr, const ScopeID& expr_scope
-	) {
+	/**
+	 * Parses the expression assuming it evaluates to a type. Panics otherwise.
+	 * @param ctx Context passed to a query.
+	 * @param expr An RPN expression created with e.g. ExtensionMakeRPN.
+	 * @param expr_scope A scope where the expression has been expressed.
+	 * @return ts::TypeInfo with information about the evaluated type.
+	 */
+	ts::TypeInfo
+		parseTypeFromExpr(query::Context& ctx, const rpn::ExprElem& expr, ScopeID expr_scope) {
 		// This is a std::unordered_map, not base::HashMap, because base::HashMap
 		// does not support this constructor.
 		const static auto BUILTINS = std::unordered_map<base::StrId, ts::TypeInfo>{
@@ -747,8 +751,15 @@ namespace compiler::helios {
 		RIFT_PANIC("Couldn't parse the type.");
 	}
 
+	/**
+	 * Parses the expression assuming it evaluates to a type. Panics otherwise.
+	 * @param ctx Context passed to a query.
+	 * @param expr A PST expression, that has been written in the source code.
+	 * @param expr_scope A scope where the expression has been expressed.
+	 * @return ts::TypeInfo with information about the evaluated type.
+	 */
 	ts::TypeInfo parseTypeFromExpr(
-		query::Context& ctx, const tpc::ParserCBorrowRef<pst::Expr>& expr, const ScopeID& expr_scope
+		query::Context& ctx, const tpc::ParserCBorrowRef<pst::Expr>& expr, ScopeID expr_scope
 	) {
 		const auto rpn_expr   = rpn::ExtensionMakeRPN(ctx, { expr->elements, expr_scope });
 		const auto final_type = rpn::ExtensionRPNEvalRPNExpr(ctx, { rpn_expr, expr_scope });
@@ -818,7 +829,7 @@ namespace compiler::helios {
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
 
-	struct IMPLEMENT_QUERY(QueryStructInfo, StructInfo) {
+	struct IMPLEMENT_QUERY(QueryStructSymbolData, StructSymbolData) {
 		struct StructDataParser final: pst::PstStmtVisitorPanicky {
 			base::Optional<base::StrId>                             name;
 			base::Optional<tpc::ParserCBorrowRef<pst::InheritList>> base_classes;
@@ -837,7 +848,7 @@ namespace compiler::helios {
 			auto&& struct_scope = ctx.query<QueryPrimaryCodeScopeFor>({ scope(key), struct_stmt });
 			auto&& struct_symbols = ctx.query<QuerySymbolsInScope>(struct_scope);
 
-			StructInfo struct_info;
+			StructSymbolData struct_info;
 			for (auto&& sym: struct_symbols) {
 				switch (kind(sym)) {
 				case SymbolKind::Function:
@@ -870,5 +881,5 @@ namespace compiler::helios {
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
 	};
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStructInfo)
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStructSymbolData)
 }
