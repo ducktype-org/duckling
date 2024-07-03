@@ -86,8 +86,7 @@ jobs:
         run: cmake --build ${{ env.BUILD_DIR }} -- test
 
       - name: Writing test
-        run: echo "MY_DYNAMIC_VARIABLE=my_dynamic_value" >> $GITHUB_ENV
-
+        run: ${{ vars.LASTRUNID = "My-new-value" }}
 
       - name: Test Coverage
         id: test-coverage
