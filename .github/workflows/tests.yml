@@ -21,7 +21,6 @@ jobs:
       fail-fast: false
     timeout-minutes: 8  # (Per matrix run)
     runs-on: ubuntu-22.04
-    environment: workflow-test-environment
     steps:
       - uses: actions/checkout@v4
 
