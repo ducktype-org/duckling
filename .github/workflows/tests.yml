@@ -21,6 +21,7 @@ jobs:
       fail-fast: false
     timeout-minutes: 8  # (Per matrix run)
     runs-on: ubuntu-22.04
+    environment: workflow-test-environment
     steps:
       - uses: actions/checkout@v4
 
@@ -102,7 +103,7 @@ jobs:
       #   with:
       #     key: main_coverage
       #     value: ${{ steps.test-coverage.outputs.coverage-percent }}
-      #     access_token: ${{ secrets.KEY_FOR_MAURYC }}
+      #     access_token: ${{ secrets.QUACKER_PAT }}
 
       - name: Read main coverage percentage
         if: ${{ steps.coverage-enabled.outputs.value }}
@@ -110,7 +111,7 @@ jobs:
         # uses: aaimio/get-persistent-value@v1.2.1
         # with:
         #   key: foo
-        #   access_token: ${{ secrets.KEY_FOR_MAURYC }}
+        #   access_token: ${{ secrets.QUACKER_PAT }}
         run: echo value=74 > $GITHUB_OUTPUT
 
       - name: Check coverage status
@@ -123,7 +124,7 @@ jobs:
         # Possibly, we'll need to a check env.BRANCH_NAME != 'main'
         if: ${{ steps.coverage-enabled.outputs.value }}
         with:
-          github-token: ${{ secrets.KEY_FOR_MAURYC }}
+          github-token: ${{ secrets.QUACKER_PAT }}
           script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
