@@ -50,8 +50,7 @@ jobs:
 
       # Cache local branch and on miss fallback to main branch's cache. In case
       # main branch misses, fallback to any branch's cache.
-      # ${{ env.BUILD_DIR }}
-      - name: Cache build folder
+      - name: Cache build
         id: cache-build
         uses: actions/cache@v4
         with:
@@ -127,7 +126,7 @@ jobs:
               body: '👋 Coverage ran successfully!\n \
                      ✨ Lines covered on the **current** branch: **${{ steps.test-coverage.outputs.coverage-percent }}%** \n \
                      ✨ Lines covered on the main branch: ${{ steps.test-coverage.outputs.coverage-percent }}% \n \
-                     ${{ steps.check-coverage-status.outputs.success != 'true' && '❌❌❌ - **You have to write some more tests!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.' || '✅✅✅ **Great job writing tests!**'}}'
+                     ${{ steps.check-coverage-status.outputs.success != 'true' && '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.' || '✅✅✅ **Great job writing tests!**'}}'
             })
 
       - name: Fail if bad coverage
