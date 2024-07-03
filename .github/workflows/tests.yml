@@ -56,6 +56,7 @@ jobs:
         with:
           path: |
             ${{ env.CCACHE_DIR }}
+            ${{ env.BUILD_DIR }}
           key: ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache_timestamp.outputs.timestamp }}
           # This is interesting. If no match happens to the key, then it tries to partially
           # match with any of restore-keys, and if matches, then the most recent cache is used.
