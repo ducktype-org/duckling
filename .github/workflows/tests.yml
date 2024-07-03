@@ -85,8 +85,11 @@ jobs:
         working-directory: ${{ env.BUILD_DIR }}
         run: cmake --build ${{ env.BUILD_DIR }} -- test
 
-      - name: Writing test
-        run: ${{ vars.LASTRUNID = "My-new-value" }}
+      - uses: action-pack/set-variable@v1
+        with:
+          name: 'MY_VARIABLE'
+          value: 'Lorem ipsun dolor simit'
+          token: ${{ secrets.QUACKER_PAT }}
 
       - name: Test Coverage
         id: test-coverage
