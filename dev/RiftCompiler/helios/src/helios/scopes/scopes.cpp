@@ -141,7 +141,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Filters out non declarations from the StmtList.
 		 */
-		static std::vector<SymID> makeSymbolsFromStmtList(
+		static std::vector<SymID> filterSymbolsFromStmtList(
 			query::Context& ctx, const ScopeID& scope, const StmtList& list
 		) {
 			std::vector<SymID> symbols;
@@ -172,7 +172,7 @@ namespace compiler::helios {
 			}
 
 			void visitStruct(const pst::Struct& struct_) override {
-				this->out = makeSymbolsFromStmtList(ctx, key, getChildStmtsOf(struct_.getBody()));
+				this->out = filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(struct_.getBody()));
 			}
 		};
 
@@ -184,7 +184,7 @@ namespace compiler::helios {
 			auto base_element = key.ref->related_pst_element;
 
 			if (base_element->isStatementAggregate()) {
-				return makeSymbolsFromStmtList(ctx, key, getChildStmtsOf(base_element));
+				return filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(base_element));
 			} else if (base_element->isStatement()) {
 				SymbolGrabVisitor symbol_grab(ctx, key);
 				auto              as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());

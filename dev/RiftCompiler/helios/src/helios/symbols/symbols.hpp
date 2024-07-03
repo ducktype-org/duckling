@@ -295,6 +295,12 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query ts::TypeInfo from a symbol definition (like struct definition).
+	 *
+	 * Example:
+	 * struct T {
+	 *	...
+	 * }
+	 * - Then we can use this query QueryTypeFromDefinition(T).
 	 */
 	DECLARE_QUERY(QueryTypeFromDefinition, SymID, ts::TypeInfo);
 
