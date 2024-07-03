@@ -113,6 +113,9 @@ jobs:
         uses: actions/github-script@v7
         # Possibly, we'll need to a check env.BRANCH_NAME != 'main'
         if: ${{ steps.coverage-enabled.outputs.value }}
+        env:
+          FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
+          SUCC_MSG: '✅✅✅ **Great job writing tests!**'
         with:
           github-token: ${{ secrets.QUACKER_PAT }}
           script: |
@@ -120,10 +123,10 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '👋 Coverage ran successfully!\n \
-                     ✨ Lines covered on the **current** branch: **${{ steps.test-coverage.outputs.coverage-percent }}%** \n \
-                     ✨ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \n \
-                     ${{ steps.check-coverage-status.outputs.success != 'true' && '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.' || '✅✅✅ **Great job writing tests!**'}}'
+              body: '🎉 Tests and coverage ran successfully! 🎉\n \
+                     ⭐ Lines covered on the **current** branch: **${{ steps.test-coverage.outputs.coverage-percent }}%** \n \
+                     ⭐ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \n \
+                     ${{ steps.check-coverage-status.outputs.success == 'true' && env.SUCC_MSG || env.FAIL_MSG }}'
             })
 
       - name: Fail if bad coverage
