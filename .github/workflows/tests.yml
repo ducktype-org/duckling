@@ -84,6 +84,10 @@ jobs:
         working-directory: ${{ env.BUILD_DIR }}
         run: cmake --build ${{ env.BUILD_DIR }} -- test
 
+      - name: Writing test
+        run: echo "MY_DYNAMIC_VARIABLE=my_dynamic_value" >> $GITHUB_ENV
+
+
       - name: Test Coverage
         id: test-coverage
         if: ${{ steps.coverage-enabled.outputs.value }}
