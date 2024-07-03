@@ -126,7 +126,7 @@ jobs:
               repo: context.repo.repo,
               body: '👋 Coverage ran successfully!\n \
                      ✨ Lines covered on the **current** branch: **${{ steps.test-coverage.outputs.coverage-percent }}%** \n \
-                     ✨ Lines covered on the main branch: ${{ steps.test-coverage.outputs.coverage-percent }}% \n \
+                     ✨ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \n \
                      ${{ steps.check-coverage-status.outputs.success != 'true' && '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.' || '✅✅✅ **Great job writing tests!**'}}'
             })
 
