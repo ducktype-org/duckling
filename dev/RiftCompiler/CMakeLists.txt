@@ -1,5 +1,4 @@
 add_subdirectory(compiler)
-add_subdirectory(module_system)
 add_subdirectory(pst_parser)
 add_subdirectory(typesystem)
 add_subdirectory(helios)
