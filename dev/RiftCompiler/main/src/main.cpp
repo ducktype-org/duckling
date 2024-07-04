@@ -11,6 +11,7 @@
 #include <base/exceptions.hpp>
 #include <iostream>
 #include <clap/clap.hpp>
+#include <printer/stream_printer.hpp>
 
 void init() {
 	lexer::init();
@@ -25,21 +26,10 @@ int main(int argc, const char* argv[]) {
 
 		auto config = compiler::fromArgs(args);
 
-		if (config.files.empty()) {
-			std::cerr << "Nothing to be done.\n";
-			return 0;
-		}
+		// @TODO: update CompilerConfig and write proper compiler luncher
 
-		std::cerr << "Got files (ignoring all other then first):\n";
-		for (const auto& file: config.files) std::cerr << file.strView() << "\n";
-		std::cerr << "\n";
-
-		// we need file handler
-
-		std::stringstream out;
-		fs::FilePath      main_file = config.files[0];
 	} catch (const clap::exceptions::HelpException& e) {
-		// @TODO
+		printer::StreamPrinter::print(compiler::generateHelpMessage(e));
 	} catch (const base::Exception& e) {
 		std::cerr << "Compiler Exception was caught with message:\n";
 		std::cerr << e.what();
