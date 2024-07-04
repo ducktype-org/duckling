@@ -40,7 +40,10 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py download-binaries -s ccache
 
-      # Timestamps - they are used for caching, so each cache has a unique key.
+      # Generate a timestamp and save it to a variable.
+      # Timestamp is appended to the key in caching, so each cache has a unique key.
+      # This step is arbitrary, and has nothing to the order of choosing the most
+      # recent hash.
       - name: Prepare cache timestamp
         id: cache_timestamp
         shell: cmake -P {0}
@@ -129,6 +132,6 @@ jobs:
                      ${{ steps.check-coverage-status.outputs.success == 'true' && env.SUCC_MSG || env.FAIL_MSG }}'
             })
 
-      - name: Fail if bad coverage
+      - name: Fail if insufficient coverage
         if: ${{ steps.coverage-enabled.outputs.value && steps.check-coverage-status.outputs.success != 'true' }}
         run: exit 1
