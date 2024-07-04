@@ -1,9 +1,32 @@
+PROJECT_NAME = "Duckling Code Docs"
+SOURCE_BROWSER = YES
+
+HAVE_DOT = YES
+DOT_IMAGE_FORMAT = svg
+DOT_TRANSPARENT = YES
+INCLUDED_BY_GRAPH = NO
+UML_LOOK = YES
+DOT_UML_DETAILS = NONE
+
+ENABLE_PREPROCESSING = YES
+MACRO_EXPANSION = YES
+EXPAND_ONLY_PREDEF = YES
+ALIASES += "query=\xrefitem query \"Query\" \"Queries\""
+PREDEFINED = "DECLARE_QUERY(name, key, value)=auto name(key) -> value;/**< \query */" \
+            "STRONG_TYPEDEF_ID(name)=using name = u64;" \
+            "IMPLEMENT_QUERY(name, key)=" \
+            "QUERY_IMPLEMENTATION_BOILERPLATE(name)=" \
+            "COMMA=,"
+
 INPUT = "@DOXYGEN_INPUT_DIR@"
 OUTPUT_DIRECTORY = "@DOXYGEN_OUTPUT_DIR@"
 GENERATE_XML = YES
 RECURSIVE = YES
-EXCLUDE_PATTERNS = */*build*/* \
+FILE_PATTERNS = *.hpp
+EXCLUDE_PATTERNS = "@PROJECT_SOURCE_DIR@/*build*/*" \
+                   "@PROJECT_SOURCE_DIR@/docs/*" \
                    */toolbox.py
+
 EXTRACT_ALL = YES
 ALLOW_UNICODE_NAMES    = NO
 
@@ -49,5 +72,5 @@ EXTRACT_STATIC         = YES
 GENERATE_TREEVIEW = YES # optional. Also works without treeview
 DISABLE_INDEX     = NO
 FULL_SIDEBAR      = NO
-HTML_EXTRA_STYLESHEET  = "@CMAKE_CURRENT_SOURCE_DIR@/doxygen-awesome-css/doxygen-awesome.css"
+HTML_EXTRA_STYLESHEET  = "@CMAKE_CURRENT_SOURCE_DIR@/doxygen-awesome-css/doxygen-awesome.css" "@CMAKE_CURRENT_SOURCE_DIR@/doxygen_custom.css"
 HTML_COLORSTYLE        = LIGHT
