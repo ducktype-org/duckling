@@ -41,6 +41,7 @@ namespace lsp {
 		Struct,
 		TopLevel,
 		Const,
+		Variable,
 
 		Decl,  // @TODO: this isn't a StmtKind in PST
 		EagerLookup,
@@ -320,6 +321,18 @@ namespace lsp {
 		LSPFun()                             = default;
 
 		virtual ~LSPFun() = default;
+		void lsp_print(std::ostream& out) override;
+	};
+
+	class LSPVariable: public LSPDecl {
+	public:
+		tpc::Identifier    name     = default_tpc_identifier();
+		ParserRef<LSPExpr> type     = nullptr;
+		ParserRef<LSPExpr> value    = nullptr;
+		bool               is_const = true;
+		LSPVariable()               = default;
+
+		virtual ~LSPVariable() = default;
 		void lsp_print(std::ostream& out) override;
 	};
 

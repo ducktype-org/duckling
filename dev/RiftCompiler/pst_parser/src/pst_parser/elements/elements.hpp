@@ -57,7 +57,7 @@ namespace pst {
 		bool                   trailingSemicolon() override;
 		[[nodiscard]]
 		virtual ParserRef<lsp::LSPStmt> stmtFromPST() const;
-		virtual void           acceptVisitor(PstStmtVisitor& visitor) const = 0;
+		virtual void                    acceptVisitor(PstStmtVisitor& visitor) const = 0;
 
 		[[nodiscard]]
 		bool isStatement() const final {
@@ -856,6 +856,10 @@ namespace pst {
 		static ParserRef<Variable> parse(RiftParserState& state);
 		void                       dprint(std::ostream& out) const override;
 		~Variable() override = default;
+		[[nodiscard]]
+		virtual ParserRef<lsp::LSPVariable> variableFromPST() const;
+		[[nodiscard]]
+		ParserRef<lsp::LSPDecl> declFromPST() const override;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};

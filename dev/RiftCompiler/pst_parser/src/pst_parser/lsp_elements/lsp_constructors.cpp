@@ -314,6 +314,19 @@ namespace pst {
 
 	ParserRef<lsp::LSPDecl> Fun::declFromPST() const { return funFromPST(); }
 
+	ParserRef<lsp::LSPVariable> Variable::variableFromPST() const {
+		auto* res     = new lsp::LSPVariable;
+		res->position = this->getSourcePosition();
+		res->name     = this->name;
+		if (this->type) res->type = this->type->exprFromPST();
+		if (this->value) res->value = this->value->exprFromPST();
+		res->is_const = this->is_const;
+		res->kind     = lsp::StmtKind::Variable;
+		return makeRef<lsp::LSPVariable>(res);
+	}
+
+	ParserRef<lsp::LSPDecl> Variable::declFromPST() const { return variableFromPST(); }
+
 	ParserRef<lsp::LSPIf> If::ifFromPST() const {
 		lsp::LSPIf& res = *new lsp::LSPIf;
 		res.position    = this->getSourcePosition();
