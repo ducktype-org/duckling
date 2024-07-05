@@ -11,7 +11,6 @@ export class Identifier extends Stmt {
 	constructor(json: any) {
 		super(json);
 		this.name = json["indent_id"];
-
 	}
 
 	getIdentifiers(): DucklingElement[] {
@@ -24,6 +23,13 @@ export class Identifier extends Stmt {
 
 	getSemanticTokens(): SemanticToken[] {
 		return [SemanticToken.fromPosition(this.source_position, SemanticTokenTypes.variable, [])];
+	}
+}
+
+export class Name extends Identifier {
+	constructor(json: any) {
+		super(json);
+		this.name = json["value"];
 	}
 }
 
@@ -60,7 +66,7 @@ export type IdentifierFactory = ElementFactory<Identifier, StmtFactory>;
 export const identifierFactory = new ElementFactory<Identifier, StmtFactory>(stmtFactory);
 
 identifierFactory.register("Identifier", Identifier);
-identifierFactory.register("Name", Identifier);
+identifierFactory.register("Name", Name);
 
 exprElemFactory.register("Identifier", Identifier);
-exprElemFactory.register("Name", Identifier);
+exprElemFactory.register("Name", Name);
