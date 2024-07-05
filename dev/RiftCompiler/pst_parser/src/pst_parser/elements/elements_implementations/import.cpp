@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 #include "token_parser_core/automatic.hpp"
 
 namespace pst {
@@ -6,7 +7,7 @@ namespace pst {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Import>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Import), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Import>(state, state.ctokens().is(Keyword::Import))) return nullptr;
 
 		parseAll(state, Keyword::Import, &out->names, Keyword::As, &out->alias);
 
@@ -32,4 +33,6 @@ namespace pst {
 		out << R"("Alias": ")" << alias.value.strView() << R"(")";
 		out << "}";
 	}
+
+	void Import::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitImport(*this); }
 }

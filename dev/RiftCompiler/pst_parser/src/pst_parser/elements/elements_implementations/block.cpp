@@ -1,11 +1,12 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<Block> Block::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Block>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Block), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Block>(state, state.ctokens().is(Keyword::Block))) return nullptr;
 
 		parseAll(state, Keyword::Block, &out->optional_name, &out->code_block);
 
@@ -21,4 +22,6 @@ namespace pst {
 		nullAwareDprint(code_block, out);
 		out << "}}";
 	}
+
+	void Block::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitBlock(*this); }
 }

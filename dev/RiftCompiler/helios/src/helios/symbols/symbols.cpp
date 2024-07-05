@@ -17,7 +17,6 @@
 #include "../pst_ref.hpp"
 
 namespace compiler::helios {
-
 	/**
 	 * @TODO: move to some docs
 	 *  * imports are just symbols that we will "lookup in" just like usings.
@@ -71,6 +70,8 @@ namespace compiler::helios {
 	SymbolKind kind(SymID id) { return getSymRef(id)->kind; }
 
 	ScopeID scope(SymID id) { return getSymRef(id)->scope; }
+
+	PstRef<pst::Stmt> stmt(SymID id) { return getSymRef(id)->pst_stmt; }
 
 	namespace {
 		/**
@@ -155,13 +156,26 @@ namespace compiler::helios {
 				.pst_stmt    = stmt,
 			});
 		}
+		case pst::StmtKind::Import: {
+			// For now only non-wildcard import exist
+			auto&& import = dynamic_cast<const pst::Import*>(stmt.get());
+			return putInSymtable(SymbolData{
+				.scope       = scope,
+				.name        = import->getAlias(),
+				.is_wildcard = false,
+				.is_alias    = false,
+				.kind        = SymbolKind::Import,
+				.pst_stmt    = stmt,
+			});
+		}
 
 		default:
 			break;
 		}
-		RIFT_PANIC(
-			base::strConcat("makeSymbolFromStatement bad symbol kind, stmt: ", typeid(stmt).name())
-		);
+		auto stmt_ptr = stmt.get();
+		RIFT_PANIC(base::strConcat(
+			"makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
+		));
 	}
 
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymID) {
@@ -179,7 +193,11 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.symbol.ref->kind) {
 			case SymbolKind::Using:
-			case SymbolKind::Namespace: {
+			case SymbolKind::Namespace:
+			case SymbolKind::Import: {
+				// @NOTE: for now imports are done via linked scope that looks at root module scope,
+				// but in the future it might be changed to custom code
+
 				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
 				return ctx.query<QueryLookupInScope>(
 					{ linked_scope, key.name, key.follow_wildcards }
@@ -203,7 +221,10 @@ namespace compiler::helios {
 		bool                     follow_wildcards;
 	};
 
-	QUERY_EXTENSION(lookupChain, LookupChainKey, SymbolList);
+	/**
+	 * @brief Query extension for looking-up chain of names
+	 */
+	SymbolList lookupChain(query::Context&, LookupChainKey);
 
 	SymbolList lookupChain(query::Context& ctx, LookupChainKey key) {
 		RIFT_ASSERT(key.names.size() > 0, "lookupDotted received zero names");
@@ -244,8 +265,7 @@ namespace compiler::helios {
 			case SymbolKind::Using: {
 				auto using_stmt = dynamic_cast<const pst::Using*>(key.ref->pst_stmt.get());
 				auto names      = using_stmt->getPointed();
-				auto lookup_res
-					= ctx.callExt<lookupChain>(LookupChainKey{ names, scope(key), false });
+				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
 				RIFT_ASSERT(
 					not lookup_res.empty(),
 					"Using points to something that does not exists or is empty"
@@ -259,6 +279,17 @@ namespace compiler::helios {
                     namespace_stmt->getBody(),
                 });
 				return inner_scope;
+			}
+			case SymbolKind::Import: {
+				auto import_stmt = dynamic_cast<const pst::Import*>(key.ref->pst_stmt.get());
+
+				// @TODO: proper error handling via ErrorScope
+				auto imported_module = frontend::getRelativeModule(
+										   ctx, module(scope(key)), import_stmt->getModulePath()
+				)
+				                           .value();
+
+				return ctx.query<QueryRootScopeOf>(imported_module);
 			}
 			default:
 				throw base::NotYetImplemented("Getting linked scope...");
@@ -328,38 +359,38 @@ namespace compiler::helios {
 			return 2;
 		case '^':  // Power ;D
 			return 3;
+		case '.':
+			return 5;
 		default:
 			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
 		}
 	}
 
 	std::vector<rpn::ExprElem>
-		rpn::ExtensionMakeRPN(query::detail::ContextType& ctx, KeyOf_ExtensionMakeRPN key) {
+		rpn::ExtensionMakeRPN(query::Context& ctx, KeyOf_ExtensionMakeRPN key) {
 		std::vector<ExprElem> rpn;
 		std::stack<ExprElem>  st;
 		for (auto&& e: key.expr) {
 			variant_match(e) {
 				variant_case(pst::Expr::Identifier, idt) {
-					auto&& sym_id = ctx.query<QueryLookupInScopeAndParents>(
-						{ key.expr_scope, idt.indent_id, true }
-					);
-					rpn.emplace_back(Identifier{ sym_id.getAsSingle() });
+					rpn.emplace_back(NamedIdentifier{ idt.indent_id });
 				}
 				variant_case(pst::Expr::Operator, oper) {
 					auto      new_op   = Operator{ oper.oper_id };
 					const int priority = getPriority(new_op);
-					while (!st.empty() && getPriority(std::get<Operator>(st.top())) > priority) {
+					while (!st.empty() && getPriority(std::get<Operator>(st.top())) >= priority) {
 						rpn.emplace_back(st.top());
 						st.pop();
 					}
 					st.emplace(new_op);
 				}
 				variant_case(pst::Expr::NumLiteral, num) {
-					rpn.emplace_back(NumLiteral{ num.num_id });
+					rpn.emplace_back(NumValue{ num.num_id });
 				}
 				variant_case(pst::Expr::Group, group) {
-					auto&& res = ctx.callExt<ExtensionMakeRPN>(KeyOf_ExtensionMakeRPN{
-						group.expr->elements, key.expr_scope });
+					auto&& res = ExtensionMakeRPN(
+						ctx, KeyOf_ExtensionMakeRPN{ group.expr->elements, key.expr_scope }
+					);
 					rpn.insert(rpn.end(), res.begin(), res.end());
 				}
 				variant_case(pst::Expr::KeywordValue, keyword_val) {
@@ -376,30 +407,78 @@ namespace compiler::helios {
 		return rpn;
 	}
 
-	i32 rpn::ExtensionRPNValue(
-		query::detail::ContextType& ctx, const KeyOf_ExtensionRPNValue& key
-	) {
+	i32 rpn::ExtensionRPNValue(query::Context& ctx, const KeyOf_ExtensionRPNValue& key) {
 		variant_match(key.expr) {
 			variant_case(rpn::Identifier, idt) {
 				// .back() works for constants only.
 				auto&& sym_list = ctx.query<QueryDealias>(idt.symbol_list.back());
 				return ctx.query<QueryConstValueOf>(sym_list.back());
 			}
+			variant_case(rpn::NamedIdentifier, idt) {
+				auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+					{ key.expr_scope, idt.symbol_name, true }
+				);
+				return ExtensionRPNValue(
+					ctx,
+					KeyOf_ExtensionRPNValue{
+						Identifier{ sym_list.getAsSingle() },
+						key.expr_scope,
+					}
+				);
+			}
 			variant_case(rpn::Operator, op) { RIFT_PANIC("Cannot get a value from rpn::Operator"); }
 			variant_case(rpn::KeywordValue, keyword_value) {
 				throw base::NotYetImplemented("Value of KeywordValue is not yet implemented");
 			}
-			variant_case(rpn::NumLiteral, literal) { return std::stoi(literal.num_id.str()); }
+			variant_case(rpn::NumValue, literal) { return std::stoi(literal.num_id.str()); }
 			variant_default { RIFT_PANIC("Bad Expr alternative"); }
 		}
 		RIFT_PANIC("Error in RPNValue expr...");
 	}
 
-	rpn::ExprElem
-		rpn::ExtensionRPNEval(query::detail::ContextType& ctx, const KeyOf_ExtensionRPNEval& key) {
+	rpn::ExprElem rpn::ExtensionRPNEval(query::Context& ctx, const KeyOf_ExtensionRPNEval& key) {
 		auto&& [a, op, b, expr_scope] = key;
-		i32 a_value = ctx.callExt<ExtensionRPNValue>(KeyOf_ExtensionRPNValue{ a, expr_scope });
-		i32 b_value = ctx.callExt<ExtensionRPNValue>(KeyOf_ExtensionRPNValue{ b, expr_scope });
+
+		if (op.oper_id == ".") {
+			// @TODO: Add a compiler log or some kind of information if lookup failes.
+			SymbolList looked_up_symbol;
+			variant_match(a) {
+				variant_case(rpn::Identifier, idt) { looked_up_symbol = idt.symbol_list; }
+				variant_case(rpn::NamedIdentifier, idt) {
+					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+						{ key.expr_scope, idt.symbol_name, true }
+					);
+					looked_up_symbol = sym_list.getAsSingle();
+				}
+				variant_default {
+					throw base::NotYetImplemented("Lookup on non-identifier is not yet implemented"
+					);
+				}
+			}
+			variant_match(b) {
+				variant_case(rpn::NamedIdentifier, idt_right) {
+					auto&& new_symbols = ctx.query<QueryLookupInSymbol>({
+																			looked_up_symbol.back(),
+																			idt_right.symbol_name,
+																			true,
+																		})
+					                         .getAsSingle();
+					looked_up_symbol.insert(
+						looked_up_symbol.end(), new_symbols.begin(), new_symbols.end()
+					);
+					return Identifier{ looked_up_symbol };
+				}
+				variant_default {
+					throw base::NotYetImplemented(
+						"Lookup of other things than identifiers is not yet supported"
+					);
+				}
+			}
+			RIFT_PANIC("Something strange has happended during .operator evaluation...");
+		}
+
+		i32 a_value = ExtensionRPNValue(ctx, KeyOf_ExtensionRPNValue{ a, expr_scope });
+		i32 b_value = ExtensionRPNValue(ctx, KeyOf_ExtensionRPNValue{ b, expr_scope });
 
 		i32 value{};
 
@@ -419,17 +498,14 @@ namespace compiler::helios {
 		case '%':
 			value = a_value % b_value;
 			break;
-		case '^':
-			// TODO: Make this quickPower - O(log(b_value))
-			{
-				value = 1;
-				while (b_value-- > 0) value *= a_value;
-			}
-			break;
+		case '^': {
+			value = 1;
+			while (b_value-- > 0) value *= a_value;
+		} break;
 		default:
 			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
 		}
-		return NumLiteral{ base::StrId(std::to_string(value).c_str()) };
+		return NumValue{ base::StrId(std::to_string(value).c_str()) };
 	}
 
 	struct IMPLEMENT_QUERY(QueryConstValueOf, i32) {
@@ -439,10 +515,13 @@ namespace compiler::helios {
 			auto    const_symbol = dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
 			ScopeID key_scope    = scope(key);
 
-			const auto& expr = ctx.callExt<rpn::ExtensionMakeRPN>(rpn::KeyOf_ExtensionMakeRPN{
-				const_symbol->getValue()->elements,
-				key_scope,
-			});
+			const auto& expr = rpn::ExtensionMakeRPN(
+				ctx,
+				rpn::KeyOf_ExtensionMakeRPN{
+					const_symbol->getValue()->elements,
+					key_scope,
+				}
+			);
 
 			// This is a nice RPN debug print.
 			// std::cout << "RPN: \n";
@@ -452,11 +531,14 @@ namespace compiler::helios {
 			// 		variant_case(rpn::Identifier, idt) {
 			// 			for (auto&& s: idt.symbol_list) std::cout << name(s).str() << '.';
 			// 		}
+			// 		variant_case(rpn::NamedIdentifier, idt) {
+			// 			std::cout << idt.symbol_name.str() << '.';
+			// 		}
 			// 		variant_case(rpn::Operator, op) { std::cout << op.oper_id.str(); }
 			// 		variant_case(rpn::KeywordValue, keyword_value) {
 			// 			std::cout << keywordToStr(keyword_value.keyword).str();
 			// 		}
-			// 		variant_case(rpn::NumLiteral, literal) { std::cout << literal.num_id.str(); }
+			// 		variant_case(rpn::NumValue, literal) { std::cout << literal.num_id.str(); }
 			// 		variant_default { RIFT_PANIC("Bad Expr alternative"); }
 			// 	}
 			// 	std::cout << '\n';
@@ -470,28 +552,38 @@ namespace compiler::helios {
 						// Assuming idt is NOT A FUNCTION.
 						st.emplace(idt);
 					}
+					variant_case(rpn::NamedIdentifier, idt) {
+						// Assuming idt is NOT A FUNCTION.
+						st.emplace(idt);
+					}
 					variant_case(rpn::Operator, oper) {
 						const auto first = st.top();
 						st.pop();
 						const auto second = st.top();
 						st.pop();
 
-						st.push(ctx.callExt<rpn::ExtensionRPNEval>(rpn::KeyOf_ExtensionRPNEval{
-							second,
-							oper,
-							first,
-							key_scope,
-						}));
+						st.push(rpn::ExtensionRPNEval(
+							ctx,
+							rpn::KeyOf_ExtensionRPNEval{
+								second,
+								oper,
+								first,
+								key_scope,
+							}
+						));
 					}
-					variant_case(rpn::NumLiteral, num) { st.emplace(num); }
+					variant_case(rpn::NumValue, num) { st.emplace(num); }
 					variant_default { RIFT_PANIC("Bad Expr alternative"); }
 				}
 			}
 			RIFT_ASSERT(st.size() == 1, "Expression stack should have 1 element");
-			return ctx.callExt<rpn::ExtensionRPNValue>(rpn::KeyOf_ExtensionRPNValue{
-				st.top(),
-				key_scope,
-			});
+			return rpn::ExtensionRPNValue(
+				ctx,
+				rpn::KeyOf_ExtensionRPNValue{
+					st.top(),
+					key_scope,
+				}
+			);
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF

@@ -108,9 +108,10 @@ namespace exec {
 
 		template<typename T = uint8_t>
 		std::span<T> getDataUnderPointer() const {
-			// This is only a check of whether the CTV is of type
-			// Pointer or RawPointer, since both are castable to RawPointer.
-			ts::RawPointerInfo(type.getType());
+			if (type.getType().getKind() != ts::Kind::RawPointer
+			    && type.getType().getKind() != ts::Kind::Pointer) {
+				RIFT_PANIC("The underlying type should be a pointer.");
+			}
 
 			auto pointer_data = getData<u32>();
 			auto block_       = pointer_data[0];

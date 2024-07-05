@@ -5,13 +5,11 @@
 
 #pragma once
 
-#include <lexer/token.hpp>
-#include <filesystem/file.hpp>
-#include "pst.hpp"
-
 namespace pst {
-	PST parse(tokenizer::OwnFile&& td);
-	PST parse(const fs::FilePath&);
-
+	/**
+	 * @brief Calls inits that are needed for parsing.
+	 *
+	 * @note It's already automatically called by pst::PST.
+	 */
 	void init();
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "parser_state.hpp"
+#include "parser_ref.hpp"
 #include <base/ints.hpp>
 #include <ostream>
 
@@ -10,6 +12,16 @@ namespace tpc {
 	 * Things that can parse themself should have this method:
 	 *  - static ParserRef<Element> parse(RiftParserState& state);
 	 */
+
+	class Element;
+
+	template<typename T, typename State>
+	concept ParseAbleElement = requires(State& state) {
+		requires std::derived_from<State, tpc::ParserState>;
+		requires std::derived_from<T, Element>;
+		{ T::parse(state) } -> std::same_as<ParserRef<T>>;
+	};
+
 	class Element {
 	public:
 		/**

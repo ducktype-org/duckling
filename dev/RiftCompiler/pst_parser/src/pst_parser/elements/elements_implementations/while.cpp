@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<While> While::parse(RiftParserState& state) {
@@ -6,7 +7,7 @@ namespace pst {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<While>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::While), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<While>(state, state.ctokens().is(Keyword::While))) return nullptr;
 
 		parseAll(state, Keyword::While, &out->optional_name, &out->condition, &out->body);
 
@@ -22,4 +23,6 @@ namespace pst {
 		nullAwareDprint(body, out);
 		out << "}}";
 	}
+
+	void While::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitWhile(*this); }
 }

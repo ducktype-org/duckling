@@ -1,11 +1,12 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<Using> Using::parse(RiftParserState& state) {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<Using>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::Using), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Using>(state, state.ctokens().is(Keyword::Using))) return nullptr;
 
 		parseAll(state, Keyword::Using, &out->names);
 
@@ -17,4 +18,6 @@ namespace pst {
 		nullAwareDprint(names, out);
 		out << "}";
 	}
+
+	void Using::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitUsing(*this); }
 }

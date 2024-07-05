@@ -15,20 +15,23 @@ namespace compiler::helios {
 	// incremental compilation
 
 	/**
-	 * @brief Query FULL HOUTModule of single module
+	 * @brief Query FULL HOUTUnit of single module
 	 */
-	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleId, const HOUTModule&)
+	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleId, const HOUTUnit&)
 
 	/**
-	 * @brief Query FULL HOUTModule of module and all its submodules recursively
+	 * @brief Query HOUTUnit of module and all its submodules recursively
 	 */
-	DECLARE_QUERY(QueryModuleHOUTRecursively, frontend::ModuleId, std::vector<HOUTModule>)
+	DECLARE_QUERY(QueryModuleHOUTRecursively, frontend::ModuleId, std::vector<HOUTUnit>)
 
 	/**
-	 * @brief Query SymbolID of given module
-	 *	@TODO: do we want module symbols?
+	 * @brief Debug/testing query for extracting top-level functions and constants from module
 	 */
-	DECLARE_QUERY(QueryModuleSymbol, frontend::ModuleId, SymID)
+	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleId, HOUTUnit)
 
-
+	/**
+	 * @brief Query code of a function.
+	 * @note Works only for SymID-s that actually represent a function
+	 */
+	DECLARE_QUERY(QueryCodeOFFun, SymID, HOUTFunction);
 }

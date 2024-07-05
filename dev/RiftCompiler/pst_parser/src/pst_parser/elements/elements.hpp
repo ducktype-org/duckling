@@ -14,19 +14,14 @@
 #include <base/string_id.hpp>
 
 #include <variant>
-#include <iostream>
 
 // @TODO: make generic optional
-
-// forward for friend:
-namespace hir {
-	class Expression;
-}
 
 namespace pst {
 
 	class Expr;
 
+	class PstStmtVisitor;
 
 	enum class StmtKind {
 		Attribute,
@@ -41,6 +36,7 @@ namespace pst {
 		Struct,
 		TopLevel,
 		Const,
+		Variable
 	};
 
 	class Stmt: public RiftElement {
@@ -61,6 +57,35 @@ namespace pst {
 		bool                   trailingSemicolon() override;
 		[[nodiscard]]
 		virtual ParserRef<lsp::LSPStmt> stmtFromPST() const;
+		virtual void           acceptVisitor(PstStmtVisitor& visitor) const = 0;
+
+		[[nodiscard]]
+		bool isStatement() const final {
+			return true;
+		}
+
+		/**
+		 * @brief Determines if given statement is a declaration.
+		 * Declaration is everything that is considered a unique symbol in HELIOS.
+		 * For example declarations are:
+		 * * functions
+		 * * classes
+		 * * aliases and usings
+		 * * ifs, whiles with a name
+		 * * variable declaration
+		 *
+		 * For example declarations are not:
+		 * * expressions
+		 * * ifs, whiles without name
+		 * * return, break
+		 *
+		 * @note: this definition of declaration might not
+		 * always be equivalent to intuitive thinking about declarations.
+		 */
+		[[nodiscard]]
+		virtual bool isDeclaration() const {
+			return false;
+		}
 	};
 
 #define STMT_CHILD_CONSTRUCTOR(class_name) \
@@ -191,6 +216,8 @@ namespace pst {
 		~Attribute() final = default;
 		void dprint(std::ostream& out) const final;
 		bool trailingSemicolon() override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 		[[nodiscard]]
 		virtual ParserRef<lsp::LSPAttribute> attributeFromPST() const;
 		[[nodiscard]]
@@ -214,6 +241,11 @@ namespace pst {
 		[[nodiscard]]
 		const decltype(names)& getNames() const;
 
+		[[nodiscard]]
+		base::StrId getAlias() const {
+			return alias.value;
+		}
+
 		/**
 		 * @note In the future this functionality will be done by HELIOS.
 		 * This functionality is needed to implement early import system for testing.
@@ -229,6 +261,13 @@ namespace pst {
 		virtual ParserRef<lsp::LSPImport> importFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	class Using final: public Stmt {
@@ -254,6 +293,13 @@ namespace pst {
 		virtual ParserRef<lsp::LSPUsing> usingFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	class Alias final: public Stmt {
@@ -280,6 +326,13 @@ namespace pst {
 		virtual ParserRef<lsp::LSPAlias> aliasFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	class CodeBlock final: public NotStmt {
@@ -297,6 +350,11 @@ namespace pst {
 		virtual ParserRef<lsp::LSPCodeBlock> codeBlockFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPNotStmt> notStmtFromPST() const override;
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
 	};
 
 	class CodeBlockOrStmt final: public NotStmt {
@@ -318,6 +376,11 @@ namespace pst {
 		virtual ParserRef<lsp::LSPCodeBlockOrStmt> codeBlockOrStmtFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPNotStmt> notStmtFromPST() const override;
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
 	};
 
 	class RoundGroupExpr final: public NotStmt {
@@ -335,6 +398,9 @@ namespace pst {
 		ParserRef<lsp::LSPNotStmt> notStmtFromPST() const override;
 	};
 
+	/**
+	 * @TODO: improve comma separated expressions and expression parse options in general.
+	 */
 	class Expr final: public Stmt {
 	public:
 		enum class GroupType {
@@ -345,6 +411,10 @@ namespace pst {
 		};
 
 		struct Group;
+		/** @brief Represents multiple comma separated expressions.
+		 * For example `a, b` in `a, b = c` or `b, c` in `a = (b, c)`
+		 */
+		struct CommaSeparated;
 		struct Operator;
 		struct Identifier;
 		struct NumLiteral;
@@ -354,7 +424,12 @@ namespace pst {
 			dia::SourcePosition position;
 		};
 
-		using ExprElem = std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue>;
+		using ExprElem
+			= std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue, CommaSeparated>;
+
+		struct CommaSeparated {
+			std::vector<ParserRef<Expr>> expr;
+		};
 
 		struct Group {
 			GroupType           type;
@@ -382,21 +457,34 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Expr);
 		/**
 		 * @brief parses the expression until its over
+		 * @param allow_comma whether the expression can be a set of comma separated expressions.
 		 */
-		static ParserRef<Expr> parse(RiftParserState& state);
-		static ParserRef<Expr> parseUntil(RiftParserState& state, rift_def::Operator until);
+		static ParserRef<Expr> parse(RiftParserState& state, bool allow_comma = false);
+		/**
+		 * @brief Parses the expression until a particular operator is encountered(outside of
+		 * parenthesis).
+		 *
+		 * @param allow_comma whether the expression can be a set of comma separated expressions.
+		 */
+		static ParserRef<Expr>
+			parseUntil(RiftParserState& state, rift_def::Operator until, bool allow_comma = false);
 		/**
 		 * @p exact_len = false: parses the expression until its over or until it parses @p len
 		 * tokens
 		 * @p exact_len = true: parses the expression until it parses @p len tokens
+		 * @param allow_comma whether the expression can be a set of comma separated expressions.
 		 */
-		static ParserRef<Expr> parse(RiftParserState& state, usize len, bool exact_len = true);
-		void                   dprint(std::ostream& out) const final;
+		static ParserRef<Expr> parse(
+			RiftParserState& state, usize len, bool exact_len = true, bool allow_comma = false
+		);
+		void dprint(std::ostream& out) const final;
 		~Expr() final = default;
 		[[nodiscard]]
 		virtual ParserRef<lsp::LSPExpr> exprFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -404,7 +492,7 @@ namespace pst {
 	 */
 	class Action: public Stmt {
 	protected:
-		std::optional<ParserRef<Expr>> expr;
+		base::Optional<ParserRef<Expr>> expr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action);
@@ -414,6 +502,11 @@ namespace pst {
 		virtual ParserRef<lsp::LSPAction> actionFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
+
+		[[nodiscard]]
+		base::Optional<ParserCBorrowRef<Expr>> getValue() const {
+			return expr.map([](const auto& e) { return e.borrow(); });
+		}
 	};
 
 	class Return final: public Action {
@@ -426,6 +519,8 @@ namespace pst {
 		virtual ParserRef<lsp::LSPReturn> returnFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPAction> actionFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Break final: public Action {
@@ -438,6 +533,8 @@ namespace pst {
 		virtual ParserRef<lsp::LSPBreak> breakFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPAction> actionFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Continue final: public Action {
@@ -450,6 +547,8 @@ namespace pst {
 		virtual ParserRef<lsp::LSPContinue> continueFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPAction> actionFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Redo final: public Action {
@@ -462,6 +561,8 @@ namespace pst {
 		virtual ParserRef<lsp::LSPRedo> redoFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPAction> actionFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Restart final: public Action {
@@ -474,6 +575,8 @@ namespace pst {
 		virtual ParserRef<lsp::LSPRestart> restartFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPAction> actionFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Defer final: public Action {
@@ -486,6 +589,8 @@ namespace pst {
 		virtual ParserRef<lsp::LSPDefer> deferFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPAction> actionFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -501,8 +606,11 @@ namespace pst {
 		virtual ParserRef<lsp::LSPThrow> throwFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPAction> actionFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
+	// TODO: Merge it with variable. Or perhaps make a new class DataStorage.
 	class Const final: public Stmt {
 		tpc::Identifier name;
 		ParserRef<Expr> type;
@@ -533,6 +641,13 @@ namespace pst {
 		virtual ParserRef<lsp::LSPConst> constFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	/**
@@ -542,12 +657,16 @@ namespace pst {
 	public:
 		Decl(StmtKind kind, const dia::SourcePosition& position): Stmt(kind, position) {}
 
-		static ParserRef<Decl> parse(RiftParserState& state);
-		bool                   trailingSemicolon() override;
+		bool trailingSemicolon() override;
 		[[nodiscard]]
 		virtual ParserRef<lsp::LSPDecl> declFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPStmt> stmtFromPST() const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const override {
+			return true;
+		}
 	};
 
 #define DECL_CHILD_CONSTRUCTOR(class_name) \
@@ -560,9 +679,14 @@ namespace pst {
 		virtual ParserRef<lsp::LSPCodeDecl> codeDeclFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPDecl> declFromPST() const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return false;
+		}
 	};
 
-	class TopLevel: public Decl {
+	class TopLevel final: public Decl {
 		std::vector<tpc::ParserRef<Stmt>> statements;
 
 	public:
@@ -581,6 +705,13 @@ namespace pst {
 		virtual ParserRef<lsp::LSPTopLevel> topLevelFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPDecl> declFromPST() const override;
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Block final: public CodeDecl {
@@ -597,6 +728,8 @@ namespace pst {
 		virtual ParserRef<lsp::LSPBlock> blockFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPCodeDecl> codeDeclFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Namespace final: public Decl {
@@ -623,6 +756,8 @@ namespace pst {
 		virtual ParserRef<lsp::LSPNamespace> namespaceFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPDecl> declFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -641,6 +776,16 @@ namespace pst {
 			return name.value;
 		}
 
+		[[nodiscard]]
+		ParserCBorrowRef<CodeBlock> getBody() const {
+			return body.borrow();
+		}
+
+		[[nodiscard]]
+		ParserCBorrowRef<InheritList> getBases() const {
+			return bases.borrow();
+		}
+
 		static ParserRef<Struct> parse(RiftParserState& state);
 		~Struct() final = default;
 		void dprint(std::ostream& out) const final;
@@ -648,6 +793,8 @@ namespace pst {
 		virtual ParserRef<lsp::LSPStruct> structFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPDecl> declFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Fun final: public Decl {
@@ -664,6 +811,16 @@ namespace pst {
 			return name.value;
 		}
 
+		[[nodiscard]]
+		auto getParams() const {
+			return params.borrow();
+		}
+
+		[[nodiscard]]
+		auto getBody() const {
+			return body.borrow();
+		}
+
 		static ParserRef<Fun> parse(RiftParserState& state);
 		void                  dprint(std::ostream& out) const final;
 		~Fun() final = default;
@@ -671,6 +828,36 @@ namespace pst {
 		virtual ParserRef<lsp::LSPFun> funFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPDecl> declFromPST() const override;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
+	};
+
+	class Variable final: public Decl {
+		tpc::Identifier name;
+		ParserRef<Expr> type     = nullptr;
+		ParserRef<Expr> value    = nullptr;
+		bool            is_const = true;
+
+	public:
+		DECL_CHILD_CONSTRUCTOR(Variable);
+
+		[[nodiscard]]
+		base::StrId getName() const {
+			return name.value;
+		}
+
+		bool trailingSemicolon() override;
+
+		[[nodiscard]]
+		ParserCBorrowRef<Expr> getType() const {
+			return type.borrow();
+		}
+
+		static ParserRef<Variable> parse(RiftParserState& state);
+		void                       dprint(std::ostream& out) const override;
+		~Variable() override = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class If final: public CodeDecl {
@@ -688,6 +875,9 @@ namespace pst {
 		virtual ParserRef<lsp::LSPIf> ifFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPCodeDecl> codeDeclFromPST() const override;
+
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class While final: public CodeDecl {
@@ -705,6 +895,9 @@ namespace pst {
 		virtual ParserRef<lsp::LSPWhile> whileFromPST() const;
 		[[nodiscard]]
 		ParserRef<lsp::LSPCodeDecl> codeDeclFromPST() const override;
+
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**

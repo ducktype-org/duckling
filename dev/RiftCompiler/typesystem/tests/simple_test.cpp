@@ -177,25 +177,37 @@ private:
 
 	/**
 	 * Test that Raw Pointer and Pointer types correctly cast
-	 * between each other and retain informaiton as expected.
+	 * between each other and retain information as expected.
 	 */
 	void simple_pointer() {
-		const auto raw_1 = query::entryPoint<QueryRawPointerType>({});
+		const auto raw_1 = query::entryPoint<QueryRawPointerType>(false);
 		assert(raw_1.getKind() == RawPointer, "Raw Pointer should have kind RawPointer.");
-		const auto raw_2 = query::entryPoint<QueryRawPointerType>({});
-		assert(raw_1 == raw_2, "There should be only Raw Pointer.");
+		const auto raw_2 = query::entryPoint<QueryRawPointerType>(true);
+		assert(raw_2.getKind() == RawPointer, "Mutable Raw Pointer should have kind RawPointer.");
+		assert(raw_1 != raw_2, "Immutable and mutable Raw Pointers should be different.");
+		const auto raw_3 = query::entryPoint<QueryRawPointerType>(false);
+		assert(raw_1 == raw_3, "There should be only one immutable Raw Pointer.");
+		const auto raw_4 = query::entryPoint<QueryRawPointerType>(true);
+		assert(raw_2 == raw_4, "There should be only one mutable Raw Pointer.");
 
 		const TypeInfo       type_raw = raw_1;
-		const RawPointerInfo raw_3    = type_raw;
-		assert(raw_3.getKind() == RawPointer, "Raw Pointer should survive casting.");
+		const RawPointerInfo raw_5    = type_raw;
+		assert(raw_5.getKind() == RawPointer, "Raw Pointer should survive casting.");
 
 		const auto ptr_1 = query::entryPoint<QueryPointerType>({ raw_1 });
 		assert(ptr_1.getKind() == Pointer, "Pointer should have kind Pointer.");
+		const auto ptr_2 = query::entryPoint<QueryPointerType>({ raw_1 });
+		assert(ptr_1 == ptr_2, "Pointers to the same type and mutability should be equal.");
+		const auto ptr_3 = query::entryPoint<QueryPointerType>({ raw_2 });
+		assert(ptr_1 != ptr_3, "Pointers to different types should be different.");
+		const auto ptr_4 = query::entryPoint<QueryPointerType>({ raw_1, true });
+		assert(ptr_1 != ptr_4, "Pointers of different mutability should be different.");
 
-		const RawPointerInfo raw_ptr = ptr_1;
-		const PointerInfo    ptr_2   = raw_ptr;
+		const TypeInfo    type_ptr = ptr_4;
+		const PointerInfo ptr_5    = type_ptr;
 		assert(
-			ptr_2.getKind() == Pointer && ptr_2.getUnderlyingType() == raw_1,
+			ptr_5.getKind() == Pointer && ptr_5.getUnderlyingType() == ptr_4.getUnderlyingType()
+				&& ptr_5.isMutable() == ptr_4.isMutable(),
 			"Pointer should survive casting."
 		);
 	}
@@ -215,8 +227,8 @@ private:
 			"Parameter types should be as constructed."
 		);
 		assert(fun_1.getResultType() == int_32, "Result type should be as constructed.");
-		assert(fun_1.isPure() == false, "Purity should be as constructed.");
-		assert(fun_1.isFree() == false, "Freedom should be as constructed.");
+		assert(!fun_1.isPure(), "Purity should be as constructed.");
+		assert(!fun_1.isFree(), "Freedom should be as constructed.");
 
 		const TypeInfo     type_fun = fun_1;
 		const FunctionInfo fun2     = type_fun;
@@ -294,12 +306,11 @@ private:
 			"ValueCategory constructor should initialize unchanged category value."
 		);
 		assert(
-			vc.isMutable() == true,
+			vc.isMutable(),
 			"ValueCategory constructor should initialize unchanged is_mutable value."
 		);
 		assert(
-			vc.isPure() == false,
-			"ValueCategory constructor should initialize unchanged is_pure value."
+			!vc.isPure(), "ValueCategory constructor should initialize unchanged is_pure value."
 		);
 		assert(
 			vc.getAllowsSemantic() == (MOVE | COPY | REINIT | USE | DESTROY),

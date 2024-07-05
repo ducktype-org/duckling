@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	ParserRef<If> If::parse(RiftParserState& state) {
@@ -6,7 +7,7 @@ namespace pst {
 		auto position = state.ctokens().peek().getPosition();
 		auto out      = makeRef<If>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Keyword::If), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<If>(state, state.ctokens().is(Keyword::If))) return nullptr;
 
 		parseAll(state, Keyword::If, &out->optional_name, &out->condition, &out->body);
 
@@ -23,4 +24,5 @@ namespace pst {
 		out << "}}";
 	}
 
+	void If::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitIf(*this); }
 }

@@ -235,16 +235,16 @@ First way is to write static method next to :code:`provide` function, like this:
         }
 
 
-Second way is to write "Query Extension":
+Second way is to write "Query Extension" function/method or some other code taking context as parameter:
 
 .. code-block:: cpp
     :caption: Query Extension
 
     // hpp:
-    QUERY_EXTENSION(NameOfExtension, input_t, output_t)
+    output_t nameOfExtension(query::Context&, input_t);
 
     // cpp:
-    output_t NameOfExtension(query::Context& ctx, input_t in) {
+    output_t nameOfExtension(query::Context& ctx, input_t in) {
         // ...
         // use can use "ctx" here
     }
@@ -254,7 +254,8 @@ Second way is to write "Query Extension":
     
     // ...
         static auto provide(Context& context, QKey key) -> PResult {
-            auto output = context.callExt<NameOfExtension>(input);
+            // beware to never pass context that is not from your query:
+            auto output = nameOfExtension(context, input);
         }
     // ...
 
