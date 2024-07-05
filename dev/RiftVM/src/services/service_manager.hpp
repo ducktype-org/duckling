@@ -61,29 +61,25 @@ namespace vm {
 		}
 
 		template<class T>
-		requires(!IsCoreService<T>::value)
-		T& get() {
+		requires(!IsCoreService<T>::value) T& get() {
 			return std::get<base::Optional<T&>>(dynamic_services).value();
 		}
 
 		// The following are mostly for dynamic services
 		template<class T>
-		requires IsCoreService<T>::value
-		[[nodiscard]]
+		requires IsCoreService<T>::value [[nodiscard]]
 		bool isAvailable() const {
 			return true;
 		}
 
 		template<class T>
-		requires(!IsCoreService<T>::value)
-		[[nodiscard]]
+		requires(!IsCoreService<T>::value) [[nodiscard]]
 		bool isAvailable() const {
 			return get<T>().hasValue();
 		}
 
 		template<class T>
-		requires(!IsCoreService<T>::value)
-		void enable() {
+		requires(!IsCoreService<T>::value) void enable() {
 			auto& service = get<T>();
 			if (!service.has_value()) {
 				service.emplace();
@@ -92,8 +88,7 @@ namespace vm {
 		}
 
 		template<class T>
-		requires(!IsCoreService<T>::value)
-		void disable() {
+		requires(!IsCoreService<T>::value) void disable() {
 			auto& service = get<T>();
 			if (service.has_value()) service.reset();
 		}
