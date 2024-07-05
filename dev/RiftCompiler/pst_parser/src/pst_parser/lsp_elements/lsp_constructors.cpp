@@ -9,9 +9,9 @@ namespace pst {
 
 	namespace {
 		void fillAction(
-			lsp::LSPAction&                       action,
-			const dia::SourcePosition&            position,
-			const std::optional<ParserRef<Expr>>& expr
+			lsp::LSPAction&                        action,
+			const dia::SourcePosition&             position,
+			const base::Optional<ParserRef<Expr>>& expr
 		) {
 			action.position = position;
 			action.kind     = lsp::StmtKind::Action;

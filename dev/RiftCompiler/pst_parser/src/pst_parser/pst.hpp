@@ -7,6 +7,9 @@
 #include "parser.hpp"
 
 namespace pst {
+
+	using lsp::LSPTopLevel;
+
 	/**
 	 * @brief PST generation class. Parses on construction if possible.
 	 *
@@ -112,6 +115,9 @@ namespace pst {
 
 		void dprint(std::ostream& out) const { nullAwareDprint(element, out); }
 
-		void getLSP(std::ostream& out) const;
+		void getLSP(std::ostream& out) const {
+			ParserRef<LSPTopLevel> lspTopLevel = element->topLevelFromPST();
+			lspTopLevel->lsp_print(out);
+		}
 	};
 }
