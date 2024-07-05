@@ -41,51 +41,43 @@ namespace vm {
 		VCPU& getVCPU() { return vcpu; }
 
 		template<class T>
-		requires std::is_same_v<Allocator, T>
-		T& get() {
+		requires std::is_same_v<Allocator, T> T& get() {
 			return allocator;
 		}
 
 		template<class T>
-		requires std::is_same_v<StackAllocator, T>
-		T& get() {
+		requires std::is_same_v<StackAllocator, T> T& get() {
 			return stackAllocator;
 		}
 
 		template<class T>
-		requires std::is_same_v<Executor, T>
-		T& get() {
+		requires std::is_same_v<Executor, T> T& get() {
 			return executor;
 		}
 
 		template<class T>
-		requires std::is_same_v<Preprocessor, T>
-		T& get() {
+		requires std::is_same_v<Preprocessor, T> T& get() {
 			return preprocessor;
 		}
 
 		template<class T>
-		requires(!IsCoreService<T>::value)
-		T& get() {
+		requires(!IsCoreService<T>::value) T& get() {
 			return std::get<base::Optional<T&>>(dynamic_services).value();
 		}
 
 		// The following are mostly for dynamic services
 		template<class T>
-		requires IsCoreService<T>::value
-		bool isAvailable() const {
+		requires IsCoreService<T>::value bool isAvailable() const {
 			return true;
 		}
 
 		template<class T>
-		requires(!IsCoreService<T>::value)
-		bool isAvailable() const {
+		requires(!IsCoreService<T>::value) bool isAvailable() const {
 			return get<T>().hasValue();
 		}
 
 		template<class T>
-		requires(!IsCoreService<T>::value)
-		void enable() {
+		requires(!IsCoreService<T>::value) void enable() {
 			auto& service = get<T>();
 			if (!service.has_value()) {
 				service.emplace();
@@ -94,8 +86,7 @@ namespace vm {
 		}
 
 		template<class T>
-		requires(!IsCoreService<T>::value)
-		void disable() {
+		requires(!IsCoreService<T>::value) void disable() {
 			auto& service = get<T>();
 			if (service.has_value()) service.reset();
 		}

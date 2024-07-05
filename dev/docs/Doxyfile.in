@@ -1,13 +1,24 @@
 PROJECT_NAME = "Duckling Code Docs"
 SOURCE_BROWSER = YES
 
+# General options
+INPUT = "@DOXYGEN_INPUT_DIR@"
+OUTPUT_DIRECTORY = "@DOXYGEN_OUTPUT_DIR@"
+GENERATE_XML = YES
+RECURSIVE = YES
+FILE_PATTERNS = *.hpp
+EXCLUDE_PATTERNS = "@PROJECT_SOURCE_DIR@/*build*/*" \
+                   "@PROJECT_SOURCE_DIR@/docs/*" \
+                   */toolbox.py
+
+# Graph look options
 HAVE_DOT = YES
 DOT_IMAGE_FORMAT = svg
-DOT_TRANSPARENT = YES
 INCLUDED_BY_GRAPH = NO
 UML_LOOK = YES
 DOT_UML_DETAILS = NONE
 
+# Macro preprocessing options
 ENABLE_PREPROCESSING = YES
 MACRO_EXPANSION = YES
 EXPAND_ONLY_PREDEF = YES
@@ -18,14 +29,8 @@ PREDEFINED = "DECLARE_QUERY(name, key, value)=auto name(key) -> value;/**< \quer
             "QUERY_IMPLEMENTATION_BOILERPLATE(name)=" \
             "COMMA=,"
 
-INPUT = "@DOXYGEN_INPUT_DIR@"
-OUTPUT_DIRECTORY = "@DOXYGEN_OUTPUT_DIR@"
-GENERATE_XML = YES
-RECURSIVE = YES
-FILE_PATTERNS = *.hpp
-EXCLUDE_PATTERNS = "@PROJECT_SOURCE_DIR@/*build*/*" \
-                   "@PROJECT_SOURCE_DIR@/docs/*" \
-                   */toolbox.py
+# Currently unused left for potential future 
+# FILTER_PATTERNS = "*.hpp=python @CMAKE_CURRENT_SOURCE_DIR@/doxygen-ext/format_fixer.py"
 
 EXTRACT_ALL = YES
 ALLOW_UNICODE_NAMES    = NO
@@ -72,5 +77,5 @@ EXTRACT_STATIC         = YES
 GENERATE_TREEVIEW = YES # optional. Also works without treeview
 DISABLE_INDEX     = NO
 FULL_SIDEBAR      = NO
-HTML_EXTRA_STYLESHEET  = "@CMAKE_CURRENT_SOURCE_DIR@/doxygen-awesome-css/doxygen-awesome.css" "@CMAKE_CURRENT_SOURCE_DIR@/doxygen_custom.css"
+HTML_EXTRA_STYLESHEET  = "@CMAKE_CURRENT_SOURCE_DIR@/doxygen-awesome-css/doxygen-awesome.css" "@CMAKE_CURRENT_SOURCE_DIR@/doxygen-ext/doxygen_custom.css"
 HTML_COLORSTYLE        = LIGHT
