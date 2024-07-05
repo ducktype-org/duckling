@@ -174,7 +174,7 @@ IndentWrappedFunctionNames: true
 LambdaBodyIndentation: Signature
 NamespaceIndentation: All
 PPIndentWidth:   -1
-RequiresClausePosition: SingleLine
+RequiresClausePosition: OwnLine
 RequiresExpressionIndentation: OuterScope
 
 

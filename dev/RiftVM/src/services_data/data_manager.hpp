@@ -27,7 +27,8 @@ namespace vm {
 		DynamicDataStorage dynamicData;
 
 		template<class T>
-		requires(!IsCoreData<T>::value) DynamicRef<T> get() {
+		requires(!IsCoreData<T>::value)
+		DynamicRef<T> get() {
 			Dynamic<T>& data = std::get<Dynamic<T>>(dynamicData);
 			return DynamicRef(data.first, data.second);
 		}
@@ -36,12 +37,14 @@ namespace vm {
 		DataManagerDef(): dynamicData(Dynamic(base::Optional<DynamicData>(), 0)...) {}
 
 		template<class T>
-		requires std::is_same_v<Memory, T> T& get() {
+		requires std::is_same_v<Memory, T>
+		T& get() {
 			return memory;
 		}
 
 		template<class T>
-		requires std::is_same_v<TypeMetadata, T> T& get() {
+		requires std::is_same_v<TypeMetadata, T>
+		T& get() {
 			return typeMetadata;
 		}
 
@@ -50,7 +53,8 @@ namespace vm {
 		 * Each call to require should be followed by exactly one call to release.
 		 */
 		template<class T>
-		requires(!IsCoreData<T>::value) T& require() {
+		requires(!IsCoreData<T>::value)
+		T& require() {
 			auto [data, references] = get<T>();
 			if (references == 0) data = some<T>(T());
 			references++;
@@ -62,7 +66,8 @@ namespace vm {
 		 * is removed.
 		 */
 		template<class T>
-		requires(!IsCoreData<T>::value) void release() {
+		requires(!IsCoreData<T>::value)
+		void release() {
 			auto [data, references] = get<T>();
 			if (references == 1) data = base::Optional<T>();
 			if (references > 0) references--;

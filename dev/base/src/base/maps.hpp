@@ -98,7 +98,8 @@ namespace base {
 		bool is_copy = std::is_copy_constructible_v<DATA_T>>
 	// Sanity check
 	requires base::Implication<is_move, std::is_move_constructible_v<DATA_T>>
-	      && base::Implication<is_copy, std::is_copy_constructible_v<DATA_T>> class VectorMap {
+	      && base::Implication<is_copy, std::is_copy_constructible_v<DATA_T>>
+	class VectorMap {
 		std::vector<Optional<DATA_T>> map;
 		usize                         element_count{};
 
@@ -151,7 +152,9 @@ namespace base {
 		/**
 		 * @brief Moves @p data value to @p key position.
 		 */
-		void put(KEY_T key, DATA_T&& data) requires is_move {
+		void put(KEY_T key, DATA_T&& data)
+		requires is_move
+		{
 			if (usize(key) >= map.size()) map.resize(usize(key) + 1);
 			if (!map.at(usize(key)).has_value()) element_count++;
 			map.at(usize(key)).emplace(std::move(data));
@@ -160,7 +163,9 @@ namespace base {
 		/**
 		 * @brief Copies @p data value to @p key position.
 		 */
-		void put(KEY_T key, const DATA_T& data) requires is_copy {
+		void put(KEY_T key, const DATA_T& data)
+		requires is_copy
+		{
 			if (usize(key) >= map.size()) map.resize(usize(key) + 1);
 			if (!map.at(usize(key)).has_value()) element_count++;
 			map.at(usize(key)).emplace(data);

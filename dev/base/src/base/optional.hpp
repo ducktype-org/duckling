@@ -117,7 +117,8 @@ namespace base {
 		explicit constexpr operator bool() const { return has_value(); }
 
 		template<class U = T>
-		requires std::is_constructible_v<T, U> constexpr Optional& operator=(U&& value) {
+		requires std::is_constructible_v<T, U>
+		constexpr Optional& operator=(U&& value) {
 			private_optional = std::forward<U>(value);
 			return *this;
 		}
