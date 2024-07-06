@@ -71,6 +71,21 @@ namespace compiler::helios::code {
 		void debugPrint(usize indent, std::string& out) const final;
 	};
 
+	/**
+	 * @brief Represents if statement in HOUT
+	 */
+	struct IfStmt final: public Stmt {
+		ElementRef<Expr> condition;
+		CodeBlock body;
+
+		// @TODO: optional else body
+
+		IfStmt(ElementRef<Expr> condition, CodeBlock body):
+			condition(std::move(condition)), body(std::move(body)) {}
+
+		void debugPrint(usize indent, std::string& out) const final;
+	};
+
 	/* * * * * * * * *
 	 * Expressions:  *
 	 * * * * * * * * */

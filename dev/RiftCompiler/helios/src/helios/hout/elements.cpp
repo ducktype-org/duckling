@@ -28,6 +28,18 @@ namespace compiler::helios::code {
 		out += "\n";
 	}
 
+	void IfStmt::debugPrint(usize indent, std::string& out) const {
+		addIndent(indent, out);
+		out += "if (";
+		condition->debugPrint(out);
+		out += ") {\n";
+		for (const auto& stmt: body.statements) {
+			stmt->debugPrint(indent + 1, out);
+		}
+		addIndent(indent, out);
+		out += "}\n";
+	}
+
 	void ConstIntExprMock::debugPrint(std::string& out) const { out += std::to_string(value); }
 
 	void IdentifierExpresion::debugPrint(std::string& out) const {

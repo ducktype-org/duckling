@@ -97,6 +97,8 @@ namespace compiler::helios {
 	 */
 	base::borrow_ptr<SymbolData>
 		makeSymbolFromStatement(const ScopeID& scope, PstRef<pst::Stmt> stmt) {
+		// @TODO: change this function to visitor to avoid dynamic_casts
+
 		switch (stmt->getKind()) {
 		case pst::StmtKind::Fun: {
 			auto&& function_ = dynamic_cast<const pst::Fun*>(stmt.get());

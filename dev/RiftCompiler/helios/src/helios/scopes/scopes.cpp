@@ -145,9 +145,17 @@ namespace compiler::helios {
 			base::Optional<std::vector<SymID>> out;
 
 			void visitFun(const pst::Fun&) override {
+				// Scope of "fun →()← {}"
 				// @TODO: iterate function parameters and create symbols out of them
 				// The problem is that currently function parameters are Expr in Pst -- this has to
 				// change Variable declaration or custom element is probably a better choice
+				this->out.emplace(std::vector<SymID>{});
+			}
+
+			void visitIf(const pst::If&) override {
+				// Scope of "if →(...)← {}"
+				// @TODO: check if "If" defines any variables in its condition
+				// and add them here.
 				this->out.emplace(std::vector<SymID>{});
 			}
 		};
