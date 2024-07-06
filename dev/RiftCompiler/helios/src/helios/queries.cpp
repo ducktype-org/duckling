@@ -114,7 +114,8 @@ namespace compiler::helios {
 				// Get scopes:
 				auto outer_scope = ctx.query<QueryPrimaryCodeScopeFor>({parent_scope, PstRef<pst::RiftElement>(&stmt)});
 				
-				// in the future we will also add here potential variables defined in ifs condition 
+				// in the future we must also handle here different if-s variants 
+				// for example: `if (let a = ...) {}`.
 				auto condition = ctx.query<QueryHoutOfExpr>({ parent_scope, stmt.getCondition() });
 				
 				auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>({outer_scope, stmt.getBody()});
