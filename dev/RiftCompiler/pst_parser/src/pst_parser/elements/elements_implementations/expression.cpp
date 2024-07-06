@@ -1,4 +1,6 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
+
 #include <base/variant.hpp>
 
 namespace pst {
@@ -18,12 +20,13 @@ namespace pst {
 		}
 	}
 
-	ParserRef<Expr> Expr::parse(RiftParserState& state) {
+	ParserRef<Expr> Expr::parse(RiftParserState& state, bool allow_comma) {
 		// @TODO: better inf
-		return Expr::parse(state, 1e18, false);
+		return Expr::parse(state, 1e18, false, allow_comma);
 	}
 
-	ParserRef<Expr> Expr::parseUntil(RiftParserState& state, rift_def::Operator until) {
+	ParserRef<Expr>
+		Expr::parseUntil(RiftParserState& state, rift_def::Operator until, bool allow_comma) {
 		// look ahead:
 		usize count = 0;
 		while (!state.ctokens().is(until, count)) {
@@ -34,16 +37,19 @@ namespace pst {
 			count++;
 		}
 
-		return Expr::parse(state, count, true);
+		return Expr::parse(state, count, true, allow_comma);
 	}
 
 	/**
 	 * It is left in this state for now, as a lot will depend on semantical analysis
 	 * @TODO: lambda, todo-s
 	 */
-	ParserRef<Expr> Expr::parse(RiftParserState& state, usize len, bool exact_len) {
-		auto  out = makeRef<Expr>(state.ctokens().peek().getPosition());
-		usize i   = 0;
+	ParserRef<Expr>
+		Expr::parse(RiftParserState& state, usize len, bool exact_len, bool allow_comma) {
+		auto result = makeRef<Expr>(state.ctokens().peek().getPosition());
+		// Currently parsed expression
+		auto  back = result.borrow_mut();
+		usize i    = 0;
 
 		while (state.notEmpty() and i < len) {
 			i++;
@@ -53,27 +59,45 @@ namespace pst {
 				auto type = fromTokenType(state.ctokens().peek().getBracketType());
 				state.goDown();
 				if (state.notEmpty()) {
-					out->elements.emplace_back(Group{ type, Expr::parse(state), position });
+					back->elements.emplace_back(Group{ type, Expr::parse(state, true), position });
 				} else {
-					out->elements.emplace_back(Group{
+					back->elements.emplace_back(Group{
 						type, makeRef<Expr>(state.ctokens().peek().getPosition()), position });
 				}
 				state.goUpAndSkip();
 			} else if (state.ctokens().isOperator()) {
 				auto token = state.tokens().next();
-				out->elements.emplace_back(Operator({ token.getValue(), position }));
+				back->elements.emplace_back(Operator({ token.getValue(), position }));
 			} else if (state.ctokens().peek().isIdentifier()) {
 				auto token = state.tokens().next();
-				out->elements.emplace_back(Identifier({ token.getValue(), position }));
+				back->elements.emplace_back(Identifier({ token.getValue(), position }));
 			} else if (state.ctokens().isKeyword()) {
 				// @TODO: check if keyword is legal in expr and proceed accordingly
 				auto token = state.tokens().next();
-				out->elements.emplace_back(KeywordValue({ token.asKeyword(), position }));
+				back->elements.emplace_back(KeywordValue({ token.asKeyword(), position }));
 			} else if (state.ctokens().peek().isNumLiteral()) {
 				auto token = state.tokens().next();
-				out->elements.emplace_back(NumLiteral({ token.getValue(), position }));
+				back->elements.emplace_back(NumLiteral({ token.getValue(), position }));
 			} else if (state.ctokens().is(Special::Semicolon)) {
 				break;
+			} else if (state.ctokens().is(Special::Comma) && allow_comma) {
+				// Check if the expression isn't comma separated yet
+				if (result->elements.size() != 1
+				    || !std::holds_alternative<CommaSeparated>(result->elements.front())) {
+					// Change expression to a comma separated one containing previously parsed
+					// expression as the first element
+					auto sep = makeRef<Expr>(result->getSourcePosition());
+					sep->elements.emplace_back(CommaSeparated{});
+					std::get<CommaSeparated>(sep->elements.front())
+						.expr.emplace_back(std::move(result));
+					result = std::move(sep);
+				}
+				// Setup the next expression to add tokens to
+				state.tokens().skip(1);
+				auto new_exp = makeRef<Expr>(state.ctokens().peek().getPosition());
+				back         = new_exp.borrow_mut();
+				std::get<CommaSeparated>(result->elements.front())
+					.expr.emplace_back(std::move(new_exp));
 			}
 			// @TODO: Add support for strings
 			else {
@@ -83,13 +107,13 @@ namespace pst {
 		}
 		if (exact_len and i != len) {
 			state.fail(-1, "expression unexpectedly ended here");
-		} else if (out->elements.empty()) {
+		} else if (back->elements.empty()) {
 			// @IDEA: maybe we add a flag for this check, sometimes it's unnecessary
 			state.fail(-1, "no expression where expression expected");
 			// we have to skip because we might loop
 			state.tokens().skip();
 		}
-		return out;
+		return result;
 	}
 
 	void Expr::dprint(std::ostream& out) const {
@@ -97,25 +121,37 @@ namespace pst {
 		for (auto& e: elements) {
 			variant_match(e) {
 				variant_case(Identifier, idt) {
-					out << "{\"Identifier\": \"" << idt.indent_id.strView() << "\"}";
+					out << R"({"Identifier": ")" << idt.indent_id.strView() << "\"}";
 				}
 				variant_case(Operator, oper) {
-					out << "{\"Operator\": \"" << oper.oper_id.strView() << "\"}";
+					out << R"({"Operator": ")" << oper.oper_id.strView() << "\"}";
 				}
 				variant_case(NumLiteral, num) {
-					out << "{\"NumLiteral\": \"" << num.num_id.strView() << "\"}";
+					out << R"({"NumLiteral": ")" << num.num_id.strView() << "\"}";
 				}
 				variant_case(Group, group) {
 					constexpr static std::array<std::string_view, 4> gr_strings
 						= { "()", "[]", "{}", "  " };
-					out << "{ \"Group\": { \"type\": \"";
-					out << gr_strings[int(group.type)];
-					out << "\", \"expr\": ";
+					out << R"({ "Group": { "type": ")";
+					out << gr_strings.at(int(group.type));
+					out << R"(", "expr": )";
 					nullAwareDprint(group.expr, out);
 					out << "} }";
 				}
+				variant_case(CommaSeparated, sep) {
+					out << R"({ "Comma separated": [)";
+					bool comma = false;
+					for (const auto& expr: sep.expr) {
+						if (comma)
+							out << ", ";
+						else
+							comma = true;
+						tpc::nullAwareDprint(expr, out);
+					}
+					out << "] }";
+				}
 				variant_case(KeywordValue, key) {
-					out << "{\"KeywordValue\": \"" << rift_def::keywordToStr(key.keyword).strView()
+					out << R"({"KeywordValue": ")" << rift_def::keywordToStr(key.keyword).strView()
 						<< "\"}";
 				}
 				variant_default { RIFT_PANIC("Bad Expr alternative"); }
@@ -124,4 +160,6 @@ namespace pst {
 		}
 		out << "]}";
 	}
+
+	void Expr::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitExpr(*this); }
 }

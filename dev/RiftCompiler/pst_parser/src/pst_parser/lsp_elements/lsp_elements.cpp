@@ -378,6 +378,21 @@ namespace lsp {
 		out << "}}";
 	}
 
+	void LSPVariable::lsp_print(std::ostream& out) {
+		out << "{\"Variable\": {";
+		out << "\"name\":";
+		nullAwareLspPrint(name, out);
+		out << ",\"type\":";
+		nullAwareLspPrint(type, out);
+		out << ",\"value\":";
+		nullAwareLspPrint(value, out);
+		out << ",\"is_const\":";
+		out << is_const;
+		out << ",";
+		positionPrint(out, position);
+		out << "}}";
+	}
+
 	void LSPBlock::lsp_print(std::ostream& out) {
 		out << "{\"Block\": {";
 		out << "\"name\":";

@@ -21,6 +21,7 @@ import * as round_group_expr from "./round_group_expr";
 import * as struct from "./struct";
 import * as top_level from "./top_level";
 import * as using from "./using";
+import * as variablee from "./variable";
 import * as whilee from "./while";
 
 export {
@@ -47,5 +48,6 @@ export {
 	struct,
 	top_level,
 	using,
+	variablee,
 	whilee,
 };

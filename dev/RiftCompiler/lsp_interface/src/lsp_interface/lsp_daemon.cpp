@@ -6,6 +6,7 @@
 
 #include <clap/clap.hpp>
 #include <pst_parser/parser.hpp>
+#include <pst_parser/pst.hpp>
 #include <lexer/lexer.hpp>
 #include <filesystem/file.hpp>
 
@@ -79,7 +80,7 @@ void server(i32 port) {
 			const auto        path   = base64::decode_into<std::string>(base64_path);
 			const auto        file   = files.at(path);
 			auto              tokens = lexer::tokenizeFile(file);
-			auto              pst    = pst::parse(std::move(tokens));
+			pst::PST<>        pst(std::move(tokens));
 			std::stringstream ss;
 			pst.getLSP(ss);
 			return crow::response(200, ss.str());
@@ -95,7 +96,7 @@ void server(i32 port) {
 			const auto        path   = base64::decode_into<std::string>(base64_path);
 			const auto        file   = files.at(path);
 			auto              tokens = lexer::tokenizeFile(file);
-			auto              pst    = pst::parse(std::move(tokens));
+			pst::PST<>        pst(std::move(tokens));
 			std::stringstream ss;
 			if (pst.getLogger().bad()) pst.getLogger().dumpLog(true, ss);
 			return crow::response(200, ss.str());

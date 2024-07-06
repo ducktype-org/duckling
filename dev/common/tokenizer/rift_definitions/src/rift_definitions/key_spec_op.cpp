@@ -118,9 +118,10 @@ namespace rift_def {
 	/**
 	 * When modifing it modify also char.cpp -> makeCharTable
 	 */
-	constexpr std::array<std::pair<Special, std::string_view>, 5> special_array{ {
+	constexpr std::array<std::pair<Special, std::string_view>, 6> special_array{ {
 		{ Special::NotASpecial, "NotASpecial" },
 		{ Special::Semicolon, ";" },
+		{ Special::Comma, "," },
 		{ Special::AtSign, "@" },
 		{ Special::HashSign, "#" },
 		{ Special::DolarSign, "$" },
@@ -130,9 +131,9 @@ namespace rift_def {
 		{ Operator::NotAnOperator, "NotAnOperator" },
 		{ Operator::Period, "." },
 		{ Operator::PeriodStar, ".*" },
-		{ Operator::Comma, "," },
 		{ Operator::Colon, ":" },
 		{ Operator::Assign, "=" },
+		{ Operator::Pipe, "|" },
 		{ Operator::QuestionMark, "?" },
 		{ Operator::SingleArrow, "->" },
 		{ Operator::DoubleArrow, "=>" },

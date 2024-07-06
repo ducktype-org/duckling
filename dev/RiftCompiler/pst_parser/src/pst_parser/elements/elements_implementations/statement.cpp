@@ -49,6 +49,10 @@ namespace pst {
 		case Keyword::Alias:
 			return detail::parseStmt<Alias>(state);
 
+		case Keyword::Var:
+		case Keyword::Let:
+			return detail::parseStmt<Variable>(state);
+
 		default:
 			break;
 		}

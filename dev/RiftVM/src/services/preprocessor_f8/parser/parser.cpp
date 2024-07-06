@@ -210,8 +210,8 @@ namespace assemble {
 					break;
 				}
 
-				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
-					tpc::parseOne(state, rift_def::Operator::Comma);
+				if (state.ctokens().peek().is(rift_def::Special::Comma)) {
+					tpc::parseOne(state, rift_def::Special::Comma);
 				} else {
 					state.err.failAndLog(
 						state.ctokens().peek().getPosition(),
@@ -559,8 +559,8 @@ namespace assemble {
 
 				if (state.empty()) break;
 
-				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
-					tpc::parseOne(state, rift_def::Operator::Comma);
+				if (state.ctokens().peek().is(rift_def::Special::Comma)) {
+					tpc::parseOne(state, rift_def::Special::Comma);
 				} else {
 					state.err.failAndLog(
 						state.ctokens().peek().getPosition(), "expected comma or }"
@@ -588,8 +588,8 @@ namespace assemble {
 				alternatives.emplace_back(field_type.value);
 
 				if (state.empty()) break;
-				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
-					tpc::parseOne(state, rift_def::Operator::Comma);
+				if (state.ctokens().peek().is(rift_def::Special::Comma)) {
+					tpc::parseOne(state, rift_def::Special::Comma);
 				} else {
 					state.err.failAndLog(
 						state.ctokens().peek().getPosition(), "expected comma or }"
@@ -617,8 +617,8 @@ namespace assemble {
 				arguments.emplace_back(field_type.value);
 
 				if (state.empty()) break;
-				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
-					tpc::parseOne(state, rift_def::Operator::Comma);
+				if (state.ctokens().peek().is(rift_def::Special::Comma)) {
+					tpc::parseOne(state, rift_def::Special::Comma);
 				} else {
 					state.err.failAndLog(
 						state.ctokens().peek().getPosition(), "expected comma or }"

@@ -1,4 +1,5 @@
 #include "elements_implementation.hpp"
+#include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
 	bool Attribute::trailingSemicolon() { return false; }
@@ -7,7 +8,8 @@ namespace pst {
 		auto                 position = state.ctokens().peek().getPosition();
 		ParserRef<Attribute> out      = makeRef<Attribute>(position);
 
-		RIFT_ASSERT(state.ctokens().is(Special::AtSign), position.genStr("bad statement choice"));
+		if (!assertStmtChoice<Attribute>(state, state.ctokens().is(Special::AtSign)))
+			return nullptr;
 
 		parseAll(state, Special::AtSign, &out->name);
 
@@ -27,4 +29,6 @@ namespace pst {
 		}
 		out << "}}";
 	}
+
+	void Attribute::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAttribute(*this); }
 }

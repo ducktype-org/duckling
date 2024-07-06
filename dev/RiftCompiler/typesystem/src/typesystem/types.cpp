@@ -39,7 +39,29 @@ namespace ts {
 	|   POINTER TYPES   |
 	\*******************/
 
+	std::string ComponentType::toString() const {
+		return (is_mutable ? "mut " : "") + type.toString();
+	}
+
+	bool ComponentType::isImplicitlyCoercible(
+		const ComponentType target, query::detail::ContextType& ctx
+	) const {
+		return type.isImplicitlyCoercible(target.type, ctx) && (is_mutable || !target.is_mutable);
+	}
+
+	std::strong_ordering ComponentType::operator<=>(const ComponentType& other) const = default;
+
+	base::HashT ComponentType::customPerfectHash() const {
+		return reinterpret_cast<std::size_t>(type.getPimpl()) + is_mutable;
+	}
+
+	bool RawPointerInfo::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
+
+	ComponentType PointerInfo::getComponent() const { return toCPimpl(pimpl)->getComponent(); }
+
 	TypeInfo PointerInfo::getUnderlyingType() const { return toCPimpl(pimpl)->getUnderlyingType(); }
+
+	bool PointerInfo::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
 
 	struct ReferenceConstructionRecord {
 		TypeInfo      underlying_type;
@@ -89,16 +111,20 @@ namespace ts {
 	|  COMPOSITE TYPES  |
 	\*******************/
 
+	const std::vector<ComponentType>& TupleInfo::getComponents() const {
+		return toCPimpl(pimpl)->getComponents();
+	}
+
 	struct FunctionConstructionRecord {
-		std::vector<TypeDesc<>> parameter_types;
-		TypeDesc<>              result_type;
-		bool                    pure, free;
+		std::vector<TypeInfo> parameter_types;
+		TypeDesc<>            result_type;
+		bool                  pure, free;
 
 		auto operator<=>(const FunctionConstructionRecord&) const = default;
 	};
 
-	std::vector<TypeInfo> FunctionInfo::getParameterTypes() const {
-		return toCPimpl(pimpl)->getParameterList();
+	const std::vector<TypeInfo>& FunctionInfo::getParameterTypes() const {
+		return toCPimpl(pimpl)->getParameterTypes();
 	}
 
 	TypeInfo FunctionInfo::getResultType() const { return toCPimpl(pimpl)->getResult(); }
@@ -157,11 +183,10 @@ namespace ts {
 	INSTANTIATE_CHECKED_CAST(RawPointerInfo)
 	INSTANTIATE_CHECKED_CAST(ReferenceInfo)
 	INSTANTIATE_CHECKED_CAST(PointerInfo)
+	INSTANTIATE_CHECKED_CAST(TupleInfo)
 	INSTANTIATE_CHECKED_CAST(FunctionInfo)
 	INSTANTIATE_CHECKED_CAST(VariantInfo)
 	INSTANTIATE_CHECKED_CAST(NamespaceInfo)
 	INSTANTIATE_CHECKED_CAST(ModuleInfo)
-	INSTANTIATE_CHECKED_CAST(ClassInfo)
-	INSTANTIATE_CHECKED_CAST(VTableInfo)
 	INSTANTIATE_CHECKED_CAST(MetaInfo)
 }

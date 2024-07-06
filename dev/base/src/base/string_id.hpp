@@ -86,6 +86,15 @@ namespace base {
 		 */
 		static void dumpData(std::ostream& out);
 
+		/**
+		 * For debug purposes
+		 * Get internal ID
+		 */
+		[[nodiscard]]
+		InnerId innerID() const {
+			return this->id;
+		}
+
 		friend class std::hash<StrId>;
 	};
 
