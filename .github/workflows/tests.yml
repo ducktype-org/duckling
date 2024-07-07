@@ -70,10 +70,16 @@ jobs:
             ${{ runner.os }}-build-${{ matrix.build-type }}-main
             ${{ runner.os }}-build-${{ matrix.build-type }}
 
+      # Enables coverage only in case of Debug build.
+      - name: Additional CMake flags
+        id: cmake-flags
+        env:
+          flags: ${{ steps.coverage-enabled.outputs.value && '-D ENABLE_COVERAGE=ON' || '' }}
+        run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
+
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
         run: |
-          coverageFlags=${{ steps.coverage-enabled.outputs.value && '-D ENABLE_COVERAGE=ON' || '' }}
           cmake \
               -B ${{ env.BUILD_DIR }} \
               -D CMAKE_CXX_COMPILER=g++-11 \
@@ -81,7 +87,7 @@ jobs:
               -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
-              ${{coverageFlags}}
+              ${{ steps.cmake-flags.outputs.flags }}
 
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
