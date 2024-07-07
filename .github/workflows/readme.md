@@ -2,31 +2,70 @@
 
 ## About
 
-In this directory are scripts, that are purposefully designed to automate certain actions on given triggers. Each script defines a **workflow**.
+Directory containing "GitHub actions" files, that is scripts defining so called "workflows" that run on GitHub on given triggers.
 
-We are using workflows to run linter, as well as build and test our code in multiple ways.
+Current workflow files:
+* `linting.yml` -- defines linting workflow, that is run on each PR
+* `tests.yml`   -- defines test workflow, that is run on each PR and main branch
 
-## Syntax
+Workflow always runs on some commit, and is then linked to it.
 
-Workflow file starts with a `name`, which will identify it during a CI run.
+## Workflow language
 
-Then we specify `on`, which tells github when to run the action. In `tests.yml`, it happens
-on every push and pull request to `main` or `dev` branch. There is also a `workflow_dispatch:` trigger, that just means it is possible to run the action on demand. Without, it wouldn't be possible.
+Since "language" used to define workflows is not something we work with every day, here is a quick summary of its most important concepts and some unintuitive behaviors.
 
-`env` is used to specify some variables, that are easily accessible in a given file.
+### Workflow name
+`name` property at the beginning of the file gives workflow its name.
 
-Workflows are composed of jobs, which can depend on one another. In `tests.yml` we have only one job called `build`. Each job is containerized, and sharing data between jobs in not trivial, which is the reason why building and testing is not split into multiple jobs.
-Each job needs an image to run on, specified in `runs-on` and `steps`, that is a list of commands. `build` also has specified a `strategy`, which can provide a matrix and a few other parameters for parametrized jobs.
+> [!NOTE]
+> Branch rulesets ignore this name, and only take into account the job names.
 
-`matrix` allows us to run a job for each configuration of the specified lists of parameters.
-`build` has only one list of parameters - `build-type`, so there will be 2 runs - one for each element on the list, but generally there will be exponentially many runs. We can provide an arbitrary number of named lists.
-`fail-fast: false` in matrix terms it simply means: don't stop the workflow even if one (or more) matrix run fails. In `build` e.g. we want to know the percent coverage despite `Release` failing.
-`timeout-minutes` specifies maximum time before exiting a job **per matrix run**. For `build` it means, that each build can take at most `timeout-minutes` minutes to build and execute.
+### Workflow dispatch triggers
+`on` property defines events that trigger workflow runs.
 
-## Actions and job steps
+Notable triggers:
+* `push` -- on push to specified branches
+* `pull_request` -- on some pull request activities (importantly on the PR creation)
+* `workflow_dispatch` -- on manual trigger
 
-Steps are the meat of a job and execute bash commands. Steps can be named, so they are easily identified during the run, and they can produce an output. Sometimes we want to store
-an output of a command in a variable, and this can be achieved with:
+GH docs: <https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows>
+
+### Workflow environment
+`env` property specify variables, that are easily accessible in a given workflow file.
+
+### Workflow jobs
+
+`jobs` property specify actual list of things to do.
+
+Jobs may depend on success of other jobs.
+Each job is containerized, and sharing data between jobs in not trivial, which is the reason why building and testing is not split into multiple jobs.
+
+> [!TIP]
+> In `tests.yml` we have one job called `build`.
+
+## Jobs language details
+
+### Strategy
+
+`strategy` property defines some high-level aspects of the job, in particular:
+
+* `matrix` -- defies different configurations of the job (all configurations will run), see: <https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs>
+* `fail-fast` -- defines whether if one configuration fail will other be canceled
+
+### Runs-on
+
+`runs-on` property defines image of OS the job will run on.
+
+### Job timeout
+
+`timeout-minutes` property defines timeout in minutes per configuration run.
+
+
+## Job steps
+
+Each job is perform a list of steps. Each step consist of either a bash command to run or outside action to execute (see below).
+
+Steps can be named, so they are easily identified during the run, and they can produce an output. Sometimes we want to store an output of a command in a variable, and this can be achieved with:
 
 ```yaml
 - name: Set a variable
@@ -37,25 +76,36 @@ an output of a command in a variable, and this can be achieved with:
   run: echo "var_name is equal to ${{ steps.set-var.outputs.var_name }}"
 ```
 
-This syntax is willingly used in the `tests.yml` file.
+This syntax is used in the `tests.yml` file.
 
 ### Workflow expressions
 
-Accessing a variable can be achieved with `${{ ... }}` - a Github workflow expression, which are powerful enough to e.g. compare values, or even make a ternary operator: `${{ <EXPR> && <VALUE_ON_TRUE> || <VALUE_ON_FALSE> }}`. Variables support multiple data types. String values evaluate to `true`, when they are non-empty, which is also used multiple times throughout `tests.yml` file. Expressions are actually very well documented [here](https://docs.github.com/en/actions/learn-github-actions/expressions).
+Accessing a variable can be achieved with `${{ ... }}` - a Github workflow expression, which are powerful enough to e.g. compare values, or make a ternary operator: `${{ <EXPR> && <VALUE_ON_TRUE> || <VALUE_ON_FALSE> }}`. Variables support multiple data types. Expressions are very well documented [here](https://docs.github.com/en/actions/learn-github-actions/expressions).
 
-### Actions
+> [!IMPORTANT]
+> String values evaluate to `true`, when they are non-empty, which is also used multiple times throughout `tests.yml` file.
 
-Github has a marketplace for actions, which are open-source programs (scripts) specifically
-designed to make certain tasks easier.
+## Outside Actions
+
+Github has a marketplace for actions, which are open-source programs (scripts) specifically designed to make certain tasks easier.
+Outside actions we use:
 
 * `actions/checkout@v4` - puts a repository into the runner.
 * `actions/cache@v4` - an action responsible for storing files between workflow runs.
-    It is especially useful for us, since it allows us to cut down build times from 6 minutes to under 1 minute. Cache restoration can hit (by finding a matching cache), or miss.
-    If cache is restored by exactly matching it's key, then no cache will be uploaded in spite of making changes. This is why in `tests.yml` we generate a unique key each time.
-    Parameters:
+  We use it to store ccache cached build data, to speed up build times.
+  Cache restoration can hit (by finding a matching cache), or miss.
+  If cache is restored by exactly matching it's key, then no cache will be uploaded in spite of making changes. This is why in `tests.yml` we generate a unique key each time.
+  
+  Parameters:
   * `path` - required - a list of directories to store in a cache file.
-  * `key` - required - a key which uniquely identifies a cache. Cache files cannot be overridden, which means that if we want to have incremental builds in `tests.yml`, we need to generate a new key every time there has been a change in the build folder, which
-    still holds if we generate a new key for each run of the workflow. This way it doesn't make us run a complicated hashing function for a each build.
-  * `restore-keys` - optional - a list of keys, that are fuzzily matched top to bottom with available caches. If an entry matches multiple caches' names, then the most recent cache is used. Choosing the most recent file has nothing to do with the date in the cache file, but merely it's file modification date. It just so happens that, in our case, date in the filename and the date in the file properties are almost identical.
-* `action-pack/set-variable@v1` - a simple action for storing a [repository variable](https://docs.github.com/en/actions/learn-github-actions/variables#creating-configuration-variables-for-a-repository), which is persistent between runs. In `tests.yml` we use it to store the percent coverage of main, so we can use it to compare to percent coverage in other pull requests.
-* `actions/github-script@v7` - a very useful action, that allows for modification of multiple things in the repo - e.g. post a comment on the pull request.
+  * `key` - required - a key which uniquely identifies a new cache entry generated by this workflow.
+  * `restore-keys` - optional - a list of keys, that are matched top to bottom with available cache entries.
+  If an entry matches multiple caches' names, then the most recent cache is used.
+  Details on how the cache entry are matched: <https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#matching-a-cache-key>.
+  
+  > [!IMPORTANT]
+  > Choosing the most recent cache entry has nothing to do the date component in the key that we generate.
+  
+* `action-pack/set-variable@v1` - action for storing a [repository variable](https://docs.github.com/en/actions/learn-github-actions/variables#creating-configuration-variables-for-a-repository), which is persistent between runs.
+  In `tests.yml` we use it to store the percent coverage of main, so we can use it to compare to percent coverage in other pull requests.
+* `actions/github-script@v7` - action that allows to write GitHub api calls in JS.

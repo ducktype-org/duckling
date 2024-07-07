@@ -18,8 +18,12 @@ jobs:
     strategy:
       matrix:
         build-type: [Debug, Release]  # (Release, Debug, RelWithDebInfo, etc.)
+
+      # False, because We still want coverage when tests fail
       fail-fast: false
+
     timeout-minutes: 8  # (Per matrix run)
+
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -27,9 +31,9 @@ jobs:
       - name: Check if should build with coverage
         id: coverage-enabled
         if: ${{ matrix.build-type == 'Debug' }}
-        # This might be a little missleading.
-        # When we don't want to build coverage, value will be empty,
-        # and if statements will fail.
+        # This might be a little misleading.
+        # When we don't want to build coverage if statement will 
+        # stop this step, and `value` will be empty.
         run: echo value=1 > $GITHUB_OUTPUT
 
       - name: Install lcov
