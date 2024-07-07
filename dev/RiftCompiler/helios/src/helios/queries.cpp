@@ -49,15 +49,15 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
 
-
 	struct IMPLEMENT_QUERY(QueryCodeOFFun, HOUTFunction) {
-		
 		/**
 		 * @brief Query extension to get hout CodeBlock from pst::CodeBlock or pst::CodeBlockOrStmt
 		 * Might be changed into query in the future
 		 */
 		template<class Container>
-		static auto queryCodeOfCodeBlock(query::Context& ctx, const Container& container, ScopeID parent_scope) {
+		static auto queryCodeOfCodeBlock(
+			query::Context& ctx, const Container& container, ScopeID parent_scope
+		) {
 			code::CodeBlock block;
 			for (const auto& stmt: container) {
 				HoutStmtMaker stmt_maker(ctx, parent_scope);
@@ -67,7 +67,6 @@ namespace compiler::helios {
 			}
 			return block;
 		}
-
 
 		struct HoutStmtMaker: public pst::PstStmtVisitorPanicky {
 			query::Context& ctx;
@@ -89,7 +88,9 @@ namespace compiler::helios {
 
 			template<class T>
 			void output(T&& value) {
-				this->out.emplace(base::make_unique<std::remove_reference_t<T>>(std::forward<T>(value)));
+				this->out.emplace(
+					base::make_unique<std::remove_reference_t<T>>(std::forward<T>(value))
+				);
 			}
 
 			void visitReturn(const pst::Return& stmt) override {
@@ -112,13 +113,16 @@ namespace compiler::helios {
 
 			void visitIf(const pst::If& stmt) override {
 				// Get scopes:
-				auto outer_scope = ctx.query<QueryPrimaryCodeScopeFor>({parent_scope, PstRef<pst::RiftElement>(&stmt)});
-				
-				// in the future we must also handle here different if-s variants 
+				auto outer_scope
+					= ctx.query<QueryPrimaryCodeScopeFor>({ parent_scope,
+				                                            PstRef<pst::RiftElement>(&stmt) });
+
+				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
 				auto condition = ctx.query<QueryHoutOfExpr>({ parent_scope, stmt.getCondition() });
-				
-				auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>({outer_scope, stmt.getBody()});
+
+				auto inner_scope
+					= ctx.query<QueryPrimaryCodeScopeFor>({ outer_scope, stmt.getBody() });
 				auto body = queryCodeOfCodeBlock(ctx, stmt.getBody(), inner_scope);
 
 				output(code::IfStmt(std::move(condition), std::move(body)));

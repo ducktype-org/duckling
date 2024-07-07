@@ -33,9 +33,7 @@ namespace compiler::helios::code {
 		out += "if (";
 		condition->debugPrint(out);
 		out += ") {\n";
-		for (const auto& stmt: body.statements) {
-			stmt->debugPrint(indent + 1, out);
-		}
+		for (const auto& stmt: body.statements) stmt->debugPrint(indent + 1, out);
 		addIndent(indent, out);
 		out += "}\n";
 	}
