@@ -27,6 +27,7 @@ namespace compiler::helios::code {
 	 * @brief Base class for all HOUT expressions
 	 */
 	struct Expr {
+		// @TODO: set/get Type and ValueCategory of Expr
 		virtual ~Expr()                                 = default;
 		virtual void debugPrint(std::string& out) const = 0;
 	};
