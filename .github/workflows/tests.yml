@@ -37,7 +37,7 @@ jobs:
 
       - name: Install lcov
         if: ${{ steps.coverage-enabled.outputs.value }}
-        run: sudo apt-get -y install lcov
+        run: sudo apt -y install lcov
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
@@ -63,8 +63,10 @@ jobs:
           path: |
             ${{ env.CCACHE_DIR }}
           key: ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache_timestamp.outputs.timestamp }}
-          # This is interesting. If no match happens to the key, then it tries to partially
-          # match with any of restore-keys, and if matches, then the most recent cache is used.
+          # If there is no match with the key, then it tries to partially
+          # match with any of restore-keys (top to bottom).
+          # Most recent entry is used when multiple match to the same key.
+          # See readme for details.
           restore-keys : |
             ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
             ${{ runner.os }}-build-${{ matrix.build-type }}-main
@@ -73,6 +75,7 @@ jobs:
       # Enables coverage only in case of Debug build.
       - name: Additional CMake flags
         id: cmake-flags
+        # Env here is used for readability only
         env:
           flags: ${{ steps.coverage-enabled.outputs.value && '-D ENABLE_COVERAGE=ON' || '' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
