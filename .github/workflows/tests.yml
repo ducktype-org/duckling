@@ -31,7 +31,7 @@ jobs:
         id: coverage-enabled
         if: ${{ matrix.build-type == 'Debug' }}
         # This might be a little misleading.
-        # When we don't want to build coverage if statement will 
+        # When we don't want to build coverage if statement will
         # stop this step, and `value` will be empty.
         run: echo value=1 > $GITHUB_OUTPUT
 
@@ -125,6 +125,12 @@ jobs:
         id: check-coverage-status
         if: ${{ steps.coverage-enabled.outputs.value }}
         run: echo success=${{ steps.test-coverage.outputs.coverage-percent >= steps.read-main-coverage.outputs.value }} > $GITHUB_OUTPUT
+
+      - name: Hide previous bot comments
+        uses: int128/hide-comment-action@v1
+        with:
+          token: ${{ secrets.QUACKER_PAT }}
+          authors: quacker-bot
 
       - name: Post coverage status as github comment
         uses: actions/github-script@v7
