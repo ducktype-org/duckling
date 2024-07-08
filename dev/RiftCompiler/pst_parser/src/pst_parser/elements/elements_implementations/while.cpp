@@ -9,7 +9,7 @@ namespace pst {
 
 		if (!assertStmtChoice<While>(state, state[0].is(Keyword::While))) return nullptr;
 
-		state.parse().all(Keyword::While, &out->optional_name, &out->condition, &out->body);
+		state.parse(out).all(Keyword::While, &out->optional_name, &out->condition, &out->body);
 
 		out->setLastToken(state.getPosition(-1));
 

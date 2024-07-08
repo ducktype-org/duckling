@@ -8,11 +8,11 @@ namespace pst {
 
 		if (!assertStmtChoice<Struct>(state, state[0].is(Keyword::Struct))) return nullptr;
 
-		state.parse().all(Keyword::Struct, &out->name);
+		state.parse(out).all(Keyword::Struct, &out->name);
 
-		if (state.tryEat(Operator::Colon)) state.parse().one(&out->bases);
+		if (state.tryEat(Operator::Colon)) state.parse(out).one(&out->bases);
 
-		state.parse().one(&out->body);
+		state.parse(out).one(&out->body);
 
 		out->setLastToken(state.getPosition(-1));
 

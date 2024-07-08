@@ -1,4 +1,4 @@
-#include "../rift_parser_base.hpp"
+#include "../rift_parser_state.hpp"
 
 namespace pst::detail {
 

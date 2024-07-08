@@ -103,23 +103,29 @@ namespace pst {
 			if (state[0].isBracketGroup()) {
 				auto type = fromTokenType(state[0].getBracketType());
 				state.goDown();
-				if (state.notEmpty())
-					back->elements.emplace_back(Group{ type, Expr::parse(state, true) });
-				else
+				if (state.notEmpty()) {
+					ParserRef<Expr> inner;
+					state.parse(back).with<Expr>(&inner, Expr::parse, true);
+					back->elements.emplace_back(Group{ type, std::move(inner) });
+				} else
 					back->elements.emplace_back(Group{ type, makeRef<Expr>(state.getPosition()) });
 				state.goUpAndSkip();
 			} else if (state[0].isOperator()) {
-				auto token = state.tokens().next();
+				auto& token = state.tokens().next();
+				back->addToken(token);
 				back->elements.emplace_back(Operator({ token.getValue() }));
 			} else if (state[0].isIdentifier()) {
-				auto token = state.tokens().next();
+				auto& token = state.tokens().next();
+				back->addToken(token);
 				back->elements.emplace_back(Identifier({ token.getValue() }));
 			} else if (state[0].isKeyword()) {
 				// @TODO: check if keyword is legal in expr and proceed accordingly
-				auto token = state.tokens().next();
+				auto& token = state.tokens().next();
+				back->addToken(token);
 				back->elements.emplace_back(KeywordValue({ token.asKeyword() }));
 			} else if (state[0].isNumLiteral()) {
-				auto token = state.tokens().next();
+				auto& token = state.tokens().next();
+				back->addToken(token);
 				back->elements.emplace_back(NumLiteral({ token.getValue() }));
 			} else if (state[0].is(Special::Semicolon)) {
 				break;
@@ -134,13 +140,16 @@ namespace pst {
 					std::get<CommaSeparated>(sep->elements.front())
 						.expr.emplace_back(std::move(result));
 					result = std::move(sep);
+					result->addChild(back);
 				}
 				// Setup the next expression to add tokens to
+				result->addToken(state[0]);
 				state.tokens().skip(1);
 				auto new_exp = makeRef<Expr>(state.ctokens().peek().getPosition());
 				back         = new_exp.borrow_mut();
 				std::get<CommaSeparated>(result->elements.front())
 					.expr.emplace_back(std::move(new_exp));
+				result->addChild(back);
 			}
 			// @TODO: Add support for strings
 			else {

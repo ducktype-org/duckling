@@ -1,4 +1,5 @@
-#include "rift_parser_base.hpp"
+#include "rift_parser_element.hpp"
+#include "rift_parser_state.hpp"
 #include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
 
@@ -9,19 +10,17 @@ namespace pst {
 
 	const dia::SourcePosition& RiftElement::getSourcePosition() const { return source_position; }
 
-	void RiftElement::addToken(base::c_borrow_ptr<tpc::Token> t) { 
+	void RiftElement::addToken(base::c_borrow_ptr<tpc::Token> t) {
 		RIFT_ASSERT(t != nullptr, "All tokens that are part of an element should exist.");
 		tokens.push_back(t);
 	}
-	void RiftElement::addToken(const base::unique_ptr<tpc::Token>& t) { 
-		addToken(t.borrow());
-	}
-	void RiftElement::addToken(const tpc::Token& t) { 
-		addToken(base::borrow_ptr(&t));
-	}
 
-	void RiftElement::addChild(ParserCBorrowRef<RiftElement> el) { 
-		children.push_back(el);
+	void RiftElement::addToken(const base::unique_ptr<tpc::Token>& t) { addToken(t.borrow()); }
+
+	void RiftElement::addToken(const tpc::Token& t) { addToken(base::borrow_ptr(&t)); }
+
+	void RiftElement::addChild(ParserCBorrowRef<RiftElement> el) {
+		if (el != nullptr) children.push_back(el);
 	}
 
 	void RiftElement::setLastToken(dia::SourcePosition pos) {

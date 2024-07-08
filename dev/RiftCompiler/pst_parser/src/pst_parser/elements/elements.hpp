@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../rift_parser_base.hpp"
+#include "../rift_parser_state.hpp"
 #include "base/unique_pointer.hpp"
 #include "diagnostic/source_position.hpp"
 #include "elements_common.hpp"

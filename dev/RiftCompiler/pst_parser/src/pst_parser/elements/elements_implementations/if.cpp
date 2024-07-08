@@ -9,7 +9,7 @@ namespace pst {
 
 		if (!assertStmtChoice<If>(state, state[0].is(Keyword::If))) return nullptr;
 
-		state.parse().all(Keyword::If, &out->optional_name, &out->condition, &out->body);
+		state.parse(out).all(Keyword::If, &out->optional_name, &out->condition, &out->body);
 
 		out->setLastToken(state.getPosition(-1));
 

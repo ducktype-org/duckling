@@ -17,7 +17,7 @@ namespace pst {
 		do {
 			bool            is_id = state[0].isIdentifier();
 			tpc::Identifier next;
-			state.parse().one(&next, true);
+			state.parse(out).one(&next, true);
 			if (is_id) out->names.push_back(next);
 			// If not special meaning, assume wrong type
 			else if(!state[0].is(rift_def::Operator::Period) && 
@@ -25,9 +25,13 @@ namespace pst {
 					!state[0].is(rift_def::Special::Semicolon)) {
 				state.tokens().next();
 			}
+			if (state[0].is(Operator::Period)) out->addToken(state[0]);
 		} while (state.tryEat(rift_def::Operator::Period));
 
-		if (state.tryEat(rift_def::Operator::PeriodStar)) out->star = true;
+		if (state.tryEat(rift_def::Operator::PeriodStar)) {
+			out->addToken(state[-1]);
+			out->star = true;
+		}
 
 		out->setLastToken(state.getPosition(-1));
 

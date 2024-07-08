@@ -17,6 +17,9 @@ namespace pst {
 
 	STRONG_TYPEDEF_ID(PstID);
 
+	template<typename State>
+	class PSTAutomatic;
+
 	class RiftElement: public tpc::Element {
 	public:
 		explicit RiftElement(const dia::SourcePosition& position):
@@ -61,30 +64,40 @@ namespace pst {
 			return false;
 		}
 
+		template<typename X>
+		friend class PSTAutomatic;
+
 	protected:
 		dia::SourcePosition                         source_position;
 		std::vector<base::c_borrow_ptr<tpc::Token>> tokens;
-		std::vector<ParserCBorrowRef<RiftElement>> children;
+		std::vector<ParserCBorrowRef<RiftElement>>  children;
 
 		void addToken(const tpc::Token& token);
 		void addToken(const base::unique_ptr<tpc::Token>& token);
 		void addToken(base::c_borrow_ptr<tpc::Token> token);
 
 		void addTokens(std::ranges::forward_range auto args) {
-			//for(const tpc::MaybeToken& token:args) {
-				//if (token) {
-					//addToken(token.value());
-				//}
+			// for(const tpc::MaybeToken& token:args) {
+			// if (token) {
+			// addToken(token.value());
+			//}
 			//}
 		}
 
+		template<std::derived_from<RiftElement> El>
+		void addChild(base::Optional<ParserRef<El>>& el) {
+			if (el) addChild(el.value().borrow());
+		}
+
 		void addChild(ParserCBorrowRef<RiftElement> child);
+
 		template<typename T>
-		void addChild(const ParserRef<T>& child) { 
+		void addChild(const ParserRef<T>& child) {
 			addChild(child.borrow());
 		}
 
 		void addChildren() {}
+
 		template<typename T, typename... Ts>
 		void addChildren(const ParserRef<T>& el, Ts... to_add) {
 			addChild(el);
@@ -92,32 +105,12 @@ namespace pst {
 		}
 
 		void setLastToken(dia::SourcePosition pos);
+
 	private:
 		PstID id = PstID::next();
 	};
 
 	using ImportType = tpc::ParserCBorrowRef<pst::Import>;
-
-	class RiftParserState final: 
-	public tpc::ParserState {
-		std::vector<ImportType> imports;
-
-	public:
-		RiftParserState(tpc::TokenStream&& tokens, dia::Logger& err):
-			  tpc::ParserState(std::move(tokens), err) {}
-
-		void addImport(const tpc::ParserCBorrowRef<pst::Import>& import);
-
-		[[nodiscard]]
-		auto extractState() && -> std::vector<ImportType> {
-			return std::move(imports);
-		}
-
-		tpc::GenericAutomatic<RiftParserState> parse() {
-			return {*this};
-		}
-	};
-
 }
 
 ID_STD_HASH(::pst::PstID);

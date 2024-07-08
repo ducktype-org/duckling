@@ -20,11 +20,10 @@ namespace assemble {
 
 	class F8ParserState final: public tpc::ParserState {
 	public:
-		F8ParserState(tpc::TokenStream&& stream, dia::Logger& err): tpc::ParserState(std::move(stream), err) {}
+		F8ParserState(tpc::TokenStream&& stream, dia::Logger& err):
+			  tpc::ParserState(std::move(stream), err) {}
 
-		tpc::GenericAutomatic<F8ParserState> parse() {
-			return {*this};
-		}
+		tpc::GenericAutomatic<F8ParserState> parse() { return { *this }; }
 	};
 
 	enum class OpCodeArgType { arg, local, imm };

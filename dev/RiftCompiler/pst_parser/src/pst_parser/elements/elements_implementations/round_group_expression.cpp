@@ -27,7 +27,7 @@ namespace pst {
 		}
 
 		state.goDown();
-		if (state.notEmpty()) out->expr = Expr::parse(state, true);
+		if (state.notEmpty()) state.parse(out).with<Expr>(&out->expr, Expr::parse, true);
 		state.goUpAndSkip();
 
 		return out;

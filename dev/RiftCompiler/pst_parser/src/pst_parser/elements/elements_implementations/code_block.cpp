@@ -31,7 +31,7 @@ namespace pst {
 		// @TODO: this may not work in case of compilation error
 		while (state.notEmpty()) {
 			ParserRef<Stmt> stmt;
-			state.parse().one(&stmt);
+			state.parse(out).one(&stmt);
 			out->statements.emplace_back(std::move(stmt));
 		}
 

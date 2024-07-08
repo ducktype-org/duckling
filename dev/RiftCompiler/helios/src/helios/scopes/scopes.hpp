@@ -4,7 +4,7 @@
 #include <query_framework/query_int.hpp>
 #include <base/perfect_hash.hpp>
 #include <pst_parser/elements/elements.hpp>
-#include <pst_parser/rift_parser_base.hpp>
+#include <pst_parser/rift_parser_state.hpp>
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"

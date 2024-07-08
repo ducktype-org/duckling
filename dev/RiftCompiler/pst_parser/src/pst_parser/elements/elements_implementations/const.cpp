@@ -25,22 +25,23 @@ namespace pst {
 		if (!assertStmtChoice<Const>(state, state[0].is(Keyword::Const))) return nullptr;
 
 
-		state.parse().all(Keyword::Const, &out->name, Operator::Colon);
+		state.parse(out).all(Keyword::Const, &out->name, Operator::Colon);
 
-		out->type = Expr::parseUntil<
-			detail::Conditions::isAssignOrSemicolon,
-			detail::Conditions::isAssign,
-			ConstTypeEndError>(state, true);
-		out->addChild(out->type);
+		state.parse(out).with<Expr>(
+			&out->type,
+			Expr::parseUntil<
+				detail::Conditions::isAssignOrSemicolon,
+				detail::Conditions::isAssign,
+				ConstTypeEndError>,
+			true
+		);
 
-		if (state.tryEat(Operator::Assign)) {
-			out->addToken(state[-1]);
-		}
+		// If there is no = then expr parsing already threw an error
+		if (state.tryEat(Operator::Assign)) out->addToken(state[-1]);
 
-		out->value = Expr::parse(state, true);
+		state.parse(out).with<Expr>(&out->value, Expr::parse, true);
 
 		out->setLastToken(state.getPosition(-1));
-
 		return out;
 	}
 

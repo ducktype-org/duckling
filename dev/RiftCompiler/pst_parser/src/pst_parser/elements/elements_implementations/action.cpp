@@ -36,11 +36,14 @@ namespace pst {
 			assertStmtChoice<Action>(state, false);
 			return nullptr;
 		}
+		out->addToken(state[0]);
 		state.tokens().skip();
 
 		// @TODO: for now we assume if there is no expression there is a semicolon
-		if (!state[0].is(Special::Semicolon)) out->expr = Expr::parse(state, true);
-		// if (!state[0].is(Special::Semicolon)) state.parse().call<Expr>(&out->expr, Expr::parse, true);
+		// if (!state[0].is(Special::Semicolon)) out->expr = Expr::parse(state, true);
+		if (!state[0].is(Special::Semicolon))
+			state.parse(out).with<Expr>(&out->expr, Expr::parse, true);
+
 
 		out->setLastToken(state.getPosition(-1));
 

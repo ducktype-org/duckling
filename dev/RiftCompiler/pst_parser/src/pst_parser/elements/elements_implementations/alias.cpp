@@ -24,7 +24,7 @@ namespace pst {
 
 		if (!assertStmtChoice<Alias>(state, state[0].is(Keyword::Alias))) return nullptr;
 
-		state.parse().all(Keyword::Alias, &out->name, Operator::Assign, &out->points_to);
+		state.parse(out).all(Keyword::Alias, &out->name, Operator::Assign, &out->points_to);
 
 		out->setLastToken(state.getPosition(-1));
 

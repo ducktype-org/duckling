@@ -12,7 +12,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 
-#include <pst_parser/rift_parser_base.hpp>
+#include <pst_parser/rift_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
 #include "../lookup_result.hpp"

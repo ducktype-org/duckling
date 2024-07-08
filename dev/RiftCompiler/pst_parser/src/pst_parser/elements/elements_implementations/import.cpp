@@ -9,7 +9,7 @@ namespace pst {
 
 		if (!assertStmtChoice<Import>(state, state[0].is(Keyword::Import))) return nullptr;
 
-		state.parse().all(Keyword::Import, &out->names, Keyword::As, &out->alias);
+		state.parse(out).all(Keyword::Import, &out->names, Keyword::As, &out->alias);
 
 		state.addImport(out.borrow());
 		out->setLastToken(state.getPosition(-1));

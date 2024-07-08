@@ -27,47 +27,26 @@
  */
 #pragma once
 
-#include "parser_state.hpp"
-#include "common_elements.hpp"
-#include <rift_definitions/key_spec_op.hpp>
+#include <token_parser_core/automatic.hpp>
+#include "rift_parser_element.hpp"
 
-#include "base_element.hpp"
-#include <diagnostic/source_position.hpp>
-
-#include <concepts>
-
-#include "parser_ref.hpp"
-
-namespace tpc {
+namespace pst {
 	using rift_def::Keyword;
 	using rift_def::Operator;
 	using rift_def::Special;
 
-	void nullAwareDprint(Identifier, std::ostream& out);
-	void nullAwareDprint(OptionalIdentifier, std::ostream& out);
-
-	template<typename T>
-	void nullAwareDprint(const ParserRef<T>& ref, std::ostream& out) {
-		if (!ref)
-			out << "\"<nullptr>\"";
-		else
-			ref->dprint(out);
-	}
-
-	class BadKeywordError;
-	class BadSpecialError;
-	class BadOperatorError;
-	class NoIdentifierError;
-
 	template<typename State>
-	class GenericAutomatic {
+	class PSTAutomatic {
 	protected:
-		State& state;
+		State&                            state;
+		ParserBorrowRef<pst::RiftElement> el;
 
 	public:
-		GenericAutomatic(State& state): state(state) {}
+		PSTAutomatic(State& state, ParserBorrowRef<pst::RiftElement> caller):
+			  state(state),
+			  el(std::move(caller)) {}
 
-		GenericAutomatic(const GenericAutomatic&) = delete;
+		PSTAutomatic(const PSTAutomatic&) = delete;
 
 		// Useful for debugging:
 		//
@@ -84,8 +63,10 @@ namespace tpc {
 		 */
 		void one(Keyword key, bool ignorable = false) {
 			if (!state.tryEat(key)) {
-				state.log(base::make_unique<BadKeywordError>(state.getPosition(), key));
+				state.log(base::make_unique<tpc::BadKeywordError>(state.getPosition(), key));
 				if (!ignorable) state.tokens().next();
+			} else {
+				el->addToken(state[-1]);
 			}
 		}
 
@@ -96,8 +77,10 @@ namespace tpc {
 		 */
 		void one(Special spec, bool ignorable = false) {
 			if (!state.tryEat(spec)) {
-				state.log(base::make_unique<BadSpecialError>(state.getPosition(), spec));
+				state.log(base::make_unique<tpc::BadSpecialError>(state.getPosition(), spec));
 				if (!ignorable) state.tokens().next();
+			} else {
+				el->addToken(state[-1]);
 			}
 		}
 
@@ -108,8 +91,10 @@ namespace tpc {
 		 */
 		void one(Operator op, bool ignorable = false) {
 			if (!state.tryEat(op)) {
-				state.log(base::make_unique<BadOperatorError>(state.getPosition(), op));
+				state.log(base::make_unique<tpc::BadOperatorError>(state.getPosition(), op));
 				if (!ignorable) state.tokens().next();
+			} else {
+				el->addToken(state[-1]);
 			}
 		}
 
@@ -118,13 +103,14 @@ namespace tpc {
 		 * @param state The current ParserState.
 		 * @param result The place to store the parsed identifier.
 		 */
-		void one(Identifier* result, bool ignorable = false) {
+		void one(tpc::Identifier* result, bool ignorable = false) {
 			if (!state.ctokens().peek().isIdentifier()) {
-				state.log(base::make_unique<NoIdentifierError>(state.getPosition()));
+				state.log(base::make_unique<tpc::NoIdentifierError>(state.getPosition()));
 				result->value = base::StrId("<error>");
 				if (!ignorable) state.tokens().next();
 				return;
 			}
+			el->addToken(state[0]);
 			result->value = state.tokens().next().getValue();
 		}
 
@@ -133,9 +119,11 @@ namespace tpc {
 		 * @param state The current ParserState.
 		 * @param result The place to store the parsed identifier.
 		 */
-		void one(OptionalIdentifier* result, bool = false) {
-			if (state.ctokens().peek().isIdentifier())
+		void one(tpc::OptionalIdentifier* result, bool = false) {
+			if (state.ctokens().peek().isIdentifier()) {
+				el->addToken(state[0]);
 				result->value = state.tokens().next().getValue();
+			}
 		}
 
 		/**
@@ -143,9 +131,9 @@ namespace tpc {
 		 * @param state The current ParserState.
 		 * @param result The place to store the parsed element.
 		 */
-		template<std::derived_from<Element> T>
+		template<std::derived_from<RiftElement> T>
 		void one(ParserRef<T>* result, bool = false) {
-			*result = T::parse(state);
+			with(result, T::parse);
 		}
 
 		/**
@@ -153,7 +141,7 @@ namespace tpc {
 		 * @param state The current ParserState.
 		 * @param result The place to store the parsed element.
 		 */
-		template<std::derived_from<Element> T>
+		template<std::derived_from<RiftElement> T>
 		void one(base::Optional<ParserRef<T>>* result, bool = false) {
 			*result = T::parse(state);
 		}
@@ -170,9 +158,10 @@ namespace tpc {
 			parseRest(q...);
 		}
 
-		template<std::derived_from<Element> El, typename Sink, typename... Args>
+		template<std::derived_from<RiftElement> El, typename Sink, typename... Args>
 		void with(Sink* sink, ParserRef<El> fun(State&, Args...), Args&&... args) {
 			*sink = fun(state, std::forward<Args>(args)...);
+			el->addChild(*sink);
 		}
 
 	private:
@@ -187,78 +176,5 @@ namespace tpc {
 			one(t, true);
 			parseRest(q...);
 		}
-	};
-
-	class BadKeywordError final: public dia::Error {
-	private:
-		Keyword expected;
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected keyword `" + rift_def::keywordToStr(expected).str() + "` here.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadKeywordError(dia::SourcePosition pos, Keyword key): dia::Error(pos), expected(key) {}
-	};
-
-	class BadSpecialError final: public dia::Error {
-	private:
-		Special expected;
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected special `" + rift_def::specialToStr(expected).str() + "` here.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadSpecialError(dia::SourcePosition pos, Special spec): dia::Error(pos), expected(spec) {}
-	};
-
-	class BadOperatorError final: public dia::Error {
-	private:
-		Operator expected;
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected operator `" + rift_def::operatorToStr(expected).str() + "` here.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BadOperatorError(dia::SourcePosition pos, Operator opr): dia::Error(pos), expected(opr) {}
-	};
-
-	class NoIdentifierError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected an identifier here.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		NoIdentifierError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 }

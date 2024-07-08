@@ -3,7 +3,7 @@
 #include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better
 
 #include <token_file/file.hpp>
-#include "rift_parser_base.hpp"
+#include "rift_parser_state.hpp"
 #include "parser.hpp"
 
 namespace pst {
