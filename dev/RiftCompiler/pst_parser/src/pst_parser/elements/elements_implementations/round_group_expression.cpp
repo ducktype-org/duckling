@@ -22,12 +22,12 @@ namespace pst {
 		auto out      = makeRef<RoundGroupExpr>(position);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Round)) {
-			state.fail(base::make_unique<RoundExprStartError>(state.getPosition()));
+			state.log(base::make_unique<RoundExprStartError>(state.getPosition()));
 			return out;
 		}
 
 		state.goDown();
-		if (state.notEmpty()) out->expr = Expr::parse(state);
+		if (state.notEmpty()) out->expr = Expr::parse(state, true);
 		state.goUpAndSkip();
 
 		return out;

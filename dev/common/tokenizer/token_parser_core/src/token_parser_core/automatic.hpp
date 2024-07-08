@@ -11,8 +11,14 @@
  * There is no identifier next it doesn't do anything
  *  - for ParserRef<T>* it calls the parser of T object into the specified location
  *
+ * The optional argument ignorable additionally allows to control behaviour in case of error.
+ * If it's set to true then simple parse-able entities(not parser ref) will not be skipped on error.
+ * It works as a kind of assumption that is something simple doesn't fit then it's missing not
+ * wrong.
+ *
  * ParseAll takes the state and any number of additional arguments and calls parseOne on those
- * arguments from left to right.
+ * arguments from left to right. Additionally it makes the first parsed thing non-ignorable and the
+ * rest ignorable so that infinite parsing loops are very unlikely.
  *
  * NullAwareDprint is a wrapper for element specific debug prints called on pointers that prints
  * null if the pointer is null
@@ -36,7 +42,6 @@ namespace tpc {
 	using rift_def::Keyword;
 	using rift_def::Operator;
 	using rift_def::Special;
-
 
 	void nullAwareDprint(Identifier, std::ostream& out);
 	void nullAwareDprint(OptionalIdentifier, std::ostream& out);
@@ -160,6 +165,11 @@ namespace tpc {
 		void all(T t, Q... q) {
 			one(t);
 			parseRest(q...);
+		}
+
+		template<std::derived_from<Element> El, typename Sink, typename... Args>
+		void call(Sink* sink, std::function<ParserRef<El>(State&, Args...)> fun, Args&&... args) {
+			sink = fun(state, std::forward(args)...);
 		}
 
 	private:

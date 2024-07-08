@@ -6,7 +6,7 @@ namespace pst {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected type expression ending with `=`.";
+			return "Expected type expression followed by `=`.";
 		}
 
 	public:
@@ -18,14 +18,6 @@ namespace pst {
 		ConstTypeEndError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	namespace detail {
-		bool isTypeEnd(const RiftParserState& st, i64 fwd) {
-			return st[fwd].is(Operator::Assign) || st[fwd].is(Special::Semicolon);
-		}
-
-		bool isAssign(const RiftParserState& st, i64 fwd) { return st[fwd].is(Operator::Assign); }
-	}
-
 	ParserRef<Const> Const::parse(RiftParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Const>(position);
@@ -35,14 +27,17 @@ namespace pst {
 
 		state.parse().all(Keyword::Const, &out->name, Operator::Colon);
 
-		out->type = Expr::parseUntil<detail::isTypeEnd, detail::isAssign, ConstTypeEndError>(state);
+		out->type = Expr::parseUntil<
+			detail::Conditions::isAssignOrSemicolon,
+			detail::Conditions::isAssign,
+			ConstTypeEndError>(state, true);
 		out->addChild(out->type);
 
 		if (state.tryEat(Operator::Assign)) {
 			out->addToken(state[-1]);
 		}
 
-		state.parse().one(&out->value, true);
+		out->value = Expr::parse(state, true);
 
 		out->setLastToken(state.getPosition(-1));
 
@@ -56,6 +51,8 @@ namespace pst {
 		nullAwareDprint(name, out);
 		out << R"(, "type": )";
 		nullAwareDprint(type, out);
+		out << R"(, "value": )";
+		nullAwareDprint(value, out);
 		out << "}}";
 	}
 

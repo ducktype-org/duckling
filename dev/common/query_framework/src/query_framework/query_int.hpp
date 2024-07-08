@@ -24,6 +24,10 @@ namespace query::detail {
 	};
 }
 
+namespace query {
+	using Context = detail::ContextType;
+}
+
 /**
  * @brief Macro emitting body of query interface struct.
  */
@@ -42,18 +46,3 @@ namespace query::detail {
 	struct query_type: ::query::detail::QueryInterface<query_type, key, value> { \
 		INTERNAL_QUERY_INTERFACE_BOILERPLATE                                     \
 	};
-
-/**
- * @brief Macro to be used as a struct signature when implementing a query.
- * @param query_type Name of the query
- * @param PResult Type returned by the Provide method
- */
-#define IMPLEMENT_QUERY(query_type, PResult) \
-	ImplementationOf_##query_type final: public query::QueryImplementation<query_type, PResult>
-
-/**
- * @brief Macro used to declare query extensions
- * @note This is done this way, instead of just beeing a simple function,
- * so we can easily identify all extension function in the future
- */
-#define QUERY_EXTENSION(name, input, output) output name(::query::detail::ContextType&, input);

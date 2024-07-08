@@ -2,6 +2,7 @@
 #include <helios/scope_symbol_id.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
+#include <helios/queries.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 #include <pst_parser/parser.hpp>
@@ -21,6 +22,8 @@ public:
 
 		TESTER_ADD_TEST(testI32Consts);
 		TESTER_ADD_TEST(testEdgeEvals);
+		TESTER_ADD_TEST(simpleHOUTTest);
+		TESTER_ADD_TEST(importTest);
 	}
 
 private:
@@ -82,6 +85,43 @@ private:
 		ASSERT_EQUAL(7, getValue("O2", root_scope));
 		ASSERT_EQUAL(7, getValue("O3", root_scope));
 		ASSERT_EQUAL(7, getValue("O4", root_scope));
+	}
+
+	void simpleHOUTTest() {
+		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
+			fs::FilePath(path("test_modules/hout_simple_test"))
+		);
+
+		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		ASSERT_EQUAL(hout.functions.size(), 3);
+		ASSERT_EQUAL(hout.glob_data.size(), 2);
+	}
+
+	void importTest() {
+		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
+			fs::FilePath(path("test_modules/import_tests"))
+		);
+
+		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		auto test_value = [&](auto str, i64 val) {
+			auto name = base::StrId(str);
+			for (auto& gb: hout.glob_data) {
+				if (gb.original_name == name) {
+					this->assert(gb.value == val, "Bad constant value");
+					return;
+				}
+			}
+			this->fail(base::strConcat("No constant of name: ", name.strView()));
+		};
+
+		test_value("sm1_v", 123'123);
+		test_value("sm11_v", 7'812'313);
+		test_value("it_through_alias", 19'923);
+		test_value("sm1_through_sm11", 123'123);
+		test_value("sm2_v", 777'666);
+		test_value("cyclic_final", 6);
 	}
 };
 

@@ -19,9 +19,6 @@ namespace dia {
 		message_log.at(severity_id).emplace_back(std::move(message_ptr));
 	}
 
-	/**
-	 * @todo This should be done by the converter (look json toplevel list)
-	 */
 	template<DiagnosticToPrinterConverter Converter>
 	void Logger::dumpLog(const bool detailed, std::ostream& stream) const {
 		// Currently, errors are dumped first, then warnings, then infos.
@@ -30,13 +27,11 @@ namespace dia {
 		// Perhaps we will change it to showing all messages in order of appearance
 		// in the source code, or maybe we will choose a completely separate strategy.
 		// @TODO: resolve the above.
-		// Converter::dumpAll(std::ranges::join_view(message_log));
 		constexpr auto borrower = [](const base::unique_ptr<Message>& message
 		                          ) -> base::c_borrow_ptr<Message> { return message.borrow(); };
 
-		auto                                     messages = std::ranges::join_view(message_log);
-		std::vector<base::c_borrow_ptr<Message>> borrowed;
-		std::ranges::transform(messages, std::back_inserter(borrowed), borrower);
+		auto messages = std::ranges::join_view(message_log);
+		auto borrowed = std::ranges::transform_view(messages, borrower);
 
 		printer::StreamPrinter::print(Converter::listToPrinterContents(borrowed, detailed), stream);
 	}

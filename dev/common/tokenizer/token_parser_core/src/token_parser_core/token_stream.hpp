@@ -16,8 +16,6 @@ namespace tpc {
 	/**
 	 * @brief Implements the main ways for a parser to interact with a list of tokens in a safe
 	 * way(index wise)
-	 *
-	 * @note We might need to add sentinel_begin if we implement going backwards
 	 */
 	class TokenStream {
 		const Tokens& tokens;          ///< Source list of tokens

@@ -10,7 +10,6 @@
 #pragma once
 
 #include <printer/printer_content.hpp>
-#include <type_traits>
 
 #include "source_position.hpp"
 
@@ -418,7 +417,7 @@ namespace dia {
 			  message(std::move(message)) {}
 
 		[[nodiscard]]
-		printer::PrinterContent toMessageContentBrief() const override {
+		std::string toStringBrief() const override {
 			return message;
 		}
 	};

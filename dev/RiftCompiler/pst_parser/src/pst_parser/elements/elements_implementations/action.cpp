@@ -39,7 +39,8 @@ namespace pst {
 		state.tokens().skip();
 
 		// @TODO: for now we assume if there is no expression there is a semicolon
-		if (!state[0].is(Special::Semicolon)) state.parse().one(&out->expr);
+		if (!state[0].is(Special::Semicolon)) out->expr = Expr::parse(state, true);
+		// if (!state[0].is(Special::Semicolon)) state.parse().call<Expr>(&out->expr, Expr::parse, true);
 
 		out->setLastToken(state.getPosition(-1));
 
@@ -48,10 +49,10 @@ namespace pst {
 
 	namespace {
 		void simpleActionDprint(
-			std::ostream&                         out,
+			std::ostream&                          out,
 			const base::Optional<ParserRef<Expr>>& action,
-			const std::string_view                name,
-			std::string                           preposition
+			const std::string_view                 name,
+			const std::string_view                 preposition
 		) {
 			out << "{\"" << name << "\"";
 			if (action) {
@@ -85,5 +86,19 @@ namespace pst {
 		simpleActionDprint(out, expr, "Throw", "exception");
 	}
 
-	void Action::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAction(*this); }
+	void Return::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitReturn(*this); }
+
+	void Break::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitBreak(*this); }
+
+	void Continue::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitContinue(*this); }
+
+	void Redo::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitRedo(*this); }
+
+	void Restart::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitRestart(*this); }
+
+	void Defer::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitDefer(*this); }
+
+	void Throw::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitThrow(*this); }
+
+
 }

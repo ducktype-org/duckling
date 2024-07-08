@@ -22,7 +22,7 @@ namespace pst {
 		auto out      = makeRef<CodeBlock>(position);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
-			state.fail(base::make_unique<BlockStartError>(state.getPosition()));
+			state.log(base::make_unique<BlockStartError>(state.getPosition()));
 			return out;
 		}
 

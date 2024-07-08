@@ -65,16 +65,20 @@ namespace pst {
 		}
 	}
 
-	ParserRef<Expr> Expr::parse(RiftParserState& state) {
+	ParserRef<Expr> Expr::parse(RiftParserState& state, bool allow_comma) {
 		// @TODO: better inf
-		return Expr::parse(state, 1e18, false);
+		return Expr::parse(state, 1e18, false, allow_comma);
 	}
 
 	/**
 	 * It is left in this state for now, as a lot will depend on semantical analysis
 	 * @TODO: lambda, todo-s
 	 */
-	ParserRef<Expr> Expr::parse(RiftParserState& state, usize len, bool exact_len) {
+	ParserRef<Expr>
+		Expr::parse(RiftParserState& state, usize len, bool exact_len, bool allow_comma) {
+		auto result = makeRef<Expr>(state.getPosition());
+		// Currently parsed expression
+		auto  back         = result.borrow_mut();
 		auto  out          = makeRef<Expr>(state.getPosition());
 		usize i            = 0;
 		auto  expected_end = state.getPosition((i64) len);
@@ -84,12 +88,12 @@ namespace pst {
 		);
 
 		if (state.empty()) {
-			state.fail(base::make_unique<EmptyExprError>(state.getPosition()));
+			state.log(base::make_unique<EmptyExprError>(state.getPosition()));
 			return nullptr;
 		}
 		if (state[0].is(Special::Semicolon)) {
 			auto err_pos = state.getPosition(-1, 0);
-			state.fail(base::make_unique<EmptyExprError>(err_pos));
+			state.log(base::make_unique<EmptyExprError>(err_pos));
 			return nullptr;
 		}
 
@@ -100,38 +104,56 @@ namespace pst {
 				auto type = fromTokenType(state[0].getBracketType());
 				state.goDown();
 				if (state.notEmpty())
-					out->elements.emplace_back(Group{ type, Expr::parse(state) });
+					back->elements.emplace_back(Group{ type, Expr::parse(state, true) });
 				else
-					out->elements.emplace_back(Group{ type, makeRef<Expr>(state.getPosition()) });
+					back->elements.emplace_back(Group{ type, makeRef<Expr>(state.getPosition()) });
 				state.goUpAndSkip();
 			} else if (state[0].isOperator()) {
 				auto token = state.tokens().next();
-				out->elements.emplace_back(Operator({ token.getValue() }));
+				back->elements.emplace_back(Operator({ token.getValue() }));
 			} else if (state[0].isIdentifier()) {
 				auto token = state.tokens().next();
-				out->elements.emplace_back(Identifier({ token.getValue() }));
+				back->elements.emplace_back(Identifier({ token.getValue() }));
 			} else if (state[0].isKeyword()) {
 				// @TODO: check if keyword is legal in expr and proceed accordingly
 				auto token = state.tokens().next();
-				out->elements.emplace_back(KeywordValue({ token.asKeyword() }));
+				back->elements.emplace_back(KeywordValue({ token.asKeyword() }));
 			} else if (state[0].isNumLiteral()) {
 				auto token = state.tokens().next();
-				out->elements.emplace_back(NumLiteral({ token.getValue() }));
+				back->elements.emplace_back(NumLiteral({ token.getValue() }));
 			} else if (state[0].is(Special::Semicolon)) {
 				break;
+			} else if (state[0].is(Special::Comma) && allow_comma) {
+				// Check if the expression isn't comma separated yet
+				if (result->elements.size() != 1
+				    || !std::holds_alternative<CommaSeparated>(result->elements.front())) {
+					// Change expression to a comma separated one containing previously parsed
+					// expression as the first element
+					auto sep = makeRef<Expr>(result->getSourcePosition());
+					sep->elements.emplace_back(CommaSeparated{});
+					std::get<CommaSeparated>(sep->elements.front())
+						.expr.emplace_back(std::move(result));
+					result = std::move(sep);
+				}
+				// Setup the next expression to add tokens to
+				state.tokens().skip(1);
+				auto new_exp = makeRef<Expr>(state.ctokens().peek().getPosition());
+				back         = new_exp.borrow_mut();
+				std::get<CommaSeparated>(result->elements.front())
+					.expr.emplace_back(std::move(new_exp));
 			}
 			// @TODO: Add support for strings
 			else {
-				state.fail(base::make_unique<BadTokenError>(state.getPosition()));
+				state.log(base::make_unique<BadTokenError>(state.getPosition()));
 				if (i == 1) return nullptr;
 				break;
 			}
 		}
 		if (exact_len and i != len) {
 			auto bad_end = state.getPosition(-1);
-			state.fail(base::make_unique<UnexpectedExprEndError>(bad_end, expected_end));
+			state.log(base::make_unique<UnexpectedExprEndError>(bad_end, expected_end));
 		}
-		return out;
+		return result;
 	}
 
 	void Expr::dprint(std::ostream& out) const {
@@ -155,6 +177,18 @@ namespace pst {
 					out << R"(", "expr": )";
 					nullAwareDprint(group.expr, out);
 					out << "} }";
+				}
+				variant_case(CommaSeparated, sep) {
+					out << R"({ "Comma separated": [)";
+					bool comma = false;
+					for (const auto& expr: sep.expr) {
+						if (comma)
+							out << ", ";
+						else
+							comma = true;
+						tpc::nullAwareDprint(expr, out);
+					}
+					out << "] }";
 				}
 				variant_case(KeywordValue, key) {
 					out << R"({"KeywordValue": ")" << rift_def::keywordToStr(key.keyword).strView()

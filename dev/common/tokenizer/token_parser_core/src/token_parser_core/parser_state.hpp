@@ -86,7 +86,7 @@ namespace tpc {
 		/**
 		 * @brief Logs an error relatively to the current token
 		 */
-		void fail(base::unique_ptr<dia::Message> message) { err.log(std::move(message)); }
+		void log(base::unique_ptr<dia::Message> message) { err.log(std::move(message)); }
 
 		/**
 		 * @brief Get position relative to the current token.

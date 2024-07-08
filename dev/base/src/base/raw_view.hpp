@@ -117,7 +117,10 @@ namespace base {
 
 		RawView view() { return { begin, size }; }
 
-		const RawView view() const { return { begin, size }; }
+		[[nodiscard]]
+		const RawView view() const {
+			return { begin, size };
+		}
 
 		~OwningView() { delete[] begin; }
 	};

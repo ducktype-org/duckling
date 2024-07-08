@@ -15,14 +15,8 @@
 
 #include <unicode/unistr.h>
 #include <variant>
-#include <iostream>
 
 // @TODO: make generic optional
-
-// forward for friend:
-namespace hir {
-	class Expression;
-}
 
 namespace pst {
 
@@ -43,6 +37,7 @@ namespace pst {
 		Struct,
 		TopLevel,
 		Const,
+		Variable
 	};
 
 	class Stmt: public RiftElement {
@@ -62,6 +57,34 @@ namespace pst {
 		static ParserRef<Stmt> parse(RiftParserState& state);
 		bool                   trailingSemicolon() override;
 		virtual void           acceptVisitor(PstStmtVisitor& visitor) const = 0;
+
+		[[nodiscard]]
+		bool isStatement() const final {
+			return true;
+		}
+
+		/**
+		 * @brief Determines if given statement is a declaration.
+		 * Declaration is everything that is considered a unique symbol in HELIOS.
+		 * For example declarations are:
+		 * * functions
+		 * * classes
+		 * * aliases and usings
+		 * * ifs, whiles with a name
+		 * * variable declaration
+		 *
+		 * For example declarations are not:
+		 * * expressions
+		 * * ifs, whiles without name
+		 * * return, break
+		 *
+		 * @note: this definition of declaration might not
+		 * always be equivalent to intuitive thinking about declarations.
+		 */
+		[[nodiscard]]
+		virtual bool isDeclaration() const {
+			return false;
+		}
 	};
 
 #define STMT_CHILD_CONSTRUCTOR(class_name) \
@@ -86,6 +109,7 @@ namespace pst {
 	 * @tparam BRACKETS - expected brackets or None if not expected
 	 * @tparam isSeparator - Separator should always be skip-able with one skip.
 	 * @tparam isEnding - Check for successful ending.
+	 * @tparam getName - List name getter for errors.
 	 * @tparam Container - Vector-like container of SubElements with emplace_back. Possibly with
 	 * other condition because of iteration.
 	 */
@@ -143,13 +167,13 @@ namespace pst {
 		detail::Conditions::isCurlyGroup,
 		detail::NameGetters::inheritanceList>;
 
-	using ArgList = List<
+	using AtrArgList = List<
 		Expr,
 		false,
 		lexer::Token::BracketType::Round,
 		detail::Conditions::isComma,
 		detail::Conditions::isSentinel,
-		detail::NameGetters::argumentList>;
+		detail::NameGetters::attributeArgList>;
 
 	class DottedName final: public NotStmt {
 		std::vector<tpc::Identifier> names;
@@ -180,8 +204,8 @@ namespace pst {
 	};
 
 	class Attribute final: public Stmt {
-		tpc::Identifier    name;
-		ParserRef<ArgList> args = nullptr;
+		tpc::Identifier       name;
+		ParserRef<AtrArgList> args = nullptr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Attribute);
@@ -210,6 +234,11 @@ namespace pst {
 		[[nodiscard]]
 		const decltype(names)& getNames() const;
 
+		[[nodiscard]]
+		base::StrId getAlias() const {
+			return alias.value;
+		}
+
 		/**
 		 * @note In the future this functionality will be done by HELIOS.
 		 * This functionality is needed to implement early import system for testing.
@@ -223,6 +252,11 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	class Using final: public Stmt {
@@ -246,6 +280,11 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	class Alias final: public Stmt {
@@ -270,6 +309,11 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	class CodeBlock final: public NotStmt {
@@ -283,6 +327,11 @@ namespace pst {
 		static ParserRef<CodeBlock> parse(RiftParserState& state);
 		~CodeBlock() final = default;
 		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
 	};
 
 	class CodeBlockOrStmt final: public NotStmt {
@@ -300,6 +349,11 @@ namespace pst {
 		const_iterator begin() const;
 		[[nodiscard]]
 		const_iterator end() const;
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
 	};
 
 	class RoundGroupExpr final: public NotStmt {
@@ -329,6 +383,9 @@ namespace pst {
 		EmptyExprError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
+	/**
+	 * @TODO: improve comma separated expressions and expression parse options in general.
+	 */
 	class Expr final: public Stmt {
 	public:
 		enum class GroupType {
@@ -339,6 +396,10 @@ namespace pst {
 		};
 
 		struct Group;
+		/** @brief Represents multiple comma separated expressions.
+		 * For example `a, b` in `a, b = c` or `b, c` in `a = (b, c)`
+		 */
+		struct CommaSeparated;
 		struct Operator;
 		struct Identifier;
 		struct NumLiteral;
@@ -347,7 +408,12 @@ namespace pst {
 			rift_def::Keyword keyword;
 		};
 
-		using ExprElem = std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue>;
+		using ExprElem
+			= std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue, CommaSeparated>;
+
+		struct CommaSeparated {
+			std::vector<ParserRef<Expr>> expr;
+		};
 
 		struct Group {
 			GroupType       type;
@@ -371,8 +437,9 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Expr);
 		/**
 		 * @brief parses the expression until its over
+		 * @param allow_comma whether the expression can be a set of comma separated expressions.
 		 */
-		static ParserRef<Expr> parse(RiftParserState& state);
+		static ParserRef<Expr> parse(RiftParserState& state, bool allow_comma = false);
 
 		/**
 		 * @brief parses the expression until a condition is met or end of token stream.
@@ -380,6 +447,7 @@ namespace pst {
 		 * @tparam until Condition to end the parsing.
 		 * @tparam positiveEnd Condition for positive parsing end.
 		 * @tparam badEndMessage Message if the @p positiveEnd condition is not met.
+		 * @param allow_comma whether the expression can be a set of comma separated expressions.
 		 *
 		 * @return ParserRef<Expr>
 		 */
@@ -388,11 +456,13 @@ namespace pst {
 			StateCondition                  positiveEnd,
 			std::derived_from<dia::Message> badEndMessage>
 		requires std::constructible_from<badEndMessage, dia::SourcePosition>
-		static ParserRef<Expr> parseUntil(RiftParserState& state) {
+		static ParserRef<Expr> parseUntil(RiftParserState& state, bool allow_comma = false) {
 			// look ahead:
 			usize count = 0;
 			while (!until(state, (i64) count) && state.notEmpty()) count++;
+
 			if (!positiveEnd(state, (i64) count)) {
+				// Handle negative end:
 				auto pos = state.getPosition(-1);
 				if (count != 0) {
 					pos = state.getPosition(0, (i64) count - 1);
@@ -400,28 +470,33 @@ namespace pst {
 					auto other = state.getPosition(0);
 					pos        = dia::SourcePosition(pos, other.getStart());
 				}
-				state.fail(base::make_unique<badEndMessage>(pos));
+				state.log(base::make_unique<badEndMessage>(pos));
 			} else if (count == 0) {
+				// Handle empty expression:
 				auto pos = state.getPosition(-1);
 				if (!state.isEOF()) {
 					auto other = state.getPosition(0);
 					pos        = dia::SourcePosition(pos, other.getStart());
 				}
-				state.fail(base::make_unique<EmptyExprError>(pos));
+				state.log(base::make_unique<EmptyExprError>(pos));
 			}
 
+			// Don't parse empty expression:
 			if (count == 0) return nullptr;
 
-			return Expr::parse(state, count, true);
+			return Expr::parse(state, count, true, allow_comma);
 		}
 
 		/**
 		 * @p exact_len = false: parses the expression until its over or until it parses @p len
 		 * tokens
 		 * @p exact_len = true: parses the expression until it parses @p len tokens
+		 * @param allow_comma whether the expression can be a set of comma separated expressions.
 		 */
-		static ParserRef<Expr> parse(RiftParserState& state, usize len, bool exact_len = true);
-		void                   dprint(std::ostream& out) const final;
+		static ParserRef<Expr> parse(
+			RiftParserState& state, usize len, bool exact_len = true, bool allow_comma = false
+		);
+		void dprint(std::ostream& out) const final;
 		~Expr() final = default;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
@@ -439,8 +514,10 @@ namespace pst {
 		static ParserRef<Action> parse(RiftParserState& state);
 		~Action() override = default;
 
-		// TODO:
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		[[nodiscard]]
+		base::Optional<ParserCBorrowRef<Expr>> getValue() const {
+			return expr.map([](const auto& e) { return e.borrow(); });
+		}
 	};
 
 	class Return final: public Action {
@@ -449,6 +526,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Return() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Break final: public Action {
@@ -457,6 +536,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Break() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Continue final: public Action {
@@ -465,6 +546,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Continue() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Redo final: public Action {
@@ -473,6 +556,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Redo() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Restart final: public Action {
@@ -481,6 +566,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Restart() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Defer final: public Action {
@@ -489,6 +576,8 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Defer() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -500,8 +589,11 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~Throw() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
+	// TODO: Merge it with variable. Or perhaps make a new class DataStorage.
 	class Const final: public Stmt {
 		tpc::Identifier name;
 		ParserRef<Expr> type;
@@ -530,6 +622,11 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
 	};
 
 	/**
@@ -539,10 +636,12 @@ namespace pst {
 	public:
 		Decl(StmtKind kind, const dia::SourcePosition& position): Stmt(kind, position) {}
 
-		static ParserRef<Decl> parse(RiftParserState& state);
-		bool                   trailingSemicolon() override;
+		bool trailingSemicolon() override;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		[[nodiscard]]
+		bool isDeclaration() const override {
+			return true;
+		}
 	};
 
 #define DECL_CHILD_CONSTRUCTOR(class_name) \
@@ -551,9 +650,14 @@ namespace pst {
 	class CodeDecl: public Decl {
 	public:
 		DECL_CHILD_CONSTRUCTOR(CodeDecl);
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return false;
+		}
 	};
 
-	class TopLevel: public Decl {
+	class TopLevel final: public Decl {
 		std::vector<tpc::ParserRef<Stmt>> statements;
 
 	public:
@@ -567,6 +671,13 @@ namespace pst {
 		const auto& getStatements() const {
 			return statements;
 		}
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class Block final: public CodeDecl {
@@ -623,6 +734,16 @@ namespace pst {
 			return name.value;
 		}
 
+		[[nodiscard]]
+		ParserCBorrowRef<CodeBlock> getBody() const {
+			return body.borrow();
+		}
+
+		[[nodiscard]]
+		ParserCBorrowRef<InheritList> getBases() const {
+			return bases.borrow();
+		}
+
 		static ParserRef<Struct> parse(RiftParserState& state);
 		~Struct() final = default;
 		void dprint(std::ostream& out) const final;
@@ -644,9 +765,47 @@ namespace pst {
 			return name.value;
 		}
 
+		[[nodiscard]]
+		auto getParams() const {
+			return params.borrow();
+		}
+
+		[[nodiscard]]
+		auto getBody() const {
+			return body.borrow();
+		}
+
 		static ParserRef<Fun> parse(RiftParserState& state);
 		void                  dprint(std::ostream& out) const final;
 		~Fun() final = default;
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
+	};
+
+	class Variable final: public Decl {
+		tpc::Identifier name;
+		ParserRef<Expr> type     = nullptr;
+		ParserRef<Expr> value    = nullptr;
+		bool            is_const = true;
+
+	public:
+		DECL_CHILD_CONSTRUCTOR(Variable);
+
+		[[nodiscard]]
+		base::StrId getName() const {
+			return name.value;
+		}
+
+		bool trailingSemicolon() override;
+
+		[[nodiscard]]
+		ParserCBorrowRef<Expr> getType() const {
+			return type.borrow();
+		}
+
+		static ParserRef<Variable> parse(RiftParserState& state);
+		void                       dprint(std::ostream& out) const override;
+		~Variable() override = default;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
@@ -662,6 +821,9 @@ namespace pst {
 		static ParserRef<If> parse(RiftParserState& state);
 		void                 dprint(std::ostream& out) const final;
 		~If() final = default;
+
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class While final: public CodeDecl {
@@ -675,6 +837,9 @@ namespace pst {
 		static ParserRef<While> parse(RiftParserState& state);
 		void                    dprint(std::ostream& out) const final;
 		~While() final = default;
+
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	/**
@@ -801,9 +966,10 @@ namespace pst {
 	) -> ParserRef<List> {
 		auto position = state.getPosition();
 
+		// Handle opening brackets:
 		if constexpr (BRACKETS != lexer::Token::BracketType::None) {
 			if (!state[0].isBracketGroup(BRACKETS)) {
-				state.fail(base::make_unique<OpeningBracketMissingError<getName>>(
+				state.log(base::make_unique<OpeningBracketMissingError<getName>>(
 					state.getPosition(-1), BRACKETS
 				));
 				return nullptr;
@@ -815,43 +981,51 @@ namespace pst {
 
 		usize expr_length{};
 		if (state.empty() || isEnding(state, 0)) {
+			// Handle empty expression
 			if constexpr (NON_EMPTY)
-				state.fail(base::make_unique<EmptyListError<getName>>(state.getPosition(-1)));
+				state.log(base::make_unique<EmptyListError<getName>>(state.getPosition(-1)));
 		} else {
 			while (true) {
 				expr_length = 0;
+
+				// Find next separator or end
 				while (!state[(i64) expr_length].is(lexer::Token::Type::Sentinel)
 				       && !isSeparator(state, (i64) expr_length)
 				       && !isEnding(state, (i64) expr_length)) {
 					expr_length++;
 				}
 				if (expr_length == 0) {
+					// Handle empty field errors with sensible ranges
 					if (state.empty() || isEnding(state, 0)) {
 						auto pos = state.getPosition(-1);
 						if (!state.isEOF()) {
 							auto other = state.getPosition();
 							pos        = dia::SourcePosition(pos, other.getStart());
 						}
-						state.fail(base::make_unique<EmptyFieldError<getName>>(pos));
+						state.log(base::make_unique<EmptyFieldError<getName>>(pos));
 						break;
 					} else {
-						state.fail(
+						state.log(
 							base::make_unique<EmptyFieldError<getName>>(state.getPosition(-1, 0))
 						);
 						state.tokens().skip();
 						continue;
 					}
 				}
+
 				out->elements.emplace_back(SubElements::parse(state, expr_length, true));
+
 				if (isEnding(state, 0)) break;
 				if (isSeparator(state, 0))
 					state.tokens().skip();
 				else
-					state.fail(base::make_unique<NoSeparatorError<getName>>(state.getPosition()));
+					state.log(base::make_unique<NoSeparatorError<getName>>(state.getPosition()));
 			}
 		}
 
+		// Handle closing brackets
 		if constexpr (BRACKETS != lexer::Token::BracketType::None) state.goUpAndSkip();
+
 		return out;
 	}
 }

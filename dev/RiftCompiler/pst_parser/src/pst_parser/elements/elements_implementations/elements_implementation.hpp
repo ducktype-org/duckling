@@ -50,7 +50,7 @@ namespace pst {
 	template<typename Type>
 	bool assertStmtChoice(RiftParserState& state, bool good) {
 		if (!good) {
-			state.err.log(
+			state.log(
 				base::make_unique<BadStatementChoice<Type>>(state.ctokens().peek().getPosition())
 			);
 		}
