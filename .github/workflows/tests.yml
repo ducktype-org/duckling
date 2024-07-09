@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v4
 
       # The next two steps might be a little confusing.
-      # When the egression in if statement returns false, the entire
+      # When the expression in if statement returns false, the entire
       # step is skipped.
       # In that case `value` is empty so it evaluates to false.
 
