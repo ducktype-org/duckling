@@ -140,7 +140,6 @@ jobs:
           authors: quacker-bot
 
       - name: Post coverage status as github comment
-        if: ${{ steps.main-pr.outputs.value }}
         uses: actions/github-script@v7
         if: ${{ steps.coverage-enabled.outputs.value && steps.main-pr.outputs.value }}
         env:
