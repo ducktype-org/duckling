@@ -146,6 +146,36 @@ namespace pst {
 			*result = T::parse(state);
 		}
 
+		template<std::derived_from<RiftElement> El, typename Sink, typename... Args>
+		void with(Sink* sink, ParserRef<El> fun(State&, Args...), Args&&... args) {
+			*sink = fun(state, std::forward<Args>(args)...);
+			el->addChild(*sink);
+		}
+
+		template<typename T>
+		bool tryEat(T type) {
+			if (state[0].is(type)) {
+				el->addToken(state.tokens().next());
+				return true;
+			}
+			return false;
+		}
+
+		void eatOne() {
+			if (state.notEmpty()) el->addToken(state.tokens().next());
+		}
+
+		void goDown() {
+			el->addToken(state[0].getSentinelBegin());
+			state.goDown();
+		}
+
+		void goUpAndSkip() {
+			state.goUp();
+			el->addToken(state[0].getSentinelEnd());
+			state.tokens().skip();
+		}
+
 		// parses all the given elements
 		template<typename T>
 		void all(T t) {
@@ -156,12 +186,6 @@ namespace pst {
 		void all(T t, Q... q) {
 			one(t);
 			parseRest(q...);
-		}
-
-		template<std::derived_from<RiftElement> El, typename Sink, typename... Args>
-		void with(Sink* sink, ParserRef<El> fun(State&, Args...), Args&&... args) {
-			*sink = fun(state, std::forward<Args>(args)...);
-			el->addChild(*sink);
 		}
 
 	private:

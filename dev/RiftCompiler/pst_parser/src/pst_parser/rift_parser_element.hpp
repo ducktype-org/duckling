@@ -1,12 +1,12 @@
 #pragma once
 
-#include <algorithm>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/parser_ref.hpp>
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <base/strongly_typed_id.hpp>
-#include <utility>
+
+#include <variant>
 
 namespace pst {
 	class Import;
@@ -22,6 +22,11 @@ namespace pst {
 
 	class RiftElement: public tpc::Element {
 	public:
+		using Child    = ParserCBorrowRef<RiftElement>;
+		using SubToken = base::c_borrow_ptr<tpc::Token>;
+		using SubElement
+			= std::variant<base::c_borrow_ptr<tpc::Token>, ParserCBorrowRef<RiftElement>>;
+
 		explicit RiftElement(const dia::SourcePosition& position):
 			  source_position(position),
 			  id(PstID::next()) {}
@@ -29,14 +34,35 @@ namespace pst {
 		[[nodiscard]]
 		const dia::SourcePosition& getSourcePosition() const;
 
+	private:
+		template<typename T>
+		static bool holds(const SubElement& el) {
+			return std::holds_alternative<T>(el);
+		}
+
+		template<typename T>
+		static T choose(const SubElement& el) {
+			return std::get<T>(el);
+		}
+
+	public:
 		[[nodiscard]]
-		const std::vector<ParserCBorrowRef<RiftElement>>& getChildren() const {
-			return children;
+		auto viewChildren() const {
+			using namespace std::views;
+			return std::ranges::ref_view(sub_elements) | filter(holds<Child>)
+			     | transform(choose<Child>);
 		}
 
 		[[nodiscard]]
-		const std::vector<base::c_borrow_ptr<tpc::Token>>& getTokens() const {
-			return tokens;
+		auto viewTokens() const {
+			using namespace std::views;
+			return std::ranges::ref_view(sub_elements) | filter(holds<SubToken>)
+			     | transform(choose<SubToken>);
+		}
+
+		[[nodiscard]]
+		auto viewSubElements() const {
+			return std::ranges::ref_view(sub_elements);
 		}
 
 		[[nodiscard]]
@@ -68,21 +94,12 @@ namespace pst {
 		friend class PSTAutomatic;
 
 	protected:
-		dia::SourcePosition                         source_position;
-		std::vector<base::c_borrow_ptr<tpc::Token>> tokens;
-		std::vector<ParserCBorrowRef<RiftElement>>  children;
+		dia::SourcePosition     source_position;
+		std::vector<SubElement> sub_elements;
 
 		void addToken(const tpc::Token& token);
 		void addToken(const base::unique_ptr<tpc::Token>& token);
 		void addToken(base::c_borrow_ptr<tpc::Token> token);
-
-		void addTokens(std::ranges::forward_range auto args) {
-			// for(const tpc::MaybeToken& token:args) {
-			// if (token) {
-			// addToken(token.value());
-			//}
-			//}
-		}
 
 		template<std::derived_from<RiftElement> El>
 		void addChild(base::Optional<ParserRef<El>>& el) {
@@ -94,14 +111,6 @@ namespace pst {
 		template<typename T>
 		void addChild(const ParserRef<T>& child) {
 			addChild(child.borrow());
-		}
-
-		void addChildren() {}
-
-		template<typename T, typename... Ts>
-		void addChildren(const ParserRef<T>& el, Ts... to_add) {
-			addChild(el);
-			addChildren(to_add...);
 		}
 
 		void setLastToken(dia::SourcePosition pos);

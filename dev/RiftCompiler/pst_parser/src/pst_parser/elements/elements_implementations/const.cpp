@@ -37,7 +37,7 @@ namespace pst {
 		);
 
 		// If there is no = then expr parsing already threw an error
-		if (state.tryEat(Operator::Assign)) out->addToken(state[-1]);
+		state.parse(out).tryEat(Operator::Assign);
 
 		state.parse(out).with<Expr>(&out->value, Expr::parse, true);
 

@@ -10,7 +10,7 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Struct, &out->name);
 
-		if (state.tryEat(Operator::Colon)) state.parse(out).one(&out->bases);
+		if (state.parse(out).tryEat(Operator::Colon)) state.parse(out).one(&out->bases);
 
 		state.parse(out).one(&out->body);
 

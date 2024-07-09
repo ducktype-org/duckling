@@ -966,6 +966,8 @@ namespace pst {
 	) -> ParserRef<List> {
 		auto position = state.getPosition();
 
+		auto out = tpc::makeRef<List>(position);
+
 		// Handle opening brackets:
 		if constexpr (BRACKETS != lexer::Token::BracketType::None) {
 			if (!state[0].isBracketGroup(BRACKETS)) {
@@ -974,10 +976,8 @@ namespace pst {
 				));
 				return nullptr;
 			}
-			state.goDown();
+			state.parse(out).goDown();
 		}
-
-		auto out = tpc::makeRef<List>(position);
 
 		usize expr_length{};
 		if (state.empty() || isEnding(state, 0)) {
@@ -1008,23 +1008,27 @@ namespace pst {
 						state.log(
 							base::make_unique<EmptyFieldError<getName>>(state.getPosition(-1, 0))
 						);
-						state.tokens().skip();
+						state.parse(out).eatOne();
 						continue;
 					}
 				}
 
-				out->elements.emplace_back(SubElements::parse(state, expr_length, true));
+				ParserRef<SubElements> ref;
+				state.parse(out).template with<SubElements>(
+					&ref, SubElements::parse, (usize) expr_length, true, false
+				);
+				out->elements.emplace_back(std::move(ref));
 
 				if (isEnding(state, 0)) break;
 				if (isSeparator(state, 0))
-					state.tokens().skip();
+					state.parse(out).eatOne();
 				else
 					state.log(base::make_unique<NoSeparatorError<getName>>(state.getPosition()));
 			}
 		}
 
 		// Handle closing brackets
-		if constexpr (BRACKETS != lexer::Token::BracketType::None) state.goUpAndSkip();
+		if constexpr (BRACKETS != lexer::Token::BracketType::None) state.parse(out).goUpAndSkip();
 
 		return out;
 	}

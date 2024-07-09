@@ -102,14 +102,14 @@ namespace pst {
 
 			if (state[0].isBracketGroup()) {
 				auto type = fromTokenType(state[0].getBracketType());
-				state.goDown();
+				state.parse(out).goDown();
 				if (state.notEmpty()) {
 					ParserRef<Expr> inner;
 					state.parse(back).with<Expr>(&inner, Expr::parse, true);
 					back->elements.emplace_back(Group{ type, std::move(inner) });
 				} else
 					back->elements.emplace_back(Group{ type, makeRef<Expr>(state.getPosition()) });
-				state.goUpAndSkip();
+				state.parse(out).goUpAndSkip();
 			} else if (state[0].isOperator()) {
 				auto& token = state.tokens().next();
 				back->addToken(token);
@@ -143,8 +143,7 @@ namespace pst {
 					result->addChild(back);
 				}
 				// Setup the next expression to add tokens to
-				result->addToken(state[0]);
-				state.tokens().skip(1);
+				state.parse(result).tryEat(Special::Comma);
 				auto new_exp = makeRef<Expr>(state.ctokens().peek().getPosition());
 				back         = new_exp.borrow_mut();
 				std::get<CommaSeparated>(result->elements.front())

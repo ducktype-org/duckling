@@ -26,7 +26,7 @@ namespace pst {
 			return out;
 		}
 
-		state.goDown();
+		state.parse(out).goDown();
 
 		// @TODO: this may not work in case of compilation error
 		while (state.notEmpty()) {
@@ -35,7 +35,7 @@ namespace pst {
 			out->statements.emplace_back(std::move(stmt));
 		}
 
-		state.goUpAndSkip();
+		state.parse(out).goUpAndSkip();
 		return out;
 	}
 
