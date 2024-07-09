@@ -150,6 +150,35 @@ private:
 			ASSERT_EQUAL(visitor.void_return_stmt_count, 1);
 		}
 
+		struct ExprVisitor: public HoutExprPanickyVisitor {
+			usize const_int_count = 0;
+			usize ident_count = 0;
+
+			void visitConstIntExprMock(const ConstIntExprMock&) override {
+				const_int_count++;
+			}
+			void visitIdentifierExpresion(const IdentifierExpresion&) override {
+				ident_count++;
+			}
+		};
+
+		struct ExprVisitorRunner: public HoutStmtPanickyVisitor {
+			ExprVisitor expr_visitor;
+			void visitExprStmt(const ExprStmt& expr) override {
+				expr.expr->acceptVisitor(expr_visitor);
+			}
+		};
+
+		{
+			ExprVisitorRunner visitor;
+			stmt_list.at(0)->acceptVisitor(visitor);
+			ASSERT_EQUAL(visitor.expr_visitor.const_int_count, 1);
+		}
+		{
+			ExprVisitorRunner visitor;
+			stmt_list.at(1)->acceptVisitor(visitor);
+			ASSERT_EQUAL(visitor.expr_visitor.ident_count, 1);
+		}
 	}
 
 	void importTest() {
