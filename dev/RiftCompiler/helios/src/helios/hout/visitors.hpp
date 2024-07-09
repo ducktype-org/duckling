@@ -35,7 +35,7 @@ namespace compiler::helios::code {
 
 	// visitors:
 	#define HOUT_VISITOR_PANIC_METHOD(type) \
-		virtual void visit##type(const type&) { \
+	 	void visit##type(const type&) override { \
 			RIFT_PANIC("Panicky HOUT visitor: visited" #type); \
 		}
 

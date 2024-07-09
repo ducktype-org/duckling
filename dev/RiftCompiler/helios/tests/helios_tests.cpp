@@ -3,6 +3,8 @@
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
 #include <helios/queries.hpp>
+#include <helios/hout/elements.hpp>
+#include <helios/hout/visitors.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 #include <pst_parser/parser.hpp>
@@ -24,6 +26,7 @@ public:
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(simpleHOUTTest);
 		TESTER_ADD_TEST(importTest);
+		TESTER_ADD_TEST(houtVisitorTest);
 	}
 
 private:
@@ -96,6 +99,57 @@ private:
 
 		ASSERT_EQUAL(hout.functions.size(), 3);
 		ASSERT_EQUAL(hout.glob_data.size(), 2);
+	}
+
+	void houtVisitorTest() {
+		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
+			fs::FilePath(path("test_modules/visitor_test_module"))
+		);
+
+		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		ASSERT_EQUAL(hout.functions.size(), 1);
+
+		auto the_function = hout.functions.at(0);
+		
+		auto& stmt_list = the_function.body.body->statements;
+		ASSERT_EQUAL(stmt_list.size(), 4);
+		
+		using namespace compiler::helios::code;
+
+		struct StmtVisitor: public HoutStmtPanickyVisitor {
+			usize expr_stmt_count = 0;
+			usize return_stmt_count = 0;
+			usize void_return_stmt_count = 0;
+
+			void visitExprStmt(const ExprStmt&) override {
+				expr_stmt_count++;
+			}
+			void visitReturnStmt(const ReturnStmt&) override {
+				return_stmt_count++;
+			}
+			void visitVoidReturnStmt(const VoidReturnStmt&) override {
+				void_return_stmt_count++;
+			}
+		};
+
+		{
+			StmtVisitor visitor;
+			stmt_list.at(0)->acceptVisitor(visitor);
+			stmt_list.at(1)->acceptVisitor(visitor);
+			ASSERT_EQUAL(visitor.expr_stmt_count, 2);
+		}
+		{
+			StmtVisitor visitor;
+			stmt_list.at(2)->acceptVisitor(visitor);
+			ASSERT_EQUAL(visitor.return_stmt_count, 1);
+		}
+		{
+			StmtVisitor visitor;
+			stmt_list.at(3)->acceptVisitor(visitor);
+			ASSERT_EQUAL(visitor.void_return_stmt_count, 1);
+		}
+
 	}
 
 	void importTest() {
