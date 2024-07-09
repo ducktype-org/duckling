@@ -35,15 +35,11 @@ namespace compiler::helios::code {
 		out += base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
 	}
 
-	// visitors:
-	#define STMT_VISITOR(type) \
-		void type::acceptVisitor(HoutStmtVisitor& visitor) const { \
-			visitor.visit##type(*this); \
-		}
-	#define EXPR_VISITOR(type) \
-		void type::acceptVisitor(HoutExprVisitor& visitor) const { \
-			visitor.visit##type(*this); \
-		}
+// visitors:
+#define STMT_VISITOR(type) \
+	void type::acceptVisitor(HoutStmtVisitor& visitor) const { visitor.visit##type(*this); }
+#define EXPR_VISITOR(type) \
+	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
 
 	STMT_VISITOR(ReturnStmt);
 	STMT_VISITOR(VoidReturnStmt);

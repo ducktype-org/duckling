@@ -3,9 +3,8 @@
 
 namespace compiler::helios::code {
 
-	// visitors:
-	#define HOUT_VISITOR_METHOD(type) \
-		virtual void visit##type(const type& val) = 0;
+// visitors:
+#define HOUT_VISITOR_METHOD(type) virtual void visit##type(const type& val) = 0;
 
 	/**
 	 * HoutStmtVisitor is a simple base class for VisitorPattern in `hout::Stmt`s.
@@ -20,7 +19,6 @@ namespace compiler::helios::code {
 		virtual ~HoutStmtVisitor() = default;
 	};
 
-
 	/**
 	 * HoutExprVisitor is a simple base class for VisitorPattern in `hout::Expr`s.
 	 * It is used by calling `expr.acceptVisitor(visitor)`.
@@ -33,12 +31,9 @@ namespace compiler::helios::code {
 		virtual ~HoutExprVisitor() = default;
 	};
 
-	// visitors:
-	#define HOUT_VISITOR_PANIC_METHOD(type) \
-	 	void visit##type(const type&) override { \
-			RIFT_PANIC("Panicky HOUT visitor: visited" #type); \
-		}
-
+// visitors:
+#define HOUT_VISITOR_PANIC_METHOD(type) \
+	void visit##type(const type&) override { RIFT_PANIC("Panicky HOUT visitor: visited" #type); }
 
 	class HoutStmtPanickyVisitor: public HoutStmtVisitor {
 	public:

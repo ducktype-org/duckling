@@ -111,26 +111,22 @@ private:
 		ASSERT_EQUAL(hout.functions.size(), 1);
 
 		auto the_function = hout.functions.at(0);
-		
+
 		auto& stmt_list = the_function.body.body->statements;
 		ASSERT_EQUAL(stmt_list.size(), 4);
-		
+
 		using namespace compiler::helios::code;
 
 		struct StmtVisitor: public HoutStmtPanickyVisitor {
-			usize expr_stmt_count = 0;
-			usize return_stmt_count = 0;
+			usize expr_stmt_count        = 0;
+			usize return_stmt_count      = 0;
 			usize void_return_stmt_count = 0;
 
-			void visitExprStmt(const ExprStmt&) override {
-				expr_stmt_count++;
-			}
-			void visitReturnStmt(const ReturnStmt&) override {
-				return_stmt_count++;
-			}
-			void visitVoidReturnStmt(const VoidReturnStmt&) override {
-				void_return_stmt_count++;
-			}
+			void visitExprStmt(const ExprStmt&) override { expr_stmt_count++; }
+
+			void visitReturnStmt(const ReturnStmt&) override { return_stmt_count++; }
+
+			void visitVoidReturnStmt(const VoidReturnStmt&) override { void_return_stmt_count++; }
 		};
 
 		{
@@ -152,18 +148,16 @@ private:
 
 		struct ExprVisitor: public HoutExprPanickyVisitor {
 			usize const_int_count = 0;
-			usize ident_count = 0;
+			usize ident_count     = 0;
 
-			void visitConstIntExprMock(const ConstIntExprMock&) override {
-				const_int_count++;
-			}
-			void visitIdentifierExpresion(const IdentifierExpresion&) override {
-				ident_count++;
-			}
+			void visitConstIntExprMock(const ConstIntExprMock&) override { const_int_count++; }
+
+			void visitIdentifierExpresion(const IdentifierExpresion&) override { ident_count++; }
 		};
 
 		struct ExprVisitorRunner: public HoutStmtPanickyVisitor {
 			ExprVisitor expr_visitor;
+
 			void visitExprStmt(const ExprStmt& expr) override {
 				expr.expr->acceptVisitor(expr_visitor);
 			}
