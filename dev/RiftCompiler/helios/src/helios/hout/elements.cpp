@@ -4,6 +4,7 @@
 #include <base/variant.hpp>
 #include "../scopes/scopes.hpp"
 #include "../symbols/symbols.hpp"
+#include "visitors.hpp"
 
 namespace compiler::helios::code {
 
@@ -34,6 +35,22 @@ namespace compiler::helios::code {
 		out += base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
 	}
 
+	// visitors:
+	#define STMT_VISITOR(type) \
+		void type::acceptVisitor(HoutStmtVisitor& visitor) const { \
+			visitor.visit##type(*this); \
+		}
+	#define EXPR_VISITOR(type) \
+		void type::acceptVisitor(HoutExprVisitor& visitor) const { \
+			visitor.visit##type(*this); \
+		}
+
+	STMT_VISITOR(ReturnStmt);
+	STMT_VISITOR(VoidReturnStmt);
+	STMT_VISITOR(ExprStmt);
+
+	EXPR_VISITOR(ConstIntExprMock);
+	EXPR_VISITOR(IdentifierExpresion);
 }
 
 namespace compiler::helios {
