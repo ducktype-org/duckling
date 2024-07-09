@@ -1,6 +1,6 @@
 #include "type_interface.hpp"
 
-#include "typesystem/queries/types.hpp"
+#include "queries/types.hpp"
 
 #include <query_framework/query_impl.hpp>
 
