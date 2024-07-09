@@ -34,6 +34,7 @@ jobs:
 
       - name: Check if this is a PR to main
         id: main-pr
+        # Here base.ref is the target branch according to https://github.com/orgs/community/discussions/27154
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' }}
         run: echo value=1 > $GITHUB_OUTPUT
 
