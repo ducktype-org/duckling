@@ -17,7 +17,6 @@ namespace compiler::helios::code {
 		HOUT_VISITOR_METHOD(VoidReturnStmt);
 		HOUT_VISITOR_METHOD(ExprStmt);
 
-
 		virtual ~HoutStmtVisitor() = default;
 	};
 
@@ -30,10 +29,27 @@ namespace compiler::helios::code {
 	public:
 		HOUT_VISITOR_METHOD(ConstIntExprMock);
 		HOUT_VISITOR_METHOD(IdentifierExpresion);
-		HOUT_VISITOR_METHOD(ExprStmt);
-
 
 		virtual ~HoutExprVisitor() = default;
 	};
 
+	// visitors:
+	#define HOUT_VISITOR_PANIC_METHOD(type) \
+		virtual void visit##type(const type&) { \
+			RIFT_PANIC("Panicky HOUT visitor: visited" #type); \
+		}
+
+
+	class HoutStmtPanickyVisitor: public HoutStmtVisitor {
+	public:
+		HOUT_VISITOR_PANIC_METHOD(ReturnStmt);
+		HOUT_VISITOR_PANIC_METHOD(VoidReturnStmt);
+		HOUT_VISITOR_PANIC_METHOD(ExprStmt);
+	};
+
+	class HoutExprPanickyVisitor: public HoutExprVisitor {
+	public:
+		HOUT_VISITOR_METHOD(ConstIntExprMock);
+		HOUT_VISITOR_METHOD(IdentifierExpresion);
+	};
 }
