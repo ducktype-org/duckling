@@ -1,3 +1,9 @@
+/**
+ * @file compiler_config.hpp
+ * @note This code is a legacy code, but is left for adaptation
+ * to "global-compiler options" and future compiler handler
+ */
+
 #pragma once
 
 #include <vector>
