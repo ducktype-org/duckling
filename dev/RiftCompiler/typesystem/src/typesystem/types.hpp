@@ -372,7 +372,6 @@ namespace ts {
 	 * For example, (A, B) and (A, mut B) are two different tuple types.
 	 * Nota bene, the former is implicitly coercible to the latter.
 	 */
-
 	class TupleInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(TupleInfo, TypeInfo)
@@ -467,10 +466,16 @@ namespace ts {
 		CONSTRUCT_FROM_IMPLEMENTATION(Function)
 	};
 
+	/**
+	 * @brief The Variant types.
+	 *
+	 * The value of a variant type is (conceptually) equal to a value of
+	 * exactly one of its component types. In practice, we mark the type of the
+	 * dynamic value using additional discriminatory bytes, or more cleverly if possible.
+	 */
 	class VariantInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(VariantInfo, TypeInfo)
-		static VariantInfo create(const std::vector<TypeInfo>& variant_types);
 
 		[[nodiscard]]
 		const std::vector<TypeInfo>& getUnderlyingTypes() const;
@@ -484,6 +489,19 @@ namespace ts {
 		CONSTRUCT_FROM_IMPLEMENTATION(Variant)
 	};
 
+	/**
+	 * @brief The Class types.
+	 *
+	 * This kind of types is by far the most complex in implementation.
+	 *
+	 * A Class type may be cyclically dependent on itself, which is why construction
+	 * requires only a Symbol ID (which then leads to the place of definition in the PST,
+	 * whence all required information is gathered).
+	 *
+	 * A Class may have zero or one base classes and may implement arbitrarily many interfaces.
+	 * A Class may define its own member fields and member functions. All of the above can be
+	 * accessed via ClassInfo methods.
+	 */
 	class ClassInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(ClassInfo, TypeInfo)

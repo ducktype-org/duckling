@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+#include <type_traits>
 #include <base/optional.hpp>
 #include <base/str_utils.hpp>
 #include <diagnostic/logger.hpp>
@@ -194,7 +195,6 @@ namespace query {
 		return cache.at(key).data;                                                             \
 	}
 
-
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
  * It caches PResults using base::StableHashMap in a way that references to them are stable.
@@ -212,3 +212,15 @@ namespace query {
 		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
 		return cache.at(key).data;                                                             \
 	}
+
+
+/**
+ * @brief Macro defining empty storing and loading for when providing fresh result
+ * is expected to be faster than trying to look it up in a cache.
+ */
+#define QUERY_AUTO_NO_CACHE                                       \
+	static auto store(QKey, PResult res, query::ACD) -> QResult { \
+		return QResult{ std::move(res) };                         \
+	}                                                             \
+                                                                  \
+	static auto load(QKey) -> LoadResult { return {}; }

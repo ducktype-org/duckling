@@ -34,7 +34,7 @@
  */
 #define CONSTRUCT_FROM_IMPLEMENTATION(KindOfType)           \
 	friend struct ImplementationOf_Query##KindOfType##Type; \
-	explicit KindOfType##Info(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
+	KindOfType##Info(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
 
 /**
  * \brief Several type definitions for quick reference,
@@ -207,7 +207,7 @@ namespace ts {
 		 * \brief Construct from an object from the internal::TypeInfoImpl hierarchy.
 		 * \param pimpl A pointer to a type implementation object.
 		 */
-		explicit TypeInfo(const internal::TypeInfoImpl* pimpl): pimpl(pimpl) {}
+		TypeInfo(const internal::TypeInfoImpl* pimpl): pimpl(pimpl) {}
 
 		/**
 		 * \brief The pointer to the (probably significantly heavier) object carrying
