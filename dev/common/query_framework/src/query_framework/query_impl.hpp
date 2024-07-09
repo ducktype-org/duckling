@@ -186,11 +186,11 @@ namespace query {
 	static inline base::                                                                       \
 		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>            \
 				cache;                                                                         \
-	static auto load(QKey key) -> LoadResult {                                                 \
+	static auto load(const QKey& key) -> LoadResult {                                          \
 		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
 		return {};                                                                             \
 	}                                                                                          \
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                      \
+	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {               \
 		cache.put(key, { std::move(res), acd });                                               \
 		return cache.at(key).data;                                                             \
 	}
@@ -204,11 +204,11 @@ namespace query {
 	static inline base::                                                                       \
 		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>      \
 				cache;                                                                         \
-	static auto load(QKey key) -> LoadResult {                                                 \
+	static auto load(const QKey& key) -> LoadResult {                                          \
 		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
 		return {};                                                                             \
 	}                                                                                          \
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                      \
+	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {               \
 		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
 		return cache.at(key).data;                                                             \
 	}
