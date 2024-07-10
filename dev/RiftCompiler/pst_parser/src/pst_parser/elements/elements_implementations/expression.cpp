@@ -143,6 +143,7 @@ namespace pst {
 					result->addChild(back);
 				}
 				// Setup the next expression to add tokens to
+				back->setLastToken(state.getPosition(-1));
 				state.parse(result).tryEat(Special::Comma);
 				auto new_exp = makeRef<Expr>(state.ctokens().peek().getPosition());
 				back         = new_exp.borrow_mut();
@@ -161,6 +162,8 @@ namespace pst {
 			auto bad_end = state.getPosition(-1);
 			state.log(base::make_unique<UnexpectedExprEndError>(bad_end, expected_end));
 		}
+		back->setLastToken(state.getPosition(-1));
+		result->setLastToken(state.getPosition(-1));
 		return result;
 	}
 

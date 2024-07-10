@@ -16,8 +16,7 @@ namespace pst {
 			state.parse(out).one(&stmt);
 			if (stmt == nullptr) return nullptr;
 			out->source_position = stmt->getSourcePosition();
-			out->addChild(stmt);
-			out->content = std::move(stmt);
+			out->content         = std::move(stmt);
 		}
 
 		return out;
