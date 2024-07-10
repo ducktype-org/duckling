@@ -19,23 +19,12 @@ namespace ts::internal {
 	}
 
 	struct IMPLEMENT_QUERY(QuerySizeOfTuple, usize) {
-		static inline base::Map<QKey, query::CacheEntry<QResult>> cache;
-
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			auto& tuple_components = key.value->getComponents();
 			return sumTypeVectorSizes(tuple_components, ctx);
 		}
 
-		static auto store(const QKey key, const PResult p_res, const query::ACD acd) -> QResult {
-			cache.emplace(key, query::CacheEntry<QResult>{ p_res, acd });
-			return p_res;
-		}
-
-		static auto load(const QKey key) -> LoadResult {
-			if (const auto cache_iter = cache.find(key); cache_iter != cache.end())
-				return base::Optional{ cache_iter->second };
-			return {};
-		}
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySizeOfTuple)
@@ -49,35 +38,22 @@ namespace ts::internal {
 	usize maxTypeVectorSizes(const std::vector<TypeInfo>& types, query::Context& ctx) {
 		usize max = 0;
 		for (const auto& type: types) max = std::max(max, type.getSize(ctx));
-		// 1 byte is for information which type is it. Maybe dynamic size in the future.
-		return BYTE_SIZE + max;
+		return max;
 	}
 
 	struct IMPLEMENT_QUERY(QuerySizeOfVariant, usize) {
-		static inline base::Map<QKey, query::CacheEntry<QResult>> cache;
-
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			auto& variant_components = key.value->getUnderlyingTypes();
-			return maxTypeVectorSizes(variant_components, ctx);
+			// 1 byte is for information which type is it. Maybe dynamic size in the future.
+			return maxTypeVectorSizes(variant_components, ctx) + BYTE_SIZE;
 		}
 
-		static auto store(const QKey key, const PResult p_res, const query::ACD acd) -> QResult {
-			cache.emplace(key, query::CacheEntry<QResult>{ p_res, acd });
-			return p_res;
-		}
-
-		static auto load(const QKey key) -> LoadResult {
-			if (const auto cache_iter = cache.find(key); cache_iter != cache.end())
-				return base::Optional{ cache_iter->second };
-			return {};
-		}
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySizeOfVariant)
 
 	struct IMPLEMENT_QUERY(QuerySizeOfClass, usize) {
-		static inline base::Map<QKey, query::CacheEntry<QResult>> cache;
-
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			auto& interface = key.value->getInterface(ctx);
 			usize result    = 0;
@@ -88,16 +64,7 @@ namespace ts::internal {
 			return result;
 		}
 
-		static auto store(const QKey key, const PResult p_res, const query::ACD acd) -> QResult {
-			cache.emplace(key, query::CacheEntry<QResult>{ p_res, acd });
-			return p_res;
-		}
-
-		static auto load(const QKey key) -> LoadResult {
-			if (const auto cache_iter = cache.find(key); cache_iter != cache.end())
-				return base::Optional{ cache_iter->second };
-			return {};
-		}
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySizeOfClass)

@@ -81,19 +81,4 @@ namespace ts::internal {
 	ClassInfoImpl::ClassInfoImpl(compiler::helios::SymID symbol): symbol(symbol) {
 		representation = "Class " + name(symbol).str();
 	}
-
-	/*[[nodiscard]]
-	ClassInfo VTableInfoImpl::getAssociatedClass() const {
-	    return associated_class;
-	}
-
-	[[nodiscard]]
-	usize VTableInfoImpl::getParentCount() const {
-	    return associated_class.virtualAncestors().size();
-	}
-
-	[[nodiscard]]
-	usize VTableInfoImpl::getMethodCount() const {
-	    return associated_class.getVtableSize() - getParentCount();
-	}*/
 }

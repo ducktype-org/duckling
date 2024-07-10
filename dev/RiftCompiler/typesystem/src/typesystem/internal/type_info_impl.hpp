@@ -8,7 +8,6 @@
 #include <query_framework/query_impl.hpp>
 
 #include "../typesystem.hpp"
-// #include "../class_types.hpp"
 #include "queries.hpp"
 
 #include <helios/symbols/symbols.hpp>
@@ -45,7 +44,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of the type described by an object of this class.
 		 */
-		static const Kind staticKind = Kind::Any;
+		static constexpr Kind staticKind = Kind::Any;
 
 		/**
 		 * \brief Gets the Kind of the type described by this object.
@@ -145,7 +144,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Unit;
+		static constexpr Kind staticKind = Kind::Unit;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -165,7 +164,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Void;
+		static constexpr Kind staticKind = Kind::Void;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -185,7 +184,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Byte;
+		static constexpr Kind staticKind = Kind::Byte;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -211,7 +210,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Bool;
+		static constexpr Kind staticKind = Kind::Bool;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -237,7 +236,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Char;
+		static constexpr Kind staticKind = Kind::Char;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -266,7 +265,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Integral;
+		static constexpr Kind staticKind = Kind::Integral;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -310,7 +309,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Float;
+		static constexpr Kind staticKind = Kind::Float;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -340,7 +339,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::RawPointer;
+		static constexpr Kind staticKind = Kind::RawPointer;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -379,7 +378,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Pointer;
+		static constexpr Kind staticKind = Kind::Pointer;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -434,7 +433,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Reference;
+		static constexpr Kind staticKind = Kind::Reference;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -504,7 +503,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Tuple;
+		static constexpr Kind staticKind = Kind::Tuple;
 
 		[[nodiscard]]
 		usize getSize(query::Context& ctx) const override {
@@ -553,7 +552,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Function;
+		static constexpr Kind staticKind = Kind::Function;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -634,7 +633,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Variant;
+		static constexpr Kind staticKind = Kind::Variant;
 
 		[[nodiscard]]
 		usize getSize(query::Context& ctx) const override {
@@ -737,7 +736,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Namespace;
+		static constexpr Kind staticKind = Kind::Namespace;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -757,7 +756,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Module;
+		static constexpr Kind staticKind = Kind::Module;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {
@@ -766,35 +765,6 @@ namespace ts::internal {
 
 		ModuleInfoImpl() = default;
 	};
-
-	/*class VTableInfoImpl final: public TypeInfoImpl {
-	    ClassInfo associated_class;
-
-	public:
-	    [[nodiscard]]
-	    Kind getKind() const override {
-	        return staticKind;
-	    }
-
-	    *//**
-		 * \brief The Kind of types described by objects of this class.
-		 *//*
-		static Kind staticKind;
-
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return associated_class.getVtableSize() * sizeof(usize) * 8;
-		}
-
-		[[nodiscard]]
-		ClassInfo getAssociatedClass() const;
-		[[nodiscard]]
-		usize getParentCount() const;
-		[[nodiscard]]
-		usize getMethodCount() const;
-
-		explicit VTableInfoImpl(const ClassInfo class_info): associated_class(class_info) {}
-	};*/
 
 	class MetaInfoImpl final: public TypeInfoImpl {
 	public:
@@ -806,7 +776,7 @@ namespace ts::internal {
 		/**
 		 * \brief The Kind of types described by objects of this class.
 		 */
-		static const Kind staticKind = Kind::Meta;
+		static constexpr Kind staticKind = Kind::Meta;
 
 		[[nodiscard]]
 		usize getSize(query::Context&) const override {

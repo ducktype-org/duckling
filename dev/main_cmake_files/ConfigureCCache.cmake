@@ -10,7 +10,7 @@ if(USE_CCACHE)
 
 		# As of 02.2024 there is no better way to set configuration other then listing it here:
 		# @FUTURE It might change in the future
-		set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE};cache_dir=${CMAKE_CURRENT_SOURCE_DIR}/.ccache_cache/;max_size=1")
+		set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE};cache_dir=${CMAKE_CURRENT_SOURCE_DIR}/.ccache/;max_size=1")
 	else()
 		message(ERROR "CCACHE not found.")
 	endif(CCACHE)

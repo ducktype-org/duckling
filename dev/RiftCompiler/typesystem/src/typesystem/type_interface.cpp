@@ -1,6 +1,6 @@
 #include "type_interface.hpp"
 
-#include "typesystem/queries/types.hpp"
+#include "queries/types.hpp"
 
 #include <query_framework/query_impl.hpp>
 
@@ -13,7 +13,7 @@ namespace ts {
 			std::vector<TypeInfo> all_parameter_types{};
 			all_parameter_types.push_back(ctx.query<QueryPointerType>({
 				.type       = source,
-				.is_mutable = true,
+				.is_mutable = false,
 			}));
 			for (const auto& p_type: parameter_types.value()) all_parameter_types.push_back(p_type);
 			return ctx.query<QueryFunctionType>({

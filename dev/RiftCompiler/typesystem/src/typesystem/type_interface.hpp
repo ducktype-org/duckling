@@ -13,6 +13,9 @@
 namespace ts {
 	enum class Visibility { Public, Protected, Private };
 
+	/**
+	 * @brief A single element of an interface, defined by its symbol (not name).
+	 */
 	class InterfaceElement final {
 		/**
 		 * \brief The symbol corresponding to this element.
@@ -161,6 +164,16 @@ namespace ts {
 		}
 	};
 
+	/**
+	 * @brief An aggregate of the elements of the interface of an object.
+	 *
+	 * @note Expected to be used predominantly for symbol resolution in type-dependent contexts.
+	 *
+	 * Full information about all elements of an interface is obtained via the `getElements` method.
+	 * The returned map is indexed by string IDs (instead of symbols) because element names may be
+	 * overloaded and resolved only in a typing context (e.g. call of an overloaded method with
+	 * arguments of known types).
+	 */
 	class TypeInterface final {
 		/**
 		 * \brief The collection of elements of the interface of a type.
