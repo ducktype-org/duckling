@@ -591,6 +591,7 @@ namespace compiler::helios {
 			}
 
 			// Now, `a` will be a variant.
+			// @TODO: https://github.com/ducktype-org/rift-dev/pull/169#discussion_r1654601995
 			if (is_variant_b) std::swap(a, b);
 
 			variant_match(a) {
@@ -598,7 +599,7 @@ namespace compiler::helios {
 					variant_match(b) {
 						variant_case(rpn::Variant, b_variant) {
 							a_variant.elements.insert(
-								a_variant.elements.begin(),
+								a_variant.elements.end(),
 								b_variant.elements.begin(),
 								b_variant.elements.end()
 							);
@@ -683,14 +684,23 @@ namespace compiler::helios {
 		// This is a std::unordered_map, not base::HashMap, because base::HashMap
 		// does not support this constructor.
 		const static auto BUILTINS = std::unordered_map<base::StrId, ts::TypeInfo>{
+			{ base::StrId("f128"), ctx.query<::ts::QueryFloatType>(128) },
+			{ base::StrId("f80"), ctx.query<::ts::QueryFloatType>(80) },
+			{ base::StrId("f64"), ctx.query<::ts::QueryFloatType>(64) },
 			{ base::StrId("f32"), ctx.query<::ts::QueryFloatType>(32) },
 			{ base::StrId("f16"), ctx.query<::ts::QueryFloatType>(16) },
 
+			{ base::StrId("i128"), ctx.query<::ts::QueryIntegralType>({ 128, true }) },
+			{ base::StrId("i64"), ctx.query<::ts::QueryIntegralType>({ 64, true }) },
 			{ base::StrId("i32"), ctx.query<::ts::QueryIntegralType>({ 32, true }) },
 			{ base::StrId("i16"), ctx.query<::ts::QueryIntegralType>({ 16, true }) },
+			{ base::StrId("i8"), ctx.query<::ts::QueryIntegralType>({ 8, true }) },
 
+			{ base::StrId("u128"), ctx.query<::ts::QueryIntegralType>({ 128, false }) },
+			{ base::StrId("u64"), ctx.query<::ts::QueryIntegralType>({ 64, false }) },
 			{ base::StrId("u32"), ctx.query<::ts::QueryIntegralType>({ 32, false }) },
-			{ base::StrId("u16"), ctx.query<::ts::QueryIntegralType>({ 16, false }) }
+			{ base::StrId("u16"), ctx.query<::ts::QueryIntegralType>({ 16, false }) },
+			{ base::StrId("u8"), ctx.query<::ts::QueryIntegralType>({ 8, false }) },
 		};
 		variant_match(expr) {
 			variant_case(rpn::Identifier, idt) {
