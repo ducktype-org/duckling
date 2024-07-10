@@ -38,7 +38,7 @@ namespace tester {
 	}
 
 	void TestSuite::message(std::string_view mess) {
-		std::string indent_mess = std::string("       ") + std::string(mess);
+		std::string indent_mess = std::string("       ") + std::string(mess) + "\n";
 		curr_global_res->output.push_back(printer::PrinterContent({
 			indent_mess,
 		}));
