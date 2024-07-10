@@ -139,7 +139,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
 		/**
-		 * @brief Filters out non declarations from the StmtList.
+		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
 		 */
 		static std::vector<SymID> filterSymbolsFromStmtList(
 			query::Context& ctx, const ScopeID& scope, const StmtList& list
