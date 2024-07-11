@@ -56,9 +56,7 @@ class PSTBuilderTest: public tester::TestSuite {
 		testExample(emptyTopLevel);
 		testExample(emptyBlock);
 		testExample(badChoice);
-
-		// Should work with new errors part 2 changes:
-		// testExample(noBrackets);
+		testExample(noBrackets);
 	}
 
 public:

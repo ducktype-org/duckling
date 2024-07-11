@@ -4,6 +4,51 @@
 #include <base/variant.hpp>
 
 namespace pst {
+	class BadTokenError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Unexpected token in expression.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		BadTokenError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class UnexpectedExprEndError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Unexpected end to an expression.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		UnexpectedExprEndError(dia::SourcePosition pos, dia::SourcePosition expected):
+			  dia::Error(pos) {
+			addNote(base::make_unique<ExpectedEnd>(expected));
+		}
+
+		class ExpectedEnd final: public dia::NoteWithPosition {
+		protected:
+			[[nodiscard]]
+			std::string toStringBrief() const override {
+				return "Expected it to end here.";
+			}
+
+		public:
+			ExpectedEnd(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+		};
+	};
 
 	Expr::GroupType fromTokenType(Token::BracketType type) {
 		switch (type) {
@@ -25,61 +70,60 @@ namespace pst {
 		return Expr::parse(state, 1e18, false, allow_comma);
 	}
 
-	ParserRef<Expr>
-		Expr::parseUntil(RiftParserState& state, rift_def::Operator until, bool allow_comma) {
-		// look ahead:
-		usize count = 0;
-		while (!state.ctokens().is(until, count)) {
-			if (state.ctokens().size() < count) {
-				state.fail(0, "Bad expression end");
-				break;
-			}
-			count++;
-		}
-
-		return Expr::parse(state, count, true, allow_comma);
-	}
-
 	/**
 	 * It is left in this state for now, as a lot will depend on semantical analysis
 	 * @TODO: lambda, todo-s
 	 */
 	ParserRef<Expr>
 		Expr::parse(RiftParserState& state, usize len, bool exact_len, bool allow_comma) {
-		auto result = makeRef<Expr>(state.ctokens().peek().getPosition());
+		auto result = makeRef<Expr>(state.getPosition());
 		// Currently parsed expression
-		auto  back = result.borrow_mut();
-		usize i    = 0;
+		auto  back         = result.borrow_mut();
+		auto  out          = makeRef<Expr>(state.getPosition());
+		usize i            = 0;
+		auto  expected_end = state.getPosition((i64) len);
+
+		RIFT_ASSERT(
+			len > 0, state.getPosition().genStr("Expr parse should have positive expected length.")
+		);
+
+		if (state.empty()) {
+			state.log(base::make_unique<EmptyExprError>(state.getPosition()));
+			return nullptr;
+		}
+		if (state[0].is(Special::Semicolon)) {
+			auto err_pos = state.getPosition(-1, 0);
+			state.log(base::make_unique<EmptyExprError>(err_pos));
+			return nullptr;
+		}
 
 		while (state.notEmpty() and i < len) {
 			i++;
 
-			if (state.ctokens().peek().isBracketGroup()) {
-				auto type = fromTokenType(state.ctokens().peek().getBracketType());
+			if (state[0].isBracketGroup()) {
+				auto type = fromTokenType(state[0].getBracketType());
 				state.goDown();
-				if (state.notEmpty()) {
+				if (state.notEmpty())
 					back->elements.emplace_back(Group{ type, Expr::parse(state, true) });
-				} else {
-					back->elements.emplace_back(Group{
-						type, makeRef<Expr>(state.ctokens().peek().getPosition()) });
-				}
+				else
+					back->elements.emplace_back(Group{ type, makeRef<Expr>(state.getPosition()) });
 				state.goUpAndSkip();
-			} else if (state.ctokens().isOperator()) {
+			} else if (state[0].isOperator()) {
 				auto token = state.tokens().next();
 				back->elements.emplace_back(Operator({ token.getValue() }));
-			} else if (state.ctokens().peek().isIdentifier()) {
+			} else if (state[0].isIdentifier()) {
 				auto token = state.tokens().next();
 				back->elements.emplace_back(Identifier({ token.getValue() }));
-			} else if (state.ctokens().isKeyword()) {
+			} else if (state[0].isKeyword()) {
 				// @TODO: check if keyword is legal in expr and proceed accordingly
 				auto token = state.tokens().next();
 				back->elements.emplace_back(KeywordValue({ token.asKeyword() }));
-			} else if (state.ctokens().peek().isNumLiteral()) {
+			} else if (state[0].isNumLiteral()) {
 				auto token = state.tokens().next();
 				back->elements.emplace_back(NumLiteral({ token.getValue() }));
-			} else if (state.ctokens().is(Special::Semicolon)) {
+			} else if (state[0].is(Special::Semicolon)) {
 				break;
-			} else if (state.ctokens().is(Special::Comma) && allow_comma) {
+			} else if (state[0].is(Special::Comma) && allow_comma) {
 				// Check if the expression isn't comma separated yet
 				if (result->elements.size() != 1
 				    || !std::holds_alternative<CommaSeparated>(result->elements.front())) {
@@ -100,17 +144,14 @@ namespace pst {
 			}
 			// @TODO: Add support for strings
 			else {
-				state.fail(-1, "unexpected token in expression after here");
+				state.log(base::make_unique<BadTokenError>(state.getPosition()));
+				if (i == 1) return nullptr;
 				break;
 			}
 		}
 		if (exact_len and i != len) {
-			state.fail(-1, "expression unexpectedly ended here");
-		} else if (back->elements.empty()) {
-			// @IDEA: maybe we add a flag for this check, sometimes it's unnecessary
-			state.fail(-1, "no expression where expression expected");
-			// we have to skip because we might loop
-			state.tokens().skip();
+			auto bad_end = state.getPosition(-1);
+			state.log(base::make_unique<UnexpectedExprEndError>(bad_end, expected_end));
 		}
 		return result;
 	}

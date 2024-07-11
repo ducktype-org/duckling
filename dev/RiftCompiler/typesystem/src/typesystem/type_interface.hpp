@@ -7,11 +7,30 @@
 #include <base/optional.hpp>
 
 #include "type_info.hpp"
+#include <helios/scope_symbol_id.hpp>
+#include <base/string_id.hpp>
 
 namespace ts {
 	enum class Visibility { Public, Protected, Private };
 
+	/**
+	 * @brief A single element of an interface, defined by its symbol (not name).
+	 */
 	class InterfaceElement final {
+		/**
+		 * \brief The symbol corresponding to this element.
+		 */
+		const compiler::helios::SymID symbol;
+
+		/**
+		 * \brief Where the element was declared.
+		 *
+		 * For example, if a class A implements an interface I which defines method foo,
+		 * then it is important that the foo method in A is in actuality I.foo.
+		 * In this context, I is the source of A.foo.
+		 */
+		const TypeInfo source;
+
 		/**
 		 * \brief The input parameter types of this element of the interface.
 		 * If the optional is empty, then the element is a field.
@@ -24,15 +43,6 @@ namespace ts {
 		 * \brief The type of a field or the return type of a method.
 		 */
 		const TypeInfo result_type;
-
-		/**
-		 * \brief Where the element was declared.
-		 *
-		 * For example, if a class A implements an interface I which defines method foo,
-		 * then it is important that the foo method in A is in actuality I.foo.
-		 * In this context, I is the source of A.foo.
-		 */
-		const TypeInfo source;
 
 		/**
 		 * \brief The visibility of an element of the interface.
@@ -52,15 +62,36 @@ namespace ts {
 		 * \param visibility The visibility level of this element.
 		 */
 		explicit InterfaceElement(
+			const compiler::helios::SymID         symbol,
+			const TypeInfo                        source,
 			base::Optional<std::vector<TypeInfo>> parameter_types,
 			const TypeInfo                        result_type,
-			const TypeInfo                        source,
 			const Visibility                      visibility
 		):
+			  symbol(symbol),
+			  source(source),
 			  parameter_types(std::move(parameter_types)),
 			  result_type(result_type),
-			  source(source),
 			  visibility(visibility) {}
+
+	public:
+		/**
+		 * \brief Gets the symbol of this element.
+		 * \return The symbol of this element.
+		 */
+		[[nodiscard]]
+		compiler::helios::SymID getSymbol() const {
+			return symbol;
+		}
+
+		/**
+		 * \brief Gets the source of this element.
+		 * \return The source of this element.
+		 */
+		[[nodiscard]]
+		TypeInfo getSource() const {
+			return source;
+		}
 
 		/**
 		 * \brief Checks if this element of the interface is a field.
@@ -111,13 +142,17 @@ namespace ts {
 		}
 
 		/**
-		 * \brief Gets the source of this element.
-		 * \return The source of this element.
+		 * \brief Gets the entire type of this element.
+		 *
+		 * For example, if this element is a field, then its type is simply the return type.
+		 * However, if it's a method, then the type is a Function object type with an implicit
+		 * argument of the type of the host class.
+		 *
+		 * \param ctx The query Context required to create function types.
+		 * \return The type of this element.
 		 */
 		[[nodiscard]]
-		TypeInfo getSource() const {
-			return source;
-		}
+		TypeInfo getType(query::Context& ctx) const;
 
 		/**
 		 * \brief Gets the visibility of this element.
@@ -129,11 +164,21 @@ namespace ts {
 		}
 	};
 
+	/**
+	 * @brief An aggregate of the elements of the interface of an object.
+	 *
+	 * @note Expected to be used predominantly for symbol resolution in type-dependent contexts.
+	 *
+	 * Full information about all elements of an interface is obtained via the `getElements` method.
+	 * The returned map is indexed by string IDs (instead of symbols) because element names may be
+	 * overloaded and resolved only in a typing context (e.g. call of an overloaded method with
+	 * arguments of known types).
+	 */
 	class TypeInterface final {
 		/**
 		 * \brief The collection of elements of the interface of a type.
 		 */
-		const std::map<std::string, std::set<InterfaceElement>> elements{};
+		const std::map<base::StrId, std::set<InterfaceElement>> elements{};
 
 	public:
 		TypeInterface() = default;
@@ -142,7 +187,9 @@ namespace ts {
 		 * \brief Construct the interface of a type from the elements of that interface.
 		 * \param elements The elements of the interface.
 		 */
-		explicit TypeInterface(std::map<std::string, std::set<InterfaceElement>> elements):
+		explicit TypeInterface(std::map<base::StrId, std::set<InterfaceElement>> elements):
 			  elements(std::move(elements)) {}
+
+		const std::map<base::StrId, std::set<InterfaceElement>>& getElements() { return elements; }
 	};
 }

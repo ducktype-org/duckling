@@ -1,5 +1,7 @@
 #pragma once
 
+#include "diagnostic/message.hpp"
+#include "diagnostic/source_position.hpp"
 #include "token_stream.hpp"
 
 #include <diagnostic/logger.hpp>
@@ -23,6 +25,14 @@ namespace tpc {
 		[[nodiscard]]
 		const TokenStream& ctokens() const;
 
+		// clang-format off
+		[[nodiscard]]
+		inline const Token& operator[](i64 fwd) const {
+			return ctokens().peek(fwd);
+		}
+
+		// clang-format on
+
 		dia::Logger& err;  ///< Stores parsing errors
 
 		ParserState(TokenStream&& tokens, dia::Logger& err): err(err) {
@@ -41,6 +51,13 @@ namespace tpc {
 		 */
 		[[nodiscard]]
 		bool notEmpty() const;
+
+		/**
+		 * @return true If token on the relative position is an end of file.
+		 * @return true If token on the relative position is not an end of file.
+		 */
+		[[nodiscard]]
+		bool isEOF(i64 fwd = 0) const;
 
 		/**
 		 * @brief Creates a new stream from the current token in current stream and makes it the
@@ -65,43 +82,36 @@ namespace tpc {
 		}
 
 		/**
-		 * @brief Skips current token if it's equal to @p key.
-		 *
-		 * @return If the token was skipped.
+		 * @brief Logs an error relatively to the current token
 		 */
-		bool tryEat(Keyword key) {
-			if (tokens().is(key)) {
-				tokens().next();
-				return true;
-			}
-			return false;
+		void log(base::unique_ptr<dia::Message> message) { err.log(std::move(message)); }
+
+		/**
+		 * @brief Get position relative to the current token.
+		 */
+		[[nodiscard]]
+		dia::SourcePosition getPosition(i64 fwd = 0) const {
+			return ctokens().peek(fwd).getPosition();
 		}
 
 		/**
-		 * @brief Skips current token if it's equal to @p spec.
-		 *
-		 * @return If the token was skipped.
+		 * @brief Get position range relative to the current token.
 		 */
-		bool tryEat(Special spec) {
-			if (tokens().is(spec)) {
-				tokens().next();
-				return true;
-			}
-			return false;
-		}
+		[[nodiscard]]
+		dia::SourcePosition getPosition(i64 fwd_from, i64 fwd_to) const;
 
 		/**
-		 * @brief Skips current token if it's equal to @p op.
+		 * @brief Skips current token if is equal to @p t.
 		 *
 		 * @return If the token was skipped.
 		 */
-		bool tryEat(Operator op) {
-			if (tokens().is(op)) {
+		template<typename T>
+		bool tryEat(T t) {
+			if (ctokens().peek().is(t)) {
 				tokens().next();
 				return true;
 			}
 			return false;
 		}
 	};
-
 }

@@ -10,7 +10,8 @@
 
 #include <string>
 #include <base/ints.hpp>
-#include <query_framework/query_impl.hpp>
+
+#include <query_framework/query_int.hpp>
 
 #include "kind.hpp"
 
@@ -33,7 +34,7 @@
  */
 #define CONSTRUCT_FROM_IMPLEMENTATION(KindOfType)           \
 	friend struct ImplementationOf_Query##KindOfType##Type; \
-	explicit KindOfType##Info(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
+	KindOfType##Info(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
 
 /**
  * \brief Several type definitions for quick reference,
@@ -104,17 +105,19 @@ namespace ts {
 
 		/**
 		 * \brief Get the TypeInterface of the type described by this object.
+		 * \param ctx The Query Context necessary to deduce interfaces.
 		 * \return The TypeInterface of the type described by this object.
 		 */
 		[[nodiscard]]
-		TypeInterface getInterface() const;
+		TypeInterface getInterface(query::Context& ctx) const;
 
 		/**
 		 * \brief Gets the size of a value of the type described by this object, in bits.
+		 * \param ctx The Query Context necessary to deduce composite type sizes.
 		 * \return The size of a value of the type described by this object, in bits.
 		 */
 		[[nodiscard]]
-		usize getSize() const;
+		usize getSize(query::Context& ctx) const;
 
 		/**
 		 * \brief The default constructor is deleted.
@@ -196,12 +199,15 @@ namespace ts {
 		[[nodiscard]]
 		const std::string& toString() const;
 
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
+
 	protected:
 		/**
 		 * \brief Construct from an object from the internal::TypeInfoImpl hierarchy.
 		 * \param pimpl A pointer to a type implementation object.
 		 */
-		explicit TypeInfo(const internal::TypeInfoImpl* pimpl): pimpl(pimpl) {}
+		TypeInfo(const internal::TypeInfoImpl* pimpl): pimpl(pimpl) {}
 
 		/**
 		 * \brief The pointer to the (probably significantly heavier) object carrying

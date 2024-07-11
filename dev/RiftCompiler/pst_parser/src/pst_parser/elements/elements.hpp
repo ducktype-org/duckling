@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../rift_parser_base.hpp"
+#include "base/unique_pointer.hpp"
+#include "diagnostic/source_position.hpp"
 #include "elements_common.hpp"
 
 #include <token_parser_core/token_stream.hpp>
@@ -11,6 +13,7 @@
 
 #include <base/string_id.hpp>
 
+#include <unicode/unistr.h>
 #include <variant>
 
 // @TODO: make generic optional
@@ -94,7 +97,9 @@ namespace pst {
 		bool trailingSemicolon() override;
 	};
 
-	using StateCondition = bool(const RiftParserState&, usize);
+	using StateCondition = bool(const RiftParserState&, i64);
+
+	using GetName = std::string();
 
 	/**
 	 * @brief General Element representing a list of Elements.
@@ -104,6 +109,7 @@ namespace pst {
 	 * @tparam BRACKETS - expected brackets or None if not expected
 	 * @tparam isSeparator - Separator should always be skip-able with one skip.
 	 * @tparam isEnding - Check for successful ending.
+	 * @tparam getName - List name getter for errors.
 	 * @tparam Container - Vector-like container of SubElements with emplace_back. Possibly with
 	 * other condition because of iteration.
 	 */
@@ -113,6 +119,7 @@ namespace pst {
 		lexer::Token::BracketType BRACKETS,
 		StateCondition            isSeparator,
 		StateCondition            isEnding,
+		GetName                   getName,
 		class Container = std::vector<ParserRef<SubElements>>>
 	class List final: public NotStmt {
 		Container elements;
@@ -141,28 +148,32 @@ namespace pst {
 		false,
 		lexer::Token::BracketType::Round,
 		detail::Conditions::isComma,
-		detail::Conditions::isSentinel>;
+		detail::Conditions::isSentinel,
+		detail::NameGetters::parameterList>;
 
 	using RetList = List<
 		Expr,
 		true,
 		lexer::Token::BracketType::None,
 		detail::Conditions::isComma,
-		detail::Conditions::isCurlyGroup>;
+		detail::Conditions::isCurlyGroup,
+		detail::NameGetters::returnList>;
 
 	using InheritList = List<
 		Expr,
 		true,
 		lexer::Token::BracketType::None,
 		detail::Conditions::isComma,
-		detail::Conditions::isCurlyGroup>;
+		detail::Conditions::isCurlyGroup,
+		detail::NameGetters::inheritanceList>;
 
-	using ArgList = List<
+	using AtrArgList = List<
 		Expr,
 		false,
 		lexer::Token::BracketType::Round,
 		detail::Conditions::isComma,
-		detail::Conditions::isSentinel>;
+		detail::Conditions::isSentinel,
+		detail::NameGetters::attributeArgList>;
 
 	class DottedName final: public NotStmt {
 		std::vector<tpc::Identifier> names;
@@ -193,8 +204,8 @@ namespace pst {
 	};
 
 	class Attribute final: public Stmt {
-		tpc::Identifier    name;
-		ParserRef<ArgList> args = nullptr;
+		tpc::Identifier       name;
+		ParserRef<AtrArgList> args = nullptr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Attribute);
@@ -361,6 +372,22 @@ namespace pst {
 		}
 	};
 
+	class EmptyExprError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected a non-empty expression.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		EmptyExprError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	/**
 	 * @TODO: improve comma separated expressions and expression parse options in general.
 	 */
@@ -418,14 +445,53 @@ namespace pst {
 		 * @param allow_comma whether the expression can be a set of comma separated expressions.
 		 */
 		static ParserRef<Expr> parse(RiftParserState& state, bool allow_comma = false);
+
 		/**
-		 * @brief Parses the expression until a particular operator is encountered(outside of
-		 * parenthesis).
+		 * @brief parses the expression until a condition is met or end of token stream.
 		 *
+		 * @tparam until Condition to end the parsing.
+		 * @tparam positiveEnd Condition for positive parsing end.
+		 * @tparam badEndMessage Message if the @p positiveEnd condition is not met.
 		 * @param allow_comma whether the expression can be a set of comma separated expressions.
+		 *
+		 * @return ParserRef<Expr>
 		 */
-		static ParserRef<Expr>
-			parseUntil(RiftParserState& state, rift_def::Operator until, bool allow_comma = false);
+		template<
+			StateCondition                  until,
+			StateCondition                  positiveEnd,
+			std::derived_from<dia::Message> badEndMessage>
+		requires std::constructible_from<badEndMessage, dia::SourcePosition>
+		static ParserRef<Expr> parseUntil(RiftParserState& state, bool allow_comma = false) {
+			// look ahead:
+			usize count = 0;
+			while (!until(state, (i64) count) && count < state.ctokens().size()) count++;
+
+			if (!positiveEnd(state, (i64) count)) {
+				// Handle negative end:
+				auto pos = state.getPosition(-1);
+				if (count != 0) {
+					pos = state.getPosition(0, (i64) count - 1);
+				} else if (!state.isEOF()) {
+					auto other = state.getPosition(0);
+					pos        = dia::SourcePosition(pos, other.getStart());
+				}
+				state.log(base::make_unique<badEndMessage>(pos));
+			} else if (count == 0) {
+				// Handle empty expression:
+				auto pos = state.getPosition(-1);
+				if (!state.isEOF()) {
+					auto other = state.getPosition(0);
+					pos        = dia::SourcePosition(pos, other.getStart());
+				}
+				state.log(base::make_unique<EmptyExprError>(pos));
+			}
+
+			// Don't parse empty expression:
+			if (count == 0) return nullptr;
+
+			return Expr::parse(state, count, true, allow_comma);
+		}
+
 		/**
 		 * @p exact_len = false: parses the expression until its over or until it parses @p len
 		 * tokens
@@ -805,6 +871,101 @@ namespace pst {
 	class_name(const dia::SourcePosition& position): \
 		  RiftTestingStmt(StmtKind::class_name, position) {}
 
+	template<GetName type>
+	class OpeningBracketMissingError final: public dia::Error {
+	private:
+		lexer::Token::BracketType bracket;
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			std::string str_bracket{};
+			icu::UnicodeString(bracket).toUTF8String(str_bracket);
+			std::stringstream ss;
+			ss << "Opening bracket " << str_bracket << " of a " << type()
+			   << " list expected after here.";
+			return ss.str();
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		OpeningBracketMissingError(dia::SourcePosition pos, lexer::Token::BracketType bracket):
+			  dia::Error(pos),
+			  bracket(bracket) {}
+	};
+
+	template<GetName type>
+	class EmptyListError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "This " + type() + " list shouldn't be empty.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		EmptyListError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	template<GetName type>
+	class EmptyListElementError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "This " + type() + " list element shouldn't be empty.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		EmptyListElementError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	template<GetName type>
+	class EmptyFieldError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Empty field in the " + type() + " list.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		EmptyFieldError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	template<GetName type>
+	class NoSeparatorError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return type() + " list separator expected.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		NoSeparatorError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	/**
 	 * @note We might want to move it outside and allow only for specific instances to be cleaner.
 	 */
@@ -814,17 +975,19 @@ namespace pst {
 		lexer::Token::BracketType BRACKETS,
 		StateCondition            isSeparator,
 		StateCondition            isEnding,
+		GetName                   getName,
 		class Container>
-	auto List<SubElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, Container>::parse(
+	auto List<SubElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, getName, Container>::parse(
 		RiftParserState& state
 	) -> ParserRef<List> {
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 
+		// Handle opening brackets:
 		if constexpr (BRACKETS != lexer::Token::BracketType::None) {
-			if (!state.ctokens().isBracketGroup(BRACKETS)) {
-				state.fail(
-					-1, "bracket " + std::string(1, char(BRACKETS)) + " expected after here"
-				);
+			if (!state[0].isBracketGroup(BRACKETS)) {
+				state.log(base::make_unique<OpeningBracketMissingError<getName>>(
+					state.getPosition(-1), BRACKETS
+				));
 				return nullptr;
 			}
 			state.goDown();
@@ -834,37 +997,51 @@ namespace pst {
 
 		usize expr_length{};
 		if (state.empty() || isEnding(state, 0)) {
+			// Handle empty expression
 			if constexpr (NON_EMPTY)
-				state.fail(-1, "empty list where non-empty expected after here");
+				state.log(base::make_unique<EmptyListError<getName>>(state.getPosition(-1)));
 		} else {
 			while (true) {
 				expr_length = 0;
-				while (!state.ctokens().is(lexer::Token::Type::Sentinel, expr_length)
-				       && !isSeparator(state, expr_length) && !isEnding(state, expr_length)) {
+
+				// Find next separator or end
+				while (!state[(i64) expr_length].is(lexer::Token::Type::Sentinel)
+				       && !isSeparator(state, (i64) expr_length)
+				       && !isEnding(state, (i64) expr_length)) {
 					expr_length++;
 				}
 				if (expr_length == 0) {
+					// Handle empty field errors with sensible ranges
 					if (state.empty() || isEnding(state, 0)) {
-						state.fail(0, "unexpected end to a list");
+						auto pos = state.getPosition(-1);
+						if (!state.isEOF()) {
+							auto other = state.getPosition();
+							pos        = dia::SourcePosition(pos, other.getStart());
+						}
+						state.log(base::make_unique<EmptyFieldError<getName>>(pos));
 						break;
 					} else {
-						state.fail(0, "empty field in a list before here");
+						state.log(
+							base::make_unique<EmptyFieldError<getName>>(state.getPosition(-1, 0))
+						);
 						state.tokens().skip();
 						continue;
 					}
 				}
+
 				out->elements.emplace_back(SubElements::parse(state, expr_length, true));
+
 				if (isEnding(state, 0)) break;
 				if (isSeparator(state, 0))
 					state.tokens().skip();
 				else
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "separator expected"
-					);
+					state.log(base::make_unique<NoSeparatorError<getName>>(state.getPosition()));
 			}
 		}
 
+		// Handle closing brackets
 		if constexpr (BRACKETS != lexer::Token::BracketType::None) state.goUpAndSkip();
+
 		return out;
 	}
 }

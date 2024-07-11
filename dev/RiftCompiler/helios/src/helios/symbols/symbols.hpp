@@ -3,9 +3,6 @@
 #include <query_framework/query_int.hpp>
 #include <pst_parser/elements/elements.hpp>
 
-// @TODO: relax this dependency
-#include <frontend/module_tree/queries.hpp>
-
 #include "../pst_ref.hpp"
 #include "../hout/hout.hpp"
 #include "../lookup_result.hpp"
@@ -25,8 +22,8 @@ namespace compiler::helios {
 		Struct,
 		Alias,
 		Using,
+		Variable,
 		Import
-
 		// ...
 	};
 
@@ -111,11 +108,6 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, const LookupResult&);
 
-	/**
-	 * @brief Query type of the symbol.
-	 * @note: not implemented yet
-	 */
-	DECLARE_QUERY(QueryTypeOF, SymID, ts::TypeInfo);
 
 	/**
 	 * A query that returns an "absolute path" to the symbol without aliases.
@@ -182,8 +174,41 @@ namespace compiler::helios {
 			rift_def::Keyword keyword;
 		};
 
-		using ExprElem
-			= std::variant<Operator, NamedIdentifier, Identifier, NumValue, KeywordValue>;
+		/**
+		 * @brief A tuple call. It's meant as a information for the evaluator
+		 * to take `num_elements` expressions from the stack as tuple elements.
+		 */
+		struct TupleConstructor {
+			usize num_elements;
+		};
+
+		struct TupleType;
+		struct Variant;
+
+		using ExprElem = std::variant<
+			Operator,
+			NamedIdentifier,
+			Identifier,
+			NumValue,
+			KeywordValue,
+			TupleConstructor,
+			TupleType,
+			Variant>;
+
+		/**
+		 * @brief A constructed tuple. It differs from the TupleConstructor in a way that
+		 * this is something created during RPN expression evaluation, not creation.
+		 */
+		struct TupleType {
+			std::vector<ExprElem> elements;
+		};
+
+		/**
+		 * @brief A variant constructed from other expressions (types).
+		 */
+		struct Variant {
+			std::vector<ExprElem> elements;
+		};
 
 		struct KeyOf_ExtensionMakeRPN {
 			/**
@@ -201,7 +226,7 @@ namespace compiler::helios {
 		 */
 		std::vector<ExprElem> ExtensionMakeRPN(query::Context&, KeyOf_ExtensionMakeRPN);
 
-		struct KeyOf_ExtensionRPNEval {
+		struct KeyOf_ExtensionRPNEvalOperator {
 			/**
 			 * @brief Symbol on the left.
 			 */
@@ -223,7 +248,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Evaluates an operation `a (op) b`.
 		 */
-		ExprElem ExtensionRPNEval(query::Context&, const KeyOf_ExtensionRPNEval&);
+		ExprElem ExtensionRPNEvalOperator(query::Context&, const KeyOf_ExtensionRPNEvalOperator&);
 
 		struct KeyOf_ExtensionRPNValue {
 			/**
@@ -244,5 +269,67 @@ namespace compiler::helios {
 		 * rpn::Identifier([C]), then a value of a C will be returned (if it's a constant).
 		 */
 		i32 ExtensionRPNValue(query::Context&, const KeyOf_ExtensionRPNValue&);
+
+		struct KeyOf_ExtensionRPNEvalRPNExpr {
+			/**
+			 * @brief RPN expression returned by `ExtensionMakeRPN`.
+			 */
+			std::vector<ExprElem> rpn_expression;
+			/**
+			 * @brief Scope, where the expression was expressed in.
+			 */
+			ScopeID expr_scope;
+		};
+
+		/**
+		 * @brief Evaluates RPN expression. Expects a single element to be
+		 * left and the end of the evaluation and returns it. Panics if otherwise.
+		 */
+		ExprElem ExtensionRPNEvalRPNExpr(query::Context&, const KeyOf_ExtensionRPNEvalRPNExpr&);
 	}
+
+	/**
+	 * @brief Query type of the symbol.
+	 */
+	DECLARE_QUERY(QueryTypeOf, SymID, ts::TypeInfo)
+
+	/**
+	 * @brief Query ts::TypeInfo from a symbol definition (like struct definition).
+	 *
+	 * Example:
+	 * struct T {
+	 *	...
+	 * }
+	 * - Then we can use this query QueryTypeFromDefinition(T).
+	 */
+	DECLARE_QUERY(QueryTypeFromDefinition, SymID, ts::TypeInfo);
+
+	/**
+	 * @brief Struct returned by the `QueryStructSymbolData` query.
+	 */
+	struct StructSymbolData {
+		/**
+		 * @brief Name of the struct in the soure code.
+		 */
+		base::StrId name;
+		/**
+		 * @brief Struct's declared methods.
+		 */
+		std::vector<SymID> methods;
+		/**
+		 * @brief Struct's declared member variables.
+		 */
+		std::vector<SymID> members;
+		/**
+		 * @brief Struct's base classes.
+		 */
+		std::vector<ts::TypeInfo> bases;
+	};
+
+	/**
+	 * @brief Query all the information about a struct definition.
+	 * Panics if the given `SymID` is not a struct.
+	 * More information on `StructSymbolData` in it's definition.
+	 */
+	DECLARE_QUERY(QueryStructSymbolData, SymID, const StructSymbolData&)
 }

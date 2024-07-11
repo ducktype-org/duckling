@@ -103,7 +103,7 @@ namespace lexer {
 		usize                 where = 0;  ///< Current position in file
 		tokenizer::BorrowFile file;
 		dia::Logger&          errorState;
-		CharArray&            char_array;
+		const CharArray&      char_array;
 		Tokens                tokens;
 
 		/**

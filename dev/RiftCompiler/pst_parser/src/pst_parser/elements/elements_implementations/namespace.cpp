@@ -3,13 +3,16 @@
 
 namespace pst {
 	ParserRef<Namespace> Namespace::parse(RiftParserState& state) {
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 		auto out      = makeRef<Namespace>(position);
 
-		if (!assertStmtChoice<Namespace>(state, state.ctokens().is(Keyword::Namespace)))
-			return nullptr;
+		if (!assertStmtChoice<Namespace>(state, state[0].is(Keyword::Namespace))) return nullptr;
+
+		out->addKeyword(state.getPosition());
 
 		parseAll(state, Keyword::Namespace, &out->name, &out->body);
+
+		out->setLastToken(state.getPosition(-1));
 
 		return out;
 	}

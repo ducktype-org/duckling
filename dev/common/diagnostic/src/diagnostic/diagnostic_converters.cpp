@@ -114,13 +114,13 @@ namespace dia {
 			// clang-format off
 			return {
 				"{\n",
-					"start:", "{\n",
-						"line:", std::to_string(start_line), ",\n",
-						"character:", std::to_string(start_col), "\n",
+					"\"start\":", "{\n",
+						"\"line\":", std::to_string(start_line), ",\n",
+						"\"character\":", std::to_string(start_col), "\n",
 					"},\n",
-					"end:", "{\n",
-						"line:", std::to_string(end_line), ",\n",
-						"character:", std::to_string(end_col), "\n",
+					"\"end\":", "{\n",
+						"\"line\":", std::to_string(end_line), ",\n",
+						"\"character\":", std::to_string(end_col), "\n",
 					"}\n",
 				"}",
 			};
@@ -203,8 +203,8 @@ namespace dia {
 		// clang-format off
 		auto data = printer::PrinterContentsSeq{
 			"{\n",
-				"messageBrief:",    escapeJson(message_ptr->toString(false)), ",\n",
-				"messageDetailed:", escapeJson(message_ptr->toString(true)),  "\n",
+				"\"messageBrief\":",    escapeJson(message_ptr->toString(false)), ",\n",
+				"\"messageDetailed\":", escapeJson(message_ptr->toString(true)),  "\n",
 			"}"
 		};
 		// clang-format on
@@ -213,15 +213,15 @@ namespace dia {
 		// clang-format off
 		printer::PrinterContentsSeq result = {
 			"{\n",
-				"range:", /* insert at index: 2 */ ",\n",
-				"severity:", severityToLspJson(message_ptr->getSeverity()), ",\n",
+				"\"range\":", /* insert at index: 2 */ ",\n",
+				"\"severity\":", severityToLspJson(message_ptr->getSeverity()), ",\n",
 				// `code` not yet supported.
 				// `codeDescription` not yet supported.
-				"source:", "\"", domainToString(message_ptr->getDomain()), "\",\n",
-				"message:", escapeJson(message_ptr->toString(detailed)), ",\n",
+				"\"source\":", "\"", domainToString(message_ptr->getDomain()), "\",\n",
+				"\"message\":", escapeJson(message_ptr->toString(detailed)), ",\n",
 				// `tags` not yet supported.
-				"relatedInformation:", /* insert at index: 14 */ ",\n",
-				"data:", /* insert at index: 16 */ ",\n",
+				"\"relatedInformation\":", /* insert at index: 14 */ ",\n",
+				"\"data\":", /* insert at index: 16 */ "\n",
 			"}",
 		};
 		// clang-format on
