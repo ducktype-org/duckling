@@ -459,7 +459,7 @@ namespace pst {
 		static ParserRef<Expr> parseUntil(RiftParserState& state, bool allow_comma = false) {
 			// look ahead:
 			usize count = 0;
-			while (!until(state, (i64) count) && state.notEmpty()) count++;
+			while (!until(state, (i64) count) && count < state.ctokens().size()) count++;
 
 			if (!positiveEnd(state, (i64) count)) {
 				// Handle negative end:

@@ -13,3 +13,5 @@ rift_add_test(compiler parser_test_simple tests/test.cpp
 	USES PstParser)
 rift_add_test(compiler parser_test_builder tests/builder_tests.cpp
 	USES PstParser)
+rift_add_test(compiler parser_test_errors tests/error_tests.cpp
+	USES PstParser)
