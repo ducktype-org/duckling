@@ -22,6 +22,8 @@ namespace compiler::helios {
 
 		bool operator==(const SymID&) const = default;
 
+		auto operator<=>(const SymID& other) const { return ref.get() <=> other.ref.get(); }
+
 	private:
 		base::borrow_ptr<SymbolData> ref;
 
@@ -30,6 +32,7 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QueryLinkedScope;
+		friend struct ImplementationOf_QueryStructSymbolData;
 	};
 
 	/**
