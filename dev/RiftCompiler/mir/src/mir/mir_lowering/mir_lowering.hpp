@@ -7,12 +7,12 @@
 
 #include "../mir_structure/mir.hpp"
 
-namespace compiler::helios {
+namespace compiler::mir {
 
 	struct KeyOf_LowerToMirFunction {
 
 	};
 
-	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, value)
+	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, Function)
 
 }
