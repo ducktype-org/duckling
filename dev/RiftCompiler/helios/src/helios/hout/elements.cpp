@@ -7,7 +7,9 @@
 
 namespace compiler::helios::code {
 
-	void addIndent(usize indent, std::string& out) { out.append(indent * 4, ' '); }
+	constexpr usize INDENT_SIZE = 4;
+
+	void addIndent(usize indent, std::string& out) { out.append(indent * INDENT_SIZE, ' '); }
 
 	void ReturnStmt::debugPrint(usize indent, std::string& out) const {
 		addIndent(indent, out);
