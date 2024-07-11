@@ -201,7 +201,7 @@ private:
 			void visitReturnStmt(const ReturnStmt&) override { return_stmt_count++; }
 
 			void visitVoidReturnStmt(const VoidReturnStmt&) override { void_return_stmt_count++; }
-			
+
 			void visitIfStmt(const IfStmt&) override { if_stmt_count++; }
 		};
 
