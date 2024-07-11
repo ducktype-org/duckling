@@ -365,6 +365,11 @@ namespace pst {
 		static ParserRef<RoundGroupExpr> parse(RiftParserState& state);
 		~RoundGroupExpr() final = default;
 		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		ParserCBorrowRef<Expr> getExpr() const {
+			return expr.borrow();
+		}
 	};
 
 	class EmptyExprError final: public dia::Error {
@@ -815,6 +820,8 @@ namespace pst {
 		tpc::OptionalIdentifier    optional_name;
 		ParserRef<CodeBlockOrStmt> body = nullptr;
 
+		// @TODO: else
+
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {}
 
@@ -822,6 +829,15 @@ namespace pst {
 		void                 dprint(std::ostream& out) const final;
 		~If() final = default;
 
+		[[nodiscard]]
+		ParserCBorrowRef<Expr> getCondition() const {
+			return condition->getExpr();
+		}
+
+		[[nodiscard]]
+		ParserCBorrowRef<CodeBlockOrStmt> getBody() const {
+			return body.borrow();
+		}
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};

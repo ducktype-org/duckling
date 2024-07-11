@@ -27,6 +27,7 @@ namespace compiler::helios::code {
 	 * @brief Base class for all HOUT expressions
 	 */
 	struct Expr {
+		// @TODO: set/get Type and ValueCategory of Expr
 		virtual ~Expr()                                 = default;
 		virtual void debugPrint(std::string& out) const = 0;
 	};
@@ -67,6 +68,22 @@ namespace compiler::helios::code {
 		ElementRef<Expr> expr;
 
 		ExprStmt(ElementRef<Expr> expr): expr(std::move(expr)) {}
+
+		void debugPrint(usize indent, std::string& out) const final;
+	};
+
+	/**
+	 * @brief Represents if statement in HOUT
+	 */
+	struct IfStmt final: public Stmt {
+		ElementRef<Expr> condition;
+		CodeBlock        body;
+
+		// @TODO: optional else body
+
+		IfStmt(ElementRef<Expr> condition, CodeBlock body):
+			  condition(std::move(condition)),
+			  body(std::move(body)) {}
 
 		void debugPrint(usize indent, std::string& out) const final;
 	};
