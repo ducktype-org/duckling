@@ -84,6 +84,32 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Expr, true>  simpleExpr{ "x + y" };
 	Example<pst::Expr, false> badTokenExpr{ "\"" };
 
+	Example<pst::Fun, true> simpleFunction{ "fun foo(i32 x, i32 y) -> (i32, i32) {}" };
+
+	Example<pst::If, true> simpleIf{ "if (a == b) {c = d;}" };
+
+	Example<pst::Import, true> simpleImport{ "import std.math.sqrt as sqrt" };
+
+	Example<pst::Namespace, true> simpleNamespace{ "namespace name {}" };
+
+	Example<pst::RoundGroupExpr, true>  simpleRoundGroup{ "(a + b)" };
+	Example<pst::RoundGroupExpr, false> badRoundGroup{ "a + b" };
+
+	Example<pst::Stmt, true>  simpleStmt{ "x = a + b;" };
+	Example<pst::Stmt, false> badStmt{ "x = a + b" };
+
+	Example<pst::Struct, true> simpleStruct{ "struct x: y{}" };
+
+	Example<pst::TopLevel, true> simpleTopLevel{ "fun foo(){}" };
+
+	Example<pst::Using, true> simpleUsing{ "using std.math" };
+
+	// @todo Some weird position bug for later
+	// Example<pst::Variable, true> simpleVariable{"var x: i32 = 5"};
+	// Example<pst::Variable, true> simpleLetVariable{"let x: i32 = 5"};
+
+	Example<pst::While, true> simpleWhile{ "while (x < 5) {}" };
+
 	void exampleTests() {
 		for (auto e: examples) assert((*e)(), e->message());
 	}
