@@ -186,7 +186,7 @@ private:
 		auto the_function = hout.functions.at(0);
 
 		auto& stmt_list = the_function.body.body->statements;
-		ASSERT_EQUAL(stmt_list.size(), 4);
+		ASSERT_EQUAL(stmt_list.size(), 5);
 
 		using namespace compiler::helios::code;
 
@@ -194,12 +194,15 @@ private:
 			usize expr_stmt_count        = 0;
 			usize return_stmt_count      = 0;
 			usize void_return_stmt_count = 0;
+			usize if_stmt_count          = 0;
 
 			void visitExprStmt(const ExprStmt&) override { expr_stmt_count++; }
 
 			void visitReturnStmt(const ReturnStmt&) override { return_stmt_count++; }
 
 			void visitVoidReturnStmt(const VoidReturnStmt&) override { void_return_stmt_count++; }
+			
+			void visitIfStmt(const IfStmt&) override { if_stmt_count++; }
 		};
 
 		{
@@ -217,6 +220,11 @@ private:
 			StmtVisitor visitor;
 			stmt_list.at(3)->acceptVisitor(visitor);
 			ASSERT_EQUAL(visitor.void_return_stmt_count, 1);
+		}
+		{
+			StmtVisitor visitor;
+			stmt_list.at(4)->acceptVisitor(visitor);
+			ASSERT_EQUAL(visitor.if_stmt_count, 1);
 		}
 
 		struct ExprVisitor: public HoutExprPanickyVisitor {

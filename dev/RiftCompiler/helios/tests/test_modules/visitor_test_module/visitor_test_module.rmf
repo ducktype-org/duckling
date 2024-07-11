@@ -6,5 +6,6 @@ fun foo() {
 	a;
 	return 1;
 	return;
+	if (1) { }
 }
 
