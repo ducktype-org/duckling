@@ -3,16 +3,20 @@
 
 namespace pst {
 	ParserRef<Struct> Struct::parse(RiftParserState& state) {
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 		auto out      = makeRef<Struct>(position);
 
-		if (!assertStmtChoice<Struct>(state, state.ctokens().is(Keyword::Struct))) return nullptr;
+		if (!assertStmtChoice<Struct>(state, state[0].is(Keyword::Struct))) return nullptr;
+
+		out->addKeyword(state.getPosition());
 
 		parseAll(state, Keyword::Struct, &out->name);
 
 		if (state.tryEat(Operator::Colon)) parseOne(state, &out->bases);
 
 		parseOne(state, &out->body);
+
+		out->setLastToken(state.getPosition(-1));
 
 		return out;
 	}

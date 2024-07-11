@@ -5,16 +5,17 @@ namespace pst {
 	bool Attribute::trailingSemicolon() { return false; }
 
 	ParserRef<Attribute> Attribute::parse(RiftParserState& state) {
-		auto                 position = state.ctokens().peek().getPosition();
+		auto                 position = state.getPosition();
 		ParserRef<Attribute> out      = makeRef<Attribute>(position);
 
-		if (!assertStmtChoice<Attribute>(state, state.ctokens().is(Special::AtSign)))
-			return nullptr;
+		if (!assertStmtChoice<Attribute>(state, state[0].is(Special::AtSign))) return nullptr;
 
 		parseAll(state, Special::AtSign, &out->name);
 
-		if (state.ctokens().isBracketGroup(Token::BracketType::Round))
-			out->args = ArgList::parse(state);
+		if (state[0].isBracketGroup(Token::BracketType::Round))
+			out->args = AtrArgList::parse(state);
+
+		out->setLastToken(state.getPosition(-1));
 
 		return out;
 	}

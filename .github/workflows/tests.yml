@@ -27,12 +27,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # The next two steps might be a little confusing.
+      # When the expression in if statement returns false, the entire
+      # step is skipped.
+      # In that case `value` is empty so it evaluates to false.
+
+      - name: Check if this is a PR to main
+        id: main-pr
+        # Here base.ref is the target branch according to https://github.com/orgs/community/discussions/27154
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' }}
+        run: echo value=1 > $GITHUB_OUTPUT
+
       - name: Check if should build with coverage
         id: coverage-enabled
         if: ${{ matrix.build-type == 'Debug' }}
-        # This might be a little misleading.
-        # When we don't want to build coverage if statement will
-        # stop this step, and `value` will be empty.
         run: echo value=1 > $GITHUB_OUTPUT
 
       - name: Install lcov
@@ -48,7 +56,7 @@ jobs:
       # This step is arbitrary, and has nothing to the order of choosing the most
       # recent hash.
       - name: Prepare cache timestamp
-        id: cache_timestamp
+        id: cache-timestamp
         shell: cmake -P {0}
         run: |
           string(TIMESTAMP current_date "%Y-%m-%d-%H::%M::%S" UTC)
@@ -62,7 +70,7 @@ jobs:
         with:
           path: |
             ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache_timestamp.outputs.timestamp }}
+          key: ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
           # If there is no match with the key, then it tries to partially
           # match with any of restore-keys (top to bottom).
           # Most recent entry is used when multiple match to the same key.
@@ -123,10 +131,11 @@ jobs:
 
       - name: Check coverage status
         id: check-coverage-status
-        if: ${{ steps.coverage-enabled.outputs.value }}
+        if: ${{ steps.coverage-enabled.outputs.value && steps.main-pr.outputs.value }}
         run: echo success=${{ steps.test-coverage.outputs.coverage-percent >= steps.read-main-coverage.outputs.value }} > $GITHUB_OUTPUT
 
       - name: Hide previous bot comments
+        if: ${{ steps.coverage-enabled.outputs.value && steps.main-pr.outputs.value }}
         uses: int128/hide-comment-action@v1
         with:
           token: ${{ secrets.QUACKER_PAT }}
@@ -134,8 +143,7 @@ jobs:
 
       - name: Post coverage status as github comment
         uses: actions/github-script@v7
-        # Possibly, we'll need to a check env.BRANCH_NAME != 'main'
-        if: ${{ steps.coverage-enabled.outputs.value }}
+        if: ${{ steps.coverage-enabled.outputs.value && steps.main-pr.outputs.value }}
         env:
           FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
           SUCC_MSG: '✅✅✅ - **Great job writing tests!**'
@@ -153,5 +161,5 @@ jobs:
             })
 
       - name: Fail if insufficient coverage
-        if: ${{ steps.coverage-enabled.outputs.value && steps.check-coverage-status.outputs.success != 'true' }}
+        if: ${{ steps.coverage-enabled.outputs.value && steps.check-coverage-status.outputs.success != 'true' && steps.main-pr.outputs.value }}
         run: exit 1

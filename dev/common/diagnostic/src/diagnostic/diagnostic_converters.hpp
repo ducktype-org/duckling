@@ -34,6 +34,19 @@ namespace dia {
 			base::c_borrow_ptr<Message> parent_message,
 			bool                        detailed
 		);
+
+		template<std::ranges::input_range R>
+		requires std::same_as<base::c_borrow_ptr<Message>, std::ranges::range_value_t<R>>
+		[[nodiscard]]
+		static printer::PrinterContentsSeq listToPrinterContents(R range, bool detailed) {
+			std::vector<printer::PrinterContentsSeq> res;
+			for (base::c_borrow_ptr<Message> message: range) {
+				res.push_back(toPrinterContents(message, detailed));
+				res.push_back({ { "\n\n" } });
+			}
+			auto view = std::ranges::join_view(res);
+			return { view.begin(), view.end() };
+		}
 	};
 
 	static_assert(DiagnosticToPrinterConverter<DiagnosticToUserConverter>);
@@ -71,6 +84,25 @@ namespace dia {
 			base::c_borrow_ptr<Message> parent_message,
 			bool                        detailed
 		);
+
+		template<std::ranges::input_range R>
+		requires std::same_as<base::c_borrow_ptr<Message>, std::ranges::range_value_t<R>>
+		[[nodiscard]]
+		static printer::PrinterContentsSeq listToPrinterContents(R range, bool detailed) {
+			std::vector<printer::PrinterContentsSeq> res;
+			res.push_back({ { "{ \"messages\":[\n" } });
+			bool first = true;
+			for (base::c_borrow_ptr<Message> message: range) {
+				if (first)
+					first = false;
+				else
+					res.push_back({ { ",\n" } });
+				res.push_back(toPrinterContents(message, detailed));
+			}
+			res.push_back({ { "]}" } });
+			auto view = std::ranges::join_view(res);
+			return { view.begin(), view.end() };
+		}
 	};
 
 	static_assert(DiagnosticToPrinterConverter<DiagnosticToJSONConverter>);

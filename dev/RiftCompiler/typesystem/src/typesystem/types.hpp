@@ -9,6 +9,8 @@
 #pragma once
 #include "type_info.hpp"
 #include "type_desc.hpp"
+#include <helios/scope_symbol_id.hpp>
+#include <base/optional.hpp>
 
 namespace ts {
 	namespace internal {
@@ -25,6 +27,7 @@ namespace ts {
 		class TupleInfoImpl;
 		class FunctionInfoImpl;
 		class VariantInfoImpl;
+		class ClassInfoImpl;
 		class NamespaceInfoImpl;
 		class ModuleInfoImpl;
 		class MetaInfoImpl;
@@ -165,12 +168,12 @@ namespace ts {
 		/**
 		 * \brief The actual type of the component.
 		 */
-		const TypeInfo type;
+		TypeInfo type;
 
 		/**
 		 * \brief Whether the component is mutable or not.
 		 */
-		const bool is_mutable = false;
+		bool is_mutable = false;
 
 		/**
 		 * \brief Create a string representation of the component type.
@@ -188,8 +191,8 @@ namespace ts {
 		bool isImplicitlyCoercible(ComponentType target, query::detail::ContextType& ctx) const;
 
 		[[nodiscard]]
-		std::strong_ordering
-			operator<=>(const ComponentType& other) const;
+		auto operator<=>(const ComponentType& other) const
+			= default;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
@@ -369,7 +372,6 @@ namespace ts {
 	 * For example, (A, B) and (A, mut B) are two different tuple types.
 	 * Nota bene, the former is implicitly coercible to the latter.
 	 */
-
 	class TupleInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(TupleInfo, TypeInfo)
@@ -464,21 +466,100 @@ namespace ts {
 		CONSTRUCT_FROM_IMPLEMENTATION(Function)
 	};
 
+	/**
+	 * @brief The Variant types.
+	 *
+	 * The value of a variant type is (conceptually) equal to a value of
+	 * exactly one of its component types. In practice, we mark the type of the
+	 * dynamic value using additional discriminatory bytes, or more cleverly if possible.
+	 */
 	class VariantInfo: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(VariantInfo, TypeInfo)
-		static VariantInfo create(const std::vector<TypeDesc<>>& variant_types);
-
-		const std::vector<TypeDesc<>>& getUnderlyingTypes() const;
 
 		[[nodiscard]]
-		TypeDesc<> getMember(usize index) const;
+		const std::vector<TypeInfo>& getUnderlyingTypes() const;
+
+		[[nodiscard]]
+		TypeInfo getMember(usize index) const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(VariantInfo)
 
 	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Variant)
 	};
+
+	/**
+	 * @brief The Class types.
+	 *
+	 * This kind of types is by far the most complex in implementation.
+	 *
+	 * A Class type may be cyclically dependent on itself, which is why construction
+	 * requires only a Symbol ID (which then leads to the place of definition in the PST,
+	 * whence all required information is gathered).
+	 *
+	 * A Class may have zero or one base classes and may implement arbitrarily many interfaces.
+	 * A Class may define its own member fields and member functions. All of the above can be
+	 * accessed via ClassInfo methods.
+	 */
+	class ClassInfo: public TypeInfo {
+	public:
+		SETUP_TYPE_WITH_BASE(ClassInfo, TypeInfo)
+
+		/**
+		 * Gets the SymID of the class type.
+		 * @return The SymID of the class type.
+		 */
+		[[nodiscard]]
+		compiler::helios::SymID getSymbol() const;
+
+		/**
+		 * Gets the type of the base class.
+		 * @param ctx The Query Context necessary to refer to the definition of the class.
+		 * @return The type of the base class.
+		 */
+		[[nodiscard]]
+		base::Optional<ClassInfo> getBaseClassType(query::Context& ctx) const;
+
+		/**
+		 * Gets the symbol of the base class.
+		 * @param ctx The Query Context necessary to refer to the definition of the class.
+		 * @return The symbol of the base class.
+		 */
+		[[nodiscard]]
+		base::Optional<compiler::helios::SymID> getBaseClassSymbol(query::Context& ctx) const;
+
+		/**
+		 * Gets the symbols of implemented interfaces.
+		 * @param ctx The Query Context necessary to refer to the definition of the class.
+		 * @return The symbols of implemented interfaces.
+		 */
+		[[nodiscard]]
+		std::vector<ClassInfo> getImplementedInterfaceTypes(query::Context& ctx) const;
+		// @TODO: change return type to InterfaceInfo when interface type is created.
+
+		[[nodiscard]]
+		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols(query::Context& ctx
+		) const;
+
+		/**
+		 * Gets the type of a member.
+		 * @param sym The member, the type of which is requested.
+		 * @param ctx The Query Context necessary to refer to the definition of the class.
+		 * @return The type of the member.
+		 */
+		[[nodiscard]]
+		TypeInfo getMemberType(compiler::helios::SymID sym, query::Context& ctx) const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(ClassInfo)
+
+	protected:
+		CONSTRUCT_FROM_IMPLEMENTATION(Class)
+	};
+
+	/***********************\
+	|  MISCELLANEOUS TYPES  |
+	\***********************/
 
 	class NamespaceInfo: public TypeInfo {
 	public:

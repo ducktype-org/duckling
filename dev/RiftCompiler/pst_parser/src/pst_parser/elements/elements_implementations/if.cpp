@@ -4,12 +4,16 @@
 namespace pst {
 	ParserRef<If> If::parse(RiftParserState& state) {
 		// @TODO: attr list
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 		auto out      = makeRef<If>(position);
 
-		if (!assertStmtChoice<If>(state, state.ctokens().is(Keyword::If))) return nullptr;
+		if (!assertStmtChoice<If>(state, state[0].is(Keyword::If))) return nullptr;
+
+		out->addKeyword(state.getPosition());
 
 		parseAll(state, Keyword::If, &out->optional_name, &out->condition, &out->body);
+
+		out->setLastToken(state.getPosition(-1));
 
 		return out;
 	}
