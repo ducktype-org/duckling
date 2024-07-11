@@ -96,6 +96,7 @@ namespace compiler::helios::code {
 			  body(std::move(body)) {}
 
 		void debugPrint(usize indent, std::string& out) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
 	/* * * * * * * * *

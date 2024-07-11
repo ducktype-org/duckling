@@ -56,6 +56,7 @@ namespace compiler::helios::code {
 	STMT_VISITOR(ReturnStmt);
 	STMT_VISITOR(VoidReturnStmt);
 	STMT_VISITOR(ExprStmt);
+	STMT_VISITOR(IfStmt);
 
 	EXPR_VISITOR(ConstIntExprMock);
 	EXPR_VISITOR(IdentifierExpresion);

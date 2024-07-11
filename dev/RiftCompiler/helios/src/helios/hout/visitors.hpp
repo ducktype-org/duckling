@@ -15,6 +15,7 @@ namespace compiler::helios::code {
 		HOUT_VISITOR_METHOD(ReturnStmt);
 		HOUT_VISITOR_METHOD(VoidReturnStmt);
 		HOUT_VISITOR_METHOD(ExprStmt);
+		HOUT_VISITOR_METHOD(IfStmt);
 
 		virtual ~HoutStmtVisitor() = default;
 	};
@@ -40,6 +41,7 @@ namespace compiler::helios::code {
 		HOUT_VISITOR_PANIC_METHOD(ReturnStmt);
 		HOUT_VISITOR_PANIC_METHOD(VoidReturnStmt);
 		HOUT_VISITOR_PANIC_METHOD(ExprStmt);
+		HOUT_VISITOR_PANIC_METHOD(IfStmt);
 	};
 
 	class HoutExprPanickyVisitor: public HoutExprVisitor {
