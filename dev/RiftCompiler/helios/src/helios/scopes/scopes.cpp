@@ -180,7 +180,9 @@ namespace compiler::helios {
 			}
 
 			void visitStruct(const pst::Struct& struct_) override {
-				this->out.emplace(filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(struct_.getBody())));
+				this->out.emplace(
+					filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(struct_.getBody()))
+				);
 			}
 		};
 
