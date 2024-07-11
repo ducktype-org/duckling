@@ -9,4 +9,15 @@ namespace pst {
 
 	const dia::SourcePosition& RiftElement::getSourcePosition() const { return source_position; }
 
+	const std::vector<dia::SourcePosition>& RiftElement::getKeywordPositions() const {
+		return keyword_positions;
+	}
+
+	void RiftElement::addKeyword(dia::SourcePosition pos) { keyword_positions.push_back(pos); }
+
+	void RiftElement::setLastToken(dia::SourcePosition pos) {
+		if (pos.getEnd() > source_position.getEnd())
+			source_position = dia::SourcePosition(source_position, pos.getEnd());
+	}
+
 }

@@ -3,12 +3,16 @@
 
 namespace pst {
 	ParserRef<Using> Using::parse(RiftParserState& state) {
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 		auto out      = makeRef<Using>(position);
 
-		if (!assertStmtChoice<Using>(state, state.ctokens().is(Keyword::Using))) return nullptr;
+		if (!assertStmtChoice<Using>(state, state[0].is(Keyword::Using))) return nullptr;
+
+		out->addKeyword(state.getPosition());
 
 		parseAll(state, Keyword::Using, &out->names);
+
+		out->setLastToken(state.getPosition(-1));
 
 		return out;
 	}

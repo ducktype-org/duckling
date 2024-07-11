@@ -4,12 +4,16 @@
 namespace pst {
 	ParserRef<While> While::parse(RiftParserState& state) {
 		// @TODO: attr list
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 		auto out      = makeRef<While>(position);
 
-		if (!assertStmtChoice<While>(state, state.ctokens().is(Keyword::While))) return nullptr;
+		if (!assertStmtChoice<While>(state, state[0].is(Keyword::While))) return nullptr;
+
+		out->addKeyword(state.getPosition());
 
 		parseAll(state, Keyword::While, &out->optional_name, &out->condition, &out->body);
+
+		out->setLastToken(state.getPosition(-1));
 
 		return out;
 	}
