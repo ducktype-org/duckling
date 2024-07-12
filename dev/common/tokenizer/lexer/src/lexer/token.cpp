@@ -19,17 +19,23 @@ namespace lexer {
 	Token::Token(
 		Token::Type                type,
 		Tokens&&                   recursive,
-		Token&&                    sentinel,
+		Token&&                    sentinel_begin,
+		Token&&                    sentinel_end,
 		const dia::SourcePosition& position,
 		BracketType                bracket_type
 	):
 		  type(type),
 		  recursive(std::move(recursive)),
-		  sentinel(new Token(std::move(sentinel))),
+		  sentinel_begin(new Token(std::move(sentinel_begin))),
+		  sentinel_end(new Token(std::move(sentinel_end))),
 		  source_position(position),
 		  bracket_type(bracket_type) {
 		RIFT_ASSERT(
-			this->sentinel->getType() == Type::Sentinel, "non-sentinel token passed as sentinel"
+			this->sentinel_begin->getType() == Type::Sentinel,
+			"non-sentinel token passed as sentinel"
+		);
+		RIFT_ASSERT(
+			this->sentinel_end->getType() == Type::Sentinel, "non-sentinel token passed as sentinel"
 		);
 		RIFT_ASSERT(
 			type == Type::BracketGroup, "non-bracket token created with bracket constructor"
@@ -43,12 +49,16 @@ namespace lexer {
 		str_id = base::StrId(base::RawView(s.data()));
 	}
 
-	Token Token::makeSentinelEnd(base::RawView view, const dia::SourcePosition& pos) {
+	Token Token::makeSentinel(base::RawView view, const dia::SourcePosition& pos) {
 		return { Type::Sentinel, view, pos };
 	}
 
 	Token Token::makeSentinelEof(const dia::SourcePosition& pos) {
 		return { Type::Sentinel, base::RawView("EOF"), pos };
+	}
+
+	Token Token::makeSentinelBof(const dia::SourcePosition& pos) {
+		return { Type::Sentinel, base::RawView("BOF"), pos };
 	}
 
 	Token Token::makeComment(const base::RawView comment, const dia::SourcePosition& position) {
@@ -87,10 +97,12 @@ namespace lexer {
 	Token Token::makeBracketGroup(
 		BracketType                groupType,
 		Tokens&&                   tokens,
-		Token&&                    sentinel,
+		Token&&                    sentinel_begin,
+		Token&&                    sentinel_end,
 		const dia::SourcePosition& position
 	) {
-		return { Type::BracketGroup, std::move(tokens), std::move(sentinel), position, groupType };
+		return { Type::BracketGroup,      std::move(tokens), std::move(sentinel_begin),
+			     std::move(sentinel_end), position,          groupType };
 	}
 
 	Token Token::makeError(const dia::SourcePosition& position) {
@@ -104,7 +116,8 @@ namespace lexer {
 		swap(first.str_id, second.str_id);
 		swap(first.type, second.type);
 		swap(first.source_position, second.source_position);
-		swap(first.sentinel, second.sentinel);
+		swap(first.sentinel_begin, second.sentinel_begin);
+		swap(first.sentinel_end, second.sentinel_end);
 		swap(first.bracket_type, second.bracket_type);
 	}
 
@@ -127,10 +140,16 @@ namespace lexer {
 
 	const Tokens& Token::getRecursive() const { return recursive; }
 
-	const Token Token::getSentinel() const {
+	const Token Token::getSentinelBegin() const {
 		RIFT_ASSERT(isRecursive(), "getSentinel called on non-recursive token");
-		RIFT_ASSERT(sentinel, "un assigned sentinel in recursive token");
-		return Token(*sentinel);
+		RIFT_ASSERT(sentinel_begin, "unassigned sentinel in recursive token");
+		return Token(*sentinel_begin);
+	}
+
+	const Token Token::getSentinelEnd() const {
+		RIFT_ASSERT(isRecursive(), "getSentinel called on non-recursive token");
+		RIFT_ASSERT(sentinel_end, "unassigned sentinel in recursive token");
+		return Token(*sentinel_end);
 	}
 
 	bool Token::isBracketGroup() const { return type == Type::BracketGroup; }
@@ -173,12 +192,14 @@ namespace lexer {
 
 	dia::SourcePosition Token::getPosition() const { return source_position; }
 
-	TokenData::TokenData(Tokens&& tokens, Token&& eof_sentinel):
+	TokenData::TokenData(Tokens&& tokens, Token&& bof_sentinel, Token&& eof_sentinel):
 		  tokens(std::move(tokens)),
+		  bof_sentinel(std::move(bof_sentinel)),
 		  eof_sentinel(std::move(eof_sentinel)) {}
 
 	TokenData::TokenData(TokenData&& oth) noexcept:
 		  tokens(std::move(oth.tokens)),
+		  bof_sentinel(std::move(oth.bof_sentinel)),
 		  eof_sentinel(std::move(oth.eof_sentinel)){};
 
 	TokenData::~TokenData() = default;

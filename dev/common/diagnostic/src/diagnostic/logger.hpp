@@ -46,8 +46,8 @@ namespace dia {
 		 * @brief Log a message.
 		 *
 		 * @param message_ptr A base::unique_ptr to the Message to be logged.
-		 * @param immediately_dump Whether to immediately dump the log to std::cerr.
 		 * @param detailed Whether to dump detailed logs if immediately dumping.
+		 * @param immediately_dump Whether to immediately dump the log to std::cerr.
 		 */
 		void
 			log(base::unique_ptr<Message> message_ptr,

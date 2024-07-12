@@ -1,0 +1,15 @@
+const SimpleInt: i32 = 1;
+const SimpleFloat: f32 = 2.0;
+
+alias TII = (i32, i32);
+
+const TupleII: (i32, i32) = (1, 2);
+const TupleIIFF: ((i16, i32), (f16, f32)) = (1, 2);
+
+struct A {}
+struct B {}
+struct C {}
+
+var first_variant: i32 | f32 = 1;
+
+var weird_variant: A | (A, B | C) = A();

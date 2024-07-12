@@ -139,16 +139,50 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
 		/**
-		 * @brief Gets symbols for scopes of varius statements
+		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
 		 */
-		struct SymbolGrabVisitor: public pst::PstStmtVisitorPanicky {
+		static std::vector<SymID> filterSymbolsFromStmtList(
+			query::Context& ctx, const ScopeID& scope, const StmtList& list
+		) {
+			std::vector<SymID> symbols;
+			for (const auto& stmt: list) {
+				if (stmt->isDeclaration()) {
+					auto sym_id = ctx.query<QuerySymbolOfSTMT>({ scope, stmt });
+					symbols.emplace_back(sym_id);
+				}
+			}
+			return symbols;
+		}
+
+		/**
+		 * @brief Gets symbols for scopes of various statements.
+		 */
+		struct SymbolGrabVisitor final: pst::PstStmtVisitorPanicky {
+			SymbolGrabVisitor(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
+
 			base::Optional<std::vector<SymID>> out;
+			Context&                           ctx;
+			const QKey&                        key;
 
 			void visitFun(const pst::Fun&) override {
+				// Scope of "fun →()← {}"
 				// @TODO: iterate function parameters and create symbols out of them
 				// The problem is that currently function parameters are Expr in Pst -- this has to
 				// change Variable declaration or custom element is probably a better choice
 				this->out.emplace(std::vector<SymID>{});
+			}
+
+			void visitIf(const pst::If&) override {
+				// Scope of "if →(...)← {}"
+				// @TODO: check if "If" defines any variables in its condition
+				// and add them here.
+				this->out.emplace(std::vector<SymID>{});
+			}
+
+			void visitStruct(const pst::Struct& struct_) override {
+				this->out.emplace(
+					filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(struct_.getBody()))
+				);
 			}
 		};
 
@@ -160,15 +194,9 @@ namespace compiler::helios {
 			auto base_element = key.ref->related_pst_element;
 
 			if (base_element->isStatementAggregate()) {
-				for (const auto& stmt: getChildStmtsOf(base_element)) {
-					if (stmt->isDeclaration()) {
-						auto sym_id = ctx.query<QuerySymbolOfSTMT>({ key, stmt });
-						out.emplace_back(sym_id);
-					}
-				}
-				return out;
+				return filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(base_element));
 			} else if (base_element->isStatement()) {
-				SymbolGrabVisitor symbol_grab;
+				SymbolGrabVisitor symbol_grab(ctx, key);
 				auto              as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());
 				as_stmt->acceptVisitor(symbol_grab);
 				return std::move(symbol_grab.out.value());
