@@ -9,7 +9,7 @@ namespace JS {
 	template<class... Args>
 	class TypeHandler<std::variant<Args...>> {
 	public:
-		static inline Error to(std::variant<Args...>& to, ParseContext& contex) {
+		static inline Error to(std::variant<Args...>& /* to */, ParseContext& /* context */) {
 			return Error::NoError;
 		}
 
