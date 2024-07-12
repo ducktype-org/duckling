@@ -48,7 +48,7 @@ Usage example
 
     if (logger.bad()) {
         bool detailed = false;
-        errorState.dumpLog(detailed); // prints errors with file, position, part of code, etc.
+        logger.dumpLog(detailed); // prints errors with file, position, part of code, etc.
         exit(1);
     }
 
