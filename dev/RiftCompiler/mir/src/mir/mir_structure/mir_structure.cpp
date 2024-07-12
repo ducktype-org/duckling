@@ -1,7 +1,6 @@
-#pragma once
-
+#include "mir_structure.hpp"
 
 namespace compiler::mir {
 
-
 }
+
