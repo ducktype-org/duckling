@@ -28,6 +28,7 @@ namespace compiler::mir {
 	struct Argument {
 		// Imm or local/tmp or global or imm func, 
 		// perhaps a wrapper to variant?
+		// types..
 	};
 
 	struct Instruction {
