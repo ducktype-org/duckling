@@ -10,6 +10,7 @@
 #pragma once
 
 #include <printer/printer_content.hpp>
+#include <concepts>
 
 #include "source_position.hpp"
 
@@ -191,6 +192,9 @@ namespace dia {
 		} -> std::same_as<printer::PrinterContentsSeq>;
 		{
 			Converter::toPrinterContents(note, detailed)
+		} -> std::same_as<printer::PrinterContentsSeq>;
+		{
+			Converter::listToPrinterContents(std::vector<base::c_borrow_ptr<Message>>(), detailed)
 		} -> std::same_as<printer::PrinterContentsSeq>;
 	};
 
@@ -414,7 +418,7 @@ namespace dia {
 			  message(std::move(message)) {}
 
 		[[nodiscard]]
-		printer::PrinterContent toMessageContentBrief() const override {
+		std::string toStringBrief() const override {
 			return message;
 		}
 	};

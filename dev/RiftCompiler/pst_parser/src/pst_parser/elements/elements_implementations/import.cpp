@@ -4,14 +4,17 @@
 
 namespace pst {
 	ParserRef<Import> Import::parse(RiftParserState& state) {
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 		auto out      = makeRef<Import>(position);
 
-		if (!assertStmtChoice<Import>(state, state.ctokens().is(Keyword::Import))) return nullptr;
+		if (!assertStmtChoice<Import>(state, state[0].is(Keyword::Import))) return nullptr;
+
+		out->addKeyword(state.getPosition());
 
 		parseAll(state, Keyword::Import, &out->names, Keyword::As, &out->alias);
 
 		state.addImport(out.borrow());
+		out->setLastToken(state.getPosition(-1));
 
 		return out;
 	}

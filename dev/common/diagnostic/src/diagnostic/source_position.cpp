@@ -4,7 +4,6 @@
  */
 
 
-#include <cmath>
 #include <string>
 #include <printer/printer_content.hpp>
 #include <token_file/file.hpp>
@@ -29,14 +28,19 @@ namespace dia {
 		std::vector<printer::PrinterContent> res;
 		res.emplace_back(std::string(length + 1, ' ') + "|");
 
+		usize fixed_end = source_end;
+		if (end_char == source_end) fixed_end--;
+
 		auto before = source_file->viewSplitRange(begin_char, source_start);
-		auto error  = source_file->viewSplitRange(source_start, source_end + 1);
-		auto after  = source_file->viewSplitRange(source_end + 1, end_char);
+		auto error  = source_file->viewSplitRange(source_start, fixed_end + 1);
+		auto after  = source_file->viewSplitRange(fixed_end + 1, end_char);
 
 		auto linePref = [&](usize line) {
+			res.emplace_back("\n");
 			std::stringstream number;
-			number << "\n" << std::setw((int) length) << line << " | ";
-			res.emplace_back(number.str());
+			number << std::setw((int) length) << line;
+			res.emplace_back(number.str(), printer::Color::BRIGHT_BLUE);
+			res.emplace_back(" | ");
 		};
 		usize prev_line = -1;
 
@@ -109,16 +113,15 @@ namespace dia {
 		SourcePosition::genPrinterContents(const printer::PrinterContent& reason) const {
 		if (source_file == nullptr) {
 			return {
-				{ "In unknown file: " },
 				reason,
 			};
 		}
 		auto [line, column]                      = getStartLineColumn();
 		std::vector<printer::PrinterContent> res = {
-			{ "In file: " },
-			{ source_file->getPath().strView().data() },
-			{ ":" + std::to_string(line) + ":" + std::to_string(column) + "\n" },
-			reason,
+			{ "In file: " }, { source_file->getPath().strView().data() },
+			{ ":\n" },       { std::to_string(line), printer::Color::BRIGHT_BLUE },
+			{ ":" },         { std::to_string(column), printer::Color::BRIGHT_BLUE },
+			{ ": " },        reason,
 			{ "\n" },
 		};
 		for (auto el: getPrettySourceLines()) res.push_back(std::move(el));

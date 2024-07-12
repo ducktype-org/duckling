@@ -3,6 +3,7 @@
 #include "char.hpp"
 #include <diagnostic/logger.hpp>
 #include <filesystem/encoding.hpp>
+#include <token_file/forward.hpp>
 
 namespace lexer {
 	/**
@@ -17,11 +18,11 @@ namespace lexer {
 	 * @note We should probably stick to only decoding UTF-8 for now
 	 */
 	template<fs::Encoding encoding>
-	CharArray decode(base::RawView bytes, dia::Logger& err);
+	CharArray decode(tokenizer::BorrowFile file, dia::Logger& err);
 
 	template<>
-	CharArray decode<fs::US_ASCII>(base::RawView bytes, dia::Logger&);
+	CharArray decode<fs::US_ASCII>(tokenizer::BorrowFile, dia::Logger&);
 
 	template<>
-	CharArray decode<fs::UTF8>(base::RawView bytes, dia::Logger&);
+	CharArray decode<fs::UTF8>(tokenizer::BorrowFile, dia::Logger&);
 }

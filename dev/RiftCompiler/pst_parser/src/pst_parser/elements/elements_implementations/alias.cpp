@@ -2,19 +2,36 @@
 #include "pst_parser/pst_visitor.hpp"
 
 namespace pst {
+	class AliasStarError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Alias declaration cannot use `.*`.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		AliasStarError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	ParserRef<Alias> Alias::parse(RiftParserState& state) {
-		auto position = state.ctokens().peek().getPosition();
+		auto position = state.getPosition();
 		auto out      = makeRef<Alias>(position);
 
-		if (!assertStmtChoice<Alias>(state, state.ctokens().is(Keyword::Alias))) return nullptr;
+		if (!assertStmtChoice<Alias>(state, state[0].is(Keyword::Alias))) return nullptr;
+
+		out->addKeyword(state.getPosition());
 
 		parseAll(state, Keyword::Alias, &out->name, Operator::Assign, &out->points_to);
 
-		if (out->points_to->getStar()) {
-			state.err.failAndLog(
-				state.ctokens().peek(-1).getPosition(), "Alias declaration can not have `.*`"
-			);
-		}
+		out->setLastToken(state.getPosition(-1));
+
+		if (out->points_to->getStar())
+			state.log(base::make_unique<AliasStarError>(out->source_position));
 
 		return out;
 	}

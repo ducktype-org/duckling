@@ -53,6 +53,11 @@ namespace fs {
 		byte operator[](usize i) { return view()[i]; }
 
 		base::RawView view() { return content->view(); }
+
+		[[nodiscard]]
+		const base::RawView view() const {
+			return content->view();
+		}
 	};
 
 	class FilePath {
