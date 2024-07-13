@@ -9,13 +9,66 @@ namespace compiler::mir {
 
 	// @TODO: HoleID, BlockID, 
 
-	struct StmtBlockVisitor: public helios::code::HoutStmtVisitor {
-		// ...
+	namespace hc = helios::code;
+
+	struct ExprLowerRes {
+		// block
+		// mir location
 	};
 
-	struct StmtExprVisitor: public helios::code::HoutExprVisitor {
-		// ...
+	struct StmtLowerRes {
+		// block
 	};
+
+
+	struct StmtBlockVisitor: public hc::HoutStmtVisitor {
+		base::Optional<StmtLowerRes> out;
+
+		void output(StmtLowerRes value) {
+			this->out.emplace(value);
+		}
+
+		
+		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
+			throw base::NotYetImplemented("return");
+		}
+		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
+			throw base::NotYetImplemented("v return");
+		}
+		void visitExprStmt(const hc::ExprStmt& stmt) override {
+			throw base::NotYetImplemented("expr");
+		}
+		void visitIfStmt(const hc::IfStmt& stmt) override {
+			throw base::NotYetImplemented("if");
+		}
+	};
+
+	struct ExprBlockVisitor: public helios::code::HoutExprVisitor {
+		base::Optional<ExprLowerRes> out;
+
+		void output(ExprLowerRes value) {
+			this->out.emplace(value);
+		}
+
+		void visitConstIntExprMock(const hc::ConstIntExprMock& expr) override {
+			throw base::NotYetImplemented("expr");
+		}
+		void visitIdentifierExpresion(const hc::IdentifierExpresion& expr) override {
+			throw base::NotYetImplemented("identifier");
+		}
+	};
+
+	StmtLowerRes lowerStmt(base::borrow_ptr<hc::Stmt> stmt) {
+		StmtBlockVisitor visitor;
+		stmt->acceptVisitor(visitor);
+		return visitor.out.value();
+	}
+
+	ExprLowerRes lowerExpr(base::borrow_ptr<hc::Expr> expr) {
+		ExprBlockVisitor visitor;
+		expr->acceptVisitor(visitor);
+		return visitor.out.value();
+	}
 
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
