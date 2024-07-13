@@ -2,9 +2,31 @@
 #include <query_framework/query_impl.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
+#include <base/stable_container.hpp>
 
 
 namespace compiler::mir {
+
+	struct BlockBuilder {
+
+	};
+
+	using BlockRef = base::StableVectorRef<BlockBuilder>;
+
+	struct InstructionHole {
+	private:
+		BlockRef block_ref;
+		usize position;
+	public:
+		// @TODO: fill, check if filled, etc
+	};
+
+	struct FunctionBuilder {
+		base::StableVector<BlockBuilder> blocks;
+	};
+
+	
+
 
 
 	// @TODO: HoleID, BlockID, 
@@ -58,17 +80,27 @@ namespace compiler::mir {
 		}
 	};
 
-	StmtLowerRes lowerStmt(base::borrow_ptr<hc::Stmt> stmt) {
+	StmtLowerRes lowerStmt(const hc::Stmt& stmt) {
 		StmtBlockVisitor visitor;
-		stmt->acceptVisitor(visitor);
+		stmt.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
-	ExprLowerRes lowerExpr(base::borrow_ptr<hc::Expr> expr) {
+	ExprLowerRes lowerExpr(const hc::Expr& expr) {
 		ExprBlockVisitor visitor;
-		expr->acceptVisitor(visitor);
+		expr.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
+
+	StmtLowerRes lowerCodeBlock(const hc::CodeBlock& code_block) {
+		// @TODO...
+		StmtLowerRes last_result;
+		for (auto& stmt: code_block.statements | std::views::reverse) {
+			last_result = lowerStmt(*stmt);
+		}
+		return last_result;
+	}
+
 
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
