@@ -7,19 +7,66 @@
 
 namespace compiler::mir {
 
-	struct BlockBuilder {
-
-	};
+	struct InstructionHole;
+	struct BlockBuilder;
 
 	using BlockRef = base::StableVectorRef<BlockBuilder>;
 
-	struct InstructionHole {
+	/**
+	 * @brief Structure representing block in build process
+	 */
+	struct BlockBuilder {
 	private:
-		BlockRef block_ref;
-		usize position;
+		/**
+		 * @brief List of instructions kept in revered order.
+		 * If given position does not have a value that means it is empty.
+		 */
+		std::vector<base::Optional<Instruction>> reversed_instruction;
+		base::Optional<Instruction> terminator;
+
+		struct InstructionHole {
+		private:
+			BlockRef block_ref;
+			usize position;
+		public:
+			InstructionHole(BlockRef block_ref, usize position):
+				block_ref(std::move(block_ref)), position(position) {}
+			
+			void fill(Instruction instruction) {
+				RIFT_ASSERT(block_ref->reversed_instruction.at(position).empty(), "Hole is already filled");
+				block_ref->reversed_instruction.at(position).emplace(std::move(instruction));
+			}
+		};
+
 	public:
-		// @TODO: fill, check if filled, etc
+		[[nodiscard]]
+		Block build() const {
+			std::vector<Instruction> instructions;
+			for (const auto& instruction: reversed_instruction | std::views::reverse) {
+				RIFT_ASSERT(instruction.has_value(), "Empty instruction left in the block");
+				instructions.emplace_back(instruction.value());
+			}
+			return {std::move(instructions), terminator.value()};
+		}
+
+		void addInstruction(Instruction instr) {
+			reversed_instruction.emplace_back(std::move(instr));
+		}
+
+		InstructionHole addHole() {
+			reversed_instruction.push_back({});
+			
+			// creation of borrow pointer here, depends on the fact that blocks
+			// are kept in stable container:
+			return {base::borrow_ptr(this), reversed_instruction.size() - 1};
+		}
+
+		void setTerminator(Instruction instruction) {
+			RIFT_ASSERT(not terminator.has_value(), "terminator already set.");
+			terminator.emplace(std::move(instruction));
+		}
 	};
+
 
 	struct FunctionBuilder {
 		base::StableVector<BlockBuilder> blocks;

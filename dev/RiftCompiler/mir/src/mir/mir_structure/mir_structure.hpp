@@ -36,6 +36,8 @@ namespace compiler::mir {
 		// Idea 2: one giant variant
 		// Idea 3: inheritance
 
+		std::vector<Argument> arguments;
+
 		// @TODO: each Instruction should have source position reference
 
 		// Optional<> return
