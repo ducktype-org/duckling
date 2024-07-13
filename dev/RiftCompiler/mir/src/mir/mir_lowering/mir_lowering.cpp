@@ -67,9 +67,34 @@ namespace compiler::mir {
 		}
 	};
 
-
 	struct FunctionBuilder {
+	private:
 		base::StableVector<BlockBuilder> blocks;
+		base::Optional<BlockRef> entry_block;
+	public:
+
+		Function build() {
+			RIFT_ASSERT(entry_block.has_value(), "Entry block not set");
+			
+			std::vector<Block> blocks;
+			for (usize i = 0; i < this->blocks.size(); i++) {
+				blocks.emplace_back(this->blocks.getRef(i).value()->build());
+			}
+
+			// @TODO: entry block stuff
+			
+			return Function{blocks};
+		}
+		
+		BlockRef newBlock() {
+			return blocks.getRef(blocks.emplaceBack(BlockBuilder{})).value();
+		}
+		BlockRef newEntryBlock() {
+			RIFT_ASSERT(entry_block.empty(), "Entry block already set!");
+			auto res = newBlock();
+			entry_block.emplace(res);
+			return res;
+		}
 	};
 
 	
