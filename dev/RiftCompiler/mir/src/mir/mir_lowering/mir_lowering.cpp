@@ -116,11 +116,16 @@ namespace compiler::mir {
 	};
 
 	struct StmtLowerRes {
-		// block
+		BlockRef begin;
 	};
 
 
 	struct StmtBlockVisitor: public hc::HoutStmtVisitor {
+		BlockRef continuation;
+
+		StmtBlockVisitor(BlockRef continuation):
+			continuation(continuation) {}
+
 		base::Optional<StmtLowerRes> out;
 
 		void output(StmtLowerRes value) {
@@ -143,7 +148,12 @@ namespace compiler::mir {
 	};
 
 	struct ExprBlockVisitor: public helios::code::HoutExprVisitor {
+		BlockRef continuation;
+	
 		base::Optional<ExprLowerRes> out;
+
+		ExprBlockVisitor(BlockRef continuation):
+			continuation(continuation) {}
 
 		void output(ExprLowerRes value) {
 			this->out.emplace(value);
@@ -157,23 +167,23 @@ namespace compiler::mir {
 		}
 	};
 
-	StmtLowerRes lowerStmt(const hc::Stmt& stmt) {
-		StmtBlockVisitor visitor;
+	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockRef continuation) {
+		StmtBlockVisitor visitor{continuation};
 		stmt.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
-	ExprLowerRes lowerExpr(const hc::Expr& expr) {
-		ExprBlockVisitor visitor;
+	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockRef continuation) {
+		ExprBlockVisitor visitor{continuation};
 		expr.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
-	StmtLowerRes lowerCodeBlock(const hc::CodeBlock& code_block) {
-		// @TODO...
+	StmtLowerRes lowerCodeBlock(const hc::CodeBlock& code_block, BlockRef continuation) {
 		StmtLowerRes last_result;
 		for (auto& stmt: code_block.statements | std::views::reverse) {
-			last_result = lowerStmt(*stmt);
+			last_result = lowerStmt(*stmt, continuation);
+			continuation = last_result.begin;
 		}
 		return last_result;
 	}
