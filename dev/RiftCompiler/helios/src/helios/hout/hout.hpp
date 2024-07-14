@@ -40,12 +40,27 @@ namespace compiler::helios {
 
 		// @TODO: decide if HOUT functions should contain its HELIOS SymID
 
+		/**
+		 * @note it is used for hashes, and == only
+		 * @note For now it works,
+		 * but in the future with generics, and templates it might not
+		 * We might want to add actual hash?
+		 */
+		SymID original_symbol;
+
 		base::StrId original_name;
 
 		HOUTCode body;
 
+		HOUTFunction(SymID symbol): original_symbol(std::move(symbol)) {}
+
 		[[nodiscard]]
 		std::string debugPrint() const;
+
+		base::HashT customPerfectHash() const;
+		bool operator==(const HOUTFunction& oth) const {
+			return original_symbol == oth.original_symbol;
+		};
 	};
 
 	/**

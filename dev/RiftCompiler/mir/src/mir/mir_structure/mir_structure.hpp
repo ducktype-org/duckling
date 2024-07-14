@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <helios/scopes/scopes.hpp>
 
 namespace compiler::mir {
 	
@@ -60,7 +61,9 @@ namespace compiler::mir {
 		// this way some algorithms may be easier
 		
 		Instruction terminator;
-		// ScopeID scope ? -- perhaps just map during MIR creation
+
+		//  perhaps just map during MIR creation? (mir scope -- just super simple tree)
+		helios::ScopeID scope;
 	};
 
 	struct Function {

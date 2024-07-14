@@ -132,19 +132,21 @@ namespace compiler::helios {
 		struct HOUTFunctionMaker final: public pst::PstStmtVisitorPanicky {
 			query::Context& ctx;
 			ScopeID         parent_scope;
+			SymID           original_symbol;
 
 			base::Optional<HOUTFunction> out;
 
-			HOUTFunctionMaker(query::Context& ctx, ScopeID scope):
+			HOUTFunctionMaker(query::Context& ctx, ScopeID scope, SymID symbol):
 				  ctx(ctx),
-				  parent_scope(std::move(scope)) {}
+				  parent_scope(std::move(scope)),
+				  original_symbol(symbol) {}
 
 			void visitFun(const pst::Fun& stmt) final {
 				// @TODO: create function here...
 				// - create types, attributes, flags, ...
 				// @TODO: params, rest, flags, attributes, etc
 
-				HOUTFunction output;
+				HOUTFunction output(original_symbol);
 				output.original_name = stmt.getName();
 
 				// Scope of function itself:
@@ -178,9 +180,10 @@ namespace compiler::helios {
 
 			// auto fun_stmt = dynamic_cast<const pst::Fun*>(stmt(key).get());
 			// RIFT_ASSERT(fun_stmt != nullptr, "Function symbol is not actually a function");
+			
 			auto parent_scope = scope(key);
 
-			HOUTFunctionMaker func_maker(ctx, parent_scope);
+			HOUTFunctionMaker func_maker(ctx, parent_scope, key);
 			stmt(key)->acceptVisitor(func_maker);
 
 			return func_maker.out.value();

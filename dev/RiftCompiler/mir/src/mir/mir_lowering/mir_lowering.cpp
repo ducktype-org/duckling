@@ -7,6 +7,10 @@
 
 namespace compiler::mir {
 
+	base::HashT KeyOf_LowerToMirFunction::customPerfectHash() const {
+		return base::perfectHash(function);
+	}
+
 	struct InstructionHole;
 	struct BlockBuilder;
 
@@ -23,6 +27,7 @@ namespace compiler::mir {
 		 */
 		std::vector<base::Optional<Instruction>> reversed_instruction;
 		base::Optional<Instruction> terminator;
+		helios::ScopeID helios_scope;
 
 		struct InstructionHole {
 		private:
@@ -39,6 +44,9 @@ namespace compiler::mir {
 		};
 
 	public:
+		BlockBuilder(helios::ScopeID helios_scope):
+			helios_scope(helios_scope) {}
+		
 		[[nodiscard]]
 		Block build() const {
 			std::vector<Instruction> instructions;
@@ -46,7 +54,7 @@ namespace compiler::mir {
 				RIFT_ASSERT(instruction.has_value(), "Empty instruction left in the block");
 				instructions.emplace_back(instruction.value());
 			}
-			return {std::move(instructions), terminator.value()};
+			return {std::move(instructions), terminator.value(), helios_scope};
 		}
 
 		void addInstruction(Instruction instr) {
@@ -86,18 +94,15 @@ namespace compiler::mir {
 			return Function{blocks};
 		}
 		
-		BlockRef newBlock() {
-			return blocks.getRef(blocks.emplaceBack(BlockBuilder{})).value();
-		}
-		BlockRef newEntryBlock() {
-			RIFT_ASSERT(entry_block.empty(), "Entry block already set!");
-			auto res = newBlock();
-			entry_block.emplace(res);
+		BlockRef newBlock(helios::ScopeID scope, bool entry = false) {
+			auto res = blocks.getRef(blocks.emplaceBack(BlockBuilder{scope})).value();
+			if (entry) {
+				RIFT_ASSERT(entry_block.empty(), "Entry block already set!");
+				entry_block.emplace(res);
+			}
 			return res;
 		}
 	};
-
-	
 
 
 
@@ -177,10 +182,17 @@ namespace compiler::mir {
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
 	struct IMPLEMENT_QUERY(LowerToMirFunction, Function) {
-		auto provide(Context& ctx, QKey key) {
-			// @TODO:
+		static auto provide(Context& ctx, QKey key) -> QResult {
+			// First step:
 			// * build cfg+quad step by step
+
+			FunctionBuilder function_builder;
+
+
+			// @TODO:
 			// * add some lifetime stuff
+
+			return function_builder.build();
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
