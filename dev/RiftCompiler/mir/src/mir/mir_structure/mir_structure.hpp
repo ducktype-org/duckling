@@ -5,8 +5,17 @@
 
 namespace compiler::mir {
 	
-	struct MirValue {
-		// local / global / literal / func-literal
+	struct MirIntegerConst {
+		i32 value;
+	};
+
+
+	struct MirLocation {
+		// local / global / literal / func-literal, etc
+	private:
+		std::variant<MirIntegerConst> value;
+	public:
+
 	};
 
 	// @TODO: OperationKind === Operation?

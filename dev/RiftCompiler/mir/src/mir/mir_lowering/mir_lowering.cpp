@@ -111,8 +111,8 @@ namespace compiler::mir {
 	namespace hc = helios::code;
 
 	struct ExprLowerRes {
-		// block
-		// mir location
+		BlockRef begin;
+		MirLocation value;
 	};
 
 	struct StmtLowerRes {
