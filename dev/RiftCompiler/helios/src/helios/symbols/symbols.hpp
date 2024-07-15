@@ -336,5 +336,9 @@ namespace compiler::helios {
 		struct Expr;
 	}
 
+	/**
+	 * @brief Return Expr tree of HOUT of a expression assigned to a constant.
+	 * @note This query is temporary and is used for testing only.
+	 */
 	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, base::borrow_ptr<const code::Expr>);
 }
