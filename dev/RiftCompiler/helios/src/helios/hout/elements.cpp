@@ -4,6 +4,9 @@
 #include <base/variant.hpp>
 #include "../scopes/scopes.hpp"
 #include "../symbols/symbols.hpp"
+#include "base/exceptions.hpp"
+#include "base/unique_pointer.hpp"
+#include "helios/hout/element_ref.hpp"
 #include "visitors.hpp"
 
 namespace compiler::helios::code {
@@ -41,10 +44,61 @@ namespace compiler::helios::code {
 		out += "}\n";
 	}
 
-	void ConstIntExprMock::debugPrint(std::string& out) const { out += std::to_string(value); }
+	void LiteralValueExpr::debugPrint(std::string& out) const { out += std::to_string(value); }
 
-	void IdentifierExpresion::debugPrint(std::string& out) const {
+	void IdentifierExpr::debugPrint(std::string& out) const {
 		out += base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
+	}
+
+	void BinaryOperatorExpr::debugPrint(std::string& out) const {
+		out += base::strConcat("(");
+		lhs->debugPrint(out);
+		out += base::strConcat(op);
+		rhs->debugPrint(out);
+		out += base::strConcat(")");
+	}
+
+	void BinaryOperatorExpr::acceptVisitor(HoutExprVisitor& visitor) const {
+		visitor.visitBinaryOperatorExpr(*this);
+	}
+
+	ElementRef<Expr> Expr::fromRPN(const std::vector<rpn::ExprElem>& elements) {
+		std::stack<ElementRef<Expr>> st;
+		for (auto&& elem: elements) {
+			variant_match(elem) {
+				variant_case(rpn::Identifier, idt) {
+					st.push(base::make_unique<IdentifierExpr>(idt.symbol_list.back()));
+				}
+				variant_case(rpn::Operator, oper) {
+					auto b = std::move(st.top());
+					st.pop();
+					auto a = std::move(st.top());
+					st.pop();
+					st.push(base::make_unique<BinaryOperatorExpr>(
+						oper.oper_id, std::move(a), std::move(b)
+					));
+				}
+				// variant_case(rpn::NamedIdentifier, named_identifier) {
+				// todo: Write lookup? not really
+				// 	st.push(base::make_unique<Expr>(IdentifierExpr(idt.symbol_list.back())));
+				// }
+				variant_case(rpn::KeywordValue, keyword_val) {
+					std::cout << keywordToStr(keyword_val.keyword).str() << '\n';
+				}
+				variant_case(rpn::NumValue, num_value) {
+					st.push(base::make_unique<LiteralValueExpr>(std::stoi(num_value.num_id.str())));
+				}
+				// variant_case(rpn::TupleType, tuple_type) {}
+				// variant_case(rpn::Variant, variant_type) {}
+				variant_default {
+					RIFT_PANIC(base::strConcat(
+						"Unhandlable type during parsing type from expr: ", typeid(elem).name()
+					));
+				}
+			}
+		}
+		RIFT_ASSERT(st.size() == 1, "Empty HOUT Tree stack");
+		return std::move(st.top());
 	}
 
 // visitors:
@@ -58,8 +112,8 @@ namespace compiler::helios::code {
 	STMT_VISITOR(ExprStmt);
 	STMT_VISITOR(IfStmt);
 
-	EXPR_VISITOR(ConstIntExprMock);
-	EXPR_VISITOR(IdentifierExpresion);
+	EXPR_VISITOR(LiteralValueExpr);
+	EXPR_VISITOR(IdentifierExpr);
 }
 
 namespace compiler::helios {
@@ -80,7 +134,7 @@ namespace compiler::helios {
 			}
 			variant_case(pst::Expr::NumLiteral, num) {
 				auto val = base::strIdToNum(num.num_id);
-				return base::make_unique<code::ConstIntExprMock>(val);
+				return base::make_unique<code::LiteralValueExpr>(val);
 			}
 			variant_case(pst::Expr::Identifier, identifier) {
 				// @note: this does not handle overload
@@ -103,7 +157,7 @@ namespace compiler::helios {
 				RIFT_ASSERT(lookup_dealiased.size() > 0, "Empty lookup result");
 
 				// @TODO: dont just ignore everything before last symbol
-				return base::make_unique<code::IdentifierExpresion>(lookup_dealiased.back());
+				return base::make_unique<code::IdentifierExpr>(lookup_dealiased.back());
 			}
 			variant_case(pst::Expr::Group, group) {
 				throw base::NotYetImplemented("Expr from group");

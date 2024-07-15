@@ -16,6 +16,8 @@
 #include "../scope_symbol_id.hpp"
 #include "../scopes/scopes.hpp"
 #include "../pst_ref.hpp"
+#include "base/unique_pointer.hpp"
+#include "helios/hout/elements.hpp"
 
 namespace compiler::helios {
 	/**
@@ -379,8 +381,7 @@ namespace compiler::helios {
 		}
 	}
 
-	std::vector<rpn::ExprElem>
-		rpn::ExtensionMakeRPN(query::Context& ctx, KeyOf_ExtensionMakeRPN key) {
+	std::vector<rpn::ExprElem> rpn::makeRPN(query::Context& ctx, KeyOf_RPNmakeRPN key) {
 		std::vector<ExprElem> rpn;
 		std::stack<ExprElem>  st;
 		for (auto&& e: key.expr) {
@@ -401,9 +402,8 @@ namespace compiler::helios {
 					rpn.emplace_back(NumValue{ num.num_id });
 				}
 				variant_case(pst::Expr::Group, group) {
-					auto&& res = ExtensionMakeRPN(
-						ctx, KeyOf_ExtensionMakeRPN{ group.expr->elements, key.expr_scope }
-					);
+					auto&& res
+						= makeRPN(ctx, KeyOf_RPNmakeRPN{ group.expr->elements, key.expr_scope });
 					rpn.insert(rpn.end(), res.begin(), res.end());
 				}
 				variant_case(pst::Expr::KeywordValue, keyword_val) {
@@ -411,9 +411,8 @@ namespace compiler::helios {
 				}
 				variant_case(pst::Expr::CommaSeparated, tuple) {
 					for (auto&& type_expr: tuple.expr) {
-						auto&& res = ExtensionMakeRPN(
-							ctx, KeyOf_ExtensionMakeRPN{ type_expr->elements, key.expr_scope }
-						);
+						auto&& res
+							= makeRPN(ctx, KeyOf_RPNmakeRPN{ type_expr->elements, key.expr_scope });
 						rpn.insert(rpn.end(), res.begin(), res.end());
 					}
 					rpn.emplace_back(TupleConstructor{ tuple.expr.size() });
@@ -429,7 +428,7 @@ namespace compiler::helios {
 		return rpn;
 	}
 
-	i32 rpn::ExtensionRPNValue(query::Context& ctx, const KeyOf_ExtensionRPNValue& key) {
+	i32 rpn::parseValue(query::Context& ctx, const KeyOf_parseValue& key) {
 		variant_match(key.expr) {
 			variant_case(rpn::Identifier, idt) {
 				// .back() works for constants only.
@@ -440,9 +439,9 @@ namespace compiler::helios {
 				auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
 					{ key.expr_scope, idt.symbol_name, true }
 				);
-				return ExtensionRPNValue(
+				return parseValue(
 					ctx,
-					KeyOf_ExtensionRPNValue{
+					KeyOf_parseValue{
 						Identifier{ sym_list.getAsSingle() },
 						key.expr_scope,
 					}
@@ -458,9 +457,7 @@ namespace compiler::helios {
 		RIFT_PANIC("Error in RPNValue expr...");
 	}
 
-	rpn::ExprElem rpn::ExtensionRPNEvalRPNExpr(
-		query::Context& ctx, const KeyOf_ExtensionRPNEvalRPNExpr& key
-	) {
+	rpn::ExprElem rpn::evalExpr(query::Context& ctx, const KeyOf_evalExpr& key) {
 		// This is a nice RPN debug print.
 		std::cout << "RPN: \n";
 		for (auto&& e: key.rpn_expression) {
@@ -505,9 +502,9 @@ namespace compiler::helios {
 					const auto second = st.top();
 					st.pop();
 
-					st.push(ExtensionRPNEvalOperator(
+					st.push(evalOperator(
 						ctx,
-						KeyOf_ExtensionRPNEvalOperator{
+						KeyOf_evalOperator{
 							second,
 							oper,
 							first,
@@ -535,9 +532,7 @@ namespace compiler::helios {
 		return st.top();
 	}
 
-	rpn::ExprElem rpn::ExtensionRPNEvalOperator(
-		query::Context& ctx, const KeyOf_ExtensionRPNEvalOperator& key
-	) {
+	rpn::ExprElem rpn::evalOperator(query::Context& ctx, const KeyOf_evalOperator& key) {
 		auto [a, op, b, expr_scope] = key;
 
 		if (op.oper_id == ".") {
@@ -614,8 +609,8 @@ namespace compiler::helios {
 			return a;
 		}
 
-		i32 a_value = ExtensionRPNValue(ctx, KeyOf_ExtensionRPNValue{ a, expr_scope });
-		i32 b_value = ExtensionRPNValue(ctx, KeyOf_ExtensionRPNValue{ b, expr_scope });
+		i32 a_value = parseValue(ctx, KeyOf_parseValue{ a, expr_scope });
+		i32 b_value = parseValue(ctx, KeyOf_parseValue{ b, expr_scope });
 
 		i32 value{};
 
@@ -653,17 +648,17 @@ namespace compiler::helios {
 				= dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
 			const ScopeID key_scope = scope(key);
 
-			const auto& expr = ExtensionMakeRPN(
+			const auto& expr = makeRPN(
 				ctx,
-				rpn::KeyOf_ExtensionMakeRPN{
+				rpn::KeyOf_RPNmakeRPN{
 					const_symbol->getValue()->elements,
 					key_scope,
 				}
 			);
-			return ExtensionRPNValue(
+			return parseValue(
 				ctx,
-				rpn::KeyOf_ExtensionRPNValue{
-					rpn::ExtensionRPNEvalRPNExpr(ctx, { expr, key_scope }),
+				rpn::KeyOf_parseValue{
+					rpn::evalExpr(ctx, { expr, key_scope }),
 					key_scope,
 				}
 			);
@@ -774,8 +769,8 @@ namespace compiler::helios {
 	ts::TypeInfo parseTypeFromExpr(
 		query::Context& ctx, const tpc::ParserCBorrowRef<pst::Expr>& expr, ScopeID expr_scope
 	) {
-		const auto rpn_expr   = rpn::ExtensionMakeRPN(ctx, { expr->elements, expr_scope });
-		const auto final_type = rpn::ExtensionRPNEvalRPNExpr(ctx, { rpn_expr, expr_scope });
+		const auto rpn_expr   = rpn::makeRPN(ctx, { expr->elements, expr_scope });
+		const auto final_type = rpn::evalExpr(ctx, { rpn_expr, expr_scope });
 		return parseTypeFromExpr(ctx, final_type, expr_scope);
 	}
 
@@ -894,5 +889,54 @@ namespace compiler::helios {
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
 	};
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStructSymbolData)
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStructSymbolData);
+
+	struct IMPLEMENT_QUERY(QueryHOUTExprTreeOfSym, base::unique_ptr<code::Expr>) {
+		class PstStmtVisitor_GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {
+			Context&    ctx;
+			const QKey& key;
+
+			void setTypeOfSymbol(const pst::ParserCBorrowRef<pst::Expr>& expr) {
+				rpn_of_sym_expr
+					= rpn::makeRPN(ctx, rpn::KeyOf_RPNmakeRPN{ expr->elements, scope(key) });
+			}
+
+		public:
+			PstStmtVisitor_GetHOUTExprTree(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
+
+			std::vector<rpn::ExprElem> rpn_of_sym_expr;
+
+			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getValue()); }
+
+			void visitVariable(const pst::Variable& stmt) override {
+				setTypeOfSymbol(stmt.getType());
+			}
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto&& symbol_ref = getSymRef(key);
+
+			PstStmtVisitor_GetHOUTExprTree visitor(ctx, key);
+			symbol_ref->pst_stmt->acceptVisitor(visitor);
+			return code::Expr::fromRPN(visitor.rpn_of_sym_expr);
+		}
+
+		static inline base::
+			HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>
+				cache;
+
+		static auto load(const QKey& key) -> LoadResult {
+			if (auto&& copy = cache.atMaybe(key))
+				return QResWithACD{ copy->data.borrow(), copy->acd };
+			return {};
+		}
+
+		static auto store(const QKey& key, PResult res, query::ACD) -> QResult {
+			cache.put(key, std::move(res));
+			return cache.at(key).data.borrow();
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHOUTExprTreeOfSym);
 }

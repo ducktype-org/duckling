@@ -9,7 +9,9 @@
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
+#include "base/string_id.hpp"
 #include "element_ref.hpp"
+#include "helios/symbols/symbols.hpp"
 
 namespace compiler::helios::code {
 
@@ -29,7 +31,8 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Base class for all HOUT expressions
+	 * @brief Base class for all HOUT expressions.
+	 * All subclasses shall have a "Expr" suffix.
 	 */
 	struct Expr {
 		// @TODO: set/get Type and ValueCategory of Expr
@@ -37,6 +40,8 @@ namespace compiler::helios::code {
 		virtual void debugPrint(std::string& out) const = 0;
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
+
+		static ElementRef<Expr> fromRPN(const std::vector<rpn::ExprElem>& elements);
 	};
 
 	/**
@@ -104,33 +109,47 @@ namespace compiler::helios::code {
 	 * * * * * * * * */
 
 	/**
-	 * @brief Represents integer constant in HOUT
+	 * @brief Represents a literal value written in the expression.
 	 */
-	struct ConstIntExprMock final: public Expr {
+	struct LiteralValueExpr final: public Expr {
 		// @TODO: ctv + type for consts?
 		// @note: this is a mock
 		i64 value;
 
-		ConstIntExprMock(i64 value): value{ value } {}
+		LiteralValueExpr(i64 value): value(value) {}
 
 		void debugPrint(std::string& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
 	/**
-	 * @brief Represents expression made of single identifier in HOUT
+	 * @brief Represents expression made of a single identifier in HOUT.
 	 * @note: This will have to be improved,
 	 * when more complex expressions involving "." operator, local variables, etc
 	 * will be introduced.
 	 */
-	struct IdentifierExpresion final: public Expr {
+	struct IdentifierExpr final: public Expr {
 		// @note: this is a mock
 		SymID symbol;
 
-		IdentifierExpresion(SymID symbol): symbol{ std::move(symbol) } {}
+		IdentifierExpr(SymID symbol): symbol(std::move(symbol)) {}
 
 		void debugPrint(std::string& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
+	};
+
+	struct BinaryOperatorExpr: public Expr {
+		base::StrId op;
+
+		ElementRef<Expr> lhs;
+		ElementRef<Expr> rhs;
+
+		BinaryOperatorExpr(base::StrId op, ElementRef<Expr> lhs, ElementRef<Expr> rhs):
+			  op(op),
+			  lhs(std::move(lhs)),
+			  rhs(std::move(rhs)) {}
+		void debugPrint(std::string &out) const override;
+		void acceptVisitor(HoutExprVisitor &) const override;
 	};
 }
 

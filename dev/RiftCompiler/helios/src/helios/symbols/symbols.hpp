@@ -4,7 +4,6 @@
 #include <pst_parser/elements/elements.hpp>
 
 #include "../pst_ref.hpp"
-#include "../hout/hout.hpp"
 #include "../lookup_result.hpp"
 
 #include <base/string_id.hpp>
@@ -210,7 +209,7 @@ namespace compiler::helios {
 			std::vector<ExprElem> elements;
 		};
 
-		struct KeyOf_ExtensionMakeRPN {
+		struct KeyOf_RPNmakeRPN {
 			/**
 			 * @brief The expression to parse from pst.
 			 */
@@ -224,9 +223,9 @@ namespace compiler::helios {
 		/**
 		 * @brief Parses an expression from PST into RPN.
 		 */
-		std::vector<ExprElem> ExtensionMakeRPN(query::Context&, KeyOf_ExtensionMakeRPN);
+		std::vector<ExprElem> makeRPN(query::Context&, KeyOf_RPNmakeRPN);
 
-		struct KeyOf_ExtensionRPNEvalOperator {
+		struct KeyOf_evalOperator {
 			/**
 			 * @brief Symbol on the left.
 			 */
@@ -248,9 +247,9 @@ namespace compiler::helios {
 		/**
 		 * @brief Evaluates an operation `a (op) b`.
 		 */
-		ExprElem ExtensionRPNEvalOperator(query::Context&, const KeyOf_ExtensionRPNEvalOperator&);
+		ExprElem evalOperator(query::Context&, const KeyOf_evalOperator&);
 
-		struct KeyOf_ExtensionRPNValue {
+		struct KeyOf_parseValue {
 			/**
 			 * @brief The expression to parse.
 			 */
@@ -268,9 +267,9 @@ namespace compiler::helios {
 		 * For example, if we pass here a rpn::NumLiteral(5), then it will return 5 or if we pass
 		 * rpn::Identifier([C]), then a value of a C will be returned (if it's a constant).
 		 */
-		i32 ExtensionRPNValue(query::Context&, const KeyOf_ExtensionRPNValue&);
+		i32 parseValue(query::Context&, const KeyOf_parseValue&);
 
-		struct KeyOf_ExtensionRPNEvalRPNExpr {
+		struct KeyOf_evalExpr {
 			/**
 			 * @brief RPN expression returned by `ExtensionMakeRPN`.
 			 */
@@ -285,7 +284,7 @@ namespace compiler::helios {
 		 * @brief Evaluates RPN expression. Expects a single element to be
 		 * left and the end of the evaluation and returns it. Panics if otherwise.
 		 */
-		ExprElem ExtensionRPNEvalRPNExpr(query::Context&, const KeyOf_ExtensionRPNEvalRPNExpr&);
+		ExprElem evalExpr(query::Context&, const KeyOf_evalExpr&);
 	}
 
 	/**
@@ -332,4 +331,10 @@ namespace compiler::helios {
 	 * More information on `StructSymbolData` in it's definition.
 	 */
 	DECLARE_QUERY(QueryStructSymbolData, SymID, const StructSymbolData&)
+
+	namespace code {
+		struct Expr;
+	}
+
+	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, base::borrow_ptr<const code::Expr>);
 }

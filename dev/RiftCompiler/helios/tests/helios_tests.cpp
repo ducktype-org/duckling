@@ -1,3 +1,7 @@
+#include "base/borrow_pointer.hpp"
+#include "pst_parser/pst_visitor.hpp"
+#include "query_framework/query_impl.hpp"
+#include "query_framework/query_int.hpp"
 #include <base/str_utils.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/scopes/scopes.hpp>
@@ -30,6 +34,7 @@ public:
 		TESTER_ADD_TEST(simpleHOUTTest);
 		TESTER_ADD_TEST(importTest);
 		TESTER_ADD_TEST(houtVisitorTest);
+		TESTER_ADD_TEST(exprTreeTest);
 	}
 
 private:
@@ -40,11 +45,11 @@ private:
 		for (auto&& sym: symbols) {
 			auto symbol = first_symbol
 			                ? query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
-								{ scope, base::StrId(sym.c_str()), true }
-							)
+								  { scope, base::StrId(sym.c_str()), true }
+							  )
 			                : query::entryPoint<compiler::helios::QueryLookupInSymbol>(
-								{ result.back(), base::StrId(sym.c_str()), false }
-							);
+								  { result.back(), base::StrId(sym.c_str()), false }
+							  );
 			for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<compiler::helios::QueryDealias>(elem);
 				result.insert(result.end(), dealiased.begin(), dealiased.end());
@@ -231,9 +236,11 @@ private:
 			usize const_int_count = 0;
 			usize ident_count     = 0;
 
-			void visitConstIntExprMock(const ConstIntExprMock&) override { const_int_count++; }
+			void visitLiteralValueExpr(const LiteralValueExpr&) override { const_int_count++; }
 
-			void visitIdentifierExpresion(const IdentifierExpresion&) override { ident_count++; }
+			void visitIdentifierExpr(const IdentifierExpr&) override { ident_count++; }
+
+			void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override { ident_count++; }
 		};
 
 		struct ExprVisitorRunner: public HoutStmtPanickyVisitor {
@@ -278,6 +285,17 @@ private:
 		test_value("sm1_through_sm11", 123'123);
 		test_value("sm2_v", 777'666);
 		test_value("cyclic_final", 6);
+	}
+
+	void exprTreeTest() {
+		auto [_, root_scope] = getModule("expressions");
+		ASSERT_EQUAL(31, getValue("V31", root_scope));
+
+		auto        sym   = getChain("V31", root_scope).back();
+		auto        tree1 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym);
+		std::string out;
+		tree1->debugPrint(out);
+		std::cerr << "Debug tree1: " << out << "\n";
 	}
 };
 
