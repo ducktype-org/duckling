@@ -6,6 +6,11 @@
 #include "lexer_class.hpp"
 
 namespace lexer {
+	bool Lexer::token_messages = false;
+	void Lexer::setTokenMessages(bool value) {
+		token_messages = value;
+	}
+
 	using Class = Classifications;
 
 	class TokenStartError final: public dia::Error {
@@ -172,7 +177,7 @@ namespace lexer {
 	}
 
 	void Lexer::addTokenMsg(usize begin, usize end, std::string_view token_type) {
-		if (tokenMessages()) {
+		if (token_messages) {
 			printer::StreamPrinter::printNL({
 				"Add token: ",
 				std::string(token_type),
@@ -428,7 +433,7 @@ namespace lexer {
 		auto               group_end           = peek().bracketPair();
 		auto               sentinel_begin_view = file->getCharRange(where, where + 1);
 		Token              sentinel_begin = Token::makeSentinel(sentinel_begin_view, source_start);
-		if (tokenMessages())
+		if (token_messages)
 			printer::StreamPrinter::printNL(base::strConcat("group begin", generateLineColumnInfo())
 			);
 
@@ -471,7 +476,7 @@ namespace lexer {
 			std::move(sentinel_end),
 			source_position
 		));
-		if (tokenMessages()) printer::StreamPrinter::printNL("group end");
+		if (token_messages) printer::StreamPrinter::printNL("group end");
 	}
 
 	bool Lexer::isEOF() const { return peek().is(Class::end_of_file_value); }

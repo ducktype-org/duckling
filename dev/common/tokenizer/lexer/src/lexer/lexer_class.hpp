@@ -33,6 +33,8 @@ namespace lexer {
 			return errorState;
 		}
 
+		static void setTokenMessages(bool value);
+
 	private:
 		/**
 		 * @name CharArray operations
@@ -110,13 +112,7 @@ namespace lexer {
 		 * @brief Informs whether to print messages about what tokens are created to the debug
 		 * stream based on the PRINT_LOG define
 		 */
-		static constexpr bool tokenMessages() {
-#ifdef PRINT_LOG
-			return true;
-#else
-			return false;
-#endif
-		}
+		static bool token_messages;
 
 		printer::StreamPrinter streamPrinter;
 

@@ -1,2 +1,2 @@
-add_executable(rift_main src/main.cpp)
-target_link_libraries(rift_main Compiler Printer Lexer PstParser Filesystem Clap Base)
+add_executable(duck src/main.cpp)
+target_link_libraries(duck Compiler Printer Lexer PstParser Filesystem Clap Base Diagnostic)

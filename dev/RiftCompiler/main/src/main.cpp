@@ -7,11 +7,13 @@
 #include <filesystem/file.hpp>
 #include <pst_parser/parser.hpp>
 #include <lexer/lexer.hpp>
+#include <lexer/lexer_class.hpp>
 #include <compiler/compiler_config.hpp>
 #include <base/exceptions.hpp>
 #include <iostream>
 #include <clap/clap.hpp>
 #include <printer/stream_printer.hpp>
+#include <diagnostic/logger.hpp>
 
 void init() {
 	lexer::init();
@@ -21,77 +23,110 @@ void init() {
 
 clap::Clap baseCompilerOptions() {
 	return clap::Clap()
-		.addHelpFlag();
-
-		// .setDefaultParser(clap::FileParser::make())
-		// .add(clap::ParamBuilder::ofValue(clap::StringParser::make())
-		//          .addShortName('o')
-		//          .addLongName("output")
-		//          .addShortDesc("Set output file")
-		//          .build());
+		.addHelpFlag()
+		.add(clap::ParamBuilder::ofFlag()
+			.addLongName("logger-cerr")
+			.addShortDesc("todo")
+			.addLongDesc("If set, Logger class will immediately print its messages to cerr. Useful for debugging.")
+			.build())
+		.add(clap::ParamBuilder::ofFlag()
+			.addLongName("lexer-cerr")
+			.addShortDesc("todo")
+			.addLongDesc("If set, Lexer class will immediately print parsed tokens to cerr. Useful for debugging.")
+			.build())
+		.add(clap::ParamBuilder::ofFlag()
+			.addLongName("let-it-throw")
+			.addShortDesc("todo")
+			.addLongDesc("If set, program will let unhandled exceptions to be thrown . Useful for debugging.")
+			.build());
 }
 
-int main(int argc, const char* argv[]) {
+namespace {
+	bool throwing_main = false;
+}
 
-	// Note: the idea from here might be one day changed to framework
+/**
+ * @note it assumes that @p clap has parameters
+ * added by baseCompilerOptions.
+ */
+clap::ParsingResult configureWith(clap::Clap clap, clap::CLIArgs args) {
+	
+	auto res = clap.parse(args);
+	
+	if (res.isFlag("logger-cerr")) {
+		dia::Logger::setImmediatelyDump(true);
+	}
+	if (res.isFlag("lexer-cerr")) {
+		lexer::Lexer::setTokenMessages(true);
+	}
+	if (res.isFlag("let-it-throw")) {
+		throwing_main = true;
+	}
 
-	// bool put_help = false;
-	if (argc >= 2 and argv[1][0] != '-') {
-		std::string command = argv[1];
+	return res;
+}
 
-		// @TODO: set args with mock command:
-		clap::CLIArgs args{ (usize) argc - 2, argv };
+int mainProcedure(int argc, const char* argv[]) {
+	init();
 
-		if (command == "lex") {
-			// ...
-			// @TODO
-		}
-		else if (command == "parse") {
-			// ...
-			// @TODO
+	auto clap = baseCompilerOptions();
+
+	// Note: the ideas from here might be one day changed to framework
+
+	try {
+
+		if (argc >= 2 and argv[1][0] != '-') {
+			std::string command = argv[1];
+
+			clap::CLIArgs mock_args{ (usize) argc - 1, argv + 1};
+
+			if (command == "lex") {
+				// modify clap as needed
+				auto options = configureWith(clap, mock_args);
+				
+			}
+			else if (command == "parse") {
+				// modify clap as needed
+			}
+			else {
+				std::cerr << "Unknown command: " << command << ".\n";
+				return 1;
+			}
+
 		}
 		else {
-			// Unknown command error
+			clap.add(clap::ParamBuilder::ofFlag()
+				.addLongName("version")
+				.addShortDesc("todo")
+				.addLongDesc("Ignore everything and print version")
+				.build());
+			
+			auto options = configureWith(clap, clap::CLIArgs{usize(argc), argv});
+			
+			if (options.isFlag("version")) {
+				std::cerr << "Duckling version: 0.0.1 pre-alpha\n";
+			}
 		}
-
 	}
-	else {
-		// no command:
-		// @TODO: parse no command flags:
-		//  --version
-		//  --help
-		//  --some generic info
-		//  etc
-		// return
-	} 
-	
+	catch (const clap::exceptions::HelpException& e) {
+		std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result);
+	}
+	return 0;
+}
+
+
+int main(int argc, const char* argv[]) {
 	try {
-		init();
-
-		// auto config = compiler::fromArgs(args);
-
-		auto options = baseCompilerOptions().parse(args);
-
-		std::cerr << options.getFilePath() << "\n";
-		std::cerr << options.getArgs() << "\n";
-		std::cerr << options.getExtraParameterCount() << "\n";
-
-		// @TODO: update CompilerConfig and write proper compiler luncher
-
-	} catch (const clap::exceptions::HelpException& e) {
-		printer::StreamPrinter::print(compiler::generateHelpMessage(e));
+		return mainProcedure(argc, argv);
 	} catch (const base::Exception& e) {
 		std::cerr << "Compiler Exception was caught with message:\n";
 		std::cerr << e.what();
 		std::cerr << "\nAborting\n";
+		return 1;
 	} catch (const std::exception& e) {
 		std::cerr << "Unexpected Exception was caught with message:\n";
 		std::cerr << e.what();
 		std::cerr << "\nAborting\n";
+		return 1;
 	}
-
-	// if (put_help) {
-	// 	// ...
-	// 	// clap::HelpMessageGenerator
-	// }
 }
