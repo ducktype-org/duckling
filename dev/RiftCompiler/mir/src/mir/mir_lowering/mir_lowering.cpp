@@ -144,16 +144,16 @@ namespace compiler::mir {
 
 		
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
-			
+			auto return_instruction = continuation->addHole();
+
 			// lower expr:
 			auto expr_res = lowerExpr(*stmt.value, continuation, function);
-			continuation = expr_res.begin;
 
-			continuation->addInstruction(Instruction{
+			return_instruction.fill({
 				
 			});
 
-			
+			output({expr_res.begin});			
 		}
 		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
 			throw base::NotYetImplemented("v return");

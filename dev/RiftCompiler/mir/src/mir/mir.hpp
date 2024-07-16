@@ -8,18 +8,19 @@ namespace compiler::mir {
 		"=" -- pass bytes as given, without any calls, etc
 
 		operation:
-			create obj = EXPR; // <- creates object with initial value EXPR
-			tmp    obj = EXPR; // <- creates temporary object with initial value EXPR
-			assign obj = EXPR; // <- reassign object bytes to EXPR, without any additional operations 
-			detroy obj;        // <- run obj destructor if its life flag is set
-			do 			 EXPR; // <- do EXPR, discard its value
+			obj = EXPR; // <- creates or assigns local object with initial value EXPR
+				  EXPR; // <- does EXPR
+			
 
+			
 		operation additional flags:
 			* move obj; // <- this operation moves given object. Moving marks obj life flag to false
+			* construct obj;
+			* destroy obj;
 
 		Example:
-			create a = call foo();
-					   call f(a) [move a];
+			a = call foo(); [construct a]
+				call f(a);  [move a]
 
 		Operations / Expressions:
 			call   func, func args...
@@ -28,6 +29,9 @@ namespace compiler::mir {
 			GEP    obj, sym id...
 			
 			IAdd, ...
+
+			destroy
+			destroy_if
 
 		Operations / Terminators:
 		 	jmp      Block

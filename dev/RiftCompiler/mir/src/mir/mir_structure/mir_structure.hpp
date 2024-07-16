@@ -24,13 +24,6 @@ namespace compiler::mir {
 
 	};
 
-	// @TODO: OperationKind === Operation?
-
-	enum class OperationKind {
-		// This are just object markings....
-		Construct, Temporary, Move, Reassign, Destruct
-	};
-
 	struct OperationFlag {
 
 	};
@@ -41,7 +34,7 @@ namespace compiler::mir {
 		IntegerAdd, //< @TODO:some decisions here to be made about type stuff
 					// paraphs we want more generic code for MIR, so algos ar 
 
-		Destruct, // @TODO: is this operation? Paraph it should just be call to destructor with special destruct marking...
+		Destruct,
 	};
 
 	struct Instruction {
@@ -51,7 +44,12 @@ namespace compiler::mir {
 
 		Operation operation;
 
+		base::Optional<LocalRef> output;
+
 		std::vector<MirLocation> arguments;
+
+		// construct, destruct, move, ...:
+		std::vector<OperationFlag> flags;
 
 		// @TODO: each Instruction should have source position reference
 
