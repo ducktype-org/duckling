@@ -33,14 +33,9 @@ namespace dia {
 		 *
 		 * Immediately dumping logged messages may be useful when debugging.
 		 */
-		//  @THIS PR TODO: here change to functions to setit as needed
-		static constexpr bool IMMEDIATELY_DUMP =
-#ifdef PRINT_LOG
-			true
-#else
-			false
-#endif
-			;
+		static bool immediately_dump;
+		static void setImmediatelyDump(bool value);
+
 
 
 		/**
@@ -53,7 +48,7 @@ namespace dia {
 		void
 			log(base::unique_ptr<Message> message_ptr,
 		        bool                      detailed         = true,
-		        bool                      immediately_dump = IMMEDIATELY_DUMP);
+		        bool                      immediately_dump = Logger::immediately_dump);
 
 		/**
 		 * @brief Print all logged messages to a stream.
