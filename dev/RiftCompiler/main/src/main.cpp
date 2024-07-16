@@ -49,8 +49,8 @@ namespace {
  * @note it assumes that @p clap has parameters
  * added by baseCompilerOptions.
  */
-clap::ParsingResult configureWith(clap::Clap clap, clap::CLIArgs args) {
-	
+clap::ParsingResult configureWith(clap::Clap& clap, clap::CLIArgs args) {
+
 	auto res = clap.parse(args);
 
 	if (res.isFlag("logger-cerr")) {
@@ -83,7 +83,7 @@ int mainProcedure(int argc, const char* argv[]) {
 			if (command == "lex") {
 				// modify clap as needed
 				auto options = configureWith(clap, mock_args);
-				
+
 			}
 			else if (command == "parse") {
 				// modify clap as needed
@@ -100,9 +100,9 @@ int mainProcedure(int argc, const char* argv[]) {
 				.addShortDesc("todo")
 				.addLongDesc("Ignore everything and print version")
 				.build());
-			
+
 			auto options = configureWith(clap, clap::CLIArgs{usize(argc), argv});
-			
+
 			if (options.isFlag("version")) {
 				std::cerr << "Duckling version: 0.0.1 pre-alpha\n";
 			}
@@ -115,7 +115,7 @@ int mainProcedure(int argc, const char* argv[]) {
 	catch (const clap::exceptions::ClapException& e) {
 		std::cerr << "Incorrect option: " << e.what() << '\n';
 		std::cerr << "Use --help for available options.\n";
-		return 1; 
+		return 1;
 	}
 	return 0;
 }
