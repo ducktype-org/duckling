@@ -35,6 +35,10 @@ namespace compiler::mir {
 					// paraphs we want more generic code for MIR, so algos ar 
 
 		Destruct,
+		DestructIf,
+
+		VoidReturn,
+		Return,
 	};
 
 	struct Instruction {

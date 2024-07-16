@@ -18,6 +18,9 @@ namespace compiler::mir {
 	struct BlockBuilder;
 	struct FunctionBuilder;
 
+	// @TODO: since BlockRef can be a parameter
+	// we need to add BlockBuilderRef->BlockRef transformation
+	// during building phase
 	using BlockRef = base::StableVectorRef<BlockBuilder>;
 
 	struct ExprLowerRes {
@@ -146,9 +149,20 @@ namespace compiler::mir {
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
 			auto return_instruction = continuation->addHole();
 
+			// @TODO: in order to create a scope here, we need
+			// to have a clear access to scope "ReturnStmt" is created in
+			// right now it is not that simple
+			// potential solutions:
+			// 	* add parent operation to PST, and link scopes one-to-one to PST
+			//  * pass a lot of additional data here
+			//  * ...?
+
+			// scope refactor will be needed anyway..
+
 			// lower expr:
 			auto expr_res = lowerExpr(*stmt.value, continuation, function);
 
+			// here return_instruction has to be a terminator: 
 			return_instruction.fill({
 				
 			});

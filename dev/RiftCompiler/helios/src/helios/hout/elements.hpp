@@ -22,6 +22,9 @@ namespace compiler::helios::code {
 	 * @brief Base class for all HOUT statements
 	 */
 	struct Stmt {
+		// @TODO: ....
+		helios::ScopeID scope;
+
 		virtual ~Stmt()                                               = default;
 		virtual void debugPrint(usize indent, std::string& out) const = 0;
 
