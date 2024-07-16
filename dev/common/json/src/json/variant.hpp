@@ -4,6 +4,8 @@
 #include <json_struct/json_struct.h>
 #include <type_traits>
 #include "empty_struct.hpp"
+#include "type_parse.hpp"
+#include "helper.hpp"
 
 namespace JS {
 	template<class... Args>
@@ -16,7 +18,7 @@ namespace JS {
 		static void from(const std::variant<Args...>& from, Token& token, Serializer& serializer) {
 			impl::beginObject(token, serializer);
 
-			static const char name[] = "type";
+			static const std::array<char, 5> type_name{"type"};
 			std::string       value  = std::visit(
                 [](auto& x) {
                     using T = std::decay_t<decltype(x)>;
@@ -24,7 +26,7 @@ namespace JS {
                 },
                 from
             );
-			token.name       = DataRef(name);
+			token.name       = DataRef(type_name.data());
 			token.name_type  = Type::Ascii;
 			token.value.data = value.data();
 			token.value.size = value.size();
