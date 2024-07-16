@@ -123,8 +123,10 @@ namespace compiler::mir {
 	struct StmtBlockVisitor: public hc::HoutStmtVisitor {
 		BlockRef continuation;
 
-		StmtBlockVisitor(BlockRef continuation):
-			continuation(continuation) {}
+		FunctionBuilder& function;
+
+		StmtBlockVisitor(BlockRef continuation, FunctionBuilder& function):
+			continuation(continuation), function(function) {}
 
 		base::Optional<StmtLowerRes> out;
 
@@ -152,8 +154,10 @@ namespace compiler::mir {
 	
 		base::Optional<ExprLowerRes> out;
 
-		ExprBlockVisitor(BlockRef continuation):
-			continuation(continuation) {}
+		FunctionBuilder& function;
+
+		ExprBlockVisitor(BlockRef continuation, FunctionBuilder& function):
+			continuation(continuation), function(function) {}
 
 		void output(ExprLowerRes value) {
 			this->out.emplace(value);
@@ -167,22 +171,22 @@ namespace compiler::mir {
 		}
 	};
 
-	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockRef continuation) {
-		StmtBlockVisitor visitor{continuation};
+	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockRef continuation, FunctionBuilder& function) {
+		StmtBlockVisitor visitor{continuation, function};
 		stmt.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
-	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockRef continuation) {
-		ExprBlockVisitor visitor{continuation};
+	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockRef continuation, FunctionBuilder& function) {
+		ExprBlockVisitor visitor{continuation, function};
 		expr.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
-	StmtLowerRes lowerCodeBlock(const hc::CodeBlock& code_block, BlockRef continuation) {
+	StmtLowerRes lowerCodeBlock(const hc::CodeBlock& code_block, BlockRef continuation, FunctionBuilder& function) {
 		StmtLowerRes last_result;
 		for (auto& stmt: code_block.statements | std::views::reverse) {
-			last_result = lowerStmt(*stmt, continuation);
+			last_result = lowerStmt(*stmt, continuation, function);
 			continuation = last_result.begin;
 		}
 		return last_result;
