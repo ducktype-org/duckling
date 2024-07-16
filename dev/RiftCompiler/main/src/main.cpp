@@ -52,7 +52,7 @@ namespace {
 clap::ParsingResult configureWith(clap::Clap clap, clap::CLIArgs args) {
 	
 	auto res = clap.parse(args);
-	
+
 	if (res.isFlag("logger-cerr")) {
 		dia::Logger::setImmediatelyDump(true);
 	}
@@ -109,7 +109,13 @@ int mainProcedure(int argc, const char* argv[]) {
 		}
 	}
 	catch (const clap::exceptions::HelpException& e) {
+		std::cerr << "tralalala\n";
 		std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result);
+	}
+	catch (const clap::exceptions::ClapException& e) {
+		std::cerr << "Incorrect option: " << e.what() << '\n';
+		std::cerr << "Use --help for available options.\n";
+		return 1; 
 	}
 	return 0;
 }
