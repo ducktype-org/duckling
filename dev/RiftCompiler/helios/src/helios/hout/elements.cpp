@@ -77,10 +77,10 @@ namespace compiler::helios::code {
 						oper.oper_id, std::move(a), std::move(b)
 					));
 				}
-				// variant_case(rpn::NamedIdentifier, named_identifier) {
-				// todo: Write lookup? not really
-				// 	st.push(base::make_unique<Expr>(IdentifierExpr(idt.symbol_list.back())));
-				// }
+				variant_case(rpn::NamedIdentifier, named_identifier) {
+					// todo: Write lookup? not really
+					// st.push(base::make_unique<Expr>(IdentifierExpr(idt.symbol_list.back())));
+				}
 				variant_case(rpn::KeywordValue, keyword_val) {
 					std::cout << keywordToStr(keyword_val.keyword).str() << '\n';
 				}
