@@ -18,8 +18,8 @@ namespace JS {
 		static void from(const std::variant<Args...>& from, Token& token, Serializer& serializer) {
 			impl::beginObject(token, serializer);
 
-			static const std::array<char, 5> type_name{"type"};
-			std::string       value  = std::visit(
+			static const std::array<char, 5> type_name{ "type" };
+			std::string                      value = std::visit(
                 [](auto& x) {
                     using T = std::decay_t<decltype(x)>;
                     return std::string(TypeParseTraits<T>::name.data());
