@@ -70,6 +70,7 @@ int mainProcedure(int argc, const char* argv[]) {
 	init();
 
 	auto clap = baseCompilerOptions();
+	bool command_mode = false;
 
 	// Note: the ideas from here might be one day changed to framework
 
@@ -77,6 +78,7 @@ int mainProcedure(int argc, const char* argv[]) {
 
 		if (argc >= 2 and argv[1][0] != '-') {
 			std::string command = argv[1];
+			command_mode = true;
 
 			clap::CLIArgs mock_args{ (usize) argc - 1, argv + 1};
 
@@ -95,6 +97,7 @@ int mainProcedure(int argc, const char* argv[]) {
 
 		}
 		else {
+			command_mode = false;
 			clap.add(clap::ParamBuilder::ofFlag()
 				.addLongName("version")
 				.addShortDesc("todo")
@@ -109,8 +112,18 @@ int mainProcedure(int argc, const char* argv[]) {
 		}
 	}
 	catch (const clap::exceptions::HelpException& e) {
-		std::cerr << "tralalala\n";
-		std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result);
+		if (not command_mode) {
+			std::cerr << "Available commands: TODO\n\n";
+			std::cerr << "For help with given command use: ./duck [command] --help\n\n";
+			std::cerr << "General options and usage:\n";
+			std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result);
+		}
+		else {
+			std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result);
+			std::cerr << "\nFor list of available commands use: ./duck --help\n";
+		}
+
+
 	}
 	catch (const clap::exceptions::ClapException& e) {
 		std::cerr << "Incorrect option: " << e.what() << '\n';
