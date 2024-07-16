@@ -2,18 +2,24 @@
 
 #include <vector>
 #include <helios/scopes/scopes.hpp>
+#include <base/stable_container.hpp>
 
-namespace compiler::mir {
-	
+namespace compiler::mir {	
 	struct MirIntegerConst {
 		i32 value;
 	};
+
+	struct MirLocal {
+		// ...
+		// @TODO: this needs some ids
+	};
+	using LocalRef = base::StableVectorRef<MirLocal>;
 
 
 	struct MirLocation {
 		// local / global / literal / func-literal, etc
 	private:
-		std::variant<MirIntegerConst> value;
+		std::variant<MirIntegerConst, LocalRef> value;
 	public:
 
 	};
@@ -25,6 +31,10 @@ namespace compiler::mir {
 		Construct, Temporary, Move, Reassign, Destruct
 	};
 
+	struct OperationFlag {
+
+	};
+
 	enum class Operation {
 		Call,
 		VCall,
@@ -34,19 +44,14 @@ namespace compiler::mir {
 		Destruct, // @TODO: is this operation? Paraph it should just be call to destructor with special destruct marking...
 	};
 
-
-	struct Argument {
-		// Imm or local/tmp or global or imm func, 
-		// perhaps a wrapper to variant?
-		// types..
-	};
-
 	struct Instruction {
 		// Idea 1: generic arguments
 		// Idea 2: one giant variant
 		// Idea 3: inheritance
 
-		std::vector<Argument> arguments;
+		Operation operation;
+
+		std::vector<MirLocation> arguments;
 
 		// @TODO: each Instruction should have source position reference
 
@@ -77,6 +82,7 @@ namespace compiler::mir {
 
 	struct Function {
 		std::vector<Block> blocks;
+		base::StableVector<MirLocal> local_list;
 	};
 
 }

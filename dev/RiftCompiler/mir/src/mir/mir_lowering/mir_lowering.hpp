@@ -19,5 +19,5 @@ namespace compiler::mir {
 		bool operator==(const KeyOf_LowerToMirFunction&) const = default;
 	};
 
-	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, Function)
+	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, Function&)
 }

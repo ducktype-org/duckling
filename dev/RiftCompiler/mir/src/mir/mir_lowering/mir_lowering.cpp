@@ -3,9 +3,12 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
 #include <base/stable_container.hpp>
+#include <base/stable_hashmap.hpp>
 
 
 namespace compiler::mir {
+
+	namespace hc = helios::code;
 
 	base::HashT KeyOf_LowerToMirFunction::customPerfectHash() const {
 		return base::perfectHash(function);
@@ -13,8 +16,22 @@ namespace compiler::mir {
 
 	struct InstructionHole;
 	struct BlockBuilder;
+	struct FunctionBuilder;
 
 	using BlockRef = base::StableVectorRef<BlockBuilder>;
+
+	struct ExprLowerRes {
+		BlockRef begin;
+		MirLocation value;
+	};
+
+	struct StmtLowerRes {
+		BlockRef begin;
+	};
+
+	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockRef continuation, FunctionBuilder& function);
+	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockRef continuation, FunctionBuilder& function);
+	StmtLowerRes lowerCodeBlock(const hc::CodeBlock& code_block, BlockRef continuation, FunctionBuilder& function);
 
 	/**
 	 * @brief Structure representing block in build process
@@ -75,10 +92,12 @@ namespace compiler::mir {
 		}
 	};
 
+
 	struct FunctionBuilder {
 	private:
 		base::StableVector<BlockBuilder> blocks;
 		base::Optional<BlockRef> entry_block;
+		// base::StableVector<MirLocal> local_list;
 	public:
 
 		Function build() {
@@ -91,7 +110,7 @@ namespace compiler::mir {
 
 			// @TODO: entry block stuff
 			
-			return Function{blocks};
+			return Function{std::move(blocks)/*, std::move(local_list)*/};
 		}
 		
 		BlockRef newBlock(helios::ScopeID scope, bool entry = false) {
@@ -103,22 +122,6 @@ namespace compiler::mir {
 			return res;
 		}
 	};
-
-
-
-	// @TODO: HoleID, BlockID, 
-
-	namespace hc = helios::code;
-
-	struct ExprLowerRes {
-		BlockRef begin;
-		MirLocation value;
-	};
-
-	struct StmtLowerRes {
-		BlockRef begin;
-	};
-
 
 	struct StmtBlockVisitor: public hc::HoutStmtVisitor {
 		BlockRef continuation;
@@ -136,7 +139,16 @@ namespace compiler::mir {
 
 		
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
-			throw base::NotYetImplemented("return");
+			
+			// lower expr:
+			auto expr_res = lowerExpr(*stmt.value, continuation, function);
+			continuation = expr_res.begin;
+
+			continuation->addInstruction(Instruction{
+				
+			});
+
+			
 		}
 		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
 			throw base::NotYetImplemented("v return");
@@ -196,7 +208,7 @@ namespace compiler::mir {
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
 	struct IMPLEMENT_QUERY(LowerToMirFunction, Function) {
-		static auto provide(Context& ctx, QKey key) -> QResult {
+		static auto provide(Context& ctx, QKey key) -> PResult {
 			// First step:
 			// * build cfg+quad step by step
 
@@ -209,7 +221,7 @@ namespace compiler::mir {
 			return function_builder.build();
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMirFunction);
 
