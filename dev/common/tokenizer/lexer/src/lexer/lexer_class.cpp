@@ -124,10 +124,10 @@ namespace lexer {
 
 	Lexer::Lexer(tokenizer::BorrowFile file):
 		  file(file),
-		  errorState(file->getLogger()),
+		  logger(file->getLogger()),
 		  char_array(file->getChars()) {
-		if (errorState.bad()) {
-			errorState.dumpLog(false, std::cerr);
+		if (logger.bad()) {
+			logger.dumpLog(false, std::cerr);
 			throw base::LogicError("Lexer initialized with existing error");
 		}
 	}
@@ -223,7 +223,7 @@ namespace lexer {
 				decLiteralHandler(output);
 		} else {
 			if (not peek().is(Class::whitespace))
-				errorState.log(base::make_unique<TokenStartError>(sourceStart));
+				logger.log(base::make_unique<TokenStartError>(sourceStart));
 			next();
 		}
 	}
@@ -231,7 +231,7 @@ namespace lexer {
 	void Lexer::commentHandler([[maybe_unused]] Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPostion();
+		auto  sourceStart = currentPosition();
 
 		skip(2);  // "//"
 		while (true) {
@@ -255,13 +255,13 @@ namespace lexer {
 	void Lexer::blockCommentHandler([[maybe_unused]] Tokens& output) {
 		usize               begin = where;
 		usize               end{};
-		auto                sourceStart = currentPostion();
+		auto                sourceStart = currentPosition();
 		dia::SourcePosition opening(sourceStart, begin + 1);
 
 		skip(2);  // "/*"
 		while (true) {
 			if (isEOF()) {
-				errorState.log(base::make_unique<UnclosedCommentError>(opening));
+				logger.log(base::make_unique<UnclosedCommentError>(opening));
 				end = where - 1;
 				break;
 			} else if (isBlockCommentEnd()) {
@@ -280,7 +280,7 @@ namespace lexer {
 	void Lexer::operatorHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPostion();
+		auto  sourceStart = currentPosition();
 
 		while (peek().is(Class::operator_continue)) next();
 		end = where - 1;
@@ -294,7 +294,7 @@ namespace lexer {
 	void Lexer::nameHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPostion();
+		auto  sourceStart = currentPosition();
 
 		next();  // first char - character
 		while (peek().is(Class::name_continue)) next();
@@ -312,7 +312,7 @@ namespace lexer {
 	void Lexer::specialHandler(Tokens& output) {
 		usize begin       = where;
 		usize end         = where;
-		auto  sourceStart = currentPostion();
+		auto  sourceStart = currentPosition();
 
 		next();
 
@@ -324,7 +324,7 @@ namespace lexer {
 	void Lexer::binLiteralHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPostion();
+		auto  sourceStart = currentPosition();
 
 		skip(2);  // 0b
 		while (peek().isBinDigit()) next();
@@ -339,7 +339,7 @@ namespace lexer {
 	void Lexer::hexLiteralHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPostion();
+		auto  sourceStart = currentPosition();
 
 		skip(2);  // 0x
 		while (peek().isHexDigit()) next();
@@ -354,7 +354,7 @@ namespace lexer {
 	void Lexer::decLiteralHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPostion();
+		auto  sourceStart = currentPosition();
 
 		bool was_dot = false;
 		bool was_e   = false;
@@ -385,7 +385,7 @@ namespace lexer {
 	void Lexer::stringHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPostion();
+		auto  sourceStart = currentPosition();
 		bool  closed      = true;
 
 		next();
@@ -394,15 +394,15 @@ namespace lexer {
 				skip(2);
 			} else if (isEOL()) {
 				dia::SourcePosition errPos(sourceStart, where - 1);
-				dia::SourcePosition eolPos = currentPostion();
+				dia::SourcePosition eolPos = currentPosition();
 				auto                error  = base::make_unique<UnclosedStringEolError>(errPos);
 				error->addNote(base::make_unique<UnclosedStringEolError::EolLocationNote>(eolPos));
-				errorState.log(std::move(error));
+				logger.log(std::move(error));
 				closed = false;
 				break;
 			} else if (isEOF()) {
 				dia::SourcePosition errPos(sourceStart, where - 1);
-				errorState.log(base::make_unique<UnclosedStringEofError>(errPos));
+				logger.log(base::make_unique<UnclosedStringEofError>(errPos));
 				closed = false;
 				break;
 			} else {
@@ -422,7 +422,7 @@ namespace lexer {
 
 	void Lexer::bracketHandler(Tokens& output) {
 		usize end{};
-		auto  source_start = currentPostion();
+		auto  source_start = currentPosition();
 
 		Token::BracketType bracket_type{ peek().value };
 		auto               group_end           = peek().bracketPair();
@@ -446,13 +446,13 @@ namespace lexer {
 		if (peek().is(group_end))
 			next();  // par close
 		else if (isEOF()) {
-			errorState.log(
-				base::make_unique<UnmatchedBracketError>(source_start, currentPostion(), group_end)
+			logger.log(
+				base::make_unique<UnmatchedBracketError>(source_start, currentPosition(), group_end)
 			);
 			end = where - 1;
 		} else {
-			errorState.log(
-				base::make_unique<UnmatchedBracketError>(source_start, currentPostion(), group_end)
+			logger.log(
+				base::make_unique<UnmatchedBracketError>(source_start, currentPosition(), group_end)
 			);
 			end = where - 1;
 		}
@@ -486,5 +486,5 @@ namespace lexer {
 
 	bool Lexer::isStringBegin() const { return tryRawValue('"'); }
 
-	dia::SourcePosition Lexer::currentPostion() const { return { file, where }; }
+	dia::SourcePosition Lexer::currentPosition() const { return { file, where }; }
 }

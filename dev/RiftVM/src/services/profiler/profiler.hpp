@@ -9,7 +9,7 @@ namespace vm {
 	class Profiler: public Listener<MemoryEvent>, public Listener<FunctionCallEvent> {
 	private:
 		template<class... DynamicServices>
-		Profiler(ServiceManagerDef<DynamicServices...>& serviceManager) {}
+		Profiler(ServiceManagerDef<DynamicServices...>& /* serviceManager */) {}
 
 	public:
 		virtual ~Profiler() noexcept = default;
