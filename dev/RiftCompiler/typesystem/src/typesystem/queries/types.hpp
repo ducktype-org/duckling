@@ -2,6 +2,8 @@
 
 #include "../types.hpp"
 
+#include <base/maps.hpp>
+
 namespace ts {
 	/**
 	 * @brief Query to get the Unit type.
@@ -77,6 +79,54 @@ namespace ts {
 	DECLARE_QUERY(QueryPointerType, ComponentType, PointerInfo)
 
 	/**
+	 * @brief Key for QueryTupleType.
+	 */
+	struct KeyFor_QueryTupleType {
+		std::vector<ComponentType> components;
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryTupleType&) const
+			= default;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			static base::Map<KeyFor_QueryTupleType, u64> hashes{};
+
+			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+
+			u64 result = hashes.size();
+			hashes.put(*this, result);
+			return result;
+		}
+	};
+
+	DECLARE_QUERY(QueryTupleType, KeyFor_QueryTupleType, TupleInfo)
+
+	/**
+	 * @brief Key for QueryVariantType.
+	 */
+	struct KeyFor_QueryVariantType {
+		std::vector<TypeInfo> underlying_types;
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryVariantType&) const
+			= default;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			static base::Map<KeyFor_QueryVariantType, u64> hashes{};
+
+			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+
+			u64 result = hashes.size();
+			hashes.put(*this, result);
+			return result;
+		}
+	};
+
+	DECLARE_QUERY(QueryVariantType, KeyFor_QueryVariantType, VariantInfo)
+
+	/**
 	 * @brief Key for QueryFunctionType.
 	 */
 	struct KeyFor_QueryFunctionType {
@@ -95,34 +145,18 @@ namespace ts {
 		 *
 		 * See documentation of FunctionInfo for details.
 		 */
-		bool pure;
+		bool pure = false;
 
 		/**
 		 * @brief Whether the function type is free or not.
 		 *
 		 * See documentation of FunctionInfo for details.
 		 */
-		bool free;
+		bool free = false;
 
-		// This spaceship definition is required because TypeInfo has a spaceship definition.
 		[[nodiscard]]
 		auto operator<=>(const KeyFor_QueryFunctionType&) const
 			= default;
-
-		// These constructor definitions are to force giving at least the first two arguments.
-		// Initializer lists still work.
-		KeyFor_QueryFunctionType() = delete;
-
-		KeyFor_QueryFunctionType(
-			std::vector<TypeInfo> parameter_types,
-			const TypeInfo        result_type,
-			const bool            pure = false,
-			const bool            free = false
-		):
-			  parameter_types(std::move(parameter_types)),
-			  result_type(result_type),
-			  pure(pure),
-			  free(free) {}
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
@@ -140,6 +174,11 @@ namespace ts {
 	 * @brief Query to get the Function type.
 	 */
 	DECLARE_QUERY(QueryFunctionType, KeyFor_QueryFunctionType, FunctionInfo)
+
+	/**
+	 * @brief Query to get the Class type.
+	 */
+	DECLARE_QUERY(QueryClassType, compiler::helios::SymID, ClassInfo)
 
 	/**
 	 * @brief Query to get the Meta type.

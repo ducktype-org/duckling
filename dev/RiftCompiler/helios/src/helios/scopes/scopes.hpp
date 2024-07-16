@@ -89,6 +89,8 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query all symbols that are directly inside given scope.
+	 *
+	 * @NOTE: For structs, it returns what's inside struct's body.
 	 */
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, const std::vector<SymID>&);
 }

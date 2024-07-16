@@ -156,7 +156,7 @@ def setup_venv():
     setup_venv_impl()
 
 
-def download_binaries_impl(force, single):
+def download_binaries_impl(force=False, single=False):
     log_info(
         f"Downloading binary files {'WITH force' if force else 'WITHOUT force'}..."
     )

@@ -3,7 +3,27 @@
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
 
+#include <query_framework/query_impl.hpp>
+
 using namespace ts;
+
+/**
+ * @brief Query to get the size of a type.
+ *
+ * @note Prefer to use the TypeInfo::getSize method directly for efficiency.
+ * This query is for access through a query::entryPoint.
+ */
+DECLARE_QUERY(QuerySizeOfType, TypeInfo, usize)
+
+struct IMPLEMENT_QUERY(QuerySizeOfType, usize) {
+	static auto provide(Context& ctx, QKey key) -> PResult { return key.getSize(ctx); }
+
+	static auto load(QKey) -> LoadResult { return {}; }
+
+	static auto store(QKey, const PResult p_res, query::ACD) -> QResult { return QResult{ p_res }; }
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(QuerySizeOfType)
 
 /**
  * This test class contains tests checking the most basic and boring functionality of the
@@ -35,9 +55,11 @@ public:
 		TESTER_ADD_TEST(simple_ints);
 		TESTER_ADD_TEST(simple_floats);
 		TESTER_ADD_TEST(simple_pointer);
+		TESTER_ADD_TEST(simple_tuple);
+		TESTER_ADD_TEST(simple_variant);
+		TESTER_ADD_TEST(simple_function);
 		TESTER_ADD_TEST(simple_meta);
 		TESTER_ADD_TEST(simple_type_desc);
-		TESTER_ADD_TEST(simple_function);
 		TESTER_ADD_TEST(simple_value_category);
 		TESTER_ADD_TEST(simple_implicit_coercibility);
 	}
@@ -131,7 +153,10 @@ private:
 			const auto int_u = query::entryPoint<QueryIntegralType>({ 8U * (1 << i), false });
 			assert(int_1.getKind() == Integral, "Int should have kind Integral.");
 
-			assert(int_1.getSize() == 8 * (1 << i), "Size of Int should be as constructed.");
+			assert(
+				query::entryPoint<QuerySizeOfType>(int_1) == 8 * (1 << i),
+				"Size of Int should be as constructed."
+			);
 			assert(int_1 == int_2, "Ints of the same size and signedness should be the same.");
 			assert(
 				int_1 != int_u,
@@ -160,7 +185,10 @@ private:
 			auto float_1 = query::entryPoint<QueryFloatType>(float_size);
 			auto float_2 = query::entryPoint<QueryFloatType>(float_size);
 
-			assert(float_1.getSize() == float_size, "Size of Float should be as constructed.");
+			assert(
+				query::entryPoint<QuerySizeOfType>(float_1) == float_size,
+				"Size of Float should be as constructed."
+			);
 			assert(float_1 == float_2, "Floats of the same size should be the same.");
 			assert(float_1.getKind() == Float, "Floats should have float kind.");
 
@@ -210,6 +238,77 @@ private:
 				&& ptr_5.isMutable() == ptr_4.isMutable(),
 			"Pointer should survive casting."
 		);
+	}
+
+	/**
+	 * Test that tuples with different components are treated as different types
+	 * and that they are correctly cast.
+	 */
+	void simple_tuple() {
+		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
+		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
+
+		const auto tup_1 = query::entryPoint<QueryTupleType>({ { { int_16 }, { int_32 } } });
+
+		assert(
+			tup_1.getComponents() == std::vector<ComponentType>({ { int_16 }, { int_32 } }),
+			"Component types should be as constructed."
+		);
+		assert(
+			query::entryPoint<QuerySizeOfType>(tup_1)
+				== query::entryPoint<QuerySizeOfType>(int_16)
+					   + query::entryPoint<QuerySizeOfType>(int_32),
+			"Size should be equal to sum of component sizes."
+		);
+		assert(tup_1.getKind() == Tuple, "Tuple should have kind Tuple.");
+
+		const TypeInfo  type_tup = tup_1;
+		const TupleInfo tup_2    = type_tup;
+		assert(tup_2.getKind() == Tuple, "Tuple should survive casting.");
+
+		const auto tup_3 = query::entryPoint<QueryTupleType>({ { { int_16 }, { int_32 } } });
+		assert(tup_1 == tup_3, "Tuples constructed the same way should be equal.");
+
+		const auto tup_4 = query::entryPoint<QueryTupleType>({ { { int_32 }, { int_32 } } });
+		assert(tup_1 != tup_4, "Tuples with different types should be different.");
+
+		const auto tup_5 = query::entryPoint<QueryTupleType>({ { { int_16, true }, { int_32 } } });
+		assert(tup_1 != tup_5, "Tuples with different mutability should be different.");
+	}
+
+	/**
+	 * Test that variants with different components are treated as different types
+	 * and that they are correctly cast.
+	 */
+	void simple_variant() {
+		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
+		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
+
+		const auto var_1 = query::entryPoint<QueryVariantType>({ { int_16, int_32 } });
+
+		assert(
+			var_1.getUnderlyingTypes() == std::vector<TypeInfo>({ int_16, int_32 }),
+			"Underlying types should be as constructed."
+		);
+		assert(
+			query::entryPoint<QuerySizeOfType>(var_1)
+				== std::max(
+					   query::entryPoint<QuerySizeOfType>(int_16),
+					   query::entryPoint<QuerySizeOfType>(int_32)
+				   ) + BYTE_SIZE,
+			"Size should be equal to max of underlying type sizes, plus discriminant."
+		);
+		assert(var_1.getKind() == Variant, "Variant should have kind Variant.");
+
+		const TypeInfo    type_var = var_1;
+		const VariantInfo var_2    = type_var;
+		assert(var_2.getKind() == Variant, "Tuple should survive casting.");
+
+		const auto var_3 = query::entryPoint<QueryVariantType>({ { int_16, int_32 } });
+		assert(var_1 == var_3, "Variants constructed the same way should be equal.");
+
+		const auto var_4 = query::entryPoint<QueryVariantType>({ { int_32, int_32 } });
+		assert(var_1 != var_4, "Variants with different underlying types should be different.");
 	}
 
 	/**
@@ -264,7 +363,10 @@ private:
 		const auto meta_2 = query::entryPoint<QueryMetaType>({});
 
 		assert(meta == meta_2, "There shouldn't be multiple different 'type' types");
-		assert(meta.getSize() == META_SIZE, "MetaType should have size META_SIZE");
+		assert(
+			query::entryPoint<QuerySizeOfType>(meta) == META_SIZE,
+			"MetaType should have size META_SIZE"
+		);
 
 		assert(meta.getKind() == Meta, "MetaType should have kind Meta");
 	}
