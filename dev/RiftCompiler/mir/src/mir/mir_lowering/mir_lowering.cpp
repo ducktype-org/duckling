@@ -97,7 +97,7 @@ namespace compiler::mir {
 	private:
 		base::StableVector<BlockBuilder> blocks;
 		base::Optional<BlockRef> entry_block;
-		// base::StableVector<MirLocal> local_list;
+		base::StableVector<MirLocal> local_list;
 	public:
 
 		Function build() {
@@ -110,7 +110,12 @@ namespace compiler::mir {
 
 			// @TODO: entry block stuff
 			
-			return Function{std::move(blocks)/*, std::move(local_list)*/};
+			return Function{std::move(blocks), std::move(local_list)};
+		}
+
+		LocalRef addLocal() {
+			auto key = local_list.emplaceBack(MirLocal{});
+			return local_list.getRef(key).value();
 		}
 		
 		BlockRef newBlock(helios::ScopeID scope, bool entry = false) {
