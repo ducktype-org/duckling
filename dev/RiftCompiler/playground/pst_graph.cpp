@@ -3,10 +3,10 @@
 #include <pst_parser/pst.hpp>
 #include <base/variant.hpp>
 #include <iostream>
-#include <format>
 
 #include <graphviz/gvc.h>
 
+// NOLINTBEGIN
 struct Handler {
 	GVC_t*    gvc;
 	Agraph_t* graph;
@@ -46,6 +46,7 @@ struct Handler {
 		agclose(graph);
 	}
 };
+// NOLINTEND
 
 void handleToken(pst::RiftElement::SubToken token) { std::cerr << " " << token->getStrValue(); }
 
