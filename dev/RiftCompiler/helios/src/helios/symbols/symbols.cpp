@@ -5,10 +5,12 @@
 #include <base/stable_hashmap.hpp>
 #include <base/stable_container.hpp>
 #include <base/variant.hpp>
+#include <base/unique_pointer.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/pst_visitor.hpp>
+#include <helios/hout/elements.hpp>
 
 #include <vector>
 
@@ -16,8 +18,6 @@
 #include "../scope_symbol_id.hpp"
 #include "../scopes/scopes.hpp"
 #include "../pst_ref.hpp"
-#include "base/unique_pointer.hpp"
-#include "helios/hout/elements.hpp"
 
 namespace compiler::helios {
 	/**
