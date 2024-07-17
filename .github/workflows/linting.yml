@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install gvc
-        run: sudo apt -y install graphviz
+        run: sudo apt -y install libgraphviz-dev
       - name: Create compile_commands
         run: |
          cd dev
