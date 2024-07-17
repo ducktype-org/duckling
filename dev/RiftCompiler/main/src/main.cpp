@@ -11,7 +11,6 @@
 #include <pst_parser/pst.hpp>
 #include <lexer/lexer.hpp>
 #include <lexer/lexer_class.hpp>
-#include <compiler/compiler_config.hpp>
 #include <base/exceptions.hpp>
 #include <iostream>
 #include <clap/clap.hpp>
@@ -51,8 +50,7 @@ clap::Clap baseCompilerOptions() {
 	                           "Useful for debugging.")
 	             .addLongDesc(
 					 "Note that sometimes exception can happen before logic behind this option "
-	                 "will happen. In that case exception will most likely not be caught."
-				 )
+					 "will happen. In that case exception will most likely not be caught.")
 	             .build());
 }
 
