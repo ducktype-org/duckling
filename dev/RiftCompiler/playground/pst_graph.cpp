@@ -47,8 +47,6 @@ struct Handler {
 	}
 };
 
-// NOLINTEND
-
 void handleToken(pst::RiftElement::SubToken token) { std::cerr << " " << token->getStrValue(); }
 
 void handleElement(pst::ParserCBorrowRef<pst::RiftElement> el) {
@@ -86,6 +84,8 @@ Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::RiftElement> el) {
 	}
 	return self;
 }
+
+// NOLINTEND
 
 int main(int argc, char** argv) {
 	if (argc != 3) {
