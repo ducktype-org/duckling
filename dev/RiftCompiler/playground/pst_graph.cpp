@@ -88,8 +88,8 @@ Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::RiftElement> el) {
 }
 
 int main(int argc, char** argv) {
-	if (argc != 2) {
-		std::cerr << "usage: ./back_to_tokens_testing file_name\n";
+	if (argc != 3) {
+		std::cerr << "usage: ./pst_graph rift_file svg_out_file\n";
 		return 1;
 	}
 	pst::init();
@@ -104,6 +104,6 @@ int main(int argc, char** argv) {
 	} else {
 		Handler hdl("graph");
 		dotElement(hdl, pst.getRootElement());
-		hdl.writeToSVG(".dot.svg");
+		hdl.writeToSVG(argv[2]);
 	}
 }
