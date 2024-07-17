@@ -46,6 +46,7 @@ struct Handler {
 		agclose(graph);
 	}
 };
+
 // NOLINTEND
 
 void handleToken(pst::RiftElement::SubToken token) { std::cerr << " " << token->getStrValue(); }
