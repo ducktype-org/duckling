@@ -37,7 +37,6 @@ namespace dia {
 		static void setImmediatelyDump(bool value);
 
 
-
 		/**
 		 * @brief Log a message.
 		 *

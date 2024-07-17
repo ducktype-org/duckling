@@ -1,9 +1,3 @@
 #pragma once
 
-
-namespace launcher {
-
-};
-
-
-
+namespace launcher {};

@@ -12,7 +12,7 @@
 
 namespace clap {
 	struct CLIArgs {
-		usize        argc;  /// Argument count
+		usize              argc;  /// Argument count
 		const char* const* argv;  /// Pointer to an array of strings
 	};
 

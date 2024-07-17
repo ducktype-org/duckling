@@ -7,9 +7,8 @@
 
 namespace lexer {
 	bool Lexer::token_messages = false;
-	void Lexer::setTokenMessages(bool value) {
-		token_messages = value;
-	}
+
+	void Lexer::setTokenMessages(bool value) { token_messages = value; }
 
 	using Class = Classifications;
 
