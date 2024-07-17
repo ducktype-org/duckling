@@ -15,6 +15,9 @@
 #include <printer/stream_printer.hpp>
 #include <diagnostic/logger.hpp>
 
+/**
+ * @brief Runs inits needed by main
+ */
 void init() {
 	lexer::init();
 	pst::init();
@@ -52,6 +55,8 @@ namespace {
 }
 
 /**
+ * @brief Parses arguments with @p clap and performs
+ * configuration of the program that is independent from any command. 
  * @note it assumes that @p clap has parameters
  * added by baseCompilerOptions.
  */
@@ -76,6 +81,9 @@ clap::ParsingResult configureWith(clap::Clap& clap, clap::CLIArgs args) {
 	return res;
 }
 
+/**
+ * @brief Type of command callback
+ */
 using CommandRunner = std::function<void()>;
 
 /**
@@ -100,6 +108,9 @@ struct CommandList {
 		commands.emplace_back(Command{std::move(name), std::move(desc), std::move(runner)});
 	}
 
+	/**
+	 * @brief Generate help messages with list of all commands
+	 */
 	std::string generateHelpMessage() {
 		std::string out;
 		out.reserve(128);
@@ -131,6 +142,9 @@ struct CommandList {
 	}
 };
 
+/**
+ * @brief Wrapper for logic of main function
+ */
 int mainProcedure(int argc, const char* const* argv) {
 	init();
 
