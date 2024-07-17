@@ -381,7 +381,7 @@ namespace compiler::helios {
 		}
 	}
 
-	std::vector<rpn::ExprElem> rpn::makeRPN(query::Context& ctx, KeyOf_RPNmakeRPN key) {
+	rpn::RPNExpr rpn::makeRPN(query::Context& ctx, KeyOf_RPNmakeRPN key) {
 		std::vector<ExprElem> rpn;
 		std::stack<ExprElem>  st;
 		for (auto&& e: key.expr) {
@@ -404,7 +404,7 @@ namespace compiler::helios {
 				variant_case(pst::Expr::Group, group) {
 					auto&& res
 						= makeRPN(ctx, KeyOf_RPNmakeRPN{ group.expr->elements, key.expr_scope });
-					rpn.insert(rpn.end(), res.begin(), res.end());
+					rpn.insert(rpn.end(), res.elements.begin(), res.elements.end());
 				}
 				variant_case(pst::Expr::KeywordValue, keyword_val) {
 					rpn.emplace_back(KeywordValue{ keyword_val.keyword });
@@ -413,7 +413,7 @@ namespace compiler::helios {
 					for (auto&& type_expr: tuple.expr) {
 						auto&& res
 							= makeRPN(ctx, KeyOf_RPNmakeRPN{ type_expr->elements, key.expr_scope });
-						rpn.insert(rpn.end(), res.begin(), res.end());
+						rpn.insert(rpn.end(), res.elements.begin(), res.elements.end());
 					}
 					rpn.emplace_back(TupleConstructor{ tuple.expr.size() });
 				}
@@ -425,7 +425,7 @@ namespace compiler::helios {
 			st.pop();
 		}
 
-		return rpn;
+		return { rpn, key.expr_scope };
 	}
 
 	i32 rpn::parseValue(query::Context& ctx, const KeyOf_parseValue& key) {
@@ -457,10 +457,10 @@ namespace compiler::helios {
 		RIFT_PANIC("Error in RPNValue expr...");
 	}
 
-	rpn::ExprElem rpn::evalExpr(query::Context& ctx, const KeyOf_evalExpr& key) {
+	rpn::ExprElem rpn::evalExpr(query::Context& ctx, const RPNExpr& expr) {
 		// This is a nice RPN debug print.
 		std::cout << "RPN: \n";
-		for (auto&& e: key.rpn_expression) {
+		for (auto&& e: expr.elements) {
 			std::cout << "expr: ";
 			variant_match(e) {
 				variant_case(rpn::Identifier, idt) {
@@ -485,7 +485,7 @@ namespace compiler::helios {
 
 		// Here we will evaluate the RPN.
 		std::stack<ExprElem> st;
-		for (auto&& e: key.rpn_expression) {
+		for (auto&& e: expr.elements) {
 			variant_match(e) {
 				variant_case(rpn::Identifier, idt) {
 					// Assuming idt is NOT A FUNCTION.
@@ -508,7 +508,7 @@ namespace compiler::helios {
 							second,
 							oper,
 							first,
-							key.expr_scope,
+							expr.scope,
 						}
 					));
 				}
@@ -648,9 +648,9 @@ namespace compiler::helios {
 				= dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
 			const ScopeID key_scope = scope(key);
 
-			const auto& expr = makeRPN(
+			const auto& expr = rpn::makeRPN(
 				ctx,
-				rpn::KeyOf_RPNmakeRPN{
+				{
 					const_symbol->getValue()->elements,
 					key_scope,
 				}
@@ -658,7 +658,7 @@ namespace compiler::helios {
 			return parseValue(
 				ctx,
 				rpn::KeyOf_parseValue{
-					rpn::evalExpr(ctx, { expr, key_scope }),
+					rpn::evalExpr(ctx, expr),
 					key_scope,
 				}
 			);
@@ -770,7 +770,7 @@ namespace compiler::helios {
 		query::Context& ctx, const tpc::ParserCBorrowRef<pst::Expr>& expr, ScopeID expr_scope
 	) {
 		const auto rpn_expr   = rpn::makeRPN(ctx, { expr->elements, expr_scope });
-		const auto final_type = rpn::evalExpr(ctx, { rpn_expr, expr_scope });
+		const auto final_type = rpn::evalExpr(ctx, rpn_expr);
 		return parseTypeFromExpr(ctx, final_type, expr_scope);
 	}
 
@@ -898,8 +898,7 @@ namespace compiler::helios {
 			const QKey& key;
 
 			void setTypeOfSymbol(const pst::ParserCBorrowRef<pst::Expr>& expr) {
-				rpn_of_sym_expr
-					= rpn::makeRPN(ctx, rpn::KeyOf_RPNmakeRPN{ expr->elements, scope(key) });
+				rpn_of_sym_expr = rpn::makeRPN(ctx, { expr->elements, scope(key) }).elements;
 			}
 
 		public:
@@ -919,7 +918,7 @@ namespace compiler::helios {
 
 			PstStmtVisitor_GetHOUTExprTree visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
-			return code::Expr::fromRPN(visitor.rpn_of_sym_expr);
+			return code::Expr::fromRPN(ctx, { visitor.rpn_of_sym_expr, scope(key) });
 		}
 
 		static inline base::

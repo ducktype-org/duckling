@@ -291,18 +291,23 @@ private:
 		auto [_, root_scope] = getModule("expressions");
 		ASSERT_EQUAL(31, getValue("V31", root_scope));
 
-		auto        sym1   = getChain("V31", root_scope).back();
+		auto        sym1  = getChain("V31", root_scope).back();
 		auto        tree1 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym1);
 		std::string out;
 		tree1->debugPrint(out);
 		ASSERT_EQUAL("(3+((5+9)*2))", out);
 
 		ASSERT_EQUAL(12, getValue("V12", root_scope));
-		auto        sym2   = getChain("V12", root_scope).back();
+		auto        sym2  = getChain("V12", root_scope).back();
 		auto        tree2 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym2);
 		std::string out2;
 		tree2->debugPrint(out2);
-		ASSERT_EQUAL("(3+((5+9)*2))", out2);
+
+		auto sym3       = getChain("N.V3", root_scope).back();
+		auto symV3_repr = base::strConcat("(Symbol ", sym3.customPerfectHash(), ")");
+		ASSERT_EQUAL(
+			base::strConcat("(", symV3_repr, "+(", symV3_repr, "*", symV3_repr, "))"), out2
+		);
 	}
 };
 

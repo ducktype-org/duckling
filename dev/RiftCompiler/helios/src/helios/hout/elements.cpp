@@ -61,9 +61,9 @@ namespace compiler::helios::code {
 		visitor.visitBinaryOperatorExpr(*this);
 	}
 
-	ElementRef<Expr> Expr::fromRPN(const std::vector<rpn::ExprElem>& elements) {
+	ElementRef<Expr> Expr::fromRPN(query::Context& ctx, const rpn::RPNExpr& expr) {
 		std::stack<ElementRef<Expr>> st;
-		for (auto&& elem: elements) {
+		for (auto&& elem: expr.elements) {
 			variant_match(elem) {
 				variant_case(rpn::Identifier, idt) {
 					st.push(base::make_unique<IdentifierExpr>(idt.symbol_list.back()));
@@ -77,12 +77,11 @@ namespace compiler::helios::code {
 						oper.oper_id, std::move(a), std::move(b)
 					));
 				}
-				variant_case(rpn::NamedIdentifier, named_identifier) {
-					// todo: Write lookup? not really
-					// st.push(base::make_unique<Expr>(IdentifierExpr(idt.symbol_list.back())));
-				}
-				variant_case(rpn::KeywordValue, keyword_val) {
-					std::cout << keywordToStr(keyword_val.keyword).str() << '\n';
+				variant_case(rpn::NamedIdentifier, idt) {
+					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+						{ expr.scope, idt.symbol_name, true }
+					);
+					st.push(base::make_unique<IdentifierExpr>(sym_list.getAsSingle().back()));
 				}
 				variant_case(rpn::NumValue, num_value) {
 					st.push(base::make_unique<LiteralValueExpr>(std::stoi(num_value.num_id.str())));

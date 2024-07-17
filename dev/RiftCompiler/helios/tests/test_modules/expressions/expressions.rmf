@@ -1,3 +1,6 @@
 const V31: i32 = 3 + ((5+9)*2);
-const V3: i32 = 3;
+namespace N {
+    const V3: i32 = 3;
+}
+using N.*;
 const V12: i32 = V3 + V3 * V3;

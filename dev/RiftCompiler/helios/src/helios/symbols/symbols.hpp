@@ -5,6 +5,7 @@
 
 #include "../pst_ref.hpp"
 #include "../lookup_result.hpp"
+#include "helios/scope_symbol_id.hpp"
 
 #include <base/string_id.hpp>
 #include <typesystem/typesystem.hpp>
@@ -221,9 +222,24 @@ namespace compiler::helios {
 		};
 
 		/**
+		 * @brief RPN (postfix) expression with scope produced by makeRPN().
+		 */
+		struct RPNExpr {
+			/**
+			 * @brief Elements of the RPN expression.
+			 */
+			std::vector<ExprElem> elements;
+
+			/**
+			 * @brief Scope, where the expression was expressed in.
+			 */
+			ScopeID scope;
+		};
+
+		/**
 		 * @brief Parses an expression from PST into RPN.
 		 */
-		std::vector<ExprElem> makeRPN(query::Context&, KeyOf_RPNmakeRPN);
+		RPNExpr makeRPN(query::Context&, KeyOf_RPNmakeRPN);
 
 		struct KeyOf_evalOperator {
 			/**
@@ -269,22 +285,11 @@ namespace compiler::helios {
 		 */
 		i32 parseValue(query::Context&, const KeyOf_parseValue&);
 
-		struct KeyOf_evalExpr {
-			/**
-			 * @brief RPN expression returned by `ExtensionMakeRPN`.
-			 */
-			std::vector<ExprElem> rpn_expression;
-			/**
-			 * @brief Scope, where the expression was expressed in.
-			 */
-			ScopeID expr_scope;
-		};
-
 		/**
 		 * @brief Evaluates RPN expression. Expects a single element to be
 		 * left and the end of the evaluation and returns it. Panics if otherwise.
 		 */
-		ExprElem evalExpr(query::Context&, const KeyOf_evalExpr&);
+		ExprElem evalExpr(query::Context&, const RPNExpr&);
 	}
 
 	/**

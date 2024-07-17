@@ -41,7 +41,7 @@ namespace compiler::helios::code {
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
 
-		static ElementRef<Expr> fromRPN(const std::vector<rpn::ExprElem>& elements);
+		static ElementRef<Expr> fromRPN(query::Context& ctx, const rpn::RPNExpr& elements);
 	};
 
 	/**
