@@ -1,10 +1,14 @@
-#include <crow.h>
 #include <json/json.hpp>
 #include <api/api.hpp>
 #include <supervisor/supervisor.hpp>
 #include "server.hpp"
 
 #include <result.hpp>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#include <crow.h>
+#pragma GCC diagnostic pop
 
 crow::response convertError(const vm::api::ApiError& apiError) {
 	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return { 500, "Wrong response" };
