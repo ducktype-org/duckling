@@ -148,8 +148,9 @@ namespace compiler::helios::code {
 			  op(op),
 			  lhs(std::move(lhs)),
 			  rhs(std::move(rhs)) {}
-		void debugPrint(std::string &out) const override;
-		void acceptVisitor(HoutExprVisitor &) const override;
+
+		void debugPrint(std::string& out) const override;
+		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 }
 

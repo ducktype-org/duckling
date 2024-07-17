@@ -20,9 +20,9 @@ namespace pst {
 			tpc::parseOne(state, &next, true);
 			if (is_id) out->names.push_back(next);
 			// If not special meaning, assume wrong type
-			else if(!state[0].is(rift_def::Operator::Period) && 
-					!state[0].is(rift_def::Operator::PeriodStar) && 
-					!state[0].is(rift_def::Special::Semicolon)) {
+			else if (!state[0].is(rift_def::Operator::Period)
+			         && !state[0].is(rift_def::Operator::PeriodStar)
+			         && !state[0].is(rift_def::Special::Semicolon)) {
 				state.tokens().next();
 			}
 		} while (state.tryEat(rift_def::Operator::Period));
