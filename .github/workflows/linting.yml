@@ -16,7 +16,7 @@ jobs:
       - uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
-          GITHUB_TOKEN: ${{ secrets.KEY_FOR_MAURYC }}
+          GITHUB_TOKEN: ${{ secrets.QUACKER_PAT }}
         with:
           style: 'file'
           tidy-checks: ''
@@ -25,8 +25,8 @@ jobs:
           database: 'dev'
 
           # Enable to let linter post requested format changes in PR thread: 
-          # format-review: true
-          # thread-comments: true
+          format-review: true
+          thread-comments: true
 
           # The following value will only update a single comment
           # in a pull request's thread. Set it to false to disable the comment.
