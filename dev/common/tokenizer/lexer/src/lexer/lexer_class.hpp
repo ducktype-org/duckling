@@ -29,8 +29,8 @@ namespace lexer {
 		TokenData tokenize();
 
 		[[nodiscard]]
-		const dia::Logger& getErrorState() const {
-			return errorState;
+		const dia::Logger& getLogger() const {
+			return logger;
 		}
 
 	private:
@@ -98,11 +98,11 @@ namespace lexer {
 		std::string generateLineColumnInfo(usize fwd = 0) const;
 
 		[[nodiscard]]
-		dia::SourcePosition currentPostion() const;
+		dia::SourcePosition currentPosition() const;
 
 		usize                 where = 0;  ///< Current position in file
 		tokenizer::BorrowFile file;
-		dia::Logger&          errorState;
+		dia::Logger&          logger;
 		const CharArray&      char_array;
 		Tokens                tokens;
 
@@ -117,8 +117,6 @@ namespace lexer {
 			return false;
 #endif
 		}
-
-		printer::StreamPrinter streamPrinter;
 
 		void addTokenMsg(usize begin, usize end, std::string_view token_type);
 	};
