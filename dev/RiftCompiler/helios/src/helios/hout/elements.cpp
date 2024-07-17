@@ -66,14 +66,14 @@ namespace compiler::helios::code {
 		for (auto&& elem: expr.elements) {
 			variant_match(elem) {
 				variant_case(rpn::Identifier, idt) {
-					st.push(base::make_unique<IdentifierExpr>(idt.symbol_list.back()));
+					st.emplace(base::make_unique<IdentifierExpr>(idt.symbol_list.back()));
 				}
 				variant_case(rpn::Operator, oper) {
 					auto b = std::move(st.top());
 					st.pop();
 					auto a = std::move(st.top());
 					st.pop();
-					st.push(base::make_unique<BinaryOperatorExpr>(
+					st.emplace(base::make_unique<BinaryOperatorExpr>(
 						oper.oper_id, std::move(a), std::move(b)
 					));
 				}
@@ -81,10 +81,11 @@ namespace compiler::helios::code {
 					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
 						{ expr.scope, idt.symbol_name, true }
 					);
-					st.push(base::make_unique<IdentifierExpr>(sym_list.getAsSingle().back()));
+					st.emplace(base::make_unique<IdentifierExpr>(sym_list.getAsSingle().back()));
 				}
 				variant_case(rpn::NumValue, num_value) {
-					st.push(base::make_unique<LiteralValueExpr>(std::stoi(num_value.num_id.str())));
+					st.emplace(base::make_unique<LiteralValueExpr>(std::stoi(num_value.num_id.str())
+					));
 				}
 				// variant_case(rpn::TupleType, tuple_type) {}
 				// variant_case(rpn::Variant, variant_type) {}
