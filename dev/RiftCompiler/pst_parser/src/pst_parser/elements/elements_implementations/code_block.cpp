@@ -26,12 +26,16 @@ namespace pst {
 			return out;
 		}
 
-		state.goDown();
+		state.parse(out).goDown();
 
 		// @TODO: this may not work in case of compilation error
-		while (state.notEmpty()) out->statements.emplace_back(Stmt::parse(state));
+		while (state.notEmpty()) {
+			ParserRef<Stmt> stmt;
+			state.parse(out).one(&stmt);
+			out->statements.emplace_back(std::move(stmt));
+		}
 
-		state.goUpAndSkip();
+		state.parse(out).goUpAndSkip();
 		return out;
 	}
 
