@@ -39,10 +39,13 @@ namespace compiler::mir {
 			return   value
 
 		todo:
-		* tmp == create?
-		* is move a special operation?
-		* is destroy a flag?
+		* tmp == create? -- yes
+		* is move a special operation? -- no
+		* is destroy a flag? -- yes
 		* what about value categories in things like match(optional)..
+
+		CFG enriched with Scope data:
+			
 
 	*/
 

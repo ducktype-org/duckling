@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <variant>
 #include <helios/scopes/scopes.hpp>
 #include <base/stable_container.hpp>
 
@@ -57,9 +58,8 @@ namespace compiler::mir {
 
 		// @TODO: each Instruction should have source position reference
 
-		// Optional<> return
-		// Operation oper
-		// vector<MirValue> arguments
+		//  perhaps just map during MIR creation? (mir scope -- just super simple tree)
+		helios::ScopeID scope;
 	};
 
 	struct Terminator {
@@ -77,9 +77,6 @@ namespace compiler::mir {
 		// this way some algorithms may be easier
 		
 		Instruction terminator;
-
-		//  perhaps just map during MIR creation? (mir scope -- just super simple tree)
-		helios::ScopeID scope;
 	};
 
 	struct Function {
