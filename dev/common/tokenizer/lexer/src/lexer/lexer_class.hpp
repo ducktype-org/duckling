@@ -33,6 +33,9 @@ namespace lexer {
 			return errorState;
 		}
 
+		/**
+		 * @brief ADD DOCS HERE BEFORE MERGE
+		 */
 		static void setTokenMessages(bool value);
 
 	private:
