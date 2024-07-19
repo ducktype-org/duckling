@@ -128,9 +128,9 @@ struct CommandList {
 	}
 
 	/**
-	 * @brief Runs command of given name
-	 * @param what command name
-	 * @return if command of given name was found was run.
+	 * @brief Runs a command.
+	 * @param what Command to run.
+	 * @return Whether the command was run.
 	 */
 	bool run(std::string_view what) {
 		for (auto& cmd: commands) {
