@@ -1,9 +1,9 @@
 /**
  * @file main.cpp
  * @brief This file implements logic and main procedure that can be used to
- * convenient run (or add) certain functionalities of the Duckling compiler.
+ * conveniently run (or add) certain functionalities of the Duckling compiler.
  * It compiles to `duck` binary.
- * @note: the ideas from here might be one day changed to framework
+ * @note: The ideas from here might be one day separated into a framework.
  */
 
 #include <filesystem/file.hpp>
