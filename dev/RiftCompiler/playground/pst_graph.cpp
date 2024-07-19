@@ -72,10 +72,10 @@ std::string stringPosition(dia::SourcePosition pos) {
 /**
  * @brief Generates graph from a pst element and it's children and tokens.
  *
- * @note Adds information about position and (currently obfuscated) element class
+ * @note Adds information about position and element class
  */
 Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::RiftElement> el) {
-	std::string name = stringPosition(el->getSourcePosition()) + "\n" + typeid(*el.get()).name();
+	std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType();
 	auto        self = hdl.addNode(name);
 
 	for (auto sub: el->viewSubElements()) {

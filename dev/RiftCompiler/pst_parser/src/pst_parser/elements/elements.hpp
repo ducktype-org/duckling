@@ -63,6 +63,11 @@ namespace pst {
 			return true;
 		}
 
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Statement";
+		}
+
 		/**
 		 * @brief Determines if given statement is a declaration.
 		 * Declaration is everything that is considered a unique symbol in HELIOS.
@@ -93,6 +98,11 @@ namespace pst {
 	class NotStmt: public RiftElement {
 	public:
 		explicit NotStmt(const dia::SourcePosition& position): RiftElement(position) {}
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Not Statement";
+		}
 
 		bool trailingSemicolon() override;
 	};
@@ -128,6 +138,11 @@ namespace pst {
 		DECLARE_CONST_ELEMENT_ITERATOR(elements, SubElements)
 
 		explicit List(const dia::SourcePosition& position): NotStmt(position) {}
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return getName() + " list";
+		}
 
 		static ParserRef<List> parse(RiftParserState& state);
 
@@ -190,6 +205,11 @@ namespace pst {
 			return names.cend();
 		}
 
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Dotted Name";
+		}
+
 		explicit DottedName(const dia::SourcePosition& position): NotStmt(position) {}
 
 		static ParserRef<DottedName> parse(RiftParserState& state);
@@ -211,8 +231,14 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Attribute);
 		static ParserRef<Attribute> parse(RiftParserState& state);
 		~Attribute() final = default;
+
 		void dprint(std::ostream& out) const final;
 		bool trailingSemicolon() override;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Attribute";
+		}
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
@@ -254,6 +280,11 @@ namespace pst {
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 
 		[[nodiscard]]
+		std::string elementType() const override {
+			return "Import";
+		}
+
+		[[nodiscard]]
 		bool isDeclaration() const final {
 			return true;
 		}
@@ -280,6 +311,11 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Using";
+		}
 
 		[[nodiscard]]
 		bool isDeclaration() const final {
@@ -311,6 +347,11 @@ namespace pst {
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 
 		[[nodiscard]]
+		std::string elementType() const override {
+			return "Alias";
+		}
+
+		[[nodiscard]]
 		bool isDeclaration() const final {
 			return true;
 		}
@@ -327,6 +368,11 @@ namespace pst {
 		static ParserRef<CodeBlock> parse(RiftParserState& state);
 		~CodeBlock() final = default;
 		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Code Block";
+		}
 
 		[[nodiscard]]
 		bool isStatementAggregate() const final {
@@ -351,6 +397,11 @@ namespace pst {
 		const_iterator end() const;
 
 		[[nodiscard]]
+		std::string elementType() const override {
+			return "Code Block or Statement";
+		}
+
+		[[nodiscard]]
 		bool isStatementAggregate() const final {
 			return true;
 		}
@@ -365,6 +416,11 @@ namespace pst {
 		static ParserRef<RoundGroupExpr> parse(RiftParserState& state);
 		~RoundGroupExpr() final = default;
 		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Round Group Expression";
+		}
 
 		[[nodiscard]]
 		ParserCBorrowRef<Expr> getExpr() const {
@@ -446,6 +502,11 @@ namespace pst {
 		 */
 		static ParserRef<Expr> parse(RiftParserState& state, bool allow_comma = false);
 
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Expression";
+		}
+
 		/**
 		 * @brief parses the expression until a condition is met or end of token stream.
 		 *
@@ -518,6 +579,11 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Action);
 		static ParserRef<Action> parse(RiftParserState& state);
 		~Action() override = default;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Action";
+		}
 
 		[[nodiscard]]
 		base::Optional<ParserCBorrowRef<Expr>> getValue() const {
@@ -629,6 +695,11 @@ namespace pst {
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 
 		[[nodiscard]]
+		std::string elementType() const override {
+			return "Const";
+		}
+
+		[[nodiscard]]
 		bool isDeclaration() const final {
 			return true;
 		}
@@ -644,6 +715,11 @@ namespace pst {
 		bool trailingSemicolon() override;
 
 		[[nodiscard]]
+		std::string elementType() const override {
+			return "Declaration";
+		}
+
+		[[nodiscard]]
 		bool isDeclaration() const override {
 			return true;
 		}
@@ -655,6 +731,11 @@ namespace pst {
 	class CodeDecl: public Decl {
 	public:
 		DECL_CHILD_CONSTRUCTOR(CodeDecl);
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Code Declaration";
+		}
 
 		[[nodiscard]]
 		bool isDeclaration() const final {
@@ -671,6 +752,11 @@ namespace pst {
 
 		~TopLevel() override = default;
 		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Top Level";
+		}
 
 		[[nodiscard]]
 		const auto& getStatements() const {
@@ -696,6 +782,11 @@ namespace pst {
 		~Block() final = default;
 		void dprint(std::ostream& out) const final;
 
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Block";
+		}
+
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
@@ -719,6 +810,11 @@ namespace pst {
 		static ParserRef<Namespace> parse(RiftParserState& state);
 		~Namespace() final = default;
 		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Namespace";
+		}
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
@@ -753,6 +849,11 @@ namespace pst {
 		~Struct() final = default;
 		void dprint(std::ostream& out) const final;
 
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Struct";
+		}
+
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
@@ -784,6 +885,11 @@ namespace pst {
 		void                  dprint(std::ostream& out) const final;
 		~Fun() final = default;
 
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Function";
+		}
+
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
@@ -812,6 +918,11 @@ namespace pst {
 		void                       dprint(std::ostream& out) const override;
 		~Variable() override = default;
 
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Variable";
+		}
+
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
@@ -828,6 +939,11 @@ namespace pst {
 		static ParserRef<If> parse(RiftParserState& state);
 		void                 dprint(std::ostream& out) const final;
 		~If() final = default;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "If";
+		}
 
 		[[nodiscard]]
 		ParserCBorrowRef<Expr> getCondition() const {
@@ -854,6 +970,10 @@ namespace pst {
 		void                    dprint(std::ostream& out) const final;
 		~While() final = default;
 
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "While";
+		}
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};

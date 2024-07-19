@@ -90,12 +90,23 @@ namespace pst {
 			return false;
 		}
 
+		[[nodiscard]]
+		ParserCBorrowRef<RiftElement> getParent() const {
+			return parent;
+		}
+
+		[[nodiscard]]
+		virtual std::string elementType() const {
+			return "Element";
+		}
+
 		template<typename X>
 		friend class PSTAutomatic;
 
 	protected:
-		dia::SourcePosition     source_position;
-		std::vector<SubElement> sub_elements;
+		dia::SourcePosition          source_position;
+		std::vector<SubElement>      sub_elements;
+		ParserBorrowRef<RiftElement> parent;
 
 		void addToken(const tpc::Token& token);
 		void addToken(const base::unique_ptr<tpc::Token>& token);
@@ -114,6 +125,8 @@ namespace pst {
 		}
 
 		void setLastToken(dia::SourcePosition pos);
+
+		void setParent(ParserBorrowRef<RiftElement> parent) { this->parent = parent; }
 
 	private:
 		PstID id = PstID::next();

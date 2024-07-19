@@ -53,7 +53,6 @@ namespace pst {
 
 		/**
 		 * @brief Parses the expected keyword. Skips on success, logs error on failure.
-		 * @param state The current ParserState.
 		 * @param key The expected keyword.
 		 */
 		void one(Keyword key, bool ignorable = false) {
@@ -67,7 +66,6 @@ namespace pst {
 
 		/**
 		 * @brief Parses the expected Special token. Skips on success, logs error on failure.
-		 * @param state The current ParserState.
 		 * @param spec The expected special token.
 		 */
 		void one(Special spec, bool ignorable = false) {
@@ -81,7 +79,6 @@ namespace pst {
 
 		/**
 		 * @brief Parses the expected operator. Skips on success, logs error on failure.
-		 * @param state The current ParserState.
 		 * @param op The expected operator.
 		 */
 		void one(Operator op, bool ignorable = false) {
@@ -95,7 +92,6 @@ namespace pst {
 
 		/**
 		 * @brief Parses an identifier to @p result. Skips on success, logs error on failure.
-		 * @param state The current ParserState.
 		 * @param result The place to store the parsed identifier.
 		 */
 		void one(tpc::Identifier* result, bool ignorable = false) {
@@ -111,7 +107,6 @@ namespace pst {
 
 		/**
 		 * @brief Parses an identifier to @p result. Skips on success, does nothing on failure.
-		 * @param state The current ParserState.
 		 * @param result The place to store the parsed identifier.
 		 */
 		void one(tpc::OptionalIdentifier* result, bool = false) {
@@ -123,22 +118,11 @@ namespace pst {
 
 		/**
 		 * @brief Parses an Element. Skips on success, logs error on failure.
-		 * @param state The current ParserState.
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<RiftElement> T>
 		void one(ParserRef<T>* result, bool = false) {
 			with(result, T::parse);
-		}
-
-		/**
-		 * @brief Parses an Element. Skips on success, logs error on failure.
-		 * @param state The current ParserState.
-		 * @param result The place to store the parsed element.
-		 */
-		template<std::derived_from<RiftElement> T>
-		void one(base::Optional<ParserRef<T>>* result, bool = false) {
-			*result = T::parse(state);
 		}
 
 		/**
@@ -153,8 +137,12 @@ namespace pst {
 		 */
 		template<std::derived_from<RiftElement> El, typename Sink, typename... Args>
 		void with(Sink* sink, ParserRef<El> fun(State&, Args...), Args&&... args) {
-			*sink = fun(state, std::forward<Args>(args)...);
-			el->addChild(*sink);
+			ParserRef<El> result = fun(state, std::forward<Args>(args)...);
+			if (result != nullptr) {
+				result->setParent(el);
+				el->addChild(result);
+				*sink = std::move(result);
+			}
 		}
 
 		/**
