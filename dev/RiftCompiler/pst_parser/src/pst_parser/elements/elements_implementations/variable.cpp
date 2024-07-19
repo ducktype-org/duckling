@@ -45,8 +45,6 @@ namespace pst {
 
 		state.parse(out).with<Expr>(&out->value, Expr::parse, true);
 
-		out->setLastToken(state.getPosition(-1));
-
 		return out;
 	}
 

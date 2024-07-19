@@ -9,13 +9,11 @@ namespace pst {
 			ParserRef<CodeBlock> block;
 			state.parse(out).one(&block);
 			if (block == nullptr) return nullptr;
-			out->source_position = block->getSourcePosition();
 			out->content         = std::move(block);
 		} else {
 			ParserRef<Stmt> stmt;
 			state.parse(out).one(&stmt);
 			if (stmt == nullptr) return nullptr;
-			out->source_position = stmt->getSourcePosition();
 			out->content         = std::move(stmt);
 		}
 

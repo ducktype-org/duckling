@@ -15,8 +15,6 @@ namespace pst {
 			state.tokens().skip();
 		state.parse(out).one(&out->body);
 
-		out->setLastToken(state.getPosition(-1));
-
 		return out;
 	}
 

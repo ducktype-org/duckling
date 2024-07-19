@@ -26,8 +26,6 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Alias, &out->name, Operator::Assign, &out->points_to);
 
-		out->setLastToken(state.getPosition(-1));
-
 		if (out->points_to->getStar())
 			state.log(base::make_unique<AliasStarError>(out->source_position));
 

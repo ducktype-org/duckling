@@ -13,6 +13,7 @@ namespace pst {
 	void RiftElement::addToken(base::c_borrow_ptr<tpc::Token> t) {
 		RIFT_ASSERT(t != nullptr, "All tokens that are part of an element should exist.");
 		sub_elements.emplace_back(t);
+		setLastToken(t->getPosition());
 	}
 
 	void RiftElement::addToken(const base::unique_ptr<tpc::Token>& t) { addToken(t.borrow()); }
@@ -20,7 +21,10 @@ namespace pst {
 	void RiftElement::addToken(const tpc::Token& t) { addToken(base::borrow_ptr(&t)); }
 
 	void RiftElement::addChild(ParserCBorrowRef<RiftElement> el) {
-		if (el != nullptr) sub_elements.emplace_back(el);
+		if (el != nullptr) {
+			sub_elements.emplace_back(el);
+			setLastToken(el->getSourcePosition());
+		}
 	}
 
 	void RiftElement::setLastToken(dia::SourcePosition pos) {

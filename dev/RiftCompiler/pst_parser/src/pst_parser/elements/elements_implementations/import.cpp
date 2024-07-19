@@ -12,8 +12,6 @@ namespace pst {
 		state.parse(out).all(Keyword::Import, &out->names, Keyword::As, &out->alias);
 
 		state.addImport(out.borrow());
-		out->setLastToken(state.getPosition(-1));
-
 		return out;
 	}
 

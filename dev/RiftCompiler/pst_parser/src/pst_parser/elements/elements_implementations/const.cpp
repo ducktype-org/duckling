@@ -24,7 +24,6 @@ namespace pst {
 
 		if (!assertStmtChoice<Const>(state, state[0].is(Keyword::Const))) return nullptr;
 
-
 		state.parse(out).all(Keyword::Const, &out->name, Operator::Colon);
 
 		state.parse(out).with<Expr>(
@@ -40,8 +39,6 @@ namespace pst {
 		state.parse(out).tryEat(Operator::Assign);
 
 		state.parse(out).with<Expr>(&out->value, Expr::parse, true);
-
-		out->setLastToken(state.getPosition(-1));
 		return out;
 	}
 

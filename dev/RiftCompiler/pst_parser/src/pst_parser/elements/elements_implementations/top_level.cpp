@@ -8,7 +8,6 @@ namespace pst {
 			state.parse(out).one(&stmt);
 			out->statements.emplace_back(std::move(stmt));
 		}
-		out->setLastToken(state.getPosition(-1));
 		return out;
 	}
 

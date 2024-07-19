@@ -14,8 +14,6 @@ namespace pst {
 
 		if (state[0].isBracketGroup(Token::BracketType::Round)) state.parse(out).one(&out->args);
 
-		out->setLastToken(state.getPosition(-1));
-
 		return out;
 	}
 

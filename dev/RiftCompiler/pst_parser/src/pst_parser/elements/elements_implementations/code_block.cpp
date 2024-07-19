@@ -23,7 +23,7 @@ namespace pst {
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
 			state.log(base::make_unique<BlockStartError>(state.getPosition()));
-			return out;
+			return nullptr;
 		}
 
 		state.parse(out).goDown();

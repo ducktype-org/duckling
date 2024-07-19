@@ -10,8 +10,6 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Namespace, &out->name, &out->body);
 
-		out->setLastToken(state.getPosition(-1));
-
 		return out;
 	}
 

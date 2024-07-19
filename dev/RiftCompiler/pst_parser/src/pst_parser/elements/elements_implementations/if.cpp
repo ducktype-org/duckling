@@ -11,8 +11,6 @@ namespace pst {
 
 		state.parse(out).all(Keyword::If, &out->optional_name, &out->condition, &out->body);
 
-		out->setLastToken(state.getPosition(-1));
-
 		return out;
 	}
 

@@ -29,8 +29,6 @@ namespace pst {
 
 		if (state.parse(out).tryEat(rift_def::Operator::PeriodStar)) out->star = true;
 
-		out->setLastToken(state.getPosition(-1));
-
 		return out;
 	}
 
