@@ -1,8 +1,8 @@
 /**
- * @file automatic.hpp
- * @brief Useful parsing abstractions for ParserState
+ * @file pst_automatic.hpp
+ * @brief Useful parsing abstractions for RiftParserState
  *
- * ParseOne - has four modes depending on the type of second argument:
+ * one() - has four modes depending on the type of the first argument:
  *  - for Specials, Keywords and Operators from `rift_def` it ensures that the next token has that
  * value and skips it, otherwise it logs an error
  *  - for Identifier* it ensures the next token is an identifier and parses it to the specified
@@ -16,14 +16,9 @@
  * It works as a kind of assumption that is something simple doesn't fit then it's missing not
  * wrong.
  *
- * ParseAll takes the state and any number of additional arguments and calls parseOne on those
+ * all() takes the state and any number of additional arguments and calls parseOne on those
  * arguments from left to right. Additionally it makes the first parsed thing non-ignorable and the
  * rest ignorable so that infinite parsing loops are very unlikely.
- *
- * NullAwareDprint is a wrapper for element specific debug prints called on pointers that prints
- * null if the pointer is null
- *
- * @note ParseOne/ParseAll should be changed to be methods of `tpc::ParserState`
  */
 #pragma once
 
@@ -52,7 +47,7 @@ namespace pst {
 		//
 		// parses one of the available types
 		// template<class T>
-		// void one([[maybe_unused]]T t, [[maybe_unused]]bool) {
+		// void one([[maybe_unused]]T t, [[maybe_unused]]bool = false) {
 		// 	static_assert(sizeof(T) < 0, "parseOne for type `T` is not implemented\n");
 		// }
 
@@ -146,12 +141,25 @@ namespace pst {
 			*result = T::parse(state);
 		}
 
+		/**
+		 * @brief Call a custom parse function with automation.
+		 *
+		 * The return type of the parsed function usually has to be specified with the first
+		 * template argument.
+		 *
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param fun Parsing function.
+		 * @param args Arguments passed to the parsing function
+		 */
 		template<std::derived_from<RiftElement> El, typename Sink, typename... Args>
 		void with(Sink* sink, ParserRef<El> fun(State&, Args...), Args&&... args) {
 			*sink = fun(state, std::forward<Args>(args)...);
 			el->addChild(*sink);
 		}
 
+		/**
+		 * @brief Automatic version of the ParserState function
+		 */
 		template<typename T>
 		bool tryEat(T type) {
 			if (state[0].is(type)) {
@@ -161,15 +169,24 @@ namespace pst {
 			return false;
 		}
 
+		/**
+		 * @brief Eats any token
+		 */
 		void eatOne() {
 			if (state.notEmpty()) el->addToken(state.tokens().next());
 		}
 
+		/**
+		 * @brief Automatic version of the ParserState function
+		 */
 		void goDown() {
 			el->addToken(state[0].getSentinelBegin());
 			state.goDown();
 		}
 
+		/**
+		 * @brief Automatic version of the ParserState function
+		 */
 		void goUpAndSkip() {
 			state.goUp();
 			el->addToken(state[0].getSentinelEnd());

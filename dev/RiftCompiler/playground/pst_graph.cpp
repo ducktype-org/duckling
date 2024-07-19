@@ -6,7 +6,11 @@
 
 #include <graphviz/gvc.h>
 
+// Linting is turned off because the graph api uses c-style pointers for text.
 // NOLINTBEGIN
+/**
+ * @brief Graph handler for gvc graphs
+ */
 struct Handler {
 	GVC_t*    gvc;
 	Agraph_t* graph;
@@ -65,9 +69,15 @@ std::string stringPosition(dia::SourcePosition pos) {
 	return ss.str();
 }
 
+/**
+ * @brief Generates graph from a pst element and it's children and tokens.
+ *
+ * @note Adds information about position and (currently obfuscated) element class
+ */
 Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::RiftElement> el) {
-	auto self
-		= hdl.addNode(stringPosition(el->getSourcePosition()) + "\n" + typeid(*el.get()).name());
+	std::string name = stringPosition(el->getSourcePosition()) + "\n" + typeid(*el.get()).name();
+	auto        self = hdl.addNode(name);
+
 	for (auto sub: el->viewSubElements()) {
 		variant_match(sub) {
 			variant_case(pst::RiftElement::SubToken, token) {
@@ -76,6 +86,7 @@ Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::RiftElement> el) {
 				hdl.addEdge(self, sub_node);
 				agsafeset(sub_node, "shape", "box", "");
 			}
+
 			variant_case(pst::RiftElement::Child, child) {
 				auto sub_node = dotElement(hdl, child);
 				hdl.addEdge(self, sub_node);
