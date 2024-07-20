@@ -29,10 +29,11 @@ namespace pst {
 		 * @note Requires that the file was successfully tokenized.
 		 */
 		void parse() requires ParseAble {
-			lexer::TokenData& token_data = file->getTokenData();
-			RiftParserState   state(
+			const lexer::TokenData& token_data = file->getTokenData();
+			RiftParserState         state(
                 tpc::TokenStream(
                     token_data.tokens,
+                    tpc::Token(token_data.bof_sentinel),
                     tpc::Token(token_data.eof_sentinel),
                     0,
                     token_data.tokens.size()

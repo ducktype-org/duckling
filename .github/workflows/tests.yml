@@ -8,50 +8,158 @@ on:
   workflow_dispatch:
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
-  WORKSPACE: ${{github.workspace}}/dev/
+  WORKSPACE: ${{ github.workspace }}/dev
+  BUILD_DIR: ${{ github.workspace }}/dev/build
+  CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
-  run-tests:
-    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
-    # You can convert this to a matrix build if you need cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  build:
+    strategy:
+      matrix:
+        build-type: [Debug, Release]  # (Release, Debug, RelWithDebInfo, etc.)
+      fail-fast: false
+
+    timeout-minutes: 8  # (Per matrix run)
+
     runs-on: ubuntu-22.04
-
-    timeout-minutes: 8
-
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: 'false'
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    # @FIXME: Caching does not work, cmake rebuilds everything anyway
-    # Perhaps use https://cristianadam.eu/20200113/speeding-up-c-plus-plus-github-actions-using-ccache/
-    # - name: CacheBuild
-    #   id: cache-build
-    #   uses: actions/cache@v3
-    #   with:
-    #     path: |
-    #       ${{env.WORKSPACE}}/lib/*
-    #       ${{env.WORKSPACE}}/bin/*
-    #       ${{env.WORKSPACE}}/CMakeFiles/*
-    #       ${{env.WORKSPACE}}/CMakeLists.txt
-    #       ${{env.WORKSPACE}}/Makefile
-    #       ${{env.WORKSPACE}}/CMakeCache.txt
-    #       ${{env.WORKSPACE}}/cmake_install.cmake
-    #       ${{env.WORKSPACE}}/CTestTestfile.cmake
-    #     key: ${{ runner.os }}-cache-build
+      # The next two steps might be a little confusing.
+      # When the expression in if statement returns false, the entire
+      # step is skipped.
+      # In that case `value` is empty so it evaluates to false.
 
+      - name: Check if this is a PR to main
+        id: main-pr
+        # Here base.ref is the target branch according to https://github.com/orgs/community/discussions/27154
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' }}
+        run: echo value=1 > $GITHUB_OUTPUT
 
-    - name: Configure CMake
-      working-directory: ${{env.WORKSPACE}}
-      run: cmake -B ${{env.WORKSPACE}} -D CMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -D DOWNLOAD_UBUNTU_ICU_BUILD=ON
+      - name: Check if should build with coverage
+        id: coverage-enabled
+        if: ${{ matrix.build-type == 'Debug' }}
+        run: echo value=1 > $GITHUB_OUTPUT
 
-    - name: Build
-      working-directory: ${{env.WORKSPACE}}
-      run: cmake --build ${{env.WORKSPACE}} -j 2 --target build_all_tests --config ${{env.BUILD_TYPE}}
+      - name: Install lcov
+        if: ${{ steps.coverage-enabled.outputs.value }}
+        run: sudo apt -y install lcov
 
-    - name: Test
-      working-directory: ${{env.WORKSPACE}}
-      run: ctest -C ${{env.BUILD_TYPE}}
+      - name: Install ccache
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py download-binaries -s ccache
+
+      # Generate a timestamp and save it to a variable.
+      # Timestamp is appended to the key in caching, so each cache has a unique key.
+      # This step is arbitrary, and has nothing to the order of choosing the most
+      # recent hash.
+      - name: Prepare cache timestamp
+        id: cache-timestamp
+        shell: cmake -P {0}
+        run: |
+          string(TIMESTAMP current_date "%Y-%m-%d-%H::%M::%S" UTC)
+          file(APPEND "$ENV{GITHUB_OUTPUT}" "timestamp=${current_date}")
+
+      # Cache local branch and on miss fallback to main branch's cache. In case
+      # main branch misses, fallback to any branch's cache.
+      - name: Cache build
+        id: cache-build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          # If there is no match with the key, then it tries to partially
+          # match with any of restore-keys (top to bottom).
+          # Most recent entry is used when multiple match to the same key.
+          # See readme for details.
+          restore-keys : |
+            ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
+            ${{ runner.os }}-build-${{ matrix.build-type }}-main
+            ${{ runner.os }}-build-${{ matrix.build-type }}
+
+      # Enables coverage only in case of Debug build.
+      - name: Additional CMake flags
+        id: cmake-flags
+        # Env here is used for readability only
+        env:
+          flags: ${{ steps.coverage-enabled.outputs.value && '-D ENABLE_COVERAGE=ON' || '' }}
+        run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
+
+      - name: Configure CMake
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          cmake \
+              -B ${{ env.BUILD_DIR }} \
+              -D CMAKE_CXX_COMPILER=g++-11 \
+              -D BUILD_DOCS=OFF \
+              -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} \
+              -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
+              -D USE_CCACHE=ON \
+              ${{ steps.cmake-flags.outputs.flags }}
+
+      - name: Build tests
+        working-directory: ${{ env.WORKSPACE }}
+        run: cmake --build ${{ env.BUILD_DIR }} -j 5 -- build_all_tests
+
+      - name: Test
+        working-directory: ${{ env.BUILD_DIR }}
+        run: cmake --build ${{ env.BUILD_DIR }} -- test
+
+      - name: Test Coverage
+        id: test-coverage
+        if: ${{ steps.coverage-enabled.outputs.value }}
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} -- coverage
+          echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
+
+      - name: Save main coverage percentage
+        uses: action-pack/set-variable@v1
+        if: ${{ steps.coverage-enabled.outputs.value && env.BRANCH_NAME == 'main' }}
+        with:
+          name: 'MAIN_COVERAGE_VALUE'
+          value: ${{ steps.test-coverage.outputs.coverage-percent }}
+          token: ${{ secrets.QUACKER_PAT }}
+
+      - name: Read main coverage percentage
+        if: ${{ steps.coverage-enabled.outputs.value }}
+        id: read-main-coverage
+        run: echo value=${{ vars.MAIN_COVERAGE_VALUE }} > $GITHUB_OUTPUT
+
+      - name: Check coverage status
+        id: check-coverage-status
+        if: ${{ steps.coverage-enabled.outputs.value && steps.main-pr.outputs.value }}
+        run: echo success=${{ steps.test-coverage.outputs.coverage-percent >= steps.read-main-coverage.outputs.value }} > $GITHUB_OUTPUT
+
+      - name: Hide previous bot comments
+        if: ${{ steps.coverage-enabled.outputs.value && steps.main-pr.outputs.value }}
+        uses: int128/hide-comment-action@v1
+        with:
+          token: ${{ secrets.QUACKER_PAT }}
+          authors: quacker-bot
+
+      - name: Post coverage status as github comment
+        uses: actions/github-script@v7
+        if: ${{ steps.coverage-enabled.outputs.value && steps.main-pr.outputs.value }}
+        env:
+          FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
+          SUCC_MSG: '✅✅✅ - **Great job writing tests!**'
+        with:
+          github-token: ${{ secrets.QUACKER_PAT }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🎉 Tests and coverage ran successfully! 🎉\n \
+                     ⭐ Lines covered on the **current** branch: **${{ steps.test-coverage.outputs.coverage-percent }}%** \n \
+                     ⭐ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \n \
+                     ${{ steps.check-coverage-status.outputs.success == 'true' && env.SUCC_MSG || env.FAIL_MSG }}'
+            })
+
+      - name: Fail if insufficient coverage
+        if: ${{ steps.coverage-enabled.outputs.value && steps.check-coverage-status.outputs.success != 'true' && steps.main-pr.outputs.value }}
+        run: exit 1

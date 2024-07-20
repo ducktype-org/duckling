@@ -25,6 +25,9 @@ namespace pst {
 		const dia::SourcePosition& getSourcePosition() const;
 
 		[[nodiscard]]
+		const std::vector<dia::SourcePosition>& getKeywordPositions() const;
+
+		[[nodiscard]]
 		PstID getID() const {
 			return id;
 		}
@@ -49,10 +52,15 @@ namespace pst {
 			return false;
 		}
 
-	private:
-		dia::SourcePosition source_position;
+	protected:
+		dia::SourcePosition              source_position;
+		std::vector<dia::SourcePosition> keyword_positions;
 
-		PstID id;
+		void setLastToken(dia::SourcePosition pos);
+		void addKeyword(dia::SourcePosition pos);
+
+	private:
+		PstID id = PstID::next();
 	};
 
 	using ImportType = tpc::ParserCBorrowRef<pst::Import>;

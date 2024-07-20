@@ -11,17 +11,39 @@ namespace pst::detail {
 	public:
 		Conditions() = delete;
 
-		static bool isComma(const RiftParserState& state, usize fwd) {
-			return state.ctokens().is(rift_def::Special::Comma, fwd);
+		static bool isComma(const RiftParserState& state, i64 fwd) {
+			return state[fwd].is(rift_def::Special::Comma);
 		}
 
-		static bool isSentinel(const RiftParserState& state, usize fwd) {
-			return state.ctokens().is(lexer::Token::Type::Sentinel, fwd);
+		static bool isSentinel(const RiftParserState& state, i64 fwd) {
+			return state[fwd].is(lexer::Token::Type::Sentinel);
 		}
 
-		static bool isCurlyGroup(const RiftParserState& state, usize fwd) {
-			return state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly, fwd);
+		static bool isCurlyGroup(const RiftParserState& state, i64 fwd) {
+			return state[fwd].isBracketGroup(lexer::Token::BracketType::Curly);
 		}
+
+		static bool isAssignOrSemicolon(const RiftParserState& st, i64 fwd) {
+			return st[fwd].is(rift_def::Operator::Assign)
+			    || st[fwd].is(rift_def::Special::Semicolon);
+		}
+
+		static bool isAssign(const RiftParserState& st, i64 fwd) {
+			return st[fwd].is(rift_def::Operator::Assign);
+		}
+	};
+
+	class NameGetters {
+	public:
+		NameGetters() = delete;
+
+		static std::string parameterList() { return "function parameter"; }
+
+		static std::string returnList() { return "function return type"; }
+
+		static std::string inheritanceList() { return "inheritance"; }
+
+		static std::string attributeArgList() { return "attribute argument"; }
 	};
 
 	/**

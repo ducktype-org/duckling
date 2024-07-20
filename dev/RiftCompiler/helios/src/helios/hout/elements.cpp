@@ -4,10 +4,13 @@
 #include <base/variant.hpp>
 #include "../scopes/scopes.hpp"
 #include "../symbols/symbols.hpp"
+#include "visitors.hpp"
 
 namespace compiler::helios::code {
 
-	void addIndent(usize indent, std::string& out) { out.append(indent * 4, ' '); }
+	constexpr usize INDENT_SIZE = 4;
+
+	void addIndent(usize indent, std::string& out) { out.append(indent * INDENT_SIZE, ' '); }
 
 	void ReturnStmt::debugPrint(usize indent, std::string& out) const {
 		addIndent(indent, out);
@@ -28,12 +31,35 @@ namespace compiler::helios::code {
 		out += "\n";
 	}
 
+	void IfStmt::debugPrint(usize indent, std::string& out) const {
+		addIndent(indent, out);
+		out += "if (";
+		condition->debugPrint(out);
+		out += ") {\n";
+		for (const auto& stmt: body.statements) stmt->debugPrint(indent + 1, out);
+		addIndent(indent, out);
+		out += "}\n";
+	}
+
 	void ConstIntExprMock::debugPrint(std::string& out) const { out += std::to_string(value); }
 
 	void IdentifierExpresion::debugPrint(std::string& out) const {
 		out += base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
 	}
 
+// visitors:
+#define STMT_VISITOR(type) \
+	void type::acceptVisitor(HoutStmtVisitor& visitor) const { visitor.visit##type(*this); }
+#define EXPR_VISITOR(type) \
+	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
+
+	STMT_VISITOR(ReturnStmt);
+	STMT_VISITOR(VoidReturnStmt);
+	STMT_VISITOR(ExprStmt);
+	STMT_VISITOR(IfStmt);
+
+	EXPR_VISITOR(ConstIntExprMock);
+	EXPR_VISITOR(IdentifierExpresion);
 }
 
 namespace compiler::helios {

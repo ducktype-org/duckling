@@ -6,10 +6,12 @@
 #pragma once
 
 #include "kind.hpp"
-#include "queries.hpp"
 #include "type_desc.hpp"
 #include "type_info.hpp"
 #include "types.hpp"
+#include "type_interface.hpp"
+
+#include "queries.hpp"
 
 namespace ts {
 	void init();  // if needed

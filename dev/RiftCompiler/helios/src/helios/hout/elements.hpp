@@ -15,20 +15,28 @@ namespace compiler::helios::code {
 
 	// @TODO: Add source positions
 
+	class HoutStmtVisitor;
+	class HoutExprVisitor;
+
 	/**
 	 * @brief Base class for all HOUT statements
 	 */
 	struct Stmt {
 		virtual ~Stmt()                                               = default;
 		virtual void debugPrint(usize indent, std::string& out) const = 0;
+
+		virtual void acceptVisitor(HoutStmtVisitor&) const = 0;
 	};
 
 	/**
 	 * @brief Base class for all HOUT expressions
 	 */
 	struct Expr {
+		// @TODO: set/get Type and ValueCategory of Expr
 		virtual ~Expr()                                 = default;
 		virtual void debugPrint(std::string& out) const = 0;
+
+		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
 	};
 
 	/**
@@ -51,6 +59,7 @@ namespace compiler::helios::code {
 		ReturnStmt(ElementRef<Expr> value): value(std::move(value)) {}
 
 		void debugPrint(usize indent, std::string& out) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
 	/**
@@ -58,6 +67,7 @@ namespace compiler::helios::code {
 	 */
 	struct VoidReturnStmt final: public Stmt {
 		void debugPrint(usize indent, std::string& out) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
 	/**
@@ -69,6 +79,24 @@ namespace compiler::helios::code {
 		ExprStmt(ElementRef<Expr> expr): expr(std::move(expr)) {}
 
 		void debugPrint(usize indent, std::string& out) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
+	};
+
+	/**
+	 * @brief Represents if statement in HOUT
+	 */
+	struct IfStmt final: public Stmt {
+		ElementRef<Expr> condition;
+		CodeBlock        body;
+
+		// @TODO: optional else body
+
+		IfStmt(ElementRef<Expr> condition, CodeBlock body):
+			  condition(std::move(condition)),
+			  body(std::move(body)) {}
+
+		void debugPrint(usize indent, std::string& out) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
 	/* * * * * * * * *
@@ -86,6 +114,7 @@ namespace compiler::helios::code {
 		ConstIntExprMock(i64 value): value{ value } {}
 
 		void debugPrint(std::string& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
 	/**
@@ -101,6 +130,7 @@ namespace compiler::helios::code {
 		IdentifierExpresion(SymID symbol): symbol{ std::move(symbol) } {}
 
 		void debugPrint(std::string& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 }
 

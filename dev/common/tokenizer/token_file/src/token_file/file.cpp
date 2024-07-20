@@ -15,7 +15,7 @@ namespace tokenizer {
 	 * @return usize - 0 if there is new line, otherwise number of characters that together form a
 	 * newline
 	 */
-	usize isNewLine(const std::span<lexer::Char> where) {
+	usize isNewLine(const std::span<const lexer::Char> where) {
 		auto& newline = lexer::Classifications::newline;
 		if (where.size() > 0 && where[0].is(newline)) {
 			if (where.size() > 1 && where[0].is(0x0D) && where[1].is(0x0A)) return 2;
@@ -24,7 +24,9 @@ namespace tokenizer {
 		return 0;
 	}
 
-	TokenFile::TokenFile(const fs::FilePath& path): path(path) { content = path.getContent(); }
+	TokenFile::TokenFile(const fs::FilePath& path): path(path) {
+		content.emplace(path.getContent());
+	}
 
 	void TokenFile::countLines() {
 		if (log.bad()) return;
@@ -85,22 +87,22 @@ namespace tokenizer {
 	void TokenFile::runLexer() {
 		if (log.bad()) return;
 		lexer::Lexer lexer{ base::borrow_ptr(this) };
-		token_data = lexer.tokenize();
+		token_data.emplace(lexer.tokenize());
 	}
 
-	fs::FileContent TokenFile::getContent() {
+	const fs::FileContent TokenFile::getContent() const {
 		if (content) return content.value();
 		return path.getContent();
 	}
 
 	fs::FilePath TokenFile::getPath() { return path; }
 
-	lexer::CharArray& TokenFile::getChars() {
+	const lexer::CharArray& TokenFile::getChars() const {
 		if (!decoded) RIFT_PANIC("Tried to access nonexistant Character data.");
 		return decoded.value();
 	}
 
-	lexer::TokenData& TokenFile::getTokenData() {
+	const lexer::TokenData& TokenFile::getTokenData() const {
 		// @TODO: Maybe use lexer to create it.
 		if (!token_data) RIFT_PANIC("Tried to access nonexistant token data.");
 		return token_data.value();
