@@ -20,7 +20,7 @@ namespace pst {
 
 	void RiftElement::addToken(const tpc::Token& t) { addToken(base::borrow_ptr(&t)); }
 
-	void RiftElement::addChild(ParserCBorrowRef<RiftElement> el) {
+	void RiftElement::addChild(ParserBorrowRef<RiftElement> el) {
 		if (el != nullptr) {
 			sub_elements.emplace_back(el);
 			setLastToken(el->getSourcePosition());

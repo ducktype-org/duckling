@@ -57,7 +57,7 @@ void handleElement(pst::ParserCBorrowRef<pst::RiftElement> el) {
 	for (auto sub: el->viewSubElements()) {
 		variant_match(sub) {
 			variant_case(pst::RiftElement::SubToken, token) { handleToken(token); }
-			variant_case(pst::RiftElement::Child, child) { handleElement(child); }
+			variant_case(pst::RiftElement::ConstChild, child) { handleElement(child); }
 		}
 	}
 }
@@ -87,7 +87,7 @@ Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::RiftElement> el) {
 				agsafeset(sub_node, "shape", "box", "");
 			}
 
-			variant_case(pst::RiftElement::Child, child) {
+			variant_case(pst::RiftElement::ConstChild, child) {
 				auto sub_node = dotElement(hdl, child);
 				hdl.addEdge(self, sub_node);
 			}
@@ -109,10 +109,11 @@ int main(int argc, char** argv) {
 
 	if (pst.getLogger().bad()) {
 		pst.getLogger().dumpLog(false, std::cerr);
-		std::cerr << "\nThere are errors, aborting.\n";
+		std::cerr << "\nThere are errors.\n";
 		pst.dprint(std::cerr);
 		std::cerr << "\n";
-	} else {
+	}
+	if (pst.getRootElement() != nullptr) {
 		Handler hdl("graph");
 		dotElement(hdl, pst.getRootElement());
 		hdl.writeToSVG(argv[2]);
