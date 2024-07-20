@@ -6,9 +6,10 @@ INPUT = "@DOXYGEN_INPUT_DIR@"
 OUTPUT_DIRECTORY = "@DOXYGEN_OUTPUT_DIR@"
 GENERATE_XML = YES
 RECURSIVE = YES
-FILE_PATTERNS = *.hpp *.cpp
+FILE_PATTERNS = *.hpp *.cpp *.md
 EXCLUDE_PATTERNS = "@PROJECT_SOURCE_DIR@/*build*/*" \
                    "@PROJECT_SOURCE_DIR@/docs/*" \
+                   "@PROJECT_SOURCE_DIR@/scripts/*" \
                    */toolbox.py
 
 # Graph look options

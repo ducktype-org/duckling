@@ -1,3 +1,5 @@
+\page common-readme Common modules
+
 # Module overview:
 
 ## config
@@ -6,21 +8,35 @@
   has functions dedicated for parsing arguments of main rift compiler and test options.
 
 ## filesystem
+
+\subpage filesystem-module
+
   Module implementing `std::filesystem::path` wrapper and reading of files content, with
   automatic memory management.
   
-## lexer
+## tokenizer
+
+\subpage tokenizer-module
+
   Module implementing lexing of any text according to rules defined by Rift Programming Language,
   keywords, specials and operators definitions provided by `rift_definition` module.
 
 ## printer
+
+\subpage printer-module
+
   Module implementing printing to console with logical structure of messages, message packs, etc.
   It also provides additional features like message levels, and colors.
 
-## rift_definitions
-  Defines keywords, specials and operators used by lexer.
-  Provides interface for switching between definitions.
-
 ## tester
+
+\subpage tester-module
+
   Implements simple testing framework.
+
+## json
+
+\subpage json-module
+
+Json module
 
