@@ -22,7 +22,9 @@ DOT_UML_DETAILS = NONE
 ENABLE_PREPROCESSING = YES
 MACRO_EXPANSION = YES
 EXPAND_ONLY_PREDEF = YES
-ALIASES += "query=\xrefitem query \"Query\" \"Queries\""
+ALIASES += "query=\xrefitem query \"Query\" \"Queries\"" \
+            "TODO:=\todo" \
+            "TODO=\todo"
 PREDEFINED = "DECLARE_QUERY(name, key, value)=auto name(key) -> value;/**< \query */" \
             "STRONG_TYPEDEF_ID(name)=using name = u64;" \
             "IMPLEMENT_QUERY(name, key)=" \
