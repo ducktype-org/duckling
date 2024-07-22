@@ -112,7 +112,8 @@ struct CommandList {
 	/**
 	 * @brief Generate help messages with list of all commands
 	 */
-	std::string generateHelpMessage() {
+	[[nodiscard]]
+	std::string generateHelpMessage() const {
 		std::string out;
 		out.reserve(128);
 
@@ -142,6 +143,18 @@ struct CommandList {
 		return false;
 	}
 };
+
+void printHelp(const clap::Clap& clap, const clap::ParsingResult& parsing_result, const CommandList& commands, bool command_mode) {
+	if (command_mode) {
+		std::cerr << clap::HelpMessageGenerator::generate(clap, parsing_result);
+		std::cerr << "\nFor list of available commands use: ./duck --help\n";
+	} else {
+		std::cerr << commands.generateHelpMessage();
+		std::cerr << "\nFor help with given command use: ./duck [command] --help\n\n";
+		std::cerr << "General options and usage:\n";
+		std::cerr << clap::HelpMessageGenerator::generate(clap, parsing_result);
+	}
+}
 
 /**
  * @brief Wrapper for logic of main function
@@ -242,18 +255,16 @@ int mainProcedure(int argc, const char* const* argv) {
 
 			auto options = configureWith(clap, full_args);
 
-			if (options.isFlag("version")) std::cerr << "Duckling version: 0.0.1 pre-alpha\n";
+			if (options.isFlag("version")) {
+				std::cerr << "Duckling version: 0.0.1 pre-alpha\n";
+				return 0;
+			}
+			
+			printHelp(clap, options, commands, command_mode);
+			return 0;
 		}
 	} catch (const clap::exceptions::HelpException& e) {
-		if (not command_mode) {
-			std::cerr << commands.generateHelpMessage();
-			std::cerr << "\nFor help with given command use: ./duck [command] --help\n\n";
-			std::cerr << "General options and usage:\n";
-			std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result);
-		} else {
-			std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result);
-			std::cerr << "\nFor list of available commands use: ./duck --help\n";
-		}
+		printHelp(clap, e.parsing_result, commands, command_mode);
 	} catch (const clap::exceptions::ClapException& e) {
 		std::cerr << "Incorrect option: " << e.what() << '\n';
 		std::cerr << "Use --help for available options.\n";
