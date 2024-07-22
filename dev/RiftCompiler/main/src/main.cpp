@@ -156,18 +156,7 @@ void printHelp(const clap::Clap& clap, const clap::ParsingResult& parsing_result
 	}
 }
 
-/**
- * @brief Wrapper for logic of main function
- */
-int mainProcedure(int argc, const char* const* argv) {
-	init();
-
-	clap::CLIArgs full_args{ (usize) argc, argv };
-	clap::CLIArgs command_args{ (usize) argc - 1, argv + 1 };
-
-	auto clap         = baseCompilerOptions();
-	bool command_mode = false;
-
+CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 	CommandList commands;
 	commands.add("lex", "Runs lexer on single file and prints result to cout.", [&]() {
 		// modify clap as needed:
@@ -233,6 +222,22 @@ int mainProcedure(int argc, const char* const* argv) {
 		configureWith(clap, command_args);
 		throw base::LogicError("Command `throw` thrown successfully!");
 	});
+	return commands;
+}
+
+/**
+ * @brief Wrapper for logic of main function
+ */
+int mainProcedure(int argc, const char* const* argv) {
+	init();
+
+	clap::CLIArgs full_args{ (usize) argc, argv };
+	clap::CLIArgs command_args{ (usize) argc - 1, argv + 1 };
+
+	auto clap         = baseCompilerOptions();
+	bool command_mode = false;
+
+	auto commands = getCommandList(command_args, clap);
 
 	try {
 		if (argc >= 2 and argv[1][0] != '-') {
