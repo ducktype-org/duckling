@@ -2,7 +2,7 @@
  * @file automatic.hpp
  * @brief Useful parsing abstractions for ParserState
  *
- * ParseOne - has four modes depending on the type of second argument:
+ * one() - has four modes depending on the type of the first argument:
  *  - for Specials, Keywords and Operators from `rift_def` it ensures that the next token has that
  * value and skips it, otherwise it logs an error
  *  - for Identifier* it ensures the next token is an identifier and parses it to the specified
@@ -16,14 +16,12 @@
  * It works as a kind of assumption that is something simple doesn't fit then it's missing not
  * wrong.
  *
- * ParseAll takes the state and any number of additional arguments and calls parseOne on those
+ * all() takes the state and any number of additional arguments and calls parseOne on those
  * arguments from left to right. Additionally it makes the first parsed thing non-ignorable and the
  * rest ignorable so that infinite parsing loops are very unlikely.
  *
  * NullAwareDprint is a wrapper for element specific debug prints called on pointers that prints
  * null if the pointer is null
- *
- * @note ParseOne/ParseAll should be changed to be methods of `tpc::ParserState`
  */
 #pragma once
 
@@ -79,7 +77,6 @@ namespace tpc {
 
 		/**
 		 * @brief Parses the expected keyword. Skips on success, logs error on failure.
-		 * @param state The current ParserState.
 		 * @param key The expected keyword.
 		 */
 		void one(Keyword key, bool ignorable = false) {
@@ -91,7 +88,6 @@ namespace tpc {
 
 		/**
 		 * @brief Parses the expected Special token. Skips on success, logs error on failure.
-		 * @param state The current ParserState.
 		 * @param spec The expected special token.
 		 */
 		void one(Special spec, bool ignorable = false) {
@@ -103,7 +99,6 @@ namespace tpc {
 
 		/**
 		 * @brief Parses the expected operator. Skips on success, logs error on failure.
-		 * @param state The current ParserState.
 		 * @param op The expected operator.
 		 */
 		void one(Operator op, bool ignorable = false) {
@@ -115,7 +110,6 @@ namespace tpc {
 
 		/**
 		 * @brief Parses an identifier to @p result. Skips on success, logs error on failure.
-		 * @param state The current ParserState.
 		 * @param result The place to store the parsed identifier.
 		 */
 		void one(Identifier* result, bool ignorable = false) {
@@ -130,7 +124,6 @@ namespace tpc {
 
 		/**
 		 * @brief Parses an identifier to @p result. Skips on success, does nothing on failure.
-		 * @param state The current ParserState.
 		 * @param result The place to store the parsed identifier.
 		 */
 		void one(OptionalIdentifier* result, bool = false) {
@@ -140,7 +133,6 @@ namespace tpc {
 
 		/**
 		 * @brief Parses an Element. Skips on success, logs error on failure.
-		 * @param state The current ParserState.
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<Element> T>
@@ -158,30 +150,52 @@ namespace tpc {
 			*result = T::parse(state);
 		}
 
-		// parses all the given elements
+		/**
+		 * @brief Parses all of the given elements.
+		 * @note Forces the first element to be skipped on error if it's a token.
+		 */
 		template<typename T>
 		void all(T t) {
 			one(t);
 		}
 
+		/**
+		 * @brief Parses all of the given elements.
+		 * @note Forces the first element to be skipped on error if it's a token.
+		 */
 		template<typename T, typename... Q>
 		void all(T t, Q... q) {
 			one(t);
 			parseRest(q...);
 		}
 
+		/**
+		 * @brief Call a custom parse function with automation.
+		 *
+		 * The return type of the parsed function usually has to be specified with the first
+		 * template argument.
+		 *
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param fun Parsing function.
+		 * @param args Arguments passed to the parsing function
+		 */
 		template<std::derived_from<Element> El, typename Sink, typename... Args>
 		void with(Sink* sink, ParserRef<El> fun(State&, Args...), Args&&... args) {
 			*sink = fun(state, std::forward<Args>(args)...);
 		}
 
 	private:
-		// parses all the given elements
+		/**
+		 * @brief Parses all of the given elements.
+		 */
 		template<typename T>
 		void parseRest(T t) {
 			one(t, true);
 		}
 
+		/**
+		 * @brief Parses all of the given elements.
+		 */
 		template<typename T, typename... Q>
 		void parseRest(T t, Q... q) {
 			one(t, true);

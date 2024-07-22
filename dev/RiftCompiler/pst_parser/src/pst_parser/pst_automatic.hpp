@@ -181,12 +181,19 @@ namespace pst {
 			state.tokens().skip();
 		}
 
-		// parses all the given elements
+		/**
+		 * @brief Parses all of the given elements.
+		 * @note Forces the first element to be skipped on error if it's a token.
+		 */
 		template<typename T>
 		void all(T t) {
 			one(t);
 		}
 
+		/**
+		 * @brief Parses all of the given elements.
+		 * @note Forces the first element to be skipped on error if it's a token.
+		 */
 		template<typename T, typename... Q>
 		void all(T t, Q... q) {
 			one(t);
@@ -194,12 +201,17 @@ namespace pst {
 		}
 
 	private:
-		// parses all the given elements
+		/**
+		 * @brief Parses all of the given elements.
+		 */
 		template<typename T>
 		void parseRest(T t) {
 			one(t, true);
 		}
 
+		/**
+		 * @brief Parses all of the given elements.
+		 */
 		template<typename T, typename... Q>
 		void parseRest(T t, Q... q) {
 			one(t, true);
