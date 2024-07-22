@@ -79,7 +79,7 @@ Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::RiftElement> el) {
 				static std::string shape_string = "shape";
 				static std::string box_string   = "box";
 				static std::string empty_string = "";
-				agsafeset(sub_node, shape_string.data(), "box", "");
+				agsafeset(sub_node, shape_string.data(), box_string.data(), empty_string.data());
 			}
 
 			variant_case(pst::RiftElement::ConstChild, child) {
