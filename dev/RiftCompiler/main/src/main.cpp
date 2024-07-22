@@ -35,9 +35,10 @@ namespace {
 }
 
 /**
- * @brief Type of command callback
+ * @brief Type of command callback. The returned int value is the value
+ * that will be returned by hole application (i.e. exit status).
  */
-using CommandRunner = std::function<void()>;
+using CommandRunner = std::function<int()>;
 
 /**
  * @brief Structure representing a single command of "duck main"
@@ -80,19 +81,24 @@ struct CommandList {
 		return out;
 	}
 
+	struct CommandStatus {
+		bool was_command_run;
+		int exit_code;
+	};
+
 	/**
 	 * @brief Runs command of given name
 	 * @param what command name
 	 * @return if command of given name was found was run.
 	 */
-	bool run(std::string_view what) {
+	CommandStatus run(std::string_view what) {
 		for (auto& cmd: commands) {
 			if (cmd.name == what) {
-				cmd.runner();
-				return true;
+				int status = cmd.runner();
+				return {true, status};
 			}
 		}
-		return false;
+		return {false, 1};
 	}
 };
 
@@ -149,6 +155,13 @@ clap::ParsingResult configureDuckMainWith(clap::Clap& clap, clap::CLIArgs args) 
 	return res;
 }
 
+/**
+ * @brief Generated command list filled with duck-main commands.
+ * 
+ * @param command_args 
+ * @param clap 
+ * @return CommandList 
+ */
 CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 	CommandList commands;
 	commands.add("lex", "Runs lexer on single file and prints result to cout.", [&]() {
@@ -172,6 +185,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 			std::cout << "Tokenization errors: ";
 			token_file->getLogger().dumpLog(true, std::cout);
 			std::cout << "\n";
+			return 1;
 		} else {
 			auto& tokens = token_file->getTokenData();
 			for (auto& token: tokens.tokens) {
@@ -184,6 +198,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 					std::cout
 				);
 			}
+			return 0;
 		}
 	});
 	commands.add("parse", "Runs parser on single file and prints result in json to cout.", [&]() {
@@ -201,17 +216,22 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto pst = pst::PST(file_to_parse);
 
+		int exit_code = 0;
+
 		if (pst.getLogger().messageCount() != 0) {
 			std::cout << "Errors and messages: \n";
 			pst.getLogger().dumpLog(true, std::cout);
 			std::cout << "\n\n";
+			exit_code = 1;
 		}
 
 		std::cout << "Parsed tree:\n";
 		pst.dprint(std::cout);
 		std::cout << "\n";
+
+		return exit_code;
 	});
-	commands.add("throw", "Throws exception (testing command).", [&]() {
+	commands.add("throw", "Throws exception (testing command).", [&]() -> int {
 		configureDuckMainWith(clap, command_args);
 		throw base::LogicError("Command `throw` thrown successfully!");
 	});
@@ -253,12 +273,13 @@ int mainProcedure(int argc, const char* const* argv) {
 			std::string command = argv[1];
 
 			command_mode         = true;
-			auto was_command_run = commands.run(command);
+			auto command_status = commands.run(command);
 
-			if (not was_command_run) {
+			if (not command_status.was_command_run) {
 				std::cerr << "Unknown command: " << command << ".\n";
-				return 1;
 			}
+
+			return command_status.exit_code;
 		} else {
 			command_mode = false;
 
@@ -280,12 +301,12 @@ int mainProcedure(int argc, const char* const* argv) {
 		}
 	} catch (const clap::exceptions::HelpException& e) {
 		printHelp(clap, e.parsing_result, commands, command_mode);
+		return 0;
 	} catch (const clap::exceptions::ClapException& e) {
 		std::cerr << "Incorrect option: " << e.what() << '\n';
 		std::cerr << "Use --help for available options.\n";
 		return 1;
 	}
-	return 0;
 }
 
 int main(int argc, const char* argv[]) {
