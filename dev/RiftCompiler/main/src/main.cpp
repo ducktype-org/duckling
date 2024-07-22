@@ -16,7 +16,6 @@
 #include <printer/stream_printer.hpp>
 #include <config/config.hpp>
 
-
 /**
  * @brief Runs inits needed by main
  */
@@ -25,7 +24,6 @@ void init() {
 	pst::init();
 	// @TODO: more inits?
 }
-
 
 namespace {
 	/**
@@ -83,7 +81,7 @@ struct CommandList {
 
 	struct CommandStatus {
 		bool was_command_run;
-		int exit_code;
+		int  exit_code;
 	};
 
 	/**
@@ -95,14 +93,19 @@ struct CommandList {
 		for (auto& cmd: commands) {
 			if (cmd.name == what) {
 				int status = cmd.runner();
-				return {true, status};
+				return { true, status };
 			}
 		}
-		return {false, 1};
+		return { false, 1 };
 	}
 };
 
-void printHelp(const clap::Clap& clap, const clap::ParsingResult& parsing_result, const CommandList& commands, bool command_mode) {
+void printHelp(
+	const clap::Clap&          clap,
+	const clap::ParsingResult& parsing_result,
+	const CommandList&         commands,
+	bool                       command_mode
+) {
 	if (command_mode) {
 		std::cerr << clap::HelpMessageGenerator::generate(clap, parsing_result);
 		std::cerr << "\nFor list of available commands use: ./duck --help\n";
@@ -120,18 +123,18 @@ void printHelp(const clap::Clap& clap, const clap::ParsingResult& parsing_result
  */
 clap::Clap getClap() {
 	// standard options:
-	auto clap         = config::standardOptions();
-	
+	auto clap = config::standardOptions();
+
 	// custom options of main:
-	clap.add(clap::ParamBuilder::ofFlag()
-		.addLongName("let-it-throw")
-		.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
-					"Useful for debugging.")
-		.addLongDesc(
-			"Note that sometimes exception can happen before logic behind this option "
-			"will happen. In that case exception will most likely not be caught."
-		)
-		.build());
+	clap.add(
+		clap::ParamBuilder::ofFlag()
+			.addLongName("let-it-throw")
+			.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
+	                      "Useful for debugging.")
+			.addLongDesc("Note that sometimes exception can happen before logic behind this option "
+	                     "will happen. In that case exception will most likely not be caught.")
+			.build()
+	);
 
 	return clap;
 }
@@ -157,10 +160,10 @@ clap::ParsingResult configureDuckMainWith(clap::Clap& clap, clap::CLIArgs args) 
 
 /**
  * @brief Generated command list filled with duck-main commands.
- * 
- * @param command_args 
- * @param clap 
- * @return CommandList 
+ *
+ * @param command_args
+ * @param clap
+ * @return CommandList
  */
 CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 	CommandList commands;
@@ -253,31 +256,30 @@ int mainProcedure(int argc, const char* const* argv) {
 	auto commands = getCommandList(command_args, clap);
 
 	// our custom commands:
-	clap.add(clap::ParamBuilder::ofFlag()
-		.addLongName("let-it-throw")
-		.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
-					"Useful for debugging.")
-		.addLongDesc(
-			"Note that sometimes exception can happen before logic behind this option "
-			"will happen. In that case exception will most likely not be caught."
-		)
-		.build());
+	clap.add(
+		clap::ParamBuilder::ofFlag()
+			.addLongName("let-it-throw")
+			.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
+	                      "Useful for debugging.")
+			.addLongDesc("Note that sometimes exception can happen before logic behind this option "
+	                     "will happen. In that case exception will most likely not be caught.")
+			.build()
+	);
 
 	try {
 		// @future: improve the way we detect whether there was a command or no and
 		// the way we handle command line arguments.
-		// It is currently done this way, because clap was not designed for 
+		// It is currently done this way, because clap was not designed for
 		// "interactive" options, and "Conditional parameters" don't serve this role well.
 
 		if (argc >= 2 and argv[1][0] != '-') {
 			std::string command = argv[1];
 
-			command_mode         = true;
+			command_mode        = true;
 			auto command_status = commands.run(command);
 
-			if (not command_status.was_command_run) {
+			if (not command_status.was_command_run)
 				std::cerr << "Unknown command: " << command << ".\n";
-			}
 
 			return command_status.exit_code;
 		} else {
@@ -295,7 +297,7 @@ int mainProcedure(int argc, const char* const* argv) {
 				std::cerr << "Duckling version: 0.0.1 pre-alpha\n";
 				return 0;
 			}
-			
+
 			printHelp(clap, options, commands, command_mode);
 			return 0;
 		}

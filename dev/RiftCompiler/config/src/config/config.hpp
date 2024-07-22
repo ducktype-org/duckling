@@ -4,7 +4,7 @@
  * @todo: add a way to customize what options are included ans how.
  */
 
-#pragma  once
+#pragma once
 
 #include <clap/clap.hpp>
 
@@ -25,5 +25,3 @@ namespace config {
 	 */
 	clap::ParsingResult configureWith(clap::Clap& clap, clap::CLIArgs args);
 }
-
-
