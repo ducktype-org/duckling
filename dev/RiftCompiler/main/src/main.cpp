@@ -29,7 +29,7 @@ void init() {
 
 namespace {
 	/**
-	 * @brief Whether main should (not) catch exceptions.
+	 * @brief Whether main should throw compiler exceptions.
 	 */
 	bool throwing_main = true;
 }
