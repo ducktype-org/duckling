@@ -7,7 +7,8 @@
 #include <graphviz/gvc.h>
 
 // Linting is turned off because the graph api uses c-style pointers for text.
-// NOLINTBEGIN
+// NOLINTBEGIN(-avoid-c-arrays)
+
 /**
  * @brief Graph handler for gvc graphs
  */
@@ -30,7 +31,8 @@ struct Handler {
 	Agnode_t* addNode(std::string s) {
 		auto name = next();
 		auto node = agnode(graph, name.data(), 1);
-		agsafeset(node, "label", s.data(), "");
+		static std::string label_string = "label";
+		agsafeset(node, label_string.data(), s.data(), "");
 		return node;
 	}
 
@@ -50,17 +52,6 @@ struct Handler {
 		agclose(graph);
 	}
 };
-
-void handleToken(pst::RiftElement::SubToken token) { std::cerr << " " << token->getStrValue(); }
-
-void handleElement(pst::ParserCBorrowRef<pst::RiftElement> el) {
-	for (auto sub: el->viewSubElements()) {
-		variant_match(sub) {
-			variant_case(pst::RiftElement::SubToken, token) { handleToken(token); }
-			variant_case(pst::RiftElement::ConstChild, child) { handleElement(child); }
-		}
-	}
-}
 
 std::string stringPosition(dia::SourcePosition pos) {
 	std::stringstream ss;
@@ -84,7 +75,8 @@ Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::RiftElement> el) {
 				std::string value = { token->getStrValue().data(), token->getStrValue().size() };
 				auto sub_node = hdl.addNode(stringPosition(token->getPosition()) + "\n" + value);
 				hdl.addEdge(self, sub_node);
-				agsafeset(sub_node, "shape", "box", "");
+				static std::string shape_string = "shape";
+				agsafeset(sub_node, shape_string.data(), "box", "");
 			}
 
 			variant_case(pst::RiftElement::ConstChild, child) {
@@ -96,7 +88,7 @@ Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::RiftElement> el) {
 	return self;
 }
 
-// NOLINTEND
+// NOLINTEND(-avoid-c-arrays)
 
 int main(int argc, char** argv) {
 	if (argc != 3) {
