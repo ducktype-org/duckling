@@ -1,8 +1,3 @@
-#include "base/borrow_pointer.hpp"
-#include "pst_parser/pst_visitor.hpp"
-#include "query_framework/query_impl.hpp"
-#include "query_framework/query_int.hpp"
-#include <base/str_utils.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
@@ -45,11 +40,11 @@ private:
 		for (auto&& sym: symbols) {
 			auto symbol = first_symbol
 			                ? query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
-								{ scope, base::StrId(sym.c_str()), true }
-							)
+								  { scope, base::StrId(sym.c_str()), true }
+							  )
 			                : query::entryPoint<compiler::helios::QueryLookupInSymbol>(
-								{ result.back(), base::StrId(sym.c_str()), false }
-							);
+								  { result.back(), base::StrId(sym.c_str()), false }
+							  );
 			for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<compiler::helios::QueryDealias>(elem);
 				result.insert(result.end(), dealiased.begin(), dealiased.end());
@@ -291,22 +286,22 @@ private:
 		auto [_, root_scope] = getModule("expressions");
 		ASSERT_EQUAL(31, getValue("V31", root_scope));
 
-		auto        sym1  = getChain("V31", root_scope).back();
-		auto        tree1 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym1);
-		std::string out;
+		auto              sym1  = getChain("V31", root_scope).back();
+		auto              tree1 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym1);
+		std::stringstream out;
 		tree1->debugPrint(out);
-		ASSERT_EQUAL("(3+((5+9)*2))", out);
+		ASSERT_EQUAL("(3+((5+9)*2))", out.str());
 
 		ASSERT_EQUAL(12, getValue("V12", root_scope));
 		auto        sym2  = getChain("V12", root_scope).back();
 		auto        tree2 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym2);
-		std::string out2;
+		std::stringstream out2;
 		tree2->debugPrint(out2);
 
 		auto sym3       = getChain("N.V3", root_scope).back();
 		auto symV3_repr = base::strConcat("(Symbol ", sym3.customPerfectHash(), ")");
 		ASSERT_EQUAL(
-			base::strConcat("(", symV3_repr, "+(", symV3_repr, "*", symV3_repr, "))"), out2
+			base::strConcat("(", symV3_repr, "+(", symV3_repr, "*", symV3_repr, "))"), out2.str()
 		);
 	}
 };

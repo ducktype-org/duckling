@@ -5,7 +5,7 @@
 
 #include "../pst_ref.hpp"
 #include "../lookup_result.hpp"
-#include "helios/scope_symbol_id.hpp"
+#include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>
 #include <typesystem/typesystem.hpp>

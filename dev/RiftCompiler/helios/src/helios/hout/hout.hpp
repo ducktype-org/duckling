@@ -7,7 +7,6 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
-#include "query_framework/query_int.hpp"
 #include <base/string_id.hpp>
 #include <vector>
 
@@ -86,6 +85,4 @@ namespace compiler::helios {
 		[[nodiscard]]
 		std::string debugPrint() const;
 	};
-
-
 }

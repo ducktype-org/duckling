@@ -12,49 +12,53 @@ namespace compiler::helios::code {
 
 	constexpr usize INDENT_SIZE = 4;
 
-	void addIndent(usize indent, std::string& out) { out.append(indent * INDENT_SIZE, ' '); }
+	void addIndent(std::ostream& out, usize indent) {
+		out << std::string().append(indent * INDENT_SIZE, ' ');
+	}
 
-	void ReturnStmt::debugPrint(usize indent, std::string& out) const {
-		addIndent(indent, out);
-		out += "return ";
+	void ReturnStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "return ";
 		this->value->debugPrint(out);
-		out += "\n";
+		out << "\n";
 	}
 
-	void VoidReturnStmt::debugPrint(usize indent, std::string& out) const {
-		addIndent(indent, out);
-		out += "void return\n";
+	void VoidReturnStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "void return\n";
 	}
 
-	void ExprStmt::debugPrint(usize indent, std::string& out) const {
-		addIndent(indent, out);
-		out += "do ";
+	void ExprStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "do ";
 		expr->debugPrint(out);
-		out += "\n";
+		out << "\n";
 	}
 
-	void IfStmt::debugPrint(usize indent, std::string& out) const {
-		addIndent(indent, out);
-		out += "if (";
+	void IfStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "if (";
 		condition->debugPrint(out);
-		out += ") {\n";
-		for (const auto& stmt: body.statements) stmt->debugPrint(indent + 1, out);
-		addIndent(indent, out);
-		out += "}\n";
+		out << ") {\n";
+		for (const auto& stmt: body.statements) stmt->debugPrint(out, indent + 1);
+		addIndent(out, indent);
+		out << "}\n";
 	}
 
-	void LiteralValueExpr::debugPrint(std::string& out) const { out += std::to_string(value); }
-
-	void IdentifierExpr::debugPrint(std::string& out) const {
-		out += base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
+	void LiteralValueExpr::debugPrint(std::ostream& out, usize) const {
+		out << std::to_string(value);
 	}
 
-	void BinaryOperatorExpr::debugPrint(std::string& out) const {
-		out += base::strConcat("(");
+	void IdentifierExpr::debugPrint(std::ostream& out, usize) const {
+		out << base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
+	}
+
+	void BinaryOperatorExpr::debugPrint(std::ostream& out, usize) const {
+		out << base::strConcat("(");
 		lhs->debugPrint(out);
-		out += base::strConcat(op);
+		out << base::strConcat(op);
 		rhs->debugPrint(out);
-		out += base::strConcat(")");
+		out << base::strConcat(")");
 	}
 
 	void BinaryOperatorExpr::acceptVisitor(HoutExprVisitor& visitor) const {
@@ -62,33 +66,38 @@ namespace compiler::helios::code {
 	}
 
 	ElementRef<Expr> Expr::fromRPN(query::Context& ctx, const rpn::RPNExpr& expr) {
+		// The algorithm from RPN: https://en.wikipedia.org/wiki/Binary_expression_tree
 		std::stack<ElementRef<Expr>> st;
 		for (auto&& elem: expr.elements) {
 			variant_match(elem) {
 				variant_case(rpn::Identifier, idt) {
 					st.emplace(base::make_unique<IdentifierExpr>(idt.symbol_list.back()));
 				}
+
 				variant_case(rpn::Operator, oper) {
 					auto b = std::move(st.top());
 					st.pop();
 					auto a = std::move(st.top());
 					st.pop();
+
 					st.emplace(base::make_unique<BinaryOperatorExpr>(
 						oper.oper_id, std::move(a), std::move(b)
 					));
 				}
+
 				variant_case(rpn::NamedIdentifier, idt) {
 					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
 						{ expr.scope, idt.symbol_name, true }
 					);
+
 					st.emplace(base::make_unique<IdentifierExpr>(sym_list.getAsSingle().back()));
 				}
+
 				variant_case(rpn::NumValue, num_value) {
 					st.emplace(base::make_unique<LiteralValueExpr>(std::stoi(num_value.num_id.str())
 					));
 				}
-				// variant_case(rpn::TupleType, tuple_type) {}
-				// variant_case(rpn::Variant, variant_type) {}
+
 				variant_default {
 					RIFT_PANIC(base::strConcat(
 						"Unhandlable type during parsing type from expr: ", typeid(elem).name()

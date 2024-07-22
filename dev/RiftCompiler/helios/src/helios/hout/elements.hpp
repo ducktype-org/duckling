@@ -9,9 +9,9 @@
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
-#include "base/string_id.hpp"
 #include "element_ref.hpp"
-#include "helios/symbols/symbols.hpp"
+#include <base/string_id.hpp>
+#include <helios/symbols/symbols.hpp>
 
 namespace compiler::helios::code {
 
@@ -24,8 +24,8 @@ namespace compiler::helios::code {
 	 * @brief Base class for all HOUT statements
 	 */
 	struct Stmt {
-		virtual ~Stmt()                                               = default;
-		virtual void debugPrint(usize indent, std::string& out) const = 0;
+		virtual ~Stmt()                                                    = default;
+		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
 
 		virtual void acceptVisitor(HoutStmtVisitor&) const = 0;
 	};
@@ -36,8 +36,8 @@ namespace compiler::helios::code {
 	 */
 	struct Expr {
 		// @TODO: set/get Type and ValueCategory of Expr
-		virtual ~Expr()                                 = default;
-		virtual void debugPrint(std::string& out) const = 0;
+		virtual ~Expr()                                  = default;
+		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
 
@@ -63,7 +63,7 @@ namespace compiler::helios::code {
 
 		ReturnStmt(ElementRef<Expr> value): value(std::move(value)) {}
 
-		void debugPrint(usize indent, std::string& out) const final;
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
@@ -71,7 +71,7 @@ namespace compiler::helios::code {
 	 * @brief Represents `return;` in HOUT
 	 */
 	struct VoidReturnStmt final: public Stmt {
-		void debugPrint(usize indent, std::string& out) const final;
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
@@ -83,7 +83,7 @@ namespace compiler::helios::code {
 
 		ExprStmt(ElementRef<Expr> expr): expr(std::move(expr)) {}
 
-		void debugPrint(usize indent, std::string& out) const final;
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
@@ -100,7 +100,7 @@ namespace compiler::helios::code {
 			  condition(std::move(condition)),
 			  body(std::move(body)) {}
 
-		void debugPrint(usize indent, std::string& out) const final;
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
@@ -118,7 +118,7 @@ namespace compiler::helios::code {
 
 		LiteralValueExpr(i64 value): value(value) {}
 
-		void debugPrint(std::string& out) const final;
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
@@ -134,7 +134,7 @@ namespace compiler::helios::code {
 
 		IdentifierExpr(SymID symbol): symbol(std::move(symbol)) {}
 
-		void debugPrint(std::string& out) const final;
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
@@ -149,7 +149,7 @@ namespace compiler::helios::code {
 			  lhs(std::move(lhs)),
 			  rhs(std::move(rhs)) {}
 
-		void debugPrint(std::string& out) const override;
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 }
