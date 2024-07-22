@@ -34,7 +34,8 @@ namespace lexer {
 		}
 
 		/**
-		 * @brief ADD DOCS HERE BEFORE MERGE
+		 * @brief Sets value of token_messages flag
+		 * that determines if lexer print debug token messages to cerr. 
 		 */
 		static void setTokenMessages(bool value);
 

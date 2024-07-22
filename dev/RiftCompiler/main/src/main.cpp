@@ -240,6 +240,11 @@ int mainProcedure(int argc, const char* const* argv) {
 	auto commands = getCommandList(command_args, clap);
 
 	try {
+		// @future: improve the way we detect whether there was a command or no and
+		// the way we handle command line arguments.
+		// It is currently done this way, because clap was not designed for 
+		// "interactive" options, and "Conditional parameters" don't serve this role well.
+
 		if (argc >= 2 and argv[1][0] != '-') {
 			std::string command = argv[1];
 
