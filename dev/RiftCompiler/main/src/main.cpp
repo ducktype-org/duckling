@@ -10,12 +10,12 @@
 #include <pst_parser/parser.hpp>
 #include <pst_parser/pst.hpp>
 #include <lexer/lexer.hpp>
-#include <lexer/lexer_class.hpp>
 #include <base/exceptions.hpp>
 #include <iostream>
 #include <clap/clap.hpp>
 #include <printer/stream_printer.hpp>
-#include <diagnostic/logger.hpp>
+#include <config/config.hpp>
+
 
 /**
  * @brief Runs inits needed by main
@@ -26,60 +26,12 @@ void init() {
 	// @TODO: more inits?
 }
 
-/**
- * @brief Generate Clap instance with all parameters that
- * are always available.
- * @return clap::Clap
- */
-clap::Clap baseCompilerOptions() {
-	return clap::Clap()
-	    .addHelpFlag()
-	    .add(clap::ParamBuilder::ofFlag()
-	             .addLongName("logger-cerr")
-	             .addShortDesc("If set, Logger class will immediately print its messages to cerr. "
-	                           "Useful for debugging.")
-	             .build())
-	    .add(clap::ParamBuilder::ofFlag()
-	             .addLongName("lexer-cerr")
-	             .addShortDesc("If set, Lexer class will immediately print parsed tokens to cerr. "
-	                           "Useful for debugging.")
-	             .build())
-	    .add(clap::ParamBuilder::ofFlag()
-	             .addLongName("let-it-throw")
-	             .addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
-	                           "Useful for debugging.")
-	             .addLongDesc(
-					 "Note that sometimes exception can happen before logic behind this option "
-					 "will happen. In that case exception will most likely not be caught."
-				 )
-	             .build());
-}
 
 namespace {
 	/**
 	 * @brief Whether main should (not) catch exceptions.
 	 */
 	bool throwing_main = true;
-}
-
-/**
- * @brief Parses arguments with @p clap and performs
- * configuration of the program that is independent from any command.
- * @note it assumes that @p clap has parameters
- * added by baseCompilerOptions.
- */
-clap::ParsingResult configureWith(clap::Clap& clap, clap::CLIArgs args) {
-	auto res = clap.parse(args);
-
-	if (res.isFlag("logger-cerr")) dia::Logger::setImmediatelyDump(true);
-	if (res.isFlag("lexer-cerr")) lexer::Lexer::setTokenMessages(true);
-
-	if (res.isFlag("let-it-throw"))
-		throwing_main = true;
-	else
-		throwing_main = false;
-
-	return res;
 }
 
 /**
@@ -156,6 +108,47 @@ void printHelp(const clap::Clap& clap, const clap::ParsingResult& parsing_result
 	}
 }
 
+/**
+ * @brief Generate Clap instance with all standard "main" parameters.
+ * @return clap::Clap
+ */
+clap::Clap getClap() {
+	// standard options:
+	auto clap         = config::standardOptions();
+	
+	// custom options of main:
+	clap.add(clap::ParamBuilder::ofFlag()
+		.addLongName("let-it-throw")
+		.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
+					"Useful for debugging.")
+		.addLongDesc(
+			"Note that sometimes exception can happen before logic behind this option "
+			"will happen. In that case exception will most likely not be caught."
+		)
+		.build());
+
+	return clap;
+}
+
+/**
+ * @brief Parses arguments with @p clap and performs
+ * configuration of the program that is independent from any command.
+ * @note it assumes that @p clap has parameters
+ * added by getClap.
+ */
+clap::ParsingResult configureDuckMainWith(clap::Clap& clap, clap::CLIArgs args) {
+	// standard options:
+	auto res = config::configureWith(clap, args);
+
+	// custom options of main:
+	if (res.isFlag("let-it-throw"))
+		throwing_main = true;
+	else
+		throwing_main = false;
+
+	return res;
+}
+
 CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 	CommandList commands;
 	commands.add("lex", "Runs lexer on single file and prints result to cout.", [&]() {
@@ -167,7 +160,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .required()
 		             .build());
 
-		auto options = configureWith(clap, command_args);
+		auto options = configureDuckMainWith(clap, command_args);
 
 		auto file_to_lex = options.getValue<fs::FilePath>("file").value();
 
@@ -202,7 +195,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .required()
 		             .build());
 
-		auto options = configureWith(clap, command_args);
+		auto options = configureDuckMainWith(clap, command_args);
 
 		auto file_to_parse = options.getValue<fs::FilePath>("file").value();
 
@@ -219,7 +212,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		std::cout << "\n";
 	});
 	commands.add("throw", "Throws exception (testing command).", [&]() {
-		configureWith(clap, command_args);
+		configureDuckMainWith(clap, command_args);
 		throw base::LogicError("Command `throw` thrown successfully!");
 	});
 	return commands;
@@ -234,10 +227,21 @@ int mainProcedure(int argc, const char* const* argv) {
 	clap::CLIArgs full_args{ (usize) argc, argv };
 	clap::CLIArgs command_args{ (usize) argc - 1, argv + 1 };
 
-	auto clap         = baseCompilerOptions();
+	auto clap         = getClap();
 	bool command_mode = false;
 
 	auto commands = getCommandList(command_args, clap);
+
+	// our custom commands:
+	clap.add(clap::ParamBuilder::ofFlag()
+		.addLongName("let-it-throw")
+		.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
+					"Useful for debugging.")
+		.addLongDesc(
+			"Note that sometimes exception can happen before logic behind this option "
+			"will happen. In that case exception will most likely not be caught."
+		)
+		.build());
 
 	try {
 		// @future: improve the way we detect whether there was a command or no and
@@ -263,7 +267,7 @@ int mainProcedure(int argc, const char* const* argv) {
 			             .addShortDesc("Ignore everything and print version")
 			             .build());
 
-			auto options = configureWith(clap, full_args);
+			auto options = configureDuckMainWith(clap, full_args);
 
 			if (options.isFlag("version")) {
 				std::cerr << "Duckling version: 0.0.1 pre-alpha\n";
