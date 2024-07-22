@@ -25,10 +25,10 @@ namespace pst {
 	 */
 	class RiftElement: public tpc::Element {
 	public:
-		using Child           = ParserBorrowRef<RiftElement>;
-		using ConstChild      = ParserCBorrowRef<RiftElement>;
+		using Child      = ParserBorrowRef<RiftElement>;
+		using ConstChild = ParserCBorrowRef<RiftElement>;
 
-		using SubToken        = base::c_borrow_ptr<tpc::Token>;
+		using SubToken = base::c_borrow_ptr<tpc::Token>;
 
 		using SubElement      = std::variant<SubToken, Child>;
 		using ConstSubElement = std::variant<SubToken, ConstChild>;
@@ -193,7 +193,9 @@ namespace pst {
 		void addChild(base::Optional<ParserRef<El>>& el) {
 			if (el) addChild(el.value().borrow());
 		}
+
 		void addChild(ParserBorrowRef<RiftElement> child);
+
 		template<typename T>
 		void addChild(ParserRef<T>& child) {
 			addChild(child.borrow_mut());

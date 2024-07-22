@@ -29,8 +29,8 @@ struct Handler {
 	Handler(std::string s): gvc(gvContext()), graph(agopen(s.data(), Agdirected, 0)) {}
 
 	Agnode_t* addNode(std::string s) {
-		auto name = next();
-		auto node = agnode(graph, name.data(), 1);
+		auto               name         = next();
+		auto               node         = agnode(graph, name.data(), 1);
 		static std::string label_string = "label";
 		agsafeset(node, label_string.data(), s.data(), "");
 		return node;
