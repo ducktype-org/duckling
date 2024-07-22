@@ -264,7 +264,8 @@ int mainProcedure(int argc, const char* const* argv) {
 
 			clap.add(clap::ParamBuilder::ofFlag()
 			             .addLongName("version")
-			             .addShortDesc("Ignore everything and print version")
+			             .addShortName('v')
+			             .addShortDesc("Print version and don't perform any tasks.")
 			             .build());
 
 			auto options = configureDuckMainWith(clap, full_args);
