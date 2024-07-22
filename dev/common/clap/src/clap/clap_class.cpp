@@ -18,7 +18,7 @@ namespace {
 	/**
 	 * Merges the arguments provided in a form of C-string array with spaces. If a C-string
 	 * contains a white space, then adds quotes around it.
-	 * @note: it skips first parameter, as it is considered to be exec file.
+	 * @note: It skips first parameter, as it is assumed to be the name of the command.
 	 * @param argc Argument count.
 	 * @param argv Argument vector - the array of C-strings.
 	 * @return Merged vector into a single string.

@@ -1,9 +1,9 @@
 /**
  * @file main.cpp
  * @brief This file implements logic and main procedure that can be used to
- * convenient run (or add) certain functionalities of the Duckling compiler.
+ * conveniently run (or add) certain functionalities of the Duckling compiler.
  * It compiles to `duck` binary.
- * @note: the ideas from here might be one day changed to framework
+ * @note: The ideas from here might be one day separated into a framework.
  */
 
 #include <filesystem/file.hpp>
@@ -87,9 +87,9 @@ struct CommandList {
 	};
 
 	/**
-	 * @brief Runs command of given name
-	 * @param what command name
-	 * @return if command of given name was found was run.
+	 * @brief Runs a command.
+	 * @param what Command to run.
+	 * @return Whether the command was run.
 	 */
 	CommandStatus run(std::string_view what) {
 		for (auto& cmd: commands) {
