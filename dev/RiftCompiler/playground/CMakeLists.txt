@@ -17,3 +17,5 @@ target_link_libraries(pst_graph Lexer PstParser gvc cgraph cdt)
 target_link_libraries(json_testing Lexer PstParser)
 target_link_libraries(frontend_testing Filesystem ModuleTree Clap)
 target_link_libraries(helios_testing Base ModuleTree Clap HELIOS QueryFramework)
+
+list(APPEND CTEST_CUSTOM_COVERAGE_EXCLUDE .*/playground/.*)

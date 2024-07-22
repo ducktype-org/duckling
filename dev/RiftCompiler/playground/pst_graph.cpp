@@ -26,19 +26,20 @@ struct Handler {
 
 	Handler() = delete;
 
-	Handler(std::string s): gvc(gvContext()), graph(agopen(s.data(), Agdirected, 0)) {}
+	Handler(std::string s): gvc(gvContext()), graph(agopen(s.data(), Agdirected, nullptr)) {}
 
 	Agnode_t* addNode(std::string s) {
 		auto               name         = next();
 		auto               node         = agnode(graph, name.data(), 1);
 		static std::string label_string = "label";
-		agsafeset(node, label_string.data(), s.data(), "");
+		static std::string empty_string = "";
+		agsafeset(node, label_string.data(), s.data(), empty_string.data());
 		return node;
 	}
 
 	Agedge_t* addEdge(Agnode_t* from, Agnode_t* to) { return agedge(graph, from, to, nullptr, 1); }
 
-	void writeToSVG(std::string file_name) {
+	void writeToSVG(const std::string& file_name) {
 		FILE* file = fopen(file_name.c_str(), "w");
 
 		gvLayout(gvc, graph, "dot");
@@ -76,6 +77,8 @@ Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::RiftElement> el) {
 				auto sub_node = hdl.addNode(stringPosition(token->getPosition()) + "\n" + value);
 				hdl.addEdge(self, sub_node);
 				static std::string shape_string = "shape";
+				static std::string box_string   = "box";
+				static std::string empty_string = "";
 				agsafeset(sub_node, shape_string.data(), "box", "");
 			}
 
