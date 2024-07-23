@@ -39,13 +39,6 @@ inline static base::HashMap<FileId, SourceFile&> files{};
  */
 inline static base::Map<pst::PstID, FileId> root_element_file_back_map;
 
-// /**
-//  * @brief Map storting ModuleID of each FileID
-//  * @note: as of right not it is needed only for QueryPrimaryCodeScopeFor acquiring
-//  * the root scope.
-//  */
-// inline static base::Map<FileId, ModuleId> file_module_back_map;
-
 /**
  * @brief Holds global map of module path to module id
  */

@@ -82,10 +82,6 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeID) {
 		static auto provide(Context&, QKey key) -> PResult {
-			// @TODO: dont just ignore other files...
-			// auto   main_file  = ctx.query<frontend::QueryMainSourceFile>(key);
-			// auto&  module_pst = ctx.query<frontend::QueryFilePST>(main_file);
-
 			return putInScopeTable(ScopeData{
 				.parent              = ScopeID{ nullptr },
 				.is_root             = true,

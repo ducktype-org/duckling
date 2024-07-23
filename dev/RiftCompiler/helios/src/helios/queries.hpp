@@ -34,6 +34,4 @@ namespace compiler::helios {
 	 * @note Works only for SymID-s that actually represent a function
 	 */
 	DECLARE_QUERY(QueryCodeOFFun, SymID, HOUTFunction);
-
-
 }

@@ -42,6 +42,8 @@ namespace compiler::helios {
 		 * Scope behaviour for:
 		 * * StatementAggravates -- a scope of aggregated statements
 		 * * Function -- a scope of function arguments (@todo: function scopes are currently empty)
+		 * * Namespaces -- empty Scope
+		 * * Classes -- scope containing class fields
 		 */
 		PstRef<pst::RiftElement> base_element;
 

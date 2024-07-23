@@ -74,8 +74,8 @@ private:
 			fs::FilePath(path("test_modules/" + name))
 		);
 
-		// auto&& root_scope = query::entryPoint<compiler::helios::QueryRootScopeOf>(module);
-
+		// This is what extendQueryRootScopeOfMainModuleFile is doing:
+		// (there is currently no way to call query extension without context)
 		auto  main_source_file = query::entryPoint<compiler::frontend::QueryMainSourceFile>(module);
 		auto& main_source_pst
 			= query::entryPoint<compiler::frontend::QueryFilePST>(main_source_file);

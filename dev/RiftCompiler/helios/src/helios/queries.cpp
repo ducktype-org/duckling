@@ -20,8 +20,6 @@ namespace compiler::helios {
 			// store it in some vector or something
 			// lookup all and stuff
 
-			// auto root_scope = ctx.query<QueryRootScopeOf>(key);
-
 			auto main_file_root_scope = extendQueryRootScopeOfMainModuleFile(ctx, key);
 
 			auto symbols_in_module_root = ctx.query<QuerySymbolsInScope>(main_file_root_scope);
