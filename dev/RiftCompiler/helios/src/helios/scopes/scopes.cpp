@@ -109,25 +109,25 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
-		static auto provide(Context&, QKey element) -> PResult {
-			// Potential way of eliminating dependency on parent:
-			// auto parent
-			// = scope(ctx.query<QuerySymbolOfSTMT>({ element.parent, element.base_element }));
+		static auto provide(Context& ctx, QKey element) -> PResult {
+			auto parent = ctx.query<QueryPrimaryCodeScopeFor>({ element.base_element->getParent() });
 
 			// simple parent sanity check:
+			// it is technically not needed anymore, but it left as an additional
+			// layer of bug detection.
 			if (parent_map.contains(element.base_element->getID())) {
 				RIFT_ASSERT(
-					parent_map.at(element.base_element->getID()) == element.parent,
+					parent_map.at(element.base_element->getID()) == parent,
 					"Parent mismatch in QueryPrimaryCodeScopeFor"
 				);
 			} else {
-				parent_map.put(element.base_element->getID(), element.parent);
+				parent_map.put(element.base_element->getID(), parent);
 			}
 
 			return putInScopeTable(ScopeData{
-				.parent              = element.parent,
+				.parent              = parent,
 				.related_pst_element = element.base_element,
-				.parent_module       = module(element.parent),
+				.parent_module       = module(parent),
 				.symbols             = {},
 			});
 		}

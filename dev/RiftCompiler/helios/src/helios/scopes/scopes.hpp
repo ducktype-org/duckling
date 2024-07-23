@@ -33,17 +33,6 @@ namespace compiler::helios {
 
 	struct KeyOf_QueryPrimaryCodeScopeFor {
 		/**
-		 * @brief scope that queries scope will be contained within
-		 * @fixme: it is highly bug prone, as one can create many scopes with arbitrary parent
-		 * scopes for singular element, and it has already lead to crucial errors.
-		 * On the other hand it is not trivial to eliminate it.
-		 * Solution would be to either eliminate it or to add smart sanity checks, that
-		 * can prevent at least some of potential bugs.
-		 * For now a simple assertion is added to disallow "double parent" situation
-		 */
-		ScopeID parent;
-
-		/**
 		 * @brief Element for which the scope is created.
 		 * @note: scopes of various elements behave differently
 		 * For now scope of StatementAggravates and Functions are possible.
@@ -59,11 +48,10 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Query Scope for given PST element that will be the child of scope from the key.
-	 *
-	 * @note: this is not perfect and might be changed in the future.
-	 * there is currently no association between parent and base_element
-	 * values inside the key.
+	 * @brief Query Scope for given PST element.
+	 * @note: Primary Scopes are linked directly to PST structure.
+	 * This means that every PST element has a scope, even for some it doesn't make a lot of sense.
+	 * The reason for this is that handling scope structure without direct link to PST was highly bug prone and led to potential errors or lack of consistency between different fragments of code.
 	 */
 	DECLARE_QUERY(QueryPrimaryCodeScopeFor, KeyOf_QueryPrimaryCodeScopeFor, ScopeID);
 
