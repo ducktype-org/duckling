@@ -7,10 +7,7 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
-
-// @TODO: relax this dependency
-#include <frontend/module_tree/module_tree.hpp>  // ModuleId
-
+#include <base/string_id.hpp>
 #include <vector>
 
 namespace compiler::helios {
@@ -100,9 +97,7 @@ namespace compiler::helios {
 
 		std::vector<HOUTFunction> functions;
 
-
 		[[nodiscard]]
 		std::string debugPrint() const;
 	};
-
 }

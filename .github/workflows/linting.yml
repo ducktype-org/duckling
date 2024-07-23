@@ -7,6 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install gvc
+        run: sudo apt -y install libgraphviz-dev
       - name: Create compile_commands
         run: |
          cd dev
@@ -16,7 +18,7 @@ jobs:
       - uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
-          GITHUB_TOKEN: ${{ secrets.KEY_FOR_MAURYC }}
+          GITHUB_TOKEN: ${{ secrets.QUACKER_PAT }}
         with:
           style: 'file'
           tidy-checks: ''

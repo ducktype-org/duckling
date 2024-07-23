@@ -2,6 +2,12 @@
 
 #include "config.hpp"
 
+#if defined(__clang__)
+	#define CLANG_MUST_TAIL [[clang::musttail]]
+#else
+	#define CLANG_MUST_TAIL
+#endif
+
 #define LABEL_PTR(opcode) (&&LABEL_##opcode)
 
 /**
@@ -55,8 +61,8 @@
  * with `0` being the current instruction.
  */
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define OPFUN_CONT(i)                                                                              \
-	IF_TC({ [[clang::musttail]] return instr[i].opfun(&instr[i], local_stack, frame, executor); }) \
+#define OPFUN_CONT(i)                                                                          \
+	IF_TC({ CLANG_MUST_TAIL return instr[i].opfun(&instr[i], local_stack, frame, executor); }) \
 	IF_NOT_TC({ instr += i; })
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 

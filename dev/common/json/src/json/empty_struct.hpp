@@ -1,7 +1,6 @@
 #pragma once
 
 #include <json_struct/json_struct.h>
-#include "helper.hpp"
 
 namespace JS {
 	template<class T>
