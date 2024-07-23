@@ -26,8 +26,9 @@ namespace compiler::helios::code {
 	 */
 	class HoutExprVisitor {
 	public:
-		HOUT_VISITOR_METHOD(ConstIntExprMock);
-		HOUT_VISITOR_METHOD(IdentifierExpresion);
+		HOUT_VISITOR_METHOD(LiteralValueExpr);
+		HOUT_VISITOR_METHOD(IdentifierExpr);
+		HOUT_VISITOR_METHOD(BinaryOperatorExpr);
 
 		virtual ~HoutExprVisitor() = default;
 	};
@@ -46,7 +47,8 @@ namespace compiler::helios::code {
 
 	class HoutExprPanickyVisitor: public HoutExprVisitor {
 	public:
-		HOUT_VISITOR_METHOD(ConstIntExprMock);
-		HOUT_VISITOR_METHOD(IdentifierExpresion);
+		HOUT_VISITOR_METHOD(LiteralValueExpr);
+		HOUT_VISITOR_METHOD(IdentifierExpr);
+		HOUT_VISITOR_METHOD(BinaryOperatorExpr);
 	};
 }

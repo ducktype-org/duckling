@@ -1,4 +1,3 @@
-#include <base/str_utils.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
@@ -30,6 +29,7 @@ public:
 		TESTER_ADD_TEST(simpleHOUTTest);
 		TESTER_ADD_TEST(importTest);
 		TESTER_ADD_TEST(houtVisitorTest);
+		TESTER_ADD_TEST(exprTreeTest);
 	}
 
 private:
@@ -231,9 +231,11 @@ private:
 			usize const_int_count = 0;
 			usize ident_count     = 0;
 
-			void visitConstIntExprMock(const ConstIntExprMock&) override { const_int_count++; }
+			void visitLiteralValueExpr(const LiteralValueExpr&) override { const_int_count++; }
 
-			void visitIdentifierExpresion(const IdentifierExpresion&) override { ident_count++; }
+			void visitIdentifierExpr(const IdentifierExpr&) override { ident_count++; }
+
+			void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override { ident_count++; }
 		};
 
 		struct ExprVisitorRunner: public HoutStmtPanickyVisitor {
@@ -278,6 +280,29 @@ private:
 		test_value("sm1_through_sm11", 123'123);
 		test_value("sm2_v", 777'666);
 		test_value("cyclic_final", 6);
+	}
+
+	void exprTreeTest() {
+		auto [_, root_scope] = getModule("expressions");
+		ASSERT_EQUAL(31, getValue("V31", root_scope));
+
+		auto              sym1  = getChain("V31", root_scope).back();
+		auto              tree1 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym1);
+		std::stringstream out;
+		tree1->debugPrint(out);
+		ASSERT_EQUAL("(3+((5+9)*2))", out.str());
+
+		ASSERT_EQUAL(12, getValue("V12", root_scope));
+		auto              sym2  = getChain("V12", root_scope).back();
+		auto              tree2 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym2);
+		std::stringstream out2;
+		tree2->debugPrint(out2);
+
+		auto sym3       = getChain("N.V3", root_scope).back();
+		auto symV3_repr = base::strConcat("(Symbol ", sym3.customPerfectHash(), ")");
+		ASSERT_EQUAL(
+			base::strConcat("(", symV3_repr, "+(", symV3_repr, "*", symV3_repr, "))"), out2.str()
+		);
 	}
 };
 

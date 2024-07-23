@@ -10,6 +10,8 @@
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
 #include "element_ref.hpp"
+#include <base/string_id.hpp>
+#include <helios/symbols/symbols.hpp>
 
 namespace compiler::helios::code {
 
@@ -22,21 +24,24 @@ namespace compiler::helios::code {
 	 * @brief Base class for all HOUT statements
 	 */
 	struct Stmt {
-		virtual ~Stmt()                                               = default;
-		virtual void debugPrint(usize indent, std::string& out) const = 0;
+		virtual ~Stmt()                                                    = default;
+		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
 
 		virtual void acceptVisitor(HoutStmtVisitor&) const = 0;
 	};
 
 	/**
-	 * @brief Base class for all HOUT expressions
+	 * @brief Base class for all HOUT expressions.
+	 * All subclasses shall have a "Expr" suffix.
 	 */
 	struct Expr {
 		// @TODO: set/get Type and ValueCategory of Expr
-		virtual ~Expr()                                 = default;
-		virtual void debugPrint(std::string& out) const = 0;
+		virtual ~Expr()                                                    = default;
+		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
+
+		static ElementRef<Expr> fromRPN(query::Context& ctx, const rpn::RPNExpr& elements);
 	};
 
 	/**
@@ -58,7 +63,7 @@ namespace compiler::helios::code {
 
 		ReturnStmt(ElementRef<Expr> value): value(std::move(value)) {}
 
-		void debugPrint(usize indent, std::string& out) const final;
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
@@ -66,7 +71,7 @@ namespace compiler::helios::code {
 	 * @brief Represents `return;` in HOUT
 	 */
 	struct VoidReturnStmt final: public Stmt {
-		void debugPrint(usize indent, std::string& out) const final;
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
@@ -78,7 +83,7 @@ namespace compiler::helios::code {
 
 		ExprStmt(ElementRef<Expr> expr): expr(std::move(expr)) {}
 
-		void debugPrint(usize indent, std::string& out) const final;
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
@@ -95,7 +100,7 @@ namespace compiler::helios::code {
 			  condition(std::move(condition)),
 			  body(std::move(body)) {}
 
-		void debugPrint(usize indent, std::string& out) const final;
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
@@ -104,32 +109,47 @@ namespace compiler::helios::code {
 	 * * * * * * * * */
 
 	/**
-	 * @brief Represents integer constant in HOUT
+	 * @brief Represents a literal value written in the expression.
 	 */
-	struct ConstIntExprMock final: public Expr {
+	struct LiteralValueExpr final: public Expr {
 		// @TODO: ctv + type for consts?
 		// @note: this is a mock
 		i64 value;
 
-		ConstIntExprMock(i64 value): value{ value } {}
+		LiteralValueExpr(i64 value): value(value) {}
 
-		void debugPrint(std::string& out) const final;
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
 	/**
-	 * @brief Represents expression made of single identifier in HOUT
+	 * @brief Represents expression made of a single identifier in HOUT.
 	 * @note: This will have to be improved,
 	 * when more complex expressions involving "." operator, local variables, etc
 	 * will be introduced.
 	 */
-	struct IdentifierExpresion final: public Expr {
+	struct IdentifierExpr final: public Expr {
 		// @note: this is a mock
 		SymID symbol;
 
-		IdentifierExpresion(SymID symbol): symbol{ std::move(symbol) } {}
+		IdentifierExpr(SymID symbol): symbol(std::move(symbol)) {}
 
-		void debugPrint(std::string& out) const final;
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
+		void acceptVisitor(HoutExprVisitor&) const override;
+	};
+
+	struct BinaryOperatorExpr: public Expr {
+		base::StrId op;
+
+		ElementRef<Expr> lhs;
+		ElementRef<Expr> rhs;
+
+		BinaryOperatorExpr(base::StrId op, ElementRef<Expr> lhs, ElementRef<Expr> rhs):
+			  op(op),
+			  lhs(std::move(lhs)),
+			  rhs(std::move(rhs)) {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const final override;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 }
