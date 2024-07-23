@@ -289,7 +289,6 @@ namespace compiler::helios {
 			case SymbolKind::Namespace: {
 				auto namespace_stmt = dynamic_cast<const pst::Namespace*>(key.ref->pst_stmt.get());
 				auto inner_scope    = ctx.query<QueryPrimaryCodeScopeFor>({
-                    scope(key),
                     namespace_stmt->getBody(),
                 });
 				return inner_scope;
@@ -853,7 +852,7 @@ namespace compiler::helios {
 
 			auto struct_stmt = getSymRef(key)->pst_stmt;
 
-			auto&& struct_scope = ctx.query<QueryPrimaryCodeScopeFor>({ scope(key), struct_stmt });
+			auto&& struct_scope = ctx.query<QueryPrimaryCodeScopeFor>({ struct_stmt });
 			auto&& struct_symbols = ctx.query<QuerySymbolsInScope>(struct_scope);
 
 			StructSymbolData struct_info;

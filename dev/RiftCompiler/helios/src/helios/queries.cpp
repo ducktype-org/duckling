@@ -20,9 +20,14 @@ namespace compiler::helios {
 			// store it in some vector or something
 			// lookup all and stuff
 
-			auto root_scope = ctx.query<QueryRootScopeOf>(key);
+			// auto root_scope = ctx.query<QueryRootScopeOf>(key);
+			auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(key);
+			auto& main_source_pst = ctx.query<frontend::QueryFilePST>(main_source_file);
 
-			auto symbols_in_module_root = ctx.query<QuerySymbolsInScope>(root_scope);
+
+			auto main_file_root_scope = ctx.query<QueryPrimaryCodeScopeFor>({main_source_pst.getRootElement()});
+
+			auto symbols_in_module_root = ctx.query<QuerySymbolsInScope>(main_file_root_scope);
 
 			HOUTUnit out;
 
@@ -114,15 +119,14 @@ namespace compiler::helios {
 			void visitIf(const pst::If& stmt) override {
 				// Get scopes:
 				auto outer_scope
-					= ctx.query<QueryPrimaryCodeScopeFor>({ parent_scope,
-				                                            PstRef<pst::RiftElement>(&stmt) });
+					= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(&stmt) });
 
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
 				auto condition = ctx.query<QueryHoutOfExpr>({ parent_scope, stmt.getCondition() });
 
 				auto inner_scope
-					= ctx.query<QueryPrimaryCodeScopeFor>({ outer_scope, stmt.getBody() });
+					= ctx.query<QueryPrimaryCodeScopeFor>({ stmt.getBody() });
 				auto body = queryCodeOfCodeBlock(ctx, stmt.getBody(), inner_scope);
 
 				output(code::IfStmt(std::move(condition), std::move(body)));
@@ -152,15 +156,13 @@ namespace compiler::helios {
 				// @TODO: document somewhere how do scopes behave depending on what they are looking
 				// at
 				auto outer_scope
-					= ctx.query<QueryPrimaryCodeScopeFor>({ parent_scope,
-				                                            PstRef<pst::RiftElement>(&stmt) });
+					= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(&stmt) });
 
 				auto fun_body = stmt.getBody();
 
 				// Scope of function body:
 				auto inner_scope
-					= ctx.query<QueryPrimaryCodeScopeFor>({ outer_scope,
-				                                            PstRef<pst::RiftElement>(fun_body) });
+					= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(fun_body) });
 
 				// HOUTCode out;
 				code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body, inner_scope);

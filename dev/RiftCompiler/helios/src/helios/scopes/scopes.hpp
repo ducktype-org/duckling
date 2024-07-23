@@ -28,6 +28,9 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query root scope for given module.
+	 * @note @todo: Right now RootScopes are empty, and in order to access proper module
+	 * symbols, one need to get scope of root element of the main module file.
+	 * This should be somehow refactored when multi-file modules will be introduced.
 	 */
 	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleId, ScopeID);
 

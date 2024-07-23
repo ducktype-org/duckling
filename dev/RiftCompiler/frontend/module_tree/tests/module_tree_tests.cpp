@@ -5,6 +5,9 @@
 
 using namespace compiler::frontend;
 
+
+// @TODO: add module ID test in this PR
+
 class ModuleTreeTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ModuleTreeTest

@@ -163,7 +163,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<RiftElement> getParent() const {
+		auto getParent() const {
 			return parent;
 		}
 
@@ -183,7 +183,7 @@ namespace pst {
 	protected:
 		dia::SourcePosition          source_position;
 		std::vector<SubElement>      sub_elements;
-		ParserBorrowRef<RiftElement> parent;
+		base::Optional<ParserBorrowRef<RiftElement>> parent;
 
 		void addToken(const tpc::Token& token);
 		void addToken(const base::unique_ptr<tpc::Token>& token);
@@ -206,7 +206,7 @@ namespace pst {
 		 */
 		void setLastToken(dia::SourcePosition pos);
 
-		void setParent(ParserBorrowRef<RiftElement> parent) { this->parent = parent; }
+		void setParent(ParserBorrowRef<RiftElement> parent) { this->parent.emplace(parent); }
 
 	private:
 		PstID id = PstID::next();

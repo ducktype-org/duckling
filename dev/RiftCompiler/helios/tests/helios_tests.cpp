@@ -70,12 +70,17 @@ private:
 
 	std::pair<compiler::frontend::ModuleId, compiler::helios::ScopeID>
 		getModule(const std::string& name) {
-		auto&& module = query::entryPoint<compiler::frontend::QueryModuleTree>(
+		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
 			fs::FilePath(path("test_modules/" + name))
 		);
 
-		auto&& root_scope = query::entryPoint<compiler::helios::QueryRootScopeOf>(module);
-		return { module, root_scope };
+		// auto&& root_scope = query::entryPoint<compiler::helios::QueryRootScopeOf>(module);
+
+		auto main_source_file = query::entryPoint<compiler::frontend::QueryMainSourceFile>(module);
+		auto& main_source_pst = query::entryPoint<compiler::frontend::QueryFilePST>(main_source_file);
+		auto main_file_root_scope = query::entryPoint<compiler::helios::QueryPrimaryCodeScopeFor>({main_source_pst.getRootElement()});
+		
+		return { module, main_file_root_scope };
 	}
 
 	void testI32Consts() {
