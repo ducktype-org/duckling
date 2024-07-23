@@ -36,7 +36,7 @@ namespace compiler::helios::code {
 	 */
 	struct Expr {
 		// @TODO: set/get Type and ValueCategory of Expr
-		virtual ~Expr()                                  = default;
+		virtual ~Expr()                                                    = default;
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;

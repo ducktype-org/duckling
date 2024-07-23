@@ -40,11 +40,11 @@ private:
 		for (auto&& sym: symbols) {
 			auto symbol = first_symbol
 			                ? query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
-								  { scope, base::StrId(sym.c_str()), true }
-							  )
+								{ scope, base::StrId(sym.c_str()), true }
+							)
 			                : query::entryPoint<compiler::helios::QueryLookupInSymbol>(
-								  { result.back(), base::StrId(sym.c_str()), false }
-							  );
+								{ result.back(), base::StrId(sym.c_str()), false }
+							);
 			for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<compiler::helios::QueryDealias>(elem);
 				result.insert(result.end(), dealiased.begin(), dealiased.end());
@@ -293,8 +293,8 @@ private:
 		ASSERT_EQUAL("(3+((5+9)*2))", out.str());
 
 		ASSERT_EQUAL(12, getValue("V12", root_scope));
-		auto        sym2  = getChain("V12", root_scope).back();
-		auto        tree2 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym2);
+		auto              sym2  = getChain("V12", root_scope).back();
+		auto              tree2 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym2);
 		std::stringstream out2;
 		tree2->debugPrint(out2);
 
