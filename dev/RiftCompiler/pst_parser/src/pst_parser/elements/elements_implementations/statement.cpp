@@ -7,7 +7,7 @@ namespace pst {
 		template<class T>
 		ParserRef<T> parseStmt(RiftParserState& state, bool force_semi = false) {
 			ParserRef<T> out = T::parse(state);
-			if (force_semi or out->trailingSemicolon()) parseOne(state, Special::Semicolon);
+			if (force_semi or out->trailingSemicolon()) state.parse(out).one(Special::Semicolon);
 			return out;
 		}
 	}

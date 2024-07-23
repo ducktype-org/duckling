@@ -8,11 +8,7 @@ namespace pst {
 
 		if (!assertStmtChoice<Block>(state, state[0].is(Keyword::Block))) return nullptr;
 
-		out->addKeyword(state.getPosition());
-
-		parseAll(state, Keyword::Block, &out->optional_name, &out->code_block);
-
-		out->setLastToken(state.getPosition(-1));
+		state.parse(out).all(Keyword::Block, &out->optional_name, &out->code_block);
 
 		return out;
 	}

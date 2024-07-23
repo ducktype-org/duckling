@@ -140,16 +140,16 @@ namespace lexer {
 
 	const Tokens& Token::getRecursive() const { return recursive; }
 
-	const Token Token::getSentinelBegin() const {
+	const Token& Token::getSentinelBegin() const {
 		RIFT_ASSERT(isRecursive(), "getSentinel called on non-recursive token");
 		RIFT_ASSERT(sentinel_begin, "unassigned sentinel in recursive token");
-		return Token(*sentinel_begin);
+		return *sentinel_begin;
 	}
 
-	const Token Token::getSentinelEnd() const {
+	const Token& Token::getSentinelEnd() const {
 		RIFT_ASSERT(isRecursive(), "getSentinel called on non-recursive token");
 		RIFT_ASSERT(sentinel_end, "unassigned sentinel in recursive token");
-		return Token(*sentinel_end);
+		return *sentinel_end;
 	}
 
 	bool Token::isBracketGroup() const { return type == Type::BracketGroup; }

@@ -24,11 +24,7 @@ namespace pst {
 
 		if (!assertStmtChoice<Alias>(state, state[0].is(Keyword::Alias))) return nullptr;
 
-		out->addKeyword(state.getPosition());
-
-		parseAll(state, Keyword::Alias, &out->name, Operator::Assign, &out->points_to);
-
-		out->setLastToken(state.getPosition(-1));
+		state.parse(out).all(Keyword::Alias, &out->name, Operator::Assign, &out->points_to);
 
 		if (out->points_to->getStar())
 			state.log(base::make_unique<AliasStarError>(out->source_position));
