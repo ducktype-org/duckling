@@ -27,20 +27,23 @@ namespace pst {
 
 		if (!assertStmtChoice<Namespace>(state, is_var || is_let)) return nullptr;
 
-		out->addKeyword(position);
 		out->is_const = is_let;
 
 		// @TODO: Add a possibility for type deduction from assigned value and no initial value.
-		parseAll(state, is_var ? Keyword::Var : Keyword::Let, &out->name, Operator::Colon);
-		out->type = Expr::parseUntil<
-			detail::Conditions::isAssignOrSemicolon,
-			detail::Conditions::isAssign,
-			VariableTypeEndError>(state, true);
+		state.parse(out).all(is_var ? Keyword::Var : Keyword::Let, &out->name, Operator::Colon);
 
-		parseOne(state, Operator::Assign, true);
-		out->value = Expr::parse(state, true);
+		state.parse(out).with(
+			&out->type,
+			Expr::parseUntil<
+				detail::Conditions::isAssignOrSemicolon,
+				detail::Conditions::isAssign,
+				VariableTypeEndError>,
+			true
+		);
 
-		out->setLastToken(state.getPosition());
+		state.parse(out).one(Operator::Assign, true);
+
+		state.parse(out).with<Expr>(&out->value, Expr::parse, true);
 
 		return out;
 	}
