@@ -49,9 +49,11 @@ namespace compiler::frontend {
 
 	/**
 	 * @brief Returns ModuleID
-	 * Assumes that @p element is a TopLevel element of some File parsed with interface of Frontend module. 
+	 * Assumes that @p element is a TopLevel element of some File parsed with interface of Frontend
+	 * module.
 	 */
-	ModuleId extendQueryModuleIDOfPST(query::Context&, pst::ParserCBorrowRef<pst::RiftElement> element);
+	ModuleId
+		extendQueryModuleIDOfPST(query::Context&, pst::ParserCBorrowRef<pst::RiftElement> element);
 
 	/**
 	 * @brief Query extension used to

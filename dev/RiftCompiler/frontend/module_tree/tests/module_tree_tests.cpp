@@ -52,9 +52,7 @@ private:
 	void testModuleIDInSourceFile(const ModuleTree& module) {
 		auto id = module.getId();
 		ASSERT_EQUAL_NO_PRINT(id, module.getMainSourceFile().linked_module);
-		for (auto& file: module.getSourceFiles()) {
-			ASSERT_EQUAL_NO_PRINT(id, file.linked_module);
-		}
+		for (auto& file: module.getSourceFiles()) ASSERT_EQUAL_NO_PRINT(id, file.linked_module);
 	}
 
 	void testOtherFeatures() {
