@@ -104,9 +104,13 @@ namespace compiler::helios {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
 		static auto provide(Context& ctx, QKey element) -> PResult {
-			ScopeID parent = element.base_element->getParent().has_value() ?
-				ctx.query<QueryPrimaryCodeScopeFor>({ element.base_element->getParent().value() })
-			 :  ctx.query<QueryRootScopeOf>({ frontend::extendQueryModuleIDOfPST(ctx, element.base_element) });
+			ScopeID parent = element.base_element->getParent().has_value()
+			                   ? ctx.query<QueryPrimaryCodeScopeFor>(
+								   { element.base_element->getParent().value() }
+							   )
+			                   : ctx.query<QueryRootScopeOf>(
+								   { frontend::extendQueryModuleIDOfPST(ctx, element.base_element) }
+							   );
 
 
 			// simple parent sanity check:
@@ -183,7 +187,7 @@ namespace compiler::helios {
 			}
 
 			void visitNamespace(const pst::Namespace&) override {
-				this->out.emplace( std::vector<SymID>() );
+				this->out.emplace(std::vector<SymID>());
 			}
 		};
 
@@ -291,10 +295,11 @@ namespace compiler::helios {
 	}
 
 	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleId module) {
-		auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
-		auto& main_source_pst = ctx.query<frontend::QueryFilePST>(main_source_file);
+		auto  main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
+		auto& main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
 
-		auto main_file_root_scope = ctx.query<QueryPrimaryCodeScopeFor>({main_source_pst.getRootElement()});
+		auto main_file_root_scope
+			= ctx.query<QueryPrimaryCodeScopeFor>({ main_source_pst.getRootElement() });
 
 		return main_file_root_scope;
 	}

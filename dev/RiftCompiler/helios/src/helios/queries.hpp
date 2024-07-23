@@ -35,5 +35,5 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryCodeOFFun, SymID, HOUTFunction);
 
-	
+
 }

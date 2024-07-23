@@ -76,10 +76,13 @@ private:
 
 		// auto&& root_scope = query::entryPoint<compiler::helios::QueryRootScopeOf>(module);
 
-		auto main_source_file = query::entryPoint<compiler::frontend::QueryMainSourceFile>(module);
-		auto& main_source_pst = query::entryPoint<compiler::frontend::QueryFilePST>(main_source_file);
-		auto main_file_root_scope = query::entryPoint<compiler::helios::QueryPrimaryCodeScopeFor>({main_source_pst.getRootElement()});
-		
+		auto  main_source_file = query::entryPoint<compiler::frontend::QueryMainSourceFile>(module);
+		auto& main_source_pst
+			= query::entryPoint<compiler::frontend::QueryFilePST>(main_source_file);
+		auto main_file_root_scope = query::entryPoint<compiler::helios::QueryPrimaryCodeScopeFor>(
+			{ main_source_pst.getRootElement() }
+		);
+
 		return { module, main_file_root_scope };
 	}
 

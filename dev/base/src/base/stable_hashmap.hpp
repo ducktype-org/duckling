@@ -79,7 +79,9 @@ namespace base {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& value) {
-			return data.put(std::forward<K>(key), ::base::make_unique<DATA_T>(std::forward<D>(value)));
+			return data.put(
+				std::forward<K>(key), ::base::make_unique<DATA_T>(std::forward<D>(value))
+			);
 		}
 
 		/**

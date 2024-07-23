@@ -54,7 +54,9 @@ namespace compiler::helios {
 	 * @brief Query Scope for given PST element.
 	 * @note: Primary Scopes are linked directly to PST structure.
 	 * This means that every PST element has a scope, even for some it doesn't make a lot of sense.
-	 * The reason for this is that handling scope structure without direct link to PST was highly bug prone and led to potential errors or lack of consistency between different fragments of code.
+	 * The reason for this is that handling scope structure without direct link to PST was highly
+	 * bug prone and led to potential errors or lack of consistency between different fragments of
+	 * code.
 	 */
 	DECLARE_QUERY(QueryPrimaryCodeScopeFor, KeyOf_QueryPrimaryCodeScopeFor, ScopeID);
 
@@ -89,9 +91,9 @@ namespace compiler::helios {
 	 * @brief Root scope of main module file is currently the "effective" root scope.
 	 * See: QueryRootScope for details
 	 * @todo: this has to change in the future
-	 * 
-	 * @param module 
-	 * @return ScopeID 
+	 *
+	 * @param module
+	 * @return ScopeID
 	 */
 	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context&, frontend::ModuleId module);
 }

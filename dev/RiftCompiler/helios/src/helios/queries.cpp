@@ -21,7 +21,7 @@ namespace compiler::helios {
 			// lookup all and stuff
 
 			// auto root_scope = ctx.query<QueryRootScopeOf>(key);
-			
+
 			auto main_file_root_scope = extendQueryRootScopeOfMainModuleFile(ctx, key);
 
 			auto symbols_in_module_root = ctx.query<QuerySymbolsInScope>(main_file_root_scope);
@@ -122,9 +122,8 @@ namespace compiler::helios {
 				// for example: `if (let a = ...) {}`.
 				auto condition = ctx.query<QueryHoutOfExpr>({ parent_scope, stmt.getCondition() });
 
-				auto inner_scope
-					= ctx.query<QueryPrimaryCodeScopeFor>({ stmt.getBody() });
-				auto body = queryCodeOfCodeBlock(ctx, stmt.getBody(), inner_scope);
+				auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt.getBody() });
+				auto body        = queryCodeOfCodeBlock(ctx, stmt.getBody(), inner_scope);
 
 				output(code::IfStmt(std::move(condition), std::move(body)));
 			}

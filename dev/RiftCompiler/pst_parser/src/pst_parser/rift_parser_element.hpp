@@ -181,8 +181,8 @@ namespace pst {
 		friend class PSTAutomatic;
 
 	protected:
-		dia::SourcePosition          source_position;
-		std::vector<SubElement>      sub_elements;
+		dia::SourcePosition                          source_position;
+		std::vector<SubElement>                      sub_elements;
 		base::Optional<ParserBorrowRef<RiftElement>> parent;
 
 		void addToken(const tpc::Token& token);

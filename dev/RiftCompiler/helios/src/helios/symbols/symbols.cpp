@@ -855,7 +855,7 @@ namespace compiler::helios {
 
 			auto struct_stmt = getSymRef(key)->pst_stmt;
 
-			auto&& struct_scope = ctx.query<QueryPrimaryCodeScopeFor>({ struct_stmt });
+			auto&& struct_scope   = ctx.query<QueryPrimaryCodeScopeFor>({ struct_stmt });
 			auto&& struct_symbols = ctx.query<QuerySymbolsInScope>(struct_scope);
 
 			StructSymbolData struct_info;

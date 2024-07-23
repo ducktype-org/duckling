@@ -40,7 +40,7 @@ inline static base::HashMap<FileId, SourceFile&> files{};
 inline static base::Map<pst::PstID, FileId> root_element_file_back_map;
 
 // /**
-//  * @brief Map storting ModuleID of each FileID 
+//  * @brief Map storting ModuleID of each FileID
 //  * @note: as of right not it is needed only for QueryPrimaryCodeScopeFor acquiring
 //  * the root scope.
 //  */
@@ -60,7 +60,10 @@ FileId FileId::nextID() {
 	return out;
 }
 
-SourceFile::SourceFile(fs::FilePath path, ModuleId module_id): path(std::move(path)), id(FileId::nextID()), linked_module(module_id) {
+SourceFile::SourceFile(fs::FilePath path, ModuleId module_id):
+	  path(std::move(path)),
+	  id(FileId::nextID()),
+	  linked_module(module_id) {
 	rift_file_name = base::StrId(this->path.stem().c_str());
 }
 
@@ -283,7 +286,6 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
  * QuerySubmodules *
  *******************/
 struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrId COMMA ModuleId>) {
-
 	static auto provide(Context&, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
 
@@ -304,27 +306,27 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
 struct IMPLEMENT_QUERY(QueryFilePST, const pst::PST<>&) {
 	static auto provide(Context&, QKey key) -> PResult {
 		auto& file = files.at(key);
-		auto& pst = file.getPST();;
+		auto& pst  = file.getPST();
+		;
 		root_element_file_back_map.put(pst.getRootElement()->getID(), key);
 		return pst;
 	}
 
 	// @note: unstable ref here is only possible, because
-	// PResult is already a reference 
+	// PResult is already a reference
 	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);
 
-
-ModuleId compiler::frontend::extendQueryModuleIDOfPST(query::Context&, pst::ParserCBorrowRef<pst::RiftElement> element) {
+ModuleId compiler::frontend::extendQueryModuleIDOfPST(
+	query::Context&, pst::ParserCBorrowRef<pst::RiftElement> element
+) {
 	// get top-level:
-	while (element->getParent().has_value()) {
-		element = element->getParent().value();
-	}
+	while (element->getParent().has_value()) element = element->getParent().value();
 
 	auto file_id = root_element_file_back_map[element->getID()];
-	auto result = files.at(file_id).linked_module;
+	auto result  = files.at(file_id).linked_module;
 	RIFT_ASSERT(result.isGood(), "Bad module ID in SourceFile");
 
 	return result;
