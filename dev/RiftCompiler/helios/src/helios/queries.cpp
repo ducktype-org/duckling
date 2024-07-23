@@ -75,9 +75,21 @@ namespace compiler::helios {
 			bool                                         empty = false;
 			base::Optional<code::ElementRef<code::Stmt>> out;
 
+
 			HoutStmtMaker(query::Context& ctx, ScopeID scope):
 				  ctx(ctx),
 				  parent_scope(std::move(scope)) {}
+
+			template<class T>
+			ScopeID scopeOf(ScopeID parent, const T& element) {
+				return ctx.query<QueryPrimaryCodeScopeFor>({ parent,
+				                                            PstRef<pst::RiftElement>(&element) });
+			}
+
+			template<class T>
+			ScopeID selfScope(const T& element) {
+				return scopeOf(parent_scope, element);
+			}
 
 			// @TODO: visits for all valid stmt-s
 
@@ -113,9 +125,7 @@ namespace compiler::helios {
 
 			void visitIf(const pst::If& stmt) override {
 				// Get scopes:
-				auto outer_scope
-					= ctx.query<QueryPrimaryCodeScopeFor>({ parent_scope,
-				                                            PstRef<pst::RiftElement>(&stmt) });
+				auto outer_scope = selfScope(stmt);
 
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
@@ -125,7 +135,7 @@ namespace compiler::helios {
 					= ctx.query<QueryPrimaryCodeScopeFor>({ outer_scope, stmt.getBody() });
 				auto body = queryCodeOfCodeBlock(ctx, stmt.getBody(), inner_scope);
 
-				output(code::IfStmt(std::move(condition), std::move(body)));
+				output(code::IfStmt(outer_scope, std::move(condition), std::move(body)));
 			}
 		};
 
