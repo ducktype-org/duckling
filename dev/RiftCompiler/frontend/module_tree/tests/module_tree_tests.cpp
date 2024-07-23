@@ -5,8 +5,6 @@
 
 using namespace compiler::frontend;
 
-// @TODO: add module ID test in this PR
-
 class ModuleTreeTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS ModuleTreeTest
@@ -51,6 +49,14 @@ private:
 		ASSERT_EQUAL("awe.rmf", awe_module->getMainSourceFile().path.name());
 	}
 
+	void testModuleIDInSourceFile(const ModuleTree& module) {
+		auto id = module.getId();
+		ASSERT_EQUAL_NO_PRINT(id, module.getMainSourceFile().linked_module);
+		for (auto& file: module.getSourceFiles()) {
+			ASSERT_EQUAL_NO_PRINT(id, file.linked_module);
+		}
+	}
+
 	void testOtherFeatures() {
 		auto pth = fs::FilePath(path("test_module"));
 		auto mt  = ModuleTree::create(pth);
@@ -67,6 +73,12 @@ private:
 		auto another_module = mt->getSubmodules()[base::StrId("another")];
 		auto awesome_module = another_module->getSubmodules()[base::StrId("awesome_module")];
 		auto mod_module     = awesome_module->getSubmodules()[base::StrId("mod")];
+
+		testModuleIDInSourceFile(*awe_module);
+		testModuleIDInSourceFile(*another_module);
+		testModuleIDInSourceFile(*awesome_module);
+		testModuleIDInSourceFile(*mod_module);
+		testModuleIDInSourceFile(*mt);
 
 		assert(not mt->getParentModule().has_value(), "Root module has a parent");
 		assert(
