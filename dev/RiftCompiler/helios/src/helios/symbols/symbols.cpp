@@ -302,7 +302,10 @@ namespace compiler::helios {
 				)
 				                           .value();
 
-				return ctx.query<QueryRootScopeOf>(imported_module);
+				// Here we don't access just root scope, because root scopes are currently empty:
+				auto linked_scope = extendQueryRootScopeOfMainModuleFile(ctx, imported_module);
+
+				return linked_scope;
 			}
 			default:
 				throw base::NotYetImplemented("Getting linked scope...");

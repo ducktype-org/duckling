@@ -84,4 +84,14 @@ namespace compiler::helios {
 	 * @NOTE: For structs, it returns what's inside struct's body.
 	 */
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, const std::vector<SymID>&);
+
+	/**
+	 * @brief Root scope of main module file is currently the "effective" root scope.
+	 * See: QueryRootScope for details
+	 * @todo: this has to change in the future
+	 * 
+	 * @param module 
+	 * @return ScopeID 
+	 */
+	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context&, frontend::ModuleId module);
 }

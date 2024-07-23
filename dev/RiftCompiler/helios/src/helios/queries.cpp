@@ -21,11 +21,8 @@ namespace compiler::helios {
 			// lookup all and stuff
 
 			// auto root_scope = ctx.query<QueryRootScopeOf>(key);
-			auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(key);
-			auto& main_source_pst = ctx.query<frontend::QueryFilePST>(main_source_file);
-
-
-			auto main_file_root_scope = ctx.query<QueryPrimaryCodeScopeFor>({main_source_pst.getRootElement()});
+			
+			auto main_file_root_scope = extendQueryRootScopeOfMainModuleFile(ctx, key);
 
 			auto symbols_in_module_root = ctx.query<QuerySymbolsInScope>(main_file_root_scope);
 
