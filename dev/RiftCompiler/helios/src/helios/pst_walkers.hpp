@@ -7,7 +7,7 @@
 #pragma once
 
 #include <pst_parser/elements/elements.hpp>
-#include <pst_parser/rift_parser_base.hpp>
+#include <pst_parser/rift_parser_state.hpp>
 #include <vector>
 
 #include "pst_ref.hpp"

@@ -21,8 +21,8 @@ namespace tpc {
 		const Tokens& tokens;          ///< Source list of tokens
 		usize         where = 0;       ///< current position
 		usize         to;              ///< end position
-		Token         sentinel_end;    ///< Token to return if out of bounds forward
-		Token         sentinel_begin;  ///< Token to return if out of bounds backwards
+		const Token&  sentinel_end;    ///< Token to return if out of bounds forward
+		const Token&  sentinel_begin;  ///< Token to return if out of bounds backwards
 
 	public:
 		TokenStream()             = delete;
@@ -30,7 +30,11 @@ namespace tpc {
 		TokenStream(TokenStream&&) noexcept;
 
 		TokenStream(
-			const Tokens& tokens, Token sentinel_begin, Token sentinel_end, usize from, usize to
+			const Tokens& tokens,
+			const Token&  sentinel_begin,
+			const Token&  sentinel_end,
+			usize         from,
+			usize         to
 		);
 
 		/**

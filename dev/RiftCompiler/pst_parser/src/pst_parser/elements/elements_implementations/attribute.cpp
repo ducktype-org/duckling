@@ -10,12 +10,9 @@ namespace pst {
 
 		if (!assertStmtChoice<Attribute>(state, state[0].is(Special::AtSign))) return nullptr;
 
-		parseAll(state, Special::AtSign, &out->name);
+		state.parse(out).all(Special::AtSign, &out->name);
 
-		if (state[0].isBracketGroup(Token::BracketType::Round))
-			out->args = AtrArgList::parse(state);
-
-		out->setLastToken(state.getPosition(-1));
+		if (state[0].isBracketGroup(Token::BracketType::Round)) state.parse(out).one(&out->args);
 
 		return out;
 	}

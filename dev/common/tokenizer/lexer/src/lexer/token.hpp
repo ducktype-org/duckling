@@ -112,9 +112,9 @@ namespace lexer {
 		[[nodiscard]]
 		const Tokens& getRecursive() const;
 		[[nodiscard]]
-		const Token getSentinelBegin() const;
+		const Token& getSentinelBegin() const;
 		[[nodiscard]]
-		const Token getSentinelEnd() const;
+		const Token& getSentinelEnd() const;
 
 		[[nodiscard]]
 		bool               isBracketGroup() const;

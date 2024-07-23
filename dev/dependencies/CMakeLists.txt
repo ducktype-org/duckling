@@ -56,4 +56,6 @@ FetchContent_MakeAvailable(result)
 get_target_property(TEMP Result INTERFACE_INCLUDE_DIRECTORIES)
 set_target_properties(Result PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
 
+find_library(gvc gvc)
+
 FindOrBuildICU(VERSION 74.1 URL "${ICU_RELEASE}" URL_HASH "${ICU_CONTROL}")
