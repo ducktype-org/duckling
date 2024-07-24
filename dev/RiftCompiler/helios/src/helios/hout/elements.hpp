@@ -24,10 +24,9 @@ namespace compiler::helios::code {
 	 * @brief Base class for all HOUT statements
 	 */
 	struct Stmt {
-		// @TODO: ....
-		ScopeID scope;
+		ScopeID lifetime_scope;
 
-		Stmt(ScopeID scope): scope(scope) {}
+		Stmt(ScopeID lifetime_scope): lifetime_scope(std::move(lifetime_scope)) {}
 
 		virtual ~Stmt()                                                    = default;
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
@@ -40,7 +39,12 @@ namespace compiler::helios::code {
 	 * All subclasses shall have a "Expr" suffix.
 	 */
 	struct Expr {
+		ScopeID lifetime_scope;
+
 		// @TODO: set/get Type and ValueCategory of Expr
+
+		Expr(ScopeID lifetime_scope): lifetime_scope(std::move(lifetime_scope)) {}
+	
 		virtual ~Expr()                                                    = default;
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
 
@@ -123,7 +127,7 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		i64 value;
 
-		LiteralValueExpr(i64 value): value(value) {}
+		LiteralValueExpr(ScopeID scope, i64 value): Expr(scope), value(value) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
@@ -139,7 +143,7 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		SymID symbol;
 
-		IdentifierExpr(SymID symbol): symbol(std::move(symbol)) {}
+		IdentifierExpr(ScopeID scope, SymID symbol): Expr(scope), symbol(std::move(symbol)) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
@@ -151,7 +155,8 @@ namespace compiler::helios::code {
 		ElementRef<Expr> lhs;
 		ElementRef<Expr> rhs;
 
-		BinaryOperatorExpr(base::StrId op, ElementRef<Expr> lhs, ElementRef<Expr> rhs):
+		BinaryOperatorExpr(ScopeID scope, base::StrId op, ElementRef<Expr> lhs, ElementRef<Expr> rhs): 
+		      Expr(scope),
 			  op(op),
 			  lhs(std::move(lhs)),
 			  rhs(std::move(rhs)) {}

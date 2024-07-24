@@ -71,7 +71,7 @@ namespace compiler::helios::code {
 		for (auto&& elem: expr.elements) {
 			variant_match(elem) {
 				variant_case(rpn::Identifier, idt) {
-					st.emplace(base::make_unique<IdentifierExpr>(idt.symbol_list.back()));
+					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, idt.symbol_list.back()));
 				}
 
 				variant_case(rpn::Operator, oper) {
@@ -81,7 +81,7 @@ namespace compiler::helios::code {
 					st.pop();
 
 					st.emplace(base::make_unique<BinaryOperatorExpr>(
-						oper.oper_id, std::move(a), std::move(b)
+						expr.scope, oper.oper_id, std::move(a), std::move(b)
 					));
 				}
 
@@ -90,11 +90,11 @@ namespace compiler::helios::code {
 						{ expr.scope, idt.symbol_name, true }
 					);
 
-					st.emplace(base::make_unique<IdentifierExpr>(sym_list.getAsSingle().back()));
+					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, sym_list.getAsSingle().back()));
 				}
 
 				variant_case(rpn::NumValue, num_value) {
-					st.emplace(base::make_unique<LiteralValueExpr>(std::stoi(num_value.num_id.str())
+					st.emplace(base::make_unique<LiteralValueExpr>(expr.scope, std::stoi(num_value.num_id.str())
 					));
 				}
 
@@ -145,7 +145,7 @@ namespace compiler::helios {
 			}
 			variant_case(pst::Expr::NumLiteral, num) {
 				auto val = base::strIdToNum(num.num_id);
-				return base::make_unique<code::LiteralValueExpr>(val);
+				return base::make_unique<code::LiteralValueExpr>(scope, val);
 			}
 			variant_case(pst::Expr::Identifier, identifier) {
 				// @note: this does not handle overload
@@ -168,7 +168,7 @@ namespace compiler::helios {
 				RIFT_ASSERT(lookup_dealiased.size() > 0, "Empty lookup result");
 
 				// @TODO: dont just ignore everything before last symbol
-				return base::make_unique<code::IdentifierExpr>(lookup_dealiased.back());
+				return base::make_unique<code::IdentifierExpr>(scope, lookup_dealiased.back());
 			}
 			variant_case(pst::Expr::Group, group) {
 				throw base::NotYetImplemented("Expr from group");
