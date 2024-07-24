@@ -40,6 +40,8 @@ namespace compiler::mir {
 
 		VoidReturn,
 		Return,
+		Jump,
+		Branch
 	};
 
 	struct Instruction {

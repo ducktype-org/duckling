@@ -56,11 +56,12 @@ namespace compiler::helios {
 		 */
 		template<class Container>
 		static auto queryCodeOfCodeBlock(
-			query::Context& ctx, const Container& container, ScopeID parent_scope
+			query::Context& ctx, const Container& container
 		) {
-			code::CodeBlock block;
+			auto scope = ctx.query<QueryPrimaryCodeScopeFor>( { container });
+			code::CodeBlock block(scope, {});
 			for (const auto& stmt: container) {
-				HoutStmtMaker stmt_maker(ctx, parent_scope);
+				HoutStmtMaker stmt_maker(ctx, scope);
 				stmt->acceptVisitor(stmt_maker);
 				if (not stmt_maker.empty)
 					block.statements.emplace_back(std::move(stmt_maker.out.value()));
@@ -126,7 +127,7 @@ namespace compiler::helios {
 				auto condition = ctx.query<QueryHoutOfExpr>({ stmt.getCondition() });
 
 				auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt.getBody() });
-				auto body        = queryCodeOfCodeBlock(ctx, stmt.getBody(), inner_scope);
+				auto body        = queryCodeOfCodeBlock(ctx, stmt.getBody());
 
 				output(code::IfStmt(outer_scope, std::move(condition), std::move(body)));
 			}
@@ -164,7 +165,7 @@ namespace compiler::helios {
 					= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(fun_body) });
 
 				// HOUTCode out;
-				code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body, inner_scope);
+				code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
 				output.body.body
 					= std::make_shared<const code::CodeBlock>(std::move(function_body));
 

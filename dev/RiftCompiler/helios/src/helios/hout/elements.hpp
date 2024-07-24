@@ -57,6 +57,7 @@ namespace compiler::helios::code {
 	 * @brief A block of HOUT statements
 	 */
 	struct CodeBlock final {
+		ScopeID lifetime_scope;
 		std::vector<ElementRef<Stmt>> statements;
 	};
 

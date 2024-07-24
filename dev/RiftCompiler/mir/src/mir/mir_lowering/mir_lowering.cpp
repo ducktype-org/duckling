@@ -47,7 +47,6 @@ namespace compiler::mir {
 		 */
 		std::vector<base::Optional<Instruction>> reversed_instruction;
 		base::Optional<Instruction> terminator;
-		helios::ScopeID helios_scope;
 
 		struct InstructionHole {
 		private:
@@ -64,8 +63,7 @@ namespace compiler::mir {
 		};
 
 	public:
-		BlockBuilder(helios::ScopeID helios_scope):
-			helios_scope(helios_scope) {}
+		BlockBuilder() = default;
 		
 		[[nodiscard]]
 		Block build() const {
@@ -121,8 +119,8 @@ namespace compiler::mir {
 			return local_list.getRef(key).value();
 		}
 		
-		BlockRef newBlock(helios::ScopeID scope, bool entry = false) {
-			auto res = blocks.getRef(blocks.emplaceBack(BlockBuilder{scope})).value();
+		BlockRef newBlock(bool entry = false) {
+			auto res = blocks.getRef(blocks.emplaceBack(BlockBuilder{})).value();
 			if (entry) {
 				RIFT_ASSERT(entry_block.empty(), "Entry block already set!");
 				entry_block.emplace(res);
@@ -239,7 +237,22 @@ namespace compiler::mir {
 			// First step:
 			// * build cfg+quad step by step
 
+
 			FunctionBuilder function_builder;
+
+			// @TODO: add parameters stuff
+
+			auto fun_body_scope = key.function.body.body->lifetime_scope;
+
+			// not just vreturn:
+			auto last_block = function_builder.newBlock();
+
+			auto first_block = lowerCodeBlock(*key.function.body.body, last_block, function_builder);
+
+			auto entry_block = function_builder.newBlock(true);
+
+			// @TODO: jump arguments:
+			entry_block->setTerminator({ Operation::Jump, {}, {}, {}, fun_body_scope} );
 
 
 			// @TODO:
