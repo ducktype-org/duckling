@@ -36,8 +36,8 @@ inline static base::HashMap<FileId, SourceFile&> files{};
  * @brief Map storting FileID of each parsed PST (by root element ID)
  * @note: as of right not it is needed only for QueryPrimaryCodeScopeFor for acquiring
  * the root scope via extendQueryModuleIDOfPST.
- * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put information 
- * from this map into PST nodes. 
+ * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put information
+ * from this map into PST nodes.
  */
 inline static base::Map<pst::PstID, FileId> root_element_file_back_map;
 
