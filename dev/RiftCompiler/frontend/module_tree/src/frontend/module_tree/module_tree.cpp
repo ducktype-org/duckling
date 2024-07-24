@@ -7,6 +7,7 @@
 
 #include <pst_parser/parser.hpp>
 #include <base/maps.hpp>
+#include <base/stable_hashmap.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include "queries.hpp"
@@ -15,10 +16,10 @@ using fs::FsTree;
 using std::regex;
 using namespace compiler::frontend;
 
-// @TODO: creation points of module tree shared objects
+// @todo: creation points of module tree shared objects
 // as well as filling of modules, files global lists
-// should be centralized to single methods/functions
-// the current situation is hard to maintain
+// should be centralized to single methods/functions/queries.
+// The current situation is hard to maintain.
 
 /**
  * @brief Holds global map of all modules
@@ -30,6 +31,15 @@ inline static base::HashMap<ModuleId, std::shared_ptr<ModuleTree>> modules{};
  * @TODO: this holding a reference is dangerous:
  */
 inline static base::HashMap<FileId, SourceFile&> files{};
+
+/**
+ * @brief Map storting FileID of each parsed PST (by root element ID)
+ * @note: as of right not it is needed only for QueryPrimaryCodeScopeFor for acquiring
+ * the root scope via extendQueryModuleIDOfPST.
+ * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put information
+ * from this map into PST nodes.
+ */
+inline static base::Map<pst::PstID, FileId> root_element_file_back_map;
 
 /**
  * @brief Holds global map of module path to module id
@@ -45,7 +55,10 @@ FileId FileId::nextID() {
 	return out;
 }
 
-SourceFile::SourceFile(fs::FilePath path): path(std::move(path)), id(FileId::nextID()) {
+SourceFile::SourceFile(fs::FilePath path, ModuleId module_id):
+	  path(std::move(path)),
+	  id(FileId::nextID()),
+	  linked_module(module_id) {
 	rift_file_name = base::StrId(this->path.stem().c_str());
 }
 
@@ -116,7 +129,7 @@ void ModuleTree::handleNewFile(
 	// type.
 	if (extension == RIFT_SOURCE_FILE) {
 		// File contains regular source content.
-		module_root->m_source_files.push_back(filepath);
+		module_root->m_source_files.emplace_back(filepath, module_root->getId());
 	} else if (extension == RIFT_MODULE_FILE) {
 		// File with a config of SOME module.
 		if (stem_id == module_root->getName()) {
@@ -126,13 +139,13 @@ void ModuleTree::handleNewFile(
 			if (module_root->m_main_source_file.has_value())
 				throw base::LogicError(base::strConcat("Module already has a main source file."));
 
-			module_root->m_main_source_file.emplace(filepath);
+			module_root->m_main_source_file.emplace(filepath, module_root->getId());
 		} else {
 			// Single-file module.
 			auto submodule = std::shared_ptr<ModuleTree>(new ModuleTree());
 			modules.put(submodule->getId(), submodule);
 			module_root->m_submodules.put(stem_id, submodule);
-			submodule->m_main_source_file.emplace(filepath);
+			submodule->m_main_source_file.emplace(filepath, submodule->getId());
 			submodule->m_parent = module_root;
 			if_opt_some(submodule->m_main_source_file, main_file) {
 				files.put(main_file.id, main_file);
@@ -251,8 +264,6 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QueryMainSourceFile);
  * QuerySourceFiles *
  ********************/
 struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileId>) {
-	inline static base::HashMap<QKey, base::unique_ptr<PResWithACD>> cache{};
-
 	static auto provide(Context&, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
 
@@ -261,19 +272,7 @@ struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileId>) {
 		return out;
 	}
 
-	static auto load(QKey key) -> LoadResult {
-		if (cache.contains(key)) {
-			auto entry = cache.at(key).borrow();
-			return QResWithACD{ entry->data, entry->acd };
-		} else {
-			return {};
-		}
-	}
-
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-		cache.put(key, base::make_unique<PResWithACD>(PResWithACD{ std::move(res), acd }));
-		return cache.at(key)->data;
-	}
+	QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
@@ -282,8 +281,6 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
  * QuerySubmodules *
  *******************/
 struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrId COMMA ModuleId>) {
-	inline static base::HashMap<QKey, base::unique_ptr<PResWithACD>> cache{};
-
 	static auto provide(Context&, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
 
@@ -293,19 +290,7 @@ struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrId COMMA ModuleId
 		return out;
 	}
 
-	static auto load(QKey key) -> LoadResult {
-		if (cache.contains(key)) {
-			auto entry = cache.at(key).borrow();
-			return QResWithACD{ entry->data, entry->acd };
-		} else {
-			return {};
-		}
-	}
-
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-		cache.put(key, base::make_unique<PResWithACD>(PResWithACD{ std::move(res), acd }));
-		return cache.at(key)->data;
-	}
+	QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
@@ -314,24 +299,30 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
  * QueryFilePST *
  ****************/
 struct IMPLEMENT_QUERY(QueryFilePST, const pst::PST<>&) {
-	inline static base::HashMap<QKey, query::CacheEntry<QResult>> cache{};
-
 	static auto provide(Context&, QKey key) -> PResult {
 		auto& file = files.at(key);
-		return file.getPST();
+		auto& pst  = file.getPST();
+		root_element_file_back_map.put(pst.getRootElement()->getID(), key);
+		return pst;
 	}
 
-	static auto load(QKey key) -> LoadResult {
-		if (cache.contains(key))
-			return cache.at(key);
-		else
-			return {};
-	}
-
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-		cache.put(key, { res, acd });
-		return res;
-	}
+	// @note: unstable ref here is only possible, because
+	// PResult is already a reference
+	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);
+
+ModuleId compiler::frontend::extendQueryModuleIDOfPST(
+	query::Context&, pst::ParserCBorrowRef<pst::RiftElement> element
+) {
+	// get top-level:
+	while (element->getParent().has_value()) element = element->getParent().value();
+
+	// this access depends of global state that might become a problem in incremental compilation:
+	auto file_id = root_element_file_back_map[element->getID()];
+	auto result  = files.at(file_id).linked_module;
+	RIFT_ASSERT(result.isGood(), "Bad module ID in SourceFile");
+
+	return result;
+}
