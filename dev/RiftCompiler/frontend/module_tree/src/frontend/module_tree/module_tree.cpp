@@ -16,10 +16,10 @@ using fs::FsTree;
 using std::regex;
 using namespace compiler::frontend;
 
-// @TODO: creation points of module tree shared objects
+// @todo: creation points of module tree shared objects
 // as well as filling of modules, files global lists
-// should be centralized to single methods/functions
-// the current situation is hard to maintain
+// should be centralized to single methods/functions/queries.
+// The current situation is hard to maintain.
 
 /**
  * @brief Holds global map of all modules
@@ -34,8 +34,10 @@ inline static base::HashMap<FileId, SourceFile&> files{};
 
 /**
  * @brief Map storting FileID of each parsed PST (by root element ID)
- * @note: as of right not it is needed only for QueryPrimaryCodeScopeFor acquiring
- * the root scope.
+ * @note: as of right not it is needed only for QueryPrimaryCodeScopeFor for acquiring
+ * the root scope via extendQueryModuleIDOfPST.
+ * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put information 
+ * from this map into PST nodes. 
  */
 inline static base::Map<pst::PstID, FileId> root_element_file_back_map;
 
@@ -300,7 +302,6 @@ struct IMPLEMENT_QUERY(QueryFilePST, const pst::PST<>&) {
 	static auto provide(Context&, QKey key) -> PResult {
 		auto& file = files.at(key);
 		auto& pst  = file.getPST();
-		;
 		root_element_file_back_map.put(pst.getRootElement()->getID(), key);
 		return pst;
 	}
@@ -318,6 +319,7 @@ ModuleId compiler::frontend::extendQueryModuleIDOfPST(
 	// get top-level:
 	while (element->getParent().has_value()) element = element->getParent().value();
 
+	// this access depends of global state that might become a problem in incremental compilation:
 	auto file_id = root_element_file_back_map[element->getID()];
 	auto result  = files.at(file_id).linked_module;
 	RIFT_ASSERT(result.isGood(), "Bad module ID in SourceFile");

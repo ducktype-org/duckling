@@ -18,6 +18,7 @@
 namespace compiler::frontend {
 	/**
 	 * @brief Structure holding FileID within SourceFile
+	 * @todo: change to STRONG_TYPEDEF_ID
 	 */
 	struct FileId {
 		[[nodiscard]]
