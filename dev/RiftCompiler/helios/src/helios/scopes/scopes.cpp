@@ -12,7 +12,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 
-#include <pst_parser/rift_parser_base.hpp>
+#include <pst_parser/rift_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
 #include "../lookup_result.hpp"
@@ -31,8 +31,9 @@ namespace compiler::helios {
 
 		/**
 		 * @brief PST element for which the scope was created.
+		 * Empty for root scope.
 		 */
-		PstRef<pst::RiftElement> related_pst_element;
+		base::Optional<PstRef<pst::RiftElement>> related_pst_element;
 
 		/**
 		 * @brief Module, the scope was defined in
@@ -80,28 +81,17 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeID) {
-		inline static base::Map<frontend::ModuleId, query::CacheEntry<ScopeID>> cache;
-
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			// @TODO: dont just ignore other files...
-			auto   main_file  = ctx.query<frontend::QueryMainSourceFile>(key);
-			auto&& module_pst = ctx.query<frontend::QueryFilePST>(main_file);
-
+		static auto provide(Context&, QKey key) -> PResult {
 			return putInScopeTable(ScopeData{
 				.parent              = ScopeID{ nullptr },
 				.is_root             = true,
-				.related_pst_element = module_pst.getRootElement(),
+				.related_pst_element = {},
 				.parent_module       = key,
 				.symbols             = {},
 			});
 		}
 
-		static auto load(QKey key) -> LoadResult { return cache.atMaybeCopy(key); }
-
-		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-			cache.put(key, { res, acd });
-			return cache.at(key).data;
-		}
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
@@ -109,25 +99,32 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
-		static auto provide(Context&, QKey element) -> PResult {
-			// Potential way of eliminating dependency on parent:
-			// auto parent
-			// = scope(ctx.query<QuerySymbolOfSTMT>({ element.parent, element.base_element }));
+		static auto provide(Context& ctx, QKey element) -> PResult {
+			ScopeID parent = element.base_element->getParent().has_value()
+			                   ? ctx.query<QueryPrimaryCodeScopeFor>(
+								   { element.base_element->getParent().value() }
+							   )
+			                   : ctx.query<QueryRootScopeOf>(
+								   { frontend::extendQueryModuleIDOfPST(ctx, element.base_element) }
+							   );
+
 
 			// simple parent sanity check:
+			// it is technically not needed anymore, but it left as an additional
+			// layer of bug detection.
 			if (parent_map.contains(element.base_element->getID())) {
 				RIFT_ASSERT(
-					parent_map.at(element.base_element->getID()) == element.parent,
+					parent_map.at(element.base_element->getID()) == parent,
 					"Parent mismatch in QueryPrimaryCodeScopeFor"
 				);
 			} else {
-				parent_map.put(element.base_element->getID(), element.parent);
+				parent_map.put(element.base_element->getID(), parent);
 			}
 
 			return putInScopeTable(ScopeData{
-				.parent              = element.parent,
+				.parent              = parent,
 				.related_pst_element = element.base_element,
-				.parent_module       = module(element.parent),
+				.parent_module       = module(parent),
 				.symbols             = {},
 			});
 		}
@@ -184,6 +181,10 @@ namespace compiler::helios {
 					filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(struct_.getBody()))
 				);
 			}
+
+			void visitNamespace(const pst::Namespace&) override {
+				this->out.emplace(std::vector<SymID>());
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -191,7 +192,11 @@ namespace compiler::helios {
 
 			// @TODO: expand macros?
 
-			auto base_element = key.ref->related_pst_element;
+			if (not key.ref->related_pst_element.has_value()) {
+				RIFT_ASSERT(key.ref->is_root, "Non root scope without PST element!");
+				return {};
+			}
+			auto base_element = key.ref->related_pst_element.value();
 
 			if (base_element->isStatementAggregate()) {
 				return filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(base_element));
@@ -273,11 +278,8 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
 
 	base::HashT KeyOf_QueryPrimaryCodeScopeFor::customPerfectHash() const {
-		auto hash_1 = base::perfectHash(parent);
-		auto hash_2 = base_element->getID().asInt();
-
-		// @FIXME: this does not work:
-		return hash_1 * 143 + hash_2 * 7;
+		auto hash_1 = base_element->getID().asInt();
+		return hash_1;
 	}
 
 	base::HashT KeyOf_LookupInScope::customPerfectHash() const {
@@ -286,5 +288,15 @@ namespace compiler::helios {
 
 		// @FIXME: this does not work:
 		return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;
+	}
+
+	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleId module) {
+		auto  main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
+		auto& main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
+
+		auto main_file_root_scope
+			= ctx.query<QueryPrimaryCodeScopeFor>({ main_source_pst.getRootElement() });
+
+		return main_file_root_scope;
 	}
 }

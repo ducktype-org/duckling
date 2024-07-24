@@ -68,7 +68,7 @@ namespace base {
 		 * @return A reference to the data.
 		 */
 		DATA_T& operator[](const KEY_T& key) {
-			if (!contains(key)) data.emplace(key, make_unique<DATA_T>());
+			if (!contains(key)) data.emplace(key, ::base::make_unique<DATA_T>());
 			return *data[key];
 		}
 
@@ -79,7 +79,9 @@ namespace base {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& value) {
-			return data.put(std::forward<K>(key), make_unique<DATA_T>(std::forward<D>(value)));
+			return data.put(
+				std::forward<K>(key), ::base::make_unique<DATA_T>(std::forward<D>(value))
+			);
 		}
 
 		/**

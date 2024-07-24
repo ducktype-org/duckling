@@ -3,7 +3,7 @@
 #include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better
 
 #include <token_file/file.hpp>
-#include "rift_parser_base.hpp"
+#include "rift_parser_state.hpp"
 #include "parser.hpp"
 
 namespace pst {
@@ -33,8 +33,8 @@ namespace pst {
 			RiftParserState         state(
                 tpc::TokenStream(
                     token_data.tokens,
-                    tpc::Token(token_data.bof_sentinel),
-                    tpc::Token(token_data.eof_sentinel),
+                    token_data.bof_sentinel,
+                    token_data.eof_sentinel,
                     0,
                     token_data.tokens.size()
                 ),
