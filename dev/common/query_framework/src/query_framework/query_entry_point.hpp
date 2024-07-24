@@ -15,6 +15,7 @@ namespace query {
 	 */
 	template<typename QueryType>
 	auto entryPoint(typename QueryType::QKey key) -> decltype(auto) {
+		// @todo: this does not work well with exceptions:
 		RIFT_ASSERT(
 			detail::dep_graph::queryStackSize() == 0, "query::entryPoint called from within query!"
 		);

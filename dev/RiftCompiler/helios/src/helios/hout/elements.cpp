@@ -133,6 +133,9 @@ namespace compiler::helios {
 	 */
 	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key)
 		-> code::ElementRef<code::Expr> {
+		
+		auto scope = ctx.query<QueryPrimaryCodeScopeFor>( { key.expr } );
+
 		RIFT_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single expression");
 		const auto& elem = key.expr->elements.at(0);
 
@@ -149,7 +152,7 @@ namespace compiler::helios {
 				// @note: this does not handle "." operation
 
 				auto lookup_result = ctx.query<QueryLookupInScopeAndParents>(KeyOf_LookupInScope{
-					key.scope, identifier.indent_id, true });
+					scope, identifier.indent_id, true });
 
 				compiler::helios::SymbolList lookup_dealiased;
 
@@ -201,11 +204,9 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr);
 
 	base::HashT KeyOf_QueryHoutOfExpr::customPerfectHash() const {
-		auto hash_1 = base::perfectHash(scope);
-		auto hash_2 = this->expr->getID().asInt();
+		auto hash_1 = this->expr->getID().asInt();
 
-		// @FIXME: this does not work:
-		return (hash_1 * 143 + hash_2 * 7);
+		return hash_1;
 	}
 
 };

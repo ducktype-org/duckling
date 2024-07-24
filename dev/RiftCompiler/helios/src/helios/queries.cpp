@@ -20,9 +20,9 @@ namespace compiler::helios {
 			// store it in some vector or something
 			// lookup all and stuff
 
-			auto root_scope = ctx.query<QueryRootScopeOf>(key);
+			auto main_file_root_scope = extendQueryRootScopeOfMainModuleFile(ctx, key);
 
-			auto symbols_in_module_root = ctx.query<QuerySymbolsInScope>(root_scope);
+			auto symbols_in_module_root = ctx.query<QuerySymbolsInScope>(main_file_root_scope);
 
 			HOUTUnit out;
 
@@ -81,14 +81,8 @@ namespace compiler::helios {
 				  parent_scope(std::move(scope)) {}
 
 			template<class T>
-			ScopeID scopeOf(ScopeID parent, const T& element) {
-				return ctx.query<QueryPrimaryCodeScopeFor>({ parent,
-				                                            PstRef<pst::RiftElement>(&element) });
-			}
-
-			template<class T>
-			ScopeID selfScope(const T& element) {
-				return scopeOf(parent_scope, element);
+			ScopeID scopeOf(const T& element) {
+				return ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(&element) });
 			}
 
 			// @TODO: visits for all valid stmt-s
@@ -107,10 +101,10 @@ namespace compiler::helios {
 
 			void visitReturn(const pst::Return& stmt) override {
 				if (auto val = stmt.getValue()) {
-					auto expr = ctx.query<QueryHoutOfExpr>({ parent_scope, val.value() });
-					output(code::ReturnStmt(std::move(expr)));
+					auto expr = ctx.query<QueryHoutOfExpr>({ val.value() });
+					output(code::ReturnStmt(scopeOf(stmt), std::move(expr)));
 				} else {
-					output(code::VoidReturnStmt());
+					output(code::VoidReturnStmt(scopeOf(stmt)));
 				}
 			}
 
@@ -119,21 +113,20 @@ namespace compiler::helios {
 			void visitUsing(const pst::Using&) override { empty = true; }
 
 			void visitExpr(const pst::Expr& stmt) override {
-				auto expr = ctx.query<QueryHoutOfExpr>({ parent_scope, PstRef<pst::Expr>(&stmt) });
-				output(code::ExprStmt(std::move(expr)));
+				auto expr = ctx.query<QueryHoutOfExpr>({ PstRef<pst::Expr>(&stmt) });
+				output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
 			}
 
 			void visitIf(const pst::If& stmt) override {
 				// Get scopes:
-				auto outer_scope = selfScope(stmt);
+				auto outer_scope = scopeOf(stmt);
 
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
-				auto condition = ctx.query<QueryHoutOfExpr>({ parent_scope, stmt.getCondition() });
+				auto condition = ctx.query<QueryHoutOfExpr>({ stmt.getCondition() });
 
-				auto inner_scope
-					= ctx.query<QueryPrimaryCodeScopeFor>({ outer_scope, stmt.getBody() });
-				auto body = queryCodeOfCodeBlock(ctx, stmt.getBody(), inner_scope);
+				auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt.getBody() });
+				auto body        = queryCodeOfCodeBlock(ctx, stmt.getBody(), inner_scope);
 
 				output(code::IfStmt(outer_scope, std::move(condition), std::move(body)));
 			}
@@ -161,18 +154,14 @@ namespace compiler::helios {
 
 				// Scope of function itself:
 				// this scope will contain all "function declaration" symbols like parameters
-				// @TODO: document somewhere how do scopes behave depending on what they are looking
-				// at
-				auto outer_scope
-					= ctx.query<QueryPrimaryCodeScopeFor>({ parent_scope,
-				                                            PstRef<pst::RiftElement>(&stmt) });
+				// auto outer_scope
+				// 	= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(&stmt) });
 
 				auto fun_body = stmt.getBody();
 
 				// Scope of function body:
 				auto inner_scope
-					= ctx.query<QueryPrimaryCodeScopeFor>({ outer_scope,
-				                                            PstRef<pst::RiftElement>(fun_body) });
+					= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(fun_body) });
 
 				// HOUTCode out;
 				code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body, inner_scope);

@@ -76,6 +76,7 @@ namespace compiler::helios::code {
 	 * @brief Represents `return;` in HOUT
 	 */
 	struct VoidReturnStmt final: public Stmt {
+		VoidReturnStmt(ScopeID scope): Stmt(scope) {}
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
@@ -162,7 +163,6 @@ namespace compiler::helios::code {
 
 namespace compiler::helios {
 	struct KeyOf_QueryHoutOfExpr {
-		ScopeID           scope;
 		PstRef<pst::Expr> expr;
 
 		[[nodiscard]]
