@@ -94,6 +94,9 @@ namespace compiler::mir {
 	struct Function {
 		std::vector<Block> blocks;
 		base::StableVector<MirLocal> local_list;
+		
+		[[nodiscard]]
+		std::string debugPrint() const;
 	};
 
 }

@@ -12,11 +12,11 @@ namespace compiler::mir {
 	
 
 	struct KeyOf_LowerToMirFunction {
-		helios::HOUTFunction function;
+		helios::HOUTFunction& function;
 		
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
-		bool operator==(const KeyOf_LowerToMirFunction&) const = default;
+		bool operator==(const KeyOf_LowerToMirFunction& oth) const { return function == oth.function; }
 	};
 
 	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, Function&)

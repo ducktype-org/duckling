@@ -29,6 +29,11 @@ namespace base {
 		using Ref  = StableVectorRef<Data>;
 		using CRef = StableVectorCRef<Data>;
 
+		StableVector() = default;
+		StableVector(StableVector&&) = default;
+		
+		StableVector(const StableVector&) = delete;
+
 		[[nodiscard]]
 		constexpr usize size() const noexcept {
 			return data.size();
