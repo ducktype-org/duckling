@@ -161,5 +161,5 @@ jobs:
             })
 
       - name: Fail if insufficient coverage
-        if: ${{ steps.coverage-enabled.outputs.value && steps.check-coverage-status.outputs.success != 'true' && steps.main-pr.outputs.value }}
+        if: ${{ steps.coverage-enabled.outputs.value && steps.check-coverage-status.outputs.success != 'true' && steps.main-pr.outputs.value && (not contains(github.event.pull_request.labels.*.name, 'Override Coverage Check'))}}
         run: exit 1
