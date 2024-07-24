@@ -25,9 +25,9 @@ MACRO_EXPANSION = YES
 EXPAND_ONLY_PREDEF = YES
 ALIASES += "query=\xrefitem query \"Query\" \"Queries\"" \
             "TODO=\todo"
-PREDEFINED = "DECLARE_QUERY(name, key, value)=auto name(key) -> value;/**< \query */" \
+PREDEFINED = "DECLARE_QUERY(name, key, value)=auto name(key) -> value;/**< \query \ref ImplementationOf_##name \"Implementation\" */" \
             "STRONG_TYPEDEF_ID(name)=using name = u64;" \
-            "IMPLEMENT_QUERY(name, key)=" \
+            "IMPLEMENT_QUERY(name, PResult)=ImplementationOf_##name final: public query::QueryImplementation<name, PResult>" \
             "QUERY_IMPLEMENTATION_BOILERPLATE(name)=" \
             "COMMA=,"
 
