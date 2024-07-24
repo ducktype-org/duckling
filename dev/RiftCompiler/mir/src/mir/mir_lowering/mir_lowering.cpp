@@ -74,7 +74,7 @@ namespace compiler::mir {
 				RIFT_ASSERT(instruction.has_value(), "Empty instruction left in the block");
 				instructions.emplace_back(instruction.value());
 			}
-			return {std::move(instructions), terminator.value(), helios_scope};
+			return {std::move(instructions), terminator.value()};
 		}
 
 		void addInstruction(Instruction instr) {
@@ -163,9 +163,13 @@ namespace compiler::mir {
 			auto expr_res = lowerExpr(*stmt.value, continuation, function);
 
 			// here return_instruction has to be a terminator: 
-			return_instruction.fill({
-				
-			});
+			return_instruction.fill(Instruction(
+				Operation::Return,
+				{},
+				{ expr_res.value },
+				{},
+				stmt.lifetime_scope
+			));
 
 			output({expr_res.begin});			
 		}
@@ -194,10 +198,14 @@ namespace compiler::mir {
 			this->out.emplace(value);
 		}
 
-		void visitConstIntExprMock(const hc::ConstIntExprMock& expr) override {
+		void visitLiteralValueExpr(const hc::LiteralValueExpr& expr) override {
+
 			throw base::NotYetImplemented("expr");
 		}
-		void visitIdentifierExpresion(const hc::IdentifierExpresion& expr) override {
+		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
+			throw base::NotYetImplemented("identifier");
+		}
+		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
 			throw base::NotYetImplemented("identifier");
 		}
 	};

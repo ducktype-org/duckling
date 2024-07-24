@@ -60,6 +60,18 @@ namespace compiler::mir {
 
 		//  perhaps just map during MIR creation? (mir scope -- just super simple tree)
 		helios::ScopeID scope;
+
+		Instruction(const Instruction&) = default;
+		Instruction(Instruction&&) = default;
+		
+		Instruction(Operation operation, base::Optional<LocalRef> output, std::vector<MirLocation> arguments, std::vector<OperationFlag> flags, helios::ScopeID scope):
+			operation(operation),
+			output(std::move(output)),
+			arguments(std::move(arguments)),
+			flags(std::move(flags)),
+			scope(scope) 
+			{}
+
 	};
 
 	struct Terminator {
