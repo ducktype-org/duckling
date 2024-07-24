@@ -118,7 +118,7 @@ namespace compiler::helios {
 
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
-				auto condition = ctx.query<QueryHoutOfExpr>({ parent_scope, stmt.getCondition() });
+				auto condition = ctx.query<QueryHoutOfExpr>({ outer_scope, stmt.getCondition() });
 
 				auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt.getBody() });
 				auto body        = queryCodeOfCodeBlock(ctx, stmt.getBody(), inner_scope);
@@ -147,10 +147,8 @@ namespace compiler::helios {
 
 				// Scope of function itself:
 				// this scope will contain all "function declaration" symbols like parameters
-				// @TODO: document somewhere how do scopes behave depending on what they are looking
-				// at
-				auto outer_scope
-					= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(&stmt) });
+				// auto outer_scope
+				// 	= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(&stmt) });
 
 				auto fun_body = stmt.getBody();
 
