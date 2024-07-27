@@ -46,6 +46,71 @@
 							},
 						]
 					}
+				},
+				"else body": {
+					"CodeBlockOrStmt": {
+						"If": {
+							"name": "<ANONYMOUS>",
+							"condition": {
+								"RoundGroupExpr": {
+									"Expr": [
+										{
+											"Identifier": "a"
+										},
+										{
+											"Operator": "+"
+										},
+										{
+											"Identifier": "b"
+										},
+										{
+											"Operator": "=="
+										},
+										{
+											"NumLiteral": "0"
+										},
+									]
+								}
+							},
+							"body": {
+								"CodeBlockOrStmt": {
+									"CodeBlock": [
+										{
+											"Expr": [
+												{
+													"Identifier": "c"
+												},
+												{
+													"Operator": "="
+												},
+												{
+													"NumLiteral": "4.30"
+												},
+											]
+										},
+									]
+								}
+							},
+							"else body": {
+								"CodeBlockOrStmt": {
+									"Expr": [
+										{
+											"Identifier": "c"
+										},
+										{
+											"Operator": "="
+										},
+										{
+											"Operator": "-"
+										},
+										{
+											"NumLiteral": "1"
+										},
+									]
+								}
+							}
+						}
+					}
 				}
 			}
 		},

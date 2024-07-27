@@ -88,6 +88,8 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Fun, true> simpleFunction{ "fun foo(i32 x, i32 y) -> (i32, i32) {}" };
 
 	Example<pst::If, true> simpleIf{ "if (a == b) {c = d;}" };
+	Example<pst::If, true> simpleIfElse{ "if (a == b) {c = d;} else {c = e;}" };
+	Example<pst::If, true> simpleIfElseNoBlocks{ "if (a == b) c = d; else c = e;" };
 
 	Example<pst::Import, true> simpleImport{ "import std.math.sqrt as sqrt" };
 
