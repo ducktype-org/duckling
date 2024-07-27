@@ -929,7 +929,7 @@ namespace pst {
 	class If final: public CodeDecl {
 		ParserRef<RoundGroupExpr>  condition = nullptr;
 		tpc::OptionalIdentifier    optional_name;
-		ParserRef<CodeBlockOrStmt> body = nullptr;
+		ParserRef<CodeBlockOrStmt> body      = nullptr;
 		ParserRef<CodeBlockOrStmt> else_body = nullptr;
 
 	public:
