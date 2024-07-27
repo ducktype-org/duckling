@@ -1,5 +1,5 @@
 @ATRR
-fun c(){
+fun c() = {
 	x = 3;
 	y = 4;
 }
