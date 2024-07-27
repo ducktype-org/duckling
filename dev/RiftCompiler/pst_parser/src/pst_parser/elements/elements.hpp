@@ -978,6 +978,28 @@ namespace pst {
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
+	class For final: public CodeDecl {
+		tpc::OptionalIdentifier    optional_name;
+		tpc::Identifier iterator;
+		ParserRef<Expr> type;
+		ParserRef<Expr> iterable;
+		ParserRef<CodeBlockOrStmt> body = nullptr;
+
+	public:
+		explicit For(const dia::SourcePosition& position): CodeDecl(position) {}
+
+		static ParserRef<For> parse(RiftParserState& state);
+		void                    dprint(std::ostream& out) const final;
+		~For() final = default;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "For";
+		}
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
+	};
+
 	/**
 	 * @brief Class designated to be the parent of non-functional statements that are only used
 	 * internally for testing.
