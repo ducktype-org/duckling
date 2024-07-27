@@ -54,22 +54,18 @@ namespace pst {
 				state.parse(out).with<Expr>(
 					&out->type,
 					Expr::parseUntil<
-						detail::Conditions::is<Keyword::In>, 
-						detail::Conditions::is<Keyword::In>, 
-						ForNoInError
-					>, true
+						detail::Conditions::is<Keyword::In>,
+						detail::Conditions::is<Keyword::In>,
+						ForNoInError>,
+					true
 				);
 				state.parse(out).tryEat(Keyword::In);
 			} else {
 				state.parse(out).one(Keyword::In);
 			}
 
-			state.parse(out).with<Expr>(
-				&out->iterable,
-				Expr::parse,
-				true
-			);
-			
+			state.parse(out).with<Expr>(&out->iterable, Expr::parse, true);
+
 			state.parse(out).goUpAndSkip();
 		}
 

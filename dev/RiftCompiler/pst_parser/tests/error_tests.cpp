@@ -104,8 +104,8 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Using, true> simpleUsing{ "using std.math" };
 
-	Example<pst::For, true> simpleFor{ "for(a in a.b(x, y)) {}" };
-	Example<pst::For, true> simpleTypedFor{ "for(a: T, U in a + c) {}" };
+	Example<pst::For, true>  simpleFor{ "for(a in a.b(x, y)) {}" };
+	Example<pst::For, true>  simpleTypedFor{ "for(a: T, U in a + c) {}" };
 	Example<pst::For, false> emptyTypeFor{ "for(a: in a + c) {}" };
 	Example<pst::For, false> noInFor{ "for(a a + c) {}" };
 

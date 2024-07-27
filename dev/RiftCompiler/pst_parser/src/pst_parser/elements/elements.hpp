@@ -980,16 +980,16 @@ namespace pst {
 
 	class For final: public CodeDecl {
 		tpc::OptionalIdentifier    optional_name;
-		tpc::Identifier iterator;
-		ParserRef<Expr> type = nullptr;
-		ParserRef<Expr> iterable = nullptr;
-		ParserRef<CodeBlockOrStmt> body = nullptr;
+		tpc::Identifier            iterator;
+		ParserRef<Expr>            type     = nullptr;
+		ParserRef<Expr>            iterable = nullptr;
+		ParserRef<CodeBlockOrStmt> body     = nullptr;
 
 	public:
 		explicit For(const dia::SourcePosition& position): CodeDecl(position) {}
 
 		static ParserRef<For> parse(RiftParserState& state);
-		void                    dprint(std::ostream& out) const final;
+		void                  dprint(std::ostream& out) const final;
 		~For() final = default;
 
 		[[nodiscard]]
