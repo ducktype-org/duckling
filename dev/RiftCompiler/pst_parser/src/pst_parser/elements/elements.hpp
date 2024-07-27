@@ -981,8 +981,8 @@ namespace pst {
 	class For final: public CodeDecl {
 		tpc::OptionalIdentifier    optional_name;
 		tpc::Identifier iterator;
-		ParserRef<Expr> type;
-		ParserRef<Expr> iterable;
+		ParserRef<Expr> type = nullptr;
+		ParserRef<Expr> iterable = nullptr;
 		ParserRef<CodeBlockOrStmt> body = nullptr;
 
 	public:

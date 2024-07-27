@@ -43,7 +43,7 @@ namespace pst {
 
 		state.parse(out).all(Keyword::For, &out->optional_name);
 
-		if (!state[0].isBracketGroup(Token::Curly)) {
+		if (!state[0].isBracketGroup(Token::Round)) {
 			state.log(base::make_unique<ForBracketError>(state.getPosition()));
 		} else {
 			state.parse(out).goDown();
