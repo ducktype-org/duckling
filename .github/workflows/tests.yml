@@ -127,7 +127,7 @@ jobs:
     steps: 
       - name: Save main coverage percentage
         uses: action-pack/set-variable@v1
-        if: env.BRANCH_NAME == 'main' }}
+        if: ${{ env.BRANCH_NAME == 'main' }}
         with:
           name: 'MAIN_COVERAGE_VALUE'
           value: ${{ needs.build.outputs.coverage-value }}
