@@ -88,7 +88,6 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
-        # note that lack of space in "-DCMAKE_BUILD_TYPE" is for some reason important.
         run: |
           cmake \
               -B ${{ env.BUILD_DIR }} \
