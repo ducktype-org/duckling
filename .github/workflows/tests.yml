@@ -41,18 +41,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # The step might be a little confusing.
-      # When the expression in if statement returns false, the entire
-      # step is skipped.
-      # In that case `value` is empty so it evaluates to false.
-
-      - name: Check if should build with coverage
-        id: coverage-enabled
-        if: ${{ matrix.build-type == 'Debug' }}
-        run: echo value=1 > $GITHUB_OUTPUT
-
       - name: Install lcov
-        if: ${{ steps.coverage-enabled.outputs.value }}
+        if: ${{ env.COVERAGE-ENABLED }}
         run: sudo apt -y install lcov
 
       - name: Install ccache
@@ -93,7 +83,7 @@ jobs:
         id: cmake-flags
         # Env here is used for readability only
         env:
-          flags: ${{ steps.coverage-enabled.outputs.value && '-D ENABLE_COVERAGE=ON' || '' }}
+          flags: ${{ env.COVERAGE-ENABLED && '-D ENABLE_COVERAGE=ON' || '' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
       - name: Configure CMake
@@ -118,7 +108,7 @@ jobs:
 
       - name: Test Coverage
         id: test-coverage
-        if: ${{ steps.coverage-enabled.outputs.value }}
+        if: ${{ env.COVERAGE-ENABLED }}
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
