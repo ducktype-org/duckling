@@ -12,6 +12,7 @@ env:
   BUILD_DIR: ${{ github.workspace }}/dev/build
   CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+  IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
 
 jobs:
   build:
@@ -20,23 +21,21 @@ jobs:
         build-type: [Debug, Release]  # (Release, Debug, RelWithDebInfo, etc.)
       fail-fast: false
 
+    outputs:
+      coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
+
     timeout-minutes: 8  # (Per matrix run)
 
     runs-on: ubuntu-22.04
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # The next two steps might be a little confusing.
+      # The step might be a little confusing.
       # When the expression in if statement returns false, the entire
       # step is skipped.
       # In that case `value` is empty so it evaluates to false.
-
-      - name: Check if this is a PR to main
-        id: main-pr
-        # Here base.ref is the target branch according to https://github.com/orgs/community/discussions/27154
-        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' }}
-        run: echo value=1 > $GITHUB_OUTPUT
 
       - name: Check if should build with coverage
         id: coverage-enabled
@@ -116,26 +115,34 @@ jobs:
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
+      
+
+  coverage:
+    needs: [build]
+
+    runs-on: ubuntu-22.04
+
+    timeout-minutes: 2
+
+    steps: 
       - name: Save main coverage percentage
         uses: action-pack/set-variable@v1
-        if: ${{ steps.coverage-enabled.outputs.value && env.BRANCH_NAME == 'main' }}
+        if: env.BRANCH_NAME == 'main' }}
         with:
           name: 'MAIN_COVERAGE_VALUE'
-          value: ${{ steps.test-coverage.outputs.coverage-percent }}
+          value: ${{ needs.build.outputs.coverage-value }}
           token: ${{ secrets.QUACKER_PAT }}
 
       - name: Read main coverage percentage
-        if: ${{ steps.coverage-enabled.outputs.value }}
         id: read-main-coverage
         run: echo value=${{ vars.MAIN_COVERAGE_VALUE }} > $GITHUB_OUTPUT
 
       - name: Check coverage status
         id: check-coverage-status
-        if: ${{ steps.coverage-enabled.outputs.value && steps.main-pr.outputs.value }}
-        run: echo success=${{ steps.test-coverage.outputs.coverage-percent >= steps.read-main-coverage.outputs.value }} > $GITHUB_OUTPUT
+        run: echo success=${{ needs.build.outputs.coverage-value >= steps.read-main-coverage.outputs.value }} > $GITHUB_OUTPUT
 
       - name: Hide previous bot comments
-        if: ${{ steps.coverage-enabled.outputs.value && steps.main-pr.outputs.value }}
+        if: ${{ env.IF_MAIN_PR }}
         uses: int128/hide-comment-action@v1
         with:
           token: ${{ secrets.QUACKER_PAT }}
@@ -143,7 +150,7 @@ jobs:
 
       - name: Post coverage status as github comment
         uses: actions/github-script@v7
-        if: ${{ steps.coverage-enabled.outputs.value && steps.main-pr.outputs.value }}
+        if: ${{ env.IF_MAIN_PR }}
         env:
           FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
           SUCC_MSG: '✅✅✅ - **Great job writing tests!**'
@@ -161,5 +168,6 @@ jobs:
             })
 
       - name: Fail if insufficient coverage
-        if: ${{ steps.coverage-enabled.outputs.value && steps.check-coverage-status.outputs.success != 'true' && steps.main-pr.outputs.value && (! contains(github.event.pull_request.labels.*.name, 'Override Coverage Check'))}}
+        if: ${{ steps.check-coverage-status.outputs.success != 'true' && steps.main-pr.outputs.value && (! contains(github.event.pull_request.labels.*.name, 'Override Coverage Check'))}}
         run: exit 1
+
