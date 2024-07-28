@@ -88,12 +88,13 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
+        # note that lack of space in "-DCMAKE_BUILD_TYPE" is for some reason important.
         run: |
           cmake \
               -B ${{ env.BUILD_DIR }} \
               -D CMAKE_CXX_COMPILER=g++-11 \
               -D BUILD_DOCS=OFF \
-              -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
+              -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
               ${{ steps.cmake-flags.outputs.flags }}
@@ -114,7 +115,6 @@ jobs:
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
-    
   coverage:
     needs: [build]
 
@@ -168,4 +168,3 @@ jobs:
       - name: Fail if insufficient coverage
         if: ${{ steps.check-coverage-status.outputs.success != 'true' && steps.main-pr.outputs.value && (! contains(github.event.pull_request.labels.*.name, 'Override Coverage Check'))}}
         run: exit 1
-
