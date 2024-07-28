@@ -25,7 +25,9 @@ jobs:
       # @note: with matrix runs, each run works with the same output,
       # and they will overwrite each other
       # see: https://github.com/orgs/community/discussions/26639
-      #      https://github.com/orgs/community/discussions/38088
+      # 
+      # According to: https://github.com/orgs/community/discussions/38088
+      # it should not override if the step if skipped.
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
 
     timeout-minutes: 8  # (Per matrix run)
