@@ -176,3 +176,6 @@ private:
 };
 
 TESTER_COMMON_MAIN("/common/clap/tests/");
+
+
+ala ma kota
