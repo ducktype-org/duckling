@@ -22,6 +22,10 @@ jobs:
       fail-fast: false
 
     outputs:
+      # @note: with matrix runs, each run works with the same output,
+      # and they will overwrite each other
+      # see: https://github.com/orgs/community/discussions/26639
+      #      https://github.com/orgs/community/discussions/38088
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
 
     timeout-minutes: 8  # (Per matrix run)
@@ -94,7 +98,7 @@ jobs:
               -B ${{ env.BUILD_DIR }} \
               -D CMAKE_CXX_COMPILER=g++-11 \
               -D BUILD_DOCS=OFF \
-              -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} \
+              -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
               ${{ steps.cmake-flags.outputs.flags }}
@@ -115,8 +119,7 @@ jobs:
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
-      
-
+    
   coverage:
     needs: [build]
 
@@ -162,7 +165,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: '🎉 Tests and coverage ran successfully! 🎉\n \
-                     ⭐ Lines covered on the **current** branch: **${{ steps.test-coverage.outputs.coverage-percent }}%** \n \
+                     ⭐ Lines covered on the **current** branch: **${{ needs.build.outputs.coverage-value }}%** \n \
                      ⭐ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \n \
                      ${{ steps.check-coverage-status.outputs.success == 'true' && env.SUCC_MSG || env.FAIL_MSG }}'
             })
