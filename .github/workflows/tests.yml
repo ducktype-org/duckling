@@ -100,7 +100,7 @@ jobs:
 
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
-        run: cmake --build ${{ env.BUILD_DIR }} -j 5 -- build_all_tests
+        run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- build_all_tests
 
       - name: Test
         working-directory: ${{ env.BUILD_DIR }}
