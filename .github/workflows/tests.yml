@@ -35,6 +35,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     env:
+      # to test envs for true/false one must use `evn.abc == 'true'` 
       COVERAGE-ENABLED: ${{ matrix.build-type == 'Debug' }}
 
     steps:
@@ -42,7 +43,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install lcov
-        if: ${{ env.COVERAGE-ENABLED }}
+        if: ${{ env.COVERAGE-ENABLED == 'true' }}
         run: sudo apt -y install lcov
 
       - name: Install ccache
@@ -83,7 +84,7 @@ jobs:
         id: cmake-flags
         # Env here is used for readability only
         env:
-          flags: ${{ env.COVERAGE-ENABLED && '-D ENABLE_COVERAGE=ON' || '' }}
+          flags: ${{ env.COVERAGE-ENABLED == 'true' && '-D ENABLE_COVERAGE=ON' || '' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
       - name: Configure CMake
@@ -108,7 +109,7 @@ jobs:
 
       - name: Test Coverage
         id: test-coverage
-        if: ${{ env.COVERAGE-ENABLED }}
+        if: ${{ env.COVERAGE-ENABLED == 'true' }}
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
@@ -139,7 +140,7 @@ jobs:
         run: echo success=${{ needs.build.outputs.coverage-value >= steps.read-main-coverage.outputs.value }} > $GITHUB_OUTPUT
 
       - name: Hide previous bot comments
-        if: ${{ env.IF_MAIN_PR }}
+        if: ${{ env.IF_MAIN_PR == 'true' }}
         uses: int128/hide-comment-action@v1
         with:
           token: ${{ secrets.QUACKER_PAT }}
@@ -147,7 +148,7 @@ jobs:
 
       - name: Post coverage status as github comment
         uses: actions/github-script@v7
-        if: ${{ env.IF_MAIN_PR }}
+        if: ${{ env.IF_MAIN_PR == 'true' }}
         env:
           FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
           SUCC_MSG: '✅✅✅ - **Great job writing tests!**'
