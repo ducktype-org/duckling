@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     env:
-      # to test envs for true/false one must use `evn.abc == 'true'` 
+      # @note: to test envs for true/false one must use `evn.abc == 'true'` 
       COVERAGE-ENABLED: ${{ matrix.build-type == 'Debug' }}
 
     steps:
