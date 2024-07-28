@@ -40,3 +40,7 @@ namespace compiler {
 	}
 
 }
+
+
+ala ma kota
+
