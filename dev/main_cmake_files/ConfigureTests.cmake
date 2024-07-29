@@ -24,7 +24,7 @@ function(rift_add_test test_pack test_name source USES)
 		add_executable(${test_name} ${CMAKE_CURRENT_LIST_DIR}/${source})
 		target_link_libraries(${test_name} Tester ${ARGN})
 
-		add_test(NAME "${test_name}" COMMAND ${test_name} ${CMAKE_SOURCE_DIR})
+		add_test(NAME "${test_name}" COMMAND ${test_name})
 
 		# It is needed in case tests are run on multiple threads.
 		set_target_properties(${test_name} PROPERTIES DEPENDS build_${test_pack}_tests)
