@@ -1,4 +1,6 @@
-# RiftVM tests
+\page vm-tests RiftVM Tests
+
+\subpage vm-performance-tests 
 
 ## Unit tests
 

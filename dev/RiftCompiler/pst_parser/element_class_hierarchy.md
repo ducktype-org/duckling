@@ -1,3 +1,5 @@
+\page element-hierarchy Element Class Hierarchy
+
 Forward deklaracje są zapisane w odziemnym pliku/plikach
 
 Klasy mogą mieć statyczną metodę `parse`, która parsuje dowolne wyrażenie, zależnie na jakie tokeny trafi.

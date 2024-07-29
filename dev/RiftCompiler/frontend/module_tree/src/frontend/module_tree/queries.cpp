@@ -34,33 +34,6 @@ namespace compiler::frontend {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleTree);
 
-	/*******************
-	 * QueryFileID *
-	 *******************/
-	struct IMPLEMENT_QUERY(QueryFileID, compiler::frontend::FileId) {
-		inline static base::HashMap<QKey, query::CacheEntry<QResult>> cache{};
-
-		static auto provide(Context&, QKey key) -> PResult {
-			SourceFile file = SourceFile(key);
-
-			return file.id;
-		}
-
-		static auto load(QKey key) -> LoadResult {
-			if (cache.contains(key))
-				return cache.at(key);
-			else
-				return {};
-		}
-
-		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-			cache.put(key, { res, acd });
-			return res;
-		}
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFileID);
-
 	base::Optional<ModuleId> getRelativeModule(
 		query::Context& ctx, ModuleId from, const std::vector<base::StrId>& path
 	) {
