@@ -1,3 +1,5 @@
+\page json-module JSON Module
+
 **JSON is broken, see: issue in ZPP1**
 
 # JSON module documentation

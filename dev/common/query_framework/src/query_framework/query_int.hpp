@@ -39,8 +39,9 @@ namespace query {
 
 /**
  * @brief Macro used do delcare queries.
- * @example
- * 	DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue)
+ *
+ * For example:
+ * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue)`
  */
 #define DECLARE_QUERY(query_type, key, value)                                    \
 	struct query_type: ::query::detail::QueryInterface<query_type, key, value> { \

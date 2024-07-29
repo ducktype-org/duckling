@@ -13,15 +13,11 @@ private:
 	std::queue<Event>          eventQueue;
 
 public:
-	void addEvent(const Event& event) noexcept
-	requires std::copy_constructible<Event>
-	{
+	void addEvent(const Event& event) noexcept requires std::copy_constructible<Event> {
 		eventQueue.push(event);
 	}
 
-	void addEvent(Event&& event) noexcept
-	requires std::move_constructible<Event>
-	{
+	void addEvent(Event&& event) noexcept requires std::move_constructible<Event> {
 		eventQueue.emplace(std::move(event));
 	}
 
