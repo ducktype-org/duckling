@@ -1,0 +1,9 @@
+[1/9] Building CXX object base/CMakeFiles/Base.dir/src/base/impl/convert.cpp.o
+[2/9] Building CXX object base/CMakeFiles/Base.dir/src/base/impl/raw_view.cpp.o
+[3/9] Building CXX object base/CMakeFiles/Base.dir/src/base/impl/str_utils.cpp.o
+[4/9] Building CXX object base/CMakeFiles/Base.dir/src/base/impl/exceptions.cpp.o
+[5/9] Building CXX object base/CMakeFiles/Base.dir/src/base/impl/define_helper.cpp.o
+[6/9] Building CXX object base/CMakeFiles/Base.dir/src/base/impl/string_id.cpp.o
+[7/9] Linking CXX static library lib/libBase.a
+[8/9] Building CXX object playground/CMakeFiles/fibs.dir/llvm_example.cpp.o
+[9/9] Linking CXX executable bin/fibs

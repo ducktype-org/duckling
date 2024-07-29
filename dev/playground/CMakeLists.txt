@@ -8,3 +8,14 @@ target_link_libraries(panic_playground Base)
 target_link_libraries(clap_playground Base Clap Printer)
 target_link_libraries(clap_example_cat Base Clap)
 target_link_libraries(fs_parser_playground Base ModuleTree Clap)
+
+add_executable(fibs llvm_example.cpp)
+llvm_map_components_to_libnames(llvm_libs
+    Core
+    ExecutionEngine
+    Interpreter
+    MC
+    MCJIT
+    Support
+    nativecodegen)
+# target_include_directories(fibs PRIVATE LLVM)target_link_libraries(fibs ${llvm_libs} Base)
