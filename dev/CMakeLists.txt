@@ -45,6 +45,21 @@ add_custom_test_pack(compiler)
 # Dependencies
 add_subdirectory(dependencies)
 
+find_package(LLVM 18.1.0 CONFIG PATHS ../../../llvm_lib/lib/cmake/llvm/ NO_DEFAULT_PATH)
+if (NOT ${LLVM_FOUND} EQUAL 1)
+	message(STATUS "Custom LLVM not found, looking for local")
+	find_package(LLVM 18.1.0 REQUIRED CONFIG)
+else()
+	message(STATUS "Using custom LLVM")
+endif ()
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
+include_directories(${LLVM_INCLUDE_DIRS})
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+add_definitions(${LLVM_DEFINITIONS_LIST})
+
+
 # Source:
 add_subdirectory(base)
 add_subdirectory(common)

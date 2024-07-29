@@ -16,4 +16,4 @@ constexpr Compiler BuildCompiler = Compiler::GCC;
 #error "LLVM_INCLUDE_BEGIN does not support MSVS yet"
 #endif
 
-#define LLVM_INCLUDE_END _Pragma ("GCC diagnostic pop")
+#define LLVM_INCLUDE_END() _Pragma ("GCC diagnostic pop")

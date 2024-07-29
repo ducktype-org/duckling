@@ -18,4 +18,5 @@ llvm_map_components_to_libnames(llvm_libs
     MCJIT
     Support
     nativecodegen)
-# target_include_directories(fibs PRIVATE LLVM)target_link_libraries(fibs ${llvm_libs} Base)
+# target_include_directories(fibs PRIVATE LLVM)
+target_link_libraries(fibs LLVM ${llvm_libs} Base)
