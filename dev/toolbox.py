@@ -57,6 +57,14 @@ def with_venv(cmd):
 
 
 def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, coverage):
+    bld = pathlib.Path(build_dir)
+    if bld.exists():
+        # Delete old cache
+        try:
+            (bld / pathlib.Path("CMakeCache.txt")).unlink()
+            (bld / pathlib.Path("CMakeFiles.txt")).rmdir()
+        except FileNotFoundError:
+            pass
     cmd = f"""
         cmake
          -G "{build_system}"
