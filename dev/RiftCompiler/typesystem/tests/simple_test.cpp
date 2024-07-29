@@ -488,4 +488,4 @@ public:
 	~SimpleTypeSystemTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/src/typesystem/tests/")
+TESTER_COMMON_MAIN("RiftCompiler/src/typesystem/tests/")

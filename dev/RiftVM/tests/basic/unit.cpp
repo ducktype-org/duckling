@@ -13,4 +13,4 @@ private:
 	void init_primitives_with_zero() { runTestOnVm("init_primitives_with_zero.rbc", "", "0"); }
 };
 
-TESTER_COMMON_MAIN("/RiftVM/tests/basic/");
+TESTER_COMMON_MAIN("RiftVM/tests/basic/");

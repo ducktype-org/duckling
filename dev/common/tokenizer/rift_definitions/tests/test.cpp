@@ -81,4 +81,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/common/rift_definitions/tests/");
+TESTER_COMMON_MAIN("common/rift_definitions/tests/");

@@ -67,7 +67,7 @@ private:
 };
 
 // If the main is same as bellow you can just write:
-// TESTER_COMMON_MAIN("/common/tester/examples/");
+// TESTER_COMMON_MAIN("common/tester/examples/");
 
 int main(int argc, const char** argv) {
 	// Relative path to test folder should be here:

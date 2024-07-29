@@ -85,4 +85,4 @@ public:
 	~SimpleExecTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/src/exec/tests/")
+TESTER_COMMON_MAIN("RiftCompiler/src/exec/tests/")

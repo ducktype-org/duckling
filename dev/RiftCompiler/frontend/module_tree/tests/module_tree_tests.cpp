@@ -119,4 +119,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/frontend/module_tree/tests/");
+TESTER_COMMON_MAIN("RiftCompiler/frontend/module_tree/tests/");

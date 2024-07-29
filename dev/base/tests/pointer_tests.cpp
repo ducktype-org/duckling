@@ -79,4 +79,4 @@ private:
 	void increment_wrapper_using_borrow(base::borrow_ptr<Wrapper> b_ptr) { b_ptr->x++; }
 };
 
-TESTER_COMMON_MAIN("/base/tests/");
+TESTER_COMMON_MAIN("base/tests/");
