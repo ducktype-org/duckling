@@ -27,4 +27,4 @@ private:
 	void test_tailcall() { runTestOnVm("tailcall.rbc", "1000000", "0"); }
 };
 
-TESTER_COMMON_MAIN("RiftVM/tests/correctness/");
+TESTER_COMMON_MAIN("/RiftVM/tests/correctness/");

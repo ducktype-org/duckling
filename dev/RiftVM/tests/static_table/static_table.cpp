@@ -19,4 +19,4 @@ private:
 	void initWithZero() { runTestOnVm("init_with_zero.rbc", "", "0"); }
 };
 
-TESTER_COMMON_MAIN("RiftVM/tests/static_table/");
+TESTER_COMMON_MAIN("/RiftVM/tests/static_table/");

@@ -314,4 +314,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("RiftCompiler/helios/tests/");
+TESTER_COMMON_MAIN("/RiftCompiler/helios/tests/");

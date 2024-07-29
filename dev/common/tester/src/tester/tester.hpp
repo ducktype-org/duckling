@@ -91,7 +91,7 @@ namespace tester {
 
 		template<class T>
 		auto path(T&& t) {
-			return config.test_files_path / t;
+			return config.test_files_path + t;
 		}
 
 		TestSuite(TestConfig&& config, std::string_view name);

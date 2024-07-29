@@ -4,7 +4,6 @@ add_library(Tester
 )
 
 make_module(Tester USES Printer Base Clap)
-target_compile_definitions(Tester PRIVATE CMAKE_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
 add_example(tester_example examples/example.cpp USES Tester Printer)
 

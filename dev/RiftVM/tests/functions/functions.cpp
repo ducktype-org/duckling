@@ -40,4 +40,4 @@ private:
 	void test_preserved_flag() { runTestOnVm("preserved_flag.rbc", "", "1"); }
 };
 
-TESTER_COMMON_MAIN("RiftVM/tests/functions/");
+TESTER_COMMON_MAIN("/RiftVM/tests/functions/");

@@ -120,4 +120,4 @@ public:
 	~PSTBuilderTest() override = default;
 };
 
-TESTER_COMMON_MAIN("RiftCompiler/pst_parser/tests/");
+TESTER_COMMON_MAIN("/RiftCompiler/pst_parser/tests/");
