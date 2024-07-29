@@ -464,13 +464,14 @@ namespace pst {
 		struct Operator;
 		struct Identifier;
 		struct NumLiteral;
+		struct Block;
 
 		struct KeywordValue {
 			rift_def::Keyword keyword;
 		};
 
 		using ExprElem
-			= std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue, CommaSeparated>;
+			= std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue, CommaSeparated, Block>;
 
 		struct CommaSeparated {
 			std::vector<ParserRef<Expr>> expr;
@@ -479,6 +480,10 @@ namespace pst {
 		struct Group {
 			GroupType       type;
 			ParserRef<Expr> expr;
+		};
+
+		struct Block {
+			ParserRef<CodeBlock> block;
 		};
 
 		struct Operator {
