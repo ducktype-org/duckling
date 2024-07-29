@@ -4,4 +4,6 @@ add_library(Config
 
 make_module(Config USES Base Clap Lexer Diagnostic)
 
-# @TODO: add test
+rift_add_test(compiler config_test tests/test.cpp
+	USES Config Tester)
+
