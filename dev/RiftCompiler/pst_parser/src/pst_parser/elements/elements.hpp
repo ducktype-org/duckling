@@ -470,8 +470,8 @@ namespace pst {
 			rift_def::Keyword keyword;
 		};
 
-		using ExprElem
-			= std::variant<Operator, Identifier, NumLiteral, Group, KeywordValue, CommaSeparated, Block>;
+		using ExprElem = std::
+			variant<Operator, Identifier, NumLiteral, Group, KeywordValue, CommaSeparated, Block>;
 
 		struct CommaSeparated {
 			std::vector<ParserRef<Expr>> expr;
