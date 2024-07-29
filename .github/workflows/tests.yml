@@ -8,6 +8,10 @@ on:
   workflow_dispatch:
 
 env:
+  # @note: boolean variables evaluate to true/false string, but github expressions treat
+  # all non-empty strings as true, so one must use `evn.abc == 'true'` to actually use
+  # them im conditional statements.
+  # (this apply to all variables, not just the ones form here)
   WORKSPACE: ${{ github.workspace }}/dev
   BUILD_DIR: ${{ github.workspace }}/dev/build
   CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
@@ -35,15 +39,14 @@ jobs:
     runs-on: ubuntu-22.04
 
     env:
-      # @note: to test envs for true/false one must use `evn.abc == 'true'` 
-      COVERAGE-ENABLED: ${{ matrix.build-type == 'Debug' }}
+      COVERAGE_ENABLED: ${{ matrix.build-type == 'Debug' }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install lcov
-        if: ${{ env.COVERAGE-ENABLED == 'true' }}
+        if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov
 
       - name: Install ccache
@@ -84,7 +87,7 @@ jobs:
         id: cmake-flags
         # Env here is used for readability only
         env:
-          flags: ${{ env.COVERAGE-ENABLED == 'true' && '-D ENABLE_COVERAGE=ON' || '' }}
+          flags: ${{ env.COVERAGE_ENABLED == 'true' && '-D ENABLE_COVERAGE=ON' || '' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
       - name: Configure CMake
@@ -94,7 +97,7 @@ jobs:
               -B ${{ env.BUILD_DIR }} \
               -D CMAKE_CXX_COMPILER=g++-11 \
               -D BUILD_DOCS=OFF \
-              -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} \
+              -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
               ${{ steps.cmake-flags.outputs.flags }}
@@ -109,7 +112,7 @@ jobs:
 
       - name: Test Coverage
         id: test-coverage
-        if: ${{ env.COVERAGE-ENABLED == 'true' }}
+        if: ${{ env.COVERAGE_ENABLED == 'true' }}
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
@@ -166,5 +169,5 @@ jobs:
             })
 
       - name: Fail if insufficient coverage
-        if: ${{ steps.check-coverage-status.outputs.success != 'true' && steps.main-pr.outputs.value && (! contains(github.event.pull_request.labels.*.name, 'Override Coverage Check'))}}
+        if: ${{ steps.check-coverage-status.outputs.success != 'true' && env.IF_MAIN_PR == 'true' && (! contains(github.event.pull_request.labels.*.name, 'Override Coverage Check'))}}
         run: exit 1
