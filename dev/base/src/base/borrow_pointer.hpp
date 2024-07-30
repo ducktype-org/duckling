@@ -62,17 +62,9 @@ namespace base {
 
 		T* get() const noexcept { return ptr; }
 
-		auto begin() const
-		requires std::ranges::range<T>
-		{
-			return (*this)->begin();
-		}
+		auto begin() const requires std::ranges::range<T> { return (*this)->begin(); }
 
-		auto end() const
-		requires std::ranges::range<T>
-		{
-			return (*this)->end();
-		}
+		auto end() const requires std::ranges::range<T> { return (*this)->end(); }
 	};
 
 	/**

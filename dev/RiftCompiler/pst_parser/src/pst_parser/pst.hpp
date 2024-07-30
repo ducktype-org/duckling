@@ -28,9 +28,7 @@ namespace pst {
 		/**
 		 * @note Requires that the file was successfully tokenized.
 		 */
-		void parse()
-		requires ParseAble
-		{
+		void parse() requires ParseAble {
 			const lexer::TokenData& token_data = file->getTokenData();
 			RiftParserState         state(
                 tpc::TokenStream(
@@ -49,8 +47,7 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from text content
 		 */
-		explicit PST(std::string_view content)
-		requires ParseAble
+		explicit PST(std::string_view content) requires ParseAble
 			  : file(tokenizer::makeTokenFile(fs::FilePath::createTempFile(content))) {
 			pst::init();
 			if (!file->tokenize()) return;
@@ -61,9 +58,7 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from tokenized file
 		 */
-		PST(tokenizer::OwnFile&& file)
-
-		requires ParseAble: file(std::move(file)) {
+		PST(tokenizer::OwnFile&& file) requires ParseAble: file(std::move(file)) {
 			pst::init();
 			if (getLogger().bad()) return;
 			parse();
@@ -72,17 +67,13 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from file path
 		 */
-		PST(const fs::FilePath& path)
-
-		requires ParseAble: file(tokenizer::makeTokenFile(path)) {
+		PST(const fs::FilePath& path) requires ParseAble: file(tokenizer::makeTokenFile(path)) {
 			pst::init();
 			if (!file->tokenize()) return;
 			parse();
 		}
 
-		static PST fromContents(std::string_view contents)
-		requires ParseAble
-		{
+		static PST fromContents(std::string_view contents) requires ParseAble {
 			return PST(contents);
 		}
 

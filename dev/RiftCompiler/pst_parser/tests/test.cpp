@@ -22,8 +22,7 @@
 	}
 
 template<class T>
-requires std::is_base_of_v<pst::PstStmtVisitor, T>
-class PstStmtVisitorTester final: public T {
+requires std::is_base_of_v<pst::PstStmtVisitor, T> class PstStmtVisitorTester final: public T {
 public:
 	int counter = 0;
 
