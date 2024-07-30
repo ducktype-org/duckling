@@ -51,7 +51,7 @@ jobs:
 
 
       - name: Install llvm
-        run: sudo apt -y install llvm
+        run: sudo apt -y install llvm llvm-dev
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
