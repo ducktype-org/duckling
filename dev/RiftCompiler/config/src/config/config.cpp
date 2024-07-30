@@ -24,9 +24,9 @@ namespace config {
 
 	clap::ParsingResult configureWith(clap::Clap& clap, clap::CLIArgs args) {
 		auto res = clap.parse(args);
-
-		if (res.isFlag("logger-cerr")) dia::Logger::setImmediatelyDump(true);
-		if (res.isFlag("lexer-cerr")) lexer::Lexer::setTokenMessages(true);
+		
+		dia::Logger::setImmediatelyDump(res.isFlag("logger-cerr"));
+		lexer::Lexer::setTokenMessages(res.isFlag("lexer-cerr"));
 
 		return res;
 	}
