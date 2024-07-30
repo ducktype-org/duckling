@@ -105,7 +105,7 @@ static Function* CreateFibFunction(Module* M, LLVMContext& Context) {
 }
 
 int main(int argc, char** argv) {
-	int n = argc > 1 ? atol(argv[1]) : 24;
+	int n = int(argc > 1 ? atol(argv[1]) : 24);
 
 	InitializeNativeTarget();
 	InitializeNativeTargetAsmPrinter();
