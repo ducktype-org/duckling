@@ -25,7 +25,7 @@
 #include "base/llvm_helpers.hpp"
 LLVM_INCLUDE_BEGIN()
 
-#include "llvm/ADT/APInt.h"
+#include <llvm/ADT/APInt.h>
 #include "llvm/IR/Verifier.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
