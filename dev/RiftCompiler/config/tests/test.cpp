@@ -21,42 +21,42 @@ private:
 
 	void testConfig() {
 		{
-			auto opts = parseOpts<0>({});
+			auto opts = parseOpts<1>({"./prog"});
 			ASSERT_EQUAL(opts.getArgs(), "");
 
 			assertThrows<clap::exceptions::HelpException>([&]() {
-				parseOpts<1>({"--help"});
+				parseOpts<2>({"./prog", "--help"});
 			}, "No help thrown");
 
 			assertThrows<clap::exceptions::HelpException>([&]() {
-				parseOpts<1>({"lex --help"});
+				parseOpts<3>({"./prog", "lex --help"});
 			}, "No help thrown");
 
 			assertThrows<clap::exceptions::HelpException>([&]() {
-				parseOpts<1>({"-h"});
+				parseOpts<2>({"./prog", "-h"});
 			}, "No help thrown");
 		}
 
 		{
-			auto opts = parseOpts<1>({"--logger-cerr"});
+			auto opts = parseOpts<2>({"./prog", "--logger-cerr"});
 			ASSERT_EQUAL(opts.isFlag("logger-cerr"), true);
 			ASSERT_EQUAL(opts.isFlag("lexer-cerr"), false);
 		}
 
 		{
-			auto opts = parseOpts<1>({"--lexer-cerr"});
+			auto opts = parseOpts<2>({"./prog", "--lexer-cerr"});
 			ASSERT_EQUAL(opts.isFlag("logger-cerr"), false);
 			ASSERT_EQUAL(opts.isFlag("lexer-cerr"), true);
 		}
 
 		{
-			auto opts = parseOpts<2>({"--logger-cerr", "--lexer-cerr"});
+			auto opts = parseOpts<3>({"./prog", "--logger-cerr", "--lexer-cerr"});
 			ASSERT_EQUAL(opts.isFlag("logger-cerr"), true);
 			ASSERT_EQUAL(opts.isFlag("lexer-cerr"), true);
 		}
 
 		{
-			auto opts = parseOpts<3>({"--logger-cerr", "--lexer-cerr", "--help"});
+			auto opts = parseOpts<4>({"./prog", "--logger-cerr", "--lexer-cerr", "--help"});
 			ASSERT_EQUAL(opts.isFlag("logger-cerr"), true);
 			ASSERT_EQUAL(opts.isFlag("lexer-cerr"), true);
 			ASSERT_EQUAL(opts.isFlag("help"), false);

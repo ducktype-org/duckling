@@ -259,6 +259,8 @@ namespace clap {
 	ParsingResult Clap::parse(CLIArgs args) { return parse(args.argc, args.argv); }
 
 	ParsingResult Clap::parse(usize argc, const char* const* argv) {
+		RIFT_ASSERT(argc > 0, "clap assumes argc is at least 1, as it is the name of the program from the parameters.");
+
 		ParsingState st(argc, argv);
 
 		// Going left to right through chars in args.
