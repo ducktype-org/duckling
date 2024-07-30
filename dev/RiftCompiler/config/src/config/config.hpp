@@ -1,7 +1,7 @@
 /**
  * @file config.hpp
  * @brief utility functions for handling set of compiler options not associated with concrete task
- * @todo: add a way to customize what options are included ans how.
+ * @todo: add a way to customize what options are included and how.
  */
 
 #pragma once
