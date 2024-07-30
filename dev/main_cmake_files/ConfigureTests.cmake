@@ -3,13 +3,13 @@ if(ENABLE_COVERAGE)
 	find_program(LCOV lcov REQUIRED)
 	find_program(GENHTML genhtml REQUIRED)
 
-	message(-- base Dir: ${CMAKE_SOURCE_DIR})
-
 	add_custom_target(coverage
 		COMMAND ${LCOV} --directory "${CMAKE_SOURCE_DIR}" --capture --output-file coverage.info
-			--base-directory "${CMAKE_SOURCE_DIR}" --no-external --exclude "**/_deps/**"
+			--base-directory "${CMAKE_SOURCE_DIR}" --no-external --exclude "**/_deps/**" 
+			--exclude "**/playground/**"
 		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
-		WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+		VERBATIM)
 endif()
 
 

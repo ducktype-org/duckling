@@ -96,6 +96,7 @@ namespace tokenizer {
 
 		/**
 		 * @brief Run the whole lexer.
+		 * @return If tokenizing process run without errors.
 		 */
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		bool tokenize() {

@@ -5,6 +5,11 @@
 #include <algorithm>
 
 namespace dia {
+
+	bool Logger::immediately_dump = false;
+
+	void Logger::setImmediatelyDump(bool value) { immediately_dump = value; }
+
 	void Logger::log(
 		base::unique_ptr<Message> message_ptr, const bool detailed, const bool immediately_dump
 	) {
