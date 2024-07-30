@@ -51,7 +51,9 @@ jobs:
 
 
       - name: Install llvm
-        run: sudo apt -y install llvm llvm-dev
+        # run: sudo apt -y install llvm llvm-dev
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py download-llvm -v 18.1.8 -a x86_64
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
