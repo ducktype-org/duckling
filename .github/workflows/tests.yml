@@ -29,7 +29,7 @@ jobs:
       # @note: with matrix runs, each run works with the same output,
       # and they will overwrite each other
       # see: https://github.com/orgs/community/discussions/26639
-      # 
+      #
       # According to: https://github.com/orgs/community/discussions/38088
       # it should not override if the step if skipped.
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
@@ -48,6 +48,10 @@ jobs:
       - name: Install lcov
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov
+
+
+      - name: Install llvm
+        run: sudo apt -y install llvm
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
@@ -125,7 +129,7 @@ jobs:
 
     timeout-minutes: 2
 
-    steps: 
+    steps:
       - name: Save main coverage percentage
         uses: action-pack/set-variable@v1
         if: ${{ env.BRANCH_NAME == 'main' }}
