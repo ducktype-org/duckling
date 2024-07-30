@@ -18,25 +18,21 @@ class InternetFile:
 
     def download(self, force=False):
         if force or not self.path.exists():
-            try:
-                log_info(f"Downloading {self.path}...")
-                res = requests.get(self.resource_url, stream=True, auth=self.auth)
+            log_info(f"Downloading {self.path}...")
+            res = requests.get(self.resource_url, stream=True, auth=self.auth)
 
-                if res.status_code != 200:
-                    exit_with_error(
-                        f"Cannot download: {self.resource_url}, status_code = {res.status_code}, meaning: {http.client.responses[res.status_code]}"
-                    )
+            if res.status_code != 200:
+                exit_with_error(
+                    f"Cannot download: {self.resource_url}, status_code = {res.status_code}, meaning: {http.client.responses[res.status_code]}"
+                )
 
-                with open(self.path, "wb") as f:
-                    for chunk in res.iter_content(chunk_size=8192):
-                        f.write(chunk)
-                log_info(f"Done downloading {self.path} from {self.resource_url}")
+            with open(self.path, "wb") as f:
+                for chunk in res.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            log_info(f"Done downloading {self.path} from {self.resource_url}")
 
-                for callback in self.after_download_callbacks:
-                    callback[0](self, *callback[1:])
-
-            except requests.exceptions.HTTPError as e:
-                exit_with_error(e)
+            for callback in self.after_download_callbacks:
+                callback[0](self, *callback[1:])
         else:
             log_info(f"File {self.path} already exits. Skiped.")
 

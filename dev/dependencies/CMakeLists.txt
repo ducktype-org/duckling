@@ -61,7 +61,7 @@ find_library(gvc gvc)
 FindOrBuildICU(VERSION 74.1 URL "${ICU_RELEASE}" URL_HASH "${ICU_CONTROL}")
 
 macro(insertLLVM)
-	find_package(LLVM 18.1.0 CONFIG PATHS scripts/downloads/llvm_lib/lib/cmake/llvm/ NO_DEFAULT_PATH)
+	find_package(LLVM 18.1.0 CONFIG PATHS scripts/downloads NO_DEFAULT_PATH)
 	if (NOT ${LLVM_FOUND} EQUAL 1)
 		message(STATUS "Custom LLVM not found, looking for local")
 		find_package(LLVM 18.1.0 REQUIRED CONFIG)
