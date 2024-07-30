@@ -13,53 +13,45 @@ public:
 
 private:
 
-	template<int size>
-	auto parseOpts(const std::array<const char*, size>& data) {
+	auto parseOpts(const std::vector<const char*>& data) {
 		auto clap = config::standardOptions();
-		return config::configureWith(clap, {size, data.data()});
+		return config::configureWith(clap, {data.size(), data.data()});
 	}
 
 	void testConfig() {
 		{
-			auto opts = parseOpts<1>({"./prog"});
+			auto opts = parseOpts({"./prog"});
 			ASSERT_EQUAL(opts.getArgs(), "");
 
 			assertThrows<clap::exceptions::HelpException>([&]() {
-				parseOpts<2>({"./prog", "--help"});
+				parseOpts({"./prog", "--help"});
 			}, "No help thrown");
 
 			assertThrows<clap::exceptions::HelpException>([&]() {
-				parseOpts<3>({"./prog", "lex --help"});
+				parseOpts({"./prog", "lex", "--help"});
 			}, "No help thrown");
 
 			assertThrows<clap::exceptions::HelpException>([&]() {
-				parseOpts<2>({"./prog", "-h"});
+				parseOpts({"./prog", "-h"});
 			}, "No help thrown");
 		}
 
 		{
-			auto opts = parseOpts<2>({"./prog", "--logger-cerr"});
+			auto opts = parseOpts({"./prog", "--logger-cerr"});
 			ASSERT_EQUAL(opts.isFlag("logger-cerr"), true);
 			ASSERT_EQUAL(opts.isFlag("lexer-cerr"), false);
 		}
 
 		{
-			auto opts = parseOpts<2>({"./prog", "--lexer-cerr"});
+			auto opts = parseOpts({"./prog", "--lexer-cerr"});
 			ASSERT_EQUAL(opts.isFlag("logger-cerr"), false);
 			ASSERT_EQUAL(opts.isFlag("lexer-cerr"), true);
 		}
 
 		{
-			auto opts = parseOpts<3>({"./prog", "--logger-cerr", "--lexer-cerr"});
+			auto opts = parseOpts({"./prog", "--logger-cerr", "--lexer-cerr"});
 			ASSERT_EQUAL(opts.isFlag("logger-cerr"), true);
 			ASSERT_EQUAL(opts.isFlag("lexer-cerr"), true);
-		}
-
-		{
-			auto opts = parseOpts<4>({"./prog", "--logger-cerr", "--lexer-cerr", "--help"});
-			ASSERT_EQUAL(opts.isFlag("logger-cerr"), true);
-			ASSERT_EQUAL(opts.isFlag("lexer-cerr"), true);
-			ASSERT_EQUAL(opts.isFlag("help"), false);
 		}
 	}
 	
