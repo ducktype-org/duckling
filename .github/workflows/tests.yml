@@ -36,7 +36,7 @@ jobs:
 
     timeout-minutes: 8  # (Per matrix run)
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     env:
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Debug' }}
@@ -48,12 +48,6 @@ jobs:
       - name: Install lcov
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov
-
-
-      - name: Install llvm
-        # run: sudo apt -y install llvm llvm-dev
-        working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py download-llvm -v 18.1.8 -a x86_64
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
