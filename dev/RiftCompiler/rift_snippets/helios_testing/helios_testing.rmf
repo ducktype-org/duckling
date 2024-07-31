@@ -3,7 +3,6 @@ import submodule as SM;
 const other_module: i32 = SM.a;
 const other_module_2: i32 = SM.a + SM.b;
 
-
 fun foo(a: i32) -> i32 {
 	alias x = N.x;
 	if (x) {
