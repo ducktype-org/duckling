@@ -124,7 +124,7 @@ namespace base {
 		// Acessors:
 
 		[[nodiscard]]
-		constexpr base::Optional<Ref<T>> get() const noexcept {
+		constexpr Optional<Ref<T>> get() const noexcept {
 			if (ptr == nullptr) {
 				return {};
 			}
