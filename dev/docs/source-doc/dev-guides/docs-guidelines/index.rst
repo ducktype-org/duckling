@@ -12,16 +12,16 @@ Documentation guidelines
 Documentation structure
 =======================
 
-Rift docuemntation is divided into two parts:
+Rift documentation is divided into three parts:
 
 * ``rift-doc`` - user documentation, describing language funcionalities, usage, assumptions and goals 
-* ``source-doc`` - developer documentation, describing implementation details and providing resources for developers
+* ``source-doc`` - developer documentation, guidelines and resources for developers
+* ``doxygen`` - low level description of source code, implementation details and libraries usage
 
 ``source-doc`` is further divided into:
 
 * ``dev-guides`` - guidelines, tutorial and instructions
 * ``dev-handbook`` - high level description of source code
-* ``source-docs`` - low level description of source code, implementation details and libraries usage
 
 Basic rst
 =========
