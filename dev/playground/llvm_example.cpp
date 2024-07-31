@@ -25,7 +25,7 @@
 #include "base/llvm_helpers.hpp"
 LLVM_INCLUDE_BEGIN()
 
-#include <llvm/ADT/APInt.h>
+#include "llvm/ADT/APInt.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
@@ -52,6 +52,8 @@ LLVM_INCLUDE_END()
 #include <string>
 #include <vector>
 
+// This is NOT a LLVM line, it is for Duckling's github to pass linter check.
+// NOLINTBEGIN
 
 using namespace llvm;
 
@@ -147,3 +149,5 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
+
+// NOLINTEND
