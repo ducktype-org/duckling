@@ -358,11 +358,11 @@ def download_llvm_impl(version, arch):
         name = f"clang+llvm-{version}-{arch}-linux-gnu"
 
     llvm_file = InternetFile(
-        f"scripts/downloads/llvm_{arch}.tar.xz",
+        f"scripts/downloads/llvm_{version}_{arch}.tar.xz",
         f"https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/{name}.tar.xz",
         after_download=[
             (callback_unTAR,),
-            (callback_move, name, f"llvm_lib_{arch}"),
+            (callback_move, name, f"llvm_lib_{version}_{arch}"),
         ],
     )
     llvm_file.download()
