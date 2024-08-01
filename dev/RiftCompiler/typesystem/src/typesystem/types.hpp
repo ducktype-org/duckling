@@ -1,6 +1,6 @@
 /**
- * \file type_info.hpp
- * \brief Interfaces of the simpler kinds of types.
+ * @file type_info.hpp
+ * @brief Interfaces of the simpler kinds of types.
  *
  * The interface is not aware of the internal implementation hierarchy in any way other than its
  * existence and name.
@@ -38,7 +38,7 @@ namespace ts {
 	\******************/
 
 	/**
-	 * \brief The Unit type.
+	 * @brief The Unit type.
 	 *
 	 * The Unit type is the type with only one value -- the empty tuple ().
 	 */
@@ -53,7 +53,7 @@ namespace ts {
 	};
 
 	/**
-	 * \brief The Void type.
+	 * @brief The Void type.
 	 *
 	 * The Void type has no values. It is uninstantiable.
 	 * This can be used to mark functions which must never return.
@@ -72,7 +72,7 @@ namespace ts {
 	};
 
 	/**
-	 * \brief The Byte type.
+	 * @brief The Byte type.
 	 *
 	 * A value of the Byte type holds exactly one byte.
 	 * It may be desirable to use a type which represents exactly a byte
@@ -90,7 +90,7 @@ namespace ts {
 	};
 
 	/**
-	 * \brief The Bool type.
+	 * @brief The Bool type.
 	 *
 	 * Despite having a size of 8 bits, a value of the Bool type can be
 	 * only one of two values: true (1) and false (0).
@@ -106,7 +106,7 @@ namespace ts {
 	};
 
 	/**
-	 * \brief The Char type.
+	 * @brief The Char type.
 	 *
 	 * A value of this type represents a character.
 	 * It is not decided how encodings other than ASCII will be supported yet.
@@ -122,7 +122,7 @@ namespace ts {
 	};
 
 	/**
-	 * \brief The Integral types.
+	 * @brief The Integral types.
 	 *
 	 * Each Integral type has a size which is a power of two between 8 and 128 (inclusive).
 	 * Additionally, it can be signed or unsigned.
@@ -138,7 +138,7 @@ namespace ts {
 	};
 
 	/**
-	 * \brief The Float types.
+	 * @brief The Float types.
 	 *
 	 * The Float types come in sizes being powers of two between 16 and 128 (inclusive),
 	 * as well as 80 bits.
@@ -158,7 +158,7 @@ namespace ts {
 	\*******************/
 
 	/**
-	 * \brief A type supplied with mutability information.
+	 * @brief A type supplied with mutability information.
 	 *
 	 * It's called "Component Type" because it is used in types which are composed of other types.
 	 * For example, a typed pointer may point to an immutable value. Or a tuple may have some
@@ -166,17 +166,17 @@ namespace ts {
 	 */
 	struct ComponentType {
 		/**
-		 * \brief The actual type of the component.
+		 * @brief The actual type of the component.
 		 */
 		TypeInfo type;
 
 		/**
-		 * \brief Whether the component is mutable or not.
+		 * @brief Whether the component is mutable or not.
 		 */
 		bool is_mutable = false;
 
 		/**
-		 * \brief Create a string representation of the component type.
+		 * @brief Create a string representation of the component type.
 		 */
 		[[nodiscard]]
 		std::string toString() const;
@@ -199,7 +199,7 @@ namespace ts {
 	};
 
 	/**
-	 * \brief The Raw Pointer type.
+	 * @brief The Raw Pointer type.
 	 *
 	 * A value of this type is simply a memory address.
 	 */
@@ -217,7 +217,7 @@ namespace ts {
 	};
 
 	/**
-	 * \brief The (typed) Pointer types.
+	 * @brief The (typed) Pointer types.
 	 *
 	 * A value of this type is simply a memory address.
 	 * However, it is statically known what the type of the pointee is.
@@ -227,22 +227,22 @@ namespace ts {
 		SETUP_TYPE_WITH_BASE(PointerInfo, TypeInfo)
 
 		/**
-		 * \brief Gets the underlying component of the Pointer type.
+		 * @brief Gets the underlying component of the Pointer type.
 		 * @return The underlying component of the Pointer type.
 		 */
 		[[nodiscard]]
 		ComponentType getComponent() const;
 
 		/**
-		 * \brief Gets the underlying type of the Pointer type.
-		 * \return The underlying type.
+		 * @brief Gets the underlying type of the Pointer type.
+		 * @return The underlying type.
 		 */
 		[[nodiscard]]
 		TypeInfo getUnderlyingType() const;
 
 		/**
-		 * \brief Checks whether the data under the pointer is mutable.
-		 * \return Whether the data under the pointer is mutable.
+		 * @brief Checks whether the data under the pointer is mutable.
+		 * @return Whether the data under the pointer is mutable.
 		 */
 		[[nodiscard]]
 		bool isMutable() const;
@@ -254,11 +254,11 @@ namespace ts {
 	};
 
 	/**
-	 * \brief The kind of a Reference type. See documentation of each kind for details.
+	 * @brief The kind of a Reference type. See documentation of each kind for details.
 	 */
 	enum class ReferenceKind {
 		/**
-		 * \brief A reference of this kind owns its referee.
+		 * @brief A reference of this kind owns its referee.
 		 *
 		 * When the reference is destroyed, so is the referee.
 		 * The reference does not give access to explicit destruction of the referee, because
@@ -267,7 +267,7 @@ namespace ts {
 		BOX,
 
 		/**
-		 * \brief A reference of this kind specifically does **not** own its referee.
+		 * @brief A reference of this kind specifically does **not** own its referee.
 		 *
 		 * When the reference is destroyed, the referee remains untouched.
 		 * Additionally, the reference does not give access to explicit destruction of the referee.
@@ -276,7 +276,7 @@ namespace ts {
 		REF,
 
 		/**
-		 * \brief A reference of this kind allows the user to decide if they want to explicitly
+		 * @brief A reference of this kind allows the user to decide if they want to explicitly
 		 * destroy the referee.
 		 *
 		 * When the reference is destroyed, the referee remains untouched.
@@ -287,7 +287,7 @@ namespace ts {
 	};
 
 	/**
-	 * \brief The Reference types.
+	 * @brief The Reference types.
 	 *
 	 * A value of a Reference type is just a memory address with an
 	 * associated type, just like in the case of a (typed) Pointer.
@@ -299,16 +299,16 @@ namespace ts {
 		SETUP_TYPE_WITH_BASE(ReferenceInfo, TypeInfo)
 
 		/**
-		 * \brief Create a new reference type with the given parameters.
-		 * \param underlying_type The underlying type of the reference.
-		 * \param ref_kind The kind of a reference.
-		 * \param leaking Whether the reference can leak its value.
+		 * @brief Create a new reference type with the given parameters.
+		 * @param underlying_type The underlying type of the reference.
+		 * @param ref_kind The kind of a reference.
+		 * @param leaking Whether the reference can leak its value.
 		 * By default, references are non-leaking.
-		 * \param nullable Whether the reference can be empty.
+		 * @param nullable Whether the reference can be empty.
 		 * By default, references cannot be empty.
-		 * \param unique Whether the reference is unique.
+		 * @param unique Whether the reference is unique.
 		 * By default, references can be copied and shared.
-		 * \return The created reference type.
+		 * @return The created reference type.
 		 */
 		static ReferenceInfo create(
 			TypeInfo      underlying_type,
@@ -319,36 +319,36 @@ namespace ts {
 		);
 
 		/**
-		 * \brief Gets the underlying type.
-		 * \return The underlying type.
+		 * @brief Gets the underlying type.
+		 * @return The underlying type.
 		 */
 		[[nodiscard]]
 		TypeInfo getUnderlyingType() const;
 
 		/**
-		 * \brief Gets the reference kind.
-		 * \return The reference kind.
+		 * @brief Gets the reference kind.
+		 * @return The reference kind.
 		 */
 		[[nodiscard]]
 		ReferenceKind getReferenceKind() const;
 
 		/**
-		 * \brief Check whether the reference is leaking or not.
-		 * \return Whether the reference is leaking or not.
+		 * @brief Check whether the reference is leaking or not.
+		 * @return Whether the reference is leaking or not.
 		 */
 		[[nodiscard]]
 		bool isLeaking() const;
 
 		/**
-		 * \brief Check whether the reference is nullable or not.
-		 * \return Whether the reference is nullable or not.
+		 * @brief Check whether the reference is nullable or not.
+		 * @return Whether the reference is nullable or not.
 		 */
 		[[nodiscard]]
 		bool isNullable() const;
 
 		/**
-		 * \brief Check whether the reference is unique or not.
-		 * \return Whether the reference is unique or not.
+		 * @brief Check whether the reference is unique or not.
+		 * @return Whether the reference is unique or not.
 		 */
 		[[nodiscard]]
 		bool isUnique() const;
@@ -364,7 +364,7 @@ namespace ts {
 	\*******************/
 
 	/**
-	 * \brief The Tuple types.
+	 * @brief The Tuple types.
 	 *
 	 * Each Tuple type is simply a tuple of elements, with additional specification
 	 * about whether these elements are mutable or not.
@@ -386,7 +386,7 @@ namespace ts {
 	};
 
 	/**
-	 * \brief The Function types.
+	 * @brief The Function types.
 	 *
 	 * Each function type has a list of parameter types and a return type.
 	 * Additionally, it may be a pure function and it may be a free function.
@@ -433,29 +433,29 @@ namespace ts {
 		SETUP_TYPE_WITH_BASE(FunctionInfo, TypeInfo)
 
 		/**
-		 * \brief Gets the parameter types of the function type.
-		 * \return The parameter types of the function type.
+		 * @brief Gets the parameter types of the function type.
+		 * @return The parameter types of the function type.
 		 */
 		[[nodiscard]]
 		const std::vector<TypeInfo>& getParameterTypes() const;
 
 		/**
-		 * \brief Gets the result type of the function type.
-		 * \return The result type of the function type.
+		 * @brief Gets the result type of the function type.
+		 * @return The result type of the function type.
 		 */
 		[[nodiscard]]
 		TypeInfo getResultType() const;
 
 		/**
-		 * \brief Check whether the function type is pure or not.
-		 * \return Whether the function type is pure or not.
+		 * @brief Check whether the function type is pure or not.
+		 * @return Whether the function type is pure or not.
 		 */
 		[[nodiscard]]
 		bool isPure() const;
 
 		/**
-		 * \brief Check whether the function type is free or not.
-		 * \return Whether the function type is free or not.
+		 * @brief Check whether the function type is free or not.
+		 * @return Whether the function type is free or not.
 		 */
 		[[nodiscard]]
 		bool isFree() const;
