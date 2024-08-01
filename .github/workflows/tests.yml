@@ -36,7 +36,7 @@ jobs:
 
     timeout-minutes: 8  # (Per matrix run)
 
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
 
     env:
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Debug' }}
@@ -52,6 +52,11 @@ jobs:
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py download-binaries -s ccache
+
+
+      - name: Install LLVM
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py download-llvm -v 18.1.8 -a x86_64
 
       # Generate a timestamp and save it to a variable.
       # Timestamp is appended to the key in caching, so each cache has a unique key.
@@ -95,7 +100,7 @@ jobs:
         run: |
           cmake \
               -B ${{ env.BUILD_DIR }} \
-              -D CMAKE_CXX_COMPILER=g++-13 \
+              -D CMAKE_CXX_COMPILER=g++-11 \
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
