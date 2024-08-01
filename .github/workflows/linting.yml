@@ -20,7 +20,7 @@ jobs:
       - name: Create compile_commands
         run: |
          cd dev
-         cmake -DCMAKE_CXX_COMPILER=g++-13 -D BUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+         cmake -DCMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
          cd ..
         shell: bash
       - uses: cpp-linter/cpp-linter-action@v2
