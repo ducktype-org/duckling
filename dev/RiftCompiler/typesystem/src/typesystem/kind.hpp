@@ -9,7 +9,7 @@
 
 namespace ts {
 	/**
-	 * \brief Enum which identifies the features of a type described in the Type System.
+	 * @brief Enum which identifies the features of a type described in the Type System.
 	 *
 	 * For example, the Void type does not hold much information about itself.
 	 * However, each of the several Integral types holds a signedness boolean.
@@ -41,12 +41,12 @@ namespace ts {
 		VTable,
 
 		/**
-		 * \brief The kind of the type which holds type values. In other words, the "type" type.
+		 * @brief The kind of the type which holds type values. In other words, the "type" type.
 		 */
 		Meta,
 
 		/**
-		 * \brief The kind of the general TypeInfo(Impl).
+		 * @brief The kind of the general TypeInfo(Impl).
 		 * Must not be used in constructors or non-static contexts.
 		 */
 		Any = -1,

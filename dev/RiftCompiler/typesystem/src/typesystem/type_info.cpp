@@ -1,6 +1,6 @@
 /**
- * \file type_info.cpp
- * \brief Implementation of TypeInfo.
+ * @file type_info.cpp
+ * @brief Implementation of TypeInfo.
  *
  * This file is not included outside the Type System module and can thus have full knowledge of the
  * underlying implementation hierarchy.
