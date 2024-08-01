@@ -6,6 +6,7 @@ if(ENABLE_COVERAGE)
 	add_custom_target(coverage
 		COMMAND ${LCOV} --directory "${CMAKE_SOURCE_DIR}" --capture --output-file coverage.info
 			--base-directory "${CMAKE_SOURCE_DIR}" --no-external --exclude "**/_deps/**"
+			--exclude "**/_deps/**" --ignore-errors unused
 		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 		VERBATIM)
