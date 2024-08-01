@@ -4,7 +4,7 @@ on: pull_request
 
 jobs:
   cpp-linter:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Install gvc
@@ -12,6 +12,10 @@ jobs:
 
       - name: Install llvm
         run: sudo apt -y install llvm llvm-dev
+
+      - name: Install ccache
+        working-directory: ${{ github.workspace }}/dev
+        run: ./toolbox.py download-llvm -v 18.1.8 -a x86_64
 
       - name: Create compile_commands
         run: |
