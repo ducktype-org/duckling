@@ -1,26 +1,14 @@
 \page printer-module Printer Module
 
-# Printer
-
-[Description](#Description)  
-[Interface](#Interface)  
-[Usage](#Usage)  
-[Files](#File-list)  
-[Notes](#Notes)
+\tableofcontents
 
 # Description
 
 \subpage printer-requirements
 
-This module provides functionality for outputting messages to console. Has tools to help put messages together from smaller parts, like error messages. Additionally contains cool features like changing font and background colors.
+This module provides functionality for outputting messages to console. Has tools to help put messages together from smaller parts, like error messages. Additionally, contains cool features like changing font and background colors.
 
 # Interface
-
-## Files:
-
-* [message.hpp](src/printer/printer_content.hpp) - Description of Message objects.
-* [printer.hpp](src/printer/stream_printer.hpp) - Interface of a printer to console (maybe other printers will appear in the future).
-* [printer.cpp](src/printer/stream_printer.cpp) - Implementation of a printer to console.
 
 ## Symbols:
 
@@ -172,10 +160,11 @@ Prints the message to specified ostream (std::cerr by default).
 
 # Usage
 
-[example.cpp](examples/example.cpp).
+@include printer_example.cpp
 
 Code output:
-![Example output](examples/exampleoutput.png)
+
+![Example output](common/printer/examples/exampleoutput.png)
 
 # Notes
 

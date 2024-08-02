@@ -10,11 +10,17 @@ FILE_PATTERNS = *.hpp *.cpp *.md
 EXCLUDE_PATTERNS = "@PROJECT_SOURCE_DIR@/*build*/*" \
                    "@PROJECT_SOURCE_DIR@/docs/*" \
                    "@PROJECT_SOURCE_DIR@/scripts/*" \
-                   */toolbox.py
+                   */toolbox.py \
+                   "@PROJECT_SOURCE_DIR@/*/examples/*" 
+# Examples should be excluded not to generate docs for classes and functions in examples.
 
 # Code snippets and code examples options
 EXAMPLE_PATH = "@DOXYGEN_INPUT_DIR@"
 EXAMPLE_RECURSIVE = YES
+
+# Images
+IMAGE_PATH = "@PROJECT_SOURCE_DIR@"
+# Path to images should be relative to dev directory.
 
 # Graph look options
 HAVE_DOT = YES

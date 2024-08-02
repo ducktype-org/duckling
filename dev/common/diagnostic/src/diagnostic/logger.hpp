@@ -1,6 +1,42 @@
 /**
  * @file logger.hpp
  * @author Maurycy Wojda
+ * @brief Module implementing logging for source code
+ * (with location, error structure, etc.).
+ *
+ * ### Usage:
+ * @include logger_example.cpp
+ *
+ * Interface
+ * =========
+ *
+ * All symbols are in namespace ``dia``.
+ *
+ * Error State
+ * -----------
+ *
+ * Logger is a class that keeps track of errors, warnings, and other messages and stores them for
+ * future output.
+ *
+ * ### Adding errors
+ *
+ * New errors are added using the ``log()`` method.
+ * Every message must extend the ``Error``, ``Warning``, ``Info``, or ``Hint`` class and implement
+ * the ``getDomain()`` and ``toStringBrief()`` methods. The first one treats it as a fatal error
+ * while the second treats it more like a warning. There are two versions for both. One takes
+ * position and message while the other takes only message.
+ *
+ * ### Printing errors
+ *
+ * Errors are printed to output using the ``dumpLog()`` method.
+ *
+ * ### Checking state
+ *
+ * Methods ``good()``, ``bad()`` and ``messageCount()`` are used to get information about the
+ * current number of messages. The ``messageCount()`` method can take a severity as an argument and
+ * thus can be used to count errors and warnings.
+ *
+ * @example logger_example.cpp
  */
 
 #pragma once
