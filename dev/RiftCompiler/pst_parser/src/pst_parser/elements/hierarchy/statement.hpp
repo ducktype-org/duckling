@@ -131,6 +131,7 @@ namespace pst {
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 
+		[[nodiscard]]
 		ParserCBorrowRef<Expr> getExpr() const { return expression.borrow(); }
 
 		[[nodiscard]]
