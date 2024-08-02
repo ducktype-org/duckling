@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../rift_parser_state.hpp"
-#include "../../pst_visitor.hpp" // IWYU pragma: export
+#include "../../pst_visitor.hpp"  // IWYU pragma: export
 
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/parser_ref.hpp>
@@ -15,7 +15,7 @@
 
 #include <base/exceptions.hpp>
 #include <ostream>
-#include <functional> // IWYU pragma: export
+#include <functional>  // IWYU pragma: export
 
 namespace pst {
 	using tpc::makeRef;

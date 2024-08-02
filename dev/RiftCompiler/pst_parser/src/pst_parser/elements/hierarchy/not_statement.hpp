@@ -99,7 +99,6 @@ namespace pst {
 		detail::Conditions::isSentinel,
 		detail::NameGetters::attributeArgList>;
 
-
 	class DottedName final: public NotStmt {
 		std::vector<tpc::Identifier> names;
 		bool                         star = false;
@@ -277,6 +276,7 @@ namespace pst {
 		std::vector<ExprElem> elements;
 
 		explicit Expr(const dia::SourcePosition& position): NotStmt(position) {}
+
 		/**
 		 * @brief parses the expression until its over
 		 * @param allow_comma whether the expression can be a set of comma separated expressions.
