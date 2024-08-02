@@ -100,7 +100,11 @@ namespace pst {
 		while (state.notEmpty() and i < len) {
 			i++;
 
-			if (state[0].isBracketGroup()) {
+			if (state[0].isBracketGroup(Token::Curly)) {
+				ParserRef<CodeBlock> inner;
+				state.parse(back).one(&inner, false);
+				back->elements.emplace_back(Block{ std::move(inner) });
+			} else if (state[0].isBracketGroup()) {
 				auto type = fromTokenType(state[0].getBracketType());
 				state.parse(out).goDown();
 				if (state.notEmpty()) {
