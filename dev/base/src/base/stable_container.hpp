@@ -1,3 +1,7 @@
+/**
+ * @file stable_container.hpp
+ * @brief Provides a simple expandable container with stable references.
+ */
 #pragma once
 
 #include "ints.hpp"

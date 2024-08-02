@@ -8,5 +8,6 @@
 - \subpage common-readme
 - \subpage compiler-readme
 - \subpage vm-readme
+- \subpage base-readme
 
 

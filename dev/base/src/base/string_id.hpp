@@ -1,5 +1,58 @@
 /**
  * @file string_id.hpp
+ *
+ * @brief String ID is a library that implements `StrId` type.
+ * It is a light-weight representation of string.
+ *
+ * @attention String id uses global data, and therefore should not be used
+ * "before" `main`. It may lead to static Initialization Order Fiasco.
+ *
+ * Functionalities
+ * ===============
+ *
+ * StrId creation
+ * --------------
+ *
+ * `StrId` can be created from various other string representations using `StrId` constructors.
+ *
+ * Bad state of StrId
+ * ------------------
+ *
+ * `StrId` default constructor leaves it in a "bad" state, which does not
+ * represent any string. Whether `StrId` is in a bad or good state can be
+ * checked using `.isGood()` and `.isBad()` methods.
+ *
+ * Retrieving original string
+ * --------------------------
+ *
+ * String represented by `StrId` can be accessed directly using `.view()`,
+ * `.strView()` and `.str()` methods.
+ *
+ * @note `.str()` constructs a new string, while other methods provide only a view to existing data.
+ *
+ * Testing for equality
+ * --------------------
+ *
+ * Using `==` operator on `StrId` is equivalent to testing equality of represented
+ * strings (Same for `!=`).
+ *
+ * @note `StrId == StrId` is extremely quick.
+ *
+ * Comparison
+ * ----------
+ *
+ * Using `<` operator on `StrId` will provide a well-behaving linear order.
+ * It can be used with, for example, `std::map`.
+ *
+ * @attention Order used by `<` is arbitrary and has nothing to do with lexicographical comparison.
+ *
+ * Additional functionalities
+ * --------------------------
+ *
+ * * `StrId` can be converted to `usize` representation with `strIdToNum`. It is mostly for debug or
+ * strange quick hacks.
+ * * `StrId` can be hashed using standard `std::hash`.
+ * * `StrId` works with `base::strConcat`.
  */
 
 #pragma once

@@ -1,3 +1,21 @@
+/**
+ * @file perfect_hash.hpp
+ * @brief Provides a very simple framework for defining perfect hashing for any types.
+ *
+ * ### Usage
+ *
+ * In order to define perfect hash for a given type `T` you have to do one of:
+ *
+ * - write `t.customPerfectHash() const -> base::HashT` method.
+ * - write `customPerfectHash(const T& /*or T* /) -> base::HashT` function declared in the same
+ * scope as type `T`.
+ *
+ * In order to get the perfect hash of any type use `base::perfectHash`.
+ *
+ * @include perfect_hash_example.cpp
+ *
+ * @example perfect_hash_example.cpp
+ */
 #pragma once
 
 #include "ints.hpp"

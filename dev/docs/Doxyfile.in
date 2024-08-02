@@ -12,6 +12,10 @@ EXCLUDE_PATTERNS = "@PROJECT_SOURCE_DIR@/*build*/*" \
                    "@PROJECT_SOURCE_DIR@/scripts/*" \
                    */toolbox.py
 
+# Code snippets and code examples options
+EXAMPLE_PATH = "@DOXYGEN_INPUT_DIR@"
+EXAMPLE_RECURSIVE = YES
+
 # Graph look options
 HAVE_DOT = YES
 DOT_IMAGE_FORMAT = svg
