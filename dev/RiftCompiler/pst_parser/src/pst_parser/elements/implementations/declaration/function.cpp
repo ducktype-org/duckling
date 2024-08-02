@@ -1,5 +1,4 @@
-#include "elements_implementation.hpp"
-#include "pst_parser/pst_visitor.hpp"
+#include "forward.hpp"
 
 namespace pst {
 	// @TODO: make better

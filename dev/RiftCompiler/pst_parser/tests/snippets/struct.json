@@ -11,36 +11,38 @@
 							"Expr": [
 								{
 									"Identifier": "bbb"
-								}
+								},
 							]
 						},
 						{
 							"Expr": [
 								{
 									"Identifier": "cccc"
-								}
+								},
 							]
-						}
+						},
 					]
 				},
 				"body": {
 					"CodeBlock": [
 						{
-							"Expr": [
-								{
-									"Identifier": "a"
-								},
-								{
-									"Operator": "+"
-								},
-								{
-									"Identifier": "b"
-								}
-							]
-						}
+							"Expr Stmt": {
+								"Expr": [
+									{
+										"Identifier": "a"
+									},
+									{
+										"Operator": "+"
+									},
+									{
+										"Identifier": "b"
+									},
+								]
+							}
+						},
 					]
 				}
 			}
-		}
+		},
 	]
 }

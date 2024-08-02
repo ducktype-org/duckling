@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../elements.hpp"
+#include "../../rift_parser_state.hpp"
+#include "../../pst_visitor.hpp" // IWYU pragma: export
 
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/parser_ref.hpp>
@@ -10,10 +11,11 @@
 #include <lexer/token.hpp>
 #include <lexer/classifications.hpp>
 
+#include <base/variant.hpp>
+
 #include <base/exceptions.hpp>
 #include <ostream>
-#include <variant>
-#include <functional>
+#include <functional> // IWYU pragma: export
 
 namespace pst {
 	using tpc::makeRef;

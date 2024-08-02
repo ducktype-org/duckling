@@ -13,20 +13,23 @@
 					"CodeBlockOrStmt": {
 						"CodeBlock": [
 							{
-								"Expr": [
-									{
-										"Identifier": "a"
-									},
-									{
-										"Operator": ":"
-									},
-									{
-										"Identifier": "T"
-									},
-								]
+								"Expr Stmt": {
+									"Expr": [
+										{
+											"Identifier": "a"
+										},
+										{
+											"Operator": ":"
+										},
+										{
+											"Identifier": "T"
+										},
+									]
+								}
 							},
 							{
-								"Defer": {
+								"Action": {
+									"kind": "Defer",
 									"what": {
 										"Expr": [
 											{
@@ -85,7 +88,8 @@
 															"CodeBlockOrStmt": {
 																"CodeBlock": [
 																	{
-																		"Break": {
+																		"Action": {
+																			"kind": "Break",
 																			"from": {
 																				"Expr": [
 																					{
@@ -96,10 +100,13 @@
 																		}
 																	},
 																	{
-																		"Break"
+																		"Action": {
+																			"kind": "Break"
+																		}
 																	},
 																	{
-																		"Continue": {
+																		"Action": {
+																			"kind": "Continue",
 																			"with": {
 																				"Expr": [
 																					{
@@ -110,10 +117,13 @@
 																		}
 																	},
 																	{
-																		"Continue"
+																		"Action": {
+																			"kind": "Continue"
+																		}
 																	},
 																	{
-																		"Redo": {
+																		"Action": {
+																			"kind": "Redo",
 																			"what": {
 																				"Expr": [
 																					{
@@ -124,10 +134,13 @@
 																		}
 																	},
 																	{
-																		"Redo"
+																		"Action": {
+																			"kind": "Redo"
+																		}
 																	},
 																	{
-																		"Restart": {
+																		"Action": {
+																			"kind": "Restart",
 																			"what": {
 																				"Expr": [
 																					{
@@ -138,10 +151,13 @@
 																		}
 																	},
 																	{
-																		"Restart"
+																		"Action": {
+																			"kind": "Restart"
+																		}
 																	},
 																	{
-																		"Throw": {
+																		"Action": {
+																			"kind": "Throw",
 																			"exception": {
 																				"Expr": [
 																					{
@@ -162,7 +178,8 @@
 								}
 							},
 							{
-								"Return": {
+								"Action": {
+									"kind": "Return",
 									"with": {
 										"Expr": [
 											{

@@ -1,4 +1,4 @@
-#include "elements_implementation.hpp"
+#include "forward.hpp"
 
 namespace pst {
 	ParserRef<TopLevel> TopLevel::parse(RiftParserState& state) {

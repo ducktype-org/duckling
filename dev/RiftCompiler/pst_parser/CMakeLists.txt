@@ -1,4 +1,9 @@
-file(GLOB ElementImplementationFiles "src/pst_parser/elements/elements_implementations/*.cpp")
+file(GLOB ElementImplementationFiles 
+	"src/pst_parser/elements/implementations/statement/*.cpp"
+	"src/pst_parser/elements/implementations/meta/*.cpp"
+	"src/pst_parser/elements/implementations/not_statement/*.cpp"
+	"src/pst_parser/elements/implementations/declaration/*.cpp"
+)
 
 add_library(PstParser
 	src/pst_parser/parser.cpp
