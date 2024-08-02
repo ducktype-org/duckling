@@ -1,3 +1,8 @@
+/**
+ * @file queries.hpp
+ * @brief This file contains top-level queries for interacting with HELIOS.
+ * @note Other queries related to Symbols and Scopes can albo be called from outside HELIOS.
+ */
 #pragma once
 
 #include <query_framework/query_int.hpp>

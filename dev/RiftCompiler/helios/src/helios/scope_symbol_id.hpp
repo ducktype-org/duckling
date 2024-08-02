@@ -1,3 +1,9 @@
+/**
+ * @file scope_symbol_id.hpp
+ * @brief This file contains definitions of SymbolID
+ * and ScopeID structures, that are used to represent HELIOS-symbols
+ * and HELIOS-scopes across the compiler.
+ */
 #pragma once
 
 #include <base/perfect_hash.hpp>

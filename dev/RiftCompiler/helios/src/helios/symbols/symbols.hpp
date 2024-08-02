@@ -1,3 +1,7 @@
+/**
+ * @file symbols.hpp
+ * @brief This file defines Queries responsible for creation of Symbols and operations on them.
+ */
 #pragma once
 
 #include <query_framework/query_int.hpp>

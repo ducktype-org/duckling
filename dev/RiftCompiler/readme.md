@@ -7,6 +7,7 @@ Main Rift compiler
 # Module overview:
 
 - \subpage pst-parser-module
+- \subpage helios-readme
 
 # Some strange names:
 
