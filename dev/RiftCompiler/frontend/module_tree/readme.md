@@ -2,5 +2,5 @@
 
 This is a tree-like representation of a Rift module tree.
 
-### Usage;
+### Usage:
 @include module_tree_example.cpp

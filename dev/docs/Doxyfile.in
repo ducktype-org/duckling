@@ -26,6 +26,7 @@ IMAGE_PATH = "@PROJECT_SOURCE_DIR@"
 # Graph look options
 HAVE_DOT = YES
 DOT_IMAGE_FORMAT = svg
+INTERACTIVE_SVG = YES # To handle large graphs (they were cut off before)
 INCLUDED_BY_GRAPH = NO
 UML_LOOK = YES
 DOT_UML_DETAILS = NONE
