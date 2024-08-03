@@ -186,6 +186,17 @@ Then you can link to it using ``@ref`` command or hash ``#`` syntax:
     or
     [Link text](#label_name)
 
+Images
+++++++
+
+You include image in the documentation the same way you would in Markdown:
+
+.. code-block:: markdown
+
+    ![Example output](common/printer/examples/exampleoutput.png)
+
+Path to the image is relative to the location of dev directory.
+
 
 .. _excluded_directories:
 Directories excluded from Doxygen
