@@ -6,9 +6,7 @@ namespace pst {
 
 		state.parse(out).with<Expr>(&out->expression, Expr::parse, true);
 
-		if (out->expression == nullptr) {
-			return nullptr;
-		}
+		if (out->expression == nullptr) return nullptr;
 
 		return out;
 	}
