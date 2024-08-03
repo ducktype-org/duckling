@@ -145,19 +145,4 @@ To create external table of contents use ``toctree`` directive.
         folder/doc.rst
         *
 
-Doxygen and breathe
-===================
-
-``Doxygen`` is a tool to generate documentation for C++ code and ``breathe`` enables doxygen usage in sphinx. To include generated documentation use breathe directives, for example:
-
-.. code-block:: rst
-
-    .. doxygenclass:: base::Exception
-
-See `breathe documentation <https://breathe.readthedocs.io/en/latest/index.html>`_ for full list of directives.
-
-See also
-========
-
-* :doc:`Printer examplary documentation </source-doc/source-docs/common/printer/index>`
 * `Discord documentation channel <https://discord.com/channels/860531247826731029/1106545291852783627>`_
