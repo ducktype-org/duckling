@@ -19,7 +19,7 @@ namespace pst {
 
 	using StateCondition = bool(const RiftParserState&, i64);
 
-	using GetName = std::string();
+	using GetName = std::string (*)();
 
 	enum class StmtKind {
 		Attribute,

@@ -1,4 +1,4 @@
-#include "forward.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 	ParserRef<Namespace> Namespace::parse(RiftParserState& state) {

@@ -1,8 +1,8 @@
 file(GLOB ElementImplementationFiles 
-	"src/pst_parser/elements/implementations/statement/*.cpp"
+	"src/pst_parser/elements/implementations/statements/*.cpp"
 	"src/pst_parser/elements/implementations/meta/*.cpp"
-	"src/pst_parser/elements/implementations/not_statement/*.cpp"
-	"src/pst_parser/elements/implementations/declaration/*.cpp"
+	"src/pst_parser/elements/implementations/not_statements/*.cpp"
+	"src/pst_parser/elements/implementations/declarations/*.cpp"
 )
 
 add_library(PstParser

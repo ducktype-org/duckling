@@ -1,4 +1,4 @@
-#include "forward.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 	class BlockStartError final: public dia::Error {

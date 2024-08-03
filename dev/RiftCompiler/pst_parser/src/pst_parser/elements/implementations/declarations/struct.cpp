@@ -1,4 +1,4 @@
-#include "forward.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 	ParserRef<Struct> Struct::parse(RiftParserState& state) {
