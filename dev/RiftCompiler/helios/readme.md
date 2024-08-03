@@ -1,4 +1,4 @@
-@page helios-readme Helios
+@page helios-module Helios
 
 @attention
 This is the documentation of the implementation of HELIOS. For a general overview of the HELIOS process, see: `@TODO`.

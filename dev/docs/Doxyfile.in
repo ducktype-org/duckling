@@ -11,7 +11,8 @@ EXCLUDE_PATTERNS = "@PROJECT_SOURCE_DIR@/*build*/*" \
                    "@PROJECT_SOURCE_DIR@/docs/*" \
                    "@PROJECT_SOURCE_DIR@/scripts/*" \
                    */toolbox.py \
-                   "@PROJECT_SOURCE_DIR@/*/examples/*" 
+                   "@PROJECT_SOURCE_DIR@/*/examples/*" \
+                   "@PROJECT_SOURCE_DIR@/*/tests/*"
 # Examples should be excluded not to generate docs for classes and functions in examples.
 
 # Code snippets and code examples options
@@ -34,7 +35,10 @@ ENABLE_PREPROCESSING = YES
 MACRO_EXPANSION = YES
 EXPAND_ONLY_PREDEF = YES
 ALIASES += "query=\xrefitem query \"Query\" \"Queries\"" \
-            "TODO=\todo"
+            "TODO=\todo" \
+            "tip=\remark" \
+            "hint=\remark" \
+            "important=\attention"
 PREDEFINED = "DECLARE_QUERY(name, key, value)=auto name(key) -> value;/**< \query \ref ImplementationOf_##name \"Implementation\" */" \
             "STRONG_TYPEDEF_ID(name)=using name = u64;" \
             "IMPLEMENT_QUERY(name, PResult)=ImplementationOf_##name final: public query::QueryImplementation<name, PResult>" \
@@ -91,3 +95,7 @@ DISABLE_INDEX     = NO
 FULL_SIDEBAR      = NO
 HTML_EXTRA_STYLESHEET  = "@CMAKE_CURRENT_SOURCE_DIR@/doxygen-awesome-css/doxygen-awesome.css" "@CMAKE_CURRENT_SOURCE_DIR@/doxygen-ext/doxygen_custom.css"
 HTML_COLORSTYLE        = LIGHT
+
+# To customize layout
+# Currently the only change is to make "Detailed Description" appear at the top of documentation website of every "file"
+LAYOUT_FILE = "@CMAKE_CURRENT_SOURCE_DIR@/doxygen-ext/DoxygenLayout.xml"

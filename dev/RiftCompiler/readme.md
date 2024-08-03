@@ -6,8 +6,13 @@ Main Rift compiler
 
 # Module overview:
 
+- \subpage config-module
+- \subpage exec-module
+- \subpage frontend-module
+- \subpage helios-module
 - \subpage pst-parser-module
-- \subpage helios-readme
+- \subpage rift-snippets-readme
+- \subpage typesystem-module
 
 # Some strange names:
 

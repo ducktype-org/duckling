@@ -50,6 +50,8 @@ Json module
 
 \subpage query-framework-module
 
+  This module provides implementation of Query Framework used in compiler.
+
 ## tester
 
 \subpage tester-module
