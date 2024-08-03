@@ -1,5 +1,4 @@
-#include "elements_implementation.hpp"
-#include "pst_parser/pst_visitor.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 	ParserRef<Block> Block::parse(RiftParserState& state) {
@@ -14,7 +13,7 @@ namespace pst {
 	}
 
 	void Block::dprint(std::ostream& out) const {
-		out << "{\"Block\": {";
+		out << R"({"Block": {)";
 
 		out << R"("optional name": )";
 		nullAwareDprint(optional_name, out);

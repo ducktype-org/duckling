@@ -1,4 +1,6 @@
-#include "elements_implementation.hpp"
+#include "preamble.hpp"
+#include "../../hierarchy/statements.hpp"
+#include "../../hierarchy/declarations.hpp"
 
 namespace pst {
 
@@ -67,6 +69,6 @@ namespace pst {
 		}
 
 		// Expr as stmt have semicolon at the end:
-		return detail::parseStmt<Expr>(state, true);
+		return detail::parseStmt<ExprStmt>(state);
 	}
 }
