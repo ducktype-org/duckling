@@ -1,5 +1,4 @@
-#include "elements_implementation.hpp"
-#include "pst_parser/pst_visitor.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 	class AliasStarError final: public dia::Error {

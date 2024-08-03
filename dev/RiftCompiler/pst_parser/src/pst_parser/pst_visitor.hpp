@@ -22,7 +22,7 @@ namespace pst {
 
 		virtual void visitAlias([[maybe_unused]] const Alias& stmt) = 0;
 
-		virtual void visitExpr([[maybe_unused]] const Expr& stmt) = 0;
+		virtual void visitExprStmt([[maybe_unused]] const ExprStmt& stmt) = 0;
 
 		virtual void visitReturn([[maybe_unused]] const Return& stmt) = 0;
 
@@ -71,7 +71,7 @@ namespace pst {
 
 		void visitAlias([[maybe_unused]] const Alias& stmt) override {}
 
-		void visitExpr([[maybe_unused]] const Expr& stmt) override {}
+		void visitExprStmt([[maybe_unused]] const ExprStmt& stmt) override {}
 
 		void visitReturn([[maybe_unused]] const Return& stmt) override {}
 
@@ -124,7 +124,7 @@ namespace pst {
 		PANIC_VISITOR_VISIT_METHOD(Import);
 		PANIC_VISITOR_VISIT_METHOD(Using);
 		PANIC_VISITOR_VISIT_METHOD(Alias);
-		PANIC_VISITOR_VISIT_METHOD(Expr);
+		PANIC_VISITOR_VISIT_METHOD(ExprStmt);
 		PANIC_VISITOR_VISIT_METHOD(Return);
 		PANIC_VISITOR_VISIT_METHOD(Defer);
 		PANIC_VISITOR_VISIT_METHOD(Restart);
