@@ -1,5 +1,5 @@
-#include "elements_implementation.hpp"
-#include "pst_parser/pst_visitor.hpp"
+#include "preamble.hpp"
+#include "../../hierarchy/actions.hpp"
 
 namespace pst {
 	ParserRef<Action> Action::parse(RiftParserState& state) {
@@ -52,13 +52,13 @@ namespace pst {
 			const std::string_view                 name,
 			const std::string_view                 preposition
 		) {
-			out << "{\"" << name << "\"";
+			out << R"({"Action": {)";
+			out << R"("kind": ")" << name << "\"";
 			if (action) {
-				out << " : {\"" << preposition << "\": ";
+				out << ", \"" << preposition << "\": ";
 				nullAwareDprint(action.value(), out);
-				out << "}";
 			}
-			out << "}";
+			out << "}}";
 		}
 	}
 
