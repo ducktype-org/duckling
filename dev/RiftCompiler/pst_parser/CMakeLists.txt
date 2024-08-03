@@ -1,5 +1,9 @@
 file(GLOB ElementImplementationFiles CONFIGURE_DEPENDS 
-	"src/pst_parser/elements/elements_implementations/*.cpp" )
+	"src/pst_parser/elements/implementations/statements/*.cpp"
+	"src/pst_parser/elements/implementations/meta/*.cpp"
+	"src/pst_parser/elements/implementations/not_statements/*.cpp"
+	"src/pst_parser/elements/implementations/declarations/*.cpp"
+)
 
 add_library(PstParser
 	src/pst_parser/parser.cpp
