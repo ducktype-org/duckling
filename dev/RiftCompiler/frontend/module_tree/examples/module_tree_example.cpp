@@ -1,5 +1,4 @@
 #include "frontend/module_tree/module_tree.hpp"
-
 #include <iostream>
 
 int main() {
@@ -16,7 +15,6 @@ int main() {
 	// Print content of source files.
 	for (auto&& file: module_tree->getSourceFiles())
 		std::cout << file.path.getContent().view().stringView() << '\n';
-
 
 	// Print names of other modules.
 	//
