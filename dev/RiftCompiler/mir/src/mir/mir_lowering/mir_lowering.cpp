@@ -41,6 +41,9 @@ namespace compiler::mir {
 	 */
 	struct BlockBuilder {
 	private:
+
+		BlockID id;
+
 		/**
 		 * @brief List of instructions kept in revered order.
 		 * If given position does not have a value that means it is empty.
@@ -63,7 +66,7 @@ namespace compiler::mir {
 		};
 
 	public:
-		BlockBuilder() = default;
+		BlockBuilder(usize vector_index): id(vector_index) {};
 		
 		[[nodiscard]]
 		Block build() const {
@@ -72,7 +75,7 @@ namespace compiler::mir {
 				RIFT_ASSERT(instruction.has_value(), "Empty instruction left in the block");
 				instructions.emplace_back(instruction.value());
 			}
-			return {std::move(instructions), terminator.value()};
+			return {id, std::move(instructions), terminator.value()};
 		}
 
 		void addInstruction(Instruction instr) {
@@ -90,6 +93,11 @@ namespace compiler::mir {
 		void setTerminator(Instruction instruction) {
 			RIFT_ASSERT(not terminator.has_value(), "terminator already set.");
 			terminator.emplace(std::move(instruction));
+		}
+
+		[[nodiscard]]
+		BlockID getID() const {
+			return id;
 		}
 	};
 
@@ -120,11 +128,13 @@ namespace compiler::mir {
 		}
 		
 		BlockRef newBlock(bool entry = false) {
-			auto res = blocks.getRef(blocks.emplaceBack(BlockBuilder{})).value();
+			auto index = blocks.size();
+			auto res = blocks.getRef(blocks.emplaceBack(BlockBuilder{index})).value();
 			if (entry) {
 				RIFT_ASSERT(entry_block.empty(), "Entry block already set!");
 				entry_block.emplace(res);
 			}
+			RIFT_ASSERT(u64(res->getID()) == blocks.size() - 1 , "Bad block id");
 			return res;
 		}
 	};

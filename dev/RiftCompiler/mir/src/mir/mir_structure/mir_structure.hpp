@@ -4,28 +4,38 @@
 #include <variant>
 #include <helios/scopes/scopes.hpp>
 #include <base/stable_container.hpp>
+#include <base/strongly_typed_id.hpp>
 
-namespace compiler::mir {	
-	struct MirIntegerConst {
+
+namespace compiler::mir {
+
+	/**
+	 * @brief BlockID is a temporary solution that should be replaced by 
+	 * proper BlockReference.
+	 * It is like that for now, to avoid confusion with BlockRef used in * mir_lowering and transformation between that BlockRef to this "BlockRef".
+	 */
+	STRONG_TYPEDEF_INT(BlockID, u64);
+
+	struct MirIntegerConst final {
 		i32 value;
 	};
 
-	struct MirLocal {
+	struct MirLocal final {
 		// ...
 		// @TODO: this needs some ids
 	};
 	using LocalRef = base::StableVectorRef<MirLocal>;
 
 
-	struct MirLocation {
+	struct MirLocation final {
 		// local / global / literal / func-literal, etc
 	private:
-		std::variant<MirIntegerConst, LocalRef> value;
+		std::variant<MirIntegerConst, LocalRef, BlockID> value;
 	public:
 
 	};
 
-	struct OperationFlag {
+	struct OperationFlag final {
 
 	};
 
@@ -44,7 +54,7 @@ namespace compiler::mir {
 		Branch
 	};
 
-	struct Instruction {
+	struct Instruction final {
 		// Idea 1: generic arguments
 		// Idea 2: one giant variant
 		// Idea 3: inheritance
@@ -76,13 +86,18 @@ namespace compiler::mir {
 
 	};
 
-	struct Terminator {
+	struct Terminator final {
 		// Is it separate?
 
 		// Jump / Branch / Return / ...
 	};
 
-	struct Block {
+	struct Block final {
+		/**
+		 * @brief id should be identical to the index in the vector of blocks.
+		 */
+		BlockID id;
+		
 		// add: scope info
 
 		std::vector<Instruction> instructions;
@@ -93,7 +108,7 @@ namespace compiler::mir {
 		Instruction terminator;
 	};
 
-	struct Function {
+	struct Function final {
 		std::vector<Block> blocks;
 		base::StableVector<MirLocal> local_list;
 		
