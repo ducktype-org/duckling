@@ -253,8 +253,8 @@ namespace compiler::mir {
 
 			auto fun_body_scope = key.function.body.body->lifetime_scope;
 
-			// not just vreturn:
 			auto last_block = function_builder.newBlock();
+			last_block->setTerminator({Operation::FunctionEnd, {}, {}, {}, fun_body_scope});
 
 			auto first_block = lowerCodeBlock(*key.function.body.body, last_block, function_builder);
 

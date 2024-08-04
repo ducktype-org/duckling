@@ -31,7 +31,7 @@ namespace compiler::mir {
 		// local / global / literal / func-literal, etc
 	private:
 		using ValueType = std::variant<MirIntegerConst, LocalRef, BlockID>;
-		
+
 		ValueType value;
 	public:
 		MirLocation(MirIntegerConst value): value(value) {}
@@ -56,7 +56,9 @@ namespace compiler::mir {
 		VoidReturn,
 		Return,
 		Jump,
-		Branch
+		Branch,
+
+		FunctionEnd
 	};
 
 	struct Instruction final {
