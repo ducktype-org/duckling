@@ -154,23 +154,13 @@ namespace compiler::mir {
 
 		
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
-			auto return_instruction = continuation->addHole();
-
-			// @TODO: in order to create a scope here, we need
-			// to have a clear access to scope "ReturnStmt" is created in
-			// right now it is not that simple
-			// potential solutions:
-			// 	* add parent operation to PST, and link scopes one-to-one to PST
-			//  * pass a lot of additional data here
-			//  * ...?
-
-			// scope refactor will be needed anyway..
-
+			auto return_block = function.newBlock();
+	
 			// lower expr:
-			auto expr_res = lowerExpr(*stmt.value, continuation, function);
+			auto expr_res = lowerExpr(*stmt.value, return_block, function);
 
 			// here return_instruction has to be a terminator: 
-			return_instruction.fill(Instruction(
+			return_block->setTerminator(Instruction(
 				Operation::Return,
 				{},
 				{ expr_res.value },
