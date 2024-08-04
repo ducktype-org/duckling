@@ -7,7 +7,7 @@
  * In order to define perfect hash for a given type `T` you have to do one of:
  *
  * - write `t.customPerfectHash() const -> base::HashT` method.
- * - write `customPerfectHash(const T& /*or T* /) -> base::HashT` function declared in the same
+ * - write `customPerfectHash(const T& [or T*]) -> base::HashT` function declared in the same
  * scope as type `T`.
  *
  * In order to get the perfect hash of any type use `base::perfectHash`.
