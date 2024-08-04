@@ -5,7 +5,6 @@
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 
-
 namespace compiler::mir {
 
 	namespace hc = helios::code;
@@ -231,7 +230,7 @@ namespace compiler::mir {
 	}
 
 	StmtLowerRes lowerCodeBlock(const hc::CodeBlock& code_block, BlockRef continuation, FunctionBuilder& function) {
-		StmtLowerRes last_result;
+		StmtLowerRes last_result { continuation };
 		for (auto& stmt: code_block.statements | std::views::reverse) {
 			last_result = lowerStmt(*stmt, continuation, function);
 			continuation = last_result.begin;
@@ -262,7 +261,7 @@ namespace compiler::mir {
 			auto entry_block = function_builder.newBlock(true);
 
 			// @TODO: jump arguments:
-			entry_block->setTerminator({ Operation::Jump, {}, {}, {}, fun_body_scope} );
+			entry_block->setTerminator({ Operation::Jump, {}, {first_block.begin->getID()}, {}, fun_body_scope} );
 
 
 			// @TODO:

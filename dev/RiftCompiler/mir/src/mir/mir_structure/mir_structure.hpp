@@ -30,8 +30,13 @@ namespace compiler::mir {
 	struct MirLocation final {
 		// local / global / literal / func-literal, etc
 	private:
-		std::variant<MirIntegerConst, LocalRef, BlockID> value;
+		using ValueType = std::variant<MirIntegerConst, LocalRef, BlockID>;
+		
+		ValueType value;
 	public:
+		MirLocation(MirIntegerConst value): value(value) {}
+		MirLocation(LocalRef value): value(value) {}
+		MirLocation(BlockID value): value(value) {}
 
 	};
 
