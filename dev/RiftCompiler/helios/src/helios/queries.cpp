@@ -106,8 +106,9 @@ namespace compiler::helios {
 
 			void visitUsing(const pst::Using&) override { empty = true; }
 
-			void visitExpr(const pst::Expr& stmt) override {
-				auto expr = ctx.query<QueryHoutOfExpr>({ parent_scope, PstRef<pst::Expr>(&stmt) });
+			void visitExprStmt(const pst::ExprStmt& stmt) override {
+				auto expr = ctx.query<QueryHoutOfExpr>({ parent_scope,
+				                                         PstRef<pst::Expr>(stmt.getExpr()) });
 				output(code::ExprStmt(std::move(expr)));
 			}
 
