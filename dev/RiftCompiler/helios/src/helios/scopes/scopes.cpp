@@ -186,7 +186,7 @@ namespace compiler::helios {
 				this->out.emplace(std::vector<SymID>());
 			}
 
-			void visitExpr(const pst::Expr&) override {
+			void visitExprStmt(const pst::ExprStmt&) override {
 				this->out.emplace(std::vector<SymID>());
 			}
 
