@@ -2,6 +2,7 @@ import { SemanticToken } from "./common";
 import { DucklingElement } from "./elements";
 import { ExprElem, exprElemFactory } from "./expression";
 import { SemanticTokenTypes } from "vscode-languageserver";
+
 class Operator extends ExprElem {
 	operator: string;
 

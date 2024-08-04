@@ -7,6 +7,7 @@ const SEVERITY_MAP: { [key: string]: DiagnosticSeverity } = {
 	"INFO": DiagnosticSeverity.Information,
 };
 
+// Represents an error message from the compiler daemon
 export class DucklingParserError {
 	public readonly line: number;
 	public readonly column: number;
@@ -23,6 +24,7 @@ export class DucklingParserError {
 	}
 }
 
+// Converts the output of the compiler daemon to an array of DucklingParserError objects
 export function toErrors(output: string): DucklingParserError[] {
 	const errors: DucklingParserError[] = [];
 	const errorsDesc = concatenatePairs(removeANSIEscapeCodes(output).split(ERR_DELIMITER));
@@ -48,11 +50,13 @@ export function toErrors(output: string): DucklingParserError[] {
 	return errors;
 }
 
+// Removes ANSI escape codes from a string
 function removeANSIEscapeCodes(input: string): string {
 	const ansiEscapePattern = /\u001b\[[0-9;]*m/g;
 	return input.replace(ansiEscapePattern, '');
 }
 
+// Concatenates pairs of strings in an array
 function concatenatePairs(array: string[]): string[] {
 	const result: string[] = [];
 

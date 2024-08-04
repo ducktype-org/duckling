@@ -1,8 +1,6 @@
 import { DucklingElement, Stmt, stmtFactory } from "./elements";
-import { Identifier, identifierFactory } from "./identifier";
 import { SemanticToken } from "./common";
 import { SemanticTokenTypes } from "vscode-languageserver";
-import { identifier } from ".";
 import { DottedName } from "./dotted_name";
 
 export class Alias extends Stmt {

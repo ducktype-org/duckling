@@ -1,4 +1,4 @@
-import { Identifier, OptionalIdentifier, optionalIdentifierFactory } from "./identifier";
+import { OptionalIdentifier } from "./identifier";
 import { CodeDecl, codeDeclFactory, notStmtFactory, DucklingElement } from "./elements";
 import { RoundGroupExpr } from "./round_group_expr";
 import { CodeBlockOrStmt, codeBlockOrStmtFactory } from "./code_block_or_statement";

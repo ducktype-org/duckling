@@ -1,10 +1,10 @@
 # Duckling Language Server
 
 This Language Server works for ```.duckling``` files. It has the following language features:
+- Syntax Highlighting
 - Completions
-- Diagnostics regenerated on each file change or configuration change
-
-It also includes an End-to-End test.
+- Diagnostics
+- Folding
 
 ## Structure
 
@@ -12,7 +12,6 @@ It also includes an End-to-End test.
 .
 ├── client // Language Client
 │   ├── src
-│   │   ├── test // End to End tests for Language Client / Server
 │   │   └── extension.ts // Language Client entry point
 ├── package.json // The extension manifest.
 └── server // Language Server

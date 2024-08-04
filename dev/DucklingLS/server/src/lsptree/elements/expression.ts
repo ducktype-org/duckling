@@ -1,11 +1,16 @@
-import { Identifier } from "./identifier";
-import { DucklingElement, Stmt, stmtFactory, ducklingElementFactory, DucklingElementFactory, StmtFactory } from "./elements";
+import { 
+	DucklingElement, 
+	Stmt, 
+	stmtFactory, 
+	ducklingElementFactory,
+	DucklingElementFactory, 
+	StmtFactory 
+} from "./elements";
 import { ElementFactory } from "./element_factory";
 import { SemanticToken } from "./common";
 
 
 export abstract class ExprElem extends DucklingElement {
-
 }
 
 export type ExprElemFactory = ElementFactory<ExprElem, DucklingElementFactory>;

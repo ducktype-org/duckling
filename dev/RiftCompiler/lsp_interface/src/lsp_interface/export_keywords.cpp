@@ -10,9 +10,9 @@ namespace {
 }
 
 namespace lsp {
-	LspInterface::LspInterface() { rift_def::key_spec_op::init(); }
+	ExportKeywords::ExportKeywords() { rift_def::key_spec_op::init(); }
 
-	std::string LspInterface::getKeywordListJson() const {
+	std::string ExportKeywords::getKeywordListJson() const {
 		std::vector<std::string> keywords;
 		for (rift_def::Keyword k: rift_def::getKeywords()) {
 			std::string keyword = rift_def::keywordToStr(k).str();
@@ -23,7 +23,7 @@ namespace lsp {
 		return jsonList(keywords);
 	}
 
-	std::string LspInterface::getSpecialListJson() const {
+	std::string ExportKeywords::getSpecialListJson() const {
 		std::vector<std::string> specials;
 		for (rift_def::Special s: rift_def::getSpecials()) {
 			std::string special = rift_def::specialToStr(s).str();
@@ -34,7 +34,7 @@ namespace lsp {
 		return jsonList(specials);
 	}
 
-	std::string LspInterface::getOperatorListJson() const {
+	std::string ExportKeywords::getOperatorListJson() const {
 		std::vector<std::string> operators;
 		for (rift_def::Operator o: rift_def::getOperators()) {
 			std::string op = rift_def::operatorToStr(o).str();
@@ -45,7 +45,7 @@ namespace lsp {
 		return jsonList(operators);
 	}
 
-	std::string LspInterface::getAllJson() const {
+	std::string ExportKeywords::getAllJson() const {
 		std::map<std::string, std::string> result;
 		result["keywords"]  = getKeywordListJson();
 		result["specials"]  = getSpecialListJson();

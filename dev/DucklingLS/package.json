@@ -1,7 +1,7 @@
 {
     "name": "duckling-support",
-    "displayName": "Duckling Language Support",
-    "description": "Extension for RIFT language with Language Server",
+    "displayName": "DucklingLS",
+    "description": "Duckling Language Server",
     "version": "0.0.1",
     "author": "zpp-2.1",
     "categories": [
@@ -79,7 +79,6 @@
         "mocha": "^9.2.1",
         "typescript": "^5.2.2"
     },
-    "license": "MIT",
     "keywords": [
         "Duckling",
         "language server",

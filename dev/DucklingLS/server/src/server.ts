@@ -17,25 +17,27 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { handleSemanticTokensFull } from "./semanticTokens";
 import { getCompletionItems, onCompletionResolve, preloadKeywords } from "./completion";
-import { validateDuckling } from "./validation"; // Import the validation function
+import { validateDuckling } from "./validation";
 import { CompilerDaemonClient } from "./compilerDaemonClient";
 import { getFoldingRanges } from './foldingRanges';
 import { DucklingElement } from './lsptree/elements/elements';
 import { Token } from './semanticTokensDeclarations';
 require("./lsptree/elements/index");
 
-
+// Create a connection between the client and the server
 const connection = createConnection(ProposedFeatures.all);
+// Send a notification to the client that the server has started
 connection.sendNotification('window/showMessage', {type: 3, message: 'DucklingLS started!'});
 
+// Create a compiler daemon client
 const compilerDaemonClient = new CompilerDaemonClient();
+// Create a document manager
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
-let hasDiagnosticRelatedInformationCapability = false;
 
-// Storing PST for documents
+// Storing LSPT for documents
 const lsptCache: Map<string, DucklingElement | null> = new Map();
 const semanticTokensCache: Map<string, Token[]> = new Map();
 
@@ -45,6 +47,7 @@ const semanticTokensLegend = {
 	tokenModifiers: Object.values(SemanticTokenModifiers)
 };
 
+// Initial setup of the language server
 connection.onInitialize((params: InitializeParams) => {
 	const capabilities = params.capabilities;
 
@@ -55,11 +58,6 @@ connection.onInitialize((params: InitializeParams) => {
 	);
 	hasWorkspaceFolderCapability = !!(
 		capabilities.workspace && !!capabilities.workspace.workspaceFolders
-	);
-	hasDiagnosticRelatedInformationCapability = !!(
-		capabilities.textDocument &&
-		capabilities.textDocument.publishDiagnostics &&
-		capabilities.textDocument.publishDiagnostics.relatedInformation
 	);
 
 	const result: InitializeResult = {
@@ -77,6 +75,7 @@ connection.onInitialize((params: InitializeParams) => {
 			foldingRangeProvider: true,
 		}
 	};
+
 	if (hasWorkspaceFolderCapability) {
 		result.capabilities.workspace = {
 			workspaceFolders: {
@@ -84,6 +83,8 @@ connection.onInitialize((params: InitializeParams) => {
 			}
 		};
 	}
+
+	// Preload keywords for autocompletion
 	preloadKeywords(compilerDaemonClient, connection);
 	return result;
 });
@@ -100,6 +101,7 @@ connection.onInitialized(() => {
 	}
 });
 
+// Register the handler for semantic tokens
 connection.onRequest("textDocument/semanticTokens/full", (params) => 
 	handleSemanticTokensFull(params, documents, lsptCache, semanticTokensCache, compilerDaemonClient, connection)
 );
@@ -110,14 +112,13 @@ interface ExampleSettings {
 }
 
 // The global settings, used when the `workspace/configuration` request is not supported by the client.
-// Please note that this is not the case when using this server with the client provided in this example
-// but could happen with other clients.
 const defaultSettings: ExampleSettings = { maxNumberOfProblems: 1000 };
 let globalSettings: ExampleSettings = defaultSettings;
 
 // Cache the settings of all open documents
 const documentSettings: Map<string, Thenable<ExampleSettings>> = new Map();
 
+// Listen for configuration changes
 connection.onDidChangeConfiguration(change => {
 	if (hasConfigurationCapability) {
 		// Reset all cached document settings
@@ -151,31 +152,39 @@ documents.onDidClose(e => {
 	documentSettings.delete(e.document.uri);
 });
 
+// This handler is called when the IDE detects a change in the document
 documents.onDidChangeContent(change => {
+	// The document has changed, so we need to update it in the compiler daemon
 	compilerDaemonClient.putFile(change.document.uri, change.document.getText(), connection).then(() => {
+		// Get the LSPTree for the document
 		compilerDaemonClient.getLSPT(change.document.uri, connection).then((LSPTree) => {
 			lsptCache.set(change.document.uri, LSPTree);
 			console.log(LSPTree);
 		});
 
+		// Revalidate the document
 		validateDuckling(change.document, connection, compilerDaemonClient);
 	});
 });
-
 
 connection.onDidChangeWatchedFiles(_change => {
 	connection.console.log("We received an file change event");
 });
 
+// This handler provides the initial list of the completion items.
 connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
 	return getCompletionItems(_textDocumentPosition, documents, lsptCache);
 });
+
+// This handler resolves additional information for the item selected in the completion list.
 connection.onCompletionResolve(onCompletionResolve);
 
+// This handler provides the folding ranges
 connection.onFoldingRanges((params: FoldingRangeParams): FoldingRange[] | null => {
 	return getFoldingRanges(params, documents, semanticTokensCache, lsptCache);
 });
 
+// Make the compiler daemon client exit when the connection exits
 connection.onExit(() => {
 	compilerDaemonClient.exit();
 });

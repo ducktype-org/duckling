@@ -16,6 +16,19 @@
 #include <span>
 #include <utility>
 
+/**
+ * @brief This file contains classes that are used to represent LSP elements.
+ * LSP elements are exact copies of standard PST elements.
+ * They are meant to hold information coming from further parts of the compilation.
+ * Migration to the query framework probably makes this structure obsolete.
+ *
+ * This class structure is difficult to maintain.
+ * If all LSP-related functionalities can be supported by the query framework,
+ * serialization should be implemented in the PST elements class structure.
+ *
+ * Right now, the main task of this class structure is the serialization of PST.
+ */
+
 namespace lsp {
 	using dia::SourcePosition;
 	using std::string;

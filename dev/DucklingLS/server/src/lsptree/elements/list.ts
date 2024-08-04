@@ -2,8 +2,6 @@ import { NotStmt, notStmtFactory, NotStmtFactory, DucklingElement, ducklingEleme
 import { Expr } from "./expression";
 import { ElementFactory } from "./element_factory";
 
-
-
 export class List<T extends DucklingElement> extends NotStmt {
 	elements: T[];
 

@@ -11,6 +11,7 @@ interface CommentMarker {
 	type: "line" | "blockStart" | "blockEnd";
 }
 
+// This function computes the tokens for comments separately
 function computeCommentsTokens(document: TextDocument): Token[] {
 	const tokens: Token[] = [];
 	const text = document.getText();
@@ -91,26 +92,31 @@ export async function handleSemanticTokensFull(
 	compilerDaemonClient: CompilerDaemonClient,
 	connection: Connection
 ): Promise<SemanticTokens> {
-
 	const document = documents.get(params.textDocument.uri);
 	if (!document) return { data: [] };
 
+	// Get the LSPTree from the cache
 	let LSPTree = lsptCache.get(document.uri);
+	// or request it from the compiler daemon if it is not in the cache
 	if (!LSPTree) {
 		LSPTree = await compilerDaemonClient.getLSPT(document.uri, connection);
 		lsptCache.set(document.uri, LSPTree);
 	}
 
+	// Compute the semantic tokens from the LSPT and the comments
 	const commentTokens: Token[] = computeCommentsTokens(document);
 	const compiledTokens: Token[] = LSPTree?.getSemanticTokens() ?? [];
 	const tokens = compiledTokens.concat(commentTokens);
 
+	// Sort the tokens and build the response
 	tokens.sort((a, b) => compareTokens(a, b));
 	semanticTokensCache.set(document.uri, tokens);
 	const builder = new SemanticTokensBuilder();
+	// Each token needs to be pushed to the builder
 	tokens.forEach((token) => {
 		builder.push(token.line, token.startCharacter, token.length, token.tokenType, token.tokenModifiers);
 	});
 
+	// The builder will translate the tokens to the LSP format by itself
 	return builder.build();
 }

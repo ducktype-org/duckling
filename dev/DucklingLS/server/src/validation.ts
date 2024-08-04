@@ -1,7 +1,6 @@
 import { Diagnostic, Connection } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { getDocumentSettings } from "./server";
-import { DucklingParserError } from "./errors";
 import { CompilerDaemonClient } from "./compilerDaemonClient";
 
 export async function validateDuckling(
@@ -12,8 +11,11 @@ export async function validateDuckling(
 	const settings = await getDocumentSettings(textDocument.uri);
 	let problems = 0;
 	const diagnostics: Diagnostic[] = [];
+
+	// Get the errors from the compiler daemon
 	let errors = await compilerDaemonClient.getErrors(textDocument.uri, connection);
 
+	// Parse the errors and add them to the diagnostics
 	for (const error of errors) {
 		problems++;
 		const diagnostic: Diagnostic = {

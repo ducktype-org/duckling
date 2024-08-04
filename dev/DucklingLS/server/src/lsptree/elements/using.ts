@@ -1,9 +1,6 @@
 import { SemanticTokenTypes } from "vscode-languageserver";
-import { keyword } from ".";
 import { SemanticToken } from "./common";
 import { DucklingElement, Stmt, stmtFactory } from "./elements";
-import { exprFactory } from "./expression";
-import { Identifier, identifierFactory } from "./identifier";
 import { DottedName, dottedNameFactory } from "./dotted_name";
 
 

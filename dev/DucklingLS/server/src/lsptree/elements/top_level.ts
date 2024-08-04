@@ -1,8 +1,13 @@
-import { Decl, declFactory, DucklingElement, Stmt, stmtFactory } from "./elements";
+import { 
+	Decl, 
+	declFactory, 
+	DucklingElement, 
+	Stmt, 
+	stmtFactory 
+} from "./elements";
 
 export class LSPTree extends Decl {
 	statements: Stmt[];
-
 
 	constructor(json: any) {
 		super(json);

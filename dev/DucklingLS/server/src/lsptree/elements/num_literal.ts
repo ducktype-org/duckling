@@ -3,7 +3,6 @@ import { SemanticToken } from "./common";
 import { ExprElem, exprElemFactory } from "./expression";
 import { DucklingElement } from "./elements";
 
-
 export class NumLiteral extends ExprElem {
 	value: string;
 	constructor(json: any) {

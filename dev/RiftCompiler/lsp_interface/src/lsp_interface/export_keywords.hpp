@@ -8,9 +8,9 @@
 #include <string>
 
 namespace lsp {
-	class LspInterface {
+	class ExportKeywords {
 	public:
-		LspInterface();
+		ExportKeywords();
 		[[nodiscard]]
 		std::string getKeywordListJson() const;
 		[[nodiscard]]

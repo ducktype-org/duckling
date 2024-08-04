@@ -55,6 +55,10 @@ namespace pst {
 
 		static ParserRef<Stmt> parse(RiftParserState& state);
 		bool                   trailingSemicolon() override;
+		/**
+		 * @brief Recursively creates a matching LSPTree.
+		 * An analogous function has to be created for every RiftElement.
+		 */
 		[[nodiscard]]
 		virtual ParserRef<lsp::LSPStmt> stmtFromPST() const;
 		virtual void                    acceptVisitor(PstStmtVisitor& visitor) const = 0;
@@ -195,7 +199,21 @@ namespace pst {
 		[[nodiscard]]
 		bool getStar() const;
 
-
+		/**
+		 * As ParserRef<> (unique_ptr) is not covariant in C++, a ladder-like method
+		 * for creating LSPTree nodes had to be devised. The only thing done by
+		 * DottedName::notStmtFromPST() is calling DottedName::dottedNameFromPST().
+		 * This is done because of the following issue:
+		 *
+		 * NotStmt notStmt = new DottedName();
+		 * ParserRef<lsp::LSPNotStmt> lsptNode = notStmt.notStmtFromPST();
+		 *
+		 * We expect lsptNode to behave like LSPDottedName, not LSPNotStmt.
+		 * This includes serialization among other things. C++ cannot automatically
+		 * infer the exact type of ParserRef<>. By creating a 'call ladder', we allow
+		 * ParserRef<lsp::LSPNotStmt> lsptNode to hold a reference to an instance of
+		 * lsp::LSPDottedName.
+		 */
 		[[nodiscard]]
 		ParserRef<lsp::LSPDottedName> dottedNameFromPST() const;
 		[[nodiscard]]

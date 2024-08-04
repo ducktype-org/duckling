@@ -5,6 +5,19 @@
 
 using tpc::makeRef;
 
+/**
+ * @brief This file contains implementations of translators from PST nodes to LSPTree nodes.
+ * For each new class, a pair of constructors has to be written.
+ *
+ * For example, for DottedName:
+ * ParserRef<lsp::LSPDottedName> DottedName::dottedNameFromPST()
+ * and
+ * ParserRef<lsp::LSPNotStmt> DottedName::notStmtFromPST()
+ *
+ * As DottedName inherits from NotStmt, we have to create constructors for instances of
+ * ParserRef<lsp::LSPDottedName> and ParserRef<lsp::LSPNotStmt>.
+ */
+
 namespace pst {
 
 	namespace {

@@ -1,5 +1,4 @@
 import { SemanticTokenTypes } from "vscode-languageserver";
-import { keyword } from ".";
 import { CodeBlock, codeBlockFactory } from "./code_block";
 import { SemanticToken } from "./common";
 import { Decl, declFactory, DucklingElement } from "./elements";

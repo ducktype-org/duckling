@@ -1,15 +1,10 @@
 {
 	"name": "duckling-server",
-	"description": "Implementation of Duckling language server in node.",
+	"description": "DucklingLS server",
 	"version": "0.0.1",
 	"author": "zpp-2.1",
-	"license": "MIT",
 	"engines": {
 		"node": "*"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/Microsoft/vscode-extension-samples"
 	},
 	"dependencies": {
 		"vscode-languageserver": "^8.1.0",

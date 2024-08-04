@@ -2,10 +2,6 @@ import { ElementFactory, ParentlessElementFactory } from "./element_factory";
 import { SourcePosition, SemanticToken } from "./common";
 import { FoldingRange } from "vscode-languageserver";
 
-enum StmtType {
-}
-
-
 export abstract class DucklingElement {
 	source_position: SourcePosition;
 
@@ -13,6 +9,7 @@ export abstract class DucklingElement {
 		this.source_position = new SourcePosition(json["position"]);
 	}
 
+	// Function used in the implementation of `code completion`.
 	getIdentifiers(): DucklingElement[] {
 		let acc = new Set<DucklingElement>();
 		for (const element of this.getElements()) {
@@ -20,23 +17,21 @@ export abstract class DucklingElement {
 		}
 		return [...acc.values()];
 	}
+	
+	// A universal function used to write tree crawlers.
 	abstract getElements(): DucklingElement[];
+	// Function used in the implementation of `syntax highlighting`.
 	abstract getSemanticTokens(): SemanticToken[];
+	// Function used in the implementation of `folding ranges`.
 	getFoldingRanges(): FoldingRange[] {
 		return this.getElements().flatMap(element => element.getFoldingRanges());
 	}
 }
 
 export abstract class Stmt extends DucklingElement {
-
-}
-
-interface StmtJSON {
-	new(json: any): Stmt;
 }
 
 export abstract class Decl extends Stmt {
-
 }
 
 export abstract class NotStmt extends DucklingElement {
