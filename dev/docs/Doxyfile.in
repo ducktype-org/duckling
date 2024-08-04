@@ -39,7 +39,8 @@ ALIASES += "query=\xrefitem query \"Query\" \"Queries\"" \
             "TODO=\todo" \
             "tip=\remark" \
             "hint=\remark" \
-            "important=\attention"
+            "important=\attention" \
+            "NOTE=\note"
 PREDEFINED = "DECLARE_QUERY(name, key, value)=auto name(key) -> value;/**< \query \ref ImplementationOf_##name \"Implementation\" */" \
             "STRONG_TYPEDEF_ID(name)=using name = u64;" \
             "IMPLEMENT_QUERY(name, PResult)=ImplementationOf_##name final: public query::QueryImplementation<name, PResult>" \

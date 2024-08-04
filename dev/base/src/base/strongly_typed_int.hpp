@@ -10,8 +10,8 @@
  *
  * Two variants are provided:
  *
- * @doxydefine STRONG_TYPEDEF_INT_DIMENSIONAL
- * @doxydefine STRONG_TYPEDEF_INT
+ * - STRONG_TYPEDEF_INT_DIMENSIONAL
+ * - STRONG_TYPEDEF_INT
  *
  * ### Usage
  * @include strongly_typed_int_example.cpp
