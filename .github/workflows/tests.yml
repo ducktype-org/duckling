@@ -7,10 +7,15 @@ on:
   workflow_dispatch:
 
 env:
+  # @note: boolean variables evaluate to true/false string, but github expressions treat
+  # all non-empty strings as true, so one must use `evn.abc == 'true'` to actually use
+  # them im conditional statements.
+  # (this apply to all variables, not just the ones form here)
   WORKSPACE: ${{ github.workspace }}/dev
   BUILD_DIR: ${{ github.workspace }}/dev/build
   CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+  IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
 
 jobs:
   build:
@@ -19,31 +24,28 @@ jobs:
         build-type: [Debug, Release]  # (Release, Debug, RelWithDebInfo, etc.)
       fail-fast: false
 
+    outputs:
+      # @note: with matrix runs, each run works with the same output,
+      # and they will overwrite each other
+      # see: https://github.com/orgs/community/discussions/26639
+      # 
+      # According to: https://github.com/orgs/community/discussions/38088
+      # it should not override if the step if skipped.
+      coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
+
     timeout-minutes: 8  # (Per matrix run)
 
     runs-on: ubuntu-22.04
+
+    env:
+      COVERAGE_ENABLED: ${{ matrix.build-type == 'Debug' }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # The next two steps might be a little confusing.
-      # When the expression in if statement returns false, the entire
-      # step is skipped.
-      # In that case `value` is empty so it evaluates to false.
-
-      - name: Check if this is a PR to main
-        id: main-pr
-        # Here base.ref is the target branch according to https://github.com/orgs/community/discussions/27154
-        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' }}
-        run: echo value=1 > $GITHUB_OUTPUT
-
-      - name: Check if should build with coverage
-        id: coverage-enabled
-        if: ${{ matrix.build-type == 'Debug' }}
-        run: echo value=1 > $GITHUB_OUTPUT
-
       - name: Install lcov
-        if: ${{ steps.coverage-enabled.outputs.value }}
+        if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov
 
       - name: Install ccache
@@ -84,7 +86,7 @@ jobs:
         id: cmake-flags
         # Env here is used for readability only
         env:
-          flags: ${{ steps.coverage-enabled.outputs.value && '-D ENABLE_COVERAGE=ON' || '' }}
+          flags: ${{ env.COVERAGE_ENABLED == 'true' && '-D ENABLE_COVERAGE=ON' || '' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
       - name: Configure CMake
@@ -94,14 +96,14 @@ jobs:
               -B ${{ env.BUILD_DIR }} \
               -D CMAKE_CXX_COMPILER=g++-11 \
               -D BUILD_DOCS=OFF \
-              -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} \
+              -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
               -D USE_CCACHE=ON \
               ${{ steps.cmake-flags.outputs.flags }}
 
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
-        run: cmake --build ${{ env.BUILD_DIR }} -j 5 -- build_all_tests
+        run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- build_all_tests
 
       - name: Test
         working-directory: ${{ env.BUILD_DIR }}
@@ -109,32 +111,38 @@ jobs:
 
       - name: Test Coverage
         id: test-coverage
-        if: ${{ steps.coverage-enabled.outputs.value }}
+        if: ${{ env.COVERAGE_ENABLED == 'true' }}
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
+  coverage:
+    needs: [build]
+
+    runs-on: ubuntu-22.04
+
+    timeout-minutes: 2
+
+    steps: 
       - name: Save main coverage percentage
         uses: action-pack/set-variable@v1
-        if: ${{ steps.coverage-enabled.outputs.value && env.BRANCH_NAME == 'main' }}
+        if: ${{ env.BRANCH_NAME == 'main' }}
         with:
           name: 'MAIN_COVERAGE_VALUE'
-          value: ${{ steps.test-coverage.outputs.coverage-percent }}
+          value: ${{ needs.build.outputs.coverage-value }}
           token: ${{ secrets.QUACKER_PAT }}
 
       - name: Read main coverage percentage
-        if: ${{ steps.coverage-enabled.outputs.value }}
         id: read-main-coverage
         run: echo value=${{ vars.MAIN_COVERAGE_VALUE }} > $GITHUB_OUTPUT
 
       - name: Check coverage status
         id: check-coverage-status
-        if: ${{ steps.coverage-enabled.outputs.value && steps.main-pr.outputs.value }}
-        run: echo success=${{ steps.test-coverage.outputs.coverage-percent >= steps.read-main-coverage.outputs.value }} > $GITHUB_OUTPUT
+        run: echo success=${{ needs.build.outputs.coverage-value >= steps.read-main-coverage.outputs.value }} > $GITHUB_OUTPUT
 
       - name: Hide previous bot comments
-        if: ${{ steps.coverage-enabled.outputs.value && steps.main-pr.outputs.value }}
+        if: ${{ env.IF_MAIN_PR == 'true' }}
         uses: int128/hide-comment-action@v1
         with:
           token: ${{ secrets.QUACKER_PAT }}
@@ -142,7 +150,7 @@ jobs:
 
       - name: Post coverage status as github comment
         uses: actions/github-script@v7
-        if: ${{ steps.coverage-enabled.outputs.value && steps.main-pr.outputs.value }}
+        if: ${{ env.IF_MAIN_PR == 'true' }}
         env:
           FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
           SUCC_MSG: '✅✅✅ - **Great job writing tests!**'
@@ -154,11 +162,11 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: '🎉 Tests and coverage ran successfully! 🎉\n \
-                     ⭐ Lines covered on the **current** branch: **${{ steps.test-coverage.outputs.coverage-percent }}%** \n \
+                     ⭐ Lines covered on the **current** branch: **${{ needs.build.outputs.coverage-value }}%** \n \
                      ⭐ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \n \
                      ${{ steps.check-coverage-status.outputs.success == 'true' && env.SUCC_MSG || env.FAIL_MSG }}'
             })
 
       - name: Fail if insufficient coverage
-        if: ${{ steps.coverage-enabled.outputs.value && steps.check-coverage-status.outputs.success != 'true' && steps.main-pr.outputs.value }}
+        if: ${{ steps.check-coverage-status.outputs.success != 'true' && env.IF_MAIN_PR == 'true' && (! contains(github.event.pull_request.labels.*.name, 'Override Coverage Check'))}}
         run: exit 1

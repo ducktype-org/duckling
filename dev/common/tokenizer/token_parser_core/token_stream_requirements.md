@@ -1,3 +1,5 @@
+\page tpc-requirements Token Stream Requirements
+
 # class Token stream:
 
 * `where` - pozycja stream-a, aktualny token to `token_data.tokens[where]`. Innych rzeczy z `token_data` nie tykamy

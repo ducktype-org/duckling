@@ -289,7 +289,6 @@ namespace compiler::helios {
 			case SymbolKind::Namespace: {
 				auto namespace_stmt = dynamic_cast<const pst::Namespace*>(key.ref->pst_stmt.get());
 				auto inner_scope    = ctx.query<QueryPrimaryCodeScopeFor>({
-                    scope(key),
                     namespace_stmt->getBody(),
                 });
 				return inner_scope;
@@ -303,7 +302,10 @@ namespace compiler::helios {
 				)
 				                           .value();
 
-				return ctx.query<QueryRootScopeOf>(imported_module);
+				// Here we don't access just root scope, because root scopes are currently empty:
+				auto linked_scope = extendQueryRootScopeOfMainModuleFile(ctx, imported_module);
+
+				return linked_scope;
 			}
 			default:
 				throw base::NotYetImplemented("Getting linked scope...");
@@ -853,7 +855,7 @@ namespace compiler::helios {
 
 			auto struct_stmt = getSymRef(key)->pst_stmt;
 
-			auto&& struct_scope = ctx.query<QueryPrimaryCodeScopeFor>({ scope(key), struct_stmt });
+			auto&& struct_scope   = ctx.query<QueryPrimaryCodeScopeFor>({ struct_stmt });
 			auto&& struct_symbols = ctx.query<QuerySymbolsInScope>(struct_scope);
 
 			StructSymbolData struct_info;

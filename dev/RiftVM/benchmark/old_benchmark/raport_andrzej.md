@@ -1,3 +1,5 @@
+\page vm-old-andrzej-raport Raport Andrzeja
+
 ## Test 5.06
 
 | name | input | RiftVM time (no debug) | RiftVM time (with debug) | Java time | Java no jit | JS |  JS no jit | Python |

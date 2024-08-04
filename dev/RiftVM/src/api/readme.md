@@ -1,3 +1,5 @@
+\page vm-api RiftVM API
+
 # API internal documentation
 Any client (HTTP server, terminal client) can only communicate with the VM using an API defined in a `vm.hpp`.
 ## Result type structure

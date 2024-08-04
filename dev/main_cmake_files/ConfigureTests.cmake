@@ -3,13 +3,13 @@ if(ENABLE_COVERAGE)
 	find_program(LCOV lcov REQUIRED)
 	find_program(GENHTML genhtml REQUIRED)
 
-	message(-- base Dir: ${CMAKE_SOURCE_DIR})
-
 	add_custom_target(coverage
 		COMMAND ${LCOV} --directory "${CMAKE_SOURCE_DIR}" --capture --output-file coverage.info
-			--base-directory "${CMAKE_SOURCE_DIR}" --no-external --exclude "**/_deps/**"
+			--base-directory "${CMAKE_SOURCE_DIR}" --no-external --exclude "**/_deps/**" 
+			--exclude "**/playground/**"
 		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
-		WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+		VERBATIM)
 endif()
 
 
@@ -24,7 +24,7 @@ function(rift_add_test test_pack test_name source USES)
 		add_executable(${test_name} ${CMAKE_CURRENT_LIST_DIR}/${source})
 		target_link_libraries(${test_name} Tester ${ARGN})
 
-		add_test(NAME "${test_name}" COMMAND ${test_name} ${CMAKE_SOURCE_DIR})
+		add_test(NAME "${test_name}" COMMAND ${test_name})
 
 		# It is needed in case tests are run on multiple threads.
 		set_target_properties(${test_name} PROPERTIES DEPENDS build_${test_pack}_tests)

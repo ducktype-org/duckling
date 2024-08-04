@@ -1,3 +1,5 @@
+\page vm-performance-tests VM Performance Tests
+
 # Performance tests
 
 *Note: for the time being, the performance tests mentioned below have been

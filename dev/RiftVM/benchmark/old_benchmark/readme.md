@@ -1,3 +1,8 @@
+\page vm-benchmark-old Rift VM Old Benchmark
+
+- \subpage vm-old-out-files-structure
+- \subpage vm-old-andrzej-raport
+
 # Wersje maszyn:
 JavaScript: 20.2.0 z https://nodejs.org/en
 Python: 3.11.3 z https://www.python.org/downloads/release/python-3113/

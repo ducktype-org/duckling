@@ -1,3 +1,5 @@
+\page printer-module Printer Module
+
 # Printer
 
 [Description](#Description)  
@@ -7,6 +9,8 @@
 [Notes](#Notes)
 
 # Description
+
+\subpage printer-requirements
 
 This module provides functionality for outputting messages to console. Has tools to help put messages together from smaller parts, like error messages. Additionally contains cool features like changing font and background colors.
 
