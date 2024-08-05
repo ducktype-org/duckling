@@ -53,6 +53,8 @@ namespace pst {
 		virtual void visitIf([[maybe_unused]] const If& stmt) {}
 
 		virtual void visitWhile([[maybe_unused]] const While& stmt) {}
+
+		virtual void visitFor([[maybe_unused]] const For& stmt) {}
 	};
 
 	/**

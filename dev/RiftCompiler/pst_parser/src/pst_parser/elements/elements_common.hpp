@@ -33,6 +33,11 @@ namespace pst::detail {
 		static bool isAssign(const RiftParserState& st, i64 fwd) {
 			return st[fwd].is(rift_def::Operator::Assign);
 		}
+
+		template<rift_def::Keyword key>
+		static bool is(const RiftParserState& st, i64 fwd) {
+			return st[fwd].is(key);
+		}
 	};
 
 	class NameGetters {

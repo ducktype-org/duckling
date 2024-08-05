@@ -1,4 +1,4 @@
-file(GLOB ElementImplementationFiles 
+file(GLOB ElementImplementationFiles CONFIGURE_DEPENDS 
 	"src/pst_parser/elements/implementations/statements/*.cpp"
 	"src/pst_parser/elements/implementations/meta/*.cpp"
 	"src/pst_parser/elements/implementations/not_statements/*.cpp"

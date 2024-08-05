@@ -128,6 +128,8 @@ private:
 
 	void testWhile() { testJsonRelativePath("while.rift", "while.json"); }
 
+	void testFor() { testJsonRelativePath("for.rift", "for.json"); }
+
 	void testFun() { testJsonRelativePath("fun.rift", "fun.json"); }
 
 	void testFun2() { testJsonRelativePath("fun2.rift", "fun2.json"); }
