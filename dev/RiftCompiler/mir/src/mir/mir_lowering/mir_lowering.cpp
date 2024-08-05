@@ -174,7 +174,9 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("v return");
 		}
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
-			throw base::NotYetImplemented("expr");
+			auto expr_result = lowerExpr(*stmt.expr, continuation, function);
+			
+			output({ expr_result.begin });
 		}
 		void visitIfStmt(const hc::IfStmt& stmt) override {
 			throw base::NotYetImplemented("if");
@@ -189,7 +191,7 @@ namespace compiler::mir {
 		FunctionBuilder& function;
 
 		ExprBlockVisitor(BlockRef continuation, FunctionBuilder& function):
-			continuation(continuation), function(function) {}
+			continuation(std::move(continuation)), function(function) {}
 
 		void output(ExprLowerRes value) {
 			this->out.emplace(value);
@@ -197,7 +199,7 @@ namespace compiler::mir {
 
 		void visitLiteralValueExpr(const hc::LiteralValueExpr& expr) override {
 
-			throw base::NotYetImplemented("expr");
+			output({ continuation, MirLocation{ MirIntegerConst{expr.value} } });
 		}
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
 			throw base::NotYetImplemented("identifier");

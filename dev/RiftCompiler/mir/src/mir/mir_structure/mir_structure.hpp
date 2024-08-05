@@ -17,7 +17,7 @@ namespace compiler::mir {
 	STRONG_TYPEDEF_INT(BlockID, u64);
 
 	struct MirIntegerConst final {
-		i32 value;
+		i64 value;
 	};
 
 	struct MirLocal final {
@@ -88,7 +88,7 @@ namespace compiler::mir {
 			output(std::move(output)),
 			arguments(std::move(arguments)),
 			flags(std::move(flags)),
-			scope(scope) 
+			scope(std::move(scope)) 
 			{}
 
 	};
