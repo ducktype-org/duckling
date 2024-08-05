@@ -6,9 +6,7 @@ namespace pst {
 
 		state.parse(out).with<Expr>(&out->expression, Expr::parse, true);
 
-		if (out->expression == nullptr) {
-			std::cerr << "AAA\n";
-		}
+		if (out->expression == nullptr) std::cerr << "AAA\n";
 
 		return out;
 	}

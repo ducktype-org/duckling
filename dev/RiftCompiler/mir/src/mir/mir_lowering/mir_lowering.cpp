@@ -23,7 +23,7 @@ namespace compiler::mir {
 	using BlockRef = base::StableVectorRef<BlockBuilder>;
 
 	struct ExprLowerRes {
-		BlockRef begin;
+		BlockRef    begin;
 		MirLocation value;
 	};
 
@@ -33,14 +33,15 @@ namespace compiler::mir {
 
 	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockRef continuation, FunctionBuilder& function);
 	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockRef continuation, FunctionBuilder& function);
-	StmtLowerRes lowerCodeBlock(const hc::CodeBlock& code_block, BlockRef continuation, FunctionBuilder& function);
+	StmtLowerRes lowerCodeBlock(
+		const hc::CodeBlock& code_block, BlockRef continuation, FunctionBuilder& function
+	);
 
 	/**
 	 * @brief Structure representing block in build process
 	 */
 	struct BlockBuilder {
 	private:
-
 		BlockID id;
 
 		/**
@@ -48,25 +49,29 @@ namespace compiler::mir {
 		 * If given position does not have a value that means it is empty.
 		 */
 		std::vector<base::Optional<Instruction>> reversed_instruction;
-		base::Optional<Instruction> terminator;
+		base::Optional<Instruction>              terminator;
 
 		struct InstructionHole {
 		private:
 			BlockRef block_ref;
-			usize position;
+			usize    position;
+
 		public:
 			InstructionHole(BlockRef block_ref, usize position):
-				block_ref(std::move(block_ref)), position(position) {}
-			
+				  block_ref(std::move(block_ref)),
+				  position(position) {}
+
 			void fill(Instruction instruction) {
-				RIFT_ASSERT(block_ref->reversed_instruction.at(position).empty(), "Hole is already filled");
+				RIFT_ASSERT(
+					block_ref->reversed_instruction.at(position).empty(), "Hole is already filled"
+				);
 				block_ref->reversed_instruction.at(position).emplace(std::move(instruction));
 			}
 		};
 
 	public:
-		BlockBuilder(usize vector_index): id(vector_index) {};
-		
+		BlockBuilder(usize vector_index): id(vector_index){};
+
 		[[nodiscard]]
 		Block build() const {
 			std::vector<Instruction> instructions;
@@ -74,7 +79,7 @@ namespace compiler::mir {
 				RIFT_ASSERT(instruction.has_value(), "Empty instruction left in the block");
 				instructions.emplace_back(instruction.value());
 			}
-			return {id, std::move(instructions), terminator.value()};
+			return { id, std::move(instructions), terminator.value() };
 		}
 
 		void addInstruction(Instruction instr) {
@@ -83,10 +88,10 @@ namespace compiler::mir {
 
 		InstructionHole addHole() {
 			reversed_instruction.push_back({});
-			
+
 			// creation of borrow pointer here, depends on the fact that blocks
 			// are kept in stable container:
-			return {base::borrow_ptr(this), reversed_instruction.size() - 1};
+			return { base::borrow_ptr(this), reversed_instruction.size() - 1 };
 		}
 
 		void setTerminator(Instruction instruction) {
@@ -100,26 +105,24 @@ namespace compiler::mir {
 		}
 	};
 
-
 	struct FunctionBuilder {
 	private:
-		base::Optional<base::StrId> name;
+		base::Optional<base::StrId>      name;
 		base::StableVector<BlockBuilder> blocks;
-		base::Optional<BlockRef> entry_block;
-		base::StableVector<MirLocal> local_list;
-	public:
+		base::Optional<BlockRef>         entry_block;
+		base::StableVector<MirLocal>     local_list;
 
+	public:
 		Function build() {
 			RIFT_ASSERT(entry_block.has_value(), "Entry block not set");
-			
+
 			std::vector<Block> blocks;
-			for (usize i = 0; i < this->blocks.size(); i++) {
+			for (usize i = 0; i < this->blocks.size(); i++)
 				blocks.emplace_back(this->blocks.getRef(i).value()->build());
-			}
 
 			// @TODO: entry block stuff
-			
-			return Function{name.value(), std::move(blocks), std::move(local_list)};
+
+			return Function{ name.value(), std::move(blocks), std::move(local_list) };
 		}
 
 		void setName(base::StrId name) {
@@ -132,16 +135,16 @@ namespace compiler::mir {
 			auto key = local_list.emplaceBack(MirLocal{});
 			return local_list.getRef(key).value();
 		}
-		
+
 		[[nodiscard]]
 		BlockRef newBlock(bool entry = false) {
 			auto index = blocks.size();
-			auto res = blocks.getRef(blocks.emplaceBack(BlockBuilder{index})).value();
+			auto res   = blocks.getRef(blocks.emplaceBack(BlockBuilder{ index })).value();
 			if (entry) {
 				RIFT_ASSERT(entry_block.empty(), "Entry block already set!");
 				entry_block.emplace(res);
 			}
-			RIFT_ASSERT(u64(res->getID()) == blocks.size() - 1 , "Bad block id");
+			RIFT_ASSERT(u64(res->getID()) == blocks.size() - 1, "Bad block id");
 			return res;
 		}
 	};
@@ -152,104 +155,110 @@ namespace compiler::mir {
 		FunctionBuilder& function;
 
 		StmtBlockVisitor(BlockRef continuation, FunctionBuilder& function):
-			continuation(continuation), function(function) {}
+			  continuation(continuation),
+			  function(function) {}
 
 		base::Optional<StmtLowerRes> out;
 
-		void output(StmtLowerRes value) {
-			this->out.emplace(value);
-		}
+		void output(StmtLowerRes value) { this->out.emplace(value); }
 
-		
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
 			auto return_block = function.newBlock();
-	
+
 			// lower expr:
 			auto expr_res = lowerExpr(*stmt.value, return_block, function);
 
-			// here return_instruction has to be a terminator: 
-			return_block->setTerminator(Instruction(
-				Operation::Return,
-				{},
-				{ expr_res.value },
-				{},
-				stmt.lifetime_scope
-			));
+			// here return_instruction has to be a terminator:
+			return_block->setTerminator(
+				Instruction(Operation::Return, {}, { expr_res.value }, {}, stmt.lifetime_scope)
+			);
 
-			output({expr_res.begin});			
+			output({ expr_res.begin });
 		}
+
 		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
 			throw base::NotYetImplemented("v return");
 		}
+
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
 			auto expr_result = lowerExpr(*stmt.expr, continuation, function);
-			
+
 			output({ expr_result.begin });
 		}
+
 		void visitIfStmt(const hc::IfStmt& stmt) override {
 			// @TODO: else body
 			auto else_block = function.newBlock();
-			else_block->setTerminator({Operation::Jump, {}, {continuation->getID()}, {}, stmt.lifetime_scope});
+			else_block->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, stmt.lifetime_scope }
+			);
 
 			auto then_block = lowerCodeBlock(stmt.body, continuation, function);
-			
+
 			auto condition_block = function.newBlock();
 
 			auto expr_result = lowerExpr(*stmt.condition, condition_block, function);
 
-			condition_block->setTerminator({Operation::Branch, {}, {expr_result.value, then_block.begin->getID(), else_block->getID()}, {}, stmt.lifetime_scope});
+			condition_block->setTerminator(
+				{ Operation::Branch,
+			      {},
+			      { expr_result.value, then_block.begin->getID(), else_block->getID() },
+			      {},
+			      stmt.lifetime_scope }
+			);
 
-			output({expr_result.begin});
+			output({ expr_result.begin });
 		}
 	};
 
 	struct ExprBlockVisitor: public helios::code::HoutExprVisitor {
 		BlockRef continuation;
-	
+
 		base::Optional<ExprLowerRes> out;
 
 		FunctionBuilder& function;
 
 		ExprBlockVisitor(BlockRef continuation, FunctionBuilder& function):
-			continuation(std::move(continuation)), function(function) {}
+			  continuation(std::move(continuation)),
+			  function(function) {}
 
-		void output(ExprLowerRes value) {
-			this->out.emplace(value);
-		}
+		void output(ExprLowerRes value) { this->out.emplace(value); }
 
 		void visitLiteralValueExpr(const hc::LiteralValueExpr& expr) override {
-
-			output({ continuation, MirLocation{ MirIntegerConst{expr.value} } });
+			output({ continuation, MirLocation{ MirIntegerConst{ expr.value } } });
 		}
+
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
 			throw base::NotYetImplemented("identifier");
 		}
+
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
 			throw base::NotYetImplemented("identifier");
 		}
 	};
 
 	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockRef continuation, FunctionBuilder& function) {
-		StmtBlockVisitor visitor{continuation, function};
+		StmtBlockVisitor visitor{ continuation, function };
 		stmt.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
 	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockRef continuation, FunctionBuilder& function) {
-		ExprBlockVisitor visitor{continuation, function};
+		ExprBlockVisitor visitor{ continuation, function };
 		expr.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
-	StmtLowerRes lowerCodeBlock(const hc::CodeBlock& code_block, BlockRef continuation, FunctionBuilder& function) {
-		StmtLowerRes last_result { continuation };
+	StmtLowerRes lowerCodeBlock(
+		const hc::CodeBlock& code_block, BlockRef continuation, FunctionBuilder& function
+	) {
+		StmtLowerRes last_result{ continuation };
 		for (auto& stmt: code_block.statements | std::views::reverse) {
-			last_result = lowerStmt(*stmt, continuation, function);
+			last_result  = lowerStmt(*stmt, continuation, function);
 			continuation = last_result.begin;
 		}
 		return last_result;
 	}
-
 
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
@@ -268,13 +277,16 @@ namespace compiler::mir {
 			auto fun_body_scope = key.function.body.body->lifetime_scope;
 
 			auto last_block = function_builder.newBlock();
-			last_block->setTerminator({Operation::FunctionEnd, {}, {}, {}, fun_body_scope});
+			last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, fun_body_scope });
 
-			auto first_block = lowerCodeBlock(*key.function.body.body, last_block, function_builder);
+			auto first_block
+				= lowerCodeBlock(*key.function.body.body, last_block, function_builder);
 
 			auto entry_block = function_builder.newBlock(true);
 
-			entry_block->setTerminator({ Operation::Jump, {}, {first_block.begin->getID()}, {}, fun_body_scope} );
+			entry_block->setTerminator(
+				{ Operation::Jump, {}, { first_block.begin->getID() }, {}, fun_body_scope }
+			);
 
 
 			// @TODO:
@@ -285,8 +297,8 @@ namespace compiler::mir {
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 	};
-	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMirFunction);
 
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMirFunction);
 
 
 }

@@ -29,9 +29,9 @@ namespace base {
 		using Ref  = StableVectorRef<Data>;
 		using CRef = StableVectorCRef<Data>;
 
-		StableVector() = default;
+		StableVector()               = default;
 		StableVector(StableVector&&) = default;
-		
+
 		StableVector(const StableVector&) = delete;
 
 		[[nodiscard]]

@@ -44,7 +44,7 @@ namespace compiler::helios::code {
 		// @TODO: set/get Type and ValueCategory of Expr
 
 		Expr(ScopeID lifetime_scope): lifetime_scope(std::move(lifetime_scope)) {}
-	
+
 		virtual ~Expr()                                                    = default;
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
 
@@ -57,7 +57,7 @@ namespace compiler::helios::code {
 	 * @brief A block of HOUT statements
 	 */
 	struct CodeBlock final {
-		ScopeID lifetime_scope;
+		ScopeID                       lifetime_scope;
 		std::vector<ElementRef<Stmt>> statements;
 	};
 
@@ -82,6 +82,7 @@ namespace compiler::helios::code {
 	 */
 	struct VoidReturnStmt final: public Stmt {
 		VoidReturnStmt(ScopeID scope): Stmt(scope) {}
+
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
@@ -156,8 +157,10 @@ namespace compiler::helios::code {
 		ElementRef<Expr> lhs;
 		ElementRef<Expr> rhs;
 
-		BinaryOperatorExpr(ScopeID scope, base::StrId op, ElementRef<Expr> lhs, ElementRef<Expr> rhs): 
-		      Expr(scope),
+		BinaryOperatorExpr(
+			ScopeID scope, base::StrId op, ElementRef<Expr> lhs, ElementRef<Expr> rhs
+		):
+			  Expr(scope),
 			  op(op),
 			  lhs(std::move(lhs)),
 			  rhs(std::move(rhs)) {}

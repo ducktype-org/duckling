@@ -7,9 +7,9 @@ namespace compiler::mir {
 	void Function::debugPrint(std::ostream& output) const {
 		output << "Function " << name.strView() << ": TODO -> TODO {\n";
 
-		for (const auto& block : blocks | std::views::reverse) {
+		for (const auto& block: blocks | std::views::reverse) {
 			output << "  block " << u64(block.id) << ":\n";
-			for (const auto& instruction : block.instructions) {
+			for (const auto& instruction: block.instructions) {
 				output << "    ";
 				instruction.debugPrint(output);
 				output << "\n";
@@ -24,7 +24,7 @@ namespace compiler::mir {
 	void Instruction::debugPrint(std::ostream& output) const {
 		// save flags to restore
 		auto output_flags = output.flags();
-		
+
 		if (this->output.has_value()) {
 			this->output.value()->debugPrint(output);
 			output << " := ";
@@ -36,14 +36,15 @@ namespace compiler::mir {
 		output << base::enumToStr(operation).strView() << "  ";
 
 
-		for (const auto& arg : arguments) {
+		for (const auto& arg: arguments) {
 			arg.debugPrint(output);
 			output << ", ";
 		}
 
 		output << " Flags[";
-		for (const auto& flag : flags) {
-			output << "Flag todo" << ", ";
+		for (const auto& flag: flags) {
+			output << "Flag todo"
+				   << ", ";
 		}
 		output << "], scope:" << scope.customPerfectHash();
 
@@ -51,25 +52,14 @@ namespace compiler::mir {
 		output.flags(output_flags);
 	}
 
-	void MirLocal::debugPrint(std::ostream& output) const {
-		output << "Local(" << u64(id) << ")";
-	}
+	void MirLocal::debugPrint(std::ostream& output) const { output << "Local(" << u64(id) << ")"; }
 
 	void MirLocation::debugPrint(std::ostream& output) const {
 		variant_match(this->value) {
-			variant_case(LocalRef, local) {
-				local->debugPrint(output);
-			}
-			variant_case(MirIntegerConst, value) {
-				output << value.value;
-			}
-			variant_case(BlockID, block) {
-				output << "Block(" << u64(block) << ")";
-			}
-			variant_default {
-				RIFT_PANIC("Unexpected MirLocal alternative in mir debugPrint");
-			}
-		}	
+			variant_case(LocalRef, local) { local->debugPrint(output); }
+			variant_case(MirIntegerConst, value) { output << value.value; }
+			variant_case(BlockID, block) { output << "Block(" << u64(block) << ")"; }
+			variant_default { RIFT_PANIC("Unexpected MirLocal alternative in mir debugPrint"); }
+		}
 	}
 }
-

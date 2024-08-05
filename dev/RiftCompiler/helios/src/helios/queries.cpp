@@ -55,10 +55,8 @@ namespace compiler::helios {
 		 * Might be changed into query in the future
 		 */
 		template<class Container>
-		static auto queryCodeOfCodeBlock(
-			query::Context& ctx, const Container& container
-		) {
-			auto scope = ctx.query<QueryPrimaryCodeScopeFor>( { container });
+		static auto queryCodeOfCodeBlock(query::Context& ctx, const Container& container) {
+			auto            scope = ctx.query<QueryPrimaryCodeScopeFor>({ container });
 			code::CodeBlock block(scope, {});
 			for (const auto& stmt: container) {
 				HoutStmtMaker stmt_maker(ctx, scope);
@@ -75,7 +73,6 @@ namespace compiler::helios {
 
 			bool                                         empty = false;
 			base::Optional<code::ElementRef<code::Stmt>> out;
-
 
 			HoutStmtMaker(query::Context& ctx, ScopeID scope):
 				  ctx(ctx),
@@ -114,9 +111,8 @@ namespace compiler::helios {
 			void visitUsing(const pst::Using&) override { empty = true; }
 
 			void visitExprStmt(const pst::ExprStmt& stmt) override {
-				auto expr = ctx.query<QueryHoutOfExpr>({
-				                                         PstRef<pst::Expr>(stmt.getExpr()) });
-				
+				auto expr = ctx.query<QueryHoutOfExpr>({ PstRef<pst::Expr>(stmt.getExpr()) });
+
 				output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
 			}
 
@@ -182,7 +178,7 @@ namespace compiler::helios {
 
 			// auto fun_stmt = dynamic_cast<const pst::Fun*>(stmt(key).get());
 			// RIFT_ASSERT(fun_stmt != nullptr, "Function symbol is not actually a function");
-			
+
 			auto parent_scope = scope(key);
 
 			HOUTFunctionMaker func_maker(ctx, parent_scope, key);

@@ -71,7 +71,8 @@ namespace compiler::helios::code {
 		for (auto&& elem: expr.elements) {
 			variant_match(elem) {
 				variant_case(rpn::Identifier, idt) {
-					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, idt.symbol_list.back()));
+					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, idt.symbol_list.back())
+					);
 				}
 
 				variant_case(rpn::Operator, oper) {
@@ -90,11 +91,14 @@ namespace compiler::helios::code {
 						{ expr.scope, idt.symbol_name, true }
 					);
 
-					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, sym_list.getAsSingle().back()));
+					st.emplace(
+						base::make_unique<IdentifierExpr>(expr.scope, sym_list.getAsSingle().back())
+					);
 				}
 
 				variant_case(rpn::NumValue, num_value) {
-					st.emplace(base::make_unique<LiteralValueExpr>(expr.scope, std::stoi(num_value.num_id.str())
+					st.emplace(base::make_unique<LiteralValueExpr>(
+						expr.scope, std::stoi(num_value.num_id.str())
 					));
 				}
 
@@ -133,8 +137,7 @@ namespace compiler::helios {
 	 */
 	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key)
 		-> code::ElementRef<code::Expr> {
-		
-		auto scope = ctx.query<QueryPrimaryCodeScopeFor>( { key.expr } );
+		auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ key.expr });
 
 		RIFT_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single expression");
 		const auto& elem = key.expr->elements.at(0);
