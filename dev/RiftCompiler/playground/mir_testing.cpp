@@ -45,7 +45,7 @@ int main(int argc, const char* argv[]) {
 	for (auto& fun: top_level.functions) {
 		auto& mir_fun = query::entryPoint<compiler::mir::LowerToMirFunction>({ fun });
 
-		std::cerr << mir_fun.debugPrint();
+		mir_fun.debugPrint(std::cerr);
 		std::cerr << "\n";
 	}
 }

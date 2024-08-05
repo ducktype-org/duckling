@@ -5,7 +5,24 @@
 #include <helios/scopes/scopes.hpp>
 #include <base/stable_container.hpp>
 #include <base/strongly_typed_id.hpp>
+#include <base/stringifyable_enum.hpp>
 
+MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
+	Call,
+	VCall,
+	IntegerAdd, //< @TODO:some decisions here to be made about type stuff
+				// paraphs we want more generic code for MIR, so algos ar 
+
+	Destruct,
+	DestructIf,
+
+	VoidReturn,
+	Return,
+	Jump,
+	Branch,
+
+	FunctionEnd
+);
 
 namespace compiler::mir {
 
@@ -20,9 +37,17 @@ namespace compiler::mir {
 		i64 value;
 	};
 
+	STRONG_TYPEDEF_ID(LocalID);
+	
 	struct MirLocal final {
 		// ...
 		// @TODO: this needs some ids
+		// @TODO: types
+		LocalID id;
+
+		MirLocal(): id(LocalID::next()) {}
+
+		void debugPrint(std::ostream& output) const;
 	};
 	using LocalRef = base::StableVectorRef<MirLocal>;
 
@@ -38,27 +63,11 @@ namespace compiler::mir {
 		MirLocation(LocalRef value): value(value) {}
 		MirLocation(BlockID value): value(value) {}
 
+		void debugPrint(std::ostream& output) const;
 	};
 
 	struct OperationFlag final {
 
-	};
-
-	enum class Operation {
-		Call,
-		VCall,
-		IntegerAdd, //< @TODO:some decisions here to be made about type stuff
-					// paraphs we want more generic code for MIR, so algos ar 
-
-		Destruct,
-		DestructIf,
-
-		VoidReturn,
-		Return,
-		Jump,
-		Branch,
-
-		FunctionEnd
 	};
 
 	struct Instruction final {
@@ -80,6 +89,7 @@ namespace compiler::mir {
 		//  perhaps just map during MIR creation? (mir scope -- just super simple tree)
 		helios::ScopeID scope;
 
+		Instruction() = delete;
 		Instruction(const Instruction&) = default;
 		Instruction(Instruction&&) = default;
 		
@@ -91,12 +101,7 @@ namespace compiler::mir {
 			scope(std::move(scope)) 
 			{}
 
-	};
-
-	struct Terminator final {
-		// Is it separate?
-
-		// Jump / Branch / Return / ...
+		void debugPrint(std::ostream& output) const;
 	};
 
 	struct Block final {
@@ -113,14 +118,16 @@ namespace compiler::mir {
 		// this way some algorithms may be easier
 		
 		Instruction terminator;
+
+		// void debugPrint(std::ostream& output) const;
 	};
 
 	struct Function final {
+		base::StrId name;
 		std::vector<Block> blocks;
 		base::StableVector<MirLocal> local_list;
 		
-		[[nodiscard]]
-		std::string debugPrint() const;
+		void debugPrint(std::ostream& output) const;
 	};
 
 }

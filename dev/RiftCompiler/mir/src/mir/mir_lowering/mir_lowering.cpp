@@ -103,6 +103,7 @@ namespace compiler::mir {
 
 	struct FunctionBuilder {
 	private:
+		base::Optional<base::StrId> name;
 		base::StableVector<BlockBuilder> blocks;
 		base::Optional<BlockRef> entry_block;
 		base::StableVector<MirLocal> local_list;
@@ -118,14 +119,21 @@ namespace compiler::mir {
 
 			// @TODO: entry block stuff
 			
-			return Function{std::move(blocks), std::move(local_list)};
+			return Function{name.value(), std::move(blocks), std::move(local_list)};
 		}
 
+		void setName(base::StrId name) {
+			RIFT_ASSERT(not this->name.has_value(), "Name already set");
+			this->name.emplace(name);
+		}
+
+		[[nodiscard]]
 		LocalRef addLocal() {
 			auto key = local_list.emplaceBack(MirLocal{});
 			return local_list.getRef(key).value();
 		}
 		
+		[[nodiscard]]
 		BlockRef newBlock(bool entry = false) {
 			auto index = blocks.size();
 			auto res = blocks.getRef(blocks.emplaceBack(BlockBuilder{index})).value();
@@ -240,6 +248,8 @@ namespace compiler::mir {
 
 
 			FunctionBuilder function_builder;
+
+			function_builder.setName(key.function.original_name);
 
 			// @TODO: add parameters stuff
 

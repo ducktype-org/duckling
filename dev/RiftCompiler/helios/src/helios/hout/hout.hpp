@@ -54,6 +54,7 @@ namespace compiler::helios {
 		[[nodiscard]]
 		std::string debugPrint() const;
 
+		[[nodiscard]]
 		base::HashT customPerfectHash() const;
 		bool operator==(const HOUTFunction& oth) const {
 			return original_symbol == oth.original_symbol;
