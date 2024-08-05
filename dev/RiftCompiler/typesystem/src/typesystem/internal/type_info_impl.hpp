@@ -681,11 +681,9 @@ namespace ts::internal {
 
 		[[nodiscard]]
 		base::Optional<ClassInfo> getBaseClassType(query::Context& ctx) const {
-			auto& bases = ctx.query<compiler::helios::QueryStructSymbolData>(symbol).bases;
-			if (bases.empty())
-				return {};
-			else
-				return { ClassInfo(bases.at(0)) };
+			auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol).base;
+			if (base.has_value()) return { ClassInfo(base.value()) };
+			return {};
 		}
 
 		[[nodiscard]]
@@ -698,23 +696,19 @@ namespace ts::internal {
 		// @TODO: change return type to InterfaceInfo when interface type is created.
 		[[nodiscard]]
 		std::vector<ClassInfo> getImplementedInterfaceTypes(query::Context& ctx) const {
-			auto& bases = ctx.query<compiler::helios::QueryStructSymbolData>(symbol).bases;
-			std::vector<ClassInfo> result;
-			result.reserve(std::max(0UL, bases.size() - 1));
-			for (int i = 1; i < bases.size(); i++) result.emplace_back(bases.at(i));
-			return result;
+			auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol).implements;
+			return { implements.begin(), implements.end() };
 		}
 
 		[[nodiscard]]
 		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols(query::Context& ctx
 		) const {
-			auto& bases = ctx.query<compiler::helios::QueryStructSymbolData>(symbol).bases;
-			std::vector<compiler::helios::SymID> result;
-			result.reserve(std::max(0UL, bases.size() - 1));
-			for (int i = 1; i < bases.size(); i++)
-				// @TODO: change cast type to InterfaceInfo when interface type is created.
-				result.push_back(ClassInfo(bases.at(i)).getSymbol());
-			return result;
+			auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol).implements;
+			// @TODO: change cast type to InterfaceInfo when interface type is created.
+			constexpr auto transformer
+				= [](const ts::TypeInfo& interface) { return ClassInfo(interface).getSymbol(); };
+			auto view = std::ranges::ref_view(implements) | std::views::transform(transformer);
+			return { view.begin(), view.end() };
 		}
 
 		[[nodiscard]]

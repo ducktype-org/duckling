@@ -33,6 +33,17 @@ namespace pst::detail {
 		static bool isAssign(const RiftParserState& st, i64 fwd) {
 			return st[fwd].is(rift_def::Operator::Assign);
 		}
+
+		static bool isBlockGroup(const RiftParserState& st, i64 fwd) {
+			return st[fwd].isBracketGroup(lexer::Token::Curly)
+			    && not st[fwd - 1].is(rift_def::Operator::Colon);
+		}
+
+		static bool isImplementsOrBlockGroup(const RiftParserState& st, i64 fwd) {
+			return st[fwd].is(rift_def::Keyword::Implements)
+			    || (st[fwd].isBracketGroup(lexer::Token::Curly)
+			        && not st[fwd - 1].is(rift_def::Operator::Colon));
+		}
 	};
 
 	class NameGetters {

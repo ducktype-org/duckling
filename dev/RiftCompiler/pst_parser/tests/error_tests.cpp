@@ -99,7 +99,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, true>  simpleStmt{ "x = a + b;" };
 	Example<pst::Stmt, false> badStmt{ "x = a + b" };
 
-	Example<pst::Struct, true> simpleStruct{ "struct x: y{}" };
+	Example<pst::Class, true> simpleClass{ "class x extends y implements z:{} {}" };
 
 	Example<pst::TopLevel, true> simpleTopLevel{ "fun foo(){}" };
 

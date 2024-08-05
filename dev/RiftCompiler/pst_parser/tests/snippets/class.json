@@ -1,11 +1,18 @@
 {
 	"PST": [
 		{
-			"Struct": {
+			"Class": {
 				"name": {
-					"Name": "aaa"
+					"Name": "xxx"
 				},
-				"base_classes": {
+				"Base": {
+					"Expr": [
+						{
+							"Identifier": "aaa"
+						},
+					]
+				},
+				"Implements": {
 					"List": [
 						{
 							"Expr": [

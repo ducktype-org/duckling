@@ -1,4 +1,4 @@
-struct FirstStructEver {
+class FirstClassEver {
     var a: i32 = 0;
     var b: f32 = 0;
 
@@ -10,4 +10,4 @@ struct FirstStructEver {
     }
 }
 
-struct SecondStruct : FirstStructEver {}
+class SecondClass extends FirstClassEver {}

@@ -176,9 +176,9 @@ namespace compiler::helios {
 				this->out.emplace(std::vector<SymID>{});
 			}
 
-			void visitStruct(const pst::Struct& struct_) override {
+			void visitClass(const pst::Class& class_) override {
 				this->out.emplace(
-					filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(struct_.getBody()))
+					filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(class_.getBody()))
 				);
 			}
 

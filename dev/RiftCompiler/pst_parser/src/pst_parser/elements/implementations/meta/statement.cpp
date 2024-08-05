@@ -39,8 +39,8 @@ namespace pst {
 		case Keyword::Namespace:
 			return detail::parseStmt<Namespace>(state);
 
-		case Keyword::Struct:
-			return detail::parseStmt<Struct>(state);
+		case Keyword::Class:
+			return detail::parseStmt<Class>(state);
 
 		case Keyword::Block:
 			return detail::parseStmt<Block>(state);

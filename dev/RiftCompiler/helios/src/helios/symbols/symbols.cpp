@@ -130,12 +130,12 @@ namespace compiler::helios {
 				.pst_stmt = stmt,
 			});
 		}
-		case pst::StmtKind::Struct: {
-			auto&& struct_ = dynamic_cast<const pst::Struct*>(stmt.get());
+		case pst::StmtKind::Class: {
+			auto&& class_ = dynamic_cast<const pst::Class*>(stmt.get());
 			return putInSymtable(SymbolData{
 				.scope    = scope,
-				.name     = struct_->getName(),
-				.kind     = SymbolKind::Struct,
+				.name     = class_->getName(),
+				.kind     = SymbolKind::Class,
 				.pst_stmt = stmt,
 			});
 		}
@@ -822,7 +822,7 @@ namespace compiler::helios {
 
 			base::Optional<ts::TypeInfo> definition_type_info;
 
-			void visitStruct(const pst::Struct&) override {
+			void visitClass(const pst::Class&) override {
 				definition_type_info = ctx.query<ts::QueryClassType>(key);
 			}
 		};
@@ -839,60 +839,68 @@ namespace compiler::helios {
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
 
-	struct IMPLEMENT_QUERY(QueryStructSymbolData, StructSymbolData) {
-		struct StructDataParser final: pst::PstStmtVisitorPanicky {
-			base::Optional<base::StrId>                             name;
-			base::Optional<tpc::ParserCBorrowRef<pst::InheritList>> base_classes;
+	// @TODO: Add implements information
+	struct IMPLEMENT_QUERY(QueryClassSymbolData, ClassSymbolData) {
+		struct ClassDataParser final: pst::PstStmtVisitorPanicky {
+			base::Optional<base::StrId>                                name;
+			base::Optional<tpc::ParserCBorrowRef<pst::Expr>>           base_class;
+			base::Optional<tpc::ParserCBorrowRef<pst::ImplementsList>> implements;
 
-			void visitStruct(const pst::Struct& stmt) override {
+			void visitClass(const pst::Class& stmt) override {
 				name = stmt.getName();
-				if (auto&& bases = stmt.getBases(); bases != nullptr) base_classes = bases;
+				if (auto&& base = stmt.getBase(); base != nullptr) base_class = base;
+				if (auto&& implements = stmt.getImplements(); implements != nullptr)
+					this->implements = implements;
 			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			RIFT_ASSERT(kind(key) == SymbolKind::Struct, "Symbol is not a struct");
+			RIFT_ASSERT(kind(key) == SymbolKind::Class, "Symbol is not a class");
 
-			auto struct_stmt = getSymRef(key)->pst_stmt;
+			auto class_stmt = getSymRef(key)->pst_stmt;
 
-			auto&& struct_scope   = ctx.query<QueryPrimaryCodeScopeFor>({ struct_stmt });
-			auto&& struct_symbols = ctx.query<QuerySymbolsInScope>(struct_scope);
+			auto&& class_scope    = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt });
+			auto&& struct_symbols = ctx.query<QuerySymbolsInScope>(class_scope);
 
-			StructSymbolData struct_info;
+			ClassSymbolData class_info;
 			for (auto&& sym: struct_symbols) {
 				switch (kind(sym)) {
 				case SymbolKind::Function:
-					struct_info.methods.push_back(sym);
+					class_info.methods.push_back(sym);
 					break;
 				case SymbolKind::Const:
 				case SymbolKind::Variable:
-					struct_info.members.push_back(sym);
+					class_info.members.push_back(sym);
 					break;
 				default:
 					throw base::NotYetImplemented(base::strConcat(
 						"Using ",
 						typeid(kind(sym)).name(),
-						" inside a struct is not yet implemented."
+						" inside a class is not yet implemented."
 					));
 				}
 			}
 			// Find the name
-			auto struct_data_parser = StructDataParser();
-			struct_stmt->acceptVisitor(struct_data_parser);
-			struct_info.name = struct_data_parser.name.value();
+			auto class_data_parser = ClassDataParser();
+			class_stmt->acceptVisitor(class_data_parser);
+			class_info.name = class_data_parser.name.value();
 
-			if_opt_some(struct_data_parser.base_classes, bases) {
-				for (auto&& base: bases)
-					struct_info.bases.push_back(parseTypeFromExpr(ctx, base, scope(key)));
+			if_opt_some(class_data_parser.base_class, base) {
+				class_info.base = parseTypeFromExpr(ctx, base, scope(key));
 			}
 
-			return struct_info;
+			if_opt_some(class_data_parser.implements, implements) {
+				for (auto&& interface: implements)
+					class_info.implements.push_back(parseTypeFromExpr(ctx, interface, scope(key)));
+			}
+
+			return class_info;
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStructSymbolData);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);
 
 	struct IMPLEMENT_QUERY(QueryHOUTExprTreeOfSym, base::unique_ptr<code::Expr>) {
 		class PstStmtVisitor_GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {

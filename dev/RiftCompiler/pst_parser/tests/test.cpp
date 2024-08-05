@@ -40,7 +40,7 @@ public:
 	PSTVISITOR_METHOD(Const)
 	PSTVISITOR_METHOD(Block)
 	PSTVISITOR_METHOD(Namespace)
-	PSTVISITOR_METHOD(Struct)
+	PSTVISITOR_METHOD(Class)
 	PSTVISITOR_METHOD(Fun)
 	PSTVISITOR_METHOD(Variable)
 	PSTVISITOR_METHOD(If)
@@ -65,7 +65,7 @@ public:
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testUsing);
 		TESTER_ADD_TEST(testNamespace);
-		TESTER_ADD_TEST(testStruct);
+		TESTER_ADD_TEST(testClass);
 		TESTER_ADD_TEST(testListParsing);
 		TESTER_ADD_TEST(testListParsingErrors);
 		TESTER_ADD_TEST(testUsingErrors);
@@ -142,7 +142,7 @@ private:
 
 	void testNamespace() { testJsonRelativePath("namespace.rift", "namespace.json"); }
 
-	void testStruct() { testJsonRelativePath("struct.rift", "struct.json"); }
+	void testClass() { testJsonRelativePath("class.rift", "class.json"); }
 
 	void testListParsing() { testJsonRelativePath("lists_ok.rift", "lists_ok.json"); }
 

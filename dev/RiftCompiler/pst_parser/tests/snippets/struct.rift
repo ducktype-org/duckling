@@ -1,5 +1,0 @@
-
-
-struct aaa: bbb, cccc {
-	a + b;
-}

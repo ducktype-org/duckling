@@ -31,7 +31,7 @@ namespace pst {
 		CodeDecl,
 		Action,
 		ExprStmt,
-		Struct,
+		Class,
 		TopLevel,
 		Const,
 		Variable

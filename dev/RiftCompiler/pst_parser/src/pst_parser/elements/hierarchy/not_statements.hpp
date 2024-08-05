@@ -83,12 +83,12 @@ namespace pst {
 		detail::Conditions::isCurlyGroup,
 		detail::NameGetters::returnList>;
 
-	using InheritList = List<
+	using ImplementsList = List<
 		Expr,
 		true,
 		lexer::Token::BracketType::None,
 		detail::Conditions::isComma,
-		detail::Conditions::isCurlyGroup,
+		detail::Conditions::isBlockGroup,
 		detail::NameGetters::inheritanceList>;
 
 	using AtrArgList = List<

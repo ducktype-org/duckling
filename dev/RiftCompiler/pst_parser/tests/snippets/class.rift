@@ -1,0 +1,5 @@
+
+
+class xxx extends aaa implements bbb, cccc {
+	a + b;
+}

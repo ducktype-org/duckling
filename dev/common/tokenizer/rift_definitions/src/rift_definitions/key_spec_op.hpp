@@ -31,7 +31,7 @@ namespace rift_def {
 		// Non-code declaration
 		// @TODO: struct or class?
 		Fun,
-		Struct,
+		Class,
 		Namespace,
 		Import,
 		As,
@@ -110,9 +110,11 @@ namespace rift_def {
 		Or,
 		Xor,
 
-		// Access specifiers:
+		// Class specific:
 		Public,
-		Private,  // ...
+		Private,
+		Extends,
+		Implements,
 
 		// Misc:
 

@@ -44,7 +44,7 @@ namespace pst {
 
 		virtual void visitNamespace([[maybe_unused]] const Namespace& stmt) = 0;
 
-		virtual void visitStruct([[maybe_unused]] const Struct& stmt) = 0;
+		virtual void visitClass([[maybe_unused]] const Class& stmt) = 0;
 
 		virtual void visitFun([[maybe_unused]] const Fun& stmt) = 0;
 
@@ -93,7 +93,7 @@ namespace pst {
 
 		void visitNamespace([[maybe_unused]] const Namespace& stmt) override {}
 
-		void visitStruct([[maybe_unused]] const Struct& stmt) override {}
+		void visitClass([[maybe_unused]] const Class& stmt) override {}
 
 		void visitFun([[maybe_unused]] const Fun& stmt) override {}
 
@@ -135,7 +135,7 @@ namespace pst {
 		PANIC_VISITOR_VISIT_METHOD(Const);
 		PANIC_VISITOR_VISIT_METHOD(Block);
 		PANIC_VISITOR_VISIT_METHOD(Namespace);
-		PANIC_VISITOR_VISIT_METHOD(Struct);
+		PANIC_VISITOR_VISIT_METHOD(Class);
 		PANIC_VISITOR_VISIT_METHOD(Fun);
 		PANIC_VISITOR_VISIT_METHOD(Variable);
 		PANIC_VISITOR_VISIT_METHOD(If);
