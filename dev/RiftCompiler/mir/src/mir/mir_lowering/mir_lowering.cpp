@@ -262,7 +262,6 @@ namespace compiler::mir {
 
 			auto entry_block = function_builder.newBlock(true);
 
-			// @TODO: jump arguments:
 			entry_block->setTerminator({ Operation::Jump, {}, {first_block.begin->getID()}, {}, fun_body_scope} );
 
 

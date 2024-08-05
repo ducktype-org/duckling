@@ -7,19 +7,24 @@ namespace compiler::mir {
 	void Function::debugPrint(std::ostream& output) const {
 		output << "Function " << name.strView() << ": TODO -> TODO {\n";
 
-		for (const auto& block : blocks) {
+		for (const auto& block : blocks | std::views::reverse) {
 			output << "  block " << u64(block.id) << ":\n";
 			for (const auto& instruction : block.instructions) {
 				output << "    ";
 				instruction.debugPrint(output);
 				output << "\n";
 			}
+			output << "    ";
+			block.terminator.debugPrint(output);
+			output << "\n";
 		}
-
 		output << "}\n";
 	}
 
 	void Instruction::debugPrint(std::ostream& output) const {
+		// save flags to restore
+		auto output_flags = output.flags();
+		
 		if (this->output.has_value()) {
 			this->output.value()->debugPrint(output);
 			output << " := ";
@@ -27,18 +32,23 @@ namespace compiler::mir {
 			output << "    ";
 		}
 
+		output << std::left << std::setw(12);
 		output << base::enumToStr(operation).strView() << "  ";
+
 
 		for (const auto& arg : arguments) {
 			arg.debugPrint(output);
 			output << ", ";
 		}
 
-		output << "\t[";
+		output << " Flags[";
 		for (const auto& flag : flags) {
 			output << "Flag todo" << ", ";
 		}
 		output << "], scope:" << scope.customPerfectHash();
+
+		// restore flags
+		output.flags(output_flags);
 	}
 
 	void MirLocal::debugPrint(std::ostream& output) const {
