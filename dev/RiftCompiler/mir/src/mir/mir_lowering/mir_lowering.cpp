@@ -187,7 +187,19 @@ namespace compiler::mir {
 			output({ expr_result.begin });
 		}
 		void visitIfStmt(const hc::IfStmt& stmt) override {
-			throw base::NotYetImplemented("if");
+			auto then_block = function.newBlock();
+			auto else_block = function.newBlock();
+
+			then_block->setTerminator({Operation::Jump, {}, {continuation->getID()}, {}, stmt.lifetime_scope});
+			else_block->setTerminator({Operation::Jump, {}, {continuation->getID()}, {}, stmt.lifetime_scope});
+
+			auto condition_block = function.newBlock();
+
+			auto expr_result = lowerExpr(*stmt.condition, condition_block, function);
+
+			condition_block->setTerminator({Operation::Branch, {}, {expr_result.value, then_block->getID(), else_block->getID()}, {}, stmt.lifetime_scope});
+
+			output({expr_result.begin});
 		}
 	};
 

@@ -8,6 +8,8 @@
 #include <base/stringifyable_enum.hpp>
 
 MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
+	Uninitialized,
+
 	Call,
 	VCall,
 	IntegerAdd, //< @TODO:some decisions here to be made about type stuff
@@ -75,7 +77,7 @@ namespace compiler::mir {
 		// Idea 2: one giant variant
 		// Idea 3: inheritance
 
-		Operation operation;
+		Operation operation = Operation::Uninitialized;
 
 		base::Optional<LocalRef> output;
 
