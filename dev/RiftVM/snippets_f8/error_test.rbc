@@ -13,7 +13,7 @@ function main {
 
 		label Loop;
 
-		//aaa ;
+		#aaa ;
 
 		output_int64 1, 0;
 		add64 1, 3;

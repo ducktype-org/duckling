@@ -127,8 +127,8 @@ private:
 		auto [line, column]  = position.getStartLineColumn();
 		assert(line == 5, "Wrong line number");
 		assert(column == 2, "Wrong column");
-		assert(position.getStart() == 16, "Wrong start index");
-		assert(position.getEnd() == 20, "Wrong end index");
+		assert(position.getStart() == 15, "Wrong start index");
+		assert(position.getEnd() == 19, "Wrong end index");
 	}
 };
 
