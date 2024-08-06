@@ -249,7 +249,6 @@ namespace compiler::mir {
 		}
 	};
 
-
 	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockRef continuation, FunctionBuilder& function) {
 		StmtBlockVisitor visitor{ continuation, function };
 		stmt.acceptVisitor(visitor);
