@@ -59,7 +59,7 @@ namespace compiler::helios {
 			auto            scope = ctx.query<QueryPrimaryCodeScopeFor>({ container });
 			code::CodeBlock block(scope, {});
 			for (const auto& stmt: container) {
-				HoutStmtMaker stmt_maker(ctx, scope);
+				HoutStmtMaker stmt_maker(ctx);
 				stmt->acceptVisitor(stmt_maker);
 				if (not stmt_maker.empty)
 					block.statements.emplace_back(std::move(stmt_maker.out.value()));
@@ -69,14 +69,11 @@ namespace compiler::helios {
 
 		struct HoutStmtMaker: public pst::PstStmtVisitorPanicky {
 			query::Context& ctx;
-			ScopeID         parent_scope;
 
 			bool                                         empty = false;
 			base::Optional<code::ElementRef<code::Stmt>> out;
 
-			HoutStmtMaker(query::Context& ctx, ScopeID scope):
-				  ctx(ctx),
-				  parent_scope(std::move(scope)) {}
+			HoutStmtMaker(query::Context& ctx): ctx(ctx) {}
 
 			template<class T>
 			ScopeID scopeOf(const T& element) {
@@ -133,15 +130,13 @@ namespace compiler::helios {
 
 		struct HOUTFunctionMaker final: public pst::PstStmtVisitorPanicky {
 			query::Context& ctx;
-			ScopeID         parent_scope;
 			SymID           original_symbol;
 
 			base::Optional<HOUTFunction> out;
 
-			HOUTFunctionMaker(query::Context& ctx, ScopeID scope, SymID symbol):
+			HOUTFunctionMaker(query::Context& ctx, SymID symbol):
 				  ctx(ctx),
-				  parent_scope(std::move(scope)),
-				  original_symbol(symbol) {}
+				  original_symbol(std::move(symbol)) {}
 
 			void visitFun(const pst::Fun& stmt) final {
 				// @TODO: create function here...
@@ -176,12 +171,7 @@ namespace compiler::helios {
 				kind(key) == SymbolKind::Function, "Function creation called on non-function symbol"
 			);
 
-			// auto fun_stmt = dynamic_cast<const pst::Fun*>(stmt(key).get());
-			// RIFT_ASSERT(fun_stmt != nullptr, "Function symbol is not actually a function");
-
-			auto parent_scope = scope(key);
-
-			HOUTFunctionMaker func_maker(ctx, parent_scope, key);
+			HOUTFunctionMaker func_maker(ctx, key);
 			stmt(key)->acceptVisitor(func_maker);
 
 			return func_maker.out.value();
