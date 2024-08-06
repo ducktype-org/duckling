@@ -66,7 +66,8 @@ namespace compiler::mir {
 					block_ref->reversed_instruction.at(position).empty(), "Hole is already filled"
 				);
 				RIFT_ASSERT(
-					not isTerminating(instruction.operation), "Instruction must not be a terminating instruction"
+					not isTerminating(instruction.operation),
+					"Instruction must not be a terminating instruction"
 				);
 				block_ref->reversed_instruction.at(position).emplace(std::move(instruction));
 			}
@@ -86,7 +87,10 @@ namespace compiler::mir {
 		}
 
 		void addInstruction(Instruction instr) {
-			RIFT_ASSERT(not isTerminating(instr.operation), "Instruction must not be a terminating instruction");
+			RIFT_ASSERT(
+				not isTerminating(instr.operation),
+				"Instruction must not be a terminating instruction"
+			);
 			reversed_instruction.emplace_back(std::move(instr));
 		}
 
@@ -101,7 +105,9 @@ namespace compiler::mir {
 
 		void setTerminator(Instruction instruction) {
 			RIFT_ASSERT(not terminator.has_value(), "terminator already set.");
-			RIFT_ASSERT(isTerminating(instruction.operation), "Terminator must be a terminating instruction");
+			RIFT_ASSERT(
+				isTerminating(instruction.operation), "Terminator must be a terminating instruction"
+			);
 			terminator.emplace(std::move(instruction));
 		}
 

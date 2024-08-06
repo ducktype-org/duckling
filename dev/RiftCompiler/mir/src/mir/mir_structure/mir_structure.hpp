@@ -66,6 +66,7 @@ namespace compiler::mir {
 		using ValueType = std::variant<MirIntegerConst, LocalRef, BlockID>;
 
 		ValueType value;
+
 	public:
 		MirLocation(MirIntegerConst value): value(value) {}
 
@@ -75,7 +76,7 @@ namespace compiler::mir {
 
 		void debugPrint(std::ostream& output) const;
 	};
-	
+
 	/**
 	 * @brief Structure representing meta informations about operation
 	 * such as:
@@ -87,7 +88,7 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Single instruction of MIR code.
-	 * 
+	 *
 	 */
 	struct Instruction final {
 		Operation operation = Operation::Uninitialized;
@@ -139,7 +140,7 @@ namespace compiler::mir {
 		/**
 		 * @brief Last instruction of the block.
 		 * It has to be terminating instruction (branch, return, etc).
-		 * 
+		 *
 		 * @todo: Decide if we wan't to move it to instruction vector.
 		 */
 		Instruction terminator;

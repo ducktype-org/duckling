@@ -5,14 +5,14 @@ namespace compiler::mir {
 
 	bool isTerminating(Operation op) {
 		switch (op) {
-			case Operation::VoidReturn:
-			case Operation::Return:
-			case Operation::Jump:
-			case Operation::Branch:
-			case Operation::FunctionEnd:
-				return true;
-			default:
-				return false;
+		case Operation::VoidReturn:
+		case Operation::Return:
+		case Operation::Jump:
+		case Operation::Branch:
+		case Operation::FunctionEnd:
+			return true;
+		default:
+			return false;
 		}
 	}
 

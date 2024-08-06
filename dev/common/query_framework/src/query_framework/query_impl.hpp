@@ -91,10 +91,12 @@ namespace query {
 
 				if constexpr (std::is_lvalue_reference_v<typename QueryImplType::QResult>) {
 					// if QResult is an lvalue reference, then we just bind to it:
-					static_assert(std::is_lvalue_reference_v<decltype(v.value().data)>, "Load should return lvalue reference, when QResult is an lvalue reference");
+					static_assert(
+						std::is_lvalue_reference_v<decltype(v.value().data)>,
+						"Load should return lvalue reference, when QResult is an lvalue reference"
+					);
 					return v.value().data;
-				}
-				else {
+				} else {
 					return std::move(v.value().data);
 				}
 			} else {
