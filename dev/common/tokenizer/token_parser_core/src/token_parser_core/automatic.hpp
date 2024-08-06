@@ -49,7 +49,7 @@ namespace tpc {
 		if (!ref)
 			out << "\"<nullptr>\"";
 		else
-			ref->dprint(out);
+			ref->debugPrint(out);
 	}
 
 	class BadKeywordError;

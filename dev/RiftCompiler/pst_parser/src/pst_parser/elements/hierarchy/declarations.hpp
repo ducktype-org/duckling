@@ -201,7 +201,7 @@ namespace pst {
 
 		[[nodiscard]]
 		std::string elementType() const override {
-			return "Variable";
+			return is_const ? "Let": "Var";
 		}
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;

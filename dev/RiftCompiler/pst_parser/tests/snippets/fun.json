@@ -1,27 +1,36 @@
 {
-	"PST": [
+	"Top Level": [
 		{
-			"Attribute": {
-				"name": {
-					"Name": "ATRR"
-				}
-			}
-		},
-		{
-			"Fun": {
+			"attributes": [
+				{
+					"Attribute": {
+						"name": {
+							"Dotted Name": {
+								"star": "false",
+								"names": [
+									{
+										"Name": "ATRR"
+									},
+								]
+							}
+						}
+					}
+				},
+			],
+			"Function": {
 				"name": {
 					"Name": "c"
 				},
 				"params": {
-					"List": []
+					"function parameter list": []
 				},
 				"rets": "<nullptr>",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": [
+					"Code Block or Statement": {
+						"Code Block": [
 							{
 								"Expr Stmt": {
-									"Expr": [
+									"Expression": [
 										{
 											"Identifier": "x"
 										},
@@ -36,7 +45,7 @@
 							},
 							{
 								"Expr Stmt": {
-									"Expr": [
+									"Expression": [
 										{
 											"Identifier": "y"
 										},

@@ -18,16 +18,16 @@ namespace pst {
 	}
 
 	void Fun::dprint(std::ostream& out) const {
-		out << "{\"Fun\": { ";
-		out << "\"name\": ";
+		out << "{";
+		out << "\"name\":";
 		nullAwareDprint(name, out);
-		out << ", \"params\":";
+		out << ",\"params\":";
 		nullAwareDprint(params, out);
-		out << ", \"rets\":";
+		out << ",\"rets\":";
 		nullAwareDprint(rets, out);
-		out << ", \"body\":";
+		out << ",\"body\":";
 		nullAwareDprint(body, out);
-		out << " } }";
+		out << "}";
 	}
 
 	void Fun::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitFun(*this); }

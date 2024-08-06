@@ -1,28 +1,28 @@
 {
-	"PST": [
+	"Top Level": [
 		{
 			"Class": {
 				"name": {
 					"Name": "xxx"
 				},
 				"Base": {
-					"Expr": [
+					"Expression": [
 						{
 							"Identifier": "aaa"
 						},
 					]
 				},
 				"Implements": {
-					"List": [
+					"inheritance list": [
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "bbb"
 								},
 							]
 						},
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "cccc"
 								},
@@ -31,10 +31,10 @@
 					]
 				},
 				"body": {
-					"CodeBlock": [
+					"Code Block": [
 						{
 							"Expr Stmt": {
-								"Expr": [
+								"Expression": [
 									{
 										"Identifier": "a"
 									},

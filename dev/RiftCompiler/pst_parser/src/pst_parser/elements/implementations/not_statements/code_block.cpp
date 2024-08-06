@@ -40,11 +40,11 @@ namespace pst {
 	}
 
 	void CodeBlock::dprint(std::ostream& out) const {
-		out << "{\"CodeBlock\": [";
+		out << "[";
 		for (auto& stmt: statements) {
 			nullAwareDprint(stmt, out);
 			out << ", ";
 		}
-		out << "]}";
+		out << "]";
 	}
 }

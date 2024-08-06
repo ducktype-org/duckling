@@ -56,12 +56,12 @@ namespace pst {
 		static ParserRef<List> parse(RiftParserState& state);
 
 		void dprint(std::ostream& out) const final {
-			out << "{\"List\" : [";
+			out << "[";
 			for (auto& x: elements) {
 				tpc::nullAwareDprint(x, out);
 				out << ",";
 			}
-			out << "]}";
+			out << "]";
 		}
 
 		~List() final = default;
@@ -130,6 +130,24 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 		~DottedName() final = default;
+	};
+
+	class Attribute final: public NotStmt {
+		ParserRef<DottedName> name;
+		ParserRef<AtrArgList> args = nullptr;
+
+	public:
+		explicit Attribute(dia::SourcePosition& pos): NotStmt(pos) {}
+
+		static ParserRef<Attribute> parse(RiftParserState& state);
+		~Attribute() final = default;
+
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Attribute";
+		}
 	};
 
 	class CodeBlock final: public NotStmt {

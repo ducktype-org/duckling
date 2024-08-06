@@ -4,71 +4,127 @@
 
 namespace pst {
 
-	namespace detail {
-
-		template<class T>
-		ParserRef<T> parseStmt(RiftParserState& state, bool force_semi = false) {
-			ParserRef<T> out = T::parse(state);
-			if (force_semi or out->trailingSemicolon()) state.parse(out).one(Special::Semicolon);
-			return out;
-		}
-	}
+	using AttrList = std::vector<ParserRef<Attribute>>;
 
 	bool Stmt::trailingSemicolon() { return true; }
 
+	namespace detail {
+
+		template<std::derived_from<Stmt> T>
+		ParserRef<T> parseStmt(RiftParserState& state) {
+			ParserRef<T> out = T::parse(state);
+			if (out->trailingSemicolon()) state.parse(out).one(Special::Semicolon);
+			return out;
+		}
+
+		ParserRef<Stmt> chooseStmt(RiftParserState& state) {
+			Special as_special = state[0].asSpecial();
+			Keyword as_keyword = state[0].asKeyword();
+
+			switch (as_keyword) {
+			case Keyword::If:
+				return detail::parseStmt<If>(state);
+
+			case Keyword::Fun:
+				return detail::parseStmt<Fun>(state);
+
+			case Keyword::While:
+				return detail::parseStmt<While>(state);
+
+			case Keyword::Import:
+				return detail::parseStmt<Import>(state);
+
+			case Keyword::Using:
+				return detail::parseStmt<Using>(state);
+
+			case Keyword::Namespace:
+				return detail::parseStmt<Namespace>(state);
+
+			case Keyword::Class:
+				return detail::parseStmt<Class>(state);
+
+			case Keyword::Block:
+				return detail::parseStmt<Block>(state);
+
+			case Keyword::Const:
+				return detail::parseStmt<Const>(state);
+
+			case Keyword::Alias:
+				return detail::parseStmt<Alias>(state);
+
+			case Keyword::Var:
+			case Keyword::Let:
+				return detail::parseStmt<Variable>(state);
+
+			default:
+				break;
+			}
+
+			if (rift_def::keywordFlags(as_keyword).contains(rift_def::KeywordFlags::is_action))
+				return detail::parseStmt<Action>(state);
+
+			if (as_special == Special::Semicolon) {
+				state.tokens().skip();
+				return nullptr;
+			}
+
+			// Expr as stmt have semicolon at the end:
+			return detail::parseStmt<ExprStmt>(state);
+		}
+	}
+
 	ParserRef<Stmt> Stmt::parse(RiftParserState& state) {
-		auto as_keyword = state[0].asKeyword();
+		// Collect Attributes
 		auto as_special = state[0].asSpecial();
+		AttrList attributes;
 
-		switch (as_keyword) {
-		case Keyword::If:
-			return detail::parseStmt<If>(state);
-
-		case Keyword::Fun:
-			return detail::parseStmt<Fun>(state);
-
-		case Keyword::While:
-			return detail::parseStmt<While>(state);
-
-		case Keyword::Import:
-			return detail::parseStmt<Import>(state);
-
-		case Keyword::Using:
-			return detail::parseStmt<Using>(state);
-
-		case Keyword::Namespace:
-			return detail::parseStmt<Namespace>(state);
-
-		case Keyword::Class:
-			return detail::parseStmt<Class>(state);
-
-		case Keyword::Block:
-			return detail::parseStmt<Block>(state);
-
-		case Keyword::Const:
-			return detail::parseStmt<Const>(state);
-
-		case Keyword::Alias:
-			return detail::parseStmt<Alias>(state);
-
-		case Keyword::Var:
-		case Keyword::Let:
-			return detail::parseStmt<Variable>(state);
-
-		default:
-			break;
+		while (as_special == Special::AtSign) {
+			ParserRef<Attribute> attr = Attribute::parse(state);
+			if (attr != nullptr) {
+				attributes.push_back(std::move(attr));
+			}
+			as_special = state[0].asSpecial();
 		}
 
-		if (as_special == Special::AtSign) return detail::parseStmt<Attribute>(state);
-		if (rift_def::keywordFlags(as_keyword).contains(rift_def::KeywordFlags::is_action))
-			return detail::parseStmt<Action>(state);
+		// Parse Statement
+		ParserRef<Stmt> out = detail::chooseStmt(state);
 
-		if (as_special == Special::Semicolon) {
-			state.tokens().skip();
-			return nullptr;
+		// Add Attributes
+		if (out != nullptr) {
+			out->addAttributes(std::move(attributes));
 		}
 
-		// Expr as stmt have semicolon at the end:
-		return detail::parseStmt<ExprStmt>(state);
+		return out;
+	}
+
+	void Stmt::dprintAttributes(std::ostream& out) const {
+		if (not attributes.empty()) {
+			out << R"("attributes": [)";
+			for(auto& attribute: attributes) {
+				tpc::nullAwareDprint(attribute, out);
+				out << ",";
+			}
+			out << "],";
+		}
+	}
+
+	void Stmt::addAttributes(std::vector<ParserRef<Attribute>>&& additions) {
+		attributes = std::move(additions);
+
+		using namespace std::views;
+		auto borrow = [](ParserRef<Attribute>& arg) -> Child {
+			return arg.borrow_mut();
+		};
+		auto borrowed = attributes | transform(borrow);
+
+		sub_elements.insert(
+			sub_elements.begin(), 
+			borrowed.begin(), 
+			borrowed.end()
+		);
+
+		if (attributes.size() > 0) {
+			setFirstToken(attributes.front()->getSourcePosition());
+		}
 	}
 }

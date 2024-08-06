@@ -1,21 +1,21 @@
 {
-	"PST": [
+	"Top Level": [
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "foo"
 				},
 				"params": {
-					"List": [
+					"function parameter list": [
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "a"
 								},
 							]
 						},
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "b"
 								},
@@ -25,21 +25,21 @@
 				},
 				"rets": "<nullptr>",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}
 		},
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "foo"
 				},
 				"params": {
-					"List": [
+					"function parameter list": [
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "a"
 								},
@@ -52,7 +52,7 @@
 							]
 						},
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "b"
 								},
@@ -62,28 +62,28 @@
 				},
 				"rets": "<nullptr>",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}
 		},
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "foo"
 				},
 				"params": {
-					"List": [
+					"function parameter list": [
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "a"
 								},
 							]
 						},
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "b"
 								},
@@ -99,21 +99,21 @@
 				},
 				"rets": "<nullptr>",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}
 		},
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "foo"
 				},
 				"params": {
-					"List": [
+					"function parameter list": [
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "a"
 								},
@@ -123,8 +123,8 @@
 				},
 				"rets": "<nullptr>",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}

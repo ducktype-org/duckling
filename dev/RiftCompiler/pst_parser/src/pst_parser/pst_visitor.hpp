@@ -14,8 +14,6 @@ namespace pst {
 	public:
 		virtual ~PstStmtVisitor() = default;
 
-		virtual void visitAttribute([[maybe_unused]] const Attribute& stmt) = 0;
-
 		virtual void visitImport([[maybe_unused]] const Import& stmt) = 0;
 
 		virtual void visitUsing([[maybe_unused]] const Using& stmt) = 0;
@@ -62,8 +60,6 @@ namespace pst {
 	class PstStmtVisitorEmpty: public PstStmtVisitor {
 	public:
 		~PstStmtVisitorEmpty() override = default;
-
-		void visitAttribute([[maybe_unused]] const Attribute& stmt) override {}
 
 		void visitImport([[maybe_unused]] const Import& stmt) override {}
 
@@ -120,7 +116,6 @@ namespace pst {
 	public:
 		~PstStmtVisitorPanicky() override = default;
 
-		PANIC_VISITOR_VISIT_METHOD(Attribute);
 		PANIC_VISITOR_VISIT_METHOD(Import);
 		PANIC_VISITOR_VISIT_METHOD(Using);
 		PANIC_VISITOR_VISIT_METHOD(Alias);

@@ -169,7 +169,7 @@ namespace pst {
 	}
 
 	void Expr::dprint(std::ostream& out) const {
-		out << "{\"Expr\" : [";
+		out << "[";
 		for (auto& e: elements) {
 			variant_match(e) {
 				variant_case(Identifier, idt) {
@@ -210,6 +210,6 @@ namespace pst {
 			}
 			out << ", ";
 		}
-		out << "]}";
+		out << "]";
 	}
 }

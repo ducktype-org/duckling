@@ -153,7 +153,11 @@ namespace assemble {
 		VariantType,
 		FunctionType>;
 
-	struct AsmElement: tpc::Element {};
+	struct AsmElement: tpc::Element {
+		void debugPrint(std::ostream& out) const override {
+			dprint(out);
+		}
+	};
 
 	struct Type: AsmElement {
 		TypeData                    datatype;

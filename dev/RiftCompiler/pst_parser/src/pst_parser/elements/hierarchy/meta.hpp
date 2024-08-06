@@ -16,13 +16,13 @@
 
 namespace pst {
 	class PstStmtVisitor;
+	class Attribute;
 
 	using StateCondition = bool(const RiftParserState&, i64);
 
 	using GetName = std::string (*)();
 
 	enum class StmtKind {
-		Attribute,
 		Import,
 		Using,
 		Alias,
@@ -45,6 +45,20 @@ namespace pst {
 			  RiftElement(position),
 			  kind(kind) {}
 
+		std::vector<ParserRef<Attribute>> attributes;
+
+		/**
+		 * @brief Prepends attributes after parsing handling sub elements and position.
+		 */
+		void addAttributes(std::vector<ParserRef<Attribute>>&& additions);
+
+		void dprintAttributes(std::ostream& out) const;
+
+		void dprintPrefix(std::ostream& out) const override {
+			dprintAttributes(out);
+			RiftElement::dprintPrefix(out);
+		}
+
 	public:
 		[[nodiscard]]
 		StmtKind getKind() const {
@@ -54,6 +68,13 @@ namespace pst {
 		static ParserRef<Stmt> parse(RiftParserState& state);
 		bool                   trailingSemicolon() override;
 		virtual void           acceptVisitor(PstStmtVisitor& visitor) const = 0;
+
+		/** 
+		 * @note This might need to return a vector of borrow pointers instead
+		 */
+		auto& getAttributes() const {
+			return attributes;
+		}
 
 		[[nodiscard]]
 		bool isStatement() const final {

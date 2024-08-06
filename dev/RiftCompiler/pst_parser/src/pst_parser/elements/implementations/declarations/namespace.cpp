@@ -13,7 +13,7 @@ namespace pst {
 	}
 
 	void Namespace::dprint(std::ostream& out) const {
-		out << "{\"Namespace\": {";
+		out << "{";
 
 		out << R"("name": )";
 		nullAwareDprint(name, out);
@@ -21,7 +21,8 @@ namespace pst {
 		// @TODO: change to body in print:
 		out << R"(, "block": )";
 		nullAwareDprint(body, out);
-		out << "}}";
+
+		out << "}";
 	}
 
 	void Namespace::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitNamespace(*this); }

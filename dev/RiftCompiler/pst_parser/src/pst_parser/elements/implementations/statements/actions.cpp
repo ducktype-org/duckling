@@ -45,43 +45,46 @@ namespace pst {
 		return out;
 	}
 
-	namespace {
-		void simpleActionDprint(
-			std::ostream&                          out,
-			const base::Optional<ParserRef<Expr>>& action,
-			const std::string_view                 name,
-			const std::string_view                 preposition
-		) {
-			out << R"({"Action": {)";
-			out << R"("kind": ")" << name << "\"";
-			if (action) {
-				out << ", \"" << preposition << "\": ";
-				nullAwareDprint(action.value(), out);
-			}
-			out << "}}";
+	void Action::dprintPrefix(std::ostream& out) const {
+		Stmt::dprintPrefix(out);
+		out << R"({"kind": )";
+	}
+
+	void Action::dprintSuffix(std::ostream& out) const {
+		if (expr) {
+			out << R"(, "value":)";
+			nullAwareDprint(expr.value(), out);
 		}
+		out << "}";
+		Stmt::dprintSuffix(out);
 	}
 
 	void Return::dprint(std::ostream& out) const {
-		simpleActionDprint(out, expr, "Return", "with");
+		out << "\"Return\"";
 	}
 
-	void Break::dprint(std::ostream& out) const { simpleActionDprint(out, expr, "Break", "from"); }
+	void Break::dprint(std::ostream& out) const {
+		out << "\"Break\"";
+	}
 
 	void Continue::dprint(std::ostream& out) const {
-		simpleActionDprint(out, expr, "Continue", "with");
+		out << "\"Continue\"";
 	}
 
-	void Redo::dprint(std::ostream& out) const { simpleActionDprint(out, expr, "Redo", "what"); }
+	void Redo::dprint(std::ostream& out) const {
+		out << "\"Redo\"";
+	}
 
 	void Restart::dprint(std::ostream& out) const {
-		simpleActionDprint(out, expr, "Restart", "what");
+		out << "\"Restart\"";
 	}
 
-	void Defer::dprint(std::ostream& out) const { simpleActionDprint(out, expr, "Defer", "what"); }
+	void Defer::dprint(std::ostream& out) const { 
+		out << "\"Defer\"";
+	}
 
 	void Throw::dprint(std::ostream& out) const {
-		simpleActionDprint(out, expr, "Throw", "exception");
+		out << "\"Throw\"";
 	}
 
 	void Return::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitReturn(*this); }

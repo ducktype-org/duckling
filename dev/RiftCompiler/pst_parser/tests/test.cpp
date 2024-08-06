@@ -26,7 +26,6 @@ requires std::is_base_of_v<pst::PstStmtVisitor, T> class PstStmtVisitorTester fi
 public:
 	int counter = 0;
 
-	PSTVISITOR_METHOD(Attribute)
 	PSTVISITOR_METHOD(Import)
 	PSTVISITOR_METHOD(Using)
 	PSTVISITOR_METHOD(Alias)
@@ -94,7 +93,7 @@ private:
 		ASSERT_EQUAL(expected_counter, empty_vistor.counter);
 	}
 
-	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 19); }
+	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 18); }
 
 	void testVisitorAlternative() { testVisitorImpl("snippets/alternative_statements.txt", 1); }
 

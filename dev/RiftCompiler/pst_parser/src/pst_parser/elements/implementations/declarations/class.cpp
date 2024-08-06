@@ -44,7 +44,7 @@ namespace pst {
 	}
 
 	void Class::dprint(std::ostream& out) const {
-		out << R"({"Class": {"name":)";
+		out << R"({"name":)";
 		nullAwareDprint(name, out);
 
 		out << R"(,"Base":)";
@@ -56,7 +56,7 @@ namespace pst {
 		out << R"(,"body": )";
 		nullAwareDprint(body, out);
 
-		out << "}}";
+		out << "}";
 	}
 
 	void Class::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitClass(*this); }
