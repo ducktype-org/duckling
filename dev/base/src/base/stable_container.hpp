@@ -32,6 +32,9 @@ namespace base {
 		StableVector()               = default;
 		StableVector(StableVector&&) = default;
 
+		/**
+		 * @note explicit delete here causes much better compiler errors
+		 */
 		StableVector(const StableVector&) = delete;
 
 		[[nodiscard]]
