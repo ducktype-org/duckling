@@ -167,7 +167,7 @@ namespace compiler::mir {
 		FunctionBuilder& function;
 
 		StmtBlockVisitor(BlockRef continuation, FunctionBuilder& function):
-			  continuation(continuation),
+			  continuation(std::move(continuation)),
 			  function(function) {}
 
 		base::Optional<StmtLowerRes> out;
@@ -188,8 +188,8 @@ namespace compiler::mir {
 			output({ expr_res.begin });
 		}
 
-		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
-			throw base::NotYetImplemented("v return");
+		void visitVoidReturnStmt(const hc::VoidReturnStmt&) override {
+			throw base::NotYetImplemented("void return");
 		}
 
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
@@ -240,14 +240,15 @@ namespace compiler::mir {
 			output({ continuation, MirLocation{ MirIntegerConst{ expr.value } } });
 		}
 
-		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
+		void visitIdentifierExpr(const hc::IdentifierExpr&) override {
 			throw base::NotYetImplemented("identifier");
 		}
 
-		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
-			throw base::NotYetImplemented("identifier");
+		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr&) override {
+			throw base::NotYetImplemented("binary operator");
 		}
 	};
+
 
 	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockRef continuation, FunctionBuilder& function) {
 		StmtBlockVisitor visitor{ continuation, function };
@@ -275,7 +276,7 @@ namespace compiler::mir {
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
 	struct IMPLEMENT_QUERY(LowerToMirFunction, Function) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
+		static auto provide(Context&, QKey key) -> PResult {
 			// First step:
 			// * build cfg+quad step by step
 
