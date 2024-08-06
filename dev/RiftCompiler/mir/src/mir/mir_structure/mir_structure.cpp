@@ -3,6 +3,18 @@
 
 namespace compiler::mir {
 
+	bool isTerminating(Operation op) {
+		switch (op) {
+			case Operation::VoidReturn:
+			case Operation::Return:
+			case Operation::Jump:
+			case Operation::Branch:
+			case Operation::FunctionEnd:
+				return true;
+			default:
+				return false;
+		}
+	}
 
 	void Function::debugPrint(std::ostream& output) const {
 		output << "Function " << name.strView() << ": TODO -> TODO {\n";

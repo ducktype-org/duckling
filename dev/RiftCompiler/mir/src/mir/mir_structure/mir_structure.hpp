@@ -10,6 +10,7 @@
 MAKE_STRINGIFYABLE_ENUM(
 	compiler::mir,
 	u64,
+
 	Operation,
 	Uninitialized,
 
@@ -31,10 +32,12 @@ MAKE_STRINGIFYABLE_ENUM(
 
 namespace compiler::mir {
 
+	bool isTerminating(Operation op);
+
 	/**
 	 * @brief BlockID is a temporary solution that should be replaced by
 	 * proper BlockReference.
-	 * It is like that for now, to avoid confusion with BlockRef used in * mir_lowering and
+	 * It is like that for now, to avoid confusion with BlockRef used in mir_lowering and
 	 * transformation between that BlockRef to this "BlockRef".
 	 */
 	STRONG_TYPEDEF_INT(BlockID, u64);
@@ -46,10 +49,9 @@ namespace compiler::mir {
 	STRONG_TYPEDEF_ID(LocalID);
 
 	struct MirLocal final {
-		// ...
-		// @TODO: this needs some ids
-		// @TODO: types
 		LocalID id;
+
+		// @TODO: type
 
 		MirLocal(): id(LocalID::next()) {}
 
@@ -59,13 +61,11 @@ namespace compiler::mir {
 	using LocalRef = base::StableVectorRef<MirLocal>;
 
 	struct MirLocation final {
-		// local / global / literal / func-literal, etc
-
 	private:
+		// @TODO: global, literal, func-literal, ...
 		using ValueType = std::variant<MirIntegerConst, LocalRef, BlockID>;
 
 		ValueType value;
-
 	public:
 		MirLocation(MirIntegerConst value): value(value) {}
 
@@ -75,14 +75,21 @@ namespace compiler::mir {
 
 		void debugPrint(std::ostream& output) const;
 	};
-
+	
+	/**
+	 * @brief Structure representing meta informations about operation
+	 * such as:
+	 * * does operation construct some variable
+	 * * does operation destruct some variable
+	 * * does operation move some variable
+	 */
 	struct OperationFlag final {};
 
+	/**
+	 * @brief Single instruction of MIR code.
+	 * 
+	 */
 	struct Instruction final {
-		// Idea 1: generic arguments
-		// Idea 2: one giant variant
-		// Idea 3: inheritance
-
 		Operation operation = Operation::Uninitialized;
 
 		base::Optional<LocalRef> output;
@@ -117,24 +124,30 @@ namespace compiler::mir {
 		void debugPrint(std::ostream& output) const;
 	};
 
+	/**
+	 * @brief A simple block of MIR cfg code.
+	 */
 	struct Block final {
 		/**
-		 * @brief id should be identical to the index in the vector of blocks.
+		 * @brief Unique identifier of the block.
+		 * @note it must be identical to the index in the vector of blocks.
 		 */
 		BlockID id;
 
-		// add: scope info
-
 		std::vector<Instruction> instructions;
 
-		// It might be easier to have it in the vector and just add some asserts
-		// this way some algorithms may be easier
-
+		/**
+		 * @brief Last instruction of the block.
+		 * It has to be terminating instruction (branch, return, etc).
+		 * 
+		 * @todo: Decide if we wan't to move it to instruction vector.
+		 */
 		Instruction terminator;
-
-		// void debugPrint(std::ostream& output) const;
 	};
 
+	/**
+	 * @brief Function in MIR.
+	 */
 	struct Function final {
 		base::StrId                  name;
 		std::vector<Block>           blocks;

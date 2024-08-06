@@ -65,6 +65,9 @@ namespace compiler::mir {
 				RIFT_ASSERT(
 					block_ref->reversed_instruction.at(position).empty(), "Hole is already filled"
 				);
+				RIFT_ASSERT(
+					not isTerminating(instruction.operation), "Instruction must not be a terminating instruction"
+				);
 				block_ref->reversed_instruction.at(position).emplace(std::move(instruction));
 			}
 		};
@@ -83,11 +86,13 @@ namespace compiler::mir {
 		}
 
 		void addInstruction(Instruction instr) {
+			RIFT_ASSERT(not isTerminating(instr.operation), "Instruction must not be a terminating instruction");
 			reversed_instruction.emplace_back(std::move(instr));
 		}
 
 		InstructionHole addHole() {
-			reversed_instruction.push_back({});
+			// this emplaces empty optional:
+			reversed_instruction.emplace_back();
 
 			// creation of borrow pointer here, depends on the fact that blocks
 			// are kept in stable container:
@@ -96,6 +101,7 @@ namespace compiler::mir {
 
 		void setTerminator(Instruction instruction) {
 			RIFT_ASSERT(not terminator.has_value(), "terminator already set.");
+			RIFT_ASSERT(isTerminating(instruction.operation), "Terminator must be a terminating instruction");
 			terminator.emplace(std::move(instruction));
 		}
 
