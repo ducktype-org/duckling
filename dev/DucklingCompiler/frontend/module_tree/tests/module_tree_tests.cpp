@@ -46,7 +46,7 @@ private:
 		ASSERT_EQUAL(0, awe_module->getSourceFiles().size());
 		ASSERT_EQUAL(0, awe_module->getOtherFiles().size());
 		ASSERT_EQUAL(true, awe_module->hasMainSourceFile());
-		ASSERT_EQUAL("awe.rmf", awe_module->getMainSourceFile().path.name());
+		ASSERT_EQUAL("awe.dmf", awe_module->getMainSourceFile().path.name());
 	}
 
 	void testModuleIDInSourceFile(const ModuleTree& module) {

@@ -179,7 +179,7 @@ namespace compiler::frontend {
 
 		/**
 		 * Parses the name of the module.
-		 * @return base::StrId with the name. `A.rmf -> A`, `/.../module/ -> module`.
+		 * @return base::StrId with the name. `A.dmf -> A`, `/.../module/ -> module`.
 		 */
 		[[nodiscard]]
 		base::StrId getName() const;
