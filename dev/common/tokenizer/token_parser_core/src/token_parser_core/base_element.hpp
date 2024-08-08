@@ -9,7 +9,7 @@ namespace tpc {
 	 * @brief Base class for implementations of AST nodes
 	 *
 	 * Things that can parse themself should have this method:
-	 *  - static ParserRef<Element> parse(RiftParserState& state);
+	 *  - static ParserRef<Element> parse(DucklingParserState& state);
 	 */
 
 	class Element {

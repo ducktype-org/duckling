@@ -12,9 +12,9 @@ Documentation guidelines
 Documentation structure
 =======================
 
-Rift docuemntation is divided into two parts:
+Duckling docuemntation is divided into two parts:
 
-* ``rift-doc`` - user documentation, describing language funcionalities, usage, assumptions and goals 
+* ``duckling-doc`` - user documentation, describing language funcionalities, usage, assumptions and goals 
 * ``source-doc`` - developer documentation, describing implementation details and providing resources for developers
 
 ``source-doc`` is further divided into:

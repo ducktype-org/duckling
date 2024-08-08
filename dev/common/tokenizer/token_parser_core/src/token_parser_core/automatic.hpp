@@ -3,7 +3,7 @@
  * @brief Useful parsing abstractions for ParserState
  *
  * one() - has four modes depending on the type of the first argument:
- *  - for Specials, Keywords and Operators from `rift_def` it ensures that the next token has that
+ *  - for Specials, Keywords and Operators from `duckling_def` it ensures that the next token has that
  * value and skips it, otherwise it logs an error
  *  - for Identifier* it ensures the next token is an identifier and parses it to the specified
  * location and skips it, otherwise it logs an error
@@ -27,7 +27,7 @@
 
 #include "parser_state.hpp"
 #include "common_elements.hpp"
-#include <rift_definitions/key_spec_op.hpp>
+#include <duckling_definitions/key_spec_op.hpp>
 
 #include "base_element.hpp"
 #include <diagnostic/source_position.hpp>
@@ -37,9 +37,9 @@
 #include "parser_ref.hpp"
 
 namespace tpc {
-	using rift_def::Keyword;
-	using rift_def::Operator;
-	using rift_def::Special;
+	using duckling_def::Keyword;
+	using duckling_def::Operator;
+	using duckling_def::Special;
 
 	void nullAwareDprint(Identifier, std::ostream& out);
 	void nullAwareDprint(OptionalIdentifier, std::ostream& out);
@@ -210,7 +210,7 @@ namespace tpc {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected keyword `" + rift_def::keywordToStr(expected).str() + "` here.";
+			return "Expected keyword `" + duckling_def::keywordToStr(expected).str() + "` here.";
 		}
 
 	public:
@@ -229,7 +229,7 @@ namespace tpc {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected special `" + rift_def::specialToStr(expected).str() + "` here.";
+			return "Expected special `" + duckling_def::specialToStr(expected).str() + "` here.";
 		}
 
 	public:
@@ -248,7 +248,7 @@ namespace tpc {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected operator `" + rift_def::operatorToStr(expected).str() + "` here.";
+			return "Expected operator `" + duckling_def::operatorToStr(expected).str() + "` here.";
 		}
 
 	public:

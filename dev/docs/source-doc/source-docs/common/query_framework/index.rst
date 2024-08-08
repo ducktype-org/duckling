@@ -331,7 +331,7 @@ Cycles
 
 
 .. caution::
-    As of right now when Query Framework detects cycles it just throws a :ref:`panic <rift-panic-ref>`.
+    As of right now when Query Framework detects cycles it just throws a :ref:`panic <duckling-panic-ref>`.
     In the future versions it will report a critical compilation error.
     Even later proper handling of cyclic queries will be added.
 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
-project(Rift)
+project(Duckling)
 
 cmake_policy(SET CMP0079 NEW)
 cmake_policy(SET CMP0054 NEW)
@@ -48,8 +48,8 @@ add_subdirectory(dependencies)
 # Source:
 add_subdirectory(base)
 add_subdirectory(common)
-add_subdirectory(RiftCompiler)
-add_subdirectory(RiftVM)
+add_subdirectory(DucklingCompiler)
+add_subdirectory(DucklingVM)
 add_subdirectory(playground)
 
 # Scripts:

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="1400" height="1000" viewBox="0 0 1400 1000">
+<defs>
+</defs>
+<text x="90" y="950" font-size="20" text-anchor="end" dominant-baseline="middle" stroke="none" fill="#555555">0.0s</text>
+<path d="M100,940 L1300,940" stroke="#666666" />
+<path d="M100,890 L1300,890" stroke="#AAAAAA " />
+<text x="90" y="850" font-size="20" text-anchor="end" dominant-baseline="middle" stroke="none" fill="#555555">4.0s</text>
+<path d="M100,840 L1300,840" stroke="#666666" />
+<path d="M100,790 L1300,790" stroke="#AAAAAA " />
+<text x="90" y="750" font-size="20" text-anchor="end" dominant-baseline="middle" stroke="none" fill="#555555">8.0s</text>
+<path d="M100,740 L1300,740" stroke="#666666" />
+<path d="M100,690 L1300,690" stroke="#AAAAAA " />
+<text x="90" y="650" font-size="20" text-anchor="end" dominant-baseline="middle" stroke="none" fill="#555555">12.0s</text>
+<path d="M100,640 L1300,640" stroke="#666666" />
+<path d="M100,590 L1300,590" stroke="#AAAAAA " />
+<text x="90" y="550" font-size="20" text-anchor="end" dominant-baseline="middle" stroke="none" fill="#555555">16.0s</text>
+<path d="M100,540 L1300,540" stroke="#666666" />
+<path d="M100,490 L1300,490" stroke="#AAAAAA " />
+<text x="90" y="450" font-size="20" text-anchor="end" dominant-baseline="middle" stroke="none" fill="#555555">20.0s</text>
+<path d="M100,440 L1300,440" stroke="#666666" />
+<text x="175.0" y="967" font-size="24" text-anchor="middle" dominant-baseline="hanging" font-family="serif" font-weight="lighter">DucklingVM</text>
+<text x="325.0" y="967" font-size="24" text-anchor="middle" dominant-baseline="hanging" font-family="serif" font-weight="lighter">JVM + JIT</text>
+<text x="475.0" y="967" font-size="24" text-anchor="middle" dominant-baseline="hanging" font-family="serif" font-weight="lighter">JVM</text>
+<text x="625.0" y="967" font-size="24" text-anchor="middle" dominant-baseline="hanging" font-family="serif" font-weight="lighter">NodeJS + JIT</text>
+<text x="775.0" y="967" font-size="24" text-anchor="middle" dominant-baseline="hanging" font-family="serif" font-weight="lighter">NodeJS</text>
+<text x="925.0" y="967" font-size="24" text-anchor="middle" dominant-baseline="hanging" font-family="serif" font-weight="lighter">C++ GDB</text>
+<text x="1075.0" y="967" font-size="24" text-anchor="middle" dominant-baseline="hanging" font-family="serif" font-weight="lighter">C++ Valgrind</text>
+<text x="1225.0" y="967" font-size="24" text-anchor="middle" dominant-baseline="hanging" font-family="serif" font-weight="lighter">Python3</text>
+<rect x="114.0" y="832.635" width="16" height="107.365" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1" />
+<rect x="134.0" y="887.54" width="16" height="52.46000000000001" fill="#FFE6CC" stroke="#D6B656" stroke-width="1" />
+<rect x="154.0" y="857.94" width="16" height="82.06" fill="#FFF2CC" stroke="#D79B00" stroke-width="1" />
+<rect x="174.0" y="889.02" width="16" height="50.980000000000004" fill="#E1D5E7" stroke="#9673A6" stroke-width="1" />
+<rect x="194.0" y="875.955" width="16" height="64.045" fill="#D5E8D4" stroke="#82B366" stroke-width="1" />
+<rect x="214.0" y="852.95" width="16" height="87.05000000000001" fill="#F8CECC" stroke="#B85450" stroke-width="1" />
+<rect x="264.0" y="927.41" width="16" height="12.589999999999998" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1" />
+<rect x="284.0" y="929.015" width="16" height="10.985" fill="#FFE6CC" stroke="#D6B656" stroke-width="1" />
+<rect x="304.0" y="930.435" width="16" height="9.565" fill="#FFF2CC" stroke="#D79B00" stroke-width="1" />
+<rect x="324.0" y="931.595" width="16" height="8.405" fill="#E1D5E7" stroke="#9673A6" stroke-width="1" />
+<rect x="344.0" y="931.87" width="16" height="8.13" fill="#D5E8D4" stroke="#82B366" stroke-width="1" />
+<rect x="364.0" y="932.68" width="16" height="7.32" fill="#F8CECC" stroke="#B85450" stroke-width="1" />
+<rect x="414.0" y="803.7" width="16" height="136.3" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1" />
+<rect x="434.0" y="873.09" width="16" height="66.91" fill="#FFE6CC" stroke="#D6B656" stroke-width="1" />
+<rect x="454.0" y="835.86" width="16" height="104.13999999999999" fill="#FFF2CC" stroke="#D79B00" stroke-width="1" />
+<rect x="474.0" y="874.48" width="16" height="65.52" fill="#E1D5E7" stroke="#9673A6" stroke-width="1" />
+<rect x="494.0" y="854.865" width="16" height="85.135" fill="#D5E8D4" stroke="#82B366" stroke-width="1" />
+<rect x="514.0" y="862.19" width="16" height="77.81" fill="#F8CECC" stroke="#B85450" stroke-width="1" />
+<rect x="564.0" y="896.535" width="16" height="43.464999999999996" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1" />
+<rect x="584.0" y="909.19" width="16" height="30.81" fill="#FFE6CC" stroke="#D6B656" stroke-width="1" />
+<rect x="604.0" y="909.935" width="16" height="30.064999999999998" fill="#FFF2CC" stroke="#D79B00" stroke-width="1" />
+<rect x="624.0" y="912.08" width="16" height="27.92" fill="#E1D5E7" stroke="#9673A6" stroke-width="1" />
+<rect x="644.0" y="910.565" width="16" height="29.435" fill="#D5E8D4" stroke="#82B366" stroke-width="1" />
+<rect x="664.0" y="913.04" width="16" height="26.96" fill="#F8CECC" stroke="#B85450" stroke-width="1" />
+<rect x="714.0" y="738.535" width="16" height="201.465" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1" />
+<rect x="734.0" y="825.36" width="16" height="114.64000000000001" fill="#FFE6CC" stroke="#D6B656" stroke-width="1" />
+<rect x="754.0" y="788.51" width="16" height="151.48999999999998" fill="#FFF2CC" stroke="#D79B00" stroke-width="1" />
+<rect x="774.0" y="829.075" width="16" height="110.92500000000001" fill="#E1D5E7" stroke="#9673A6" stroke-width="1" />
+<rect x="794.0" y="776.235" width="16" height="163.76500000000001" fill="#D5E8D4" stroke="#82B366" stroke-width="1" />
+<rect x="814.0" y="777.98" width="16" height="162.01999999999998" fill="#F8CECC" stroke="#B85450" stroke-width="1" />
+<rect x="864.0" y="919.9" width="16" height="20.1" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1" />
+<rect x="884.0" y="917.475" width="16" height="22.525000000000002" fill="#FFE6CC" stroke="#D6B656" stroke-width="1" />
+<rect x="904.0" y="925.06" width="16" height="14.940000000000001" fill="#FFF2CC" stroke="#D79B00" stroke-width="1" />
+<rect x="924.0" y="925.715" width="16" height="14.284999999999998" fill="#E1D5E7" stroke="#9673A6" stroke-width="1" />
+<rect x="944.0" y="926.56" width="16" height="13.440000000000001" fill="#D5E8D4" stroke="#82B366" stroke-width="1" />
+<rect x="964.0" y="927.175" width="16" height="12.825000000000001" fill="#F8CECC" stroke="#B85450" stroke-width="1" />
+<rect x="1014.0" y="845.58" width="16" height="94.42" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1" />
+<rect x="1034.0" y="880.08" width="16" height="59.919999999999995" fill="#FFE6CC" stroke="#D6B656" stroke-width="1" />
+<rect x="1054.0" y="859.39" width="16" height="80.61" fill="#FFF2CC" stroke="#D79B00" stroke-width="1" />
+<rect x="1074.0" y="875.24" width="16" height="64.75999999999999" fill="#E1D5E7" stroke="#9673A6" stroke-width="1" />
+<rect x="1094.0" y="865.925" width="16" height="74.075" fill="#D5E8D4" stroke="#82B366" stroke-width="1" />
+<rect x="1114.0" y="873.9300000000001" width="16" height="66.07" fill="#F8CECC" stroke="#B85450" stroke-width="1" />
+<rect x="1164.0" y="443.435" width="16" height="496.565" fill="#DAE8FC" stroke="#6C8EBF" stroke-width="1" />
+<rect x="1184.0" y="577.315" width="16" height="362.685" fill="#FFE6CC" stroke="#D6B656" stroke-width="1" />
+<rect x="1204.0" y="554.585" width="16" height="385.41499999999996" fill="#FFF2CC" stroke="#D79B00" stroke-width="1" />
+<rect x="1224.0" y="567.525" width="16" height="372.475" fill="#E1D5E7" stroke="#9673A6" stroke-width="1" />
+<rect x="1244.0" y="490.985" width="16" height="449.015" fill="#D5E8D4" stroke="#82B366" stroke-width="1" />
+<rect x="1264.0" y="525.41" width="16" height="414.59000000000003" fill="#F8CECC" stroke="#B85450" stroke-width="1" />
+</svg>

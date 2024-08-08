@@ -5,7 +5,7 @@
 
 #include <diagnostic/logger.hpp>
 #include <token_file/file.hpp>
-#include <rift_definitions/key_spec_op.hpp>
+#include <duckling_definitions/key_spec_op.hpp>
 #include <base/exceptions.hpp>
 #include <base/init_guard.hpp>
 
@@ -14,11 +14,11 @@
 
 namespace lexer {
 	void init() {
-		RIFT_SIMPLE_INIT_GUARD_BEGIN
+		DUCKLING_SIMPLE_INIT_GUARD_BEGIN
 		// Put inits here
 		Classifications::init();
-		rift_def::key_spec_op::init();
-		RIFT_SIMPLE_INIT_GUARD_END
+		duckling_def::key_spec_op::init();
+		DUCKLING_SIMPLE_INIT_GUARD_END
 	}
 
 	tokenizer::OwnFile tokenizeFile(const fs::FilePath& path) {

@@ -5,12 +5,12 @@
 #include <token_file/file.hpp>
 
 std::byte operator""_BT(unsigned long long x) {
-	RIFT_ASSERT(x < 256, "bad std::byte literal operator");
+	DUCKLING_ASSERT(x < 256, "bad std::byte literal operator");
 	return std::byte(x);
 }
 
 std::byte operator""_BT(char x) {
-	RIFT_ASSERT(x >= 0, "bad std::byte literal operator");
+	DUCKLING_ASSERT(x >= 0, "bad std::byte literal operator");
 	return std::byte(x);
 }
 
@@ -21,7 +21,7 @@ class DecodeTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Decode Test") {
 		lexer::init();
-		rift_def::setKeywordMode(rift_def::KeywordMode::RiftSource);
+		duckling_def::setKeywordMode(duckling_def::KeywordMode::DucklingSource);
 
 		TESTER_ADD_TEST(badContinuations);
 		TESTER_ADD_TEST(invalidFirstBytes);

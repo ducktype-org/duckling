@@ -5,7 +5,7 @@ VM docs
 .. @TODO
 
 .. note:: 
-	For RiftVM user documentation see: `rift-doc <https://github.com/rift-lang/rift-doc>`_.
-	This is overview of RiftVM implementation for developers.
+	For DucklingVM user documentation see: `duckling-doc <https://github.com/ducktype-org/duckling-doc>`_.
+	This is overview of DucklingVM implementation for developers.
 
 	

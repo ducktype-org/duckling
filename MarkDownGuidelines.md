@@ -46,6 +46,5 @@
    ~~~~~
 
 10. Links  
-    <https://github.com/rift-lang/>  
-    [Rift Lang](https://github.com/rift-lang/)  
+    [Duckling](https://github.com/ducktype-org)  
     [How to write .md](#how-to-write-md-for-github)

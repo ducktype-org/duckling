@@ -4,8 +4,8 @@
 
 ## File structure
 
-* [RiftCompiler](RiftCompiler/) - implementation of main Rift language compiler
-* [RiftVM](RiftVM/) - implementation of Rift Virtual Machine
+* [DucklingCompiler](DucklingCompiler/) - implementation of main Duckling language compiler
+* [DucklingVM](DucklingVM/) - implementation of Duckling Virtual Machine
 * [common](common/) - modules shared across entire codebase
 * [guidelines](guidelines/) - guidelines related to development
 * [miscellaneous](miscellaneous/) - for files without any specific location
@@ -15,7 +15,7 @@
 
 ### General structure
 
-[RiftCompiler](RiftCompiler/) and [RiftVM](RiftVM/) are modules by themselves, while
+[DucklingCompiler](DucklingCompiler/) and [DucklingVM](DucklingVM/) are modules by themselves, while
 `common` folder holds subfolders each representing a single module.
 
 ### Module structure

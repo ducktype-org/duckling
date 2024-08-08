@@ -1,0 +1,74 @@
+#include "preamble.hpp"
+#include "../../hierarchy/statements.hpp"
+#include "../../hierarchy/declarations.hpp"
+
+namespace pst {
+
+	namespace detail {
+
+		template<class T>
+		ParserRef<T> parseStmt(DucklingParserState& state, bool force_semi = false) {
+			ParserRef<T> out = T::parse(state);
+			if (force_semi or out->trailingSemicolon()) state.parse(out).one(Special::Semicolon);
+			return out;
+		}
+	}
+
+	bool Stmt::trailingSemicolon() { return true; }
+
+	ParserRef<Stmt> Stmt::parse(DucklingParserState& state) {
+		auto as_keyword = state[0].asKeyword();
+		auto as_special = state[0].asSpecial();
+
+		switch (as_keyword) {
+		case Keyword::If:
+			return detail::parseStmt<If>(state);
+
+		case Keyword::Fun:
+			return detail::parseStmt<Fun>(state);
+
+		case Keyword::While:
+			return detail::parseStmt<While>(state);
+
+		case Keyword::Import:
+			return detail::parseStmt<Import>(state);
+
+		case Keyword::Using:
+			return detail::parseStmt<Using>(state);
+
+		case Keyword::Namespace:
+			return detail::parseStmt<Namespace>(state);
+
+		case Keyword::Struct:
+			return detail::parseStmt<Struct>(state);
+
+		case Keyword::Block:
+			return detail::parseStmt<Block>(state);
+
+		case Keyword::Const:
+			return detail::parseStmt<Const>(state);
+
+		case Keyword::Alias:
+			return detail::parseStmt<Alias>(state);
+
+		case Keyword::Var:
+		case Keyword::Let:
+			return detail::parseStmt<Variable>(state);
+
+		default:
+			break;
+		}
+
+		if (as_special == Special::AtSign) return detail::parseStmt<Attribute>(state);
+		if (duckling_def::keywordFlags(as_keyword).contains(duckling_def::KeywordFlags::is_action))
+			return detail::parseStmt<Action>(state);
+
+		if (as_special == Special::Semicolon) {
+			state.tokens().skip();
+			return nullptr;
+		}
+
+		// Expr as stmt have semicolon at the end:
+		return detail::parseStmt<ExprStmt>(state);
+	}
+}

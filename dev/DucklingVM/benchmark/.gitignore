@@ -1,0 +1,8 @@
+*.out
+*.class
+*.exe
+__pychace__/
+
+results/*
+build/*
+duckling_vm_bins/*

@@ -7,11 +7,11 @@ add_library(Lexer
 	src/lexer/lexer_class.cpp
 )
 
-make_module(Lexer USES Filesystem Printer RiftDefinitions unicode Result::Result Diagnostic)
+make_module(Lexer USES Filesystem Printer DucklingDefinitions unicode Result::Result Diagnostic)
 
-rift_add_test(common lexer_test_simple tests/test.cpp
-	USES Lexer RiftDefinitions)
-rift_add_test(common token_test_position tests/token_position_test.cpp
-	USES Lexer RiftDefinitions)
-rift_add_test(common lexer_test_decode tests/decode_test.cpp
-	USES Lexer RiftDefinitions)
+duckling_add_test(common lexer_test_simple tests/test.cpp
+	USES Lexer DucklingDefinitions)
+duckling_add_test(common token_test_position tests/token_position_test.cpp
+	USES Lexer DucklingDefinitions)
+duckling_add_test(common lexer_test_decode tests/decode_test.cpp
+	USES Lexer DucklingDefinitions)

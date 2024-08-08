@@ -77,7 +77,7 @@ namespace query::detail {
 		}
 
 		void setExit(NodeID node) {
-			RIFT_ASSERT(query_stack_size > 0, "Query exit called on empty call stack");
+			DUCKLING_ASSERT(query_stack_size > 0, "Query exit called on empty call stack");
 			query_stack_size--;
 
 			node_data.at(node).color = Color::Done;

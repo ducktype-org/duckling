@@ -143,7 +143,7 @@ Token queries
 
 ``bool is<Special|Keyword|Operator|BracketGroup>(usize fwd = 0)`` methods provide a way to check if a particular token is of a particular ``lexer::Token::Type``.
 
-``asKeyword`` and ``asSpecial`` methods interpret underlying value of a token as ``rift_def::Keyword`` or ``rift_def::Special``.
+``asKeyword`` and ``asSpecial`` methods interpret underlying value of a token as ``duckling_def::Keyword`` or ``duckling_def::Special``.
 
 .. code-block::cpp
 
@@ -156,7 +156,7 @@ Token queries
 
 	bool isOperator(base::StrId oper, usize fwd = 0) const;
 	bool isBracketGroup(Token::BracketType type, usize fwd = 0) const;
-	bool is(<lexer::Token::Type|rift_def::Keyword|rift_def::Special|rift_def::Operator> t, usize fwd = 0) const;
+	bool is(<lexer::Token::Type|duckling_def::Keyword|duckling_def::Special|duckling_def::Operator> t, usize fwd = 0) const;
 
 Element
 ^^^^^^^

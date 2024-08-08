@@ -1,8 +1,8 @@
 **Docs might temporary be broken due to migration to submodule**
 
-# Rift source docs and dev guide
+# Duckling source docs and dev guide
 
-- [Rift the docs docs](#rift-the-docs-docs)
+- [Duckling the docs docs](#duckling-the-docs-docs)
   - [Building](#building)
   - [Excluded directories](#excluded-directories)
   - [Writing docs](#writing-docs)

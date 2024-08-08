@@ -1,0 +1,122 @@
+#include <tester/tester.hpp>
+#include "frontend/module_tree/module_tree.hpp"
+#include "frontend/module_tree/queries.hpp"
+#include <query_framework/query_entry_point.hpp>
+
+using namespace compiler::frontend;
+
+class ModuleTreeTest: public tester::TestSuite {
+#undef TESTER_CLASS
+#define TESTER_CLASS ModuleTreeTest
+
+	// This regex catches anything, that starts with '.' or '$'.
+	const std::regex test_regex = std::regex(R"(\..*|\$.*)");
+
+public:
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("frontend::ModuleTree test") {
+		TESTER_ADD_TEST(parseModule);
+		TESTER_ADD_TEST(testOtherFeatures);
+		TESTER_ADD_TEST(testQueries);
+	}
+
+private:
+	void parseModule() {
+		auto pth = fs::FilePath(path("test_module"));
+		auto mt  = ModuleTree::create(pth, test_regex, test_regex);
+
+		ASSERT_EQUAL(true, mt->hasMainSourceFile());
+		ASSERT_EQUAL(2, mt->getSubmodules().size());
+		ASSERT_EQUAL(1, mt->getOtherFiles().size());
+		ASSERT_EQUAL(1, mt->getSourceFiles().size());
+
+		auto another_module = mt->getSubmodules()[base::StrId("another")];
+		ASSERT_EQUAL(1, another_module->getSourceFiles().size());
+		ASSERT_EQUAL(true, another_module->hasMainSourceFile());
+		ASSERT_EQUAL(
+			2, another_module->getOtherFiles().size()
+		);  // 2, because there are 2 different file extensions
+		ASSERT_EQUAL(2, another_module->getOtherFiles()[base::StrId(".txt")].size());
+		ASSERT_EQUAL(1, another_module->getOtherFiles()[base::StrId("")].size());
+		ASSERT_EQUAL(1, another_module->getSubmodules().size());
+		ASSERT_EQUAL("whoa.duck", another_module->getSourceFiles().front().path.name());
+
+		ASSERT_EQUAL(true, mt->getSubmodules().contains(base::StrId("awe")));
+		auto awe_module = mt->getSubmodules()[base::StrId("awe")];
+		ASSERT_EQUAL(0, awe_module->getSubmodules().size());
+		ASSERT_EQUAL(0, awe_module->getSourceFiles().size());
+		ASSERT_EQUAL(0, awe_module->getOtherFiles().size());
+		ASSERT_EQUAL(true, awe_module->hasMainSourceFile());
+		ASSERT_EQUAL("awe.rmf", awe_module->getMainSourceFile().path.name());
+	}
+
+	void testModuleIDInSourceFile(const ModuleTree& module) {
+		auto id = module.getId();
+		ASSERT_EQUAL_NO_PRINT(id, module.getMainSourceFile().linked_module);
+		for (auto& file: module.getSourceFiles()) ASSERT_EQUAL_NO_PRINT(id, file.linked_module);
+	}
+
+	void testOtherFeatures() {
+		auto pth = fs::FilePath(path("test_module"));
+		auto mt  = ModuleTree::create(pth);
+
+		ASSERT_EQUAL("test_module", mt->getName());
+		ASSERT_EQUAL(true, mt->hasMainSourceFile());
+		ASSERT_EQUAL("content123\n", mt->getMainSourceFile().path.getContent().view());
+		ASSERT_EQUAL(true, mt->getParentModule().empty());
+		ASSERT_EQUAL(
+			mt->getName(), mt->getSubmodules()[base::StrId("awe")]->getParentModule()->getName()
+		);
+
+		auto awe_module     = mt->getSubmodules()[base::StrId("awe")];
+		auto another_module = mt->getSubmodules()[base::StrId("another")];
+		auto awesome_module = another_module->getSubmodules()[base::StrId("awesome_module")];
+		auto mod_module     = awesome_module->getSubmodules()[base::StrId("mod")];
+
+		testModuleIDInSourceFile(*awe_module);
+		testModuleIDInSourceFile(*another_module);
+		testModuleIDInSourceFile(*awesome_module);
+		testModuleIDInSourceFile(*mod_module);
+		testModuleIDInSourceFile(*mt);
+
+		assert(not mt->getParentModule().has_value(), "Root module has a parent");
+		assert(
+			awe_module->getParentModule().has_value(), "Non-root module does not have a parent (1)"
+		);
+		assert(
+			another_module->getParentModule().has_value(),
+			"Non-root module does not have a parent (2)"
+		);
+		assert(
+			awesome_module->getParentModule().has_value(),
+			"Non-root module does not have a parent (3)"
+		);
+		assert(
+			mod_module->getParentModule().has_value(), "Non-root module does not have a parent (4)"
+		);
+
+		ASSERT_EQUAL_NO_PRINT(mt->getId(), awe_module->getParentModule().value().getId());
+		ASSERT_EQUAL_NO_PRINT(mt->getId(), another_module->getParentModule().value().getId());
+		ASSERT_EQUAL_NO_PRINT(
+			another_module->getId(), awesome_module->getParentModule().value().getId()
+		);
+		ASSERT_EQUAL_NO_PRINT(
+			awesome_module->getId(), mod_module->getParentModule().value().getId()
+		);
+	}
+
+	void testQueries() {
+		auto pth  = fs::FilePath(path("test_module"));
+		auto root = query::entryPoint<QueryModuleTree>(pth);
+
+		[[maybe_unused]] auto awe = query::entryPoint<QuerySubmodules>(root).at(base::StrId("awe"));
+
+		auto sources = query::entryPoint<QuerySourceFiles>(root);
+		assert(sources.size() == 1, "Bad source count!");
+
+		auto main_id = sources.at(0);
+
+		[[maybe_unused]] auto& pst = query::entryPoint<QueryFilePST>(main_id);
+	}
+};
+
+TESTER_COMMON_MAIN("/DucklingCompiler/frontend/module_tree/tests/");

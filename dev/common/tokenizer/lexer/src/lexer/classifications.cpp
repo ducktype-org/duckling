@@ -36,7 +36,7 @@ namespace lexer {
 		if (err.isFailure()) {
 			std::string strerror;
 			icu::UnicodeString::fromUTF8(pattern).toUTF8String(strerror);
-			RIFT_PANIC("error in unicode set pattern: " + strerror);
+			DUCKLING_PANIC("error in unicode set pattern: " + strerror);
 		}
 		set.freeze();
 		return;
@@ -73,55 +73,55 @@ namespace lexer {
 	 */
 	void sanityChecks() {
 		using Class = Classifications;
-		for (auto cl: Class::classes) RIFT_ASSERT(!cl->isEmpty(), "a classification is empty");
-		for (auto cl: Class::classes) RIFT_ASSERT(cl->isFrozen(), "a classification isn't frozen");
+		for (auto cl: Class::classes) DUCKLING_ASSERT(!cl->isEmpty(), "a classification is empty");
+		for (auto cl: Class::classes) DUCKLING_ASSERT(cl->isFrozen(), "a classification isn't frozen");
 
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			Class::name_continue.containsAll(Class::name_start),
 			"Set of characters continuing a name should include all the characters starting a name."
 		);
 
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			checkEmptyIntersect(Class::newline, Class::vertical_space),
 			"Sets of newline characters and vertical space characters should be disjoint."
 		);
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			checkEmptyIntersect(Class::newline, Class::format_control),
 			"Sets of newline characters and format control characters should be disjoint."
 		);
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			checkEmptyIntersect(Class::format_control, Class::vertical_space),
 			"Sets of format control characters and vertical space characters should be disjoint."
 		);
 
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			checkEmptyIntersect(Class::syntax, Class::name_start),
 			"Sets of syntax characters and characters starting a name should be disjoint"
 		);
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			Class::syntax.containsAll(Class::special),
 			"Special characters should be a subset of syntax characters"
 		);
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			Class::syntax.containsAll(Class::operator_start),
 			"Characters starting an operator should be a subset of syntax characters"
 		);
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			Class::syntax.containsAll(Class::open_bracket),
 			"Open brackets should be a subset of syntax characters"
 		);
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			Class::syntax.containsAll(Class::close_bracket),
 			"Closed brackets should be a subset of syntax characters"
 		);
 
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			Class::operator_continue.containsAll(Class::operator_start),
 			"Set of characters continuing an operator should include all the characters starting "
 			"an operator."
 		);
 
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			checkEmptyIntersect(Class::special, Class::operator_continue),
 			"Sets of special characters and characters continuing an operator should be disjoint."
 		);
@@ -130,26 +130,26 @@ namespace lexer {
 		// documentation assert(checkEmptyIntersect(Class::name_start, Class::operator_continue));
 		icu::UnicodeSet c;
 		c.addAll(Class::name_start).retainAll(Class::operator_continue);
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			c.size() == 2,
 			"Intersection of Characters starting a name and characters continuing an operator "
 			"should be known."
 		);
 
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			checkEmptyIntersect(Class::whitespace, Class::name_continue),
 			"Whitespace characters and characters continuing a name should be disjoint."
 		);
-		RIFT_ASSERT(
+		DUCKLING_ASSERT(
 			checkEmptyIntersect(Class::whitespace, Class::syntax),
 			"Whitespace characters and syntax characters should be disjoint."
 		);
 	}
 
 	void Classifications::init() {
-		RIFT_SIMPLE_INIT_GUARD_BEGIN
+		DUCKLING_SIMPLE_INIT_GUARD_BEGIN
 		for (auto cl: classes)
-			RIFT_ASSERT(!cl->isFrozen(), "a classification is frozen at the beginning");
+			DUCKLING_ASSERT(!cl->isFrozen(), "a classification is frozen at the beginning");
 		createFromPattern(name_start, u8R"([[:XID_Start:][:ID_Compat_Math_Start:][_]])");
 		createFromPattern(name_continue, u8R"([[:XID_Continue:][:ID_Compat_Math_Continue:]])");
 		createFromPattern(whitespace, u8R"([:Pattern_White_Space:])");
@@ -183,11 +183,11 @@ namespace lexer {
 		operator_continue.applyPattern(icu::UnicodeString::fromUTF8(u8R"([:Mn:])"), err)
 			.addAll(operator_start)
 			.freeze();
-		if (err.isFailure()) RIFT_PANIC(std::string(err.errorName()));
+		if (err.isFailure()) DUCKLING_PANIC(std::string(err.errorName()));
 
 		end_of_file.add(end_of_file_value).freeze();
 
 		sanityChecks();
-		RIFT_SIMPLE_INIT_GUARD_END
+		DUCKLING_SIMPLE_INIT_GUARD_END
 	}
 }

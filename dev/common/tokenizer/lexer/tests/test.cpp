@@ -12,9 +12,9 @@ class SimpleLexerTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Lexer Test") {
 		lexer::init();
-		rift_def::setKeywordMode(rift_def::KeywordMode::RiftSource);
+		duckling_def::setKeywordMode(duckling_def::KeywordMode::DucklingSource);
 
-		fs::FilePath file(path("token_code.rift"));
+		fs::FilePath file(path("token_code.duck"));
 		td = lexer::tokenizeFile(file);
 		TESTER_ADD_TEST(testBasicStructure);
 		TESTER_ADD_TEST(testGroup0);

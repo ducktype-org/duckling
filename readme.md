@@ -1,4 +1,4 @@
-# Main Rift development repository
+# Main Duckling development repository
 
 ## Before start
 

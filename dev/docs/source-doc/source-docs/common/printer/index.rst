@@ -216,9 +216,9 @@ Prints the message to specified ostream (:code:`std::cerr` by default).
 File list
 =========
 
-* `printer.hpp <https://github.com/rift-lang/rift-dev/blob/main/dev/common/printer/src/printer/printer.hpp>`_ - interface, all functionalities
-* `printer.cpp <https://github.com/rift-lang/rift-dev/blob/main/dev/common/printer/src/printer/printer.cpp>`_ - implementation
-* `example.cpp <https://github.com/rift-lang/rift-dev/blob/main/dev/common/printer/examples/example.cpp>`_ - example usage
+* `printer.hpp <https://github.com/ducktype-org/duckling-dev/blob/main/dev/common/printer/src/printer/printer.hpp>`_ - interface, all functionalities
+* `printer.cpp <https://github.com/ducktype-org/duckling-dev/blob/main/dev/common/printer/src/printer/printer.cpp>`_ - implementation
+* `example.cpp <https://github.com/ducktype-org/duckling-dev/blob/main/dev/common/printer/examples/example.cpp>`_ - example usage
 
 Notes
 =====

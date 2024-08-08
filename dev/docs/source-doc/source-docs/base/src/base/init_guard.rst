@@ -14,6 +14,6 @@ Intention of this library is to provide automatic way of detecting if initializa
 Code doc 
 ========
 
-.. doxygendefine:: RIFT_SIMPLE_INIT_GUARD_BEGIN
+.. doxygendefine:: DUCKLING_SIMPLE_INIT_GUARD_BEGIN
 
-.. doxygendefine:: RIFT_SIMPLE_INIT_GUARD_END
+.. doxygendefine:: DUCKLING_SIMPLE_INIT_GUARD_END

@@ -25,7 +25,7 @@ FsTree::FsTree(fs::FilePath root, regex reject_file_regex, regex reject_director
 
 auto FsTree::getParentTree() const -> base::Optional<const FsTree&> {
 	if (m_parent.has_value()) {
-		RIFT_ASSERT(not m_parent.value().expired(), "Parent of FsTree is expired");
+		DUCKLING_ASSERT(not m_parent.value().expired(), "Parent of FsTree is expired");
 		return *m_parent.value().lock();
 	}
 	return {};

@@ -28,12 +28,12 @@ namespace base {
 	};
 
 	/**
-	 * @brief Exception intended to be the basis of all non-panic rift-specific exceptions.
+	 * @brief Exception intended to be the basis of all non-panic duckling-specific exceptions.
 	 */
 	class Exception: public std::exception {};
 
 	/**
-	 * @brief Rift-specific logic error exception
+	 * @brief Duckling-specific logic error exception
 	 */
 	class LogicError: public Exception {
 		std::string message;
@@ -57,22 +57,22 @@ namespace base {
 	};
 }
 
-#define DETAIL_RIFT_STR2(X) #X
-#define DETAIL_RIFT_STR(X)  DETAIL_RIFT_STR2(X)
+#define DETAIL_DUCKLING_STR2(X) #X
+#define DETAIL_DUCKLING_STR(X)  DETAIL_DUCKLING_STR2(X)
 
 /**
  * @brief base::Panic based assert that allows catching for testing purposes.
  */
-#define RIFT_ASSERT(cond, what) \
+#define DUCKLING_ASSERT(cond, what) \
 	if (!(cond)) _THROW_PANIC("    Assertion failed: `" #cond "`\n", what)
 
 /**
  * @brief base::Panic based throw that allows catching for testing purposes
  */
-#define RIFT_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what)
+#define DUCKLING_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what)
 
 #define _THROW_PANIC(panic_title, what...)                        \
 	throw base::Panic(                                            \
-		"    In " __FILE__ " at line " DETAIL_RIFT_STR(__LINE__), \
+		"    In " __FILE__ " at line " DETAIL_DUCKLING_STR(__LINE__), \
 		base::strConcat(panic_title, "    ", what)                \
 	)

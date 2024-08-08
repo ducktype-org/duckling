@@ -199,11 +199,11 @@ public:
 		// --------------------------------------------------
 
 		// base::Optional can also hold a reference!
-		std::string                  name = "Rift";
+		std::string                  name = "Duckling";
 		base::Optional<std::string&> opt_name(name);
 
 		opt_name.value().push_back('!');
-		ASSERT_EQUAL("Rift!", name);
+		ASSERT_EQUAL("Duckling!", name);
 	}
 
 	void comparatorTest() {

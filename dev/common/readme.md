@@ -5,7 +5,7 @@
 ## config
   Module implementing parsing command line arguments.
   It also provides interface for easy creation of parsing rules,
-  has functions dedicated for parsing arguments of main rift compiler and test options.
+  has functions dedicated for parsing arguments of main duckling compiler and test options.
 
 ## filesystem
 
@@ -18,8 +18,8 @@
 
 \subpage tokenizer-module
 
-  Module implementing lexing of any text according to rules defined by Rift Programming Language,
-  keywords, specials and operators definitions provided by `rift_definition` module.
+  Module implementing lexing of any text according to rules defined by Duckling Programming Language,
+  keywords, specials and operators definitions provided by `duckling_definition` module.
 
 ## printer
 
