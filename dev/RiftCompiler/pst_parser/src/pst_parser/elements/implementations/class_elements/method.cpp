@@ -1,10 +1,11 @@
 #include "preamble.hpp"
 
 namespace pst {
-	// @TODO: make better
-	ParserRef<Fun> Fun::parse(RiftParserState& state) {
+	ParserRef<Method> Method::parse(RiftParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Fun>(position);
+		auto out      = makeRef<Method>(position);
+
+		out->parseSpecifiers(state);
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
@@ -16,7 +17,7 @@ namespace pst {
 		return out;
 	}
 
-	void Fun::dprint(std::ostream& out) const {
+	void Method::dprint(std::ostream& out) const {
 		out << "{";
 		out << "\"name\":";
 		nullAwareDprint(name, out);
@@ -29,5 +30,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void Fun::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitFun(*this); }
+	void Method::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitMethod(*this); }
 }

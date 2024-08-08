@@ -2,6 +2,7 @@
 
 #include "../../rift_parser_state.hpp"
 #include "../../pst_visitor.hpp"  // IWYU pragma: export
+#include "../parser_common_errors.hpp" // IWYU pragma: export
 
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/parser_ref.hpp>

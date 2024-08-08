@@ -34,21 +34,30 @@ namespace pst {
 		Action,
 		ExprStmt,
 		Class,
-		ClassStmt,
 		TopLevel,
 		Const,
-		Variable
+		Variable,
+		// Class Statements
+		Method,
+		Field,
+		Constructor,
+		Destructor,
+		AccessBlock,
 	};
 
 	class Stmt: public RiftElement {
 		StmtKind kind;
 
 	protected:
+		using AttrList = std::vector<ParserRef<Attribute>>;
+
+		AttrList attributes;
+
 		Stmt(StmtKind kind, const dia::SourcePosition& position):
 			  RiftElement(position),
 			  kind(kind) {}
 
-		std::vector<ParserRef<Attribute>> attributes;
+		static AttrList collectAttributes(RiftParserState& state);
 
 		/**
 		 * @brief Prepends attributes after parsing handling sub elements and position.
@@ -58,8 +67,8 @@ namespace pst {
 		void dprintAttributes(std::ostream& out) const;
 
 		void dprintPrefix(std::ostream& out) const override {
-			dprintAttributes(out);
 			RiftElement::dprintPrefix(out);
+			dprintAttributes(out);
 		}
 
 	public:
@@ -133,22 +142,24 @@ namespace pst {
 		inline static const std::set<rift_def::Keyword> class_specs = {
 			rift_def::Keyword::Public,
 			rift_def::Keyword::Private,
+			rift_def::Keyword::Protected,
 			rift_def::Keyword::Static,
-			rift_def::Keyword::Const,
 		};
 		std::vector<rift_def::Keyword> specifiers;
 	
 		void parseSpecifiers(RiftParserState& state);
 
 		[[nodiscard]]
-		i64 countSpecifiers(RiftParserState& state) const;
+		static i64 countSpecifiers(RiftParserState& state);
 
 		void dprintPrefix(std::ostream& out) const override;
+
+		ClassStmt(StmtKind kind, const dia::SourcePosition& pos): Stmt(kind, pos) {}
+	private:
+		static ParserRef<ClassStmt> chooseStmt(RiftParserState& state, tpc::Identifier class_name);
+
 	public:
-		STMT_CHILD_CONSTRUCTOR(ClassStmt);
-
-		static ParserRef<ClassStmt> parse(RiftParserState& state);
-
+		static ParserRef<ClassStmt> parse(RiftParserState& state, tpc::Identifier class_name);
 
 		[[nodiscard]]
 		std::string elementType() const override {

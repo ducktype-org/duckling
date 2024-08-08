@@ -43,6 +43,9 @@ namespace tpc {
 
 	void nullAwareDprint(Identifier, std::ostream& out);
 	void nullAwareDprint(OptionalIdentifier, std::ostream& out);
+	void nullAwareDprint(Keyword, std::ostream& out);
+	void nullAwareDprint(Operator, std::ostream& out);
+	void nullAwareDprint(Special, std::ostream& out);
 
 	template<typename T>
 	void nullAwareDprint(const ParserRef<T>& ref, std::ostream& out) {

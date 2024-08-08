@@ -17,11 +17,9 @@ namespace tpc {
 		/**
 		 * @brief Method used to build the printable information in a format similar to JSON
 		 *
-		 * overrides should generally end by calling the version from the base class
+		 * overrides should generally begin by calling the version from the base class
 		 */
-		virtual void dprintPrefix(std::ostream& out) const {
-			out << "\"" << elementType() << "\":";
-		}
+		virtual void dprintPrefix(std::ostream&) const {}
 		/**
 		 * @brief Method used to build the printable information in a format similar to JSON
 		 *
@@ -57,6 +55,7 @@ namespace tpc {
 		virtual void debugPrint(std::ostream& out) const {
 			out << "{";
 			dprintPrefix(out);
+			out << "\"" << elementType() << "\":";
 			dprint(out);
 			dprintSuffix(out);
 			out << "}";

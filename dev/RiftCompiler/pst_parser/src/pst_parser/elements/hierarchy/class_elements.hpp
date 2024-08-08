@@ -4,7 +4,10 @@
 
 namespace pst {
 #define CLASS_STMT_CHILD_CONSTRUCTOR(class_name) \
-	class_name(const dia::SourcePosition& position): ClassStmt(position) {}
+	class_name(const dia::SourcePosition& position): ClassStmt(StmtKind::class_name, position) {}
+
+#define CLASS_STMT_PASS_CONSTRUCTOR(class_name) \
+	class_name(StmtKind kind, const dia::SourcePosition& position): ClassStmt(kind, position) {}
 
 	class AccessBlock final: public ClassStmt {
 		rift_def::Keyword specifier = rift_def::Keyword::NotAKeyword;
@@ -41,7 +44,7 @@ namespace pst {
 		tpc::Identifier kind; ///< What is after the `.`
 
 	public:
-		CLASS_STMT_CHILD_CONSTRUCTOR(ClassSpecial);
+		CLASS_STMT_PASS_CONSTRUCTOR(ClassSpecial);
 		static ParserRef<ClassSpecial> parse(RiftParserState& state);
 
 		[[nodiscard]]
@@ -66,7 +69,7 @@ namespace pst {
 		ParserRef<CodeBlock> body = nullptr;
 
 	public:
-		Constructor(dia::SourcePosition pos): ClassSpecial(pos) {};
+		Constructor(dia::SourcePosition pos): ClassSpecial(StmtKind::Constructor, pos) {};
 		static ParserRef<Constructor> parse(RiftParserState& state);
 
 		~Constructor() override = default;
@@ -84,7 +87,7 @@ namespace pst {
 		ParserRef<CodeBlock> body = nullptr;
 
 	public:
-		Destructor(dia::SourcePosition pos): ClassSpecial(pos) {};
+		Destructor(dia::SourcePosition pos): ClassSpecial(StmtKind::Destructor, pos) {};
 		static ParserRef<Destructor> parse(RiftParserState& state);
 
 		~Destructor() override = default;
@@ -101,7 +104,7 @@ namespace pst {
 	class Method final: public ClassStmt {
 		tpc::Identifier            name;
 		ParserRef<ParamList> params = nullptr;
-		ParserRef<RetList> inits = nullptr;
+		ParserRef<RetList> rets = nullptr;
 		ParserRef<CodeBlock> body = nullptr;
 
 	public:

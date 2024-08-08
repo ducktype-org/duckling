@@ -48,7 +48,7 @@ namespace pst {
 		 * @brief Gives access to automatic parsing tools.
 		 */
 		template<std::derived_from<RiftElement> El>
-		pst::PSTAutomatic<RiftParserState> parse(ParserBorrowRef<El>& el) {
+		pst::PSTAutomatic<RiftParserState> parse(ParserBorrowRef<El> el) {
 			return { *this, el };
 		}
 	};

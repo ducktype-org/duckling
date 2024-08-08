@@ -51,6 +51,16 @@ namespace pst {
 		virtual void visitIf([[maybe_unused]] const If& stmt) {}
 
 		virtual void visitWhile([[maybe_unused]] const While& stmt) {}
+
+		virtual void visitMethod([[maybe_unused]] const Method& stmt) {}
+
+		virtual void visitField([[maybe_unused]] const Field& stmt) {}
+
+		virtual void visitConstructor([[maybe_unused]] const Constructor& stmt) {}
+
+		virtual void visitDestructor([[maybe_unused]] const Destructor& stmt) {}
+
+		virtual void visitAccessBlock([[maybe_unused]] const AccessBlock& stmt) {}
 	};
 
 	/**
@@ -98,6 +108,16 @@ namespace pst {
 		void visitIf([[maybe_unused]] const If& stmt) override {}
 
 		void visitWhile([[maybe_unused]] const While& stmt) override {}
+
+		void visitMethod([[maybe_unused]] const Method& stmt) override {}
+
+		void visitField([[maybe_unused]] const Field& stmt) override {}
+
+		void visitConstructor([[maybe_unused]] const Constructor& stmt) override {}
+
+		void visitDestructor([[maybe_unused]] const Destructor& stmt) override {}
+
+		void visitAccessBlock([[maybe_unused]] const AccessBlock& stmt) override {}
 	};
 
 /**
@@ -135,5 +155,10 @@ namespace pst {
 		PANIC_VISITOR_VISIT_METHOD(Variable);
 		PANIC_VISITOR_VISIT_METHOD(If);
 		PANIC_VISITOR_VISIT_METHOD(While);
+		PANIC_VISITOR_VISIT_METHOD(Method);
+		PANIC_VISITOR_VISIT_METHOD(Field);
+		PANIC_VISITOR_VISIT_METHOD(Constructor);
+		PANIC_VISITOR_VISIT_METHOD(Destructor);
+		PANIC_VISITOR_VISIT_METHOD(AccessBlock);
 	};
 }

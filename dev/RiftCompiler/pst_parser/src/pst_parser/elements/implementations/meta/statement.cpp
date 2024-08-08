@@ -4,8 +4,6 @@
 
 namespace pst {
 
-	using AttrList = std::vector<ParserRef<Attribute>>;
-
 	bool Stmt::trailingSemicolon() { return true; }
 
 	namespace detail {
@@ -73,8 +71,7 @@ namespace pst {
 		}
 	}
 
-	ParserRef<Stmt> Stmt::parse(RiftParserState& state) {
-		// Collect Attributes
+	Stmt::AttrList Stmt::collectAttributes(RiftParserState& state) {
 		auto as_special = state[0].asSpecial();
 		AttrList attributes;
 
@@ -85,6 +82,12 @@ namespace pst {
 			}
 			as_special = state[0].asSpecial();
 		}
+		return attributes;
+	}	
+
+	ParserRef<Stmt> Stmt::parse(RiftParserState& state) {
+		// Collect Attributes
+		auto attributes = collectAttributes(state);
 
 		// Parse Statement
 		ParserRef<Stmt> out = detail::chooseStmt(state);
