@@ -113,6 +113,9 @@ namespace rift_def {
 		// Class specific:
 		Public,
 		Private,
+		Protected,
+		Static,
+		This,
 		Extends,
 		Implements,
 

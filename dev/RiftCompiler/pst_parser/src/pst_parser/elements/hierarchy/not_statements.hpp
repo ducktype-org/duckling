@@ -99,6 +99,14 @@ namespace pst {
 		detail::Conditions::isSentinel,
 		detail::NameGetters::attributeArgList>;
 
+	using InitList = List<
+		Expr,
+		false,
+		lexer::Token::BracketType::None,
+		detail::Conditions::isComma,
+		detail::Conditions::isBlockGroup,
+		detail::NameGetters::classInitList>;
+
 	class DottedName final: public NotStmt {
 		std::vector<tpc::Identifier> names;
 		bool                         star = false;
@@ -165,6 +173,27 @@ namespace pst {
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Code Block";
+		}
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
+	};
+
+	class ClassBlock final: public NotStmt {
+		std::vector<ParserRef<ClassStmt>> statements;
+
+	public:
+		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos) {};
+		static ParserRef<ClassBlock> parse(RiftParserState& state);
+
+		~ClassBlock() override = default;
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Class Block";
 		}
 
 		[[nodiscard]]

@@ -57,6 +57,8 @@ namespace pst::detail {
 		static std::string inheritanceList() { return "inheritance"; }
 
 		static std::string attributeArgList() { return "attribute argument"; }
+
+		static std::string classInitList() { return "initialization"; }
 	};
 
 	/**

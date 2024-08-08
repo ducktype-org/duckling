@@ -14,6 +14,8 @@
 
 #include <unicode/unistr.h>
 
+#include <set>
+
 namespace pst {
 	class PstStmtVisitor;
 	class Attribute;
@@ -32,6 +34,7 @@ namespace pst {
 		Action,
 		ExprStmt,
 		Class,
+		ClassStmt,
 		TopLevel,
 		Const,
 		Variable
@@ -124,4 +127,33 @@ namespace pst {
 
 		bool trailingSemicolon() override;
 	};
+
+	class ClassStmt: public Stmt {
+	protected:
+		inline static const std::set<rift_def::Keyword> class_specs = {
+			rift_def::Keyword::Public,
+			rift_def::Keyword::Private,
+			rift_def::Keyword::Static,
+			rift_def::Keyword::Const,
+		};
+		std::vector<rift_def::Keyword> specifiers;
+	
+		void parseSpecifiers(RiftParserState& state);
+
+		[[nodiscard]]
+		i64 countSpecifiers(RiftParserState& state) const;
+
+		void dprintPrefix(std::ostream& out) const override;
+	public:
+		STMT_CHILD_CONSTRUCTOR(ClassStmt);
+
+		static ParserRef<ClassStmt> parse(RiftParserState& state);
+
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Class Element";
+		}
+	};
+
 }
