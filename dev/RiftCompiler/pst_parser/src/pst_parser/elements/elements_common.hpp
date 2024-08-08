@@ -17,6 +17,10 @@ namespace pst::detail {
 			return state[fwd].is(rift_def::Special::Comma);
 		}
 
+		static bool isSemicolon(const RiftParserState& state, i64 fwd) {
+			return state[fwd].is(rift_def::Special::Semicolon);
+		}
+
 		static bool isSentinel(const RiftParserState& state, i64 fwd) {
 			return state[fwd].is(lexer::Token::Type::Sentinel);
 		}

@@ -189,7 +189,7 @@ namespace pst {
 
 	public:
 		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos) {};
-		static ParserRef<ClassBlock> parse(RiftParserState& state);
+		static ParserRef<ClassBlock> parse(RiftParserState& state, tpc::Identifier class_name);
 
 		~ClassBlock() override = default;
 		void dprint(std::ostream& out) const final;

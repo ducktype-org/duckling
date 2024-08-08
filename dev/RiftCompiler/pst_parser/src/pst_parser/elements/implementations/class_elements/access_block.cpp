@@ -1,27 +1,49 @@
 #include "preamble.hpp"
 
 namespace pst {
+	class NoSpecifierError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected an access specifier.";
+		}
+
+	public:
+		NoSpecifierError(dia::SourcePosition pos): dia::Error(pos) {}
+
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+	};
+
 	ParserRef<AccessBlock> AccessBlock::parse(RiftParserState& state, tpc::Identifier class_name) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Block>(position);
+		auto out      = makeRef<AccessBlock>(position);
 
-		if (!assertStmtChoice<Block>(state, state[0].is(Keyword::Block))) return nullptr;
+		if(not access_specifiers.contains(state[0].asKeyword())) {
+			state.log(base::make_unique<NoSpecifierError>(position));
+		} else {
+			out->specifier = state[0].asKeyword();
+		}
 
-		state.parse(out).all(Keyword::Block, &out->optional_name, &out->code_block);
+		state.parse(out).eatOne();
+
+		state.parse(out).with(&out->block, ClassBlock::parse, tpc::Identifier(class_name));
 
 		return out;
 	}
 
-	void Block::dprint(std::ostream& out) const {
+	void AccessBlock::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("optional name": )";
-		nullAwareDprint(optional_name, out);
+		out << R"("specifier": )";
+		tpc::nullAwareDprint(specifier, out);
 		out << R"(, "code block": )";
-		nullAwareDprint(code_block, out);
+		nullAwareDprint(block, out);
 
 		out << "}";
 	}
 
-	void Block::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitBlock(*this); }
+	void AccessBlock::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAccessBlock(*this); }
 }

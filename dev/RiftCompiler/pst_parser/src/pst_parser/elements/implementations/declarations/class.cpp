@@ -38,7 +38,7 @@ namespace pst {
 		if (state.parse(out).tryEat(Keyword::Implements))
 			state.parse(out).one(&out->implements, true);
 
-		state.parse(out).one(&out->body, true);
+		state.parse(out).with(&out->body, ClassBlock::parse, tpc::Identifier{out->name});
 
 		return out;
 	}

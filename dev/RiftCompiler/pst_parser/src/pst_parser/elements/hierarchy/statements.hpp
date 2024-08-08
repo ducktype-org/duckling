@@ -163,9 +163,6 @@ namespace pst {
 	protected:
 		base::Optional<ParserRef<Expr>> expr;
 
-		void dprintPrefix(std::ostream& out) const override;
-		void dprintSuffix(std::ostream& out) const override;
-
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action);
 		static ParserRef<Action> parse(RiftParserState& state);

@@ -101,7 +101,7 @@ namespace pst {
 		tpc::Identifier           name;
 		ParserRef<Expr>           base       = nullptr;
 		ParserRef<ImplementsList> implements = nullptr;
-		ParserRef<CodeBlock>      body       = nullptr;
+		ParserRef<ClassBlock>      body       = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Class);
@@ -112,7 +112,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<CodeBlock> getBody() const {
+		ParserCBorrowRef<ClassBlock> getBody() const {
 			return body.borrow();
 		}
 
