@@ -267,15 +267,13 @@ namespace base {
 		 * @return Object T to perform an operation on.
 		 */
 		[[nodiscard]]
-		constexpr const T*
-			operator->() const {
+		constexpr const T* operator->() const {
 			_throwOnNoValue();
 			return private_optional.operator->();
 		}
 
 		[[nodiscard]]
-		constexpr T*
-			operator->() {
+		constexpr T* operator->() {
 			_throwOnNoValue();
 			return private_optional.operator->();
 		}
@@ -324,6 +322,16 @@ namespace base {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
+		}
+
+		// Custom definition, because operator<=> on std::optional returns int. (???)
+		std::strong_ordering operator<=>(const Optional& other) const
+			requires requires(T v1, T v2) {
+				{ v1 <=> v2 } -> std::same_as<std::strong_ordering>;
+			} {
+			if (private_optional.has_value() != other.private_optional.has_value())
+				return private_optional.has_value() <=> other.private_optional.has_value();
+			return private_optional.value() <=> other.private_optional.value();
 		}
 
 	protected:
@@ -515,6 +523,15 @@ namespace base {
 			return {};
 		}
 
+		// Custom definition, because operator<=> on std::optional returns int. (???)
+		std::strong_ordering operator<=>(const Optional& other) const
+			requires requires(T v1, T v2) {
+				{ v1 <=> v2 } -> std::same_as<std::strong_ordering>;
+			} {
+			if (private_optional.has_value() != other.private_optional.has_value())
+				return private_optional.has_value() <=> other.private_optional.has_value();
+			return private_optional.value() <=> other.private_optional.value();
+		}
 
 	private:
 		void _throwOnNoValue() const {
