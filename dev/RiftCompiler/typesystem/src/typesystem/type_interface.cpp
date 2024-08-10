@@ -57,7 +57,7 @@ namespace ts {
 		const std::vector<TypeInfo>&      positional_arg_types,
 		const std::vector<NamedArgument>& named_args,
 		query::Context&                   ctx,
-		InterfaceElement                  method,
+		const InterfaceElement&           method,
 		std::set<InterfaceElement>&       exact_matches,
 		std::set<InterfaceElement>&       coercion_matches,
 		std::set<InterfaceElement>&       non_matches
@@ -131,7 +131,7 @@ namespace ts {
 		std::set<InterfaceElement> non_matches;
 
 		// Categorise overloads into the above sets.
-		for (auto element: elements_matching_name) {
+		for (const auto& element: elements_matching_name) {
 			selectMatchCategoryForMethod(
 				positional_arg_types,
 				named_args,
@@ -177,6 +177,7 @@ namespace ts {
 			const std::vector<TypeInterface::NamedArgument>& named = argument_info.value().second;
 
 			std::vector<std::string> args;
+			args.reserve(positional.size() + named.size());
 			for (auto positional_type: positional) args.push_back(positional_type.toString());
 			for (auto named_arg: named)
 				args.push_back(named_arg.name.str() + " : " + named_arg.type.toString());
