@@ -40,7 +40,7 @@ namespace compiler::mir {
 	/**
 	 * @brief Structure representing block in build process
 	 */
-	struct BlockBuilder {
+	struct BlockBuilder final {
 	private:
 		BlockID id;
 
@@ -117,7 +117,7 @@ namespace compiler::mir {
 		}
 	};
 
-	struct FunctionBuilder {
+	struct FunctionBuilder final {
 	private:
 		base::Optional<base::StrId>      name;
 		base::StableVector<BlockBuilder> blocks;
@@ -172,7 +172,10 @@ namespace compiler::mir {
 
 		base::Optional<StmtLowerRes> out;
 
-		void output(StmtLowerRes value) { this->out.emplace(value); }
+		void output(StmtLowerRes value) {
+			RIFT_ASSERT(this->out.empty(), "Output already set.");
+			this->out.emplace(value);
+		}
 
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
 			auto return_block = function.newBlock();
@@ -180,7 +183,6 @@ namespace compiler::mir {
 			// lower expr:
 			auto expr_res = lowerExpr(*stmt.value, return_block, function);
 
-			// here return_instruction has to be a terminator:
 			return_block->setTerminator(
 				Instruction(Operation::Return, {}, { expr_res.value }, {}, stmt.lifetime_scope)
 			);
@@ -189,7 +191,11 @@ namespace compiler::mir {
 		}
 
 		void visitVoidReturnStmt(const hc::VoidReturnStmt&) override {
-			throw base::NotYetImplemented("void return");
+			auto return_block = function.newBlock();
+			return_block->setTerminator(
+				{ Operation::ReturnVoid, {}, {}, {}, stmt.lifetime_scope }
+			);
+			output({ return_block });
 		}
 
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
@@ -223,7 +229,7 @@ namespace compiler::mir {
 		}
 	};
 
-	struct ExprBlockVisitor: public helios::code::HoutExprVisitor {
+	struct ExprBlockVisitor: public hc::HoutExprVisitor {
 		BlockRef continuation;
 
 		base::Optional<ExprLowerRes> out;
@@ -234,7 +240,10 @@ namespace compiler::mir {
 			  continuation(std::move(continuation)),
 			  function(function) {}
 
-		void output(ExprLowerRes value) { this->out.emplace(value); }
+		void output(ExprLowerRes value) {
+			RIFT_ASSERT(this->out.empty(), "Output already set.");
+			this->out.emplace(value);
+		}
 
 		void visitLiteralValueExpr(const hc::LiteralValueExpr& expr) override {
 			output({ continuation, MirLocation{ MirIntegerConst{ expr.value } } });
@@ -300,6 +309,7 @@ namespace compiler::mir {
 				{ Operation::Jump, {}, { first_block.begin->getID() }, {}, fun_body_scope }
 			);
 
+			// second step: lifetime stuff
 
 			// @TODO:
 			// * add some lifetime stuff
