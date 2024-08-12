@@ -21,7 +21,7 @@ namespace ts::internal {
 	}
 
 	/**
-	 * \brief The TypeInfoImpl class and its subclasses are a heavy type implementation hierarchy.
+	 * @brief The TypeInfoImpl class and its subclasses are a heavy type implementation hierarchy.
 	 *
 	 * An object from the TypeInfoImpl hierarchy, like IntegralInfoImpl, FunctionInfoImpl etc. hold
 	 * all the data describing a type (hence, they are heavy). This data includes:
@@ -42,33 +42,33 @@ namespace ts::internal {
 	class TypeInfoImpl {
 	public:
 		/**
-		 * \brief The Kind of the type described by an object of this class.
+		 * @brief The Kind of the type described by an object of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Any;
 
 		/**
-		 * \brief Gets the Kind of the type described by this object.
-		 * \return The Kind of the type described by this object.
+		 * @brief Gets the Kind of the type described by this object.
+		 * @return The Kind of the type described by this object.
 		 */
 		[[nodiscard]]
 		virtual Kind getKind() const
 			= 0;
 
 		/**
-		 * \brief Gets the size of a value of the type described by this object, in bits.
-		 * \param ctx The Query Context necessary to deduce composite type sizes.
+		 * @brief Gets the size of a value of the type described by this object, in bits.
+		 * @param ctx The Query Context necessary to deduce composite type sizes.
 		 * This is applicable for types which require being at some point "incomplete".
-		 * \return The size of a value of the type described by this object, in bits.
+		 * @return The size of a value of the type described by this object, in bits.
 		 */
 		[[nodiscard]]
 		virtual usize getSize(query::Context& ctx) const
 			= 0;
 
 		/**
-		 * \brief Gets the TypeInterface of the type described by this class.
-		 * \param ctx The Query Context necessary to deduce interfaces.
+		 * @brief Gets the TypeInterface of the type described by this class.
+		 * @param ctx The Query Context necessary to deduce interfaces.
 		 * This is applicable for types which require being at some point "incomplete".
-		 * \return The TypeInterface of the type described by this class.
+		 * @return The TypeInterface of the type described by this class.
 		 */
 		// @TODO: Remove the default for the interface. Each type should know its interface.
 		// The interface default is to be removed when interfaces for each type are determined.
@@ -80,8 +80,8 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief Get the text representation of this type.
-		 * \return The text representation of this type.
+		 * @brief Get the text representation of this type.
+		 * @return The text representation of this type.
 		 */
 		[[nodiscard]]
 		virtual const std::string& toString() const {
@@ -91,7 +91,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief Determine whether it is legal to consider an implicit coercion
+		 * @brief Determine whether it is legal to consider an implicit coercion
 		 * from a value described by this TypeDesc to one described by target.
 		 *
 		 * An implicit coercion is when, for example, a boolean is expected, but
@@ -111,9 +111,9 @@ namespace ts::internal {
 		 *
 		 * This is typically determined by rules specific for the Kind of the source type.
 		 *
-		 * \param target The target of a hypothetical implicit coercion.
-		 * \param context The query context necessary for checking user defined coercions.
-		 * \return Whether the implicit coercion is allowed or not.
+		 * @param target The target of a hypothetical implicit coercion.
+		 * @param context The query context necessary for checking user defined coercions.
+		 * @return Whether the implicit coercion is allowed or not.
 		 */
 		[[nodiscard]]
 		virtual bool isImplicitlyCoercible(
@@ -129,7 +129,7 @@ namespace ts::internal {
 		// @TODO make this a field in TypeInfoImpl, set in the constructor?
 		// Should be done when text representation for types is determined.
 		/**
-		 * \brief The text representation of this type.
+		 * @brief The text representation of this type.
 		 */
 		std::string representation = "UNNAMED";
 	};
@@ -142,7 +142,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Unit;
 
@@ -162,7 +162,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Void;
 
@@ -182,7 +182,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Byte;
 
@@ -208,7 +208,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Bool;
 
@@ -234,7 +234,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Char;
 
@@ -263,7 +263,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Integral;
 
@@ -307,7 +307,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Float;
 
@@ -337,7 +337,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::RawPointer;
 
@@ -376,7 +376,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Pointer;
 
@@ -431,7 +431,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Reference;
 
@@ -501,7 +501,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Tuple;
 
@@ -550,7 +550,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Function;
 
@@ -631,7 +631,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Variant;
 
@@ -663,7 +663,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static inline Kind staticKind = Kind::Class;
 
@@ -734,7 +734,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Namespace;
 
@@ -754,7 +754,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Module;
 
@@ -774,7 +774,7 @@ namespace ts::internal {
 		}
 
 		/**
-		 * \brief The Kind of types described by objects of this class.
+		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Meta;
 

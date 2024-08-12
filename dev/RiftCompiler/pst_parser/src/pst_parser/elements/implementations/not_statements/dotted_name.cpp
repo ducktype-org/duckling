@@ -1,5 +1,4 @@
-#include "elements_implementation.hpp"
-#include "pst_parser/elements/elements.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 	std::vector<base::StrId> DottedName::getNames() const {
