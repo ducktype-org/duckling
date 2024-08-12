@@ -1,7 +1,6 @@
 {
 	"PST": [
 		{
-
 			"Attribute": {
 				"name": {
 					"Name": "ATRR"
@@ -21,35 +20,39 @@
 					"CodeBlockOrStmt": {
 						"CodeBlock": [
 							{
-								"Expr": [
-									{
-										"Identifier": "x"
-									},
-									{
-										"Operator": "="
-									},
-									{
-										"NumLiteral": "3"
-									}
-								]
+								"Expr Stmt": {
+									"Expr": [
+										{
+											"Identifier": "x"
+										},
+										{
+											"Operator": "="
+										},
+										{
+											"NumLiteral": "3"
+										},
+									]
+								}
 							},
 							{
-								"Expr": [
-									{
-										"Identifier": "y"
-									},
-									{
-										"Operator": "="
-									},
-									{
-										"NumLiteral": "4"
-									}
-								]
-							}
+								"Expr Stmt": {
+									"Expr": [
+										{
+											"Identifier": "y"
+										},
+										{
+											"Operator": "="
+										},
+										{
+											"NumLiteral": "4"
+										},
+									]
+								}
+							},
 						]
 					}
 				}
 			}
-		}
+		},
 	]
 }

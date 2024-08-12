@@ -8,21 +8,23 @@
 				"block": {
 					"CodeBlock": [
 						{
-							"Expr": [
-								{
-									"Identifier": "x"
-								},
-								{
-									"Operator": "+"
-								},
-								{
-									"NumLiteral": "3"
-								}
-							]
-						}
+							"Expr Stmt": {
+								"Expr": [
+									{
+										"Identifier": "x"
+									},
+									{
+										"Operator": "+"
+									},
+									{
+										"NumLiteral": "3"
+									},
+								]
+							}
+						},
 					]
 				}
 			}
-		}
+		},
 	]
 }
