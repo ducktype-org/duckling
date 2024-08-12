@@ -1,5 +1,6 @@
 #include "mir_structure.hpp"
 #include <base/variant.hpp>
+#include <sstream>
 
 namespace compiler::mir {
 
@@ -46,16 +47,22 @@ namespace compiler::mir {
 			output << "    ";
 		}
 
-		output << std::left << std::setw(12);
+		output << std::left << std::setw(15);
 		output << base::enumToStr(operation).strView() << "  ";
 
+		std::stringstream args;
 
+		std::string_view separator = "";
 		for (const auto& arg: arguments) {
-			arg.debugPrint(output);
-			output << ", ";
+			args << separator;
+			arg.debugPrint(args);
+			separator = ", ";
 		}
 
-		output << " Flags[";
+		output << std::left << std::setw(15);
+		output << args.str() << "  ";
+
+		output << "Flags[";
 		for ([[maybe_unused]] const auto& flag: flags) {
 			output << "Flag todo"
 				   << ", ";
