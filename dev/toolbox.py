@@ -63,7 +63,7 @@ def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, cove
         # Delete old cache
         try:
             (bld / pathlib.Path("CMakeCache.txt")).unlink()
-            (bld / pathlib.Path("CMakeFiles.txt")).rmdir()
+            (bld / pathlib.Path("CMakeFiles")).rmdir()
         except FileNotFoundError:
             pass
     cmd = f"""
