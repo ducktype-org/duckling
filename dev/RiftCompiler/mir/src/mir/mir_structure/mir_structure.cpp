@@ -20,7 +20,11 @@ namespace compiler::mir {
 		output << "Function " << name.strView() << ": TODO -> TODO {\n";
 
 		for (const auto& block: blocks | std::views::reverse) {
-			output << "  block " << u64(block.id) << ":\n";
+			output << "  block " << u64(block.id);
+			if (block.id == entry_block) {
+				output << " [entry]";
+			}
+			output << ":\n";
 			for (const auto& instruction: block.instructions) {
 				output << "    ";
 				instruction.debugPrint(output);

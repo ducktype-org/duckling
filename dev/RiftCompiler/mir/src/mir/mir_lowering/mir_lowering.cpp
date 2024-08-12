@@ -132,9 +132,7 @@ namespace compiler::mir {
 			for (usize i = 0; i < this->blocks.size(); i++)
 				blocks.emplace_back(this->blocks.getRef(i).value()->build());
 
-			// @TODO: entry block stuff
-
-			return Function{ name.value(), std::move(blocks), std::move(local_list) };
+			return Function{ name.value(), std::move(blocks), std::move(local_list), entry_block.value()->getID() };
 		}
 
 		void setName(base::StrId name) {
@@ -149,15 +147,16 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]]
-		BlockRef newBlock(bool entry = false) {
+		BlockRef newBlock() {
 			auto index = blocks.size();
 			auto res   = blocks.getRef(blocks.emplaceBack(BlockBuilder{ index })).value();
-			if (entry) {
-				RIFT_ASSERT(entry_block.empty(), "Entry block already set!");
-				entry_block.emplace(res);
-			}
 			RIFT_ASSERT(u64(res->getID()) == blocks.size() - 1, "Bad block id");
 			return res;
+		}
+
+		void setEntry(BlockRef block) {
+			RIFT_ASSERT(entry_block.empty(), "Entry block already set.");
+			entry_block.emplace(block);
 		}
 	};
 
@@ -303,11 +302,7 @@ namespace compiler::mir {
 			auto first_block
 				= lowerCodeBlock(*key.function.body.body, last_block, function_builder);
 
-			auto entry_block = function_builder.newBlock(true);
-
-			entry_block->setTerminator(
-				{ Operation::Jump, {}, { first_block.begin->getID() }, {}, fun_body_scope }
-			);
+			function_builder.setEntry(first_block.begin);
 
 			// second step: lifetime stuff
 
