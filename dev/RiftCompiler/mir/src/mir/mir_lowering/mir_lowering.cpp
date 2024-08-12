@@ -132,7 +132,9 @@ namespace compiler::mir {
 			for (usize i = 0; i < this->blocks.size(); i++)
 				blocks.emplace_back(this->blocks.getRef(i).value()->build());
 
-			return Function{ name.value(), std::move(blocks), std::move(local_list), entry_block.value()->getID() };
+			return Function{
+				name.value(), std::move(blocks), std::move(local_list), entry_block.value()->getID()
+			};
 		}
 
 		void setName(base::StrId name) {
@@ -191,9 +193,7 @@ namespace compiler::mir {
 
 		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
 			auto return_block = function.newBlock();
-			return_block->setTerminator(
-				{ Operation::ReturnVoid, {}, {}, {}, stmt.lifetime_scope }
-			);
+			return_block->setTerminator({ Operation::ReturnVoid, {}, {}, {}, stmt.lifetime_scope });
 			output({ return_block });
 		}
 

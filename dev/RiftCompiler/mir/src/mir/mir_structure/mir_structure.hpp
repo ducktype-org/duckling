@@ -41,6 +41,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	 */
 	FunctionEnd
 );
+
 // clang-format on
 
 namespace compiler::mir {
@@ -170,7 +171,7 @@ namespace compiler::mir {
 		base::StrId                  name;
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
-		BlockID 					 entry_block;
+		BlockID                      entry_block;
 
 		void debugPrint(std::ostream& output) const;
 	};

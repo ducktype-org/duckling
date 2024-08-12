@@ -21,9 +21,7 @@ namespace compiler::mir {
 
 		for (const auto& block: blocks | std::views::reverse) {
 			output << "  block " << u64(block.id);
-			if (block.id == entry_block) {
-				output << " [entry]";
-			}
+			if (block.id == entry_block) output << " [entry]";
 			output << ":\n";
 			for (const auto& instruction: block.instructions) {
 				output << "    ";
