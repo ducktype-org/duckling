@@ -184,13 +184,13 @@ namespace compiler::mir {
 			auto expr_res = lowerExpr(*stmt.value, return_block, function);
 
 			return_block->setTerminator(
-				Instruction(Operation::Return, {}, { expr_res.value }, {}, stmt.lifetime_scope)
+				Instruction(Operation::ReturnValue, {}, { expr_res.value }, {}, stmt.lifetime_scope)
 			);
 
 			output({ expr_res.begin });
 		}
 
-		void visitVoidReturnStmt(const hc::VoidReturnStmt&) override {
+		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
 			auto return_block = function.newBlock();
 			return_block->setTerminator(
 				{ Operation::ReturnVoid, {}, {}, {}, stmt.lifetime_scope }

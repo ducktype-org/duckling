@@ -7,32 +7,49 @@
 #include <base/strongly_typed_id.hpp>
 #include <base/stringifyable_enum.hpp>
 
-MAKE_STRINGIFYABLE_ENUM(
-	compiler::mir,
-	u64,
-
-	Operation,
+// clang-format off
+MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Uninitialized,
 
 	Call,
 	VCall,
-	IntegerAdd,  //< @TODO:some decisions here to be made about type stuff
-                 // paraphs we want more generic code for MIR, so algos ar
+
+	/**
+	 * @brief Placeholder. 
+	 * @todo  Some decisions here to be made about operations like that.
+     * Perhaps we want more generic code for MIR, so algorithms are simpler.
+	 * There could be single operation for all Add, Sub, etc, and single one for all
+	 * comparisons. 
+	 */
+	IntegerAdd,
 
 	Destruct,
 	DestructIf,
 
-	VoidReturn,
-	Return,
+	ReturnVoid,
+	ReturnValue,
 	Jump,
 	Branch,
 
+	/**
+	 * @brief Operation that represents end of a function.
+	 * @note  It is always implicitly added at the end of a function.
+	 * This operation can have different meaning depending on the context.
+	 * For example in a function that returns void, it is just a return.
+	 * In a function that returns value, "it is" an compiler error, unless its
+	 * unreachable.
+	 */
 	FunctionEnd
 );
+// clang-format on
 
 namespace compiler::mir {
 
-	bool isTerminating(Operation op);
+	/**
+	 * @brief Whether given operation is an operation that can (ans has to be)
+	 * the last operation in the block (i.e. be a terminator).
+	 */
+	bool isTerminating(Operation);
 
 	/**
 	 * @brief BlockID is a temporary solution that should be replaced by
@@ -97,7 +114,7 @@ namespace compiler::mir {
 
 		std::vector<MirLocation> arguments;
 
-		// construct, destruct, move, ...:
+		// construct, destruct, move.
 		std::vector<OperationFlag> flags;
 
 		// @TODO: each Instruction should have source position reference

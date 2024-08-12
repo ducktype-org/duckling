@@ -41,7 +41,7 @@ namespace compiler::helios {
 		 * @brief Element for which the scope is created.
 		 * @note: scopes of various elements behave differently
 		 * Scope behaviour for:
-		 * * StatementAggravates -- a scope of aggregated statements
+		 * * StatementAggregates -- a scope of aggregated statements
 		 * * Function -- a scope of function arguments (@todo: function scopes are currently empty)
 		 * * Namespaces -- empty Scope
 		 * * Classes -- scope containing class fields

@@ -5,8 +5,8 @@ namespace compiler::mir {
 
 	bool isTerminating(Operation op) {
 		switch (op) {
-		case Operation::VoidReturn:
-		case Operation::Return:
+		case Operation::ReturnVoid:
+		case Operation::ReturnValue:
 		case Operation::Jump:
 		case Operation::Branch:
 		case Operation::FunctionEnd:
