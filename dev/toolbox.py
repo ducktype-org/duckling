@@ -2,6 +2,7 @@
 
 import pathlib
 import sys
+import shutil
 
 import click
 import requests
@@ -63,7 +64,7 @@ def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, cove
         # Delete old cache
         try:
             (bld / pathlib.Path("CMakeCache.txt")).unlink()
-            (bld / pathlib.Path("CMakeFiles")).rmdir()
+            shutil.rmtree(bld / pathlib.Path("CMakeFiles"))
         except FileNotFoundError:
             pass
     cmd = f"""
