@@ -68,4 +68,26 @@ namespace ts::internal {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySizeOfClass)
+
+	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, TypeInterface) {
+		static auto provide(Context& ctx, const QKey key) -> PResult {
+			compiler::helios::SymID symbol = key.value->getSymbol();
+			auto& field_syms  = ctx.query<compiler::helios::QueryStructSymbolData>(symbol).members;
+			// @TODO: Add methods to the interface, when obtaining their signature is supported.
+			// auto& method_syms = ctx.query<compiler::helios::QueryStructSymbolData>(symbol).methods;
+
+			std::set<InterfaceElement> elements;
+
+			for (auto field_sym : field_syms) {
+				TypeInfo field_type = ctx.query<compiler::helios::QueryTypeOfSymbol>(field_sym);
+				elements.insert(InterfaceElement(field_sym, key.value->toTypeInfo(), {}, field_type, {}));
+			}
+
+			return TypeInterface(elements);
+		}
+
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryInterfaceOfClass)
 }

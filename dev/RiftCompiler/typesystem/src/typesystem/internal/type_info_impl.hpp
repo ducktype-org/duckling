@@ -673,6 +673,11 @@ namespace ts::internal {
 		static inline Kind staticKind = Kind::Class;
 
 		[[nodiscard]]
+		const TypeInterface& getInterface(query::Context& ctx) const override {
+			return ctx.query<QueryInterfaceOfClass>(this);
+		}
+
+		[[nodiscard]]
 		usize getSize(query::Context& ctx) const override {
 			return ctx.query<QuerySizeOfClass>({ this });
 		}
