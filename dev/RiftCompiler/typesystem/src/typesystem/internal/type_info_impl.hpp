@@ -124,7 +124,7 @@ namespace ts::internal {
 
 		[[nodiscard]]
 		TypeInfo toTypeInfo() const {
-			return TypeInfo(this);
+			return this;
 		}
 
 		virtual ~TypeInfoImpl() = default;

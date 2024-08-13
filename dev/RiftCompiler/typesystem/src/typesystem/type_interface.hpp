@@ -210,6 +210,7 @@ namespace ts {
 		 * @brief Gets all the elements of an interface, grouped by name.
 		 * @return The elements of an interface, grouped by name.
 		 */
+		[[nodiscard]]
 		const base::Map<base::StrId, std::set<InterfaceElement>>& getElements() const {
 			return elements;
 		}
@@ -219,6 +220,7 @@ namespace ts {
 		 * @param name The requested name.
 		 * @return The elements of an interface with the requested name.
 		 */
+		[[nodiscard]]
 		const std::set<InterfaceElement>& getElements(base::StrId name) {
 			return elements.at(name);
 		}
