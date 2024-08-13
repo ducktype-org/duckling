@@ -9,7 +9,7 @@ target_link_libraries(clap_playground Base Clap Printer)
 target_link_libraries(clap_example_cat Base Clap)
 target_link_libraries(fs_parser_playground Base ModuleTree Clap)
 
-add_executable(fibs llvm_example.cpp)
+add_executable(llvm_example llvm_example.cpp)
 llvm_map_components_to_libnames(llvm_libs
     Core
     ExecutionEngine
@@ -18,4 +18,5 @@ llvm_map_components_to_libnames(llvm_libs
     MCJIT
     Support
     nativecodegen)
-target_link_libraries(fibs ${llvm_libs} Base)
+target_include_directories(llvm_example PRIVATE ${LLVM_INCLUDE_DIRS})
+target_link_libraries(llvm_example ${llvm_libs} llvm_helpers)

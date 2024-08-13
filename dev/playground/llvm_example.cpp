@@ -22,7 +22,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "base/llvm_helpers.hpp"
+#include "llvm_helpers.hpp"
 LLVM_INCLUDE_BEGIN()
 
 #include "llvm/ADT/APInt.h"
