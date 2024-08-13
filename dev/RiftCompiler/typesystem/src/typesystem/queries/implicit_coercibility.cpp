@@ -9,7 +9,8 @@ namespace ts {
 		inline static base::Map<QKey, query::CacheEntry<QResult>> cache;
 
 		static auto provide(Context& context, const QKey key) -> PResult {
-			return getImplicitConversionsFrom(key.source, context).contains(key.target)
+			return key.source == key.target
+			    || getImplicitConversionsFrom(key.source, context).contains(key.target)
 			    || getImplicitConstructorsOf(key.target, context).contains(key.source)
 			    || key.source.isImplicitlyCoercible(key.target, context);
 		}
@@ -45,12 +46,12 @@ namespace ts {
 		inline static base::Map<QKey, query::CacheEntry<QResult>> cache;
 
 		static auto provide(Context& context, const QKey& key) -> PResult {
-			return context.query<QueryImplicitCoercibilityOnInfo>(
-					   KeyFor_QueryImplicitCoercibilityOnInfo(
-						   key.source.getType(), key.target.getType()
-					   )
-				   )
-			    && key.source.getValueCategory().contains(key.target.getValueCategory());
+			bool type_coercibility = context.query<QueryImplicitCoercibilityOnInfo>(
+				KeyFor_QueryImplicitCoercibilityOnInfo(key.source.getType(), key.target.getType())
+			);
+			bool vc_coercibility
+				= key.source.getValueCategory().contains(key.target.getValueCategory());
+			return type_coercibility && vc_coercibility;
 		}
 
 		static auto load(const QKey& key) -> LoadResult {
