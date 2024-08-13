@@ -22,31 +22,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm_helpers.hpp"
+#include <llvm_helpers/llvm_helpers.hpp>
 LLVM_INCLUDE_BEGIN()
 
-#include "llvm/ADT/APInt.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/GenericValue.h"
-#include "llvm/ExecutionEngine/MCJIT.h"
-#include "llvm/IR/Argument.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/raw_ostream.h"
+#include <llvm/ADT/APInt.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/GenericValue.h>
+#include <llvm/ExecutionEngine/MCJIT.h>
+#include <llvm/IR/Argument.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/InstrTypes.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
+#include <llvm/Support/Casting.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/raw_ostream.h>
 
 LLVM_INCLUDE_END()
 
-#include <algorithm>
 #include <cstdlib>
 #include <memory>
 #include <string>
@@ -120,7 +119,7 @@ int main(int argc, char** argv) {
 	// We are about to create the "fib" function:
 	Function* FibF = CreateFibFunction(M, Context);
 
-	// Now we going to create JIT
+	// Now we are going to create JIT
 	std::string      errStr;
 	ExecutionEngine* EE = EngineBuilder(std::move(Owner)).setErrorStr(&errStr).create();
 
