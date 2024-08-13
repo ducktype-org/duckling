@@ -516,17 +516,29 @@ private:
 			"Bigger int should not be coercible into a smaller one."
 		);
 
-		const auto int_2_desc_const
+		const auto i2_const
 			= TypeDesc<>(int_2, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
-		const auto int_2_desc_mut
+		const auto i2_mut
 			= TypeDesc<>(int_2, ValueCategory(PrimaryCategory::Local, true, true, {}, {}));
-		const auto int_3_desc_const
+		const auto i3_const
 			= TypeDesc<>(int_3, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
 
-		assert(query::entryPoint<QueryImplicitCoercibilityOnDesc>({int_2_desc_const, int_3_desc_const}), "Smaller int value should be coercible into a bigger one.");
-		assert(query::entryPoint<QueryImplicitCoercibilityOnDesc>({int_2_desc_mut, int_2_desc_const}), "Mutable value should be coercible to an immutable one.");
-		assert(query::entryPoint<QueryImplicitCoercibilityOnDesc>({int_2_desc_mut, int_3_desc_const}), "Mutable value should be coercible to a bigger, immutable one.");
-		assert(!query::entryPoint<QueryImplicitCoercibilityOnDesc>({int_2_desc_const, int_2_desc_mut}), "Immutable value should not be coercible to a mutable one.");
+		assert(
+			query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_const, i3_const }),
+			"Smaller int value should be coercible into a bigger one."
+		);
+		assert(
+			query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_mut, i2_const }),
+			"Mutable value should be coercible to an immutable one."
+		);
+		assert(
+			query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_mut, i3_const }),
+			"Mutable value should be coercible to a bigger, immutable one."
+		);
+		assert(
+			!query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_const, i2_mut }),
+			"Immutable value should not be coercible to a mutable one."
+		);
 	}
 
 public:
