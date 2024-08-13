@@ -5,7 +5,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message("-- GNU compiler")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare")
 
-	# Debug version uses Og and prints all logs. 
+	# Debug version uses Og.
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og")
 
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -14,7 +14,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	# I didn't find a good -Werror=terminate alternative for Clang.
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=shadow-all -Werror=return-stack-address -Werror=free-nonheap-object -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare")
 
-	# Debug version uses O0 and prints all logs. 
+	# Debug version uses O0.
 	# For some reason -Og does not work in clang
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
 else()
