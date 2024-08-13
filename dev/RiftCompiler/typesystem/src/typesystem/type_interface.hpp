@@ -69,6 +69,7 @@ namespace ts {
 		 */
 		Visibility visibility;
 
+	public:
 		/**
 		 * @brief Construct an element of an interface of a type.
 		 * @param parameters The parameters of this element.
@@ -89,7 +90,6 @@ namespace ts {
 			  result_type(result_type),
 			  visibility(visibility) {}
 
-	public:
 		/**
 		 * @brief Gets the symbol of this element.
 		 * @return The symbol of this element.
@@ -210,7 +210,9 @@ namespace ts {
 		 * @brief Gets all the elements of an interface, grouped by name.
 		 * @return The elements of an interface, grouped by name.
 		 */
-		const base::Map<base::StrId, std::set<InterfaceElement>>& getElements() { return elements; }
+		const base::Map<base::StrId, std::set<InterfaceElement>>& getElements() const {
+			return elements;
+		}
 
 		/**
 		 * @brief Gets all the elements of an interface with a given name.
@@ -316,10 +318,10 @@ namespace ts {
 		 * @return The elements which match the name.
 		 */
 		ResolutionResult resolve(
-			base::StrId                       name,
-			const std::vector<TypeInfo>&      positional_arg_types,
-			const std::vector<NamedArgument>& named_args,
-			query::Context&                   ctx
+			base::StrId                    name,
+			const std::vector<TypeInfo>&   positional_arg_types,
+			const std::set<NamedArgument>& named_args,
+			query::Context&                ctx
 		);
 
 		/**

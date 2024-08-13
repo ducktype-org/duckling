@@ -55,8 +55,8 @@ namespace ts::internal {
 
 	struct IMPLEMENT_QUERY(QuerySizeOfClass, usize) {
 		static auto provide(Context& ctx, const QKey key) -> PResult {
-			auto& interface = key.value->getInterface(ctx);
-			usize result    = 0;
+			const auto& interface = key.value->getInterface(ctx);
+			usize       result    = 0;
 			for (auto& [k, elems]: interface.getElements()) {
 				for (auto& elem: elems)
 					if (elem.isField()) result += elem.getResultType().getSize(ctx);

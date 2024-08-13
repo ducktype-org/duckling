@@ -74,7 +74,7 @@ namespace ts::internal {
 		// The interface default is to be removed when interfaces for each type are determined.
 		// Then, this definition should become pure virtual.
 		[[nodiscard]]
-		virtual TypeInterface& getInterface(query::Context&) const {
+		virtual const TypeInterface& getInterface(query::Context&) const {
 			static TypeInterface empty{};
 			return empty;
 		}
@@ -120,6 +120,11 @@ namespace ts::internal {
 			[[maybe_unused]] const TypeInfo target, [[maybe_unused]] query::Context& context
 		) const {
 			return false;
+		}
+
+		[[nodiscard]]
+		TypeInfo toTypeInfo() const {
+			return TypeInfo(this);
 		}
 
 		virtual ~TypeInfoImpl() = default;

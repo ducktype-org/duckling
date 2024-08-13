@@ -326,16 +326,6 @@ namespace base {
 			return {};
 		}
 
-		// Custom definition, because operator<=> on std::optional returns int. (???)
-		std::strong_ordering operator<=>(const Optional& other) const
-			requires requires(T v1, T v2) {
-				{ v1 <=> v2 } -> std::same_as<std::strong_ordering>;
-			} {
-			if (private_optional.has_value() != other.private_optional.has_value())
-				return private_optional.has_value() <=> other.private_optional.has_value();
-			return private_optional.value() <=> other.private_optional.value();
-		}
-
 	protected:
 		void _throwOnNoValue() const {
 			if (!has_value()) RIFT_PANIC("Tried to retrieve a value from an empty optional.");
@@ -523,16 +513,6 @@ namespace base {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
-		}
-
-		// Custom definition, because operator<=> on std::optional returns int. (???)
-		std::strong_ordering operator<=>(const Optional& other) const
-			requires requires(T v1, T v2) {
-				{ v1 <=> v2 } -> std::same_as<std::strong_ordering>;
-			} {
-			if (private_optional.has_value() != other.private_optional.has_value())
-				return private_optional.has_value() <=> other.private_optional.has_value();
-			return private_optional.value() <=> other.private_optional.value();
 		}
 
 	private:

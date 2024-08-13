@@ -53,14 +53,27 @@ namespace ts {
 		return AmbiguousMatch{ elements_matching_name, {}, {} };
 	}
 
+	/**
+	 * @brief For an InterfaceElement which is a method (i.e. which has parameters), given two
+	 * collections of positional and named arguments, determine whether the arguments match the
+	 * parameters exactly, via coercion, or not at all. Return the proper category by reference.
+	 * @param positional_arg_types The types of the provided positional arguments.
+	 * @param named_args The names and types of the provided named arguments.
+	 * @param ctx The query context, for coercibility resolution.
+	 * @param method The method to be matched against.
+	 * @param exact_matches The reference to the category of exact matches.
+	 * @param coercion_matches The reference to the category of matches via coercion.
+	 * @param non_matches The reference to the category of non-matches.
+	 * @return The reference to the proper category, out of the three given.
+	 */
 	std::set<InterfaceElement>& selectMatchCategoryForMethod(
-		const std::vector<TypeInfo>&      positional_arg_types,
-		const std::vector<NamedArgument>& named_args,
-		query::Context&                   ctx,
-		const InterfaceElement&           method,
-		std::set<InterfaceElement>&       exact_matches,
-		std::set<InterfaceElement>&       coercion_matches,
-		std::set<InterfaceElement>&       non_matches
+		const std::vector<TypeInfo>&   positional_arg_types,
+		const std::set<NamedArgument>& named_args,
+		query::Context&                ctx,
+		const InterfaceElement&        method,
+		std::set<InterfaceElement>&    exact_matches,
+		std::set<InterfaceElement>&    coercion_matches,
+		std::set<InterfaceElement>&    non_matches
 	) {
 		// Since this resolution step really only considers methods, we discard fields.
 		if (method.isField()) return non_matches;
@@ -118,10 +131,10 @@ namespace ts {
 	}
 
 	ResolutionResult TypeInterface::resolve(
-		base::StrId                       name,
-		const std::vector<TypeInfo>&      positional_arg_types,
-		const std::vector<NamedArgument>& named_args,
-		query::Context&                   ctx
+		base::StrId                    name,
+		const std::vector<TypeInfo>&   positional_arg_types,
+		const std::set<NamedArgument>& named_args,
+		query::Context&                ctx
 	) {
 		// Preamble
 		const std::set<InterfaceElement>& elements_matching_name = getElements(name);

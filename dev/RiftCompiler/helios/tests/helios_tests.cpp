@@ -59,7 +59,7 @@ private:
 	}
 
 	static auto getTypeOf(auto name, auto scope) {
-		return query::entryPoint<compiler::helios::QueryTypeOf>(getChain(name, scope).back());
+		return query::entryPoint<compiler::helios::QueryTypeOfSymbol>(getChain(name, scope).back());
 	}
 
 	static auto getTypeFromDefintion(auto name, auto scope) {
