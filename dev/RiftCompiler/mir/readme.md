@@ -92,6 +92,12 @@ In particular passing MIR Local to an operation argument or assigning operation 
 
 ### Lifetime flags and move semantics
 
+Each local variable in MIR has implicit, hidden "lifetime flag". It is a boolean flag, that dictates whether this local variable is still "alive". Operation with move flag sets this flag to false. This flag will be used to decide if destructor have to be called on a given object. Details of how exactly it will be realized are not yet known.
+
+Potential ideas:
+* `destruct_if` operation that calls destructor only if lifetime flag is set.
+* `call_if` operation that calls any function only if lifetime flag is set.
+* `branch_if_live` operation branch based of lifetime flag.
 
 ### Problems and future work
 
