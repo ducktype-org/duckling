@@ -222,7 +222,7 @@ namespace ts {
 		 */
 		[[nodiscard]]
 		const std::set<InterfaceElement>& getElements(base::StrId name) {
-			static std::set<InterfaceElement> empty_set {};
+			static std::set<InterfaceElement> empty_set{};
 			if (!elements.contains(name)) return empty_set;
 			return elements.at(name);
 		}
