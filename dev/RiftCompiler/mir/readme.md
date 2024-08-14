@@ -37,10 +37,10 @@ Example:
 
 ```cpp
 // operation calling a constructor on local variable v:
-v := call(F)   [construct v] // call takes the function as first argument
+v := call(F)   [construct v] [scope of ...] // call takes the function as first argument
 
 // operations calling foo, and moving variable v
-call(foo, v)   [move v]
+call(foo, v)   [move v] [scope of ...]
 ```
 
 Possible subset of operations:
@@ -66,8 +66,7 @@ They are made from following components:
 * name
 * parameters
 * return types
-* code, composed of set of basic blocks
-* marked of entry block
+* code, composed of set of basic blocks with marked entry block
 
 ### MIR basic blocks
 
