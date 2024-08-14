@@ -214,7 +214,7 @@ namespace compiler::helios {
 				as_stmt->acceptVisitor(symbol_grab);
 				return std::move(symbol_grab.out.value());
 			} else if (base_element->elementType() == "Expression") {
-				// @TODO in this PR: change the way we check condition in this if.
+				// @FIXME: change the way we check condition in this if.
 				return std::vector<SymID>{};
 			} else {
 				RIFT_PANIC("Query symbols from scope of non-statement, non-codeblock and non-expr");
