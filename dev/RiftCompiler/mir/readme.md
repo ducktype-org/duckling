@@ -95,18 +95,13 @@ In particular passing MIR Local to an operation argument or assigning operation 
 
 ### Problems and future work
 
--- pointers to members
+* Getting access to local objects members and globals is problematic.
+  On one hand, classic approach of doing it in low-level representation is to get pointers to members. At first is seams to work very well with Duckling high level types, as `ref` type describes semantic of member access very well. This however breaks when member is already a `ref`, as Duckling does not support builtin ref-s to ref-s (it is supported via std support).
+* Value categories and types in MIR
+* Match and switch statements in MIR
 
+### Other ides that were (in current version) rejected for some reasons
 
-### Other ides that were rejected in favor of other ones
-
-todo:
-* tmp == create? -- yes
-* is move a special operation? -- no
-* is destroy a flag? -- yes
-* what about value categories in things like match(optional)..
-
-
-
-
+* Special operations for move, create, etc instead of flags. This was rejected, because we want to have "move event" happen exactly when it actually is happening.
+* Distinguishing of temporary and local variables. This was deemed not necessary, and therefor not worth the effort. It might be brought back to solve some problems in the future.
 
