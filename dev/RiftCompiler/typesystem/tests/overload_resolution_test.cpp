@@ -3,11 +3,12 @@
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
 
+#include <base/variant.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <query_framework/test_utils/context_suite.hpp>
-#include <base/variant.hpp>
 
 using namespace ts;
+using namespace compiler::helios::test_utils;
 
 class TypeSystemOverloadResolutionTest final: public tester::ContextSuite {
 #undef TESTER_CLASS

@@ -13,6 +13,7 @@
 #include <typesystem/internal/queries.hpp>
 
 #include <helios/test_utils/helios_test_utils.hpp>
+using namespace compiler::helios::test_utils;
 
 class HeliosTests: public tester::TestSuite {
 #undef TESTER_CLASS

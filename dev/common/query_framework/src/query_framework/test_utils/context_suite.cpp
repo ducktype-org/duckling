@@ -10,7 +10,7 @@ namespace tester {
 			static inline usize                   nextID = 0;
 
 			KeyFor_DoWithContext(std::function<void*(query::Context&)> value):
-				  value(value),
+				  value(std::move(value)),
 				  ID(nextID++) {}
 
 			[[nodiscard]]
@@ -22,7 +22,7 @@ namespace tester {
 		DECLARE_QUERY(DoWithContext, KeyFor_DoWithContext, void*)
 
 		struct IMPLEMENT_QUERY(DoWithContext, void*) {
-			static auto provide(Context& ctx, const QKey key) -> PResult { return key.value(ctx); }
+			static auto provide(Context& ctx, const QKey& key) -> PResult { return key.value(ctx); }
 
 			QUERY_AUTO_NO_CACHE
 		};
