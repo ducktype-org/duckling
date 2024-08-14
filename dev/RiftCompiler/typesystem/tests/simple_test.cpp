@@ -516,6 +516,12 @@ private:
 			"Bigger int should not be coercible into a smaller one."
 		);
 
+		const auto void_type = query::entryPoint<QueryVoidType>({});
+		assert(
+			!query::entryPoint<QueryImplicitCoercibilityOnInfo>({ void_type, int_2 }),
+			"Void should not be coercible to anything."
+		);
+
 		const auto i2_const
 			= TypeDesc<>(int_2, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
 		const auto i2_mut
@@ -545,4 +551,4 @@ public:
 	~SimpleTypeSystemTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/src/typesystem/tests/")
+TESTER_COMMON_MAIN("/RiftCompiler/typesystem/tests/")

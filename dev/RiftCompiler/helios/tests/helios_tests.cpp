@@ -12,6 +12,8 @@
 #include <typesystem/typesystem.hpp>
 #include <typesystem/internal/queries.hpp>
 
+#include <helios/test_utils/helios_test_utils.hpp>
+
 class HeliosTests: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS HeliosTests
@@ -33,61 +35,8 @@ public:
 	}
 
 private:
-	static auto getChain(auto chain, auto scope) {
-		auto                         symbols = base::strSplit(chain, ".");
-		compiler::helios::SymbolList result;
-		bool                         first_symbol = true;
-		for (auto&& sym: symbols) {
-			auto symbol = first_symbol
-			                ? query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
-								{ scope, base::StrId(sym.c_str()), true }
-							)
-			                : query::entryPoint<compiler::helios::QueryLookupInSymbol>(
-								{ result.back(), base::StrId(sym.c_str()), false }
-							);
-			for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
-				auto dealiased = query::entryPoint<compiler::helios::QueryDealias>(elem);
-				result.insert(result.end(), dealiased.begin(), dealiased.end());
-			}
-			first_symbol = false;
-		}
-		return result;
-	}
-
-	static auto getValue(auto name, auto scope) {
-		return query::entryPoint<compiler::helios::QueryConstValueOf>(getChain(name, scope).back());
-	}
-
-	static auto getTypeOf(auto name, auto scope) {
-		return query::entryPoint<compiler::helios::QueryTypeOfSymbol>(getChain(name, scope).back());
-	}
-
-	static auto getTypeFromDefintion(auto name, auto scope) {
-		return query::entryPoint<compiler::helios::QueryTypeFromDefinition>(
-			getChain(name, scope).back()
-		);
-	}
-
-	std::pair<compiler::frontend::ModuleId, compiler::helios::ScopeID>
-		getModule(const std::string& name) {
-		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
-			fs::FilePath(path("test_modules/" + name))
-		);
-
-		// This is what extendQueryRootScopeOfMainModuleFile is doing:
-		// (there is currently no way to call query extension without context)
-		auto  main_source_file = query::entryPoint<compiler::frontend::QueryMainSourceFile>(module);
-		auto& main_source_pst
-			= query::entryPoint<compiler::frontend::QueryFilePST>(main_source_file);
-		auto main_file_root_scope = query::entryPoint<compiler::helios::QueryPrimaryCodeScopeFor>(
-			{ main_source_pst.getRootElement() }
-		);
-
-		return { module, main_file_root_scope };
-	}
-
 	void testI32Consts() {
-		auto [_, root_scope] = getModule("constants");
+		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/constants")));
 
 		ASSERT_EQUAL(1'107, getValue("M", root_scope));
 		ASSERT_EQUAL(1, getValue("N.X", root_scope));
@@ -104,7 +53,7 @@ private:
 	}
 
 	void testStructSymbolData() {
-		auto [_, root_scope] = getModule("structs");
+		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/structs")));
 
 		const auto first_struct = getChain("FirstStructEver", root_scope).back();
 		const auto first_struct_info
@@ -129,7 +78,7 @@ private:
 	}
 
 	void testTypeOf() {
-		auto [_, root_scope] = getModule("types");
+		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/types")));
 
 		const auto INT32_TYPE = query::entryPoint<ts::QueryIntegralType>({ 32, true });
 		const auto F32_TYPE   = query::entryPoint<ts::QueryFloatType>(32);
@@ -150,9 +99,9 @@ private:
 
 		const auto weird_variant = getTypeOf("weird_variant", root_scope);
 
-		const auto structA     = getTypeFromDefintion("A", root_scope);
-		const auto structB     = getTypeFromDefintion("B", root_scope);
-		const auto structC     = getTypeFromDefintion("C", root_scope);
+		const auto structA     = getTypeFromDefinition("A", root_scope);
+		const auto structB     = getTypeFromDefinition("B", root_scope);
+		const auto structC     = getTypeFromDefinition("C", root_scope);
 		auto       right_tuple = query::entryPoint<ts::QueryTupleType>(
             { { { structA, false },
 		              { query::entryPoint<ts::QueryVariantType>({ { structB, structC } }), false } } }
@@ -163,7 +112,7 @@ private:
 	}
 
 	void testEdgeEvals() {
-		auto [_, root_scope] = getModule("edge_evals");
+		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/edge_evals")));
 
 		ASSERT_EQUAL(1, getValue("M1", root_scope));
 		ASSERT_EQUAL(6, getValue("M2", root_scope));
@@ -174,7 +123,7 @@ private:
 	}
 
 	void simpleHOUTTest() {
-		auto [module, _] = getModule("hout_simple_test");
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/hout_simple_test")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
@@ -267,7 +216,7 @@ private:
 	}
 
 	void importTest() {
-		auto [module, _] = getModule("import_tests");
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/import_tests")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
@@ -291,7 +240,7 @@ private:
 	}
 
 	void exprTreeTest() {
-		auto [_, root_scope] = getModule("expressions");
+		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/expressions")));
 		ASSERT_EQUAL(31, getValue("V31", root_scope));
 
 		auto              sym1  = getChain("V31", root_scope).back();
