@@ -12,6 +12,7 @@ namespace ts {
 			base::Map<base::StrId, std::set<InterfaceElement>> result{};
 			for (const InterfaceElement& element: elements) {
 				base::StrId name = compiler::helios::name(element.getSymbol());
+				if (!result.contains(name)) result.put(name, {});
 				result.at(name).insert(element);
 			}
 			return result;
