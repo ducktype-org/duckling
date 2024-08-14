@@ -223,4 +223,4 @@ namespace query {
 		return QResult{ std::move(res) };                                       \
 	}                                                                           \
                                                                                 \
-	static auto load(QKey) -> LoadResult { return {}; }
+	static auto load(const QKey&) -> LoadResult { return {}; }
