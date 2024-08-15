@@ -20,9 +20,9 @@ std::vector<std::string> base::strSplit(const std::string_view str, const std::s
 	size_t                   end_pos   = 0;
 	size_t                   start_pos = 0;
 	while ((end_pos = str.find(delimiter, start_pos)) != std::string::npos) {
-		result.push_back(std::string(str.substr(start_pos, end_pos - start_pos)));
+		result.emplace_back(str.substr(start_pos, end_pos - start_pos));
 		start_pos = end_pos + delimiter.length();
 	}
-	result.push_back(std::string(str.substr(start_pos)));
+	result.emplace_back(str.substr(start_pos));
 	return result;
 }
