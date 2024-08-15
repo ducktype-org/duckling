@@ -132,7 +132,7 @@ namespace compiler::mir {
 		// @TODO: each Instruction should have source position reference
 
 		/**
-		 * @brief Helios Scope this instruction comes from. 
+		 * @brief Helios Scope this instruction comes from.
 		 * Used for lifetime analysis.
 		 * @todo: we might or might now want to create "MIR scopes" in the future.
 		 */

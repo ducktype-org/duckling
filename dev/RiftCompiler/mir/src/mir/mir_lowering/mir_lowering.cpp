@@ -48,31 +48,31 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Lowers statement.
-	 * 
-	 * @param stmt 
+	 *
+	 * @param stmt
 	 * @param continuation Block that should be executed after this statement.
 	 * @param function Function that we are lowering this statement in.
-	 * @return StmtLowerRes 
+	 * @return StmtLowerRes
 	 */
 	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockRef continuation, FunctionBuilder& function);
-	
+
 	/**
 	 * @brief Lowers expression.
-	 * 
-	 * @param expr 
+	 *
+	 * @param expr
 	 * @param continuation Block that should be executed after this expression.
 	 * @param function Function that we are lowering this expression in.
-	 * @return ExprLowerRes 
+	 * @return ExprLowerRes
 	 */
 	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockRef continuation, FunctionBuilder& function);
-	
+
 	/**
 	 * @brief Lowers code-block, by lowering all statements in the block.
-	 * 
-	 * @param code_block 
-	 * @param continuation Block that should be executed after this code block. 
+	 *
+	 * @param code_block
+	 * @param continuation Block that should be executed after this code block.
 	 * @param function Function that we are lowering this code block in.
-	 * @return StmtLowerRes 
+	 * @return StmtLowerRes
 	 */
 	StmtLowerRes lowerCodeBlock(
 		const hc::CodeBlock& code_block, BlockRef continuation, FunctionBuilder& function
@@ -135,7 +135,7 @@ namespace compiler::mir {
 		/**
 		 * @brief Adds instruction to the block.
 		 * @note Instructions are added from last to first
-		 * @param instr 
+		 * @param instr
 		 */
 		void addInstruction(Instruction instr) {
 			RIFT_ASSERT(
@@ -147,8 +147,9 @@ namespace compiler::mir {
 
 		/**
 		 * @brief Adds instruction hole, that can be filled later/
-		 * @note It is needed when one does not know the instruction he has to add, before something else will be lowered.
-		 * @return InstructionHole 
+		 * @note It is needed when one does not know the instruction he has to add, before something
+		 * else will be lowered.
+		 * @return InstructionHole
 		 */
 		InstructionHole addHole() {
 			// this emplaces empty optional:
