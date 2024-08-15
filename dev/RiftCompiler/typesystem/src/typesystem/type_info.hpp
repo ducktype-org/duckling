@@ -33,6 +33,7 @@
  * @param KindOfType The class name from the TypeInfo hierarchy, without "Info".
  */
 #define CONSTRUCT_FROM_IMPLEMENTATION(KindOfType)           \
+	friend class internal::KindOfType##InfoImpl;            \
 	friend struct ImplementationOf_Query##KindOfType##Type; \
 	KindOfType##Info(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
 
@@ -208,6 +209,8 @@ namespace ts {
 		 * @param pimpl A pointer to a type implementation object.
 		 */
 		TypeInfo(const internal::TypeInfoImpl* pimpl): pimpl(pimpl) {}
+
+		friend class internal::TypeInfoImpl;
 
 		/**
 		 * @brief The pointer to the (probably significantly heavier) object carrying

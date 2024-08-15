@@ -10,13 +10,13 @@ namespace ts::internal {
 	/**
 	 * @brief A "stupid" key, containing only a pointer value and defining comparison and hashing.
 	 */
-	struct KeyFor_QuerySizeOfTuple {
+	struct WrappedTupleInfoImplPtr {
 		const ts::internal::TupleInfoImpl* value;
-		KeyFor_QuerySizeOfTuple() = delete;
+		WrappedTupleInfoImplPtr() = delete;
 
-		KeyFor_QuerySizeOfTuple(const ts::internal::TupleInfoImpl* value): value(value) {}
+		WrappedTupleInfoImplPtr(const ts::internal::TupleInfoImpl* value): value(value) {}
 
-		auto operator<=>(const KeyFor_QuerySizeOfTuple& other) const = default;
+		auto operator<=>(const WrappedTupleInfoImplPtr& other) const = default;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
@@ -30,20 +30,20 @@ namespace ts::internal {
 	 * @note This query is made for the purpose of caching. Analogous queries for most other
 	 * types do not exist, because getting their sizes is trivial (e.g. 8 for i8).
 	 */
-	DECLARE_QUERY(QuerySizeOfTuple, KeyFor_QuerySizeOfTuple, usize)
+	DECLARE_QUERY(QuerySizeOfTuple, WrappedTupleInfoImplPtr, usize)
 
 	class VariantInfoImpl;
 
 	/**
 	 * @brief A "stupid" key, containing only a pointer value and defining comparison and hashing.
 	 */
-	struct KeyFor_QuerySizeOfVariant {
+	struct WrappedVariantIntoImplPtr {
 		const ts::internal::VariantInfoImpl* value;
-		KeyFor_QuerySizeOfVariant() = delete;
+		WrappedVariantIntoImplPtr() = delete;
 
-		KeyFor_QuerySizeOfVariant(const ts::internal::VariantInfoImpl* value): value(value) {}
+		WrappedVariantIntoImplPtr(const ts::internal::VariantInfoImpl* value): value(value) {}
 
-		auto operator<=>(const KeyFor_QuerySizeOfVariant& other) const = default;
+		auto operator<=>(const WrappedVariantIntoImplPtr& other) const = default;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
@@ -57,20 +57,20 @@ namespace ts::internal {
 	 * @note This query is made for the purpose of caching. Analogous queries for most other
 	 * types do not exist, because getting their sizes is trivial (e.g. 8 for i8).
 	 */
-	DECLARE_QUERY(QuerySizeOfVariant, KeyFor_QuerySizeOfVariant, usize)
+	DECLARE_QUERY(QuerySizeOfVariant, WrappedVariantIntoImplPtr, usize)
 
 	class ClassInfoImpl;
 
 	/**
 	 * @brief A "stupid" key, containing only a pointer value and defining comparison and hashing.
 	 */
-	struct KeyFor_QuerySizeOfClass {
+	struct WrappedClassInfoImplPtr {
 		const ts::internal::ClassInfoImpl* value;
-		KeyFor_QuerySizeOfClass() = delete;
+		WrappedClassInfoImplPtr() = delete;
 
-		KeyFor_QuerySizeOfClass(const ts::internal::ClassInfoImpl* value): value(value) {}
+		WrappedClassInfoImplPtr(const ts::internal::ClassInfoImpl* value): value(value) {}
 
-		auto operator<=>(const KeyFor_QuerySizeOfClass& other) const = default;
+		auto operator<=>(const WrappedClassInfoImplPtr& other) const = default;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
@@ -79,10 +79,18 @@ namespace ts::internal {
 	};
 
 	/**
-	 * @brief TS-internal query to get the size of a tuple.
+	 * @brief TS-internal query to get the size of a class.
 	 *
 	 * @note This query is made for the purpose of caching. Analogous queries for most other
 	 * types do not exist, because getting their sizes is trivial (e.g. 8 for i8).
 	 */
-	DECLARE_QUERY(QuerySizeOfClass, KeyFor_QuerySizeOfClass, usize)
+	DECLARE_QUERY(QuerySizeOfClass, WrappedClassInfoImplPtr, usize)
+
+	/**
+	 * TS-internal query to get the interface of a class.
+	 *
+	 * @note This query is made for the purpose of caching. Analogous queries for most other
+	 * types do not exist, because getting their interfaces is trivial.
+	 */
+	DECLARE_QUERY(QueryInterfaceOfClass, WrappedClassInfoImplPtr, const TypeInterface&)
 }

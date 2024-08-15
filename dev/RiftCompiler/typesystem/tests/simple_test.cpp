@@ -58,6 +58,7 @@ public:
 		TESTER_ADD_TEST(simple_tuple);
 		TESTER_ADD_TEST(simple_variant);
 		TESTER_ADD_TEST(simple_function);
+		TESTER_ADD_TEST(simple_language_elements);
 		TESTER_ADD_TEST(simple_meta);
 		TESTER_ADD_TEST(simple_type_desc);
 		TESTER_ADD_TEST(simple_value_category);
@@ -358,17 +359,49 @@ private:
 		);
 	}
 
+	void simple_language_elements() {
+		const auto nspace   = query::entryPoint<QueryNamespaceType>({});
+		const auto nspace_2 = query::entryPoint<QueryNamespaceType>({});
+
+		assert(nspace == nspace_2, "There shouldn't be multiple different Namespace types.");
+		assert(
+			query::entryPoint<QuerySizeOfType>(nspace) == 0, "NamespaceType should have size 0."
+		);
+
+		assert(nspace.getKind() == Namespace, "NamespaceType should have kind Meta.");
+
+		const TypeInfo      nspace_type = nspace;
+		const NamespaceInfo nspace_3    = nspace_type;
+		assert(nspace_3.getKind() == Namespace, "NamespaceType should survive casting.");
+
+		const auto module   = query::entryPoint<QueryModuleType>({});
+		const auto module_2 = query::entryPoint<QueryModuleType>({});
+
+		assert(module == module_2, "There shouldn't be multiple different Module types.");
+		assert(query::entryPoint<QuerySizeOfType>(module) == 0, "ModuleType should have size 0.");
+
+		assert(module.getKind() == Module, "ModuleType should have kind Meta.");
+
+		const TypeInfo   module_type = module;
+		const ModuleInfo module_3    = module_type;
+		assert(module_3.getKind() == Module, "ModuleType should survive casting.");
+	}
+
 	void simple_meta() {
 		const auto meta   = query::entryPoint<QueryMetaType>({});
 		const auto meta_2 = query::entryPoint<QueryMetaType>({});
 
-		assert(meta == meta_2, "There shouldn't be multiple different 'type' types");
+		assert(meta == meta_2, "There shouldn't be multiple different 'type' types.");
 		assert(
 			query::entryPoint<QuerySizeOfType>(meta) == META_SIZE,
-			"MetaType should have size META_SIZE"
+			"MetaType should have size META_SIZE."
 		);
 
-		assert(meta.getKind() == Meta, "MetaType should have kind Meta");
+		assert(meta.getKind() == Meta, "MetaType should have kind Meta.");
+
+		const TypeInfo meta_type = meta;
+		const MetaInfo met_3     = meta_type;
+		assert(met_3.getKind() == Meta, "MetaType should survive casting.");
 	}
 
 	void simple_type_desc() {
@@ -475,12 +508,42 @@ private:
 		const auto int_3 = query::entryPoint<QueryIntegralType>({ 8U * (1 << 3) });
 		assert(
 			query::entryPoint<QueryImplicitCoercibilityOnInfo>({ int_2, int_3 }),
-			"Smaller int should be coercible into a biger one."
+			"Smaller int should be coercible into a bigger one."
 		);
 
 		assert(
 			!query::entryPoint<QueryImplicitCoercibilityOnInfo>({ int_3, int_2 }),
 			"Bigger int should not be coercible into a smaller one."
+		);
+
+		const auto void_type = query::entryPoint<QueryVoidType>({});
+		assert(
+			!query::entryPoint<QueryImplicitCoercibilityOnInfo>({ void_type, int_2 }),
+			"Void should not be coercible to anything."
+		);
+
+		const auto i2_const
+			= TypeDesc<>(int_2, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
+		const auto i2_mut
+			= TypeDesc<>(int_2, ValueCategory(PrimaryCategory::Local, true, true, {}, {}));
+		const auto i3_const
+			= TypeDesc<>(int_3, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
+
+		assert(
+			query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_const, i3_const }),
+			"Smaller int value should be coercible into a bigger one."
+		);
+		assert(
+			query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_mut, i2_const }),
+			"Mutable value should be coercible to an immutable one."
+		);
+		assert(
+			query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_mut, i3_const }),
+			"Mutable value should be coercible to a bigger, immutable one."
+		);
+		assert(
+			!query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_const, i2_mut }),
+			"Immutable value should not be coercible to a mutable one."
 		);
 	}
 
@@ -488,4 +551,4 @@ public:
 	~SimpleTypeSystemTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/src/typesystem/tests/")
+TESTER_COMMON_MAIN("/RiftCompiler/typesystem/tests/")
