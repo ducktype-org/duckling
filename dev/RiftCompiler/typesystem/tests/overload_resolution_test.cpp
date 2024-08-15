@@ -27,7 +27,7 @@ private:
 		const TypeInfo                my_struct_type
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(my_struct_symbol);
 
-		withContext([&](query::Context& ctx) {
+		withContext([&](query::Context& ctx) -> void* {
 			TypeInterface my_struct_interface = my_struct_type.getInterface(ctx);
 
 			assert(
@@ -55,7 +55,7 @@ private:
 				"MyStruct should have size equal to the sum of sizes of its members."
 			);
 
-			return nullptr;
+			return nullptr;  // No result.
 		});
 	}
 

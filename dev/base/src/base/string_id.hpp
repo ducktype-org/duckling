@@ -67,7 +67,10 @@ namespace base {
 
 		std::strong_ordering operator<=>(const StrId& oth) const = default;
 
-		// Due to the operator==(RawView) definition, implicit operator== is deleted.
+		/**
+		 * Due to the operator==(RawView) definition, implicit operator==(StrId) is deleted.
+		 * Here, it is defined explicitly.
+		 */
 		bool operator==(const StrId& oth) const {
 			return operator<=>(oth) == std::strong_ordering::equal;
 		}

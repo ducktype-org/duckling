@@ -16,7 +16,7 @@ namespace compiler::helios::test_utils {
 		return { module, main_file_root_scope };
 	}
 
-	std::vector<SymID> getChain(const std::string& chain, ScopeID scope) {
+	std::vector<SymID> getChain(const std::string_view chain, ScopeID scope) {
 		auto       symbols = base::strSplit(chain, ".");
 		SymbolList result;
 		bool       first_symbol = true;
@@ -36,15 +36,15 @@ namespace compiler::helios::test_utils {
 		return result;
 	}
 
-	int getValue(const std::string& name, ScopeID scope) {
-		return query::entryPoint<QueryConstValueOf>(getChain(name, scope).back());
+	int getValue(const std::string_view chain, ScopeID scope) {
+		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back());
 	}
 
-	ts::TypeInfo getTypeOf(const std::string& name, ScopeID scope) {
-		return query::entryPoint<QueryTypeOfSymbol>(getChain(name, scope).back());
+	ts::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope) {
+		return query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back());
 	}
 
-	ts::TypeInfo getTypeFromDefinition(const std::string& name, ScopeID scope) {
-		return query::entryPoint<QueryTypeFromDefinition>(getChain(name, scope).back());
+	ts::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
+		return query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back());
 	}
 }

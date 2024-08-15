@@ -1,4 +1,5 @@
 #include <base/str_utils.hpp>
+#include <iostream>
 
 void base::detail::strConcat(std::string& out, const icu::UnicodeString& unistr) {
 	unistr.toUTF8String(out);
@@ -14,14 +15,14 @@ void base::strReplaceAll(std::string& str, const std::string& from, const std::s
 	}
 }
 
-std::vector<std::string> base::strSplit(const std::string& str, const std::string& delimiter) {
+std::vector<std::string> base::strSplit(const std::string_view str, const std::string& delimiter) {
 	std::vector<std::string> result;
 	size_t                   end_pos   = 0;
 	size_t                   start_pos = 0;
 	while ((end_pos = str.find(delimiter, start_pos)) != std::string::npos) {
-		result.push_back(str.substr(start_pos, end_pos - start_pos));
+		result.push_back(std::string(str.substr(start_pos, end_pos - start_pos)));
 		start_pos = end_pos + delimiter.length();
 	}
-	result.push_back(str.substr(start_pos));
+	result.push_back(std::string(str.substr(start_pos)));
 	return result;
 }

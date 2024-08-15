@@ -30,12 +30,6 @@ namespace tester {
 		QUERY_IMPLEMENTATION_BOILERPLATE(DoWithContext)
 	}
 
-	/**
-	 * @brief Execute a function as if it were in the middle of a query, i.e. supplied with a
-	 * query::Context.
-	 * @param action The function object to execute, applied to a query::Context.
-	 * @return The (pointer to the) result of the function.
-	 */
 	void* ContextSuite::withContext(std::function<void*(query::Context&)> action) {
 		return query::entryPoint<DoWithContext>(std::move(action));
 	}
