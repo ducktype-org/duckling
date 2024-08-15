@@ -18,5 +18,8 @@ namespace compiler::mir {
 		}
 	};
 
+	/**
+	 * @brief Lower a HOUTFunction to a MIRFunction
+	 */
 	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, Function&)
 }

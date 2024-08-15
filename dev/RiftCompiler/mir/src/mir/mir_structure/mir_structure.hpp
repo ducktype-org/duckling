@@ -22,9 +22,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	 * comparisons. 
 	 */
 	IntegerAdd,
-
-	Destruct,
-	DestructIf,
+	
+	Destruct,	//< See readme.md for more info about destruct.
+	DestructIf, //< See readme.md for more info about DestructIf.
 
 	ReturnVoid,
 	ReturnValue,
@@ -66,6 +66,11 @@ namespace compiler::mir {
 
 	STRONG_TYPEDEF_ID(LocalID);
 
+	/**
+	 * @brief Data of MIR Local variable.
+	 * @note This structure should only be stored directly in MIR Function.
+	 * Other uses should use LocalRef.
+	 */
 	struct MirLocal final {
 		LocalID id;
 
@@ -76,8 +81,14 @@ namespace compiler::mir {
 		void debugPrint(std::ostream& output) const;
 	};
 
+	/**
+	 * @brief Reference to MIR Local variable data.
+	 */
 	using LocalRef = base::StableVectorRef<MirLocal>;
 
+	/**
+	 * @brief Structure representing any MIR value.
+	 */
 	struct MirLocation final {
 	private:
 		// @TODO: global, literal, func-literal, ...
@@ -120,7 +131,11 @@ namespace compiler::mir {
 
 		// @TODO: each Instruction should have source position reference
 
-		//  perhaps just map during MIR creation? (mir scope -- just super simple tree)
+		/**
+		 * @brief Helios Scope this instruction comes from. 
+		 * Used for lifetime analysis.
+		 * @todo: we might or might now want to create "MIR scopes" in the future.
+		 */
 		helios::ScopeID scope;
 
 		Instruction()                   = delete;
