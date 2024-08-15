@@ -27,7 +27,7 @@ private:
 		const TypeInfo                my_struct_type
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(my_struct_symbol);
 
-		withContextDo([&](query::Context& ctx){
+		withContextDo([&](query::Context& ctx) {
 			TypeInterface my_struct_interface = my_struct_type.getInterface(ctx);
 
 			assert(
