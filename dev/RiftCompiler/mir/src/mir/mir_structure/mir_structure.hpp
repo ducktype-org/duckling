@@ -140,6 +140,11 @@ namespace compiler::mir {
 
 		Instruction()                   = delete;
 		Instruction(const Instruction&) = default;
+
+		/**
+		 * @todo this line produces -Wmaybe-uninitialized warning for some reason.
+		 * fix it.
+		 */
 		Instruction(Instruction&&)      = default;
 
 		Instruction(

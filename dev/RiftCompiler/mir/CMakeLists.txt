@@ -4,3 +4,6 @@ add_library(MIR
 )
 
 make_module(MIR USES Base QueryFramework HELIOS)
+
+rift_add_test(compiler mir_test tests/mir_tests.cpp
+	USES Base TypeSystem PstParser HELIOS MIR)
