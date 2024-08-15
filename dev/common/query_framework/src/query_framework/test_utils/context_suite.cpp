@@ -5,11 +5,11 @@
 namespace tester {
 	namespace {
 		struct KeyFor_DoWithContext {
-			std::function<void*(query::Context&)> value;
-			usize                                 ID;
-			static inline usize                   nextID = 0;
+			std::function<std::any(query::Context&)> value;
+			usize                                    ID;
+			static inline usize                      nextID = 0;
 
-			KeyFor_DoWithContext(std::function<void*(query::Context&)> value):
+			KeyFor_DoWithContext(std::function<std::any(query::Context&)> value):
 				  value(std::move(value)),
 				  ID(nextID++) {}
 
@@ -19,9 +19,9 @@ namespace tester {
 			}
 		};
 
-		DECLARE_QUERY(DoWithContext, KeyFor_DoWithContext, void*)
+		DECLARE_QUERY(DoWithContext, KeyFor_DoWithContext, std::any)
 
-		struct IMPLEMENT_QUERY(DoWithContext, void*) {
+		struct IMPLEMENT_QUERY(DoWithContext, std::any) {
 			static auto provide(Context& ctx, const QKey& key) -> PResult { return key.value(ctx); }
 
 			QUERY_AUTO_NO_CACHE
@@ -30,7 +30,14 @@ namespace tester {
 		QUERY_IMPLEMENTATION_BOILERPLATE(DoWithContext)
 	}
 
-	void* ContextSuite::withContext(std::function<void*(query::Context&)> action) {
+	std::any ContextSuite::withContextCompute(std::function<std::any(query::Context&)> action) {
 		return query::entryPoint<DoWithContext>(std::move(action));
+	}
+
+	void ContextSuite::withContextDo(std::function<void(query::Context&)> action) {
+		query::entryPoint<DoWithContext>({ [&](query::Context& ctx) -> std::any {
+			action(ctx);
+			return {};
+		} });
 	}
 }
