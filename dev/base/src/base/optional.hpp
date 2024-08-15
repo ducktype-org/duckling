@@ -515,7 +515,6 @@ namespace base {
 			return {};
 		}
 
-
 	private:
 		void _throwOnNoValue() const {
 			if (!has_value()) RIFT_PANIC("Tried to retrieve a value from an empty optional.");

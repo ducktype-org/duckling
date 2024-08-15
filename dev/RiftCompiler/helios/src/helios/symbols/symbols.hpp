@@ -295,7 +295,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query type of the symbol.
 	 */
-	DECLARE_QUERY(QueryTypeOf, SymID, ts::TypeInfo)
+	DECLARE_QUERY(QueryTypeOfSymbol, SymID, ts::TypeInfo)
 
 	/**
 	 * @brief Query ts::TypeInfo from a symbol definition (like struct definition).
