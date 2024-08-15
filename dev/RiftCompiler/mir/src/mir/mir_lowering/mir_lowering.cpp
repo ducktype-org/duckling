@@ -1,3 +1,9 @@
+/**
+ * @file mir_lowering.cpp
+ * @brief Implementation of lowering HOUT functions to MIR functions.
+ * The creation of MIR is done "in reverse" that is from function end to its beginning.
+ */
+
 #include "mir_lowering.hpp"
 #include <query_framework/query_impl.hpp>
 #include <helios/hout/elements.hpp>
@@ -18,27 +24,63 @@ namespace compiler::mir {
 	struct FunctionBuilder;
 
 	// @TODO: since BlockRef can be a parameter
-	// we need to add BlockBuilderRef->BlockRef transformation
+	// we will need to add BlockBuilderRef->BlockRef transformation
 	// during building phase
 	using BlockRef = base::StableVectorRef<BlockBuilder>;
 
+	/**
+	 * @brief Represents result of expression lowering, which is
+	 * a BlockRef that is the beginning of the lowered expression and MirLocation
+	 * that holds the result of the expression.
+	 */
 	struct ExprLowerRes {
 		BlockRef    begin;
 		MirLocation value;
 	};
 
+	/**
+	 * @brief Represents result of statement lowering, which is
+	 * a BlockRef that is the beginning of the lowered statement.
+	 */
 	struct StmtLowerRes {
 		BlockRef begin;
 	};
 
+	/**
+	 * @brief Lowers statement.
+	 * 
+	 * @param stmt 
+	 * @param continuation Block that should be executed after this statement.
+	 * @param function Function that we are lowering this statement in.
+	 * @return StmtLowerRes 
+	 */
 	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockRef continuation, FunctionBuilder& function);
+	
+	/**
+	 * @brief Lowers expression.
+	 * 
+	 * @param expr 
+	 * @param continuation Block that should be executed after this expression.
+	 * @param function Function that we are lowering this expression in.
+	 * @return ExprLowerRes 
+	 */
 	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockRef continuation, FunctionBuilder& function);
+	
+	/**
+	 * @brief Lowers code-block, by lowering all statements in the block.
+	 * 
+	 * @param code_block 
+	 * @param continuation Block that should be executed after this code block. 
+	 * @param function Function that we are lowering this code block in.
+	 * @return StmtLowerRes 
+	 */
 	StmtLowerRes lowerCodeBlock(
 		const hc::CodeBlock& code_block, BlockRef continuation, FunctionBuilder& function
 	);
 
 	/**
-	 * @brief Structure representing block in build process
+	 * @brief Structure representing block in build process.
+	 * @note It is a builder in the sense of design pattern.
 	 */
 	struct BlockBuilder final {
 	private:
@@ -51,6 +93,10 @@ namespace compiler::mir {
 		std::vector<base::Optional<Instruction>> reversed_instruction;
 		base::Optional<Instruction>              terminator;
 
+		/**
+		 * @brief Structure representing a hole in the block, that is
+		 * empty instruction that has to be filled, before the block will be builded.
+		 */
 		struct InstructionHole {
 		private:
 			BlockRef block_ref;
@@ -86,6 +132,11 @@ namespace compiler::mir {
 			return { id, std::move(instructions), terminator.value() };
 		}
 
+		/**
+		 * @brief Adds instruction to the block.
+		 * @note Instructions are added from last to first
+		 * @param instr 
+		 */
 		void addInstruction(Instruction instr) {
 			RIFT_ASSERT(
 				not isTerminating(instr.operation),
@@ -94,6 +145,11 @@ namespace compiler::mir {
 			reversed_instruction.emplace_back(std::move(instr));
 		}
 
+		/**
+		 * @brief Adds instruction hole, that can be filled later/
+		 * @note It is needed when one does not know the instruction he has to add, before something else will be lowered.
+		 * @return InstructionHole 
+		 */
 		InstructionHole addHole() {
 			// this emplaces empty optional:
 			reversed_instruction.emplace_back();
@@ -117,6 +173,10 @@ namespace compiler::mir {
 		}
 	};
 
+	/**
+	 * @brief Structure representing function in build process.
+	 * @note It is a builder in the sense of design pattern.
+	 */
 	struct FunctionBuilder final {
 	private:
 		base::Optional<base::StrId>      name;
@@ -162,6 +222,10 @@ namespace compiler::mir {
 		}
 	};
 
+	/**
+	 * @brief Visitor that implements actual logic of lowering statements.
+	 * @note The result of the visitor is stored in out member.
+	 */
 	struct StmtBlockVisitor: public hc::HoutStmtVisitor {
 		BlockRef continuation;
 
@@ -228,6 +292,10 @@ namespace compiler::mir {
 		}
 	};
 
+	/**
+	 * @brief Visitor that implements actual logic of lowering expression.
+	 * @note The result of the visitor is stored in out member.
+	 */
 	struct ExprBlockVisitor: public hc::HoutExprVisitor {
 		BlockRef continuation;
 
