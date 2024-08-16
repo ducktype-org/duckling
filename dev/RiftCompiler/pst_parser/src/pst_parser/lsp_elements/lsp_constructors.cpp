@@ -1,7 +1,7 @@
 /**
- * @note This file is currently not compiled and not linter, because the corrsponding method declarations were deleted for merging purposes.
- * It might be added back in some different way.
- */ 
+ * @note This file is currently not compiled and not linter, because the corrsponding method
+ * declarations were deleted for merging purposes. It might be added back in some different way.
+ */
 
 // NOLINTBEGIN
 
