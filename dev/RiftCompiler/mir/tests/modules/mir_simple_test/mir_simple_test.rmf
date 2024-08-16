@@ -1,4 +1,4 @@
-fun foo(var a: i32) {}
+fun foo1(var a: i32) {}
 
 fun foo2() { return 2; }
 
