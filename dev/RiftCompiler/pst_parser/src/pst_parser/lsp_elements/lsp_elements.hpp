@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../rift_parser_base.hpp"
+#include "../rift_parser_element.hpp"
+#include "../rift_parser_state.hpp"
 
 #include <token_parser_core/token_stream.hpp>
 #include <token_parser_core/parser_state.hpp>
