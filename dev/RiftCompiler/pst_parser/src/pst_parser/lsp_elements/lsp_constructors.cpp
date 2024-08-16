@@ -9,12 +9,12 @@
  *
  * As DottedName inherits from NotStmt, we have to create constructors for instances of
  * ParserRef<lsp::LSPDottedName> and ParserRef<lsp::LSPNotStmt>.
- 
+
  * @note This file is currently not compiled and because the corrsponding method
  * declarations were deleted for merging purposes. It might be added back in some different way.
- * It is commented out, because otherwise linter would complain, even with "NOLINTBEGIN/END" comments.
+ * It is commented out, because otherwise linter would complain, even with "NOLINTBEGIN/END"
+ * comments.
  */
-
 
 
 #include <base/variant.hpp>
@@ -372,4 +372,3 @@ using tpc::makeRef;
 // 	ParserRef<lsp::LSPCodeDecl> While::codeDeclFromPST() const { return whileFromPST(); }
 
 // }
-
