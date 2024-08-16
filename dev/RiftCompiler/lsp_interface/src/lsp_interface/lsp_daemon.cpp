@@ -102,7 +102,10 @@ void server(i32 port) {
 			auto              tokens = lexer::tokenizeFile(file);
 			pst::PST<>        pst(std::move(tokens));
 			std::stringstream ss;
-			pst.getLSP(ss);
+			
+			// @TODO: replace it with some other LSP generation 
+			// pst.getLSP(ss);
+			
 			return crow::response(200, ss.str());
 		} catch (std::exception& e) {
 			std::string error_msg = e.what();
