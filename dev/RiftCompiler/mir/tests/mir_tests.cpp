@@ -38,22 +38,26 @@ private:
 			auto unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 
 			auto& functions = unit.functions;
-			ASSERT_EQUAL(3, functions.size());
+			ASSERT_EQUAL(4, functions.size());
 			ASSERT_EQUAL(base::StrId("foo1"), functions.at(0).original_name);
 			ASSERT_EQUAL(base::StrId("foo2"), functions.at(1).original_name);
 			ASSERT_EQUAL(base::StrId("foo3"), functions.at(2).original_name);
+			ASSERT_EQUAL(base::StrId("foo4"), functions.at(3).original_name);
 
 			auto& foo1_mir = ctx.query<compiler::mir::LowerToMirFunction>({functions.at(0)});
 			auto& foo2_mir = ctx.query<compiler::mir::LowerToMirFunction>({functions.at(1)});
 			auto& foo3_mir = ctx.query<compiler::mir::LowerToMirFunction>({functions.at(2)});
+			auto& foo4_mir = ctx.query<compiler::mir::LowerToMirFunction>({functions.at(3)});
 
 			ASSERT_EQUAL(foo1_mir.name, base::StrId("foo1"));
 			ASSERT_EQUAL(foo2_mir.name, base::StrId("foo2"));
 			ASSERT_EQUAL(foo3_mir.name, base::StrId("foo3"));
+			ASSERT_EQUAL(foo4_mir.name, base::StrId("foo4"));
 
 			ASSERT_EQUAL(foo1_mir.blocks.size(), 1);
 			ASSERT_EQUAL(foo2_mir.blocks.size(), 2);
 			ASSERT_EQUAL(foo3_mir.blocks.size(), 5);
+			ASSERT_EQUAL(foo4_mir.blocks.size(), 2);
 
 			// This doesn't test much other then that the code doesn't crash/throw exceptions.
 			// It also make debug_prints covered by tests.
@@ -61,6 +65,7 @@ private:
 			foo1_mir.debugPrint(all_functions);
 			foo2_mir.debugPrint(all_functions);
 			foo3_mir.debugPrint(all_functions);
+			foo4_mir.debugPrint(all_functions);
 		});
 	}
 };

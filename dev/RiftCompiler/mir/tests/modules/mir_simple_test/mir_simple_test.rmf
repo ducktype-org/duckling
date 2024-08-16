@@ -9,3 +9,6 @@ fun foo3() {
 	return 123;
 }
 
+fun foo4() {
+	return;
+}
