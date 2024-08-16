@@ -54,6 +54,13 @@ private:
 			ASSERT_EQUAL(foo1_mir.blocks.size(), 1);
 			ASSERT_EQUAL(foo2_mir.blocks.size(), 2);
 			ASSERT_EQUAL(foo3_mir.blocks.size(), 5);
+
+			// This doesn't test much other then that the code doesn't crash/throw exceptions.
+			// It also make debug_prints covered by tests.
+			std::stringstream all_functions;
+			foo1_mir.debugPrint(all_functions);
+			foo2_mir.debugPrint(all_functions);
+			foo3_mir.debugPrint(all_functions);
 		});
 	}
 };
