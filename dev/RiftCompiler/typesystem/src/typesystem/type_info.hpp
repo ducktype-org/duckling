@@ -1,6 +1,6 @@
 /**
- * \file type_info.hpp
- * \brief Interface of the TypeInfo class.
+ * @file type_info.hpp
+ * @brief Interface of the TypeInfo class.
  *
  * The interface is not aware of the internal implementation hierarchy
  * in any way other than its existence and name.
@@ -10,13 +10,14 @@
 
 #include <string>
 #include <base/ints.hpp>
-#include <query_framework/query_impl.hpp>
+
+#include <query_framework/query_int.hpp>
 
 #include "kind.hpp"
 
 /**
- * \brief Template constructor from the TypeInfoImpl* hierarchy with a dynamic cast check.
- * \param SomeTypeInfo The class name from the TypeInfo hierarchy.
+ * @brief Template constructor from the TypeInfoImpl* hierarchy with a dynamic cast check.
+ * @param SomeTypeInfo The class name from the TypeInfo hierarchy.
  */
 #define CONSTRUCT_WITH_CHECKED_CAST(SomeTypeInfo)                                                 \
 	template<std::derived_from<TypeInfo> TYPE_INFO>                                               \
@@ -25,20 +26,20 @@
 	}
 
 /**
- * \brief Constructor from KindOfType##InfoImpl*.
+ * @brief Constructor from KindOfType##InfoImpl*.
  *
  * Marks respective query as a friend for exclusive construction access.
  *
- * \param KindOfType The class name from the TypeInfo hierarchy, without "Info".
+ * @param KindOfType The class name from the TypeInfo hierarchy, without "Info".
  */
 #define CONSTRUCT_FROM_IMPLEMENTATION(KindOfType)           \
 	friend struct ImplementationOf_Query##KindOfType##Type; \
-	explicit KindOfType##Info(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
+	KindOfType##Info(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
 
 /**
- * \brief Several type definitions for quick reference,
+ * @brief Several type definitions for quick reference,
  * like Impl=internal::SomeTypeInfo##Impl and Pimpl=Impl*.
- * \param SomeTypeInfo The class name from the `TypeInfo` hierarchy.
+ * @param SomeTypeInfo The class name from the `TypeInfo` hierarchy.
  */
 #define SETUP_TYPE(SomeTypeInfo)                 \
 	using Impl   = internal::SomeTypeInfo##Impl; \
@@ -46,10 +47,10 @@
 	using CPimpl = const Impl*;
 
 /**
- * \brief Several type definitions for quick reference,
+ * @brief Several type definitions for quick reference,
  * like Impl=internal::SomeTypeInfo##Impl and Pimpl=Impl*.
- * \param SomeTypeInfo The class name from the TypeInfo hierarchy.
- * \param BaseTypeInfo The base class of SomeTypeInfo. Since TypeInfo itself does not have a
+ * @param SomeTypeInfo The class name from the TypeInfo hierarchy.
+ * @param BaseTypeInfo The base class of SomeTypeInfo. Since TypeInfo itself does not have a
  * base class, this macro should not be used in the definition of TypeInfo.
  */
 #define SETUP_TYPE_WITH_BASE(SomeTypeInfo, BaseTypeInfo) \
@@ -78,7 +79,7 @@ namespace ts {
 	typename TYPE_INFO::CPimpl checkDynamicCast(const internal::TypeInfoImpl*);
 
 	/**
-	 * \brief The TypeInfo class and its subclasses form a lightweight type interface hierarchy.
+	 * @brief The TypeInfo class and its subclasses form a lightweight type interface hierarchy.
 	 *
 	 * An object from the TypeInfo hierarchy, like IntegralInfo, FunctionInfo etc. hold a
 	 * pointer to an implementation object (pImpl) from the internal::TypeInfoImpl hierarchy.
@@ -96,42 +97,44 @@ namespace ts {
 		SETUP_TYPE(TypeInfo)
 
 		/**
-		 * \brief Get the Kind of the type described by this object.
-		 * \return The Kind of the type described by this object.
+		 * @brief Get the Kind of the type described by this object.
+		 * @return The Kind of the type described by this object.
 		 */
 		[[nodiscard]]
 		Kind getKind() const;
 
 		/**
-		 * \brief Get the TypeInterface of the type described by this object.
-		 * \return The TypeInterface of the type described by this object.
+		 * @brief Get the TypeInterface of the type described by this object.
+		 * @param ctx The Query Context necessary to deduce interfaces.
+		 * @return The TypeInterface of the type described by this object.
 		 */
 		[[nodiscard]]
-		TypeInterface getInterface() const;
+		TypeInterface getInterface(query::Context& ctx) const;
 
 		/**
-		 * \brief Gets the size of a value of the type described by this object, in bits.
-		 * \return The size of a value of the type described by this object, in bits.
+		 * @brief Gets the size of a value of the type described by this object, in bits.
+		 * @param ctx The Query Context necessary to deduce composite type sizes.
+		 * @return The size of a value of the type described by this object, in bits.
 		 */
 		[[nodiscard]]
-		usize getSize() const;
+		usize getSize(query::Context& ctx) const;
 
 		/**
-		 * \brief The default constructor is deleted.
+		 * @brief The default constructor is deleted.
 		 * This class must be instantiated only from meaningful pieces of data.
 		 * See the other constructors.
 		 */
 		TypeInfo() = delete;
 
 		/**
-		 * \brief Construct by upcasting.
+		 * @brief Construct by upcasting.
 		 *
 		 * It is possible to cast up and down the TypeInfo hierarchy. This means that
 		 * an IntegralInfo object can be cast to a TypeInfo object. After all, a description
 		 * of an integral type is a description of just "a type".
 		 *
-		 * \tparam TYPE_INFO The type of the argument from the TypeInfo hierarchy.
-		 * \param other The object to be upcast from.
+		 * @tparam TYPE_INFO The type of the argument from the TypeInfo hierarchy.
+		 * @param other The object to be upcast from.
 		 *
 		 */
 		template<std::derived_from<TypeInfo> TYPE_INFO>
@@ -140,21 +143,21 @@ namespace ts {
 		}
 
 		/**
-		 * \brief Compare with another TypeInfo.
+		 * @brief Compare with another TypeInfo.
 		 *
 		 * The comparison is arbitrary and should only be used for
 		 * indexing ordered data structures or comparing for equality.
 		 *
-		 * \param other The other TypeInfo.
-		 * \return The result of comparison, dependent on the value of the pImpl pointer.
+		 * @param other The other TypeInfo.
+		 * @return The result of comparison, dependent on the value of the pImpl pointer.
 		 */
 		[[nodiscard]]
 		auto operator<=>(const TypeInfo& other) const
 			= default;
 
 		/**
-		 * \brief Get pointer to the underlying TypeInfoImpl object.
-		 * \return Pointer to the underlying TypeInfoImpl object.
+		 * @brief Get pointer to the underlying TypeInfoImpl object.
+		 * @return Pointer to the underlying TypeInfoImpl object.
 		 */
 		[[nodiscard]]
 		const internal::TypeInfoImpl* getPimpl() const {
@@ -162,7 +165,7 @@ namespace ts {
 		}
 
 		/**
-		 * \brief Determine whether it is legal to consider and implicit coercion
+		 * @brief Determine whether it is legal to consider and implicit coercion
 		 * from a value described by this TypeDesc to one described by target.
 		 *
 		 * An implicit coercion is when, for example, a boolean is expected, but
@@ -182,29 +185,32 @@ namespace ts {
 		 *
 		 * This is typically determined by rules specific for the Kind of the source type.
 		 *
-		 * \param target The target of a hypothetical implicit coercion.
-		 * \param context Context needed fo the query call.
-		 * \return Whether the implicit coercion is allowed or not.
+		 * @param target The target of a hypothetical implicit coercion.
+		 * @param context Context needed fo the query call.
+		 * @return Whether the implicit coercion is allowed or not.
 		 */
 		[[nodiscard]]
 		bool isImplicitlyCoercible(TypeInfo target, query::detail::ContextType& context) const;
 
 		/**
-		 * \brief Get the text representation of this type.
-		 * \return The text representation of this type.
+		 * @brief Get the text representation of this type.
+		 * @return The text representation of this type.
 		 */
 		[[nodiscard]]
 		const std::string& toString() const;
 
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
+
 	protected:
 		/**
-		 * \brief Construct from an object from the internal::TypeInfoImpl hierarchy.
-		 * \param pimpl A pointer to a type implementation object.
+		 * @brief Construct from an object from the internal::TypeInfoImpl hierarchy.
+		 * @param pimpl A pointer to a type implementation object.
 		 */
-		explicit TypeInfo(const internal::TypeInfoImpl* pimpl): pimpl(pimpl) {}
+		TypeInfo(const internal::TypeInfoImpl* pimpl): pimpl(pimpl) {}
 
 		/**
-		 * \brief The pointer to the (probably significantly heavier) object carrying
+		 * @brief The pointer to the (probably significantly heavier) object carrying
 		 * the implementation which describes the types represented by this object.
 		 */
 		const internal::TypeInfoImpl* pimpl;

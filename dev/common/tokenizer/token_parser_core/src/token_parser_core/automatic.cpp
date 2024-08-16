@@ -1,45 +1,6 @@
 #include "automatic.hpp"
 
 namespace tpc {
-
-	void parseOne(ParserState& state, Keyword key) {
-		if (!state.tryEat(key)) {
-			state.fail(
-				-1, "expected keyword `" + rift_def::keywordToStr(key).str() + "` after here"
-			);
-		}
-	}
-
-	void parseOne(ParserState& state, Special spec) {
-		if (!state.tryEat(spec)) {
-			state.fail(
-				-1, "expected special `" + rift_def::specialToStr(spec).str() + "` after here"
-			);
-		}
-	}
-
-	void parseOne(ParserState& state, Operator op) {
-		if (!state.tryEat(op)) {
-			state.fail(
-				-1, "expected operator `" + rift_def::operatorToStr(op).str() + "` after here"
-			);
-		}
-	}
-
-	void parseOne(ParserState& state, Identifier* result) {
-		if (!state.ctokens().peek().isIdentifier())
-			state.fail(-1, "expected identifier after here");
-		result->position = state.tokens().peek().getPosition();
-		result->value    = state.tokens().next().getValue();
-	}
-
-	void parseOne(ParserState& state, OptionalIdentifier* result) {
-		if (state.ctokens().peek().isIdentifier()) {
-			result->position = state.tokens().peek().getPosition();
-			result->value    = state.tokens().next().getValue();
-		}
-	}
-
 	void identifierDprint(base::StrId value, std::ostream& out) {
 		// @TODO: change Name to Identifier
 		out << "{\"Name\": ";
@@ -60,5 +21,4 @@ namespace tpc {
 		else
 			out << "\"<ANONYMOUS>\"";
 	}
-
 }

@@ -31,6 +31,8 @@
 #include "../type_info.hpp"
 #include "../type_desc.hpp"
 
+#include <base/maps.hpp>
+
 // In the future, coercibility could work significantly differently.
 // For example, these functions could also return the OperationID of the coercion operation.
 // The current coercion implementation has not yet been tested.

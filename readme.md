@@ -31,6 +31,17 @@ To begin, enter the `dev/` directory and then:
 
 This fetches library dependencies, setups virtual environment, downloads binaries, etc...
 
+#### [Optional, but recommended] Installing custom LLVM library
+
+```bash
+./toolbox.py download-llvm
+```
+
+In case of trouble during build or `setup-build` step, it is advised
+to install the latest supported version of LLVM for a given machine.
+LLVM is **NOT installed system-wide**, but only for this project.
+Using version `18.1.8` should work for most platforms.
+
 #### Create a build folder
 
 ```bash

@@ -18,6 +18,7 @@ namespace {
 	/**
 	 * Merges the arguments provided in a form of C-string array with spaces. If a C-string
 	 * contains a white space, then adds quotes around it.
+	 * @note: It skips first parameter, as it is assumed to be the name of the command.
 	 * @param argc Argument count.
 	 * @param argv Argument vector - the array of C-strings.
 	 * @return Merged vector into a single string.
@@ -28,6 +29,8 @@ namespace {
 
 		// if an argv[i] contains a white space, then it must have been added with quotes
 		for (usize i = 1; i < argc; i++) {
+			RIFT_ASSERT(argv[i] != nullptr, "Clap received null pointer as one of argv arguments.");
+
 			bool has_whitespace = false;
 			auto arg            = std::string(argv[i]);
 			for (auto c: arg)
@@ -258,6 +261,11 @@ namespace clap {
 	ParsingResult Clap::parse(CLIArgs args) { return parse(args.argc, args.argv); }
 
 	ParsingResult Clap::parse(usize argc, const char* const* argv) {
+		RIFT_ASSERT(
+			argc > 0,
+			"clap assumes argc is at least 1, as it is the name of the program from the parameters."
+		);
+
 		ParsingState st(argc, argv);
 
 		// Going left to right through chars in args.

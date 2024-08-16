@@ -22,8 +22,7 @@
 	}
 
 template<class T>
-requires std::is_base_of_v<pst::PstStmtVisitor, T>
-class PstStmtVisitorTester final: public T {
+requires std::is_base_of_v<pst::PstStmtVisitor, T> class PstStmtVisitorTester final: public T {
 public:
 	int counter = 0;
 
@@ -31,7 +30,7 @@ public:
 	PSTVISITOR_METHOD(Import)
 	PSTVISITOR_METHOD(Using)
 	PSTVISITOR_METHOD(Alias)
-	PSTVISITOR_METHOD(Expr)
+	PSTVISITOR_METHOD(ExprStmt)
 	PSTVISITOR_METHOD(Return)
 	PSTVISITOR_METHOD(Redo)
 	PSTVISITOR_METHOD(Break)
@@ -157,7 +156,7 @@ private:
 	void testUsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/using_err.rift"));
 		assert(
-			pst.getLogger().messageCount(dia::Message::Severity::Error) == 3, "Expected 3 errors"
+			pst.getLogger().messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
 		);
 	}
 
@@ -171,7 +170,7 @@ private:
 	void testMissingSemiErr() {
 		pst::PST<> pst = prepare(path("snippets/missing_semicolon_err.rift"));
 		assert(
-			pst.getLogger().messageCount(dia::Message::Severity::Error) == 4, "Expected 4 errors"
+			pst.getLogger().messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
 		);
 	}
 

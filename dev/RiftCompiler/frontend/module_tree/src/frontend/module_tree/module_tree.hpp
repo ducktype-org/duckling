@@ -18,6 +18,7 @@
 namespace compiler::frontend {
 	/**
 	 * @brief Structure holding FileID within SourceFile
+	 * @todo: change to STRONG_TYPEDEF_ID
 	 */
 	struct FileId {
 		[[nodiscard]]
@@ -38,6 +39,11 @@ namespace compiler::frontend {
 		FileId() = default;
 	};
 
+	STRONG_TYPEDEF_ID(ModuleId);
+
+	// @TODO: move to STRONG_TYPEDEF_ID?
+	inline base::HashT customPerfectHash(ModuleId id) { return id.asInt(); }
+
 	/**
 	 * @brief Structure holding SourceFile within Module Tree
 	 */
@@ -47,7 +53,13 @@ namespace compiler::frontend {
 		FileId                     id;
 		base::Optional<pst::PST<>> parse_tree;
 
-		SourceFile(fs::FilePath);
+		/**
+		 * @brief Module the file belongs to
+		 * @note: in the future there might be module-less files
+		 */
+		ModuleId linked_module;
+
+		SourceFile(fs::FilePath, ModuleId linked_module);
 
 		/**
 		 * @brief Lazily parses the source file and returns PST
@@ -55,11 +67,6 @@ namespace compiler::frontend {
 		 */
 		const pst::PST<>& getPST();
 	};
-
-	STRONG_TYPEDEF_ID(ModuleId);
-
-	// @TODO: move to STRONG_TYPEDEF_ID?
-	inline base::HashT customPerfectHash(ModuleId id) { return id.asInt(); }
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed

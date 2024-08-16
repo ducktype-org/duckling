@@ -1,0 +1,11 @@
+
+const a: i32 = 0;
+
+fun foo() {
+	1;
+	a;
+	return 1;
+	return;
+	if (1) { }
+}
+

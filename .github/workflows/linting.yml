@@ -4,19 +4,22 @@ on: pull_request
 
 jobs:
   cpp-linter:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Install gvc and LLVM
+        run: sudo apt -y install libgraphviz-dev llvm llvm-dev
+
       - name: Create compile_commands
         run: |
          cd dev
-         cmake -DCMAKE_CXX_COMPILER=g++-11 -D BUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON 
+         cmake -DCMAKE_CXX_COMPILER=g++-13 -D BUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
          cd ..
         shell: bash
       - uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
-          GITHUB_TOKEN: ${{ secrets.KEY_FOR_MAURYC }}
+          GITHUB_TOKEN: ${{ secrets.QUACKER_PAT }}
         with:
           style: 'file'
           tidy-checks: ''
@@ -24,7 +27,7 @@ jobs:
           lines-changed-only: true
           database: 'dev'
 
-          # Enable to let linter post requested format changes in PR thread: 
+          # Enable to let linter post requested format changes in PR thread:
           # format-review: true
           # thread-comments: true
 

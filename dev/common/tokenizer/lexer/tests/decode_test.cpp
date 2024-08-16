@@ -40,7 +40,7 @@ private:
 		std::string content{ view.stringView() };
 		auto        path = fs::FilePath::createTempFile(content);
 		auto        file = tokenizer::makeTokenFile(path);
-		file->decode();
+		file->decode<encoding>();
 		assert(file->getLogger().bad(), "Encoding error not found");
 	}
 
@@ -101,9 +101,12 @@ private:
 	void goodAscii() {
 		std::vector<std::byte> in = {};
 		for (uchar c = 0; c < 128; c++) in.push_back(std::byte{ c });
-		dia::Logger err;
-		auto res = lexer::decode<fs::Encoding::US_ASCII>(base::RawView(in.data(), in.size()), err);
-		assert(err.good(), "Valid Ascii not accepted");
+
+		std::string content{ reinterpret_cast<char*>(in.data()), in.size() };
+		auto        path = fs::FilePath::createTempFile(content);
+		auto        file = tokenizer::makeTokenFile(path);
+		file->decode<fs::Encoding::US_ASCII>();
+		assert(file->getLogger().good(), "Valid Ascii not accepted");
 	}
 };
 

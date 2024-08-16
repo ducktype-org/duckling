@@ -1,10 +1,12 @@
+\page compiler-readme Compiler modules
+
 # Main compiler
 
 Main Rift compiler
 
 # Module overview:
 
-todo
+- \subpage pst-parser-module
 
 # Some strange names:
 

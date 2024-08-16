@@ -4,7 +4,7 @@
 #include <query_framework/query_int.hpp>
 #include <base/perfect_hash.hpp>
 #include <pst_parser/elements/elements.hpp>
-#include <pst_parser/rift_parser_base.hpp>
+#include <pst_parser/rift_parser_state.hpp>
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
@@ -28,21 +28,15 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query root scope for given module.
+	 * @todo: Right now RootScopes are empty, and in order to access proper module
+	 * symbols, one need to get scope of root element of the main module file.
+	 * This should be somehow refactored when multi-file modules will be introduced.
+	 * @todo: Currently root scopes are somewhat problematic.
+	 * See description of "root_element_file_back_map" for details.
 	 */
 	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleId, ScopeID);
 
 	struct KeyOf_QueryPrimaryCodeScopeFor {
-		/**
-		 * @brief scope that queries scope will be contained within
-		 * @fixme: it is highly bug prone, as one can create many scopes with arbitrary parent
-		 * scopes for singular element, and it has already lead to crucial errors.
-		 * On the other hand it is not trivial to eliminate it.
-		 * Solution would be to either eliminate it or to add smart sanity checks, that
-		 * can prevent at least some of potential bugs.
-		 * For now a simple assertion is added to disallow "double parent" situation
-		 */
-		ScopeID parent;
-
 		/**
 		 * @brief Element for which the scope is created.
 		 * @note: scopes of various elements behave differently
@@ -50,6 +44,8 @@ namespace compiler::helios {
 		 * Scope behaviour for:
 		 * * StatementAggravates -- a scope of aggregated statements
 		 * * Function -- a scope of function arguments (@todo: function scopes are currently empty)
+		 * * Namespaces -- empty Scope
+		 * * Classes -- scope containing class fields
 		 */
 		PstRef<pst::RiftElement> base_element;
 
@@ -59,11 +55,12 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Query Scope for given PST element that will be the child of scope from the key.
-	 *
-	 * @note: this is not perfect and might be changed in the future.
-	 * there is currently no association between parent and base_element
-	 * values inside the key.
+	 * @brief Query Scope for given PST element.
+	 * @note: Primary Scopes are linked directly to PST structure.
+	 * This means that every PST element has a scope, even for some it doesn't make a lot of sense.
+	 * The reason for this is that handling scope structure without direct link to PST was highly
+	 * bug prone and led to potential errors or lack of consistency between different fragments of
+	 * code.
 	 */
 	DECLARE_QUERY(QueryPrimaryCodeScopeFor, KeyOf_QueryPrimaryCodeScopeFor, ScopeID);
 
@@ -89,6 +86,18 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query all symbols that are directly inside given scope.
+	 *
+	 * @NOTE: For structs, it returns what's inside struct's body.
 	 */
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, const std::vector<SymID>&);
+
+	/**
+	 * @brief Root scope of main module file is currently the "effective" root scope.
+	 * See: QueryRootScope for details
+	 * @todo: this has to change in the future
+	 *
+	 * @param module
+	 * @return ScopeID
+	 */
+	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context&, frontend::ModuleId module);
 }
