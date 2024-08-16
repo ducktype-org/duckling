@@ -1,7 +1,7 @@
 /**
  * @file mir_tests.cpp
  * @brief Tests in this file are very bad right now, because MIR
- * is not yet fully implemented and is hard to properly test. 
+ * is not yet fully implemented and is hard to properly test.
  */
 
 #include <query_framework/query_entry_point.hpp>
@@ -18,7 +18,6 @@
 using namespace ts;
 using namespace compiler::helios::test_utils;
 
-
 class MIRConstructionTest final: public tester::ContextSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS MIRConstructionTest
@@ -30,10 +29,9 @@ public:
 	}
 
 private:
-
 	void simpleTest() {
 		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_simple_test")));
-		
+
 		withContextDo([&](query::Context& ctx) {
 			auto unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 
@@ -44,10 +42,10 @@ private:
 			ASSERT_EQUAL(base::StrId("foo3"), functions.at(2).original_name);
 			ASSERT_EQUAL(base::StrId("foo4"), functions.at(3).original_name);
 
-			auto& foo1_mir = ctx.query<compiler::mir::LowerToMirFunction>({functions.at(0)});
-			auto& foo2_mir = ctx.query<compiler::mir::LowerToMirFunction>({functions.at(1)});
-			auto& foo3_mir = ctx.query<compiler::mir::LowerToMirFunction>({functions.at(2)});
-			auto& foo4_mir = ctx.query<compiler::mir::LowerToMirFunction>({functions.at(3)});
+			auto& foo1_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			auto& foo2_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(1) });
+			auto& foo3_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) });
+			auto& foo4_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(3) });
 
 			ASSERT_EQUAL(foo1_mir.name, base::StrId("foo1"));
 			ASSERT_EQUAL(foo2_mir.name, base::StrId("foo2"));

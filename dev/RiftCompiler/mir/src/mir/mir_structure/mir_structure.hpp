@@ -145,7 +145,7 @@ namespace compiler::mir {
 		 * @todo this line produces -Wmaybe-uninitialized warning for some reason.
 		 * fix it.
 		 */
-		Instruction(Instruction&&)      = default;
+		Instruction(Instruction&&) = default;
 
 		Instruction(
 			Operation                  operation,
