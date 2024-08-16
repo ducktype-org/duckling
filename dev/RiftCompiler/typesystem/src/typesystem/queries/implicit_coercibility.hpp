@@ -80,7 +80,7 @@ namespace ts {
 	DECLARE_QUERY(QueryImplicitCoercibilityOnInfo, KeyFor_QueryImplicitCoercibilityOnInfo, bool)
 
 	/**
-	 * @brief Key for QueryImplicitCoercibilityOnInfo.
+	 * @brief Key for QueryImplicitCoercibilityOnDesc.
 	 */
 	struct KeyFor_QueryImplicitCoercibilityOnDesc {
 		/**
