@@ -89,7 +89,7 @@ namespace query {
 				log(base::strConcat(
 					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Cached. Done.\n"
 				));
-				
+
 				if constexpr (std::is_lvalue_reference_v<typename QueryImplType::QResult>) {
 					// if QResult is an lvalue reference, then we just bind to it:
 					static_assert(
@@ -112,7 +112,7 @@ namespace query {
 				dep_graph::setEntry(node_id, from);
 
 				// Use of defer here makes it also called when an exception is thrown.
-				defer (dep_graph::setExit(node_id));
+				defer(dep_graph::setExit(node_id));
 
 				log(base::strConcat(
 					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Calculating.\n"
@@ -183,13 +183,18 @@ namespace query {
 	}                                                                                               \
 	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryId(pretty_name); \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;                            \
-	static_assert((not std::is_reference_v<type::QueryType::QResult>) or \
-	 (std::is_lvalue_reference_v<type::QueryType::QResult> and std::is_const_v<std::remove_reference_t<type::QueryType::QResult>>), \
-		"Query result type should be either non-reference or const lvalue reference");
+	static_assert(                                                                                  \
+		(not std::is_reference_v<type::QueryType::QResult>)                                         \
+			or (std::is_lvalue_reference_v<type::QueryType::QResult>                                \
+	            and std::is_const_v<std::remove_reference_t<type::QueryType::QResult>>),            \
+		"Query result type should be either non-reference or const lvalue reference"                \
+	);
 
-	// @TODO: make it work:
-	// static_assert(std::is_same_v<std::invoke_result_t<type::store, type::QueryType::QKey, type::PResult, ::query::ACD>, type::QueryType::QResult>, "Bad store result."); \
-	// static_assert(std::is_same_v<std::invoke_result_t<type::provide, ::query::Context&, type::QueryType::QKey>, type::PResult>, "Bad provide result.");
+// @TODO: make it work:
+// static_assert(std::is_same_v<std::invoke_result_t<type::store, type::QueryType::QKey,
+// type::PResult, ::query::ACD>, type::QueryType::QResult>, "Bad store result."); \
+	// static_assert(std::is_same_v<std::invoke_result_t<type::provide, ::query::Context&,
+// type::QueryType::QKey>, type::PResult>, "Bad provide result.");
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is
