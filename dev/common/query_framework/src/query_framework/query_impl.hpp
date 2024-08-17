@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <base/optional.hpp>
 #include <base/str_utils.hpp>
+#include <base/defer.hpp>
 #include <diagnostic/logger.hpp>
 
 #include "acd.hpp"
@@ -88,7 +89,18 @@ namespace query {
 				log(base::strConcat(
 					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Cached. Done.\n"
 				));
-				return std::move(v.value().data);
+				
+				if constexpr (std::is_lvalue_reference_v<typename QueryImplType::QResult>) {
+					// if QResult is an lvalue reference, then we just bind to it:
+					static_assert(
+						std::is_lvalue_reference_v<decltype(v.value().data)>,
+						"Load should return lvalue reference, when QResult is an lvalue reference"
+					);
+					return v.value().data;
+				} else {
+					return std::move(v.value().data);
+				}
+
 			} else {
 				auto node_id = makeNodeID(QueryImplType::QueryType::id, key);
 				auto context = ContextMaker::make(node_id);
@@ -96,8 +108,12 @@ namespace query {
 				// @FUTURE: provide legit acd here
 				ACD acd;
 
-				// epilog:
+				// prolog:
 				dep_graph::setEntry(node_id, from);
+
+				// Use of defer here makes it also called when an exception is thrown.
+				defer (dep_graph::setExit(node_id));
+
 				log(base::strConcat(
 					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Calculating.\n"
 				));
@@ -106,8 +122,7 @@ namespace query {
 				auto&& result
 					= QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 
-				// prolog:
-				dep_graph::setExit(node_id);
+				// epilog:
 				log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Done.\n"));
 
 				return result;
@@ -167,7 +182,10 @@ namespace query {
 		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                     \
 	}                                                                                               \
 	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryId(pretty_name); \
-	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
+	decltype(type::QueryType::name) type::QueryType::name = pretty_name;                            \
+	static_assert((not std::is_reference_v<type::QueryType::QResult>) or \
+	 (std::is_lvalue_reference_v<type::QueryType::QResult> and std::is_const_v<std::remove_reference_t<type::QueryType::QResult>>), \
+		"Query result type should be either non-reference or const lvalue reference");
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is

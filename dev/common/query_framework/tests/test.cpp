@@ -1,4 +1,5 @@
 #include <tester/tester.hpp>
+#include <base/stable_hashmap.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -103,6 +104,20 @@ struct IMPLEMENT_QUERY(CallingEntryPoint, u64) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(CallingEntryPoint);
 
+
+DECLARE_QUERY(ReferenceQuery, u64, const u64&);
+
+struct IMPLEMENT_QUERY(ReferenceQuery, u64) {
+	static auto provide(Context&, QKey key) -> PResult {
+		return key;
+	}
+
+	QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(ReferenceQuery);
+
+
 class QueryTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS QueryTest
@@ -121,6 +136,7 @@ private:
 		assert(query::entryPoint<Fibonacci>(Key1{ 10 }) == 55, "Bad query output (2)");
 		assert(query::entryPoint<Fibonacci>(Key1{ 0 }) == 0, "Bad query output (3)");
 		assert(query::entryPoint<FibonacciSum>(Key2{ 4 }) == 7, "Bad query output (4)");
+		assert(query::entryPoint<ReferenceQuery>(88) == 88, "Bad query output (5)");
 	}
 
 	void autoCacheTest() {
