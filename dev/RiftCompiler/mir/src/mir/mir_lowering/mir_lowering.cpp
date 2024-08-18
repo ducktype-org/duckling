@@ -23,27 +23,27 @@ namespace compiler::mir {
 	struct BlockBuilder;
 	struct FunctionBuilder;
 
-	// @TODO: since BlockRef can be a parameter
+	// @TODO: since BlockBuilderRef can be a parameter
 	// we will need to add BlockBuilderRef->BlockRef transformation
 	// during building phase
-	using BlockRef = base::StableVectorRef<BlockBuilder>;
+	using BlockBuilderRef = base::StableVectorRef<BlockBuilder>;
 
 	/**
 	 * @brief Represents result of expression lowering, which is
-	 * a BlockRef that is the beginning of the lowered expression and MirLocation
+	 * a BlockBuilderRef that is the beginning of the lowered expression and MirLocation
 	 * that holds the result of the expression.
 	 */
 	struct ExprLowerRes {
-		BlockRef    begin;
+		BlockBuilderRef    begin;
 		MirLocation value;
 	};
 
 	/**
 	 * @brief Represents result of statement lowering, which is
-	 * a BlockRef that is the beginning of the lowered statement.
+	 * a BlockBuilderRef that is the beginning of the lowered statement.
 	 */
 	struct StmtLowerRes {
-		BlockRef begin;
+		BlockBuilderRef begin;
 	};
 
 	/**
@@ -54,7 +54,7 @@ namespace compiler::mir {
 	 * @param function Function that we are lowering this statement in.
 	 * @return StmtLowerRes
 	 */
-	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockRef continuation, FunctionBuilder& function);
+	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function);
 
 	/**
 	 * @brief Lowers expression.
@@ -64,7 +64,7 @@ namespace compiler::mir {
 	 * @param function Function that we are lowering this expression in.
 	 * @return ExprLowerRes
 	 */
-	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockRef continuation, FunctionBuilder& function);
+	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function);
 
 	/**
 	 * @brief Lowers code-block, by lowering all statements in the block.
@@ -75,7 +75,7 @@ namespace compiler::mir {
 	 * @return StmtLowerRes
 	 */
 	StmtLowerRes lowerCodeBlock(
-		const hc::CodeBlock& code_block, BlockRef continuation, FunctionBuilder& function
+		const hc::CodeBlock& code_block, BlockBuilderRef continuation, FunctionBuilder& function
 	);
 
 	/**
@@ -99,11 +99,11 @@ namespace compiler::mir {
 		 */
 		struct InstructionHole {
 		private:
-			BlockRef block_ref;
+			BlockBuilderRef block_ref;
 			usize    position;
 
 		public:
-			InstructionHole(BlockRef block_ref, usize position):
+			InstructionHole(BlockBuilderRef block_ref, usize position):
 				  block_ref(std::move(block_ref)),
 				  position(position) {}
 
@@ -182,7 +182,7 @@ namespace compiler::mir {
 	private:
 		base::Optional<base::StrId>      name;
 		base::StableVector<BlockBuilder> blocks;
-		base::Optional<BlockRef>         entry_block;
+		base::Optional<BlockBuilderRef>         entry_block;
 		base::StableVector<MirLocal>     local_list;
 
 	public:
@@ -210,14 +210,14 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]]
-		BlockRef newBlock() {
+		BlockBuilderRef newBlock() {
 			auto index = blocks.size();
 			auto res   = blocks.getRef(blocks.emplaceBack(BlockBuilder{ index })).value();
 			RIFT_ASSERT(u64(res->getID()) == blocks.size() - 1, "Bad block id");
 			return res;
 		}
 
-		void setEntry(BlockRef block) {
+		void setEntry(BlockBuilderRef block) {
 			RIFT_ASSERT(entry_block.empty(), "Entry block already set.");
 			entry_block.emplace(block);
 		}
@@ -228,11 +228,11 @@ namespace compiler::mir {
 	 * @note The result of the visitor is stored in out member.
 	 */
 	struct StmtBlockVisitor: public hc::HoutStmtVisitor {
-		BlockRef continuation;
+		BlockBuilderRef continuation;
 
 		FunctionBuilder& function;
 
-		StmtBlockVisitor(BlockRef continuation, FunctionBuilder& function):
+		StmtBlockVisitor(BlockBuilderRef continuation, FunctionBuilder& function):
 			  continuation(std::move(continuation)),
 			  function(function) {}
 
@@ -298,13 +298,13 @@ namespace compiler::mir {
 	 * @note The result of the visitor is stored in out member.
 	 */
 	struct ExprBlockVisitor: public hc::HoutExprVisitor {
-		BlockRef continuation;
+		BlockBuilderRef continuation;
 
 		base::Optional<ExprLowerRes> out;
 
 		FunctionBuilder& function;
 
-		ExprBlockVisitor(BlockRef continuation, FunctionBuilder& function):
+		ExprBlockVisitor(BlockBuilderRef continuation, FunctionBuilder& function):
 			  continuation(std::move(continuation)),
 			  function(function) {}
 
@@ -326,20 +326,20 @@ namespace compiler::mir {
 		}
 	};
 
-	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockRef continuation, FunctionBuilder& function) {
+	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function) {
 		StmtBlockVisitor visitor{ continuation, function };
 		stmt.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
-	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockRef continuation, FunctionBuilder& function) {
+	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function) {
 		ExprBlockVisitor visitor{ continuation, function };
 		expr.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
 	StmtLowerRes lowerCodeBlock(
-		const hc::CodeBlock& code_block, BlockRef continuation, FunctionBuilder& function
+		const hc::CodeBlock& code_block, BlockBuilderRef continuation, FunctionBuilder& function
 	) {
 		StmtLowerRes last_result{ continuation };
 		for (auto& stmt: code_block.statements | std::views::reverse) {
