@@ -1,7 +1,6 @@
 {
 	"PST": [
 		{
-
 			"While": {
 				"name": "<ANONYMOUS>",
 				"condition": {
@@ -27,7 +26,7 @@
 							},
 							{
 								"NumLiteral": "0.8"
-							}
+							},
 						]
 					}
 				},
@@ -35,22 +34,24 @@
 					"CodeBlockOrStmt": {
 						"CodeBlock": [
 							{
-								"Expr": [
-									{
-										"Identifier": "c"
-									},
-									{
-										"Operator": "-"
-									},
-									{
-										"Identifier": "d"
-									}
-								]
-							}
+								"Expr Stmt": {
+									"Expr": [
+										{
+											"Identifier": "c"
+										},
+										{
+											"Operator": "-"
+										},
+										{
+											"Identifier": "d"
+										},
+									]
+								}
+							},
 						]
 					}
 				}
 			}
-		}
+		},
 	]
 }

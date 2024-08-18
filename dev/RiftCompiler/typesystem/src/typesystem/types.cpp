@@ -1,6 +1,6 @@
 /**
- * \file types.cpp
- * \brief Implementation of the simpler kinds of types.
+ * @file types.cpp
+ * @brief Implementation of the simpler kinds of types.
  *
  * This file is not included outside the Type System module and can thus have full knowledge of the
  * underlying implementation hierarchy.
@@ -19,8 +19,8 @@
 
 // NOLINTBEGIN: linter assumes it's a function like macro
 /**
- * \brief Explicitly instantiate the `checkDynamicCast` template.
- * \param ClassName The class name from the `TypeInfo` hierarchy.
+ * @brief Explicitly instantiate the `checkDynamicCast` template.
+ * @param ClassName The class name from the `TypeInfo` hierarchy.
  */
 #define INSTANTIATE_CHECKED_CAST(ClassName) \
 	template ClassName::CPimpl checkDynamicCast<ClassName>(TypeInfo::CPimpl);

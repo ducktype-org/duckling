@@ -65,13 +65,19 @@ namespace base {
 			return !id.isBad();
 		}
 
-		bool operator==(const StrId& oth) const { return id == oth.id; }
+		std::strong_ordering operator<=>(const StrId& oth) const = default;
 
-		bool operator==(RawView oth) const { return view().stringView() == oth.stringView(); }
+		/**
+		 * Due to the operator==(RawView) definition, implicit operator==(StrId) is deleted.
+		 * Here, it is defined explicitly.
+		 */
+		bool operator==(const StrId& oth) const {
+			return operator<=>(oth) == std::strong_ordering::equal;
+		}
 
-		bool operator!=(const StrId& oth) const { return id != oth.id; }
-
-		bool operator<(const StrId& oth) const { return id < oth.id; }
+		bool operator==(const RawView& oth) const {
+			return view().stringView() == oth.stringView();
+		}
 
 		explicit operator usize() const { return usize(id); }
 

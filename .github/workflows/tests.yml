@@ -4,7 +4,6 @@ on:
   push:
     branches: [ "main", "dev" ]
   pull_request:
-    branches: [ "main", "dev" ]
   workflow_dispatch:
 
 env:
@@ -29,14 +28,14 @@ jobs:
       # @note: with matrix runs, each run works with the same output,
       # and they will overwrite each other
       # see: https://github.com/orgs/community/discussions/26639
-      # 
+      #
       # According to: https://github.com/orgs/community/discussions/38088
       # it should not override if the step if skipped.
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
 
     timeout-minutes: 8  # (Per matrix run)
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     env:
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Debug' }}
@@ -45,9 +44,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install lcov
+      - name: Install lcov and LLVM
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo apt -y install lcov
+        run: sudo apt -y install lcov llvm llvm-dev
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
@@ -95,7 +94,7 @@ jobs:
         run: |
           cmake \
               -B ${{ env.BUILD_DIR }} \
-              -D CMAKE_CXX_COMPILER=g++-11 \
+              -D CMAKE_CXX_COMPILER=g++-13 \
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
@@ -121,11 +120,11 @@ jobs:
   coverage:
     needs: [build]
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     timeout-minutes: 2
 
-    steps: 
+    steps:
       - name: Save main coverage percentage
         uses: action-pack/set-variable@v1
         if: ${{ env.BRANCH_NAME == 'main' }}

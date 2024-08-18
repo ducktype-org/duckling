@@ -111,7 +111,7 @@ namespace ts {
 		/**
 		 * Compares value categories in terms of what might be done with values they describe.
 		 * @param other Value category to compare
-		 * @return Weather the other value category is contained in this value category.
+		 * @return Whether the other value category is contained in this value category.
 		 */
 		[[nodiscard]]
 		bool contains(const ValueCategory& other) const {
