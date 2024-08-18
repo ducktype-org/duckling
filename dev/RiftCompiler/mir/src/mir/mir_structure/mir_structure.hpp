@@ -46,6 +46,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 namespace compiler::mir {
 
+	struct MirLocal;
+
 	/**
 	 * @brief Whether given operation is an operation that can (and has to be)
 	 * the last operation in the block (i.e. be a terminator).
@@ -67,6 +69,11 @@ namespace compiler::mir {
 	STRONG_TYPEDEF_ID(LocalID);
 
 	/**
+	 * @brief Reference to MIR Local variable data.
+	 */
+	using LocalRef = base::StableVectorRef<MirLocal>;
+
+	/**
 	 * @brief Description of a MIR Local variable, like a function argument or simply local variable.
 	 * @note This structure should only be stored directly in MIR Function, as part of the description of a function.
 	 * Other uses should use LocalRef to reference the variable description.
@@ -76,15 +83,17 @@ namespace compiler::mir {
 
 		// @TODO: type
 
+	private:
 		MirLocal(): id(LocalID::next()) {}
 
+		friend struct Function;
+		friend struct FunctionBuilder;
+		friend LocalRef;
+
+	public:
 		void debugPrint(std::ostream& output) const;
 	};
 
-	/**
-	 * @brief Reference to MIR Local variable data.
-	 */
-	using LocalRef = base::StableVectorRef<MirLocal>;
 
 	/**
 	 * @brief Structure representing any MIR value.
