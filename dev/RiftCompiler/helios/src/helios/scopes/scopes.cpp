@@ -214,7 +214,8 @@ namespace compiler::helios {
 				as_stmt->acceptVisitor(symbol_grab);
 				return std::move(symbol_grab.out.value());
 			} else if (base_element->elementType() == "Expression") {
-				// @FIXME: change the way we check condition in this if.
+				// @FIXME: change the way we check the condition, by comparing enum
+				// values instead of strings. Make the enum stringifiable.
 				return std::vector<SymID>{};
 			} else {
 				RIFT_PANIC("Query symbols from scope of non-statement, non-codeblock and non-expr");

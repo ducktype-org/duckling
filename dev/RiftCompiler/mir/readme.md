@@ -6,9 +6,9 @@ MIR is a module responsible for creation and definition of Middle Intermediate R
 
 ## MIR representation
 
-MIR is a representation where code of functions is represented as a set of "Basic blocks". Each basic block is a list of operation, and each operation is of a form `variable := operation(value, value, ..., value)`. In particular MIR in NOT in any way tree like structure.
+MIR is a representation where the code of functions is represented as a set of "basic blocks". Each basic block is a list of operations, and each operation is of the form `[ variable := ] operation(value, value, ..., value)`. In particular, MIR in NOT in any way a tree like structure.
 
-We use this representation for following purposes:
+We use this representation for the following purposes:
 
 * Destructor code insertion (lifetime analysis).
 * Static verification of move semantics.

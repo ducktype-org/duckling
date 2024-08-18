@@ -47,7 +47,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 namespace compiler::mir {
 
 	/**
-	 * @brief Whether given operation is an operation that can (ans has to be)
+	 * @brief Whether given operation is an operation that can (and has to be)
 	 * the last operation in the block (i.e. be a terminator).
 	 */
 	bool isTerminating(Operation);
