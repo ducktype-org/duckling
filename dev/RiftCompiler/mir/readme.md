@@ -109,5 +109,4 @@ Potential ideas:
 ### Other ideas that were (in the current version) rejected
 
 * Special operations for move, create, etc instead of flags. This was rejected, because we want to have a "move event" happen exactly when it actually is happening.
-* Distinguishing of temporary and local variables. This was deemed not necessary, and therefore not worth the effort. It might be brought back to solve some problems in the future.
-
+* Distinguishing of temporary and local variables. This was deemed not necessary, and therefore not worth the effort. Types of local entities (local/temporary/parameters/global/something else) might be brought back at some point to solve some problems or make them easier in the future (like static implementation of static analysis algorithms or introduction of references to non-local objects).
