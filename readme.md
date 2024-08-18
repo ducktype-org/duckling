@@ -8,13 +8,13 @@
 
 ```bash
 sudo apt update -y && \
-sudo apt install python3 doxygen graphviz -y
+sudo apt install python3 doxygen graphviz cmake ninja g++ lcov llvm-dev clang-tidy libzstd-dev zlib1g zlib1g-dev -y
 ```
 
 #### Arch linux
 
 ```bash
-sudo pacman -Sy python python-pip doxygen graphviz --noconfirm
+sudo pacman -Sy base-devel python python-pip doxygen graphviz lcov clang-tidy zlib ninja gcc llvm --noconfirm
 ```
 
 ### Setting up the repo
