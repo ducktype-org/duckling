@@ -9,7 +9,7 @@ namespace tpc {
 	 * @brief Struct for storing identifiers
 	 */
 	struct Identifier {
-		base::StrId         value;
+		base::StrId value;
 
 		// @TODO: this should be changed do be properly set during parsing:
 		dia::SourcePosition position = dia::SourcePosition::fakePosition();
@@ -24,6 +24,6 @@ namespace tpc {
 		base::Optional<base::StrId> value;
 
 		// @TODO: this should be changed do be properly set during parsing:
-		dia::SourcePosition         position = dia::SourcePosition::fakePosition();
+		dia::SourcePosition position = dia::SourcePosition::fakePosition();
 	};
 }
