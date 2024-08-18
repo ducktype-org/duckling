@@ -2,7 +2,7 @@
 
 Command-Line Argument Parser is our library for parsing user input passed through command line arguments.
 
-%A simple ``cat`` using clap:
+A simple ``cat`` using clap:
 
 @include clap_example_cat.cpp
 

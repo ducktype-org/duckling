@@ -1,7 +1,6 @@
 # Playground
 add_executable(panic_playground make_panic.cpp)
 add_executable(clap_playground clap_playground.cpp)
-add_executable(clap_example_cat ../common/clap/examples/clap_example_cat.cpp)
 add_executable(fs_parser_playground fs_parser_playground.cpp)
 
 target_link_libraries(panic_playground Base)
