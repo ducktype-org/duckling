@@ -16,11 +16,11 @@ We use this representation for the following purposes:
 * (potentially some more static analyses).
 * As an intermediate step in the process of compilation to LLVM IR.
 
-## Semitics of MIR
+## Semantics of MIR
 
-MIR operates still on high level types while having very low level "feel" which can pose some challenges. As of right now MIR semantics are not yet fully designed, but the general ideas are described.
-In the most high level words MIR can be described as: 
-> non-SSA CFG representation enriched with Scope data.
+MIR still operates on high level types while having a very low level "feel" which can pose some challenges. As of right now, MIR semantics are not yet fully designed, but the general ideas are described.
+In the most high level words, MIR can be described as: 
+> non-SSA (single static assignment) CFG (control flow graph) representation enriched with scope data.
 
 ### MIR operation
 
@@ -28,9 +28,9 @@ MIR operations are the smallest but also most complicated element of MIR.
 Each operation is composed of the following components:
 
 * Optional variable, that the output will be stored to.
-* "Operation" that describes what this operation actually do.
+* "Operation" that describes what this operation actually does.
 * Arguments -- a list of MIR Values.
-* Flags that describe what Local Variables this operation construct/destructs/moves.
+* Flags that describe what Local Variables this operation constructs/destructs/moves.
 * Helios Scope this operation originates from (used for lifetime analysis)
 
 Example:
@@ -50,6 +50,7 @@ Operations "Expressions":
 * `vcall(func-ptr, func args...)`
 * `get_pointer(local/global)`
 * `GEP(local, index)`
+  (GEP stands for "get element pointer", which is an LLVM instruction)
 * add, sub, mul, etc
 * `destroy(local)`
 
@@ -61,11 +62,11 @@ Operations "Terminators":
 ### MIR functions
 
 MIR Functions are the unit of executable code in MIR.
-They are made from following components:
+They are made from the following components:
 
 * name
 * parameters
-* return types
+* return type
 * code, composed of set of basic blocks with marked entry block
 
 ### MIR basic blocks
@@ -100,13 +101,13 @@ Potential ideas:
 
 ### Problems and future work
 
-* Getting access to local objects members and globals is problematic.
-  On one hand, classic approach of doing it in low-level representation is to get pointers to members. At first is seams to work very well with Duckling high level types, as `ref` type describes semantic of member access very well. This however breaks when member is already a `ref`, as Duckling does not support builtin ref-s to ref-s (it is supported via std support).
+* Getting access to local object's members or global values is problematic.
+  On the one hand, a classic approach of doing it in low-level representation is to get pointers to members. At first this seems to work very well with Duckling's high level types, as `ref` types describe the semantics of member access very well. This however breaks when a member is already a `ref`, as Duckling does not support builtin ref-s to ref-s (it is supported via std support).
 * Value categories and types in MIR
 * Match and switch statements in MIR
 
-### Other ides that were (in current version) rejected for some reasons
+### Other ideas that were (in the current version) rejected
 
-* Special operations for move, create, etc instead of flags. This was rejected, because we want to have "move event" happen exactly when it actually is happening.
-* Distinguishing of temporary and local variables. This was deemed not necessary, and therefor not worth the effort. It might be brought back to solve some problems in the future.
+* Special operations for move, create, etc instead of flags. This was rejected, because we want to have a "move event" happen exactly when it actually is happening.
+* Distinguishing of temporary and local variables. This was deemed not necessary, and therefore not worth the effort. It might be brought back to solve some problems in the future.
 
