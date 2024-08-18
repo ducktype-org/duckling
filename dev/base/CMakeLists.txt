@@ -57,3 +57,6 @@ rift_add_test(base at_maybe_test tests/at_maybe_test.cpp
 
 rift_add_test(base perfect_hash_test tests/perfect_hash_test.cpp
         USES Base)
+
+rift_add_test(base box_ref_tests tests/box_ref_tests.cpp
+        USES Base)

@@ -89,12 +89,14 @@ namespace base {
 
 		void assertNotNull() const {
 			if (ptr == nullptr) {
-				RIFT_PANIC("Ref got nullptr");
+				RIFT_PANIC("MRef got nullptr");
 			}
 		}
 	public:
 		// Constructors from pointers:
 		MRef() = default;
+		MRef(std::nullptr_t) = default;
+
 		explicit MRef(T* ptr): ptr{ptr} { }
 
 		// Copy:
@@ -109,7 +111,16 @@ namespace base {
 		template<class U>
 		MRef(MRef<U>&& other) noexcept: ptr(other.ptr) {}
 
+		// Construction from Ref:
+		template<class U>
+		MRef(const Ref<U>& other) noexcept: ptr(other.get()) {}
+
 		// Assign:
+		MRef& operator=(std::nullptr_t) noexcept {
+			ptr= nullptr;
+			return *this;
+		}
+
 		MRef& operator=(const MRef& other) noexcept {
 			ptr = other.ptr;
 			return *this;
@@ -117,6 +128,12 @@ namespace base {
 
 		template<class U>
 		MRef& operator=(const MRef<U>& other) noexcept {
+			ptr = other.ptr;
+			return *this;
+		}
+
+		template<class U>
+		MRef& operator=(const Ref<U>& other) noexcept {
 			ptr = other.ptr;
 			return *this;
 		}
@@ -131,16 +148,15 @@ namespace base {
 			return Ref<T>(ptr);
 		}
 
-		T& operator*() const { return *get(); }
-
-		T* operator->() const noexcept { return get(); }
-
+		// unsafe access:
+		T* operator->() const { assertNotNull(); return ptr; }
+		T& operator*() const { assertNotNull(); return *ptr; }
 
 		// Comparison:
 
 		template<class U>
-		bool operator==(const Ref<U>& other) const {
-			return ptr == other.get();
+		bool operator==(const MRef<U>& other) const {
+			return ptr == other.ptr;
 		}
 
 		// swap:
@@ -151,3 +167,6 @@ namespace base {
 		~MRef() = default;
 	};
 }
+
+// global namespace export:
+using base::Ref;
