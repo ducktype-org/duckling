@@ -8,7 +8,7 @@
 
 ```bash
 sudo apt update -y && \
-sudo apt install python3 doxygen graphviz cmake ninja g++ lcov llvm-dev clang-tidy libzstd-dev zlib1g zlib1g-dev -y
+sudo apt install python3 doxygen graphviz cmake ninja g++ lcov llvm-dev clang-tidy libzstd-dev zlib1g-dev -y
 ```
 
 #### Arch linux
