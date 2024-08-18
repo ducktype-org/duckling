@@ -121,7 +121,7 @@ namespace compiler::helios {
 				// for example: `if (let a = ...) {}`.
 				auto condition = ctx.query<QueryHoutOfExpr>({ stmt.getCondition() });
 
-				auto body        = queryCodeOfCodeBlock(ctx, stmt.getBody());
+				auto body = queryCodeOfCodeBlock(ctx, stmt.getBody());
 
 				output(code::IfStmt(outer_scope, std::move(condition), std::move(body)));
 			}

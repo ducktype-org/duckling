@@ -74,9 +74,11 @@ namespace compiler::mir {
 	using LocalRef = base::StableVectorRef<MirLocal>;
 
 	/**
-	 * @brief Description of a MIR Local variable, like a function argument or simply local variable.
-	 * @note This structure should only be stored directly in MIR Function, as part of the description of a function.
-	 * Other uses should use LocalRef to reference the variable description.
+	 * @brief Description of a MIR Local variable, like a function argument or simply local
+	 * variable.
+	 * @note This structure should only be stored directly in MIR Function, as part of the
+	 * description of a function. Other uses should use LocalRef to reference the variable
+	 * description.
 	 */
 	struct MirLocal final {
 		LocalID id;
@@ -93,7 +95,6 @@ namespace compiler::mir {
 	public:
 		void debugPrint(std::ostream& output) const;
 	};
-
 
 	/**
 	 * @brief Structure representing any MIR value.

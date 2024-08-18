@@ -34,8 +34,8 @@ namespace compiler::mir {
 	 * that holds the result of the expression.
 	 */
 	struct ExprLowerRes {
-		BlockBuilderRef    begin;
-		MirLocation value;
+		BlockBuilderRef begin;
+		MirLocation     value;
 	};
 
 	/**
@@ -54,7 +54,8 @@ namespace compiler::mir {
 	 * @param function Function that we are lowering this statement in.
 	 * @return StmtLowerRes
 	 */
-	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function);
+	StmtLowerRes
+		lowerStmt(const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function);
 
 	/**
 	 * @brief Lowers expression.
@@ -64,7 +65,8 @@ namespace compiler::mir {
 	 * @param function Function that we are lowering this expression in.
 	 * @return ExprLowerRes
 	 */
-	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function);
+	ExprLowerRes
+		lowerExpr(const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function);
 
 	/**
 	 * @brief Lowers code-block, by lowering all statements in the block.
@@ -100,7 +102,7 @@ namespace compiler::mir {
 		struct InstructionHole {
 		private:
 			BlockBuilderRef block_ref;
-			usize    position;
+			usize           position;
 
 		public:
 			InstructionHole(BlockBuilderRef block_ref, usize position):
@@ -182,7 +184,7 @@ namespace compiler::mir {
 	private:
 		base::Optional<base::StrId>      name;
 		base::StableVector<BlockBuilder> blocks;
-		base::Optional<BlockBuilderRef>         entry_block;
+		base::Optional<BlockBuilderRef>  entry_block;
 		base::StableVector<MirLocal>     local_list;
 
 	public:
@@ -326,13 +328,15 @@ namespace compiler::mir {
 		}
 	};
 
-	StmtLowerRes lowerStmt(const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function) {
+	StmtLowerRes
+		lowerStmt(const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function) {
 		StmtBlockVisitor visitor{ continuation, function };
 		stmt.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
-	ExprLowerRes lowerExpr(const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function) {
+	ExprLowerRes
+		lowerExpr(const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function) {
 		ExprBlockVisitor visitor{ continuation, function };
 		expr.acceptVisitor(visitor);
 		return visitor.out.value();
