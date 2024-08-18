@@ -63,7 +63,7 @@ namespace lsp {
 
 	class LSPElement {
 	public:
-		SourcePosition position = SourcePosition::getBadPosition();
+		SourcePosition position = SourcePosition::fakePosition();
 		LSPElement()            = default;
 		virtual ~LSPElement()   = default;
 		virtual void lsp_print(std::ostream& out);
@@ -171,32 +171,32 @@ namespace lsp {
 
 		struct KeywordValue {
 			rift_def::Keyword keyword  = rift_def::Keyword::NotAKeyword;
-			SourcePosition    position = SourcePosition::getBadPosition();
+			SourcePosition    position = SourcePosition::fakePosition();
 			void              lsp_print(std::ostream&);
 		};
 
 		struct Group {
 			GroupType          type     = GroupType::RoundGroup;
 			ParserRef<LSPExpr> expr     = nullptr;
-			SourcePosition     position = SourcePosition::getBadPosition();
+			SourcePosition     position = SourcePosition::fakePosition();
 			void               lsp_print(std::ostream&);
 		};
 
 		struct Operator {
 			base::StrId    oper_id  = base::StrId();
-			SourcePosition position = SourcePosition::getBadPosition();
+			SourcePosition position = SourcePosition::fakePosition();
 			void           lsp_print(std::ostream&);
 		};
 
 		struct Identifier {
 			base::StrId    indent_id = base::StrId();
-			SourcePosition position  = SourcePosition::getBadPosition();
+			SourcePosition position  = SourcePosition::fakePosition();
 			void           lsp_print(std::ostream&);
 		};
 
 		struct NumLiteral {
 			base::StrId    num_id   = base::StrId();
-			SourcePosition position = SourcePosition::getBadPosition();
+			SourcePosition position = SourcePosition::fakePosition();
 			void           lsp_print(std::ostream&);
 		};
 
