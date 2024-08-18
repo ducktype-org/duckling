@@ -1,7 +1,7 @@
 /**
  * @file stream_printer.hpp
  * @brief Module for outputting text, especially coloured, to a stream, like the console or a file.
- 
+
  Basic usage:
  @include printer_example.cpp
 
@@ -11,14 +11,14 @@
 
  - First, all messages are printed normally to showcase the output.
  - Then, minimum importance of a message level is set to 4, so that only the fifth message shows up
- when printing console output. 
+ when printing console output.
  - Then, amount of hint type messages is limited to 1 so the third
- message which is the second hint is not printed. 
+ message which is the second hint is not printed.
  - Then, maximum amount of all messages is set to
- one so only the first message is printed. 
+ one so only the first message is printed.
  - And lastly, the console is cleared of all messages and
- adding single messages to consoles through initializer lists is showcased. 
- 
+ adding single messages to consoles through initializer lists is showcased.
+
  Also showcasing that
  console settings are not reset upon clearing messages from it.
 
