@@ -1,7 +1,8 @@
 #include <base/constexpr_cat.hpp>
 #include <iostream>
+#include <string>
 
 int main() {
-	constexpr a = CONSTEXPR_CAT("A", "B", "C");
-	std::cout << a;
+	constexpr auto a = CONSTEXPR_CAT("A", "B", "C");
+	std::cout << std::string(a.data()) << std::endl;
 }

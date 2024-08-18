@@ -10,5 +10,5 @@ int main() {
 	N::MyEnum enum_value = N::MyEnum::A;
 
 	std::cout << base::enumToStr(enum_value).strView() << "\n";  // "A"
-	enum_value = base::strToEnum(base::StrId("B"));
+	enum_value = base::strToEnum<N::MyEnum>(base::StrId("B"));
 }

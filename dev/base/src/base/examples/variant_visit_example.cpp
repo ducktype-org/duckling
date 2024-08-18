@@ -4,11 +4,11 @@
 int main() {
 	std::variant<int, bool, char> variant;
 
-	std::cout << VARIANT_VISIT(
-		variant,
-		VARIANT_CASE(int&, i, return i++) VARIANT_CASE(bool, b, return int(b))
-			VARIANT_CASE(char, c, return int(c))
-	) << "\n";
+	VARIANT_VISIT(variant,
+		VISIT_CASE(int&, i, std::cout << i++) 
+		VISIT_CASE(bool, b, std::cout <<  int(b))
+		VISIT_CASE(char, c, std::cout <<  int(c))
+	);
 
 	std::cout << VISIT(variant, aut, return int(aut)) << "\n";
 }
