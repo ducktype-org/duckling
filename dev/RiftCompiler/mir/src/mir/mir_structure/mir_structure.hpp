@@ -67,9 +67,9 @@ namespace compiler::mir {
 	STRONG_TYPEDEF_ID(LocalID);
 
 	/**
-	 * @brief Data of MIR Local variable.
-	 * @note This structure should only be stored directly in MIR Function.
-	 * Other uses should use LocalRef.
+	 * @brief Description of a MIR Local variable, like a function argument or simply local variable.
+	 * @note This structure should only be stored directly in MIR Function, as part of the description of a function.
+	 * Other uses should use LocalRef to reference the variable description.
 	 */
 	struct MirLocal final {
 		LocalID id;

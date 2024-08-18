@@ -146,7 +146,7 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * @brief Adds instruction hole, that can be filled later/
+		 * @brief Adds instruction hole, that can be filled later.
 		 * @note It is needed when one does not know the instruction he has to add, before something
 		 * else will be lowered.
 		 * @return InstructionHole
