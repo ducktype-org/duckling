@@ -1,6 +1,4 @@
-# ZPP 2.1 Rift development repository
-
-This repository contains code for ZPP 2.1 Rift development. It introduces Language Server Protocol support for Rift.
+# Main Rift development repository
 
 ## Before start
 
