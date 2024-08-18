@@ -121,7 +121,6 @@ namespace compiler::helios {
 				// for example: `if (let a = ...) {}`.
 				auto condition = ctx.query<QueryHoutOfExpr>({ stmt.getCondition() });
 
-				auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt.getBody() });
 				auto body        = queryCodeOfCodeBlock(ctx, stmt.getBody());
 
 				output(code::IfStmt(outer_scope, std::move(condition), std::move(body)));
@@ -152,10 +151,6 @@ namespace compiler::helios {
 				// 	= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(&stmt) });
 
 				auto fun_body = stmt.getBody();
-
-				// Scope of function body:
-				auto inner_scope
-					= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(fun_body) });
 
 				// HOUTCode out;
 				code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
