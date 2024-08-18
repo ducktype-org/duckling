@@ -13,6 +13,7 @@ public:
 
 		TESTER_ADD_TEST(simpleOperatorPrecedenceTest);
 		TESTER_ADD_TEST(simpleOperatorAssociativityTest);
+		TESTER_ADD_TEST(exportsForLSPTest);
 	}
 
 private:
@@ -78,6 +79,12 @@ private:
 		assert(add == OperatorAssociativity::LeftToRight, "* has bad associativity");
 
 		assert(inc == OperatorAssociativity::RightToLeft, "++ has bad associativity");
+	}
+
+	void exportsForLSPTest() {
+		ASSERT_EQUAL(rift_def::getKeywords().size(), 60);
+		ASSERT_EQUAL(rift_def::getSpecials().size(), 6);
+		ASSERT_EQUAL(rift_def::getOperators().size(), 15);
 	}
 };
 
