@@ -71,7 +71,8 @@ namespace compiler::helios::code {
 		for (auto&& elem: expr.elements) {
 			variant_match(elem) {
 				variant_case(rpn::Identifier, idt) {
-					st.emplace(base::make_unique<IdentifierExpr>(idt.symbol_list.back()));
+					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, idt.symbol_list.back())
+					);
 				}
 
 				variant_case(rpn::Operator, oper) {
@@ -81,7 +82,7 @@ namespace compiler::helios::code {
 					st.pop();
 
 					st.emplace(base::make_unique<BinaryOperatorExpr>(
-						oper.oper_id, std::move(a), std::move(b)
+						expr.scope, oper.oper_id, std::move(a), std::move(b)
 					));
 				}
 
@@ -90,11 +91,14 @@ namespace compiler::helios::code {
 						{ expr.scope, idt.symbol_name, true }
 					);
 
-					st.emplace(base::make_unique<IdentifierExpr>(sym_list.getAsSingle().back()));
+					st.emplace(
+						base::make_unique<IdentifierExpr>(expr.scope, sym_list.getAsSingle().back())
+					);
 				}
 
 				variant_case(rpn::NumValue, num_value) {
-					st.emplace(base::make_unique<LiteralValueExpr>(std::stoi(num_value.num_id.str())
+					st.emplace(base::make_unique<LiteralValueExpr>(
+						expr.scope, std::stoi(num_value.num_id.str())
 					));
 				}
 
@@ -133,6 +137,8 @@ namespace compiler::helios {
 	 */
 	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key)
 		-> code::ElementRef<code::Expr> {
+		auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ key.expr });
+
 		RIFT_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single expression");
 		const auto& elem = key.expr->elements.at(0);
 
@@ -142,14 +148,14 @@ namespace compiler::helios {
 			}
 			variant_case(pst::Expr::NumLiteral, num) {
 				auto val = base::strIdToNum(num.num_id);
-				return base::make_unique<code::LiteralValueExpr>(val);
+				return base::make_unique<code::LiteralValueExpr>(scope, val);
 			}
 			variant_case(pst::Expr::Identifier, identifier) {
 				// @note: this does not handle overload
 				// @note: this does not handle "." operation
 
 				auto lookup_result = ctx.query<QueryLookupInScopeAndParents>(KeyOf_LookupInScope{
-					key.scope, identifier.indent_id, true });
+					scope, identifier.indent_id, true });
 
 				compiler::helios::SymbolList lookup_dealiased;
 
@@ -165,7 +171,7 @@ namespace compiler::helios {
 				RIFT_ASSERT(lookup_dealiased.size() > 0, "Empty lookup result");
 
 				// @TODO: dont just ignore everything before last symbol
-				return base::make_unique<code::IdentifierExpr>(lookup_dealiased.back());
+				return base::make_unique<code::IdentifierExpr>(scope, lookup_dealiased.back());
 			}
 			variant_case(pst::Expr::Group, group) {
 				throw base::NotYetImplemented("Expr from group");
@@ -201,11 +207,9 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr);
 
 	base::HashT KeyOf_QueryHoutOfExpr::customPerfectHash() const {
-		auto hash_1 = base::perfectHash(scope);
-		auto hash_2 = this->expr->getID().asInt();
+		auto hash_1 = this->expr->getID().asInt();
 
-		// @FIXME: this does not work:
-		return (hash_1 * 143 + hash_2 * 7);
+		return hash_1;
 	}
 
 };
