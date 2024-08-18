@@ -3,6 +3,7 @@
 - \subpage dev-readme
 - \subpage modules
 - \subpage dependencies-readme
+- \subpage scripts-readme
 
 \page modules Modules
 

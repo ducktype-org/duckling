@@ -1,3 +1,7 @@
+/**
+ * @file query_impl.hpp
+ * @brief Implementation of macros and templates used in the generation of query implementations.
+ */
 #pragma once
 
 #include <utility>

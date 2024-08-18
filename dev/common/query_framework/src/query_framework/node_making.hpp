@@ -1,3 +1,7 @@
+/**
+ * @file node_making.hpp
+ * @brief Helper functions for generating query `NodeID`.
+ */
 #pragma once
 
 #include "query_id.hpp"

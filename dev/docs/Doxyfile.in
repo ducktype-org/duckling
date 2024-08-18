@@ -9,7 +9,6 @@ RECURSIVE = YES
 FILE_PATTERNS = *.hpp *.cpp *.md
 EXCLUDE_PATTERNS = "@PROJECT_SOURCE_DIR@/*build*/*" \
                    "@PROJECT_SOURCE_DIR@/docs/*" \
-                   "@PROJECT_SOURCE_DIR@/scripts/*" \
                    */toolbox.py \
                    "@PROJECT_SOURCE_DIR@/*/examples/*" \
                    "@PROJECT_SOURCE_DIR@/*/tests/*"

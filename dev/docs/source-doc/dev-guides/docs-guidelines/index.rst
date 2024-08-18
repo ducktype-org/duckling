@@ -145,4 +145,9 @@ To create external table of contents use ``toctree`` directive.
         folder/doc.rst
         *
 
+See also
+========
+
+*  :doc:`Printer examplary documentation (now inside Doxygen)`
+
 * `Discord documentation channel <https://discord.com/channels/860531247826731029/1106545291852783627>`_

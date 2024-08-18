@@ -1,3 +1,7 @@
+/**
+ * @file query_entry_point.hpp
+ * @brief Implementation of "Query Entry Point" used to call queries from outside of query-framework.
+ */
 #pragma once
 
 #include "query_id_provider.hpp"

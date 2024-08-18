@@ -1,11 +1,11 @@
 /**
  * @file type_interface.hpp
- * @brief Interface describes interface provided by the type, ie.
- * its attributes and methods. In type system implementation interface
- * is represented by TypeInterface class.
+ * @brief The interface provided by a type consists of
+ * its attributes and methods. In type system implementation,
+ * type interfaces are represented by the TypeInterface class.
  *
- * In practice TypeInterface just holds a map
- * witch associates InterfaceElements with their names.
+ * In practice, TypeInterface simply holds a map,
+ * which associates InterfaceElement elements with their names.
  */
 #pragma once
 

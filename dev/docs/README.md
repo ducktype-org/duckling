@@ -6,7 +6,7 @@
   - [Building](#building)
   - [Excluded directories](#excluded-directories)
   - [Writing docs](#writing-docs)
-    - [Writing examples](#writing-examples)
+  - [Writing examples](#writing-examples)
 
 ## Building
 
@@ -76,14 +76,16 @@ This will create a tree of pages.
 Doxygen autolink feature makes a link from every function name, class, file name that you write anywhere. You only have to write the name.
 If you want to link to a file, for example `queries.hpp`, and there is more than one file of that name in the project, you can write more of the path to that file, for example `helios/queries.hpp`. 
 
-Basides pages, documentation of each file is written at the __top of each file__, inside Doxygent comment.
+Basides pages, documentation of each file is written as a Doxygen commment at the __top of each file__.
 
-Currently, there is no automatic link between documentations inside files and pages.
+Currently, there Doxygen generated different trees and different websites for "pages" and for "files".
+There is no automatic way to link on page all visible files or all files inside some directory.
+To fix that in the near future we will move "pages" to "dir" - directory documentation marked by "@dir" Doxygen command.
 
 
 @TODO Create tool to automatically link all files containing docs visible from page to that page.
 
-### Writing examples
+## Writing examples
 
 When writing documentation you can put examples hard-coded inside code block or put it in outside file.
 The latter has some advantages, because the Doxygen entities (functions, classes, macros) used inside examples 

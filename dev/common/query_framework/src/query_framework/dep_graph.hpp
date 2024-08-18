@@ -1,3 +1,7 @@
+/**
+ * @file dep_graph.hpp
+ * @brief Implementation of Dependency Graph. Dependency Graph is a data structure used to track dependencies of queries and detect cyclic query calls.
+ */
 #pragma once
 
 #include "node_id.hpp"

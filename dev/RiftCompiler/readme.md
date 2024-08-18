@@ -13,6 +13,7 @@ Main Rift compiler
 - \subpage pst-parser-module
 - \subpage rift-snippets-readme
 - \subpage typesystem-module
+- \subpage operations-module
 
 # Some strange names:
 
