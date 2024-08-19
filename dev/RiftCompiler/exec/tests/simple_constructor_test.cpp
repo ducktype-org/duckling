@@ -21,7 +21,7 @@ private:
 
 		exec::CTV ctv = exec::alloc_new(td, 8);
 
-		ASSERT_EQUAL(ctv.getData().size() * 8, 8);
+		assert(ctv.getData().size() * 8 == 8, "Size of ctv is incorrect");
 
 		ctv.getData()[0] = 2;
 
@@ -37,27 +37,27 @@ private:
 		auto block_       = pointer_data[0];
 		auto offset_      = pointer_data[1];
 
-		assertTrue(block_ == block && offset_ == offset, "Wrapper for data access didn't work");
+		assert(block_ == block && offset_ == offset, "Wrapper for data access didn't work");
 
-		assertTrue(block == ctv.data.block, "Pointer has incorrect block");
+		assert(block == ctv.data.block, "Pointer has incorrect block");
 
-		assertTrue(offset == ctv.data.offset, "Pointer has incorrect offset");
+		assert(offset == ctv.data.offset, "Pointer has incorrect offset");
 
-		assertTrue(
+		assert(
 			p_ctv.getData<u32>().size() == 2,
 			"Pointer doesn't hold two values (block id and offset)"
 		);
 
 
-		assertTrue(exec::getBlocks()[block].data[0] == 2, "Incorrect value under pointer.");
+		assert(exec::getBlocks()[block].data[0] == 2, "Incorrect value under pointer.");
 
 		ctv.getData()[0] = 4;
 
-		assertTrue(exec::getBlocks()[block].data[0] == 4, "Incorrect value under pointer.");
+		assert(exec::getBlocks()[block].data[0] == 4, "Incorrect value under pointer.");
 
 		auto under = p_ctv.getDataUnderPointer();
 
-		assertTrue(under[0] == 4, "Value given by pointer (by data_under_pointer) is wrong");
+		assert(under[0] == 4, "Value given by pointer (by data_under_pointer) is wrong");
 	}
 
 public:
