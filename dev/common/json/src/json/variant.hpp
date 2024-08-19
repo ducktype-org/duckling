@@ -2,8 +2,9 @@
 
 #include <variant>
 #include <nlohmann/json.hpp>
-#include "empty_struct.hpp"
 #include <type_traits>
+#include <base/exceptions.hpp>
+#include "empty_struct.hpp"
 #include "type_parse.hpp"
 
 template<typename... Args>
@@ -22,5 +23,7 @@ struct nlohmann::adl_serializer<std::variant<Args...>> {
 		);
 	}
 
-	static void from_json(const json&, const std::variant<Args...>&) {}
+	static void from_json(const json&, const std::variant<Args...>&) {
+		RIFT_PANIC("Parsing data from JSON into a custom variant is not supported (yet).");
+	}
 };

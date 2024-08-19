@@ -56,7 +56,7 @@ private:
 		auto corr_json = fs::getSimpleFileContent(path("fun_position.json"));
 		auto corr      = corr_json.view().stringView();
 
-		assert(testing_utils::compareJson(result_stream.str(), corr), "outputs are not equal");
+		assertTrue(testing_utils::compareJson(result_stream.str(), corr), "outputs are not equal");
 	}
 
 public:

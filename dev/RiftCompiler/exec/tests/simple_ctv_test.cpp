@@ -19,7 +19,7 @@ private:
 
 		exec::CTV ctv = exec::alloc_new(td, 8);
 
-		assert(ctv.getData().size() * 8 == 8, "Size of ctv is incorrect");
+		ASSERT_EQUAL(ctv.getData().size() * 8, 8);
 
 		ctv.getData()[0] = 2;
 
@@ -35,9 +35,9 @@ private:
 		auto block_       = pointer_data[0];
 		auto offset_      = pointer_data[1];
 
-		assert(block_ == block && offset_ == offset, "Wrapper for data access didn't work");
+		ASSERT_EQUAL(block_ == block && offset_, offset);
 
-		assert(block == ctv.data.block, "Pointer has incorrect block");
+		ASSERT_EQUAL(block, ctv.data.block);
 
 		assert(offset == ctv.data.offset, "Pointer has incorrect offset");
 

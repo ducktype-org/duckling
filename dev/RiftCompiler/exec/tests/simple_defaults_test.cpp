@@ -84,7 +84,7 @@ private:
 			result.getData<bool>().front(),
 			"Parent comparison is supposed to return true but default comparison returned false"
 		);
-		assert(parent_counter == 1, "Wrong number of compares on the parent class");
+		ASSERT_EQUAL(parent_counter, 1);
 		assert(member_counter == 1, "Wrong number of compares on the member class");
 
 		parent_result_ctv.getData<bool>().front() = false;

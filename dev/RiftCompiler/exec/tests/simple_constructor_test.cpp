@@ -21,7 +21,7 @@ private:
 
 		exec::CTV ctv = exec::alloc_new(td, 8);
 
-		assert(ctv.getData().size() * 8 == 8, "Size of ctv is incorrect");
+		ASSERT_EQUAL(ctv.getData().size() * 8, 8);
 
 		ctv.getData()[0] = 2;
 

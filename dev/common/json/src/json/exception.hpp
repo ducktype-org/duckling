@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <nlohmann/json.hpp>
+#include <base/exceptions.hpp>
 
 template<>
 struct nlohmann::adl_serializer<std::exception> {
@@ -10,5 +11,7 @@ struct nlohmann::adl_serializer<std::exception> {
 		j["what"] = e.what();
 	}
 
-	static void from_json(const json&, std::exception&) {}
+	static void from_json(const json&, std::exception&) {
+		RIFT_PANIC("Parsing data from JSON into exception is not supported (yet).");
+	}
 };

@@ -6,7 +6,7 @@
 #include <memory_data/pointer.hpp>
 #include "kinds.hpp"
 
-#include <nlohmann/json.hpp>
+#include <json/json.hpp>
 
 namespace vm {
 	class TypeMetadata;
@@ -140,4 +140,4 @@ namespace vm {
 	};
 }
 
-// REGISTER_PARSE_TYPE_ALIAS(vm::Type, "Type");
+REGISTER_PARSE_TYPE_ALIAS(vm::Type, "Type");
