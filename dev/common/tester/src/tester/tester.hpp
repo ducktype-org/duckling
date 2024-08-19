@@ -1,6 +1,8 @@
 /**
  * @file tester.hpp
  * @author Andrzej
+ *
+ * @example tester_example.cpp
  */
 
 #pragma once

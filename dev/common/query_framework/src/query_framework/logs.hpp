@@ -1,5 +1,6 @@
 /**
- * @file Very simple logging mechanism for query events
+ * @file logs.hpp
+ * @brief Implementation of simple logging for internal query-framework use.
  */
 
 #pragma once

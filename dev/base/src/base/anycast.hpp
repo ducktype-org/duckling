@@ -1,6 +1,11 @@
 /**
- * @file any.hpp
+ * @file anycast.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
+ *
+ * ### Usage:
+ * @include anycast_example.cpp
+ *
+ * @example anycast_example.cpp
  */
 
 #pragma once

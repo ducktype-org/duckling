@@ -1,3 +1,33 @@
+/**
+ * @file stringifyable_enum.hpp
+ *
+ * @brief This library provides a simple way of creating `enum class` types,
+ * that can be automatically converted to `base::StrId` and vice versa.
+ *
+ * Functionalities
+ * ===============
+ *
+ * MAKE_STRINGIFYABLE_ENUM
+ * -----------------------
+ *
+ * Macro generating enum. It takes three main parameters: namespace, base type,
+ * enum name. All other parameters are treated as enum members.
+ *
+ * @attention For technical reasons `MAKE_STRINGIFYABLE_ENUM` must be used
+ * in top-level code only. That is why `namespace` parameter exists. It states
+ * in what namespace the enum will be created.
+ *
+ * Conversion to and from StrId
+ * ------------------------------
+ *
+ * - `base::enumToStr`
+ * - `base::strToEnum`
+ *
+ * ### Usage
+ * @include stringifyable_enum_example.cpp
+ *
+ * @example stringifyable_enum_example.cpp
+ */
 #pragma once
 
 #include "define_helper.hpp"

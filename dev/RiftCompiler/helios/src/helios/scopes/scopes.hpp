@@ -1,3 +1,6 @@
+/** @file scopes.hpp
+ *  @brief This file defines Queries responsible for creation of Scopes and operations on them.
+ */
 #pragma once
 
 #include <base/string_id.hpp>

@@ -1,3 +1,12 @@
+/**
+ * @file type_interface.hpp
+ * @brief The interface provided by a type consists of
+ * its attributes and methods. In type system implementation,
+ * type interfaces are represented by the TypeInterface class.
+ *
+ * In practice, TypeInterface simply holds a map,
+ * which associates InterfaceElement elements with their names.
+ */
 #pragma once
 
 #include <map>
