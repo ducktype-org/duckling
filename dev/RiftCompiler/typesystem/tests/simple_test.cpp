@@ -212,7 +212,9 @@ private:
 		const auto raw_1 = query::entryPoint<QueryRawPointerType>(false);
 		assertTrue(raw_1.getKind() == RawPointer, "Raw Pointer should have kind RawPointer.");
 		const auto raw_2 = query::entryPoint<QueryRawPointerType>(true);
-		assertTrue(raw_2.getKind() == RawPointer, "Mutable Raw Pointer should have kind RawPointer.");
+		assertTrue(
+			raw_2.getKind() == RawPointer, "Mutable Raw Pointer should have kind RawPointer."
+		);
 		assertTrue(raw_1 != raw_2, "Immutable and mutable Raw Pointers should be different.");
 		const auto raw_3 = query::entryPoint<QueryRawPointerType>(false);
 		assertTrue(raw_1 == raw_3, "There should be only one immutable Raw Pointer.");
@@ -336,7 +338,9 @@ private:
 
 		const auto fun_identical
 			= query::entryPoint<QueryFunctionType>({ { int_16, int_32 }, int_32 });
-		assertTrue(fun_1 == fun_identical, "Function types constructed the same way should be equal.");
+		assertTrue(
+			fun_1 == fun_identical, "Function types constructed the same way should be equal."
+		);
 		const auto fun_different_input
 			= query::entryPoint<QueryFunctionType>({ { int_32, int_32 }, int_32 });
 		assertTrue(
@@ -350,7 +354,9 @@ private:
 		);
 		const auto fun_different_flags
 			= query::entryPoint<QueryFunctionType>({ { int_16, int_32 }, int_32, true, true });
-		assertTrue(fun_1 != fun_different_flags, "Functions with different flags should be different.");
+		assertTrue(
+			fun_1 != fun_different_flags, "Functions with different flags should be different."
+		);
 
 		const TypeInfo     type_fun_different_flags = fun_different_flags;
 		const FunctionInfo fun_different_flags_2    = type_fun_different_flags;
@@ -378,7 +384,9 @@ private:
 		const auto module_2 = query::entryPoint<QueryModuleType>({});
 
 		assertTrue(module == module_2, "There shouldn't be multiple different Module types.");
-		assertTrue(query::entryPoint<QuerySizeOfType>(module) == 0, "ModuleType should have size 0.");
+		assertTrue(
+			query::entryPoint<QuerySizeOfType>(module) == 0, "ModuleType should have size 0."
+		);
 
 		assertTrue(module.getKind() == Module, "ModuleType should have kind Meta.");
 
@@ -480,7 +488,9 @@ private:
 	 */
 	void simple_macro_elements() {
 		const auto namespace_1 = query::entryPoint<QueryNamespaceType>({});
-		assertTrue(namespace_1.getKind() == Namespace, "Namespace type should have kind Namespace.");
+		assertTrue(
+			namespace_1.getKind() == Namespace, "Namespace type should have kind Namespace."
+		);
 		const auto module_1 = query::entryPoint<QueryModuleType>({});
 		assertTrue(module_1.getKind() == Module, "Module type should have kind Module.");
 

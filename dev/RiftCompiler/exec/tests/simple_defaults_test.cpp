@@ -247,13 +247,17 @@ private:
 		auto eq_res_1
 			= operation::getDefault(operation::Defaultable::Equality, int_type)({ int_ctv_a,
 		                                                                          int_ctv_b });
-		assertTrue(eq_res_1.getData<bool>().front() == true, "After assigment values should be equal.");
+		assertTrue(
+			eq_res_1.getData<bool>().front() == true, "After assigment values should be equal."
+		);
 
 
 		auto cmp_res_1
 			= operation::getDefault(operation::Defaultable::Compare, int_type)({ int_ctv_a,
 		                                                                         int_ctv_b });
-		assertTrue(cmp_res_1.getData<int8_t>().front() == 0, "After assigment values should be equal.");
+		assertTrue(
+			cmp_res_1.getData<int8_t>().front() == 0, "After assigment values should be equal."
+		);
 	}
 
 	void int_test() {
@@ -630,7 +634,8 @@ private:
 	// 	const auto& equal = operation::getDefault(operation::Defaultable::Equality, tuple);
 	//
 	// 	auto res_equal = equal({ ctv, ctv });
-	// 	assertTrue(res_equal.getData<bool>().front() == true, "tuple value is not equal to itself.");
+	// 	assertTrue(res_equal.getData<bool>().front() == true, "tuple value is not equal to
+	// itself.");
 	//
 	// 	res_equal = equal({ ctv, ctv2 });
 	// 	assertTrue(res_equal.getData<bool>().front() == true, "Two empty tuples should be equal.");
@@ -656,7 +661,8 @@ private:
 	// 	construct_full({ ctv4, int_42, int_37 });
 	//
 	// 	res_equal = equal({ ctv3, ctv4 });
-	// 	assertTrue(res_equal.getData<bool>().front() == false, "(37, 42) shall not be equal (42, 37).");
+	// 	assertTrue(res_equal.getData<bool>().front() == false, "(37, 42) shall not be equal (42,
+	// 37).");
 	//
 	// 	auto ctv5 = exec::alloc_new(tuple);
 	// 	construct_full({ ctv5, int_37, int_42 });
