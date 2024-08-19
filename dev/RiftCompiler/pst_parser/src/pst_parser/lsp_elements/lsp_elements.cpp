@@ -100,7 +100,7 @@ namespace lsp {
 		throw std::runtime_error("LSPNotStmt should never be printed");
 	}  // This should never be printed
 
-	static_assertTrue(std::is_base_of_v<LSPElement, LSPExpr>);
+	static_assert(std::is_base_of_v<LSPElement, LSPExpr>);
 
 	void LSPAttribute::lsp_print(std::ostream& out) {
 		out << "{\"Attribute\": {";
