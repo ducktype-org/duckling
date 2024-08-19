@@ -35,7 +35,7 @@ private:
 		auto block_       = pointer_data[0];
 		auto offset_      = pointer_data[1];
 
-		ASSERT_EQUAL(block_ == block && offset_, offset);
+		ASSERT_TRUE(block_ == block && offset_ == offset);
 
 		ASSERT_EQUAL(block, ctv.data.block);
 
