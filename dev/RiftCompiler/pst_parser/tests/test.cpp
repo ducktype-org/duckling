@@ -110,10 +110,10 @@ private:
 
 		if (no_errors) {
 			// if (pst.getErrorState().fail()) pst.getErrorState().dumpLog();
-			assert(pst.getLogger().good(), "there are unexpected errors in rift source-code");
+			assertTrue(pst.getLogger().good(), "there are unexpected errors in rift source-code");
 		}
 
-		assert(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
+		assertTrue(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
 		// @TODO: Do we want to print some information about the differences or the bad output to a
 		// file?
 	}
@@ -148,28 +148,28 @@ private:
 
 	void testListParsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/lists_err.rift"));
-		assert(
+		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 5, "Expected 5 errors"
 		);
 	}
 
 	void testUsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/using_err.rift"));
-		assert(
+		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
 		);
 	}
 
 	void testParamListErrors() {
 		pst::PST<> pst = prepare(path("snippets/params_err.rift"));
-		assert(
+		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 7, "Expected 7 errors"
 		);
 	}
 
 	void testMissingSemiErr() {
 		pst::PST<> pst = prepare(path("snippets/missing_semicolon_err.rift"));
-		assert(
+		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
 		);
 	}

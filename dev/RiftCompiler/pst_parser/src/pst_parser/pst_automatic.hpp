@@ -48,7 +48,7 @@ namespace pst {
 		// parses one of the available types
 		// template<class T>
 		// void one([[maybe_unused]]T t, [[maybe_unused]]bool = false) {
-		// 	static_assert(sizeof(T) < 0, "parseOne for type `T` is not implemented\n");
+		// 	static_assertTrue(sizeof(T) < 0, "parseOne for type `T` is not implemented\n");
 		// }
 
 		/**

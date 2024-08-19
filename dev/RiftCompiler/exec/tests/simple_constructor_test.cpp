@@ -37,27 +37,27 @@ private:
 		auto block_       = pointer_data[0];
 		auto offset_      = pointer_data[1];
 
-		assert(block_ == block && offset_ == offset, "Wrapper for data access didn't work");
+		assertTrue(block_ == block && offset_ == offset, "Wrapper for data access didn't work");
 
-		assert(block == ctv.data.block, "Pointer has incorrect block");
+		assertTrue(block == ctv.data.block, "Pointer has incorrect block");
 
-		assert(offset == ctv.data.offset, "Pointer has incorrect offset");
+		assertTrue(offset == ctv.data.offset, "Pointer has incorrect offset");
 
-		assert(
+		assertTrue(
 			p_ctv.getData<u32>().size() == 2,
 			"Pointer doesn't hold two values (block id and offset)"
 		);
 
 
-		assert(exec::getBlocks()[block].data[0] == 2, "Incorrect value under pointer.");
+		assertTrue(exec::getBlocks()[block].data[0] == 2, "Incorrect value under pointer.");
 
 		ctv.getData()[0] = 4;
 
-		assert(exec::getBlocks()[block].data[0] == 4, "Incorrect value under pointer.");
+		assertTrue(exec::getBlocks()[block].data[0] == 4, "Incorrect value under pointer.");
 
 		auto under = p_ctv.getDataUnderPointer();
 
-		assert(under[0] == 4, "Value given by pointer (by data_under_pointer) is wrong");
+		assertTrue(under[0] == 4, "Value given by pointer (by data_under_pointer) is wrong");
 	}
 
 public:

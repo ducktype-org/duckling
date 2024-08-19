@@ -225,7 +225,7 @@ private:
 			auto name = base::StrId(str);
 			for (auto& gb: hout.glob_data) {
 				if (gb.original_name == name) {
-					this->assert(gb.value == val, "Bad constant value");
+					this->assertTrue(gb.value == val, "Bad constant value");
 					return;
 				}
 			}

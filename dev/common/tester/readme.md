@@ -27,7 +27,7 @@ All symbols are in namespace `tester` and come from [tester.hpp](tester.hpp).
 
 Class that is intended to be inherited from while writing test classes.
 
-* `assert(bool v, std::string_view err, bool critical = true)`
+* `assertTrue(bool v, std::string_view err, bool critical = true)`
   If `v` is `false` then: adds `err` to test output, marks test as failed.
   Additionally if `critical` is `true` and `v` is `false` execution of a test will stop.
 
@@ -46,4 +46,3 @@ Macro used to add tests inside test class constructor
 [example.cpp](misc/example.cpp).
 
 # Notes
-

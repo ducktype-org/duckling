@@ -30,12 +30,12 @@ private:
 		auto get_op = operation::getOperation(id);
 
 
-		assert(get_op.signature == fun_sig, "Wrong signature.");
+		assertTrue(get_op.signature == fun_sig, "Wrong signature.");
 
 		auto res = get_op.function(std::vector<exec::CTV>{ ctv });
 
-		assert(res.data == ctv.data, "Wrong CTV result,");
-		assert(res.size == ctv.size, "Wrong CTV size.");
+		assertTrue(res.data == ctv.data, "Wrong CTV result,");
+		assertTrue(res.size == ctv.size, "Wrong CTV size.");
 	}
 
 	void simple_default() {
@@ -54,26 +54,26 @@ private:
 		auto def_id = operation::getIdDefault(operation::Defaultable::Compare, int_16);
 
 
-		assert(id == def_id, "Ids of the same operation do not match.");
+		assertTrue(id == def_id, "Ids of the same operation do not match.");
 
 		auto get_op = operation::getOperation(id);
 
 
-		assert(get_op.signature == fun_sig, "Wrong signature.");
+		assertTrue(get_op.signature == fun_sig, "Wrong signature.");
 
 		auto res = get_op.function(std::vector<exec::CTV>{ ctv });
 
-		assert(res.data == ctv.data, "Wrong CTV result,");
-		assert(res.size == ctv.size, "Wrong CTV size.");
+		assertTrue(res.data == ctv.data, "Wrong CTV result,");
+		assertTrue(res.size == ctv.size, "Wrong CTV size.");
 
 		const operation::TypedOperation& get_op2
 			= operation::getDefault(operation::Defaultable::Compare, int_16);
 
 		auto res2 = get_op2.function(std::vector<exec::CTV>{ ctv });
 
-		assert(get_op2.signature == fun_sig, "Wrong signature.");
-		assert(res2.data == ctv.data, "Wrong CTV result,");
-		assert(res2.size == ctv.size, "Wrong CTV size.");
+		assertTrue(get_op2.signature == fun_sig, "Wrong signature.");
+		assertTrue(res2.data == ctv.data, "Wrong CTV result,");
+		assertTrue(res2.size == ctv.size, "Wrong CTV size.");
 	}
 
 public:

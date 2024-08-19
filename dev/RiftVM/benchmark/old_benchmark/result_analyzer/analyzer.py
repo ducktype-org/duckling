@@ -24,7 +24,7 @@ LANG_ID = {
 
 LANG_NAME = {v: k for k, v in LANG_ID.items()}
 
-assert(len(LANG_NAME) == len(LANG_ID))
+assertTrue(len(LANG_NAME) == len(LANG_ID))
 
 HUMAN_NAME = {
 	"cpp": "C++",
@@ -114,7 +114,7 @@ class LangResult:
 # Result of all
 class TestResult:
 	def __init__(self, values, file):
-		assert(len(values) == REPETITIONS * TEST_CASES * LANG_COUNT)
+		assertTrue(len(values) == REPETITIONS * TEST_CASES * LANG_COUNT)
 
 		self.file = file
 		self.langs = []

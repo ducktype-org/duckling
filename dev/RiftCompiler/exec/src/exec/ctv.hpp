@@ -55,7 +55,7 @@ namespace exec {
 
 		// @TODO: use strongly typed ints for bit / byte offsets
 		Pointer shift(usize shift /* in bits */) const {
-			// @TODO: assert(offset + shift in block)
+			// @TODO: assertTrue(offset + shift in block)
 
 			return { block, offset + shift };
 		}

@@ -80,44 +80,44 @@ private:
 		exec::CTV a = exec::alloc_new(custom_class_desc, customClass.getSize());
 
 		exec::CTV result = x({ a, a });
-		assert(
+		assertTrue(
 			result.getData<bool>().front(),
 			"Parent comparison is supposed to return true but default comparison returned false"
 		);
 		ASSERT_EQUAL(parent_counter, 1);
-		assert(member_counter == 1, "Wrong number of compares on the member class");
+		assertTrue(member_counter == 1, "Wrong number of compares on the member class");
 
 		parent_result_ctv.getData<bool>().front() = false;
 
 		result = x({ a, a });
-		assert(
+		assertTrue(
 			!result.getData<bool>().front(),
 			"Parent comparison is supposed to return false but default comparison returned true"
 		);
-		assert(parent_counter == 2, "Wrong number of compares on the parent class");
-		assert(member_counter == 2, "Wrong number of compares on the member class");
+		assertTrue(parent_counter == 2, "Wrong number of compares on the parent class");
+		assertTrue(member_counter == 2, "Wrong number of compares on the member class");
 
 		parent_result_ctv.getData<bool>().front() = true;
 		member_result_ctv.getData<bool>().front() = false;
 
 		result = x({ a, a });
-		assert(
+		assertTrue(
 			!result.getData<bool>().front(),
 			"Member comparison is supposed to return false but default comparison returned true"
 		);
-		assert(parent_counter == 2, "Wrong number of compares on the parent class");
-		assert(member_counter == 3, "Wrong number of compares on the member class");
+		assertTrue(parent_counter == 2, "Wrong number of compares on the parent class");
+		assertTrue(member_counter == 3, "Wrong number of compares on the member class");
 
 		parent_result_ctv.getData<bool>().front() = true;
 		member_result_ctv.getData<bool>().front() = true;
 
 		result = x({ a, a });
-		assert(
+		assertTrue(
 			result.getData<bool>().front(),
 			"Both results were set back to true but returned value is still false"
 		);
-		assert(parent_counter == 3, "Wrong number of compares on the parent class");
-		assert(member_counter == 4, "Wrong number of compares on the member class");
+		assertTrue(parent_counter == 3, "Wrong number of compares on the parent class");
+		assertTrue(member_counter == 4, "Wrong number of compares on the member class");
 	}
 
 	void default_comparison_test() {
@@ -170,49 +170,49 @@ private:
 		exec::CTV a = exec::alloc_new(custom_class_desc, customClass.getSize());
 
 		exec::CTV result = x({ a, a });
-		assert(
+		assertTrue(
 			result.getData<int8_t>().front() == 0,
 			"Parent comparison is supposed to return 0 but default comparison returned nonzero"
 		);
-		assert(parent_counter == 1, "Wrong number of compares on the parent class");
-		assert(member_counter == 1, "Wrong number of compares on the member class");
+		assertTrue(parent_counter == 1, "Wrong number of compares on the parent class");
+		assertTrue(member_counter == 1, "Wrong number of compares on the member class");
 
 		parent_result_ctv.getData<int8_t>().front() = -1;
 
 		result = x({ a, a });
-		assert(
+		assertTrue(
 			result.getData<int8_t>().front() == -1,
 			"Parent comparison is supposed to return -1 but default comparison returned ???"
 		);
-		assert(parent_counter == 2, "Wrong number of compares on the parent class");
-		assert(member_counter == 2, "Wrong number of compares on the member class");
+		assertTrue(parent_counter == 2, "Wrong number of compares on the parent class");
+		assertTrue(member_counter == 2, "Wrong number of compares on the member class");
 
 		parent_result_ctv.getData<int8_t>().front() = 0;
 		member_result_ctv.getData<int8_t>().front() = 1;
 
 		result = x({ a, a });
-		assert(
+		assertTrue(
 			result.getData<int8_t>().front() == 1,
 			"Member comparison is supposed to return 1 but default comparison returned ???"
 		);
-		assert(parent_counter == 2, "Wrong number of compares on the parent class");
-		assert(member_counter == 3, "Wrong number of compares on the member class");
+		assertTrue(parent_counter == 2, "Wrong number of compares on the parent class");
+		assertTrue(member_counter == 3, "Wrong number of compares on the member class");
 
 		parent_result_ctv.getData<int8_t>().front() = 1;
 		member_result_ctv.getData<int8_t>().front() = 1;
 
 		result = x({ a, a });
-		assert(
+		assertTrue(
 			result.getData<int8_t>().front() == 1,
 			"Both results were set back to 1 but returned value is still ???"
 		);
-		assert(parent_counter == 2, "Wrong number of compares on the parent class");
-		assert(member_counter == 4, "Wrong number of compares on the member class");
+		assertTrue(parent_counter == 2, "Wrong number of compares on the parent class");
+		assertTrue(member_counter == 4, "Wrong number of compares on the member class");
 	}
 
 	template<typename T, usize SIZE>
 	void simple_int_test() {
-		static_assert(SIZE == sizeof(T) * 8);
+		static_assertTrue(SIZE == sizeof(T) * 8);
 		// @TODO use the T and SIZE
 		auto           int_type = query::entryPoint<ts::QueryIntegralType>({ SIZE });
 		ts::TypeDesc<> int_desc{ int_type };
@@ -231,29 +231,29 @@ private:
 		auto eq_res
 			= operation::getDefault(operation::Defaultable::Equality, int_type)({ int_ctv_a,
 		                                                                          int_ctv_b });
-		assert(eq_res.getData<bool>().front() == false, "42 should not be equal to 27.");
+		assertTrue(eq_res.getData<bool>().front() == false, "42 should not be equal to 27.");
 
 
 		auto cmp_res
 			= operation::getDefault(operation::Defaultable::Compare, int_type)({ int_ctv_a,
 		                                                                         int_ctv_b });
-		assert(cmp_res.getData<int8_t>().front() == -1, "42 should be bigger than 27.");
+		assertTrue(cmp_res.getData<int8_t>().front() == -1, "42 should be bigger than 27.");
 
 
 		operation::getDefault(operation::Defaultable::Assign, int_type)({ int_ctv_a, int_ctv_b });
 
-		assert(int_ctv_a.getData<T>().front() == 27, "Assigment should set the value to 27");
+		assertTrue(int_ctv_a.getData<T>().front() == 27, "Assigment should set the value to 27");
 
 		auto eq_res_1
 			= operation::getDefault(operation::Defaultable::Equality, int_type)({ int_ctv_a,
 		                                                                          int_ctv_b });
-		assert(eq_res_1.getData<bool>().front() == true, "After assigment values should be equal.");
+		assertTrue(eq_res_1.getData<bool>().front() == true, "After assigment values should be equal.");
 
 
 		auto cmp_res_1
 			= operation::getDefault(operation::Defaultable::Compare, int_type)({ int_ctv_a,
 		                                                                         int_ctv_b });
-		assert(cmp_res_1.getData<int8_t>().front() == 0, "After assigment values should be equal.");
+		assertTrue(cmp_res_1.getData<int8_t>().front() == 0, "After assigment values should be equal.");
 	}
 
 	void int_test() {
@@ -375,13 +375,13 @@ private:
 		message(base::strConcat("value b1.b: ", (usize) b1.getData<int8_t>()[1]));
 
 
-		assert(b1.getData<int8_t>()[0] == 27, "b1.a != 27");
-		assert(b1.getData<int8_t>()[1] == 42, "b1.b != 42");
+		assertTrue(b1.getData<int8_t>()[0] == 27, "b1.a != 27");
+		assertTrue(b1.getData<int8_t>()[1] == 42, "b1.b != 42");
 
 
 		auto a1 = exec::alloc_new(class_A, class_A.getSize());
 		operation::getDefault(operation::Defaultable::ConstructEmpty, class_A)({ a1 });
-		assert(a1.getData<int8_t>().front() == 27, "a1.a != 27");
+		assertTrue(a1.getData<int8_t>().front() == 27, "a1.a != 27");
 
 
 		a1.getData<int8_t>().front() = 20;
@@ -403,7 +403,7 @@ private:
 				  << "\n";
 
 		operation::getDefault(operation::Defaultable::ConstructFull, class_A)({ a1, int1 });
-		assert(a1.getData<int8_t>().front() == 80, "construct full didn't set a1.a to 80");
+		assertTrue(a1.getData<int8_t>().front() == 80, "construct full didn't set a1.a to 80");
 
 
 		operation::getDefault(operation::Defaultable::ConstructFull, class_B)({ b2, int2, a1 });
@@ -411,8 +411,8 @@ private:
 		std::cerr << "b2.getData<int8_t>()[0]  " << (int) b2.getData<int8_t>()[0]
 				  << ",b2.getData<int8_t>()[1]  " << (int) b2.getData<int8_t>()[1] << "\n";
 
-		assert(b2.getData<int8_t>()[0] == 80, "construct full didn't set b2.a to 80");
-		assert(b2.getData<int8_t>()[1] == 10, "construct full didn't set b2.b to 10");
+		assertTrue(b2.getData<int8_t>()[0] == 80, "construct full didn't set b2.a to 80");
+		assertTrue(b2.getData<int8_t>()[1] == 10, "construct full didn't set b2.b to 10");
 	}
 
 	void virtual_construct() {
@@ -446,7 +446,7 @@ private:
 		cons({ ctv_z });
 
 
-		assert(ctv_z.getData<uint8_t>().front() == 7, "Empty constructor didn't set the value");
+		assertTrue(ctv_z.getData<uint8_t>().front() == 7, "Empty constructor didn't set the value");
 
 
 		auto B = ts::ClassInfo::create(
@@ -465,7 +465,7 @@ private:
 
 		auto member_b = getMemberNonVirtual(ctv_b, symbol_z);
 
-		assert(
+		assertTrue(
 			member_b.getData<uint8_t>().front() == 7,
 			base::strConcat(
 				"Constructor of B didn't set field in parent ",
@@ -494,7 +494,7 @@ private:
 		/*auto member = */ exec::getVirtualMember(ctv_a, A, symbol_z);
 
 		// @TODO: constructors should construct virtual parents
-		// assert(member.getData<uint8_t>().front() == 7,
+		// assertTrue(member.getData<uint8_t>().front() == 7,
 		//        base::strConcat("Constructor of A didn't set field in virtual parent ",
 		//                         (u64)member.getData<uint8_t>().front()));
 	}
@@ -565,7 +565,7 @@ private:
 	// 	auto res = fun({ B_ctv, B_ctv });
 	//
 	//
-	// 	assert(res.getData<bool>()[0] == true, "b_ctv should be equal to itself");
+	// 	assertTrue(res.getData<bool>()[0] == true, "b_ctv should be equal to itself");
 	//
 	//
 	// 	auto B_ctv_2 = exec::alloc_new(B, B.getSize());
@@ -583,19 +583,19 @@ private:
 	//
 	//
 	// 	auto member_ctv = getVirtualMember(B_ctv_2, B, symbol0);
-	// 	assert(
+	// 	assertTrue(
 	// 		member_ctv.getData<uint8_t>().front() == 30, "This value should be set to 30 already."
 	// 	);
 	//
 	//
 	// 	auto res2 = fun({ B_ctv, B_ctv_2 });
 	//
-	// 	assert(res2.getData<bool>()[0] == false, "Those ctvs should not be equal");
+	// 	assertTrue(res2.getData<bool>()[0] == false, "Those ctvs should not be equal");
 	//
 	//
 	// 	auto res3 = fun({ B_ctv_2, B_ctv_2 });
 	//
-	// 	assert(res3.getData<bool>()[0] == true, "b_ctv_2 should be equal to itself");
+	// 	assertTrue(res3.getData<bool>()[0] == true, "b_ctv_2 should be equal to itself");
 	//
 	//
 	// 	auto ctv_c                       = getVirtualMember(C_ctv, C, symbol0);
@@ -603,7 +603,7 @@ private:
 	//
 	// 	auto res4 = fun({ B_ctv, B_ctv_2 });
 	//
-	// 	assert(res4.getData<bool>()[0] == true, "Those ctvs should be equal now");
+	// 	assertTrue(res4.getData<bool>()[0] == true, "Those ctvs should be equal now");
 	// }
 	//
 	// void tuple_tests() {
@@ -630,10 +630,10 @@ private:
 	// 	const auto& equal = operation::getDefault(operation::Defaultable::Equality, tuple);
 	//
 	// 	auto res_equal = equal({ ctv, ctv });
-	// 	assert(res_equal.getData<bool>().front() == true, "tuple value is not equal to itself.");
+	// 	assertTrue(res_equal.getData<bool>().front() == true, "tuple value is not equal to itself.");
 	//
 	// 	res_equal = equal({ ctv, ctv2 });
-	// 	assert(res_equal.getData<bool>().front() == true, "Two empty tuples should be equal.");
+	// 	assertTrue(res_equal.getData<bool>().front() == true, "Two empty tuples should be equal.");
 	//
 	// 	auto int_42                       = exec::alloc_new(int8);
 	// 	int_42.getData<uint8_t>().front() = 42;
@@ -644,7 +644,7 @@ private:
 	//
 	// 	const auto& construct_full = operation::getDefault(ConstructFull, tuple);
 	//
-	// 	assert(
+	// 	assertTrue(
 	// 		construct_full.signature.getParameterTypes().size() == 3,
 	// 		"Construct full should take 3 arguments: value being constructed and values of fields"
 	// 	);
@@ -656,13 +656,13 @@ private:
 	// 	construct_full({ ctv4, int_42, int_37 });
 	//
 	// 	res_equal = equal({ ctv3, ctv4 });
-	// 	assert(res_equal.getData<bool>().front() == false, "(37, 42) shall not be equal (42, 37).");
+	// 	assertTrue(res_equal.getData<bool>().front() == false, "(37, 42) shall not be equal (42, 37).");
 	//
 	// 	auto ctv5 = exec::alloc_new(tuple);
 	// 	construct_full({ ctv5, int_37, int_42 });
 	//
 	// 	res_equal = equal({ ctv3, ctv5 });
-	// 	assert(res_equal.getData<bool>().front() == true, "(37, 42) shall be equal (37, 42).");
+	// 	assertTrue(res_equal.getData<bool>().front() == true, "(37, 42) shall be equal (37, 42).");
 	// }
 
 public:

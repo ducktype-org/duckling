@@ -78,19 +78,19 @@ private:
 		testModuleIDInSourceFile(*mod_module);
 		testModuleIDInSourceFile(*mt);
 
-		assert(not mt->getParentModule().has_value(), "Root module has a parent");
-		assert(
+		assertTrue(not mt->getParentModule().has_value(), "Root module has a parent");
+		assertTrue(
 			awe_module->getParentModule().has_value(), "Non-root module does not have a parent (1)"
 		);
-		assert(
+		assertTrue(
 			another_module->getParentModule().has_value(),
 			"Non-root module does not have a parent (2)"
 		);
-		assert(
+		assertTrue(
 			awesome_module->getParentModule().has_value(),
 			"Non-root module does not have a parent (3)"
 		);
-		assert(
+		assertTrue(
 			mod_module->getParentModule().has_value(), "Non-root module does not have a parent (4)"
 		);
 
@@ -107,7 +107,7 @@ private:
 		[[maybe_unused]] auto awe = query::entryPoint<QuerySubmodules>(root).at(base::StrId("awe"));
 
 		auto sources = query::entryPoint<QuerySourceFiles>(root);
-		assert(sources.size() == 1, "Bad source count!");
+		assertTrue(sources.size() == 1, "Bad source count!");
 
 		auto main_id = sources.at(0);
 
