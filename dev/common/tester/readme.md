@@ -46,4 +46,3 @@ Macro used to add tests inside test class constructor
 [example.cpp](misc/example.cpp).
 
 # Notes
-
