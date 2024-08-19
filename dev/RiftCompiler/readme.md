@@ -11,6 +11,7 @@ Main Rift compiler
 - \subpage frontend-module
 - \subpage helios-module
 - \subpage pst-parser-module
+- \subpage mir
 - \subpage rift-snippets-readme
 - \subpage typesystem-module
 - \subpage operations-module
