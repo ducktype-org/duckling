@@ -8,7 +8,7 @@ namespace operation {
 
 		template<typename T, usize SIZE>
 		void addIntegral() {
-			static_assertTrue(SIZE == 8 * (sizeof(T)));
+			static_assert(SIZE == 8 * (sizeof(T)));
 
 			auto int_type = query::entryPoint<ts::QueryIntegralType>({ SIZE });
 

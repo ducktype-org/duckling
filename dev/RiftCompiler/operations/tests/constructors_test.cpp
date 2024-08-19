@@ -62,7 +62,7 @@ private:
 
 		auto x = exec::getMember(ctv_parent, parent_class.getMemberInfo(symbol0), parent_class);
 
-		assertTrue(
+		assert(
 			x.getData<int8_t>().front() == 14,
 			base::strConcat(
 				"This member should be set to ",
@@ -74,7 +74,7 @@ private:
 
 		ctv_int.getData<int8_t>().front() = 28;
 
-		assertTrue(
+		assert(
 			x.getData<int8_t>().front() == 14,
 			base::strConcat(
 				"This member should be set to ",
