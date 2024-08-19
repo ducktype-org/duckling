@@ -4,15 +4,17 @@
 #include <vector>
 
 #include <json/json.hpp>
-#include <json/type_parse.hpp>
 
 struct Foo {
 	int         a;
 	char        b;
 	std::string s;
 
+	// Specify which fields are supposed to be JSONed
 	NLOHMANN_DEFINE_TYPE_INTRUSIVE(Foo, a, b, s);
 };
+// Tell our library about this struct
+JSON_REGISTER_TYPE(Foo)
 
 struct Bar {
 	std::string      a;
@@ -22,20 +24,16 @@ struct Bar {
 
 	NLOHMANN_DEFINE_TYPE_INTRUSIVE(Bar, a, g, b, s);
 };
+// We can also specify a custom name
+JSON_REGISTER_TYPE_WITH_NAME(Bar, "Barbara")
 
 struct Empty {};
+// An empty struct has a special register macro
+JSON_REGISTER_EMPTY_STRUCT(Empty)
 
-NLOHMANN_EMPTY_STRUCT(Empty);
-
-REGISTER_PARSE_TYPE(Foo);
-REGISTER_PARSE_TYPE(Bar);
-REGISTER_PARSE_TYPE(Empty);
-
-struct Fiz {
-	int x;
-
-	NLOHMANN_DEFINE_TYPE_INTRUSIVE(Fiz, x);
-};
+struct Empty2 {};
+// It also comes with a name variant
+JSON_REGISTER_EMPTY_STRUCT_WITH_NAME(Empty2, "BetterEmpty")
 
 int main() {
 	using MyVar = std::variant<Foo, Bar, Empty>;

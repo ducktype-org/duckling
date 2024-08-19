@@ -10,22 +10,22 @@ https://github.com/jorgen/json_struct
 ### Type names
 JSON module provides a way to register name aliases to C++ types in order to serialize them
 ```c++
-REGISTER_PARSE_TYPE(Object)
+JSON_REGISTER_TYPE(Object)
 ```
 or with an alias
 ```c++
-REGISTER_PARSE_TYPE_ALIAS(Object, "Alias")
+JSON_REGISTER_TYPE_WITH_NAME(Object, "Alias")
 ```
 
 Templated objects can also be aliased:
 ```c++
-REGISTER_PARSE_TYPE_TEMPLATE_ALIAS(std::vector, "vector")
+JSON_REGISTER_TEMPLATE_WITH_NAME(std::vector, "vector")
 ```
 
 of for variadic templates
 
 ```c++
-REGISTER_PARSE_TYPE_TEMPLATE_VARIADIC_ALIAS(std::tuble, "tuple")
+JSON_REGISTER_TEMPLATE_VARIADIC_WITH_NAME(std::tuble, "tuple")
 ```
 
 Custom type names can be achieved by implementing `TypeParseTraits`, for example for tables:

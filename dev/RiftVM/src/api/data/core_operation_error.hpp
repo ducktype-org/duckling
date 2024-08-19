@@ -27,9 +27,9 @@ namespace vm::api {
 	};
 }
 
-REGISTER_PARSE_TYPE_ALIAS(vm::api::ResumeError, "ResumeError");
-REGISTER_PARSE_TYPE_ALIAS(vm::api::PauseError, "PauseError");
-REGISTER_PARSE_TYPE_ALIAS(vm::api::RunError, "RunError");
-REGISTER_PARSE_TYPE_ALIAS(vm::api::JoinError, "JoinError");
-REGISTER_PARSE_TYPE_ALIAS(vm::api::OtherError, "OtherError");
-REGISTER_PARSE_TYPE_ALIAS(vm::api::CoreOperationError, "CoreOperationError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ResumeError, "ResumeError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::PauseError, "PauseError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::RunError, "RunError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::JoinError, "JoinError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::OtherError, "OtherError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::CoreOperationError, "CoreOperationError");

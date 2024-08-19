@@ -40,23 +40,23 @@ namespace vm::api {
 		= std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Panicked, Executing>;
 }
 
-NLOHMANN_EMPTY_STRUCT(vm::api::ExecutionNotStarted);
-NLOHMANN_EMPTY_STRUCT(vm::api::Parsing);
-NLOHMANN_EMPTY_STRUCT(vm::api::TypeAnalysis);
-NLOHMANN_EMPTY_STRUCT(vm::api::Paused);
-NLOHMANN_EMPTY_STRUCT(vm::api::Running);
-NLOHMANN_EMPTY_STRUCT(vm::api::WaitingForInput);
-NLOHMANN_EMPTY_STRUCT(vm::api::NotStarted);
+JSON_REGISTER_EMPTY_STRUCT(vm::api::ExecutionNotStarted);
+JSON_REGISTER_EMPTY_STRUCT(vm::api::Parsing);
+JSON_REGISTER_EMPTY_STRUCT(vm::api::TypeAnalysis);
+JSON_REGISTER_EMPTY_STRUCT(vm::api::Paused);
+JSON_REGISTER_EMPTY_STRUCT(vm::api::Running);
+JSON_REGISTER_EMPTY_STRUCT(vm::api::WaitingForInput);
+JSON_REGISTER_EMPTY_STRUCT(vm::api::NotStarted);
 
 
-REGISTER_PARSE_TYPE_ALIAS(vm::api::ExecutionNotStarted, "ExecutionNotStarted")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::Parsing, "Parsing")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::TypeAnalysis, "TypeAnalysis")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::Executing, "Executing")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::WaitingForInput, "WaitingForInput")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::NotStarted, "NotStarted")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionNotStarted, "ExecutionNotStarted")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::Parsing, "Parsing")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::TypeAnalysis, "TypeAnalysis")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::Executing, "Executing")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::WaitingForInput, "WaitingForInput")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::NotStarted, "NotStarted")
 
-REGISTER_PARSE_TYPE_ALIAS(vm::api::Paused, "Paused")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::Panicked, "Panicked")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::Running, "Running")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::PausedOnError, "PausedOnError")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::Paused, "Paused")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::Panicked, "Panicked")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::Running, "Running")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::PausedOnError, "PausedOnError")

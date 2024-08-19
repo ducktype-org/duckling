@@ -14,10 +14,22 @@ struct json::IsEmptySerialization<void> {
 	static constexpr bool value = false;
 };
 
-#define NLOHMANN_EMPTY_STRUCT(T)                \
-	namespace json {                            \
-		template<>                              \
-		struct IsEmptySerialization<T> {        \
-			static constexpr bool value = true; \
-		};                                      \
-	}
+#define JSON_REGISTER_EMPTY_STRUCT_WITH_NAME(T, NAME)                                 \
+	namespace json {                                                                  \
+		template<>                                                                    \
+		struct IsEmptySerialization<T> {                                              \
+			static constexpr bool value = true;                                       \
+		};                                                                            \
+	}                                                                                 \
+	JSON_REGISTER_TYPE_WITH_NAME(T, NAME);                                            \
+	template<>                                                                        \
+	struct nlohmann::adl_serializer<T> {                                              \
+		static void to_json(json& j, const T&) {                                      \
+			j["type"] = std::string(TypeParseTraits<T>::name.data());                 \
+		}                                                                             \
+		static void from_json(const json&, T&) {                                      \
+			RIFT_PANIC("Parsing data from JSON into " #T " is not supported (yet)."); \
+		}                                                                             \
+	};
+
+#define JSON_REGISTER_EMPTY_STRUCT(T) JSON_REGISTER_EMPTY_STRUCT_WITH_NAME(T, #T)
