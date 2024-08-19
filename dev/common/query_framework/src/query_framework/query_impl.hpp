@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+#include <type_traits>
 #include <base/optional.hpp>
 #include <base/str_utils.hpp>
 #include <diagnostic/logger.hpp>
@@ -87,6 +88,11 @@ namespace query {
 				log(base::strConcat(
 					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Cached. Done.\n"
 				));
+
+				// @todo: This might bind & to a const&, via std::move "creating" &&.
+				// It should works for all cases in our codebase,
+				// but I'm not sure if it will work always and if it is
+				// standardized behaviour.
 				return std::move(v.value().data);
 			} else {
 				auto node_id = makeNodeID(QueryImplType::QueryType::id, key);
@@ -185,15 +191,14 @@ namespace query {
 	static inline base::                                                                       \
 		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>            \
 				cache;                                                                         \
-	static auto load(QKey key) -> LoadResult {                                                 \
+	static auto load(const QKey& key) -> LoadResult {                                          \
 		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
 		return {};                                                                             \
 	}                                                                                          \
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                      \
+	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {               \
 		cache.put(key, { std::move(res), acd });                                               \
 		return cache.at(key).data;                                                             \
 	}
-
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
@@ -204,11 +209,23 @@ namespace query {
 	static inline base::                                                                       \
 		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>      \
 				cache;                                                                         \
-	static auto load(QKey key) -> LoadResult {                                                 \
+	static auto load(const QKey& key) -> LoadResult {                                          \
 		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
 		return {};                                                                             \
 	}                                                                                          \
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {                      \
+	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {               \
 		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
 		return cache.at(key).data;                                                             \
 	}
+
+
+/**
+ * @brief Macro defining empty storing and loading for when providing fresh result
+ * is expected to be faster than trying to look it up in a cache.
+ */
+#define QUERY_AUTO_NO_CACHE                                                     \
+	static auto store(const QKey&, PResult res, const query::ACD&) -> QResult { \
+		return QResult{ std::move(res) };                                       \
+	}                                                                           \
+                                                                                \
+	static auto load(const QKey&) -> LoadResult { return {}; }

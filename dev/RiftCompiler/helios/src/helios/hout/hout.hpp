@@ -7,10 +7,7 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
-
-// @TODO: relax this dependency
-#include <frontend/module_tree/module_tree.hpp>  // ModuleId
-
+#include <base/string_id.hpp>
 #include <vector>
 
 namespace compiler::helios {
@@ -40,12 +37,29 @@ namespace compiler::helios {
 
 		// @TODO: decide if HOUT functions should contain its HELIOS SymID
 
+		/**
+		 * @note it is used for hashes, and == only
+		 * @note For now it works,
+		 * but in the future with generics, and templates it might not
+		 * We might want to add actual hash?
+		 */
+		SymID original_symbol;
+
 		base::StrId original_name;
 
 		HOUTCode body;
 
+		HOUTFunction(SymID symbol): original_symbol(std::move(symbol)) {}
+
 		[[nodiscard]]
 		std::string debugPrint() const;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
+
+		bool operator==(const HOUTFunction& oth) const {
+			return original_symbol == oth.original_symbol;
+		}
 	};
 
 	/**
@@ -85,9 +99,7 @@ namespace compiler::helios {
 
 		std::vector<HOUTFunction> functions;
 
-
 		[[nodiscard]]
 		std::string debugPrint() const;
 	};
-
 }

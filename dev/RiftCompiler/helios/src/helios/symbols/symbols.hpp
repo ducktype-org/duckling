@@ -3,12 +3,9 @@
 #include <query_framework/query_int.hpp>
 #include <pst_parser/elements/elements.hpp>
 
-// @TODO: relax this dependency
-#include <frontend/module_tree/queries.hpp>
-
 #include "../pst_ref.hpp"
-#include "../hout/hout.hpp"
 #include "../lookup_result.hpp"
+#include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>
 #include <typesystem/typesystem.hpp>
@@ -25,7 +22,8 @@ namespace compiler::helios {
 		Struct,
 		Alias,
 		Using,
-
+		Variable,
+		Import
 		// ...
 	};
 
@@ -110,11 +108,6 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, const LookupResult&);
 
-	/**
-	 * @brief Query type of the symbol.
-	 * @note: not implemented yet
-	 */
-	DECLARE_QUERY(QueryTypeOF, SymID, ts::TypeInfo);
 
 	/**
 	 * A query that returns an "absolute path" to the symbol without aliases.
@@ -181,10 +174,43 @@ namespace compiler::helios {
 			rift_def::Keyword keyword;
 		};
 
-		using ExprElem
-			= std::variant<Operator, NamedIdentifier, Identifier, NumValue, KeywordValue>;
+		/**
+		 * @brief A tuple call. It's meant as a information for the evaluator
+		 * to take `num_elements` expressions from the stack as tuple elements.
+		 */
+		struct TupleConstructor {
+			usize num_elements;
+		};
 
-		struct KeyOf_ExtensionMakeRPN {
+		struct TupleType;
+		struct Variant;
+
+		using ExprElem = std::variant<
+			Operator,
+			NamedIdentifier,
+			Identifier,
+			NumValue,
+			KeywordValue,
+			TupleConstructor,
+			TupleType,
+			Variant>;
+
+		/**
+		 * @brief A constructed tuple. It differs from the TupleConstructor in a way that
+		 * this is something created during RPN expression evaluation, not creation.
+		 */
+		struct TupleType {
+			std::vector<ExprElem> elements;
+		};
+
+		/**
+		 * @brief A variant constructed from other expressions (types).
+		 */
+		struct Variant {
+			std::vector<ExprElem> elements;
+		};
+
+		struct KeyOf_RPNmakeRPN {
 			/**
 			 * @brief The expression to parse from pst.
 			 */
@@ -196,11 +222,26 @@ namespace compiler::helios {
 		};
 
 		/**
+		 * @brief RPN (postfix) expression with scope produced by makeRPN().
+		 */
+		struct RPNExpr {
+			/**
+			 * @brief Elements of the RPN expression.
+			 */
+			std::vector<ExprElem> elements;
+
+			/**
+			 * @brief Scope, where the expression was expressed in.
+			 */
+			ScopeID scope;
+		};
+
+		/**
 		 * @brief Parses an expression from PST into RPN.
 		 */
-		std::vector<ExprElem> ExtensionMakeRPN(query::Context&, KeyOf_ExtensionMakeRPN);
+		RPNExpr makeRPN(query::Context&, KeyOf_RPNmakeRPN);
 
-		struct KeyOf_ExtensionRPNEval {
+		struct KeyOf_evalOperator {
 			/**
 			 * @brief Symbol on the left.
 			 */
@@ -222,9 +263,9 @@ namespace compiler::helios {
 		/**
 		 * @brief Evaluates an operation `a (op) b`.
 		 */
-		ExprElem ExtensionRPNEval(query::Context&, const KeyOf_ExtensionRPNEval&);
+		ExprElem evalOperator(query::Context&, const KeyOf_evalOperator&);
 
-		struct KeyOf_ExtensionRPNValue {
+		struct KeyOf_parseValue {
 			/**
 			 * @brief The expression to parse.
 			 */
@@ -242,6 +283,67 @@ namespace compiler::helios {
 		 * For example, if we pass here a rpn::NumLiteral(5), then it will return 5 or if we pass
 		 * rpn::Identifier([C]), then a value of a C will be returned (if it's a constant).
 		 */
-		i32 ExtensionRPNValue(query::Context&, const KeyOf_ExtensionRPNValue&);
+		i32 parseValue(query::Context&, const KeyOf_parseValue&);
+
+		/**
+		 * @brief Evaluates RPN expression. Expects a single element to be
+		 * left and the end of the evaluation and returns it. Panics if otherwise.
+		 */
+		ExprElem evalExpr(query::Context&, const RPNExpr&);
 	}
+
+	/**
+	 * @brief Query type of the symbol.
+	 */
+	DECLARE_QUERY(QueryTypeOfSymbol, SymID, ts::TypeInfo)
+
+	/**
+	 * @brief Query ts::TypeInfo from a symbol definition (like struct definition).
+	 *
+	 * Example:
+	 * struct T {
+	 *	...
+	 * }
+	 * - Then we can use this query QueryTypeFromDefinition(T).
+	 */
+	DECLARE_QUERY(QueryTypeFromDefinition, SymID, ts::TypeInfo);
+
+	/**
+	 * @brief Struct returned by the `QueryStructSymbolData` query.
+	 */
+	struct StructSymbolData {
+		/**
+		 * @brief Name of the struct in the soure code.
+		 */
+		base::StrId name;
+		/**
+		 * @brief Struct's declared methods.
+		 */
+		std::vector<SymID> methods;
+		/**
+		 * @brief Struct's declared member variables.
+		 */
+		std::vector<SymID> members;
+		/**
+		 * @brief Struct's base classes.
+		 */
+		std::vector<ts::TypeInfo> bases;
+	};
+
+	/**
+	 * @brief Query all the information about a struct definition.
+	 * Panics if the given `SymID` is not a struct.
+	 * More information on `StructSymbolData` in it's definition.
+	 */
+	DECLARE_QUERY(QueryStructSymbolData, SymID, const StructSymbolData&)
+
+	namespace code {
+		struct Expr;
+	}
+
+	/**
+	 * @brief Return Expr tree of HOUT of a expression assigned to a constant.
+	 * @note This query is temporary and is used for testing only.
+	 */
+	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, base::borrow_ptr<const code::Expr>);
 }

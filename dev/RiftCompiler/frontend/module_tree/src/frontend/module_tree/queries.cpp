@@ -34,32 +34,51 @@ namespace compiler::frontend {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleTree);
 
-	/*******************
-	 * QueryFileID *
-	 *******************/
-	struct IMPLEMENT_QUERY(QueryFileID, compiler::frontend::FileId) {
-		inline static base::HashMap<QKey, query::CacheEntry<QResult>> cache{};
+	base::Optional<ModuleId> getRelativeModule(
+		query::Context& ctx, ModuleId from, const std::vector<base::StrId>& path
+	) {
+		RIFT_ASSERT(path.size() >= 1, "Empty module path");
 
-		static auto provide(Context&, QKey key) -> PResult {
-			SourceFile file = SourceFile(key);
+		// @TODO: ambiguities
 
-			return file.id;
+		// first step (in priority):
+		// * check children
+		// * check ancestors
+
+		base::Optional<ModuleId> current_module;
+
+		for (const auto& [name, submodule]: ctx.query<QuerySubmodules>(from)) {
+			if (name == path.at(0)) {
+				current_module = submodule;
+				break;
+			}
+		}
+		if (not current_module.has_value()) {
+			base::Optional<ModuleId> ancestor = ctx.query<QueryParentModule>(from);
+			while (ancestor) {
+				if (frontend::moduleName(ancestor.value()) == path.at(0)) {
+					current_module = ancestor.value();
+					break;
+				}
+				ancestor = ctx.query<QueryParentModule>(ancestor.value());
+			}
 		}
 
-		static auto load(QKey key) -> LoadResult {
-			if (cache.contains(key))
-				return cache.at(key);
-			else
-				return {};
+		// second step: follow children
+
+		for (usize i = 1; i < path.size() and current_module.has_value(); i++) {
+			auto curr_children = ctx.query<QuerySubmodules>(current_module.value());
+			for (const auto& [name, submodule]: curr_children) {
+				if (name == path.at(i)) {
+					current_module = submodule;
+					break;
+				}
+			}
 		}
 
-		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-			cache.put(key, { res, acd });
-			return res;
-		}
-	};
+		return current_module;
+	}
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFileID);
 }
 
 // NOLINTEND(performance-unnecessary-value-param)

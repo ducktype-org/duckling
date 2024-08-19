@@ -22,7 +22,7 @@ namespace pst {
 
 		virtual void visitAlias([[maybe_unused]] const Alias& stmt) = 0;
 
-		virtual void visitExpr([[maybe_unused]] const Expr& stmt) = 0;
+		virtual void visitExprStmt([[maybe_unused]] const ExprStmt& stmt) = 0;
 
 		virtual void visitReturn([[maybe_unused]] const Return& stmt) = 0;
 
@@ -40,8 +40,6 @@ namespace pst {
 
 		virtual void visitConst([[maybe_unused]] const Const& stmt) = 0;
 
-		virtual void visitDecl([[maybe_unused]] const Decl& stmt) = 0;
-
 		virtual void visitBlock([[maybe_unused]] const Block& stmt) = 0;
 
 		virtual void visitNamespace([[maybe_unused]] const Namespace& stmt) = 0;
@@ -49,6 +47,12 @@ namespace pst {
 		virtual void visitStruct([[maybe_unused]] const Struct& stmt) = 0;
 
 		virtual void visitFun([[maybe_unused]] const Fun& stmt) = 0;
+
+		virtual void visitVariable([[maybe_unused]] const Variable& stmt) = 0;
+
+		virtual void visitIf([[maybe_unused]] const If& stmt) {}
+
+		virtual void visitWhile([[maybe_unused]] const While& stmt) {}
 	};
 
 	/**
@@ -67,7 +71,7 @@ namespace pst {
 
 		void visitAlias([[maybe_unused]] const Alias& stmt) override {}
 
-		void visitExpr([[maybe_unused]] const Expr& stmt) override {}
+		void visitExprStmt([[maybe_unused]] const ExprStmt& stmt) override {}
 
 		void visitReturn([[maybe_unused]] const Return& stmt) override {}
 
@@ -85,8 +89,6 @@ namespace pst {
 
 		void visitConst([[maybe_unused]] const Const& stmt) override {}
 
-		void visitDecl([[maybe_unused]] const Decl& stmt) override {}
-
 		void visitBlock([[maybe_unused]] const Block& stmt) override {}
 
 		void visitNamespace([[maybe_unused]] const Namespace& stmt) override {}
@@ -94,6 +96,12 @@ namespace pst {
 		void visitStruct([[maybe_unused]] const Struct& stmt) override {}
 
 		void visitFun([[maybe_unused]] const Fun& stmt) override {}
+
+		void visitVariable([[maybe_unused]] const Variable& stmt) override {}
+
+		void visitIf([[maybe_unused]] const If& stmt) override {}
+
+		void visitWhile([[maybe_unused]] const While& stmt) override {}
 	};
 
 /**
@@ -116,7 +124,7 @@ namespace pst {
 		PANIC_VISITOR_VISIT_METHOD(Import);
 		PANIC_VISITOR_VISIT_METHOD(Using);
 		PANIC_VISITOR_VISIT_METHOD(Alias);
-		PANIC_VISITOR_VISIT_METHOD(Expr);
+		PANIC_VISITOR_VISIT_METHOD(ExprStmt);
 		PANIC_VISITOR_VISIT_METHOD(Return);
 		PANIC_VISITOR_VISIT_METHOD(Defer);
 		PANIC_VISITOR_VISIT_METHOD(Restart);
@@ -125,10 +133,12 @@ namespace pst {
 		PANIC_VISITOR_VISIT_METHOD(Continue);
 		PANIC_VISITOR_VISIT_METHOD(Throw);
 		PANIC_VISITOR_VISIT_METHOD(Const);
-		PANIC_VISITOR_VISIT_METHOD(Decl);
 		PANIC_VISITOR_VISIT_METHOD(Block);
 		PANIC_VISITOR_VISIT_METHOD(Namespace);
 		PANIC_VISITOR_VISIT_METHOD(Struct);
 		PANIC_VISITOR_VISIT_METHOD(Fun);
+		PANIC_VISITOR_VISIT_METHOD(Variable);
+		PANIC_VISITOR_VISIT_METHOD(If);
+		PANIC_VISITOR_VISIT_METHOD(While);
 	};
 }

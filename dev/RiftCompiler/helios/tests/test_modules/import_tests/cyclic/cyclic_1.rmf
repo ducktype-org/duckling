@@ -1,0 +1,6 @@
+import cyclic.cyclic_2 as c2;
+
+const a0: i32 = 0;
+const a2: i32 = c2.a1 + 1;
+const a4: i32 = c2.a3 + 1;
+const a6: i32 = c2.a5 + 1;

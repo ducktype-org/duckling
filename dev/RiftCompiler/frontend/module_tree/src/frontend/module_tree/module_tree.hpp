@@ -15,11 +15,10 @@
 
 #include <string>
 
-// @TODO: change std::string here to StrId
-
 namespace compiler::frontend {
 	/**
 	 * @brief Structure holding FileID within SourceFile
+	 * @todo: change to STRONG_TYPEDEF_ID
 	 */
 	struct FileId {
 		[[nodiscard]]
@@ -40,16 +39,27 @@ namespace compiler::frontend {
 		FileId() = default;
 	};
 
+	STRONG_TYPEDEF_ID(ModuleId);
+
+	// @TODO: move to STRONG_TYPEDEF_ID?
+	inline base::HashT customPerfectHash(ModuleId id) { return id.asInt(); }
+
 	/**
 	 * @brief Structure holding SourceFile within Module Tree
 	 */
 	struct SourceFile {
 		fs::FilePath               path;
-		std::string                rift_file_name;  // or StrID?
+		base::StrId                rift_file_name;
 		FileId                     id;
 		base::Optional<pst::PST<>> parse_tree;
 
-		SourceFile(fs::FilePath);
+		/**
+		 * @brief Module the file belongs to
+		 * @note: in the future there might be module-less files
+		 */
+		ModuleId linked_module;
+
+		SourceFile(fs::FilePath, ModuleId linked_module);
 
 		/**
 		 * @brief Lazily parses the source file and returns PST
@@ -57,11 +67,6 @@ namespace compiler::frontend {
 		 */
 		const pst::PST<>& getPST();
 	};
-
-	STRONG_TYPEDEF_ID(ModuleId);
-
-	// @TODO: move to STRONG_TYPEDEF_ID?
-	inline base::HashT customPerfectHash(ModuleId id) { return id.asInt(); }
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
@@ -162,7 +167,7 @@ namespace compiler::frontend {
 		 * @return base::HashMap that maps a name of the submodule to the pointer to the submodule.
 		 */
 		[[nodiscard]]
-		const base::HashMap<std::string, std::shared_ptr<ModuleTree>>& getSubmodules() const;
+		const base::HashMap<base::StrId, std::shared_ptr<ModuleTree>>& getSubmodules() const;
 
 		/**
 		 * Accesses all the other files that are located inside the module.
@@ -170,14 +175,14 @@ namespace compiler::frontend {
 		 * with files with this extension.
 		 */
 		[[nodiscard]]
-		const base::HashMap<std::string, std::vector<fs::FilePath>>& getOtherFiles() const;
+		const base::HashMap<base::StrId, std::vector<fs::FilePath>>& getOtherFiles() const;
 
 		/**
 		 * Parses the name of the module.
-		 * @return std::string with the name. `A.rmf -> A`, `/.../module/ -> module`.
+		 * @return base::StrId with the name. `A.rmf -> A`, `/.../module/ -> module`.
 		 */
 		[[nodiscard]]
-		std::string getName() const;
+		base::StrId getName() const;
 
 		/**
 		 * Creates a nice, human-readable representation of this module tree.
@@ -219,10 +224,13 @@ namespace compiler::frontend {
 		 * Id of the current root Module.
 		 */
 		ModuleId id;
+
 		/**
-		 * A pointer to the module's parent. Might be nullptr.
+		 * A pointer to the module's parent.
+		 * Empty if module is a root module.
 		 */
-		std::weak_ptr<ModuleTree> m_parent;
+		base::Optional<std::weak_ptr<ModuleTree>> m_parent;
+
 		/**
 		 * A pointer to the file system tree, that this structure is mapping.
 		 */
@@ -237,16 +245,17 @@ namespace compiler::frontend {
 		base::Optional<SourceFile> m_main_source_file;
 		/**
 		 * All the source files in the module. Does not contain files of other submodules.
+		 * Does not include main source file.
 		 */
 		std::vector<SourceFile> m_source_files;
 		/**
 		 * Other direct submodules. Maps module's name to a pointer to it.
 		 */
-		base::HashMap<std::string, std::shared_ptr<ModuleTree>> m_submodules;
+		base::HashMap<base::StrId, std::shared_ptr<ModuleTree>> m_submodules;
 		/**
 		 * All other files inside this module. Indexed by their extension.
 		 */
-		base::HashMap<std::string, std::vector<fs::FilePath>> m_other_files;
+		base::HashMap<base::StrId, std::vector<fs::FilePath>> m_other_files;
 	};
 }
 

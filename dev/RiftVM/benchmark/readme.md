@@ -1,3 +1,5 @@
+\page vm-benchmark Rift VM Benchmarks
+
 # Benchmark RiftVM versions
 
 Folder structure:
@@ -11,6 +13,8 @@ Folder structure:
 ```
 
 `old_benchmark` is a directory with the bash script used to benchmark different virtual machines: RiftVM, Java, Python NodeJS, C++. Written as a part of the 2023 RiftVM paper.
+
+\subpage vm-benchmark-old
 
 ## Python script for comparing RiftVM versinons
 

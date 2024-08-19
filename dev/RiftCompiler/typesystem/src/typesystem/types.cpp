@@ -1,6 +1,6 @@
 /**
- * \file types.cpp
- * \brief Implementation of the simpler kinds of types.
+ * @file types.cpp
+ * @brief Implementation of the simpler kinds of types.
  *
  * This file is not included outside the Type System module and can thus have full knowledge of the
  * underlying implementation hierarchy.
@@ -13,12 +13,14 @@
 
 #include "internal/type_info_impl.hpp"
 #include "type_desc.hpp"
+#include "types.hpp"
+
 #include <base/exceptions.hpp>
 
 // NOLINTBEGIN: linter assumes it's a function like macro
 /**
- * \brief Explicitly instantiate the `checkDynamicCast` template.
- * \param ClassName The class name from the `TypeInfo` hierarchy.
+ * @brief Explicitly instantiate the `checkDynamicCast` template.
+ * @param ClassName The class name from the `TypeInfo` hierarchy.
  */
 #define INSTANTIATE_CHECKED_CAST(ClassName) \
 	template ClassName::CPimpl checkDynamicCast<ClassName>(TypeInfo::CPimpl);
@@ -48,8 +50,6 @@ namespace ts {
 	) const {
 		return type.isImplicitlyCoercible(target.type, ctx) && (is_mutable || !target.is_mutable);
 	}
-
-	std::strong_ordering ComponentType::operator<=>(const ComponentType& other) const = default;
 
 	base::HashT ComponentType::customPerfectHash() const {
 		return reinterpret_cast<std::size_t>(type.getPimpl()) + is_mutable;
@@ -137,25 +137,36 @@ namespace ts {
 	|  NOMINAL TYPES  |
 	\*****************/
 
-	VariantInfo VariantInfo::create(const std::vector<TypeDesc<>>& variant_types) {
-		static base::Map<std::vector<TypeDesc<>>, VariantInfo> variants;
-		if (variants.contains(variant_types)) return variants[variant_types];
-
-		auto ptr = base::make_unique<Impl>(variant_types);
-
-		variants.put(variant_types, VariantInfo{ ptr.get() });
-
-		pushType(std::move(ptr));
-
-		return variants[variant_types];
-	}
-
-	const std::vector<TypeDesc<>>& VariantInfo::getUnderlyingTypes() const {
+	const std::vector<TypeInfo>& VariantInfo::getUnderlyingTypes() const {
 		return toCPimpl(pimpl)->getUnderlyingTypes();
 	}
 
-	TypeDesc<> VariantInfo::getMember(const usize index) const {
+	TypeInfo VariantInfo::getMember(const usize index) const {
 		return toCPimpl(pimpl)->getMember(index);
+	}
+
+	compiler::helios::SymID ClassInfo::getSymbol() const { return toCPimpl(pimpl)->getSymbol(); }
+
+	base::Optional<ClassInfo> ClassInfo::getBaseClassType(query::Context& ctx) const {
+		return toCPimpl(pimpl)->getBaseClassType(ctx);
+	}
+
+	base::Optional<compiler::helios::SymID> ClassInfo::getBaseClassSymbol(query::Context& ctx
+	) const {
+		return toCPimpl(pimpl)->getBaseClassSymbol(ctx);
+	}
+
+	std::vector<ClassInfo> ClassInfo::getImplementedInterfaceTypes(query::Context& ctx) const {
+		return toCPimpl(pimpl)->getImplementedInterfaceTypes(ctx);
+	}
+
+	std::vector<compiler::helios::SymID>
+		ClassInfo::getImplementedInterfaceSymbols(query::Context& ctx) const {
+		return toCPimpl(pimpl)->getImplementedInterfaceSymbols(ctx);
+	}
+
+	TypeInfo ClassInfo::getMemberType(compiler::helios::SymID sym, query::Context& ctx) const {
+		return toCPimpl(pimpl)->getMemberType(sym, ctx);
 	}
 
 	template<std::derived_from<TypeInfo> TYPE_INFO>
@@ -186,6 +197,7 @@ namespace ts {
 	INSTANTIATE_CHECKED_CAST(TupleInfo)
 	INSTANTIATE_CHECKED_CAST(FunctionInfo)
 	INSTANTIATE_CHECKED_CAST(VariantInfo)
+	INSTANTIATE_CHECKED_CAST(ClassInfo)
 	INSTANTIATE_CHECKED_CAST(NamespaceInfo)
 	INSTANTIATE_CHECKED_CAST(ModuleInfo)
 	INSTANTIATE_CHECKED_CAST(MetaInfo)

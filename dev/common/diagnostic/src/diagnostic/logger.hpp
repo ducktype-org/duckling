@@ -33,26 +33,21 @@ namespace dia {
 		 *
 		 * Immediately dumping logged messages may be useful when debugging.
 		 */
-		static constexpr bool IMMEDIATELY_DUMP =
-#ifdef PRINT_LOG
-			true
-#else
-			false
-#endif
-			;
+		static bool immediately_dump;
+		static void setImmediatelyDump(bool value);
 
 
 		/**
 		 * @brief Log a message.
 		 *
 		 * @param message_ptr A base::unique_ptr to the Message to be logged.
-		 * @param immediately_dump Whether to immediately dump the log to std::cerr.
 		 * @param detailed Whether to dump detailed logs if immediately dumping.
+		 * @param immediately_dump Whether to immediately dump the log to std::cerr.
 		 */
 		void
 			log(base::unique_ptr<Message> message_ptr,
 		        bool                      detailed         = true,
-		        bool                      immediately_dump = IMMEDIATELY_DUMP);
+		        bool                      immediately_dump = Logger::immediately_dump);
 
 		/**
 		 * @brief Print all logged messages to a stream.

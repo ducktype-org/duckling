@@ -3,7 +3,7 @@
 
 std::string convertError(const vm::api::ApiError& apiError) {
 	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return "Wrong response";
-	return std::visit([](const auto& v) { return nlohmann::json(v); }, apiError);
+	return nlohmann::json(apiError);
 }
 
 template<class T, class E>

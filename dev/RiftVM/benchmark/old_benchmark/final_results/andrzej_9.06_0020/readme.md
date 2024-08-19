@@ -1,3 +1,0 @@
-3x
-stare dane
-

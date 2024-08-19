@@ -18,6 +18,14 @@
 
 namespace assemble {
 
+	class F8ParserState final: public tpc::ParserState {
+	public:
+		F8ParserState(tpc::TokenStream&& stream, dia::Logger& err):
+			  tpc::ParserState(std::move(stream), err) {}
+
+		tpc::GenericAutomatic<F8ParserState> parse() { return { *this }; }
+	};
+
 	enum class OpCodeArgType { arg, local, imm };
 
 	struct OpCodeNumArg {
@@ -149,7 +157,7 @@ namespace assemble {
 
 	struct Type: AsmElement {
 		TypeData                    datatype;
-		static tpc::ParserRef<Type> parse(tpc::ParserState& state);
+		static tpc::ParserRef<Type> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override {
 			out << "type: ";
@@ -162,24 +170,24 @@ namespace assemble {
 		base::StrId               opcode_name;
 		std::vector<OpCodeAnyArg> args;
 
-		static tpc::ParserRef<OpCode> parse(tpc::ParserState& state) {
+		static tpc::ParserRef<OpCode> parse(F8ParserState& state) {
 			auto out = tpc::makeRef<OpCode>();
 
 			tpc::Identifier identifier1;
-			tpc::parseOne(state, &identifier1);
+			state.parse().one(&identifier1);
 			out->opcode_name = identifier1.value;
 
-			if (state.ctokens().peek().is(rift_def::Special::Semicolon)) {
-				tpc::parseOne(state, rift_def::Special::Semicolon);
+			if (state[0].is(rift_def::Special::Semicolon)) {
+				state.parse().one(rift_def::Special::Semicolon);
 				return out;
 			}
 
 
 			while (state.notEmpty()) {
-				switch (state.ctokens().peek().getType()) {
+				switch (state[0].getType()) {
 				case lexer::Token::Type::Identifier: {
 					tpc::Identifier identifier2;
-					tpc::parseOne(state, &identifier2);
+					state.parse().one(&identifier2);
 
 					out->args.emplace_back(OpCodeLabelArg{ 0, false, identifier2.value });
 					break;
@@ -191,31 +199,31 @@ namespace assemble {
 						);
 					} catch (std::logic_error& e) {
 						state.err.failAndLog(
-							state.ctokens().peek().getPosition(),
-							base::strConcat("not a number: ", state.ctokens().peek().getValue())
+							state.getPosition(),
+							base::strConcat("not a number: ", state[0].getValue())
 						);
 						state.tokens().skip();
 					}
 					break;
 				default:
 					state.err.failAndLog(
-						state.ctokens().peek().getPosition(),
-						base::strConcat("incorrect token1: ", state.ctokens().peek().getValue())
+						state.getPosition(),
+						base::strConcat("incorrect token1: ", state[0].getValue())
 					);
 					state.tokens().skip();
 				}
 
 				if (state.ctokens().peek().is(rift_def::Special::Semicolon)) {
-					tpc::parseOne(state, rift_def::Special::Semicolon);
+					state.parse().one(rift_def::Special::Semicolon);
 					break;
 				}
 
-				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
-					tpc::parseOne(state, rift_def::Operator::Comma);
+				if (state.ctokens().peek().is(rift_def::Special::Comma)) {
+					state.parse().one(rift_def::Special::Comma);
 				} else {
 					state.err.failAndLog(
-						state.ctokens().peek().getPosition(),
-						base::strConcat("incorrect token2: ", state.ctokens().peek().getValue())
+						state.getPosition(),
+						base::strConcat("incorrect token2: ", state[0].getValue())
 					);
 					state.tokens().skip();
 				}
@@ -245,23 +253,20 @@ namespace assemble {
 		std::vector<tpc::ParserRef<OpCode>> opcodes;
 		base::Map<base::StrId, usize>       label_position;
 
-		static tpc::ParserRef<ByteCode> parse(tpc::ParserState& state) {
+		static tpc::ParserRef<ByteCode> parse(F8ParserState& state) {
 			auto out = tpc::makeRef<ByteCode>();
 
 			while (state.notEmpty()) {
 				if (state.tryEat(rift_def::Keyword::BCLabel)) {
 					tpc::Identifier label_name;
-					tpc::parseOne(state, &label_name);
+					state.parse().one(&label_name);
 
-					if (!state.tryEat(rift_def::Special::Semicolon)) {
-						state.err.failAndLog(
-							state.ctokens().peek(-1).getPosition(), "semicolon expected"
-						);
-					}
+					if (!state.tryEat(rift_def::Special::Semicolon))
+						state.err.failAndLog(state.getPosition(-1), "semicolon expected");
 
 					if (out->label_position.contains(label_name.value)) {
 						state.err.failAndLog(
-							state.ctokens().peek(-1).getPosition(),
+							state.getPosition(-1),
 							base::strConcat("repeated label: ", label_name.value)
 						);
 					} else {
@@ -316,7 +321,7 @@ namespace assemble {
 		usize                    ret_size   = size_t_max;
 		tpc::ParserRef<ByteCode> code;
 
-		static tpc::ParserRef<Func> parse(tpc::ParserState& state);
+		static tpc::ParserRef<Func> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override {
 			out << "function {\n";
@@ -335,7 +340,7 @@ namespace assemble {
 		std::vector<tpc::ParserRef<Func>> functions;
 		std::vector<tpc::ParserRef<Type>> types;
 
-		static tpc::ParserRef<ParsedCode> parse(tpc::ParserState& state);
+		static tpc::ParserRef<ParsedCode> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override {
 			for (auto& type: types) {
@@ -352,13 +357,13 @@ namespace assemble {
 		~ParsedCode() override = default;
 	};
 
-	tpc::ParserRef<Func> Func::parse(tpc::ParserState& state) {
+	tpc::ParserRef<Func> Func::parse(F8ParserState& state) {
 		auto out = tpc::makeRef<Func>();
 
-		tpc::parseAll(state, rift_def::Keyword::BCFunction, &out->name);
+		state.parse().all(rift_def::Keyword::BCFunction, &out->name);
 
-		if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.err.failAndLog(state.ctokens().peek(-1).getPosition(), "expected `{` after here");
+		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+			state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
 			return nullptr;
 		}
 
@@ -369,79 +374,68 @@ namespace assemble {
 
 			switch (next.asKeyword()) {
 			case rift_def::Keyword::BCArgSize: {
-				tpc::parseOne(state, rift_def::Operator::Colon);
-				if (out->arg_size != size_t_max) {
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "arg_size duplicate"
-					);
-				}
+				state.parse().one(rift_def::Operator::Colon);
+				if (out->arg_size != size_t_max)
+					state.err.failAndLog(state.getPosition(), "arg_size duplicate");
 				auto value = state.tokens().next();
 
 				if (!value.isNumLiteral()) {
 					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "arg_size argument is not num-literal"
+						state.getPosition(), "arg_size argument is not num-literal"
 					);
 				}
 				try {
 					out->arg_size = strIdToNum(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "arg_size argument is not num-literal"
+						state.getPosition(), "arg_size argument is not num-literal"
 					);
 				}
-				tpc::parseOne(state, rift_def::Special::Semicolon);
+				state.parse().one(rift_def::Special::Semicolon);
 				break;
 			}
 
 			case rift_def::Keyword::BCLocalSize: {
-				tpc::parseOne(state, rift_def::Operator::Colon);
-				if (out->local_size != size_t_max) {
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "local_size duplicate"
-					);
-				}
+				state.parse().one(rift_def::Operator::Colon);
+				if (out->local_size != size_t_max)
+					state.err.failAndLog(state.getPosition(), "local_size duplicate");
 				auto value = state.tokens().next();
 				if (!value.isNumLiteral()) {
 					state.err.failAndLog(
-						state.ctokens().peek().getPosition(),
-						"local_size argument is not num-literal"
+						state.getPosition(), "local_size argument is not num-literal"
 					);
 				}
 				try {
 					out->local_size = strIdToNum(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
-						state.ctokens().peek().getPosition(),
-						"local_size argument is not num-literal"
+						state.getPosition(), "local_size argument is not num-literal"
 					);
 				}
 
-				tpc::parseOne(state, rift_def::Special::Semicolon);
+				state.parse().one(rift_def::Special::Semicolon);
 				break;
 			}
 
 			case rift_def::Keyword::BCRetSize: {
-				tpc::parseOne(state, rift_def::Operator::Colon);
-				if (out->ret_size != size_t_max) {
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "ret_size duplicate"
-					);
-				}
+				state.parse().one(rift_def::Operator::Colon);
+				if (out->ret_size != size_t_max)
+					state.err.failAndLog(state.getPosition(), "ret_size duplicate");
 				auto value = state.tokens().next();
 				if (!value.isNumLiteral()) {
 					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "ret_size argument is not num-literal"
+						state.getPosition(), "ret_size argument is not num-literal"
 					);
 				}
 				try {
 					out->ret_size = base::strIdToNum(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "ret_size argument is not num-literal"
+						state.getPosition(), "ret_size argument is not num-literal"
 					);
 				}
 
-				tpc::parseOne(state, rift_def::Special::Semicolon);
+				state.parse().one(rift_def::Special::Semicolon);
 				break;
 			}
 
@@ -450,27 +444,23 @@ namespace assemble {
 			}
 
 			case rift_def::Keyword::BCCode: {
-				tpc::parseOne(state, rift_def::Operator::Colon);
-				if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly))
-					state.err.failAndLog(state.ctokens().peek().getPosition(), "no {} on code:");
+				state.parse().one(rift_def::Operator::Colon);
+				if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly))
+					state.err.failAndLog(state.getPosition(), "no {} on code:");
 
 				state.goDown();
-				tpc::parseOne(state, &out->code);
+				state.parse().one(&out->code);
 				state.goUpAndSkip();
 				break;
 			}
 
 			default:
-				state.err.failAndLog(
-					state.ctokens().peek().getPosition(), "bad keyword in function"
-				);
+				state.err.failAndLog(state.getPosition(), "bad keyword in function");
 			}
 		}
 
 		if (state.notEmpty()) {
-			state.err.failAndLog(
-				state.ctokens().peek(-1).getPosition(), "Unexpected function content!"
-			);
+			state.err.failAndLog(state.getPosition(-1), "Unexpected function content!");
 
 			state.goUpAndSkip();
 			return nullptr;
@@ -485,7 +475,7 @@ namespace assemble {
 		return out;
 	}
 
-	tpc::ParserRef<Type> Type::parse(tpc::ParserState& state) {
+	tpc::ParserRef<Type> Type::parse(F8ParserState& state) {
 		if (!state.tryEat(rift_def::Keyword::BCType)) {
 			state.err.failAndLog(state.ctokens().peek().getPosition(), "expected keyword 'type'");
 			return nullptr;
@@ -494,14 +484,14 @@ namespace assemble {
 
 		/// @TODO: implement keywordToNumLiteral
 		auto type = state.tokens().next().asKeyword();
-		tpc::parseOne(state, rift_def::Operator::Colon);
+		state.parse().one(rift_def::Operator::Colon);
 		base::StrId name = state.tokens().next().getValue();
 
 		switch (type) {
 		case rift_def::Keyword::BCPrimitive: {
 			auto value = state.tokens().next();
 			if (!value.isNumLiteral()) {
-				state.err.failAndLog(state.ctokens().peek().getPosition(), "expected number");
+				state.err.failAndLog(state.getPosition(), "expected number");
 			} else {
 				out->datatype
 					= PrimitiveType{ name, static_cast<TypeSize>(strIdToNum(value.getValue())) };
@@ -511,7 +501,7 @@ namespace assemble {
 		case rift_def::Keyword::BCPointer: {
 			auto pointered_type = state.tokens().next();
 			if (!pointered_type.isIdentifier())
-				state.err.failAndLog(state.ctokens().peek().getPosition(), "expected identifier");
+				state.err.failAndLog(state.getPosition(), "expected identifier");
 			else
 				out->datatype = PointerType{ name, pointered_type.getValue() };
 			break;
@@ -519,11 +509,11 @@ namespace assemble {
 		case rift_def::Keyword::BCStaticTable: {
 			auto type_name = state.tokens().next();
 			if (!type_name.isIdentifier()) {
-				state.err.failAndLog(state.ctokens().peek().getPosition(), "expected identifier");
+				state.err.failAndLog(state.getPosition(), "expected identifier");
 			} else {
 				auto size = state.tokens().next();
 				if (!size.isNumLiteral()) {
-					state.err.failAndLog(state.ctokens().peek().getPosition(), "expected number");
+					state.err.failAndLog(state.getPosition(), "expected number");
 				} else {
 					out->datatype
 						= StaticTableType{ name,
@@ -536,16 +526,14 @@ namespace assemble {
 		case rift_def::Keyword::BCDynamicTable: {
 			const lexer::Token& type_name = state.tokens().next();
 			if (!type_name.isIdentifier())
-				state.err.failAndLog(state.ctokens().peek().getPosition(), "expected identifier");
+				state.err.failAndLog(state.getPosition(), "expected identifier");
 			else
 				out->datatype = DynamicTableType{ name, type_name.getValue() };
 			break;
 		}
 		case rift_def::Keyword::BCData: {
-			if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.failAndLog(
-					state.ctokens().peek(-1).getPosition(), "expected `{` after here"
-				);
+			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
 				return nullptr;
 			}
 
@@ -554,17 +542,15 @@ namespace assemble {
 			while (state.notEmpty()) {
 				tpc::Identifier field_name;
 				tpc::Identifier field_type;
-				tpc::parseAll(state, &field_name, rift_def::Operator::Colon, &field_type);
+				state.parse().all(&field_name, rift_def::Operator::Colon, &field_type);
 				fields.emplace_back(Field{ field_name.value, field_type.value });
 
 				if (state.empty()) break;
 
-				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
-					tpc::parseOne(state, rift_def::Operator::Comma);
+				if (state.ctokens().peek().is(rift_def::Special::Comma)) {
+					state.parse().one(rift_def::Special::Comma);
 				} else {
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "expected comma or }"
-					);
+					state.err.failAndLog(state.getPosition(), "expected comma or }");
 					state.tokens().skip();
 				}
 			}
@@ -573,10 +559,8 @@ namespace assemble {
 			break;
 		}
 		case rift_def::Keyword::BCVariant: {
-			if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.failAndLog(
-					state.ctokens().peek(-1).getPosition(), "expected `{` after here"
-				);
+			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
 				return nullptr;
 			}
 
@@ -584,16 +568,14 @@ namespace assemble {
 			std::vector<base::StrId> alternatives;
 			while (state.notEmpty()) {
 				tpc::Identifier field_type;
-				tpc::parseOne(state, &field_type);
+				state.parse().one(&field_type);
 				alternatives.emplace_back(field_type.value);
 
 				if (state.empty()) break;
-				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
-					tpc::parseOne(state, rift_def::Operator::Comma);
+				if (state[0].is(rift_def::Special::Comma)) {
+					state.parse().one(rift_def::Special::Comma);
 				} else {
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "expected comma or }"
-					);
+					state.err.failAndLog(state.getPosition(), "expected comma or }");
 					state.tokens().skip();
 				}
 			}
@@ -602,10 +584,8 @@ namespace assemble {
 			break;
 		}
 		case rift_def::Keyword::BCFunType: {
-			if (!state.ctokens().isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.failAndLog(
-					state.ctokens().peek(-1).getPosition(), "expected `{` after here"
-				);
+			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
 				return nullptr;
 			}
 
@@ -613,27 +593,25 @@ namespace assemble {
 			std::vector<base::StrId> arguments;
 			while (state.notEmpty()) {
 				tpc::Identifier field_type;
-				tpc::parseOne(state, &field_type);
+				state.parse().one(&field_type);
 				arguments.emplace_back(field_type.value);
 
 				if (state.empty()) break;
-				if (state.ctokens().peek().is(rift_def::Operator::Comma)) {
-					tpc::parseOne(state, rift_def::Operator::Comma);
+				if (state[0].is(rift_def::Special::Comma)) {
+					state.parse().one(rift_def::Special::Comma);
 				} else {
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "expected comma or }"
-					);
+					state.err.failAndLog(state.getPosition(), "expected comma or }");
 					state.tokens().skip();
 				}
 			}
 			state.goUpAndSkip();
 			tpc::Identifier result;
-			tpc::parseOne(state, &result);
+			state.parse().one(&result);
 			out->datatype = FunctionType{ name, arguments, result };
 			break;
 		}
 		default: {
-			state.err.failAndLog(state.ctokens().peek().getPosition(), "expected variant of type");
+			state.err.failAndLog(state.getPosition(), "expected variant of type");
 			break;
 		}
 		}
@@ -641,14 +619,14 @@ namespace assemble {
 		return out;
 	}
 
-	tpc::ParserRef<ParsedCode> ParsedCode::parse(tpc::ParserState& state) {
+	tpc::ParserRef<ParsedCode> ParsedCode::parse(F8ParserState& state) {
 		auto out = tpc::makeRef<ParsedCode>();
 
 		while (state.notEmpty()) {
-			if (state.ctokens().is(rift_def::Keyword::BCType)) {
+			if (state[0].is(rift_def::Keyword::BCType)) {
 				auto type = Type::parse(state);
 				if (type != nullptr) out->types.emplace_back(std::move(type));
-			} else if (state.ctokens().is(rift_def::Keyword::BCFunction)) {
+			} else if (state[0].is(rift_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state);
 				if (func != nullptr) out->functions.emplace_back(std::move(func));
 			} else {
@@ -678,12 +656,12 @@ namespace assemble {
 
 		tokenizer::OwnFile file = lexer::tokenizeFile(path);
 
-		lexer::TokenData& td = file->getTokenData();
+		const lexer::TokenData& td = file->getTokenData();
 
 		auto log = dia::Logger();
 
-		tpc::ParserState state(
-			tpc::TokenStream(td.tokens, tpc::Token(td.eof_sentinel), 0, td.tokens.size()), log
+		F8ParserState state(
+			tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()), log
 		);
 
 		tpc::ParserRef<ParsedCode> out = ParsedCode::parse(state);

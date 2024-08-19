@@ -4,36 +4,128 @@
 #include <base/variant.hpp>
 #include "../scopes/scopes.hpp"
 #include "../symbols/symbols.hpp"
+#include <base/unique_pointer.hpp>
+#include <helios/hout/element_ref.hpp>
+#include "visitors.hpp"
 
 namespace compiler::helios::code {
 
-	void addIndent(usize indent, std::string& out) { out.append(indent * 4, ' '); }
+	constexpr usize INDENT_SIZE = 4;
 
-	void ReturnStmt::debugPrint(usize indent, std::string& out) const {
-		addIndent(indent, out);
-		out += "return ";
+	void addIndent(std::ostream& out, usize indent) {
+		out << std::string().append(indent * INDENT_SIZE, ' ');
+	}
+
+	void ReturnStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "return ";
 		this->value->debugPrint(out);
-		out += "\n";
+		out << "\n";
 	}
 
-	void VoidReturnStmt::debugPrint(usize indent, std::string& out) const {
-		addIndent(indent, out);
-		out += "void return\n";
+	void VoidReturnStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "void return\n";
 	}
 
-	void ExprStmt::debugPrint(usize indent, std::string& out) const {
-		addIndent(indent, out);
-		out += "do ";
+	void ExprStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "do ";
 		expr->debugPrint(out);
-		out += "\n";
+		out << "\n";
 	}
 
-	void ConstIntExprMock::debugPrint(std::string& out) const { out += std::to_string(value); }
-
-	void IdentifierExpresion::debugPrint(std::string& out) const {
-		out += base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
+	void IfStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "if (";
+		condition->debugPrint(out);
+		out << ") {\n";
+		for (const auto& stmt: body.statements) stmt->debugPrint(out, indent + 1);
+		addIndent(out, indent);
+		out << "}\n";
 	}
 
+	void LiteralValueExpr::debugPrint(std::ostream& out, usize) const {
+		out << std::to_string(value);
+	}
+
+	void IdentifierExpr::debugPrint(std::ostream& out, usize) const {
+		out << base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
+	}
+
+	void BinaryOperatorExpr::debugPrint(std::ostream& out, usize) const {
+		out << base::strConcat("(");
+		lhs->debugPrint(out);
+		out << base::strConcat(op);
+		rhs->debugPrint(out);
+		out << base::strConcat(")");
+	}
+
+	void BinaryOperatorExpr::acceptVisitor(HoutExprVisitor& visitor) const {
+		visitor.visitBinaryOperatorExpr(*this);
+	}
+
+	ElementRef<Expr> Expr::fromRPN(query::Context& ctx, const rpn::RPNExpr& expr) {
+		// The algorithm from RPN: https://en.wikipedia.org/wiki/Binary_expression_tree
+		std::stack<ElementRef<Expr>> st;
+		for (auto&& elem: expr.elements) {
+			variant_match(elem) {
+				variant_case(rpn::Identifier, idt) {
+					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, idt.symbol_list.back())
+					);
+				}
+
+				variant_case(rpn::Operator, oper) {
+					auto b = std::move(st.top());
+					st.pop();
+					auto a = std::move(st.top());
+					st.pop();
+
+					st.emplace(base::make_unique<BinaryOperatorExpr>(
+						expr.scope, oper.oper_id, std::move(a), std::move(b)
+					));
+				}
+
+				variant_case(rpn::NamedIdentifier, idt) {
+					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+						{ expr.scope, idt.symbol_name, true }
+					);
+
+					st.emplace(
+						base::make_unique<IdentifierExpr>(expr.scope, sym_list.getAsSingle().back())
+					);
+				}
+
+				variant_case(rpn::NumValue, num_value) {
+					st.emplace(base::make_unique<LiteralValueExpr>(
+						expr.scope, std::stoi(num_value.num_id.str())
+					));
+				}
+
+				variant_default {
+					RIFT_PANIC(base::strConcat(
+						"Unhandlable type during parsing type from expr: ", typeid(elem).name()
+					));
+				}
+			}
+		}
+		RIFT_ASSERT(st.size() == 1, "Empty HOUT Tree stack");
+		return std::move(st.top());
+	}
+
+// visitors:
+#define STMT_VISITOR(type) \
+	void type::acceptVisitor(HoutStmtVisitor& visitor) const { visitor.visit##type(*this); }
+#define EXPR_VISITOR(type) \
+	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
+
+	STMT_VISITOR(ReturnStmt);
+	STMT_VISITOR(VoidReturnStmt);
+	STMT_VISITOR(ExprStmt);
+	STMT_VISITOR(IfStmt);
+
+	EXPR_VISITOR(LiteralValueExpr);
+	EXPR_VISITOR(IdentifierExpr);
 }
 
 namespace compiler::helios {
@@ -45,6 +137,8 @@ namespace compiler::helios {
 	 */
 	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key)
 		-> code::ElementRef<code::Expr> {
+		auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ key.expr });
+
 		RIFT_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single expression");
 		const auto& elem = key.expr->elements.at(0);
 
@@ -54,14 +148,14 @@ namespace compiler::helios {
 			}
 			variant_case(pst::Expr::NumLiteral, num) {
 				auto val = base::strIdToNum(num.num_id);
-				return base::make_unique<code::ConstIntExprMock>(val);
+				return base::make_unique<code::LiteralValueExpr>(scope, val);
 			}
 			variant_case(pst::Expr::Identifier, identifier) {
 				// @note: this does not handle overload
 				// @note: this does not handle "." operation
 
 				auto lookup_result = ctx.query<QueryLookupInScopeAndParents>(KeyOf_LookupInScope{
-					key.scope, identifier.indent_id, true });
+					scope, identifier.indent_id, true });
 
 				compiler::helios::SymbolList lookup_dealiased;
 
@@ -77,7 +171,7 @@ namespace compiler::helios {
 				RIFT_ASSERT(lookup_dealiased.size() > 0, "Empty lookup result");
 
 				// @TODO: dont just ignore everything before last symbol
-				return base::make_unique<code::IdentifierExpresion>(lookup_dealiased.back());
+				return base::make_unique<code::IdentifierExpr>(scope, lookup_dealiased.back());
 			}
 			variant_case(pst::Expr::Group, group) {
 				throw base::NotYetImplemented("Expr from group");
@@ -113,11 +207,9 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr);
 
 	base::HashT KeyOf_QueryHoutOfExpr::customPerfectHash() const {
-		auto hash_1 = base::perfectHash(scope);
-		auto hash_2 = this->expr->getID().asInt();
+		auto hash_1 = this->expr->getID().asInt();
 
-		// @FIXME: this does not work:
-		return (hash_1 * 143 + hash_2 * 7);
+		return hash_1;
 	}
 
 };

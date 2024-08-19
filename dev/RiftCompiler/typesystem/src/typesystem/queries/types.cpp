@@ -1,6 +1,8 @@
-#include <query_framework/query_impl.hpp>
-#include "../internal/type_info_impl.hpp"
 #include "types.hpp"
+
+#include "../internal/type_info_impl.hpp"
+
+#include <query_framework/query_impl.hpp>
 
 namespace ts {
 	struct IMPLEMENT_QUERY(QueryUnitType, UnitInfo::Pimpl) {
@@ -9,11 +11,7 @@ namespace ts {
 			return &unit_impl;
 		}
 
-		static auto load(QKey) -> LoadResult { return {}; }
-
-		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
-			return QResult{ p_res };
-		}
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryUnitType)
@@ -24,11 +22,7 @@ namespace ts {
 			return &void_impl;
 		}
 
-		static auto load(QKey) -> LoadResult { return {}; }
-
-		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
-			return QResult{ p_res };
-		}
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVoidType)
@@ -39,11 +33,7 @@ namespace ts {
 			return &byte_impl;
 		}
 
-		static auto load(QKey) -> LoadResult { return {}; }
-
-		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
-			return QResult{ p_res };
-		}
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryByteType)
@@ -54,11 +44,7 @@ namespace ts {
 			return &bool_impl;
 		}
 
-		static auto load(QKey) -> LoadResult { return {}; }
-
-		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
-			return QResult{ p_res };
-		}
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryBoolType)
@@ -69,11 +55,7 @@ namespace ts {
 			return &char_impl;
 		}
 
-		static auto load(QKey) -> LoadResult { return {}; }
-
-		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
-			return QResult{ p_res };
-		}
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCharType)
@@ -93,7 +75,7 @@ namespace ts {
 			[[nodiscard]]
 			std::string toStringDetailed() const override {
 				std::stringstream ss;
-				ss << "Invalid size of integral type: " << requested_size << "\n"
+				ss << toStringBrief() << "\n"
 				   << "The only allowed sizes are 8, 16, 32, 64, and 128.";
 				return ss.str();
 			}
@@ -136,11 +118,7 @@ namespace ts {
 			return &cache.at({ size, signedness });
 		}
 
-		static auto load(QKey) -> LoadResult { return {}; }
-
-		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
-			return QResult{ p_res };
-		}
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIntegralType)
@@ -160,7 +138,7 @@ namespace ts {
 			[[nodiscard]]
 			std::string toStringDetailed() const override {
 				std::stringstream ss;
-				ss << "Invalid size of float type: " << requested_size << "\n"
+				ss << toStringBrief() << "\n"
 				   << "The only allowed sizes are 16, 32, 64, 80, and 128.";
 				return ss.str();
 			}
@@ -201,11 +179,7 @@ namespace ts {
 			return &cache.at(size);
 		}
 
-		static auto load(QKey) -> LoadResult { return {}; }
-
-		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
-			return QResult{ p_res };
-		}
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFloatType)
@@ -218,42 +192,48 @@ namespace ts {
 			return &rawPointer_impl.at(key);
 		}
 
-		static auto load(QKey) -> LoadResult { return {}; }
-
-		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
-			return QResult{ p_res };
-		}
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRawPointerType)
 
 	struct IMPLEMENT_QUERY(QueryPointerType, PointerInfo::Pimpl) {
-		static inline base::Map<QKey, query::CacheEntry<PointerInfo>> cache;
-
 		static auto provide(Context&, const QKey key) -> PResult {
 			const auto pointer_pimpl = new internal::PointerInfoImpl{ key };
 			pushType(base::unique_ptr(pointer_pimpl));
 			return pointer_pimpl;
 		}
 
-		static auto store(const QKey key, const PResult p_res, const query::ACD acd) -> QResult {
-			const auto q_res = QResult{ p_res };
-			cache.emplace(key, query::CacheEntry<QResult>{ q_res, acd });
-			return q_res;
-		}
-
-		static auto load(const QKey key) -> LoadResult {
-			if (const auto cache_iter = cache.find(key); cache_iter != cache.end())
-				return base::Optional{ cache_iter->second };
-			return {};
-		}
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
 
-	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionInfo::Pimpl) {
-		static inline base::Map<QKey, query::CacheEntry<FunctionInfo>> cache;
+	struct IMPLEMENT_QUERY(QueryTupleType, TupleInfo::Pimpl) {
+		static auto provide(Context&, const QKey& key) -> PResult {
+			const auto tuple_pimpl = new internal::TupleInfoImpl{ key.components };
+			pushType(base::unique_ptr(tuple_pimpl));
+			return tuple_pimpl;
+		}
 
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleType)
+
+	struct IMPLEMENT_QUERY(QueryVariantType, VariantInfo::Pimpl) {
+		static auto provide(Context&, const QKey& key) -> PResult {
+			const auto Variant_pimpl = new internal::VariantInfoImpl{ key.underlying_types };
+			pushType(base::unique_ptr(Variant_pimpl));
+			return Variant_pimpl;
+		}
+
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVariantType)
+
+	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionInfo::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			const auto [params, result, pure, free] = key;
 			const auto function_pimpl
@@ -262,20 +242,22 @@ namespace ts {
 			return function_pimpl;
 		}
 
-		static auto store(const QKey& key, const PResult p_res, const query::ACD acd) -> QResult {
-			const auto q_res = QResult{ p_res };
-			cache.emplace(key, query::CacheEntry<QResult>{ q_res, acd });
-			return q_res;
-		}
-
-		static auto load(const QKey& key) -> LoadResult {
-			if (const auto cache_iter = cache.find(key); cache_iter != cache.end())
-				return base::Optional{ cache_iter->second };
-			return {};
-		}
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType)
+
+	struct IMPLEMENT_QUERY(QueryClassType, ClassInfo::Pimpl) {
+		static auto provide(Context&, QKey key) -> PResult {
+			const auto class_pimpl = new internal::ClassInfoImpl{ key };
+			pushType(base::unique_ptr(class_pimpl));
+			return class_pimpl;
+		}
+
+		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassType)
 
 	struct IMPLEMENT_QUERY(QueryNamespaceType, NamespaceInfo::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
@@ -283,11 +265,7 @@ namespace ts {
 			return &namespace_impl;
 		}
 
-		static auto load(QKey) -> LoadResult { return {}; }
-
-		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
-			return QResult{ p_res };
-		}
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryNamespaceType)
@@ -298,11 +276,7 @@ namespace ts {
 			return &module_impl;
 		}
 
-		static auto load(QKey) -> LoadResult { return {}; }
-
-		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
-			return QResult{ p_res };
-		}
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleType)
@@ -313,11 +287,7 @@ namespace ts {
 			return &meta_impl;
 		}
 
-		static auto load(QKey) -> LoadResult { return {}; }
-
-		static auto store(QKey, const PResult p_res, query::ACD) -> QResult {
-			return QResult{ p_res };
-		}
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMetaType)

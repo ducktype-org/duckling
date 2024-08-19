@@ -29,9 +29,15 @@ namespace lexer {
 		TokenData tokenize();
 
 		[[nodiscard]]
-		const dia::Logger& getErrorState() const {
-			return errorState;
+		const dia::Logger& getLogger() const {
+			return logger;
 		}
+
+		/**
+		 * @brief Sets value of token_messages flag
+		 * that determines if lexer print debug token messages to cerr.
+		 */
+		static void setTokenMessages(bool value);
 
 	private:
 		/**
@@ -98,27 +104,19 @@ namespace lexer {
 		std::string generateLineColumnInfo(usize fwd = 0) const;
 
 		[[nodiscard]]
-		dia::SourcePosition currentPostion() const;
+		dia::SourcePosition currentPosition() const;
 
 		usize                 where = 0;  ///< Current position in file
 		tokenizer::BorrowFile file;
-		dia::Logger&          errorState;
-		CharArray&            char_array;
+		dia::Logger&          logger;
+		const CharArray&      char_array;
 		Tokens                tokens;
 
 		/**
 		 * @brief Informs whether to print messages about what tokens are created to the debug
 		 * stream based on the PRINT_LOG define
 		 */
-		static constexpr bool tokenMessages() {
-#ifdef PRINT_LOG
-			return true;
-#else
-			return false;
-#endif
-		}
-
-		printer::StreamPrinter streamPrinter;
+		static bool token_messages;
 
 		void addTokenMsg(usize begin, usize end, std::string_view token_type);
 	};

@@ -2,7 +2,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <array>
 
 #include <json/json.hpp>
 #include <json/type_parse.hpp>
@@ -58,4 +57,7 @@ int main() {
 	std::exception* e = new std::runtime_error("error");
 	std::cout << nlohmann::json(*e) << "\n";
 	delete e;
+
+	Empty empty;
+	std::cout << nlohmann::json(empty) << '\n';
 }

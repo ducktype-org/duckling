@@ -9,7 +9,8 @@
 #include <vector>
 
 #include "char.hpp"
-#include "diagnostic/source_position.hpp"
+
+#include <diagnostic/source_position.hpp>
 #include <base/smart_pointers.hpp>
 #include <base/raw_view.hpp>
 #include <base/string_id.hpp>
@@ -67,14 +68,15 @@ namespace lexer {
 		 * @name Functions that construct a Token
 		 * @{
 		 */
-		static Token makeSentinelEnd(base::RawView view, const dia::SourcePosition&);
+		static Token makeSentinel(base::RawView view, const dia::SourcePosition&);
 		static Token makeSentinelEof(const dia::SourcePosition&);
+		static Token makeSentinelBof(const dia::SourcePosition&);
 		static Token makeKeyword(base::RawView keyword, const dia::SourcePosition&);
 		static Token makeNumber(const base::RawView number, dia::SourcePosition);
 		static Token makeString(base::RawView string, const dia::SourcePosition&);
 		static Token makeFormattedString(Tokens&& tokens, dia::SourcePosition);  ///< Unimplemented
 		static Token
-			makeBracketGroup(BracketType bracket_type, Tokens&& tokens, Token&& sentinel, const dia::SourcePosition&);
+			makeBracketGroup(BracketType bracket_type, Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition&);
 		static Token makeComment(base::RawView comment, const dia::SourcePosition&);
 		static Token makeOperator(base::RawView oper, const dia::SourcePosition&);
 		static Token makeIdentifier(base::RawView identifier, const dia::SourcePosition&);
@@ -91,7 +93,8 @@ namespace lexer {
 		Token(
 			Type                       type,
 			Tokens&&                   recursive,
-			Token&&                    sentinel,
+			Token&&                    sentinel_begin,
+			Token&&                    sentinel_end,
 			const dia::SourcePosition& position,
 			BracketType                bracket
 		);
@@ -109,7 +112,9 @@ namespace lexer {
 		[[nodiscard]]
 		const Tokens& getRecursive() const;
 		[[nodiscard]]
-		const Token getSentinel() const;
+		const Token& getSentinelBegin() const;
+		[[nodiscard]]
+		const Token& getSentinelEnd() const;
 
 		[[nodiscard]]
 		bool               isBracketGroup() const;
@@ -156,7 +161,8 @@ namespace lexer {
 		Type                         type = Type::Empty;
 		base::StrId                  str_id;
 		Tokens                       recursive;
-		std::shared_ptr<const Token> sentinel;
+		std::shared_ptr<const Token> sentinel_begin;
+		std::shared_ptr<const Token> sentinel_end;
 		dia::SourcePosition          source_position;
 		BracketType                  bracket_type{ BracketType::None };
 	};
@@ -166,11 +172,12 @@ namespace lexer {
 	 */
 	struct TokenData {
 		Tokens tokens;
+		Token  bof_sentinel;
 		Token  eof_sentinel;
 
 		TokenData() = delete;
 		TokenData(TokenData&&) noexcept;
-		TokenData(Tokens&& tokens, Token&& eof_sentinel);
+		TokenData(Tokens&& tokens, Token&& bof_sentinel, Token&& eof_sentinel);
 
 		void       operator=(const TokenData&) = delete;
 		TokenData& operator=(TokenData&&)      = default;

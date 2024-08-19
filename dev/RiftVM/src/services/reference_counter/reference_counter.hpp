@@ -5,7 +5,7 @@
 namespace vm {
 	class ReferenceCounter {
 		template<class... DynamicServices>
-		ReferenceCounter(ServiceManagerDef<DynamicServices...>&) {}
+		ReferenceCounter(ServiceManagerDef<DynamicServices...>& /* serviceManager */) {}
 
 	public:
 		template<class... DynamicServices>

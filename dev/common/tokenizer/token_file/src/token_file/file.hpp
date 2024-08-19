@@ -22,11 +22,11 @@ namespace tokenizer {
 	 */
 	class TokenFile {
 	private:
-		fs::FilePath                     path;
-		dia::Logger                      log;
-		base::Optional<fs::FileContent>  content;
-		base::Optional<lexer::CharArray> decoded;
-		base::Optional<lexer::TokenData> token_data;
+		fs::FilePath                           path;
+		dia::Logger                            log;
+		base::Optional<const fs::FileContent>  content;
+		base::Optional<const lexer::CharArray> decoded;
+		base::Optional<const lexer::TokenData> token_data;
 
 		/**
 		 * @brief Stores line bounds (first character of the line, character after last character)
@@ -74,17 +74,20 @@ namespace tokenizer {
 		std::vector<std::pair<usize, base::RawView>>
 			viewSplitRange(usize begin_char, usize end_char);
 
-		fs::FileContent   getContent();
-		lexer::CharArray& getChars();
-		lexer::TokenData& getTokenData();
-		dia::Logger&      getLogger();
-		fs::FilePath      getPath();
+		[[nodiscard]]
+		const fs::FileContent getContent() const;
+		[[nodiscard]]
+		const lexer::CharArray& getChars() const;
+		[[nodiscard]]
+		const lexer::TokenData& getTokenData() const;
+		dia::Logger&            getLogger();
+		fs::FilePath            getPath();
 
 		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
 
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {
-			decoded = lexer::decode<encoding>(content->view(), log);
+			decoded.emplace(lexer::decode<encoding>(BorrowFile{ this }, log));
 		}
 
 		void countLines();
@@ -93,6 +96,7 @@ namespace tokenizer {
 
 		/**
 		 * @brief Run the whole lexer.
+		 * @return If tokenizing process run without errors.
 		 */
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		bool tokenize() {

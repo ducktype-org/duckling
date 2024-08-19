@@ -2,8 +2,10 @@
 
 import pathlib
 import sys
+import shutil
 
 import click
+import requests
 
 from scripts.toolbox.helpers import (
     abort_if_false,
@@ -57,6 +59,14 @@ def with_venv(cmd):
 
 
 def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, coverage):
+    bld = pathlib.Path(build_dir)
+    if bld.exists():
+        # Delete old cache
+        try:
+            (bld / pathlib.Path("CMakeCache.txt")).unlink()
+            shutil.rmtree(bld / pathlib.Path("CMakeFiles"))
+        except FileNotFoundError:
+            pass
     cmd = f"""
         cmake
          -G "{build_system}"
@@ -156,12 +166,28 @@ def setup_venv():
     setup_venv_impl()
 
 
-def download_binaries_impl(force=False):
+def download_binaries_impl(force=False, single=False):
     log_info(
         f"Downloading binary files {'WITH force' if force else 'WITHOUT force'}..."
     )
-    for file in FILES_TO_DOWNLOAD:
-        file.download(force)
+
+    if single:
+        log_info(f"Searching for file called '{single}'...")
+
+        found = False
+        for file in FILES_TO_DOWNLOAD:
+            if single in file.resource_url:
+                log_info(f"Found file: {file.resource_url}")
+                file.download(force)
+                found = True
+                break
+        if not found:
+            exit_with_error(f"Couldn't find a file with '{single}' in resource url")
+
+    else:
+        log_info(f"Downloading all supported files")
+        for file in FILES_TO_DOWNLOAD:
+            file.download(force)
 
     log_info("Download done")
 
@@ -175,9 +201,16 @@ def download_binaries_impl(force=False):
     type=bool,
     default=False,
 )
-def download_binaries(force):
-    """Download necessary binary files from the internet"""
-    download_binaries_impl(force)
+@click.option(
+    "-s",
+    "--single",
+    help="Download a single file, that is fuzzily named as passed in this flag",
+    type=str,
+    default="",
+)
+def download_binaries(*args, **kwargs):
+    """Downloads necessary binary files from the internet"""
+    download_binaries_impl(*args, **kwargs)
 
 
 def init_impl():
@@ -275,7 +308,7 @@ def docs_impl(build_dir):
     default="build",
 )
 def docs(*args, **kwargs):
-    """Build a documentation for the project and opens it in the browser"""
+    """Builds a documentation for the project and opens it in the browser"""
     docs_impl(*args, **kwargs)
 
 
@@ -306,6 +339,58 @@ def test_impl(build_dir, memcheck):
 def test(*args, **kwargs):
     """Performs tests of the code"""
     test_impl(*args, **kwargs)
+
+def download_llvm_impl(version, arch):
+    log_info("==========================")
+    log_info("Downloading LLVM may or may not work, depending on a presence of compiled binaries listed here: https://github.com/llvm/llvm-project/releases/")
+    log_new_line()
+    log_info("- A note on binaries -")
+    log_info("Volunteers make binaries for the LLVM project, which will be uploaded")
+    log_info("when they have had time to test and build these binaries. They might")
+    log_info("not be available directly or not at all for each release. We suggest")
+    log_info("you use the binaries from your distribution or build your own if you")
+    log_info("rely on a specific platform or configuration.")
+    log_info("==========================")
+    log_new_line()
+
+    if arch == 'x86_64':
+        name = f"clang+llvm-{version}-{arch}-linux-gnu-ubuntu-18.04"
+    else:
+        name = f"clang+llvm-{version}-{arch}-linux-gnu"
+
+    llvm_file = InternetFile(
+        f"scripts/downloads/llvm_{version}_{arch}.tar.xz",
+        f"https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/{name}.tar.xz",
+        after_download=[
+            (callback_unTAR,),
+            (callback_move, name, f"llvm_lib_{version}_{arch}"),
+        ],
+    )
+    llvm_file.download()
+
+
+
+@cli.command()
+@click.option(
+    "-v",
+    "--version",
+    prompt="LLVM Version",
+    help="Version of LLVM release, ex. 18.1.8",
+    default="18.1.8",
+)
+@click.option(
+    "-a",
+    "--arch",
+    prompt="Architecture",
+    help="Architecture of the target machine",
+    default="x86_64",
+    type=click.Choice(
+        ["x86_64", "aarch64"], case_sensitive=False
+    ),
+)
+def download_llvm(*args, **kwargs):
+    """Downloads specified version of LLVM. This is LINUX ONLY."""
+    download_llvm_impl(*args, **kwargs)
 
 
 if __name__ == "__main__":

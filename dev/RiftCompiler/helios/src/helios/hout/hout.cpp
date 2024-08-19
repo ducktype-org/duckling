@@ -1,5 +1,6 @@
 #include "hout.hpp"
 #include "elements.hpp"
+#include <sstream>
 
 namespace compiler::helios {
 
@@ -18,15 +19,21 @@ namespace compiler::helios {
 	}
 
 	std::string HOUTFunction::debugPrint() const {
-		std::string out;
+		std::stringstream out;
 		// @TODO
 
-		out += "fun ";
-		out += original_name.strView();
-		out += " ( @TODO ) -> @TODO {\n";
-		for (auto&& stmt: body.body->statements) stmt->debugPrint(1, out);
-		out += "}\n";
-		return out;
+		out << "fun ";
+		out << original_name.strView();
+		out << " ( @TODO ) -> @TODO {\n";
+		for (auto&& stmt: body.body->statements) stmt->debugPrint(out, 1);
+		out << "}\n";
+		return out.str();
+	}
+
+	base::HashT HOUTFunction::customPerfectHash() const {
+		// @note: see
+		// https://github.com/orgs/ducktype-org/projects/8/views/1?pane=issue&itemId=70870558
+		return base::perfectHash(original_symbol);
 	}
 
 	std::string HOUTGlobalData::debugPrint() const {

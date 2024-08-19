@@ -33,6 +33,16 @@
 		)                                      \
 	)
 
+#define ASSERT_EQUAL_NO_PRINT(expected, actual)                                           \
+	assertEqual(                                                                          \
+		expected,                                                                         \
+		actual,                                                                           \
+		base::strConcat(                                                                  \
+			"Values not equal:\n\t\tIn line ", __LINE__, ": ", #expected, " != ", #actual \
+		)                                                                                 \
+	)
+
+
 class SimpleTesterTest;
 
 namespace tester {
@@ -41,7 +51,7 @@ namespace tester {
 		friend SimpleTesterTest;
 
 	protected:
-		typedef void (TestSuite::*TestType)();
+		using TestType = void (TestSuite::*)();
 
 	private:
 		class CritTestError: public std::exception {

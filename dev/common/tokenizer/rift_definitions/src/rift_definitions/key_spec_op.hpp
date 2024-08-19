@@ -142,6 +142,7 @@ namespace rift_def {
 		NotASpecial,
 		Semicolon,
 		AtSign,
+		Comma,
 		DolarSign,
 		HashSign,
 		//...
@@ -152,9 +153,9 @@ namespace rift_def {
 		NotAnOperator,
 		Period,
 		PeriodStar,
-		Comma,
 		Colon,
 		Assign,
+		Pipe,  // | for variants and bitwise or.
 		QuestionMark,
 		SingleArrow,
 		DoubleArrow,
@@ -187,4 +188,8 @@ namespace rift_def {
 	base::StrId operatorToStr(Operator oper);
 
 	base::FlagType keywordFlags(Keyword key);
+
+	std::vector<Keyword>  getKeywords();
+	std::vector<Special>  getSpecials();
+	std::vector<Operator> getOperators();
 }

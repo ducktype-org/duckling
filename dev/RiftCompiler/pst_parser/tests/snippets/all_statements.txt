@@ -15,8 +15,6 @@ alias X = X;
 
 const X: W = 5;
 
-while (x);
-
 block B {}
 
 namespace X {}
@@ -35,3 +33,8 @@ defer a+2;
 
 return 2;
 
+var x: i32 = 5;
+
+if (a) {}
+
+while (a) {}

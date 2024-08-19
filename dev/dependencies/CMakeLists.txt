@@ -7,6 +7,7 @@ set(NLOHMANN_JSON_COMMIT "9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03")  # 3.11.3
 set(RESULT_COMMIT "a97e66bc66f140132619fd5f5cdffc30127f4220")
 set(ASIO_COMMIT "89b0a4138a92883ae2514be68018a6c837a5b65f")
 set(CROW_COMMIT "4f3f5deaaa01825c63c83431bfa96ccec195f741")
+set(BASE64_COMMIT "387b32f337b83d358ac1ffe574e596ba99c41d31")
 
 # ICU supporting Unicode 15.1
 set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-1/icu4c-74_1-src.tgz")
@@ -30,6 +31,11 @@ FetchContent_Declare(
 FetchContent_Declare(
 	crow
 	URL "https://github.com/CrowCpp/Crow/archive/${CROW_COMMIT}.zip"
+)
+
+FetchContent_Declare(
+	base64
+	URL "https://github.com/tobiaslocker/base64/archive/${BASE64_COMMIT}.zip"
 )
 
 FetchContent_MakeAvailable(asio)
@@ -56,4 +62,32 @@ FetchContent_MakeAvailable(result)
 get_target_property(TEMP Result INTERFACE_INCLUDE_DIRECTORIES)
 set_target_properties(Result PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
 
+find_library(gvc gvc)
+
 FindOrBuildICU(VERSION 74.1 URL "${ICU_RELEASE}" URL_HASH "${ICU_CONTROL}")
+
+FetchContent_MakeAvailable(base64)
+add_library(base64 INTERFACE)
+target_include_directories(base64 INTERFACE "${base64_SOURCE_DIR}/include" "${base64_SOURCE_DIR}/test")
+FetchContent_GetProperties(base64)
+if(NOT base64_POPULATED)
+    FetchContent_Populate(base64)
+    add_subdirectory("${base64_SOURCE_DIR}" "${base64_BINARY_DIR}")
+endif()
+
+add_dependencies(build_all_tests base64_tests roundtrip_test)
+# This macro inserts LLVM as a library to the project. It should be used in the top-level
+# CMakeList.txt file.
+# First it tries to find a downloaded version of LLVM located somewhere in `scripts/downloads`,
+# and upon failing tries to use a system version of LLVM which is at least 18.1.x.
+macro(insertLLVM)
+	find_package(LLVM 18.1.0 CONFIG PATHS scripts/downloads NO_DEFAULT_PATH)
+	if (NOT ${LLVM_FOUND} EQUAL 1)
+		message(STATUS "Custom LLVM not found, looking for local")
+		find_package(LLVM 18.1.0 REQUIRED CONFIG)
+	else()
+		message(STATUS "Using custom LLVM")
+	endif ()
+	message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+	message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+endmacro()
