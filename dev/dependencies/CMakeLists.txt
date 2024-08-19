@@ -3,7 +3,7 @@ include(FindOrBuildICU.cmake)
 
 # It's nice to get stripped-down release zips instead of cloning
 # a repo and checking out a tag
-set(NLOHMANN_JSON_COMMIT "9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03")  # 3.11.3
+set(NLOHMANN_JSON_TAG "v3.11.3")
 set(RESULT_COMMIT "a97e66bc66f140132619fd5f5cdffc30127f4220")
 set(ASIO_COMMIT "89b0a4138a92883ae2514be68018a6c837a5b65f")
 set(CROW_COMMIT "4f3f5deaaa01825c63c83431bfa96ccec195f741")
@@ -15,7 +15,7 @@ set(ICU_CONTROL "SHA512=32c28270aa5d94c58d2b1ef46d4ab73149b5eaa2e0621d4a4c11597b
 
 FetchContent_Declare(
 	nlohmann_json
-	URL "https://github.com/nlohmann/json/archive/${NLOHMANN_JSON_COMMIT}.zip"
+	URL "https://github.com/nlohmann/json/releases/download/${NLOHMANN_JSON_TAG}/json.tar.xz"
 )
 
 FetchContent_Declare(
@@ -38,29 +38,23 @@ FetchContent_Declare(
 	URL "https://github.com/tobiaslocker/base64/archive/${BASE64_COMMIT}.zip"
 )
 
+# @CMAKE 25: change to usage of FetchContent_Declare SYSTEM parameter
+function(setAsSystemLibrary libname)
+	get_target_property(TEMP ${libname} INTERFACE_INCLUDE_DIRECTORIES)
+	set_target_properties(${libname} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
+endfunction()
+
 FetchContent_MakeAvailable(asio)
 set(ASIO_INCLUDE_DIR "${asio_SOURCE_DIR}/asio/include")
 
 FetchContent_MakeAvailable(crow)
-
-# Marks Crow include libraries as system
-# @CMAKE 25: change to usage of FetchContent_Declare SYSTEM parameter
-get_target_property(TEMP Crow INTERFACE_INCLUDE_DIRECTORIES)
-set_target_properties(Crow PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
+setAsSystemLibrary(Crow)
 
 FetchContent_MakeAvailable(nlohmann_json)
-
-# Marks JsonStruct include libraries as system
-# @CMAKE 25: change to usage of FetchContent_Declare SYSTEM parameter
-get_target_property(TEMP nlohmann_json INTERFACE_INCLUDE_DIRECTORIES)
-set_target_properties(nlohmann_json PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
+setAsSystemLibrary(nlohmann_json)
 
 FetchContent_MakeAvailable(result)
-
-# Marks Result include libraries as system
-# @CMAKE 25: change to usage of FetchContent_Declare SYSTEM parameter
-get_target_property(TEMP Result INTERFACE_INCLUDE_DIRECTORIES)
-set_target_properties(Result PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${TEMP}")
+setAsSystemLibrary(Result)
 
 find_library(gvc gvc)
 
@@ -91,4 +85,5 @@ macro(insertLLVM)
 	endif ()
 	message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 	message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+	# TODO: Mark all LLVM components as system with setAsSystemLibraries
 endmacro()
