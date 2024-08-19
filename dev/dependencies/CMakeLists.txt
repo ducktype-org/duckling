@@ -76,6 +76,7 @@ if(NOT base64_POPULATED)
 endif()
 
 add_dependencies(build_all_tests base64_tests roundtrip_test)
+
 # This macro inserts LLVM as a library to the project. It should be used in the top-level
 # CMakeList.txt file.
 # First it tries to find a downloaded version of LLVM located somewhere in `scripts/downloads`,

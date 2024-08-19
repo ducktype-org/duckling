@@ -1,8 +1,7 @@
 #pragma once
 
-#include <exception>
-#include <nlohmann/json.hpp>
 #include <base/exceptions.hpp>
+#include <nlohmann/json.hpp>
 
 template<>
 struct nlohmann::adl_serializer<std::exception> {
