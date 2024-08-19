@@ -1,6 +1,6 @@
 /**
  * @file acd.hpp
- * @brief Implementation of :code:`ACD` -- a simple structure that defines 
+ * @brief Implementation of :code:`ACD` -- a simple structure that defines
  * additional data that needs to be stored along side every cache entry.
  */
 #pragma once
