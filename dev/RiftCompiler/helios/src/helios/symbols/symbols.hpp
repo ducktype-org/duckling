@@ -5,10 +5,12 @@
 
 #include "../pst_ref.hpp"
 #include "../lookup_result.hpp"
+#include "../helios_errors.hpp"
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>
 #include <typesystem/typesystem.hpp>
+#include <expected>
 
 namespace compiler::helios {
 
@@ -106,18 +108,18 @@ namespace compiler::helios {
 	 * @brief Query result of lookup of single name within the symbol.
 	 * It essentially implements "symbol.name" operation.
 	 */
-	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, const LookupResult&);
-
+	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, const QueryLookup_Result&);
 
 	/**
 	 * A query that returns an "absolute path" to the symbol without aliases.
 	 */
 	DECLARE_QUERY(QueryDealias, SymID, const SymbolList&);
 
+	using QueryConstValueOf_Result = std::expected<i32, std::variant<QueryLookup_Result::error_type, errors::ExpressionParsingError>>;
 	/**
 	 * Calculates a value of a constant.
 	 */
-	DECLARE_QUERY(QueryConstValueOf, SymID, i32);
+	DECLARE_QUERY(QueryConstValueOf, SymID, const QueryConstValueOf_Result&)
 
 	/**
 	 * RPN - Reverse Polish Notation.
@@ -283,7 +285,7 @@ namespace compiler::helios {
 		 * For example, if we pass here a rpn::NumLiteral(5), then it will return 5 or if we pass
 		 * rpn::Identifier([C]), then a value of a C will be returned (if it's a constant).
 		 */
-		i32 parseValue(query::Context&, const KeyOf_parseValue&);
+		QueryConstValueOf_Result parseValue(query::Context&, const KeyOf_parseValue&);
 
 		/**
 		 * @brief Evaluates RPN expression. Expects a single element to be

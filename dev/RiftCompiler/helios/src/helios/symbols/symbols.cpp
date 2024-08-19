@@ -205,7 +205,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
 
-	struct IMPLEMENT_QUERY(QueryLookupInSymbol, LookupResult) {
+	struct IMPLEMENT_QUERY(QueryLookupInSymbol, QueryLookup_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.symbol.ref->kind) {
 			case SymbolKind::Using:
@@ -240,7 +240,8 @@ namespace compiler::helios {
 	/**
 	 * @brief Query extension for looking-up chain of names
 	 */
-	SymbolList lookupChain(query::Context& ctx, const LookupChainKey& key) {
+	std::expected<SymbolList, errors::AmbiguityError>
+		lookupChain(query::Context& ctx, const LookupChainKey& key) {
 		RIFT_ASSERT(!key.names.empty(), "lookupDotted received zero names");
 
 		// initial symbol:
@@ -250,7 +251,7 @@ namespace compiler::helios {
 
 		if (not first.isSingle()) {
 			// @TODO: error in state
-			RIFT_PANIC("ambiguity in lookupChain");
+			return std::unexpected(errors::AmbiguityError("ambiguity in lookupChain"));
 		}
 
 		if (key.names.size() == 1) return first.getAsSingle();
@@ -262,12 +263,14 @@ namespace compiler::helios {
 				{ result.back(), key.names[i], key.follow_wildcards }
 			);
 
-			if (!append_res.isSingle()) {
+			IF_ERR_GET_RET_ELSE_VALUE(append_res, append_res_value)
+
+			if (!append_res_value.isSingle()) {
 				// @TODO: error in state
-				RIFT_PANIC("ambiguity in lookup");
+				return std::unexpected(errors::AmbiguityError("ambiguity in lookupChain"));
 			}
 
-			auto single_append_res = append_res.getAsSingle();
+			auto single_append_res = append_res_value.getAsSingle();
 			result.insert(result.end(), single_append_res.begin(), single_append_res.end());
 		}
 		return result;
@@ -281,10 +284,10 @@ namespace compiler::helios {
 				auto names      = using_stmt->getPointed();
 				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
 				RIFT_ASSERT(
-					not lookup_res.empty(),
+					lookup_res.has_value() && not *lookup_res.empty(),
 					"Using points to something that does not exists or is empty"
 				);
-				return ctx.query<QueryLinkedScope>({ lookup_res.back() });
+				return ctx.query<QueryLinkedScope>({ *lookup_res.back() });
 			}
 			case SymbolKind::Namespace: {
 				auto namespace_stmt = dynamic_cast<const pst::Namespace*>(key.ref->pst_stmt.get());
@@ -430,7 +433,7 @@ namespace compiler::helios {
 		return { rpn, key.expr_scope };
 	}
 
-	i32 rpn::parseValue(query::Context& ctx, const KeyOf_parseValue& key) {
+	QueryConstValueOf_Result rpn::parseValue(query::Context& ctx, const KeyOf_parseValue& key) {
 		variant_match(key.expr) {
 			variant_case(rpn::Identifier, idt) {
 				// .back() works for constants only.
@@ -611,6 +614,7 @@ namespace compiler::helios {
 			return a;
 		}
 
+
 		i32 a_value = parseValue(ctx, KeyOf_parseValue{ a, expr_scope });
 		i32 b_value = parseValue(ctx, KeyOf_parseValue{ b, expr_scope });
 
@@ -642,7 +646,7 @@ namespace compiler::helios {
 		return NumValue{ base::StrId(std::to_string(value).c_str()) };
 	}
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, i32) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, QueryConstValueOf_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			RIFT_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 

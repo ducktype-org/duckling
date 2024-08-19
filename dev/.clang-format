@@ -2,7 +2,7 @@
 
 # Project settings
 Language:        Cpp
-Standard:       'c++20'
+Standard:       'c++23'
 
 
 # Alignments

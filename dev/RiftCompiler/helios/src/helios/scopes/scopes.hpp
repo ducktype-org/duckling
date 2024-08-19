@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/string_id.hpp>
+#include <expected>
 #include <query_framework/query_int.hpp>
 #include <base/perfect_hash.hpp>
 #include <pst_parser/elements/elements.hpp>
@@ -9,6 +10,7 @@
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
 #include "../lookup_result.hpp"
+#include "../helios_errors.hpp"
 
 // @TODO: relax this dependency
 #include <frontend/module_tree/queries.hpp>
@@ -74,15 +76,16 @@ namespace compiler::helios {
 		bool        operator==(const KeyOf_LookupInScope&) const = default;
 	};
 
+    using QueryLookup_Result = std::expected<LookupResult, std::variant<errors::AmbiguityError, errors::SymbolNotFoundError>>;
 	/**
 	 * @brief Performs lookup of single name inside given scope.
 	 */
-	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, const LookupResult&);
+	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, const QueryLookup_Result &);
 
 	/**
 	 * @brief Performs lookup of single name inside given scope and its parents.
 	 */
-	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, const LookupResult&);
+	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, const QueryLookup_Result &);
 
 	/**
 	 * @brief Query all symbols that are directly inside given scope.
