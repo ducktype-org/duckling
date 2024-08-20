@@ -39,8 +39,8 @@ private:
 	void test2() { fail("oops!"); }
 
 	void test3() {
-		assert(true, "bad");
-		assert(false, "good");
+		assertTrue(true, "bad");
+		assertTrue(false, "good");
 	}
 
 	void test4() {
@@ -49,12 +49,12 @@ private:
 	}
 
 	void test5() {
-		assert(false, "this is critical and stops the test");
+		assertTrue(false, "this is critical and stops the test");
 		message("this is not displayed");
 	}
 
 	void test6() {
-		assert(false, "this is not critical and won't end the test", false);
+		assertTrue(false, "this is not critical and won't end the test", false);
 		message("this is displayed");
 	}
 
@@ -63,7 +63,7 @@ private:
 		std::this_thread::sleep_for(123ms);
 	}
 
-	void test8() { assert(false, "oops!"); }
+	void test8() { assertTrue(false, "oops!"); }
 };
 
 // If the main is same as bellow you can just write:

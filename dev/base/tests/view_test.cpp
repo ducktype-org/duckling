@@ -19,10 +19,10 @@ public:
 		{ base::RawView view(string, 18); }
 		base::RawView view(string, 18);
 
-		assert(view.stringView() == "Some random string", "bad RawView.stringView()");
-		assert(view.stdString() == "Some random string", "bad RawView.stdString()");
-		assert(view.getBegin() == string, "bad RawView.begin");
-		assert(view.size() == 18, "bad RawView.size");
+		assertTrue(view.stringView() == "Some random string", "bad RawView.stringView()");
+		assertTrue(view.stdString() == "Some random string", "bad RawView.stdString()");
+		assertTrue(view.getBegin() == string, "bad RawView.begin");
+		assertTrue(view.size() == 18, "bad RawView.size");
 	}
 
 	void owningViewTest() {
@@ -38,18 +38,20 @@ public:
 
 		{
 			base::OwningView copy_view(string_2);
-			assert(
+			assertTrue(
 				copy_view.view().getBegin() != reinterpret_cast<const byte*>(string_2),
 				"Owning view didn't make memory copy (1)"
 			);
-			assert(copy_view.view().stringView() == string_2, "Owning view has bad content (1)");
+			assertTrue(
+				copy_view.view().stringView() == string_2, "Owning view has bad content (1)"
+			);
 
 			auto copy_view_2 = base::OwningView::copy(base::RawView(string_1, 20));
-			assert(
+			assertTrue(
 				copy_view_2.view().getBegin() != reinterpret_cast<const byte*>(string_1),
 				"Owning view didn't make memory copy (2)"
 			);
-			assert(
+			assertTrue(
 				copy_view_2.view().stringView() == reinterpret_cast<const char*>(string_1),
 				"Owning view has bad content (2)"
 			);

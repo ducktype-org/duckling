@@ -6,8 +6,8 @@ namespace vm::api {
 	struct LoadProgramError {
 		std::string why;
 
-		JS_OBJ(why);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(LoadProgramError, why);
 	};
 }
 
-REGISTER_PARSE_TYPE_ALIAS(vm::api::LoadProgramError, "LoadProgramError")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::LoadProgramError, "LoadProgramError")
