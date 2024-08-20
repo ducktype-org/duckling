@@ -156,7 +156,7 @@ class BarGraph:
 		))
 
 	def getPoints(self, n: int) -> list:
-		assertTrue(n >= 2)
+		assert(n >= 2)
 		# margin = 70
 		if (n == 2): 
 			margin = 100
@@ -170,7 +170,7 @@ class BarGraph:
 		for _ in range(n):
 			out += [pos]
 			pos += interval
-		assertTrue(len(out) == n)
+		assert(len(out) == n)
 		return out
 
 	def save(self, f: str):
