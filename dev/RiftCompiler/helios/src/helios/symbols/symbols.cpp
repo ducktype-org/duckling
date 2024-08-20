@@ -240,14 +240,16 @@ namespace compiler::helios {
 	/**
 	 * @brief Query extension for looking-up chain of names
 	 */
-	std::expected<SymbolList, errors::AmbiguityError>
+	std::expected<SymbolList, std::variant<errors::AmbiguityError, QueryLookup_Result::error_type>>
 		lookupChain(query::Context& ctx, const LookupChainKey& key) {
 		RIFT_ASSERT(!key.names.empty(), "lookupDotted received zero names");
 
 		// initial symbol:
-		auto first = ctx.query<QueryLookupInScopeAndParents>(
+		auto first_query_result = ctx.query<QueryLookupInScopeAndParents>(
 			{ key.begin_scope, key.names[0], key.follow_wildcards }
 		);
+
+		IF_ERR_RET_ELSE_VALUE(first_query_result, first)
 
 		if (not first.isSingle()) {
 			// @TODO: error in state
@@ -263,7 +265,7 @@ namespace compiler::helios {
 				{ result.back(), key.names[i], key.follow_wildcards }
 			);
 
-			IF_ERR_GET_RET_ELSE_VALUE(append_res, append_res_value)
+			IF_ERR_RET_ELSE_VALUE(append_res, append_res_value)
 
 			if (!append_res_value.isSingle()) {
 				// @TODO: error in state
@@ -336,9 +338,10 @@ namespace compiler::helios {
 		return (hash_1 * 143 + hash_2 * 7) * 2 + follow_wildcards;
 	}
 
-	struct IMPLEMENT_QUERY(QueryDealias, SymbolList) {
+	struct
+		IMPLEMENT_QUERY(QueryDealias, std::expected<SymbolList COMMA QueryLookup_Result::error_type>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			if (kind(key) != SymbolKind::Alias) return { key };
+			if (kind(key) != SymbolKind::Alias) return SymbolList{ key };
 
 			auto&& alias_definition
 				= dynamic_cast<const pst::Alias*>(getSymRef(key)->pst_stmt.get());
@@ -346,13 +349,16 @@ namespace compiler::helios {
 			bool       first_symbol = true;
 			SymbolList result;
 			for (auto&& pointed: alias_definition->getPointed()) {
-				auto&& pointed_symbol_lookup
+				auto&& pointed_symbol_lookup_result
 					= first_symbol
 				        ? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
 				        : ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false });
 
+				IF_ERR_RET_ELSE_VALUE(pointed_symbol_lookup_result, pointed_symbol_lookup)
+
 				for (auto&& path = pointed_symbol_lookup.getAsSingle(); auto&& path_symbol: path) {
-					auto&& dealiased = ctx.query<QueryDealias>(path_symbol);
+					auto&& query_dealias_result = ctx.query<QueryDealias>(path_symbol);
+					IF_ERR_RET_ELSE_VALUE(query_dealias_result, dealiased)
 					result.insert(result.end(), dealiased.begin(), dealiased.end());
 				}
 
@@ -386,7 +392,8 @@ namespace compiler::helios {
 		}
 	}
 
-	rpn::RPNExpr rpn::makeRPN(query::Context& ctx, KeyOf_RPNmakeRPN key) {
+	std::expected<rpn::RPNExpr, errors::ExpressionParsingError>
+		rpn::makeRPN(query::Context& ctx, KeyOf_RPNmakeRPN key) {
 		std::vector<ExprElem> rpn;
 		std::stack<ExprElem>  st;
 		for (auto&& e: key.expr) {
@@ -407,8 +414,9 @@ namespace compiler::helios {
 					rpn.emplace_back(NumValue{ num.num_id });
 				}
 				variant_case(pst::Expr::Group, group) {
-					auto&& res
+					auto&& rpn_making_result
 						= makeRPN(ctx, KeyOf_RPNmakeRPN{ group.expr->elements, key.expr_scope });
+					IF_ERR_RET_ELSE_VALUE(rpn_making_result, res)
 					rpn.insert(rpn.end(), res.elements.begin(), res.elements.end());
 				}
 				variant_case(pst::Expr::KeywordValue, keyword_val) {
@@ -416,8 +424,9 @@ namespace compiler::helios {
 				}
 				variant_case(pst::Expr::CommaSeparated, tuple) {
 					for (auto&& type_expr: tuple.expr) {
-						auto&& res
+						auto&& rpn_making_result
 							= makeRPN(ctx, KeyOf_RPNmakeRPN{ type_expr->elements, key.expr_scope });
+						IF_ERR_RET_ELSE_VALUE(rpn_making_result, res)
 						rpn.insert(rpn.end(), res.elements.begin(), res.elements.end());
 					}
 					rpn.emplace_back(TupleConstructor{ tuple.expr.size() });
@@ -430,27 +439,32 @@ namespace compiler::helios {
 			st.pop();
 		}
 
-		return { rpn, key.expr_scope };
+		return RPNExpr{ rpn, key.expr_scope };
 	}
 
 	QueryConstValueOf_Result rpn::parseValue(query::Context& ctx, const KeyOf_parseValue& key) {
 		variant_match(key.expr) {
 			variant_case(rpn::Identifier, idt) {
 				// .back() works for constants only.
-				auto&& sym_list = ctx.query<QueryDealias>(idt.symbol_list.back());
+				auto&& query_dealias_result = ctx.query<QueryDealias>(idt.symbol_list.back());
+				IF_ERR_RET_ELSE_VALUE(query_dealias_result, sym_list)
 				return ctx.query<QueryConstValueOf>(sym_list.back());
 			}
 			variant_case(rpn::NamedIdentifier, idt) {
-				auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+				auto&& query_lookup_result = ctx.query<QueryLookupInScopeAndParents>(
 					{ key.expr_scope, idt.symbol_name, true }
 				);
-				return parseValue(
+				IF_ERR_RET_ELSE_VALUE(query_lookup_result, sym_list)
+
+				auto&& try_parse_value_result = parseValue(
 					ctx,
 					KeyOf_parseValue{
 						Identifier{ sym_list.getAsSingle() },
 						key.expr_scope,
 					}
 				);
+				IF_ERR_RET_ELSE_VALUE(try_parse_value_result, result)
+				return result;
 			}
 			variant_case(rpn::Operator, op) { RIFT_PANIC("Cannot get a value from rpn::Operator"); }
 			variant_case(rpn::KeywordValue, keyword_value) {
@@ -462,7 +476,7 @@ namespace compiler::helios {
 		RIFT_PANIC("Error in RPNValue expr...");
 	}
 
-	rpn::ExprElem rpn::evalExpr(query::Context& ctx, const RPNExpr& expr) {
+	rpn::RPNEvaluation_Result rpn::evalExpr(query::Context& ctx, const RPNExpr& expr) {
 		// This is a nice RPN debug print.
 		std::cout << "RPN: \n";
 		for (auto&& e: expr.elements) {
@@ -507,7 +521,7 @@ namespace compiler::helios {
 					const auto second = st.top();
 					st.pop();
 
-					st.push(evalOperator(
+					auto eval_result = evalOperator(
 						ctx,
 						KeyOf_evalOperator{
 							second,
@@ -515,7 +529,9 @@ namespace compiler::helios {
 							first,
 							expr.scope,
 						}
-					));
+					);
+					IF_ERR_RET_ELSE_VALUE(eval_result, evaluated)
+					st.push(evaluated);
 				}
 				variant_case(rpn::NumValue, num) { st.emplace(num); }
 				variant_case(rpn::TupleConstructor, tuple) {
@@ -537,7 +553,8 @@ namespace compiler::helios {
 		return st.top();
 	}
 
-	rpn::ExprElem rpn::evalOperator(query::Context& ctx, const KeyOf_evalOperator& key) {
+	rpn::RPNEvaluation_Result
+		rpn::evalOperator(query::Context& ctx, const KeyOf_evalOperator& key) {
 		auto [a, op, b, expr_scope] = key;
 
 		if (op.oper_id == ".") {
@@ -546,9 +563,10 @@ namespace compiler::helios {
 			variant_match(a) {
 				variant_case(rpn::Identifier, idt) { looked_up_symbol = idt.symbol_list; }
 				variant_case(rpn::NamedIdentifier, idt) {
-					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+					auto&& query_lookup_result = ctx.query<QueryLookupInScopeAndParents>(
 						{ key.expr_scope, idt.symbol_name, true }
 					);
+					IF_ERR_RET_ELSE_VALUE(query_lookup_result, sym_list)
 					looked_up_symbol = sym_list.getAsSingle();
 				}
 				variant_default {
@@ -558,15 +576,14 @@ namespace compiler::helios {
 			}
 			variant_match(b) {
 				variant_case(rpn::NamedIdentifier, idt_right) {
-					auto&& new_symbols = ctx.query<QueryLookupInSymbol>({
-																			looked_up_symbol.back(),
-																			idt_right.symbol_name,
-																			true,
-																		})
-					                         .getAsSingle();
-					looked_up_symbol.insert(
-						looked_up_symbol.end(), new_symbols.begin(), new_symbols.end()
-					);
+					auto&& query_lookup_result = ctx.query<QueryLookupInSymbol>({
+						looked_up_symbol.back(),
+						idt_right.symbol_name,
+						true,
+					});
+					IF_ERR_RET_ELSE_VALUE(query_lookup_result, new_symbols)
+					auto&& single = new_symbols.getAsSingle();
+					looked_up_symbol.insert(looked_up_symbol.end(), single.begin(), single.end());
 					return Identifier{ looked_up_symbol };
 				}
 				variant_default {
@@ -615,8 +632,12 @@ namespace compiler::helios {
 		}
 
 
-		i32 a_value = parseValue(ctx, KeyOf_parseValue{ a, expr_scope });
-		i32 b_value = parseValue(ctx, KeyOf_parseValue{ b, expr_scope });
+		auto&& a_parsing_result = parseValue(ctx, KeyOf_parseValue{ a, expr_scope });
+		auto&& b_parsing_result = parseValue(ctx, KeyOf_parseValue{ b, expr_scope });
+		IF_ERR_RET_ELSE_VALUE(a_parsing_result, a_value);
+		IF_ERR_RET_ELSE_VALUE(b_parsing_result, b_value);
+		//		i32 a_value =
+		//		i32 b_value =
 
 		i32 value{};
 
@@ -654,17 +675,20 @@ namespace compiler::helios {
 				= dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
 			const ScopeID key_scope = scope(key);
 
-			const auto& expr = rpn::makeRPN(
+			const auto& rpn_making_result = rpn::makeRPN(
 				ctx,
 				{
 					const_symbol->getValue()->elements,
 					key_scope,
 				}
 			);
+			IF_ERR_RET_ELSE_VALUE(rpn_making_result, expr)
+			auto&& rpn_eval_result = rpn::evalExpr(ctx, expr);
+			IF_ERR_RET_ELSE_VALUE(rpn_eval_result, evaluated)
 			return parseValue(
 				ctx,
 				rpn::KeyOf_parseValue{
-					rpn::evalExpr(ctx, expr),
+					evaluated,
 					key_scope,
 				}
 			);
@@ -675,7 +699,6 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
-    using ParseTypeFromExpr_Result = std::expected<ts::TypeInfo, std::variant<>>;
 	/**
 	 * Parses the expression assuming it evaluates to a type. Panics otherwise.
 	 * @param ctx Context passed to a query.
@@ -683,7 +706,7 @@ namespace compiler::helios {
 	 * @param expr_scope A scope where the expression has been expressed.
 	 * @return ts::TypeInfo with information about the evaluated type.
 	 */
-	ts::TypeInfo
+	ParseTypeFromExpr_Result
 		parseTypeFromExpr(query::Context& ctx, const rpn::ExprElem& expr, ScopeID expr_scope) {
 		// This is a std::unordered_map, not base::HashMap, because base::HashMap
 		// does not support this constructor.
@@ -716,14 +739,13 @@ namespace compiler::helios {
 			variant_case(rpn::NamedIdentifier, named_identifier) {
 				const auto it = BUILTINS.find(named_identifier.symbol_name);
 				if (it == BUILTINS.end()) {
-					const auto symbol
-						= ctx.query<QueryLookupInScopeAndParents>({
-																	  expr_scope,
-																	  named_identifier.symbol_name,
-																	  true,
-																  })
-					          .leaves.back();
-					return ctx.query<QueryTypeFromDefinition>(symbol);
+					const auto symbol_query_result = ctx.query<QueryLookupInScopeAndParents>({
+						expr_scope,
+						named_identifier.symbol_name,
+						true,
+					});
+					IF_ERR_RET_ELSE_VALUE(symbol_query_result, symbol)
+					return ctx.query<QueryTypeFromDefinition>(symbol.leaves.back());
 				}
 				return it->second;
 			}
@@ -744,10 +766,11 @@ namespace compiler::helios {
 				std::vector<ts::ComponentType> tuple_components;
 				tuple_components.reserve(tuple_type.elements.size());
 
-				for (auto&& tuple_subtype: tuple_type.elements)
-					tuple_components.emplace_back(
-						parseTypeFromExpr(ctx, tuple_subtype, expr_scope), false
-					);
+				for (auto&& tuple_subtype: tuple_type.elements) {
+					auto&& parsing_result = parseTypeFromExpr(ctx, tuple_subtype, expr_scope);
+					IF_ERR_RET_ELSE_VALUE(parsing_result, parsed_subtype)
+					tuple_components.emplace_back(parsed_subtype, false);
+				}
 				std::reverse(tuple_components.begin(), tuple_components.end());
 
 				return ctx.query<ts::QueryTupleType>({ tuple_components });
@@ -756,12 +779,15 @@ namespace compiler::helios {
 				std::vector<ts::TypeInfo> variant_types;
 
 				variant_types.reserve(variant_type.elements.size());
-				for (auto&& tuple_subtype: variant_type.elements)
-					variant_types.push_back(parseTypeFromExpr(ctx, tuple_subtype, expr_scope));
+				for (auto&& variant_subtype: variant_type.elements) {
+					auto&& parsing_result = parseTypeFromExpr(ctx, variant_subtype, expr_scope);
+					IF_ERR_RET_ELSE_VALUE(parsing_result, parsed_variant_subtype)
+					variant_types.push_back(parsed_variant_subtype);
+				}
 
 				return ctx.query<ts::QueryVariantType>({ variant_types });
 			}
-			variant_default { RIFT_PANIC("Unhandlable type during parsing type from expr..."); }
+			variant_default { RIFT_PANIC("Unhandleble type during parsing type from expr..."); }
 		}
 		RIFT_PANIC("Couldn't parse the type.");
 	}
@@ -773,15 +799,19 @@ namespace compiler::helios {
 	 * @param expr_scope A scope where the expression has been expressed.
 	 * @return ts::TypeInfo with information about the evaluated type.
 	 */
-	ts::TypeInfo parseTypeFromExpr(
+	ParseTypeFromExpr_Result parseTypeFromExpr(
 		query::Context& ctx, const tpc::ParserCBorrowRef<pst::Expr>& expr, ScopeID expr_scope
 	) {
-		const auto rpn_expr   = rpn::makeRPN(ctx, { expr->elements, expr_scope });
-		const auto final_type = rpn::evalExpr(ctx, rpn_expr);
-		return parseTypeFromExpr(ctx, final_type, expr_scope);
+		const auto rpn_expr_result = rpn::makeRPN(ctx, { expr->elements, expr_scope });
+		IF_ERR_RET_ELSE_VALUE(rpn_expr_result, rpn_expr);
+		const auto final_type_result = rpn::evalExpr(ctx, rpn_expr);
+		IF_ERR_RET_ELSE_VALUE(final_type_result, final_type);
+		auto parsing_result = parseTypeFromExpr(ctx, final_type, expr_scope);
+		IF_ERR_RET_ELSE_VALUE(parsing_result, result)
+		return result;
 	}
 
-	struct IMPLEMENT_QUERY(QueryTypeOf, ::ts::TypeInfo) {
+	struct IMPLEMENT_QUERY(QueryTypeOf, ParseTypeFromExpr_Result) {
 		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
@@ -793,7 +823,7 @@ namespace compiler::helios {
 		public:
 			PstStmtVisitor_GetTypeOf(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
-			base::Optional<ts::TypeInfo> symbol_type_info;
+			base::Optional<ParseTypeFromExpr_Result> symbol_type_info;
 
 			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getType()); }
 
@@ -844,7 +874,7 @@ namespace compiler::helios {
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
 
-	struct IMPLEMENT_QUERY(QueryStructSymbolData, StructSymbolData) {
+	struct IMPLEMENT_QUERY(QueryStructSymbolData, QueryStructSymbolData_Result) {
 		struct StructDataParser final: pst::PstStmtVisitorPanicky {
 			base::Optional<base::StrId>                             name;
 			base::Optional<tpc::ParserCBorrowRef<pst::InheritList>> base_classes;
@@ -887,8 +917,11 @@ namespace compiler::helios {
 			struct_info.name = struct_data_parser.name.value();
 
 			if_opt_some(struct_data_parser.base_classes, bases) {
-				for (auto&& base: bases)
-					struct_info.bases.push_back(parseTypeFromExpr(ctx, base, scope(key)));
+				for (auto&& base: bases) {
+					auto&& parsing_result = parseTypeFromExpr(ctx, base, scope(key));
+					IF_ERR_RET_ELSE_VALUE(parsing_result, parsed)
+					struct_info.bases.push_back(parsed);
+				}
 			}
 
 			return struct_info;

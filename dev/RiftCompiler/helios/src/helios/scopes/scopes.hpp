@@ -76,16 +76,17 @@ namespace compiler::helios {
 		bool        operator==(const KeyOf_LookupInScope&) const = default;
 	};
 
-    using QueryLookup_Result = std::expected<LookupResult, std::variant<errors::AmbiguityError, errors::SymbolNotFoundError>>;
+	using QueryLookup_Result = std::
+		expected<LookupResult, std::variant<errors::AmbiguityError, errors::SymbolNotFoundError>>;
 	/**
 	 * @brief Performs lookup of single name inside given scope.
 	 */
-	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, const QueryLookup_Result &);
+	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, const QueryLookup_Result&);
 
 	/**
 	 * @brief Performs lookup of single name inside given scope and its parents.
 	 */
-	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, const QueryLookup_Result &);
+	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, const QueryLookup_Result&);
 
 	/**
 	 * @brief Query all symbols that are directly inside given scope.

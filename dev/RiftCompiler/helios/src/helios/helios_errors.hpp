@@ -3,7 +3,9 @@
 #include <string>
 
 // Some simple helpers
-#define IF_ERR_GET_RET_ELSE_VALUE(value, name) if(!value.has_value()) return std::unexpected(value.error()); auto &&name = *value;
+#define IF_ERR_RET_ELSE_VALUE(value, name)                         \
+	if (!value.has_value()) return std::unexpected(value.error()); \
+	auto&& name = *value;
 
 namespace compiler::helios::errors {
 	/**

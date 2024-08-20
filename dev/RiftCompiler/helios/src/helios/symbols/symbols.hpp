@@ -114,9 +114,10 @@ namespace compiler::helios {
 	/**
 	 * A query that returns an "absolute path" to the symbol without aliases.
 	 */
-	DECLARE_QUERY(QueryDealias, SymID, const SymbolList&);
+	DECLARE_QUERY(QueryDealias, SymID, const std::expected<SymbolList COMMA QueryLookup_Result::error_type>&);
 
-	using QueryConstValueOf_Result = std::expected<i32, std::variant<QueryLookup_Result::error_type, errors::ExpressionParsingError>>;
+	using QueryConstValueOf_Result = std::
+		expected<i32, std::variant<QueryLookup_Result::error_type, errors::ExpressionParsingError>>;
 	/**
 	 * Calculates a value of a constant.
 	 */
@@ -224,6 +225,8 @@ namespace compiler::helios {
 			ScopeID expr_scope;
 		};
 
+		using RPNEvaluation_Result = std::expected<ExprElem, QueryConstValueOf_Result::error_type>;
+
 		/**
 		 * @brief RPN (postfix) expression with scope produced by makeRPN().
 		 */
@@ -242,7 +245,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Parses an expression from PST into RPN.
 		 */
-		RPNExpr makeRPN(query::Context&, KeyOf_RPNmakeRPN);
+		std::expected<RPNExpr, errors::ExpressionParsingError> makeRPN(query::Context&, KeyOf_RPNmakeRPN);
 
 		struct KeyOf_evalOperator {
 			/**
@@ -266,7 +269,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Evaluates an operation `a (op) b`.
 		 */
-		ExprElem evalOperator(query::Context&, const KeyOf_evalOperator&);
+		RPNEvaluation_Result evalOperator(query::Context&, const KeyOf_evalOperator&);
 
 		struct KeyOf_parseValue {
 			/**
@@ -292,13 +295,17 @@ namespace compiler::helios {
 		 * @brief Evaluates RPN expression. Expects a single element to be
 		 * left and the end of the evaluation and returns it. Panics if otherwise.
 		 */
-		ExprElem evalExpr(query::Context&, const RPNExpr&);
+		RPNEvaluation_Result evalExpr(query::Context&, const RPNExpr&);
 	}
+
+	using ParseTypeFromExpr_Result = std::expected<
+		ts::TypeInfo,
+		std::variant<QueryLookup_Result::error_type, errors::ExpressionParsingError>>;
 
 	/**
 	 * @brief Query type of the symbol.
 	 */
-	DECLARE_QUERY(QueryTypeOf, SymID, ts::TypeInfo)
+	DECLARE_QUERY(QueryTypeOf, SymID, const ParseTypeFromExpr_Result&)
 
 	/**
 	 * @brief Query ts::TypeInfo from a symbol definition (like struct definition).
@@ -333,12 +340,14 @@ namespace compiler::helios {
 		std::vector<ts::TypeInfo> bases;
 	};
 
+	using QueryStructSymbolData_Result = std::variant<StructSymbolData, ParseTypeFromExpr_Result::error_type>;
+
 	/**
 	 * @brief Query all the information about a struct definition.
 	 * Panics if the given `SymID` is not a struct.
 	 * More information on `StructSymbolData` in it's definition.
 	 */
-	DECLARE_QUERY(QueryStructSymbolData, SymID, const StructSymbolData&)
+	DECLARE_QUERY(QueryStructSymbolData, SymID, const QueryStructSymbolData_Result&)
 
 	namespace code {
 		struct Expr;
