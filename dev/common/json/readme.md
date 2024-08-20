@@ -42,7 +42,7 @@ where `CONSTEXPR_CAT` concatenates string in compile time.
 
 ### Structs
 
-nlohmann_json can parse JSON and populate structures with content by adding some metadata to the C++ structs.
+nlohmann::json can parse JSON and populate structures with content.
 
 ```json
 {
@@ -73,8 +73,8 @@ JsonObject object = nlohmann::from_json(json_data);
 Serializing the struct to JSON could be done like this:
 
 ```c++
-using nlohmann;
-json json_obj = obj;  // simple as that
+JsonObject obj = { ... };
+nlohmann::json json_obj = obj;  // Simple as that
 std::cout << json_obj << '\n';  // It is very flexible
 ```
 
