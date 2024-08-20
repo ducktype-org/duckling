@@ -6,6 +6,7 @@
 #include "../pst_ref.hpp"
 #include "../lookup_result.hpp"
 #include "../helios_errors.hpp"
+#include <helios/scopes/scopes.hpp>
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>

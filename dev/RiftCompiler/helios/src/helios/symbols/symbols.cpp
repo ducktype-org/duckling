@@ -284,10 +284,10 @@ namespace compiler::helios {
 				auto names      = using_stmt->getPointed();
 				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
 				RIFT_ASSERT(
-					lookup_res.has_value() && not *lookup_res.empty(),
+					lookup_res.has_value() && not lookup_res.value().empty(),
 					"Using points to something that does not exists or is empty"
 				);
-				return ctx.query<QueryLinkedScope>({ *lookup_res.back() });
+				return ctx.query<QueryLinkedScope>({ lookup_res.value().back() });
 			}
 			case SymbolKind::Namespace: {
 				auto namespace_stmt = dynamic_cast<const pst::Namespace*>(key.ref->pst_stmt.get());
@@ -675,6 +675,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
+    using ParseTypeFromExpr_Result = std::expected<ts::TypeInfo, std::variant<>>;
 	/**
 	 * Parses the expression assuming it evaluates to a type. Panics otherwise.
 	 * @param ctx Context passed to a query.
