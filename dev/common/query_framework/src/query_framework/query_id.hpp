@@ -1,3 +1,7 @@
+/**
+ * @file query_id.hpp
+ * @brief Definition of query id type.
+ */
 #pragma once
 
 #include <base/ints.hpp>

@@ -1,6 +1,7 @@
 /**
  * @file parameter.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
+ * @brief This class stores all the information about one parameter.
  */
 
 #pragma once

@@ -1,8 +1,10 @@
 \page json-module JSON Module
 
-**JSON is broken, see: issue in ZPP1**
+@warning JSON is deprecated.
+JSON was added by ZPP 1.1 and uses external library. It was concluded that the external library is buggy or behaves strangely. 
 
 # JSON module documentation
+
 ## Library json_struct
 Source and documentation:
 https://github.com/jorgen/json_struct

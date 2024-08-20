@@ -1,3 +1,15 @@
+/**
+ * @file defer.hpp
+ * @brief Defer is a macro that postpones execution of expression till the end of scope.
+ *
+ * @note Multiple defer statements cannot be used in the same line.
+ *
+ * ### Usage:
+ * @include defer_example.cpp
+ *
+ * @example defer_example.cpp
+ */
+
 #pragma once
 
 #include "define_helper.hpp"

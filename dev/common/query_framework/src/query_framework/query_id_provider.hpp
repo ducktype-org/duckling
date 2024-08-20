@@ -1,3 +1,7 @@
+/**
+ * @file query_id_provider.hpp
+ * @brief Functions responsible for creating unique query id-s.
+ */
 #pragma once
 
 #include "query_id.hpp"
