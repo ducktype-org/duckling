@@ -28,12 +28,7 @@ struct Bar {
 JSON_REGISTER_TYPE_WITH_NAME(Bar, "Barbara")
 
 struct Empty {};
-// An empty struct has a special register macro
-JSON_REGISTER_EMPTY_STRUCT(Empty)
-
-struct Empty2 {};
-// It also comes with a name variant
-JSON_REGISTER_EMPTY_STRUCT_WITH_NAME(Empty2, "BetterEmpty")
+JSON_REGISTER_TYPE(Empty)
 
 int main() {
 	using MyVar = std::variant<Foo, Bar, Empty>;

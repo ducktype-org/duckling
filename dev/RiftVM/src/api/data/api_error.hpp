@@ -10,4 +10,4 @@ namespace vm::api {
 	using ApiError = std::variant<ProcessError, CoreOperationError, WrongResponse>;
 }
 
-JSON_REGISTER_EMPTY_STRUCT_WITH_NAME(vm::api::WrongResponse, "WrongResponse")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::WrongResponse, "WrongResponse")
