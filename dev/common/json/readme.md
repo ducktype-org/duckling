@@ -27,7 +27,7 @@ JSON_REGISTER_TEMPLATE_WITH_NAME(std::vector, "vector")
 of for variadic templates
 
 ```c++
-JSON_REGISTER_TEMPLATE_VARIADIC_WITH_NAME(std::tuble, "tuple")
+JSON_REGISTER_TEMPLATE_VARIADIC_WITH_NAME(std::tuple, "tuple")
 ```
 
 Custom type names can be achieved by implementing `TypeParseTraits`, for example for tables:
@@ -42,7 +42,7 @@ where `CONSTEXPR_CAT` concatenates string in compile time.
 
 ### Structs
 
-json_struct can parse JSON and automatically populate structures with content by adding some metadata to the C++ structs.
+nlohmann_json can parse JSON and populate structures with content by adding some metadata to the C++ structs.
 
 ```json
 {
@@ -60,87 +60,39 @@ struct JsonObject {
     std::string two;
     double three;
 
-    JS_OBJ(one, two, three);
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(JsonObject, one, two, three);
 };
-```
-
-or
-
-```c++
-struct JsonObject {
-    int one;
-    std::string two;
-    double three;
-};
-JS_OBJ_EXT(JsonObject, one, two, three);
-```
-
-or for empty structs:
-
-```c++
-struct JsonEmptyObject {};
-JS_EMPTY(Object)
 ```
 
 Populating the struct would look like this:
 
 ```c++
-JS::ParseContext context(json_data);
-JsonObject obj;
-context.parseTo(obj);
+JsonObject object = nlohmann::from_json(json_data);
 ```
 
 Serializing the struct to JSON could be done like this:
 
 ```c++
-std::string pretty_json = JS::serializeStruct(obj);
-// or
-std::string compact_json = JS::serializeStruct(obj, JS::SerializerOptions(JS::SerializerOptions::Compact));
+using nlohmann;
+json json_obj = obj;  // simple as that
+std::cout << json_obj << '\n';  // It is very flexible
 ```
 
 ### Variants
-For now, only serialization of `std::variant<Args...>` is prepared, where each `Arg`$\in$`Args` is either a struct serialized with `JS_OBJ` or `JS_OBJ_EXT` or `JS_EMPTY`, or an empty struct. Each `Arg` must have a registered type as described above.
-> Arg CANNOT be one of std::string, std::variant, std::unique_ptr, table, nor any primitive type
+For now, only serialization of `std::variant<Args...>` is prepared, where each `Arg`$\in$`Args` is registered with `JSON_REGISTER_TYPE(_WITH_NAME)`. 
 
-### Predefined serialization
-The following types have predefined serialization in json_struct
-- std::string
-- double
-- float
-- uint8_t
-- int16_t
-- uint16_t
-- int32_t
-- uint32_t
-- int64_t
-- uint64_t
-- std::unique_ptr
-- bool
-- std::vector
-- [T]
-### Custom serialization
-You can implement custom serialization by implementing `TypeHandler` class. For example:
+### Serialization
+Most standard types have a predefined serialization, but you can have custom serialization by specializing `adl_serializer` struct. For example:
 ```c++
-namespace JS {
 template<>
-struct TypeHandler<uint32_t> {
-public:
-    static inline Error to(uint32_t &to_type, ParseContext &context) {
-        char *pointer;
-        unsigned long value = strtoul(context.token.value.data, &pointer, 10);
-        to_type = static_cast<unsigned int>(value);
-        if (context.token.value.data == pointer)
-            return Error::FailedToParseInt;
-        return Error::NoError;
+struct nlohmann::adl_serializer<uint32_t> {
+    static void to_json(json& j, const uint32_t& e) {
+        j["value"] = uint32_t;
+        j["field_name"] = "This is how simple it is!";  // Some additional data if you want
     }
 
-    static void from(const uint32_t &from_type, Token &token, Serializer &serializer) {
-        std::string buf = std::to_string(from_type);
-        token.value_type = Type::Number;
-        token.value.data = buf.data();
-        token.value.size = buf.size();
-        serializer.write(token);
+    static void from_json(const json& j, uint32_t& value) {
+        value = std::stoul(j["value"]);
     }
 };
-}
 ```

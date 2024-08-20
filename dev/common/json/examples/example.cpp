@@ -31,7 +31,7 @@ struct Empty {};
 JSON_REGISTER_TYPE(Empty)
 
 int main() {
-	using MyVar = std::variant<Foo, Bar, Empty>;
+	using MyVar = std::variant<Foo, Bar, Empty, std::string>;
 
 	Foo   foo{ 5, 'a', "abc" };
 	Bar   bar{ "abc", { 3, 4 }, 'b', 4.1f };
