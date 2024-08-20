@@ -1,13 +1,11 @@
 \page json-module JSON Module
 
-@warning JSON is deprecated.
-JSON was added by ZPP 1.1 and uses external library. It was concluded that the external library is buggy or behaves strangely. 
-
 # JSON module documentation
 
-## Library json_struct
+## Library nlohmann::json
 Source and documentation:
-https://github.com/jorgen/json_struct
+https://github.com/nlohmann/json
+
 ## Basic usage
 ### Type names
 JSON module provides a way to register name aliases to C++ types in order to serialize them
