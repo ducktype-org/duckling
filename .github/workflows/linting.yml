@@ -7,8 +7,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Install gvc and LLVM (and nlohmann_json, which @TODO should be removed)
+      - name: Install gvc, LLVM and nlohmann_json
         run: sudo apt -y install libgraphviz-dev llvm llvm-dev nlohmann-json3-dev
+        # @TODO: Remove this dependency from here.
 
       - name: Create compile_commands
         run: |
