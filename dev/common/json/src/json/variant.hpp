@@ -14,10 +14,8 @@ struct nlohmann::adl_serializer<std::variant<Args...>> {
 			[&]<typename VT>(const VT& value) {
 				using T   = std::decay_t<VT>;
 				j["type"] = std::string(TypeParseTraits<T>::name.data());
-				if constexpr (std::is_empty_v<T> || ::json::IsEmptySerialization<T>::value) {
-				} else {
+				if constexpr (!(std::is_empty_v<T> || ::json::IsEmptySerialization<T>::value))
 					j["data"] = value;
-				}
 			},
 			v
 		);

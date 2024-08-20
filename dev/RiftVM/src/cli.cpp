@@ -1,5 +1,6 @@
 #include <api/api.hpp>
 #include "cli.hpp"
+#include <json/json.hpp>
 
 std::string convertError(const vm::api::ApiError& apiError) {
 	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return "Wrong response";

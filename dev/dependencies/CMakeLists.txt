@@ -85,5 +85,5 @@ macro(insertLLVM)
 	endif ()
 	message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 	message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-	# TODO: Mark all LLVM components as system with setAsSystemLibraries
+	# @TODO: Mark all LLVM components as system with setAsSystemLibraries
 endmacro()
