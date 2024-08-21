@@ -6,7 +6,7 @@ add_library(Tester
 make_module(Tester USES Printer Base Clap)
 target_compile_definitions(Tester PRIVATE CMAKE_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
-add_example(tester_example examples/example.cpp USES Tester Printer)
+add_example(tester_example examples/tester_example.cpp USES Tester Printer)
 
 rift_add_test(common tester_test_simple tests/test.cpp
 	USES)

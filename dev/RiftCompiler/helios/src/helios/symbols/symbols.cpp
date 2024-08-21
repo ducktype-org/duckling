@@ -731,10 +731,10 @@ namespace compiler::helios {
 		};
 		variant_match(expr) {
 			variant_case(rpn::Identifier, idt) {
-				return ctx.query<QueryTypeOf>(idt.symbol_list.back());
+				return ctx.query<QueryTypeOfSymbol>(idt.symbol_list.back());
 			}
 			variant_case(rpn::Operator, oper) {
-				RIFT_PANIC(base::strConcat("Type cannot be an opeartor: ", oper.oper_id));
+				RIFT_PANIC(base::strConcat("Type cannot be an operator: ", oper.oper_id));
 			}
 			variant_case(rpn::NamedIdentifier, named_identifier) {
 				const auto it = BUILTINS.find(named_identifier.symbol_name);
@@ -753,7 +753,7 @@ namespace compiler::helios {
 				const auto it = BUILTINS.find(keywordToStr(keyword_val.keyword));
 				if (it == BUILTINS.end()) {
 					throw base::NotYetImplemented(strConcat(
-						"KeywordValue is not yet handled by the QueryTypeOf: ",
+						"KeywordValue is not yet handled by the QueryTypeOfSymbol: ",
 						keywordToStr(keyword_val.keyword)
 					));
 				}
@@ -811,7 +811,7 @@ namespace compiler::helios {
 		return result;
 	}
 
-	struct IMPLEMENT_QUERY(QueryTypeOf, ParseTypeFromExpr_Result) {
+	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, ParseTypeFromExpr_Result) {
 		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
@@ -843,7 +843,7 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOf);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
 
 	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, ::ts::TypeInfo) {
 		class PstStmtVisitor_GetTypeFromDefinition final: public pst::PstStmtVisitorPanicky {

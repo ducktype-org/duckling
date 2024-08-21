@@ -1,6 +1,8 @@
 /**
  * @file tester.hpp
  * @author Andrzej
+ *
+ * @example tester_example.cpp
  */
 
 #pragma once
@@ -51,7 +53,7 @@ namespace tester {
 		friend SimpleTesterTest;
 
 	protected:
-		typedef void (TestSuite::*TestType)();
+		using TestType = void (TestSuite::*)();
 
 	private:
 		class CritTestError: public std::exception {

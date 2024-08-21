@@ -3,6 +3,7 @@
  * @brief Value category definition.
  *
  * Value category describes properties of the value that are not directly tied to its type.
+ * Every TypeDesc has a ValueCategory object associated with it.
  */
 
 #pragma once
@@ -111,7 +112,7 @@ namespace ts {
 		/**
 		 * Compares value categories in terms of what might be done with values they describe.
 		 * @param other Value category to compare
-		 * @return Weather the other value category is contained in this value category.
+		 * @return Whether the other value category is contained in this value category.
 		 */
 		[[nodiscard]]
 		bool contains(const ValueCategory& other) const {

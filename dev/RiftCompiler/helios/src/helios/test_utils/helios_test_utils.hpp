@@ -1,0 +1,50 @@
+#pragma once
+
+#include <vector>
+#include "tester/tester.hpp"
+#include "helios/scopes/scopes.hpp"
+#include "helios/symbols/symbols.hpp"
+
+namespace compiler::helios::test_utils {
+	/**
+	 * Get the ModuleId and ScopeID of a module in the given directory.
+	 * @param path The path to the module directory.
+	 * @return The module's ModuleId and ScopeID.
+	 */
+	std::pair<frontend::ModuleId, ScopeID> getModule(const fs::FilePath& path);
+
+	/**
+	 * Get the SymIDs of all symbols in a chain in a given scope.
+	 * @param chain The symbol chain to look up, e.g. `"N1.N2.X"`.
+	 * @param scope The scope in which to perform the lookup, like the scope of a module.
+	 * @return The symbols of all elements of a chain. In particular, the symbol of the last
+	 * element in the chain is accessed with the `back()` method.
+	 */
+	std::vector<SymID> getChain(const std::string_view chain, ScopeID scope);
+
+	/**
+	 * Get the integral value of the last symbol in a symbol chain in a given scope.
+	 * @param chain The symbol chain to resolve.
+	 * @param scope The scope in which to resolve.
+	 * @return The value of the last symbol in the chain.
+	 */
+	int getValue(const std::string_view chain, ScopeID scope);
+
+	/**
+	 * Get the type of the value associated with last symbol in a symbol chain in a given scope.
+	 * Use this to get the type of the a variable `a` in `var a : i32`.
+	 * @param chain The symbol chain to resolve.
+	 * @param scope The scope in which to resolve.
+	 * @return The type of the last symbol in the chain.
+	 */
+	ts::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope);
+
+	/**
+	 * Get the type associated with the last symbol in a symbol chain in a given scope.
+	 * Use this to get the type `T` of the symbol `T` in definition `struct T {}`.
+	 * @param chain The symbol chain to resolve.
+	 * @param scope The scope in which to resolve.
+	 * @return The type of the last symbol in the chain.
+	 */
+	ts::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope);
+}

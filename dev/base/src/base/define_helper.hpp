@@ -1,3 +1,25 @@
+/**
+ * @file define_helper.hpp
+ *
+ * @brief Define helper is a set of functionalities commonly used in macro programming.
+ *
+ * If-s macros allow for simple conditional compilation. `IF(true, A, B)` will expand o `A`,
+`IF(false, A, B)` will expand to `B`. Analogously for `IF_NOT`.
+ *
+ * Push/pop diagnostics allows to push/pop diagnostic options via pragmas with acts like diagnostic
+scope. If a diagnostic option is changed using `_Pragma` inside push/pop pair, it will only affect
+code inside this pair.
+ *
+ * @note Doxygen does not see those macros for some reason. Probably because they are inside if-s.
+ *
+ * ### Usage:
+ * @code
+    PUSH_DIAGNOSTIC
+    NO_SHADOW
+    // shadowed declarations are ignored here
+    POP_DIAGNOSTIC
+ * @endcode
+ */
 #pragma once
 
 #include <vector>

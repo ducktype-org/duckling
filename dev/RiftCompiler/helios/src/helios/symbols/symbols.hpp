@@ -1,3 +1,7 @@
+/**
+ * @file symbols.hpp
+ * @brief This file defines Queries responsible for creation of Symbols and operations on them.
+ */
 #pragma once
 
 #include <query_framework/query_int.hpp>
@@ -305,7 +309,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query type of the symbol.
 	 */
-	DECLARE_QUERY(QueryTypeOf, SymID, const ParseTypeFromExpr_Result&)
+	DECLARE_QUERY(QueryTypeOfSymbol, SymID, const ParseTypeFromExpr_Result&)
 
 	/**
 	 * @brief Query ts::TypeInfo from a symbol definition (like struct definition).

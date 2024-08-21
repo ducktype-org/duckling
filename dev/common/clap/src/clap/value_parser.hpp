@@ -1,6 +1,7 @@
 /**
  * @file value_parser.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
+ * @brief This is an interface class that is used to parse values from a string.
  */
 
 #pragma once

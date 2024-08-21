@@ -74,7 +74,7 @@ namespace ts::internal {
 		// The interface default is to be removed when interfaces for each type are determined.
 		// Then, this definition should become pure virtual.
 		[[nodiscard]]
-		virtual TypeInterface& getInterface(query::Context&) const {
+		virtual const TypeInterface& getInterface(query::Context&) const {
 			static TypeInterface empty{};
 			return empty;
 		}
@@ -120,6 +120,11 @@ namespace ts::internal {
 			[[maybe_unused]] const TypeInfo target, [[maybe_unused]] query::Context& context
 		) const {
 			return false;
+		}
+
+		[[nodiscard]]
+		TypeInfo toTypeInfo() const {
+			return this;
 		}
 
 		virtual ~TypeInfoImpl() = default;
@@ -666,6 +671,11 @@ namespace ts::internal {
 		 * @brief The Kind of types described by objects of this class.
 		 */
 		static inline Kind staticKind = Kind::Class;
+
+		[[nodiscard]]
+		const TypeInterface& getInterface(query::Context& ctx) const override {
+			return ctx.query<QueryInterfaceOfClass>(this);
+		}
 
 		[[nodiscard]]
 		usize getSize(query::Context& ctx) const override {

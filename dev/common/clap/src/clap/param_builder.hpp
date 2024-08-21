@@ -1,6 +1,7 @@
 /**
  * @file param_builder.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
+ * @brief This is the class through which clap::Parameter should be instantiated.
  */
 
 #pragma once

@@ -1,3 +1,8 @@
+/**
+ * @file maps.hpp
+ *
+ * @brief Provides utility classes for maps.
+ */
 #pragma once
 
 #include <map>

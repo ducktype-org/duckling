@@ -24,6 +24,10 @@ namespace compiler::helios::code {
 	 * @brief Base class for all HOUT statements
 	 */
 	struct Stmt {
+		ScopeID lifetime_scope;
+
+		Stmt(ScopeID lifetime_scope): lifetime_scope(std::move(lifetime_scope)) {}
+
 		virtual ~Stmt()                                                    = default;
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
 
@@ -35,7 +39,12 @@ namespace compiler::helios::code {
 	 * All subclasses shall have a "Expr" suffix.
 	 */
 	struct Expr {
+		ScopeID lifetime_scope;
+
 		// @TODO: set/get Type and ValueCategory of Expr
+
+		Expr(ScopeID lifetime_scope): lifetime_scope(std::move(lifetime_scope)) {}
+
 		virtual ~Expr()                                                    = default;
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
 
@@ -48,6 +57,7 @@ namespace compiler::helios::code {
 	 * @brief A block of HOUT statements
 	 */
 	struct CodeBlock final {
+		ScopeID                       lifetime_scope;
 		std::vector<ElementRef<Stmt>> statements;
 	};
 
@@ -61,9 +71,9 @@ namespace compiler::helios::code {
 	struct ReturnStmt final: public Stmt {
 		ElementRef<Expr> value;
 
-		ReturnStmt(ElementRef<Expr> value): value(std::move(value)) {}
+		ReturnStmt(ScopeID scope, ElementRef<Expr> value): Stmt(scope), value(std::move(value)) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final override;
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
@@ -71,7 +81,9 @@ namespace compiler::helios::code {
 	 * @brief Represents `return;` in HOUT
 	 */
 	struct VoidReturnStmt final: public Stmt {
-		void debugPrint(std::ostream& out, usize indent = 0) const final override;
+		VoidReturnStmt(ScopeID scope): Stmt(scope) {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
@@ -81,9 +93,9 @@ namespace compiler::helios::code {
 	struct ExprStmt final: public Stmt {
 		ElementRef<Expr> expr;
 
-		ExprStmt(ElementRef<Expr> expr): expr(std::move(expr)) {}
+		ExprStmt(ScopeID scope, ElementRef<Expr> expr): Stmt(scope), expr(std::move(expr)) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final override;
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
@@ -96,11 +108,12 @@ namespace compiler::helios::code {
 
 		// @TODO: optional else body
 
-		IfStmt(ElementRef<Expr> condition, CodeBlock body):
+		IfStmt(ScopeID scope, ElementRef<Expr> condition, CodeBlock body):
+			  Stmt(scope),
 			  condition(std::move(condition)),
 			  body(std::move(body)) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final override;
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
 
@@ -116,9 +129,9 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		i64 value;
 
-		LiteralValueExpr(i64 value): value(value) {}
+		LiteralValueExpr(ScopeID scope, i64 value): Expr(scope), value(value) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final override;
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
@@ -132,9 +145,9 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		SymID symbol;
 
-		IdentifierExpr(SymID symbol): symbol(std::move(symbol)) {}
+		IdentifierExpr(ScopeID scope, SymID symbol): Expr(scope), symbol(std::move(symbol)) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final override;
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
@@ -144,19 +157,21 @@ namespace compiler::helios::code {
 		ElementRef<Expr> lhs;
 		ElementRef<Expr> rhs;
 
-		BinaryOperatorExpr(base::StrId op, ElementRef<Expr> lhs, ElementRef<Expr> rhs):
+		BinaryOperatorExpr(
+			ScopeID scope, base::StrId op, ElementRef<Expr> lhs, ElementRef<Expr> rhs
+		):
+			  Expr(scope),
 			  op(op),
 			  lhs(std::move(lhs)),
 			  rhs(std::move(rhs)) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final override;
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 }
 
 namespace compiler::helios {
 	struct KeyOf_QueryHoutOfExpr {
-		ScopeID           scope;
 		PstRef<pst::Expr> expr;
 
 		[[nodiscard]]

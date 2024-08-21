@@ -1,6 +1,8 @@
 /**
  * @file module_tree.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
+ *
+ * @example module_tree_example.cpp
  */
 
 #pragma once

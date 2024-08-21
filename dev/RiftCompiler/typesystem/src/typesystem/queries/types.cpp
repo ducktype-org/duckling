@@ -75,7 +75,7 @@ namespace ts {
 			[[nodiscard]]
 			std::string toStringDetailed() const override {
 				std::stringstream ss;
-				ss << "Invalid size of integral type: " << requested_size << "\n"
+				ss << toStringBrief() << "\n"
 				   << "The only allowed sizes are 8, 16, 32, 64, and 128.";
 				return ss.str();
 			}
@@ -138,7 +138,7 @@ namespace ts {
 			[[nodiscard]]
 			std::string toStringDetailed() const override {
 				std::stringstream ss;
-				ss << "Invalid size of float type: " << requested_size << "\n"
+				ss << toStringBrief() << "\n"
 				   << "The only allowed sizes are 16, 32, 64, 80, and 128.";
 				return ss.str();
 			}
