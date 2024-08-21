@@ -1,6 +1,6 @@
-// Tests ret_l64 opcode.
-// input = n
-// output = n
+# Tests ret_l64 opcode.
+# input = n
+# output = n
 
 function check {
 	arg_size: 0;

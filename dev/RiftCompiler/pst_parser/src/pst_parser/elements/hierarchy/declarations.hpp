@@ -210,9 +210,8 @@ namespace pst {
 	class If final: public CodeDecl {
 		ParserRef<RoundGroupExpr>  condition = nullptr;
 		tpc::OptionalIdentifier    optional_name;
-		ParserRef<CodeBlockOrStmt> body = nullptr;
-
-		// @TODO: else
+		ParserRef<CodeBlockOrStmt> body      = nullptr;
+		ParserRef<CodeBlockOrStmt> else_body = nullptr;
 
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {}

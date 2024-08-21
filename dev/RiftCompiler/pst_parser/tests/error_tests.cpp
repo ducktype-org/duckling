@@ -85,9 +85,11 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Expr, true>  blockExpr{ "x + {return 2 * x;}" };
 	Example<pst::Expr, false> badTokenExpr{ "\"" };
 
-	Example<pst::Fun, true> simpleFunction{ "fun foo(i32 x, i32 y) -> (i32, i32) {}" };
+	Example<pst::Fun, true> simpleFunction{ "fun foo(i32 x, i32 y) -> (i32, i32) = {}" };
 
 	Example<pst::If, true> simpleIf{ "if (a == b) {c = d;}" };
+	Example<pst::If, true> simpleIfElse{ "if (a == b) {c = d;} else {c = e;}" };
+	Example<pst::If, true> simpleIfElseNoBlocks{ "if (a == b) c = d; else c = e;" };
 
 	Example<pst::Import, true> simpleImport{ "import std.math.sqrt as sqrt" };
 
@@ -101,7 +103,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Class, true> simpleClass{ "class x extends y implements z:{} {}" };
 
-	Example<pst::TopLevel, true> simpleTopLevel{ "fun foo(){}" };
+	Example<pst::TopLevel, true> simpleTopLevel{ "fun foo() = {}" };
 
 	Example<pst::Using, true> simpleUsing{ "using std.math" };
 

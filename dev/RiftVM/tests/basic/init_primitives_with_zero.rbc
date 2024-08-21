@@ -5,9 +5,9 @@ function main {
   arg_size: 0;
   ret_size: 0;
 
-  // x - 0
-  // y - 8
-  // z - 16
+  # x - 0
+  # y - 8
+  # z - 16
   local_size: 40;
 
   code: {
