@@ -166,7 +166,17 @@ namespace base {
 
 		~MRef() = default;
 	};
+	
+	template<class T>
+	using CRef = Ref<const T>; 
+	
+	template<class T>
+	using MCRef = MRef<const T>; 
 }
 
 // global namespace export:
 using base::Ref;
+using base::CRef;
+using base::MRef;
+using base::MCRef;
+

@@ -30,10 +30,7 @@ struct LiveCounter {
 	}
 };
 
-struct LiveCounterInherit: public LiveCounter{
-
-};
-
+struct LiveCounterInherit: public LiveCounter {};
 
 class BoxRefTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -42,14 +39,42 @@ class BoxRefTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("BoxRef Test") {
 		TESTER_ADD_TEST(testBoxRef);
+		TESTER_ADD_TEST(defaultMembersTest);
 	}
 
 private:
 	void testBoxRef() {
+		// c++ sanity checks:
+		{
+			struct Ptr {
+				int* ptr = nullptr;
+				Ptr() = default;
+				Ptr(const Ptr&) = default;
+				Ptr(Ptr&&) = default;
+			};
+
+			int c = 0;
+			Ptr a;
+			a.ptr = &c;
+			
+			int* b = std::move(a).ptr;
+
+			ASSERT_EQUAL(a.ptr, &c);
+			ASSERT_EQUAL(b, &c);
+		}
+
 		// basic box:
 		{
 			Box<LiveCounter> a = box<LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 1);
+		}
+		ASSERT_EQUAL(LiveCounter::count, 0);
+
+		// Box type deduction:
+		{
+			Box a = box<LiveCounter>();
+			auto b = box<LiveCounter>();
+			ASSERT_EQUAL(LiveCounter::count, 2);
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
@@ -83,6 +108,11 @@ private:
 			ASSERT_EQUAL(a_ref->state, 456);
 
 			ASSERT_EQUAL(LiveCounter::count, 1);
+
+			auto a_ref_const = a_moved.ref();
+
+			// decltype(a_ref_const->state) is just int for some reason, but "it" is still a const.
+			static_assert(std::is_const_v<std::remove_pointer_t<decltype(a_ref_const.get())>>, ".ref() should return const ref");
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
@@ -130,7 +160,7 @@ private:
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
-		// std swap ref:
+		// std swap:
 		{
 			LiveCounter a;
 			LiveCounter b;
@@ -143,7 +173,78 @@ private:
 			ASSERT_EQUAL(ref_1, Ref(&b));
 			ASSERT_EQUAL(ref_2, Ref(&a));
 			ASSERT_TRUE(ref_1 != ref_2);
+
+			Box c = box<LiveCounter>();
+			Box d = box<LiveCounter>();
+
+			Ref c_ref = c.ref();
+			Ref d_ref = d.ref();
+
+			std::swap(c, d);
+
+			ASSERT_EQUAL(c.ref(), d_ref);
+			ASSERT_EQUAL(d.ref(), c_ref);
 		}
+
+		
+	}
+
+	void defaultMembersTest() {
+		struct Data {
+			int data;
+		};
+
+		{
+			// move + default:
+			struct Container {
+				MBox<Data> data_1;
+				MRef<Data> data_2;
+
+				Container() = default;
+				Container(Container&&) = default;
+			};
+
+			Container c;
+			Container c1 = std::move(c);
+		}
+		{		
+			// move:
+			struct Container {
+				Box<Data> data_1;
+				MBox<Data> data_2;
+				Ref<Data> data_3;
+				MRef<Data> data_4;
+
+				Container(): data_1(box<Data>()), data_3(data_1.ref()) {};
+				Container(Container&&) = default;
+			};
+
+			Container c;
+			Container c1 = std::move(c);
+		}
+		{
+			// all:
+			struct Container {
+				Data data{0};
+				Ref<Data> data_1;
+				MRef<Data> data_2;
+
+				Container(): data_1(&data) {};
+				Container(const Container&) = default;
+				Container(Container&&) = default;
+			};
+
+			Container a;
+			Container b = a;
+			Container c = std::move(b);
+		}
+
+
+
+	}
+
+	void testMBoxMRef() {
+		// @TODO
 	}
 };
 

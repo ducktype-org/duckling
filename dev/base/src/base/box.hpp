@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include "ref.hpp"
 
 
@@ -9,7 +8,7 @@ namespace base {
 	template<class T>
 	class Box final {
 	private:
-		std::unique_ptr<T> ptr;
+		T* ptr;
 
 		template<class U>
 		friend class Box;
@@ -44,35 +43,41 @@ namespace base {
 
 		Box& operator=(const Box& other) = delete;
 
+		// @TODO: do we need move operations here? Maybe copy will by enough?
+		// do we want this = ?
 		template<class U>
 		Box& operator=(Box<U>&& oth) noexcept {
-			ptr = oth.ptr;
+			delete ptr;
+			ptr = std::move(oth).ptr;
 			oth.ptr = nullptr;
 			return *this;
 		}
 
-		friend void swap(Box& first, Box& second) { std::swap(first.ptr, second.ptr); }
+		friend void swap(Box& first, Box& second) noexcept { std::swap(first.ptr, second.ptr); }
 
 		Ref<T> refMut() const noexcept {
-			return Ref<T>(ptr.get());
+			return Ref<T>(ptr);
 		}
 
 		Ref<const T> ref() const noexcept {
-			return Ref<T>(ptr.get());
+			return Ref<const T>(ptr);
 		}
 
-		T* operator->() const { assertNotNull(); return ptr.get(); }
+		T* operator->() const { assertNotNull(); return ptr; }
 
 		T& operator*() const { assertNotNull(); return *ptr; }
 
-		~Box() = default;
+		~Box() {
+			delete ptr;
+			ptr = nullptr;
+		};
 	};
 
 	template<class T>
 	class MBox final {
 	private:
 		// do we wan't to use unique here, or just make it over self?
-		std::unique_ptr<T> ptr = nullptr;
+		T* ptr = nullptr;
 
 		template<class U>
 		friend class MBox;
@@ -98,27 +103,29 @@ namespace base {
 		}
 
 		template<class U>
-		MBox(MBox<U>&& other) noexcept: ptr(std::move(other.ptr)) {
+		MBox(MBox<U>&& other) noexcept: ptr(std::move(other).ptr) {
 			other.ptr = nullptr;
 		}
 
 		MBox& operator=(const MBox& other) = delete;
 
+		// do we want it?
 		template<class U>
 		MBox& operator=(MBox<U>&& oth) noexcept {
-			ptr = std::move(oth.ptr);
+			delete ptr;
+			ptr = std::move(oth).ptr;
 			oth.ptr = nullptr;
 			return *this;
 		}
 
-		friend void swap(MBox& first, MBox& second) { std::swap(first.ptr, second.ptr); }
+		friend void swap(MBox& first, MBox& second) noexcept { std::swap(first.ptr, second.ptr); }
 
 		MRef<T> refMut() const noexcept {
-			return Ref<T>(ptr.get());
+			return Ref<T>(ptr);
 		}
 
 		MRef<const T> ref() const noexcept {
-			return Ref<T>(ptr.get());
+			return Ref<T>(ptr);
 		}
 
 		[[nodiscard]]
@@ -133,6 +140,10 @@ namespace base {
 		T* operator->() const { assertNotNull(); return ptr; }
 		T& operator*() const { assertNotNull(); return *ptr; }
 
+		~MBox() {
+			delete ptr;
+			ptr = nullptr;
+		};
 	};
 
 	template<class T, class... Args>
@@ -143,6 +154,7 @@ namespace base {
 
 // global namespace export:
 using base::Box;
+using base::MBox;
 using base::box;
 
 
