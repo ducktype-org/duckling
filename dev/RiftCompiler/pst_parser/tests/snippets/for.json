@@ -1,0 +1,107 @@
+{
+	"PST": [
+		{
+			"For": {
+				"name": "<ANONYMOUS>",
+				"identifier": {
+					"Name": "a"
+				},
+				"type": {
+					"Expr": [
+						{
+							"Comma separated": [
+								{
+									"Expr": [
+										{
+											"Identifier": "T"
+										},
+									]
+								},
+								{
+									"Expr": [
+										{
+											"Identifier": "U"
+										},
+									]
+								}
+							]
+						},
+					]
+				},
+				"iterable": {
+					"Expr": [
+						{
+							"Identifier": "x"
+						},
+						{
+							"Operator": "."
+						},
+						{
+							"Identifier": "b"
+						},
+						{
+							"Group": {
+								"type": "()",
+								"expr": {
+									"Expr": [
+										{
+											"Comma separated": [
+												{
+													"Expr": [
+														{
+															"Identifier": "c"
+														},
+														{
+															"Operator": "+"
+														},
+														{
+															"Identifier": "d"
+														},
+													]
+												},
+												{
+													"Expr": [
+														{
+															"Identifier": "w"
+														},
+													]
+												}
+											]
+										},
+									]
+								}
+							}
+						},
+					]
+				},
+				"body": {
+					"CodeBlockOrStmt": {
+						"CodeBlock": [
+							{
+								"Expr Stmt": {
+									"Expr": [
+										{
+											"Identifier": "print"
+										},
+										{
+											"Group": {
+												"type": "()",
+												"expr": {
+													"Expr": [
+														{
+															"Identifier": "a"
+														},
+													]
+												}
+											}
+										},
+									]
+								}
+							},
+						]
+					}
+				}
+			}
+		},
+	]
+}

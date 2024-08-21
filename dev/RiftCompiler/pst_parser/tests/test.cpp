@@ -58,6 +58,7 @@ public:
 
 		TESTER_ADD_TEST(testIf);
 		TESTER_ADD_TEST(testWhile);
+		TESTER_ADD_TEST(testFor);
 		TESTER_ADD_TEST(testFun);
 		TESTER_ADD_TEST(testFun2);
 		TESTER_ADD_TEST(testBlock);
