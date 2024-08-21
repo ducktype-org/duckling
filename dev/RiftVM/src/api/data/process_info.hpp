@@ -10,9 +10,9 @@ namespace vm {
 		struct ProcessInfo {
 			PID pid;
 
-			JS_OBJ(pid);
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(ProcessInfo, pid);
 		};
 	}
 }
 
-REGISTER_PARSE_TYPE_ALIAS(vm::api::ProcessInfo, "ProcessInfo")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ProcessInfo, "ProcessInfo")

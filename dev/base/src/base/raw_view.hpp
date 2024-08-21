@@ -1,3 +1,7 @@
+/**
+ * @file raw_view.hpp
+ * @brief Provides byte array views.
+ */
 #pragma once
 
 #include "ints.hpp"

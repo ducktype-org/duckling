@@ -1,8 +1,34 @@
 /**
  * @file optional.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
- */
+ * @brief ``base::Optional`` is our wrapper around ``std::optional``.
+ *
+ * ### Usage:
+ * @code
+    base::Optional<int> opt(4);
+    match_optional(opt) {
+        opt_some(val) {
+            // Opt's value is now accessible through val!
+            std::cout << "Value: " << val << '\n';
+        }
+        opt_none { std::cout << "No value!\n"; }
+    }
 
+    // Or simply
+    base::Optional<int> magic_number = 42;
+    if_opt_some(magic_number, value) { std::cout << "Magic number = " << value << "\n"; }
+
+    if_opt_none(magic_number) { std::cout << "magic_number holds no value.\n"; }
+ * @endcode
+ *
+ * Output:
+ * @code
+    Value: 4
+    Magic number = 42
+ * @endcode
+ *
+ * @example optional_simple_example.cpp
+ */
 #pragma once
 
 #include <optional>

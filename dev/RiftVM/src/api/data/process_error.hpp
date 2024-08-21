@@ -10,4 +10,4 @@ namespace vm::api {
 	using ProcessError = std::variant<ProcessNotFound>;
 }
 
-REGISTER_PARSE_TYPE_ALIAS(vm::api::ProcessNotFound, "ProcessNotFound")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ProcessNotFound, "ProcessNotFound")

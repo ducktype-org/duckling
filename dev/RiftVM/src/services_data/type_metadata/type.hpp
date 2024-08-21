@@ -6,6 +6,8 @@
 #include <memory_data/pointer.hpp>
 #include "kinds.hpp"
 
+#include <json/json.hpp>
+
 namespace vm {
 	class TypeMetadata;
 
@@ -134,8 +136,8 @@ namespace vm {
 
 		friend class TypeMetadata;
 
-		JS_OBJ(size);  // TODO: add better output of type
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, size);  // TODO: add better output of type
 	};
 }
 
-REGISTER_PARSE_TYPE_ALIAS(vm::Type, "Type");
+JSON_REGISTER_TYPE_WITH_NAME(vm::Type, "Type");

@@ -127,7 +127,8 @@ namespace lexer {
 		);
 
 		// name_start and name_continue intersection isn't currently empty. More in Classifications
-		// documentation assert(checkEmptyIntersect(Class::name_start, Class::operator_continue));
+		// documentationassertTrue(checkEmptyIntersect(Class::name_start,
+		// Class::operator_continue));
 		icu::UnicodeSet c;
 		c.addAll(Class::name_start).retainAll(Class::operator_continue);
 		RIFT_ASSERT(

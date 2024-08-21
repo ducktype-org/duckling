@@ -1,3 +1,7 @@
+/**
+ * @file query_int.hpp
+ * @brief Implementation of automatic generation of query interfaces.
+ */
 #pragma once
 
 #include <string_view>

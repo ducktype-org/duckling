@@ -30,15 +30,15 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			TypeInterface my_struct_interface = my_struct_type.getInterface(ctx);
 
-			assert(
+			assertTrue(
 				my_struct_interface.getElements(base::StrId("a")).size() == 1,
 				"There should be exactly one 'a' member."
 			);
-			assert(
+			assertTrue(
 				my_struct_interface.getElements(base::StrId("b")).size() == 1,
 				"There should be exactly one 'b' member."
 			);
-			assert(
+			assertTrue(
 				my_struct_interface.getElements(base::StrId("c")).empty(),
 				"There should be exactly no 'c' members."
 			);
@@ -47,10 +47,10 @@ private:
 
 			variant_match(a_resolution) {
 				variant_case_novalue(TypeInterface::SingleMatch) {}
-				variant_default { assert(false, "Member 'a' should match exactly."); }
+				variant_default { assertTrue(false, "Member 'a' should match exactly."); }
 			}
 
-			assert(
+			assertTrue(
 				my_struct_type.getSize(ctx) == 64,
 				"MyStruct should have size equal to the sum of sizes of its members."
 			);

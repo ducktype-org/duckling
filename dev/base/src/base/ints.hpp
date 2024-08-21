@@ -1,3 +1,11 @@
+/**
+ * @file ints.hpp
+ *
+ * @attention `<cstdint>` should not be used, unless necessary. Ints should be used instead.
+ *
+ * @brief Ints is a library analogous to `<cstdint>` with generally shorter type names
+ * and one big improvement: `u8` and `i8` types are strongly typed.
+ */
 #pragma once
 
 #include <cstdint>

@@ -1,3 +1,44 @@
+/**
+ * @file variant.hpp
+ *
+ * @brief Implements additional `std::variant` functionalities.
+ *
+ * Functionalities
+ * ===============
+ *
+ * Variant visit
+ * -------------
+ *
+ * Variant visit provides macros that simplify `std::visit` calls.
+ *
+ * - `VARIANT_VISIT`
+ * - `VISIT_CASE`
+ * - `VISIT`
+ *
+ * ### Usage
+ *
+ * @include variant_visit_example.cpp
+ *
+ * Variant match
+ * -------------
+ *
+ * @note This functionality is macro-based. Braces are very important for it to work properly.
+ *
+ * Variant match is a macro that allows matching over `std::variant` types.
+ *
+ * - `variant_match`
+ * - `variant_case`
+ * - `variant_case_novalue`
+ * - `variant_default`
+ *
+ * ### Usage
+ *
+ * @include variant_match_example.cpp
+ *
+ * @example variant_visit_example.cpp
+ *
+ * @example variant_match_example.cpp
+ */
 #pragma once
 
 #include <variant>

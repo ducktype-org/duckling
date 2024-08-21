@@ -23,7 +23,7 @@ namespace tester {
 		  name(name),
 		  config(std::move(config)) {}
 
-	void TestSuite::assert(bool v, std::string_view err, bool critical) {
+	void TestSuite::assertTrue(bool v, std::string_view err, bool critical) {
 		if (!v) {
 			curr_global_res->success = false;
 			message(err);

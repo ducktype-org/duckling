@@ -41,7 +41,7 @@ private:
 		auto        path = fs::FilePath::createTempFile(content);
 		auto        file = tokenizer::makeTokenFile(path);
 		file->decode<encoding>();
-		assert(file->getLogger().bad(), "Encoding error not found");
+		assertTrue(file->getLogger().bad(), "Encoding error not found");
 	}
 
 	void badContinuations() {
@@ -106,7 +106,7 @@ private:
 		auto        path = fs::FilePath::createTempFile(content);
 		auto        file = tokenizer::makeTokenFile(path);
 		file->decode<fs::Encoding::US_ASCII>();
-		assert(file->getLogger().good(), "Valid Ascii not accepted");
+		assertTrue(file->getLogger().good(), "Valid Ascii not accepted");
 	}
 };
 

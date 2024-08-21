@@ -42,13 +42,13 @@ public:
 
 	void basicTest() {
 		Optional<int> opt(4);
-		assert(*opt == 4, "Value not equal to 4");
+		ASSERT_EQUAL(*opt, 4);
 
 		Optional<int> opt2;
-		assert(opt2.empty(), "opt2 should hold no value");
+		ASSERT_TRUE(opt2.empty());
 		opt2 = base::Optional(2);
-		assert(opt2.has_value(), "opt2 should have no value");
-		assert(opt2.value() == 2, "opt2 should have value of 2");
+		ASSERT_TRUE(opt2.has_value());
+		ASSERT_EQUAL(opt2.value(), 2);
 	}
 
 	void macroTest() {
@@ -57,38 +57,38 @@ public:
 		bool visited = false;
 		match_optional(opt) {
 			opt_some(val) {
-				assert(val == 4, "Value not equal to 4");
+				ASSERT_EQUAL(val, 4);
 				visited = true;
 			}
-			opt_none assert(false, "Entered None case with value");
+			opt_none assertTrue(false, "Entered None case with value");
 		}
-		assert(visited, "Macro opt_some does not work");
+		assertTrue(visited, "Macro opt_some does not work");
 
 		visited = false;
 		if_opt_some(opt, val) {
-			assert(val == 4, "Value not equal to 4");
+			ASSERT_EQUAL(val, 4);
 			visited = true;
 		}
-		assert(visited, "Macro if_opt_some does not work");
+		assertTrue(visited, "Macro if_opt_some does not work");
 
-		if_opt_none(opt) assert(false, "opt has value, shouldn't enter this case");
+		if_opt_none(opt) assertTrue(false, "opt has value, shouldn't enter this case");
 
 
 		Optional<int> opt2;
 		match_optional(opt2) {
 			opt_some(_val) {
 				(void) _val;  // So that the compiler doesn't yell at us for not using the value.
-				assert(false, "No value, in opt2, shouldn't enter this case");
+				assertTrue(false, "No value, in opt2, shouldn't enter this case");
 			}
-			opt_none assert(opt2.empty(), "Entered opt_none with a value!");
+			opt_none assertTrue(opt2.empty(), "Entered opt_none with a value!");
 		}
 
 		visited                   = false;
 		if_opt_none(opt2) visited = true;
-		assert(visited, "Macro if_opt_none does not work");
+		assertTrue(visited, "Macro if_opt_none does not work");
 		if_opt_some(opt2, value) {
 			(void) value;
-			assert(false, "No value, in opt2, shouldn't enter this case");
+			assertTrue(false, "No value, in opt2, shouldn't enter this case");
 		}
 	}
 
@@ -103,24 +103,24 @@ public:
 		Optional<int> opt(4);
 
 		auto result = opt.map([](int val) { return val * 1.1; });
-		assert(result.value() == 4.4, base::strConcat("Result is not 4.4, but: ", result.value()));
+		ASSERT_EQUAL(result.value(), 4.4);
 
 		auto result2 = opt.map([](int val) { return val * val; });
-		assert(result2.value() == 16, base::strConcat("Result is not 16, but: ", result2.value()));
+		ASSERT_EQUAL(result2.value(), 16);
 
 		Optional<int> empty;
 		auto          result3 = empty.map([](int val) { return val * 2; });
-		assert(result3.empty(), "Result3 is not empty!");
+		assertTrue(result3.empty(), "Result3 is not empty!");
 	}
 
 	void flatMapTest() {
 		Optional<int> opt(4);
 		auto          result = opt.flatMap([](int val) { return Optional(val * 1.1); });
-		assert(result.value() == 4.4, base::strConcat("Result is not 4.4, but: ", result.value()));
+		ASSERT_EQUAL(result.value(), 4.4);
 
 		Optional<int> empty;
 		auto          result2 = empty.flatMap([](auto val) { return Optional(val * 2); });
-		assert(result2.empty(), "Result2 is not empty!");
+		assertTrue(result2.empty(), "Result2 is not empty!");
 	}
 
 	void testReference() {
@@ -129,7 +129,7 @@ public:
 		optVec.value()[0]++;
 		vec[1] = 30;
 		for (usize i = 0; i < vec.size(); i++) {
-			assert(
+			assertTrue(
 				vec[i] == optVec.value()[i],
 				base::strConcat("Values at index ", i, " are not equal, but it's a reference.")
 			);
@@ -139,45 +139,45 @@ public:
 	void assignTest() {
 		base::Optional<int> a;
 		a = 1;
-		assert(1 == *a, "A not equal to 1");
+		ASSERT_EQUAL(1, *a);
 		a = 2;
-		assert(2 == *a, "A not equal to 2");
+		ASSERT_EQUAL(2, *a);
 
 		std::string                 str1 = "str1", str2 = "str2";
 		base::Optional<std::string> b;
 		b = str1;
-		assert(str1 == *b, "B not equal to str1");
+		ASSERT_EQUAL(str1, *b);
 		b = str2;
-		assert(str2 == *b, "B not equal to str2");
+		ASSERT_EQUAL(str2, *b);
 
 		base::Optional<std::string&> c;
 		c = str1;
-		assert(str1 == *c, "C not equal to str1");
+		ASSERT_EQUAL(str1, *c);
 		c = str2;
-		assert(str2 == *c, "C not equal to str2");
+		ASSERT_EQUAL(str2, *c);
 		c.value()[0] = 'd';
-		assert(str2[0] == 'd', "C should start with a d");
+		ASSERT_EQUAL(str2[0], 'd');
 	}
 
 	void swapTest() {
 		base::Optional<std::string> a = "1";
 		base::Optional<std::string> b = "2";
 		std::swap(a, b);
-		assert("2" == *a, "a does not hold 2");
-		assert("1" == *b, "b does not hold 1");
+		ASSERT_EQUAL("2", *a);
+		ASSERT_EQUAL("1", *b);
 
 		std::string                  str1 = "123";
 		std::string                  str2 = "321";
 		base::Optional<std::string&> c    = str1;
 		base::Optional<std::string&> d    = str2;
 		std::swap(c, d);
-		assert(str2 == *c, "c does not hold str2");
-		assert(str1 == *d, "d does not hold str1");
+		ASSERT_EQUAL(str2, *c);
+		ASSERT_EQUAL(str1, *d);
 	}
 
 	void danglingPointerTest() {
 		// This would not compile if -Werror flag is on, and it would create a dangling pointer...
-		if_opt_some(Optional(1), val) { assert(val == 1, base::strConcat("val != 1, but: ", val)); }
+		if_opt_some(Optional(1), val) { ASSERT_EQUAL(val, 1); }
 	}
 
 	void testFromDocs() {

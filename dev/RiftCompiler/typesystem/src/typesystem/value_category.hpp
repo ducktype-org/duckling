@@ -3,6 +3,7 @@
  * @brief Value category definition.
  *
  * Value category describes properties of the value that are not directly tied to its type.
+ * Every TypeDesc has a ValueCategory object associated with it.
  */
 
 #pragma once
