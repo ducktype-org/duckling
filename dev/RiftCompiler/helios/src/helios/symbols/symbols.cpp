@@ -392,8 +392,7 @@ namespace compiler::helios {
 		}
 	}
 
-	std::expected<rpn::RPNExpr, errors::ExpressionParsingError>
-		rpn::makeRPN(query::Context& ctx, KeyOf_RPNmakeRPN key) {
+	rpn::MakeRPN_Result rpn::makeRPN(query::Context& ctx, KeyOf_RPNmakeRPN key) {
 		std::vector<ExprElem> rpn;
 		std::stack<ExprElem>  st;
 		for (auto&& e: key.expr) {
@@ -932,19 +931,20 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStructSymbolData);
 
-	struct IMPLEMENT_QUERY(QueryHOUTExprTreeOfSym, base::unique_ptr<code::Expr>) {
+	struct
+		IMPLEMENT_QUERY(QueryHOUTExprTreeOfSym, std::expected<base::unique_ptr<code::Expr> COMMA rpn::MakeRPN_Result::error_type>) {
 		class PstStmtVisitor_GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
 
 			void setTypeOfSymbol(const pst::ParserCBorrowRef<pst::Expr>& expr) {
-				rpn_of_sym_expr = rpn::makeRPN(ctx, { expr->elements, scope(key) }).elements;
+				rpn_of_sym_expr = rpn::makeRPN(ctx, { expr->elements, scope(key) });
 			}
 
 		public:
 			PstStmtVisitor_GetHOUTExprTree(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
-			std::vector<rpn::ExprElem> rpn_of_sym_expr;
+			base::Optional<rpn::MakeRPN_Result> rpn_of_sym_expr;
 
 			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getValue()); }
 
@@ -958,7 +958,13 @@ namespace compiler::helios {
 
 			PstStmtVisitor_GetHOUTExprTree visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
-			return code::Expr::fromRPN(ctx, { visitor.rpn_of_sym_expr, scope(key) });
+			RIFT_ASSERT(
+				visitor.rpn_of_sym_expr.has_value(),
+				"Something wrong has happened while parsing expr"
+			);
+			auto&& visitor_value = visitor.rpn_of_sym_expr.value();
+			IF_ERR_RET_ELSE_VALUE(visitor_value, rpn_expr)
+			return code::Expr::fromRPN(ctx, { rpn_expr.elements, scope(key) });
 		}
 
 		static inline base::
@@ -966,14 +972,22 @@ namespace compiler::helios {
 				cache;
 
 		static auto load(const QKey& key) -> LoadResult {
-			if (auto&& copy = cache.atMaybe(key))
-				return QResWithACD{ copy->data.borrow(), copy->acd };
+			if (auto&& copy = cache.atMaybe(key)) {
+				if (copy->data.has_value())
+					return QResWithACD{ copy->data->borrow(), copy->acd };
+				else
+					return QResWithACD{ std::unexpected(copy->data.error()), copy->acd };
+			}
 			return {};
 		}
 
 		static auto store(const QKey& key, PResult res, query::ACD) -> QResult {
 			cache.put(key, std::move(res));
-			return cache.at(key).data.borrow();
+
+			if (auto&& c = cache.at(key).data; c.has_value())
+				return c.value().borrow();
+			else
+				return std::unexpected(c.error());
 		}
 	};
 

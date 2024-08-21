@@ -247,11 +247,13 @@ namespace compiler::helios {
 			ScopeID scope;
 		};
 
+		using MakeRPN_Result =
+			std::expected<RPNExpr, errors::ExpressionParsingError>;
+
 		/**
 		 * @brief Parses an expression from PST into RPN.
 		 */
-		std::expected<RPNExpr, errors::ExpressionParsingError>
-			makeRPN(query::Context&, KeyOf_RPNmakeRPN);
+		MakeRPN_Result makeRPN(query::Context&, KeyOf_RPNmakeRPN);
 
 		struct KeyOf_evalOperator {
 			/**
@@ -345,7 +347,7 @@ namespace compiler::helios {
 	};
 
 	using QueryStructSymbolData_Result
-		= std::variant<StructSymbolData, ParseTypeFromExpr_Result::error_type>;
+		= std::expected<StructSymbolData, PotentialParsingErrors>;
 
 	/**
 	 * @brief Query all the information about a struct definition.
@@ -362,5 +364,5 @@ namespace compiler::helios {
 	 * @brief Return Expr tree of HOUT of a expression assigned to a constant.
 	 * @note This query is temporary and is used for testing only.
 	 */
-	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, base::borrow_ptr<const code::Expr>);
+	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, std::expected<base::borrow_ptr<const code::Expr> COMMA rpn::MakeRPN_Result::error_type>);
 }
