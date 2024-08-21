@@ -118,6 +118,8 @@ private:
 			LiveCounter a;
 			Ref<LiveCounter> a_ref_1 = &a;
 			Ref<LiveCounter> a_ref_2 = a_ref_1;
+
+			// moving refs have no effect:
 			Ref<LiveCounter> a_ref_3 = std::move(a_ref_2);
 
 			ASSERT_EQUAL(LiveCounter::count, 1);
