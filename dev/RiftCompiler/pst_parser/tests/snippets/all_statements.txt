@@ -21,7 +21,7 @@ namespace X {}
 
 struct X {}
 
-fun X() {}
+fun X() = {}
 
 redo;
 

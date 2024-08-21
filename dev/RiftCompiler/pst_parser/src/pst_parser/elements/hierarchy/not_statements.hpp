@@ -80,7 +80,7 @@ namespace pst {
 		true,
 		lexer::Token::BracketType::None,
 		detail::Conditions::isComma,
-		detail::Conditions::isCurlyGroup,
+		detail::Conditions::isAssign,
 		detail::NameGetters::returnList>;
 
 	using InheritList = List<
