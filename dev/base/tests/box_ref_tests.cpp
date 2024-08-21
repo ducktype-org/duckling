@@ -13,6 +13,10 @@ struct LiveCounter {
 		count++;
 	}
 
+	LiveCounter(int state): state(state) {
+		count++;
+	}
+
 	LiveCounter(const LiveCounter&) {
 		count++;
 	}
@@ -134,8 +138,8 @@ private:
 
 			std::swap(ref_1, ref_2);
 
-			ASSERT_EQUAL(ref_1, &b);
-			ASSERT_EQUAL(ref_2, &a);
+			ASSERT_EQUAL(ref_1, Ref(&b));
+			ASSERT_EQUAL(ref_2, Ref(&a));
 			ASSERT_TRUE(ref_1 != ref_2);
 		}
 	}

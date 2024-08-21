@@ -11,6 +11,9 @@ namespace base {
 	private:
 		std::unique_ptr<T> ptr;
 
+		template<class U>
+		friend class Box;
+
 		constexpr void assertNotNull() const {
 			if (ptr == nullptr) {
 				RIFT_PANIC("Box got nullptr");
@@ -35,7 +38,7 @@ namespace base {
 		}
 
 		template<class U>
-		Box(Box<U>&& other) noexcept: ptr(other.ptr) {
+		Box(Box<U>&& other) noexcept: ptr(std::move(other).ptr) {
 			other.ptr = nullptr;
 		}
 
@@ -58,7 +61,7 @@ namespace base {
 			return Ref<T>(ptr.get());
 		}
 
-		T* operator->() const { assertNotNull(); return ptr; }
+		T* operator->() const { assertNotNull(); return ptr.get(); }
 
 		T& operator*() const { assertNotNull(); return *ptr; }
 
@@ -70,6 +73,9 @@ namespace base {
 	private:
 		// do we wan't to use unique here, or just make it over self?
 		std::unique_ptr<T> ptr = nullptr;
+
+		template<class U>
+		friend class MBox;
 
 		constexpr void assertNotNull() const {
 			if (ptr == nullptr) {
