@@ -151,7 +151,7 @@ namespace pst {
 
 		[[nodiscard]]
 		std::string elementType() const override {
-			return "Class Method";
+			return "Class Field";
 		}
 
 		[[nodiscard]]

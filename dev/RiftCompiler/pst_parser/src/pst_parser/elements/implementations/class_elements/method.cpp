@@ -12,7 +12,7 @@ namespace pst {
 		state.parse(out).all(Keyword::Fun, &out->name, &out->params);
 		if (state.parse(out).tryEat(Operator::SingleArrow)) state.parse(out).one(&out->rets);
 
-		state.parse(out).one(&out->body);
+		state.parse(out).all(Operator::Assign, &out->body);
 
 		return out;
 	}

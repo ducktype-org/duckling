@@ -39,7 +39,7 @@ namespace pst {
 
 	void Destructor::dprint(std::ostream& out) const {
 		out << "{";
-		out << ",\"body\":";
+		out << "\"body\":";
 		nullAwareDprint(body, out);
 		out << "}";
 	}

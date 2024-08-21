@@ -57,6 +57,11 @@ namespace pst {
 		out << R"(, "type": )";
 		nullAwareDprint(type, out);
 
+		if (init) {
+			out << R"(, "initial": )";
+			nullAwareDprint(init.value(), out);
+		}
+
 		out << "}";
 	}
 

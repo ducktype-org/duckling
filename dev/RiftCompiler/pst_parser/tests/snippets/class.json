@@ -31,20 +31,283 @@
 					]
 				},
 				"body": {
-					"Code Block": [
+					"Class Block": [
 						{
-							"Expr Stmt": {
-								"Expression": [
-									{
-										"Identifier": "a"
-									},
-									{
-										"Operator": "+"
-									},
-									{
-										"Identifier": "b"
-									},
-								]
+							"Class Field": {
+								"is const": "false",
+								"name": {
+									"Name": "x"
+								},
+								"type": {
+									"Expression": [
+										{
+											"KeywordValue": "i32"
+										},
+									]
+								}
+							}
+						},
+						{
+							"Class Field": {
+								"is const": "false",
+								"name": {
+									"Name": "y"
+								},
+								"type": {
+									"Expression": [
+										{
+											"KeywordValue": "i32"
+										},
+									]
+								},
+								"initial": {
+									"Expression": [
+										{
+											"NumLiteral": "5"
+										},
+									]
+								}
+							}
+						},
+						{
+							"Class Method": {
+								"name": {
+									"Name": "foo"
+								},
+								"params": {
+									"function parameter list": [
+										{
+											"Expression": [
+												{
+													"Identifier": "a"
+												},
+												{
+													"Operator": ":"
+												},
+												{
+													"KeywordValue": "i64"
+												},
+											]
+										},
+										{
+											"Expression": [
+												{
+													"Identifier": "c"
+												},
+												{
+													"Operator": ":"
+												},
+												{
+													"Identifier": "yyy"
+												},
+											]
+										},
+									]
+								},
+								"rets": "<nullptr>",
+								"body": {
+									"Code Block": [
+										{
+											"Expr Stmt": {
+												"Expression": [
+													{
+														"Identifier": "goo"
+													},
+													{
+														"Group": {
+															"type": "()",
+															"expr": {
+																"Expression": [
+																	{
+																		"Identifier": "a"
+																	},
+																]
+															}
+														}
+													},
+												]
+											}
+										},
+									]
+								}
+							}
+						},
+						{
+							"Class Method": {
+								"name": {
+									"Name": "goo"
+								},
+								"params": {
+									"function parameter list": [
+										{
+											"Expression": [
+												{
+													"Identifier": "z"
+												},
+												{
+													"Operator": ":"
+												},
+												{
+													"KeywordValue": "i64"
+												},
+											]
+										},
+									]
+								},
+								"rets": {
+									"function return type list": [
+										{
+											"Expression": [
+												{
+													"KeywordValue": "i64"
+												},
+											]
+										},
+									]
+								},
+								"body": {
+									"Code Block": [
+										{
+											"Expr Stmt": {
+												"Expression": [
+													{
+														"Identifier": "x"
+													},
+													{
+														"Operator": "="
+													},
+													{
+														"Identifier": "z"
+													},
+												]
+											}
+										},
+										{
+											"Action": {
+												"kind": "Return",
+												"value": {
+													"Expression": [
+														{
+															"Identifier": "y"
+														},
+													]
+												}
+											}
+										},
+									]
+								}
+							}
+						},
+						{
+							"Access specification block": {
+								"specifier": "public",
+								"code block": {
+									"Class Block": [
+										{
+											"Class Constructor": {
+												"name": {
+													"Name": "create"
+												},
+												"params": {
+													"function parameter list": [
+														{
+															"Expression": [
+																{
+																	"Identifier": "c"
+																},
+																{
+																	"Operator": ":"
+																},
+																{
+																	"KeywordValue": "i64"
+																},
+															]
+														},
+													]
+												},
+												"inits": {
+													"initialization list": [
+														{
+															"Expression": [
+																{
+																	"Identifier": "aaa"
+																},
+																{
+																	"Group": {
+																		"type": "()",
+																		"expr": {
+																			"Expression": [
+																				{
+																					"Identifier": "c"
+																				},
+																			]
+																		}
+																	}
+																},
+															]
+														},
+													]
+												},
+												"body": {
+													"Code Block": [
+														{
+															"Expr Stmt": {
+																"Expression": [
+																	{
+																		"Identifier": "x"
+																	},
+																	{
+																		"Operator": "="
+																	},
+																	{
+																		"Identifier": "c"
+																	},
+																]
+															}
+														},
+													]
+												}
+											}
+										},
+										{
+											"Class Constructor": {
+												"name": {
+													"Name": "abc"
+												},
+												"params": {
+													"function parameter list": []
+												},
+												"inits": "<nullptr>",
+												"body": {
+													"Code Block": [
+														{
+															"Expr Stmt": {
+																"Expression": [
+																	{
+																		"Identifier": "x"
+																	},
+																	{
+																		"Operator": "="
+																	},
+																	{
+																		"NumLiteral": "81"
+																	},
+																]
+															}
+														},
+													]
+												}
+											}
+										},
+										{
+											"Class Destructor": {
+												"body": {
+													"Code Block": []
+												}
+											}
+										},
+									]
+								}
 							}
 						},
 					]
