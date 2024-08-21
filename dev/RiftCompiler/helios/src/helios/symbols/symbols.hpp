@@ -120,8 +120,9 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryDealias, SymID, const std::expected<SymbolList COMMA QueryLookup_Result::error_type>&);
 
-	using QueryConstValueOf_Result = std::
-		expected<i32, std::variant<QueryLookup_Result::error_type, errors::ExpressionParsingError>>;
+	using PotentialParsingErrors
+		= std::variant<QueryLookup_Result::error_type, errors::ExpressionParsingError>;
+	using QueryConstValueOf_Result = std::expected<i32, PotentialParsingErrors>;
 	/**
 	 * Calculates a value of a constant.
 	 */
@@ -249,7 +250,8 @@ namespace compiler::helios {
 		/**
 		 * @brief Parses an expression from PST into RPN.
 		 */
-		std::expected<RPNExpr, errors::ExpressionParsingError> makeRPN(query::Context&, KeyOf_RPNmakeRPN);
+		std::expected<RPNExpr, errors::ExpressionParsingError>
+			makeRPN(query::Context&, KeyOf_RPNmakeRPN);
 
 		struct KeyOf_evalOperator {
 			/**
@@ -302,9 +304,7 @@ namespace compiler::helios {
 		RPNEvaluation_Result evalExpr(query::Context&, const RPNExpr&);
 	}
 
-	using ParseTypeFromExpr_Result = std::expected<
-		ts::TypeInfo,
-		std::variant<QueryLookup_Result::error_type, errors::ExpressionParsingError>>;
+	using ParseTypeFromExpr_Result = std::expected<ts::TypeInfo, PotentialParsingErrors>;
 
 	/**
 	 * @brief Query type of the symbol.
@@ -344,7 +344,8 @@ namespace compiler::helios {
 		std::vector<ts::TypeInfo> bases;
 	};
 
-	using QueryStructSymbolData_Result = std::variant<StructSymbolData, ParseTypeFromExpr_Result::error_type>;
+	using QueryStructSymbolData_Result
+		= std::variant<StructSymbolData, ParseTypeFromExpr_Result::error_type>;
 
 	/**
 	 * @brief Query all the information about a struct definition.

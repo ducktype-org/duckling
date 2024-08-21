@@ -28,7 +28,9 @@ namespace compiler::helios::test_utils {
 										   { result.back(), base::StrId(sym.c_str()), false }
 									   );
 			for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
-				auto dealiased = query::entryPoint<QueryDealias>(elem);
+				auto query_dealias_result = query::entryPoint<QueryDealias>(elem);
+//				IF_ERR_RET_ELSE_VALUE()
+
 				result.insert(result.end(), dealiased.begin(), dealiased.end());
 			}
 			first_symbol = false;
@@ -36,11 +38,11 @@ namespace compiler::helios::test_utils {
 		return result;
 	}
 
-	int getValue(const std::string_view chain, ScopeID scope) {
+	QueryConstValueOf_Result getValue(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back());
 	}
 
-	ts::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope) {
+	const ParseTypeFromExpr_Result& getTypeOf(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back());
 	}
 

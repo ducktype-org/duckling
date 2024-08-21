@@ -20,7 +20,7 @@ namespace compiler::helios::test_utils {
 	 * @return The symbols of all elements of a chain. In particular, the symbol of the last
 	 * element in the chain is accessed with the `back()` method.
 	 */
-	std::vector<SymID> getChain(const std::string_view chain, ScopeID scope);
+	std::vector<SymID> getChain(std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the integral value of the last symbol in a symbol chain in a given scope.
@@ -28,7 +28,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The value of the last symbol in the chain.
 	 */
-	int getValue(const std::string_view chain, ScopeID scope);
+	QueryConstValueOf_Result getValue(std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the type of the value associated with last symbol in a symbol chain in a given scope.
@@ -37,7 +37,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The type of the last symbol in the chain.
 	 */
-	ts::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope);
+	const ParseTypeFromExpr_Result& getTypeOf(std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the type associated with the last symbol in a symbol chain in a given scope.
@@ -46,5 +46,5 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The type of the last symbol in the chain.
 	 */
-	ts::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope);
+	ts::TypeInfo getTypeFromDefinition(std::string_view chain, ScopeID scope);
 }
