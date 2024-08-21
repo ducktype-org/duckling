@@ -25,7 +25,7 @@ namespace base {
 
 		// Constructors from pointers:
 		Ref() = delete;
-		explicit Ref(T* ptr): ptr{ptr} { assertNotNull(); }
+		Ref(T* ptr): ptr{ptr} { assertNotNull(); }
 		
 		// Copy:
 		Ref(const Ref& other) noexcept: ptr(other.get()) {}
@@ -97,7 +97,7 @@ namespace base {
 		MRef() = default;
 		MRef(std::nullptr_t) = default;
 
-		explicit MRef(T* ptr): ptr{ptr} { }
+		MRef(T* ptr): ptr{ptr} { }
 
 		// Copy:
 		MRef(const MRef& other) noexcept: ptr(other.get()) {}
