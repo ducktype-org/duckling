@@ -20,21 +20,24 @@ namespace tpc {
 		 * overrides should generally begin by calling the version from the base class
 		 */
 		virtual void dprintPrefix(std::ostream&) const {}
+
 		/**
 		 * @brief Method used to build the printable information in a format similar to JSON
 		 *
 		 * overrides should generally end by calling the version from the base class
 		 */
 		virtual void dprintSuffix(std::ostream&) const {}
+
 		/**
 		 * @brief Method used to build the printable information in a format similar to JSON
-		 * 
+		 *
 		 * It should generally start and end with paired `{}` brackets and contain
 		 * only the parts specific to the element.
 		 */
 		virtual void dprint(std::ostream& out) const = 0;
+
 	public:
-		virtual ~Element()                           = 0;
+		virtual ~Element() = 0;
 
 		// @IDEA: this might be just a const variable if it will be enough in the future
 		/**
@@ -62,7 +65,7 @@ namespace tpc {
 		}
 
 		/**
-		 * @brief Printable element type 
+		 * @brief Printable element type
 		 */
 		[[nodiscard]]
 		virtual std::string elementType() const {

@@ -98,10 +98,11 @@ namespace pst {
 	};
 
 	class Class final: public Decl {
+	private:
 		tpc::Identifier           name;
 		ParserRef<Expr>           base       = nullptr;
 		ParserRef<ImplementsList> implements = nullptr;
-		ParserRef<ClassBlock>      body       = nullptr;
+		ParserRef<ClassBlock>     body       = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Class);
@@ -201,7 +202,7 @@ namespace pst {
 
 		[[nodiscard]]
 		std::string elementType() const override {
-			return is_const ? "Let": "Var";
+			return is_const ? "Let" : "Var";
 		}
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;

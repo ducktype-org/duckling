@@ -159,7 +159,7 @@ namespace pst {
 	};
 
 	/**
-	 * @todo Maybe join CodeBlock and ClassBlock into one generic version 
+	 * @todo Maybe join CodeBlock and ClassBlock into one generic version
 	 */
 	class CodeBlock final: public NotStmt {
 		std::vector<ParserRef<Stmt>> statements;
@@ -188,8 +188,10 @@ namespace pst {
 		std::vector<ParserRef<ClassStmt>> statements;
 
 	public:
-		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos) {};
-		static ParserRef<ClassBlock> parse(RiftParserState& state, tpc::Identifier class_name);
+		DECLARE_CONST_ELEMENT_ITERATOR(statements, ClassStmt)
+
+		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos){};
+		static ParserRef<ClassBlock> parse(RiftParserState& state, const ClassContext& ctx);
 
 		~ClassBlock() override = default;
 		void dprint(std::ostream& out) const final;

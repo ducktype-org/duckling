@@ -3,11 +3,20 @@
 #include "not_statements.hpp"
 
 namespace pst {
-#define CLASS_STMT_CHILD_CONSTRUCTOR(class_name) \
-	class_name(const dia::SourcePosition& position): ClassStmt(StmtKind::class_name, position) {}
+#define CLASS_STMT_CHILD_CONSTRUCTOR(class_name)                              \
+	class_name(const dia::SourcePosition& position, const ClassContext& ctx): \
+		  ClassStmt(StmtKind::class_name, position, ctx) {}
 
-#define CLASS_STMT_PASS_CONSTRUCTOR(class_name) \
-	class_name(StmtKind kind, const dia::SourcePosition& position): ClassStmt(kind, position) {}
+#define CLASS_STMT_PASS_CONSTRUCTOR(class_name)                                              \
+	class_name(StmtKind kind, const dia::SourcePosition& position, const ClassContext& ctx): \
+		  ClassStmt(kind, position, ctx) {}
+
+#define CLASS_STMT_SPEC_CONSTRUCTOR(class_name)                               \
+	class_name(const dia::SourcePosition& position, const ClassContext& ctx): \
+		  ClassSpecial(StmtKind::class_name, position, ctx) {}
+
+#define CLASS_STMT_PARSE(class_name) \
+	static ParserRef<class_name> parse(RiftParserState& state, const ClassContext& ctx);
 
 	class AccessBlock final: public ClassStmt {
 		static inline const std::set<rift_def::Keyword> access_specifiers = {
@@ -16,12 +25,12 @@ namespace pst {
 			rift_def::Keyword::Protected,
 		};
 
-		rift_def::Keyword specifier = rift_def::Keyword::NotAKeyword;
-		ParserRef<ClassBlock> block;	
+		rift_def::Keyword     specifier = rift_def::Keyword::NotAKeyword;
+		ParserRef<ClassBlock> block;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock);
-		static ParserRef<AccessBlock> parse(RiftParserState& state, tpc::Identifier name);
+		CLASS_STMT_PARSE(AccessBlock);
 
 		~AccessBlock() override = default;
 		void dprint(std::ostream& out) const final;
@@ -35,6 +44,8 @@ namespace pst {
 		bool isDeclaration() const final {
 			return false;
 		}
+
+		ParserCBorrowRef<ClassBlock> getBlock() const { return block.borrow(); }
 
 		[[nodiscard]]
 		bool trailingSemicolon() override {
@@ -50,15 +61,20 @@ namespace pst {
 	 */
 	class ClassSpecial: public ClassStmt {
 	protected:
-		tpc::Identifier kind; ///< What is after the `.`
+		tpc::Identifier kind;  ///< What is after the `.`
 
 	public:
 		CLASS_STMT_PASS_CONSTRUCTOR(ClassSpecial);
-		static ParserRef<ClassSpecial> parse(RiftParserState& state);
+		CLASS_STMT_PARSE(ClassSpecial);
 
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Class special method";
+		}
+
+		[[nodiscard]]
+		base::StrId getName() const {
+			return kind.value;
 		}
 
 		[[nodiscard]]
@@ -74,12 +90,12 @@ namespace pst {
 
 	class Constructor final: public ClassSpecial {
 		ParserRef<ParamList> params = nullptr;
-		ParserRef<InitList> inits = nullptr;
-		ParserRef<CodeBlock> body = nullptr;
+		ParserRef<InitList>  inits  = nullptr;
+		ParserRef<CodeBlock> body   = nullptr;
 
 	public:
-		Constructor(dia::SourcePosition pos): ClassSpecial(StmtKind::Constructor, pos) {};
-		static ParserRef<Constructor> parse(RiftParserState& state);
+		CLASS_STMT_SPEC_CONSTRUCTOR(Constructor);
+		CLASS_STMT_PARSE(Constructor);
 
 		~Constructor() override = default;
 		void dprint(std::ostream& out) const final;
@@ -89,6 +105,11 @@ namespace pst {
 			return "Class Constructor";
 		}
 
+		[[nodiscard]]
+		bool isDeclaration() const override {
+			return true;
+		}
+
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
@@ -96,8 +117,8 @@ namespace pst {
 		ParserRef<CodeBlock> body = nullptr;
 
 	public:
-		Destructor(dia::SourcePosition pos): ClassSpecial(StmtKind::Destructor, pos) {};
-		static ParserRef<Destructor> parse(RiftParserState& state);
+		CLASS_STMT_SPEC_CONSTRUCTOR(Destructor);
+		CLASS_STMT_PARSE(Destructor);
 
 		~Destructor() override = default;
 		void dprint(std::ostream& out) const final;
@@ -111,14 +132,14 @@ namespace pst {
 	};
 
 	class Method final: public ClassStmt {
-		tpc::Identifier            name;
+		tpc::Identifier      name;
 		ParserRef<ParamList> params = nullptr;
-		ParserRef<RetList> rets = nullptr;
-		ParserRef<CodeBlock> body = nullptr;
+		ParserRef<RetList>   rets   = nullptr;
+		ParserRef<CodeBlock> body   = nullptr;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Method);
-		static ParserRef<Method> parse(RiftParserState& state);
+		CLASS_STMT_PARSE(Method);
 
 		~Method() override = default;
 		void dprint(std::ostream& out) const final;
@@ -126,6 +147,16 @@ namespace pst {
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Class Method";
+		}
+
+		[[nodiscard]]
+		base::StrId getName() const {
+			return name.value;
+		}
+
+		[[nodiscard]]
+		bool isDeclaration() const override {
+			return true;
 		}
 
 		[[nodiscard]]
@@ -137,14 +168,14 @@ namespace pst {
 	};
 
 	class Field final: public ClassStmt {
-		bool is_const = false;
-		tpc::Identifier            name;
-		ParserRef<Expr>            type;
+		bool                            is_const = false;
+		tpc::Identifier                 name;
+		ParserRef<Expr>                 type;
 		base::Optional<ParserRef<Expr>> init;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Field);
-		static ParserRef<Field> parse(RiftParserState& state);
+		CLASS_STMT_PARSE(Field);
 
 		~Field() override = default;
 		void dprint(std::ostream& out) const final;
@@ -152,6 +183,16 @@ namespace pst {
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Class Field";
+		}
+
+		[[nodiscard]]
+		base::StrId getName() const {
+			return name.value;
+		}
+
+		[[nodiscard]]
+		bool isDeclaration() const override {
+			return true;
 		}
 
 		[[nodiscard]]

@@ -23,7 +23,12 @@ namespace compiler::helios {
 		Alias,
 		Using,
 		Variable,
-		Import
+		Import,
+
+		// Class Symbols
+		Method,
+		Field,
+		Constructor,
 		// ...
 	};
 

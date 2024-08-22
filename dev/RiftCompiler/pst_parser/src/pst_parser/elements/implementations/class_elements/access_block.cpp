@@ -17,19 +17,20 @@ namespace pst {
 		}
 	};
 
-	ParserRef<AccessBlock> AccessBlock::parse(RiftParserState& state, tpc::Identifier class_name) {
+	ParserRef<AccessBlock> AccessBlock::parse(RiftParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = makeRef<AccessBlock>(position);
+		auto out      = makeRef<AccessBlock>(position, ctx);
 
-		if(not access_specifiers.contains(state[0].asKeyword())) {
+		if (not access_specifiers.contains(state[0].asKeyword())) {
 			state.log(base::make_unique<NoSpecifierError>(position));
 		} else {
+			out->context.specifiers.push_back(base::borrow_ptr(&state[0]));
 			out->specifier = state[0].asKeyword();
 		}
 
 		state.parse(out).eatOne();
 
-		state.parse(out).with(&out->block, ClassBlock::parse, tpc::Identifier(class_name));
+		state.parse(out).with(&out->block, ClassBlock::parse, out->getContext());
 
 		return out;
 	}
@@ -45,5 +46,7 @@ namespace pst {
 		out << "}";
 	}
 
-	void AccessBlock::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAccessBlock(*this); }
+	void AccessBlock::acceptVisitor(PstStmtVisitor& visitor) const {
+		visitor.visitAccessBlock(*this);
+	}
 }

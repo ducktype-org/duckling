@@ -154,9 +154,7 @@ namespace assemble {
 		FunctionType>;
 
 	struct AsmElement: tpc::Element {
-		void debugPrint(std::ostream& out) const override {
-			dprint(out);
-		}
+		void debugPrint(std::ostream& out) const override { dprint(out); }
 	};
 
 	struct Type: AsmElement {

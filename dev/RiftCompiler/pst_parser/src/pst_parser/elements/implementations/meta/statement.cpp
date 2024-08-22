@@ -72,18 +72,16 @@ namespace pst {
 	}
 
 	Stmt::AttrList Stmt::collectAttributes(RiftParserState& state) {
-		auto as_special = state[0].asSpecial();
+		auto     as_special = state[0].asSpecial();
 		AttrList attributes;
 
 		while (as_special == Special::AtSign) {
 			ParserRef<Attribute> attr = Attribute::parse(state);
-			if (attr != nullptr) {
-				attributes.push_back(std::move(attr));
-			}
+			if (attr != nullptr) attributes.push_back(std::move(attr));
 			as_special = state[0].asSpecial();
 		}
 		return attributes;
-	}	
+	}
 
 	ParserRef<Stmt> Stmt::parse(RiftParserState& state) {
 		// Collect Attributes
@@ -93,9 +91,7 @@ namespace pst {
 		ParserRef<Stmt> out = detail::chooseStmt(state);
 
 		// Add Attributes
-		if (out != nullptr) {
-			out->addAttributes(std::move(attributes));
-		}
+		if (out != nullptr) out->addAttributes(std::move(attributes));
 
 		return out;
 	}
@@ -103,7 +99,7 @@ namespace pst {
 	void Stmt::dprintAttributes(std::ostream& out) const {
 		if (not attributes.empty()) {
 			out << R"("attributes": [)";
-			for(auto& attribute: attributes) {
+			for (auto& attribute: attributes) {
 				tpc::nullAwareDprint(attribute, out);
 				out << ",";
 			}
@@ -115,19 +111,11 @@ namespace pst {
 		attributes = std::move(additions);
 
 		using namespace std::views;
-		auto borrow = [](ParserRef<Attribute>& arg) -> Child {
-			return arg.borrow_mut();
-		};
+		auto borrow   = [](ParserRef<Attribute>& arg) -> Child { return arg.borrow_mut(); };
 		auto borrowed = attributes | transform(borrow);
 
-		sub_elements.insert(
-			sub_elements.begin(), 
-			borrowed.begin(), 
-			borrowed.end()
-		);
+		sub_elements.insert(sub_elements.begin(), borrowed.begin(), borrowed.end());
 
-		if (attributes.size() > 0) {
-			setFirstToken(attributes.front()->getSourcePosition());
-		}
+		if (attributes.size() > 0) setFirstToken(attributes.front()->getSourcePosition());
 	}
 }

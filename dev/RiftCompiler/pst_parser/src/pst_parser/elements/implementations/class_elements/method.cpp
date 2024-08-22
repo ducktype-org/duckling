@@ -1,9 +1,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<Method> Method::parse(RiftParserState& state) {
+	ParserRef<Method> Method::parse(RiftParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Method>(position);
+		auto out      = makeRef<Method>(position, ctx);
 
 		out->parseSpecifiers(state);
 

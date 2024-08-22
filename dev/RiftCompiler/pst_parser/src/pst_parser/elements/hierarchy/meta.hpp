@@ -81,12 +81,10 @@ namespace pst {
 		bool                   trailingSemicolon() override;
 		virtual void           acceptVisitor(PstStmtVisitor& visitor) const = 0;
 
-		/** 
+		/**
 		 * @note This might need to return a vector of borrow pointers instead
 		 */
-		auto& getAttributes() const {
-			return attributes;
-		}
+		auto& getAttributes() const { return attributes; }
 
 		[[nodiscard]]
 		bool isStatement() const final {
@@ -137,6 +135,11 @@ namespace pst {
 		bool trailingSemicolon() override;
 	};
 
+	struct ClassContext {
+		base::StrId                                 name;
+		std::vector<base::c_borrow_ptr<tpc::Token>> specifiers;
+	};
+
 	class ClassStmt: public Stmt {
 	protected:
 		inline static const std::set<rift_def::Keyword> class_specs = {
@@ -145,8 +148,8 @@ namespace pst {
 			rift_def::Keyword::Protected,
 			rift_def::Keyword::Static,
 		};
-		std::vector<rift_def::Keyword> specifiers;
-	
+		ClassContext context;
+
 		void parseSpecifiers(RiftParserState& state);
 
 		[[nodiscard]]
@@ -154,12 +157,17 @@ namespace pst {
 
 		void dprintPrefix(std::ostream& out) const override;
 
-		ClassStmt(StmtKind kind, const dia::SourcePosition& pos): Stmt(kind, pos) {}
+		ClassStmt(StmtKind kind, const dia::SourcePosition& pos, const ClassContext& ctx):
+			  Stmt(kind, pos),
+			  context(ctx) {}
+
 	private:
-		static ParserRef<ClassStmt> chooseStmt(RiftParserState& state, tpc::Identifier class_name);
+		static ParserRef<ClassStmt> chooseStmt(RiftParserState& state, const ClassContext& ctx);
 
 	public:
-		static ParserRef<ClassStmt> parse(RiftParserState& state, tpc::Identifier class_name);
+		static ParserRef<ClassStmt> parse(RiftParserState& state, const ClassContext& ctx);
+
+		const ClassContext& getContext() { return { context }; }
 
 		[[nodiscard]]
 		std::string elementType() const override {

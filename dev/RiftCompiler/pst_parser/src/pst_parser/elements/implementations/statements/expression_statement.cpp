@@ -11,9 +11,7 @@ namespace pst {
 		return out;
 	}
 
-	void ExprStmt::dprint(std::ostream& out) const {
-		nullAwareDprint(expression, out);
-	}
+	void ExprStmt::dprint(std::ostream& out) const { nullAwareDprint(expression, out); }
 
 	void ExprStmt::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitExprStmt(*this); }
 }

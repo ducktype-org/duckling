@@ -19,7 +19,7 @@ namespace pst {
 	}
 
 	void CodeBlockOrStmt::dprint(std::ostream& out) const {
-		auto printThrough = [&](const auto& el) {return tpc::nullAwareDprint(el, out);};
+		auto printThrough = [&](const auto& el) { return tpc::nullAwareDprint(el, out); };
 
 		std::visit(printThrough, content);
 	}

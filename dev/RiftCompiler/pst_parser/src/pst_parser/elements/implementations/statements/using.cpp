@@ -12,9 +12,7 @@ namespace pst {
 		return out;
 	}
 
-	void Using::dprint(std::ostream& out) const {
-		nullAwareDprint(names, out);
-	}
+	void Using::dprint(std::ostream& out) const { nullAwareDprint(names, out); }
 
 	void Using::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitUsing(*this); }
 }

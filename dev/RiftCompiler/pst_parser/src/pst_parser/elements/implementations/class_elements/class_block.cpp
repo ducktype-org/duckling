@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<ClassBlock> ClassBlock::parse(RiftParserState& state, tpc::Identifier class_name) {
+	ParserRef<ClassBlock> ClassBlock::parse(RiftParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
 		auto out      = makeRef<ClassBlock>(position);
 
@@ -15,7 +15,7 @@ namespace pst {
 		// @TODO: this may not work in case of compilation error
 		while (state.notEmpty()) {
 			ParserRef<ClassStmt> stmt;
-			state.parse(out).with(&stmt, ClassStmt::parse, tpc::Identifier(class_name));
+			state.parse(out).with(&stmt, ClassStmt::parse, ctx);
 			out->statements.emplace_back(std::move(stmt));
 		}
 

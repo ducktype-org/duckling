@@ -48,6 +48,9 @@
 							}
 						},
 						{
+							"specifiers": [
+								"private",
+							],
 							"Class Field": {
 								"is const": "false",
 								"name": {
@@ -133,6 +136,9 @@
 							}
 						},
 						{
+							"specifiers": [
+								"private",
+							],
 							"Class Method": {
 								"name": {
 									"Name": "goo"
@@ -199,11 +205,17 @@
 							}
 						},
 						{
+							"specifiers": [
+								"public",
+							],
 							"Access specification block": {
 								"specifier": "public",
 								"code block": {
 									"Class Block": [
 										{
+											"specifiers": [
+												"public",
+											],
 											"Class Constructor": {
 												"name": {
 													"Name": "create"
@@ -270,6 +282,9 @@
 											}
 										},
 										{
+											"specifiers": [
+												"public",
+											],
 											"Class Constructor": {
 												"name": {
 													"Name": "abc"
@@ -300,6 +315,9 @@
 											}
 										},
 										{
+											"specifiers": [
+												"public",
+											],
 											"Class Destructor": {
 												"body": {
 													"Code Block": []

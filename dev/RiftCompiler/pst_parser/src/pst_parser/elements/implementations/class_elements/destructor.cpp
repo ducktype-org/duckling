@@ -17,9 +17,9 @@ namespace pst {
 		}
 	};
 
-	ParserRef<Destructor> Destructor::parse(RiftParserState& state) {
+	ParserRef<Destructor> Destructor::parse(RiftParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Destructor>(position);
+		auto out      = makeRef<Destructor>(position, ctx);
 
 		out->parseSpecifiers(state);
 
@@ -27,9 +27,7 @@ namespace pst {
 		state.parse(out).all(Operator::Period, &out->kind);
 
 		state.parse(out).goDown();
-		if (state.notEmpty()) {
-			state.log(base::make_unique<NonEmptyError>(state.getPosition()));
-		}
+		if (state.notEmpty()) state.log(base::make_unique<NonEmptyError>(state.getPosition()));
 		state.parse(out).goUpAndSkip();
 
 		state.parse(out).one(&out->body);
@@ -44,5 +42,7 @@ namespace pst {
 		out << "}";
 	}
 
-	void Destructor::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitDestructor(*this); }
+	void Destructor::acceptVisitor(PstStmtVisitor& visitor) const {
+		visitor.visitDestructor(*this);
+	}
 }

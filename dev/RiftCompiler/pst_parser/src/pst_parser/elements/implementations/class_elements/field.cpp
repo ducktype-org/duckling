@@ -17,9 +17,9 @@ namespace pst {
 		FieldTypeEndError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<Field> Field::parse(RiftParserState& state) {
+	ParserRef<Field> Field::parse(RiftParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Field>(position);
+		auto out      = makeRef<Field>(position, ctx);
 
 		out->parseSpecifiers(state);
 
@@ -38,9 +38,8 @@ namespace pst {
 			true
 		);
 
-		if (state.parse(out).tryEat(Operator::Assign)) {
+		if (state.parse(out).tryEat(Operator::Assign))
 			state.parse(out).with<Expr>(&out->init, Expr::parse, true);
-		}
 
 		return out;
 	}
@@ -49,8 +48,10 @@ namespace pst {
 		out << "{";
 
 		out << R"("is const": )";
-		if(is_const) out << R"("true")";
-		else out << R"("false")";
+		if (is_const)
+			out << R"("true")";
+		else
+			out << R"("false")";
 
 		out << R"(,"name": )";
 		nullAwareDprint(name, out);

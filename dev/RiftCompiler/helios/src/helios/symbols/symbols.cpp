@@ -184,7 +184,33 @@ namespace compiler::helios {
 				.pst_stmt    = stmt,
 			});
 		}
-
+		case pst::StmtKind::Method: {
+			auto&& method = dynamic_cast<const pst::Method*>(stmt.get());
+			return putInSymtable(SymbolData{
+				.scope    = scope,
+				.name     = method->getName(),
+				.kind     = SymbolKind::Method,
+				.pst_stmt = stmt,
+			});
+		}
+		case pst::StmtKind::Field: {
+			auto&& field = dynamic_cast<const pst::Field*>(stmt.get());
+			return putInSymtable(SymbolData{
+				.scope    = scope,
+				.name     = field->getName(),
+				.kind     = SymbolKind::Field,
+				.pst_stmt = stmt,
+			});
+		}
+		case pst::StmtKind::Constructor: {
+			auto&& constructor = dynamic_cast<const pst::Constructor*>(stmt.get());
+			return putInSymtable(SymbolData{
+				.scope    = scope,
+				.name     = constructor->getName(),
+				.kind     = SymbolKind::Constructor,
+				.pst_stmt = stmt,
+			});
+		}
 		default:
 			break;
 		}
@@ -865,11 +891,10 @@ namespace compiler::helios {
 			ClassSymbolData class_info;
 			for (auto&& sym: struct_symbols) {
 				switch (kind(sym)) {
-				case SymbolKind::Function:
+				case SymbolKind::Method:
 					class_info.methods.push_back(sym);
 					break;
-				case SymbolKind::Const:
-				case SymbolKind::Variable:
+				case SymbolKind::Field:
 					class_info.members.push_back(sym);
 					break;
 				default:
