@@ -100,13 +100,13 @@ namespace compiler::helios {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
 		static auto provide(Context& ctx, QKey element) -> PResult {
-			ScopeID parent = element.base_element->getParent().has_value()
-			                   ? ctx.query<QueryPrimaryCodeScopeFor>(
-								   { element.base_element->getParent().value() }
-							   )
-			                   : ctx.query<QueryRootScopeOf>(
-								   { frontend::extendQueryModuleIDOfPST(ctx, element.base_element) }
-							   );
+			ScopeID parent
+				= element.base_element->getParent().has_value()
+			        ? ctx.query<QueryPrimaryCodeScopeFor>({ element.base_element->getParent().value(
+					  ) })
+			        : ctx.query<QueryRootScopeOf>(
+						  { frontend::extendQueryModuleIDOfPST(ctx, element.base_element) }
+					  );
 
 
 			// simple parent sanity check:
@@ -245,9 +245,9 @@ namespace compiler::helios {
 			for (const auto& sym: symbol_list) {
 				if (isWildcard(sym)) {
 					if (key.with_wildcards) {
-						auto& query_wild_result
-							= ctx.query<QueryLookupInSymbol>({ sym, key.name, true });
-						IF_ERR_RET_ELSE_VALUE(query_wild_result, wild_result)
+						UNPACK_RESULT(
+							ctx.query<QueryLookupInSymbol>({ sym, key.name, true }), wild_result
+						);
 						if (!wild_result.isEmpty())
 							result.children.push_back(wild_result.toNode(sym));
 					}
@@ -268,18 +268,19 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, QueryLookup_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto&& query_lookup_result = ctx.query<QueryLookupInScope>(key);
-			IF_ERR_RET_ELSE_VALUE(query_lookup_result, result)
+			UNPACK_RESULT(ctx.query<QueryLookupInScope>(key), result);
 
 			if (key.scope.ref->parent.ref != nullptr) {
 				auto parent = key.scope.ref->parent;
 
 				// Reverse insertion order allow for linear result concatenation instead of
 				// quadratic
-				auto query_parent_result = ctx.query<QueryLookupInScopeAndParents>(
-					{ parent, key.name, key.with_wildcards }
+				UNPACK_RESULT_MUT(
+					ctx.query<QueryLookupInScopeAndParents>({ parent, key.name, key.with_wildcards }
+				    ),
+					parent_result
 				);
-				IF_ERR_RET_ELSE_VALUE(query_parent_result, parent_result)
+
 				parent_result.insert(result);
 
 				return parent_result;

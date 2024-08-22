@@ -695,26 +695,27 @@ namespace ts::internal {
 
 		[[nodiscard]]
 		QueryStructResult<base::Optional<ClassInfo>> getBaseClassType(query::Context& ctx) const {
-			auto& bases = ctx.query<compiler::helios::QueryStructSymbolData>(symbol).bases;
+			UNPACK_RESULT(ctx.query<compiler::helios::QueryStructSymbolData>(symbol), struct_data);
+			auto& bases = struct_data.bases;
 			if (bases.empty())
 				return {};
 			else
-				return { ClassInfo(bases.at(0)) };
+				return base::Optional{ ClassInfo(bases.at(0)) };
 		}
 
 		[[nodiscard]]
 		QueryStructResult<base::Optional<compiler::helios::SymID>>
 			getBaseClassSymbol(query::Context& ctx) const {
-			return getBaseClassType(ctx).map([](ClassInfo classInfo) {
-				return classInfo.getSymbol();
-			});
+			UNPACK_RESULT(getBaseClassType(ctx), base_class_type);
+			return base_class_type.map([](ClassInfo classInfo) { return classInfo.getSymbol(); });
 		}
 
 		// @TODO: change return type to InterfaceInfo when interface type is created.
 		[[nodiscard]]
 		QueryStructResult<std::vector<ClassInfo>> getImplementedInterfaceTypes(query::Context& ctx
 		) const {
-			auto& bases = ctx.query<compiler::helios::QueryStructSymbolData>(symbol).bases;
+			UNPACK_RESULT(ctx.query<compiler::helios::QueryStructSymbolData>(symbol), struct_data);
+			auto&                  bases = struct_data.bases;
 			std::vector<ClassInfo> result;
 			result.reserve(std::max(0UL, bases.size() - 1));
 			for (int i = 1; i < bases.size(); i++) result.emplace_back(bases.at(i));
@@ -724,7 +725,8 @@ namespace ts::internal {
 		[[nodiscard]]
 		QueryStructResult<std::vector<compiler::helios::SymID>>
 			getImplementedInterfaceSymbols(query::Context& ctx) const {
-			auto& bases = ctx.query<compiler::helios::QueryStructSymbolData>(symbol).bases;
+			UNPACK_RESULT(ctx.query<compiler::helios::QueryStructSymbolData>(symbol), struct_data);
+			auto&                                bases = struct_data.bases;
 			std::vector<compiler::helios::SymID> result;
 			result.reserve(std::max(0UL, bases.size() - 1));
 			for (int i = 1; i < bases.size(); i++)
