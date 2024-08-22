@@ -18,7 +18,7 @@ namespace pst {
 
 	void ClassStmt::parseSpecifiers(RiftParserState& state) {
 		while (class_specs.contains(state[0].asKeyword())) {
-			context.specifiers.push_back(base::borrow_ptr(&state[0]));
+			context.specifiers.emplace_back(&state[0]);
 			state.parse(base::borrow_ptr(this)).eatOne();
 		}
 	}

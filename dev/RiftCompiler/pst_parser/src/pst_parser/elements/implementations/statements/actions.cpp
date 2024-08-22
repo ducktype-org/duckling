@@ -47,7 +47,7 @@ namespace pst {
 
 	namespace detail {
 		void simpleActionDprint(
-			std::ostream& out, std::string kind, const base::Optional<ParserRef<Expr>>* expr
+			std::ostream& out, const std::string& kind, const base::Optional<ParserRef<Expr>>* expr
 		) {
 			out << "{";
 			out << R"("kind": ")" << kind << "\"";

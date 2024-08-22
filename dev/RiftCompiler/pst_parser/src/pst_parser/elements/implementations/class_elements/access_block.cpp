@@ -24,7 +24,7 @@ namespace pst {
 		if (not access_specifiers.contains(state[0].asKeyword())) {
 			state.log(base::make_unique<NoSpecifierError>(position));
 		} else {
-			out->context.specifiers.push_back(base::borrow_ptr(&state[0]));
+			out->context.specifiers.emplace_back(&state[0]);
 			out->specifier = state[0].asKeyword();
 		}
 

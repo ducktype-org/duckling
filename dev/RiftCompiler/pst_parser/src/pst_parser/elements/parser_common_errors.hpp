@@ -2,22 +2,20 @@
 
 #include <diagnostic/message.hpp>
 
-namespace pst {
-	namespace error {
-		class BlockStartError final: public dia::Error {
-		protected:
-			[[nodiscard]]
-			std::string toStringBrief() const override {
-				return "Expected a code block starting with `{`.";
-			}
+namespace pst::error {
+	class BlockStartError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected a code block starting with `{`.";
+		}
 
-		public:
-			[[nodiscard]]
-			Domain getDomain() const override {
-				return Domain::Parser;
-			}
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
 
-			BlockStartError(dia::SourcePosition pos): dia::Error(pos) {}
-		};
-	}
+		BlockStartError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
 }

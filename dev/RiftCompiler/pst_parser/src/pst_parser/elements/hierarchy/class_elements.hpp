@@ -45,7 +45,10 @@ namespace pst {
 			return false;
 		}
 
-		ParserCBorrowRef<ClassBlock> getBlock() const { return block.borrow(); }
+		[[nodiscard]]
+		ParserCBorrowRef<ClassBlock> getBlock() const {
+			return block.borrow();
+		}
 
 		[[nodiscard]]
 		bool trailingSemicolon() override {

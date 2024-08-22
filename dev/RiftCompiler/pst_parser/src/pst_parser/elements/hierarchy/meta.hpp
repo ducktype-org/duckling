@@ -84,7 +84,10 @@ namespace pst {
 		/**
 		 * @note This might need to return a vector of borrow pointers instead
 		 */
-		auto& getAttributes() const { return attributes; }
+		[[nodiscard]]
+		auto& getAttributes() const {
+			return attributes;
+		}
 
 		[[nodiscard]]
 		bool isStatement() const final {
@@ -157,9 +160,9 @@ namespace pst {
 
 		void dprintPrefix(std::ostream& out) const override;
 
-		ClassStmt(StmtKind kind, const dia::SourcePosition& pos, const ClassContext& ctx):
+		ClassStmt(StmtKind kind, const dia::SourcePosition& pos, ClassContext ctx):
 			  Stmt(kind, pos),
-			  context(ctx) {}
+			  context(std::move(ctx)) {}
 
 	private:
 		static ParserRef<ClassStmt> chooseStmt(RiftParserState& state, const ClassContext& ctx);
