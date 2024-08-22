@@ -21,4 +21,15 @@ namespace tpc {
 		else
 			out << "\"<ANONYMOUS>\"";
 	}
+
+	void nullAwareSemanticTokenPrint(Identifier ident, std::ostream& out) {
+		identifierDprint(ident.value, out);
+	}
+
+	void nullAwareSemanticTokenPrint(OptionalIdentifier ident, std::ostream& out) {
+		if (ident.value.has_value())
+			identifierDprint(ident.value.value(), out);
+		else
+			out << "\"<ANONYMOUS>\"";
+	}
 }

@@ -24,5 +24,21 @@ namespace pst {
 		out << "}}";
 	}
 
+	void Namespace::semPrint(std::ostream& out) const {
+		out << "{\"Namespace\": {";
+
+		out << position.semPrint();
+
+		out << R"(,"semanticTokenType": "namespace")";
+
+		out << R"(,"name": )";
+		nullAwareSemanticTokenPrint(name, out);
+
+		// @TODO: change to body in print:
+		out << R"(, "block": )";
+		nullAwareSemanticTokenPrint(body, out);
+		out << "}}";
+	}
+
 	void Namespace::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitNamespace(*this); }
 }

@@ -30,5 +30,20 @@ namespace pst {
 		out << " } }";
 	}
 
+	void Fun::semPrint(std::ostream& out) const {
+		out << "{\"Fun\": { ";
+		out << position.semPrint();
+		out << R"(,"semanticTokenType": "function")";
+		out << ",\"name\": ";
+		nullAwareSemanticTokenPrint(name, out);
+		out << ", \"params\":";
+		nullAwareSemanticTokenPrint(params, out);
+		out << ", \"rets\":";
+		nullAwareSemanticTokenPrint(rets, out);
+		out << ", \"body\":";
+		nullAwareSemanticTokenPrint(body, out);
+		out << " }}";
+	}
+
 	void Fun::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitFun(*this); }
 }

@@ -2,6 +2,8 @@ import { spawn, ChildProcess } from "child_process";
 import { DucklingElement, ducklingElementFactory } from "./lsptree/elements/elements";
 import { DucklingParserError, toErrors } from "./errors";
 import { Connection } from "vscode-languageserver";
+import { SemanticToken } from "./lsptree/elements/common";
+//import { parseTree } from "./jsonToSemTokens";
 
 // For the compiler daemon client to work, daemon's binary should be in DucklingLS/bin/ directory
 const BINARY_PATH = __dirname + "/../../bin/";
@@ -84,6 +86,30 @@ export class CompilerDaemonClient {
 
 		function handleJSON(json: any): DucklingElement | null {
 			return ducklingElementFactory.createDefined(json); // LSPT is created here from JSON
+		}
+
+		function handleCatch(error: any) : null {
+			console.error(error);
+			return null;
+		}
+
+		return response.then(handleResponse).then(handleJSON).catch(handleCatch);
+	}
+
+	// This function is called to get the LSPTree from the daemon for a file
+	public async getSemTokens(filePath: string, connection: Connection): Promise<SemanticToken[] | null> {
+		this.waitForReady(connection);
+
+		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
+
+		const response = fetch(`${DAEMON_ADRESS}/get_sem_tokens/${base64FilePath}`);
+
+		function handleResponse(res: Response) {
+			return res.json();
+		}
+
+		function handleJSON(json: any): SemanticToken[] | null {
+			return SemanticToken.parseTree(json); // Tokens are created here from JSON
 		}
 
 		function handleCatch(error: any) : null {

@@ -30,5 +30,21 @@ namespace pst {
 		out << "}}";
 	}
 
+	void Struct::semPrint(std::ostream& out) const {
+		out << "{\"Struct\": {\"name\":";
+		nullAwareSemanticTokenPrint(name, out);
+
+		out << R"(,"base_classes":)";
+		nullAwareSemanticTokenPrint(bases, out);
+		out << ",";
+
+		out << R"("body": )";
+		nullAwareSemanticTokenPrint(body, out);
+
+		out << ","
+		position.semPrint(out);
+		out << R"(,"semanticTokenType": "struct"}})";
+	}
+
 	void Struct::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitStruct(*this); }
 }

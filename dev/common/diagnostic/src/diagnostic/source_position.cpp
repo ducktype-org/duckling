@@ -134,4 +134,16 @@ namespace dia {
 		printer::StreamPrinter::printNL(content, res);
 		return res.str();
 	}
+
+	void SourcePosition::semPrint(std::ostream& out) const {
+		out << "position: {";
+		std::pair<usize, usize> start = this.getStartLineColumn();
+		std::pair<usize, usize> end   = this.getEndLineColumn();
+		out << "startLine: " << start.first << ", ";
+		out << "startColumn: " << start.second << ", ";
+		out << "endLine: " << end.first << ", ";
+		out << "endColumn: " << end.second << ", ";
+		out << "start: " << this.source_start << ", ";
+		out << "end: " << this.source_end << "}";
+	}
 }

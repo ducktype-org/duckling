@@ -53,5 +53,18 @@ namespace pst {
 		out << "}}";
 	}
 
+	void Const::semPrint(std::ostream& out) const {
+		out << "{\"Const\": {";
+		position.semPrint(out);
+		out << R"(,"semanticTokenType": "variable",)"; // TODO: maybe needs a change?
+		out << R"("name": )";
+		nullAwareSemanticTokenPrint(name, out);
+		out << R"(, "type": )";
+		nullAwareSemanticTokenPrint(type, out);
+		out << R"(, "value": )";
+		nullAwareSemanticTokenPrint(value, out);
+		out << "}}";
+	}
+
 	void Const::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitConst(*this); }
 }

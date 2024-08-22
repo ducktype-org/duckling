@@ -31,6 +31,9 @@ namespace pst {
 		~TopLevel() override = default;
 		void dprint(std::ostream& out) const final;
 
+		~TopLevel() override = default;
+		void semPrint(std::ostream& out) const final;
+
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Top Level";
@@ -59,6 +62,7 @@ namespace pst {
 		static ParserRef<Block> parse(RiftParserState& state);
 		~Block() final = default;
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -88,6 +92,8 @@ namespace pst {
 		static ParserRef<Namespace> parse(RiftParserState& state);
 		~Namespace() final = default;
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
+
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -126,6 +132,7 @@ namespace pst {
 		static ParserRef<Struct> parse(RiftParserState& state);
 		~Struct() final = default;
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -161,6 +168,7 @@ namespace pst {
 
 		static ParserRef<Fun> parse(RiftParserState& state);
 		void                  dprint(std::ostream& out) const final;
+		void				  semPrint(std::ostream& out) const final;
 		~Fun() final = default;
 
 		[[nodiscard]]
@@ -194,6 +202,7 @@ namespace pst {
 
 		static ParserRef<Variable> parse(RiftParserState& state);
 		void                       dprint(std::ostream& out) const override;
+		void                       semPrint(std::ostream& out) const override;
 		~Variable() override = default;
 
 		[[nodiscard]]
@@ -216,6 +225,7 @@ namespace pst {
 
 		static ParserRef<If> parse(RiftParserState& state);
 		void                 dprint(std::ostream& out) const final;
+		void                 semPrint(std::ostream& out) const final;
 		~If() final = default;
 
 		[[nodiscard]]
@@ -246,6 +256,7 @@ namespace pst {
 
 		static ParserRef<While> parse(RiftParserState& state);
 		void                    dprint(std::ostream& out) const final;
+		void                    semPrint(std::ostream& out) const final;
 		~While() final = default;
 
 		[[nodiscard]]

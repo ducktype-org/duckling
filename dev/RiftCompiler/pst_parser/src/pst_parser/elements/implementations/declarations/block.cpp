@@ -22,5 +22,16 @@ namespace pst {
 		out << "}}";
 	}
 
+	void Block::semPrint(std::ostream& out) const {
+		out << R"({"Block": {)";
+		out << position.semPrint();
+		out << R"(,"semanticTokenType": "namespace")"; //TODO: maybe needs a change?
+		out << R"(,"optional name": )";
+		nullAwareSemanticTokenPrint(optional_name, out);
+		out << R"(, "code block": )";
+		nullAwareSemanticTokenPrint(code_block, out);
+		out << "}}";
+	}
+
 	void Block::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitBlock(*this); }
 }

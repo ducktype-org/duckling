@@ -43,5 +43,21 @@ namespace pst {
 		out << "}}";
 	}
 
+	void Alias::semPrint(std::ostream& out) const {
+		out << "{\"Alias\": {";
+
+		position.semPrint(out);
+
+		out << R"(,"semanticTokenType": "variable",)";
+
+		out << strConcat(R"("name": ")", name.value, R"(",)");
+
+		out << R"("points_to": )";
+
+		nullAwareSemanticTokenPrint(points_to, out);
+
+		out << "}}";
+	}
+
 	void Alias::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAlias(*this); }
 }

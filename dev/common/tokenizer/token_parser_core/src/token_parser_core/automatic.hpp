@@ -44,12 +44,23 @@ namespace tpc {
 	void nullAwareDprint(Identifier, std::ostream& out);
 	void nullAwareDprint(OptionalIdentifier, std::ostream& out);
 
+	void nullAwareSemanticTokenPrint(Identifier, std::ostream& out);
+	void nullAwareSemanticTokenPrint(OptionalIdentifier, std::ostream& out);
+
 	template<typename T>
 	void nullAwareDprint(const ParserRef<T>& ref, std::ostream& out) {
 		if (!ref)
 			out << "\"<nullptr>\"";
 		else
 			ref->dprint(out);
+	}
+
+	template<typename T>
+	void nullAwareSemanticTokenPrint(const ParserRef<T>& ref, std::ostream& out) {
+		if (!ref)
+			out << "\"<nullptr>\"";
+		else
+			ref->semPrint(out);
 	}
 
 	class BadKeywordError;

@@ -60,6 +60,23 @@ namespace pst {
 			}
 			out << "}}";
 		}
+
+		void simpleActionSemPrint(
+			std::ostream&                          out,
+			const base::Optional<ParserRef<Expr>>& action,
+			const std::string_view                 name,
+			const std::string_view                 preposition
+		) {
+			out << R"({"Action": {)";
+			position.semPrint(out);
+			out << R"(,"semanticTokenType": "event",)";
+			out << R"("kind": ")" << name << "\"";
+			if (action) {
+				out << ", \"" << preposition << "\": ";
+				nullAwareSemanticTokenPrint(action.value(), out);
+			}
+			out << "}}";
+		}
 	}
 
 	void Return::dprint(std::ostream& out) const {
@@ -82,6 +99,29 @@ namespace pst {
 
 	void Throw::dprint(std::ostream& out) const {
 		simpleActionDprint(out, expr, "Throw", "exception");
+	}
+
+	// Semantic printing
+	void Return::semPrint(std::ostream& out) const {
+		simpleActionSemPrint(out, expr, "Return", "with");
+	}
+
+	void Break::semPrint(std::ostream& out) const { simpleActionSemPrint(out, expr, "Break", "from"); }
+
+	void Continue::semPrint(std::ostream& out) const {
+		simpleActionSemPrint(out, expr, "Continue", "with");
+	}
+
+	void Redo::semPrint(std::ostream& out) const { simpleActionSemPrint(out, expr, "Redo", "what"); }
+
+	void Restart::semPrint(std::ostream& out) const {
+		simpleActionSemPrint(out, expr, "Restart", "what");
+	}
+
+	void Defer::semPrint(std::ostream& out) const { simpleActionSemPrint(out, expr, "Defer", "what"); }
+
+	void Throw::semPrint(std::ostream& out) const {
+		simpleActionSemPrint(out, expr, "Throw", "exception");
 	}
 
 	void Return::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitReturn(*this); }

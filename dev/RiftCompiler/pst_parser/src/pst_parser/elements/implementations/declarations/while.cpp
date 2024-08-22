@@ -23,5 +23,17 @@ namespace pst {
 		out << "}}";
 	}
 
+	void While::semPrint(std::ostream& out) const {
+		out << R"({"While": {"name":)";
+		nullAwareSemanticTokenPrint(optional_name, out);
+		out << ", \"condition\": ";
+		nullAwareSemanticTokenPrint(condition, out);
+		out << ", \"body\": ";
+		nullAwareSemanticTokenPrint(body, out);
+		out << ","
+		position.semPrint(out);
+		out << ",semanticTokenType: keyword}}";
+	}
+
 	void While::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitWhile(*this); }
 }

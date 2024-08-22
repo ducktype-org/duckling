@@ -23,5 +23,17 @@ namespace pst {
 		out << "}}";
 	}
 
+	void If::semPrint(std::ostream& out) const {
+		out << "{\"If\": {\"name\":";
+		nullAwareSemanticTokenPrint(optional_name, out);
+		out << ", \"condition\": ";
+		nullAwareSemanticTokenPrint(condition, out);
+		out << ", \"body\": ";
+		nullAwareSemanticTokenPrint(body, out);
+		out << ",";
+		position.semPrint(out);
+		out << R"(,"semanticTokenType": "namespace"}})";
+	}
+
 	void If::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitIf(*this); }
 }

@@ -29,6 +29,7 @@ namespace pst {
 		~Attribute() final = default;
 
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
 		bool trailingSemicolon() override;
 
 		[[nodiscard]]
@@ -72,6 +73,7 @@ namespace pst {
 		bool getStar() const;
 		~Import() final = default;
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 
@@ -105,6 +107,7 @@ namespace pst {
 
 		~Using() final = default;
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 
@@ -128,6 +131,7 @@ namespace pst {
 
 		~ExprStmt() final = default;
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 
@@ -162,6 +166,7 @@ namespace pst {
 		static ParserRef<Alias> parse(RiftParserState& state);
 		~Alias() final = default;
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 
@@ -226,6 +231,7 @@ namespace pst {
 
 		~Const() final = default;
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 

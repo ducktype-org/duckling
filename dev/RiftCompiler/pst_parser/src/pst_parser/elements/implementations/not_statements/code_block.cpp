@@ -47,4 +47,15 @@ namespace pst {
 		}
 		out << "]}";
 	}
+
+	void CodeBlock::semPrint(std::ostream& out) const {
+		out << "{\"CodeBlock\": [";
+		for (auto& stmt: statements) {
+			nullAwareSemanticTokenPrint(stmt, out);
+			out << ", ";
+		}
+		out << R"(],semanticTokenType: "namespace",)";
+		position.semPrint(out);
+		out << "}";
+	}
 }

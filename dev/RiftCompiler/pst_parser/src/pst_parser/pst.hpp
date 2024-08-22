@@ -103,5 +103,18 @@ namespace pst {
 			  imports(std::move(other.imports)) {}
 
 		void dprint(std::ostream& out) const { nullAwareDprint(element, out); }
+
+		void semPrint(std::ostream& out) const { nullAwareSemanticTokenPrint(element, out); }
+
+		// TODO: Add position to dprint
+		void semanticTokensPrint(std::ostream& out) const {
+			nullAwareDprint(element, out);
+		}
+
+		// TODO
+		void foldingRangesPrint(std::ostream& out) const { nullAwareDprint(element, out); }
+
+		// TODO
+		void completionItemsPrint(std::ostream& out) const { nullAwareDprint(element, out); }
 	};
 }

@@ -31,5 +31,15 @@ namespace pst {
 		out << "}";
 	}
 
+	void Import::semPrint(std::ostream& out) const {
+		out << "{\"Import\": ";
+		position.semPrint(out);
+		out << R"(,"semanticTokenType": "event",)"; // TODO: maybe needs a change?
+		nullAwareSemanticTokenPrint(names, out);
+		out << ", ";
+		out << R"("Alias": ")" << alias.value.strView() << R"(")";
+		out << "}";
+	}
+
 	void Import::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitImport(*this); }
 }

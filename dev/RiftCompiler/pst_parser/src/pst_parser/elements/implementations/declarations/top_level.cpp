@@ -24,4 +24,14 @@ namespace pst {
 		}
 		out << "]}";
 	}
+
+	void TopLevel::semPrint(std::ostream& out) const {
+		out << "{\"MPST\" : [";
+		for (auto& e: statements) {
+			nullAwareSemanticTokenPrint(e, out);
+			out << ", ";
+		}
+		out << "]}";
+	}
+
 }

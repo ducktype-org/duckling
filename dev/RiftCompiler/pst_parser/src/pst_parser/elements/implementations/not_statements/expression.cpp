@@ -212,4 +212,51 @@ namespace pst {
 		}
 		out << "]}";
 	}
+
+	void Expr::semPrint(std::ostream& out) const {
+		out << "{\"Expr\" : [";
+		for (auto& e: elements) {
+			variant_match(e) {
+				variant_case(Identifier, idt) {
+					out << R"({"Identifier": ")" << idt.indent_id.strView() << "\"}";
+				}
+				variant_case(Operator, oper) {
+					out << R"({"Operator": ")" << oper.oper_id.strView() << "\"}";
+				}
+				variant_case(NumLiteral, num) {
+					out << R"({"NumLiteral": ")" << num.num_id.strView() << "\"}";
+				}
+				variant_case(Group, group) {
+					constexpr static std::array<std::string_view, 4> gr_strings
+						= { "()", "[]", "{}", "  " };
+					out << R"({ "Group": { "type": ")";
+					out << gr_strings.at(int(group.type));
+					out << R"(", "expr": )";
+					nullAwareSemanticTokenPrint(group.expr, out);
+					out << "} }";
+				}
+				variant_case(CommaSeparated, sep) {
+					out << R"({ "Comma separated": [)";
+					bool comma = false;
+					for (const auto& expr: sep.expr) {
+						if (comma)
+							out << ", ";
+						else
+							comma = true;
+						tpc::nullAwareSemanticTokenPrint(expr, out);
+					}
+					out << "] }";
+				}
+				variant_case(KeywordValue, key) {
+					out << R"({"KeywordValue": ")" << rift_def::keywordToStr(key.keyword).strView()
+						<< "\"}";
+				}
+				variant_default { RIFT_PANIC("Bad Expr alternative"); }
+			}
+			out << ", ";
+		}
+		out << "],";
+		position.semPrint(out);
+		out << R"(,"semanticTokenType": "macro"})"; // TODO: maybe not macro but idk
+	}
 }

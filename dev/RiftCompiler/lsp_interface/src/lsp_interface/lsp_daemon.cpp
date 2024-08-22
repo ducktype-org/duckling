@@ -114,6 +114,31 @@ void server(i32 port) {
 	});
 
 	/*
+	    /get_sem_tokens/[base64 relative path]
+
+	    Generate a modified PST for a file under the given path in the virtual file system.
+	*/
+	CROW_ROUTE(app, "/get_sem_tokens/<string>")
+	([&files](const std::string& base64_path) {
+		try {
+			const auto        path   = base64::decode_into<std::string>(base64_path);
+			const auto        file   = files.at(path);
+			auto              tokens = lexer::tokenizeFile(file);
+			pst::PST<>        pst(std::move(tokens));
+			std::stringstream ss;
+
+			// @TODO: replace it with some other LSP generation
+			// pst.getLSP(ss);
+			pst.semanticTokensPrint(ss);
+
+			return crow::response(200, ss.str());
+		} catch (std::exception& e) {
+			std::string error_msg = e.what();
+			return crow::response(400, error_msg);
+		}
+	});
+
+	/*
 	    /get_errors/[base64 relative path]
 
 	    Generate diagnostics for a file under the given path in the virtual file system.

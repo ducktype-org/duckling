@@ -36,6 +36,26 @@ namespace pst {
 		out << "}";
 	}
 
+	void CodeBlockOrStmt::semPrint(std::ostream& out) const {
+		struct PrinterFunctor {
+			std::ostream& out_;
+
+			void operator()(const ParserRef<Stmt>& stmt) { nullAwareSemanticTokenPrint(stmt, out_); }
+
+			void operator()(const ParserRef<CodeBlock>& codeBlock) {
+				nullAwareSemanticTokenPrint(codeBlock, out_);
+			}
+
+			PrinterFunctor(std::ostream& out): out_(out) {}
+		};
+
+		out << "{\"CodeBlockOrStmt\": ";
+		position.semPrint(out);
+		out << R"(,"semanticTokenType": "namespace",)";
+		std::visit(PrinterFunctor(out), content);
+		out << "}";
+	}
+
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {
 		variant_match(content) {
 			variant_case(ParserRef<Stmt>, stmt) { return const_iterator(&stmt); }

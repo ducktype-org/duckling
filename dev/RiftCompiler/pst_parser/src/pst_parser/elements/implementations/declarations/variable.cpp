@@ -58,6 +58,19 @@ namespace pst {
 		out << "}}";
 	}
 
+	void Variable::semPrint(std::ostream& out) const {
+		out << "{\"";
+		out << (is_const ? "let" : "var");
+		out << "\": {";
+		position.semPrint(out);
+		out << R"(,"semanticTokenType": "variable")";
+		out << R"(,"name": )";
+		nullAwareSemanticTokenPrint(name, out);
+		out << R"(, "type": )";
+		nullAwareSemanticTokenPrint(type, out);
+		out << "}}";
+	}
+
 	void Variable::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitVariable(*this); }
 
 	bool Variable::trailingSemicolon() { return true; }

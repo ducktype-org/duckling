@@ -48,4 +48,24 @@ namespace pst {
 
 		out << "]}}";
 	}
+
+	void DottedName::semPrint(std::ostream& out) const {
+		out << "{\"DottedName\": {";
+
+		position.semPrint(out);
+		out << R"(,"semanticTokenType": "variable",)";
+		if (star)
+			out << R"("star": "true",)";
+		else
+			out << R"("star": "false",)";
+
+		out << R"("names": [)";
+
+		for (const auto& name: names) {
+			tpc::nullAwareSemanticTokenPrint(name, out);
+			out << ", ";
+		}
+
+		out << "]}}";
+	}
 }

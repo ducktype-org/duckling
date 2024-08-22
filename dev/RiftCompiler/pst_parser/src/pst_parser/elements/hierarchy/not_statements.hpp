@@ -64,6 +64,18 @@ namespace pst {
 			out << "]}";
 		}
 
+		void semPrint(std::ostream& out) const final {
+			out << "{\"List\" : [";
+			for (auto& x: elements) {
+				tpc::nullAwareSemanticTokenPrint(x, out);
+				out << ",";
+			}
+			out << "],";
+			position.semPrint(out);
+			out << R"(,"semanticTokenType": "struct")"; // TODO: maybe needs a change?
+			out <<"}";									// Also i am unsure about the nesting
+		}
+
 		~List() final = default;
 	};
 
@@ -129,6 +141,7 @@ namespace pst {
 		bool getStar() const;
 
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
 		~DottedName() final = default;
 	};
 
@@ -143,6 +156,7 @@ namespace pst {
 		static ParserRef<CodeBlock> parse(RiftParserState& state);
 		~CodeBlock() final = default;
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -164,6 +178,7 @@ namespace pst {
 		static ParserRef<CodeBlockOrStmt> parse(RiftParserState& state);
 		~CodeBlockOrStmt() final = default;
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
 
 		using const_iterator = CodeBlock::const_iterator;
 		[[nodiscard]]
@@ -191,6 +206,7 @@ namespace pst {
 		static ParserRef<RoundGroupExpr> parse(RiftParserState& state);
 		~RoundGroupExpr() final = default;
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -344,6 +360,7 @@ namespace pst {
 			RiftParserState& state, usize len, bool exact_len = true, bool allow_comma = false
 		);
 		void dprint(std::ostream& out) const final;
+		void semPrint(std::ostream& out) const final;
 		~Expr() final = default;
 	};
 

@@ -27,5 +27,18 @@ namespace pst {
 		out << "}}";
 	}
 
+	void Attribute::semPrint(std::ostream& out) const {
+		out << "{\"Attribute\" : {";
+		position.semPrint(out);
+		out << R"(,"semanticTokenType": "property",)"; // TODO: maybe needs a change?
+		out << "\"name\" : ";
+		nullAwareSemanticTokenPrint(name, out);
+		if (args != nullptr) {
+			out << ", \"args\": ";
+			nullAwareSemanticTokenPrint(args, out);
+		}
+		out << "}}";
+	}
+
 	void Attribute::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAttribute(*this); }
 }
