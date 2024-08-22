@@ -58,6 +58,7 @@ public:
 
 		TESTER_ADD_TEST(testIf);
 		TESTER_ADD_TEST(testWhile);
+		TESTER_ADD_TEST(testFor);
 		TESTER_ADD_TEST(testFun);
 		TESTER_ADD_TEST(testFun2);
 		TESTER_ADD_TEST(testBlock);
@@ -127,6 +128,8 @@ private:
 	void testIf() { testJsonRelativePath("if.rift", "if.json"); }
 
 	void testWhile() { testJsonRelativePath("while.rift", "while.json"); }
+
+	void testFor() { testJsonRelativePath("for.rift", "for.json"); }
 
 	void testFun() { testJsonRelativePath("fun.rift", "fun.json"); }
 
