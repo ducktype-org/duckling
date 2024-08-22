@@ -61,6 +61,8 @@ namespace pst {
 		virtual void visitDestructor([[maybe_unused]] const Destructor& stmt) {}
 
 		virtual void visitAccessBlock([[maybe_unused]] const AccessBlock& stmt) {}
+
+		virtual void visitFor([[maybe_unused]] const For& stmt) {}
 	};
 
 	/**
@@ -102,6 +104,8 @@ namespace pst {
 		void visitClass([[maybe_unused]] const Class& stmt) override {}
 
 		void visitFun([[maybe_unused]] const Fun& stmt) override {}
+
+		void visitFor([[maybe_unused]] const For& stmt) override {}
 
 		void visitVariable([[maybe_unused]] const Variable& stmt) override {}
 
@@ -152,6 +156,7 @@ namespace pst {
 		PANIC_VISITOR_VISIT_METHOD(Namespace);
 		PANIC_VISITOR_VISIT_METHOD(Class);
 		PANIC_VISITOR_VISIT_METHOD(Fun);
+		PANIC_VISITOR_VISIT_METHOD(For);
 		PANIC_VISITOR_VISIT_METHOD(Variable);
 		PANIC_VISITOR_VISIT_METHOD(If);
 		PANIC_VISITOR_VISIT_METHOD(While);

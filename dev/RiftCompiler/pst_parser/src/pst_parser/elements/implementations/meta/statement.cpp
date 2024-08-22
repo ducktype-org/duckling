@@ -29,6 +29,9 @@ namespace pst {
 			case Keyword::While:
 				return detail::parseStmt<While>(state);
 
+			case Keyword::For:
+				return detail::parseStmt<For>(state);
+
 			case Keyword::Import:
 				return detail::parseStmt<Import>(state);
 

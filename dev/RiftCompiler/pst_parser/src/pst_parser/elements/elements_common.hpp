@@ -48,6 +48,11 @@ namespace pst::detail {
 			    || (st[fwd].isBracketGroup(lexer::Token::Curly)
 			        && not st[fwd - 1].is(rift_def::Operator::Colon));
 		}
+
+		template<rift_def::Keyword key>
+		static bool is(const RiftParserState& st, i64 fwd) {
+			return st[fwd].is(key);
+		}
 	};
 
 	class NameGetters {

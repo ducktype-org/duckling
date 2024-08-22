@@ -1,0 +1,107 @@
+{
+	"Top Level": [
+		{
+			"For": {
+				"name": "<ANONYMOUS>",
+				"identifier": {
+					"Name": "a"
+				},
+				"type": {
+					"Expression": [
+						{
+							"Comma separated": [
+								{
+									"Expression": [
+										{
+											"Identifier": "T"
+										},
+									]
+								},
+								{
+									"Expression": [
+										{
+											"Identifier": "U"
+										},
+									]
+								}
+							]
+						},
+					]
+				},
+				"iterable": {
+					"Expression": [
+						{
+							"Identifier": "x"
+						},
+						{
+							"Operator": "."
+						},
+						{
+							"Identifier": "b"
+						},
+						{
+							"Group": {
+								"type": "()",
+								"expr": {
+									"Expression": [
+										{
+											"Comma separated": [
+												{
+													"Expression": [
+														{
+															"Identifier": "c"
+														},
+														{
+															"Operator": "+"
+														},
+														{
+															"Identifier": "d"
+														},
+													]
+												},
+												{
+													"Expression": [
+														{
+															"Identifier": "w"
+														},
+													]
+												}
+											]
+										},
+									]
+								}
+							}
+						},
+					]
+				},
+				"body": {
+					"Code Block or Statement": {
+						"Code Block": [
+							{
+								"Expr Stmt": {
+									"Expression": [
+										{
+											"Identifier": "print"
+										},
+										{
+											"Group": {
+												"type": "()",
+												"expr": {
+													"Expression": [
+														{
+															"Identifier": "a"
+														},
+													]
+												}
+											}
+										},
+									]
+								}
+							},
+						]
+					}
+				}
+			}
+		},
+	]
+}

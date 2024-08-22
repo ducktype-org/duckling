@@ -258,4 +258,27 @@ namespace pst {
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
+
+	class For final: public CodeDecl {
+		tpc::OptionalIdentifier    optional_name;
+		tpc::Identifier            iterator;
+		ParserRef<Expr>            type     = nullptr;
+		ParserRef<Expr>            iterable = nullptr;
+		ParserRef<CodeBlockOrStmt> body     = nullptr;
+
+	public:
+		explicit For(const dia::SourcePosition& position): CodeDecl(position) {}
+
+		static ParserRef<For> parse(RiftParserState& state);
+		void                  dprint(std::ostream& out) const final;
+		~For() final = default;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "For";
+		}
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
+	};
+
 }
