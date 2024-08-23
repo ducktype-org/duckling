@@ -8,8 +8,9 @@ namespace pst {
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
-		state.parse(out).all(Keyword::Fun, &out->name, &out->params);
-		if (state.parse(out).tryEat(Operator::SingleArrow)) state.parse(out).one(&out->rets);
+		state.parse(out).all(Keyword::Fun, &out->name);
+		state.parse(out).with<ParamList>(&out->params, ParamList::parse);
+		if (state.parse(out).tryEat(Operator::SingleArrow)) state.parse(out).with<Expr>(&out->ret, Expr::parse, false);
 		while (state.notEmpty() and !state[0].isBracketGroup(Token::BracketType::Curly))
 			state.tokens().skip();
 		state.parse(out).one(&out->body);
@@ -24,7 +25,7 @@ namespace pst {
 		out << ", \"params\":";
 		nullAwareDprint(params, out);
 		out << ", \"rets\":";
-		nullAwareDprint(rets, out);
+		nullAwareDprint(ret, out);
 		out << ", \"body\":";
 		nullAwareDprint(body, out);
 		out << " } }";

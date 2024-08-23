@@ -795,13 +795,29 @@ namespace compiler::helios {
 			void visitVariable(const pst::Variable& stmt) override {
 				setTypeOfSymbol(stmt.getType());
 			}
+
+			void visitFun(const pst::Fun& fun) override {
+				auto params = fun.getParams();
+				auto ret    = fun.getRet();
+
+				std::vector<ts::TypeInfo> param_types{};
+				param_types.reserve(params->size());
+
+				for (auto param: params)
+					param_types.emplace_back(parseTypeFromExpr(ctx, param, scope(key)));
+				ts::TypeInfo ret_type = parseTypeFromExpr(ctx, ret, scope(key));
+
+				symbol_type_info = ctx.query<ts::QueryFunctionType>({ param_types, ret_type });
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::cerr << "Providing type of symbol " << name(key).str() << std::endl;
 			auto&& symbol_ref = getSymRef(key);
 
 			PstStmtVisitor_GetTypeOf visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
+			std::cerr << "Provided " << visitor.symbol_type_info.value().toString() << std::endl;
 			return visitor.symbol_type_info.value();
 		}
 

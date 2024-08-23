@@ -36,6 +36,8 @@ namespace compiler::helios {
 				}
 			}
 
+			std::cerr << "Grabbing functions..." << std::endl;
+
 			// grab functions:
 			for (auto sym: symbols_in_module_root)
 				if (kind(sym) == SymbolKind::Function)
@@ -142,8 +144,7 @@ namespace compiler::helios {
 				// - create types, attributes, flags, ...
 				// @TODO: params, rest, flags, attributes, etc
 
-				HOUTFunction output(original_symbol);
-				output.original_name = stmt.getName();
+				HOUTFunction output(original_symbol, ctx);
 
 				// Scope of function itself:
 				// this scope will contain all "function declaration" symbols like parameters

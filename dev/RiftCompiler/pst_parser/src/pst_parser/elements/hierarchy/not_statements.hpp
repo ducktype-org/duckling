@@ -46,6 +46,8 @@ namespace pst {
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(elements, SubElements)
 
+		usize size() const { return elements.size(); }
+
 		explicit List(const dia::SourcePosition& position): NotStmt(position) {}
 
 		[[nodiscard]]
@@ -66,14 +68,6 @@ namespace pst {
 
 		~List() final = default;
 	};
-
-	using ParamList = List<
-		Expr,
-		false,
-		lexer::Token::BracketType::Round,
-		detail::Conditions::isComma,
-		detail::Conditions::isSentinel,
-		detail::NameGetters::parameterList>;
 
 	using RetList = List<
 		Expr,
