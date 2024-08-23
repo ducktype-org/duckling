@@ -21,16 +21,17 @@ namespace compiler::helios::test_utils {
 		SymbolList result;
 		bool       first_symbol = true;
 		for (auto&& sym: symbols) {
-			auto symbol = first_symbol ? query::entryPoint<QueryLookupInScopeAndParents>(
-							  { scope, base::StrId(sym.c_str()), true }
-						  )
-			                           : query::entryPoint<QueryLookupInSymbol>(
-										   { result.back(), base::StrId(sym.c_str()), false }
-									   );
+			UNPACK_THROW(
+				first_symbol ? query::entryPoint<QueryLookupInScopeAndParents>(
+								   { scope, base::StrId(sym.c_str()), true }
+							   )
+							 : query::entryPoint<QueryLookupInSymbol>(
+								   { result.back(), base::StrId(sym.c_str()), false }
+							   ),
+				auto symbol =
+			);
 			for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
-				auto query_dealias_result = query::entryPoint<QueryDealias>(elem);
-//				IF_ERR_RET_ELSE_VALUE()
-
+				UNPACK_THROW(query::entryPoint<QueryDealias>(elem), auto dealiased =);
 				result.insert(result.end(), dealiased.begin(), dealiased.end());
 			}
 			first_symbol = false;
@@ -38,15 +39,17 @@ namespace compiler::helios::test_utils {
 		return result;
 	}
 
-	QueryConstValueOf_Result getValue(const std::string_view chain, ScopeID scope) {
-		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back());
+	int getValue(const std::string_view chain, ScopeID scope) {
+		UNPACK_THROW(query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back()), return);
 	}
 
-	const ParseTypeFromExpr_Result& getTypeOf(const std::string_view chain, ScopeID scope) {
-		return query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back());
+	ts::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope) {
+		UNPACK_THROW(query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back()), return);
 	}
 
 	ts::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
-		return query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back());
+		UNPACK_THROW(
+			query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back()), return
+		);
 	}
 }

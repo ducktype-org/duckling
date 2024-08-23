@@ -247,8 +247,7 @@ namespace compiler::helios {
 			ScopeID scope;
 		};
 
-		using MakeRPN_Result =
-			std::expected<RPNExpr, errors::ExpressionParsingError>;
+		using MakeRPN_Result = std::expected<RPNExpr, errors::ExpressionParsingError>;
 
 		/**
 		 * @brief Parses an expression from PST into RPN.
@@ -322,7 +321,7 @@ namespace compiler::helios {
 	 * }
 	 * - Then we can use this query QueryTypeFromDefinition(T).
 	 */
-	DECLARE_QUERY(QueryTypeFromDefinition, SymID, ts::TypeInfo);
+	DECLARE_QUERY(QueryTypeFromDefinition, SymID, const ParseTypeFromExpr_Result&);
 
 	/**
 	 * @brief Struct returned by the `QueryStructSymbolData` query.
@@ -346,8 +345,7 @@ namespace compiler::helios {
 		std::vector<ts::TypeInfo> bases;
 	};
 
-	using QueryStructSymbolData_Result
-		= std::expected<StructSymbolData, PotentialParsingErrors>;
+	using QueryStructSymbolData_Result = std::expected<StructSymbolData, PotentialParsingErrors>;
 
 	/**
 	 * @brief Query all the information about a struct definition.

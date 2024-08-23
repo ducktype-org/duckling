@@ -852,7 +852,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
 
-	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, ::ts::TypeInfo) {
+	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, ParseTypeFromExpr_Result) {
 		class PstStmtVisitor_GetTypeFromDefinition final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;

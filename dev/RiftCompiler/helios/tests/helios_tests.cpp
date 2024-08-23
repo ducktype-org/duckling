@@ -57,10 +57,14 @@ private:
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/structs")));
 
 		const auto first_struct = getChain("FirstStructEver", root_scope).back();
-		const auto first_struct_info
-			= query::entryPoint<compiler::helios::QueryStructSymbolData>(first_struct);
-		const auto first_struct_typeinfo
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_struct);
+		UNPACK_THROW(
+			query::entryPoint<compiler::helios::QueryStructSymbolData>(first_struct),
+			const auto first_struct_info =
+		);
+		UNPACK_THROW(
+			query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_struct),
+			const auto first_struct_typeinfo =
+		);
 
 		ASSERT_EQUAL(2, first_struct_info.members.size());
 		ASSERT_EQUAL(2, first_struct_info.methods.size());
@@ -68,8 +72,11 @@ private:
 		ASSERT_EQUAL("FirstStructEver", first_struct_info.name);
 
 		const auto second_struct = getChain("SecondStruct", root_scope).back();
-		auto       second_struct_info
-			= query::entryPoint<compiler::helios::QueryStructSymbolData>(second_struct);
+
+		UNPACK_THROW(
+			query::entryPoint<compiler::helios::QueryStructSymbolData>(second_struct),
+			auto second_struct_info =
+		);
 
 		ASSERT_EQUAL(0, second_struct_info.members.size());
 		ASSERT_EQUAL(0, second_struct_info.methods.size());
@@ -244,15 +251,20 @@ private:
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/expressions")));
 		ASSERT_EQUAL(31, getValue("V31", root_scope));
 
-		auto              sym1  = getChain("V31", root_scope).back();
-		auto              tree1 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym1);
+		auto              sym1 = getChain("V31", root_scope).back();
 		std::stringstream out;
+		UNPACK_THROW(
+			query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym1), auto tree1 =
+		);
+
 		tree1->debugPrint(out);
 		ASSERT_EQUAL("(3+((5+9)*2))", out.str());
 
 		ASSERT_EQUAL(12, getValue("V12", root_scope));
-		auto              sym2  = getChain("V12", root_scope).back();
-		auto              tree2 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym2);
+		auto sym2 = getChain("V12", root_scope).back();
+		UNPACK_THROW(
+			query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym2), auto tree2 =
+		);
 		std::stringstream out2;
 		tree2->debugPrint(out2);
 

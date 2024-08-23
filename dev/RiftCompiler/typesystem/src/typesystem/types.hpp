@@ -12,6 +12,7 @@
 #include <helios/scope_symbol_id.hpp>
 #include <base/optional.hpp>
 
+
 namespace ts {
 	namespace internal {
 		class UnitInfoImpl;
@@ -503,6 +504,7 @@ namespace ts {
 	 * accessed via ClassInfo methods.
 	 */
 	class ClassInfo: public TypeInfo {
+
 	public:
 		SETUP_TYPE_WITH_BASE(ClassInfo, TypeInfo)
 

@@ -30,7 +30,9 @@ namespace compiler::helios {
 			for (auto sym: symbols_in_module_root) {
 				if (kind(sym) == SymbolKind::Const) {
 					auto original_name = name(sym);
-					auto value         = ctx.query<QueryConstValueOf>(sym);
+					auto value_result = ctx.query<QueryConstValueOf>(sym);
+					RIFT_ASSERT(value_result.has_value(), "Not propagating errors yet");
+					auto value= *value_result;
 
 					out.glob_data.push_back(HOUTGlobalData{ sym, original_name, value });
 				}

@@ -87,9 +87,11 @@ namespace compiler::helios::code {
 				}
 
 				variant_case(rpn::NamedIdentifier, idt) {
-					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+					auto&& sym_list_result = ctx.query<QueryLookupInScopeAndParents>(
 						{ expr.scope, idt.symbol_name, true }
 					);
+					RIFT_ASSERT(sym_list_result.has_value(), "Not propagating errors here yet...");
+					auto&& sym_list = *sym_list_result;
 
 					st.emplace(
 						base::make_unique<IdentifierExpr>(expr.scope, sym_list.getAsSingle().back())
@@ -154,21 +156,27 @@ namespace compiler::helios {
 				// @note: this does not handle overload
 				// @note: this does not handle "." operation
 
-				auto lookup_result = ctx.query<QueryLookupInScopeAndParents>(KeyOf_LookupInScope{
-					scope, identifier.indent_id, true });
+				auto lookup_query_result = ctx.query<QueryLookupInScopeAndParents>(
+					KeyOf_LookupInScope{ scope, identifier.indent_id, true }
+				);
+				RIFT_ASSERT(lookup_query_result.has_value(), "Not propagating errors for now...");
+				auto lookup_result = *lookup_query_result;
 
 				compiler::helios::SymbolList lookup_dealiased;
 
 				auto symbol_path = lookup_result.getAsSingle();
 
 				for (auto single_sym: symbol_path) {
-					auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym);
+					auto dealiased_result = ctx.query<compiler::helios::QueryDealias>(single_sym);
+					RIFT_ASSERT(dealiased_result.has_value(), "Not propagating errors for now...");
+					auto dealiased = *dealiased_result;
+
 					lookup_dealiased.insert(
 						lookup_dealiased.end(), dealiased.begin(), dealiased.end()
 					);
 				}
 
-				RIFT_ASSERT(lookup_dealiased.size() > 0, "Empty lookup result");
+				RIFT_ASSERT(!lookup_dealiased.empty(), "Empty lookup result");
 
 				// @TODO: dont just ignore everything before last symbol
 				return base::make_unique<code::IdentifierExpr>(scope, lookup_dealiased.back());

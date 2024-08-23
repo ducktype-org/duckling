@@ -5,6 +5,11 @@
 #include "helios/scopes/scopes.hpp"
 #include "helios/symbols/symbols.hpp"
 
+#define UNPACK_THROW(result, with_value)                       \
+	auto RES_VAR_NAME = result;                              \
+	if (!RES_VAR_NAME.has_value()) throw RES_VAR_NAME.error(); \
+	with_value RES_VAR_NAME.value()
+
 namespace compiler::helios::test_utils {
 	/**
 	 * Get the ModuleId and ScopeID of a module in the given directory.
@@ -20,7 +25,7 @@ namespace compiler::helios::test_utils {
 	 * @return The symbols of all elements of a chain. In particular, the symbol of the last
 	 * element in the chain is accessed with the `back()` method.
 	 */
-	std::vector<SymID> getChain(std::string_view chain, ScopeID scope);
+	std::vector<SymID> getChain(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the integral value of the last symbol in a symbol chain in a given scope.
@@ -28,7 +33,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The value of the last symbol in the chain.
 	 */
-	QueryConstValueOf_Result getValue(std::string_view chain, ScopeID scope);
+	int getValue(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the type of the value associated with last symbol in a symbol chain in a given scope.
@@ -37,7 +42,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The type of the last symbol in the chain.
 	 */
-	const ParseTypeFromExpr_Result& getTypeOf(std::string_view chain, ScopeID scope);
+	ts::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the type associated with the last symbol in a symbol chain in a given scope.
@@ -46,5 +51,5 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The type of the last symbol in the chain.
 	 */
-	ts::TypeInfo getTypeFromDefinition(std::string_view chain, ScopeID scope);
+	ts::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope);
 }

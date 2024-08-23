@@ -147,7 +147,7 @@ namespace ts {
 
 	compiler::helios::SymID ClassInfo::getSymbol() const { return toCPimpl(pimpl)->getSymbol(); }
 
-	base::Optional<ClassInfo> ClassInfo::getBaseClassType(query::Context& ctx) const {
+	QueryStructResult<base::Optional<ClassInfo>> ClassInfo::getBaseClassType(query::Context& ctx) const {
 		return toCPimpl(pimpl)->getBaseClassType(ctx);
 	}
 

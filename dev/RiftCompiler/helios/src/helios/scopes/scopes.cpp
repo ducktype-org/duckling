@@ -100,13 +100,13 @@ namespace compiler::helios {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
 		static auto provide(Context& ctx, QKey element) -> PResult {
-			ScopeID parent
-				= element.base_element->getParent().has_value()
-			        ? ctx.query<QueryPrimaryCodeScopeFor>({ element.base_element->getParent().value(
-					  ) })
-			        : ctx.query<QueryRootScopeOf>(
-						  { frontend::extendQueryModuleIDOfPST(ctx, element.base_element) }
-					  );
+			ScopeID parent = element.base_element->getParent().has_value()
+			                   ? ctx.query<QueryPrimaryCodeScopeFor>(
+								   { element.base_element->getParent().value() }
+							   )
+			                   : ctx.query<QueryRootScopeOf>(
+								   { frontend::extendQueryModuleIDOfPST(ctx, element.base_element) }
+							   );
 
 
 			// simple parent sanity check:
@@ -275,10 +275,10 @@ namespace compiler::helios {
 
 				// Reverse insertion order allow for linear result concatenation instead of
 				// quadratic
-				UNPACK_RESULT_MUT(
+				UNPACK_RESULT_CUSTOM(
 					ctx.query<QueryLookupInScopeAndParents>({ parent, key.name, key.with_wildcards }
 				    ),
-					parent_result
+					auto parent_result
 				);
 
 				parent_result.insert(result);
