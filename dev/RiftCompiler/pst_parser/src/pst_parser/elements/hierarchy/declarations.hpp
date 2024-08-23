@@ -169,7 +169,7 @@ namespace pst {
 	};
 
 	using ParamList = List<
-		Variable,
+		FunParam,
 		false,
 		lexer::Token::BracketType::Round,
 		detail::Conditions::isComma,
@@ -177,10 +177,10 @@ namespace pst {
 		detail::NameGetters::parameterList>;
 
 	class Fun final: public Decl {
-		tpc::Identifier            name;
-		ParserRef<ParamList>       params = nullptr;
-		ParserRef<Expr>            ret    = nullptr;
-		ParserRef<CodeBlockOrStmt> body   = nullptr;
+		tpc::Identifier                 name;
+		ParserRef<ParamList>            params = nullptr;
+		base::Optional<ParserRef<Expr>> ret;
+		ParserRef<CodeBlockOrStmt>      body = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Fun);
@@ -197,7 +197,7 @@ namespace pst {
 
 		[[nodiscard]]
 		auto getRet() const {
-			return ret.borrow();
+			return ret.map([](const auto& v) { return v.borrow(); });
 		}
 
 		[[nodiscard]]

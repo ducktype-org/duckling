@@ -85,7 +85,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Expr, true>  blockExpr{ "x + {return 2 * x;}" };
 	Example<pst::Expr, false> badTokenExpr{ "\"" };
 
-	Example<pst::Fun, true> simpleFunction{ "fun foo(i32 x, i32 y) -> (i32, i32) {}" };
+	Example<pst::Fun, true> simpleFunction1{ "fun foo(x: i32, y: i32) -> (i32, i32) {}" };
+	Example<pst::Fun, true> simpleFunction2{ "fun foo(x: i32, y: i32 = 1) {}" };
+	Example<pst::Fun, false> badFunction{ "fun foo(x: i32, y) {}" };
 
 	Example<pst::If, true> simpleIf{ "if (a == b) {c = d;}" };
 

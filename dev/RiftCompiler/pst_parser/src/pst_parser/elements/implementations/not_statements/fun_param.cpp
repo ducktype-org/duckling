@@ -1,11 +1,11 @@
 #include "preamble.hpp"
 
 namespace pst {
-	class FunArgumentEndError final: public dia::Error {
+	class FunParamEndError final: public dia::Error {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Unexpected end to function argument";
+			return "Unexpected end to function parameter";
 		}
 
 	public:
@@ -14,20 +14,20 @@ namespace pst {
 			return Domain::Parser;
 		}
 
-		FunArgumentEndError(dia::SourcePosition pos): dia::Error(pos) {}
+		FunParamEndError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<FunArgument> FunArgument::parse(RiftParserState& state) {
+	ParserRef<FunParam> FunParam::parse(RiftParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<FunArgument>(position);
+		auto out      = makeRef<FunParam>(position);
 
 		state.parse(out).all(&out->name, Operator::Colon);
 
 		state.parse(out).with<Expr>(&out->type, 
 			Expr::parseUntil<
-				detail::Conditions::isAssignOrComma, 
-				detail::Conditions::isAssignOrComma, 
-				FunArgumentEndError
+				detail::Conditions::isAssignOrCommaOrEnd,
+				detail::Conditions::isAssignOrCommaOrEnd,
+				FunParamEndError
 			>, false
 		);
 
@@ -38,8 +38,8 @@ namespace pst {
 		return out;
 	}
 
-	void FunArgument::dprint(std::ostream& out) const {
-		out << "{\"Function Argument\": {";
+	void FunParam::dprint(std::ostream& out) const {
+		out << "{\"Function Parameter\": {";
 
 		out << R"("name": )";
 		nullAwareDprint(name, out);

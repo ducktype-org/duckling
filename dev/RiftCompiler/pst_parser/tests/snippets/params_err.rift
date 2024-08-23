@@ -2,11 +2,11 @@
 
 fun foo(, ,) {}
 
-fun foo(a,) {}
+fun foo(a: i32,) {}
 
-fun foo(a, b,) {}
+fun foo(a: i32, b: f32,) {}
 
-fun foo(,a) {}
+fun foo(,a: i32) {}
 
 fun foo {}
 

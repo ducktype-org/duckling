@@ -149,7 +149,7 @@ private:
 	void testListParsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/lists_err.rift"));
 		assertTrue(
-			pst.getLogger().messageCount(dia::Message::Severity::Error) == 5, "Expected 5 errors"
+			pst.getLogger().messageCount(dia::Message::Severity::Error) == 4, "Expected 5 errors"
 		);
 	}
 

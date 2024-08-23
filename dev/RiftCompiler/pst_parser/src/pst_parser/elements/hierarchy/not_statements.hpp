@@ -69,26 +69,26 @@ namespace pst {
 		~List() final = default;
 	};
 
-	class FunArgument final: public NotStmt {
+	class FunParam final: public NotStmt {
 		tpc::Identifier name;
 		ParserRef<Expr> type;
 		base::Optional<ParserRef<Expr>> initial;
 
 	public:
-		explicit FunArgument(const dia::SourcePosition& position): NotStmt(position) {}
+		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {}
 
-		static ParserRef<FunArgument> parse(RiftParserState& state);
-		~FunArgument() final = default;
+		static ParserRef<FunParam> parse(RiftParserState& state);
+//		~FunParam() final = default;
 		void dprint(std::ostream& out) const final;
 
 		[[nodiscard]]
 		std::string elementType() const override {
-			return "Function Argument";
+			return "Function Parameter";
 		}
 
 		[[nodiscard]]
-		bool isStatementAggregate() const final {
-			return true;
+		ParserCBorrowRef<Expr> getType() const {
+			return type.borrow();
 		}
 	};
 
@@ -464,14 +464,14 @@ namespace pst {
 	 * @note We might want to move it outside and allow only for specific instances to be cleaner.
 	 */
 	template<
-		class SubElements,
+		class ListElements,
 		bool                      NON_EMPTY,
 		lexer::Token::BracketType BRACKETS,
 		StateCondition            isSeparator,
 		StateCondition            isEnding,
 		GetName                   getName,
 		class Container>
-	auto List<SubElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, getName, Container>::parse(
+	auto List<ListElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, getName, Container>::parse(
 		RiftParserState& state
 	) -> ParserRef<List> {
 		auto position = state.getPosition();
@@ -523,10 +523,17 @@ namespace pst {
 					}
 				}
 
-				ParserRef<SubElements> ref;
-				state.parse(out).template with<SubElements>(
-					&ref, SubElements::parse, (usize) expr_length, true, false
-				);
+				ParserRef<ListElements> ref;
+				// @TODO: This is a "temporary" fix.
+				// Hopefully we can handle this with a uniform `parse` function for all
+				// elements, maybe by polymorphism.
+				if constexpr (std::derived_from<ListElements, Expr>) {
+					state.parse(out).template with<ListElements>(
+						&ref, ListElements::parse, (usize) expr_length, true, false
+					);
+				} else {
+					state.parse(out).template with<ListElements>(&ref, ListElements::parse);
+				}
 				out->elements.emplace_back(std::move(ref));
 
 				if (isEnding(state, 0)) break;

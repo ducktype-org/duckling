@@ -804,8 +804,10 @@ namespace compiler::helios {
 				param_types.reserve(params->size());
 
 				for (auto param: params)
-					param_types.emplace_back(parseTypeFromExpr(ctx, param, scope(key)));
-				ts::TypeInfo ret_type = parseTypeFromExpr(ctx, ret, scope(key));
+					param_types.emplace_back(parseTypeFromExpr(ctx, param->getType(), scope(key)));
+				ts::TypeInfo ret_type = ret.has_value()
+				                          ? parseTypeFromExpr(ctx, ret.value(), scope(key))
+				                          : ctx.query<ts::QueryUnitType>({});
 
 				symbol_type_info = ctx.query<ts::QueryFunctionType>({ param_types, ret_type });
 			}

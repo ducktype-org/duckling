@@ -1,5 +1,4 @@
 
-fun A() -> i32, , { }
-fun A() -> 1, , 1 { }
-fun A() -> {}
-fun A() -> ,1 {}
+fun A(a: i32, ,) {}
+fun A(a: i32, , b: i32) {}
+fun A(, a: i32) {}

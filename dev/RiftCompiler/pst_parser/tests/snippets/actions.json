@@ -8,7 +8,7 @@
 				"params": {
 					"List": []
 				},
-				"rets": "<nullptr>",
+				"rets": "unit",
 				"body": {
 					"CodeBlockOrStmt": {
 						"CodeBlock": [
@@ -23,7 +23,7 @@
 										},
 										{
 											"Identifier": "T"
-										},
+										}
 									]
 								}
 							},
@@ -48,7 +48,7 @@
 														"Expr": []
 													}
 												}
-											},
+											}
 										]
 									}
 								}
@@ -63,7 +63,7 @@
 											"Expr": [
 												{
 													"KeywordValue": "true"
-												},
+												}
 											]
 										}
 									},
@@ -80,7 +80,7 @@
 																"Expr": [
 																	{
 																		"KeywordValue": "true"
-																	},
+																	}
 																]
 															}
 														},
@@ -94,7 +94,7 @@
 																				"Expr": [
 																					{
 																						"Identifier": "A"
-																					},
+																					}
 																				]
 																			}
 																		}
@@ -111,7 +111,7 @@
 																				"Expr": [
 																					{
 																						"Identifier": "B"
-																					},
+																					}
 																				]
 																			}
 																		}
@@ -128,7 +128,7 @@
 																				"Expr": [
 																					{
 																						"Identifier": "A"
-																					},
+																					}
 																				]
 																			}
 																		}
@@ -145,7 +145,7 @@
 																				"Expr": [
 																					{
 																						"Identifier": "B"
-																					},
+																					}
 																				]
 																			}
 																		}
@@ -162,16 +162,16 @@
 																				"Expr": [
 																					{
 																						"NumLiteral": "123"
-																					},
+																					}
 																				]
 																			}
 																		}
-																	},
+																	}
 																]
 															}
 														}
 													}
-												},
+												}
 											]
 										}
 									}
@@ -184,15 +184,15 @@
 										"Expr": [
 											{
 												"NumLiteral": "12"
-											},
+											}
 										]
 									}
 								}
-							},
+							}
 						]
 					}
 				}
 			}
-		},
+		}
 	]
 }

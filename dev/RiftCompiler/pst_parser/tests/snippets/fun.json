@@ -15,7 +15,7 @@
 				"params": {
 					"List": []
 				},
-				"rets": "<nullptr>",
+				"rets": "unit",
 				"body": {
 					"CodeBlockOrStmt": {
 						"CodeBlock": [
@@ -30,7 +30,7 @@
 										},
 										{
 											"NumLiteral": "3"
-										},
+										}
 									]
 								}
 							},
@@ -45,14 +45,14 @@
 										},
 										{
 											"NumLiteral": "4"
-										},
+										}
 									]
 								}
-							},
+							}
 						]
 					}
 				}
 			}
-		},
+		}
 	]
 }

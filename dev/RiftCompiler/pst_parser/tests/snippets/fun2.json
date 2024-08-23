@@ -8,22 +8,36 @@
 				"params": {
 					"List": [
 						{
-							"Expr": [
-								{
-									"Identifier": "a"
+							"Function Parameter": {
+								"name": {
+									"Name": "a"
 								},
-							]
+								"type": {
+									"Expr": [
+										{
+											"KeywordValue": "i32"
+										}
+									]
+								}
+							}
 						},
 						{
-							"Expr": [
-								{
-									"Identifier": "b"
+							"Function Parameter": {
+								"name": {
+									"Name": "b"
 								},
-							]
-						},
+								"type": {
+									"Expr": [
+										{
+											"Identifier": "f32"
+										}
+									]
+								}
+							}
+						}
 					]
 				},
-				"rets": "<nullptr>",
+				"rets": "unit",
 				"body": {
 					"CodeBlockOrStmt": {
 						"CodeBlock": []
@@ -39,28 +53,43 @@
 				"params": {
 					"List": [
 						{
-							"Expr": [
-								{
-									"Identifier": "a"
+							"Function Parameter": {
+								"name": {
+									"Name": "a"
 								},
-								{
-									"Operator": ":"
-								},
-								{
-									"KeywordValue": "i32"
-								},
-							]
+								"type": {
+									"Expr": [
+										{
+											"KeywordValue": "i32"
+										}
+									]
+								}
+							}
 						},
 						{
-							"Expr": [
-								{
-									"Identifier": "b"
+							"Function Parameter": {
+								"name": {
+									"Name": "b"
 								},
-							]
-						},
+								"type": {
+									"Expr": [
+										{
+											"Identifier": "f32"
+										}
+									]
+								},
+								"initial": {
+									"Expr": [
+										{
+											"NumLiteral": "0"
+										}
+									]
+								}
+							}
+						}
 					]
 				},
-				"rets": "<nullptr>",
+				"rets": "unit",
 				"body": {
 					"CodeBlockOrStmt": {
 						"CodeBlock": []
@@ -76,28 +105,43 @@
 				"params": {
 					"List": [
 						{
-							"Expr": [
-								{
-									"Identifier": "a"
+							"Function Parameter": {
+								"name": {
+									"Name": "a"
 								},
-							]
+								"type": {
+									"Expr": [
+										{
+											"Identifier": "f32"
+										}
+									]
+								}
+							}
 						},
 						{
-							"Expr": [
-								{
-									"Identifier": "b"
+							"Function Parameter": {
+								"name": {
+									"Name": "b"
 								},
-								{
-									"Operator": ":"
+								"type": {
+									"Expr": [
+										{
+											"KeywordValue": "i32"
+										}
+									]
 								},
-								{
-									"KeywordValue": "i32"
-								},
-							]
-						},
+								"initial": {
+									"Expr": [
+										{
+											"NumLiteral": "42"
+										}
+									]
+								}
+							}
+						}
 					]
 				},
-				"rets": "<nullptr>",
+				"rets": "unit",
 				"body": {
 					"CodeBlockOrStmt": {
 						"CodeBlock": []
@@ -113,21 +157,28 @@
 				"params": {
 					"List": [
 						{
-							"Expr": [
-								{
-									"Identifier": "a"
+							"Function Parameter": {
+								"name": {
+									"Name": "a"
 								},
-							]
-						},
+								"type": {
+									"Expr": [
+										{
+											"Identifier": "A"
+										}
+									]
+								}
+							}
+						}
 					]
 				},
-				"rets": "<nullptr>",
+				"rets": "unit",
 				"body": {
 					"CodeBlockOrStmt": {
 						"CodeBlock": []
 					}
 				}
 			}
-		},
+		}
 	]
 }
