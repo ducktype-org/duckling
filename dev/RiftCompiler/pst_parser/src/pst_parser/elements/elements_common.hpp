@@ -30,6 +30,11 @@ namespace pst::detail {
 			    || st[fwd].is(rift_def::Special::Semicolon);
 		}
 
+		static bool isAssignOrComma(const RiftParserState& st, i64 fwd) {
+			return st[fwd].is(rift_def::Operator::Assign)
+			    || st[fwd].is(rift_def::Special::Comma);
+		}
+
 		static bool isAssign(const RiftParserState& st, i64 fwd) {
 			return st[fwd].is(rift_def::Operator::Assign);
 		}

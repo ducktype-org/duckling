@@ -69,6 +69,30 @@ namespace pst {
 		~List() final = default;
 	};
 
+	class FunArgument final: public NotStmt {
+		tpc::Identifier name;
+		ParserRef<Expr> type;
+		base::Optional<ParserRef<Expr>> initial;
+
+	public:
+		explicit FunArgument(const dia::SourcePosition& position): NotStmt(position) {}
+
+		static ParserRef<FunArgument> parse(RiftParserState& state);
+		~FunArgument() final = default;
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Function Argument";
+		}
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
+	};
+
+
 	using RetList = List<
 		Expr,
 		true,
