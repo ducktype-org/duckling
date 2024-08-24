@@ -104,7 +104,7 @@ namespace pst {
 		false,
 		lexer::Token::BracketType::None,
 		detail::Conditions::isComma,
-		detail::Conditions::isBlockGroup,
+		detail::Conditions::isAssign,
 		detail::NameGetters::classInitList>;
 
 	class DottedName final: public NotStmt {

@@ -18,7 +18,8 @@ namespace pst {
 	template<std::derived_from<RiftElement> Element = TopLevel>
 	class PST {
 	public:
-		constexpr static bool ParseAble = tpc::ParseAbleElement<Element, RiftParserState>;
+		template<typename... Args>
+		constexpr static bool ParseAble = tpc::ParseAbleElement<Element, RiftParserState, Args...>;
 
 	private:
 		tokenizer::OwnFile      file;
@@ -28,7 +29,8 @@ namespace pst {
 		/**
 		 * @note Requires that the file was successfully tokenized.
 		 */
-		void parse() requires ParseAble {
+		template<typename... Args>
+		void parse(Args&&... args) requires ParseAble<Args...> {
 			const lexer::TokenData& token_data = file->getTokenData();
 			RiftParserState         state(
                 tpc::TokenStream(
@@ -40,25 +42,26 @@ namespace pst {
                 ),
                 file->getLogger()
             );
-			element = Element::parse(state);
+			element = Element::parse(state, std::forward<Args>(args)...);
 			imports = std::move(state).extractState();
 		}
 
 		/**
 		 * @brief Construct a new Pst from text content
 		 */
-		explicit PST(std::string_view content) requires ParseAble
+		template<typename... Args>
+		explicit PST(std::string_view content, Args&&... args) requires ParseAble<Args...>
 			  : file(tokenizer::makeTokenFile(fs::FilePath::createTempFile(content))) {
 			pst::init();
 			if (!file->tokenize()) return;
-			parse();
+			parse(std::forward<Args>(args)...);
 		}
 
 	public:
 		/**
 		 * @brief Construct a new Pst from tokenized file
 		 */
-		PST(tokenizer::OwnFile&& file) requires ParseAble: file(std::move(file)) {
+		PST(tokenizer::OwnFile&& file) requires ParseAble<>: file(std::move(file)) {
 			pst::init();
 			if (getLogger().bad()) return;
 			parse();
@@ -67,14 +70,19 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from file path
 		 */
-		PST(const fs::FilePath& path) requires ParseAble: file(tokenizer::makeTokenFile(path)) {
+		PST(const fs::FilePath& path) requires ParseAble<>: file(tokenizer::makeTokenFile(path)) {
 			pst::init();
 			if (!file->tokenize()) return;
 			parse();
 		}
 
-		static PST fromContents(std::string_view contents) requires ParseAble {
+		static PST fromContents(std::string_view contents) requires ParseAble<> {
 			return PST(contents);
+		}
+
+		template<typename ...Args>
+		static PST fromContentsWithContext(std::string_view contents, Args&&... args) requires ParseAble<Args...> {
+			return PST(contents, std::forward<Args>(args)...);
 		}
 
 		[[nodiscard]]

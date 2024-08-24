@@ -13,14 +13,14 @@ class xxx extends aaa implements bbb, cccc {
 	}
 
 	public {
-		xxx.create(c:i64): aaa(c) {
+		xxx.create(c:i64): aaa(c) = {
 			x = c;
 		} 
 
-		xxx.abc() {
+		xxx.abc() = {
 			x = 81;
 		}
 
-		xxx.destroy() {}
+		xxx.destroy() = {}
 	}
 }

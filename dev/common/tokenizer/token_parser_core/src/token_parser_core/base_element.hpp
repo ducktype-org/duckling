@@ -84,9 +84,9 @@ namespace tpc {
 		}
 	};
 
-	template<typename T, typename State>
-	concept ParseAbleElement = requires(State& state) {
+	template<typename T, typename State, typename... Args>
+	concept ParseAbleElement = requires(State& state, Args&&... args) {
 		requires std::derived_from<T, Element>;
-		{ T::parse(state) } -> std::same_as<ParserRef<T>>;
+		{ T::parse(state, std::forward<Args>(args)...) } -> std::same_as<ParserRef<T>>;
 	};
 }

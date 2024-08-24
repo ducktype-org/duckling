@@ -30,7 +30,7 @@ namespace pst {
 		if (state.notEmpty()) state.log(base::make_unique<NonEmptyError>(state.getPosition()));
 		state.parse(out).goUpAndSkip();
 
-		state.parse(out).one(&out->body);
+		state.parse(out).all(Operator::Assign, &out->body);
 
 		return out;
 	}

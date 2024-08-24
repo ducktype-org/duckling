@@ -96,7 +96,26 @@ namespace pst {
 		while (state.notEmpty() and i < len) {
 			i++;
 
-			if (state[0].isBracketGroup(Token::Curly)) {
+			if (state[0].is(rift_def::Operator::Colon)
+				&& state[1].isBracketGroup(Token::Curly)) {
+				// @TODO: This should probably generate something more specific to templates
+
+				auto& token = state.tokens().next();
+				back->addToken(token);
+				back->elements.emplace_back(Operator{token.getValue()});
+
+				state.parse(back).goDown();
+				if (state.notEmpty()) {
+					ParserRef<Expr> inner;
+					state.parse(back).with<Expr>(&inner, Expr::parse, true);
+					back->elements.emplace_back(Group{ GroupType::CurlyGroup, std::move(inner) });
+				} else
+					back->elements.emplace_back(Group{ GroupType::CurlyGroup,  makeRef<Expr>(state.getPosition()) });
+				state.parse(back).goUpAndSkip();
+
+				i++;
+			}
+			else if (state[0].isBracketGroup(Token::Curly)) {
 				ParserRef<CodeBlock> inner;
 				state.parse(back).one(&inner, false);
 				back->elements.emplace_back(Block{ std::move(inner) });

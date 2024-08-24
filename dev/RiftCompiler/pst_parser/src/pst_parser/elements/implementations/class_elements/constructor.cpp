@@ -16,7 +16,7 @@ namespace pst {
 
 		state.parse(out).one(&out->params);
 		if (state.parse(out).tryEat(Operator::Colon)) state.parse(out).one(&out->inits);
-		state.parse(out).one(&out->body);
+		state.parse(out).all(Operator::Assign, &out->body);
 
 		return out;
 	}
