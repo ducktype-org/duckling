@@ -52,15 +52,15 @@ class PSTErrorTests: public tester::TestSuite {
 	struct ClassStmtExample: public GenExample {
 		pst::ClassContext context;
 
-		ClassStmtExample(std::string code, pst::ClassContext ctx):
+		ClassStmtExample(std::string code, pst::ClassContext&& ctx):
 			  GenExample(std::move(code)),
-			  context(ctx) {}
+			  context(std::move(ctx)) {}
 
 		ClassStmtExample(std::string code):
 			  GenExample(std::move(code)),
 			  context{ base::StrId("unnamed"), {} } {}
 
-		ClassStmtExample(std::string code, std::string class_name):
+		ClassStmtExample(std::string code, const std::string& class_name):
 			  GenExample(std::move(code)),
 			  context{ base::StrId(class_name.c_str()), {} } {}
 
