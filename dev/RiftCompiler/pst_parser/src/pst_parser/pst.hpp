@@ -80,8 +80,9 @@ namespace pst {
 			return PST(contents);
 		}
 
-		template<typename ...Args>
-		static PST fromContentsWithContext(std::string_view contents, Args&&... args) requires ParseAble<Args...> {
+		template<typename... Args>
+		static PST fromContentsWithContext(std::string_view contents, Args&&... args)
+			requires ParseAble<Args...> {
 			return PST(contents, std::forward<Args>(args)...);
 		}
 
