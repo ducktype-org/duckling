@@ -55,12 +55,11 @@ namespace compiler::helios {
 		 * Might be changed into query in the future
 		 */
 		template<class Container>
-		static auto queryCodeOfCodeBlock(
-			query::Context& ctx, const Container& container, ScopeID parent_scope
-		) {
-			code::CodeBlock block;
+		static auto queryCodeOfCodeBlock(query::Context& ctx, const Container& container) {
+			auto            scope = ctx.query<QueryPrimaryCodeScopeFor>({ container });
+			code::CodeBlock block(scope, {});
 			for (const auto& stmt: container) {
-				HoutStmtMaker stmt_maker(ctx, parent_scope);
+				HoutStmtMaker stmt_maker(ctx);
 				stmt->acceptVisitor(stmt_maker);
 				if (not stmt_maker.empty)
 					block.statements.emplace_back(std::move(stmt_maker.out.value()));
@@ -70,14 +69,16 @@ namespace compiler::helios {
 
 		struct HoutStmtMaker: public pst::PstStmtVisitorPanicky {
 			query::Context& ctx;
-			ScopeID         parent_scope;
 
 			bool                                         empty = false;
 			base::Optional<code::ElementRef<code::Stmt>> out;
 
-			HoutStmtMaker(query::Context& ctx, ScopeID scope):
-				  ctx(ctx),
-				  parent_scope(std::move(scope)) {}
+			HoutStmtMaker(query::Context& ctx): ctx(ctx) {}
+
+			template<class T>
+			ScopeID scopeOf(const T& element) {
+				return ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(&element) });
+			}
 
 			// @TODO: visits for all valid stmt-s
 
@@ -95,10 +96,10 @@ namespace compiler::helios {
 
 			void visitReturn(const pst::Return& stmt) override {
 				if (auto val = stmt.getValue()) {
-					auto expr = ctx.query<QueryHoutOfExpr>({ parent_scope, val.value() });
-					output(code::ReturnStmt(std::move(expr)));
+					auto expr = ctx.query<QueryHoutOfExpr>({ val.value() });
+					output(code::ReturnStmt(scopeOf(stmt), std::move(expr)));
 				} else {
-					output(code::VoidReturnStmt());
+					output(code::VoidReturnStmt(scopeOf(stmt)));
 				}
 			}
 
@@ -107,43 +108,41 @@ namespace compiler::helios {
 			void visitUsing(const pst::Using&) override { empty = true; }
 
 			void visitExprStmt(const pst::ExprStmt& stmt) override {
-				auto expr = ctx.query<QueryHoutOfExpr>({ parent_scope,
-				                                         PstRef<pst::Expr>(stmt.getExpr()) });
-				output(code::ExprStmt(std::move(expr)));
+				auto expr = ctx.query<QueryHoutOfExpr>({ PstRef<pst::Expr>(stmt.getExpr()) });
+
+				output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
 			}
 
 			void visitIf(const pst::If& stmt) override {
 				// Get scopes:
-				auto outer_scope
-					= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(&stmt) });
+				auto outer_scope = scopeOf(stmt);
 
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
-				auto condition = ctx.query<QueryHoutOfExpr>({ outer_scope, stmt.getCondition() });
+				auto condition = ctx.query<QueryHoutOfExpr>({ stmt.getCondition() });
 
-				auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt.getBody() });
-				auto body        = queryCodeOfCodeBlock(ctx, stmt.getBody(), inner_scope);
+				auto body = queryCodeOfCodeBlock(ctx, stmt.getBody());
 
-				output(code::IfStmt(std::move(condition), std::move(body)));
+				output(code::IfStmt(outer_scope, std::move(condition), std::move(body)));
 			}
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstStmtVisitorPanicky {
 			query::Context& ctx;
-			ScopeID         parent_scope;
+			SymID           original_symbol;
 
 			base::Optional<HOUTFunction> out;
 
-			HOUTFunctionMaker(query::Context& ctx, ScopeID scope):
+			HOUTFunctionMaker(query::Context& ctx, SymID symbol):
 				  ctx(ctx),
-				  parent_scope(std::move(scope)) {}
+				  original_symbol(std::move(symbol)) {}
 
 			void visitFun(const pst::Fun& stmt) final {
 				// @TODO: create function here...
 				// - create types, attributes, flags, ...
 				// @TODO: params, rest, flags, attributes, etc
 
-				HOUTFunction output;
+				HOUTFunction output(original_symbol);
 				output.original_name = stmt.getName();
 
 				// Scope of function itself:
@@ -153,12 +152,8 @@ namespace compiler::helios {
 
 				auto fun_body = stmt.getBody();
 
-				// Scope of function body:
-				auto inner_scope
-					= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(fun_body) });
-
 				// HOUTCode out;
-				code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body, inner_scope);
+				code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
 				output.body.body
 					= std::make_shared<const code::CodeBlock>(std::move(function_body));
 
@@ -171,11 +166,7 @@ namespace compiler::helios {
 				kind(key) == SymbolKind::Function, "Function creation called on non-function symbol"
 			);
 
-			// auto fun_stmt = dynamic_cast<const pst::Fun*>(stmt(key).get());
-			// RIFT_ASSERT(fun_stmt != nullptr, "Function symbol is not actually a function");
-			auto parent_scope = scope(key);
-
-			HOUTFunctionMaker func_maker(ctx, parent_scope);
+			HOUTFunctionMaker func_maker(ctx, key);
 			stmt(key)->acceptVisitor(func_maker);
 
 			return func_maker.out.value();

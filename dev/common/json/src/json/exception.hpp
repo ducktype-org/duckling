@@ -1,28 +1,16 @@
 #pragma once
 
-#include <exception>
-#include <json_struct/json_struct.h>
+#include <base/exceptions.hpp>
+#include <nlohmann/json.hpp>
 
-namespace JS {
-	template<>
-	class TypeHandler<std::exception> {
-	public:
-		static inline Error
-			to([[maybe_unused]] std::exception& to, [[maybe_unused]] ParseContext& context) {
-			// @TODO?
-			return Error::NoError;
-		}
+template<>
+struct nlohmann::adl_serializer<std::exception> {
+	static void to_json(json& j, const std::exception& e) {
+		j["name"] = typeid(e).name();  // It is not perfect, but there is nothing better.
+		j["what"] = e.what();
+	}
 
-		static void from(const std::exception& from, Token& token, Serializer& serializer) {
-			static const char exceptionName[] = "error";
-
-			impl::beginObject(token, serializer);
-
-			token.name      = DataRef(exceptionName);
-			token.name_type = Type::String;
-			TypeHandler<std::string>::from(from.what(), token, serializer);
-
-			impl::endObject(token, serializer);
-		}
-	};
-}
+	static void from_json(const json&, std::exception&) {
+		RIFT_PANIC("Parsing data from JSON into exception is not supported (yet).");
+	}
+};

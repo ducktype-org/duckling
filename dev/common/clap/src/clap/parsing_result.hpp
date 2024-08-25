@@ -1,6 +1,7 @@
 /**
  * @file parsing_result.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
+ * @brief This is a container class for the result of a parsing.
  */
 
 #pragma once

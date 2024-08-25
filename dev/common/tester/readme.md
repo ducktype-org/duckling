@@ -1,12 +1,6 @@
-\page tester-module Tester Module
+@page tester-module Tester Module
 
-# Tester
-
-[Description](#Description)  
-[Interface](#Interface)  
-[Usage](#Usage)  
-[Files](#File-list)  
-[Notes](#Notes)
+@tableofcontents
 
 # Description
 
@@ -16,18 +10,18 @@ This module provides simple framework for writing tests. Has tools to help group
 
 ## Files:
 
-* [tester.hpp](tester.hpp) - all functionalities
-* [tester.cpp](tester.cpp) - implementation
+* tester.hpp - all functionalities
+* tester.cpp - implementation
 
 ## Symbols:
 
-All symbols are in namespace `tester` and come from [tester.hpp](tester.hpp).
+All symbols are in namespace `tester` and come from tester.hpp.
 
 ### TestSuite
 
 Class that is intended to be inherited from while writing test classes.
 
-* `assert(bool v, std::string_view err, bool critical = true)`
+* `assertTrue(bool v, std::string_view err, bool critical = true)`
   If `v` is `false` then: adds `err` to test output, marks test as failed.
   Additionally if `critical` is `true` and `v` is `false` execution of a test will stop.
 
@@ -43,7 +37,6 @@ Macro used to add tests inside test class constructor
 
 # Usage
 
-[example.cpp](misc/example.cpp).
+@include tester_example.cpp
 
 # Notes
-

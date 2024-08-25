@@ -13,6 +13,7 @@ public:
 
 		TESTER_ADD_TEST(simpleOperatorPrecedenceTest);
 		TESTER_ADD_TEST(simpleOperatorAssociativityTest);
+		TESTER_ADD_TEST(exportsForLSPTest);
 	}
 
 private:
@@ -33,19 +34,19 @@ private:
 
 		auto assign = operatorPrecedence(Operator::Assign, OperatorType::Binary);
 
-		assert(period == period_2, "Same operators have different precedence");
-		assert(multiply == divide, "*, / have different precedence");
-		assert(add == subtract, "+, - have different precedence");
+		assertTrue(period == period_2, "Same operators have different precedence");
+		assertTrue(multiply == divide, "*, / have different precedence");
+		assertTrue(add == subtract, "+, - have different precedence");
 
-		assert(period < add, ". is not the first operator");
-		assert(period < inc, ". is not the first operator");
-		assert(period < neg, ". is not the first operator");
-		assert(period < subtract, ". is not the first operator");
-		assert(period < multiply, ". is not the first operator");
-		assert(period < divide, ". is not the first operator");
-		assert(period < assign, ". is not the first operator");
+		assertTrue(period < add, ". is not the first operator");
+		assertTrue(period < inc, ". is not the first operator");
+		assertTrue(period < neg, ". is not the first operator");
+		assertTrue(period < subtract, ". is not the first operator");
+		assertTrue(period < multiply, ". is not the first operator");
+		assertTrue(period < divide, ". is not the first operator");
+		assertTrue(period < assign, ". is not the first operator");
 
-		assert(multiply < subtract, "* is not before -");
+		assertTrue(multiply < subtract, "* is not before -");
 	}
 
 	void simpleOperatorAssociativityTest() {
@@ -72,12 +73,18 @@ private:
 		[[maybe_unused]] auto assign
 			= operatorAssociativity(Operator::Assign, OperatorType::Binary);
 
-		assert(period == period_2, "Same operators have different associativity");
+		assertTrue(period == period_2, "Same operators have different associativity");
 
-		assert(multiply == OperatorAssociativity::LeftToRight, "* has bad associativity");
-		assert(add == OperatorAssociativity::LeftToRight, "* has bad associativity");
+		assertTrue(multiply == OperatorAssociativity::LeftToRight, "* has bad associativity");
+		assertTrue(add == OperatorAssociativity::LeftToRight, "* has bad associativity");
 
-		assert(inc == OperatorAssociativity::RightToLeft, "++ has bad associativity");
+		assertTrue(inc == OperatorAssociativity::RightToLeft, "++ has bad associativity");
+	}
+
+	void exportsForLSPTest() {
+		ASSERT_EQUAL(rift_def::getKeywords().size(), 60);
+		ASSERT_EQUAL(rift_def::getSpecials().size(), 6);
+		ASSERT_EQUAL(rift_def::getOperators().size(), 15);
 	}
 };
 

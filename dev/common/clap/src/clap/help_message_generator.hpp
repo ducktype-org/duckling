@@ -1,6 +1,7 @@
 /**
  * @file help_message_generator.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
+ * @brief A generic help message generator, that is easily extensible.
  */
 
 #pragma once

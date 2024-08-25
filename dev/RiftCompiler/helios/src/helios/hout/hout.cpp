@@ -30,6 +30,12 @@ namespace compiler::helios {
 		return out.str();
 	}
 
+	base::HashT HOUTFunction::customPerfectHash() const {
+		// @note: see
+		// https://github.com/orgs/ducktype-org/projects/8/views/1?pane=issue&itemId=70870558
+		return base::perfectHash(original_symbol);
+	}
+
 	std::string HOUTGlobalData::debugPrint() const {
 		return base::strConcat(
 			"const ",

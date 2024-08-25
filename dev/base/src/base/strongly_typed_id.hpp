@@ -1,3 +1,9 @@
+/**
+ * @file strongly_typed_id.hpp
+ *
+ * @brief Strongly typed id is a library that provides macros that create a class
+ * implementing a strongly typed ID type.
+ */
 #pragma once
 
 #include "ints.hpp"

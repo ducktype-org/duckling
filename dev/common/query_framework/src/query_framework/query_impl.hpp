@@ -1,3 +1,7 @@
+/**
+ * @file query_impl.hpp
+ * @brief Implementation of macros and templates used in the generation of query implementations.
+ */
 #pragma once
 
 #include <utility>
@@ -90,17 +94,11 @@ namespace query {
 					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Cached. Done.\n"
 				));
 
-				if constexpr (std::is_lvalue_reference_v<typename QueryImplType::QResult>) {
-					// if QResult is an lvalue reference, then we just bind to it:
-					static_assert(
-						std::is_lvalue_reference_v<decltype(v.value().data)>,
-						"Load should return lvalue reference, when QResult is an lvalue reference"
-					);
-					return v.value().data;
-				} else {
-					return std::move(v.value().data);
-				}
-
+				// @todo: This might bind & to a const&, via std::move "creating" &&.
+				// It should works for all cases in our codebase,
+				// but I'm not sure if it will work always and if it is
+				// standardized behaviour.
+				return std::move(v.value().data);
 			} else {
 				auto node_id = makeNodeID(QueryImplType::QueryType::id, key);
 				auto context = ContextMaker::make(node_id);

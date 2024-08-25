@@ -12,7 +12,7 @@ namespace vm::api {
 
 	struct Panicked {
 		std::exception exception;
-		JS_OBJ(exception);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Panicked, exception);
 	};
 
 	struct Paused {};
@@ -21,7 +21,7 @@ namespace vm::api {
 
 	struct PausedOnError {
 		std::string reason;
-		JS_OBJ(reason);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(PausedOnError, reason);
 	};
 
 	struct WaitingForInput {};
@@ -33,21 +33,22 @@ namespace vm::api {
 
 	struct Executing {
 		ExecStatus exec_status;
-		JS_OBJ(exec_status);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(vm::api::Executing, exec_status);
 	};
 
 	using VCPUStatus
 		= std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Panicked, Executing>;
 }
 
-REGISTER_PARSE_TYPE_ALIAS(vm::api::ExecutionNotStarted, "ExecutionNotStarted")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::Parsing, "Parsing")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::TypeAnalysis, "TypeAnalysis")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::Executing, "Executing")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::WaitingForInput, "WaitingForInput")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::NotStarted, "NotStarted")
 
-REGISTER_PARSE_TYPE_ALIAS(vm::api::Paused, "Paused")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::Panicked, "Panicked")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::Running, "Running")
-REGISTER_PARSE_TYPE_ALIAS(vm::api::PausedOnError, "PausedOnError")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionNotStarted, "ExecutionNotStarted")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::Parsing, "Parsing")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::TypeAnalysis, "TypeAnalysis")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::WaitingForInput, "WaitingForInput")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::NotStarted, "NotStarted")
+
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::Paused, "Paused")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::Running, "Running")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::Executing, "Executing")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::Panicked, "Panicked")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::PausedOnError, "PausedOnError")

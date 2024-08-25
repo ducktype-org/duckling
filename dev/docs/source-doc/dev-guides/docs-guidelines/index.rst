@@ -12,16 +12,16 @@ Documentation guidelines
 Documentation structure
 =======================
 
-Rift docuemntation is divided into two parts:
+Rift documentation is divided into three parts:
 
 * ``rift-doc`` - user documentation, describing language funcionalities, usage, assumptions and goals 
-* ``source-doc`` - developer documentation, describing implementation details and providing resources for developers
+* ``source-doc`` - developer documentation, guidelines and resources for developers
+* ``doxygen`` - low level description of source code, implementation details and libraries usage
 
 ``source-doc`` is further divided into:
 
 * ``dev-guides`` - guidelines, tutorial and instructions
 * ``dev-handbook`` - high level description of source code
-* ``source-docs`` - low level description of source code, implementation details and libraries usage
 
 Basic rst
 =========
@@ -145,19 +145,9 @@ To create external table of contents use ``toctree`` directive.
         folder/doc.rst
         *
 
-Doxygen and breathe
-===================
-
-``Doxygen`` is a tool to generate documentation for C++ code and ``breathe`` enables doxygen usage in sphinx. To include generated documentation use breathe directives, for example:
-
-.. code-block:: rst
-
-    .. doxygenclass:: base::Exception
-
-See `breathe documentation <https://breathe.readthedocs.io/en/latest/index.html>`_ for full list of directives.
-
 See also
 ========
 
-* :doc:`Printer examplary documentation </source-doc/source-docs/common/printer/index>`
+*  :doc:`Printer examplary documentation (now inside Doxygen)`
+
 * `Discord documentation channel <https://discord.com/channels/860531247826731029/1106545291852783627>`_

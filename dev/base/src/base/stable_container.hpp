@@ -1,3 +1,7 @@
+/**
+ * @file stable_container.hpp
+ * @brief Provides a simple expandable container with stable references.
+ */
 #pragma once
 
 #include "ints.hpp"
@@ -28,6 +32,15 @@ namespace base {
 	public:
 		using Ref  = StableVectorRef<Data>;
 		using CRef = StableVectorCRef<Data>;
+
+		StableVector()               = default;
+		StableVector(StableVector&&) = default;
+
+		/**
+		 * @note explicit delete here causes much better compiler errors.
+		 * @note It is deleted because data member can't be copied in a simple way.
+		 */
+		StableVector(const StableVector&) = delete;
 
 		[[nodiscard]]
 		constexpr usize size() const noexcept {

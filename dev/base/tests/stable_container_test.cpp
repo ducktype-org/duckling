@@ -23,68 +23,68 @@ private:
 
 		base::StableVector<i32> vector;
 
-		assert(vector.empty(), "bad list empty");
-		assert(!vector.notEmpty(), "bad list not empty");
-		assert(vector.size() == 0, "bad list size");
+		assertTrue(vector.empty(), "bad list empty");
+		assertTrue(!vector.notEmpty(), "bad list not empty");
+		assertTrue(vector.size() == 0, "bad list size");
 
 		vector.pushBack(2);
 		vector.pushBack(3);
 		vector.pushBack(4);
 
-		assert(vector[0] == 2, "Bad stable list pushBack (0)");
-		assert(vector[1] == 3, "Bad stable list pushBack (1)");
-		assert(vector[2] == 4, "Bad stable list pushBack (2)");
+		assertTrue(vector[0] == 2, "Bad stable list pushBack (0)");
+		assertTrue(vector[1] == 3, "Bad stable list pushBack (1)");
+		assertTrue(vector[2] == 4, "Bad stable list pushBack (2)");
 
 		auto maybe_ref = vector.getRef(1);
-		assert(maybe_ref.has_value(), "No value");
+		assertTrue(maybe_ref.has_value(), "No value");
 		auto ref = maybe_ref.value();
 
-		assert(*ref == 3, "Bad stable list ref");
+		assertTrue(*ref == 3, "Bad stable list ref");
 		*ref = 4;
-		assert(*ref == 4, "Bad stable list ref");
+		assertTrue(*ref == 4, "Bad stable list ref");
 
 		auto maybe_c_ref = vector.getCRef(0);
-		assert(maybe_c_ref.has_value(), "No value");
+		assertTrue(maybe_c_ref.has_value(), "No value");
 		auto c_ref = maybe_c_ref.value();
-		assert(*c_ref == 2, "Bad stable list c_ref");
+		assertTrue(*c_ref == 2, "Bad stable list c_ref");
 
 		for (int i = 0; i < 100; i++) vector.pushBack(i);
 
-		assert(vector.getRef(102).has_value(), "No value where there should be");
-		assert(vector.getRef(103).empty(), "Value where there should be none");
-		assert(vector.getRef(104).empty(), "Value where there should be none");
+		assertTrue(vector.getRef(102).has_value(), "No value where there should be");
+		assertTrue(vector.getRef(103).empty(), "Value where there should be none");
+		assertTrue(vector.getRef(104).empty(), "Value where there should be none");
 
-		assert(vector.size() == 103, "bad list size");
-		assert(!vector.empty(), "bad list empty");
-		assert(vector.notEmpty(), "bad list not empty");
+		assertTrue(vector.size() == 103, "bad list size");
+		assertTrue(!vector.empty(), "bad list empty");
+		assertTrue(vector.notEmpty(), "bad list not empty");
 
-		assert(*ref == 4, "Stable list ref not stable");
-		assert(*c_ref == 2, "Bad stable list c_ref");
+		assertTrue(*ref == 4, "Stable list ref not stable");
+		assertTrue(*c_ref == 2, "Bad stable list c_ref");
 	}
 
 	void customKeyTest() {
 		base::StableVector<int, SomeId> list;
 
-		assert(list.empty(), "bad list empty");
+		assertTrue(list.empty(), "bad list empty");
 
 		auto key1 = list.pushBack(1);
 		auto key2 = list.emplaceBack(2);
 
-		assert(key1 != key2, "some keys");
-		assert(key1 + SomeId(1) == key2, "Strange key chosen");
+		assertTrue(key1 != key2, "some keys");
+		assertTrue(key1 + SomeId(1) == key2, "Strange key chosen");
 
-		assert(list[key1] == 1, "bad value in list");
+		assertTrue(list[key1] == 1, "bad value in list");
 
 		auto ref = list.getRef(key1).value();
-		assert(*ref == 1, "bad reference");
+		assertTrue(*ref == 1, "bad reference");
 		*ref = 100;
-		assert(*ref == 100, "bad reference");
+		assertTrue(*ref == 100, "bad reference");
 
 		for (usize i = 0; i < 100; i++) list.pushBack(int(i));
 
-		assert(*ref == 100, "bad reference");
+		assertTrue(*ref == 100, "bad reference");
 		*ref = 1'000;
-		assert(*ref == 1'000, "bad reference");
+		assertTrue(*ref == 1'000, "bad reference");
 	}
 
 	void stableHashMapTest() {
@@ -107,7 +107,7 @@ private:
 		map.put("b", "test 3");
 		auto put_res = map.put("lol", "test");
 
-		assert(put_res.second == false, "Value was wrongly inserted");
+		assertTrue(put_res.second == false, "Value was wrongly inserted");
 
 		ASSERT_EQUAL(3, map.size());
 		ASSERT_EQUAL(map["a"], "test 2");

@@ -44,7 +44,7 @@ class PSTBuilderTest: public tester::TestSuite {
 
 	template<typename Element, bool good>
 	void testExample(Example<Element, good>& example) {
-		assert(example(), example.message());
+		assertTrue(example(), example.message());
 	}
 
 	Example<pst::TopLevel, true>   emptyTopLevel{ "" };
@@ -102,13 +102,13 @@ private:
 		pst::PST<Element> PSTmanual   = manualSteps<Element>(filepath);
 		pst::PST<Element> PSTcontent  = fromContents<Element>(filepath);
 		pst::PST<Element> PSTfilename = fromFilename<Element>(filepath);
-		assert(PSTmanual.getLogger().good() == PSTcontent.getLogger().good(), error);
-		assert(PSTmanual.getLogger().good() == PSTfilename.getLogger().good(), error);
+		assertTrue(PSTmanual.getLogger().good() == PSTcontent.getLogger().good(), error);
+		assertTrue(PSTmanual.getLogger().good() == PSTfilename.getLogger().good(), error);
 		std::string manualPrint   = stringDprint(PSTmanual);
 		std::string contentPrint  = stringDprint(PSTcontent);
 		std::string filenamePrint = stringDprint(PSTfilename);
-		assert(manualPrint == contentPrint, error);
-		assert(manualPrint == filenamePrint, error);
+		assertTrue(manualPrint == contentPrint, error);
+		assertTrue(manualPrint == filenamePrint, error);
 	}
 
 	template<typename Element>

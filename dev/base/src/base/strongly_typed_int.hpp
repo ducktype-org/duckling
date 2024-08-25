@@ -1,3 +1,23 @@
+/**
+ * @file strongly_typed_int.hpp
+ *
+ * @brief Provides macros for creating a strongly typed integer.
+ * They are created as classes that generally behave the same as other integral types but can only
+ * be explicitly cast.
+ *
+ * Functionalities
+ * ---------------
+ *
+ * Two variants are provided:
+ *
+ * - STRONG_TYPEDEF_INT_DIMENSIONAL
+ * - STRONG_TYPEDEF_INT
+ *
+ * ### Usage
+ * @include strongly_typed_int_example.cpp
+ *
+ * @example strongly_typed_int_example.cpp
+ */
 #pragma once
 
 #include <type_traits>

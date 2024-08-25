@@ -1,3 +1,8 @@
+/**
+ * @file unique_pointer.hpp
+ *
+ * @see smart_pointers.hpp
+ */
 #pragma once
 
 #include <memory>

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# `color_test.sh` is a script that modifies the output of `ctest` to add more colors. 
+# It can be run with any arguments that are possible for the `ctest` command
+
 esc=$(printf '\x1B')
 make_green=$(printf "${esc}[32m&${esc}[0m")
 make_red=$(printf "${esc}[91m&${esc}[0m")

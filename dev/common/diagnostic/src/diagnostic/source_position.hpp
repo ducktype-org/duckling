@@ -1,6 +1,18 @@
 /**
- * @file message.hpp
+ * @file source_position.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
+ * @brief Module implementing source position handling.
+ *
+ * ### Usage:
+ * @code
+int main() {
+    dia::SourcePosition singleCharacter{<source-file>, <line>, <column>, <position-in-file>};
+    dia::SourcePosition multipleCharacters{<source-file>, <line>, <column>, <start-position>,
+<end-position>}; dia::SourcePosition rangeFromSingleCharacter{singleCharacter, <end-position>};
+
+    std::cerr << multipleCharacters.genErrorStr("some message") << "\n";
+}
+ @endcode
  */
 
 #pragma once
