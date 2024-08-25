@@ -159,8 +159,7 @@ private:
 
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
-			[[maybe_unused]]
-			auto a_ref_const = a_moved.ref();
+			[[maybe_unused]] auto a_ref_const = a_moved.ref();
 
 			// decltype(a_ref_const->state) is just int for some reason, but "it" is still a const.
 			static_assert(
@@ -376,9 +375,8 @@ private:
 
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
-			auto a_ref_const = a_moved.ref();
-			[[maybe_unused]]
-			auto pointer     = a_ref_const.get().value().get();
+			auto                  a_ref_const = a_moved.ref();
+			[[maybe_unused]] auto pointer     = a_ref_const.get().value().get();
 
 			// decltype(a_ref_const->state) is just int for some reason, but "it" is still a const.
 			static_assert(
