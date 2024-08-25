@@ -5,7 +5,7 @@
 #pragma once
 
 #include <utility>
-#include <type_traits>
+#include <type_traits> // IWYU pragma: export
 #include <base/optional.hpp>
 #include <base/str_utils.hpp>
 #include <base/defer.hpp>
@@ -14,7 +14,7 @@
 #include "acd.hpp"
 #include "query_int.hpp"
 #include "dep_graph.hpp"
-#include "query_id_provider.hpp"
+#include "query_id_provider.hpp" // IWYU pragma: export
 #include "logs.hpp"
 #include "node_making.hpp"
 
@@ -175,24 +175,23 @@ namespace query {
  * @param pretty_name Pretty name of the Query
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                \
-	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from)   \
-		-> type::QueryType::QResult {                                                               \
+	auto type::QueryType::internal_query(type::QKey key, ::query::detail::NodeID from)   \
+		-> type::QResult {                                                               \
 		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                     \
 	}                                                                                               \
 	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryId(pretty_name); \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;                            \
 	static_assert(                                                                                  \
-		(not std::is_reference_v<type::QueryType::QResult>)                                         \
-			or (std::is_lvalue_reference_v<type::QueryType::QResult>                                \
-	            and std::is_const_v<std::remove_reference_t<type::QueryType::QResult>>),            \
+		(not std::is_reference_v<type::QResult>)                                         \
+			or (std::is_lvalue_reference_v<type::QResult>                                \
+	            and std::is_const_v<std::remove_reference_t<type::QResult>>),            \
 		"Query result type should be either non-reference or const lvalue reference"                \
-	);
+	);                                                                                              \
+	static_assert(std::is_same_v<std::invoke_result_t<decltype(type::store), type::QKey, \
+	type::PResult, ::query::ACD>, type::QResult>, "Bad store result."); \
+		static_assert(std::is_same_v<std::invoke_result_t<decltype(type::provide), ::query::Context&, \
+	type::QKey>, type::PResult>, "Bad provide result.");
 
-// @TODO: make it work:
-// static_assert(std::is_same_v<std::invoke_result_t<type::store, type::QueryType::QKey,
-// type::PResult, ::query::ACD>, type::QueryType::QResult>, "Bad store result."); \
-	// static_assert(std::is_same_v<std::invoke_result_t<type::provide, ::query::Context&,
-// type::QueryType::QKey>, type::PResult>, "Bad provide result.");
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is
