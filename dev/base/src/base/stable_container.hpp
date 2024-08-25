@@ -26,7 +26,6 @@ namespace base {
 		std::vector<Box<Data>> data;
 
 	public:
-
 		using RefT  = Ref<Data>;
 		using CRefT = CRef<Data>;
 

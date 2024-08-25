@@ -20,25 +20,23 @@ namespace base {
 		friend class Ref;
 
 		void assertNotNull() const {
-			if (ptr == nullptr) {
-				RIFT_PANIC("Ref got nullptr");
-			}
+			if (ptr == nullptr) RIFT_PANIC("Ref got nullptr");
 		}
-	public:
 
+	public:
 		// Constructors from pointers:
 		Ref() = delete;
-		Ref(T* ptr): ptr{ptr} { assertNotNull(); }
+
+		Ref(T* ptr): ptr{ ptr } { assertNotNull(); }
 
 		Ref(std::nullptr_t) = delete;
-		
+
 		// Copy:
 		Ref(const Ref& other) noexcept = default;
-		
+
 		template<class U>
 		Ref(const Ref<U>& other) noexcept: ptr(other.get()) {}
 
-		
 		// @note: move constructors are not defined, since they are equivalent to copy constructors.
 		// moving still works, because they are not deleted.
 
@@ -51,11 +49,12 @@ namespace base {
 			return *this;
 		}
 
-
 		// Acessors:
 
 		[[nodiscard]]
-		constexpr T* get() const noexcept { return ptr; }
+		constexpr T* get() const noexcept {
+			return ptr;
+		}
 
 		T& operator*() const { return *get(); }
 
@@ -74,9 +73,7 @@ namespace base {
 		}
 
 		// swap:
-		friend void swap(Ref& first, Ref& second) noexcept {
-			std::swap(first.ptr, second.ptr);
-		}
+		friend void swap(Ref& first, Ref& second) noexcept { std::swap(first.ptr, second.ptr); }
 
 		~Ref() = default;
 	};
@@ -96,22 +93,22 @@ namespace base {
 		friend class Ref;
 
 		void assertNotNull() const {
-			if (ptr == nullptr) {
-				RIFT_PANIC("MRef got nullptr");
-			}
+			if (ptr == nullptr) RIFT_PANIC("MRef got nullptr");
 		}
+
 	public:
 		// Constructors from pointers:
 		MRef() = default;
-		MRef(std::nullptr_t) {};
+		MRef(std::nullptr_t){};
 
-		MRef(T* ptr): ptr{ptr} { }
+		MRef(T* ptr): ptr{ ptr } {}
 
-		// @TODO: I would like to assertNotNull during copy, but then the type is not trivially copyable... 
+		// @TODO: I would like to assertNotNull during copy, but then the type is not trivially
+		// copyable...
 
 		// Copy:
 		MRef(const MRef& other) noexcept = default;
-		
+
 		template<class U>
 		MRef(const MRef<U>& other) noexcept: ptr(other.ptr) {}
 
@@ -124,7 +121,7 @@ namespace base {
 
 		// Assign:
 		MRef& operator=(std::nullptr_t) noexcept {
-			ptr= nullptr;
+			ptr = nullptr;
 			return *this;
 		}
 
@@ -146,15 +143,20 @@ namespace base {
 
 		[[nodiscard]]
 		constexpr Optional<Ref<T>> get() const noexcept {
-			if (ptr == nullptr) {
-				return {};
-			}
+			if (ptr == nullptr) return {};
 			return Ref<T>(ptr);
 		}
 
 		// unsafe access:
-		T* operator->() const { assertNotNull(); return ptr; }
-		T& operator*() const { assertNotNull(); return *ptr; }
+		T* operator->() const {
+			assertNotNull();
+			return ptr;
+		}
+
+		T& operator*() const {
+			assertNotNull();
+			return *ptr;
+		}
 
 		// Comparison:
 
@@ -171,9 +173,7 @@ namespace base {
 		}
 
 		// swap:
-		friend void swap(MRef& first, MRef& second) noexcept {
-			std::swap(first.ptr, second.ptr);
-		}
+		friend void swap(MRef& first, MRef& second) noexcept { std::swap(first.ptr, second.ptr); }
 
 		~MRef() = default;
 	};
@@ -181,16 +181,16 @@ namespace base {
 	// Deduction guide for constructing a MRef from a Ref:
 	template<class U>
 	MRef(Ref<U>&&) noexcept -> MRef<U>;
-	
+
 	template<class T>
-	using CRef = Ref<const T>; 
-	
+	using CRef = Ref<const T>;
+
 	template<class T>
-	using MCRef = MRef<const T>; 
+	using MCRef = MRef<const T>;
 }
 
 // global namespace export:
-using base::Ref;
 using base::CRef;
-using base::MRef;
 using base::MCRef;
+using base::MRef;
+using base::Ref;
