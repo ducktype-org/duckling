@@ -60,3 +60,37 @@ rift_add_test(base perfect_hash_test tests/perfect_hash_test.cpp
 
 rift_add_test(base box_ref_tests tests/box_ref_tests.cpp
         USES Base)
+
+
+add_example(anycast_example src/base/examples/anycast_example.cpp
+        USES Base)
+
+add_example(constexpr_cat_example src/base/examples/constexpr_cat_example.cpp
+        USES Base)
+
+add_example(defer_example src/base/examples/defer_example.cpp
+        USES Base)
+
+add_example(optional_simple_example src/base/examples/optional_simple_example.cpp
+        USES Base)
+
+add_example(perfect_hash_example src/base/examples/perfect_hash_example.cpp
+        USES Base)
+
+add_example(smart_pointers_example src/base/examples/smart_pointers_example.cpp
+        USES Base)
+
+add_example(str_utils_example src/base/examples/str_utils_example.cpp
+        USES Base)
+
+add_example(stringifyable_enum_example src/base/examples/stringifyable_enum_example.cpp
+        USES Base)
+
+add_example(strongly_typed_int_example src/base/examples/strongly_typed_int_example.cpp
+        USES Base)
+
+add_example(variant_match_example src/base/examples/variant_match_example.cpp
+        USES Base)
+
+add_example(variant_visit_example src/base/examples/variant_visit_example.cpp
+        USES Base)
