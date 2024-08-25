@@ -108,7 +108,7 @@ private:
 	}
 
 	void testBoxRef() {
-		// basic box:
+		// basic Box:
 		{
 			Box<LiveCounter> a = box<LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 1);
@@ -123,7 +123,7 @@ private:
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
-		// box move:
+		// Box move:
 		{
 			Box<LiveCounter> a = box<LiveCounter>();
 			a->state = 2;
@@ -138,7 +138,7 @@ private:
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
-		// Ref from box:
+		// Ref from Box:
 		{
 			Box<LiveCounter> a = box<LiveCounter>(123);
 			ASSERT_EQUAL(a->state, 123);
@@ -334,9 +334,11 @@ private:
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
-		// MXox move:
+		// MBox move:
 		{
 			MBox<LiveCounter> a = box<LiveCounter>();
+			ASSERT_EQUAL(LiveCounter::count, 1);
+
 			a->state = 2;
 			MBox b = std::move(a);
 
@@ -346,6 +348,31 @@ private:
 			assertThrows<base::Panic>([&]() {
 				a->state = 4;
 			}, "Use after move did not throw!");
+		}
+		ASSERT_EQUAL(LiveCounter::count, 0);
+
+		// Ref from Box:
+		{
+			MBox<LiveCounter> a = box<LiveCounter>(123);
+			ASSERT_EQUAL(LiveCounter::count, 1);
+			ASSERT_EQUAL(a->state, 123);
+
+			auto a_ref = a.refMut();
+			ASSERT_EQUAL(a_ref->state, 123);
+
+			a_ref.get().value()->state = 456;
+			ASSERT_EQUAL(a->state, 456);
+			ASSERT_EQUAL(a_ref->state, 456);
+
+			auto a_moved = std::move(a);
+			ASSERT_EQUAL(a_ref->state, 456);
+
+			ASSERT_EQUAL(LiveCounter::count, 1);
+
+			auto a_ref_const = a_moved.ref();
+
+			// decltype(a_ref_const->state) is just int for some reason, but "it" is still a const.
+			static_assert(std::is_const_v<std::remove_pointer_t<decltype(a_ref_const.get())>>, ".ref() should return const ref");
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 	}
