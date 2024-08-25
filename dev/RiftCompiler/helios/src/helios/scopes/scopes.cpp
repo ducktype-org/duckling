@@ -25,7 +25,8 @@ namespace compiler::helios {
 		// adapted from hir:
 
 		// created on startup:
-		ScopeID parent;
+		std::optional<ScopeID> parent;
+
 		// base::StrId name; ///< for debug
 		bool is_root = false;
 
@@ -265,11 +266,11 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
 	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, LookupResult) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			LookupResult result = ctx.query<QueryLookupInScope>(key);
 
-			if (key.scope.ref->parent.ref != nullptr) {
-				auto parent = key.scope.ref->parent;
+			if (key.scope.ref->parent.has_value()) {
+				auto parent = key.scope.ref->parent.value();
 
 				// Reverse insertion order allow for linear result concatenation instead of
 				// quadratic

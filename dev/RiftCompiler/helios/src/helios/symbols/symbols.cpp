@@ -98,7 +98,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return base::borrow_ptr<SymbolData>
 	 */
-	base::borrow_ptr<SymbolData>
+	Ref<SymbolData>
 		makeSymbolFromStatement(const ScopeID& scope, PstRef<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 

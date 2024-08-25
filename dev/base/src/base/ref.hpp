@@ -100,20 +100,20 @@ namespace base {
 		MRef(T* ptr): ptr{ptr} { }
 
 		// Copy:
-		MRef(const MRef& other) noexcept: ptr(other.get()) {}
+		MRef(const MRef& other) noexcept: ptr(other.ptr) {}
 		
 		template<class U>
-		MRef(const MRef<U>& other) noexcept: ptr(other.get()) {}
+		MRef(const MRef<U>& other) noexcept: ptr(other.ptr) {}
 
 		// Move:
 		MRef(MRef&& other) noexcept: ptr{other.ptr} { }
 
 		template<class U>
-		MRef(MRef<U>&& other) noexcept: ptr(other.ptr) {}
+		MRef(MRef<U>&& other) noexcept: ptr(std::move(other).ptr) {}
 
 		// Construction from Ref:
 		template<class U>
-		MRef(const Ref<U>& other) noexcept: ptr(other.get()) {}
+		MRef(const Ref<U>& other) noexcept: ptr(other.ptr) {}
 
 		// Assign:
 		MRef& operator=(std::nullptr_t) noexcept {

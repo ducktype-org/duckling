@@ -38,31 +38,35 @@ class BoxRefTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("BoxRef Test") {
+		TESTER_ADD_TEST(cppSanityCheck);
 		TESTER_ADD_TEST(testBoxRef);
 		TESTER_ADD_TEST(defaultMembersTest);
 	}
 
 private:
+	void cppSanityCheck() {
+		struct Ptr {
+			int* ptr = nullptr;
+			Ptr() = default;
+			Ptr(const Ptr&) = default;
+			Ptr(Ptr&&) = default;
+		};
+
+		int v = 0;
+		Ptr a;
+		a.ptr = &v;
+		
+		// NOLINTBEGIN
+		int* b = std::move(a).ptr;
+		int* c = std::move(a.ptr);
+		// NOLINTEND
+		
+		ASSERT_EQUAL(a.ptr, &v);
+		ASSERT_EQUAL(b, &v);
+		ASSERT_EQUAL(c, &v);
+	}
+
 	void testBoxRef() {
-		// c++ sanity checks:
-		{
-			struct Ptr {
-				int* ptr = nullptr;
-				Ptr() = default;
-				Ptr(const Ptr&) = default;
-				Ptr(Ptr&&) = default;
-			};
-
-			int c = 0;
-			Ptr a;
-			a.ptr = &c;
-			
-			int* b = std::move(a).ptr;
-
-			ASSERT_EQUAL(a.ptr, &c);
-			ASSERT_EQUAL(b, &c);
-		}
-
 		// basic box:
 		{
 			Box<LiveCounter> a = box<LiveCounter>();
@@ -210,12 +214,12 @@ private:
 		{		
 			// move:
 			struct Container {
-				Box<Data> data_1;
+				Box<Data>  data_1;
 				MBox<Data> data_2;
-				Ref<Data> data_3;
+				Ref<Data>  data_3;
 				MRef<Data> data_4;
 
-				Container(): data_1(box<Data>()), data_3(data_1.ref()) {};
+				Container(): data_1(box<Data>()), data_3(data_1.refMut()) {};
 				Container(Container&&) = default;
 			};
 
@@ -236,6 +240,8 @@ private:
 
 			Container a;
 			Container b = a;
+
+			[[maybe_unused]]
 			Container c = std::move(b);
 		}
 

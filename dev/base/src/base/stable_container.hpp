@@ -12,12 +12,6 @@
 
 namespace base {
 
-	template<typename Data>
-	using StableVectorRef = Ref<Data>;
-
-	template<typename Data>
-	using StableVectorCRef = Ref<const Data>;
-
 	/**
 	 * @brief Expandable list with stable references (References are valid after the addition of new
 	 * elements).
@@ -32,8 +26,9 @@ namespace base {
 		std::vector<Box<Data>> data;
 
 	public:
-		using Ref  = StableVectorRef<Data>;
-		using CRef = StableVectorCRef<Data>;
+
+		using RefT  = Ref<Data>;
+		using CRefT = CRef<Data>;
 
 		StableVector()               = default;
 		StableVector(StableVector&&) = default;
@@ -65,12 +60,12 @@ namespace base {
 			return *data.at(static_cast<usize>(pos));
 		}
 
-		Optional<Ref> getRef(Key pos) noexcept {
+		Optional<RefT> getRef(Key pos) noexcept {
 			if (static_cast<usize>(pos) >= size()) return {};
 			return data[static_cast<usize>(pos)].refMut();
 		}
 
-		Optional<CRef> getCRef(Key pos) const noexcept {
+		Optional<CRefT> getCRef(Key pos) const noexcept {
 			if (static_cast<usize>(pos) >= size()) return {};
 			return data[static_cast<usize>(pos)].ref();
 		}
@@ -87,9 +82,9 @@ namespace base {
 			return Key(data.size() - 1);
 		}
 
-		Ref last() { return data.back().refMut(); }
+		RefT last() { return data.back().refMut(); }
 
-		CRef last() const { return data.back().ref(); }
+		CRefT last() const { return data.back().ref(); }
 
 		template<class... Args>
 		constexpr Key emplaceBack(Args&&... args) {

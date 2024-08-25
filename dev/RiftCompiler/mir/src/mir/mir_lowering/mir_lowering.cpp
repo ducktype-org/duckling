@@ -26,7 +26,7 @@ namespace compiler::mir {
 	// @TODO: since BlockBuilderRef can be a parameter
 	// we will need to add BlockBuilderRef->BlockRef transformation
 	// during building phase
-	using BlockBuilderRef = base::StableVectorRef<BlockBuilder>;
+	using BlockBuilderRef = Ref<BlockBuilder>;
 
 	/**
 	 * @brief Represents result of expression lowering, which is
@@ -159,7 +159,7 @@ namespace compiler::mir {
 
 			// creation of borrow pointer here, depends on the fact that blocks
 			// are kept in stable container:
-			return { base::borrow_ptr(this), reversed_instruction.size() - 1 };
+			return { this, reversed_instruction.size() - 1 };
 		}
 
 		void setTerminator(Instruction instruction) {
