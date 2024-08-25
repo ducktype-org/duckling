@@ -153,6 +153,13 @@ namespace base {
 		T* operator->() const { assertNotNull(); return ptr; }
 		T& operator*() const { assertNotNull(); return *ptr; }
 
+		Box<T> stealBox() && {
+			assertNotNull();
+			T* output = ptr;
+			ptr = nullptr;
+			return Box<T>(output);
+		}
+
 		~MBox() {
 			delete ptr;
 		};
@@ -160,7 +167,7 @@ namespace base {
 
 	// Deduction guide for constructing a MBox from a Box:
 	template<class U>
-	MBox(Box<U>&& other) noexcept -> MBox<U>;
+	MBox(Box<U>&&) noexcept -> MBox<U>;
 
 	template<class T, class... Args>
 	inline Box<T> box(Args&&... args) {

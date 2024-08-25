@@ -132,8 +132,15 @@ private:
 			ASSERT_EQUAL(b->state, 2);
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
+			(*b).state = 4;
+			ASSERT_EQUAL(b->state, 4);
+
 			assertThrows<base::Panic>([&]() {
 				a->state = 4;
+			}, "Use after move did not throw!");
+
+			assertThrows<base::Panic>([&]() {
+				*a;
 			}, "Use after move did not throw!");
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
@@ -232,8 +239,6 @@ private:
 			ASSERT_EQUAL(c.ref(), d_ref);
 			ASSERT_EQUAL(d.ref(), c_ref);
 		}
-
-		
 	}
 
 	void defaultMembersTest() {
@@ -345,8 +350,15 @@ private:
 			ASSERT_EQUAL(b->state, 2);
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
+			(*b).state = 4;
+			ASSERT_EQUAL(b->state, 4);
+
 			assertThrows<base::Panic>([&]() {
 				a->state = 4;
+			}, "Use after move did not throw!");
+
+			assertThrows<base::Panic>([&]() {
+				*a;
 			}, "Use after move did not throw!");
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
@@ -370,9 +382,99 @@ private:
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
 			auto a_ref_const = a_moved.ref();
+			auto pointer = a_ref_const.get().value().get();
 
 			// decltype(a_ref_const->state) is just int for some reason, but "it" is still a const.
-			static_assert(std::is_const_v<std::remove_pointer_t<decltype(a_ref_const.get())>>, ".ref() should return const ref");
+			static_assert(std::is_const_v<std::remove_pointer_t<decltype(pointer)>>, ".ref() should return const ref");
+		}
+		ASSERT_EQUAL(LiveCounter::count, 0);
+
+		// MRef template deduction:
+		{
+			LiveCounter a;
+
+			MRef a_ref_1 = &a;
+			MRef<LiveCounter> a_ref_2 = &a;
+
+			ASSERT_EQUAL(LiveCounter::count, 1);
+			ASSERT_EQUAL(a_ref_1.get(), a_ref_2.get());
+			ASSERT_EQUAL(a_ref_1.get(), Ref(&a));
+		}
+		ASSERT_EQUAL(LiveCounter::count, 0);
+
+		// Construction from inheriting class:
+		{
+			LiveCounterInherit a;
+
+			[[maybe_unused]]
+			MRef<LiveCounter> a_ref = &a;
+			ASSERT_EQUAL(LiveCounter::count, 1);
+			
+			MBox<LiveCounter> live = box<LiveCounterInherit>();
+			ASSERT_EQUAL(LiveCounter::count, 2);
+
+		}
+		ASSERT_EQUAL(LiveCounter::count, 0);
+
+		// Copy MRefs:
+		{
+			LiveCounter a;
+			MRef<LiveCounter> a_ref_1 = &a;
+			MRef<LiveCounter> a_ref_2 = a_ref_1;
+
+			// NOLINTBEGIN
+			// moving refs have no effect:
+			MRef<LiveCounter> a_ref_3 = std::move(a_ref_2);
+			// NOLINTEND
+
+			ASSERT_EQUAL(LiveCounter::count, 1);
+			ASSERT_EQUAL(a_ref_3.get(), a_ref_2.get());
+			ASSERT_EQUAL(a_ref_2.get(), a_ref_1.get());
+			ASSERT_EQUAL(a_ref_1.get(), Ref(&a));
+			ASSERT_TRUE(a_ref_1 == a_ref_2);
+		}
+		ASSERT_EQUAL(LiveCounter::count, 0);
+
+		// std swap:
+		{
+			LiveCounter a;
+			LiveCounter b;
+
+			MRef ref_1 = &a;
+			MRef ref_2 = &b;
+
+			std::swap(ref_1, ref_2);
+
+			ASSERT_EQUAL(ref_1, MRef(&b));
+			ASSERT_EQUAL(ref_2, MRef(&a));
+			ASSERT_TRUE(ref_1 != ref_2);
+
+			Box c = box<LiveCounter>();
+			Box d = box<LiveCounter>();
+
+			MRef c_ref = c.ref();
+			MRef d_ref = d.ref();
+
+			std::swap(c, d);
+
+			ASSERT_EQUAL(c.ref(), d_ref);
+			ASSERT_EQUAL(d.ref(), c_ref);
+		}
+
+		// move MBox into Box:
+		{
+			MBox a = box<LiveCounter>();
+			ASSERT_EQUAL(LiveCounter::count, 1);
+
+			Box b = std::move(a).stealBox();
+			ASSERT_EQUAL(LiveCounter::count, 1);
+			
+			// @TODO: assert that this does not compile:
+			// Box c = a.stealBox();
+
+			assertThrows<base::Panic>([&]() {
+				*a;
+			}, "Use after move did not throw!");
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 	}

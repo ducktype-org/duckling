@@ -5,6 +5,9 @@
 
 namespace base {
 
+	template<class T>
+	class MRef;
+
 	/**
 	 * @brief Reference
 	 */
@@ -65,6 +68,11 @@ namespace base {
 			return ptr == other.get();
 		}
 
+		template<class U>
+		bool operator==(const MRef<U>& other) const {
+			return ptr == other.ptr;
+		}
+
 		// swap:
 		friend void swap(Ref& first, Ref& second) noexcept {
 			std::swap(first.ptr, second.ptr);
@@ -83,6 +91,9 @@ namespace base {
 
 		template<class U>
 		friend class MRef;
+
+		template<class U>
+		friend class Ref;
 
 		void assertNotNull() const {
 			if (ptr == nullptr) {
@@ -154,6 +165,11 @@ namespace base {
 			return ptr == other.ptr;
 		}
 
+		template<class U>
+		bool operator==(const Ref<U>& other) const {
+			return ptr == other.ptr;
+		}
+
 		// swap:
 		friend void swap(MRef& first, MRef& second) noexcept {
 			std::swap(first.ptr, second.ptr);
@@ -161,6 +177,10 @@ namespace base {
 
 		~MRef() = default;
 	};
+
+	// Deduction guide for constructing a MRef from a Ref:
+	template<class U>
+	MRef(Ref<U>&&) noexcept -> MRef<U>;
 	
 	template<class T>
 	using CRef = Ref<const T>; 
