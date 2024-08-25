@@ -4,6 +4,29 @@
 #include <base/ints.hpp>
 
 
+// Ref, MRef asserts:
+
+// @note: MRef is not trivial due to "ptr = nullptr" in default constructor.
+static_assert(std::is_trivial_v<Ref<int>>, "Ref should be trivially type");
+
+static_assert(std::is_trivially_copyable_v<Ref<int>>, "Ref should be trivially copyable");
+static_assert(std::is_trivially_copyable_v<MRef<int>>, "MRef should be trivially copyable");
+
+static_assert(std::is_copy_constructible_v<Ref<int>>, "Ref should be copy constructible");
+static_assert(std::is_copy_constructible_v<MRef<int>>, "MRef should be copy constructible");
+
+static_assert(std::is_move_constructible_v<Ref<int>>, "Ref should be move constructible");
+static_assert(std::is_move_constructible_v<MRef<int>>, "MRef should be move constructible");
+
+static_assert(std::is_copy_assignable_v<Ref<int>>, "Ref should be copy assignable");
+static_assert(std::is_copy_assignable_v<MRef<int>>, "MRef should be copy assignable");
+
+static_assert(std::is_move_assignable_v<Ref<int>>, "Ref should be move assignable");
+static_assert(std::is_move_assignable_v<MRef<int>>, "MRef should be move assignable");
+
+static_assert(std::is_constructible_v<MRef<int>, std::nullptr_t>, "MRef should be constructible from nullptr");
+
+
 struct LiveCounter {
 	static inline usize count = 0;
 
@@ -153,8 +176,10 @@ private:
 			Ref<LiveCounter> a_ref_1 = &a;
 			Ref<LiveCounter> a_ref_2 = a_ref_1;
 
+			// NOLINTBEGIN
 			// moving refs have no effect:
 			Ref<LiveCounter> a_ref_3 = std::move(a_ref_2);
+			// NOLINTEND
 
 			ASSERT_EQUAL(LiveCounter::count, 1);
 			ASSERT_EQUAL(a_ref_3.get(), a_ref_2.get());
@@ -241,8 +266,10 @@ private:
 			Container a;
 			Container b = a;
 
+			// NOLINTBEGIN
 			[[maybe_unused]]
 			Container c = std::move(b);
+			// NOLINTEND
 		}
 
 

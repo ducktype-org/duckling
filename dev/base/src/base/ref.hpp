@@ -28,22 +28,17 @@ namespace base {
 		Ref(T* ptr): ptr{ptr} { assertNotNull(); }
 		
 		// Copy:
-		Ref(const Ref& other) noexcept: ptr(other.get()) {}
+		Ref(const Ref& other) noexcept = default;
 		
 		template<class U>
 		Ref(const Ref<U>& other) noexcept: ptr(other.get()) {}
 
-		// Move:
-		Ref(Ref&& other) noexcept: ptr{other.ptr} { }
-
-		template<class U>
-		Ref(Ref<U>&& other) noexcept: ptr(other.ptr) {}
+		
+		// @note: move constructors are not defined, since they are equivalent to copy constructors.
+		// moving still works, because they are not deleted.
 
 		// Assign:
-		Ref& operator=(const Ref& other) noexcept {
-			ptr = other.ptr;
-			return *this;
-		}
+		Ref& operator=(const Ref& other) noexcept = default;
 
 		template<class U>
 		Ref& operator=(const Ref<U>& other) noexcept {
@@ -99,21 +94,20 @@ namespace base {
 
 		MRef(T* ptr): ptr{ptr} { }
 
+		// @TODO: I would like to assertNotNull during copy, but then the type is not trivially copyable... 
+
 		// Copy:
-		MRef(const MRef& other) noexcept: ptr(other.ptr) {}
+		MRef(const MRef& other) noexcept = default;
 		
 		template<class U>
 		MRef(const MRef<U>& other) noexcept: ptr(other.ptr) {}
 
-		// Move:
-		MRef(MRef&& other) noexcept: ptr{other.ptr} { }
-
-		template<class U>
-		MRef(MRef<U>&& other) noexcept: ptr(std::move(other).ptr) {}
+		// @note: move constructors are not defined, since they are equivalent to copy constructors.
+		// moving still works, because they are not deleted.
 
 		// Construction from Ref:
 		template<class U>
-		MRef(const Ref<U>& other) noexcept: ptr(other.ptr) {}
+		MRef(const Ref<U>& other) noexcept: ptr(other.get()) {}
 
 		// Assign:
 		MRef& operator=(std::nullptr_t) noexcept {
@@ -121,10 +115,7 @@ namespace base {
 			return *this;
 		}
 
-		MRef& operator=(const MRef& other) noexcept {
-			ptr = other.ptr;
-			return *this;
-		}
+		MRef& operator=(const MRef& other) noexcept = default;
 
 		template<class U>
 		MRef& operator=(const MRef<U>& other) noexcept {
@@ -154,6 +145,8 @@ namespace base {
 
 		// Comparison:
 
+		bool operator==(std::nullptr_t) const { return ptr == nullptr; }
+
 		template<class U>
 		bool operator==(const MRef<U>& other) const {
 			return ptr == other.ptr;
@@ -179,4 +172,3 @@ using base::Ref;
 using base::CRef;
 using base::MRef;
 using base::MCRef;
-
