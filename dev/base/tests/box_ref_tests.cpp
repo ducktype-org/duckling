@@ -27,6 +27,22 @@ static_assert(std::is_move_assignable_v<MRef<int>>, "MRef should be move assigna
 static_assert(not std::is_constructible_v<Ref<int>, std::nullptr_t>, "Ref should not be constructible from nullptr");
 static_assert(std::is_constructible_v<MRef<int>, std::nullptr_t>, "MRef should be constructible from nullptr");
 
+// Box, MBox asserts:
+static_assert(not std::is_copy_constructible_v<Box<int>>, "Box should be copy constructible");
+static_assert(not std::is_copy_constructible_v<MBox<int>>, "MBox should be copy constructible");
+
+static_assert(std::is_move_constructible_v<Box<int>>, "Box should be move constructible");
+static_assert(std::is_move_constructible_v<MBox<int>>, "MBox should be move constructible");
+
+static_assert(not std::is_copy_assignable_v<Box<int>>, "Box should not be copy assignable");
+static_assert(not std::is_copy_assignable_v<MBox<int>>, "MBox should not be copy assignable");
+
+static_assert(std::is_move_assignable_v<Box<int>>, "Box should be move assignable");
+static_assert(std::is_move_assignable_v<MBox<int>>, "MBox should be move assignable");
+
+static_assert(not std::is_constructible_v<Box<int>, std::nullptr_t>, "Box should not be constructible from nullptr");
+static_assert(std::is_constructible_v<MBox<int>, std::nullptr_t>, "MBox should be constructible from nullptr");
+
 
 struct LiveCounter {
 	static inline usize count = 0;
@@ -65,6 +81,7 @@ public:
 		TESTER_ADD_TEST(cppSanityCheck);
 		TESTER_ADD_TEST(testBoxRef);
 		TESTER_ADD_TEST(defaultMembersTest);
+		TESTER_ADD_TEST(testMBoxMRef);
 	}
 
 private:
@@ -278,7 +295,59 @@ private:
 	}
 
 	void testMBoxMRef() {
-		// @TODO
+		// basic MBox:
+		{
+			MBox<LiveCounter> a = box<LiveCounter>();
+			
+			ASSERT_TRUE(a.get().has_value());
+			ASSERT_TRUE(a.ref().get().has_value());
+			ASSERT_TRUE(a.refMut().get().has_value());
+
+			ASSERT_EQUAL(LiveCounter::count, 1);
+		}
+		ASSERT_EQUAL(LiveCounter::count, 0);
+
+		// nullptr MBox:
+		{
+			MBox<LiveCounter> a = nullptr;
+
+			ASSERT_TRUE(a.get().empty());
+			ASSERT_TRUE(a.ref().get().empty());
+			ASSERT_TRUE(a.refMut().get().empty());
+
+			ASSERT_EQUAL(LiveCounter::count, 0);
+		}
+		ASSERT_EQUAL(LiveCounter::count, 0);
+
+		// MBox from box:
+		{
+			MBox<LiveCounter> a = box<LiveCounter>();
+
+			ASSERT_EQUAL(LiveCounter::count, 1);
+		}
+		ASSERT_EQUAL(LiveCounter::count, 0);
+
+		// MBox type deduction:
+		{
+			MBox a = box<LiveCounter>();
+			ASSERT_EQUAL(LiveCounter::count, 1);
+		}
+		ASSERT_EQUAL(LiveCounter::count, 0);
+
+		// MXox move:
+		{
+			MBox<LiveCounter> a = box<LiveCounter>();
+			a->state = 2;
+			MBox b = std::move(a);
+
+			ASSERT_EQUAL(b->state, 2);
+			ASSERT_EQUAL(LiveCounter::count, 1);
+
+			assertThrows<base::Panic>([&]() {
+				a->state = 4;
+			}, "Use after move did not throw!");
+		}
+		ASSERT_EQUAL(LiveCounter::count, 0);
 	}
 };
 

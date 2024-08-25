@@ -2,6 +2,8 @@
  * @file borrow_pointer.hpp
  *
  * @see smart_pointers.hpp
+ * 
+ * @deprecated use Ref instead
  */
 #pragma once
 

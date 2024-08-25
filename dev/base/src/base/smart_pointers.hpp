@@ -12,6 +12,8 @@
  * @include smart_pointers_example.cpp
  *
  * @example smart_pointers_example.cpp
+ * 
+ * @deprecated use Box and Ref instead 
  */
 #pragma once
 

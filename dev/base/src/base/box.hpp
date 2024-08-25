@@ -13,6 +13,9 @@ namespace base {
 		template<class U>
 		friend class Box;
 
+		template<class U>
+		friend class MBox;
+
 		constexpr void assertNotNull() const {
 			if (ptr == nullptr) {
 				RIFT_PANIC("Box got nullptr");
@@ -21,6 +24,7 @@ namespace base {
 
 	public:
 		Box() = delete;
+		Box(std::nullptr_t) = delete;
 
 		/**
 		 * @brief Constructs a Box from a raw pointer.
@@ -82,6 +86,9 @@ namespace base {
 		template<class U>
 		friend class MBox;
 
+		template<class U>
+		friend class Box;
+
 		constexpr void assertNotNull() const {
 			if (ptr == nullptr) {
 				RIFT_PANIC("MBox got nullptr");
@@ -89,6 +96,7 @@ namespace base {
 		}
 	public:
 		MBox() = default;
+		MBox(std::nullptr_t) {};
 
 		/**
 		 * @brief Constructs a Box from a raw pointer.
@@ -98,7 +106,12 @@ namespace base {
 
 		MBox(const MBox& other) = delete;
 
-		MBox(MBox&& other) noexcept: ptr{std::move(other.ptr)} {
+		MBox(MBox&& other) noexcept: ptr{std::move(other).ptr} {
+			other.ptr = nullptr;
+		}
+
+		template<class U>
+		MBox(Box<U>&& other) noexcept: ptr{std::move(other).ptr} {
 			other.ptr = nullptr;
 		}
 
@@ -121,11 +134,11 @@ namespace base {
 		friend void swap(MBox& first, MBox& second) noexcept { std::swap(first.ptr, second.ptr); }
 
 		MRef<T> refMut() const noexcept {
-			return Ref<T>(ptr);
+			return MRef<T>(ptr);
 		}
 
 		MRef<const T> ref() const noexcept {
-			return Ref<T>(ptr);
+			return MRef<T>(ptr);
 		}
 
 		[[nodiscard]]
@@ -142,19 +155,28 @@ namespace base {
 
 		~MBox() {
 			delete ptr;
-			ptr = nullptr;
 		};
 	};
+
+	// Deduction guide for constructing a MBox from a Box:
+	template<class U>
+	MBox(Box<U>&& other) noexcept -> MBox<U>;
 
 	template<class T, class... Args>
 	inline Box<T> box(Args&&... args) {
 		return Box<T>(new T(std::forward<Args>(args)...));
 	}
+
+	template<class T>
+	using CBox = Box<const T>;
+
+	template<class T>
+	using MCBox = MBox<const T>;
 }
 
 // global namespace export:
 using base::Box;
 using base::MBox;
+using base::CBox;
+using base::MCBox;
 using base::box;
-
-
