@@ -9,7 +9,6 @@
 #include <base/perfect_hash.hpp>
 #include <base/smart_pointers.hpp>
 #include <base/ref.hpp>
-#include <utility>
 
 namespace compiler::helios {
 	// Forward:
@@ -34,7 +33,7 @@ namespace compiler::helios {
 	private:
 		Ref<SymbolData> ref;
 
-		SymID(Ref<SymbolData> ref): ref(std::move(ref)) {}
+		SymID(Ref<SymbolData> ref): ref(ref) {}
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
 		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct GetSymRef_Functor;
@@ -57,7 +56,7 @@ namespace compiler::helios {
 	private:
 		Ref<ScopeData> ref;
 
-		ScopeID(Ref<ScopeData> ref): ref(std::move(ref)) {}
+		ScopeID(Ref<ScopeData> ref): ref(ref) {}
 		friend struct ImplementationOf_QueryRootScopeOf;
 		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;
 		friend struct ImplementationOf_QuerySymbolsInScope;

@@ -76,33 +76,33 @@ namespace tester {
 	void TestSuite::runTest(TestType test) {
 		try {
 			(this->*test)();
-		} catch (const CritTestError& e) {
-		} catch (const base::Panic& panic) {
-			curr_global_res->success = false;
-			message("Unexpected Panic occurred in:");
-			message(panic.getPosition());
-			message("Error:");
-			message(panic.what());
-		} catch (const base::LogicError& logicError) {
-			curr_global_res->success = false;
-			message("Logic Error occurred:");
-			message(logicError.what());
-		} catch (const base::NotYetImplemented& nyi) {
-			curr_global_res->success = false;
-			message("NotYetImplemented error:");
-			message(nyi.what());
-		} catch (const base::Exception& exception) {
-			curr_global_res->success = false;
-			message(
-				"base::Exception was thrown. This was not expected. Add this exception to "
-				"TestSuite."
-			);
-			message(exception.what());
-		} catch (const std::exception& exception) {
-			curr_global_res->success = false;
-			message("std::exception was thrown. This was not expected.");
-			message(exception.what());
-		}
+		} catch (const CritTestError& e) {}
+		// } catch (const base::Panic& panic) {
+		// 	curr_global_res->success = false;
+		// 	message("Unexpected Panic occurred in:");
+		// 	message(panic.getPosition());
+		// 	message("Error:");
+		// 	message(panic.what());
+		// } catch (const base::LogicError& logicError) {
+		// 	curr_global_res->success = false;
+		// 	message("Logic Error occurred:");
+		// 	message(logicError.what());
+		// } catch (const base::NotYetImplemented& nyi) {
+		// 	curr_global_res->success = false;
+		// 	message("NotYetImplemented error:");
+		// 	message(nyi.what());
+		// } catch (const base::Exception& exception) {
+		// 	curr_global_res->success = false;
+		// 	message(
+		// 		"base::Exception was thrown. This was not expected. Add this exception to "
+		// 		"TestSuite."
+		// 	);
+		// 	message(exception.what());
+		// } catch (const std::exception& exception) {
+		// 	curr_global_res->success = false;
+		// 	message("std::exception was thrown. This was not expected.");
+		// 	message(exception.what());
+		// }
 	}
 
 	void TestSuite::resultHandler(const TestData& test, const TestResult& res) {

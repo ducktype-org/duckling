@@ -106,7 +106,7 @@ namespace compiler::mir {
 
 		public:
 			InstructionHole(BlockBuilderRef block_ref, usize position):
-				  block_ref(std::move(block_ref)),
+				  block_ref(block_ref),
 				  position(position) {}
 
 			void fill(Instruction instruction) {
@@ -235,7 +235,7 @@ namespace compiler::mir {
 		FunctionBuilder& function;
 
 		StmtBlockVisitor(BlockBuilderRef continuation, FunctionBuilder& function):
-			  continuation(std::move(continuation)),
+			  continuation(continuation),
 			  function(function) {}
 
 		base::Optional<StmtLowerRes> out;
@@ -307,7 +307,7 @@ namespace compiler::mir {
 		FunctionBuilder& function;
 
 		ExprBlockVisitor(BlockBuilderRef continuation, FunctionBuilder& function):
-			  continuation(std::move(continuation)),
+			  continuation(continuation),
 			  function(function) {}
 
 		void output(ExprLowerRes value) {

@@ -24,6 +24,7 @@ static_assert(std::is_copy_assignable_v<MRef<int>>, "MRef should be copy assigna
 static_assert(std::is_move_assignable_v<Ref<int>>, "Ref should be move assignable");
 static_assert(std::is_move_assignable_v<MRef<int>>, "MRef should be move assignable");
 
+static_assert(not std::is_constructible_v<Ref<int>, std::nullptr_t>, "Ref should not be constructible from nullptr");
 static_assert(std::is_constructible_v<MRef<int>, std::nullptr_t>, "MRef should be constructible from nullptr");
 
 

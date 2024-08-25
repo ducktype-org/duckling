@@ -64,8 +64,8 @@ namespace compiler::helios {
 		if (ref->is_root) {
 			return {};
 		} else {
-			RIFT_ASSERT(getScopeRef(ref->parent) != nullptr, "Non root scope has no parent.");
-			return ref->parent;
+			RIFT_ASSERT(ref->parent.has_value(), "Non root scope has no parent.");
+			return ref->parent.value();
 		}
 	}
 
@@ -84,7 +84,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeID) {
 		static auto provide(Context&, QKey key) -> PResult {
 			return putInScopeTable(ScopeData{
-				.parent              = ScopeID{ nullptr },
+				.parent              = {},
 				.is_root             = true,
 				.related_pst_element = {},
 				.parent_module       = key,

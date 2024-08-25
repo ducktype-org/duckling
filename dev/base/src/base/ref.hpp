@@ -26,6 +26,8 @@ namespace base {
 		// Constructors from pointers:
 		Ref() = delete;
 		Ref(T* ptr): ptr{ptr} { assertNotNull(); }
+
+		Ref(std::nullptr_t) = delete;
 		
 		// Copy:
 		Ref(const Ref& other) noexcept = default;
