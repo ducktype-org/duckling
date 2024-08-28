@@ -5,10 +5,10 @@
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
+				"parameters": {
 					"function parameter list": []
 				},
-				"rets": "<nullptr>",
+				"return": "<nullptr>",
 				"body": {
 					"Code Block or Statement": {
 						"Code Block": [

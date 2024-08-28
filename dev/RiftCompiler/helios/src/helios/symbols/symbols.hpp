@@ -29,6 +29,7 @@ namespace compiler::helios {
 		Method,
 		Field,
 		Constructor,
+		Destructor,
 		// ...
 	};
 
@@ -330,7 +331,7 @@ namespace compiler::helios {
 		 */
 		std::vector<SymID> members;
 		/**
-		 * @brief Class'es base classes.
+		 * @brief Class'es base class.
 		 */
 		base::Optional<ts::TypeInfo> base;
 		/**

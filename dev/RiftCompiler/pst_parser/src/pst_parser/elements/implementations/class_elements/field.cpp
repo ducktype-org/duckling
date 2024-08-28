@@ -24,7 +24,7 @@ namespace pst {
 		out->parseSpecifiers(state);
 
 		if (state.parse(out).tryEat(Keyword::Const)) {
-			out->is_const = true;
+			out->is_mutable = false;
 			state.parse(out).eatOne();
 		}
 
@@ -47,8 +47,8 @@ namespace pst {
 	void Field::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("is const": )";
-		if (is_const)
+		out << R"("is mutable": )";
+		if (is_mutable)
 			out << R"("true")";
 		else
 			out << R"("false")";

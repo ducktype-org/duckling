@@ -18,6 +18,12 @@ namespace pst {
 #define CLASS_STMT_PARSE(class_name) \
 	static ParserRef<class_name> parse(RiftParserState& state, const ClassContext& ctx);
 
+
+	/**
+	 * @brief Access specifier block inside of a class.
+	 *
+	 * They are used to change the visibility of multiple definitions in a class
+	 */
 	class AccessBlock final: public ClassStmt {
 		static inline const std::set<rift_def::Keyword> access_specifiers = {
 			rift_def::Keyword::Public,
@@ -171,7 +177,7 @@ namespace pst {
 	};
 
 	class Field final: public ClassStmt {
-		bool                            is_const = false;
+		bool                            is_mutable = true;
 		tpc::Identifier                 name;
 		ParserRef<Expr>                 type;
 		base::Optional<ParserRef<Expr>> init;

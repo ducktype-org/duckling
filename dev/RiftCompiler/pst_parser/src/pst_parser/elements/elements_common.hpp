@@ -38,6 +38,9 @@ namespace pst::detail {
 			return st[fwd].is(rift_def::Operator::Assign);
 		}
 
+		/**
+		 * @brief This is to differentiate blocks from template specification
+		 */
 		static bool isBlockGroup(const RiftParserState& st, i64 fwd) {
 			return st[fwd].isBracketGroup(lexer::Token::Curly)
 			    && not st[fwd - 1].is(rift_def::Operator::Colon);
@@ -55,6 +58,9 @@ namespace pst::detail {
 		}
 	};
 
+	/**
+	 * @brief These are helper static functions returning names that can be  passed to templates.
+	 */
 	class NameGetters {
 	public:
 		NameGetters() = delete;

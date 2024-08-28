@@ -12,7 +12,6 @@ namespace pst {
 
 		state.parse(out).goDown();
 
-		// @TODO: this may not work in case of compilation error
 		while (state.notEmpty()) {
 			ParserRef<ClassStmt> stmt;
 			state.parse(out).with(&stmt, ClassStmt::parse, ctx);

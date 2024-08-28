@@ -21,9 +21,9 @@ namespace pst {
 		out << "{";
 		out << "\"name\":";
 		nullAwareDprint(name, out);
-		out << ",\"params\":";
+		out << ",\"parameters\":";
 		nullAwareDprint(params, out);
-		out << ",\"rets\":";
+		out << ",\"return\":";
 		nullAwareDprint(rets, out);
 		out << ",\"body\":";
 		nullAwareDprint(body, out);

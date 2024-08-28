@@ -18,6 +18,9 @@ namespace pst {
 	template<std::derived_from<RiftElement> Element = TopLevel>
 	class PST {
 	public:
+		/**
+		 * @brief Checks if an element is pars-able using given arguments.
+		 */
 		template<typename... Args>
 		constexpr static bool ParseAble = tpc::ParseAbleElement<Element, RiftParserState, Args...>;
 

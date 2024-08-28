@@ -865,7 +865,6 @@ namespace compiler::helios {
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
 
-	// @TODO: Add implements information
 	struct IMPLEMENT_QUERY(QueryClassSymbolData, ClassSymbolData) {
 		struct ClassDataParser final: pst::PstStmtVisitorPanicky {
 			base::Optional<base::StrId>                                name;
@@ -886,10 +885,10 @@ namespace compiler::helios {
 			auto class_stmt = getSymRef(key)->pst_stmt;
 
 			auto&& class_scope    = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt });
-			auto&& struct_symbols = ctx.query<QuerySymbolsInScope>(class_scope);
+			auto&& class_symbols = ctx.query<QuerySymbolsInScope>(class_scope);
 
 			ClassSymbolData class_info;
-			for (auto&& sym: struct_symbols) {
+			for (auto&& sym: class_symbols) {
 				switch (kind(sym)) {
 				case SymbolKind::Method:
 					class_info.methods.push_back(sym);

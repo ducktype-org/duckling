@@ -115,9 +115,9 @@ namespace pst {
 
 		using namespace std::views;
 		auto borrow   = [](ParserRef<Attribute>& arg) -> Child { return arg.borrow_mut(); };
-		auto borrowed = attributes | transform(borrow);
+		auto borrowed_additions = attributes | transform(borrow);
 
-		sub_elements.insert(sub_elements.begin(), borrowed.begin(), borrowed.end());
+		sub_elements.insert(sub_elements.end(), borrowed_additions.begin(), borrowed_additions.end());
 
 		if (attributes.size() > 0) setFirstToken(attributes.front()->getSourcePosition());
 	}

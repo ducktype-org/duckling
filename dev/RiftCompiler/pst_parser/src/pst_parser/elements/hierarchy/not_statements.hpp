@@ -158,9 +158,6 @@ namespace pst {
 		}
 	};
 
-	/**
-	 * @todo Maybe join CodeBlock and ClassBlock into one generic version
-	 */
 	class CodeBlock final: public NotStmt {
 		std::vector<ParserRef<Stmt>> statements;
 

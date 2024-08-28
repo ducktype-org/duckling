@@ -5,7 +5,7 @@
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
+				"parameters": {
 					"function parameter list": [
 						{
 							"Expression": [
@@ -23,7 +23,7 @@
 						},
 					]
 				},
-				"rets": "<nullptr>",
+				"return": "<nullptr>",
 				"body": {
 					"Code Block or Statement": {
 						"Code Block": []
@@ -36,7 +36,7 @@
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
+				"parameters": {
 					"function parameter list": [
 						{
 							"Expression": [
@@ -60,7 +60,7 @@
 						},
 					]
 				},
-				"rets": "<nullptr>",
+				"return": "<nullptr>",
 				"body": {
 					"Code Block or Statement": {
 						"Code Block": []
@@ -73,7 +73,7 @@
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
+				"parameters": {
 					"function parameter list": [
 						{
 							"Expression": [
@@ -97,7 +97,7 @@
 						},
 					]
 				},
-				"rets": "<nullptr>",
+				"return": "<nullptr>",
 				"body": {
 					"Code Block or Statement": {
 						"Code Block": []
@@ -110,7 +110,7 @@
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
+				"parameters": {
 					"function parameter list": [
 						{
 							"Expression": [
@@ -121,7 +121,7 @@
 						},
 					]
 				},
-				"rets": "<nullptr>",
+				"return": "<nullptr>",
 				"body": {
 					"Code Block or Statement": {
 						"Code Block": []

@@ -5,10 +5,10 @@
 				"name": {
 					"Name": "A"
 				},
-				"params": {
+				"parameters": {
 					"function parameter list": []
 				},
-				"rets": {
+				"return": {
 					"function return type list": [
 						{
 							"Expression": [
@@ -31,10 +31,10 @@
 				"name": {
 					"Name": "A"
 				},
-				"params": {
+				"parameters": {
 					"function parameter list": []
 				},
-				"rets": {
+				"return": {
 					"function return type list": [
 						{
 							"Expression": [
@@ -63,10 +63,10 @@
 				"name": {
 					"Name": "A"
 				},
-				"params": {
+				"parameters": {
 					"function parameter list": []
 				},
-				"rets": {
+				"return": {
 					"function return type list": [
 						{
 							"Expression": [
@@ -96,10 +96,10 @@
 				"name": {
 					"Name": "A"
 				},
-				"params": {
+				"parameters": {
 					"function parameter list": []
 				},
-				"rets": {
+				"return": {
 					"function return type list": [
 						{
 							"Expression": [
@@ -158,10 +158,10 @@
 				"name": {
 					"Name": "A"
 				},
-				"params": {
+				"parameters": {
 					"function parameter list": []
 				},
-				"rets": {
+				"return": {
 					"function return type list": [
 						{
 							"Expression": [

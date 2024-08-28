@@ -28,6 +28,7 @@ namespace pst {
 			out->specifier = state[0].asKeyword();
 		}
 
+		// Consume the keyword specifier
 		state.parse(out).eatOne();
 
 		state.parse(out).with(&out->block, ClassBlock::parse, out->getContext());
