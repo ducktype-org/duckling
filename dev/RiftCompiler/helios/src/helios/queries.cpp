@@ -29,10 +29,7 @@ namespace compiler::helios {
 			// grab constants:
 			for (auto sym: symbols_in_module_root) {
 				if (kind(sym) == SymbolKind::Const) {
-					auto original_name = name(sym);
-					auto value         = ctx.query<QueryConstValueOf>(sym);
-
-					out.glob_data.push_back(HOUTGlobalData{ sym, original_name, value });
+					out.glob_data.emplace_back(sym, ctx);
 				}
 			}
 
