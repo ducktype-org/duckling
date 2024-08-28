@@ -18,7 +18,6 @@ namespace pst {
 #define CLASS_STMT_PARSE(class_name) \
 	static ParserRef<class_name> parse(RiftParserState& state, const ClassContext& ctx);
 
-
 	/**
 	 * @brief Access specifier block inside of a class.
 	 *

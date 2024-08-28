@@ -884,7 +884,7 @@ namespace compiler::helios {
 
 			auto class_stmt = getSymRef(key)->pst_stmt;
 
-			auto&& class_scope    = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt });
+			auto&& class_scope   = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt });
 			auto&& class_symbols = ctx.query<QuerySymbolsInScope>(class_scope);
 
 			ClassSymbolData class_info;
