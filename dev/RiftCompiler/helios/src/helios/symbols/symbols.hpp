@@ -327,6 +327,14 @@ namespace compiler::helios {
 		 */
 		std::vector<SymID> methods;
 		/**
+		 * @brief Class'es declared constructors.
+		 */
+		std::vector<SymID> constructors;
+		/**
+		 * @brief Class'es declared destructor.
+		 */
+		base::Optional<SymID> destructor;
+		/**
 		 * @brief Class'es declared member variables.
 		 */
 		std::vector<SymID> members;

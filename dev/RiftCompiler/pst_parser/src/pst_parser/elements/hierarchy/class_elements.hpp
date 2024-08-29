@@ -87,7 +87,7 @@ namespace pst {
 
 		[[nodiscard]]
 		bool isDeclaration() const override {
-			return false;
+			return true;
 		}
 
 		[[nodiscard]]

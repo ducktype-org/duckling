@@ -114,6 +114,8 @@ private:
 
 		ASSERT_EQUAL(2, first_class_info.members.size());
 		ASSERT_EQUAL(2, first_class_info.methods.size());
+		ASSERT_EQUAL(1, first_class_info.constructors.size());
+		assert(first_class_info.destructor.has_value(), "Expected a destructor.");
 		assert(not first_class_info.base.has_value(), "Expected no base class.");
 		ASSERT_EQUAL(0, first_class_info.implements.size());
 		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
@@ -124,6 +126,8 @@ private:
 
 		ASSERT_EQUAL(0, second_class_info.members.size());
 		ASSERT_EQUAL(0, second_class_info.methods.size());
+		ASSERT_EQUAL(0, second_class_info.constructors.size());
+		assert(not second_class_info.destructor.has_value(), "Expected no destructor.");
 		assert(second_class_info.base.has_value(), "Expected class to have a base class.");
 		ASSERT_EQUAL(true, first_class_typeinfo == second_class_info.base);
 		ASSERT_EQUAL("SecondClass", second_class_info.name);

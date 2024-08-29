@@ -8,6 +8,15 @@ class FirstClassEver {
     fun setA(new_a: i32) = {
         a = new_a;
     }
+
+    private {
+        FirstClassEver.copy(FirstClassEver other) = {
+            a = other.a;
+            b = other.b;
+        }
+    }
+
+    FirstClassEver.destroy() = {}
 }
 
 class SecondClass extends FirstClassEver {}

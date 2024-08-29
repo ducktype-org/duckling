@@ -211,6 +211,15 @@ namespace compiler::helios {
 				.pst_stmt = stmt,
 			});
 		}
+		case pst::StmtKind::Destructor: {
+			auto&& destructor = dynamic_cast<const pst::Destructor*>(stmt.get());
+			return putInSymtable(SymbolData{
+				.scope    = scope,
+				.name     = base::StrId("destroy"),
+				.kind     = SymbolKind::Destructor,
+				.pst_stmt = stmt,
+			});
+		}
 		default:
 			break;
 		}
@@ -892,6 +901,13 @@ namespace compiler::helios {
 				switch (kind(sym)) {
 				case SymbolKind::Method:
 					class_info.methods.push_back(sym);
+					break;
+				case SymbolKind::Constructor:
+					class_info.constructors.push_back(sym);
+					break;
+				case SymbolKind::Destructor:
+					// This doesn't catch multiple destructors
+					class_info.destructor = sym;
 					break;
 				case SymbolKind::Field:
 					class_info.members.push_back(sym);
