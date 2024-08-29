@@ -12,7 +12,7 @@
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>
-#include <typesystem/typesystem.hpp>
+#include <typesystem/type_info.hpp>
 
 namespace compiler::helios {
 

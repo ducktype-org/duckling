@@ -3,7 +3,6 @@
 #include <query_framework/query_impl.hpp>
 #include <base/variant.hpp>
 #include "../scopes/scopes.hpp"
-#include "../symbols/symbols.hpp"
 #include <base/unique_pointer.hpp>
 #include <helios/hout/element_ref.hpp>
 #include "visitors.hpp"
@@ -71,7 +70,7 @@ namespace compiler::helios::code {
 		for (auto&& elem: expr.elements) {
 			variant_match(elem) {
 				variant_case(rpn::Identifier, idt) {
-					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, idt.symbol_list.back())
+					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, idt.symbol_list.back(), ctx)
 					);
 				}
 
@@ -82,7 +81,7 @@ namespace compiler::helios::code {
 					st.pop();
 
 					st.emplace(base::make_unique<BinaryOperatorExpr>(
-						expr.scope, oper.oper_id, std::move(a), std::move(b)
+						expr.scope, oper.oper_id, std::move(a), std::move(b), ctx
 					));
 				}
 
@@ -92,13 +91,13 @@ namespace compiler::helios::code {
 					);
 
 					st.emplace(
-						base::make_unique<IdentifierExpr>(expr.scope, sym_list.getAsSingle().back())
+						base::make_unique<IdentifierExpr>(expr.scope, sym_list.getAsSingle().back(), ctx)
 					);
 				}
 
 				variant_case(rpn::NumValue, num_value) {
 					st.emplace(base::make_unique<LiteralValueExpr>(
-						expr.scope, std::stoi(num_value.num_id.str())
+						expr.scope, std::stoi(num_value.num_id.str()), ctx
 					));
 				}
 
@@ -148,7 +147,7 @@ namespace compiler::helios {
 			}
 			variant_case(pst::Expr::NumLiteral, num) {
 				auto val = base::strIdToNum(num.num_id);
-				return base::make_unique<code::LiteralValueExpr>(scope, val);
+				return base::make_unique<code::LiteralValueExpr>(scope, val, ctx);
 			}
 			variant_case(pst::Expr::Identifier, identifier) {
 				// @note: this does not handle overload
@@ -171,7 +170,7 @@ namespace compiler::helios {
 				RIFT_ASSERT(lookup_dealiased.size() > 0, "Empty lookup result");
 
 				// @TODO: dont just ignore everything before last symbol
-				return base::make_unique<code::IdentifierExpr>(scope, lookup_dealiased.back());
+				return base::make_unique<code::IdentifierExpr>(scope, lookup_dealiased.back(), ctx);
 			}
 			variant_case(pst::Expr::Group, group) {
 				throw base::NotYetImplemented("Expr from group");
