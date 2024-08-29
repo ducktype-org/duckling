@@ -212,7 +212,6 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Destructor: {
-			auto&& destructor = dynamic_cast<const pst::Destructor*>(stmt.get());
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = base::StrId("destroy"),
