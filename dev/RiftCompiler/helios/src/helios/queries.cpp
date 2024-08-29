@@ -30,8 +30,6 @@ namespace compiler::helios {
 			for (auto sym: symbols_in_module_root)
 				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
 
-			std::cerr << "Grabbing functions..." << std::endl;
-
 			// grab functions:
 			for (auto sym: symbols_in_module_root)
 				if (kind(sym) == SymbolKind::Function)

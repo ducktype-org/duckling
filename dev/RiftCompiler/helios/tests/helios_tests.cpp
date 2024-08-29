@@ -126,9 +126,7 @@ private:
 	void simpleHOUTTest() {
 		auto [module, _] = getModule(fs::FilePath(path("test_modules/hout_simple_test")));
 
-		std::cerr << "1" << std::endl;
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		std::cerr << "2" << std::endl;
 
 		ASSERT_EQUAL(hout.functions.size(), 3);
 		ASSERT_EQUAL(hout.glob_data.size(), 2);

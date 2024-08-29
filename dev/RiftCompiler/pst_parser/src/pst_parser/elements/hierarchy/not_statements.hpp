@@ -46,7 +46,10 @@ namespace pst {
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(elements, SubElements)
 
-		usize size() const { return elements.size(); }
+		[[nodiscard]]
+		usize size() const {
+			return elements.size();
+		}
 
 		explicit List(const dia::SourcePosition& position): NotStmt(position) {}
 

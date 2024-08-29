@@ -814,12 +814,10 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::cerr << "Providing type of symbol " << name(key).str() << std::endl;
 			auto&& symbol_ref = getSymRef(key);
 
 			PstStmtVisitor_GetTypeOf visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
-			std::cerr << "Provided " << visitor.symbol_type_info.value().toString() << std::endl;
 			return visitor.symbol_type_info.value();
 		}
 
