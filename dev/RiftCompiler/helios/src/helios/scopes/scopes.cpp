@@ -70,6 +70,18 @@ namespace compiler::helios {
 
 	frontend::ModuleId module(ScopeID id) { return getScopeRef(id)->parent_module; }
 
+	bool idScopeGlobal(ScopeID id) {
+		auto ref = getScopeRef(id);
+		if (ref->is_root) return true;
+		RIFT_ASSERT(ref->related_pst_element.has_value(), "No pst element");
+
+		if (ref->related_pst_element.has_value()) {
+			auto element = ref->related_pst_element.value();
+			if (element->elementType() == "StmtList") return true;
+		}
+		return false;
+	}
+
 	namespace {
 		base::StableVector<ScopeData> scope_table;
 

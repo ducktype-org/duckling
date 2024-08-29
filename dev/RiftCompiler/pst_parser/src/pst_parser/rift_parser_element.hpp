@@ -5,8 +5,15 @@
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <base/strongly_typed_id.hpp>
+#include <base/stringifyable_enum.hpp>
 
 #include <variant>
+
+// clang-format off
+MAKE_STRINGIFYABLE_ENUM(pst, u32, RiftElementType,
+	CodeDeclaration
+);
+// clang-format on
 
 namespace pst {
 	class Import;
@@ -168,16 +175,10 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Returns a string of element type.
-		 *
-		 * Mostly for debugging and visualization.
-		 * @todo add element type the stringifiable enum
-		 * @note it is used by helios as a hacky way to check if given element in an expression
+		 * @brief Returns a element type of the PST node.
 		 */
 		[[nodiscard]]
-		virtual std::string elementType() const {
-			return "Element";
-		}
+		virtual RiftElementType elementType() const = 0;
 
 		template<typename X>
 		friend class PSTAutomatic;

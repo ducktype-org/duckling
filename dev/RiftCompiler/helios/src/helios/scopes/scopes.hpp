@@ -30,6 +30,12 @@ namespace compiler::helios {
 	frontend::ModuleId module(ScopeID id);
 
 	/**
+	 * @brief Determine if given scope is a scope of global scopes, that is
+	 * if `var x: i32;` creates a valid global variable inside it. 
+	 */
+	bool idScopeGlobal(ScopeID id);
+
+	/**
 	 * @brief Query root scope for given module.
 	 * @todo: Right now RootScopes are empty, and in order to access proper module
 	 * symbols, one need to get scope of root element of the main module file.
