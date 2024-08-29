@@ -27,11 +27,8 @@ namespace compiler::helios {
 			HOUTUnit out;
 
 			// grab constants:
-			for (auto sym: symbols_in_module_root) {
-				if (kind(sym) == SymbolKind::Const) {
-					out.glob_data.emplace_back(sym, ctx);
-				}
-			}
+			for (auto sym: symbols_in_module_root)
+				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
 
 			std::cerr << "Grabbing functions..." << std::endl;
 

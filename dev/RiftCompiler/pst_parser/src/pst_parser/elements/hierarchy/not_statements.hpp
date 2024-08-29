@@ -70,15 +70,15 @@ namespace pst {
 	};
 
 	class FunParam final: public NotStmt {
-		tpc::Identifier name;
-		ParserRef<Expr> type;
+		tpc::Identifier                 name;
+		ParserRef<Expr>                 type;
 		base::Optional<ParserRef<Expr>> initial;
 
 	public:
 		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {}
 
 		static ParserRef<FunParam> parse(RiftParserState& state);
-//		~FunParam() final = default;
+		//		~FunParam() final = default;
 		void dprint(std::ostream& out) const final;
 
 		[[nodiscard]]
@@ -91,7 +91,6 @@ namespace pst {
 			return type.borrow();
 		}
 	};
-
 
 	using RetList = List<
 		Expr,

@@ -51,11 +51,10 @@ namespace pst {
 		out << ", \"params\":";
 		nullAwareDprint(params, out);
 		out << ", \"rets\":";
-		if (ret) {
+		if (ret)
 			nullAwareDprint(ret.value(), out);
-		} else {
+		else
 			out << "\"unit\"";
-		}
 		out << ", \"body\":";
 		nullAwareDprint(body, out);
 		out << " } }";

@@ -23,17 +23,17 @@ namespace pst {
 
 		state.parse(out).all(&out->name, Operator::Colon);
 
-		state.parse(out).with<Expr>(&out->type, 
+		state.parse(out).with<Expr>(
+			&out->type,
 			Expr::parseUntil<
 				detail::Conditions::isAssignOrCommaOrEnd,
 				detail::Conditions::isAssignOrCommaOrEnd,
-				FunParamEndError
-			>, false
+				FunParamEndError>,
+			false
 		);
 
-		if (state.parse(out).tryEat(Operator::Assign)) {
+		if (state.parse(out).tryEat(Operator::Assign))
 			state.parse(out).with<Expr>(&out->initial, Expr::parse, false);
-		}
 
 		return out;
 	}

@@ -70,7 +70,8 @@ namespace compiler::helios::code {
 		for (auto&& elem: expr.elements) {
 			variant_match(elem) {
 				variant_case(rpn::Identifier, idt) {
-					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, idt.symbol_list.back(), ctx)
+					st.emplace(
+						base::make_unique<IdentifierExpr>(expr.scope, idt.symbol_list.back(), ctx)
 					);
 				}
 
@@ -90,9 +91,9 @@ namespace compiler::helios::code {
 						{ expr.scope, idt.symbol_name, true }
 					);
 
-					st.emplace(
-						base::make_unique<IdentifierExpr>(expr.scope, sym_list.getAsSingle().back(), ctx)
-					);
+					st.emplace(base::make_unique<IdentifierExpr>(
+						expr.scope, sym_list.getAsSingle().back(), ctx
+					));
 				}
 
 				variant_case(rpn::NumValue, num_value) {

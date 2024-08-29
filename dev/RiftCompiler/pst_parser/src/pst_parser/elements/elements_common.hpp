@@ -32,8 +32,7 @@ namespace pst::detail {
 
 		static bool isAssignOrCommaOrEnd(const RiftParserState& st, i64 fwd) {
 			return st[fwd].is(lexer::Token::Type::Sentinel)
-			    || st[fwd].is(rift_def::Operator::Assign)
-			    || st[fwd].is(rift_def::Special::Comma);
+			    || st[fwd].is(rift_def::Operator::Assign) || st[fwd].is(rift_def::Special::Comma);
 		}
 
 		static bool isAssign(const RiftParserState& st, i64 fwd) {
