@@ -1,5 +1,4 @@
 
-
 fun foo(, ,) {}
 
 fun foo(a: i32,) {}
@@ -10,4 +9,8 @@ fun foo(,a: i32) {}
 
 fun foo {}
 
+fun foo(a i32) {}
 
+fun foo(a:) {}
+
+fun foo(a) {}

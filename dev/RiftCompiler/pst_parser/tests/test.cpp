@@ -163,7 +163,7 @@ private:
 	void testParamListErrors() {
 		pst::PST<> pst = prepare(path("snippets/params_err.rift"));
 		assertTrue(
-			pst.getLogger().messageCount(dia::Message::Severity::Error) == 7, "Expected 7 errors"
+			pst.getLogger().messageCount(dia::Message::Severity::Error) == 11, "Expected 11 errors"
 		);
 	}
 
