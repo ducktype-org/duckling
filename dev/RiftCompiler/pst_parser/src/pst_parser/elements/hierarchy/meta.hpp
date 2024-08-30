@@ -66,10 +66,7 @@ namespace pst {
 
 		void dprintAttributes(std::ostream& out) const;
 
-		void dprintPrefix(std::ostream& out) const override {
-			RiftElement::dprintPrefix(out);
-			dprintAttributes(out);
-		}
+		void dprintPrefix(std::ostream& out) const override;
 
 	public:
 		[[nodiscard]]

@@ -99,6 +99,11 @@ namespace pst {
 		return out;
 	}
 
+	void Stmt::dprintPrefix(std::ostream& out) const {
+		RiftElement::dprintPrefix(out);
+		dprintAttributes(out);
+	}
+
 	void Stmt::dprintAttributes(std::ostream& out) const {
 		if (not attributes.empty()) {
 			out << R"("attributes": [)";
