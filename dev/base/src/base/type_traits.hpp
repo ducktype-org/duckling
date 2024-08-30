@@ -1,3 +1,30 @@
+/**
+ * @file type_traits.hpp
+ *
+ * @brief Type traits provides a set of functionalities useful during metaprogramming with types.
+ *
+ * Functionalities
+ * ===============
+ *
+ * Concepts:
+ * ---------
+ * - base::IsInstantiationOf
+ * - base::IsNumber
+ * - base::IsOfSameClass
+ *
+ * Functions:
+ * ----------
+ * - base::typeName
+ *
+ * Variables:
+ * ----------
+ * - base::Implication
+ *
+ * ### Usage
+ * @include type_traits_example.cpp
+ *
+ * @example type_traits_example.cpp
+ */
 #pragma once
 
 #include <type_traits>

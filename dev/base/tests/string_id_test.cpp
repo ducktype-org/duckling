@@ -38,14 +38,14 @@ private:
 	void basicMapTest() {
 		base::Map<std::string, int> map;
 		map.put("abc", 5);
-		assert(map.size() == 1, "Bad map size 1");
-		assert(map.notEmpty(), "Bad map size 2");
-		assert(map["abc"] == 5, "Bad map value 1");
+		assertTrue(map.size() == 1, "Bad map size 1");
+		assertTrue(map.notEmpty(), "Bad map size 2");
+		assertTrue(map["abc"] == 5, "Bad map value 1");
 
-		for (auto& [v, k]: map) assert(map[v] == k, "Bad map value 2");
+		for (auto& [v, k]: map) assertTrue(map[v] == k, "Bad map value 2");
 
-		assert(map.erase("abc"), "Map element not erased");
-		assert(map.empty(), "Map is not empty");
+		assertTrue(map.erase("abc"), "Map element not erased");
+		assertTrue(map.empty(), "Map is not empty");
 
 		base::HashMap<int, A> map2;
 		A                     a(4, this);
@@ -58,7 +58,7 @@ private:
 		);
 
 		map3.put(5, 5);
-		assert(map3.erase(5), "Map element not erased 2");
+		assertTrue(map3.erase(5), "Map element not erased 2");
 	}
 
 	static base::RawView make_view(std::string_view view) {
@@ -70,16 +70,16 @@ private:
 		base::StrId id2(make_view("abc"));
 		base::StrId id3(make_view("ab"));
 
-		assert(id1 == id2, "== error");
-		assert(id2 != id3, "!= error");
-		assert(id3 == id3, "== error");
-		assert(id3 == "ab", "data error");
+		assertTrue(id1 == id2, "== error");
+		assertTrue(id2 != id3, "!= error");
+		assertTrue(id3 == id3, "== error");
+		assertTrue(id3 == "ab", "data error");
 	}
 };
 
 A::A(const A& other): x(other.x), count(other.count), test(other.test) {
 	count++;
-	test->assert(count < 2, "A constructor called to many times");
+	test->assertTrue(count < 2, "A constructor called to many times");
 }
 
 TESTER_COMMON_MAIN("/base/tests/");

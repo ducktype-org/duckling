@@ -1,55 +1,26 @@
 #pragma once
 
 #include <variant>
-#include <json_struct/json_struct.h>
+#include <nlohmann/json.hpp>
 #include <type_traits>
+#include <base/exceptions.hpp>
 #include "empty_struct.hpp"
 #include "type_parse.hpp"
-#include "helper.hpp"
 
-namespace JS {
-	template<class... Args>
-	class TypeHandler<std::variant<Args...>> {
-	public:
-		static inline Error to(std::variant<Args...>& /* to */, ParseContext& /* context */) {
-			return Error::NoError;
-		}
+template<typename... Args>
+struct nlohmann::adl_serializer<std::variant<Args...>> {
+	static void to_json(json& j, const std::variant<Args...>& v) {
+		std::visit(
+			[&]<typename VT>(const VT& value) {
+				using T   = std::decay_t<VT>;
+				j["type"] = std::string(TypeParseTraits<T>::name.data());
+				if constexpr (!std::is_empty_v<T>) j["data"] = value;
+			},
+			v
+		);
+	}
 
-		static void from(const std::variant<Args...>& from, Token& token, Serializer& serializer) {
-			impl::beginObject(token, serializer);
-
-			static const std::array<char, 5> type_name{ "type" };
-			std::string                      value = std::visit(
-                [](auto& x) {
-                    using T = std::decay_t<decltype(x)>;
-                    return std::string(TypeParseTraits<T>::name.data());
-                },
-                from
-            );
-			token.name       = DataRef(type_name.data());
-			token.name_type  = Type::Ascii;
-			token.value.data = value.data();
-			token.value.size = value.size();
-			token.value_type = Type::String;
-			serializer.write(token);
-
-			std::visit(
-				[&token, &serializer](auto& x) {
-					using T = std::decay_t<decltype(x)>;
-
-					if constexpr (std::is_empty_v<T> || IsEmptySerialization<T>::value) {
-					} else {
-						auto members
-							= Internal::JsonStructBaseDummy<T, T>::js_static_meta_data_info();
-						using MembersType = decltype(members);
-						Internal::MemberChecker<T, MembersType, 0, MembersType::size - 1>::
-							serializeMembers(x, members, token, serializer, "");
-					}
-				},
-				from
-			);
-
-			impl::endObject(token, serializer);
-		}
-	};
-}
+	static void from_json(const json&, const std::variant<Args...>&) {
+		RIFT_PANIC("Parsing data from JSON into a custom variant is not supported (yet).");
+	}
+};

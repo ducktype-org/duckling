@@ -1,3 +1,8 @@
+/**
+ * @file borrow_pointer.hpp
+ *
+ * @see smart_pointers.hpp
+ */
 #pragma once
 
 #include <utility>

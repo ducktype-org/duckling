@@ -2,8 +2,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <tuple>
-#include <array>
+
 #include <json/json.hpp>
 
 struct Foo {
@@ -11,8 +10,11 @@ struct Foo {
 	char        b;
 	std::string s;
 
-	JS_OBJ(a, b, s);
+	// Specify which fields are supposed to be JSONed
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE(Foo, a, b, s);
 };
+// Tell our library about this struct
+JSON_REGISTER_TYPE(Foo)
 
 struct Bar {
 	std::string      a;
@@ -20,26 +22,16 @@ struct Bar {
 	char             b;
 	float            s;
 
-	JS_OBJ(a, g, b, s);
+	NLOHMANN_DEFINE_TYPE_INTRUSIVE(Bar, a, g, b, s);
 };
+// We can also specify a custom name
+JSON_REGISTER_TYPE_WITH_NAME(Bar, "Barbara")
 
 struct Empty {};
-
-REGISTER_PARSE_TYPE(Foo);
-REGISTER_PARSE_TYPE(Bar);
-REGISTER_PARSE_TYPE(Empty);
-
-struct Fiz {
-	int x;
-
-	JS_OBJ(x);
-};
-
-REGISTER_PARSE_TYPE(Fiz);
+JSON_REGISTER_TYPE(Empty)
 
 int main() {
-	using MyVar = std::variant<Foo, Bar, Empty>;
-
+	using MyVar = std::variant<Foo, Bar, Empty, std::string>;
 
 	Foo   foo{ 5, 'a', "abc" };
 	Bar   bar{ "abc", { 3, 4 }, 'b', 4.1f };
@@ -47,11 +39,18 @@ int main() {
 	MyVar y{ foo };
 	MyVar z{ bar };
 
-	std::cout << JS::serializeStruct(x) << "\n";
-	std::cout << JS::serializeStruct(y) << "\n";
-	std::cout << JS::serializeStruct(z) << "\n";
+
+	nlohmann::json j(x);
+	std::cout << j << "\n";
+	j = y;
+	std::cout << j << "\n";
+	j = z;
+	std::cout << j << "\n";
 
 	std::exception* e = new std::runtime_error("error");
+	std::cout << nlohmann::json(*e) << "\n";
+	delete e;
 
-	std::cout << JS::serializeStruct(*e) << "\n";
+	Empty empty;
+	std::cout << nlohmann::json(empty) << '\n';
 }

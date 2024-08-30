@@ -34,8 +34,8 @@ public:
 		try {
 			throwPanic1();
 		} catch (base::Panic& panic) {
-			assert(panic.getPosition() == "throwPanic", "Bad panic position");
-			assert(containsCstr(panic.what(), "panic test"), "Bad panic reason");
+			assertTrue(panic.getPosition() == "throwPanic", "Bad panic position");
+			assertTrue(containsCstr(panic.what(), "panic test"), "Bad panic reason");
 			return;
 		}
 		fail("Panic what not caught");
@@ -45,7 +45,7 @@ public:
 		try {
 			throwPanic2();
 		} catch (base::Panic& panic) {
-			assert(
+			assertTrue(
 				containsCstr(panic.what(), "    Panic thrown:\n    panic test 2"),
 				"Bad panic reason"
 			);
@@ -58,7 +58,7 @@ public:
 		try {
 			throwPanic3();
 		} catch (base::Panic& panic) {
-			assert(
+			assertTrue(
 				containsCstr(panic.what(), "    Assertion failed: `false`\n    panic test 3"),
 				"Bad panic reason"
 			);
@@ -71,7 +71,7 @@ public:
 		try {
 			throw base::NotYetImplemented("NotYetImplemented test");
 		} catch (base::NotYetImplemented& nyi) {
-			assert(
+			assertTrue(
 				compareCstr(
 					nyi.what(), "The feature is not implemented yet.\nNotYetImplemented test"
 				),
@@ -86,7 +86,7 @@ public:
 		try {
 			throw base::LogicError("Logic error test");
 		} catch (base::LogicError& le) {
-			assert(compareCstr(le.what(), "Logic error test"), "Bad LogicError reason");
+			assertTrue(compareCstr(le.what(), "Logic error test"), "Bad LogicError reason");
 			return;
 		}
 		fail("LogicError what not caught");

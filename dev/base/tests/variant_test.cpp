@@ -29,7 +29,7 @@ public:
 				v_b = true;
 			}
 			variant_case(char, v_c) {
-				assert(v_c == 'b', "something went wrong");
+				assertTrue(v_c == 'b', "something went wrong");
 				v_c = 'a';
 				break;
 				fail("break did nothing");
@@ -37,7 +37,7 @@ public:
 			variant_default { fail("default happened"); }
 		}
 
-		assert(std::get<char>(v) == 'a', "something went wrong");
+		assertTrue(std::get<char>(v) == 'a', "something went wrong");
 
 		bool default_ok = false;
 		variant_match(v) {
@@ -45,7 +45,7 @@ public:
 			variant_default { default_ok = true; }
 		}
 
-		assert(default_ok, "Default did not happen");
+		assertTrue(default_ok, "Default did not happen");
 
 		v = T();
 
@@ -55,7 +55,7 @@ public:
 		}
 
 		variant_match(v) {
-			variant_case(T, v_t) { assert(v_t.getData() == 2, "something failed"); }
+			variant_case(T, v_t) { assertTrue(v_t.getData() == 2, "something failed"); }
 			variant_default { fail("default happened (3)"); }
 		}
 
@@ -68,16 +68,16 @@ public:
 						  any_v += a;
 					  }));
 
-		assert(std::get<i32>(v_2) == 6, "bad variant access");
+		assertTrue(std::get<i32>(v_2) == 6, "bad variant access");
 
 		VARIANT_VISIT(v_2, VISIT_CASE(int, i_v, {
 						  i_v = 100;
-						  assert(i_v == 100, "something strange");
+						  assertTrue(i_v == 100, "something strange");
 					  }) VISIT_CASE([[maybe_unused]] auto&, any_v, {
 						  fail("Bad variant access");
 					  }));
 
-		assert(std::get<i32>(v_2) == 6, "bad variant access");
+		assertTrue(std::get<i32>(v_2) == 6, "bad variant access");
 	}
 };
 

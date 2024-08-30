@@ -7,7 +7,6 @@
 
 namespace vm {
 	class Profiler: public Listener<MemoryEvent>, public Listener<FunctionCallEvent> {
-	private:
 		template<class... DynamicServices>
 		Profiler(ServiceManagerDef<DynamicServices...>& /* serviceManager */) {}
 
