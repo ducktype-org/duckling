@@ -44,7 +44,7 @@ class InternetFile:
                             written_mib = round(written / 1024 / 1024, 2)
                             written_formatted = f'{{:>{len(str(total_length_mib))}}}'.format(written_mib)
                             # Force a carriage return and rewrite the line
-                            sys.stdout.write(f"\r{self.path}: {written_formatted} / {total_length_mib} MiB")
+                            sys.stdout.write(f"\r{self.path}: {written_formatted}/{total_length_mib} MiB")
                             sys.stdout.flush()
 
                     if total_length is not None:
