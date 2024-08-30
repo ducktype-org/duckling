@@ -19,7 +19,7 @@ class PSTBuilderTest: public tester::TestSuite {
 		"snippets/import.rift",    "snippets/lists_err.rift",
 		"snippets/lists_ok.rift",  "snippets/missing_semicolon_err.rift",
 		"snippets/namespace.rift", "snippets/params_err.rift",
-		"snippets/struct.rift",    "snippets/using_err.rift",
+		"snippets/class.rift",     "snippets/using_err.rift",
 		"snippets/using.rift",     "snippets/while.rift",
 	};
 

@@ -14,8 +14,6 @@ namespace pst {
 	public:
 		virtual ~PstStmtVisitor() = default;
 
-		virtual void visitAttribute([[maybe_unused]] const Attribute& stmt) = 0;
-
 		virtual void visitImport([[maybe_unused]] const Import& stmt) = 0;
 
 		virtual void visitUsing([[maybe_unused]] const Using& stmt) = 0;
@@ -44,7 +42,7 @@ namespace pst {
 
 		virtual void visitNamespace([[maybe_unused]] const Namespace& stmt) = 0;
 
-		virtual void visitStruct([[maybe_unused]] const Struct& stmt) = 0;
+		virtual void visitClass([[maybe_unused]] const Class& stmt) = 0;
 
 		virtual void visitFun([[maybe_unused]] const Fun& stmt) = 0;
 
@@ -53,6 +51,16 @@ namespace pst {
 		virtual void visitIf([[maybe_unused]] const If& stmt) {}
 
 		virtual void visitWhile([[maybe_unused]] const While& stmt) {}
+
+		virtual void visitMethod([[maybe_unused]] const Method& stmt) {}
+
+		virtual void visitField([[maybe_unused]] const Field& stmt) {}
+
+		virtual void visitConstructor([[maybe_unused]] const Constructor& stmt) {}
+
+		virtual void visitDestructor([[maybe_unused]] const Destructor& stmt) {}
+
+		virtual void visitAccessBlock([[maybe_unused]] const AccessBlock& stmt) {}
 
 		virtual void visitFor([[maybe_unused]] const For& stmt) {}
 	};
@@ -64,8 +72,6 @@ namespace pst {
 	class PstStmtVisitorEmpty: public PstStmtVisitor {
 	public:
 		~PstStmtVisitorEmpty() override = default;
-
-		void visitAttribute([[maybe_unused]] const Attribute& stmt) override {}
 
 		void visitImport([[maybe_unused]] const Import& stmt) override {}
 
@@ -95,15 +101,27 @@ namespace pst {
 
 		void visitNamespace([[maybe_unused]] const Namespace& stmt) override {}
 
-		void visitStruct([[maybe_unused]] const Struct& stmt) override {}
+		void visitClass([[maybe_unused]] const Class& stmt) override {}
 
 		void visitFun([[maybe_unused]] const Fun& stmt) override {}
+
+		void visitFor([[maybe_unused]] const For& stmt) override {}
 
 		void visitVariable([[maybe_unused]] const Variable& stmt) override {}
 
 		void visitIf([[maybe_unused]] const If& stmt) override {}
 
 		void visitWhile([[maybe_unused]] const While& stmt) override {}
+
+		void visitMethod([[maybe_unused]] const Method& stmt) override {}
+
+		void visitField([[maybe_unused]] const Field& stmt) override {}
+
+		void visitConstructor([[maybe_unused]] const Constructor& stmt) override {}
+
+		void visitDestructor([[maybe_unused]] const Destructor& stmt) override {}
+
+		void visitAccessBlock([[maybe_unused]] const AccessBlock& stmt) override {}
 	};
 
 /**
@@ -122,7 +140,6 @@ namespace pst {
 	public:
 		~PstStmtVisitorPanicky() override = default;
 
-		PANIC_VISITOR_VISIT_METHOD(Attribute);
 		PANIC_VISITOR_VISIT_METHOD(Import);
 		PANIC_VISITOR_VISIT_METHOD(Using);
 		PANIC_VISITOR_VISIT_METHOD(Alias);
@@ -137,10 +154,16 @@ namespace pst {
 		PANIC_VISITOR_VISIT_METHOD(Const);
 		PANIC_VISITOR_VISIT_METHOD(Block);
 		PANIC_VISITOR_VISIT_METHOD(Namespace);
-		PANIC_VISITOR_VISIT_METHOD(Struct);
+		PANIC_VISITOR_VISIT_METHOD(Class);
 		PANIC_VISITOR_VISIT_METHOD(Fun);
+		PANIC_VISITOR_VISIT_METHOD(For);
 		PANIC_VISITOR_VISIT_METHOD(Variable);
 		PANIC_VISITOR_VISIT_METHOD(If);
 		PANIC_VISITOR_VISIT_METHOD(While);
+		PANIC_VISITOR_VISIT_METHOD(Method);
+		PANIC_VISITOR_VISIT_METHOD(Field);
+		PANIC_VISITOR_VISIT_METHOD(Constructor);
+		PANIC_VISITOR_VISIT_METHOD(Destructor);
+		PANIC_VISITOR_VISIT_METHOD(AccessBlock);
 	};
 }

@@ -74,17 +74,18 @@ namespace pst {
 	}
 
 	void For::dprint(std::ostream& out) const {
-		out << R"({"For": {"name":)";
+		out << "{";
+		out << R"("name":)";
 		nullAwareDprint(optional_name, out);
-		out << ", \"identifier\": ";
+		out << R"(, "identifier": )";
 		nullAwareDprint(iterator, out);
-		out << ", \"type\": ";
+		out << R"(, "type": )";
 		nullAwareDprint(type, out);
-		out << ", \"iterable\": ";
+		out << R"(, "iterable": )";
 		nullAwareDprint(iterable, out);
-		out << ", \"body\": ";
+		out << R"(, "body": )";
 		nullAwareDprint(body, out);
-		out << "}}";
+		out << "}";
 	}
 
 	void For::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitFor(*this); }

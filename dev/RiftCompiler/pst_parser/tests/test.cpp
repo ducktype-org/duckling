@@ -26,7 +26,6 @@ requires std::is_base_of_v<pst::PstStmtVisitor, T> class PstStmtVisitorTester fi
 public:
 	int counter = 0;
 
-	PSTVISITOR_METHOD(Attribute)
 	PSTVISITOR_METHOD(Import)
 	PSTVISITOR_METHOD(Using)
 	PSTVISITOR_METHOD(Alias)
@@ -40,7 +39,7 @@ public:
 	PSTVISITOR_METHOD(Const)
 	PSTVISITOR_METHOD(Block)
 	PSTVISITOR_METHOD(Namespace)
-	PSTVISITOR_METHOD(Struct)
+	PSTVISITOR_METHOD(Class)
 	PSTVISITOR_METHOD(Fun)
 	PSTVISITOR_METHOD(Variable)
 	PSTVISITOR_METHOD(If)
@@ -66,7 +65,7 @@ public:
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testUsing);
 		TESTER_ADD_TEST(testNamespace);
-		TESTER_ADD_TEST(testStruct);
+		TESTER_ADD_TEST(testClass);
 		TESTER_ADD_TEST(testListParsing);
 		TESTER_ADD_TEST(testListParsingErrors);
 		TESTER_ADD_TEST(testUsingErrors);
@@ -95,7 +94,7 @@ private:
 		ASSERT_EQUAL(expected_counter, empty_vistor.counter);
 	}
 
-	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 19); }
+	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 18); }
 
 	void testVisitorAlternative() { testVisitorImpl("snippets/alternative_statements.txt", 1); }
 
@@ -145,7 +144,7 @@ private:
 
 	void testNamespace() { testJsonRelativePath("namespace.rift", "namespace.json"); }
 
-	void testStruct() { testJsonRelativePath("struct.rift", "struct.json"); }
+	void testClass() { testJsonRelativePath("class.rift", "class.json"); }
 
 	void testListParsing() { testJsonRelativePath("lists_ok.rift", "lists_ok.json"); }
 

@@ -17,11 +17,11 @@ namespace pst {
 
 	void TopLevel::dprint(std::ostream& out) const {
 		// @TODO: PST?
-		out << "{\"PST\" : [";
+		out << "[";
 		for (auto& e: statements) {
 			nullAwareDprint(e, out);
 			out << ", ";
 		}
-		out << "]}";
+		out << "]";
 	}
 }

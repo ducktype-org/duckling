@@ -2,7 +2,6 @@
 
 namespace pst {
 	ParserRef<While> While::parse(RiftParserState& state) {
-		// @TODO: attr list
 		auto position = state.getPosition();
 		auto out      = makeRef<While>(position);
 
@@ -14,13 +13,13 @@ namespace pst {
 	}
 
 	void While::dprint(std::ostream& out) const {
-		out << R"({"While": {"name":)";
+		out << R"({"name":)";
 		nullAwareDprint(optional_name, out);
 		out << ", \"condition\": ";
 		nullAwareDprint(condition, out);
 		out << ", \"body\": ";
 		nullAwareDprint(body, out);
-		out << "}}";
+		out << "}";
 	}
 
 	void While::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitWhile(*this); }

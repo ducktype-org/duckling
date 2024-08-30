@@ -17,7 +17,9 @@ class PSTErrorTests: public tester::TestSuite {
 	static std::vector<GenExample*> examples;
 
 	struct GenExample {
-		GenExample() { examples.push_back(this); }
+		std::string code;
+
+		GenExample(std::string code): code(std::move(code)) { examples.push_back(this); }
 
 		virtual bool operator()() = 0;
 		[[nodiscard]]
@@ -29,9 +31,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 	template<typename Element, bool good = true>
 	struct Example: public GenExample {
-		std::string code;
-
-		Example(std::string code): GenExample(), code(std::move(code)) {}
+		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element>::fromContents(code);
@@ -43,6 +43,38 @@ class PSTErrorTests: public tester::TestSuite {
 			std::stringstream ss;
 			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
 			ss << base::typeName<Element>();
+			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
+			return ss.str();
+		}
+	};
+
+	template<std::derived_from<pst::ClassStmt> Element, bool good = true>
+	struct ClassStmtExample: public GenExample {
+		pst::ClassContext context;
+
+		ClassStmtExample(std::string code, pst::ClassContext&& ctx):
+			  GenExample(std::move(code)),
+			  context(std::move(ctx)) {}
+
+		ClassStmtExample(std::string code):
+			  GenExample(std::move(code)),
+			  context{ base::StrId("unnamed"), {} } {}
+
+		ClassStmtExample(std::string code, const std::string& class_name):
+			  GenExample(std::move(code)),
+			  context{ base::StrId(class_name.c_str()), {} } {}
+
+		bool operator()() override {
+			auto parsed = pst::PST<Element>::fromContentsWithContext(this->code, context);
+			return parsed.getLogger().good() == good;
+		}
+
+		[[nodiscard]]
+		std::string message() const override {
+			std::stringstream ss;
+			ss << "Unexpected behaviour while parsing: `" << this->code << "` as ";
+			ss << base::typeName<Element>();
+			ss << " in class `" << context.name.str() << "`";
 			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
 			return ss.str();
 		}
@@ -101,8 +133,6 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, true>  simpleStmt{ "x = a + b;" };
 	Example<pst::Stmt, false> badStmt{ "x = a + b" };
 
-	Example<pst::Struct, true> simpleStruct{ "struct x: y{}" };
-
 	Example<pst::TopLevel, true> simpleTopLevel{ "fun foo() = {}" };
 
 	Example<pst::Using, true> simpleUsing{ "using std.math" };
@@ -111,6 +141,41 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::For, true>  simpleTypedFor{ "for(a: T, U in a + c) {}" };
 	Example<pst::For, false> emptyTypeFor{ "for(a: in a + c) {}" };
 	Example<pst::For, false> noInFor{ "for(a a + c) {}" };
+
+	Example<pst::Class, true>  simpleClass{ "class x{}" };
+	Example<pst::Class, true>  complicatedClass{ "class x extends y implements z:{}, d:{T} {}" };
+	Example<pst::Class, false> emptyExtendsClass{ "class x extends {}" };
+	Example<pst::Class, false> emptyExtendsClass2{ "class x extends implements z {}" };
+	Example<pst::Class, false> multipleExtendsClass{ "class x extends y, z {}" };
+
+	ClassStmtExample<pst::AccessBlock, true>  publicAccessBlock{ "public {}" };
+	ClassStmtExample<pst::AccessBlock, true>  privateAccessBlock{ "private {}" };
+	ClassStmtExample<pst::AccessBlock, true>  protectedAccessBlock{ "protected {}" };
+	ClassStmtExample<pst::AccessBlock, false> multiSpecifierBlock{ "public private {}" };
+
+	ClassStmtExample<pst::Field, true>  simpleField{ "x: i32 = 5" };
+	ClassStmtExample<pst::Field, true>  simpleSpecifiedField{ "public static x: i32 = 5" };
+	ClassStmtExample<pst::Field, false> badField{ "x = 5" };
+	ClassStmtExample<pst::Field, false> badField2{ "x : = 5" };
+
+	ClassStmtExample<pst::Method, true> simpleMethod{ "fun foo(i32 x, i32 y) -> (i32, i32) = {}" };
+
+	ClassStmtExample<pst::Constructor, true> defaultConstructor{ "name(x: i32) = {}", "name" };
+	ClassStmtExample<pst::Constructor, true> namedConstructor{
+		"name.from_pair((x, y): (i32, i32)) = {}", "name"
+	};
+	ClassStmtExample<pst::Constructor, true> initConstructor{
+		"name.init(x: i32, y: i32): z(x, y) = {}", "name"
+	};
+	ClassStmtExample<pst::Constructor, false> badConstructor1{
+		"name.(x: i32, y: i32): z(x, y) = {}", "name"
+	};
+	ClassStmtExample<pst::Constructor, false> badConstructor2{ "name.(x: i32, y: i32) -> i32 = {}",
+		                                                       "name" };
+
+	ClassStmtExample<pst::Destructor, true>  simpleDestructor{ "name.destroy() = {}", "name" };
+	ClassStmtExample<pst::Destructor, false> nonEmptyDestructor{ "name.destroy(x: i32) = {}",
+		                                                         "name" };
 
 	// @todo Some weird position bug for later
 	// Example<pst::Variable, true> simpleVariable{"var x: i32 = 5"};

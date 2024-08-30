@@ -16,15 +16,15 @@ namespace pst {
 	}
 
 	void If::dprint(std::ostream& out) const {
-		out << "{\"If\": {\"name\":";
+		out << "{\"name\":";
 		nullAwareDprint(optional_name, out);
-		out << ", \"condition\": ";
+		out << ",\"condition\":";
 		nullAwareDprint(condition, out);
-		out << ", \"body\": ";
+		out << ",\"body\":";
 		nullAwareDprint(body, out);
 		out << ", \"else body\": ";
 		nullAwareDprint(else_body, out);
-		out << "}}";
+		out << "}";
 	}
 
 	void If::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitIf(*this); }

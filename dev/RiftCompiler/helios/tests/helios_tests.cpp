@@ -24,7 +24,7 @@ public:
 
 		TESTER_ADD_TEST(testI32Consts);
 		TESTER_ADD_TEST(testEdgeEvals);
-		TESTER_ADD_TEST(testStructSymbolData);
+		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testTypeOf);
 		TESTER_ADD_TEST(simpleHOUTTest);
 		TESTER_ADD_TEST(importTest);
@@ -103,29 +103,34 @@ private:
 		ASSERT_EQUAL(75, getValue("F", root_scope));
 	}
 
-	void testStructSymbolData() {
-		auto [_, root_scope] = getModule("structs");
+	void testClassSymbolData() {
+		auto [_, root_scope] = getModule("classes");
 
-		const auto first_struct = getChain("FirstStructEver", root_scope).back();
-		const auto first_struct_info
-			= query::entryPoint<compiler::helios::QueryStructSymbolData>(first_struct);
-		const auto first_struct_typeinfo
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_struct);
+		const auto first_class = getChain("FirstClassEver", root_scope).back();
+		const auto first_class_info
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class);
+		const auto first_class_typeinfo
+			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class);
 
-		ASSERT_EQUAL(2, first_struct_info.members.size());
-		ASSERT_EQUAL(2, first_struct_info.methods.size());
-		ASSERT_EQUAL(0, first_struct_info.bases.size());
-		ASSERT_EQUAL("FirstStructEver", first_struct_info.name);
+		ASSERT_EQUAL(2, first_class_info.members.size());
+		ASSERT_EQUAL(2, first_class_info.methods.size());
+		ASSERT_EQUAL(1, first_class_info.constructors.size());
+		assert(first_class_info.destructor.has_value(), "Expected a destructor.");
+		assert(not first_class_info.base.has_value(), "Expected no base class.");
+		ASSERT_EQUAL(0, first_class_info.implements.size());
+		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
 
-		const auto second_struct = getChain("SecondStruct", root_scope).back();
-		auto       second_struct_info
-			= query::entryPoint<compiler::helios::QueryStructSymbolData>(second_struct);
+		const auto second_class = getChain("SecondClass", root_scope).back();
+		auto       second_class_info
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(second_class);
 
-		ASSERT_EQUAL(0, second_struct_info.members.size());
-		ASSERT_EQUAL(0, second_struct_info.methods.size());
-		ASSERT_EQUAL(1, second_struct_info.bases.size());
-		ASSERT_EQUAL(true, first_struct_typeinfo == second_struct_info.bases.front());
-		ASSERT_EQUAL("SecondStruct", second_struct_info.name);
+		ASSERT_EQUAL(0, second_class_info.members.size());
+		ASSERT_EQUAL(0, second_class_info.methods.size());
+		ASSERT_EQUAL(0, second_class_info.constructors.size());
+		assert(not second_class_info.destructor.has_value(), "Expected no destructor.");
+		assert(second_class_info.base.has_value(), "Expected class to have a base class.");
+		ASSERT_EQUAL(true, first_class_typeinfo == second_class_info.base);
+		ASSERT_EQUAL("SecondClass", second_class_info.name);
 	}
 
 	void testTypeOf() {
@@ -150,15 +155,15 @@ private:
 
 		const auto weird_variant = getTypeOf("weird_variant", root_scope);
 
-		const auto structA     = getTypeFromDefintion("A", root_scope);
-		const auto structB     = getTypeFromDefintion("B", root_scope);
-		const auto structC     = getTypeFromDefintion("C", root_scope);
+		const auto classA      = getTypeFromDefintion("A", root_scope);
+		const auto classB      = getTypeFromDefintion("B", root_scope);
+		const auto classC      = getTypeFromDefintion("C", root_scope);
 		auto       right_tuple = query::entryPoint<ts::QueryTupleType>(
-            { { { structA, false },
-		              { query::entryPoint<ts::QueryVariantType>({ { structB, structC } }), false } } }
+            { { { classA, false },
+		              { query::entryPoint<ts::QueryVariantType>({ { classB, classC } }), false } } }
         );
 		const auto weird_variant_type
-			= query::entryPoint<ts::QueryVariantType>({ { structA, right_tuple } });
+			= query::entryPoint<ts::QueryVariantType>({ { classA, right_tuple } });
 		ASSERT_EQUAL(true, weird_variant == weird_variant_type);
 	}
 

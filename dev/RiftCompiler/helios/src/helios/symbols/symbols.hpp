@@ -19,11 +19,17 @@ namespace compiler::helios {
 		Namespace,
 		Function,
 		Const,
-		Struct,
+		Class,
 		Alias,
 		Using,
 		Variable,
-		Import
+		Import,
+
+		// Class Symbols
+		Method,
+		Field,
+		Constructor,
+		Destructor,
 		// ...
 	};
 
@@ -298,10 +304,10 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryTypeOf, SymID, ts::TypeInfo)
 
 	/**
-	 * @brief Query ts::TypeInfo from a symbol definition (like struct definition).
+	 * @brief Query ts::TypeInfo from a symbol definition (like class definition).
 	 *
 	 * Example:
-	 * struct T {
+	 * class T {
 	 *	...
 	 * }
 	 * - Then we can use this query QueryTypeFromDefinition(T).
@@ -309,33 +315,45 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryTypeFromDefinition, SymID, ts::TypeInfo);
 
 	/**
-	 * @brief Struct returned by the `QueryStructSymbolData` query.
+	 * @brief Struct returned by the `QueryClassSymbolData` query.
 	 */
-	struct StructSymbolData {
+	struct ClassSymbolData {
 		/**
-		 * @brief Name of the struct in the soure code.
+		 * @brief Name of the class in the source code.
 		 */
 		base::StrId name;
 		/**
-		 * @brief Struct's declared methods.
+		 * @brief Class'es declared methods.
 		 */
 		std::vector<SymID> methods;
 		/**
-		 * @brief Struct's declared member variables.
+		 * @brief Class'es declared constructors.
+		 */
+		std::vector<SymID> constructors;
+		/**
+		 * @brief Class'es declared destructor.
+		 */
+		base::Optional<SymID> destructor;
+		/**
+		 * @brief Class'es declared member variables.
 		 */
 		std::vector<SymID> members;
 		/**
-		 * @brief Struct's base classes.
+		 * @brief Class'es base class.
 		 */
-		std::vector<ts::TypeInfo> bases;
+		base::Optional<ts::TypeInfo> base;
+		/**
+		 * @brief Class'es implemented interfaces.
+		 */
+		std::vector<ts::TypeInfo> implements;
 	};
 
 	/**
-	 * @brief Query all the information about a struct definition.
-	 * Panics if the given `SymID` is not a struct.
-	 * More information on `StructSymbolData` in it's definition.
+	 * @brief Query all the information about a class definition.
+	 * Panics if the given `SymID` is not a class.
+	 * More information on `ClassSymbolData` in it's definition.
 	 */
-	DECLARE_QUERY(QueryStructSymbolData, SymID, const StructSymbolData&)
+	DECLARE_QUERY(QueryClassSymbolData, SymID, const ClassSymbolData&)
 
 	namespace code {
 		struct Expr;
