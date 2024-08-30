@@ -23,7 +23,7 @@ namespace pst {
 	/**
 	 * @brief General Element representing a list of Elements.
 	 *
-	 * @tparam SubElements - Kept Elements, has to have precise length parse like Expr
+	 * @tparam ListElements - Kept Elements, has to have precise length parse like Expr
 	 * @tparam NON_EMPTY - Should empty list be an error.
 	 * @tparam BRACKETS - expected brackets or None if not expected
 	 * @tparam isSeparator - Separator should always be skip-able with one skip.
@@ -33,18 +33,18 @@ namespace pst {
 	 * other condition because of iteration.
 	 */
 	template<
-		class SubElements,
+		class ListElements,
 		bool                      NON_EMPTY,
 		lexer::Token::BracketType BRACKETS,
 		StateCondition            isSeparator,
 		StateCondition            isEnding,
 		GetName                   getName,
-		class Container = std::vector<ParserRef<SubElements>>>
+		class Container = std::vector<ParserRef<ListElements>>>
 	class List final: public NotStmt {
 		Container elements;
 
 	public:
-		DECLARE_CONST_ELEMENT_ITERATOR(elements, SubElements)
+		DECLARE_CONST_ELEMENT_ITERATOR(elements, ListElements)
 
 		[[nodiscard]]
 		usize size() const {
@@ -81,7 +81,7 @@ namespace pst {
 		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {}
 
 		static ParserRef<FunParam> parse(RiftParserState& state);
-		//		~FunParam() final = default;
+		~FunParam() final = default;
 		void dprint(std::ostream& out) const final;
 
 		[[nodiscard]]

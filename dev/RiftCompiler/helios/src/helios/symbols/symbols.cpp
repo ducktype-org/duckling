@@ -781,8 +781,14 @@ namespace compiler::helios {
 			Context&    ctx;
 			const QKey& key;
 
+			void setTypeOfSymbol(const ts::TypeInfo& type) {
+				if (symbol_type_info.has_value())
+					RIFT_PANIC("Attempted to set type of symbol in visitor a second time.");
+				symbol_type_info = type;
+			}
+
 			void setTypeOfSymbol(const pst::ParserCBorrowRef<pst::Expr>& expr) {
-				symbol_type_info = parseTypeFromExpr(ctx, expr, scope(key));
+				setTypeOfSymbol(parseTypeFromExpr(ctx, expr, scope(key)));
 			}
 
 		public:
@@ -809,7 +815,7 @@ namespace compiler::helios {
 				                          ? parseTypeFromExpr(ctx, ret.value(), scope(key))
 				                          : ctx.query<ts::QueryUnitType>({});
 
-				symbol_type_info = ctx.query<ts::QueryFunctionType>({ param_types, ret_type });
+				setTypeOfSymbol(ctx.query<ts::QueryFunctionType>({ param_types, ret_type }));
 			}
 		};
 
@@ -830,6 +836,12 @@ namespace compiler::helios {
 		class PstStmtVisitor_GetTypeFromDefinition final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
+
+			void setTypeOfDefinition(const ts::TypeInfo& type) {
+				if (definition_type_info.has_value())
+					RIFT_PANIC("Attempted to set type of definition in visitor a second time.");
+				definition_type_info = type;
+			}
 
 		public:
 			PstStmtVisitor_GetTypeFromDefinition(Context& ctx, const QKey& key):
@@ -915,7 +927,7 @@ namespace compiler::helios {
 			Context&    ctx;
 			const QKey& key;
 
-			void setTypeOfSymbol(const pst::ParserCBorrowRef<pst::Expr>& expr) {
+			void setExprTree(const pst::ParserCBorrowRef<pst::Expr>& expr) {
 				rpn_of_sym_expr = rpn::makeRPN(ctx, { expr->elements, scope(key) }).elements;
 			}
 
@@ -924,11 +936,9 @@ namespace compiler::helios {
 
 			std::vector<rpn::ExprElem> rpn_of_sym_expr;
 
-			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getValue()); }
+			void visitConst(const pst::Const& stmt) override { setExprTree(stmt.getValue()); }
 
-			void visitVariable(const pst::Variable& stmt) override {
-				setTypeOfSymbol(stmt.getType());
-			}
+			void visitVariable(const pst::Variable& stmt) override { setExprTree(stmt.getType()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

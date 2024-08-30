@@ -1,17 +1,17 @@
 #pragma once
 
-#include <vector>
-#include <base/ints.hpp>
-
-#include <query_framework/query_impl.hpp>
-#include <pst_parser/elements/elements.hpp>
-#include <base/perfect_hash.hpp>
-
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
 #include "element_ref.hpp"
+
+#include <base/ints.hpp>
+#include <base/perfect_hash.hpp>
 #include <base/string_id.hpp>
+#include <vector>
+
 #include <helios/symbols/symbols.hpp>
+#include <pst_parser/elements/elements.hpp>
+#include <query_framework/query_impl.hpp>
 #include <typesystem/type_desc.hpp>
 #include <typesystem/queries.hpp>
 
@@ -140,6 +140,7 @@ namespace compiler::helios::code {
 			  Expr(
 				  scope,
 				  ts::TypeDesc<>(
+					  // @TODO: Select type of expression based on type of literal.
 					  ctx.query<ts::QueryIntegralType>({ 64 }),
 					  ts::ValueCategory(ts::PrimaryCategory::Literal)
 				  )
@@ -176,7 +177,7 @@ namespace compiler::helios::code {
 
 	struct BinaryOperatorExpr: public Expr {
 		// @TODO: At this point, this should be a symbol.
-		//  HOUT should not be concerned with overload reslution.
+		//  HOUT should not be concerned with overload resolution.
 		base::StrId op;
 
 		ElementRef<Expr> lhs;
@@ -192,6 +193,7 @@ namespace compiler::helios::code {
 			  Expr(
 				  scope,
 				  ts::TypeDesc<>(
+					  // @TODO: Select type of expression based on result type of the operation.
 					  ctx.query<ts::QueryIntegralType>({ 64 }),
 					  ts::ValueCategory(ts::PrimaryCategory::Temporary)
 				  )

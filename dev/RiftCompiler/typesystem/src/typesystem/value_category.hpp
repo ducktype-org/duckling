@@ -30,12 +30,7 @@ namespace ts {
 	 * @param symbol The symbol in question.
 	 * @return The symbol's primary category.
 	 */
-	inline PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol) {
-		compiler::helios::SymbolKind symbol_kind = compiler::helios::kind(symbol);
-		// @TODO Properly check whether the symbol is local or global.
-		bool is_symbol_local = symbol_kind == compiler::helios::SymbolKind::Variable;
-		return is_symbol_local ? PrimaryCategory::Local : PrimaryCategory::Global;
-	}
+	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol);
 
 	constexpr base::FlagType MOVE(0);
 	constexpr base::FlagType COPY(1);

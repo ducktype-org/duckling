@@ -157,8 +157,8 @@ namespace pst {
 		}
 
 		static ParserRef<Variable> parse(RiftParserState& state);
-		void                       dprint(std::ostream& out) const override;
-		~Variable() override = default;
+		~Variable() final = default;
+		void dprint(std::ostream& out) const final;
 
 		[[nodiscard]]
 		std::string elementType() const override {
