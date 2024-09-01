@@ -137,7 +137,9 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isStatementAggregate() const override { return true; }
+		bool isStatementAggregate() const override {
+			return true;
+		}
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
