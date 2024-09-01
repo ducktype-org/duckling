@@ -1,6 +1,6 @@
-// Tests ret_imm opcode.
-// output == 17 <- test passed
-// output != 17 <- test failed
+# Tests ret_imm opcode.
+# output == 17 <- test passed
+# output != 17 <- test failed
 
 function check {
 	arg_size: 0;

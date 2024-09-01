@@ -1,9 +1,9 @@
 
-fun foo(a, b) {}
+fun foo(a, b) = {}
 
-fun foo(a: i32, b) {}
+fun foo(a: i32, b) = {}
 
-fun foo(a, b: i32) {}
+fun foo(a, b: i32) = {}
 
-fun foo(a) {}
+fun foo(a) = {}
 

@@ -24,7 +24,7 @@ class MIRConstructionTest final: public tester::ContextSuite {
 
 public:
 	MIRConstructionTest(tester::TestConfig&& config):
-		  tester::ContextSuite(std::move(config), "TypeSystem overload resolution test") {
+		  tester::ContextSuite(std::move(config), "mir construction test") {
 		TESTER_ADD_TEST(simpleTest);
 	}
 

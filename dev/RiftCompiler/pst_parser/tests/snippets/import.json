@@ -1,109 +1,121 @@
 {
-	"PST": [
+	"Top Level": [
 		{
 			"Import": {
-				"DottedName": {
-					"star": "false",
-					"names": [
-						{
-							"Name": "aaaa"
-						},
-						{
-							"Name": "bbb"
-						},
-						{
-							"Name": "c"
-						},
-					]
-				}
-			},
-			"Alias": "D"
+				"Import": {
+					"Dotted Name": {
+						"star": "false",
+						"names": [
+							{
+								"Name": "aaaa"
+							},
+							{
+								"Name": "bbb"
+							},
+							{
+								"Name": "c"
+							},
+						]
+					}
+				},
+				"Alias": "D"
+			}
 		},
 		{
 			"Import": {
-				"DottedName": {
-					"star": "true",
-					"names": [
-						{
-							"Name": "dasdsa"
-						},
-						{
-							"Name": "dasd"
-						},
-					]
-				}
-			},
-			"Alias": "F"
+				"Import": {
+					"Dotted Name": {
+						"star": "true",
+						"names": [
+							{
+								"Name": "dasdsa"
+							},
+							{
+								"Name": "dasd"
+							},
+						]
+					}
+				},
+				"Alias": "F"
+			}
 		},
 		{
 			"Import": {
-				"DottedName": {
-					"star": "false",
-					"names": [
-						{
-							"Name": "aaaa"
-						},
-					]
-				}
-			},
-			"Alias": "σααα"
+				"Import": {
+					"Dotted Name": {
+						"star": "false",
+						"names": [
+							{
+								"Name": "aaaa"
+							},
+						]
+					}
+				},
+				"Alias": "σααα"
+			}
 		},
 		{
 			"Import": {
-				"DottedName": {
-					"star": "false",
-					"names": [
-						{
-							"Name": "a"
-						},
-						{
-							"Name": "b"
-						},
-						{
-							"Name": "c"
-						},
-						{
-							"Name": "d"
-						},
-					]
-				}
-			},
-			"Alias": "XX"
+				"Import": {
+					"Dotted Name": {
+						"star": "false",
+						"names": [
+							{
+								"Name": "a"
+							},
+							{
+								"Name": "b"
+							},
+							{
+								"Name": "c"
+							},
+							{
+								"Name": "d"
+							},
+						]
+					}
+				},
+				"Alias": "XX"
+			}
 		},
 		{
 			"Import": {
-				"DottedName": {
-					"star": "false",
-					"names": [
-						{
-							"Name": "ἄλφα"
-						},
-						{
-							"Name": "βῆτα"
-						},
-						{
-							"Name": "γάμμα"
-						},
-					]
-				}
-			},
-			"Alias": "U"
+				"Import": {
+					"Dotted Name": {
+						"star": "false",
+						"names": [
+							{
+								"Name": "ἄλφα"
+							},
+							{
+								"Name": "βῆτα"
+							},
+							{
+								"Name": "γάμμα"
+							},
+						]
+					}
+				},
+				"Alias": "U"
+			}
 		},
 		{
 			"Import": {
-				"DottedName": {
-					"star": "true",
-					"names": [
-						{
-							"Name": "ἄλφα"
-						},
-						{
-							"Name": "βῆτα"
-						},
-					]
-				}
-			},
-			"Alias": "_1"
+				"Import": {
+					"Dotted Name": {
+						"star": "true",
+						"names": [
+							{
+								"Name": "ἄλφα"
+							},
+							{
+								"Name": "βῆτα"
+							},
+						]
+					}
+				},
+				"Alias": "_1"
+			}
 		},
 	]
 }

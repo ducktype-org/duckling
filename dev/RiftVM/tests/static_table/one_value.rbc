@@ -5,28 +5,28 @@ function main {
   arg_size: 0;
   ret_size: 0;
 
-  // x - 0
-  // i - 8
-  // t - 16
+  # x - 0
+  # i - 8
+  # t - 16
   local_size: 40;
 
   code: {
-    init_type int64; // [0,8)
-    init_type int64; // [8,16)
+    init_type int64; # [0,8)
+    init_type int64; # [8,16)
 
     alloc_lptr_type     16, tableint64;
 
-    // i := 0
+    # i := 0
     mov_l64_imm         8, 0;
 
-    // x := 3 -> r0
+    # x := 3 -> r0
     mov_l64_imm         0, 3;
 
-    // t[i] := x (by idx)
+    # t[i] := x (by idx)
     store_lptr_l64_ofs  16, 0;
     ext_l64             8;
 
-    // x := 5 -> r0
+    # x := 5 -> r0
     mov_l64_imm         0, 5;
 
     load_l64_lptr_ofs   0, 16;

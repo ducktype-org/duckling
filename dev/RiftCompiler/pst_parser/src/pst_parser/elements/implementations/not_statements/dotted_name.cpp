@@ -32,7 +32,7 @@ namespace pst {
 	}
 
 	void DottedName::dprint(std::ostream& out) const {
-		out << "{\"DottedName\": {";
+		out << "{";
 
 		if (star)
 			out << R"("star": "true",)";
@@ -46,6 +46,6 @@ namespace pst {
 			out << ", ";
 		}
 
-		out << "]}}";
+		out << "]}";
 	}
 }

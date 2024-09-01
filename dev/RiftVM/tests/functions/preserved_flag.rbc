@@ -1,7 +1,7 @@
-// Test's whether on function call the flag (result of the compare opcodes)
-// is preserved after the call to another function.
-// output == 1 <- test passed
-// output == 0 <- test failed
+# Test's whether on function call the flag (result of the compare opcodes)
+# is preserved after the call to another function.
+# output == 1 <- test passed
+# output == 0 <- test failed
 
 function check {
 	arg_size: 0;
@@ -31,15 +31,15 @@ function main {
         mov_l64_imm         0,  1;
         mov_l64_imm         8,  0;
         
-        // flag from cmpEq should be on
+        # flag from cmpEq should be on
         jmpRelIf_label      ok_label;
 
-        // print "0" (failed)
+        # print "0" (failed)
         output_l64          8;
         ret_imm             0;
 
         label ok_label;
-        // print "1" (passed)
+        # print "1" (passed)
         output_l64          0;
 		ret_imm             0;
 	}

@@ -19,21 +19,9 @@ namespace pst {
 	}
 
 	void CodeBlockOrStmt::dprint(std::ostream& out) const {
-		struct PrinterFunctor {
-			std::ostream& out_;
+		auto printThrough = [&](const auto& el) { return tpc::nullAwareDprint(el, out); };
 
-			void operator()(const ParserRef<Stmt>& stmt) { nullAwareDprint(stmt, out_); }
-
-			void operator()(const ParserRef<CodeBlock>& codeBlock) {
-				nullAwareDprint(codeBlock, out_);
-			}
-
-			PrinterFunctor(std::ostream& out): out_(out) {}
-		};
-
-		out << "{\"CodeBlockOrStmt\": ";
-		std::visit(PrinterFunctor(out), content);
-		out << "}";
+		std::visit(printThrough, content);
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {

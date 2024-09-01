@@ -5,75 +5,75 @@ function main {
   arg_size: 0;
   ret_size: 0;
 
-  // x - 0
-  // i - 8
-  // y - 16
-  // t - 24
+  # x - 0
+  # i - 8
+  # y - 16
+  # t - 24
   local_size: 40;
 
   code: {
-    init_type int64; // x [0,8)
-    init_type int64; // i [8,16)
-    init_type int64; // y [16,24)
+    init_type int64; # x [0,8)
+    init_type int64; # i [8,16)
+    init_type int64; # y [16,24)
 
-    // alloc t[42]
+    # alloc t[42]
     alloc_lptr_type 24, tableint64;
 
-    // i := 41
+    # i := 41
     mov_l64_imm         8, 42;
 
-    // x := 1
+    # x := 1
     mov_l64_imm         0, 1;
 
-    // populate table t with 1..42 sequence
-    // while(x > 0)
+    # populate table t with 1..42 sequence
+    # while(x > 0)
     label Loop1;
-      // i--
+      # i--
       sub_l64_imm         8, 1;
 
-      // t[i] := x (by idx)
+      # t[i] := x (by idx)
       store_lptr_l64_ofs  24, 0;
       ext_l64             8;
 
-      // x++
+      # x++
       add_l64_imm         0, 1;
 
-      // if i > 0 : end
+      # if i > 0 : end
       cmpG_l64_imm        8, 0;
       jmpRelIf_label      Loop1;
 
-    // sum the sequence
+    # sum the sequence
 
-    // i := 41
+    # i := 41
     mov_l64_imm         8, 42;
 
-    // y := 0
+    # y := 0
     mov_l64_imm         16, 0;
 
     label Loop2;
-      // i--
+      # i--
       sub_l64_imm         8, 1;
 
       load_l64_lptr_ofs   0, 24;
       ext_l64             8;
 
-      // y += x
+      # y += x
       add_l64_l64         16, 0;
 
-      // if i > 0 : end
+      # if i > 0 : end
       cmpG_l64_imm        8, 0;
       jmpRelIf_label      Loop2;
 
 
-    // should return 42*(42+1)/2=903
+    # should return 42*(42+1)/2=903
     output_l64          16;
 
-    // free t
+    # free t
     free_lptr           24;
 
-    deinit; // y
-    deinit; // i
-    deinit; // x
+    deinit; # y
+    deinit; # i
+    deinit; # x
 
     ret_imm             0;
   }

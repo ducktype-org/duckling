@@ -14,15 +14,17 @@
 
 #include <unicode/unistr.h>
 
+#include <set>
+
 namespace pst {
 	class PstStmtVisitor;
+	class Attribute;
 
 	using StateCondition = bool(const RiftParserState&, i64);
 
 	using GetName = std::string (*)();
 
 	enum class StmtKind {
-		Attribute,
 		Import,
 		Using,
 		Alias,
@@ -31,19 +33,40 @@ namespace pst {
 		CodeDecl,
 		Action,
 		ExprStmt,
-		Struct,
+		Class,
 		TopLevel,
 		Const,
-		Variable
+		Variable,
+		// Class Statements
+		Method,
+		Field,
+		Constructor,
+		Destructor,
+		AccessBlock,
 	};
 
 	class Stmt: public RiftElement {
 		StmtKind kind;
 
 	protected:
+		using AttrList = std::vector<ParserRef<Attribute>>;
+
+		AttrList attributes;
+
 		Stmt(StmtKind kind, const dia::SourcePosition& position):
 			  RiftElement(position),
 			  kind(kind) {}
+
+		static AttrList collectAttributes(RiftParserState& state);
+
+		/**
+		 * @brief Prepends attributes after parsing handling sub elements and position.
+		 */
+		void addAttributes(std::vector<ParserRef<Attribute>>&& additions);
+
+		void dprintAttributes(std::ostream& out) const;
+
+		void dprintPrefix(std::ostream& out) const override;
 
 	public:
 		[[nodiscard]]
@@ -54,6 +77,14 @@ namespace pst {
 		static ParserRef<Stmt> parse(RiftParserState& state);
 		bool                   trailingSemicolon() override;
 		virtual void           acceptVisitor(PstStmtVisitor& visitor) const = 0;
+
+		/**
+		 * @note This might need to return a vector of borrow pointers instead
+		 */
+		[[nodiscard]]
+		auto& getAttributes() const {
+			return attributes;
+		}
 
 		[[nodiscard]]
 		bool isStatement() const final {
@@ -103,4 +134,45 @@ namespace pst {
 
 		bool trailingSemicolon() override;
 	};
+
+	struct ClassContext {
+		base::StrId                                 name;
+		std::vector<base::c_borrow_ptr<tpc::Token>> specifiers;
+	};
+
+	class ClassStmt: public Stmt {
+	protected:
+		inline static const std::set<rift_def::Keyword> class_specs = {
+			rift_def::Keyword::Public,
+			rift_def::Keyword::Private,
+			rift_def::Keyword::Protected,
+			rift_def::Keyword::Static,
+		};
+		ClassContext context;
+
+		void parseSpecifiers(RiftParserState& state);
+
+		[[nodiscard]]
+		static i64 countSpecifiers(RiftParserState& state);
+
+		void dprintPrefix(std::ostream& out) const override;
+
+		ClassStmt(StmtKind kind, const dia::SourcePosition& pos, ClassContext ctx):
+			  Stmt(kind, pos),
+			  context(std::move(ctx)) {}
+
+	private:
+		static ParserRef<ClassStmt> chooseStmt(RiftParserState& state, const ClassContext& ctx);
+
+	public:
+		static ParserRef<ClassStmt> parse(RiftParserState& state, const ClassContext& ctx);
+
+		const ClassContext& getContext() { return { context }; }
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Class Element";
+		}
+	};
+
 }

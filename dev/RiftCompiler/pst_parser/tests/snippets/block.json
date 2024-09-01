@@ -1,10 +1,10 @@
 {
-	"PST": [
+	"Top Level": [
 		{
 			"Block": {
 				"optional name": "<ANONYMOUS>",
 				"code block": {
-					"CodeBlock": []
+					"Code Block": []
 				}
 			}
 		},
@@ -14,7 +14,7 @@
 					"Name": "B"
 				},
 				"code block": {
-					"CodeBlock": []
+					"Code Block": []
 				}
 			}
 		},
@@ -24,10 +24,10 @@
 					"Name": "B"
 				},
 				"code block": {
-					"CodeBlock": [
+					"Code Block": [
 						{
 							"Expr Stmt": {
-								"Expr": [
+								"Expression": [
 									{
 										"Identifier": "a"
 									},
