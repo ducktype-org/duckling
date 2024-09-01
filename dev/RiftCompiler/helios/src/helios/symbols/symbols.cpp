@@ -830,9 +830,7 @@ namespace compiler::helios {
 				setTypeOfSymbol(stmt.getType());
 			}
 
-			void visitField(const pst::Field& stmt) override {
-				setTypeOfSymbol(stmt.getType());
-			}
+			void visitField(const pst::Field& stmt) override { setTypeOfSymbol(stmt.getType()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

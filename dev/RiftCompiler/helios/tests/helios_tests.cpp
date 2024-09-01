@@ -105,9 +105,9 @@ private:
 
 		const auto weird_variant = getTypeOf("weird_variant", root_scope);
 
-		const auto classA     = getTypeFromDefinition("A", root_scope);
-		const auto classB     = getTypeFromDefinition("B", root_scope);
-		const auto classC     = getTypeFromDefinition("C", root_scope);
+		const auto classA      = getTypeFromDefinition("A", root_scope);
+		const auto classB      = getTypeFromDefinition("B", root_scope);
+		const auto classC      = getTypeFromDefinition("C", root_scope);
 		auto       right_tuple = query::entryPoint<ts::QueryTupleType>(
             { { { classA, false },
 		              { query::entryPoint<ts::QueryVariantType>({ { classB, classC } }), false } } }

@@ -203,7 +203,6 @@ namespace pst {
 			return type.borrow();
 		}
 
-
 		[[nodiscard]]
 		bool isDeclaration() const override {
 			return true;
