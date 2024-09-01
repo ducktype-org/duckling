@@ -6,9 +6,9 @@ alias TII = (i32, i32);
 const TupleII: (i32, i32) = (1, 2);
 const TupleIIFF: ((i16, i32), (f16, f32)) = (1, 2);
 
-struct A {}
-struct B {}
-struct C {}
+class A {}
+class B {}
+class C {}
 
 var first_variant: i32 | f32 = 1;
 

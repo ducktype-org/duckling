@@ -1,4 +1,4 @@
-// Three simple errors, to test parsing error recovery.
+# Three simple errors, to test parsing error recovery.
 
 if;
 while if;

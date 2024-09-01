@@ -114,7 +114,7 @@ namespace pst {
 		[[nodiscard]]
 		auto viewSubElements() const {
 			using namespace std::views;
-			return std::ranges::ref_view(sub_elements) | transform(visitConstChild);
+			return sub_elements | transform(visitConstChild);
 		}
 
 		/**
@@ -207,6 +207,11 @@ namespace pst {
 		 * @brief Updates the position to include the end of the given position.
 		 */
 		void setLastToken(dia::SourcePosition pos);
+
+		/**
+		 * @brief Updates the position to include the beginning of the given position.
+		 */
+		void setFirstToken(dia::SourcePosition pos);
 
 		void setParent(ParserBorrowRef<RiftElement> parent) { this->parent.emplace(parent); }
 

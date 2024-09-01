@@ -19,26 +19,6 @@
 #include "not_statements.hpp"
 
 namespace pst {
-	class Attribute final: public Stmt {
-		tpc::Identifier       name;
-		ParserRef<AtrArgList> args = nullptr;
-
-	public:
-		STMT_CHILD_CONSTRUCTOR(Attribute);
-		static ParserRef<Attribute> parse(RiftParserState& state);
-		~Attribute() final = default;
-
-		void dprint(std::ostream& out) const final;
-		bool trailingSemicolon() override;
-
-		[[nodiscard]]
-		std::string elementType() const override {
-			return "Attribute";
-		}
-
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
-	};
-
 	/**
 	 * @note: Import allows for two syntaxes right now:
 	 * import A.B as D;

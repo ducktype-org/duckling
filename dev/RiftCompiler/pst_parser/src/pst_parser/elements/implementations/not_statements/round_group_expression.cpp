@@ -33,9 +33,5 @@ namespace pst {
 		return out;
 	}
 
-	void RoundGroupExpr::dprint(std::ostream& out) const {
-		out << "{\"RoundGroupExpr\": ";
-		nullAwareDprint(expr, out);
-		out << " }";
-	}
+	void RoundGroupExpr::dprint(std::ostream& out) const { nullAwareDprint(expr, out); }
 }
