@@ -1,7 +1,7 @@
-// Old lookup testing.
-// Structs are commented, cause they are not supported yet.
+# Old lookup testing.
+# Structs are commented, cause they are not supported yet.
 
-/*
+#{
 const abc: T;
 
 struct QQ {
@@ -9,10 +9,10 @@ struct QQ {
 }
 
 struct Q {
-	// var x: i32;
-	// var b: i32;
+	# var x: i32;
+	# var b: i32;
 
-	// var s: QQ;
+	# var s: QQ;
 }
 
 namespace ha {
@@ -28,35 +28,35 @@ namespace T {
 	alias x = h;
 
 
-	// g: cool_type;
+	# g: cool_type;
 
-	// using x.a.b;  // alias ez
+	# using x.a.b;  # alias ez
 	
-	// link:
-	// using g.*;
+	# link:
+	# using g.*;
 }
 
-// aliased lookup:
-// T.b;
+# aliased lookup:
+# T.b;
 
-// T -> using(g) -> h
-// it is: global.T.g.h, ...g.h
-// T.h;
-*/
+# T -> using(g) -> h
+# it is: global.T.g.h, ...g.h
+# T.h;
+}#
 
-/*
+#{
 struct T {
 	const a: Q;
 	alias x = a.x;
 }
-*/
+}#
 
 namespace X {
 	namespace Z {
 		namespace B {
-			//var s: QQ;
+			#var s: QQ;
 			const abc: T;
-			//alias c = abc.x;
+			#alias c = abc.x;
 		}
 
 		alias a = X.Z.B.abc;

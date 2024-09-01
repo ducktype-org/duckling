@@ -15,6 +15,18 @@ namespace tpc {
 		identifierDprint(ident.value, out);
 	}
 
+	void nullAwareDprint(Keyword key, std::ostream& out) {
+		out << "\"" << keywordToStr(key).str() << "\"";
+	}
+
+	void nullAwareDprint(Special spec, std::ostream& out) {
+		out << "\"" << specialToStr(spec).str() << "\"";
+	}
+
+	void nullAwareDprint(Operator op, std::ostream& out) {
+		out << "\"" << operatorToStr(op).str() << "\"";
+	}
+
 	void nullAwareDprint(OptionalIdentifier ident, std::ostream& out) {
 		if (ident.value.has_value())
 			identifierDprint(ident.value.value(), out);

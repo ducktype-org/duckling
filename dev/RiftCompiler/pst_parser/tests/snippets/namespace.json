@@ -1,15 +1,15 @@
 {
-	"PST": [
+	"Top Level": [
 		{
 			"Namespace": {
 				"name": {
 					"Name": "myspace"
 				},
 				"block": {
-					"CodeBlock": [
+					"Code Block": [
 						{
 							"Expr Stmt": {
-								"Expr": [
+								"Expression": [
 									{
 										"Identifier": "x"
 									},

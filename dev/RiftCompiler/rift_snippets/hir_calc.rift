@@ -1,4 +1,4 @@
-// Simple const calculations.
+# Simple const calculations.
 
 const D: i32 = A + (B + C);
 
@@ -22,7 +22,7 @@ namespace NN {
 		const A: i32 = D;
 	}
 	alias A = NNN.A;
-	// const Amb: i32 = A; // this is ambiguity error
+	# const Amb: i32 = A; # this is ambiguity error
 }
 
 

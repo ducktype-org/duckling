@@ -6,10 +6,10 @@ function collatz {
   local_size: 8;
 
   code: {
-    // n := argument
+    # n := argument
     mov_l64_pFuncArg   0;
 
-    // if n == 0: end
+    # if n == 0: end
     cmpEq_l64_imm      0, 0;
     jmpRelIf_label     End;
 
@@ -31,7 +31,7 @@ function main {
   local_size: 8;
 
   code: {
-    // n := input
+    # n := input
     input_l64          0;
 
     setPArg_l64        0;

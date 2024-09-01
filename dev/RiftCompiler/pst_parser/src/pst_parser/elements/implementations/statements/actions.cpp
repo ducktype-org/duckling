@@ -45,44 +45,40 @@ namespace pst {
 		return out;
 	}
 
-	namespace {
+	namespace detail {
 		void simpleActionDprint(
-			std::ostream&                          out,
-			const base::Optional<ParserRef<Expr>>& action,
-			const std::string_view                 name,
-			const std::string_view                 preposition
+			std::ostream& out, const std::string& kind, const base::Optional<ParserRef<Expr>>* expr
 		) {
-			out << R"({"Action": {)";
-			out << R"("kind": ")" << name << "\"";
-			if (action) {
-				out << ", \"" << preposition << "\": ";
-				nullAwareDprint(action.value(), out);
+			out << "{";
+			out << R"("kind": ")" << kind << "\"";
+
+			if (*expr) {
+				out << R"(, "value":)";
+				nullAwareDprint(expr->value(), out);
 			}
-			out << "}}";
+			out << "}";
 		}
 	}
 
 	void Return::dprint(std::ostream& out) const {
-		simpleActionDprint(out, expr, "Return", "with");
+		detail::simpleActionDprint(out, "Return", &expr);
 	}
 
-	void Break::dprint(std::ostream& out) const { simpleActionDprint(out, expr, "Break", "from"); }
+	void Break::dprint(std::ostream& out) const { detail::simpleActionDprint(out, "Break", &expr); }
 
 	void Continue::dprint(std::ostream& out) const {
-		simpleActionDprint(out, expr, "Continue", "with");
+		detail::simpleActionDprint(out, "Continue", &expr);
 	}
 
-	void Redo::dprint(std::ostream& out) const { simpleActionDprint(out, expr, "Redo", "what"); }
+	void Redo::dprint(std::ostream& out) const { detail::simpleActionDprint(out, "Redo", &expr); }
 
 	void Restart::dprint(std::ostream& out) const {
-		simpleActionDprint(out, expr, "Restart", "what");
+		detail::simpleActionDprint(out, "Restart", &expr);
 	}
 
-	void Defer::dprint(std::ostream& out) const { simpleActionDprint(out, expr, "Defer", "what"); }
+	void Defer::dprint(std::ostream& out) const { detail::simpleActionDprint(out, "Defer", &expr); }
 
-	void Throw::dprint(std::ostream& out) const {
-		simpleActionDprint(out, expr, "Throw", "exception");
-	}
+	void Throw::dprint(std::ostream& out) const { detail::simpleActionDprint(out, "Throw", &expr); }
 
 	void Return::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitReturn(*this); }
 

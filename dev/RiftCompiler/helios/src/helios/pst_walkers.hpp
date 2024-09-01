@@ -15,7 +15,8 @@
 namespace compiler::helios {
 	// @future: walkers for class and other stuff
 
-	using StmtList = std::vector<PstRef<pst::Stmt>>;
+	template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
+	using StmtList = std::vector<PstRef<Stmt>>;
 
 	/**
 	 * @brief Returns all children statements of given RiftElement
@@ -27,6 +28,13 @@ namespace compiler::helios {
 	 *
 	 * @return StmtList
 	 */
-	StmtList getChildStmtsOf(PstRef<pst::RiftElement>);
+	StmtList<> getChildStmtsOf(PstRef<pst::RiftElement>);
 
+	/**
+	 * @brief Returns all children statements of given ClassStmt
+	 * Flattens access specifier blocks as their information is included in statements.
+	 *
+	 * @return StmtList
+	 */
+	StmtList<pst::ClassStmt> getChildStmtsOfClass(PstRef<pst::RiftElement>);
 }

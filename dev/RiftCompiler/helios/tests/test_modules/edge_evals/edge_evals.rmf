@@ -2,9 +2,9 @@
 const M1: i32 = 10 / 2 / 5;
 const M2: i32 = 120 / 5 / 4;
 
-// This does not parse well.
-// const M3: i32 = 1 * -1;
-// const M5
+# This does not parse well.
+# const M3: i32 = 1 * -1;
+# const M5
 
 namespace NS1 {
     namespace NS2 {

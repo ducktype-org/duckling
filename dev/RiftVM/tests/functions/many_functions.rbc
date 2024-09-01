@@ -1,6 +1,6 @@
-// Test check's if we can call two nested functions.
-// Also if the stacks are seperate.
-// output = input + 1110
+# Test check's if we can call two nested functions.
+# Also if the stacks are seperate.
+# output = input + 1110
 
 function add1000 {
 	arg_size: 0;

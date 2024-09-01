@@ -42,7 +42,7 @@ namespace pst {
 	}
 
 	void Const::dprint(std::ostream& out) const {
-		out << "{\"Const\": {";
+		out << "{";
 
 		out << R"("name": )";
 		nullAwareDprint(name, out);
@@ -50,7 +50,7 @@ namespace pst {
 		nullAwareDprint(type, out);
 		out << R"(, "value": )";
 		nullAwareDprint(value, out);
-		out << "}}";
+		out << "}";
 	}
 
 	void Const::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitConst(*this); }

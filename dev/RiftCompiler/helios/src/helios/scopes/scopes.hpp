@@ -17,8 +17,6 @@
 #include <frontend/module_tree/queries.hpp>
 
 namespace compiler::helios {
-	using StmtList = std::vector<PstRef<pst::Stmt>>;
-
 	/**
 	 * @brief Return parent scope or none for root-scopes.
 	 */

@@ -13,4 +13,4 @@ struct T {
 }
 
 var t: T;
-// t.z; dealias to t.x.z
+# t.z; dealias to t.x.z
