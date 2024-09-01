@@ -13,16 +13,16 @@ public:
 		std::string res;
 
 		res = base::strConcat("aBd", 1, 5, true, "Inny string");
-		assert(res == "aBd15trueInny string", "strConcat returned answer other than expected");
+		assertTrue(res == "aBd15trueInny string", "strConcat returned answer other than expected");
 
 		res = base::strConcat();
-		assert(res == "", "strConcat returned answer other than expected");
+		assertTrue(res == "", "strConcat returned answer other than expected");
 
 		res = base::strConcat("", "", "");
-		assert(res == "", "strConcat returned answer other than expected");
+		assertTrue(res == "", "strConcat returned answer other than expected");
 
 		res = base::strConcat(1, -87, 123'456'789ull);
-		assert(res == "1-87123456789", "strConcat returned answer other than expected");
+		assertTrue(res == "1-87123456789", "strConcat returned answer other than expected");
 
 		assertThrows<std::domain_error>(
 			[]() { base::strConcat("abacabadaba", nullptr); },

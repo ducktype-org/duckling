@@ -36,7 +36,6 @@ include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureTests.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureGlobalCleanTargets.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureModules.cmake)
 
-
 # The first test is building tests.
 add_custom_test_pack(base)
 add_custom_test_pack(common)
@@ -44,6 +43,7 @@ add_custom_test_pack(compiler)
 
 # Dependencies
 add_subdirectory(dependencies)
+insertLLVM()
 
 # Source:
 add_subdirectory(base)

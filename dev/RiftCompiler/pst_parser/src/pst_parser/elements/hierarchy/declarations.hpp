@@ -136,6 +136,10 @@ namespace pst {
 			return "Class";
 		}
 
+		bool isStatementAggregate() const override {
+			return true;
+		}
+
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 

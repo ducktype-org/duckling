@@ -1,6 +1,8 @@
 /**
  * @file tester.hpp
  * @author Andrzej
+ *
+ * @example tester_example.cpp
  */
 
 #pragma once
@@ -11,29 +13,8 @@
 #include <string>
 #include <printer/stream_printer.hpp>
 
-// @TODO: error message here is weird:
 
-#define ASSERT_EQUAL(expected, actual)         \
-	assertEqual(                               \
-		expected,                              \
-		actual,                                \
-		base::strConcat(                       \
-			"Values not equal:\n\t\tIn line ", \
-			__LINE__,                          \
-			": ",                              \
-			expected,                          \
-			" != ",                            \
-			#actual,                           \
-			"\n\t\tExpected:\t",               \
-			expected,                          \
-			"\n\t\tFound:  \t",                \
-			actual,                            \
-			" == ",                            \
-			#actual                            \
-		)                                      \
-	)
-
-#define ASSERT_EQUAL_NO_PRINT(expected, actual)                                           \
+#define ASSERT_EQUAL(expected, actual)                                                    \
 	assertEqual(                                                                          \
 		expected,                                                                         \
 		actual,                                                                           \
@@ -41,6 +22,9 @@
 			"Values not equal:\n\t\tIn line ", __LINE__, ": ", #expected, " != ", #actual \
 		)                                                                                 \
 	)
+
+
+#define ASSERT_TRUE(actual) ASSERT_EQUAL(true, actual)
 
 
 class SimpleTesterTest;
@@ -51,7 +35,7 @@ namespace tester {
 		friend SimpleTesterTest;
 
 	protected:
-		typedef void (TestSuite::*TestType)();
+		using TestType = void (TestSuite::*)();
 
 	private:
 		class CritTestError: public std::exception {
@@ -98,7 +82,7 @@ namespace tester {
 		virtual ~TestSuite() = default;
 		void addTest(TestType test, std::string_view test_name);
 
-		void assert(bool v, std::string_view err, bool critical = true);
+		void assertTrue(bool v, std::string_view err, bool critical = true);
 		void fail(std::string_view err);
 		void message(std::string_view mess);
 
@@ -115,7 +99,7 @@ namespace tester {
 		// rvalue reference to make sure the order is correct for the macro above.
 		template<class T, class U>
 		void assertEqual(const T& expected, const U& actual, std::string_view error) {
-			assert(expected == actual, error);
+			assertTrue(expected == actual, error);
 		}
 	};
 

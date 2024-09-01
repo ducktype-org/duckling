@@ -13,8 +13,8 @@ public:
 		using base::EmptyFlag;
 		using base::FlagType;
 		FlagType empty_flag;
-		assert(empty_flag == EmptyFlag, "empty flag is not empty 1");
-		assert(!empty_flag.contains(FlagType(1)), "empty flag is not empty 2");
+		ASSERT_EQUAL(empty_flag, EmptyFlag);
+		ASSERT_TRUE(!empty_flag.contains(FlagType(1)));
 
 		FlagType flag_123 = FlagType(1) | FlagType(2) | FlagType(3);
 
@@ -23,19 +23,19 @@ public:
 		flag_123_oth |= FlagType(2);
 		flag_123_oth |= FlagType(3);
 
-		assert(flag_123_oth == flag_123, "123 != 123");
+		ASSERT_EQUAL(flag_123_oth, flag_123);
 
-		assert(flag_123.contains(FlagType(1)), "123 does not contains 1");
-		assert(flag_123.contains(FlagType(2)), "123 does not contains 2");
-		assert(flag_123.contains(FlagType(3)), "123 does not contains 3");
+		ASSERT_TRUE(flag_123.contains(FlagType(1)));
+		ASSERT_TRUE(flag_123.contains(FlagType(2)));
+		ASSERT_TRUE(flag_123.contains(FlagType(3)));
 
-		assert(flag_123.contains(FlagType(1) | FlagType(2)), "123 does not contains 12");
-		assert(flag_123.contains(FlagType(1) | FlagType(3)), "123 does not contains 13");
-		assert(flag_123.contains(FlagType(2) | FlagType(3)), "123 does not contains 23");
+		ASSERT_TRUE(flag_123.contains(FlagType(1) | FlagType(2)));
+		ASSERT_TRUE(flag_123.contains(FlagType(1) | FlagType(3)));
+		ASSERT_TRUE(flag_123.contains(FlagType(2) | FlagType(3)));
 
-		assert(!flag_123.contains(FlagType(4)), "123 contains 4");
-		assert(!flag_123.contains(FlagType(5)), "123 contains 5");
-		assert(!flag_123.contains(FlagType(1) | FlagType(4)), "123 contains 14");
+		ASSERT_TRUE(!flag_123.contains(FlagType(4)));
+		ASSERT_TRUE(!flag_123.contains(FlagType(5)));
+		ASSERT_TRUE(!flag_123.contains(FlagType(1) | FlagType(4)));
 	}
 };
 

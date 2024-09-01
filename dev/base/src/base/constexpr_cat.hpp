@@ -4,8 +4,19 @@
  *
  * @note For a char sequence to work it needs constexpr size() and data() methods.
  *
- * @date 2024-03-28
+ * Constexpr cat implements a way to concatenate strings during compile time.
+ * Is is extremely specific and strange, and should not be used under standard
+ * circumstances.
  *
+ * @note It is currently only used by Json library.
+ * @note For concatenation at runtime use `base::strConcat`
+ *
+ * Usage:
+ * @include constexpr_cat_example.cpp
+ *
+ * @example constexpr_cat_example.cpp
+ *
+ * @date 2024-03-28
  */
 #pragma once
 

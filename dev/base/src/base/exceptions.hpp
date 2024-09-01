@@ -1,3 +1,14 @@
+/**
+ * @file exceptions.hpp
+ *
+ * @brief Exceptions is simple extension of standard C++ exception system.
+ * It should be used everywhere.
+ *
+ * All exception created by us should inherit from `base::Exception`.
+ * Additionally this module provides `base::Panic` exception, and `RIFT_ASSERT`,
+ * and `RIFT_PANIC` macro, that should be used instead of things like `<cassert>`.
+ */
+
 #pragma once
 
 #include <exception>

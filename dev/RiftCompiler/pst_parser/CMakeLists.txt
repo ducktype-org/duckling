@@ -9,6 +9,12 @@ file(GLOB ElementImplementationFiles CONFIGURE_DEPENDS
 add_library(PstParser
 	src/pst_parser/parser.cpp
 	src/pst_parser/rift_parser_base.cpp
+	
+	# LSP files are commented out for merge purposes:
+	# src/pst_parser/lsp_elements/lsp_elements.cpp
+	# src/pst_parser/lsp_elements/lsp_constructors.cpp
+
+
 	${ElementImplementationFiles}
 	src/pst_parser/pst_visitor.hpp
 )

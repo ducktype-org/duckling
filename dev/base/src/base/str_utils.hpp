@@ -1,6 +1,18 @@
 /**
  * @file str_utils.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
+ * @brief Provides a convenient set of utilities for concatenating string of various
+ * representations into one, splitting strings, and replacing strings.
+ *
+ * Functionalities:
+ * - `strConcat`
+ * - `strSplit`
+ * - `strReplaceAll`
+ *
+ * ### Usage
+ * @include str_utils_example.cpp
+ *
+ * @example str_utils_example.cpp
  */
 #pragma once
 
@@ -91,5 +103,6 @@ namespace base {
 	 * @param delimiter A string, that is used to separate the substrings.
 	 * @return A vector of separated strings.
 	 */
-	std::vector<std::string> strSplit(const std::string& str, const std::string& delimiter = " ");
+	std::vector<std::string>
+		strSplit(const std::string_view str, const std::string& delimiter = " ");
 }

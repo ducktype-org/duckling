@@ -36,39 +36,41 @@ private:
 	};
 
 	void testBasicStructure() {
-		assert(td->getTokenData().tokens.size() == 8, "Wrong amount of top-level token groups");
+		assertTrue(td->getTokenData().tokens.size() == 8, "Wrong amount of top-level token groups");
 	}
 
 	void checkTokenIsBracketGroup(usize index) {
-		assert(td->getTokenData().tokens[index].isBracketGroup(), "Token is not a bracket group");
+		assertTrue(
+			td->getTokenData().tokens[index].isBracketGroup(), "Token is not a bracket group"
+		);
 	}
 
 	void testGroup0() {
 		checkTokenIsBracketGroup(0);
 		const auto& inner_tokens = td->getTokenData().tokens[0].getRecursive();
 
-		assert(
+		assertTrue(
 			inner_tokens.size() == 3,
 			"Expected 3 tokens, got " + std::to_string(inner_tokens.size())
 		);
 
-		assert(
+		assertTrue(
 			inner_tokens[0].isBracketGroup(lexer::Token::BracketType::Round),
 			"First token is not a round bracket group"
 		);
 
-		assert(
+		assertTrue(
 			inner_tokens[1].isBracketGroup(lexer::Token::BracketType::Square),
 			"Second token is not a square bracket group"
 		);
 
-		assert(
+		assertTrue(
 			inner_tokens[2].isBracketGroup(lexer::Token::BracketType::Curly),
 			"Third token is not a curly bracket group"
 		);
 
 		for (usize i = 0; i < 3; i++) {
-			assert(
+			assertTrue(
 				inner_tokens[i].getRecursive().empty(),
 				"Group " + std::to_string(i) + " is not empty"
 			);
@@ -81,13 +83,13 @@ private:
 		auto& inner_tokens = td->getTokenData().tokens[index].getRecursive();
 		message("got " + std::to_string(inner_tokens.size()) + " tokens");
 		for (const auto& token: inner_tokens) {
-			assert(
+			assertTrue(
 				token.getType() == token_type,
 				std::string("Type of token `") + std::string(token.getStrValue()) + "` is not a "
 					+ std::string(group_names[index]),
 				false
 			);
-			assert(
+			assertTrue(
 				(token.*isTokenType)(),
 				std::string("Token `") + std::string(token.getStrValue()) + "` is not a "
 					+ std::string(group_names[index]),
@@ -125,10 +127,10 @@ private:
 	void testSourcePosition() {
 		const auto& position = td->getTokenData().tokens[1].getRecursive().front().getPosition();
 		auto [line, column]  = position.getStartLineColumn();
-		assert(line == 5, "Wrong line number");
-		assert(column == 2, "Wrong column");
-		assert(position.getStart() == 15, "Wrong start index");
-		assert(position.getEnd() == 19, "Wrong end index");
+		ASSERT_EQUAL(line, 5);
+		ASSERT_EQUAL(column, 2);
+		ASSERT_EQUAL(position.getStart(), 15);
+		ASSERT_EQUAL(position.getEnd(), 19);
 	}
 };
 

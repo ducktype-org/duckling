@@ -82,7 +82,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 	template<typename Element, bool good>
 	void testExample(Example<Element, good>& example) {
-		assert(example(), example.message());
+		assertTrue(example(), example.message());
 	}
 
 	Example<pst::Alias, true>  simpleAlias{ "alias sqrt=std.math.sqrt" };
@@ -184,7 +184,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::While, true> simpleWhile{ "while (x < 5) {}" };
 
 	void exampleTests() {
-		for (auto e: examples) assert((*e)(), e->message());
+		for (auto e: examples) assertTrue((*e)(), e->message());
 	}
 
 public:

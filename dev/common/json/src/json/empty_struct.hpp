@@ -1,38 +1,16 @@
 #pragma once
 
-#include <json_struct/json_struct.h>
+#include <nlohmann/json.hpp>
+#include "type_parse.hpp"
+#include <base/exceptions.hpp>
 
-namespace JS {
-	template<class T>
-	struct IsEmptySerialization {
-		static constexpr const bool value = false;
-	};
-}
-
-namespace JS {
-	template<>
-	struct IsEmptySerialization<void> {
-		static constexpr const bool value = false;
-	};
-}
-
-#define JS_EMPTY(T)                                                                          \
-	namespace JS {                                                                           \
-		template<>                                                                           \
-		class TypeHandler<T> {                                                               \
-		public:                                                                              \
-			static inline Error                                                              \
-				to([[maybe_unused]] T& to, [[maybe_unused]] ParseContext& context) {         \
-				return Error::NoError;                                                       \
-			}                                                                                \
-                                                                                             \
-			static void                                                                      \
-				from([[maybe_unused]] const T& from, Token& token, Serializer& serializer) { \
-				impl::emptyObject(token, serializer);                                        \
-			}                                                                                \
-		};                                                                                   \
-		template<>                                                                           \
-		struct IsEmptySerialization<T> {                                                     \
-			static constexpr const bool value = true;                                        \
-		};                                                                                   \
+template<class T>
+requires std::is_empty_v<T> struct nlohmann::adl_serializer<T> {
+	static void to_json(json& j, const T&) {
+		j["type"] = std::string(TypeParseTraits<T>::name.data());
 	}
+
+	static void from_json(const json&, T&) {
+		RIFT_PANIC("Parsing data from JSON into empty struct is not supported (yet).");
+	}
+};

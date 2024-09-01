@@ -199,6 +199,12 @@ namespace pst {
 		}
 
 		[[nodiscard]]
+		ParserCBorrowRef<Expr> getType() const {
+			return type.borrow();
+		}
+
+
+		[[nodiscard]]
 		bool isDeclaration() const override {
 			return true;
 		}

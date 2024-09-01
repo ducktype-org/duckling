@@ -1,6 +1,9 @@
 /**
  * @file clap_class.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
+ * @brief This is a declaration of a class clap::Clap
+ * with some template definitions.
+ * @example clap_example_cat.cpp
  */
 
 #pragma once

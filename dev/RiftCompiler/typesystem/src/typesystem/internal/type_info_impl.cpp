@@ -13,20 +13,6 @@ namespace ts::internal {
 	}
 
 	/**
-	 * @brief Creates a human-readable string representation of a vector of types.
-	 * @param types Vector of types to stringify.
-	 * @return A human-readable string representing a sequence of types.
-	 * @todo Remove when all types stop using TypeDesc for member types.
-	 */
-	std::string stringifyTypeVector(const std::vector<TypeDesc<>>& types) {
-		std::string res = "(";
-		for (const auto& t: types) res += t.getType().toString() + ",";
-		res += ")";
-
-		return res;
-	}
-
-	/**
 	 * @brief Creates a human-readable string representation of a vector of component types.
 	 * @param types Vector of component types to stringify.
 	 * @return A human-readable string representing a sequence of component types.

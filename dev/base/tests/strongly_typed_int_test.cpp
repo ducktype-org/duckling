@@ -13,30 +13,30 @@ public:
 
 	void stronglyTypedInt() {
 		Meters m(0);
-		assert(i64(m) == 0, "Basic math failed (1)");
-		assert(m == Meters(0), "Basic math failed (2)");
+		assertTrue(i64(m) == 0, "Basic math failed (1)");
+		assertTrue(m == Meters(0), "Basic math failed (2)");
 
 		Meters m1(2);
 		Meters m2 = m + m1;
-		assert(m2 == Meters(2), "Basic math failed (3)");
-		assert(-m2 == Meters(-2), "Basic math failed (4)");
-		assert(+(-m2) == Meters(-2), "Basic math failed (5)");
-		assert(m2 != Meters(1), "Basic math failed (6)");
-		assert(m2 > Meters(0), "Basic math failed (7)");
-		assert(m2 > Meters(1), "Basic math failed (8)");
-		assert(m2 >= Meters(2), "Basic math failed (9)");
-		assert(m2 <= Meters(2), "Basic math failed (10)");
-		assert(m2 < Meters(3), "Basic math failed (11)");
-		assert(m2 < Meters(10), "Basic math failed (12)");
+		assertTrue(m2 == Meters(2), "Basic math failed (3)");
+		assertTrue(-m2 == Meters(-2), "Basic math failed (4)");
+		assertTrue(+(-m2) == Meters(-2), "Basic math failed (5)");
+		assertTrue(m2 != Meters(1), "Basic math failed (6)");
+		assertTrue(m2 > Meters(0), "Basic math failed (7)");
+		assertTrue(m2 > Meters(1), "Basic math failed (8)");
+		assertTrue(m2 >= Meters(2), "Basic math failed (9)");
+		assertTrue(m2 <= Meters(2), "Basic math failed (10)");
+		assertTrue(m2 < Meters(3), "Basic math failed (11)");
+		assertTrue(m2 < Meters(10), "Basic math failed (12)");
 
-		assert(m2 - Meters(10) == Meters(-8), "Basic math failed (13)");
-		assert(m2 * 2 == Meters(4), "Basic math failed (14)");
-		assert(m2 / 2 == Meters(1), "Basic math failed (15)");
+		assertTrue(m2 - Meters(10) == Meters(-8), "Basic math failed (13)");
+		assertTrue(m2 * 2 == Meters(4), "Basic math failed (14)");
+		assertTrue(m2 / 2 == Meters(1), "Basic math failed (15)");
 
 		m2 += Meters(10);
-		assert(m2 == Meters(12), "Basic math failed (16)");
+		assertTrue(m2 == Meters(12), "Basic math failed (16)");
 		m2 -= Meters(20);
-		assert(m2 == Meters(-8), "Basic math failed (17)");
+		assertTrue(m2 == Meters(-8), "Basic math failed (17)");
 	}
 
 	~StronglyTypedIntTest() override = default;
