@@ -60,7 +60,7 @@ class InternetFile:
                             sys.stdout.write(f"\r{self.path}: {written_mib_padded}/{total_length_mib} MiB")
                             sys.stdout.flush()
 
-                    if total_length is not None:
+                    if display_progress_bar:
                         sys.stdout.write('\n')
                         sys.stdout.flush()
 
