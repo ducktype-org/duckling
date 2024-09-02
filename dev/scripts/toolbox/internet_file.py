@@ -4,7 +4,7 @@ import pathlib
 import sys
 
 import requests
-from math import log10, ceil
+from math import log10, floor
 
 from scripts.toolbox.helpers import bash_command, exit_with_error, log_info
 
@@ -38,11 +38,15 @@ class InternetFile:
 
                     if display_progress_bar:
                         total_length_mib = bytes_to_mib(total_length)
+
                         # This is a special python format string, so we can add
                         # padding with spaces: {:>X}, where X is the amount of
                         # space which will be occupied (spaces + content), and it
                         # will be aligned to the right (>).
-                        written_format_base = '{:>' + str(ceil(log10((total_length_mib))) + 3) + '}'
+                        #
+                        # floor(log10(x)) is for counting decimal digits and '+3' is leaving
+                        # space for '.XY'.
+                        written_format_base = '{:>' + str(floor(log10((total_length_mib))) + 3) + '}'
                     else:
                         log_info(f"Cannot display a progress bar during downloading of {self.path}...")
 
