@@ -1,8 +1,10 @@
 import http
 import http.client
 import pathlib
+import sys
 
 import requests
+from math import log10, floor
 
 from scripts.toolbox.helpers import bash_command, exit_with_error, log_info
 
@@ -28,8 +30,45 @@ class InternetFile:
                     )
 
                 with open(self.path, "wb") as f:
+                    total_length = int(res.headers.get('content-length'))
+                    total_length_mib = None
+                    written_format_base = None
+                    display_progress_bar = total_length is not None  # content length header exists
+                    bytes_to_mib = lambda x: round(x / 1024 / 1024, 2)
+
+                    if display_progress_bar:
+                        total_length_mib = bytes_to_mib(total_length)
+
+                        # This is a special python format string, so we can add
+                        # padding with spaces: {:>X}, where X is the amount of
+                        # space which will be occupied (spaces + content), and it
+                        # will be aligned to the right (>).
+                        #
+                        # floor(log10(x)) is for counting decimal digits and '+3' is leaving
+                        # space for '.XY'.
+                        written_format_base = '{:>' + str(floor(log10((total_length_mib))) + 3) + '}'
+                    else:
+                        log_info(f"Cannot display a progress bar during downloading of {self.path}...")
+
+
+                    written = 0
                     for chunk in res.iter_content(chunk_size=8192):
                         f.write(chunk)
+
+                        if display_progress_bar:
+                            written += len(chunk)
+                            written_mib = bytes_to_mib(written)
+                            written_mib_padded = written_format_base.format(written_mib)
+
+                            # Force a carriage return and rewrite the line
+                            sys.stdout.write(f"\r{self.path}: {written_mib_padded}/{total_length_mib} MiB")
+                            sys.stdout.flush()
+
+                    if display_progress_bar:
+                        sys.stdout.write('\n')
+                        sys.stdout.flush()
+
+
                 log_info(f"Done downloading {self.path} from {self.resource_url}")
 
                 for callback in self.after_download_callbacks:
@@ -38,7 +77,7 @@ class InternetFile:
             except requests.exceptions.HTTPError as e:
                 exit_with_error(e)
         else:
-            log_info(f"File {self.path} already exits. Skiped.")
+            log_info(f"File {self.path} already exits. Skipped.")
 
 
 def callback_unTAR(res: InternetFile):
