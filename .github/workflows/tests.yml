@@ -118,6 +118,10 @@ jobs:
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
       # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
+      # This step deletes all the cache entries that are related to this branch,
+      # and it is done in this moment in the script, right after building, because
+      # upload of the current build happens after everything
+      # else has finished, so there will be a cache entry ready for pulling.
       - name: Cleanup previous Cache entries for this branch
         run: |
           gh extension install actions/gh-actions-cache
@@ -136,9 +140,8 @@ jobs:
           done
           echo "Done"
         env:
-          GH_TOKEN: ${{ secrets.QUACKER_PAT }}
+          GH_TOKEN: ${{ secrets.QUACKER_PAT }}  # This env variable is used by GH tool.
           REPO: ${{ github.repository }}
-          BRANCH: refs/pull/${{ github.event.pull_request.number }}/merge
 
   coverage:
     needs: [build]
