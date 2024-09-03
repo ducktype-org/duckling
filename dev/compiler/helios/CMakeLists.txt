@@ -11,5 +11,5 @@ add_library(HELIOS
 
 make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystem)
 
-duckling_add_test(compiler helios_test tests/helios_tests.cpp
+cmake_add_test(compiler helios_test tests/helios_tests.cpp
 	USES Base TypeSystem PstParser HELIOS)

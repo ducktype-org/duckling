@@ -6,7 +6,7 @@ add_library(Operations
 
 make_module(Operations USES TypeSystem Exec Base)
 
-duckling_add_test(compiler operations_test_simple tests/simple_test.cpp
+cmake_add_test(compiler operations_test_simple tests/simple_test.cpp
 	USES Base Clap Operations TypeSystem)
-duckling_add_test(compiler operation_constructor tests/constructors_test.cpp
+cmake_add_test(compiler operation_constructor tests/constructors_test.cpp
 	USES Base Clap Operations TypeSystem)

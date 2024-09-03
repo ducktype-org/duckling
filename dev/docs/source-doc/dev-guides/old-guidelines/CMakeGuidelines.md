@@ -13,7 +13,7 @@ add_library(ModuleName
 make_module(ModuleName USES Module1 Module2 ... [INCLUDE path/to/directory1 path/to/directory2])
 
 # Add tests:
-duckling_add_test(TARGET simple_test path_to_test.cpp
+cmake_add_test(TARGET simple_test path_to_test.cpp
 	USES Module1 Module2 ...)  
 where $TARGET \in \{common, compiler, vm\}$
 

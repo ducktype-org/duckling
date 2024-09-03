@@ -6,7 +6,7 @@ else ()
     message(STATUS "VTune not found, skipping profiler target generation")
 endif ()
 
-function(duckling_add_perf_test test_pack test_name source USES)
+function(cmake_add_perf_test test_pack test_name source USES)
     if (${USES} STREQUAL "USES")
         set(EXEC "prof_${test_name}")
         add_executable(${EXEC} ${CMAKE_CURRENT_LIST_DIR}/${source})
@@ -34,17 +34,17 @@ function(duckling_add_perf_test test_pack test_name source USES)
         set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL true)
         set_target_properties(${target_name} PROPERTIES EXCLUDE_FROM_ALL true)
     else ()
-        message(FATAL_ERROR "duckling_add_perf_test lacks uses clause")
+        message(FATAL_ERROR "cmake_add_perf_test lacks uses clause")
     endif ()
 endfunction()
 
 if (PROFILE)
     add_custom_target("profile_all")
 
-    duckling_add_perf_test(vm vm_fib_rec fib_rec.cpp
+    cmake_add_perf_test(vm vm_fib_rec fib_rec.cpp
             USES LibVm Tester)
-    duckling_add_perf_test(vm vm_collatz collatz.cpp
+    cmake_add_perf_test(vm vm_collatz collatz.cpp
             USES LibVm Tester)
-    duckling_add_perf_test(vm vm_ackermann ackermann.cpp
+    cmake_add_perf_test(vm vm_ackermann ackermann.cpp
             USES LibVm Tester)
 endif ()

@@ -9,9 +9,9 @@ add_library(Lexer
 
 make_module(Lexer USES Filesystem Printer DucklingDefinitions unicode Result::Result Diagnostic)
 
-duckling_add_test(common lexer_test_simple tests/test.cpp
+cmake_add_test(common lexer_test_simple tests/test.cpp
 	USES Lexer DucklingDefinitions)
-duckling_add_test(common token_test_position tests/token_position_test.cpp
+cmake_add_test(common token_test_position tests/token_position_test.cpp
 	USES Lexer DucklingDefinitions)
-duckling_add_test(common lexer_test_decode tests/decode_test.cpp
+cmake_add_test(common lexer_test_decode tests/decode_test.cpp
 	USES Lexer DucklingDefinitions)

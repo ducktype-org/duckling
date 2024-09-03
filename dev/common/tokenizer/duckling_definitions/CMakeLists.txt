@@ -5,5 +5,5 @@ add_library(DucklingDefinitions
 
 make_module(DucklingDefinitions USES Base)
 
-duckling_add_test(common duckling_def_test_simple tests/test.cpp
+cmake_add_test(common duckling_def_test_simple tests/test.cpp
 	USES DucklingDefinitions)

@@ -13,6 +13,6 @@ add_library(TypeSystem
 # @FIXME: adding HELIOS dependency for SymID introduces cyclic dependency (but everything compiles).
 make_module(TypeSystem USES Base HELIOS QueryFramework)
 
-duckling_add_test(compiler typesystem_test_simple tests/simple_test.cpp USES TypeSystem)
+cmake_add_test(compiler typesystem_test_simple tests/simple_test.cpp USES TypeSystem)
 
-duckling_add_test(compiler typesystem_test_error tests/error_test.cpp USES TypeSystem)
+cmake_add_test(compiler typesystem_test_error tests/error_test.cpp USES TypeSystem)

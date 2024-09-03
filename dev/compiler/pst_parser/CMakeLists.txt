@@ -14,9 +14,9 @@ add_library(PstParser
 
 make_module(PstParser USES Lexer Printer TPC)
 
-duckling_add_test(compiler parser_test_simple tests/test.cpp
+cmake_add_test(compiler parser_test_simple tests/test.cpp
 	USES PstParser)
-duckling_add_test(compiler parser_test_builder tests/builder_tests.cpp
+cmake_add_test(compiler parser_test_builder tests/builder_tests.cpp
 	USES PstParser)
-duckling_add_test(compiler parser_test_errors tests/error_tests.cpp
+cmake_add_test(compiler parser_test_errors tests/error_tests.cpp
 	USES PstParser)
