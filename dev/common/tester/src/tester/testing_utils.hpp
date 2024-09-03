@@ -24,7 +24,7 @@ namespace testing_utils {
 			j = nextChar(s2, j + 1);
 
 			if (i == s1.size() && j == s2.size()) return true;
-			if (i == s1.size() && j == s2.size()) return false;
+			if (i == s1.size() || j == s2.size()) return false;
 			if (s1[i] != s2[j]) return false;
 		}
 
