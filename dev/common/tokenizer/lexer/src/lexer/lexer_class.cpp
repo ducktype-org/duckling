@@ -237,7 +237,7 @@ namespace lexer {
 		usize end{};
 		auto  sourceStart = currentPosition();
 
-		skip(2);  // "//"
+		skip(1);  // "#"
 		while (true) {
 			if (isEOF()) {
 				end = where - 1;
@@ -262,7 +262,7 @@ namespace lexer {
 		auto                sourceStart = currentPosition();
 		dia::SourcePosition opening(sourceStart, begin + 1);
 
-		skip(2);  // "/*"
+		skip(2);  // "#{"
 		while (true) {
 			if (isEOF()) {
 				logger.log(base::make_unique<UnclosedCommentError>(opening));
@@ -482,11 +482,11 @@ namespace lexer {
 
 	bool Lexer::isEOL() const { return peek().is(Class::newline); }
 
-	bool Lexer::isCommentBegin() const { return tryRawValue('/') && tryRawValue('/', 1); }
+	bool Lexer::isCommentBegin() const { return tryRawValue('#'); }
 
-	bool Lexer::isBlockCommentBegin() const { return tryRawValue('/') && tryRawValue('*', 1); }
+	bool Lexer::isBlockCommentBegin() const { return tryRawValue('#') && tryRawValue('{', 1); }
 
-	bool Lexer::isBlockCommentEnd() const { return tryRawValue('*') && tryRawValue('/', 1); }
+	bool Lexer::isBlockCommentEnd() const { return tryRawValue('}') && tryRawValue('#', 1); }
 
 	bool Lexer::isStringBegin() const { return tryRawValue('"'); }
 

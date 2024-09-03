@@ -3,52 +3,52 @@ function collatz {
 	arg_size: 0;
 	ret_size: 0;
 
-	// n - 0
-	// j - 8
-	// tmp1 - 16
+	# n - 0
+	# j - 8
+	# tmp1 - 16
 	local_size: 24;
 
 	code: {
 
-		// n := argument
+		# n := argument
 		mov_l64_pFuncArg      0;
 
-		// j := 0
+		# j := 0
 		mov_l64_imm           8, 0;
 
-		// if n == 1: end
+		# if n == 1: end
 		cmpEq_l64_imm         0, 1;
 		jmpRelIf_label        End;
 
-		// do-while (n != 1):
+		# do-while (n != 1):
 		label WhileNneq0;
 
-			// if n % 2 == 0:
+			# if n % 2 == 0:
 			
-			// if condition:
-				// tmp := n
+			# if condition:
+				# tmp := n
 				mov_l64_l64          16, 0;
-				// tmp %= 2
+				# tmp %= 2
 				mod_l64_imm          16, 2;
 				cmpEq_l64_imm        16, 0;
 				jmpRelIf_label       else;
 
-			// if code:
-				// n = 3n + 1;
+			# if code:
+				# n = 3n + 1;
 				mul_l64_imm		     0, 3;
 				add_l64_imm          0, 1;
 				jmpRel_label         afterIf;
 			
-			// else 
+			# else 
 				label else;
 
-				// else code:
-					// n = n / 2
+				# else code:
+					# n = n / 2
 					div_l64_imm  0, 2;
 				
 			label afterIf;
 
-			// if n > j: // j := n
+			# if n > j: # j := n
 			cmpG_l64_l64     0, 8;
 			cmov_l64_l64     8, 0;
 
@@ -57,7 +57,7 @@ function collatz {
 
 		label End;
 
-		// return j
+		# return j
 		ret_l64 8;
 	}
 }
@@ -67,44 +67,44 @@ function main {
 	arg_size: 0;
 	ret_size: 0;
 
-	// x - 0
-	// s - 8
-	// i - 16
-	// tmp - 24
+	# x - 0
+	# s - 8
+	# i - 16
+	# tmp - 24
 	local_size: 32;
 
 	code: {
-		// x := input
+		# x := input
 		input_l64       0;
 
-		// s := 0
+		# s := 0
 		mov_l64_imm     8, 0;
 
-		// i := 1
+		# i := 1
 		mov_l64_imm     16, 1;
 
-		// do-for (x > i; i++)
+		# do-for (x > i; i++)
 		label Loop;
-			// output_l64         16;
+			# output_l64         16;
 
-			// tmp := collatz(i)
+			# tmp := collatz(i)
 			setPArg_l64        16;
 			call_func          0;
 			mov_l64_r0         24;
 
-			// if tmp > s:
+			# if tmp > s:
 			cmpG_l64_l64       24, 8;
 			jmpRelNotIf_label  EndIF;
 				mov_l64_l64    8, 24;
 
 			label EndIF;
 
-			// i++;
+			# i++;
 			add_l64_imm      16, 1;
 
-			// output_l64       0;
-			// output_l64       16;
-			// if x > i : end
+			# output_l64       0;
+			# output_l64       16;
+			# if x > i : end
 			cmpG_l64_l64     0, 16;
 			jmpRelIf_label   Loop;
 

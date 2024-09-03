@@ -1,21 +1,21 @@
 {
-	"PST": [
+	"Top Level": [
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
-					"List": [
+				"parameters": {
+					"function parameter list": [
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "a"
 								},
 							]
 						},
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "b"
 								},
@@ -23,23 +23,23 @@
 						},
 					]
 				},
-				"rets": "<nullptr>",
+				"return": "<nullptr>",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}
 		},
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
-					"List": [
+				"parameters": {
+					"function parameter list": [
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "a"
 								},
@@ -52,7 +52,7 @@
 							]
 						},
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "b"
 								},
@@ -60,30 +60,30 @@
 						},
 					]
 				},
-				"rets": "<nullptr>",
+				"return": "<nullptr>",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}
 		},
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
-					"List": [
+				"parameters": {
+					"function parameter list": [
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "a"
 								},
 							]
 						},
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "b"
 								},
@@ -97,23 +97,23 @@
 						},
 					]
 				},
-				"rets": "<nullptr>",
+				"return": "<nullptr>",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}
 		},
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
-					"List": [
+				"parameters": {
+					"function parameter list": [
 						{
-							"Expr": [
+							"Expression": [
 								{
 									"Identifier": "a"
 								},
@@ -121,10 +121,10 @@
 						},
 					]
 				},
-				"rets": "<nullptr>",
+				"return": "<nullptr>",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}

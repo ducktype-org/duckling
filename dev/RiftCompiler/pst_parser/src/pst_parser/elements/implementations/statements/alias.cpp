@@ -32,7 +32,7 @@ namespace pst {
 	}
 
 	void Alias::dprint(std::ostream& out) const {
-		out << "{\"Alias\": {";
+		out << "{";
 
 		out << strConcat(R"("name": ")", name.value, R"(",)");
 
@@ -40,7 +40,7 @@ namespace pst {
 
 		nullAwareDprint(points_to, out);
 
-		out << "}}";
+		out << "}";
 	}
 
 	void Alias::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAlias(*this); }

@@ -1,10 +1,10 @@
 {
-	"PST": [
+	"Top Level": [
 		{
 			"Using": {
-				"DottedName": {
-					"star" : "false",
-					"names" : [
+				"Dotted Name": {
+					"star": "false",
+					"names": [
 						{
 							"Name": "aaaa"
 						},
@@ -20,9 +20,9 @@
 		},
 		{
 			"Using": {
-				"DottedName": {
-					"star" : "true",
-					"names" : [
+				"Dotted Name": {
+					"star": "true",
+					"names": [
 						{
 							"Name": "dasdsa"
 						},
@@ -35,9 +35,9 @@
 		},
 		{
 			"Using": {
-				"DottedName": {
-					"star" : "false",
-					"names" : [
+				"Dotted Name": {
+					"star": "false",
+					"names": [
 						{
 							"Name": "aaaa"
 						},
@@ -47,9 +47,9 @@
 		},
 		{
 			"Using": {
-				"DottedName": {
-					"star" : "false",
-					"names" : [
+				"Dotted Name": {
+					"star": "false",
+					"names": [
 						{
 							"Name": "a"
 						},
@@ -68,9 +68,9 @@
 		},
 		{
 			"Using": {
-				"DottedName": {
-					"star" : "false",
-					"names" : [
+				"Dotted Name": {
+					"star": "false",
+					"names": [
 						{
 							"Name": "ἄλφα"
 						},
@@ -86,9 +86,9 @@
 		},
 		{
 			"Using": {
-				"DottedName": {
-					"star" : "true",
-					"names" : [
+				"Dotted Name": {
+					"star": "true",
+					"names": [
 						{
 							"Name": "ἄλφα"
 						},
@@ -99,6 +99,5 @@
 				}
 			}
 		},
-
 	]
 }

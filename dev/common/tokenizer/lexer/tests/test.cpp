@@ -129,8 +129,8 @@ private:
 		auto [line, column]  = position.getStartLineColumn();
 		ASSERT_EQUAL(line, 5);
 		ASSERT_EQUAL(column, 2);
-		ASSERT_EQUAL(position.getStart(), 16);
-		ASSERT_EQUAL(position.getEnd(), 20);
+		ASSERT_EQUAL(position.getStart(), 15);
+		ASSERT_EQUAL(position.getEnd(), 19);
 	}
 };
 

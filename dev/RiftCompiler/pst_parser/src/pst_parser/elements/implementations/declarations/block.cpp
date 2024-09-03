@@ -13,13 +13,14 @@ namespace pst {
 	}
 
 	void Block::dprint(std::ostream& out) const {
-		out << R"({"Block": {)";
+		out << "{";
 
 		out << R"("optional name": )";
 		nullAwareDprint(optional_name, out);
 		out << R"(, "code block": )";
 		nullAwareDprint(code_block, out);
-		out << "}}";
+
+		out << "}";
 	}
 
 	void Block::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitBlock(*this); }
