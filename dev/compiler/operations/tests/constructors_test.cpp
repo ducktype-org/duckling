@@ -95,4 +95,4 @@ public:
 	~OperationsTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/DucklingCompiler/src/operations/tests/")
+TESTER_COMMON_MAIN("/compiler/src/operations/tests/")

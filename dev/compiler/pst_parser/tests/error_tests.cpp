@@ -129,4 +129,4 @@ public:
 
 std::vector<PSTErrorTests::GenExample*> PSTErrorTests::examples = {};
 
-TESTER_COMMON_MAIN("/DucklingCompiler/pst_parser/tests/");
+TESTER_COMMON_MAIN("/compiler/pst_parser/tests/");

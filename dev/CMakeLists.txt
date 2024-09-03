@@ -48,7 +48,7 @@ add_subdirectory(dependencies)
 # Source:
 add_subdirectory(base)
 add_subdirectory(common)
-add_subdirectory(DucklingCompiler)
+add_subdirectory(compiler)
 add_subdirectory(VM)
 add_subdirectory(playground)
 

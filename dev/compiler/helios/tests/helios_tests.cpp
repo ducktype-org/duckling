@@ -314,4 +314,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/DucklingCompiler/helios/tests/");
+TESTER_COMMON_MAIN("/compiler/helios/tests/");

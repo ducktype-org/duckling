@@ -119,4 +119,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/DucklingCompiler/frontend/module_tree/tests/");
+TESTER_COMMON_MAIN("/compiler/frontend/module_tree/tests/");

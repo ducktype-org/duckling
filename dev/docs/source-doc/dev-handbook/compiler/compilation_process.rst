@@ -32,7 +32,7 @@ Parser phase
 
 Parser can take lexer output and return a parse-tree (AST), without any semantically meaningful information.
 
-Implementation docs: :doc:`/source-doc/source-docs/DucklingCompiler/pst_parser/index`.
+Implementation docs: :doc:`/source-doc/source-docs/compiler/pst_parser/index`.
 
 
 .. attention:: **Everything bellow is experimental or theoretical!**
@@ -49,7 +49,7 @@ HIR ("High intermediate representation") is an representation and an algorithm r
 
 Details: :doc:`/source-doc/dev-handbook/compiler/hir`.
 
-Implementation docs: :doc:`/source-doc/source-docs/DucklingCompiler/hir/index`.
+Implementation docs: :doc:`/source-doc/source-docs/compiler/hir/index`.
 
 Further compilation
 -------------------

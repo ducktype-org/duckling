@@ -62,4 +62,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/DucklingCompiler/config/tests/");
+TESTER_COMMON_MAIN("/compiler/config/tests/");

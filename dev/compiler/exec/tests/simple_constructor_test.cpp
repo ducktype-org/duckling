@@ -1,15 +1,17 @@
 #include <exec/ctv.hpp>
 #include <iostream>
+#include <operations/constructors.hpp>
+#include <operations/create_default.hpp>
+#include <operations/operation.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
-#include <base/string_id.hpp>
 
 class SimpleExecTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleExecTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Exec Test") { TESTER_ADD_TEST(simple); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Exec Constructor Test") { TESTER_ADD_TEST(simple); }
 
 private:
 	void simple() {
@@ -62,4 +64,4 @@ public:
 	~SimpleExecTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/DucklingCompiler/src/exec/tests/")
+TESTER_COMMON_MAIN("/compiler/src/exec/tests/")

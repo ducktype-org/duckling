@@ -669,4 +669,4 @@ public:
 	~SimpleExecTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/DucklingCompiler/src/exec/tests/")
+TESTER_COMMON_MAIN("/compiler/src/exec/tests/")

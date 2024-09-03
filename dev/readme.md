@@ -4,7 +4,7 @@
 
 ## File structure
 
-* [DucklingCompiler](DucklingCompiler/) - implementation of main Duckling language compiler
+* [compiler](compiler/) - implementation of main Duckling language compiler
 * [VM](VM/) - implementation of Duckling Virtual Machine
 * [common](common/) - modules shared across entire codebase
 * [guidelines](guidelines/) - guidelines related to development
@@ -15,7 +15,7 @@
 
 ### General structure
 
-[DucklingCompiler](DucklingCompiler/) and [VM](VM/) are modules by themselves, while
+[compiler](compiler/) and [VM](VM/) are modules by themselves, while
 `common` folder holds subfolders each representing a single module.
 
 ### Module structure

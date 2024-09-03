@@ -5,7 +5,7 @@ add_library(ModuleTree
 
 make_module(ModuleTree USES Filesystem PstParser QueryFramework)
 
-add_example(module_tree_example ../../../docs/source-doc/source-docs/DucklingCompiler/frontend/module_tree/module_tree_example.cpp USES ModuleTree)
+add_example(module_tree_example ../../../docs/source-doc/source-docs/compiler/frontend/module_tree/module_tree_example.cpp USES ModuleTree)
 
 duckling_add_test(compiler frontend_test_module_tree tests/module_tree_tests.cpp
 	USES ModuleTree)

@@ -488,4 +488,4 @@ public:
 	~SimpleTypeSystemTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/DucklingCompiler/src/typesystem/tests/")
+TESTER_COMMON_MAIN("/compiler/src/typesystem/tests/")
