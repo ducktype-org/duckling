@@ -1,5 +1,7 @@
 #pragma once
+
 #include <string>
+#include <base/ints.hpp>
 
 namespace testing_utils {
 	inline i32 nextChar(std::string_view s, i32 i) {
