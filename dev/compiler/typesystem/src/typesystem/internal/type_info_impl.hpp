@@ -722,7 +722,7 @@ namespace ts::internal {
 			const auto& elements_with_same_name = getInterface(ctx).getElements().at(name(sym));
 			for (const auto& element: elements_with_same_name)
 				if (element.getSymbol() == sym) return element.getType(ctx);
-			DUCKLING_PANIC("Element not found.");
+			CORE_PANIC("Element not found.");
 		}
 	};
 

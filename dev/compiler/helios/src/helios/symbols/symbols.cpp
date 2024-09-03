@@ -189,7 +189,7 @@ namespace compiler::helios {
 			break;
 		}
 		auto stmt_ptr = stmt.get();
-		DUCKLING_PANIC(base::strConcat(
+		CORE_PANIC(base::strConcat(
 			"makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
 		));
 	}
@@ -241,7 +241,7 @@ namespace compiler::helios {
 	 * @brief Query extension for looking-up chain of names
 	 */
 	SymbolList lookupChain(query::Context& ctx, const LookupChainKey& key) {
-		DUCKLING_ASSERT(!key.names.empty(), "lookupDotted received zero names");
+		CORE_ASSERT(!key.names.empty(), "lookupDotted received zero names");
 
 		// initial symbol:
 		auto first = ctx.query<QueryLookupInScopeAndParents>(
@@ -250,7 +250,7 @@ namespace compiler::helios {
 
 		if (not first.isSingle()) {
 			// @TODO: error in state
-			DUCKLING_PANIC("ambiguity in lookupChain");
+			CORE_PANIC("ambiguity in lookupChain");
 		}
 
 		if (key.names.size() == 1) return first.getAsSingle();
@@ -264,7 +264,7 @@ namespace compiler::helios {
 
 			if (!append_res.isSingle()) {
 				// @TODO: error in state
-				DUCKLING_PANIC("ambiguity in lookup");
+				CORE_PANIC("ambiguity in lookup");
 			}
 
 			auto single_append_res = append_res.getAsSingle();
@@ -280,7 +280,7 @@ namespace compiler::helios {
 				auto using_stmt = dynamic_cast<const pst::Using*>(key.ref->pst_stmt.get());
 				auto names      = using_stmt->getPointed();
 				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
-				DUCKLING_ASSERT(
+				CORE_ASSERT(
 					not lookup_res.empty(),
 					"Using points to something that does not exists or is empty"
 				);
@@ -379,7 +379,7 @@ namespace compiler::helios {
 		case '.':
 			return 5;
 		default:
-			DUCKLING_PANIC("Unknown operator: " + op.oper_id.str());
+			CORE_PANIC("Unknown operator: " + op.oper_id.str());
 		}
 	}
 
@@ -419,7 +419,7 @@ namespace compiler::helios {
 					}
 					rpn.emplace_back(TupleConstructor{ tuple.expr.size() });
 				}
-				variant_default { DUCKLING_PANIC("Bad Expr alternative"); }
+				variant_default { CORE_PANIC("Bad Expr alternative"); }
 			}
 		}
 		while (!st.empty()) {
@@ -449,14 +449,14 @@ namespace compiler::helios {
 					}
 				);
 			}
-			variant_case(rpn::Operator, op) { DUCKLING_PANIC("Cannot get a value from rpn::Operator"); }
+			variant_case(rpn::Operator, op) { CORE_PANIC("Cannot get a value from rpn::Operator"); }
 			variant_case(rpn::KeywordValue, keyword_value) {
 				throw base::NotYetImplemented("Value of KeywordValue is not yet implemented");
 			}
 			variant_case(rpn::NumValue, literal) { return std::stoi(literal.num_id.str()); }
-			variant_default { DUCKLING_PANIC("Bad Expr alternative"); }
+			variant_default { CORE_PANIC("Bad Expr alternative"); }
 		}
-		DUCKLING_PANIC("Error in RPNValue expr...");
+		CORE_PANIC("Error in RPNValue expr...");
 	}
 
 	rpn::ExprElem rpn::evalExpr(query::Context& ctx, const RPNExpr& expr) {
@@ -480,7 +480,7 @@ namespace compiler::helios {
 					std::cout << "Tuple constructor of num elemenents: "
 							  << tuple_constructor.num_elements;
 				}
-				variant_default { DUCKLING_PANIC("Bad Expr alternative"); }
+				variant_default { CORE_PANIC("Bad Expr alternative"); }
 			}
 			std::cout << '\n';
 		}
@@ -518,7 +518,7 @@ namespace compiler::helios {
 				variant_case(rpn::TupleConstructor, tuple) {
 					TupleType tuple_type;
 					for (usize i = 0; i < tuple.num_elements; i++) {
-						DUCKLING_ASSERT(
+						CORE_ASSERT(
 							!st.empty(), "Logic error during tuple creation, not enough elements"
 						);
 						auto tuple_element = st.top();
@@ -527,10 +527,10 @@ namespace compiler::helios {
 					}
 					st.emplace(tuple_type);
 				}
-				variant_default { DUCKLING_PANIC("Bad Expr alternative"); }
+				variant_default { CORE_PANIC("Bad Expr alternative"); }
 			}
 		}
-		DUCKLING_ASSERT(st.size() == 1, "Expression stack should have 1 element");
+		CORE_ASSERT(st.size() == 1, "Expression stack should have 1 element");
 		return st.top();
 	}
 
@@ -572,7 +572,7 @@ namespace compiler::helios {
 					);
 				}
 			}
-			DUCKLING_PANIC("Something strange has happended during .operator evaluation...");
+			CORE_PANIC("Something strange has happended during .operator evaluation...");
 		}
 		if (op.oper_id == "|") {
 			// @TODO: Check if A and B are types.
@@ -606,7 +606,7 @@ namespace compiler::helios {
 						variant_default { a_variant.elements.push_back(b); }
 					}
 				}
-				variant_default { DUCKLING_PANIC("A is not a variant, but it should be."); }
+				variant_default { CORE_PANIC("A is not a variant, but it should be."); }
 			}
 			return a;
 		}
@@ -637,14 +637,14 @@ namespace compiler::helios {
 			while (b_value-- > 0) value *= a_value;
 		} break;
 		default:
-			DUCKLING_PANIC("Unknown operator: " + op.oper_id.str());
+			CORE_PANIC("Unknown operator: " + op.oper_id.str());
 		}
 		return NumValue{ base::StrId(std::to_string(value).c_str()) };
 	}
 
 	struct IMPLEMENT_QUERY(QueryConstValueOf, i32) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			DUCKLING_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
+			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
 			const auto const_symbol
 				= dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
@@ -706,7 +706,7 @@ namespace compiler::helios {
 				return ctx.query<QueryTypeOf>(idt.symbol_list.back());
 			}
 			variant_case(rpn::Operator, oper) {
-				DUCKLING_PANIC(base::strConcat("Type cannot be an opeartor: ", oper.oper_id));
+				CORE_PANIC(base::strConcat("Type cannot be an opeartor: ", oper.oper_id));
 			}
 			variant_case(rpn::NamedIdentifier, named_identifier) {
 				const auto it = BUILTINS.find(named_identifier.symbol_name);
@@ -733,7 +733,7 @@ namespace compiler::helios {
 				return it->second;
 			}
 			variant_case(rpn::NumValue, num_value) {
-				DUCKLING_PANIC("Numerical value is not a type: ", num_value.num_id);
+				CORE_PANIC("Numerical value is not a type: ", num_value.num_id);
 			}
 			variant_case(rpn::TupleType, tuple_type) {
 				std::vector<ts::ComponentType> tuple_components;
@@ -756,9 +756,9 @@ namespace compiler::helios {
 
 				return ctx.query<ts::QueryVariantType>({ variant_types });
 			}
-			variant_default { DUCKLING_PANIC("Unhandlable type during parsing type from expr..."); }
+			variant_default { CORE_PANIC("Unhandlable type during parsing type from expr..."); }
 		}
-		DUCKLING_PANIC("Couldn't parse the type.");
+		CORE_PANIC("Couldn't parse the type.");
 	}
 
 	/**
@@ -851,7 +851,7 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			DUCKLING_ASSERT(kind(key) == SymbolKind::Struct, "Symbol is not a struct");
+			CORE_ASSERT(kind(key) == SymbolKind::Struct, "Symbol is not a struct");
 
 			auto struct_stmt = getSymRef(key)->pst_stmt;
 

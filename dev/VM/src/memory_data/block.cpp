@@ -32,7 +32,7 @@ namespace vm {
 				// @FIXME: no Data implementation
 				throw base::NotYetImplemented("typeAtOffset Data");
 			default:
-				DUCKLING_PANIC("not implemented");
+				CORE_PANIC("not implemented");
 			}
 		}
 	}

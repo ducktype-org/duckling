@@ -15,7 +15,7 @@ namespace vm {
 
 	// Type definition:
 	void Type::definePrimitive(TypeSize pass_size) {
-		DUCKLING_ASSERT(state == State::Declared, "Bad type define");
+		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		kind_type = Kind::Primitive;
@@ -24,7 +24,7 @@ namespace vm {
 	}
 
 	void Type::definePointer(TypeCRef inner) {
-		DUCKLING_ASSERT(state == State::Declared, "Bad type define");
+		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		size      = PointerSize;
@@ -33,7 +33,7 @@ namespace vm {
 	}
 
 	void Type::defineStaticTable(TypeRef inner, u64 table_size) {
-		DUCKLING_ASSERT(state == State::Declared, "Bad type define");
+		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		kind_type = Kind::StaticTable;
@@ -41,7 +41,7 @@ namespace vm {
 	}
 
 	void Type::defineDynamicTable(TypeRef inner) {
-		DUCKLING_ASSERT(state == State::Declared, "Bad type define");
+		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		size      = PointerSize;
@@ -50,7 +50,7 @@ namespace vm {
 	}
 
 	void Type::defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions) {
-		DUCKLING_ASSERT(state == State::Declared, "Bad type define");
+		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		kind_type = Kind::Data;
@@ -64,7 +64,7 @@ namespace vm {
 	}
 
 	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {
-		DUCKLING_ASSERT(state == State::Declared, "Bad type define");
+		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		kind_type    = Kind::Variant;
@@ -74,7 +74,7 @@ namespace vm {
 	}
 
 	void Type::defineFunction(std::vector<TypeCRef> parameters, TypeCRef result) {
-		DUCKLING_ASSERT(state == State::Declared, "Bad type define");
+		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		size      = PointerSize;
@@ -85,7 +85,7 @@ namespace vm {
 	void Type::finalize() {
 		if (state == State::Finalizing) {
 			// @TODO: better errors
-			DUCKLING_PANIC("Cyclic type dependency");
+			CORE_PANIC("Cyclic type dependency");
 		}
 		if (state == State::Finalized) return;
 		state = State::Finalizing;
@@ -162,9 +162,9 @@ namespace vm {
 				else
 					return {};
 			}
-			variant_default { DUCKLING_PANIC("Unexpected Type kind"); }
+			variant_default { CORE_PANIC("Unexpected Type kind"); }
 		}
-		DUCKLING_PANIC("something went wrong");
+		CORE_PANIC("something went wrong");
 	}
 
 	// pointer, staticTable, dynamicTable

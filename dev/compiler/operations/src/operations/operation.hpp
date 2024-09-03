@@ -21,7 +21,7 @@ namespace operation {
 		const ts::FunctionInfo signature;
 
 		exec::CTV operator()(const std::vector<exec::CTV>& ctvs) const {
-			DUCKLING_ASSERT(
+			CORE_ASSERT(
 				ctvs.size() == signature.getParameterTypes().size(),
 				base::strConcat(
 					"operation received incorrect number of arguments.",
@@ -35,7 +35,7 @@ namespace operation {
 			for (usize i = 0; i < ctvs.size(); i++) {
 				// @TODO: this should check if types are compatible.
 				// (possibly doing some conversion, or discarding consts?)
-				DUCKLING_ASSERT(
+				CORE_ASSERT(
 					ctvs[i].type.getType() == signature.getParameterTypes()[i],
 					"Argument has incorrect type"
 				);

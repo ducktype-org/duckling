@@ -21,8 +21,8 @@ namespace tpc {
 		  to(to),
 		  sentinel_end(sentinel_end),
 		  sentinel_begin(sentinel_begin) {
-		DUCKLING_ASSERT(tokens.size() >= to, "TokenStream received too few tokens.");
-		DUCKLING_ASSERT(from <= to, "TokenStream received illegal from-to values");
+		CORE_ASSERT(tokens.size() >= to, "TokenStream received too few tokens.");
+		CORE_ASSERT(from <= to, "TokenStream received illegal from-to values");
 	}
 
 	TokenStream::TokenStream(TokenStream&& stream) noexcept:

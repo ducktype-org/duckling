@@ -51,9 +51,9 @@ namespace vm {
 			// load/store performance in TC by eliminating
 			// 4 stack push-pops in asm
 			if (isUnowned(id))
-				DUCKLING_PANIC("Tried accessing unowned block");
+				CORE_PANIC("Tried accessing unowned block");
 			else if (!blocks[usize(id)].filled)
-				DUCKLING_PANIC("Tried accessing uninitialized block");
+				CORE_PANIC("Tried accessing uninitialized block");
 			return blocks[usize(id)].block;
 		}
 

@@ -42,7 +42,7 @@ namespace base {
 	 * @OPT: better memory/buffers usage
 	 */
 	StrId::StrId(const base::RawView& data) {
-		DUCKLING_ASSERT(data.getBegin() != nullptr, "StrId received null string");
+		CORE_ASSERT(data.getBegin() != nullptr, "StrId received null string");
 
 		if (to_id_map.contains(data)) {
 			id = to_id_map[data];

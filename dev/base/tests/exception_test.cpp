@@ -26,9 +26,9 @@ public:
 
 	void throwPanic1() { throw base::Panic("throwPanic", "panic test"); }
 
-	void throwPanic2() { DUCKLING_PANIC("panic test 2"); }
+	void throwPanic2() { CORE_PANIC("panic test 2"); }
 
-	void throwPanic3() { DUCKLING_ASSERT(false, "panic test 3"); }
+	void throwPanic3() { CORE_ASSERT(false, "panic test 3"); }
 
 	void testPanic1() {
 		try {

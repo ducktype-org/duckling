@@ -10,7 +10,7 @@ Exceptions is simple extension of standard C++ exception system.
 It should be used everywhere.
 
 All exception created by us should inherit from :code:`base::Exception`.
-Additionally this module provides :code:`base::Panic` exception, and :code:`DUCKLING_ASSERT`, and :code:`DUCKLING_PANIC` macro, that should be used instead of things like :code:`<cassert>`.
+Additionally this module provides :code:`base::Panic` exception, and :code:`CORE_ASSERT`, and :code:`CORE_PANIC` macro, that should be used instead of things like :code:`<cassert>`.
 
 Code Doc
 ===============
@@ -23,10 +23,10 @@ Code Doc
 
 .. doxygenclass:: base::NotYetImplemented
 
-.. doxygendefine:: DUCKLING_ASSERT
+.. doxygendefine:: CORE_ASSERT
 
 .. _duckling-panic-ref:
 
-.. doxygendefine:: DUCKLING_PANIC
+.. doxygendefine:: CORE_PANIC
 
 

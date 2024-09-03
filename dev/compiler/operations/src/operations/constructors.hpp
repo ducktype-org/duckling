@@ -56,7 +56,7 @@ namespace operation {
 	exec::CTV execConstructor(
 		const Constructor& cons, const std::vector<exec::CTV>& args, exec::CTV ctv
 	) {
-		DUCKLING_ASSERT(
+		CORE_ASSERT(
 			args.size() == cons.input.size(), "Arguments don't match parameters in constructor."
 		);
 

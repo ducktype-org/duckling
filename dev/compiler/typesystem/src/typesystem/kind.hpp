@@ -111,7 +111,7 @@ namespace ts {
 			std::stringstream ss;
 			ss << "Tried to translate non-existent Kind with underlying value "
 			   << static_cast<int>(kind) << " to string.";
-			DUCKLING_PANIC(ss.str());
+			CORE_PANIC(ss.str());
 		}
 	}
 }

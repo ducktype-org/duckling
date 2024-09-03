@@ -15,7 +15,7 @@ namespace query {
 	 */
 	template<typename QueryType>
 	auto entryPoint(typename QueryType::QKey key) -> decltype(auto) {
-		DUCKLING_ASSERT(
+		CORE_ASSERT(
 			detail::dep_graph::queryStackSize() == 0, "query::entryPoint called from within query!"
 		);
 		return QueryType::internal_query(

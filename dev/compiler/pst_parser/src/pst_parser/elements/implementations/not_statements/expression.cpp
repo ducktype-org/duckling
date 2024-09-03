@@ -80,7 +80,7 @@ namespace pst {
 		usize i            = 0;
 		auto  expected_end = state.getPosition((i64) len);
 
-		DUCKLING_ASSERT(
+		CORE_ASSERT(
 			len > 0, state.getPosition().genStr("Expr parse should have positive expected length.")
 		);
 
@@ -206,7 +206,7 @@ namespace pst {
 					out << R"({"KeywordValue": ")" << duckling_def::keywordToStr(key.keyword).strView()
 						<< "\"}";
 				}
-				variant_default { DUCKLING_PANIC("Bad Expr alternative"); }
+				variant_default { CORE_PANIC("Bad Expr alternative"); }
 			}
 			out << ", ";
 		}

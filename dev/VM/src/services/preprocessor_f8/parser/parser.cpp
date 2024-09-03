@@ -726,7 +726,7 @@ namespace assemble {
 					for (auto& param: data.parameters) parameters.emplace_back(type_map[param]);
 					type_map[data.name]->defineFunction(parameters, type_map[data.result]);
 				}
-				variant_default { DUCKLING_PANIC("bad type"); }
+				variant_default { CORE_PANIC("bad type"); }
 			}
 		}
 
@@ -745,7 +745,7 @@ namespace assemble {
 			return static_cast<u16>(vm::str_to_OpcodeFix8.at(str.str()));
 		} catch (std::out_of_range& err) {
 			// @TODO: better errors
-			DUCKLING_PANIC(base::strConcat("Incorrect opcode: ", str));
+			CORE_PANIC(base::strConcat("Incorrect opcode: ", str));
 			return 0;
 		}
 	}

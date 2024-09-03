@@ -10,9 +10,9 @@
 
 namespace pst {
 	void init() {
-		DUCKLING_SIMPLE_INIT_GUARD_BEGIN
+		CORE_SIMPLE_INIT_GUARD_BEGIN
 		tpc::init();
 		lexer::init();
-		DUCKLING_SIMPLE_INIT_GUARD_END
+		CORE_SIMPLE_INIT_GUARD_END
 	}
 }

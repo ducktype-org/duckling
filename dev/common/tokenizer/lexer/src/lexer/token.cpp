@@ -30,14 +30,14 @@ namespace lexer {
 		  sentinel_end(new Token(std::move(sentinel_end))),
 		  source_position(position),
 		  bracket_type(bracket_type) {
-		DUCKLING_ASSERT(
+		CORE_ASSERT(
 			this->sentinel_begin->getType() == Type::Sentinel,
 			"non-sentinel token passed as sentinel"
 		);
-		DUCKLING_ASSERT(
+		CORE_ASSERT(
 			this->sentinel_end->getType() == Type::Sentinel, "non-sentinel token passed as sentinel"
 		);
-		DUCKLING_ASSERT(
+		CORE_ASSERT(
 			type == Type::BracketGroup, "non-bracket token created with bracket constructor"
 		);
 
@@ -141,14 +141,14 @@ namespace lexer {
 	const Tokens& Token::getRecursive() const { return recursive; }
 
 	const Token& Token::getSentinelBegin() const {
-		DUCKLING_ASSERT(isRecursive(), "getSentinel called on non-recursive token");
-		DUCKLING_ASSERT(sentinel_begin, "unassigned sentinel in recursive token");
+		CORE_ASSERT(isRecursive(), "getSentinel called on non-recursive token");
+		CORE_ASSERT(sentinel_begin, "unassigned sentinel in recursive token");
 		return *sentinel_begin;
 	}
 
 	const Token& Token::getSentinelEnd() const {
-		DUCKLING_ASSERT(isRecursive(), "getSentinel called on non-recursive token");
-		DUCKLING_ASSERT(sentinel_end, "unassigned sentinel in recursive token");
+		CORE_ASSERT(isRecursive(), "getSentinel called on non-recursive token");
+		CORE_ASSERT(sentinel_end, "unassigned sentinel in recursive token");
 		return *sentinel_end;
 	}
 

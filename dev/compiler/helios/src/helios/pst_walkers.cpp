@@ -24,7 +24,7 @@ namespace compiler::helios {
 			return out;
 		} else {
 			const auto& element = *elem.get();
-			DUCKLING_PANIC(
+			CORE_PANIC(
 				base::strConcat("Bad Duckling Element in `getChildStmtsOf`: ", typeid(element).name())
 			);
 		}

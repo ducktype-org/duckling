@@ -14,6 +14,6 @@ Intention of this library is to provide automatic way of detecting if initializa
 Code doc 
 ========
 
-.. doxygendefine:: DUCKLING_SIMPLE_INIT_GUARD_BEGIN
+.. doxygendefine:: CORE_SIMPLE_INIT_GUARD_BEGIN
 
-.. doxygendefine:: DUCKLING_SIMPLE_INIT_GUARD_END
+.. doxygendefine:: CORE_SIMPLE_INIT_GUARD_END

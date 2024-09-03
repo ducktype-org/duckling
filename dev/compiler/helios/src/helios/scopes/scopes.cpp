@@ -63,7 +63,7 @@ namespace compiler::helios {
 		if (ref->is_root) {
 			return {};
 		} else {
-			DUCKLING_ASSERT(getScopeRef(ref->parent) != nullptr, "Non root scope has no parent.");
+			CORE_ASSERT(getScopeRef(ref->parent) != nullptr, "Non root scope has no parent.");
 			return ref->parent;
 		}
 	}
@@ -113,7 +113,7 @@ namespace compiler::helios {
 			// it is technically not needed anymore, but it left as an additional
 			// layer of bug detection.
 			if (parent_map.contains(element.base_element->getID())) {
-				DUCKLING_ASSERT(
+				CORE_ASSERT(
 					parent_map.at(element.base_element->getID()) == parent,
 					"Parent mismatch in QueryPrimaryCodeScopeFor"
 				);
@@ -193,7 +193,7 @@ namespace compiler::helios {
 			// @TODO: expand macros?
 
 			if (not key.ref->related_pst_element.has_value()) {
-				DUCKLING_ASSERT(key.ref->is_root, "Non root scope without PST element!");
+				CORE_ASSERT(key.ref->is_root, "Non root scope without PST element!");
 				return {};
 			}
 			auto base_element = key.ref->related_pst_element.value();
@@ -206,7 +206,7 @@ namespace compiler::helios {
 				as_stmt->acceptVisitor(symbol_grab);
 				return std::move(symbol_grab.out.value());
 			} else {
-				DUCKLING_PANIC("Query symbols from scope of non-statement and non-codeblock");
+				CORE_PANIC("Query symbols from scope of non-statement and non-codeblock");
 			}
 		}
 

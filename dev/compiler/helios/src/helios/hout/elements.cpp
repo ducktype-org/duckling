@@ -99,13 +99,13 @@ namespace compiler::helios::code {
 				}
 
 				variant_default {
-					DUCKLING_PANIC(base::strConcat(
+					CORE_PANIC(base::strConcat(
 						"Unhandlable type during parsing type from expr: ", typeid(elem).name()
 					));
 				}
 			}
 		}
-		DUCKLING_ASSERT(st.size() == 1, "Empty HOUT Tree stack");
+		CORE_ASSERT(st.size() == 1, "Empty HOUT Tree stack");
 		return std::move(st.top());
 	}
 
@@ -133,7 +133,7 @@ namespace compiler::helios {
 	 */
 	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key)
 		-> code::ElementRef<code::Expr> {
-		DUCKLING_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single expression");
+		CORE_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single expression");
 		const auto& elem = key.expr->elements.at(0);
 
 		variant_match(elem) {
@@ -162,7 +162,7 @@ namespace compiler::helios {
 					);
 				}
 
-				DUCKLING_ASSERT(lookup_dealiased.size() > 0, "Empty lookup result");
+				CORE_ASSERT(lookup_dealiased.size() > 0, "Empty lookup result");
 
 				// @TODO: dont just ignore everything before last symbol
 				return base::make_unique<code::IdentifierExpr>(lookup_dealiased.back());
@@ -171,10 +171,10 @@ namespace compiler::helios {
 				throw base::NotYetImplemented("Expr from group");
 			}
 			variant_case_novalue(pst::Expr::Operator) {
-				DUCKLING_PANIC("Expression consisting of only operator is not allowed (yet?).");
+				CORE_PANIC("Expression consisting of only operator is not allowed (yet?).");
 			}
 		}
-		DUCKLING_PANIC("No match in variant");
+		CORE_PANIC("No match in variant");
 	}
 
 	struct IMPLEMENT_QUERY(QueryHoutOfExpr, code::ElementRef<code::Expr>) {

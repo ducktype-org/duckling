@@ -110,7 +110,7 @@ namespace exec {
 		std::span<T> getDataUnderPointer() const {
 			if (type.getType().getKind() != ts::Kind::RawPointer
 			    && type.getType().getKind() != ts::Kind::Pointer) {
-				DUCKLING_PANIC("The underlying type should be a pointer.");
+				CORE_PANIC("The underlying type should be a pointer.");
 			}
 
 			auto pointer_data = getData<u32>();

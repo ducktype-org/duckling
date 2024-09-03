@@ -269,7 +269,7 @@ namespace pst {
 		DucklingTestingStmt(StmtKind kind, const dia::SourcePosition& position): Stmt(kind, position) {}
 	};
 
-#define DUCKLING_TEST_CHILD_CONSTRUCTOR(class_name)      \
+#define CORE_TEST_CHILD_CONSTRUCTOR(class_name)      \
 	class_name(const dia::SourcePosition& position): \
 		  DucklingTestingStmt(StmtKind::class_name, position) {}
 

@@ -12,7 +12,7 @@ namespace pst {
 	}
 
 	void TopLevel::acceptVisitor(PstStmtVisitor&) const {
-		DUCKLING_PANIC("Visitng TopLevel statement");
+		CORE_PANIC("Visitng TopLevel statement");
 	}
 
 	void TopLevel::dprint(std::ostream& out) const {

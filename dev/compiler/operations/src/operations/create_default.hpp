@@ -34,7 +34,7 @@ namespace operation {
 		case ConstructFull:
 			return createDefaultConstructFull(type_info);
 		default:
-			DUCKLING_PANIC("Illegal enum value.");
+			CORE_PANIC("Illegal enum value.");
 		}
 	}
 

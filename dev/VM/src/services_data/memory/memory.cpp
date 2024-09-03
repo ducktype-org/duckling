@@ -7,7 +7,7 @@ namespace vm {
 		if (free_ids.empty()) {
 			blocks.emplace_back();
 			blocks.back().owned = true;
-			DUCKLING_ASSERT(usize(high_id) == blocks.size() - 1, "Bad high id");
+			CORE_ASSERT(usize(high_id) == blocks.size() - 1, "Bad high id");
 			return high_id++;
 		}
 		BlockId res = free_ids.back();
@@ -30,17 +30,17 @@ namespace vm {
 
 	void Memory::returnBlockID(BlockId id) {
 		if (isUnowned(id))
-			DUCKLING_PANIC("Tried returning an unowned id");
+			CORE_PANIC("Tried returning an unowned id");
 		else if (blocks[usize(id)].filled)
-			DUCKLING_PANIC("Tried returning an id of an unfreed block");
+			CORE_PANIC("Tried returning an id of an unfreed block");
 		refCheck(id);
 	}
 
 	void Memory::makeBlock(BlockId id, Block&& block) {
 		if (isUnowned(id))
-			DUCKLING_PANIC("Tried creating an unowned block");
+			CORE_PANIC("Tried creating an unowned block");
 		else if (blocks[usize(id)].filled)
-			DUCKLING_PANIC("Tried creating an initialized block");
+			CORE_PANIC("Tried creating an initialized block");
 		blocks[usize(id)].block = new Block(std::move(block));
 
 		// @TODO: this assumes every block is initialized
@@ -48,7 +48,7 @@ namespace vm {
 	}
 
 	void Memory::deleteBlock(BlockId id) {
-		if (isUnowned(id)) DUCKLING_PANIC("Tried deleting an unowned block");
+		if (isUnowned(id)) CORE_PANIC("Tried deleting an unowned block");
 		blocks[usize(id)].filled = false;
 		delete blocks[usize(id)].block;
 
@@ -67,17 +67,17 @@ namespace vm {
 
 	void Memory::createRef(BlockId id) {
 		if (isUnowned(id))
-			DUCKLING_PANIC("Tried creating a reference to an unowned block");
+			CORE_PANIC("Tried creating a reference to an unowned block");
 		else if (!blocks[usize(id)].filled)
-			DUCKLING_PANIC("Tried creating a reference to an uninitialized block");
+			CORE_PANIC("Tried creating a reference to an uninitialized block");
 		blocks[usize(id)].refcount++;
 	}
 
 	void Memory::destroyRef(BlockId id) {
 		if (id >= high_id || (!blocks[usize(id)].owned && !blocks[usize(id)].deleted))
-			DUCKLING_PANIC("Tried deleting a reference to an unowned block");
+			CORE_PANIC("Tried deleting a reference to an unowned block");
 		if (blocks[usize(id)].refcount == 0)
-			DUCKLING_PANIC("Tried deleting a reference to an unreferenced block");
+			CORE_PANIC("Tried deleting a reference to an unreferenced block");
 		if (--blocks[usize(id)].refcount == 0 && blocks[usize(id)].deleted) {
 			blocks[usize(id)].deleted = true;
 			refCheck(id);

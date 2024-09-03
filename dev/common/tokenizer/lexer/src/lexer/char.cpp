@@ -10,11 +10,11 @@ namespace lexer {
 
 	Char::Char(UChar32 value, u8 size, usize index): value(value), size(size), index(index) {
 		if (size == u8{ 0 }) {
-			DUCKLING_ASSERT(
+			CORE_ASSERT(
 				value == Classifications::end_of_file_value, "non-EOF Char created with size 0"
 			);
 		} else {
-			DUCKLING_ASSERT(size > u8{ 0 } && size <= u8{ 4 }, "Char constructed with bad size");
+			CORE_ASSERT(size > u8{ 0 } && size <= u8{ 4 }, "Char constructed with bad size");
 		}
 	}
 

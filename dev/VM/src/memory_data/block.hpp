@@ -31,7 +31,7 @@ namespace vm {
 			  element_type(type),
 			  data(data.getBegin()),
 			  block_id(block_id_) {
-			DUCKLING_ASSERT(type->getSize() == data.size(), "type size does not equal data size");
+			CORE_ASSERT(type->getSize() == data.size(), "type size does not equal data size");
 		}
 
 		Block(BlockId block_id_, TypeCRef type, u64 length, base::ModRawView data):
@@ -40,7 +40,7 @@ namespace vm {
 			  element_type(type),
 			  data(data.getBegin()),
 			  block_id(block_id_) {
-			DUCKLING_ASSERT(
+			CORE_ASSERT(
 				length * type->getSize() == data.size(), "type size does not equal data size"
 			);
 		}
@@ -64,9 +64,9 @@ namespace vm {
 			// @NOTE: In current VM implementation offset is always 0
 			// is offset actually used/will be used anywhere?
 			// if (offset < start || offset > end) [[unlikely]]
-			// 	DUCKLING_PANIC("Tried to defer outside of a block");
+			// 	CORE_PANIC("Tried to defer outside of a block");
 			// if (end - offset < u->getSize()) [[unlikely]]
-			// 	DUCKLING_PANIC("Tried to defer too big of a type");
+			// 	CORE_PANIC("Tried to defer too big of a type");
 			return { data, u->getSize() };
 		}
 

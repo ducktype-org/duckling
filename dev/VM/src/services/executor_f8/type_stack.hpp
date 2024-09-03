@@ -35,7 +35,7 @@ namespace vm {
 		}
 
 		void pop() {
-			DUCKLING_ASSERT(!types.empty(), "Pop called on empty stack");
+			CORE_ASSERT(!types.empty(), "Pop called on empty stack");
 			byte_size -= types.back()->getSize();
 			types.pop_back();
 		}

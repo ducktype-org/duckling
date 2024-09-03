@@ -14,11 +14,11 @@
 
 namespace lexer {
 	void init() {
-		DUCKLING_SIMPLE_INIT_GUARD_BEGIN
+		CORE_SIMPLE_INIT_GUARD_BEGIN
 		// Put inits here
 		Classifications::init();
 		duckling_def::key_spec_op::init();
-		DUCKLING_SIMPLE_INIT_GUARD_END
+		CORE_SIMPLE_INIT_GUARD_END
 	}
 
 	tokenizer::OwnFile tokenizeFile(const fs::FilePath& path) {

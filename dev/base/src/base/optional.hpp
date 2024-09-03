@@ -234,31 +234,31 @@ namespace base {
 		// clang-format on
 
 		/**
-		 * Get value or DUCKLING_PANIC with message.
+		 * Get value or CORE_PANIC with message.
 		 * @param message message to be passed to the panic
 		 * @return
 		 */
 		[[nodiscard]]
 		constexpr const T& expect(std::string_view message) const& {
-			if (!has_value()) DUCKLING_PANIC(message);
+			if (!has_value()) CORE_PANIC(message);
 			return value();
 		}
 
 		[[nodiscard]]
 		constexpr const T&& expect(std::string_view message) const&& {
-			if (!has_value()) DUCKLING_PANIC(message);
+			if (!has_value()) CORE_PANIC(message);
 			return std::move(value());
 		}
 
 		[[nodiscard]]
 		constexpr T& expect(std::string_view message) & {
-			if (!has_value()) DUCKLING_PANIC(message);
+			if (!has_value()) CORE_PANIC(message);
 			return value();
 		}
 
 		[[nodiscard]]
 		constexpr T&& expect(std::string_view message) && {
-			if (!has_value()) DUCKLING_PANIC(message);
+			if (!has_value()) CORE_PANIC(message);
 			return std::move(value());
 		}
 
@@ -328,7 +328,7 @@ namespace base {
 
 	protected:
 		void _throwOnNoValue() const {
-			if (!has_value()) DUCKLING_PANIC("Tried to retrieve a value from an empty optional.");
+			if (!has_value()) CORE_PANIC("Tried to retrieve a value from an empty optional.");
 		}
 
 	private:
@@ -467,25 +467,25 @@ namespace base {
 
 		[[nodiscard]]
 		constexpr const T& expect(std::string_view message) const& {
-			if (!has_value()) DUCKLING_PANIC(message);
+			if (!has_value()) CORE_PANIC(message);
 			return value();
 		}
 
 		[[nodiscard]]
 		constexpr const T&& expect(std::string_view message) const&& {
-			if (!has_value()) DUCKLING_PANIC(message);
+			if (!has_value()) CORE_PANIC(message);
 			return std::move(value());
 		}
 
 		[[nodiscard]]
 		constexpr T& expect(std::string_view message) & {
-			if (!has_value()) DUCKLING_PANIC(message);
+			if (!has_value()) CORE_PANIC(message);
 			return value();
 		}
 
 		[[nodiscard]]
 		constexpr T&& expect(std::string_view message) && {
-			if (!has_value()) DUCKLING_PANIC(message);
+			if (!has_value()) CORE_PANIC(message);
 			return std::move(value());
 		}
 
@@ -518,7 +518,7 @@ namespace base {
 
 	private:
 		void _throwOnNoValue() const {
-			if (!has_value()) DUCKLING_PANIC("Tried to retrieve a value from an empty optional.");
+			if (!has_value()) CORE_PANIC("Tried to retrieve a value from an empty optional.");
 		}
 
 		Optional<std::reference_wrapper<T>> private_optional;

@@ -35,7 +35,7 @@ namespace compiler::helios::code {
 
 // visitors:
 #define HOUT_VISITOR_PANIC_METHOD(type) \
-	void visit##type(const type&) override { DUCKLING_PANIC("Panicky HOUT visitor: visited" #type); }
+	void visit##type(const type&) override { CORE_PANIC("Panicky HOUT visitor: visited" #type); }
 
 	class HoutStmtPanickyVisitor: public HoutStmtVisitor {
 	public:

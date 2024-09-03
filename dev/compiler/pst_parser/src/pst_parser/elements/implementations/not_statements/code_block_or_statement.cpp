@@ -41,7 +41,7 @@ namespace pst {
 			variant_case(ParserRef<Stmt>, stmt) { return const_iterator(&stmt); }
 			variant_case(ParserRef<CodeBlock>, code_block) { return code_block->begin(); }
 		}
-		DUCKLING_PANIC("something went wrong");
+		CORE_PANIC("something went wrong");
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::end() const {
@@ -49,6 +49,6 @@ namespace pst {
 			variant_case(ParserRef<Stmt>, stmt) { return const_iterator(&stmt) + 1; }
 			variant_case(ParserRef<CodeBlock>, code_block) { return code_block->end(); }
 		}
-		DUCKLING_PANIC("something went wrong");
+		CORE_PANIC("something went wrong");
 	}
 }

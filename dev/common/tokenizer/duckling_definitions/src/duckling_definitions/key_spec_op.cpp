@@ -163,7 +163,7 @@ namespace duckling_def {
 	base::VectorMap<Operator, base::StrId, false, true> rev_operator_map;
 
 	void key_spec_op::init() {
-		DUCKLING_SIMPLE_INIT_GUARD_BEGIN;
+		CORE_SIMPLE_INIT_GUARD_BEGIN;
 
 		keyword_mode = DEFAULT_MODE;
 
@@ -197,19 +197,19 @@ namespace duckling_def {
 
 		// just to be safe for any future changes
 		// @TODO: move to same tests
-		DUCKLING_ASSERT(duckling_keywords_array.size() == duckling_keyword_map.size(), "keyword map error");
-		DUCKLING_ASSERT(
+		CORE_ASSERT(duckling_keywords_array.size() == duckling_keyword_map.size(), "keyword map error");
+		CORE_ASSERT(
 			special_array.size() == special_map.size()
 				&& special_array.size() == rev_special_map.size(),
 			"special map error"
 		);
-		DUCKLING_ASSERT(
+		CORE_ASSERT(
 			operator_array.size() == operator_map.size()
 				&& operator_array.size() == rev_operator_map.size(),
 			"operator map error"
 		);
 
-		DUCKLING_SIMPLE_INIT_GUARD_END;
+		CORE_SIMPLE_INIT_GUARD_END;
 	}
 
 	Keyword strAsKeyword(base::StrId id) {
@@ -227,7 +227,7 @@ namespace duckling_def {
 				return Keyword::NotAKeyword;
 
 		default:
-			DUCKLING_PANIC("Illegal keyword_mode");
+			CORE_PANIC("Illegal keyword_mode");
 		}
 		if (duckling_keyword_map.contains(id)) return duckling_keyword_map[id];
 		return Keyword::NotAKeyword;

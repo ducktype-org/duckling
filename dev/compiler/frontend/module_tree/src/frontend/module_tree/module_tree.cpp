@@ -161,7 +161,7 @@ void ModuleTree::handleNewFile(
 
 base::Optional<const ModuleTree&> ModuleTree::getParentModule() const {
 	if (m_parent.has_value()) {
-		DUCKLING_ASSERT(not m_parent.value().expired(), "Parent of a module is expired!");
+		CORE_ASSERT(not m_parent.value().expired(), "Parent of a module is expired!");
 		return *m_parent->lock();
 	}
 	return {};
@@ -322,7 +322,7 @@ ModuleId compiler::frontend::extendQueryModuleIDOfPST(
 	// this access depends of global state that might become a problem in incremental compilation:
 	auto file_id = root_element_file_back_map[element->getID()];
 	auto result  = files.at(file_id).linked_module;
-	DUCKLING_ASSERT(result.isGood(), "Bad module ID in SourceFile");
+	CORE_ASSERT(result.isGood(), "Bad module ID in SourceFile");
 
 	return result;
 }

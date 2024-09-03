@@ -41,7 +41,7 @@ namespace base {
 
 		[[nodiscard]]
 		base::RawView view() const {
-			DUCKLING_ASSERT(id.isGood(), "StrId is bad");
+			CORE_ASSERT(id.isGood(), "StrId is bad");
 			return to_data_map[id];
 		}
 

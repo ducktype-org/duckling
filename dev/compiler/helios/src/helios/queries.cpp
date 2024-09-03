@@ -167,12 +167,12 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			DUCKLING_ASSERT(
+			CORE_ASSERT(
 				kind(key) == SymbolKind::Function, "Function creation called on non-function symbol"
 			);
 
 			// auto fun_stmt = dynamic_cast<const pst::Fun*>(stmt(key).get());
-			// DUCKLING_ASSERT(fun_stmt != nullptr, "Function symbol is not actually a function");
+			// CORE_ASSERT(fun_stmt != nullptr, "Function symbol is not actually a function");
 			auto parent_scope = scope(key);
 
 			HOUTFunctionMaker func_maker(ctx, parent_scope);

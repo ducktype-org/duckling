@@ -12,8 +12,8 @@ namespace compiler::helios {
 	bool LookupResult::isSingle() const { return symbolCount() == 1; }
 
 	SymbolList LookupResult::getAsSingle() const {
-		DUCKLING_ASSERT(!isEmpty(), "Empty lookup");
-		DUCKLING_ASSERT(isSingle(), "Ambiguity");
+		CORE_ASSERT(!isEmpty(), "Empty lookup");
+		CORE_ASSERT(isSingle(), "Ambiguity");
 
 		if (!leaves.empty()) return { leaves[0] };
 
@@ -27,7 +27,7 @@ namespace compiler::helios {
 		}
 
 		// (Thic cannot happen, but for sanity.)
-		DUCKLING_PANIC("isSingle, but haven\'t found any symbols");
+		CORE_PANIC("isSingle, but haven\'t found any symbols");
 	}
 
 	u64 LookupResult::symbolCount() const {

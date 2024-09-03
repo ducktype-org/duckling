@@ -16,7 +16,7 @@ namespace duckling_def {
 	}
 
 	void operator_precedence::init() {
-		DUCKLING_SIMPLE_INIT_GUARD_BEGIN;
+		CORE_SIMPLE_INIT_GUARD_BEGIN;
 
 		key_spec_op::init();
 
@@ -64,18 +64,18 @@ namespace duckling_def {
 			{ Operator::Assign, OperatorType::Binary }, OperatorAssociativity::RightToLeft
 		);
 
-		DUCKLING_SIMPLE_INIT_GUARD_END;
+		CORE_SIMPLE_INIT_GUARD_END;
 	}
 
 	i64 operatorPrecedence([[maybe_unused]] base::StrId operator_, OperatorType operator_type) {
-		DUCKLING_ASSERT(operator_.isGood(), "Bad string passed to operator precedence");
+		CORE_ASSERT(operator_.isGood(), "Bad string passed to operator precedence");
 
 		if (precedence.contains({ strAsOperator(operator_), operator_type }))
 			return precedence[{ strAsOperator(operator_), operator_type }];
 
 		// generic rules:
 		base::RawView str_view = operator_.view();
-		DUCKLING_ASSERT(str_view.size() > 0, "String of size zero passed to operator precedence");
+		CORE_ASSERT(str_view.size() > 0, "String of size zero passed to operator precedence");
 
 		throw base::NotYetImplemented(base::strConcat(
 			"Generic rules for operator precedence dont yet exist for operator: ", operator_
@@ -87,14 +87,14 @@ namespace duckling_def {
 	}
 
 	OperatorAssociativity operatorAssociativity(base::StrId operator_, OperatorType operator_type) {
-		DUCKLING_ASSERT(operator_.isGood(), "Bad string passed to operator precedence");
+		CORE_ASSERT(operator_.isGood(), "Bad string passed to operator precedence");
 
 		if (associativity.contains({ strAsOperator(operator_), operator_type }))
 			return associativity[{ strAsOperator(operator_), operator_type }];
 
 		// generic rules:
 		base::RawView str_view = operator_.view();
-		DUCKLING_ASSERT(str_view.size() > 0, "String of size zero passed to operator precedence");
+		CORE_ASSERT(str_view.size() > 0, "String of size zero passed to operator precedence");
 
 		throw base::NotYetImplemented(base::strConcat(
 			"Generic rules for operator associativity dont yet exist for operator: ", operator_

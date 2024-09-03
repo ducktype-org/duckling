@@ -5,12 +5,12 @@
 #include <token_file/file.hpp>
 
 std::byte operator""_BT(unsigned long long x) {
-	DUCKLING_ASSERT(x < 256, "bad std::byte literal operator");
+	CORE_ASSERT(x < 256, "bad std::byte literal operator");
 	return std::byte(x);
 }
 
 std::byte operator""_BT(char x) {
-	DUCKLING_ASSERT(x >= 0, "bad std::byte literal operator");
+	CORE_ASSERT(x >= 0, "bad std::byte literal operator");
 	return std::byte(x);
 }
 

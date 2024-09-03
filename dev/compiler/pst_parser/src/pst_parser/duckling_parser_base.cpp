@@ -11,7 +11,7 @@ namespace pst {
 	const dia::SourcePosition& DucklingElement::getSourcePosition() const { return source_position; }
 
 	void DucklingElement::addToken(base::c_borrow_ptr<tpc::Token> t) {
-		DUCKLING_ASSERT(t != nullptr, "All tokens that are part of an element should exist.");
+		CORE_ASSERT(t != nullptr, "All tokens that are part of an element should exist.");
 		sub_elements.emplace_back(t);
 		setLastToken(t->getPosition());
 	}

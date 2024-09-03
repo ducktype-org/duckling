@@ -29,7 +29,7 @@ namespace {
 
 		// if an argv[i] contains a white space, then it must have been added with quotes
 		for (usize i = 1; i < argc; i++) {
-			DUCKLING_ASSERT(argv[i] != nullptr, "Clap received null pointer as one of argv arguments.");
+			CORE_ASSERT(argv[i] != nullptr, "Clap received null pointer as one of argv arguments.");
 
 			bool has_whitespace = false;
 			auto arg            = std::string(argv[i]);
@@ -261,7 +261,7 @@ namespace clap {
 	ParsingResult Clap::parse(CLIArgs args) { return parse(args.argc, args.argv); }
 
 	ParsingResult Clap::parse(usize argc, const char* const* argv) {
-		DUCKLING_ASSERT(
+		CORE_ASSERT(
 			argc > 0,
 			"clap assumes argc is at least 1, as it is the name of the program from the parameters."
 		);

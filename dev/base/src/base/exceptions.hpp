@@ -57,22 +57,22 @@ namespace base {
 	};
 }
 
-#define DETAIL_DUCKLING_STR2(X) #X
-#define DETAIL_DUCKLING_STR(X)  DETAIL_DUCKLING_STR2(X)
+#define DETAIL_CORE_STR2(X) #X
+#define DETAIL_CORE_STR(X)  DETAIL_CORE_STR2(X)
 
 /**
  * @brief base::Panic based assert that allows catching for testing purposes.
  */
-#define DUCKLING_ASSERT(cond, what) \
+#define CORE_ASSERT(cond, what) \
 	if (!(cond)) _THROW_PANIC("    Assertion failed: `" #cond "`\n", what)
 
 /**
  * @brief base::Panic based throw that allows catching for testing purposes
  */
-#define DUCKLING_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what)
+#define CORE_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what)
 
 #define _THROW_PANIC(panic_title, what...)                        \
 	throw base::Panic(                                            \
-		"    In " __FILE__ " at line " DETAIL_DUCKLING_STR(__LINE__), \
+		"    In " __FILE__ " at line " DETAIL_CORE_STR(__LINE__), \
 		base::strConcat(panic_title, "    ", what)                \
 	)

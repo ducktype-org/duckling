@@ -2,7 +2,7 @@
 
 namespace vm {
 	TypeRef TypeMetadata::addType(Type&& type) {
-		DUCKLING_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
+		CORE_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
 
 
 		auto id      = types.emplaceBack(std::move(type));
@@ -15,7 +15,7 @@ namespace vm {
 	}
 
 	void TypeMetadata::finalize() {
-		DUCKLING_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
+		CORE_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
 		state = TypeMetadataState::Finalized;
 
 		for (auto id: types_ids) types[id].finalize();
