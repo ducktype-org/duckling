@@ -1,19 +1,19 @@
 #pragma once
 
-#include "../pst_ref.hpp"
-#include "../scope_symbol_id.hpp"
-#include "element_ref.hpp"
-
+#include <vector>
 #include <base/ints.hpp>
 #include <base/perfect_hash.hpp>
 #include <base/string_id.hpp>
-#include <vector>
 
 #include <helios/symbols/symbols.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <query_framework/query_impl.hpp>
 #include <typesystem/type_desc.hpp>
 #include <typesystem/queries.hpp>
+
+#include "../pst_ref.hpp"
+#include "../scope_symbol_id.hpp"
+#include "element_ref.hpp"
 
 namespace compiler::helios::code {
 
