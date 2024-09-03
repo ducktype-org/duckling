@@ -1,181 +1,195 @@
 {
-	"PST": [
+	"Top Level": [
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
-					"List": [
+				"parameters": {
+					"function parameter list": [
 						{
 							"Function Parameter": {
-								"name": {
-									"Name": "a"
-								},
-								"type": {
-									"Expr": [
-										{
-											"KeywordValue": "i32"
-										}
-									]
+								"Function Parameter": {
+									"name": {
+										"Name": "a"
+									},
+									"type": {
+										"Expression": [
+											{
+												"KeywordValue": "i32"
+											}
+										]
+									}
 								}
 							}
 						},
 						{
 							"Function Parameter": {
-								"name": {
-									"Name": "b"
-								},
-								"type": {
-									"Expr": [
-										{
-											"Identifier": "f32"
-										}
-									]
+								"Function Parameter": {
+									"name": {
+										"Name": "b"
+									},
+									"type": {
+										"Expression": [
+											{
+												"Identifier": "f32"
+											}
+										]
+									}
 								}
 							}
 						}
 					]
 				},
-				"rets": "unit",
+				"return": "unit",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}
 		},
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
-					"List": [
+				"parameters": {
+					"function parameter list": [
 						{
 							"Function Parameter": {
-								"name": {
-									"Name": "a"
-								},
-								"type": {
-									"Expr": [
-										{
-											"KeywordValue": "i32"
-										}
-									]
+								"Function Parameter": {
+									"name": {
+										"Name": "a"
+									},
+									"type": {
+										"Expression": [
+											{
+												"KeywordValue": "i32"
+											}
+										]
+									}
 								}
 							}
 						},
 						{
 							"Function Parameter": {
-								"name": {
-									"Name": "b"
-								},
-								"type": {
-									"Expr": [
-										{
-											"Identifier": "f32"
-										}
-									]
-								},
-								"initial": {
-									"Expr": [
-										{
-											"NumLiteral": "0"
-										}
-									]
+								"Function Parameter": {
+									"name": {
+										"Name": "b"
+									},
+									"type": {
+										"Expression": [
+											{
+												"Identifier": "f32"
+											}
+										]
+									},
+									"initial": {
+										"Expression": [
+											{
+												"NumLiteral": "0"
+											}
+										]
+									}
 								}
 							}
 						}
 					]
 				},
-				"rets": "unit",
+				"return": "unit",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}
 		},
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
-					"List": [
+				"parameters": {
+					"function parameter list": [
 						{
 							"Function Parameter": {
-								"name": {
-									"Name": "a"
-								},
-								"type": {
-									"Expr": [
-										{
-											"Identifier": "f32"
-										}
-									]
+								"Function Parameter": {
+									"name": {
+										"Name": "a"
+									},
+									"type": {
+										"Expression": [
+											{
+												"Identifier": "f32"
+											}
+										]
+									}
 								}
 							}
 						},
 						{
 							"Function Parameter": {
-								"name": {
-									"Name": "b"
-								},
-								"type": {
-									"Expr": [
-										{
-											"KeywordValue": "i32"
-										}
-									]
-								},
-								"initial": {
-									"Expr": [
-										{
-											"NumLiteral": "42"
-										}
-									]
+								"Function Parameter": {
+									"name": {
+										"Name": "b"
+									},
+									"type": {
+										"Expression": [
+											{
+												"KeywordValue": "i32"
+											}
+										]
+									},
+									"initial": {
+										"Expression": [
+											{
+												"NumLiteral": "42"
+											}
+										]
+									}
 								}
 							}
 						}
 					]
 				},
-				"rets": "unit",
+				"return": "unit",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}
 		},
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
-					"List": [
+				"parameters": {
+					"function parameter list": [
 						{
 							"Function Parameter": {
-								"name": {
-									"Name": "a"
-								},
-								"type": {
-									"Expr": [
-										{
-											"Identifier": "A"
-										}
-									]
+								"Function Parameter": {
+									"name": {
+										"Name": "a"
+									},
+									"type": {
+										"Expression": [
+											{
+												"Identifier": "A"
+											}
+										]
+									}
 								}
 							}
 						}
 					]
 				},
-				"rets": "unit",
+				"return": "unit",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}

@@ -1,37 +1,37 @@
 {
-	"PST": [
+	"Top Level": [
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "A"
 				},
-				"params": {
-					"List": []
+				"parameters": {
+					"function parameter list": []
 				},
-				"rets": {
-					"Expr": [
+				"return": {
+					"Expression": [
 						{
 							"KeywordValue": "i32"
 						}
 					]
 				},
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}
 		},
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "A"
 				},
-				"params": {
-					"List": []
+				"parameters": {
+					"function parameter list": []
 				},
-				"rets": {
-					"Expr": [
+				"return": {
+					"Expression": [
 						{
 							"NumLiteral": "1"
 						},
@@ -44,33 +44,33 @@
 					]
 				},
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}
 		},
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "A"
 				},
-				"params": {
-					"List": []
+				"parameters": {
+					"function parameter list": []
 				},
-				"rets": {
-					"Expr": [
+				"return": {
+					"Expression": [
 						{
 							"Comma separated": [
 								{
-									"Expr": [
+									"Expression": [
 										{
 											"KeywordValue": "i32"
 										}
 									]
 								},
 								{
-									"Expr": [
+									"Expression": [
 										{
 											"KeywordValue": "i32"
 										}
@@ -81,33 +81,33 @@
 					]
 				},
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}
 		},
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "A"
 				},
-				"params": {
-					"List": []
+				"parameters": {
+					"function parameter list": []
 				},
-				"rets": {
-					"Expr": [
+				"return": {
+					"Expression": [
 						{
 							"Comma separated": [
 								{
-									"Expr": [
+									"Expression": [
 										{
 											"KeywordValue": "i32"
 										}
 									]
 								},
 								{
-									"Expr": [
+									"Expression": [
 										{
 											"NumLiteral": "1"
 										},
@@ -120,12 +120,12 @@
 									]
 								},
 								{
-									"Expr": [
+									"Expression": [
 										{
 											"Group": {
 												"type": "()",
 												"expr": {
-													"Expr": [
+													"Expression": [
 														{
 															"Identifier": "abc"
 														}
@@ -136,7 +136,7 @@
 									]
 								},
 								{
-									"Expr": [
+									"Expression": [
 										{
 											"Identifier": "x"
 										}
@@ -147,33 +147,33 @@
 					]
 				},
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}
 		},
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "A"
 				},
-				"params": {
-					"List": []
+				"parameters": {
+					"function parameter list": []
 				},
-				"rets": {
-					"Expr": [
+				"return": {
+					"Expression": [
 						{
 							"Comma separated": [
 								{
-									"Expr": [
+									"Expression": [
 										{
 											"KeywordValue": "i32"
 										}
 									]
 								},
 								{
-									"Expr": [
+									"Expression": [
 										{
 											"NumLiteral": "1"
 										},
@@ -186,12 +186,12 @@
 									]
 								},
 								{
-									"Expr": [
+									"Expression": [
 										{
 											"Group": {
 												"type": "()",
 												"expr": {
-													"Expr": [
+													"Expression": [
 														{
 															"Identifier": "abc"
 														}
@@ -202,7 +202,7 @@
 									]
 								},
 								{
-									"Expr": [
+									"Expression": [
 										{
 											"Identifier": "x"
 										}
@@ -213,8 +213,8 @@
 					]
 				},
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": []
+					"Code Block or Statement": {
+						"Code Block": []
 					}
 				}
 			}

@@ -72,7 +72,7 @@ namespace ts::internal {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, TypeInterface) {
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			compiler::helios::SymID symbol = key.value->getSymbol();
-			auto& field_syms = ctx.query<compiler::helios::QueryStructSymbolData>(symbol).members;
+			auto& field_syms = ctx.query<compiler::helios::QueryClassSymbolData>(symbol).members;
 			// @TODO: Add methods to the interface, when obtaining their signature is supported.
 
 			std::set<InterfaceElement> elements;

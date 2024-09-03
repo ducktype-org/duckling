@@ -1,7 +1,7 @@
 
 const a: i32 = 0;
 
-fun foo() {
+fun foo() = {
 	1;
 	a;
 	return 1;

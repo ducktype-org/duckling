@@ -1,4 +1,4 @@
-// Simple test of lookup.
+# Simple test of lookup.
 
 namespace A {
 	using B.C.*;

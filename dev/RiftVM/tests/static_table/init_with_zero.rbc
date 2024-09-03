@@ -5,10 +5,10 @@ function main {
   arg_size: 0;
   ret_size: 0;
 
-  // x - 0
-  // i - 8
-  // y - 16
-  // t - 24
+  # x - 0
+  # i - 8
+  # y - 16
+  # t - 24
   local_size: 40;
 
   code: {
@@ -21,14 +21,14 @@ function main {
 
     alloc_lptr_type     24, tableint64;
 
-    // x := t[0]
+    # x := t[0]
     mov_l64_imm         8, 0;
     load_l64_lptr_ofs   0, 24;
     ext_l64             8;
 
     mov_l64_l64         16, 0;
 
-    // x := t[1]
+    # x := t[1]
     mov_l64_imm         8, 1;
     load_l64_lptr_ofs   0, 24;
     ext_l64             8;

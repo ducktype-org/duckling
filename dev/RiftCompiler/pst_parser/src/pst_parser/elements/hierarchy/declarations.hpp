@@ -97,16 +97,15 @@ namespace pst {
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
-	/**
-	 * @note outdated with "current" syntax (one inherits then implemnets etc)
-	 */
-	class Struct final: public Decl {
-		tpc::Identifier        name;
-		ParserRef<InheritList> bases = nullptr;
-		ParserRef<CodeBlock>   body  = nullptr;
+	class Class final: public Decl {
+	private:
+		tpc::Identifier           name;
+		ParserRef<Expr>           base       = nullptr;
+		ParserRef<ImplementsList> implements = nullptr;
+		ParserRef<ClassBlock>     body       = nullptr;
 
 	public:
-		DECL_CHILD_CONSTRUCTOR(Struct);
+		DECL_CHILD_CONSTRUCTOR(Class);
 
 		[[nodiscard]]
 		base::StrId getName() const {
@@ -114,22 +113,32 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<CodeBlock> getBody() const {
+		ParserCBorrowRef<ClassBlock> getBody() const {
 			return body.borrow();
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<InheritList> getBases() const {
-			return bases.borrow();
+		ParserCBorrowRef<Expr> getBase() const {
+			return base.borrow();
 		}
 
-		static ParserRef<Struct> parse(RiftParserState& state);
-		~Struct() final = default;
+		[[nodiscard]]
+		ParserCBorrowRef<ImplementsList> getImplements() const {
+			return implements.borrow();
+		}
+
+		static ParserRef<Class> parse(RiftParserState& state);
+		~Class() final = default;
 		void dprint(std::ostream& out) const final;
 
 		[[nodiscard]]
 		std::string elementType() const override {
-			return "Struct";
+			return "Class";
+		}
+
+		[[nodiscard]]
+		bool isStatementAggregate() const override {
+			return true;
 		}
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
@@ -162,7 +171,7 @@ namespace pst {
 
 		[[nodiscard]]
 		std::string elementType() const override {
-			return "Variable";
+			return is_const ? "Let" : "Var";
 		}
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
@@ -220,9 +229,8 @@ namespace pst {
 	class If final: public CodeDecl {
 		ParserRef<RoundGroupExpr>  condition = nullptr;
 		tpc::OptionalIdentifier    optional_name;
-		ParserRef<CodeBlockOrStmt> body = nullptr;
-
-		// @TODO: else
+		ParserRef<CodeBlockOrStmt> body      = nullptr;
+		ParserRef<CodeBlockOrStmt> else_body = nullptr;
 
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {}
@@ -268,4 +276,27 @@ namespace pst {
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
+
+	class For final: public CodeDecl {
+		tpc::OptionalIdentifier    optional_name;
+		tpc::Identifier            iterator;
+		ParserRef<Expr>            type     = nullptr;
+		ParserRef<Expr>            iterable = nullptr;
+		ParserRef<CodeBlockOrStmt> body     = nullptr;
+
+	public:
+		explicit For(const dia::SourcePosition& position): CodeDecl(position) {}
+
+		static ParserRef<For> parse(RiftParserState& state);
+		void                  dprint(std::ostream& out) const final;
+		~For() final = default;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "For";
+		}
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
+	};
+
 }

@@ -2,38 +2,38 @@ function fib {
     arg_size: 8;
     ret_size: 8;
     
-    // n - 0
-    // tmp1 - 8
+    # n - 0
+    # tmp1 - 8
     
     local_size: 16;
     
     code: {
-        // n := argument
+        # n := argument
         mov_l64_pFuncArg    0;
 
-        // if !(n > 1): end
+        # if !(n > 1): end
         cmpG_l64_imm        0, 1;
         jmpRelNotIf_label   End;
 
-        // tmp1 = fib(n - 1)
+        # tmp1 = fib(n - 1)
         sub_l64_imm         0, 1;
         setPArg_l64         0;
         call_func           0;
         mov_l64_r0          8;
         
-        // tmp2 = fib(n - 2)
+        # tmp2 = fib(n - 2)
         sub_l64_imm         0, 1;
         setPArg_l64         0;
         call_func           0;
         mov_l64_r0          0;
         
-        // (fib(n - 1) + fib(n - 2)) % mod
+        # (fib(n - 1) + fib(n - 2)) % mod
         add_l64_l64         0, 8;
         mod_l64_imm         0, 8388449;
         
         label               End;
 
-        // return tmp1
+        # return tmp1
         ret_l64             0;
     }
 }
@@ -42,15 +42,15 @@ function main {
     arg_size: 0;
     ret_size: 8;
     
-    // n - 0
+    # n - 0
     
     local_size: 16;
     
     code: {
-        // n := argument
+        # n := argument
         input_l64          0;
         
-        // fib(n)
+        # fib(n)
         setPArg_l64        0;
         call_func          0;
         mov_l64_r0         8;

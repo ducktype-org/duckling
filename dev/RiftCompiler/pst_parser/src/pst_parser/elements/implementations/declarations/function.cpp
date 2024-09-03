@@ -28,36 +28,36 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Fun, &out->name);
 		state.parse(out).with<ParamList>(&out->params, ParamList::parse);
+
 		if (state.parse(out).tryEat(Operator::SingleArrow))
 			state.parse(out).with<Expr>(
 				&out->ret,
 				Expr::parseUntil<
-					detail::Conditions::isCurlyGroup,
-					detail::Conditions::isCurlyGroup,
+					detail::Conditions::isAssign,
+					detail::Conditions::isAssign,
 					FunctionReturnTypeListEndError>,
 				true
 			);
-		while (state.notEmpty() and !state[0].isBracketGroup(Token::BracketType::Curly))
-			state.tokens().skip();
-		state.parse(out).one(&out->body);
+
+		state.parse(out).all(Operator::Assign, &out->body);
 
 		return out;
 	}
 
 	void Fun::dprint(std::ostream& out) const {
-		out << "{\"Fun\": { ";
-		out << "\"name\": ";
+		out << "{";
+		out << "\"name\":";
 		nullAwareDprint(name, out);
-		out << ", \"params\":";
+		out << ",\"parameters\":";
 		nullAwareDprint(params, out);
-		out << ", \"rets\":";
+		out << ",\"return\":";
 		if (ret)
 			nullAwareDprint(ret.value(), out);
 		else
 			out << "\"unit\"";
-		out << ", \"body\":";
+		out << ",\"body\":";
 		nullAwareDprint(body, out);
-		out << " } }";
+		out << "}";
 	}
 
 	void Fun::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitFun(*this); }

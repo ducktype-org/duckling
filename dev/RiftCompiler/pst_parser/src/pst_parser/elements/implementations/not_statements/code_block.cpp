@@ -1,28 +1,12 @@
 #include "preamble.hpp"
 
 namespace pst {
-	class BlockStartError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected a code block starting with `{`.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		BlockStartError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
 	ParserRef<CodeBlock> CodeBlock::parse(RiftParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<CodeBlock>(position);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
-			state.log(base::make_unique<BlockStartError>(state.getPosition()));
+			state.log(base::make_unique<error::BlockStartError>(state.getPosition()));
 			return nullptr;
 		}
 
@@ -40,11 +24,11 @@ namespace pst {
 	}
 
 	void CodeBlock::dprint(std::ostream& out) const {
-		out << "{\"CodeBlock\": [";
+		out << "[";
 		for (auto& stmt: statements) {
 			nullAwareDprint(stmt, out);
 			out << ", ";
 		}
-		out << "]}";
+		out << "]";
 	}
 }

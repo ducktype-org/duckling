@@ -61,12 +61,12 @@ namespace pst {
 		static ParserRef<List> parse(RiftParserState& state);
 
 		void dprint(std::ostream& out) const final {
-			out << "{\"List\" : [";
+			out << "[";
 			for (auto& x: elements) {
 				tpc::nullAwareDprint(x, out);
 				out << ",";
 			}
-			out << "]}";
+			out << "]";
 		}
 
 		~List() final = default;
@@ -100,15 +100,15 @@ namespace pst {
 		true,
 		lexer::Token::BracketType::None,
 		detail::Conditions::isComma,
-		detail::Conditions::isCurlyGroup,
+		detail::Conditions::isAssign,
 		detail::NameGetters::returnList>;
 
-	using InheritList = List<
+	using ImplementsList = List<
 		Expr,
 		true,
 		lexer::Token::BracketType::None,
 		detail::Conditions::isComma,
-		detail::Conditions::isCurlyGroup,
+		detail::Conditions::isBlockGroup,
 		detail::NameGetters::inheritanceList>;
 
 	using AtrArgList = List<
@@ -118,6 +118,14 @@ namespace pst {
 		detail::Conditions::isComma,
 		detail::Conditions::isSentinel,
 		detail::NameGetters::attributeArgList>;
+
+	using InitList = List<
+		Expr,
+		false,
+		lexer::Token::BracketType::None,
+		detail::Conditions::isComma,
+		detail::Conditions::isAssign,
+		detail::NameGetters::classInitList>;
 
 	class DottedName final: public NotStmt {
 		std::vector<tpc::Identifier> names;
@@ -152,6 +160,24 @@ namespace pst {
 		~DottedName() final = default;
 	};
 
+	class Attribute final: public NotStmt {
+		ParserRef<DottedName> name;
+		ParserRef<AtrArgList> args = nullptr;
+
+	public:
+		explicit Attribute(dia::SourcePosition& pos): NotStmt(pos) {}
+
+		static ParserRef<Attribute> parse(RiftParserState& state);
+		~Attribute() final = default;
+
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Attribute";
+		}
+	};
+
 	class CodeBlock final: public NotStmt {
 		std::vector<ParserRef<Stmt>> statements;
 
@@ -167,6 +193,29 @@ namespace pst {
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Code Block";
+		}
+
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
+	};
+
+	class ClassBlock final: public NotStmt {
+		std::vector<ParserRef<ClassStmt>> statements;
+
+	public:
+		DECLARE_CONST_ELEMENT_ITERATOR(statements, ClassStmt)
+
+		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos){};
+		static ParserRef<ClassBlock> parse(RiftParserState& state, const ClassContext& ctx);
+
+		~ClassBlock() override = default;
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Class Block";
 		}
 
 		[[nodiscard]]

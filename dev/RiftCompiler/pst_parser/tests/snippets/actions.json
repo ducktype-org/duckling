@@ -1,20 +1,20 @@
 {
-	"PST": [
+	"Top Level": [
 		{
-			"Fun": {
+			"Function": {
 				"name": {
 					"Name": "foo"
 				},
-				"params": {
-					"List": []
+				"parameters": {
+					"function parameter list": []
 				},
-				"rets": "unit",
+				"return": "unit",
 				"body": {
-					"CodeBlockOrStmt": {
-						"CodeBlock": [
+					"Code Block or Statement": {
+						"Code Block": [
 							{
 								"Expr Stmt": {
-									"Expr": [
+									"Expression": [
 										{
 											"Identifier": "a"
 										},
@@ -23,15 +23,15 @@
 										},
 										{
 											"Identifier": "T"
-										}
+										},
 									]
 								}
 							},
 							{
 								"Action": {
 									"kind": "Defer",
-									"what": {
-										"Expr": [
+									"value": {
+										"Expression": [
 											{
 												"Identifier": "a"
 											},
@@ -45,10 +45,10 @@
 												"Group": {
 													"type": "()",
 													"expr": {
-														"Expr": []
+														"Expression": []
 													}
 												}
-											}
+											},
 										]
 									}
 								}
@@ -59,42 +59,42 @@
 										"Name": "A"
 									},
 									"condition": {
-										"RoundGroupExpr": {
-											"Expr": [
+										"Round Group Expression": {
+											"Expression": [
 												{
 													"KeywordValue": "true"
-												}
+												},
 											]
 										}
 									},
 									"body": {
-										"CodeBlockOrStmt": {
-											"CodeBlock": [
+										"Code Block or Statement": {
+											"Code Block": [
 												{
 													"While": {
 														"name": {
 															"Name": "B"
 														},
 														"condition": {
-															"RoundGroupExpr": {
-																"Expr": [
+															"Round Group Expression": {
+																"Expression": [
 																	{
 																		"KeywordValue": "true"
-																	}
+																	},
 																]
 															}
 														},
 														"body": {
-															"CodeBlockOrStmt": {
-																"CodeBlock": [
+															"Code Block or Statement": {
+																"Code Block": [
 																	{
 																		"Action": {
 																			"kind": "Break",
-																			"from": {
-																				"Expr": [
+																			"value": {
+																				"Expression": [
 																					{
 																						"Identifier": "A"
-																					}
+																					},
 																				]
 																			}
 																		}
@@ -107,11 +107,11 @@
 																	{
 																		"Action": {
 																			"kind": "Continue",
-																			"with": {
-																				"Expr": [
+																			"value": {
+																				"Expression": [
 																					{
 																						"Identifier": "B"
-																					}
+																					},
 																				]
 																			}
 																		}
@@ -124,11 +124,11 @@
 																	{
 																		"Action": {
 																			"kind": "Redo",
-																			"what": {
-																				"Expr": [
+																			"value": {
+																				"Expression": [
 																					{
 																						"Identifier": "A"
-																					}
+																					},
 																				]
 																			}
 																		}
@@ -141,11 +141,11 @@
 																	{
 																		"Action": {
 																			"kind": "Restart",
-																			"what": {
-																				"Expr": [
+																			"value": {
+																				"Expression": [
 																					{
 																						"Identifier": "B"
-																					}
+																					},
 																				]
 																			}
 																		}
@@ -158,20 +158,20 @@
 																	{
 																		"Action": {
 																			"kind": "Throw",
-																			"exception": {
-																				"Expr": [
+																			"value": {
+																				"Expression": [
 																					{
 																						"NumLiteral": "123"
-																					}
+																					},
 																				]
 																			}
 																		}
-																	}
+																	},
 																]
 															}
 														}
 													}
-												}
+												},
 											]
 										}
 									}
@@ -180,19 +180,19 @@
 							{
 								"Action": {
 									"kind": "Return",
-									"with": {
-										"Expr": [
+									"value": {
+										"Expression": [
 											{
 												"NumLiteral": "12"
-											}
+											},
 										]
 									}
 								}
-							}
+							},
 						]
 					}
 				}
 			}
-		}
+		},
 	]
 }

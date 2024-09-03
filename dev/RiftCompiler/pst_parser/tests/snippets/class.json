@@ -1,0 +1,348 @@
+{
+	"Top Level": [
+		{
+			"Class": {
+				"name": {
+					"Name": "xxx"
+				},
+				"Base": {
+					"Expression": [
+						{
+							"Identifier": "aaa"
+						}
+					]
+				},
+				"Implements": {
+					"inheritance list": [
+						{
+							"Expression": [
+								{
+									"Identifier": "bbb"
+								}
+							]
+						},
+						{
+							"Expression": [
+								{
+									"Identifier": "cccc"
+								}
+							]
+						}
+					]
+				},
+				"body": {
+					"Class Block": [
+						{
+							"Class Field": {
+								"is mutable": "true",
+								"name": {
+									"Name": "x"
+								},
+								"type": {
+									"Expression": [
+										{
+											"KeywordValue": "i32"
+										}
+									]
+								}
+							}
+						},
+						{
+							"specifiers": [
+								"private"
+							],
+							"Class Field": {
+								"is mutable": "true",
+								"name": {
+									"Name": "y"
+								},
+								"type": {
+									"Expression": [
+										{
+											"KeywordValue": "i32"
+										}
+									]
+								},
+								"initial": {
+									"Expression": [
+										{
+											"NumLiteral": "5"
+										}
+									]
+								}
+							}
+						},
+						{
+							"Class Method": {
+								"name": {
+									"Name": "foo"
+								},
+								"parameters": {
+									"function parameter list": [
+										{
+											"Function Parameter": {
+												"Function Parameter": {
+													"name": {
+														"Name": "a"
+													},
+													"type": {
+														"Expression": [
+															{
+																"KeywordValue": "i64"
+															}
+														]
+													}
+												}
+											}
+										},
+										{
+											"Function Parameter": {
+												"Function Parameter": {
+													"name": {
+														"Name": "c"
+													},
+													"type": {
+														"Expression": [
+															{
+																"Identifier": "yyy"
+															}
+														]
+													}
+												}
+											}
+										}
+									]
+								},
+								"return": "<nullptr>",
+								"body": {
+									"Code Block": [
+										{
+											"Expr Stmt": {
+												"Expression": [
+													{
+														"Identifier": "goo"
+													},
+													{
+														"Group": {
+															"type": "()",
+															"expr": {
+																"Expression": [
+																	{
+																		"Identifier": "a"
+																	}
+																]
+															}
+														}
+													}
+												]
+											}
+										}
+									]
+								}
+							}
+						},
+						{
+							"specifiers": [
+								"private"
+							],
+							"Class Method": {
+								"name": {
+									"Name": "goo"
+								},
+								"parameters": {
+									"function parameter list": [
+										{
+											"Function Parameter": {
+												"Function Parameter": {
+													"name": {
+														"Name": "z"
+													},
+													"type": {
+														"Expression": [
+															{
+																"KeywordValue": "i64"
+															}
+														]
+													}
+												}
+											}
+										}
+									]
+								},
+								"return": {
+									"function return type list": [
+										{
+											"Expression": [
+												{
+													"KeywordValue": "i64"
+												}
+											]
+										}
+									]
+								},
+								"body": {
+									"Code Block": [
+										{
+											"Expr Stmt": {
+												"Expression": [
+													{
+														"Identifier": "x"
+													},
+													{
+														"Operator": "="
+													},
+													{
+														"Identifier": "z"
+													}
+												]
+											}
+										},
+										{
+											"Action": {
+												"kind": "Return",
+												"value": {
+													"Expression": [
+														{
+															"Identifier": "y"
+														}
+													]
+												}
+											}
+										}
+									]
+								}
+							}
+						},
+						{
+							"specifiers": [
+								"public"
+							],
+							"Access specification block": {
+								"specifier": "public",
+								"code block": {
+									"Class Block": [
+										{
+											"specifiers": [
+												"public"
+											],
+											"Class Constructor": {
+												"name": {
+													"Name": "create"
+												},
+												"params": {
+													"function parameter list": [
+														{
+															"Function Parameter": {
+																"Function Parameter": {
+																	"name": {
+																		"Name": "c"
+																	},
+																	"type": {
+																		"Expression": [
+																			{
+																				"KeywordValue": "i64"
+																			}
+																		]
+																	}
+																}
+															}
+														}
+													]
+												},
+												"inits": {
+													"initialization list": [
+														{
+															"Expression": [
+																{
+																	"Identifier": "aaa"
+																},
+																{
+																	"Group": {
+																		"type": "()",
+																		"expr": {
+																			"Expression": [
+																				{
+																					"Identifier": "c"
+																				}
+																			]
+																		}
+																	}
+																}
+															]
+														}
+													]
+												},
+												"body": {
+													"Code Block": [
+														{
+															"Expr Stmt": {
+																"Expression": [
+																	{
+																		"Identifier": "x"
+																	},
+																	{
+																		"Operator": "="
+																	},
+																	{
+																		"Identifier": "c"
+																	}
+																]
+															}
+														}
+													]
+												}
+											}
+										},
+										{
+											"specifiers": [
+												"public"
+											],
+											"Class Constructor": {
+												"name": {
+													"Name": "abc"
+												},
+												"params": {
+													"function parameter list": []
+												},
+												"inits": "<nullptr>",
+												"body": {
+													"Code Block": [
+														{
+															"Expr Stmt": {
+																"Expression": [
+																	{
+																		"Identifier": "x"
+																	},
+																	{
+																		"Operator": "="
+																	},
+																	{
+																		"NumLiteral": "81"
+																	}
+																]
+															}
+														}
+													]
+												}
+											}
+										},
+										{
+											"specifiers": [
+												"public"
+											],
+											"Class Destructor": {
+												"body": {
+													"Code Block": []
+												}
+											}
+										}
+									]
+								}
+							}
+						}
+					]
+				}
+			}
+		}
+	]
+}
