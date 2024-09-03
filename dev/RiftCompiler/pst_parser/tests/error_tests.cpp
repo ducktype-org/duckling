@@ -160,12 +160,13 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::Field, false> badField{ "x = 5" };
 	ClassStmtExample<pst::Field, false> badField2{ "x : = 5" };
 
-	ClassStmtExample<pst::Method, true> simpleMethod{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
+	ClassStmtExample<pst::Method, true> simpleMethod{
+		"fun foo(x: i32, y: i32) -> (i32, i32) = {}"
+	};
 
 	ClassStmtExample<pst::Constructor, true> defaultConstructor{ "name(x: i32) = {}", "name" };
-	ClassStmtExample<pst::Constructor, true> namedConstructor{
-		"name.from_pair(p: (i32, i32)) = {}", "name"
-	};
+	ClassStmtExample<pst::Constructor, true> namedConstructor{ "name.from_pair(p: (i32, i32)) = {}",
+		                                                       "name" };
 	ClassStmtExample<pst::Constructor, true> initConstructor{
 		"name.init(x: i32, y: i32): z(x, y) = {}", "name"
 	};
