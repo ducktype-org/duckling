@@ -49,7 +49,7 @@ add_subdirectory(dependencies)
 add_subdirectory(base)
 add_subdirectory(common)
 add_subdirectory(DucklingCompiler)
-add_subdirectory(DucklingVM)
+add_subdirectory(VM)
 add_subdirectory(playground)
 
 # Scripts:
