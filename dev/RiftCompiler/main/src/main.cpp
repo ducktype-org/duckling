@@ -238,6 +238,10 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		configureDuckMainWith(clap, command_args);
 		throw base::LogicError("Command `throw` thrown successfully!");
 	});
+	commands.add("token-count", "Throws exception (testing command).", [&]() -> int {
+		// todo
+		return 1;
+	});
 	return commands;
 }
 
