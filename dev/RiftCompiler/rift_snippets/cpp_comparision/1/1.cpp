@@ -8,7 +8,7 @@ using u64 = uint64_t;
 using i64 = int64_t;
 struct Vec {
 	i64 x, y;
-	Vec(i64 x, i64 y): x{x}, y{y} {}
+
 	bool operator<(const Vec& oth) const {
 		if (x != oth.x) return x < oth.x;
 		return y < oth.y;
@@ -25,8 +25,6 @@ enum class Direction {
 struct DivVec {
 	Vec position;
 	Direction dir;
-
-	DivVec(Vec position, Direction dir): position{position}, dir{dir} {}
 	
 	bool operator<(const DivVec& oth) const {
 		if (position < oth.position) return true;
@@ -43,7 +41,6 @@ struct Flips {
 struct MirrorPoint {
 	Vec position;
 	Flips flips;
-	MirrorPoint(Vec position, Flips flips): position{position}, flips{flips} {}
 };
 
 std::vector<MirrorPoint> mirrors;
@@ -127,7 +124,6 @@ void makeDiag(Direction diag_direction) {
 	for (auto& [_, mirrors_on_diag]: mirror_per_diag) {
 		std::sort(mirrors_on_diag.begin(), mirrors_on_diag.end(), compareVecOnDiagonal(flip_x, flip_y));
 
-		// todo: add from edge
 		for (i64 i = 0; i < std::ssize(mirrors_on_diag) - 1; i++) {
 			auto from = mirrors_on_diag.at(i);
 			auto to = mirrors_on_diag.at(i + 1);

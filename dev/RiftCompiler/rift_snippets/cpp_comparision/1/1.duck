@@ -1,0 +1,114 @@
+import io;
+import algo;
+
+class Vec {
+	public var x, y: i64;
+}
+
+enum Direction {
+	PG,
+	PD,
+	LG,
+	LD
+}
+
+class DivVec {
+	public var position: Vec;
+	public var dir: Direction;
+}
+
+class Flips {
+	public var x_flip = false;
+	public var y_flip = false;
+}
+
+class MirrorPoint {
+	public var position: Vec;
+	public var flips: Flips;
+}
+
+var mirrors: List:{MirrorPoint};
+
+fun sign(x: i64) = if x > 0 then 1 else (if x < 0 then (-1) else 0);
+
+fun dirToVec(d: Direction) -> Vec {
+	match (d) {
+		case Direction.PG =
+			return {1, 1};
+		case Direction.PD =
+			return {1, -1};
+		case Direction.LG =
+			return {-1, 1};
+		case Direction.LD =
+			return {-1, -1};
+	}
+}
+
+fun getDirection(s: ref String) {
+	if (s == "PG") return Direction.PG;
+	if (s == "PD") return Direction.PD;
+	if (s == "LG") return Direction.LG;
+	if (s == "LD") return Direction.LD;
+	panic;
+}
+
+// PG - x no flip, y no flip
+// PD - x no flip, y flip
+// LG - x flip,    y no flip
+// LD - x flip,    y flip
+
+fun diagID(flip_x: bool, flip_y: bool, v: Vec) =
+	(if flip_x then (v.x) else (-v.x)) - (if flip_y then (v.y) else (-v.y));
+
+fun compareVecOnDiagonal(flip_x: bool, @unused flip_y: bool) =
+	lambda[flip_x, flip_y](lhs: MirrorPoint, rhs: MirrorPoint) -> bool {
+		if (flip_x) {
+			return lhs.position.x > rhs.position.x;
+		}
+		else {
+			return lhs.position.x < rhs.position.x;
+		}
+	};
+
+fun flipDirection(d: Direction, mirror: MirrorPoint) {
+	// structural matching..?:
+	auto [x_flip, y_flip] = mirror.flips;
+	auto [x, y] = dirToVec(d);
+
+	if (x_flip) x *= -1;
+	if (y_flip) y *= -1;
+
+	if (x == 1 and y == 1) return Direction.PG;
+	if (x == 1 and y == -1) return Direction.PD;
+	if (x == -1 and y == 1) return Direction.LG;
+	if (x == -1 and y == -1) return Direction.LD;
+
+	panic;
+}
+
+var from_to: Map:{DivVec, DivVec};
+
+
+fun makeDiag(Direction diag_direction) {
+	// this are different flips:
+	let flip_x = diag_direction == Direction.LG or diag_direction == Direction.LD;
+	let flip_y = diag_direction == Direction.PD or diag_direction == Direction.LD;
+
+	var mirror_per_diag: std.Map:{i64, std.vector{MirrorPoint}};
+
+	for (let mirror in mirrors) {
+		let diag_id = diagID(flip_x, flip_y, mirror.position);
+		mirror_per_diag[diag_id].append(mirror);
+	}
+		
+	for (let [_, mirrors_on_diag]: mirror_per_diag) {
+		std.sort(mirrors_on_diag, cmp = compareVecOnDiagonal(flip_x, flip_y));
+
+		for (let i in 0..(mirrors_on_diag.ssize() - 1)) {
+			let from = mirrors_on_diag.at(i);
+			let to = mirrors_on_diag.at(i + 1);
+
+			from_to.insert({from.position, diag_direction}, {to.position, flipDirection(diag_direction, to)});
+		}
+	}
+}
