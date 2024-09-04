@@ -45,10 +45,12 @@ fun dirToVec(d: Direction) -> Vec {
 }
 
 fun getDirection(s: ref String) {
-	if (s == "PG") return Direction.PG;
-	if (s == "PD") return Direction.PD;
-	if (s == "LG") return Direction.LG;
-	if (s == "LD") return Direction.LD;
+	match (s) {
+		case "PG" = return Direction.PG;
+		case "PD" = return Direction.PD;
+		case "LG" = return Direction.LG;
+		case "LD" = return Direction.LD;
+	}
 	panic;
 }
 
@@ -78,10 +80,12 @@ fun flipDirection(d: Direction, mirror: MirrorPoint) {
 	if (x_flip) x *= -1;
 	if (y_flip) y *= -1;
 
-	if (x == 1 and y == 1) return Direction.PG;
-	if (x == 1 and y == -1) return Direction.PD;
-	if (x == -1 and y == 1) return Direction.LG;
-	if (x == -1 and y == -1) return Direction.LD;
+	match (x, y) {
+		case (1, 1) = return Direction.PG;
+		case (1, -1) = return Direction.PD;
+		case (-1, 1) = return Direction.LG;
+		case (-1, -1) = return Direction.LD;
+	}
 
 	panic;
 }
@@ -94,7 +98,7 @@ fun makeDiag(Direction diag_direction) {
 	let flip_x = diag_direction == Direction.LG or diag_direction == Direction.LD;
 	let flip_y = diag_direction == Direction.PD or diag_direction == Direction.LD;
 
-	var mirror_per_diag: std.Map:{i64, std.vector{MirrorPoint}};
+	var mirror_per_diag: std.Map:{i64, std.List:{MirrorPoint}};
 
 	for (let mirror in mirrors) {
 		let diag_id = diagID(flip_x, flip_y, mirror.position);
@@ -102,7 +106,7 @@ fun makeDiag(Direction diag_direction) {
 	}
 		
 	for (let [_, mirrors_on_diag]: mirror_per_diag) {
-		std.sort(mirrors_on_diag, cmp = compareVecOnDiagonal(flip_x, flip_y));
+		std.sort(&mirrors_on_diag, cmp = compareVecOnDiagonal(flip_x, flip_y));
 
 		for (let i in 0..(mirrors_on_diag.ssize() - 1)) {
 			let from = mirrors_on_diag.at(i);
