@@ -9,14 +9,10 @@
 					"function parameter list": []
 				},
 				"return": {
-					"function return type list": [
+					"Expression": [
 						{
-							"Expression": [
-								{
-									"KeywordValue": "i32"
-								},
-							]
-						},
+							"KeywordValue": "i32"
+						}
 					]
 				},
 				"body": {
@@ -35,20 +31,16 @@
 					"function parameter list": []
 				},
 				"return": {
-					"function return type list": [
+					"Expression": [
 						{
-							"Expression": [
-								{
-									"NumLiteral": "1"
-								},
-								{
-									"Operator": "+"
-								},
-								{
-									"NumLiteral": "1"
-								},
-							]
+							"NumLiteral": "1"
 						},
+						{
+							"Operator": "+"
+						},
+						{
+							"NumLiteral": "1"
+						}
 					]
 				},
 				"body": {
@@ -67,83 +59,25 @@
 					"function parameter list": []
 				},
 				"return": {
-					"function return type list": [
+					"Expression": [
 						{
-							"Expression": [
+							"Comma separated": [
 								{
-									"KeywordValue": "i32"
-								},
-							]
-						},
-						{
-							"Expression": [
-								{
-									"KeywordValue": "i32"
-								},
-							]
-						},
-					]
-				},
-				"body": {
-					"Code Block or Statement": {
-						"Code Block": []
-					}
-				}
-			}
-		},
-		{
-			"Function": {
-				"name": {
-					"Name": "A"
-				},
-				"parameters": {
-					"function parameter list": []
-				},
-				"return": {
-					"function return type list": [
-						{
-							"Expression": [
-								{
-									"KeywordValue": "i32"
-								},
-							]
-						},
-						{
-							"Expression": [
-								{
-									"NumLiteral": "1"
-								},
-								{
-									"Operator": "+"
-								},
-								{
-									"NumLiteral": "1"
-								},
-							]
-						},
-						{
-							"Expression": [
-								{
-									"Group": {
-										"type": "()",
-										"expr": {
-											"Expression": [
-												{
-													"Identifier": "abc"
-												},
-											]
+									"Expression": [
+										{
+											"KeywordValue": "i32"
 										}
-									}
+									]
 								},
-							]
-						},
-						{
-							"Expression": [
 								{
-									"Identifier": "x"
-								},
+									"Expression": [
+										{
+											"KeywordValue": "i32"
+										}
+									]
+								}
 							]
-						},
+						}
 					]
 				},
 				"body": {
@@ -162,50 +96,54 @@
 					"function parameter list": []
 				},
 				"return": {
-					"function return type list": [
+					"Expression": [
 						{
-							"Expression": [
+							"Comma separated": [
 								{
-									"KeywordValue": "i32"
-								},
-							]
-						},
-						{
-							"Expression": [
-								{
-									"NumLiteral": "1"
-								},
-								{
-									"Operator": "+"
-								},
-								{
-									"NumLiteral": "1"
-								},
-							]
-						},
-						{
-							"Expression": [
-								{
-									"Group": {
-										"type": "()",
-										"expr": {
-											"Expression": [
-												{
-													"Identifier": "abc"
-												},
-											]
+									"Expression": [
+										{
+											"KeywordValue": "i32"
 										}
-									}
+									]
 								},
-							]
-						},
-						{
-							"Expression": [
 								{
-									"Identifier": "x"
+									"Expression": [
+										{
+											"NumLiteral": "1"
+										},
+										{
+											"Operator": "+"
+										},
+										{
+											"NumLiteral": "1"
+										}
+									]
 								},
+								{
+									"Expression": [
+										{
+											"Group": {
+												"type": "()",
+												"expr": {
+													"Expression": [
+														{
+															"Identifier": "abc"
+														}
+													]
+												}
+											}
+										}
+									]
+								},
+								{
+									"Expression": [
+										{
+											"Identifier": "x"
+										}
+									]
+								}
 							]
-						},
+						}
 					]
 				},
 				"body": {
@@ -215,5 +153,71 @@
 				}
 			}
 		},
+		{
+			"Function": {
+				"name": {
+					"Name": "A"
+				},
+				"parameters": {
+					"function parameter list": []
+				},
+				"return": {
+					"Expression": [
+						{
+							"Comma separated": [
+								{
+									"Expression": [
+										{
+											"KeywordValue": "i32"
+										}
+									]
+								},
+								{
+									"Expression": [
+										{
+											"NumLiteral": "1"
+										},
+										{
+											"Operator": "+"
+										},
+										{
+											"NumLiteral": "1"
+										}
+									]
+								},
+								{
+									"Expression": [
+										{
+											"Group": {
+												"type": "()",
+												"expr": {
+													"Expression": [
+														{
+															"Identifier": "abc"
+														}
+													]
+												}
+											}
+										}
+									]
+								},
+								{
+									"Expression": [
+										{
+											"Identifier": "x"
+										}
+									]
+								}
+							]
+						}
+					]
+				},
+				"body": {
+					"Code Block or Statement": {
+						"Code Block": []
+					}
+				}
+			}
+		}
 	]
 }

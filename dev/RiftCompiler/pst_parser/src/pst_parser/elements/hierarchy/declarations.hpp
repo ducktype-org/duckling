@@ -144,42 +144,6 @@ namespace pst {
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
-	class Fun final: public Decl {
-		tpc::Identifier            name;
-		ParserRef<ParamList>       params = nullptr;
-		ParserRef<RetList>         rets   = nullptr;
-		ParserRef<CodeBlockOrStmt> body   = nullptr;
-
-	public:
-		DECL_CHILD_CONSTRUCTOR(Fun);
-
-		[[nodiscard]]
-		base::StrId getName() const {
-			return name.value;
-		}
-
-		[[nodiscard]]
-		auto getParams() const {
-			return params.borrow();
-		}
-
-		[[nodiscard]]
-		auto getBody() const {
-			return body.borrow();
-		}
-
-		static ParserRef<Fun> parse(RiftParserState& state);
-		void                  dprint(std::ostream& out) const final;
-		~Fun() final = default;
-
-		[[nodiscard]]
-		std::string elementType() const override {
-			return "Function";
-		}
-
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
-	};
-
 	class Variable final: public Decl {
 		tpc::Identifier name;
 		ParserRef<Expr> type     = nullptr;
@@ -202,12 +166,61 @@ namespace pst {
 		}
 
 		static ParserRef<Variable> parse(RiftParserState& state);
-		void                       dprint(std::ostream& out) const override;
-		~Variable() override = default;
+		~Variable() final = default;
+		void dprint(std::ostream& out) const final;
 
 		[[nodiscard]]
 		std::string elementType() const override {
 			return is_const ? "Let" : "Var";
+		}
+
+		void acceptVisitor(PstStmtVisitor& visitor) const override;
+	};
+
+	using ParamList = List<
+		FunParam,
+		false,
+		lexer::Token::BracketType::Round,
+		detail::Conditions::isComma,
+		detail::Conditions::isSentinel,
+		detail::NameGetters::parameterList>;
+
+	class Fun final: public Decl {
+		tpc::Identifier                 name;
+		ParserRef<ParamList>            params = nullptr;
+		base::Optional<ParserRef<Expr>> ret;
+		ParserRef<CodeBlockOrStmt>      body = nullptr;
+
+	public:
+		DECL_CHILD_CONSTRUCTOR(Fun);
+
+		[[nodiscard]]
+		base::StrId getName() const {
+			return name.value;
+		}
+
+		[[nodiscard]]
+		auto getParams() const {
+			return params.borrow();
+		}
+
+		[[nodiscard]]
+		auto getRet() const {
+			return ret.map([](const auto& v) { return v.borrow(); });
+		}
+
+		[[nodiscard]]
+		auto getBody() const {
+			return body.borrow();
+		}
+
+		static ParserRef<Fun> parse(RiftParserState& state);
+		void                  dprint(std::ostream& out) const final;
+		~Fun() final = default;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Function";
 		}
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;

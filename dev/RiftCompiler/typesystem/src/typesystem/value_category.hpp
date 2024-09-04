@@ -9,6 +9,7 @@
 #pragma once
 
 #include <base/flag.hpp>
+#include <helios/symbols/symbols.hpp>
 
 namespace ts {
 	// There used to be "Identifiable" category, but it is now replaced with "Local" and "Global"
@@ -23,6 +24,13 @@ namespace ts {
 		Global,    /**< Global values correspond to global variables. */
 		Literal    /**< Literal values store values explicitly written in the code. */
 	};
+
+	/**
+	 * @brief Get the primary category of a symbol: either Local or Global.
+	 * @param symbol The symbol in question.
+	 * @return The symbol's primary category.
+	 */
+	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol);
 
 	constexpr base::FlagType MOVE(0);
 	constexpr base::FlagType COPY(1);
