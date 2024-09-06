@@ -7,8 +7,11 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
+#include "../symbols/symbols.hpp"
 #include <base/string_id.hpp>
 #include <memory>
+#include <typesystem/types.hpp>
+#include <query_framework/query_impl.hpp>
 #include <vector>
 
 namespace compiler::helios {
@@ -32,8 +35,6 @@ namespace compiler::helios {
 	 */
 	struct HOUTFunction {
 		// @TODO:
-		// - arguments
-		// - return values
 		// - flags like "pure", "thread safe", "shared-thread-function", etc
 
 		// @TODO: decide if HOUT functions should contain its HELIOS SymID
@@ -50,7 +51,17 @@ namespace compiler::helios {
 
 		HOUTCode body;
 
-		HOUTFunction(SymID symbol): original_symbol(std::move(symbol)) {}
+		ts::FunctionInfo type;
+
+		/**
+		 * Construct a HOUT Function object.
+		 * @param symbol The symbol of the function.
+		 * @param ctx The query context to resolve the function's properties.
+		 */
+		HOUTFunction(SymID symbol, query::Context& ctx):
+			  original_symbol(std::move(symbol)),
+			  original_name(name(original_symbol)),
+			  type(ctx.query<QueryTypeOfSymbol>(original_symbol)) {}
 
 		[[nodiscard]]
 		std::string debugPrint() const;
@@ -69,8 +80,6 @@ namespace compiler::helios {
 	 * @TODO: make it represent more general stuff
 	 */
 	struct HOUTGlobalData {
-		// @TODO: types
-
 		// @TODO: decide if HOUT functions global data contain its HELIOS SymID
 		// Currently it is here for pretty printing
 		SymID helios_symbol;
@@ -79,6 +88,14 @@ namespace compiler::helios {
 
 		// @TODO: CTV from TS:
 		i64 value;
+
+		ts::TypeInfo type;
+
+		HOUTGlobalData(SymID symbol, query::Context& ctx):
+			  helios_symbol(symbol),
+			  original_name(name(symbol)),
+			  value(ctx.query<QueryConstValueOf>(symbol)),
+			  type(ctx.query<QueryTypeOfSymbol>(symbol)) {}
 
 		[[nodiscard]]
 		std::string debugPrint() const;

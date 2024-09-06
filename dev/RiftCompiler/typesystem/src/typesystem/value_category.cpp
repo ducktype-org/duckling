@@ -1,6 +1,13 @@
 #include "value_category.hpp"
 
 namespace ts {
+	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol) {
+		compiler::helios::SymbolKind symbol_kind = compiler::helios::kind(symbol);
+		// @TODO Properly check whether the symbol is local or global.
+		bool is_symbol_local = symbol_kind == compiler::helios::SymbolKind::Variable;
+		return is_symbol_local ? PrimaryCategory::Local : PrimaryCategory::Global;
+	}
+
 	/**
 	 * @brief Construct the value category with default attributes based on primary category.
 	 * @param pc The primary category.
