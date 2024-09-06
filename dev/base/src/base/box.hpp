@@ -124,7 +124,7 @@ namespace base {
 		MBox(std::nullptr_t){};
 
 		/**
-		 * @brief Constructs a Box from a raw pointer.
+		 * @brief Constructs an MBox from a raw pointer.
 		 * @note It takes ownership of the pointer.
 		 */
 		explicit MBox(T* ptr) noexcept: ptr{ ptr } {}
