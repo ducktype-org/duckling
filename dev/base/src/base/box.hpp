@@ -71,6 +71,7 @@ namespace base {
 		 * 
 		 * @return Ref<T> 
 		 */
+		[[nodiscard]]
 		Ref<T> refMut() const noexcept { return Ref<T>(ptr); }
 
 		/**
@@ -78,6 +79,7 @@ namespace base {
 		 * 
 		 * @return Ref<const T> 
 		 */
+		[[nodiscard]]
 		Ref<const T> ref() const noexcept { return Ref<const T>(ptr); }
 
 		T* operator->() const {
@@ -167,12 +169,14 @@ namespace base {
 		 * 
 		 * @return MRef<T> 
 		 */
+		[[nodiscard]]
 		MRef<T> refMut() const noexcept { return MRef<T>(ptr); }
 		/**
 		 * @brief Returns a immutable pointer to the pointed value, wrapped in MRef type.
 		 * 
 		 * @return MRef<const T> 
 		 */
+		[[nodiscard]]
 		MRef<const T> ref() const noexcept { return MRef<T>(ptr); }
 
 		/**
