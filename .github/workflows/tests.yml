@@ -140,7 +140,7 @@ jobs:
           done
           echo "Done"
         env:
-          GH_TOKEN: ${{ secrets.QUACKER_PAT }}  # This env variable is used by the GH tool.
+          GH_TOKEN: ${{ secrets.CACHE_DEL_PAT }}  # This env variable is used by the GH tool.
           REPO: ${{ github.repository }}
 
   coverage:
