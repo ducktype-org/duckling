@@ -24,7 +24,7 @@
 				"parameters": {
 					"function parameter list": []
 				},
-				"return": "<nullptr>",
+				"return": "unit",
 				"body": {
 					"Code Block or Statement": {
 						"Code Block": [
