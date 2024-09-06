@@ -33,6 +33,8 @@ namespace base {
 
 		Ref(std::nullptr_t) = delete;
 
+		// @TODO: I would be preferred to assertNotNull during copy, but then the type is not trivially copyable.
+
 		// Copy:
 		Ref(const Ref& other) noexcept = default;
 
@@ -66,7 +68,7 @@ namespace base {
 
 		template<class U>
 		bool operator==(const Ref<U>& other) const {
-			return ptr == other.get();
+			return ptr == other.ptr;
 		}
 
 		template<class U>
@@ -109,9 +111,6 @@ namespace base {
 		MRef(std::nullptr_t){};
 
 		MRef(T* ptr): ptr{ ptr } {}
-
-		// @TODO: I would like to assertNotNull during copy, but then the type is not trivially
-		// copyable...
 
 		// Copy:
 		MRef(const MRef& other) noexcept = default;

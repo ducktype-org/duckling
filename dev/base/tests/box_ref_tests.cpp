@@ -319,14 +319,6 @@ private:
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
-		// MBox from box:
-		{
-			MBox<LiveCounter> a = box<LiveCounter>();
-
-			ASSERT_EQUAL(LiveCounter::count, 1);
-		}
-		ASSERT_EQUAL(LiveCounter::count, 0);
-
 		// MBox type deduction:
 		{
 			MBox a = box<LiveCounter>();
