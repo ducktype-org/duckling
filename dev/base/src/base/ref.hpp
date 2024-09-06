@@ -9,7 +9,9 @@ namespace base {
 	class MRef;
 
 	/**
-	 * @brief Reference
+	 * @brief A non-nullable pointer wrapper type, that does not own the pointer.
+	 * 
+	 * @tparam T pointed type
 	 */
 	template<class T>
 	class Ref final {
@@ -79,7 +81,12 @@ namespace base {
 	};
 
 	/**
-	 * @brief Maybe reference
+	 * @brief A nullable pointer wrapper type, that does not owns the pointer.
+	 * Implements both null-unchecked and null-checked access to the pointer.
+	 * @note: When attempting to use a pointer when it is in null state, a panic will be thrown. In the future we might consider 
+	 * removing this check in release build for performance.
+	 *
+	 * @tparam T pointed type
 	 */
 	template<class T>
 	class MRef final {
@@ -141,18 +148,33 @@ namespace base {
 
 		// Acessors:
 
+		/**
+		 * @brief Null checked access method. Returns optional Ref to the pointed value.
+		 * If MRef was in null state, the optional will be empty.
+		 * If MRef was not in null state, the optional will contain Ref to the pointed value.
+		 * Can be nicely used with optional pattern matching from base.
+		 * 
+		 * @return Optional<Ref<T>> 
+		 */
 		[[nodiscard]]
 		constexpr Optional<Ref<T>> get() const noexcept {
 			if (ptr == nullptr) return {};
 			return Ref<T>(ptr);
 		}
 
-		// unsafe access:
+		/**
+		 * @brief Null unchecked access method. Works like "->" operator on typical pointer.
+		 * @note panics if MRef was in null state.
+		 */
 		T* operator->() const {
 			assertNotNull();
 			return ptr;
 		}
 
+		/**
+		 * @brief Null unchecked access method. Works like "*" operator on typical pointer.
+		 * @note panics if MRef was in null state.
+		 */
 		T& operator*() const {
 			assertNotNull();
 			return *ptr;

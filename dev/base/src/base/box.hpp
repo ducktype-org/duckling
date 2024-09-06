@@ -185,7 +185,7 @@ namespace base {
 		 * If MBox was not in null state, the optional will contain Ref to the pointed value.
 		 * Can be nicely used with optional pattern matching from base.
 		 * 
-		 * @return constexpr Optional<Ref<T>> 
+		 * @return Optional<Ref<T>> 
 		 */
 		[[nodiscard]]
 		constexpr Optional<Ref<T>> get() const noexcept {
@@ -196,8 +196,6 @@ namespace base {
 		/**
 		 * @brief Null unchecked access method. Works like "->" operator on typical pointer.
 		 * @note panics if MBox was in null state.
-		 * 
-		 * @return constexpr Optional<Ref<T>> 
 		 */
 		T* operator->() const {
 			assertNotNull();
@@ -207,8 +205,6 @@ namespace base {
 		/**
 		 * @brief Null unchecked access method. Works like "*" operator on typical pointer.
 		 * @note panics if MBox was in null state.
-		 * 
-		 * @return constexpr Optional<Ref<T>> 
 		 */
 		T& operator*() const {
 			assertNotNull();
