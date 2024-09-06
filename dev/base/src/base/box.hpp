@@ -5,11 +5,11 @@
 namespace base {
 
 	/**
-	 * @brief A pointer wrapper type, that owns the pointer and deletes it when it goes out of scope.
-	 * It is not nullable, and it is not copyable.
+	 * @brief A pointer wrapper type, that owns the pointer and deletes it when it goes out of
+	 * scope. It is not nullable, and it is not copyable.
 	 * @note: When performing a move operation, the source pointer is set to nullptr.
-	 * Attempt to use it after that will result in a panic. In the future we might consider 
-	 * removing this check in release build for performance. 
+	 * Attempt to use it after that will result in a panic. In the future we might consider
+	 * removing this check in release build for performance.
 	 *
 	 * @tparam T pointed type
 	 */
@@ -43,7 +43,7 @@ namespace base {
 		Box(Box&& other) noexcept: ptr{ std::move(other.ptr) } { other.ptr = nullptr; }
 
 		template<class U>
-		Box(Box<U>&& other) noexcept: ptr{std::move(other).ptr} {
+		Box(Box<U>&& other) noexcept: ptr{ std::move(other).ptr } {
 			other.ptr = nullptr;
 		}
 
@@ -51,10 +51,10 @@ namespace base {
 
 		/**
 		 * @brief Move assignment. The object previously pointed to by the Box is deleted.
-		 * 
-		 * @tparam U 
-		 * @param oth 
-		 * @return Box& 
+		 *
+		 * @tparam U
+		 * @param oth
+		 * @return Box&
 		 */
 		template<class U>
 		Box& operator=(Box<U>&& oth) noexcept {
@@ -68,19 +68,23 @@ namespace base {
 
 		/**
 		 * @brief Returns a mutable pointer to the pointed value, wrapped in Ref type.
-		 * 
-		 * @return Ref<T> 
+		 *
+		 * @return Ref<T>
 		 */
 		[[nodiscard]]
-		Ref<T> refMut() const noexcept { return Ref<T>(ptr); }
+		Ref<T> refMut() const noexcept {
+			return Ref<T>(ptr);
+		}
 
 		/**
 		 * @brief Returns a immutable pointer to the pointed value, wrapped in Ref type.
-		 * 
-		 * @return Ref<const T> 
+		 *
+		 * @return Ref<const T>
 		 */
 		[[nodiscard]]
-		Ref<const T> ref() const noexcept { return Ref<const T>(ptr); }
+		Ref<const T> ref() const noexcept {
+			return Ref<const T>(ptr);
+		}
 
 		T* operator->() const {
 			assertNotNull();
@@ -92,17 +96,15 @@ namespace base {
 			return *ptr;
 		}
 
-		~Box() {
-			delete ptr;
-		}
+		~Box() { delete ptr; }
 	};
 
 	/**
-	 * @brief A nullable pointer wrapper type, that owns the pointer and deletes it when it goes out of scope.
-	 * Implements both null-unchecked and null-checked access to the pointer.
-	 * It is not copyable.
-	 * @note: When attempting to use a pointer when it is in null state, a panic will be thrown. In the future we might consider 
-	 * removing this check in release build for performance.
+	 * @brief A nullable pointer wrapper type, that owns the pointer and deletes it when it goes out
+	 * of scope. Implements both null-unchecked and null-checked access to the pointer. It is not
+	 * copyable.
+	 * @note: When attempting to use a pointer when it is in null state, a panic will be thrown. In
+	 * the future we might consider removing this check in release build for performance.
 	 *
 	 * @tparam T pointed type
 	 */
@@ -141,7 +143,7 @@ namespace base {
 		}
 
 		template<class U>
-		MBox(MBox<U>&& other) noexcept: ptr{std::move(other).ptr} {
+		MBox(MBox<U>&& other) noexcept: ptr{ std::move(other).ptr } {
 			other.ptr = nullptr;
 		}
 
@@ -149,10 +151,10 @@ namespace base {
 
 		/**
 		 * @brief Move assignment. The object previously pointed to by the MBox is deleted.
-		 * 
-		 * @tparam U 
-		 * @param oth 
-		 * @return MBox& 
+		 *
+		 * @tparam U
+		 * @param oth
+		 * @return MBox&
 		 */
 		template<class U>
 		MBox& operator=(MBox<U>&& oth) noexcept {
@@ -166,26 +168,31 @@ namespace base {
 
 		/**
 		 * @brief Returns a mutable pointer to the pointed value, wrapped in MRef type.
-		 * 
-		 * @return MRef<T> 
+		 *
+		 * @return MRef<T>
 		 */
 		[[nodiscard]]
-		MRef<T> refMut() const noexcept { return MRef<T>(ptr); }
+		MRef<T> refMut() const noexcept {
+			return MRef<T>(ptr);
+		}
+
 		/**
 		 * @brief Returns a immutable pointer to the pointed value, wrapped in MRef type.
-		 * 
-		 * @return MRef<const T> 
+		 *
+		 * @return MRef<const T>
 		 */
 		[[nodiscard]]
-		MRef<const T> ref() const noexcept { return MRef<T>(ptr); }
+		MRef<const T> ref() const noexcept {
+			return MRef<T>(ptr);
+		}
 
 		/**
 		 * @brief Null checked access method. Returns optional Ref to the pointed value.
 		 * If MBox was in null state, the optional will be empty.
 		 * If MBox was not in null state, the optional will contain Ref to the pointed value.
 		 * Can be nicely used with optional pattern matching from base.
-		 * 
-		 * @return Optional<Ref<T>> 
+		 *
+		 * @return Optional<Ref<T>>
 		 */
 		[[nodiscard]]
 		constexpr Optional<Ref<T>> get() const noexcept {
@@ -216,8 +223,8 @@ namespace base {
 		 * It leaved MBox in null state.
 		 *
 		 * @note panics if MBox was in null state.
-		 * 
-		 * @return constexpr Optional<Ref<T>> 
+		 *
+		 * @return constexpr Optional<Ref<T>>
 		 */
 		Box<T> stealBox() && {
 			assertNotNull();

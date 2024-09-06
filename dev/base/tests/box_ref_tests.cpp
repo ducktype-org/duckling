@@ -120,7 +120,7 @@ private:
 			auto b = box<LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 2);
 
-			Box  c = box<const LiveCounter>();
+			Box c = box<const LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 3);
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);

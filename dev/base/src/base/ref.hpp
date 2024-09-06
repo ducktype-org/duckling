@@ -10,7 +10,7 @@ namespace base {
 
 	/**
 	 * @brief A non-nullable pointer wrapper type, that does not own the pointer.
-	 * 
+	 *
 	 * @tparam T pointed type
 	 */
 	template<class T>
@@ -33,13 +33,14 @@ namespace base {
 
 		Ref(std::nullptr_t) = delete;
 
-		// @TODO: I would be preferred to assertNotNull during copy, but then the type is not trivially copyable.
+		// @TODO: I would be preferred to assertNotNull during copy, but then the type is not
+		// trivially copyable.
 
 		// Copy:
 		Ref(const Ref& other) noexcept = default;
 
 		template<class U>
-		Ref(const Ref<U>& other) noexcept: ptr{other.get()} {}
+		Ref(const Ref<U>& other) noexcept: ptr{ other.get() } {}
 
 		// @note: move constructors are not defined, since they are equivalent to copy constructors.
 		// moving still works, because they are not deleted.
@@ -85,8 +86,8 @@ namespace base {
 	/**
 	 * @brief A nullable pointer wrapper type, that does not owns the pointer.
 	 * Implements both null-unchecked and null-checked access to the pointer.
-	 * @note: When attempting to use a pointer when it is in null state, a panic will be thrown. In the future we might consider 
-	 * removing this check in release build for performance.
+	 * @note: When attempting to use a pointer when it is in null state, a panic will be thrown. In
+	 * the future we might consider removing this check in release build for performance.
 	 *
 	 * @tparam T pointed type
 	 */
@@ -116,14 +117,14 @@ namespace base {
 		MRef(const MRef& other) noexcept = default;
 
 		template<class U>
-		MRef(const MRef<U>& other) noexcept: ptr{other.ptr} {}
+		MRef(const MRef<U>& other) noexcept: ptr{ other.ptr } {}
 
 		// @note: move constructors are not defined, since they are equivalent to copy constructors.
 		// moving still works, because they are not deleted.
 
 		// Construction from Ref:
 		template<class U>
-		MRef(const Ref<U>& other) noexcept: ptr{other.get()} {}
+		MRef(const Ref<U>& other) noexcept: ptr{ other.get() } {}
 
 		// Assign:
 		MRef& operator=(std::nullptr_t) noexcept {
@@ -152,8 +153,8 @@ namespace base {
 		 * If MRef was in null state, the optional will be empty.
 		 * If MRef was not in null state, the optional will contain Ref to the pointed value.
 		 * Can be nicely used with optional pattern matching from base.
-		 * 
-		 * @return Optional<Ref<T>> 
+		 *
+		 * @return Optional<Ref<T>>
 		 */
 		[[nodiscard]]
 		constexpr Optional<Ref<T>> get() const noexcept {
