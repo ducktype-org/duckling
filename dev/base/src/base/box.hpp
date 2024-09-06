@@ -43,7 +43,7 @@ namespace base {
 		Box(Box&& other) noexcept: ptr{ std::move(other.ptr) } { other.ptr = nullptr; }
 
 		template<class U>
-		Box(Box<U>&& other) noexcept: ptr(std::move(other).ptr) {
+		Box(Box<U>&& other) noexcept: ptr{std::move(other).ptr} {
 			other.ptr = nullptr;
 		}
 
@@ -139,7 +139,7 @@ namespace base {
 		}
 
 		template<class U>
-		MBox(MBox<U>&& other) noexcept: ptr(std::move(other).ptr) {
+		MBox(MBox<U>&& other) noexcept: ptr{std::move(other).ptr} {
 			other.ptr = nullptr;
 		}
 

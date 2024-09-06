@@ -35,7 +35,7 @@ namespace base {
 		Ref(const Ref& other) noexcept = default;
 
 		template<class U>
-		Ref(const Ref<U>& other) noexcept: ptr(other.get()) {}
+		Ref(const Ref<U>& other) noexcept: ptr{other.get()} {}
 
 		// @note: move constructors are not defined, since they are equivalent to copy constructors.
 		// moving still works, because they are not deleted.
@@ -110,14 +110,14 @@ namespace base {
 		MRef(const MRef& other) noexcept = default;
 
 		template<class U>
-		MRef(const MRef<U>& other) noexcept: ptr(other.ptr) {}
+		MRef(const MRef<U>& other) noexcept: ptr{other.ptr} {}
 
 		// @note: move constructors are not defined, since they are equivalent to copy constructors.
 		// moving still works, because they are not deleted.
 
 		// Construction from Ref:
 		template<class U>
-		MRef(const Ref<U>& other) noexcept: ptr(other.get()) {}
+		MRef(const Ref<U>& other) noexcept: ptr{other.get()} {}
 
 		// Assign:
 		MRef& operator=(std::nullptr_t) noexcept {
