@@ -8,6 +8,7 @@
 
 #include "../scope_symbol_id.hpp"
 #include <base/string_id.hpp>
+#include <memory>
 #include <vector>
 
 namespace compiler::helios {
