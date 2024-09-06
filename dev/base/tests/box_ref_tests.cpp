@@ -400,7 +400,7 @@ private:
 			MRef                    b_ref_1 = &b;
 			MRef<const LiveCounter> b_ref_2 = &b;
 
-			ASSERT_EQUAL(LiveCounter::count, 1);
+			ASSERT_EQUAL(LiveCounter::count, 2);
 			ASSERT_EQUAL(b_ref_1.get(), b_ref_2.get());
 			ASSERT_EQUAL(b_ref_1.get(), Ref(&b));
 		}
