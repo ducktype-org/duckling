@@ -172,6 +172,8 @@ namespace lexer {
 
 	bool Token::isOperator() const { return type == Type::Operator; }
 
+	Operator Token::asOperator() const { return rift_def::strAsOperator(str_id); }
+
 	bool Token::isIdentifier() const { return type == Type::Identifier; }
 
 	bool Token::isNumLiteral() const { return type == Type::NumLiteral; }

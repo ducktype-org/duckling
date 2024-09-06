@@ -136,6 +136,9 @@ namespace lexer {
 		[[nodiscard]]
 		bool isOperator() const;
 		[[nodiscard]]
+		Operator asOperator() const;
+
+		[[nodiscard]]
 		bool isIdentifier() const;
 		[[nodiscard]]
 		bool isNumLiteral() const;

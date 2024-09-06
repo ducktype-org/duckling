@@ -19,7 +19,7 @@ namespace rift_def {
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
-	constexpr std::array<std::tuple<Keyword, std::string_view, base::FlagType>, 66>
+	constexpr std::array<std::tuple<Keyword, std::string_view, base::FlagType>, 67>
 		rift_keywords_array{ {
 			{ Keyword::Fun, "fun", base::EmptyFlag },
 			{ Keyword::Class, "class", base::EmptyFlag },
@@ -38,6 +38,7 @@ namespace rift_def {
 			{ Keyword::For, "for", base::EmptyFlag },
 			{ Keyword::Loop, "loop", base::EmptyFlag },
 			{ Keyword::If, "if", base::EmptyFlag },
+			{ Keyword::Then, "then", base::EmptyFlag },
 			{ Keyword::Else, "else", base::EmptyFlag },
 			{ Keyword::Elif, "elif", base::EmptyFlag },
 
@@ -133,7 +134,7 @@ namespace rift_def {
 		{ Special::DolarSign, "$" },
 	} };
 
-	constexpr std::array<std::pair<Operator, std::string_view>, 15> operator_array{ {
+	constexpr std::array<std::pair<Operator, std::string_view>, 21> operator_array{ {
 		{ Operator::NotAnOperator, "NotAnOperator" },
 		{ Operator::Period, "." },
 		{ Operator::PeriodStar, ".*" },
@@ -143,6 +144,13 @@ namespace rift_def {
 		{ Operator::QuestionMark, "?" },
 		{ Operator::SingleArrow, "->" },
 		{ Operator::DoubleArrow, "=>" },
+
+		{ Operator::Lesser, "<"},
+		{ Operator::Greater, ">"},
+		{ Operator::LEqual, "<="},
+		{ Operator::GEqual, ">="},
+		{ Operator::Equal, "=="},
+		{ Operator::NotEqual, "!="},
 
 		{ Operator::Minus, "-" },
 		{ Operator::Plus, "+" },

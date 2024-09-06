@@ -49,6 +49,7 @@ namespace rift_def {
 		For,
 		Loop,
 		If,
+		Then,
 		Elif,
 		Else,
 
@@ -165,6 +166,13 @@ namespace rift_def {
 		QuestionMark,
 		SingleArrow,
 		DoubleArrow,
+
+		Lesser,
+		Greater,
+		LEqual,
+		GEqual,
+		Equal,
+		NotEqual,
 
 		Plus,
 		Minus,
