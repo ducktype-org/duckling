@@ -75,7 +75,6 @@ namespace base {
 
 		~Box() {
 			delete ptr;
-			ptr = nullptr;
 		}
 	};
 
