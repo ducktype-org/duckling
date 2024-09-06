@@ -59,8 +59,18 @@ namespace base {
 
 		friend void swap(Box& first, Box& second) noexcept { std::swap(first.ptr, second.ptr); }
 
+		/**
+		 * @brief Returns a mutable pointer to the pointed value, wrapped in Ref type.
+		 * 
+		 * @return Ref<T> 
+		 */
 		Ref<T> refMut() const noexcept { return Ref<T>(ptr); }
 
+		/**
+		 * @brief Returns a immutable pointer to the pointed value, wrapped in Ref type.
+		 * 
+		 * @return Ref<const T> 
+		 */
 		Ref<const T> ref() const noexcept { return Ref<const T>(ptr); }
 
 		T* operator->() const {
@@ -139,27 +149,63 @@ namespace base {
 
 		friend void swap(MBox& first, MBox& second) noexcept { std::swap(first.ptr, second.ptr); }
 
+		/**
+		 * @brief Returns a mutable pointer to the pointed value, wrapped in MRef type.
+		 * 
+		 * @return MRef<T> 
+		 */
 		MRef<T> refMut() const noexcept { return MRef<T>(ptr); }
-
+		/**
+		 * @brief Returns a immutable pointer to the pointed value, wrapped in MRef type.
+		 * 
+		 * @return MRef<const T> 
+		 */
 		MRef<const T> ref() const noexcept { return MRef<T>(ptr); }
 
+		/**
+		 * @brief Null checked access method. Returns optional Ref to the pointed value.
+		 * If MBox was in null state, the optional will be empty.
+		 * If MBox was not in null state, the optional will contain Ref to the pointed value.
+		 * Can be nicely used with optional pattern matching from base.
+		 * 
+		 * @return constexpr Optional<Ref<T>> 
+		 */
 		[[nodiscard]]
 		constexpr Optional<Ref<T>> get() const noexcept {
 			if (ptr == nullptr) return {};
 			return Ref<T>(ptr);
 		}
 
-		// unsafe access:
+		/**
+		 * @brief Null unchecked access method. Works like "->" operator on typical pointer.
+		 * @note panics if MBox was in null state.
+		 * 
+		 * @return constexpr Optional<Ref<T>> 
+		 */
 		T* operator->() const {
 			assertNotNull();
 			return ptr;
 		}
 
+		/**
+		 * @brief Null unchecked access method. Works like "*" operator on typical pointer.
+		 * @note panics if MBox was in null state.
+		 * 
+		 * @return constexpr Optional<Ref<T>> 
+		 */
 		T& operator*() const {
 			assertNotNull();
 			return *ptr;
 		}
 
+		/**
+		 * @brief Method that allows to construct Box from MBox.
+		 * It leaved MBox in null state.
+		 *
+		 * @note panics if MBox was in null state.
+		 * 
+		 * @return constexpr Optional<Ref<T>> 
+		 */
 		Box<T> stealBox() && {
 			assertNotNull();
 			T* output = ptr;
