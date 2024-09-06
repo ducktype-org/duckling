@@ -4,6 +4,15 @@
 
 namespace base {
 
+	/**
+	 * @brief A pointer wrapper type, that owns the pointer and deletes it when it goes out of scope.
+	 * It is not nullable, and it is not copyable.
+	 * @note: When performing a move operation, the source pointer is set to nullptr.
+	 * Attempt to use it after that will result in a panic. In the future we might consider 
+	 * removing this check in release build for performance. 
+	 *
+	 * @tparam T pointed type
+	 */
 	template<class T>
 	class Box final {
 	private:
@@ -31,8 +40,6 @@ namespace base {
 
 		Box(const Box& other) = delete;
 
-		// @TODO: do we make Box secretly nullable to enforce move semantics or do we not?
-
 		Box(Box&& other) noexcept: ptr{ std::move(other.ptr) } { other.ptr = nullptr; }
 
 		template<class U>
@@ -42,8 +49,6 @@ namespace base {
 
 		Box& operator=(const Box& other) = delete;
 
-		// @TODO: do we need move operations here? Maybe copy will by enough?
-		// do we want this = ?
 		template<class U>
 		Box& operator=(Box<U>&& oth) noexcept {
 			delete ptr;
@@ -74,10 +79,18 @@ namespace base {
 		}
 	};
 
+	/**
+	 * @brief A nullable pointer wrapper type, that owns the pointer and deletes it when it goes out of scope.
+	 * Implements both null-unchecked and null-checked access to the pointer.
+	 * It is not copyable.
+	 * @note: When attempting to use a pointer when it is in null state, a panic will be thrown. In the future we might consider 
+	 * removing this check in release build for performance.
+	 *
+	 * @tparam T pointed type
+	 */
 	template<class T>
 	class MBox final {
 	private:
-		// do we wan't to use unique here, or just make it over self?
 		T* ptr = nullptr;
 
 		template<class U>
