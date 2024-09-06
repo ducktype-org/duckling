@@ -49,6 +49,13 @@ namespace base {
 
 		Box& operator=(const Box& other) = delete;
 
+		/**
+		 * @brief Move assignment. The object previously pointed to by the Box is deleted.
+		 * 
+		 * @tparam U 
+		 * @param oth 
+		 * @return Box& 
+		 */
 		template<class U>
 		Box& operator=(Box<U>&& oth) noexcept {
 			delete ptr;
@@ -138,7 +145,13 @@ namespace base {
 
 		MBox& operator=(const MBox& other) = delete;
 
-		// do we want it?
+		/**
+		 * @brief Move assignment. The object previously pointed to by the MBox is deleted.
+		 * 
+		 * @tparam U 
+		 * @param oth 
+		 * @return MBox& 
+		 */
 		template<class U>
 		MBox& operator=(MBox<U>&& oth) noexcept {
 			delete ptr;
