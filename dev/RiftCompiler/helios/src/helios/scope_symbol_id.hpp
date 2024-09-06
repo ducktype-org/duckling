@@ -7,7 +7,6 @@
 #pragma once
 
 #include <base/perfect_hash.hpp>
-#include <base/smart_pointers.hpp>
 #include <base/ref.hpp>
 
 namespace compiler::helios {
