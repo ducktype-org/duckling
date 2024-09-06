@@ -20,7 +20,7 @@ namespace base {
 		friend class Ref;
 
 		void assertNotNull() const {
-			if (ptr == nullptr) RIFT_PANIC("Ref got nullptr");
+			if (ptr == nullptr) RIFT_PANIC("Ref was in null state, when non-null was required!");
 		}
 
 	public:
@@ -93,7 +93,7 @@ namespace base {
 		friend class Ref;
 
 		void assertNotNull() const {
-			if (ptr == nullptr) RIFT_PANIC("MRef got nullptr");
+			if (ptr == nullptr) RIFT_PANIC("MRef was in null state, when non-null was required!");
 		}
 
 	public:
