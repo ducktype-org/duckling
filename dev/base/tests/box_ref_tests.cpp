@@ -119,6 +119,9 @@ private:
 			Box  a = box<LiveCounter>();
 			auto b = box<LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 2);
+
+			Box  c = box<const LiveCounter>();
+			ASSERT_EQUAL(LiveCounter::count, 3);
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
@@ -323,6 +326,9 @@ private:
 		{
 			MBox a = box<LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 1);
+
+			MBox b = box<const LiveCounter>();
+			ASSERT_EQUAL(LiveCounter::count, 2);
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
@@ -388,6 +394,15 @@ private:
 			ASSERT_EQUAL(LiveCounter::count, 1);
 			ASSERT_EQUAL(a_ref_1.get(), a_ref_2.get());
 			ASSERT_EQUAL(a_ref_1.get(), Ref(&a));
+
+			const LiveCounter b;
+
+			MRef                    b_ref_1 = &b;
+			MRef<const LiveCounter> b_ref_2 = &b;
+
+			ASSERT_EQUAL(LiveCounter::count, 1);
+			ASSERT_EQUAL(b_ref_1.get(), b_ref_2.get());
+			ASSERT_EQUAL(b_ref_1.get(), Ref(&b));
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
