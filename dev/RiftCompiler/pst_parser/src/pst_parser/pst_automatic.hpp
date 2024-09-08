@@ -126,6 +126,21 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
+		 *
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param fun The value.
+		 */
+		template<std::derived_from<RiftElement> El, typename Sink, typename... Args>
+		void assign(Sink* sink, ParserRef<El> sub_tree) {
+			if (sub_tree != nullptr) {
+				sub_tree->setParent(el);
+				el->addChild(sub_tree);
+				*sink = std::move(sub_tree);
+			}
+		}
+
+		/**
 		 * @brief Call a custom parse function with automation.
 		 *
 		 * The return type of the parsed function usually has to be specified with the first
@@ -138,11 +153,7 @@ namespace pst {
 		template<std::derived_from<RiftElement> El, typename Sink, typename... Args>
 		void with(Sink* sink, ParserRef<El> fun(State&, Args...), Args&&... args) {
 			ParserRef<El> result = fun(state, std::forward<Args>(args)...);
-			if (result != nullptr) {
-				result->setParent(el);
-				el->addChild(result);
-				*sink = std::move(result);
-			}
+			assign(sink, std::move(result));
 		}
 
 		/**

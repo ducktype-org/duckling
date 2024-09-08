@@ -38,6 +38,7 @@ namespace rift_def {
 		Using,
 		Alias,
 		In,
+		Lambda,
 
 		// Var-like:
 		Var,

@@ -6,4 +6,4 @@
 #include "hierarchy/declarations.hpp"    // IWYU pragma: export
 #include "hierarchy/actions.hpp"         // IWYU pragma: export
 #include "hierarchy/class_elements.hpp"  // IWYU pragma: export
-#include "hierarchy/expr.hpp"  // IWYU pragma: export
+#include "hierarchy/expr.hpp"            // IWYU pragma: export
