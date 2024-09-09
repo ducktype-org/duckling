@@ -1,5 +1,6 @@
 #pragma once
 
+#include "elements_list.hpp"
 #include "../rift_parser_state.hpp"
 
 namespace pst::detail {

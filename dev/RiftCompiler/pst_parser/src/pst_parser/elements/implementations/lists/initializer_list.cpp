@@ -1,0 +1,16 @@
+#include "impl_template.hpp"
+
+#include "../../hierarchy/not_statements.hpp"
+
+namespace pst {
+	ParserRef<InitList> InitList::parse(RiftParserState& state) {
+		return ListParsingTemplate::parseList<
+			Expr,
+			InitList,
+			false,
+			lexer::Token::BracketType::None,
+			detail::Conditions::isComma,
+			detail::Conditions::isAssign,
+			detail::NameGetters::classInitList>(state);
+	}
+}

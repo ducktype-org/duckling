@@ -140,10 +140,10 @@ namespace pst {
 	};
 
 	class Method final: public ClassStmt {
-		tpc::Identifier      name;
-		ParserRef<ParamList> params = nullptr;
-		ParserRef<RetList>   rets   = nullptr;
-		ParserRef<CodeBlock> body   = nullptr;
+		tpc::Identifier                 name;
+		ParserRef<ParamList>            params = nullptr;
+		base::Optional<ParserRef<Expr>> ret;
+		ParserRef<CodeBlock>            body = nullptr;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Method);

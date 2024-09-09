@@ -1,0 +1,18 @@
+#include "preamble.hpp"
+
+namespace pst::expr {
+	ParserRef<ExprElement> RoundExpr::parse(RiftParserState& state, u64 length) {
+		std::cerr << "Parsing Round Group Expression";
+		if (!checkLength(state, length)) return nullptr;
+
+		if (length != 1 || state[0].isBracketGroup(lexer::Token::Round)) {}  // Error
+
+		auto out = base::make_unique<RoundExpr>(state.getPosition());
+
+		state.parse(out).goDown();
+		state.parse(out).with(&out->expr, Comma::parse, state.ctokens().size());
+		state.parse(out).goUpAndSkip();
+
+		return out;
+	}
+}

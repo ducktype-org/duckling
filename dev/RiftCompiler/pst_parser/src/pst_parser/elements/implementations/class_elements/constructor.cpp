@@ -1,4 +1,5 @@
 #include "preamble.hpp"
+#include "../../hierarchy/lists.hpp"  // IWYU pragma: keep
 
 namespace pst {
 	ParserRef<Constructor> Constructor::parse(RiftParserState& state, const ClassContext& ctx) {

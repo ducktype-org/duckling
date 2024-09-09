@@ -177,14 +177,6 @@ namespace pst {
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
-	using ParamList = List<
-		FunParam,
-		false,
-		lexer::Token::BracketType::Round,
-		detail::Conditions::isComma,
-		detail::Conditions::isSentinel,
-		detail::NameGetters::parameterList>;
-
 	class Fun final: public Decl {
 		tpc::Identifier                 name;
 		ParserRef<ParamList>            params = nullptr;

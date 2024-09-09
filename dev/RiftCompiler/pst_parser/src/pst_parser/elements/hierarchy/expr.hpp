@@ -1,10 +1,16 @@
+#pragma once
+
 #include "meta.hpp"
+#include "lists.hpp"           // IWYU pragma: keep
+#include "not_statements.hpp"  // IWYU pragma: keep
 
 #include <stack>
 
 #define CONDITION(name) static bool name(const RiftParserState& state, i64 fwd = 0)
 
 namespace pst {
+	class CodeBlock;
+
 	/**
 	 * @brief Common root for expression sub-elements
 	 */
@@ -69,7 +75,7 @@ namespace pst {
 		template<
 			std::derived_from<ExprElement> T,
 			StateCondition                 until  // ,
-												  // StateCondition                  positiveEnd,
+		                                          // StateCondition                  positiveEnd,
 		                                          // std::derived_from<dia::Message> badEndMessage
 			>
 		ParserRef<ExprElement> parseUntil(RiftParserState& state) {
@@ -159,6 +165,28 @@ namespace pst {
 
 				return out;
 			}
+		};
+
+		class RoundExpr: public ExprElement {
+			ParserRef<ExprElement> expr;
+
+		public:
+			explicit RoundExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {}
+
+			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			std::string elementType() const override { return "Round Group Expression"; }
+		};
+
+		class BlockExpr: public ExprElement {
+			ParserRef<CodeBlock> block;
+
+		public:
+			explicit BlockExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {}
+
+			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			std::string elementType() const override { return "Block Expression"; }
 		};
 
 		class GeneralPrefix: public PrefixOperator {

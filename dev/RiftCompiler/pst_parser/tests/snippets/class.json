@@ -9,7 +9,7 @@
 					"Expression": [
 						{
 							"Identifier": "aaa"
-						}
+						},
 					]
 				},
 				"Implements": {
@@ -18,16 +18,16 @@
 							"Expression": [
 								{
 									"Identifier": "bbb"
-								}
+								},
 							]
 						},
 						{
 							"Expression": [
 								{
 									"Identifier": "cccc"
-								}
+								},
 							]
-						}
+						},
 					]
 				},
 				"body": {
@@ -42,14 +42,14 @@
 									"Expression": [
 										{
 											"KeywordValue": "i32"
-										}
+										},
 									]
 								}
 							}
 						},
 						{
 							"specifiers": [
-								"private"
+								"private",
 							],
 							"Class Field": {
 								"is mutable": "true",
@@ -60,14 +60,14 @@
 									"Expression": [
 										{
 											"KeywordValue": "i32"
-										}
+										},
 									]
 								},
 								"initial": {
 									"Expression": [
 										{
 											"NumLiteral": "5"
-										}
+										},
 									]
 								}
 							}
@@ -89,7 +89,7 @@
 														"Expression": [
 															{
 																"KeywordValue": "i64"
-															}
+															},
 														]
 													}
 												}
@@ -105,15 +105,15 @@
 														"Expression": [
 															{
 																"Identifier": "yyy"
-															}
+															},
 														]
 													}
 												}
 											}
-										}
+										},
 									]
 								},
-								"return": "<nullptr>",
+								"return": "unit",
 								"body": {
 									"Code Block": [
 										{
@@ -129,21 +129,21 @@
 																"Expression": [
 																	{
 																		"Identifier": "a"
-																	}
+																	},
 																]
 															}
 														}
-													}
+													},
 												]
 											}
-										}
+										},
 									]
 								}
 							}
 						},
 						{
 							"specifiers": [
-								"private"
+								"private",
 							],
 							"Class Method": {
 								"name": {
@@ -161,23 +161,19 @@
 														"Expression": [
 															{
 																"KeywordValue": "i64"
-															}
+															},
 														]
 													}
 												}
 											}
-										}
+										},
 									]
 								},
 								"return": {
-									"function return type list": [
+									"Expression": [
 										{
-											"Expression": [
-												{
-													"KeywordValue": "i64"
-												}
-											]
-										}
+											"KeywordValue": "i64"
+										},
 									]
 								},
 								"body": {
@@ -193,7 +189,7 @@
 													},
 													{
 														"Identifier": "z"
-													}
+													},
 												]
 											}
 										},
@@ -204,18 +200,18 @@
 													"Expression": [
 														{
 															"Identifier": "y"
-														}
+														},
 													]
 												}
 											}
-										}
+										},
 									]
 								}
 							}
 						},
 						{
 							"specifiers": [
-								"public"
+								"public",
 							],
 							"Access specification block": {
 								"specifier": "public",
@@ -223,7 +219,7 @@
 									"Class Block": [
 										{
 											"specifiers": [
-												"public"
+												"public",
 											],
 											"Class Constructor": {
 												"name": {
@@ -241,12 +237,12 @@
 																		"Expression": [
 																			{
 																				"KeywordValue": "i64"
-																			}
+																			},
 																		]
 																	}
 																}
 															}
-														}
+														},
 													]
 												},
 												"inits": {
@@ -263,13 +259,13 @@
 																			"Expression": [
 																				{
 																					"Identifier": "c"
-																				}
+																				},
 																			]
 																		}
 																	}
-																}
+																},
 															]
-														}
+														},
 													]
 												},
 												"body": {
@@ -285,17 +281,17 @@
 																	},
 																	{
 																		"Identifier": "c"
-																	}
+																	},
 																]
 															}
-														}
+														},
 													]
 												}
 											}
 										},
 										{
 											"specifiers": [
-												"public"
+												"public",
 											],
 											"Class Constructor": {
 												"name": {
@@ -318,31 +314,31 @@
 																	},
 																	{
 																		"NumLiteral": "81"
-																	}
+																	},
 																]
 															}
-														}
+														},
 													]
 												}
 											}
 										},
 										{
 											"specifiers": [
-												"public"
+												"public",
 											],
 											"Class Destructor": {
 												"body": {
 													"Code Block": []
 												}
 											}
-										}
+										},
 									]
 								}
 							}
-						}
+						},
 					]
 				}
 			}
-		}
+		},
 	]
 }
