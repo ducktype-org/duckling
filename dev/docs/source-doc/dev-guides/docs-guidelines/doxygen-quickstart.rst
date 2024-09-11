@@ -1,19 +1,84 @@
-===========================
-Doxygen Documentation Guide
-===========================
+==================
+Doxygen Quickstart
+==================
 
 .. contents::
     :depth: 2
     :local:
 
 There are two distinct places where Doxygen documentation can be written:
-- in the source code files
-- in the Markdown (`.md`) files
 
-Markdown Doxygen Pages
-----------------------
+* in the :ref:`source code files <source-files>`
+* in the :ref:`Markdown files <md-files>`
 
-Markdown files can be used to generate Doxygen documentation. 
+.. _source-files:
+Source Code Files
+=================
+
+Doxygen documentation can be written directly in the source code files.
+This is useful when you want to provide a detailed description of a class, function, or variable.
+
+Start each file with a comment block:
+
+.. code-block:: cpp
+
+    /**
+     @file foo.hpp
+     @brief Brief description of the file.
+     @author John Doe
+     @date 2021-10-01
+     
+     Detailed description of the file.
+     */
+
+Note the double asterisk ``**`` starting the comment block. This is important, as Doxygen uses it to identify the beginning of the comment.
+After the ``/**`` each line should either start with space (as in the example above) or with an asterisk ``*``, like this:
+
+.. code-block:: cpp
+
+    /**
+     * @file foo.hpp
+     * @brief Brief description of the file.
+     * @author John Doe
+     * @date 2021-10-01
+     *
+     * Detailed description of the file.
+     */
+
+.. note::
+    Doxygen commands can start with ``@`` or ``\``, but the latter is discouraged.
+
+You can also add Doxygen commands to describe classes, functions, and variables:
+
+.. code-block:: cpp
+
+    /**
+     * @class Foo
+     * @brief Brief description of the class.
+     * @details Detailed description of the class.
+     */
+    class Foo {
+    public:
+        /**
+         * @brief Brief description of the function.
+         * @details Detailed description of the function.
+         * @param x Description of the parameter.
+         * @return Description of the return value.
+         */
+        int bar(int x);
+    };
+
+    /**
+     * @brief Brief description of the variable.
+     * @details Detailed description of the variable.
+     */
+    int baz;
+
+.. _md-files:
+Markdown Files
+==============
+
+Markdown files can also be used to generate Doxygen documentation. 
 This is useful when you want to provide a high-level overview of the codebase, 
 or when you want to provide a tutorial or a guide.
 
@@ -59,17 +124,17 @@ It integrates with the Markdown syntax, so you can use it in the same way you wo
 There are also alternative syntaxes like ``[Link text](#<file_name>)``.
 
 Doxygen autolink
-----------------
+================
 
 Doxygen can automatically detect if a word is a Doxygen entity and create a link to it.
 This works for file names, functions, classes and many others. 
 Full list can be found `here <https://www.doxygen.nl/manual/autolink.html>`_.
 
-Add example
------------
+How to add code examples
+========================
 
 In external file
-++++++++++++++++
+----------------
 
 To add an example to a Doxygen page, you should create ``examples`` folder and place the example file there.
 Then you can mark it as an example using the following command:
@@ -105,7 +170,7 @@ The command can be in any source file (not in the markdown file), it doesn't mat
 Creating a link to example file from the documentation is currently not possible, see :ref:`excluded_directories`.
 
 In code snippet
-+++++++++++++++
+----------------
 
 To include an example in a code snippet, you can use the following command:
 
@@ -123,13 +188,13 @@ This will include the file ``exceptions.hpp`` from the ``base`` directory.
 
 
 Useful commands
----------------
+===============
 
 All Markdown syntax is available in Doxygen documentation, so you can use headers, lists, tables, etc.
 However, there are some extensions that can be useful. All list can be found `here <https://www.doxygen.nl/manual/markdown.html>`_.
 
 Table of contents
-+++++++++++++++++
+-----------------
 
 To create a table of contents, you can use the following command:
 
@@ -140,7 +205,7 @@ To create a table of contents, you can use the following command:
     [TOC]
 
 Notes and warnings
-++++++++++++++++++
+------------------
 
 To create a note, warning, attention and remark (hint, tip) you can use the following command:
 
@@ -170,7 +235,7 @@ You can also use Github-style notes (``>`` are important):
     > This is important.
 
 Links to section headers
-+++++++++++++++++++++++++
+------------------------
 
 To create a link to a section header, you have to create label first:
 
@@ -187,7 +252,7 @@ Then you can link to it using ``@ref`` command or hash ``#`` syntax:
     [Link text](#label_name)
 
 Images
-++++++
+------
 
 You include image in the documentation the same way you would in Markdown:
 
@@ -200,9 +265,9 @@ Path to the image is relative to the location of dev directory.
 
 .. _excluded_directories:
 Directories excluded from Doxygen
----------------------------------
+=================================
 
-Currently the following directories are excluded from Doxygen documentation generation, 
+Currently, the following directories are excluded from Doxygen documentation generation, 
 but can be included or marked as examples:
 
 * ``*/examples/*``

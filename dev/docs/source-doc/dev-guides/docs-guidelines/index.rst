@@ -5,145 +5,59 @@ Documentation guidelines
 .. @TODO:
 .. Write more tutorials
 
-.. contents::
-    :depth: 2
-    :local:
+This is overview of all documentation in the Duckling project.
 
 Documentation structure
 =======================
 
-Rift documentation is divided into three parts:
+Duckling documentation is divided into three parts:
 
-* ``rift-doc`` - user documentation, describing language funcionalities, usage, assumptions and goals 
-* ``source-doc`` - developer documentation, guidelines and resources for developers
-* ``doxygen`` - low level description of source code, implementation details and libraries usage
+* :ref:`duckling-doc <duckling-doc>` - user documentation, describing language funcionalities, usage, assumptions and goals 
+* :ref:`source-doc <source-doc>` - developer documentation, guidelines and resources for developers
+* :ref:`doxygen <doxygen>` - low level description of source code, implementation details and libraries usage
 
-``source-doc`` is further divided into:
+:ref:`source-doc <source-doc>` is further divided into:
 
-* ``dev-guides`` - guidelines, tutorial and instructions
-* ``dev-handbook`` - high level description of source code
+* :doc:`dev-guides </source-doc/dev-guides/index>` - guidelines, tutorial and instructions
+* :doc:`dev-handbook </source-doc/dev-handbook/index>` - high level description of source code
 
-Basic rst
-=========
+.. _duckling-doc:
 
-Documentation is written primarly in ``reStructuredText``. Idea behind ``reStructuredText`` (``.rst`` files) is similar to ``Markdown``. Sorce files are supposed to be easily redable and editable for humans, while at the same time providing funcionalities for generating nice-looking HTML documents.
+Duckling documentation
+======================
 
-Headers
--------
+This is the user documentation, describing language funcionalities, usage, assumptions and goals.
+You can find it in the `rift-doc <https://github.com/ducktype-org/rift-doc>`_ github repository 
+and is currently under development.
 
-In ``.rst`` headers are created by underlining text with some symbols. While technicly order of nesting doesn't matter we use following standard:
+.. _source-doc:
 
-.. code-block:: rst
+Source documentation
+====================
 
-    =====
-    Title
-    =====
+You are currently in the source documentation. This part of the documentation is intended for developers contributing to Duckling.
+It is in the main Duckling repository in the ``docs`` directory.
 
-    Section
-    =======
+It is generated using Sphinx and reStructuredText (rst) format, for which you can find a quickstart guide here: :doc:`rst-quickstart`.
 
-    Subsection
-    ----------
+.. _doxygen:
 
-    Subsubsection
-    ^^^^^^^^^^^^^
+Doxygen documentation
+=====================
 
-    Paragraphs
-    """"""""""
+Doxygen documentation is generated from source code comments. It is intended for developers who want to understand the implementation details of Duckling.
 
-Lists
------
+A quick overview of Doxygen documentation can be found here: :doc:`doxygen-quickstart`. 
 
-To create ordered lists use ``#.`` sybmols and to create unordered lists use ``*`` symbol. Of course lists can be nested and you can use other directives inside lists. When nesting something in a list, keep in mind that it should be indented to flush with the parent list item text (ie. three spaces in ordered lists and two spaces in unordered lists).
-
-.. code-block:: rst
-
-    Ordered list:
-
-    #. First item
-
-    #. Second item
-
-       #. Second item, first subitem
-
-       #. Second item, second subitem
-       
-    #. Third item
-
-    Unordered list:
-
-    * Item
-
-      * Subitem
-
-      * Another subitem
-
-    * Another item
-
-    * Yet another item
-
-    Mixed list:
-
-    * Item
-
-      #. First subitem
-
-      #. Second subitem
-
-    * Another item
-
-Inline formatting
------------------
-
-* ``code`` - use double backticks: \`\`code\`\`
-* *italic* - use single asterisk: \*italic\*
-* **bold** - use double asterisk: \*\*bold\*\*
-
-You can also use "\\" sign to escape characters.
-
-Code blocks
------------
-
-Use ``code-block`` directive to write a block of code. You can also specify a language to set highlighting.
-
-.. code-block:: rst
-    
-    .. code-block:: cpp
-
-        int main() {
-            return 0;
-        }
+You can also write Markdown documentation that will be included in Doxygen, see :doc:`markdown-quickstart`.
 
 
-Tables of contents
-==================
+.. toctree::
+    :maxdepth: 1
+    :caption: Read more:
+    :glob:
 
-In ``rst`` you can easily generate both internal and external tables of contents.
-
-To create internal table of contents use ``contents`` directive.
-
-.. code-block:: rst
-
-    .. contents::
-        :depth: 2
-        :local:
-
-To create external table of contents use ``toctree`` directive.
-
-* Use ``maxdepth`` to set depth of generated sub items. 
-* Use ``caption`` to set the caption.
-* Use ``glob`` to enable auto adding items that match pattern.
-
-.. code-block:: rst
-
-    .. toctree::
-        :maxdepth: 1
-        :caption: Contents:
-        :glob:
-
-        directory/file.rst
-        folder/doc.rst
-        *
+    *
 
 See also
 ========
