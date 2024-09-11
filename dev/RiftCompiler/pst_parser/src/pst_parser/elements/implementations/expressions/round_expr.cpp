@@ -5,7 +5,7 @@ namespace pst::expr {
 		std::cerr << "Parsing Round Group Expression";
 		if (!checkLength(state, length)) return nullptr;
 
-		if (length != 1 || state[0].isBracketGroup(lexer::Token::Round)) {}  // Error
+		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Round))) {}  // Error
 
 		auto out = base::make_unique<RoundExpr>(state.getPosition());
 

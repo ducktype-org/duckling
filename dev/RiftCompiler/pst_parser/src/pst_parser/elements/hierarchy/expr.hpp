@@ -80,7 +80,8 @@ namespace pst {
 			>
 		ParserRef<ExprElement> parseUntil(RiftParserState& state) {
 			i64 length = 0;
-			while (state.notEmpty() && !until(state, length)) length++;
+			while (!state[length].is(lexer::Token::Type::Sentinel) && !until(state, length))
+				length++;
 			return T::parse(state, length);
 		}
 
@@ -167,6 +168,76 @@ namespace pst {
 			}
 		};
 
+		class TemplateSpecifier final: public ExprElement {
+			ParserRef<ExprElement> inner;
+
+		public:
+			TemplateSpecifier(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
+
+			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			std::string elementType() const override { return "Template Specifier Expression"; }
+		};
+
+		class IdentifierLiteral: public ExprElement {
+			tpc::Identifier                        name;
+			base::Optional<ParserRef<ExprElement>> template_specifier;
+
+		public:
+			IdentifierLiteral(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
+
+			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			std::string elementType() const override { return "Literal Expression"; }
+		};
+
+		class Access: public ExprElement {
+			base::StrId                            type;  ///< either `.` or `.?`
+			tpc::Identifier                        name;
+			base::Optional<ParserRef<ExprElement>> template_specifier;
+
+		public:
+			Access(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
+
+			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			std::string elementType() const override { return "Access Expression"; }
+		};
+
+		class Call: public ExprElement {
+			lexer::Token::BracketType type;  ///< either Round or Square
+			ParserRef<ExprElement>    args;
+
+		public:
+			Call(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
+
+			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			std::string elementType() const override { return "Call Expression"; }
+		};
+
+		/**
+		 * @brief Combined Access / Call / Subscirpt.
+		 */
+		class ChainExpr: public ExprElement {
+			using Lower = IdentifierLiteral;
+
+			ParserRef<ExprElement>              literal;
+			std::vector<ParserRef<ExprElement>> chain;
+
+			/**
+			 * @brief checks length before the start of the next link
+			 */
+			static u64 toNextLink(const RiftParserState& state, u64 length);
+
+		public:
+			ChainExpr(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
+
+			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			std::string elementType() const override { return "Chain Expression"; }
+		};
+
 		class RoundExpr: public ExprElement {
 			ParserRef<ExprElement> expr;
 
@@ -190,7 +261,7 @@ namespace pst {
 		};
 
 		class GeneralPrefix: public PrefixOperator {
-			using Lower = Value;
+			using Lower = ChainExpr;
 			using Self  = GeneralPrefix;
 
 		public:
@@ -248,7 +319,8 @@ namespace pst {
 					reduced_length--;
 				if (fwd == reduced_length) {}  // Error
 
-				if (fwd + 1 < reduced_length && state[reduced_length - 1].isIdentifier())
+				if (fwd + 1 < reduced_length && state[reduced_length - 1].isIdentifier()
+				    && !state[reduced_length - 2].is(Operator::Period))
 					reduced_length--;
 				return parseRecursive(state, length, length - reduced_length);
 			}

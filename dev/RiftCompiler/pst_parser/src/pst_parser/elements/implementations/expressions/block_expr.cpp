@@ -7,6 +7,8 @@ namespace pst::expr {
 		std::cerr << "Parsing Round Group Expression";
 		if (!checkLength(state, length)) return nullptr;
 
+		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Curly))) {}  // Error
+
 		auto out = base::make_unique<BlockExpr>(state.getPosition());
 
 		state.parse(out).one(&out->block);
