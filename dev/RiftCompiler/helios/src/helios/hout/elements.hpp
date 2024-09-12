@@ -8,8 +8,8 @@
 #include <helios/symbols/symbols.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <query_framework/query_impl.hpp>
-#include "typesystem/higher/type_desc.hpp"
-#include "typesystem/higher/queries.hpp"
+#include <typesystem/higher/type_desc.hpp>
+#include <typesystem/higher/queries.hpp>
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
