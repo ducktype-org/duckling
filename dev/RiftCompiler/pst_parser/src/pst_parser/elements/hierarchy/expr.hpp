@@ -62,12 +62,7 @@ namespace pst {
 		/**
 		 * @brief General parseUntil
 		 */
-		template<
-			std::derived_from<ExprElement> T,
-			StateCondition                 until  // ,
-		                                          // StateCondition                  positiveEnd,
-		                                          // std::derived_from<dia::Message> badEndMessage
-			>
+		template<std::derived_from<ExprElement> T, StateCondition until>
 		ParserRef<ExprElement> parseUntil(RiftParserState& state) {
 			i64 length = 0;
 			while (!state[length].is(lexer::Token::Type::Sentinel) && !until(state, length))
@@ -323,19 +318,22 @@ namespace pst {
 		/**
 		 * @brief Unimplemented place for chained comparison operators.
 		 */
-		class ComparisonOperator: public BinaryOperator {
+		class ComparisonChain: public ExprElement {
 			using Lower = GeneralBinary;
 
-		public:
-			ComparisonOperator() = delete;
+			std::vector<ParserRef<ExprElement>> sub_expr;
+			std::vector<Operator>               operators;
 
-			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length) {
-				return Lower::parse(state, length);
-			}
+			static u64 skipToOp(const RiftParserState& state, u64 base, u64 length);
+
+		public:
+			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600){};
+
+			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 		};
 
 		class LogicNot: public PrefixOperator {
-			using Lower = GeneralBinary;
+			using Lower = ComparisonChain;
 			using Self  = LogicNot;
 
 		public:
