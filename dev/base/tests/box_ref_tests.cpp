@@ -302,7 +302,7 @@ private:
 		{
 			MBox<LiveCounter> a = box<LiveCounter>();
 
-			ASSERT_TRUE(a.toOptRef().has_value());
+			ASSERT_TRUE(a.toOpt().has_value());
 			ASSERT_TRUE(a.ref().toOpt().has_value());
 			ASSERT_TRUE(a.refMut().toOpt().has_value());
 
@@ -314,7 +314,7 @@ private:
 		{
 			MBox<LiveCounter> a = nullptr;
 
-			ASSERT_TRUE(a.toOptRef().empty());
+			ASSERT_TRUE(a.toOpt().empty());
 			ASSERT_TRUE(a.ref().toOpt().empty());
 			ASSERT_TRUE(a.refMut().toOpt().empty());
 
@@ -468,7 +468,7 @@ private:
 			MBox a = box<LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
-			Box b = std::move(a).toOpt().value();
+			Box b = std::move(a).toOptBox().value();
 			ASSERT_EQUAL(LiveCounter::count, 1);
 			ASSERT_TRUE(std::move(a).toOpt().empty());
 

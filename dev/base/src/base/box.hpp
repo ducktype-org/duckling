@@ -195,7 +195,7 @@ namespace base {
 		 * @return Optional<Ref<T>>
 		 */
 		[[nodiscard]]
-		constexpr Optional<Ref<T>> toOptRef() const noexcept {
+		constexpr Optional<Ref<T>> toOpt() const noexcept {
 			if (ptr == nullptr) return {};
 			return Ref<T>(ptr);
 		}
@@ -224,7 +224,7 @@ namespace base {
 		 *
 		 * @return Optional<Ref<T>>
 		 */
-		Optional<Box<T>> toOpt() && {
+		Optional<Box<T>> toOptBox() && {
 			T* output = ptr;
 			ptr       = nullptr;
 			if (output == nullptr) return {};
