@@ -77,7 +77,7 @@ namespace base {
 		}
 
 		/**
-		 * @brief Returns a immutable pointer to the pointed value, wrapped in Ref type.
+		 * @brief Returns an immutable pointer to the pointed value, wrapped in Ref type.
 		 *
 		 * @return Ref<const T>
 		 */
@@ -220,7 +220,7 @@ namespace base {
 
 		/**
 		 * @brief Method that converts MBox to Optional<Box>.
-		 * It leaved MBox in null state.
+		 * It leaves MBox in null state.
 		 *
 		 * @return Optional<Ref<T>>
 		 */
