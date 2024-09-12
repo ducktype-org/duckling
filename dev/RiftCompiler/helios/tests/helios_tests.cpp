@@ -9,8 +9,8 @@
 #include <pst_parser/parser.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
-#include <typesystem/typesystem.hpp>
-#include <typesystem/internal/queries.hpp>
+#include <typesystem/higher/typesystem.hpp>
+#include <typesystem/higher/internal/queries.hpp>
 
 #include <helios/test_utils/helios_test_utils.hpp>
 using namespace compiler::helios::test_utils;
