@@ -40,7 +40,7 @@ namespace base {
 
 		Box(const Box& other) = delete;
 
-		Box(Box&& other) noexcept: ptr{ std::move(other.ptr) } { other.ptr = nullptr; }
+		Box(Box&& other) noexcept: ptr{ std::move(other).ptr } { other.ptr = nullptr; }
 
 		template<class U>
 		Box(Box<U>&& other) noexcept: ptr{ std::move(other).ptr } {
