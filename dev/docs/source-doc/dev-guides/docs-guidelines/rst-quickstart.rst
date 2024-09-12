@@ -133,11 +133,16 @@ Cross-references
 
 You can easily create cross-references to other parts of the documentation.
 
-General syntax is: ``:label:`target` ``. 
+General syntax is: 
+
+.. code-block:: rst
+
+    :role:`target`
+
 
 You may supply an explicit title and reference target, 
 like in reStructuredText direct hyperlinks: 
-:role:`title <target>` will refer to target, but the link text will be title.
+:code:`:role:`title <target>`` will refer to "target", but the link text will be "title".
 
 Cross-referencing documents
 ---------------------------

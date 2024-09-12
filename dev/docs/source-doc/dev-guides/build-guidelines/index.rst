@@ -13,7 +13,7 @@ that will take care of all the details for you.
 After you have cloned the repository you should navigate to the ``dev`` directory.
 All commands from now on should be run from this directory.
 
-How tu use toolbox
+How to use toolbox
 ==================
 
 To run the toolbox, you need to have Python3 installed on your system, as well as Python package manager ``pip``.
@@ -66,6 +66,7 @@ You will be asked a series of questions about the build configuration.
 Inside square brackets you can see the default value that will be used if you just press enter.
 
 .. code-block:: bash
+
 	> ./toolbox.py setup-build
 	:caption: Example output of the build script
 	Build dir name [build]: 
@@ -100,7 +101,7 @@ The compiles binaries are inside the ``build/bin`` directory.
 Compiling with test coverage enabled
 ====================================
 
-To compile with test coverage enable you should use the toolbox script.
+To compile with test coverage enable you should use the toolbox script to create the build directory first.
 
 .. code-block:: bash
 
@@ -109,6 +110,7 @@ To compile with test coverage enable you should use the toolbox script.
 When asked about enabling coverage, type ``y``.
 
 .. code-block:: bash
+	
 	> ./toolbox.py setup-build
 	...
 	Enable coverage [y/N]: y
@@ -126,7 +128,7 @@ When asked about enabling coverage, type ``y``.
 	Providing answer to the questions and running the command with the appropriate flags have the same effect, 
 	thanks to the Click library.
 
-To run the tests with coverage enabled, you can use the following command:
+To run the tests with coverage, you can use the following command:
 
 .. code-block:: bash
 
@@ -140,6 +142,9 @@ To compile with CCACHE enabled you should use the toolbox script.
 .. code-block:: bash
 
 	./toolbox.py setup-build --ccache
+
+
+.. _running-the-tests:
 
 Running the tests
 =================
@@ -179,4 +184,27 @@ you can run the following commands:
 
 	This will run all tests that have ``vm_`` in their name at the beggining.
 
+Compiling the documentation
+===========================
 
+To compile the documentation (source-doc and doxygen) you can use the following command:
+
+.. code-block:: bash
+
+	./toolbox.py docs
+
+This will compile the documentation and open it in your default browser.
+
+You can also run the CMake target by yourself:
+
+.. code-block:: bash
+
+	ninja docs
+
+This will compile the documentation and put it in the ``build/docs`` directory.
+There are also custom targets for opening the documentation in the browser:
+
+.. code-block:: bash
+
+	ninja open-sphinx-docs
+	ninja open-doxygen-docs

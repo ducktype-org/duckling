@@ -11,7 +11,7 @@ This page describes how to comiit changes to our repositories following good pra
 Repository setup
 ================
 
-Setup your repo in a standard way. Some repositories have a ``toolbox.py`` script or setup instructions to facilitate the process.
+Set up your repo in a standard way. Some repositories have a ``toolbox.py`` script or setup instructions to facilitate the process.
 
 Create a branch
 ===============
@@ -21,7 +21,7 @@ Most of our repositories don't allow commiting directly to the ``main`` branch. 
 Make some changes
 =================
 
-Dont forget to write tests and docs! On ``rift-dev`` Quacker bot will block the merge if coverage percantege drops (this can be bypassed if really needed).
+Don't forget to write tests and docs! On ``rift-dev`` Quacker bot will block the merge if coverage percantege drops (this can be bypassed if really needed).
 
 Create pull request
 ===================

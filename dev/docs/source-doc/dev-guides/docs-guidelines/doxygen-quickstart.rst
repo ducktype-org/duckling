@@ -12,6 +12,7 @@ There are two distinct places where Doxygen documentation can be written:
 * in the :ref:`Markdown files <md-files>`
 
 .. _source-files:
+
 Source Code Files
 =================
 
@@ -75,6 +76,7 @@ You can also add Doxygen commands to describe classes, functions, and variables:
     int baz;
 
 .. _md-files:
+
 Markdown Files
 ==============
 
@@ -130,6 +132,8 @@ Doxygen can automatically detect if a word is a Doxygen entity and create a link
 This works for file names, functions, classes and many others. 
 Full list can be found `here <https://www.doxygen.nl/manual/autolink.html>`_.
 
+.. _doxygen-examples:
+
 How to add code examples
 ========================
 
@@ -143,10 +147,17 @@ Then you can mark it as an example using the following command:
 
     @example <example_file_name>
 
+If there are multiple files with the same name in different directories, you can specify parf of the path to the file:
+
+.. code-block:: markdown
+
+    @example <part/of/the/path/to/file.cpp>
+
 The command can be in any source file (not in the markdown file), it doesn't matter where. 
 
 .. warning::
-    Anything after the command is treated as an **example description**, 
+    Anything after the :code:`@example <file_name>` command is treated 
+    as an **example description**, 
     so if you write a description of the file, put it at the end.
 
     .. code-block:: cpp
@@ -154,8 +165,8 @@ The command can be in any source file (not in the markdown file), it doesn't mat
         /** 
          @file foo.hpp
          
-         Description...
-
+         Description of the file...
+         
          @example example.cpp
          This is an example of how to use the function `foo`.
 
@@ -164,28 +175,69 @@ The command can be in any source file (not in the markdown file), it doesn't mat
     
 .. note::
     The example command doesn't create clickable link to the example file from that place.
-    It only indicates to Doxygen, that the file is an example.
-    To include the example in the documentation, you need to use the ``@include`` command as well.
+    It only indicates to Doxygen, that the file is an example, so the Doxygen will create links 
+    from every function, class, etc. that is used in the example to that example.
+
+    So if you want to see if the example is correctly linked, you have to see the documentation 
+    of some function or class that is used in the example. There should be something like:
+
+    .. code-block:: markdown
+
+        function_name()
+        This is the description of the function.
+
+        Examples:
+        example_file_name.cpp.
+
+    There is also "examples" page in the Doxygen documentation, where all examples are listed.
+
 
 Creating a link to example file from the documentation is currently not possible, see :ref:`excluded_directories`.
 
-In code snippet
-----------------
+You can include the contents of the example (or any file) in the documentation using the ``@include`` command.
+
+.. code-block:: markdown
+
+    @include <file_name>
+
+.. tip::
+    Often you will want to use the file as an example as well as include it in the documentation.
+    In this case, you can use both commands:
+
+    .. code-block:: markdown
+
+        @include <example_file_name>
+        @example <example_file_name>
+
+
+In a code snippet
+-----------------
 
 To include an example in a code snippet, you can use the following command:
 
-.. code-block:: markdown
+.. code-block:: cpp
 
-    @include my_favorite_example.cpp
+    /**
+    * @code
+    * ... 
+    * @endcode
+    */
 
-If there are multiple files with the same name in different directories, you can specify parf of the path to the file:
+This will include the code between ``@code`` and ``@endcode`` in the documentation.
 
-.. code-block:: markdown
+.. note::
+    Everything in the Doxygen description is also interpreted as Markdown, so you can use headers, lists, tables,
+    as well as code snippets:
 
-    @include base/exceptions.hpp
+    .. code-block:: cpp
 
-This will include the file ``exceptions.hpp`` from the ``base`` directory.
-
+        /**
+         ```cpp
+         int main() {
+            return 0;
+         }
+         ```
+         */
 
 Useful commands
 ===============
@@ -264,6 +316,7 @@ Path to the image is relative to the location of dev directory.
 
 
 .. _excluded_directories:
+
 Directories excluded from Doxygen
 =================================
 

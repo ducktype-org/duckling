@@ -62,6 +62,6 @@ You can also write Markdown documentation that will be included in Doxygen, see 
 See also
 ========
 
-*  :doc:`Printer examplary documentation (now inside Doxygen)`
+*  Printer examplary documentation (now inside Doxygen, search for ``printer``)
 
 * `Discord documentation channel <https://discord.com/channels/860531247826731029/1106545291852783627>`_
