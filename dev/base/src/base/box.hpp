@@ -195,7 +195,7 @@ namespace base {
 		 * @return Optional<Ref<T>>
 		 */
 		[[nodiscard]]
-		constexpr Optional<Ref<T>> get() const noexcept {
+		constexpr Optional<Ref<T>> toOptRef() const noexcept {
 			if (ptr == nullptr) return {};
 			return Ref<T>(ptr);
 		}
@@ -219,17 +219,15 @@ namespace base {
 		}
 
 		/**
-		 * @brief Method that allows to construct Box from MBox.
+		 * @brief Method that converts MBox to Optional<Box>.
 		 * It leaved MBox in null state.
 		 *
-		 * @note panics if MBox was in null state.
-		 *
-		 * @return constexpr Optional<Ref<T>>
+		 * @return Optional<Ref<T>>
 		 */
-		Box<T> stealBox() && {
-			assertNotNull();
+		Optional<Box<T>> toOpt() && {
 			T* output = ptr;
 			ptr       = nullptr;
+			if (output == nullptr) return {};
 			return Box<T>(output);
 		}
 
