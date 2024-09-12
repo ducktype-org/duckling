@@ -14,6 +14,7 @@
 
 #include <vector>
 
+#include <typesystem/queries/types.hpp>
 #include "../lookup_result.hpp"
 #include "../scope_symbol_id.hpp"
 #include "../scopes/scopes.hpp"

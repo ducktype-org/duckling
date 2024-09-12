@@ -661,10 +661,6 @@ namespace ts::internal {
 	class ClassInfoImpl final: public TypeInfoImpl {
 		compiler::helios::SymID symbol;
 
-		template<class T>
-		using QueryStructResult
-			= std::expected<T, compiler::helios::QueryStructSymbolData_Result::error_type>;
-
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
@@ -694,7 +690,8 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		QueryStructResult<base::Optional<ClassInfo>> getBaseClassType(query::Context& ctx) const {
+		ClassInfo::QueryStructResult<base::Optional<ClassInfo>> getBaseClassType(query::Context& ctx
+		) const {
 			UNPACK_RESULT(ctx.query<compiler::helios::QueryStructSymbolData>(symbol), struct_data);
 			auto& bases = struct_data.bases;
 			if (bases.empty())
@@ -704,7 +701,7 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		QueryStructResult<base::Optional<compiler::helios::SymID>>
+		ClassInfo::QueryStructResult<base::Optional<compiler::helios::SymID>>
 			getBaseClassSymbol(query::Context& ctx) const {
 			UNPACK_RESULT(getBaseClassType(ctx), base_class_type);
 			return base_class_type.map([](ClassInfo classInfo) { return classInfo.getSymbol(); });
@@ -712,8 +709,8 @@ namespace ts::internal {
 
 		// @TODO: change return type to InterfaceInfo when interface type is created.
 		[[nodiscard]]
-		QueryStructResult<std::vector<ClassInfo>> getImplementedInterfaceTypes(query::Context& ctx
-		) const {
+		ClassInfo::QueryStructResult<std::vector<ClassInfo>>
+			getImplementedInterfaceTypes(query::Context& ctx) const {
 			UNPACK_RESULT(ctx.query<compiler::helios::QueryStructSymbolData>(symbol), struct_data);
 			auto&                  bases = struct_data.bases;
 			std::vector<ClassInfo> result;
@@ -723,7 +720,7 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		QueryStructResult<std::vector<compiler::helios::SymID>>
+		ClassInfo::QueryStructResult<std::vector<compiler::helios::SymID>>
 			getImplementedInterfaceSymbols(query::Context& ctx) const {
 			UNPACK_RESULT(ctx.query<compiler::helios::QueryStructSymbolData>(symbol), struct_data);
 			auto&                                bases = struct_data.bases;

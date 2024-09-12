@@ -1,6 +1,7 @@
 #include "type_interface.hpp"
 
 #include "queries/types.hpp"
+#include "queries/implicit_coercibility.hpp"
 
 #include <helios/symbols/symbols.hpp>
 #include <query_framework/query_impl.hpp>
