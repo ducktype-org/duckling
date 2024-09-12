@@ -302,7 +302,7 @@ private:
 		{
 			MBox<LiveCounter> a = box<LiveCounter>();
 
-			ASSERT_TRUE(a.get().has_value());
+			ASSERT_TRUE(a.toOptRef().has_value());
 			ASSERT_TRUE(a.ref().get().has_value());
 			ASSERT_TRUE(a.refMut().get().has_value());
 
@@ -314,7 +314,7 @@ private:
 		{
 			MBox<LiveCounter> a = nullptr;
 
-			ASSERT_TRUE(a.get().empty());
+			ASSERT_TRUE(a.toOptRef().empty());
 			ASSERT_TRUE(a.ref().get().empty());
 			ASSERT_TRUE(a.refMut().get().empty());
 
@@ -468,8 +468,9 @@ private:
 			MBox a = box<LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
-			Box b = std::move(a).stealBox();
+			Box b = std::move(a).toOpt().value();
 			ASSERT_EQUAL(LiveCounter::count, 1);
+			ASSERT_TRUE(std::move(a).toOpt().empty());
 
 			// @TODO: assert that this does not compile:
 			// Box c = a.stealBox();
