@@ -303,8 +303,8 @@ private:
 			MBox<LiveCounter> a = box<LiveCounter>();
 
 			ASSERT_TRUE(a.toOptRef().has_value());
-			ASSERT_TRUE(a.ref().get().has_value());
-			ASSERT_TRUE(a.refMut().get().has_value());
+			ASSERT_TRUE(a.ref().toOpt().has_value());
+			ASSERT_TRUE(a.refMut().toOpt().has_value());
 
 			ASSERT_EQUAL(LiveCounter::count, 1);
 		}
@@ -315,8 +315,8 @@ private:
 			MBox<LiveCounter> a = nullptr;
 
 			ASSERT_TRUE(a.toOptRef().empty());
-			ASSERT_TRUE(a.ref().get().empty());
-			ASSERT_TRUE(a.refMut().get().empty());
+			ASSERT_TRUE(a.ref().toOpt().empty());
+			ASSERT_TRUE(a.refMut().toOpt().empty());
 
 			ASSERT_EQUAL(LiveCounter::count, 0);
 		}
@@ -364,7 +364,7 @@ private:
 			auto a_ref = a.refMut();
 			ASSERT_EQUAL(a_ref->state, 123);
 
-			a_ref.get().value()->state = 456;
+			a_ref.toOpt().value()->state = 456;
 			ASSERT_EQUAL(a->state, 456);
 			ASSERT_EQUAL(a_ref->state, 456);
 
@@ -374,7 +374,7 @@ private:
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
 			auto                  a_ref_const = a_moved.ref();
-			[[maybe_unused]] auto pointer     = a_ref_const.get().value().get();
+			[[maybe_unused]] auto pointer     = a_ref_const.toOpt().value().get();
 
 			// decltype(a_ref_const->state) is just int for some reason, but "it" is still a const.
 			static_assert(
@@ -392,8 +392,8 @@ private:
 			MRef<LiveCounter> a_ref_2 = &a;
 
 			ASSERT_EQUAL(LiveCounter::count, 1);
-			ASSERT_EQUAL(a_ref_1.get(), a_ref_2.get());
-			ASSERT_EQUAL(a_ref_1.get(), Ref(&a));
+			ASSERT_EQUAL(a_ref_1.toOpt(), a_ref_2.toOpt());
+			ASSERT_EQUAL(a_ref_1.toOpt(), Ref(&a));
 
 			const LiveCounter b;
 
@@ -401,8 +401,8 @@ private:
 			MRef<const LiveCounter> b_ref_2 = &b;
 
 			ASSERT_EQUAL(LiveCounter::count, 2);
-			ASSERT_EQUAL(b_ref_1.get(), b_ref_2.get());
-			ASSERT_EQUAL(b_ref_1.get(), Ref(&b));
+			ASSERT_EQUAL(b_ref_1.toOpt(), b_ref_2.toOpt());
+			ASSERT_EQUAL(b_ref_1.toOpt(), Ref(&b));
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
@@ -430,9 +430,9 @@ private:
 			// NOLINTEND
 
 			ASSERT_EQUAL(LiveCounter::count, 1);
-			ASSERT_EQUAL(a_ref_3.get(), a_ref_2.get());
-			ASSERT_EQUAL(a_ref_2.get(), a_ref_1.get());
-			ASSERT_EQUAL(a_ref_1.get(), Ref(&a));
+			ASSERT_EQUAL(a_ref_3.toOpt(), a_ref_2.toOpt());
+			ASSERT_EQUAL(a_ref_2.toOpt(), a_ref_1.toOpt());
+			ASSERT_EQUAL(a_ref_1.toOpt(), Ref(&a));
 			ASSERT_TRUE(a_ref_1 == a_ref_2);
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);

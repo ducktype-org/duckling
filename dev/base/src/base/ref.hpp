@@ -157,7 +157,7 @@ namespace base {
 		 * @return Optional<Ref<T>>
 		 */
 		[[nodiscard]]
-		constexpr Optional<Ref<T>> get() const noexcept {
+		constexpr Optional<Ref<T>> toOpt() const noexcept {
 			if (ptr == nullptr) return {};
 			return Ref<T>(ptr);
 		}
