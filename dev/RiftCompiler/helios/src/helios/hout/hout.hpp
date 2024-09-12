@@ -9,7 +9,8 @@
 #include "../scope_symbol_id.hpp"
 #include "../symbols/symbols.hpp"
 #include <base/string_id.hpp>
-#include "typesystem/higher/types.hpp"
+#include <memory>
+#include <typesystem/higher/types.hpp>
 #include <query_framework/query_impl.hpp>
 #include <vector>
 
