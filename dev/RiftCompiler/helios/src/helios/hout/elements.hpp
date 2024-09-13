@@ -28,7 +28,7 @@ namespace compiler::helios::code {
 	struct Stmt {
 		ScopeID lifetime_scope;
 
-		Stmt(ScopeID lifetime_scope): lifetime_scope(std::move(lifetime_scope)) {}
+		Stmt(ScopeID lifetime_scope): lifetime_scope(lifetime_scope) {}
 
 		virtual ~Stmt()                                                    = default;
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
@@ -49,7 +49,7 @@ namespace compiler::helios::code {
 		tsh::TypeDesc<> type_desc;
 
 		Expr(ScopeID lifetime_scope, tsh::TypeDesc<> type_desc):
-			  lifetime_scope(std::move(lifetime_scope)),
+			  lifetime_scope(lifetime_scope),
 			  type_desc(type_desc) {}
 
 		virtual ~Expr()                                                    = default;
