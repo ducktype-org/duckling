@@ -12,6 +12,6 @@ namespace vm {
 	using Offset = u64;
 	class Type;
 
-	using TypeRef  = base::StableVectorRef<Type>;
-	using TypeCRef = base::StableVectorCRef<Type>;
+	using TypeRef  = Ref<Type>;
+	using TypeCRef = CRef<Type>;
 }

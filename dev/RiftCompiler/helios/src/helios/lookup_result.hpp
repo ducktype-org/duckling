@@ -13,6 +13,7 @@
 #include <vector>
 #include <query_framework/query_int.hpp>
 #include <expected>
+#include <base/variant.hpp>
 
 namespace compiler::helios {
 

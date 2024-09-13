@@ -99,8 +99,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return base::borrow_ptr<SymbolData>
 	 */
-	base::borrow_ptr<SymbolData>
-		makeSymbolFromStatement(const ScopeID& scope, PstRef<pst::Stmt> stmt) {
+	Ref<SymbolData> makeSymbolFromStatement(const ScopeID& scope, PstRef<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		switch (stmt->getKind()) {
@@ -891,8 +890,14 @@ namespace compiler::helios {
 			Context&    ctx;
 			const QKey& key;
 
+			void setTypeOfSymbol(const ParseTypeFromExpr_Result& type) {
+				if (symbol_type_info.has_value())
+					RIFT_PANIC("Attempted to set type of symbol in visitor a second time.");
+				symbol_type_info = type;
+			}
+
 			void setTypeOfSymbol(const pst::ParserCBorrowRef<pst::Expr>& expr) {
-				symbol_type_info = parseTypeFromExpr(ctx, expr, scope(key));
+				setTypeOfSymbol(parseTypeFromExpr(ctx, expr, scope(key)));
 			}
 
 		public:
@@ -906,7 +911,39 @@ namespace compiler::helios {
 				setTypeOfSymbol(stmt.getType());
 			}
 
-			void visitField(const pst::Field& stmt) override { setTypeOfSymbol(stmt.getType()); }
+			void visitField(const pst::Field& field) override { setTypeOfSymbol(field.getType()); }
+
+			void visitFun(const pst::Fun& fun) override {
+				auto params = fun.getParams();
+				auto ret    = fun.getRet();
+
+				std::vector<ts::TypeInfo> param_types{};
+				param_types.reserve(params->size());
+
+				for (auto param: params) {
+					auto&& parse_type_res = parseTypeFromExpr(ctx, param->getType(), scope(key));
+					if (parse_type_res.has_value()) {
+						param_types.emplace_back(parse_type_res.value());
+					} else {
+						// In this case we are setting error
+						setTypeOfSymbol(parse_type_res);
+						return;
+					}
+				}
+				ts::TypeInfo ret_type = ctx.query<ts::QueryUnitType>({});
+				if(ret.has_value()) {
+					auto&& parsed = parseTypeFromExpr(ctx, ret.value(), scope(key));
+					if(parsed.has_value()) {
+						ret_type = parsed.value();
+					} else {
+						// In this case we are setting error
+						setTypeOfSymbol(parsed);
+						return;
+					}
+				}
+
+				setTypeOfSymbol(ctx.query<ts::QueryFunctionType>({ param_types, ret_type }));
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -926,6 +963,12 @@ namespace compiler::helios {
 		class PstStmtVisitor_GetTypeFromDefinition final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
+
+			void setTypeOfDefinition(const ts::TypeInfo& type) {
+				if (definition_type_info.has_value())
+					RIFT_PANIC("Attempted to set type of definition in visitor a second time.");
+				definition_type_info = type;
+			}
 
 		public:
 			PstStmtVisitor_GetTypeFromDefinition(Context& ctx, const QKey& key):
@@ -1028,7 +1071,7 @@ namespace compiler::helios {
 			Context&    ctx;
 			const QKey& key;
 
-			void setTypeOfSymbol(const pst::ParserCBorrowRef<pst::Expr>& expr) {
+			void setExprTree(const pst::ParserCBorrowRef<pst::Expr>& expr) {
 				rpn_of_sym_expr = rpn::makeRPN(ctx, { expr->elements, scope(key) });
 			}
 
@@ -1037,11 +1080,9 @@ namespace compiler::helios {
 
 			base::Optional<rpn::MakeRPN_Result> rpn_of_sym_expr;
 
-			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getValue()); }
+			void visitConst(const pst::Const& stmt) override { setExprTree(stmt.getValue()); }
 
-			void visitVariable(const pst::Variable& stmt) override {
-				setTypeOfSymbol(stmt.getType());
-			}
+			void visitVariable(const pst::Variable& stmt) override { setExprTree(stmt.getType()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

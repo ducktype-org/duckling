@@ -2,16 +2,18 @@
 
 #include <vector>
 #include <base/ints.hpp>
-
-#include <query_framework/query_int.hpp>
-#include <pst_parser/elements/elements.hpp>
 #include <base/perfect_hash.hpp>
+#include <base/string_id.hpp>
+
+#include <helios/symbols/symbols.hpp>
+#include <pst_parser/elements/elements.hpp>
+#include <query_framework/query_impl.hpp>
+#include <typesystem/type_desc.hpp>
+#include <typesystem/queries.hpp>
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
 #include "element_ref.hpp"
-#include <base/string_id.hpp>
-#include <helios/symbols/symbols.hpp>
 
 namespace compiler::helios::code {
 
@@ -41,9 +43,14 @@ namespace compiler::helios::code {
 	struct Expr {
 		ScopeID lifetime_scope;
 
-		// @TODO: set/get Type and ValueCategory of Expr
+		/**
+		 * The type of the expression, and its value category.
+		 */
+		ts::TypeDesc<> type_desc;
 
-		Expr(ScopeID lifetime_scope): lifetime_scope(std::move(lifetime_scope)) {}
+		Expr(ScopeID lifetime_scope, ts::TypeDesc<> type_desc):
+			  lifetime_scope(std::move(lifetime_scope)),
+			  type_desc(type_desc) {}
 
 		virtual ~Expr()                                                    = default;
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
@@ -129,7 +136,16 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		i64 value;
 
-		LiteralValueExpr(ScopeID scope, i64 value): Expr(scope), value(value) {}
+		LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx):
+			  Expr(
+				  scope,
+				  ts::TypeDesc<>(
+					  // @TODO: Select type of expression based on type of literal.
+					  ctx.query<ts::QueryIntegralType>({ 64 }),
+					  ts::ValueCategory(ts::PrimaryCategory::Literal)
+				  )
+			  ),
+			  value(value) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
@@ -145,22 +161,35 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		SymID symbol;
 
-		IdentifierExpr(ScopeID scope, SymID symbol): Expr(scope), symbol(std::move(symbol)) {}
+		IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx);
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
 	struct BinaryOperatorExpr: public Expr {
+		// @TODO: At this point, this should be a symbol.
+		//  HOUT should not be concerned with overload resolution.
 		base::StrId op;
 
 		ElementRef<Expr> lhs;
 		ElementRef<Expr> rhs;
 
 		BinaryOperatorExpr(
-			ScopeID scope, base::StrId op, ElementRef<Expr> lhs, ElementRef<Expr> rhs
+			ScopeID          scope,
+			base::StrId      op,
+			ElementRef<Expr> lhs,
+			ElementRef<Expr> rhs,
+			query::Context&  ctx
 		):
-			  Expr(scope),
+			  Expr(
+				  scope,
+				  ts::TypeDesc<>(
+					  // @TODO: Select type of expression based on result type of the operation.
+					  ctx.query<ts::QueryIntegralType>({ 64 }),
+					  ts::ValueCategory(ts::PrimaryCategory::Temporary)
+				  )
+			  ),
 			  op(op),
 			  lhs(std::move(lhs)),
 			  rhs(std::move(rhs)) {}

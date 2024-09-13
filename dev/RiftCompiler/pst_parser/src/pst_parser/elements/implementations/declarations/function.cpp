@@ -1,6 +1,24 @@
 #include "preamble.hpp"
 
 namespace pst {
+	namespace {
+		class FunctionReturnTypeListEndError final: public dia::Error {
+		protected:
+			[[nodiscard]]
+			std::string toStringBrief() const override {
+				return "Unexpected end of function return type expression.";
+			}
+
+		public:
+			[[nodiscard]]
+			Domain getDomain() const override {
+				return Domain::Parser;
+			}
+
+			FunctionReturnTypeListEndError(dia::SourcePosition pos): dia::Error(pos) {}
+		};
+	}
+
 	// @TODO: make better
 	ParserRef<Fun> Fun::parse(RiftParserState& state) {
 		auto position = state.getPosition();
@@ -8,9 +26,18 @@ namespace pst {
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
-		state.parse(out).all(Keyword::Fun, &out->name, &out->params);
+		state.parse(out).all(Keyword::Fun, &out->name);
+		state.parse(out).with<ParamList>(&out->params, ParamList::parse);
 
-		if (state.parse(out).tryEat(Operator::SingleArrow)) state.parse(out).one(&out->rets);
+		if (state.parse(out).tryEat(Operator::SingleArrow))
+			state.parse(out).with<Expr>(
+				&out->ret,
+				Expr::parseUntil<
+					detail::Conditions::isAssign,
+					detail::Conditions::isAssign,
+					FunctionReturnTypeListEndError>,
+				true
+			);
 
 		state.parse(out).all(Operator::Assign, &out->body);
 
@@ -24,7 +51,10 @@ namespace pst {
 		out << ",\"parameters\":";
 		nullAwareDprint(params, out);
 		out << ",\"return\":";
-		nullAwareDprint(rets, out);
+		if (ret)
+			nullAwareDprint(ret.value(), out);
+		else
+			out << "\"unit\"";
 		out << ",\"body\":";
 		nullAwareDprint(body, out);
 		out << "}";

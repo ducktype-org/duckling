@@ -3,12 +3,17 @@
 #include <query_framework/query_impl.hpp>
 #include <base/variant.hpp>
 #include "../scopes/scopes.hpp"
-#include "../symbols/symbols.hpp"
 #include <base/unique_pointer.hpp>
 #include <helios/hout/element_ref.hpp>
 #include "visitors.hpp"
 
 namespace compiler::helios::code {
+	namespace {
+		auto unpackOrPanic(auto&& value) {
+			RIFT_ASSERT(value.has_value(), "Handling errors in HOUT is not supported yet");
+			return value.value();
+		}
+	}
 
 	constexpr usize INDENT_SIZE = 4;
 
@@ -71,7 +76,8 @@ namespace compiler::helios::code {
 		for (auto&& elem: expr.elements) {
 			variant_match(elem) {
 				variant_case(rpn::Identifier, idt) {
-					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, idt.symbol_list.back())
+					st.emplace(
+						base::make_unique<IdentifierExpr>(expr.scope, idt.symbol_list.back(), ctx)
 					);
 				}
 
@@ -82,7 +88,7 @@ namespace compiler::helios::code {
 					st.pop();
 
 					st.emplace(base::make_unique<BinaryOperatorExpr>(
-						expr.scope, oper.oper_id, std::move(a), std::move(b)
+						expr.scope, oper.oper_id, std::move(a), std::move(b), ctx
 					));
 				}
 
@@ -95,12 +101,12 @@ namespace compiler::helios::code {
 					auto&& single_result = sym_list.getAsSingle();
 					RIFT_ASSERT(single_result.has_value(), "Not propagating errors here yet...");
 					auto&& single = single_result.value();
-					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, single.back()));
+					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, single.back(), ctx));
 				}
 
 				variant_case(rpn::NumValue, num_value) {
 					st.emplace(base::make_unique<LiteralValueExpr>(
-						expr.scope, std::stoi(num_value.num_id.str())
+						expr.scope, std::stoi(num_value.num_id.str()), ctx
 					));
 				}
 
@@ -128,6 +134,16 @@ namespace compiler::helios::code {
 
 	EXPR_VISITOR(LiteralValueExpr);
 	EXPR_VISITOR(IdentifierExpr);
+
+	IdentifierExpr::IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx):
+		  Expr(
+			  scope,
+			  ts::TypeDesc<>(
+				  unpackOrPanic(ctx.query<QueryTypeOfSymbol>(symbol)),
+				  ts::ValueCategory(ts::primaryCategoryOfSymbol(symbol))
+			  )
+		  ),
+		  symbol(std::move(symbol)) {}
 }
 
 namespace compiler::helios {
@@ -150,7 +166,7 @@ namespace compiler::helios {
 			}
 			variant_case(pst::Expr::NumLiteral, num) {
 				auto val = base::strIdToNum(num.num_id);
-				return base::make_unique<code::LiteralValueExpr>(scope, val);
+				return base::make_unique<code::LiteralValueExpr>(scope, val, ctx);
 			}
 			variant_case(pst::Expr::Identifier, identifier) {
 				// @note: this does not handle overload
@@ -181,7 +197,7 @@ namespace compiler::helios {
 				RIFT_ASSERT(!lookup_dealiased.empty(), "Empty lookup result");
 
 				// @TODO: dont just ignore everything before last symbol
-				return base::make_unique<code::IdentifierExpr>(scope, lookup_dealiased.back());
+				return base::make_unique<code::IdentifierExpr>(scope, lookup_dealiased.back(), ctx);
 			}
 			variant_case(pst::Expr::Group, group) {
 				throw base::NotYetImplemented("Expr from group");
