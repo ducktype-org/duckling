@@ -629,8 +629,7 @@ namespace compiler::helios {
 						),
 						sym_list
 					);
-					UNPACK_RESULT(sym_list.getAsSingle(), new_symbol);
-					looked_up_symbol = new_symbol;
+					UNPACK_RESULT_CUSTOM(sym_list.getAsSingle(), looked_up_symbol);
 				}
 				variant_default {
 					throw base::NotYetImplemented("Lookup on non-identifier is not yet implemented"
