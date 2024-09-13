@@ -37,7 +37,7 @@ namespace compiler::helios::errors {
 	};
 }
 
-#define HELIOS_ASSERT(cnd, ErrTp,  ...) \
+#define HELIOS_ASSERT(cnd, ErrTp, ...) \
 	if (!(cnd)) return std::unexpected(ErrTp(__VA_ARGS__))
 
 #define HELIOS_PANIC(ErrTp, ...) return std::unexpected(ErrTp(__VA_ARGS__))

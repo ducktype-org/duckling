@@ -931,9 +931,9 @@ namespace compiler::helios {
 					}
 				}
 				ts::TypeInfo ret_type = ctx.query<ts::QueryUnitType>({});
-				if(ret.has_value()) {
+				if (ret.has_value()) {
 					auto&& parsed = parseTypeFromExpr(ctx, ret.value(), scope(key));
-					if(parsed.has_value()) {
+					if (parsed.has_value()) {
 						ret_type = parsed.value();
 					} else {
 						// In this case we are setting error
