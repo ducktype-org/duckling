@@ -311,6 +311,24 @@ private:
 				variant_default RIFT_PANIC("Caught invalid error in tests");
 			}
 		}
+
+
+		try {
+			getValue("C", root_scope);
+		} catch (QueryConstValueOf_Result::error_type& err) {
+			variant_match(err) {
+				variant_case(QueryLookup_Result::error_type, lookup_error) {
+					variant_match(lookup_error) {
+						variant_case(errors::AmbiguityError, symbol_error) {
+							// Since this branch was chosen, everything worked well.
+						}
+						variant_default RIFT_PANIC("Caught invalid error in tests");
+					}
+				}
+
+				variant_default RIFT_PANIC("Caught invalid error in tests");
+			}
+		}
 	}
 };
 
