@@ -1,7 +1,7 @@
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>
-#include <tester/tester.hpp>
-#include <typesystem/higher/typesystem.hpp>
+#include "query_framework/query_entry_point.hpp"
+#include "query_framework/query_impl.hpp"
+#include "tester/tester.hpp"
+#include "typesystem/higher/typesystem.hpp"
 
 using namespace ts;
 
@@ -10,7 +10,7 @@ class TypeSystemErrorTest final: public tester::TestSuite {
 #define TESTER_CLASS TypeSystemErrorTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("TypeSystem simple interface test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("TypeSystem error test") {
 		TESTER_ADD_TEST(integral_size_error_test);
 		TESTER_ADD_TEST(float_size_error_test);
 	}

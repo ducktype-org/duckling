@@ -1,9 +1,9 @@
 #include <algorithm>
-#include <query_framework/query_entry_point.hpp>
-#include <tester/tester.hpp>
-#include <typesystem/higher/typesystem.hpp>
+#include "query_framework/query_entry_point.hpp"
+#include "tester/tester.hpp"
+#include "typesystem/higher/typesystem.hpp"
 
-#include <query_framework/query_impl.hpp>
+#include "query_framework/query_impl.hpp"
 
 using namespace ts;
 
@@ -48,7 +48,7 @@ class SimpleTypeSystemTest final: public tester::TestSuite {
 #define TESTER_CLASS SimpleTypeSystemTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("TypeSystem simple interface test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("TypeSystemHigher simple test") {
 		TESTER_ADD_TEST(trivial_cast_and_assignment);
 		TESTER_ADD_TEST(simple_void_and_unit);
 		TESTER_ADD_TEST(simple_byte_sized);

@@ -1,2 +1,2 @@
 
-# make_module(TypeSystem USES Base HELIOS QueryFramework)
+# make_module(TypeSystemLower USES Base HELIOS QueryFramework)

@@ -1,11 +1,11 @@
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>
-#include <tester/tester.hpp>
-#include <typesystem/higher/typesystem.hpp>
+#include "query_framework/query_entry_point.hpp"
+#include "query_framework/query_impl.hpp"
+#include "tester/tester.hpp"
+#include "typesystem/higher/typesystem.hpp"
 
-#include <base/variant.hpp>
-#include <helios/test_utils/helios_test_utils.hpp>
-#include <query_framework/test_utils/context_suite.hpp>
+#include "base/variant.hpp"
+#include "helios/test_utils/helios_test_utils.hpp"
+#include "query_framework/test_utils/context_suite.hpp"
 
 using namespace ts;
 using namespace compiler::helios::test_utils;
@@ -63,4 +63,4 @@ public:
 	~TypeSystemOverloadResolutionTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/typesystem/tests/")
+TESTER_COMMON_MAIN("/RiftCompiler/typesystem/higher/tests/")
