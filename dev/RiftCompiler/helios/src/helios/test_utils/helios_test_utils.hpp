@@ -5,8 +5,8 @@
 #include "helios/scopes/scopes.hpp"
 #include "helios/symbols/symbols.hpp"
 
-#define UNPACK_THROW(result, with_value)                       \
-	auto RES_VAR_NAME = result;                              \
+#define UNPACK_THROW(with_value, result)                       \
+	auto RES_VAR_NAME = result;                                \
 	if (!RES_VAR_NAME.has_value()) throw RES_VAR_NAME.error(); \
 	with_value RES_VAR_NAME.value()
 

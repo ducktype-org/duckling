@@ -91,11 +91,11 @@ namespace compiler::helios::code {
 						{ expr.scope, idt.symbol_name, true }
 					);
 					RIFT_ASSERT(sym_list_result.has_value(), "Not propagating errors here yet...");
-					auto&& sym_list = *sym_list_result;
-
-					st.emplace(
-						base::make_unique<IdentifierExpr>(expr.scope, sym_list.getAsSingle().back())
-					);
+					auto&& sym_list      = *sym_list_result;
+					auto&& single_result = sym_list.getAsSingle();
+					RIFT_ASSERT(single_result.has_value(), "Not propagating errors here yet...");
+					auto&& single = single_result.value();
+					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, single.back()));
 				}
 
 				variant_case(rpn::NumValue, num_value) {
@@ -164,7 +164,9 @@ namespace compiler::helios {
 
 				compiler::helios::SymbolList lookup_dealiased;
 
-				auto symbol_path = lookup_result.getAsSingle();
+				auto symbol_path_result = lookup_result.getAsSingle();
+				RIFT_ASSERT(symbol_path_result.has_value(), "Not propagating errors for now...");
+				auto symbol_path = symbol_path_result.value();
 
 				for (auto single_sym: symbol_path) {
 					auto dealiased_result = ctx.query<compiler::helios::QueryDealias>(single_sym);

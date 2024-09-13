@@ -13,6 +13,7 @@
 #include <typesystem/internal/queries.hpp>
 
 #include <helios/test_utils/helios_test_utils.hpp>
+#include "base/variant.hpp"
 using namespace compiler::helios::test_utils;
 
 class HeliosTests: public tester::TestSuite {
@@ -25,6 +26,7 @@ public:
 		pst::init();
 		ts::init();
 
+		TESTER_ADD_TEST(errorTests);
 		TESTER_ADD_TEST(testI32Consts);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testStructSymbolData);
@@ -58,12 +60,12 @@ private:
 
 		const auto first_struct = getChain("FirstStructEver", root_scope).back();
 		UNPACK_THROW(
-			query::entryPoint<compiler::helios::QueryStructSymbolData>(first_struct),
-			const auto first_struct_info =
+			const auto first_struct_info =,
+			query::entryPoint<compiler::helios::QueryStructSymbolData>(first_struct)
 		);
 		UNPACK_THROW(
-			query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_struct),
-			const auto first_struct_typeinfo =
+			const auto first_struct_typeinfo =,
+			query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_struct)
 		);
 
 		ASSERT_EQUAL(2, first_struct_info.members.size());
@@ -74,8 +76,8 @@ private:
 		const auto second_struct = getChain("SecondStruct", root_scope).back();
 
 		UNPACK_THROW(
-			query::entryPoint<compiler::helios::QueryStructSymbolData>(second_struct),
-			auto second_struct_info =
+			auto second_struct_info =,
+			query::entryPoint<compiler::helios::QueryStructSymbolData>(second_struct)
 		);
 
 		ASSERT_EQUAL(0, second_struct_info.members.size());
@@ -254,7 +256,7 @@ private:
 		auto              sym1 = getChain("V31", root_scope).back();
 		std::stringstream out;
 		UNPACK_THROW(
-			query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym1), auto tree1 =
+			auto tree1 =, query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym1)
 		);
 
 		tree1->debugPrint(out);
@@ -263,7 +265,7 @@ private:
 		ASSERT_EQUAL(12, getValue("V12", root_scope));
 		auto sym2 = getChain("V12", root_scope).back();
 		UNPACK_THROW(
-			query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym2), auto tree2 =
+			auto tree2 =, query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym2)
 		);
 		std::stringstream out2;
 		tree2->debugPrint(out2);
@@ -273,6 +275,42 @@ private:
 		ASSERT_EQUAL(
 			base::strConcat("(", symV3_repr, "+(", symV3_repr, "*", symV3_repr, "))"), out2.str()
 		);
+	}
+
+	void errorTests() {
+		using namespace compiler::helios;
+		auto [_, root_scope]
+			= getModule(fs::FilePath(path("test_modules/error_generating/bad_expr")));
+
+		try {
+			getValue("InvalidExpr", root_scope);
+		} catch (QueryConstValueOf_Result::error_type& err) {
+			variant_match(err) {
+				variant_case(errors::ExpressionParsingError, parsing_err)
+					ASSERT_EQUAL_NO_PRINT(parsing_err.message, "Malformed expression");
+
+				variant_default RIFT_PANIC("Caught invalid error in tests");
+			}
+		}
+
+		try {
+			getValue("InvalidSym", root_scope);
+		} catch (QueryConstValueOf_Result::error_type& err) {
+			// We might need something like:
+			// https://stackoverflow.com/questions/39272268/creating-a-new-boost-variant-type-from-given-nested-boost-variant-type
+			variant_match(err) {
+				variant_case(QueryLookup_Result::error_type, lookup_error) {
+					variant_match(lookup_error) {
+						variant_case(errors::SymbolNotFoundError, symbol_error) {
+							// Since this branch was chosen, everything worked well.
+						}
+						variant_default RIFT_PANIC("Caught invalid error in tests");
+					}
+				}
+
+				variant_default RIFT_PANIC("Caught invalid error in tests");
+			}
+		}
 	}
 };
 

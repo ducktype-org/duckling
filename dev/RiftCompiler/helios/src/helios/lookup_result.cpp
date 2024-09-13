@@ -1,4 +1,5 @@
 #include "lookup_result.hpp"
+#include "helios_errors.hpp"
 #include <base/exceptions.hpp>
 
 namespace compiler::helios {
@@ -11,14 +12,16 @@ namespace compiler::helios {
 
 	bool LookupResult::isSingle() const { return symbolCount() == 1; }
 
-	SymbolList LookupResult::getAsSingle() const {
-		RIFT_ASSERT(!isEmpty(), "Empty lookup");
-		RIFT_ASSERT(isSingle(), "Ambiguity");
+	std::expected<SymbolList, std::variant<errors::AmbiguityError, errors::SymbolNotFoundError>>
+		LookupResult::getAsSingle() const {
+		HELIOS_ASSERT(!isEmpty(), errors::SymbolNotFoundError);
+		HELIOS_ASSERT(isSingle(), errors::AmbiguityError, "Ambiguity");
 
-		if (!leaves.empty()) return { leaves[0] };
+		if (!leaves.empty()) return SymbolList{ leaves[0] };
 
 		for (const auto& [node_id, inner]: children) {
-			if (auto&& child_path = inner.getAsSingle(); !child_path.empty()) {
+			UNPACK_RESULT(inner.getAsSingle(), child_path);
+			if (!child_path.empty()) {
 				SymbolList result;
 				result.push_back(node_id);
 				result.insert(result.end(), child_path.begin(), child_path.end());

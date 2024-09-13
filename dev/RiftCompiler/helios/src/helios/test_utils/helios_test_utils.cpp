@@ -22,16 +22,17 @@ namespace compiler::helios::test_utils {
 		bool       first_symbol = true;
 		for (auto&& sym: symbols) {
 			UNPACK_THROW(
+				auto symbol =,
 				first_symbol ? query::entryPoint<QueryLookupInScopeAndParents>(
 								   { scope, base::StrId(sym.c_str()), true }
 							   )
 							 : query::entryPoint<QueryLookupInSymbol>(
 								   { result.back(), base::StrId(sym.c_str()), false }
-							   ),
-				auto symbol =
+							   )
 			);
-			for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
-				UNPACK_THROW(query::entryPoint<QueryDealias>(elem), auto dealiased =);
+			UNPACK_THROW(auto&& symbol_path =, symbol.getAsSingle());
+			for (auto&& elem: symbol_path) {
+				UNPACK_THROW(auto dealiased =, query::entryPoint<QueryDealias>(elem));
 				result.insert(result.end(), dealiased.begin(), dealiased.end());
 			}
 			first_symbol = false;
@@ -40,16 +41,16 @@ namespace compiler::helios::test_utils {
 	}
 
 	int getValue(const std::string_view chain, ScopeID scope) {
-		UNPACK_THROW(query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back()), return);
+		UNPACK_THROW(return, query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back()));
 	}
 
 	ts::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope) {
-		UNPACK_THROW(query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back()), return);
+		UNPACK_THROW(return, query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back()));
 	}
 
 	ts::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
-		UNPACK_THROW(
-			query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back()), return
+		UNPACK_THROW(return,
+		                   query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back())
 		);
 	}
 }

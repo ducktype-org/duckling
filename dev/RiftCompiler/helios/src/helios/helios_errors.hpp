@@ -32,8 +32,12 @@ namespace compiler::helios::errors {
 		std::string message;
 	};
 
-	struct ExpressionParsingError {};
+	struct ExpressionParsingError {
+		std::string message;
+	};
 }
 
-#define HELIOS_ASSERT(err_tp, cnd, ...) \
-	if (!(cnd)) { return std::unexpected(ErrTp(__VA_ARGS__)); }
+#define HELIOS_ASSERT(cnd, ErrTp,  ...) \
+	if (!(cnd)) return std::unexpected(ErrTp(__VA_ARGS__))
+
+#define HELIOS_PANIC(ErrTp, ...) return std::unexpected(ErrTp(__VA_ARGS__))

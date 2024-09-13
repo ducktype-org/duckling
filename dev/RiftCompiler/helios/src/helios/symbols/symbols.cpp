@@ -260,7 +260,7 @@ namespace compiler::helios {
 
 		if (key.names.size() == 1) return first.getAsSingle();
 
-		SymbolList result = first.getAsSingle();
+		UNPACK_RESULT(first.getAsSingle(), result);
 
 		for (usize i = 1; i < key.names.size(); i++) {
 			UNPACK_RESULT(
@@ -274,7 +274,7 @@ namespace compiler::helios {
 				return std::unexpected(errors::AmbiguityError("ambiguity in lookupChain"));
 			}
 
-			auto single_append_res = append_res_value.getAsSingle();
+			UNPACK_RESULT(append_res_value.getAsSingle(), single_append_res);
 			result.insert(result.end(), single_append_res.begin(), single_append_res.end());
 		}
 		return result;
@@ -357,8 +357,8 @@ namespace compiler::helios {
 						: ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false }),
 					pointed_symbol_lookup
 				);
-
-				for (auto&& path = pointed_symbol_lookup.getAsSingle(); auto&& path_symbol: path) {
+				UNPACK_RESULT(pointed_symbol_lookup.getAsSingle(), path);
+				for (auto&& path_symbol: path) {
 					UNPACK_RESULT(ctx.query<QueryDealias>(path_symbol), dealiased);
 					result.insert(result.end(), dealiased.begin(), dealiased.end());
 				}
@@ -374,7 +374,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	int getPriority(const rpn::Operator& op) {
+	std::expected<i32, errors::ExpressionParsingError> getPriority(const rpn::Operator& op) {
 		switch (static_cast<char>(op.oper_id.view()[0])) {
 		case '+':
 		case '-':
@@ -389,7 +389,7 @@ namespace compiler::helios {
 		case '.':
 			return 5;
 		default:
-			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
+			HELIOS_PANIC(errors::ExpressionParsingError, "Unknown operator: " + op.oper_id.str());
 		}
 	}
 
@@ -402,9 +402,11 @@ namespace compiler::helios {
 					rpn.emplace_back(NamedIdentifier{ idt.indent_id });
 				}
 				variant_case(pst::Expr::Operator, oper) {
-					auto      new_op   = Operator{ oper.oper_id };
-					const int priority = getPriority(new_op);
-					while (!st.empty() && getPriority(std::get<Operator>(st.top())) >= priority) {
+					auto new_op = Operator{ oper.oper_id };
+					UNPACK_RESULT(getPriority(new_op), priority);
+					while (!st.empty()) {
+						UNPACK_RESULT(getPriority(std::get<Operator>(st.top())), top_priority);
+						if (top_priority < priority) break;
 						rpn.emplace_back(st.top());
 						st.pop();
 					}
@@ -432,7 +434,9 @@ namespace compiler::helios {
 					}
 					rpn.emplace_back(TupleConstructor{ tuple.expr.size() });
 				}
-				variant_default { RIFT_PANIC("Bad Expr alternative"); }
+				variant_default {
+					HELIOS_PANIC(errors::ExpressionParsingError, "Bad Expr alternative");
+				}
 			}
 		}
 		while (!st.empty()) {
@@ -458,11 +462,12 @@ namespace compiler::helios {
 					sym_list
 				);
 
+				UNPACK_RESULT(sym_list.getAsSingle(), identifier);
 				UNPACK_RESULT(
 					parseValue(
 						ctx,
 						KeyOf_parseValue{
-							Identifier{ sym_list.getAsSingle() },
+							Identifier{ identifier },
 							key.expr_scope,
 						}
 					),
@@ -470,42 +475,53 @@ namespace compiler::helios {
 				);
 				return result;
 			}
-			variant_case(rpn::Operator, op) { RIFT_PANIC("Cannot get a value from rpn::Operator"); }
+			variant_case(rpn::Operator, op) {
+				HELIOS_PANIC(
+					errors::ExpressionParsingError, "Cannot get a value from rpn::Operator"
+				);
+			}
 			variant_case(rpn::KeywordValue, keyword_value) {
 				throw base::NotYetImplemented("Value of KeywordValue is not yet implemented");
 			}
 			variant_case(rpn::NumValue, literal) { return std::stoi(literal.num_id.str()); }
-			variant_default { RIFT_PANIC("Bad Expr alternative"); }
+			variant_default {
+				HELIOS_PANIC(errors::ExpressionParsingError, "Bad Expr alternative");
+			}
 		}
-		RIFT_PANIC("Error in RPNValue expr...");
+		HELIOS_PANIC(errors::ExpressionParsingError, "Error in RPNValue expr...");
+	}
+
+	namespace {
+		void printRpn(const rpn::RPNExpr& expr) {
+			// This is a nice RPN debug print.
+			std::cerr << "RPN: \n";
+			for (auto&& e: expr.elements) {
+				std::cerr << "expr: ";
+				variant_match(e) {
+					variant_case(rpn::Identifier, idt) {
+						for (auto&& s: idt.symbol_list) std::cerr << name(s).str() << '.';
+					}
+					variant_case(rpn::NamedIdentifier, idt) {
+						std::cerr << idt.symbol_name.str() << '.';
+					}
+					variant_case(rpn::Operator, op) { std::cerr << op.oper_id.str(); }
+					variant_case(rpn::KeywordValue, keyword_value) {
+						std::cerr << keywordToStr(keyword_value.keyword).str();
+					}
+					variant_case(rpn::NumValue, literal) { std::cerr << literal.num_id.str(); }
+					variant_case(rpn::TupleConstructor, tuple_constructor) {
+						std::cerr << "Tuple constructor of num elements: "
+								  << tuple_constructor.num_elements;
+					}
+					variant_default { RIFT_PANIC("Bad Expr alternative"); }
+				}
+				std::cerr << '\n';
+			}
+		}
 	}
 
 	rpn::RPNEvaluation_Result rpn::evalExpr(query::Context& ctx, const RPNExpr& expr) {
-		// This is a nice RPN debug print.
-		std::cout << "RPN: \n";
-		for (auto&& e: expr.elements) {
-			std::cout << "expr: ";
-			variant_match(e) {
-				variant_case(rpn::Identifier, idt) {
-					for (auto&& s: idt.symbol_list) std::cout << name(s).str() << '.';
-				}
-				variant_case(rpn::NamedIdentifier, idt) {
-					std::cout << idt.symbol_name.str() << '.';
-				}
-				variant_case(rpn::Operator, op) { std::cout << op.oper_id.str(); }
-				variant_case(rpn::KeywordValue, keyword_value) {
-					std::cout << keywordToStr(keyword_value.keyword).str();
-				}
-				variant_case(rpn::NumValue, literal) { std::cout << literal.num_id.str(); }
-				variant_case(rpn::TupleConstructor, tuple_constructor) {
-					std::cout << "Tuple constructor of num elemenents: "
-							  << tuple_constructor.num_elements;
-				}
-				variant_default { RIFT_PANIC("Bad Expr alternative"); }
-			}
-			std::cout << '\n';
-		}
-
+		printRpn(expr);
 		// Here we will evaluate the RPN.
 		std::stack<ExprElem> st;
 		for (auto&& e: expr.elements) {
@@ -520,6 +536,9 @@ namespace compiler::helios {
 				}
 				variant_case(rpn::KeywordValue, keyword) { st.emplace(keyword); }
 				variant_case(rpn::Operator, oper) {
+					HELIOS_ASSERT(
+						st.size() >= 2, errors::ExpressionParsingError, "Malformed expression"
+					);
 					const auto first = st.top();
 					st.pop();
 					const auto second = st.top();
@@ -552,7 +571,9 @@ namespace compiler::helios {
 					}
 					st.emplace(tuple_type);
 				}
-				variant_default { RIFT_PANIC("Bad Expr alternative"); }
+				variant_default {
+					HELIOS_PANIC(errors::ExpressionParsingError, "Bad Expr alternative");
+				}
 			}
 		}
 		RIFT_ASSERT(st.size() == 1, "Expression stack should have 1 element");
@@ -575,7 +596,8 @@ namespace compiler::helios {
 						),
 						sym_list
 					);
-					looked_up_symbol = sym_list.getAsSingle();
+					UNPACK_RESULT(sym_list.getAsSingle(), new_symbol);
+					looked_up_symbol = new_symbol;
 				}
 				variant_default {
 					throw base::NotYetImplemented("Lookup on non-identifier is not yet implemented"
@@ -592,7 +614,7 @@ namespace compiler::helios {
 						}),
 						new_symbols
 					);
-					auto&& single = new_symbols.getAsSingle();
+					UNPACK_RESULT(new_symbols.getAsSingle(), single);
 					looked_up_symbol.insert(looked_up_symbol.end(), single.begin(), single.end());
 					return Identifier{ looked_up_symbol };
 				}
@@ -602,7 +624,10 @@ namespace compiler::helios {
 					);
 				}
 			}
-			RIFT_PANIC("Something strange has happended during .operator evaluation...");
+			HELIOS_PANIC(
+				errors::ExpressionParsingError,
+				"Something strange has happended during .operator evaluation..."
+			);
 		}
 		if (op.oper_id == "|") {
 			// @TODO: Check if A and B are types.
@@ -636,7 +661,11 @@ namespace compiler::helios {
 						variant_default { a_variant.elements.push_back(b); }
 					}
 				}
-				variant_default { RIFT_PANIC("A is not a variant, but it should be."); }
+				variant_default {
+					HELIOS_PANIC(
+						errors::ExpressionParsingError, "A is not a variant, but it should be."
+					);
+				}
 			}
 			return a;
 		}
@@ -741,7 +770,10 @@ namespace compiler::helios {
 				return ctx.query<QueryTypeOfSymbol>(idt.symbol_list.back());
 			}
 			variant_case(rpn::Operator, oper) {
-				RIFT_PANIC(base::strConcat("Type cannot be an operator: ", oper.oper_id));
+				HELIOS_PANIC(
+					errors::ExpressionParsingError,
+					base::strConcat("Type cannot be an operator: ", oper.oper_id)
+				);
 			}
 			variant_case(rpn::NamedIdentifier, named_identifier) {
 				const auto it = BUILTINS.find(named_identifier.symbol_name);
@@ -800,6 +832,7 @@ namespace compiler::helios {
 			}
 			variant_default { RIFT_PANIC("Unhandleble type during parsing type from expr..."); }
 		}
+		HELIOS_PANIC(errors::ExpressionParsingError);
 		RIFT_PANIC("Couldn't parse the type.");
 	}
 

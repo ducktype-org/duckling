@@ -1,0 +1,2 @@
+const InvalidExpr: i32 = 1 +;
+const InvalidSym: i32 = A + 1;
