@@ -9,11 +9,11 @@ add_library(Exec
 make_module(Exec USES Base Operations)
 
 rift_add_test(compiler exec_operators_test_simple tests/operators_test.cpp
-	USES Exec Base Clap Operations TypeSystem)
+	USES Exec Base Clap Operations TypeSystemHigher)
 
 rift_add_test(compiler exec_ctv_test_simple tests/simple_ctv_test.cpp
-	USES Exec Clap TypeSystem)
+	USES Exec Clap TypeSystemHigher)
 rift_add_test(compiler exec_defaults_test_simple tests/simple_defaults_test.cpp
-	USES Exec Clap TypeSystem)
+	USES Exec Clap TypeSystemHigher)
 rift_add_test(compiler exec_constructor_test_simple tests/simple_constructor_test.cpp
-	USES Exec Clap TypeSystem)
+	USES Exec Clap TypeSystemHigher)
