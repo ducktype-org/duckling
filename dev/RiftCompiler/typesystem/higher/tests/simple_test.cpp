@@ -1,9 +1,9 @@
 #include <algorithm>
-#include "query_framework/query_entry_point.hpp"
-#include "tester/tester.hpp"
-#include "typesystem/higher/typesystem.hpp"
+#include <query_framework/query_entry_point.hpp>
+#include <tester/tester.hpp>
+#include <typesystem/higher/typesystem.hpp>
 
-#include "query_framework/query_impl.hpp"
+#include <query_framework/query_impl.hpp>
 
 using namespace tsh;
 
