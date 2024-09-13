@@ -1,7 +1,7 @@
-// Tests for recurrence, but also for many function aspects
-// (passing arguments, results, whether stacks are seperate).
-// input = n
-// output = n * (n + 1) / 2
+# Tests for recurrence, but also for many function aspects
+# (passing arguments, results, whether stacks are seperate).
+# input = n
+# output = n * (n + 1) / 2
 
 function sum {
 	arg_size: 0;
@@ -12,7 +12,7 @@ function sum {
         mov_l64_pFuncArg    0;
         cmpEq_l64_imm       0,  0;
         jmpRelIf_label      ret_label;
-        // if arg != 0:
+        # if arg != 0:
             mov_l64_l64         8,  0;
             sub_l64_imm         0,  1;
             setPArg_l64         0;

@@ -508,8 +508,8 @@ namespace ts {
 		SETUP_TYPE_WITH_BASE(ClassInfo, TypeInfo)
 
 		template<class T>
-		using QueryStructResult
-			= std::expected<T, compiler::helios::QueryStructSymbolData_Result::error_type>;
+		using QueryClassResult
+			= std::expected<T, compiler::helios::QueryClassSymbolData_Result::error_type>;
 
 		/**
 		 * Gets the SymID of the class type.
@@ -524,7 +524,7 @@ namespace ts {
 		 * @return The type of the base class.
 		 */
 		[[nodiscard]]
-		QueryStructResult<base::Optional<ClassInfo>> getBaseClassType(query::Context& ctx) const;
+		QueryClassResult<base::Optional<ClassInfo>> getBaseClassType(query::Context& ctx) const;
 
 		/**
 		 * Gets the symbol of the base class.
@@ -532,7 +532,7 @@ namespace ts {
 		 * @return The symbol of the base class.
 		 */
 		[[nodiscard]]
-		QueryStructResult<base::Optional<compiler::helios::SymID>>
+		QueryClassResult<base::Optional<compiler::helios::SymID>>
 			getBaseClassSymbol(query::Context& ctx) const;
 
 		/**
@@ -541,12 +541,12 @@ namespace ts {
 		 * @return The symbols of implemented interfaces.
 		 */
 		[[nodiscard]]
-		QueryStructResult<std::vector<ClassInfo>> getImplementedInterfaceTypes(query::Context& ctx
+		QueryClassResult<std::vector<ClassInfo>> getImplementedInterfaceTypes(query::Context& ctx
 		) const;
 		// @TODO: change return type to InterfaceInfo when interface type is created.
 
 		[[nodiscard]]
-		QueryStructResult<std::vector<compiler::helios::SymID>>
+		QueryClassResult<std::vector<compiler::helios::SymID>>
 			getImplementedInterfaceSymbols(query::Context& ctx) const;
 
 		/**

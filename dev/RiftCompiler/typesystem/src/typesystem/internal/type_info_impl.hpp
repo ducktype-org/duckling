@@ -690,46 +690,38 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		ClassInfo::QueryStructResult<base::Optional<ClassInfo>> getBaseClassType(query::Context& ctx
+		ClassInfo::QueryClassResult<base::Optional<ClassInfo>> getBaseClassType(query::Context& ctx
 		) const {
-			UNPACK_RESULT(ctx.query<compiler::helios::QueryStructSymbolData>(symbol), struct_data);
-			auto& bases = struct_data.bases;
-			if (bases.empty())
-				return {};
-			else
-				return base::Optional{ ClassInfo(bases.at(0)) };
+			UNPACK_RESULT(ctx.query<compiler::helios::QueryClassSymbolData>(symbol), class_data);
+			auto& base = class_data.base;
+			if (base.has_value()) return base::Optional{ ClassInfo(base.value()) };
+			return {};
 		}
 
 		[[nodiscard]]
-		ClassInfo::QueryStructResult<base::Optional<compiler::helios::SymID>>
+		ClassInfo::QueryClassResult<base::Optional<compiler::helios::SymID>>
 			getBaseClassSymbol(query::Context& ctx) const {
 			UNPACK_RESULT(getBaseClassType(ctx), base_class_type);
 			return base_class_type.map([](ClassInfo classInfo) { return classInfo.getSymbol(); });
 		}
 
-		// @TODO: change return type to InterfaceInfo when interface type is created.
-		[[nodiscard]]
-		ClassInfo::QueryStructResult<std::vector<ClassInfo>>
+		ClassInfo::QueryClassResult<std::vector<ClassInfo>>
 			getImplementedInterfaceTypes(query::Context& ctx) const {
-			UNPACK_RESULT(ctx.query<compiler::helios::QueryStructSymbolData>(symbol), struct_data);
-			auto&                  bases = struct_data.bases;
-			std::vector<ClassInfo> result;
-			result.reserve(std::max(0UL, bases.size() - 1));
-			for (int i = 1; i < bases.size(); i++) result.emplace_back(bases.at(i));
-			return result;
+			UNPACK_RESULT(ctx.query<compiler::helios::QueryClassSymbolData>(symbol), class_data);
+			auto& implements = class_data.implements;
+			return std::vector<ClassInfo>{ implements.begin(), implements.end() };
 		}
 
 		[[nodiscard]]
-		ClassInfo::QueryStructResult<std::vector<compiler::helios::SymID>>
+		ClassInfo::QueryClassResult<std::vector<compiler::helios::SymID>>
 			getImplementedInterfaceSymbols(query::Context& ctx) const {
-			UNPACK_RESULT(ctx.query<compiler::helios::QueryStructSymbolData>(symbol), struct_data);
-			auto&                                bases = struct_data.bases;
-			std::vector<compiler::helios::SymID> result;
-			result.reserve(std::max(0UL, bases.size() - 1));
-			for (int i = 1; i < bases.size(); i++)
-				// @TODO: change cast type to InterfaceInfo when interface type is created.
-				result.push_back(ClassInfo(bases.at(i)).getSymbol());
-			return result;
+			UNPACK_RESULT(ctx.query<compiler::helios::QueryClassSymbolData>(symbol), class_data);
+			auto& implements = class_data.implements;
+			// @TODO: change cast type to InterfaceInfo when interface type is created.
+			constexpr auto transformer
+				= [](const ts::TypeInfo& interface) { return ClassInfo(interface).getSymbol(); };
+			auto view = std::ranges::ref_view(implements) | std::views::transform(transformer);
+			return std::vector<compiler::helios::SymID>{ view.begin(), view.end() };
 		}
 
 		[[nodiscard]]

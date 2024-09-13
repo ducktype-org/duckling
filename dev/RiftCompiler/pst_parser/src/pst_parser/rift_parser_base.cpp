@@ -27,6 +27,11 @@ namespace pst {
 		}
 	}
 
+	void RiftElement::setFirstToken(dia::SourcePosition pos) {
+		if (pos.getStart() < source_position.getStart())
+			source_position = dia::SourcePosition(pos, source_position.getEnd());
+	}
+
 	void RiftElement::setLastToken(dia::SourcePosition pos) {
 		if (pos.getEnd() > source_position.getEnd())
 			source_position = dia::SourcePosition(source_position, pos.getEnd());

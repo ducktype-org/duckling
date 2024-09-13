@@ -23,36 +23,38 @@ public:
 private:
 	void overload_resolution_test() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("class_definitions")));
-		const compiler::helios::SymID my_struct_symbol = getChain("MyStruct", root_scope).back();
-		const TypeInfo                my_struct_type
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(my_struct_symbol);
+		const compiler::helios::SymID my_class_symbol = getChain("MyClass", root_scope).back();
+
+		const TypeInfo my_class_type
+			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(my_class_symbol);
+
 
 		withContextDo([&](query::Context& ctx) {
-			TypeInterface my_struct_interface = my_struct_type.getInterface(ctx);
+			TypeInterface my_class_interface = my_class_type.getInterface(ctx);
 
-			assert(
-				my_struct_interface.getElements(base::StrId("a")).size() == 1,
+			assertTrue(
+				my_class_interface.getElements(base::StrId("a")).size() == 1,
 				"There should be exactly one 'a' member."
 			);
-			assert(
-				my_struct_interface.getElements(base::StrId("b")).size() == 1,
+			assertTrue(
+				my_class_interface.getElements(base::StrId("b")).size() == 1,
 				"There should be exactly one 'b' member."
 			);
-			assert(
-				my_struct_interface.getElements(base::StrId("c")).empty(),
+			assertTrue(
+				my_class_interface.getElements(base::StrId("c")).empty(),
 				"There should be exactly no 'c' members."
 			);
 
-			auto a_resolution = my_struct_interface.resolve(base::StrId("a"), ctx);
+			auto a_resolution = my_class_interface.resolve(base::StrId("a"), ctx);
 
 			variant_match(a_resolution) {
 				variant_case_novalue(TypeInterface::SingleMatch) {}
-				variant_default { assert(false, "Member 'a' should match exactly."); }
+				variant_default { assertTrue(false, "Member 'a' should match exactly."); }
 			}
 
-			assert(
-				my_struct_type.getSize(ctx) == 64,
-				"MyStruct should have size equal to the sum of sizes of its members."
+			assertTrue(
+				my_class_type.getSize(ctx) == 64,
+				"MyClass should have size equal to the sum of sizes of its members."
 			);
 		});
 	}

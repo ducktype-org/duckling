@@ -5,15 +5,16 @@
 #pragma once
 
 #include <utility>
-#include <type_traits>
+#include <type_traits>  // IWYU pragma: export
 #include <base/optional.hpp>
 #include <base/str_utils.hpp>
+#include <base/defer.hpp>
 #include <diagnostic/logger.hpp>
 
 #include "acd.hpp"
 #include "query_int.hpp"
 #include "dep_graph.hpp"
-#include "query_id_provider.hpp"
+#include "query_id_provider.hpp"  // IWYU pragma: export
 #include "logs.hpp"
 #include "node_making.hpp"
 
@@ -105,8 +106,12 @@ namespace query {
 				// @FUTURE: provide legit acd here
 				ACD acd;
 
-				// epilog:
+				// prolog:
 				dep_graph::setEntry(node_id, from);
+
+				// Use of defer here makes it also called when an exception is thrown.
+				defer(dep_graph::setExit(node_id));
+
 				log(base::strConcat(
 					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Calculating.\n"
 				));
@@ -115,8 +120,7 @@ namespace query {
 				auto&& result
 					= QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 
-				// prolog:
-				dep_graph::setExit(node_id);
+				// epilog:
 				log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Done.\n"));
 
 				return result;
@@ -171,12 +175,31 @@ namespace query {
  * @param pretty_name Pretty name of the Query
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                \
-	auto type::QueryType::internal_query(type::QueryType::QKey key, ::query::detail::NodeID from)   \
-		-> type::QueryType::QResult {                                                               \
+	auto type::QueryType::internal_query(type::QKey key, ::query::detail::NodeID from)              \
+		-> type::QResult {                                                                          \
 		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                     \
 	}                                                                                               \
 	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryId(pretty_name); \
-	decltype(type::QueryType::name) type::QueryType::name = pretty_name;
+	decltype(type::QueryType::name) type::QueryType::name = pretty_name;                            \
+	static_assert(                                                                                  \
+		(not std::is_reference_v<type::QResult>)                                                    \
+			or (std::is_lvalue_reference_v<type::QResult>                                           \
+	            and std::is_const_v<std::remove_reference_t<type::QResult>>),                       \
+		"Query result type should be either non-reference or const lvalue reference"                \
+	);                                                                                              \
+	static_assert(                                                                                  \
+		std::is_same_v<                                                                             \
+			std::invoke_result_t<decltype(type::store), type::QKey, type::PResult, ::query::ACD>,   \
+			type::QResult>,                                                                         \
+		"Bad store result."                                                                         \
+	);                                                                                              \
+	static_assert(                                                                                  \
+		std::is_same_v<                                                                             \
+			std::invoke_result_t<decltype(type::provide), ::query::Context&, type::QKey>,           \
+			type::PResult>,                                                                         \
+		"Bad provide result."                                                                       \
+	);
+
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is

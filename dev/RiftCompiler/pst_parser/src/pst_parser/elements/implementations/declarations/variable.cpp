@@ -48,14 +48,14 @@ namespace pst {
 	}
 
 	void Variable::dprint(std::ostream& out) const {
-		out << "{\"";
-		out << (is_const ? "let" : "var");
-		out << "\": {";
+		out << "{";
+
 		out << R"("name": )";
 		nullAwareDprint(name, out);
 		out << R"(, "type": )";
 		nullAwareDprint(type, out);
-		out << "}}";
+
+		out << "}";
 	}
 
 	void Variable::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitVariable(*this); }

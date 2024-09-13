@@ -19,9 +19,9 @@ block B {}
 
 namespace X {}
 
-struct X {}
+class X {}
 
-fun X() {}
+fun X() = {}
 
 redo;
 

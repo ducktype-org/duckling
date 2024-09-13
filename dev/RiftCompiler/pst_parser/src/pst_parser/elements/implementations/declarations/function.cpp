@@ -9,25 +9,25 @@ namespace pst {
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		state.parse(out).all(Keyword::Fun, &out->name, &out->params);
+
 		if (state.parse(out).tryEat(Operator::SingleArrow)) state.parse(out).one(&out->rets);
-		while (state.notEmpty() and !state[0].isBracketGroup(Token::BracketType::Curly))
-			state.tokens().skip();
-		state.parse(out).one(&out->body);
+
+		state.parse(out).all(Operator::Assign, &out->body);
 
 		return out;
 	}
 
 	void Fun::dprint(std::ostream& out) const {
-		out << "{\"Fun\": { ";
-		out << "\"name\": ";
+		out << "{";
+		out << "\"name\":";
 		nullAwareDprint(name, out);
-		out << ", \"params\":";
+		out << ",\"parameters\":";
 		nullAwareDprint(params, out);
-		out << ", \"rets\":";
+		out << ",\"return\":";
 		nullAwareDprint(rets, out);
-		out << ", \"body\":";
+		out << ",\"body\":";
 		nullAwareDprint(body, out);
-		out << " } }";
+		out << "}";
 	}
 
 	void Fun::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitFun(*this); }

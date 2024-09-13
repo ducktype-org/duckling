@@ -10,17 +10,21 @@ namespace pst {
 
 		state.parse(out).all(Keyword::If, &out->optional_name, &out->condition, &out->body);
 
+		if (state.parse(out).tryEat(Keyword::Else)) state.parse(out).one(&out->else_body, true);
+
 		return out;
 	}
 
 	void If::dprint(std::ostream& out) const {
-		out << "{\"If\": {\"name\":";
+		out << "{\"name\":";
 		nullAwareDprint(optional_name, out);
-		out << ", \"condition\": ";
+		out << ",\"condition\":";
 		nullAwareDprint(condition, out);
-		out << ", \"body\": ";
+		out << ",\"body\":";
 		nullAwareDprint(body, out);
-		out << "}}";
+		out << ", \"else body\": ";
+		nullAwareDprint(else_body, out);
+		out << "}";
 	}
 
 	void If::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitIf(*this); }

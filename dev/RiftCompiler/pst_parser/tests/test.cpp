@@ -26,7 +26,6 @@ requires std::is_base_of_v<pst::PstStmtVisitor, T> class PstStmtVisitorTester fi
 public:
 	int counter = 0;
 
-	PSTVISITOR_METHOD(Attribute)
 	PSTVISITOR_METHOD(Import)
 	PSTVISITOR_METHOD(Using)
 	PSTVISITOR_METHOD(Alias)
@@ -40,7 +39,7 @@ public:
 	PSTVISITOR_METHOD(Const)
 	PSTVISITOR_METHOD(Block)
 	PSTVISITOR_METHOD(Namespace)
-	PSTVISITOR_METHOD(Struct)
+	PSTVISITOR_METHOD(Class)
 	PSTVISITOR_METHOD(Fun)
 	PSTVISITOR_METHOD(Variable)
 	PSTVISITOR_METHOD(If)
@@ -58,6 +57,7 @@ public:
 
 		TESTER_ADD_TEST(testIf);
 		TESTER_ADD_TEST(testWhile);
+		TESTER_ADD_TEST(testFor);
 		TESTER_ADD_TEST(testFun);
 		TESTER_ADD_TEST(testFun2);
 		TESTER_ADD_TEST(testBlock);
@@ -65,7 +65,7 @@ public:
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testUsing);
 		TESTER_ADD_TEST(testNamespace);
-		TESTER_ADD_TEST(testStruct);
+		TESTER_ADD_TEST(testClass);
 		TESTER_ADD_TEST(testListParsing);
 		TESTER_ADD_TEST(testListParsingErrors);
 		TESTER_ADD_TEST(testUsingErrors);
@@ -94,7 +94,7 @@ private:
 		ASSERT_EQUAL(expected_counter, empty_vistor.counter);
 	}
 
-	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 19); }
+	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 18); }
 
 	void testVisitorAlternative() { testVisitorImpl("snippets/alternative_statements.txt", 1); }
 
@@ -110,10 +110,10 @@ private:
 
 		if (no_errors) {
 			// if (pst.getErrorState().fail()) pst.getErrorState().dumpLog();
-			assert(pst.getLogger().good(), "there are unexpected errors in rift source-code");
+			assertTrue(pst.getLogger().good(), "there are unexpected errors in rift source-code");
 		}
 
-		assert(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
+		assertTrue(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
 		// @TODO: Do we want to print some information about the differences or the bad output to a
 		// file?
 	}
@@ -127,6 +127,8 @@ private:
 	void testIf() { testJsonRelativePath("if.rift", "if.json"); }
 
 	void testWhile() { testJsonRelativePath("while.rift", "while.json"); }
+
+	void testFor() { testJsonRelativePath("for.rift", "for.json"); }
 
 	void testFun() { testJsonRelativePath("fun.rift", "fun.json"); }
 
@@ -142,34 +144,34 @@ private:
 
 	void testNamespace() { testJsonRelativePath("namespace.rift", "namespace.json"); }
 
-	void testStruct() { testJsonRelativePath("struct.rift", "struct.json"); }
+	void testClass() { testJsonRelativePath("class.rift", "class.json"); }
 
 	void testListParsing() { testJsonRelativePath("lists_ok.rift", "lists_ok.json"); }
 
 	void testListParsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/lists_err.rift"));
-		assert(
+		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 5, "Expected 5 errors"
 		);
 	}
 
 	void testUsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/using_err.rift"));
-		assert(
+		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
 		);
 	}
 
 	void testParamListErrors() {
 		pst::PST<> pst = prepare(path("snippets/params_err.rift"));
-		assert(
+		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 7, "Expected 7 errors"
 		);
 	}
 
 	void testMissingSemiErr() {
 		pst::PST<> pst = prepare(path("snippets/missing_semicolon_err.rift"));
-		assert(
+		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
 		);
 	}

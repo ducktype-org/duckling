@@ -35,7 +35,7 @@ private:
 	void testPassByValue() {
 		auto u_ptr = base::make_unique<Wrapper>(3);
 		increment_wrapper_using_borrow(u_ptr.borrow_mut());
-		assert(u_ptr->x == 4, "Pass by value failed");
+		assertTrue(u_ptr->x == 4, "Pass by value failed");
 	}
 
 	void testOwnership() {
@@ -44,12 +44,12 @@ private:
 			auto b_ptr = u_ptr.borrow_mut();
 			b_ptr->x   = 5;
 		}
-		assert(u_ptr->x == 5, "Scoped borrow assignment failed");
+		assertTrue(u_ptr->x == 5, "Scoped borrow assignment failed");
 
 		auto b_ptr     = u_ptr.borrow();
 		auto u_ptr_raw = u_ptr.release();
-		assert(u_ptr.get() == nullptr, "release didn't worked properly (1)");
-		assert(b_ptr.get() == u_ptr_raw, "release didn't worked properly (2)");
+		assertTrue(u_ptr.get() == nullptr, "release didn't worked properly (1)");
+		assertTrue(b_ptr.get() == u_ptr_raw, "release didn't worked properly (2)");
 		delete u_ptr_raw;
 
 		// compile time method checks
@@ -60,7 +60,7 @@ private:
 
 		// ownership check:
 		auto d_count = Derived::destructor_count;
-		assert(Derived::destructor_count == d_count, "UB");
+		assertTrue(Derived::destructor_count == d_count, "UB");
 
 		{
 			base::unique_ptr<Derived> d_ptr(new Derived());
@@ -70,10 +70,10 @@ private:
 				d_ptr.borrow_mut();
 			}
 
-			assert(Derived::destructor_count == d_count, "Borrows destroy the object");
+			assertTrue(Derived::destructor_count == d_count, "Borrows destroy the object");
 		}
 
-		assert(Derived::destructor_count == d_count + 1, "Unique didn't destroy the object");
+		assertTrue(Derived::destructor_count == d_count + 1, "Unique didn't destroy the object");
 	}
 
 	void increment_wrapper_using_borrow(base::borrow_ptr<Wrapper> b_ptr) { b_ptr->x++; }

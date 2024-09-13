@@ -6,8 +6,8 @@ function modify_pointer {
 	ret_size: 0;
 
 	code: {
-		// init Pointer 
-		// init int
+		# init Pointer 
+		# init int
 		mov_lptr_ptrFuncArg   0;
 		load_l64_lptr         16, 0;
 		add_l64_imm           16, 1;
@@ -24,14 +24,14 @@ function main {
 	ret_size: 0;
 
 	code: {
-		// init Pointer
-		// init int64
+		# init Pointer
+		# init int64
 		alloc_lptr_type    0, int64;
 		
 		input_l64          16;
 		store_lptr_l64     0, 16;
 		
-		// modify
+		# modify
 		setPtrArg_lptr     0;
 		call_func          0;
 		

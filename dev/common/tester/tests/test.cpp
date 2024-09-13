@@ -63,19 +63,19 @@ private:
 	}
 
 	void verySimpleTestingUtilsTest() {
-		assert(testing_utils::compareJson(" {}", "{ }"), "Incorrect compareJson (1)");
+		assertTrue(testing_utils::compareJson(" {}", "{ }"), "Incorrect compareJson (1)");
 
-		assert(
+		assertTrue(
 			testing_utils::compareJson(R"--( { "data" : {} })--", R"--(  { "data" : {  } } )--"),
 			"Incorrect compareJson (2)"
 		);
 
-		assert(
+		assertTrue(
 			!testing_utils::compareJson(R"--( { "data" : [] })--", R"--(  { "data" : {  } } )--"),
 			"Incorrect compareJson (3)"
 		);
 
-		assert(
+		assertTrue(
 			!testing_utils::compareJson(
 				R"--( { "data" :  { }, "data2" : {} })--", R"--(  { "data" : {  } } )--"
 			),

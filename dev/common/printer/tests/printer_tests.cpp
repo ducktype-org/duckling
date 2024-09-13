@@ -35,7 +35,7 @@ private:
 		std::stringstream ss1;
 		printer::StreamPrinter::print(mc1, ss1);
 		std::string expected1 = "\033[41mms1\033[0m";
-		assert(
+		assertTrue(
 			ss1.str() == expected1,
 			"Full print wrong output (" + ss1.str() + "), expected: (" + expected1 + ").",
 			false
@@ -45,7 +45,7 @@ private:
 		std::stringstream ss2;
 		printer::StreamPrinter::print({ mc1, mc2 }, ss2);
 		std::string expected2 = "\033[41mms1\033[0m\033[31mms2\033[0m";
-		assert(
+		assertTrue(
 			ss2.str() == expected2,
 			"Full print wrong output (" + ss2.str() + "), expected (" + expected2 + ").",
 			false

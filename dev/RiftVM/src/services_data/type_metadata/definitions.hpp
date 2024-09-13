@@ -4,7 +4,6 @@
 
 #include <base/ints.hpp>
 #include <base/strongly_typed_int.hpp>
-#include <json/json.hpp>
 
 namespace vm {
 

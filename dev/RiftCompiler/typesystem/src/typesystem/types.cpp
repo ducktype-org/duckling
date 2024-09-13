@@ -147,20 +147,20 @@ namespace ts {
 
 	compiler::helios::SymID ClassInfo::getSymbol() const { return toCPimpl(pimpl)->getSymbol(); }
 
-	ClassInfo::QueryStructResult<base::Optional<ClassInfo>> ClassInfo::getBaseClassType(query::Context& ctx) const {
+	ClassInfo::QueryClassResult<base::Optional<ClassInfo>> ClassInfo::getBaseClassType(query::Context& ctx) const {
 		return toCPimpl(pimpl)->getBaseClassType(ctx);
 	}
 
-	ClassInfo::QueryStructResult<base::Optional<compiler::helios::SymID>> ClassInfo::getBaseClassSymbol(query::Context& ctx
+	ClassInfo::QueryClassResult<base::Optional<compiler::helios::SymID>> ClassInfo::getBaseClassSymbol(query::Context& ctx
 	) const {
 		return toCPimpl(pimpl)->getBaseClassSymbol(ctx);
 	}
 
-	ClassInfo::QueryStructResult<std::vector<ClassInfo>> ClassInfo::getImplementedInterfaceTypes(query::Context& ctx) const {
+	ClassInfo::QueryClassResult<std::vector<ClassInfo>> ClassInfo::getImplementedInterfaceTypes(query::Context& ctx) const {
 		return toCPimpl(pimpl)->getImplementedInterfaceTypes(ctx);
 	}
 
-	ClassInfo::QueryStructResult<std::vector<compiler::helios::SymID>>
+	ClassInfo::QueryClassResult<std::vector<compiler::helios::SymID>>
 		ClassInfo::getImplementedInterfaceSymbols(query::Context& ctx) const {
 		return toCPimpl(pimpl)->getImplementedInterfaceSymbols(ctx);
 	}

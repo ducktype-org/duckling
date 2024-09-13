@@ -17,6 +17,10 @@ namespace pst::detail {
 			return state[fwd].is(rift_def::Special::Comma);
 		}
 
+		static bool isSemicolon(const RiftParserState& state, i64 fwd) {
+			return state[fwd].is(rift_def::Special::Semicolon);
+		}
+
 		static bool isSentinel(const RiftParserState& state, i64 fwd) {
 			return state[fwd].is(lexer::Token::Type::Sentinel);
 		}
@@ -33,8 +37,30 @@ namespace pst::detail {
 		static bool isAssign(const RiftParserState& st, i64 fwd) {
 			return st[fwd].is(rift_def::Operator::Assign);
 		}
+
+		/**
+		 * @brief This is to differentiate blocks from template specification
+		 */
+		static bool isBlockGroup(const RiftParserState& st, i64 fwd) {
+			return st[fwd].isBracketGroup(lexer::Token::Curly)
+			    && not st[fwd - 1].is(rift_def::Operator::Colon);
+		}
+
+		static bool isImplementsOrBlockGroup(const RiftParserState& st, i64 fwd) {
+			return st[fwd].is(rift_def::Keyword::Implements)
+			    || (st[fwd].isBracketGroup(lexer::Token::Curly)
+			        && not st[fwd - 1].is(rift_def::Operator::Colon));
+		}
+
+		template<rift_def::Keyword key>
+		static bool is(const RiftParserState& st, i64 fwd) {
+			return st[fwd].is(key);
+		}
 	};
 
+	/**
+	 * @brief These are helper static functions returning names that can be  passed to templates.
+	 */
 	class NameGetters {
 	public:
 		NameGetters() = delete;
@@ -46,6 +72,8 @@ namespace pst::detail {
 		static std::string inheritanceList() { return "inheritance"; }
 
 		static std::string attributeArgList() { return "attribute argument"; }
+
+		static std::string classInitList() { return "initialization"; }
 	};
 
 	/**

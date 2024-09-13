@@ -72,9 +72,10 @@ namespace ts::internal {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, TypeInterface) {
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			compiler::helios::SymID symbol = key.value->getSymbol();
-			auto&& struct_data = ctx.query<compiler::helios::QueryStructSymbolData>(symbol);
-			RIFT_ASSERT(struct_data.has_value(), "Handling errors is not supported in TS yet...");
-			auto& field_syms = struct_data.value().members;
+
+			auto&& class_data = ctx.query<compiler::helios::QueryClassSymbolData>(symbol);
+			RIFT_ASSERT(class_data.has_value(), "Handling errors is not supported in TS yet...");
+			auto& field_syms = class_data.value().members;
 			// @TODO: Add methods to the interface, when obtaining their signature is supported.
 
 			std::set<InterfaceElement> elements;
