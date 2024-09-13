@@ -7,7 +7,7 @@
 #include "helios/test_utils/helios_test_utils.hpp"
 #include "query_framework/test_utils/context_suite.hpp"
 
-using namespace ts;
+using namespace tsh;
 using namespace compiler::helios::test_utils;
 
 class TypeSystemOverloadResolutionTest final: public tester::ContextSuite {

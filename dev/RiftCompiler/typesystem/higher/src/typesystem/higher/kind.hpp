@@ -7,7 +7,11 @@
 #include <base/exceptions.hpp>
 #include <sstream>
 
-namespace ts {
+/**
+ * @brief The namespace of all definitions of the Higher Type System.
+ * Short for "Type System: High(er)".
+ */
+namespace tsh {
 	/**
 	 * @brief Enum which identifies the features of a type described in the Type System.
 	 *

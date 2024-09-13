@@ -4,7 +4,7 @@
 
 #include <base/maps.hpp>
 
-namespace ts {
+namespace tsh {
 	/**
 	 * @brief Query to get the Unit type.
 	 */

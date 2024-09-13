@@ -27,7 +27,7 @@
 
 // NOLINTEND
 
-namespace ts {
+namespace tsh {
 
 #define toCPimpl(pimpl) (reinterpret_cast<CPimpl>(pimpl))
 

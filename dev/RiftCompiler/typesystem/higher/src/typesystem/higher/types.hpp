@@ -12,7 +12,7 @@
 #include <helios/scope_symbol_id.hpp>
 #include <base/optional.hpp>
 
-namespace ts {
+namespace tsh {
 	namespace internal {
 		class UnitInfoImpl;
 		class VoidInfoImpl;

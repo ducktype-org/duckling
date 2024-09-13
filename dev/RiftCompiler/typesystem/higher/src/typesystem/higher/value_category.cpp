@@ -1,6 +1,6 @@
 #include "value_category.hpp"
 
-namespace ts {
+namespace tsh {
 	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol) {
 		compiler::helios::SymbolKind symbol_kind = compiler::helios::kind(symbol);
 		// @TODO Properly check whether the symbol is local or global.

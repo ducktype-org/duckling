@@ -9,7 +9,7 @@
 
 #include <concepts>
 
-namespace ts {
+namespace tsh {
 
 	class TypeInfo;
 

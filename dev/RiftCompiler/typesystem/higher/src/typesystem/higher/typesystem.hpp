@@ -13,7 +13,7 @@
 
 #include "queries.hpp"
 
-namespace ts {
+namespace tsh {
 	void init();  // if needed
 
 	void reset();

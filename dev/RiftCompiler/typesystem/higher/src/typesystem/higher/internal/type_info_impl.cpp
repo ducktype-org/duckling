@@ -2,7 +2,7 @@
 #include <queue>
 #include <utility>
 
-namespace ts::internal {
+namespace tsh::internal {
 	/**
 	 * @brief Gets the global TypeInfoImpl storage structure.
 	 * @return The global TypeInfoImpl storage structure.

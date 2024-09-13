@@ -20,7 +20,7 @@
 #include <base/string_id.hpp>
 #include <variant>
 
-namespace ts {
+namespace tsh {
 	enum class Visibility { Public, Protected, Private };
 
 	/**

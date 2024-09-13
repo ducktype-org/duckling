@@ -4,7 +4,7 @@
 
 #include <set>
 
-namespace ts {
+namespace tsh {
 	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnInfo, bool) {
 		inline static base::Map<QKey, query::CacheEntry<QResult>> cache;
 

@@ -1,7 +1,7 @@
 #include "typesystem.hpp"
 #include "internal/type_info_impl.hpp"
 
-namespace ts {
+namespace tsh {
 	static bool was_init = false;
 
 	void init() {

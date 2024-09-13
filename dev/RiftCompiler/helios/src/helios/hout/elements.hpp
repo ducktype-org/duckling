@@ -46,9 +46,9 @@ namespace compiler::helios::code {
 		/**
 		 * The type of the expression, and its value category.
 		 */
-		ts::TypeDesc<> type_desc;
+		tsh::TypeDesc<> type_desc;
 
-		Expr(ScopeID lifetime_scope, ts::TypeDesc<> type_desc):
+		Expr(ScopeID lifetime_scope, tsh::TypeDesc<> type_desc):
 			  lifetime_scope(std::move(lifetime_scope)),
 			  type_desc(type_desc) {}
 
@@ -139,10 +139,10 @@ namespace compiler::helios::code {
 		LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx):
 			  Expr(
 				  scope,
-				  ts::TypeDesc<>(
+				  tsh::TypeDesc<>(
 					  // @TODO: Select type of expression based on type of literal.
-					  ctx.query<ts::QueryIntegralType>({ 64 }),
-					  ts::ValueCategory(ts::PrimaryCategory::Literal)
+					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 				  )
 			  ),
 			  value(value) {}
@@ -164,9 +164,9 @@ namespace compiler::helios::code {
 		IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx):
 			  Expr(
 				  scope,
-				  ts::TypeDesc<>(
+				  tsh::TypeDesc<>(
 					  ctx.query<QueryTypeOfSymbol>(symbol),
-					  ts::ValueCategory(ts::primaryCategoryOfSymbol(symbol))
+					  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
 				  )
 			  ),
 			  symbol(std::move(symbol)) {}
@@ -192,10 +192,10 @@ namespace compiler::helios::code {
 		):
 			  Expr(
 				  scope,
-				  ts::TypeDesc<>(
+				  tsh::TypeDesc<>(
 					  // @TODO: Select type of expression based on result type of the operation.
-					  ctx.query<ts::QueryIntegralType>({ 64 }),
-					  ts::ValueCategory(ts::PrimaryCategory::Temporary)
+					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 				  )
 			  ),
 			  op(op),

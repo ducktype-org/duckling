@@ -12,7 +12,7 @@
 
 #include <helios/symbols/symbols.hpp>
 
-namespace ts::internal {
+namespace tsh::internal {
 	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
 
 	template<std::derived_from<TypeInfoImpl> T>
@@ -716,7 +716,7 @@ namespace ts::internal {
 			auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol).implements;
 			// @TODO: change cast type to InterfaceInfo when interface type is created.
 			constexpr auto transformer
-				= [](const ts::TypeInfo& interface) { return ClassInfo(interface).getSymbol(); };
+				= [](const tsh::TypeInfo& interface) { return ClassInfo(interface).getSymbol(); };
 			auto view = std::ranges::ref_view(implements) | std::views::transform(transformer);
 			return { view.begin(), view.end() };
 		}

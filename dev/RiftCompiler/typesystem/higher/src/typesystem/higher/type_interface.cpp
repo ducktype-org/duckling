@@ -5,7 +5,7 @@
 #include <helios/symbols/symbols.hpp>
 #include <query_framework/query_impl.hpp>
 
-namespace ts {
+namespace tsh {
 	namespace {
 		base::Map<base::StrId, std::set<InterfaceElement>>
 			groupElementsByName(const std::set<InterfaceElement>& elements) {

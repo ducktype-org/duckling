@@ -11,7 +11,7 @@
 #include "internal/type_info_impl.hpp"
 #include "internal/queries.hpp"
 
-namespace ts {
+namespace tsh {
 	[[nodiscard]]
 	Kind TypeInfo::getKind() const {
 		return pimpl->getKind();

@@ -51,7 +51,7 @@ namespace compiler::helios {
 
 		HOUTCode body;
 
-		ts::FunctionInfo type;
+		tsh::FunctionInfo type;
 
 		/**
 		 * Construct a HOUT Function object.
@@ -89,7 +89,7 @@ namespace compiler::helios {
 		// @TODO: CTV from TS:
 		i64 value;
 
-		ts::TypeInfo type;
+		tsh::TypeInfo type;
 
 		HOUTGlobalData(SymID symbol, query::Context& ctx):
 			  helios_symbol(symbol),

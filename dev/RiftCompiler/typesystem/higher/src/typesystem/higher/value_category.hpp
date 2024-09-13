@@ -11,7 +11,7 @@
 #include <base/flag.hpp>
 #include <helios/symbols/symbols.hpp>
 
-namespace ts {
+namespace tsh {
 	// There used to be "Identifiable" category, but it is now replaced with "Local" and "Global"
 	// Maybe in the future we want to bring back "Identifiable" and make a struct to keep more
 	// information

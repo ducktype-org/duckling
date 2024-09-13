@@ -5,7 +5,7 @@
 
 #include "query_framework/query_impl.hpp"
 
-using namespace ts;
+using namespace tsh;
 
 /**
  * @brief Query to get the size of a type.

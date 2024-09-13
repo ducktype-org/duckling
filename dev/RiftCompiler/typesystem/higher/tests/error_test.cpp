@@ -3,7 +3,7 @@
 #include "tester/tester.hpp"
 #include "typesystem/higher/typesystem.hpp"
 
-using namespace ts;
+using namespace tsh;
 
 class TypeSystemErrorTest final: public tester::TestSuite {
 #undef TESTER_CLASS

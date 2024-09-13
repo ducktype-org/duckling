@@ -61,7 +61,7 @@
 	using BPimpl  = BImpl*;                              \
 	using CBPimpl = const BImpl*;
 
-namespace ts {
+namespace tsh {
 	// This may become const instead of constexpr because it might be defined during runtime.
 	constexpr usize META_SIZE    = 64;
 	constexpr usize POINTER_SIZE = 64;

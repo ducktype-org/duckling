@@ -4,7 +4,7 @@
 
 #include "type_info_impl.hpp"
 
-namespace ts::internal {
+namespace tsh::internal {
 
 	/**
 	 * @brief Gets the sum of the sizes of the types in a vector.

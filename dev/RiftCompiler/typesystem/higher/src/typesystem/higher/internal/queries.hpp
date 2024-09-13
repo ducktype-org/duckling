@@ -4,17 +4,17 @@
 
 #include "../type_interface.hpp"
 
-namespace ts::internal {
+namespace tsh::internal {
 	class TupleInfoImpl;
 
 	/**
 	 * @brief A "stupid" key, containing only a pointer value and defining comparison and hashing.
 	 */
 	struct WrappedTupleInfoImplPtr {
-		const ts::internal::TupleInfoImpl* value;
+		const tsh::internal::TupleInfoImpl* value;
 		WrappedTupleInfoImplPtr() = delete;
 
-		WrappedTupleInfoImplPtr(const ts::internal::TupleInfoImpl* value): value(value) {}
+		WrappedTupleInfoImplPtr(const tsh::internal::TupleInfoImpl* value): value(value) {}
 
 		auto operator<=>(const WrappedTupleInfoImplPtr& other) const = default;
 
@@ -38,10 +38,10 @@ namespace ts::internal {
 	 * @brief A "stupid" key, containing only a pointer value and defining comparison and hashing.
 	 */
 	struct WrappedVariantIntoImplPtr {
-		const ts::internal::VariantInfoImpl* value;
+		const tsh::internal::VariantInfoImpl* value;
 		WrappedVariantIntoImplPtr() = delete;
 
-		WrappedVariantIntoImplPtr(const ts::internal::VariantInfoImpl* value): value(value) {}
+		WrappedVariantIntoImplPtr(const tsh::internal::VariantInfoImpl* value): value(value) {}
 
 		auto operator<=>(const WrappedVariantIntoImplPtr& other) const = default;
 
@@ -65,10 +65,10 @@ namespace ts::internal {
 	 * @brief A "stupid" key, containing only a pointer value and defining comparison and hashing.
 	 */
 	struct WrappedClassInfoImplPtr {
-		const ts::internal::ClassInfoImpl* value;
+		const tsh::internal::ClassInfoImpl* value;
 		WrappedClassInfoImplPtr() = delete;
 
-		WrappedClassInfoImplPtr(const ts::internal::ClassInfoImpl* value): value(value) {}
+		WrappedClassInfoImplPtr(const tsh::internal::ClassInfoImpl* value): value(value) {}
 
 		auto operator<=>(const WrappedClassInfoImplPtr& other) const = default;
 
