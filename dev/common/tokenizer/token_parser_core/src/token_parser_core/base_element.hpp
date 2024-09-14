@@ -18,6 +18,7 @@ namespace tpc {
 		 * @brief Method used to print information from AST in a format similar to JSON
 		 */
 		virtual void dprint(std::ostream& out) const = 0;
+		//virtual void semPrint(std::ostream& out) const = 0;
 		virtual ~Element()                           = 0;
 
 		// @IDEA: this might be just a const variable if it will be enough in the future

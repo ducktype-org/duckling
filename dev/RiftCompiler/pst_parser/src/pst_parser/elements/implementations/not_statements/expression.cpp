@@ -168,7 +168,7 @@ namespace pst {
 		return result;
 	}
 
-	void Expr::dprint(std::ostream& out) const {
+	void Expr::dprint(std::ostream& out) const { // TODO: think how we can also print elements' positions
 		out << "{\"Expr\" : [";
 		for (auto& e: elements) {
 			variant_match(e) {
@@ -256,7 +256,7 @@ namespace pst {
 			out << ", ";
 		}
 		out << "],";
-		position.semPrint(out);
+		getSourcePosition().semPrint(out);
 		out << R"(,"semanticTokenType": "macro"})"; // TODO: maybe not macro but idk
 	}
 }

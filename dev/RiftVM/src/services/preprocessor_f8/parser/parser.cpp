@@ -164,6 +164,7 @@ namespace assemble {
 			VARIANT_VISIT(datatype, VISIT_CASE(auto&, data, { data.dprint(out); }))
 			out << "\n}";
 		}
+
 	};
 
 	struct OpCode: AsmElement {

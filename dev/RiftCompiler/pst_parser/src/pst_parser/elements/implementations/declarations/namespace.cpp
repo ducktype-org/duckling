@@ -27,7 +27,7 @@ namespace pst {
 	void Namespace::semPrint(std::ostream& out) const {
 		out << "{\"Namespace\": {";
 
-		out << position.semPrint();
+		getSourcePosition().semPrint(out);
 
 		out << R"(,"semanticTokenType": "namespace")";
 

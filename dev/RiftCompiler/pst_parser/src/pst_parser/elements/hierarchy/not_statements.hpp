@@ -65,15 +65,15 @@ namespace pst {
 		}
 
 		void semPrint(std::ostream& out) const final {
-			out << "{\"List\" : [";
+			out << "{\"List\" : { \"Elements\": [";
 			for (auto& x: elements) {
 				tpc::nullAwareSemanticTokenPrint(x, out);
 				out << ",";
 			}
 			out << "],";
-			position.semPrint(out);
+			getSourcePosition().semPrint(out);
 			out << R"(,"semanticTokenType": "struct")"; // TODO: maybe needs a change?
-			out <<"}";									// Also i am unsure about the nesting
+			out <<"}}";									// Also i am unsure about the nesting
 		}
 
 		~List() final = default;
@@ -289,7 +289,7 @@ namespace pst {
 			base::StrId num_id;
 		};
 
-		std::vector<ExprElem> elements;
+		std::vector<ExprElem> elements; // TODO: figure out how to not destroy json and also give positions to the elements
 
 		explicit Expr(const dia::SourcePosition& position): NotStmt(position) {}
 

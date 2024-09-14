@@ -43,6 +43,8 @@ namespace pst {
 		[[nodiscard]]
 		const dia::SourcePosition& getSourcePosition() const;
 
+		virtual void semPrint(std::ostream& out) const = 0;
+
 	private:
 		/**
 		 * @brief Helper function for filtering variants

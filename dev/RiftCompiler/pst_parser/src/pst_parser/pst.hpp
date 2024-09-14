@@ -108,7 +108,7 @@ namespace pst {
 
 		// TODO: Add position to dprint
 		void semanticTokensPrint(std::ostream& out) const {
-			nullAwareDprint(element, out);
+			nullAwareSemanticTokenPrint(element, out);
 		}
 
 		// TODO

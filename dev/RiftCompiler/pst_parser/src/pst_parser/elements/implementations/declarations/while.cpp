@@ -30,9 +30,9 @@ namespace pst {
 		nullAwareSemanticTokenPrint(condition, out);
 		out << ", \"body\": ";
 		nullAwareSemanticTokenPrint(body, out);
-		out << ","
-		position.semPrint(out);
-		out << ",semanticTokenType: keyword}}";
+		out << ",";
+		getSourcePosition().semPrint(out);
+		out << ",\"semanticTokenType\": \"keyword\"}}";
 	}
 
 	void While::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitWhile(*this); }

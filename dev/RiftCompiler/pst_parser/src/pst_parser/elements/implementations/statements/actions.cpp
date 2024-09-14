@@ -65,7 +65,8 @@ namespace pst {
 			std::ostream&                          out,
 			const base::Optional<ParserRef<Expr>>& action,
 			const std::string_view                 name,
-			const std::string_view                 preposition
+			const std::string_view                 preposition,
+			const dia::SourcePosition&             position
 		) {
 			out << R"({"Action": {)";
 			position.semPrint(out);
@@ -103,25 +104,25 @@ namespace pst {
 
 	// Semantic printing
 	void Return::semPrint(std::ostream& out) const {
-		simpleActionSemPrint(out, expr, "Return", "with");
+		simpleActionSemPrint(out, expr, "Return", "with", getSourcePosition());
 	}
 
-	void Break::semPrint(std::ostream& out) const { simpleActionSemPrint(out, expr, "Break", "from"); }
+	void Break::semPrint(std::ostream& out) const { simpleActionSemPrint(out, expr, "Break", "from", getSourcePosition()); }
 
 	void Continue::semPrint(std::ostream& out) const {
-		simpleActionSemPrint(out, expr, "Continue", "with");
+		simpleActionSemPrint(out, expr, "Continue", "with", getSourcePosition());
 	}
 
-	void Redo::semPrint(std::ostream& out) const { simpleActionSemPrint(out, expr, "Redo", "what"); }
+	void Redo::semPrint(std::ostream& out) const { simpleActionSemPrint(out, expr, "Redo", "what", getSourcePosition()); }
 
 	void Restart::semPrint(std::ostream& out) const {
-		simpleActionSemPrint(out, expr, "Restart", "what");
+		simpleActionSemPrint(out, expr, "Restart", "what", getSourcePosition());
 	}
 
-	void Defer::semPrint(std::ostream& out) const { simpleActionSemPrint(out, expr, "Defer", "what"); }
+	void Defer::semPrint(std::ostream& out) const { simpleActionSemPrint(out, expr, "Defer", "what", getSourcePosition()); }
 
 	void Throw::semPrint(std::ostream& out) const {
-		simpleActionSemPrint(out, expr, "Throw", "exception");
+		simpleActionSemPrint(out, expr, "Throw", "exception", getSourcePosition());
 	}
 
 	void Return::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitReturn(*this); }

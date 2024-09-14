@@ -15,12 +15,13 @@ namespace pst {
 		out << "}";
 	}
 
-	void ExprStmt::dprint(std::ostream& out) const {
-		out << "{\"Expr Stmt\" :";
-		position.dprint(out);
+	void ExprStmt::semPrint(std::ostream& out) const {
+		out << "{\"Expr Stmt\" : {";
+		getSourcePosition().semPrint(out);
 		out << R"(,"semanticTokenType": "method",)"; // TODO: maybe needs a change?
-		expression->dprint(out);
-		out << "}";
+		out << "\"expression\": ";
+		nullAwareSemanticTokenPrint(expression, out);
+		out << "}}";
 	}
 
 	void ExprStmt::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitExprStmt(*this); }

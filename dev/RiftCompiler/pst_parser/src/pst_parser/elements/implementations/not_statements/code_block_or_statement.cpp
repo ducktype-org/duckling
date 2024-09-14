@@ -49,11 +49,12 @@ namespace pst {
 			PrinterFunctor(std::ostream& out): out_(out) {}
 		};
 
-		out << "{\"CodeBlockOrStmt\": ";
-		position.semPrint(out);
+		out << "{\"CodeBlockOrStmt\": {";
+		getSourcePosition().semPrint(out);
 		out << R"(,"semanticTokenType": "namespace",)";
+		out << "\"content\": ";
 		std::visit(PrinterFunctor(out), content);
-		out << "}";
+		out << "}}";
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {

@@ -8,8 +8,6 @@ namespace pst {
 		explicit Return(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		~Return() final = default;
-
 		void semPrint(std::ostream& out) const final;
 		~Return() final = default;
 
@@ -21,8 +19,6 @@ namespace pst {
 		explicit Break(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		~Break() final = default;
-
 		void semPrint(std::ostream& out) const final;
 		~Break() final = default;
 
@@ -34,8 +30,6 @@ namespace pst {
 		explicit Continue(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		~Continue() final = default;
-
 		void semPrint(std::ostream& out) const final;
 		~Continue() final = default;
 
@@ -47,8 +41,6 @@ namespace pst {
 		explicit Redo(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		~Redo() final = default;
-
 		void semPrint(std::ostream& out) const final;
 		~Redo() final = default;
 
@@ -60,8 +52,6 @@ namespace pst {
 		explicit Restart(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		~Restart() final = default;
-
 		void semPrint(std::ostream& out) const final;
 		~Restart() final = default;
 
@@ -73,8 +63,6 @@ namespace pst {
 		explicit Defer(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		~Defer() final = default;
-
 		void semPrint(std::ostream& out) const final;
 		~Defer() final = default;
 
@@ -89,8 +77,6 @@ namespace pst {
 		explicit Throw(const dia::SourcePosition& position): Action(position) {}
 
 		void dprint(std::ostream& out) const final;
-		~Throw() final = default;
-
 		void semPrint(std::ostream& out) const final;
 		~Throw() final = default;
 

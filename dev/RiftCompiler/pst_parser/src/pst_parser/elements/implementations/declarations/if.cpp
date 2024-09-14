@@ -31,8 +31,8 @@ namespace pst {
 		out << ", \"body\": ";
 		nullAwareSemanticTokenPrint(body, out);
 		out << ",";
-		position.semPrint(out);
-		out << R"(,"semanticTokenType": "namespace"}})";
+		getSourcePosition().semPrint(out);
+		out << R"(,"semanticTokenType": "keyword"}})";
 	}
 
 	void If::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitIf(*this); }

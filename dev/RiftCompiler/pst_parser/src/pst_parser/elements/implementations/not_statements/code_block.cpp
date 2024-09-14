@@ -53,9 +53,9 @@ namespace pst {
 		for (auto& stmt: statements) {
 			nullAwareSemanticTokenPrint(stmt, out);
 			out << ", ";
-		}
-		out << R"(],semanticTokenType: "namespace",)";
-		position.semPrint(out);
-		out << "}";
+    	}
+		out << R"(],"semanticTokenType": "namespace",)";
+		getSourcePosition().semPrint(out);
+		out << "}}";
 	}
 }

@@ -32,7 +32,7 @@ namespace pst {
 
 	void Fun::semPrint(std::ostream& out) const {
 		out << "{\"Fun\": { ";
-		out << position.semPrint();
+		getSourcePosition().semPrint(out);
 		out << R"(,"semanticTokenType": "function")";
 		out << ",\"name\": ";
 		nullAwareSemanticTokenPrint(name, out);

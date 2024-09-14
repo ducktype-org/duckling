@@ -52,7 +52,7 @@ namespace pst {
 	void DottedName::semPrint(std::ostream& out) const {
 		out << "{\"DottedName\": {";
 
-		position.semPrint(out);
+		getSourcePosition().semPrint(out);
 		out << R"(,"semanticTokenType": "variable",)";
 		if (star)
 			out << R"("star": "true",)";

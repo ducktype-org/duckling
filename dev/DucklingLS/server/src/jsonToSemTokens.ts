@@ -1,4 +1,5 @@
 import { SourcePosition, SemanticToken } from "./lsptree/elements/common";
+import { getTokenTypeIndex, stringToSemanticTokenType } from "./semanticTokensDeclarations";
 
 type Node = {
     [key: string]: any;
@@ -17,7 +18,7 @@ function parseTree(json: Node): SemanticToken[] {
 
         // Push the current node's tuple to the result array
         if (typeof firstField === 'string' && typeof semTokenType === 'string') {
-            result.push(SemanticToken.fromPosition(position, semTokenType, []));
+            result.push(SemanticToken.fromPosition(position, stringToSemanticTokenType(semTokenType), []));
         }
 
         // Recursively traverse the rest of the fields as children nodes

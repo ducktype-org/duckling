@@ -73,8 +73,8 @@ namespace dia {
 		usize getEnd() const;
 		[[nodiscard]]
 		tokenizer::BorrowFile getSource() const;
-		[[nodiscard]]
-		void SourcePosition::semPrint(std::ostream& out) const;
+		//[[nodiscard]]
+		void semPrint(std::ostream& out) const;
 
 	private:
 		usize                 source_start;  ///< Start of the range of characters in the file.

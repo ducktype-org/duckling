@@ -55,7 +55,7 @@ namespace pst {
 
 	void Const::semPrint(std::ostream& out) const {
 		out << "{\"Const\": {";
-		position.semPrint(out);
+		getSourcePosition().semPrint(out);
 		out << R"(,"semanticTokenType": "variable",)"; // TODO: maybe needs a change?
 		out << R"("name": )";
 		nullAwareSemanticTokenPrint(name, out);

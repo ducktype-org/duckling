@@ -30,3 +30,10 @@ export const semanticTokensLegend = {
 export function getTokenTypeIndex(type: any): number {
 	return semanticTokensLegend.tokenTypes.indexOf(type);
 }
+
+export function stringToSemanticTokenType(value: string): SemanticTokenTypes {
+	if (value in SemanticTokenTypes) {
+		return SemanticTokenTypes[value as keyof typeof SemanticTokenTypes];
+	}
+	return SemanticTokenTypes.keyword; // or throw an error, or handle it as needed
+}

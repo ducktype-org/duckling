@@ -41,8 +41,8 @@ namespace pst {
 		out << R"("body": )";
 		nullAwareSemanticTokenPrint(body, out);
 
-		out << ","
-		position.semPrint(out);
+		out << ",";
+		getSourcePosition().semPrint(out);
 		out << R"(,"semanticTokenType": "struct"}})";
 	}
 

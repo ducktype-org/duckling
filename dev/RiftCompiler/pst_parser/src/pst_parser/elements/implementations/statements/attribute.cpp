@@ -29,7 +29,7 @@ namespace pst {
 
 	void Attribute::semPrint(std::ostream& out) const {
 		out << "{\"Attribute\" : {";
-		position.semPrint(out);
+		getSourcePosition().semPrint(out);
 		out << R"(,"semanticTokenType": "property",)"; // TODO: maybe needs a change?
 		out << "\"name\" : ";
 		nullAwareSemanticTokenPrint(name, out);

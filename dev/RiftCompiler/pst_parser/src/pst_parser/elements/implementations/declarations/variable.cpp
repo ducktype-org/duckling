@@ -62,7 +62,7 @@ namespace pst {
 		out << "{\"";
 		out << (is_const ? "let" : "var");
 		out << "\": {";
-		position.semPrint(out);
+		getSourcePosition().semPrint(out);
 		out << R"(,"semanticTokenType": "variable")";
 		out << R"(,"name": )";
 		nullAwareSemanticTokenPrint(name, out);

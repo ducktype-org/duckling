@@ -30,8 +30,6 @@ namespace pst {
 
 		~TopLevel() override = default;
 		void dprint(std::ostream& out) const final;
-
-		~TopLevel() override = default;
 		void semPrint(std::ostream& out) const final;
 
 		[[nodiscard]]
