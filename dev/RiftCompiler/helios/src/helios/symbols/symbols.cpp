@@ -14,7 +14,6 @@
 
 #include <vector>
 
-#include <typesystem/queries/types.hpp>
 #include "../lookup_result.hpp"
 #include "../scope_symbol_id.hpp"
 #include "../scopes/scopes.hpp"
@@ -772,30 +771,30 @@ namespace compiler::helios {
 	 * @param ctx Context passed to a query.
 	 * @param expr An RPN expression created with e.g. ExtensionMakeRPN.
 	 * @param expr_scope A scope where the expression has been expressed.
-	 * @return ts::TypeInfo with information about the evaluated type.
+	 * @return tsh::TypeInfo with information about the evaluated type.
 	 */
 	ParseTypeFromExpr_Result
 		parseTypeFromExpr(query::Context& ctx, const rpn::ExprElem& expr, ScopeID expr_scope) {
 		// This is a std::unordered_map, not base::HashMap, because base::HashMap
 		// does not support this constructor.
-		const static auto BUILTINS = std::unordered_map<base::StrId, ts::TypeInfo>{
-			{ base::StrId("f128"), ctx.query<::ts::QueryFloatType>(128) },
-			{ base::StrId("f80"), ctx.query<::ts::QueryFloatType>(80) },
-			{ base::StrId("f64"), ctx.query<::ts::QueryFloatType>(64) },
-			{ base::StrId("f32"), ctx.query<::ts::QueryFloatType>(32) },
-			{ base::StrId("f16"), ctx.query<::ts::QueryFloatType>(16) },
+		const static auto BUILTINS = std::unordered_map<base::StrId, tsh::TypeInfo>{
+			{ base::StrId("f128"), ctx.query<::tsh::QueryFloatType>(128) },
+			{ base::StrId("f80"), ctx.query<::tsh::QueryFloatType>(80) },
+			{ base::StrId("f64"), ctx.query<::tsh::QueryFloatType>(64) },
+			{ base::StrId("f32"), ctx.query<::tsh::QueryFloatType>(32) },
+			{ base::StrId("f16"), ctx.query<::tsh::QueryFloatType>(16) },
 
-			{ base::StrId("i128"), ctx.query<::ts::QueryIntegralType>({ 128, true }) },
-			{ base::StrId("i64"), ctx.query<::ts::QueryIntegralType>({ 64, true }) },
-			{ base::StrId("i32"), ctx.query<::ts::QueryIntegralType>({ 32, true }) },
-			{ base::StrId("i16"), ctx.query<::ts::QueryIntegralType>({ 16, true }) },
-			{ base::StrId("i8"), ctx.query<::ts::QueryIntegralType>({ 8, true }) },
+			{ base::StrId("i128"), ctx.query<::tsh::QueryIntegralType>({ 128, true }) },
+			{ base::StrId("i64"), ctx.query<::tsh::QueryIntegralType>({ 64, true }) },
+			{ base::StrId("i32"), ctx.query<::tsh::QueryIntegralType>({ 32, true }) },
+			{ base::StrId("i16"), ctx.query<::tsh::QueryIntegralType>({ 16, true }) },
+			{ base::StrId("i8"), ctx.query<::tsh::QueryIntegralType>({ 8, true }) },
 
-			{ base::StrId("u128"), ctx.query<::ts::QueryIntegralType>({ 128, false }) },
-			{ base::StrId("u64"), ctx.query<::ts::QueryIntegralType>({ 64, false }) },
-			{ base::StrId("u32"), ctx.query<::ts::QueryIntegralType>({ 32, false }) },
-			{ base::StrId("u16"), ctx.query<::ts::QueryIntegralType>({ 16, false }) },
-			{ base::StrId("u8"), ctx.query<::ts::QueryIntegralType>({ 8, false }) },
+			{ base::StrId("u128"), ctx.query<::tsh::QueryIntegralType>({ 128, false }) },
+			{ base::StrId("u64"), ctx.query<::tsh::QueryIntegralType>({ 64, false }) },
+			{ base::StrId("u32"), ctx.query<::tsh::QueryIntegralType>({ 32, false }) },
+			{ base::StrId("u16"), ctx.query<::tsh::QueryIntegralType>({ 16, false }) },
+			{ base::StrId("u8"), ctx.query<::tsh::QueryIntegralType>({ 8, false }) },
 		};
 		variant_match(expr) {
 			variant_case(rpn::Identifier, idt) {
@@ -836,7 +835,7 @@ namespace compiler::helios {
 				RIFT_PANIC("Numerical value is not a type: ", num_value.num_id);
 			}
 			variant_case(rpn::TupleType, tuple_type) {
-				std::vector<ts::ComponentType> tuple_components;
+				std::vector<tsh::ComponentType> tuple_components;
 				tuple_components.reserve(tuple_type.elements.size());
 
 				for (auto&& tuple_subtype: tuple_type.elements) {
@@ -847,10 +846,10 @@ namespace compiler::helios {
 				}
 				std::reverse(tuple_components.begin(), tuple_components.end());
 
-				return ctx.query<ts::QueryTupleType>({ tuple_components });
+				return ctx.query<tsh::QueryTupleType>({ tuple_components });
 			}
 			variant_case(rpn::Variant, variant_type) {
-				std::vector<ts::TypeInfo> variant_types;
+				std::vector<tsh::TypeInfo> variant_types;
 
 				variant_types.reserve(variant_type.elements.size());
 				for (auto&& variant_subtype: variant_type.elements) {
@@ -860,7 +859,7 @@ namespace compiler::helios {
 					variant_types.push_back(parsed_variant_subtype);
 				}
 
-				return ctx.query<ts::QueryVariantType>({ variant_types });
+				return ctx.query<tsh::QueryVariantType>({ variant_types });
 			}
 			variant_default { RIFT_PANIC("Unhandleble type during parsing type from expr..."); }
 		}
@@ -873,7 +872,7 @@ namespace compiler::helios {
 	 * @param ctx Context passed to a query.
 	 * @param expr A PST expression, that has been written in the source code.
 	 * @param expr_scope A scope where the expression has been expressed.
-	 * @return ts::TypeInfo with information about the evaluated type.
+	 * @return tsh::TypeInfo with information about the evaluated type.
 	 */
 	ParseTypeFromExpr_Result parseTypeFromExpr(
 		query::Context& ctx, const tpc::ParserCBorrowRef<pst::Expr>& expr, ScopeID expr_scope
@@ -916,7 +915,7 @@ namespace compiler::helios {
 				auto params = fun.getParams();
 				auto ret    = fun.getRet();
 
-				std::vector<ts::TypeInfo> param_types{};
+				std::vector<tsh::TypeInfo> param_types{};
 				param_types.reserve(params->size());
 
 				for (auto param: params) {
@@ -929,7 +928,7 @@ namespace compiler::helios {
 						return;
 					}
 				}
-				ts::TypeInfo ret_type = ctx.query<ts::QueryUnitType>({});
+				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
 				if (ret.has_value()) {
 					auto&& parsed = parseTypeFromExpr(ctx, ret.value(), scope(key));
 					if (parsed.has_value()) {
@@ -940,8 +939,7 @@ namespace compiler::helios {
 						return;
 					}
 				}
-
-				setTypeOfSymbol(ctx.query<ts::QueryFunctionType>({ param_types, ret_type }));
+				setTypeOfSymbol(ctx.query<tsh::QueryFunctionType>({ param_types, ret_type }));
 			}
 		};
 
@@ -963,7 +961,7 @@ namespace compiler::helios {
 			Context&    ctx;
 			const QKey& key;
 
-			void setTypeOfDefinition(const ts::TypeInfo& type) {
+			void setTypeOfDefinition(const tsh::TypeInfo& type) {
 				if (definition_type_info.has_value())
 					RIFT_PANIC("Attempted to set type of definition in visitor a second time.");
 				definition_type_info = type;
@@ -974,10 +972,10 @@ namespace compiler::helios {
 				  ctx(ctx),
 				  key(key) {}
 
-			base::Optional<ts::TypeInfo> definition_type_info;
+			base::Optional<tsh::TypeInfo> definition_type_info;
 
 			void visitClass(const pst::Class&) override {
-				definition_type_info = ctx.query<ts::QueryClassType>(key);
+				definition_type_info = ctx.query<tsh::QueryClassType>(key);
 			}
 		};
 

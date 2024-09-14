@@ -138,9 +138,9 @@ namespace compiler::helios::code {
 	IdentifierExpr::IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx):
 		  Expr(
 			  scope,
-			  ts::TypeDesc<>(
+			  tsh::TypeDesc<>(
 				  unpackOrPanic(ctx.query<QueryTypeOfSymbol>(symbol)),
-				  ts::ValueCategory(ts::primaryCategoryOfSymbol(symbol))
+				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
 			  )
 		  ),
 		  symbol(std::move(symbol)) {}

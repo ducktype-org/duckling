@@ -11,7 +11,7 @@ add_library(HELIOS
 	src/helios/test_utils/helios_test_utils.cpp
 )
 
-make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystem)
+make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystemHigher)
 
 rift_add_test(compiler helios_test tests/helios_tests.cpp
-	USES Base TypeSystem PstParser HELIOS)
+	USES Base TypeSystemHigher PstParser HELIOS)

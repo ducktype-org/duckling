@@ -42,7 +42,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The type of the last symbol in the chain.
 	 */
-	ts::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope);
+	tsh::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the type associated with the last symbol in a symbol chain in a given scope.
@@ -51,5 +51,5 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The type of the last symbol in the chain.
 	 */
-	ts::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope);
+	tsh::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope);
 }

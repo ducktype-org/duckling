@@ -4,9 +4,9 @@ add_library(Operations
 	src/operations/internal/builtin_operations.cpp
 )
 
-make_module(Operations USES TypeSystem Exec Base)
+make_module(Operations USES TypeSystemHigher Exec Base)
 
 rift_add_test(compiler operations_test_simple tests/simple_test.cpp
-	USES Base Clap Operations TypeSystem)
+	USES Base Clap Operations TypeSystemHigher)
 rift_add_test(compiler operation_constructor tests/constructors_test.cpp
-	USES Base Clap Operations TypeSystem)
+	USES Base Clap Operations TypeSystemHigher)

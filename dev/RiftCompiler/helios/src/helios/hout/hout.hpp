@@ -10,7 +10,7 @@
 #include "../symbols/symbols.hpp"
 #include <base/string_id.hpp>
 #include <memory>
-#include <typesystem/types.hpp>
+#include <typesystem/higher/types.hpp>
 #include <query_framework/query_impl.hpp>
 #include <vector>
 
@@ -51,7 +51,7 @@ namespace compiler::helios {
 
 		HOUTCode body;
 
-		ts::FunctionInfo type;
+		tsh::FunctionInfo type;
 
 		/**
 		 * Construct a HOUT Function object.
@@ -86,7 +86,7 @@ namespace compiler::helios {
 		// @TODO: CTV from TS:
 		i64 value;
 
-		ts::TypeInfo type;
+		tsh::TypeInfo type;
 
 		HOUTGlobalData(SymID symbol, query::Context& ctx);
 

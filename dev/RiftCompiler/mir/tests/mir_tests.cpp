@@ -15,7 +15,7 @@
 
 #include <mir/mir_lowering/mir_lowering.hpp>
 
-using namespace ts;
+using namespace tsh;
 using namespace compiler::helios::test_utils;
 
 class MIRConstructionTest final: public tester::ContextSuite {

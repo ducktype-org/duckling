@@ -10,12 +10,13 @@
 #include "../pst_ref.hpp"
 #include "../lookup_result.hpp"
 #include "../helios_errors.hpp"
+#include "typesystem/higher/type_info.hpp"
 #include <helios/scopes/scopes.hpp>
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>
-#include <typesystem/type_info.hpp>
 #include <expected>
+#include <typesystem/higher/type_info.hpp>
 
 namespace compiler::helios {
 
@@ -311,7 +312,7 @@ namespace compiler::helios {
 		RPNEvaluation_Result evalExpr(query::Context&, const RPNExpr&);
 	}
 
-	using ParseTypeFromExpr_Result = std::expected<ts::TypeInfo, PotentialParsingErrors>;
+	using ParseTypeFromExpr_Result = std::expected<tsh::TypeInfo, PotentialParsingErrors>;
 
 	/**
 	 * @brief Query type of the symbol.
@@ -319,7 +320,7 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryTypeOfSymbol, SymID, const ParseTypeFromExpr_Result&)
 
 	/**
-	 * @brief Query ts::TypeInfo from a symbol definition (like class definition).
+	 * @brief Query tsh::TypeInfo from a symbol definition (like class definition).
 	 *
 	 * Example:
 	 * class T {
@@ -356,11 +357,11 @@ namespace compiler::helios {
 		/**
 		 * @brief Class'es base class.
 		 */
-		base::Optional<ts::TypeInfo> base;
+		base::Optional<tsh::TypeInfo> base;
 		/**
 		 * @brief Class'es implemented interfaces.
 		 */
-		std::vector<ts::TypeInfo> implements;
+		std::vector<tsh::TypeInfo> implements;
 	};
 
 	using QueryClassSymbolData_Result = std::expected<ClassSymbolData, PotentialParsingErrors>;

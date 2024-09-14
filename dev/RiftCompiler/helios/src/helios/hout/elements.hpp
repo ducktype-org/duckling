@@ -8,8 +8,8 @@
 #include <helios/symbols/symbols.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <query_framework/query_impl.hpp>
-#include <typesystem/type_desc.hpp>
-#include <typesystem/queries.hpp>
+#include <typesystem/higher/type_desc.hpp>
+#include <typesystem/higher/queries.hpp>
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
@@ -28,7 +28,7 @@ namespace compiler::helios::code {
 	struct Stmt {
 		ScopeID lifetime_scope;
 
-		Stmt(ScopeID lifetime_scope): lifetime_scope(std::move(lifetime_scope)) {}
+		Stmt(ScopeID lifetime_scope): lifetime_scope(lifetime_scope) {}
 
 		virtual ~Stmt()                                                    = default;
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
@@ -46,10 +46,10 @@ namespace compiler::helios::code {
 		/**
 		 * The type of the expression, and its value category.
 		 */
-		ts::TypeDesc<> type_desc;
+		tsh::TypeDesc<> type_desc;
 
-		Expr(ScopeID lifetime_scope, ts::TypeDesc<> type_desc):
-			  lifetime_scope(std::move(lifetime_scope)),
+		Expr(ScopeID lifetime_scope, tsh::TypeDesc<> type_desc):
+			  lifetime_scope(lifetime_scope),
 			  type_desc(type_desc) {}
 
 		virtual ~Expr()                                                    = default;
@@ -139,10 +139,10 @@ namespace compiler::helios::code {
 		LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx):
 			  Expr(
 				  scope,
-				  ts::TypeDesc<>(
+				  tsh::TypeDesc<>(
 					  // @TODO: Select type of expression based on type of literal.
-					  ctx.query<ts::QueryIntegralType>({ 64 }),
-					  ts::ValueCategory(ts::PrimaryCategory::Literal)
+					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 				  )
 			  ),
 			  value(value) {}
@@ -184,10 +184,10 @@ namespace compiler::helios::code {
 		):
 			  Expr(
 				  scope,
-				  ts::TypeDesc<>(
+				  tsh::TypeDesc<>(
 					  // @TODO: Select type of expression based on result type of the operation.
-					  ctx.query<ts::QueryIntegralType>({ 64 }),
-					  ts::ValueCategory(ts::PrimaryCategory::Temporary)
+					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 				  )
 			  ),
 			  op(op),
