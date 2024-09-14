@@ -690,7 +690,7 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		ClassInfo::QueryClassResult<base::Optional<ClassInfo>> getBaseClassType(query::Context& ctx
+		ClassInfo::QueryClass_Result<base::Optional<ClassInfo>> getBaseClassType(query::Context& ctx
 		) const {
 			UNPACK_RESULT(ctx.query<compiler::helios::QueryClassSymbolData>(symbol), class_data);
 			auto& base = class_data.base;
@@ -699,13 +699,13 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		ClassInfo::QueryClassResult<base::Optional<compiler::helios::SymID>>
+		ClassInfo::QueryClass_Result<base::Optional<compiler::helios::SymID>>
 			getBaseClassSymbol(query::Context& ctx) const {
 			UNPACK_RESULT(getBaseClassType(ctx), base_class_type);
 			return base_class_type.map([](ClassInfo classInfo) { return classInfo.getSymbol(); });
 		}
 
-		ClassInfo::QueryClassResult<std::vector<ClassInfo>>
+		ClassInfo::QueryClass_Result<std::vector<ClassInfo>>
 			getImplementedInterfaceTypes(query::Context& ctx) const {
 			UNPACK_RESULT(ctx.query<compiler::helios::QueryClassSymbolData>(symbol), class_data);
 			auto& implements = class_data.implements;
@@ -713,7 +713,7 @@ namespace ts::internal {
 		}
 
 		[[nodiscard]]
-		ClassInfo::QueryClassResult<std::vector<compiler::helios::SymID>>
+		ClassInfo::QueryClass_Result<std::vector<compiler::helios::SymID>>
 			getImplementedInterfaceSymbols(query::Context& ctx) const {
 			UNPACK_RESULT(ctx.query<compiler::helios::QueryClassSymbolData>(symbol), class_data);
 			auto& implements = class_data.implements;
