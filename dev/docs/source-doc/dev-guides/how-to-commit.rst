@@ -23,6 +23,17 @@ Make some changes
 
 Don't forget to write tests and docs! On ``rift-dev`` Quacker bot will block the merge if coverage percantege drops (this can be bypassed if really needed).
 
+Format your code
+----------------
+
+Before commiting changes, make sure that your code is properly formatted.
+To do that you can use our bash script. From the `dev` directory run:
+
+.. code-block:: bash
+
+    ./scripts/formatting/format_repo.sh
+
+
 Create pull request
 ===================
 
