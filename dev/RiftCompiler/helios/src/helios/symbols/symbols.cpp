@@ -228,7 +228,7 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymID) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
+		static auto provide(Context&, QKey key) -> PResult {
 			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
 		}
 
