@@ -2,7 +2,9 @@
 
 # Main compiler
 
-Main Rift compiler
+Rift compiler module.
+
+More information about files and directories can be found in the Doxygen documentation.
 
 # Module overview:
 

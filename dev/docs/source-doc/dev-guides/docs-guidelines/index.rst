@@ -45,11 +45,23 @@ It is generated using Sphinx and reStructuredText (rst) format, for which you ca
 Doxygen documentation
 =====================
 
-Doxygen documentation is generated from source code comments. It is intended for developers who want to understand the implementation details of Duckling.
+Doxygen documentation is generated from source code comments. 
+It is intended for developers who want to understand the implementation details of Duckling.
 
 A quick overview of Doxygen documentation can be found here: :doc:`doxygen-quickstart`. 
 
 You can also write Markdown documentation that will be included in Doxygen, see :doc:`markdown-quickstart`.
+
+Excluded directories
+--------------------
+
+The following directories are excluded from Doxygen documentation (you can find them in the ``Doxyfile.in`` file):
+
+* ``*build*/*``
+* ``docs/*``
+* ``*/examples/*``
+* ``*/tests/*``
+
 
 
 .. toctree::
