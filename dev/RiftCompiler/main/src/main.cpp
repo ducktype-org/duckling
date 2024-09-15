@@ -15,6 +15,8 @@
 #include <clap/clap.hpp>
 #include <printer/stream_printer.hpp>
 #include <config/config.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <helios/queries.hpp>
 
 /**
  * @brief Runs inits needed by main
@@ -231,6 +233,29 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		std::cout << "Parsed tree:\n";
 		pst.dprint(std::cout);
 		std::cout << "\n";
+
+		return exit_code;
+	});
+	commands.add("get_hout", "Debug prints hout-unit of a module.", [&]() {
+		// modify clap as needed:
+		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+		             .addShortName('m')
+		             .addLongName("module")
+		             .addShortDesc("Path to the module")
+		             .required()
+		             .build());
+
+		auto options = configureDuckMainWith(clap, command_args);
+
+		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+
+		int exit_code = 0;
+
+		// @TODO: error handling
+		using namespace compiler;
+		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+		auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+		std::cout << top_level.debugPrint();
 
 		return exit_code;
 	});
