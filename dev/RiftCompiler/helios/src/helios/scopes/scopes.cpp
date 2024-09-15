@@ -25,7 +25,8 @@ namespace compiler::helios {
 		// adapted from hir:
 
 		// created on startup:
-		ScopeID parent;
+		std::optional<ScopeID> parent;
+
 		// base::StrId name; ///< for debug
 		bool is_root = false;
 
@@ -63,8 +64,8 @@ namespace compiler::helios {
 		if (ref->is_root) {
 			return {};
 		} else {
-			RIFT_ASSERT(getScopeRef(ref->parent) != nullptr, "Non root scope has no parent.");
-			return ref->parent;
+			RIFT_ASSERT(ref->parent.has_value(), "Non root scope has no parent.");
+			return ref->parent.value();
 		}
 	}
 
@@ -83,7 +84,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeID) {
 		static auto provide(Context&, QKey key) -> PResult {
 			return putInScopeTable(ScopeData{
-				.parent              = ScopeID{ nullptr },
+				.parent              = {},
 				.is_root             = true,
 				.related_pst_element = {},
 				.parent_module       = key,
@@ -266,11 +267,11 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
 	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, LookupResult) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			LookupResult result = ctx.query<QueryLookupInScope>(key);
 
-			if (key.scope.ref->parent.ref != nullptr) {
-				auto parent = key.scope.ref->parent;
+			if (key.scope.ref->parent.has_value()) {
+				auto parent = key.scope.ref->parent.value();
 
 				// Reverse insertion order allow for linear result concatenation instead of
 				// quadratic

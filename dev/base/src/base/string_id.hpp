@@ -134,7 +134,7 @@ namespace base {
 
 		explicit operator usize() const { return usize(id); }
 
-		friend void swap(StrId& first, StrId& second) {
+		friend void swap(StrId& first, StrId& second) noexcept {
 			using std::swap;
 			swap(first.id, second.id);
 		}

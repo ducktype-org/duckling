@@ -12,7 +12,7 @@
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>
-#include <typesystem/type_info.hpp>
+#include <typesystem/higher/type_info.hpp>
 
 namespace compiler::helios {
 
@@ -305,10 +305,10 @@ namespace compiler::helios {
 	/**
 	 * @brief Query type of the symbol.
 	 */
-	DECLARE_QUERY(QueryTypeOfSymbol, SymID, ts::TypeInfo)
+	DECLARE_QUERY(QueryTypeOfSymbol, SymID, tsh::TypeInfo)
 
 	/**
-	 * @brief Query ts::TypeInfo from a symbol definition (like class definition).
+	 * @brief Query tsh::TypeInfo from a symbol definition (like class definition).
 	 *
 	 * Example:
 	 * class T {
@@ -316,7 +316,7 @@ namespace compiler::helios {
 	 * }
 	 * - Then we can use this query QueryTypeFromDefinition(T).
 	 */
-	DECLARE_QUERY(QueryTypeFromDefinition, SymID, ts::TypeInfo);
+	DECLARE_QUERY(QueryTypeFromDefinition, SymID, tsh::TypeInfo);
 
 	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.
@@ -345,11 +345,11 @@ namespace compiler::helios {
 		/**
 		 * @brief Class'es base class.
 		 */
-		base::Optional<ts::TypeInfo> base;
+		base::Optional<tsh::TypeInfo> base;
 		/**
 		 * @brief Class'es implemented interfaces.
 		 */
-		std::vector<ts::TypeInfo> implements;
+		std::vector<tsh::TypeInfo> implements;
 	};
 
 	/**

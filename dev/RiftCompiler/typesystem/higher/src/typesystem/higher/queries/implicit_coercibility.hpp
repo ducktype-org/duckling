@@ -1,0 +1,121 @@
+/**
+ * @file implicit_coercibility.hpp
+ * @brief Interface to deducing whether an implicit coercion of two values is allowed.
+ *
+ * An implicit coercion is when, for example, a boolean is expected, but
+ * and integer is given. A desirable (and common) behaviour may be to
+ * convert the integer value to true if and only if it is non-zero.
+ *
+ * Another context in which implicit coercions are desirable is when
+ * casting from subclass to superclass.
+ *
+ * In other words, a coercion is the conversion of a value of one type, to a value of another
+ * type, be it with a no-op (cast, if upwards a class hierarchy) or otherwise (conversion).
+ *
+ * These queries do not determine how to perform a coercion.
+ * They only determine whether one should be considered.
+ * A coercion may thus be allowed but not implemented; or implemented
+ * but not allowed to be used implicitly by the compiler, so the user
+ * may define a coercion from class A to class B, but not want it
+ * to ever be used implicitly (in C++ that is achieved by annotating a
+ * single-argument constructor with the `explicit` keyword).
+ *
+ * This is typically determined by rules specific for the Kind of the source type and
+ * value categories (see: ValueCategory) of the source and target values.
+ *
+ * The user may also declare that they desire an implicit coercion to be considered.
+ */
+
+#pragma once
+
+#include "../type_info.hpp"
+#include "../type_desc.hpp"
+
+#include <base/maps.hpp>
+
+// In the future, coercibility could work significantly differently.
+// For example, these functions could also return the OperationID of the coercion operation.
+// The current coercion implementation has not yet been tested.
+// @TODO: Consider the above and add tests
+
+namespace tsh {
+	/**
+	 * @brief Key for QueryImplicitCoercibilityOnInfo.
+	 */
+	struct KeyFor_QueryImplicitCoercibilityOnInfo {
+		/**
+		 * @brief Source type of the coercion.
+		 */
+		TypeInfo source;
+
+		/**
+		 * @brief Target type of the coercion.
+		 */
+		TypeInfo target;
+
+		KeyFor_QueryImplicitCoercibilityOnInfo(const TypeInfo& source, const TypeInfo& target):
+			  source(source),
+			  target(target) {}
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryImplicitCoercibilityOnInfo&) const
+			= default;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			static base::Map<KeyFor_QueryImplicitCoercibilityOnInfo, u64> hashes{};
+
+			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+
+			u64 result = hashes.size();
+			hashes.put(*this, result);
+			return result;
+		}
+	};
+
+	/**
+	 * @brief Query to check whether implicit coercion from one type described by TypeInfo to
+	 * another is allowed.
+	 */
+	DECLARE_QUERY(QueryImplicitCoercibilityOnInfo, KeyFor_QueryImplicitCoercibilityOnInfo, bool)
+
+	/**
+	 * @brief Key for QueryImplicitCoercibilityOnDesc.
+	 */
+	struct KeyFor_QueryImplicitCoercibilityOnDesc {
+		/**
+		 * @brief Source value description of the coercion.
+		 */
+		TypeDesc<> source;
+
+		/**
+		 * @brief Target value description of the coercion.
+		 */
+		TypeDesc<> target;
+
+		KeyFor_QueryImplicitCoercibilityOnDesc(const TypeDesc<>& source, const TypeDesc<>& target):
+			  source(source),
+			  target(target) {}
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryImplicitCoercibilityOnDesc&) const
+			= default;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			static base::Map<KeyFor_QueryImplicitCoercibilityOnDesc, u64> hashes{};
+
+			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+
+			u64 result = hashes.size();
+			hashes.put(*this, result);
+			return result;
+		}
+	};
+
+	/**
+	 * @brief Query to check whether implicit coercion from one value described by TypeDesc to
+	 * another is allowed.
+	 */
+	DECLARE_QUERY(QueryImplicitCoercibilityOnDesc, KeyFor_QueryImplicitCoercibilityOnDesc, bool)
+}
