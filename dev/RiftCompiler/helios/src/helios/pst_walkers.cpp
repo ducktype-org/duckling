@@ -24,7 +24,7 @@ namespace compiler::helios {
 		} else {
 			const auto& element = *elem.get();
 			RIFT_PANIC(base::strConcat(
-				"Bad Rift Element in `getChildStmtsOfClass`: ", typeid(element).name()
+				"Bad Rift Element in `getChildStmtsOfClassBlock`: ", typeid(element).name()
 			));
 		}
 	}

@@ -119,21 +119,6 @@ namespace compiler::helios {
 
 				output(code::IfStmt(outer_scope, std::move(condition), std::move(body)));
 			}
-
-			// void visitVariable(const pst::Variable& stmt) override {
-			// 	// @TODO: do something with if const
-
-			// 	// here scope should be easier to get...
-			// 	// @TODO: make some refactor that it is
-
-
-
-			// 	// sym:
-			// 	auto sym = ctx.query<QuerySymbolOfSTMT>({ PstRef<pst::Variable>(&stmt) });
-
-			// 	// get type:
-			// 	auto type = ctx.query<QueryTypeOfSymbol>( { } );
-			// }
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstStmtVisitorPanicky {
