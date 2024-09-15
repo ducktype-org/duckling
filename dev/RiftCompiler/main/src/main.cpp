@@ -253,7 +253,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		// @TODO: error handling
 		using namespace compiler;
-		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+		auto root      = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 		auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 		std::cout << top_level.debugPrint();
 
