@@ -327,19 +327,22 @@ int mainProcedure(int argc, const char* const* argv) {
 }
 
 int main(int argc, const char* argv[]) {
-	try {
+	if (throwing_main) {
 		return mainProcedure(argc, argv);
-	} catch (const base::Exception& e) {
-		if (throwing_main) throw;
-		std::cerr << "[ERROR] Compiler Exception was caught with message:\n";
-		std::cerr << e.what();
-		std::cerr << "\nAborting\n";
-		return 1;
-	} catch (const std::exception& e) {
-		if (throwing_main) throw;
-		std::cerr << "[ERROR] Unexpected Exception was caught with message:\n";
-		std::cerr << e.what();
-		std::cerr << "\nAborting\n";
-		return 1;
+	}
+	else {
+		try {
+			return mainProcedure(argc, argv);
+		} catch (const base::Exception& e) {
+			std::cerr << "[ERROR] Compiler Exception was caught with message:\n";
+			std::cerr << e.what();
+			std::cerr << "\nAborting\n";
+			return 1;
+		} catch (const std::exception& e) {
+			std::cerr << "[ERROR] Unexpected Exception was caught with message:\n";
+			std::cerr << e.what();
+			std::cerr << "\nAborting\n";
+			return 1;
+		}
 	}
 }
