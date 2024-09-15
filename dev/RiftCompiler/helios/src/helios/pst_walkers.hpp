@@ -24,18 +24,17 @@ namespace compiler::helios {
 	 *  * For CodeBlock return Stmt in the code block
 	 *  * For CodeBlockOrStmt return Stmt in the code block
 	 *  * For TopLevel return top level Stmt in the PST
-	 *  * For Class it ???? @TODO
 	 *  * For other it panics
 	 *
 	 * @return StmtList
 	 */
-	StmtList<> getChildStmtsOf(PstRef<pst::RiftElement>);
+	StmtList<> getStmtsFromStmtAggregate(PstRef<pst::RiftElement>);
 
 	/**
-	 * @brief Returns all children statements of given ClassStmt
+	 * @brief Returns all children statements of given ClassBlock
 	 * Flattens access specifier blocks as their information is included in statements.
 	 *
 	 * @return StmtList
 	 */
-	StmtList<pst::ClassStmt> getChildStmtsOfClass(PstRef<pst::RiftElement>);
+	StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(PstRef<pst::RiftElement>);
 }

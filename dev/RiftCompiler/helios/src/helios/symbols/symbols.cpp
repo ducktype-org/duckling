@@ -229,8 +229,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymID) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto scope = ctx.query<QueryPrimaryCodeScopeFor>( { key.stmt });
-			return PResult{ makeSymbolFromStatement(scope, key.stmt) };
+			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
 		}
 
 		// @OPT: opt it?
