@@ -1,0 +1,9 @@
+fun foo() = {
+	var a: i32 = 0;
+	var b: i32 = 0;
+	if (0) {
+		b = 2;
+	}
+	return a;
+}
+
