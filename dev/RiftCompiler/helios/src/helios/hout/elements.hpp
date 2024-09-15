@@ -72,7 +72,6 @@ namespace compiler::helios::code {
 	 * Statements: *
 	 * * * * * * * */
 
-
 	/**
 	 * @brief Represents `return [expr];` in HOUT
 	 */
