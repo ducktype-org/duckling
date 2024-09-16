@@ -119,6 +119,17 @@ namespace compiler::helios {
 
 				output(code::IfStmt(outer_scope, std::move(condition), std::move(body)));
 			}
+
+			void visitVariable(const pst::Variable& stmt) override {
+				// @TODO: do something with if const
+
+				// here scope should be easier to get...
+				// @TODO: make some refactor that it is
+
+				// Here:
+				// * get scope just by "scopeOf(stmt.parent)"
+				// * get sym
+			}
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstStmtVisitorPanicky {
