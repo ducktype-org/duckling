@@ -196,13 +196,9 @@ namespace compiler::helios {
 				output(std::vector<SymID>());
 			}
 
-			void visitExprStmt(const pst::ExprStmt&) override {
-				output(std::vector<SymID>());
-			}
+			void visitExprStmt(const pst::ExprStmt&) override { output(std::vector<SymID>()); }
 
-			void visitReturn(const pst::Return&) override {
-				output(std::vector<SymID>());
-			}
+			void visitReturn(const pst::Return&) override { output(std::vector<SymID>()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

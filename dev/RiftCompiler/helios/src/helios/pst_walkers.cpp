@@ -46,9 +46,9 @@ namespace compiler::helios {
 			return out;
 		} else {
 			const auto& element = *elem.get();
-			RIFT_PANIC(
-				base::strConcat("Bad Rift Element in `getStmtsFromStmtAggregate`: ", typeid(element).name())
-			);
+			RIFT_PANIC(base::strConcat(
+				"Bad Rift Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
+			));
 		}
 	}
 
