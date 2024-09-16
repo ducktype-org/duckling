@@ -46,7 +46,7 @@ namespace compiler::helios {
 	struct SymbolData final {
 		// created when creating SymbolData:
 		ScopeID     scope;
-		base::StrId name;
+		base::StrID name;
 		bool        anonymous   = false;
 		bool        is_wildcard = false;
 		bool        is_alias    = false;
@@ -68,7 +68,7 @@ namespace compiler::helios {
 
 	bool isWildcard(SymID id) { return getSymRef(id)->is_wildcard; }
 
-	base::StrId name(SymID id) { return getSymRef(id)->name; }
+	base::StrID name(SymID id) { return getSymRef(id)->name; }
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->kind; }
 
@@ -153,7 +153,7 @@ namespace compiler::helios {
 			return putInSymtable(SymbolData{
 				.scope = scope,
 				.name
-				= base::StrId(base::strConcat("<USING> ", using_->getPointed().front()).c_str()),
+				= base::StrID(base::strConcat("<USING> ", using_->getPointed().front()).c_str()),
 				.is_wildcard = true,
 				.is_alias    = true,
 				.kind        = SymbolKind::Using,
@@ -213,7 +213,7 @@ namespace compiler::helios {
 		case pst::StmtKind::Destructor: {
 			return putInSymtable(SymbolData{
 				.scope    = scope,
-				.name     = base::StrId("destroy"),
+				.name     = base::StrID("destroy"),
 				.kind     = SymbolKind::Destructor,
 				.pst_stmt = stmt,
 			});
@@ -265,7 +265,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
 
 	struct LookupChainKey final {
-		std::vector<base::StrId> names;
+		std::vector<base::StrID> names;
 		ScopeID                  begin_scope;
 		bool                     follow_wildcards;
 	};
@@ -360,7 +360,7 @@ namespace compiler::helios {
 
 	base::HashT KeyOf_LookupInSymbol::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(symbol);
-		auto hash_2 = std::hash<base::StrId>()(name);
+		auto hash_2 = std::hash<base::StrID>()(name);
 
 		// @FIXME: this does not work:
 		return (hash_1 * 143 + hash_2 * 7) * 2 + follow_wildcards;
@@ -672,7 +672,7 @@ namespace compiler::helios {
 		default:
 			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
 		}
-		return NumValue{ base::StrId(std::to_string(value).c_str()) };
+		return NumValue{ base::StrID(std::to_string(value).c_str()) };
 	}
 
 	struct IMPLEMENT_QUERY(QueryConstValueOf, i32) {
@@ -715,24 +715,24 @@ namespace compiler::helios {
 		parseTypeFromExpr(query::Context& ctx, const rpn::ExprElem& expr, ScopeID expr_scope) {
 		// This is a std::unordered_map, not base::HashMap, because base::HashMap
 		// does not support this constructor.
-		const static auto BUILTINS = std::unordered_map<base::StrId, tsh::TypeInfo>{
-			{ base::StrId("f128"), ctx.query<::tsh::QueryFloatType>(128) },
-			{ base::StrId("f80"), ctx.query<::tsh::QueryFloatType>(80) },
-			{ base::StrId("f64"), ctx.query<::tsh::QueryFloatType>(64) },
-			{ base::StrId("f32"), ctx.query<::tsh::QueryFloatType>(32) },
-			{ base::StrId("f16"), ctx.query<::tsh::QueryFloatType>(16) },
+		const static auto BUILTINS = std::unordered_map<base::StrID, tsh::TypeInfo>{
+			{ base::StrID("f128"), ctx.query<::tsh::QueryFloatType>(128) },
+			{ base::StrID("f80"), ctx.query<::tsh::QueryFloatType>(80) },
+			{ base::StrID("f64"), ctx.query<::tsh::QueryFloatType>(64) },
+			{ base::StrID("f32"), ctx.query<::tsh::QueryFloatType>(32) },
+			{ base::StrID("f16"), ctx.query<::tsh::QueryFloatType>(16) },
 
-			{ base::StrId("i128"), ctx.query<::tsh::QueryIntegralType>({ 128, true }) },
-			{ base::StrId("i64"), ctx.query<::tsh::QueryIntegralType>({ 64, true }) },
-			{ base::StrId("i32"), ctx.query<::tsh::QueryIntegralType>({ 32, true }) },
-			{ base::StrId("i16"), ctx.query<::tsh::QueryIntegralType>({ 16, true }) },
-			{ base::StrId("i8"), ctx.query<::tsh::QueryIntegralType>({ 8, true }) },
+			{ base::StrID("i128"), ctx.query<::tsh::QueryIntegralType>({ 128, true }) },
+			{ base::StrID("i64"), ctx.query<::tsh::QueryIntegralType>({ 64, true }) },
+			{ base::StrID("i32"), ctx.query<::tsh::QueryIntegralType>({ 32, true }) },
+			{ base::StrID("i16"), ctx.query<::tsh::QueryIntegralType>({ 16, true }) },
+			{ base::StrID("i8"), ctx.query<::tsh::QueryIntegralType>({ 8, true }) },
 
-			{ base::StrId("u128"), ctx.query<::tsh::QueryIntegralType>({ 128, false }) },
-			{ base::StrId("u64"), ctx.query<::tsh::QueryIntegralType>({ 64, false }) },
-			{ base::StrId("u32"), ctx.query<::tsh::QueryIntegralType>({ 32, false }) },
-			{ base::StrId("u16"), ctx.query<::tsh::QueryIntegralType>({ 16, false }) },
-			{ base::StrId("u8"), ctx.query<::tsh::QueryIntegralType>({ 8, false }) },
+			{ base::StrID("u128"), ctx.query<::tsh::QueryIntegralType>({ 128, false }) },
+			{ base::StrID("u64"), ctx.query<::tsh::QueryIntegralType>({ 64, false }) },
+			{ base::StrID("u32"), ctx.query<::tsh::QueryIntegralType>({ 32, false }) },
+			{ base::StrID("u16"), ctx.query<::tsh::QueryIntegralType>({ 16, false }) },
+			{ base::StrID("u8"), ctx.query<::tsh::QueryIntegralType>({ 8, false }) },
 		};
 		variant_match(expr) {
 			variant_case(rpn::Identifier, idt) {
@@ -904,7 +904,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryClassSymbolData, ClassSymbolData) {
 		struct ClassDataParser final: pst::PstStmtVisitorPanicky {
-			base::Optional<base::StrId>                                name;
+			base::Optional<base::StrID>                                name;
 			base::Optional<tpc::ParserCBorrowRef<pst::Expr>>           base_class;
 			base::Optional<tpc::ParserCBorrowRef<pst::ImplementsList>> implements;
 

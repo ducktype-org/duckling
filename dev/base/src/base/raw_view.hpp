@@ -82,7 +82,7 @@ namespace base {
 		}
 	};
 
-	class StrId;
+	class StrID;
 
 	/**
 	 * @brief Owning byte array view
@@ -90,7 +90,7 @@ namespace base {
 	class OwningView final {
 		byte* begin{ nullptr };
 		usize size{ 0 };
-		friend class base::StrId;
+		friend class base::StrID;
 
 	public:
 		OwningView() = default;

@@ -34,7 +34,7 @@ namespace tsh {
 		 * A parameter is described with its name, type, and whether it has a default value.
 		 */
 		struct Parameter final {
-			base::StrId          name;
+			base::StrID          name;
 			TypeInfo             type;
 			bool                 has_default_value;
 			std::strong_ordering operator<=>(const Parameter& other) const = default;
@@ -212,7 +212,7 @@ namespace tsh {
 		/**
 		 * @brief The collection of elements of the interface of a type.
 		 */
-		const base::Map<base::StrId, std::set<InterfaceElement>> elements{};
+		const base::Map<base::StrID, std::set<InterfaceElement>> elements{};
 
 	public:
 		TypeInterface() = default;
@@ -228,7 +228,7 @@ namespace tsh {
 		 * @return The elements of an interface, grouped by name.
 		 */
 		[[nodiscard]]
-		const base::Map<base::StrId, std::set<InterfaceElement>>& getElements() const {
+		const base::Map<base::StrID, std::set<InterfaceElement>>& getElements() const {
 			return elements;
 		}
 
@@ -238,7 +238,7 @@ namespace tsh {
 		 * @return The elements of an interface with the requested name.
 		 */
 		[[nodiscard]]
-		const std::set<InterfaceElement>& getElements(base::StrId name) {
+		const std::set<InterfaceElement>& getElements(base::StrID name) {
 			static std::set<InterfaceElement> empty_set{};
 			if (!elements.contains(name)) return empty_set;
 			return elements.at(name);
@@ -254,7 +254,7 @@ namespace tsh {
 		 * A named argument is described with its name and type.
 		 */
 		struct NamedArgument final {
-			base::StrId name;
+			base::StrID name;
 			TypeInfo    type;
 		};
 
@@ -324,7 +324,7 @@ namespace tsh {
 		 * @param ctx The query context for implicit coercion checks.
 		 * @return The elements which match the name.
 		 */
-		ResolutionResult resolve(base::StrId name, query::Context& ctx);
+		ResolutionResult resolve(base::StrID name, query::Context& ctx);
 
 		/**
 		 * @brief Gets the elements which match a name and given arguments.
@@ -339,7 +339,7 @@ namespace tsh {
 		 * @return The elements which match the name.
 		 */
 		ResolutionResult resolve(
-			base::StrId                    name,
+			base::StrID                    name,
 			const std::vector<TypeInfo>&   positional_arg_types,
 			const std::set<NamedArgument>& named_args,
 			query::Context&                ctx
@@ -357,7 +357,7 @@ namespace tsh {
 		 * @param ctx The query context for implicit coercion checks.
 		 * @return The elements which match the name.
 		 */
-		ResolutionResult resolve(base::StrId name, TypeInfo single_arg_type, query::Context& ctx);
+		ResolutionResult resolve(base::StrID name, TypeInfo single_arg_type, query::Context& ctx);
 
 		/**
 		 * @brief Auxiliary function to stringify a member lookup request.
@@ -382,7 +382,7 @@ namespace tsh {
 		 * (notation simplified), and stringifies to `foo(i32, f32, print_result : bool)`.
 		 */
 		static std::string stringifyRequestSignature(
-			base::StrId name,
+			base::StrID name,
 			const base::Optional<
 				std::pair<std::vector<TypeInfo>, std::vector<TypeInterface::NamedArgument>>>&
 				argument_info

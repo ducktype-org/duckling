@@ -60,7 +60,7 @@ namespace compiler::helios {
 
 		/**
 		 * Turns LookupResult into NestedResult referencing node.
-		 * @param node SymId, that the NestedResult represents.
+		 * @param node SymID, that the NestedResult represents.
 		 * @return New NestedResult from self with node.
 		 */
 		[[nodiscard]]

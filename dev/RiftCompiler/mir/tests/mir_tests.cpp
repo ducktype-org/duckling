@@ -37,20 +37,20 @@ private:
 
 			auto& functions = unit.functions;
 			ASSERT_EQUAL(4, functions.size());
-			ASSERT_EQUAL(base::StrId("foo1"), functions.at(0).original_name);
-			ASSERT_EQUAL(base::StrId("foo2"), functions.at(1).original_name);
-			ASSERT_EQUAL(base::StrId("foo3"), functions.at(2).original_name);
-			ASSERT_EQUAL(base::StrId("foo4"), functions.at(3).original_name);
+			ASSERT_EQUAL(base::StrID("foo1"), functions.at(0).original_name);
+			ASSERT_EQUAL(base::StrID("foo2"), functions.at(1).original_name);
+			ASSERT_EQUAL(base::StrID("foo3"), functions.at(2).original_name);
+			ASSERT_EQUAL(base::StrID("foo4"), functions.at(3).original_name);
 
 			auto& foo1_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
 			auto& foo2_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(1) });
 			auto& foo3_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) });
 			auto& foo4_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(3) });
 
-			ASSERT_EQUAL(foo1_mir.name, base::StrId("foo1"));
-			ASSERT_EQUAL(foo2_mir.name, base::StrId("foo2"));
-			ASSERT_EQUAL(foo3_mir.name, base::StrId("foo3"));
-			ASSERT_EQUAL(foo4_mir.name, base::StrId("foo4"));
+			ASSERT_EQUAL(foo1_mir.name, base::StrID("foo1"));
+			ASSERT_EQUAL(foo2_mir.name, base::StrID("foo2"));
+			ASSERT_EQUAL(foo3_mir.name, base::StrID("foo3"));
+			ASSERT_EQUAL(foo4_mir.name, base::StrID("foo4"));
 
 			ASSERT_EQUAL(foo1_mir.blocks.size(), 1);
 			ASSERT_EQUAL(foo2_mir.blocks.size(), 2);

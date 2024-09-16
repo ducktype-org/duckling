@@ -198,7 +198,7 @@ namespace compiler::mir {
 	 * @brief Function in MIR.
 	 */
 	struct Function final {
-		base::StrId                  name;
+		base::StrID                  name;
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;

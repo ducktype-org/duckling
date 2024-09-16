@@ -12,9 +12,9 @@ auto hash(const T& t) {
 	return std::hash<T>{}(t);
 }
 
-class StrongIdTest: public tester::TestSuite {
+class StrongIDTest: public tester::TestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS StrongIdTest
+#define TESTER_CLASS StrongIDTest
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Strong ID test") { TESTER_ADD_TEST(basicTest); }
@@ -27,7 +27,7 @@ public:
 		auto id1 = A::next();
 		ASSERT_EQUAL(id1.asInt(), 1);
 		ASSERT_EQUAL(u64(id1), 1);
-		assertTrue(id1.isGood(), "Id is not good.");
+		assertTrue(id1.isGood(), "ID is not good.");
 
 		(void) B::next();
 		(void) B::next();

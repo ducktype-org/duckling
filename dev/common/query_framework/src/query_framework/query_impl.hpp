@@ -179,7 +179,7 @@ namespace query {
 		-> type::QResult {                                                                          \
 		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                     \
 	}                                                                                               \
-	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryId(pretty_name); \
+	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryID(pretty_name); \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;                            \
 	static_assert(                                                                                  \
 		(not std::is_reference_v<type::QResult>)                                                    \

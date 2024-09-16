@@ -7,8 +7,8 @@
 
 namespace vm {
 
-	// @TODO: change to strong Id maker when it is ready
-	STRONG_TYPEDEF_INT_DIMENSIONAL(TypeId, u64);
+	// @TODO: change to strong ID maker when it is ready
+	STRONG_TYPEDEF_INT_DIMENSIONAL(TypeID, u64);
 	using Offset = u64;
 	class Type;
 
