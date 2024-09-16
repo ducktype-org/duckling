@@ -1,7 +1,7 @@
-set(GCOV_PATH "gcov" CACHE STRING "LCOV program path")
+set(GCOV_PATH "gcov" CACHE STRING "GCOV program path")
 if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
-	find_program(LCOV ${LCOV_NAME} REQUIRED)
+	find_program(LCOV lcov REQUIRED)
 	find_program(GENHTML genhtml REQUIRED)
 
 	add_custom_target(coverage
