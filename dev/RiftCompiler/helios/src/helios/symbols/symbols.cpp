@@ -228,7 +228,23 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymID) {
+		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
+
 		static auto provide(Context&, QKey key) -> PResult {
+
+			// This is a sanity check, that might be rendered obsolete
+			// once scope refactor will be introduced.
+			// It currently prevents some scope bugs/inconsistencies from happening.
+			if (parent_map.contains(key.stmt->getID())) {
+				RIFT_ASSERT(
+					parent_map.at(key.stmt->getID()) == key.scope,
+					"Parent mismatch in QuerySymbolOfSTMT"
+				);
+			} else {
+				parent_map.put(key.stmt->getID(), key.scope);
+			}
+
+
 			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
 		}
 
