@@ -56,23 +56,29 @@ namespace pst {
 
 	// Expr Elements
 	class ExprElement;
+	class NewExprStmt;
 
 	namespace expr {
 		class PrefixOperator;
 		class SuffixOperator;
 		class BinaryOperator;
-		class ValueOperator;
+		class Value;
+		class Literal;
+		class IdentifierLiteral;
+		class Access;
+		class Call;
+		class ChainExpr;
 		class RoundExpr;
 		class BlockExpr;
 		class GeneralPrefix;
 		class GeneralSuffix;
 		class GeneralBinary;
+		class ComparisonChain;
 		class LogicNot;
 		class LogicAnd;
 		class LogicOr;
 		class Ternary;
 		class Comma;
 		class Assignment;
-		class NewExprStmt;
 	}
 }
