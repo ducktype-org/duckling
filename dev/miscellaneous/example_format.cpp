@@ -23,7 +23,7 @@ namespace N {
 		MyType(i32 a): a(a) {}
 
 		virtual void fillSymTable(
-			[[maybe_unused]] symtable::ScopeId      parent_scope,
+			[[maybe_unused]] symtable::ScopeID      parent_scope,
 			[[maybe_unused]] symtable::SymbolTable& symtable
 		) {}
 	};

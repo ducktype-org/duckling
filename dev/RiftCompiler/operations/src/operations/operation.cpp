@@ -45,11 +45,11 @@ namespace operation {
 	}
 
 	TypedOperation& getDefault(Defaultable kind, ts::TypeInfo type) {
-		OperationID id = getIdDefault(kind, type);
+		OperationID id = getIDDefault(kind, type);
 		return getOperations()[id];
 	}
 
-	OperationID getIdDefault(Defaultable kind, ts::TypeInfo type) {
+	OperationID getIDDefault(Defaultable kind, ts::TypeInfo type) {
 		return getDefaults().at({ kind, type });
 	}
 }

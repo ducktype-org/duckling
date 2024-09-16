@@ -71,7 +71,7 @@ namespace operation {
 
 	TypedOperation& getDefault(Defaultable kind, ts::TypeInfo type);
 
-	OperationID getIdDefault(Defaultable kind, ts::TypeInfo type);
+	OperationID getIDDefault(Defaultable kind, ts::TypeInfo type);
 
 	struct Call {
 		const operation::OperationID op;
