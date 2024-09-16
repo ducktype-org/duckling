@@ -25,7 +25,7 @@ namespace vm {
 		void finalize();
 
 		[[nodiscard]]
-		TypeCRef                 getType(TypeID id) const;
+		TypeCRef getType(TypeID id) const;
 
 		[[nodiscard]]
 		base::Optional<TypeCRef> getTypeSafe(TypeID id) const;

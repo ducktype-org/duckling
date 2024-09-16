@@ -13,4 +13,5 @@ int main() {
 	std::cout << base::enumToStr(enum_value).strView() << "\n";  // "A"
 	enum_value = base::strToEnum<N::MyEnum>(base::StrID("B"));
 }
+
 // NOLINTEND

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "declatations.hpp"
 #include "not_statements.hpp"
 
 namespace pst {

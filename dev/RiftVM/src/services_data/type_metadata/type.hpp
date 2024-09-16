@@ -120,18 +120,27 @@ namespace vm {
 		base::Optional<u64> getStaticTableSize() const;
 
 		// data
+		[[nodiscard]]
 		base::Optional<TypeCRef> getFieldType(kind::Data::FieldID fieldID) const;
-		base::Optional<Offset>   getFieldOffset(kind::Data::FieldID fieldID) const;
+		[[nodiscard]]
+		base::Optional<Offset> getFieldOffset(kind::Data::FieldID fieldID) const;
+		[[nodiscard]]
 		base::Optional<TypeCRef> getFieldTypeByOffset(Offset offset) const;
+		[[nodiscard]]
 		base::Optional<TypeCRef> getFieldTypeByOffsetRecursive(Offset offset) const;
 
 		// variant
-		base::Optional<u64>      getVariantCount() const;
+		[[nodiscard]]
+		base::Optional<u64> getVariantCount() const;
+		[[nodiscard]]
 		base::Optional<TypeCRef> getNthVariantType(u64 variantID) const;
 
 		// function
-		base::Optional<u64>      getParameterCount() const;
+		[[nodiscard]]
+		base::Optional<u64> getParameterCount() const;
+		[[nodiscard]]
 		base::Optional<TypeCRef> getNthParameterType(u64 parameterID) const;
+		[[nodiscard]]
 		base::Optional<TypeCRef> getResultType() const;
 
 		friend class TypeMetadata;

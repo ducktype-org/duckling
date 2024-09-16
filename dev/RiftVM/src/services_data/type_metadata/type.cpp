@@ -191,7 +191,6 @@ namespace vm {
 	}
 
 	// struct
-	[[nodiscard]]
 	base::Optional<TypeCRef> Type::getFieldType(kind::Data::FieldID field_id) const {
 		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
 			if (field_id >= data.fields.size()) return base::Optional<TypeCRef>();
@@ -199,7 +198,6 @@ namespace vm {
 		});
 	}
 
-	[[nodiscard]]
 	base::Optional<Offset> Type::getFieldOffset(kind::Data::FieldID field_id) const {
 		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
 			if (field_id >= data.fields.size()) return base::Optional<Offset>();
@@ -207,7 +205,6 @@ namespace vm {
 		});
 	}
 
-	[[nodiscard]]
 	base::Optional<TypeCRef> Type::getFieldTypeByOffset(Offset offset) const {
 		return get<kind::Data>().flatMap([offset](const kind::Data& data) {
 			i64 begin = -1, end = i64(data.fields.size()), middle = 0;
@@ -223,7 +220,6 @@ namespace vm {
 		});
 	}
 
-	[[nodiscard]]
 	base::Optional<TypeCRef> Type::getFieldTypeByOffsetRecursive(Offset offset) const {
 		return get<kind::Data>().flatMap([offset](const kind::Data& data) {
 			i64 begin = -1, end = i64(data.fields.size()), middle = 0;
@@ -243,14 +239,12 @@ namespace vm {
 	}
 
 	// variant
-	[[nodiscard]]
 	base::Optional<u64> Type::getVariantCount() const {
 		return get<kind::Variant>().map([](const kind::Variant& variant) {
 			return variant.alternatives.size();
 		});
 	}
 
-	[[nodiscard]]
 	base::Optional<TypeCRef> Type::getNthVariantType(u64 variant_id) const {
 		return get<kind::Variant>().flatMap([variant_id](const kind::Variant& variant) {
 			if (variant_id >= variant.alternatives.size()) return base::Optional<TypeCRef>();
@@ -265,7 +259,6 @@ namespace vm {
 		});
 	}
 
-	[[nodiscard]]
 	base::Optional<TypeCRef> Type::getNthParameterType(u64 parameter_id) const {
 		return get<kind::Function>().flatMap([parameter_id](const kind::Function& function) {
 			if (parameter_id >= function.parameters.size()) return base::Optional<TypeCRef>();
@@ -273,7 +266,6 @@ namespace vm {
 		});
 	}
 
-	[[nodiscard]]
 	base::Optional<TypeCRef> Type::getResultType() const {
 		return get<kind::Function>().flatMap([](const kind::Function& function) {
 			return base::Optional<TypeCRef>(function.result);
