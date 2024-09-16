@@ -95,6 +95,7 @@ jobs:
           cmake \
               -B ${{ env.BUILD_DIR }} \
               -D CMAKE_CXX_COMPILER=g++-14 \
+              -D GCOV_PATH=gcov-14 \
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
