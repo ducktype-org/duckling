@@ -169,7 +169,7 @@ namespace lexer {
 
 	/**
 	 * @brief A basic wrapper for tokenization result
-	 */ 
+	 */
 	struct TokenData final {
 		Tokens tokens;
 		Token  bof_sentinel;

@@ -66,7 +66,7 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryPrimaryCodeScopeFor, KeyOf_QueryPrimaryCodeScopeFor, ScopeID);
 
-	struct KeyOf_LookupInScope final{
+	struct KeyOf_LookupInScope final {
 		ScopeID     scope;
 		base::StrId name;
 		bool        with_wildcards;
