@@ -46,7 +46,7 @@ jobs:
 
       - name: Install lcov and LLVM
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo apt -y install lcov llvm llvm-dev
+        run: sudo apt -y install lcov llvm llvm-dev g++-14
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
@@ -94,7 +94,7 @@ jobs:
         run: |
           cmake \
               -B ${{ env.BUILD_DIR }} \
-              -D CMAKE_CXX_COMPILER=g++-13 \
+              -D CMAKE_CXX_COMPILER=g++-14 \
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
