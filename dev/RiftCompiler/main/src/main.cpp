@@ -280,17 +280,6 @@ int mainProcedure(int argc, const char* const* argv) {
 
 	auto commands = getCommandList(command_args, clap);
 
-	// our custom commands:
-	clap.add(
-		clap::ParamBuilder::ofFlag()
-			.addLongName("let-it-throw")
-			.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
-	                      "Useful for debugging.")
-			.addLongDesc("Note that sometimes exception can happen before logic behind this option "
-	                     "will happen. In that case exception will most likely not be caught.")
-			.build()
-	);
-
 	try {
 		// @future: improve the way we detect whether there was a command or no and
 		// the way we handle command line arguments.
