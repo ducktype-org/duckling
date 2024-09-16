@@ -1,6 +1,7 @@
 name: cpp-linter
 
-on: pull_request
+# lets see whats happens now:
+on: pull_request_target
 
 jobs:
   cpp-linter:
