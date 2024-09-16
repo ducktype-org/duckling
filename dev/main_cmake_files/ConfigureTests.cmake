@@ -1,11 +1,12 @@
+set(GCOV_PATH "gcov" CACHE STRING "LCOV program path")
 if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
-	find_program(LCOV lcov REQUIRED)
+	find_program(LCOV ${LCOV_NAME} REQUIRED)
 	find_program(GENHTML genhtml REQUIRED)
 
 	add_custom_target(coverage
 		COMMAND ${LCOV} --directory "${CMAKE_SOURCE_DIR}" --capture --output-file coverage.info
-			--base-directory "${CMAKE_SOURCE_DIR}" --no-external --exclude "**/_deps/**" --ignore-errors version
+			--base-directory "${CMAKE_SOURCE_DIR}" --no-external --exclude "**/_deps/**" --gcov-tool ${GCOV_PATH}
 		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 		VERBATIM)
