@@ -16,11 +16,11 @@ namespace clap {
 	// Forward declaration
 	class ParsingResult;
 
-	struct Optional {};
+	struct Optional final {};
 
-	struct Required {};
+	struct Required final {};
 
-	struct Conditional {
+	struct Conditional final {
 		using Condition = std::function<bool(const ParsingResult&)>;
 		Condition   condition;
 		std::string condition_description;

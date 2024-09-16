@@ -42,7 +42,7 @@ namespace tsh {
 	/**
 	 * @brief Key for QueryImplicitCoercibilityOnInfo.
 	 */
-	struct KeyFor_QueryImplicitCoercibilityOnInfo {
+	struct KeyFor_QueryImplicitCoercibilityOnInfo final {
 		/**
 		 * @brief Source type of the coercion.
 		 */
@@ -82,7 +82,7 @@ namespace tsh {
 	/**
 	 * @brief Key for QueryImplicitCoercibilityOnDesc.
 	 */
-	struct KeyFor_QueryImplicitCoercibilityOnDesc {
+	struct KeyFor_QueryImplicitCoercibilityOnDesc final {
 		/**
 		 * @brief Source value description of the coercion.
 		 */

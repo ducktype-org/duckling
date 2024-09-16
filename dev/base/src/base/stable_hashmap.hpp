@@ -15,7 +15,7 @@ namespace base {
 	 * @tparam HASH_T Hash functor for hashing keys
 	 */
 	template<typename KEY_T, typename DATA_T, typename HASH_T = std::hash<KEY_T>>
-	class StableHashMap {
+	class StableHashMap final {
 	public:
 		StableHashMap() = default;
 

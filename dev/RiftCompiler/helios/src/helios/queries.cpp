@@ -61,7 +61,7 @@ namespace compiler::helios {
 			return block;
 		}
 
-		struct HoutStmtMaker: public pst::PstStmtVisitorPanicky {
+		struct HoutStmtMaker final: public pst::PstStmtVisitorPanicky {
 			query::Context& ctx;
 
 			bool                                         empty = false;

@@ -8,7 +8,7 @@ namespace tpc {
 	/**
 	 * @brief Struct for storing identifiers
 	 */
-	struct Identifier {
+	struct Identifier final {
 		base::StrId value;
 
 		// @TODO: this should be changed do be properly set during parsing:
@@ -20,7 +20,7 @@ namespace tpc {
 	/**
 	 * @brief Struct for storing optional identifiers
 	 */
-	struct OptionalIdentifier {
+	struct OptionalIdentifier final {
 		base::Optional<base::StrId> value;
 
 		// @TODO: this should be changed do be properly set during parsing:

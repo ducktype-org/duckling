@@ -69,7 +69,7 @@ namespace base {
 		STRONG_TYPEDEF_ID(StrInnerID);
 	}
 
-	class StrId {
+	class StrId final {
 		using InnerId = detail::StrInnerID;
 		InnerId id;
 
@@ -171,7 +171,7 @@ namespace base {
 
 namespace std {
 	template<>
-	struct hash<base::StrId> {
+	struct hash<base::StrId> final {
 		usize operator()(const base::StrId& x) const { return x.id.asInt(); }
 	};
 }

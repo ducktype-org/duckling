@@ -43,7 +43,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Stores generic symbol data
 	 */
-	struct SymbolData {
+	struct SymbolData final {
 		// created when creating SymbolData:
 		ScopeID     scope;
 		base::StrId name;
@@ -60,7 +60,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Helper struct used to access private SymID data.
 	 */
-	struct GetSymRef_Functor {
+	struct GetSymRef_Functor final {
 		static auto get(SymID id) { return id.ref; }
 	};
 
@@ -264,7 +264,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
 
-	struct LookupChainKey {
+	struct LookupChainKey final {
 		std::vector<base::StrId> names;
 		ScopeID                  begin_scope;
 		bool                     follow_wildcards;

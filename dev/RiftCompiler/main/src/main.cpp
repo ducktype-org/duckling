@@ -41,7 +41,7 @@ using CommandRunner = std::function<int()>;
 /**
  * @brief Structure representing a single command of "duck main"
  */
-struct Command {
+struct Command final {
 	std::string   name;
 	std::string   description;
 	CommandRunner runner;
@@ -50,7 +50,7 @@ struct Command {
 /**
  * @brief Structure representing all commands of "duck main"
  */
-struct CommandList {
+struct CommandList final {
 	std::vector<Command> commands;
 
 	/**
@@ -79,7 +79,7 @@ struct CommandList {
 		return out;
 	}
 
-	struct CommandStatus {
+	struct CommandStatus final {
 		bool was_command_run;
 		int  exit_code;
 	};

@@ -25,7 +25,7 @@ namespace compiler::helios {
 	 *
 	 * Intuitively LookupResult is a result of a single "." operator.
 	 */
-	struct LookupResult {
+	struct LookupResult final {
 		/**
 		 * Direct symbols found.
 		 */
@@ -79,7 +79,7 @@ namespace compiler::helios {
 	 * behind some alias. "node" represent the alias, while "inner" represent
 	 * lookup result behind the alias.
 	 */
-	struct NestedResult {
+	struct NestedResult final {
 		SymID        node;  ///< node should always be alias-like of using-like thing
 		LookupResult inner;
 	};
