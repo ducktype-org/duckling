@@ -5,6 +5,7 @@ on:
     branches: [ "main", "dev" ]
   pull_request:
   workflow_dispatch:
+  
 
 env:
   # @note: boolean variables evaluate to true/false string, but github expressions treat
