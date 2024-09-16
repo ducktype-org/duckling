@@ -45,9 +45,9 @@ namespace operation {
 		}
 	};
 
-	STRONG_TYPEDEF_ID(OperationID);
+	STRONG_TYPEDEF_ID(OperationId);
 
-	using OperationMap = base::VectorMap<OperationID, TypedOperation>;
+	using OperationMap = base::VectorMap<OperationId, TypedOperation>;
 
 
 	enum class Defaultable {
@@ -59,22 +59,22 @@ namespace operation {
 	};
 
 
-	using DefaultsMap = base::Map<std::pair<Defaultable, ts::TypeInfo>, OperationID>;
+	using DefaultsMap = base::Map<std::pair<Defaultable, ts::TypeInfo>, OperationId>;
 
-	TypedOperation getOperation(OperationID id);
+	TypedOperation getOperation(OperationId id);
 
-	bool existsOperation(OperationID id);
+	bool existsOperation(OperationId id);
 
-	OperationID addOperation(const TypedOperation& operation);
+	OperationId addOperation(const TypedOperation& operation);
 
-	OperationID addDefault(Defaultable kind, ts::TypeInfo type, const TypedOperation& operation);
+	OperationId addDefault(Defaultable kind, ts::TypeInfo type, const TypedOperation& operation);
 
 	TypedOperation& getDefault(Defaultable kind, ts::TypeInfo type);
 
-	OperationID getIDDefault(Defaultable kind, ts::TypeInfo type);
+	OperationId getIdDefault(Defaultable kind, ts::TypeInfo type);
 
 	struct Call {
-		const operation::OperationID op;
+		const operation::OperationId op;
 		const ts::TypeDesc<>         type;
 		const usize                  offset;
 		const usize                  size;

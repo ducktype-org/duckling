@@ -21,7 +21,7 @@
 namespace operation {
 
 	struct TypedSymbol {
-		symtable::SymbolID symbol;
+		symtable::SymbolId symbol;
 		ts::TypeInfo       type_info;
 
 		auto operator<=>(const TypedSymbol& other) const = default;

@@ -24,11 +24,15 @@ namespace vm {
 
 		void finalize();
 
+		[[nodiscard]]
 		TypeCRef                 getType(TypeID id) const;
+
+		[[nodiscard]]
 		base::Optional<TypeCRef> getTypeSafe(TypeID id) const;
 
 		// @TODO: This function is currently used by parser, but
 		// should be deleted in the future
+		[[nodiscard]]
 		base::Optional<TypeCRef> getTypeByName(base::StrID name) const;
 
 		template<class... DynamicData>

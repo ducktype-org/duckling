@@ -27,7 +27,7 @@ namespace exec {
 		auto operator<=>(const BuiltInOp& other) const = default;
 	};
 
-	using BuiltInOpMap = base::Map<BuiltInOp, operation::OperationID>;
+	using BuiltInOpMap = base::Map<BuiltInOp, operation::OperationId>;
 
 	BuiltInOpMap& getBuiltInOps();
 

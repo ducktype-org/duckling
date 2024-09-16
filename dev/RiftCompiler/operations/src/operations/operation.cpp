@@ -23,33 +23,33 @@ namespace operation {
 		}
 	}
 
-	TypedOperation getOperation(OperationID id) { return getOperations()[id]; }
+	TypedOperation getOperation(OperationId id) { return getOperations()[id]; }
 
-	bool existsOperation(OperationID id) { return getOperations().contains(id); }
+	bool existsOperation(OperationId id) { return getOperations().contains(id); }
 
-	OperationID addOperation(const TypedOperation& operation) {
-		auto id = OperationID::next();
+	OperationId addOperation(const TypedOperation& operation) {
+		auto id = OperationId::next();
 		getOperations().put(id, operation);
 		return id;
 	}
 
-	OperationID addDefault(Defaultable kind, ts::TypeInfo type, const TypedOperation& operation) {
+	OperationId addDefault(Defaultable kind, ts::TypeInfo type, const TypedOperation& operation) {
 		// @TODO: One day add checking if the signature is ok
 		if (getDefaults().contains({ kind, type }))
 			throw base::LogicError("Redeclaration of default operation is not legal.");
 
-		OperationID id = OperationID::next();
+		OperationId id = OperationId::next();
 		getOperations().put(id, operation);
 		getDefaults().put({ kind, type }, id);
 		return id;
 	}
 
 	TypedOperation& getDefault(Defaultable kind, ts::TypeInfo type) {
-		OperationID id = getIDDefault(kind, type);
+		OperationId id = getIdDefault(kind, type);
 		return getOperations()[id];
 	}
 
-	OperationID getIDDefault(Defaultable kind, ts::TypeInfo type) {
+	OperationId getIdDefault(Defaultable kind, ts::TypeInfo type) {
 		return getDefaults().at({ kind, type });
 	}
 }

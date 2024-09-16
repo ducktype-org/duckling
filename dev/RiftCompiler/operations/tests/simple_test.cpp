@@ -51,10 +51,10 @@ private:
 
 		auto id = operation::addDefault(operation::Defaultable::Compare, int_16, op);
 
-		auto def_id = operation::getIDDefault(operation::Defaultable::Compare, int_16);
+		auto def_id = operation::getIdDefault(operation::Defaultable::Compare, int_16);
 
 
-		assert(id == def_id, "IDs of the same operation do not match.");
+		assert(id == def_id, "Ids of the same operation do not match.");
 
 		auto get_op = operation::getOperation(id);
 
