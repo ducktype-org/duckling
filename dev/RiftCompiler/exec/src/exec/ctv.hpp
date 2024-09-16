@@ -21,7 +21,7 @@ namespace exec {
 	struct Block;
 
 	// @TODO: use strongly typed int
-	using BlockId = u32;
+	using BlockID = u32;
 
 	using Data = std::vector<uint8_t>;
 
@@ -30,10 +30,10 @@ namespace exec {
 	struct Block {
 		Data data;
 
-		static BlockId create(usize size) {
+		static BlockID create(usize size) {
 			getBlocks().emplace_back(Data(size, 0));
 
-			return BlockId(getBlocks().size() - 1);
+			return BlockID(getBlocks().size() - 1);
 		}
 
 		// template <typename T = uint8_t>
@@ -50,7 +50,7 @@ namespace exec {
 	};
 
 	struct Pointer {
-		BlockId block;
+		BlockID block;
 		usize   offset; /* in bits */
 
 		// @TODO: use strongly typed ints for bit / byte offsets

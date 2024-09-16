@@ -10,49 +10,49 @@
 
 namespace compiler::frontend {
 
-	base::StrID moduleName(ModuleId);
-	std::string printModuleTree(ModuleId);
+	base::StrID moduleName(ModuleID);
+	std::string printModuleTree(ModuleID);
 
 	/**
 	 * @brief Query entire module tree build from given path.
 	 * @return module id of root-module.
 	 */
-	DECLARE_QUERY(QueryModuleTree, fs::FilePath, ModuleId)
+	DECLARE_QUERY(QueryModuleTree, fs::FilePath, ModuleID)
 
 	/**
 	 * @brief Query parent of a module.
 	 * @return parent module, none for root-module.
 	 */
-	DECLARE_QUERY(QueryParentModule, ModuleId, base::Optional<ModuleId>)
+	DECLARE_QUERY(QueryParentModule, ModuleID, base::Optional<ModuleID>)
 
 	/**
 	 * @brief Query main source file of a module.
 	 */
-	DECLARE_QUERY(QueryMainSourceFile, ModuleId, FileId)
+	DECLARE_QUERY(QueryMainSourceFile, ModuleID, FileID)
 
 	/**
 	 * @brief Query sources files of a module (without main source file).
 	 */
-	DECLARE_QUERY(QuerySourceFiles, ModuleId, const std::vector<FileId>&)
+	DECLARE_QUERY(QuerySourceFiles, ModuleID, const std::vector<FileID>&)
 
 	/**
 	 * @brief Query map of children modules aka submodules
 	 * of given module.
 	 */
-	DECLARE_QUERY(QuerySubmodules, ModuleId, const base::HashMap<base::StrID COMMA ModuleId>&)
+	DECLARE_QUERY(QuerySubmodules, ModuleID, const base::HashMap<base::StrID COMMA ModuleID>&)
 
 
 	/**
 	 * @brief Query PST of given file.
 	 */
-	DECLARE_QUERY(QueryFilePST, FileId, const pst::PST<>&)
+	DECLARE_QUERY(QueryFilePST, FileID, const pst::PST<>&)
 
 	/**
 	 * @brief Returns ModuleID
 	 * Assumes that @p element is a TopLevel element of some File parsed with interface of Frontend
 	 * module.
 	 */
-	ModuleId
+	ModuleID
 		extendQueryModuleIDOfPST(query::Context&, pst::ParserCBorrowRef<pst::RiftElement> element);
 
 	/**
@@ -72,6 +72,6 @@ namespace compiler::frontend {
 	 *
 	 * @return Found module, none if no matching module was found.
 	 */
-	base::Optional<ModuleId>
-		getRelativeModule(query::Context&, ModuleId from, const std::vector<base::StrID>& path);
+	base::Optional<ModuleID>
+		getRelativeModule(query::Context&, ModuleID from, const std::vector<base::StrID>& path);
 }

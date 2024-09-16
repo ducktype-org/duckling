@@ -17,7 +17,7 @@
 namespace exec {
 
 	inline exec::CTV
-		getVirtualMember(exec::CTV ctv, ts::ClassInfo class_info, symtable::SymbolId symbol) {
+		getVirtualMember(exec::CTV ctv, ts::ClassInfo class_info, symtable::SymbolID symbol) {
 		ts::MemberInfo member          = class_info.getMemberInfo(symbol);
 		auto           member_ancestor = member.last_virtual_ancestor.value();
 		auto           member_offset   = member.start_offset.value();
@@ -28,7 +28,7 @@ namespace exec {
 		return member_ctv;
 	}
 
-	inline exec::CTV getMemberNonVirtual(exec::CTV ctv, symtable::SymbolId symbol) {
+	inline exec::CTV getMemberNonVirtual(exec::CTV ctv, symtable::SymbolID symbol) {
 		ts::ClassInfo class_info = ctv.type.getType();
 		auto          member     = class_info.getMemberInfo(symbol);
 		auto          offset     = member.start_offset.value();
@@ -37,7 +37,7 @@ namespace exec {
 		return ctv.subCTV(desc, offset, desc.getType().getSize());
 	}
 
-	inline exec::CTV getMember(exec::CTV ctv, symtable::SymbolId symbol, ts::ClassInfo class_info) {
+	inline exec::CTV getMember(exec::CTV ctv, symtable::SymbolID symbol, ts::ClassInfo class_info) {
 		ts::MemberInfo member = class_info.getMemberInfo(symbol);
 
 		if (member.last_virtual_ancestor.has_value())

@@ -66,7 +66,7 @@ namespace exec::operators {
 	operation::TypedOperation typed_op                                                            \
 		= { fun_name,                                                                             \
 		    query::entryPoint<ts::QueryFunctionType>({ { arg_info_1, arg_info_2 }, res_info }) }; \
-	operation::OperationId id = operation::addOperation(typed_op);                                \
+	operation::OperationID id = operation::addOperation(typed_op);                                \
 	getBuiltInOps().put({ Operator::op_name, { arg_info_1, arg_info_2 } }, id);
 
 #define BIN_ENTRY_SIMPLE(info, op_name, fun_name) BIN_ENTRY(info, info, info, op_name, fun_name)

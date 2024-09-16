@@ -50,7 +50,7 @@ private:
 	}
 
 	void testModuleIDInSourceFile(const ModuleTree& module) {
-		auto id = module.getId();
+		auto id = module.getID();
 		ASSERT_EQUAL(id, module.getMainSourceFile().linked_module);
 		for (auto& file: module.getSourceFiles()) ASSERT_EQUAL(id, file.linked_module);
 	}
@@ -94,10 +94,10 @@ private:
 			mod_module->getParentModule().has_value(), "Non-root module does not have a parent (4)"
 		);
 
-		ASSERT_EQUAL(mt->getId(), awe_module->getParentModule().value().getId());
-		ASSERT_EQUAL(mt->getId(), another_module->getParentModule().value().getId());
-		ASSERT_EQUAL(another_module->getId(), awesome_module->getParentModule().value().getId());
-		ASSERT_EQUAL(awesome_module->getId(), mod_module->getParentModule().value().getId());
+		ASSERT_EQUAL(mt->getID(), awe_module->getParentModule().value().getID());
+		ASSERT_EQUAL(mt->getID(), another_module->getParentModule().value().getID());
+		ASSERT_EQUAL(another_module->getID(), awesome_module->getParentModule().value().getID());
+		ASSERT_EQUAL(awesome_module->getID(), mod_module->getParentModule().value().getID());
 	}
 
 	void testQueries() {

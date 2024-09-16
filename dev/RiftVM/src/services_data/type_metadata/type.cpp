@@ -191,14 +191,14 @@ namespace vm {
 	}
 
 	// struct
-	base::Optional<TypeCRef> Type::getFieldType(kind::Data::FieldId field_id) const {
+	base::Optional<TypeCRef> Type::getFieldType(kind::Data::FieldID field_id) const {
 		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
 			if (field_id >= data.fields.size()) return base::Optional<TypeCRef>();
 			return base::Optional<TypeCRef>(data.fields[field_id].type);
 		});
 	}
 
-	base::Optional<Offset> Type::getFieldOffset(kind::Data::FieldId field_id) const {
+	base::Optional<Offset> Type::getFieldOffset(kind::Data::FieldID field_id) const {
 		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
 			if (field_id >= data.fields.size()) return base::Optional<Offset>();
 			return base::Optional<Offset>(Offset(data.fields[field_id].offset));

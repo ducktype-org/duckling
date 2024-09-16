@@ -69,7 +69,7 @@ private:
 
 		ts::ClassInfo customClass = ts::ClassInfo::create(
 			base::StrID("custom"),
-			{ { member_class, symtable::SymbolId::next() } },
+			{ { member_class, symtable::SymbolID::next() } },
 			{ { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
@@ -159,7 +159,7 @@ private:
 
 		ts::ClassInfo customClass = ts::ClassInfo::create(
 			base::StrID("custom"),
-			{ { member_class, symtable::SymbolId::next() } },
+			{ { member_class, symtable::SymbolID::next() } },
 			{ { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
 		);
@@ -284,9 +284,9 @@ private:
 		*/
 
 		ts::ClassInfo class_A
-			= ts::ClassInfo::create(base::StrID("A"), { { int_desc, symtable::SymbolId::next() } });
+			= ts::ClassInfo::create(base::StrID("A"), { { int_desc, symtable::SymbolID::next() } });
 
-		auto b_member = symtable::SymbolId::next();
+		auto b_member = symtable::SymbolID::next();
 
 		ts::ClassInfo class_B = ts::ClassInfo::create(
 			base::StrID("B"),
@@ -425,7 +425,7 @@ private:
 		*/
 
 		ts::TypeDesc<> int_desc(query::entryPoint<ts::QueryIntegralType>({ 8 }));
-		auto           symbol_z = symtable::SymbolId::next();
+		auto           symbol_z = symtable::SymbolID::next();
 		auto           Z = ts::ClassInfo::create(base::StrID("Z"), { { int_desc, symbol_z } });
 
 		operation::Operation construct_z = [](const std::vector<exec::CTV>& ctvs) {
@@ -510,12 +510,12 @@ private:
 	//
 	//
 	// 	ts::TypeDesc<> int_desc(ts::IntegralInfo::create(8));
-	// 	auto           symbol0 = symtable::SymbolId::next();
+	// 	auto           symbol0 = symtable::SymbolID::next();
 	//
 	// 	ts::ClassInfo  A(ts::ClassInfo::create(base::StrID("A"), { { int_desc, symbol0 } }));
 	// 	ts::TypeDesc<> A_desc(A);
 	//
-	// 	auto symbol1 = symtable::SymbolId::next();
+	// 	auto symbol1 = symtable::SymbolID::next();
 	//
 	// 	ts::ClassInfo  B(ts::ClassInfo::create(
 	//            base::StrID("B"),
@@ -526,7 +526,7 @@ private:
 	// 	ts::TypeDesc<> B_desc(B);
 	//
 	//
-	// 	auto symbol2 = symtable::SymbolId::next();
+	// 	auto symbol2 = symtable::SymbolID::next();
 	//
 	//
 	// 	ts::ClassInfo  C(ts::ClassInfo::create(

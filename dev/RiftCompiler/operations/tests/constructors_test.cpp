@@ -28,14 +28,14 @@ private:
 
 
 		ts::TypeDesc<> int_desc(query::entryPoint<ts::QueryIntegralType>({ 8 }));
-		auto           symbol0 = symtable::SymbolId::next();
+		auto           symbol0 = symtable::SymbolID::next();
 
 		ts::ClassInfo parent_class(
 			ts::ClassInfo::create(base::StrID("parent"), { { int_desc, symbol0 } })
 		);
 		ts::TypeDesc<> desc_parent_class(parent_class);
 
-		auto symbol1 = symtable::SymbolId::next();
+		auto symbol1 = symtable::SymbolID::next();
 
 		ts::ClassInfo  inheriting_class(ts::ClassInfo::create(
             base::StrID("inheriting"),

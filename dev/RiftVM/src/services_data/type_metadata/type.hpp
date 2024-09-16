@@ -38,7 +38,7 @@ namespace vm {
 		base::StrID name;
 		TypeSize    size      = TypeSize(-1);
 		Kind        kind_type = Kind::None;
-		TypeId      id;
+		TypeID      id;
 
 		std::variant<
 			std::monostate,
@@ -71,7 +71,7 @@ namespace vm {
 
 		// Type query:
 		[[nodiscard]]
-		inline TypeId getId() const {
+		inline TypeID getID() const {
 			return id;
 		}
 
@@ -120,18 +120,18 @@ namespace vm {
 		base::Optional<u64> getStaticTableSize() const;
 
 		// data
-		base::Optional<TypeCRef> getFieldType(kind::Data::FieldId fieldId) const;
-		base::Optional<Offset>   getFieldOffset(kind::Data::FieldId fieldId) const;
+		base::Optional<TypeCRef> getFieldType(kind::Data::FieldID fieldID) const;
+		base::Optional<Offset>   getFieldOffset(kind::Data::FieldID fieldID) const;
 		base::Optional<TypeCRef> getFieldTypeByOffset(Offset offset) const;
 		base::Optional<TypeCRef> getFieldTypeByOffsetRecursive(Offset offset) const;
 
 		// variant
 		base::Optional<u64>      getVariantCount() const;
-		base::Optional<TypeCRef> getNthVariantType(u64 variantId) const;
+		base::Optional<TypeCRef> getNthVariantType(u64 variantID) const;
 
 		// function
 		base::Optional<u64>      getParameterCount() const;
-		base::Optional<TypeCRef> getNthParameterType(u64 parameterId) const;
+		base::Optional<TypeCRef> getNthParameterType(u64 parameterID) const;
 		base::Optional<TypeCRef> getResultType() const;
 
 		friend class TypeMetadata;

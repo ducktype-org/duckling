@@ -772,7 +772,7 @@ namespace assemble {
 										  << "\n";
 								label.value = 0;
 							} else {
-								label.value = static_cast<i64>(u64(type.value()->getId()));
+								label.value = static_cast<i64>(u64(type.value()->getID()));
 							}
 						}
 					}

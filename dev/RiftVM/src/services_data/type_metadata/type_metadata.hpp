@@ -11,9 +11,9 @@ namespace vm {
 	private:
 		enum class TypeMetadataState { AddingTypes, Finalized };
 
-		base::StableVector<Type, TypeId> types;
-		std::vector<TypeId>              types_ids;
-		base::Map<base::StrID, TypeId>   names_to_type;
+		base::StableVector<Type, TypeID> types;
+		std::vector<TypeID>              types_ids;
+		base::Map<base::StrID, TypeID>   names_to_type;
 
 		TypeMetadataState state;
 
@@ -24,8 +24,8 @@ namespace vm {
 
 		void finalize();
 
-		TypeCRef                 getType(TypeId id) const;
-		base::Optional<TypeCRef> getTypeSafe(TypeId id) const;
+		TypeCRef                 getType(TypeID id) const;
+		base::Optional<TypeCRef> getTypeSafe(TypeID id) const;
 
 		// @TODO: This function is currently used by parser, but
 		// should be deleted in the future
