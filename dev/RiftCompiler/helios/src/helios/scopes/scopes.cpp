@@ -27,7 +27,7 @@ namespace compiler::helios {
 		// created on startup:
 		std::optional<ScopeID> parent;
 
-		// base::StrId name; ///< for debug
+		// base::StrID name; ///< for debug
 		bool is_root = false;
 
 		/**
@@ -39,7 +39,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Module, the scope was defined in
 		 */
-		frontend::ModuleId parent_module;
+		frontend::ModuleID parent_module;
 
 		// cache entries:
 		// in the future we might need separation for: direct symbols, expanded symbols
@@ -69,7 +69,7 @@ namespace compiler::helios {
 		}
 	}
 
-	frontend::ModuleId module(ScopeID id) { return getScopeRef(id)->parent_module; }
+	frontend::ModuleID module(ScopeID id) { return getScopeRef(id)->parent_module; }
 
 	namespace {
 		base::StableVector<ScopeData> scope_table;
@@ -302,13 +302,13 @@ namespace compiler::helios {
 
 	base::HashT KeyOf_LookupInScope::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(scope);
-		auto hash_2 = std::hash<base::StrId>()(name);
+		auto hash_2 = std::hash<base::StrID>()(name);
 
 		// @FIXME: this does not work:
 		return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;
 	}
 
-	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleId module) {
+	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
 		auto  main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
 		auto& main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
 

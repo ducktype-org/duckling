@@ -152,7 +152,7 @@ namespace pst {
 		static ParserRef<DottedName> parse(RiftParserState& state);
 
 		[[nodiscard]]
-		std::vector<base::StrId> getNames() const;
+		std::vector<base::StrID> getNames() const;
 		[[nodiscard]]
 		bool getStar() const;
 
@@ -331,15 +331,15 @@ namespace pst {
 		};
 
 		struct Operator {
-			base::StrId oper_id;
+			base::StrID oper_id;
 		};
 
 		struct Identifier {
-			base::StrId indent_id;
+			base::StrID indent_id;
 		};
 
 		struct NumLiteral {
-			base::StrId num_id;
+			base::StrID num_id;
 		};
 
 		std::vector<ExprElem> elements;

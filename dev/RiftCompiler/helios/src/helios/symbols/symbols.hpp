@@ -50,7 +50,7 @@ namespace compiler::helios {
 	/**
 	 * @return name of the symbol
 	 */
-	base::StrId name(SymID);
+	base::StrID name(SymID);
 
 	/**
 	 * @return kind of the symbol
@@ -101,7 +101,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Name to lookup
 		 */
-		base::StrId name;
+		base::StrID name;
 
 		/**
 		 * @brief Should wildcards be included in lookup
@@ -144,7 +144,7 @@ namespace compiler::helios {
 			/**
 			 * @brief A string representing the operator.
 			 */
-			base::StrId oper_id;
+			base::StrID oper_id;
 		};
 
 		/**
@@ -154,7 +154,7 @@ namespace compiler::helios {
 			/**
 			 * @brief A name to lookup when needed..
 			 */
-			base::StrId symbol_name;
+			base::StrID symbol_name;
 		};
 
 		/**
@@ -175,7 +175,7 @@ namespace compiler::helios {
 			 * @TODO: Replace it with TypeSystem's value.
 			 * The value representation.
 			 */
-			base::StrId num_id;
+			base::StrID num_id;
 		};
 
 		/**
@@ -326,7 +326,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Name of the class in the source code.
 		 */
-		base::StrId name;
+		base::StrID name;
 		/**
 		 * @brief Class'es declared methods.
 		 */

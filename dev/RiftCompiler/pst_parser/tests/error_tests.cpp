@@ -58,11 +58,11 @@ class PSTErrorTests: public tester::TestSuite {
 
 		ClassStmtExample(std::string code):
 			  GenExample(std::move(code)),
-			  context{ base::StrId("unnamed"), {} } {}
+			  context{ base::StrID("unnamed"), {} } {}
 
 		ClassStmtExample(std::string code, const std::string& class_name):
 			  GenExample(std::move(code)),
-			  context{ base::StrId(class_name.c_str()), {} } {}
+			  context{ base::StrID(class_name.c_str()), {} } {}
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element>::fromContentsWithContext(this->code, context);
