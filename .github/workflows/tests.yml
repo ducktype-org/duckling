@@ -1,9 +1,11 @@
 name: tests
 
+# What now?
+
 on:
   push:
     branches: [ "main", "dev" ]
-  pull_request:
+  pull_request_target:
   workflow_dispatch:
   
 
