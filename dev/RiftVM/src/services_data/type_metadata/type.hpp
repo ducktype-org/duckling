@@ -35,10 +35,10 @@ namespace vm {
 
 		State state = State::Declared;
 
-		base::StrId name;
+		base::StrID name;
 		TypeSize    size      = TypeSize(-1);
 		Kind        kind_type = Kind::None;
-		TypeId      id;
+		TypeID      id;
 
 		std::variant<
 			std::monostate,
@@ -55,14 +55,14 @@ namespace vm {
 
 	public:
 		// Type declaration:
-		static Type declareType(base::StrId name);
+		static Type declareType(base::StrID name);
 
 		// Type definition:
 		void definePrimitive(TypeSize size);
 		void definePointer(TypeCRef inner);
 		void defineStaticTable(TypeRef inner, u64 table_size);
 		void defineDynamicTable(TypeRef inner);
-		void defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions);
+		void defineData(const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions);
 		void defineVariant(const std::vector<TypeRef>& variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
 
@@ -71,12 +71,12 @@ namespace vm {
 
 		// Type query:
 		[[nodiscard]]
-		inline TypeId getId() const {
+		inline TypeID getID() const {
 			return id;
 		}
 
 		[[nodiscard]]
-		inline base::StrId getName() const {
+		inline base::StrID getName() const {
 			return name;
 		}
 
@@ -120,18 +120,27 @@ namespace vm {
 		base::Optional<u64> getStaticTableSize() const;
 
 		// data
-		base::Optional<TypeCRef> getFieldType(kind::Data::FieldId fieldId) const;
-		base::Optional<Offset>   getFieldOffset(kind::Data::FieldId fieldId) const;
+		[[nodiscard]]
+		base::Optional<TypeCRef> getFieldType(kind::Data::FieldID fieldID) const;
+		[[nodiscard]]
+		base::Optional<Offset> getFieldOffset(kind::Data::FieldID fieldID) const;
+		[[nodiscard]]
 		base::Optional<TypeCRef> getFieldTypeByOffset(Offset offset) const;
+		[[nodiscard]]
 		base::Optional<TypeCRef> getFieldTypeByOffsetRecursive(Offset offset) const;
 
 		// variant
-		base::Optional<u64>      getVariantCount() const;
-		base::Optional<TypeCRef> getNthVariantType(u64 variantId) const;
+		[[nodiscard]]
+		base::Optional<u64> getVariantCount() const;
+		[[nodiscard]]
+		base::Optional<TypeCRef> getNthVariantType(u64 variantID) const;
 
 		// function
-		base::Optional<u64>      getParameterCount() const;
-		base::Optional<TypeCRef> getNthParameterType(u64 parameterId) const;
+		[[nodiscard]]
+		base::Optional<u64> getParameterCount() const;
+		[[nodiscard]]
+		base::Optional<TypeCRef> getNthParameterType(u64 parameterID) const;
+		[[nodiscard]]
 		base::Optional<TypeCRef> getResultType() const;
 
 		friend class TypeMetadata;

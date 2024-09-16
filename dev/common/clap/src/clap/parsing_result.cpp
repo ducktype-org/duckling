@@ -14,17 +14,17 @@ namespace clap {
 
 	const std::string& ParsingResult::getArgs() const { return args; }
 
-	base::Optional<usize> ParsingResult::getId(char name) const {
+	base::Optional<usize> ParsingResult::getID(char name) const {
 		if (short_names_to_id.contains(name)) return short_names_to_id.at(name);
 		return {};
 	}
 
-	base::Optional<usize> ParsingResult::getId(const base::RawView& name) const {
+	base::Optional<usize> ParsingResult::getID(const base::RawView& name) const {
 		if (long_names_to_id.contains(name)) return long_names_to_id.at(name);
 		return {};
 	}
 
-	usize ParsingResult::insertQueryId(const Parameter& parameter) {
+	usize ParsingResult::insertQueryID(const Parameter& parameter) {
 		usize id = 0;
 		if_opt_some(parameter.getShortName(), name) {
 			if (short_names_to_id.contains(name))
@@ -51,11 +51,11 @@ namespace clap {
 	}
 
 	void ParsingResult::insertFlag(const Parameter& parameter) {
-		flags.insert(insertQueryId(parameter));
+		flags.insert(insertQueryID(parameter));
 	}
 
 	void ParsingResult::insertParameterValue(const Parameter& parameter, const ParsedValue& value) {
-		id_to_value.put(insertQueryId(parameter), value);
+		id_to_value.put(insertQueryID(parameter), value);
 	}
 
 	void ParsingResult::insertPositional(const ParsedValue& value) {
@@ -63,7 +63,7 @@ namespace clap {
 	}
 
 	bool ParsingResult::hasParam(const Parameter& parameter) {
-		auto id = insertQueryId(parameter);
+		auto id = insertQueryID(parameter);
 		if (flags.contains(id)) return true;
 		if (id_to_value.contains(id)) return true;
 		return false;

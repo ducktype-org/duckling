@@ -7,7 +7,7 @@
 
 namespace vm {
 	// Type declaration:
-	Type Type::declareType(base::StrId name) {
+	Type Type::declareType(base::StrID name) {
 		Type type{};
 		type.name = name;
 		return type;
@@ -49,7 +49,7 @@ namespace vm {
 		kind      = kind::DynamicTable{ std::move(inner) };
 	}
 
-	void Type::defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions) {
+	void Type::defineData(const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions) {
 		RIFT_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
@@ -191,14 +191,14 @@ namespace vm {
 	}
 
 	// struct
-	base::Optional<TypeCRef> Type::getFieldType(kind::Data::FieldId field_id) const {
+	base::Optional<TypeCRef> Type::getFieldType(kind::Data::FieldID field_id) const {
 		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
 			if (field_id >= data.fields.size()) return base::Optional<TypeCRef>();
 			return base::Optional<TypeCRef>(data.fields[field_id].type);
 		});
 	}
 
-	base::Optional<Offset> Type::getFieldOffset(kind::Data::FieldId field_id) const {
+	base::Optional<Offset> Type::getFieldOffset(kind::Data::FieldID field_id) const {
 		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
 			if (field_id >= data.fields.size()) return base::Optional<Offset>();
 			return base::Optional<Offset>(Offset(data.fields[field_id].offset));

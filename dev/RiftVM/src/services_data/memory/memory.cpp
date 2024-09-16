@@ -3,21 +3,21 @@
 #include <base/exceptions.hpp>
 
 namespace vm {
-	BlockId Memory::reserveBlockID() {
+	BlockID Memory::reserveBlockID() {
 		if (free_ids.empty()) {
 			blocks.emplace_back();
 			blocks.back().owned = true;
 			RIFT_ASSERT(usize(high_id) == blocks.size() - 1, "Bad high id");
 			return high_id++;
 		}
-		BlockId res = free_ids.back();
+		BlockID res = free_ids.back();
 		free_ids.pop_back();
 		return res;
 	}
 
-	bool Memory::refCheck(BlockId id) {
+	bool Memory::refCheck(BlockID id) {
 		if (blocks[usize(id)].refcount == 0) {
-			if (id == high_id - BlockId(1)) {
+			if (id == high_id - BlockID(1)) {
 				high_id--;
 				blocks.pop_back();
 			} else {
@@ -28,7 +28,7 @@ namespace vm {
 		return true;
 	}
 
-	void Memory::returnBlockID(BlockId id) {
+	void Memory::returnBlockID(BlockID id) {
 		if (isUnowned(id))
 			RIFT_PANIC("Tried returning an unowned id");
 		else if (blocks[usize(id)].filled)
@@ -36,7 +36,7 @@ namespace vm {
 		refCheck(id);
 	}
 
-	void Memory::makeBlock(BlockId id, Block&& block) {
+	void Memory::makeBlock(BlockID id, Block&& block) {
 		if (isUnowned(id))
 			RIFT_PANIC("Tried creating an unowned block");
 		else if (blocks[usize(id)].filled)
@@ -47,7 +47,7 @@ namespace vm {
 		blocks[usize(id)].filled = true;
 	}
 
-	void Memory::deleteBlock(BlockId id) {
+	void Memory::deleteBlock(BlockID id) {
 		if (isUnowned(id)) RIFT_PANIC("Tried deleting an unowned block");
 		blocks[usize(id)].filled = false;
 		delete blocks[usize(id)].block;
@@ -65,7 +65,7 @@ namespace vm {
 		blocks[usize(id)].deleted = false;
 	}
 
-	void Memory::createRef(BlockId id) {
+	void Memory::createRef(BlockID id) {
 		if (isUnowned(id))
 			RIFT_PANIC("Tried creating a reference to an unowned block");
 		else if (!blocks[usize(id)].filled)
@@ -73,7 +73,7 @@ namespace vm {
 		blocks[usize(id)].refcount++;
 	}
 
-	void Memory::destroyRef(BlockId id) {
+	void Memory::destroyRef(BlockID id) {
 		if (id >= high_id || (!blocks[usize(id)].owned && !blocks[usize(id)].deleted))
 			RIFT_PANIC("Tried deleting a reference to an unowned block");
 		if (blocks[usize(id)].refcount == 0)

@@ -90,7 +90,7 @@ namespace vm::api {
 
 	cpp::result<response::Block, ApiError> getBlock(PID pid, u64 block_id) {
 		return Supervisor::get()
-		    .doRequest(api::makeDataRequest(pid, request::Block{ BlockId(block_id) }))
+		    .doRequest(api::makeDataRequest(pid, request::Block{ BlockID(block_id) }))
 		    .flat_map(mapOrWrongResponse<response::Block>);
 	}
 }
