@@ -41,6 +41,9 @@ jobs:
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Debug' }}
 
     steps:
+      - name: AAAAA
+        run: echo ${{ secrets.TEST }}
+    
       - name: Checkout repository
         uses: actions/checkout@v4
 
