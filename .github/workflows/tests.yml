@@ -46,7 +46,7 @@ jobs:
 
       - name: Install lcov and LLVM
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo apt -y install lcov llvm llvm-dev g++-14
+        run: sudo apt -y install lcov llvm llvm-dev
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
