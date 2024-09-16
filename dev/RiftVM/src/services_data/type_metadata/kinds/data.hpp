@@ -17,7 +17,7 @@ namespace vm::kind {
 		using FieldId = u64;
 
 		// @todo when hashmap has operator = change to base::HashMap
-		std::unordered_map<base::StrId, FieldId> field_name_map;
+		std::unordered_map<base::StrID, FieldId> field_name_map;
 		std::vector<FieldDesc>                   fields;
 	};
 }

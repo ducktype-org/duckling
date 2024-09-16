@@ -35,7 +35,7 @@ namespace compiler::frontend {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleTree);
 
 	base::Optional<ModuleId> getRelativeModule(
-		query::Context& ctx, ModuleId from, const std::vector<base::StrId>& path
+		query::Context& ctx, ModuleId from, const std::vector<base::StrID>& path
 	) {
 		RIFT_ASSERT(path.size() >= 1, "Empty module path");
 

@@ -27,7 +27,7 @@ class SimpleIdMapsTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple FileSystem Test") {
 		TESTER_ADD_TEST(basicMapTest);
-		TESTER_ADD_TEST(strIdTest);
+		TESTER_ADD_TEST(strIDTest);
 	}
 
 	~SimpleIdMapsTest() override = default;
@@ -65,10 +65,10 @@ private:
 		return base::RawView({ reinterpret_cast<const byte*>(view.data()), view.size() });
 	}
 
-	void strIdTest() {
-		base::StrId id1(make_view("abc"));
-		base::StrId id2(make_view("abc"));
-		base::StrId id3(make_view("ab"));
+	void strIDTest() {
+		base::StrID id1(make_view("abc"));
+		base::StrID id2(make_view("abc"));
+		base::StrID id3(make_view("ab"));
 
 		assertTrue(id1 == id2, "== error");
 		assertTrue(id2 != id3, "!= error");

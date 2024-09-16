@@ -18,7 +18,7 @@ public:
 
 private:
 	void simple_constructor() {
-		auto class_info = ts::ClassInfo::create(base::StrId("class"), {});
+		auto class_info = ts::ClassInfo::create(base::StrID("class"), {});
 		// operation::Constructor cons {{}, {}, {}};
 
 		operation::Constructor cons = operation::makeConstructorClass(class_info);
@@ -31,14 +31,14 @@ private:
 		auto           symbol0 = symtable::SymbolId::next();
 
 		ts::ClassInfo parent_class(
-			ts::ClassInfo::create(base::StrId("parent"), { { int_desc, symbol0 } })
+			ts::ClassInfo::create(base::StrID("parent"), { { int_desc, symbol0 } })
 		);
 		ts::TypeDesc<> desc_parent_class(parent_class);
 
 		auto symbol1 = symtable::SymbolId::next();
 
 		ts::ClassInfo  inheriting_class(ts::ClassInfo::create(
-            base::StrId("inheriting"),
+            base::StrID("inheriting"),
             { { int_desc, symbol1 } },
             { { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
             0

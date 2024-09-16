@@ -37,7 +37,7 @@ namespace pst {
 		const decltype(names)& getNames() const;
 
 		[[nodiscard]]
-		base::StrId getAlias() const {
+		base::StrID getAlias() const {
 			return alias.value;
 		}
 
@@ -46,7 +46,7 @@ namespace pst {
 		 * This functionality is needed to implement early import system for testing.
 		 */
 		[[nodiscard]]
-		std::vector<base::StrId> getModulePath() const;
+		std::vector<base::StrID> getModulePath() const;
 
 		[[nodiscard]]
 		bool getStar() const;
@@ -130,7 +130,7 @@ namespace pst {
 		STMT_CHILD_CONSTRUCTOR(Alias);
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 
@@ -190,7 +190,7 @@ namespace pst {
 		static ParserRef<Const> parse(RiftParserState& state);
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 

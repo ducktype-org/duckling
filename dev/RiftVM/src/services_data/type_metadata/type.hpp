@@ -35,7 +35,7 @@ namespace vm {
 
 		State state = State::Declared;
 
-		base::StrId name;
+		base::StrID name;
 		TypeSize    size      = TypeSize(-1);
 		Kind        kind_type = Kind::None;
 		TypeId      id;
@@ -55,14 +55,14 @@ namespace vm {
 
 	public:
 		// Type declaration:
-		static Type declareType(base::StrId name);
+		static Type declareType(base::StrID name);
 
 		// Type definition:
 		void definePrimitive(TypeSize size);
 		void definePointer(TypeCRef inner);
 		void defineStaticTable(TypeRef inner, u64 table_size);
 		void defineDynamicTable(TypeRef inner);
-		void defineData(const std::vector<std::pair<base::StrId, TypeRef>>& fields_definitions);
+		void defineData(const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions);
 		void defineVariant(const std::vector<TypeRef>& variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
 
@@ -76,7 +76,7 @@ namespace vm {
 		}
 
 		[[nodiscard]]
-		inline base::StrId getName() const {
+		inline base::StrID getName() const {
 			return name;
 		}
 

@@ -51,7 +51,7 @@ namespace compiler::frontend {
 	 */
 	struct SourceFile {
 		fs::FilePath               path;
-		base::StrId                rift_file_name;
+		base::StrID                rift_file_name;
 		FileId                     id;
 		base::Optional<pst::PST<>> parse_tree;
 
@@ -169,7 +169,7 @@ namespace compiler::frontend {
 		 * @return base::HashMap that maps a name of the submodule to the pointer to the submodule.
 		 */
 		[[nodiscard]]
-		const base::HashMap<base::StrId, std::shared_ptr<ModuleTree>>& getSubmodules() const;
+		const base::HashMap<base::StrID, std::shared_ptr<ModuleTree>>& getSubmodules() const;
 
 		/**
 		 * Accesses all the other files that are located inside the module.
@@ -177,14 +177,14 @@ namespace compiler::frontend {
 		 * with files with this extension.
 		 */
 		[[nodiscard]]
-		const base::HashMap<base::StrId, std::vector<fs::FilePath>>& getOtherFiles() const;
+		const base::HashMap<base::StrID, std::vector<fs::FilePath>>& getOtherFiles() const;
 
 		/**
 		 * Parses the name of the module.
-		 * @return base::StrId with the name. `A.rmf -> A`, `/.../module/ -> module`.
+		 * @return base::StrID with the name. `A.rmf -> A`, `/.../module/ -> module`.
 		 */
 		[[nodiscard]]
-		base::StrId getName() const;
+		base::StrID getName() const;
 
 		/**
 		 * Creates a nice, human-readable representation of this module tree.
@@ -253,11 +253,11 @@ namespace compiler::frontend {
 		/**
 		 * Other direct submodules. Maps module's name to a pointer to it.
 		 */
-		base::HashMap<base::StrId, std::shared_ptr<ModuleTree>> m_submodules;
+		base::HashMap<base::StrID, std::shared_ptr<ModuleTree>> m_submodules;
 		/**
 		 * All other files inside this module. Indexed by their extension.
 		 */
-		base::HashMap<base::StrId, std::vector<fs::FilePath>> m_other_files;
+		base::HashMap<base::StrID, std::vector<fs::FilePath>> m_other_files;
 	};
 }
 

@@ -29,7 +29,7 @@ namespace vm {
 		return types.getCRef(id);
 	}
 
-	base::Optional<TypeCRef> TypeMetadata::getTypeByName(base::StrId name) const {
+	base::Optional<TypeCRef> TypeMetadata::getTypeByName(base::StrID name) const {
 		if (names_to_type.contains(name))
 			return getType(names_to_type[name]);
 		else

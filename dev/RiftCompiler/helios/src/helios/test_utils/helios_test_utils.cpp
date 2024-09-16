@@ -22,10 +22,10 @@ namespace compiler::helios::test_utils {
 		bool       first_symbol = true;
 		for (auto&& sym: symbols) {
 			auto symbol = first_symbol ? query::entryPoint<QueryLookupInScopeAndParents>(
-							  { scope, base::StrId(sym.c_str()), true }
+							  { scope, base::StrID(sym.c_str()), true }
 						  )
 			                           : query::entryPoint<QueryLookupInSymbol>(
-										   { result.back(), base::StrId(sym.c_str()), false }
+										   { result.back(), base::StrID(sym.c_str()), false }
 									   );
 			for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<QueryDealias>(elem);

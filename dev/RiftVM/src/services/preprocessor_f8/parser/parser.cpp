@@ -36,7 +36,7 @@ namespace assemble {
 	struct OpCodeLabelArg {
 		i64         value;
 		bool        type_value;
-		base::StrId label_name;
+		base::StrID label_name;
 	};
 
 	using OpCodeAnyArg = std::variant<OpCodeNumArg, OpCodeLabelArg>;
@@ -45,7 +45,7 @@ namespace assemble {
 	using TypeSize = u64;
 
 	struct PrimitiveType {
-		base::StrId name;
+		base::StrID name;
 		TypeSize    size{};
 
 		void dprint(std::ostream& out) const {
@@ -57,8 +57,8 @@ namespace assemble {
 	};
 
 	struct PointerType {
-		base::StrId name;
-		base::StrId inner;
+		base::StrID name;
+		base::StrID inner;
 
 		void dprint(std::ostream& out) const {
 			out << "pointer {\n";
@@ -69,8 +69,8 @@ namespace assemble {
 	};
 
 	struct StaticTableType {
-		base::StrId name;
-		base::StrId inner;
+		base::StrID name;
+		base::StrID inner;
 		TypeSize    table_size;
 
 		void dprint(std::ostream& out) const {
@@ -83,8 +83,8 @@ namespace assemble {
 	};
 
 	struct DynamicTableType {
-		base::StrId name;
-		base::StrId inner;
+		base::StrID name;
+		base::StrID inner;
 
 		void dprint(std::ostream& out) const {
 			out << "dynamic_table {\n";
@@ -95,12 +95,12 @@ namespace assemble {
 	};
 
 	struct Field {
-		base::StrId name;
-		base::StrId type;
+		base::StrID name;
+		base::StrID type;
 	};
 
 	struct DataType {
-		base::StrId        name;
+		base::StrID        name;
 		std::vector<Field> fields;
 
 		void dprint(std::ostream& out) const {
@@ -115,8 +115,8 @@ namespace assemble {
 	};
 
 	struct VariantType {
-		base::StrId              name;
-		std::vector<base::StrId> variant_alternatives;
+		base::StrID              name;
+		std::vector<base::StrID> variant_alternatives;
 
 		void dprint(std::ostream& out) const {
 			out << "variant {\n";
@@ -129,9 +129,9 @@ namespace assemble {
 	};
 
 	struct FunctionType {
-		base::StrId              name;
-		std::vector<base::StrId> parameters;
-		base::StrId              result;
+		base::StrID              name;
+		std::vector<base::StrID> parameters;
+		base::StrID              result;
 
 		void dprint(std::ostream& out) const {
 			out << "function {\n";
@@ -169,7 +169,7 @@ namespace assemble {
 	};
 
 	struct OpCode: AsmElement {
-		base::StrId               opcode_name;
+		base::StrID               opcode_name;
 		std::vector<OpCodeAnyArg> args;
 
 		static tpc::ParserRef<OpCode> parse(F8ParserState& state) {
@@ -197,7 +197,7 @@ namespace assemble {
 				case lexer::Token::Type::NumLiteral:
 					try {
 						out->args.emplace_back(OpCodeNumArg{
-							OpCodeArgType::imm, base::strIdToNum(state.tokens().next().getValue()) }
+							OpCodeArgType::imm, base::strIDToNum(state.tokens().next().getValue()) }
 						);
 					} catch (std::logic_error& e) {
 						state.err.failAndLog(
@@ -253,7 +253,7 @@ namespace assemble {
 
 	struct ByteCode: AsmElement {
 		std::vector<tpc::ParserRef<OpCode>> opcodes;
-		base::Map<base::StrId, usize>       label_position;
+		base::Map<base::StrID, usize>       label_position;
 
 		static tpc::ParserRef<ByteCode> parse(F8ParserState& state) {
 			auto out = tpc::makeRef<ByteCode>();
@@ -387,7 +387,7 @@ namespace assemble {
 					);
 				}
 				try {
-					out->arg_size = strIdToNum(value.getValue());
+					out->arg_size = strIDToNum(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.getPosition(), "arg_size argument is not num-literal"
@@ -408,7 +408,7 @@ namespace assemble {
 					);
 				}
 				try {
-					out->local_size = strIdToNum(value.getValue());
+					out->local_size = strIDToNum(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.getPosition(), "local_size argument is not num-literal"
@@ -430,7 +430,7 @@ namespace assemble {
 					);
 				}
 				try {
-					out->ret_size = base::strIdToNum(value.getValue());
+					out->ret_size = base::strIDToNum(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.getPosition(), "ret_size argument is not num-literal"
@@ -487,7 +487,7 @@ namespace assemble {
 		/// @TODO: implement keywordToNumLiteral
 		auto type = state.tokens().next().asKeyword();
 		state.parse().one(rift_def::Operator::Colon);
-		base::StrId name = state.tokens().next().getValue();
+		base::StrID name = state.tokens().next().getValue();
 
 		switch (type) {
 		case rift_def::Keyword::BCPrimitive: {
@@ -496,7 +496,7 @@ namespace assemble {
 				state.err.failAndLog(state.getPosition(), "expected number");
 			} else {
 				out->datatype
-					= PrimitiveType{ name, static_cast<TypeSize>(strIdToNum(value.getValue())) };
+					= PrimitiveType{ name, static_cast<TypeSize>(strIDToNum(value.getValue())) };
 			}
 			break;
 		}
@@ -520,7 +520,7 @@ namespace assemble {
 					out->datatype
 						= StaticTableType{ name,
 						                   type_name.getValue(),
-						                   static_cast<TypeSize>(strIdToNum(size.getValue())) };
+						                   static_cast<TypeSize>(strIDToNum(size.getValue())) };
 				}
 			}
 			break;
@@ -567,7 +567,7 @@ namespace assemble {
 			}
 
 			state.goDown();
-			std::vector<base::StrId> alternatives;
+			std::vector<base::StrID> alternatives;
 			while (state.notEmpty()) {
 				tpc::Identifier field_type;
 				state.parse().one(&field_type);
@@ -592,7 +592,7 @@ namespace assemble {
 			}
 
 			state.goDown();
-			std::vector<base::StrId> arguments;
+			std::vector<base::StrID> arguments;
 			while (state.notEmpty()) {
 				tpc::Identifier field_type;
 				state.parse().one(&field_type);
@@ -676,10 +676,10 @@ namespace assemble {
 
 	// returns true if was successfully
 	bool defineTypes(CodeContainer& code, vm::TypeMetadata& type_metadata) {
-		base::Map<base::StrId, vm::TypeRef> type_map;
+		base::Map<base::StrID, vm::TypeRef> type_map;
 
 		for (auto& type: code.code->types) {
-			base::StrId name = VISIT(type->datatype, value, return value.name);
+			base::StrID name = VISIT(type->datatype, value, return value.name);
 
 			if (type_map.contains(name)) {
 				code.ok = false;
@@ -709,7 +709,7 @@ namespace assemble {
 					type_map[data.name]->defineDynamicTable(type_map[data.inner]);
 				}
 				variant_case(DataType, data) {
-					std::vector<std::pair<base::StrId COMMA vm::TypeRef>> fields;
+					std::vector<std::pair<base::StrID COMMA vm::TypeRef>> fields;
 					fields.reserve(data.fields.size());
 					for (auto& field: data.fields)
 						fields.emplace_back(field.name, type_map[field.type]);
@@ -742,7 +742,7 @@ namespace assemble {
 		if (!ok) out << error << '\n';
 	}
 
-	u16 nameToOpcodeValue(base::StrId str) {
+	u16 nameToOpcodeValue(base::StrID str) {
 		try {
 			return static_cast<u16>(vm::str_to_OpcodeFix8.at(str.str()));
 		} catch (std::out_of_range& err) {

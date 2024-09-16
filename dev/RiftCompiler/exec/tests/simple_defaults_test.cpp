@@ -31,9 +31,9 @@ public:
 
 private:
 	void default_equality_test() {
-		ts::ClassInfo parent_class = ts::ClassInfo::create(base::StrId("Parent"), {});
+		ts::ClassInfo parent_class = ts::ClassInfo::create(base::StrID("Parent"), {});
 
-		ts::ClassInfo member_class = ts::ClassInfo::create(base::StrId("Member"), {});
+		ts::ClassInfo member_class = ts::ClassInfo::create(base::StrID("Member"), {});
 
 		auto bool_type = query::entryPoint<ts::QueryBoolType>({});
 
@@ -68,7 +68,7 @@ private:
 		operation::addDefault(operation::Defaultable::Equality, member_class, member_eq);
 
 		ts::ClassInfo customClass = ts::ClassInfo::create(
-			base::StrId("custom"),
+			base::StrID("custom"),
 			{ { member_class, symtable::SymbolId::next() } },
 			{ { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
@@ -121,9 +121,9 @@ private:
 	}
 
 	void default_comparison_test() {
-		ts::ClassInfo parent_class = ts::ClassInfo::create(base::StrId("parent"), {});
+		ts::ClassInfo parent_class = ts::ClassInfo::create(base::StrID("parent"), {});
 
-		ts::ClassInfo member_class = ts::ClassInfo::create(base::StrId("member"), {});
+		ts::ClassInfo member_class = ts::ClassInfo::create(base::StrID("member"), {});
 
 		auto int_type = query::entryPoint<ts::QueryIntegralType>({ 8 });
 
@@ -158,7 +158,7 @@ private:
 		operation::addDefault(operation::Defaultable::Compare, member_class, member_comp);
 
 		ts::ClassInfo customClass = ts::ClassInfo::create(
-			base::StrId("custom"),
+			base::StrID("custom"),
 			{ { member_class, symtable::SymbolId::next() } },
 			{ { parent_class, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
@@ -284,12 +284,12 @@ private:
 		*/
 
 		ts::ClassInfo class_A
-			= ts::ClassInfo::create(base::StrId("A"), { { int_desc, symtable::SymbolId::next() } });
+			= ts::ClassInfo::create(base::StrID("A"), { { int_desc, symtable::SymbolId::next() } });
 
 		auto b_member = symtable::SymbolId::next();
 
 		ts::ClassInfo class_B = ts::ClassInfo::create(
-			base::StrId("B"),
+			base::StrID("B"),
 			{ { int_desc, b_member } },
 			{ { class_A, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
@@ -426,7 +426,7 @@ private:
 
 		ts::TypeDesc<> int_desc(query::entryPoint<ts::QueryIntegralType>({ 8 }));
 		auto           symbol_z = symtable::SymbolId::next();
-		auto           Z = ts::ClassInfo::create(base::StrId("Z"), { { int_desc, symbol_z } });
+		auto           Z = ts::ClassInfo::create(base::StrID("Z"), { { int_desc, symbol_z } });
 
 		operation::Operation construct_z = [](const std::vector<exec::CTV>& ctvs) {
 			ctvs[0].getData<uint8_t>().front() = 7;
@@ -450,7 +450,7 @@ private:
 
 
 		auto B = ts::ClassInfo::create(
-			base::StrId("B"),
+			base::StrID("B"),
 			{},
 			{ { Z, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 			0
@@ -475,7 +475,7 @@ private:
 
 
 		auto A = ts::ClassInfo::create(
-			base::StrId("A"),
+			base::StrID("A"),
 			{},
 			{ { Z, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 			0
@@ -512,13 +512,13 @@ private:
 	// 	ts::TypeDesc<> int_desc(ts::IntegralInfo::create(8));
 	// 	auto           symbol0 = symtable::SymbolId::next();
 	//
-	// 	ts::ClassInfo  A(ts::ClassInfo::create(base::StrId("A"), { { int_desc, symbol0 } }));
+	// 	ts::ClassInfo  A(ts::ClassInfo::create(base::StrID("A"), { { int_desc, symbol0 } }));
 	// 	ts::TypeDesc<> A_desc(A);
 	//
 	// 	auto symbol1 = symtable::SymbolId::next();
 	//
 	// 	ts::ClassInfo  B(ts::ClassInfo::create(
-	//            base::StrId("B"),
+	//            base::StrID("B"),
 	//            { { int_desc, symbol1 } },
 	//            { { A, ts::InheritanceTag(true, ts::InheritanceTag::Kind::Public) } },
 	//            0
@@ -530,7 +530,7 @@ private:
 	//
 	//
 	// 	ts::ClassInfo  C(ts::ClassInfo::create(
-	//            base::StrId("C"),
+	//            base::StrID("C"),
 	//            { { int_desc, symbol2 } },
 	//            { { B, ts::InheritanceTag(false, ts::InheritanceTag::Kind::Public) } },
 	//            0

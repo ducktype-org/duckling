@@ -27,7 +27,7 @@ namespace compiler::helios {
 		// created on startup:
 		std::optional<ScopeID> parent;
 
-		// base::StrId name; ///< for debug
+		// base::StrID name; ///< for debug
 		bool is_root = false;
 
 		/**
@@ -298,7 +298,7 @@ namespace compiler::helios {
 
 	base::HashT KeyOf_LookupInScope::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(scope);
-		auto hash_2 = std::hash<base::StrId>()(name);
+		auto hash_2 = std::hash<base::StrID>()(name);
 
 		// @FIXME: this does not work:
 		return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;

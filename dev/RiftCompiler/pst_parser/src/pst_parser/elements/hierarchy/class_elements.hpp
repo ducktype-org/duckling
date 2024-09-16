@@ -81,7 +81,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return kind.value;
 		}
 
@@ -158,7 +158,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 
@@ -194,7 +194,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 

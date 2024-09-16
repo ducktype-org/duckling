@@ -59,7 +59,7 @@ SourceFile::SourceFile(fs::FilePath path, ModuleId module_id):
 	  path(std::move(path)),
 	  id(FileId::nextID()),
 	  linked_module(module_id) {
-	rift_file_name = base::StrId(this->path.stem().c_str());
+	rift_file_name = base::StrID(this->path.stem().c_str());
 }
 
 const pst::PST<>& SourceFile::getPST() {
@@ -110,7 +110,7 @@ void ModuleTree::buildModuleTree(
 		// Discards directories without main module file:
 		// @TODO: decide if this behavior is desirable
 		if (submodule->hasMainSourceFile())
-			module_root->m_submodules.put(base::StrId(dir_iter.first.c_str()), submodule);
+			module_root->m_submodules.put(base::StrID(dir_iter.first.c_str()), submodule);
 	}
 }
 
@@ -122,8 +122,8 @@ void ModuleTree::handleNewFile(
 	std::string stem      = filepath.stem();
 	std::string extension = filepath.extension();
 
-	auto stem_id      = base::StrId(stem.c_str());
-	auto extension_id = base::StrId(extension.c_str());
+	auto stem_id      = base::StrID(stem.c_str());
+	auto extension_id = base::StrID(extension.c_str());
 
 	// There are 3 types of files: source files, module file, others - each if-branch handles other
 	// type.
@@ -167,10 +167,10 @@ base::Optional<const ModuleTree&> ModuleTree::getParentModule() const {
 	return {};
 }
 
-base::StrId ModuleTree::getName() const {
+base::StrID ModuleTree::getName() const {
 	// @OPT: store this value as a module tree field
 	if (m_fs_tree == nullptr) return getMainSourceFile().rift_file_name;
-	return base::StrId(m_fs_tree->getRoot().name().c_str());
+	return base::StrID(m_fs_tree->getRoot().name().c_str());
 }
 
 std::string ModuleTree::prettyPrint(u32 indentation) const {
@@ -209,17 +209,17 @@ const SourceFile& ModuleTree::getMainSourceFile() const {
 
 const std::vector<SourceFile>& ModuleTree::getSourceFiles() const { return m_source_files; }
 
-const base::HashMap<base::StrId, std::shared_ptr<ModuleTree>>& ModuleTree::getSubmodules() const {
+const base::HashMap<base::StrID, std::shared_ptr<ModuleTree>>& ModuleTree::getSubmodules() const {
 	return m_submodules;
 }
 
-const base::HashMap<base::StrId, std::vector<fs::FilePath>>& ModuleTree::getOtherFiles() const {
+const base::HashMap<base::StrID, std::vector<fs::FilePath>>& ModuleTree::getOtherFiles() const {
 	return m_other_files;
 }
 
 ModuleId ModuleTree::getId() const { return id; }
 
-base::StrId compiler::frontend::moduleName(ModuleId module) {
+base::StrID compiler::frontend::moduleName(ModuleId module) {
 	return modules.at(module)->getName();
 }
 
@@ -280,7 +280,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
 /*******************
  * QuerySubmodules *
  *******************/
-struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrId COMMA ModuleId>) {
+struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleId>) {
 	static auto provide(Context&, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
 

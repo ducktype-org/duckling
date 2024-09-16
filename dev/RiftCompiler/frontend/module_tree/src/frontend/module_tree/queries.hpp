@@ -10,7 +10,7 @@
 
 namespace compiler::frontend {
 
-	base::StrId moduleName(ModuleId);
+	base::StrID moduleName(ModuleId);
 	std::string printModuleTree(ModuleId);
 
 	/**
@@ -39,7 +39,7 @@ namespace compiler::frontend {
 	 * @brief Query map of children modules aka submodules
 	 * of given module.
 	 */
-	DECLARE_QUERY(QuerySubmodules, ModuleId, const base::HashMap<base::StrId COMMA ModuleId>&)
+	DECLARE_QUERY(QuerySubmodules, ModuleId, const base::HashMap<base::StrID COMMA ModuleId>&)
 
 
 	/**
@@ -73,5 +73,5 @@ namespace compiler::frontend {
 	 * @return Found module, none if no matching module was found.
 	 */
 	base::Optional<ModuleId>
-		getRelativeModule(query::Context&, ModuleId from, const std::vector<base::StrId>& path);
+		getRelativeModule(query::Context&, ModuleId from, const std::vector<base::StrID>& path);
 }
