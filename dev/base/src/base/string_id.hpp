@@ -80,7 +80,7 @@ namespace base {
 		static ToIdType   to_id_map;
 
 	public:
-		StrId(): id(InnerId::bad()){};
+		StrId(): id(InnerId::bad()) {};
 		StrId(const StrId& oth) = default;
 		StrId(StrId&& oth)      = default;
 

@@ -37,7 +37,7 @@ namespace query {
 		private:
 			NodeID my_node;
 
-			ContextType(NodeID my_node): my_node(my_node){};
+			ContextType(NodeID my_node): my_node(my_node) {};
 			friend struct ContextMaker;
 
 		public:
@@ -175,8 +175,9 @@ namespace query {
  * @param pretty_name Pretty name of the Query
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                \
-	auto type::QueryType::internal_query(type::QKey key, ::query::detail::NodeID from)              \
-		-> type::QResult {                                                                          \
+	auto type::QueryType::internal_query(                                                           \
+		type::QKey key, ::query::detail::NodeID from                                                \
+	) -> type::QResult {                                                                            \
 		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                     \
 	}                                                                                               \
 	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryId(pretty_name); \

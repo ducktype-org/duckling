@@ -122,7 +122,7 @@ namespace compiler::mir {
 		};
 
 	public:
-		BlockBuilder(usize vector_index): id(vector_index){};
+		BlockBuilder(usize vector_index): id(vector_index) {};
 
 		[[nodiscard]]
 		Block build() const {

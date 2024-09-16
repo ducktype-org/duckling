@@ -63,7 +63,8 @@ namespace compiler::mir {
 		output << args.str() << "  ";
 
 		output << "Flags[";
-		for ([[maybe_unused]] const auto& flag: flags) {
+		for ([[maybe_unused]]
+		     const auto& flag: flags) {
 			output << "Flag todo"
 				   << ", ";
 		}

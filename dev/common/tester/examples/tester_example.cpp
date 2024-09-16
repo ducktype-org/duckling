@@ -34,7 +34,7 @@ private:
 	// Each test should be a method of signature void()
 	// You can also write more methods or code here
 
-	void test1(){};
+	void test1() {};
 
 	void test2() { fail("oops!"); }
 

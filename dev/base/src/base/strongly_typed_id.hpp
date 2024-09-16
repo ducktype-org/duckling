@@ -46,8 +46,7 @@
 		}                                                                \
 		static NAME bad() { return NAME{ BAD_ID }; }                     \
 		[[nodiscard]]                                                    \
-		inline constexpr explicit                                        \
-			operator u64() const noexcept {                              \
+		inline constexpr explicit operator u64() const noexcept {        \
 			return id;                                                   \
 		}                                                                \
 		[[nodiscard]]                                                    \

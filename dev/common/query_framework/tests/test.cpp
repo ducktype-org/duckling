@@ -82,8 +82,8 @@ struct IMPLEMENT_QUERY(FibonacciSum, double) {
 
 	static auto load([[maybe_unused]] QKey key) -> LoadResult { return {}; }
 
-	static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd)
-		-> QResult {
+	static auto
+		store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd) -> QResult {
 		return QResult(res);
 	}
 };

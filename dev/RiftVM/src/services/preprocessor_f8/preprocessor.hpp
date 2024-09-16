@@ -13,7 +13,8 @@ namespace vm {
 		TypeMetadata& type_metadata;
 
 		template<class... DynamicServices>
-		Preprocessor([[maybe_unused]] ServiceManagerDef<DynamicServices...>& serviceManager):
+		Preprocessor([[maybe_unused]]
+		             ServiceManagerDef<DynamicServices...>& serviceManager):
 			  type_metadata(serviceManager.getVCPU().getData().template get<TypeMetadata>()) {}
 
 	public:

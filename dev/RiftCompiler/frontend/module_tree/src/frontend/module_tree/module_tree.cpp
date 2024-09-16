@@ -71,7 +71,7 @@ const pst::PST<>& SourceFile::getPST() {
 	}
 }
 
-ModuleTree::ModuleTree(): id(ModuleId::next()){};
+ModuleTree::ModuleTree(): id(ModuleId::next()) {};
 
 std::shared_ptr<ModuleTree> ModuleTree::create(std::shared_ptr<fs::FsTree> root) {
 	auto ptr = std::shared_ptr<ModuleTree>(new ModuleTree());

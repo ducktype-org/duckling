@@ -124,7 +124,7 @@ namespace vm {
 		VCPU(bool use_stdio):
 			  status(api::ExecutionNotStarted{}),
 			  uses_stdio(use_stdio),
-			  serviceManager(*this){};
+			  serviceManager(*this) {};
 		virtual ~VCPU();
 	};
 }

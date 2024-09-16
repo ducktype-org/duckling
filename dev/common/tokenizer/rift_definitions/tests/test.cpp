@@ -57,20 +57,24 @@ private:
 
 		auto inc = operatorAssociativity(Operator::DoublePlus, OperatorType::UnaryRight);
 
-		[[maybe_unused]] auto neg
+		[[maybe_unused]]
+		auto neg
 			= operatorAssociativity(Operator::Minus, OperatorType::UnaryRight);
 
 		auto multiply = operatorAssociativity(Operator::Multiply, OperatorType::Binary);
 
-		[[maybe_unused]] auto divide
+		[[maybe_unused]]
+		auto divide
 			= operatorAssociativity(Operator::Divide, OperatorType::Binary);
 
 		auto add = operatorAssociativity(Operator::Plus, OperatorType::Binary);
 
-		[[maybe_unused]] auto subtract
+		[[maybe_unused]]
+		auto subtract
 			= operatorAssociativity(Operator::Minus, OperatorType::Binary);
 
-		[[maybe_unused]] auto assign
+		[[maybe_unused]]
+		auto assign
 			= operatorAssociativity(Operator::Assign, OperatorType::Binary);
 
 		assertTrue(period == period_2, "Same operators have different associativity");

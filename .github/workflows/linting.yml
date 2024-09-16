@@ -26,7 +26,7 @@ jobs:
         with:
           style: 'file'
           tidy-checks: ''
-          version: 17
+          version: 18
           lines-changed-only: true
           database: 'dev'
 

@@ -35,9 +35,9 @@ namespace query {
 /**
  * @brief Macro emitting body of query interface struct.
  */
-#define INTERNAL_QUERY_INTERFACE_BOILERPLATE                                                  \
-	static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
-	static ::std::string_view       name;                                                     \
+#define INTERNAL_QUERY_INTERFACE_BOILERPLATE                                                \
+	static auto                     internal_query(QKey, ::query::detail::NodeID)->QResult; \
+	static ::std::string_view       name;                                                   \
 	static ::query::detail::QueryID id;
 
 
