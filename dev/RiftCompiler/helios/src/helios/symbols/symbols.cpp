@@ -231,19 +231,21 @@ namespace compiler::helios {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
 		static auto provide(Context&, QKey key) -> PResult {
+			auto pst_id = key.stmt->getID();
+
+			// std::cerr << "making symbol: " << key.stmt->
 
 			// This is a sanity check, that might be rendered obsolete
 			// once scope refactor will be introduced.
 			// It currently prevents some scope bugs/inconsistencies from happening.
-			if (parent_map.contains(key.stmt->getID())) {
+			if (parent_map.contains(pst_id)) {
 				RIFT_ASSERT(
-					parent_map.at(key.stmt->getID()) == key.scope,
+					parent_map.at(pst_id) == key.scope,
 					"Parent mismatch in QuerySymbolOfSTMT"
 				);
 			} else {
-				parent_map.put(key.stmt->getID(), key.scope);
+				parent_map.put(pst_id, key.scope);
 			}
-
 
 			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
 		}

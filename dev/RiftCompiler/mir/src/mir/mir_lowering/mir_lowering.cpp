@@ -293,6 +293,10 @@ namespace compiler::mir {
 
 			output({ expr_result.begin });
 		}
+
+		void visitVariableStmt(const hc::VariableStmt&) override {
+			throw base::NotYetImplemented("variable");
+		}
 	};
 
 	/**

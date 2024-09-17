@@ -53,7 +53,7 @@ namespace compiler::helios::code {
 			  type_desc(type_desc) {}
 
 		virtual ~Expr()                                                    = default;
-		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
+		virtual void debugPrint(std::ostream& out) const = 0;
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
 
@@ -76,6 +76,8 @@ namespace compiler::helios::code {
 	 * @brief Represents `var/let a : T = ..;` statement in HOUT
 	 */
 	struct VariableStmt final: public Stmt {
+		// @TODO: decide where we handle non-initial value (pre hout/post hout):
+		// currently PST always have it.
 		base::Optional<ElementRef<Expr> > initial_value;
 		tsh::TypeDesc<> type;
 
@@ -169,7 +171,7 @@ namespace compiler::helios::code {
 			  ),
 			  value(value) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
@@ -191,9 +193,9 @@ namespace compiler::helios::code {
 					  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
 				  )
 			  ),
-			  symbol(std::move(symbol)) {}
+			  symbol(symbol) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
@@ -224,7 +226,7 @@ namespace compiler::helios::code {
 			  lhs(std::move(lhs)),
 			  rhs(std::move(rhs)) {}
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 }

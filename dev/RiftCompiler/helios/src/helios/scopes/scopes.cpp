@@ -209,6 +209,10 @@ namespace compiler::helios {
 			auto base_element = key.ref->related_pst_element.value();
 
 			if (base_element->isStatementAggregate()) {
+				std::cerr << "Getting symbols for scope: ";
+				base_element->debugPrint(std::cerr);
+				std::cerr << "\n\n";
+
 				return filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(base_element));
 			} else if (base_element->isStatement()) {
 				SymbolGrabVisitor symbol_grab(ctx, key);
