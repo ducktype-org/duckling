@@ -20,6 +20,7 @@
 #include <printer/stream_printer.hpp>
 
 const std::regex is_string_literal{ R"--(^.*string_literal$)--" };
+const std::regex is_preproc{ R"--(^preproc_.*$)--" };
 
 /**
  * @note Includes are hardcoded to have 3 tokens which is more aligned with c++ definitions
@@ -39,6 +40,12 @@ int count_tokens(TSNode node) {
 	} else if ("preproc_include" == type) {
 		// std::cout << type << "\n";
 		return 3;
+	} else if (std::regex_match(type, is_preproc)) {
+		std::cerr << "Non include preprocessing directives are untested for token counts";
+		// This is an educated guess of how it would be treated
+		int res = 1;
+		for (int child = 0; child < count; child++) res += count_tokens(ts_node_child(node, child));
+		return res;
 	} else {
 		// std::cout << type << "\n";
 		int res = 0;
@@ -52,7 +59,7 @@ struct CppParser {
 	TSParser*         parser;
 	TSTree*           tree;
 
-	CppParser(std::string source_code): source_code(source_code), parser(ts_parser_new()) {
+	CppParser(const std::string& source_code): source_code(source_code), parser(ts_parser_new()) {
 		if (ts_parser_set_language(parser, tree_sitter_cpp()))
 			tree = ts_parser_parse_string(parser, nullptr, source_code.data(), source_code.size());
 	}
