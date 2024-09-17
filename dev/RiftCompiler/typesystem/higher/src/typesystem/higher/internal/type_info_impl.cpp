@@ -7,8 +7,8 @@ namespace tsh::internal {
 	 * @brief Gets the global TypeInfoImpl storage structure.
 	 * @return The global TypeInfoImpl storage structure.
 	 */
-	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes() {
-		static std::vector<base::unique_ptr<const TypeInfoImpl>> type_info_impl_storage{};
+	std::vector<Box<const TypeInfoImpl>>& getTypes() {
+		static std::vector<Box<const TypeInfoImpl>> type_info_impl_storage{};
 		return type_info_impl_storage;
 	}
 

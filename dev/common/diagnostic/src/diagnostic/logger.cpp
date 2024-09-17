@@ -10,10 +10,8 @@ namespace dia {
 
 	void Logger::setImmediatelyDump(bool value) { immediately_dump = value; }
 
-	void Logger::log(
-		base::unique_ptr<Message> message_ptr, const bool detailed, const bool immediately_dump
-	) {
-		if (immediately_dump) {
+	void Logger::log(base::unique_ptr<Message> message_ptr, const bool detailed, const bool dump) {
+		if (dump) {
 			printer::StreamPrinter::print(
 				DiagnosticToUserConverter::toPrinterContents(message_ptr.borrow(), detailed)
 			);

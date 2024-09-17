@@ -136,7 +136,7 @@ clap::Clap getClap() {
 			.build()
 	);
 
-	return clap;
+	return { clap };
 }
 
 /**

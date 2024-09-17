@@ -191,18 +191,18 @@ namespace compiler::mir {
 		Function build() {
 			RIFT_ASSERT(entry_block.has_value(), "Entry block not set");
 
-			std::vector<Block> blocks;
-			for (usize i = 0; i < this->blocks.size(); i++)
-				blocks.emplace_back(this->blocks.getRef(i).value()->build());
+			std::vector<Block> built_blocks;
+			for (usize i = 0; i < blocks.size(); i++)
+				built_blocks.emplace_back(blocks.getRef(i).value()->build());
 
 			return Function{
-				name.value(), std::move(blocks), std::move(local_list), entry_block.value()->getID()
+				name.value(), built_blocks, std::move(local_list), entry_block.value()->getID()
 			};
 		}
 
-		void setName(base::StrId name) {
-			RIFT_ASSERT(not this->name.has_value(), "Name already set");
-			this->name.emplace(name);
+		void setName(base::StrId new_name) {
+			RIFT_ASSERT(not name.has_value(), "Name already set");
+			name.emplace(new_name);
 		}
 
 		[[nodiscard]]

@@ -213,7 +213,7 @@ namespace pst {
 		 */
 		void setFirstToken(dia::SourcePosition pos);
 
-		void setParent(ParserBorrowRef<RiftElement> parent) { this->parent.emplace(parent); }
+		void setParent(ParserBorrowRef<RiftElement> new_parent) { parent.emplace(new_parent); }
 
 	private:
 		PstID id = PstID::next();

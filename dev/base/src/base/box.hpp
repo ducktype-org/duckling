@@ -239,7 +239,7 @@ namespace base {
 	MBox(Box<U>&&) noexcept -> MBox<U>;
 
 	template<class T, class... Args>
-	inline Box<T> box(Args&&... args) {
+	inline Box<T> makeBox(Args&&... args) {
 		return Box<T>(new T(std::forward<Args>(args)...));
 	}
 
@@ -252,7 +252,7 @@ namespace base {
 
 // global namespace export:
 using base::Box;
-using base::box;
 using base::CBox;
+using base::makeBox;
 using base::MBox;
 using base::MCBox;

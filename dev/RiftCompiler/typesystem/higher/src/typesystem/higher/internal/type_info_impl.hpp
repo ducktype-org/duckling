@@ -13,11 +13,11 @@
 #include <helios/symbols/symbols.hpp>
 
 namespace tsh::internal {
-	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
+	std::vector<Box<const TypeInfoImpl>>& getTypes();
 
 	template<std::derived_from<TypeInfoImpl> T>
 	void pushType(base::unique_ptr<T>&& type) {
-		getTypes().emplace_back(base::unique_ptr<TypeInfoImpl>(std::move(type)));
+		getTypes().emplace_back(Box<TypeInfoImpl>(type.release()));
 	}
 
 	/**

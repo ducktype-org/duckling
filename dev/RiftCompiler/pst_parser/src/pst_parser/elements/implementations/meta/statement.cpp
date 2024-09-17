@@ -80,7 +80,10 @@ namespace pst {
 
 		while (as_special == Special::AtSign) {
 			ParserRef<Attribute> attr = Attribute::parse(state);
-			if (attr != nullptr) attributes.push_back(std::move(attr));
+			if (attr != nullptr) {
+				Box<Attribute> boxed{ attr.release() };
+				attributes.push_back(std::move(boxed));
+			}
 			as_special = state[0].asSpecial();
 		}
 		return attributes;
@@ -108,18 +111,19 @@ namespace pst {
 		if (not attributes.empty()) {
 			out << R"("attributes": [)";
 			for (auto& attribute: attributes) {
-				tpc::nullAwareDprint(attribute, out);
+				attribute->debugPrint(out);
 				out << ",";
 			}
 			out << "],";
 		}
 	}
 
-	void Stmt::addAttributes(std::vector<ParserRef<Attribute>>&& additions) {
+	void Stmt::addAttributes(AttrList&& additions) {
 		attributes = std::move(additions);
 
 		using namespace std::views;
-		auto borrow = [](ParserRef<Attribute>& arg) -> Child { return arg.borrow_mut(); };
+		auto borrow
+			= [](Box<Attribute>& arg) -> Child { return base::borrow_ptr<Attribute>(&*arg); };
 		auto borrowed_additions = attributes | transform(borrow);
 
 		sub_elements.insert(

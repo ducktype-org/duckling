@@ -11,6 +11,7 @@
 #include <token_parser_core/automatic.hpp>
 
 #include <base/string_id.hpp>
+#include <base/box.hpp>
 
 #include <unicode/unistr.h>
 
@@ -49,7 +50,7 @@ namespace pst {
 		StmtKind kind;
 
 	protected:
-		using AttrList = std::vector<ParserRef<Attribute>>;
+		using AttrList = std::vector<Box<Attribute>>;
 
 		AttrList attributes;
 
@@ -62,7 +63,7 @@ namespace pst {
 		/**
 		 * @brief Prepends attributes after parsing handling sub elements and position.
 		 */
-		void addAttributes(std::vector<ParserRef<Attribute>>&& additions);
+		void addAttributes(AttrList&& additions);
 
 		void dprintAttributes(std::ostream& out) const;
 
