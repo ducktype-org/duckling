@@ -1,6 +1,9 @@
+# class T { }
+
 fun foo() = {
-	# var a: i32 = 0;
+	var a: i32 = 0;
 	var b: i32 = 0;
+	var c: i32 | f32 = 0;
 	if (0) {
 		# b = 2;
 	}

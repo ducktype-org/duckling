@@ -13,6 +13,14 @@
 
 namespace compiler::helios {
 
+	void printScopeAndParents(ScopeID scope) {
+		std::cerr << scope.customPerfectHash() << " -> ";
+		while (parent(scope)) {
+			scope = parent(scope).value();
+			std::cerr << scope.customPerfectHash() << " -> ";
+		}
+		std::cerr << "\n";
+	}
 
 	struct IMPLEMENT_QUERY(QueryTopLevelEntities, HOUTUnit) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -123,9 +131,30 @@ namespace compiler::helios {
 			void visitVariable(const pst::Variable& stmt) override {
 				// @TODO: do something with mut/immut
 
+
 				// @note: This is a hot-path, that should work *most*
 				// of the times. It will be changed during scope refactor.
-				auto scope_of_symbol = scopeOf(*stmt.getParent().value());
+				auto stmt_parent = stmt.getParent().value();
+				auto stmt_parent_parent = stmt_parent->getParent().value();
+				ScopeID scope_of_symbol = scopeOf(*stmt_parent);
+				// we need the enum...
+				// Code Block or Statement scopes are broken
+				// scope refactor will fix it
+				if (stmt_parent_parent->elementType() == "Code Block or Statement"
+				   and stmt_parent->elementType() == "Code Block") {
+					scope_of_symbol = parent(scope_of_symbol).value();
+				}
+
+				std::cerr << "[[[parent of vars:]]]\n";
+				stmt_parent->debugPrint(std::cerr);
+				std::cerr << "\n-----\n";
+				std::cerr << "[[[vars:]]]\n";
+				stmt.debugPrint(std::cerr);
+				std::cerr << "\n-------------------\n\n";
+				std::cerr << "\nsym scope:\n";
+				printScopeAndParents(scope_of_symbol);
+				std::cerr << "\n-------------------\n\n";
+			
 
 				auto symbol = ctx.query<QuerySymbolOfSTMT>({ scope_of_symbol, PstRef<pst::Stmt>(&stmt) });
 

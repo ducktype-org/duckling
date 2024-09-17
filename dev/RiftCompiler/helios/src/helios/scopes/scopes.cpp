@@ -141,7 +141,7 @@ namespace compiler::helios {
 		 */
 		template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
 		static std::vector<SymID> filterSymbolsFromStmtList(
-			query::Context& ctx, const ScopeID& scope, const StmtList<Stmt>& list
+			query::Context& ctx, ScopeID scope, const StmtList<Stmt>& list
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
@@ -211,7 +211,20 @@ namespace compiler::helios {
 			if (base_element->isStatementAggregate()) {
 				std::cerr << "Getting symbols for scope: ";
 				base_element->debugPrint(std::cerr);
+				if_opt_some(base_element->getParent(), parent) {
+					std::cerr << "\nparent: " << parent->elementType() << "\n";
+				}
 				std::cerr << "\n\n";
+
+				// @TODO: the error here is that this perform double scoping..
+				// Hot-patch:
+				if (base_element->elementType() == "Code Block")
+				if (base_element->getParent().value()->elementType() == "Code Block or Statement") {
+					// hot patch:
+					// code block inside CodeBlockOrStmt has empty scope
+					std::cerr << "hit filter\n";
+					return {};
+				}
 
 				return filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(base_element));
 			} else if (base_element->isStatement()) {

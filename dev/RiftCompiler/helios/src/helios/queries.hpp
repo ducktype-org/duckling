@@ -19,6 +19,8 @@ namespace compiler::helios {
 	// @FUTURE: paraph we will need to add more granularity to HOUT generation for efficient
 	// incremental compilation
 
+	void printScopeAndParents(ScopeID scope);
+
 	/**
 	 * @brief Query FULL HOUTUnit of single module
 	 */
