@@ -46,7 +46,7 @@ namespace lexer {
 		icu::UnicodeString(bracket_type)
 			.append(u_getBidiPairedBracket(bracket_type))
 			.toUTF8String(s);
-		str_id = base::StrId(base::RawView(s.data()));
+		str_id = base::StrID(base::RawView(s.data()));
 	}
 
 	Token Token::makeSentinel(base::RawView view, const dia::SourcePosition& pos) {
@@ -73,7 +73,7 @@ namespace lexer {
 
 	Token
 		Token::makeIdentifier(const base::RawView identifier, const dia::SourcePosition& position) {
-		if (rift_def::strAsKeyword(base::StrId(identifier)) != Keyword::NotAKeyword)
+		if (rift_def::strAsKeyword(base::StrID(identifier)) != Keyword::NotAKeyword)
 			return makeKeyword(identifier, position);
 		return { Type::Identifier, identifier, position };
 	}
@@ -134,7 +134,7 @@ namespace lexer {
 
 	Token::BracketType Token::getBracketType() const { return bracket_type; }
 
-	base::StrId Token::getValue() const { return str_id; }
+	base::StrID Token::getValue() const { return str_id; }
 
 	std::string_view Token::getStrValue() const { return getValue().strView(); }
 
@@ -180,7 +180,7 @@ namespace lexer {
 
 	bool Token::isString() const { return type == Type::String; }
 
-	bool Token::isStr(base::StrId str) const { return getValue() == str; }
+	bool Token::isStr(base::StrID str) const { return getValue() == str; }
 
 	bool Token::is(Type qtype) const { return type == qtype; }
 

@@ -28,7 +28,7 @@ namespace lsp {
 		out << "}";
 	}
 
-	void lspIdentifierPrint(base::StrId value, const dia::SourcePosition& pos, std::ostream& out) {
+	void lspIdentifierPrint(base::StrID value, const dia::SourcePosition& pos, std::ostream& out) {
 		// @TODO: change Name to Identifier
 		out << "{\"Name\":";
 		out << "{\"value\":";
@@ -68,7 +68,7 @@ namespace lsp {
 		out << "\"" << rift_def::keywordToStr(keyword).view().stringView() << "\"";
 	}
 
-	void lsp_print_strId(std::ostream& out, base::StrId id) {
+	void lsp_print_strID(std::ostream& out, base::StrID id) {
 		if (id.isBad())
 			out << "\"BAD_NAME\"";
 		else
@@ -214,7 +214,7 @@ namespace lsp {
 	void LSPExpr::Operator::lsp_print(std::ostream& out) {
 		out << "{\"Operator\": {";
 		out << "\"oper_id\": ";
-		lsp_print_strId(out, oper_id);
+		lsp_print_strID(out, oper_id);
 		out << ",";
 		positionPrint(out, position);
 		out << "}}";
@@ -223,7 +223,7 @@ namespace lsp {
 	void LSPExpr::Identifier::lsp_print(std::ostream& out) {
 		out << "{\"Identifier\": {";
 		out << "\"indent_id\": ";
-		lsp_print_strId(out, indent_id);
+		lsp_print_strID(out, indent_id);
 		out << ",";
 		positionPrint(out, position);
 		out << "}}";
@@ -232,7 +232,7 @@ namespace lsp {
 	void LSPExpr::NumLiteral::lsp_print(std::ostream& out) {
 		out << "{\"NumLiteral\": {";
 		out << "\"num_id\": ";
-		lsp_print_strId(out, num_id);
+		lsp_print_strID(out, num_id);
 		out << ",";
 		positionPrint(out, position);
 		out << "}}";

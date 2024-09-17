@@ -8,7 +8,7 @@ namespace printer {
 	using PrinterContentText = std::string;
 
 	// @TODO: Determine the correct type for enum class Color.
-	using ColorId = int8_t;
+	using ColorID = int8_t;
 	// @IDEA: Add possibility and functionality for custom colors. Reference ANSI escape code 38.
 	/**
 	 * Important to note that these colors are inconsistent across terminals and can have
@@ -24,7 +24,7 @@ namespace printer {
 	 * set, it's the defaultMessageColor from printer.cpp. Do not set message's color to DEFAULT.
 	 * DEFAULT resets color settings to terminal's default.
 	 */
-	enum class Color : ColorId {
+	enum class Color : ColorID {
 		DEFAULT = 0,
 
 		BLACK          = 30,

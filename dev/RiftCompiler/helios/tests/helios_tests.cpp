@@ -227,7 +227,7 @@ private:
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
 		auto test_value = [&](auto str, i64 val) {
-			auto name = base::StrId(str);
+			auto name = base::StrID(str);
 			for (auto& gb: hout.glob_data) {
 				if (gb.original_name == name) {
 					this->assertTrue(gb.value == val, "Bad constant value");
