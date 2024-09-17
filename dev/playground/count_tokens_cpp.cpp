@@ -27,7 +27,7 @@ const std::regex is_string_literal{ R"--(^.*string_literal$)--" };
  * @note Comments are hardcoded to always be 0 tokens which is more aligned with c++ definitions
  */
 int count_tokens(TSNode node) {
-	int         count = ts_node_child_count(node);
+	u32         count = ts_node_child_count(node);
 	std::string type{ ts_node_type(node) };
 	// std::cout << type << "\n";
 	if (ts_node_is_extra(node)) {
@@ -52,10 +52,12 @@ struct CppParser {
 	TSParser*         parser;
 	TSTree*           tree;
 
-	CppParser(std::string source_code): source_code(source_code) {
-		parser = ts_parser_new();
+	CppParser(std::string source_code):
+		  source_code(source_code),
+		  parser(ts_parser_new()),
+		  tree(nullptr) {
 		ts_parser_set_language(parser, tree_sitter_cpp());
-		tree = ts_parser_parse_string(parser, NULL, source_code.data(), source_code.size());
+		tree = ts_parser_parse_string(parser, nullptr, source_code.data(), source_code.size());
 	}
 
 	int getTokenCount() {
@@ -90,7 +92,7 @@ int main(int argc, const char** argv) {
 		return 0;
 	}
 
-	fs::FilePath      path          = input.getPositional<fs::FilePath>(0);
+	auto              path          = input.getPositional<fs::FilePath>(0);
 	auto              file_contents = path.getContent();
 	const std::string source_code   = file_contents.view().stdString();
 

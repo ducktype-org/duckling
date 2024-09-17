@@ -7,7 +7,6 @@ function(BuildTreeSitter)
 	cmake_parse_arguments(BuildTreeSitter "" "${oneValueArgs}" "" ${ARGN})
 	
 	set(DEPS_DIR ${PROJECT_BINARY_DIR}/_deps)
-	set(DOWNLOAD_DIR ${DEPS_DIR}/download)
 
 	set(TS_DIR ${DEPS_DIR}/tree-sitter-src)
 	set(TS_CPP_DIR ${DEPS_DIR}/tree-sitter-cpp-src)
