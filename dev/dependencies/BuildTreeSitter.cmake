@@ -1,6 +1,6 @@
 # Downloads and sets up tree sitter parser for usage with c++
 
-include(ExternalProject)
+include(FetchContent)
 
 function(BuildTreeSitter)
 	set(oneValueArgs TS_URL TS_CPP_URL)
@@ -18,40 +18,46 @@ function(BuildTreeSitter)
 	set(TS_INCLUDE ${TS_DIR}/lib/include)
 	set(TS_CPP_INCLUDE ${TS_CPP_DIR}/bindings/c)
 
-	ExternalProject_Add(
-		external_tree_sitter
-		DOWNLOAD_DIR ${DOWNLOAD_DIR}
+	FetchContent_Declare(
+		fetch_tree_sitter
 		URL ${BuildTreeSitter_TS_URL}
 		SOURCE_DIR ${TS_DIR}
-		BUILD_IN_SOURCE TRUE
-		CONFIGURE_COMMAND ""
-		BUILD_COMMAND "make"
-		BUILD_BYPRODUCTS ${TS_LIB}
-		INSTALL_COMMAND ""
 	)
 
-	ExternalProject_Add(
-		external_tree_sitter_cpp
-		DOWNLOAD_DIR ${DOWNLOAD_DIR}
+	FetchContent_Declare(
+		fetch_tree_sitter_cpp
 		URL ${BuildTreeSitter_TS_CPP_URL}
 		SOURCE_DIR ${TS_CPP_DIR}
-		BUILD_IN_SOURCE TRUE
-		CONFIGURE_COMMAND ""
-		BUILD_COMMAND "make"
-		BUILD_BYPRODUCTS ${TS_CPP_LIB}
-		INSTALL_COMMAND ""
+	)
+
+	FetchContent_MakeAvailable(fetch_tree_sitter fetch_tree_sitter_cpp)
+
+	add_custom_target(
+		build_tree_sitter
+		BYPRODUCTS ${TS_LIB}
+		COMMAND ${CMAKE_MAKE_PROGRAM} --quiet
+		WORKING_DIRECTORY ${TS_DIR}
+		VERBATIM
+	)
+
+	add_custom_target(
+		build_tree_sitter_cpp
+		BYPRODUCTS ${TS_CPP_LIB}
+		COMMAND ${CMAKE_MAKE_PROGRAM} --quiet
+		WORKING_DIRECTORY ${TS_CPP_DIR}
+		VERBATIM
 	)
 
 	add_library(tree_sitter STATIC IMPORTED GLOBAL)
+	add_dependencies(tree_sitter build_tree_sitter)
 	set_target_properties(tree_sitter PROPERTIES IMPORTED_LOCATION
 		${TS_LIB})
-	add_dependencies(tree_sitter external_tree_sitter)
 	target_include_directories(tree_sitter INTERFACE ${TS_INCLUDE})
 
 	add_library(tree_sitter_cpp STATIC IMPORTED GLOBAL)
+	add_dependencies(tree_sitter_cpp build_tree_sitter_cpp)
 	set_target_properties(tree_sitter_cpp PROPERTIES IMPORTED_LOCATION
 		${TS_CPP_LIB})
-	add_dependencies(tree_sitter_cpp external_tree_sitter_cpp)
 	target_include_directories(tree_sitter_cpp INTERFACE ${TS_CPP_INCLUDE})
 
 	add_library(TreeSitter INTERFACE)
