@@ -121,14 +121,26 @@ namespace compiler::helios {
 			}
 
 			void visitVariable(const pst::Variable& stmt) override {
-				// @TODO: do something with if const
+				// @TODO: do something with mut/immut
 
-				// here scope should be easier to get...
-				// @TODO: make some refactor that it is
+				// @note: This is a hot-path, that should work *most*
+				// of the times. It will be changed during scope refactor.
+				auto scope_of_symbol = scopeOf(*stmt.getParent().value());
 
-				// Here:
-				// * get scope just by "scopeOf(stmt.parent)"
-				// * get sym
+				auto symbol = ctx.query<QuerySymbolOfSTMT>({ scope_of_symbol, PstRef<pst::Stmt>(&stmt) });
+
+				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol);
+
+				// for now initial value is assumed to always be present:
+				// this will probably change:
+				auto initial_value = ctx.query<QueryHoutOfExpr>({ stmt.getValue() });
+
+				output(code::VariableStmt(
+					scope_of_symbol,
+					std::move(initial_value),
+					symbol_type,
+					symbol
+				));
 			}
 		};
 
