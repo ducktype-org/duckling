@@ -216,11 +216,12 @@ namespace compiler::helios {
 				}
 				std::cerr << "\n\n";
 
-				// @TODO: the error here is that this perform double scoping..
+				// @TODO: the error here is that this perform double scoping
+				// for CodeBlocks inside CodeBlocksOrStmt
 				// Hot-patch:
 				if (base_element->elementType() == "Code Block")
 				if (base_element->getParent().value()->elementType() == "Code Block or Statement") {
-					// hot patch:
+					// hot patch currently does:
 					// code block inside CodeBlockOrStmt has empty scope
 					std::cerr << "hit filter\n";
 					return {};

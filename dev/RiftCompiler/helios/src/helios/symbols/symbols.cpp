@@ -399,6 +399,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryDealias, SymbolList) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			// @TODO: usings?
 			if (kind(key) != SymbolKind::Alias) return { key };
 
 			auto&& alias_definition
@@ -782,7 +783,10 @@ namespace compiler::helios {
 																	  true,
 																  })
 					          .leaves.back();
-					return ctx.query<QueryTypeFromDefinition>(symbol);
+					// very simple dealias, that should
+					// ultimately be replaced by type expr comp-time eval:
+					auto dealias_sym = ctx.query<QueryDealias>({symbol}).back();
+					return ctx.query<QueryTypeFromDefinition>(dealias_sym);
 				}
 				return it->second;
 			}
