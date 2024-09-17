@@ -15,6 +15,7 @@
 #include <tree_sitter/api.h>
 #include <tree-sitter-cpp.h>
 #include <regex>
+#include <base/exceptions.hpp>
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
@@ -62,6 +63,8 @@ struct CppParser {
 	CppParser(const std::string& source_code): source_code(source_code), parser(ts_parser_new()) {
 		if (ts_parser_set_language(parser, tree_sitter_cpp()))
 			tree = ts_parser_parse_string(parser, nullptr, source_code.data(), source_code.size());
+		else
+			RIFT_PANIC("Failed to set parser language.");
 	}
 
 	int getTokenCount() {
