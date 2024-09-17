@@ -55,8 +55,8 @@ int main(int argc, const char** argv) {
 		return 0;
 	}
 
-	fs::FilePath path = input.getPositional<fs::FilePath>(0);
-	auto         file = tokenizer::makeTokenFile(path);
+	auto path = input.getPositional<fs::FilePath>(0);
+	auto file = tokenizer::makeTokenFile(path);
 
 	if (!file->tokenize()) {
 		std::cout << -1;

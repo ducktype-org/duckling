@@ -52,12 +52,9 @@ struct CppParser {
 	TSParser*         parser;
 	TSTree*           tree;
 
-	CppParser(std::string source_code):
-		  source_code(source_code),
-		  parser(ts_parser_new()),
-		  tree(nullptr) {
-		ts_parser_set_language(parser, tree_sitter_cpp());
-		tree = ts_parser_parse_string(parser, nullptr, source_code.data(), source_code.size());
+	CppParser(std::string source_code): source_code(source_code), parser(ts_parser_new()) {
+		if (ts_parser_set_language(parser, tree_sitter_cpp()))
+			tree = ts_parser_parse_string(parser, nullptr, source_code.data(), source_code.size());
 	}
 
 	int getTokenCount() {
