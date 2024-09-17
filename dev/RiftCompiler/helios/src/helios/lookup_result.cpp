@@ -2,6 +2,9 @@
 #include <base/exceptions.hpp>
 
 namespace compiler::helios {
+
+	NestedResult::NestedResult(SymID node, LookupResult inner): node(node), inner(std::move(inner)) {}
+
 	auto LookupResult::isEmpty() const -> bool {
 		if (!leaves.empty()) return false;
 		for (auto&& [node, inner]: children)

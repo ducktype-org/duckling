@@ -82,6 +82,8 @@ namespace compiler::helios {
 	struct NestedResult final {
 		SymID        node;  ///< node should always be alias-like of using-like thing
 		LookupResult inner;
+
+		NestedResult(SymID node, LookupResult inner);
 	};
 
 	// @TODO: do we want ChainLookupResult for stuff like aliases, usings etc?

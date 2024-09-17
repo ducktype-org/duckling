@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "unique_pointer.hpp"
 #include "maps.hpp"
 
 namespace base {
