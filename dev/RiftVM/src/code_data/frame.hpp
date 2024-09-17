@@ -46,7 +46,7 @@ namespace vm {
 		StandardFunctionArgs next_args;
 		StandardFunctionArgs args;
 
-		std::vector<BlockId> block_id_stack;
+		std::vector<BlockID> block_id_stack;
 		u64                  local_stack_head;
 	};
 }

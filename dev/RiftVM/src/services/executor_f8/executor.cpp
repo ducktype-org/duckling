@@ -53,7 +53,7 @@ namespace vm {
 			.next_args   = { 0, memory.nullPtr() },
 			.args        = { 0, memory.nullPtr() },
 
-			.block_id_stack   = std::vector<BlockId>(),
+			.block_id_stack   = std::vector<BlockID>(),
 			.local_stack_head = 0,
 		};
 	}
@@ -344,7 +344,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_init_type(OPFUN_ARGS) {
 		{
-			auto             type      = executor.types.getType(vm::TypeId(instr->arg0));
+			auto             type      = executor.types.getType(vm::TypeID(instr->arg0));
 			auto             type_size = type->getSize();
 			base::ModRawView data(&local_stack[frame->local_stack_head], type_size);
 			frame->local_stack_head += type_size;
@@ -388,10 +388,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_alloc_lptr_type(OPFUN_ARGS) {
 		{
-			auto type = executor.types.getType(vm::TypeId(instr->arg1));
+			auto type = executor.types.getType(vm::TypeID(instr->arg1));
 			// This is disasbled, because we don't want to pay performance for initializing it
 			// NOLINTBEGIN(cppcoreguidelines-pro-type-member-init)
-			BlockId block;
+			BlockID block;
 			// NOLINTEND(cppcoreguidelines-pro-type-member-init)
 			if (type->getKind() == vm::Type::Kind::StaticTable) {
 				// @TODO: As noted in type.hpp, interface used below may change

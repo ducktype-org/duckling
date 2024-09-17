@@ -10,13 +10,13 @@ namespace compiler::frontend {
 	/*******************
 	 * QueryModuleTree *
 	 *******************/
-	struct IMPLEMENT_QUERY(QueryModuleTree, compiler::frontend::ModuleId) {
+	struct IMPLEMENT_QUERY(QueryModuleTree, compiler::frontend::ModuleID) {
 		inline static base::HashMap<QKey, query::CacheEntry<QResult>> cache{};
 
 		static auto provide(Context&, QKey key) -> PResult {
 			std::shared_ptr<ModuleTree> module_tree = ModuleTree::create(key);
 
-			return module_tree->getId();
+			return module_tree->getID();
 		}
 
 		static auto load(QKey key) -> LoadResult {
@@ -34,8 +34,8 @@ namespace compiler::frontend {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleTree);
 
-	base::Optional<ModuleId> getRelativeModule(
-		query::Context& ctx, ModuleId from, const std::vector<base::StrId>& path
+	base::Optional<ModuleID> getRelativeModule(
+		query::Context& ctx, ModuleID from, const std::vector<base::StrID>& path
 	) {
 		RIFT_ASSERT(path.size() >= 1, "Empty module path");
 
@@ -45,7 +45,7 @@ namespace compiler::frontend {
 		// * check children
 		// * check ancestors
 
-		base::Optional<ModuleId> current_module;
+		base::Optional<ModuleID> current_module;
 
 		for (const auto& [name, submodule]: ctx.query<QuerySubmodules>(from)) {
 			if (name == path.at(0)) {
@@ -54,7 +54,7 @@ namespace compiler::frontend {
 			}
 		}
 		if (not current_module.has_value()) {
-			base::Optional<ModuleId> ancestor = ctx.query<QueryParentModule>(from);
+			base::Optional<ModuleID> ancestor = ctx.query<QueryParentModule>(from);
 			while (ancestor) {
 				if (frontend::moduleName(ancestor.value()) == path.at(0)) {
 					current_module = ancestor.value();

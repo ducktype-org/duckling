@@ -67,7 +67,7 @@ namespace rift_def {
 		RIFT_SIMPLE_INIT_GUARD_END;
 	}
 
-	i64 operatorPrecedence([[maybe_unused]] base::StrId operator_, OperatorType operator_type) {
+	i64 operatorPrecedence([[maybe_unused]] base::StrID operator_, OperatorType operator_type) {
 		RIFT_ASSERT(operator_.isGood(), "Bad string passed to operator precedence");
 
 		if (precedence.contains({ strAsOperator(operator_), operator_type }))
@@ -86,7 +86,7 @@ namespace rift_def {
 		return operatorPrecedence(operatorToStr(operator_), operator_type);
 	}
 
-	OperatorAssociativity operatorAssociativity(base::StrId operator_, OperatorType operator_type) {
+	OperatorAssociativity operatorAssociativity(base::StrID operator_, OperatorType operator_type) {
 		RIFT_ASSERT(operator_.isGood(), "Bad string passed to operator precedence");
 
 		if (associativity.contains({ strAsOperator(operator_), operator_type }))

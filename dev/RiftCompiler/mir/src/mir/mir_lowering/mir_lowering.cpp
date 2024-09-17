@@ -182,7 +182,7 @@ namespace compiler::mir {
 	 */
 	struct FunctionBuilder final {
 	private:
-		base::Optional<base::StrId>      name;
+		base::Optional<base::StrID>      name;
 		base::StableVector<BlockBuilder> blocks;
 		base::Optional<BlockBuilderRef>  entry_block;
 		base::StableVector<MirLocal>     local_list;
@@ -200,7 +200,7 @@ namespace compiler::mir {
 			};
 		}
 
-		void setName(base::StrId new_name) {
+		void setName(base::StrID new_name) {
 			RIFT_ASSERT(not name.has_value(), "Name already set");
 			name.emplace(new_name);
 		}

@@ -34,7 +34,7 @@ namespace vm::api {
 		};
 
 		struct Block {
-			BlockId block_id;
+			BlockID block_id;
 		};
 
 		struct Memory {

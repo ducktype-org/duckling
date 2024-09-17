@@ -22,14 +22,14 @@ namespace compiler::frontend {
 	 * @brief Structure holding FileID within SourceFile
 	 * @todo: change to STRONG_TYPEDEF_ID
 	 */
-	struct FileId {
+	struct FileID {
 		[[nodiscard]]
 		u64 asInt() const {
 			return id;
 		}
 
-		static FileId nextID();
-		bool          operator==(const FileId&) const = default;
+		static FileID nextID();
+		bool          operator==(const FileID&) const = default;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
@@ -38,30 +38,30 @@ namespace compiler::frontend {
 
 	private:
 		u64 id;
-		FileId() = default;
+		FileID() = default;
 	};
 
-	STRONG_TYPEDEF_ID(ModuleId);
+	STRONG_TYPEDEF_ID(ModuleID);
 
 	// @TODO: move to STRONG_TYPEDEF_ID?
-	inline base::HashT customPerfectHash(ModuleId id) { return id.asInt(); }
+	inline base::HashT customPerfectHash(ModuleID id) { return id.asInt(); }
 
 	/**
 	 * @brief Structure holding SourceFile within Module Tree
 	 */
 	struct SourceFile {
 		fs::FilePath               path;
-		base::StrId                rift_file_name;
-		FileId                     id;
+		base::StrID                rift_file_name;
+		FileID                     id;
 		base::Optional<pst::PST<>> parse_tree;
 
 		/**
 		 * @brief Module the file belongs to
 		 * @note: in the future there might be module-less files
 		 */
-		ModuleId linked_module;
+		ModuleID linked_module;
 
-		SourceFile(fs::FilePath, ModuleId linked_module);
+		SourceFile(fs::FilePath, ModuleID linked_module);
 
 		/**
 		 * @brief Lazily parses the source file and returns PST
@@ -169,7 +169,7 @@ namespace compiler::frontend {
 		 * @return base::HashMap that maps a name of the submodule to the pointer to the submodule.
 		 */
 		[[nodiscard]]
-		const base::HashMap<base::StrId, std::shared_ptr<ModuleTree>>& getSubmodules() const;
+		const base::HashMap<base::StrID, std::shared_ptr<ModuleTree>>& getSubmodules() const;
 
 		/**
 		 * Accesses all the other files that are located inside the module.
@@ -177,14 +177,14 @@ namespace compiler::frontend {
 		 * with files with this extension.
 		 */
 		[[nodiscard]]
-		const base::HashMap<base::StrId, std::vector<fs::FilePath>>& getOtherFiles() const;
+		const base::HashMap<base::StrID, std::vector<fs::FilePath>>& getOtherFiles() const;
 
 		/**
 		 * Parses the name of the module.
-		 * @return base::StrId with the name. `A.rmf -> A`, `/.../module/ -> module`.
+		 * @return base::StrID with the name. `A.rmf -> A`, `/.../module/ -> module`.
 		 */
 		[[nodiscard]]
-		base::StrId getName() const;
+		base::StrID getName() const;
 
 		/**
 		 * Creates a nice, human-readable representation of this module tree.
@@ -195,10 +195,10 @@ namespace compiler::frontend {
 
 		/**
 		 * Fetches the id of the module.
-		 * @return compiler::frontend::ModuleId.
+		 * @return compiler::frontend::ModuleID.
 		 */
 		[[nodiscard]]
-		ModuleId getId() const;
+		ModuleID getID() const;
 
 	private:
 		ModuleTree();
@@ -223,9 +223,9 @@ namespace compiler::frontend {
 		);
 
 		/**
-		 * Id of the current root Module.
+		 * ID of the current root Module.
 		 */
-		ModuleId id;
+		ModuleID id;
 
 		/**
 		 * A pointer to the module's parent.
@@ -253,23 +253,23 @@ namespace compiler::frontend {
 		/**
 		 * Other direct submodules. Maps module's name to a pointer to it.
 		 */
-		base::HashMap<base::StrId, std::shared_ptr<ModuleTree>> m_submodules;
+		base::HashMap<base::StrID, std::shared_ptr<ModuleTree>> m_submodules;
 		/**
 		 * All other files inside this module. Indexed by their extension.
 		 */
-		base::HashMap<base::StrId, std::vector<fs::FilePath>> m_other_files;
+		base::HashMap<base::StrID, std::vector<fs::FilePath>> m_other_files;
 	};
 }
 
 // std::hash functor for ModuleID and FileID:
 namespace std {
 	template<>
-	struct hash<compiler::frontend::ModuleId> {
-		usize operator()(const compiler::frontend::ModuleId& k) const { return k.asInt(); }
+	struct hash<compiler::frontend::ModuleID> {
+		usize operator()(const compiler::frontend::ModuleID& k) const { return k.asInt(); }
 	};
 
 	template<>
-	struct hash<compiler::frontend::FileId> {
-		usize operator()(const compiler::frontend::FileId& k) const { return k.asInt(); }
+	struct hash<compiler::frontend::FileID> {
+		usize operator()(const compiler::frontend::FileID& k) const { return k.asInt(); }
 	};
 }

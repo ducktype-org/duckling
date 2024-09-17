@@ -10,7 +10,7 @@ namespace vm {
 			if (offset == 0) {
 				if (searched->getSize() > type->getSize())
 					return false;
-				else if (searched->getId() == type->getId())
+				else if (searched->getID() == type->getID())
 					return true;
 			}
 			switch (type->getKind()) {
