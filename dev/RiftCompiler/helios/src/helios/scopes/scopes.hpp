@@ -40,7 +40,7 @@ namespace compiler::helios {
 	struct KeyOf_QueryPrimaryCodeScopeFor {
 		/**
 		 * @brief Element for which the scope is created.
-		 * @note: scopes of various elements behave differently
+		 * @note: scopes of various elements behave differently 
 		 * Scope behaviour for:
 		 * * StatementAggregates -- a scope of aggregated statements
 		 * * Function -- a scope of function arguments (@todo: function scopes are currently empty)
@@ -48,6 +48,10 @@ namespace compiler::helios {
 		 * * Classes -- scope containing class fields
 		 * * Expr -- empty Scope
 		 * * Return -- empty Scope
+		 * * Variables -- empty Scope
+		 *
+		 * @todo: once scope refactor will be introduced, most "empty scope"
+		 * stuff will be no longer needed.
 		 */
 		PstRef<pst::RiftElement> base_element;
 

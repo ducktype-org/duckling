@@ -195,6 +195,10 @@ namespace compiler::helios {
 			void visitReturn(const pst::Return&) override {
 				this->out.emplace(std::vector<SymID>());
 			}
+
+			void visitVariable(const pst::Variable&) override {
+				this->out.emplace(std::vector<SymID>());
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
