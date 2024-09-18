@@ -1,7 +1,7 @@
 class T { }
 
 fun foo() = {
-	var a: i32 = 0;
+	var a: i32 = abc;
 	var b: i32 = 0;
 	var c: i32 | f32 = 0;
 	var d: hmm = 0;
@@ -12,3 +12,5 @@ fun foo() = {
 	}
 	return a;
 }
+
+const abc: i32 = 123;

@@ -278,14 +278,6 @@ private:
 
 		ASSERT_EQUAL(hout.functions.size(), 1);
 
-		// @TODO: there is no sane way of accessing variables from HOUT functions
-		// to make some assertions on them.
-		// For now this test mostly checks that HELIOS does not hit
-		// any of its own panics or asserts (which happened a lot during coding of first hout variables).
-		// In the future some interface should be added that would allow for better testing of this.
-		// For example:
-		// * internal way of looking up inside functions (slight more complicated but potentially better).
-
 		auto& function = hout.functions.at(0);
 		
 		ASSERT_EQUAL(function.original_name, "foo");
@@ -299,12 +291,40 @@ private:
 			return dynamic_cast<const compiler::helios::code::VariableStmt&>(*statements.at(i).get());
 		};
 
-		{
-			auto& stmt_0 = get_var_ref(0);
-			ASSERT_EQUAL(compiler::helios::name(stmt_0.helios_symbol), "a");
+		auto i32_type = query::entryPoint<tsh::QueryIntegralType>(32);
+		auto f32_type = query::entryPoint<tsh::QueryFloatType>(32);
+		auto i32_or_f32 = query::entryPoint<tsh::QueryVariantType>({ { i32_type, f32_type } });
 
+		{
+			auto& var = get_var_ref(0);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "a");
+			ASSERT_EQUAL(var.type.getType(), i32_type);
 		}
 
+		{
+			auto& var = get_var_ref(1);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "b");
+			ASSERT_EQUAL(var.type.getType(), i32_type);
+		}
+
+		{
+			auto& var = get_var_ref(2);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
+			ASSERT_EQUAL(var.type.getType(), i32_or_f32);
+		}
+
+		{
+			auto& var = get_var_ref(3);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "d");
+			ASSERT_EQUAL(var.type.getType().getKind(), tsh::Kind::Class);
+		}
+
+		{
+			auto& if_stmt = dynamic_cast<const compiler::helios::code::IfStmt&>(*statements.at(4).get());
+			auto& var = dynamic_cast<const compiler::helios::code::VariableStmt&>(*if_stmt.body.statements.at(0).get());
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "x");
+			ASSERT_EQUAL(var.type.getType(), i32_type);
+		}
 
 	}
 };
