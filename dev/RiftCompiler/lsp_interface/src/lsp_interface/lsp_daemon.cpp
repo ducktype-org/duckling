@@ -2,7 +2,6 @@
  * @file lsp_daemon.cpp
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
-#pragma once
 #include <iostream>
 #include <iomanip>
 #include <crow.h>
