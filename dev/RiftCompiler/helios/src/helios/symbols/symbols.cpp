@@ -273,7 +273,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query extension for looking-up chain of names
 	 */
-	std::expected<SymbolList, std::variant<errors::AmbiguityError, QueryLookup_Result::error_type>>
+	errors::HResult<SymbolList, errors::AmbiguityError, QueryLookup_Result::error_type>
 		lookupChain(query::Context& ctx, const LookupChainKey& key) {
 		RIFT_ASSERT(!key.names.empty(), "lookupDotted received zero names");
 
@@ -287,12 +287,12 @@ namespace compiler::helios {
 
 		if (not first.isSingle()) {
 			// @TODO: error in state
-			return std::unexpected(errors::AmbiguityError;
+			return errors::HUnexpected(errors::AmbiguityError());
 		}
 
-		if (key.names.size() == 1) return first.getAsSingle();
-
 		UNPACK_RESULT(first.getAsSingle(), result);
+
+		if (key.names.size() == 1) return result;
 
 		for (usize i = 1; i < key.names.size(); i++) {
 			UNPACK_RESULT(
@@ -303,7 +303,7 @@ namespace compiler::helios {
 
 			if (!append_res_value.isSingle()) {
 				// @TODO: error in state
-				return std::unexpected(errors::AmbiguityError;
+				return errors::HUnexpected(errors::AmbiguityError());
 			}
 
 			UNPACK_RESULT(append_res_value.getAsSingle(), single_append_res);
@@ -373,7 +373,7 @@ namespace compiler::helios {
 	}
 
 	struct
-		IMPLEMENT_QUERY(QueryDealias, std::expected<SymbolList COMMA QueryLookup_Result::error_type>) {
+		IMPLEMENT_QUERY(QueryDealias, errors::HResult<SymbolList COMMA QueryLookup_Result::error_type>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			if (kind(key) != SymbolKind::Alias) return SymbolList{ key };
 
@@ -406,7 +406,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	std::expected<i32, errors::ExpressionParsingError> getPriority(const rpn::Operator& op) {
+	errors::HResult<i32, errors::ExpressionParsingError> getPriority(const rpn::Operator& op) {
 		switch (static_cast<char>(op.oper_id.view()[0])) {
 		case '+':
 		case '-':
@@ -421,9 +421,7 @@ namespace compiler::helios {
 		case '.':
 			return 5;
 		default:
-			return std::unexpected(
-				errors::ExpressionParsingError;
-			);
+			return errors::HUnexpected(errors::ExpressionParsingError());
 		}
 	}
 
@@ -469,7 +467,7 @@ namespace compiler::helios {
 					rpn.emplace_back(TupleConstructor{ tuple.expr.size() });
 				}
 				variant_default {
-					return std::unexpected(errors::ExpressionParsingError;
+					return errors::HUnexpected(errors::ExpressionParsingError());
 					;
 				}
 			}
@@ -519,13 +517,9 @@ namespace compiler::helios {
 				throw base::NotYetImplemented("Value of KeywordValue is not yet implemented");
 			}
 			variant_case(rpn::NumValue, literal) { return std::stoi(literal.num_id.str()); }
-			variant_default {
-				return std::unexpected(errors::ExpressionParsingError;
-				;
-			}
+			variant_default { return errors::HUnexpected(errors::ExpressionParsingError()); }
 		}
-		return std::unexpected(errors::ExpressionParsingError;
-		;
+		return errors::HUnexpected(errors::ExpressionParsingError());
 	}
 
 	namespace {
@@ -608,10 +602,7 @@ namespace compiler::helios {
 					}
 					st.emplace(tuple_type);
 				}
-				variant_default {
-					return std::unexpected(errors::ExpressionParsingError;
-					;
-				}
+				variant_default { return errors::HUnexpected(errors::ExpressionParsingError()); }
 			}
 		}
 		RIFT_ASSERT(st.size() == 1, "Expression stack should have 1 element");
@@ -661,10 +652,7 @@ namespace compiler::helios {
 					);
 				}
 			}
-			HELIOS_PANIC(
-				errors::ExpressionParsingError,
-				"Something strange has happended during .operator evaluation..."
-			);
+			return errors::HUnexpected(errors::ExpressionParsingError());
 		}
 		if (op.oper_id == "|") {
 			// @TODO: Check if A and B are types.

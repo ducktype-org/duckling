@@ -12,10 +12,10 @@ namespace compiler::helios {
 
 	bool LookupResult::isSingle() const { return symbolCount() == 1; }
 
-	std::expected<SymbolList, std::variant<errors::AmbiguityError, errors::SymbolNotFoundError>>
+	errors::HResult<SymbolList, errors::AmbiguityError, errors::SymbolNotFoundError>
 		LookupResult::getAsSingle() const {
-		if (!!isEmpty()) return std::unexpected(errors::SymbolNotFoundError());
-		if (!isSingle()) return std::unexpected(errors::AmbiguityError());
+		if (isEmpty()) return errors::HUnexpected(errors::SymbolNotFoundError());
+		if (!isSingle()) return errors::HUnexpected(errors::AmbiguityError());
 
 		if (!leaves.empty()) return SymbolList{ leaves[0] };
 

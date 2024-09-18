@@ -508,8 +508,8 @@ namespace tsh {
 		SETUP_TYPE_WITH_BASE(ClassInfo, TypeInfo)
 
 		template<class T>
-		using QueryClass_Result
-			= std::expected<T, compiler::helios::QueryClassSymbolData_Result::error_type>;
+		using QueryClass_Result = compiler::helios::errors::
+			HResult<T, compiler::helios::QueryClassSymbolData_Result::error_type>;
 
 		/**
 		 * Gets the SymID of the class type.

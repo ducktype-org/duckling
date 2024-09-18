@@ -12,7 +12,6 @@
 
 #include <vector>
 #include <query_framework/query_int.hpp>
-#include <expected>
 #include <base/variant.hpp>
 
 namespace compiler::helios {
@@ -58,7 +57,7 @@ namespace compiler::helios {
 		 * @return A SymbolList representing a path to the symbol.
 		 */
 		[[nodiscard]]
-		std::expected<SymbolList, std::variant<errors::AmbiguityError, errors::SymbolNotFoundError>>
+		errors::HResult<SymbolList, errors::AmbiguityError, errors::SymbolNotFoundError>
 			 getAsSingle() const;
 		void insert(LookupResult other);
 

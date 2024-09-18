@@ -15,7 +15,6 @@
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>
-#include <expected>
 #include <typesystem/higher/type_info.hpp>
 
 namespace compiler::helios {
@@ -125,11 +124,11 @@ namespace compiler::helios {
 	/**
 	 * A query that returns an "absolute path" to the symbol without aliases.
 	 */
-	DECLARE_QUERY(QueryDealias, SymID, const std::expected<SymbolList COMMA QueryLookup_Result::error_type>&);
+	DECLARE_QUERY(QueryDealias, SymID, const errors::HResult<SymbolList COMMA QueryLookup_Result::error_type>&);
 
-	using PotentialParsingErrors
-		= std::variant<QueryLookup_Result::error_type, errors::ExpressionParsingError>;
-	using QueryConstValueOf_Result = std::expected<i32, PotentialParsingErrors>;
+	using PotentialParsingErrors = errors::
+		unique_types_variant_t<QueryLookup_Result::error_type, errors::ExpressionParsingError>;
+	using QueryConstValueOf_Result = errors::HResult<i32, PotentialParsingErrors>;
 	/**
 	 * Calculates a value of a constant.
 	 */
@@ -237,7 +236,8 @@ namespace compiler::helios {
 			ScopeID expr_scope;
 		};
 
-		using RPNEvaluation_Result = std::expected<ExprElem, QueryConstValueOf_Result::error_type>;
+		using RPNEvaluation_Result
+			= errors::HResult<ExprElem, QueryConstValueOf_Result::error_type>;
 
 		/**
 		 * @brief RPN (postfix) expression with scope produced by makeRPN().
@@ -254,7 +254,7 @@ namespace compiler::helios {
 			ScopeID scope;
 		};
 
-		using MakeRPN_Result = std::expected<RPNExpr, errors::ExpressionParsingError>;
+		using MakeRPN_Result = errors::HResult<RPNExpr, errors::ExpressionParsingError>;
 
 		/**
 		 * @brief Parses an expression from PST into RPN.
@@ -312,7 +312,7 @@ namespace compiler::helios {
 		RPNEvaluation_Result evalExpr(query::Context&, const RPNExpr&);
 	}
 
-	using ParseTypeFromExpr_Result = std::expected<tsh::TypeInfo, PotentialParsingErrors>;
+	using ParseTypeFromExpr_Result = errors::HResult<tsh::TypeInfo, PotentialParsingErrors>;
 
 	/**
 	 * @brief Query type of the symbol.
@@ -364,7 +364,7 @@ namespace compiler::helios {
 		std::vector<tsh::TypeInfo> implements;
 	};
 
-	using QueryClassSymbolData_Result = std::expected<ClassSymbolData, PotentialParsingErrors>;
+	using QueryClassSymbolData_Result = errors::HResult<ClassSymbolData, PotentialParsingErrors>;
 
 	/**
 	 * @brief Query all the information about a class definition.
@@ -381,5 +381,5 @@ namespace compiler::helios {
 	 * @brief Return Expr tree of HOUT of a expression assigned to a constant.
 	 * @note This query is temporary and is used for testing only.
 	 */
-	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, std::expected<base::borrow_ptr<const code::Expr> COMMA rpn::MakeRPN_Result::error_type>);
+	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, errors::HResult<base::borrow_ptr<const code::Expr> COMMA rpn::MakeRPN_Result::error_type>);
 }

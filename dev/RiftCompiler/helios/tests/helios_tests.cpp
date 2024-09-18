@@ -351,20 +351,20 @@ private:
 					  unique_types<int, int, float>::types,
 					  unique_types<int>::types>);
 
-		static_assert(std::is_same_v<unique_types_variant<int>, std::variant<int>>);
-		static_assert(std::is_same_v<unique_types_variant<int, int>, std::variant<int>>);
-		static_assert(!std::is_same_v<unique_types_variant<int, int, float>, std::variant<int>>);
+		static_assert(std::is_same_v<unique_types_variant_t<int>, std::variant<int>>);
+		static_assert(std::is_same_v<unique_types_variant_t<int, int>, std::variant<int>>);
+		static_assert(!std::is_same_v<unique_types_variant_t<int, int, float>, std::variant<int>>);
 		static_assert(std::is_same_v<
-					  unique_types_variant<int, int, float>,
+					  unique_types_variant_t<int, int, float>,
 					  std::variant<int, float>>);
 		static_assert(std::is_same_v<
-					  unique_types_variant<int, int, float, int, int>,
+					  unique_types_variant_t<int, int, float, int, int>,
 					  std::variant<float, int>>);
 		static_assert(std::is_same_v<
-					  unique_types_variant<int, int, float, std::variant<int, int>>,
+					  unique_types_variant_t<int, int, float, std::variant<int, int>>,
 					  std::variant<float, int>>);
 		static_assert(std::is_same_v<
-					  unique_types_variant<
+					  unique_types_variant_t<
 						  std::variant<int, float, int>,
 						  int,
 						  int,
@@ -378,7 +378,7 @@ private:
 
 		std::variant<std::variant<int, float>, std::variant<int, A>> y;
 
-		unique_types_variant<decltype(y)> y1 = 1;
+		unique_types_variant_t<decltype(y)> y1 = 1;
 
 		variant_match(y1) {
 			variant_case(int, val) ASSERT_EQUAL(val, 1);
@@ -387,8 +387,14 @@ private:
 
 		static_assert(std::is_same_v<
 					  std::variant<int, float, bool>,
-					  unique_types_variant<
+					  unique_types_variant_t<
 						  std::variant<std::variant<int, float, std::variant<bool>>>>>);
+
+		using namespace compiler::helios::errors;
+		static_assert(std::is_same_v<HResult<int, std::variant<int>>::error_type, std::variant<int>>);
+		static_assert(std::is_same_v<HResult<int, int>::error_type, std::variant<int>>);
+		static_assert(std::is_same_v<HResult<int, int, bool>::error_type, std::variant<int, bool>>);
+		static_assert(std::is_same_v<HResult<int, std::variant<int>>, HResult<int, int>>);
 	}
 };
 
