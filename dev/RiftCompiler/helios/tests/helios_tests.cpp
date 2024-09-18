@@ -13,7 +13,9 @@
 #include <typesystem/higher/internal/queries.hpp>
 
 #include <helios/test_utils/helios_test_utils.hpp>
-#include "base/variant.hpp"
+#include <base/variant.hpp>
+#include <helios/helios_result.hpp>
+
 using namespace compiler::helios::test_utils;
 
 class HeliosTests: public tester::TestSuite {
@@ -333,6 +335,60 @@ private:
 				variant_default RIFT_PANIC("Caught invalid error in tests");
 			}
 		}
+	}
+
+	void heliosResultTests() {
+		using namespace compiler::helios::errors::impl;
+
+		static_assert(is_in_v<int, int>);
+		static_assert(is_in_v<int, float, double, int>);
+		static_assert(is_in_v<int, float, int, double, int>);
+		static_assert(!is_in_v<int, float, double>);
+
+		static_assert(std::is_same_v<unique_types<int, int>::types, unique_types<int>::types>);
+		static_assert(!std::is_same_v<unique_types<int, int>::types, unique_types<float>::types>);
+		static_assert(!std::is_same_v<
+					  unique_types<int, int, float>::types,
+					  unique_types<int>::types>);
+
+		static_assert(std::is_same_v<unique_types_variant<int>, std::variant<int>>);
+		static_assert(std::is_same_v<unique_types_variant<int, int>, std::variant<int>>);
+		static_assert(!std::is_same_v<unique_types_variant<int, int, float>, std::variant<int>>);
+		static_assert(std::is_same_v<
+					  unique_types_variant<int, int, float>,
+					  std::variant<int, float>>);
+		static_assert(std::is_same_v<
+					  unique_types_variant<int, int, float, int, int>,
+					  std::variant<float, int>>);
+		static_assert(std::is_same_v<
+					  unique_types_variant<int, int, float, std::variant<int, int>>,
+					  std::variant<float, int>>);
+		static_assert(std::is_same_v<
+					  unique_types_variant<
+						  std::variant<int, float, int>,
+						  int,
+						  int,
+						  float,
+						  std::variant<int, int>>,
+					  std::variant<float, int>>);
+
+		std::variant<int, int> x;
+
+		struct A {};
+
+		std::variant<std::variant<int, float>, std::variant<int, A>> y;
+
+		unique_types_variant<decltype(y)> y1 = 1;
+
+		variant_match(y1) {
+			variant_case(int, val) ASSERT_EQUAL(val, 1);
+			variant_default RIFT_PANIC("Invalid state");
+		}
+
+		static_assert(std::is_same_v<
+					  std::variant<int, float, bool>,
+					  unique_types_variant<
+						  std::variant<std::variant<int, float, std::variant<bool>>>>>);
 	}
 };
 

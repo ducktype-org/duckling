@@ -2,6 +2,7 @@
 
 #include <string>
 #include <base/define_helper.hpp>
+#include <variant>
 
 // This is a unique variable per macro - assuming every macro is in a separate line.
 #define RES_VAR_NAME CONCAT_2(result_storage_aBz4vq2_, __LINE__)
