@@ -33,9 +33,12 @@ public:
 		TESTER_ADD_TEST(importTest);
 		TESTER_ADD_TEST(houtVisitorTest);
 		TESTER_ADD_TEST(exprTreeTest);
+		TESTER_ADD_TEST(houtVariablesTest);
 	}
 
 private:
+	// @TODO: test_modules/aliases are not used in tests
+
 	void testI32Consts() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/constants")));
 
@@ -266,6 +269,43 @@ private:
 		ASSERT_EQUAL(
 			base::strConcat("(", symV3_repr, "+(", symV3_repr, "*", symV3_repr, "))"), out2.str()
 		);
+	}
+
+	void houtVariablesTest() {
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/variables")));
+
+		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		ASSERT_EQUAL(hout.functions.size(), 1);
+
+		// @TODO: there is no sane way of accessing variables from HOUT functions
+		// to make some assertions on them.
+		// For now this test mostly checks that HELIOS does not hit
+		// any of its own panics or asserts (which happened a lot during coding of first hout variables).
+		// In the future some interface should be added that would allow for better testing of this.
+		// For example:
+		// * internal way of looking up inside functions (slight more complicated but potentially better).
+
+		auto& function = hout.functions.at(0);
+		
+		ASSERT_EQUAL(function.original_name, "foo");
+
+		// note that alias should not be included here:
+		ASSERT_EQUAL(function.body.body->statements.size(), 6);
+
+		auto& statements = function.body.body->statements;
+
+		auto get_var_ref = [&](usize i) -> decltype(auto) {
+			return dynamic_cast<const compiler::helios::code::VariableStmt&>(*statements.at(i).get());
+		};
+
+		{
+			auto& stmt_0 = get_var_ref(0);
+			ASSERT_EQUAL(compiler::helios::name(stmt_0.helios_symbol), "a");
+
+		}
+
+
 	}
 };
 
