@@ -27,8 +27,7 @@
  * @return crow::response The HTTP response corresponding to the API error.
  */
 crow::response convertError(const vm::api::ApiError& apiError) {
-	if (std::holds_alternative<vm::api::WrongResponse>(apiError))
-		return { 500, "Wrong response" };
+	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return { 500, "Wrong response" };
 	return {
 		400,
 		std::visit(
@@ -67,26 +66,26 @@ void server(i32 port) {
 	std::unordered_map<std::string, fs::FilePath> files;
 
 	/**
-     * @brief Route to check if the server is running.
-     * @return crow::response The HTTP response indicating the server status.
-     */
+	 * @brief Route to check if the server is running.
+	 * @return crow::response The HTTP response indicating the server status.
+	 */
 	CROW_ROUTE(app, "/status")
 	([]() { return crow::response(200, "OK"); });
 
-    /**
-     * @brief Route to export keywords.
-     * @return crow::response The HTTP response containing the exported keywords in JSON format.
-     */
+	/**
+	 * @brief Route to export keywords.
+	 * @return crow::response The HTTP response containing the exported keywords in JSON format.
+	 */
 	CROW_ROUTE(app, "/export_keywords")
 	([lsp]() { return crow::response(200, lsp.getAllJson()); });
 
-    /**
-     * @brief Route to add or override a file in the virtual file system.
-     *
-     * @param base64_path The base64 encoded relative path of the file.
-     * @param base64_content The base64 encoded content of the file.
-     * @return crow::response The HTTP response indicating the result of the operation.
-     */
+	/**
+	 * @brief Route to add or override a file in the virtual file system.
+	 *
+	 * @param base64_path The base64 encoded relative path of the file.
+	 * @param base64_content The base64 encoded content of the file.
+	 * @return crow::response The HTTP response indicating the result of the operation.
+	 */
 	CROW_ROUTE(app, "/put_file/<string>/<string>")
 	([&files](const std::string& base64_path, const std::string& base64_content) {
 		try {
@@ -102,12 +101,12 @@ void server(i32 port) {
 		}
 	});
 
-    /**
-     * @brief Route to generate LSP tree for a file under the given path in the virtual file system.
-     *
-     * @param base64_path The base64 encoded relative path of the file.
-     * @return crow::response The HTTP response containing the LSP tree.
-     */
+	/**
+	 * @brief Route to generate LSP tree for a file under the given path in the virtual file system.
+	 *
+	 * @param base64_path The base64 encoded relative path of the file.
+	 * @return crow::response The HTTP response containing the LSP tree.
+	 */
 	CROW_ROUTE(app, "/get_lsptree/<string>")
 	([&files](const std::string& base64_path) {
 		try {
@@ -127,12 +126,13 @@ void server(i32 port) {
 		}
 	});
 
-    /**
-     * @brief Route to generate diagnostics for a file under the given path in the virtual file system.
-     *
-     * @param base64_path The base64 encoded relative path of the file.
-     * @return crow::response The HTTP response containing the diagnostics.
-     */
+	/**
+	 * @brief Route to generate diagnostics for a file under the given path in the virtual file
+	 * system.
+	 *
+	 * @param base64_path The base64 encoded relative path of the file.
+	 * @return crow::response The HTTP response containing the diagnostics.
+	 */
 	CROW_ROUTE(app, "/get_errors/<string>")
 	([&files](const std::string& base64_path) {
 		try {
@@ -162,54 +162,53 @@ void showVersion() {
 
 /**
  * @brief The main function of the LSP daemon.
- * 
+ *
  * This function initializes the command-line argument parser, handles exceptions,
  * and starts the LSP server on the specified port.
- * 
+ *
  * Example usage 1: ./lsp_daemon -p 8080
  * Example usage 2: ./lsp_daemon --port 8080
- * 
+ *
  * @param argc The number of command-line arguments.
  * @param argv The array of command-line arguments.
  * @return int The exit code of the program.
  */
 int main(int argc, const char** argv) {
-    // Initialize the command-line argument parser with help flag and port parameter
-    auto clap
-        = clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
-                                             .addShortName('p')
-                                             .addLongName("port")
-                                             .addShortDesc("Choose port for server")
-                                             .build());
+	// Initialize the command-line argument parser with help flag and port parameter
+	auto clap
+		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
+	                                         .addShortName('p')
+	                                         .addLongName("port")
+	                                         .addShortDesc("Choose port for server")
+	                                         .build());
 
-    clap::ParsingResult result;
+	clap::ParsingResult result;
 
-    try {
-        // Parse the command-line arguments
-        result = clap.parse(argc, argv);
-    } catch (clap::exceptions::ClapException& e) {
-        // Handle general parsing exceptions and print error message
-        printer::StreamPrinter      console = printer::StreamPrinter();
-        printer::PrinterContentsSeq contents;
-        contents.emplace_back("rift: ", printer::Color::DEFAULT, printer::Color::DEFAULT);
-        contents.emplace_back("error: ", printer::Color::RED, printer::Color::DEFAULT);
-        contents.emplace_back(e.what(), printer::Color::DEFAULT, printer::Color::DEFAULT);
-        console.printNL(contents);
-        return 1;
-    } catch (clap::exceptions::HelpException& e) {
-        // Handle help exception and print help message
-        std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);
-        std::cout << help_message << '\n';
-        return 0;
-    }
+	try {
+		// Parse the command-line arguments
+		result = clap.parse(argc, argv);
+	} catch (clap::exceptions::ClapException& e) {
+		// Handle general parsing exceptions and print error message
+		printer::StreamPrinter      console = printer::StreamPrinter();
+		printer::PrinterContentsSeq contents;
+		contents.emplace_back("rift: ", printer::Color::DEFAULT, printer::Color::DEFAULT);
+		contents.emplace_back("error: ", printer::Color::RED, printer::Color::DEFAULT);
+		contents.emplace_back(e.what(), printer::Color::DEFAULT, printer::Color::DEFAULT);
+		console.printNL(contents);
+		return 1;
+	} catch (clap::exceptions::HelpException& e) {
+		// Handle help exception and print help message
+		std::string help_message = clap::HelpMessageGenerator::generate(clap, e.parsing_result);
+		std::cout << help_message << '\n';
+		return 0;
+	}
 
-    // Check if the version flag is set and show version information
-    if (result.isFlag('v'))
-        showVersion();
-    // Check if the port parameter is provided and start the server on the specified port
-    else if (auto port = result.getValue<i64>("port"))
-        server(i32(port.value()));
-    // If no port or file is specified, throw a runtime error
-    else
+	// Check if the version flag is set and show version information
+	if (result.isFlag('v')) showVersion();
+	// Check if the port parameter is provided and start the server on the specified port
+	else if (auto port = result.getValue<i64>("port"))
+		server(i32(port.value()));
+	// If no port or file is specified, throw a runtime error
+	else
 		throw std::runtime_error("No port or file specified");
 }
