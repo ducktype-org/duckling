@@ -14,8 +14,8 @@ namespace compiler::helios {
 
 	std::expected<SymbolList, std::variant<errors::AmbiguityError, errors::SymbolNotFoundError>>
 		LookupResult::getAsSingle() const {
-		HELIOS_ASSERT(!isEmpty(), errors::SymbolNotFoundError);
-		HELIOS_ASSERT(isSingle(), errors::AmbiguityError, "Ambiguity");
+		if (!!isEmpty()) return std::unexpected(errors::SymbolNotFoundError());
+		if (!isSingle()) return std::unexpected(errors::AmbiguityError());
 
 		if (!leaves.empty()) return SymbolList{ leaves[0] };
 

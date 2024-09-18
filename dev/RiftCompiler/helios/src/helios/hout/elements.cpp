@@ -97,7 +97,7 @@ namespace compiler::helios::code {
 						{ expr.scope, idt.symbol_name, true }
 					);
 					RIFT_ASSERT(sym_list_result.has_value(), "Not propagating errors here yet...");
-					auto&& sym_list      = *sym_list_result;
+					auto&& sym_list      = sym_list_result.value();
 					auto&& single_result = sym_list.getAsSingle();
 					RIFT_ASSERT(single_result.has_value(), "Not propagating errors here yet...");
 					auto&& single = single_result.value();
@@ -176,7 +176,7 @@ namespace compiler::helios {
 					KeyOf_LookupInScope{ scope, identifier.indent_id, true }
 				);
 				RIFT_ASSERT(lookup_query_result.has_value(), "Not propagating errors for now...");
-				auto lookup_result = *lookup_query_result;
+				auto lookup_result = lookup_query_result.value();
 
 				compiler::helios::SymbolList lookup_dealiased;
 
@@ -187,7 +187,7 @@ namespace compiler::helios {
 				for (auto single_sym: symbol_path) {
 					auto dealiased_result = ctx.query<compiler::helios::QueryDealias>(single_sym);
 					RIFT_ASSERT(dealiased_result.has_value(), "Not propagating errors for now...");
-					auto dealiased = *dealiased_result;
+					auto dealiased = dealiased_result.value();
 
 					lookup_dealiased.insert(
 						lookup_dealiased.end(), dealiased.begin(), dealiased.end()

@@ -287,7 +287,7 @@ namespace compiler::helios {
 
 		if (not first.isSingle()) {
 			// @TODO: error in state
-			return std::unexpected(errors::AmbiguityError("ambiguity in lookupChain"));
+			return std::unexpected(errors::AmbiguityError;
 		}
 
 		if (key.names.size() == 1) return first.getAsSingle();
@@ -303,7 +303,7 @@ namespace compiler::helios {
 
 			if (!append_res_value.isSingle()) {
 				// @TODO: error in state
-				return std::unexpected(errors::AmbiguityError("ambiguity in lookupChain"));
+				return std::unexpected(errors::AmbiguityError;
 			}
 
 			UNPACK_RESULT(append_res_value.getAsSingle(), single_append_res);
@@ -421,7 +421,9 @@ namespace compiler::helios {
 		case '.':
 			return 5;
 		default:
-			HELIOS_PANIC(errors::ExpressionParsingError, "Unknown operator: " + op.oper_id.str());
+			return std::unexpected(
+				errors::ExpressionParsingError;
+			);
 		}
 	}
 
@@ -467,7 +469,8 @@ namespace compiler::helios {
 					rpn.emplace_back(TupleConstructor{ tuple.expr.size() });
 				}
 				variant_default {
-					HELIOS_PANIC(errors::ExpressionParsingError, "Bad Expr alternative");
+					return std::unexpected(errors::ExpressionParsingError;
+					;
 				}
 			}
 		}
@@ -517,10 +520,12 @@ namespace compiler::helios {
 			}
 			variant_case(rpn::NumValue, literal) { return std::stoi(literal.num_id.str()); }
 			variant_default {
-				HELIOS_PANIC(errors::ExpressionParsingError, "Bad Expr alternative");
+				return std::unexpected(errors::ExpressionParsingError;
+				;
 			}
 		}
-		HELIOS_PANIC(errors::ExpressionParsingError, "Error in RPNValue expr...");
+		return std::unexpected(errors::ExpressionParsingError;
+		;
 	}
 
 	namespace {
@@ -604,7 +609,8 @@ namespace compiler::helios {
 					st.emplace(tuple_type);
 				}
 				variant_default {
-					HELIOS_PANIC(errors::ExpressionParsingError, "Bad Expr alternative");
+					return std::unexpected(errors::ExpressionParsingError;
+					;
 				}
 			}
 		}
