@@ -9,6 +9,7 @@
 #include <map>
 
 namespace {
+	
 	/**
      * @brief Converts a list of strings to a JSON array format.
      *
