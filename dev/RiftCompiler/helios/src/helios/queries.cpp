@@ -136,8 +136,7 @@ namespace compiler::helios {
 				auto    stmt_parent        = stmt.getParent().value();
 				auto    stmt_parent_parent = stmt_parent->getParent().value();
 				ScopeID scope_of_symbol    = scopeOf(*stmt_parent);
-				// we need the enum...
-				// Code Block or Statement scopes are broken
+				// @todo: change the usage of elementType to elementKind (once its implemented)
 				// scope refactor will fix it
 				if (stmt_parent_parent->elementType() == "Code Block or Statement"
 				    and stmt_parent->elementType() == "Code Block") {

@@ -216,7 +216,7 @@ namespace compiler::helios {
 				// @TODO: the error here is that this perform double scoping
 				// for CodeBlocks inside CodeBlocksOrStmt
 				// Hot-patch:
-				// @TODO: change elementType usage to elementKind
+				// @TODO: change elementType usage to elementKind (once its implemented)
 				if (base_element->elementType() == "Code Block")
 					if (base_element->getParent().value()->elementType()
 					    == "Code Block or Statement") {
