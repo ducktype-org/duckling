@@ -236,22 +236,10 @@ namespace compiler::helios {
 		static auto provide(Context&, QKey key) -> PResult {
 			auto pst_id = key.stmt->getID();
 
-			// std::cerr << "making symbol: " << key.stmt->
-
 			// This is a sanity check, that might be rendered obsolete
 			// once scope refactor will be introduced.
 			// It currently prevents some scope bugs/inconsistencies from happening.
 			if (parent_map.contains(pst_id)) {
-				if (parent_map.at(pst_id) != key.scope) {
-					// debug print:
-					std::cerr << " !!! Parent mismatch in QuerySymbolOfSTMT\n";
-					std::cerr << "new scope: \n";
-					
-					printScopeAndParents(key.scope);
-					std::cerr << "org scope: \n";
-					printScopeAndParents(parent_map.at(pst_id));
-
-				}
 				RIFT_ASSERT(
 					parent_map.at(pst_id) == key.scope,
 					"Parent mismatch in QuerySymbolOfSTMT"

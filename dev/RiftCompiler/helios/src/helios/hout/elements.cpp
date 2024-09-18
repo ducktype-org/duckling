@@ -207,9 +207,9 @@ namespace compiler::helios {
 			if (key.expr->elements.size() == 1)
 				return houtOfSingleExpr(ctx, key);
 			else {
-				std::cerr << "For: \n";
-				key.expr->dprint(std::cerr);
-				throw base::NotYetImplemented("Complicated HOUT expressions");
+				std::stringstream expr_dprint;
+				key.expr->dprint(expr_dprint);
+				throw base::NotYetImplemented(base::strConcat("Complicated HOUT expressions: ", expr_dprint.str()));
 			}
 		}
 

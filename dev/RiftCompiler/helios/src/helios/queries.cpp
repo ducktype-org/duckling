@@ -13,7 +13,7 @@
 
 namespace compiler::helios {
 
-	void printScopeAndParents(ScopeID scope) {
+	void debugPrintScopeAndParents(ScopeID scope) {
 		std::cerr << scope.customPerfectHash() << " -> ";
 		while (parent(scope)) {
 			scope = parent(scope).value();
@@ -131,7 +131,6 @@ namespace compiler::helios {
 			void visitVariable(const pst::Variable& stmt) override {
 				// @TODO: do something with mut/immut
 
-
 				// @note: This is a hot-path, that should work *most*
 				// of the times. It will be changed during scope refactor.
 				auto stmt_parent = stmt.getParent().value();
@@ -145,16 +144,7 @@ namespace compiler::helios {
 					scope_of_symbol = parent(scope_of_symbol).value();
 				}
 
-				std::cerr << "[[[parent of vars:]]]\n";
-				stmt_parent->debugPrint(std::cerr);
-				std::cerr << "\n-----\n";
-				std::cerr << "[[[vars:]]]\n";
-				stmt.debugPrint(std::cerr);
-				std::cerr << "\n-------------------\n\n";
-				std::cerr << "\nsym scope:\n";
-				printScopeAndParents(scope_of_symbol);
-				std::cerr << "\n-------------------\n\n";
-			
+				// @TODO: error handling
 
 				auto symbol = ctx.query<QuerySymbolOfSTMT>({ scope_of_symbol, PstRef<pst::Stmt>(&stmt) });
 

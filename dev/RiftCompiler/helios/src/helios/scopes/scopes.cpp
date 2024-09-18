@@ -209,21 +209,14 @@ namespace compiler::helios {
 			auto base_element = key.ref->related_pst_element.value();
 
 			if (base_element->isStatementAggregate()) {
-				std::cerr << "Getting symbols for scope: ";
-				base_element->debugPrint(std::cerr);
-				if_opt_some(base_element->getParent(), parent) {
-					std::cerr << "\nparent: " << parent->elementType() << "\n";
-				}
-				std::cerr << "\n\n";
-
 				// @TODO: the error here is that this perform double scoping
 				// for CodeBlocks inside CodeBlocksOrStmt
 				// Hot-patch:
+				// @TODO: change elementType usage to elementKind
 				if (base_element->elementType() == "Code Block")
 				if (base_element->getParent().value()->elementType() == "Code Block or Statement") {
 					// hot patch currently does:
 					// code block inside CodeBlockOrStmt has empty scope
-					std::cerr << "hit filter\n";
 					return {};
 				}
 

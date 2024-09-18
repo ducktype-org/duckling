@@ -19,6 +19,9 @@ namespace compiler::helios {
 	// @FUTURE: paraph we will need to add more granularity to HOUT generation for efficient
 	// incremental compilation
 
+	/**
+	 * @brief Debug function for printing scope and its parents IDs.
+	 */
 	void printScopeAndParents(ScopeID scope);
 
 	/**
