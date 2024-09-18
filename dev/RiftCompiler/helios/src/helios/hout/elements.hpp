@@ -52,7 +52,7 @@ namespace compiler::helios::code {
 			  lifetime_scope(lifetime_scope),
 			  type_desc(type_desc) {}
 
-		virtual ~Expr()                                                    = default;
+		virtual ~Expr()                                  = default;
 		virtual void debugPrint(std::ostream& out) const = 0;
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
@@ -72,29 +72,32 @@ namespace compiler::helios::code {
 	 * Statements: *
 	 * * * * * * * */
 
-	 /**
+	/**
 	 * @brief Represents `var/let a : T = ..;` statement in HOUT
 	 */
 	struct VariableStmt final: public Stmt {
 		// @TODO: decide where we handle non-initial value (pre hout/post hout):
 		// currently PST always have it.
-		base::Optional<ElementRef<Expr> > initial_value;
-		tsh::TypeDesc<> type;
+		base::Optional<ElementRef<Expr>> initial_value;
+		tsh::TypeDesc<>                  type;
 
 		// @TODO decide if this is needed:
 		SymID helios_symbol;
 
-		VariableStmt(ScopeID scope, base::Optional<ElementRef<Expr> > initial_value, tsh::TypeDesc<> type, SymID helios_symbol):
-			Stmt(scope),
-			initial_value(std::move(initial_value)),
-			type(type),
-			helios_symbol(helios_symbol)
-		{}
+		VariableStmt(
+			ScopeID                          scope,
+			base::Optional<ElementRef<Expr>> initial_value,
+			tsh::TypeDesc<>                  type,
+			SymID                            helios_symbol
+		):
+			  Stmt(scope),
+			  initial_value(std::move(initial_value)),
+			  type(type),
+			  helios_symbol(helios_symbol) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
-
 
 	/**
 	 * @brief Represents `return [expr];` in HOUT

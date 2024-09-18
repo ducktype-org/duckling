@@ -133,20 +133,21 @@ namespace compiler::helios {
 
 				// @note: This is a hot-path, that should work *most*
 				// of the times. It will be changed during scope refactor.
-				auto stmt_parent = stmt.getParent().value();
-				auto stmt_parent_parent = stmt_parent->getParent().value();
-				ScopeID scope_of_symbol = scopeOf(*stmt_parent);
+				auto    stmt_parent        = stmt.getParent().value();
+				auto    stmt_parent_parent = stmt_parent->getParent().value();
+				ScopeID scope_of_symbol    = scopeOf(*stmt_parent);
 				// we need the enum...
 				// Code Block or Statement scopes are broken
 				// scope refactor will fix it
 				if (stmt_parent_parent->elementType() == "Code Block or Statement"
-				   and stmt_parent->elementType() == "Code Block") {
+				    and stmt_parent->elementType() == "Code Block") {
 					scope_of_symbol = parent(scope_of_symbol).value();
 				}
 
 				// @TODO: error handling
 
-				auto symbol = ctx.query<QuerySymbolOfSTMT>({ scope_of_symbol, PstRef<pst::Stmt>(&stmt) });
+				auto symbol
+					= ctx.query<QuerySymbolOfSTMT>({ scope_of_symbol, PstRef<pst::Stmt>(&stmt) });
 
 				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol);
 
@@ -155,10 +156,7 @@ namespace compiler::helios {
 				auto initial_value = ctx.query<QueryHoutOfExpr>({ stmt.getValue() });
 
 				output(code::VariableStmt(
-					scope_of_symbol,
-					std::move(initial_value),
-					symbol_type,
-					symbol
+					scope_of_symbol, std::move(initial_value), symbol_type, symbol
 				));
 			}
 		};

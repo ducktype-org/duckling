@@ -218,11 +218,12 @@ namespace compiler::helios {
 				// Hot-patch:
 				// @TODO: change elementType usage to elementKind
 				if (base_element->elementType() == "Code Block")
-				if (base_element->getParent().value()->elementType() == "Code Block or Statement") {
-					// hot patch currently does:
-					// code block inside CodeBlockOrStmt has empty scope
-					return {};
-				}
+					if (base_element->getParent().value()->elementType()
+					    == "Code Block or Statement") {
+						// hot patch currently does:
+						// code block inside CodeBlockOrStmt has empty scope
+						return {};
+					}
 
 				return filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(base_element));
 			} else if (base_element->isStatement()) {

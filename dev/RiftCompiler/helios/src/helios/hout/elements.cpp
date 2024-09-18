@@ -49,7 +49,7 @@ namespace compiler::helios::code {
 		out << "var ";
 		out << name(this->helios_symbol).strView();
 		out << " : ";
-		
+
 		// this might not be correct:?
 		out << this->type.getType().toString();
 		out << " = ";
@@ -58,10 +58,7 @@ namespace compiler::helios::code {
 		out << ";\n";
 	}
 
-
-	void LiteralValueExpr::debugPrint(std::ostream& out) const {
-		out << std::to_string(value);
-	}
+	void LiteralValueExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
 
 	void IdentifierExpr::debugPrint(std::ostream& out) const {
 		out << base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
@@ -209,7 +206,9 @@ namespace compiler::helios {
 			else {
 				std::stringstream expr_dprint;
 				key.expr->dprint(expr_dprint);
-				throw base::NotYetImplemented(base::strConcat("Complicated HOUT expressions: ", expr_dprint.str()));
+				throw base::NotYetImplemented(
+					base::strConcat("Complicated HOUT expressions: ", expr_dprint.str())
+				);
 			}
 		}
 

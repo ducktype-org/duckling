@@ -58,7 +58,7 @@ namespace base::detail {
 	template<typename VariantT, typename T, std::size_t index>
 	constexpr auto alternative_index_aux() {
 		static_assert(std::variant_size_v<VariantT> > index, "Type not found in variant");
-		if constexpr (index == std::variant_size_v<VariantT>) ///< @TODO: does this if works?
+		if constexpr (index == std::variant_size_v<VariantT>)  ///< @TODO: does this if works?
 			return index;
 		else if constexpr (std::is_same_v<std::variant_alternative_t<index, VariantT>, T>)
 			return index;

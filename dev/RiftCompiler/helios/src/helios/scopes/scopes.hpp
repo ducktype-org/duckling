@@ -40,7 +40,7 @@ namespace compiler::helios {
 	struct KeyOf_QueryPrimaryCodeScopeFor {
 		/**
 		 * @brief Element for which the scope is created.
-		 * @note: scopes of various elements behave differently 
+		 * @note: scopes of various elements behave differently
 		 * Scope behaviour for:
 		 * * StatementAggregates -- a scope of aggregated statements
 		 * * Function -- a scope of function arguments (@todo: function scopes are currently empty)

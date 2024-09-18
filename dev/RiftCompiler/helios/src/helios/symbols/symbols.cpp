@@ -232,7 +232,6 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymID) {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
-
 		static auto provide(Context&, QKey key) -> PResult {
 			auto pst_id = key.stmt->getID();
 
@@ -241,8 +240,7 @@ namespace compiler::helios {
 			// It currently prevents some scope bugs/inconsistencies from happening.
 			if (parent_map.contains(pst_id)) {
 				RIFT_ASSERT(
-					parent_map.at(pst_id) == key.scope,
-					"Parent mismatch in QuerySymbolOfSTMT"
+					parent_map.at(pst_id) == key.scope, "Parent mismatch in QuerySymbolOfSTMT"
 				);
 			} else {
 				parent_map.put(pst_id, key.scope);
@@ -773,7 +771,7 @@ namespace compiler::helios {
 					          .leaves.back();
 					// very simple dealias, that should
 					// ultimately be replaced by type expr comp-time eval:
-					auto dealias_sym = ctx.query<QueryDealias>({symbol}).back();
+					auto dealias_sym = ctx.query<QueryDealias>({ symbol }).back();
 					return ctx.query<QueryTypeFromDefinition>(dealias_sym);
 				}
 				return it->second;

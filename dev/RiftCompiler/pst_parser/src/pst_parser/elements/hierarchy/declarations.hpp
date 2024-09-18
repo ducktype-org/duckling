@@ -164,7 +164,7 @@ namespace pst {
 		ParserCBorrowRef<Expr> getType() const {
 			return type.borrow();
 		}
-		
+
 		[[nodiscard]]
 		ParserCBorrowRef<Expr> getValue() const {
 			return value.borrow();
