@@ -60,7 +60,14 @@ To create build directory run:
 
 .. code-block:: bash
 
-	./toolbox.py build
+	./toolbox.py setup-build
+
+If you want to be able to compile Sphinx documentation later, **before creating the build directory** 
+you should create Python virtual environment with required packages:
+
+.. code-block:: bash
+
+	./toolbox.py setup-venv
 
 You will be asked a series of questions about the build configuration.
 Inside square brackets you can see the default value that will be used if you just press enter.
@@ -80,7 +87,7 @@ Inside square brackets you can see the default value that will be used if you ju
 	...
 
 It is recommmended to use Ninja build system, as it by default uses all available cores to compile the project.
-Ninja works the same way as Unix Makefiles.
+Ninja works the same way as Unix Makefiles, so any command, like `ninja <target>` can be replaced with `make <target>`.
 To install Ninja on Ubuntu run:
 
 .. code-block:: bash
@@ -186,6 +193,10 @@ you can run the following commands:
 
 Compiling the documentation
 ===========================
+
+Before compiling the documentation, make sure that you have the Python virtual environment set up.
+If you haven't done it yet, you can do it by running :code:`./toolbox.py setup-venv`. The environment 
+should be active when you create the build directory with :code:`./toolbox.py setup-build`.
 
 To compile the documentation (source-doc and doxygen) you can use the following command:
 

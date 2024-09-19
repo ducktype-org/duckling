@@ -75,6 +75,8 @@ You can also add Doxygen commands to describe classes, functions, and variables:
      */
     int baz;
 
+For more information on Doxygen commands, see the `official Doxygen documentation <https://www.doxygen.nl/manual/commands.html>`_.
+
 .. _md-files:
 
 Markdown Files
