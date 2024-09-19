@@ -24,13 +24,13 @@ using namespace compiler::frontend;
 /**
  * @brief Holds global map of all modules
  */
-inline static base::HashMap<ModuleId, std::shared_ptr<ModuleTree>> modules{};
+inline static base::HashMap<ModuleID, std::shared_ptr<ModuleTree>> modules{};
 
 /**
  * @brief Holds global map of all Source files
  * @TODO: this holding a reference is dangerous:
  */
-inline static base::HashMap<FileId, SourceFile&> files{};
+inline static base::HashMap<FileID, SourceFile&> files{};
 
 /**
  * @brief Map storting FileID of each parsed PST (by root element ID)
@@ -39,27 +39,27 @@ inline static base::HashMap<FileId, SourceFile&> files{};
  * @todo: Either delete root scopes and add to PST some kind of "module nodes" or put information
  * from this map into PST nodes.
  */
-inline static base::Map<pst::PstID, FileId> root_element_file_back_map;
+inline static base::Map<pst::PstID, FileID> root_element_file_back_map;
 
 /**
  * @brief Holds global map of module path to module id
  */
-inline static base::HashMap<fs::FilePath, ModuleId> modulePaths{};
+inline static base::HashMap<fs::FilePath, ModuleID> modulePaths{};
 
-FileId FileId::nextID() {
+FileID FileID::nextID() {
 	// @OPT: move to global variable
-	static u64 nextId = 0;
+	static u64 nextID = 0;
 
-	FileId out{};
-	out.id = nextId++;
+	FileID out{};
+	out.id = nextID++;
 	return out;
 }
 
-SourceFile::SourceFile(fs::FilePath path, ModuleId module_id):
+SourceFile::SourceFile(fs::FilePath path, ModuleID module_id):
 	  path(std::move(path)),
-	  id(FileId::nextID()),
+	  id(FileID::nextID()),
 	  linked_module(module_id) {
-	rift_file_name = base::StrId(this->path.stem().c_str());
+	rift_file_name = base::StrID(this->path.stem().c_str());
 }
 
 const pst::PST<>& SourceFile::getPST() {
@@ -71,15 +71,15 @@ const pst::PST<>& SourceFile::getPST() {
 	}
 }
 
-ModuleTree::ModuleTree(): id(ModuleId::next()){};
+ModuleTree::ModuleTree(): id(ModuleID::next()){};
 
 std::shared_ptr<ModuleTree> ModuleTree::create(std::shared_ptr<fs::FsTree> root) {
 	auto ptr = std::shared_ptr<ModuleTree>(new ModuleTree());
 
 	buildModuleTree(ptr, std::move(root));
 
-	modules.put(ptr->getId(), ptr);
-	if (ptr->hasMainSourceFile()) modulePaths.put(ptr->getMainSourceFile().path, ptr->getId());
+	modules.put(ptr->getID(), ptr);
+	if (ptr->hasMainSourceFile()) modulePaths.put(ptr->getMainSourceFile().path, ptr->getID());
 
 	// at this point references inside module tree are stable, so we can fill "files" map:
 	if (ptr->hasMainSourceFile()) {
@@ -110,7 +110,7 @@ void ModuleTree::buildModuleTree(
 		// Discards directories without main module file:
 		// @TODO: decide if this behavior is desirable
 		if (submodule->hasMainSourceFile())
-			module_root->m_submodules.put(base::StrId(dir_iter.first.c_str()), submodule);
+			module_root->m_submodules.put(base::StrID(dir_iter.first.c_str()), submodule);
 	}
 }
 
@@ -122,14 +122,14 @@ void ModuleTree::handleNewFile(
 	std::string stem      = filepath.stem();
 	std::string extension = filepath.extension();
 
-	auto stem_id      = base::StrId(stem.c_str());
-	auto extension_id = base::StrId(extension.c_str());
+	auto stem_id      = base::StrID(stem.c_str());
+	auto extension_id = base::StrID(extension.c_str());
 
 	// There are 3 types of files: source files, module file, others - each if-branch handles other
 	// type.
 	if (extension == RIFT_SOURCE_FILE) {
 		// File contains regular source content.
-		module_root->m_source_files.emplace_back(filepath, module_root->getId());
+		module_root->m_source_files.emplace_back(filepath, module_root->getID());
 	} else if (extension == RIFT_MODULE_FILE) {
 		// File with a config of SOME module.
 		if (stem_id == module_root->getName()) {
@@ -139,13 +139,13 @@ void ModuleTree::handleNewFile(
 			if (module_root->m_main_source_file.has_value())
 				throw base::LogicError(base::strConcat("Module already has a main source file."));
 
-			module_root->m_main_source_file.emplace(filepath, module_root->getId());
+			module_root->m_main_source_file.emplace(filepath, module_root->getID());
 		} else {
 			// Single-file module.
 			auto submodule = std::shared_ptr<ModuleTree>(new ModuleTree());
-			modules.put(submodule->getId(), submodule);
+			modules.put(submodule->getID(), submodule);
 			module_root->m_submodules.put(stem_id, submodule);
-			submodule->m_main_source_file.emplace(filepath, submodule->getId());
+			submodule->m_main_source_file.emplace(filepath, submodule->getID());
 			submodule->m_parent = module_root;
 			if_opt_some(submodule->m_main_source_file, main_file) {
 				files.put(main_file.id, main_file);
@@ -167,10 +167,10 @@ base::Optional<const ModuleTree&> ModuleTree::getParentModule() const {
 	return {};
 }
 
-base::StrId ModuleTree::getName() const {
+base::StrID ModuleTree::getName() const {
 	// @OPT: store this value as a module tree field
 	if (m_fs_tree == nullptr) return getMainSourceFile().rift_file_name;
-	return base::StrId(m_fs_tree->getRoot().name().c_str());
+	return base::StrID(m_fs_tree->getRoot().name().c_str());
 }
 
 std::string ModuleTree::prettyPrint(u32 indentation) const {
@@ -209,31 +209,31 @@ const SourceFile& ModuleTree::getMainSourceFile() const {
 
 const std::vector<SourceFile>& ModuleTree::getSourceFiles() const { return m_source_files; }
 
-const base::HashMap<base::StrId, std::shared_ptr<ModuleTree>>& ModuleTree::getSubmodules() const {
+const base::HashMap<base::StrID, std::shared_ptr<ModuleTree>>& ModuleTree::getSubmodules() const {
 	return m_submodules;
 }
 
-const base::HashMap<base::StrId, std::vector<fs::FilePath>>& ModuleTree::getOtherFiles() const {
+const base::HashMap<base::StrID, std::vector<fs::FilePath>>& ModuleTree::getOtherFiles() const {
 	return m_other_files;
 }
 
-ModuleId ModuleTree::getId() const { return id; }
+ModuleID ModuleTree::getID() const { return id; }
 
-base::StrId compiler::frontend::moduleName(ModuleId module) {
+base::StrID compiler::frontend::moduleName(ModuleID module) {
 	return modules.at(module)->getName();
 }
 
-std::string compiler::frontend::printModuleTree(ModuleId module) {
+std::string compiler::frontend::printModuleTree(ModuleID module) {
 	return modules.at(module)->prettyPrint();
 }
 
 /*********************
  * QueryParentModule *
  *********************/
-struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleId>) {
+struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
 	static auto provide(Context&, QKey key) -> PResult {
 		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
-		return module_tree->getParentModule().map([](const auto& parent) { return parent.getId(); }
+		return module_tree->getParentModule().map([](const auto& parent) { return parent.getID(); }
 		);
 	}
 
@@ -247,7 +247,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QueryParentModule);
 /***********************
  * QueryMainSourceFile *
  ***********************/
-struct IMPLEMENT_QUERY(QueryMainSourceFile, FileId) {
+struct IMPLEMENT_QUERY(QueryMainSourceFile, FileID) {
 	static auto provide(Context&, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
 		return module_tree->getMainSourceFile().id;
@@ -263,11 +263,11 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QueryMainSourceFile);
 /********************
  * QuerySourceFiles *
  ********************/
-struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileId>) {
+struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
 	static auto provide(Context&, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
 
-		std::vector<FileId> out{};
+		std::vector<FileID> out{};
 		for (const auto& file: module_tree->getSourceFiles()) out.push_back(file.id);
 		return out;
 	}
@@ -280,13 +280,13 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
 /*******************
  * QuerySubmodules *
  *******************/
-struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrId COMMA ModuleId>) {
+struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleID>) {
 	static auto provide(Context&, QKey key) -> PResult {
 		auto module_tree = modules.at(key);
 
 		PResult out{};
 		for (const auto& [name, module]: module_tree->getSubmodules())
-			out.put(name, module->getId());
+			out.put(name, module->getID());
 		return out;
 	}
 
@@ -313,7 +313,7 @@ struct IMPLEMENT_QUERY(QueryFilePST, const pst::PST<>&) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);
 
-ModuleId compiler::frontend::extendQueryModuleIDOfPST(
+ModuleID compiler::frontend::extendQueryModuleIDOfPST(
 	query::Context&, pst::ParserCBorrowRef<pst::RiftElement> element
 ) {
 	// get top-level:

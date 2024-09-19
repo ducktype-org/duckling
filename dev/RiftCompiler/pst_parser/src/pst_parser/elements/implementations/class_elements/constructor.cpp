@@ -10,7 +10,7 @@ namespace pst {
 		state.parse(out).eatOne();
 
 		if (state[0].isBracketGroup(Token::Round))
-			out->kind = { base::StrId("create") };
+			out->kind = { base::StrID("create") };
 		else
 			state.parse(out).all(Operator::Period, &out->kind);
 

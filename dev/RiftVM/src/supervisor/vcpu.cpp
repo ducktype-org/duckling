@@ -142,7 +142,7 @@ namespace vm {
 		variant_match(request) {
 			variant_case(api::request::TypeMetadata, type_request) {
 				auto res = dataManager.get<vm::TypeMetadata>().getTypeByName(
-					base::StrId(type_request.type_name.c_str())
+					base::StrID(type_request.type_name.c_str())
 				);
 				match_optional(res) {
 					opt_some(value) { response = value; }

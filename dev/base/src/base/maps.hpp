@@ -109,7 +109,7 @@ namespace base {
 
 	public:
 		using SelfType = VectorMap;
-		using IdType   = KEY_T;
+		using IDType   = KEY_T;
 		using DataType = DATA_T;
 
 		using iterator       = typename std::vector<Optional<DATA_T>>::iterator;

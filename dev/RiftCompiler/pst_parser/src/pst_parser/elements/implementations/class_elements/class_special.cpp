@@ -8,7 +8,7 @@ namespace pst {
 
 		if (state[skip + 1].isBracketGroup(Token::Round)) return Constructor::parse(state, ctx);
 
-		if (state[skip + 2].isStr(base::StrId{ "destroy" })) return Destructor::parse(state, ctx);
+		if (state[skip + 2].isStr(base::StrID{ "destroy" })) return Destructor::parse(state, ctx);
 
 		return Constructor::parse(state, ctx);
 	}

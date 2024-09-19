@@ -7,11 +7,11 @@
 
 namespace tsh {
 	namespace {
-		base::Map<base::StrId, std::set<InterfaceElement>>
+		base::Map<base::StrID, std::set<InterfaceElement>>
 			groupElementsByName(const std::set<InterfaceElement>& elements) {
-			base::Map<base::StrId, std::set<InterfaceElement>> result{};
+			base::Map<base::StrID, std::set<InterfaceElement>> result{};
 			for (const InterfaceElement& element: elements) {
-				base::StrId name = compiler::helios::name(element.getSymbol());
+				base::StrID name = compiler::helios::name(element.getSymbol());
 				if (!result.contains(name)) result.put(name, {});
 				result.at(name).insert(element);
 			}
@@ -46,7 +46,7 @@ namespace tsh {
 	using NamedArgument    = TypeInterface::NamedArgument;
 	using Parameter        = InterfaceElement::Parameter;
 
-	ResolutionResult TypeInterface::resolve(base::StrId name, query::Context&) {
+	ResolutionResult TypeInterface::resolve(base::StrID name, query::Context&) {
 		const std::set<InterfaceElement>& elements_matching_name = getElements(name);
 		if (elements_matching_name.empty()) return NoMatch{ {} };
 		if (elements_matching_name.size() == 1)
@@ -132,7 +132,7 @@ namespace tsh {
 	}
 
 	ResolutionResult TypeInterface::resolve(
-		base::StrId                    name,
+		base::StrID                    name,
 		const std::vector<TypeInfo>&   positional_arg_types,
 		const std::set<NamedArgument>& named_args,
 		query::Context&                ctx
@@ -173,12 +173,12 @@ namespace tsh {
 	}
 
 	ResolutionResult
-		TypeInterface::resolve(base::StrId name, TypeInfo single_arg_type, query::Context& ctx) {
+		TypeInterface::resolve(base::StrID name, TypeInfo single_arg_type, query::Context& ctx) {
 		return resolve(name, { single_arg_type }, {}, ctx);
 	}
 
 	std::string TypeInterface::stringifyRequestSignature(
-		base::StrId name,
+		base::StrID name,
 		const base::Optional<
 			std::pair<std::vector<TypeInfo>, std::vector<TypeInterface::NamedArgument>>>&
 			argument_info

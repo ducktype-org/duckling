@@ -129,10 +129,10 @@ Keyword asKeyword(usize fwd = 0) const;
 Special asSpecial(usize fwd = 0) const;
 ```
 
-`is`, `isOperator(base::StrId, usize fwd)` and `isBracketGroup(lexer::Token::BracketType, usize fwd)` methods provide ways to compare a particular token with a value or type
+`is`, `isOperator(base::StrID, usize fwd)` and `isBracketGroup(lexer::Token::BracketType, usize fwd)` methods provide ways to compare a particular token with a value or type
 
 ```cpp
-bool isOperator(base::StrId oper, usize fwd = 0) const;
+bool isOperator(base::StrID oper, usize fwd = 0) const;
 bool isBracketGroup(Token::BracketType type, usize fwd = 0) const;
 bool is(<lexer::Token::Type|rift_def::Keyword|rift_def::Special|rift_def::Operator> t, usize fwd = 0) const;
 ```
