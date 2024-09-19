@@ -105,7 +105,7 @@ Documentation build
 ``website``
 ===========
 
-In this repository you can find all of our website files. ``main`` branch represents current public version of the website (available at `ducktype.org <ducktype.org>`_ and `duckling.pl <duckling.pl>`_) and `dev` branch represents current stable development version (available at `testsite.ducktype.org <testsite.ducktype.org>`).
+In this repository you can find all of our website files. ``main`` branch represents current public version of the website (available at `ducktype.org <https://ducktype.org/>`_ and `duckling.pl <https://duckling.pl/>`_) and `dev` branch represents current stable development version (available at `testsite.ducktype.org <https://testsite.ducktype.org/>`_).
 
 Repository setup
 ----------------
@@ -155,7 +155,7 @@ Repository setup
 
 This repository is dedicated to configuration of all of our sphinx-based documentation. It is included as a submodule in ``rift-doc`` and ``rift-dev``.
 
-zpp
+``zpp``
 ===
 
 Each year some zpp teams join our organization. Since their projects are usually somewhat independent from core language developement, they work on a separete repository (usually fork of ``rift-dev``) and their work is later synced-up or merged into core repos. These repos are marked with ``-zpp`` suffix and are poject specific.
