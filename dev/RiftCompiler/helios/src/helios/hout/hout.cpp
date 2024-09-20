@@ -3,14 +3,6 @@
 #include <sstream>
 
 namespace compiler::helios {
-
-	namespace {
-		auto unpackOrPanic(auto&& value) {
-			RIFT_ASSERT(value.has_value(), "Handling errors in HOUT is not supported yet");
-			return value.value();
-		}
-	}
-
 	std::string HOUTUnit::debugPrint() const {
 		std::string out;
 
@@ -46,7 +38,10 @@ namespace compiler::helios {
 	HOUTFunction::HOUTFunction(SymID symbol, query::Context& ctx):
 		  original_symbol(std::move(symbol)),
 		  original_name(name(original_symbol)),
-		  type(unpackOrPanic(ctx.query<QueryTypeOfSymbol>(original_symbol))) {}
+		  type(UNPACK_OR_PANIC(
+			  ctx.query<QueryTypeOfSymbol>(original_symbol),
+			  "Handling errors in HOUT is not supported yet"
+		  )) {}
 
 	std::string HOUTGlobalData::debugPrint() const {
 		return base::strConcat(
@@ -65,8 +60,12 @@ namespace compiler::helios {
 	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx):
 		  helios_symbol(symbol),
 		  original_name(name(symbol)),
-		  value(unpackOrPanic(ctx.query<QueryConstValueOf>(symbol))),
-		  type(unpackOrPanic(ctx.query<QueryTypeOfSymbol>(symbol))) {}
+		  value(UNPACK_OR_PANIC(
+			  ctx.query<QueryConstValueOf>(symbol), "Handling errors in HOUT is not supported yet"
+		  )),
+		  type(UNPACK_OR_PANIC(
+			  ctx.query<QueryTypeOfSymbol>(symbol), "Handling errors in HOUT is not supported yet"
+		  )) {}
 
 
 }

@@ -8,13 +8,6 @@
 #include "visitors.hpp"
 
 namespace compiler::helios::code {
-	namespace {
-		auto unpackOrPanic(auto&& value) {
-			RIFT_ASSERT(value.has_value(), "Handling errors in HOUT is not supported yet");
-			return value.value();
-		}
-	}
-
 	constexpr usize INDENT_SIZE = 4;
 
 	void addIndent(std::ostream& out, usize indent) {
@@ -139,7 +132,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
-				  unpackOrPanic(ctx.query<QueryTypeOfSymbol>(symbol)),
+				  UNPACK_OR_PANIC(ctx.query<QueryTypeOfSymbol>(symbol), "Handling errors in HOUT is not supported yet"),
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
 			  )
 		  ),

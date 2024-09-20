@@ -24,10 +24,10 @@ namespace compiler::helios::test_utils {
 			UNPACK_THROW(
 				auto symbol =,
 				first_symbol ? query::entryPoint<QueryLookupInScopeAndParents>(
-					{ scope, base::StrId(sym.c_str()), true }
+					{ scope, base::StrID(sym.c_str()), true }
 				)
 							 : query::entryPoint<QueryLookupInSymbol>(
-								 { result.back(), base::StrId(sym.c_str()), false }
+								 { result.back(), base::StrID(sym.c_str()), false }
 							 )
 			);
 			UNPACK_THROW(auto&& symbol_path =, symbol.getAsSingle());
