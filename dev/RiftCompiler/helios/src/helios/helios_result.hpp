@@ -140,9 +140,7 @@ namespace compiler::helios::errors {
 		// Constructor from Unexpected<T>, where T is not a variant
 		template<class T>
 		requires impl::is_in_variant<T, error_type>::value
-		constexpr HResult(const HUnexpected<T>& err) {
-			error_storage = err.value;
-		}
+		constexpr HResult(const HUnexpected<T>& err): error_storage(err.value) {}
 
 		// Constructor from Unexpected<T>, where T is a variant
 		template<class T>
@@ -168,19 +166,7 @@ namespace compiler::helios::errors {
 			if (oth.has_error())
 				std::visit([&](auto&& erTp) { error_storage = error_type{ erTp }; }, oth.error());
 		}
-
-		// Move constructor from HResult, where Ts... are a subset of this HResult types
-		template<class... Ts>
-		constexpr HResult(HResult<ResTp, Ts...>&& oth) {
-			// Cannot use the initializer list, because oth.value_storage is private (different
-			// types)
-			if (oth.has_value()) value_storage = std::move(oth.value());
-			if (oth.has_error())
-				std::visit(
-					[&](auto&& erTp) { error_storage = error_type{ erTp }; }, std::move(oth.error())
-				);
-		}
-
+		
 		// Constructor of the main value by forwarding arguments
 		template<class... Args>
 		requires std::is_constructible_v<base::Optional<ResTp>, Args...>
