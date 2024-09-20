@@ -9,6 +9,7 @@
 
 #include "scope_symbol_id.hpp"
 #include "helios_errors.hpp"
+#include "helios_result.hpp"
 
 #include <vector>
 #include <query_framework/query_int.hpp>

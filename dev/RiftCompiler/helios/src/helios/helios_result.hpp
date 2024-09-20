@@ -137,24 +137,14 @@ namespace compiler::helios::errors {
 	public:
 		using error_type = unique_types_variant_t<ErrTp1, ErrTps...>;
 
-		// Constructors from Unexpected<T>, where T is not a variant
+		// Constructor from Unexpected<T>, where T is not a variant
 		template<class T>
 		requires impl::is_in_variant<T, error_type>::value
 		constexpr HResult(const HUnexpected<T>& err) {
 			error_storage = err.value;
 		}
 
-		template<class T>
-		requires impl::is_in_variant<T, error_type>::value constexpr HResult(HUnexpected<T>&& err) {
-			error_storage = std::move(err.value);
-		}
-
-		// Constructors from Unexpected<T>, where T is a variant
-		template<class T>
-		constexpr HResult(HUnexpected<T>&& err) {
-			std::visit([&](auto&& err_value) { error_storage = err_value; }, std::move(err.value));
-		}
-
+		// Constructor from Unexpected<T>, where T is a variant
 		template<class T>
 		constexpr HResult(const HUnexpected<T>& err) {
 			std::visit([&](auto&& err_value) { error_storage = err_value; }, err.value);
@@ -284,7 +274,7 @@ namespace compiler::helios::errors {
 		return compiler::helios::errors::HUnexpected(RES_VAR_NAME.error()); \
 	name = RES_VAR_NAME.value()
 
-#define UNPACK_OR_PANIC(result, message)        \
+#define UNPACK_OR_PANIC(result, message)       \
 	[](auto&& res) {                           \
 		RIFT_ASSERT(res.has_value(), message); \
 		return res.value();                    \
