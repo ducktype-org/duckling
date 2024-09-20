@@ -6,7 +6,7 @@
 #include <iostream>
 
 namespace compiler::helios::errors {
-	// Thanks to:
+	// Thanks for showing how to unpack and concat variants:
 	// https://stackoverflow.com/questions/39272268/creating-a-new-boost-variant-type-from-given-nested-boost-variant-type
 	namespace impl {
 		namespace flatten {
@@ -160,38 +160,44 @@ namespace compiler::helios::errors {
 			std::visit([&](auto&& err_value) { error_storage = err_value; }, err.value);
 		}
 
-		// Constructor of the main value by forwarding arguments
-		template<class... Args>
-		constexpr HResult(Args&&... args): value_storage(std::forward<Args>(args)...) {}
-
 		// Move constructor
-		constexpr HResult(HResult&&) noexcept            = default;
+		constexpr HResult(HResult&&) noexcept = default;
 		// Copy constructor
-		constexpr HResult(const HResult&)                = default;
-		// Move = operator
+		constexpr HResult(const HResult&) = default;
+		// Move = operator (potentially we will need more to support all the constructors as well?)
 		constexpr HResult& operator=(HResult&&) noexcept = default;
 		// Copy = operator
-		constexpr HResult& operator=(const HResult&)     = default;
+		constexpr HResult& operator=(const HResult&) = default;
 
 		// Copy constructor from HResult, where Ts... are a subset of this HResult types
 		template<class... Ts>
-		constexpr HResult(const HResult<ResTp, Ts...>& oth): value_storage(oth.value_storage) {
+		constexpr HResult(const HResult<ResTp, Ts...>& oth) {
+			// Cannot use the initializer list, because oth.value_storage is private (different
+			// types)
+			if (oth.has_value()) value_storage = oth.value();
 			if (oth.has_error())
 				std::visit(
-					[&](auto&& erTp) { error_storage = error_type{ erTp }; }, oth.error_storage
+					[&](auto&& erTp) { error_storage = error_type{ erTp }; }, oth.error()
 				);
 		}
 
 		// Move constructor from HResult, where Ts... are a subset of this HResult types
 		template<class... Ts>
-		constexpr HResult(HResult<ResTp, Ts...>&& oth):
-			  value_storage(std::move(oth.value_storage)) {
+		constexpr HResult(HResult<ResTp, Ts...>&& oth) {
+			// Cannot use the initializer list, because oth.value_storage is private (different
+			// types)
+			if (oth.has_value()) value_storage = std::move(oth.value());
 			if (oth.has_error())
 				std::visit(
 					[&](auto&& erTp) { error_storage = error_type{ erTp }; },
-					std::move(oth.error_storage)
+					std::move(oth.error())
 				);
 		}
+
+		// Constructor of the main value by forwarding arguments
+		template<class... Args>
+		requires std::is_constructible_v<base::Optional<ResTp>, Args...>
+		constexpr HResult(Args&&... args): value_storage(std::forward<Args>(args)...) {}
 
 		[[nodiscard]]
 		constexpr bool has_error() const {
@@ -252,8 +258,8 @@ namespace compiler::helios::errors {
 		}
 
 	private:
-		base::Optional<ResTp>      value_storage;
 		base::Optional<error_type> error_storage;
+		base::Optional<ResTp>      value_storage;
 
 		void _throwOnInvalidStateAccess() const {
 			RIFT_ASSERT(

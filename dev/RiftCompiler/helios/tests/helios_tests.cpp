@@ -37,6 +37,8 @@ public:
 		TESTER_ADD_TEST(importTest);
 		TESTER_ADD_TEST(houtVisitorTest);
 		TESTER_ADD_TEST(exprTreeTest);
+		TESTER_ADD_TEST(heliosResultConceptTests);
+		TESTER_ADD_TEST(heliosResultTests);
 	}
 
 private:
@@ -323,7 +325,7 @@ private:
 		}
 	}
 
-	void heliosResultTests() {
+	void heliosResultConceptTests() {
 		using namespace compiler::helios::errors::impl;
 
 		static_assert(is_in_v<int, int>);
@@ -375,14 +377,59 @@ private:
 					  std::variant<int, float, bool>,
 					  unique_types_variant_t<
 						  std::variant<std::variant<int, float, std::variant<bool>>>>>);
+	}
 
+	void heliosResultTests() {
 		using namespace compiler::helios::errors;
+
 		static_assert(std::is_same_v<
 					  HResult<int, std::variant<int>>::error_type,
 					  std::variant<int>>);
 		static_assert(std::is_same_v<HResult<int, int>::error_type, std::variant<int>>);
 		static_assert(std::is_same_v<HResult<int, int, bool>::error_type, std::variant<int, bool>>);
 		//		static_assert(std::is_same_v<HResult<int, std::variant<int>>, HResult<int, int>>);
+
+		HResult<int, float> whoa = 1;
+		ASSERT_TRUE(whoa.has_value());
+		ASSERT_TRUE(!whoa.has_error());
+		ASSERT_EQUAL(1, whoa.value());
+
+		std::string                    info  = "Hello";
+		HResult<int, std::string_view> whoa2 = HUnexpected(std::string_view(info));
+		ASSERT_TRUE(!whoa2.has_value());
+		ASSERT_TRUE(whoa2.has_error());
+		bool entered = false;
+		variant_match(whoa2.error()) {
+			variant_case(std::string_view, str) {
+				entered = true;
+				ASSERT_EQUAL(str, info);
+			}
+			variant_default RIFT_PANIC("The above didn\'t work");
+		}
+		ASSERT_TRUE(entered);
+
+		struct Err1 {};
+
+		struct Err2 {};
+
+		struct Err3 {};
+
+		struct Err4 {};
+
+		HResult<int, Err2, Err4> sub_result = HUnexpected(Err2());
+		static_assert(std::is_same_v<decltype(sub_result)::error_type, std::variant<Err2, Err4>>);
+		HResult<int, Err1, Err2, Err3, decltype(sub_result)::error_type> result(sub_result);
+		static_assert(std::is_same_v<
+					  decltype(result)::error_type,
+					  std::variant<Err1, Err3, Err2, Err4>>);
+		bool entered2 = false;
+		ASSERT_TRUE(!result.has_value());
+		ASSERT_TRUE(result.has_error());
+		variant_match(result.error()) {
+			variant_case(Err2, value) { entered2 = true; }
+			variant_default RIFT_PANIC("Invalid branch");
+		}
+		ASSERT_TRUE(entered2);
 	}
 };
 

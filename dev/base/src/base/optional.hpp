@@ -125,7 +125,7 @@ namespace base {
 		Optional& operator=(const Optional&)     = default;
 
 		template<class... Args>
-		constexpr explicit Optional(Args&&... args):
+		requires std::is_constructible_v<T, Args...> constexpr explicit Optional(Args&&... args):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
 		template<class U = T>
@@ -290,15 +290,13 @@ namespace base {
 		 * @return Object T to perform an operation on.
 		 */
 		[[nodiscard]]
-		constexpr const T*
-			operator->() const {
+		constexpr const T* operator->() const {
 			_throwOnNoValue();
 			return private_optional.operator->();
 		}
 
 		[[nodiscard]]
-		constexpr T*
-			operator->() {
+		constexpr T* operator->() {
 			_throwOnNoValue();
 			return private_optional.operator->();
 		}
