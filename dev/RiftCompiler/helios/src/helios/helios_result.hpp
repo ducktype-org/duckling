@@ -166,7 +166,7 @@ namespace compiler::helios::errors {
 			if (oth.has_error())
 				std::visit([&](auto&& erTp) { error_storage = error_type{ erTp }; }, oth.error());
 		}
-		
+
 		// Constructor of the main value by forwarding arguments
 		template<class... Args>
 		requires std::is_constructible_v<base::Optional<ResTp>, Args...>
