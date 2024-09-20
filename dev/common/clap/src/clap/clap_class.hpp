@@ -38,9 +38,7 @@ namespace clap {
 	public:
 		Clap();
 
-		Clap(Clap& other) noexcept: Clap(std::move(other)) {}
-
-		Clap(Clap&& other) noexcept:
+		Clap(Clap& other) noexcept:
 			  default_value_parser(std::move(other.default_value_parser)),
 			  positional_parameters(std::move(other.positional_parameters)),
 			  parameters(std::move(other.parameters)) {}
