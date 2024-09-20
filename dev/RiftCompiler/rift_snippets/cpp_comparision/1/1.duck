@@ -95,15 +95,15 @@ fun makeDiag(Direction diag_direction) = {
 
 	var mirror_per_diag: i64->MirrorPoint[];
 
-	for (let mirror in mirrors) {
+	for (mirror in mirrors) {
 		let diag_id = diagID(flip_x, flip_y, mirror.position);
 		mirror_per_diag[diag_id].append(mirror);
 	}
 		
-	for (let [_, mirrors_on_diag] in mirror_per_diag) {
+	for ([_, mirrors_on_diag] in mirror_per_diag) {
 		std.sort(&mirrors_on_diag, cmp = compareVecOnDiagonal(flip_x, flip_y));
 
-		for (let i in 0..(mirrors_on_diag.ssize() - 1)) {
+		for (i in 0..(mirrors_on_diag.ssize() - 1)) {
 			let from = mirrors_on_diag.at(i);
 			let to = mirrors_on_diag.at(i + 1);
 
