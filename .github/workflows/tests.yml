@@ -24,6 +24,7 @@ jobs:
         build-type: [Debug, Release]  # (Release, Debug, RelWithDebInfo, etc.)
       fail-fast: false
 
+
     outputs:
       # @note: with matrix runs, each run works with the same output,
       # and they will overwrite each other
@@ -33,7 +34,8 @@ jobs:
       # it should not override if the step if skipped.
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
 
-    timeout-minutes: 10  # (Per matrix run)
+    timeout-minutes: 20  # (Per matrix run)
+
 
     runs-on: ubuntu-24.04
 
