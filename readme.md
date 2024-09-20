@@ -8,7 +8,7 @@
 
 ```bash
 sudo apt update -y && \
-sudo apt install python3 doxygen graphviz -y
+sudo apt install python3 doxygen graphviz-dev -y
 ```
 
 #### Arch linux
