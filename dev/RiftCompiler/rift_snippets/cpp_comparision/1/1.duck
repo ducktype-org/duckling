@@ -5,12 +5,7 @@ class Vec {
 	var x, y: i64;
 }
 
-enum Direction {
-	PG,
-	PD,
-	LG,
-	LD
-}
+enum Direction { PG, PD, LG, LD }
 
 class DivVec {
 	var position: Vec;
@@ -31,7 +26,7 @@ var mirrors: MirrorPoint[];
 
 fun sign(x: i64) = if x > 0 then 1 else (if x < 0 then (-1) else 0);
 
-fun dirToVec(d: Direction) -> Vec {
+fun dirToVec(d: Direction) -> Vec = {
 	match (d) {
 		case Direction.PG =
 			return {1, 1};
@@ -44,7 +39,7 @@ fun dirToVec(d: Direction) -> Vec {
 	}
 }
 
-fun getDirection(s: ref String) {
+fun getDirection(s: ref String) = {
 	match (s) {
 		case "PG" = return Direction.PG;
 		case "PD" = return Direction.PD;
@@ -72,7 +67,7 @@ fun compareVecOnDiagonal(flip_x: bool, @unused flip_y: bool) =
 		}
 	};
 
-fun flipDirection(d: Direction, mirror: MirrorPoint) {
+fun flipDirection(d: Direction, mirror: MirrorPoint) = {
 	# structural matching..?:
 	var [x_flip, y_flip] = mirror.flips;
 	let [x, y] = dirToVec(d);
@@ -93,7 +88,7 @@ fun flipDirection(d: Direction, mirror: MirrorPoint) {
 var from_to: DivVec->DivVec;
 
 
-fun makeDiag(Direction diag_direction) {
+fun makeDiag(Direction diag_direction) = {
 	# this are different flips:
 	let flip_x = diag_direction == Direction.LG or diag_direction == Direction.LD;
 	let flip_y = diag_direction == Direction.PD or diag_direction == Direction.LD;
