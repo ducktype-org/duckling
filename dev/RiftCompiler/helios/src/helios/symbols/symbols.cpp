@@ -466,9 +466,7 @@ namespace compiler::helios {
 					}
 					rpn.emplace_back(TupleConstructor{ tuple.expr.size() });
 				}
-				variant_default {
-					return errors::HUnexpected(errors::ExpressionParsingError());
-				}
+				variant_default { return errors::HUnexpected(errors::ExpressionParsingError()); }
 			}
 		}
 		while (!st.empty()) {

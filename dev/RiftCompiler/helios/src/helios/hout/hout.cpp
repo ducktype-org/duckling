@@ -36,7 +36,7 @@ namespace compiler::helios {
 	}
 
 	HOUTFunction::HOUTFunction(SymID symbol, query::Context& ctx):
-		  original_symbol(std::move(symbol)),
+		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
 		  type(UNPACK_OR_PANIC(
 			  ctx.query<QueryTypeOfSymbol>(original_symbol),

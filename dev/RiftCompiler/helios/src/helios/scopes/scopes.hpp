@@ -78,8 +78,8 @@ namespace compiler::helios {
 		bool        operator==(const KeyOf_LookupInScope&) const = default;
 	};
 
-	using QueryLookup_Result = errors::
-		HResult<LookupResult, errors::AmbiguityError, errors::SymbolNotFoundError>;
+	using QueryLookup_Result
+		= errors::HResult<LookupResult, errors::AmbiguityError, errors::SymbolNotFoundError>;
 	/**
 	 * @brief Performs lookup of single name inside given scope.
 	 */

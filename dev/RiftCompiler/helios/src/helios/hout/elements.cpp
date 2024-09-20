@@ -132,11 +132,14 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
-				  UNPACK_OR_PANIC(ctx.query<QueryTypeOfSymbol>(symbol), "Handling errors in HOUT is not supported yet"),
+				  UNPACK_OR_PANIC(
+					  ctx.query<QueryTypeOfSymbol>(symbol),
+					  "Handling errors in HOUT is not supported yet"
+				  ),
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
 			  )
 		  ),
-		  symbol(std::move(symbol)) {}
+		  symbol(symbol) {}
 }
 
 namespace compiler::helios {
