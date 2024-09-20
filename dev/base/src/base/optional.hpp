@@ -112,7 +112,7 @@ namespace base {
 	 * @tparam T type of stored value. It can be a reference.
 	 */
 	template<class T>
-	class Optional {
+	class Optional final {
 	public:
 		Optional()  = default;
 		~Optional() = default;
@@ -360,7 +360,7 @@ namespace base {
 	// we can do to avoid doing it this way, mainly because std::optional<T> is not supported for
 	// T being an incomplete type.
 	template<class T>
-	class Optional<T&> {
+	class Optional<T&> final {
 	public:
 		Optional() = default;
 

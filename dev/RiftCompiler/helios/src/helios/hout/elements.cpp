@@ -165,7 +165,7 @@ namespace compiler::helios {
 				throw base::NotYetImplemented("Keyword expressions");
 			}
 			variant_case(pst::Expr::NumLiteral, num) {
-				auto val = base::strIdToNum(num.num_id);
+				auto val = base::strIDToNum(num.num_id);
 				return base::make_unique<code::LiteralValueExpr>(scope, val, ctx);
 			}
 			variant_case(pst::Expr::Identifier, identifier) {

@@ -47,7 +47,7 @@ namespace compiler::helios {
 		 */
 		SymID original_symbol;
 
-		base::StrId original_name;
+		base::StrID original_name;
 
 		HOUTCode body;
 
@@ -81,7 +81,7 @@ namespace compiler::helios {
 		// Currently it is here for pretty printing
 		SymID helios_symbol;
 
-		base::StrId original_name;
+		base::StrID original_name;
 
 		// @TODO: CTV from TS:
 		i64 value;

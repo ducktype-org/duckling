@@ -4,8 +4,8 @@
 
 namespace base {
 
-	StrId::ToDataType StrId::to_data_map;
-	StrId::ToIdType   StrId::to_id_map;
+	StrID::ToDataType StrID::to_data_map;
+	StrID::ToIDType   StrID::to_id_map;
 
 	constexpr usize default_buffer_size = 32'768;
 	using BufferList                    = std::vector<base::OwningView>;
@@ -41,15 +41,15 @@ namespace base {
 	 *
 	 * @OPT: better memory/buffers usage
 	 */
-	StrId::StrId(const base::RawView& data) {
-		RIFT_ASSERT(data.getBegin() != nullptr, "StrId received null string");
+	StrID::StrID(const base::RawView& data) {
+		RIFT_ASSERT(data.getBegin() != nullptr, "StrID received null string");
 
 		if (to_id_map.contains(data)) {
 			id = to_id_map[data];
 			return;
 		}
 
-		id = InnerId::next();
+		id = InnerID::next();
 
 		base::RawView actual_data;
 
@@ -76,11 +76,11 @@ namespace base {
 		to_id_map.put(actual_data, id);
 	}
 
-	StrId::StrId(const char* data): StrId(base::RawView(data)) {}
+	StrID::StrID(const char* data): StrID(base::RawView(data)) {}
 
-	StrId::StrId(char character): StrId(std::string(1, character).c_str()) {}
+	StrID::StrID(char character): StrID(std::string(1, character).c_str()) {}
 
-	void StrId::dumpData(std::ostream& out) {
+	void StrID::dumpData(std::ostream& out) {
 		i32 i = 0;
 		for (auto v: to_data_map) {
 			if (v) out << i << ": " << v->stringView() << "\n";
@@ -88,7 +88,7 @@ namespace base {
 		}
 	}
 
-	i64 strIdToNum(base::StrId str) {
+	i64 strIDToNum(base::StrID str) {
 		auto view = str.strView();
 
 		i64                    out{};

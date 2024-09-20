@@ -31,11 +31,11 @@ namespace vm {
 			  memory(getMemory(serviceManager.getVCPU())) {}
 
 	public:
-		BlockId makeTypeBlock(TypeCRef type);
+		BlockID makeTypeBlock(TypeCRef type);
 
-		BlockId makeArrayBlock(TypeCRef type, u64 length);
+		BlockID makeArrayBlock(TypeCRef type, u64 length);
 
-		void deleteBlock(BlockId block_id);
+		void deleteBlock(BlockID block_id);
 
 		template<class... DynamicServices>
 		friend class ServiceManagerDef;

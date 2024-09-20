@@ -2,7 +2,7 @@
  * @file stringifyable_enum.hpp
  *
  * @brief This library provides a simple way of creating `enum class` types,
- * that can be automatically converted to `base::StrId` and vice versa.
+ * that can be automatically converted to `base::StrID` and vice versa.
  *
  * Functionalities
  * ===============
@@ -17,7 +17,7 @@
  * in top-level code only. That is why `namespace` parameter exists. It states
  * in what namespace the enum will be created.
  *
- * Conversion to and from StrId
+ * Conversion to and from StrID
  * ------------------------------
  *
  * - `base::enumToStr`
@@ -39,13 +39,13 @@
 namespace base {
 	namespace detail {
 		template<typename EnumType>
-		using StrToEnumType = base::Map<base::StrId, EnumType>;
+		using StrToEnumType = base::Map<base::StrID, EnumType>;
 
 		template<typename EnumType>
-		using EnumToStrType = base::Map<EnumType, base::StrId>;
+		using EnumToStrType = base::Map<EnumType, base::StrID>;
 
 		template<typename EnumType>
-		struct TwoMaps {
+		struct TwoMaps final {
 			EnumToStrType<EnumType> to_str;
 			EnumToStrType<EnumType> to_enum;
 		};
@@ -69,7 +69,7 @@ namespace base {
 			::base::detail::StrToEnumType<namespace_name::name> out;                             \
 			for (base_type i = 0; i < string_vector.size(); i++) {                               \
 				out.put(                                                                         \
-					base::StrId(string_vector[i].data()), static_cast<namespace_name::name>(i)   \
+					base::StrID(string_vector[i].data()), static_cast<namespace_name::name>(i)   \
 				);                                                                               \
 			}                                                                                    \
 			return out;                                                                          \
@@ -79,7 +79,7 @@ namespace base {
 			::base::detail::EnumToStrType<namespace_name::name> out;                             \
 			for (base_type i = 0; i < string_vector.size(); i++) {                               \
 				out.put(                                                                         \
-					static_cast<namespace_name::name>(i), ::base::StrId(string_vector[i].data()) \
+					static_cast<namespace_name::name>(i), ::base::StrID(string_vector[i].data()) \
 				);                                                                               \
 			}                                                                                    \
 			return out;                                                                          \
@@ -88,13 +88,13 @@ namespace base {
                                                                                                  \
 	namespace base {                                                                             \
 		template<>                                                                               \
-		inline ::namespace_name::name strToEnum<::namespace_name::name>(::base::StrId id) {      \
+		inline ::namespace_name::name strToEnum<::namespace_name::name>(::base::StrID id) {      \
 			static ::base::detail::StrToEnumType<namespace_name::name> mapping                   \
 				= name##_enum_helper::strToEnumMaker();                                          \
 			return mapping[id];                                                                  \
 		}                                                                                        \
 		template<>                                                                               \
-		inline ::base::StrId enumToStr<::namespace_name::name>(::namespace_name::name v) {       \
+		inline ::base::StrID enumToStr<::namespace_name::name>(::namespace_name::name v) {       \
 			static ::base::detail::EnumToStrType<::namespace_name::name> mapping                 \
 				= name##_enum_helper::enumToStrMaker();                                          \
 			return mapping[v];                                                                   \
@@ -103,8 +103,8 @@ namespace base {
 
 namespace base {
 	template<typename EnumType>
-	EnumType strToEnum(StrId id);
+	EnumType strToEnum(StrID id);
 
 	template<typename EnumType>
-	StrId enumToStr(EnumType v);
+	StrID enumToStr(EnumType v);
 }

@@ -18,7 +18,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Symbol Identifier. Used to represent HELIOS Symbol across the compiler.
 	 */
-	struct SymID {
+	struct SymID final {
 		// @FUTURE: add some mangling, so valgrind will not get confused
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
@@ -43,7 +43,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Scope Identifier. Used to represent HELIOS Scope across the compiler.
 	 */
-	struct ScopeID {
+	struct ScopeID final {
 		// @FUTURE: add some mangling, so valgrind will not get confused
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {

@@ -3,7 +3,7 @@
 #include <query_framework/query_entry_point.hpp>
 
 namespace compiler::helios::test_utils {
-	std::pair<frontend::ModuleId, ScopeID> getModule(const fs::FilePath& path) {
+	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::FilePath& path) {
 		auto module = query::entryPoint<frontend::QueryModuleTree>(path);
 
 		// This is what extendQueryRootScopeOfMainModuleFile is doing:

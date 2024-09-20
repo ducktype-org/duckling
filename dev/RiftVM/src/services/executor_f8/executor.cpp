@@ -32,17 +32,6 @@ namespace vm {
 		handleExecutionStrategy();
 	}
 
-	[[gnu::always_inline]]
-	inline void Executor::initNextFrame(Frame* frame, StandardFunctionArgs& args) {
-		frame->regs      = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = memory.nullPtr() };
-		frame->flags     = FlagData{ .flag = false };
-		frame->ret_val   = 0;
-		frame->args      = args;
-		frame->next_args = { 0, memory.nullPtr() };
-		// if (!frame->block_id_stack.empty() || frame->local_stack_head != 0)
-		//   RIFT_PANIC("init/deinits not paired");
-	}
-
 	Frame Executor::internalInitFrame() {
 		return Frame{
 			.instr       = nullptr,
@@ -50,10 +39,10 @@ namespace vm {
 			.regs        = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = memory.nullPtr() },
 			.flags       = FlagData{ .flag = false },
 			.ret_val     = 0,
-			.next_args   = { 0, memory.nullPtr() },
-			.args        = { 0, memory.nullPtr() },
+			.next_args   = nullptr,
+			.args        = nullptr,
 
-			.block_id_stack   = std::vector<BlockId>(),
+			.block_id_stack   = std::vector<BlockID>(),
 			.local_stack_head = 0,
 		};
 	}
@@ -133,16 +122,6 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_mov_r0_l64(OPFUN_ARGS) {
 		{ frame->regs.p64_reg_0 = derefStack<u64>(local_stack, instr->arg0); }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mov_l64_pFuncArg(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) = frame->args.p64_arg; }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mov_lptr_ptrFuncArg(OPFUN_ARGS) {
-		{ derefStack<Pointer>(local_stack, instr->arg0) = frame->args.pointer_arg; }
 		OPFUN_CONT(1);
 	}
 
@@ -234,13 +213,55 @@ namespace vm {
 		OPFUN_CONT_CHECK_STRATEGY(1);
 	}
 
-	RETURN_TYPE OpFuns::op_setPtrArg_lptr(OPFUN_ARGS) {
-		{ frame->next_args.pointer_arg = derefStack<Pointer>(local_stack, instr->arg0); }
+	RETURN_TYPE OpFuns::op_mov_l64_arg64(OPFUN_ARGS) {
+		{ derefStack<i64>(local_stack, instr->arg0) = derefStack<i64>(frame->args, instr->arg1); }
 		OPFUN_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_setPArg_l64(OPFUN_ARGS) {
-		{ frame->next_args.p64_arg = derefStack<i64>(local_stack, instr->arg0); }
+	RETURN_TYPE OpFuns::op_mov_lptr_argptr(OPFUN_ARGS) {
+		{
+			derefStack<Pointer>(local_stack, instr->arg0)
+				= derefStack<Pointer>(frame->args, instr->arg1);
+		}
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::op_getFstArg_l64(OPFUN_ARGS) {
+		{ derefStack<i64>(local_stack, instr->arg0) = derefStack<i64>(frame->args, 0); }
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::op_getFstArg_lptr(OPFUN_ARGS) {
+		{ derefStack<Pointer>(local_stack, instr->arg0) = derefStack<Pointer>(frame->args, 0); }
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::op_setFstArg_l64(OPFUN_ARGS) {
+		{ derefStack<i64>(frame->next_args, 0) = derefStack<i64>(local_stack, instr->arg0); }
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::op_setFstArg_lptr(OPFUN_ARGS) {
+		{
+			derefStack<Pointer>(frame->next_args, 0)
+				= derefStack<Pointer>(local_stack, instr->arg0);
+		}
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::op_mov_arg64_l64(OPFUN_ARGS) {
+		{
+			derefStack<i64>(frame->next_args, instr->arg0)
+				= derefStack<i64>(local_stack, instr->arg1);
+		}
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::op_mov_argptr_lptr(OPFUN_ARGS) {
+		{
+			derefStack<Pointer>(frame->next_args, instr->arg0)
+				= derefStack<Pointer>(local_stack, instr->arg1);
+		}
 		OPFUN_CONT(1);
 	}
 
@@ -261,19 +282,22 @@ namespace vm {
 			auto* prev_frame = frame;
 			frame++;
 			i32 function_id = instr->arg0;
-			if (frame + 1 > runtime_data.frame_stack_end) RIFT_PANIC("RiftVM stack overflow.");
-			executor.initNextFrame(frame, prev_frame->next_args);
+			if (frame + 1 >= runtime_data.frame_stack_end) RIFT_PANIC("RiftVM stack overflow.");
+			frame->args = prev_frame->next_args;
 
 			// Update values passed as arguments.
 			instr = executor.executing_code->functions[function_id].bc.data();
 
 			u64 local_stack_size = executor.executing_code->functions[function_id].stack_size;
 			local_stack          = runtime_data.local_stack_top;
-
 			runtime_data.local_stack_top += local_stack_size;
+
+			frame->next_args = runtime_data.local_stack_top;
+			runtime_data.local_stack_top
+				+= executor.executing_code->functions[function_id].next_arg_size;
+
 			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
 				RIFT_PANIC("RiftVM stack overflow.");
-			memset(local_stack, 0, local_stack_size);
 		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
@@ -286,17 +310,11 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_ret_tailcall(OPFUN_ARGS) {
 		{
-			auto& runtime_data = executor.runtime_data;
-
 			auto function_id = instr->arg0;
-			executor.initNextFrame(frame, frame->next_args);
+
 			instr = executor.executing_code->functions[function_id].bc.data();
 
-			auto local_stack_size = executor.executing_code->functions[function_id].stack_size;
-			runtime_data.local_stack_top = local_stack + local_stack_size;
-			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
-				RIFT_PANIC("RiftVM stack overflow.");
-			memset(local_stack, 0, local_stack_size);
+			swap(frame->args, frame->next_args);
 		}
 		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
@@ -344,7 +362,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_init_type(OPFUN_ARGS) {
 		{
-			auto             type      = executor.types.getType(vm::TypeId(instr->arg0));
+			auto             type      = executor.types.getType(vm::TypeID(instr->arg0));
 			auto             type_size = type->getSize();
 			base::ModRawView data(&local_stack[frame->local_stack_head], type_size);
 			frame->local_stack_head += type_size;
@@ -388,10 +406,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_alloc_lptr_type(OPFUN_ARGS) {
 		{
-			auto type = executor.types.getType(vm::TypeId(instr->arg1));
+			auto type = executor.types.getType(vm::TypeID(instr->arg1));
 			// This is disasbled, because we don't want to pay performance for initializing it
 			// NOLINTBEGIN(cppcoreguidelines-pro-type-member-init)
-			BlockId block;
+			BlockID block;
 			// NOLINTEND(cppcoreguidelines-pro-type-member-init)
 			if (type->getKind() == vm::Type::Kind::StaticTable) {
 				// @TODO: As noted in type.hpp, interface used below may change
@@ -499,6 +517,9 @@ namespace vm {
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
 		std::byte* local_stack = runtime_data.local_stack_top;
 		runtime_data.local_stack_top += main_func.stack_size;
+
+		frame->next_args = runtime_data.local_stack_top;
+		runtime_data.local_stack_top += main_func.next_arg_size;
 
 		auto* instr = main_func.bc.data();
 

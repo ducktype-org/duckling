@@ -8,7 +8,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR("VM Functions Tests") {
 		TESTER_ADD_TEST(test_ret_l64_opcode);
 		TESTER_ADD_TEST(test_ret_imm_opcode);
-		TESTER_ADD_TEST(test_setPArg_l64_opcode);
+		TESTER_ADD_TEST(test_setFstArg_l64_opcode);
 		TESTER_ADD_TEST(test_recurence);
 		TESTER_ADD_TEST(test_many_functions);
 		TESTER_ADD_TEST(test_preserved_flag);
@@ -22,9 +22,9 @@ private:
 
 	void test_ret_imm_opcode() { runTestOnVm("ret_imm.rbc", "", "17"); }
 
-	void test_setPArg_l64_opcode() {
-		runTestOnVm("setPArg_l64.rbc", "18", "18");
-		runTestOnVm("setPArg_l64.rbc", "4200", "4200");
+	void test_setFstArg_l64_opcode() {
+		runTestOnVm("setFstArg_l64.rbc", "18", "18");
+		runTestOnVm("setFstArg_l64.rbc", "4200", "4200");
 	}
 
 	void test_recurence() {

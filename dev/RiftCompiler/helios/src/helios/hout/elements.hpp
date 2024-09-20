@@ -170,14 +170,14 @@ namespace compiler::helios::code {
 	struct BinaryOperatorExpr: public Expr {
 		// @TODO: At this point, this should be a symbol.
 		//  HOUT should not be concerned with overload resolution.
-		base::StrId op;
+		base::StrID op;
 
 		ElementRef<Expr> lhs;
 		ElementRef<Expr> rhs;
 
 		BinaryOperatorExpr(
 			ScopeID          scope,
-			base::StrId      op,
+			base::StrID      op,
 			ElementRef<Expr> lhs,
 			ElementRef<Expr> rhs,
 			query::Context&  ctx

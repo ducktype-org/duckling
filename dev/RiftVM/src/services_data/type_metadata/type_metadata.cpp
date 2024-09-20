@@ -21,15 +21,15 @@ namespace vm {
 		for (auto id: types_ids) types[id].finalize();
 	}
 
-	TypeCRef TypeMetadata::getType(TypeId id) const {
-		return types.getCRef(id).expect("Bad TypeId in getType");
+	TypeCRef TypeMetadata::getType(TypeID id) const {
+		return types.getCRef(id).expect("Bad TypeID in getType");
 	}
 
-	base::Optional<TypeCRef> TypeMetadata::getTypeSafe(TypeId id) const {
+	base::Optional<TypeCRef> TypeMetadata::getTypeSafe(TypeID id) const {
 		return types.getCRef(id);
 	}
 
-	base::Optional<TypeCRef> TypeMetadata::getTypeByName(base::StrId name) const {
+	base::Optional<TypeCRef> TypeMetadata::getTypeByName(base::StrID name) const {
 		if (names_to_type.contains(name))
 			return getType(names_to_type[name]);
 		else

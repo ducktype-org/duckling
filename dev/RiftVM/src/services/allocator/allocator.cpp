@@ -5,7 +5,7 @@
 namespace vm {
 	Memory& Allocator::getMemory(VCPU& vcpu) { return vcpu.getData().get<Memory>(); }
 
-	BlockId Allocator::makeTypeBlock(TypeCRef type) {
+	BlockID Allocator::makeTypeBlock(TypeCRef type) {
 		auto  block_id = memory.reserveBlockID();
 		byte* data     = new byte[type->getSize()];
 		std::memset(data, 0, type->getSize());
@@ -13,7 +13,7 @@ namespace vm {
 		return block_id;
 	}
 
-	BlockId Allocator::makeArrayBlock(TypeCRef type, u64 length) {
+	BlockID Allocator::makeArrayBlock(TypeCRef type, u64 length) {
 		auto  block_id = memory.reserveBlockID();
 		byte* data     = new byte[type->getSize() * length];
 		std::memset(data, 0, type->getSize() * length);
@@ -24,7 +24,7 @@ namespace vm {
 		return block_id;
 	}
 
-	void Allocator::deleteBlock(BlockId block_id) {
+	void Allocator::deleteBlock(BlockID block_id) {
 		delete[] memory.getBlock(block_id)->rawPointer().getBegin();
 		memory.deleteBlock(block_id);
 		memory.returnBlockID(block_id);
