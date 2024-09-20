@@ -58,7 +58,7 @@ fun diagID(flip_x: bool, flip_y: bool, v: Vec) =
 	(if flip_x then (v.x) else (-v.x)) - (if flip_y then (v.y) else (-v.y));
 
 fun compareVecOnDiagonal(flip_x: bool, @unused flip_y: bool) =
-	lambda[flip_x, flip_y](lhs: MirrorPoint, rhs: MirrorPoint) -> bool {
+	lambda[flip_x, flip_y](lhs: MirrorPoint, rhs: MirrorPoint) {
 		if (flip_x) {
 			return lhs.position.x > rhs.position.x;
 		}
@@ -90,8 +90,8 @@ var from_to: DivVec->DivVec;
 
 fun makeDiag(Direction diag_direction) = {
 	# this are different flips:
-	let flip_x = diag_direction == Direction.LG or diag_direction == Direction.LD;
-	let flip_y = diag_direction == Direction.PD or diag_direction == Direction.LD;
+	let flip_x = diag_direction in [Direction.LG, Direction.LD];
+	let flip_y = diag_direction in [Direction.PD, Direction.LD];
 
 	var mirror_per_diag: i64->MirrorPoint[];
 
@@ -104,8 +104,8 @@ fun makeDiag(Direction diag_direction) = {
 		std.sort(&mirrors_on_diag, cmp = compareVecOnDiagonal(flip_x, flip_y));
 
 		for (i in 0..(mirrors_on_diag.ssize() - 1)) {
-			let from = mirrors_on_diag.at(i);
-			let to = mirrors_on_diag.at(i + 1);
+			let from = mirrors_on_diag[i];
+			let to = mirrors_on_diag[i + 1];
 
 			from_to.insert({from.position, diag_direction}, {to.position, flipDirection(diag_direction, to)});
 		}

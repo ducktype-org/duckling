@@ -81,7 +81,7 @@ i64 diagID(bool flip_x, bool flip_y, Vec v) {
 }
 
 auto compareVecOnDiagonal(bool flip_x, [[maybe_unused]] bool flip_y) {
-	return [=](MirrorPoint lhs, MirrorPoint rhs) -> bool {
+	return [=](MirrorPoint lhs, MirrorPoint rhs) {
 		if (flip_x) {
 			return lhs.position.x > rhs.position.x;
 		}
