@@ -136,105 +136,105 @@ void makeDiag(Direction diag_direction) {
 
 
 
-int main() {
-	std::ios_base::sync_with_stdio(0);
-	std::cin.tie(0);
+// int main() {
+// 	std::ios_base::sync_with_stdio(0);
+// 	std::cin.tie(0);
 	
-	i64 box_size;
+// 	i64 box_size;
 
-	u64 mirror_count;
-	std::cin >> mirror_count;
+// 	u64 mirror_count;
+// 	std::cin >> mirror_count;
 
-	std::cin >> box_size;
+// 	std::cin >> box_size;
 
-	std::map<Vec, Flips> mirror_points_mapped;
+// 	std::map<Vec, Flips> mirror_points_mapped;
 
-	std::vector<std::tuple<i64, i64, i64, i64>> input;
-	for (u64 i = 0; i < mirror_count; i++) {
-		i64 xb, yb, xe, ye;
-		std::cin >> xb >> yb >> xe >> ye;
-		input.emplace_back(xb, yb, xe, ye);
-	}
+// 	std::vector<std::tuple<i64, i64, i64, i64>> input;
+// 	for (u64 i = 0; i < mirror_count; i++) {
+// 		i64 xb, yb, xe, ye;
+// 		std::cin >> xb >> yb >> xe >> ye;
+// 		input.emplace_back(xb, yb, xe, ye);
+// 	}
 
-	input.push_back({0, 0, box_size, 0});
-	input.push_back({0, 0, 0, box_size});
-	input.push_back({box_size, 0, box_size, box_size});
-	input.push_back({0, box_size, box_size, box_size});
+// 	input.push_back({0, 0, box_size, 0});
+// 	input.push_back({0, 0, 0, box_size});
+// 	input.push_back({box_size, 0, box_size, box_size});
+// 	input.push_back({0, box_size, box_size, box_size});
 
-	for (auto [xb, yb, xe, ye]: input) {
-		// i64 xb, yb, xe, ye;
-		// std::cin >> xb >> yb >> xe >> ye;
+// 	for (auto [xb, yb, xe, ye]: input) {
+// 		// i64 xb, yb, xe, ye;
+// 		// std::cin >> xb >> yb >> xe >> ye;
 
-		i64 xd = sign(xe - xb);
-		i64 yd = sign(ye - yb);
+// 		i64 xd = sign(xe - xb);
+// 		i64 yd = sign(ye - yb);
 		
-		i64 x = xb;
-		i64 y = yb;
+// 		i64 x = xb;
+// 		i64 y = yb;
 
-		bool x_flip = yd != 0;
-		bool y_flip = xd != 0;
+// 		bool x_flip = yd != 0;
+// 		bool y_flip = xd != 0;
 		
-		bool go = true;
-		while (go) {
-			if (x == xe and y == ye)
-				go = false;
+// 		bool go = true;
+// 		while (go) {
+// 			if (x == xe and y == ye)
+// 				go = false;
 
-			mirror_points_mapped[{x, y}].x_flip |= x_flip;
-			mirror_points_mapped[{x, y}].y_flip |= y_flip;
+// 			mirror_points_mapped[{x, y}].x_flip |= x_flip;
+// 			mirror_points_mapped[{x, y}].y_flip |= y_flip;
 
-			x += xd;
-			y += yd;
+// 			x += xd;
+// 			y += yd;
 			
-		}
-	}
+// 		}
+// 	}
 	
-	for (auto [pos, flips]: mirror_points_mapped) {
-		mirrors.emplace_back(MirrorPoint(pos, flips));
-	}
+// 	for (auto [pos, flips]: mirror_points_mapped) {
+// 		mirrors.emplace_back(MirrorPoint(pos, flips));
+// 	}
 
-	makeDiag(Direction::PG);
-	makeDiag(Direction::PD);
-	makeDiag(Direction::LG);
-	makeDiag(Direction::LD);
+// 	makeDiag(Direction::PG);
+// 	makeDiag(Direction::PD);
+// 	makeDiag(Direction::LG);
+// 	makeDiag(Direction::LD);
 
-	u64 q;
-	std::cin >> q;
+// 	u64 q;
+// 	std::cin >> q;
 
-	std::map<DivVec, Vec> cache;
+// 	std::map<DivVec, Vec> cache;
 
-	for (u64 i = 0; i < q; i++) {
-		Vec start(0, 0);
-		std::cin >> start.x >> start.y;
+// 	for (u64 i = 0; i < q; i++) {
+// 		Vec start(0, 0);
+// 		std::cin >> start.x >> start.y;
 
-		std::string s;
-		std::cin >> s;
+// 		std::string s;
+// 		std::cin >> s;
 
-		auto direction = getDirection(s);
+// 		auto direction = getDirection(s);
 
-		DivVec start_position(start, direction);
-		DivVec current = start_position;
+// 		DivVec start_position(start, direction);
+// 		DivVec current = start_position;
 
 
-		if (cache.contains(current)) {
-			std::cout << cache.at(current).x << " " << cache.at(current).y << "\n";
-			continue;
-		}
+// 		if (cache.contains(current)) {
+// 			std::cout << cache.at(current).x << " " << cache.at(current).y << "\n";
+// 			continue;
+// 		}
 
-		while (true) {
-			current = from_to.at(current);
+// 		while (true) {
+// 			current = from_to.at(current);
 
-			// std::cerr << "bouce: ";
-			// std::cerr << current.position.x << " " << current.position.y << " " << (int)current.dir << "\n";
+// 			// std::cerr << "bouce: ";
+// 			// std::cerr << current.position.x << " " << current.position.y << " " << (int)current.dir << "\n";
 
-			if (current.position.x == 0 or current.position.y == 0 or current.position.x == box_size or current.position.y == box_size) {
-				break;
-			}
+// 			if (current.position.x == 0 or current.position.y == 0 or current.position.x == box_size or current.position.y == box_size) {
+// 				break;
+// 			}
 
-		}
+// 		}
 
-		cache.insert({start_position, current.position});
+// 		cache.insert({start_position, current.position});
 
-		std::cout << current.position.x << " " << current.position.y << "\n";
-	}
+// 		std::cout << current.position.x << " " << current.position.y << "\n";
+// 	}
 
-}
+// }

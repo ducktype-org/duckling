@@ -63,6 +63,6 @@ int main(int argc, const char** argv) {
 		return -1;
 	}
 
-	std::cout << count_tokens(file->getTokenData().tokens);
+	std::cout << count_tokens(file->getTokenData().tokens) << "\n";
 	return 0;
 }
