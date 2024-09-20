@@ -72,8 +72,32 @@ export class CompilerDaemonClient {
 		return response.then(handleResponse).catch(handleCatch);
 	}
 
+	// // This function is called to get the LSPTree from the daemon for a file
+	// public async getLSPT(filePath: string, connection: Connection): Promise<DucklingElement | null> {
+	// 	this.waitForReady(connection);
+
+	// 	const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
+
+	// 	const response = fetch(`${DAEMON_ADRESS}/get_lsptree/${base64FilePath}`);
+
+	// 	function handleResponse(res: Response) {
+	// 		return res.json();
+	// 	}
+
+	// 	function handleJSON(json: any): DucklingElement | null {
+	// 		return ducklingElementFactory.createDefined(json); // LSPT is created here from JSON
+	// 	}
+
+	// 	function handleCatch(error: any) : null {
+	// 		console.error(error);
+	// 		return null;
+	// 	}
+
+	// 	return response.then(handleResponse).then(handleJSON).catch(handleCatch);
+	// }
+
 	// This function is called to get the LSPTree from the daemon for a file
-	public async getLSPT(filePath: string, connection: Connection): Promise<DucklingElement | null> {
+	public async getLSPT(filePath: string, connection: Connection): Promise<JSON | null> {
 		this.waitForReady(connection);
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
@@ -84,41 +108,13 @@ export class CompilerDaemonClient {
 			return res.json();
 		}
 
-		function handleJSON(json: any): DucklingElement | null {
-			return ducklingElementFactory.createDefined(json); // LSPT is created here from JSON
-		}
-
 		function handleCatch(error: any) : null {
 			console.error(error);
 			return null;
 		}
 
-		return response.then(handleResponse).then(handleJSON).catch(handleCatch);
-	}
-
-	// This function is called to get the LSPTree from the daemon for a file
-	public async getSemTokens(filePath: string, connection: Connection): Promise<string> {
-		this.waitForReady(connection);
-
-		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
-
-		const response = fetch(`${DAEMON_ADRESS}/get_sem_tokens/${base64FilePath}`);
-
-		function handleResponse(res: Response) {
-			return res.text();
-		}
-
-		function handleJSON(json: any): SemanticToken[] | null {
-			return SemanticToken.parseTree(json); // Tokens are created here from JSON
-		}
-
-		function handleCatch(error: any) : string {
-			console.error(error);
-			return "mega siara\n";
-		}
-
+		//return response.then(handleResponse).catch(handleCatch);
 		return response.then(handleResponse).catch(handleCatch);
-		// return response.then(handleResponse).then(handleJSON).catch(handleCatch);
 	}
 
 	// This function is called to get the errors from the daemon for a file

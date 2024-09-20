@@ -22,6 +22,7 @@ import { CompilerDaemonClient } from "./compilerDaemonClient";
 import { getFoldingRanges } from './foldingRanges';
 import { DucklingElement } from './lsptree/elements/elements';
 import { Token } from './semanticTokensDeclarations';
+import { extractObjectsWithTokenKind } from './parseLSPT';
 require("./lsptree/elements/index");
 
 // Create a connection between the client and the server
@@ -40,6 +41,7 @@ let hasWorkspaceFolderCapability = false;
 // Storing LSPT for documents
 const lsptCache: Map<string, DucklingElement | null> = new Map();
 const semanticTokensCache: Map<string, Token[]> = new Map();
+const foldingCache: Map<string, FoldingRange[]> = new Map();
 
 // Semantic tokens legend
 const semanticTokensLegend = {
@@ -103,7 +105,7 @@ connection.onInitialized(() => {
 
 // Register the handler for semantic tokens
 connection.onRequest("textDocument/semanticTokens/full", (params) => 
-	handleSemanticTokensFull(params, documents, lsptCache, semanticTokensCache, compilerDaemonClient, connection)
+	handleSemanticTokensFull(params, documents, semanticTokensCache, compilerDaemonClient, connection)
 );
 
 // The example settings
@@ -158,8 +160,8 @@ documents.onDidChangeContent(change => {
 	compilerDaemonClient.putFile(change.document.uri, change.document.getText(), connection).then(() => {
 		// Get the LSPTree for the document
 		compilerDaemonClient.getLSPT(change.document.uri, connection).then((LSPTree) => {
-			lsptCache.set(change.document.uri, LSPTree);
-			console.log(LSPTree);
+			semanticTokensCache.delete(change.document.uri);
+			foldingCache.delete(change.document.uri);
 		});
 
 		// Revalidate the document
@@ -180,8 +182,8 @@ connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): Com
 connection.onCompletionResolve(onCompletionResolve);
 
 // This handler provides the folding ranges
-connection.onFoldingRanges((params: FoldingRangeParams): FoldingRange[] | null => {
-	return getFoldingRanges(params, documents, semanticTokensCache, lsptCache);
+connection.onFoldingRanges((params: FoldingRangeParams): Promise<FoldingRange[]> => {
+	return getFoldingRanges(params, documents, compilerDaemonClient, foldingCache, connection);
 });
 
 // Make the compiler daemon client exit when the connection exits

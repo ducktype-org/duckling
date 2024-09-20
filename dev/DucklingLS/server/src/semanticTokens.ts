@@ -4,6 +4,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { Token, getTokenTypeIndex, semanticTokensLegend, compareTokens } from "./semanticTokensDeclarations";
 import { DucklingElement } from "./lsptree/elements/elements";
 import { CompilerDaemonClient } from "./compilerDaemonClient";
+import { extractObjectsWithTokenKind } from "./parseLSPT";
 import { log } from "console";
 
 interface CommentMarker {
@@ -88,7 +89,6 @@ function computeCommentsTokens(document: TextDocument): Token[] {
 export async function handleSemanticTokensFull(
 	params: SemanticTokensParams,
 	documents: TextDocuments<TextDocument>,
-	lsptCache: Map<string, DucklingElement | null>,
 	semanticTokensCache: Map<string, Token[]>,
 	compilerDaemonClient: CompilerDaemonClient,
 	connection: Connection
@@ -97,24 +97,25 @@ export async function handleSemanticTokensFull(
 	if (!document) return { data: [] };
 
 	// Get the LSPTree from the cache
-	let LSPTree = lsptCache.get(document.uri);
+	let preloadedTokens = semanticTokensCache.get(document.uri);
+	let tokens: Token[] = [];
 	// or request it from the compiler daemon if it is not in the cache
-	//if (!LSPTree) {
-		LSPTree = await compilerDaemonClient.getLSPT(document.uri, connection);
-		let semTokensDebug = await compilerDaemonClient.getSemTokens(document.uri, connection) || "No semantic tokens received";
-		connection.console.log("Received semantic tokens:\n\n\n\n\n\n\n");
-		connection.console.log(semTokensDebug);
-		lsptCache.set(document.uri, LSPTree);
-	//}
+	if (preloadedTokens === undefined) {
+		let LSPTree = await compilerDaemonClient.getLSPT(document.uri, connection);
+		if (!LSPTree) {
+			connection.console.error("LSPTree is null");
+			return { data: [] };
+		}
+		preloadedTokens = extractObjectsWithTokenKind(LSPTree);
+		const commentTokens: Token[] = computeCommentsTokens(document);
+		tokens = preloadedTokens.concat(commentTokens);
+		tokens.sort((a, b) => compareTokens(a, b));
+		semanticTokensCache.set(document.uri, tokens);
+	} else {
+		tokens = preloadedTokens;
+		connection.console.log("Using preloaded tokens");
+	}
 
-	// Compute the semantic tokens from the LSPT and the comments
-	const commentTokens: Token[] = computeCommentsTokens(document);
-	const compiledTokens: Token[] = LSPTree?.getSemanticTokens() ?? [];
-	const tokens = compiledTokens.concat(commentTokens);
-
-	// Sort the tokens and build the response
-	tokens.sort((a, b) => compareTokens(a, b));
-	semanticTokensCache.set(document.uri, tokens);
 	const builder = new SemanticTokensBuilder();
 	// Each token needs to be pushed to the builder
 	tokens.forEach((token) => {

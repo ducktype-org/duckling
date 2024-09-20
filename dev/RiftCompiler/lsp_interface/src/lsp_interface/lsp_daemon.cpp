@@ -94,7 +94,7 @@ void server(i32 port) {
 
 	    Generate LSP tree for a file under the given path in the virtual file system.
 	*/
-	CROW_ROUTE(app, "/get_lsptree/<string>")
+	CROW_ROUTE(app, "/get_sem_tokens/<string>")
 	([&files](const std::string& base64_path) {
 		try {
 			const auto        path   = base64::decode_into<std::string>(base64_path);
@@ -118,7 +118,7 @@ void server(i32 port) {
 
 	    Generate a modified PST for a file under the given path in the virtual file system.
 	*/
-	CROW_ROUTE(app, "/get_sem_tokens/<string>")
+	CROW_ROUTE(app, "/get_lsptree/<string>")
 	([&files](const std::string& base64_path) {
 		try {
 			const auto        path   = base64::decode_into<std::string>(base64_path);
