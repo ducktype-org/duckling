@@ -21,7 +21,7 @@
 
 namespace compiler::helios {
 
-	struct ScopeData {
+	struct ScopeData final {
 		// adapted from hir:
 
 		// created on startup:

@@ -8,7 +8,7 @@
 using query::detail::NodeID;
 
 template<>
-struct std::hash<NodeID> {
+struct std::hash<NodeID> final {
 	std::size_t operator()(const NodeID& key) const {
 		auto l = key.q_id;
 		auto r = key.hash.val;
@@ -36,7 +36,7 @@ namespace query::detail {
 			Done,
 		};
 
-		struct NodeData {
+		struct NodeData final {
 			Color               color;
 			std::vector<NodeID> dependencies;
 

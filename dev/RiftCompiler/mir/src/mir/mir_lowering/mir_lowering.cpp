@@ -33,7 +33,7 @@ namespace compiler::mir {
 	 * a BlockBuilderRef that is the beginning of the lowered expression and MirLocation
 	 * that holds the result of the expression.
 	 */
-	struct ExprLowerRes {
+	struct ExprLowerRes final {
 		BlockBuilderRef begin;
 		MirLocation     value;
 	};
@@ -42,7 +42,7 @@ namespace compiler::mir {
 	 * @brief Represents result of statement lowering, which is
 	 * a BlockBuilderRef that is the beginning of the lowered statement.
 	 */
-	struct StmtLowerRes {
+	struct StmtLowerRes final {
 		BlockBuilderRef begin;
 	};
 
@@ -99,7 +99,7 @@ namespace compiler::mir {
 		 * @brief Structure representing a hole in the block, that is
 		 * empty instruction that has to be filled, before the block will be builded.
 		 */
-		struct InstructionHole {
+		struct InstructionHole final {
 		private:
 			BlockBuilderRef block_ref;
 			usize           position;

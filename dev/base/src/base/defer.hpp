@@ -17,7 +17,7 @@
 
 namespace detail {
 	template<typename ActionT>
-	class DeferHelper {
+	class DeferHelper final {
 		ActionT action;
 
 	public:
