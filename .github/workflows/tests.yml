@@ -50,9 +50,9 @@ jobs:
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov llvm llvm-dev
 
-      # - name: Install ccache
-      #   working-directory: ${{ env.WORKSPACE }}
-      #   run: ./toolbox.py download-binaries -s ccache
+      - name: Install ccache
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py download-binaries -s ccache
 
       # Generate a timestamp and save it to a variable.
       # Timestamp is appended to the key in caching, so each cache has a unique key.
@@ -100,7 +100,7 @@ jobs:
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
-              -D USE_CCACHE=OFF \
+              -D USE_CCACHE=ON \
               ${{ steps.cmake-flags.outputs.flags }}
 
       - name: Build tests
