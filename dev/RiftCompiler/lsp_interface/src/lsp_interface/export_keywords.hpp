@@ -11,7 +11,7 @@ namespace lsp {
 	/**
 	 * @brief Class to export keywords for LSP purposes in JSON format.
 	 *
-	 * Member mrthods return JSON strings containing different types of keywords.
+	 * Member methods return JSON strings containing Keywords, Specials and/or Operators.
 	 */
 	class ExportKeywords {
 	public:

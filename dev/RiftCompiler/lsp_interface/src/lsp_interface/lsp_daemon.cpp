@@ -67,6 +67,7 @@ void server(i32 port) {
 
 	/**
 	 * @brief Route to check if the server is running.
+	 * * URL: /status
 	 * @return crow::response The HTTP response indicating the server status.
 	 */
 	CROW_ROUTE(app, "/status")
@@ -74,6 +75,7 @@ void server(i32 port) {
 
 	/**
 	 * @brief Route to export keywords.
+	 * * URL: /export_keywords
 	 * @return crow::response The HTTP response containing the exported keywords in JSON format.
 	 */
 	CROW_ROUTE(app, "/export_keywords")
@@ -81,7 +83,7 @@ void server(i32 port) {
 
 	/**
 	 * @brief Route to add or override a file in the virtual file system.
-	 *
+	 * * URL: /put_file/[base64 relative path]/[base64 file contents]
 	 * @param base64_path The base64 encoded relative path of the file.
 	 * @param base64_content The base64 encoded content of the file.
 	 * @return crow::response The HTTP response indicating the result of the operation.
@@ -103,7 +105,7 @@ void server(i32 port) {
 
 	/**
 	 * @brief Route to generate LSP tree for a file under the given path in the virtual file system.
-	 *
+	 * * URL: /get_lsptree/[base64 relative path]
 	 * @param base64_path The base64 encoded relative path of the file.
 	 * @return crow::response The HTTP response containing the LSP tree.
 	 */
@@ -129,7 +131,7 @@ void server(i32 port) {
 	/**
 	 * @brief Route to generate diagnostics for a file under the given path in the virtual file
 	 * system.
-	 *
+	 * * URL: /get_errors/[base64 relative path]
 	 * @param base64_path The base64 encoded relative path of the file.
 	 * @return crow::response The HTTP response containing the diagnostics.
 	 */
@@ -176,11 +178,17 @@ void showVersion() {
 int main(int argc, const char** argv) {
 	// Initialize the command-line argument parser with help flag and port parameter
 	auto clap
-		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
-	                                         .addShortName('p')
-	                                         .addLongName("port")
-	                                         .addShortDesc("Choose port for server")
-	                                         .build());
+		= clap::Clap().addHelpFlag()
+		.add(clap::ParamBuilder::ofFlag()
+						.addShortName('v')
+						.addLongName("version")
+						.addShortDesc("Show version information")
+						.build())
+		.add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
+						.addShortName('p')
+						.addLongName("port")
+						.addShortDesc("Choose port for server")
+						.build());
 
 	clap::ParsingResult result;
 
@@ -203,12 +211,10 @@ int main(int argc, const char** argv) {
 		return 0;
 	}
 
-	// Check if the version flag is set and show version information
-	if (result.isFlag('v')) showVersion();
+	if (result.isFlag("version")) showVersion();
 	// Check if the port parameter is provided and start the server on the specified port
 	else if (auto port = result.getValue<i64>("port"))
 		server(i32(port.value()));
-	// If no port or file is specified, throw a runtime error
 	else
 		throw std::runtime_error("No port or file specified");
 }
