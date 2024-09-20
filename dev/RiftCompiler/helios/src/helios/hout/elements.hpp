@@ -2,16 +2,18 @@
 
 #include <vector>
 #include <base/ints.hpp>
-
-#include <query_framework/query_int.hpp>
-#include <pst_parser/elements/elements.hpp>
 #include <base/perfect_hash.hpp>
+#include <base/string_id.hpp>
+
+#include <helios/symbols/symbols.hpp>
+#include <pst_parser/elements/elements.hpp>
+#include <query_framework/query_impl.hpp>
+#include <typesystem/higher/type_desc.hpp>
+#include <typesystem/higher/queries.hpp>
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
 #include "element_ref.hpp"
-#include <base/string_id.hpp>
-#include <helios/symbols/symbols.hpp>
 
 namespace compiler::helios::code {
 
@@ -26,7 +28,7 @@ namespace compiler::helios::code {
 	struct Stmt {
 		ScopeID lifetime_scope;
 
-		Stmt(ScopeID lifetime_scope): lifetime_scope(std::move(lifetime_scope)) {}
+		Stmt(ScopeID lifetime_scope): lifetime_scope(lifetime_scope) {}
 
 		virtual ~Stmt()                                                    = default;
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
@@ -41,9 +43,14 @@ namespace compiler::helios::code {
 	struct Expr {
 		ScopeID lifetime_scope;
 
-		// @TODO: set/get Type and ValueCategory of Expr
+		/**
+		 * The type of the expression, and its value category.
+		 */
+		tsh::TypeDesc<> type_desc;
 
-		Expr(ScopeID lifetime_scope): lifetime_scope(std::move(lifetime_scope)) {}
+		Expr(ScopeID lifetime_scope, tsh::TypeDesc<> type_desc):
+			  lifetime_scope(lifetime_scope),
+			  type_desc(type_desc) {}
 
 		virtual ~Expr()                                                    = default;
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
@@ -129,7 +136,16 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		i64 value;
 
-		LiteralValueExpr(ScopeID scope, i64 value): Expr(scope), value(value) {}
+		LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx):
+			  Expr(
+				  scope,
+				  tsh::TypeDesc<>(
+					  // @TODO: Select type of expression based on type of literal.
+					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+				  )
+			  ),
+			  value(value) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
@@ -145,22 +161,43 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		SymID symbol;
 
-		IdentifierExpr(ScopeID scope, SymID symbol): Expr(scope), symbol(std::move(symbol)) {}
+		IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx):
+			  Expr(
+				  scope,
+				  tsh::TypeDesc<>(
+					  ctx.query<QueryTypeOfSymbol>(symbol),
+					  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
+				  )
+			  ),
+			  symbol(std::move(symbol)) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
 	struct BinaryOperatorExpr: public Expr {
-		base::StrId op;
+		// @TODO: At this point, this should be a symbol.
+		//  HOUT should not be concerned with overload resolution.
+		base::StrID op;
 
 		ElementRef<Expr> lhs;
 		ElementRef<Expr> rhs;
 
 		BinaryOperatorExpr(
-			ScopeID scope, base::StrId op, ElementRef<Expr> lhs, ElementRef<Expr> rhs
+			ScopeID          scope,
+			base::StrID      op,
+			ElementRef<Expr> lhs,
+			ElementRef<Expr> rhs,
+			query::Context&  ctx
 		):
-			  Expr(scope),
+			  Expr(
+				  scope,
+				  tsh::TypeDesc<>(
+					  // @TODO: Select type of expression based on result type of the operation.
+					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+				  )
+			  ),
 			  op(op),
 			  lhs(std::move(lhs)),
 			  rhs(std::move(rhs)) {}

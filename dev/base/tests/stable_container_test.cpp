@@ -3,7 +3,7 @@
 #include "base/stable_hashmap.hpp"
 #include <base/strongly_typed_int.hpp>
 
-STRONG_TYPEDEF_INT_DIMENSIONAL(SomeId, usize);
+STRONG_TYPEDEF_INT_DIMENSIONAL(SomeID, usize);
 
 class StableListTestSimple: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -63,7 +63,7 @@ private:
 	}
 
 	void customKeyTest() {
-		base::StableVector<int, SomeId> list;
+		base::StableVector<int, SomeID> list;
 
 		assertTrue(list.empty(), "bad list empty");
 
@@ -71,7 +71,7 @@ private:
 		auto key2 = list.emplaceBack(2);
 
 		assertTrue(key1 != key2, "some keys");
-		assertTrue(key1 + SomeId(1) == key2, "Strange key chosen");
+		assertTrue(key1 + SomeID(1) == key2, "Strange key chosen");
 
 		assertTrue(list[key1] == 1, "bad value in list");
 

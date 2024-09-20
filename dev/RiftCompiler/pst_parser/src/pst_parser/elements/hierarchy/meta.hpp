@@ -136,7 +136,7 @@ namespace pst {
 	};
 
 	struct ClassContext {
-		base::StrId                                 name;
+		base::StrID                                 name;
 		std::vector<base::c_borrow_ptr<tpc::Token>> specifiers;
 	};
 

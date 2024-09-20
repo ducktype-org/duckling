@@ -6,7 +6,7 @@ namespace query::detail {
 		constexpr QueryID outside_world_query = { 0 };
 	}
 
-	QueryID newQueryId(const std::string_view pretty_name) {
+	QueryID newQueryID(const std::string_view pretty_name) {
 		const QueryID ret = next;
 		QueryID::setName(ret, pretty_name);
 

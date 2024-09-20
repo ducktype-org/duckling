@@ -23,7 +23,7 @@ namespace pst {
 	/**
 	 * @brief General Element representing a list of Elements.
 	 *
-	 * @tparam SubElements - Kept Elements, has to have precise length parse like Expr
+	 * @tparam ListElements - Kept Elements, has to have precise length parse like Expr
 	 * @tparam NON_EMPTY - Should empty list be an error.
 	 * @tparam BRACKETS - expected brackets or None if not expected
 	 * @tparam isSeparator - Separator should always be skip-able with one skip.
@@ -33,18 +33,23 @@ namespace pst {
 	 * other condition because of iteration.
 	 */
 	template<
-		class SubElements,
+		class ListElements,
 		bool                      NON_EMPTY,
 		lexer::Token::BracketType BRACKETS,
 		StateCondition            isSeparator,
 		StateCondition            isEnding,
 		GetName                   getName,
-		class Container = std::vector<ParserRef<SubElements>>>
+		class Container = std::vector<ParserRef<ListElements>>>
 	class List final: public NotStmt {
 		Container elements;
 
 	public:
-		DECLARE_CONST_ELEMENT_ITERATOR(elements, SubElements)
+		DECLARE_CONST_ELEMENT_ITERATOR(elements, ListElements)
+
+		[[nodiscard]]
+		usize size() const {
+			return elements.size();
+		}
 
 		explicit List(const dia::SourcePosition& position): NotStmt(position) {}
 
@@ -67,13 +72,28 @@ namespace pst {
 		~List() final = default;
 	};
 
-	using ParamList = List<
-		Expr,
-		false,
-		lexer::Token::BracketType::Round,
-		detail::Conditions::isComma,
-		detail::Conditions::isSentinel,
-		detail::NameGetters::parameterList>;
+	class FunParam final: public NotStmt {
+		tpc::Identifier                 name;
+		ParserRef<Expr>                 type;
+		base::Optional<ParserRef<Expr>> initial;
+
+	public:
+		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {}
+
+		static ParserRef<FunParam> parse(RiftParserState& state);
+		~FunParam() final = default;
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Function Parameter";
+		}
+
+		[[nodiscard]]
+		ParserCBorrowRef<Expr> getType() const {
+			return type.borrow();
+		}
+	};
 
 	using RetList = List<
 		Expr,
@@ -132,7 +152,7 @@ namespace pst {
 		static ParserRef<DottedName> parse(RiftParserState& state);
 
 		[[nodiscard]]
-		std::vector<base::StrId> getNames() const;
+		std::vector<base::StrID> getNames() const;
 		[[nodiscard]]
 		bool getStar() const;
 
@@ -311,15 +331,15 @@ namespace pst {
 		};
 
 		struct Operator {
-			base::StrId oper_id;
+			base::StrID oper_id;
 		};
 
 		struct Identifier {
-			base::StrId indent_id;
+			base::StrID indent_id;
 		};
 
 		struct NumLiteral {
-			base::StrId num_id;
+			base::StrID num_id;
 		};
 
 		std::vector<ExprElem> elements;
@@ -495,14 +515,14 @@ namespace pst {
 	 * @note We might want to move it outside and allow only for specific instances to be cleaner.
 	 */
 	template<
-		class SubElements,
+		class ListElements,
 		bool                      NON_EMPTY,
 		lexer::Token::BracketType BRACKETS,
 		StateCondition            isSeparator,
 		StateCondition            isEnding,
 		GetName                   getName,
 		class Container>
-	auto List<SubElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, getName, Container>::parse(
+	auto List<ListElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, getName, Container>::parse(
 		RiftParserState& state
 	) -> ParserRef<List> {
 		auto position = state.getPosition();
@@ -554,10 +574,17 @@ namespace pst {
 					}
 				}
 
-				ParserRef<SubElements> ref;
-				state.parse(out).template with<SubElements>(
-					&ref, SubElements::parse, (usize) expr_length, true, false
-				);
+				ParserRef<ListElements> ref;
+				// @TODO: This is a "temporary" fix.
+				// Hopefully we can handle this with a uniform `parse` function for all
+				// elements, maybe by polymorphism.
+				if constexpr (std::derived_from<ListElements, Expr>) {
+					state.parse(out).template with<ListElements>(
+						&ref, ListElements::parse, (usize) expr_length, true, false
+					);
+				} else {
+					state.parse(out).template with<ListElements>(&ref, ListElements::parse);
+				}
 				out->elements.emplace_back(std::move(ref));
 
 				if (isEnding(state, 0)) break;

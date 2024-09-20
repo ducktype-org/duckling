@@ -33,11 +33,8 @@
 
 #include <optional>
 #include <functional>
-#include <concepts>
 
 #include "exceptions.hpp"
-#include "type_traits.hpp"
-#include "unique_pointer.hpp"
 
 /* Some cool macros.
  *
@@ -115,7 +112,7 @@ namespace base {
 	 * @tparam T type of stored value. It can be a reference.
 	 */
 	template<class T>
-	class Optional {
+	class Optional final {
 	public:
 		Optional()  = default;
 		~Optional() = default;
@@ -150,7 +147,7 @@ namespace base {
 
 		constexpr void reset() noexcept { private_optional.reset(); }
 
-		friend void swap(Optional& a, Optional& b) {
+		friend void swap(Optional& a, Optional& b) noexcept {
 			std::swap(a.private_optional, b.private_optional);
 		}
 
@@ -365,7 +362,7 @@ namespace base {
 	// we can do to avoid doing it this way, mainly because std::optional<T> is not supported for
 	// T being an incomplete type.
 	template<class T>
-	class Optional<T&> {
+	class Optional<T&> final {
 	public:
 		Optional() = default;
 
@@ -390,7 +387,7 @@ namespace base {
 
 		explicit constexpr operator bool() const { return has_value(); }
 
-		friend void swap(Optional& a, Optional& b) {
+		friend void swap(Optional& a, Optional& b) noexcept {
 			std::swap(a.private_optional, b.private_optional);
 		}
 

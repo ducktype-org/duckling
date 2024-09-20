@@ -25,7 +25,7 @@ namespace compiler::helios {
 	 *
 	 * Intuitively LookupResult is a result of a single "." operator.
 	 */
-	struct LookupResult {
+	struct LookupResult final {
 		/**
 		 * Direct symbols found.
 		 */
@@ -60,7 +60,7 @@ namespace compiler::helios {
 
 		/**
 		 * Turns LookupResult into NestedResult referencing node.
-		 * @param node SymId, that the NestedResult represents.
+		 * @param node SymID, that the NestedResult represents.
 		 * @return New NestedResult from self with node.
 		 */
 		[[nodiscard]]
@@ -79,9 +79,11 @@ namespace compiler::helios {
 	 * behind some alias. "node" represent the alias, while "inner" represent
 	 * lookup result behind the alias.
 	 */
-	struct NestedResult {
+	struct NestedResult final {
 		SymID        node;  ///< node should always be alias-like of using-like thing
 		LookupResult inner;
+
+		NestedResult(SymID node, LookupResult inner);
 	};
 
 	// @TODO: do we want ChainLookupResult for stuff like aliases, usings etc?

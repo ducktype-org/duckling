@@ -4,7 +4,7 @@
 
 namespace tester {
 	namespace {
-		struct KeyFor_DoWithContext {
+		struct KeyFor_DoWithContext final {
 			std::function<std::any(query::Context&)> value;
 			usize                                    ID;
 			static inline usize                      nextID = 0;

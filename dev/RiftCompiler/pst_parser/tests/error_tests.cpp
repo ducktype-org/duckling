@@ -58,11 +58,11 @@ class PSTErrorTests: public tester::TestSuite {
 
 		ClassStmtExample(std::string code):
 			  GenExample(std::move(code)),
-			  context{ base::StrId("unnamed"), {} } {}
+			  context{ base::StrID("unnamed"), {} } {}
 
 		ClassStmtExample(std::string code, const std::string& class_name):
 			  GenExample(std::move(code)),
-			  context{ base::StrId(class_name.c_str()), {} } {}
+			  context{ base::StrID(class_name.c_str()), {} } {}
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element>::fromContentsWithContext(this->code, context);
@@ -117,7 +117,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Expr, true>  blockExpr{ "x + {return 2 * x;}" };
 	Example<pst::Expr, false> badTokenExpr{ "\"" };
 
-	Example<pst::Fun, true> simpleFunction{ "fun foo(i32 x, i32 y) -> (i32, i32) = {}" };
+	Example<pst::Fun, true>  simpleFunction1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
+	Example<pst::Fun, true>  simpleFunction2{ "fun foo(x: i32, y: i32 = 1) = {}" };
+	Example<pst::Fun, false> badFunction{ "fun foo(x: i32, y) = {}" };
 
 	Example<pst::If, true> simpleIf{ "if (a == b) {c = d;}" };
 	Example<pst::If, true> simpleIfElse{ "if (a == b) {c = d;} else {c = e;}" };
@@ -158,12 +160,13 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::Field, false> badField{ "x = 5" };
 	ClassStmtExample<pst::Field, false> badField2{ "x : = 5" };
 
-	ClassStmtExample<pst::Method, true> simpleMethod{ "fun foo(i32 x, i32 y) -> (i32, i32) = {}" };
+	ClassStmtExample<pst::Method, true> simpleMethod{
+		"fun foo(x: i32, y: i32) -> (i32, i32) = {}"
+	};
 
 	ClassStmtExample<pst::Constructor, true> defaultConstructor{ "name(x: i32) = {}", "name" };
-	ClassStmtExample<pst::Constructor, true> namedConstructor{
-		"name.from_pair((x, y): (i32, i32)) = {}", "name"
-	};
+	ClassStmtExample<pst::Constructor, true> namedConstructor{ "name.from_pair(p: (i32, i32)) = {}",
+		                                                       "name" };
 	ClassStmtExample<pst::Constructor, true> initConstructor{
 		"name.init(x: i32, y: i32): z(x, y) = {}", "name"
 	};

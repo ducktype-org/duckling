@@ -11,7 +11,7 @@ namespace query::detail {
 	/**
 	 * @brief Type representing hash value for all key-types.
 	 */
-	struct KeyHash {
+	struct KeyHash final {
 		u64 val;
 	};
 
@@ -19,7 +19,7 @@ namespace query::detail {
 	 * @brief Struct representing
 	 * dep_graph node of concrete query invocation.
 	 */
-	struct NodeID {
+	struct NodeID final {
 		QueryID q_id;
 		KeyHash hash;
 	};

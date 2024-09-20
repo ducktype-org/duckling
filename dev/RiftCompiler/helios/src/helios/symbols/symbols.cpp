@@ -43,10 +43,10 @@ namespace compiler::helios {
 	/**
 	 * @brief Stores generic symbol data
 	 */
-	struct SymbolData {
+	struct SymbolData final {
 		// created when creating SymbolData:
 		ScopeID     scope;
-		base::StrId name;
+		base::StrID name;
 		bool        anonymous   = false;
 		bool        is_wildcard = false;
 		bool        is_alias    = false;
@@ -60,7 +60,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Helper struct used to access private SymID data.
 	 */
-	struct GetSymRef_Functor {
+	struct GetSymRef_Functor final {
 		static auto get(SymID id) { return id.ref; }
 	};
 
@@ -68,7 +68,7 @@ namespace compiler::helios {
 
 	bool isWildcard(SymID id) { return getSymRef(id)->is_wildcard; }
 
-	base::StrId name(SymID id) { return getSymRef(id)->name; }
+	base::StrID name(SymID id) { return getSymRef(id)->name; }
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->kind; }
 
@@ -98,8 +98,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return base::borrow_ptr<SymbolData>
 	 */
-	base::borrow_ptr<SymbolData>
-		makeSymbolFromStatement(const ScopeID& scope, PstRef<pst::Stmt> stmt) {
+	Ref<SymbolData> makeSymbolFromStatement(const ScopeID& scope, PstRef<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		switch (stmt->getKind()) {
@@ -154,7 +153,7 @@ namespace compiler::helios {
 			return putInSymtable(SymbolData{
 				.scope = scope,
 				.name
-				= base::StrId(base::strConcat("<USING> ", using_->getPointed().front()).c_str()),
+				= base::StrID(base::strConcat("<USING> ", using_->getPointed().front()).c_str()),
 				.is_wildcard = true,
 				.is_alias    = true,
 				.kind        = SymbolKind::Using,
@@ -214,7 +213,7 @@ namespace compiler::helios {
 		case pst::StmtKind::Destructor: {
 			return putInSymtable(SymbolData{
 				.scope    = scope,
-				.name     = base::StrId("destroy"),
+				.name     = base::StrID("destroy"),
 				.kind     = SymbolKind::Destructor,
 				.pst_stmt = stmt,
 			});
@@ -265,8 +264,8 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
 
-	struct LookupChainKey {
-		std::vector<base::StrId> names;
+	struct LookupChainKey final {
+		std::vector<base::StrID> names;
 		ScopeID                  begin_scope;
 		bool                     follow_wildcards;
 	};
@@ -361,7 +360,7 @@ namespace compiler::helios {
 
 	base::HashT KeyOf_LookupInSymbol::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(symbol);
-		auto hash_2 = std::hash<base::StrId>()(name);
+		auto hash_2 = std::hash<base::StrID>()(name);
 
 		// @FIXME: this does not work:
 		return (hash_1 * 143 + hash_2 * 7) * 2 + follow_wildcards;
@@ -673,7 +672,7 @@ namespace compiler::helios {
 		default:
 			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
 		}
-		return NumValue{ base::StrId(std::to_string(value).c_str()) };
+		return NumValue{ base::StrID(std::to_string(value).c_str()) };
 	}
 
 	struct IMPLEMENT_QUERY(QueryConstValueOf, i32) {
@@ -710,30 +709,30 @@ namespace compiler::helios {
 	 * @param ctx Context passed to a query.
 	 * @param expr An RPN expression created with e.g. ExtensionMakeRPN.
 	 * @param expr_scope A scope where the expression has been expressed.
-	 * @return ts::TypeInfo with information about the evaluated type.
+	 * @return tsh::TypeInfo with information about the evaluated type.
 	 */
-	ts::TypeInfo
+	tsh::TypeInfo
 		parseTypeFromExpr(query::Context& ctx, const rpn::ExprElem& expr, ScopeID expr_scope) {
 		// This is a std::unordered_map, not base::HashMap, because base::HashMap
 		// does not support this constructor.
-		const static auto BUILTINS = std::unordered_map<base::StrId, ts::TypeInfo>{
-			{ base::StrId("f128"), ctx.query<::ts::QueryFloatType>(128) },
-			{ base::StrId("f80"), ctx.query<::ts::QueryFloatType>(80) },
-			{ base::StrId("f64"), ctx.query<::ts::QueryFloatType>(64) },
-			{ base::StrId("f32"), ctx.query<::ts::QueryFloatType>(32) },
-			{ base::StrId("f16"), ctx.query<::ts::QueryFloatType>(16) },
+		const static auto BUILTINS = std::unordered_map<base::StrID, tsh::TypeInfo>{
+			{ base::StrID("f128"), ctx.query<::tsh::QueryFloatType>(128) },
+			{ base::StrID("f80"), ctx.query<::tsh::QueryFloatType>(80) },
+			{ base::StrID("f64"), ctx.query<::tsh::QueryFloatType>(64) },
+			{ base::StrID("f32"), ctx.query<::tsh::QueryFloatType>(32) },
+			{ base::StrID("f16"), ctx.query<::tsh::QueryFloatType>(16) },
 
-			{ base::StrId("i128"), ctx.query<::ts::QueryIntegralType>({ 128, true }) },
-			{ base::StrId("i64"), ctx.query<::ts::QueryIntegralType>({ 64, true }) },
-			{ base::StrId("i32"), ctx.query<::ts::QueryIntegralType>({ 32, true }) },
-			{ base::StrId("i16"), ctx.query<::ts::QueryIntegralType>({ 16, true }) },
-			{ base::StrId("i8"), ctx.query<::ts::QueryIntegralType>({ 8, true }) },
+			{ base::StrID("i128"), ctx.query<::tsh::QueryIntegralType>({ 128, true }) },
+			{ base::StrID("i64"), ctx.query<::tsh::QueryIntegralType>({ 64, true }) },
+			{ base::StrID("i32"), ctx.query<::tsh::QueryIntegralType>({ 32, true }) },
+			{ base::StrID("i16"), ctx.query<::tsh::QueryIntegralType>({ 16, true }) },
+			{ base::StrID("i8"), ctx.query<::tsh::QueryIntegralType>({ 8, true }) },
 
-			{ base::StrId("u128"), ctx.query<::ts::QueryIntegralType>({ 128, false }) },
-			{ base::StrId("u64"), ctx.query<::ts::QueryIntegralType>({ 64, false }) },
-			{ base::StrId("u32"), ctx.query<::ts::QueryIntegralType>({ 32, false }) },
-			{ base::StrId("u16"), ctx.query<::ts::QueryIntegralType>({ 16, false }) },
-			{ base::StrId("u8"), ctx.query<::ts::QueryIntegralType>({ 8, false }) },
+			{ base::StrID("u128"), ctx.query<::tsh::QueryIntegralType>({ 128, false }) },
+			{ base::StrID("u64"), ctx.query<::tsh::QueryIntegralType>({ 64, false }) },
+			{ base::StrID("u32"), ctx.query<::tsh::QueryIntegralType>({ 32, false }) },
+			{ base::StrID("u16"), ctx.query<::tsh::QueryIntegralType>({ 16, false }) },
+			{ base::StrID("u8"), ctx.query<::tsh::QueryIntegralType>({ 8, false }) },
 		};
 		variant_match(expr) {
 			variant_case(rpn::Identifier, idt) {
@@ -770,7 +769,7 @@ namespace compiler::helios {
 				RIFT_PANIC("Numerical value is not a type: ", num_value.num_id);
 			}
 			variant_case(rpn::TupleType, tuple_type) {
-				std::vector<ts::ComponentType> tuple_components;
+				std::vector<tsh::ComponentType> tuple_components;
 				tuple_components.reserve(tuple_type.elements.size());
 
 				for (auto&& tuple_subtype: tuple_type.elements)
@@ -779,16 +778,16 @@ namespace compiler::helios {
 					);
 				std::reverse(tuple_components.begin(), tuple_components.end());
 
-				return ctx.query<ts::QueryTupleType>({ tuple_components });
+				return ctx.query<tsh::QueryTupleType>({ tuple_components });
 			}
 			variant_case(rpn::Variant, variant_type) {
-				std::vector<ts::TypeInfo> variant_types;
+				std::vector<tsh::TypeInfo> variant_types;
 
 				variant_types.reserve(variant_type.elements.size());
 				for (auto&& tuple_subtype: variant_type.elements)
 					variant_types.push_back(parseTypeFromExpr(ctx, tuple_subtype, expr_scope));
 
-				return ctx.query<ts::QueryVariantType>({ variant_types });
+				return ctx.query<tsh::QueryVariantType>({ variant_types });
 			}
 			variant_default { RIFT_PANIC("Unhandlable type during parsing type from expr..."); }
 		}
@@ -800,9 +799,9 @@ namespace compiler::helios {
 	 * @param ctx Context passed to a query.
 	 * @param expr A PST expression, that has been written in the source code.
 	 * @param expr_scope A scope where the expression has been expressed.
-	 * @return ts::TypeInfo with information about the evaluated type.
+	 * @return tsh::TypeInfo with information about the evaluated type.
 	 */
-	ts::TypeInfo parseTypeFromExpr(
+	tsh::TypeInfo parseTypeFromExpr(
 		query::Context& ctx, const tpc::ParserCBorrowRef<pst::Expr>& expr, ScopeID expr_scope
 	) {
 		const auto rpn_expr   = rpn::makeRPN(ctx, { expr->elements, expr_scope });
@@ -810,19 +809,25 @@ namespace compiler::helios {
 		return parseTypeFromExpr(ctx, final_type, expr_scope);
 	}
 
-	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, ::ts::TypeInfo) {
+	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, ::tsh::TypeInfo) {
 		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
 
+			void setTypeOfSymbol(const tsh::TypeInfo& type) {
+				if (symbol_type_info.has_value())
+					RIFT_PANIC("Attempted to set type of symbol in visitor a second time.");
+				symbol_type_info = type;
+			}
+
 			void setTypeOfSymbol(const pst::ParserCBorrowRef<pst::Expr>& expr) {
-				symbol_type_info = parseTypeFromExpr(ctx, expr, scope(key));
+				setTypeOfSymbol(parseTypeFromExpr(ctx, expr, scope(key)));
 			}
 
 		public:
 			PstStmtVisitor_GetTypeOf(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
-			base::Optional<ts::TypeInfo> symbol_type_info;
+			base::Optional<tsh::TypeInfo> symbol_type_info;
 
 			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getType()); }
 
@@ -830,7 +835,23 @@ namespace compiler::helios {
 				setTypeOfSymbol(stmt.getType());
 			}
 
-			void visitField(const pst::Field& stmt) override { setTypeOfSymbol(stmt.getType()); }
+			void visitField(const pst::Field& field) override { setTypeOfSymbol(field.getType()); }
+
+			void visitFun(const pst::Fun& fun) override {
+				auto params = fun.getParams();
+				auto ret    = fun.getRet();
+
+				std::vector<tsh::TypeInfo> param_types{};
+				param_types.reserve(params->size());
+
+				for (auto param: params)
+					param_types.emplace_back(parseTypeFromExpr(ctx, param->getType(), scope(key)));
+				tsh::TypeInfo ret_type = ret.has_value()
+				                           ? parseTypeFromExpr(ctx, ret.value(), scope(key))
+				                           : ctx.query<tsh::QueryUnitType>({});
+
+				setTypeOfSymbol(ctx.query<tsh::QueryFunctionType>({ param_types, ret_type }));
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -846,20 +867,26 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
 
-	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, ::ts::TypeInfo) {
+	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, ::tsh::TypeInfo) {
 		class PstStmtVisitor_GetTypeFromDefinition final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
+
+			void setTypeOfDefinition(const tsh::TypeInfo& type) {
+				if (definition_type_info.has_value())
+					RIFT_PANIC("Attempted to set type of definition in visitor a second time.");
+				definition_type_info = type;
+			}
 
 		public:
 			PstStmtVisitor_GetTypeFromDefinition(Context& ctx, const QKey& key):
 				  ctx(ctx),
 				  key(key) {}
 
-			base::Optional<ts::TypeInfo> definition_type_info;
+			base::Optional<tsh::TypeInfo> definition_type_info;
 
 			void visitClass(const pst::Class&) override {
-				definition_type_info = ctx.query<ts::QueryClassType>(key);
+				definition_type_info = ctx.query<tsh::QueryClassType>(key);
 			}
 		};
 
@@ -877,7 +904,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryClassSymbolData, ClassSymbolData) {
 		struct ClassDataParser final: pst::PstStmtVisitorPanicky {
-			base::Optional<base::StrId>                                name;
+			base::Optional<base::StrID>                                name;
 			base::Optional<tpc::ParserCBorrowRef<pst::Expr>>           base_class;
 			base::Optional<tpc::ParserCBorrowRef<pst::ImplementsList>> implements;
 
@@ -948,7 +975,7 @@ namespace compiler::helios {
 			Context&    ctx;
 			const QKey& key;
 
-			void setTypeOfSymbol(const pst::ParserCBorrowRef<pst::Expr>& expr) {
+			void setExprTree(const pst::ParserCBorrowRef<pst::Expr>& expr) {
 				rpn_of_sym_expr = rpn::makeRPN(ctx, { expr->elements, scope(key) }).elements;
 			}
 
@@ -957,11 +984,9 @@ namespace compiler::helios {
 
 			std::vector<rpn::ExprElem> rpn_of_sym_expr;
 
-			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getValue()); }
+			void visitConst(const pst::Const& stmt) override { setExprTree(stmt.getValue()); }
 
-			void visitVariable(const pst::Variable& stmt) override {
-				setTypeOfSymbol(stmt.getType());
-			}
+			void visitVariable(const pst::Variable& stmt) override { setExprTree(stmt.getType()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

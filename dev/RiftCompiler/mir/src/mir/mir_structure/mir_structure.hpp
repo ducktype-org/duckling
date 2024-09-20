@@ -71,7 +71,7 @@ namespace compiler::mir {
 	/**
 	 * @brief Reference to MIR Local variable data.
 	 */
-	using LocalRef = base::StableVectorRef<MirLocal>;
+	using LocalRef = Ref<MirLocal>;
 
 	/**
 	 * @brief Description of a MIR Local variable, like a function argument or simply local
@@ -198,7 +198,7 @@ namespace compiler::mir {
 	 * @brief Function in MIR.
 	 */
 	struct Function final {
-		base::StrId                  name;
+		base::StrID                  name;
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;

@@ -26,14 +26,14 @@ namespace compiler::mir {
 	// @TODO: since BlockBuilderRef can be a parameter
 	// we will need to add BlockBuilderRef->BlockRef transformation
 	// during building phase
-	using BlockBuilderRef = base::StableVectorRef<BlockBuilder>;
+	using BlockBuilderRef = Ref<BlockBuilder>;
 
 	/**
 	 * @brief Represents result of expression lowering, which is
 	 * a BlockBuilderRef that is the beginning of the lowered expression and MirLocation
 	 * that holds the result of the expression.
 	 */
-	struct ExprLowerRes {
+	struct ExprLowerRes final {
 		BlockBuilderRef begin;
 		MirLocation     value;
 	};
@@ -42,7 +42,7 @@ namespace compiler::mir {
 	 * @brief Represents result of statement lowering, which is
 	 * a BlockBuilderRef that is the beginning of the lowered statement.
 	 */
-	struct StmtLowerRes {
+	struct StmtLowerRes final {
 		BlockBuilderRef begin;
 	};
 
@@ -99,14 +99,14 @@ namespace compiler::mir {
 		 * @brief Structure representing a hole in the block, that is
 		 * empty instruction that has to be filled, before the block will be builded.
 		 */
-		struct InstructionHole {
+		struct InstructionHole final {
 		private:
 			BlockBuilderRef block_ref;
 			usize           position;
 
 		public:
 			InstructionHole(BlockBuilderRef block_ref, usize position):
-				  block_ref(std::move(block_ref)),
+				  block_ref(block_ref),
 				  position(position) {}
 
 			void fill(Instruction instruction) {
@@ -159,7 +159,7 @@ namespace compiler::mir {
 
 			// creation of borrow pointer here, depends on the fact that blocks
 			// are kept in stable container:
-			return { base::borrow_ptr(this), reversed_instruction.size() - 1 };
+			return { this, reversed_instruction.size() - 1 };
 		}
 
 		void setTerminator(Instruction instruction) {
@@ -182,7 +182,7 @@ namespace compiler::mir {
 	 */
 	struct FunctionBuilder final {
 	private:
-		base::Optional<base::StrId>      name;
+		base::Optional<base::StrID>      name;
 		base::StableVector<BlockBuilder> blocks;
 		base::Optional<BlockBuilderRef>  entry_block;
 		base::StableVector<MirLocal>     local_list;
@@ -200,7 +200,7 @@ namespace compiler::mir {
 			};
 		}
 
-		void setName(base::StrId name) {
+		void setName(base::StrID name) {
 			RIFT_ASSERT(not this->name.has_value(), "Name already set");
 			this->name.emplace(name);
 		}
@@ -235,7 +235,7 @@ namespace compiler::mir {
 		FunctionBuilder& function;
 
 		StmtBlockVisitor(BlockBuilderRef continuation, FunctionBuilder& function):
-			  continuation(std::move(continuation)),
+			  continuation(continuation),
 			  function(function) {}
 
 		base::Optional<StmtLowerRes> out;
@@ -307,7 +307,7 @@ namespace compiler::mir {
 		FunctionBuilder& function;
 
 		ExprBlockVisitor(BlockBuilderRef continuation, FunctionBuilder& function):
-			  continuation(std::move(continuation)),
+			  continuation(continuation),
 			  function(function) {}
 
 		void output(ExprLowerRes value) {

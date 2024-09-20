@@ -12,7 +12,7 @@
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>
-#include <typesystem/typesystem.hpp>
+#include <typesystem/higher/type_info.hpp>
 
 namespace compiler::helios {
 
@@ -50,7 +50,7 @@ namespace compiler::helios {
 	/**
 	 * @return name of the symbol
 	 */
-	base::StrId name(SymID);
+	base::StrID name(SymID);
 
 	/**
 	 * @return kind of the symbol
@@ -100,7 +100,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Name to lookup
 		 */
-		base::StrId name;
+		base::StrID name;
 
 		/**
 		 * @brief Should wildcards be included in lookup
@@ -143,7 +143,7 @@ namespace compiler::helios {
 			/**
 			 * @brief A string representing the operator.
 			 */
-			base::StrId oper_id;
+			base::StrID oper_id;
 		};
 
 		/**
@@ -153,7 +153,7 @@ namespace compiler::helios {
 			/**
 			 * @brief A name to lookup when needed..
 			 */
-			base::StrId symbol_name;
+			base::StrID symbol_name;
 		};
 
 		/**
@@ -174,7 +174,7 @@ namespace compiler::helios {
 			 * @TODO: Replace it with TypeSystem's value.
 			 * The value representation.
 			 */
-			base::StrId num_id;
+			base::StrID num_id;
 		};
 
 		/**
@@ -305,10 +305,10 @@ namespace compiler::helios {
 	/**
 	 * @brief Query type of the symbol.
 	 */
-	DECLARE_QUERY(QueryTypeOfSymbol, SymID, ts::TypeInfo)
+	DECLARE_QUERY(QueryTypeOfSymbol, SymID, tsh::TypeInfo)
 
 	/**
-	 * @brief Query ts::TypeInfo from a symbol definition (like class definition).
+	 * @brief Query tsh::TypeInfo from a symbol definition (like class definition).
 	 *
 	 * Example:
 	 * class T {
@@ -316,7 +316,7 @@ namespace compiler::helios {
 	 * }
 	 * - Then we can use this query QueryTypeFromDefinition(T).
 	 */
-	DECLARE_QUERY(QueryTypeFromDefinition, SymID, ts::TypeInfo);
+	DECLARE_QUERY(QueryTypeFromDefinition, SymID, tsh::TypeInfo);
 
 	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.
@@ -325,7 +325,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Name of the class in the source code.
 		 */
-		base::StrId name;
+		base::StrID name;
 		/**
 		 * @brief Class'es declared methods.
 		 */
@@ -345,11 +345,11 @@ namespace compiler::helios {
 		/**
 		 * @brief Class'es base class.
 		 */
-		base::Optional<ts::TypeInfo> base;
+		base::Optional<tsh::TypeInfo> base;
 		/**
 		 * @brief Class'es implemented interfaces.
 		 */
-		std::vector<ts::TypeInfo> implements;
+		std::vector<tsh::TypeInfo> implements;
 	};
 
 	/**

@@ -3,7 +3,7 @@
 #include <query_framework/query_entry_point.hpp>
 
 namespace compiler::helios::test_utils {
-	std::pair<frontend::ModuleId, ScopeID> getModule(const fs::FilePath& path) {
+	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::FilePath& path) {
 		auto module = query::entryPoint<frontend::QueryModuleTree>(path);
 
 		// This is what extendQueryRootScopeOfMainModuleFile is doing:
@@ -22,10 +22,10 @@ namespace compiler::helios::test_utils {
 		bool       first_symbol = true;
 		for (auto&& sym: symbols) {
 			auto symbol = first_symbol ? query::entryPoint<QueryLookupInScopeAndParents>(
-							  { scope, base::StrId(sym.c_str()), true }
+							  { scope, base::StrID(sym.c_str()), true }
 						  )
 			                           : query::entryPoint<QueryLookupInSymbol>(
-										   { result.back(), base::StrId(sym.c_str()), false }
+										   { result.back(), base::StrID(sym.c_str()), false }
 									   );
 			for (auto&& symbol_path = symbol.getAsSingle(); auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<QueryDealias>(elem);
@@ -40,11 +40,11 @@ namespace compiler::helios::test_utils {
 		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back());
 	}
 
-	ts::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope) {
+	tsh::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back());
 	}
 
-	ts::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
+	tsh::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back());
 	}
 }

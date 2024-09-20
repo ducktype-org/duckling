@@ -21,12 +21,13 @@
 
 namespace compiler::helios {
 
-	struct ScopeData {
+	struct ScopeData final {
 		// adapted from hir:
 
 		// created on startup:
-		ScopeID parent;
-		// base::StrId name; ///< for debug
+		std::optional<ScopeID> parent;
+
+		// base::StrID name; ///< for debug
 		bool is_root = false;
 
 		/**
@@ -38,7 +39,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Module, the scope was defined in
 		 */
-		frontend::ModuleId parent_module;
+		frontend::ModuleID parent_module;
 
 		// cache entries:
 		// in the future we might need separation for: direct symbols, expanded symbols
@@ -63,12 +64,12 @@ namespace compiler::helios {
 		if (ref->is_root) {
 			return {};
 		} else {
-			RIFT_ASSERT(getScopeRef(ref->parent) != nullptr, "Non root scope has no parent.");
-			return ref->parent;
+			RIFT_ASSERT(ref->parent.has_value(), "Non root scope has no parent.");
+			return ref->parent.value();
 		}
 	}
 
-	frontend::ModuleId module(ScopeID id) { return getScopeRef(id)->parent_module; }
+	frontend::ModuleID module(ScopeID id) { return getScopeRef(id)->parent_module; }
 
 	namespace {
 		base::StableVector<ScopeData> scope_table;
@@ -83,7 +84,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeID) {
 		static auto provide(Context&, QKey key) -> PResult {
 			return putInScopeTable(ScopeData{
-				.parent              = ScopeID{ nullptr },
+				.parent              = {},
 				.is_root             = true,
 				.related_pst_element = {},
 				.parent_module       = key,
@@ -266,11 +267,11 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
 	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, LookupResult) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			LookupResult result = ctx.query<QueryLookupInScope>(key);
 
-			if (key.scope.ref->parent.ref != nullptr) {
-				auto parent = key.scope.ref->parent;
+			if (key.scope.ref->parent.has_value()) {
+				auto parent = key.scope.ref->parent.value();
 
 				// Reverse insertion order allow for linear result concatenation instead of
 				// quadratic
@@ -297,13 +298,13 @@ namespace compiler::helios {
 
 	base::HashT KeyOf_LookupInScope::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(scope);
-		auto hash_2 = std::hash<base::StrId>()(name);
+		auto hash_2 = std::hash<base::StrID>()(name);
 
 		// @FIXME: this does not work:
 		return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;
 	}
 
-	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleId module) {
+	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
 		auto  main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
 		auto& main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
 

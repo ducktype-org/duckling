@@ -7,8 +7,7 @@
 #pragma once
 
 #include <base/perfect_hash.hpp>
-#include <base/smart_pointers.hpp>
-#include <utility>
+#include <base/ref.hpp>
 
 namespace compiler::helios {
 	// Forward:
@@ -19,7 +18,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Symbol Identifier. Used to represent HELIOS Symbol across the compiler.
 	 */
-	struct SymID {
+	struct SymID final {
 		// @FUTURE: add some mangling, so valgrind will not get confused
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
@@ -31,9 +30,9 @@ namespace compiler::helios {
 		auto operator<=>(const SymID& other) const { return ref.get() <=> other.ref.get(); }
 
 	private:
-		base::borrow_ptr<SymbolData> ref;
+		Ref<SymbolData> ref;
 
-		SymID(base::borrow_ptr<SymbolData> ref): ref(std::move(ref)) {}
+		SymID(Ref<SymbolData> ref): ref(ref) {}
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
 		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct GetSymRef_Functor;
@@ -44,7 +43,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Scope Identifier. Used to represent HELIOS Scope across the compiler.
 	 */
-	struct ScopeID {
+	struct ScopeID final {
 		// @FUTURE: add some mangling, so valgrind will not get confused
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
@@ -54,9 +53,9 @@ namespace compiler::helios {
 		bool operator==(const ScopeID&) const = default;
 
 	private:
-		base::borrow_ptr<ScopeData> ref;
+		Ref<ScopeData> ref;
 
-		ScopeID(base::borrow_ptr<ScopeData> ref): ref(std::move(ref)) {}
+		ScopeID(Ref<ScopeData> ref): ref(ref) {}
 		friend struct ImplementationOf_QueryRootScopeOf;
 		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;
 		friend struct ImplementationOf_QuerySymbolsInScope;

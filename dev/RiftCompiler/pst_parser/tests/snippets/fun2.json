@@ -8,22 +8,40 @@
 				"parameters": {
 					"function parameter list": [
 						{
-							"Expression": [
-								{
-									"Identifier": "a"
-								},
-							]
+							"Function Parameter": {
+								"Function Parameter": {
+									"name": {
+										"Name": "a"
+									},
+									"type": {
+										"Expression": [
+											{
+												"KeywordValue": "i32"
+											}
+										]
+									}
+								}
+							}
 						},
 						{
-							"Expression": [
-								{
-									"Identifier": "b"
-								},
-							]
-						},
+							"Function Parameter": {
+								"Function Parameter": {
+									"name": {
+										"Name": "b"
+									},
+									"type": {
+										"Expression": [
+											{
+												"Identifier": "f32"
+											}
+										]
+									}
+								}
+							}
+						}
 					]
 				},
-				"return": "<nullptr>",
+				"return": "unit",
 				"body": {
 					"Code Block or Statement": {
 						"Code Block": []
@@ -39,28 +57,47 @@
 				"parameters": {
 					"function parameter list": [
 						{
-							"Expression": [
-								{
-									"Identifier": "a"
-								},
-								{
-									"Operator": ":"
-								},
-								{
-									"KeywordValue": "i32"
-								},
-							]
+							"Function Parameter": {
+								"Function Parameter": {
+									"name": {
+										"Name": "a"
+									},
+									"type": {
+										"Expression": [
+											{
+												"KeywordValue": "i32"
+											}
+										]
+									}
+								}
+							}
 						},
 						{
-							"Expression": [
-								{
-									"Identifier": "b"
-								},
-							]
-						},
+							"Function Parameter": {
+								"Function Parameter": {
+									"name": {
+										"Name": "b"
+									},
+									"type": {
+										"Expression": [
+											{
+												"Identifier": "f32"
+											}
+										]
+									},
+									"initial": {
+										"Expression": [
+											{
+												"NumLiteral": "0"
+											}
+										]
+									}
+								}
+							}
+						}
 					]
 				},
-				"return": "<nullptr>",
+				"return": "unit",
 				"body": {
 					"Code Block or Statement": {
 						"Code Block": []
@@ -76,28 +113,47 @@
 				"parameters": {
 					"function parameter list": [
 						{
-							"Expression": [
-								{
-									"Identifier": "a"
-								},
-							]
+							"Function Parameter": {
+								"Function Parameter": {
+									"name": {
+										"Name": "a"
+									},
+									"type": {
+										"Expression": [
+											{
+												"Identifier": "f32"
+											}
+										]
+									}
+								}
+							}
 						},
 						{
-							"Expression": [
-								{
-									"Identifier": "b"
-								},
-								{
-									"Operator": ":"
-								},
-								{
-									"KeywordValue": "i32"
-								},
-							]
-						},
+							"Function Parameter": {
+								"Function Parameter": {
+									"name": {
+										"Name": "b"
+									},
+									"type": {
+										"Expression": [
+											{
+												"KeywordValue": "i32"
+											}
+										]
+									},
+									"initial": {
+										"Expression": [
+											{
+												"NumLiteral": "42"
+											}
+										]
+									}
+								}
+							}
+						}
 					]
 				},
-				"return": "<nullptr>",
+				"return": "unit",
 				"body": {
 					"Code Block or Statement": {
 						"Code Block": []
@@ -113,21 +169,30 @@
 				"parameters": {
 					"function parameter list": [
 						{
-							"Expression": [
-								{
-									"Identifier": "a"
-								},
-							]
-						},
+							"Function Parameter": {
+								"Function Parameter": {
+									"name": {
+										"Name": "a"
+									},
+									"type": {
+										"Expression": [
+											{
+												"Identifier": "A"
+											}
+										]
+									}
+								}
+							}
+						}
 					]
 				},
-				"return": "<nullptr>",
+				"return": "unit",
 				"body": {
 					"Code Block or Statement": {
 						"Code Block": []
 					}
 				}
 			}
-		},
+		}
 	]
 }

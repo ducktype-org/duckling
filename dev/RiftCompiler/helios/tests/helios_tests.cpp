@@ -9,8 +9,8 @@
 #include <pst_parser/parser.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
-#include <typesystem/typesystem.hpp>
-#include <typesystem/internal/queries.hpp>
+#include <typesystem/higher/typesystem.hpp>
+#include <typesystem/higher/internal/queries.hpp>
 
 #include <helios/test_utils/helios_test_utils.hpp>
 using namespace compiler::helios::test_utils;
@@ -23,7 +23,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR("HeliosTests") {
 		lexer::init();
 		pst::init();
-		ts::init();
+		tsh::init();
 
 		TESTER_ADD_TEST(testI32Consts);
 		TESTER_ADD_TEST(testEdgeEvals);
@@ -86,21 +86,21 @@ private:
 	void testTypeOf() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/types")));
 
-		const auto INT32_TYPE = query::entryPoint<ts::QueryIntegralType>({ 32, true });
-		const auto F32_TYPE   = query::entryPoint<ts::QueryFloatType>(32);
+		const auto INT32_TYPE = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
+		const auto F32_TYPE   = query::entryPoint<tsh::QueryFloatType>(32);
 
 		ASSERT_EQUAL(true, INT32_TYPE == getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(true, F32_TYPE == getTypeOf("SimpleFloat", root_scope));
 
 		const auto tuple_int_int           = getTypeOf("TupleII", root_scope);
-		const auto tuple_int_int_type_info = query::entryPoint<ts::QueryTupleType>(
+		const auto tuple_int_int_type_info = query::entryPoint<tsh::QueryTupleType>(
 			{ { { INT32_TYPE, false }, { INT32_TYPE, false } } }
 		);
 		ASSERT_EQUAL(true, tuple_int_int == tuple_int_int_type_info);
 
 		const auto first_variant = getTypeOf("first_variant", root_scope);
 		const auto first_variant_type_info
-			= query::entryPoint<ts::QueryVariantType>({ { INT32_TYPE, F32_TYPE } });
+			= query::entryPoint<tsh::QueryVariantType>({ { INT32_TYPE, F32_TYPE } });
 		ASSERT_EQUAL(true, first_variant == first_variant_type_info);
 
 		const auto weird_variant = getTypeOf("weird_variant", root_scope);
@@ -108,12 +108,12 @@ private:
 		const auto classA      = getTypeFromDefinition("A", root_scope);
 		const auto classB      = getTypeFromDefinition("B", root_scope);
 		const auto classC      = getTypeFromDefinition("C", root_scope);
-		auto       right_tuple = query::entryPoint<ts::QueryTupleType>(
+		auto       right_tuple = query::entryPoint<tsh::QueryTupleType>(
             { { { classA, false },
-		              { query::entryPoint<ts::QueryVariantType>({ { classB, classC } }), false } } }
+		              { query::entryPoint<tsh::QueryVariantType>({ { classB, classC } }), false } } }
         );
 		const auto weird_variant_type
-			= query::entryPoint<ts::QueryVariantType>({ { classA, right_tuple } });
+			= query::entryPoint<tsh::QueryVariantType>({ { classA, right_tuple } });
 		ASSERT_EQUAL(true, weird_variant == weird_variant_type);
 	}
 
@@ -227,7 +227,7 @@ private:
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
 		auto test_value = [&](auto str, i64 val) {
-			auto name = base::StrId(str);
+			auto name = base::StrID(str);
 			for (auto& gb: hout.glob_data) {
 				if (gb.original_name == name) {
 					this->assertTrue(gb.value == val, "Bad constant value");

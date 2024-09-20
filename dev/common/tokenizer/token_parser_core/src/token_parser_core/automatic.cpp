@@ -1,7 +1,7 @@
 #include "automatic.hpp"
 
 namespace tpc {
-	void identifierDprint(base::StrId value, std::ostream& out) {
+	void identifierDprint(base::StrID value, std::ostream& out) {
 		// @TODO: change Name to Identifier
 		out << "{\"Name\": ";
 		if (value.isBad())

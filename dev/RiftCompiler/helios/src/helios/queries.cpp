@@ -27,14 +27,8 @@ namespace compiler::helios {
 			HOUTUnit out;
 
 			// grab constants:
-			for (auto sym: symbols_in_module_root) {
-				if (kind(sym) == SymbolKind::Const) {
-					auto original_name = name(sym);
-					auto value         = ctx.query<QueryConstValueOf>(sym);
-
-					out.glob_data.push_back(HOUTGlobalData{ sym, original_name, value });
-				}
-			}
+			for (auto sym: symbols_in_module_root)
+				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
 
 			// grab functions:
 			for (auto sym: symbols_in_module_root)
@@ -67,7 +61,7 @@ namespace compiler::helios {
 			return block;
 		}
 
-		struct HoutStmtMaker: public pst::PstStmtVisitorPanicky {
+		struct HoutStmtMaker final: public pst::PstStmtVisitorPanicky {
 			query::Context& ctx;
 
 			bool                                         empty = false;
@@ -142,8 +136,7 @@ namespace compiler::helios {
 				// - create types, attributes, flags, ...
 				// @TODO: params, rest, flags, attributes, etc
 
-				HOUTFunction output(original_symbol);
-				output.original_name = stmt.getName();
+				HOUTFunction output(original_symbol, ctx);
 
 				// Scope of function itself:
 				// this scope will contain all "function declaration" symbols like parameters

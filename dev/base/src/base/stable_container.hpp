@@ -6,15 +6,11 @@
 
 #include "ints.hpp"
 #include "optional.hpp"
+#include "ref.hpp"
+#include "box.hpp"
 #include <vector>
 
 namespace base {
-
-	template<typename Data>
-	using StableVectorRef = borrow_ptr<Data>;
-
-	template<typename Data>
-	using StableVectorCRef = c_borrow_ptr<Data>;
 
 	/**
 	 * @brief Expandable list with stable references (References are valid after the addition of new
@@ -26,12 +22,12 @@ namespace base {
 	 */
 	template<typename Data, typename Key = usize>
 	requires std::constructible_from<Key, usize> && std::constructible_from<usize, Key>
-	class StableVector {
-		std::vector<unique_ptr<Data>> data;
+	class StableVector final {
+		std::vector<Box<Data>> data;
 
 	public:
-		using Ref  = StableVectorRef<Data>;
-		using CRef = StableVectorCRef<Data>;
+		using RefT  = Ref<Data>;
+		using CRefT = CRef<Data>;
 
 		StableVector()               = default;
 		StableVector(StableVector&&) = default;
@@ -63,31 +59,31 @@ namespace base {
 			return *data.at(static_cast<usize>(pos));
 		}
 
-		Optional<Ref> getRef(Key pos) noexcept {
+		Optional<RefT> getRef(Key pos) noexcept {
 			if (static_cast<usize>(pos) >= size()) return {};
-			return data[static_cast<usize>(pos)].borrow_mut();
+			return data[static_cast<usize>(pos)].refMut();
 		}
 
-		Optional<CRef> getCRef(Key pos) const noexcept {
+		Optional<CRefT> getCRef(Key pos) const noexcept {
 			if (static_cast<usize>(pos) >= size()) return {};
-			return data[static_cast<usize>(pos)].borrow();
+			return data[static_cast<usize>(pos)].ref();
 		}
 
 		constexpr Key pushBack(const Data& value) {
-			auto new_ptr = base::make_unique<Data>(value);
+			auto new_ptr = box<Data>(value);
 			data.emplace_back(std::move(new_ptr));
 			return Key(data.size() - 1);
 		}
 
 		Key pushBack(Data&& value) {
-			auto new_ptr = base::make_unique<Data>(std::move(value));
+			auto new_ptr = box<Data>(std::move(value));
 			data.emplace_back(std::move(new_ptr));
 			return Key(data.size() - 1);
 		}
 
-		Ref last() { return data.back().borrow_mut(); }
+		RefT last() { return data.back().refMut(); }
 
-		CRef last() const { return data.back().borrow(); }
+		CRefT last() const { return data.back().ref(); }
 
 		template<class... Args>
 		constexpr Key emplaceBack(Args&&... args) {

@@ -2,6 +2,8 @@
  * @file unique_pointer.hpp
  *
  * @see smart_pointers.hpp
+ *
+ * @deprecated use Box instead
  */
 #pragma once
 
