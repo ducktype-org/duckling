@@ -290,7 +290,7 @@ namespace compiler::helios {
 			return errors::HUnexpected(errors::AmbiguityError());
 		}
 
-		UNPACK_RESULT(first.getAsSingle(), result);
+		UNPACK_RESULT_COPY(first.getAsSingle(), result);
 
 		if (key.names.size() == 1) return result;
 
@@ -468,7 +468,6 @@ namespace compiler::helios {
 				}
 				variant_default {
 					return errors::HUnexpected(errors::ExpressionParsingError());
-					;
 				}
 			}
 		}
@@ -509,9 +508,7 @@ namespace compiler::helios {
 				return result;
 			}
 			variant_case(rpn::Operator, op) {
-				HELIOS_PANIC(
-					errors::ExpressionParsingError, "Cannot get a value from rpn::Operator"
-				);
+				return errors::HUnexpected(errors::ExpressionParsingError());
 			}
 			variant_case(rpn::KeywordValue, keyword_value) {
 				throw base::NotYetImplemented("Value of KeywordValue is not yet implemented");
@@ -567,9 +564,8 @@ namespace compiler::helios {
 				}
 				variant_case(rpn::KeywordValue, keyword) { st.emplace(keyword); }
 				variant_case(rpn::Operator, oper) {
-					HELIOS_ASSERT(
-						st.size() >= 2, errors::ExpressionParsingError, "Malformed expression"
-					);
+					if (st.size() < 2) return errors::HUnexpected(errors::ExpressionParsingError());
+
 					const auto first = st.top();
 					st.pop();
 					const auto second = st.top();
@@ -686,11 +682,7 @@ namespace compiler::helios {
 						variant_default { a_variant.elements.push_back(b); }
 					}
 				}
-				variant_default {
-					HELIOS_PANIC(
-						errors::ExpressionParsingError, "A is not a variant, but it should be."
-					);
-				}
+				variant_default { return errors::HUnexpected(errors::ExpressionParsingError()); }
 			}
 			return a;
 		}
@@ -795,10 +787,7 @@ namespace compiler::helios {
 				return ctx.query<QueryTypeOfSymbol>(idt.symbol_list.back());
 			}
 			variant_case(rpn::Operator, oper) {
-				HELIOS_PANIC(
-					errors::ExpressionParsingError,
-					base::strConcat("Type cannot be an operator: ", oper.oper_id)
-				);
+				return errors::HUnexpected(errors::ExpressionParsingError());
 			}
 			variant_case(rpn::NamedIdentifier, named_identifier) {
 				const auto it = BUILTINS.find(named_identifier.symbol_name);
@@ -857,7 +846,7 @@ namespace compiler::helios {
 			}
 			variant_default { RIFT_PANIC("Unhandleble type during parsing type from expr..."); }
 		}
-		HELIOS_PANIC(errors::ExpressionParsingError);
+		return errors::HUnexpected(errors::ExpressionParsingError());
 		RIFT_PANIC("Couldn't parse the type.");
 	}
 
@@ -942,7 +931,8 @@ namespace compiler::helios {
 
 			PstStmtVisitor_GetTypeOf visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
-			return visitor.symbol_type_info.value();
+			// @TODO: Fix THIS!
+			return std::move(visitor.symbol_type_info.value());
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
@@ -1057,7 +1047,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);
 
 	struct
-		IMPLEMENT_QUERY(QueryHOUTExprTreeOfSym, std::expected<base::unique_ptr<code::Expr> COMMA rpn::MakeRPN_Result::error_type>) {
+		IMPLEMENT_QUERY(QueryHOUTExprTreeOfSym, errors::HResult<base::unique_ptr<code::Expr> COMMA rpn::MakeRPN_Result::error_type>) {
 		class PstStmtVisitor_GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
@@ -1096,9 +1086,9 @@ namespace compiler::helios {
 		static auto load(const QKey& key) -> LoadResult {
 			if (auto&& copy = cache.atMaybe(key)) {
 				if (copy->data.has_value())
-					return QResWithACD{ copy->data->borrow(), copy->acd };
+					return QResWithACD{ copy->data.value().borrow(), copy->acd };
 				else
-					return QResWithACD{ std::unexpected(copy->data.error()), copy->acd };
+					return QResWithACD{ errors::HUnexpected(copy->data.error()), copy->acd };
 			}
 			return {};
 		}
@@ -1109,7 +1099,7 @@ namespace compiler::helios {
 			if (auto&& c = cache.at(key).data; c.has_value())
 				return c.value().borrow();
 			else
-				return std::unexpected(c.error());
+				return errors::HUnexpected(c.error());
 		}
 	};
 

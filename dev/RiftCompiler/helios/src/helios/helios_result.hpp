@@ -3,6 +3,7 @@
 #include <base/define_helper.hpp>
 #include <variant>
 #include <base/optional.hpp>
+#include <iostream>
 
 namespace compiler::helios::errors {
 	// Thanks to:
@@ -111,6 +112,13 @@ namespace compiler::helios::errors {
 		template<class... Types>
 		using unique_types_variant_t = unique_types_to_variant_t<
 			variant_to_unique_types_t<flatten_variant_t<std::variant<Types...>>>>;
+
+
+		template<class... Types>
+		struct is_in_variant;
+
+		template<class First, class... Others>
+		struct is_in_variant<First, std::variant<Others...>>: is_in<First, Others...> {};
 	}  // namespace impl
 
 	template<class... Types>
@@ -118,8 +126,7 @@ namespace compiler::helios::errors {
 
 	template<class T>
 	struct HUnexpected {
-		template<class... Args>
-		explicit HUnexpected(T&& t): value(t) {}
+		explicit constexpr HUnexpected(const T& t): value(t) {}
 
 		T value;
 	};
@@ -130,51 +137,129 @@ namespace compiler::helios::errors {
 	public:
 		using error_type = unique_types_variant_t<ErrTp1, ErrTps...>;
 
-		template<class... Args>
-		requires std::is_constructible_v<ResTp, Args...>
-		HResult(Args&&... args): result(std::forward<Args>(args)...) {}
+		// Constructors from Unexpected<T>, where T is not a variant
+		template<class T>
+		requires impl::is_in_variant<T, error_type>::value
+		constexpr HResult(const HUnexpected<T>& err) {
+			error_storage = err.value;
+		}
 
 		template<class T>
-		HResult(const HUnexpected<T>& err): error_value(err.value) {}
-
-		template<class... Ts>
-		HResult(const HResult<Ts...>::error_type& err) {
-			std::visit([&](auto&& erTp) { error_value = error_type{ erTp }; }, err);
+		requires impl::is_in_variant<T, error_type>::value constexpr HResult(HUnexpected<T>&& err) {
+			error_storage = std::move(err.value);
 		}
 
+		// Constructors from Unexpected<T>, where T is a variant
+		template<class T>
+		constexpr HResult(HUnexpected<T>&& err) {
+			std::visit([&](auto&& err_value) { error_storage = err_value; }, std::move(err.value));
+		}
+
+		template<class T>
+		constexpr HResult(const HUnexpected<T>& err) {
+			std::visit([&](auto&& err_value) { error_storage = err_value; }, err.value);
+		}
+
+		// Constructor of the main value by forwarding arguments
+		template<class... Args>
+		constexpr HResult(Args&&... args): value_storage(std::forward<Args>(args)...) {}
+
+		// Move constructor
+		constexpr HResult(HResult&&) noexcept            = default;
+		// Copy constructor
+		constexpr HResult(const HResult&)                = default;
+		// Move = operator
+		constexpr HResult& operator=(HResult&&) noexcept = default;
+		// Copy = operator
+		constexpr HResult& operator=(const HResult&)     = default;
+
+		// Copy constructor from HResult, where Ts... are a subset of this HResult types
 		template<class... Ts>
-		HResult(const HResult<ResTp, Ts...>& oth) {
-			if (oth.has_value()) result = oth.result;
+		constexpr HResult(const HResult<ResTp, Ts...>& oth): value_storage(oth.value_storage) {
 			if (oth.has_error())
-				std::visit([&](auto&& erTp) { error_value = error_type{ erTp }; }, oth.error_value);
+				std::visit(
+					[&](auto&& erTp) { error_storage = error_type{ erTp }; }, oth.error_storage
+				);
+		}
+
+		// Move constructor from HResult, where Ts... are a subset of this HResult types
+		template<class... Ts>
+		constexpr HResult(HResult<ResTp, Ts...>&& oth):
+			  value_storage(std::move(oth.value_storage)) {
+			if (oth.has_error())
+				std::visit(
+					[&](auto&& erTp) { error_storage = error_type{ erTp }; },
+					std::move(oth.error_storage)
+				);
 		}
 
 		[[nodiscard]]
-		bool has_error() const {
-			RIFT_ASSERT(
-				error_value.valueless_by_exception() ^ !result.has_value(),
-				"HResult has an invalid state"
-			);
-			return !result.has_value();
+		constexpr bool has_error() const {
+			return !value_storage.has_value();
 		}
 
 		[[nodiscard]]
-		bool has_value() const {
+		constexpr bool has_value() const {
 			return !has_error();
 		}
 
-		ResTp value() const {
+		constexpr const ResTp& value() const& {
+			_throwOnInvalidStateAccess();
 			RIFT_ASSERT(has_value(), "Result is empty!");
-			return result.value();
+			return value_storage.value();
 		}
 
-		error_type error() const {
+		constexpr const ResTp&& value() const&& {
+			_throwOnInvalidStateAccess();
+			RIFT_ASSERT(has_value(), "Result is empty!");
+			return std::move(value_storage.value());
+		}
+
+		constexpr ResTp& value() & {
+			_throwOnInvalidStateAccess();
+			RIFT_ASSERT(has_value(), "Result is empty!");
+			return value_storage.value();
+		}
+
+		constexpr ResTp&& value() && {
+			_throwOnInvalidStateAccess();
+			RIFT_ASSERT(has_value(), "Result is empty!");
+			return std::move(value_storage.value());
+		}
+
+		constexpr const error_type& error() const& {
+			_throwOnInvalidStateAccess();
 			RIFT_ASSERT(has_error(), "Error is empty!");
-			return error_value;
+			return error_storage.value();
+		}
+
+		constexpr const error_type&& error() const&& {
+			_throwOnInvalidStateAccess();
+			RIFT_ASSERT(has_error(), "Error is empty!");
+			return std::move(error_storage.value());
+		}
+
+		constexpr error_type& error() & {
+			_throwOnInvalidStateAccess();
+			RIFT_ASSERT(has_error(), "Error is empty!");
+			return error_storage.value();
+		}
+
+		constexpr error_type&& error() && {
+			_throwOnInvalidStateAccess();
+			RIFT_ASSERT(has_error(), "Error is empty!");
+			return std::move(error_storage.value());
 		}
 
 	private:
-		base::Optional<ResTp> result;
-		error_type            error_value;
+		base::Optional<ResTp>      value_storage;
+		base::Optional<error_type> error_storage;
+
+		void _throwOnInvalidStateAccess() const {
+			RIFT_ASSERT(
+				error_storage.has_value() ^ value_storage.has_value(),
+				"HResult has an invalid state"
+			);
+		}
 	};
 }
