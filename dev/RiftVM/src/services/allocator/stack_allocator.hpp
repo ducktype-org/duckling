@@ -25,21 +25,21 @@ namespace vm {
 			  memory(getMemory(serviceManager.getVCPU())) {}
 
 	public:
-		BlockId makeTypeBlock(TypeCRef type, base::ModRawView data) {
+		BlockID makeTypeBlock(TypeCRef type, base::ModRawView data) {
 			auto block_id = memory.reserveBlockID();
 			std::memset(data.getBegin(), 0, data.size());
 			memory.makeBlock(block_id, Block(block_id, type, data));
 			return block_id;
 		}
 
-		BlockId makeArrayBlock(TypeCRef type, u64 length, base::ModRawView data) {
+		BlockID makeArrayBlock(TypeCRef type, u64 length, base::ModRawView data) {
 			auto block_id = memory.reserveBlockID();
 			std::memset(data.getBegin(), 0, data.size() * length);
 			memory.makeBlock(block_id, Block(block_id, type, length, data));
 			return block_id;
 		}
 
-		void deleteBlock(BlockId block_id) {
+		void deleteBlock(BlockID block_id) {
 			memory.deleteBlock(block_id);
 			memory.returnBlockID(block_id);
 		}

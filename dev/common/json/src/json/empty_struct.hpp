@@ -5,7 +5,7 @@
 #include <base/exceptions.hpp>
 
 template<class T>
-requires std::is_empty_v<T> struct nlohmann::adl_serializer<T> {
+requires std::is_empty_v<T> struct nlohmann::adl_serializer<T> final {
 	static void to_json(json& j, const T&) {
 		j["type"] = std::string(TypeParseTraits<T>::name.data());
 	}

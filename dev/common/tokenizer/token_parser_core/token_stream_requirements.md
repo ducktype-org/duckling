@@ -14,7 +14,7 @@ Stream idzie do przodu, czyli kolejne tokeny są na pozycjach `where+1`, `where+
 
 * isKeyword, asKeyword, isSpecial, asSpecial - forward metod z `peek(fwd)`
 * `bool isOperator(usize fwd = 0) const;` - sprawdza czy `peek(fwd).getType() == Token::Type::Operator`
-* `bool isOperator(base::StrId oper, usize fwd = 0) const;` - sprawdza czy `isOperator(fwd)` oraz`peek(fwd).isStr(oper)`
+* `bool isOperator(base::StrID oper, usize fwd = 0) const;` - sprawdza czy `isOperator(fwd)` oraz`peek(fwd).isStr(oper)`
 
 * `usize size() const;` - zwraca pozostałą liczbę token-ów w streamie
 

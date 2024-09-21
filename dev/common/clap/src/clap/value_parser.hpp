@@ -20,7 +20,7 @@ namespace clap {
 	/**
 	 * A result of a single value parsing.
 	 */
-	struct ValueParsingResult {
+	struct ValueParsingResult final {
 		/**
 		 * The value. It has to be cast back with base::anyCast.
 		 */
@@ -126,7 +126,7 @@ namespace clap {
 		using ValueParser::ValueParser;
 
 	public:
-		struct Range {
+		struct Range final {
 			i64 begin, end;
 		};
 

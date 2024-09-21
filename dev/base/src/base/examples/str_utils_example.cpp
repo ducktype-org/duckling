@@ -3,7 +3,7 @@
 #include <iostream>
 
 int main() {
-	base::StrId str("def");
+	base::StrID str("def");
 
 	// prints: abc4def true
 	std::cout << base::strConcat("abc", 4, str, " ", true, "\n");

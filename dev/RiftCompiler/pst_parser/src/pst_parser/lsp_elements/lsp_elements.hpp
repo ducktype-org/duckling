@@ -37,7 +37,7 @@ namespace lsp {
 	using tpc::makeRef;
 	using tpc::ParserRef;
 
-	inline tpc::Identifier default_tpc_identifier() { return tpc::Identifier{ base::StrId() }; }
+	inline tpc::Identifier default_tpc_identifier() { return tpc::Identifier{ base::StrID() }; }
 
 
 	class LSPExpr;
@@ -183,19 +183,19 @@ namespace lsp {
 		};
 
 		struct Operator {
-			base::StrId    oper_id  = base::StrId();
+			base::StrID    oper_id  = base::StrID();
 			SourcePosition position = SourcePosition::fakePosition();
 			void           lsp_print(std::ostream&);
 		};
 
 		struct Identifier {
-			base::StrId    indent_id = base::StrId();
+			base::StrID    indent_id = base::StrID();
 			SourcePosition position  = SourcePosition::fakePosition();
 			void           lsp_print(std::ostream&);
 		};
 
 		struct NumLiteral {
-			base::StrId    num_id   = base::StrId();
+			base::StrID    num_id   = base::StrID();
 			SourcePosition position = SourcePosition::fakePosition();
 			void           lsp_print(std::ostream&);
 		};

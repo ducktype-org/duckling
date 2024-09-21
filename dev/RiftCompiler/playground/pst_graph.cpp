@@ -12,7 +12,7 @@
 /**
  * @brief Graph handler for gvc graphs
  */
-struct Handler {
+struct Handler final {
 	GVC_t*    gvc;
 	Agraph_t* graph;
 

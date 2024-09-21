@@ -129,6 +129,7 @@ namespace rift_def {
 		BCLocalSize,
 		BCRetSize,
 		BCArgSize,
+		BCNextArgSize,
 		BCDefine,
 		BCLabel,
 		BCArg,
@@ -185,13 +186,13 @@ namespace rift_def {
 
 	void setKeywordMode(KeywordMode mode);
 
-	Special  strAsSpecial(base::StrId id);
-	Keyword  strAsKeyword(base::StrId id);
-	Operator strAsOperator(base::StrId id);
+	Special  strAsSpecial(base::StrID id);
+	Keyword  strAsKeyword(base::StrID id);
+	Operator strAsOperator(base::StrID id);
 
-	base::StrId keywordToStr(Keyword key);
-	base::StrId specialToStr(Special spec);
-	base::StrId operatorToStr(Operator oper);
+	base::StrID keywordToStr(Keyword key);
+	base::StrID specialToStr(Special spec);
+	base::StrID operatorToStr(Operator oper);
 
 	base::FlagType keywordFlags(Keyword key);
 

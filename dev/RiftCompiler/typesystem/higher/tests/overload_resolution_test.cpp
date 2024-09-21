@@ -33,19 +33,19 @@ private:
 			TypeInterface my_class_interface = my_class_type.getInterface(ctx);
 
 			assertTrue(
-				my_class_interface.getElements(base::StrId("a")).size() == 1,
+				my_class_interface.getElements(base::StrID("a")).size() == 1,
 				"There should be exactly one 'a' member."
 			);
 			assertTrue(
-				my_class_interface.getElements(base::StrId("b")).size() == 1,
+				my_class_interface.getElements(base::StrID("b")).size() == 1,
 				"There should be exactly one 'b' member."
 			);
 			assertTrue(
-				my_class_interface.getElements(base::StrId("c")).empty(),
+				my_class_interface.getElements(base::StrID("c")).empty(),
 				"There should be exactly no 'c' members."
 			);
 
-			auto a_resolution = my_class_interface.resolve(base::StrId("a"), ctx);
+			auto a_resolution = my_class_interface.resolve(base::StrID("a"), ctx);
 
 			variant_match(a_resolution) {
 				variant_case_novalue(TypeInterface::SingleMatch) {}

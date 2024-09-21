@@ -76,7 +76,7 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(Namespace);
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 
@@ -108,7 +108,7 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(Class);
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 
@@ -154,7 +154,7 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(Variable);
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 
@@ -195,7 +195,7 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(Fun);
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 

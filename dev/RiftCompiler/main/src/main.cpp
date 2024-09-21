@@ -15,6 +15,8 @@
 #include <clap/clap.hpp>
 #include <printer/stream_printer.hpp>
 #include <config/config.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <helios/queries.hpp>
 
 /**
  * @brief Runs inits needed by main
@@ -41,7 +43,7 @@ using CommandRunner = std::function<int()>;
 /**
  * @brief Structure representing a single command of "duck main"
  */
-struct Command {
+struct Command final {
 	std::string   name;
 	std::string   description;
 	CommandRunner runner;
@@ -50,7 +52,7 @@ struct Command {
 /**
  * @brief Structure representing all commands of "duck main"
  */
-struct CommandList {
+struct CommandList final {
 	std::vector<Command> commands;
 
 	/**
@@ -79,7 +81,7 @@ struct CommandList {
 		return out;
 	}
 
-	struct CommandStatus {
+	struct CommandStatus final {
 		bool was_command_run;
 		int  exit_code;
 	};
@@ -234,6 +236,29 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		return exit_code;
 	});
+	commands.add("get_hout", "Debug prints hout-unit of a module.", [&]() {
+		// modify clap as needed:
+		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+		             .addShortName('m')
+		             .addLongName("module")
+		             .addShortDesc("Path to the module")
+		             .required()
+		             .build());
+
+		auto options = configureDuckMainWith(clap, command_args);
+
+		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+
+		int exit_code = 0;
+
+		// @TODO: error handling
+		using namespace compiler;
+		auto root      = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+		auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+		std::cout << top_level.debugPrint();
+
+		return exit_code;
+	});
 	commands.add("throw", "Throws exception (testing command).", [&]() -> int {
 		configureDuckMainWith(clap, command_args);
 		throw base::LogicError("Command `throw` thrown successfully!");
@@ -254,17 +279,6 @@ int mainProcedure(int argc, const char* const* argv) {
 	bool command_mode = false;
 
 	auto commands = getCommandList(command_args, clap);
-
-	// our custom commands:
-	clap.add(
-		clap::ParamBuilder::ofFlag()
-			.addLongName("let-it-throw")
-			.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
-	                      "Useful for debugging.")
-			.addLongDesc("Note that sometimes exception can happen before logic behind this option "
-	                     "will happen. In that case exception will most likely not be caught.")
-			.build()
-	);
 
 	try {
 		// @future: improve the way we detect whether there was a command or no and

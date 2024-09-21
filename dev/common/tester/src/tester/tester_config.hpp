@@ -5,7 +5,7 @@
 #include "clap/clap.hpp"
 
 namespace tester {
-	struct TestConfig {
+	struct TestConfig final {
 		std::string test_files_path;
 	};
 
