@@ -54,7 +54,7 @@ private:
 
 			ASSERT_EQUAL(foo1_mir.blocks.size(), 1);
 			ASSERT_EQUAL(foo2_mir.blocks.size(), 2);
-			ASSERT_EQUAL(foo3_mir.blocks.size(), 5);
+			ASSERT_EQUAL(foo3_mir.blocks.size(), 6);
 			ASSERT_EQUAL(foo4_mir.blocks.size(), 2);
 
 			// This doesn't test much other then that the code doesn't crash/throw exceptions.

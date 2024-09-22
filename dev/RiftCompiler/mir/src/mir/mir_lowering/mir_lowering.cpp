@@ -317,8 +317,8 @@ namespace compiler::mir {
 			);
 			auto then_body = lowerCodeBlock(stmt.body, then_block, function);
 
+			// @future: in the future we wan't jumpy code here
 			auto condition_block = function.newBlock();
-
 			auto expr_result = lowerExpr(*stmt.condition, condition_block, function);
 
 			condition_block->setTerminator(
