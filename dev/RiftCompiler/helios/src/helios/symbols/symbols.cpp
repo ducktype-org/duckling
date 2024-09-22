@@ -386,9 +386,8 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryDealias, SymbolList) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO: this does not handle usings.
-			if (kind(key) == SymbolKind::Using) {
+			if (kind(key) == SymbolKind::Using)
 				std::cerr << "Warning: QueryDealias does not handle usings (@TODO).\n";
-			}
 
 			if (kind(key) != SymbolKind::Alias) return { key };
 
@@ -772,7 +771,8 @@ namespace compiler::helios {
 																	  named_identifier.symbol_name,
 																	  true,
 																  })
-					          .getAsSingle().back();
+					          .getAsSingle()
+					          .back();
 					// very simple dealias, that should
 					// ultimately be replaced by type expr comp-time eval:
 					auto dealias_sym = ctx.query<QueryDealias>({ symbol }).back();
