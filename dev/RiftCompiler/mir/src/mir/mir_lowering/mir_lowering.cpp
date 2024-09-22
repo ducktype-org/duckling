@@ -83,8 +83,8 @@ namespace compiler::mir {
 	/**
 	 * @brief Creates construct flag for given local.
 	 * @note: It is a function, not a constructor to avoid .hpp bloat.
-	 * @param local 
-	 * @return constexpr OperationFlag 
+	 * @param local
+	 * @return constexpr OperationFlag
 	 */
 	constexpr OperationFlag flagConstruct(LocalRef local) {
 		return { OperationFlag::Flag::Construct, local };
@@ -93,8 +93,8 @@ namespace compiler::mir {
 	/**
 	 * @brief Creates destruct flag for given local.
 	 * @note: It is a function, not a constructor to avoid .hpp bloat.
-	 * @param local 
-	 * @return constexpr OperationFlag 
+	 * @param local
+	 * @return constexpr OperationFlag
 	 */
 	constexpr OperationFlag flagDestruct(LocalRef local) {
 		return { OperationFlag::Flag::Destruct, local };
@@ -103,8 +103,8 @@ namespace compiler::mir {
 	/**
 	 * @brief Creates move flag for given local.
 	 * @note: It is a function, not a constructor to avoid .hpp bloat.
-	 * @param local 
-	 * @return constexpr OperationFlag 
+	 * @param local
+	 * @return constexpr OperationFlag
 	 */
 	constexpr OperationFlag flagMove(LocalRef local) {
 		return { OperationFlag::Flag::Move, local };
@@ -319,7 +319,7 @@ namespace compiler::mir {
 
 			// @future: in the future we wan't jumpy code here
 			auto condition_block = function.newBlock();
-			auto expr_result = lowerExpr(*stmt.condition, condition_block, function);
+			auto expr_result     = lowerExpr(*stmt.condition, condition_block, function);
 
 			condition_block->setTerminator(
 				{ Operation::Branch,
@@ -335,7 +335,7 @@ namespace compiler::mir {
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
 			auto local                   = function.addLocal(stmt.helios_symbol);
 			auto local_construction_hole = continuation->addHole();
-			
+
 			match_optional(stmt.initial_value) {
 				opt_some(value) {
 					auto expr_result = lowerExpr(*value, continuation, function);
@@ -349,9 +349,7 @@ namespace compiler::mir {
 					output({ expr_result.begin });
 					return;
 				}
-				opt_none {
-					throw base::NotYetImplemented("variable without initial value in MIR");
-				}
+				opt_none { throw base::NotYetImplemented("variable without initial value in MIR"); }
 			}
 
 			RIFT_PANIC("match_optional failed in visitVariableStmt.");

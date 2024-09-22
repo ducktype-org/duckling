@@ -201,7 +201,7 @@ namespace compiler::mir {
 
 		/**
 		 * @brief List of instructions in the block.
-		 * @note It does not include terminator instruction. 
+		 * @note It does not include terminator instruction.
 		 */
 		std::vector<Instruction> instructions;
 
