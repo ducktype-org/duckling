@@ -61,7 +61,7 @@ namespace compiler::helios::code {
 	void LiteralValueExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
 
 	void IdentifierExpr::debugPrint(std::ostream& out) const {
-		out << base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
+		out << base::strConcat("(Symbol ", name(symbol), " (", symbol.customPerfectHash(), "))");
 	}
 
 	void BinaryOperatorExpr::debugPrint(std::ostream& out) const {
