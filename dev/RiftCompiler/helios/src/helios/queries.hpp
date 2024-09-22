@@ -20,7 +20,9 @@ namespace compiler::helios {
 	// incremental compilation
 
 	/**
-	 * @brief Debug function for printing scope and its parents IDs.
+	 * @brief Debug function to print scope and its parents IDs.
+	 * @note: not used right now
+	 * @param scope
 	 */
 	void printScopeAndParents(ScopeID scope);
 
