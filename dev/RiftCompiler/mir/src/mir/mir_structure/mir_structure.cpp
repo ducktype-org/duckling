@@ -40,12 +40,13 @@ namespace compiler::mir {
 		// save flags to restore
 		auto output_flags = output.flags();
 
+		output << std::left << std::setw(12);
+		std::stringstream output_value;
 		if (this->output.has_value()) {
-			this->output.value()->debugPrint(output);
-			output << " := ";
-		} else {
-			output << "    ";
+			this->output.value()->debugPrint(output_value);
+			output_value << " :=";
 		}
+		output << output_value.str() << " ";
 
 		output << std::left << std::setw(15);
 		output << base::enumToStr(operation).strView() << "  ";
