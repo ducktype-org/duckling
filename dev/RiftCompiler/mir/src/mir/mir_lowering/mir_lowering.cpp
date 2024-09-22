@@ -206,8 +206,8 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]]
-		LocalRef addLocal() {
-			auto key = local_list.emplaceBack(MirLocal{});
+		LocalRef addLocal(helios::SymID helios_id) {
+			auto key = local_list.emplaceBack(MirLocal{helios_id});
 			return local_list.getRef(key).value();
 		}
 
@@ -294,8 +294,46 @@ namespace compiler::mir {
 			output({ expr_result.begin });
 		}
 
-		void visitVariableStmt(const hc::VariableStmt&) override {
-			throw base::NotYetImplemented("variable");
+		void visitVariableStmt(const hc::VariableStmt& stmt) override {
+			auto local = function.addLocal(stmt.helios_symbol);
+			auto local_construction_hole = continuation->addHole();
+
+			BlockBuilderRef my_cont = continuation;
+			
+			match_optional (stmt.initial_value) {
+				opt_some(value) {
+					auto expr_result = lowerExpr(*value, continuation, function);
+					
+					// @TODO: is expr_result.value moved here?
+					// we might want to introduce "lowerExprInto"
+
+					local_construction_hole.fill(Instruction{
+						Operation::Assign,
+						{ local },
+						{ expr_result.value },
+						{ OperationFlag::construct(local) },
+						stmt.lifetime_scope
+					});
+
+					output({ expr_result.begin });  
+					return;
+				}
+				opt_none {
+					// default initialization
+					local_construction_hole.fill(Instruction{
+						Operation::Assign,
+						{ local },
+						{ MirLocation{ MirIntegerConst{ 0 } } }, // @TODO < this is a placeholder
+						{ OperationFlag::construct(local) },
+						stmt.lifetime_scope
+					});
+
+					output({ continuation });  
+					return;
+				}
+			}
+
+			RIFT_PANIC("match_optional failed in visitVariableStmt.");
 		}
 	};
 
