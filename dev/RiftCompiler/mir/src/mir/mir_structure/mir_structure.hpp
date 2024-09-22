@@ -138,16 +138,6 @@ namespace compiler::mir {
 		Flag     flag;
 		LocalRef local;
 
-		constexpr static OperationFlag construct(LocalRef local) {
-			return { Flag::Construct, local };
-		}
-
-		constexpr static OperationFlag destruct(LocalRef local) {
-			return { Flag::Destruct, local };
-		}
-
-		constexpr static OperationFlag move(LocalRef local) { return { Flag::Move, local }; }
-
 		void debugPrint(std::ostream& output) const;
 	};
 

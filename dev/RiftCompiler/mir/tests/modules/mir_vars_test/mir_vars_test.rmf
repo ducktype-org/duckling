@@ -1,7 +1,8 @@
 fun foo() = {
-	var a: i32 = 0;
-	return 0; # hmm, if we have "a" here, we need to map HeliosSymbols to MirLocals
-	          # probably can be just a map
+	var a: i32 = 23;
+	return 0;
+	if (9) {
+		var b: i32 = 7;
+	}
 }
-
 

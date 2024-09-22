@@ -81,6 +81,36 @@ namespace compiler::mir {
 	);
 
 	/**
+	 * @brief Creates construct flag for given local.
+	 * @note: It is a function, not a constructor to avoid .hpp bloat.
+	 * @param local 
+	 * @return constexpr OperationFlag 
+	 */
+	constexpr OperationFlag flagConstruct(LocalRef local) {
+		return { OperationFlag::Flag::Construct, local };
+	}
+
+	/**
+	 * @brief Creates destruct flag for given local.
+	 * @note: It is a function, not a constructor to avoid .hpp bloat.
+	 * @param local 
+	 * @return constexpr OperationFlag 
+	 */
+	constexpr OperationFlag flagDestruct(LocalRef local) {
+		return { OperationFlag::Flag::Destruct, local };
+	}
+
+	/**
+	 * @brief Creates move flag for given local.
+	 * @note: It is a function, not a constructor to avoid .hpp bloat.
+	 * @param local 
+	 * @return constexpr OperationFlag 
+	 */
+	constexpr OperationFlag flagMove(LocalRef local) {
+		return { OperationFlag::Flag::Move, local };
+	}
+
+	/**
 	 * @brief Structure representing block in build process.
 	 * @note It is a builder in the sense of design pattern.
 	 */
@@ -302,29 +332,17 @@ namespace compiler::mir {
 				opt_some(value) {
 					auto expr_result = lowerExpr(*value, continuation, function);
 
-					// @TODO: is expr_result.value moved here?
-					// we might want to introduce "lowerExprInto"
-
 					local_construction_hole.fill(Instruction{ Operation::Assign,
 					                                          { local },
 					                                          { expr_result.value },
-					                                          { OperationFlag::construct(local) },
+					                                          { flagConstruct(local) },
 					                                          stmt.lifetime_scope });
 
 					output({ expr_result.begin });
 					return;
 				}
 				opt_none {
-					// default initialization
-					local_construction_hole.fill(Instruction{
-						Operation::Assign,
-						{ local },
-						{ MirLocation{ MirIntegerConst{ 0 } } },  // @TODO < this is a placeholder
-						{ OperationFlag::construct(local) },
-						stmt.lifetime_scope });
-
-					output({ continuation });
-					return;
+					throw base::NotYetImplemented("variable without initial value in MIR");
 				}
 			}
 
