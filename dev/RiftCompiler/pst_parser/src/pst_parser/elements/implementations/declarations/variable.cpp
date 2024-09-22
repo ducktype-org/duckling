@@ -42,6 +42,7 @@ namespace pst {
 
 		state.parse(out).one(Operator::Assign, true);
 
+		// @TODO: Perhaps add possibility for default construction.
 		state.parse(out).with<Expr>(&out->value, Expr::parse, true);
 
 		return out;

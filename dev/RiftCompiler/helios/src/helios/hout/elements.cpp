@@ -44,15 +44,27 @@ namespace compiler::helios::code {
 		out << "}\n";
 	}
 
-	void LiteralValueExpr::debugPrint(std::ostream& out, usize) const {
-		out << std::to_string(value);
+	void VariableStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "var ";
+		out << name(this->helios_symbol).strView();
+		out << " : ";
+
+		// this might not be correct:?
+		out << this->type.getType().toString();
+		out << " = ";
+		this->initial_value.value()->debugPrint(out);
+
+		out << ";\n";
 	}
 
-	void IdentifierExpr::debugPrint(std::ostream& out, usize) const {
-		out << base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
+	void LiteralValueExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
+
+	void IdentifierExpr::debugPrint(std::ostream& out) const {
+		out << base::strConcat("(Symbol ", name(symbol), " (", symbol.customPerfectHash(), "))");
 	}
 
-	void BinaryOperatorExpr::debugPrint(std::ostream& out, usize) const {
+	void BinaryOperatorExpr::debugPrint(std::ostream& out) const {
 		out << base::strConcat("(");
 		lhs->debugPrint(out);
 		out << base::strConcat(op);
@@ -123,6 +135,7 @@ namespace compiler::helios::code {
 	STMT_VISITOR(VoidReturnStmt);
 	STMT_VISITOR(ExprStmt);
 	STMT_VISITOR(IfStmt);
+	STMT_VISITOR(VariableStmt);
 
 	EXPR_VISITOR(LiteralValueExpr);
 	EXPR_VISITOR(IdentifierExpr);
@@ -190,8 +203,13 @@ namespace compiler::helios {
 
 			if (key.expr->elements.size() == 1)
 				return houtOfSingleExpr(ctx, key);
-			else
-				throw base::NotYetImplemented("Complicated HOUT expressions");
+			else {
+				std::stringstream expr_dprint;
+				key.expr->dprint(expr_dprint);
+				throw base::NotYetImplemented(
+					base::strConcat("Complicated HOUT expressions: ", expr_dprint.str())
+				);
+			}
 		}
 
 		// @TODO: perhaps add cache
