@@ -13,6 +13,11 @@
 
 namespace compiler::helios {
 
+	/**
+	 * @brief Debug function to print scope IDs and its parents IDs.
+	 * @note: not used right now
+	 * @param scope 
+	 */
 	void debugPrintScopeAndParents(ScopeID scope) {
 		std::cerr << scope.customPerfectHash() << " -> ";
 		while (parent(scope)) {
