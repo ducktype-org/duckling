@@ -307,7 +307,15 @@ namespace compiler::mir {
 				{ Operation::Jump, {}, { continuation->getID() }, {}, stmt.lifetime_scope }
 			);
 
-			auto then_block = lowerCodeBlock(stmt.body, continuation, function);
+			// @note: here then block created a new block
+			// so "else" will not jump into it.
+			// @future: the current solution may be sub-optimal
+			// we will have to look into it.
+			auto then_block = function.newBlock();
+			then_block->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, stmt.lifetime_scope }
+			);
+			auto then_body = lowerCodeBlock(stmt.body, then_block, function);
 
 			auto condition_block = function.newBlock();
 
@@ -316,7 +324,7 @@ namespace compiler::mir {
 			condition_block->setTerminator(
 				{ Operation::Branch,
 			      {},
-			      { expr_result.value, then_block.begin->getID(), else_block->getID() },
+			      { expr_result.value, then_body.begin->getID(), else_block->getID() },
 			      {},
 			      stmt.lifetime_scope }
 			);

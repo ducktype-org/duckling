@@ -1,8 +1,8 @@
 fun foo() = {
 	var a: i32 = 23;
-	return 0;
 	if (9) {
 		var b: i32 = 7;
 	}
+	return 0;
 }
 
