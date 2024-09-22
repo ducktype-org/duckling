@@ -151,6 +151,8 @@ namespace compiler::mir {
 		constexpr static OperationFlag move(LocalRef local) {
 			return { Flag::Move, local };
 		}
+
+		void debugPrint(std::ostream& output) const;
 	};
 
 	/**
