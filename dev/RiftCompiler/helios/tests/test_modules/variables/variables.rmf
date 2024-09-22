@@ -1,16 +1,22 @@
 class T { }
 
 fun foo() = {
-	var a: i32 = abc;
+	var a: i32 = in_n;
 	var b: i32 = 0;
 	var c: i32 | f32 = 0;
-	var d: hmm = 0;
+	var d: Q = 0;   # @TODO: type "Q" here does not work. 
 	alias hmm = T;
+	using N.*;
 	if (0) {
 		var x: i32 = c;
 		b;
 	}
 	return a;
+}
+
+namespace N {
+	class Q {}
+	const in_n: i32 = 0;
 }
 
 const abc: i32 = 123;

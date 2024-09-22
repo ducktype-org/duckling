@@ -385,7 +385,11 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryDealias, SymbolList) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// @TODO: usings?
+			// @TODO: this does not handle usings.
+			if (kind(key) == SymbolKind::Using) {
+				std::cerr << "Warning: QueryDealias does not handle usings.\n";
+			}
+
 			if (kind(key) != SymbolKind::Alias) return { key };
 
 			auto&& alias_definition
