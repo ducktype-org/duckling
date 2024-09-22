@@ -24,7 +24,7 @@ namespace compiler::helios {
 	 * @note: not used right now
 	 * @param scope
 	 */
-	void printScopeAndParents(ScopeID scope);
+	void debugPrintScopeAndParents(ScopeID scope);
 
 	/**
 	 * @brief Query FULL HOUTUnit of single module
