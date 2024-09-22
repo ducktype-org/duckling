@@ -283,7 +283,7 @@ private:
 		ASSERT_EQUAL(function.original_name, "foo");
 
 		// note that alias should not be included here:
-		ASSERT_EQUAL(function.body.body->statements.size(), 6);
+		ASSERT_EQUAL(function.body.body->statements.size(), 7);
 
 		auto& statements = function.body.body->statements;
 
@@ -328,6 +328,12 @@ private:
 			);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "x");
 			ASSERT_EQUAL(var.type.getType(), i32_type);
+		}
+
+		{
+			auto& var = get_var_ref(5);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "e");
+			ASSERT_EQUAL(var.type.getType().getKind(), tsh::Kind::Class);
 		}
 	}
 };
