@@ -26,6 +26,7 @@ public:
 	MIRConstructionTest(tester::TestConfig&& config):
 		  tester::ContextSuite(std::move(config), "mir construction test") {
 		TESTER_ADD_TEST(simpleTest);
+		TESTER_ADD_TEST(simpleVarTest);
 	}
 
 private:
@@ -64,6 +65,36 @@ private:
 			foo2_mir.debugPrint(all_functions);
 			foo3_mir.debugPrint(all_functions);
 			foo4_mir.debugPrint(all_functions);
+		});
+	}
+
+	void simpleVarTest() {
+		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_var_test")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& functions = unit.functions;
+			ASSERT_EQUAL(1, functions.size());
+			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
+
+			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
+
+			ASSERT_EQUAL(foo_mir.blocks.size(), 5);
+
+			// @note: block order is reversed:
+			// @note: instruction count does not include terminator instruction:
+
+			using enum compiler::mir::Operation;
+			
+			ASSERT_EQUAL(foo_mir.blocks.at(4).id, foo_mir.entry_block);
+			ASSERT_EQUAL(foo_mir.blocks.at(4).instructions.size(), 1);
+			ASSERT_EQUAL(foo_mir.blocks.at(4).instructions.at(0).operation, Assign);
+			ASSERT_EQUAL(foo_mir.blocks.at(4).terminator.operation, Branch);
+			
+			ASSERT_EQUAL(foo_mir.blocks.at(3).instructions.size(), 1);
+			ASSERT_EQUAL(foo_mir.blocks.at(3).instructions.at(0).operation, Assign);
+			ASSERT_EQUAL(foo_mir.blocks.at(3).terminator.operation, Jump);
 		});
 	}
 };
