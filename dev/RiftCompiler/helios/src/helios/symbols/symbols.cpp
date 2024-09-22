@@ -772,7 +772,7 @@ namespace compiler::helios {
 																	  named_identifier.symbol_name,
 																	  true,
 																  })
-					          .leaves.back();
+					          .getAsSingle().back();
 					// very simple dealias, that should
 					// ultimately be replaced by type expr comp-time eval:
 					auto dealias_sym = ctx.query<QueryDealias>({ symbol }).back();
