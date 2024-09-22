@@ -89,9 +89,15 @@ namespace compiler::mir {
 
 	void OperationFlag::debugPrint(std::ostream& output) const {
 		switch (flag) {
-		case Flag::Construct: output << "Construct"; break;
-		case Flag::Destruct: output << "Destruct"; break;
-		case Flag::Move: output << "Move"; break;
+		case Flag::Construct:
+			output << "Construct";
+			break;
+		case Flag::Destruct:
+			output << "Destruct";
+			break;
+		case Flag::Move:
+			output << "Move";
+			break;
 		}
 		output << " ";
 		local->debugPrint(output);
