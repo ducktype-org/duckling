@@ -199,6 +199,10 @@ namespace compiler::mir {
 		 */
 		BlockID id;
 
+		/**
+		 * @brief List of instructions in the block.
+		 * @note It does not include terminator instruction. 
+		 */
 		std::vector<Instruction> instructions;
 
 		/**
