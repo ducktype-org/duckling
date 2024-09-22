@@ -297,9 +297,7 @@ namespace compiler::mir {
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
 			auto local                   = function.addLocal(stmt.helios_symbol);
 			auto local_construction_hole = continuation->addHole();
-
-			BlockBuilderRef my_cont = continuation;
-
+			
 			match_optional(stmt.initial_value) {
 				opt_some(value) {
 					auto expr_result = lowerExpr(*value, continuation, function);
