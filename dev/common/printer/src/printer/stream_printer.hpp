@@ -36,7 +36,7 @@
 #include <iostream>
 
 namespace printer {
-	class StreamPrinter {
+	class StreamPrinter final {
 	public:
 		static void print(const PrinterContent& content, std::ostream& out = std::cerr);
 		static void print(const PrinterContentsSeq& contents, std::ostream& out = std::cerr);

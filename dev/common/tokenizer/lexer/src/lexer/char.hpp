@@ -9,7 +9,7 @@ namespace lexer {
 	/**
 	 * @brief Class representing a Unicode code point and allowing to check it's classifications
 	 */
-	class Char {
+	class Char final {
 	public:
 		const UChar32 value;
 		const u8      size;

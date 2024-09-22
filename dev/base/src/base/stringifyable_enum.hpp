@@ -45,7 +45,7 @@ namespace base {
 		using EnumToStrType = base::Map<EnumType, base::StrID>;
 
 		template<typename EnumType>
-		struct TwoMaps {
+		struct TwoMaps final {
 			EnumToStrType<EnumType> to_str;
 			EnumToStrType<EnumType> to_enum;
 		};

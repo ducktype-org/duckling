@@ -4,18 +4,19 @@
 # output = n * (n + 1) / 2
 
 function sum {
-	arg_size: 0;
+	arg_size: 8;
+	next_arg_size: 8;
 	ret_size: 0;
 	local_size: 16;
 
 	code: {
-        mov_l64_pFuncArg    0;
+        getFstArg_l64       0;
         cmpEq_l64_imm       0,  0;
         jmpRelIf_label      ret_label;
         # if arg != 0:
             mov_l64_l64         8,  0;
             sub_l64_imm         0,  1;
-            setPArg_l64         0;
+            setFstArg_l64       0;
             
             call_func           0;
             
@@ -30,13 +31,14 @@ function sum {
 
 function main {
 	arg_size: 0;
+	next_arg_size: 8;
 	ret_size: 0;
 
 	local_size: 8;
 
 	code: {
         input_l64           0;
-        setPArg_l64         0;
+        setFstArg_l64       0;
 		
         call_func          	0;
         

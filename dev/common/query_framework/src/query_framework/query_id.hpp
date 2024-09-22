@@ -7,7 +7,7 @@
 #include <base/ints.hpp>
 
 namespace query::detail {
-	struct QueryID {
+	struct QueryID final {
 		using VAL_T = u64;
 		VAL_T val;
 

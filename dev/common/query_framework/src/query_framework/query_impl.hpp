@@ -33,7 +33,7 @@ namespace query {
 		 * a way to hack-in the query model. This however will most likely be
 		 * discarded.
 		 */
-		struct ContextType {
+		struct ContextType final {
 		private:
 			NodeID my_node;
 
@@ -71,7 +71,7 @@ namespace query {
 		/**
 		 * @brief Internal helper struct used to create context
 		 */
-		struct ContextMaker {
+		struct ContextMaker final {
 			static auto make(NodeID my_node) { return ContextType(my_node); }
 		};
 

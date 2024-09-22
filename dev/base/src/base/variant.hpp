@@ -48,7 +48,7 @@
 
 namespace base::detail {
 	template<typename... T>
-	struct VisitOverloaded: T... {
+	struct VisitOverloaded final: T... {
 		using T::operator()...;
 	};
 

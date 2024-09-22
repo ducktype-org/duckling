@@ -22,7 +22,7 @@ namespace compiler::frontend {
 	 * @brief Structure holding FileID within SourceFile
 	 * @todo: change to STRONG_TYPEDEF_ID
 	 */
-	struct FileID {
+	struct FileID final {
 		[[nodiscard]]
 		u64 asInt() const {
 			return id;
@@ -49,7 +49,7 @@ namespace compiler::frontend {
 	/**
 	 * @brief Structure holding SourceFile within Module Tree
 	 */
-	struct SourceFile {
+	struct SourceFile final {
 		fs::FilePath               path;
 		base::StrID                rift_file_name;
 		FileID                     id;
@@ -264,12 +264,12 @@ namespace compiler::frontend {
 // std::hash functor for ModuleID and FileID:
 namespace std {
 	template<>
-	struct hash<compiler::frontend::ModuleID> {
+	struct hash<compiler::frontend::ModuleID> final {
 		usize operator()(const compiler::frontend::ModuleID& k) const { return k.asInt(); }
 	};
 
 	template<>
-	struct hash<compiler::frontend::FileID> {
+	struct hash<compiler::frontend::FileID> final {
 		usize operator()(const compiler::frontend::FileID& k) const { return k.asInt(); }
 	};
 }

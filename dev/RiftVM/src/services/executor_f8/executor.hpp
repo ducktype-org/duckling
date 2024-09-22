@@ -114,7 +114,6 @@ namespace vm {
 		 */
 		base::ModRawView internalDerefPointer(Pointer);
 
-		inline void initNextFrame(Frame*, StandardFunctionArgs& args);
 		/** Using raw Frame pointers seem to boost performance in function calls */
 		Frame internalInitFrame();
 		u64   internalCallMain(const FuncData&);
