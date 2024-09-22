@@ -265,7 +265,7 @@ private:
 		tree2->debugPrint(out2);
 
 		auto sym3       = getChain("N.V3", root_scope).back();
-		auto symV3_repr = base::strConcat("(Symbol ", sym3.customPerfectHash(), ")");
+		auto symV3_repr = base::strConcat("(Symbol V3 (", sym3.customPerfectHash(), "))");
 		ASSERT_EQUAL(
 			base::strConcat("(", symV3_repr, "+(", symV3_repr, "*", symV3_repr, "))"), out2.str()
 		);
