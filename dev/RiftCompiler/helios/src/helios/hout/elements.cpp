@@ -79,7 +79,7 @@ namespace compiler::helios::code {
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
 			  )
 		  ),
-		  symbol(std::move(symbol)) {}
+		  symbol(symbol) {}
 
 	void IdentifierExpr::debugPrint(std::ostream& out) const {
 		out << base::strConcat("(Symbol ", name(symbol), " (", symbol.customPerfectHash(), "))");
