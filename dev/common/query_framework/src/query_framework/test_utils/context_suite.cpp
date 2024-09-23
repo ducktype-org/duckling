@@ -1,6 +1,7 @@
 #include "context_suite.hpp"
 
-#include <query_framework/query_entry_point.hpp>
+#include "../query_impl.hpp"
+#include "../query_entry_point.hpp"
 
 namespace tester {
 	namespace {
