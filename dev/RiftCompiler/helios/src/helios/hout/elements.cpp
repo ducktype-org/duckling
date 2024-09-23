@@ -44,6 +44,19 @@ namespace compiler::helios::code {
 		out << "}\n";
 	}
 
+	LiteralValueExpr::LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx):
+		  Expr(
+			  scope,
+			  tsh::TypeDesc<>(
+				  // @TODO: Select type of expression based on type of literal.
+				  ctx.query<tsh::QueryIntegralType>({ 64 }),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  )
+		  ),
+		  value(value) {}
+
+	void LiteralValueExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
+
 	void VariableStmt::debugPrint(std::ostream& out, usize indent) const {
 		addIndent(out, indent);
 		out << "var ";
@@ -58,11 +71,38 @@ namespace compiler::helios::code {
 		out << ";\n";
 	}
 
-	void LiteralValueExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
+	IdentifierExpr::IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx):
+		  Expr(
+			  scope,
+			  tsh::TypeDesc<>(
+				  ctx.query<QueryTypeOfSymbol>(symbol),
+				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
+			  )
+		  ),
+		  symbol(symbol) {}
 
 	void IdentifierExpr::debugPrint(std::ostream& out) const {
 		out << base::strConcat("(Symbol ", name(symbol), " (", symbol.customPerfectHash(), "))");
 	}
+
+	BinaryOperatorExpr::BinaryOperatorExpr(
+		ScopeID          scope,
+		base::StrID      op,
+		ElementRef<Expr> lhs,
+		ElementRef<Expr> rhs,
+		query::Context&  ctx
+	):
+		  Expr(
+			  scope,
+			  tsh::TypeDesc<>(
+				  // @TODO: Select type of expression based on result type of the operation.
+				  ctx.query<tsh::QueryIntegralType>({ 64 }),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  )
+		  ),
+		  op(op),
+		  lhs(std::move(lhs)),
+		  rhs(std::move(rhs)) {}
 
 	void BinaryOperatorExpr::debugPrint(std::ostream& out) const {
 		out << base::strConcat("(");

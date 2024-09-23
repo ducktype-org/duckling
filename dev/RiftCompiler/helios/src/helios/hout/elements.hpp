@@ -7,7 +7,7 @@
 
 #include <helios/symbols/symbols.hpp>
 #include <pst_parser/elements/elements.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/query_int.hpp>
 #include <typesystem/higher/type_desc.hpp>
 #include <typesystem/higher/queries.hpp>
 
@@ -163,16 +163,7 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		i64 value;
 
-		LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx):
-			  Expr(
-				  scope,
-				  tsh::TypeDesc<>(
-					  // @TODO: Select type of expression based on type of literal.
-					  ctx.query<tsh::QueryIntegralType>({ 64 }),
-					  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-				  )
-			  ),
-			  value(value) {}
+		LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
@@ -188,15 +179,7 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		SymID symbol;
 
-		IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx):
-			  Expr(
-				  scope,
-				  tsh::TypeDesc<>(
-					  ctx.query<QueryTypeOfSymbol>(symbol),
-					  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
-				  )
-			  ),
-			  symbol(symbol) {}
+		IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
@@ -216,18 +199,7 @@ namespace compiler::helios::code {
 			ElementRef<Expr> lhs,
 			ElementRef<Expr> rhs,
 			query::Context&  ctx
-		):
-			  Expr(
-				  scope,
-				  tsh::TypeDesc<>(
-					  // @TODO: Select type of expression based on result type of the operation.
-					  ctx.query<tsh::QueryIntegralType>({ 64 }),
-					  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-				  )
-			  ),
-			  op(op),
-			  lhs(std::move(lhs)),
-			  rhs(std::move(rhs)) {}
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
