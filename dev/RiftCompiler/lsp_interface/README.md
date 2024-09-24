@@ -4,8 +4,8 @@ This package contains `lsp_daemon`, a REST API server responsible for providing 
 
 ## Usage
 
-`./lsp_daemon -p 12345`
+`./lsp_daemon -p <port_number>`
 
 or
 
-`./lsp_daemon --port 12345`
+`./lsp_daemon --port <port_number>`
