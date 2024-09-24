@@ -191,7 +191,7 @@ namespace compiler::helios {
 			}
 
 			void visitNamespace(const pst::Namespace&) override {
-				// This seams strange, but namespace scope is indeed empty.
+				// This seems strange, but namespace scope is indeed empty.
 				// The scope that is full is the codeblock within the namespace.
 				output(std::vector<SymID>());
 			}
