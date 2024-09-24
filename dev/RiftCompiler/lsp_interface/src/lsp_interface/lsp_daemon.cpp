@@ -177,18 +177,18 @@ void showVersion() {
  */
 int main(int argc, const char** argv) {
 	// Initialize the command-line argument parser with help flag and port parameter
-	auto clap
-		= clap::Clap().addHelpFlag()
-		.add(clap::ParamBuilder::ofFlag()
-						.addShortName('v')
-						.addLongName("version")
-						.addShortDesc("Show version information")
-						.build())
-		.add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
-						.addShortName('p')
-						.addLongName("port")
-						.addShortDesc("Choose port for server")
-						.build());
+	auto clap = clap::Clap()
+	                .addHelpFlag()
+	                .add(clap::ParamBuilder::ofFlag()
+	                         .addShortName('v')
+	                         .addLongName("version")
+	                         .addShortDesc("Show version information")
+	                         .build())
+	                .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
+	                         .addShortName('p')
+	                         .addLongName("port")
+	                         .addShortDesc("Choose port for server")
+	                         .build());
 
 	clap::ParsingResult result;
 

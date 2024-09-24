@@ -9,6 +9,24 @@
 #include <vector>
 #include <map>
 
+namespace {
+	/**
+	 * @brief Converts a list of strings to a JSON array format.
+	 *
+	 * @param list The list of strings to convert.
+	 * @return std::string The JSON array representation of the list.
+	 */
+	std::string jsonList(const std::vector<std::string>& list);
+
+	/**
+	 * @brief Converts a dictionary of strings to a JSON object format.
+	 *
+	 * @param dict The dictionary of strings to convert.
+	 * @return std::string The JSON object representation of the dictionary.
+	 */
+	std::string jsonDict(const std::map<std::string, std::string>& dict);
+}
+
 namespace lsp {
 	/**
 	 * @brief Constructs an ExportKeywords object and initializes the key_spec_op module.
@@ -94,12 +112,6 @@ namespace lsp {
 }
 
 namespace {
-	/**
-	 * @brief Converts a list of strings to a JSON array format.
-	 *
-	 * @param list The list of strings to convert.
-	 * @return std::string The JSON array representation of the list.
-	 */
 	std::string jsonList(const std::vector<std::string>& list) {
 		std::string result = "[";
 		for (const std::string& str: list) result += "\"" + str + "\",";
@@ -109,12 +121,6 @@ namespace {
 		return result;
 	}
 
-	/**
-	 * @brief Converts a dictionary of strings to a JSON object format.
-	 *
-	 * @param dict The dictionary of strings to convert.
-	 * @return std::string The JSON object representation of the dictionary.
-	 */
 	std::string jsonDict(const std::map<std::string, std::string>& dict) {
 		std::string result = "{";
 		for (const auto& pair: dict) {
