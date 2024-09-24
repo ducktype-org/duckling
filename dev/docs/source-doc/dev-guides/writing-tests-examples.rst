@@ -11,7 +11,7 @@ Our test framework is located in the `tester` module, in the `common` directory.
 
 .. note::
 
-    To easily open the Doxygen documentation, you can use the following command:
+    To easily open the Doxygen documentation, you can use the following command inside the build folder:
 
     .. code-block:: bash
 

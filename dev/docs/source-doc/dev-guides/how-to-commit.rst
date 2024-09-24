@@ -37,7 +37,7 @@ To do that you can use our bash script. From the `dev` directory run:
 Create pull request
 ===================
 
-GH will automatically run tests, check coverage and do some other things to ensure quality. You also need to get at least one positive review (you can spam ``review-ping`` chanel on discord or scream at people at a weekly meeting to get your review faster). Make corrections until your change is accepted and passes all tests.
+GH will automatically run tests, check coverage and do some other things to ensure quality. You also need to get at least one positive review (you can spam ``review-ping`` chanel on discord or yell at people at a weekly meeting to get your review faster). Make corrections until your change is accepted and passes all tests.
 
 Merge changes
 =============

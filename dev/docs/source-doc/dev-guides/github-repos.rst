@@ -21,16 +21,6 @@ Source code structure
 * ``RiftVM`` - virtual machine code
 * ``base`` - custom module with standard-library-like implmentations
 * ``common`` - commonly used modules
-    * ``clap`` - command line argument parser
-    * ``diagnostics`` - reporting errors and other messages
-    * ``config`` - command line argument parsing
-    * ``filesystem`` - reading files and memory management
-    * ``json`` - json handling
-    * ``listener`` - 
-    * ``printer`` - printing to console
-    * ``query_frmaework`` - query framework used in compiler
-    * ``tester`` - testing framework
-    * ``tokenizer`` - lexing text according to duckling rules
 * ``docs`` - documentation
 
 ``dev-space``
@@ -41,11 +31,11 @@ This repository is a place to organize our workflow and keep materials that are 
 Repository Structure
 --------------------
 
-Here you can find description of the most importnt parts of the repository.
+Here you can find description of the most important parts of the repository.
 
 * ``organizacja/``
     * ``dev/``
-        * ``Qx/`` - xth quarter summary
+        * ``Q<n>/`` - Summary of the <n>th quarter of the project
         * ``plan.md`` - general developement schedule
         * ``scenariusz_weekly.md`` - weekly dev team meeting checklist
     * ``misje/`` - mission files
@@ -58,49 +48,21 @@ Here you can find description of the most importnt parts of the repository.
     * ``website/`` - website notes and reports
     * ``zpp/`` - zpp notes and reports
     * ``organizacja.md`` - workflow description
-    * ``osoby.md`` - contact info (almost) all team members
+    * ``osoby.md`` - contact info to (almost) all team members
 * ``prace_naukowe/`` - zpp theses and other articles
 
-Most information about current and finished tasks can be found in ``misje/`` directory. Each mission directory has a ``info.md`` file with general mission description, ``raporty/`` directory with progress reports and other files with notes and materials. Finished missions also have final report with mission summary.
+Most information about current and finished tasks can be found in ``misje/`` directory 
+(if you don't know what missions are, check out :doc:`work-organization` 
+and `dev-space <https://github.com/ducktype-org/dev-space/blob/main/organizacja/orgranizacja.md>`_). 
+Each mission directory has a ``info.md`` file with general mission description, 
+``raporty/`` directory with progress reports and other files with notes and materials. 
+Finished missions also have final report with mission summary.
 
 ``rift-doc``
 ============
 
-This is the main duckling documentation repository, written for future duckling users. It describes how to write duckling code and how does it work.
-
-Documentation build
--------------------
-
-1. Fetch submodules
-
-.. code-block:: bash
-
-    git submodule update --init
-
-2. Install python dependencies
-
-.. code-block:: bash
-    cd doc
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip3 install -r doc-config/requirements.txt
-
-3. Also make sure `doxygen` is installed
-
-4. Run cmake (venv must be activated)
-
-.. code-block:: bash
-    mkdir build
-    cd build
-    cmake ..
-    source ../.venv/bin/deactivate
-
-5. Build documentation
-
-.. code-block:: bash
-    make docs
-
-6. Open documentation at `doc/build/sphinx/index.html`
+This is the main duckling documentation repository, written for future duckling users. It describes how to write duckling code and how it works.
+For instructions on how to build the documentation, check out `main README.md <https://github.com/ducktype-org/rift-doc>`_.
 
 ``website``
 ===========
@@ -120,7 +82,7 @@ Repository setup
 
 .. code-block:: bash
 
-	python3 -m venv .venv
+    python3 -m venv .venv
     source .venv/bin/activate
     pip install -r requirements.txt
 
@@ -128,7 +90,7 @@ Repository setup
 
 .. code-block:: bash
 
-	sudo apt install nodejs
+    sudo apt install nodejs
     sudo apt install npm
     npm install
     npm install -g sass
@@ -156,6 +118,6 @@ Repository setup
 This repository is dedicated to configuration of all of our sphinx-based documentation. It is included as a submodule in ``rift-doc`` and ``rift-dev``.
 
 ``zpp``
-===
+=======
 
 Each year some zpp teams join our organization. Since their projects are usually somewhat independent from core language developement, they work on a separete repository (usually fork of ``rift-dev``) and their work is later synced-up or merged into core repos. These repos are marked with ``-zpp`` suffix and are poject specific.

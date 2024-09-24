@@ -6,22 +6,21 @@ Building the project
     :depth: 2
     :local:
 
-Here you can find instructions on how to build the project.
-Most of the time you will want to use our tailored build script ``toolbox.py``, 
-that will take care of all the details for you.
 
-After you have cloned the repository you should navigate to the ``dev`` directory.
-All commands from now on should be run from this directory.
+Here you can find instructions on how to build the project.
+
+
+Prerequisites
+=============
+
+To build the project, make sure you have the required dependencies installed.
+You can find the list of dependencies in the 
+`readme file of the project github repository <https://github.com/ducktype-org/rift-dev/tree/main?tab=readme-ov-file#installing-dependencies>`_.
 
 How to use toolbox
 ==================
-
-To run the toolbox, you need to have Python3 installed on your system, as well as Python package manager ``pip``.
-It requires python `Click <https://click.palletsprojects.com/en/8.1.x/>`_ package to be installed.
-
-.. code-block:: bash
-
-	pip install click
+Most of the time you will want to use our tailored build script ``toolbox.py``, 
+that will take care of all the details for you.
 
 To run toolbox you can use ``python3 toolbox.py`` command or ``./toolbox.py``.
 To see all available arguments run the script without any options:
@@ -34,136 +33,39 @@ To see all available arguments run the script without any options:
 Standard build
 ==============
 
-Thirst thing you need to do is to initialize the repository by running:
+To build the project, you should use `toolbox.py` that will take care of all the details for you.
+The script provides the commands for:
 
-.. code-block:: bash
+* initializing the project (updating submodules, downloading binaries, etc.),
+* configuring Python virtual environment,
+* creating the build directory,
+* building the documentation,
+* compiling and running tests
 
-	./toolbox.py init
-
-This will initialize the git submodules, create python virtual environment 
-for documentation (you can do it seperately as well) 
-and download binaries of the required tools (clang-format, ccache).
-
-.. important::
-
-	If you are starting the development and the LLVM backend is not installed on your system, you can download it by running:
-
-	.. code-block:: bash
-
-		./toolbox.py download-llvm
-
-	You should also install **the required dependencies** for the project.
-	The full list of dependencies is available 
-	in the main `readme file of the project github repository <https://github.com/ducktype-org/rift-dev/tree/main>`_. 
-
-To create build directory run:
-
-.. code-block:: bash
-
-	./toolbox.py setup-build
-
-If you want to be able to compile Sphinx documentation later, **before creating the build directory** 
-you should create Python virtual environment with required packages:
-
-.. code-block:: bash
-
-	./toolbox.py setup-venv
-
-You will be asked a series of questions about the build configuration.
-Inside square brackets you can see the default value that will be used if you just press enter.
-
-.. code-block:: bash
-
-	> ./toolbox.py setup-build
-	:caption: Example output of the build script
-	Build dir name [build]: 
-	Build system (Ninja, Unix Makefiles) [Ninja]: Ninja
-	build type (Debug, Release, RelWithDebInfo, MinSizeRel) [debug]: 
-	Build docs [Y/n]: 
-	Compiler path [g++]: 
-	Use ccache [y/N]: 
-	Enable coverage [y/N]: 
-	[INFO]: Setting up a build folder...
-	...
+Details on how to use the script to build the project are 
+provided in the main `README.md <https://github.com/ducktype-org/rift-dev>`_ file.
 
 It is recommmended to use Ninja build system, as it by default uses all available cores to compile the project.
-Ninja works the same way as Unix Makefiles, so any command, like `ninja <target>` can be replaced with `make <target>`.
-To install Ninja on Ubuntu run:
+Ninja works the same way as Unix Makefiles, so any command, like :code:`ninja <target>` can be replaced with :code:`make <target>`.
+
+After initialization, you can compile the project by running in the build directory:
 
 .. code-block:: bash
 
-	sudo apt install ninja-build
-
-After initialization, you can compile the project by running:
-
-.. code-block:: bash
-
-	cd build
 	ninja <target>
 	ninja all
 
 The compiles binaries are inside the ``build/bin`` directory.
 
-
-Compiling with test coverage enabled
-====================================
-
-To compile with test coverage enable you should use the toolbox script to create the build directory first.
-
-.. code-block:: bash
-
-	./toolbox.py setup-build
-
-When asked about enabling coverage, type ``y``.
-
-.. code-block:: bash
-	
-	> ./toolbox.py setup-build
-	...
-	Enable coverage [y/N]: y
-	...
-
-.. tip::
-
-	You can also achieve the same effect by running:
-
-	.. code-block:: bash
-
-		./toolbox.py setup-build --coverage
-
-
-	Providing answer to the questions and running the command with the appropriate flags have the same effect, 
-	thanks to the Click library.
-
-To run the tests with coverage, you can use the following command:
-
-.. code-block:: bash
-
-	./toolbox.py coverage
-
-Compiling with CCACHE enabled
-=============================
-
-To compile with CCACHE enabled you should use the toolbox script.
-
-.. code-block:: bash
-
-	./toolbox.py setup-build --ccache
-
-
-.. _running-the-tests:
-
 Running the tests
 =================
 
-To compile and run the tests you can use the following command:
+To compile and run the tests you can use the ``test`` command from the ``toolbox``.
+This will compile the project and run the tests. 
 
-.. code-block:: bash
-
-	./toolbox.py test
-
-This will compile the project and run the tests. We use the CTest tool 
-from CMake to manage the test files. There is a CMake command to compile 
+It's useful to be aware of more direct methods for running the tests.
+We use the CTest tool from CMake to manage the test files. 
+There is also a CMake command to compile 
 and run tests:
 
 .. code-block:: bash
@@ -183,7 +85,7 @@ you can run the following commands:
 
 .. note::
 
-	You can also use the ``ctest`` command to run the tests, for example with rexeg name filter:
+	You can also use the ``ctest`` command to run the tests, for example with regex name filter:
 
 	.. code-block:: bash
 
@@ -194,7 +96,7 @@ you can run the following commands:
 Compiling the documentation
 ===========================
 
-Before compiling the documentation, make sure that you have the Python virtual environment set up.
+Before compiling the documentation, make sure that you have the Python virtual environment set up (.
 If you haven't done it yet, you can do it by running :code:`./toolbox.py setup-venv`. The environment 
 should be active when you create the build directory with :code:`./toolbox.py setup-build`.
 

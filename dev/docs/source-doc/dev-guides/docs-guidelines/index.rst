@@ -5,7 +5,7 @@ Documentation guidelines
 .. @TODO:
 .. Write more tutorials
 
-This is overview of all documentation in the Duckling project.
+This is an overview of all documentation in the Duckling project.
 
 Documentation structure
 =======================

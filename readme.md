@@ -8,13 +8,13 @@
 
 ```bash
 sudo apt update -y && \
-sudo apt install python3 doxygen graphviz-dev -y
+sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++ lcov llvm-dev clang-tidy libzstd-dev zlib1g-dev -y
 ```
 
 #### Arch linux
 
 ```bash
-sudo pacman -Sy python python-pip doxygen graphviz --noconfirm
+sudo pacman -Sy python python-pip python-click doxygen graphviz lcov --noconfirm
 ```
 
 ### Setting up the repo
@@ -37,6 +37,7 @@ This fetches library dependencies, setups virtual environment, downloads binarie
 
 In case of trouble during build or `setup-build` step, it is advised
 to install the latest supported version of LLVM for a given machine.
+After using this command, 
 LLVM is **NOT installed system-wide**, but only for this project.
 Using version `18.1.8` should work for most platforms.
 
@@ -50,11 +51,15 @@ Press enter on every prompt to leave default options.
 
 #### Building the docs
 
+If you want to build the docs make sure that in the previous step 
+the build directory was created with the `docs` option enabled.
+
 ```bash
 ./toolbox.py docs
 ```
 
-This builds the docs and opens them in your favorite browser. Leave defaults if you chose defaults in previous step.
+This builds the docs and opens them in your favorite browser. 
+Leave defaults if you chose defaults in previous step.
 
 #### Running tests
 
