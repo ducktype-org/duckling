@@ -19,6 +19,7 @@ Remember to install the required dependencies before building the project.
 	If you want a more in-depth look at the inner workings of the build system
 	you can look at the Python code that makes up the :code:`toolbox.py` script.
 
+
 Compiling the project
 ---------------------
 

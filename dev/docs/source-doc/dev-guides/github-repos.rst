@@ -69,48 +69,9 @@ For instructions on how to build the documentation, check out `main README.md <h
 
 In this repository you can find all of our website files. ``main`` branch represents current public version of the website (available at `ducktype.org <https://ducktype.org/>`_ and `duckling.pl <https://duckling.pl/>`_) and `dev` branch represents current stable development version (available at `testsite.ducktype.org <https://testsite.ducktype.org/>`_).
 
-Repository setup
-----------------
+All instructions on how to build and deploy the website can be found in the ``dev-space`` repository in the ``website/`` directory, 
+link `here <https://github.com/ducktype-org/dev-space/tree/main/organizacja/website/how-to>`_.
 
-1. Download repository and setup git
-
-.. code-block:: bash
-
-	git clone git@github.com:ducktype-org/website.git
-
-2. Setup virtual environment and python dependencies
-
-.. code-block:: bash
-
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install -r requirements.txt
-
-3. Setup node.js and its dependencies
-
-.. code-block:: bash
-
-    sudo apt install nodejs
-    sudo apt install npm
-    npm install
-    npm install -g sass
-
-4. Create `.env` file and set necessary enviroment variables
-
-.. code-block:: 
-
-    SECRET_KEY='secret key generated with django.core.management.utils.get_random_secret_key()'
-    OLD_SECRET_KEY=''
-    OLD_SECRET_KEY=''
-    DEBUG='True'
-    ALLOWED_HOSTS='*'
-    STATIC_URL='static/'
-
-5. To locally preview website run
-
-.. code-block:: bash
-
-    python3 ./website/manage.py runserver
 
 ``doc-confic``
 ==============

@@ -27,7 +27,11 @@ To begin, enter the `dev/` directory and then:
 ./toolbox.py init
 ```
 
-This fetches library dependencies, setups virtual environment, downloads binaries, etc...
+This:
+* fetches library dependencies
+* updates git submodules
+* setups virtual environment
+* downloads binaries, etc...
 
 #### [Optional, but recommended] Installing custom LLVM library
 
