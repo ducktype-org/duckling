@@ -1,5 +1,6 @@
 #include "hout.hpp"
 #include "elements.hpp"
+#include <query_framework/query_impl.hpp>
 #include <sstream>
 
 namespace compiler::helios {
@@ -50,5 +51,14 @@ namespace compiler::helios {
 		);
 	}
 
+	HOUTFunction::HOUTFunction(SymID symbol, query::Context& ctx):
+		  original_symbol(symbol),
+		  original_name(name(original_symbol)),
+		  type(ctx.query<QueryTypeOfSymbol>(original_symbol)) {}
 
+	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx):
+		  helios_symbol(symbol),
+		  original_name(name(symbol)),
+		  value(ctx.query<QueryConstValueOf>(symbol)),
+		  type(ctx.query<QueryTypeOfSymbol>(symbol)) {}
 }

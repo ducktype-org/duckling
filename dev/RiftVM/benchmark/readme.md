@@ -44,35 +44,40 @@ Every program from `benchmark_programs` is available to every benchmark suite.
 ### Benchmark
 For usage info you can type:
 ```bash
-python3 benchmark_riftvm.py --help
+python3 benchmark_riftvm.py
 ```
 By default, script benchmarks __all__ RiftVm's from the `rift_vm_bins` folder with __fast__ benchmark suite (defined by `DEFAULT_BENCHMARK_SUITE` global variable).
 ```bash
-python3 benchmark_riftvm.py
+python3 benchmark_riftvm.py run fast
 ```
 
 To benchmark only __one__ binary you can:
 ```bash
-python3 benchmark_riftvm.py --only rift_vm_bins/RiftVm_dev_1d9e5a2
+python3 benchmark_riftvm.py run --only rift_vm_bins/RiftVm_dev_1d9e5a2
 ```
 
 To specify the benchmark suite:
 ```bash
-python3 benchmark_riftvm.py -i long
+python3 benchmark_riftvm.py run long
 ```
 
 You can configure the number of repetitions. As the final results the minimum is taken, but in the `.csv` file all results are saved.
 ```bash
-python3 benchmark_riftvm.py -r 10
+python3 benchmark_riftvm.py run -r 10
 ```
 
 ### Compile and move to riftvm_bins
 
-Often the user wants to compile the current project and move the compiled binary to the `riftvm_bins` directory with the appropriate name. There is useful option for that use case:
+Often the user wants to compile the current project and move the compiled binary to the `riftvm_bins` directory with the appropriate name. There is a useful command for that use case:
 ```bash
-python3 benchmark_riftvm.py --cmake ../..
+python3 benchmark_riftvm.py compile ../..
 ``` 
-It will compile project inside `build` directory and move the binary to the binaries folder. Binary file will be renamed to current branch and shortened commit hash, indicating current development version. To add some additional suffix you can:
+It will compile project inside `build` directory and move the binary to the binaries folder. Executable RiftVM file will be renamed to current branch and shortened commit hash, indicating current development version. To add some additional suffix you can:
 ```bash
-python3 benchmark_riftvm.py --cmake ../.. --suffix computed_gotos
-``` 
+python3 benchmark_riftvm.py compile ../.. --suffix computed_gotos
+```
+
+You can also set C++ compiler for project or pass custom CMake options, for detailed info check:
+```bash
+python3 benchmark_riftvm.py compile
+```

@@ -11,7 +11,7 @@
 #include <base/string_id.hpp>
 #include <memory>
 #include <typesystem/higher/types.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/query_int.hpp>
 #include <vector>
 
 namespace compiler::helios {
@@ -58,10 +58,7 @@ namespace compiler::helios {
 		 * @param symbol The symbol of the function.
 		 * @param ctx The query context to resolve the function's properties.
 		 */
-		HOUTFunction(SymID symbol, query::Context& ctx):
-			  original_symbol(std::move(symbol)),
-			  original_name(name(original_symbol)),
-			  type(ctx.query<QueryTypeOfSymbol>(original_symbol)) {}
+		HOUTFunction(SymID symbol, query::Context& ctx);
 
 		[[nodiscard]]
 		std::string debugPrint() const;
@@ -91,11 +88,7 @@ namespace compiler::helios {
 
 		tsh::TypeInfo type;
 
-		HOUTGlobalData(SymID symbol, query::Context& ctx):
-			  helios_symbol(symbol),
-			  original_name(name(symbol)),
-			  value(ctx.query<QueryConstValueOf>(symbol)),
-			  type(ctx.query<QueryTypeOfSymbol>(symbol)) {}
+		HOUTGlobalData(SymID symbol, query::Context& ctx);
 
 		[[nodiscard]]
 		std::string debugPrint() const;

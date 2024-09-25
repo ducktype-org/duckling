@@ -29,7 +29,7 @@ namespace dia {
 	 *
 	 * It always stores a valid position with the position (EOF, EOF) being EOF
 	 */
-	class SourcePosition {
+	class SourcePosition final {
 	private:
 		explicit SourcePosition(): source_start(0), source_end(0), source_file(nullptr) {}
 

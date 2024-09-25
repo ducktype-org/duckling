@@ -191,6 +191,6 @@ namespace fs {
 }
 
 template<>
-struct std::hash<fs::FilePath> {
+struct std::hash<fs::FilePath> final {
 	usize operator()(const fs::FilePath& key) const { return fs::FilePath::FileHash()(key.path); }
 };

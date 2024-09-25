@@ -38,7 +38,7 @@ namespace tester {
 		using TestType = void (TestSuite::*)();
 
 	private:
-		class CritTestError: public std::exception {
+		class CritTestError final: public std::exception {
 		public:
 			[[nodiscard]]
 			const char* what() const noexcept final;
@@ -46,12 +46,12 @@ namespace tester {
 
 		printer::StreamPrinter streamPrinter;
 
-		struct TestData {
+		struct TestData final {
 			TestType    test;
 			std::string name;
 		};
 
-		struct TestResult {
+		struct TestResult final {
 			bool                        success = true;
 			bool                        stop    = false;
 			printer::PrinterContentsSeq output;

@@ -29,10 +29,6 @@ namespace vm {
 	 * In the future special calling conventions can be added to quickly call
 	 * functions with common signatures
 	 */
-	struct StandardFunctionArgs {
-		u64     p64_arg;
-		Pointer pointer_arg;
-	};
 
 	struct Frame {
 		// Program control flow:
@@ -40,11 +36,11 @@ namespace vm {
 		std::byte*                    local_stack;
 
 		// Register like data:
-		Registers            regs;
-		FlagData             flags;
-		u64                  ret_val;
-		StandardFunctionArgs next_args;
-		StandardFunctionArgs args;
+		Registers  regs;
+		FlagData   flags;
+		u64        ret_val;
+		std::byte* next_args;
+		std::byte* args;
 
 		std::vector<BlockID> block_id_stack;
 		u64                  local_stack_head;

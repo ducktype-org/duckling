@@ -43,7 +43,7 @@ using CommandRunner = std::function<int()>;
 /**
  * @brief Structure representing a single command of "duck main"
  */
-struct Command {
+struct Command final {
 	std::string   name;
 	std::string   description;
 	CommandRunner runner;
@@ -52,7 +52,7 @@ struct Command {
 /**
  * @brief Structure representing all commands of "duck main"
  */
-struct CommandList {
+struct CommandList final {
 	std::vector<Command> commands;
 
 	/**
@@ -81,7 +81,7 @@ struct CommandList {
 		return out;
 	}
 
-	struct CommandStatus {
+	struct CommandStatus final {
 		bool was_command_run;
 		int  exit_code;
 	};
@@ -279,17 +279,6 @@ int mainProcedure(int argc, const char* const* argv) {
 	bool command_mode = false;
 
 	auto commands = getCommandList(command_args, clap);
-
-	// our custom commands:
-	clap.add(
-		clap::ParamBuilder::ofFlag()
-			.addLongName("let-it-throw")
-			.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
-	                      "Useful for debugging.")
-			.addLongDesc("Note that sometimes exception can happen before logic behind this option "
-	                     "will happen. In that case exception will most likely not be caught.")
-			.build()
-	);
 
 	try {
 		// @future: improve the way we detect whether there was a command or no and

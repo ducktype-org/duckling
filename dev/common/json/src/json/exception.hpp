@@ -4,7 +4,7 @@
 #include <nlohmann/json.hpp>
 
 template<>
-struct nlohmann::adl_serializer<std::exception> {
+struct nlohmann::adl_serializer<std::exception> final {
 	static void to_json(json& j, const std::exception& e) {
 		j["name"] = typeid(e).name();  // It is not perfect, but there is nothing better.
 		j["what"] = e.what();
