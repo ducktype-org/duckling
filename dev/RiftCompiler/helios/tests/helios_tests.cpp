@@ -33,9 +33,12 @@ public:
 		TESTER_ADD_TEST(importTest);
 		TESTER_ADD_TEST(houtVisitorTest);
 		TESTER_ADD_TEST(exprTreeTest);
+		TESTER_ADD_TEST(houtVariablesTest);
 	}
 
 private:
+	// @TODO: test_modules/aliases are not used in tests
+
 	void testI32Consts() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/constants")));
 
@@ -262,10 +265,76 @@ private:
 		tree2->debugPrint(out2);
 
 		auto sym3       = getChain("N.V3", root_scope).back();
-		auto symV3_repr = base::strConcat("(Symbol ", sym3.customPerfectHash(), ")");
+		auto symV3_repr = base::strConcat("(Symbol V3 (", sym3.customPerfectHash(), "))");
 		ASSERT_EQUAL(
 			base::strConcat("(", symV3_repr, "+(", symV3_repr, "*", symV3_repr, "))"), out2.str()
 		);
+	}
+
+	void houtVariablesTest() {
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/variables")));
+
+		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+
+		ASSERT_EQUAL(hout.functions.size(), 1);
+
+		auto& function = hout.functions.at(0);
+
+		ASSERT_EQUAL(function.original_name, "foo");
+
+		// note that alias should not be included here:
+		ASSERT_EQUAL(function.body.body->statements.size(), 7);
+
+		auto& statements = function.body.body->statements;
+
+		auto get_var_ref = [&](usize i) -> decltype(auto) {
+			return dynamic_cast<const compiler::helios::code::VariableStmt&>(*statements.at(i).get()
+			);
+		};
+
+		auto i32_type   = query::entryPoint<tsh::QueryIntegralType>(32);
+		auto f32_type   = query::entryPoint<tsh::QueryFloatType>(32);
+		auto i32_or_f32 = query::entryPoint<tsh::QueryVariantType>({ { i32_type, f32_type } });
+
+		{
+			auto& var = get_var_ref(0);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "a");
+			ASSERT_EQUAL(var.type.getType(), i32_type);
+		}
+
+		{
+			auto& var = get_var_ref(1);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "b");
+			ASSERT_EQUAL(var.type.getType(), i32_type);
+		}
+
+		{
+			auto& var = get_var_ref(2);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
+			ASSERT_EQUAL(var.type.getType(), i32_or_f32);
+		}
+
+		{
+			auto& var = get_var_ref(3);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "d");
+			ASSERT_EQUAL(var.type.getType().getKind(), tsh::Kind::Class);
+		}
+
+		{
+			auto& if_stmt
+				= dynamic_cast<const compiler::helios::code::IfStmt&>(*statements.at(4).get());
+			auto& var = dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*if_stmt.body.statements.at(0).get()
+			);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "x");
+			ASSERT_EQUAL(var.type.getType(), i32_type);
+		}
+
+		{
+			auto& var = get_var_ref(5);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "e");
+			ASSERT_EQUAL(var.type.getType().getKind(), tsh::Kind::Class);
+		}
 	}
 };
 

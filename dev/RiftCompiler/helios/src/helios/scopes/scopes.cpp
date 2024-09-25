@@ -21,7 +21,7 @@
 
 namespace compiler::helios {
 
-	struct ScopeData {
+	struct ScopeData final {
 		// adapted from hir:
 
 		// created on startup:
@@ -141,7 +141,7 @@ namespace compiler::helios {
 		 */
 		template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
 		static std::vector<SymID> filterSymbolsFromStmtList(
-			query::Context& ctx, const ScopeID& scope, const StmtList<Stmt>& list
+			query::Context& ctx, ScopeID scope, const StmtList<Stmt>& list
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
@@ -198,7 +198,13 @@ namespace compiler::helios {
 
 			void visitExprStmt(const pst::ExprStmt&) override { output(std::vector<SymID>()); }
 
-			void visitReturn(const pst::Return&) override { output(std::vector<SymID>()); }
+			void visitReturn(const pst::Return&) override {
+				output(std::vector<SymID>());
+			}
+
+			void visitVariable(const pst::Variable&) override {
+				output(std::vector<SymID>());
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -213,7 +219,23 @@ namespace compiler::helios {
 			auto base_element = key.ref->related_pst_element.value();
 
 			if (base_element->isStatementAggregate()) {
+<<<<<<< HEAD
 				return filterSymbolsFromStmtList(ctx, key, getStmtsFromStmtAggregate(base_element));
+=======
+				// @TODO: the error here is that this perform double scoping
+				// for CodeBlocks inside CodeBlocksOrStmt
+				// Hot-patch:
+				// @TODO: change elementType usage to elementKind (once its implemented)
+				if (base_element->elementType() == "Code Block")
+					if (base_element->getParent().value()->elementType()
+					    == "Code Block or Statement") {
+						// hot patch currently does:
+						// code block inside CodeBlockOrStmt has empty scope
+						return {};
+					}
+
+				return filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(base_element));
+>>>>>>> origin/main
 			} else if (base_element->isStatement()) {
 				SymbolGrabVisitor symbol_grab(ctx, key);
 				auto              as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());

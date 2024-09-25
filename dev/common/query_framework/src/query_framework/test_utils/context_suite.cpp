@@ -1,10 +1,11 @@
 #include "context_suite.hpp"
 
-#include <query_framework/query_entry_point.hpp>
+#include "../query_impl.hpp"
+#include "../query_entry_point.hpp"
 
 namespace tester {
 	namespace {
-		struct KeyFor_DoWithContext {
+		struct KeyFor_DoWithContext final {
 			std::function<std::any(query::Context&)> value;
 			usize                                    ID;
 			static inline usize                      nextID = 0;

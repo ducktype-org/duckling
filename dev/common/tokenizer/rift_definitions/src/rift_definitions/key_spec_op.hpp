@@ -129,6 +129,7 @@ namespace rift_def {
 		BCLocalSize,
 		BCRetSize,
 		BCArgSize,
+		BCNextArgSize,
 		BCDefine,
 		BCLabel,
 		BCArg,

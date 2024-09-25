@@ -22,7 +22,7 @@ namespace base {
 	 */
 	template<typename Data, typename Key = usize>
 	requires std::constructible_from<Key, usize> && std::constructible_from<usize, Key>
-	class StableVector {
+	class StableVector final {
 		std::vector<Box<Data>> data;
 
 	public:

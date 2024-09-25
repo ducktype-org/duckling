@@ -19,7 +19,7 @@
 namespace clap {
 	class Clap;
 
-	struct ParsedValue {
+	struct ParsedValue final {
 		std::any    value;
 		std::string raw_source;
 	};

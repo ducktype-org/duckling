@@ -1,6 +1,7 @@
 
 function collatz {
-	arg_size: 0;
+	arg_size: 8;
+	next_arg_size: 0;
 	ret_size: 0;
 
 	# n - 0
@@ -11,7 +12,7 @@ function collatz {
 	code: {
 
 		# n := argument
-		mov_l64_pFuncArg      0;
+		getFstArg_l64	         0;
 
 		# j := 0
 		mov_l64_imm           8, 0;
@@ -65,6 +66,7 @@ function collatz {
 
 function main {
 	arg_size: 0;
+	next_arg_size: 8;
 	ret_size: 0;
 
 	# x - 0
@@ -88,7 +90,7 @@ function main {
 			# output_l64         16;
 
 			# tmp := collatz(i)
-			setPArg_l64        16;
+			setFstArg_l64			 16;
 			call_func          0;
 			mov_l64_r0         24;
 

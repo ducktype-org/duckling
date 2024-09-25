@@ -37,7 +37,7 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleID, ScopeID);
 
-	struct KeyOf_QueryPrimaryCodeScopeFor {
+	struct KeyOf_QueryPrimaryCodeScopeFor final {
 		/**
 		 * @brief Element for which the scope is created.
 		 * @note: scopes of various elements behave differently
@@ -48,6 +48,10 @@ namespace compiler::helios {
 		 * * Classes -- scope containing class fields
 		 * * Expr -- empty Scope
 		 * * Return -- empty Scope
+		 * * Variables -- empty Scope
+		 *
+		 * @todo: once scope refactor will be introduced, most "empty scope"
+		 * stuff will be no longer needed.
 		 */
 		PstRef<pst::RiftElement> base_element;
 
@@ -66,7 +70,7 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryPrimaryCodeScopeFor, KeyOf_QueryPrimaryCodeScopeFor, ScopeID);
 
-	struct KeyOf_LookupInScope {
+	struct KeyOf_LookupInScope final {
 		ScopeID     scope;
 		base::StrID name;
 		bool        with_wildcards;

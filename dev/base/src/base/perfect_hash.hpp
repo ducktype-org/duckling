@@ -94,7 +94,7 @@ namespace base {
 	}
 
 	template<class T>
-	struct PerfectHashFunctor {
+	struct PerfectHashFunctor final {
 		std::size_t operator()(const T& key) const { return ::base::perfectHash<T>(key); }
 	};
 }

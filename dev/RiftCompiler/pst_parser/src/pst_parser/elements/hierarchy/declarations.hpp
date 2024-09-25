@@ -165,6 +165,16 @@ namespace pst {
 			return type.borrow();
 		}
 
+		[[nodiscard]]
+		ParserCBorrowRef<Expr> getValue() const {
+			return value.borrow();
+		}
+
+		[[nodiscard]]
+		bool isConst() const {
+			return is_const;
+		}
+
 		static ParserRef<Variable> parse(RiftParserState& state);
 		~Variable() final = default;
 		void dprint(std::ostream& out) const final;

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import argparse
+import click
+import shlex
 import subprocess
 import os
 import random
@@ -14,48 +15,338 @@ INPUT_FILE_EXTENSION = ".in"
 CSV_EXTENSION = ".csv"
 
 # Directories:
-BUILD_DIR_NAME = "build"
-BENCHMARK_INPUTS_DIR = "benchmark_inputs"
-BENCHMARK_PROGRAMS_DIR = "benchmark_programs"
 RIFT_VM_BINARIES_DIR = "rift_vm_bins"
-RESULTS_DIR = "results"
 BUILD_DIR_PATH_TO_BINARIES = "./bin/"
-
-# Benchmark suite:
-DEFAULT_BENCHMARK_SUITE = "fast"
-BENCHMARK_ONLY = []
-# BENCHMARK_ONLY = ["ackermann.rbc"]
 
 # Compile options:
 DEAFULT_RIFT_VM_TARGET = "RiftVm"
-DEFAULT_CPU_CORES = 1
+DEFAULT_CPU_CORES = os.cpu_count() or 1
 
 
-class bcolors:
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    OKCYAN = "\033[96m"
-    OKGREEN = "\033[92m"
-    GREEN = "\033[32m"
-    YELLOW = "\33[33m"
-    RED = "\033[31m"
-    WARNING = "\033[93m"
-    FAIL = "\033[91m"
-    ENDC = "\033[0m"
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
+def log_error(message):
+    click.echo(click.style(message, fg="red", bold=True))
 
 
-def run_command_with_time(command: list, stdin: str):
-    env_vars = {"TIMEFORMAT": "%R", "LC_NUMERIC": "en_US.UTF-8"}
-    prefix = ["time", "-f", "%U"]
-    full_command = prefix + command
-    return subprocess.run(
-        full_command, input=stdin, capture_output=True, text=True, env=env_vars
+def log_success(message):
+    click.echo(click.style(message, fg="green", bold=True))
+
+
+def log_info(message):
+    click.echo(click.style(message, fg="white", bold=True))
+
+
+def log_text(message):
+    click.echo(click.style(message, fg="white", bold=False))
+
+
+@click.group()
+def cli():
+    """
+    The script to run benchmarks on RiftVM executables.
+
+    The 'compile' command compiles the RiftVM executable
+    and places it in the binaries directory.
+    The 'run' command runs benchmarks for all binaries in the binaries directory.
+    The 'results' command displays results for the given benchmark suite.
+    """
+    pass
+
+
+@cli.command(no_args_is_help=True)
+@click.argument(
+    "path_to_cmake",
+    type=click.Path(exists=True),
+    required=True,
+)
+@click.argument(
+    "cmake_target",
+    default=DEAFULT_RIFT_VM_TARGET,
+    type=click.STRING,
+)
+@click.option(
+    "-j",
+    "--cpu_cores",
+    default=DEFAULT_CPU_CORES,
+    help="Number of CPU cores to use for compilation.",
+)
+@click.option(
+    "--suffix",
+    type=click.STRING,
+    help="If specified, in the compiled binary name suffix will be appended.",
+)
+@click.option(
+    "--build_dir",
+    default="build",
+    type=click.STRING,
+    help="Name of the build directory.",
+)
+@click.option(
+    "--binaries_dir",
+    default=RIFT_VM_BINARIES_DIR,
+    type=click.STRING,
+    help="Name of the directory where RiftVM binaries will be stored.",
+)
+@click.option(
+    "--cxx_compiler",
+    type=click.STRING,
+    help="Path to the C++ compiler.",
+)
+@click.option(
+    "--cmake_options",
+    type=click.STRING,
+    help="Additional options for CMake.",
+)
+def compile(
+    path_to_cmake,
+    cmake_target,
+    cpu_cores,
+    suffix,
+    build_dir,
+    binaries_dir,
+    cxx_compiler,
+    cmake_options,
+):
+    """
+    The script compiles the CMAKE_TARGET in Release. It uses the CMakeLists.txt file
+    located in the PATH_TO_CMAKE. The compiled binary is renamed and placed in the BINARIES_DIR.
+    """
+    create_dir_if_not_exists(binaries_dir)
+
+    try:
+        bin_path = cmake_build_target(
+            path_to_cmake,
+            build_dir,
+            cmake_target,
+            cpu_cores,
+            cxx_compiler,
+            cmake_options,
+        )
+
+    except subprocess.CalledProcessError as err:
+        # If return code is non-zero, raise a CalledProcessError and print this message
+        log_error("Compilation error...")
+        return
+
+    [branch, commit] = get_git_head_info()
+    exe_file_name = f"{cmake_target}_{branch}_{commit}"
+
+    # Append compiler name to the binary name if provided
+    if cxx_compiler and "clang" in cxx_compiler:
+        exe_file_name += "_clang"
+    elif cxx_compiler and ("g++" in cxx_compiler or "gcc" in cxx_compiler):
+        exe_file_name += "_gcc"
+
+    # Append suffix to the binary name if provided
+    if suffix:
+        exe_file_name += f"_{suffix}"
+
+    new_executable_path = os.path.join(binaries_dir, exe_file_name)
+
+    while os.path.exists(new_executable_path):
+        new_executable_path += datetime.datetime.now().strftime("_%y%m%d%H%M%S")
+
+    subprocess.run(["mv", bin_path, new_executable_path])
+
+    log_success("Compiled binary to " + new_executable_path)
+
+
+@cli.command(no_args_is_help=True)
+@click.argument(
+    "benchmark_suite",
+    type=click.STRING,
+)
+@click.option(
+    "--only",
+    help="If specified, only benchmark binary the given binary path.",
+    type=click.STRING,
+)
+@click.option(
+    "--binaries_dir",
+    default=RIFT_VM_BINARIES_DIR,
+    type=click.Path(),
+    help="Name of the directory where RiftVM binaries will be stored.",
+)
+@click.option(
+    "--programs_dir",
+    default="benchmark_programs",
+    type=click.Path(exists=True),
+    help="Name of the directory where benchmark programs are stored.",
+)
+@click.option(
+    "--inputs_dir",
+    default="benchmark_inputs",
+    type=click.Path(exists=True),
+    help="Name of the directory where benchmark program's inputs are stored.",
+)
+@click.option(
+    "--results_dir",
+    default="results",
+    type=click.Path(),
+    help="Name of the directory where benchmark results will be stored.",
+)
+@click.option(
+    "--reps",
+    default=5,
+    type=click.INT,
+    help="Number of repetitions for each benchmark.",
+)
+@click.option(
+    "--program",
+    default=None,
+    type=click.STRING,
+    help="Name of the program file to benchmark.",
+    multiple=True,
+)
+@click.pass_context
+def run(
+    ctx,
+    benchmark_suite,
+    only,
+    binaries_dir,
+    programs_dir,
+    inputs_dir,
+    results_dir,
+    reps,
+    program,
+):
+    """
+    Runs benchmarks for all binaries in the BINARIES_DIR directory
+    on the BENCHMARK_SUITE. The results for each RiftVM executable
+    are stored in the RESULTS_DIR in separate CSV files. You can
+    specify the number of repetitions for each benchmark with the REPS option.
+    Example usage:
+
+        python3 benchmark_riftvm.py run fast --reps 5
+
+    To run benchmarks only for the given binary, use the --only option:
+
+        python3 benchmark_riftvm.py run fast --only <path_to_binary>
+
+    You can also narrow the programs to benchmark with --program option (multiple allowed):
+
+        python3 benchmark_riftvm.py run fast --program collatz.rbc --program fib.rbc
+     
+    """
+    create_dir_if_not_exists(results_dir)
+
+    if only:
+        binaries = [only]
+    else:
+        binaries = get_all_files_in_dir(binaries_dir)
+        if len(binaries) == 0:
+            log_info(
+                "You may want to compile the binary first with command:\n"
+                "    python3 benchmark_riftvm.py compile <path_to_cmake_directory>"
+            )
+            return 
+
+    benchmark_suite_files = get_benchmark_suite_files(
+        programs_dir, inputs_dir, benchmark_suite, program
     )
 
+    log_info("Running benchmark on binaries:")
+    for binary in binaries:
+        log_info("  - " + binary)
+    log_info("")
 
-def cmake_build_binary(cmake_path, riftvm_target, cpu_cores):
+    log_info("Benchmark suite:")
+    if len(benchmark_suite_files) > 0:
+
+        for program, _ in benchmark_suite_files:
+            log_info("  - " + program)
+        log_info("")
+
+        for binary in binaries:
+            benchmark_one_riftvm(
+                binary, benchmark_suite_files, results_dir, benchmark_suite, reps
+            )
+            log_info("")
+
+        ctx.invoke(results, benchmark_suite=benchmark_suite, results_dir=results_dir)
+    else:
+        log_info("No benchmark programs found.")
+
+
+@cli.command(no_args_is_help=True)
+@click.argument(
+    "benchmark_suite",
+    type=click.STRING,
+)
+@click.option(
+    "--results_dir",
+    default="results",
+    type=click.Path(),
+    help="Name of the directory where benchmark results are stored.",
+)
+def results(benchmark_suite, results_dir):
+    """
+    Displays results for the BENCHMARK_SUITE,
+    from the CSV file stored in the RESULTS_DIR.
+    """
+    results = get_all_files_in_dir(results_dir, benchmark_suite + CSV_EXTENSION)
+
+    data = []
+    for result in results:
+        program_name = os.path.basename(result)[
+            : -(1 + len(CSV_EXTENSION) + len(benchmark_suite))
+        ]
+        file_data = list()
+
+        with open(result, "r") as f:
+            lines = f.readlines()
+
+            for line in lines:
+                elems = line.split(",")
+                elems = elems[:-1]
+                elems = [elem.strip() for elem in elems]
+                test_name = elems[0]
+                test_input = elems[1]
+                test_runs = elems[2:]
+                file_data.append((test_name, test_input, test_runs))
+
+        data.append((program_name, sorted(file_data)))
+
+    # for every program and every time calculate minimum
+    max_test_input_len = 10
+    processed_data = []
+    for program_name, file_data in data:
+        processed_file = list()
+        for test_name, test_input, test_runs in file_data:
+            test_runs = [float(run) for run in test_runs]
+            if len(test_input) > max_test_input_len:
+                max_test_input_len = len(test_input)
+            processed_file.append((test_name, test_input, min(test_runs)))
+
+        processed_data.append((program_name, processed_file))
+
+    # display results for every program
+    log_info(f"\nResults for '{benchmark_suite}' benchmark suite:")
+    log_text(
+        " " * 4
+        + "test name".ljust(25)
+        + " "
+        + "input".ljust(max_test_input_len + 1)
+        + " "
+        + "t_min [s]".rjust(10)
+        + "\n"
+    )
+    for program, results in processed_data:
+        log_info("--- " + program + ":")
+        for test_name, test_input, test_result in results:
+            log_text(
+                " " * 4
+                + test_name.ljust(25)
+                + " "
+                + test_input.ljust(max_test_input_len + 1)
+                + " "
+                + time_or_dnf(test_result).rjust(10)
+            )
+        log_text("")
+
+
+def cmake_build_target(
+    cmake_path, build_dir, riftvm_target, cpu_cores, cxx_compiler, cmake_options
+):
     """Builds the project with CMake.
     Path to cmake should be relative to the current directory.
     Returns absolute path to the compiled binary."""
@@ -67,29 +358,45 @@ def cmake_build_binary(cmake_path, riftvm_target, cpu_cores):
         "-S",
         ".",
         "-B",
-        BUILD_DIR_NAME,
+        build_dir,
         "-DCMAKE_BUILD_TYPE=Release",
     ]
+    if cxx_compiler:
+        run_cmake_command += ["-DCMAKE_CXX_COMPILER=" + cxx_compiler]
+    if cmake_options:
+        run_cmake_command += shlex.split(cmake_options)
+
+    log_info(shlex.join(run_cmake_command))
     subprocess.run(run_cmake_command)
 
     compile_target_command = [
         "cmake",
         "--build",
-        BUILD_DIR_NAME,
+        build_dir,
         "--target",
         riftvm_target,
     ]
     if cpu_cores > 1:
         compile_target_command += ["-j", str(cpu_cores)]
 
+    log_info(shlex.join(compile_target_command))
     result = subprocess.run(compile_target_command)
     result.check_returncode()
 
     riftvm_bin_abs_path = os.path.abspath(
-        os.path.join(BUILD_DIR_NAME, BUILD_DIR_PATH_TO_BINARIES, riftvm_target)
+        os.path.join(build_dir, BUILD_DIR_PATH_TO_BINARIES, riftvm_target)
     )
     os.chdir(current_directory)
     return riftvm_bin_abs_path
+
+
+def run_command_with_time(command: list, stdin: str):
+    env_vars = {"TIMEFORMAT": "%R", "LC_NUMERIC": "en_US.UTF-8"}
+    prefix = ["time", "-f", "%U"]
+    full_command = prefix + command
+    return subprocess.run(
+        full_command, input=stdin, capture_output=True, text=True, env=env_vars
+    )
 
 
 def run_riftvm(rift_vm_bin_path, program_file, stdin_str):
@@ -99,13 +406,13 @@ def run_riftvm(rift_vm_bin_path, program_file, stdin_str):
     measured_time = float(stderr_lines[-2])
 
     if len(stderr_lines) > 2:
-        print(
-            bcolors.RED
-            + "Got abnormal stderr output.\n"
+        log_error(
+            "Got abnormal stderr output.\n"
             + "Make sure binary does not print anything to stderr."
         )
-        print("Return code: " + str(result.returncode))
-        print("stderr: " + result.stderr + bcolors.ENDC)
+
+        log_error("return code: " + str(result.returncode))
+        log_error("stderr: " + result.stderr)
         measured_time = -1
 
     return [result.stdout, measured_time]
@@ -119,14 +426,14 @@ def get_benchmark_times(rift_vm_bin_path, benchmark_program, stdin, repeats=5):
     times = []
     benchmark_program_name = os.path.basename(benchmark_program)
     display_stdin = stdin.replace("\n", " ").strip()
-    print("-" * 60)
-    print(benchmark_program_name[:30].ljust(30) + display_stdin[:30].rjust(30))
+    log_text("-" * 60)
+    log_info(benchmark_program_name[:30].ljust(30) + display_stdin[:30].rjust(30))
 
     for i in range(repeats):
         [_, time] = run_riftvm(rift_vm_bin_path, benchmark_program, stdin)
         times.append(time)
 
-        print(" " * 4 + time_or_dnf(time))
+        log_text(" " * 4 + time_or_dnf(time))
 
         sleep(random.uniform(0, 0.5))
 
@@ -162,6 +469,7 @@ def get_stdin_list(path_to_input):
 def create_dir_if_not_exists(dir_name):
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
+        log_info(f"Created directory: {dir_name}")
 
 
 def save_benchmark_results(raport_path, results):
@@ -173,31 +481,32 @@ def save_benchmark_results(raport_path, results):
                 f.write((str(exec_time) + ",").ljust(10))
             f.write("\n")
 
-    print(bcolors.GREEN + f"Results saved to: {raport_path}" + bcolors.ENDC)
+    log_success("Results saved to: " + raport_path)
 
 
-def benchmark_one_riftvm(rift_vm_bin_path, benchmark_files, args):
+def benchmark_one_riftvm(
+    rift_vm_bin_path, benchmark_files, results_dir, inputs_suite, reps
+):
     binary_name = os.path.basename(rift_vm_bin_path)
     raport_path = os.path.join(
-        args.results_dir, f"{binary_name}_{args.inputs_suite}" + CSV_EXTENSION
+        results_dir, f"{binary_name}_{inputs_suite}" + CSV_EXTENSION
     )
     results = list()
 
-    print(f"\nRunning benchmark for:")
-    print(bcolors.HEADER + binary_name + bcolors.ENDC)
+    log_info("Running benchmark for: " + binary_name)
 
     start = time.time()
 
     for program_file_path, input_file_path in benchmark_files:
         for stdin in get_stdin_list(input_file_path):
             stdin_times = get_benchmark_times(
-                rift_vm_bin_path, program_file_path, stdin, repeats=args.reps
+                rift_vm_bin_path, program_file_path, stdin, repeats=reps
             )
             program = os.path.basename(program_file_path)
             results.append((program, stdin, stdin_times))
 
     end = time.time()
-    print(f"Elapsed time: " + str(datetime.timedelta(seconds=int(end - start))))
+    log_info(f"Elapsed time: " + str(datetime.timedelta(seconds=int(end - start))))
 
     save_benchmark_results(raport_path, results)
 
@@ -208,7 +517,7 @@ def get_all_files_in_dir(dir_name, extension=None):
     """Returns list of paths to all files in a given directory
     with given extension."""
     if not os.path.exists(dir_name):
-        print(bcolors.RED + f"Directory {dir_name} does not exist." + bcolors.ENDC)
+        log_error(f"Directory {dir_name} does not exist.")
         return []
 
     files = []
@@ -219,38 +528,7 @@ def get_all_files_in_dir(dir_name, extension=None):
     return sorted(files)
 
 
-def build_binary_and_save(args):
-    """
-    Builds the project with CMake and moves the binary to the binaries directory.
-    Returns the path to the new binary.
-    """
-    create_dir_if_not_exists(args.binaries_dir)
-
-    try:
-        bin_path = cmake_build_binary(args.cmake, args.target, args.cpu_cores)
-
-    except subprocess.CalledProcessError as err:
-        # If return code is non-zero, raise a CalledProcessError and print this message
-        print(bcolors.RED + "Compilation error..." + bcolors.ENDC)
-        return
-
-    [branch, commit] = get_git_head_info()
-    new_bin_path = os.path.join(args.binaries_dir, f"{args.target}_{branch}_{commit}")
-
-    if args.suffix:
-        new_bin_path = new_bin_path + "_" + args.suffix
-
-    while os.path.exists(new_bin_path):
-        new_bin_path += datetime.datetime.now().strftime("_%y%m%d%H%M%S")
-
-    subprocess.run(["mv", bin_path, new_bin_path])
-
-    print(bcolors.GREEN + "Compiled binary to " + new_bin_path + bcolors.ENDC)
-
-
-def get_benchmark_suite_files(
-    programs_dir, inputs_dir, input_suite_name=DEFAULT_BENCHMARK_SUITE
-):
+def get_benchmark_suite_files(programs_dir, inputs_dir, input_suite_name, programs_only):
     """
     Find's all input files in the inputs_dir and matches them with
     programs in the programs_dir. The name of the input file should
@@ -258,7 +536,8 @@ def get_benchmark_suite_files(
     Returns a list of pairs: (benchmark_program_path, benchmark_input_path),
     where path's are relative to the directory of the script.
 
-    If BENCHMARK_ONLY is specified, only benchmarks the given programs.
+    Argument `programs_only` should be a list of program names (ex. 'collatz.rbc').
+    If `programs_only` is provided, only programs from the list will be benchmarked.
     """
     benchmark_suite_files = (
         []
@@ -266,9 +545,9 @@ def get_benchmark_suite_files(
     benchmark_inputs = get_all_files_in_dir(
         os.path.join(inputs_dir, input_suite_name), INPUT_FILE_EXTENSION
     )
-    if BENCHMARK_ONLY and len(BENCHMARK_ONLY) > 0:
+    if programs_only and len(programs_only) > 0:
         all_benchmark_programs = [
-            os.path.join(programs_dir, code) for code in BENCHMARK_ONLY
+            os.path.join(programs_dir, code) for code in programs_only
         ]
     else:
         all_benchmark_programs = get_all_files_in_dir(programs_dir, RIFT_BC_EXTENSION)
@@ -284,221 +563,5 @@ def get_benchmark_suite_files(
     return benchmark_suite_files
 
 
-def run_benchmarks(args):
-    """
-    If args.only_benchmark is specified, only benchmarks the given binary.
-    Otherwise, benchmarks all binaries in the binaries directory.
-    """
-
-    if args.only:
-        binaries = [args.only]
-    else:
-        binaries = get_all_files_in_dir(args.binaries_dir)
-        if len(binaries) == 0:
-            print(
-                "You may want to compile the binary first with command:\n"
-                "  python3 benchmark_riftvm.py --cmake <path_to_cmake_directory>"
-            )
-
-    benchmark_suite_files = get_benchmark_suite_files(
-        args.programs_dir, args.inputs_dir, args.inputs_suite
-    )
-
-    print("Running benchmark on binaries:")
-    for binary in binaries:
-        print(bcolors.OKBLUE + "  - " + binary + bcolors.ENDC)
-
-    print("Benchmark suite:")
-    if len(benchmark_suite_files) > 0:
-        for program, _ in benchmark_suite_files:
-            print(bcolors.OKBLUE + "  - " + program + bcolors.ENDC)
-
-        for binary in binaries:
-            benchmark_one_riftvm(binary, benchmark_suite_files, args)
-    else:
-        print(bcolors.OKBLUE + "No benchmark programs found." + bcolors.ENDC)
-
-
-def display_results(args):
-    """
-    Displays results from the csv's loaded
-    from the "results" directory.
-    """
-    results = get_all_files_in_dir(args.results_dir, args.inputs_suite + CSV_EXTENSION)
-
-    data = []
-    for result in results:
-        program_name = os.path.basename(result)[
-            : -(1 + len(CSV_EXTENSION) + len(args.inputs_suite))
-        ]
-        file_data = list()
-
-        with open(result, "r") as f:
-            lines = f.readlines()
-
-            for line in lines:
-                elems = line.split(",")
-                elems = elems[:-1]
-                elems = [elem.strip() for elem in elems]
-                test_name = elems[0]
-                test_input = elems[1]
-                test_runs = elems[2:]
-                file_data.append((test_name, test_input, test_runs))
-
-        data.append((program_name, sorted(file_data)))
-
-    # for every program and every time calculate minimum
-    max_test_input_len = 10
-    processed_data = []
-    for program_name, file_data in data:
-        processed_file = list()
-        for test_name, test_input, test_runs in file_data:
-            test_runs = [float(run) for run in test_runs]
-            if len(test_input) > max_test_input_len:
-                max_test_input_len = len(test_input)
-            processed_file.append((test_name, test_input, min(test_runs)))
-
-        processed_data.append((program_name, processed_file))
-
-    # display results for every program
-    print(
-        f"\nResults for {bcolors.OKBLUE + args.inputs_suite + bcolors.ENDC} benchmark suite:"
-    )
-    print(
-        " " * 4
-        + "test name".ljust(25)
-        + " "
-        + "input".ljust(max_test_input_len + 1)
-        + " "
-        + "t_min [s]".rjust(10)
-    )
-    for program, results in processed_data:
-        print()
-        print(bcolors.HEADER + "--- " + program + ":" + bcolors.ENDC)
-        for test_name, test_input, test_result in results:
-            print(
-                " " * 4
-                + test_name.ljust(25)
-                + " "
-                + test_input.ljust(max_test_input_len + 1)
-                + " "
-                + time_or_dnf(test_result).rjust(10)
-            )
-
-
-def main():
-    desc = """
-When running the benchmark, place the binaries in the binaries directory.
-You can specify the benchmark suite with the -i (--inputs_suite) option.
-Default benchmark suite is "fast". Benchmark suites are defined inside the 
-benchmark_inputs directory.
-
-  python3 benchmark_riftvm.py -i <benchmark_suite_name>
-
-There is a build tool to help you compile the binary. If you want to use it,
-you need to specify the path to the CMake directory. The script will build
-create the build directory where CMakeLists.txt is located, compile RiftVM
-and move the binary to the binaries directory. You can specify the CMake
-target with the (-t) --target option.
-
-  python3 benchmark_riftvm.py --cmake <path_to_cmake_directory> -t RiftVm_cg
-  
-If you want to benchmark only specific tests from suite, you can specify them in
-BENCHMARK_ONLY list at the beginning of this file.
-
-If you want to benchmark only specifit binaries you can specify them in "--only"
-option in script argument.
-"""
-
-    parser = argparse.ArgumentParser(
-        description=desc, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-
-    # Benchmark options:
-    parser.add_argument(
-        "-i",
-        "--inputs_suite",
-        default=DEFAULT_BENCHMARK_SUITE,
-        help="Name of the benchmark suite. Benchmark suites are defined inside "
-        + "benchmark inputs directory.",
-    )
-    parser.add_argument(
-        "-r",
-        "--reps",
-        default=5,
-        type=int,
-        help="Number of repetitions for each benchmark",
-    )
-    parser.add_argument(
-        "--results_only",
-        action="store_true",
-        help="If specified, only displays results from results directory.",
-    )
-    parser.add_argument(
-        "--only",
-        help="If specified, only benchmark binary the given binary path",
-        type=str,
-    )
-
-    # Compile options:
-    parser.add_argument(
-        "--cmake",
-        help="If specified, builds the project with CMake from given directory.",
-    )
-    parser.add_argument(
-        "-t",
-        "--target",
-        default=DEAFULT_RIFT_VM_TARGET,
-        help="Name of the target to build with CMake.",
-    )
-    parser.add_argument(
-        "-s",
-        "--suffix",
-        help="If specified, in the compiled binary name suffix will be appended.",
-    )
-    parser.add_argument(
-        "-j",
-        "--cpu_cores",
-        default=DEFAULT_CPU_CORES,
-        help="Number of CPU cores to use for compilation.",
-        type=int,
-    )
-
-    # Directories options:
-    parser.add_argument(
-        "-b",
-        "--binaries_dir",
-        default=RIFT_VM_BINARIES_DIR,
-        help="Name of the directory where RiftVM binaries will be stored.",
-    )
-    parser.add_argument(
-        "-p",
-        "--programs_dir",
-        default=BENCHMARK_PROGRAMS_DIR,
-        help="Name of the directory where benchmark programs are stored.",
-    )
-    parser.add_argument(
-        "--inputs_dir",
-        default=BENCHMARK_INPUTS_DIR,
-        help="Name of the directory where benchmark program's inputs are stored.",
-    )
-    parser.add_argument(
-        "-o",
-        "--results_dir",
-        default=RESULTS_DIR,
-        help="Name of the directory where benchmark results will be stored.",
-    )
-
-    args = parser.parse_args()
-
-    if args.cmake:
-        build_binary_and_save(args)
-    elif args.results_only:
-        display_results(args)
-    else:
-        run_benchmarks(args)
-        display_results(args)
-
-
 if __name__ == "__main__":
-    main()
+    cli()

@@ -33,7 +33,7 @@ namespace tsh {
 	/**
 	 * @brief Key for QueryIntegralType.
 	 */
-	struct KeyFor_QueryIntegralType {
+	struct KeyFor_QueryIntegralType final {
 		/**
 		 * @brief The size of the Integral type. Pick from { 8, 16, 32, 64, 128 }.
 		 */
@@ -81,7 +81,7 @@ namespace tsh {
 	/**
 	 * @brief Key for QueryTupleType.
 	 */
-	struct KeyFor_QueryTupleType {
+	struct KeyFor_QueryTupleType final {
 		std::vector<ComponentType> components;
 
 		[[nodiscard]]
@@ -105,7 +105,7 @@ namespace tsh {
 	/**
 	 * @brief Key for QueryVariantType.
 	 */
-	struct KeyFor_QueryVariantType {
+	struct KeyFor_QueryVariantType final {
 		std::vector<TypeInfo> underlying_types;
 
 		[[nodiscard]]
@@ -129,7 +129,7 @@ namespace tsh {
 	/**
 	 * @brief Key for QueryFunctionType.
 	 */
-	struct KeyFor_QueryFunctionType {
+	struct KeyFor_QueryFunctionType final {
 		/**
 		 * @brief The types of the parameters of the function.
 		 */

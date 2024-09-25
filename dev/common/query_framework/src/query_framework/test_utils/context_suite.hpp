@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../query_impl.hpp"
+#include "../query_int.hpp"
 
 #include <tester/tester.hpp>
 
