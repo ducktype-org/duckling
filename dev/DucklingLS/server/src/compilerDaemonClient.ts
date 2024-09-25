@@ -5,7 +5,7 @@ import { Connection } from "vscode-languageserver";
 
 // For the compiler daemon client to work, daemon's binary should be in DucklingLS/bin/ directory
 const BINARY_PATH = __dirname + "/../../bin/";
-const DAEMON_PORT = "42069";
+const DAEMON_PORT = "14369";
 const DAEMON_ADRESS = "http://localhost:" + DAEMON_PORT;
 
 /**
