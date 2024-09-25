@@ -198,13 +198,9 @@ namespace compiler::helios {
 
 			void visitExprStmt(const pst::ExprStmt&) override { output(std::vector<SymID>()); }
 
-			void visitReturn(const pst::Return&) override {
-				output(std::vector<SymID>());
-			}
+			void visitReturn(const pst::Return&) override { output(std::vector<SymID>()); }
 
-			void visitVariable(const pst::Variable&) override {
-				output(std::vector<SymID>());
-			}
+			void visitVariable(const pst::Variable&) override { output(std::vector<SymID>()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -219,9 +215,6 @@ namespace compiler::helios {
 			auto base_element = key.ref->related_pst_element.value();
 
 			if (base_element->isStatementAggregate()) {
-<<<<<<< HEAD
-				return filterSymbolsFromStmtList(ctx, key, getStmtsFromStmtAggregate(base_element));
-=======
 				// @TODO: the error here is that this perform double scoping
 				// for CodeBlocks inside CodeBlocksOrStmt
 				// Hot-patch:
@@ -234,8 +227,7 @@ namespace compiler::helios {
 						return {};
 					}
 
-				return filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(base_element));
->>>>>>> origin/main
+				return filterSymbolsFromStmtList(ctx, key, getStmtsFromStmtAggregate(base_element));
 			} else if (base_element->isStatement()) {
 				SymbolGrabVisitor symbol_grab(ctx, key);
 				auto              as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());
