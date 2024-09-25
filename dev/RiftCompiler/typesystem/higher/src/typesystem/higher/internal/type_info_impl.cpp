@@ -1,4 +1,5 @@
 #include "type_info_impl.hpp"
+#include <query_framework/query_impl.hpp>
 #include <queue>
 #include <utility>
 
@@ -45,6 +46,10 @@ namespace tsh::internal {
 		representation = stringifyTypeVector(this->components);
 	}
 
+	usize TupleInfoImpl::getSize(query::Context& ctx) const {
+		return ctx.query<QuerySizeOfTuple>({ this });
+	}
+
 	FunctionInfoImpl::FunctionInfoImpl(
 		std::vector<TypeInfo> parameter_types,
 		const TypeInfo        result_type,
@@ -59,12 +64,85 @@ namespace tsh::internal {
 		               + result_type.toString() + ")";
 	}
 
+	bool FunctionInfoImpl::isImplicitlyCoercible(const TypeInfo target, query::Context& context)
+		const {
+		// A function type is coercible to another function type if and only if
+		// the return type is coercible to the other return type and
+		// the other parameter types are coercible to the parameter types,
+		// similar to the rules of function subtyping.
+		//
+		// Additionally, only a pure function can be coerced to a pure function,
+		// and only a free function can be coerced to a free function.
+
+		if (target.getKind() != Kind::Function) return false;
+		const FunctionInfo targetFunction = target;
+		if ((!pure && targetFunction.isPure()) || (!free && targetFunction.isFree())
+		    || parameter_types.size() != targetFunction.getParameterTypes().size()) {
+			return false;
+		}
+
+		for (usize i = 0; i < parameter_types.size(); i++)
+			if (!context.query<QueryImplicitCoercibilityOnInfo>({
+					targetFunction.getParameterTypes()[i],
+					parameter_types[i],
+				}))
+				return false;
+		return context.query<QueryImplicitCoercibilityOnInfo>({
+			result_type,
+			targetFunction.getResultType(),
+		});
+	}
+
 	VariantInfoImpl::VariantInfoImpl(const std::vector<TypeInfo>& variant_types):
 		  underlying_types(variant_types) {
 		representation = "Variant " + stringifyTypeVector(variant_types);
 	}
 
+	usize VariantInfoImpl::getSize(query::Context& ctx) const {
+		return ctx.query<QuerySizeOfVariant>({ this });
+	}
+
 	ClassInfoImpl::ClassInfoImpl(compiler::helios::SymID symbol): symbol(symbol) {
 		representation = "Class " + name(symbol).str();
+	}
+
+	const TypeInterface& ClassInfoImpl::getInterface(query::Context& ctx) const {
+		return ctx.query<QueryInterfaceOfClass>(this);
+	}
+
+	usize ClassInfoImpl::getSize(query::Context& ctx) const {
+		return ctx.query<QuerySizeOfClass>({ this });
+	}
+
+	ClassInfo::QueryClass_Result<base::Optional<ClassInfo>>
+		ClassInfoImpl::getBaseClassType(query::Context& ctx) const {
+		UNPACK_RESULT(ctx.query<compiler::helios::QueryClassSymbolData>(symbol), class_data);
+		auto& base = class_data.base;
+		if (base.has_value()) return { ClassInfo(base.value()) };
+		return {};
+	}
+
+	ClassInfo::QueryClass_Result<base::Optional<compiler::helios::SymID>>
+		ClassInfoImpl::getBaseClassSymbol(query::Context& ctx) const {
+		UNPACK_RESULT(getBaseClassType(ctx), base_class_type);
+		return base_class_type.map([](ClassInfo classInfo) { return classInfo.getSymbol(); });
+	}
+
+	ClassInfo::QueryClass_Result<std::vector<ClassInfo>>
+		ClassInfoImpl::getImplementedInterfaceTypes(query::Context& ctx) const {
+		UNPACK_RESULT(ctx.query<compiler::helios::QueryClassSymbolData>(symbol), class_data);
+		auto& implements = class_data.implements;
+		return std::vector<ClassInfo>{ implements.begin(), implements.end() };
+	}
+
+	ClassInfo::QueryClass_Result<std::vector<compiler::helios::SymID>>
+		ClassInfoImpl::getImplementedInterfaceSymbols(query::Context& ctx) const {
+		UNPACK_RESULT(ctx.query<compiler::helios::QueryClassSymbolData>(symbol), class_data);
+		auto& implements = class_data.implements;
+		// @TODO: change cast type to InterfaceInfo when interface type is created.
+		constexpr auto transformer
+			= [](const tsh::TypeInfo& interface) { return ClassInfo(interface).getSymbol(); };
+		auto view = std::ranges::ref_view(implements) | std::views::transform(transformer);
+		return std::vector<compiler::helios::SymID>{ view.begin(), view.end() };
 	}
 }

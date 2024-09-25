@@ -11,7 +11,7 @@
 #include <base/string_id.hpp>
 #include <memory>
 #include <typesystem/higher/types.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/query_int.hpp>
 #include <vector>
 
 namespace compiler::helios {

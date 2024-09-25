@@ -20,6 +20,13 @@ namespace compiler::helios {
 	// incremental compilation
 
 	/**
+	 * @brief Debug function to print scope and its parents IDs.
+	 * @note: not used right now
+	 * @param scope
+	 */
+	void debugPrintScopeAndParents(ScopeID scope);
+
+	/**
 	 * @brief Query FULL HOUTUnit of single module
 	 */
 	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, const HOUTUnit&)

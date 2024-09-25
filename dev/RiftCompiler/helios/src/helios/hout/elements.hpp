@@ -7,7 +7,7 @@
 
 #include <helios/symbols/symbols.hpp>
 #include <pst_parser/elements/elements.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/query_int.hpp>
 #include <typesystem/higher/type_desc.hpp>
 #include <typesystem/higher/queries.hpp>
 
@@ -52,8 +52,8 @@ namespace compiler::helios::code {
 			  lifetime_scope(lifetime_scope),
 			  type_desc(type_desc) {}
 
-		virtual ~Expr()                                                    = default;
-		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
+		virtual ~Expr()                                  = default;
+		virtual void debugPrint(std::ostream& out) const = 0;
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
 
@@ -71,6 +71,33 @@ namespace compiler::helios::code {
 	/* * * * * * * *
 	 * Statements: *
 	 * * * * * * * */
+
+	/**
+	 * @brief Represents `var/let a : T = ..;` statement in HOUT
+	 */
+	struct VariableStmt final: public Stmt {
+		// @TODO: decide where we handle non-initial value (pre hout/post hout):
+		// currently PST always have it.
+		base::Optional<ElementRef<Expr>> initial_value;
+		tsh::TypeDesc<>                  type;
+
+		// @TODO decide if this is needed:
+		SymID helios_symbol;
+
+		VariableStmt(
+			ScopeID                          scope,
+			base::Optional<ElementRef<Expr>> initial_value,
+			tsh::TypeDesc<>                  type,
+			SymID                            helios_symbol
+		):
+			  Stmt(scope),
+			  initial_value(std::move(initial_value)),
+			  type(type),
+			  helios_symbol(helios_symbol) {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
+	};
 
 	/**
 	 * @brief Represents `return [expr];` in HOUT
@@ -136,18 +163,9 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		i64 value;
 
-		LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx):
-			  Expr(
-				  scope,
-				  tsh::TypeDesc<>(
-					  // @TODO: Select type of expression based on type of literal.
-					  ctx.query<tsh::QueryIntegralType>({ 64 }),
-					  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-				  )
-			  ),
-			  value(value) {}
+		LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx);
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
@@ -163,7 +181,7 @@ namespace compiler::helios::code {
 
 		IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx);
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
@@ -181,20 +199,9 @@ namespace compiler::helios::code {
 			ElementRef<Expr> lhs,
 			ElementRef<Expr> rhs,
 			query::Context&  ctx
-		):
-			  Expr(
-				  scope,
-				  tsh::TypeDesc<>(
-					  // @TODO: Select type of expression based on result type of the operation.
-					  ctx.query<tsh::QueryIntegralType>({ 64 }),
-					  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-				  )
-			  ),
-			  op(op),
-			  lhs(std::move(lhs)),
-			  rhs(std::move(rhs)) {}
+		);
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 }

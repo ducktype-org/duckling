@@ -1,0 +1,24 @@
+class T { }
+
+fun foo() = {
+	var a: i32 = in_n;
+	var b: i32 = 0;
+	var c: i32 | f32 = 0;
+	var d: T = 0;
+	alias hmm = T;
+	using N.*;
+	if (0) {
+		var x: i32 = c;
+		b;
+	}
+	var e: Q = 0;
+	return a;
+}
+
+const abc: i32 = 123;
+
+namespace N {
+	class Q {}
+	const in_n: i32 = 0;
+}
+

@@ -1,5 +1,6 @@
 #include "hout.hpp"
 #include "elements.hpp"
+#include <query_framework/query_impl.hpp>
 #include <sstream>
 
 namespace compiler::helios {
@@ -66,6 +67,4 @@ namespace compiler::helios {
 		  type(UNPACK_OR_PANIC(
 			  ctx.query<QueryTypeOfSymbol>(symbol), "Handling errors in HOUT is not supported yet"
 		  )) {}
-
-
 }
