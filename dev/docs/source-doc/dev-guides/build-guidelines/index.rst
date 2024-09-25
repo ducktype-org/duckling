@@ -7,45 +7,24 @@ Building the project
     :local:
 
 
-Here you can find instructions on how to build the project.
-
-
-Prerequisites
-=============
-
-To build the project, make sure you have the required dependencies installed.
-You can find the list of dependencies in the 
-`readme file of the project github repository <https://github.com/ducktype-org/rift-dev/tree/main?tab=readme-ov-file#installing-dependencies>`_.
-
-How to use toolbox
-==================
-Most of the time you will want to use our tailored build script ``toolbox.py``, 
-that will take care of all the details for you.
-
-To run toolbox you can use ``python3 toolbox.py`` command or ``./toolbox.py``.
-To see all available arguments run the script without any options:
-
-.. code-block:: bash
-
-	./toolbox.py
-
-
 Standard build
 ==============
 
-To build the project, you should use `toolbox.py` that will take care of all the details for you.
-The script provides the commands for:
+**The most up-to-date build instructions are in the** `README file in the root of the project <https://github.com/ducktype-org/rift-dev>`_.
 
-* initializing the project (updating submodules, downloading binaries, etc.),
-* configuring Python virtual environment,
-* creating the build directory,
-* building the documentation,
-* compiling and running tests
+The process includes initializing the repository and creating the build directory. 
+Remember to install the required dependencies before building the project.
 
-Details on how to use the script to build the project are 
-provided in the main `README.md <https://github.com/ducktype-org/rift-dev>`_ file.
+.. tip::
+	If you want a more in-depth look at the inner workings of the build system
+	you can look at the Python code that makes up the :code:`toolbox.py` script.
 
-It is recommmended to use Ninja build system, as it by default uses all available cores to compile the project.
+Compiling the project
+---------------------
+
+Ninja and Unix Makefiles are two alternative build systems that can be used to compile the project.
+You can choose which you want to use in the `toolbox.py`.
+The default option is the Ninja build system, as it uses all available cores to compile the project by default.
 Ninja works the same way as Unix Makefiles, so any command, like :code:`ninja <target>` can be replaced with :code:`make <target>`.
 
 After initialization, you can compile the project by running in the build directory:
@@ -96,28 +75,38 @@ you can run the following commands:
 Compiling the documentation
 ===========================
 
-Before compiling the documentation, make sure that you have the Python virtual environment set up (.
-If you haven't done it yet, you can do it by running :code:`./toolbox.py setup-venv`. The environment 
-should be active when you create the build directory with :code:`./toolbox.py setup-build`.
+The easy way to compile the documentation is to use the ``toolbox.py`` script.
+Here's more information on how the script works.
 
-To compile the documentation (source-doc and doxygen) you can use the following command:
+Before compiling the documentation, Python virtual environment from ``requirements.txt``
+in ``docs/doc-config`` has to be created. 
+The environment should be active when a new build directory with ``CMake`` is created.
 
-.. code-block:: bash
-
-	./toolbox.py docs
-
-This will compile the documentation and open it in your default browser.
-
-You can also run the CMake target by yourself:
+After you have created the build directory,
+to compile the documentation (source-doc and doxygen) you can run the build target:
 
 .. code-block:: bash
 
 	ninja docs
 
-This will compile the documentation and put it in the ``build/docs`` directory.
+This will compile the documentation and put it in the ``build/docs`` subdirectory.
 There are also custom targets for opening the documentation in the browser:
 
 .. code-block:: bash
 
 	ninja open-sphinx-docs
 	ninja open-doxygen-docs
+
+.. note::
+
+	Sometimes when creating new files in the documentation, Sphinx might not recognize them.
+	To fix this, you can run the ``ninja clean`` command or rerun the CMake configuration.
+
+
+Docs configuration
+------------------
+
+Our Sphinx documentation configuration is in the ``docs/doc-config`` directory.
+It is currently a separate Github repository that is included as a submodule in the main repository.
+When doing changes to the configuration, you should commit them to the submodule repository and then update 
+the main repository with the new submodule commit.

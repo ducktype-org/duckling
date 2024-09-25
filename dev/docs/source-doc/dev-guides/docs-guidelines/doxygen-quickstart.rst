@@ -33,18 +33,8 @@ Start each file with a comment block:
      */
 
 Note the double asterisk ``**`` starting the comment block. This is important, as Doxygen uses it to identify the beginning of the comment.
-After the ``/**`` each line should either start with asterisk ``*`` (as in the example above, **it's the one we use**) or with space, like this:
-
-.. code-block:: cpp
-
-    /**
-     @file foo.hpp
-     @brief Brief description of the file.
-     @author John Doe
-     @date 2021-10-01
-     
-     Detailed description of the file.
-     */
+After the ``/**`` each line should either start with asterisk ``*`` (as in the example above). It can also start with space, but it's not 
+the style we use.
 
 .. note::
     Doxygen commands can start with ``@`` or ``\``, but the latter is discouraged.
