@@ -19,8 +19,6 @@
 #include "../scopes/scopes.hpp"
 #include "../pst_ref.hpp"
 
-#include "../queries.hpp"
-
 namespace compiler::helios {
 	/**
 	 * @TODO: move to some docs
@@ -954,8 +952,7 @@ namespace compiler::helios {
 
 			PstStmtVisitor_GetTypeOf visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
-			// @TODO: Fix THIS!
-			return std::move(visitor.symbol_type_info.value());
+			return visitor.symbol_type_info.value();
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;

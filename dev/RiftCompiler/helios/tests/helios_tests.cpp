@@ -363,7 +363,7 @@ private:
 						  std::variant<int, int>>,
 					  std::variant<float, int>>);
 
-		std::variant<int, int> x;
+		std::variant<int, int> _;
 
 		struct A {};
 
