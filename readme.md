@@ -40,10 +40,15 @@ This:
 ```
 
 In case of trouble during build or `setup-build` step, it is advised
-to install the latest supported version of LLVM for a given machine.
+to install the latest supported version of LLVM for you system 
+(the required dependencies are already listed in the dependencies list above).
+But the most reliable way is to download the LLVM locally using toolbox with this command.
+
 After using this command, 
 LLVM is **NOT installed system-wide**, but only for this project.
 Using version `18.1.8` should work for most platforms.
+
+The downloaded library is placed in the `scripts/downloads` directory.
 
 #### Create a build folder
 
