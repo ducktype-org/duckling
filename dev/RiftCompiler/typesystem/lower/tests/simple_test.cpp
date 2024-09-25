@@ -28,9 +28,7 @@ private:
 				variant_case(IntegralTypeLayout, itl) {
 					assertTrue(itl.getSize() == 32, "Integral layout should have size 32.");
 				}
-				variant_default {
-					fail("Layout of integral type should be integral.");
-				}
+				variant_default { fail("Layout of integral type should be integral."); }
 			}
 		});
 	}

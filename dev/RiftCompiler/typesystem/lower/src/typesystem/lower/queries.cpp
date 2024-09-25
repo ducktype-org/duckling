@@ -6,9 +6,11 @@ namespace tsl {
 	struct IMPLEMENT_QUERY(QueryTypeLayout, TypeLayout) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			using enum tsh::Kind;
-			switch(key.getKind()) {
-			case Unit: return EmptyLayout(key);
-			case Integral: return IntegralTypeLayout(tsh::IntegralInfo(key));
+			switch (key.getKind()) {
+			case Unit:
+				return EmptyLayout(key);
+			case Integral:
+				return IntegralTypeLayout(tsh::IntegralInfo(key));
 			default:
 				RIFT_PANIC("Nooo!");
 			}

@@ -131,7 +131,11 @@ namespace tsh {
 	public:
 		SETUP_TYPE_WITH_BASE(IntegralInfo, TypeInfo)
 
-
+		/**
+		 * @brief Get the size of the integral type.
+		 * @return The size of the type.
+		 */
+		[[nodiscard]]
 		usize getSize() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(IntegralInfo)
@@ -154,6 +158,7 @@ namespace tsh {
 		 * @brief Get the size of the floating point type.
 		 * @return The size of the type.
 		 */
+		[[nodiscard]]
 		usize getSize() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(FloatInfo)

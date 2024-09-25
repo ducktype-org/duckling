@@ -237,10 +237,6 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind staticKind = Kind::Integral;
 
-		/**
-		 * @brief Get the size of the integral type.
-		 * @return The size of the type.
-		 */
 		[[nodiscard]]
 		usize getSize() const {
 			return size;
