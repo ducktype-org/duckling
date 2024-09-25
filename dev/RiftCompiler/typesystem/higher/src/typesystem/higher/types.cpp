@@ -55,6 +55,10 @@ namespace tsh {
 		return reinterpret_cast<std::size_t>(type.getPimpl()) + is_mutable;
 	}
 
+	usize IntegralInfo::getSize() const { return toCPimpl(pimpl)->getSize(); }
+
+	usize FloatInfo::getSize() const { return toCPimpl(pimpl)->getSize(); }
+
 	bool RawPointerInfo::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
 
 	ComponentType PointerInfo::getComponent() const { return toCPimpl(pimpl)->getComponent(); }

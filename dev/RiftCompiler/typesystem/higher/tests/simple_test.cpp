@@ -1,29 +1,11 @@
 #include <algorithm>
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
-#include <typesystem/higher/typesystem.hpp>
+#include "typesystem/higher/all.hpp"
 
 #include <query_framework/query_impl.hpp>
 
 using namespace tsh;
-
-/**
- * @brief Query to get the size of a type.
- *
- * @note Prefer to use the TypeInfo::getSize method directly for efficiency.
- * This query is for access through a query::entryPoint.
- */
-DECLARE_QUERY(QuerySizeOfType, TypeInfo, usize)
-
-struct IMPLEMENT_QUERY(QuerySizeOfType, usize) {
-	static auto provide(Context& ctx, QKey key) -> PResult { return key.getSize(ctx); }
-
-	static auto load(QKey) -> LoadResult { return {}; }
-
-	static auto store(QKey, const PResult p_res, query::ACD) -> QResult { return QResult{ p_res }; }
-};
-
-QUERY_IMPLEMENTATION_BOILERPLATE(QuerySizeOfType)
 
 /**
  * This test class contains tests checking the most basic and boring functionality of the
@@ -43,12 +25,12 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySizeOfType)
 
  * The converse (i.e. that two types are not unified when they shouldn't be) should also be checked.
  */
-class SimpleTypeSystemTest final: public tester::TestSuite {
+class HigherTypeSystemSimpleTest final: public tester::TestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS SimpleTypeSystemTest
+#define TESTER_CLASS HigherTypeSystemSimpleTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("TypeSystemHigher simple test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("Higher TypeSystem simple test") {
 		TESTER_ADD_TEST(trivial_cast_and_assignment);
 		TESTER_ADD_TEST(simple_void_and_unit);
 		TESTER_ADD_TEST(simple_byte_sized);
@@ -155,7 +137,7 @@ private:
 			assertTrue(int_1.getKind() == Integral, "Int should have kind Integral.");
 
 			assertTrue(
-				query::entryPoint<QuerySizeOfType>(int_1) == 8 * (1 << i),
+				int_1.getSize() == 8 * (1 << i),
 				"Size of Int should be as constructed."
 			);
 			assertTrue(int_1 == int_2, "Ints of the same size and signedness should be the same.");
@@ -187,7 +169,7 @@ private:
 			auto float_2 = query::entryPoint<QueryFloatType>(float_size);
 
 			assertTrue(
-				query::entryPoint<QuerySizeOfType>(float_1) == float_size,
+				float_1.getSize() == float_size,
 				"Size of Float should be as constructed."
 			);
 			assertTrue(float_1 == float_2, "Floats of the same size should be the same.");
@@ -257,12 +239,6 @@ private:
 			tup_1.getComponents() == std::vector<ComponentType>({ { int_16 }, { int_32 } }),
 			"Component types should be as constructed."
 		);
-		assertTrue(
-			query::entryPoint<QuerySizeOfType>(tup_1)
-				== query::entryPoint<QuerySizeOfType>(int_16)
-					   + query::entryPoint<QuerySizeOfType>(int_32),
-			"Size should be equal to sum of component sizes."
-		);
 		assertTrue(tup_1.getKind() == Tuple, "Tuple should have kind Tuple.");
 
 		const TypeInfo  type_tup = tup_1;
@@ -292,14 +268,6 @@ private:
 		assertTrue(
 			var_1.getUnderlyingTypes() == std::vector<TypeInfo>({ int_16, int_32 }),
 			"Underlying types should be as constructed."
-		);
-		assertTrue(
-			query::entryPoint<QuerySizeOfType>(var_1)
-				== std::max(
-					   query::entryPoint<QuerySizeOfType>(int_16),
-					   query::entryPoint<QuerySizeOfType>(int_32)
-				   ) + BYTE_SIZE,
-			"Size should be equal to max of underlying type sizes, plus discriminant."
 		);
 		assertTrue(var_1.getKind() == Variant, "Variant should have kind Variant.");
 
@@ -370,9 +338,6 @@ private:
 		const auto nspace_2 = query::entryPoint<QueryNamespaceType>({});
 
 		assertTrue(nspace == nspace_2, "There shouldn't be multiple different Namespace types.");
-		assertTrue(
-			query::entryPoint<QuerySizeOfType>(nspace) == 0, "NamespaceType should have size 0."
-		);
 
 		assertTrue(nspace.getKind() == Namespace, "NamespaceType should have kind Meta.");
 
@@ -384,9 +349,6 @@ private:
 		const auto module_2 = query::entryPoint<QueryModuleType>({});
 
 		assertTrue(module == module_2, "There shouldn't be multiple different Module types.");
-		assertTrue(
-			query::entryPoint<QuerySizeOfType>(module) == 0, "ModuleType should have size 0."
-		);
 
 		assertTrue(module.getKind() == Module, "ModuleType should have kind Meta.");
 
@@ -400,10 +362,6 @@ private:
 		const auto meta_2 = query::entryPoint<QueryMetaType>({});
 
 		assertTrue(meta == meta_2, "There shouldn't be multiple different 'type' types.");
-		assertTrue(
-			query::entryPoint<QuerySizeOfType>(meta) == META_SIZE,
-			"MetaType should have size META_SIZE."
-		);
 
 		assertTrue(meta.getKind() == Meta, "MetaType should have kind Meta.");
 
@@ -558,7 +516,7 @@ private:
 	}
 
 public:
-	~SimpleTypeSystemTest() override = default;
+	~HigherTypeSystemSimpleTest() override = default;
 };
 
 TESTER_COMMON_MAIN("/RiftCompiler/typesystem/tests/")

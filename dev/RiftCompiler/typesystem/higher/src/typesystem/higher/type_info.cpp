@@ -23,11 +23,6 @@ namespace tsh {
 	}
 
 	[[nodiscard]]
-	usize TypeInfo::getSize(query::Context& ctx) const {
-		return pimpl->getSize(ctx);
-	}
-
-	[[nodiscard]]
 	bool TypeInfo::isImplicitlyCoercible(const TypeInfo target, query::Context& ctx) const {
 		return pimpl->isImplicitlyCoercible(target, ctx);
 	}

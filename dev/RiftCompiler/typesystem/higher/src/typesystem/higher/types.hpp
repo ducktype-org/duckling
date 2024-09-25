@@ -131,6 +131,9 @@ namespace tsh {
 	public:
 		SETUP_TYPE_WITH_BASE(IntegralInfo, TypeInfo)
 
+
+		usize getSize() const;
+
 		CONSTRUCT_WITH_CHECKED_CAST(IntegralInfo)
 
 	protected:
@@ -146,6 +149,12 @@ namespace tsh {
 	class FloatInfo final: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(FloatInfo, TypeInfo)
+
+		/**
+		 * @brief Get the size of the floating point type.
+		 * @return The size of the type.
+		 */
+		usize getSize() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(FloatInfo)
 

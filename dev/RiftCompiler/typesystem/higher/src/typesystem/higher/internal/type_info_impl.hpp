@@ -7,7 +7,7 @@
 
 #include <query_framework/query_int.hpp>
 
-#include "../typesystem.hpp"
+#include "../all.hpp"
 #include "queries.hpp"
 
 #include <helios/symbols/symbols.hpp>
@@ -52,16 +52,6 @@ namespace tsh::internal {
 		 */
 		[[nodiscard]]
 		virtual Kind getKind() const
-			= 0;
-
-		/**
-		 * @brief Gets the size of a value of the type described by this object, in bits.
-		 * @param ctx The Query Context necessary to deduce composite type sizes.
-		 * This is applicable for types which require being at some point "incomplete".
-		 * @return The size of a value of the type described by this object, in bits.
-		 */
-		[[nodiscard]]
-		virtual usize getSize(query::Context& ctx) const
 			= 0;
 
 		/**
@@ -151,11 +141,6 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind staticKind = Kind::Unit;
 
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return 0;
-		}
-
 		UnitInfoImpl() { representation = "unit"; }
 	};
 
@@ -171,11 +156,6 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind staticKind = Kind::Void;
 
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return 0;
-		}
-
 		VoidInfoImpl() { representation = "void"; }
 	};
 
@@ -190,11 +170,6 @@ namespace tsh::internal {
 		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Byte;
-
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return BYTE_SIZE;
-		}
 
 		explicit ByteInfoImpl() { representation = "byte"; }
 
@@ -217,11 +192,6 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind staticKind = Kind::Bool;
 
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return BOOL_SIZE;
-		}
-
 		explicit BoolInfoImpl() { representation = "bool"; }
 
 		[[nodiscard]]
@@ -242,11 +212,6 @@ namespace tsh::internal {
 		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Char;
-
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return CHAR_SIZE;
-		}
 
 		explicit CharInfoImpl() { representation = "char"; }
 
@@ -272,8 +237,12 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind staticKind = Kind::Integral;
 
+		/**
+		 * @brief Get the size of the integral type.
+		 * @return The size of the type.
+		 */
 		[[nodiscard]]
-		usize getSize(query::Context&) const override {
+		usize getSize() const {
 			return size;
 		}
 
@@ -292,12 +261,12 @@ namespace tsh::internal {
 		}
 
 		[[nodiscard]]
-		bool isImplicitlyCoercible(const TypeInfo target, query::Context& ctx) const override {
+		bool isImplicitlyCoercible(const TypeInfo target, query::Context&) const override {
 			// Implicit coercions allow checking against zero,
 			// as well as promoting to greater sizes and to floating point
 			// numbers for physics simulations or similar
 			return target.getKind() == Kind::Bool
-			    || (target.getKind() == Kind::Integral && target.getSize(ctx) > size)
+			    || (target.getKind() == Kind::Integral && IntegralInfo(target).getSize() > size)
 			    || target.getKind() == Kind::Float;
 		}
 	};
@@ -317,7 +286,7 @@ namespace tsh::internal {
 		static constexpr Kind staticKind = Kind::Float;
 
 		[[nodiscard]]
-		usize getSize(query::Context&) const override {
+		usize getSize() const {
 			return size;
 		}
 
@@ -326,9 +295,9 @@ namespace tsh::internal {
 		}
 
 		[[nodiscard]]
-		bool isImplicitlyCoercible(const TypeInfo target, query::Context& ctx) const override {
+		bool isImplicitlyCoercible(const TypeInfo target, query::Context&) const override {
 			// Implicit coercions allow promoting to greater sizes
-			return target.getKind() == Kind::Float && FloatInfo(target).getSize(ctx) > size;
+			return target.getKind() == Kind::Float && FloatInfo(target).getSize() > size;
 		}
 	};
 
@@ -345,11 +314,6 @@ namespace tsh::internal {
 		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::RawPointer;
-
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return POINTER_SIZE;
-		}
 
 		explicit RawPointerInfoImpl(const bool is_mutable): is_mutable(is_mutable) {
 			representation = "raw_pointer";
@@ -384,11 +348,6 @@ namespace tsh::internal {
 		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Pointer;
-
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return POINTER_SIZE;
-		}
 
 		[[nodiscard]]
 		ComponentType getComponent() const {
@@ -439,11 +398,6 @@ namespace tsh::internal {
 		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Reference;
-
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return POINTER_SIZE;
-		}
 
 		[[nodiscard]]
 		TypeInfo getUnderlyingType() const {
@@ -511,9 +465,6 @@ namespace tsh::internal {
 		static constexpr Kind staticKind = Kind::Tuple;
 
 		[[nodiscard]]
-		usize getSize(query::Context& ctx) const override;
-
-		[[nodiscard]]
 		const std::vector<ComponentType>& getComponents() const {
 			return components;
 		}
@@ -556,11 +507,6 @@ namespace tsh::internal {
 		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Function;
-
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return (1 + !free) * POINTER_SIZE;
-		}
 
 		[[nodiscard]]
 		const std::vector<TypeInfo>& getParameterTypes() const {
@@ -612,9 +558,6 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind staticKind = Kind::Variant;
 
-		[[nodiscard]]
-		usize getSize(query::Context& ctx) const override;
-
 		explicit VariantInfoImpl(const std::vector<TypeInfo>& variant_types);
 
 		[[nodiscard]]
@@ -644,9 +587,6 @@ namespace tsh::internal {
 
 		[[nodiscard]]
 		const TypeInterface& getInterface(query::Context& ctx) const override;
-
-		[[nodiscard]]
-		usize getSize(query::Context& ctx) const override;
 
 		explicit ClassInfoImpl(compiler::helios::SymID symbol);
 
@@ -694,11 +634,6 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind staticKind = Kind::Namespace;
 
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return 0;
-		}
-
 		NamespaceInfoImpl() = default;
 	};
 
@@ -714,11 +649,6 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind staticKind = Kind::Module;
 
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return 0;
-		}
-
 		ModuleInfoImpl() = default;
 	};
 
@@ -733,11 +663,6 @@ namespace tsh::internal {
 		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind staticKind = Kind::Meta;
-
-		[[nodiscard]]
-		usize getSize(query::Context&) const override {
-			return META_SIZE;
-		}
 
 		explicit MetaInfoImpl() = default;
 	};
