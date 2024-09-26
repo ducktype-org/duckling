@@ -17,15 +17,15 @@ namespace compiler::helios {
 
 	bool LookupResult::isSingle() const { return symbolCount() == 1; }
 
-	errors::HResult<SymbolList, errors::AmbiguityError, errors::SymbolNotFoundError>
+	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound>
 		LookupResult::getAsSingle() const {
-		if (isEmpty()) return errors::HError(errors::SymbolNotFoundError());
-		if (!isSingle()) return errors::HError(errors::AmbiguityError());
+		if (isEmpty()) return errors::HError(errors::SymbolNotFound());
+		if (!isSingle()) return errors::HError(errors::Ambiguity());
 
 		if (!leaves.empty()) return SymbolList{ leaves[0] };
 
 		for (const auto& [node_id, inner]: children) {
-			UNPACK_RESULT(inner.getAsSingle(), child_path);
+			UNPACK_RESULT(SymbolList child_path =, inner.getAsSingle());
 			if (!child_path.empty()) {
 				SymbolList result;
 				result.push_back(node_id);

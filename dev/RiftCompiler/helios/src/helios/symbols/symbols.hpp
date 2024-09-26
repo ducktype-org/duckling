@@ -127,8 +127,8 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryDealias, SymID, const errors::HResult<SymbolList COMMA QueryLookup_Result::error_type>&);
 
-	using PotentialParsingErrors = errors::
-		unique_types_variant_t<QueryLookup_Result::error_type, errors::ExpressionParsingError>;
+	using PotentialParsingErrors
+		= errors::unique_types_variant_t<QueryLookup_Result::error_type, errors::InvalidExpr>;
 	using QueryConstValueOf_Result = errors::HResult<i32, PotentialParsingErrors>;
 	/**
 	 * Calculates a value of a constant.
@@ -255,7 +255,7 @@ namespace compiler::helios {
 			ScopeID scope;
 		};
 
-		using MakeRPN_Result = errors::HResult<RPNExpr, errors::ExpressionParsingError>;
+		using MakeRPN_Result = errors::HResult<RPNExpr, errors::InvalidExpr>;
 
 		/**
 		 * @brief Parses an expression from PST into RPN.

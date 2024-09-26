@@ -1,9 +1,9 @@
 #pragma once
 
 namespace compiler::helios::errors {
-	struct SymbolNotFoundError {};
+	struct SymbolNotFound {};
 
-	struct AmbiguityError {};
+	struct Ambiguity {};
 
-	struct ExpressionParsingError {};
+	struct InvalidExpr {};
 }

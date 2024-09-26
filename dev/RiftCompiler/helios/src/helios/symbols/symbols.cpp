@@ -18,6 +18,7 @@
 #include "../scope_symbol_id.hpp"
 #include "../scopes/scopes.hpp"
 #include "../pst_ref.hpp"
+#include "helios/helios_result.hpp"
 
 namespace compiler::helios {
 	/**
@@ -288,40 +289,42 @@ namespace compiler::helios {
 	/**
 	 * @brief Query extension for looking-up chain of names
 	 */
-	errors::HResult<SymbolList, errors::AmbiguityError, QueryLookup_Result::error_type>
+	errors::HResult<SymbolList, errors::Ambiguity, QueryLookup_Result::error_type>
 		lookupChain(query::Context& ctx, const LookupChainKey& key) {
 		RIFT_ASSERT(!key.names.empty(), "lookupDotted received zero names");
 
 		// initial symbol:
 		UNPACK_RESULT(
+			LookupResult first =,
 			ctx.query<QueryLookupInScopeAndParents>(
 				{ key.begin_scope, key.names[0], key.follow_wildcards }
-			),
-			first
+			)
 		);
 
 		if (not first.isSingle()) {
 			// @TODO: error in state
-			return errors::HError(errors::AmbiguityError());
+			return errors::HError(errors::Ambiguity());
 		}
 
-		UNPACK_RESULT_COPY(first.getAsSingle(), result);
-
+		UNPACK_RESULT(SymbolList result =, first.getAsSingle());
 		if (key.names.size() == 1) return result;
 
 		for (usize i = 1; i < key.names.size(); i++) {
 			UNPACK_RESULT(
-				ctx.query<QueryLookupInSymbol>({ result.back(), key.names[i], key.follow_wildcards }
-			    ),
-				append_res_value
+				auto append_res =,
+				ctx.query<QueryLookupInSymbol>({
+					result.back(),
+					key.names[i],
+					key.follow_wildcards,
+				})
 			);
 
-			if (!append_res_value.isSingle()) {
+			if (!append_res.isSingle()) {
 				// @TODO: error in state
-				return errors::HError(errors::AmbiguityError());
+				return errors::HError(errors::Ambiguity());
 			}
 
-			UNPACK_RESULT(append_res_value.getAsSingle(), single_append_res);
+			UNPACK_RESULT(auto single_append_res =, append_res.getAsSingle());
 			result.insert(result.end(), single_append_res.begin(), single_append_res.end());
 		}
 		return result;
@@ -403,14 +406,14 @@ namespace compiler::helios {
 			SymbolList result;
 			for (auto&& pointed: alias_definition->getPointed()) {
 				UNPACK_RESULT(
+					auto&& pointed_symbol_lookup =,
 					first_symbol
 						? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
-						: ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false }),
-					pointed_symbol_lookup
+						: ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false })
 				);
-				UNPACK_RESULT(pointed_symbol_lookup.getAsSingle(), path);
+				UNPACK_RESULT(auto&& path =, pointed_symbol_lookup.getAsSingle());
 				for (auto&& path_symbol: path) {
-					UNPACK_RESULT(ctx.query<QueryDealias>(path_symbol), dealiased);
+					UNPACK_RESULT(auto&& dealiased =, ctx.query<QueryDealias>(path_symbol));
 					result.insert(result.end(), dealiased.begin(), dealiased.end());
 				}
 
@@ -425,7 +428,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	errors::HResult<i32, errors::ExpressionParsingError> getPriority(const rpn::Operator& op) {
+	errors::HResult<i32, errors::InvalidExpr> getPriority(const rpn::Operator& op) {
 		switch (static_cast<char>(op.oper_id.view()[0])) {
 		case '+':
 		case '-':
@@ -440,7 +443,7 @@ namespace compiler::helios {
 		case '.':
 			return 5;
 		default:
-			return errors::HError(errors::ExpressionParsingError());
+			return errors::HError(errors::InvalidExpr());
 		}
 	}
 
@@ -454,9 +457,11 @@ namespace compiler::helios {
 				}
 				variant_case(pst::Expr::Operator, oper) {
 					auto new_op = Operator{ oper.oper_id };
-					UNPACK_RESULT(getPriority(new_op), priority);
+					UNPACK_RESULT(const int priority =, getPriority(new_op));
 					while (!st.empty()) {
-						UNPACK_RESULT(getPriority(std::get<Operator>(st.top())), top_priority);
+						UNPACK_RESULT(
+							const int top_priority =, getPriority(std::get<Operator>(st.top()))
+						);
 						if (top_priority < priority) break;
 						rpn.emplace_back(st.top());
 						st.pop();
@@ -468,7 +473,8 @@ namespace compiler::helios {
 				}
 				variant_case(pst::Expr::Group, group) {
 					UNPACK_RESULT(
-						makeRPN(ctx, KeyOf_RPNmakeRPN{ group.expr->elements, key.expr_scope }), res
+						auto&& res =,
+						makeRPN(ctx, KeyOf_RPNmakeRPN{ group.expr->elements, key.expr_scope })
 					);
 					rpn.insert(rpn.end(), res.elements.begin(), res.elements.end());
 				}
@@ -478,14 +484,14 @@ namespace compiler::helios {
 				variant_case(pst::Expr::CommaSeparated, tuple) {
 					for (auto&& type_expr: tuple.expr) {
 						UNPACK_RESULT(
-							makeRPN(ctx, KeyOf_RPNmakeRPN{ type_expr->elements, key.expr_scope }),
-							res
+							auto&& res =,
+							makeRPN(ctx, KeyOf_RPNmakeRPN{ type_expr->elements, key.expr_scope })
 						);
 						rpn.insert(rpn.end(), res.elements.begin(), res.elements.end());
 					}
 					rpn.emplace_back(TupleConstructor{ tuple.expr.size() });
 				}
-				variant_default { return errors::HError(errors::ExpressionParsingError()); }
+				variant_default { return errors::HError(errors::InvalidExpr()); }
 			}
 		}
 		while (!st.empty()) {
@@ -500,40 +506,32 @@ namespace compiler::helios {
 		variant_match(key.expr) {
 			variant_case(rpn::Identifier, idt) {
 				// .back() works for constants only.
-				UNPACK_RESULT(ctx.query<QueryDealias>(idt.symbol_list.back()), sym_list);
+				UNPACK_RESULT(auto&& sym_list =, ctx.query<QueryDealias>(idt.symbol_list.back()));
 				return ctx.query<QueryConstValueOf>(sym_list.back());
 			}
 			variant_case(rpn::NamedIdentifier, idt) {
 				UNPACK_RESULT(
+					auto&& sym_list =,
 					ctx.query<QueryLookupInScopeAndParents>(
 						{ key.expr_scope, idt.symbol_name, true }
-					),
-					sym_list
+					)
 				);
 
-				UNPACK_RESULT(sym_list.getAsSingle(), identifier);
-				UNPACK_RESULT(
-					parseValue(
-						ctx,
-						KeyOf_parseValue{
-							Identifier{ identifier },
-							key.expr_scope,
-						}
-					),
-					result
-				);
-				return result;
+				UNPACK_RESULT(auto&& identifier =, sym_list.getAsSingle());
+				UNPACK_RESULT(return,
+				                    parseValue(
+										ctx,
+										KeyOf_parseValue{ Identifier{ identifier }, key.expr_scope }
+									));
 			}
-			variant_case(rpn::Operator, op) {
-				return errors::HError(errors::ExpressionParsingError());
-			}
+			variant_case(rpn::Operator, op) { return errors::HError(errors::InvalidExpr()); }
 			variant_case(rpn::KeywordValue, keyword_value) {
 				throw base::NotYetImplemented("Value of KeywordValue is not yet implemented");
 			}
 			variant_case(rpn::NumValue, literal) { return std::stoi(literal.num_id.str()); }
-			variant_default { return errors::HError(errors::ExpressionParsingError()); }
+			variant_default { return errors::HError(errors::InvalidExpr()); }
 		}
-		return errors::HError(errors::ExpressionParsingError());
+		return errors::HError(errors::InvalidExpr());
 	}
 
 	namespace {
@@ -581,7 +579,7 @@ namespace compiler::helios {
 				}
 				variant_case(rpn::KeywordValue, keyword) { st.emplace(keyword); }
 				variant_case(rpn::Operator, oper) {
-					if (st.size() < 2) return errors::HError(errors::ExpressionParsingError());
+					if (st.size() < 2) return errors::HError(errors::InvalidExpr());
 
 					const auto first = st.top();
 					st.pop();
@@ -589,6 +587,7 @@ namespace compiler::helios {
 					st.pop();
 
 					UNPACK_RESULT(
+						auto evaluated =,
 						evalOperator(
 							ctx,
 							KeyOf_evalOperator{
@@ -597,10 +596,9 @@ namespace compiler::helios {
 								first,
 								expr.scope,
 							}
-						),
-						evaluated
+						)
 					);
-					st.push(evaluated);
+					st.emplace(evaluated);
 				}
 				variant_case(rpn::NumValue, num) { st.emplace(num); }
 				variant_case(rpn::TupleConstructor, tuple) {
@@ -615,7 +613,7 @@ namespace compiler::helios {
 					}
 					st.emplace(tuple_type);
 				}
-				variant_default { return errors::HError(errors::ExpressionParsingError()); }
+				variant_default { return errors::HError(errors::InvalidExpr()); }
 			}
 		}
 		RIFT_ASSERT(st.size() == 1, "Expression stack should have 1 element");
@@ -633,12 +631,12 @@ namespace compiler::helios {
 				variant_case(rpn::Identifier, idt) { looked_up_symbol = idt.symbol_list; }
 				variant_case(rpn::NamedIdentifier, idt) {
 					UNPACK_RESULT(
+						auto&& sym_list =,
 						ctx.query<QueryLookupInScopeAndParents>(
 							{ key.expr_scope, idt.symbol_name, true }
-						),
-						sym_list
+						)
 					);
-					UNPACK_RESULT_CUSTOM(sym_list.getAsSingle(), looked_up_symbol);
+					UNPACK_RESULT(looked_up_symbol =, sym_list.getAsSingle());
 				}
 				variant_default {
 					throw base::NotYetImplemented("Lookup on non-identifier is not yet implemented"
@@ -648,14 +646,14 @@ namespace compiler::helios {
 			variant_match(b) {
 				variant_case(rpn::NamedIdentifier, idt_right) {
 					UNPACK_RESULT(
+						auto&& new_symbols =,
 						ctx.query<QueryLookupInSymbol>({
 							looked_up_symbol.back(),
 							idt_right.symbol_name,
 							true,
-						}),
-						new_symbols
+						})
 					);
-					UNPACK_RESULT(new_symbols.getAsSingle(), single);
+					UNPACK_RESULT(SymbolList single =, new_symbols.getAsSingle());
 					looked_up_symbol.insert(looked_up_symbol.end(), single.begin(), single.end());
 					return Identifier{ looked_up_symbol };
 				}
@@ -665,7 +663,7 @@ namespace compiler::helios {
 					);
 				}
 			}
-			return errors::HError(errors::ExpressionParsingError());
+			return errors::HError(errors::InvalidExpr());
 		}
 		if (op.oper_id == "|") {
 			// @TODO: Check if A and B are types.
@@ -699,14 +697,14 @@ namespace compiler::helios {
 						variant_default { a_variant.elements.push_back(b); }
 					}
 				}
-				variant_default { return errors::HError(errors::ExpressionParsingError()); }
+				variant_default { return errors::HError(errors::InvalidExpr()); }
 			}
 			return a;
 		}
 
 
-		UNPACK_RESULT(parseValue(ctx, KeyOf_parseValue{ a, expr_scope }), a_value);
-		UNPACK_RESULT(parseValue(ctx, KeyOf_parseValue{ b, expr_scope }), b_value);
+		UNPACK_RESULT(i32 a_value =, parseValue(ctx, KeyOf_parseValue{ a, expr_scope }));
+		UNPACK_RESULT(i32 b_value =, parseValue(ctx, KeyOf_parseValue{ b, expr_scope }));
 
 		i32 value{};
 
@@ -745,16 +743,16 @@ namespace compiler::helios {
 			const ScopeID key_scope = scope(key);
 
 			UNPACK_RESULT(
+				rpn::RPNExpr expr =,
 				rpn::makeRPN(
 					ctx,
 					{
 						const_symbol->getValue()->elements,
 						key_scope,
 					}
-				),
-				expr
+				)
 			);
-			UNPACK_RESULT(rpn::evalExpr(ctx, expr), evaluated);
+			UNPACK_RESULT(rpn::ExprElem evaluated =, rpn::evalExpr(ctx, expr));
 			return parseValue(
 				ctx,
 				rpn::KeyOf_parseValue{
@@ -803,24 +801,22 @@ namespace compiler::helios {
 			variant_case(rpn::Identifier, idt) {
 				return ctx.query<QueryTypeOfSymbol>(idt.symbol_list.back());
 			}
-			variant_case(rpn::Operator, oper) {
-				return errors::HError(errors::ExpressionParsingError());
-			}
+			variant_case(rpn::Operator, oper) { return errors::HError(errors::InvalidExpr()); }
 			variant_case(rpn::NamedIdentifier, named_identifier) {
 				const auto it = BUILTINS.find(named_identifier.symbol_name);
 				if (it == BUILTINS.end()) {
 					UNPACK_RESULT(
+						auto&& symbol_res =,
 						ctx.query<QueryLookupInScopeAndParents>({
 							expr_scope,
 							named_identifier.symbol_name,
 							true,
-						}),
-						symbol_res
+						})
 					);
-					UNPACK_RESULT(symbol_res.getAsSingle(), symbol);
+					UNPACK_RESULT(const SymbolList symbol =, symbol_res.getAsSingle());
 					// very simple dealias, that should
 					// ultimately be replaced by type expr comp-time eval:
-					UNPACK_RESULT(ctx.query<QueryDealias>({ symbol.back() }), dealias_sym);
+					UNPACK_RESULT(auto&& dealias_sym =, ctx.query<QueryDealias>({ symbol.back() }));
 					return ctx.query<QueryTypeFromDefinition>(dealias_sym.back());
 				}
 				return it->second;
@@ -844,7 +840,8 @@ namespace compiler::helios {
 
 				for (auto&& tuple_subtype: tuple_type.elements) {
 					UNPACK_RESULT(
-						parseTypeFromExpr(ctx, tuple_subtype, expr_scope), parsed_subtype
+						tsh::TypeInfo parsed_subtype =,
+						parseTypeFromExpr(ctx, tuple_subtype, expr_scope)
 					);
 					tuple_components.emplace_back(parsed_subtype, false);
 				}
@@ -858,7 +855,8 @@ namespace compiler::helios {
 				variant_types.reserve(variant_type.elements.size());
 				for (auto&& variant_subtype: variant_type.elements) {
 					UNPACK_RESULT(
-						parseTypeFromExpr(ctx, variant_subtype, expr_scope), parsed_variant_subtype
+						tsh::TypeInfo parsed_variant_subtype =,
+						parseTypeFromExpr(ctx, variant_subtype, expr_scope)
 					);
 					variant_types.push_back(parsed_variant_subtype);
 				}
@@ -867,7 +865,7 @@ namespace compiler::helios {
 			}
 			variant_default { RIFT_PANIC("Unhandleble type during parsing type from expr..."); }
 		}
-		return errors::HError(errors::ExpressionParsingError());
+		return errors::HError(errors::InvalidExpr());
 		RIFT_PANIC("Couldn't parse the type.");
 	}
 
@@ -881,10 +879,9 @@ namespace compiler::helios {
 	ParseTypeFromExpr_Result parseTypeFromExpr(
 		query::Context& ctx, const tpc::ParserCBorrowRef<pst::Expr>& expr, ScopeID expr_scope
 	) {
-		UNPACK_RESULT(rpn::makeRPN(ctx, { expr->elements, expr_scope }), rpn_expr);
-		UNPACK_RESULT(rpn::evalExpr(ctx, rpn_expr), final_type);
-		UNPACK_RESULT(parseTypeFromExpr(ctx, final_type, expr_scope), result);
-		return result;
+		UNPACK_RESULT(rpn::RPNExpr rpn_expr =, rpn::makeRPN(ctx, { expr->elements, expr_scope }));
+		UNPACK_RESULT(rpn::ExprElem final_type =, rpn::evalExpr(ctx, rpn_expr));
+		UNPACK_RESULT(return, parseTypeFromExpr(ctx, final_type, expr_scope));
 	}
 
 	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, ParseTypeFromExpr_Result) {
@@ -1047,13 +1044,14 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				UNPACK_RESULT(parseTypeFromExpr(ctx, base, scope(key)), parsed);
-				class_info.base = parsed;
+				UNPACK_RESULT(class_info.base =, parseTypeFromExpr(ctx, base, scope(key)));
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: implements) {
-					UNPACK_RESULT(parseTypeFromExpr(ctx, interface, scope(key)), parsed);
+					UNPACK_RESULT(
+						tsh::TypeInfo parsed =, parseTypeFromExpr(ctx, interface, scope(key))
+					);
 					class_info.implements.push_back(parsed);
 				}
 			}
@@ -1095,7 +1093,7 @@ namespace compiler::helios {
 				visitor.rpn_of_sym_expr.has_value(),
 				"Something wrong has happened while parsing expr"
 			);
-			UNPACK_RESULT(visitor.rpn_of_sym_expr.value(), rpn_expr);
+			UNPACK_RESULT(rpn::RPNExpr rpn_expr =, visitor.rpn_of_sym_expr.value());
 			return code::Expr::fromRPN(ctx, { rpn_expr.elements, scope(key) });
 		}
 

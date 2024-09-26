@@ -101,13 +101,13 @@ namespace compiler::helios {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
 		static auto provide(Context& ctx, QKey element) -> PResult {
-			ScopeID parent = element.base_element->getParent().has_value()
-			                   ? ctx.query<QueryPrimaryCodeScopeFor>(
-								   { element.base_element->getParent().value() }
-							   )
-			                   : ctx.query<QueryRootScopeOf>(
-								   { frontend::extendQueryModuleIDOfPST(ctx, element.base_element) }
-							   );
+			ScopeID parent
+				= element.base_element->getParent().has_value()
+			        ? ctx.query<QueryPrimaryCodeScopeFor>({ element.base_element->getParent().value(
+					  ) })
+			        : ctx.query<QueryRootScopeOf>(
+						  { frontend::extendQueryModuleIDOfPST(ctx, element.base_element) }
+					  );
 
 
 			// simple parent sanity check:
@@ -266,7 +266,8 @@ namespace compiler::helios {
 				if (isWildcard(sym)) {
 					if (key.with_wildcards) {
 						UNPACK_RESULT(
-							ctx.query<QueryLookupInSymbol>({ sym, key.name, true }), wild_result
+							auto& wild_result =,
+							ctx.query<QueryLookupInSymbol>({ sym, key.name, true })
 						);
 						if (!wild_result.isEmpty())
 							result.children.push_back(wild_result.toNode(sym));
@@ -288,17 +289,17 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, QueryLookup_Result) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			UNPACK_RESULT(ctx.query<QueryLookupInScope>(key), result);
+			UNPACK_RESULT(LookupResult result =, ctx.query<QueryLookupInScope>(key));
 
 			if (key.scope.ref->parent.has_value()) {
 				auto parent = key.scope.ref->parent.value();
 
 				// Reverse insertion order allow for linear result concatenation instead of
 				// quadratic
-				UNPACK_RESULT_CUSTOM(
+				UNPACK_RESULT(
+					LookupResult parent_result =,
 					ctx.query<QueryLookupInScopeAndParents>({ parent, key.name, key.with_wildcards }
-				    ),
-					auto parent_result
+				    )
 				);
 
 				parent_result.insert(result);

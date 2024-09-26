@@ -83,7 +83,7 @@ namespace compiler::helios {
 	};
 
 	using QueryLookup_Result
-		= errors::HResult<LookupResult, errors::AmbiguityError, errors::SymbolNotFoundError>;
+		= errors::HResult<LookupResult, errors::Ambiguity, errors::SymbolNotFound>;
 	/**
 	 * @brief Performs lookup of single name inside given scope.
 	 */

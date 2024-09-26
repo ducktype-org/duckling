@@ -299,7 +299,7 @@ private:
 			RIFT_PANIC("Should throw.");
 		} catch (QueryConstValueOf_Result::error_type& err) {
 			variant_match(err) {
-				variant_case(errors::ExpressionParsingError, parsing_err) {}
+				variant_case(errors::InvalidExpr, parsing_err) {}
 
 				variant_default RIFT_PANIC("Caught invalid error in tests");
 			}
@@ -310,7 +310,7 @@ private:
 			RIFT_PANIC("Should throw.");
 		} catch (QueryConstValueOf_Result::error_type& err) {
 			variant_match(err) {
-				variant_case(errors::SymbolNotFoundError, symbol_error) {
+				variant_case(errors::SymbolNotFound, symbol_error) {
 					// Since this branch was chosen, everything worked well.
 				}
 				variant_default RIFT_PANIC("Caught invalid error in tests");
@@ -322,7 +322,7 @@ private:
 			RIFT_PANIC("Should throw.");
 		} catch (QueryConstValueOf_Result::error_type& err) {
 			variant_match(err) {
-				variant_case(errors::AmbiguityError, symbol_error) {
+				variant_case(errors::Ambiguity, symbol_error) {
 					// Since this branch was chosen, everything worked well.
 				}
 				variant_default RIFT_PANIC("Caught invalid error in tests");

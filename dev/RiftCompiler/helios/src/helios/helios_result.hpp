@@ -1,10 +1,9 @@
 #pragma once
 
-#include "base/exceptions.hpp"
+#include <base/exceptions.hpp>
 #include <base/define_helper.hpp>
 #include <variant>
 #include <base/optional.hpp>
-#include <iostream>
 
 namespace compiler::helios::errors {
 	// Thanks for showing how to unpack and concat variants:
@@ -252,10 +251,11 @@ namespace compiler::helios::errors {
 // returns an error as well, otherwise stores an unpacked value
 // inside a new variable named `name`.
 // For interested: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2561r1.html#ref-P2561R0
-#define UNPACK_RESULT(new_value, name)      UNPACK_RESULT_CUSTOM(new_value, auto&& name)
-#define UNPACK_RESULT_COPY(new_value, name) UNPACK_RESULT_CUSTOM(new_value, auto name)
-
-#define UNPACK_RESULT_CUSTOM(new_value, name)                                                     \
+// **ATTENTION** This macro is not a single instruction, so it means if you have an if-statement
+// before it, you need to put the call inside curly braces. It will not compile otherwise.
+#define UNPACK_RESULT(var, new_value)                                                             \
 	auto&& RES_VAR_NAME = new_value;                                                              \
 	if (!RES_VAR_NAME.has_value()) return compiler::helios::errors::HError(RES_VAR_NAME.error()); \
-	name = RES_VAR_NAME.value()
+	var RES_VAR_NAME.value()
+
+#define UNPACK_RESULT2(value) (!value.has_value() ? return value.error() : value.value())

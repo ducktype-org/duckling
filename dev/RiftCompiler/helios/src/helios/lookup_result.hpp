@@ -58,8 +58,7 @@ namespace compiler::helios {
 		 * @return A SymbolList representing a path to the symbol.
 		 */
 		[[nodiscard]]
-		errors::HResult<SymbolList, errors::AmbiguityError, errors::SymbolNotFoundError>
-			 getAsSingle() const;
+		errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> getAsSingle() const;
 		void insert(LookupResult other);
 
 		/**
