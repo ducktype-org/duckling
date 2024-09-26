@@ -50,14 +50,14 @@ jobs:
 
       # Prepare ssh key for secure connection to server.
       # Save the key to a file, set permissions.
-      # ssh-keyscan adds the server's key to the list of known hosts,
-      # so that it is not asked for confirmation during the first connection.
+      # Adding the server's host key to the known_hosts file
+      # to avoid the prompt for confirmation and check the server's identity.
       - name: Prepare ssh key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.WWW_SERVER_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -p 222 ${{ env.WWW_HOST }} >> ~/.ssh/known_hosts
+          echo "${{ secrets: WWW_SERVER_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
       
       # Move "sphinx" and "doxygen" to specified directory on server.
       # The destination directory is ignored by the server and preconfigured one is used.
