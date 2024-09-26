@@ -309,8 +309,6 @@ namespace compiler::mir {
 
 			// The "then" branch requires a new block,
 			// because otherwise the "else" branch would jump to it.
-			// @future: the current solution may be sub-optimal
-			// we will have to look into it.
 			auto then_block = function.newBlock();
 			then_block->setTerminator(
 				{ Operation::Jump, {}, { continuation->getID() }, {}, stmt.lifetime_scope }
