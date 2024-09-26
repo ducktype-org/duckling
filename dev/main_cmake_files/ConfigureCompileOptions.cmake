@@ -16,7 +16,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
 	# Debug version uses O0.
 	# For some reason -Og does not work in clang
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()

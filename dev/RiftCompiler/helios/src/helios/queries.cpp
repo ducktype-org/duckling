@@ -148,8 +148,7 @@ namespace compiler::helios {
 				auto symbol
 					= ctx.query<QuerySymbolOfSTMT>({ scope_of_symbol, PstRef<pst::Stmt>(&stmt) });
 
-				auto symbol_type = UNPACK_OR_PANIC(
-					ctx.query<QueryTypeOfSymbol>(symbol),
+				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol).expect(
 					"Handling errors is not supported in HOUT yet"
 				);
 

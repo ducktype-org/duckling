@@ -74,8 +74,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
-				  UNPACK_OR_PANIC(
-					  ctx.query<QueryTypeOfSymbol>(symbol),
+				  ctx.query<QueryTypeOfSymbol>(symbol).expect(
 					  "Handling errors in HOUT is not supported yet"
 				  ),
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))

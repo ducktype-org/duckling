@@ -19,8 +19,8 @@ namespace compiler::helios {
 
 	errors::HResult<SymbolList, errors::AmbiguityError, errors::SymbolNotFoundError>
 		LookupResult::getAsSingle() const {
-		if (isEmpty()) return errors::HUnexpected(errors::SymbolNotFoundError());
-		if (!isSingle()) return errors::HUnexpected(errors::AmbiguityError());
+		if (isEmpty()) return errors::HError(errors::SymbolNotFoundError());
+		if (!isSingle()) return errors::HError(errors::AmbiguityError());
 
 		if (!leaves.empty()) return SymbolList{ leaves[0] };
 

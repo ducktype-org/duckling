@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/exceptions.hpp"
 #include <base/define_helper.hpp>
 #include <variant>
 #include <base/optional.hpp>
@@ -125,8 +126,8 @@ namespace compiler::helios::errors {
 	using unique_types_variant_t = impl::unique_types_variant_t<Types...>;
 
 	template<class T>
-	struct HUnexpected {
-		explicit constexpr HUnexpected(const T& t): value(t) {}
+	struct HError {
+		explicit constexpr HError(const T& t): value(t) {}
 
 		T value;
 	};
@@ -137,14 +138,14 @@ namespace compiler::helios::errors {
 	public:
 		using error_type = unique_types_variant_t<ErrTp1, ErrTps...>;
 
-		// Constructor from Unexpected<T>, where T is not a variant
+		// Constructor from HError<T>, where T is not a variant
 		template<class T>
 		requires impl::is_in_variant<T, error_type>::value
-		constexpr HResult(const HUnexpected<T>& err): error_storage(err.value) {}
+		constexpr HResult(const HError<T>& err): error_storage(err.value) {}
 
-		// Constructor from Unexpected<T>, where T is a variant
+		// Constructor from HError<T>, where T is a variant
 		template<class T>
-		constexpr HResult(const HUnexpected<T>& err) {
+		constexpr HResult(const HError<T>& err) {
 			std::visit([&](auto&& err_value) { error_storage = err_value; }, err.value);
 		}
 
@@ -157,7 +158,7 @@ namespace compiler::helios::errors {
 		// Copy = operator
 		constexpr HResult& operator=(const HResult&) = default;
 
-		// Copy constructor from HResult, where Ts... are a subset of this HResult types
+		// Copy constructor from HResult, where Ts... are a subset of this HResult error types
 		template<class... Ts>
 		constexpr HResult(const HResult<ResTp, Ts...>& oth) {
 			// Cannot use the initializer list, because oth.value_storage is private (different
@@ -182,52 +183,52 @@ namespace compiler::helios::errors {
 			return !has_error();
 		}
 
-		constexpr const ResTp& value() const& {
+		constexpr const ResTp& value() const& { return expect("Result it empty!"); }
+
+		constexpr const ResTp&& value() const&& { return std::move(expect("Result it empty!")); }
+
+		constexpr ResTp& value() & { return expect("Result it empty!"); }
+
+		constexpr ResTp&& value() && { return std::move(expect("Result it empty!")); }
+
+		constexpr const ResTp& expect(std::string_view message) const& {
 			_throwOnInvalidStateAccess();
-			RIFT_ASSERT(has_value(), "Result is empty!");
-			return value_storage.value();
+			return value_storage.expect(message);
 		}
 
-		constexpr const ResTp&& value() const&& {
+		constexpr const ResTp&& expect(std::string_view message) const&& {
 			_throwOnInvalidStateAccess();
-			RIFT_ASSERT(has_value(), "Result is empty!");
-			return std::move(value_storage.value());
+			return std::move(value_storage.expect(message));
 		}
 
-		constexpr ResTp& value() & {
+		constexpr ResTp& expect(std::string_view message) & {
 			_throwOnInvalidStateAccess();
-			RIFT_ASSERT(has_value(), "Result is empty!");
-			return value_storage.value();
+			return value_storage.expect(message);
 		}
 
-		constexpr ResTp&& value() && {
+		constexpr ResTp&& expect(std::string_view message) && {
 			_throwOnInvalidStateAccess();
-			RIFT_ASSERT(has_value(), "Result is empty!");
-			return std::move(value_storage.value());
+			return std::move(value_storage.value(message));
 		}
 
 		constexpr const error_type& error() const& {
 			_throwOnInvalidStateAccess();
-			RIFT_ASSERT(has_error(), "Error is empty!");
-			return error_storage.value();
+			return error_storage.expect("Result's error is empty!");
 		}
 
 		constexpr const error_type&& error() const&& {
 			_throwOnInvalidStateAccess();
-			RIFT_ASSERT(has_error(), "Error is empty!");
-			return std::move(error_storage.value());
+			return std::move(error_storage.expect("Result's error is empty!"));
 		}
 
 		constexpr error_type& error() & {
 			_throwOnInvalidStateAccess();
-			RIFT_ASSERT(has_error(), "Error is empty!");
-			return error_storage.value();
+			return error_storage.expect("Result's error is empty!");
 		}
 
 		constexpr error_type&& error() && {
 			_throwOnInvalidStateAccess();
-			RIFT_ASSERT(has_error(), "Error is empty!");
-			return std::move(error_storage.value());
+			return std::move(error_storage.expect("Result's error is empty!"));
 		}
 
 	private:
@@ -254,14 +255,7 @@ namespace compiler::helios::errors {
 #define UNPACK_RESULT(new_value, name)      UNPACK_RESULT_CUSTOM(new_value, auto&& name)
 #define UNPACK_RESULT_COPY(new_value, name) UNPACK_RESULT_CUSTOM(new_value, auto name)
 
-#define UNPACK_RESULT_CUSTOM(new_value, name)                               \
-	auto&& RES_VAR_NAME = new_value;                                        \
-	if (!RES_VAR_NAME.has_value())                                          \
-		return compiler::helios::errors::HUnexpected(RES_VAR_NAME.error()); \
+#define UNPACK_RESULT_CUSTOM(new_value, name)                                                     \
+	auto&& RES_VAR_NAME = new_value;                                                              \
+	if (!RES_VAR_NAME.has_value()) return compiler::helios::errors::HError(RES_VAR_NAME.error()); \
 	name = RES_VAR_NAME.value()
-
-#define UNPACK_OR_PANIC(result, message)       \
-	[](auto&& res) {                           \
-		RIFT_ASSERT(res.has_value(), message); \
-		return res.value();                    \
-	}(result)

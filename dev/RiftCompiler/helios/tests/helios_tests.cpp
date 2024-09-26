@@ -290,11 +290,13 @@ private:
 
 	void errorTests() {
 		using namespace compiler::helios;
+
 		auto [_, root_scope]
 			= getModule(fs::FilePath(path("test_modules/error_generating/bad_expr")));
 
 		try {
 			getValue("InvalidExpr", root_scope);
+			RIFT_PANIC("Should throw.");
 		} catch (QueryConstValueOf_Result::error_type& err) {
 			variant_match(err) {
 				variant_case(errors::ExpressionParsingError, parsing_err) {}
@@ -305,9 +307,8 @@ private:
 
 		try {
 			getValue("InvalidSym", root_scope);
+			RIFT_PANIC("Should throw.");
 		} catch (QueryConstValueOf_Result::error_type& err) {
-			// We might need something like:
-			// https://stackoverflow.com/questions/39272268/creating-a-new-boost-variant-type-from-given-nested-boost-variant-type
 			variant_match(err) {
 				variant_case(errors::SymbolNotFoundError, symbol_error) {
 					// Since this branch was chosen, everything worked well.
@@ -318,6 +319,7 @@ private:
 
 		try {
 			getValue("C", root_scope);
+			RIFT_PANIC("Should throw.");
 		} catch (QueryConstValueOf_Result::error_type& err) {
 			variant_match(err) {
 				variant_case(errors::AmbiguityError, symbol_error) {
@@ -396,7 +398,7 @@ private:
 		ASSERT_EQUAL(1, whoa.value());
 
 		std::string                    info  = "Hello";
-		HResult<int, std::string_view> whoa2 = HUnexpected(std::string_view(info));
+		HResult<int, std::string_view> whoa2 = HError(std::string_view(info));
 		ASSERT_TRUE(!whoa2.has_value());
 		ASSERT_TRUE(whoa2.has_error());
 		bool entered = false;
@@ -417,7 +419,7 @@ private:
 
 		struct Err4 {};
 
-		HResult<int, Err2, Err4> sub_result = HUnexpected(Err2());
+		HResult<int, Err2, Err4> sub_result = HError(Err2());
 		static_assert(std::is_same_v<decltype(sub_result)::error_type, std::variant<Err2, Err4>>);
 		HResult<int, Err1, Err2, Err3, decltype(sub_result)::error_type> result(sub_result);
 		static_assert(std::is_same_v<

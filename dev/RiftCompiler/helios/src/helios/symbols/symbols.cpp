@@ -302,7 +302,7 @@ namespace compiler::helios {
 
 		if (not first.isSingle()) {
 			// @TODO: error in state
-			return errors::HUnexpected(errors::AmbiguityError());
+			return errors::HError(errors::AmbiguityError());
 		}
 
 		UNPACK_RESULT_COPY(first.getAsSingle(), result);
@@ -318,7 +318,7 @@ namespace compiler::helios {
 
 			if (!append_res_value.isSingle()) {
 				// @TODO: error in state
-				return errors::HUnexpected(errors::AmbiguityError());
+				return errors::HError(errors::AmbiguityError());
 			}
 
 			UNPACK_RESULT(append_res_value.getAsSingle(), single_append_res);
@@ -440,7 +440,7 @@ namespace compiler::helios {
 		case '.':
 			return 5;
 		default:
-			return errors::HUnexpected(errors::ExpressionParsingError());
+			return errors::HError(errors::ExpressionParsingError());
 		}
 	}
 
@@ -485,7 +485,7 @@ namespace compiler::helios {
 					}
 					rpn.emplace_back(TupleConstructor{ tuple.expr.size() });
 				}
-				variant_default { return errors::HUnexpected(errors::ExpressionParsingError()); }
+				variant_default { return errors::HError(errors::ExpressionParsingError()); }
 			}
 		}
 		while (!st.empty()) {
@@ -525,15 +525,15 @@ namespace compiler::helios {
 				return result;
 			}
 			variant_case(rpn::Operator, op) {
-				return errors::HUnexpected(errors::ExpressionParsingError());
+				return errors::HError(errors::ExpressionParsingError());
 			}
 			variant_case(rpn::KeywordValue, keyword_value) {
 				throw base::NotYetImplemented("Value of KeywordValue is not yet implemented");
 			}
 			variant_case(rpn::NumValue, literal) { return std::stoi(literal.num_id.str()); }
-			variant_default { return errors::HUnexpected(errors::ExpressionParsingError()); }
+			variant_default { return errors::HError(errors::ExpressionParsingError()); }
 		}
-		return errors::HUnexpected(errors::ExpressionParsingError());
+		return errors::HError(errors::ExpressionParsingError());
 	}
 
 	namespace {
@@ -581,7 +581,7 @@ namespace compiler::helios {
 				}
 				variant_case(rpn::KeywordValue, keyword) { st.emplace(keyword); }
 				variant_case(rpn::Operator, oper) {
-					if (st.size() < 2) return errors::HUnexpected(errors::ExpressionParsingError());
+					if (st.size() < 2) return errors::HError(errors::ExpressionParsingError());
 
 					const auto first = st.top();
 					st.pop();
@@ -615,7 +615,7 @@ namespace compiler::helios {
 					}
 					st.emplace(tuple_type);
 				}
-				variant_default { return errors::HUnexpected(errors::ExpressionParsingError()); }
+				variant_default { return errors::HError(errors::ExpressionParsingError()); }
 			}
 		}
 		RIFT_ASSERT(st.size() == 1, "Expression stack should have 1 element");
@@ -665,7 +665,7 @@ namespace compiler::helios {
 					);
 				}
 			}
-			return errors::HUnexpected(errors::ExpressionParsingError());
+			return errors::HError(errors::ExpressionParsingError());
 		}
 		if (op.oper_id == "|") {
 			// @TODO: Check if A and B are types.
@@ -699,7 +699,7 @@ namespace compiler::helios {
 						variant_default { a_variant.elements.push_back(b); }
 					}
 				}
-				variant_default { return errors::HUnexpected(errors::ExpressionParsingError()); }
+				variant_default { return errors::HError(errors::ExpressionParsingError()); }
 			}
 			return a;
 		}
@@ -804,7 +804,7 @@ namespace compiler::helios {
 				return ctx.query<QueryTypeOfSymbol>(idt.symbol_list.back());
 			}
 			variant_case(rpn::Operator, oper) {
-				return errors::HUnexpected(errors::ExpressionParsingError());
+				return errors::HError(errors::ExpressionParsingError());
 			}
 			variant_case(rpn::NamedIdentifier, named_identifier) {
 				const auto it = BUILTINS.find(named_identifier.symbol_name);
@@ -867,7 +867,7 @@ namespace compiler::helios {
 			}
 			variant_default { RIFT_PANIC("Unhandleble type during parsing type from expr..."); }
 		}
-		return errors::HUnexpected(errors::ExpressionParsingError());
+		return errors::HError(errors::ExpressionParsingError());
 		RIFT_PANIC("Couldn't parse the type.");
 	}
 
@@ -1108,7 +1108,7 @@ namespace compiler::helios {
 				if (copy->data.has_value())
 					return QResWithACD{ copy->data.value().borrow(), copy->acd };
 				else
-					return QResWithACD{ errors::HUnexpected(copy->data.error()), copy->acd };
+					return QResWithACD{ errors::HError(copy->data.error()), copy->acd };
 			}
 			return {};
 		}
@@ -1119,7 +1119,7 @@ namespace compiler::helios {
 			if (auto&& c = cache.at(key).data; c.has_value())
 				return c.value().borrow();
 			else
-				return errors::HUnexpected(c.error());
+				return errors::HError(c.error());
 		}
 	};
 
