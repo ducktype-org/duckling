@@ -57,7 +57,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.WWW_SERVER_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          echo "${{ secrets: WWW_SERVER_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.WWW_SERVER_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
       
       # Move "sphinx" and "doxygen" to specified directory on server.
       # The destination directory is ignored by the server and preconfigured one is used.

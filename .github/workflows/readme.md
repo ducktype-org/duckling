@@ -94,7 +94,7 @@ Outside actions we use:
 
 * `actions/checkout@v4` - puts a repository into the runner.
   If you want to do a checkout from a different repository in our organization (like submodule), 
-  you have to pass aditional options and use a personal access token (PAT).  
+  you have to pass aditional options and use a personal access token.  
 * `actions/cache@v4` - an action responsible for storing files between workflow runs.
   We use it to store ccache cached build data, to speed up build times.
   Cache restoration can hit (by finding a matching cache), or miss.
