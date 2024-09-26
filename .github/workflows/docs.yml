@@ -2,11 +2,15 @@ name: docs
 
 on:
   push:
+    branches:
+      - main
     paths:
       - '**.cpp'
       - '**.hpp'
       - '**.md'
       - 'dev/docs/**'
+  
+  workflow_dispatch:
 
 env:
   DEV_DIR: ${{ github.workspace }}/dev
