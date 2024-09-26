@@ -163,42 +163,44 @@ namespace compiler::helios {
 			Context&                           ctx;
 			const QKey&                        key;
 
+			template<class... Args>
+			void output(Args&&... args) {
+				RIFT_ASSERT(this->out.empty(), "Output already set");
+				this->out.emplace(std::forward<Args>(args)...);
+			}
+
 			void visitFun(const pst::Fun&) override {
 				// Scope of "fun →()← {}"
 				// @TODO: iterate function parameters and create symbols out of them
 				// The problem is that currently function parameters are Expr in Pst -- this has to
 				// change Variable declaration or custom element is probably a better choice
-				this->out.emplace(std::vector<SymID>{});
+				output(std::vector<SymID>{});
 			}
 
 			void visitIf(const pst::If&) override {
 				// Scope of "if →(...)← {}"
 				// @TODO: check if "If" defines any variables in its condition
 				// and add them here.
-				this->out.emplace(std::vector<SymID>{});
+				output(std::vector<SymID>{});
 			}
 
 			void visitClass(const pst::Class& class_) override {
-				this->out.emplace(
-					filterSymbolsFromStmtList(ctx, key, getChildStmtsOfClass(class_.getBody()))
+				output(
+					filterSymbolsFromStmtList(ctx, key, getChildStmtsOfClassBlock(class_.getBody()))
 				);
 			}
 
 			void visitNamespace(const pst::Namespace&) override {
-				this->out.emplace(std::vector<SymID>());
+				// This seems strange, but namespace scope is indeed empty.
+				// The scope that is full is the codeblock within the namespace.
+				output(std::vector<SymID>());
 			}
 
-			void visitExprStmt(const pst::ExprStmt&) override {
-				this->out.emplace(std::vector<SymID>());
-			}
+			void visitExprStmt(const pst::ExprStmt&) override { output(std::vector<SymID>()); }
 
-			void visitReturn(const pst::Return&) override {
-				this->out.emplace(std::vector<SymID>());
-			}
+			void visitReturn(const pst::Return&) override { output(std::vector<SymID>()); }
 
-			void visitVariable(const pst::Variable&) override {
-				this->out.emplace(std::vector<SymID>());
-			}
+			void visitVariable(const pst::Variable&) override { output(std::vector<SymID>()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -225,7 +227,7 @@ namespace compiler::helios {
 						return {};
 					}
 
-				return filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(base_element));
+				return filterSymbolsFromStmtList(ctx, key, getStmtsFromStmtAggregate(base_element));
 			} else if (base_element->isStatement()) {
 				SymbolGrabVisitor symbol_grab(ctx, key);
 				auto              as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());
