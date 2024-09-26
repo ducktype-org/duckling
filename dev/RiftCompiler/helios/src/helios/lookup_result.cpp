@@ -34,8 +34,8 @@ namespace compiler::helios {
 			}
 		}
 
-		// (Thic cannot happen, but for sanity.)
-		RIFT_PANIC("isSingle, but haven\'t found any symbols");
+		// (Thic cannot logically happen, but for sanity.)
+		RIFT_PANIC("isSingle() == true, but haven\'t found any symbols");
 	}
 
 	u64 LookupResult::symbolCount() const {

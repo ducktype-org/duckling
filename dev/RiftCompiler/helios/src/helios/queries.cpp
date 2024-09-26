@@ -70,7 +70,7 @@ namespace compiler::helios {
 		}
 
 		struct HoutStmtMaker final: public pst::PstStmtVisitorPanicky {
-			query::Context& ctx;
+			query::Context&                              ctx;
 			bool                                         empty = false;
 			base::Optional<code::ElementRef<code::Stmt>> out;
 

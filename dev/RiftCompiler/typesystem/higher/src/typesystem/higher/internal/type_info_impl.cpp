@@ -115,7 +115,9 @@ namespace tsh::internal {
 
 	ClassInfo::QueryClass_Result<base::Optional<ClassInfo>>
 		ClassInfoImpl::getBaseClassType(query::Context& ctx) const {
-		UNPACK_RESULT(auto&& class_data =, ctx.query<compiler::helios::QueryClassSymbolData>(symbol));
+		UNPACK_RESULT(
+			auto&& class_data =, ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
+		);
 		auto& base = class_data.base;
 		if (base.has_value()) return { ClassInfo(base.value()) };
 		return {};
@@ -129,14 +131,18 @@ namespace tsh::internal {
 
 	ClassInfo::QueryClass_Result<std::vector<ClassInfo>>
 		ClassInfoImpl::getImplementedInterfaceTypes(query::Context& ctx) const {
-		UNPACK_RESULT(auto&& class_data =, ctx.query<compiler::helios::QueryClassSymbolData>(symbol));
+		UNPACK_RESULT(
+			auto&& class_data =, ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
+		);
 		auto& implements = class_data.implements;
 		return std::vector<ClassInfo>{ implements.begin(), implements.end() };
 	}
 
 	ClassInfo::QueryClass_Result<std::vector<compiler::helios::SymID>>
 		ClassInfoImpl::getImplementedInterfaceSymbols(query::Context& ctx) const {
-		UNPACK_RESULT(auto&& class_data =, ctx.query<compiler::helios::QueryClassSymbolData>(symbol));
+		UNPACK_RESULT(
+			auto&& class_data =, ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
+		);
 		auto& implements = class_data.implements;
 		// @TODO: change cast type to InterfaceInfo when interface type is created.
 		constexpr auto transformer
