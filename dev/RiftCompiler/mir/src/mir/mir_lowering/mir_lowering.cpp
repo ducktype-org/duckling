@@ -307,8 +307,8 @@ namespace compiler::mir {
 				{ Operation::Jump, {}, { continuation->getID() }, {}, stmt.lifetime_scope }
 			);
 
-			// @note: here then block created a new block
-			// so "else" will not jump into it.
+			// The "then" branch requires a new block,
+			// because otherwise the "else" branch would jump to it.
 			// @future: the current solution may be sub-optimal
 			// we will have to look into it.
 			auto then_block = function.newBlock();
@@ -317,7 +317,7 @@ namespace compiler::mir {
 			);
 			auto then_body = lowerCodeBlock(stmt.body, then_block, function);
 
-			// @future: in the future we wan't jumpy code here
+			// @TODO: Implement jumpy code here.
 			auto condition_block = function.newBlock();
 			auto expr_result     = lowerExpr(*stmt.condition, condition_block, function);
 
