@@ -113,6 +113,12 @@ private:
 			ASSERT_EQUAL(foo_mir.blocks.at(3).instructions.size(), 1);
 			ASSERT_EQUAL(foo_mir.blocks.at(3).instructions.at(0).operation, Assign);
 			ASSERT_EQUAL(foo_mir.blocks.at(3).terminator.operation, Jump);
+
+
+			// Test debug print:
+			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
+			std::stringstream foo_str;
+			foo_mir.debugPrint(foo_str);			
 		});
 	}
 };
