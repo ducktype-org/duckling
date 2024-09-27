@@ -40,12 +40,13 @@ namespace compiler::mir {
 		// save flags to restore
 		auto output_flags = output.flags();
 
+		output << std::left << std::setw(12);
+		std::stringstream output_value;
 		if (this->output.has_value()) {
-			this->output.value()->debugPrint(output);
-			output << " := ";
-		} else {
-			output << "    ";
+			this->output.value()->debugPrint(output_value);
+			output_value << " :=";
 		}
+		output << output_value.str() << " ";
 
 		output << std::left << std::setw(15);
 		output << base::enumToStr(operation).strView() << "  ";
@@ -62,10 +63,12 @@ namespace compiler::mir {
 		output << std::left << std::setw(15);
 		output << args.str() << "  ";
 
+		separator = "";
 		output << "Flags[";
 		for ([[maybe_unused]] const auto& flag: flags) {
-			output << "Flag todo"
-				   << ", ";
+			output << separator;
+			flag.debugPrint(output);
+			separator = ", ";
 		}
 		output << "], scope:" << scope.customPerfectHash();
 
@@ -82,5 +85,21 @@ namespace compiler::mir {
 			variant_case(BlockID, block) { output << "Block(" << u64(block) << ")"; }
 			variant_default { RIFT_PANIC("Unexpected MirLocal alternative in mir debugPrint"); }
 		}
+	}
+
+	void OperationFlag::debugPrint(std::ostream& output) const {
+		switch (flag) {
+		case Flag::Construct:
+			output << "Construct";
+			break;
+		case Flag::Destruct:
+			output << "Destruct";
+			break;
+		case Flag::Move:
+			output << "Move";
+			break;
+		}
+		output << " ";
+		local->debugPrint(output);
 	}
 }
