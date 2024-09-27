@@ -118,7 +118,7 @@ private:
 			// Test debug print:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
 			std::stringstream foo_str;
-			foo_mir.debugPrint(foo_str);			
+			foo_mir.debugPrint(foo_str);
 		});
 	}
 };
