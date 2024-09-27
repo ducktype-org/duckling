@@ -81,6 +81,36 @@ namespace compiler::mir {
 	);
 
 	/**
+	 * @brief Creates construct flag for given local.
+	 * @note: It is a function, not a constructor to avoid .hpp bloat.
+	 * @param local
+	 * @return constexpr OperationFlag
+	 */
+	constexpr OperationFlag flagConstruct(LocalRef local) {
+		return { OperationFlag::Flag::Construct, local };
+	}
+
+	/**
+	 * @brief Creates destruct flag for given local.
+	 * @note: It is a function, not a constructor to avoid .hpp bloat.
+	 * @param local
+	 * @return constexpr OperationFlag
+	 */
+	constexpr OperationFlag flagDestruct(LocalRef local) {
+		return { OperationFlag::Flag::Destruct, local };
+	}
+
+	/**
+	 * @brief Creates move flag for given local.
+	 * @note: It is a function, not a constructor to avoid .hpp bloat.
+	 * @param local
+	 * @return constexpr OperationFlag
+	 */
+	constexpr OperationFlag flagMove(LocalRef local) {
+		return { OperationFlag::Flag::Move, local };
+	}
+
+	/**
 	 * @brief Structure representing block in build process.
 	 * @note It is a builder in the sense of design pattern.
 	 */
@@ -206,8 +236,8 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]]
-		LocalRef addLocal() {
-			auto key = local_list.emplaceBack(MirLocal{});
+		LocalRef addLocal(helios::SymID helios_id) {
+			auto key = local_list.emplaceBack(MirLocal{ helios_id });
 			return local_list.getRef(key).value();
 		}
 
@@ -277,16 +307,22 @@ namespace compiler::mir {
 				{ Operation::Jump, {}, { continuation->getID() }, {}, stmt.lifetime_scope }
 			);
 
-			auto then_block = lowerCodeBlock(stmt.body, continuation, function);
+			// The "then" branch requires a new block,
+			// because otherwise the "else" branch would jump to it.
+			auto then_block = function.newBlock();
+			then_block->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, stmt.lifetime_scope }
+			);
+			auto then_body = lowerCodeBlock(stmt.body, then_block, function);
 
+			// @TODO: Implement jumpy code here.
 			auto condition_block = function.newBlock();
-
-			auto expr_result = lowerExpr(*stmt.condition, condition_block, function);
+			auto expr_result     = lowerExpr(*stmt.condition, condition_block, function);
 
 			condition_block->setTerminator(
 				{ Operation::Branch,
 			      {},
-			      { expr_result.value, then_block.begin->getID(), else_block->getID() },
+			      { expr_result.value, then_body.begin->getID(), else_block->getID() },
 			      {},
 			      stmt.lifetime_scope }
 			);
@@ -294,8 +330,27 @@ namespace compiler::mir {
 			output({ expr_result.begin });
 		}
 
-		void visitVariableStmt(const hc::VariableStmt&) override {
-			throw base::NotYetImplemented("variable");
+		void visitVariableStmt(const hc::VariableStmt& stmt) override {
+			auto local                   = function.addLocal(stmt.helios_symbol);
+			auto local_construction_hole = continuation->addHole();
+
+			match_optional(stmt.initial_value) {
+				opt_some(value) {
+					auto expr_result = lowerExpr(*value, continuation, function);
+
+					local_construction_hole.fill(Instruction{ Operation::Assign,
+					                                          { local },
+					                                          { expr_result.value },
+					                                          { flagConstruct(local) },
+					                                          stmt.lifetime_scope });
+
+					output({ expr_result.begin });
+					return;
+				}
+				opt_none { throw base::NotYetImplemented("variable without initial value in MIR"); }
+			}
+
+			RIFT_PANIC("match_optional failed in visitVariableStmt.");
 		}
 	};
 
