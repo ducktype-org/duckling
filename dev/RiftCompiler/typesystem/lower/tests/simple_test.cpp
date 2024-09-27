@@ -53,7 +53,7 @@ private:
 			}
 
 			usize int_sizes[] = { 8, 16, 32, 64, 128 };
-			for (int size: int_sizes) {
+			for (usize size: int_sizes) {
 				TypeLayout int_layout
 					= ctx.query<QueryTypeLayout>(ctx.query<tsh::QueryIntegralType>(size));
 				variant_match(int_layout()) {
@@ -68,7 +68,7 @@ private:
 			}
 
 			usize float_sizes[] = { 16, 32, 64, 80, 128 };
-			for (int size: float_sizes) {
+			for (usize size: float_sizes) {
 				TypeLayout float_layout
 					= ctx.query<QueryTypeLayout>(ctx.query<tsh::QueryFloatType>(size));
 				variant_match(float_layout()) {

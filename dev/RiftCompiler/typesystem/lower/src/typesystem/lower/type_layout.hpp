@@ -33,7 +33,6 @@ namespace tsl {
 		tsh::TypeInfo source_type;
 
 	public:
-
 		// This definition is necessary for default definitions in deriving classes.
 		bool operator==(const TypeLayoutABC& other) const = default;
 
