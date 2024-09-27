@@ -221,7 +221,7 @@ namespace compiler::mir {
 
 	public:
 		FunctionBuilder(query::Context& ctx): ctx(ctx) {}
-	
+
 		[[nodiscard]]
 		Function build() {
 			RIFT_ASSERT(entry_block.has_value(), "Entry block not set");
@@ -243,10 +243,7 @@ namespace compiler::mir {
 		[[nodiscard]]
 		LocalRef addLocal(helios::SymID helios_id) {
 			auto key = local_list.emplaceBack(MirLocal{
-				helios_id,
-				ctx.query<helios::QueryTypeOfSymbol>(helios_id),
-				scope(helios_id)
-			});
+				helios_id, ctx.query<helios::QueryTypeOfSymbol>(helios_id), scope(helios_id) });
 			return local_list.getRef(key).value();
 		}
 
@@ -429,7 +426,7 @@ namespace compiler::mir {
 			// * build cfg+quad step by step
 
 
-			FunctionBuilder function_builder{ctx};
+			FunctionBuilder function_builder{ ctx };
 
 			function_builder.setName(key.function.original_name);
 

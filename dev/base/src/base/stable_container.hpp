@@ -91,6 +91,7 @@ namespace base {
 		}
 
 		auto begin() const { return data.begin(); }
+
 		auto end() const { return data.end(); }
 	};
 

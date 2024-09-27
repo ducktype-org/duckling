@@ -20,7 +20,7 @@ namespace compiler::mir {
 
 	void Function::debugPrint(std::ostream& output) const {
 		output << "Function " << name.strView() << ": TODO -> TODO\n";
-		
+
 		for (auto& local: this->local_list) {
 			output << "    ";
 			local->debugPrint(output, true);
