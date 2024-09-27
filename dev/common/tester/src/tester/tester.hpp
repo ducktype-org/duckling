@@ -83,6 +83,7 @@ namespace tester {
 		void addTest(TestType test, std::string_view test_name);
 
 		void assertTrue(bool v, std::string_view err, bool critical = true);
+		void assertFalse(bool v, std::string_view err, bool critical = true);
 		void fail(std::string_view err);
 		void message(std::string_view mess);
 

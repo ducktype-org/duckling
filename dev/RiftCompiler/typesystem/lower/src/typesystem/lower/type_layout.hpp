@@ -33,6 +33,10 @@ namespace tsl {
 		tsh::TypeInfo source_type;
 
 	public:
+
+		// This definition is necessary for default definitions in deriving classes.
+		bool operator==(const TypeLayoutABC& other) const = default;
+
 		/**
 		 * @brief Get the total size of a layout, in bits.
 		 * @return The total size of a layout, in bits.
@@ -241,6 +245,10 @@ namespace tsl {
 			  pointee(other.pointee ? box<TypeLayout>(*other.pointee) : MBox<TypeLayout>{}) {}
 
 		Ref<TypeLayout> operator->() { return pointee.toOpt().value(); }
+
+		Ref<TypeLayout> getPointee() { return operator->(); }
+
+		bool hasPointee() { return pointee; }
 
 		/**
 		 * @brief Construct a PointerLayout for a RawPointer.
