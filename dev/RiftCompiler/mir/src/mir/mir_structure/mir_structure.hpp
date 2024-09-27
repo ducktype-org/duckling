@@ -91,6 +91,7 @@ namespace compiler::mir {
 		// for now we just keep HELIOS id:
 		helios::SymID helios_id;
 		tsh::TypeDesc<> type;
+		helios::ScopeID lifetime_scope;
 
 	private:
 		// @note: making MirLocal from helios_id
@@ -98,10 +99,11 @@ namespace compiler::mir {
 		// It will not work with temporary values for example.
 		// it might work poorly for template/generic instantiations.
 
-		MirLocal(helios::SymID helios_id, tsh::TypeDesc<> type):
+		MirLocal(helios::SymID helios_id, tsh::TypeDesc<> type, helios::ScopeID lifetime_scope):
 			id(LocalID::next()),
 			helios_id(helios_id),
-			type(type) {}
+			type(type),
+			lifetime_scope(lifetime_scope) {}
 
 		friend struct Function;
 		friend struct FunctionBuilder;

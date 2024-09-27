@@ -88,6 +88,8 @@ namespace compiler::mir {
 		output << "Local(" << u64(id) << ")";
 		if (detailed) {
 			output << ": Helios Name: " << name(this->helios_id).strView();
+			output << ", Type: ";
+			output << this->type.getType().toString();
 		}
 	}
 
