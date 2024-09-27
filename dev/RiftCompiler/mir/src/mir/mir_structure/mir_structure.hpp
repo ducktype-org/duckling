@@ -14,6 +14,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Call,
 	VCall,
 
+	Assign, //< simple byte by byte assignment
+
 	/**
 	 * @brief Placeholder. 
 	 * @todo  Some decisions here to be made about operations like that.
@@ -85,8 +87,16 @@ namespace compiler::mir {
 
 		// @TODO: type
 
+		// for now we just keep HELIOS id:
+		helios::SymID helios_id;
+
 	private:
-		MirLocal(): id(LocalID::next()) {}
+		// @note: making MirLocal from helios_id
+		// is a temporary solution.
+		// It will not work with temporary values for example.
+		// it might work poorly for template/generic instantiations.
+
+		MirLocal(helios::SymID helios_id): id(LocalID::next()), helios_id(helios_id) {}
 
 		friend struct Function;
 		friend struct FunctionBuilder;
@@ -123,7 +133,13 @@ namespace compiler::mir {
 	 * * does operation destruct some variable
 	 * * does operation move some variable
 	 */
-	struct OperationFlag final {};
+	struct OperationFlag final {
+		enum class Flag { Construct, Destruct, Move };
+		Flag     flag;
+		LocalRef local;
+
+		void debugPrint(std::ostream& output) const;
+	};
 
 	/**
 	 * @brief Single instruction of MIR code.
@@ -183,6 +199,10 @@ namespace compiler::mir {
 		 */
 		BlockID id;
 
+		/**
+		 * @brief List of instructions in the block.
+		 * @note It does not include terminator instruction.
+		 */
 		std::vector<Instruction> instructions;
 
 		/**
