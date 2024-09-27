@@ -393,6 +393,9 @@ namespace tsh {
 		[[nodiscard]]
 		const std::vector<ComponentType>& getComponents() const;
 
+		[[nodiscard]]
+		std::vector<TypeInfo> getComponentTypes() const;
+
 		CONSTRUCT_WITH_CHECKED_CAST(TupleInfo)
 
 	protected:

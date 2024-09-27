@@ -55,6 +55,8 @@ namespace tsh {
 		 */
 		TypeInfo source;
 
+		// @TODO: Add declaration order in source.
+
 		/**
 		 * @brief The input parameters of this element of the interface.
 		 * If the optional is empty, then the element is a field.

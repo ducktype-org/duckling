@@ -18,7 +18,7 @@ namespace tsh {
 	}
 
 	[[nodiscard]]
-	TypeInterface TypeInfo::getInterface(query::Context& ctx) const {
+	const TypeInterface& TypeInfo::getInterface(query::Context& ctx) const {
 		return pimpl->getInterface(ctx);
 	}
 

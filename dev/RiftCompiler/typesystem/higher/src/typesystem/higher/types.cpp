@@ -119,6 +119,14 @@ namespace tsh {
 		return toCPimpl(pimpl)->getComponents();
 	}
 
+	std::vector<TypeInfo> TupleInfo::getComponentTypes() const {
+		const std::vector<ComponentType>& components = getComponents();
+		std::vector<TypeInfo>             componentTypes;
+		componentTypes.reserve(components.size());
+		for (const auto& component: components) componentTypes.push_back(component.type);
+		return componentTypes;
+	}
+
 	struct FunctionConstructionRecord {
 		std::vector<TypeInfo> parameter_types;
 		TypeDesc<>            result_type;

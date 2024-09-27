@@ -103,7 +103,7 @@ namespace tsh {
 		 * @return The TypeInterface of the type described by this object.
 		 */
 		[[nodiscard]]
-		TypeInterface getInterface(query::Context& ctx) const;
+		const TypeInterface& getInterface(query::Context& ctx) const;
 
 		/**
 		 * @brief The default constructor is deleted.
