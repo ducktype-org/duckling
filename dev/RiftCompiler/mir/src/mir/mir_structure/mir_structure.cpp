@@ -94,9 +94,7 @@ namespace compiler::mir {
 		}
 	}
 
-	base::StrID MirLocal::getName() const {
-		return name(this->helios_id);
-	}
+	base::StrID MirLocal::getName() const { return name(this->helios_id); }
 
 	void MirLocation::debugPrint(std::ostream& output) const {
 		variant_match(this->value) {

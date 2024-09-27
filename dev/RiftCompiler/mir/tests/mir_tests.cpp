@@ -83,7 +83,7 @@ private:
 			// Test locals:
 			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
 
-			auto i32_type   = ctx.query<tsh::QueryIntegralType>(32);
+			auto i32_type = ctx.query<tsh::QueryIntegralType>(32);
 
 			{
 				auto a = foo_mir.local_list.getCRef(1).value();
