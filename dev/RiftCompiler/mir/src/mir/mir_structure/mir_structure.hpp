@@ -3,6 +3,7 @@
 #include <vector>
 #include <variant>
 #include <helios/scopes/scopes.hpp>
+#include <typesystem/higher/type_desc.hpp>
 #include <base/stable_container.hpp>
 #include <base/strongly_typed_id.hpp>
 #include <base/stringifyable_enum.hpp>
@@ -89,6 +90,7 @@ namespace compiler::mir {
 
 		// for now we just keep HELIOS id:
 		helios::SymID helios_id;
+		tsh::TypeDesc<> type;
 
 	private:
 		// @note: making MirLocal from helios_id
@@ -96,7 +98,10 @@ namespace compiler::mir {
 		// It will not work with temporary values for example.
 		// it might work poorly for template/generic instantiations.
 
-		MirLocal(helios::SymID helios_id): id(LocalID::next()), helios_id(helios_id) {}
+		MirLocal(helios::SymID helios_id, tsh::TypeDesc<> type):
+			id(LocalID::next()),
+			helios_id(helios_id),
+			type(type) {}
 
 		friend struct Function;
 		friend struct FunctionBuilder;
