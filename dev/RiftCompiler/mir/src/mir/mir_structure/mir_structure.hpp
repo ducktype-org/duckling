@@ -111,6 +111,9 @@ namespace compiler::mir {
 
 	public:
 		void debugPrint(std::ostream& output, bool detailed = false) const;
+
+		[[nodiscard]]
+		base::StrID getName() const;
 	};
 
 	/**
