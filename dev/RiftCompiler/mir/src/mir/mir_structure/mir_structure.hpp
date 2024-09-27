@@ -103,7 +103,7 @@ namespace compiler::mir {
 		friend LocalRef;
 
 	public:
-		void debugPrint(std::ostream& output) const;
+		void debugPrint(std::ostream& output, bool detailed = false) const;
 	};
 
 	/**
@@ -184,7 +184,7 @@ namespace compiler::mir {
 			  output(std::move(output)),
 			  arguments(std::move(arguments)),
 			  flags(std::move(flags)),
-			  scope(std::move(scope)) {}
+			  scope(scope) {}
 
 		void debugPrint(std::ostream& output) const;
 	};
