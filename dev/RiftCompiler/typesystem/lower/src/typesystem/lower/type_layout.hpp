@@ -172,13 +172,19 @@ namespace tsl {
 		/**
 		 * @return The full list of component offsets, in bytes.
 		 */
-		const std::vector<usize>& getComponentOffsets() const { return component_offsets; }
+		[[nodiscard]]
+		const std::vector<usize>& getComponentOffsets() const {
+			return component_offsets;
+		}
 
 		/**
 		 * @param index The index of a component.
 		 * @return The offset of the component corresponding to the given index, in bytes.
 		 */
-		usize getComponentOffset(usize index) const { return component_offsets[index]; }
+		[[nodiscard]]
+		usize getComponentOffset(usize index) const {
+			return component_offsets[index];
+		}
 	};
 
 	/**
@@ -190,7 +196,7 @@ namespace tsl {
 		base::Map<compiler::helios::SymID, usize> field_offsets;
 
 		// Delegate constructor.
-		ClassTypeLayout(struct ClassTypeLayoutConstructionHelper&& helper);
+		ClassTypeLayout(const struct ClassTypeLayoutConstructionHelper& helper);
 
 	public:
 		ClassTypeLayout(tsh::ClassInfo class_info, query::Context& ctx);
@@ -198,6 +204,7 @@ namespace tsl {
 		/**
 		 * @return The full dictionary of field offsets, in bytes.
 		 */
+		[[nodiscard]]
 		const base::Map<compiler::helios::SymID, usize>& getFieldOffsets() const {
 			return field_offsets;
 		}
@@ -206,6 +213,7 @@ namespace tsl {
 		 * @param symbol The symbol of a field.
 		 * @return The offset of the field corresponding to the given symbol, in bytes.
 		 */
+		[[nodiscard]]
 		usize getFieldOffset(compiler::helios::SymID symbol) const {
 			return field_offsets.at(symbol);
 		}
@@ -274,8 +282,7 @@ namespace tsl {
 
 		using TypeLayoutDirectVariant::TypeLayoutDirectVariant;
 
-		TypeLayout(const TypeLayout& other) = default;
-
+		[[nodiscard]]
 		usize getSize() const {
 			variant_match((*this)()) {
 				variant_case(EmptyTypeLayout, l) { return l.getSize(); }
@@ -289,6 +296,7 @@ namespace tsl {
 			RIFT_PANIC("Unmatched type layout.");
 		}
 
+		[[nodiscard]]
 		tsh::TypeInfo getSourceType() const {
 			variant_match((*this)()) {
 				variant_case(EmptyTypeLayout, l) { return l.getSourceType(); }

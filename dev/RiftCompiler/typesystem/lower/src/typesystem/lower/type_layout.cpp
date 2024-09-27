@@ -41,7 +41,7 @@ namespace tsl {
 			return maxTypeLayoutSizeInVector(getLayoutVector(types, ctx));
 		}
 
-		std::vector<usize> alignOffsetsForLayoutVector(const std::vector<TypeLayout> layouts) {
+		std::vector<usize> alignOffsetsForLayoutVector(const std::vector<TypeLayout>& layouts) {
 			// Preamble.
 			std::vector<usize> offsets{};
 			offsets.reserve(layouts.size());
@@ -109,7 +109,7 @@ namespace tsl {
 
 	TupleTypeLayout::TupleTypeLayout(TupleTypeLayoutConstructionHelper&& helper):
 		  TypeLayoutABC(helper.total_size, helper.tuple_info),
-		  component_offsets(std::move(helper.component_offsets)) {}
+		  component_offsets(std::move(helper).component_offsets) {}
 
 	struct ClassTypeLayoutConstructionHelper {
 		tsh::ClassInfo                     class_info;
@@ -119,7 +119,7 @@ namespace tsl {
 		usize                              total_size;
 
 		static std::vector<tsh::InterfaceElement>
-			getFieldsOfInterface(tsh::TypeInterface interface) {
+			getFieldsOfInterface(const tsh::TypeInterface& interface) {
 			const auto&                        elements = interface.getElements();
 			std::vector<tsh::InterfaceElement> fields;
 			fields.reserve(elements.size());
@@ -154,7 +154,7 @@ namespace tsl {
 	ClassTypeLayout::ClassTypeLayout(tsh::ClassInfo class_info, query::Context& ctx):
 		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(class_info, ctx)) {}
 
-	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper):
+	ClassTypeLayout::ClassTypeLayout(const ClassTypeLayoutConstructionHelper& helper):
 		  TypeLayoutABC(helper.total_size, helper.class_info) {
 		for (int i = 0; i < helper.field_elements.size(); i++)
 			field_offsets.put(helper.field_elements[i].getSymbol(), helper.field_offsets[i]);
