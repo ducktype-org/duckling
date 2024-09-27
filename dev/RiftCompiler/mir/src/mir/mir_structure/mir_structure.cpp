@@ -90,6 +90,7 @@ namespace compiler::mir {
 			output << ": Helios Name: " << name(this->helios_id).strView();
 			output << ", Type: ";
 			output << this->type.getType().toString();
+			output << ", Lifetime Scope: " << this->lifetime_scope.customPerfectHash();
 		}
 	}
 
