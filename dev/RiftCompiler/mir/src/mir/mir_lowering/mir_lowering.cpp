@@ -217,7 +217,12 @@ namespace compiler::mir {
 		base::Optional<BlockBuilderRef>  entry_block;
 		base::StableVector<MirLocal>     local_list;
 
+		query::Context& ctx;
+
 	public:
+		FunctionBuilder(query::Context& ctx): ctx(ctx) {}
+
+		[[nodiscard]]
 		Function build() {
 			RIFT_ASSERT(entry_block.has_value(), "Entry block not set");
 
@@ -237,7 +242,8 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		LocalRef addLocal(helios::SymID helios_id) {
-			auto key = local_list.emplaceBack(MirLocal{ helios_id });
+			auto key = local_list.emplaceBack(MirLocal{
+				helios_id, ctx.query<helios::QueryTypeOfSymbol>(helios_id), scope(helios_id) });
 			return local_list.getRef(key).value();
 		}
 
@@ -415,16 +421,16 @@ namespace compiler::mir {
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
 	struct IMPLEMENT_QUERY(LowerToMirFunction, Function) {
-		static auto provide(Context&, QKey key) -> PResult {
+		static auto provide(Context& ctx, QKey key) -> PResult {
 			// First step:
 			// * build cfg+quad step by step
 
 
-			FunctionBuilder function_builder;
+			FunctionBuilder function_builder{ ctx };
 
 			function_builder.setName(key.function.original_name);
 
-			// @TODO: add parameters stuff
+			// @TODO: add parameters do list od locals
 
 			auto fun_body_scope = key.function.body.body->lifetime_scope;
 
