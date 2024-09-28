@@ -18,8 +18,8 @@
 #include "../scope_symbol_id.hpp"
 #include "../scopes/scopes.hpp"
 #include "../pst_ref.hpp"
-#include "helios/helios_errors.hpp"
-#include "helios/helios_result.hpp"
+#include "../helios_errors.hpp"
+#include "../helios_result.hpp"
 
 namespace compiler::helios {
 	/**
