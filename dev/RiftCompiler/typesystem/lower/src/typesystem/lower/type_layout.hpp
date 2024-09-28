@@ -54,12 +54,12 @@ namespace tsl {
 			return source_type;
 		}
 
+		virtual ~TypeLayoutABC() = default;
+
 	protected:
 		TypeLayoutABC(usize size, tsh::TypeInfo source_type):
 			  size(size),
 			  source_type(source_type) {}
-
-		virtual ~TypeLayoutABC() = default;
 	};
 
 	class TypeLayout;

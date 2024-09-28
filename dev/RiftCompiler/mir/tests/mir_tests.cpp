@@ -80,6 +80,24 @@ private:
 			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
+			// Test locals:
+			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
+
+			auto i32_type = ctx.query<tsh::QueryIntegralType>(32);
+
+			{
+				auto a = foo_mir.local_list.getCRef(1).value();
+				ASSERT_EQUAL(a->getName(), "a");
+				ASSERT_EQUAL(a->type.getType(), i32_type);
+			}
+			{
+				auto b = foo_mir.local_list.getCRef(0).value();
+				ASSERT_EQUAL(b->getName(), "b");
+				ASSERT_EQUAL(b->type.getType(), i32_type);
+			}
+
+			// Test code generation:
+
 			ASSERT_EQUAL(foo_mir.blocks.size(), 5);
 
 			// @note: block order is reversed:
@@ -95,6 +113,12 @@ private:
 			ASSERT_EQUAL(foo_mir.blocks.at(3).instructions.size(), 1);
 			ASSERT_EQUAL(foo_mir.blocks.at(3).instructions.at(0).operation, Assign);
 			ASSERT_EQUAL(foo_mir.blocks.at(3).terminator.operation, Jump);
+
+
+			// Test debug print:
+			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
+			std::stringstream foo_str;
+			foo_mir.debugPrint(foo_str);
 		});
 	}
 };

@@ -1,5 +1,6 @@
 #include "mir_structure.hpp"
 #include <base/variant.hpp>
+#include <helios/symbols/symbols.hpp>
 #include <sstream>
 
 namespace compiler::mir {
@@ -18,7 +19,14 @@ namespace compiler::mir {
 	}
 
 	void Function::debugPrint(std::ostream& output) const {
-		output << "Function " << name.strView() << ": TODO -> TODO {\n";
+		output << "Function " << name.strView() << ": TODO -> TODO\n";
+
+		for (auto& local: this->local_list) {
+			output << "    ";
+			local->debugPrint(output, true);
+			output << "\n";
+		}
+		output << "{\n";
 
 		for (const auto& block: blocks | std::views::reverse) {
 			output << "  block " << u64(block.id);
@@ -76,7 +84,17 @@ namespace compiler::mir {
 		output.flags(output_flags);
 	}
 
-	void MirLocal::debugPrint(std::ostream& output) const { output << "Local(" << u64(id) << ")"; }
+	void MirLocal::debugPrint(std::ostream& output, bool detailed) const {
+		output << "Local(" << u64(id) << ")";
+		if (detailed) {
+			output << ": Helios Name: " << name(this->helios_id).strView();
+			output << ", Type: ";
+			output << this->type.getType().toString();
+			output << ", Lifetime Scope: " << this->lifetime_scope.customPerfectHash();
+		}
+	}
+
+	base::StrID MirLocal::getName() const { return name(this->helios_id); }
 
 	void MirLocation::debugPrint(std::ostream& output) const {
 		variant_match(this->value) {
