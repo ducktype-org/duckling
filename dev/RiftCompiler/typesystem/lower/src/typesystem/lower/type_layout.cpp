@@ -41,23 +41,27 @@ namespace tsl {
 			return maxTypeLayoutSizeInVector(getLayoutVector(types, ctx));
 		}
 
-		std::vector<usize> alignOffsetsForLayoutVector(const std::vector<TypeLayout>& layouts) {
+		/**
+		 * @brief Gets the offsets for the given type sizes, with alignment in mind.
+		 * @param sizes The sizes of the types.
+		 * @return The aligned offsets.
+		 */
+		std::vector<usize> alignOffsetsForSizeVector(const std::vector<usize>& sizes) {
 			// Preamble.
 			std::vector<usize> offsets{};
-			offsets.reserve(layouts.size());
+			offsets.reserve(sizes.size());
 			usize bytes_taken = 0;
 
 			// For each component layout...
-			for (const auto& layout: layouts) {
+			for (const auto& size_in_bits: sizes) {
 				// Get its size in bytes, rounded up.
-				usize layout_size_in_bits  = layout.getSize();
-				usize layout_size_in_bytes = (layout_size_in_bits + 7) / 8;
+				usize size_in_bytes = (size_in_bits + 7) / 8;
 
 				// Find alignment factor.
 				usize alignment_factor = 8;
-				if (layout_size_in_bytes <= 4) alignment_factor = 4;
-				if (layout_size_in_bytes <= 2) alignment_factor = 2;
-				if (layout_size_in_bytes <= 1) alignment_factor = 1;
+				if (size_in_bytes <= 4) alignment_factor = 4;
+				if (size_in_bytes <= 2) alignment_factor = 2;
+				if (size_in_bytes <= 1) alignment_factor = 1;
 
 				// Round up offset to nearest multiple of alignment factor.
 				bytes_taken
@@ -65,22 +69,47 @@ namespace tsl {
 
 				// Save offset.
 				offsets.push_back(bytes_taken);
-				bytes_taken += layout_size_in_bytes;
+				bytes_taken += size_in_bytes;
 			}
 
 			return offsets;
 		}
+
+		/**
+		 * @brief Gets the offsets for the given type layouts, with alignment in mind.
+		 * @param layouts The layouts of the types.
+		 * @return The aligned offsets.
+		 */
+		std::vector<usize> alignOffsetsForLayoutVector(const std::vector<TypeLayout>& layouts) {
+			std::vector<usize> sizes;
+			sizes.reserve(layouts.size());
+			for (const auto& layout: layouts) sizes.push_back(layout.getSize());
+			return alignOffsetsForSizeVector(sizes);
+		}
 	}
 
+	struct VariantTypeLayoutConstructionHelper {
+		tsh::VariantInfo   variant_info;
+		usize              max_component_size;
+		std::vector<usize> offsets;
+
+		VariantTypeLayoutConstructionHelper(tsh::VariantInfo variant_info, query::Context& ctx):
+			  variant_info(variant_info),
+			  max_component_size(maxTypeSizeInVector(variant_info.getUnderlyingTypes(), ctx)),
+			  offsets(alignOffsetsForSizeVector({ 8, max_component_size })) {}
+	};
+
 	VariantTypeLayout::VariantTypeLayout(tsh::VariantInfo variant_info, query::Context& ctx):
+		  VariantTypeLayout(VariantTypeLayoutConstructionHelper(variant_info, ctx)) {}
+
+	VariantTypeLayout::VariantTypeLayout(VariantTypeLayoutConstructionHelper helper):
 		  TypeLayoutABC(
-			  8 * BYTE_SIZE + maxTypeSizeInVector(variant_info.getUnderlyingTypes(), ctx),
-			  variant_info
+			  helper.offsets[1] * BYTE_SIZE + helper.max_component_size, helper.variant_info
 		  ),
-		  tag_offset{ 0 },   // 0 bytes
-		  tag_size{ 8 },     // 8 bits
-		  data_offset{ 8 },  // 8 bytes
-		  index_to_type{ variant_info.getUnderlyingTypes() } {
+		  tag_offset{ 0 },                   // 0 bytes
+		  tag_size{ 8 },                     // 8 bits
+		  data_offset{ helper.offsets[1] },  // up to 8 bytes
+		  index_to_type{ helper.variant_info.getUnderlyingTypes() } {
 		for (int i = 0; i < index_to_type.size(); i++) {
 			const auto& type = index_to_type[i];
 			type_to_index.put(type, i);
@@ -100,7 +129,7 @@ namespace tsl {
 			  total_size(
 				  component_layouts.empty()
 					  ? 0
-					  : component_offsets.back() + component_layouts.back().getSize()
+					  : component_offsets.back() * BYTE_SIZE + component_layouts.back().getSize()
 			  ) {}
 	};
 
@@ -147,7 +176,9 @@ namespace tsl {
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  total_size(
-				  field_layouts.empty() ? 0 : field_offsets.back() + field_layouts.back().getSize()
+				  field_layouts.empty()
+					  ? 0
+					  : field_offsets.back() * BYTE_SIZE + field_layouts.back().getSize()
 			  ) {}
 	};
 

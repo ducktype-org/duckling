@@ -36,7 +36,7 @@ namespace tester {
 		 * @brief Execute a procedure as if it were in the middle of a query, i.e. supplied with a
 		 * query::Context.
 		 *
-		 * @note If you are supplying a lambda, make sure it catches `this` be reference
+		 * @note If you are supplying a lambda, make sure it catches `this` by reference
 		 * ([&] works), to enable use of TestSuite methods and avoid unhelpful errors.
 		 *
 		 * @param action The procedure object to execute, applied to a query::Context.

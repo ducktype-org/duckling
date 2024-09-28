@@ -58,6 +58,8 @@ namespace tsl {
 		TypeLayoutABC(usize size, tsh::TypeInfo source_type):
 			  size(size),
 			  source_type(source_type) {}
+
+		virtual ~TypeLayoutABC() = default;
 	};
 
 	class TypeLayout;
@@ -110,6 +112,9 @@ namespace tsl {
 
 		base::Map<tsh::TypeInfo, usize> type_to_index;
 		std::vector<tsh::TypeInfo>      index_to_type;
+
+		// Delegate constructor.
+		VariantTypeLayout(struct VariantTypeLayoutConstructionHelper helper);
 
 	public:
 		VariantTypeLayout(tsh::VariantInfo variant_info, query::Context& ctx);
@@ -296,6 +301,7 @@ namespace tsl {
 				variant_case(IntegralTypeLayout, l) { return l.getSize(); }
 				variant_case(FloatTypeLayout, l) { return l.getSize(); }
 				variant_case(VariantTypeLayout, l) { return l.getSize(); }
+				variant_case(TupleTypeLayout, l) { return l.getSize(); }
 				variant_case(ClassTypeLayout, l) { return l.getSize(); }
 				variant_case(FunctionalTypeLayout, l) { return l.getSize(); }
 				variant_case(PointerTypeLayout, l) { return l.getSize(); }
@@ -310,6 +316,7 @@ namespace tsl {
 				variant_case(IntegralTypeLayout, l) { return l.getSourceType(); }
 				variant_case(FloatTypeLayout, l) { return l.getSourceType(); }
 				variant_case(VariantTypeLayout, l) { return l.getSourceType(); }
+				variant_case(TupleTypeLayout, l) { return l.getSourceType(); }
 				variant_case(ClassTypeLayout, l) { return l.getSourceType(); }
 				variant_case(FunctionalTypeLayout, l) { return l.getSourceType(); }
 				variant_case(PointerTypeLayout, l) { return l.getSourceType(); }
