@@ -82,17 +82,15 @@ namespace compiler::helios {
 		bool        operator==(const KeyOf_LookupInScope&) const = default;
 	};
 
-	using QueryLookup_Result
-		= errors::HResult<LookupResult, errors::Ambiguity, errors::SymbolNotFound>;
 	/**
 	 * @brief Performs lookup of single name inside given scope.
 	 */
-	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, const QueryLookup_Result&);
+	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, const LookupResult&);
 
 	/**
 	 * @brief Performs lookup of single name inside given scope and its parents.
 	 */
-	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, const QueryLookup_Result&);
+	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, const LookupResult&);
 
 	/**
 	 * @brief Query all symbols that are directly inside given scope.

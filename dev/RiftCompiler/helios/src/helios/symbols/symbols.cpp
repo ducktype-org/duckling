@@ -18,6 +18,7 @@
 #include "../scope_symbol_id.hpp"
 #include "../scopes/scopes.hpp"
 #include "../pst_ref.hpp"
+#include "helios/helios_errors.hpp"
 #include "helios/helios_result.hpp"
 
 namespace compiler::helios {
@@ -254,7 +255,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
 
-	struct IMPLEMENT_QUERY(QueryLookupInSymbol, QueryLookup_Result) {
+	struct IMPLEMENT_QUERY(QueryLookupInSymbol, LookupResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.symbol.ref->kind) {
 			case SymbolKind::Using:
@@ -289,40 +290,25 @@ namespace compiler::helios {
 	/**
 	 * @brief Query extension for looking-up chain of names
 	 */
-	errors::HResult<SymbolList, errors::Ambiguity, QueryLookup_Result::error_type>
+	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound>
 		lookupChain(query::Context& ctx, const LookupChainKey& key) {
 		RIFT_ASSERT(!key.names.empty(), "lookupDotted received zero names");
 
 		// initial symbol:
-		UNPACK_RESULT(
-			LookupResult first =,
-			ctx.query<QueryLookupInScopeAndParents>(
-				{ key.begin_scope, key.names[0], key.follow_wildcards }
-			)
+		LookupResult first = ctx.query<QueryLookupInScopeAndParents>(
+			{ key.begin_scope, key.names[0], key.follow_wildcards }
 		);
 
-		if (not first.isSingle()) {
-			// @TODO: error in state
-			return errors::HError(errors::Ambiguity());
-		}
-
 		UNPACK_RESULT(SymbolList result =, first.getAsSingle());
+
 		if (key.names.size() == 1) return result;
 
 		for (usize i = 1; i < key.names.size(); i++) {
-			UNPACK_RESULT(
-				auto append_res =,
-				ctx.query<QueryLookupInSymbol>({
-					result.back(),
-					key.names[i],
-					key.follow_wildcards,
-				})
-			);
-
-			if (!append_res.isSingle()) {
-				// @TODO: error in state
-				return errors::HError(errors::Ambiguity());
-			}
+			auto append_res = ctx.query<QueryLookupInSymbol>({
+				result.back(),
+				key.names[i],
+				key.follow_wildcards,
+			});
 
 			UNPACK_RESULT(auto single_append_res =, append_res.getAsSingle());
 			result.insert(result.end(), single_append_res.begin(), single_append_res.end());
@@ -390,8 +376,7 @@ namespace compiler::helios {
 		return (hash_1 * 143 + hash_2 * 7) * 2 + follow_wildcards;
 	}
 
-	struct
-		IMPLEMENT_QUERY(QueryDealias, errors::HResult<SymbolList COMMA QueryLookup_Result::error_type>) {
+	struct IMPLEMENT_QUERY(QueryDealias, QueryDealias_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO: this does not handle usings.
 			if (kind(key) == SymbolKind::Using)
@@ -405,14 +390,25 @@ namespace compiler::helios {
 			bool       first_symbol = true;
 			SymbolList result;
 			for (auto&& pointed: alias_definition->getPointed()) {
-				UNPACK_RESULT(
-					auto&& pointed_symbol_lookup =,
-					first_symbol
-						? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
-						: ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false })
-				);
-				UNPACK_RESULT(auto&& path =, pointed_symbol_lookup.getAsSingle());
-				for (auto&& path_symbol: path) {
+				auto&& pointed_symbol_lookup
+					= first_symbol
+				        ? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
+				        : ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false });
+				auto&& path = pointed_symbol_lookup.getAsSingle();
+				if (path.has_error()) {
+					variant_match(path.error()) {
+						variant_case(errors::Ambiguity, _) {
+							// @TODO: Report an error
+							return errors::HError(errors::Failed());
+						}
+						variant_case(errors::SymbolNotFound, _) {
+							// @TODO: Report an error
+							return errors::HError(errors::Failed());
+						}
+					}
+					RIFT_PANIC("Invalid state");
+				}
+				for (auto&& path_symbol: path.value()) {
 					UNPACK_RESULT(auto&& dealiased =, ctx.query<QueryDealias>(path_symbol));
 					result.insert(result.end(), dealiased.begin(), dealiased.end());
 				}
@@ -506,15 +502,13 @@ namespace compiler::helios {
 		variant_match(key.expr) {
 			variant_case(rpn::Identifier, idt) {
 				// .back() works for constants only.
-				UNPACK_RESULT(auto&& sym_list =, ctx.query<QueryDealias>(idt.symbol_list.back()));
-				return ctx.query<QueryConstValueOf>(sym_list.back());
+				auto&& sym_list = ctx.query<QueryDealias>(idt.symbol_list.back());
+				if(sym_list.has_error()) return errors::HError(errors::InvalidExpr());
+				return ctx.query<QueryConstValueOf>(sym_list.value().back());
 			}
 			variant_case(rpn::NamedIdentifier, idt) {
-				UNPACK_RESULT(
-					auto&& sym_list =,
-					ctx.query<QueryLookupInScopeAndParents>(
-						{ key.expr_scope, idt.symbol_name, true }
-					)
+				auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+					{ key.expr_scope, idt.symbol_name, true }
 				);
 
 				UNPACK_RESULT(auto&& identifier =, sym_list.getAsSingle());
@@ -630,11 +624,8 @@ namespace compiler::helios {
 			variant_match(a) {
 				variant_case(rpn::Identifier, idt) { looked_up_symbol = idt.symbol_list; }
 				variant_case(rpn::NamedIdentifier, idt) {
-					UNPACK_RESULT(
-						auto&& sym_list =,
-						ctx.query<QueryLookupInScopeAndParents>(
-							{ key.expr_scope, idt.symbol_name, true }
-						)
+					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+						{ key.expr_scope, idt.symbol_name, true }
 					);
 					UNPACK_RESULT(looked_up_symbol =, sym_list.getAsSingle());
 				}
@@ -645,14 +636,11 @@ namespace compiler::helios {
 			}
 			variant_match(b) {
 				variant_case(rpn::NamedIdentifier, idt_right) {
-					UNPACK_RESULT(
-						auto&& new_symbols =,
-						ctx.query<QueryLookupInSymbol>({
-							looked_up_symbol.back(),
-							idt_right.symbol_name,
-							true,
-						})
-					);
+					auto&& new_symbols = ctx.query<QueryLookupInSymbol>({
+						looked_up_symbol.back(),
+						idt_right.symbol_name,
+						true,
+					});
 					UNPACK_RESULT(SymbolList single =, new_symbols.getAsSingle());
 					looked_up_symbol.insert(looked_up_symbol.end(), single.begin(), single.end());
 					return Identifier{ looked_up_symbol };
@@ -805,19 +793,17 @@ namespace compiler::helios {
 			variant_case(rpn::NamedIdentifier, named_identifier) {
 				const auto it = BUILTINS.find(named_identifier.symbol_name);
 				if (it == BUILTINS.end()) {
-					UNPACK_RESULT(
-						auto&& symbol_res =,
-						ctx.query<QueryLookupInScopeAndParents>({
-							expr_scope,
-							named_identifier.symbol_name,
-							true,
-						})
-					);
+					auto&& symbol_res = ctx.query<QueryLookupInScopeAndParents>({
+						expr_scope,
+						named_identifier.symbol_name,
+						true,
+					});
 					UNPACK_RESULT(const SymbolList symbol =, symbol_res.getAsSingle());
 					// very simple dealias, that should
 					// ultimately be replaced by type expr comp-time eval:
-					UNPACK_RESULT(auto&& dealias_sym =, ctx.query<QueryDealias>({ symbol.back() }));
-					return ctx.query<QueryTypeFromDefinition>(dealias_sym.back());
+					auto&& dealias_sym = ctx.query<QueryDealias>({ symbol.back() });
+					if(dealias_sym.has_error()) return errors::HError(errors::InvalidExpr());
+					return ctx.query<QueryTypeFromDefinition>(dealias_sym.value().back());
 				}
 				return it->second;
 			}

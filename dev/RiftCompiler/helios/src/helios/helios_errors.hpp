@@ -6,4 +6,6 @@ namespace compiler::helios::errors {
 	struct Ambiguity {};
 
 	struct InvalidExpr {};
+
+	struct Failed {};
 }

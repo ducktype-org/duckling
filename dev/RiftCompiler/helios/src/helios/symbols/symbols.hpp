@@ -10,6 +10,7 @@
 #include "../pst_ref.hpp"
 #include "../lookup_result.hpp"
 #include "../helios_errors.hpp"
+#include "helios/helios_result.hpp"
 #include "typesystem/higher/type_info.hpp"
 #include <helios/scopes/scopes.hpp>
 #include <helios/scope_symbol_id.hpp>
@@ -120,15 +121,16 @@ namespace compiler::helios {
 	 * @brief Query result of lookup of single name within the symbol.
 	 * It essentially implements "symbol.name" operation.
 	 */
-	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, const QueryLookup_Result&);
+	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, const LookupResult&);
 
+	using QueryDealias_Result = errors::HResult<SymbolList, errors::Failed>;
 	/**
 	 * A query that returns an "absolute path" to the symbol without aliases.
 	 */
-	DECLARE_QUERY(QueryDealias, SymID, const errors::HResult<SymbolList COMMA QueryLookup_Result::error_type>&);
+	DECLARE_QUERY(QueryDealias, SymID, const QueryDealias_Result&);
 
-	using PotentialParsingErrors
-		= errors::unique_types_variant_t<QueryLookup_Result::error_type, errors::InvalidExpr>;
+	using PotentialParsingErrors = errors::
+		unique_types_variant_t<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr>;
 	using QueryConstValueOf_Result = errors::HResult<i32, PotentialParsingErrors>;
 	/**
 	 * Calculates a value of a constant.

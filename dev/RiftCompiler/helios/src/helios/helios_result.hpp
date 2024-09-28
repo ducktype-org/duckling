@@ -257,5 +257,3 @@ namespace compiler::helios::errors {
 	auto&& RES_VAR_NAME = new_value;                                                              \
 	if (!RES_VAR_NAME.has_value()) return compiler::helios::errors::HError(RES_VAR_NAME.error()); \
 	var RES_VAR_NAME.value()
-
-#define UNPACK_RESULT2(value) (!value.has_value() ? return value.error() : value.value())

@@ -140,11 +140,9 @@ namespace compiler::helios::code {
 				}
 
 				variant_case(rpn::NamedIdentifier, idt) {
-					auto&& sym_list_result = ctx.query<QueryLookupInScopeAndParents>(
+					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
 						{ expr.scope, idt.symbol_name, true }
 					);
-					RIFT_ASSERT(sym_list_result.has_value(), "Not propagating errors here yet...");
-					auto&& sym_list      = sym_list_result.value();
 					auto&& single_result = sym_list.getAsSingle();
 					RIFT_ASSERT(single_result.has_value(), "Not propagating errors here yet...");
 					auto&& single = single_result.value();
@@ -211,11 +209,8 @@ namespace compiler::helios {
 				// @note: this does not handle overload
 				// @note: this does not handle "." operation
 
-				auto lookup_query_result = ctx.query<QueryLookupInScopeAndParents>(
-					KeyOf_LookupInScope{ scope, identifier.indent_id, true }
-				);
-				RIFT_ASSERT(lookup_query_result.has_value(), "Not propagating errors for now...");
-				auto lookup_result = lookup_query_result.value();
+				auto lookup_result = ctx.query<QueryLookupInScopeAndParents>(KeyOf_LookupInScope{
+					scope, identifier.indent_id, true });
 
 				compiler::helios::SymbolList lookup_dealiased;
 
