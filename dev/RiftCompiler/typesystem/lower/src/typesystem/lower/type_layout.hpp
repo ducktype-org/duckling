@@ -191,7 +191,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		usize getComponentOffset(usize index) const {
-			return component_offsets[index];
+			return getComponentOffsets()[index];
 		}
 	};
 
@@ -223,7 +223,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		usize getFieldOffset(compiler::helios::SymID symbol) const {
-			return field_offsets.at(symbol);
+			return getFieldOffsets().at(symbol);
 		}
 	};
 

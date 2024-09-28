@@ -2,9 +2,12 @@
 
 #include <base/variant.hpp>
 #include <tester/tester.hpp>
+#include <typesystem/higher/type_interface.hpp>
 #include <typesystem/higher/queries.hpp>
 #include <query_framework/test_utils/context_suite.hpp>
 #include <query_framework/query_impl.hpp>
+
+#include <helios/test_utils/helios_test_utils.hpp>
 
 using namespace tsl;
 using namespace tsh;
@@ -34,7 +37,8 @@ private:
 				"Layout should have source type as constructed."
 			);
 			variant_match(unit_layout()) {
-				variant_case(EmptyTypeLayout, l) { /* good */ }
+				variant_case(EmptyTypeLayout, l) { /* good */
+				}
 				variant_default { fail("Layout of unit type should be empty."); }
 			}
 
@@ -54,7 +58,8 @@ private:
 					"Layout should have source type as constructed."
 				);
 				variant_match(byte_sized_layout()) {
-					variant_case(IntegralTypeLayout, l) { /* good */ }
+					variant_case(IntegralTypeLayout, l) { /* good */
+					}
 					variant_default { fail("Layout of byte sized type should be integral."); }
 				}
 			}
@@ -72,7 +77,8 @@ private:
 					"Layout should have source type as constructed."
 				);
 				variant_match(int_layout()) {
-					variant_case(IntegralTypeLayout, l) { /* good */ }
+					variant_case(IntegralTypeLayout, l) { /* good */
+					}
 					variant_default { fail("Layout of integral type should be integral."); }
 				}
 			}
@@ -90,7 +96,8 @@ private:
 					"Layout should have source type as constructed."
 				);
 				variant_match(float_layout()) {
-					variant_case(FloatTypeLayout, l) { /* good */ }
+					variant_case(FloatTypeLayout, l) { /* good */
+					}
 					variant_default { fail("Layout of float type should be float."); }
 				}
 			}
@@ -106,7 +113,8 @@ private:
 				"Layout should have source type as constructed."
 			);
 			variant_match(functional_layout()) {
-				variant_case(FunctionalTypeLayout, l) { /* good */ }
+				variant_case(FunctionalTypeLayout, l) { /* good */
+				}
 				variant_default { fail("Layout of function type should be functional."); }
 			}
 
@@ -161,7 +169,10 @@ private:
 				variant_layout.getSize() == 2 * BYTE_SIZE + 16,
 				"Variant layout size should account for data alignment."
 			);
-			assertTrue(variant_layout.getSourceType() == variant_type, "Variant ");
+			assertTrue(
+				variant_layout.getSourceType() == variant_type,
+				"Layout should have source type as constructed."
+			);
 			variant_match(variant_layout()) {
 				variant_case(VariantTypeLayout, l) {
 					assertTrue(l.getTagOffset() == 0, "Variant tag should be at the beginning.");
@@ -185,11 +196,88 @@ private:
 	}
 
 	void tuple_test() {
-		withContextDo([&](query::Context& ctx) -> void {});
+		withContextDo([&](query::Context& ctx) -> void {
+			IntegralInfo i8_type      = ctx.query<QueryIntegralType>({ 8 });
+			FloatInfo    f16_type     = ctx.query<QueryFloatType>(16);
+			FloatInfo    f64_type     = ctx.query<QueryFloatType>(64);
+			TupleInfo    tuple_type   = ctx.query<QueryTupleType>({
+                { { i8_type }, { f16_type }, { f64_type } },
+            });
+			TypeLayout   tuple_layout = ctx.query<QueryTypeLayout>(tuple_type);
+
+			assertTrue(
+				tuple_layout.getSize() == 16 * BYTE_SIZE,
+				"Variant layout size should account for data alignment."
+			);
+			assertTrue(
+				tuple_layout.getSourceType() == tuple_type,
+				"Layout should have source type as constructed."
+			);
+			variant_match(tuple_layout()) {
+				variant_case(TupleTypeLayout, l) {
+					assertTrue(
+						l.getComponentOffset(0) == 0 && l.getComponentOffset(1) == 2
+							&& l.getComponentOffset(2) == 8,
+						"Tuple layout should align its component layouts."
+					);
+				}
+				variant_default { fail("Layout of tuple type should be tuple-like."); }
+			}
+		});
 	}
 
 	void class_test() {
-		withContextDo([&](query::Context& ctx) -> void {});
+		using namespace compiler::helios;
+		using namespace test_utils;
+
+		auto [_, root_scope]        = getModule(fs::FilePath(path("class_layout")));
+		const SymID my_class_symbol = getChain("MyClass", root_scope).back();
+
+		withContextDo([&](query::Context& ctx) -> void {
+			ClassInfo     my_class_type      = ctx.query<QueryClassType>(my_class_symbol);
+			TypeInterface my_class_interface = my_class_type.getInterface(ctx);
+
+			SymID a_field_symbol = [&]() {
+				variant_match(my_class_interface.resolve(base::StrID("a"), ctx)) {
+					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
+				}
+				RIFT_PANIC("Could not resolve field.");
+			}();
+			SymID b_field_symbol = [&]() {
+				variant_match(my_class_interface.resolve(base::StrID("b"), ctx)) {
+					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
+				}
+				RIFT_PANIC("Could not resolve field.");
+			}();
+			SymID c_field_symbol = [&]() {
+				variant_match(my_class_interface.resolve(base::StrID("c"), ctx)) {
+					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
+				}
+				RIFT_PANIC("Could not resolve field.");
+			}();
+
+			TypeLayout my_class_layout = ctx.query<QueryTypeLayout>(my_class_type);
+			assertTrue(
+				my_class_layout.getSize() == 16 * BYTE_SIZE,
+				"Class layout size should account for data alignment."
+			);
+			assertTrue(
+				my_class_layout.getSourceType() == my_class_type,
+				"Layout should have source type as constructed."
+			);
+
+			variant_match(my_class_layout()) {
+				variant_case(ClassTypeLayout, l) {
+					assertTrue(
+						l.getFieldOffset(a_field_symbol) == 0
+							&& l.getFieldOffset(b_field_symbol) == 2
+							&& l.getFieldOffset(c_field_symbol) == 8,
+						"Class layout should align its component layouts."
+					);
+				}
+				variant_default { fail("Layout of class type should be class-like."); }
+			}
+		});
 	}
 
 public:
