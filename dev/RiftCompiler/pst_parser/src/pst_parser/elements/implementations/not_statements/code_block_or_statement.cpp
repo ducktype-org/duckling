@@ -40,7 +40,9 @@ namespace pst {
 		struct PrinterFunctor {
 			std::ostream& out_;
 
-			void operator()(const ParserRef<Stmt>& stmt) { nullAwareSemanticTokenPrint(stmt, out_); }
+			void operator()(const ParserRef<Stmt>& stmt) {
+				nullAwareSemanticTokenPrint(stmt, out_);
+			}
 
 			void operator()(const ParserRef<CodeBlock>& codeBlock) {
 				nullAwareSemanticTokenPrint(codeBlock, out_);

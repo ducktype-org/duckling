@@ -107,19 +107,25 @@ namespace pst {
 		simpleActionSemPrint(out, expr, "Return", "with", getSourcePosition());
 	}
 
-	void Break::semPrint(std::ostream& out) const { simpleActionSemPrint(out, expr, "Break", "from", getSourcePosition()); }
+	void Break::semPrint(std::ostream& out) const {
+		simpleActionSemPrint(out, expr, "Break", "from", getSourcePosition());
+	}
 
 	void Continue::semPrint(std::ostream& out) const {
 		simpleActionSemPrint(out, expr, "Continue", "with", getSourcePosition());
 	}
 
-	void Redo::semPrint(std::ostream& out) const { simpleActionSemPrint(out, expr, "Redo", "what", getSourcePosition()); }
+	void Redo::semPrint(std::ostream& out) const {
+		simpleActionSemPrint(out, expr, "Redo", "what", getSourcePosition());
+	}
 
 	void Restart::semPrint(std::ostream& out) const {
 		simpleActionSemPrint(out, expr, "Restart", "what", getSourcePosition());
 	}
 
-	void Defer::semPrint(std::ostream& out) const { simpleActionSemPrint(out, expr, "Defer", "what", getSourcePosition()); }
+	void Defer::semPrint(std::ostream& out) const {
+		simpleActionSemPrint(out, expr, "Defer", "what", getSourcePosition());
+	}
 
 	void Throw::semPrint(std::ostream& out) const {
 		simpleActionSemPrint(out, expr, "Throw", "exception", getSourcePosition());

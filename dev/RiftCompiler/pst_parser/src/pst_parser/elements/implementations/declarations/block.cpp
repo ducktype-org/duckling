@@ -25,7 +25,7 @@ namespace pst {
 	void Block::semPrint(std::ostream& out) const {
 		out << R"({"Block": {)";
 		getSourcePosition().semPrint(out);
-		out << R"(,"semanticTokenType": "namespace")"; //TODO: maybe needs a change?
+		out << R"(,"semanticTokenType": "namespace")";  // TODO: maybe needs a change?
 		out << R"(,"optional name": )";
 		nullAwareSemanticTokenPrint(optional_name, out);
 		out << R"(, "code block": )";

@@ -18,7 +18,7 @@ namespace pst {
 	void ExprStmt::semPrint(std::ostream& out) const {
 		out << "{\"Expr Stmt\" : {";
 		getSourcePosition().semPrint(out);
-		out << R"(,"semanticTokenType": "method",)"; // TODO: maybe needs a change?
+		out << R"(,"semanticTokenType": "method",)";  // TODO: maybe needs a change?
 		out << "\"expression\": ";
 		nullAwareSemanticTokenPrint(expression, out);
 		out << "}}";

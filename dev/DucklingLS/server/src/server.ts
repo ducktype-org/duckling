@@ -22,7 +22,6 @@ import { CompilerDaemonClient } from "./compilerDaemonClient";
 import { getFoldingRanges } from './foldingRanges';
 import { DucklingElement } from './lsptree/elements/elements';
 import { Token } from './semanticTokensDeclarations';
-import { extractObjectsWithTokenKind } from './parseLSPT';
 require("./lsptree/elements/index");
 
 // Create a connection between the client and the server
@@ -39,9 +38,10 @@ let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 
 // Storing LSPT for documents
-const lsptCache: Map<string, DucklingElement | null> = new Map();
+const lsptCache: Map<string, JSON> = new Map();
 const semanticTokensCache: Map<string, Token[]> = new Map();
 const foldingCache: Map<string, FoldingRange[]> = new Map();
+const completionCache: Map<string, CompletionItem[]> = new Map();
 
 // Semantic tokens legend
 const semanticTokensLegend = {
@@ -105,7 +105,7 @@ connection.onInitialized(() => {
 
 // Register the handler for semantic tokens
 connection.onRequest("textDocument/semanticTokens/full", (params) => 
-	handleSemanticTokensFull(params, documents, semanticTokensCache, compilerDaemonClient, connection)
+	handleSemanticTokensFull(params, documents, lsptCache, compilerDaemonClient, connection)
 );
 
 // The example settings
@@ -160,8 +160,8 @@ documents.onDidChangeContent(change => {
 	compilerDaemonClient.putFile(change.document.uri, change.document.getText(), connection).then(() => {
 		// Get the LSPTree for the document
 		compilerDaemonClient.getLSPT(change.document.uri, connection).then((LSPTree) => {
-			semanticTokensCache.delete(change.document.uri);
-			foldingCache.delete(change.document.uri);
+			lsptCache.set(change.document.uri, LSPTree);
+			// foldingCache.delete(change.document.uri);
 		});
 
 		// Revalidate the document
@@ -175,15 +175,15 @@ connection.onDidChangeWatchedFiles(_change => {
 
 // This handler provides the initial list of the completion items.
 connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
-	return getCompletionItems(_textDocumentPosition, documents, lsptCache);
+	return getCompletionItems(_textDocumentPosition, documents, compilerDaemonClient, completionCache, connection);
 });
 
 // This handler resolves additional information for the item selected in the completion list.
 connection.onCompletionResolve(onCompletionResolve);
 
 // This handler provides the folding ranges
-connection.onFoldingRanges((params: FoldingRangeParams): Promise<FoldingRange[]> => {
-	return getFoldingRanges(params, documents, compilerDaemonClient, foldingCache, connection);
+connection.onFoldingRanges((params: FoldingRangeParams): FoldingRange[] => {
+	return getFoldingRanges(params, documents, compilerDaemonClient, lsptCache, connection);
 });
 
 // Make the compiler daemon client exit when the connection exits

@@ -3,6 +3,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { CompilerDaemonClient, LSPKeywordData } from './compilerDaemonClient';
 import { Identifier, OptionalIdentifier } from "./lsptree/elements/identifier";
 import { DucklingElement } from "./lsptree/elements/elements";
+import { extractIdentifiers } from './parseLSPT';
 
 // Cached arrays to store keywords, operators, and special keywords for completion
 let cachedKeywords: CompletionItem[] = [];
@@ -41,22 +42,35 @@ export async function preloadKeywords(client: CompilerDaemonClient, connection: 
 export function getCompletionItems(
 	textDocumentPosition: TextDocumentPositionParams,
 	documents: TextDocuments<TextDocument>,
-	lsptCache: Map<string, DucklingElement | null>,
+	compilerDaemonClient: CompilerDaemonClient,
+	completionCache: Map<string, CompletionItem[]>,
+	connection: Connection
 ): CompletionItem[] {
 	const document = documents.get(textDocumentPosition.textDocument.uri);
 	const position = textDocumentPosition.position;
-	if (!document) {
-		return [];
+	if (!document) return [];
+	
+	let completionTokens = completionCache.get(document.uri) || null;
+
+	if (!completionTokens) {
+		// Fetch identifiers from the LSPT cache
+		let Idents = compilerDaemonClient.getLSPT(document.uri, connection).then((res: JSON | null) => res);
+		const newIdents = extractIdentifiers(Idents);
+		completionCache.set(document.uri, newIdents);
+		completionTokens = newIdents;
 	}
-	const text = document.getText();
-	const lineText = text.split('\n')[position.line].substring(0, position.character);
-	if (lineText.endsWith('.')) {
-		// Fetch and return identifiers if the last character is a dot
-		return getIdentifiers(lsptCache);
-	} else {
-		// Return both keywords and identifiers otherwise
-		return cachedKeywords.concat(getIdentifiers(lsptCache));
-	}
+
+	return completionTokens;
+
+	// const text = document.getText();
+	// const lineText = text.split('\n')[position.line].substring(0, position.character);
+	// if (lineText.endsWith('.')) {
+	// 	// Fetch and return identifiers if the last character is a dot
+	// 	return getIdentifiers(lsptCache);
+	// } else {
+	// 	// Return both keywords and identifiers otherwise
+	// 	return cachedKeywords.concat(getIdentifiers(lsptCache));
+	// }
 }
 
 /**

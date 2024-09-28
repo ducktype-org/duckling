@@ -92,7 +92,6 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		void semPrint(std::ostream& out) const final;
 
-
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Namespace";
@@ -166,7 +165,7 @@ namespace pst {
 
 		static ParserRef<Fun> parse(RiftParserState& state);
 		void                  dprint(std::ostream& out) const final;
-		void				  semPrint(std::ostream& out) const final;
+		void                  semPrint(std::ostream& out) const final;
 		~Fun() final = default;
 
 		[[nodiscard]]

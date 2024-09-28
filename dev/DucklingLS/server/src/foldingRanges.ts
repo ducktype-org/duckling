@@ -2,23 +2,24 @@ import { Connection } from 'vscode-languageserver';
 import {TextDocument } from 'vscode-languageserver-textdocument';
 import { FoldingRange, FoldingRangeKind, TextDocuments, FoldingRangeParams } from 'vscode-languageserver';
 import { Token, getTokenTypeIndex } from "./semanticTokensDeclarations";
+import { computeComments } from "./semanticTokens";
 import { DucklingElement } from './lsptree/elements/elements';
-import { extractObjectsWithFoldingRange } from './parseLSPT';
+import { extractObjectsWithFoldingRange, updateLSPTInCache } from './parseLSPT';
 import { CompilerDaemonClient } from "./compilerDaemonClient";
 
-/**
- * Represents a mapping of token types to their corresponding families.
- * If we set tokens to one family, they will fold together.
- */
-const tokenFamilies: { [key: number]: number } = {
-	[getTokenTypeIndex('keyword')]: 1,
-	[getTokenTypeIndex('variable')]: 1,
-	[getTokenTypeIndex('operator')]: 1,
-	[getTokenTypeIndex('number')]: 1,
-	[getTokenTypeIndex('comment')]: 2,
-	[getTokenTypeIndex('string')]: 3,
-	[getTokenTypeIndex('decorator')]: 4,
-};
+// /**
+//  * Represents a mapping of token types to their corresponding families.
+//  * If we set tokens to one family, they will fold together.
+//  */
+// const tokenFamilies: { [key: number]: number } = {
+// 	[getTokenTypeIndex('keyword')]: 1,
+// 	[getTokenTypeIndex('variable')]: 1,
+// 	[getTokenTypeIndex('operator')]: 1,
+// 	[getTokenTypeIndex('number')]: 1,
+// 	[getTokenTypeIndex('comment')]: 2,
+// 	[getTokenTypeIndex('string')]: 3,
+// 	[getTokenTypeIndex('decorator')]: 4,
+// };
 
 /**
  * Retrieves the folding ranges for a given text document.
@@ -27,26 +28,25 @@ const tokenFamilies: { [key: number]: number } = {
  * @param foldingCache - Cache of folding ranges.
  * @returns An array of FoldingRanges.
  */
-export async function getFoldingRanges(
+export function getFoldingRanges(
 	params: FoldingRangeParams,
 	documents: TextDocuments<TextDocument>,
 	compilerDaemonClient: CompilerDaemonClient,
-	foldingCache: Map<string, FoldingRange[]>,
+	lsptCache: Map<string, JSON>,
 	connection: Connection
-): Promise<FoldingRange[]> {
+): FoldingRange[] {
 	const document = documents.get(params.textDocument.uri) as TextDocument;
 	if (!document) return []; 
 
-	let tokens = foldingCache.get(document.uri) || null;
-	if (!tokens) {
-		// We now know we need to generate the ranges from scratch.
-		let LSPTree = await compilerDaemonClient.getLSPT(document.uri, connection);
-		const newTokens = groupFoldingRanges(extractObjectsWithFoldingRange(LSPTree));
-		foldingCache.set(document.uri, newTokens);
-		tokens = newTokens;
+	let LSPTree = lsptCache.get(document.uri) || null;
+	if (!LSPTree) {
+		let LSPTree = compilerDaemonClient.getLSPT(document.uri, connection).then((res: JSON) => res);
+		updateLSPTInCache(lsptCache, document.uri, LSPTree);
 	}
+	// We now know we need to generate the ranges from scratch.
+	const newTokens = groupFoldingRanges(extractObjectsWithFoldingRange(LSPTree).concat(computeComments(document)));
 	
-	return tokens;
+	return newTokens;
 }
 
 function groupFoldingRanges(tokens: FoldingRange[]): FoldingRange[] {

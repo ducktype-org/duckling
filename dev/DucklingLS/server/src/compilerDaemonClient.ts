@@ -97,7 +97,7 @@ export class CompilerDaemonClient {
 	// }
 
 	// This function is called to get the LSPTree from the daemon for a file
-	public async getLSPT(filePath: string, connection: Connection): Promise<JSON | null> {
+	public async getLSPT(filePath: string, connection: Connection): Promise<JSON> {
 		this.waitForReady(connection);
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');

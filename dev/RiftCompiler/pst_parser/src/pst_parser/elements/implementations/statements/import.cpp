@@ -34,7 +34,7 @@ namespace pst {
 	void Import::semPrint(std::ostream& out) const {
 		out << "{\"Import\": {";
 		getSourcePosition().semPrint(out);
-		out << R"(,"semanticTokenType": "event",)"; // TODO: maybe needs a change?
+		out << R"(,"foldingRangeKind": "imports",)";  // TODO: maybe needs a change?
 		nullAwareSemanticTokenPrint(names, out);
 		out << ", ";
 		out << R"("Alias": ")" << alias.value.strView() << R"(")";

@@ -42,7 +42,7 @@ namespace pst {
 	void RoundGroupExpr::semPrint(std::ostream& out) const {
 		out << "{\"RoundGroupExpr\": {";
 		getSourcePosition().semPrint(out);
-		out << R"(,"semanticTokenType": "namespace", "Body":)"; // TODO: maybe needs a change?
+		out << R"(,"semanticTokenType": "namespace", "Body":)";  // TODO: maybe needs a change?
 		nullAwareSemanticTokenPrint(expr, out);
 		out << " }}";
 	}

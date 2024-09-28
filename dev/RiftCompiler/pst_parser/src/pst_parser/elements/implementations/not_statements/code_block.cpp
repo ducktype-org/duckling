@@ -53,8 +53,8 @@ namespace pst {
 		for (auto& stmt: statements) {
 			nullAwareSemanticTokenPrint(stmt, out);
 			out << ", ";
-    	}
-		out << R"(],"semanticTokenType": "namespace",)";
+		}
+		out << R"(],"foldingRangeKind": "region",)";
 		getSourcePosition().semPrint(out);
 		out << "}}";
 	}
