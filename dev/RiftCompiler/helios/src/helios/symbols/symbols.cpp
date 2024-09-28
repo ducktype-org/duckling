@@ -503,7 +503,7 @@ namespace compiler::helios {
 			variant_case(rpn::Identifier, idt) {
 				// .back() works for constants only.
 				auto&& sym_list = ctx.query<QueryDealias>(idt.symbol_list.back());
-				if(sym_list.has_error()) return errors::HError(errors::InvalidExpr());
+				if (sym_list.has_error()) return errors::HError(errors::InvalidExpr());
 				return ctx.query<QueryConstValueOf>(sym_list.value().back());
 			}
 			variant_case(rpn::NamedIdentifier, idt) {
@@ -802,7 +802,7 @@ namespace compiler::helios {
 					// very simple dealias, that should
 					// ultimately be replaced by type expr comp-time eval:
 					auto&& dealias_sym = ctx.query<QueryDealias>({ symbol.back() });
-					if(dealias_sym.has_error()) return errors::HError(errors::InvalidExpr());
+					if (dealias_sym.has_error()) return errors::HError(errors::InvalidExpr());
 					return ctx.query<QueryTypeFromDefinition>(dealias_sym.value().back());
 				}
 				return it->second;
