@@ -47,6 +47,8 @@ namespace compiler::helios {
 		 */
 		SymID original_symbol;
 
+		// @TODO: store here list of parameters
+
 		base::StrID original_name;
 
 		HOUTCode body;
