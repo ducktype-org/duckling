@@ -4,7 +4,6 @@
 #pragma once
 
 #include <base/string_id.hpp>
-#include <expected>
 #include <query_framework/query_int.hpp>
 #include <base/perfect_hash.hpp>
 #include <pst_parser/elements/elements.hpp>
@@ -13,7 +12,6 @@
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
 #include "../lookup_result.hpp"
-#include "../helios_errors.hpp"
 
 // @TODO: relax this dependency
 #include <frontend/module_tree/queries.hpp>

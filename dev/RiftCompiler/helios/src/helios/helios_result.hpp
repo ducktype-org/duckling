@@ -207,7 +207,7 @@ namespace compiler::helios::errors {
 
 		constexpr ResTp&& expect(std::string_view message) && {
 			_throwOnInvalidStateAccess();
-			return std::move(value_storage.value(message));
+			return std::move(value_storage.expect(message));
 		}
 
 		constexpr const error_type& error() const& {

@@ -9,7 +9,7 @@ add_library(HELIOS
 	src/helios/hout/elements.cpp
 	src/helios/helios_errors.hpp
 	src/helios/test_utils/helios_test_utils.cpp
-		src/helios/helios_result.hpp
+	src/helios/helios_result.hpp
 )
 
 make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystemHigher)

@@ -143,9 +143,9 @@ namespace compiler::helios::code {
 					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
 						{ expr.scope, idt.symbol_name, true }
 					);
-					auto&& single_result = sym_list.getAsSingle();
-					RIFT_ASSERT(single_result.has_value(), "Not propagating errors here yet...");
-					auto&& single = single_result.value();
+					auto single_result
+						= sym_list.getAsSingle().expect("Not propagating errors here yet...");
+					auto&& single = single_result;
 					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, single.back(), ctx));
 				}
 
@@ -180,7 +180,6 @@ namespace compiler::helios::code {
 
 	EXPR_VISITOR(LiteralValueExpr);
 	EXPR_VISITOR(IdentifierExpr);
-
 }
 
 namespace compiler::helios {
@@ -214,15 +213,12 @@ namespace compiler::helios {
 
 				compiler::helios::SymbolList lookup_dealiased;
 
-				auto symbol_path_result = lookup_result.getAsSingle();
-				RIFT_ASSERT(symbol_path_result.has_value(), "Not propagating errors for now...");
-				auto symbol_path = symbol_path_result.value();
+				auto symbol_path
+					= lookup_result.getAsSingle().expect("Not propagating errors for now...");
 
 				for (auto single_sym: symbol_path) {
-					auto dealiased_result = ctx.query<compiler::helios::QueryDealias>(single_sym);
-					RIFT_ASSERT(dealiased_result.has_value(), "Not propagating errors for now...");
-					auto dealiased = dealiased_result.value();
-
+					auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym)
+					                     .expect("Not propagating errors for now...");
 					lookup_dealiased.insert(
 						lookup_dealiased.end(), dealiased.begin(), dealiased.end()
 					);
