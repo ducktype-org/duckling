@@ -430,7 +430,7 @@ namespace compiler::mir {
 
 			function_builder.setName(key.function.original_name);
 
-			// @TODO: add parameters stuff
+			// @TODO: add parameters do list od locals
 
 			auto fun_body_scope = key.function.body.body->lifetime_scope;
 
