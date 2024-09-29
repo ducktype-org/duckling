@@ -234,6 +234,7 @@ namespace compiler::mir {
 		BlockID                      entry_block;
 
 		Function() = delete;
+		Function(const Function&) = delete;
 
 		Function(
 			base::StrID                  name,

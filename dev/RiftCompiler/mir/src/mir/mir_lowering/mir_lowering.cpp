@@ -5,6 +5,7 @@
  */
 
 #include "mir_lowering.hpp"
+#include "mir_lifetimes.hpp"
 #include <query_framework/query_impl.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
@@ -14,15 +15,15 @@
 namespace compiler::mir {
 
 	Function::Function(
-			base::StrID                  name,
-			std::vector<Block>           blocks,
-			base::StableVector<MirLocal> local_list,
-			BlockID                      entry_block
-		):
-			  name(name),
-			  blocks(std::move(blocks)),
-			  local_list(std::move(local_list)),
-			  entry_block(entry_block) {}
+		base::StrID                  name,
+		std::vector<Block>           blocks,
+		base::StableVector<MirLocal> local_list,
+		BlockID                      entry_block
+	):
+		name(name),
+		blocks(std::move(blocks)),
+		local_list(std::move(local_list)),
+		entry_block(entry_block) {}
 
 
 	namespace hc = helios::code;
@@ -146,6 +147,11 @@ namespace compiler::mir {
 			BlockBuilderRef block_ref;
 			usize           position;
 
+			[[nodiscard]]
+			bool isEmpty() const {
+				return not block_ref->reversed_instruction.at(position).empty();
+			}
+
 		public:
 			InstructionHole(BlockBuilderRef block_ref, usize position):
 				  block_ref(block_ref),
@@ -153,7 +159,7 @@ namespace compiler::mir {
 
 			void fill(Instruction instruction) {
 				RIFT_ASSERT(
-					block_ref->reversed_instruction.at(position).empty(), "Hole is already filled"
+					isEmpty(), "Hole is already filled"
 				);
 				RIFT_ASSERT(
 					not isTerminating(instruction.operation),
@@ -456,10 +462,8 @@ namespace compiler::mir {
 
 			// second step: lifetime stuff
 
-			// @TODO:
-			// * add some lifetime stuff
-
-			return function_builder.build();
+			auto function_no_lifetime =  function_builder.build();
+			return addDestructors(ctx, std::move(function_no_lifetime));
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
