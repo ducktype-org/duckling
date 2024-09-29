@@ -47,13 +47,15 @@ namespace compiler::helios {
 		// any lookup in the scope requires calculation of symbols witch itself is done only once!
 		base::Optional<query::CacheEntry<SymbolList>> symbols;
 
+		u64 depth;
+
 
 		// This delete is important, to prevent any copy of scope data:
 		// ScopeData(const ScopeData&)            = delete;
 		// ScopeData& operator=(const ScopeData&) = delete;
 	};
 
-	struct GetScopeRef_Functor {
+	struct GetScopeRef_Functor final {
 		static auto get(ScopeID id) { return id.ref; }
 	};
 
@@ -70,6 +72,8 @@ namespace compiler::helios {
 	}
 
 	frontend::ModuleID module(ScopeID id) { return getScopeRef(id)->parent_module; }
+
+	u64 scopeDepth(ScopeID id) { return getScopeRef(id)->depth; }
 
 	namespace {
 		base::StableVector<ScopeData> scope_table;
@@ -89,6 +93,7 @@ namespace compiler::helios {
 				.related_pst_element = {},
 				.parent_module       = key,
 				.symbols             = {},
+				.depth               = 0,
 			});
 		}
 
@@ -127,6 +132,7 @@ namespace compiler::helios {
 				.related_pst_element = element.base_element,
 				.parent_module       = module(parent),
 				.symbols             = {},
+				.depth                = scopeDepth(parent) + 1,
 			});
 		}
 

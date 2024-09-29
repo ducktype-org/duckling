@@ -28,6 +28,11 @@ namespace compiler::helios {
 	frontend::ModuleID module(ScopeID id);
 
 	/**
+	 * @brief Return depth of the scope in the scope tree.
+	 */
+	u64 scopeDepth(ScopeID);
+
+	/**
 	 * @brief Query root scope for given module.
 	 * @todo: Right now RootScopes are empty, and in order to access proper module
 	 * symbols, one need to get scope of root element of the main module file.
