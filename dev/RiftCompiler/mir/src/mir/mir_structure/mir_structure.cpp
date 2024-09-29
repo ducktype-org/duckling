@@ -18,6 +18,27 @@ namespace compiler::mir {
 		}
 	}
 
+	std::vector<BlockID> getTerminatorSuccessors(const Instruction& terminator) {
+		using enum Operation;
+		switch (terminator.operation) {
+		case Jump:
+			return { terminator.arguments.at(0).asT<BlockID>() };
+			break;
+		
+		case Branch:
+			return { terminator.arguments.at(1).asT<BlockID>(), terminator.arguments.at(2).asT<BlockID>() };
+			break;
+
+		case ReturnVoid: [[fallthrough]];
+		case ReturnValue: [[fallthrough]];
+		case FunctionEnd:
+			return {};
+		
+		default:
+			RIFT_PANIC("Not a terminator instruction");
+		}
+	}
+
 	void Function::debugPrint(std::ostream& output) const {
 		output << "Function " << name.strView() << ": TODO -> TODO\n";
 

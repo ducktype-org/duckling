@@ -134,6 +134,11 @@ namespace compiler::mir {
 		MirLocation(BlockID value): value(value) {}
 
 		void debugPrint(std::ostream& output) const;
+
+		template<class T>
+		const T& asT() const {
+			return std::get<T>(value);
+		}
 	};
 
 	/**
@@ -198,6 +203,8 @@ namespace compiler::mir {
 
 		void debugPrint(std::ostream& output) const;
 	};
+
+	std::vector<BlockID> getTerminatorSuccessors(const Instruction& terminator);
 
 	/**
 	 * @brief A simple block of MIR cfg code.
