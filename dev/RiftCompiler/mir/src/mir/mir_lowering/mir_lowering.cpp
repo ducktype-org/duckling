@@ -13,6 +13,18 @@
 
 namespace compiler::mir {
 
+	Function::Function(
+			base::StrID                  name,
+			std::vector<Block>           blocks,
+			base::StableVector<MirLocal> local_list,
+			BlockID                      entry_block
+		):
+			  name(name),
+			  blocks(std::move(blocks)),
+			  local_list(std::move(local_list)),
+			  entry_block(entry_block) {}
+
+
 	namespace hc = helios::code;
 
 	base::HashT KeyOf_LowerToMirFunction::customPerfectHash() const {

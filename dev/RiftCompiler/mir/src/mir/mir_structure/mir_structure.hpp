@@ -233,6 +233,17 @@ namespace compiler::mir {
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
 
+		Function() = delete;
+
+		Function(
+			base::StrID                  name,
+			std::vector<Block>           blocks,
+			base::StableVector<MirLocal> local_list,
+			BlockID                      entry_block
+		);
+
+		Function(Function&&) = default;
+
 		void debugPrint(std::ostream& output) const;
 	};
 
