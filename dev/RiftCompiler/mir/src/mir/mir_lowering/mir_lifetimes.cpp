@@ -74,7 +74,10 @@ namespace compiler::mir {
 			
 			for (u64 i = 0; i < block.instructions.size(); i++) {
 				const auto& instr = block.instructions.at(i);
-				const auto& next_instr = block.instructions.at(i + 1);
+				const auto& next_instr = 
+				 i < block.instructions.size() - 1 ?
+					block.instructions.at(i + 1) : 
+					block.terminator;
 				
 				new_instructions.push_back(instr);
 				

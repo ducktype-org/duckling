@@ -149,7 +149,7 @@ namespace compiler::mir {
 
 			[[nodiscard]]
 			bool isEmpty() const {
-				return not block_ref->reversed_instruction.at(position).empty();
+				return block_ref->reversed_instruction.at(position).empty();
 			}
 
 		public:

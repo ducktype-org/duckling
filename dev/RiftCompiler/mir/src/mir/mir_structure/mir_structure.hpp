@@ -74,7 +74,7 @@ namespace compiler::mir {
 	/**
 	 * @brief Reference to MIR Local variable data.
 	 */
-	using LocalRef = Ref<MirLocal>;
+	using LocalRef = Ref<const MirLocal>;
 
 	/**
 	 * @brief Description of a MIR Local variable, like a function argument or simply local
