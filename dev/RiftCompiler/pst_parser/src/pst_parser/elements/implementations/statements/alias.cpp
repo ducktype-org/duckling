@@ -45,17 +45,11 @@ namespace pst {
 
 	void Alias::semPrint(std::ostream& out) const {
 		out << "{\"Alias\": {";
-
 		getSourcePosition().semPrint(out);
-
 		out << R"(,"semanticTokenType": "variable",)";
-
 		out << strConcat(R"("name": ")", name.value, R"(",)");
-
 		out << R"("points_to": )";
-
 		nullAwareSemanticTokenPrint(points_to, out);
-
 		out << "}}";
 	}
 

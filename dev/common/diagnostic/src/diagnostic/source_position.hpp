@@ -73,7 +73,6 @@ namespace dia {
 		usize getEnd() const;
 		[[nodiscard]]
 		tokenizer::BorrowFile getSource() const;
-		//[[nodiscard]]
 		void semPrint(std::ostream& out) const;
 
 	private:

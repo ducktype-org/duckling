@@ -21,7 +21,7 @@ namespace pst {
 	void Using::semPrint(std::ostream& out) const {
 		out << "{\"Using\": {";
 		getSourcePosition().semPrint(out);
-		out << R"(,"semanticTokenType": "event",)";  // TODO: maybe needs a change?
+		out << R"(,"semanticTokenType": "event",)";  // @TODO: maybe needs a change?
 		nullAwareSemanticTokenPrint(names, out);
 		out << "}}";
 	}

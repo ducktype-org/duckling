@@ -204,7 +204,7 @@ namespace pst {
 		}
 	};
 
-	// TODO: Merge it with variable. Or perhaps make a new class DataStorage.
+	// @TODO: Merge it with variable. Or perhaps make a new class DataStorage.
 	class Const final: public Stmt {
 		tpc::Identifier name;
 		ParserRef<Expr> type;

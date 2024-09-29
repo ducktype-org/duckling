@@ -53,27 +53,27 @@ void server(i32 port) {
 	lsp::ExportKeywords                           lsp;
 	std::unordered_map<std::string, fs::FilePath> files;
 
-	/*
-	    /status
-
-	    Check if the server is running.
-	*/
+	/**
+	 * /status
+	 * 
+	 * Check if the server is running.
+	 */
 	CROW_ROUTE(app, "/status")
 	([]() { return crow::response(200, "OK"); });
 
-	/*
-	    /export_keywords
-
-	    Export keywords.
-	*/
+	/**
+	 * /export_keywords
+	 * 
+	 * Exports all keywords, specials and operators.
+	 */
 	CROW_ROUTE(app, "/export_keywords")
 	([lsp]() { return crow::response(200, lsp.getAllJson()); });
 
-	/*
-	    /put_file/[base64 relative path]/[base64 file contents]
-
-	    Add or override a file in the virtual file system.
-	*/
+	/**
+	 * /put_file/[base64 relative path]/[base64 file contents]
+	 * 
+	 * Add or override a file in the virtual file system.
+	 */
 	CROW_ROUTE(app, "/put_file/<string>/<string>")
 	([&files](const std::string& base64_path, const std::string& base64_content) {
 		try {
@@ -89,34 +89,10 @@ void server(i32 port) {
 		}
 	});
 
-	/*
-	    /get_lsptree/[base64 relative path]
-
-	    Generate LSP tree for a file under the given path in the virtual file system.
-	*/
-	CROW_ROUTE(app, "/get_sem_tokens/<string>")
-	([&files](const std::string& base64_path) {
-		try {
-			const auto        path   = base64::decode_into<std::string>(base64_path);
-			const auto        file   = files.at(path);
-			auto              tokens = lexer::tokenizeFile(file);
-			pst::PST<>        pst(std::move(tokens));
-			std::stringstream ss;
-
-			// @TODO: replace it with some other LSP generation
-			// pst.getLSP(ss);
-
-			return crow::response(200, ss.str());
-		} catch (std::exception& e) {
-			std::string error_msg = e.what();
-			return crow::response(400, error_msg);
-		}
-	});
-
-	/*
-	    /get_sem_tokens/[base64 relative path]
-
-	    Generate a modified PST for a file under the given path in the virtual file system.
+	/**
+	 * /get_lsptree/[base64 relative path]
+	 * 
+	 * Generate LSP tree for a file under the given path in the virtual file system.
 	*/
 	CROW_ROUTE(app, "/get_lsptree/<string>")
 	([&files](const std::string& base64_path) {
@@ -126,11 +102,7 @@ void server(i32 port) {
 			auto              tokens = lexer::tokenizeFile(file);
 			pst::PST<>        pst(std::move(tokens));
 			std::stringstream ss;
-
-			// @TODO: replace it with some other LSP generation
-			// pst.getLSP(ss);
-			pst.semanticTokensPrint(ss);
-
+			pst.semPrint(ss);
 			return crow::response(200, ss.str());
 		} catch (std::exception& e) {
 			std::string error_msg = e.what();
@@ -138,11 +110,11 @@ void server(i32 port) {
 		}
 	});
 
-	/*
-	    /get_errors/[base64 relative path]
-
-	    Generate diagnostics for a file under the given path in the virtual file system.
-	*/
+	/**
+	 * /get_errors/[base64 relative path]
+	 *
+	 * Generate diagnostics for a file under the given path in the virtual file system.
+	 */
 	CROW_ROUTE(app, "/get_errors/<string>")
 	([&files](const std::string& base64_path) {
 		try {
