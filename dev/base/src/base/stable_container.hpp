@@ -89,6 +89,10 @@ namespace base {
 		constexpr Key emplaceBack(Args&&... args) {
 			return pushBack(Data(std::forward<Args>(args)...));
 		}
+
+		auto begin() const { return data.begin(); }
+
+		auto end() const { return data.end(); }
 	};
 
 

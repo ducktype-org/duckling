@@ -3,6 +3,7 @@
 #include <vector>
 #include <variant>
 #include <helios/scopes/scopes.hpp>
+#include <typesystem/higher/type_desc.hpp>
 #include <base/stable_container.hpp>
 #include <base/strongly_typed_id.hpp>
 #include <base/stringifyable_enum.hpp>
@@ -88,7 +89,9 @@ namespace compiler::mir {
 		// @TODO: type
 
 		// for now we just keep HELIOS id:
-		helios::SymID helios_id;
+		helios::SymID   helios_id;
+		tsh::TypeDesc<> type;
+		helios::ScopeID lifetime_scope;
 
 	private:
 		// @note: making MirLocal from helios_id
@@ -96,14 +99,21 @@ namespace compiler::mir {
 		// It will not work with temporary values for example.
 		// it might work poorly for template/generic instantiations.
 
-		MirLocal(helios::SymID helios_id): id(LocalID::next()), helios_id(helios_id) {}
+		MirLocal(helios::SymID helios_id, tsh::TypeDesc<> type, helios::ScopeID lifetime_scope):
+			  id(LocalID::next()),
+			  helios_id(helios_id),
+			  type(type),
+			  lifetime_scope(lifetime_scope) {}
 
 		friend struct Function;
 		friend struct FunctionBuilder;
 		friend LocalRef;
 
 	public:
-		void debugPrint(std::ostream& output) const;
+		void debugPrint(std::ostream& output, bool detailed = false) const;
+
+		[[nodiscard]]
+		base::StrID getName() const;
 	};
 
 	/**
@@ -184,7 +194,7 @@ namespace compiler::mir {
 			  output(std::move(output)),
 			  arguments(std::move(arguments)),
 			  flags(std::move(flags)),
-			  scope(std::move(scope)) {}
+			  scope(scope) {}
 
 		void debugPrint(std::ostream& output) const;
 	};
