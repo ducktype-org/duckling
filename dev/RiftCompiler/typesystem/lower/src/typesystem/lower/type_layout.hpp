@@ -199,6 +199,7 @@ namespace tsl {
 	 * @brief Layout of class type.
 	 *
 	 * @todo Add vtable support.
+	 * @todo Add laout of base classes.
 	 */
 	class ClassTypeLayout: public TypeLayoutABC {
 		base::Map<compiler::helios::SymID, usize> field_offsets;
@@ -285,43 +286,31 @@ namespace tsl {
 
 	/**
 	 * @brief The ADT representing the layout of a type.
+	 *
+	 * @note Use operator() when matching against the variant's options.
 	 */
 	class TypeLayout: public TypeLayoutDirectVariant {
 	public:
+		// Use when matching against the variant's options.
 		TypeLayoutDirectVariant& operator()() { return *this; }
 
+		// Use when matching against the variant's options.
 		const TypeLayoutDirectVariant& operator()() const { return *this; }
 
 		using TypeLayoutDirectVariant::TypeLayoutDirectVariant;
 
 		[[nodiscard]]
 		usize getSize() const {
-			variant_match((*this)()) {
-				variant_case(EmptyTypeLayout, l) { return l.getSize(); }
-				variant_case(IntegralTypeLayout, l) { return l.getSize(); }
-				variant_case(FloatTypeLayout, l) { return l.getSize(); }
-				variant_case(VariantTypeLayout, l) { return l.getSize(); }
-				variant_case(TupleTypeLayout, l) { return l.getSize(); }
-				variant_case(ClassTypeLayout, l) { return l.getSize(); }
-				variant_case(FunctionalTypeLayout, l) { return l.getSize(); }
-				variant_case(PointerTypeLayout, l) { return l.getSize(); }
-			}
-			RIFT_PANIC("Unmatched type layout.");
+			usize result;
+			VISIT(*this, l, result = l.getSize());
+			return result;
 		}
 
 		[[nodiscard]]
 		tsh::TypeInfo getSourceType() const {
-			variant_match((*this)()) {
-				variant_case(EmptyTypeLayout, l) { return l.getSourceType(); }
-				variant_case(IntegralTypeLayout, l) { return l.getSourceType(); }
-				variant_case(FloatTypeLayout, l) { return l.getSourceType(); }
-				variant_case(VariantTypeLayout, l) { return l.getSourceType(); }
-				variant_case(TupleTypeLayout, l) { return l.getSourceType(); }
-				variant_case(ClassTypeLayout, l) { return l.getSourceType(); }
-				variant_case(FunctionalTypeLayout, l) { return l.getSourceType(); }
-				variant_case(PointerTypeLayout, l) { return l.getSourceType(); }
-			}
-			RIFT_PANIC("Unmatched type layout.");
+			base::Optional<tsh::TypeInfo> result;
+			VISIT(*this, l, result = l.getSourceType());
+			return result.value();
 		}
 	};
 }
