@@ -379,12 +379,12 @@ private:
 	void heliosResultTests() {
 		using namespace compiler::helios::errors;
 
+		static_assert(std::is_same_v<HResult<int, std::variant<int>>::error_type, int>);
 		static_assert(std::is_same_v<
-					  HResult<int, std::variant<int>>::error_type,
-					  std::variant<int>>);
-		static_assert(std::is_same_v<HResult<int, int>::error_type, std::variant<int>>);
+					  HResult<int, int, std::variant<float>>::error_type,
+					  std::variant<int, float>>);
+		static_assert(std::is_same_v<HResult<int, int>::error_type, int>);
 		static_assert(std::is_same_v<HResult<int, int, bool>::error_type, std::variant<int, bool>>);
-		//		static_assert(std::is_same_v<HResult<int, std::variant<int>>, HResult<int, int>>);
 
 		HResult<int, float> whoa = 1;
 		ASSERT_TRUE(whoa.has_value());
@@ -395,15 +395,7 @@ private:
 		HResult<int, std::string_view> whoa2 = HError(std::string_view(info));
 		ASSERT_TRUE(!whoa2.has_value());
 		ASSERT_TRUE(whoa2.has_error());
-		bool entered = false;
-		variant_match(whoa2.error()) {
-			variant_case(std::string_view, str) {
-				entered = true;
-				ASSERT_EQUAL(str, info);
-			}
-			variant_default RIFT_PANIC("The above didn\'t work");
-		}
-		ASSERT_TRUE(entered);
+		ASSERT_EQUAL(whoa2.error(), info);
 
 		struct Err1 {};
 
