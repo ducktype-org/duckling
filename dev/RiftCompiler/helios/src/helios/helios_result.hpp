@@ -230,6 +230,31 @@ namespace compiler::helios::errors {
 			return std::move(error_storage.expect("Result's error is empty!"));
 		}
 
+		constexpr const ResTp& valueOrThrow() const& {
+			_throwOnInvalidStateAccess();
+			if (has_error()) throw error();
+			return value_storage.value();
+		}
+
+		constexpr const ResTp&& valueOrThrow() const&& {
+			_throwOnInvalidStateAccess();
+			if (has_error()) throw error();
+			return std::move(value_storage.value());
+		}
+
+		constexpr ResTp& ValueOrThrow() & {
+			_throwOnInvalidStateAccess();
+			if (has_error()) throw error();
+			return value_storage.value();
+		}
+
+		constexpr ResTp&& valueOrThrow() && {
+			_throwOnInvalidStateAccess();
+			if (has_error()) throw error();
+			return std::move(value_storage.value());
+		}
+
+
 	private:
 		base::Optional<error_type> error_storage;
 		base::Optional<ResTp>      value_storage;
@@ -252,7 +277,7 @@ namespace compiler::helios::errors {
 // inside a new variable named `name`.
 // For interested: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2561r1.html#ref-P2561R0
 // **ATTENTION** This macro is not a single instruction, so it means if you have an if-statement
-// before it, you need to put the call inside curly braces. It will not compile otherwise.
+// before it, you need to put the call inside curly braces. Luckily, it will NOT COMPILE otherwise.
 #define UNPACK_RESULT(var, new_value)                                                             \
 	auto&& RES_VAR_NAME = new_value;                                                              \
 	if (!RES_VAR_NAME.has_value()) return compiler::helios::errors::HError(RES_VAR_NAME.error()); \

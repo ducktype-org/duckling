@@ -5,11 +5,6 @@
 #include "helios/scopes/scopes.hpp"
 #include "helios/symbols/symbols.hpp"
 
-#define UNPACK_THROW(with_value, result)                       \
-	auto RES_VAR_NAME = result;                                \
-	if (!RES_VAR_NAME.has_value()) throw RES_VAR_NAME.error(); \
-	with_value RES_VAR_NAME.value()
-
 namespace compiler::helios::test_utils {
 	/**
 	 * Get the ModuleID and ScopeID of a module in the given directory.
