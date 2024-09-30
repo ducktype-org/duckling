@@ -156,14 +156,15 @@ namespace compiler::helios::errors {
 	requires std::is_trivially_copyable_v<ErrTp1> && (std::is_trivially_copyable_v<ErrTps> && ...)
 	class HResult {
 	public:
-		using error_type_struct = single_variant_extractor<unique_types_variant_t<ErrTp1, ErrTps...>>;
+		using error_type_struct
+			= single_variant_extractor<unique_types_variant_t<ErrTp1, ErrTps...>>;
 
-		using error_type = error_type_struct::type;
+		using error_type       = error_type_struct::type;
 		using error_is_variant = std::is_base_of<std::true_type, error_type_struct>;
 
 		// Constructor from HError<T>, where T is not a variant
 		template<class T>
-		requires (not error_is_variant::value or impl::is_in_variant<T, error_type>::value)
+		requires(not error_is_variant::value or impl::is_in_variant<T, error_type>::value)
 		constexpr HResult(const HError<T>& err): error_storage(err.value) {}
 
 		// Constructor from HError<T>, where T is a variant and error_type is a variant
