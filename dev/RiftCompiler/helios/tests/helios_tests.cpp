@@ -379,12 +379,13 @@ private:
 	void heliosResultTests() {
 		using namespace compiler::helios::errors;
 
+		static_assert(std::is_same_v<HResult<int, int>::error_type, int>);
 		static_assert(std::is_same_v<HResult<int, std::variant<int>>::error_type, int>);
 		static_assert(std::is_same_v<
 					  HResult<int, int, std::variant<float>>::error_type,
 					  std::variant<int, float>>);
-		static_assert(std::is_same_v<HResult<int, int>::error_type, int>);
 		static_assert(std::is_same_v<HResult<int, int, bool>::error_type, std::variant<int, bool>>);
+		static_assert(std::is_same_v<HResult<int, int, int, int, float>::error_type, std::variant<int, float>>);
 
 		HResult<int, float> whoa = 1;
 		ASSERT_TRUE(whoa.has_value());
