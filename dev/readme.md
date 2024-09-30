@@ -1,24 +1,20 @@
-\page dev-readme Folder Structure
-
 # Main development folder
 
 ## File structure
 
-* [RiftCompiler](RiftCompiler/) - implementation of main Rift language compiler
-* [RiftVM](RiftVM/) - implementation of Rift Virtual Machine
-* [common](common/) - modules shared across entire codebase
-* [guidelines](guidelines/) - guidelines related to development
-* [miscellaneous](miscellaneous/) - for files without any specific location
-* [libs](libs/) - for external libraries
+* [base](base/) - our custom standard library, should be preferred over `std::`
+* [common](common/) - modules shared across the entire codebase,
+* [dependencies](dependencies/) - CMake files for dealing with dependencies,
+* [docs](docs/) - developer documentation,
+* [DucklingLS](DucklingLS/) - implementation of the Duckling language server and VS Code client,
+* [miscellaneous](miscellaneous/) - for files without any specific location,
+* [playground](playground/) - a space for trying out new ideas and experiments,
+* [RiftCompiler](RiftCompiler/) - implementation of the main Rift language compiler,
+* [RiftVM](RiftVM/) - implementation of the Rift Virtual Machine,
+* [scripts](scripts/) - collection of various scripts.
 
-## Code structure
 
-### General structure
-
-[RiftCompiler](RiftCompiler/) and [RiftVM](RiftVM/) are modules by themselves, while
-`common` folder holds subfolders each representing a single module.
-
-### Module structure
+## Module structure
 
 ```
 📦module_name
@@ -36,9 +32,5 @@
  ┗ 📜readme.md
 ```
 
-Tests are treated as a submodule. There might also by some other additional submodules.
+Tests are treated as a submodule. There might also be some other additional submodules.
 Paths like `module_name/src/module_name` are not pretty, but are necessary to provide correct include paths using CMake.
-
-### CMake
-
----> [CMakeGuidelines.md](guidelines/CMakeGuildelines.md)
