@@ -300,17 +300,9 @@ namespace tsl {
 		using TypeLayoutDirectVariant::TypeLayoutDirectVariant;
 
 		[[nodiscard]]
-		usize getSize() const {
-			usize result;
-			VISIT(*this, l, result = l.getSize());
-			return result;
-		}
+		usize getSize() const;
 
 		[[nodiscard]]
-		tsh::TypeInfo getSourceType() const {
-			base::Optional<tsh::TypeInfo> result;
-			VISIT(*this, l, result = l.getSourceType());
-			return result.value();
-		}
+		tsh::TypeInfo getSourceType() const;
 	};
 }
