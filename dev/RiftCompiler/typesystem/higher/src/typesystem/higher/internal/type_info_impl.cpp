@@ -114,19 +114,25 @@ namespace tsh::internal {
 	}
 
 	base::Optional<ClassInfo> ClassInfoImpl::getBaseClassType(query::Context& ctx) const {
-		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol).expect("Not handling ERRORS in TS yet").base;
+		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
+		                 .expect("Not handling ERRORS in TS yet")
+		                 .base;
 		if (base.has_value()) return { ClassInfo(base.value()) };
 		return {};
 	}
 
 	std::vector<ClassInfo> ClassInfoImpl::getImplementedInterfaceTypes(query::Context& ctx) const {
-		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol).expect("Not handling ERRORS in TS yet").implements;
+		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
+		                       .expect("Not handling ERRORS in TS yet")
+		                       .implements;
 		return { implements.begin(), implements.end() };
 	}
 
 	std::vector<compiler::helios::SymID>
 		ClassInfoImpl::getImplementedInterfaceSymbols(query::Context& ctx) const {
-		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol).expect("Not handling ERRORS in TS yet").implements;
+		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
+		                       .expect("Not handling ERRORS in TS yet")
+		                       .implements;
 		// @TODO: change cast type to InterfaceInfo when interface type is created.
 		constexpr auto transformer
 			= [](const tsh::TypeInfo& interface) { return ClassInfo(interface).getSymbol(); };

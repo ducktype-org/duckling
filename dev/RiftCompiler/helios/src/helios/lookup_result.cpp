@@ -25,7 +25,10 @@ namespace compiler::helios {
 		if (!leaves.empty()) return SymbolList{ leaves[0] };
 
 		for (const auto& [node_id, inner]: children) {
-			UNPACK_RESULT(SymbolList child_path =, inner.getAsSingle());
+			SymbolList child_path = inner.getAsSingle().expect(
+				"This cannot be error, "
+				"because it was asserted above."
+			);
 			if (!child_path.empty()) {
 				SymbolList result;
 				result.push_back(node_id);
