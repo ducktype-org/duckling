@@ -1,99 +1,23 @@
 # Main Rift development repository
 
-## Before start
+This is the main repository for the Rift project. 
+It contains the main codebase and documentation for the project.
 
-### Installing dependencies
+## Documentation website
 
-#### Debian/Ubuntu
+The documentation for the project can be found at [https://internal.ducktype.org/docs/](https://internal.ducktype.org/docs/).
 
-```bash
-sudo apt update -y && \
-sudo apt install python3 doxygen graphviz -y
-```
+- **Login**: `dev`
+- **Password**: `7ocwXWOAwg=`
 
-#### Arch linux
+## Repo setup and build instructions
 
-```bash
-sudo pacman -Sy python python-pip doxygen graphviz --noconfirm
-```
-
-### Setting up the repo
-
-To begin, enter the `dev/` directory and then:
-
-#### Initialize the repository with toolbox
-
-```bash
-./toolbox.py init
-```
-
-This fetches library dependencies, setups virtual environment, downloads binaries, etc...
-
-#### [Optional, but recommended] Installing custom LLVM library
-
-```bash
-./toolbox.py download-llvm
-```
-
-In case of trouble during build or `setup-build` step, it is advised
-to install the latest supported version of LLVM for a given machine.
-LLVM is **NOT installed system-wide**, but only for this project.
-Using version `18.1.8` should work for most platforms.
-
-#### Create a build folder
-
-```bash
-./toolbox.py setup-build
-```
-
-Press enter on every prompt to leave default options.
-
-#### Building the docs
-
-```bash
-./toolbox.py docs
-```
-
-This builds the docs and opens them in your favorite browser. Leave defaults if you chose defaults in previous step.
-
-#### Running tests
-
-```shell
-./toolbox.py test     # regular tests
-./toolbox.py test -m  # run tests under valgrind
-```
-
-#### Testing coverage
-
-Before running this command make sure you build folder has enabled coverage.
-
-```shell
-# This is only needed if build folder was not prepared for coverage.
-./toolbox.py setup-build --coverage
-
-./toolbox.py coverage
-```
-
-
-___
-
-You can read more about toolbox'es useful features at:
-
-```bash
-./toolbox.py --help
-```
-
-or for more specific information about a command:
-
-```bash
-./toolbox.py setup-build --help
-```
+Instructions for building the project are in the [Developer Guide - Building the project](https://internal.ducktype.org/docs/sphinx/source-doc/dev-guides/build-guidelines/index.html) section of the documentation.
 
 ## File structure
 
-* [dev](dev/) - main code development
+* [`dev`](dev/) - main code development
 
 ## Making changes
 
-* See docs
-* [dev/guidelines](guidelines/) - guidelines dedicated to writing code
+* See [docs](https://internal.ducktype.org/docs/sphinx/source-doc/dev-guides)
