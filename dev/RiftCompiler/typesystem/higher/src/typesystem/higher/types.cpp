@@ -147,22 +147,20 @@ namespace tsh {
 
 	compiler::helios::SymID ClassInfo::getSymbol() const { return toCPimpl(pimpl)->getSymbol(); }
 
-	ClassInfo::QueryClass_Result<base::Optional<ClassInfo>>
-		ClassInfo::getBaseClassType(query::Context& ctx) const {
+	base::Optional<ClassInfo> ClassInfo::getBaseClassType(query::Context& ctx) const {
 		return toCPimpl(pimpl)->getBaseClassType(ctx);
 	}
 
-	ClassInfo::QueryClass_Result<base::Optional<compiler::helios::SymID>>
-		ClassInfo::getBaseClassSymbol(query::Context& ctx) const {
+	base::Optional<compiler::helios::SymID> ClassInfo::getBaseClassSymbol(query::Context& ctx
+	) const {
 		return toCPimpl(pimpl)->getBaseClassSymbol(ctx);
 	}
 
-	ClassInfo::QueryClass_Result<std::vector<ClassInfo>>
-		ClassInfo::getImplementedInterfaceTypes(query::Context& ctx) const {
+	std::vector<ClassInfo> ClassInfo::getImplementedInterfaceTypes(query::Context& ctx) const {
 		return toCPimpl(pimpl)->getImplementedInterfaceTypes(ctx);
 	}
 
-	ClassInfo::QueryClass_Result<std::vector<compiler::helios::SymID>>
+	std::vector<compiler::helios::SymID>
 		ClassInfo::getImplementedInterfaceSymbols(query::Context& ctx) const {
 		return toCPimpl(pimpl)->getImplementedInterfaceSymbols(ctx);
 	}

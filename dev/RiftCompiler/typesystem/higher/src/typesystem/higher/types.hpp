@@ -11,7 +11,6 @@
 #include "type_desc.hpp"
 #include <helios/scope_symbol_id.hpp>
 #include <base/optional.hpp>
-#include <helios/symbols/symbols.hpp>
 
 namespace tsh {
 	namespace internal {
@@ -507,10 +506,6 @@ namespace tsh {
 	public:
 		SETUP_TYPE_WITH_BASE(ClassInfo, TypeInfo)
 
-		template<class T>
-		using QueryClass_Result = compiler::helios::errors::
-			HResult<T, compiler::helios::QueryClassSymbolData_Result::error_type>;
-
 		/**
 		 * Gets the SymID of the class type.
 		 * @return The SymID of the class type.
@@ -524,7 +519,7 @@ namespace tsh {
 		 * @return The type of the base class.
 		 */
 		[[nodiscard]]
-		QueryClass_Result<base::Optional<ClassInfo>> getBaseClassType(query::Context& ctx) const;
+		base::Optional<ClassInfo> getBaseClassType(query::Context& ctx) const;
 
 		/**
 		 * Gets the symbol of the base class.
@@ -532,8 +527,7 @@ namespace tsh {
 		 * @return The symbol of the base class.
 		 */
 		[[nodiscard]]
-		QueryClass_Result<base::Optional<compiler::helios::SymID>>
-			getBaseClassSymbol(query::Context& ctx) const;
+		base::Optional<compiler::helios::SymID> getBaseClassSymbol(query::Context& ctx) const;
 
 		/**
 		 * Gets the symbols of implemented interfaces.
@@ -541,13 +535,12 @@ namespace tsh {
 		 * @return The symbols of implemented interfaces.
 		 */
 		[[nodiscard]]
-		QueryClass_Result<std::vector<ClassInfo>> getImplementedInterfaceTypes(query::Context& ctx
-		) const;
+		std::vector<ClassInfo> getImplementedInterfaceTypes(query::Context& ctx) const;
 		// @TODO: change return type to InterfaceInfo when interface type is created.
 
 		[[nodiscard]]
-		QueryClass_Result<std::vector<compiler::helios::SymID>>
-			getImplementedInterfaceSymbols(query::Context& ctx) const;
+		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols(query::Context& ctx
+		) const;
 
 		/**
 		 * Gets the type of a member.

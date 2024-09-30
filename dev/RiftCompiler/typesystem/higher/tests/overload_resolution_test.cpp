@@ -25,10 +25,8 @@ private:
 		auto [_, root_scope] = getModule(fs::FilePath(path("class_definitions")));
 		const compiler::helios::SymID my_class_symbol = getChain("MyClass", root_scope).back();
 
-		UNPACK_THROW(
-			const TypeInfo my_class_type =,
-			query::entryPoint<compiler::helios::QueryTypeFromDefinition>(my_class_symbol)
-		);
+		const TypeInfo my_class_type
+			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(my_class_symbol).expect("Not expecting an ERROR here...");
 
 
 		withContextDo([&](query::Context& ctx) {

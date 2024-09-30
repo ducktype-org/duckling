@@ -656,20 +656,22 @@ namespace tsh::internal {
 		}
 
 		[[nodiscard]]
-		ClassInfo::QueryClass_Result<base::Optional<ClassInfo>> getBaseClassType(query::Context& ctx
-		) const;
+		base::Optional<ClassInfo> getBaseClassType(query::Context& ctx) const;
 
 		[[nodiscard]]
-		ClassInfo::QueryClass_Result<base::Optional<compiler::helios::SymID>>
-			getBaseClassSymbol(query::Context& ctx) const;
+		base::Optional<compiler::helios::SymID> getBaseClassSymbol(query::Context& ctx) const {
+			return getBaseClassType(ctx).map([](ClassInfo classInfo) {
+				return classInfo.getSymbol();
+			});
+		}
 
 		// @TODO: change return type to InterfaceInfo when interface type is created.
-		ClassInfo::QueryClass_Result<std::vector<ClassInfo>>
-			getImplementedInterfaceTypes(query::Context& ctx) const;
+		[[nodiscard]]
+		std::vector<ClassInfo> getImplementedInterfaceTypes(query::Context& ctx) const;
 
 		[[nodiscard]]
-		ClassInfo::QueryClass_Result<std::vector<compiler::helios::SymID>>
-			getImplementedInterfaceSymbols(query::Context& ctx) const;
+		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols(query::Context& ctx
+		) const;
 
 		[[nodiscard]]
 		TypeInfo getMemberType(compiler::helios::SymID sym, query::Context& ctx) const {

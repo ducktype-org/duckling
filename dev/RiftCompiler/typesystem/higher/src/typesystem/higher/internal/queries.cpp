@@ -72,20 +72,13 @@ namespace tsh::internal {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, TypeInterface) {
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			compiler::helios::SymID symbol = key.value->getSymbol();
-
-			auto&& class_data = ctx.query<compiler::helios::QueryClassSymbolData>(symbol);
-			RIFT_ASSERT(class_data.has_value(), "Handling errors is not supported in TS yet...");
-			auto& field_syms = class_data.value().members;
+			auto& field_syms = ctx.query<compiler::helios::QueryClassSymbolData>(symbol).expect("Handling ERRORS in TS is not supported yet...").members;
 			// @TODO: Add methods to the interface, when obtaining their signature is supported.
 
 			std::set<InterfaceElement> elements;
 
 			for (auto field_sym: field_syms) {
-				auto field_type_result = ctx.query<compiler::helios::QueryTypeOfSymbol>(field_sym);
-				RIFT_ASSERT(
-					field_type_result.has_value(), "Handling errors is not supported in TS yet..."
-				);
-				TypeInfo field_type = field_type_result.value();
+				TypeInfo field_type = ctx.query<compiler::helios::QueryTypeOfSymbol>(field_sym).expect("Handling ERRORS in TS is not supported yet...");
 				elements.insert(
 					InterfaceElement(field_sym, key.value->toTypeInfo(), {}, field_type, {})
 				);

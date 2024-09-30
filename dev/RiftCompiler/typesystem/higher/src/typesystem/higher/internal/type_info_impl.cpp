@@ -113,41 +113,24 @@ namespace tsh::internal {
 		return ctx.query<QuerySizeOfClass>({ this });
 	}
 
-	ClassInfo::QueryClass_Result<base::Optional<ClassInfo>>
-		ClassInfoImpl::getBaseClassType(query::Context& ctx) const {
-		UNPACK_RESULT(
-			auto&& class_data =, ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-		);
-		auto& base = class_data.base;
+	base::Optional<ClassInfo> ClassInfoImpl::getBaseClassType(query::Context& ctx) const {
+		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol).expect("Not handling ERRORS in TS yet").base;
 		if (base.has_value()) return { ClassInfo(base.value()) };
 		return {};
 	}
 
-	ClassInfo::QueryClass_Result<base::Optional<compiler::helios::SymID>>
-		ClassInfoImpl::getBaseClassSymbol(query::Context& ctx) const {
-		UNPACK_RESULT(auto&& base_class_type =, getBaseClassType(ctx));
-		return base_class_type.map([](ClassInfo classInfo) { return classInfo.getSymbol(); });
+	std::vector<ClassInfo> ClassInfoImpl::getImplementedInterfaceTypes(query::Context& ctx) const {
+		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol).expect("Not handling ERRORS in TS yet").implements;
+		return { implements.begin(), implements.end() };
 	}
 
-	ClassInfo::QueryClass_Result<std::vector<ClassInfo>>
-		ClassInfoImpl::getImplementedInterfaceTypes(query::Context& ctx) const {
-		UNPACK_RESULT(
-			auto&& class_data =, ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-		);
-		auto& implements = class_data.implements;
-		return std::vector<ClassInfo>{ implements.begin(), implements.end() };
-	}
-
-	ClassInfo::QueryClass_Result<std::vector<compiler::helios::SymID>>
+	std::vector<compiler::helios::SymID>
 		ClassInfoImpl::getImplementedInterfaceSymbols(query::Context& ctx) const {
-		UNPACK_RESULT(
-			auto&& class_data =, ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-		);
-		auto& implements = class_data.implements;
+		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol).expect("Not handling ERRORS in TS yet").implements;
 		// @TODO: change cast type to InterfaceInfo when interface type is created.
 		constexpr auto transformer
 			= [](const tsh::TypeInfo& interface) { return ClassInfo(interface).getSymbol(); };
 		auto view = std::ranges::ref_view(implements) | std::views::transform(transformer);
-		return std::vector<compiler::helios::SymID>{ view.begin(), view.end() };
+		return { view.begin(), view.end() };
 	}
 }

@@ -243,7 +243,7 @@ namespace compiler::mir {
 		[[nodiscard]]
 		LocalRef addLocal(helios::SymID helios_id) {
 			auto key = local_list.emplaceBack(MirLocal{
-				helios_id, ctx.query<helios::QueryTypeOfSymbol>(helios_id), scope(helios_id) });
+				helios_id, ctx.query<helios::QueryTypeOfSymbol>(helios_id).expect("Handling ERRORS in MIR is not supported yet..."), scope(helios_id) });
 			return local_list.getRef(key).value();
 		}
 
