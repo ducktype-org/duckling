@@ -16,6 +16,7 @@
 #include "types.hpp"
 
 #include <base/exceptions.hpp>
+#include <algorithm>
 
 // NOLINTBEGIN: linter assumes it's a function like macro
 /**

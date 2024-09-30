@@ -56,6 +56,11 @@ namespace tsh {
 		TypeInfo source;
 
 		// @TODO: Add declaration order in source.
+		// That is: Add information which describes the index of a field / method in
+		// the declaration source code of a class / scope. The first declared field would
+		// have index 0, the next one would have 1, etc.
+		// This could be useful later on when addressing fields by index and when forming
+		// packing strategies which the user can influence with the order of declarations.
 
 		/**
 		 * @brief The input parameters of this element of the interface.

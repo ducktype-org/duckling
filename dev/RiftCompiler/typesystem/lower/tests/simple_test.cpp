@@ -207,7 +207,7 @@ private:
 
 			assertTrue(
 				tuple_layout.getSize() == 16 * BYTE_SIZE,
-				"Variant layout size should account for data alignment."
+				"Tuple layout size should account for data alignment."
 			);
 			assertTrue(
 				tuple_layout.getSourceType() == tuple_type,

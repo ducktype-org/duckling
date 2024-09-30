@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
-#include "typesystem/higher/all.hpp"
+#include <typesystem/higher/all.hpp>
 
 #include <query_framework/query_impl.hpp>
 
@@ -508,9 +508,6 @@ private:
 			"Immutable value should not be coercible to a mutable one."
 		);
 	}
-
-public:
-	~HigherTypeSystemSimpleTest() override = default;
 };
 
 TESTER_COMMON_MAIN("/RiftCompiler/typesystem/tests/")
