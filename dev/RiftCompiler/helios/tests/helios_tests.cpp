@@ -385,7 +385,9 @@ private:
 					  HResult<int, int, std::variant<float>>::error_type,
 					  std::variant<int, float>>);
 		static_assert(std::is_same_v<HResult<int, int, bool>::error_type, std::variant<int, bool>>);
-		static_assert(std::is_same_v<HResult<int, int, int, int, float>::error_type, std::variant<int, float>>);
+		static_assert(std::is_same_v<
+					  HResult<int, int, int, int, float>::error_type,
+					  std::variant<int, float>>);
 
 		HResult<int, float> whoa = 1;
 		ASSERT_TRUE(whoa.has_value());
@@ -396,7 +398,7 @@ private:
 		HResult<int, std::string_view> whoa2 = HError(std::string_view(info));
 		ASSERT_TRUE(!whoa2.has_value());
 		ASSERT_TRUE(whoa2.has_error());
-		ASSERT_EQUAL(whoa2.error(), info);
+		ASSERT_EQUAL(whoa2.error(), "Hello");
 
 		struct Err1 {};
 
