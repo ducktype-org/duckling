@@ -299,7 +299,7 @@ namespace compiler::helios {
 
 				parent_result.insert(result);
 
-				return std::move(parent_result);
+				return parent_result;
 			} else {
 				return result;
 			}
