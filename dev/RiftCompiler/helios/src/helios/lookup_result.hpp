@@ -8,9 +8,12 @@
 #pragma once
 
 #include "scope_symbol_id.hpp"
+#include "helios_errors.hpp"
+#include "helios_result.hpp"
 
 #include <vector>
 #include <query_framework/query_int.hpp>
+#include <base/variant.hpp>
 
 namespace compiler::helios {
 
@@ -55,8 +58,8 @@ namespace compiler::helios {
 		 * @return A SymbolList representing a path to the symbol.
 		 */
 		[[nodiscard]]
-		SymbolList getAsSingle() const;
-		void       insert(LookupResult other);
+		errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> getAsSingle() const;
+		void insert(LookupResult other);
 
 		/**
 		 * Turns LookupResult into NestedResult referencing node.

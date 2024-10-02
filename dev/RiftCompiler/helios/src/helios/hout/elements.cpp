@@ -8,7 +8,6 @@
 #include "visitors.hpp"
 
 namespace compiler::helios::code {
-
 	constexpr usize INDENT_SIZE = 4;
 
 	void addIndent(std::ostream& out, usize indent) {
@@ -75,7 +74,9 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
-				  ctx.query<QueryTypeOfSymbol>(symbol),
+				  ctx.query<QueryTypeOfSymbol>(symbol).expect(
+					  "Handling errors in HOUT is not supported yet"
+				  ),
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
 			  )
 		  ),
@@ -142,10 +143,9 @@ namespace compiler::helios::code {
 					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
 						{ expr.scope, idt.symbol_name, true }
 					);
-
-					st.emplace(base::make_unique<IdentifierExpr>(
-						expr.scope, sym_list.getAsSingle().back(), ctx
-					));
+					auto single
+						= sym_list.getAsSingle().expect("Not propagating errors here yet...");
+					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, single.back(), ctx));
 				}
 
 				variant_case(rpn::NumValue, num_value) {
@@ -212,16 +212,18 @@ namespace compiler::helios {
 
 				compiler::helios::SymbolList lookup_dealiased;
 
-				auto symbol_path = lookup_result.getAsSingle();
+				auto symbol_path
+					= lookup_result.getAsSingle().expect("Not propagating errors for now...");
 
 				for (auto single_sym: symbol_path) {
-					auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym);
+					auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym)
+					                     .expect("Not propagating errors for now...");
 					lookup_dealiased.insert(
 						lookup_dealiased.end(), dealiased.begin(), dealiased.end()
 					);
 				}
 
-				RIFT_ASSERT(lookup_dealiased.size() > 0, "Empty lookup result");
+				RIFT_ASSERT(!lookup_dealiased.empty(), "Empty lookup result");
 
 				// @TODO: dont just ignore everything before last symbol
 				return base::make_unique<code::IdentifierExpr>(scope, lookup_dealiased.back(), ctx);

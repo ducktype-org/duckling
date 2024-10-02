@@ -16,7 +16,7 @@
 #include "hout/hout.hpp"
 
 namespace compiler::helios {
-	// @FUTURE: paraph we will need to add more granularity to HOUT generation for efficient
+	// @FUTURE: perhaps we will need to add more granularity to HOUT generation for efficient
 	// incremental compilation
 
 	/**

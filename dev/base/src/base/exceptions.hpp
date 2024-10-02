@@ -82,8 +82,8 @@ namespace base {
  */
 #define RIFT_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what)
 
-#define _THROW_PANIC(panic_title, what...)                        \
-	throw base::Panic(                                            \
-		"    In " __FILE__ " at line " DETAIL_RIFT_STR(__LINE__), \
-		base::strConcat(panic_title, "    ", what)                \
+#define _THROW_PANIC(panic_title, what...)                \
+	throw base::Panic(                                    \
+		"    In " __FILE__ ":" DETAIL_RIFT_STR(__LINE__), \
+		base::strConcat(panic_title, "    ", what)        \
 	)
