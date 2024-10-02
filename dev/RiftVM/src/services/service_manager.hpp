@@ -75,7 +75,7 @@ namespace vm {
 		template<class T>
 		requires(!IsCoreService<T>::value) [[nodiscard]]
 		bool isAvailable() const {
-			return get<T>().has_value();
+			return get<T>().hasValue();
 		}
 
 		template<class T>
