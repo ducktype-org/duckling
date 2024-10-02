@@ -297,7 +297,7 @@ namespace compiler::helios {
 					{ parent, key.name, key.with_wildcards }
 				);
 
-				parent_result.insert(result);
+				parent_result.insert(std::move(result));
 
 				return parent_result;
 			} else {
