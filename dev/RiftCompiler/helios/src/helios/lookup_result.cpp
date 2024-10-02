@@ -24,21 +24,20 @@ namespace compiler::helios {
 
 		if (!leaves.empty()) return SymbolList{ leaves[0] };
 
-		for (const auto& [node_id, inner]: children) {
-			SymbolList child_path = inner.getAsSingle().expect(
-				"This cannot be error, "
-				"because it was asserted above."
-			);
-			if (!child_path.empty()) {
-				SymbolList result;
-				result.push_back(node_id);
-				result.insert(result.end(), child_path.begin(), child_path.end());
-				return result;
-			}
-		}
+		RIFT_ASSERT(children.size() != 1, "Invalid state: contains empty children");
 
-		// (Thic cannot logically happen, but for sanity.)
-		RIFT_PANIC("isSingle() == true, but haven\'t found any symbols");
+		auto&& [node_id, inner] = children[0];
+		SymbolList child_path   = inner.getAsSingle().expect(
+            "This cannot be error, "
+			  "because it was asserted above."
+        );
+
+		RIFT_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
+
+		SymbolList result;
+		result.push_back(node_id);
+		result.insert(result.end(), child_path.begin(), child_path.end());
+		return result;
 	}
 
 	u64 LookupResult::symbolCount() const {
