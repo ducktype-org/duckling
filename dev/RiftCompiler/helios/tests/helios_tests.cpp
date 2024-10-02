@@ -332,11 +332,11 @@ private:
 		static_assert(IsIn_v<int, float, int, double, int>);
 		static_assert(!IsIn_v<int, float, double>);
 
-		static_assert(std::is_same_v<unique_types<int, int>::types, unique_types<int>::types>);
-		static_assert(!std::is_same_v<unique_types<int, int>::types, unique_types<float>::types>);
+		static_assert(std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<int>::types>);
+		static_assert(!std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<float>::types>);
 		static_assert(!std::is_same_v<
-					  unique_types<int, int, float>::types,
-					  unique_types<int>::types>);
+					  UniqueTypes<int, int, float>::types,
+					  UniqueTypes<int>::types>);
 
 		static_assert(std::is_same_v<UniqueTypesVariant_t<int>, std::variant<int>>);
 		static_assert(std::is_same_v<UniqueTypesVariant_t<int, int>, std::variant<int>>);
@@ -390,13 +390,13 @@ private:
 					  std::variant<int, float>>);
 
 		HResult<int, float> whoa = 1;
-		ASSERT_TRUE(whoa.has_value());
+		ASSERT_TRUE(whoa.hasValue());
 		ASSERT_TRUE(!whoa.hasError());
 		ASSERT_EQUAL(1, whoa.value());
 
 		std::string                    info  = "Hello";
 		HResult<int, std::string_view> whoa2 = HError(std::string_view(info));
-		ASSERT_TRUE(!whoa2.has_value());
+		ASSERT_TRUE(!whoa2.hasValue());
 		ASSERT_TRUE(whoa2.hasError());
 		ASSERT_EQUAL(whoa2.error(), "Hello");
 
@@ -415,7 +415,7 @@ private:
 					  decltype(result)::ErrorType,
 					  std::variant<Err1, Err3, Err2, Err4>>);
 		bool entered2 = false;
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_TRUE(!result.hasValue());
 		ASSERT_TRUE(result.hasError());
 		variant_match(result.error()) {
 			variant_case(Err2, value) { entered2 = true; }

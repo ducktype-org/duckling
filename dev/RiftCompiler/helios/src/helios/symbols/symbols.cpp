@@ -324,7 +324,7 @@ namespace compiler::helios {
 				auto names      = using_stmt->getPointed();
 				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
 				RIFT_ASSERT(
-					lookup_res.has_value() && not lookup_res.value().empty(),
+					lookup_res.hasValue() && not lookup_res.value().empty(),
 					"Using points to something that does not exists or is empty"
 				);
 				return ctx.query<QueryLinkedScope>({ lookup_res.value().back() });
@@ -907,7 +907,7 @@ namespace compiler::helios {
 
 				for (auto param: params) {
 					auto&& parse_type_res = parseTypeFromExpr(ctx, param->getType(), scope(key));
-					if (parse_type_res.has_value()) {
+					if (parse_type_res.hasValue()) {
 						param_types.emplace_back(parse_type_res.value());
 					} else {
 						// In this case we are setting error
@@ -918,7 +918,7 @@ namespace compiler::helios {
 				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
 				if (ret.has_value()) {
 					auto&& parsed = parseTypeFromExpr(ctx, ret.value(), scope(key));
-					if (parsed.has_value()) {
+					if (parsed.hasValue()) {
 						ret_type = parsed.value();
 					} else {
 						// In this case we are setting error
@@ -1089,7 +1089,7 @@ namespace compiler::helios {
 
 		static auto load(const QKey& key) -> LoadResult {
 			if (auto&& copy = cache.atMaybe(key)) {
-				if (copy->data.has_value())
+				if (copy->data.hasValue())
 					return QResWithACD{ copy->data.value().borrow(), copy->acd };
 				else
 					return QResWithACD{ errors::HError(copy->data.error()), copy->acd };
@@ -1100,7 +1100,7 @@ namespace compiler::helios {
 		static auto store(const QKey& key, PResult res, query::ACD) -> QResult {
 			cache.put(key, std::move(res));
 
-			if (auto&& c = cache.at(key).data; c.has_value())
+			if (auto&& c = cache.at(key).data; c.hasValue())
 				return c.value().borrow();
 			else
 				return errors::HError(c.error());

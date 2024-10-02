@@ -36,7 +36,7 @@ namespace compiler::helios::errors {
 			 */
 			template<typename TResult, typename T, typename... TOther>
 			struct FlattenVariant<TResult, T, TOther...> {
-				using type = Cat<TResult, std::tuple<T>, typename FlattenVariant<TOther...>::type>;
+				using type = Cat<TResult, std::tuple<T>, typename FlattenVariant<TResult, TOther...>::type>;
 			};
 
 			/**
