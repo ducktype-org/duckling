@@ -1,5 +1,7 @@
 #pragma once
 
+// Feel free to modify this file, as this code is very generic and tough to write once.
+
 #include <base/exceptions.hpp>
 #include <base/define_helper.hpp>
 #include <type_traits>
@@ -178,7 +180,6 @@ namespace compiler::helios::errors {
 	 * @brief Our implementation of std::expected for HELIOS purposes.
 	 */
 	template<class ResTp, class ErrTp1, class... ErrTps>
-	requires std::is_trivially_copyable_v<ErrTp1> && (std::is_trivially_copyable_v<ErrTps> && ...)
 	class HResult {
 	public:
 		using ErrorTypeStruct = SingleVariantExtractor<UniqueTypesVariant_t<ErrTp1, ErrTps...>>;
