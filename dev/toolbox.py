@@ -22,6 +22,8 @@ from scripts.toolbox.internet_file import (
     callback_unTAR,
 )
 
+from scripts.toolbox.clang_tidy import simulate_clang_tidy
+
 DATA_USER = "dev"
 # @FUTURE: change this password and hide it:
 DATA_PASS = "7ocwXWOAwg="
@@ -392,6 +394,18 @@ def download_llvm(*args, **kwargs):
     """Downloads specified version of LLVM. This is LINUX ONLY."""
     download_llvm_impl(*args, **kwargs)
 
+@cli.command()
+@click.option(
+    "-p",
+    "--path",
+    prompt="clang-tidy path",
+    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-17 or clang-tidy",
+    default="clang-tidy-17",
+)
+def clang_tidy(*args, **kwargs):
+    """Simulates clang-tidy as if in a workflow"""
+    simulate_clang_tidy(*args, **kwargs)
+
 
 if __name__ == "__main__":
     if pathlib.Path.cwd() != pathlib.Path(__file__).parent.absolute():
@@ -399,6 +413,6 @@ if __name__ == "__main__":
 
     # Disable traceback for shorter error messages.
     # Comment this line when debugging.
-    sys.tracebacklimit = 0
+    # sys.tracebacklimit = 0
 
     cli()
