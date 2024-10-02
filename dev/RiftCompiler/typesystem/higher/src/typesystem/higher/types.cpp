@@ -55,6 +55,10 @@ namespace tsh {
 		return reinterpret_cast<std::size_t>(type.getPimpl()) + is_mutable;
 	}
 
+	usize IntegralInfo::getSize() const { return toCPimpl(pimpl)->getSize(); }
+
+	usize FloatInfo::getSize() const { return toCPimpl(pimpl)->getSize(); }
+
 	bool RawPointerInfo::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
 
 	ComponentType PointerInfo::getComponent() const { return toCPimpl(pimpl)->getComponent(); }
@@ -113,6 +117,14 @@ namespace tsh {
 
 	const std::vector<ComponentType>& TupleInfo::getComponents() const {
 		return toCPimpl(pimpl)->getComponents();
+	}
+
+	std::vector<TypeInfo> TupleInfo::getComponentTypes() const {
+		const std::vector<ComponentType>& components = getComponents();
+		std::vector<TypeInfo>             componentTypes;
+		componentTypes.reserve(components.size());
+		for (const auto& component: components) componentTypes.push_back(component.type);
+		return componentTypes;
 	}
 
 	struct FunctionConstructionRecord {

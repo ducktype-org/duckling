@@ -131,6 +131,13 @@ namespace tsh {
 	public:
 		SETUP_TYPE_WITH_BASE(IntegralInfo, TypeInfo)
 
+		/**
+		 * @brief Get the size of the integral type.
+		 * @return The size of the type.
+		 */
+		[[nodiscard]]
+		usize getSize() const;
+
 		CONSTRUCT_WITH_CHECKED_CAST(IntegralInfo)
 
 	protected:
@@ -146,6 +153,13 @@ namespace tsh {
 	class FloatInfo final: public TypeInfo {
 	public:
 		SETUP_TYPE_WITH_BASE(FloatInfo, TypeInfo)
+
+		/**
+		 * @brief Get the size of the floating point type.
+		 * @return The size of the type.
+		 */
+		[[nodiscard]]
+		usize getSize() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(FloatInfo)
 
@@ -378,6 +392,9 @@ namespace tsh {
 
 		[[nodiscard]]
 		const std::vector<ComponentType>& getComponents() const;
+
+		[[nodiscard]]
+		std::vector<TypeInfo> getComponentTypes() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(TupleInfo)
 

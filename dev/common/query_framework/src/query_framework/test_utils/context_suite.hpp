@@ -22,6 +22,9 @@ namespace tester {
 		 * @brief Execute a function as if it were in the middle of a query, i.e. supplied with a
 		 * query::Context. The function may return a value of any copy-constructible type.
 		 *
+		 * @note If you are supplying a lambda, make sure it catches `this` be reference
+		 * ([&] works), to enable use of TestSuite methods and avoid unhelpful errors.
+		 *
 		 * @param action The function object to execute, applied to a query::Context.
 		 * The function may return a value of any copy-constructible type.
 		 *
@@ -32,6 +35,9 @@ namespace tester {
 		/**
 		 * @brief Execute a procedure as if it were in the middle of a query, i.e. supplied with a
 		 * query::Context.
+		 *
+		 * @note If you are supplying a lambda, make sure it catches `this` by reference
+		 * ([&] works), to enable use of TestSuite methods and avoid unhelpful errors.
 		 *
 		 * @param action The procedure object to execute, applied to a query::Context.
 		 */

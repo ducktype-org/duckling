@@ -45,10 +45,6 @@ namespace tsh::internal {
 		representation = stringifyTypeVector(this->components);
 	}
 
-	usize TupleInfoImpl::getSize(query::Context& ctx) const {
-		return ctx.query<QuerySizeOfTuple>({ this });
-	}
-
 	FunctionInfoImpl::FunctionInfoImpl(
 		std::vector<TypeInfo> parameter_types,
 		const TypeInfo        result_type,
@@ -97,20 +93,12 @@ namespace tsh::internal {
 		representation = "Variant " + stringifyTypeVector(variant_types);
 	}
 
-	usize VariantInfoImpl::getSize(query::Context& ctx) const {
-		return ctx.query<QuerySizeOfVariant>({ this });
-	}
-
 	ClassInfoImpl::ClassInfoImpl(compiler::helios::SymID symbol): symbol(symbol) {
 		representation = "Class " + name(symbol).str();
 	}
 
 	const TypeInterface& ClassInfoImpl::getInterface(query::Context& ctx) const {
 		return ctx.query<QueryInterfaceOfClass>(this);
-	}
-
-	usize ClassInfoImpl::getSize(query::Context& ctx) const {
-		return ctx.query<QuerySizeOfClass>({ this });
 	}
 
 	base::Optional<ClassInfo> ClassInfoImpl::getBaseClassType(query::Context& ctx) const {

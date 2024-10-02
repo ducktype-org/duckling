@@ -10,7 +10,7 @@
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <type_traits>
-#include <typesystem/higher/typesystem.hpp>
+#include <typesystem/higher/all.hpp>
 #include <typesystem/higher/internal/queries.hpp>
 
 #include <helios/test_utils/helios_test_utils.hpp>

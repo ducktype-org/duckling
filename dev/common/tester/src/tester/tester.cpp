@@ -31,6 +31,10 @@ namespace tester {
 		}
 	}
 
+	void TestSuite::assertFalse(bool v, std::string_view err, bool critical) {
+		assertTrue(!v, err, critical);
+	}
+
 	void TestSuite::fail(std::string_view err) {
 		curr_global_res->success = false;
 		message(err);
