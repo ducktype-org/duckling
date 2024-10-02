@@ -395,7 +395,7 @@ namespace compiler::helios {
 				        ? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
 				        : ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false });
 				auto&& path = pointed_symbol_lookup.getAsSingle();
-				if (path.has_error()) {
+				if (path.hasError()) {
 					variant_match(path.error()) {
 						variant_case(errors::Ambiguity, _) {
 							// @TODO: Report an error
@@ -503,7 +503,7 @@ namespace compiler::helios {
 			variant_case(rpn::Identifier, idt) {
 				// .back() works for constants only.
 				auto&& sym_list = ctx.query<QueryDealias>(idt.symbol_list.back());
-				if (sym_list.has_error()) return errors::HError(errors::InvalidExpr());
+				if (sym_list.hasError()) return errors::HError(errors::InvalidExpr());
 				return ctx.query<QueryConstValueOf>(sym_list.value().back());
 			}
 			variant_case(rpn::NamedIdentifier, idt) {
@@ -802,7 +802,7 @@ namespace compiler::helios {
 					// very simple dealias, that should
 					// ultimately be replaced by type expr comp-time eval:
 					auto&& dealias_sym = ctx.query<QueryDealias>({ symbol.back() });
-					if (dealias_sym.has_error()) return errors::HError(errors::InvalidExpr());
+					if (dealias_sym.hasError()) return errors::HError(errors::InvalidExpr());
 					return ctx.query<QueryTypeFromDefinition>(dealias_sym.value().back());
 				}
 				return it->second;
@@ -1051,7 +1051,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);
 
 	struct
-		IMPLEMENT_QUERY(QueryHOUTExprTreeOfSym, errors::HResult<base::unique_ptr<code::Expr> COMMA rpn::MakeRPN_Result::error_type>) {
+		IMPLEMENT_QUERY(QueryHOUTExprTreeOfSym, errors::HResult<base::unique_ptr<code::Expr> COMMA rpn::MakeRPN_Result::ErrorType>) {
 		class PstStmtVisitor_GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;

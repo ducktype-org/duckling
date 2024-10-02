@@ -291,7 +291,7 @@ private:
 		try {
 			getValue("InvalidExpr", root_scope);
 			RIFT_PANIC("Should throw.");
-		} catch (QueryConstValueOf_Result::error_type& err) {
+		} catch (QueryConstValueOf_Result::ErrorType& err) {
 			variant_match(err) {
 				variant_case(errors::InvalidExpr, parsing_err) {}
 
@@ -302,7 +302,7 @@ private:
 		try {
 			getValue("InvalidSym", root_scope);
 			RIFT_PANIC("Should throw.");
-		} catch (QueryConstValueOf_Result::error_type& err) {
+		} catch (QueryConstValueOf_Result::ErrorType& err) {
 			variant_match(err) {
 				variant_case(errors::SymbolNotFound, symbol_error) {
 					// Since this branch was chosen, everything worked well.
@@ -314,7 +314,7 @@ private:
 		try {
 			getValue("C", root_scope);
 			RIFT_PANIC("Should throw.");
-		} catch (QueryConstValueOf_Result::error_type& err) {
+		} catch (QueryConstValueOf_Result::ErrorType& err) {
 			variant_match(err) {
 				variant_case(errors::Ambiguity, symbol_error) {
 					// Since this branch was chosen, everything worked well.
@@ -327,10 +327,10 @@ private:
 	void heliosResultConceptTests() {
 		using namespace compiler::helios::errors::impl;
 
-		static_assert(is_in_v<int, int>);
-		static_assert(is_in_v<int, float, double, int>);
-		static_assert(is_in_v<int, float, int, double, int>);
-		static_assert(!is_in_v<int, float, double>);
+		static_assert(IsIn_v<int, int>);
+		static_assert(IsIn_v<int, float, double, int>);
+		static_assert(IsIn_v<int, float, int, double, int>);
+		static_assert(!IsIn_v<int, float, double>);
 
 		static_assert(std::is_same_v<unique_types<int, int>::types, unique_types<int>::types>);
 		static_assert(!std::is_same_v<unique_types<int, int>::types, unique_types<float>::types>);
@@ -338,20 +338,20 @@ private:
 					  unique_types<int, int, float>::types,
 					  unique_types<int>::types>);
 
-		static_assert(std::is_same_v<unique_types_variant_t<int>, std::variant<int>>);
-		static_assert(std::is_same_v<unique_types_variant_t<int, int>, std::variant<int>>);
-		static_assert(!std::is_same_v<unique_types_variant_t<int, int, float>, std::variant<int>>);
+		static_assert(std::is_same_v<UniqueTypesVariant_t<int>, std::variant<int>>);
+		static_assert(std::is_same_v<UniqueTypesVariant_t<int, int>, std::variant<int>>);
+		static_assert(!std::is_same_v<UniqueTypesVariant_t<int, int, float>, std::variant<int>>);
 		static_assert(std::is_same_v<
-					  unique_types_variant_t<int, int, float>,
+					  UniqueTypesVariant_t<int, int, float>,
 					  std::variant<int, float>>);
 		static_assert(std::is_same_v<
-					  unique_types_variant_t<int, int, float, int, int>,
+					  UniqueTypesVariant_t<int, int, float, int, int>,
 					  std::variant<float, int>>);
 		static_assert(std::is_same_v<
-					  unique_types_variant_t<int, int, float, std::variant<int, int>>,
+					  UniqueTypesVariant_t<int, int, float, std::variant<int, int>>,
 					  std::variant<float, int>>);
 		static_assert(std::is_same_v<
-					  unique_types_variant_t<
+					  UniqueTypesVariant_t<
 						  std::variant<int, float, int>,
 						  int,
 						  int,
@@ -363,7 +363,7 @@ private:
 
 		std::variant<std::variant<int, float>, std::variant<int, A>> y;
 
-		unique_types_variant_t<decltype(y)> y1 = 1;
+		UniqueTypesVariant_t<decltype(y)> y1 = 1;
 
 		variant_match(y1) {
 			variant_case(int, val) ASSERT_EQUAL(val, 1);
@@ -372,32 +372,32 @@ private:
 
 		static_assert(std::is_same_v<
 					  std::variant<int, float, bool>,
-					  unique_types_variant_t<
+					  UniqueTypesVariant_t<
 						  std::variant<std::variant<int, float, std::variant<bool>>>>>);
 	}
 
 	void heliosResultTests() {
 		using namespace compiler::helios::errors;
 
-		static_assert(std::is_same_v<HResult<int, int>::error_type, int>);
-		static_assert(std::is_same_v<HResult<int, std::variant<int>>::error_type, int>);
+		static_assert(std::is_same_v<HResult<int, int>::ErrorType, int>);
+		static_assert(std::is_same_v<HResult<int, std::variant<int>>::ErrorType, int>);
 		static_assert(std::is_same_v<
-					  HResult<int, int, std::variant<float>>::error_type,
+					  HResult<int, int, std::variant<float>>::ErrorType,
 					  std::variant<int, float>>);
-		static_assert(std::is_same_v<HResult<int, int, bool>::error_type, std::variant<int, bool>>);
+		static_assert(std::is_same_v<HResult<int, int, bool>::ErrorType, std::variant<int, bool>>);
 		static_assert(std::is_same_v<
-					  HResult<int, int, int, int, float>::error_type,
+					  HResult<int, int, int, int, float>::ErrorType,
 					  std::variant<int, float>>);
 
 		HResult<int, float> whoa = 1;
 		ASSERT_TRUE(whoa.has_value());
-		ASSERT_TRUE(!whoa.has_error());
+		ASSERT_TRUE(!whoa.hasError());
 		ASSERT_EQUAL(1, whoa.value());
 
 		std::string                    info  = "Hello";
 		HResult<int, std::string_view> whoa2 = HError(std::string_view(info));
 		ASSERT_TRUE(!whoa2.has_value());
-		ASSERT_TRUE(whoa2.has_error());
+		ASSERT_TRUE(whoa2.hasError());
 		ASSERT_EQUAL(whoa2.error(), "Hello");
 
 		struct Err1 {};
@@ -409,14 +409,14 @@ private:
 		struct Err4 {};
 
 		HResult<int, Err2, Err4> sub_result = HError(Err2());
-		static_assert(std::is_same_v<decltype(sub_result)::error_type, std::variant<Err2, Err4>>);
-		HResult<int, Err1, Err2, Err3, decltype(sub_result)::error_type> result(sub_result);
+		static_assert(std::is_same_v<decltype(sub_result)::ErrorType, std::variant<Err2, Err4>>);
+		HResult<int, Err1, Err2, Err3, decltype(sub_result)::ErrorType> result(sub_result);
 		static_assert(std::is_same_v<
-					  decltype(result)::error_type,
+					  decltype(result)::ErrorType,
 					  std::variant<Err1, Err3, Err2, Err4>>);
 		bool entered2 = false;
 		ASSERT_TRUE(!result.has_value());
-		ASSERT_TRUE(result.has_error());
+		ASSERT_TRUE(result.hasError());
 		variant_match(result.error()) {
 			variant_case(Err2, value) { entered2 = true; }
 			variant_default RIFT_PANIC("Invalid branch");

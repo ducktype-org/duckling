@@ -130,7 +130,7 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryDealias, SymID, const QueryDealias_Result&);
 
 	using PotentialParsingErrors = errors::
-		unique_types_variant_t<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr>;
+		UniqueTypesVariant_t<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr>;
 	using QueryConstValueOf_Result = errors::HResult<i32, PotentialParsingErrors>;
 	/**
 	 * Calculates a value of a constant.
@@ -239,8 +239,7 @@ namespace compiler::helios {
 			ScopeID expr_scope;
 		};
 
-		using RPNEvaluation_Result
-			= errors::HResult<ExprElem, QueryConstValueOf_Result::error_type>;
+		using RPNEvaluation_Result = errors::HResult<ExprElem, QueryConstValueOf_Result::ErrorType>;
 
 		/**
 		 * @brief RPN (postfix) expression with scope produced by makeRPN().
@@ -384,5 +383,5 @@ namespace compiler::helios {
 	 * @brief Return Expr tree of HOUT of a expression assigned to a constant.
 	 * @note This query is temporary and is used for testing only.
 	 */
-	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, errors::HResult<base::borrow_ptr<const code::Expr> COMMA rpn::MakeRPN_Result::error_type>);
+	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, errors::HResult<base::borrow_ptr<const code::Expr> COMMA rpn::MakeRPN_Result::ErrorType>);
 }
