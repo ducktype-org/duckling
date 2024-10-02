@@ -11,6 +11,15 @@
 #include <iostream>
 
 namespace vm {
+	/**
+	 * @brief The virtual CPU of the VM. It governs the thread that executes the code, and manages it's data and services.
+	 *
+	 * @note The code in this class is executed in the supervisor's thread.
+	 * 
+	 * It is responsible for creating and reseting the Exection Thread, for
+	 * setting the status of the execution (pause, stop, run) and for managing the input and output 
+	 * of the executing thread.
+	 */
 	class VCPU: public Listener<api::VCPUStatus> {
 	private:
 		std::shared_mutex rwGlobal;
@@ -38,17 +47,56 @@ namespace vm {
 
 		cpp::result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
 
+		/**
+		 * @brief Entry point for the external request to the VCPU.
+		 * 
+		 * This method is called by the supervisor, and it is responsible for
+		 * executing the request. The possible requests include 
+		 * io operations, start/stop the Exection Thread or communicate with the Exection Thread.
+		 * 
+		 * @param request Request that performs action on the Exection Thread.
+		 * @return cpp::result<api::Response, api::CoreOperationError> 
+		 */
 		cpp::result<api::Response, api::CoreOperationError>
 			doRequest(const api::ExecutorRequest& request);
 		cpp::result<api::Response, api::CoreOperationError>
 			doRequest(const api::DataRequest& request);
+
+		/**
+		 * @brief Creates new thread that runs the code in the Executor service.
+		 */
 		cpp::result<api::Response, api::CoreOperationError> run();
+
+		/**
+		 * @brief Joins the executing thread.
+		 */
 		cpp::result<api::Response, api::CoreOperationError> join();
+		/**
+		 * @brief Stops the executing thread (by joining it). 
+		 * After this method is called, the thread is removed.
+		 */
 		cpp::result<api::Response, api::CoreOperationError> stop();
+		
+		/** 
+		 * @brief Passes the input string to the executing thread.
+		 * If the executing thread is paused and waiting for input, it will resume.
+		 * Relevant if "uses_stdio" is false.
+		 */
 		cpp::result<api::Response, api::CoreOperationError> input(const api::request::Input& request
 		);
+
+		/** 
+		 * @brief Gets the output of the executing thread and clears the output stream.
+		 * If the output stream is empty, it waits until it is not.
+		 * Relevant if "uses_stdio" is false.
+		 */
 		cpp::result<api::Response, api::CoreOperationError> output();
 
+		/**
+		 * @brief Gets the Status of the VCPU (memory-safe).
+		 * 
+		 * @return api::VCPUStatus 
+		 */
 		api::VCPUStatus getStatus();
 
 
@@ -62,6 +110,9 @@ namespace vm {
 		 * This design is not perfect, and might be changed in the future.
 		 */
 		DataManager    dataManager;
+		/**
+		 * @brief Holds all services. When it's constructed, it initializes all services.
+		 */
 		ServiceManager serviceManager;
 
 	public:

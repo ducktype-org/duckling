@@ -50,6 +50,15 @@ namespace vm {
 			  local_stack_end(local_stack.data() + STACK_LENGTH) {}
 	};
 
+	/**
+	 * @brief Service that executes the code.
+	 * 
+	 * This service is responsible for executing the code.
+	 * Most of the code in this class is executed
+	 * in the Exection Thread, but some methods can be called from the supervisor thread. 
+	 * It also provides endpoints for the VCPU to control the execution of the code
+	 * in a memory-safe way (see `external_api_mutex`).
+	 */
 	class Executor {
 	private:
 		Allocator&      dynamic_allocator;
@@ -84,6 +93,13 @@ namespace vm {
 
 		// This might change:
 		std::condition_variable pause_cv;
+		/**
+		 * @brief Mutex that controls access to `is_running` and `execution_strategy`.
+		 *
+		 * When the supervisor thread (external api) wants to change the execution strategy, it has to lock this mutex.
+		 * The Exection Thread running in a loop will first check the `is_running` flag every instruction,
+		 * and if it is false, it will wait on `pause_cv` until it is notified by the supervisor thread. 
+		 */
 		std::mutex              external_api_mutex;
 		ExecutionStrategy       execution_strategy = ExecutionStrategy::Stoped;
 		std::atomic<bool>       is_running         = false;
@@ -95,6 +111,10 @@ namespace vm {
 		// speeds things up significantly.
 		[[gnu::cold]]
 		void handleExecutionStrategy();
+		/** 
+		 * @brief This function is called to check the `is_running` atomic bool.
+		 * If it is false, it will call `handleExecutionStrategy`.
+		 */
 		void handleExecutionStrategyIfNeeded();
 
 		/**
@@ -116,6 +136,12 @@ namespace vm {
 
 		/** Using raw Frame pointers seem to boost performance in function calls */
 		Frame internalInitFrame();
+
+		/**
+		 * @brief This is the main function to call when starting the execution of a program.
+		 * 
+		 * @return value returned by the program
+		 */
 		u64   internalCallMain(const FuncData&);
 
 		// @TODO add some thread data in the future
