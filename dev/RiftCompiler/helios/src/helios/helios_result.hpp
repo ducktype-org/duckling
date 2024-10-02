@@ -373,7 +373,7 @@ namespace compiler::helios::errors {
  * **ATTENTION** This macro is not a single instruction, so it means if you have an if-statement
  * before it, you need to put the call inside curly braces. Luckily, it will NOT COMPILE otherwise.
  */
-#define UNPACK_RESULT(var, new_value)                                                             \
-	auto&& RES_VAR_NAME = new_value;                                                              \
+#define UNPACK_RESULT(var, new_value)                                                            \
+	auto&& RES_VAR_NAME = new_value;                                                             \
 	if (!RES_VAR_NAME.hasValue()) return compiler::helios::errors::HError(RES_VAR_NAME.error()); \
 	var RES_VAR_NAME.value()
