@@ -2,6 +2,8 @@
 
 # Module overview:
 
+This module contains useful utilities and tools that are used in other parts of the project.
+
 ## clap
 
 \subpage clap-module
