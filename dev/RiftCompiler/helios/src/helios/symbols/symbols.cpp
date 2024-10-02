@@ -445,7 +445,7 @@ namespace compiler::helios {
 		}
 	}
 
-	// @TODO:
+	// @TODO: Once EXPR 2.0, Report errors here and change error status to Failed
 	rpn::RPNExpr rpn::makeRPN(query::Context& ctx, KeyOf_RPNmakeRPN key) {
 		std::vector<ExprElem> rpn;
 		std::stack<ExprElem>  st;
@@ -519,9 +519,9 @@ namespace compiler::helios {
 				throw base::NotYetImplemented("Value of KeywordValue is not yet implemented");
 			}
 			variant_case(rpn::NumValue, literal) { return std::stoi(literal.num_id.str()); }
-			variant_default { return errors::HError(errors::InvalidExpr()); }
+			variant_default { RIFT_PANIC("Bad Expr alternative"); }
 		}
-		return errors::HError(errors::InvalidExpr());
+		RIFT_PANIC("Bad Expr alternative");
 	}
 
 	namespace {
@@ -604,7 +604,7 @@ namespace compiler::helios {
 					}
 					st.emplace(tuple_type);
 				}
-				variant_default { return errors::HError(errors::InvalidExpr()); }
+				variant_default { RIFT_PANIC("Bad Expr alternative"); }
 			}
 		}
 		RIFT_ASSERT(st.size() == 1, "Expression stack should have 1 element");
