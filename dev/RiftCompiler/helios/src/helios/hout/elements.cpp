@@ -143,9 +143,8 @@ namespace compiler::helios::code {
 					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
 						{ expr.scope, idt.symbol_name, true }
 					);
-					auto single_result
+					auto single
 						= sym_list.getAsSingle().expect("Not propagating errors here yet...");
-					auto&& single = single_result;
 					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, single.back(), ctx));
 				}
 
