@@ -24,9 +24,9 @@ namespace compiler::helios {
 
 		if (!leaves.empty()) return SymbolList{ leaves[0] };
 
-		RIFT_ASSERT(children.size() != 1, "Invalid state: contains empty children");
+		RIFT_ASSERT(children.size() == 1, "Invalid state: contains empty children");
 
-		auto&& [node_id, inner] = children[0];
+		auto&& [node_id, inner] = children.at(0);
 		SymbolList child_path   = inner.getAsSingle().expect(
             "This cannot be error, "
 			  "because it was asserted above."
