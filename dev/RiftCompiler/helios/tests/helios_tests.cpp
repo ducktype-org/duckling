@@ -9,6 +9,7 @@
 #include <pst_parser/parser.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
+#include <type_traits>
 #include <typesystem/higher/typesystem.hpp>
 #include <typesystem/higher/internal/queries.hpp>
 
@@ -327,6 +328,10 @@ private:
 	void heliosResultConceptTests() {
 		using namespace compiler::helios::errors::impl;
 
+		static_assert(std::is_same_v<
+					  std::variant<int, float, bool>,
+					  FlattenVariant_t<std::variant<int, float, std::variant<bool>>>>);
+
 		static_assert(IsIn_v<int, int>);
 		static_assert(IsIn_v<int, float, double, int>);
 		static_assert(IsIn_v<int, float, int, double, int>);
@@ -334,9 +339,8 @@ private:
 
 		static_assert(std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<int>::types>);
 		static_assert(!std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<float>::types>);
-		static_assert(!std::is_same_v<
-					  UniqueTypes<int, int, float>::types,
-					  UniqueTypes<int>::types>);
+		static_assert(!std::
+		                  is_same_v<UniqueTypes<int, int, float>::types, UniqueTypes<int>::types>);
 
 		static_assert(std::is_same_v<UniqueTypesVariant_t<int>, std::variant<int>>);
 		static_assert(std::is_same_v<UniqueTypesVariant_t<int, int>, std::variant<int>>);
@@ -388,6 +392,8 @@ private:
 		static_assert(std::is_same_v<
 					  HResult<int, int, int, int, float>::ErrorType,
 					  std::variant<int, float>>);
+		// static_assert(std::is_same_v<impl::flatten::FlattenVariant_t<int, int>,
+		// impl::FlattenVariant_t<typename T>)
 
 		HResult<int, float> whoa = 1;
 		ASSERT_TRUE(whoa.hasValue());

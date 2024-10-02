@@ -18,40 +18,31 @@ namespace compiler::helios::errors {
 			template<typename... Ts>
 			using Cat = decltype(std::tuple_cat(std::declval<Ts>()...));
 
-			template<typename TResult, typename... Ts>
-			struct FlattenVariant;
-
 			/**
-			 * @brief Base case: no more types to process.
+			 * @brief Flattens a variant of types (including of variants) into a single tuple of
+			 * types.
 			 */
-			template<typename TResult>
-			struct FlattenVariant<TResult> {
-				using type = TResult;
+			template<typename... Ts>
+			struct FlattenVariant {
+				using type = std::tuple<>;
 			};
 
 			/**
 			 * @brief Case: T is not a variant.
-			 * Return concatenation of previously processed types,
-			 * T, and the flattened remaining types.
 			 */
-			template<typename TResult, typename T, typename... TOther>
-			struct FlattenVariant<TResult, T, TOther...> {
-				using type = Cat<TResult, std::tuple<T>, typename FlattenVariant<TResult, TOther...>::type>;
+			template<class T, class... Ts>
+			struct FlattenVariant<T, Ts...> {
+				using type = Cat<std::tuple<T>, typename FlattenVariant<Ts...>::type>;
 			};
 
 			/**
 			 * @brief Case: T is a variant.
-			 * Return concatenation of previously processed types,
-			 * the types inside the variant, and the flattened remaining types.
-			 * The types inside the variant are recursively flattened in a new
-			 * flatten_variant instantiation.
 			 */
-			template<typename TResult, typename... Ts, typename... TOther>
-			struct FlattenVariant<TResult, std::variant<Ts...>, TOther...> {
+			template<class... VTs, class... Ts>
+			struct FlattenVariant<std::variant<VTs...>, Ts...> {
 				using type = Cat<
-					TResult,
-					typename FlattenVariant<std::tuple<>, Ts...>::type,
-					typename FlattenVariant<TResult, TOther...>::type>;
+					typename FlattenVariant<VTs...>::type,
+					typename FlattenVariant<Ts...>::type>;
 			};
 
 			/**
@@ -68,7 +59,7 @@ namespace compiler::helios::errors {
 
 		template<typename T>
 		using FlattenVariant_t
-			= flatten::ToVariant<typename flatten::FlattenVariant<std::tuple<>, T>::type>::type;
+			= flatten::ToVariant<typename flatten::FlattenVariant<T>::type>::type;
 
 		/**
 		 * @brief Check if ToCheck is in [Types...] list of types
