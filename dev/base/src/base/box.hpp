@@ -166,6 +166,8 @@ namespace base {
 
 		friend void swap(MBox& first, MBox& second) noexcept { std::swap(first.ptr, second.ptr); }
 
+		operator bool() const { return ptr; }
+
 		/**
 		 * @brief Returns a mutable pointer to the pointed value, wrapped in MRef type.
 		 *

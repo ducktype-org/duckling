@@ -9,6 +9,8 @@
 #include <base/optional.hpp>
 #include <base/str_utils.hpp>
 #include <base/defer.hpp>
+#include <base/maps.hpp>
+#include <base/stable_hashmap.hpp>
 #include <diagnostic/logger.hpp>
 
 #include "acd.hpp"
