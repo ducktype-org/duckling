@@ -195,15 +195,9 @@ namespace tsl {
 		  TypeLayoutABC(POINTER_SIZE, pointer_info),
 		  pointee(box<TypeLayout>(ctx.query<QueryTypeLayout>(pointer_info.getUnderlyingType()))) {}
 
-	usize TypeLayout::getSize() const {
-		usize result{};
-		VISIT(*this, l, result = l.getSize());
-		return result;
-	}
+	usize TypeLayout::getSize() const { return VISIT(*this, l, return l.getSize()); }
 
 	tsh::TypeInfo TypeLayout::getSourceType() const {
-		base::Optional<tsh::TypeInfo> result;
-		VISIT(*this, l, result = l.getSourceType());
-		return result.value();
+		return VISIT(*this, l, return l.getSourceType());
 	}
 }
