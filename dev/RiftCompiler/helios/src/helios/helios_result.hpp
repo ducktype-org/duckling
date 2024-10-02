@@ -1,6 +1,5 @@
 #pragma once
 
-#include "base/unique_pointer.hpp"
 #include <base/exceptions.hpp>
 #include <base/define_helper.hpp>
 #include <type_traits>

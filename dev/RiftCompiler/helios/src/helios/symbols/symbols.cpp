@@ -20,8 +20,8 @@
 #include "../pst_ref.hpp"
 #include "../helios_errors.hpp"
 #include "../helios_result.hpp"
-#include "base/optional.hpp"
-#include "typesystem/higher/type_info.hpp"
+#include <base/optional.hpp>
+#include <typesystem/higher/type_info.hpp>
 
 namespace compiler::helios {
 	/**
