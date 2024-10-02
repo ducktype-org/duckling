@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/unique_pointer.hpp"
 #include <base/exceptions.hpp>
 #include <base/define_helper.hpp>
 #include <type_traits>
@@ -146,12 +147,14 @@ namespace compiler::helios::errors {
 
 		template<class... Types>
 		struct SingleVariantExtractor<std::variant<Types...>>: std::true_type {
-			using type = std::variant<Types...>;
+			using type   = std::variant<Types...>;
+			using single = std::true_type;
 		};
 
 		template<class T>
 		struct SingleVariantExtractor<std::variant<T>>: std::false_type {
-			using type = T;
+			using type   = T;
+			using single = std::false_type;
 		};
 
 	}  // namespace impl
@@ -220,13 +223,20 @@ namespace compiler::helios::errors {
 		 * @brief Copy constructor from HResult, where Ts... are a subset of this HResult error
 		 * types
 		 */
-		template<class... Ts>
-		constexpr HResult(const HResult<ResTp, Ts...>& oth) {
+		template<class T, class... Ts>
+		requires std::is_constructible_v<base::Optional<ResTp>, T>
+		constexpr HResult(const HResult<T, Ts...>& oth) {
 			// Cannot use the initializer list, because oth.value_storage is private (different
 			// types)
 			if (oth.hasValue()) value_storage = oth.value();
-			if (oth.hasError())
-				std::visit([&](auto&& erTp) { error_storage = ErrorType{ erTp }; }, oth.error());
+			if (oth.hasError()) {
+				if constexpr (HResult<T, Ts...>::ErrorIsVariant::value)
+					std::visit(
+						[&](auto&& erTp) { error_storage = ErrorType{ erTp }; }, oth.error()
+					);
+				else
+					error_storage = oth.error();
+			}
 		}
 
 		/**
@@ -324,7 +334,7 @@ namespace compiler::helios::errors {
 			return std::move(value_storage.value());
 		}
 
-		constexpr ResTp& ValueOrThrow() & {
+		constexpr ResTp& valueOrThrow() & {
 			_throwOnInvalidStateAccess();
 			if (hasError()) throw error();
 			return value_storage.value();
@@ -338,6 +348,7 @@ namespace compiler::helios::errors {
 
 
 	private:
+		// @TODO: If C++ >= 23 -> change to std::expected
 		base::Optional<ErrorType> error_storage;
 		base::Optional<ResTp>     value_storage;
 

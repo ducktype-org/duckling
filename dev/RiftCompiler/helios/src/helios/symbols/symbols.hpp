@@ -11,6 +11,7 @@
 #include "../lookup_result.hpp"
 #include "../helios_errors.hpp"
 #include "../helios_result.hpp"
+#include "base/unique_pointer.hpp"
 #include <typesystem/higher/type_info.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/scope_symbol_id.hpp>
@@ -129,13 +130,12 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryDealias, SymID, const QueryDealias_Result&);
 
-	using PotentialParsingErrors = errors::
-		UniqueTypesVariant_t<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr>;
-	using QueryConstValueOf_Result = errors::HResult<i32, PotentialParsingErrors>;
+	using PotentialParsingErrors = std::
+		variant<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr, errors::Failed>;
 	/**
 	 * Calculates a value of a constant.
 	 */
-	DECLARE_QUERY(QueryConstValueOf, SymID, const QueryConstValueOf_Result&)
+	DECLARE_QUERY(QueryConstValueOf, SymID, const errors::HResult<i32 COMMA errors::Failed>&)
 
 	/**
 	 * RPN - Reverse Polish Notation.
@@ -239,7 +239,7 @@ namespace compiler::helios {
 			ScopeID expr_scope;
 		};
 
-		using RPNEvaluation_Result = errors::HResult<ExprElem, QueryConstValueOf_Result::ErrorType>;
+		using RPNEvaluation_Result = errors::HResult<ExprElem, PotentialParsingErrors>;
 
 		/**
 		 * @brief RPN (postfix) expression with scope produced by makeRPN().
@@ -256,12 +256,10 @@ namespace compiler::helios {
 			ScopeID scope;
 		};
 
-		using MakeRPN_Result = errors::HResult<RPNExpr, errors::InvalidExpr>;
-
 		/**
 		 * @brief Parses an expression from PST into RPN.
 		 */
-		MakeRPN_Result makeRPN(query::Context&, KeyOf_RPNmakeRPN);
+		RPNExpr makeRPN(query::Context&, KeyOf_RPNmakeRPN);
 
 		struct KeyOf_evalOperator {
 			/**
@@ -298,6 +296,8 @@ namespace compiler::helios {
 			ScopeID expr_scope;
 		};
 
+		using RPNParseValue_Result = errors::HResult<i32, PotentialParsingErrors>;
+
 		/**
 		 * @TODO: Change this from i32 to typesystem's value.
 		 * Parses a value from rpn::ExprElem.
@@ -305,7 +305,7 @@ namespace compiler::helios {
 		 * For example, if we pass here a rpn::NumLiteral(5), then it will return 5 or if we pass
 		 * rpn::Identifier([C]), then a value of a C will be returned (if it's a constant).
 		 */
-		QueryConstValueOf_Result parseValue(query::Context&, const KeyOf_parseValue&);
+		RPNParseValue_Result parseValue(query::Context&, const KeyOf_parseValue&);
 
 		/**
 		 * @brief Evaluates RPN expression. Expects a single element to be
@@ -315,11 +315,12 @@ namespace compiler::helios {
 	}
 
 	using ParseTypeFromExpr_Result = errors::HResult<tsh::TypeInfo, PotentialParsingErrors>;
+	using QueryType_Result         = errors::HResult<tsh::TypeInfo, errors::Failed>;
 
 	/**
 	 * @brief Query type of the symbol.
 	 */
-	DECLARE_QUERY(QueryTypeOfSymbol, SymID, const ParseTypeFromExpr_Result&)
+	DECLARE_QUERY(QueryTypeOfSymbol, SymID, const QueryType_Result&);
 
 	/**
 	 * @brief Query tsh::TypeInfo from a symbol definition (like class definition).
@@ -330,7 +331,7 @@ namespace compiler::helios {
 	 * }
 	 * - Then we can use this query QueryTypeFromDefinition(T).
 	 */
-	DECLARE_QUERY(QueryTypeFromDefinition, SymID, const ParseTypeFromExpr_Result&);
+	DECLARE_QUERY(QueryTypeFromDefinition, SymID, const QueryType_Result&);
 
 	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.
@@ -366,7 +367,7 @@ namespace compiler::helios {
 		std::vector<tsh::TypeInfo> implements;
 	};
 
-	using QueryClassSymbolData_Result = errors::HResult<ClassSymbolData, PotentialParsingErrors>;
+	using QueryClassSymbolData_Result = errors::HResult<ClassSymbolData, errors::Failed>;
 
 	/**
 	 * @brief Query all the information about a class definition.
@@ -383,5 +384,5 @@ namespace compiler::helios {
 	 * @brief Return Expr tree of HOUT of a expression assigned to a constant.
 	 * @note This query is temporary and is used for testing only.
 	 */
-	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, errors::HResult<base::borrow_ptr<const code::Expr> COMMA rpn::MakeRPN_Result::ErrorType>);
+	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, errors::HResult<const base::unique_ptr<code::Expr>& COMMA errors::Failed>);
 }
