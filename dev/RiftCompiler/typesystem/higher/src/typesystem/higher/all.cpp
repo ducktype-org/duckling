@@ -1,4 +1,4 @@
-#include "typesystem.hpp"
+#include "all.hpp"
 #include "internal/type_info_impl.hpp"
 
 namespace tsh {

@@ -1,16 +1,16 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 #include <tester/tester.hpp>
-#include <typesystem/higher/typesystem.hpp>
+#include <typesystem/higher/all.hpp>
 
 using namespace tsh;
 
-class TypeSystemErrorTest final: public tester::TestSuite {
+class HigherTypeSystemErrorTest final: public tester::TestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS TypeSystemErrorTest
+#define TESTER_CLASS HigherTypeSystemErrorTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("TypeSystem error test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("Higher TypeSystem error test") {
 		TESTER_ADD_TEST(integral_size_error_test);
 		TESTER_ADD_TEST(float_size_error_test);
 	}
@@ -54,7 +54,7 @@ private:
 	}
 
 public:
-	~TypeSystemErrorTest() override = default;
+	~HigherTypeSystemErrorTest() override = default;
 };
 
 TESTER_COMMON_MAIN("/RiftCompiler/typesystem/tests/")

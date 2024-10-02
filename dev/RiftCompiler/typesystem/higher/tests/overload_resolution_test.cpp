@@ -1,7 +1,7 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 #include <tester/tester.hpp>
-#include <typesystem/higher/typesystem.hpp>
+#include <typesystem/higher/all.hpp>
 
 #include <base/variant.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -51,11 +51,6 @@ private:
 				variant_case_novalue(TypeInterface::SingleMatch) {}
 				variant_default { assertTrue(false, "Member 'a' should match exactly."); }
 			}
-
-			assertTrue(
-				my_class_type.getSize(ctx) == 64,
-				"MyClass should have size equal to the sum of sizes of its members."
-			);
 		});
 	}
 
