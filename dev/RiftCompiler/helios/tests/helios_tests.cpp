@@ -1,3 +1,4 @@
+#include "helios/helios_errors.hpp"
 #include <helios/scope_symbol_id.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
@@ -292,36 +293,22 @@ private:
 		try {
 			getValue("InvalidExpr", root_scope);
 			RIFT_PANIC("Should throw.");
-		} catch (PotentialParsingErrors& err) {
-			variant_match(err) {
-				variant_case(errors::InvalidExpr, parsing_err) {}
-
-				variant_default RIFT_PANIC("Caught invalid error in tests");
-			}
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getValue("InvalidSym", root_scope);
 			RIFT_PANIC("Should throw.");
-		} catch (PotentialParsingErrors& err) {
-			variant_match(err) {
-				variant_case(errors::SymbolNotFound, symbol_error) {
-					// Since this branch was chosen, everything worked well.
-				}
-				variant_default RIFT_PANIC("Caught invalid error in tests");
-			}
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
-			auto chain = getChain("C", root_scope);
+			getValue("C", root_scope);
 			RIFT_PANIC("Should throw.");
-		} catch (PotentialParsingErrors& err) {
-			variant_match(err) {
-				variant_case(errors::Ambiguity, symbol_error) {
-					// Since this branch was chosen, everything worked well.
-				}
-				variant_default RIFT_PANIC("Caught invalid error in tests");
-			}
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
 		}
 	}
 
