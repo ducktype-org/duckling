@@ -1,3 +1,7 @@
+/**
+ * @file frame.hpp
+ * @brief Defines the frame structure used by the Executor module.
+ */
 #pragma once
 
 #include <base/ints.hpp>

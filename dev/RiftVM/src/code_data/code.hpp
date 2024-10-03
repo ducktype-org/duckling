@@ -1,3 +1,9 @@
+/**
+ * @file code.hpp
+ *
+ * @brief Representation of the RiftBC code.
+ * Parser creates this structure from the text file and the Executor uses it to execute the code.
+ */
 #pragma once
 
 #include "instruction.hpp"

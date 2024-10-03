@@ -1,3 +1,7 @@
+/**
+ * @file instruction.hpp
+ * @brief Defines the instruction structure (types) and the opcodes functions used by the Executor and Parser modules.
+ */
 #pragma once
 
 #include "frame.hpp"
@@ -15,8 +19,12 @@
 #define RETURN_TYPE IF_NOT_TC([[gnu::always_inline]] inline) void
 
 namespace {
-	// Returns number of opcodes recognized by Executor in a compile-time.
-	// Used for `vm::OP_CASES_COUNT`.
+	/**
+	 * @brief Returns number of opcodes recognized by Executor in a compile-time.
+	 * Used for `vm::OP_CASES_COUNT`.
+	 * 
+	 * @return constexpr u16 
+	 */
 	constexpr u16 count_op_cases() {
 		u16 count = 0;
 #define DEF_OPCODE(opcode) count++;

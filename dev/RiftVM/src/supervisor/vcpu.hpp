@@ -48,10 +48,9 @@ namespace vm {
 		cpp::result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
 
 		/**
-		 * @brief Entry point for the external request to the VCPU.
+		 * @brief Performs external execution request on the VCPU.
 		 * 
-		 * This method is called by the supervisor, and it is responsible for
-		 * executing the request. The possible requests include 
+		 * This method is called by the supervisor. The possible requests include 
 		 * io operations, start/stop the Exection Thread or communicate with the Exection Thread.
 		 * 
 		 * @param request Request that performs action on the Exection Thread.
@@ -59,6 +58,18 @@ namespace vm {
 		 */
 		cpp::result<api::Response, api::CoreOperationError>
 			doRequest(const api::ExecutorRequest& request);
+		
+		/**
+		 * @brief Performs external data request on the VCPU.
+		 *
+		 * This method is called by the supervisor. 
+		 * Only valid state of the VCPU for data requests is "Executing",
+		 * but the executor has to be paused in some way to perform the request.
+		 * It inspects the VM's memory.
+		 * 
+		 * @param request 
+		 * @return cpp::result<api::Response, api::CoreOperationError> 
+		 */
 		cpp::result<api::Response, api::CoreOperationError>
 			doRequest(const api::DataRequest& request);
 
@@ -169,6 +180,9 @@ namespace vm {
 
 		// Each of the following methods can be called concurrently, so they should synchronize
 		// resources.
+		/**
+		 * @brief Entry point to perform requests on the VCPU.
+		 */
 		cpp::result<api::Response, api::CoreOperationError>
 			doRequest(const api::RequestVariant& request);
 
