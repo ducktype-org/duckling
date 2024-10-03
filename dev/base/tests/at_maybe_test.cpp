@@ -6,7 +6,7 @@ class AtMaybeTest final: public tester::TestSuite {
 #define TESTER_CLASS AtMaybeTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("AtMaybe Test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testMapAtMaybe);
 		TESTER_ADD_TEST(testVectorMapAtMaybe);
 	}

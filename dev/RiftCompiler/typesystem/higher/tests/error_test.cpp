@@ -10,7 +10,7 @@ class HigherTypeSystemErrorTest final: public tester::TestSuite {
 #define TESTER_CLASS HigherTypeSystemErrorTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Higher TypeSystem error test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(integral_size_error_test);
 		TESTER_ADD_TEST(float_size_error_test);
 	}

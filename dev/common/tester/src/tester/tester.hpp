@@ -12,6 +12,7 @@
 #include <exception>
 #include <string>
 #include <printer/stream_printer.hpp>
+#include <base/define_helper.hpp>
 
 
 #define ASSERT_EQUAL(expected, actual)                                                    \
@@ -108,9 +109,9 @@ namespace tester {
 
 #define TESTER_ADD_TEST(test) addTest(static_cast<TestType>(&TESTER_CLASS::test), #test)
 
-#define TESTER_TEST_SIMPLE_CONSTRUCTOR(name, ...)                         \
+#define TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                         \
 	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
-		  tester::TestSuite(std::move(config), name)
+		  tester::TestSuite(std::move(config), STRINGIFY(TESTER_CLASS))
 
 /**
  * @brief Only use this macro if single class test file

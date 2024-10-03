@@ -6,7 +6,7 @@ class SimpleFileSystemTest: public tester::TestSuite {
 #define TESTER_CLASS SimpleFileSystemTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple FileSystem Test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(getSimpleContentTest);
 		TESTER_ADD_TEST(filePathTest);
 	}

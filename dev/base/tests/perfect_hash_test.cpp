@@ -21,7 +21,7 @@ class PerfectHashTest final: public tester::TestSuite {
 #define TESTER_CLASS PerfectHashTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Perfect hashing Test") { TESTER_ADD_TEST(testPerfectHash); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testPerfectHash); }
 
 private:
 	void testPerfectHash() {

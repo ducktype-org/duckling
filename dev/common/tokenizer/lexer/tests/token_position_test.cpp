@@ -40,7 +40,7 @@ class LexerPositionTest: public tester::TestSuite {
 	tokenizer::OwnFile td;
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Lexer: Token Position Tests") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		lexer::init();
 		TESTER_ADD_TEST(simplePositionTest);
 	}

@@ -35,6 +35,8 @@ namespace base {
 	std::vector<std::string> vaArgSplit(std::string_view va_arg);
 }
 
+#define STRINGIFY(arg) #arg
+
 #define CONCAT(arg1, arg2) arg1##arg2
 /**
  * @brief Combines arguments after expanding them.

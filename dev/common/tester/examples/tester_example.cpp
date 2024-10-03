@@ -12,7 +12,7 @@ class MyTest: public tester::TestSuite {
 public:
 	// more code can be here
 
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("My Test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		// More code can be here
 
 		TESTER_ADD_TEST(test1);

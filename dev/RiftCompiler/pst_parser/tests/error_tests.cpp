@@ -191,7 +191,7 @@ class PSTErrorTests: public tester::TestSuite {
 	}
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("PST Error Tests") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		lexer::init();
 		pst::init();
 

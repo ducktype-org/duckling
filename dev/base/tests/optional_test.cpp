@@ -14,7 +14,7 @@ class OptionalTest: public tester::TestSuite {
 #define TESTER_CLASS OptionalTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("base::Optional<T> test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basicTest);
 		TESTER_ADD_TEST(mapTest);
 		TESTER_ADD_TEST(flatMapTest);
