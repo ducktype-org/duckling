@@ -5,13 +5,20 @@
 
 namespace tester {
 
-	std::string addSpacesBeforeCapital(std::string_view view) {
+	std::string addSpacesBeforeCapital(std::string_view str) {
 		std::string result;
-		result.reserve(view.size());
+		result.reserve(str.size());
+		bool was_capital = true;
 
-		for (usize i = 0; i < view.size(); ++i) {
-			if (i != 0 and std::isupper(view[i])) result.push_back(' ');
-			result.push_back(view[i]);
+		for (auto c: str) {
+			if (not was_capital and std::isupper(c)) {
+				result.push_back(' ');
+				was_capital = true;
+			}
+			else {
+				was_capital = false;
+			}
+			result.push_back(c);
 		}
 
 		return result;
