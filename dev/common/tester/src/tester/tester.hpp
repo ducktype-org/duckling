@@ -34,8 +34,8 @@ namespace tester {
 
 	/**
 	 * @brief Add spaces before capital letters in a string (excluding first letter).
-	 * 
-	 * @return std::string 
+	 *
+	 * @return std::string
 	 */
 	std::string addSpacesBeforeCapital(std::string_view);
 
@@ -116,7 +116,7 @@ namespace tester {
 
 #define TESTER_ADD_TEST(test) addTest(static_cast<TestType>(&TESTER_CLASS::test), #test)
 
-#define TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                         \
+#define TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                               \
 	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
 		  tester::TestSuite(std::move(config), addSpacesBeforeCapital(STRINGIFY(TESTER_CLASS)))
 
