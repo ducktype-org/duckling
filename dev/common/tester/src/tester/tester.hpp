@@ -116,9 +116,11 @@ namespace tester {
 
 #define TESTER_ADD_TEST(test) addTest(static_cast<TestType>(&TESTER_CLASS::test), #test)
 
+#define TESTER_SUITE_NAME tester::addSpacesBeforeCapital(STRINGIFY(TESTER_CLASS))
+
 #define TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                               \
 	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
-		  tester::TestSuite(std::move(config), addSpacesBeforeCapital(STRINGIFY(TESTER_CLASS)))
+		  tester::TestSuite(std::move(config), TESTER_SUITE_NAME)
 
 /**
  * @brief Only use this macro if single class test file
