@@ -81,16 +81,18 @@ namespace tester {
 	public:
 		bool run();
 
+		// public, cause linter complained:
+		virtual ~TestSuite() = default;
+
 	protected:
 		TestConfig config;
 
 		template<class T>
-		auto path(T&& t) {
+		auto path(const T& t) {
 			return config.test_files_path + t;
 		}
 
 		TestSuite(TestConfig&& config, std::string_view name);
-		virtual ~TestSuite() = default;
 		void addTest(TestType test, std::string_view test_name);
 
 		void assertTrue(bool v, std::string_view err, bool critical = true);
@@ -121,7 +123,7 @@ namespace tester {
 
 #define TESTER_SUITE_NAME tester::addSpacesBeforeCapital(STRINGIFY_2(TESTER_CLASS))
 
-#define TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                               \
+#define TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                             \
 	TESTER_CLASS(tester::TestConfig config __VA_OPT__(, ) __VA_ARGS__): \
 		  tester::TestSuite(std::move(config), TESTER_SUITE_NAME)
 
