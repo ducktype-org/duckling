@@ -11,13 +11,10 @@ namespace tester {
 		bool was_capital = true;
 
 		for (auto c: str) {
-			if (not was_capital and std::isupper(c)) {
-				result.push_back(' ');
-				was_capital = true;
-			}
-			else {
-				was_capital = false;
-			}
+			bool is_capital = std::isupper(c);
+			if (not was_capital and std::isupper(c)) result.push_back(' ');
+
+			was_capital = is_capital;
 			result.push_back(c);
 		}
 
