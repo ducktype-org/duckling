@@ -4,14 +4,14 @@
 #include <tester/tester.hpp>
 
 
-#define VM_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                      \
+#define VM_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                            \
 	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
 		  VmTestSuite(std::move(config), TESTER_SUITE_NAME)
 
 class VmTestSuite: public tester::TestSuite {
 public:
 	VmTestSuite(tester ::TestConfig&& config, std::string_view name):
-		  tester::TestSuite(std::move(config), name) { };
+		  tester::TestSuite(std::move(config), name){};
 
 protected:
 	void runTestOnVm(
