@@ -81,7 +81,6 @@ namespace tester {
 	public:
 		bool run();
 
-		// public, cause linter complained:
 		virtual ~TestSuite() = default;
 
 	protected:

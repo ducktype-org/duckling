@@ -12,7 +12,7 @@ namespace tester {
 
 		for (auto c: str) {
 			bool is_capital = std::isupper(c);
-			if (not was_capital and std::isupper(c)) result.push_back(' ');
+			if (not was_capital and is_capital) result.push_back(' ');
 
 			was_capital = is_capital;
 			result.push_back(c);
