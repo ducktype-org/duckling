@@ -37,6 +37,8 @@ namespace base {
 
 #define STRINGIFY(arg) #arg
 
+#define STRINGIFY_2(arg) STRINGIFY(arg)
+
 #define CONCAT(arg1, arg2) arg1##arg2
 /**
  * @brief Combines arguments after expanding them.
