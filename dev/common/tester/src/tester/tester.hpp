@@ -32,6 +32,13 @@ class SimpleTesterTest;
 
 namespace tester {
 
+	/**
+	 * @brief Add spaces before capital letters in a string (excluding first letter).
+	 * 
+	 * @return std::string 
+	 */
+	std::string addSpacesBeforeCapital(std::string_view);
+
 	class TestSuite {
 		friend SimpleTesterTest;
 
@@ -111,7 +118,7 @@ namespace tester {
 
 #define TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                         \
 	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
-		  tester::TestSuite(std::move(config), STRINGIFY(TESTER_CLASS))
+		  tester::TestSuite(std::move(config), addSpacesBeforeCapital(STRINGIFY(TESTER_CLASS)))
 
 /**
  * @brief Only use this macro if single class test file

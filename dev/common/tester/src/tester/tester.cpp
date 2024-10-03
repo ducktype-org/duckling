@@ -1,8 +1,21 @@
 #include "tester.hpp"
 #include <base/exceptions.hpp>
 #include <chrono>
+#include <cctype>
 
 namespace tester {
+
+	std::string addSpacesBeforeCapital(std::string_view view) {
+		std::string result;
+		result.reserve(view.size());
+
+		for (usize i = 0; i < view.size(); ++i) {
+			if (i != 0 and std::isupper(view[i])) result.push_back(' ');
+			result.push_back(view[i]);
+		}
+
+		return result;
+	}
 
 	constexpr usize header_line_length = 40;
 
