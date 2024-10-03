@@ -122,7 +122,7 @@ namespace tester {
 #define TESTER_SUITE_NAME tester::addSpacesBeforeCapital(STRINGIFY_2(TESTER_CLASS))
 
 #define TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                               \
-	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
+	TESTER_CLASS(tester::TestConfig config __VA_OPT__(, ) __VA_ARGS__): \
 		  tester::TestSuite(std::move(config), TESTER_SUITE_NAME)
 
 /**
