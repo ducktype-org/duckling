@@ -11,7 +11,7 @@ class SimpleExecTest: public tester::TestSuite {
 #define TESTER_CLASS SimpleExecTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Exec Test") {
 		exec::init();
 
 		TESTER_ADD_TEST(initialization);

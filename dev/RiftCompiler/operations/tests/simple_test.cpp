@@ -8,7 +8,7 @@ class OperationsTest: public tester::TestSuite {
 #define TESTER_CLASS OperationsTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Operation Test") {
 		TESTER_ADD_TEST(simple_operation);
 		TESTER_ADD_TEST(simple_default);
 	}

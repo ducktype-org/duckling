@@ -9,7 +9,7 @@ class SimpleExecTest: public tester::TestSuite {
 #define TESTER_CLASS SimpleExecTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(simple); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Exec Test") { TESTER_ADD_TEST(simple); }
 
 private:
 	void simple() {
