@@ -76,7 +76,7 @@ class BoxRefTest final: public tester::TestSuite {
 #define TESTER_CLASS BoxRefTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("BoxRef Test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(cppSanityCheck);
 		TESTER_ADD_TEST(testBoxRef);
 		TESTER_ADD_TEST(defaultMembersTest);

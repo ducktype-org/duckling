@@ -5,7 +5,7 @@ class StaticTableVmTest: public VmTestSuite {
 #define TESTER_CLASS StaticTableVmTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR("Static Table VM Test") {
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(oneValue);
 		TESTER_ADD_TEST(arrSum);
 		TESTER_ADD_TEST(initWithZero);

@@ -30,7 +30,7 @@ class HigherTypeSystemSimpleTest final: public tester::TestSuite {
 #define TESTER_CLASS HigherTypeSystemSimpleTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Higher TypeSystem simple test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(trivial_cast_and_assignment);
 		TESTER_ADD_TEST(simple_void_and_unit);
 		TESTER_ADD_TEST(simple_byte_sized);

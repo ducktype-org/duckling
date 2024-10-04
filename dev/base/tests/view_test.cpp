@@ -7,7 +7,7 @@ class ViewTest: public tester::TestSuite {
 #define TESTER_CLASS ViewTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("View Test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(rawViewTest);
 		TESTER_ADD_TEST(owningViewTest);
 	}

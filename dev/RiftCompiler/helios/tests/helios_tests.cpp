@@ -25,7 +25,7 @@ class HeliosTests: public tester::TestSuite {
 #define TESTER_CLASS HeliosTests
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("HeliosTests") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		lexer::init();
 		pst::init();
 		tsh::init();

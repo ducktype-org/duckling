@@ -13,7 +13,7 @@ class ModuleTreeTest: public tester::TestSuite {
 	const std::regex test_regex = std::regex(R"(\..*|\$.*)");
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("frontend::ModuleTree test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(parseModule);
 		TESTER_ADD_TEST(testOtherFeatures);
 		TESTER_ADD_TEST(testQueries);

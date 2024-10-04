@@ -5,7 +5,7 @@ class VmFunctionsTests: public VmTestSuite {
 #define TESTER_CLASS VmFunctionsTests
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR("VM Functions Tests") {
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(test_ret_l64_opcode);
 		TESTER_ADD_TEST(test_ret_imm_opcode);
 		TESTER_ADD_TEST(test_setFstArg_l64_opcode);

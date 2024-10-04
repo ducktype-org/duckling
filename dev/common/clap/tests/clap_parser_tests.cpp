@@ -9,7 +9,7 @@ class ClapParserTester: public tester::TestSuite {
 #define TESTER_CLASS ClapParserTester
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Clap Parser Tester") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(intParserTest);
 		TESTER_ADD_TEST(stringParserTest);
 		TESTER_ADD_TEST(rangeParserTest);

@@ -17,7 +17,7 @@ class VariantUtilsTest: public tester::TestSuite {
 #define TESTER_CLASS VariantUtilsTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Variant Test") { TESTER_ADD_TEST(simpleTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(simpleTest); }
 
 	void simpleTest() {
 		std::variant<int, bool, char, T> v;

@@ -7,7 +7,7 @@ class SimpleRiftDefTest: public tester::TestSuite {
 #define TESTER_CLASS SimpleRiftDefTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple rift definitions test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		rift_def::key_spec_op::init();
 		rift_def::operator_precedence::init();
 
