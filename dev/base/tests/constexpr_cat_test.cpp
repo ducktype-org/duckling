@@ -7,7 +7,7 @@ class ConstexprCatTest: public tester::TestSuite {
 #define TESTER_CLASS ConstexprCatTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Constexpr cat Test") { TESTER_ADD_TEST(testConstexprCat); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testConstexprCat); }
 
 	void testConstexprCat() {
 		constexpr std::array res1 = CONSTEXPR_CAT("aBd", "Inny string");

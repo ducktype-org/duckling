@@ -7,7 +7,7 @@ class FlagTypeTest: public tester::TestSuite {
 #define TESTER_CLASS FlagTypeTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("FlagType test") { TESTER_ADD_TEST(basicTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(basicTest); }
 
 	void basicTest() {
 		using base::EmptyFlag;

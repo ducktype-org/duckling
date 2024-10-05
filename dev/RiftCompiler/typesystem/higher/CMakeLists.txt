@@ -4,8 +4,8 @@ add_library(TypeSystemHigher
         src/typesystem/higher/type_info.cpp
         src/typesystem/higher/types.cpp
         src/typesystem/higher/type_interface.cpp
-        src/typesystem/higher/typesystem.cpp
         src/typesystem/higher/value_category.cpp
+        src/typesystem/higher/all.cpp
         src/typesystem/higher/internal/type_info_impl.cpp
         src/typesystem/higher/internal/queries.cpp
 )

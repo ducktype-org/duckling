@@ -48,6 +48,10 @@ namespace compiler::helios {
 		 * * Classes -- scope containing class fields
 		 * * Expr -- empty Scope
 		 * * Return -- empty Scope
+		 * * Variables -- empty Scope
+		 *
+		 * @todo: once scope refactor will be introduced, most "empty scope"
+		 * stuff will be no longer needed.
 		 */
 		PstRef<pst::RiftElement> base_element;
 

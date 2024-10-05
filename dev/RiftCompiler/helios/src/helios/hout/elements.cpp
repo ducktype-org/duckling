@@ -8,7 +8,6 @@
 #include "visitors.hpp"
 
 namespace compiler::helios::code {
-
 	constexpr usize INDENT_SIZE = 4;
 
 	void addIndent(std::ostream& out, usize indent) {
@@ -44,15 +43,69 @@ namespace compiler::helios::code {
 		out << "}\n";
 	}
 
-	void LiteralValueExpr::debugPrint(std::ostream& out, usize) const {
-		out << std::to_string(value);
+	LiteralValueExpr::LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx):
+		  Expr(
+			  scope,
+			  tsh::TypeDesc<>(
+				  // @TODO: Select type of expression based on type of literal.
+				  ctx.query<tsh::QueryIntegralType>({ 64 }),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  )
+		  ),
+		  value(value) {}
+
+	void LiteralValueExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
+
+	void VariableStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "var ";
+		out << name(this->helios_symbol).strView();
+		out << " : ";
+
+		// this might not be correct:?
+		out << this->type.getType().toString();
+		out << " = ";
+		this->initial_value.value()->debugPrint(out);
+
+		out << ";\n";
 	}
 
-	void IdentifierExpr::debugPrint(std::ostream& out, usize) const {
-		out << base::strConcat("(Symbol ", symbol.customPerfectHash(), ")");
+	IdentifierExpr::IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx):
+		  Expr(
+			  scope,
+			  tsh::TypeDesc<>(
+				  ctx.query<QueryTypeOfSymbol>(symbol).expect(
+					  "Handling errors in HOUT is not supported yet"
+				  ),
+				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
+			  )
+		  ),
+		  symbol(symbol) {}
+
+	void IdentifierExpr::debugPrint(std::ostream& out) const {
+		out << base::strConcat("(Symbol ", name(symbol), " (", symbol.customPerfectHash(), "))");
 	}
 
-	void BinaryOperatorExpr::debugPrint(std::ostream& out, usize) const {
+	BinaryOperatorExpr::BinaryOperatorExpr(
+		ScopeID          scope,
+		base::StrID      op,
+		ElementRef<Expr> lhs,
+		ElementRef<Expr> rhs,
+		query::Context&  ctx
+	):
+		  Expr(
+			  scope,
+			  tsh::TypeDesc<>(
+				  // @TODO: Select type of expression based on result type of the operation.
+				  ctx.query<tsh::QueryIntegralType>({ 64 }),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  )
+		  ),
+		  op(op),
+		  lhs(std::move(lhs)),
+		  rhs(std::move(rhs)) {}
+
+	void BinaryOperatorExpr::debugPrint(std::ostream& out) const {
 		out << base::strConcat("(");
 		lhs->debugPrint(out);
 		out << base::strConcat(op);
@@ -90,10 +143,9 @@ namespace compiler::helios::code {
 					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
 						{ expr.scope, idt.symbol_name, true }
 					);
-
-					st.emplace(base::make_unique<IdentifierExpr>(
-						expr.scope, sym_list.getAsSingle().back(), ctx
-					));
+					auto single
+						= sym_list.getAsSingle().expect("Not propagating errors here yet...");
+					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, single.back(), ctx));
 				}
 
 				variant_case(rpn::NumValue, num_value) {
@@ -123,6 +175,7 @@ namespace compiler::helios::code {
 	STMT_VISITOR(VoidReturnStmt);
 	STMT_VISITOR(ExprStmt);
 	STMT_VISITOR(IfStmt);
+	STMT_VISITOR(VariableStmt);
 
 	EXPR_VISITOR(LiteralValueExpr);
 	EXPR_VISITOR(IdentifierExpr);
@@ -159,16 +212,18 @@ namespace compiler::helios {
 
 				compiler::helios::SymbolList lookup_dealiased;
 
-				auto symbol_path = lookup_result.getAsSingle();
+				auto symbol_path
+					= lookup_result.getAsSingle().expect("Not propagating errors for now...");
 
 				for (auto single_sym: symbol_path) {
-					auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym);
+					auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym)
+					                     .expect("Not propagating errors for now...");
 					lookup_dealiased.insert(
 						lookup_dealiased.end(), dealiased.begin(), dealiased.end()
 					);
 				}
 
-				RIFT_ASSERT(lookup_dealiased.size() > 0, "Empty lookup result");
+				RIFT_ASSERT(!lookup_dealiased.empty(), "Empty lookup result");
 
 				// @TODO: dont just ignore everything before last symbol
 				return base::make_unique<code::IdentifierExpr>(scope, lookup_dealiased.back(), ctx);
@@ -190,8 +245,13 @@ namespace compiler::helios {
 
 			if (key.expr->elements.size() == 1)
 				return houtOfSingleExpr(ctx, key);
-			else
-				throw base::NotYetImplemented("Complicated HOUT expressions");
+			else {
+				std::stringstream expr_dprint;
+				key.expr->dprint(expr_dprint);
+				throw base::NotYetImplemented(
+					base::strConcat("Complicated HOUT expressions: ", expr_dprint.str())
+				);
+			}
 		}
 
 		// @TODO: perhaps add cache

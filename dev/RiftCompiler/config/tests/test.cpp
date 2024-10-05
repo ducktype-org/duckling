@@ -7,7 +7,7 @@ class ConfigTests: public tester::TestSuite {
 #define TESTER_CLASS ConfigTests
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Config Test") { TESTER_ADD_TEST(testConfig); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testConfig); }
 
 private:
 	auto parseOpts(const std::vector<const char*>& data) {

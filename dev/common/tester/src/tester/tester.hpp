@@ -12,6 +12,7 @@
 #include <exception>
 #include <string>
 #include <printer/stream_printer.hpp>
+#include <base/define_helper.hpp>
 
 
 #define ASSERT_EQUAL(expected, actual)                                                    \
@@ -30,6 +31,16 @@
 class SimpleTesterTest;
 
 namespace tester {
+
+	/**
+	 * @brief Add spaces before capital letters in a string,
+	 * excluding: first letter, capital letters after capital letters.
+	 *
+	 * @todo improve the logic, so that "ABCSome" results in "ABC Some"
+	 *
+	 * @return std::string
+	 */
+	std::string addSpacesBeforeCapital(std::string_view);
 
 	class TestSuite {
 		friend SimpleTesterTest;
@@ -70,19 +81,21 @@ namespace tester {
 	public:
 		bool run();
 
+		virtual ~TestSuite() = default;
+
 	protected:
 		TestConfig config;
 
 		template<class T>
-		auto path(T&& t) {
+		auto path(const T& t) {
 			return config.test_files_path + t;
 		}
 
 		TestSuite(TestConfig&& config, std::string_view name);
-		virtual ~TestSuite() = default;
 		void addTest(TestType test, std::string_view test_name);
 
 		void assertTrue(bool v, std::string_view err, bool critical = true);
+		void assertFalse(bool v, std::string_view err, bool critical = true);
 		void fail(std::string_view err);
 		void message(std::string_view mess);
 
@@ -107,9 +120,11 @@ namespace tester {
 
 #define TESTER_ADD_TEST(test) addTest(static_cast<TestType>(&TESTER_CLASS::test), #test)
 
-#define TESTER_TEST_SIMPLE_CONSTRUCTOR(name, ...)                         \
-	TESTER_CLASS(tester::TestConfig&& config __VA_OPT__(, ) __VA_ARGS__): \
-		  tester::TestSuite(std::move(config), name)
+#define TESTER_SUITE_NAME tester::addSpacesBeforeCapital(STRINGIFY_2(TESTER_CLASS))
+
+#define TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                             \
+	TESTER_CLASS(tester::TestConfig config __VA_OPT__(, ) __VA_ARGS__): \
+		  tester::TestSuite(std::move(config), TESTER_SUITE_NAME)
 
 /**
  * @brief Only use this macro if single class test file

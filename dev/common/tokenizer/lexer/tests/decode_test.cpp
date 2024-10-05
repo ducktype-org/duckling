@@ -19,7 +19,7 @@ class DecodeTest: public tester::TestSuite {
 #define TESTER_CLASS DecodeTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Decode Test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		lexer::init();
 		rift_def::setKeywordMode(rift_def::KeywordMode::RiftSource);
 

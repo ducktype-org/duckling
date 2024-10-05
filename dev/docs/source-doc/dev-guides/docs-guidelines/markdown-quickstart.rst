@@ -1,5 +1,5 @@
 ===================
-Markdown quickstart
+Markdown Quickstart
 ===================
 
 For more detailed, in-deph instructions go to `GitHub Docs <https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax>`_.
@@ -35,7 +35,9 @@ To create diffrent headeing levels use more hashes.
 
     And even more ...
 
-Headers automatically create anchors. You can use them to link different sections of your documents. See :ref:`source-doc/dev-guides/markdown-guidelines:links` to learn more.
+Headers automatically create anchors. You can use them to link different sections of your documents. See :ref:`links` to learn more.
+
+.. _inline-formatting:
 
 Inline formatting
 =================
@@ -117,6 +119,8 @@ You can also add language specific syntax highlighting by specifying language ne
         }
         ```
 
+.. _links:
+
 Links
 =====
 
@@ -144,7 +148,7 @@ Link to anchor
     
 Use hash symbol to link specific part of your document.
 
-    Go to :ref:`specific section <source-doc/dev-guides/markdown-guidelines:Inline formatting>`.
+    Go to :ref:`inline-formatting`.
 
     .. code-block:: markdown
 
