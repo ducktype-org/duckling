@@ -10,7 +10,7 @@ class StableListTestSimple: public tester::TestSuite {
 #define TESTER_CLASS StableListTestSimple
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Stable list test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(customKeyTest);
 		TESTER_ADD_TEST(stableHashMapTest);

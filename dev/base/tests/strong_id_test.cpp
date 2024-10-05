@@ -17,7 +17,7 @@ class StrongIDTest: public tester::TestSuite {
 #define TESTER_CLASS StrongIDTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Strong ID test") { TESTER_ADD_TEST(basicTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(basicTest); }
 
 	void basicTest() {
 		auto id0 = A::next();

@@ -10,3 +10,6 @@ add_subdirectory(config)
 add_subdirectory(main)
 
 add_subdirectory(playground)
+
+add_subdirectory(rift_snippets)
+

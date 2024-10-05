@@ -81,6 +81,12 @@ jobs:
             ${{ runner.os }}-build-${{ matrix.build-type }}-main
             ${{ runner.os }}-build-${{ matrix.build-type }}
 
+      # Remove ccache folder to prevent cache snowball growth
+      - name: Remove ccache on main
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        id: ccache-main-rm
+        run: rm -rf ${CCACHE_DIR}
+
       # Enables coverage only in case of Debug build.
       - name: Additional CMake flags
         id: cmake-flags

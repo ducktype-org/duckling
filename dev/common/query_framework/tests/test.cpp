@@ -132,7 +132,7 @@ class QueryTest: public tester::TestSuite {
 
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Query Test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(autoCacheTest);
 		TESTER_ADD_TEST(entryPointSanityTest);

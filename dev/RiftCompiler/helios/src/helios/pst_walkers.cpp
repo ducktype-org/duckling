@@ -16,7 +16,7 @@ namespace compiler::helios {
 		}
 	}
 
-	StmtList<pst::ClassStmt> getChildStmtsOfClass(PstRef<pst::RiftElement> elem) {
+	StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(PstRef<pst::RiftElement> elem) {
 		if (auto* ptr = dynamic_cast<const pst::ClassBlock*>(elem.get())) {
 			StmtList<pst::ClassStmt> out;
 			for (auto&& e: *ptr) detail::visitClassStmts(out, e);
@@ -24,20 +24,16 @@ namespace compiler::helios {
 		} else {
 			const auto& element = *elem.get();
 			RIFT_PANIC(base::strConcat(
-				"Bad Rift Element in `getChildStmtsOfClass`: ", typeid(element).name()
+				"Bad Rift Element in `getChildStmtsOfClassBlock`: ", typeid(element).name()
 			));
 		}
 	}
 
-	StmtList<> getChildStmtsOf(PstRef<pst::RiftElement> elem) {
+	StmtList<> getStmtsFromStmtAggregate(PstRef<pst::RiftElement> elem) {
 		if (auto* ptr = dynamic_cast<const pst::CodeBlock*>(elem.get())) {
 			StmtList<> out;
 			for (auto&& e: *ptr) out.emplace_back(e);
 			return out;
-		}
-		if (auto* ptr = dynamic_cast<const pst::Class*>(elem.get())) {
-			auto out = getChildStmtsOfClass(ptr->getBody());
-			return { out.begin(), out.end() };
 		}
 		if (auto* ptr = dynamic_cast<const pst::CodeBlockOrStmt*>(elem.get())) {
 			StmtList<> out;
@@ -50,9 +46,9 @@ namespace compiler::helios {
 			return out;
 		} else {
 			const auto& element = *elem.get();
-			RIFT_PANIC(
-				base::strConcat("Bad Rift Element in `getChildStmtsOf`: ", typeid(element).name())
-			);
+			RIFT_PANIC(base::strConcat(
+				"Bad Rift Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
+			));
 		}
 	}
 

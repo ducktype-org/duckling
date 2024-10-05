@@ -5,8 +5,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message("-- GNU compiler")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare")
 
-	# Debug version uses Og.
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og")
+	# Debug version uses O0.
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
@@ -16,7 +16,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
 	# Debug version uses O0.
 	# For some reason -Og does not work in clang
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()
@@ -24,9 +24,6 @@ endif()
 if (USE_MARCH_NATIVE)
 	add_compile_options(-march=native)
 endif (USE_MARCH_NATIVE)
-
-# "-O2" here is needed so standard "cmake .." is compiled with O2.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 
 # Release version uses O2, not O3. It might change.
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")

@@ -136,10 +136,10 @@ namespace pst {
 			return "Class";
 		}
 
-		[[nodiscard]]
-		bool isStatementAggregate() const override {
-			return true;
-		}
+		// [[nodiscard]]
+		// bool isStatementAggregate() const override {
+		// 	return true;
+		// }
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
@@ -163,6 +163,16 @@ namespace pst {
 		[[nodiscard]]
 		ParserCBorrowRef<Expr> getType() const {
 			return type.borrow();
+		}
+
+		[[nodiscard]]
+		ParserCBorrowRef<Expr> getValue() const {
+			return value.borrow();
+		}
+
+		[[nodiscard]]
+		bool isConst() const {
+			return is_const;
 		}
 
 		static ParserRef<Variable> parse(RiftParserState& state);

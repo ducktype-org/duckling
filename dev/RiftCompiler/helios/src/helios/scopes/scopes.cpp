@@ -141,7 +141,7 @@ namespace compiler::helios {
 		 */
 		template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
 		static std::vector<SymID> filterSymbolsFromStmtList(
-			query::Context& ctx, const ScopeID& scope, const StmtList<Stmt>& list
+			query::Context& ctx, ScopeID scope, const StmtList<Stmt>& list
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
@@ -163,38 +163,44 @@ namespace compiler::helios {
 			Context&                           ctx;
 			const QKey&                        key;
 
+			template<class... Args>
+			void output(Args&&... args) {
+				RIFT_ASSERT(this->out.empty(), "Output already set");
+				this->out.emplace(std::forward<Args>(args)...);
+			}
+
 			void visitFun(const pst::Fun&) override {
 				// Scope of "fun →()← {}"
 				// @TODO: iterate function parameters and create symbols out of them
 				// The problem is that currently function parameters are Expr in Pst -- this has to
 				// change Variable declaration or custom element is probably a better choice
-				this->out.emplace(std::vector<SymID>{});
+				output(std::vector<SymID>{});
 			}
 
 			void visitIf(const pst::If&) override {
 				// Scope of "if →(...)← {}"
 				// @TODO: check if "If" defines any variables in its condition
 				// and add them here.
-				this->out.emplace(std::vector<SymID>{});
+				output(std::vector<SymID>{});
 			}
 
 			void visitClass(const pst::Class& class_) override {
-				this->out.emplace(
-					filterSymbolsFromStmtList(ctx, key, getChildStmtsOfClass(class_.getBody()))
+				output(
+					filterSymbolsFromStmtList(ctx, key, getChildStmtsOfClassBlock(class_.getBody()))
 				);
 			}
 
 			void visitNamespace(const pst::Namespace&) override {
-				this->out.emplace(std::vector<SymID>());
+				// This seems strange, but namespace scope is indeed empty.
+				// The scope that is full is the codeblock within the namespace.
+				output(std::vector<SymID>());
 			}
 
-			void visitExprStmt(const pst::ExprStmt&) override {
-				this->out.emplace(std::vector<SymID>());
-			}
+			void visitExprStmt(const pst::ExprStmt&) override { output(std::vector<SymID>()); }
 
-			void visitReturn(const pst::Return&) override {
-				this->out.emplace(std::vector<SymID>());
-			}
+			void visitReturn(const pst::Return&) override { output(std::vector<SymID>()); }
+
+			void visitVariable(const pst::Variable&) override { output(std::vector<SymID>()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -209,7 +215,19 @@ namespace compiler::helios {
 			auto base_element = key.ref->related_pst_element.value();
 
 			if (base_element->isStatementAggregate()) {
-				return filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(base_element));
+				// @TODO: the error here is that this perform double scoping
+				// for CodeBlocks inside CodeBlocksOrStmt
+				// Hot-patch:
+				// @TODO: change elementType usage to elementKind (once its implemented)
+				if (base_element->elementType() == "Code Block")
+					if (base_element->getParent().value()->elementType()
+					    == "Code Block or Statement") {
+						// hot patch currently does:
+						// code block inside CodeBlockOrStmt has empty scope
+						return {};
+					}
+
+				return filterSymbolsFromStmtList(ctx, key, getStmtsFromStmtAggregate(base_element));
 			} else if (base_element->isStatement()) {
 				SymbolGrabVisitor symbol_grab(ctx, key);
 				auto              as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());
@@ -275,9 +293,10 @@ namespace compiler::helios {
 
 				// Reverse insertion order allow for linear result concatenation instead of
 				// quadratic
-				auto parent_result = ctx.query<QueryLookupInScopeAndParents>(
+				LookupResult parent_result = ctx.query<QueryLookupInScopeAndParents>(
 					{ parent, key.name, key.with_wildcards }
 				);
+
 				parent_result.insert(std::move(result));
 
 				return parent_result;

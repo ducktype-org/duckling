@@ -1,0 +1,17 @@
+import std.io as io;
+ 
+fun doubleSum(list: (int | f32)[]) {
+	var out: f32; # default init
+
+    for (elem in list) {
+        typematch (elem) {
+            case v:int = out += v; 
+            case v:f32 = out += v; 
+        }
+    }
+    return out;
+}
+
+
+io.printLn(doubleSum([1, 2.5, 3, 4.5]));
+

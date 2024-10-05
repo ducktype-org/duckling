@@ -25,7 +25,7 @@ class SimpleIDMapsTest: public tester::TestSuite {
 #define TESTER_CLASS SimpleIDMapsTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple FileSystem Test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basicMapTest);
 		TESTER_ADD_TEST(strIDTest);
 	}

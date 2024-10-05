@@ -1,8 +1,25 @@
 #include "tester.hpp"
 #include <base/exceptions.hpp>
 #include <chrono>
+#include <cctype>
 
 namespace tester {
+
+	std::string addSpacesBeforeCapital(std::string_view str) {
+		std::string result;
+		result.reserve(str.size());
+		bool was_capital = true;
+
+		for (auto c: str) {
+			bool is_capital = std::isupper(c);
+			if (not was_capital and is_capital) result.push_back(' ');
+
+			was_capital = is_capital;
+			result.push_back(c);
+		}
+
+		return result;
+	}
 
 	constexpr usize header_line_length = 40;
 
@@ -29,6 +46,10 @@ namespace tester {
 			message(err);
 			if (critical) throw CritTestError();
 		}
+	}
+
+	void TestSuite::assertFalse(bool v, std::string_view err, bool critical) {
+		assertTrue(!v, err, critical);
 	}
 
 	void TestSuite::fail(std::string_view err) {
