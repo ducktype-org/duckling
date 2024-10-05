@@ -1,0 +1,40 @@
+import std.io as io;
+
+class HeavyData {
+	name: string;
+	data: int[];
+
+	public {
+		This.create() = {
+			name = "default";
+		} 
+
+		This(this.name, this.data) = {}
+
+		using data.size;
+
+		fun getName() = name;
+
+		fun accessData(pos) = data[pos];
+	}
+};
+
+
+# fun main() = {
+#	var data = HeavyData("data", [1, 2, 3, 4, 5]);
+#
+#	let moved_data(std::move(data));
+#
+#	// Accessing movedData
+#	io.printLn("Name: ", moved_data.getName());
+#	io.printLn("Size: ", moved_data.size());
+#	io.print("Data: ");
+#
+#	for (i in 0..movedData.size()) {
+#		print(moved_data.accessData(i), " ");
+#	}
+#
+#	return 0;
+# }
+
+

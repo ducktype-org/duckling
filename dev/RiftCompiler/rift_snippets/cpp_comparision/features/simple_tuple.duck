@@ -1,0 +1,9 @@
+import std.io as io;
+
+fun main() = {
+	let tuple = (1, 2.5, "hello");
+
+	io.printLn(tuple[0]);
+	io.printLn(tuple[1]);
+	io.printLn(tuple[2]);
+}
