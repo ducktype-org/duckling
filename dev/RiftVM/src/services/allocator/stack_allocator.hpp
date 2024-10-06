@@ -14,7 +14,7 @@ namespace vm {
 	/**
 	 * @brief Memory allocator
 	 *
-	 * Same as Allocator, but when creating a block, caller (`Executor`) has to provide 
+	 * Same as Allocator, but when creating a block, caller (`Executor`) has to provide
 	 * pointer to the memory on the stack, that will be used to initialize the block.
 	 */
 	class StackAllocator {

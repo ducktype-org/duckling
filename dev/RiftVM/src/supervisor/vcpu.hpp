@@ -12,19 +12,19 @@
 
 namespace vm {
 	/**
-	 * @brief The API for using the virtual CPU of the VM. 
+	 * @brief The API for using the virtual CPU of the VM.
 	 * It manages VCPU's data and services.
 	 *
 	 * VCPU is an abstract concepts that represents the program's execution environment.
 	 *
 	 * @note The code in this class is executed in the supervisor's thread.
-	 * 
-	 * It is responsible for loading and parsing of the program, 
+	 *
+	 * It is responsible for loading and parsing of the program,
 	 * creating and reseting the Exection Thread,
-	 * setting the status of the execution (pause, stop, run), 
+	 * setting the status of the execution (pause, stop, run),
 	 * managing the input and output of the executing thread and some more.
 	 *
-	 * Only execution of the code is done in the separate thread, 
+	 * Only execution of the code is done in the separate thread,
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
 	class VCPU: public Listener<api::VCPUStatus> {
@@ -56,26 +56,26 @@ namespace vm {
 
 		/**
 		 * @brief Performs external execution request on the VCPU.
-		 * 
-		 * This method is called by the supervisor. The possible requests include 
+		 *
+		 * This method is called by the supervisor. The possible requests include
 		 * io operations, start/stop the Exection Thread or communicate with the Exection Thread.
-		 * 
+		 *
 		 * @param request Request that performs action on the Exection Thread.
-		 * @return cpp::result<api::Response, api::CoreOperationError> 
+		 * @return cpp::result<api::Response, api::CoreOperationError>
 		 */
 		cpp::result<api::Response, api::CoreOperationError>
 			doRequest(const api::ExecutorRequest& request);
-		
+
 		/**
 		 * @brief Performs external data request on the VCPU.
 		 *
-		 * This method is called by the supervisor. 
+		 * This method is called by the supervisor.
 		 * Only valid state of the VCPU for data requests is "Executing",
 		 * but the executor has to be paused in some way to perform the request.
 		 * It inspects the VM's memory stored in the DataManager.
-		 * 
-		 * @param request 
-		 * @return cpp::result<api::Response, api::CoreOperationError> 
+		 *
+		 * @param request
+		 * @return cpp::result<api::Response, api::CoreOperationError>
 		 */
 		cpp::result<api::Response, api::CoreOperationError>
 			doRequest(const api::DataRequest& request);
@@ -90,12 +90,12 @@ namespace vm {
 		 */
 		cpp::result<api::Response, api::CoreOperationError> join();
 		/**
-		 * @brief Stops the executing thread (by joining it). 
+		 * @brief Stops the executing thread (by joining it).
 		 * After this method is called, the thread is removed.
 		 */
 		cpp::result<api::Response, api::CoreOperationError> stop();
-		
-		/** 
+
+		/**
 		 * @brief Passes the input string to the executing thread.
 		 * If the executing thread is paused and waiting for input, it will resume.
 		 * Relevant if "uses_stdio" is false.
@@ -103,7 +103,7 @@ namespace vm {
 		cpp::result<api::Response, api::CoreOperationError> input(const api::request::Input& request
 		);
 
-		/** 
+		/**
 		 * @brief Gets the output of the executing thread and clears the output stream.
 		 * If the output stream is empty, it waits until it is not.
 		 * Relevant if "uses_stdio" is false.
@@ -112,8 +112,8 @@ namespace vm {
 
 		/**
 		 * @brief Gets the Status of the VCPU (memory-safe).
-		 * 
-		 * @return api::VCPUStatus 
+		 *
+		 * @return api::VCPUStatus
 		 */
 		api::VCPUStatus getStatus();
 
@@ -127,7 +127,7 @@ namespace vm {
 		 *
 		 * This design is not perfect, and might be changed in the future.
 		 */
-		DataManager    dataManager;
+		DataManager dataManager;
 		/**
 		 * @brief Holds all services. When it's constructed, it initializes all services.
 		 */

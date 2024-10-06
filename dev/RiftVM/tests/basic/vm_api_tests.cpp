@@ -41,7 +41,9 @@ private:
 		assertTrue(status.has_value(), "Status failed (1)");
 		assertTrue(std::holds_alternative<vm::api::Executing>(status.value()), "Wrong status (1)");
 		auto exec_status = std::get<vm::api::Executing>(status.value()).exec_status;
-		assertTrue(std::holds_alternative<vm::api::NotStarted>(exec_status), "Wrong exec status (1)");
+		assertTrue(
+			std::holds_alternative<vm::api::NotStarted>(exec_status), "Wrong exec status (1)"
+		);
 
 		fs::FilePath file(path("vm_api_tests.rbc"));
 		auto         loaded_file_response = vm::api::loadFile(pid, file);
@@ -51,11 +53,13 @@ private:
 		assertTrue(status.has_value(), "Status failed (2)");
 		assertTrue(std::holds_alternative<vm::api::Executing>(status.value()), "Wrong status (2)");
 		exec_status = std::get<vm::api::Executing>(status.value()).exec_status;
-		assertTrue(std::holds_alternative<vm::api::NotStarted>(exec_status), "Wrong exec status (2)");
+		assertTrue(
+			std::holds_alternative<vm::api::NotStarted>(exec_status), "Wrong exec status (2)"
+		);
 	}
 
 	void dataServices() {
-		auto pid = loadProgram("vm_api_tests.rbc");
+		auto pid  = loadProgram("vm_api_tests.rbc");
 		auto type = vm::api::getType(pid, "int64");
 		assertTrue(type.has_value(), "Type failed (1)");
 		assertTrue(type.value()->getSize() == 8, "Wrong type size");
@@ -86,7 +90,9 @@ private:
 		assertTrue(status.has_value(), "Status failed (3)");
 		assertTrue(std::holds_alternative<vm::api::Executing>(status.value()), "Wrong status (3)");
 		auto exec_status = std::get<vm::api::Executing>(status.value()).exec_status;
-		assertTrue(std::holds_alternative<vm::api::WaitingForInput>(exec_status), "Wrong exec status (3)");
+		assertTrue(
+			std::holds_alternative<vm::api::WaitingForInput>(exec_status), "Wrong exec status (3)"
+		);
 
 		auto input_response = vm::api::input(pid, "42");
 		assertTrue(input_response.has_value(), "Input failed (1)");

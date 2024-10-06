@@ -29,7 +29,8 @@ namespace vm {
 	 *
 	 * Uses the `Memory` data module to create and delete memory blocks.
 	 * More information in the paper:
-	 * ["Prototyp maszyny wirtualnej..."](https://github.com/ducktype-org/dev-space/blob/main/prace_naukowe/maszyna_wirtualna.pdf)
+	 * ["Prototyp maszyny
+	 * wirtualnej..."](https://github.com/ducktype-org/dev-space/blob/main/prace_naukowe/maszyna_wirtualna.pdf)
 	 */
 	class Allocator {
 	private:

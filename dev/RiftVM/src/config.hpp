@@ -9,8 +9,9 @@
  *
  * They differ in the way they handle the main loop of the `Executor`
  * and they use different type for the "instrucion struct" `Fix8Instruction`.
- * More information in the paper 
- * ["Nowoczesne metody optymalizacji..."](https://github.com/ducktype-org/dev-space/blob/main/prace_naukowe/pondvm-opt-pl.pdf)
+ * More information in the paper
+ * ["Nowoczesne metody
+ * optymalizacji..."](https://github.com/ducktype-org/dev-space/blob/main/prace_naukowe/pondvm-opt-pl.pdf)
  */
 
 #pragma once

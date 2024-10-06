@@ -17,7 +17,7 @@ namespace vm {
 		Profiler(ServiceManagerDef<DynamicServices...>& /* serviceManager */) {}
 
 	public:
-		 ~Profiler() noexcept override = default;
+		~Profiler() noexcept override = default;
 
 		void onEvent(const MemoryEvent& event) noexcept override;
 		void onEvent(const FunctionCallEvent& event) noexcept override;

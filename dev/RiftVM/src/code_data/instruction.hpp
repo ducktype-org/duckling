@@ -1,6 +1,7 @@
 /**
  * @file instruction.hpp
- * @brief Defines the instruction structure (types) and the opcodes functions used by the Executor and Parser modules.
+ * @brief Defines the instruction structure (types) and the opcodes functions used by the Executor
+ * and Parser modules.
  */
 #pragma once
 
@@ -22,8 +23,8 @@ namespace {
 	/**
 	 * @brief Returns number of opcodes recognized by Executor in a compile-time.
 	 * Used for `vm::OP_CASES_COUNT`.
-	 * 
-	 * @return constexpr u16 
+	 *
+	 * @return constexpr u16
 	 */
 	constexpr u16 count_op_cases() {
 		u16 count = 0;
@@ -39,7 +40,7 @@ namespace vm {
 
 	/**
 	 * @brief Bytecode instruction representation.
-	 * 
+	 *
 	 * Depends on the @ref RiftVM/src/config.hpp configuration.
 	 */
 	struct Fix8Instruction;
@@ -73,9 +74,9 @@ namespace vm {
 	#endif
 #endif
 
-	/** 
+	/**
 	 * @brief A class that contains all opcode functions implementations
-	 * Executor service calls these functions to execute the instructions. 
+	 * Executor service calls these functions to execute the instructions.
 	 */
 	class OpFuns {
 	public:
@@ -85,7 +86,7 @@ namespace vm {
 
 		/**
 		 * @brief A mapping between opcode ids and function pointers.
-		 * 
+		 *
 		 * @warning Ordering of elements must stay the same as in vm::OpcodeFix8
 		 */
 		static constexpr std::array<OpFun*, OP_CASES_COUNT> opfuns{

@@ -9,8 +9,8 @@ namespace vm {
 
 	/**
 	 * @brief Holds metadata about all types in the VCPU.
-	 * 
-	 * This class is used to store and access all types 
+	 *
+	 * This class is used to store and access all types
 	 * that are used in the VCPU.
 	 */
 	class TypeMetadata {

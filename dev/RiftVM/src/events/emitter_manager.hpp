@@ -9,9 +9,9 @@
 
 namespace vm {
 	/**
-	* @brief Manages emitters for VM events
-	*
-	* @warning This class is not used anywhere in the code. The events are not implemented yet.
+	 * @brief Manages emitters for VM events
+	 *
+	 * @warning This class is not used anywhere in the code. The events are not implemented yet.
 	 */
 	class EmitterManager {
 	private:
