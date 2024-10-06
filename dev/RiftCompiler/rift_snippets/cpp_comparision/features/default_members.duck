@@ -7,8 +7,8 @@ class Point {
 }
 
 fun findClosestPoint(reference: Point, points: Point[]) -> Point = {
-    var closestPoint: Point = points[0];
-    var closestDistance: Point = reference.distanceFrom(closestPoint);
+    var closestPoint = points[0];
+    var closestDistance = reference.distanceFrom(closestPoint);
 
     for (point: Point in Points) {
         var currentDistance: Point = reference.distanceFrom(point);
