@@ -1,7 +1,7 @@
 class Point {
     i32 x, y;
 
-    fun distanceFrom(other: Point) -> f32 {
+    fun distanceFrom(other: Point) -> f32 { # = {...}
         return std.sqrt((x - other.x) * (x - other.x) + (y - other.y) * (y - other.y));
     }
 }
@@ -22,29 +22,29 @@ fun findClosestPoint(reference: Point, points: Point[]) -> Point = {
 }
 
 fun main() = {
-    var p1: Point = Point(3,4);
-    var p2: Point = Point(1,2);
-    var p3: Point = Point(5,6);
-    var p4: Point = Point(1,2);
+    let p1 = Point(3,4);
+    let p2 = Point(1,2);
+    let p3 = Point(5,6);
+    let p4 = Point(1,2);
 
     if (p1 == p2) {
-        print("p1 jest równy p2", out=std.io.cout, end="\n");
+        println("p1 jest równy p2");
     } else {
-        print("p1 nie równy p2", out=std.io.cout, end="\n");
+        println("p1 nie równy p2");
     }
 
     if (p2 == p4) {
-        print("p2 jest równy p4", out=std.io.cout, end="\n");
+        println("p2 jest równy p4");
     }
 
     var points: Point[] = [p1, p1, p3, p4];
     std.sort(points);
 
-    print("posortowane punkty:\n", out=std.io.cout);
+    println("posortowane punkty:");
     for (p: Point in points) {
-        print(p, out=std.io.cout, end="\n");
+        println(p);
     }
 
     let closestPoint = findClosestPoint(p1, points);
-    print("Najbliższy punkt do ", p1, " to ", closestPoint, out=std.io.cout, end="\n");
+    println("Najbliższy punkt do ", p1, " to ", closestPoint);
 }

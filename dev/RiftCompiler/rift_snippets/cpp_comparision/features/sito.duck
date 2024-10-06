@@ -1,9 +1,15 @@
+import io;
 var n: i32;
 var T: bool[1300000];
 scan(n, in=std.io.cin)
-for (i: i32 in some_range) # nw jak zapisać range
-    for (j: i32 in some@range_2)
-        T[j]=1;
-for (i: i32 in some_range_3)
-    if (!T[i])
-        print(i, out=std.io.cout, end=" ");
+for (i in some_range) # nw jak zapisać range
+    for (j in some@range_2)
+        T[j]=true;
+var k = 1;
+while (n) {
+    k++;
+    if (!T[i]) {
+        n--;
+        println(i);
+    }
+}
