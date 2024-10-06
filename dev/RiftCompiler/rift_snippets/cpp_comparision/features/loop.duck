@@ -1,0 +1,7 @@
+for Outer(i in some_range) {
+  for Inner(j in some_range) {
+    if (i + j == 123) {
+        brak Outer;
+    }
+  }
+}

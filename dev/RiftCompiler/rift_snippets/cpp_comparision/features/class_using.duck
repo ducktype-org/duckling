@@ -1,0 +1,28 @@
+class Point {
+    var x: f32, y: f32;
+};
+
+class Circle {
+    var m: Point;
+    alias x = m.x;
+    alias y = m.y;
+    var r: f32;
+};
+
+fun is_in_circle (p: Point, c: Circle) = {
+    var d2 = (p.x - c.x)**2 + (p.y - c.y)**2;
+    return d2 < c.r**2;
+}
+
+fun main() = {
+    var myCircle: Circle;
+    myCircle.x = 0;
+    myCircle.y = 0;
+    myCircle.r = 1;
+
+    var myPoint: Point;
+    myPoint.x = 0.5;
+    myPoint.y = -0.1;
+
+    print(is_in_circle(myPoint, myCircle));
+}
