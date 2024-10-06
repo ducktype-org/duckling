@@ -1,0 +1,38 @@
+import std.io as io
+
+template{T: type, U: type}
+fun map(list: List:{T}, modifier: const ref T -> U) -> List:{U} = {
+	List:{U} result;
+	for(el: const ref T in list) {
+		result.append(modifier(el));
+	}
+	return result;
+}
+
+template{T: type}
+fun filter(list: List:{T}, condition: const ref T -> Bool) -> List:{T} = {
+	List:{T} result;
+	for(el: const ref T in list) {
+		if (condition(el)) {
+			result.append(modifier(el));
+		}
+	}
+	return result;
+}
+
+# fun main() -> int {
+	# let list: List:{int} = {1, 2, 3, 4, 5};
+
+	# let mapped: List:{double} = map(list, lambda (el: const ref int) -> double = 1.5 * el);
+
+	# let filtered: List:{int}  = filter(list, lambda (el: const ref int) -> Bool = el % 2 == 1);
+
+	# io.print("Initial list: ");
+	# io.printLn(list);
+	# io.print("Mapped list: ");
+	# io.printLn(mapped);
+	# io.print("Filtered list: ");
+	# io.printLn(filtered);
+
+	# return 0;
+# }
