@@ -1,8 +1,6 @@
 /**
  * @file code.hpp
  *
- * @brief Representation of the RiftBC code.
- * Parser creates this structure from the text file and the Executor uses it to execute the code.
  */
 #pragma once
 
@@ -12,6 +10,9 @@
 namespace vm {
 	using ByteCode = std::vector<Fix8Instruction>;
 
+	/** 
+	 * @brief Function data. 
+	 */
 	struct FuncData {
 		ByteCode bc;
 		usize    stack_size;
@@ -19,7 +20,11 @@ namespace vm {
 		usize    next_arg_size;
 		usize    ret_size;
 	};
-
+	
+	/**
+	 * @brief Representation of the whole code.
+	 * Parser creates this structure from the text file and the Executor uses it to execute the code.	
+	 */
 	struct Code {
 		std::vector<FuncData> functions;
 		usize                 main_id;

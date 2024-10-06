@@ -8,6 +8,9 @@
 namespace vm {
 	// @TODO: static type checking
 
+	/**
+	 * @brief Service that loads the program file to the VM.
+	 */
 	class Preprocessor {
 	private:
 		TypeMetadata& type_metadata;
@@ -20,6 +23,12 @@ namespace vm {
 		template<class... DynamicServices>
 		friend class ServiceManagerDef;
 
+		/**
+		 * @brief Parses the file, creates type metadata and returns the code.
+		 * 
+		 * @param file
+		 * @return cpp::result<vm::Code, std::string> 
+		 */
 		cpp::result<vm::Code, std::string> getCode(const fs::FilePath& file);
 	};
 }

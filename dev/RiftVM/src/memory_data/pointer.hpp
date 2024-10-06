@@ -8,6 +8,10 @@ namespace vm {
 	// @TODO: change to STRONG_TYPEDEF_IT when available
 	STRONG_TYPEDEF_INT_DIMENSIONAL(BlockID, u64);
 
+	/**
+	 * @brief Basic pointer used in the VM.
+	 * Contains the block ID and the offset in the block.
+	 */
 	class Pointer {
 	private:
 		BlockID block;

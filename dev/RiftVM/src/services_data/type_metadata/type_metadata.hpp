@@ -7,6 +7,12 @@ namespace vm {
 	template<class... DynamicData>
 	class DataManagerDef;
 
+	/**
+	 * @brief Holds metadata about all types in the VCPU.
+	 * 
+	 * This class is used to store and access all types 
+	 * that are used in the VCPU.
+	 */
 	class TypeMetadata {
 	private:
 		enum class TypeMetadataState { AddingTypes, Finalized };
@@ -22,6 +28,9 @@ namespace vm {
 	public:
 		TypeRef addType(Type&& type);
 
+		/**
+		 * @brief Finalize adding types.
+		 */
 		void finalize();
 
 		[[nodiscard]]

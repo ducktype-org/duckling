@@ -9,6 +9,13 @@
 namespace vm {
 	class VCPU;
 
+	/**
+	 * @brief Container for all services used by the VM.
+	 * 
+	 * The services are initialized in the constructor and can be accessed using the `get` method.
+	 * 
+	 * @tparam DynamicServices external, non-core services that can be added and removed.
+	 */
 	template<class... DynamicServices>
 	class ServiceManagerDef {
 	private:

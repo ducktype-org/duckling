@@ -7,13 +7,25 @@ namespace vm {
 	template<class... DynamicData>
 	class DataManagerDef;
 
+	/**
+	 * @brief Holds metadata about all dynamic memory of the VCPU.
+	 * 
+	 * This class is used to manage memory blocks of the VCPU.
+	 * The memory used by the VCPU is divided into blocks. Each block 
+	 * has a unique ID, which is used to access the block, fixed size 
+	 * and a pointer to the data. Owner of the block is the one who 
+	 * creates it - mainly `Allocator` services or `Executor` itself.
+	 * 
+	 * More information in the paper 
+	 * ["Prototyp maszyny wirtualnej..."](https://github.com/ducktype-org/dev-space/blob/main/prace_naukowe/maszyna_wirtualna.pdf)
+	 */
 	class Memory {
 	private:
 		Memory() = default;
 
 		template<class... DynamicData>
 		friend class DataManagerDef;
-
+		
 		struct BlockData {
 			u64    refcount = 0;
 			bool   owned    = false;

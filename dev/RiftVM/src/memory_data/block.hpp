@@ -11,6 +11,9 @@
 
 namespace vm {
 
+	/**
+	 * @brief Wrapper around pointer to the memory.
+	 */
 	class Block {
 	protected:
 		const u64 start = 0;

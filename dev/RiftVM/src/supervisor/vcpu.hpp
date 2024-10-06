@@ -12,13 +12,20 @@
 
 namespace vm {
 	/**
-	 * @brief The virtual CPU of the VM. It governs the thread that executes the code, and manages it's data and services.
+	 * @brief The API for using the virtual CPU of the VM. 
+	 * It manages VCPU's data and services.
+	 *
+	 * VCPU is an abstract concepts that represents the program's execution environment.
 	 *
 	 * @note The code in this class is executed in the supervisor's thread.
 	 * 
-	 * It is responsible for creating and reseting the Exection Thread, for
-	 * setting the status of the execution (pause, stop, run) and for managing the input and output 
-	 * of the executing thread.
+	 * It is responsible for loading and parsing of the program, 
+	 * creating and reseting the Exection Thread,
+	 * setting the status of the execution (pause, stop, run), 
+	 * managing the input and output of the executing thread and some more.
+	 *
+	 * Only execution of the code is done in the separate thread, 
+	 * loading and parsing of the program is done in the caller's thread.
 	 */
 	class VCPU: public Listener<api::VCPUStatus> {
 	private:
@@ -65,7 +72,7 @@ namespace vm {
 		 * This method is called by the supervisor. 
 		 * Only valid state of the VCPU for data requests is "Executing",
 		 * but the executor has to be paused in some way to perform the request.
-		 * It inspects the VM's memory.
+		 * It inspects the VM's memory stored in the DataManager.
 		 * 
 		 * @param request 
 		 * @return cpp::result<api::Response, api::CoreOperationError> 

@@ -6,12 +6,18 @@
 #include "../services.hpp"
 
 namespace vm {
+	/**
+	 * @brief Service that profiles the execution of the VM.
+	 *
+	 * It listens to the events emitted by different services.
+	 * Currently nothing emits events and this service is not implemented!
+	 */
 	class Profiler: public Listener<MemoryEvent>, public Listener<FunctionCallEvent> {
 		template<class... DynamicServices>
 		Profiler(ServiceManagerDef<DynamicServices...>& /* serviceManager */) {}
 
 	public:
-		virtual ~Profiler() noexcept = default;
+		 ~Profiler() noexcept override = default;
 
 		void onEvent(const MemoryEvent& event) noexcept override;
 		void onEvent(const FunctionCallEvent& event) noexcept override;
