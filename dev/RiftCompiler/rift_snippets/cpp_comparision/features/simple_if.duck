@@ -1,3 +1,3 @@
-fun is_in_box(float x, float y, float p1x, float p1y, float p2x, float p2y) = {
-    return (p2x < x < p1x or p2x > x > p1x) and (p2y < y < p1y or p2y > y > p1y);
-}
+fun is_in_box(x: f32, y: f32, p1x: f32, p1y: f32, p2x: f32, p2y: f32) =
+    (p2x < x < p1x or p2x > x > p1x) and (p2y < y < p1y or p2y > y > p1y);
+

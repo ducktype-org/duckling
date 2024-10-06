@@ -1,6 +1,6 @@
 import std.io as io;
  
-fun doubleSum(list: (int | f32)[]) {
+fun doubleSum(list: List:{int | f32}) {
 	var out: f32; # default init
 
     for (elem in list) {

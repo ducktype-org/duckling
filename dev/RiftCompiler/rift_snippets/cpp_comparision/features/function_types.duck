@@ -1,18 +1,18 @@
-import std.io as io
+import std.io as io;
 
-template{T: type, U: type}
+template{T, U}
 fun map(list: List:{T}, modifier: const ref T -> U) -> List:{U} = {
-	List:{U} result;
-	for(el: const ref T in list) {
+	var result: List:{U};
+	for(el in list) {
 		result.append(modifier(el));
 	}
 	return result;
 }
 
-template{T: type}
+template{T}
 fun filter(list: List:{T}, condition: const ref T -> Bool) -> List:{T} = {
-	List:{T} result;
-	for(el: const ref T in list) {
+	var result: List:{T};
+	for(el in list) {
 		if (condition(el)) {
 			result.append(modifier(el));
 		}

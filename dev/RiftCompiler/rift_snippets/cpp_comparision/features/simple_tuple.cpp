@@ -10,3 +10,7 @@ int main() {
 
 	return 0;
 }
+
+// @TODO: function tuple return (multi value return)
+// tuples inside sets/maps/sorts for comparisons
+

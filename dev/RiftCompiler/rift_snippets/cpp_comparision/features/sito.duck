@@ -1,10 +1,14 @@
 import io;
 var n: i32;
 var T: bool[1300000];
-scan(n, in=std.io.cin)
-for (i in some_range) # nw jak zapisać range
-    for (j in some@range_2)
+scan(n);
+for (i in 2..1141) {
+    var j = i**2;
+    while (!T[i] && j<1300000) {
         T[j]=true;
+        j += i;
+    }
+}
 var k = 1;
 while (n) {
     k++;

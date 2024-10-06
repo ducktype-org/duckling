@@ -1,16 +1,16 @@
 class Point {
     i32 x, y;
 
-    fun distanceFrom(other: Point) -> f32 { # = {...}
+    fun distanceFrom(other: Point) = { # = {...}
         return std.sqrt((x - other.x) * (x - other.x) + (y - other.y) * (y - other.y));
     }
 }
 
-fun findClosestPoint(reference: Point, points: Point[]) -> Point = {
+fun findClosestPoint(reference: Point, points: Point[]) = {
     var closestPoint = points[0];
     var closestDistance = reference.distanceFrom(closestPoint);
 
-    for (point: Point in Points) {
+    for (point in Points) {
         var currentDistance: Point = reference.distanceFrom(point);
         if (currentDistance < closestDistance) {
             closestPoint = point;
@@ -41,7 +41,7 @@ fun main() = {
     std.sort(points);
 
     println("posortowane punkty:");
-    for (p: Point in points) {
+    for (p in points) {
         println(p);
     }
 

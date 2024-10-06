@@ -1,7 +1,7 @@
-for Outer(i in some_range) {
-  for Inner(j in some_range) {
+for Outer(i in 0..1000) {
+  for (j in 0..1000) { # range(0, 1000)
     if (i + j == 123) {
-        brak Outer;
+        break Outer;
     }
   }
 }
