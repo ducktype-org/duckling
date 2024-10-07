@@ -103,6 +103,7 @@ namespace vm {
 		 */
 		std::mutex        external_api_mutex;
 		ExecutionStrategy execution_strategy = ExecutionStrategy::Stoped;
+		// @todo change to atomic_flag
 		std::atomic<bool> is_running         = false;
 
 		// This function is marked as cold, because, well, it is cold, but
