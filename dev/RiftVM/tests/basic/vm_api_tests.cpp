@@ -1,6 +1,7 @@
 #include "api/data/status.hpp"
 #include "api/vm.hpp"
 #include <api/api.hpp>
+#include <cstdint>
 #include <tester/tester.hpp>
 #include <variant>
 #include <thread>
@@ -59,10 +60,10 @@ private:
 	}
 
 	void dataServices() {
-		auto pid  = loadProgram("vm_api_tests.rbc");
-		auto type = vm::api::getType(pid, "int64");
+		auto pid  = loadProgram("print_block_id.rbc");
+		auto type = vm::api::getType(pid, "custom_int");
 		assertTrue(type.has_value(), "Type failed (1)");
-		assertTrue(type.value()->getSize() == 8, "Wrong type size");
+		assertTrue(type.value()->getSize() == 13, "Wrong type size");
 
 		// Block request is not implemented fully
 
@@ -70,6 +71,20 @@ private:
 		auto result = vm::api::run(pid);
 		assertTrue(result.has_value(), "Run failed (1)");
 
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+		// Test the block request. The program should be waiting on input, so we can get the output.
+		auto output = vm::api::output(pid);
+		assertTrue(output.has_value(), "Output failed (1)");
+		int64_t output_int = std::stoll(output.value().output);
+
+		auto block_response = vm::api::getBlock(pid, output_int);
+		assertTrue(block_response.has_value(), "Block failed (1)");
+
+		auto block = block_response.value();
+		assertTrue(block.data.size() == 13, "Wrong block size");
+
+		// Provide the input and end the program.
 		auto input_response = vm::api::input(pid, "42");
 		assertTrue(input_response.has_value(), "Input failed (1)");
 
