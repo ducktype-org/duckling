@@ -1,3 +1,8 @@
+/**
+ * @file instruction.hpp
+ * @brief Defines the instruction structure (types) and the opcodes functions used by the Executor
+ * and Parser modules.
+ */
 #pragma once
 
 #include "frame.hpp"
@@ -15,8 +20,12 @@
 #define RETURN_TYPE IF_NOT_TC([[gnu::always_inline]] inline) void
 
 namespace {
-	// Returns number of opcodes recognized by Executor in a compile-time.
-	// Used for `vm::OP_CASES_COUNT`.
+	/**
+	 * @brief Returns number of opcodes recognized by Executor in a compile-time.
+	 * Used for `vm::OP_CASES_COUNT`.
+	 *
+	 * @return constexpr u16
+	 */
 	constexpr u16 count_op_cases() {
 		u16 count = 0;
 #define DEF_OPCODE(opcode) count++;
@@ -28,6 +37,12 @@ namespace {
 
 namespace vm {
 	class Executor;
+
+	/**
+	 * @brief Bytecode instruction representation.
+	 *
+	 * Depends on the @ref RiftVM/src/config.hpp configuration.
+	 */
 	struct Fix8Instruction;
 
 	class OpFuns;
@@ -59,14 +74,22 @@ namespace vm {
 	#endif
 #endif
 
+	/**
+	 * @brief A class that contains all opcode functions implementations
+	 * Executor service calls these functions to execute the instructions.
+	 * For convenience they are implemented in the `executor.cpp` file.
+	 */
 	class OpFuns {
 	public:
 #define DEF_OPCODE(opcode) static OpFun op_##opcode;
 #include "opcodes_list.hpp"
 #undef DEF_OPCODE
 
-		// A mapping between opcode ids and function pointers.
-		// WARN: Ordering of elements must stay the same as in vm::OpcodeFix8
+		/**
+		 * @brief A mapping between opcode ids and function pointers.
+		 *
+		 * @warning Ordering of elements must stay the same as in vm::OpcodeFix8
+		 */
 		static constexpr std::array<OpFun*, OP_CASES_COUNT> opfuns{
 #define DEF_OPCODE(opcode) op_##opcode,
 #include "opcodes_list.hpp"

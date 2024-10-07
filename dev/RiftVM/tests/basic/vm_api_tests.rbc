@@ -1,0 +1,26 @@
+type primitive: int64 8
+type static_table: tableint64 int64 42
+
+function main {
+  arg_size: 0;
+	next_arg_size: 0;
+  ret_size: 0;
+
+  # x - 0
+  # y - 8
+  # z - 16
+  local_size: 40;
+
+  code: {
+    input_l64           0;
+    mov_l64_imm         0, 1;
+    init_type int64;
+
+    output_l64          0;
+
+    deinit;
+
+    ret_imm             0;
+  }
+
+}

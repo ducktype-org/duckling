@@ -1,3 +1,7 @@
+/**
+ * @file code.hpp
+ *
+ */
 #pragma once
 
 #include "instruction.hpp"
@@ -6,6 +10,9 @@
 namespace vm {
 	using ByteCode = std::vector<Fix8Instruction>;
 
+	/**
+	 * @brief Function data.
+	 */
 	struct FuncData {
 		ByteCode bc;
 		usize    stack_size;
@@ -14,6 +21,11 @@ namespace vm {
 		usize    ret_size;
 	};
 
+	/**
+	 * @brief Representation of the whole code.
+	 * Parser creates this structure from the text file and the Executor uses it to execute the
+	 * code.
+	 */
 	struct Code {
 		std::vector<FuncData> functions;
 		usize                 main_id;

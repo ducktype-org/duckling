@@ -1,3 +1,8 @@
+/**
+ * @file cli.hpp
+ * @brief Command line interface for the VM.
+ */
+
 #pragma once
 
 #include <supervisor/supervisor.hpp>

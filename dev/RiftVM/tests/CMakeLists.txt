@@ -17,6 +17,8 @@ function(add_riftvm_tests suffix)
 
   rift_add_test(vm ${test_set}_micro_test basic/working_vm.cpp
           USES ${libriftvm} Tester)
+  rift_add_test(vm ${test_set}_api_tests basic/vm_api_tests.cpp
+          USES ${libriftvm} Tester)
   rift_add_test(vm ${test_set}_static_table_test static_table/static_table.cpp
           USES ${libriftvm} Tester ${vmtester})
   rift_add_test(vm ${test_set}_unit_tests basic/unit.cpp
