@@ -11,6 +11,7 @@ namespace vm {
 	/**
 	 * @brief Basic pointer used in the VM.
 	 * Contains the block ID and the offset in the block.
+	 * @todo change to more performant version with block*, offset
 	 */
 	class Pointer {
 	private:
