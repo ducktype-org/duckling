@@ -1,8 +1,9 @@
+#include "vcpu.hpp"
+
 #include <memory>
 #include <mutex>
 #include <base/variant.hpp>
-#include "api/data/request.hpp"
-#include "vcpu.hpp"
+#include <api/data/request.hpp>
 
 namespace vm {
 	DataManager& VCPU::getData() { return dataManager; }

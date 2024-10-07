@@ -33,6 +33,7 @@ private:
 		return pid;
 	}
 
+	// Checks if the program status is correct after loading a file.
 	void parsesTheFile() {
 		auto process_pid_response = vm::api::spawn(false);
 		assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
@@ -59,13 +60,12 @@ private:
 		);
 	}
 
+	// Checks if the program can use the data services (block requests, type requests).
 	void dataServices() {
 		auto pid  = loadProgram("print_block_id.rbc");
 		auto type = vm::api::getType(pid, "custom_int");
 		assertTrue(type.has_value(), "Type failed (1)");
 		assertTrue(type.value()->getSize() == 13, "Wrong type size");
-
-		// Block request is not implemented fully
 
 		// Assert that the VCPU can still run.
 		auto result = vm::api::run(pid);
@@ -73,7 +73,8 @@ private:
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-		// Test the block request. The program should be waiting on input, so we can get the output.
+		// Test the block request. The program should be waiting on input, so we can get the block
+		// ID before the block is freed from memory.
 		auto output = vm::api::output(pid);
 		assertTrue(output.has_value(), "Output failed (1)");
 		int64_t output_int = std::stoll(output.value().output);
@@ -92,6 +93,7 @@ private:
 		assertTrue(join_response.has_value(), "Join failed (1)");
 	}
 
+	// Checks if the program can run and pause, waiting for input.
 	void waitingForInputRun() {
 		auto pid = loadProgram("vm_api_tests.rbc");
 

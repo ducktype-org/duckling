@@ -77,6 +77,7 @@ namespace vm {
 	/**
 	 * @brief A class that contains all opcode functions implementations
 	 * Executor service calls these functions to execute the instructions.
+	 * For convenience they are implemented in the `executor.cpp` file.
 	 */
 	class OpFuns {
 	public:

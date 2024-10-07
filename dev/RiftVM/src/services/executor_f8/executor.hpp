@@ -68,9 +68,20 @@ namespace vm {
 
 		VCPU& vcpu;
 
-		std::vector<Frame>     frame_stack;
+		std::vector<Frame> frame_stack;
+
+		/**
+		 * @brief Continous block of memory, that is used for the call stack.
+		 * Here each stack frame is composed of: "arg_stack", local_stack". The "arg_stack" is used
+		 * for arguments passed to the function, and the "local_stack" is used for local variables.
+		 * [arg_stack(1) | local_stack(1) | arg_stack(1) | local_stack(2) | ...]
+		 * When preparing for a new function call, the arguments are placed
+		 * exactly after the local variables of the current function, so in the "arg_stack"
+		 * of the new frame.
+		 */
 		std::vector<std::byte> local_stack_reserved;
-		RuntimeData            runtime_data;
+
+		RuntimeData runtime_data;
 
 		/**
 		 * This is currently duplicated inside VCPUStatus
@@ -104,7 +115,7 @@ namespace vm {
 		std::mutex        external_api_mutex;
 		ExecutionStrategy execution_strategy = ExecutionStrategy::Stoped;
 		// @todo change to atomic_flag
-		std::atomic<bool> is_running         = false;
+		std::atomic<bool> is_running = false;
 
 		// This function is marked as cold, because, well, it is cold, but
 		// the compiler did not figure this out on its own, hence the
