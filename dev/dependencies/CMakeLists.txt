@@ -65,7 +65,8 @@ find_library(gvc gvc)
 
 FindOrBuildICU(VERSION 74.1 URL "${ICU_RELEASE}" URL_HASH "${ICU_CONTROL}")
 
-# Do not call MakeAvailable!
+# Do not call MakeAvailable, because
+# We want to avoid using their CMakeLists.txt
 FetchContent_GetProperties(base64)
 if(NOT base64_POPULATED)
 	FetchContent_Populate(base64)
