@@ -151,7 +151,11 @@ private:
 			ASSERT_EQUAL(get_block_successors(1), BlockList{});
 			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 1 } });
 			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 1 } });
-			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 2 } COMMA BlockID{ 3 } });
+
+			// Here the order does not matter.
+			// If it will brake, cause order changed,
+			// it has to changed to order-free assertion.
+			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 3 } COMMA BlockID{ 2 } });
 		});
 	}
 
