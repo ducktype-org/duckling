@@ -55,11 +55,12 @@ namespace compiler::helios {
 		// ScopeData& operator=(const ScopeData&) = delete;
 	};
 
-	struct GetScopeRef_Functor final {
+	struct ScopeAccess_Functor final {
 		static auto get(ScopeID id) { return id.ref; }
+		static auto idOf(Ref<ScopeData> ref) { return ScopeID(ref); }
 	};
 
-	auto getScopeRef(ScopeID id) { return GetScopeRef_Functor::get(id); }
+	auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
 
 	base::Optional<ScopeID> parent(ScopeID id) {
 		auto ref = getScopeRef(id);
@@ -83,6 +84,14 @@ namespace compiler::helios {
 			auto key = scope_table.emplaceBack(std::forward<T>(args)...);
 			return scope_table.getRef(key).value();
 		}
+	}
+
+	std::vector<ScopeID> getAllHeliosScopes() {
+		std::vector<ScopeID> out;
+		for (auto& scope_data: scope_table) {
+			out.emplace_back(ScopeAccess_Functor::idOf(scope_data.refMut()));
+		}
+		return out;
 	}
 
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeID) {

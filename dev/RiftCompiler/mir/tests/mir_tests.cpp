@@ -27,6 +27,8 @@ public:
 		  tester::ContextSuite(std::move(config), "mir construction test") {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(simpleVarTest);
+		TESTER_ADD_TEST(testTerminatorSuccessors);
+		TESTER_ADD_TEST(mockLifetimeAnalysisTest);
 	}
 
 private:
