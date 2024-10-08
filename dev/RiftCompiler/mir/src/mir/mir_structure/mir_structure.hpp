@@ -135,8 +135,15 @@ namespace compiler::mir {
 
 		void debugPrint(std::ostream& output) const;
 
+		/**
+		 * @brief Returns reference value of given type
+		 * stored in MirLocation.
+		 * Throws if value is not of given type.
+		 * @tparam T 
+		 * @return const T& 
+		 */
 		template<class T>
-		const T& asT() const {
+		const T& get() const {
 			return std::get<T>(value);
 		}
 	};
@@ -196,7 +203,7 @@ namespace compiler::mir {
 			helios::ScopeID            scope
 		):
 			  operation(operation),
-			  output(std::move(output)),
+			  output(output),
 			  arguments(std::move(arguments)),
 			  flags(std::move(flags)),
 			  scope(scope) {}
@@ -204,6 +211,13 @@ namespace compiler::mir {
 		void debugPrint(std::ostream& output) const;
 	};
 
+	/**
+	 * @brief Returns list of MIR BlockIDs that
+	 * can be jumped to from given terminator instruction.
+	 * 
+	 * @param terminator 
+	 * @return std::vector<BlockID> 
+	 */
 	std::vector<BlockID> getTerminatorSuccessors(const Instruction& terminator);
 
 	/**

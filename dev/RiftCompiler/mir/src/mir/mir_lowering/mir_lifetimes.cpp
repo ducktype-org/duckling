@@ -3,19 +3,15 @@
 
 namespace compiler::mir {
 
-	// hmm... we might want to replace it with some kind of explicit graph creation
-	// and walking.
-
 	/**
 	 * @brief Lowest common ancestor of @p a and @p b
+	 * @todo: It works in linear time, maybe optimize it
 	 *
 	 * @param a
 	 * @param b
 	 * @return helios::ScopeID
 	 */
 	helios::ScopeID lca(helios::ScopeID a, helios::ScopeID b) {
-		// @TODO: optimize it
-
 		auto depth_a = helios::scopeDepth(a);
 		auto depth_b = helios::scopeDepth(b);
 
@@ -42,6 +38,14 @@ namespace compiler::mir {
 			return block.instructions.at(0).scope;
 	}
 
+	/**
+	 * @brief Returns list of scopes that lifetime ends
+	 * when we jump from @p begin to @p end.
+	 * 
+	 * @param begin 
+	 * @param end 
+	 * @return std::vector<helios::ScopeID> 
+	 */
 	std::vector<helios::ScopeID> getEndingScopes(helios::ScopeID begin, helios::ScopeID end) {
 		std::vector<helios::ScopeID> result;
 
@@ -54,10 +58,10 @@ namespace compiler::mir {
 		return result;
 	}
 
-	Function addDestructors(query::Context& ctx, Function function) {
-		// hmmm... BlockID
-		// for now block order is important..
+	Function addDestructors(query::Context&, Function function) {
+		// context is unused, but left since it might be useful in the future.
 
+		// preserving block order is important, because of how MIR BlockIDs works
 		std::vector<Block> new_blocks;
 
 		std::map<helios::ScopeID, std::vector<LocalRef>> locals_by_scope;
@@ -65,10 +69,7 @@ namespace compiler::mir {
 			locals_by_scope[local->lifetime_scope].emplace_back(local.ref());
 
 		// No live analysis here, since it is quite complex.
-		// It might be best to do it in a separate pass, when
-		// we already have destructors added.
-
-		// sort destructors...
+		// see doc-comment of this function for details.
 
 		for (auto& block: function.blocks) {
 			std::vector<Instruction> new_instructions;
@@ -105,6 +106,7 @@ namespace compiler::mir {
 			auto& terminator = block.terminator;
 			auto  successors = getTerminatorSuccessors(terminator);
 			if (successors.empty()) {
+				// the function ends
 				for (auto& local: function.local_list)
 					add_destructor(terminator.scope, local.ref());
 			} else {
@@ -114,17 +116,18 @@ namespace compiler::mir {
 						terminator.scope, beginScope(function.blocks.at(u64(succ)))
 					);
 
-					if (ending_scopes.has_value())
+					if (ending_scopes.has_value()) {
+						// we have to validate that all paths have the same ending scopes
+						// otherwise this implementation is incorrect
 						RIFT_ASSERT(ending_scopes == succ_ending_scopes, "Different ending scopes");
-					else
+					}
+					else {	
 						ending_scopes.emplace(std::move(succ_ending_scopes));
+					}
 				}
 
 				add_destructors(ending_scopes.value(), terminator.scope);
 			}
-
-
-			// next handle terminator (TODO TODO to be done....):
 
 			new_blocks.push_back({ block.id, std::move(new_instructions), block.terminator });
 		}

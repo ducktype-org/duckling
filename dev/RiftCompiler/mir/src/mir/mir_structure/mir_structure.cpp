@@ -22,18 +22,14 @@ namespace compiler::mir {
 		using enum Operation;
 		switch (terminator.operation) {
 		case Jump:
-			return { terminator.arguments.at(0).asT<BlockID>() };
-			break;
+			return { terminator.arguments.at(0).get<BlockID>() };
 
 		case Branch:
-			return { terminator.arguments.at(1).asT<BlockID>(),
-				     terminator.arguments.at(2).asT<BlockID>() };
-			break;
+			return { terminator.arguments.at(1).get<BlockID>(),
+				     terminator.arguments.at(2).get<BlockID>() };
 
 		case ReturnVoid:
-			[[fallthrough]];
 		case ReturnValue:
-			[[fallthrough]];
 		case FunctionEnd:
 			return {};
 

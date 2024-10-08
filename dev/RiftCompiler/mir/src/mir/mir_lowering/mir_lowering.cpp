@@ -460,7 +460,7 @@ namespace compiler::mir {
 
 	struct IMPLEMENT_QUERY(LowerToMirFunction, Function) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// first step: lowering to pre-mir
+			// first step: lowering to pre-mir (cfg+quad)
 			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
 
 			// second step: lifetime stuff
