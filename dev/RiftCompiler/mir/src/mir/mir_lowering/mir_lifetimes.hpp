@@ -11,7 +11,7 @@ namespace compiler::mir {
 	 *
 	 * @important
 	 * It it a mock implementation, and does not perform
-	 * liveness range checks. This means that tt will add destructors for all locals, even if they
+	 * liveness range checks. This means that it will add destructors for all locals, even if they
 	 * are not yet created. example:
 	 * ```cpp
 	 * fun foo() { return; var a: T; } // calls destructor on return
@@ -25,6 +25,8 @@ namespace compiler::mir {
 	 *
 	 * @todo Currently no code is put in place to
 	 * generate correct order of destructors calls.
+	 * 
+	 * @todo Add better tests once its not mock anymore.
 	 *
 	 * @return Function
 	 */
