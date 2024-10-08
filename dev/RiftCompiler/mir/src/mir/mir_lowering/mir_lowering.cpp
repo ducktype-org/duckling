@@ -445,14 +445,13 @@ namespace compiler::mir {
 		function_builder.setName(function.original_name);
 
 		// @TODO: add parameters do list od locals
-		
+
 		auto fun_body_scope = function.body.body->lifetime_scope;
-		auto last_block = function_builder.newBlock();
+		auto last_block     = function_builder.newBlock();
 		last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, fun_body_scope });
-		
+
 		// build cfg+quad step by step:
-		auto first_block
-				= lowerCodeBlock(*function.body.body, last_block, function_builder);
+		auto first_block = lowerCodeBlock(*function.body.body, last_block, function_builder);
 
 		function_builder.setEntry(first_block.begin);
 
@@ -463,7 +462,7 @@ namespace compiler::mir {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// first step: lowering to pre-mir
 			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
-			
+
 			// second step: lifetime stuff
 			return addDestructors(ctx, std::move(function_no_lifetime));
 		}
