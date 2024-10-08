@@ -51,7 +51,8 @@ namespace compiler::helios {
 		}
 
 		bool operator==(const ScopeID&) const = default;
-		bool operator<(const ScopeID& other) const { return ref < other.ref; };
+
+		bool operator<(const ScopeID& other) const { return ref < other.ref; }
 
 	private:
 		Ref<ScopeData> ref;

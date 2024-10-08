@@ -24,16 +24,19 @@ namespace compiler::mir {
 		case Jump:
 			return { terminator.arguments.at(0).asT<BlockID>() };
 			break;
-		
+
 		case Branch:
-			return { terminator.arguments.at(1).asT<BlockID>(), terminator.arguments.at(2).asT<BlockID>() };
+			return { terminator.arguments.at(1).asT<BlockID>(),
+				     terminator.arguments.at(2).asT<BlockID>() };
 			break;
 
-		case ReturnVoid: [[fallthrough]];
-		case ReturnValue: [[fallthrough]];
+		case ReturnVoid:
+			[[fallthrough]];
+		case ReturnValue:
+			[[fallthrough]];
 		case FunctionEnd:
 			return {};
-		
+
 		default:
 			RIFT_PANIC("Not a terminator instruction");
 		}

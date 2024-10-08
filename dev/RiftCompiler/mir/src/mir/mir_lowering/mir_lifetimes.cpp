@@ -8,10 +8,10 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Lowest common ancestor of @p a and @p b
-	 * 
-	 * @param a 
-	 * @param b 
-	 * @return helios::ScopeID 
+	 *
+	 * @param a
+	 * @param b
+	 * @return helios::ScopeID
 	 */
 	helios::ScopeID lca(helios::ScopeID a, helios::ScopeID b) {
 		// @TODO: optimize it
@@ -36,12 +36,10 @@ namespace compiler::mir {
 	}
 
 	helios::ScopeID beginScope(const Block& block) {
-		if (block.instructions.empty()) {
+		if (block.instructions.empty())
 			return block.terminator.scope;
-		}
-		else {
+		else
 			return block.instructions.at(0).scope;
-		}
 	}
 
 	std::vector<helios::ScopeID> getEndingScopes(helios::ScopeID begin, helios::ScopeID end) {
@@ -56,7 +54,6 @@ namespace compiler::mir {
 		return result;
 	}
 
-
 	Function addDestructors(query::Context& ctx, Function function) {
 		// hmmm... BlockID
 		// for now block order is important..
@@ -64,9 +61,8 @@ namespace compiler::mir {
 		std::vector<Block> new_blocks;
 
 		std::map<helios::ScopeID, std::vector<LocalRef>> locals_by_scope;
-		for (auto& local: function.local_list) {
+		for (auto& local: function.local_list)
 			locals_by_scope[local->lifetime_scope].emplace_back(local.ref());
-		}
 
 		// No live analysis here, since it is quite complex.
 		// It might be best to do it in a separate pass, when
@@ -83,54 +79,45 @@ namespace compiler::mir {
 					Operation::DestructIf,
 					{},
 					{ local },
-					{ OperationFlag{OperationFlag::Flag::Destruct, local } },
-					instr_scope
-				});
+					{ OperationFlag{ OperationFlag::Flag::Destruct, local } },
+					instr_scope });
 			};
 			auto add_destructors = [&](const auto& ending_scopes, helios::ScopeID instr_scope) {
 				for (auto scope: ending_scopes) {
 					auto& locals = locals_by_scope[scope];
-					for (auto& local: locals) {
-						add_destructor(instr_scope, local);
-					}
+					for (auto& local: locals) add_destructor(instr_scope, local);
 				}
 			};
-			
+
 			for (u64 i = 0; i < block.instructions.size(); i++) {
-				const auto& instr = block.instructions.at(i);
-				const auto& next_instr = 
-				 i < block.instructions.size() - 1 ?
-					block.instructions.at(i + 1) : 
-					block.terminator;
-				
+				const auto& instr      = block.instructions.at(i);
+				const auto& next_instr = i < block.instructions.size() - 1
+				                           ? block.instructions.at(i + 1)
+				                           : block.terminator;
+
 				new_instructions.push_back(instr);
-				
+
 				auto ending_scopes = getEndingScopes(instr.scope, next_instr.scope);
 
 				add_destructors(ending_scopes, instr.scope);
 			}
 
 			auto& terminator = block.terminator;
-			auto successors = getTerminatorSuccessors(terminator);
+			auto  successors = getTerminatorSuccessors(terminator);
 			if (successors.empty()) {
-				for (auto& local: function.local_list) {
+				for (auto& local: function.local_list)
 					add_destructor(terminator.scope, local.ref());
-				}
-			}
-			else {
+			} else {
 				base::Optional<std::vector<helios::ScopeID>> ending_scopes;
 				for (auto succ: successors) {
 					auto succ_ending_scopes = getEndingScopes(
-						terminator.scope, 
-						beginScope(function.blocks.at(u64(succ)))
+						terminator.scope, beginScope(function.blocks.at(u64(succ)))
 					);
 
-					if (ending_scopes.has_value()) {
+					if (ending_scopes.has_value())
 						RIFT_ASSERT(ending_scopes == succ_ending_scopes, "Different ending scopes");
-					}
-					else {
+					else
 						ending_scopes.emplace(std::move(succ_ending_scopes));
-					}					
 				}
 
 				add_destructors(ending_scopes.value(), terminator.scope);

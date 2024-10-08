@@ -6,5 +6,5 @@
 namespace compiler::mir {
 	struct Function;
 
-	Function addDestructors(query::Context&, Function);	
+	Function addDestructors(query::Context&, Function);
 }

@@ -240,7 +240,7 @@ namespace compiler::mir {
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
 
-		Function() = delete;
+		Function()                = delete;
 		Function(const Function&) = delete;
 
 		Function(

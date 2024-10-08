@@ -20,10 +20,10 @@ namespace compiler::mir {
 		base::StableVector<MirLocal> local_list,
 		BlockID                      entry_block
 	):
-		name(name),
-		blocks(std::move(blocks)),
-		local_list(std::move(local_list)),
-		entry_block(entry_block) {}
+		  name(name),
+		  blocks(std::move(blocks)),
+		  local_list(std::move(local_list)),
+		  entry_block(entry_block) {}
 
 
 	namespace hc = helios::code;
@@ -158,9 +158,7 @@ namespace compiler::mir {
 				  position(position) {}
 
 			void fill(Instruction instruction) {
-				RIFT_ASSERT(
-					isEmpty(), "Hole is already filled"
-				);
+				RIFT_ASSERT(isEmpty(), "Hole is already filled");
 				RIFT_ASSERT(
 					not isTerminating(instruction.operation),
 					"Instruction must not be a terminating instruction"
@@ -466,7 +464,7 @@ namespace compiler::mir {
 
 			// second step: lifetime stuff
 
-			auto function_no_lifetime =  function_builder.build();
+			auto function_no_lifetime = function_builder.build();
 			return addDestructors(ctx, std::move(function_no_lifetime));
 		}
 

@@ -132,7 +132,7 @@ namespace compiler::helios {
 				.related_pst_element = element.base_element,
 				.parent_module       = module(parent),
 				.symbols             = {},
-				.depth                = scopeDepth(parent) + 1,
+				.depth               = scopeDepth(parent) + 1,
 			});
 		}
 
