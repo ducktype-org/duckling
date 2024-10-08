@@ -41,10 +41,10 @@ namespace compiler::mir {
 	/**
 	 * @brief Returns list of scopes that lifetime ends
 	 * when we jump from @p begin to @p end.
-	 * 
-	 * @param begin 
-	 * @param end 
-	 * @return std::vector<helios::ScopeID> 
+	 *
+	 * @param begin
+	 * @param end
+	 * @return std::vector<helios::ScopeID>
 	 */
 	std::vector<helios::ScopeID> getEndingScopes(helios::ScopeID begin, helios::ScopeID end) {
 		std::vector<helios::ScopeID> result;
@@ -120,8 +120,7 @@ namespace compiler::mir {
 						// we have to validate that all paths have the same ending scopes
 						// otherwise this implementation is incorrect
 						RIFT_ASSERT(ending_scopes == succ_ending_scopes, "Different ending scopes");
-					}
-					else {	
+					} else {
 						ending_scopes.emplace(std::move(succ_ending_scopes));
 					}
 				}

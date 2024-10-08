@@ -139,8 +139,8 @@ namespace compiler::mir {
 		 * @brief Returns reference value of given type
 		 * stored in MirLocation.
 		 * Throws if value is not of given type.
-		 * @tparam T 
-		 * @return const T& 
+		 * @tparam T
+		 * @return const T&
 		 */
 		template<class T>
 		const T& get() const {
@@ -214,9 +214,9 @@ namespace compiler::mir {
 	/**
 	 * @brief Returns list of MIR BlockIDs that
 	 * can be jumped to from given terminator instruction.
-	 * 
-	 * @param terminator 
-	 * @return std::vector<BlockID> 
+	 *
+	 * @param terminator
+	 * @return std::vector<BlockID>
 	 */
 	std::vector<BlockID> getTerminatorSuccessors(const Instruction& terminator);
 

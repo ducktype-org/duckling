@@ -9,10 +9,10 @@ namespace compiler::mir {
 	 * @brief Perform a pass of MIR, that add destructor calls
 	 * based of instruction lifetime-scopes.
 	 *
-	 * @important 
+	 * @important
 	 * It it a mock implementation, and does not perform
-	 * liveness range checks. This means that tt will add destructors for all locals, even if they are not yet created.
-	 * example:
+	 * liveness range checks. This means that tt will add destructors for all locals, even if they
+	 * are not yet created. example:
 	 * ```cpp
 	 * fun foo() { return; var a: T; } // calls destructor on return
 	 * ```
@@ -22,11 +22,11 @@ namespace compiler::mir {
 	 *   * "add liveness" after adding destructors, and delete destructors that are not needed.
 	 *   * make explicit cfg graph, and somehow walk it to find liveness ranges.
 	 *   * somehow use lifetime_scopes to find liveness ranges.
-	 * 
-	 * @todo Currently no code is put in place to 
+	 *
+	 * @todo Currently no code is put in place to
 	 * generate correct order of destructors calls.
 	 *
-	 * @return Function 
+	 * @return Function
 	 */
 	Function addDestructors(query::Context&, Function);
 }
