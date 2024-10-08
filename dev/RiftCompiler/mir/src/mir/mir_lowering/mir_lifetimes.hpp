@@ -25,7 +25,7 @@ namespace compiler::mir {
 	 *
 	 * @todo Currently no code is put in place to
 	 * generate correct order of destructors calls.
-	 * 
+	 *
 	 * @todo Add better tests once its not mock anymore.
 	 *
 	 * @return Function

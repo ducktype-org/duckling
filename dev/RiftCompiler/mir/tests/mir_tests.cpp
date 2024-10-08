@@ -124,35 +124,34 @@ private:
 		});
 	}
 
-	void testTerminatorSuccessors() {	
+	void testTerminatorSuccessors() {
 		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_var_test")));
 
-		withContextDo( [&](query::Context& ctx) {
+		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& functions = unit.functions;
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
 			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
-			
+
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 			ASSERT_EQUAL(foo_mir.blocks.size(), 5);
 			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
 
-			auto get_block_terminator = [&](u64 block_id) {
-				return foo_mir.blocks.at(block_id).terminator;
-			};
+			auto get_block_terminator
+				= [&](u64 block_id) { return foo_mir.blocks.at(block_id).terminator; };
 			auto get_block_successors = [&](u64 block_id) {
 				return compiler::mir::getTerminatorSuccessors(get_block_terminator(block_id));
 			};
-			
+
 			using compiler::mir::BlockID;
 			using BlockList = std::vector<BlockID>;
 			ASSERT_EQUAL(get_block_successors(0), BlockList{});
 			ASSERT_EQUAL(get_block_successors(1), BlockList{});
-			ASSERT_EQUAL(get_block_successors(2), BlockList{BlockID{1}});
-			ASSERT_EQUAL(get_block_successors(3), BlockList{BlockID{1}});
-			ASSERT_EQUAL(get_block_successors(4), BlockList{BlockID{2} COMMA BlockID{3}});
+			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 1 } });
+			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 1 } });
+			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 2 } COMMA BlockID{ 3 } });
 		});
 	}
 
@@ -163,14 +162,14 @@ private:
 
 		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_var_test")));
 
-		withContextDo( [&](query::Context& ctx) {
+		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& functions = unit.functions;
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
 			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
-			
+
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
 		});
