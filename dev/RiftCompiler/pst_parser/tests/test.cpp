@@ -51,7 +51,7 @@ class SimpleParserTest: public tester::TestSuite {
 #define TESTER_CLASS SimpleParserTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Parser Test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		lexer::init();
 		pst::init();
 

@@ -1,3 +1,7 @@
+/**
+ * @file opcodes.hpp
+ * @brief Defines enum for all opcodes in the VM.
+ */
 #pragma once
 
 #include <base/ints.hpp>

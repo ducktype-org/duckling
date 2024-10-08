@@ -6,7 +6,7 @@ class SimpleVmTest: public tester::TestSuite {
 #define TESTER_CLASS SimpleVmTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Vm Test") { TESTER_ADD_TEST(simpleRun); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(simpleRun); }
 
 
 private:

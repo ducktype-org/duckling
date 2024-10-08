@@ -299,9 +299,10 @@ namespace compiler::helios {
 
 				// Reverse insertion order allow for linear result concatenation instead of
 				// quadratic
-				auto parent_result = ctx.query<QueryLookupInScopeAndParents>(
+				LookupResult parent_result = ctx.query<QueryLookupInScopeAndParents>(
 					{ parent, key.name, key.with_wildcards }
 				);
+
 				parent_result.insert(std::move(result));
 
 				return parent_result;

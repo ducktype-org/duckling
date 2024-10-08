@@ -7,7 +7,7 @@ class ConcatTest: public tester::TestSuite {
 #define TESTER_CLASS ConcatTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Concat Test") { TESTER_ADD_TEST(testStrConcat); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testStrConcat); }
 
 	void testStrConcat() {
 		std::string res;

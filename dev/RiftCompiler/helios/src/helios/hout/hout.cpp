@@ -4,7 +4,6 @@
 #include <sstream>
 
 namespace compiler::helios {
-
 	std::string HOUTUnit::debugPrint() const {
 		std::string out;
 
@@ -37,6 +36,12 @@ namespace compiler::helios {
 		return base::perfectHash(original_symbol);
 	}
 
+	HOUTFunction::HOUTFunction(SymID symbol, query::Context& ctx):
+		  original_symbol(symbol),
+		  original_name(name(original_symbol)),
+		  type(ctx.query<QueryTypeOfSymbol>(original_symbol)
+	               .expect("Handling errors in HOUT is not supported yet")) {}
+
 	std::string HOUTGlobalData::debugPrint() const {
 		return base::strConcat(
 			"const ",
@@ -51,14 +56,13 @@ namespace compiler::helios {
 		);
 	}
 
-	HOUTFunction::HOUTFunction(SymID symbol, query::Context& ctx):
-		  original_symbol(symbol),
-		  original_name(name(original_symbol)),
-		  type(ctx.query<QueryTypeOfSymbol>(original_symbol)) {}
-
 	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx):
 		  helios_symbol(symbol),
 		  original_name(name(symbol)),
-		  value(ctx.query<QueryConstValueOf>(symbol)),
-		  type(ctx.query<QueryTypeOfSymbol>(symbol)) {}
+		  value(ctx.query<QueryConstValueOf>(symbol).expect(
+			  "Handling errors in HOUT is not supported yet"
+		  )),
+		  type(ctx.query<QueryTypeOfSymbol>(symbol).expect(
+			  "Handling errors in HOUT is not supported yet"
+		  )) {}
 }

@@ -37,7 +37,7 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QueryLinkedScope;
-		friend struct ImplementationOf_QueryStructSymbolData;
+		friend struct ImplementationOf_QueryClassSymbolData;
 	};
 
 	/**

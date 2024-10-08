@@ -5,7 +5,7 @@ class VmCorrectnessTests: public VmTestSuite {
 #define TESTER_CLASS VmCorrectnessTests
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR("VM Correctness Tests") {
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(test_ackermann_old);
 		TESTER_ADD_TEST(test_ackermann_new);
 		TESTER_ADD_TEST(test_collatz);

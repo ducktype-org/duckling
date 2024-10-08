@@ -9,7 +9,7 @@ class FileSystemFsTreeTest: public tester::TestSuite {
 	const std::regex test_regex = std::regex(R"(\..*|\$.*)");
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("FileSystem FsTree test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(parseDirectory);
 		TESTER_ADD_TEST(testOtherFeatures);
 	}

@@ -1,3 +1,4 @@
+#include "helios/helios_errors.hpp"
 #include <helios/scope_symbol_id.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
@@ -9,10 +10,14 @@
 #include <pst_parser/parser.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
+#include <type_traits>
 #include <typesystem/higher/all.hpp>
 #include <typesystem/higher/internal/queries.hpp>
 
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <base/variant.hpp>
+#include <helios/helios_result.hpp>
+
 using namespace compiler::helios::test_utils;
 
 class HeliosTests: public tester::TestSuite {
@@ -20,11 +25,12 @@ class HeliosTests: public tester::TestSuite {
 #define TESTER_CLASS HeliosTests
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("HeliosTests") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		lexer::init();
 		pst::init();
 		tsh::init();
 
+		TESTER_ADD_TEST(errorTests);
 		TESTER_ADD_TEST(testI32Consts);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testClassSymbolData);
@@ -33,6 +39,8 @@ public:
 		TESTER_ADD_TEST(importTest);
 		TESTER_ADD_TEST(houtVisitorTest);
 		TESTER_ADD_TEST(exprTreeTest);
+		TESTER_ADD_TEST(heliosResultConceptTests);
+		TESTER_ADD_TEST(heliosResultTests);
 		TESTER_ADD_TEST(houtVariablesTest);
 	}
 
@@ -61,9 +69,10 @@ private:
 
 		const auto first_class = getChain("FirstClassEver", root_scope).back();
 		const auto first_class_info
-			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class);
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class).valueOrThrow();
 		const auto first_class_typeinfo
-			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class);
+			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
+		          .valueOrThrow();
 
 		ASSERT_EQUAL(2, first_class_info.members.size());
 		ASSERT_EQUAL(2, first_class_info.methods.size());
@@ -75,7 +84,8 @@ private:
 
 		const auto second_class = getChain("SecondClass", root_scope).back();
 		auto       second_class_info
-			= query::entryPoint<compiler::helios::QueryClassSymbolData>(second_class);
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(second_class)
+		          .valueOrThrow();
 
 		ASSERT_EQUAL(0, second_class_info.members.size());
 		ASSERT_EQUAL(0, second_class_info.methods.size());
@@ -252,15 +262,18 @@ private:
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/expressions")));
 		ASSERT_EQUAL(31, getValue("V31", root_scope));
 
-		auto              sym1  = getChain("V31", root_scope).back();
-		auto              tree1 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym1);
+		auto              sym1 = getChain("V31", root_scope).back();
 		std::stringstream out;
+		auto&             tree1
+			= query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym1).valueOrThrow();
+
 		tree1->debugPrint(out);
 		ASSERT_EQUAL("(3+((5+9)*2))", out.str());
 
 		ASSERT_EQUAL(12, getValue("V12", root_scope));
-		auto              sym2  = getChain("V12", root_scope).back();
-		auto              tree2 = query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym2);
+		auto  sym2 = getChain("V12", root_scope).back();
+		auto& tree2
+			= query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym2).valueOrThrow();
 		std::stringstream out2;
 		tree2->debugPrint(out2);
 
@@ -269,6 +282,139 @@ private:
 		ASSERT_EQUAL(
 			base::strConcat("(", symV3_repr, "+(", symV3_repr, "*", symV3_repr, "))"), out2.str()
 		);
+	}
+
+	void errorTests() {
+		using namespace compiler::helios;
+
+		auto [_, root_scope]
+			= getModule(fs::FilePath(path("test_modules/error_generating/bad_expr")));
+
+		try {
+			getValue("InvalidExpr", root_scope);
+			RIFT_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getValue("InvalidSym", root_scope);
+			RIFT_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		try {
+			getValue("C", root_scope);
+			RIFT_PANIC("Should throw.");
+		} catch (errors::Failed& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+	}
+
+	void heliosResultConceptTests() {
+		using namespace compiler::helios::errors::impl;
+
+		static_assert(std::is_same_v<
+					  std::variant<int, float, bool>,
+					  FlattenVariant_t<std::variant<int, float, std::variant<bool>>>>);
+
+		static_assert(IsIn_v<int, int>);
+		static_assert(IsIn_v<int, float, double, int>);
+		static_assert(IsIn_v<int, float, int, double, int>);
+		static_assert(!IsIn_v<int, float, double>);
+
+		static_assert(std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<int>::types>);
+		static_assert(!std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<float>::types>);
+		static_assert(!std::
+		                  is_same_v<UniqueTypes<int, int, float>::types, UniqueTypes<int>::types>);
+
+		static_assert(std::is_same_v<UniqueTypesVariant_t<int>, std::variant<int>>);
+		static_assert(std::is_same_v<UniqueTypesVariant_t<int, int>, std::variant<int>>);
+		static_assert(!std::is_same_v<UniqueTypesVariant_t<int, int, float>, std::variant<int>>);
+		static_assert(std::is_same_v<
+					  UniqueTypesVariant_t<int, int, float>,
+					  std::variant<int, float>>);
+		static_assert(std::is_same_v<
+					  UniqueTypesVariant_t<int, int, float, int, int>,
+					  std::variant<float, int>>);
+		static_assert(std::is_same_v<
+					  UniqueTypesVariant_t<int, int, float, std::variant<int, int>>,
+					  std::variant<float, int>>);
+		static_assert(std::is_same_v<
+					  UniqueTypesVariant_t<
+						  std::variant<int, float, int>,
+						  int,
+						  int,
+						  float,
+						  std::variant<int, int>>,
+					  std::variant<float, int>>);
+
+		struct A {};
+
+		std::variant<std::variant<int, float>, std::variant<int, A>> y;
+
+		UniqueTypesVariant_t<decltype(y)> y1 = 1;
+
+		variant_match(y1) {
+			variant_case(int, val) ASSERT_EQUAL(val, 1);
+			variant_default RIFT_PANIC("Invalid state");
+		}
+
+		static_assert(std::is_same_v<
+					  std::variant<int, float, bool>,
+					  UniqueTypesVariant_t<
+						  std::variant<std::variant<int, float, std::variant<bool>>>>>);
+	}
+
+	void heliosResultTests() {
+		using namespace compiler::helios::errors;
+
+		static_assert(std::is_same_v<HResult<int, int>::ErrorType, int>);
+		static_assert(std::is_same_v<HResult<int, std::variant<int>>::ErrorType, int>);
+		static_assert(std::is_same_v<
+					  HResult<int, int, std::variant<float>>::ErrorType,
+					  std::variant<int, float>>);
+		static_assert(std::is_same_v<HResult<int, int, bool>::ErrorType, std::variant<int, bool>>);
+		static_assert(std::is_same_v<
+					  HResult<int, int, int, int, float>::ErrorType,
+					  std::variant<int, float>>);
+		// static_assert(std::is_same_v<impl::flatten::FlattenVariant_t<int, int>,
+		// impl::FlattenVariant_t<typename T>)
+
+		HResult<int, float> whoa = 1;
+		ASSERT_TRUE(whoa.hasValue());
+		ASSERT_TRUE(!whoa.hasError());
+		ASSERT_EQUAL(1, whoa.value());
+
+		std::string                    info  = "Hello";
+		HResult<int, std::string_view> whoa2 = HError(std::string_view(info));
+		ASSERT_TRUE(!whoa2.hasValue());
+		ASSERT_TRUE(whoa2.hasError());
+		ASSERT_EQUAL(whoa2.error(), "Hello");
+
+		struct Err1 {};
+
+		struct Err2 {};
+
+		struct Err3 {};
+
+		struct Err4 {};
+
+		HResult<int, Err2, Err4> sub_result = HError(Err2());
+		static_assert(std::is_same_v<decltype(sub_result)::ErrorType, std::variant<Err2, Err4>>);
+		HResult<int, Err1, Err2, Err3, decltype(sub_result)::ErrorType> result(sub_result);
+		static_assert(std::is_same_v<
+					  decltype(result)::ErrorType,
+					  std::variant<Err1, Err3, Err2, Err4>>);
+		bool entered2 = false;
+		ASSERT_TRUE(!result.hasValue());
+		ASSERT_TRUE(result.hasError());
+		variant_match(result.error()) {
+			variant_case(Err2, value) { entered2 = true; }
+			variant_default RIFT_PANIC("Invalid branch");
+		}
+		ASSERT_TRUE(entered2);
 	}
 
 	void houtVariablesTest() {

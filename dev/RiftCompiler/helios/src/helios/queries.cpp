@@ -70,8 +70,7 @@ namespace compiler::helios {
 		}
 
 		struct HoutStmtMaker final: public pst::PstStmtVisitorPanicky {
-			query::Context& ctx;
-
+			query::Context&                              ctx;
 			bool                                         empty = false;
 			base::Optional<code::ElementRef<code::Stmt>> out;
 
@@ -148,7 +147,9 @@ namespace compiler::helios {
 				auto symbol
 					= ctx.query<QuerySymbolOfSTMT>({ scope_of_symbol, PstRef<pst::Stmt>(&stmt) });
 
-				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol);
+				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol).expect(
+					"Handling errors is not supported in HOUT yet"
+				);
 
 				// for now initial value is assumed to always be present:
 				// this will probably change:
