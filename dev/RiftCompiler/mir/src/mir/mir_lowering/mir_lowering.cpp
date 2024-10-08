@@ -440,31 +440,31 @@ namespace compiler::mir {
 
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
+	Function lowerToPreMirFunction(query::Context& ctx, const helios::HOUTFunction& function) {
+		FunctionBuilder function_builder{ ctx };
+		function_builder.setName(function.original_name);
+
+		// @TODO: add parameters do list od locals
+		
+		auto fun_body_scope = function.body.body->lifetime_scope;
+		auto last_block = function_builder.newBlock();
+		last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, fun_body_scope });
+		
+		// build cfg+quad step by step:
+		auto first_block
+				= lowerCodeBlock(*function.body.body, last_block, function_builder);
+
+		function_builder.setEntry(first_block.begin);
+
+		return function_builder.build();
+	}
+
 	struct IMPLEMENT_QUERY(LowerToMirFunction, Function) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// First step:
-			// * build cfg+quad step by step
-
-
-			FunctionBuilder function_builder{ ctx };
-
-			function_builder.setName(key.function.original_name);
-
-			// @TODO: add parameters do list od locals
-
-			auto fun_body_scope = key.function.body.body->lifetime_scope;
-
-			auto last_block = function_builder.newBlock();
-			last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, fun_body_scope });
-
-			auto first_block
-				= lowerCodeBlock(*key.function.body.body, last_block, function_builder);
-
-			function_builder.setEntry(first_block.begin);
-
+			// first step: lowering to pre-mir
+			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
+			
 			// second step: lifetime stuff
-
-			auto function_no_lifetime = function_builder.build();
 			return addDestructors(ctx, std::move(function_no_lifetime));
 		}
 
@@ -472,6 +472,4 @@ namespace compiler::mir {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMirFunction);
-
-
 }

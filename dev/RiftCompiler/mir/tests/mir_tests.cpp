@@ -43,10 +43,10 @@ private:
 			ASSERT_EQUAL(base::StrID("foo3"), functions.at(2).original_name);
 			ASSERT_EQUAL(base::StrID("foo4"), functions.at(3).original_name);
 
-			auto& foo1_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
-			auto& foo2_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(1) });
-			auto& foo3_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) });
-			auto& foo4_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(3) });
+			auto foo1_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(0));
+			auto foo2_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(1));
+			auto foo3_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(2));
+			auto foo4_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(3));
 
 			ASSERT_EQUAL(foo1_mir.name, base::StrID("foo1"));
 			ASSERT_EQUAL(foo2_mir.name, base::StrID("foo2"));
@@ -77,7 +77,7 @@ private:
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
-			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			auto foo_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
 			// Test locals:

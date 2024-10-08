@@ -20,6 +20,15 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Lower a HOUTFunction to a MIRFunction
+	 * Performs lifetime analysis and checks
 	 */
 	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, const Function&)
+
+	/**
+	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction
+	 * Does not perform lifetime analysis and any checks.
+	 * @note Exposed in the interface mostly for tests
+	 */
+	Function lowerToPreMirFunction(query::Context&, const helios::HOUTFunction& function);
+
 }
