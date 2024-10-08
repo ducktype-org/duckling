@@ -34,7 +34,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Return all scopes currently stored by HELIOS.
-	 * @note: This should be used for tests or debug only.
+	 * @note: This should be used for tests and debug only.
 	 * @return std::vector<ScopeID>
 	 */
 	std::vector<ScopeID> getAllHeliosScopes();
