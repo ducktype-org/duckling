@@ -11,6 +11,10 @@
 
 namespace vm {
 
+	/**
+	 * @brief Wrapper around pointer to the memory.
+	 * @note it will be used for future verification of pointer usage
+	 */
 	class Block {
 	protected:
 		const u64 start = 0;

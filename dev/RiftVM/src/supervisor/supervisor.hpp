@@ -10,6 +10,13 @@
 #include <base/smart_pointers.hpp>
 
 namespace vm {
+	/**
+	 * @brief Supervisor for the VM, responsible for managing VCPU's ('VCPU') and forwarding
+	 * requests.
+	 *
+	 * To run the VM, you should use the frontend API (like `server.hpp` or `cli.hpp`), not this
+	 * class directly.
+	 */
 	class Supervisor {
 	private:
 		Supervisor() = default;

@@ -1,3 +1,7 @@
+/**
+ * @file vm.hpp
+ * @brief Main API for the RiftVM clients (CLI, Server, etc.)
+ */
 #pragma once
 
 #include "services/service_manager.hpp"
@@ -14,13 +18,11 @@ namespace vm {
 namespace vm::api {
 	/**
 	 * @brief Create new process in the api
-	 * @return
 	 */
 	cpp::result<ProcessInfo, ApiError> spawn(bool usesStdio);
 
 	/**
 	 * @brief Get the execution status of the RiftVM
-	 * @return
 	 */
 	cpp::result<VCPUStatus, ApiError> getExecutionStatus(PID pid);
 

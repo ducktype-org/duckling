@@ -1,3 +1,9 @@
+/**
+ * @file allocator.hpp
+ * @brief Dynamic memory allocator for the VM.
+ *
+ * Used by the Executor thread to allocate and deallocate memory.
+ */
 #pragma once
 
 #include <base/maps.hpp>
@@ -18,7 +24,13 @@ namespace vm {
 	class VCPU;
 
 	/**
-	 * @brief Default dynamic memory allocator
+	 * @brief Default dynamic memory allocator.
+	 * Used by the Executor thread to allocate and deallocate memory.
+	 *
+	 * Uses the `Memory` data module to create and delete memory blocks.
+	 * More information in the paper:
+	 * ["Prototyp maszyny
+	 * wirtualnej..."](https://github.com/ducktype-org/dev-space/blob/main/prace_naukowe/maszyna_wirtualna.pdf)
 	 */
 	class Allocator {
 	private:
