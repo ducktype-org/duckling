@@ -5,7 +5,6 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Lowest common ancestor of @p a and @p b
-	 * @todo: It works in linear time, maybe optimize it
 	 *
 	 * @param a
 	 * @param b
@@ -31,16 +30,14 @@ namespace compiler::mir {
 		return a;
 	}
 
-	helios::ScopeID beginScope(const Block& block) {
-		if (block.instructions.empty())
-			return block.terminator.scope;
-		else
-			return block.instructions.at(0).scope;
-	}
-
 	/**
-	 * @brief Returns list of scopes that lifetime ends
-	 * when we jump from @p begin to @p end.
+	 * @brief Returns list of scopes that lifetime ends between two consecutive instruction,
+	 * first from @p begin scope, second from @p end scope.
+	 * In general its the list of scopes between @p begin and lca(begin, end).
+	 *
+	 * @todo this is a general implementation that always works.
+	 * In the future we should find some invariant about two consecutive scopes
+	 * that we validate.  
 	 *
 	 * @param begin
 	 * @param end
@@ -59,6 +56,10 @@ namespace compiler::mir {
 	}
 
 	Function addDestructors(query::Context&, Function function) {
+		// Idea of implementation: for each block we iterate over instructions
+		// and add destructors after each instruction (often 0 of them),
+		// based on scopes that ends there.
+
 		// context is unused, but left since it might be useful in the future.
 
 		// preserving block order is important, because of how MIR BlockIDs works
@@ -72,9 +73,12 @@ namespace compiler::mir {
 		// See doc-comment of this function for details.
 
 		for (auto& block: function.blocks) {
+			// each block is considered independently
+
 			std::vector<Instruction> new_instructions;
 			new_instructions.reserve(block.instructions.size());
 
+			// lambdas used just to not duplicate code:
 			auto add_destructor = [&](helios::ScopeID instr_scope, LocalRef local) {
 				new_instructions.push_back(Instruction{
 					Operation::DestructIf,
@@ -103,6 +107,9 @@ namespace compiler::mir {
 				add_destructors(ending_scopes, instr.scope);
 			}
 
+			// we handle terminator in special way, 
+			// because its successors are a set, not a single object:
+
 			auto& terminator = block.terminator;
 			auto  successors = getTerminatorSuccessors(terminator);
 			if (successors.empty()) {
@@ -111,9 +118,17 @@ namespace compiler::mir {
 					add_destructor(terminator.scope, local.ref());
 			} else {
 				base::Optional<std::vector<helios::ScopeID>> ending_scopes;
+
+				// we have to validate here that each path has the same ending scopes
+				// @todo there are two possible futures:
+				// * It will remain a valid assumption (intuitively it should, but some weird cases might break it).
+				//   Assume it is, and ensure it in MIR-Lowering
+				// * It will not be a valid assumption, and we will have to change this implementation.
+				// This hole for is just for this validation.
+				// Maybe we should have some conditional compilation here based on debug/release modes
 				for (auto succ: successors) {
 					auto succ_ending_scopes = getEndingScopes(
-						terminator.scope, beginScope(function.blocks.at(u64(succ)))
+						terminator.scope, function.blocks.at(u64(succ)).beginScope()
 					);
 
 					if (ending_scopes.has_value()) {

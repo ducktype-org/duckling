@@ -74,7 +74,7 @@ namespace compiler::mir {
 	/**
 	 * @brief Reference to MIR Local variable data.
 	 */
-	using LocalRef = Ref<const MirLocal>;
+	using LocalRef = CRef<MirLocal>;
 
 	/**
 	 * @brief Description of a MIR Local variable, like a function argument or simply local
@@ -243,6 +243,9 @@ namespace compiler::mir {
 		 * @todo: Decide if we wan't to move it to instruction vector.
 		 */
 		Instruction terminator;
+
+		[[nodiscard]]
+		helios::ScopeID beginScope() const;
 	};
 
 	/**

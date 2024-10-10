@@ -38,6 +38,13 @@ namespace compiler::mir {
 		}
 	}
 
+	helios::ScopeID Block::beginScope() const {
+		if (instructions.empty())
+			return terminator.scope;
+		else
+			return instructions.at(0).scope;
+	}
+
 	void Function::debugPrint(std::ostream& output) const {
 		output << "Function " << name.strView() << ": TODO -> TODO\n";
 
