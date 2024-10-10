@@ -68,8 +68,8 @@ namespace compiler::mir {
 		for (auto& local: function.local_list)
 			locals_by_scope[local->lifetime_scope].emplace_back(local.ref());
 
-		// No live analysis here, since it is quite complex.
-		// see doc-comment of this function for details.
+		// No lifetime analysis here, since it is quite complex.
+		// See doc-comment of this function for details.
 
 		for (auto& block: function.blocks) {
 			std::vector<Instruction> new_instructions;

@@ -6,12 +6,12 @@ namespace compiler::mir {
 	struct Function;
 
 	/**
-	 * @brief Perform a pass of MIR, that add destructor calls
-	 * based of instruction lifetime-scopes.
+	 * @brief Perform a pass of MIR, that adds destructor calls
+	 * based on instruction lifetime-scopes.
 	 *
 	 * @important
-	 * It it a mock implementation, and does not perform
-	 * liveness range checks. This means that it will add destructors for all locals, even if they
+	 * It is a mock implementation, and does not perform
+	 * lifetime checks. This means that it will add destructors for all locals, even if they
 	 * are not yet created. example:
 	 * ```cpp
 	 * fun foo() { return; var a: T; } // calls destructor on return

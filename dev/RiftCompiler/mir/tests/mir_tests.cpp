@@ -152,9 +152,9 @@ private:
 			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 1 } });
 			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 1 } });
 
-			// Here the order does not matter.
-			// If it will brake, cause order changed,
-			// it has to changed to order-free assertion.
+			// Here, the order does not matter.
+			// If it breaks because the order changes,
+			// the check has to be changed to an order-free assertion.
 			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 3 } COMMA BlockID{ 2 } });
 		});
 	}
