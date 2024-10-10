@@ -22,7 +22,7 @@ from scripts.toolbox.internet_file import (
     callback_unTAR,
 )
 
-from scripts.toolbox.clang_tidy import simulate_clang_tidy
+from scripts.toolbox.cpp_linter import simulate_cpp_linter
 
 DATA_USER = "dev"
 # @FUTURE: change this password and hide it:
@@ -396,15 +396,31 @@ def download_llvm(*args, **kwargs):
 
 @cli.command()
 @click.option(
-    "-p",
-    "--path",
+    "-t",
+    "--tidy",
+    'clang_tidy_path',
     prompt="clang-tidy path",
     help="Path to clang-tidy, ex. /usr/bin/clang-tidy-17 or clang-tidy",
     default="clang-tidy-17",
 )
-def clang_tidy(*args, **kwargs):
-    """Simulates clang-tidy as if in a workflow"""
-    simulate_clang_tidy(*args, **kwargs)
+@click.option(
+    "-f",
+    "--format",
+    'clang_format_path',
+    prompt="clang-format path",
+    help="Path to clang-format, ex. /usr/bin/clang-format-17 or clang-format",
+    default="scripts/downloads/clang-format"
+)
+@click.option(
+    "-b",
+    "--build",
+    prompt="build folder",
+    help="Path to build folder with compile_commands.json",
+    default="build",
+)
+def linter(*args, **kwargs):
+    """Simulates clang-tidy and clang-format as if in a workflow"""
+    simulate_cpp_linter(*args, **kwargs)
 
 
 if __name__ == "__main__":
