@@ -5,6 +5,7 @@
  */
 
 #include "mir_lowering.hpp"
+#include "mir_lifetimes.hpp"
 #include <query_framework/query_impl.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
@@ -12,6 +13,18 @@
 #include <base/stable_hashmap.hpp>
 
 namespace compiler::mir {
+
+	Function::Function(
+		base::StrID                  name,
+		std::vector<Block>           blocks,
+		base::StableVector<MirLocal> local_list,
+		BlockID                      entry_block
+	):
+		  name(name),
+		  blocks(std::move(blocks)),
+		  local_list(std::move(local_list)),
+		  entry_block(entry_block) {}
+
 
 	namespace hc = helios::code;
 
@@ -134,15 +147,18 @@ namespace compiler::mir {
 			BlockBuilderRef block_ref;
 			usize           position;
 
+			[[nodiscard]]
+			bool isEmpty() const {
+				return block_ref->reversed_instruction.at(position).empty();
+			}
+
 		public:
 			InstructionHole(BlockBuilderRef block_ref, usize position):
 				  block_ref(block_ref),
 				  position(position) {}
 
 			void fill(Instruction instruction) {
-				RIFT_ASSERT(
-					block_ref->reversed_instruction.at(position).empty(), "Hole is already filled"
-				);
+				RIFT_ASSERT(isEmpty(), "Hole is already filled");
 				RIFT_ASSERT(
 					not isTerminating(instruction.operation),
 					"Instruction must not be a terminating instruction"
@@ -424,40 +440,35 @@ namespace compiler::mir {
 
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
+	Function lowerToPreMirFunction(query::Context& ctx, const helios::HOUTFunction& function) {
+		FunctionBuilder function_builder{ ctx };
+		function_builder.setName(function.original_name);
+
+		// @TODO: add parameters do list od locals
+
+		auto fun_body_scope = function.body.body->lifetime_scope;
+		auto last_block     = function_builder.newBlock();
+		last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, fun_body_scope });
+
+		// build cfg+quad step by step:
+		auto first_block = lowerCodeBlock(*function.body.body, last_block, function_builder);
+
+		function_builder.setEntry(first_block.begin);
+
+		return function_builder.build();
+	}
+
 	struct IMPLEMENT_QUERY(LowerToMirFunction, Function) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// First step:
-			// * build cfg+quad step by step
-
-
-			FunctionBuilder function_builder{ ctx };
-
-			function_builder.setName(key.function.original_name);
-
-			// @TODO: add parameters do list od locals
-
-			auto fun_body_scope = key.function.body.body->lifetime_scope;
-
-			auto last_block = function_builder.newBlock();
-			last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, fun_body_scope });
-
-			auto first_block
-				= lowerCodeBlock(*key.function.body.body, last_block, function_builder);
-
-			function_builder.setEntry(first_block.begin);
+			// first step: lowering to pre-mir (cfg+quad)
+			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
 
 			// second step: lifetime stuff
-
-			// @TODO:
-			// * add some lifetime stuff
-
-			return function_builder.build();
+			return addDestructors(ctx, std::move(function_no_lifetime));
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMirFunction);
-
-
 }

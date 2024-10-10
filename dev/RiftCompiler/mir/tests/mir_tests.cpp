@@ -27,6 +27,8 @@ public:
 		  tester::ContextSuite(std::move(config), "mir construction test") {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(simpleVarTest);
+		TESTER_ADD_TEST(testTerminatorSuccessors);
+		TESTER_ADD_TEST(mockLifetimeAnalysisTest);
 	}
 
 private:
@@ -43,10 +45,10 @@ private:
 			ASSERT_EQUAL(base::StrID("foo3"), functions.at(2).original_name);
 			ASSERT_EQUAL(base::StrID("foo4"), functions.at(3).original_name);
 
-			auto& foo1_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
-			auto& foo2_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(1) });
-			auto& foo3_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) });
-			auto& foo4_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(3) });
+			auto foo1_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(0));
+			auto foo2_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(1));
+			auto foo3_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(2));
+			auto foo4_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(3));
 
 			ASSERT_EQUAL(foo1_mir.name, base::StrID("foo1"));
 			ASSERT_EQUAL(foo2_mir.name, base::StrID("foo2"));
@@ -77,7 +79,7 @@ private:
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
-			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			auto foo_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
 			// Test locals:
@@ -119,6 +121,61 @@ private:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
 			std::stringstream foo_str;
 			foo_mir.debugPrint(foo_str);
+		});
+	}
+
+	void testTerminatorSuccessors() {
+		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_var_test")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& functions = unit.functions;
+			ASSERT_EQUAL(1, functions.size());
+			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
+
+			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+
+			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
+			ASSERT_EQUAL(foo_mir.blocks.size(), 5);
+			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
+
+			auto get_block_terminator
+				= [&](u64 block_id) { return foo_mir.blocks.at(block_id).terminator; };
+			auto get_block_successors = [&](u64 block_id) {
+				return compiler::mir::getTerminatorSuccessors(get_block_terminator(block_id));
+			};
+
+			using compiler::mir::BlockID;
+			using BlockList = std::vector<BlockID>;
+			ASSERT_EQUAL(get_block_successors(0), BlockList{});
+			ASSERT_EQUAL(get_block_successors(1), BlockList{});
+			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 1 } });
+			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 1 } });
+
+			// Here, the order does not matter.
+			// If it breaks because the order changes,
+			// the check has to be changed to an order-free assertion.
+			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 3 } COMMA BlockID{ 2 } });
+		});
+	}
+
+	void mockLifetimeAnalysisTest() {
+		// since lifetime analysis is a mock implementation, we don't
+		// yet test them with much effort.
+		// But we do want to make sure, that it compiles and does not throw:
+
+		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_var_test")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& functions = unit.functions;
+			ASSERT_EQUAL(1, functions.size());
+			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
+
+			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+
+			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
+			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
 		});
 	}
 };

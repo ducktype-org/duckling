@@ -77,6 +77,8 @@ namespace base {
 			return ptr == other.ptr;
 		}
 
+		bool operator<(const Ref& other) const { return ptr < other.ptr; }
+
 		// swap:
 		friend void swap(Ref& first, Ref& second) noexcept { std::swap(first.ptr, second.ptr); }
 

@@ -28,6 +28,18 @@ namespace compiler::helios {
 	frontend::ModuleID module(ScopeID id);
 
 	/**
+	 * @brief Return depth of the scope in the scope tree.
+	 */
+	u64 scopeDepth(ScopeID);
+
+	/**
+	 * @brief Return all scopes currently stored by HELIOS.
+	 * @note: This should be used for tests and debug only.
+	 * @return std::vector<ScopeID>
+	 */
+	std::vector<ScopeID> getAllHeliosScopes();
+
+	/**
 	 * @brief Query root scope for given module.
 	 * @todo: Right now RootScopes are empty, and in order to access proper module
 	 * symbols, one need to get scope of root element of the main module file.

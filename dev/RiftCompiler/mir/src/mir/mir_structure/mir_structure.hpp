@@ -74,7 +74,7 @@ namespace compiler::mir {
 	/**
 	 * @brief Reference to MIR Local variable data.
 	 */
-	using LocalRef = Ref<MirLocal>;
+	using LocalRef = CRef<MirLocal>;
 
 	/**
 	 * @brief Description of a MIR Local variable, like a function argument or simply local
@@ -134,6 +134,18 @@ namespace compiler::mir {
 		MirLocation(BlockID value): value(value) {}
 
 		void debugPrint(std::ostream& output) const;
+
+		/**
+		 * @brief Returns reference value of given type
+		 * stored in MirLocation.
+		 * Throws if value is not of given type.
+		 * @tparam T
+		 * @return const T&
+		 */
+		template<class T>
+		const T& get() const {
+			return std::get<T>(value);
+		}
 	};
 
 	/**
@@ -191,13 +203,22 @@ namespace compiler::mir {
 			helios::ScopeID            scope
 		):
 			  operation(operation),
-			  output(std::move(output)),
+			  output(output),
 			  arguments(std::move(arguments)),
 			  flags(std::move(flags)),
 			  scope(scope) {}
 
 		void debugPrint(std::ostream& output) const;
 	};
+
+	/**
+	 * @brief Returns list of MIR BlockIDs that
+	 * can be jumped to from given terminator instruction.
+	 *
+	 * @param terminator
+	 * @return std::vector<BlockID>
+	 */
+	std::vector<BlockID> getTerminatorSuccessors(const Instruction& terminator);
 
 	/**
 	 * @brief A simple block of MIR cfg code.
@@ -222,6 +243,9 @@ namespace compiler::mir {
 		 * @todo: Decide if we wan't to move it to instruction vector.
 		 */
 		Instruction terminator;
+
+		[[nodiscard]]
+		helios::ScopeID beginScope() const;
 	};
 
 	/**
@@ -232,6 +256,18 @@ namespace compiler::mir {
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
+
+		Function()                = delete;
+		Function(const Function&) = delete;
+
+		Function(
+			base::StrID                  name,
+			std::vector<Block>           blocks,
+			base::StableVector<MirLocal> local_list,
+			BlockID                      entry_block
+		);
+
+		Function(Function&&) = default;
 
 		void debugPrint(std::ostream& output) const;
 	};
