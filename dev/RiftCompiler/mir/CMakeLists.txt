@@ -1,5 +1,6 @@
 add_library(MIR
 	src/mir/mir_lowering/mir_lowering.cpp
+	src/mir/mir_lowering/mir_lifetimes.cpp
 	src/mir/mir_structure/mir_structure.cpp
 )
 

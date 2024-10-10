@@ -42,6 +42,10 @@ public:
 		TESTER_ADD_TEST(heliosResultConceptTests);
 		TESTER_ADD_TEST(heliosResultTests);
 		TESTER_ADD_TEST(houtVariablesTest);
+
+		// this is at the end
+		// so we test all the scopes created in helios tests:
+		TESTER_ADD_TEST(scopeParentsAndDepthTests);
 	}
 
 private:
@@ -480,6 +484,21 @@ private:
 			auto& var = get_var_ref(5);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "e");
 			ASSERT_EQUAL(var.type.getType().getKind(), tsh::Kind::Class);
+		}
+	}
+
+	void scopeParentsAndDepthTests() {
+		auto all_scopes = compiler::helios::getAllHeliosScopes();
+		message(base::strConcat("Scope count: ", all_scopes.size()));
+		for (auto scope: all_scopes) {
+			auto depth = scopeDepth(scope);
+			while (depth != 0) {
+				scope = parent(scope).value();
+				ASSERT_TRUE(depth > 0);
+				ASSERT_EQUAL(depth - 1, scopeDepth(scope));
+				depth = scopeDepth(scope);
+			}
+			assertTrue(parent(scope).empty(), "Scope at depth 0 can't have a parent");
 		}
 	}
 };

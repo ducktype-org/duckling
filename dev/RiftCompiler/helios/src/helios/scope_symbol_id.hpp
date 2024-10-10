@@ -52,6 +52,8 @@ namespace compiler::helios {
 
 		bool operator==(const ScopeID&) const = default;
 
+		bool operator<(const ScopeID& other) const { return ref < other.ref; }
+
 	private:
 		Ref<ScopeData> ref;
 
@@ -60,7 +62,7 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;
 		friend struct ImplementationOf_QuerySymbolsInScope;
 		friend struct ImplementationOf_QueryLookupInScopeAndParents;
-		friend struct GetScopeRef_Functor;
+		friend struct ScopeAccess_Functor;
 	};
 
 }

@@ -18,6 +18,33 @@ namespace compiler::mir {
 		}
 	}
 
+	std::vector<BlockID> getTerminatorSuccessors(const Instruction& terminator) {
+		using enum Operation;
+		switch (terminator.operation) {
+		case Jump:
+			return { terminator.arguments.at(0).get<BlockID>() };
+
+		case Branch:
+			return { terminator.arguments.at(1).get<BlockID>(),
+				     terminator.arguments.at(2).get<BlockID>() };
+
+		case ReturnVoid:
+		case ReturnValue:
+		case FunctionEnd:
+			return {};
+
+		default:
+			RIFT_PANIC("Not a terminator instruction");
+		}
+	}
+
+	helios::ScopeID Block::beginScope() const {
+		if (instructions.empty())
+			return terminator.scope;
+		else
+			return instructions.at(0).scope;
+	}
+
 	void Function::debugPrint(std::ostream& output) const {
 		output << "Function " << name.strView() << ": TODO -> TODO\n";
 
