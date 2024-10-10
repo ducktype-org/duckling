@@ -1,9 +1,11 @@
 import pathlib
 from scripts.toolbox.helpers import (
     BashCommandError,
+    bash_command,
     bash_command_get_output,
     exit_with_error,
     log_info,
+    log_new_line,
     log_warning,
 )
 
@@ -17,7 +19,9 @@ def get_diffs():
     if has_unstaged_changes():
         log_warning("You have unstaged changes, diff may not work correctly...")
 
-    diff_out, _ = bash_command_get_output("git diff --merge-base main -U0 --relative")
+    diff_out, _ = bash_command_get_output(
+        "git diff --merge-base origin/main -U0 --relative"
+    )
     diff_lines = diff_out.splitlines()
 
     changes = {}
@@ -70,6 +74,8 @@ def simulate_cpp_linter(clang_tidy_path: str, clang_format_path: str, build: str
     diffs = get_diffs()
     log_info(f"Found {diffs=}")
 
+    clang_format_failed = False
+
     for file in diffs:
         if file.endswith(".hpp") or file.endswith(".cpp"):
             log_info(f"Running linting on: {file}")
@@ -77,22 +83,36 @@ def simulate_cpp_linter(clang_tidy_path: str, clang_format_path: str, build: str
                 # clang-tidy command succeeds if not errors were found
                 bash_command_get_output(
                     f"{clang_tidy_path} -p {build_folder} --format-style file"
-                    f' -line-filter="[{{"name": "{file}", "lines": {str(diffs[file])}}}]"'
+                    f' -line-filter="[{{"name": "{file}", "lines": {diffs[file]}}}]"'
                     f" --extra-arg= {file}"
                 )
 
                 # clang-format command succeeds always and returns data (possibly empty)
+                lines = [f"--lines={start}:{stop}" for start, stop in diffs[file]]
                 clang_out, clang_err = bash_command_get_output(
                     f"{clang_format_path}"
                     " -style=file --dry-run"
-                    f" {' '.join([f'--lines={start}:{stop}' for start, stop in diffs[file]])} {file}"
+                    f" {' '.join(lines)} {file}"
                 )
 
                 # Parse data returned by clang-format
                 if clang_out or clang_err:
                     log_warning(f"Failed clang-format output: \n{clang_out}{clang_err}")
+                    clang_format_failed = True
 
             except BashCommandError as e:
                 log_warning(f"Failed: {file}, because:\n{e.stdout}{e.stderr}")
         else:
             log_info(f"Skipping linting on: {file}")
+
+    if clang_format_failed:
+        log_new_line()
+        log_warning(
+            "Found formatting issues. Do you want to format the repo [Y/n]: ",
+            fg="magenta",
+            newline=False,
+        )
+        to_format = input().lower()
+        log_new_line()
+        if to_format == "y" or to_format == "":
+            bash_command("./scripts/formatting/format_repo.sh")

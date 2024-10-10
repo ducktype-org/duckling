@@ -26,9 +26,9 @@ def bash_command(cmd, cwd=".", redirect=None):
     proc = sp.Popen(["/bin/bash", "-c", cmd], cwd=cwd, stdout=redirect, stderr=redirect)
     stdout, stderr = proc.communicate()
 
-    if stdout:
+    if stdout is not None:
         stdout = stdout.decode('UTF-8')
-    if stderr:
+    if stderr is not None:
         stderr = stderr.decode('UTF-8')
 
     status = proc.wait()
@@ -41,11 +41,11 @@ def bash_command_get_output(cmd, cwd="."):
     return bash_command(cmd, cwd, redirect=sp.PIPE)
 
 
-def log_info(msg):
-    click.echo(click.style(f"[INFO]: {msg}", fg="yellow", bold=True))
+def log_info(msg, newline=True):
+    click.echo(click.style(f"[INFO]: {msg}", fg="yellow", bold=True), nl=newline)
 
-def log_warning(msg, fg="blue"):
-    click.echo(click.style(f"[WARNING]: {msg}", fg=fg, bold=True))
+def log_warning(msg, fg="blue", newline=True):
+    click.echo(click.style(f"[WARNING]: {msg}", fg=fg, bold=True), nl=newline)
 
 def log_new_line():
     click.echo("")
