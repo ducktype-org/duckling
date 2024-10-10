@@ -37,7 +37,7 @@ namespace compiler::mir {
 	 *
 	 * @todo this is a general implementation that always works.
 	 * In the future we should find some invariant about two consecutive scopes
-	 * that we validate.  
+	 * that we validate.
 	 *
 	 * @param begin
 	 * @param end
@@ -107,7 +107,7 @@ namespace compiler::mir {
 				add_destructors(ending_scopes, instr.scope);
 			}
 
-			// we handle terminator in special way, 
+			// we handle terminator in special way,
 			// because its successors are a set, not a single object:
 
 			auto& terminator = block.terminator;
@@ -121,11 +121,12 @@ namespace compiler::mir {
 
 				// we have to validate here that each path has the same ending scopes
 				// @todo there are two possible futures:
-				// * It will remain a valid assumption (intuitively it should, but some weird cases might break it).
+				// * It will remain a valid assumption (intuitively it should, but some weird cases
+				// might break it).
 				//   Assume it is, and ensure it in MIR-Lowering
-				// * It will not be a valid assumption, and we will have to change this implementation.
-				// This hole for is just for this validation.
-				// Maybe we should have some conditional compilation here based on debug/release modes
+				// * It will not be a valid assumption, and we will have to change this
+				// implementation. This hole for is just for this validation. Maybe we should have
+				// some conditional compilation here based on debug/release modes
 				for (auto succ: successors) {
 					auto succ_ending_scopes = getEndingScopes(
 						terminator.scope, function.blocks.at(u64(succ)).beginScope()
