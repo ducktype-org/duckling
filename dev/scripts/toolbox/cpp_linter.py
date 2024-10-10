@@ -4,6 +4,7 @@ from scripts.toolbox.helpers import (
     bash_command,
     bash_command_get_output,
     exit_with_error,
+    get_input,
     log_info,
     log_new_line,
     log_warning,
@@ -107,12 +108,9 @@ def simulate_cpp_linter(clang_tidy_path: str, clang_format_path: str, build: str
 
     if clang_format_failed:
         log_new_line()
-        log_warning(
-            "Found formatting issues. Do you want to format the repo [Y/n]: ",
-            fg="magenta",
-            newline=False,
-        )
-        to_format = input().lower()
+        to_format = get_input(
+            "Found formatting issues. Do you want to format the repo [Y/n]: "
+        ).lower()
         log_new_line()
         if to_format == "y" or to_format == "":
             bash_command("./scripts/formatting/format_repo.sh")

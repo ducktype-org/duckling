@@ -42,10 +42,14 @@ def bash_command_get_output(cmd, cwd="."):
 
 
 def log_info(msg, newline=True):
-    click.echo(click.style(f"[INFO]: {msg}", fg="yellow", bold=True), nl=newline)
+    click.echo(click.style(f"[INFO]: {msg}", fg="yellow", bold=False), nl=newline)
 
 def log_warning(msg, fg="blue", newline=True):
     click.echo(click.style(f"[WARNING]: {msg}", fg=fg, bold=True), nl=newline)
+
+def get_input(msg, newline=False):
+    click.echo(click.style(f"[INPUT]: {msg}", fg="magenta", bold=False), nl=newline)
+    return input()
 
 def log_new_line():
     click.echo("")
