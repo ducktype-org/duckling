@@ -26,8 +26,10 @@ def bash_command(cmd, cwd=".", redirect=None):
     proc = sp.Popen(["/bin/bash", "-c", cmd], cwd=cwd, stdout=redirect, stderr=redirect)
     stdout, stderr = proc.communicate()
 
-    stdout = stdout.decode('UTF-8')
-    stderr = stderr.decode('UTF-8')
+    if stdout:
+        stdout = stdout.decode('UTF-8')
+    if stderr:
+        stderr = stderr.decode('UTF-8')
 
     status = proc.wait()
     if status != 0:
