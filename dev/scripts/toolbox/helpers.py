@@ -22,7 +22,7 @@ class BashCommandError(Exception):
 
 
 def bash_command(cmd, cwd=".", redirect=None):
-    click.echo(click.style(f"[RUNNING BASH]: {cmd}", fg="yellow", bold=False))
+    click.echo(click.style(f"[BASH]: {cmd}", fg="bright_cyan", bold=False))
     proc = sp.Popen(["/bin/bash", "-c", cmd], cwd=cwd, stdout=redirect, stderr=redirect)
     stdout, stderr = proc.communicate()
 

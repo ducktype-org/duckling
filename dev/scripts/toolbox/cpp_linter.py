@@ -11,17 +11,9 @@ from scripts.toolbox.helpers import (
 )
 
 
-def has_unstaged_changes() -> bool:
-    status_out, _ = bash_command_get_output("git status")
-    return "Changes not staged for commit:" in status_out
-
-
-def get_diffs():
-    if has_unstaged_changes():
-        log_warning("You have unstaged changes, diff may not work correctly...")
-
+def get_diffs(unstaged: bool):
     diff_out, _ = bash_command_get_output(
-        "git diff --merge-base origin/main -U0 --relative"
+        f'git diff --merge-base origin/main -U0 --relative {" " if unstaged else "--staged"}'
     )
     diff_lines = diff_out.splitlines()
 
@@ -67,12 +59,12 @@ def get_diffs():
     return changes
 
 
-def simulate_cpp_linter(clang_tidy_path: str, clang_format_path: str, build: str):
+def simulate_cpp_linter(clang_tidy_path: str, clang_format_path: str, build: str, unstaged: bool):
     build_folder = pathlib.Path(build)
     if not build_folder.exists():
         exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
 
-    diffs = get_diffs()
+    diffs = get_diffs(unstaged)
     log_info(f"Found {diffs=}")
 
     clang_format_failed = False
@@ -81,7 +73,7 @@ def simulate_cpp_linter(clang_tidy_path: str, clang_format_path: str, build: str
         if file.endswith(".hpp") or file.endswith(".cpp"):
             log_info(f"Running linting on: {file}")
             try:
-                # clang-tidy command succeeds if not errors were found
+                # clang-tidy command succeeds if no errors were found
                 bash_command_get_output(
                     f"{clang_tidy_path} -p {build_folder} --format-style file"
                     f' -line-filter="[{{"name": "{file}", "lines": {diffs[file]}}}]"'
