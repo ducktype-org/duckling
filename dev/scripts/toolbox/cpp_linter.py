@@ -11,9 +11,24 @@ from scripts.toolbox.helpers import (
 )
 
 
-def get_diffs(unstaged: bool):
+def get_unstaged_new_files() -> bool:
+    status_out, _ = bash_command_get_output("git status --porcelain")
+    new_unstaged_files = []
+    for file in status_out.splitlines():
+        if file.startswith("??"):
+            new_unstaged_files.append(file[3:])
+
+    return new_unstaged_files
+
+
+def get_diffs():
+    if new_unstaged_files := get_unstaged_new_files():
+        log_warning(
+            f"Files not in working tree, so not included in diff: [{', '.join(new_unstaged_files)}]"
+        )
+
     diff_out, _ = bash_command_get_output(
-        f'git diff --merge-base origin/main -U0 --relative {" " if unstaged else "--staged"}'
+        "git diff --merge-base origin/main -U0 --relative"
     )
     diff_lines = diff_out.splitlines()
 
@@ -59,12 +74,12 @@ def get_diffs(unstaged: bool):
     return changes
 
 
-def simulate_cpp_linter(clang_tidy_path: str, clang_format_path: str, build: str, unstaged: bool):
+def simulate_cpp_linter(clang_tidy_path: str, clang_format_path: str, build: str):
     build_folder = pathlib.Path(build)
     if not build_folder.exists():
         exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
 
-    diffs = get_diffs(unstaged)
+    diffs = get_diffs()
     log_info(f"Found {diffs=}")
 
     clang_format_failed = False

@@ -419,17 +419,10 @@ def download_llvm(*args, **kwargs):
     help="Path to build folder with compile_commands.json",
     default="build",
 )
-@click.option(
-    "-u",
-    "--unstaged",
-    help="If added, will run diff on the working tree instead of staged changes",
-    is_flag=True
-)
 def linter(*args, **kwargs):
     """Simulates clang-tidy and clang-format as if in a workflow.
 
-    It compares the current branch's staged changes with the most recent common ancestor shared with the 'main' branch (called the merge base).
-    If flag '-u/--unstaged' is added, uses working tree instead of staged changes.
+    It compares the current branch's working tree with the most recent common ancestor shared with the 'main' branch (called the merge base).
     """
     simulate_cpp_linter(*args, **kwargs)
 
@@ -440,6 +433,6 @@ if __name__ == "__main__":
 
     # Disable traceback for shorter error messages.
     # Comment this line when debugging.
-    sys.tracebacklimit = 0
+    # sys.tracebacklimit = 0
 
     cli()
