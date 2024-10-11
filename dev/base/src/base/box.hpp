@@ -96,6 +96,8 @@ namespace base {
 			return *ptr;
 		}
 
+		bool operator==(const Box& other) const { return ptr == other.ptr; }
+
 		~Box() { delete ptr; }
 	};
 

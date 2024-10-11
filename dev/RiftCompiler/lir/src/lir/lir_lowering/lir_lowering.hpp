@@ -11,6 +11,8 @@ namespace compiler::lir {
 
 		bool operator==(const KeyOf_LowerToLirFunction& oth) const {
 			return function == oth.function;
+
+			// this still does not work, but the compiler errors are helpful now
 		}
 	};
 }

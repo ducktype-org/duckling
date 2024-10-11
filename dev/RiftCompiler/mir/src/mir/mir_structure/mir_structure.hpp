@@ -67,6 +67,8 @@ namespace compiler::mir {
 
 	struct MirIntegerConst final {
 		i64 value;
+
+		bool operator==(const MirIntegerConst& other) const = default;
 	};
 
 	STRONG_TYPEDEF_ID(LocalID);
@@ -114,6 +116,10 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		base::StrID getName() const;
+
+		bool operator==(const MirLocal& other) const {
+			return id == other.id;
+		};
 	};
 
 	/**
@@ -132,6 +138,8 @@ namespace compiler::mir {
 		MirLocation(LocalRef value): value(value) {}
 
 		MirLocation(BlockID value): value(value) {}
+		
+		bool operator==(const MirLocation& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 
@@ -159,6 +167,8 @@ namespace compiler::mir {
 		enum class Flag { Construct, Destruct, Move };
 		Flag     flag;
 		LocalRef local;
+		
+		bool operator==(const OperationFlag& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 	};
@@ -208,6 +218,8 @@ namespace compiler::mir {
 			  flags(std::move(flags)),
 			  scope(scope) {}
 
+		bool operator==(const Instruction& other) const = default;
+
 		void debugPrint(std::ostream& output) const;
 	};
 
@@ -243,6 +255,8 @@ namespace compiler::mir {
 		 * @todo: Decide if we wan't to move it to instruction vector.
 		 */
 		Instruction terminator;
+
+		bool operator==(const Block& other) const = default;
 
 		[[nodiscard]]
 		helios::ScopeID beginScope() const;
