@@ -1,5 +1,6 @@
 #pragma once
 
+#include "declarations.hpp"
 #include "not_statements.hpp"
 
 namespace pst {
@@ -81,7 +82,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return kind.value;
 		}
 
@@ -158,7 +159,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 
@@ -194,7 +195,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 

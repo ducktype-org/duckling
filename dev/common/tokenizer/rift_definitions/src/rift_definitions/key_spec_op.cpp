@@ -12,8 +12,8 @@ namespace rift_def {
 
 	void setKeywordMode(KeywordMode mode) { keyword_mode = mode; }
 
-	base::StrId makeStrId(std::string_view view) {
-		return base::StrId(base::RawView({ reinterpret_cast<const byte*>(view.data()), view.size() }
+	base::StrID makeStrID(std::string_view view) {
+		return base::StrID(base::RawView({ reinterpret_cast<const byte*>(view.data()), view.size() }
 		));
 	}
 
@@ -102,12 +102,13 @@ namespace rift_def {
 			{ Keyword::This, "this", base::EmptyFlag },
 		} };
 
-	constexpr std::array<std::tuple<Keyword, std::string_view, base::FlagType>, 16>
+	constexpr std::array<std::tuple<Keyword, std::string_view, base::FlagType>, 17>
 		bc_keywords_array{ {
 			{ Keyword::BCFunction, "function", base::EmptyFlag },
 			{ Keyword::BCLocalSize, "local_size", base::EmptyFlag },
 			{ Keyword::BCRetSize, "ret_size", base::EmptyFlag },
 			{ Keyword::BCArgSize, "arg_size", base::EmptyFlag },
+			{ Keyword::BCNextArgSize, "next_arg_size", base::EmptyFlag },
 			{ Keyword::BCDefine, "define", base::EmptyFlag },
 			{ Keyword::BCLabel, "label", base::EmptyFlag },
 			{ Keyword::BCArg, "arg", base::EmptyFlag },
@@ -162,20 +163,20 @@ namespace rift_def {
 	} };
 
 	// Distinct for all keyword modes:
-	base::VectorMap<base::StrId, Keyword, false, true> rift_keyword_map;
-	base::VectorMap<base::StrId, Keyword, false, true> bc_keyword_map;
+	base::VectorMap<base::StrID, Keyword, false, true> rift_keyword_map;
+	base::VectorMap<base::StrID, Keyword, false, true> bc_keyword_map;
 
 	// Single for all
-	base::VectorMap<Keyword, base::StrId, false, true> rev_keyword_map;
+	base::VectorMap<Keyword, base::StrID, false, true> rev_keyword_map;
 
 	// Single for all:
 	base::VectorMap<Keyword, base::FlagType, false, true> keyword_flags;
 
-	base::VectorMap<base::StrId, Special, false, true>  special_map;
-	base::VectorMap<base::StrId, Operator, false, true> operator_map;
+	base::VectorMap<base::StrID, Special, false, true>  special_map;
+	base::VectorMap<base::StrID, Operator, false, true> operator_map;
 
-	base::VectorMap<Special, base::StrId, false, true>  rev_special_map;
-	base::VectorMap<Operator, base::StrId, false, true> rev_operator_map;
+	base::VectorMap<Special, base::StrID, false, true>  rev_special_map;
+	base::VectorMap<Operator, base::StrID, false, true> rev_operator_map;
 
 	void key_spec_op::init() {
 		RIFT_SIMPLE_INIT_GUARD_BEGIN;
@@ -183,31 +184,31 @@ namespace rift_def {
 		keyword_mode = DEFAULT_MODE;
 
 		// keywords:
-		rev_keyword_map.put(Keyword::NotAKeyword, base::StrId("NotAKeyword"));
+		rev_keyword_map.put(Keyword::NotAKeyword, base::StrID("NotAKeyword"));
 		keyword_flags.put(Keyword::NotAKeyword, base::EmptyFlag);
 
 		for (auto [k, s, f]: rift_keywords_array) {
-			rift_keyword_map.put(makeStrId(s), k);
-			rev_keyword_map.put(k, makeStrId(s));
+			rift_keyword_map.put(makeStrID(s), k);
+			rev_keyword_map.put(k, makeStrID(s));
 			keyword_flags.put(k, f);
 		}
 
 		for (auto [k, s, f]: bc_keywords_array) {
-			bc_keyword_map.put(makeStrId(s), k);
-			rev_keyword_map.put(k, makeStrId(s));
+			bc_keyword_map.put(makeStrID(s), k);
+			rev_keyword_map.put(k, makeStrID(s));
 			keyword_flags.put(k, f);
 		}
 
 		// specials:
 		for (auto [k, s]: special_array) {
-			special_map.put(makeStrId(s), k);
-			rev_special_map.put(k, makeStrId(s));
+			special_map.put(makeStrID(s), k);
+			rev_special_map.put(k, makeStrID(s));
 		}
 
 		// operators:
 		for (auto [k, s]: operator_array) {
-			operator_map.put(makeStrId(s), k);
-			rev_operator_map.put(k, makeStrId(s));
+			operator_map.put(makeStrID(s), k);
+			rev_operator_map.put(k, makeStrID(s));
 		}
 
 		// just to be safe for any future changes
@@ -227,7 +228,7 @@ namespace rift_def {
 		RIFT_SIMPLE_INIT_GUARD_END;
 	}
 
-	Keyword strAsKeyword(base::StrId id) {
+	Keyword strAsKeyword(base::StrID id) {
 		switch (keyword_mode) {
 		case KeywordMode::RiftSource:
 			if (rift_keyword_map.contains(id))
@@ -248,21 +249,21 @@ namespace rift_def {
 		return Keyword::NotAKeyword;
 	}
 
-	Special strAsSpecial(base::StrId id) {
+	Special strAsSpecial(base::StrID id) {
 		if (special_map.contains(id)) return special_map[id];
 		return Special::NotASpecial;
 	}
 
-	Operator strAsOperator(base::StrId id) {
+	Operator strAsOperator(base::StrID id) {
 		if (operator_map.contains(id)) return operator_map[id];
 		return Operator::NotAnOperator;
 	}
 
-	base::StrId keywordToStr(Keyword key) { return rev_keyword_map[key]; }
+	base::StrID keywordToStr(Keyword key) { return rev_keyword_map[key]; }
 
-	base::StrId specialToStr(Special spec) { return rev_special_map[spec]; }
+	base::StrID specialToStr(Special spec) { return rev_special_map[spec]; }
 
-	base::StrId operatorToStr(Operator oper) { return rev_operator_map[oper]; }
+	base::StrID operatorToStr(Operator oper) { return rev_operator_map[oper]; }
 
 	base::FlagType keywordFlags(Keyword key) { return keyword_flags[key]; }
 

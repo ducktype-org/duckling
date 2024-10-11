@@ -9,7 +9,7 @@ class StronglyTypedIntTest: public tester::TestSuite {
 #define TESTER_CLASS StronglyTypedIntTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Strongly typed int Test") { TESTER_ADD_TEST(stronglyTypedInt); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(stronglyTypedInt); }
 
 	void stronglyTypedInt() {
 		Meters m(0);

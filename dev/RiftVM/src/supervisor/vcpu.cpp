@@ -1,7 +1,9 @@
+#include "vcpu.hpp"
+
 #include <memory>
 #include <mutex>
 #include <base/variant.hpp>
-#include "vcpu.hpp"
+#include <api/data/request.hpp>
 
 namespace vm {
 	DataManager& VCPU::getData() { return dataManager; }
@@ -142,7 +144,7 @@ namespace vm {
 		variant_match(request) {
 			variant_case(api::request::TypeMetadata, type_request) {
 				auto res = dataManager.get<vm::TypeMetadata>().getTypeByName(
-					base::StrId(type_request.type_name.c_str())
+					base::StrID(type_request.type_name.c_str())
 				);
 				match_optional(res) {
 					opt_some(value) { response = value; }
@@ -166,7 +168,8 @@ namespace vm {
 		variant_match(request) {
 			variant_case(api::ExecutorRequest, exec_request) { return doRequest(exec_request); }
 			variant_case(api::DataRequest, data_request) { return doRequest(data_request); }
-			variant_default { return api::Response(getStatus()); }
+			variant_case(api::StatusRequest, status_request) { return api::Response(getStatus()); }
+			variant_default { return api::Response(api::response::Empty()); }
 		}
 		RIFT_PANIC("something went wrong");
 	}

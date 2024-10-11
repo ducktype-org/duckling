@@ -26,7 +26,7 @@ class OwnershipPointerTest: public tester::TestSuite {
 #define TESTER_CLASS OwnershipPointerTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Ownership pointer test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testPassByValue);
 		TESTER_ADD_TEST(testOwnership);
 	}

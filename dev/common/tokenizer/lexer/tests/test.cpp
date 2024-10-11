@@ -10,7 +10,7 @@ class SimpleLexerTest: public tester::TestSuite {
 	tokenizer::OwnFile td;
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple Lexer Test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		lexer::init();
 		rift_def::setKeywordMode(rift_def::KeywordMode::RiftSource);
 

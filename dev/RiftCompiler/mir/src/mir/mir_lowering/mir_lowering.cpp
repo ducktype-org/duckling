@@ -5,6 +5,7 @@
  */
 
 #include "mir_lowering.hpp"
+#include "mir_lifetimes.hpp"
 #include <query_framework/query_impl.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
@@ -12,6 +13,18 @@
 #include <base/stable_hashmap.hpp>
 
 namespace compiler::mir {
+
+	Function::Function(
+		base::StrID                  name,
+		std::vector<Block>           blocks,
+		base::StableVector<MirLocal> local_list,
+		BlockID                      entry_block
+	):
+		  name(name),
+		  blocks(std::move(blocks)),
+		  local_list(std::move(local_list)),
+		  entry_block(entry_block) {}
+
 
 	namespace hc = helios::code;
 
@@ -33,7 +46,7 @@ namespace compiler::mir {
 	 * a BlockBuilderRef that is the beginning of the lowered expression and MirLocation
 	 * that holds the result of the expression.
 	 */
-	struct ExprLowerRes {
+	struct ExprLowerRes final {
 		BlockBuilderRef begin;
 		MirLocation     value;
 	};
@@ -42,7 +55,7 @@ namespace compiler::mir {
 	 * @brief Represents result of statement lowering, which is
 	 * a BlockBuilderRef that is the beginning of the lowered statement.
 	 */
-	struct StmtLowerRes {
+	struct StmtLowerRes final {
 		BlockBuilderRef begin;
 	};
 
@@ -81,6 +94,36 @@ namespace compiler::mir {
 	);
 
 	/**
+	 * @brief Creates construct flag for given local.
+	 * @note: It is a function, not a constructor to avoid .hpp bloat.
+	 * @param local
+	 * @return constexpr OperationFlag
+	 */
+	constexpr OperationFlag flagConstruct(LocalRef local) {
+		return { OperationFlag::Flag::Construct, local };
+	}
+
+	/**
+	 * @brief Creates destruct flag for given local.
+	 * @note: It is a function, not a constructor to avoid .hpp bloat.
+	 * @param local
+	 * @return constexpr OperationFlag
+	 */
+	constexpr OperationFlag flagDestruct(LocalRef local) {
+		return { OperationFlag::Flag::Destruct, local };
+	}
+
+	/**
+	 * @brief Creates move flag for given local.
+	 * @note: It is a function, not a constructor to avoid .hpp bloat.
+	 * @param local
+	 * @return constexpr OperationFlag
+	 */
+	constexpr OperationFlag flagMove(LocalRef local) {
+		return { OperationFlag::Flag::Move, local };
+	}
+
+	/**
 	 * @brief Structure representing block in build process.
 	 * @note It is a builder in the sense of design pattern.
 	 */
@@ -99,10 +142,15 @@ namespace compiler::mir {
 		 * @brief Structure representing a hole in the block, that is
 		 * empty instruction that has to be filled, before the block will be builded.
 		 */
-		struct InstructionHole {
+		struct InstructionHole final {
 		private:
 			BlockBuilderRef block_ref;
 			usize           position;
+
+			[[nodiscard]]
+			bool isEmpty() const {
+				return block_ref->reversed_instruction.at(position).empty();
+			}
 
 		public:
 			InstructionHole(BlockBuilderRef block_ref, usize position):
@@ -110,9 +158,7 @@ namespace compiler::mir {
 				  position(position) {}
 
 			void fill(Instruction instruction) {
-				RIFT_ASSERT(
-					block_ref->reversed_instruction.at(position).empty(), "Hole is already filled"
-				);
+				RIFT_ASSERT(isEmpty(), "Hole is already filled");
 				RIFT_ASSERT(
 					not isTerminating(instruction.operation),
 					"Instruction must not be a terminating instruction"
@@ -182,12 +228,17 @@ namespace compiler::mir {
 	 */
 	struct FunctionBuilder final {
 	private:
-		base::Optional<base::StrId>      name;
+		base::Optional<base::StrID>      name;
 		base::StableVector<BlockBuilder> blocks;
 		base::Optional<BlockBuilderRef>  entry_block;
 		base::StableVector<MirLocal>     local_list;
 
+		query::Context& ctx;
+
 	public:
+		FunctionBuilder(query::Context& ctx): ctx(ctx) {}
+
+		[[nodiscard]]
 		Function build() {
 			RIFT_ASSERT(entry_block.has_value(), "Entry block not set");
 
@@ -200,14 +251,19 @@ namespace compiler::mir {
 			};
 		}
 
-		void setName(base::StrId name) {
+		void setName(base::StrID name) {
 			RIFT_ASSERT(not this->name.has_value(), "Name already set");
 			this->name.emplace(name);
 		}
 
 		[[nodiscard]]
-		LocalRef addLocal() {
-			auto key = local_list.emplaceBack(MirLocal{});
+		LocalRef addLocal(helios::SymID helios_id) {
+			auto key = local_list.emplaceBack(MirLocal{
+				helios_id,
+				ctx.query<helios::QueryTypeOfSymbol>(helios_id).expect(
+					"Handling ERRORS in MIR is not supported yet..."
+				),
+				scope(helios_id) });
 			return local_list.getRef(key).value();
 		}
 
@@ -277,21 +333,50 @@ namespace compiler::mir {
 				{ Operation::Jump, {}, { continuation->getID() }, {}, stmt.lifetime_scope }
 			);
 
-			auto then_block = lowerCodeBlock(stmt.body, continuation, function);
+			// The "then" branch requires a new block,
+			// because otherwise the "else" branch would jump to it.
+			auto then_block = function.newBlock();
+			then_block->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, stmt.lifetime_scope }
+			);
+			auto then_body = lowerCodeBlock(stmt.body, then_block, function);
 
+			// @TODO: Implement jumpy code here.
 			auto condition_block = function.newBlock();
-
-			auto expr_result = lowerExpr(*stmt.condition, condition_block, function);
+			auto expr_result     = lowerExpr(*stmt.condition, condition_block, function);
 
 			condition_block->setTerminator(
 				{ Operation::Branch,
 			      {},
-			      { expr_result.value, then_block.begin->getID(), else_block->getID() },
+			      { expr_result.value, then_body.begin->getID(), else_block->getID() },
 			      {},
 			      stmt.lifetime_scope }
 			);
 
 			output({ expr_result.begin });
+		}
+
+		void visitVariableStmt(const hc::VariableStmt& stmt) override {
+			auto local                   = function.addLocal(stmt.helios_symbol);
+			auto local_construction_hole = continuation->addHole();
+
+			match_optional(stmt.initial_value) {
+				opt_some(value) {
+					auto expr_result = lowerExpr(*value, continuation, function);
+
+					local_construction_hole.fill(Instruction{ Operation::Assign,
+					                                          { local },
+					                                          { expr_result.value },
+					                                          { flagConstruct(local) },
+					                                          stmt.lifetime_scope });
+
+					output({ expr_result.begin });
+					return;
+				}
+				opt_none { throw base::NotYetImplemented("variable without initial value in MIR"); }
+			}
+
+			RIFT_PANIC("match_optional failed in visitVariableStmt.");
 		}
 	};
 
@@ -355,40 +440,35 @@ namespace compiler::mir {
 
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
+	Function lowerToPreMirFunction(query::Context& ctx, const helios::HOUTFunction& function) {
+		FunctionBuilder function_builder{ ctx };
+		function_builder.setName(function.original_name);
+
+		// @TODO: add parameters do list od locals
+
+		auto fun_body_scope = function.body.body->lifetime_scope;
+		auto last_block     = function_builder.newBlock();
+		last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, fun_body_scope });
+
+		// build cfg+quad step by step:
+		auto first_block = lowerCodeBlock(*function.body.body, last_block, function_builder);
+
+		function_builder.setEntry(first_block.begin);
+
+		return function_builder.build();
+	}
+
 	struct IMPLEMENT_QUERY(LowerToMirFunction, Function) {
-		static auto provide(Context&, QKey key) -> PResult {
-			// First step:
-			// * build cfg+quad step by step
-
-
-			FunctionBuilder function_builder;
-
-			function_builder.setName(key.function.original_name);
-
-			// @TODO: add parameters stuff
-
-			auto fun_body_scope = key.function.body.body->lifetime_scope;
-
-			auto last_block = function_builder.newBlock();
-			last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, fun_body_scope });
-
-			auto first_block
-				= lowerCodeBlock(*key.function.body.body, last_block, function_builder);
-
-			function_builder.setEntry(first_block.begin);
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			// first step: lowering to pre-mir (cfg+quad)
+			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
 
 			// second step: lifetime stuff
-
-			// @TODO:
-			// * add some lifetime stuff
-
-			return function_builder.build();
+			return addDestructors(ctx, std::move(function_no_lifetime));
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMirFunction);
-
-
 }

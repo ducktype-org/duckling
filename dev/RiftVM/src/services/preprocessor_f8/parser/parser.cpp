@@ -36,7 +36,7 @@ namespace assemble {
 	struct OpCodeLabelArg {
 		i64         value;
 		bool        type_value;
-		base::StrId label_name;
+		base::StrID label_name;
 	};
 
 	using OpCodeAnyArg = std::variant<OpCodeNumArg, OpCodeLabelArg>;
@@ -45,7 +45,7 @@ namespace assemble {
 	using TypeSize = u64;
 
 	struct PrimitiveType {
-		base::StrId name;
+		base::StrID name;
 		TypeSize    size{};
 
 		void dprint(std::ostream& out) const {
@@ -57,8 +57,8 @@ namespace assemble {
 	};
 
 	struct PointerType {
-		base::StrId name;
-		base::StrId inner;
+		base::StrID name;
+		base::StrID inner;
 
 		void dprint(std::ostream& out) const {
 			out << "pointer {\n";
@@ -69,8 +69,8 @@ namespace assemble {
 	};
 
 	struct StaticTableType {
-		base::StrId name;
-		base::StrId inner;
+		base::StrID name;
+		base::StrID inner;
 		TypeSize    table_size;
 
 		void dprint(std::ostream& out) const {
@@ -83,8 +83,8 @@ namespace assemble {
 	};
 
 	struct DynamicTableType {
-		base::StrId name;
-		base::StrId inner;
+		base::StrID name;
+		base::StrID inner;
 
 		void dprint(std::ostream& out) const {
 			out << "dynamic_table {\n";
@@ -95,12 +95,12 @@ namespace assemble {
 	};
 
 	struct Field {
-		base::StrId name;
-		base::StrId type;
+		base::StrID name;
+		base::StrID type;
 	};
 
 	struct DataType {
-		base::StrId        name;
+		base::StrID        name;
 		std::vector<Field> fields;
 
 		void dprint(std::ostream& out) const {
@@ -115,8 +115,8 @@ namespace assemble {
 	};
 
 	struct VariantType {
-		base::StrId              name;
-		std::vector<base::StrId> variant_alternatives;
+		base::StrID              name;
+		std::vector<base::StrID> variant_alternatives;
 
 		void dprint(std::ostream& out) const {
 			out << "variant {\n";
@@ -129,9 +129,9 @@ namespace assemble {
 	};
 
 	struct FunctionType {
-		base::StrId              name;
-		std::vector<base::StrId> parameters;
-		base::StrId              result;
+		base::StrID              name;
+		std::vector<base::StrID> parameters;
+		base::StrID              result;
 
 		void dprint(std::ostream& out) const {
 			out << "function {\n";
@@ -169,7 +169,7 @@ namespace assemble {
 	};
 
 	struct OpCode: AsmElement {
-		base::StrId               opcode_name;
+		base::StrID               opcode_name;
 		std::vector<OpCodeAnyArg> args;
 
 		static tpc::ParserRef<OpCode> parse(F8ParserState& state) {
@@ -197,7 +197,7 @@ namespace assemble {
 				case lexer::Token::Type::NumLiteral:
 					try {
 						out->args.emplace_back(OpCodeNumArg{
-							OpCodeArgType::imm, base::strIdToNum(state.tokens().next().getValue()) }
+							OpCodeArgType::imm, base::strIDToNum(state.tokens().next().getValue()) }
 						);
 					} catch (std::logic_error& e) {
 						state.err.failAndLog(
@@ -253,7 +253,7 @@ namespace assemble {
 
 	struct ByteCode: AsmElement {
 		std::vector<tpc::ParserRef<OpCode>> opcodes;
-		base::Map<base::StrId, usize>       label_position;
+		base::Map<base::StrID, usize>       label_position;
 
 		static tpc::ParserRef<ByteCode> parse(F8ParserState& state) {
 			auto out = tpc::makeRef<ByteCode>();
@@ -318,9 +318,10 @@ namespace assemble {
 
 	struct Func: AsmElement {
 		tpc::Identifier          name;
-		usize                    arg_size   = size_t_max;
-		usize                    local_size = size_t_max;
-		usize                    ret_size   = size_t_max;
+		usize                    arg_size      = size_t_max;
+		usize                    next_arg_size = size_t_max;
+		usize                    local_size    = size_t_max;
+		usize                    ret_size      = size_t_max;
 		tpc::ParserRef<ByteCode> code;
 
 		static tpc::ParserRef<Func> parse(F8ParserState& state);
@@ -387,10 +388,36 @@ namespace assemble {
 					);
 				}
 				try {
-					out->arg_size = strIdToNum(value.getValue());
+					out->arg_size = strIDToNum(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.getPosition(), "arg_size argument is not num-literal"
+					);
+				}
+				state.parse().one(rift_def::Special::Semicolon);
+				break;
+			}
+			case rift_def::Keyword::BCNextArgSize: {
+				state.parse().one(rift_def::Operator::Colon);
+				if (out->next_arg_size != size_t_max) {
+					state.err.failAndLog(
+						state.ctokens().peek().getPosition(), "next_arg_size duplicate"
+					);
+				}
+				auto value = state.tokens().next();
+
+				if (!value.isNumLiteral()) {
+					state.err.failAndLog(
+						state.ctokens().peek().getPosition(),
+						"next_arg_size argument is not num-literal"
+					);
+				}
+				try {
+					out->next_arg_size = strIDToNum(value.getValue());
+				} catch (std::logic_error& e) {
+					state.err.failAndLog(
+						state.ctokens().peek().getPosition(),
+						"next_arg_size argument is not num-literal"
 					);
 				}
 				state.parse().one(rift_def::Special::Semicolon);
@@ -408,7 +435,7 @@ namespace assemble {
 					);
 				}
 				try {
-					out->local_size = strIdToNum(value.getValue());
+					out->local_size = strIDToNum(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.getPosition(), "local_size argument is not num-literal"
@@ -430,7 +457,7 @@ namespace assemble {
 					);
 				}
 				try {
-					out->ret_size = base::strIdToNum(value.getValue());
+					out->ret_size = base::strIDToNum(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.getPosition(), "ret_size argument is not num-literal"
@@ -472,6 +499,7 @@ namespace assemble {
 
 		if (out->local_size == size_t_max) state.fail(0, "Local size not set");
 		if (out->arg_size == size_t_max) state.fail(0, "Arg size not set");
+		if (out->next_arg_size == size_t_max) state.fail(0, "Next arg size not set");
 		if (out->ret_size == size_t_max) state.fail(0, "Ret size not set");
 
 		return out;
@@ -487,7 +515,7 @@ namespace assemble {
 		/// @TODO: implement keywordToNumLiteral
 		auto type = state.tokens().next().asKeyword();
 		state.parse().one(rift_def::Operator::Colon);
-		base::StrId name = state.tokens().next().getValue();
+		base::StrID name = state.tokens().next().getValue();
 
 		switch (type) {
 		case rift_def::Keyword::BCPrimitive: {
@@ -496,7 +524,7 @@ namespace assemble {
 				state.err.failAndLog(state.getPosition(), "expected number");
 			} else {
 				out->datatype
-					= PrimitiveType{ name, static_cast<TypeSize>(strIdToNum(value.getValue())) };
+					= PrimitiveType{ name, static_cast<TypeSize>(strIDToNum(value.getValue())) };
 			}
 			break;
 		}
@@ -520,7 +548,7 @@ namespace assemble {
 					out->datatype
 						= StaticTableType{ name,
 						                   type_name.getValue(),
-						                   static_cast<TypeSize>(strIdToNum(size.getValue())) };
+						                   static_cast<TypeSize>(strIDToNum(size.getValue())) };
 				}
 			}
 			break;
@@ -567,7 +595,7 @@ namespace assemble {
 			}
 
 			state.goDown();
-			std::vector<base::StrId> alternatives;
+			std::vector<base::StrID> alternatives;
 			while (state.notEmpty()) {
 				tpc::Identifier field_type;
 				state.parse().one(&field_type);
@@ -592,7 +620,7 @@ namespace assemble {
 			}
 
 			state.goDown();
-			std::vector<base::StrId> arguments;
+			std::vector<base::StrID> arguments;
 			while (state.notEmpty()) {
 				tpc::Identifier field_type;
 				state.parse().one(&field_type);
@@ -676,10 +704,10 @@ namespace assemble {
 
 	// returns true if was successfully
 	bool defineTypes(CodeContainer& code, vm::TypeMetadata& type_metadata) {
-		base::Map<base::StrId, vm::TypeRef> type_map;
+		base::Map<base::StrID, vm::TypeRef> type_map;
 
 		for (auto& type: code.code->types) {
-			base::StrId name = VISIT(type->datatype, value, return value.name);
+			base::StrID name = VISIT(type->datatype, value, return value.name);
 
 			if (type_map.contains(name)) {
 				code.ok = false;
@@ -709,7 +737,7 @@ namespace assemble {
 					type_map[data.name]->defineDynamicTable(type_map[data.inner]);
 				}
 				variant_case(DataType, data) {
-					std::vector<std::pair<base::StrId COMMA vm::TypeRef>> fields;
+					std::vector<std::pair<base::StrID COMMA vm::TypeRef>> fields;
 					fields.reserve(data.fields.size());
 					for (auto& field: data.fields)
 						fields.emplace_back(field.name, type_map[field.type]);
@@ -742,7 +770,7 @@ namespace assemble {
 		if (!ok) out << error << '\n';
 	}
 
-	u16 nameToOpcodeValue(base::StrId str) {
+	u16 nameToOpcodeValue(base::StrID str) {
 		try {
 			return static_cast<u16>(vm::str_to_OpcodeFix8.at(str.str()));
 		} catch (std::out_of_range& err) {
@@ -752,13 +780,50 @@ namespace assemble {
 		}
 	}
 
+	void assertTailcallsSignatures(std::vector<vm::FuncData>& functions) {
+		for (const auto& func: functions) {
+			for (const auto& op: func.bc) {
+#ifdef USE_TAIL_CALLS
+				if (op.opfun
+				    == vm::OpFuns::opfuns.at(static_cast<uint16_t>(vm::OpcodeFix8::ret_tailcall))) {
+#else
+				if (static_cast<vm::OpcodeFix8>(op.opcode) == vm::OpcodeFix8::ret_tailcall) {
+#endif
+					RIFT_ASSERT(
+						func.arg_size == func.next_arg_size,
+						"Invalid Tailcall! Caller signature must have arg_size equal to "
+						"next_arg_size"
+					);
+					RIFT_ASSERT(
+						functions[op.arg0].arg_size == functions[op.arg0].next_arg_size,
+						"Invalid Tailcall! Called function signature must have arg_size == "
+						"next_arg_size"
+					);
+					RIFT_ASSERT(
+						func.arg_size == functions[op.arg0].arg_size,
+						"Invalid Tailcall! Caller and called arg size unmatched"
+					);
+					RIFT_ASSERT(
+						func.stack_size == functions[op.arg0].stack_size,
+						"Invalid Tailcall! Caller and called stack size unmatched"
+					);
+					RIFT_ASSERT(
+						func.ret_size == functions[op.arg0].ret_size,
+						"Invalid Tailcall! Caller and called ret size unmatched"
+					);
+				}
+			}
+		}
+	}
+
 	vm::FuncData
 		changeFuncToFuncData(const tpc::ParserCBorrowRef<Func>& func, vm::TypeMetadata& types) {
 		vm::FuncData funcData;
-		funcData.ret_size   = 0;
-		funcData.arg_size   = func->arg_size;
-		funcData.stack_size = func->local_size;
-		funcData.ret_size   = func->ret_size;
+		funcData.ret_size      = 0;
+		funcData.arg_size      = func->arg_size;
+		funcData.next_arg_size = func->next_arg_size;
+		funcData.stack_size    = func->local_size;
+		funcData.ret_size      = func->ret_size;
 
 		for (auto& op: func->code->opcodes) {
 			// calculate type arguments:
@@ -772,7 +837,7 @@ namespace assemble {
 										  << "\n";
 								label.value = 0;
 							} else {
-								label.value = static_cast<i64>(u64(type.value()->getId()));
+								label.value = static_cast<i64>(u64(type.value()->getID()));
 							}
 						}
 					}
@@ -840,6 +905,7 @@ namespace assemble {
 				changeFuncToFuncData(func.borrow(), type_metadata)
 			);
 		}
+		assertTailcallsSignatures(instructions_code.functions);
 
 		return instructions_code;
 	}
@@ -863,5 +929,4 @@ namespace assemble {
 
 		return result;
 	}
-
 }

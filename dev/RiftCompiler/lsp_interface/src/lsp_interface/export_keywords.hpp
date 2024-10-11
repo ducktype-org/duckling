@@ -8,6 +8,11 @@
 #include <string>
 
 namespace lsp {
+	/**
+	 * @brief Class to export keywords for LSP purposes in JSON format.
+	 *
+	 * Member methods return JSON strings containing Keywords, Specials and/or Operators.
+	 */
 	class ExportKeywords {
 	public:
 		ExportKeywords();

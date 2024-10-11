@@ -14,7 +14,7 @@
 #include "value_parser.hpp"
 
 namespace clap {
-	struct CLIArgs {
+	struct CLIArgs final {
 		usize              argc;  /// Argument count
 		const char* const* argv;  /// Pointer to an array of strings
 	};
@@ -34,7 +34,7 @@ namespace clap {
 	 *
 	 * Refer to the clap docs for more complete example.
 	 */
-	class Clap {
+	class Clap final {
 	public:
 		Clap();
 

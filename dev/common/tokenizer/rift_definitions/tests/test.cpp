@@ -7,7 +7,7 @@ class SimpleRiftDefTest: public tester::TestSuite {
 #define TESTER_CLASS SimpleRiftDefTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple rift definitions test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		rift_def::key_spec_op::init();
 		rift_def::operator_precedence::init();
 
@@ -20,7 +20,7 @@ private:
 	void simpleOperatorPrecedenceTest() {
 		using namespace rift_def;
 
-		auto period   = operatorPrecedence(base::StrId("."), OperatorType::Binary);
+		auto period   = operatorPrecedence(base::StrID("."), OperatorType::Binary);
 		auto period_2 = operatorPrecedence(Operator::Period, OperatorType::Binary);
 
 		auto inc = operatorPrecedence(Operator::DoublePlus, OperatorType::UnaryRight);
@@ -52,7 +52,7 @@ private:
 	void simpleOperatorAssociativityTest() {
 		using namespace rift_def;
 
-		auto period   = operatorAssociativity(base::StrId("."), OperatorType::Binary);
+		auto period   = operatorAssociativity(base::StrID("."), OperatorType::Binary);
 		auto period_2 = operatorAssociativity(Operator::Period, OperatorType::Binary);
 
 		auto inc = operatorAssociativity(Operator::DoublePlus, OperatorType::UnaryRight);

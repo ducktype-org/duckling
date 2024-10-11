@@ -5,8 +5,9 @@ class VmCorrectnessTests: public VmTestSuite {
 #define TESTER_CLASS VmCorrectnessTests
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR("VM Correctness Tests") {
-		TESTER_ADD_TEST(test_ackermann);
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(test_ackermann_old);
+		TESTER_ADD_TEST(test_ackermann_new);
 		TESTER_ADD_TEST(test_collatz);
 		TESTER_ADD_TEST(test_fib_iter);
 		TESTER_ADD_TEST(test_fib_rec);
@@ -16,7 +17,9 @@ public:
 private:
 	// Note: these tests treat 16f17da CG as a reference
 	// TODO: add more inputs and some corner cases
-	void test_ackermann() { runTestOnVm("ackermann.rbc", "3 3", "61"); }
+	void test_ackermann_old() { runTestOnVm("ackermann_old.rbc", "3 3", "61"); }
+
+	void test_ackermann_new() { runTestOnVm("ackermann_new.rbc", "3 3", "61"); }
 
 	void test_collatz() { runTestOnVm("collatz.rbc", "424242", "24648077896"); }
 

@@ -1,3 +1,6 @@
+/**
+ * @file emitter_manager.hpp
+ */
 #pragma once
 
 #include <listener/emitter.hpp>
@@ -5,6 +8,11 @@
 #include "function_call_event.hpp"
 
 namespace vm {
+	/**
+	 * @brief Manages emitters for VM events
+	 *
+	 * @warning This class is not used anywhere in the code. The events are not implemented yet.
+	 */
 	class EmitterManager {
 	private:
 		EmitterManager() = default;

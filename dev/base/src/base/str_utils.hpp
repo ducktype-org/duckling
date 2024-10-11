@@ -24,7 +24,7 @@
 #include "raw_view.hpp"
 
 namespace base {
-	class StrId;
+	class StrID;
 
 	namespace detail {
 		template<typename T>
@@ -45,7 +45,7 @@ namespace base {
 
 		// This is forward declaration to prevent circular header dependency through:
 		// string_id.hpp -> maps.hpp -> exceptions.hpp -> str_utils.hpp
-		void strConcat(std::string& out, base::StrId str_id);
+		void strConcat(std::string& out, base::StrID str_id);
 
 		inline void strConcat(std::string& out, bool v) { out.append(v ? "true" : "false"); }
 

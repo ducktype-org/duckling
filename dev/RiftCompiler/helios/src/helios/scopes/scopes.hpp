@@ -25,7 +25,19 @@ namespace compiler::helios {
 	/**
 	 * @brief Return module the scope was defined in
 	 */
-	frontend::ModuleId module(ScopeID id);
+	frontend::ModuleID module(ScopeID id);
+
+	/**
+	 * @brief Return depth of the scope in the scope tree.
+	 */
+	u64 scopeDepth(ScopeID);
+
+	/**
+	 * @brief Return all scopes currently stored by HELIOS.
+	 * @note: This should be used for tests and debug only.
+	 * @return std::vector<ScopeID>
+	 */
+	std::vector<ScopeID> getAllHeliosScopes();
 
 	/**
 	 * @brief Query root scope for given module.
@@ -35,9 +47,9 @@ namespace compiler::helios {
 	 * @todo: Currently root scopes are somewhat problematic.
 	 * See description of "root_element_file_back_map" for details.
 	 */
-	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleId, ScopeID);
+	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleID, ScopeID);
 
-	struct KeyOf_QueryPrimaryCodeScopeFor {
+	struct KeyOf_QueryPrimaryCodeScopeFor final {
 		/**
 		 * @brief Element for which the scope is created.
 		 * @note: scopes of various elements behave differently
@@ -48,6 +60,10 @@ namespace compiler::helios {
 		 * * Classes -- scope containing class fields
 		 * * Expr -- empty Scope
 		 * * Return -- empty Scope
+		 * * Variables -- empty Scope
+		 *
+		 * @todo: once scope refactor will be introduced, most "empty scope"
+		 * stuff will be no longer needed.
 		 */
 		PstRef<pst::RiftElement> base_element;
 
@@ -66,9 +82,9 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryPrimaryCodeScopeFor, KeyOf_QueryPrimaryCodeScopeFor, ScopeID);
 
-	struct KeyOf_LookupInScope {
+	struct KeyOf_LookupInScope final {
 		ScopeID     scope;
-		base::StrId name;
+		base::StrID name;
 		bool        with_wildcards;
 
 		[[nodiscard]]
@@ -101,5 +117,5 @@ namespace compiler::helios {
 	 * @param module
 	 * @return ScopeID
 	 */
-	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context&, frontend::ModuleId module);
+	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context&, frontend::ModuleID module);
 }

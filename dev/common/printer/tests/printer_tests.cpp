@@ -25,7 +25,7 @@ class PrinterTest final: public tester::TestSuite {
 #define TESTER_CLASS PrinterTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Printer test") { TESTER_ADD_TEST(test); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(test); }
 
 private:
 	// @TODO: add more tests.

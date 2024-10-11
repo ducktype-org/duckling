@@ -18,6 +18,10 @@
 #include "../scope_symbol_id.hpp"
 #include "../scopes/scopes.hpp"
 #include "../pst_ref.hpp"
+#include "../helios_errors.hpp"
+#include "../helios_result.hpp"
+#include <base/optional.hpp>
+#include <typesystem/higher/type_info.hpp>
 
 namespace compiler::helios {
 	/**
@@ -43,10 +47,10 @@ namespace compiler::helios {
 	/**
 	 * @brief Stores generic symbol data
 	 */
-	struct SymbolData {
+	struct SymbolData final {
 		// created when creating SymbolData:
 		ScopeID     scope;
-		base::StrId name;
+		base::StrID name;
 		bool        anonymous   = false;
 		bool        is_wildcard = false;
 		bool        is_alias    = false;
@@ -60,7 +64,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Helper struct used to access private SymID data.
 	 */
-	struct GetSymRef_Functor {
+	struct GetSymRef_Functor final {
 		static auto get(SymID id) { return id.ref; }
 	};
 
@@ -68,7 +72,7 @@ namespace compiler::helios {
 
 	bool isWildcard(SymID id) { return getSymRef(id)->is_wildcard; }
 
-	base::StrId name(SymID id) { return getSymRef(id)->name; }
+	base::StrID name(SymID id) { return getSymRef(id)->name; }
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->kind; }
 
@@ -153,7 +157,7 @@ namespace compiler::helios {
 			return putInSymtable(SymbolData{
 				.scope = scope,
 				.name
-				= base::StrId(base::strConcat("<USING> ", using_->getPointed().front()).c_str()),
+				= base::StrID(base::strConcat("<USING> ", using_->getPointed().front()).c_str()),
 				.is_wildcard = true,
 				.is_alias    = true,
 				.kind        = SymbolKind::Using,
@@ -213,7 +217,7 @@ namespace compiler::helios {
 		case pst::StmtKind::Destructor: {
 			return putInSymtable(SymbolData{
 				.scope    = scope,
-				.name     = base::StrId("destroy"),
+				.name     = base::StrID("destroy"),
 				.kind     = SymbolKind::Destructor,
 				.pst_stmt = stmt,
 			});
@@ -228,7 +232,22 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymID) {
+		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
+
 		static auto provide(Context&, QKey key) -> PResult {
+			auto pst_id = key.stmt->getID();
+
+			// This is a sanity check, that might be rendered obsolete
+			// once scope refactor will be introduced.
+			// It currently prevents some scope bugs/inconsistencies from happening.
+			if (parent_map.contains(pst_id)) {
+				RIFT_ASSERT(
+					parent_map.at(pst_id) == key.scope, "Parent mismatch in QuerySymbolOfSTMT"
+				);
+			} else {
+				parent_map.put(pst_id, key.scope);
+			}
+
 			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
 		}
 
@@ -264,8 +283,8 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
 
-	struct LookupChainKey {
-		std::vector<base::StrId> names;
+	struct LookupChainKey final {
+		std::vector<base::StrID> names;
 		ScopeID                  begin_scope;
 		bool                     follow_wildcards;
 	};
@@ -273,34 +292,27 @@ namespace compiler::helios {
 	/**
 	 * @brief Query extension for looking-up chain of names
 	 */
-	SymbolList lookupChain(query::Context& ctx, const LookupChainKey& key) {
+	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound>
+		lookupChain(query::Context& ctx, const LookupChainKey& key) {
 		RIFT_ASSERT(!key.names.empty(), "lookupDotted received zero names");
 
 		// initial symbol:
-		auto first = ctx.query<QueryLookupInScopeAndParents>(
+		LookupResult first = ctx.query<QueryLookupInScopeAndParents>(
 			{ key.begin_scope, key.names[0], key.follow_wildcards }
 		);
 
-		if (not first.isSingle()) {
-			// @TODO: error in state
-			RIFT_PANIC("ambiguity in lookupChain");
-		}
+		UNPACK_RESULT(SymbolList result =, first.getAsSingle());
 
-		if (key.names.size() == 1) return first.getAsSingle();
-
-		SymbolList result = first.getAsSingle();
+		if (key.names.size() == 1) return result;
 
 		for (usize i = 1; i < key.names.size(); i++) {
-			auto append_res = ctx.query<QueryLookupInSymbol>(
-				{ result.back(), key.names[i], key.follow_wildcards }
-			);
+			auto append_res = ctx.query<QueryLookupInSymbol>({
+				result.back(),
+				key.names[i],
+				key.follow_wildcards,
+			});
 
-			if (!append_res.isSingle()) {
-				// @TODO: error in state
-				RIFT_PANIC("ambiguity in lookup");
-			}
-
-			auto single_append_res = append_res.getAsSingle();
+			UNPACK_RESULT(auto single_append_res =, append_res.getAsSingle());
 			result.insert(result.end(), single_append_res.begin(), single_append_res.end());
 		}
 		return result;
@@ -314,10 +326,10 @@ namespace compiler::helios {
 				auto names      = using_stmt->getPointed();
 				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
 				RIFT_ASSERT(
-					not lookup_res.empty(),
+					lookup_res.hasValue() && not lookup_res.value().empty(),
 					"Using points to something that does not exists or is empty"
 				);
-				return ctx.query<QueryLinkedScope>({ lookup_res.back() });
+				return ctx.query<QueryLinkedScope>({ lookup_res.value().back() });
 			}
 			case SymbolKind::Namespace: {
 				auto namespace_stmt = dynamic_cast<const pst::Namespace*>(key.ref->pst_stmt.get());
@@ -360,15 +372,19 @@ namespace compiler::helios {
 
 	base::HashT KeyOf_LookupInSymbol::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(symbol);
-		auto hash_2 = std::hash<base::StrId>()(name);
+		auto hash_2 = std::hash<base::StrID>()(name);
 
 		// @FIXME: this does not work:
 		return (hash_1 * 143 + hash_2 * 7) * 2 + follow_wildcards;
 	}
 
-	struct IMPLEMENT_QUERY(QueryDealias, SymbolList) {
+	struct IMPLEMENT_QUERY(QueryDealias, QueryDealias_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			if (kind(key) != SymbolKind::Alias) return { key };
+			// @TODO: this does not handle usings.
+			if (kind(key) == SymbolKind::Using)
+				std::cerr << "Warning: QueryDealias does not handle usings (@TODO).\n";
+
+			if (kind(key) != SymbolKind::Alias) return SymbolList{ key };
 
 			auto&& alias_definition
 				= dynamic_cast<const pst::Alias*>(getSymRef(key)->pst_stmt.get());
@@ -380,9 +396,22 @@ namespace compiler::helios {
 					= first_symbol
 				        ? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
 				        : ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false });
-
-				for (auto&& path = pointed_symbol_lookup.getAsSingle(); auto&& path_symbol: path) {
-					auto&& dealiased = ctx.query<QueryDealias>(path_symbol);
+				auto&& path = pointed_symbol_lookup.getAsSingle();
+				if (path.hasError()) {
+					variant_match(path.error()) {
+						variant_case(errors::Ambiguity, _) {
+							// @TODO: Report an error
+							return errors::HError(errors::Failed());
+						}
+						variant_case(errors::SymbolNotFound, _) {
+							// @TODO: Report an error
+							return errors::HError(errors::Failed());
+						}
+					}
+					RIFT_PANIC("Invalid state");
+				}
+				for (auto&& path_symbol: path.value()) {
+					UNPACK_RESULT(auto&& dealiased =, ctx.query<QueryDealias>(path_symbol));
 					result.insert(result.end(), dealiased.begin(), dealiased.end());
 				}
 
@@ -397,7 +426,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
-	int getPriority(const rpn::Operator& op) {
+	i32 getPriority(const rpn::Operator& op) {
 		switch (static_cast<char>(op.oper_id.view()[0])) {
 		case '+':
 		case '-':
@@ -416,6 +445,7 @@ namespace compiler::helios {
 		}
 	}
 
+	// @TODO: Once EXPR 2.0, Report errors here and change error status to Failed
 	rpn::RPNExpr rpn::makeRPN(query::Context& ctx, KeyOf_RPNmakeRPN key) {
 		std::vector<ExprElem> rpn;
 		std::stack<ExprElem>  st;
@@ -437,7 +467,7 @@ namespace compiler::helios {
 					rpn.emplace_back(NumValue{ num.num_id });
 				}
 				variant_case(pst::Expr::Group, group) {
-					auto&& res
+					auto res
 						= makeRPN(ctx, KeyOf_RPNmakeRPN{ group.expr->elements, key.expr_scope });
 					rpn.insert(rpn.end(), res.elements.begin(), res.elements.end());
 				}
@@ -446,7 +476,7 @@ namespace compiler::helios {
 				}
 				variant_case(pst::Expr::CommaSeparated, tuple) {
 					for (auto&& type_expr: tuple.expr) {
-						auto&& res
+						RPNExpr res
 							= makeRPN(ctx, KeyOf_RPNmakeRPN{ type_expr->elements, key.expr_scope });
 						rpn.insert(rpn.end(), res.elements.begin(), res.elements.end());
 					}
@@ -460,64 +490,72 @@ namespace compiler::helios {
 			st.pop();
 		}
 
-		return { rpn, key.expr_scope };
+		return RPNExpr{ rpn, key.expr_scope };
 	}
 
-	i32 rpn::parseValue(query::Context& ctx, const KeyOf_parseValue& key) {
+	// @TODO: Once EXPR 2.0, Report errors here and change error status to Failed
+	rpn::RPNParseValue_Result rpn::parseValue(query::Context& ctx, const KeyOf_parseValue& key) {
 		variant_match(key.expr) {
 			variant_case(rpn::Identifier, idt) {
 				// .back() works for constants only.
 				auto&& sym_list = ctx.query<QueryDealias>(idt.symbol_list.back());
-				return ctx.query<QueryConstValueOf>(sym_list.back());
+				if (sym_list.hasError()) return errors::HError(errors::InvalidExpr());
+				return ctx.query<QueryConstValueOf>(sym_list.value().back());
 			}
 			variant_case(rpn::NamedIdentifier, idt) {
 				auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
 					{ key.expr_scope, idt.symbol_name, true }
 				);
-				return parseValue(
-					ctx,
-					KeyOf_parseValue{
-						Identifier{ sym_list.getAsSingle() },
-						key.expr_scope,
-					}
-				);
+
+				UNPACK_RESULT(auto&& identifier =, sym_list.getAsSingle());
+				UNPACK_RESULT(return,
+				                    parseValue(
+										ctx,
+										KeyOf_parseValue{ Identifier{ identifier }, key.expr_scope }
+									));
 			}
-			variant_case(rpn::Operator, op) { RIFT_PANIC("Cannot get a value from rpn::Operator"); }
+			variant_case(rpn::Operator, op) { return errors::HError(errors::InvalidExpr()); }
 			variant_case(rpn::KeywordValue, keyword_value) {
 				throw base::NotYetImplemented("Value of KeywordValue is not yet implemented");
 			}
 			variant_case(rpn::NumValue, literal) { return std::stoi(literal.num_id.str()); }
 			variant_default { RIFT_PANIC("Bad Expr alternative"); }
 		}
-		RIFT_PANIC("Error in RPNValue expr...");
+		RIFT_PANIC("Bad Expr alternative");
 	}
 
-	rpn::ExprElem rpn::evalExpr(query::Context& ctx, const RPNExpr& expr) {
-		// This is a nice RPN debug print.
-		std::cout << "RPN: \n";
-		for (auto&& e: expr.elements) {
-			std::cout << "expr: ";
-			variant_match(e) {
-				variant_case(rpn::Identifier, idt) {
-					for (auto&& s: idt.symbol_list) std::cout << name(s).str() << '.';
+	namespace {
+		void printRpn(const rpn::RPNExpr& expr) {
+			// This is a nice RPN debug print.
+			std::cerr << "RPN: \n";
+			for (auto&& e: expr.elements) {
+				std::cerr << "expr: ";
+				variant_match(e) {
+					variant_case(rpn::Identifier, idt) {
+						for (auto&& s: idt.symbol_list) std::cerr << name(s).str() << '.';
+					}
+					variant_case(rpn::NamedIdentifier, idt) {
+						std::cerr << idt.symbol_name.str() << '.';
+					}
+					variant_case(rpn::Operator, op) { std::cerr << op.oper_id.str(); }
+					variant_case(rpn::KeywordValue, keyword_value) {
+						std::cerr << keywordToStr(keyword_value.keyword).str();
+					}
+					variant_case(rpn::NumValue, literal) { std::cerr << literal.num_id.str(); }
+					variant_case(rpn::TupleConstructor, tuple_constructor) {
+						std::cerr << "Tuple constructor of num elements: "
+								  << tuple_constructor.num_elements;
+					}
+					variant_default { RIFT_PANIC("Bad Expr alternative"); }
 				}
-				variant_case(rpn::NamedIdentifier, idt) {
-					std::cout << idt.symbol_name.str() << '.';
-				}
-				variant_case(rpn::Operator, op) { std::cout << op.oper_id.str(); }
-				variant_case(rpn::KeywordValue, keyword_value) {
-					std::cout << keywordToStr(keyword_value.keyword).str();
-				}
-				variant_case(rpn::NumValue, literal) { std::cout << literal.num_id.str(); }
-				variant_case(rpn::TupleConstructor, tuple_constructor) {
-					std::cout << "Tuple constructor of num elemenents: "
-							  << tuple_constructor.num_elements;
-				}
-				variant_default { RIFT_PANIC("Bad Expr alternative"); }
+				std::cerr << '\n';
 			}
-			std::cout << '\n';
 		}
+	}
 
+	// @TODO: Once EXPR 2.0, Report errors here and change error status to Failed
+	rpn::RPNEvaluation_Result rpn::evalExpr(query::Context& ctx, const RPNExpr& expr) {
+		printRpn(expr);
 		// Here we will evaluate the RPN.
 		std::stack<ExprElem> st;
 		for (auto&& e: expr.elements) {
@@ -532,20 +570,26 @@ namespace compiler::helios {
 				}
 				variant_case(rpn::KeywordValue, keyword) { st.emplace(keyword); }
 				variant_case(rpn::Operator, oper) {
+					if (st.size() < 2) return errors::HError(errors::InvalidExpr());
+
 					const auto first = st.top();
 					st.pop();
 					const auto second = st.top();
 					st.pop();
 
-					st.push(evalOperator(
-						ctx,
-						KeyOf_evalOperator{
-							second,
-							oper,
-							first,
-							expr.scope,
-						}
-					));
+					UNPACK_RESULT(
+						auto evaluated =,
+						evalOperator(
+							ctx,
+							KeyOf_evalOperator{
+								second,
+								oper,
+								first,
+								expr.scope,
+							}
+						)
+					);
+					st.emplace(evaluated);
 				}
 				variant_case(rpn::NumValue, num) { st.emplace(num); }
 				variant_case(rpn::TupleConstructor, tuple) {
@@ -567,7 +611,8 @@ namespace compiler::helios {
 		return st.top();
 	}
 
-	rpn::ExprElem rpn::evalOperator(query::Context& ctx, const KeyOf_evalOperator& key) {
+	rpn::RPNEvaluation_Result
+		rpn::evalOperator(query::Context& ctx, const KeyOf_evalOperator& key) {
 		auto [a, op, b, expr_scope] = key;
 
 		if (op.oper_id == ".") {
@@ -579,7 +624,7 @@ namespace compiler::helios {
 					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
 						{ key.expr_scope, idt.symbol_name, true }
 					);
-					looked_up_symbol = sym_list.getAsSingle();
+					UNPACK_RESULT(looked_up_symbol =, sym_list.getAsSingle());
 				}
 				variant_default {
 					throw base::NotYetImplemented("Lookup on non-identifier is not yet implemented"
@@ -589,14 +634,12 @@ namespace compiler::helios {
 			variant_match(b) {
 				variant_case(rpn::NamedIdentifier, idt_right) {
 					auto&& new_symbols = ctx.query<QueryLookupInSymbol>({
-																			looked_up_symbol.back(),
-																			idt_right.symbol_name,
-																			true,
-																		})
-					                         .getAsSingle();
-					looked_up_symbol.insert(
-						looked_up_symbol.end(), new_symbols.begin(), new_symbols.end()
-					);
+						looked_up_symbol.back(),
+						idt_right.symbol_name,
+						true,
+					});
+					UNPACK_RESULT(SymbolList single =, new_symbols.getAsSingle());
+					looked_up_symbol.insert(looked_up_symbol.end(), single.begin(), single.end());
 					return Identifier{ looked_up_symbol };
 				}
 				variant_default {
@@ -605,7 +648,7 @@ namespace compiler::helios {
 					);
 				}
 			}
-			RIFT_PANIC("Something strange has happended during .operator evaluation...");
+			RIFT_PANIC("Something strange has happened during . operator evaluation...");
 		}
 		if (op.oper_id == "|") {
 			// @TODO: Check if A and B are types.
@@ -644,8 +687,9 @@ namespace compiler::helios {
 			return a;
 		}
 
-		i32 a_value = parseValue(ctx, KeyOf_parseValue{ a, expr_scope });
-		i32 b_value = parseValue(ctx, KeyOf_parseValue{ b, expr_scope });
+
+		UNPACK_RESULT(i32 a_value =, parseValue(ctx, KeyOf_parseValue{ a, expr_scope }));
+		UNPACK_RESULT(i32 b_value =, parseValue(ctx, KeyOf_parseValue{ b, expr_scope }));
 
 		i32 value{};
 
@@ -672,10 +716,10 @@ namespace compiler::helios {
 		default:
 			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
 		}
-		return NumValue{ base::StrId(std::to_string(value).c_str()) };
+		return NumValue{ base::StrID(std::to_string(value).c_str()) };
 	}
 
-	struct IMPLEMENT_QUERY(QueryConstValueOf, i32) {
+	struct IMPLEMENT_QUERY(QueryConstValueOf, errors::HResult<i32 COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			RIFT_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
@@ -683,20 +727,33 @@ namespace compiler::helios {
 				= dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
 			const ScopeID key_scope = scope(key);
 
-			const auto& expr = rpn::makeRPN(
+
+			rpn::RPNExpr expr = rpn::makeRPN(
 				ctx,
 				{
 					const_symbol->getValue()->elements,
 					key_scope,
 				}
 			);
-			return parseValue(
+			rpn::RPNEvaluation_Result evaluated = rpn::evalExpr(ctx, expr);
+			if (evaluated.hasError()) {
+				// @TODO: Report an error
+				return errors::HError(errors::Failed());
+			}
+
+			rpn::RPNParseValue_Result value = parseValue(
 				ctx,
 				rpn::KeyOf_parseValue{
-					rpn::evalExpr(ctx, expr),
+					evaluated.value(),
 					key_scope,
 				}
 			);
+			if (value.hasError()) {
+				// @TODO: Report an error
+				return errors::HError(errors::Failed());
+			}
+
+			return value.value();
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
@@ -709,49 +766,50 @@ namespace compiler::helios {
 	 * @param ctx Context passed to a query.
 	 * @param expr An RPN expression created with e.g. ExtensionMakeRPN.
 	 * @param expr_scope A scope where the expression has been expressed.
-	 * @return ts::TypeInfo with information about the evaluated type.
+	 * @return tsh::TypeInfo with information about the evaluated type.
 	 */
-	ts::TypeInfo
+	ParseTypeFromExpr_Result
 		parseTypeFromExpr(query::Context& ctx, const rpn::ExprElem& expr, ScopeID expr_scope) {
 		// This is a std::unordered_map, not base::HashMap, because base::HashMap
 		// does not support this constructor.
-		const static auto BUILTINS = std::unordered_map<base::StrId, ts::TypeInfo>{
-			{ base::StrId("f128"), ctx.query<::ts::QueryFloatType>(128) },
-			{ base::StrId("f80"), ctx.query<::ts::QueryFloatType>(80) },
-			{ base::StrId("f64"), ctx.query<::ts::QueryFloatType>(64) },
-			{ base::StrId("f32"), ctx.query<::ts::QueryFloatType>(32) },
-			{ base::StrId("f16"), ctx.query<::ts::QueryFloatType>(16) },
+		const static auto BUILTINS = std::unordered_map<base::StrID, tsh::TypeInfo>{
+			{ base::StrID("f128"), ctx.query<::tsh::QueryFloatType>(128) },
+			{ base::StrID("f80"), ctx.query<::tsh::QueryFloatType>(80) },
+			{ base::StrID("f64"), ctx.query<::tsh::QueryFloatType>(64) },
+			{ base::StrID("f32"), ctx.query<::tsh::QueryFloatType>(32) },
+			{ base::StrID("f16"), ctx.query<::tsh::QueryFloatType>(16) },
 
-			{ base::StrId("i128"), ctx.query<::ts::QueryIntegralType>({ 128, true }) },
-			{ base::StrId("i64"), ctx.query<::ts::QueryIntegralType>({ 64, true }) },
-			{ base::StrId("i32"), ctx.query<::ts::QueryIntegralType>({ 32, true }) },
-			{ base::StrId("i16"), ctx.query<::ts::QueryIntegralType>({ 16, true }) },
-			{ base::StrId("i8"), ctx.query<::ts::QueryIntegralType>({ 8, true }) },
+			{ base::StrID("i128"), ctx.query<::tsh::QueryIntegralType>({ 128, true }) },
+			{ base::StrID("i64"), ctx.query<::tsh::QueryIntegralType>({ 64, true }) },
+			{ base::StrID("i32"), ctx.query<::tsh::QueryIntegralType>({ 32, true }) },
+			{ base::StrID("i16"), ctx.query<::tsh::QueryIntegralType>({ 16, true }) },
+			{ base::StrID("i8"), ctx.query<::tsh::QueryIntegralType>({ 8, true }) },
 
-			{ base::StrId("u128"), ctx.query<::ts::QueryIntegralType>({ 128, false }) },
-			{ base::StrId("u64"), ctx.query<::ts::QueryIntegralType>({ 64, false }) },
-			{ base::StrId("u32"), ctx.query<::ts::QueryIntegralType>({ 32, false }) },
-			{ base::StrId("u16"), ctx.query<::ts::QueryIntegralType>({ 16, false }) },
-			{ base::StrId("u8"), ctx.query<::ts::QueryIntegralType>({ 8, false }) },
+			{ base::StrID("u128"), ctx.query<::tsh::QueryIntegralType>({ 128, false }) },
+			{ base::StrID("u64"), ctx.query<::tsh::QueryIntegralType>({ 64, false }) },
+			{ base::StrID("u32"), ctx.query<::tsh::QueryIntegralType>({ 32, false }) },
+			{ base::StrID("u16"), ctx.query<::tsh::QueryIntegralType>({ 16, false }) },
+			{ base::StrID("u8"), ctx.query<::tsh::QueryIntegralType>({ 8, false }) },
 		};
 		variant_match(expr) {
 			variant_case(rpn::Identifier, idt) {
 				return ctx.query<QueryTypeOfSymbol>(idt.symbol_list.back());
 			}
-			variant_case(rpn::Operator, oper) {
-				RIFT_PANIC(base::strConcat("Type cannot be an operator: ", oper.oper_id));
-			}
+			variant_case(rpn::Operator, oper) { return errors::HError(errors::InvalidExpr()); }
 			variant_case(rpn::NamedIdentifier, named_identifier) {
 				const auto it = BUILTINS.find(named_identifier.symbol_name);
 				if (it == BUILTINS.end()) {
-					const auto symbol
-						= ctx.query<QueryLookupInScopeAndParents>({
-																	  expr_scope,
-																	  named_identifier.symbol_name,
-																	  true,
-																  })
-					          .leaves.back();
-					return ctx.query<QueryTypeFromDefinition>(symbol);
+					auto&& symbol_res = ctx.query<QueryLookupInScopeAndParents>({
+						expr_scope,
+						named_identifier.symbol_name,
+						true,
+					});
+					UNPACK_RESULT(const SymbolList symbol =, symbol_res.getAsSingle());
+					// very simple dealias, that should
+					// ultimately be replaced by type expr comp-time eval:
+					auto&& dealias_sym = ctx.query<QueryDealias>({ symbol.back() });
+					if (dealias_sym.hasError()) return errors::HError(errors::InvalidExpr());
+					return ctx.query<QueryTypeFromDefinition>(dealias_sym.value().back());
 				}
 				return it->second;
 			}
@@ -769,27 +827,35 @@ namespace compiler::helios {
 				RIFT_PANIC("Numerical value is not a type: ", num_value.num_id);
 			}
 			variant_case(rpn::TupleType, tuple_type) {
-				std::vector<ts::ComponentType> tuple_components;
+				std::vector<tsh::ComponentType> tuple_components;
 				tuple_components.reserve(tuple_type.elements.size());
 
-				for (auto&& tuple_subtype: tuple_type.elements)
-					tuple_components.emplace_back(
-						parseTypeFromExpr(ctx, tuple_subtype, expr_scope), false
+				for (auto&& tuple_subtype: tuple_type.elements) {
+					UNPACK_RESULT(
+						tsh::TypeInfo parsed_subtype =,
+						parseTypeFromExpr(ctx, tuple_subtype, expr_scope)
 					);
+					tuple_components.emplace_back(parsed_subtype, false);
+				}
 				std::reverse(tuple_components.begin(), tuple_components.end());
 
-				return ctx.query<ts::QueryTupleType>({ tuple_components });
+				return ctx.query<tsh::QueryTupleType>({ tuple_components });
 			}
 			variant_case(rpn::Variant, variant_type) {
-				std::vector<ts::TypeInfo> variant_types;
+				std::vector<tsh::TypeInfo> variant_types;
 
 				variant_types.reserve(variant_type.elements.size());
-				for (auto&& tuple_subtype: variant_type.elements)
-					variant_types.push_back(parseTypeFromExpr(ctx, tuple_subtype, expr_scope));
+				for (auto&& variant_subtype: variant_type.elements) {
+					UNPACK_RESULT(
+						tsh::TypeInfo parsed_variant_subtype =,
+						parseTypeFromExpr(ctx, variant_subtype, expr_scope)
+					);
+					variant_types.push_back(parsed_variant_subtype);
+				}
 
-				return ctx.query<ts::QueryVariantType>({ variant_types });
+				return ctx.query<tsh::QueryVariantType>({ variant_types });
 			}
-			variant_default { RIFT_PANIC("Unhandlable type during parsing type from expr..."); }
+			variant_default { RIFT_PANIC("Unhandleble type during parsing type from expr..."); }
 		}
 		RIFT_PANIC("Couldn't parse the type.");
 	}
@@ -799,35 +865,40 @@ namespace compiler::helios {
 	 * @param ctx Context passed to a query.
 	 * @param expr A PST expression, that has been written in the source code.
 	 * @param expr_scope A scope where the expression has been expressed.
-	 * @return ts::TypeInfo with information about the evaluated type.
+	 * @return tsh::TypeInfo with information about the evaluated type.
 	 */
-	ts::TypeInfo parseTypeFromExpr(
+	ParseTypeFromExpr_Result parseTypeFromExpr(
 		query::Context& ctx, const tpc::ParserCBorrowRef<pst::Expr>& expr, ScopeID expr_scope
 	) {
-		const auto rpn_expr   = rpn::makeRPN(ctx, { expr->elements, expr_scope });
-		const auto final_type = rpn::evalExpr(ctx, rpn_expr);
-		return parseTypeFromExpr(ctx, final_type, expr_scope);
+		rpn::RPNExpr rpn_expr = rpn::makeRPN(ctx, { expr->elements, expr_scope });
+		UNPACK_RESULT(rpn::ExprElem final_type =, rpn::evalExpr(ctx, rpn_expr));
+		UNPACK_RESULT(return, parseTypeFromExpr(ctx, final_type, expr_scope));
 	}
 
-	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, ::ts::TypeInfo) {
+	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QueryType_Result) {
 		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
 
-			void setTypeOfSymbol(const ts::TypeInfo& type) {
+			void setTypeOfSymbol(const tsh::TypeInfo& type) {
 				if (symbol_type_info.has_value())
 					RIFT_PANIC("Attempted to set type of symbol in visitor a second time.");
 				symbol_type_info = type;
 			}
 
 			void setTypeOfSymbol(const pst::ParserCBorrowRef<pst::Expr>& expr) {
-				setTypeOfSymbol(parseTypeFromExpr(ctx, expr, scope(key)));
+				auto&& fun_type = parseTypeFromExpr(ctx, expr, scope(key));
+				if (fun_type.hasValue())
+					setTypeOfSymbol(fun_type.value());
+				else {
+					// @TODO: Report an error
+				}
 			}
 
 		public:
 			PstStmtVisitor_GetTypeOf(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
-			base::Optional<ts::TypeInfo> symbol_type_info;
+			base::Optional<tsh::TypeInfo> symbol_type_info;
 
 			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getType()); }
 
@@ -841,16 +912,29 @@ namespace compiler::helios {
 				auto params = fun.getParams();
 				auto ret    = fun.getRet();
 
-				std::vector<ts::TypeInfo> param_types{};
+				std::vector<tsh::TypeInfo> param_types{};
 				param_types.reserve(params->size());
 
-				for (auto param: params)
-					param_types.emplace_back(parseTypeFromExpr(ctx, param->getType(), scope(key)));
-				ts::TypeInfo ret_type = ret.has_value()
-				                          ? parseTypeFromExpr(ctx, ret.value(), scope(key))
-				                          : ctx.query<ts::QueryUnitType>({});
-
-				setTypeOfSymbol(ctx.query<ts::QueryFunctionType>({ param_types, ret_type }));
+				for (auto param: params) {
+					auto&& parse_type_res = parseTypeFromExpr(ctx, param->getType(), scope(key));
+					if (parse_type_res.hasValue()) {
+						param_types.emplace_back(parse_type_res.value());
+					} else {
+						// @TODO: Report an error
+						return;
+					}
+				}
+				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
+				if (ret.has_value()) {
+					auto&& parsed = parseTypeFromExpr(ctx, ret.value(), scope(key));
+					if (parsed.hasValue()) {
+						ret_type = parsed.value();
+					} else {
+						// @TODO: Report an error
+						return;
+					}
+				}
+				setTypeOfSymbol(ctx.query<tsh::QueryFunctionType>({ param_types, ret_type }));
 			}
 		};
 
@@ -859,7 +943,8 @@ namespace compiler::helios {
 
 			PstStmtVisitor_GetTypeOf visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
-			return visitor.symbol_type_info.value();
+			if_opt_some(visitor.symbol_type_info, type) return type;
+			return errors::HError(errors::Failed());
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
@@ -867,12 +952,12 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
 
-	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, ::ts::TypeInfo) {
+	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, QueryType_Result) {
 		class PstStmtVisitor_GetTypeFromDefinition final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
 
-			void setTypeOfDefinition(const ts::TypeInfo& type) {
+			void setTypeOfDefinition(const tsh::TypeInfo& type) {
 				if (definition_type_info.has_value())
 					RIFT_PANIC("Attempted to set type of definition in visitor a second time.");
 				definition_type_info = type;
@@ -883,10 +968,10 @@ namespace compiler::helios {
 				  ctx(ctx),
 				  key(key) {}
 
-			base::Optional<ts::TypeInfo> definition_type_info;
+			base::Optional<tsh::TypeInfo> definition_type_info;
 
 			void visitClass(const pst::Class&) override {
-				definition_type_info = ctx.query<ts::QueryClassType>(key);
+				definition_type_info = ctx.query<tsh::QueryClassType>(key);
 			}
 		};
 
@@ -902,9 +987,9 @@ namespace compiler::helios {
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
 
-	struct IMPLEMENT_QUERY(QueryClassSymbolData, ClassSymbolData) {
+	struct IMPLEMENT_QUERY(QueryClassSymbolData, QueryClassSymbolData_Result) {
 		struct ClassDataParser final: pst::PstStmtVisitorPanicky {
-			base::Optional<base::StrId>                                name;
+			base::Optional<base::StrID>                                name;
 			base::Optional<tpc::ParserCBorrowRef<pst::Expr>>           base_class;
 			base::Optional<tpc::ParserCBorrowRef<pst::ImplementsList>> implements;
 
@@ -954,12 +1039,24 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				class_info.base = parseTypeFromExpr(ctx, base, scope(key));
+				if (auto parsed = parseTypeFromExpr(ctx, base, scope(key)); parsed.hasValue()) {
+					class_info.base = parsed.value();
+				} else {
+					// @TODO: Report an error
+					return errors::HError(errors::Failed());
+				}
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
-				for (auto&& interface: implements)
-					class_info.implements.push_back(parseTypeFromExpr(ctx, interface, scope(key)));
+				for (auto&& interface: implements) {
+					if (auto parsed = parseTypeFromExpr(ctx, interface, scope(key));
+					    parsed.hasValue()) {
+						class_info.implements.push_back(parsed.value());
+					} else {
+						// @TODO: Report an error
+						return errors::HError(errors::Failed());
+					}
+				}
 			}
 
 			return class_info;
@@ -970,19 +1067,20 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);
 
-	struct IMPLEMENT_QUERY(QueryHOUTExprTreeOfSym, base::unique_ptr<code::Expr>) {
+	struct
+		IMPLEMENT_QUERY(QueryHOUTExprTreeOfSym, errors::HResult<base::unique_ptr<code::Expr> COMMA errors::Failed>) {
 		class PstStmtVisitor_GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
 
 			void setExprTree(const pst::ParserCBorrowRef<pst::Expr>& expr) {
-				rpn_of_sym_expr = rpn::makeRPN(ctx, { expr->elements, scope(key) }).elements;
+				rpn_of_sym_expr = rpn::makeRPN(ctx, { expr->elements, scope(key) });
 			}
 
 		public:
 			PstStmtVisitor_GetHOUTExprTree(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
-			std::vector<rpn::ExprElem> rpn_of_sym_expr;
+			base::Optional<rpn::RPNExpr> rpn_of_sym_expr;
 
 			void visitConst(const pst::Const& stmt) override { setExprTree(stmt.getValue()); }
 
@@ -994,23 +1092,15 @@ namespace compiler::helios {
 
 			PstStmtVisitor_GetHOUTExprTree visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
-			return code::Expr::fromRPN(ctx, { visitor.rpn_of_sym_expr, scope(key) });
+			RIFT_ASSERT(
+				visitor.rpn_of_sym_expr.has_value(),
+				"Something wrong has happened while parsing expr"
+			);
+			rpn::RPNExpr rpn_expr = visitor.rpn_of_sym_expr.value();
+			return code::Expr::fromRPN(ctx, { rpn_expr.elements, scope(key) });
 		}
 
-		static inline base::
-			HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>
-				cache;
-
-		static auto load(const QKey& key) -> LoadResult {
-			if (auto&& copy = cache.atMaybe(key))
-				return QResWithACD{ copy->data.borrow(), copy->acd };
-			return {};
-		}
-
-		static auto store(const QKey& key, PResult res, query::ACD) -> QResult {
-			cache.put(key, std::move(res));
-			return cache.at(key).data.borrow();
-		}
+		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHOUTExprTreeOfSym);

@@ -17,7 +17,7 @@ namespace lexer {
 	 * @note There are some undefined characters in Syntax and operator sets(They are currently
 	 * detected by the decoder).
 	 */
-	struct Classifications {
+	struct Classifications final {
 		static icu::UnicodeSet
 			name_start;     ///< set of codepoints indicating a start of an identifier or a keyword
 		static icu::UnicodeSet

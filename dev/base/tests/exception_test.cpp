@@ -16,7 +16,7 @@ class ExceptionTest: public tester::TestSuite {
 #define TESTER_CLASS ExceptionTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Exception Test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testPanic1);
 		TESTER_ADD_TEST(testPanic2);
 		TESTER_ADD_TEST(testPanic3);

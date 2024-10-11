@@ -76,7 +76,7 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(Namespace);
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 
@@ -108,7 +108,7 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(Class);
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 
@@ -136,10 +136,10 @@ namespace pst {
 			return "Class";
 		}
 
-		[[nodiscard]]
-		bool isStatementAggregate() const override {
-			return true;
-		}
+		// [[nodiscard]]
+		// bool isStatementAggregate() const override {
+		// 	return true;
+		// }
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
@@ -154,7 +154,7 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(Variable);
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 
@@ -163,6 +163,16 @@ namespace pst {
 		[[nodiscard]]
 		ParserCBorrowRef<Expr> getType() const {
 			return type.borrow();
+		}
+
+		[[nodiscard]]
+		ParserCBorrowRef<Expr> getValue() const {
+			return value.borrow();
+		}
+
+		[[nodiscard]]
+		bool isConst() const {
+			return is_const;
 		}
 
 		static ParserRef<Variable> parse(RiftParserState& state);
@@ -187,7 +197,7 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(Fun);
 
 		[[nodiscard]]
-		base::StrId getName() const {
+		base::StrID getName() const {
 			return name.value;
 		}
 

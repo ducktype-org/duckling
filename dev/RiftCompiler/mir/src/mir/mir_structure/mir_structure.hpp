@@ -3,6 +3,7 @@
 #include <vector>
 #include <variant>
 #include <helios/scopes/scopes.hpp>
+#include <typesystem/higher/type_desc.hpp>
 #include <base/stable_container.hpp>
 #include <base/strongly_typed_id.hpp>
 #include <base/stringifyable_enum.hpp>
@@ -13,6 +14,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 	Call,
 	VCall,
+
+	Assign, //< simple byte by byte assignment
 
 	/**
 	 * @brief Placeholder. 
@@ -71,7 +74,7 @@ namespace compiler::mir {
 	/**
 	 * @brief Reference to MIR Local variable data.
 	 */
-	using LocalRef = Ref<MirLocal>;
+	using LocalRef = CRef<MirLocal>;
 
 	/**
 	 * @brief Description of a MIR Local variable, like a function argument or simply local
@@ -85,15 +88,32 @@ namespace compiler::mir {
 
 		// @TODO: type
 
+		// for now we just keep HELIOS id:
+		helios::SymID   helios_id;
+		tsh::TypeDesc<> type;
+		helios::ScopeID lifetime_scope;
+
 	private:
-		MirLocal(): id(LocalID::next()) {}
+		// @note: making MirLocal from helios_id
+		// is a temporary solution.
+		// It will not work with temporary values for example.
+		// it might work poorly for template/generic instantiations.
+
+		MirLocal(helios::SymID helios_id, tsh::TypeDesc<> type, helios::ScopeID lifetime_scope):
+			  id(LocalID::next()),
+			  helios_id(helios_id),
+			  type(type),
+			  lifetime_scope(lifetime_scope) {}
 
 		friend struct Function;
 		friend struct FunctionBuilder;
 		friend LocalRef;
 
 	public:
-		void debugPrint(std::ostream& output) const;
+		void debugPrint(std::ostream& output, bool detailed = false) const;
+
+		[[nodiscard]]
+		base::StrID getName() const;
 	};
 
 	/**
@@ -114,6 +134,18 @@ namespace compiler::mir {
 		MirLocation(BlockID value): value(value) {}
 
 		void debugPrint(std::ostream& output) const;
+
+		/**
+		 * @brief Returns reference value of given type
+		 * stored in MirLocation.
+		 * Throws if value is not of given type.
+		 * @tparam T
+		 * @return const T&
+		 */
+		template<class T>
+		const T& get() const {
+			return std::get<T>(value);
+		}
 	};
 
 	/**
@@ -123,7 +155,13 @@ namespace compiler::mir {
 	 * * does operation destruct some variable
 	 * * does operation move some variable
 	 */
-	struct OperationFlag final {};
+	struct OperationFlag final {
+		enum class Flag { Construct, Destruct, Move };
+		Flag     flag;
+		LocalRef local;
+
+		void debugPrint(std::ostream& output) const;
+	};
 
 	/**
 	 * @brief Single instruction of MIR code.
@@ -165,13 +203,22 @@ namespace compiler::mir {
 			helios::ScopeID            scope
 		):
 			  operation(operation),
-			  output(std::move(output)),
+			  output(output),
 			  arguments(std::move(arguments)),
 			  flags(std::move(flags)),
-			  scope(std::move(scope)) {}
+			  scope(scope) {}
 
 		void debugPrint(std::ostream& output) const;
 	};
+
+	/**
+	 * @brief Returns list of MIR BlockIDs that
+	 * can be jumped to from given terminator instruction.
+	 *
+	 * @param terminator
+	 * @return std::vector<BlockID>
+	 */
+	std::vector<BlockID> getTerminatorSuccessors(const Instruction& terminator);
 
 	/**
 	 * @brief A simple block of MIR cfg code.
@@ -183,6 +230,10 @@ namespace compiler::mir {
 		 */
 		BlockID id;
 
+		/**
+		 * @brief List of instructions in the block.
+		 * @note It does not include terminator instruction.
+		 */
 		std::vector<Instruction> instructions;
 
 		/**
@@ -192,16 +243,31 @@ namespace compiler::mir {
 		 * @todo: Decide if we wan't to move it to instruction vector.
 		 */
 		Instruction terminator;
+
+		[[nodiscard]]
+		helios::ScopeID beginScope() const;
 	};
 
 	/**
 	 * @brief Function in MIR.
 	 */
 	struct Function final {
-		base::StrId                  name;
+		base::StrID                  name;
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
+
+		Function()                = delete;
+		Function(const Function&) = delete;
+
+		Function(
+			base::StrID                  name,
+			std::vector<Block>           blocks,
+			base::StableVector<MirLocal> local_list,
+			BlockID                      entry_block
+		);
+
+		Function(Function&&) = default;
 
 		void debugPrint(std::ostream& output) const;
 	};

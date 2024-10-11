@@ -7,9 +7,9 @@
 
 #include <helios/symbols/symbols.hpp>
 #include <pst_parser/elements/elements.hpp>
-#include <query_framework/query_impl.hpp>
-#include <typesystem/type_desc.hpp>
-#include <typesystem/queries.hpp>
+#include <query_framework/query_int.hpp>
+#include <typesystem/higher/type_desc.hpp>
+#include <typesystem/higher/queries.hpp>
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
@@ -28,7 +28,7 @@ namespace compiler::helios::code {
 	struct Stmt {
 		ScopeID lifetime_scope;
 
-		Stmt(ScopeID lifetime_scope): lifetime_scope(std::move(lifetime_scope)) {}
+		Stmt(ScopeID lifetime_scope): lifetime_scope(lifetime_scope) {}
 
 		virtual ~Stmt()                                                    = default;
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
@@ -46,14 +46,14 @@ namespace compiler::helios::code {
 		/**
 		 * The type of the expression, and its value category.
 		 */
-		ts::TypeDesc<> type_desc;
+		tsh::TypeDesc<> type_desc;
 
-		Expr(ScopeID lifetime_scope, ts::TypeDesc<> type_desc):
-			  lifetime_scope(std::move(lifetime_scope)),
+		Expr(ScopeID lifetime_scope, tsh::TypeDesc<> type_desc):
+			  lifetime_scope(lifetime_scope),
 			  type_desc(type_desc) {}
 
-		virtual ~Expr()                                                    = default;
-		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
+		virtual ~Expr()                                  = default;
+		virtual void debugPrint(std::ostream& out) const = 0;
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
 
@@ -71,6 +71,33 @@ namespace compiler::helios::code {
 	/* * * * * * * *
 	 * Statements: *
 	 * * * * * * * */
+
+	/**
+	 * @brief Represents `var/let a : T = ..;` statement in HOUT
+	 */
+	struct VariableStmt final: public Stmt {
+		// @TODO: decide where we handle non-initial value (pre hout/post hout):
+		// currently PST always have it.
+		base::Optional<ElementRef<Expr>> initial_value;
+		tsh::TypeDesc<>                  type;
+
+		// @TODO decide if this is needed:
+		SymID helios_symbol;
+
+		VariableStmt(
+			ScopeID                          scope,
+			base::Optional<ElementRef<Expr>> initial_value,
+			tsh::TypeDesc<>                  type,
+			SymID                            helios_symbol
+		):
+			  Stmt(scope),
+			  initial_value(std::move(initial_value)),
+			  type(type),
+			  helios_symbol(helios_symbol) {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
+	};
 
 	/**
 	 * @brief Represents `return [expr];` in HOUT
@@ -136,18 +163,9 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		i64 value;
 
-		LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx):
-			  Expr(
-				  scope,
-				  ts::TypeDesc<>(
-					  // @TODO: Select type of expression based on type of literal.
-					  ctx.query<ts::QueryIntegralType>({ 64 }),
-					  ts::ValueCategory(ts::PrimaryCategory::Literal)
-				  )
-			  ),
-			  value(value) {}
+		LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx);
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
@@ -161,48 +179,29 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		SymID symbol;
 
-		IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx):
-			  Expr(
-				  scope,
-				  ts::TypeDesc<>(
-					  ctx.query<QueryTypeOfSymbol>(symbol),
-					  ts::ValueCategory(ts::primaryCategoryOfSymbol(symbol))
-				  )
-			  ),
-			  symbol(std::move(symbol)) {}
+		IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx);
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
 	struct BinaryOperatorExpr: public Expr {
 		// @TODO: At this point, this should be a symbol.
 		//  HOUT should not be concerned with overload resolution.
-		base::StrId op;
+		base::StrID op;
 
 		ElementRef<Expr> lhs;
 		ElementRef<Expr> rhs;
 
 		BinaryOperatorExpr(
 			ScopeID          scope,
-			base::StrId      op,
+			base::StrID      op,
 			ElementRef<Expr> lhs,
 			ElementRef<Expr> rhs,
 			query::Context&  ctx
-		):
-			  Expr(
-				  scope,
-				  ts::TypeDesc<>(
-					  // @TODO: Select type of expression based on result type of the operation.
-					  ctx.query<ts::QueryIntegralType>({ 64 }),
-					  ts::ValueCategory(ts::PrimaryCategory::Temporary)
-				  )
-			  ),
-			  op(op),
-			  lhs(std::move(lhs)),
-			  rhs(std::move(rhs)) {}
+		);
 
-		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 }

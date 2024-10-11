@@ -1,7 +1,13 @@
 #include "lookup_result.hpp"
+#include "helios_errors.hpp"
 #include <base/exceptions.hpp>
 
 namespace compiler::helios {
+
+	NestedResult::NestedResult(SymID node, LookupResult inner):
+		  node(node),
+		  inner(std::move(inner)) {}
+
 	auto LookupResult::isEmpty() const -> bool {
 		if (!leaves.empty()) return false;
 		for (auto&& [node, inner]: children)
@@ -11,23 +17,27 @@ namespace compiler::helios {
 
 	bool LookupResult::isSingle() const { return symbolCount() == 1; }
 
-	SymbolList LookupResult::getAsSingle() const {
-		RIFT_ASSERT(!isEmpty(), "Empty lookup");
-		RIFT_ASSERT(isSingle(), "Ambiguity");
+	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound>
+		LookupResult::getAsSingle() const {
+		if (isEmpty()) return errors::HError(errors::SymbolNotFound());
+		if (!isSingle()) return errors::HError(errors::Ambiguity());
 
-		if (!leaves.empty()) return { leaves[0] };
+		if (!leaves.empty()) return SymbolList{ leaves[0] };
 
-		for (const auto& [node_id, inner]: children) {
-			if (auto&& child_path = inner.getAsSingle(); !child_path.empty()) {
-				SymbolList result;
-				result.push_back(node_id);
-				result.insert(result.end(), child_path.begin(), child_path.end());
-				return result;
-			}
-		}
+		RIFT_ASSERT(children.size() == 1, "Invalid state: contains empty children");
 
-		// (Thic cannot happen, but for sanity.)
-		RIFT_PANIC("isSingle, but haven\'t found any symbols");
+		auto&& [node_id, inner] = children.at(0);
+		SymbolList child_path   = inner.getAsSingle().expect(
+            "This cannot be error, "
+			  "because it was asserted above."
+        );
+
+		RIFT_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
+
+		SymbolList result;
+		result.push_back(node_id);
+		result.insert(result.end(), child_path.begin(), child_path.end());
+		return result;
 	}
 
 	u64 LookupResult::symbolCount() const {

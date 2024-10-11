@@ -97,7 +97,7 @@ namespace pst {
 		void one(tpc::Identifier* result, bool ignorable = false) {
 			if (!state.ctokens().peek().isIdentifier()) {
 				state.log(base::make_unique<tpc::NoIdentifierError>(state.getPosition()));
-				result->value = base::StrId("<error>");
+				result->value = base::StrID("<error>");
 				if (!ignorable) state.tokens().next();
 				return;
 			}

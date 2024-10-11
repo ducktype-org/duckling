@@ -2,7 +2,9 @@
 
 # Main compiler
 
-Main Rift compiler
+Rift compiler module.
+
+More information about files and directories can be found in the Doxygen documentation.
 
 # Module overview:
 
@@ -22,7 +24,7 @@ Main Rift compiler
 * **FQN, FQNL** - fully qualified name, fully qualified name lookup
 * **QN, QNL** - qualified name, qualified name lookup
 * **UN, UNL** - unqualified name, unqualified name lookup
-* **StrId** - string-ids used to represent strings in most of compiler
+* **StrID** - string-ids used to represent strings in most of compiler
 * **RawView** - non-owning view on array of bytes
 
 

@@ -21,13 +21,13 @@
 
 namespace compiler::helios {
 
-	struct ScopeData {
+	struct ScopeData final {
 		// adapted from hir:
 
 		// created on startup:
 		std::optional<ScopeID> parent;
 
-		// base::StrId name; ///< for debug
+		// base::StrID name; ///< for debug
 		bool is_root = false;
 
 		/**
@@ -39,7 +39,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Module, the scope was defined in
 		 */
-		frontend::ModuleId parent_module;
+		frontend::ModuleID parent_module;
 
 		// cache entries:
 		// in the future we might need separation for: direct symbols, expanded symbols
@@ -47,17 +47,21 @@ namespace compiler::helios {
 		// any lookup in the scope requires calculation of symbols witch itself is done only once!
 		base::Optional<query::CacheEntry<SymbolList>> symbols;
 
+		u64 depth;
+
 
 		// This delete is important, to prevent any copy of scope data:
 		// ScopeData(const ScopeData&)            = delete;
 		// ScopeData& operator=(const ScopeData&) = delete;
 	};
 
-	struct GetScopeRef_Functor {
+	struct ScopeAccess_Functor final {
 		static auto get(ScopeID id) { return id.ref; }
+
+		static auto idOf(Ref<ScopeData> ref) { return ScopeID(ref); }
 	};
 
-	auto getScopeRef(ScopeID id) { return GetScopeRef_Functor::get(id); }
+	auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
 
 	base::Optional<ScopeID> parent(ScopeID id) {
 		auto ref = getScopeRef(id);
@@ -69,7 +73,9 @@ namespace compiler::helios {
 		}
 	}
 
-	frontend::ModuleId module(ScopeID id) { return getScopeRef(id)->parent_module; }
+	frontend::ModuleID module(ScopeID id) { return getScopeRef(id)->parent_module; }
+
+	u64 scopeDepth(ScopeID id) { return getScopeRef(id)->depth; }
 
 	namespace {
 		base::StableVector<ScopeData> scope_table;
@@ -81,6 +87,13 @@ namespace compiler::helios {
 		}
 	}
 
+	std::vector<ScopeID> getAllHeliosScopes() {
+		std::vector<ScopeID> out;
+		for (auto& scope_data: scope_table)
+			out.emplace_back(ScopeAccess_Functor::idOf(scope_data.refMut()));
+		return out;
+	}
+
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeID) {
 		static auto provide(Context&, QKey key) -> PResult {
 			return putInScopeTable(ScopeData{
@@ -89,6 +102,7 @@ namespace compiler::helios {
 				.related_pst_element = {},
 				.parent_module       = key,
 				.symbols             = {},
+				.depth               = 0,
 			});
 		}
 
@@ -127,6 +141,7 @@ namespace compiler::helios {
 				.related_pst_element = element.base_element,
 				.parent_module       = module(parent),
 				.symbols             = {},
+				.depth               = scopeDepth(parent) + 1,
 			});
 		}
 
@@ -141,7 +156,7 @@ namespace compiler::helios {
 		 */
 		template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
 		static std::vector<SymID> filterSymbolsFromStmtList(
-			query::Context& ctx, const ScopeID& scope, const StmtList<Stmt>& list
+			query::Context& ctx, ScopeID scope, const StmtList<Stmt>& list
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
@@ -163,38 +178,44 @@ namespace compiler::helios {
 			Context&                           ctx;
 			const QKey&                        key;
 
+			template<class... Args>
+			void output(Args&&... args) {
+				RIFT_ASSERT(this->out.empty(), "Output already set");
+				this->out.emplace(std::forward<Args>(args)...);
+			}
+
 			void visitFun(const pst::Fun&) override {
 				// Scope of "fun →()← {}"
 				// @TODO: iterate function parameters and create symbols out of them
 				// The problem is that currently function parameters are Expr in Pst -- this has to
 				// change Variable declaration or custom element is probably a better choice
-				this->out.emplace(std::vector<SymID>{});
+				output(std::vector<SymID>{});
 			}
 
 			void visitIf(const pst::If&) override {
 				// Scope of "if →(...)← {}"
 				// @TODO: check if "If" defines any variables in its condition
 				// and add them here.
-				this->out.emplace(std::vector<SymID>{});
+				output(std::vector<SymID>{});
 			}
 
 			void visitClass(const pst::Class& class_) override {
-				this->out.emplace(
-					filterSymbolsFromStmtList(ctx, key, getChildStmtsOfClass(class_.getBody()))
+				output(
+					filterSymbolsFromStmtList(ctx, key, getChildStmtsOfClassBlock(class_.getBody()))
 				);
 			}
 
 			void visitNamespace(const pst::Namespace&) override {
-				this->out.emplace(std::vector<SymID>());
+				// This seems strange, but namespace scope is indeed empty.
+				// The scope that is full is the codeblock within the namespace.
+				output(std::vector<SymID>());
 			}
 
-			void visitExprStmt(const pst::ExprStmt&) override {
-				this->out.emplace(std::vector<SymID>());
-			}
+			void visitExprStmt(const pst::ExprStmt&) override { output(std::vector<SymID>()); }
 
-			void visitReturn(const pst::Return&) override {
-				this->out.emplace(std::vector<SymID>());
-			}
+			void visitReturn(const pst::Return&) override { output(std::vector<SymID>()); }
+
+			void visitVariable(const pst::Variable&) override { output(std::vector<SymID>()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -209,7 +230,19 @@ namespace compiler::helios {
 			auto base_element = key.ref->related_pst_element.value();
 
 			if (base_element->isStatementAggregate()) {
-				return filterSymbolsFromStmtList(ctx, key, getChildStmtsOf(base_element));
+				// @TODO: the error here is that this perform double scoping
+				// for CodeBlocks inside CodeBlocksOrStmt
+				// Hot-patch:
+				// @TODO: change elementType usage to elementKind (once its implemented)
+				if (base_element->elementType() == "Code Block")
+					if (base_element->getParent().value()->elementType()
+					    == "Code Block or Statement") {
+						// hot patch currently does:
+						// code block inside CodeBlockOrStmt has empty scope
+						return {};
+					}
+
+				return filterSymbolsFromStmtList(ctx, key, getStmtsFromStmtAggregate(base_element));
 			} else if (base_element->isStatement()) {
 				SymbolGrabVisitor symbol_grab(ctx, key);
 				auto              as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());
@@ -275,9 +308,10 @@ namespace compiler::helios {
 
 				// Reverse insertion order allow for linear result concatenation instead of
 				// quadratic
-				auto parent_result = ctx.query<QueryLookupInScopeAndParents>(
+				LookupResult parent_result = ctx.query<QueryLookupInScopeAndParents>(
 					{ parent, key.name, key.with_wildcards }
 				);
+
 				parent_result.insert(std::move(result));
 
 				return parent_result;
@@ -298,13 +332,13 @@ namespace compiler::helios {
 
 	base::HashT KeyOf_LookupInScope::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(scope);
-		auto hash_2 = std::hash<base::StrId>()(name);
+		auto hash_2 = std::hash<base::StrID>()(name);
 
 		// @FIXME: this does not work:
 		return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;
 	}
 
-	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleId module) {
+	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
 		auto  main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
 		auto& main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
 

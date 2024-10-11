@@ -18,7 +18,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Symbol Identifier. Used to represent HELIOS Symbol across the compiler.
 	 */
-	struct SymID {
+	struct SymID final {
 		// @FUTURE: add some mangling, so valgrind will not get confused
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
@@ -37,13 +37,13 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QueryLinkedScope;
-		friend struct ImplementationOf_QueryStructSymbolData;
+		friend struct ImplementationOf_QueryClassSymbolData;
 	};
 
 	/**
 	 * @brief Scope Identifier. Used to represent HELIOS Scope across the compiler.
 	 */
-	struct ScopeID {
+	struct ScopeID final {
 		// @FUTURE: add some mangling, so valgrind will not get confused
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
@@ -51,6 +51,8 @@ namespace compiler::helios {
 		}
 
 		bool operator==(const ScopeID&) const = default;
+
+		bool operator<(const ScopeID& other) const { return ref < other.ref; }
 
 	private:
 		Ref<ScopeData> ref;
@@ -60,7 +62,7 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;
 		friend struct ImplementationOf_QuerySymbolsInScope;
 		friend struct ImplementationOf_QueryLookupInScopeAndParents;
-		friend struct GetScopeRef_Functor;
+		friend struct ScopeAccess_Functor;
 	};
 
 }

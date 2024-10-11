@@ -1,5 +1,6 @@
 include(FetchContent)
 include(FindOrBuildICU.cmake)
+include(BuildTreeSitter.cmake)
 
 # It's nice to get stripped-down release zips instead of cloning
 # a repo and checking out a tag
@@ -8,6 +9,10 @@ set(RESULT_COMMIT "a97e66bc66f140132619fd5f5cdffc30127f4220")
 set(ASIO_COMMIT "89b0a4138a92883ae2514be68018a6c837a5b65f")
 set(CROW_COMMIT "4f3f5deaaa01825c63c83431bfa96ccec195f741")
 set(BASE64_COMMIT "387b32f337b83d358ac1ffe574e596ba99c41d31")
+
+# Tree sitter for parsing cpp
+set(TREE_SITTER_COMMIT "12fb31826b8469cc7b9788e72bceee5af1cf0977")
+set(TREE_SITTER_CPP_COMMIT "30f973c2244f0bff444186185f475c3bd76bc3a5")
 
 # ICU supporting Unicode 15.1
 set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-1/icu4c-74_1-src.tgz")
@@ -60,16 +65,21 @@ find_library(gvc gvc)
 
 FindOrBuildICU(VERSION 74.1 URL "${ICU_RELEASE}" URL_HASH "${ICU_CONTROL}")
 
-FetchContent_MakeAvailable(base64)
-add_library(base64 INTERFACE)
-target_include_directories(base64 INTERFACE "${base64_SOURCE_DIR}/include" "${base64_SOURCE_DIR}/test")
+# Do not call MakeAvailable, because
+# we want to avoid using their CMakeLists.txt
 FetchContent_GetProperties(base64)
 if(NOT base64_POPULATED)
-    FetchContent_Populate(base64)
-    add_subdirectory("${base64_SOURCE_DIR}" "${base64_BINARY_DIR}")
+	FetchContent_Populate(base64)
 endif()
 
-add_dependencies(build_all_tests base64_tests roundtrip_test)
+add_library(base64 INTERFACE)
+target_include_directories(base64 INTERFACE "${base64_SOURCE_DIR}/include")
+setAsSystemLibrary(base64)
+
+BuildTreeSitter(
+	TS_URL "https://github.com/tree-sitter/tree-sitter/archive/${TREE_SITTER_COMMIT}.zip"
+	TS_CPP_URL "https://github.com/tree-sitter/tree-sitter-cpp/archive/${TREE_SITTER_CPP_COMMIT}.zip"
+)
 
 # This macro inserts LLVM as a library to the project. It should be used in the top-level
 # CMakeList.txt file.

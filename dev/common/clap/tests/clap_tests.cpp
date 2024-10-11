@@ -10,7 +10,7 @@ class ClapTester: public tester::TestSuite {
 
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Clap Tester") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(positionalTest);
 		TESTER_ADD_TEST(namedTest);

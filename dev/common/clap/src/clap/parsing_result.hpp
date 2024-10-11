@@ -19,7 +19,7 @@
 namespace clap {
 	class Clap;
 
-	struct ParsedValue {
+	struct ParsedValue final {
 		std::any    value;
 		std::string raw_source;
 	};
@@ -95,7 +95,7 @@ namespace clap {
 		 */
 		template<class T, class N>
 		base::Optional<T> getValue(const N& name) const {
-			if_opt_some(getId(name), id) return base::anyCast<T>(id_to_value.at(id).value);
+			if_opt_some(getID(name), id) return base::anyCast<T>(id_to_value.at(id).value);
 			return {};
 		}
 
@@ -107,7 +107,7 @@ namespace clap {
 		 */
 		template<class N>
 		base::Optional<std::string> getRaw(const N& name) const {
-			if_opt_some(getId(name), id) return id_to_value.at(id).raw_source;
+			if_opt_some(getID(name), id) return id_to_value.at(id).raw_source;
 			return {};
 		}
 
@@ -147,7 +147,7 @@ namespace clap {
 		 */
 		template<class N>
 		bool isFlag(const N& name) const {
-			if_opt_some(getId(name), id) return flags.contains(id);
+			if_opt_some(getID(name), id) return flags.contains(id);
 			return false;
 		}
 
@@ -159,7 +159,7 @@ namespace clap {
 		 */
 		template<class N>
 		bool isParam(const N& name) const {
-			if_opt_some(getId(name), id) return id_to_value.contains(id);
+			if_opt_some(getID(name), id) return id_to_value.contains(id);
 			return false;
 		}
 
@@ -205,7 +205,7 @@ namespace clap {
 		 * @param parameter The parameter to be identified.
 		 * @return id
 		 */
-		usize insertQueryId(const Parameter& parameter);
+		usize insertQueryID(const Parameter& parameter);
 
 		/**
 		 * A const accessor to the id of a parameter.
@@ -213,7 +213,7 @@ namespace clap {
 		 * @return Optional holding the id if parameter with
 		 * according name has been inserted before or not.
 		 */
-		base::Optional<usize> getId(char name) const;
+		base::Optional<usize> getID(char name) const;
 
 		/**
 		 * A const accessor to the id of a parameter.
@@ -221,7 +221,7 @@ namespace clap {
 		 * @return Optional holding the id if parameter with
 		 * according name has been inserted before or not.
 		 */
-		base::Optional<usize> getId(const base::RawView& name) const;
+		base::Optional<usize> getID(const base::RawView& name) const;
 
 		usize                               id_counter = 1;
 		base::HashMap<char, usize>          short_names_to_id;

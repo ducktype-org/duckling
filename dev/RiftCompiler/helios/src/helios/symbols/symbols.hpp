@@ -9,10 +9,15 @@
 
 #include "../pst_ref.hpp"
 #include "../lookup_result.hpp"
+#include "../helios_errors.hpp"
+#include "../helios_result.hpp"
+#include <base/unique_pointer.hpp>
+#include <typesystem/higher/type_info.hpp>
+#include <helios/scopes/scopes.hpp>
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>
-#include <typesystem/type_info.hpp>
+#include <typesystem/higher/type_info.hpp>
 
 namespace compiler::helios {
 
@@ -50,7 +55,7 @@ namespace compiler::helios {
 	/**
 	 * @return name of the symbol
 	 */
-	base::StrId name(SymID);
+	base::StrID name(SymID);
 
 	/**
 	 * @return kind of the symbol
@@ -73,6 +78,7 @@ namespace compiler::helios {
 		 *
 		 * @TODO: is this needed? -- now you can create two symbols from the same pst element.
 		 * It might be better to derive scope structure directly from PST structure.
+		 * @TODO: scopes are already derived like this, it should now be deleted
 		 */
 		ScopeID scope;
 
@@ -100,7 +106,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Name to lookup
 		 */
-		base::StrId name;
+		base::StrID name;
 
 		/**
 		 * @brief Should wildcards be included in lookup
@@ -118,16 +124,18 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, const LookupResult&);
 
-
+	using QueryDealias_Result = errors::HResult<SymbolList, errors::Failed>;
 	/**
 	 * A query that returns an "absolute path" to the symbol without aliases.
 	 */
-	DECLARE_QUERY(QueryDealias, SymID, const SymbolList&);
+	DECLARE_QUERY(QueryDealias, SymID, const QueryDealias_Result&);
 
+	using PotentialParsingErrors = std::
+		variant<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr, errors::Failed>;
 	/**
 	 * Calculates a value of a constant.
 	 */
-	DECLARE_QUERY(QueryConstValueOf, SymID, i32);
+	DECLARE_QUERY(QueryConstValueOf, SymID, const errors::HResult<i32 COMMA errors::Failed>&)
 
 	/**
 	 * RPN - Reverse Polish Notation.
@@ -143,7 +151,7 @@ namespace compiler::helios {
 			/**
 			 * @brief A string representing the operator.
 			 */
-			base::StrId oper_id;
+			base::StrID oper_id;
 		};
 
 		/**
@@ -153,7 +161,7 @@ namespace compiler::helios {
 			/**
 			 * @brief A name to lookup when needed..
 			 */
-			base::StrId symbol_name;
+			base::StrID symbol_name;
 		};
 
 		/**
@@ -174,7 +182,7 @@ namespace compiler::helios {
 			 * @TODO: Replace it with TypeSystem's value.
 			 * The value representation.
 			 */
-			base::StrId num_id;
+			base::StrID num_id;
 		};
 
 		/**
@@ -231,6 +239,8 @@ namespace compiler::helios {
 			ScopeID expr_scope;
 		};
 
+		using RPNEvaluation_Result = errors::HResult<ExprElem, PotentialParsingErrors>;
+
 		/**
 		 * @brief RPN (postfix) expression with scope produced by makeRPN().
 		 */
@@ -273,7 +283,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Evaluates an operation `a (op) b`.
 		 */
-		ExprElem evalOperator(query::Context&, const KeyOf_evalOperator&);
+		RPNEvaluation_Result evalOperator(query::Context&, const KeyOf_evalOperator&);
 
 		struct KeyOf_parseValue {
 			/**
@@ -286,6 +296,8 @@ namespace compiler::helios {
 			ScopeID expr_scope;
 		};
 
+		using RPNParseValue_Result = errors::HResult<i32, PotentialParsingErrors>;
+
 		/**
 		 * @TODO: Change this from i32 to typesystem's value.
 		 * Parses a value from rpn::ExprElem.
@@ -293,22 +305,25 @@ namespace compiler::helios {
 		 * For example, if we pass here a rpn::NumLiteral(5), then it will return 5 or if we pass
 		 * rpn::Identifier([C]), then a value of a C will be returned (if it's a constant).
 		 */
-		i32 parseValue(query::Context&, const KeyOf_parseValue&);
+		RPNParseValue_Result parseValue(query::Context&, const KeyOf_parseValue&);
 
 		/**
 		 * @brief Evaluates RPN expression. Expects a single element to be
 		 * left and the end of the evaluation and returns it. Panics if otherwise.
 		 */
-		ExprElem evalExpr(query::Context&, const RPNExpr&);
+		RPNEvaluation_Result evalExpr(query::Context&, const RPNExpr&);
 	}
+
+	using ParseTypeFromExpr_Result = errors::HResult<tsh::TypeInfo, PotentialParsingErrors>;
+	using QueryType_Result         = errors::HResult<tsh::TypeInfo, errors::Failed>;
 
 	/**
 	 * @brief Query type of the symbol.
 	 */
-	DECLARE_QUERY(QueryTypeOfSymbol, SymID, ts::TypeInfo)
+	DECLARE_QUERY(QueryTypeOfSymbol, SymID, const QueryType_Result&);
 
 	/**
-	 * @brief Query ts::TypeInfo from a symbol definition (like class definition).
+	 * @brief Query tsh::TypeInfo from a symbol definition (like class definition).
 	 *
 	 * Example:
 	 * class T {
@@ -316,7 +331,7 @@ namespace compiler::helios {
 	 * }
 	 * - Then we can use this query QueryTypeFromDefinition(T).
 	 */
-	DECLARE_QUERY(QueryTypeFromDefinition, SymID, ts::TypeInfo);
+	DECLARE_QUERY(QueryTypeFromDefinition, SymID, const QueryType_Result&);
 
 	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.
@@ -325,7 +340,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Name of the class in the source code.
 		 */
-		base::StrId name;
+		base::StrID name;
 		/**
 		 * @brief Class'es declared methods.
 		 */
@@ -345,19 +360,21 @@ namespace compiler::helios {
 		/**
 		 * @brief Class'es base class.
 		 */
-		base::Optional<ts::TypeInfo> base;
+		base::Optional<tsh::TypeInfo> base;
 		/**
 		 * @brief Class'es implemented interfaces.
 		 */
-		std::vector<ts::TypeInfo> implements;
+		std::vector<tsh::TypeInfo> implements;
 	};
+
+	using QueryClassSymbolData_Result = errors::HResult<ClassSymbolData, errors::Failed>;
 
 	/**
 	 * @brief Query all the information about a class definition.
 	 * Panics if the given `SymID` is not a class.
 	 * More information on `ClassSymbolData` in it's definition.
 	 */
-	DECLARE_QUERY(QueryClassSymbolData, SymID, const ClassSymbolData&)
+	DECLARE_QUERY(QueryClassSymbolData, SymID, const QueryClassSymbolData_Result&)
 
 	namespace code {
 		struct Expr;
@@ -367,5 +384,5 @@ namespace compiler::helios {
 	 * @brief Return Expr tree of HOUT of a expression assigned to a constant.
 	 * @note This query is temporary and is used for testing only.
 	 */
-	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, base::borrow_ptr<const code::Expr>);
+	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, errors::HResult<const base::unique_ptr<code::Expr> & COMMA errors::Failed>);
 }

@@ -16,7 +16,7 @@ namespace base {
 	/**
 	 * @brief Non owning immutable byte array view
 	 */
-	class RawView {
+	class RawView final {
 	private:
 		friend class OwningView;
 
@@ -57,7 +57,7 @@ namespace base {
 	/**
 	 * @brief Non owning mutable byte array view
 	 */
-	class ModRawView {
+	class ModRawView final {
 	private:
 		byte* begin    = nullptr;
 		usize arr_size = 0;
@@ -82,15 +82,15 @@ namespace base {
 		}
 	};
 
-	class StrId;
+	class StrID;
 
 	/**
 	 * @brief Owning byte array view
 	 */
-	class OwningView {
+	class OwningView final {
 		byte* begin{ nullptr };
 		usize size{ 0 };
-		friend class base::StrId;
+		friend class base::StrID;
 
 	public:
 		OwningView() = default;
@@ -133,7 +133,7 @@ namespace base {
 // std::hash functor for RawView:
 namespace std {
 	template<>
-	struct hash<base::RawView> {
+	struct hash<base::RawView> final {
 		usize operator()(const base::RawView& k) const {
 			return std::hash<std::string_view>()(k.stringView());
 		}

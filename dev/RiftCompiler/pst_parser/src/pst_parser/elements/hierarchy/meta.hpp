@@ -154,7 +154,7 @@ namespace pst {
 	class_name(const dia::SourcePosition& position): Stmt(StmtKind::class_name, position) {}
 
 	struct ClassContext {
-		base::StrId                                 name;
+		base::StrID                                 name;
 		std::vector<base::c_borrow_ptr<tpc::Token>> specifiers;
 	};
 

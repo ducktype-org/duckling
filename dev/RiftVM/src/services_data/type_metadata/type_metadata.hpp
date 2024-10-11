@@ -7,13 +7,19 @@ namespace vm {
 	template<class... DynamicData>
 	class DataManagerDef;
 
+	/**
+	 * @brief Holds metadata about all types in the VCPU.
+	 *
+	 * This class is used to store and access all types
+	 * that are used in the VCPU.
+	 */
 	class TypeMetadata {
 	private:
 		enum class TypeMetadataState { AddingTypes, Finalized };
 
-		base::StableVector<Type, TypeId> types;
-		std::vector<TypeId>              types_ids;
-		base::Map<base::StrId, TypeId>   names_to_type;
+		base::StableVector<Type, TypeID> types;
+		std::vector<TypeID>              types_ids;
+		base::Map<base::StrID, TypeID>   names_to_type;
 
 		TypeMetadataState state;
 
@@ -22,14 +28,21 @@ namespace vm {
 	public:
 		TypeRef addType(Type&& type);
 
+		/**
+		 * @brief Finalize adding types.
+		 */
 		void finalize();
 
-		TypeCRef                 getType(TypeId id) const;
-		base::Optional<TypeCRef> getTypeSafe(TypeId id) const;
+		[[nodiscard]]
+		TypeCRef getType(TypeID id) const;
+
+		[[nodiscard]]
+		base::Optional<TypeCRef> getTypeSafe(TypeID id) const;
 
 		// @TODO: This function is currently used by parser, but
 		// should be deleted in the future
-		base::Optional<TypeCRef> getTypeByName(base::StrId name) const;
+		[[nodiscard]]
+		base::Optional<TypeCRef> getTypeByName(base::StrID name) const;
 
 		template<class... DynamicData>
 		friend class DataManagerDef;

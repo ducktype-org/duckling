@@ -11,6 +11,10 @@
 
 namespace vm {
 
+	/**
+	 * @brief Wrapper around pointer to the memory.
+	 * @note it will be used for future verification of pointer usage
+	 */
 	class Block {
 	protected:
 		const u64 start = 0;
@@ -24,9 +28,9 @@ namespace vm {
 		// appropriate allocator destroys the block.
 
 	public:
-		const BlockId block_id;
+		const BlockID block_id;
 
-		Block(BlockId block_id_, TypeCRef type, base::ModRawView data):
+		Block(BlockID block_id_, TypeCRef type, base::ModRawView data):
 			  end(type->getSize()),
 			  element_type(type),
 			  data(data.getBegin()),
@@ -34,7 +38,7 @@ namespace vm {
 			RIFT_ASSERT(type->getSize() == data.size(), "type size does not equal data size");
 		}
 
-		Block(BlockId block_id_, TypeCRef type, u64 length, base::ModRawView data):
+		Block(BlockID block_id_, TypeCRef type, u64 length, base::ModRawView data):
 			  end(length * type->getSize()),
 			  arr_length(length),
 			  element_type(type),

@@ -6,18 +6,23 @@
 namespace vm {
 
 	// @TODO: change to STRONG_TYPEDEF_IT when available
-	STRONG_TYPEDEF_INT_DIMENSIONAL(BlockId, u64);
+	STRONG_TYPEDEF_INT_DIMENSIONAL(BlockID, u64);
 
+	/**
+	 * @brief Basic pointer used in the VM.
+	 * Contains the block ID and the offset in the block.
+	 * @todo change to more performant version with block*, offset
+	 */
 	class Pointer {
 	private:
-		BlockId block;
+		BlockID block;
 		u64     offset;
 
 	public:
-		Pointer(BlockId block_, u64 offset_): block(block_), offset(offset_) {}
+		Pointer(BlockID block_, u64 offset_): block(block_), offset(offset_) {}
 
 		[[nodiscard]]
-		inline BlockId getBlock() const {
+		inline BlockID getBlock() const {
 			return block;
 		}
 

@@ -4,33 +4,33 @@
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
 
-class SimpleIdMapsTest;
+class SimpleIDMapsTest;
 
 class A {
 private:
 	i32               x;
 	usize             count{ 0 };
-	SimpleIdMapsTest* test;
+	SimpleIDMapsTest* test;
 
 public:
-	A(i32 x, SimpleIdMapsTest* test): x(x), test(test) {}
+	A(i32 x, SimpleIDMapsTest* test): x(x), test(test) {}
 
 	A(const A& other);
 
 	A(A&& other) noexcept: x(other.x), count(other.count), test(other.test) {}
 };
 
-class SimpleIdMapsTest: public tester::TestSuite {
+class SimpleIDMapsTest: public tester::TestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS SimpleIdMapsTest
+#define TESTER_CLASS SimpleIDMapsTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR("Simple FileSystem Test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basicMapTest);
-		TESTER_ADD_TEST(strIdTest);
+		TESTER_ADD_TEST(strIDTest);
 	}
 
-	~SimpleIdMapsTest() override = default;
+	~SimpleIDMapsTest() override = default;
 
 	friend A;
 
@@ -65,10 +65,10 @@ private:
 		return base::RawView({ reinterpret_cast<const byte*>(view.data()), view.size() });
 	}
 
-	void strIdTest() {
-		base::StrId id1(make_view("abc"));
-		base::StrId id2(make_view("abc"));
-		base::StrId id3(make_view("ab"));
+	void strIDTest() {
+		base::StrID id1(make_view("abc"));
+		base::StrID id2(make_view("abc"));
+		base::StrID id3(make_view("ab"));
 
 		assertTrue(id1 == id2, "== error");
 		assertTrue(id2 != id3, "!= error");

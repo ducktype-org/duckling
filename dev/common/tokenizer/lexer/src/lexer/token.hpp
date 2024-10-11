@@ -106,7 +106,7 @@ namespace lexer {
 		[[nodiscard]]
 		BracketType getBracketType() const;
 		[[nodiscard]]
-		base::StrId getValue() const;
+		base::StrID getValue() const;
 		[[nodiscard]]
 		std::string_view getStrValue() const;
 		[[nodiscard]]
@@ -153,7 +153,7 @@ namespace lexer {
 		[[nodiscard]] bool is(Keyword) const;
 
 		[[nodiscard]]
-		bool isStr(base::StrId str) const;
+		bool isStr(base::StrID str) const;
 
 		[[nodiscard]]
 		dia::SourcePosition getPosition() const;
@@ -162,7 +162,7 @@ namespace lexer {
 		static Token makeError(const dia::SourcePosition&);
 
 		Type                         type = Type::Empty;
-		base::StrId                  str_id;
+		base::StrID                  str_id;
 		Tokens                       recursive;
 		std::shared_ptr<const Token> sentinel_begin;
 		std::shared_ptr<const Token> sentinel_end;
@@ -173,7 +173,7 @@ namespace lexer {
 	/**
 	 * @brief A basic wrapper for tokenization result
 	 */
-	struct TokenData {
+	struct TokenData final {
 		Tokens tokens;
 		Token  bof_sentinel;
 		Token  eof_sentinel;

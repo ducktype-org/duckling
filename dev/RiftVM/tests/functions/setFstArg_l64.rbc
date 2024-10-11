@@ -1,0 +1,34 @@
+# Tests setFstArg_l64 opcode.
+# input = n
+# output = n
+
+function check {
+	arg_size: 8;
+	next_arg_size: 0;
+	ret_size: 0;
+	local_size: 8;
+
+	code: {
+        getFstArg_l64    		0;
+        output_l64          0;
+		ret_l64 		    0;
+	}
+}
+
+
+function main {
+	arg_size: 0;
+	next_arg_size: 8;
+	ret_size: 0;
+
+	local_size: 8;
+
+	code: {
+        input_l64           0;
+        setFstArg_l64       0;
+		call_func          	0;
+
+		ret_imm         0;
+	}
+
+}

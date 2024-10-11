@@ -1,0 +1,60 @@
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_impl.hpp>
+#include <tester/tester.hpp>
+#include <typesystem/higher/all.hpp>
+
+using namespace tsh;
+
+class HigherTypeSystemErrorTest final: public tester::TestSuite {
+#undef TESTER_CLASS
+#define TESTER_CLASS HigherTypeSystemErrorTest
+
+public:
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(integral_size_error_test);
+		TESTER_ADD_TEST(float_size_error_test);
+	}
+
+private:
+	void integral_size_error_test() {
+		query::detail::ContextType::logger.clear();
+		assertTrue(query::detail::ContextType::logger.good(), "Test should begin without errors.");
+		query::entryPoint<QueryIntegralType>({ 42 });
+
+		std::stringstream dumped_logs;
+		assertTrue(
+			query::detail::ContextType::logger.bad(),
+			"Requesting bad integral size should result in an error."
+		);
+		query::detail::ContextType::logger.dumpLog(false, dumped_logs);
+		const auto dumped_logs_str = dumped_logs.str();
+		assertTrue(
+			dumped_logs_str.find("Invalid size of integral type")
+				!= decltype(dumped_logs_str)::npos,
+			"Logs should contain mention of invalid integral size."
+		);
+	}
+
+	void float_size_error_test() {
+		query::detail::ContextType::logger.clear();
+		assertTrue(query::detail::ContextType::logger.good(), "Test should begin without errors.");
+		query::entryPoint<QueryFloatType>(42);
+
+		std::stringstream dumped_logs;
+		assertTrue(
+			query::detail::ContextType::logger.bad(),
+			"Requesting bad float size should result in an error."
+		);
+		query::detail::ContextType::logger.dumpLog(false, dumped_logs);
+		const auto dumped_logs_str = dumped_logs.str();
+		assertTrue(
+			dumped_logs_str.find("Invalid size of float type") != decltype(dumped_logs_str)::npos,
+			"Logs should contain mention of invalid float size."
+		);
+	}
+
+public:
+	~HigherTypeSystemErrorTest() override = default;
+};
+
+TESTER_COMMON_MAIN("/RiftCompiler/typesystem/tests/")

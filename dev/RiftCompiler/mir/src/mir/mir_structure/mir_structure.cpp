@@ -1,5 +1,6 @@
 #include "mir_structure.hpp"
 #include <base/variant.hpp>
+#include <helios/symbols/symbols.hpp>
 #include <sstream>
 
 namespace compiler::mir {
@@ -17,8 +18,42 @@ namespace compiler::mir {
 		}
 	}
 
+	std::vector<BlockID> getTerminatorSuccessors(const Instruction& terminator) {
+		using enum Operation;
+		switch (terminator.operation) {
+		case Jump:
+			return { terminator.arguments.at(0).get<BlockID>() };
+
+		case Branch:
+			return { terminator.arguments.at(1).get<BlockID>(),
+				     terminator.arguments.at(2).get<BlockID>() };
+
+		case ReturnVoid:
+		case ReturnValue:
+		case FunctionEnd:
+			return {};
+
+		default:
+			RIFT_PANIC("Not a terminator instruction");
+		}
+	}
+
+	helios::ScopeID Block::beginScope() const {
+		if (instructions.empty())
+			return terminator.scope;
+		else
+			return instructions.at(0).scope;
+	}
+
 	void Function::debugPrint(std::ostream& output) const {
-		output << "Function " << name.strView() << ": TODO -> TODO {\n";
+		output << "Function " << name.strView() << ": TODO -> TODO\n";
+
+		for (auto& local: this->local_list) {
+			output << "    ";
+			local->debugPrint(output, true);
+			output << "\n";
+		}
+		output << "{\n";
 
 		for (const auto& block: blocks | std::views::reverse) {
 			output << "  block " << u64(block.id);
@@ -40,12 +75,13 @@ namespace compiler::mir {
 		// save flags to restore
 		auto output_flags = output.flags();
 
+		output << std::left << std::setw(12);
+		std::stringstream output_value;
 		if (this->output.has_value()) {
-			this->output.value()->debugPrint(output);
-			output << " := ";
-		} else {
-			output << "    ";
+			this->output.value()->debugPrint(output_value);
+			output_value << " :=";
 		}
+		output << output_value.str() << " ";
 
 		output << std::left << std::setw(15);
 		output << base::enumToStr(operation).strView() << "  ";
@@ -62,10 +98,12 @@ namespace compiler::mir {
 		output << std::left << std::setw(15);
 		output << args.str() << "  ";
 
+		separator = "";
 		output << "Flags[";
 		for ([[maybe_unused]] const auto& flag: flags) {
-			output << "Flag todo"
-				   << ", ";
+			output << separator;
+			flag.debugPrint(output);
+			separator = ", ";
 		}
 		output << "], scope:" << scope.customPerfectHash();
 
@@ -73,7 +111,17 @@ namespace compiler::mir {
 		output.flags(output_flags);
 	}
 
-	void MirLocal::debugPrint(std::ostream& output) const { output << "Local(" << u64(id) << ")"; }
+	void MirLocal::debugPrint(std::ostream& output, bool detailed) const {
+		output << "Local(" << u64(id) << ")";
+		if (detailed) {
+			output << ": Helios Name: " << name(this->helios_id).strView();
+			output << ", Type: ";
+			output << this->type.getType().toString();
+			output << ", Lifetime Scope: " << this->lifetime_scope.customPerfectHash();
+		}
+	}
+
+	base::StrID MirLocal::getName() const { return name(this->helios_id); }
 
 	void MirLocation::debugPrint(std::ostream& output) const {
 		variant_match(this->value) {
@@ -82,5 +130,21 @@ namespace compiler::mir {
 			variant_case(BlockID, block) { output << "Block(" << u64(block) << ")"; }
 			variant_default { RIFT_PANIC("Unexpected MirLocal alternative in mir debugPrint"); }
 		}
+	}
+
+	void OperationFlag::debugPrint(std::ostream& output) const {
+		switch (flag) {
+		case Flag::Construct:
+			output << "Construct";
+			break;
+		case Flag::Destruct:
+			output << "Destruct";
+			break;
+		case Flag::Move:
+			output << "Move";
+			break;
+		}
+		output << " ";
+		local->debugPrint(output);
 	}
 }

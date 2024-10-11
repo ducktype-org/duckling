@@ -16,23 +16,30 @@
 #include "hout/hout.hpp"
 
 namespace compiler::helios {
-	// @FUTURE: paraph we will need to add more granularity to HOUT generation for efficient
+	// @FUTURE: perhaps we will need to add more granularity to HOUT generation for efficient
 	// incremental compilation
+
+	/**
+	 * @brief Debug function to print scope and its parents IDs.
+	 * @note: not used right now
+	 * @param scope
+	 */
+	void debugPrintScopeAndParents(ScopeID scope);
 
 	/**
 	 * @brief Query FULL HOUTUnit of single module
 	 */
-	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleId, const HOUTUnit&)
+	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, const HOUTUnit&)
 
 	/**
 	 * @brief Query HOUTUnit of module and all its submodules recursively
 	 */
-	DECLARE_QUERY(QueryModuleHOUTRecursively, frontend::ModuleId, std::vector<HOUTUnit>)
+	DECLARE_QUERY(QueryModuleHOUTRecursively, frontend::ModuleID, std::vector<HOUTUnit>)
 
 	/**
 	 * @brief Debug/testing query for extracting top-level functions and constants from module
 	 */
-	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleId, HOUTUnit)
+	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleID, HOUTUnit)
 
 	/**
 	 * @brief Query code of a function.

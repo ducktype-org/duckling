@@ -1,10 +1,10 @@
 #include "preamble.hpp"
 
 namespace pst {
-	std::vector<base::StrId> DottedName::getNames() const {
-		std::vector<base::StrId> out;
+	std::vector<base::StrID> DottedName::getNames() const {
+		std::vector<base::StrID> out;
 		out.reserve(names.size());
-		for (auto name: names) out.push_back(base::StrId(name));
+		for (auto name: names) out.push_back(base::StrID(name));
 		return out;
 	}
 

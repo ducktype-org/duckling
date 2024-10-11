@@ -8,9 +8,12 @@
 #pragma once
 
 #include "scope_symbol_id.hpp"
+#include "helios_errors.hpp"
+#include "helios_result.hpp"
 
 #include <vector>
 #include <query_framework/query_int.hpp>
+#include <base/variant.hpp>
 
 namespace compiler::helios {
 
@@ -25,7 +28,7 @@ namespace compiler::helios {
 	 *
 	 * Intuitively LookupResult is a result of a single "." operator.
 	 */
-	struct LookupResult {
+	struct LookupResult final {
 		/**
 		 * Direct symbols found.
 		 */
@@ -55,12 +58,12 @@ namespace compiler::helios {
 		 * @return A SymbolList representing a path to the symbol.
 		 */
 		[[nodiscard]]
-		SymbolList getAsSingle() const;
-		void       insert(LookupResult other);
+		errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> getAsSingle() const;
+		void insert(LookupResult other);
 
 		/**
 		 * Turns LookupResult into NestedResult referencing node.
-		 * @param node SymId, that the NestedResult represents.
+		 * @param node SymID, that the NestedResult represents.
 		 * @return New NestedResult from self with node.
 		 */
 		[[nodiscard]]
@@ -79,9 +82,11 @@ namespace compiler::helios {
 	 * behind some alias. "node" represent the alias, while "inner" represent
 	 * lookup result behind the alias.
 	 */
-	struct NestedResult {
+	struct NestedResult final {
 		SymID        node;  ///< node should always be alias-like of using-like thing
 		LookupResult inner;
+
+		NestedResult(SymID node, LookupResult inner);
 	};
 
 	// @TODO: do we want ChainLookupResult for stuff like aliases, usings etc?
