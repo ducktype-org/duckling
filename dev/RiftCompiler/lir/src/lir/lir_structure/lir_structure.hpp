@@ -4,6 +4,12 @@
 #include <base/stable_container.hpp>
 #include <base/stringifyable_enum.hpp>
 
+namespace compiler::mir {
+	struct MirLocal;
+}
+
+
+
 // clang-format off
 
 // @TODO: two enums with the same name included in one cpp lead to compiler error.
@@ -19,7 +25,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, LirOperation,
 	 * @todo  Some decisions here to be made about operations like that.
      * Perhaps we want more generic code for MIR, so algorithms are simpler.
 	 * There could be single operation for all Add, Sub, etc, and single one for all
-	 * comparisons. 
+	 * comparisons.
 	 */
 	IntegerAdd,
 	
@@ -50,7 +56,7 @@ namespace compiler::lir {
 	 * description of a function. Other uses should use LocalRef to reference the variable
 	 * description.
 	 */
-	struct MirLocal final {
+	struct LirLocal final {
 		/**
 		 * @brief HELIOS id of the variable.
 		 * @note This is a temporary solution.
@@ -61,9 +67,11 @@ namespace compiler::lir {
 		tsl::TypeLayout type;
 
 	private:
-		MirLocal(helios::SymID helios_id, tsl::TypeLayout type):
+		LirLocal(helios::SymID helios_id, tsl::TypeLayout type):
 			helios_id(helios_id),
 			type(std::move(type)) {}
+
+		static LirLocal fromMir(query::Context& ctx, const mir::MirLocal& mir_local);
 
 		friend struct Function;
 		friend LocalRef;
