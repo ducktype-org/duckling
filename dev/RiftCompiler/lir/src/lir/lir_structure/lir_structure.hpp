@@ -5,7 +5,11 @@
 #include <base/stringifyable_enum.hpp>
 
 // clang-format off
-MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
+
+// @TODO: two enums with the same name included in one cpp lead to compiler error.
+// fix it
+
+MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, LirOperation,
 	Uninitialized, //< placeholder for uninitialized value, should not be in LIR output
 
 	Assign, //< simple byte by byte assignment
@@ -66,7 +70,7 @@ namespace compiler::lir {
 	};
 
 	struct Instruction final {
-		Operation operation = Operation::Uninitialized;
+		LirOperation operation = LirOperation::Uninitialized;
 		base::Optional<LocalRef> output;
 		std::vector<MirLocation> arguments;
 
@@ -77,7 +81,7 @@ namespace compiler::lir {
 		Instruction(Instruction&&)      = default;
 
 		Instruction(
-			Operation                  operation,
+			LirOperation                  operation,
 			base::Optional<LocalRef>   output,
 			std::vector<MirLocation>   arguments
 		):

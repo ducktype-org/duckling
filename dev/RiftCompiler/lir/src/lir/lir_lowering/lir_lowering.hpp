@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mir/mir_structure/mir_structure.hpp>
+#include "../lir_structure/lir_structure.hpp"
 
 namespace compiler::lir {
 	struct KeyOf_LowerToLirFunction {
@@ -15,4 +16,6 @@ namespace compiler::lir {
 			// this still does not work, but the compiler errors are helpful now
 		}
 	};
+
+	DECLARE_QUERY(LowerToLirFunction, KeyOf_LowerToLirFunction, const Function&);
 }
