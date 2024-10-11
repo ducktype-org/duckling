@@ -268,6 +268,7 @@ namespace compiler::mir {
 			BlockID                      entry_block
 		);
 
+		bool operator==(const Function& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 	};
