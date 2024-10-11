@@ -73,29 +73,33 @@ namespace pst {
 		class PrefixOperator: public ExprElement {
 		protected:
 			ParserRef<ExprElement> expr;
-			base::StrId            type;
+			base::StrID            type;
 
 		public:
 			explicit PrefixOperator(
-				const dia::SourcePosition& pos, base::StrId type, i64 precedence
+				const dia::SourcePosition& pos, base::StrID type, i64 precedence
 			):
 				  ExprElement(pos, precedence),
 				  type(type) {}
+
+			~PrefixOperator() override = default;
 
 			std::string elementType() const override { return type.str() + " Prefix Operator"; }
 		};
 
 		class SuffixOperator: public ExprElement {
 		protected:
-			base::StrId            type;
+			base::StrID            type;
 			ParserRef<ExprElement> expr;
 
 		public:
 			explicit SuffixOperator(
-				const dia::SourcePosition& pos, base::StrId type, i64 precedence
+				const dia::SourcePosition& pos, base::StrID type, i64 precedence
 			):
 				  ExprElement(pos, precedence),
 				  type(type) {}
+
+			~SuffixOperator() override = default;
 
 			std::string elementType() const override { return type.str() + " Suffix Operator"; }
 		};
@@ -103,26 +107,30 @@ namespace pst {
 		class BinaryOperator: public ExprElement {
 		protected:
 			ParserRef<ExprElement> left;
-			base::StrId            type;
+			base::StrID            type;
 			ParserRef<ExprElement> right;
 
 		public:
 			explicit BinaryOperator(
-				const dia::SourcePosition& pos, base::StrId type, i64 precedence
+				const dia::SourcePosition& pos, base::StrID type, i64 precedence
 			):
 				  ExprElement(pos, precedence),
 				  type(type) {}
 
+			~BinaryOperator() override = default;
+
 			std::string elementType() const override { return type.str() + " Infix Operator"; }
 		};
 
-		class Value: public ExprElement {
-			base::StrId number;
+		class Value final: public ExprElement {
+			base::StrID number;
 
 		public:
 			explicit Value(const dia::SourcePosition& position): ExprElement(position, 0) {}
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			~Value() override = default;
 
 			std::string elementType() const override { return "Value Expr"; }
 		};
@@ -141,11 +149,13 @@ namespace pst {
 			TemplateSpecifier(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+			
+			~TemplateSpecifier() override = default;
 
 			std::string elementType() const override { return "Template Specifier Expression"; }
 		};
 
-		class IdentifierLiteral: public ExprElement {
+		class IdentifierLiteral final: public ExprElement {
 			tpc::Identifier                        name;
 			base::Optional<ParserRef<ExprElement>> template_specifier;
 
@@ -154,11 +164,13 @@ namespace pst {
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
+			~IdentifierLiteral() override = default;
+
 			std::string elementType() const override { return "Identifier Expression"; }
 		};
 
-		class Access: public ExprElement {
-			base::StrId                            type;  ///< either `.` or `.?`
+		class Access final: public ExprElement {
+			base::StrID                            type;  ///< either `.` or `.?`
 			tpc::Identifier                        name;
 			base::Optional<ParserRef<ExprElement>> template_specifier;
 
@@ -166,6 +178,8 @@ namespace pst {
 			Access(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			~Access() override = default;
 
 			std::string elementType() const override { return "Access Expression"; }
 		};
@@ -175,7 +189,7 @@ namespace pst {
 		 *
 		 * @note Currently an empty call/subscript results in an error.
 		 */
-		class Call: public ExprElement {
+		class Call final: public ExprElement {
 			lexer::Token::BracketType type;  ///< either Round or Square
 			ParserRef<ExprElement>    args;
 
@@ -184,13 +198,15 @@ namespace pst {
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
+			~Call() override = default;
+
 			std::string elementType() const override { return "Call Expression"; }
 		};
 
 		/**
 		 * @brief Combined Access / Call / Subscirpt.
 		 */
-		class ChainExpr: public ExprElement {
+		class ChainExpr final: public ExprElement {
 			using Lower = Literal;
 
 			ParserRef<ExprElement>              literal;
@@ -206,10 +222,12 @@ namespace pst {
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
+			~ChainExpr() override = default;
+
 			std::string elementType() const override { return "Chain Expression"; }
 		};
 
-		class RoundExpr: public ExprElement {
+		class RoundExpr final: public ExprElement {
 			ParserRef<ExprElement> expr;
 
 		public:
@@ -217,10 +235,12 @@ namespace pst {
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
+			~RoundExpr() override = default;
+
 			std::string elementType() const override { return "Round Group Expression"; }
 		};
 
-		class BlockExpr: public ExprElement {
+		class BlockExpr final: public ExprElement {
 			ParserRef<CodeBlock> block;
 
 		public:
@@ -228,21 +248,25 @@ namespace pst {
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
+			~BlockExpr() override = default;
+
 			std::string elementType() const override { return "Block Expression"; }
 		};
 
-		class GeneralPrefix: public PrefixOperator {
+		class GeneralPrefix final: public PrefixOperator {
 			using Lower = ChainExpr;
 			using Self  = GeneralPrefix;
 
 		public:
-			explicit GeneralPrefix(const dia::SourcePosition& pos, base::StrId op):
+			explicit GeneralPrefix(const dia::SourcePosition& pos, base::StrID op):
 				  PrefixOperator(pos, op, 400) {}
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			~GeneralPrefix() override = default;
 		};
 
-		class GeneralSuffix: public SuffixOperator {
+		class GeneralSuffix final: public SuffixOperator {
 			using Lower = GeneralPrefix;
 			using Self  = GeneralSuffix;
 
@@ -250,13 +274,15 @@ namespace pst {
 				parseRecursive(RiftParserState& state, u64 length, u64 iter);
 
 		public:
-			explicit GeneralSuffix(const dia::SourcePosition& pos, base::StrId op):
+			explicit GeneralSuffix(const dia::SourcePosition& pos, base::StrID op):
 				  SuffixOperator(pos, op, 450) {}
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			~GeneralSuffix() override = default;
 		};
 
-		class GeneralBinary: public BinaryOperator {
+		class GeneralBinary final: public BinaryOperator {
 			using Lower = GeneralSuffix;
 			using Self  = GeneralBinary;
 
@@ -313,9 +339,11 @@ namespace pst {
 				parseRecursive(RiftParserState& state, const BuilderExpr& expr);
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			~GeneralBinary() override = default;
 		};
 
-		class ComparisonChain: public ExprElement {
+		class ComparisonChain final: public ExprElement {
 			using Lower = GeneralBinary;
 
 			std::vector<ParserRef<ExprElement>> sub_expr;
@@ -329,9 +357,11 @@ namespace pst {
 			std::string elementType() const override { return "Comparison Chain"; }
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			~ComparisonChain() override = default;
 		};
 
-		class LogicNot: public PrefixOperator {
+		class LogicNot final: public PrefixOperator {
 			using Lower = ComparisonChain;
 			using Self  = LogicNot;
 
@@ -340,9 +370,11 @@ namespace pst {
 				  PrefixOperator(position, rift_def::keywordToStr(Keyword::Not), 730) {}
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			~LogicNot() override = default;
 		};
 
-		class LogicAnd: public BinaryOperator {
+		class LogicAnd final: public BinaryOperator {
 			using Lower = LogicNot;
 			using Self  = LogicAnd;
 
@@ -351,9 +383,11 @@ namespace pst {
 				  BinaryOperator(position, rift_def::keywordToStr(rift_def::Keyword::And), 730) {}
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			~LogicAnd() override = default;
 		};
 
-		class LogicOr: public BinaryOperator {
+		class LogicOr final: public BinaryOperator {
 			using Lower = LogicAnd;
 			using Self  = LogicOr;
 
@@ -362,9 +396,11 @@ namespace pst {
 				  BinaryOperator(position, rift_def::keywordToStr(rift_def::Keyword::Or), 760) {}
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			~LogicOr() override = default;
 		};
 
-		class Ternary: public ExprElement {
+		class Ternary final: public ExprElement {
 			using Lower = LogicOr;
 
 			ParserRef<ExprElement> condition;
@@ -377,9 +413,11 @@ namespace pst {
 			std::string elementType() const override { return "Ternary Expr"; }
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			~Ternary() override = default;
 		};
 
-		class Comma: public ExprElement {
+		class Comma final: public ExprElement {
 			using Lower = Ternary;
 
 			std::vector<ParserRef<ExprElement>> expressions;
@@ -390,13 +428,15 @@ namespace pst {
 			std::string elementType() const override { return "Comma Expr"; }
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			~Comma() override = default;
 		};
 
-		class Assignment: public ExprElement {
+		class Assignment final: public ExprElement {
 			using Lower = Comma;
 
 			ParserRef<ExprElement> variables;
-			base::StrId            type;
+			base::StrID            type;
 			ParserRef<ExprElement> value;
 
 		public:
@@ -406,6 +446,8 @@ namespace pst {
 			std::string elementType() const override { return "Assignment Expr"; }
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+
+			~Assignment() override = default;
 		};
 	}
 
@@ -427,5 +469,7 @@ namespace pst {
 		void dprint(std::ostream& out) const override { out << "<NEWEXPRSTMT UNIMPLEMENTED>"; }
 
 		void acceptVisitor(PstStmtVisitor&) const override { RIFT_PANIC("unimplemented"); }
+
+		~NewExprStmt() override = default;
 	};
 }
