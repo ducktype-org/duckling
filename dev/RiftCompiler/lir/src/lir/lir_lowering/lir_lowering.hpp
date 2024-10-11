@@ -9,7 +9,7 @@ namespace compiler::lir {
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
 
-		bool operator==(const KeyOf_LowerToMirFunction& oth) const {
+		bool operator==(const KeyOf_LowerToLirFunction& oth) const {
 			return function == oth.function;
 		}
 	};
