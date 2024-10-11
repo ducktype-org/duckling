@@ -315,9 +315,6 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 		};
 
-		/**
-		 * @brief Unimplemented place for chained comparison operators.
-		 */
 		class ComparisonChain: public ExprElement {
 			using Lower = GeneralBinary;
 
@@ -328,6 +325,8 @@ namespace pst {
 
 		public:
 			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600){};
+
+			std::string elementType() const override { return "Comparison Chain"; }
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 		};

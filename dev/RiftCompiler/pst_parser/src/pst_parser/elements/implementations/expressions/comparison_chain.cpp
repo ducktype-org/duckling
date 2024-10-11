@@ -23,7 +23,7 @@ namespace pst::expr {
 			out->operators.push_back(state[0].asOperator());
 			state.parse(out).eatOne();
 
-			length -= fwd - 1;
+			length -= fwd + 1;
 			fwd = skipToOp(state, 0, length);
 		}
 
