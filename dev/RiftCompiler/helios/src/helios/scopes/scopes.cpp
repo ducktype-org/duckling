@@ -12,7 +12,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 
-#include <pst_parser/rift_parser_state.hpp>
+#include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
 #include "../lookup_result.hpp"
@@ -34,7 +34,7 @@ namespace compiler::helios {
 		 * @brief PST element for which the scope was created.
 		 * Empty for root scope.
 		 */
-		base::Optional<PstRef<pst::RiftElement>> related_pst_element;
+		base::Optional<PstRef<pst::LangElement>> related_pst_element;
 
 		/**
 		 * @brief Module, the scope was defined in
@@ -68,7 +68,7 @@ namespace compiler::helios {
 		if (ref->is_root) {
 			return {};
 		} else {
-			RIFT_ASSERT(ref->parent.has_value(), "Non root scope has no parent.");
+			CORE_ASSERT(ref->parent.has_value(), "Non root scope has no parent.");
 			return ref->parent.value();
 		}
 	}
@@ -128,7 +128,7 @@ namespace compiler::helios {
 			// it is technically not needed anymore, but it left as an additional
 			// layer of bug detection.
 			if (parent_map.contains(element.base_element->getID())) {
-				RIFT_ASSERT(
+				CORE_ASSERT(
 					parent_map.at(element.base_element->getID()) == parent,
 					"Parent mismatch in QueryPrimaryCodeScopeFor"
 				);
@@ -180,7 +180,7 @@ namespace compiler::helios {
 
 			template<class... Args>
 			void output(Args&&... args) {
-				RIFT_ASSERT(this->out.empty(), "Output already set");
+				CORE_ASSERT(this->out.empty(), "Output already set");
 				this->out.emplace(std::forward<Args>(args)...);
 			}
 
@@ -224,7 +224,7 @@ namespace compiler::helios {
 			// @TODO: expand macros?
 
 			if (not key.ref->related_pst_element.has_value()) {
-				RIFT_ASSERT(key.ref->is_root, "Non root scope without PST element!");
+				CORE_ASSERT(key.ref->is_root, "Non root scope without PST element!");
 				return {};
 			}
 			auto base_element = key.ref->related_pst_element.value();
@@ -253,7 +253,7 @@ namespace compiler::helios {
 				// values instead of strings. Make the enum stringifiable.
 				return std::vector<SymID>{};
 			} else {
-				RIFT_PANIC("Query symbols from scope of non-statement, non-codeblock and non-expr");
+				CORE_PANIC("Query symbols from scope of non-statement, non-codeblock and non-expr");
 			}
 		}
 

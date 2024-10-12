@@ -17,7 +17,7 @@ namespace pst {
 		RoundExprStartError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<RoundGroupExpr> RoundGroupExpr::parse(RiftParserState& state) {
+	ParserRef<RoundGroupExpr> RoundGroupExpr::parse(LangParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<RoundGroupExpr>(position);
 

@@ -17,7 +17,7 @@ namespace pst {
 		ConstTypeEndError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<Const> Const::parse(RiftParserState& state) {
+	ParserRef<Const> Const::parse(LangParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Const>(position);
 

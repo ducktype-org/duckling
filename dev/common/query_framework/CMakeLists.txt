@@ -10,5 +10,5 @@ make_module(QueryFramework USES Base Diagnostic Tester)
 
 add_example(query_example examples/example.cpp USES QueryFramework)
 
-rift_add_test(common query_test_simple tests/test.cpp
+duck_add_test(common query_test_simple tests/test.cpp
 	USES QueryFramework)

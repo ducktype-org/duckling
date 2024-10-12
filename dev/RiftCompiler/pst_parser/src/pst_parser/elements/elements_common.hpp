@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../rift_parser_state.hpp"
+#include "../lang_parser_state.hpp"
 
 namespace pst::detail {
 
@@ -13,52 +13,52 @@ namespace pst::detail {
 	public:
 		Conditions() = delete;
 
-		static bool isComma(const RiftParserState& state, i64 fwd) {
-			return state[fwd].is(rift_def::Special::Comma);
+		static bool isComma(const LangParserState& state, i64 fwd) {
+			return state[fwd].is(lang_def::Special::Comma);
 		}
 
-		static bool isSemicolon(const RiftParserState& state, i64 fwd) {
-			return state[fwd].is(rift_def::Special::Semicolon);
+		static bool isSemicolon(const LangParserState& state, i64 fwd) {
+			return state[fwd].is(lang_def::Special::Semicolon);
 		}
 
-		static bool isSentinel(const RiftParserState& state, i64 fwd) {
+		static bool isSentinel(const LangParserState& state, i64 fwd) {
 			return state[fwd].is(lexer::Token::Type::Sentinel);
 		}
 
-		static bool isCurlyGroup(const RiftParserState& state, i64 fwd) {
+		static bool isCurlyGroup(const LangParserState& state, i64 fwd) {
 			return state[fwd].isBracketGroup(lexer::Token::BracketType::Curly);
 		}
 
-		static bool isAssignOrSemicolon(const RiftParserState& st, i64 fwd) {
-			return st[fwd].is(rift_def::Operator::Assign)
-			    || st[fwd].is(rift_def::Special::Semicolon);
+		static bool isAssignOrSemicolon(const LangParserState& st, i64 fwd) {
+			return st[fwd].is(lang_def::Operator::Assign)
+			    || st[fwd].is(lang_def::Special::Semicolon);
 		}
 
-		static bool isAssignOrCommaOrEnd(const RiftParserState& st, i64 fwd) {
+		static bool isAssignOrCommaOrEnd(const LangParserState& st, i64 fwd) {
 			return st[fwd].is(lexer::Token::Type::Sentinel)
-			    || st[fwd].is(rift_def::Operator::Assign) || st[fwd].is(rift_def::Special::Comma);
+			    || st[fwd].is(lang_def::Operator::Assign) || st[fwd].is(lang_def::Special::Comma);
 		}
 
-		static bool isAssign(const RiftParserState& st, i64 fwd) {
-			return st[fwd].is(rift_def::Operator::Assign);
+		static bool isAssign(const LangParserState& st, i64 fwd) {
+			return st[fwd].is(lang_def::Operator::Assign);
 		}
 
 		/**
 		 * @brief This is to differentiate blocks from template specification
 		 */
-		static bool isBlockGroup(const RiftParserState& st, i64 fwd) {
+		static bool isBlockGroup(const LangParserState& st, i64 fwd) {
 			return st[fwd].isBracketGroup(lexer::Token::Curly)
-			    && not st[fwd - 1].is(rift_def::Operator::Colon);
+			    && not st[fwd - 1].is(lang_def::Operator::Colon);
 		}
 
-		static bool isImplementsOrBlockGroup(const RiftParserState& st, i64 fwd) {
-			return st[fwd].is(rift_def::Keyword::Implements)
+		static bool isImplementsOrBlockGroup(const LangParserState& st, i64 fwd) {
+			return st[fwd].is(lang_def::Keyword::Implements)
 			    || (st[fwd].isBracketGroup(lexer::Token::Curly)
-			        && not st[fwd - 1].is(rift_def::Operator::Colon));
+			        && not st[fwd - 1].is(lang_def::Operator::Colon));
 		}
 
-		template<rift_def::Keyword key>
-		static bool is(const RiftParserState& st, i64 fwd) {
+		template<lang_def::Keyword key>
+		static bool is(const LangParserState& st, i64 fwd) {
 			return st[fwd].is(key);
 		}
 	};

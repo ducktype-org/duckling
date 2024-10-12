@@ -6,7 +6,7 @@ add_library(Operations
 
 make_module(Operations USES TypeSystemHigher Exec Base)
 
-rift_add_test(compiler operations_test_simple tests/simple_test.cpp
+duck_add_test(compiler operations_test_simple tests/simple_test.cpp
 	USES Base Clap Operations TypeSystemHigher)
-rift_add_test(compiler operation_constructor tests/constructors_test.cpp
+duck_add_test(compiler operation_constructor tests/constructors_test.cpp
 	USES Base Clap Operations TypeSystemHigher)

@@ -199,7 +199,7 @@ int main(int argc, const char** argv) {
 		// Handle general parsing exceptions and print error message
 		printer::StreamPrinter      console = printer::StreamPrinter();
 		printer::PrinterContentsSeq contents;
-		contents.emplace_back("rift: ", printer::Color::DEFAULT, printer::Color::DEFAULT);
+		contents.emplace_back("duckling: ", printer::Color::DEFAULT, printer::Color::DEFAULT);
 		contents.emplace_back("error: ", printer::Color::RED, printer::Color::DEFAULT);
 		contents.emplace_back(e.what(), printer::Color::DEFAULT, printer::Color::DEFAULT);
 		console.printNL(contents);

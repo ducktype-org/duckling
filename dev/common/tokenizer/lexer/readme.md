@@ -2,7 +2,7 @@
 
 @tableofcontents
 
-Module implementing the conversion from source code to tokens using keyword definitions provided by `rift_definitions` module.
+Module implementing the conversion from source code to tokens using keyword definitions provided by `lang_definitions` module.
 
 @note Lexer doesn't currently support other varieties of strings (format, raw), number separators, some comment features (token from text, recursive comments) and handling of ignorable format controls. It also doesn't currently do any normalization.
 
@@ -13,13 +13,13 @@ Usage
     :caption: Basic usage
 
     #include<lexer/lexer.hpp>
-    #include<rift_definitions/key_spec_op.hpp>
+    #include<lang_definitions/key_spec_op.hpp>
 
     int main() {
         lexer::init();
-        rift_def::setKeywordMode(rift_def::KeywordMode::RiftSource);
+        lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource);
 
-        fs::FilePath file("path/to/rift/file");
+        fs::FilePath file("path/to/duckling/file");
         lexer::TokenData td = lexer::tokenizeFile(file);
     }
 ~~~~~

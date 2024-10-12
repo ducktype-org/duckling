@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<Constructor> Constructor::parse(RiftParserState& state, const ClassContext& ctx) {
+	ParserRef<Constructor> Constructor::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Constructor>(position, ctx);
 

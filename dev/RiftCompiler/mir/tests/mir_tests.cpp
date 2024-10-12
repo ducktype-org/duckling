@@ -180,4 +180,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/mir/tests/")
+TESTER_COMMON_MAIN("/compiler/mir/tests/")

@@ -28,7 +28,7 @@ namespace detail {
 }
 
 /**
- * @brief Jai/Rift-like defer
+ * @brief Jai/Duckling-like defer
  *
  * Defer takes any expression or code block and executes it after the block "ends"
  * during destruction of local variables.

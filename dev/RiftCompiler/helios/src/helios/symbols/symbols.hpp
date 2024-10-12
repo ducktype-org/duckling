@@ -189,7 +189,7 @@ namespace compiler::helios {
 		 * @brief A keyword value, like `None`.
 		 */
 		struct KeywordValue {
-			rift_def::Keyword keyword;
+			lang_def::Keyword keyword;
 		};
 
 		/**

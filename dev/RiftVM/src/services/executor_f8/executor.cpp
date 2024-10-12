@@ -56,7 +56,7 @@ namespace vm {
 		auto type  = block->innerType();
 		auto view  = block->deref(type, offset);
 
-		RIFT_ASSERT(view.size() == type->getSize(), "Bad deref size");
+		CORE_ASSERT(view.size() == type->getSize(), "Bad deref size");
 		return view;
 	}
 
@@ -282,7 +282,7 @@ namespace vm {
 			auto* prev_frame = frame;
 			frame++;
 			i32 function_id = instr->arg0;
-			if (frame + 1 >= runtime_data.frame_stack_end) RIFT_PANIC("RiftVM stack overflow.");
+			if (frame + 1 >= runtime_data.frame_stack_end) CORE_PANIC("VM stack overflow.");
 			frame->args = prev_frame->next_args;
 
 			// Update values passed as arguments.
@@ -297,7 +297,7 @@ namespace vm {
 				+= executor.executing_code->functions[function_id].next_arg_size;
 
 			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
-				RIFT_PANIC("RiftVM stack overflow.");
+				CORE_PANIC("VM stack overflow.");
 		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
@@ -376,7 +376,7 @@ namespace vm {
 		{
 			auto block_id  = frame->block_id_stack.back();
 			auto type_size = executor.memory.getBlock(block_id)->rawPointer().size();
-			// if (type_size < frame->local_stack_head) RIFT_PANIC("init/deinits not paired");
+			// if (type_size < frame->local_stack_head) CORE_PANIC("init/deinits not paired");
 			frame->local_stack_head -= type_size;
 			executor.stack_allocator.deleteBlock(block_id);
 			frame->block_id_stack.pop_back();
@@ -401,7 +401,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::op_nop(OPFUN_ARGS) { OPFUN_CONT(1); }
 
 	RETURN_TYPE OpFuns::op_ext_l64(OPFUN_ARGS) {
-		RIFT_PANIC("ext_l64 not consumed by previous instruction");
+		CORE_PANIC("ext_l64 not consumed by previous instruction");
 	}
 
 	RETURN_TYPE OpFuns::op_alloc_lptr_type(OPFUN_ARGS) {
@@ -456,7 +456,7 @@ namespace vm {
 #endif
 
 			// @TODO: this assert degrades performance by 5-10%
-			// RIFT_ASSERT(view.size() == view_size, "bad type");
+			// CORE_ASSERT(view.size() == view_size, "bad type");
 
 			std::memcpy(&local_stack[instr->arg0], view.getBegin() + idx * view_size, view_size);
 		}
@@ -483,7 +483,7 @@ namespace vm {
 #endif
 
 			// @TODO: this assert degrades performance by 5-10%
-			// RIFT_ASSERT(view.size() == view_size, "bad type");
+			// CORE_ASSERT(view.size() == view_size, "bad type");
 
 			std::memcpy(view.getBegin() + idx * view_size, &local_stack[instr->arg1], view_size);
 		}
@@ -547,7 +547,7 @@ namespace vm {
 	#include <code_data/opcodes_list.hpp>
 	#undef DEF_OPCODE
 	#undef DEF_OPCODE_END
-				IF_NOT_CG(default : { RIFT_PANIC("Unknown operator:", u64(instr->opcode)); })
+				IF_NOT_CG(default : { CORE_PANIC("Unknown operator:", u64(instr->opcode)); })
 			}
 		}
 	End:

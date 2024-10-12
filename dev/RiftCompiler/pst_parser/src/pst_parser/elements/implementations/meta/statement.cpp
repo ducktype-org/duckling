@@ -9,13 +9,13 @@ namespace pst {
 	namespace detail {
 
 		template<std::derived_from<Stmt> T>
-		ParserRef<T> parseStmt(RiftParserState& state) {
+		ParserRef<T> parseStmt(LangParserState& state) {
 			ParserRef<T> out = T::parse(state);
 			if (out->trailingSemicolon()) state.parse(out).one(Special::Semicolon);
 			return out;
 		}
 
-		ParserRef<Stmt> chooseStmt(RiftParserState& state) {
+		ParserRef<Stmt> chooseStmt(LangParserState& state) {
 			Special as_special = state[0].asSpecial();
 			Keyword as_keyword = state[0].asKeyword();
 
@@ -61,7 +61,7 @@ namespace pst {
 				break;
 			}
 
-			if (rift_def::keywordFlags(as_keyword).contains(rift_def::KeywordFlags::is_action))
+			if (lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlags::is_action))
 				return detail::parseStmt<Action>(state);
 
 			if (as_special == Special::Semicolon) {
@@ -74,7 +74,7 @@ namespace pst {
 		}
 	}
 
-	Stmt::AttrList Stmt::collectAttributes(RiftParserState& state) {
+	Stmt::AttrList Stmt::collectAttributes(LangParserState& state) {
 		auto     as_special = state[0].asSpecial();
 		AttrList attributes;
 
@@ -86,7 +86,7 @@ namespace pst {
 		return attributes;
 	}
 
-	ParserRef<Stmt> Stmt::parse(RiftParserState& state) {
+	ParserRef<Stmt> Stmt::parse(LangParserState& state) {
 		// Collect Attributes
 		auto attributes = collectAttributes(state);
 
@@ -100,7 +100,7 @@ namespace pst {
 	}
 
 	void Stmt::dprintPrefix(std::ostream& out) const {
-		RiftElement::dprintPrefix(out);
+		LangElement::dprintPrefix(out);
 		dprintAttributes(out);
 	}
 

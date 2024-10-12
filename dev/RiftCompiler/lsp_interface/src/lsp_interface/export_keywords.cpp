@@ -4,7 +4,7 @@
  * keywords, specials, and operators in JSON format.
  */
 #include "export_keywords.hpp"
-#include <rift_definitions/key_spec_op.hpp>
+#include <lang_definitions/key_spec_op.hpp>
 #include <string>
 #include <vector>
 #include <map>
@@ -31,7 +31,7 @@ namespace lsp {
 	/**
 	 * @brief Constructs an ExportKeywords object and initializes the key_spec_op module.
 	 */
-	ExportKeywords::ExportKeywords() { rift_def::key_spec_op::init(); }
+	ExportKeywords::ExportKeywords() { lang_def::key_spec_op::init(); }
 
 	/**
 	 * @brief Gets the list of keywords in JSON format.
@@ -45,10 +45,10 @@ namespace lsp {
 		 * This loop parses the output of Duckling cvompiler's getKeywords() function and adds the
 		 * keywords to the list.
 		 */
-		for (rift_def::Keyword k: rift_def::getKeywords()) {
-			std::string keyword = rift_def::keywordToStr(k).str();
+		for (lang_def::Keyword k: lang_def::getKeywords()) {
+			std::string keyword = lang_def::keywordToStr(k).str();
 			if (keyword.rfind("NotA", 0) == std::string::npos)
-				keywords.push_back(rift_def::keywordToStr(k).str());
+				keywords.push_back(lang_def::keywordToStr(k).str());
 		}
 
 		return jsonList(keywords);
@@ -66,10 +66,10 @@ namespace lsp {
 		 * This loop parses the output of Duckling cvompiler's getSpecials() function and adds the
 		 * specials to the list.
 		 */
-		for (rift_def::Special s: rift_def::getSpecials()) {
-			std::string special = rift_def::specialToStr(s).str();
+		for (lang_def::Special s: lang_def::getSpecials()) {
+			std::string special = lang_def::specialToStr(s).str();
 			if (special.rfind("NotA", 0) == std::string::npos)
-				specials.push_back(rift_def::specialToStr(s).str());
+				specials.push_back(lang_def::specialToStr(s).str());
 		}
 
 		return jsonList(specials);
@@ -87,10 +87,10 @@ namespace lsp {
 		 * This loop parses the output of Duckling cvompiler's getOperators() function and adds the
 		 * operators to the list.
 		 */
-		for (rift_def::Operator o: rift_def::getOperators()) {
-			std::string op = rift_def::operatorToStr(o).str();
+		for (lang_def::Operator o: lang_def::getOperators()) {
+			std::string op = lang_def::operatorToStr(o).str();
 			if (op.rfind("NotA", 0) == std::string::npos)
-				operators.push_back(rift_def::operatorToStr(o).str());
+				operators.push_back(lang_def::operatorToStr(o).str());
 		}
 
 		return jsonList(operators);

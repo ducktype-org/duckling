@@ -2,7 +2,7 @@
 
 # Main compiler
 
-Rift compiler module.
+Duckling compiler module.
 
 More information about files and directories can be found in the Doxygen documentation.
 
@@ -14,7 +14,7 @@ More information about files and directories can be found in the Doxygen documen
 - \subpage helios-module
 - \subpage pst-parser-module
 - \subpage mir
-- \subpage rift-snippets-readme
+- \subpage duckling-snippets-readme
 - \subpage typesystem-module
 - \subpage operations-module
 

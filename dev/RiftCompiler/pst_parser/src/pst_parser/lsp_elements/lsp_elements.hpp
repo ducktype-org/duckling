@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../rift_parser_element.hpp"
-#include "../rift_parser_state.hpp"
+#include "../lang_parser_element.hpp"
+#include "../lang_parser_state.hpp"
 
 #include <token_parser_core/token_stream.hpp>
 #include <token_parser_core/parser_state.hpp>
@@ -170,7 +170,7 @@ namespace lsp {
 		};
 
 		struct KeywordValue {
-			rift_def::Keyword keyword  = rift_def::Keyword::NotAKeyword;
+			lang_def::Keyword keyword  = lang_def::Keyword::NotAKeyword;
 			SourcePosition    position = SourcePosition::fakePosition();
 			void              lsp_print(std::ostream&);
 		};

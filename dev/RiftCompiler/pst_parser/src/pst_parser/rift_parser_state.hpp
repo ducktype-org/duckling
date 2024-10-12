@@ -7,18 +7,18 @@
 #include <base/strongly_typed_id.hpp>
 #include <utility>
 
-#include "rift_parser_element.hpp"
+#include "lang_parser_element.hpp"
 #include "pst_automatic.hpp"
 
 namespace pst {
 	/**
-	 * @brief State used for parsing Rift to PST
+	 * @brief State used for parsing Duckling to PST
 	 */
-	class RiftParserState final: public tpc::ParserState {
+	class LangParserState final: public tpc::ParserState {
 		std::vector<ImportType> imports;
 
 	public:
-		RiftParserState(tpc::TokenStream&& tokens, dia::Logger& err):
+		LangParserState(tpc::TokenStream&& tokens, dia::Logger& err):
 			  tpc::ParserState(std::move(tokens), err) {}
 
 		/**
@@ -39,16 +39,16 @@ namespace pst {
 		/**
 		 * @brief Gives access to automatic parsing tools.
 		 */
-		template<std::derived_from<RiftElement> El>
-		pst::PSTAutomatic<RiftParserState> parse(ParserRef<El>& el) {
+		template<std::derived_from<LangElement> El>
+		pst::PSTAutomatic<LangParserState> parse(ParserRef<El>& el) {
 			return { *this, el.borrow_mut() };
 		}
 
 		/**
 		 * @brief Gives access to automatic parsing tools.
 		 */
-		template<std::derived_from<RiftElement> El>
-		pst::PSTAutomatic<RiftParserState> parse(ParserBorrowRef<El> el) {
+		template<std::derived_from<LangElement> El>
+		pst::PSTAutomatic<LangParserState> parse(ParserBorrowRef<El> el) {
 			return { *this, el };
 		}
 	};

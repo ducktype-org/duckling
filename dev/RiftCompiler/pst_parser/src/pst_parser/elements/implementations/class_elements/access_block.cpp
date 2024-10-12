@@ -17,7 +17,7 @@ namespace pst {
 		}
 	};
 
-	ParserRef<AccessBlock> AccessBlock::parse(RiftParserState& state, const ClassContext& ctx) {
+	ParserRef<AccessBlock> AccessBlock::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
 		auto out      = makeRef<AccessBlock>(position, ctx);
 

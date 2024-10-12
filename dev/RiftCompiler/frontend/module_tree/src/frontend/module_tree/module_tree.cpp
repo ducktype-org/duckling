@@ -59,7 +59,7 @@ SourceFile::SourceFile(fs::FilePath path, ModuleID module_id):
 	  path(std::move(path)),
 	  id(FileID::nextID()),
 	  linked_module(module_id) {
-	rift_file_name = base::StrID(this->path.stem().c_str());
+	lang_file_name = base::StrID(this->path.stem().c_str());
 }
 
 const pst::PST<>& SourceFile::getPST() {
@@ -127,10 +127,10 @@ void ModuleTree::handleNewFile(
 
 	// There are 3 types of files: source files, module file, others - each if-branch handles other
 	// type.
-	if (extension == RIFT_SOURCE_FILE) {
+	if (extension == LANG_SOURCE_FILE) {
 		// File contains regular source content.
 		module_root->m_source_files.emplace_back(filepath, module_root->getID());
-	} else if (extension == RIFT_MODULE_FILE) {
+	} else if (extension == LANG_MODULE_FILE) {
 		// File with a config of SOME module.
 		if (stem_id == module_root->getName()) {
 			// File with a config of CURRENT module.
@@ -161,7 +161,7 @@ void ModuleTree::handleNewFile(
 
 base::Optional<const ModuleTree&> ModuleTree::getParentModule() const {
 	if (m_parent.has_value()) {
-		RIFT_ASSERT(not m_parent.value().expired(), "Parent of a module is expired!");
+		CORE_ASSERT(not m_parent.value().expired(), "Parent of a module is expired!");
 		return *m_parent->lock();
 	}
 	return {};
@@ -169,7 +169,7 @@ base::Optional<const ModuleTree&> ModuleTree::getParentModule() const {
 
 base::StrID ModuleTree::getName() const {
 	// @OPT: store this value as a module tree field
-	if (m_fs_tree == nullptr) return getMainSourceFile().rift_file_name;
+	if (m_fs_tree == nullptr) return getMainSourceFile().lang_file_name;
 	return base::StrID(m_fs_tree->getRoot().name().c_str());
 }
 
@@ -314,7 +314,7 @@ struct IMPLEMENT_QUERY(QueryFilePST, const pst::PST<>&) {
 QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);
 
 ModuleID compiler::frontend::extendQueryModuleIDOfPST(
-	query::Context&, pst::ParserCBorrowRef<pst::RiftElement> element
+	query::Context&, pst::ParserCBorrowRef<pst::LangElement> element
 ) {
 	// get top-level:
 	while (element->getParent().has_value()) element = element->getParent().value();
@@ -322,7 +322,7 @@ ModuleID compiler::frontend::extendQueryModuleIDOfPST(
 	// this access depends of global state that might become a problem in incremental compilation:
 	auto file_id = root_element_file_back_map[element->getID()];
 	auto result  = files.at(file_id).linked_module;
-	RIFT_ASSERT(result.isGood(), "Bad module ID in SourceFile");
+	CORE_ASSERT(result.isGood(), "Bad module ID in SourceFile");
 
 	return result;
 }

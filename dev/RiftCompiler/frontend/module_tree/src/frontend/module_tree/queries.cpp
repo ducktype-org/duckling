@@ -37,7 +37,7 @@ namespace compiler::frontend {
 	base::Optional<ModuleID> getRelativeModule(
 		query::Context& ctx, ModuleID from, const std::vector<base::StrID>& path
 	) {
-		RIFT_ASSERT(path.size() >= 1, "Empty module path");
+		CORE_ASSERT(path.size() >= 1, "Empty module path");
 
 		// @TODO: ambiguities
 

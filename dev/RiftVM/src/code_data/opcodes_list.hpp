@@ -1,6 +1,6 @@
 /**
  * @file opcodes_list.hpp
- * @brief Contains a list of all RiftBC opcodes. Can be used for generating
+ * @brief Contains a list of all DuckBC opcodes. Can be used for generating
  * repetetive code based on list of opcodes, #DEF_OPCODE and
  * #DEF_OPCODE_END macros.
  *

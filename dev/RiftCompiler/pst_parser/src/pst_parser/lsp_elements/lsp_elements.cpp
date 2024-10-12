@@ -65,7 +65,7 @@ namespace lsp {
 	}
 
 	void lsp_print_keyword(std::ostream& out, tpc::Keyword keyword) {
-		out << "\"" << rift_def::keywordToStr(keyword).view().stringView() << "\"";
+		out << "\"" << lang_def::keywordToStr(keyword).view().stringView() << "\"";
 	}
 
 	void lsp_print_strID(std::ostream& out, base::StrID id) {

@@ -11,7 +11,7 @@
 
 void showVersion() {
 	std::cout << std::boolalpha;
-	std::cout << "RiftVM version 0.0.\n";
+	std::cout << "VM version 0.0.\n";
 	std::cout << "Configuration: \n";
 	std::cout << "IGNORE_EXECUTION_STRATEGY: " << IGNORE_EXECUTION_STRATEGY << "\n";
 	std::cout << "USE_COMPUTED_GOTO: " << USE_COMPUTED_GOTO_VALUE << "\n";
@@ -23,9 +23,9 @@ int main(int argc, const char** argv) {
 	                .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
 	                         .addShortName('s')
 	                         .addLongName("server")
-	                         .addShortDesc("Launch RiftVM as a http server")
+	                         .addShortDesc("Launch VM as a http server")
 	                         .build())
-	                .add(clap::ParamBuilder::ofValue(clap::FileParser::make(std::regex(".*\\.rbc")))
+	                .add(clap::ParamBuilder::ofValue(clap::FileParser::make(std::regex(".*\\.dbc")))
 	                         .conditional(
 								 [](const clap::ParsingResult& result) {
 									 return !(result.isParam('f') && result.isParam('s'));
@@ -48,7 +48,7 @@ int main(int argc, const char** argv) {
 		result = clap.parse(argc, argv);
 	} catch (clap::exceptions::ClapException& e) {
 		printer::StreamPrinter::print({
-			{ "rift: ", printer::Color::DEFAULT },
+			{ "duckling: ", printer::Color::DEFAULT },
 			{ "error: ", printer::Color::RED },
 			{ e.what(), printer::Color::DEFAULT },
 		});

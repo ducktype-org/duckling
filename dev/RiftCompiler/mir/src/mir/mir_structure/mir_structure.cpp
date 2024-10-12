@@ -34,7 +34,7 @@ namespace compiler::mir {
 			return {};
 
 		default:
-			RIFT_PANIC("Not a terminator instruction");
+			CORE_PANIC("Not a terminator instruction");
 		}
 	}
 
@@ -128,7 +128,7 @@ namespace compiler::mir {
 			variant_case(LocalRef, local) { local->debugPrint(output); }
 			variant_case(MirIntegerConst, value) { output << value.value; }
 			variant_case(BlockID, block) { output << "Block(" << u64(block) << ")"; }
-			variant_default { RIFT_PANIC("Unexpected MirLocal alternative in mir debugPrint"); }
+			variant_default { CORE_PANIC("Unexpected MirLocal alternative in mir debugPrint"); }
 		}
 	}
 

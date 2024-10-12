@@ -2,8 +2,8 @@
 1e2   				# ------------
 1.2e3 				# ------------
 0.111e123			# ------------
-.12 				# might not work in rift
-.12e2 				# might not work in rift
+.12 				# might not work in Duckling
+.12e2 				# might not work in Duckling
 121290.121200e322 	# ------------
 111.e2				# ------------
 1e+2				# ------------

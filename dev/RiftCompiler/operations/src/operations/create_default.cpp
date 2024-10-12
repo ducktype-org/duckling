@@ -17,12 +17,12 @@ namespace operation {
 		Calls collectCalls(const ts::TypeInfo type_info, const Defaultable kind) {
 			switch (type_info.getKind()) {
 			case ts::Kind::Class:
-				RIFT_PANIC("Unimplemented. See file history for details.");
+				CORE_PANIC("Unimplemented. See file history for details.");
 			case ts::Kind::Tuple:
-				RIFT_PANIC("Unimplemented. See file history for details.");
+				CORE_PANIC("Unimplemented. See file history for details.");
 			default:
 				(void) kind;
-				RIFT_PANIC("Cannot collect calls for type other than class or tuple.");
+				CORE_PANIC("Cannot collect calls for type other than class or tuple.");
 			}
 		}
 
@@ -33,7 +33,7 @@ namespace operation {
 
 
 		const Operation op = [type_info, calls](const std::vector<exec::CTV>& input) {
-			RIFT_ASSERT(input.size() == 2, "Comparison should receive two values.");
+			CORE_ASSERT(input.size() == 2, "Comparison should receive two values.");
 
 			return defaultEquality(type_info, calls, input[0], input[1]);
 		};
@@ -48,7 +48,7 @@ namespace operation {
 
 	TypedOperation createDefaultVirtualEquality(ts::ClassInfo class_info) {
 		const Operation op = [class_info](const std::vector<exec::CTV>& input) {
-			RIFT_ASSERT(input.size() == 2, "Comparison should receive two values.");
+			CORE_ASSERT(input.size() == 2, "Comparison should receive two values.");
 
 			return defaultEqualityVirtual(class_info, input[0], input[1]);
 		};
@@ -66,7 +66,7 @@ namespace operation {
 
 
 		const Operation op = [type_info, calls](const std::vector<exec::CTV>& input) {
-			RIFT_ASSERT(input.size() == 2, "Comparison should receive two values.");
+			CORE_ASSERT(input.size() == 2, "Comparison should receive two values.");
 			return defaultCompare(type_info, calls, input[0], input[1]);
 		};
 
@@ -81,7 +81,7 @@ namespace operation {
 		Calls calls{};  // internal::collectCalls(type_info, Defaultable::Assign);
 
 		const Operation op = [type_info, calls](const std::vector<exec::CTV>& input) {
-			RIFT_ASSERT(input.size() == 2, "Assigment should receive two values.");
+			CORE_ASSERT(input.size() == 2, "Assigment should receive two values.");
 			return defaultAssign(type_info, calls, input[0], input[1]);
 		};
 
@@ -95,7 +95,7 @@ namespace operation {
 		Calls calls{};  // internal::collectCalls(type_info, Defaultable::ConstructEmpty);
 
 		const Operation op = [type_info, calls](const std::vector<exec::CTV>& input) {
-			RIFT_ASSERT(input.size() == 1, "Empty constructor should receive one CTV.");
+			CORE_ASSERT(input.size() == 1, "Empty constructor should receive one CTV.");
 			return defaultConstructEmpty(type_info, calls, input[0]);
 		};
 

@@ -9,7 +9,7 @@ struct nlohmann::adl_serializer<base::RawView> {
 	static void to_json(json& j, const base::RawView& e) { j = e.stringView(); }
 
 	static void from_json(const json&, const base::RawView&) {
-		RIFT_PANIC("Parsing data from JSON into base::RawView is not supported (yet).");
+		CORE_PANIC("Parsing data from JSON into base::RawView is not supported (yet).");
 	}
 };
 

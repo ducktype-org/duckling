@@ -115,7 +115,7 @@ namespace tsh {
 			std::stringstream ss;
 			ss << "Tried to translate non-existent Kind with underlying value "
 			   << static_cast<int>(kind) << " to string.";
-			RIFT_PANIC(ss.str());
+			CORE_PANIC(ss.str());
 		}
 	}
 }

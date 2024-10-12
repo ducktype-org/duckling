@@ -6,7 +6,7 @@ namespace exec {
 	}
 
 	CTV defaultEquality(ts::TypeInfo type_info, Calls calls, const CTV& a, const CTV& b) {
-		RIFT_ASSERT(
+		CORE_ASSERT(
 			a.type.getType() == type_info && b.type.getType() == type_info,
 			"Default equality can only compare values of this same type."
 		);
@@ -70,7 +70,7 @@ namespace exec {
 	}
 
 	CTV defaultCompare(ts::TypeInfo type_info, Calls calls, const CTV& a, const CTV& b) {
-		RIFT_ASSERT(
+		CORE_ASSERT(
 			a.type.getType() == type_info && b.type.getType() == type_info,
 			"Default compare can only compare values of this same type."
 		);
@@ -90,7 +90,7 @@ namespace exec {
 	}
 
 	CTV defaultAssign(ts::TypeInfo type_info, Calls calls, const CTV& a, const CTV& b) {
-		RIFT_ASSERT(
+		CORE_ASSERT(
 			a.type.getType() == type_info && b.type.getType() == type_info,
 			"Default assign can only assign values of this same type."
 		);
@@ -105,7 +105,7 @@ namespace exec {
 	}
 
 	CTV defaultConstructEmpty(ts::TypeInfo type_info, Calls calls, const CTV& ctv) {
-		RIFT_ASSERT(
+		CORE_ASSERT(
 			ctv.type.getType() == type_info,
 			"CTV of invalid type given to default empty constructor."
 		);
@@ -119,12 +119,12 @@ namespace exec {
 	}
 
 	CTV defaultConstructFull(ts::TypeInfo type_info, Calls calls, const std::vector<CTV>& ctvs) {
-		RIFT_ASSERT(
+		CORE_ASSERT(
 			ctvs[0].type.getType() == type_info,
 			"Default full constructor received incorrect CTV to construct."
 		);
 
-		RIFT_ASSERT(
+		CORE_ASSERT(
 			ctvs.size() == calls.size() + 1,
 			"Default full constructor should receive value for each call, and one target CTV."
 		);

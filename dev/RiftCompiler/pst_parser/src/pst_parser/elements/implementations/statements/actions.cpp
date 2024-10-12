@@ -2,7 +2,7 @@
 #include "../../hierarchy/actions.hpp"
 
 namespace pst {
-	ParserRef<Action> Action::parse(RiftParserState& state) {
+	ParserRef<Action> Action::parse(LangParserState& state) {
 		dia::SourcePosition position = state.getPosition();
 
 		if (!assertStmtChoice<Action>(state, state[0].isKeyword())) return nullptr;
