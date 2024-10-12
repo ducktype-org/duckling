@@ -1,15 +1,15 @@
 #include <tester/tester.hpp>
-#include <rift_definitions/key_spec_op.hpp>
-#include <rift_definitions/operator_precedence.hpp>
+#include <lang_definitions/key_spec_op.hpp>
+#include <lang_definitions/operator_precedence.hpp>
 
-class SimpleRiftDefTest: public tester::TestSuite {
+class SimpleLangDefTest: public tester::TestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS SimpleRiftDefTest
+#define TESTER_CLASS SimpleLangDefTest
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		rift_def::key_spec_op::init();
-		rift_def::operator_precedence::init();
+		lang_def::key_spec_op::init();
+		lang_def::operator_precedence::init();
 
 		TESTER_ADD_TEST(simpleOperatorPrecedenceTest);
 		TESTER_ADD_TEST(simpleOperatorAssociativityTest);
@@ -18,7 +18,7 @@ public:
 
 private:
 	void simpleOperatorPrecedenceTest() {
-		using namespace rift_def;
+		using namespace lang_def;
 
 		auto period   = operatorPrecedence(base::StrID("."), OperatorType::Binary);
 		auto period_2 = operatorPrecedence(Operator::Period, OperatorType::Binary);
@@ -50,7 +50,7 @@ private:
 	}
 
 	void simpleOperatorAssociativityTest() {
-		using namespace rift_def;
+		using namespace lang_def;
 
 		auto period   = operatorAssociativity(base::StrID("."), OperatorType::Binary);
 		auto period_2 = operatorAssociativity(Operator::Period, OperatorType::Binary);
@@ -82,10 +82,10 @@ private:
 	}
 
 	void exportsForLSPTest() {
-		ASSERT_EQUAL(rift_def::getKeywords().size(), 66);
-		ASSERT_EQUAL(rift_def::getSpecials().size(), 6);
-		ASSERT_EQUAL(rift_def::getOperators().size(), 15);
+		ASSERT_EQUAL(lang_def::getKeywords().size(), 66);
+		ASSERT_EQUAL(lang_def::getSpecials().size(), 6);
+		ASSERT_EQUAL(lang_def::getOperators().size(), 15);
 	}
 };
 
-TESTER_COMMON_MAIN("/common/rift_definitions/tests/");
+TESTER_COMMON_MAIN("/common/lang_definitions/tests/");

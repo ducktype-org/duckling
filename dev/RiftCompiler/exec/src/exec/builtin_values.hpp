@@ -11,7 +11,7 @@ namespace exec {
 	// value of void:
 	CTV noneValue();
 
-	// value of null-pointer (null == none in Rift itself, but they have to be separate here since
-	// they have different size and types)
+	// value of null-pointer (null == none in Duckling itself, but they have to be separate here
+	// since they have different size and types)
 	CTV nullValue();
 }

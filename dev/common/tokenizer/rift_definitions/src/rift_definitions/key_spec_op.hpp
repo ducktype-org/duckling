@@ -16,13 +16,13 @@
 
 // @TODO: Implement reflection for those enums
 
-namespace rift_def {
+namespace lang_def {
 
 	enum class KeywordMode {
-		RiftSource,
-		RiftBC,
+		DucklingSource,
+		DuckBC,
 	};
-	constexpr KeywordMode DEFAULT_MODE = KeywordMode::RiftSource;
+	constexpr KeywordMode DEFAULT_MODE = KeywordMode::DucklingSource;
 
 
 	enum class Keyword {
@@ -122,7 +122,7 @@ namespace rift_def {
 
 		// Misc:
 
-		// Rift Test:
+		// Duckling Test:
 
 		// BC:
 		BCFunction,

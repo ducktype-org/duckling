@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<ClassBlock> ClassBlock::parse(RiftParserState& state, const ClassContext& ctx) {
+	ParserRef<ClassBlock> ClassBlock::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
 		auto out      = makeRef<ClassBlock>(position);
 

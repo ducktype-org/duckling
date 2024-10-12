@@ -64,6 +64,6 @@ HIR implementation structure
 HIR consists of three main components:
 
 * Symbol Table -- responsible for storing symbols, handling scopes, and performing lookup within scopes.
-* Rift Symbols -- implementation of concrete symbols.
+* Duckling Symbols -- implementation of concrete symbols.
 * Analysis State -- effectively the current state of HIR transformation.
 

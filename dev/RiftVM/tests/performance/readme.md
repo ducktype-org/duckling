@@ -47,7 +47,7 @@ repurposed and the VTune integration is not maintained.*
 ## Running profiler targets
 
 [performance/CMakeLists.txt](./performance/CMakeLists.txt) defines a set of
-`profile_xyz` targets that execute RiftBC code inside a VM while collecting the
+`profile_xyz` targets that execute DuckBC code inside a VM while collecting the
 following results:
 * performance snapshot (`ps`)
 * hotspots (`hs`)

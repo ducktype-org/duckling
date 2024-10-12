@@ -17,7 +17,7 @@ namespace pst {
 		AliasStarError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<Alias> Alias::parse(RiftParserState& state) {
+	ParserRef<Alias> Alias::parse(LangParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Alias>(position);
 

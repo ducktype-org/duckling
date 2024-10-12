@@ -6,7 +6,7 @@ else ()
     message(STATUS "VTune not found, skipping profiler target generation")
 endif ()
 
-function(rift_add_perf_test test_pack test_name source USES)
+function(duck_add_perf_test test_pack test_name source USES)
     if (${USES} STREQUAL "USES")
         set(EXEC "prof_${test_name}")
         add_executable(${EXEC} ${CMAKE_CURRENT_LIST_DIR}/${source})
@@ -34,17 +34,17 @@ function(rift_add_perf_test test_pack test_name source USES)
         set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL true)
         set_target_properties(${target_name} PROPERTIES EXCLUDE_FROM_ALL true)
     else ()
-        message(FATAL_ERROR "rift_add_perf_test lacks uses clause")
+        message(FATAL_ERROR "duck_add_perf_test lacks uses clause")
     endif ()
 endfunction()
 
 if (PROFILE)
     add_custom_target("profile_all")
 
-    rift_add_perf_test(vm vm_fib_rec fib_rec.cpp
-            USES LibRiftVm Tester)
-    rift_add_perf_test(vm vm_collatz collatz.cpp
-            USES LibRiftVm Tester)
-    rift_add_perf_test(vm vm_ackermann ackermann.cpp
-            USES LibRiftVm Tester)
+    duck_add_perf_test(vm vm_fib_rec fib_rec.cpp
+            USES LibVM Tester)
+    duck_add_perf_test(vm vm_collatz collatz.cpp
+            USES LibVM Tester)
+    duck_add_perf_test(vm vm_ackermann ackermann.cpp
+            USES LibVM Tester)
 endif ()

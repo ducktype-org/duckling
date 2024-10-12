@@ -99,9 +99,9 @@ private:
 	void testVisitorAlternative() { testVisitorImpl("snippets/alternative_statements.txt", 1); }
 
 	void testJson(
-		const std::string& rift_file, const std::string& json_file, bool no_errors = true
+		const std::string& duckling_file, const std::string& json_file, bool no_errors = true
 	) {
-		pst::PST<>        pst = prepare(rift_file);
+		pst::PST<>        pst = prepare(duckling_file);
 		std::stringstream ss;
 		pst.dprint(ss);
 
@@ -110,7 +110,9 @@ private:
 
 		if (no_errors) {
 			// if (pst.getErrorState().fail()) pst.getErrorState().dumpLog();
-			assertTrue(pst.getLogger().good(), "there are unexpected errors in rift source-code");
+			assertTrue(
+				pst.getLogger().good(), "there are unexpected errors in Duckling source-code"
+			);
 		}
 
 		assertTrue(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
@@ -119,58 +121,58 @@ private:
 	}
 
 	void testJsonRelativePath(
-		const std::string& rift_file, const std::string& json_file, bool no_errors = true
+		const std::string& duckling_file, const std::string& json_file, bool no_errors = true
 	) {
-		testJson(path("snippets/" + rift_file), path("snippets/" + json_file), no_errors);
+		testJson(path("snippets/" + duckling_file), path("snippets/" + json_file), no_errors);
 	}
 
-	void testIf() { testJsonRelativePath("if.rift", "if.json"); }
+	void testIf() { testJsonRelativePath("if.duck", "if.json"); }
 
-	void testWhile() { testJsonRelativePath("while.rift", "while.json"); }
+	void testWhile() { testJsonRelativePath("while.duck", "while.json"); }
 
-	void testFor() { testJsonRelativePath("for.rift", "for.json"); }
+	void testFor() { testJsonRelativePath("for.duck", "for.json"); }
 
-	void testFun() { testJsonRelativePath("fun.rift", "fun.json"); }
+	void testFun() { testJsonRelativePath("fun.duck", "fun.json"); }
 
-	void testFun2() { testJsonRelativePath("fun2.rift", "fun2.json"); }
+	void testFun2() { testJsonRelativePath("fun2.duck", "fun2.json"); }
 
-	void testBlock() { testJsonRelativePath("block.rift", "block.json"); }
+	void testBlock() { testJsonRelativePath("block.duck", "block.json"); }
 
-	void testActions() { testJsonRelativePath("actions.rift", "actions.json"); }
+	void testActions() { testJsonRelativePath("actions.duck", "actions.json"); }
 
-	void testImport() { testJsonRelativePath("import.rift", "import.json"); }
+	void testImport() { testJsonRelativePath("import.duck", "import.json"); }
 
-	void testUsing() { testJsonRelativePath("using.rift", "using.json"); }
+	void testUsing() { testJsonRelativePath("using.duck", "using.json"); }
 
-	void testNamespace() { testJsonRelativePath("namespace.rift", "namespace.json"); }
+	void testNamespace() { testJsonRelativePath("namespace.duck", "namespace.json"); }
 
-	void testClass() { testJsonRelativePath("class.rift", "class.json"); }
+	void testClass() { testJsonRelativePath("class.duck", "class.json"); }
 
-	void testListParsing() { testJsonRelativePath("lists_ok.rift", "lists_ok.json"); }
+	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
 
 	void testListParsingErrors() {
-		pst::PST<> pst = prepare(path("snippets/lists_err.rift"));
+		pst::PST<> pst = prepare(path("snippets/lists_err.duck"));
 		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 4, "Expected 5 errors"
 		);
 	}
 
 	void testUsingErrors() {
-		pst::PST<> pst = prepare(path("snippets/using_err.rift"));
+		pst::PST<> pst = prepare(path("snippets/using_err.duck"));
 		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
 		);
 	}
 
 	void testParamListErrors() {
-		pst::PST<> pst = prepare(path("snippets/params_err.rift"));
+		pst::PST<> pst = prepare(path("snippets/params_err.duck"));
 		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 11, "Expected 11 errors"
 		);
 	}
 
 	void testMissingSemiErr() {
-		pst::PST<> pst = prepare(path("snippets/missing_semicolon_err.rift"));
+		pst::PST<> pst = prepare(path("snippets/missing_semicolon_err.duck"));
 		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
 		);
@@ -181,4 +183,4 @@ public:
 	~SimpleParserTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/pst_parser/tests/");
+TESTER_COMMON_MAIN("/compiler/pst_parser/tests/");

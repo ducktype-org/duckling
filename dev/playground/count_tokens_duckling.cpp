@@ -44,7 +44,7 @@ int main(int argc, const char** argv) {
 		input = clap.parse(argc, argv);
 	} catch (clap::exceptions::ClapException& e) {
 		printer::StreamPrinter::print({
-			{ "rift: ", printer::Color::DEFAULT },
+			{ "duckling: ", printer::Color::DEFAULT },
 			{ "error: ", printer::Color::RED },
 			{ e.what(), printer::Color::DEFAULT },
 		});

@@ -1,6 +1,6 @@
-# Rift source docs
+# Duckling source docs
 
-This directory contains documentation for the Rift project. It is divided into two parts: Doxygen and Sphinx. Doxygen is used to document C++ code, while Sphinx is used for more general developer guidelines and implementation ideas. 
+This directory contains documentation for the Duckling project. It is divided into two parts: Doxygen and Sphinx. Doxygen is used to document C++ code, while Sphinx is used for more general developer guidelines and implementation ideas. 
 It includes helpful guides for developers, such as instructions on writing tests and examples, contributing to the repository, and creating documentation.
 
 ## Building docs

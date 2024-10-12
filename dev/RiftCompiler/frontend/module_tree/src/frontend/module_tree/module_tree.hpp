@@ -51,7 +51,7 @@ namespace compiler::frontend {
 	 */
 	struct SourceFile final {
 		fs::FilePath               path;
-		base::StrID                rift_file_name;
+		base::StrID                lang_file_name;
 		FileID                     id;
 		base::Optional<pst::PST<>> parse_tree;
 
@@ -74,13 +74,13 @@ namespace compiler::frontend {
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a source file of the module.
 	 */
-	constexpr std::string_view RIFT_SOURCE_FILE = ".rift";
+	constexpr std::string_view LANG_SOURCE_FILE = ".duck";
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a single file module.
 	 */
-	constexpr std::string_view RIFT_MODULE_FILE = ".rmf";
+	constexpr std::string_view LANG_MODULE_FILE = ".dmf";
 
 	/**
 	 * `ModuleTree` contains source files, modules and other
@@ -143,23 +143,23 @@ namespace compiler::frontend {
 		base::Optional<const ModuleTree&> getParentModule() const;
 
 		/**
-		 * Checks if a module contains `RIFT_MAIN_SOURCE_FILE`.
+		 * Checks if a module contains `LANG_MAIN_SOURCE_FILE`.
 		 * @return True if pointer is valid, false otherwise.
 		 */
 		[[nodiscard]]
 		bool hasMainSourceFile() const;
 
 		/**
-		 * Accesses the main `RIFT_MAIN_SOURCE_FILE` - main source file of the module.
+		 * Accesses the main `LANG_MAIN_SOURCE_FILE` - main source file of the module.
 		 * If a pointer to file is invalid, then throws an std::logic_error exception.
-		 * @return A reference to the `RIFT_MAIN_SOURCE_FILE`.
+		 * @return A reference to the `LANG_MAIN_SOURCE_FILE`.
 		 */
 		[[nodiscard]]
 		const SourceFile& getMainSourceFile() const;
 
 		/**
 		 * Accesses the source files of the module.
-		 * @return A std::vector<SourceFile> with `RIFT_SOURCE_FILE` files to iterate over.
+		 * @return A std::vector<SourceFile> with `LANG_SOURCE_FILE` files to iterate over.
 		 */
 		[[nodiscard]]
 		const std::vector<SourceFile>& getSourceFiles() const;
@@ -181,7 +181,7 @@ namespace compiler::frontend {
 
 		/**
 		 * Parses the name of the module.
-		 * @return base::StrID with the name. `A.rmf -> A`, `/.../module/ -> module`.
+		 * @return base::StrID with the name. `A.dmf -> A`, `/.../module/ -> module`.
 		 */
 		[[nodiscard]]
 		base::StrID getName() const;

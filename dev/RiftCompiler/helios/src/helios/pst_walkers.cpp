@@ -16,20 +16,20 @@ namespace compiler::helios {
 		}
 	}
 
-	StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(PstRef<pst::RiftElement> elem) {
+	StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(PstRef<pst::LangElement> elem) {
 		if (auto* ptr = dynamic_cast<const pst::ClassBlock*>(elem.get())) {
 			StmtList<pst::ClassStmt> out;
 			for (auto&& e: *ptr) detail::visitClassStmts(out, e);
 			return out;
 		} else {
 			const auto& element = *elem.get();
-			RIFT_PANIC(base::strConcat(
-				"Bad Rift Element in `getChildStmtsOfClassBlock`: ", typeid(element).name()
+			CORE_PANIC(base::strConcat(
+				"Bad Duckling Element in `getChildStmtsOfClassBlock`: ", typeid(element).name()
 			));
 		}
 	}
 
-	StmtList<> getStmtsFromStmtAggregate(PstRef<pst::RiftElement> elem) {
+	StmtList<> getStmtsFromStmtAggregate(PstRef<pst::LangElement> elem) {
 		if (auto* ptr = dynamic_cast<const pst::CodeBlock*>(elem.get())) {
 			StmtList<> out;
 			for (auto&& e: *ptr) out.emplace_back(e);
@@ -46,8 +46,8 @@ namespace compiler::helios {
 			return out;
 		} else {
 			const auto& element = *elem.get();
-			RIFT_PANIC(base::strConcat(
-				"Bad Rift Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
+			CORE_PANIC(base::strConcat(
+				"Bad Duckling Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
 			));
 		}
 	}

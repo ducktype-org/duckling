@@ -5,7 +5,7 @@
 #include <token_file/file.hpp>
 #include <lexer/classifications.hpp>
 #include <base/optional.hpp>
-#include <rift_definitions/key_spec_op.hpp>
+#include <lang_definitions/key_spec_op.hpp>
 #include <stdexcept>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
@@ -179,8 +179,8 @@ namespace assemble {
 			state.parse().one(&identifier1);
 			out->opcode_name = identifier1.value;
 
-			if (state[0].is(rift_def::Special::Semicolon)) {
-				state.parse().one(rift_def::Special::Semicolon);
+			if (state[0].is(lang_def::Special::Semicolon)) {
+				state.parse().one(lang_def::Special::Semicolon);
 				return out;
 			}
 
@@ -215,13 +215,13 @@ namespace assemble {
 					state.tokens().skip();
 				}
 
-				if (state.ctokens().peek().is(rift_def::Special::Semicolon)) {
-					state.parse().one(rift_def::Special::Semicolon);
+				if (state.ctokens().peek().is(lang_def::Special::Semicolon)) {
+					state.parse().one(lang_def::Special::Semicolon);
 					break;
 				}
 
-				if (state.ctokens().peek().is(rift_def::Special::Comma)) {
-					state.parse().one(rift_def::Special::Comma);
+				if (state.ctokens().peek().is(lang_def::Special::Comma)) {
+					state.parse().one(lang_def::Special::Comma);
 				} else {
 					state.err.failAndLog(
 						state.getPosition(),
@@ -259,11 +259,11 @@ namespace assemble {
 			auto out = tpc::makeRef<ByteCode>();
 
 			while (state.notEmpty()) {
-				if (state.tryEat(rift_def::Keyword::BCLabel)) {
+				if (state.tryEat(lang_def::Keyword::BCLabel)) {
 					tpc::Identifier label_name;
 					state.parse().one(&label_name);
 
-					if (!state.tryEat(rift_def::Special::Semicolon))
+					if (!state.tryEat(lang_def::Special::Semicolon))
 						state.err.failAndLog(state.getPosition(-1), "semicolon expected");
 
 					if (out->label_position.contains(label_name.value)) {
@@ -363,7 +363,7 @@ namespace assemble {
 	tpc::ParserRef<Func> Func::parse(F8ParserState& state) {
 		auto out = tpc::makeRef<Func>();
 
-		state.parse().all(rift_def::Keyword::BCFunction, &out->name);
+		state.parse().all(lang_def::Keyword::BCFunction, &out->name);
 
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 			state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
@@ -376,8 +376,8 @@ namespace assemble {
 			auto next = state.tokens().next();
 
 			switch (next.asKeyword()) {
-			case rift_def::Keyword::BCArgSize: {
-				state.parse().one(rift_def::Operator::Colon);
+			case lang_def::Keyword::BCArgSize: {
+				state.parse().one(lang_def::Operator::Colon);
 				if (out->arg_size != size_t_max)
 					state.err.failAndLog(state.getPosition(), "arg_size duplicate");
 				auto value = state.tokens().next();
@@ -394,11 +394,11 @@ namespace assemble {
 						state.getPosition(), "arg_size argument is not num-literal"
 					);
 				}
-				state.parse().one(rift_def::Special::Semicolon);
+				state.parse().one(lang_def::Special::Semicolon);
 				break;
 			}
-			case rift_def::Keyword::BCNextArgSize: {
-				state.parse().one(rift_def::Operator::Colon);
+			case lang_def::Keyword::BCNextArgSize: {
+				state.parse().one(lang_def::Operator::Colon);
 				if (out->next_arg_size != size_t_max) {
 					state.err.failAndLog(
 						state.ctokens().peek().getPosition(), "next_arg_size duplicate"
@@ -420,12 +420,12 @@ namespace assemble {
 						"next_arg_size argument is not num-literal"
 					);
 				}
-				state.parse().one(rift_def::Special::Semicolon);
+				state.parse().one(lang_def::Special::Semicolon);
 				break;
 			}
 
-			case rift_def::Keyword::BCLocalSize: {
-				state.parse().one(rift_def::Operator::Colon);
+			case lang_def::Keyword::BCLocalSize: {
+				state.parse().one(lang_def::Operator::Colon);
 				if (out->local_size != size_t_max)
 					state.err.failAndLog(state.getPosition(), "local_size duplicate");
 				auto value = state.tokens().next();
@@ -442,12 +442,12 @@ namespace assemble {
 					);
 				}
 
-				state.parse().one(rift_def::Special::Semicolon);
+				state.parse().one(lang_def::Special::Semicolon);
 				break;
 			}
 
-			case rift_def::Keyword::BCRetSize: {
-				state.parse().one(rift_def::Operator::Colon);
+			case lang_def::Keyword::BCRetSize: {
+				state.parse().one(lang_def::Operator::Colon);
 				if (out->ret_size != size_t_max)
 					state.err.failAndLog(state.getPosition(), "ret_size duplicate");
 				auto value = state.tokens().next();
@@ -464,16 +464,16 @@ namespace assemble {
 					);
 				}
 
-				state.parse().one(rift_def::Special::Semicolon);
+				state.parse().one(lang_def::Special::Semicolon);
 				break;
 			}
 
-			case rift_def::Keyword::BCDefine: {
+			case lang_def::Keyword::BCDefine: {
 				throw base::NotYetImplemented("BCDefine");
 			}
 
-			case rift_def::Keyword::BCCode: {
-				state.parse().one(rift_def::Operator::Colon);
+			case lang_def::Keyword::BCCode: {
+				state.parse().one(lang_def::Operator::Colon);
 				if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly))
 					state.err.failAndLog(state.getPosition(), "no {} on code:");
 
@@ -506,7 +506,7 @@ namespace assemble {
 	}
 
 	tpc::ParserRef<Type> Type::parse(F8ParserState& state) {
-		if (!state.tryEat(rift_def::Keyword::BCType)) {
+		if (!state.tryEat(lang_def::Keyword::BCType)) {
 			state.err.failAndLog(state.ctokens().peek().getPosition(), "expected keyword 'type'");
 			return nullptr;
 		};
@@ -514,11 +514,11 @@ namespace assemble {
 
 		/// @TODO: implement keywordToNumLiteral
 		auto type = state.tokens().next().asKeyword();
-		state.parse().one(rift_def::Operator::Colon);
+		state.parse().one(lang_def::Operator::Colon);
 		base::StrID name = state.tokens().next().getValue();
 
 		switch (type) {
-		case rift_def::Keyword::BCPrimitive: {
+		case lang_def::Keyword::BCPrimitive: {
 			auto value = state.tokens().next();
 			if (!value.isNumLiteral()) {
 				state.err.failAndLog(state.getPosition(), "expected number");
@@ -528,7 +528,7 @@ namespace assemble {
 			}
 			break;
 		}
-		case rift_def::Keyword::BCPointer: {
+		case lang_def::Keyword::BCPointer: {
 			auto pointered_type = state.tokens().next();
 			if (!pointered_type.isIdentifier())
 				state.err.failAndLog(state.getPosition(), "expected identifier");
@@ -536,7 +536,7 @@ namespace assemble {
 				out->datatype = PointerType{ name, pointered_type.getValue() };
 			break;
 		}
-		case rift_def::Keyword::BCStaticTable: {
+		case lang_def::Keyword::BCStaticTable: {
 			auto type_name = state.tokens().next();
 			if (!type_name.isIdentifier()) {
 				state.err.failAndLog(state.getPosition(), "expected identifier");
@@ -553,7 +553,7 @@ namespace assemble {
 			}
 			break;
 		}
-		case rift_def::Keyword::BCDynamicTable: {
+		case lang_def::Keyword::BCDynamicTable: {
 			const lexer::Token& type_name = state.tokens().next();
 			if (!type_name.isIdentifier())
 				state.err.failAndLog(state.getPosition(), "expected identifier");
@@ -561,7 +561,7 @@ namespace assemble {
 				out->datatype = DynamicTableType{ name, type_name.getValue() };
 			break;
 		}
-		case rift_def::Keyword::BCData: {
+		case lang_def::Keyword::BCData: {
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
 				return nullptr;
@@ -572,13 +572,13 @@ namespace assemble {
 			while (state.notEmpty()) {
 				tpc::Identifier field_name;
 				tpc::Identifier field_type;
-				state.parse().all(&field_name, rift_def::Operator::Colon, &field_type);
+				state.parse().all(&field_name, lang_def::Operator::Colon, &field_type);
 				fields.emplace_back(Field{ field_name.value, field_type.value });
 
 				if (state.empty()) break;
 
-				if (state.ctokens().peek().is(rift_def::Special::Comma)) {
-					state.parse().one(rift_def::Special::Comma);
+				if (state.ctokens().peek().is(lang_def::Special::Comma)) {
+					state.parse().one(lang_def::Special::Comma);
 				} else {
 					state.err.failAndLog(state.getPosition(), "expected comma or }");
 					state.tokens().skip();
@@ -588,7 +588,7 @@ namespace assemble {
 			out->datatype = DataType{ name, fields };
 			break;
 		}
-		case rift_def::Keyword::BCVariant: {
+		case lang_def::Keyword::BCVariant: {
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
 				return nullptr;
@@ -602,8 +602,8 @@ namespace assemble {
 				alternatives.emplace_back(field_type.value);
 
 				if (state.empty()) break;
-				if (state[0].is(rift_def::Special::Comma)) {
-					state.parse().one(rift_def::Special::Comma);
+				if (state[0].is(lang_def::Special::Comma)) {
+					state.parse().one(lang_def::Special::Comma);
 				} else {
 					state.err.failAndLog(state.getPosition(), "expected comma or }");
 					state.tokens().skip();
@@ -613,7 +613,7 @@ namespace assemble {
 			out->datatype = VariantType{ name, alternatives };
 			break;
 		}
-		case rift_def::Keyword::BCFunType: {
+		case lang_def::Keyword::BCFunType: {
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
 				return nullptr;
@@ -627,8 +627,8 @@ namespace assemble {
 				arguments.emplace_back(field_type.value);
 
 				if (state.empty()) break;
-				if (state[0].is(rift_def::Special::Comma)) {
-					state.parse().one(rift_def::Special::Comma);
+				if (state[0].is(lang_def::Special::Comma)) {
+					state.parse().one(lang_def::Special::Comma);
 				} else {
 					state.err.failAndLog(state.getPosition(), "expected comma or }");
 					state.tokens().skip();
@@ -653,10 +653,10 @@ namespace assemble {
 		auto out = tpc::makeRef<ParsedCode>();
 
 		while (state.notEmpty()) {
-			if (state[0].is(rift_def::Keyword::BCType)) {
+			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state);
 				if (type != nullptr) out->types.emplace_back(std::move(type));
-			} else if (state[0].is(rift_def::Keyword::BCFunction)) {
+			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state);
 				if (func != nullptr) out->functions.emplace_back(std::move(func));
 			} else {
@@ -669,7 +669,7 @@ namespace assemble {
 	}
 
 	struct CodeContainer {
-		// @TODO: https://github.com/rift-lang/rift-poc-zpp1/issues/70
+		// @TODO: https://github.com/ducktype-org/rift-poc-zpp1/issues/70
 		bool                       ok    = true;
 		std::string                error = "";
 		tpc::ParserRef<ParsedCode> code;
@@ -679,7 +679,7 @@ namespace assemble {
 	CodeContainer parseFile(const fs::FilePath& path) {
 		lexer::init();
 		tpc::init();
-		rift_def::setKeywordMode(rift_def::KeywordMode::RiftBC);
+		lang_def::setKeywordMode(lang_def::KeywordMode::DuckBC);
 
 		auto maybeContent = path.getContentSafe();
 		if (maybeContent.has_error()) return CodeContainer{ false, maybeContent.error(), nullptr };
@@ -756,7 +756,7 @@ namespace assemble {
 					for (auto& param: data.parameters) parameters.emplace_back(type_map[param]);
 					type_map[data.name]->defineFunction(parameters, type_map[data.result]);
 				}
-				variant_default { RIFT_PANIC("bad type"); }
+				variant_default { CORE_PANIC("bad type"); }
 			}
 		}
 
@@ -775,7 +775,7 @@ namespace assemble {
 			return static_cast<u16>(vm::str_to_OpcodeFix8.at(str.str()));
 		} catch (std::out_of_range& err) {
 			// @TODO: better errors
-			RIFT_PANIC(base::strConcat("Incorrect opcode: ", str));
+			CORE_PANIC(base::strConcat("Incorrect opcode: ", str));
 			return 0;
 		}
 	}
@@ -789,25 +789,25 @@ namespace assemble {
 #else
 				if (static_cast<vm::OpcodeFix8>(op.opcode) == vm::OpcodeFix8::ret_tailcall) {
 #endif
-					RIFT_ASSERT(
+					CORE_ASSERT(
 						func.arg_size == func.next_arg_size,
 						"Invalid Tailcall! Caller signature must have arg_size equal to "
 						"next_arg_size"
 					);
-					RIFT_ASSERT(
+					CORE_ASSERT(
 						functions[op.arg0].arg_size == functions[op.arg0].next_arg_size,
 						"Invalid Tailcall! Called function signature must have arg_size == "
 						"next_arg_size"
 					);
-					RIFT_ASSERT(
+					CORE_ASSERT(
 						func.arg_size == functions[op.arg0].arg_size,
 						"Invalid Tailcall! Caller and called arg size unmatched"
 					);
-					RIFT_ASSERT(
+					CORE_ASSERT(
 						func.stack_size == functions[op.arg0].stack_size,
 						"Invalid Tailcall! Caller and called stack size unmatched"
 					);
-					RIFT_ASSERT(
+					CORE_ASSERT(
 						func.ret_size == functions[op.arg0].ret_size,
 						"Invalid Tailcall! Caller and called ret size unmatched"
 					);

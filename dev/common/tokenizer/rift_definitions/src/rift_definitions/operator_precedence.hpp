@@ -18,7 +18,7 @@
 #include <base/string_id.hpp>
 #include "key_spec_op.hpp"
 
-namespace rift_def {
+namespace lang_def {
 
 	namespace operator_precedence {
 		void init();

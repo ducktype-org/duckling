@@ -41,7 +41,7 @@ namespace vm {
 	/**
 	 * @brief Bytecode instruction representation.
 	 *
-	 * Depends on the @ref RiftVM/src/config.hpp configuration.
+	 * Depends on the @ref VM/src/config.hpp configuration.
 	 */
 	struct Fix8Instruction;
 
@@ -49,7 +49,7 @@ namespace vm {
 	using OpFun = void(OPFUN_ARGS);
 
 
-	// Describes number of RiftBC opcodes + meta-opcodes recognized by Executor.
+	// Describes number of DuckBC opcodes + meta-opcodes recognized by Executor.
 	// This constant is relevant for `vm::Opfuns::opfuns[]` (instructions.hpp) and `opcode_label[]`
 	// (CG, executor.cpp)
 	constexpr u16 OP_CASES_COUNT = count_op_cases();

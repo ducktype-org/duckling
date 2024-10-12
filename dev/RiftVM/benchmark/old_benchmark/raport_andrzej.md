@@ -2,7 +2,7 @@
 
 ## Test 5.06
 
-| name | input | RiftVM time (no debug) | RiftVM time (with debug) | Java time | Java no jit | JS |  JS no jit | Python |
+| name | input | VM time (no debug) | VM time (with debug) | Java time | Java no jit | JS |  JS no jit | Python |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: 
 |collatz | 10^5 | 0.182s | 5.041s | 0.079s | 0.283s | 0.063s | 0.532s | 1.202s |
 |collatz | 10^6 | 2.094s | 61.335s | 0.288s | 2.540s | 1.125s | 4.589s | 14.314s |

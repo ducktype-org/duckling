@@ -18,7 +18,7 @@ include(CTest)
 enable_testing()
 
 # Common functions:
-function(rift_add_test test_pack test_name source USES)
+function(duck_add_test test_pack test_name source USES)
 	if(${USES} STREQUAL "USES")
 		add_executable(${test_name} ${CMAKE_CURRENT_LIST_DIR}/${source})
 		target_link_libraries(${test_name} Tester ${ARGN})
@@ -40,7 +40,7 @@ function(rift_add_test test_pack test_name source USES)
 
 		set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
 	else()
-		message(FATAL_ERROR "rift_add_test lacks uses clause")
+		message(FATAL_ERROR "duck_add_test lacks uses clause")
 	endif()
 endfunction()
 

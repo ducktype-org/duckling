@@ -158,8 +158,8 @@ namespace compiler::mir {
 				  position(position) {}
 
 			void fill(Instruction instruction) {
-				RIFT_ASSERT(isEmpty(), "Hole is already filled");
-				RIFT_ASSERT(
+				CORE_ASSERT(isEmpty(), "Hole is already filled");
+				CORE_ASSERT(
 					not isTerminating(instruction.operation),
 					"Instruction must not be a terminating instruction"
 				);
@@ -174,7 +174,7 @@ namespace compiler::mir {
 		Block build() const {
 			std::vector<Instruction> instructions;
 			for (const auto& instruction: reversed_instruction | std::views::reverse) {
-				RIFT_ASSERT(instruction.has_value(), "Empty instruction left in the block");
+				CORE_ASSERT(instruction.has_value(), "Empty instruction left in the block");
 				instructions.emplace_back(instruction.value());
 			}
 			return { id, std::move(instructions), terminator.value() };
@@ -186,7 +186,7 @@ namespace compiler::mir {
 		 * @param instr
 		 */
 		void addInstruction(Instruction instr) {
-			RIFT_ASSERT(
+			CORE_ASSERT(
 				not isTerminating(instr.operation),
 				"Instruction must not be a terminating instruction"
 			);
@@ -209,8 +209,8 @@ namespace compiler::mir {
 		}
 
 		void setTerminator(Instruction instruction) {
-			RIFT_ASSERT(not terminator.has_value(), "terminator already set.");
-			RIFT_ASSERT(
+			CORE_ASSERT(not terminator.has_value(), "terminator already set.");
+			CORE_ASSERT(
 				isTerminating(instruction.operation), "Terminator must be a terminating instruction"
 			);
 			terminator.emplace(std::move(instruction));
@@ -240,7 +240,7 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		Function build() {
-			RIFT_ASSERT(entry_block.has_value(), "Entry block not set");
+			CORE_ASSERT(entry_block.has_value(), "Entry block not set");
 
 			std::vector<Block> blocks;
 			for (usize i = 0; i < this->blocks.size(); i++)
@@ -252,7 +252,7 @@ namespace compiler::mir {
 		}
 
 		void setName(base::StrID name) {
-			RIFT_ASSERT(not this->name.has_value(), "Name already set");
+			CORE_ASSERT(not this->name.has_value(), "Name already set");
 			this->name.emplace(name);
 		}
 
@@ -271,12 +271,12 @@ namespace compiler::mir {
 		BlockBuilderRef newBlock() {
 			auto index = blocks.size();
 			auto res   = blocks.getRef(blocks.emplaceBack(BlockBuilder{ index })).value();
-			RIFT_ASSERT(u64(res->getID()) == blocks.size() - 1, "Bad block id");
+			CORE_ASSERT(u64(res->getID()) == blocks.size() - 1, "Bad block id");
 			return res;
 		}
 
 		void setEntry(BlockBuilderRef block) {
-			RIFT_ASSERT(entry_block.empty(), "Entry block already set.");
+			CORE_ASSERT(entry_block.empty(), "Entry block already set.");
 			entry_block.emplace(block);
 		}
 	};
@@ -297,7 +297,7 @@ namespace compiler::mir {
 		base::Optional<StmtLowerRes> out;
 
 		void output(StmtLowerRes value) {
-			RIFT_ASSERT(this->out.empty(), "Output already set.");
+			CORE_ASSERT(this->out.empty(), "Output already set.");
 			this->out.emplace(value);
 		}
 
@@ -376,7 +376,7 @@ namespace compiler::mir {
 				opt_none { throw base::NotYetImplemented("variable without initial value in MIR"); }
 			}
 
-			RIFT_PANIC("match_optional failed in visitVariableStmt.");
+			CORE_PANIC("match_optional failed in visitVariableStmt.");
 		}
 	};
 
@@ -396,7 +396,7 @@ namespace compiler::mir {
 			  function(function) {}
 
 		void output(ExprLowerRes value) {
-			RIFT_ASSERT(this->out.empty(), "Output already set.");
+			CORE_ASSERT(this->out.empty(), "Output already set.");
 			this->out.emplace(value);
 		}
 

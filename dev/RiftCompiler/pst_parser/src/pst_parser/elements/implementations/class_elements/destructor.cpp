@@ -17,7 +17,7 @@ namespace pst {
 		}
 	};
 
-	ParserRef<Destructor> Destructor::parse(RiftParserState& state, const ClassContext& ctx) {
+	ParserRef<Destructor> Destructor::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Destructor>(position, ctx);
 

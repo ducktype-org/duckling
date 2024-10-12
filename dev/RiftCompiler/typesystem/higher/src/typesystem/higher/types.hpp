@@ -420,7 +420,7 @@ namespace tsh {
 	 * to protect themselves from themselves. The compiler can assist the user by
 	 * checking if the user's purity expectations are satisfied.
 	 *
-	 * By default, a function is not pure, because Rift is a predominantly imperative
+	 * By default, a function is not pure, because Duckling is a predominantly imperative
 	 * language and use of global values and shared states is expected. Also, it's
 	 * easier to introduce a `pure` annotation than a `nonpure` annotation.
 	 *

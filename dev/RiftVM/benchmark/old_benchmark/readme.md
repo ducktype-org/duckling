@@ -1,4 +1,4 @@
-\page vm-benchmark-old Rift VM Old Benchmark
+\page vm-benchmark-old Duckling VM Old Benchmark
 
 - \subpage vm-old-out-files-structure
 - \subpage vm-old-andrzej-raport
@@ -27,24 +27,24 @@ Dwie wersje uruchomienia
 1. Z JIT-em: `time java {plik} < input{n}.in > dump.out`
 2. Bez JIT-a: `time java -Xint {plik} < input{n}.in > dump.out`
 
-## RiftVM:
+## VM:
 Dwie wersje:
-1. RiftVM + debug:  
+1. VM + debug:  
 W src/services/executor_f8/op_case_config.hpp:
 ```
 constexpr bool IGNORE_EXECUTION_STRATEGY = false;
 // #define USE_COMPUTED_GOTO
 // #define USE_FLAT_FRAME
 ```
-`time ./RiftVM -f {plik}.rbc < input{n}.in > dump.out`
-2. RiftVM:  
+`time ./VM -f {plik}.dbc < input{n}.in > dump.out`
+2. VM:  
 W src/services/executor_f8/op_case_config.hpp:
 ```
 constexpr bool IGNORE_EXECUTION_STRATEGY = true;
 #define USE_COMPUTED_GOTO
 // #define USE_FLAT_FRAME
 ```
-`time ./RiftVM -f {plik}.rbc < input{n}.in > dump.out`
+`time ./VM -f {plik}.dbc < input{n}.in > dump.out`
 
 # Raportowanie
 W rozdziale 7 w pracy trzeba wpisać swój procesor i ilość i rodzaj (DDR3/DDR4 itp) ramu i swój system operacyjny. Dalej wypełnijcie odpowiednie tabelki z prędkością w sekundach zaokrąglone do 2 miejsc po przecinku. Bierzemy czas "real"

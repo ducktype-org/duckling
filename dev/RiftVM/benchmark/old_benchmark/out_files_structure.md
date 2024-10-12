@@ -12,8 +12,8 @@ Kolejność języków:
 * NodeJS + JIT
 * NodeJS bez JIT
 * Python
-* RiftVM
-* RiftVM + debug
+* VM
+* VM + debug
 
 Ogólna struktura pliku:
 ~~~~~~~~~~

@@ -16,28 +16,28 @@ public:
 
 private:
 	void test_ret_l64_opcode() {
-		runTestOnVm("ret_l64.rbc", "17", "17");
-		runTestOnVm("ret_l64.rbc", "2100", "2100");
+		runTestOnVm("ret_l64.dbc", "17", "17");
+		runTestOnVm("ret_l64.dbc", "2100", "2100");
 	}
 
-	void test_ret_imm_opcode() { runTestOnVm("ret_imm.rbc", "", "17"); }
+	void test_ret_imm_opcode() { runTestOnVm("ret_imm.dbc", "", "17"); }
 
 	void test_setFstArg_l64_opcode() {
-		runTestOnVm("setFstArg_l64.rbc", "18", "18");
-		runTestOnVm("setFstArg_l64.rbc", "4200", "4200");
+		runTestOnVm("setFstArg_l64.dbc", "18", "18");
+		runTestOnVm("setFstArg_l64.dbc", "4200", "4200");
 	}
 
 	void test_recurence() {
-		runTestOnVm("rec_func_sum.rbc", "20", "210");
-		runTestOnVm("rec_func_sum.rbc", "100", "5050");
+		runTestOnVm("rec_func_sum.dbc", "20", "210");
+		runTestOnVm("rec_func_sum.dbc", "100", "5050");
 	}
 
 	void test_many_functions() {
-		runTestOnVm("many_functions.rbc", "5", "1115");
-		runTestOnVm("many_functions.rbc", "21", "1131");
+		runTestOnVm("many_functions.dbc", "5", "1115");
+		runTestOnVm("many_functions.dbc", "21", "1131");
 	}
 
-	void test_preserved_flag() { runTestOnVm("preserved_flag.rbc", "", "1"); }
+	void test_preserved_flag() { runTestOnVm("preserved_flag.dbc", "", "1"); }
 };
 
-TESTER_COMMON_MAIN("/RiftVM/tests/functions/");
+TESTER_COMMON_MAIN("/VM/tests/functions/");

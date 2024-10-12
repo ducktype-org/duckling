@@ -1,6 +1,6 @@
 /**
  * @file vm.hpp
- * @brief Main API for the RiftVM clients (CLI, Server, etc.)
+ * @brief Main API for the VM clients (CLI, Server, etc.)
  */
 #pragma once
 
@@ -22,7 +22,7 @@ namespace vm::api {
 	cpp::result<ProcessInfo, ApiError> spawn(bool usesStdio);
 
 	/**
-	 * @brief Get the execution status of the RiftVM
+	 * @brief Get the execution status of the VM
 	 */
 	cpp::result<VCPUStatus, ApiError> getExecutionStatus(PID pid);
 

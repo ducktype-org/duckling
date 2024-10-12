@@ -35,9 +35,9 @@ You can do this by using our custom CMake function:
 .. code-block:: cmake
     :caption: CMake file of the module
 
-    rift_add_test(test_pack test_name source USES module1 module2 ...)
+    duck_add_test(test_pack test_name source USES module1 module2 ...)
     # example:
-    rift_add_test(common filesystem_test_fstree tests/fs_tree_test.cpp 
+    duck_add_test(common filesystem_test_fstree tests/fs_tree_test.cpp 
         USES Filesystem)
 
 After you added the test to the CMake file, you can compile it by using one of the following commands:
@@ -73,7 +73,7 @@ You can add the example to the CMake target list by using our custom CMake funct
 .. code-block:: cmake
     :caption: CMake file of the module
 
-    rift_add_example(example_name source USES module1 module2 ...)
+    duck_add_example(example_name source USES module1 module2 ...)
     # example:
     add_example(filesystem_temp_path_example examples/temp_path_creation.cpp
 	USES Filesystem)

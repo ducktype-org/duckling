@@ -1,4 +1,4 @@
-\page vm-api RiftVM API
+\page vm-api VM API
 
 # API internal documentation
 Any client (HTTP server, terminal client) can only communicate with the VM using an API defined in a `vm.hpp`.
@@ -18,4 +18,4 @@ Another option is to extend one of the variants present in `ApiError` like `Proc
 While deciding how to add a new error type, it is crucial to think "What is the new error representing, and where it would fit best?". It is, ultimately, a subjective choice.
 
 ## IMPORTANT!!!
-Each change in the API types and API calls should be done together with changes in the swagger file in the RiftVM directory.
+Each change in the API types and API calls should be done together with changes in the swagger file in the VM directory.

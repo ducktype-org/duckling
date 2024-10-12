@@ -33,7 +33,7 @@ namespace pst {
 		ForNoInError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<For> For::parse(RiftParserState& state) {
+	ParserRef<For> For::parse(LangParserState& state) {
 		// @TODO: attr list
 		auto position = state.getPosition();
 		auto out      = makeRef<For>(position);

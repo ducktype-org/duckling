@@ -5,7 +5,7 @@
 #include <base/init_guard.hpp>
 #include <array>
 
-namespace rift_def {
+namespace lang_def {
 	namespace {
 		KeywordMode keyword_mode;
 	}
@@ -20,7 +20,7 @@ namespace rift_def {
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
 	constexpr std::array<std::tuple<Keyword, std::string_view, base::FlagType>, 66>
-		rift_keywords_array{ {
+		lang_keywords_array{ {
 			{ Keyword::Fun, "fun", base::EmptyFlag },
 			{ Keyword::Class, "class", base::EmptyFlag },
 			{ Keyword::Namespace, "namespace", base::EmptyFlag },
@@ -154,7 +154,7 @@ namespace rift_def {
 	} };
 
 	// Distinct for all keyword modes:
-	base::VectorMap<base::StrID, Keyword, false, true> rift_keyword_map;
+	base::VectorMap<base::StrID, Keyword, false, true> lang_keyword_map;
 	base::VectorMap<base::StrID, Keyword, false, true> bc_keyword_map;
 
 	// Single for all
@@ -170,7 +170,7 @@ namespace rift_def {
 	base::VectorMap<Operator, base::StrID, false, true> rev_operator_map;
 
 	void key_spec_op::init() {
-		RIFT_SIMPLE_INIT_GUARD_BEGIN;
+		SIMPLE_INIT_GUARD_BEGIN;
 
 		keyword_mode = DEFAULT_MODE;
 
@@ -178,8 +178,8 @@ namespace rift_def {
 		rev_keyword_map.put(Keyword::NotAKeyword, base::StrID("NotAKeyword"));
 		keyword_flags.put(Keyword::NotAKeyword, base::EmptyFlag);
 
-		for (auto [k, s, f]: rift_keywords_array) {
-			rift_keyword_map.put(makeStrID(s), k);
+		for (auto [k, s, f]: lang_keywords_array) {
+			lang_keyword_map.put(makeStrID(s), k);
 			rev_keyword_map.put(k, makeStrID(s));
 			keyword_flags.put(k, f);
 		}
@@ -204,39 +204,39 @@ namespace rift_def {
 
 		// just to be safe for any future changes
 		// @TODO: move to same tests
-		RIFT_ASSERT(rift_keywords_array.size() == rift_keyword_map.size(), "keyword map error");
-		RIFT_ASSERT(
+		CORE_ASSERT(lang_keywords_array.size() == lang_keyword_map.size(), "keyword map error");
+		CORE_ASSERT(
 			special_array.size() == special_map.size()
 				&& special_array.size() == rev_special_map.size(),
 			"special map error"
 		);
-		RIFT_ASSERT(
+		CORE_ASSERT(
 			operator_array.size() == operator_map.size()
 				&& operator_array.size() == rev_operator_map.size(),
 			"operator map error"
 		);
 
-		RIFT_SIMPLE_INIT_GUARD_END;
+		SIMPLE_INIT_GUARD_END;
 	}
 
 	Keyword strAsKeyword(base::StrID id) {
 		switch (keyword_mode) {
-		case KeywordMode::RiftSource:
-			if (rift_keyword_map.contains(id))
-				return rift_keyword_map[id];
+		case KeywordMode::DucklingSource:
+			if (lang_keyword_map.contains(id))
+				return lang_keyword_map[id];
 			else
 				return Keyword::NotAKeyword;
 
-		case KeywordMode::RiftBC:
+		case KeywordMode::DuckBC:
 			if (bc_keyword_map.contains(id))
 				return bc_keyword_map[id];
 			else
 				return Keyword::NotAKeyword;
 
 		default:
-			RIFT_PANIC("Illegal keyword_mode");
+			CORE_PANIC("Illegal keyword_mode");
 		}
-		if (rift_keyword_map.contains(id)) return rift_keyword_map[id];
+		if (lang_keyword_map.contains(id)) return lang_keyword_map[id];
 		return Keyword::NotAKeyword;
 	}
 
@@ -260,8 +260,8 @@ namespace rift_def {
 
 	std::vector<Keyword> getKeywords() {
 		std::vector<Keyword> result;
-		result.reserve(rift_keywords_array.size());
-		for (const auto& [k, s, f]: rift_keywords_array) result.push_back(k);
+		result.reserve(lang_keywords_array.size());
+		for (const auto& [k, s, f]: lang_keywords_array) result.push_back(k);
 		return result;
 	}
 

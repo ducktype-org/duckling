@@ -13,14 +13,14 @@ class PSTBuilderTest: public tester::TestSuite {
 #define TESTER_CLASS PSTBuilderTest
 
 	std::vector<std::string> paths = {
-		"snippets/actions.rift",   "snippets/all_statements.txt",
-		"snippets/block.rift",     "snippets/fun.rift",
-		"snippets/fun2.rift",      "snippets/if.rift",
-		"snippets/import.rift",    "snippets/lists_err.rift",
-		"snippets/lists_ok.rift",  "snippets/missing_semicolon_err.rift",
-		"snippets/namespace.rift", "snippets/params_err.rift",
-		"snippets/class.rift",     "snippets/using_err.rift",
-		"snippets/using.rift",     "snippets/while.rift",
+		"snippets/actions.duck",   "snippets/all_statements.txt",
+		"snippets/block.duck",     "snippets/fun.duck",
+		"snippets/fun2.duck",      "snippets/if.duck",
+		"snippets/import.duck",    "snippets/lists_err.duck",
+		"snippets/lists_ok.duck",  "snippets/missing_semicolon_err.duck",
+		"snippets/namespace.duck", "snippets/params_err.duck",
+		"snippets/class.duck",     "snippets/using_err.duck",
+		"snippets/using.duck",     "snippets/while.duck",
 	};
 
 	template<typename Element, bool good = true>
@@ -120,4 +120,4 @@ public:
 	~PSTBuilderTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/pst_parser/tests/");
+TESTER_COMMON_MAIN("/compiler/pst_parser/tests/");

@@ -66,13 +66,13 @@ std::string stringPosition(dia::SourcePosition pos) {
  *
  * @note Adds information about position and element class
  */
-Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::RiftElement> el) {
+Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::LangElement> el) {
 	std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType();
 	auto        self = hdl.addNode(name);
 
 	for (auto sub: el->viewSubElements()) {
 		variant_match(sub) {
-			variant_case(pst::RiftElement::SubToken, token) {
+			variant_case(pst::LangElement::SubToken, token) {
 				std::string value = { token->getStrValue().data(), token->getStrValue().size() };
 				auto sub_node = hdl.addNode(stringPosition(token->getPosition()) + "\n" + value);
 				hdl.addEdge(self, sub_node);
@@ -82,7 +82,7 @@ Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::RiftElement> el) {
 				agsafeset(sub_node, shape_string.data(), box_string.data(), empty_string.data());
 			}
 
-			variant_case(pst::RiftElement::ConstChild, child) {
+			variant_case(pst::LangElement::ConstChild, child) {
 				auto sub_node = dotElement(hdl, child);
 				hdl.addEdge(self, sub_node);
 			}
@@ -95,7 +95,7 @@ Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::RiftElement> el) {
 
 int main(int argc, char** argv) {
 	if (argc != 3) {
-		std::cerr << "usage: ./pst_graph rift_file svg_out_file\n";
+		std::cerr << "usage: ./pst_graph duckling_file svg_out_file\n";
 		return 1;
 	}
 	pst::init();

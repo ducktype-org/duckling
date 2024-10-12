@@ -62,7 +62,7 @@ namespace pst {
 		}
 	}
 
-	ParserRef<Expr> Expr::parse(RiftParserState& state, bool allow_comma) {
+	ParserRef<Expr> Expr::parse(LangParserState& state, bool allow_comma) {
 		// @TODO: better inf
 		return Expr::parse(state, 1e18, false, allow_comma);
 	}
@@ -72,14 +72,14 @@ namespace pst {
 	 * @TODO: lambda, todo-s
 	 */
 	ParserRef<Expr>
-		Expr::parse(RiftParserState& state, usize len, bool exact_len, bool allow_comma) {
+		Expr::parse(LangParserState& state, usize len, bool exact_len, bool allow_comma) {
 		auto result = makeRef<Expr>(state.getPosition());
 		// Currently parsed expression
 		auto  back         = result.borrow_mut();
 		usize i            = 0;
 		auto  expected_end = state.getPosition((i64) len);
 
-		RIFT_ASSERT(
+		CORE_ASSERT(
 			len > 0, state.getPosition().genStr("Expr parse should have positive expected length.")
 		);
 
@@ -96,7 +96,7 @@ namespace pst {
 		while (state.notEmpty() and i < len) {
 			i++;
 
-			if (state[0].is(rift_def::Operator::Colon) && state[1].isBracketGroup(Token::Curly)) {
+			if (state[0].is(lang_def::Operator::Colon) && state[1].isBracketGroup(Token::Curly)) {
 				// @TODO: This should probably generate something more specific to templates
 
 				auto& token = state.tokens().next();
@@ -220,10 +220,10 @@ namespace pst {
 					out << "] }";
 				}
 				variant_case(KeywordValue, key) {
-					out << R"({"KeywordValue": ")" << rift_def::keywordToStr(key.keyword).strView()
+					out << R"({"KeywordValue": ")" << lang_def::keywordToStr(key.keyword).strView()
 						<< "\"}";
 				}
-				variant_default { RIFT_PANIC("Bad Expr alternative"); }
+				variant_default { CORE_PANIC("Bad Expr alternative"); }
 			}
 			out << ", ";
 		}

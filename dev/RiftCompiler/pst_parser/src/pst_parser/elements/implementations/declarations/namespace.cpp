@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<Namespace> Namespace::parse(RiftParserState& state) {
+	ParserRef<Namespace> Namespace::parse(LangParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Namespace>(position);
 

@@ -7,7 +7,7 @@
 #include <query_framework/query_int.hpp>
 #include <base/perfect_hash.hpp>
 #include <pst_parser/elements/elements.hpp>
-#include <pst_parser/rift_parser_state.hpp>
+#include <pst_parser/lang_parser_state.hpp>
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
@@ -65,7 +65,7 @@ namespace compiler::helios {
 		 * @todo: once scope refactor will be introduced, most "empty scope"
 		 * stuff will be no longer needed.
 		 */
-		PstRef<pst::RiftElement> base_element;
+		PstRef<pst::LangElement> base_element;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;

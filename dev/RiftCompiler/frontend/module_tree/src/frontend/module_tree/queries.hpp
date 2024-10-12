@@ -53,7 +53,7 @@ namespace compiler::frontend {
 	 * module.
 	 */
 	ModuleID
-		extendQueryModuleIDOfPST(query::Context&, pst::ParserCBorrowRef<pst::RiftElement> element);
+		extendQueryModuleIDOfPST(query::Context&, pst::ParserCBorrowRef<pst::LangElement> element);
 
 	/**
 	 * @brief Query extension used to

@@ -7,7 +7,7 @@ LANG_COUNT = 10
 TEST_CASES = 3
 
 # Deprecated for „human names”
-LANG_NAMES=["C++", "C++ with gdb", "C++ with Valgrind","Java with JIT", "Java without Jit", "NodeJS", "NodeJS without JIT", "Python", "RiftVM", "RiftVM with debug"]
+LANG_NAMES=["C++", "C++ with gdb", "C++ with Valgrind","Java with JIT", "Java without Jit", "NodeJS", "NodeJS without JIT", "Python", "VM", "VM with debug"]
 
 LANG_ID = {
 	"cpp": 0,
@@ -18,8 +18,8 @@ LANG_ID = {
 	"node": 5,
 	"node_no_jit": 6,
 	"python": 7,
-	"rift": 8,
-	"rift_debug": 9,
+	"duckling": 8,
+	"duckling_debug": 9,
 }
 
 LANG_NAME = {v: k for k, v in LANG_ID.items()}
@@ -35,8 +35,8 @@ HUMAN_NAME = {
 	"node": "NodeJS + JIT",
 	"node_no_jit": "NodeJS",
 	"python": "Python3",
-	"rift": "RiftVM",
-	"rift_debug": "RiftVM + debug",
+	"duckling": "VM",
+	"duckling_debug": "VM + debug",
 }
 
 COLLATZ = 0
@@ -138,7 +138,7 @@ class TestResult:
 			print(r"\\")
 
 	def generateBenchmarkTable(self):
-		first_raw = ["rift", "rift_debug", "java_no_jit", "java", "python"]
+		first_raw = ["duckling", "duckling_debug", "java_no_jit", "java", "python"]
 		second_raw = ["cpp", "gdb", "valgrind", "node_no_jit", "node"]
 
 		print(f"% From file: {self.file}")

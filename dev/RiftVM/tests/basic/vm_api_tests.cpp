@@ -47,7 +47,7 @@ private:
 			std::holds_alternative<vm::api::NotStarted>(exec_status), "Wrong exec status (1)"
 		);
 
-		fs::FilePath file(path("vm_api_tests.rbc"));
+		fs::FilePath file(path("vm_api_tests.dbc"));
 		auto         loaded_file_response = vm::api::loadFile(pid, file);
 		assertTrue(loaded_file_response.has_value(), "Load failed (1)");
 
@@ -62,7 +62,7 @@ private:
 
 	// Checks if the program can use the data services (block requests, type requests).
 	void dataServices() {
-		auto pid  = loadProgram("print_block_id.rbc");
+		auto pid  = loadProgram("print_block_id.dbc");
 		auto type = vm::api::getType(pid, "custom_int");
 		assertTrue(type.has_value(), "Type failed (1)");
 		assertTrue(type.value()->getSize() == 13, "Wrong type size");
@@ -95,7 +95,7 @@ private:
 
 	// Checks if the program can run and pause, waiting for input.
 	void waitingForInputRun() {
-		auto pid = loadProgram("vm_api_tests.rbc");
+		auto pid = loadProgram("vm_api_tests.dbc");
 
 		auto run_response = vm::api::run(pid);
 		assertTrue(run_response.has_value(), "Run failed (1)");
@@ -119,7 +119,7 @@ private:
 	}
 
 	void stopTest() {
-		auto pid = loadProgram("vm_api_tests.rbc");
+		auto pid = loadProgram("vm_api_tests.dbc");
 
 		auto run_response = vm::api::run(pid);
 		assertTrue(run_response.has_value(), "Run failed (1)");
@@ -131,7 +131,7 @@ private:
 	}
 
 	void killTest() {
-		auto pid = loadProgram("vm_api_tests.rbc");
+		auto pid = loadProgram("vm_api_tests.dbc");
 
 		auto run_response = vm::api::run(pid);
 		assertTrue(run_response.has_value(), "Run failed (1)");
@@ -143,4 +143,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/RiftVM/tests/basic/");
+TESTER_COMMON_MAIN("/VM/tests/basic/");

@@ -9,8 +9,8 @@
 * [DucklingLS](DucklingLS/) - implementation of the Duckling language server and VS Code client,
 * [miscellaneous](miscellaneous/) - for files without any specific location,
 * [playground](playground/) - a space for trying out new ideas and experiments,
-* [RiftCompiler](RiftCompiler/) - implementation of the main Rift language compiler,
-* [RiftVM](RiftVM/) - implementation of the Rift Virtual Machine,
+* [compiler](compiler/) - implementation of the main Duckling language compiler,
+* [VM](VM/) - implementation of the Duckling Virtual Machine,
 * [scripts](scripts/) - collection of various scripts.
 
 

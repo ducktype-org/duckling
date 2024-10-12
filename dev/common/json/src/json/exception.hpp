@@ -11,6 +11,6 @@ struct nlohmann::adl_serializer<std::exception> final {
 	}
 
 	static void from_json(const json&, std::exception&) {
-		RIFT_PANIC("Parsing data from JSON into exception is not supported (yet).");
+		CORE_PANIC("Parsing data from JSON into exception is not supported (yet).");
 	}
 };

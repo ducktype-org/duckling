@@ -13,8 +13,8 @@ import shlex
 @click.option("-o", help="Output file.", type=click.Path())
 @click.option("-v", default=True, help="Verbose.")
 def save_objdump(filepath, function, o, v):
-    """Dumps `opFuns` and `internalCallMain` functions from RiftVM to assembly.
-       Calls "objdump" on RiftVM executable binary file and saves the output to a text file."""
+    """Dumps `opFuns` and `internalCallMain` functions from VM to assembly.
+       Calls "objdump" on VM executable binary file and saves the output to a text file."""
     basename = pathlib.Path(filepath).stem
     result_file_path = o or basename + ".asm"
 

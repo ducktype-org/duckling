@@ -38,7 +38,7 @@ private:
 		ASSERT_EQUAL(2, another_module->getOtherFiles()[base::StrID(".txt")].size());
 		ASSERT_EQUAL(1, another_module->getOtherFiles()[base::StrID("")].size());
 		ASSERT_EQUAL(1, another_module->getSubmodules().size());
-		ASSERT_EQUAL("whoa.rift", another_module->getSourceFiles().front().path.name());
+		ASSERT_EQUAL("whoa.duck", another_module->getSourceFiles().front().path.name());
 
 		ASSERT_EQUAL(true, mt->getSubmodules().contains(base::StrID("awe")));
 		auto awe_module = mt->getSubmodules()[base::StrID("awe")];
@@ -46,7 +46,7 @@ private:
 		ASSERT_EQUAL(0, awe_module->getSourceFiles().size());
 		ASSERT_EQUAL(0, awe_module->getOtherFiles().size());
 		ASSERT_EQUAL(true, awe_module->hasMainSourceFile());
-		ASSERT_EQUAL("awe.rmf", awe_module->getMainSourceFile().path.name());
+		ASSERT_EQUAL("awe.dmf", awe_module->getMainSourceFile().path.name());
 	}
 
 	void testModuleIDInSourceFile(const ModuleTree& module) {
@@ -115,4 +115,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/frontend/module_tree/tests/");
+TESTER_COMMON_MAIN("/compiler/frontend/module_tree/tests/");

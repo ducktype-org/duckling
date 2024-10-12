@@ -15,7 +15,7 @@ private:
 		assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
 		auto pid = process_pid_response.expect("Spawn failed (2)").pid;
 
-		fs::FilePath file(path("working_rbc.rbc"));
+		fs::FilePath file(path("working_rbc.dbc"));
 		auto         loaded_file_response = vm::api::loadFile(pid, file);
 		assertTrue(loaded_file_response.has_value(), "Load failed (1)");
 
@@ -27,4 +27,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/RiftVM/tests/basic/");
+TESTER_COMMON_MAIN("/VM/tests/basic/");

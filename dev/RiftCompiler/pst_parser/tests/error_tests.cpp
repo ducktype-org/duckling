@@ -204,4 +204,4 @@ public:
 
 std::vector<PSTErrorTests::GenExample*> PSTErrorTests::examples = {};
 
-TESTER_COMMON_MAIN("/RiftCompiler/pst_parser/tests/");
+TESTER_COMMON_MAIN("/compiler/pst_parser/tests/");

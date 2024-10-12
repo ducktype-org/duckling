@@ -24,7 +24,7 @@ namespace compiler::helios {
 
 		if (!leaves.empty()) return SymbolList{ leaves[0] };
 
-		RIFT_ASSERT(children.size() == 1, "Invalid state: contains empty children");
+		CORE_ASSERT(children.size() == 1, "Invalid state: contains empty children");
 
 		auto&& [node_id, inner] = children.at(0);
 		SymbolList child_path   = inner.getAsSingle().expect(
@@ -32,7 +32,7 @@ namespace compiler::helios {
 			  "because it was asserted above."
         );
 
-		RIFT_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
+		CORE_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
 
 		SymbolList result;
 		result.push_back(node_id);

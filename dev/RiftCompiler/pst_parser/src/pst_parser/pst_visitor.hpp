@@ -129,11 +129,11 @@ namespace pst {
  */
 #define PANIC_VISITOR_VISIT_METHOD(type)                           \
 	void visit##type([[maybe_unused]] const type& stmt) override { \
-		RIFT_PANIC("PstStmtVisitorPanicky visited " #type);        \
+		CORE_PANIC("PstStmtVisitorPanicky visited " #type);        \
 	}
 
 	/**
-	 * A simple implementation for PstStmtVisitor, that by default does RIFT_PANIC.
+	 * A simple implementation for PstStmtVisitor, that by default does CORE_PANIC.
 	 * It's a helper class, whose functionality is meant to be overriden for desired statements.
 	 */
 	class PstStmtVisitorPanicky: public PstStmtVisitor {
