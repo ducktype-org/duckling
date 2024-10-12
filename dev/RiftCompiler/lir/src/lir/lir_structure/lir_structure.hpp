@@ -40,6 +40,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, LirOperation,
 
 namespace compiler::lir {
 	struct LirLocal;
+	struct Block;
 
 	/**
 	 * @brief Reference to local variable in LIR.
@@ -93,7 +94,7 @@ namespace compiler::lir {
 
 		// @TODO: each Instruction should have source position reference
 
-		Instruction()                   = delete;
+		Instruction()                   = default;
 		Instruction(const Instruction&) = default;
 		Instruction(Instruction&&)      = default;
 
@@ -108,7 +109,16 @@ namespace compiler::lir {
 
 		void debugPrint(std::ostream& output) const;
 	};
+	
+	
+	using BlockRef    = CRef<Block>;
+	using MutBlockRef = Ref<Block>;
 
+	/**
+	 * @brief LIR block.
+	 * @note This structure should only be stored directly in LIR Function, as part of the
+	 * description of a function. Other uses should use BlockRef to reference the block.
+	 */
 	struct Block final {
 		std::vector<Instruction> instructions;
 		Instruction              terminator;
@@ -119,12 +129,15 @@ namespace compiler::lir {
 	 * @brief Function in LIR.
 	 */
 	struct Function final {
+		// @TODO: store type of the function
+
 		// @TODO: is this name mangled somehow:?
 		base::StrID                  name;
 
-		std::vector<Block>           blocks;
-		
+		base::StableVector<Block>    blocks;
 		base::StableVector<LirLocal> local_list;
+
+		std::vector<BlockRef> block_order;
 
 		void debugPrint(std::ostream& output) const;
 
