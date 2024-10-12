@@ -37,7 +37,9 @@ def get_diffs():
     prev_line = None
     filename = None
     for line in diff_lines:
-        if line.startswith("@@"):
+        file_deleted = prev_line == '+++ /dev/null'
+
+        if line.startswith("@@") and not file_deleted:
             # Check if this diff is for a new file...
             if prev_line.startswith("+++ b/"):
                 # File has changed
@@ -91,7 +93,7 @@ def simulate_cpp_linter(clang_tidy_path: str, clang_format_path: str, build: str
                 # clang-tidy command succeeds if no errors were found
                 bash_command_get_output(
                     f"{clang_tidy_path} -p {build_folder} --format-style file"
-                    f' -line-filter="[{{"name": "{file}", "lines": {diffs[file]}}}]"'
+                    f' --line-filter="[{{"name": "{file}", "lines": {diffs[file]}}}]"'
                     f" --extra-arg= {file}"
                 )
 
