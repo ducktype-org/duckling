@@ -45,8 +45,8 @@ namespace compiler::lir {
 			base::StableVector<LirLocal> locals;
 			
 			// locals mapping:
-			base::Map<mir::MirLocal, LocalRef> mir_to_lir_local;
-			base::Map<mir::MirLocal, LocalRef> mir_to_lifetime_flag;
+			base::Map<mir::LocalRef, LocalRef> mir_to_lir_local;
+			base::Map<mir::LocalRef, LocalRef> mir_to_lifetime_flag;
 			
 			base::StableVector<Block> blocks;
 			
@@ -54,6 +54,25 @@ namespace compiler::lir {
 			base::Map<mir::BlockID, MutBlockRef> mir_to_lir_block;
 
 			std::vector<BlockRef> block_order;
+
+			LocalRef getLocal(mir::LocalRef mir_local) {
+				return mir_to_lir_local.at(mir_local);
+			}
+
+			LirLocation getLocation(const mir::MirLocation& loc) {
+				variant_match(loc.getVariant()) {
+					variant_case(mir::MirIntegerConst, integer) {
+						return LirLocation{integer.value};
+					}
+					variant_case(mir::LocalRef, local) {
+						return LirLocation{getLocal(local)};
+					}
+					variant_case(mir::BlockID, block) {
+						return LirLocation{BlockRef(mir_to_lir_block.at(block))};
+					}
+				}
+				RIFT_PANIC("Unhandled variant in getLocation");
+			}
 
 			void makeLocals() {
 				for (const auto& mir_local : key.function.local_list) {
@@ -63,8 +82,8 @@ namespace compiler::lir {
 					auto pos = locals.pushBack(std::move(lir_local));
 					auto flag_pos = locals.pushBack(std::move(lifetime_flag));
 
-					mir_to_lir_local.put(mir_local.ref(), locals.getCRef(pos));
-					mir_to_lifetime_flag.put(mir_local.ref(), locals.getCRef(flag_pos));
+					mir_to_lir_local.put(mir_local.ref(), locals.getCRef(pos).value());
+					mir_to_lifetime_flag.put(mir_local.ref(), locals.getCRef(flag_pos).value());
 				}
 			}
 
@@ -76,7 +95,7 @@ namespace compiler::lir {
 					// note that this block will only be filled with instructions
 					// and terminator later:
 					auto pos = blocks.pushBack({});
-					mir_to_lir_block.put(mir_block.id, blocks.getRef(pos));
+					mir_to_lir_block.put(mir_block.id, blocks.getRef(pos).value());
 				}	
 			}
 
@@ -105,6 +124,11 @@ namespace compiler::lir {
 				// @TODO
 				// don't handle terminators here
 				// curr_block alfredy in order
+				RIFT_ASSERT(not mir::isTerminating(mir_instruction.operation), "Terminator in lowerInstruction");
+				switch (mir_instruction.operation) {
+					default:
+						throw base::NotYetImplemented("instruction in LowerToLirFunction");
+				}
 			}
 
 			/**
@@ -117,6 +141,7 @@ namespace compiler::lir {
 			void lowerTerminator(MutBlockRef curr_block, const mir::Instruction& mir_terminator) {
 				// @TODO
 				// curr_block alfredy in order
+				RIFT_ASSERT(mir::isTerminating(mir_terminator.operation), "non-Terminator in lowerTerminator");
 			}
 
 			Function get() {
@@ -145,7 +170,7 @@ namespace compiler::lir {
 
 			Mir2Lir mir2lir{ctx, key};
 
-			// call order here matters:
+			// call order matters:
 			mir2lir.makeLocals();
 			mir2lir.makeInitialBlocks();
 			mir2lir.lowerBlocks();

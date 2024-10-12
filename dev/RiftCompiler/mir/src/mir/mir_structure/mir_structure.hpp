@@ -143,6 +143,11 @@ namespace compiler::mir {
 
 		void debugPrint(std::ostream& output) const;
 
+		[[nodiscard]]
+		const ValueType& getVariant() const {
+			return value;
+		}
+
 		/**
 		 * @brief Returns reference value of given type
 		 * stored in MirLocation.

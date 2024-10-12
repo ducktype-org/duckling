@@ -47,8 +47,42 @@ namespace compiler::lir {
 	 */
 	using LocalRef = CRef<LirLocal>;
 
-	struct MirLocation {
-		// ...
+	using BlockRef    = CRef<Block>;
+	using MutBlockRef = Ref<Block>;
+
+	struct LirLocation {
+	private:
+		using ValueType = std::variant<i64, LocalRef, BlockRef>;
+		ValueType value;
+
+	public:
+		LirLocation(i64 value): value(value) {}
+
+		LirLocation(LocalRef value): value(value) {}
+
+		LirLocation(BlockRef value): value(value) {}
+	
+		bool operator==(const LirLocation& other) const = default;
+
+		void debugPrint(std::ostream& output) const;
+
+		[[nodiscard]]
+		const ValueType& getVariant() const {
+			return value;
+		}
+
+		/**
+		 * @brief Returns reference value of given type
+		 * stored in LirLocation.
+		 * Throws if value is not of given type.
+		 * @tparam T
+		 * @return const T&
+		 */
+		template<class T>
+		const T& get() const {
+			return std::get<T>(value);
+		}
+
 	};
 
 	/**
@@ -90,7 +124,7 @@ namespace compiler::lir {
 	struct Instruction final {
 		LirOperation operation = LirOperation::Uninitialized;
 		base::Optional<LocalRef> output;
-		std::vector<MirLocation> arguments;
+		std::vector<LirLocation> arguments;
 
 		// @TODO: each Instruction should have source position reference
 
@@ -101,7 +135,7 @@ namespace compiler::lir {
 		Instruction(
 			LirOperation                  operation,
 			base::Optional<LocalRef>   output,
-			std::vector<MirLocation>   arguments
+			std::vector<LirLocation>   arguments
 		):
 			operation(operation),
 			output(output),
@@ -111,8 +145,6 @@ namespace compiler::lir {
 	};
 	
 	
-	using BlockRef    = CRef<Block>;
-	using MutBlockRef = Ref<Block>;
 
 	/**
 	 * @brief LIR block.
