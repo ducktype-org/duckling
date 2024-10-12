@@ -6,8 +6,6 @@
 #include <typesystem/lower/queries.hpp>
 #include <typesystem/higher/queries.hpp>
 
-#include <algorithm>
-
 namespace compiler::lir {
 
 	LirLocal LirLocal::fromMir(query::Context& ctx, const mir::MirLocal& mir_local) {
@@ -83,10 +81,42 @@ namespace compiler::lir {
 			}
 
 			void lowerBlocks() {
-				for (const auto& block: key.function.blocks | std::views::reverse) {
-					auto lir_block = mir_to_lir_block[block.id];
-			
+				for (const auto& block: key.function.blocks) {
+					const auto lir_block = mir_to_lir_block[block.id];
+					block_order.emplace_back(lir_block);
+
+					auto curr_block = lir_block;
+					for (const auto& mir_instruction : block.instructions) {
+						curr_block = lowerInstruction(curr_block, mir_instruction);
+					}
+
+					lowerTerminator(curr_block, block.terminator);
 				}
+			}
+
+			/**
+			 * @brief Lowers instruction from MIR to LIR.
+			 * * Fills @p curr_block.
+			 * Legal to use only in lowerBlocks
+			 * @param curr_block 
+			 * @return next curr_block
+			 */
+			MutBlockRef lowerInstruction(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
+				// @TODO
+				// don't handle terminators here
+				// curr_block alfredy in order
+			}
+
+			/**
+			 * @brief Lowers terminator from MIR to LIR.
+			 * Fills @p curr_block.
+			 * Legal to use only in lowerBlocks
+			 * @param curr_block 
+			 * @return next curr_block
+			 */
+			void lowerTerminator(MutBlockRef curr_block, const mir::Instruction& mir_terminator) {
+				// @TODO
+				// curr_block alfredy in order
 			}
 
 			Function get() {
@@ -119,7 +149,7 @@ namespace compiler::lir {
 			mir2lir.makeLocals();
 			mir2lir.makeInitialBlocks();
 			mir2lir.lowerBlocks();
-			
+
 			return mir2lir.get();
 		}
 
