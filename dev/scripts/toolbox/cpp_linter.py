@@ -37,7 +37,9 @@ def get_diffs():
     prev_line = None
     filename = None
     for line in diff_lines:
-        if line.startswith("@@"):
+        file_deleted = prev_line == '+++ /dev/null'
+
+        if line.startswith("@@") and not file_deleted:
             # Check if this diff is for a new file...
             if prev_line.startswith("+++ b/"):
                 # File has changed
