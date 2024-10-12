@@ -55,6 +55,8 @@ namespace compiler::lir {
 
 			std::vector<BlockRef> block_order;
 
+			// helper functions: 
+
 			LocalRef getLocal(mir::LocalRef mir_local) {
 				return mir_to_lir_local.at(mir_local);
 			}
@@ -74,6 +76,8 @@ namespace compiler::lir {
 				RIFT_PANIC("Unhandled variant in getLocation");
 			}
 
+			// main functions:
+			
 			void makeLocals() {
 				for (const auto& mir_local : key.function.local_list) {
 					auto lir_local = LirLocal::fromMir(ctx, *mir_local);
@@ -113,6 +117,47 @@ namespace compiler::lir {
 				}
 			}
 
+			// instruction lowering functions:
+
+			std::vector<LirLocation> getLocations(const std::vector<mir::MirLocation>& locs) {
+				std::vector<LirLocation> result;
+				result.reserve(locs.size());
+				for (const auto& loc : locs) {
+					result.push_back(getLocation(loc));
+				}
+				return result;
+			}
+
+			// return continuation
+			void lowerFlags(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
+				// @TODO
+				// this does not produce new blocks?
+				for (const auto& flag : mir_instruction.flags) {
+					auto lir_local = getLocal(flag.local);
+					switch (flag.flag) {
+						using enum mir::OperationFlag::Flag;
+						case Construct:
+							// @TODO -- set lifetime flag
+						case Destruct:
+							// @TODO -- ??? (also: after or before...?)
+						case Move:
+							// @TODO -- unset lifetime flag
+						default:
+							throw base::NotYetImplemented("flag in lowerFlags");
+					}
+				}
+			}
+
+			LirOperation mir2lirOperation(mir::Operation mir_operation) {
+				switch (mir_operation) {
+					case mir::Operation::Assign:
+						return LirOperation::Assign;
+					// @TODO: add more cases
+					default:
+						RIFT_PANIC("Operation without direct counterpart");
+				}
+			}
+
 			/**
 			 * @brief Lowers instruction from MIR to LIR.
 			 * * Fills @p curr_block.
@@ -124,8 +169,23 @@ namespace compiler::lir {
 				// @TODO
 				// don't handle terminators here
 				// curr_block alfredy in order
+				
 				RIFT_ASSERT(not mir::isTerminating(mir_instruction.operation), "Terminator in lowerInstruction");
+				lowerFlags(curr_block, mir_instruction);
+
 				switch (mir_instruction.operation) {
+					case mir::Operation::Assign:
+					// here much more cases will be added 
+					{
+						auto output = getLocal(mir_instruction.output.value());
+						auto args = getLocations(mir_instruction.arguments);
+						curr_block->instructions.emplace_back(
+							mir2lirOperation(mir_instruction.operation),
+							output,
+							std::move(args)
+						);
+						return curr_block;
+					}
 					default:
 						throw base::NotYetImplemented("instruction in LowerToLirFunction");
 				}
@@ -142,6 +202,12 @@ namespace compiler::lir {
 				// @TODO
 				// curr_block alfredy in order
 				RIFT_ASSERT(mir::isTerminating(mir_terminator.operation), "non-Terminator in lowerTerminator");
+				lowerFlags(curr_block, mir_terminator);
+				
+				switch (mir_terminator.operation) {
+					default:
+						throw base::NotYetImplemented("terminator in LowerToLirFunction");
+				}
 			}
 
 			Function get() {

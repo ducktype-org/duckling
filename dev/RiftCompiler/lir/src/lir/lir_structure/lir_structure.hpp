@@ -133,7 +133,7 @@ namespace compiler::lir {
 		Instruction(Instruction&&)      = default;
 
 		Instruction(
-			LirOperation                  operation,
+			LirOperation               operation,
 			base::Optional<LocalRef>   output,
 			std::vector<LirLocation>   arguments
 		):
