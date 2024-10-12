@@ -58,10 +58,9 @@ namespace compiler::lir {
 	 */
 	struct LirLocal final {
 		/**
-		 * @brief HELIOS id of the variable.
-		 * @note This is a temporary solution.
+		 * @brief HELIOS id of the variable, if exist.
 		 */
-		helios::SymID   helios_id;
+		base::Optional<helios::SymID>   helios_id;
 
 		// a copy of type-layout here might bu sub-optimal
 		tsl::TypeLayout type;
@@ -71,10 +70,20 @@ namespace compiler::lir {
 			helios_id(helios_id),
 			type(std::move(type)) {}
 
-		static LirLocal fromMir(query::Context& ctx, const mir::MirLocal& mir_local);
-
+		LirLocal(tsl::TypeLayout type):
+			helios_id({}),
+			type(std::move(type)) {}
+		
 		friend struct Function;
 		friend LocalRef;
+
+	public:
+		// note: don't use it outside lir lowering:
+
+		// @TODO: change to LocalRef (not now, due to forward declaration)
+		static LirLocal fromMir(query::Context& ctx, const mir::MirLocal& mir_local);
+		static LirLocal boolLocal(query::Context& ctx);
+
 	};
 
 	struct Instruction final {
