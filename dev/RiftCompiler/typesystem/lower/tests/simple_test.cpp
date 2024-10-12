@@ -241,19 +241,19 @@ private:
 				variant_match(my_class_interface.resolve(base::StrID("a"), ctx)) {
 					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
 				}
-				RIFT_PANIC("Could not resolve field.");
+				CORE_PANIC("Could not resolve field.");
 			}();
 			SymID b_field_symbol = [&]() {
 				variant_match(my_class_interface.resolve(base::StrID("b"), ctx)) {
 					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
 				}
-				RIFT_PANIC("Could not resolve field.");
+				CORE_PANIC("Could not resolve field.");
 			}();
 			SymID c_field_symbol = [&]() {
 				variant_match(my_class_interface.resolve(base::StrID("c"), ctx)) {
 					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
 				}
-				RIFT_PANIC("Could not resolve field.");
+				CORE_PANIC("Could not resolve field.");
 			}();
 
 			TypeLayout my_class_layout = ctx.query<QueryTypeLayout>(my_class_type);
@@ -284,4 +284,4 @@ public:
 	~LowerTypeSystemSimpleTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/typesystem/lower/tests/")
+TESTER_COMMON_MAIN("/compiler/typesystem/lower/tests/")

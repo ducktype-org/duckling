@@ -98,13 +98,13 @@ namespace tokenizer {
 	fs::FilePath TokenFile::getPath() { return path; }
 
 	const lexer::CharArray& TokenFile::getChars() const {
-		if (!decoded) RIFT_PANIC("Tried to access nonexistant Character data.");
+		if (!decoded) CORE_PANIC("Tried to access nonexistant Character data.");
 		return decoded.value();
 	}
 
 	const lexer::TokenData& TokenFile::getTokenData() const {
 		// @TODO: Maybe use lexer to create it.
-		if (!token_data) RIFT_PANIC("Tried to access nonexistant token data.");
+		if (!token_data) CORE_PANIC("Tried to access nonexistant token data.");
 		return token_data.value();
 	}
 }

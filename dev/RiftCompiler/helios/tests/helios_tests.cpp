@@ -296,21 +296,21 @@ private:
 
 		try {
 			getValue("InvalidExpr", root_scope);
-			RIFT_PANIC("Should throw.");
+			CORE_PANIC("Should throw.");
 		} catch (errors::Failed& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getValue("InvalidSym", root_scope);
-			RIFT_PANIC("Should throw.");
+			CORE_PANIC("Should throw.");
 		} catch (errors::Failed& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
 		try {
 			getValue("C", root_scope);
-			RIFT_PANIC("Should throw.");
+			CORE_PANIC("Should throw.");
 		} catch (errors::Failed& err) {
 			// Since this branch was chosen, everything worked well.
 		}
@@ -362,7 +362,7 @@ private:
 
 		variant_match(y1) {
 			variant_case(int, val) ASSERT_EQUAL(val, 1);
-			variant_default RIFT_PANIC("Invalid state");
+			variant_default CORE_PANIC("Invalid state");
 		}
 
 		static_assert(std::is_same_v<
@@ -416,7 +416,7 @@ private:
 		ASSERT_TRUE(result.hasError());
 		variant_match(result.error()) {
 			variant_case(Err2, value) { entered2 = true; }
-			variant_default RIFT_PANIC("Invalid branch");
+			variant_default CORE_PANIC("Invalid branch");
 		}
 		ASSERT_TRUE(entered2);
 	}
@@ -503,4 +503,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/helios/tests/");
+TESTER_COMMON_MAIN("/compiler/helios/tests/");

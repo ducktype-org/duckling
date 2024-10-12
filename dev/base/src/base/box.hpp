@@ -25,7 +25,7 @@ namespace base {
 		friend class MBox;
 
 		constexpr void assertNotNull() const {
-			if (ptr == nullptr) RIFT_PANIC("Box was in null state, when non-null was required!");
+			if (ptr == nullptr) CORE_PANIC("Box was in null state, when non-null was required!");
 		}
 
 	public:
@@ -120,7 +120,7 @@ namespace base {
 		friend class Box;
 
 		constexpr void assertNotNull() const {
-			if (ptr == nullptr) RIFT_PANIC("MBox was in null state, when non-null was required!");
+			if (ptr == nullptr) CORE_PANIC("MBox was in null state, when non-null was required!");
 		}
 
 	public:

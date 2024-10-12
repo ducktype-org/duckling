@@ -17,7 +17,7 @@ int main(int argc, const char* argv[]) {
 	auto clap
 		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
 	                                         .addShortName('p')
-	                                         .addShortDesc("Path to Rift source root")
+	                                         .addShortDesc("Path to Duckling source root")
 	                                         .required()
 	                                         .build());
 

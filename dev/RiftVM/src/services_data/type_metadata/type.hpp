@@ -82,7 +82,7 @@ namespace vm {
 
 		[[nodiscard]]
 		inline TypeSize getSize() const {
-			RIFT_ASSERT(size != TypeSize(-1), "getSize called before type finalization");
+			CORE_ASSERT(size != TypeSize(-1), "getSize called before type finalization");
 			return size;
 		}
 

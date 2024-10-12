@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<TopLevel> TopLevel::parse(RiftParserState& state) {
+	ParserRef<TopLevel> TopLevel::parse(LangParserState& state) {
 		auto out = makeRef<TopLevel>(state.getPosition());
 		while (state.notEmpty()) {
 			ParserRef<Stmt> stmt;
@@ -12,7 +12,7 @@ namespace pst {
 	}
 
 	void TopLevel::acceptVisitor(PstStmtVisitor&) const {
-		RIFT_PANIC("Visitng TopLevel statement");
+		CORE_PANIC("Visitng TopLevel statement");
 	}
 
 	void TopLevel::dprint(std::ostream& out) const {

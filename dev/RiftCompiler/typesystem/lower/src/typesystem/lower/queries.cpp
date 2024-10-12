@@ -32,7 +32,7 @@ namespace tsl {
 			case Class:
 				return ClassTypeLayout(tsh::ClassInfo(key), ctx);
 			default:
-				RIFT_PANIC("Unsupported source type in QueryTypeLayout.");
+				CORE_PANIC("Unsupported source type in QueryTypeLayout.");
 			}
 		}
 

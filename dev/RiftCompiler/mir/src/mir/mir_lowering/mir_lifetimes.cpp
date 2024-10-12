@@ -135,7 +135,7 @@ namespace compiler::mir {
 					if (ending_scopes.has_value()) {
 						// we have to validate that all paths have the same ending scopes
 						// otherwise this implementation is incorrect
-						RIFT_ASSERT(ending_scopes == succ_ending_scopes, "Different ending scopes");
+						CORE_ASSERT(ending_scopes == succ_ending_scopes, "Different ending scopes");
 					} else {
 						ending_scopes.emplace(std::move(succ_ending_scopes));
 					}

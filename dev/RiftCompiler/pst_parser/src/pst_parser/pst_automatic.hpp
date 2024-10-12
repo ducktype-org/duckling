@@ -1,9 +1,9 @@
 /**
  * @file pst_automatic.hpp
- * @brief Useful parsing abstractions for RiftParserState
+ * @brief Useful parsing abstractions for LangParserState
  *
  * one() - has four modes depending on the type of the first argument:
- *  - for Specials, Keywords and Operators from `rift_def` it ensures that the next token has that
+ *  - for Specials, Keywords and Operators from `lang_def` it ensures that the next token has that
  * value and skips it, otherwise it logs an error
  *  - for Identifier* it ensures the next token is an identifier and parses it to the specified
  * location and skips it, otherwise it logs an error
@@ -23,21 +23,21 @@
 #pragma once
 
 #include <token_parser_core/automatic.hpp>
-#include "rift_parser_element.hpp"
+#include "lang_parser_element.hpp"
 
 namespace pst {
-	using rift_def::Keyword;
-	using rift_def::Operator;
-	using rift_def::Special;
+	using lang_def::Keyword;
+	using lang_def::Operator;
+	using lang_def::Special;
 
 	template<typename State>
 	class PSTAutomatic {
 	protected:
 		State&                            state;
-		ParserBorrowRef<pst::RiftElement> el;
+		ParserBorrowRef<pst::LangElement> el;
 
 	public:
-		PSTAutomatic(State& state, ParserBorrowRef<pst::RiftElement> caller):
+		PSTAutomatic(State& state, ParserBorrowRef<pst::LangElement> caller):
 			  state(state),
 			  el(std::move(caller)) {}
 
@@ -120,7 +120,7 @@ namespace pst {
 		 * @brief Parses an Element. Skips on success, logs error on failure.
 		 * @param result The place to store the parsed element.
 		 */
-		template<std::derived_from<RiftElement> T>
+		template<std::derived_from<LangElement> T>
 		void one(ParserRef<T>* result, bool = false) {
 			with(result, T::parse);
 		}
@@ -135,7 +135,7 @@ namespace pst {
 		 * @param fun Parsing function.
 		 * @param args Arguments passed to the parsing function
 		 */
-		template<std::derived_from<RiftElement> El, typename Sink, typename... Args>
+		template<std::derived_from<LangElement> El, typename Sink, typename... Args>
 		void with(Sink* sink, ParserRef<El> fun(State&, Args...), Args&&... args) {
 			ParserRef<El> result = fun(state, std::forward<Args>(args)...);
 			if (result != nullptr) {

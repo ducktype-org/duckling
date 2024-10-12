@@ -2,7 +2,7 @@
 
 namespace pst {
 	tpc::ParserRef<ClassSpecial>
-		ClassSpecial::parse(RiftParserState& state, const ClassContext& ctx) {
+		ClassSpecial::parse(LangParserState& state, const ClassContext& ctx) {
 		i64 skip = ClassStmt::countSpecifiers(state);
 
 

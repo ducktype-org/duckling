@@ -3,20 +3,20 @@
 namespace pst {
 	namespace detail {
 		template<std::derived_from<ClassStmt> T, class... Ts>
-		ParserRef<T> parseStmt(RiftParserState& state, Ts... args) {
+		ParserRef<T> parseStmt(LangParserState& state, Ts... args) {
 			ParserRef<T> out = T::parse(state, std::forward<Ts...>(args)...);
 			if (out->trailingSemicolon()) state.parse(out).one(Special::Semicolon);
 			return out;
 		}
 	}
 
-	i64 ClassStmt::countSpecifiers(RiftParserState& state) {
+	i64 ClassStmt::countSpecifiers(LangParserState& state) {
 		i64 res = 0;
 		while (class_specs.contains(state[res].asKeyword())) res++;
 		return res;
 	}
 
-	void ClassStmt::parseSpecifiers(RiftParserState& state) {
+	void ClassStmt::parseSpecifiers(LangParserState& state) {
 		while (class_specs.contains(state[0].asKeyword())) {
 			context.specifiers.emplace_back(&state[0]);
 			state.parse(base::borrow_ptr(this)).eatOne();
@@ -35,7 +35,7 @@ namespace pst {
 		}
 	}
 
-	ParserRef<ClassStmt> ClassStmt::chooseStmt(RiftParserState& state, const ClassContext& ctx) {
+	ParserRef<ClassStmt> ClassStmt::chooseStmt(LangParserState& state, const ClassContext& ctx) {
 		i64 skip = countSpecifiers(state);
 
 		Keyword as_keyword = state[skip].asKeyword();
@@ -56,7 +56,7 @@ namespace pst {
 		return detail::parseStmt<Field>(state, ctx);
 	}
 
-	tpc::ParserRef<ClassStmt> ClassStmt::parse(RiftParserState& state, const ClassContext& ctx) {
+	tpc::ParserRef<ClassStmt> ClassStmt::parse(LangParserState& state, const ClassContext& ctx) {
 		// Collect Attributes
 		auto attributes = collectAttributes(state);
 

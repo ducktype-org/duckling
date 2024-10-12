@@ -1,3 +1,3 @@
 add_files(emitter_manager.cpp)
 
-set(riftvm_sources ${riftvm_sources} ${files} PARENT_SCOPE)
+set(vm_sources ${vm_sources} ${files} PARENT_SCOPE)

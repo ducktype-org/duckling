@@ -94,7 +94,7 @@ namespace base {
 
 		[[nodiscard]]
 		base::RawView view() const {
-			RIFT_ASSERT(id.isGood(), "StrID is bad");
+			CORE_ASSERT(id.isGood(), "StrID is bad");
 			return to_data_map[id];
 		}
 

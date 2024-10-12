@@ -20,7 +20,7 @@ namespace pst {
 	}
 
 	// @TODO: make better
-	ParserRef<Fun> Fun::parse(RiftParserState& state) {
+	ParserRef<Fun> Fun::parse(LangParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Fun>(position);
 

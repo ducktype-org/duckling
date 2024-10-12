@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<ExprStmt> ExprStmt::parse(RiftParserState& state) {
+	ParserRef<ExprStmt> ExprStmt::parse(LangParserState& state) {
 		auto out = makeRef<ExprStmt>(state.getPosition());
 
 		state.parse(out).with<Expr>(&out->expression, Expr::parse, true);

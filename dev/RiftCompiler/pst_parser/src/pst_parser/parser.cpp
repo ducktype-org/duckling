@@ -10,9 +10,9 @@
 
 namespace pst {
 	void init() {
-		RIFT_SIMPLE_INIT_GUARD_BEGIN
+		SIMPLE_INIT_GUARD_BEGIN
 		tpc::init();
 		lexer::init();
-		RIFT_SIMPLE_INIT_GUARD_END
+		SIMPLE_INIT_GUARD_END
 	}
 }

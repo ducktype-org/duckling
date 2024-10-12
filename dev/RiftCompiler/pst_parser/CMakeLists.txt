@@ -8,7 +8,7 @@ file(GLOB ElementImplementationFiles CONFIGURE_DEPENDS
 
 add_library(PstParser
 	src/pst_parser/parser.cpp
-	src/pst_parser/rift_parser_base.cpp
+	src/pst_parser/lang_parser_base.cpp
 
 	# LSP files are commented out for merge purposes:
 	# src/pst_parser/lsp_elements/lsp_elements.cpp
@@ -21,9 +21,9 @@ add_library(PstParser
 
 make_module(PstParser USES Lexer Printer TPC)
 
-rift_add_test(compiler parser_test_simple tests/test.cpp
+duck_add_test(compiler parser_test_simple tests/test.cpp
 	USES PstParser)
-rift_add_test(compiler parser_test_builder tests/builder_tests.cpp
+duck_add_test(compiler parser_test_builder tests/builder_tests.cpp
 	USES PstParser)
-rift_add_test(compiler parser_test_errors tests/error_tests.cpp
+duck_add_test(compiler parser_test_errors tests/error_tests.cpp
 	USES PstParser)

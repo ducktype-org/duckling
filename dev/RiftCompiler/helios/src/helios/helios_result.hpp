@@ -353,7 +353,7 @@ namespace compiler::helios::errors {
 		base::Optional<ResTp>     value_storage;
 
 		void _throwOnInvalidStateAccess() const {
-			RIFT_ASSERT(
+			CORE_ASSERT(
 				error_storage.has_value() ^ value_storage.has_value(),
 				"HResult has an invalid state"
 			);

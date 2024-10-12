@@ -1,10 +1,10 @@
-\page vm-tests RiftVM Tests
+\page vm-tests VM Tests
 
 \subpage vm-performance-tests 
 
 ## Unit tests
 
-To compile all RiftVm tests:
+To compile all VM tests:
 ```
 make build_vm_tests
 ```
@@ -14,7 +14,7 @@ To run one test from build directory:
 ctest -R vm_micro_test
 ```
 
-To run all RiftVm tests from the build directory and see the error output:
+To run all VM tests from the build directory and see the error output:
 ```
 ctest -R vm_ --output-on-failure
 ```

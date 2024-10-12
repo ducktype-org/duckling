@@ -6,6 +6,6 @@ namespace tpc {
 
 	bool Element::trailingSemicolon() {
 		// @IDEA: not Panic
-		RIFT_PANIC("trailingSemicolon called on illegal object");
+		CORE_PANIC("trailingSemicolon called on illegal object");
 	}
 }

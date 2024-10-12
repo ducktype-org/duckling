@@ -226,7 +226,7 @@ namespace compiler::helios {
 			break;
 		}
 		auto stmt_ptr = stmt.get();
-		RIFT_PANIC(base::strConcat(
+		CORE_PANIC(base::strConcat(
 			"makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
 		));
 	}
@@ -241,7 +241,7 @@ namespace compiler::helios {
 			// once scope refactor will be introduced.
 			// It currently prevents some scope bugs/inconsistencies from happening.
 			if (parent_map.contains(pst_id)) {
-				RIFT_ASSERT(
+				CORE_ASSERT(
 					parent_map.at(pst_id) == key.scope, "Parent mismatch in QuerySymbolOfSTMT"
 				);
 			} else {
@@ -294,7 +294,7 @@ namespace compiler::helios {
 	 */
 	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound>
 		lookupChain(query::Context& ctx, const LookupChainKey& key) {
-		RIFT_ASSERT(!key.names.empty(), "lookupDotted received zero names");
+		CORE_ASSERT(!key.names.empty(), "lookupDotted received zero names");
 
 		// initial symbol:
 		LookupResult first = ctx.query<QueryLookupInScopeAndParents>(
@@ -325,7 +325,7 @@ namespace compiler::helios {
 				auto using_stmt = dynamic_cast<const pst::Using*>(key.ref->pst_stmt.get());
 				auto names      = using_stmt->getPointed();
 				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
-				RIFT_ASSERT(
+				CORE_ASSERT(
 					lookup_res.hasValue() && not lookup_res.value().empty(),
 					"Using points to something that does not exists or is empty"
 				);
@@ -408,7 +408,7 @@ namespace compiler::helios {
 							return errors::HError(errors::Failed());
 						}
 					}
-					RIFT_PANIC("Invalid state");
+					CORE_PANIC("Invalid state");
 				}
 				for (auto&& path_symbol: path.value()) {
 					UNPACK_RESULT(auto&& dealiased =, ctx.query<QueryDealias>(path_symbol));
@@ -441,7 +441,7 @@ namespace compiler::helios {
 		case '.':
 			return 5;
 		default:
-			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
+			CORE_PANIC("Unknown operator: " + op.oper_id.str());
 		}
 	}
 
@@ -482,7 +482,7 @@ namespace compiler::helios {
 					}
 					rpn.emplace_back(TupleConstructor{ tuple.expr.size() });
 				}
-				variant_default { RIFT_PANIC("Bad Expr alternative"); }
+				variant_default { CORE_PANIC("Bad Expr alternative"); }
 			}
 		}
 		while (!st.empty()) {
@@ -519,9 +519,9 @@ namespace compiler::helios {
 				throw base::NotYetImplemented("Value of KeywordValue is not yet implemented");
 			}
 			variant_case(rpn::NumValue, literal) { return std::stoi(literal.num_id.str()); }
-			variant_default { RIFT_PANIC("Bad Expr alternative"); }
+			variant_default { CORE_PANIC("Bad Expr alternative"); }
 		}
-		RIFT_PANIC("Bad Expr alternative");
+		CORE_PANIC("Bad Expr alternative");
 	}
 
 	namespace {
@@ -546,7 +546,7 @@ namespace compiler::helios {
 						std::cerr << "Tuple constructor of num elements: "
 								  << tuple_constructor.num_elements;
 					}
-					variant_default { RIFT_PANIC("Bad Expr alternative"); }
+					variant_default { CORE_PANIC("Bad Expr alternative"); }
 				}
 				std::cerr << '\n';
 			}
@@ -595,7 +595,7 @@ namespace compiler::helios {
 				variant_case(rpn::TupleConstructor, tuple) {
 					TupleType tuple_type;
 					for (usize i = 0; i < tuple.num_elements; i++) {
-						RIFT_ASSERT(
+						CORE_ASSERT(
 							!st.empty(), "Logic error during tuple creation, not enough elements"
 						);
 						auto tuple_element = st.top();
@@ -604,10 +604,10 @@ namespace compiler::helios {
 					}
 					st.emplace(tuple_type);
 				}
-				variant_default { RIFT_PANIC("Bad Expr alternative"); }
+				variant_default { CORE_PANIC("Bad Expr alternative"); }
 			}
 		}
-		RIFT_ASSERT(st.size() == 1, "Expression stack should have 1 element");
+		CORE_ASSERT(st.size() == 1, "Expression stack should have 1 element");
 		return st.top();
 	}
 
@@ -648,7 +648,7 @@ namespace compiler::helios {
 					);
 				}
 			}
-			RIFT_PANIC("Something strange has happened during . operator evaluation...");
+			CORE_PANIC("Something strange has happened during . operator evaluation...");
 		}
 		if (op.oper_id == "|") {
 			// @TODO: Check if A and B are types.
@@ -682,7 +682,7 @@ namespace compiler::helios {
 						variant_default { a_variant.elements.push_back(b); }
 					}
 				}
-				variant_default { RIFT_PANIC("A is not a variant, but it should be."); }
+				variant_default { CORE_PANIC("A is not a variant, but it should be."); }
 			}
 			return a;
 		}
@@ -714,14 +714,14 @@ namespace compiler::helios {
 			while (b_value-- > 0) value *= a_value;
 		} break;
 		default:
-			RIFT_PANIC("Unknown operator: " + op.oper_id.str());
+			CORE_PANIC("Unknown operator: " + op.oper_id.str());
 		}
 		return NumValue{ base::StrID(std::to_string(value).c_str()) };
 	}
 
 	struct IMPLEMENT_QUERY(QueryConstValueOf, errors::HResult<i32 COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			RIFT_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
+			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
 			const auto const_symbol
 				= dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
@@ -824,7 +824,7 @@ namespace compiler::helios {
 				return it->second;
 			}
 			variant_case(rpn::NumValue, num_value) {
-				RIFT_PANIC("Numerical value is not a type: ", num_value.num_id);
+				CORE_PANIC("Numerical value is not a type: ", num_value.num_id);
 			}
 			variant_case(rpn::TupleType, tuple_type) {
 				std::vector<tsh::ComponentType> tuple_components;
@@ -855,9 +855,9 @@ namespace compiler::helios {
 
 				return ctx.query<tsh::QueryVariantType>({ variant_types });
 			}
-			variant_default { RIFT_PANIC("Unhandleble type during parsing type from expr..."); }
+			variant_default { CORE_PANIC("Unhandleble type during parsing type from expr..."); }
 		}
-		RIFT_PANIC("Couldn't parse the type.");
+		CORE_PANIC("Couldn't parse the type.");
 	}
 
 	/**
@@ -882,7 +882,7 @@ namespace compiler::helios {
 
 			void setTypeOfSymbol(const tsh::TypeInfo& type) {
 				if (symbol_type_info.has_value())
-					RIFT_PANIC("Attempted to set type of symbol in visitor a second time.");
+					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
 				symbol_type_info = type;
 			}
 
@@ -959,7 +959,7 @@ namespace compiler::helios {
 
 			void setTypeOfDefinition(const tsh::TypeInfo& type) {
 				if (definition_type_info.has_value())
-					RIFT_PANIC("Attempted to set type of definition in visitor a second time.");
+					CORE_PANIC("Attempted to set type of definition in visitor a second time.");
 				definition_type_info = type;
 			}
 
@@ -1002,7 +1002,7 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			RIFT_ASSERT(kind(key) == SymbolKind::Class, "Symbol is not a class");
+			CORE_ASSERT(kind(key) == SymbolKind::Class, "Symbol is not a class");
 
 			auto class_stmt = getSymRef(key)->pst_stmt;
 
@@ -1092,7 +1092,7 @@ namespace compiler::helios {
 
 			PstStmtVisitor_GetHOUTExprTree visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
-			RIFT_ASSERT(
+			CORE_ASSERT(
 				visitor.rpn_of_sym_expr.has_value(),
 				"Something wrong has happened while parsing expr"
 			);

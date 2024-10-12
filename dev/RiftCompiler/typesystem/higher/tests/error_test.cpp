@@ -57,4 +57,4 @@ public:
 	~HigherTypeSystemErrorTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/typesystem/tests/")
+TESTER_COMMON_MAIN("/compiler/typesystem/tests/")

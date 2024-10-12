@@ -1,14 +1,14 @@
 #pragma once
 
-#include "../../rift_parser_state.hpp"
+#include "../../lang_parser_state.hpp"
 #include "../../pst_visitor.hpp"        // IWYU pragma: export
 #include "../parser_common_errors.hpp"  // IWYU pragma: export
 
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/parser_ref.hpp>
 
-#include <rift_definitions/key_spec_op.hpp>
-#include <rift_definitions/operator_precedence.hpp>
+#include <lang_definitions/key_spec_op.hpp>
+#include <lang_definitions/operator_precedence.hpp>
 #include <lexer/token.hpp>
 #include <lexer/classifications.hpp>
 
@@ -21,9 +21,9 @@
 namespace pst {
 	using tpc::makeRef;
 
-	using rift_def::Keyword;
-	using rift_def::Operator;
-	using rift_def::Special;
+	using lang_def::Keyword;
+	using lang_def::Operator;
+	using lang_def::Special;
 
 	using lexer::Token;
 
@@ -51,7 +51,7 @@ namespace pst {
 	};
 
 	template<typename Type>
-	bool assertStmtChoice(RiftParserState& state, bool good) {
+	bool assertStmtChoice(LangParserState& state, bool good) {
 		if (!good) {
 			state.log(
 				base::make_unique<BadStatementChoice<Type>>(state.ctokens().peek().getPosition())

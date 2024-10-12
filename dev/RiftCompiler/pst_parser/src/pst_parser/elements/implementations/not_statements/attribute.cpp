@@ -17,7 +17,7 @@ namespace pst {
 		}
 	};
 
-	ParserRef<Attribute> Attribute::parse(RiftParserState& state) {
+	ParserRef<Attribute> Attribute::parse(LangParserState& state) {
 		auto                 position = state.getPosition();
 		ParserRef<Attribute> out      = makeRef<Attribute>(position);
 

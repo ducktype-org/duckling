@@ -26,7 +26,7 @@ namespace pst {
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(TopLevel);
-		static ParserRef<TopLevel> parse(RiftParserState& state);
+		static ParserRef<TopLevel> parse(LangParserState& state);
 
 		~TopLevel() override = default;
 		void dprint(std::ostream& out) const final;
@@ -56,7 +56,7 @@ namespace pst {
 	public:
 		explicit Block(const dia::SourcePosition& position): CodeDecl(position) {}
 
-		static ParserRef<Block> parse(RiftParserState& state);
+		static ParserRef<Block> parse(LangParserState& state);
 		~Block() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -85,7 +85,7 @@ namespace pst {
 			return body.borrow();
 		}
 
-		static ParserRef<Namespace> parse(RiftParserState& state);
+		static ParserRef<Namespace> parse(LangParserState& state);
 		~Namespace() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -127,7 +127,7 @@ namespace pst {
 			return implements.borrow();
 		}
 
-		static ParserRef<Class> parse(RiftParserState& state);
+		static ParserRef<Class> parse(LangParserState& state);
 		~Class() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -175,7 +175,7 @@ namespace pst {
 			return is_const;
 		}
 
-		static ParserRef<Variable> parse(RiftParserState& state);
+		static ParserRef<Variable> parse(LangParserState& state);
 		~Variable() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -224,7 +224,7 @@ namespace pst {
 			return body.borrow();
 		}
 
-		static ParserRef<Fun> parse(RiftParserState& state);
+		static ParserRef<Fun> parse(LangParserState& state);
 		void                  dprint(std::ostream& out) const final;
 		~Fun() final = default;
 
@@ -245,7 +245,7 @@ namespace pst {
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {}
 
-		static ParserRef<If> parse(RiftParserState& state);
+		static ParserRef<If> parse(LangParserState& state);
 		void                 dprint(std::ostream& out) const final;
 		~If() final = default;
 
@@ -275,7 +275,7 @@ namespace pst {
 	public:
 		explicit While(const dia::SourcePosition& position): CodeDecl(position) {}
 
-		static ParserRef<While> parse(RiftParserState& state);
+		static ParserRef<While> parse(LangParserState& state);
 		void                    dprint(std::ostream& out) const final;
 		~While() final = default;
 
@@ -297,7 +297,7 @@ namespace pst {
 	public:
 		explicit For(const dia::SourcePosition& position): CodeDecl(position) {}
 
-		static ParserRef<For> parse(RiftParserState& state);
+		static ParserRef<For> parse(LangParserState& state);
 		void                  dprint(std::ostream& out) const final;
 		~For() final = default;
 

@@ -23,17 +23,17 @@ namespace pst {
 	/**
 	 * @brief Base Element for all of the PST elements.
 	 */
-	class RiftElement: public tpc::Element {
+	class LangElement: public tpc::Element {
 	public:
-		using Child      = ParserBorrowRef<RiftElement>;
-		using ConstChild = ParserCBorrowRef<RiftElement>;
+		using Child      = ParserBorrowRef<LangElement>;
+		using ConstChild = ParserCBorrowRef<LangElement>;
 
 		using SubToken = base::c_borrow_ptr<tpc::Token>;
 
 		using SubElement      = std::variant<SubToken, Child>;
 		using ConstSubElement = std::variant<SubToken, ConstChild>;
 
-		explicit RiftElement(const dia::SourcePosition& position):
+		explicit LangElement(const dia::SourcePosition& position):
 			  source_position(position),
 			  id(PstID::next()) {}
 
@@ -185,18 +185,18 @@ namespace pst {
 	protected:
 		dia::SourcePosition                          source_position;
 		std::vector<SubElement>                      sub_elements;
-		base::Optional<ParserBorrowRef<RiftElement>> parent;
+		base::Optional<ParserBorrowRef<LangElement>> parent;
 
 		void addToken(const tpc::Token& token);
 		void addToken(const base::unique_ptr<tpc::Token>& token);
 		void addToken(base::c_borrow_ptr<tpc::Token> token);
 
-		template<std::derived_from<RiftElement> El>
+		template<std::derived_from<LangElement> El>
 		void addChild(base::Optional<ParserRef<El>>& el) {
 			if (el) addChild(el.value().borrow());
 		}
 
-		void addChild(ParserBorrowRef<RiftElement> child);
+		void addChild(ParserBorrowRef<LangElement> child);
 
 		template<typename T>
 		void addChild(ParserRef<T>& child) {
@@ -213,7 +213,7 @@ namespace pst {
 		 */
 		void setFirstToken(dia::SourcePosition pos);
 
-		void setParent(ParserBorrowRef<RiftElement> parent) { this->parent.emplace(parent); }
+		void setParent(ParserBorrowRef<LangElement> parent) { this->parent.emplace(parent); }
 
 	private:
 		PstID id = PstID::next();

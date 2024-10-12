@@ -17,7 +17,7 @@ namespace pst {
 		VariableTypeEndError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<Variable> Variable::parse(RiftParserState& state) {
+	ParserRef<Variable> Variable::parse(LangParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Variable>(position);
 

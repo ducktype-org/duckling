@@ -18,10 +18,10 @@ add_library(Clap
 
 make_module(Clap USES Base Filesystem)
 
-rift_add_test(common clap_tester tests/clap_tests.cpp
+duck_add_test(common clap_tester tests/clap_tests.cpp
 	USES Clap Base)
 
-rift_add_test(common clap_parser_tester tests/clap_parser_tests.cpp
+duck_add_test(common clap_parser_tester tests/clap_parser_tests.cpp
 	USES Clap Base)
 
 add_example(clap_example_cat examples/clap_example_cat.cpp

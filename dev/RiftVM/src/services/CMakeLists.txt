@@ -5,4 +5,4 @@ add_files(profiler/profiler.cpp
 		preprocessor_f8/parser/parser.cpp
 		preprocessor_f8/preprocessor.cpp)
 
-set(riftvm_sources ${riftvm_sources} ${files} PARENT_SCOPE)
+set(vm_sources ${vm_sources} ${files} PARENT_SCOPE)

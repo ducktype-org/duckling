@@ -1,3 +1,3 @@
-@page rift-snippets-readme Rift snippets
+@page duckling-snippets-readme Duckling snippets
 
-Rift snippets is a folder storing some semi-random .rift source files.
+Duckling snippets is a folder storing some semi-random .duck source files.

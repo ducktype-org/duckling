@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../rift_parser_state.hpp"
+#include "../../lang_parser_state.hpp"
 
 #include <diagnostic/source_position.hpp>
 
@@ -32,7 +32,7 @@ namespace pst {
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Import);
-		static ParserRef<Import> parse(RiftParserState& state);
+		static ParserRef<Import> parse(LangParserState& state);
 		[[nodiscard]]
 		const decltype(names)& getNames() const;
 
@@ -71,7 +71,7 @@ namespace pst {
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Using);
-		static ParserRef<Using> parse(RiftParserState& state);
+		static ParserRef<Using> parse(LangParserState& state);
 
 		[[nodiscard]]
 		auto getPointed() const {
@@ -104,7 +104,7 @@ namespace pst {
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(ExprStmt);
-		static ParserRef<ExprStmt> parse(RiftParserState& state);
+		static ParserRef<ExprStmt> parse(LangParserState& state);
 
 		~ExprStmt() final = default;
 		void dprint(std::ostream& out) const final;
@@ -139,7 +139,7 @@ namespace pst {
 			return points_to->getNames();
 		}
 
-		static ParserRef<Alias> parse(RiftParserState& state);
+		static ParserRef<Alias> parse(LangParserState& state);
 		~Alias() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -165,7 +165,7 @@ namespace pst {
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action);
-		static ParserRef<Action> parse(RiftParserState& state);
+		static ParserRef<Action> parse(LangParserState& state);
 		~Action() override = default;
 
 		[[nodiscard]]
@@ -187,7 +187,7 @@ namespace pst {
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Const);
-		static ParserRef<Const> parse(RiftParserState& state);
+		static ParserRef<Const> parse(LangParserState& state);
 
 		[[nodiscard]]
 		base::StrID getName() const {
@@ -244,13 +244,12 @@ namespace pst {
 	 * @brief Class designated to be the parent of non-functional statements that are only used
 	 * internally for testing.
 	 */
-	class RiftTestingStmt: public Stmt {
+	class TestingStmt: public Stmt {
 	public:
-		RiftTestingStmt(StmtKind kind, const dia::SourcePosition& position): Stmt(kind, position) {}
+		TestingStmt(StmtKind kind, const dia::SourcePosition& position): Stmt(kind, position) {}
 	};
 
-#define RIFT_TEST_CHILD_CONSTRUCTOR(class_name)      \
-	class_name(const dia::SourcePosition& position): \
-		  RiftTestingStmt(StmtKind::class_name, position) {}
+#define TEST_CHILD_CONSTRUCTOR(class_name) \
+	class_name(const dia::SourcePosition& position): TestingStmt(StmtKind::class_name, position) {}
 
 }

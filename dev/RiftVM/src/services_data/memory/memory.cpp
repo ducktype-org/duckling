@@ -7,7 +7,7 @@ namespace vm {
 		if (free_ids.empty()) {
 			blocks.emplace_back();
 			blocks.back().owned = true;
-			RIFT_ASSERT(usize(high_id) == blocks.size() - 1, "Bad high id");
+			CORE_ASSERT(usize(high_id) == blocks.size() - 1, "Bad high id");
 			return high_id++;
 		}
 		BlockID res = free_ids.back();
@@ -30,17 +30,17 @@ namespace vm {
 
 	void Memory::returnBlockID(BlockID id) {
 		if (isUnowned(id))
-			RIFT_PANIC("Tried returning an unowned id");
+			CORE_PANIC("Tried returning an unowned id");
 		else if (blocks[usize(id)].filled)
-			RIFT_PANIC("Tried returning an id of an unfreed block");
+			CORE_PANIC("Tried returning an id of an unfreed block");
 		refCheck(id);
 	}
 
 	void Memory::makeBlock(BlockID id, Block&& block) {
 		if (isUnowned(id))
-			RIFT_PANIC("Tried creating an unowned block");
+			CORE_PANIC("Tried creating an unowned block");
 		else if (blocks[usize(id)].filled)
-			RIFT_PANIC("Tried creating an initialized block");
+			CORE_PANIC("Tried creating an initialized block");
 		blocks[usize(id)].block = new Block(std::move(block));
 
 		// @TODO: this assumes every block is initialized
@@ -48,12 +48,12 @@ namespace vm {
 	}
 
 	void Memory::deleteBlock(BlockID id) {
-		if (isUnowned(id)) RIFT_PANIC("Tried deleting an unowned block");
+		if (isUnowned(id)) CORE_PANIC("Tried deleting an unowned block");
 		blocks[usize(id)].filled = false;
 		delete blocks[usize(id)].block;
 
 		// @FIXME: refCheck deleted BlockData if ref count is zero
-		// Issue: https://github.com/rift-lang/rift-poc-zpp1/issues/90
+		// Issue: https://github.com/ducktype-org/rift-poc-zpp1/issues/90
 		// this can cause memory error here:
 		// this code only make sense if refCheck didn't delete block
 
@@ -67,17 +67,17 @@ namespace vm {
 
 	void Memory::createRef(BlockID id) {
 		if (isUnowned(id))
-			RIFT_PANIC("Tried creating a reference to an unowned block");
+			CORE_PANIC("Tried creating a reference to an unowned block");
 		else if (!blocks[usize(id)].filled)
-			RIFT_PANIC("Tried creating a reference to an uninitialized block");
+			CORE_PANIC("Tried creating a reference to an uninitialized block");
 		blocks[usize(id)].refcount++;
 	}
 
 	void Memory::destroyRef(BlockID id) {
 		if (id >= high_id || (!blocks[usize(id)].owned && !blocks[usize(id)].deleted))
-			RIFT_PANIC("Tried deleting a reference to an unowned block");
+			CORE_PANIC("Tried deleting a reference to an unowned block");
 		if (blocks[usize(id)].refcount == 0)
-			RIFT_PANIC("Tried deleting a reference to an unreferenced block");
+			CORE_PANIC("Tried deleting a reference to an unreferenced block");
 		if (--blocks[usize(id)].refcount == 0 && blocks[usize(id)].deleted) {
 			blocks[usize(id)].deleted = true;
 			refCheck(id);

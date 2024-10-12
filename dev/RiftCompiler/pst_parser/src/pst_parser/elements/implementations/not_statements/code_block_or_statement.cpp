@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<CodeBlockOrStmt> CodeBlockOrStmt::parse(RiftParserState& state) {
+	ParserRef<CodeBlockOrStmt> CodeBlockOrStmt::parse(LangParserState& state) {
 		auto out = makeRef<CodeBlockOrStmt>(state.getPosition());
 		if (state[0].isBracketGroup(Token::BracketType::Curly)) {
 			ParserRef<CodeBlock> block;
@@ -29,7 +29,7 @@ namespace pst {
 			variant_case(ParserRef<Stmt>, stmt) { return const_iterator(&stmt); }
 			variant_case(ParserRef<CodeBlock>, code_block) { return code_block->begin(); }
 		}
-		RIFT_PANIC("something went wrong");
+		CORE_PANIC("something went wrong");
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::end() const {
@@ -37,6 +37,6 @@ namespace pst {
 			variant_case(ParserRef<Stmt>, stmt) { return const_iterator(&stmt) + 1; }
 			variant_case(ParserRef<CodeBlock>, code_block) { return code_block->end(); }
 		}
-		RIFT_PANIC("something went wrong");
+		CORE_PANIC("something went wrong");
 	}
 }

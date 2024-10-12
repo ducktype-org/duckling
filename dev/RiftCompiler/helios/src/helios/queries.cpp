@@ -78,7 +78,7 @@ namespace compiler::helios {
 
 			template<class T>
 			ScopeID scopeOf(const T& element) {
-				return ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(&element) });
+				return ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::LangElement>(&element) });
 			}
 
 			// @TODO: visits for all valid stmt-s
@@ -181,7 +181,7 @@ namespace compiler::helios {
 				// Scope of function itself:
 				// this scope will contain all "function declaration" symbols like parameters
 				// auto outer_scope
-				// 	= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::RiftElement>(&stmt) });
+				// 	= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::LangElement>(&stmt) });
 
 				auto fun_body = stmt.getBody();
 
@@ -195,7 +195,7 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			RIFT_ASSERT(
+			CORE_ASSERT(
 				kind(key) == SymbolKind::Function, "Function creation called on non-function symbol"
 			);
 

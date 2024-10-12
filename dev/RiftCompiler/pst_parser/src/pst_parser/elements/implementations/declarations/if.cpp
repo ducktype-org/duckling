@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<If> If::parse(RiftParserState& state) {
+	ParserRef<If> If::parse(LangParserState& state) {
 		// @TODO: attr list
 		auto position = state.getPosition();
 		auto out      = makeRef<If>(position);

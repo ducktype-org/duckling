@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../rift_parser_state.hpp"
+#include "../../lang_parser_state.hpp"
 #include "../elements_common.hpp"
 
 #include <diagnostic/source_position.hpp>
@@ -20,7 +20,7 @@ namespace pst {
 	class PstStmtVisitor;
 	class Attribute;
 
-	using StateCondition = bool(const RiftParserState&, i64);
+	using StateCondition = bool(const LangParserState&, i64);
 
 	using GetName = std::string (*)();
 
@@ -45,7 +45,7 @@ namespace pst {
 		AccessBlock,
 	};
 
-	class Stmt: public RiftElement {
+	class Stmt: public LangElement {
 		StmtKind kind;
 
 	protected:
@@ -54,10 +54,10 @@ namespace pst {
 		AttrList attributes;
 
 		Stmt(StmtKind kind, const dia::SourcePosition& position):
-			  RiftElement(position),
+			  LangElement(position),
 			  kind(kind) {}
 
-		static AttrList collectAttributes(RiftParserState& state);
+		static AttrList collectAttributes(LangParserState& state);
 
 		/**
 		 * @brief Prepends attributes after parsing handling sub elements and position.
@@ -74,7 +74,7 @@ namespace pst {
 			return kind;
 		}
 
-		static ParserRef<Stmt> parse(RiftParserState& state);
+		static ParserRef<Stmt> parse(LangParserState& state);
 		bool                   trailingSemicolon() override;
 		virtual void           acceptVisitor(PstStmtVisitor& visitor) const = 0;
 
@@ -123,9 +123,9 @@ namespace pst {
 #define STMT_CHILD_CONSTRUCTOR(class_name) \
 	class_name(const dia::SourcePosition& position): Stmt(StmtKind::class_name, position) {}
 
-	class NotStmt: public RiftElement {
+	class NotStmt: public LangElement {
 	public:
-		explicit NotStmt(const dia::SourcePosition& position): RiftElement(position) {}
+		explicit NotStmt(const dia::SourcePosition& position): LangElement(position) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -142,18 +142,18 @@ namespace pst {
 
 	class ClassStmt: public Stmt {
 	protected:
-		inline static const std::set<rift_def::Keyword> class_specs = {
-			rift_def::Keyword::Public,
-			rift_def::Keyword::Private,
-			rift_def::Keyword::Protected,
-			rift_def::Keyword::Static,
+		inline static const std::set<lang_def::Keyword> class_specs = {
+			lang_def::Keyword::Public,
+			lang_def::Keyword::Private,
+			lang_def::Keyword::Protected,
+			lang_def::Keyword::Static,
 		};
 		ClassContext context;
 
-		void parseSpecifiers(RiftParserState& state);
+		void parseSpecifiers(LangParserState& state);
 
 		[[nodiscard]]
-		static i64 countSpecifiers(RiftParserState& state);
+		static i64 countSpecifiers(LangParserState& state);
 
 		void dprintPrefix(std::ostream& out) const override;
 
@@ -162,10 +162,10 @@ namespace pst {
 			  context(std::move(ctx)) {}
 
 	private:
-		static ParserRef<ClassStmt> chooseStmt(RiftParserState& state, const ClassContext& ctx);
+		static ParserRef<ClassStmt> chooseStmt(LangParserState& state, const ClassContext& ctx);
 
 	public:
-		static ParserRef<ClassStmt> parse(RiftParserState& state, const ClassContext& ctx);
+		static ParserRef<ClassStmt> parse(LangParserState& state, const ClassContext& ctx);
 
 		const ClassContext& getContext() { return { context }; }
 

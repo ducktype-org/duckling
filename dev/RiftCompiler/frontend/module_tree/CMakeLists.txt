@@ -7,5 +7,5 @@ make_module(ModuleTree USES Filesystem PstParser QueryFramework)
 
 add_example(module_tree_example examples/module_tree_example.cpp USES ModuleTree)
 
-rift_add_test(compiler frontend_test_module_tree tests/module_tree_tests.cpp
+duck_add_test(compiler frontend_test_module_tree tests/module_tree_tests.cpp
 	USES ModuleTree)

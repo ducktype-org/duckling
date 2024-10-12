@@ -7,7 +7,7 @@
 #pragma once
 
 #include <pst_parser/elements/elements.hpp>
-#include <pst_parser/rift_parser_state.hpp>
+#include <pst_parser/lang_parser_state.hpp>
 #include <vector>
 
 #include "pst_ref.hpp"
@@ -19,7 +19,7 @@ namespace compiler::helios {
 	using StmtList = std::vector<PstRef<Stmt>>;
 
 	/**
-	 * @brief Returns all children statements of given RiftElement
+	 * @brief Returns all children statements of given LangElement
 	 * Currently:
 	 *  * For CodeBlock return Stmt in the code block
 	 *  * For CodeBlockOrStmt return Stmt in the code block
@@ -28,7 +28,7 @@ namespace compiler::helios {
 	 *
 	 * @return StmtList
 	 */
-	StmtList<> getStmtsFromStmtAggregate(PstRef<pst::RiftElement>);
+	StmtList<> getStmtsFromStmtAggregate(PstRef<pst::LangElement>);
 
 	/**
 	 * @brief Returns all children statements of given ClassBlock
@@ -36,5 +36,5 @@ namespace compiler::helios {
 	 *
 	 * @return StmtList
 	 */
-	StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(PstRef<pst::RiftElement>);
+	StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(PstRef<pst::LangElement>);
 }

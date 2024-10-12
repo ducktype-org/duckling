@@ -3,26 +3,26 @@
 #include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better
 
 #include <token_file/file.hpp>
-#include "rift_parser_state.hpp"
+#include "lang_parser_state.hpp"
 #include "parser.hpp"
 
 namespace pst {
 	/**
 	 * @brief PST generation class. Parses on construction if possible.
 	 *
-	 * @note The Element is only required to be derived from RiftElement and not necessarily
-	 * parsable to allow to manage already parsed generic PST<RiftElement>.
+	 * @note The Element is only required to be derived from LangElement and not necessarily
+	 * parsable to allow to manage already parsed generic PST<LangElement>.
 	 *
 	 * @tparam Element Root Element to parse.
 	 */
-	template<std::derived_from<RiftElement> Element = TopLevel>
+	template<std::derived_from<LangElement> Element = TopLevel>
 	class PST {
 	public:
 		/**
 		 * @brief Checks if an element is pars-able using given arguments.
 		 */
 		template<typename... Args>
-		constexpr static bool ParseAble = tpc::ParseAbleElement<Element, RiftParserState, Args...>;
+		constexpr static bool ParseAble = tpc::ParseAbleElement<Element, LangParserState, Args...>;
 
 	private:
 		tokenizer::OwnFile      file;
@@ -35,7 +35,7 @@ namespace pst {
 		template<typename... Args>
 		void parse(Args&&... args) requires ParseAble<Args...> {
 			const lexer::TokenData& token_data = file->getTokenData();
-			RiftParserState         state(
+			LangParserState         state(
                 tpc::TokenStream(
                     token_data.tokens,
                     token_data.bof_sentinel,

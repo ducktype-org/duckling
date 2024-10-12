@@ -11,7 +11,7 @@
 
 namespace exec {
 
-	// @TODO: unify with rift_def(key_spec_op.hpp)
+	// @TODO: unify with lang_def(key_spec_op.hpp)
 	enum class Operator {
 		Plus,
 		Minus,

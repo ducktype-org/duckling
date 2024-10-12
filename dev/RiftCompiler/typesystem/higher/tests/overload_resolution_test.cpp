@@ -59,4 +59,4 @@ public:
 	~TypeSystemOverloadResolutionTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/RiftCompiler/typesystem/higher/tests/")
+TESTER_COMMON_MAIN("/compiler/typesystem/higher/tests/")

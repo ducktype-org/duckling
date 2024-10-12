@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../rift_parser_state.hpp"
+#include "../../lang_parser_state.hpp"
 #include "../elements_common.hpp"
 
 #include <diagnostic/source_position.hpp>
@@ -58,7 +58,7 @@ namespace pst {
 			return getName() + " list";
 		}
 
-		static ParserRef<List> parse(RiftParserState& state);
+		static ParserRef<List> parse(LangParserState& state);
 
 		void dprint(std::ostream& out) const final {
 			out << "[";
@@ -80,7 +80,7 @@ namespace pst {
 	public:
 		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {}
 
-		static ParserRef<FunParam> parse(RiftParserState& state);
+		static ParserRef<FunParam> parse(LangParserState& state);
 		~FunParam() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -149,7 +149,7 @@ namespace pst {
 
 		explicit DottedName(const dia::SourcePosition& position): NotStmt(position) {}
 
-		static ParserRef<DottedName> parse(RiftParserState& state);
+		static ParserRef<DottedName> parse(LangParserState& state);
 
 		[[nodiscard]]
 		std::vector<base::StrID> getNames() const;
@@ -167,7 +167,7 @@ namespace pst {
 	public:
 		explicit Attribute(dia::SourcePosition& pos): NotStmt(pos) {}
 
-		static ParserRef<Attribute> parse(RiftParserState& state);
+		static ParserRef<Attribute> parse(LangParserState& state);
 		~Attribute() final = default;
 
 		void dprint(std::ostream& out) const final;
@@ -186,7 +186,7 @@ namespace pst {
 
 		explicit CodeBlock(const dia::SourcePosition& position): NotStmt(position) {}
 
-		static ParserRef<CodeBlock> parse(RiftParserState& state);
+		static ParserRef<CodeBlock> parse(LangParserState& state);
 		~CodeBlock() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -208,7 +208,7 @@ namespace pst {
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, ClassStmt)
 
 		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos){};
-		static ParserRef<ClassBlock> parse(RiftParserState& state, const ClassContext& ctx);
+		static ParserRef<ClassBlock> parse(LangParserState& state, const ClassContext& ctx);
 
 		~ClassBlock() override = default;
 		void dprint(std::ostream& out) const final;
@@ -230,7 +230,7 @@ namespace pst {
 	public:
 		explicit CodeBlockOrStmt(const dia::SourcePosition& position): NotStmt(position) {}
 
-		static ParserRef<CodeBlockOrStmt> parse(RiftParserState& state);
+		static ParserRef<CodeBlockOrStmt> parse(LangParserState& state);
 		~CodeBlockOrStmt() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -257,7 +257,7 @@ namespace pst {
 	public:
 		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {}
 
-		static ParserRef<RoundGroupExpr> parse(RiftParserState& state);
+		static ParserRef<RoundGroupExpr> parse(LangParserState& state);
 		~RoundGroupExpr() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -311,7 +311,7 @@ namespace pst {
 		struct Block;
 
 		struct KeywordValue {
-			rift_def::Keyword keyword;
+			lang_def::Keyword keyword;
 		};
 
 		using ExprElem = std::
@@ -350,7 +350,7 @@ namespace pst {
 		 * @brief parses the expression until its over
 		 * @param allow_comma whether the expression can be a set of comma separated expressions.
 		 */
-		static ParserRef<Expr> parse(RiftParserState& state, bool allow_comma = false);
+		static ParserRef<Expr> parse(LangParserState& state, bool allow_comma = false);
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -372,7 +372,7 @@ namespace pst {
 			StateCondition                  positiveEnd,
 			std::derived_from<dia::Message> badEndMessage>
 		requires std::constructible_from<badEndMessage, dia::SourcePosition>
-		static ParserRef<Expr> parseUntil(RiftParserState& state, bool allow_comma = false) {
+		static ParserRef<Expr> parseUntil(LangParserState& state, bool allow_comma = false) {
 			// look ahead:
 			usize count = 0;
 			while (!until(state, (i64) count) && count < state.ctokens().size()) count++;
@@ -410,7 +410,7 @@ namespace pst {
 		 * @param allow_comma whether the expression can be a set of comma separated expressions.
 		 */
 		static ParserRef<Expr> parse(
-			RiftParserState& state, usize len, bool exact_len = true, bool allow_comma = false
+			LangParserState& state, usize len, bool exact_len = true, bool allow_comma = false
 		);
 		void dprint(std::ostream& out) const final;
 		~Expr() final = default;
@@ -523,7 +523,7 @@ namespace pst {
 		GetName                   getName,
 		class Container>
 	auto List<ListElements, NON_EMPTY, BRACKETS, isSeparator, isEnding, getName, Container>::parse(
-		RiftParserState& state
+		LangParserState& state
 	) -> ParserRef<List> {
 		auto position = state.getPosition();
 
