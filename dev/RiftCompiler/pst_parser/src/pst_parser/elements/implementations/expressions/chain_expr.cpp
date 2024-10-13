@@ -7,7 +7,7 @@ namespace pst::expr {
 		u64 fwd = 1;
 		if (state[0].is(Keyword::Lambda)) fwd = 2;  // Skip ()
 		while (fwd < length) {
-			if (state[fwd].is(rift_def::Operator::Period)) break;
+			if (state[fwd].is(rift_def::NamedOperator::Period)) break;
 			if (state[fwd].isBracketGroup(lexer::Token::Square)) break;
 			if (state[fwd].isBracketGroup(lexer::Token::Round)) break;
 			fwd++;
@@ -31,7 +31,7 @@ namespace pst::expr {
 		while (length > 0) {
 			fwd = toNextLink(state, length);
 			out->chain.push_back(nullptr);
-			if (state[0].is(rift_def::Operator::Period)) {
+			if (state[0].is(rift_def::NamedOperator::Period)) {
 				state.parse(out).with(&out->chain.back(), Access::parse, +fwd);
 			} else if (state[0].isBracketGroup(lexer::Token::Round) || state[0].isBracketGroup(lexer::Token::Square)) {
 				state.parse(out).with(&out->chain.back(), Call::parse, +fwd);

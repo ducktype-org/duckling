@@ -21,7 +21,7 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeRef<FunParam>(position);
 
-		state.parse(out).all(&out->name, Operator::Colon);
+		state.parse(out).all(&out->name, NamedOperator::Colon);
 
 		state.parse(out).with<Expr>(
 			&out->type,
@@ -32,7 +32,7 @@ namespace pst {
 			false
 		);
 
-		if (state.parse(out).tryEat(Operator::Assign))
+		if (state.parse(out).tryEat(NamedOperator::Assign))
 			state.parse(out).with<Expr>(&out->initial, Expr::parse, false);
 
 		return out;

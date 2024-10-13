@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "char.hpp"
+#include "token_common.hpp"
 
 #include <diagnostic/source_position.hpp>
 #include <base/smart_pointers.hpp>
@@ -19,7 +20,6 @@
 
 namespace lexer {
 	using rift_def::Keyword;
-	using rift_def::Operator;
 	using rift_def::Special;
 
 	class Token;

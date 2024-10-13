@@ -28,7 +28,7 @@ namespace pst {
 			state.parse(out).eatOne();
 		}
 
-		state.parse(out).all(&out->name, Operator::Colon);
+		state.parse(out).all(&out->name, NamedOperator::Colon);
 		state.parse(out).with(
 			&out->type,
 			Expr::parseUntil<
@@ -38,7 +38,7 @@ namespace pst {
 			true
 		);
 
-		if (state.parse(out).tryEat(Operator::Assign))
+		if (state.parse(out).tryEat(NamedOperator::Assign))
 			state.parse(out).with<Expr>(&out->init, Expr::parse, true);
 
 		return out;

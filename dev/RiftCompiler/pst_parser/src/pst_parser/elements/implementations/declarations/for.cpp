@@ -49,7 +49,7 @@ namespace pst {
 
 			state.parse(out).one(&out->iterator, true);
 
-			if (state.parse(out).tryEat(Operator::Colon)) {
+			if (state.parse(out).tryEat(NamedOperator::Colon)) {
 				state.parse(out).with<Expr>(
 					&out->type,
 					Expr::parseUntil<

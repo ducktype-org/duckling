@@ -136,30 +136,30 @@ namespace rift_def {
 		{ Special::DolarSign, "$" },
 	} };
 
-	constexpr std::array<std::pair<Operator, std::string_view>, 21> operator_array{ {
-		{ Operator::NotAnOperator, "NotAnOperator" },
-		{ Operator::Period, "." },
-		{ Operator::PeriodStar, ".*" },
-		{ Operator::Colon, ":" },
-		{ Operator::Assign, "=" },
-		{ Operator::Pipe, "|" },
-		{ Operator::QuestionMark, "?" },
-		{ Operator::SingleArrow, "->" },
-		{ Operator::DoubleArrow, "=>" },
+	constexpr std::array<std::pair<NamedOperator, std::string_view>, 21> operator_array{ {
+		{ NamedOperator::NotAnOperator, "NotAnOperator" },
+		{ NamedOperator::Period, "." },
+		{ NamedOperator::PeriodStar, ".*" },
+		{ NamedOperator::Colon, ":" },
+		{ NamedOperator::Assign, "=" },
+		{ NamedOperator::Pipe, "|" },
+		{ NamedOperator::QuestionMark, "?" },
+		{ NamedOperator::SingleArrow, "->" },
+		{ NamedOperator::DoubleArrow, "=>" },
 
-		{ Operator::Lesser, "<" },
-		{ Operator::Greater, ">" },
-		{ Operator::LEqual, "<=" },
-		{ Operator::GEqual, ">=" },
-		{ Operator::Equal, "==" },
-		{ Operator::NotEqual, "!=" },
+		{ NamedOperator::Lesser, "<" },
+		{ NamedOperator::Greater, ">" },
+		{ NamedOperator::LEqual, "<=" },
+		{ NamedOperator::GEqual, ">=" },
+		{ NamedOperator::Equal, "==" },
+		{ NamedOperator::NotEqual, "!=" },
 
-		{ Operator::Minus, "-" },
-		{ Operator::Plus, "+" },
-		{ Operator::DoublePlus, "++" },
-		{ Operator::DoubleMinus, "--" },
-		{ Operator::Multiply, "*" },
-		{ Operator::Divide, "/" },
+		{ NamedOperator::Minus, "-" },
+		{ NamedOperator::Plus, "+" },
+		{ NamedOperator::DoublePlus, "++" },
+		{ NamedOperator::DoubleMinus, "--" },
+		{ NamedOperator::Multiply, "*" },
+		{ NamedOperator::Divide, "/" },
 	} };
 
 	// Distinct for all keyword modes:
@@ -173,10 +173,10 @@ namespace rift_def {
 	base::VectorMap<Keyword, base::FlagType, false, true> keyword_flags;
 
 	base::VectorMap<base::StrID, Special, false, true>  special_map;
-	base::VectorMap<base::StrID, Operator, false, true> operator_map;
+	base::VectorMap<base::StrID, NamedOperator, false, true> operator_map;
 
 	base::VectorMap<Special, base::StrID, false, true>  rev_special_map;
-	base::VectorMap<Operator, base::StrID, false, true> rev_operator_map;
+	base::VectorMap<NamedOperator, base::StrID, false, true> rev_operator_map;
 
 	void key_spec_op::init() {
 		RIFT_SIMPLE_INIT_GUARD_BEGIN;
@@ -254,16 +254,16 @@ namespace rift_def {
 		return Special::NotASpecial;
 	}
 
-	Operator strAsOperator(base::StrID id) {
+	NamedOperator strAsOperator(base::StrID id) {
 		if (operator_map.contains(id)) return operator_map[id];
-		return Operator::NotAnOperator;
+		return NamedOperator::NotAnOperator;
 	}
 
 	base::StrID keywordToStr(Keyword key) { return rev_keyword_map[key]; }
 
 	base::StrID specialToStr(Special spec) { return rev_special_map[spec]; }
 
-	base::StrID operatorToStr(Operator oper) { return rev_operator_map[oper]; }
+	base::StrID operatorToStr(NamedOperator oper) { return rev_operator_map[oper]; }
 
 	base::FlagType keywordFlags(Keyword key) { return keyword_flags[key]; }
 
@@ -281,8 +281,8 @@ namespace rift_def {
 		return result;
 	}
 
-	std::vector<Operator> getOperators() {
-		std::vector<Operator> result;
+	std::vector<NamedOperator> getOperators() {
+		std::vector<NamedOperator> result;
 		result.reserve(operator_array.size());
 		for (const auto& [k, s]: operator_array) result.push_back(k);
 		return result;

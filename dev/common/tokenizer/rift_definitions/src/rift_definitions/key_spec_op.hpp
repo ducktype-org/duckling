@@ -158,7 +158,7 @@ namespace rift_def {
 	};
 
 	// only operator significant during parsing
-	enum class Operator {
+	enum class NamedOperator {
 		NotAnOperator,
 		Period,
 		PeriodStar,
@@ -197,15 +197,15 @@ namespace rift_def {
 
 	Special  strAsSpecial(base::StrID id);
 	Keyword  strAsKeyword(base::StrID id);
-	Operator strAsOperator(base::StrID id);
+	NamedOperator strAsOperator(base::StrID id);
 
 	base::StrID keywordToStr(Keyword key);
 	base::StrID specialToStr(Special spec);
-	base::StrID operatorToStr(Operator oper);
+	base::StrID operatorToStr(NamedOperator oper);
 
 	base::FlagType keywordFlags(Keyword key);
 
 	std::vector<Keyword>  getKeywords();
 	std::vector<Special>  getSpecials();
-	std::vector<Operator> getOperators();
+	std::vector<NamedOperator> getOperators();
 }

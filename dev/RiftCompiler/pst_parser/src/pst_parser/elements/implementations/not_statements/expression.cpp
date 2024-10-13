@@ -96,7 +96,7 @@ namespace pst {
 		while (state.notEmpty() and i < len) {
 			i++;
 
-			if (state[0].is(rift_def::Operator::Colon) && state[1].isBracketGroup(Token::Curly)) {
+			if (state[0].is(rift_def::NamedOperator::Colon) && state[1].isBracketGroup(Token::Curly)) {
 				// @TODO: This should probably generate something more specific to templates
 
 				auto& token = state.tokens().next();

@@ -24,7 +24,7 @@ namespace tpc {
 	}
 
 	void nullAwareDprint(Operator op, std::ostream& out) {
-		out << "\"" << operatorToStr(op).str() << "\"";
+		out << "\"" << op.str() << "\"";
 	}
 
 	void nullAwareDprint(OptionalIdentifier ident, std::ostream& out) {

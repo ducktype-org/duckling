@@ -13,11 +13,11 @@ namespace pst {
 		if (state[0].isBracketGroup(Token::Round))
 			out->kind = { base::StrID("create") };
 		else
-			state.parse(out).all(Operator::Period, &out->kind);
+			state.parse(out).all(NamedOperator::Period, &out->kind);
 
 		state.parse(out).one(&out->params);
-		if (state.parse(out).tryEat(Operator::Colon)) state.parse(out).one(&out->inits);
-		state.parse(out).all(Operator::Assign, &out->body);
+		if (state.parse(out).tryEat(NamedOperator::Colon)) state.parse(out).one(&out->inits);
+		state.parse(out).all(NamedOperator::Assign, &out->body);
 
 		return out;
 	}

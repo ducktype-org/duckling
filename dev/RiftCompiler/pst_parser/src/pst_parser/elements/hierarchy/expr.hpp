@@ -41,11 +41,11 @@ namespace pst {
 		ExprClassify() = delete;
 
 		CONDITION(isComparison) {
-			static std::set<rift_def::Operator> comparisons = {
-				Operator::Lesser, Operator::LEqual, Operator::Greater,
-				Operator::GEqual, Operator::Equal,  Operator::NotEqual,
+			static std::set<rift_def::NamedOperator> comparisons = {
+				NamedOperator::Lesser, NamedOperator::LEqual, NamedOperator::Greater,
+				NamedOperator::GEqual, NamedOperator::Equal,  NamedOperator::NotEqual,
 			};
-			return state[fwd].isOperator() && comparisons.contains(state[fwd].asOperator());
+			return state[fwd].isOperator() && comparisons.contains(state[fwd].asOperator().asNamed());
 		}
 
 		CONDITION(isAssignment) {
@@ -73,56 +73,56 @@ namespace pst {
 		class PrefixOperator: public ExprElement {
 		protected:
 			ParserRef<ExprElement> expr;
-			base::StrID            type;
+			Operator            op;
 
 		public:
 			explicit PrefixOperator(
-				const dia::SourcePosition& pos, base::StrID type, i64 precedence
+				const dia::SourcePosition& pos, Operator op, i64 precedence
 			):
 				  ExprElement(pos, precedence),
-				  type(type) {}
+				  op(op) {}
 
 			~PrefixOperator() override = default;
-			void dprint(std::ostream& out) const final;
+			// void dprint(std::ostream& out) const final;
 
-			std::string elementType() const override { return type.str() + " Prefix Operator"; }
+			std::string elementType() const override { return op.str() + " Prefix Operator"; }
 		};
 
 		class SuffixOperator: public ExprElement {
 		protected:
-			base::StrID            type;
+			Operator            op;
 			ParserRef<ExprElement> expr;
 
 		public:
 			explicit SuffixOperator(
-				const dia::SourcePosition& pos, base::StrID type, i64 precedence
+				const dia::SourcePosition& pos, Operator op, i64 precedence
 			):
 				  ExprElement(pos, precedence),
-				  type(type) {}
+				  op(op) {}
 
 			~SuffixOperator() override = default;
-			void dprint(std::ostream& out) const final;
+			// void dprint(std::ostream& out) const final;
 
-			std::string elementType() const override { return type.str() + " Suffix Operator"; }
+			std::string elementType() const override { return op.str() + " Suffix Operator"; }
 		};
 
 		class BinaryOperator: public ExprElement {
 		protected:
 			ParserRef<ExprElement> left;
-			base::StrID            type;
+			Operator            op;
 			ParserRef<ExprElement> right;
 
 		public:
 			explicit BinaryOperator(
-				const dia::SourcePosition& pos, base::StrID type, i64 precedence
+				const dia::SourcePosition& pos, Operator op, i64 precedence
 			):
 				  ExprElement(pos, precedence),
-				  type(type) {}
+				  op(op) {}
 
 			~BinaryOperator() override = default;
-			void dprint(std::ostream& out) const final;
+			// void dprint(std::ostream& out) const final;
 
-			std::string elementType() const override { return type.str() + " Infix Operator"; }
+			std::string elementType() const override { return op.str() + " Infix Operator"; }
 		};
 
 		class Value final: public ExprElement {
@@ -134,7 +134,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~Value() override = default;
-			void dprint(std::ostream& out) const final;
+			// void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Value Expr"; }
 		};
@@ -158,7 +158,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 			
 			~TemplateSpecifier() override = default;
-			void dprint(std::ostream& out) const final;
+			// void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Template Specifier Expression"; }
 		};
@@ -173,7 +173,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~IdentifierLiteral() override = default;
-			void dprint(std::ostream& out) const final;
+			// void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Identifier Expression"; }
 		};
@@ -248,7 +248,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~RoundExpr() override = default;
-			void dprint(std::ostream& out) const final;
+			// void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Round Group Expression"; }
 		};
@@ -272,7 +272,7 @@ namespace pst {
 			using Self  = GeneralPrefix;
 
 		public:
-			explicit GeneralPrefix(const dia::SourcePosition& pos, base::StrID op):
+			explicit GeneralPrefix(const dia::SourcePosition& pos, Operator op):
 				  PrefixOperator(pos, op, 400) {}
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
@@ -288,7 +288,7 @@ namespace pst {
 				parseRecursive(RiftParserState& state, u64 length, u64 iter);
 
 		public:
-			explicit GeneralSuffix(const dia::SourcePosition& pos, base::StrID op):
+			explicit GeneralSuffix(const dia::SourcePosition& pos, Operator op):
 				  SuffixOperator(pos, op, 450) {}
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
@@ -304,23 +304,23 @@ namespace pst {
 			 * @brief is a general binary operators
 			 */
 			CONDITION(isGenBinOp) {
-				static const std::set<rift_def::Operator> gen_bin_ops = {
-					Operator::Multiply,
-					Operator::Divide,
-					Operator::Plus,
-					Operator::Minus,
+				static const std::set<rift_def::NamedOperator> gen_bin_ops = {
+					NamedOperator::Multiply,
+					NamedOperator::Divide,
+					NamedOperator::Plus,
+					NamedOperator::Minus,
 				};
-				return gen_bin_ops.contains(state[fwd].asOperator());
+				return gen_bin_ops.contains(state[fwd].asOperator().asNamed());
 			}
 
 			static i64 getOpPrec(Operator op) {
-				static const std::unordered_map<rift_def::Operator, i64> precedences = {
-					{ Operator::Multiply, 510 },
-					{ Operator::Divide, 510 },
-					{ Operator::Plus, 520 },
-					{ Operator::Minus, 520 },
+				static const std::unordered_map<rift_def::NamedOperator, i64> precedences = {
+					{ NamedOperator::Multiply, 510 },
+					{ NamedOperator::Divide, 510 },
+					{ NamedOperator::Plus, 520 },
+					{ NamedOperator::Minus, 520 },
 				};
-				return precedences.at(op);
+				return precedences.at(op.asNamed());
 			}
 
 			struct OperatorBuilder;
@@ -334,8 +334,8 @@ namespace pst {
 			};
 
 		public:
-			explicit GeneralBinary(const dia::SourcePosition& pos, rift_def::Operator op):
-				  BinaryOperator(pos, rift_def::operatorToStr(op), getOpPrec(op)) {}
+			explicit GeneralBinary(const dia::SourcePosition& pos, Operator op):
+				  BinaryOperator(pos, op, getOpPrec(op)) {}
 
 			/**
 			 * @brief
@@ -430,7 +430,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~Ternary() override = default;
-			void dprint(std::ostream& out) const final;
+			// void dprint(std::ostream& out) const final;
 		};
 
 		class Comma final: public ExprElement {
@@ -483,6 +483,8 @@ namespace pst {
 		}
 
 		std::string elementType() const override { return "New Expr Statement"; }
+
+		void dprint(std::ostream& out) const override { out << "<NEWEXPRSTMT UNIMPLEMENTED>"; }
 
 		void acceptVisitor(PstStmtVisitor&) const override { RIFT_PANIC("unimplemented"); }
 

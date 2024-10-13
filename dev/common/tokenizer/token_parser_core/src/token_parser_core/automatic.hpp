@@ -38,8 +38,8 @@
 
 namespace tpc {
 	using rift_def::Keyword;
-	using rift_def::Operator;
 	using rift_def::Special;
+	using lexer::Operator;
 
 	void nullAwareDprint(Identifier, std::ostream& out);
 	void nullAwareDprint(OptionalIdentifier, std::ostream& out);
@@ -251,7 +251,7 @@ namespace tpc {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected operator `" + rift_def::operatorToStr(expected).str() + "` here.";
+			return "Expected operator `" + expected.str() + "` here.";
 		}
 
 	public:

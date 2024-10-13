@@ -27,8 +27,9 @@
 
 namespace pst {
 	using rift_def::Keyword;
-	using rift_def::Operator;
 	using rift_def::Special;
+	using rift_def::NamedOperator;
+	using lexer::Operator;
 
 	template<typename State>
 	class PSTAutomatic {

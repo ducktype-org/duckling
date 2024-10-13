@@ -7,7 +7,7 @@ namespace pst::expr {
 		u64 fwd = base;
 		if (state[fwd].isIdentifier()) { fwd++; }  // Ignores first identifier
 		while (fwd < length && !isGenBinOp(state, fwd)
-		       && !(state[fwd].isIdentifier() && !state[fwd - 1].is(Operator::Period))) {
+		       && !(state[fwd].isIdentifier() && !state[fwd - 1].is(NamedOperator::Period))) {
 			fwd++;
 		}
 		return fwd;

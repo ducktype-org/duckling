@@ -11,8 +11,8 @@ namespace rift_def {
 
 	namespace {
 		// this is highly ineffective but is meant as a placeholder:
-		base::Map<std::pair<Operator, OperatorType>, i64>                   precedence;
-		base::Map<std::pair<Operator, OperatorType>, OperatorAssociativity> associativity;
+		base::Map<std::pair<NamedOperator, OperatorType>, i64>                   precedence;
+		base::Map<std::pair<NamedOperator, OperatorType>, OperatorAssociativity> associativity;
 	}
 
 	void operator_precedence::init() {
@@ -21,47 +21,47 @@ namespace rift_def {
 		key_spec_op::init();
 
 		// this is highly imperfect but is meant as a placeholder
-		precedence.put({ Operator::Period, OperatorType::Binary }, 0);
+		precedence.put({ NamedOperator::Period, OperatorType::Binary }, 0);
 
-		precedence.put({ Operator::DoublePlus, OperatorType::UnaryRight }, 1);
-		precedence.put({ Operator::Minus, OperatorType::UnaryRight }, 1);
+		precedence.put({ NamedOperator::DoublePlus, OperatorType::UnaryRight }, 1);
+		precedence.put({ NamedOperator::Minus, OperatorType::UnaryRight }, 1);
 
-		precedence.put({ Operator::Multiply, OperatorType::Binary }, 2);
-		precedence.put({ Operator::Divide, OperatorType::Binary }, 2);
+		precedence.put({ NamedOperator::Multiply, OperatorType::Binary }, 2);
+		precedence.put({ NamedOperator::Divide, OperatorType::Binary }, 2);
 
-		precedence.put({ Operator::Plus, OperatorType::Binary }, 3);
-		precedence.put({ Operator::Minus, OperatorType::Binary }, 3);
+		precedence.put({ NamedOperator::Plus, OperatorType::Binary }, 3);
+		precedence.put({ NamedOperator::Minus, OperatorType::Binary }, 3);
 
-		precedence.put({ Operator::Assign, OperatorType::Binary }, 4);
+		precedence.put({ NamedOperator::Assign, OperatorType::Binary }, 4);
 
 
 		associativity.put(
-			{ Operator::Period, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+			{ NamedOperator::Period, OperatorType::Binary }, OperatorAssociativity::LeftToRight
 		);
 
 		associativity.put(
-			{ Operator::DoublePlus, OperatorType::UnaryRight }, OperatorAssociativity::RightToLeft
+			{ NamedOperator::DoublePlus, OperatorType::UnaryRight }, OperatorAssociativity::RightToLeft
 		);
 		associativity.put(
-			{ Operator::Minus, OperatorType::UnaryRight }, OperatorAssociativity::RightToLeft
-		);
-
-		associativity.put(
-			{ Operator::Multiply, OperatorType::Binary }, OperatorAssociativity::LeftToRight
-		);
-		associativity.put(
-			{ Operator::Divide, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+			{ NamedOperator::Minus, OperatorType::UnaryRight }, OperatorAssociativity::RightToLeft
 		);
 
 		associativity.put(
-			{ Operator::Plus, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+			{ NamedOperator::Multiply, OperatorType::Binary }, OperatorAssociativity::LeftToRight
 		);
 		associativity.put(
-			{ Operator::Minus, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+			{ NamedOperator::Divide, OperatorType::Binary }, OperatorAssociativity::LeftToRight
 		);
 
 		associativity.put(
-			{ Operator::Assign, OperatorType::Binary }, OperatorAssociativity::RightToLeft
+			{ NamedOperator::Plus, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+		);
+		associativity.put(
+			{ NamedOperator::Minus, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+		);
+
+		associativity.put(
+			{ NamedOperator::Assign, OperatorType::Binary }, OperatorAssociativity::RightToLeft
 		);
 
 		RIFT_SIMPLE_INIT_GUARD_END;
@@ -82,7 +82,7 @@ namespace rift_def {
 		));
 	}
 
-	i64 operatorPrecedence(Operator operator_, OperatorType operator_type) {
+	i64 operatorPrecedence(NamedOperator operator_, OperatorType operator_type) {
 		return operatorPrecedence(operatorToStr(operator_), operator_type);
 	}
 
@@ -101,7 +101,7 @@ namespace rift_def {
 		));
 	}
 
-	OperatorAssociativity operatorAssociativity(Operator keyword, OperatorType operator_type) {
+	OperatorAssociativity operatorAssociativity(NamedOperator keyword, OperatorType operator_type) {
 		return operatorAssociativity(operatorToStr(keyword), operator_type);
 	}
 }

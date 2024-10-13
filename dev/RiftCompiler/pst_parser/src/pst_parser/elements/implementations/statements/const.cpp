@@ -23,7 +23,7 @@ namespace pst {
 
 		if (!assertStmtChoice<Const>(state, state[0].is(Keyword::Const))) return nullptr;
 
-		state.parse(out).all(Keyword::Const, &out->name, Operator::Colon);
+		state.parse(out).all(Keyword::Const, &out->name, NamedOperator::Colon);
 
 		state.parse(out).with<Expr>(
 			&out->type,
@@ -35,7 +35,7 @@ namespace pst {
 		);
 
 		// If there is no = then expr parsing already threw an error
-		state.parse(out).tryEat(Operator::Assign);
+		state.parse(out).tryEat(NamedOperator::Assign);
 
 		state.parse(out).with<Expr>(&out->value, Expr::parse, true);
 		return out;

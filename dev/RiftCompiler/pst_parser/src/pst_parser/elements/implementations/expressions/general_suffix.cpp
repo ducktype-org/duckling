@@ -27,7 +27,7 @@ namespace pst::expr {
 		if (fwd == reduced_length) {}  // Error
 
 		if (fwd + 1 < reduced_length && state[reduced_length - 1].isIdentifier()
-		    && !state[reduced_length - 2].is(Operator::Period))
+		    && !state[reduced_length - 2].is(NamedOperator::Period))
 			reduced_length--;
 		return parseRecursive(state, length, length - reduced_length);
 	}

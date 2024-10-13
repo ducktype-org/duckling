@@ -29,7 +29,7 @@ namespace pst {
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		state.parse(out).all(Keyword::Fun, &out->name, &out->params);
-		if (state.parse(out).tryEat(Operator::SingleArrow))
+		if (state.parse(out).tryEat(NamedOperator::SingleArrow))
 			state.parse(out).with<Expr>(
 				&out->ret,
 				Expr::parseUntil<
@@ -39,7 +39,7 @@ namespace pst {
 				true
 			);
 
-		state.parse(out).all(Operator::Assign, &out->body);
+		state.parse(out).all(NamedOperator::Assign, &out->body);
 
 		return out;
 	}

@@ -2,6 +2,7 @@
 
 #include <base/string_id.hpp>
 #include <base/optional.hpp>
+#include <lexer/token.hpp>
 #include <diagnostic/source_position.hpp>
 
 namespace tpc {

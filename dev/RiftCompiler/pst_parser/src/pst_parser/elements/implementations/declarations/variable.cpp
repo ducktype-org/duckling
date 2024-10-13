@@ -29,7 +29,7 @@ namespace pst {
 		out->is_const = is_let;
 
 		// @TODO: Add a possibility for type deduction from assigned value and no initial value.
-		state.parse(out).all(is_var ? Keyword::Var : Keyword::Let, &out->name, Operator::Colon);
+		state.parse(out).all(is_var ? Keyword::Var : Keyword::Let, &out->name, NamedOperator::Colon);
 
 		state.parse(out).with(
 			&out->type,
@@ -40,7 +40,7 @@ namespace pst {
 			true
 		);
 
-		state.parse(out).one(Operator::Assign, true);
+		state.parse(out).one(NamedOperator::Assign, true);
 
 		// @TODO: Perhaps add possibility for default construction.
 		state.parse(out).with<Expr>(&out->value, Expr::parse, true);
