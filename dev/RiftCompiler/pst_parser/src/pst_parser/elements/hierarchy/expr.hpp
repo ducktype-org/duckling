@@ -83,6 +83,7 @@ namespace pst {
 				  type(type) {}
 
 			~PrefixOperator() override = default;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return type.str() + " Prefix Operator"; }
 		};
@@ -100,6 +101,7 @@ namespace pst {
 				  type(type) {}
 
 			~SuffixOperator() override = default;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return type.str() + " Suffix Operator"; }
 		};
@@ -118,6 +120,7 @@ namespace pst {
 				  type(type) {}
 
 			~BinaryOperator() override = default;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return type.str() + " Infix Operator"; }
 		};
@@ -131,10 +134,14 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~Value() override = default;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Value Expr"; }
 		};
 
+		/**
+		 * @brief This is a helper element for parsing
+		 */
 		class Literal final: public ExprElement {
 		public:
 			Literal() = delete;
@@ -151,6 +158,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 			
 			~TemplateSpecifier() override = default;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Template Specifier Expression"; }
 		};
@@ -165,6 +173,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~IdentifierLiteral() override = default;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Identifier Expression"; }
 		};
@@ -180,6 +189,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~Access() override = default;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Access Expression"; }
 		};
@@ -199,6 +209,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~Call() override = default;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Call Expression"; }
 		};
@@ -221,6 +232,7 @@ namespace pst {
 			ChainExpr(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
+			void dprint(std::ostream& out) const final;
 
 			~ChainExpr() override = default;
 
@@ -236,6 +248,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~RoundExpr() override = default;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Round Group Expression"; }
 		};
@@ -249,6 +262,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~BlockExpr() override = default;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Block Expression"; }
 		};
@@ -359,6 +373,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~ComparisonChain() override = default;
+			void dprint(std::ostream& out) const final;
 		};
 
 		class LogicNot final: public PrefixOperator {
@@ -415,6 +430,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~Ternary() override = default;
+			void dprint(std::ostream& out) const final;
 		};
 
 		class Comma final: public ExprElement {
@@ -430,6 +446,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~Comma() override = default;
+			void dprint(std::ostream& out) const final;
 		};
 
 		class Assignment final: public ExprElement {
@@ -448,6 +465,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~Assignment() override = default;
+			void dprint(std::ostream& out) const final;
 		};
 	}
 
@@ -465,8 +483,6 @@ namespace pst {
 		}
 
 		std::string elementType() const override { return "New Expr Statement"; }
-
-		void dprint(std::ostream& out) const override { out << "<NEWEXPRSTMT UNIMPLEMENTED>"; }
 
 		void acceptVisitor(PstStmtVisitor&) const override { RIFT_PANIC("unimplemented"); }
 

@@ -34,4 +34,16 @@ namespace pst::expr {
 
 		return out;
 	}
+
+	void Assignment::dprint(std::ostream& out) const {
+		out << "{";
+
+		out << R"("assigned variables": )";
+		nullAwareDprint(variables, out);
+		out << R"(, "assignment type": ")" << type.str() << "\"";
+		out << R"(, "assigned value": )";
+		nullAwareDprint(value, out);
+
+		out << "}";
+	}
 }

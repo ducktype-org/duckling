@@ -15,4 +15,13 @@ namespace pst::expr {
 
 		return out;
 	}
+
+	void BlockExpr::dprint(std::ostream& out) const {
+		out << "{";
+
+		out << R"("block": )";
+		nullAwareDprint(block, out);
+
+		out << "}";
+	}
 }

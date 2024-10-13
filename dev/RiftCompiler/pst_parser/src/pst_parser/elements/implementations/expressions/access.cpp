@@ -18,4 +18,18 @@ namespace pst::expr {
 
 		return out;
 	}
+
+	void Access::dprint(std::ostream& out) const {
+		out << "{";
+
+		out << R"("type": ")" << type.str() << "\"";
+		out << R"(, "name": )";
+		nullAwareDprint(name, out);
+		if (template_specifier) {
+			out << R"(, "template specifier": )";
+			nullAwareDprint(template_specifier.value(), out);
+		}
+
+		out << "}";
+	}
 }

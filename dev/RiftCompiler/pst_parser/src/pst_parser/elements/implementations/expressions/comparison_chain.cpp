@@ -32,4 +32,19 @@ namespace pst::expr {
 
 		return out;
 	}
+
+	void ComparisonChain::dprint(std::ostream& out) const {
+		out << "{";
+
+		out << R"("sub-expressions": [)";
+		bool first = true;
+		for(auto& expr: sub_expr) {
+			if (!first) out << ", ";
+			else first = false;
+			nullAwareDprint(expr, out);
+		}
+		out << "]";
+
+		out << "}";
+	}
 }

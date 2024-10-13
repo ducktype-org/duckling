@@ -17,4 +17,18 @@ namespace pst::expr {
 
 		return out;
 	}
+
+	void Call::dprint(std::ostream& out) const {
+		out << "{";
+
+		if (type == lexer::Token::Round) {
+			out << R"--("type": "()")--";
+		} else {
+			out << R"--("type": "[]")--";
+		}
+		out << R"(, "arguments": ")";
+		nullAwareDprint(args, out);
+
+		out << "}";
+	}
 }

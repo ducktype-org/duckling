@@ -44,4 +44,21 @@ namespace pst::expr {
 
 		return out;
 	}
+
+	void ChainExpr::dprint(std::ostream& out) const {
+		out << "{";
+
+		out << R"("literal": )";
+		nullAwareDprint(literal, out);
+		out << R"(", chain": [)";
+		bool first = true;
+		for(auto& link: chain) {
+			if (!first) out << ", ";
+			else first = false;
+			nullAwareDprint(link, out);
+		}
+		out << "]";
+
+		out << "}";
+	}
 }
