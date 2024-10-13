@@ -1,0 +1,35 @@
+import std.queue as queue;
+
+class Node {
+    var edges: List:{Node};
+    var visited = false;
+    var distance: u32 = 999;
+}
+
+fun DFS(current: Node) = {
+    current.visited = true;
+    for (neighbour in current.edges) {
+        if (!neighbour.visited) DFS(neighbour);
+    }
+}
+
+fun BFS(start: Node) {
+    start.visited = true;
+    start.distance = 0;
+
+    var q: queue:{(Node, u32)}; # technically it can be deduced, can it be deduced in cpp?
+    q.push((start, 1));
+
+    while (!q.empty()) {
+        var current, dist = q.front();
+        q.pop();
+        current.visited = true;
+        current.distance = dist;
+
+        for (neighbour in current.edges) { 
+            if (!neighbour.visited) {
+                q.push((neighbour, dist+1));
+            }
+        }
+    }
+}
