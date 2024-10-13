@@ -1,0 +1,137 @@
+enum Week {
+    Monday,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday
+};
+
+class WeeklyPlanner {
+    private planner: Week->string[];
+
+    fun addEvent(day, event: string) = {
+        planner[day].pushback(event);
+    }
+
+    fun removeEvent(day, event: string) = {
+        let events = planner[day];
+        for (it in events) {
+            if (it == event) {
+                events.erase(it);
+                println("Event removed.")
+                return;
+            }
+        }
+        println("Event not found!");
+    }
+
+    fun displayDay(day) = {
+        println("Plan for ", day, ":");
+        if (planner[day].empty()) {
+            println("No events.");
+        } else {
+            for (event in planner[day]) {
+                println("- ", event);
+            }
+        }
+    }
+
+    fun displayWeek() = {
+        for (day in Week) {
+            displayDay(day);
+        }
+    }
+
+    fun clearDay(day) {
+        planner[day].clear();
+        println("Cleared all events for ", day);
+    }
+}
+
+fun userInteraction() {
+    while (true) {
+        println("\n--- Weekly Planner ---");
+        println("1. Add event");
+        println("2. Remove event");
+        println("3. Display day");
+        println("4. Display week");
+        println("5. Clear day");
+        println("6. Exit");
+        print("Choose an option: ");
+
+        let option: i32;
+        scan(option);
+
+        var event: string;
+        var day: Week;
+        var dayString: string;
+
+        match (option) {
+            case 1 = {
+                print("Enter day (e.g., Monday): ");
+                scan(daystring);
+                day = enum.fromString(dayString);
+                if (day) {
+                    print("Enter event: ");
+                    scan(event);
+                    planner.addEvent(day, event);
+                    println("Event added.");
+                } else {
+                    println("Invalid day!");
+                }
+            }
+            case 2 = {
+                print("Enter day (e.g., Monday): ");
+                scan(daystring);
+                day = enum.fromString(dayString);
+                if (day) {
+                    print("Enter event to remove: ");
+                    scan(event);
+                    planner.removeEvent(day, event);
+                } else {
+                    println("Invalid day!");
+                }
+            }
+            case 3 = {
+                print("Enter day (e.g., Monday): ");
+                scan(daystring);
+                day = enum.fromString(dayString);
+                if (day) {
+                    planner.displayDay(day);
+                } else {
+                    println("Invalid day!");
+                }
+            }
+            case 4 = {
+                planner.displayWeek();
+            }
+            case 5 = {
+                print("Enter day (e.g., Monday): ");
+                scan(daystring);
+                day = enum.fromString(dayString);
+                if (day) {
+                    planner.clearDay(day);
+                } else {
+                    println("Invalid day!");
+                }
+            }
+            case 6 = {
+                println("Exiting planner. Goodbye!");
+                return;
+            }
+            case _ = {
+                println("Invalid option!");
+            }
+        }
+
+    }
+}
+
+
+fun main() = {
+    let planner: WeeklyPlanner;
+    userInteraction(planner);
+    return;
+}
