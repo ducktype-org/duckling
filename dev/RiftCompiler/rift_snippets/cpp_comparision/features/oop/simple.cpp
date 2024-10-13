@@ -17,9 +17,9 @@ class Car {
     
     // class function to print variables
     void show_data() {
-        std::cout << "Brand: " << brand << std::endl;
-        std::cout << "Model: " << model << std::endl;
-        std::cout << "Distance driven: " << mileage << " miles" << std::endl;
+        std::cout << "Brand: " << brand << "\n";
+        std::cout << "Model: " << model << "\n";
+        std::cout << "Distance driven: " << mileage << " miles" << "\n";
     }
 };
 

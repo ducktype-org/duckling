@@ -2,7 +2,7 @@ fun DFS(node, adj: ref i32[][], visited: ref bool[]) = {
     visited[node] = true;
     print(node, " ");
     for (neighbor in adj[node]) {
-        if (!visited[neighbor]) {
+        if (not visited[neighbor]) {
             DFS(neighbor, adj, visited);
         }
     }
@@ -18,20 +18,20 @@ fun main() = {
     for (i in edges) {
         var u: i32, v: i32;
         scan(u,v);
-        if (u < 0 || u >= vertices || v < 0 || v >= vertices) {
+        if (not (0 <= u < vertices and 0 <= v < vertices)) {
             printlnerr("Invalid edge: ", u, " ", v);
             return 1;
         }
-        adj[u].pushback(v);
-        adj[v].pushback(u);
+        adj[u] += [v];
+        adj[v] += [u];
     }
     let visited: bool[vertices];
 
     for (i in vertices) {
-        if (!visited[i]) {
-            print("DFS begins from the vertex ", i, ":");
+        if (not visited[i]) {
+            print("DFS begins from the vertex ", i, ": ");
             DFS(i, adj, visited);
-            println("");
+            println();
         }
     }
     return 0;

@@ -1,4 +1,3 @@
-#include<iostream>
 #include<vector>
 #include<queue>
 #include<utility>
@@ -11,7 +10,7 @@ struct Node {
 
 void DFS(Node current) {
     current.visited = true;
-    for (auto neighbour: current.edges) {
+    for (const auto& neighbour: current.edges) {
         if (!neighbour.visited) DFS(neighbour);
     }
 }
@@ -21,17 +20,17 @@ void BFS(Node start) {
     start.distance = 0;
 
     std::queue<std::pair<Node, unsigned int>> q;
-    q.push(make_pair(start, 1));
+    q.push({start, 1});
 
     while (!q.empty()) {
-        pair<Node, unsigned int> current = q.front();
+        std::pair<Node, unsigned int> current = q.front();
         q.pop();
         current.first.visited = true;
         current.first.distance = current.second;
 
-        for (auto neighbour: current.first.edges) {
+        for (const auto& neighbour: current.first.edges) {
             if (!neighbour.visited) {
-                q.push(make_pair(neighbour, current.second+1));
+                q.push({neighbour, current.second+1});
             }
         }
     }

@@ -12,7 +12,7 @@ class WeeklyPlanner {
     private planner: Week->string[];
 
     fun addEvent(day, event: string) = {
-        planner[day].pushback(event);
+        planner[day] += [event];
     }
 
     fun removeEvent(day, event: string) = {
@@ -72,7 +72,7 @@ fun userInteraction() {
             case 1 = {
                 print("Enter day (e.g., Monday): ");
                 scan(daystring);
-                day = enum.fromString(dayString);
+                day = Week.fromString(dayString);
                 if (day) {
                     print("Enter event: ");
                     scan(event);
@@ -85,7 +85,7 @@ fun userInteraction() {
             case 2 = {
                 print("Enter day (e.g., Monday): ");
                 scan(daystring);
-                day = enum.fromString(dayString);
+                day = Week.fromString(dayString);
                 if (day) {
                     print("Enter event to remove: ");
                     scan(event);
@@ -97,7 +97,7 @@ fun userInteraction() {
             case 3 = {
                 print("Enter day (e.g., Monday): ");
                 scan(daystring);
-                day = enum.fromString(dayString);
+                day = Week.fromString(dayString);
                 if (day) {
                     planner.displayDay(day);
                 } else {
@@ -110,7 +110,7 @@ fun userInteraction() {
             case 5 = {
                 print("Enter day (e.g., Monday): ");
                 scan(daystring);
-                day = enum.fromString(dayString);
+                day = Week.fromString(dayString);
                 if (day) {
                     planner.clearDay(day);
                 } else {

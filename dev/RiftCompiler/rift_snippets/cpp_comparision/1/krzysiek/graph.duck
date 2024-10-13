@@ -21,7 +21,7 @@ fun BFS(start: Node) {
     q.push((start, 1));
 
     while (!q.empty()) {
-        var current, dist = q.front();
+        var (current, dist) = q.front();
         q.pop();
         current.visited = true;
         current.distance = dist;

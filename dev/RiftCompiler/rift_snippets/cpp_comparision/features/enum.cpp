@@ -4,8 +4,6 @@
 #include <vector>
 #include <stdexcept>
 
-using namespace std;
-
 enum Week {
     Monday,
     Tuesday,
@@ -17,7 +15,7 @@ enum Week {
 };
 
 // Mapa konwersji enum -> string
-map<Week, string> weekToString = {
+std::map<Week, std::string> weekToString = {
     {Monday, "Monday"},
     {Tuesday, "Tuesday"},
     {Wednesday, "Wednesday"},
@@ -28,7 +26,7 @@ map<Week, string> weekToString = {
 };
 
 // Mapa konwersji string -> enum
-map<string, Week> stringToWeek = {
+std::map<std::string, Week> stringToWeek = {
     {"Monday", Monday},
     {"Tuesday", Tuesday},
     {"Wednesday", Wednesday},
@@ -39,51 +37,51 @@ map<string, Week> stringToWeek = {
 };
 
 // Funkcja do konwersji enum -> string
-string enumToString(Week day) {
+std::string enumToString(Week day) {
     return weekToString[day];
 }
 
 // Funkcja do konwersji string -> enum
-Week stringToEnum(const string& dayString) {
+Week stringToEnum(const std::string& dayString) {
     if (stringToWeek.find(dayString) != stringToWeek.end()) {
         return stringToWeek[dayString];
     } else {
-        throw invalid_argument("Invalid day string");
+        throw std::invalid_argument("Invalid day string");
     }
 }
 
 // Klasa reprezentująca plan na dany dzień tygodnia
 class WeeklyPlanner {
 private:
-    map<Week, vector<string>> planner;  // Przechowuje plan zadań dla każdego dnia tygodnia
+    std::map<Week, std::vector<std::string>> planner;  // Przechowuje plan zadań dla każdego dnia tygodnia
 
 public:
     // Dodawanie wydarzenia do planu
-    void addEvent(Week day, const string& event) {
+    void addEvent(Week day, const std::string& event) {
         planner[day].push_back(event);
     }
 
     // Usuwanie wydarzenia z planu
-    void removeEvent(Week day, const string& event) {
+    void removeEvent(Week day, const std::string& event) {
         auto& events = planner[day];
         for (auto it = events.begin(); it != events.end(); ++it) {
             if (*it == event) {
                 events.erase(it);
-                cout << "Event removed." << endl;
+                std::cout << "Event removed." << "\n";
                 return;
             }
         }
-        cout << "Event not found!" << endl;
+        std::cout << "Event not found!" << "\n";
     }
 
     // Wyświetlanie planu dla danego dnia
     void displayDay(Week day) {
-        cout << "Plan for " << enumToString(day) << ":" << endl;
+        std::cout << "Plan for " << enumToString(day) << ":" << "\n";
         if (planner[day].empty()) {
-            cout << "No events." << endl;
+            std::cout << "No events." << "\n";
         } else {
             for (const auto& event : planner[day]) {
-                cout << "- " << event << endl;
+                std::cout << "- " << event << "\n";
             }
         }
     }
@@ -98,67 +96,67 @@ public:
     // Wyczyszczenie planu na dany dzień
     void clearDay(Week day) {
         planner[day].clear();
-        cout << "Cleared all events for " << enumToString(day) << endl;
+        std::cout << "Cleared all events for " << enumToString(day) << "\n";
     }
 };
 
 // Funkcja interakcji z użytkownikiem
 void userInteraction(WeeklyPlanner& planner) {
     while (true) {
-        cout << "\n--- Weekly Planner ---\n";
-        cout << "1. Add event\n";
-        cout << "2. Remove event\n";
-        cout << "3. Display day\n";
-        cout << "4. Display week\n";
-        cout << "5. Clear day\n";
-        cout << "6. Exit\n";
-        cout << "Choose an option: ";
+        std::cout << "\n--- Weekly Planner ---\n";
+        std::cout << "1. Add event\n";
+        std::cout << "2. Remove event\n";
+        std::cout << "3. Display day\n";
+        std::cout << "4. Display week\n";
+        std::cout << "5. Clear day\n";
+        std::cout << "6. Exit\n";
+        std::cout << "Choose an option: ";
 
         int option;
-        cin >> option;
+        std::cin >> option;
 
-        string dayString;
+        std::string dayString;
         Week day;
-        string event;
+        std::string event;
 
         switch (option) {
             case 1:
-                cout << "Enter day (e.g., Monday): ";
-                cin >> dayString;
+                std::cout << "Enter day (e.g., Monday): ";
+                std::cin >> dayString;
                 try {
                     day = stringToEnum(dayString);
-                    cout << "Enter event: ";
-                    cin.ignore();
-                    getline(cin, event);
+                    std::cout << "Enter event: ";
+                    std::cin.ignore();
+                    std::getline(std::cin, event);
                     planner.addEvent(day, event);
-                    cout << "Event added." << endl;
-                } catch (const invalid_argument& e) {
-                    cout << "Invalid day!" << endl;
+                    std::cout << "Event added." << "\n";
+                } catch (const std::invalid_argument& e) {
+                    std::cout << "Invalid day!" << "\n";
                 }
                 break;
 
             case 2:
-                cout << "Enter day (e.g., Monday): ";
-                cin >> dayString;
+                std::cout << "Enter day (e.g., Monday): ";
+                std::cin >> dayString;
                 try {
                     day = stringToEnum(dayString);
-                    cout << "Enter event to remove: ";
-                    cin.ignore();
-                    getline(cin, event);
+                    std::cout << "Enter event to remove: ";
+                    std::cin.ignore();
+                    std::getline(std::cin, event);
                     planner.removeEvent(day, event);
-                } catch (const invalid_argument& e) {
-                    cout << "Invalid day!" << endl;
+                } catch (const std::invalid_argument& e) {
+                    std::cout << "Invalid day!" << "\n";
                 }
                 break;
 
             case 3:
-                cout << "Enter day (e.g., Monday): ";
-                cin >> dayString;
+                std::cout << "Enter day (e.g., Monday): ";
+                std::cin >> dayString;
                 try {
                     day = stringToEnum(dayString);
                     planner.displayDay(day);
-                } catch (const invalid_argument& e) {
-                    cout << "Invalid day!" << endl;
+                } catch (const std::invalid_argument& e) {
+                    std::cout << "Invalid day!" << "\n";
                 }
                 break;
 
@@ -167,22 +165,22 @@ void userInteraction(WeeklyPlanner& planner) {
                 break;
 
             case 5:
-                cout << "Enter day (e.g., Monday): ";
-                cin >> dayString;
+                std::cout << "Enter day (e.g., Monday): ";
+                std::cin >> dayString;
                 try {
                     day = stringToEnum(dayString);
                     planner.clearDay(day);
-                } catch (const invalid_argument& e) {
-                    cout << "Invalid day!" << endl;
+                } catch (const std::invalid_argument& e) {
+                    std::cout << "Invalid day!" << "\n";
                 }
                 break;
 
             case 6:
-                cout << "Exiting planner. Goodbye!" << endl;
+                std::cout << "Exiting planner. Goodbye!" << "\n";
                 return;
 
             default:
-                cout << "Invalid option!" << endl;
+                std::cout << "Invalid option!" << "\n";
         }
     }
 }

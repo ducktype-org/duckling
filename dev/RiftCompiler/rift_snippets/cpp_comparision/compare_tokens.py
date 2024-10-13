@@ -7,12 +7,12 @@ def count_tokens(file_path, command):
     result = subprocess.run([command, file_path], capture_output=True, text=True)
     return int(result.stdout.strip())
 
-def main(features_dir):
+def main(features_dir, mode):
     cpp_command = "./bin/count_tokens_cpp"
     duck_command = "./bin/count_tokens_duckling"
     output_csv = "comparison_results.csv"
 
-    with open(output_csv, mode='w', newline='') as csv_file:
+    with open(output_csv, mode=mode, newline='') as csv_file:
         fieldnames = ['File', 'C++ Tokens', 'Duck Tokens', 'Duck Percentage of C++']
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
@@ -39,5 +39,6 @@ def main(features_dir):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Compare C++ and Duck files in a directory.')
     parser.add_argument('features_dir', type=str, help='The directory containing the feature files')
+    parser.add_argument('--mode', type=str, help='The mode to open the file in', default="w")
     args = parser.parse_args()
-    main(args.features_dir)
+    main(args.features_dir, args.mode)

@@ -3,19 +3,17 @@ class Car {
 
     mileage = 0;
 
-    fun drive(distance: int) = {
-        mileage += distance;
-    }
+    fun drive(distance: int) = mileage += distance;
 
     fun show_data() = {
-        printLn(f"Brand: {brand}");
-        printLn(f"Model: {model}");
-        printLn(f"Distance driven: {mileage} miles");
+        printLn("Brand: ", brand);
+        printLn("Model: ", model);
+        printLn("Distance driven: ", mileage, " miles");
     }
 }
 
 fun main() = {
-    my_car: Car;
+    var my_car: Car;
 
     my_car.brand = "Honda";
     my_car.model = "Accord";
