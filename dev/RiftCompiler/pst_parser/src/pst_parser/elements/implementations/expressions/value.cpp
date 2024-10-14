@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> Value::parse(RiftParserState& state, u64 length) {
+	ParserRef<ExprElement> ExprValue::parse(RiftParserState& state, u64 length) {
 		std::cerr << "Parsing Value" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
@@ -14,8 +14,7 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		auto out    = base::make_unique<Value>(pos);
-		out->number = state[0].getValue();
+		auto out    = base::make_unique<ExprValue>(pos, state[0].getValue());
 		state.parse(out).eatOne();
 
 		if (length > 1) {
@@ -25,5 +24,13 @@ namespace pst::expr {
 		}
 
 		return out;
+	}
+
+	void ExprValue::dprint(std::ostream& out) const {
+		out << "{";
+
+		out << R"("number": ")" << number.str() << "\"";
+	
+		out << "}";
 	}
 }

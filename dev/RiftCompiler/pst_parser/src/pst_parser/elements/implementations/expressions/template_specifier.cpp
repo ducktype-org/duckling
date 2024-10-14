@@ -15,4 +15,13 @@ namespace pst::expr {
 
 		return out;
 	}
+
+	void TemplateSpecifier::dprint(std::ostream& out) const {
+		out << "{";
+
+		out << R"("inner": )";
+		nullAwareDprint(inner, out);
+	
+		out << "}";
+	}
 }

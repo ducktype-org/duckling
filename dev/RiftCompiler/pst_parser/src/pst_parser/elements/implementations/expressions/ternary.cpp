@@ -84,4 +84,17 @@ namespace pst::expr {
 		state.parse(out).with(&out->if_false, Lower::parse, length - else_fwd - 1);
 		return out;
 	}
+
+	void Ternary::dprint(std::ostream& out) const {
+		out << "{";
+
+		out << R"("condition": )";
+		nullAwareDprint(condition, out);
+		out << R"(, "if_true": )";
+		nullAwareDprint(condition, out);
+		out << R"(, "if_false": )";
+		nullAwareDprint(condition, out);
+	
+		out << "}";
+	}
 }

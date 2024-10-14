@@ -83,9 +83,9 @@ namespace pst {
 				  op(op) {}
 
 			~PrefixOperator() override = default;
-			// void dprint(std::ostream& out) const final;
+			void dprint(std::ostream& out) const final;
 
-			std::string elementType() const override { return op.str() + " Prefix Operator"; }
+			std::string elementType() const override { return "Prefix Operator"; }
 		};
 
 		class SuffixOperator: public ExprElement {
@@ -101,9 +101,9 @@ namespace pst {
 				  op(op) {}
 
 			~SuffixOperator() override = default;
-			// void dprint(std::ostream& out) const final;
+			void dprint(std::ostream& out) const final;
 
-			std::string elementType() const override { return op.str() + " Suffix Operator"; }
+			std::string elementType() const override { return "Suffix Operator"; }
 		};
 
 		class BinaryOperator: public ExprElement {
@@ -120,21 +120,21 @@ namespace pst {
 				  op(op) {}
 
 			~BinaryOperator() override = default;
-			// void dprint(std::ostream& out) const final;
+			void dprint(std::ostream& out) const final;
 
-			std::string elementType() const override { return op.str() + " Infix Operator"; }
+			std::string elementType() const override { return "Infix Operator"; }
 		};
 
-		class Value final: public ExprElement {
-			base::StrID number;
+		class ExprValue final: public ExprElement {
+			lexer::Value number;
 
 		public:
-			explicit Value(const dia::SourcePosition& position): ExprElement(position, 0) {}
+			explicit ExprValue(const dia::SourcePosition& position, lexer::Value value): ExprElement(position, 0), number(value) {}
 
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
-			~Value() override = default;
-			// void dprint(std::ostream& out) const final;
+			~ExprValue() override = default;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Value Expr"; }
 		};
@@ -158,7 +158,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 			
 			~TemplateSpecifier() override = default;
-			// void dprint(std::ostream& out) const final;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Template Specifier Expression"; }
 		};
@@ -173,7 +173,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~IdentifierLiteral() override = default;
-			// void dprint(std::ostream& out) const final;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Identifier Expression"; }
 		};
@@ -248,7 +248,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~RoundExpr() override = default;
-			// void dprint(std::ostream& out) const final;
+			void dprint(std::ostream& out) const final;
 
 			std::string elementType() const override { return "Round Group Expression"; }
 		};
@@ -430,7 +430,7 @@ namespace pst {
 			static ParserRef<ExprElement> parse(RiftParserState& state, u64 length);
 
 			~Ternary() override = default;
-			// void dprint(std::ostream& out) const final;
+			void dprint(std::ostream& out) const final;
 		};
 
 		class Comma final: public ExprElement {

@@ -32,4 +32,27 @@ namespace lexer {
 
 		inline bool operator==(Operator& other) { return *this == other.value; }
 	};
+
+	/**
+	 * @brief Simple wrapper for a value
+	 */
+	struct Value final {
+		const base::StrID value;
+
+		Value();
+		Value(const base::StrID id): value(id) {};
+		Value(const std::string str): value(base::StrID(str.c_str())) {};
+		Value(const Value&) = default;
+
+		operator base::StrID() { return value; }
+
+		std::string str() const {
+			return value.str();
+		}
+
+		/**
+		 * @note This should probably do something more in the future
+		 */
+		inline bool operator==(Value& other) { return value == other.value; }
+	};
 }

@@ -15,4 +15,13 @@ namespace pst::expr {
 
 		return out;
 	}
+
+	void RoundExpr::dprint(std::ostream& out) const {
+		out << "{";
+
+		out << R"("inner_expr": )";
+		nullAwareDprint(expr, out);
+
+		out << "}";
+	}
 }

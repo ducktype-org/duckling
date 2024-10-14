@@ -16,4 +16,17 @@ namespace pst::expr {
 
 		return out;
 	}
+
+	void IdentifierLiteral::dprint(std::ostream& out) const {
+		out << "{";
+
+		out << R"("name": )";
+		nullAwareDprint(name, out);
+		if (template_specifier) {
+			out << R"(, "template": )";
+			nullAwareDprint(template_specifier.value(), out);
+		}
+	
+		out << "}";
+	}
 }

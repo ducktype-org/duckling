@@ -10,7 +10,7 @@ namespace pst::expr {
 		if (state[0].isIdentifier()) {
 			return IdentifierLiteral::parse(state, length);
 		} else if (state[0].isNumLiteral()) {
-			return Value::parse(state, length);
+			return ExprValue::parse(state, length);
 		} else if (state[0].isBracketGroup(lexer::Token::Round)) {
 			return RoundExpr::parse(state, length);
 		} else if (state[0].isBracketGroup(lexer::Token::Curly)) {
