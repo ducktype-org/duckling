@@ -14,7 +14,7 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		auto out    = base::make_unique<ExprValue>(pos, state[0].getValue());
+		auto out = base::make_unique<ExprValue>(pos, state[0].getValue());
 		state.parse(out).eatOne();
 
 		if (length > 1) {
@@ -30,7 +30,7 @@ namespace pst::expr {
 		out << "{";
 
 		out << R"("number": ")" << number.str() << "\"";
-	
+
 		out << "}";
 	}
 }

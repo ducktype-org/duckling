@@ -195,8 +195,8 @@ namespace lang_def {
 
 	void setKeywordMode(KeywordMode mode);
 
-	Special  strAsSpecial(base::StrID id);
-	Keyword  strAsKeyword(base::StrID id);
+	Special       strAsSpecial(base::StrID id);
+	Keyword       strAsKeyword(base::StrID id);
 	NamedOperator strAsOperator(base::StrID id);
 
 	base::StrID keywordToStr(Keyword key);
@@ -205,7 +205,7 @@ namespace lang_def {
 
 	base::FlagType keywordFlags(Keyword key);
 
-	std::vector<Keyword>  getKeywords();
-	std::vector<Special>  getSpecials();
+	std::vector<Keyword>       getKeywords();
+	std::vector<Special>       getSpecials();
 	std::vector<NamedOperator> getOperators();
 }

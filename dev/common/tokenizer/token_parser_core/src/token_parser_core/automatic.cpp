@@ -23,9 +23,7 @@ namespace tpc {
 		out << "\"" << specialToStr(spec).str() << "\"";
 	}
 
-	void nullAwareDprint(Operator op, std::ostream& out) {
-		out << "\"" << op.str() << "\"";
-	}
+	void nullAwareDprint(Operator op, std::ostream& out) { out << "\"" << op.str() << "\""; }
 
 	void nullAwareDprint(OptionalIdentifier ident, std::ostream& out) {
 		if (ident.value.has_value())

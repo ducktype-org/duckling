@@ -37,7 +37,8 @@ namespace pst::detail {
 
 		static bool isAssignOrCommaOrEnd(const LangParserState& st, i64 fwd) {
 			return st[fwd].is(lexer::Token::Type::Sentinel)
-			    || st[fwd].is(lang_def::NamedOperator::Assign) || st[fwd].is(lang_def::Special::Comma);
+			    || st[fwd].is(lang_def::NamedOperator::Assign)
+			    || st[fwd].is(lang_def::Special::Comma);
 		}
 
 		static bool isAssign(const LangParserState& st, i64 fwd) {

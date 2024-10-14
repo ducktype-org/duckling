@@ -94,7 +94,7 @@ namespace pst::expr {
 		nullAwareDprint(condition, out);
 		out << R"(, "if_false": )";
 		nullAwareDprint(condition, out);
-	
+
 		out << "}";
 	}
 }

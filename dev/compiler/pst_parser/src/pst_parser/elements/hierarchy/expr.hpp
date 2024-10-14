@@ -45,7 +45,8 @@ namespace pst {
 				NamedOperator::Lesser, NamedOperator::LEqual, NamedOperator::Greater,
 				NamedOperator::GEqual, NamedOperator::Equal,  NamedOperator::NotEqual,
 			};
-			return state[fwd].isOperator() && comparisons.contains(state[fwd].asOperator().asNamed());
+			return state[fwd].isOperator()
+			    && comparisons.contains(state[fwd].asOperator().asNamed());
 		}
 
 		CONDITION(isAssignment) {
@@ -73,12 +74,10 @@ namespace pst {
 		class PrefixOperator: public ExprElement {
 		protected:
 			ParserRef<ExprElement> expr;
-			Operator            op;
+			Operator               op;
 
 		public:
-			explicit PrefixOperator(
-				const dia::SourcePosition& pos, Operator op, i64 precedence
-			):
+			explicit PrefixOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):
 				  ExprElement(pos, precedence),
 				  op(op) {}
 
@@ -90,13 +89,11 @@ namespace pst {
 
 		class SuffixOperator: public ExprElement {
 		protected:
-			Operator            op;
+			Operator               op;
 			ParserRef<ExprElement> expr;
 
 		public:
-			explicit SuffixOperator(
-				const dia::SourcePosition& pos, Operator op, i64 precedence
-			):
+			explicit SuffixOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):
 				  ExprElement(pos, precedence),
 				  op(op) {}
 
@@ -109,13 +106,11 @@ namespace pst {
 		class BinaryOperator: public ExprElement {
 		protected:
 			ParserRef<ExprElement> left;
-			Operator            op;
+			Operator               op;
 			ParserRef<ExprElement> right;
 
 		public:
-			explicit BinaryOperator(
-				const dia::SourcePosition& pos, Operator op, i64 precedence
-			):
+			explicit BinaryOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):
 				  ExprElement(pos, precedence),
 				  op(op) {}
 
@@ -129,7 +124,9 @@ namespace pst {
 			lexer::Value number;
 
 		public:
-			explicit ExprValue(const dia::SourcePosition& position, lexer::Value value): ExprElement(position, 0), number(value) {}
+			explicit ExprValue(const dia::SourcePosition& position, lexer::Value value):
+				  ExprElement(position, 0),
+				  number(value) {}
 
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
 
@@ -156,7 +153,7 @@ namespace pst {
 			TemplateSpecifier(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
-			
+
 			~TemplateSpecifier() override = default;
 			void dprint(std::ostream& out) const final;
 
@@ -232,7 +229,7 @@ namespace pst {
 			ChainExpr(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
-			void dprint(std::ostream& out) const final;
+			void                          dprint(std::ostream& out) const final;
 
 			~ChainExpr() override = default;
 

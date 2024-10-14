@@ -40,7 +40,8 @@ namespace lang_def {
 		);
 
 		associativity.put(
-			{ NamedOperator::DoublePlus, OperatorType::UnaryRight }, OperatorAssociativity::RightToLeft
+			{ NamedOperator::DoublePlus, OperatorType::UnaryRight },
+			OperatorAssociativity::RightToLeft
 		);
 		associativity.put(
 			{ NamedOperator::Minus, OperatorType::UnaryRight }, OperatorAssociativity::RightToLeft

@@ -10,7 +10,7 @@ namespace pst::expr {
 		tpc::nullAwareDprint(op, out);
 		out << R"(", right_expr": )";
 		nullAwareDprint(right, out);
-	
+
 		out << "}";
 	}
 }

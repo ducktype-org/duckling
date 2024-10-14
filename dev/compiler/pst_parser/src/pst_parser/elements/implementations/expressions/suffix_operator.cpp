@@ -8,7 +8,7 @@ namespace pst::expr {
 		nullAwareDprint(expr, out);
 		out << R"(, "operator": )";
 		tpc::nullAwareDprint(op, out);
-	
+
 		out << "}";
 	}
 }

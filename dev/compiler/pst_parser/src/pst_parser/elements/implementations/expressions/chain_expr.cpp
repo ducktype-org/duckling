@@ -52,9 +52,11 @@ namespace pst::expr {
 		nullAwareDprint(literal, out);
 		out << R"(", chain": [)";
 		bool first = true;
-		for(auto& link: chain) {
-			if (!first) out << ", ";
-			else first = false;
+		for (auto& link: chain) {
+			if (!first)
+				out << ", ";
+			else
+				first = false;
 			nullAwareDprint(link, out);
 		}
 		out << "]";

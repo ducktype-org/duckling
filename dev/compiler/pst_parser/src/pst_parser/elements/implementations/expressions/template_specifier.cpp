@@ -21,7 +21,7 @@ namespace pst::expr {
 
 		out << R"("inner": )";
 		nullAwareDprint(inner, out);
-	
+
 		out << "}";
 	}
 }

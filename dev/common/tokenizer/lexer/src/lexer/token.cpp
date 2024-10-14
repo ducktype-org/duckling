@@ -173,8 +173,8 @@ namespace lexer {
 	bool Token::isOperator() const { return type == Type::Operator; }
 
 	Operator Token::asOperator() const {
-		if (isOperator()) return {getValue()};
-		return {lang_def::NamedOperator::NotAnOperator};
+		if (isOperator()) return { getValue() };
+		return { lang_def::NamedOperator::NotAnOperator };
 	}
 
 	bool Token::isIdentifier() const { return type == Type::Identifier; }

@@ -38,9 +38,11 @@ namespace pst::expr {
 
 		out << R"("sub-expressions": [)";
 		bool first = true;
-		for(auto& expr: sub_expr) {
-			if (!first) out << ", ";
-			else first = false;
+		for (auto& expr: sub_expr) {
+			if (!first)
+				out << ", ";
+			else
+				first = false;
 			nullAwareDprint(expr, out);
 		}
 		out << "]";

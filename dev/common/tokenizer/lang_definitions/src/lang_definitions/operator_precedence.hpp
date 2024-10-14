@@ -32,6 +32,7 @@ namespace lang_def {
 	i64 operatorPrecedence(NamedOperator operator_, OperatorType operator_type);
 
 	OperatorAssociativity operatorAssociativity(base::StrID operator_, OperatorType operator_type);
-	OperatorAssociativity operatorAssociativity(NamedOperator operator_, OperatorType operator_type);
+	OperatorAssociativity
+		operatorAssociativity(NamedOperator operator_, OperatorType operator_type);
 
 }

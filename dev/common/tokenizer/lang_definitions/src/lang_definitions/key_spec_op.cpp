@@ -172,10 +172,10 @@ namespace lang_def {
 	// Single for all:
 	base::VectorMap<Keyword, base::FlagType, false, true> keyword_flags;
 
-	base::VectorMap<base::StrID, Special, false, true>  special_map;
+	base::VectorMap<base::StrID, Special, false, true>       special_map;
 	base::VectorMap<base::StrID, NamedOperator, false, true> operator_map;
 
-	base::VectorMap<Special, base::StrID, false, true>  rev_special_map;
+	base::VectorMap<Special, base::StrID, false, true>       rev_special_map;
 	base::VectorMap<NamedOperator, base::StrID, false, true> rev_operator_map;
 
 	void key_spec_op::init() {
