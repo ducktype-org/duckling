@@ -7,7 +7,7 @@
 #include <lexer/token.hpp>
 
 namespace tpc {
-	using rift_def::Keyword;
+	using lang_def::Keyword;
 	using lexer::Special;
 	using lexer::Token;
 	using lexer::Tokens;

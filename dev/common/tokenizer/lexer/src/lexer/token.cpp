@@ -5,7 +5,7 @@
 
 #include "token.hpp"
 
-#include <rift_definitions/key_spec_op.hpp>
+#include <lang_definitions/key_spec_op.hpp>
 #include <utility>
 #include <algorithm>
 #include <unicode/uchar.h>
@@ -30,14 +30,14 @@ namespace lexer {
 		  sentinel_end(new Token(std::move(sentinel_end))),
 		  source_position(position),
 		  bracket_type(bracket_type) {
-		RIFT_ASSERT(
+		CORE_ASSERT(
 			this->sentinel_begin->getType() == Type::Sentinel,
 			"non-sentinel token passed as sentinel"
 		);
-		RIFT_ASSERT(
+		CORE_ASSERT(
 			this->sentinel_end->getType() == Type::Sentinel, "non-sentinel token passed as sentinel"
 		);
-		RIFT_ASSERT(
+		CORE_ASSERT(
 			type == Type::BracketGroup, "non-bracket token created with bracket constructor"
 		);
 
@@ -73,7 +73,7 @@ namespace lexer {
 
 	Token
 		Token::makeIdentifier(const base::RawView identifier, const dia::SourcePosition& position) {
-		if (rift_def::strAsKeyword(base::StrID(identifier)) != Keyword::NotAKeyword)
+		if (lang_def::strAsKeyword(base::StrID(identifier)) != Keyword::NotAKeyword)
 			return makeKeyword(identifier, position);
 		return { Type::Identifier, identifier, position };
 	}
@@ -141,14 +141,14 @@ namespace lexer {
 	const Tokens& Token::getRecursive() const { return recursive; }
 
 	const Token& Token::getSentinelBegin() const {
-		RIFT_ASSERT(isRecursive(), "getSentinel called on non-recursive token");
-		RIFT_ASSERT(sentinel_begin, "unassigned sentinel in recursive token");
+		CORE_ASSERT(isRecursive(), "getSentinel called on non-recursive token");
+		CORE_ASSERT(sentinel_begin, "unassigned sentinel in recursive token");
 		return *sentinel_begin;
 	}
 
 	const Token& Token::getSentinelEnd() const {
-		RIFT_ASSERT(isRecursive(), "getSentinel called on non-recursive token");
-		RIFT_ASSERT(sentinel_end, "unassigned sentinel in recursive token");
+		CORE_ASSERT(isRecursive(), "getSentinel called on non-recursive token");
+		CORE_ASSERT(sentinel_end, "unassigned sentinel in recursive token");
 		return *sentinel_end;
 	}
 
@@ -164,17 +164,17 @@ namespace lexer {
 
 	bool Token::isSpecial() const { return type == Type::Special; }
 
-	Special Token::asSpecial() const { return rift_def::strAsSpecial(str_id); }
+	Special Token::asSpecial() const { return lang_def::strAsSpecial(str_id); }
 
 	bool Token::isKeyword() const { return type == Type::Keyword; }
 
-	Keyword Token::asKeyword() const { return rift_def::strAsKeyword(str_id); }
+	Keyword Token::asKeyword() const { return lang_def::strAsKeyword(str_id); }
 
 	bool Token::isOperator() const { return type == Type::Operator; }
 
 	Operator Token::asOperator() const {
 		if (isOperator()) return {getValue()};
-		return {rift_def::NamedOperator::NotAnOperator};
+		return {lang_def::NamedOperator::NotAnOperator};
 	}
 
 	bool Token::isIdentifier() const { return type == Type::Identifier; }
@@ -191,9 +191,9 @@ namespace lexer {
 
 	bool Token::is(Operator op) const { return op == getValue(); }
 
-	bool Token::is(Special spc) const { return rift_def::strAsSpecial(str_id) == spc; }
+	bool Token::is(Special spc) const { return lang_def::strAsSpecial(str_id) == spc; }
 
-	bool Token::is(Keyword key) const { return rift_def::strAsKeyword(str_id) == key; }
+	bool Token::is(Keyword key) const { return lang_def::strAsKeyword(str_id) == key; }
 
 	dia::SourcePosition Token::getPosition() const { return source_position; }
 

@@ -122,7 +122,7 @@ TokenStream getRecursive() const;
 
 `bool is<Special|Keyword|Operator|BracketGroup>(usize fwd = 0)` methods provide a way to check if a particular token is of a particular `lexer::Token::Type`.
 
-`asKeyword` and `asSpecial` methods interpret underlying value of a token as `rift_def::Keyword` or `rift_def::Special`.
+`asKeyword` and `asSpecial` methods interpret underlying value of a token as `lang_def::Keyword` or `lang_def::Special`.
 
 ```cpp
 Keyword asKeyword(usize fwd = 0) const;
@@ -134,7 +134,7 @@ Special asSpecial(usize fwd = 0) const;
 ```cpp
 bool isOperator(base::StrID oper, usize fwd = 0) const;
 bool isBracketGroup(Token::BracketType type, usize fwd = 0) const;
-bool is(<lexer::Token::Type|rift_def::Keyword|rift_def::Special|rift_def::Operator> t, usize fwd = 0) const;
+bool is(<lexer::Token::Type|lang_def::Keyword|lang_def::Special|lang_def::Operator> t, usize fwd = 0) const;
 ```
 
 ## Element

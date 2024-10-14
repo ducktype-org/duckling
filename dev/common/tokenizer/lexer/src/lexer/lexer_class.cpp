@@ -201,7 +201,7 @@ namespace lexer {
 	void Lexer::parseSingleInto(Tokens& output) {
 		dia::SourcePosition sourceStart(file, where);
 		if (isEOF()) {
-			RIFT_PANIC("EOF encountered inside parseSingleInto");
+			CORE_PANIC("EOF encountered inside parseSingleInto");
 		}
 		// @TODO: for now comments aren't saved as tokens
 		else if (isCommentBegin()) {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/string_id.hpp>
-#include <rift_definitions/key_spec_op.hpp>
+#include <lang_definitions/key_spec_op.hpp>
 
 namespace lexer {
 	/**
@@ -12,7 +12,7 @@ namespace lexer {
 
 		Operator() = delete;
 		Operator(const base::StrID id): value(id) {};
-		Operator(const rift_def::NamedOperator op): value(rift_def::operatorToStr(op)) {};
+		Operator(const lang_def::NamedOperator op): value(lang_def::operatorToStr(op)) {};
 		Operator(const Operator&) = default;
 
 		operator base::StrID() { return value; }
@@ -21,14 +21,14 @@ namespace lexer {
 			return value.str();
 		}
 
-		rift_def::NamedOperator asNamed() const {
-			return rift_def::strAsOperator(value);
+		lang_def::NamedOperator asNamed() const {
+			return lang_def::strAsOperator(value);
 		}
 
 		/**
 		 * @note This should do the corrected UTF-8 check in the future.
 		 */
-		inline bool operator==(rift_def::NamedOperator& op) { return rift_def::operatorToStr(op) == value; }
+		inline bool operator==(lang_def::NamedOperator& op) { return lang_def::operatorToStr(op) == value; }
 
 		inline bool operator==(Operator& other) { return *this == other.value; }
 	};

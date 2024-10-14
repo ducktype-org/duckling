@@ -15,7 +15,7 @@
 
 # CMake
 
-  * Test and examples should only manually create executables, and then pass them to `rift_add_test` or `add_example` functions. 
+  * Test and examples should only manually create executables, and then pass them to `duck_add_test` or `add_example` functions. 
 
 # Additional executables guidelines
 
