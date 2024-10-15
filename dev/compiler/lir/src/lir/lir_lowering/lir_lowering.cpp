@@ -73,7 +73,7 @@ namespace compiler::lir {
 						return LirLocation{BlockRef(mir_to_lir_block.at(block))};
 					}
 				}
-				RIFT_PANIC("Unhandled variant in getLocation");
+				CORE_PANIC("Unhandled variant in getLocation");
 			}
 
 			// main functions:
@@ -154,7 +154,7 @@ namespace compiler::lir {
 						return LirOperation::Assign;
 					// @TODO: add more cases
 					default:
-						RIFT_PANIC("Operation without direct counterpart");
+						CORE_PANIC("Operation without direct counterpart");
 				}
 			}
 
@@ -170,7 +170,7 @@ namespace compiler::lir {
 				// don't handle terminators here
 				// curr_block alfredy in order
 				
-				RIFT_ASSERT(not mir::isTerminating(mir_instruction.operation), "Terminator in lowerInstruction");
+				CORE_ASSERT(not mir::isTerminating(mir_instruction.operation), "Terminator in lowerInstruction");
 				lowerFlags(curr_block, mir_instruction);
 
 				switch (mir_instruction.operation) {
@@ -201,7 +201,7 @@ namespace compiler::lir {
 			void lowerTerminator(MutBlockRef curr_block, const mir::Instruction& mir_terminator) {
 				// @TODO
 				// curr_block alfredy in order
-				RIFT_ASSERT(mir::isTerminating(mir_terminator.operation), "non-Terminator in lowerTerminator");
+				CORE_ASSERT(mir::isTerminating(mir_terminator.operation), "non-Terminator in lowerTerminator");
 				lowerFlags(curr_block, mir_terminator);
 				
 				switch (mir_terminator.operation) {
