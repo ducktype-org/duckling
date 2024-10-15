@@ -6,6 +6,8 @@
 #include <typesystem/lower/queries.hpp>
 #include <typesystem/higher/queries.hpp>
 
+// @opt: make switch-cases in this file "sorted"
+
 namespace compiler::lir {
 
 	base::HashT KeyOf_LowerToLirFunction::customPerfectHash() const {
@@ -141,10 +143,13 @@ namespace compiler::lir {
 						using enum mir::OperationFlag::Flag;
 						case Construct:
 							// @TODO -- set lifetime flag
+							return;
 						case Destruct:
 							// @TODO -- ??? (also: after or before...?)
+							return;
 						case Move:
 							// @TODO -- unset lifetime flag
+							return;
 						default:
 							throw base::NotYetImplemented("flag in lowerFlags");
 					}
@@ -159,6 +164,10 @@ namespace compiler::lir {
 						return LirOperation::ReturnValue;
 					case mir::Operation::ReturnVoid:
 						return LirOperation::ReturnVoid;
+					case mir::Operation::Jump:
+						return LirOperation::Jump;
+					case mir::Operation::Branch:
+						return LirOperation::Branch;
 					// @TODO: add more cases
 					default:
 						CORE_PANIC("Operation without direct counterpart");
@@ -213,15 +222,26 @@ namespace compiler::lir {
 				CORE_ASSERT(mir::isTerminating(mir_terminator.operation), "non-Terminator in lowerTerminator");
 				lowerFlags(curr_block, mir_terminator);
 				
+				CORE_ASSERT(mir_terminator.output.empty(), "terminator should not return");
 				switch (mir_terminator.operation) {
+					case mir::Operation::ReturnVoid:
 					case mir::Operation::ReturnValue:
-					case mir::Operation::ReturnVoid: {
-						CORE_ASSERT(mir_terminator.output.empty(), "terminator should not return");
+					case mir::Operation::Jump: 
+					case mir::Operation::Branch: {
 						auto args = getLocations(mir_terminator.arguments);
 						curr_block->terminator = Instruction{
 							mir2lirOperation(mir_terminator.operation),
 							{},
 							std::move(args)
+						};
+						break;
+					}
+					case mir::Operation::FunctionEnd: {
+						// @TODO...
+						curr_block->terminator = Instruction{
+							LirOperation::ReturnVoid,
+							{},
+							{}
 						};
 						break;
 					}
