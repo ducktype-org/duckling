@@ -110,7 +110,7 @@ namespace compiler::lir {
 			}
 
 			void lowerBlocks() {
-				for (const auto& block: key.function.blocks) {
+				for (const auto& block: key.function.blocks | std::views::reverse) {
 					const auto lir_block = mir_to_lir_block[block.id];
 					block_order.emplace_back(lir_block);
 

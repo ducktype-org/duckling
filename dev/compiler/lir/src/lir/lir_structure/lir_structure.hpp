@@ -100,6 +100,8 @@ namespace compiler::lir {
 		// a copy of type-layout here might bu sub-optimal
 		tsl::TypeLayout type;
 
+		void debugPrint(std::ostream& output, bool detailed = false) const;
+
 	private:
 		LirLocal(helios::SymID helios_id, tsl::TypeLayout type):
 			helios_id(helios_id),
