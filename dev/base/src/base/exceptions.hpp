@@ -5,8 +5,8 @@
  * It should be used everywhere.
  *
  * All exception created by us should inherit from `base::Exception`.
- * Additionally this module provides `base::Panic` exception, and `RIFT_ASSERT`,
- * and `RIFT_PANIC` macro, that should be used instead of things like `<cassert>`.
+ * Additionally this module provides `base::Panic` exception, and `CORE_ASSERT`,
+ * and `CORE_PANIC` macro, that should be used instead of things like `<cassert>`.
  */
 
 #pragma once
@@ -39,12 +39,12 @@ namespace base {
 	};
 
 	/**
-	 * @brief Exception intended to be the basis of all non-panic rift-specific exceptions.
+	 * @brief Exception intended to be the basis of all non-panic duckling-specific exceptions.
 	 */
 	class Exception: public std::exception {};
 
 	/**
-	 * @brief Rift-specific logic error exception
+	 * @brief Duckling-specific logic error exception
 	 */
 	class LogicError: public Exception {
 		std::string message;
@@ -68,22 +68,22 @@ namespace base {
 	};
 }
 
-#define DETAIL_RIFT_STR2(X) #X
-#define DETAIL_RIFT_STR(X)  DETAIL_RIFT_STR2(X)
+#define DETAIL_LANG_STR2(X) #X
+#define DETAIL_LANG_STR(X)  DETAIL_LANG_STR2(X)
 
 /**
  * @brief base::Panic based assert that allows catching for testing purposes.
  */
-#define RIFT_ASSERT(cond, what) \
+#define CORE_ASSERT(cond, what) \
 	if (!(cond)) _THROW_PANIC("    Assertion failed: `" #cond "`\n", what)
 
 /**
  * @brief base::Panic based throw that allows catching for testing purposes
  */
-#define RIFT_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what)
+#define CORE_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what)
 
 #define _THROW_PANIC(panic_title, what...)                \
 	throw base::Panic(                                    \
-		"    In " __FILE__ ":" DETAIL_RIFT_STR(__LINE__), \
+		"    In " __FILE__ ":" DETAIL_LANG_STR(__LINE__), \
 		base::strConcat(panic_title, "    ", what)        \
 	)

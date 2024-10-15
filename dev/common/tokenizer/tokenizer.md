@@ -5,7 +5,7 @@ Tokenizer is a subset of Common modules that together transform source code into
 
 \subpage lexer-module
 
-\subpage rift_definitions-module
+\subpage lang_definitions-module
 
 \subpage token_file-module
 

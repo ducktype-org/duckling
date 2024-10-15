@@ -24,7 +24,7 @@ namespace dia {
 		case Hint:
 			return { "HINT", printer::Color::BRIGHT_CYAN };
 		default:
-			RIFT_PANIC("Unknown message severity.");
+			CORE_PANIC("Unknown message severity.");
 		}
 	}
 
@@ -58,7 +58,7 @@ namespace dia {
 		case Misc:
 			return "Miscellaneous";
 		default:
-			RIFT_PANIC("Unknown message domain.");
+			CORE_PANIC("Unknown message domain.");
 		}
 	}
 
@@ -145,7 +145,7 @@ namespace dia {
 			case Hint:
 				return "4";
 			default:
-				RIFT_PANIC("Unknown message severity.");
+				CORE_PANIC("Unknown message severity.");
 			}
 		}
 
