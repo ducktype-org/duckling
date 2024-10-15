@@ -8,6 +8,10 @@
 
 namespace compiler::lir {
 
+	base::HashT KeyOf_LowerToLirFunction::customPerfectHash() const {
+		return base::perfectHash(function);
+	}
+
 	LirLocal LirLocal::fromMir(query::Context& ctx, const mir::MirLocal& mir_local) {
 		auto type_layout = ctx.query<tsl::QueryTypeLayout>(mir_local.type.getType());
 
@@ -128,7 +132,6 @@ namespace compiler::lir {
 				return result;
 			}
 
-			// return continuation
 			void lowerFlags(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
 				// @TODO
 				// this does not produce new blocks?

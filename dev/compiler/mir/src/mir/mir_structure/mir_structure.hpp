@@ -276,6 +276,11 @@ namespace compiler::mir {
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
 
+		// helios ID for hashes, ... this it temporary?
+		// pushing this ID all the way here is problematic
+		// it should be optional at best
+		helios::SymID helios_id;
+
 		Function()                = delete;
 		Function(const Function&) = delete;
 		Function(Function&&)      = default;
@@ -284,8 +289,12 @@ namespace compiler::mir {
 			base::StrID                  name,
 			std::vector<Block>           blocks,
 			base::StableVector<MirLocal> local_list,
-			BlockID                      entry_block
+			BlockID                      entry_block,
+			helios::SymID                helios_id
 		);
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
 
 		bool operator==(const Function& other) const = default;
 
