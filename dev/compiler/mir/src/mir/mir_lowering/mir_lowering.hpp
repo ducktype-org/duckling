@@ -8,7 +8,7 @@
 namespace compiler::mir {
 
 	struct KeyOf_LowerToMirFunction {
-		helios::HOUTFunction& function;
+		const helios::HOUTFunction& function;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;

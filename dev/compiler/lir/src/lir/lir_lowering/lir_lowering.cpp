@@ -152,6 +152,10 @@ namespace compiler::lir {
 				switch (mir_operation) {
 					case mir::Operation::Assign:
 						return LirOperation::Assign;
+					case mir::Operation::ReturnValue:
+						return LirOperation::ReturnValue;
+					case mir::Operation::ReturnVoid:
+						return LirOperation::ReturnVoid;
 					// @TODO: add more cases
 					default:
 						CORE_PANIC("Operation without direct counterpart");
@@ -166,9 +170,7 @@ namespace compiler::lir {
 			 * @return next curr_block
 			 */
 			MutBlockRef lowerInstruction(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
-				// @TODO
-				// don't handle terminators here
-				// curr_block alfredy in order
+				// curr_block already in order
 				
 				CORE_ASSERT(not mir::isTerminating(mir_instruction.operation), "Terminator in lowerInstruction");
 				lowerFlags(curr_block, mir_instruction);
@@ -186,6 +188,10 @@ namespace compiler::lir {
 						);
 						return curr_block;
 					}
+					case mir::Operation::DestructIf:
+						// @TODO implement it, once we know how to call destructors 
+						std::cerr << "DestructIf not implemented in LIR, skipping" << "\n";
+						return curr_block;
 					default:
 						throw base::NotYetImplemented("instruction in LowerToLirFunction");
 				}
@@ -205,6 +211,18 @@ namespace compiler::lir {
 				lowerFlags(curr_block, mir_terminator);
 				
 				switch (mir_terminator.operation) {
+					case mir::Operation::ReturnValue:
+					case mir::Operation::ReturnVoid: {
+						CORE_ASSERT(mir_terminator.output.empty(), "terminator should not return");
+						auto args = getLocations(mir_terminator.arguments);
+						curr_block->terminator = Instruction{
+							mir2lirOperation(mir_terminator.operation),
+							{},
+							std::move(args)
+						};
+						break;
+					}
+					// @TODO: add more cases
 					default:
 						throw base::NotYetImplemented("terminator in LowerToLirFunction");
 				}

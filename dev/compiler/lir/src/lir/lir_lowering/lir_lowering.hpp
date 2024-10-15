@@ -5,7 +5,7 @@
 
 namespace compiler::lir {
 	struct KeyOf_LowerToLirFunction {
-		mir::Function& function;
+		const mir::Function& function;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;

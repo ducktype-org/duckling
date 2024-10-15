@@ -132,6 +132,8 @@ namespace compiler::lir {
 		Instruction(const Instruction&) = default;
 		Instruction(Instruction&&)      = default;
 
+		Instruction& operator=(Instruction&&) = default;
+
 		Instruction(
 			LirOperation               operation,
 			base::Optional<LocalRef>   output,
