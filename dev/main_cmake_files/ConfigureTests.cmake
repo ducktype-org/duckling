@@ -8,7 +8,6 @@ if(ENABLE_COVERAGE)
 	# does not generate coverage data for files not linked by the tests.
 	# https://stackoverflow.com/a/78554322
 	# Some helpful guide: https://wiki.documentfoundation.org/Development/Lcov
-	# -- coverage option should be used **after compiling the tests**.
 	add_custom_target(coverage
 		# Initial coverage created for all files in the project.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
@@ -19,8 +18,6 @@ if(ENABLE_COVERAGE)
 						--exclude "**/_deps/**" 
 						--exclude "**/tests/**"
 						--output-file coverage_base.info
-		# Running the tests to gather coverage data.
-		COMMAND ${CMAKE_COMMAND} --build . -- test
 		# Creating coverage data for the tests.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
 						--capture 
