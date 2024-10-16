@@ -272,7 +272,6 @@ def coverage(build_dir, thread_count):
         )
 
     bash_command(f"cmake --build {build_dir} {thread_option} -- build_all_tests")
-    bash_command(f"cmake --build {build_dir} {thread_option} -- test")
 
     bash_command(f"cmake --build {build_dir} -- coverage")
 
