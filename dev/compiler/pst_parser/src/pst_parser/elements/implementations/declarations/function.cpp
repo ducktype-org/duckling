@@ -30,13 +30,9 @@ namespace pst {
 		state.parse(out).with<ParamList>(&out->params, ParamList::parse);
 
 		if (state.parse(out).tryEat(NamedOperator::SingleArrow))
-			state.parse(out).with<Expr>(
+			state.parse(out).with(
 				&out->ret,
-				Expr::parseUntil<
-					detail::Conditions::isAssign,
-					detail::Conditions::isAssign,
-					FunctionReturnTypeListEndError>,
-				true
+				CommaExpr::parse
 			);
 
 		state.parse(out).all(NamedOperator::Assign, &out->body);

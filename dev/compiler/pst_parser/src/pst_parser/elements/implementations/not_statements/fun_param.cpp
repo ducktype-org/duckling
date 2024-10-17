@@ -23,17 +23,13 @@ namespace pst {
 
 		state.parse(out).all(&out->name, NamedOperator::Colon);
 
-		state.parse(out).with<Expr>(
+		state.parse(out).with(
 			&out->type,
-			Expr::parseUntil<
-				detail::Conditions::isAssignOrCommaOrEnd,
-				detail::Conditions::isAssignOrCommaOrEnd,
-				FunParamEndError>,
-			false
+			UniversalExpr::parse
 		);
 
 		if (state.parse(out).tryEat(NamedOperator::Assign))
-			state.parse(out).with<Expr>(&out->initial, Expr::parse, false);
+			state.parse(out).with(&out->initial, UniversalExpr::parse);
 
 		return out;
 	}

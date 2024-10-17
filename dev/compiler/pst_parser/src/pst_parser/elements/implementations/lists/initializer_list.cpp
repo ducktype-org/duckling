@@ -5,12 +5,13 @@
 namespace pst {
 	ParserRef<InitList> InitList::parse(LangParserState& state) {
 		return ListParsingTemplate::parseList<
-			Expr,
+			ExprElement,
 			InitList,
 			false,
 			lexer::Token::BracketType::None,
 			detail::Conditions::isComma,
 			detail::Conditions::isAssign,
-			detail::NameGetters::classInitList>(state);
+			detail::NameGetters::classInitList,
+			UniversalExpr>(state);
 	}
 }

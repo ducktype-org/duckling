@@ -60,7 +60,7 @@ namespace pst {
 		~ParamList() final = default;
 	};
 
-	class ImplementsList final: public List<Expr, detail::NameGetters::inheritanceList> {
+	class ImplementsList final: public List<ExprElement, detail::NameGetters::inheritanceList> {
 	public:
 		explicit ImplementsList(const dia::SourcePosition& pos): List(pos) {}
 
@@ -69,7 +69,7 @@ namespace pst {
 		~ImplementsList() final = default;
 	};
 
-	class AtrArgList final: public List<Expr, detail::NameGetters::attributeArgList> {
+	class AtrArgList final: public List<ExprElement, detail::NameGetters::attributeArgList> {
 	public:
 		explicit AtrArgList(const dia::SourcePosition& pos): List(pos) {}
 
@@ -78,7 +78,7 @@ namespace pst {
 		~AtrArgList() final = default;
 	};
 
-	class InitList final: public List<Expr, detail::NameGetters::classInitList> {
+	class InitList final: public List<ExprElement, detail::NameGetters::classInitList> {
 	public:
 		explicit InitList(const dia::SourcePosition& pos): List(pos) {}
 

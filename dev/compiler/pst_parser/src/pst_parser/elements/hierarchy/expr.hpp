@@ -10,30 +10,6 @@ namespace pst {
 	class CodeBlock;
 
 	/**
-	 * @brief Common root for expression sub-elements
-	 */
-	class ExprElement: public NotStmt {
-		const i64 precedence;
-
-	protected:
-		/**
-		 * @brief Skips tokens, used to preserve position in case of error.
-		 */
-		static void fastForward(LangParserState& state, i64 length);
-
-		/**
-		 * @brief Sanity check of length.
-		 */
-		static bool checkLength(LangParserState& state, i64 length);
-
-		void dprint(std::ostream& out) const override { out << "<SUBEXPR UNIMPLEMENTED>"; }
-
-		explicit ExprElement(const dia::SourcePosition& position, i64 precedence):
-			  NotStmt(position),
-			  precedence(precedence) {}
-	};
-
-	/**
 	 * @brief This should be generalized or made into separate parts in logical places.
 	 */
 	class ExprClassify {
@@ -146,6 +122,9 @@ namespace pst {
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
 		};
 
+		/**
+		 * @note For now the inner expression is just a comma expression, this should probably have it's own parsing in the future 
+		 */
 		class TemplateSpecifier final: public ExprElement {
 			ParserRef<ExprElement> inner;
 
@@ -465,26 +444,4 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 		};
 	}
-
-	class NewExprStmt: public Stmt {
-		ParserRef<ExprElement> expr;
-
-	public:
-		explicit NewExprStmt(dia::SourcePosition pos): Stmt(StmtKind::ExprStmt, pos){};
-
-		static ParserRef<NewExprStmt> parse(LangParserState& state) {
-			auto out = base::make_unique<NewExprStmt>(state.getPosition());
-			state.parse(out)
-				.with(&out->expr, expr::parseUntil<expr::Assignment, ExprClassify::exprStmtEnd>);
-			return out;
-		}
-
-		std::string elementType() const override { return "New Expr Statement"; }
-
-		void dprint(std::ostream& out) const override { out << "<NEWEXPRSTMT UNIMPLEMENTED>"; }
-
-		void acceptVisitor(PstStmtVisitor&) const override { CORE_PANIC("unimplemented"); }
-
-		~NewExprStmt() override = default;
-	};
 }

@@ -35,17 +35,13 @@ namespace pst {
 
 		state.parse(out).with(
 			&out->type,
-			Expr::parseUntil<
-				detail::Conditions::isAssignOrSemicolon,
-				detail::Conditions::isAssign,
-				VariableTypeEndError>,
-			true
+			CommaExpr::parse
 		);
 
 		state.parse(out).one(NamedOperator::Assign, true);
 
 		// @TODO: Perhaps add possibility for default construction.
-		state.parse(out).with<Expr>(&out->value, Expr::parse, true);
+		state.parse(out).with(&out->value, CommaExpr::parse);
 
 		return out;
 	}

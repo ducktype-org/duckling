@@ -17,7 +17,7 @@ namespace pst {
 	class ClassBlock;
 	class ClassBlockOrStmt;
 	class RoundGroupExpr;
-	class Expr;
+	class ExprElement;
 	// Statements
 	class Import;
 	class Using;
@@ -53,10 +53,6 @@ namespace pst {
 	class Destructor;
 	class Method;
 	class Field;
-
-	// Expr Elements
-	class ExprElement;
-	class NewExprStmt;
 
 	namespace expr {
 		class PrefixOperator;

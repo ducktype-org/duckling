@@ -19,12 +19,11 @@
 #include "lists.hpp"
 
 namespace pst {
-	class Expr;
 
 	class FunParam final: public NotStmt {
 		tpc::Identifier                 name;
-		ParserRef<Expr>                 type;
-		base::Optional<ParserRef<Expr>> initial;
+		ParserRef<ExprElement>                 type;
+		base::Optional<ParserRef<ExprElement>> initial;
 
 	public:
 		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {}
@@ -39,7 +38,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getType() const {
+		ParserCBorrowRef<ExprElement> getType() const {
 			return type.borrow();
 		}
 	};
@@ -151,7 +150,7 @@ namespace pst {
 	};
 
 	class RoundGroupExpr final: public NotStmt {
-		ParserRef<Expr> expr = nullptr;
+		ParserRef<ExprElement> expr = nullptr;
 
 	public:
 		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {}
@@ -166,152 +165,42 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getExpr() const {
+		ParserCBorrowRef<ExprElement> getExpr() const {
 			return expr.borrow();
 		}
 	};
 
-	class EmptyExprError final: public dia::Error {
+	/**
+	 * @brief Common root for expression sub-elements
+	 */
+	class ExprElement: public NotStmt {
+		const i64 precedence;
+
 	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected a non-empty expression.";
-		}
+		/**
+		 * @brief Skips tokens, used to preserve position in case of error.
+		 */
+		static void fastForward(LangParserState& state, i64 length);
 
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
+		/**
+		 * @brief Sanity check of length.
+		 */
+		static bool checkLength(LangParserState& state, i64 length);
 
-		EmptyExprError(dia::SourcePosition pos): dia::Error(pos) {}
+		explicit ExprElement(const dia::SourcePosition& position, i64 precedence):
+			  NotStmt(position),
+			  precedence(precedence) {}
 	};
 
-	/**
-	 * @TODO: improve comma separated expressions and expression parse options in general.
-	 */
-	class Expr final: public NotStmt {
+	class UniversalExpr: public NotStmt {
 	public:
-		enum class GroupType {
-			RoundGroup  = 0,
-			SquareGroup = 1,
-			CurlyGroup  = 2,
-			AngleGroup  = 3,
-		};
+		static base::unique_ptr<ExprElement> parse(LangParserState& state);
+		UniversalExpr() = delete;
+	};
 
-		struct Group;
-		/** @brief Represents multiple comma separated expressions.
-		 * For example `a, b` in `a, b = c` or `b, c` in `a = (b, c)`
-		 */
-		struct CommaSeparated;
-		struct Operator;
-		struct Identifier;
-		struct NumLiteral;
-		struct Block;
-
-		struct KeywordValue {
-			lang_def::Keyword keyword;
-		};
-
-		using ExprElem = std::
-			variant<Operator, Identifier, NumLiteral, Group, KeywordValue, CommaSeparated, Block>;
-
-		struct CommaSeparated {
-			std::vector<ParserRef<Expr>> expr;
-		};
-
-		struct Group {
-			GroupType       type;
-			ParserRef<Expr> expr;
-		};
-
-		struct Block {
-			ParserRef<CodeBlock> block;
-		};
-
-		struct Operator {
-			base::StrID oper_id;
-		};
-
-		struct Identifier {
-			base::StrID indent_id;
-		};
-
-		struct NumLiteral {
-			base::StrID num_id;
-		};
-
-		std::vector<ExprElem> elements;
-
-		explicit Expr(const dia::SourcePosition& position): NotStmt(position) {}
-
-		/**
-		 * @brief parses the expression until its over
-		 * @param allow_comma whether the expression can be a set of comma separated expressions.
-		 */
-		static ParserRef<Expr> parse(LangParserState& state, bool allow_comma = false);
-
-		[[nodiscard]]
-		std::string elementType() const override {
-			return "Expression";
-		}
-
-		/**
-		 * @brief parses the expression until a condition is met or end of token stream.
-		 *
-		 * @tparam until Condition to end the parsing.
-		 * @tparam positiveEnd Condition for positive parsing end.
-		 * @tparam badEndMessage Message if the @p positiveEnd condition is not met.
-		 * @param allow_comma whether the expression can be a set of comma separated expressions.
-		 *
-		 * @return ParserRef<Expr>
-		 */
-		template<
-			StateCondition                  until,
-			StateCondition                  positiveEnd,
-			std::derived_from<dia::Message> badEndMessage>
-		requires std::constructible_from<badEndMessage, dia::SourcePosition>
-		static ParserRef<Expr> parseUntil(LangParserState& state, bool allow_comma = false) {
-			// look ahead:
-			usize count = 0;
-			while (!until(state, (i64) count) && count < state.ctokens().size()) count++;
-
-			if (!positiveEnd(state, (i64) count)) {
-				// Handle negative end:
-				auto pos = state.getPosition(-1);
-				if (count != 0) {
-					pos = state.getPosition(0, (i64) count - 1);
-				} else if (!state.isEOF()) {
-					auto other = state.getPosition(0);
-					pos        = dia::SourcePosition(pos, other.getStart());
-				}
-				state.log(base::make_unique<badEndMessage>(pos));
-			} else if (count == 0) {
-				// Handle empty expression:
-				auto pos = state.getPosition(-1);
-				if (!state.isEOF()) {
-					auto other = state.getPosition(0);
-					pos        = dia::SourcePosition(pos, other.getStart());
-				}
-				state.log(base::make_unique<EmptyExprError>(pos));
-			}
-
-			// Don't parse empty expression:
-			if (count == 0) return nullptr;
-
-			return Expr::parse(state, count, true, allow_comma);
-		}
-
-		/**
-		 * @p exact_len = false: parses the expression until its over or until it parses @p len
-		 * tokens
-		 * @p exact_len = true: parses the expression until it parses @p len tokens
-		 * @param allow_comma whether the expression can be a set of comma separated expressions.
-		 */
-		static ParserRef<Expr> parse(
-			LangParserState& state, usize len, bool exact_len = true, bool allow_comma = false
-		);
-		void dprint(std::ostream& out) const final;
-		~Expr() final = default;
+	class CommaExpr: public NotStmt {
+	public:
+		static base::unique_ptr<ExprElement> parse(LangParserState& state);
+		CommaExpr() = delete;
 	};
 }

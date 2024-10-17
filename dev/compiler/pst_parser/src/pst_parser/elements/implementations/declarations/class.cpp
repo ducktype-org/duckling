@@ -26,13 +26,9 @@ namespace pst {
 		state.parse(out).all(Keyword::Class, &out->name);
 
 		if (state.parse(out).tryEat(Keyword::Extends)) {
-			state.parse(out).with<Expr>(
+			state.parse(out).with(
 				&out->base,
-				Expr::parseUntil<
-					detail::Conditions::isImplementsOrBlockGroup,
-					detail::Conditions::isImplementsOrBlockGroup,
-					ClassEndingError>,
-				false
+				UniversalExpr::parse
 			);
 		}
 		if (state.parse(out).tryEat(Keyword::Implements))

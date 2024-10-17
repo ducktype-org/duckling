@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
 	}
 	pst::init();
 	fs::FilePath               file(argv[1]);
-	pst::PST<pst::NewExprStmt> pst(file);
+	pst::PST<pst::UniversalExpr> pst(file);
 
 	if (pst.getLogger().bad()) {
 		pst.getLogger().dumpLog(false, std::cerr);

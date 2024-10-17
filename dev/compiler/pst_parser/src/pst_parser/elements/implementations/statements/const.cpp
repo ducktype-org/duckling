@@ -25,19 +25,15 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Const, &out->name, NamedOperator::Colon);
 
-		state.parse(out).with<Expr>(
+		state.parse(out).with(
 			&out->type,
-			Expr::parseUntil<
-				detail::Conditions::isAssignOrSemicolon,
-				detail::Conditions::isAssign,
-				ConstTypeEndError>,
-			true
+			CommaExpr::parse
 		);
 
 		// If there is no = then expr parsing already threw an error
 		state.parse(out).tryEat(NamedOperator::Assign);
 
-		state.parse(out).with<Expr>(&out->value, Expr::parse, true);
+		state.parse(out).with(&out->value, CommaExpr::parse);
 		return out;
 	}
 

@@ -40,14 +40,14 @@ namespace pst {
 
 		// @TODO: for now we assume if there is no expression there is a semicolon
 		if (!state[0].is(Special::Semicolon))
-			state.parse(out).with<Expr>(&out->expr, Expr::parse, true);
+			state.parse(out).with(&out->expr, CommaExpr::parse);
 
 		return out;
 	}
 
 	namespace detail {
 		void simpleActionDprint(
-			std::ostream& out, const std::string& kind, const base::Optional<ParserRef<Expr>>* expr
+			std::ostream& out, const std::string& kind, const base::Optional<ParserRef<ExprElement>>* expr
 		) {
 			out << "{";
 			out << R"("kind": ")" << kind << "\"";

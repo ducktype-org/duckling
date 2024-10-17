@@ -50,20 +50,16 @@ namespace pst {
 			state.parse(out).one(&out->iterator, true);
 
 			if (state.parse(out).tryEat(NamedOperator::Colon)) {
-				state.parse(out).with<Expr>(
+				state.parse(out).with(
 					&out->type,
-					Expr::parseUntil<
-						detail::Conditions::is<Keyword::In>,
-						detail::Conditions::is<Keyword::In>,
-						ForNoInError>,
-					true
+					CommaExpr::parse
 				);
 				state.parse(out).tryEat(Keyword::In);
 			} else {
 				state.parse(out).one(Keyword::In);
 			}
 
-			state.parse(out).with<Expr>(&out->iterable, Expr::parse, true);
+			state.parse(out).with(&out->iterable, CommaExpr::parse);
 
 			state.parse(out).goUpAndSkip();
 		}

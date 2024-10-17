@@ -109,7 +109,8 @@ namespace pst {
 			lexer::Token::BracketType BRACKETS,
 			StateCondition            isSeparator,
 			StateCondition            isEnding,
-			GetName                   getName>
+			GetName                   getName,
+			class ParsingClass = ListElements>
 		static auto parseList(LangParserState& state) -> ParserRef<Self> {
 			auto position = state.getPosition();
 
@@ -161,16 +162,7 @@ namespace pst {
 					}
 
 					ParserRef<ListElements> ref;
-					// @TODO: This is a "temporary" fix.
-					// Hopefully we can handle this with a uniform `parse` function for all
-					// elements, maybe by polymorphism.
-					if constexpr (std::derived_from<ListElements, Expr>) {
-						state.parse(out).template with<ListElements>(
-							&ref, ListElements::parse, (usize) expr_length, true, false
-						);
-					} else {
-						state.parse(out).template with<ListElements>(&ref, ListElements::parse);
-					}
+					state.parse(out).template with<ListElements>(&ref, ParsingClass::parse);
 					out->elements.emplace_back(std::move(ref));
 
 					if (isEnding(state, 0)) break;

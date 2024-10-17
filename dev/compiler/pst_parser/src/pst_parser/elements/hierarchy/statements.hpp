@@ -99,27 +99,26 @@ namespace pst {
 		}
 	};
 
-	class ExprStmt final: public Stmt {
-		ParserRef<Expr> expression;
+	class ExprStmt: public Stmt {
+		ParserRef<ExprElement> expr;
 
 	public:
-		STMT_CHILD_CONSTRUCTOR(ExprStmt);
+		explicit ExprStmt(dia::SourcePosition pos): Stmt(StmtKind::ExprStmt, pos){};
+
 		static ParserRef<ExprStmt> parse(LangParserState& state);
 
-		~ExprStmt() final = default;
-		void dprint(std::ostream& out) const final;
-
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		~ExprStmt() override = default;
+		void dprint(std::ostream& out) const override;
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getExpr() const {
-			return expression.borrow();
-		}
+		std::string elementType() const override { return "Expr Stmt"; }
 
 		[[nodiscard]]
-		std::string elementType() const override {
-			return "Expr Stmt";
+		ParserCBorrowRef<ExprElement> getExpr() const {
+			return expr.borrow();
 		}
+
+		void acceptVisitor(PstStmtVisitor&) const override;
 	};
 
 	class Alias final: public Stmt {
@@ -161,7 +160,7 @@ namespace pst {
 	 */
 	class Action: public Stmt {
 	protected:
-		base::Optional<ParserRef<Expr>> expr;
+		base::Optional<ParserRef<ExprElement>> expr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action);
@@ -174,7 +173,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<ParserCBorrowRef<Expr>> getValue() const {
+		base::Optional<ParserCBorrowRef<ExprElement>> getValue() const {
 			return expr.map([](const auto& e) { return e.borrow(); });
 		}
 	};
@@ -182,8 +181,8 @@ namespace pst {
 	// TODO: Merge it with variable. Or perhaps make a new class DataStorage.
 	class Const final: public Stmt {
 		tpc::Identifier name;
-		ParserRef<Expr> type;
-		ParserRef<Expr> value;
+		ParserRef<ExprElement> type;
+		ParserRef<ExprElement> value;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Const);
@@ -195,12 +194,12 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getType() const {
+		ParserCBorrowRef<ExprElement> getType() const {
 			return type.borrow();
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getValue() const {
+		ParserCBorrowRef<ExprElement> getValue() const {
 			return value.borrow();
 		}
 

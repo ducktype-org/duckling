@@ -22,11 +22,11 @@ namespace pst {
 		 * @brief Checks if an element is pars-able using given arguments.
 		 */
 		template<typename... Args>
-		constexpr static bool ParseAble = tpc::ParseAbleElement<Element, LangParserState, Args...>;
+		constexpr static bool ParseAble = tpc::ParseAbleElement<LangElement, Element, LangParserState, Args...>;
 
 	private:
 		tokenizer::OwnFile      file;
-		ParserRef<Element>      element;
+		ParserRef<LangElement>      element;
 		std::vector<ImportType> imports;
 
 		/**
@@ -105,7 +105,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Element> getRootElement() const {
+		ParserCBorrowRef<LangElement> getRootElement() const {
 			return element.borrow();
 		}
 
