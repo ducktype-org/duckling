@@ -1,0 +1,21 @@
+fun divRem1(a: i32, b: i32) = (a / b, a % b);
+
+class DivRem {
+	div: i32;
+	int: i32;
+}
+
+fun divRem2(a: i32, b: i32) = DivRem(a / b, a % b);
+
+
+# fun divRem3(a: i32, b: i32, div: ref i32, rem: ref i32) {
+#	div = a / b;
+#	rem = a % b;
+# }
+
+# int main() {
+#	let (div, rem) = divRem1(5, 2);
+#	let (div2, rem2) = divRem2(5, 2);
+#	var div3: i32, rem3: i32;
+#	divRem3(5, 2, div3, rem3);
+# }
