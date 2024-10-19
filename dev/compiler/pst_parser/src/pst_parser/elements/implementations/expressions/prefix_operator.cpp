@@ -11,4 +11,6 @@ namespace pst::expr {
 
 		out << "}";
 	}
+
+	void PrefixOperator::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitPrefixOperator(*this); }
 }

@@ -59,6 +59,7 @@ namespace pst {
 
 			~PrefixOperator() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Prefix Operator"; }
 		};
@@ -75,6 +76,7 @@ namespace pst {
 
 			~SuffixOperator() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Suffix Operator"; }
 		};
@@ -92,6 +94,7 @@ namespace pst {
 
 			~BinaryOperator() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Infix Operator"; }
 		};
@@ -108,6 +111,7 @@ namespace pst {
 
 			~ExprValue() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Value Expr"; }
 		};
@@ -115,7 +119,7 @@ namespace pst {
 		/**
 		 * @brief This is a helper element for parsing
 		 */
-		class Literal final: public ExprElement {
+		class Literal: public ExprElement {
 		public:
 			Literal() = delete;
 
@@ -135,6 +139,7 @@ namespace pst {
 
 			~TemplateSpecifier() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Template Specifier Expression"; }
 		};
@@ -150,6 +155,7 @@ namespace pst {
 
 			~IdentifierLiteral() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Identifier Expression"; }
 		};
@@ -166,6 +172,7 @@ namespace pst {
 
 			~Access() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Access Expression"; }
 		};
@@ -186,6 +193,7 @@ namespace pst {
 
 			~Call() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Call Expression"; }
 		};
@@ -209,6 +217,7 @@ namespace pst {
 
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
 			void                          dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			~ChainExpr() override = default;
 
@@ -225,6 +234,7 @@ namespace pst {
 
 			~RoundExpr() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Round Group Expression"; }
 		};
@@ -239,6 +249,7 @@ namespace pst {
 
 			~BlockExpr() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Block Expression"; }
 		};
@@ -350,6 +361,7 @@ namespace pst {
 
 			~ComparisonChain() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 		};
 
 		class LogicNot final: public PrefixOperator {
@@ -407,6 +419,7 @@ namespace pst {
 
 			~Ternary() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 		};
 
 		class Comma final: public ExprElement {
@@ -423,6 +436,7 @@ namespace pst {
 
 			~Comma() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 		};
 
 		class Assignment final: public ExprElement {
@@ -442,6 +456,7 @@ namespace pst {
 
 			~Assignment() override = default;
 			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
 		};
 	}
 }

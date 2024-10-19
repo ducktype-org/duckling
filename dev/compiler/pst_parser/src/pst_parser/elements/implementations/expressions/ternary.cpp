@@ -97,4 +97,6 @@ namespace pst::expr {
 
 		out << "}";
 	}
+
+	void Ternary::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitTernary(*this); }
 }

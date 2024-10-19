@@ -30,4 +30,6 @@ namespace pst::expr {
 
 		out << "}";
 	}
+
+	void IdentifierLiteral::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitIdentifierLiteral(*this); }
 }

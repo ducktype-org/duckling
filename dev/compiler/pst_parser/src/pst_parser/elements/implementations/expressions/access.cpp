@@ -33,4 +33,6 @@ namespace pst::expr {
 
 		out << "}";
 	}
+
+	void Access::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitAccess(*this); }
 }

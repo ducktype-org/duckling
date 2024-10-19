@@ -63,4 +63,6 @@ namespace pst::expr {
 
 		out << "}";
 	}
+
+	void ChainExpr::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitChainExpr(*this); }
 }

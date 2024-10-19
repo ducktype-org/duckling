@@ -18,6 +18,7 @@
 
 namespace pst {
 	class PstStmtVisitor;
+	class PstExprVisitor;
 	class Attribute;
 
 	using StateCondition = bool(const LangParserState&, i64);

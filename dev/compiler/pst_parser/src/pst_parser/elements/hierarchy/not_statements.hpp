@@ -187,6 +187,7 @@ namespace pst {
 		 */
 		static bool checkLength(LangParserState& state, i64 length);
 
+		virtual void           acceptVisitor(PstExprVisitor& visitor) const = 0;
 		explicit ExprElement(const dia::SourcePosition& position, i64 precedence):
 			  NotStmt(position),
 			  precedence(precedence) {}

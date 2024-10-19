@@ -24,4 +24,5 @@ namespace pst::expr {
 
 		out << "}";
 	}
+	void TemplateSpecifier::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitTemplateSpecifier(*this); }
 }
