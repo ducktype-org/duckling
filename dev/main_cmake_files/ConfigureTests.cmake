@@ -15,20 +15,23 @@ if(ENABLE_COVERAGE)
 						--capture 
 						--base-directory "${CMAKE_SOURCE_DIR}" 
 						--no-external 
-						--exclude "**/_deps/**" 
-						--exclude "**/tests/**"
 						--output-file coverage_base.info
 		# Creating coverage data for the tests.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
 						--capture 
 						--base-directory "${CMAKE_SOURCE_DIR}" 
 						--no-external 
-						--exclude "**/_deps/**" 
-						--exclude "**/tests/**"
 						--output-file coverage_test.info
 		# Merging the two coverage data files.
 		COMMAND ${LCOV} --add-tracefile coverage_base.info 
 						--add-tracefile coverage_test.info 
+						--output-file coverage_unfiltered.info
+		# Removing unwanted files from the coverage report.
+		COMMAND ${LCOV} --ignore-errors unused # Unused exclusions returns an error ("playground" is currently unused).
+						--remove coverage_unfiltered.info 
+						"**/tests/**" 
+						"**/playground/**"
+						"${CMAKE_BINARY_DIR}/**"  # Especially we should exclude the dependencies.
 						--output-file coverage.info
 		
 		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
