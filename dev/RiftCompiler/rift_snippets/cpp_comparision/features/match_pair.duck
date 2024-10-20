@@ -1,0 +1,12 @@
+import std.io.printLn as printLn;
+
+fun main() = {
+    var p = 4, 5;
+    
+    match (p) {
+        case 0, 0 = printLn("Center point");
+        case x, 0 = printLn("Point on the x axis, with x coord = ", x);
+        case 0, y = printLn("Point on the y axis, with y coord = ", y);
+        case x, y = printLn("Point with coords = (", x, y, ")");
+    }
+}

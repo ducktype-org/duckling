@@ -6,7 +6,7 @@ class B extends A {
 	y: i32;
 }
 
-fun consumeOwner(a: box A) = pass;
+fun consumeOwner(a: box A) = {}; # pass?
 
 template{T}
 fun passOwner(p: box T) = move p;
@@ -19,15 +19,15 @@ class Owner {
 fun main() {
 	{
 		# default inits can most likely be omitted:
-		let p: box A; # = A();
+		var p: box A; # = A();
 	}
 	{
-		let p: box A; # = A();
+		var p: box A; # = A();
 		consumeOwner(move p);
 	}
 	{
-		let p: box B; # = B();
-		let p2: box A = passOwner(move p);
+		var p: box B; # = B();
+		var p2: box A = passOwner(move p);
 	}
 	{
 		var o: Owner;

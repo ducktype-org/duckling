@@ -5,7 +5,7 @@ const INF: const i32 = 99999999;
 
 class Graph {
     V: int;
-    adj: ref List:{(i32, i32)}; # Adjacency list
+    adj: box List:{(i32, i32)}; # Adjacency list
 
     Graph.create(V: i32) = {
         this.V = V;
@@ -20,7 +20,7 @@ class Graph {
     fun shortestPath(src: int) = {
         var pq: priority_queue:{(i32, i32)};
 
-        var dist: List:{i32, V, INF}; # some syntax for init length and value? for now i just leave it like that
+        var dist = List:{i32}(V, INF); # some syntax for init length and value? for now i just leave it like that
 
         pq.push((0, src));
         dist[src] = 0;

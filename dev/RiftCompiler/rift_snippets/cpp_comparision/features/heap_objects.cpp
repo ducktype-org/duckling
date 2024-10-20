@@ -1,3 +1,5 @@
+// adapted from cpp reference
+
 #include <memory>
 
 struct A {
@@ -11,7 +13,7 @@ struct B: A {
 void consumeOwner(std::unique_ptr<A>) {}
 
 template<class T>
-std::unique_ptr<T> passOwner(std::unique_ptr<T> p ) { return p; }
+std::unique_ptr<T> passOwner(std::unique_ptr<T> p ) { /*...*/ return p; }
 
 struct Owner {
 	std::unique_ptr<A> a;

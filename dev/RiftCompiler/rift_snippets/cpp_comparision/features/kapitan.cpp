@@ -1,9 +1,22 @@
-#include <bits/stdc++.h>
-using namespace std;
+#include <set>
+#include <iostream>
+#include <vector>
+#include <queue>
+// using namespace std;
+
+using std::vector;
+using std::pair;
+using std::set;
+using std::priority_queue;
+using std::cin;
+using std::cout;
+using std::min;
+using std::abs;
 
 int main() {
-    std::ios_base::sync_with_stdio(false);
-    std::cin.tie(NULL);
+    // std::ios_base::sync_with_stdio(false);
+    // std::cin.tie(nullptr);
+
     int n;
     set<pair<pair<int64_t, int64_t>, int>> s1;
     set<pair<pair<int64_t, int64_t>, int>> s2;

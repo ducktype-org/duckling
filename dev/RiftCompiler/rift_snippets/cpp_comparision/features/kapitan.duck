@@ -1,11 +1,18 @@
+# optimize imports:?
+import std.set as set;
+import std.min as min;
+import std.abs as abs;
+
 fun main() = {
     var n: i32;
     scan(n);
-    let s1 = std.set((i64,i64,i32))();
-    let s2 = std.set((i64,i64,i32))();
+    
+    let s1: set:{(i64,i64,i32)};
+    let s2: set:{(i64,i64,i32)};
+
     var x: i64, y: i64;
     var ODW: i64[n+7];
-    var Neigh: ((i32,i64)[])[n+7];
+    var Neigh: (i32,i64)[n+7];
     for (i in 0..n) {
         scan(x,y);
         s1.insert((x,y,i));
@@ -14,10 +21,10 @@ fun main() = {
     ODW[0]=0;
     for (i in 1..n+5)
         ODW[i]=-1;
-    var wyspa1 = *(s1.begin());
+    var wyspa1 = *(s1.begin()); # todo ???
     s1.pop();
     while (not s1.empty()) {
-        let wyspa2 = *(s1.begin());
+        let wyspa2 = *(s1.begin()); # todo ???
         s1.pop();
         let dist : i64 = min(abs(wyspa1[0] - wyspa2[0]), abs(wyspa1[1] - wyspa2[1]));
         Neigh[wyspa1[2]].push_back((wyspa2[2], dist));
@@ -45,15 +52,15 @@ fun main() = {
         q.pop();
         for (i in 0..Neigh[wyspa].size()) {
             let (cel, sciezka) = Neigh[wyspa][i];
-            if (ODW[cel] > sciezka + ODW[wyspa] || ODW[cel] == -1) {
+            if (ODW[cel] > sciezka + ODW[wyspa] or ODW[cel] == -1) {
                 ODW[cel] = ODW[wyspa] + sciezka;
                 q.insert((-ODW[cel],cel));
                 if (cel == n-1 and ODW[cel] == 0) {
-                    println(0);
+                    printLn(0);
                     return;
                 }
             }
         }
     }
-    println(ODW[n-1]);
+    printLn(ODW[n-1]);
 }

@@ -1,9 +1,9 @@
 import std.queue as queue;
 
 class Node {
-    var edges: List:{Node};
-    var visited = false;
-    var distance: u32 = 999;
+    edges: List:{Node};
+    visited = false;
+    distance: u32 = 999;
 }
 
 fun DFS(current: Node) = {
