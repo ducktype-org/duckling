@@ -5,7 +5,7 @@
 struct Node {
     std::vector<Node> edges;
     bool visited = false;
-    unsigned int distance = 999;
+    int distance = 999;
 };
 
 void DFS(Node current) {
@@ -19,11 +19,11 @@ void BFS(Node start) {
     start.visited = true;
     start.distance = 0;
 
-    std::queue<std::pair<Node, unsigned int>> q;
+    std::queue<std::pair<Node, int>> q;
     q.push({start, 1});
 
     while (!q.empty()) {
-        std::pair<Node, unsigned int> current = q.front();
+        std::pair<Node, int> current = q.front();
         q.pop();
         current.first.visited = true;
         current.first.distance = current.second;

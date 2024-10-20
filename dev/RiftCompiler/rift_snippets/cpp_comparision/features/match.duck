@@ -1,0 +1,19 @@
+import std.io.printLn as printLn;
+
+class Point {
+    x: i32;
+    y: i32;
+}
+
+fun main() = {
+    var p: Point;
+    p.x = 4;
+    p.y = 5;
+    
+    match (p) {
+        case Point(0, 0) = printLn("Center point");
+        case Point(x, 0) = printLn("Point on the x axis, with x coord = ", x);
+        case Point(0, y) = printLn("Point on the y axis, with y coord = ", y);
+        case Point(x, y) = printLn("Point with coords = (", x, y, ")");
+    }
+}

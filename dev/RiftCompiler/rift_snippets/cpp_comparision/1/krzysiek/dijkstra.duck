@@ -1,0 +1,46 @@
+import std.io.printLn as printLn;
+import std.priority_queue as priority_queue;
+
+const INF: const i32 = 99999999;
+
+class Graph {
+    V: int;
+    adj: ref List:{(i32, i32)}; # Adjacency list
+
+    Graph.create(V: i32) = {
+        this.V = V;
+        adj = List:{(i32, i32)};
+    } 
+
+    fun addEdge(u: i32, v: i32, w: i32) = {
+        adj[u].append({v, w});
+        adj[v].append({u, w});
+    }
+
+    fun shortestPath(src: int) = {
+        var pq: priority_queue:{(i32, i32)};
+
+        var dist: List:{i32, V, INF}; # some syntax for init length and value? for now i just leave it like that
+
+        pq.push((0, src));
+        dist[src] = 0;
+
+        while (not pq.empty()) {
+            var u = pq.top()[1];
+            pq.pop();
+
+            for (neighbor in adj[u]) {
+                var (v, weight) = neighbor; # unpack tuple
+
+                if (dist[v] > dist[u] + weight) {
+                    dist[v] = dist[u] + weight;
+                    pq.push((-dist[v], v));
+                }
+            }
+        }
+
+        printLn("Vertex Distance from Source");
+        for (i in 1..V)
+            printLn(i, " \t\t ", dist[i]);
+    }
+}
