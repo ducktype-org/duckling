@@ -13,32 +13,36 @@ def main(features_dir, mode):
     output_csv = "comparison_results.csv"
 
     with open(output_csv, mode=mode, newline='') as csv_file:
-        fieldnames = ['File', 'C++ Tokens', 'Duck Tokens', 'Duck Percentage of C++']
+        fieldnames = ['File', 'Category', 'C++ Tokens', 'Duck Tokens', 'Duck Percentage of C++']
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
 
-        for file_name in os.listdir(features_dir):
-            if file_name.endswith(".cpp"):
-                base_name = file_name[:-4]
-                cpp_file = os.path.join(features_dir, f"{base_name}.cpp")
-                duck_file = os.path.join(features_dir, f"{base_name}.duck")
+        for root, _, files in os.walk(features_dir):
+            for file_name in files:
+                if file_name.endswith(".cpp"):
+                    base_name = file_name[:-4]
+                    cpp_file = os.path.join(root, f"{base_name}.cpp")
+                    duck_file = os.path.join(root, f"{base_name}.duck")
 
-                if os.path.exists(duck_file):
-                    count_cpp = count_tokens(cpp_file, cpp_command)
-                    count_duck = count_tokens(duck_file, duck_command)
-                    percentage_diff = (count_duck / count_cpp) * 100 if count_cpp != 0 else 0
+                    if os.path.exists(duck_file):
+                        count_cpp = count_tokens(cpp_file, cpp_command)
+                        count_duck = count_tokens(duck_file, duck_command)
+                        percentage_diff = (count_duck / count_cpp) * 100 if count_cpp != 0 else 0
+                        innermost_folder = os.path.basename(os.path.dirname(cpp_file))
 
-                    writer.writerow({
-                        'File': base_name,
-                        'C++ Tokens': count_cpp,
-                        'Duck Tokens': count_duck,
-                        'Duck Percentage of C++': f"{percentage_diff:.2f}%"
-                    })
+                        writer.writerow({
+                            'File': base_name,
+                            'Category': innermost_folder,
+                            'C++ Tokens': count_cpp,
+                            'Duck Tokens': count_duck,
+                            'Duck Percentage of C++': f"{percentage_diff:.2f}%"
+                        })
+
     print(f"Output has been written to {output_csv}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Compare C++ and Duck files in a directory.')
-    parser.add_argument('features_dir', type=str, help='The directory containing the feature files')
+    parser.add_argument('features_dir', type=str, nargs='?', help='The directory containing the feature files', default="features/")
     parser.add_argument('--mode', type=str, help='The mode to open the file in', default="w")
     args = parser.parse_args()
     main(args.features_dir, args.mode)
