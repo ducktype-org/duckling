@@ -1,0 +1,204 @@
+alias kolor = u64;
+class Bombki {
+    zepsute: bool;
+    k1: kolor;
+    k2: kolor;
+    l1: u32;
+    l2: u32;
+}
+
+class NodePrimitive {
+    ojciecptr: ref NodePrimitive;
+    dzieci: NodePrimitive[];
+    numer: u32;
+    rozmiarDrzewa: u32;
+    nieodwiedzoneDzieci: u32;
+}
+
+fun pnodeinit() -> NodePrimitive {
+    return NodePrimitive(nullptr, [], 0, 1, 0);
+}
+
+fun zepsuj() -> Bombki {
+    return Bombki(true, 0, 0, 0, 0);
+}
+
+fun zero() -> Bombki {
+    return Bombki(false, 0, 0, 0, 0);
+}
+
+fun dodaj(b1: Bombki, b2: Bombki) -> Bombki {
+    let res = zero();
+    let ilosciKolorow: kolor->u32;
+    if (b1.zepsute or b2.zepsute) 
+        return zepsuj();
+    if (b1.l1 != 0)
+        ilosciKolorow[b1.k1] = b1.l1;
+    else
+        return b2;
+    if (b1.l2 != 0)
+        ilosciKolorow[b1.k2] = b1.l2;
+    if (b2.l1 != 0) {
+        if (b2.k1 notin ilosciKolorow) {
+            ilosciKolorow[b2.k1] = ilosciKolorow[b2.k1] + b2.l1;
+        } else {
+            ilosciKolorow[b2.k1] = b2.l1;
+        }
+    } else {
+        return b1;
+    }
+    if (b2.l2 != 0) {
+        if (b2.k2 notin ilosciKolorow) {
+            ilosciKolorow[b2.k2] = ilosciKolorow[b2.k2] + b2.l2;
+        } else {
+            ilosciKolorow[b2.k2] = b2.l2;
+        }
+    }
+    if (ilosciKolorow.empty())
+        return zero();
+    if (ilosciKolorow.size() > 2)
+        return zepsuj();
+    var it = ilosciKolorow.begin();
+    res.k1 = (*it)[0];
+    res.l1 = (*it)[1];
+    it++;
+    if (it == ilosciKolorow.end()) {
+        res.l2 = 0;
+        res.k2 = 0;
+        res.zepsute = false;
+        return res;
+    }
+    res.k2 = (*it)[0];
+    res.l2 = (*it)[1];
+    if (min(res.l2, res.l1) > 1) {
+        return zepsuj();
+    } else
+        res.zepsute = false;
+    if (res.l1 < res.l2) {
+        swap(res.l1, res.l2);
+        swap(res.k1, res.k2);
+    }
+    return res;
+}
+
+fun kalkuluj(T: Bombki[], zakres: u32, indeks: u32) {
+    if (indeks < zakres/4) {
+        T[indeks * 2] = kalkuluj(T, zakres, indeks * 2);
+        T[indeks * 2 + 1] = kalkuluj(T, zakres, indeks * 2 + 1);
+    }
+    return dodaj(T[indeks * 2], T[indeks * 2 + 1]);
+}
+
+fun robimyBinarke(Data: uint32_t[], pnode: ref NodePrimitive, T: Bombki[], mujindex: uint32_t, maxindex: uint32_t, bul: ref bool) = {
+    Data[pnode->numer] = mujindex;
+    var counter = 1;
+    for (son in (*pnode).dzieci) {
+        robimyBinarke(Data, son, T, mujindex+counter, maxindeks, bul);
+        counter += (*son).rozmiarDrzewa;
+    }
+}
+
+fun dodajDoDrzewa(node: ref NodePrimitive) = {
+    if (node == nullptr or (*node).ojciecptr == nullptr)
+        return;
+        let ojciec = (*node).ojciecptr;
+        (*ojciec).rozmiarDrzewa += (*node).rozmiarDrzewa;
+        (*ojciec).nieodwiedzoneDzieci--;
+        if ((*ojciec).nieodwiedzoneDzieci == 0)
+            dodajDoDrzewa(ojciec);
+}
+
+fun sumujDoGury(T: Bombki[], indeks: u32) = {
+    if (indeks == 0)
+        return;
+    T[indeks] = dodaj(T[indeks * 2], T[indeks * 2 + 1]);
+    sumujDoGury(T, (indeks - indeks%2) / 2);
+}
+
+fun zmien(indeks: u32, nowyKolor: kolor, T: Bombki[]) = {
+    T[indeks].k1 = nowyKolor;
+    var nrOjca = indeks - indeks%2;
+    nrOjca /= 2;
+    sumujDoGury(T, nrOjca);
+}
+
+fun wyluskaj(T: Bombki[], currindeks: u32, indeksl: u32, indeksp: u32, lprzedzial: u32, pprzedzial: u32) -> Bombki {
+    if (lprzedzial == indeksp or indeksl == pprzedzial) {
+        return zero();
+    }
+    if (lprzedzial >= indeksl and pprzedzial <= indeksp) {
+        return T[currindeks];
+    } else {
+        if (!(indeksp < lprzedzial or indeksl > pprzedzial)) {
+            let srodek = (lprzedzial + pprzedzial) / 2;
+            return dodaj(wyluskaj(T, currindeks*2, indeksl, indeksp, lprzedzial, srodek), wyluskaj(T, currindeks*2+1, indeksl, indeksp, srodek, pprzedzial));
+        } else {
+            return zero();
+        }
+    }
+}
+
+fun main() = {
+    var acc: u32, n1: u32, q1: u32;
+    scan(n1, q1);
+    let n = n1, q = q1;
+    let rozmiarTablicy = 2**(1 + floor(log2(n-1)));
+    let prefiks = rozmiarTablicy/2;
+    let T = Bombki[rozmiarTablicy](zero());
+    let Data = u32[n+3];
+    let PrimitiveTab = NodePrimitive[n+3];
+    let U: bool[n+3];
+    for (i in 0..n+1) {
+        U[i] = false;
+        PrimitiveTab[i] = pnodeinit();
+        PrimitiveTab[i].numer = i;
+    }
+    for (i in 2..n+1) {
+        scan(acc);
+        PrimitiveTab[i].ojciecptr = ref PrimitiveTab[acc];
+        PrimitiveTab[acc].dzieci.push_back(ref PrimitiveTab[i]);
+        U[acc] = true;
+    }
+    let que = queue(NodePrimitive);
+    for (i in 2..n+1) {
+        if (not U[i]) {
+            que.push(PrimitiveTab[i]);
+        } else {
+            PrimitiveTab[i].nieodwiedzoneDzieci = PrimitiveTab[i].dzieci.size();
+        }
+    }
+    while (not que.empty()) {
+        let nodeTop = que.front();
+        que.pop();
+        dodajDoDrzewa(ref nodeTop);
+    }
+    var buul = false;
+    let bul = ref buul;
+    robimyBinarke(Data, ref (PrimitiveTab[1]), T, 0, n+1, bul);
+    if (*bul) {
+        return 0;
+    }
+    var kacc: kolor;
+    for (i in 1..n+1) {
+        scan(kacc);
+        T[prefiks + Data[i]].l1 = 1;
+        T[prefiks + Data[i]].k1 = kacc;
+    }
+    T[1] = kalkuluj(T, rozmiarTablicy, 1);
+    var polecenie: char, v: u32, k: kolor;
+    for (i in 0..q) {
+        scan(polecenie);
+        if (polecenie == 'z') {
+            scan(v,k);
+            zmien(Data[v] + prefiks, k, T);
+        } else {
+            scan(v);
+            let b = wyluskaj(T, 1, Data[v], Data[v] + PrimitiveTab[v].rozmiarDrzewa, 0, prefiks);
+            if (b.zepsute) {
+                printLn("NIE");
+            } else {
+                printLn("TAK");
+            }
+        }
+    }
+}
