@@ -42,7 +42,7 @@ def main(features_dir, mode):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Compare C++ and Duck files in a directory.')
-    parser.add_argument('features_dir', type=str, nargs='?', help='The directory containing the feature files', default="features/")
+    parser.add_argument('features_dir', type=str, nargs='?', help='The directory containing the feature files, default = \"features/\"', default="features/")
     parser.add_argument('--mode', type=str, help='The mode to open the file in', default="w")
     args = parser.parse_args()
     main(args.features_dir, args.mode)
