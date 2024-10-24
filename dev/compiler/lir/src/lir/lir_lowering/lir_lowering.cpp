@@ -202,9 +202,15 @@ namespace compiler::lir {
 			 * @param curr_block
 			 * @param mir_instruction
 			 */
-			void lowerFlags(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
+			void lowerFlags(
+				[[maybe_unused]] /*<temporary for linter*/ MutBlockRef curr_block,
+				const mir::Instruction&                                mir_instruction
+			) {
 				for (const auto& flag: mir_instruction.flags) {
-					auto lir_local = getLocal(flag.local);
+					[[maybe_unused]]  //< temporary for linter
+					auto lir_local
+						= getLocal(flag.local);
+
 					switch (flag.flag) {
 						using enum mir::OperationFlag::Flag;
 					case Construct:
