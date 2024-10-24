@@ -1,0 +1,19 @@
+type primitive: custom_int 13
+
+function main {
+  arg_size: 0;
+  next_arg_size: 0;
+  ret_size: 0;
+
+  local_size: 40;
+
+  code: {
+    alloc_lptr_type      0, custom_int;
+    # Print the Block ID part (first 64 bites) of the pointer.
+    output_l64           0;
+    input_l64           16;
+    free_lptr            0;
+    ret_imm              0;
+  }
+
+}

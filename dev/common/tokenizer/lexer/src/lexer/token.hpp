@@ -15,12 +15,12 @@
 #include <base/raw_view.hpp>
 #include <base/string_id.hpp>
 #include <filesystem/file.hpp>
-#include <rift_definitions/key_spec_op.hpp>
+#include <lang_definitions/key_spec_op.hpp>
 
 namespace lexer {
-	using rift_def::Keyword;
-	using rift_def::Operator;
-	using rift_def::Special;
+	using lang_def::Keyword;
+	using lang_def::Operator;
+	using lang_def::Special;
 
 	class Token;
 	/**

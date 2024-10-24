@@ -22,7 +22,7 @@ namespace base {
 		friend class Ref;
 
 		void assertNotNull() const {
-			if (ptr == nullptr) RIFT_PANIC("Ref was in null state, when non-null was required!");
+			if (ptr == nullptr) CORE_PANIC("Ref was in null state, when non-null was required!");
 		}
 
 	public:
@@ -77,6 +77,8 @@ namespace base {
 			return ptr == other.ptr;
 		}
 
+		bool operator<(const Ref& other) const { return ptr < other.ptr; }
+
 		// swap:
 		friend void swap(Ref& first, Ref& second) noexcept { std::swap(first.ptr, second.ptr); }
 
@@ -103,7 +105,7 @@ namespace base {
 		friend class Ref;
 
 		void assertNotNull() const {
-			if (ptr == nullptr) RIFT_PANIC("MRef was in null state, when non-null was required!");
+			if (ptr == nullptr) CORE_PANIC("MRef was in null state, when non-null was required!");
 		}
 
 	public:

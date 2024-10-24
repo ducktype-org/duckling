@@ -21,6 +21,6 @@ struct nlohmann::adl_serializer<std::variant<Args...>> {
 	}
 
 	static void from_json(const json&, const std::variant<Args...>&) {
-		RIFT_PANIC("Parsing data from JSON into a custom variant is not supported (yet).");
+		CORE_PANIC("Parsing data from JSON into a custom variant is not supported (yet).");
 	}
 };

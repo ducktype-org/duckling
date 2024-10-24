@@ -11,6 +11,6 @@ requires std::is_empty_v<T> struct nlohmann::adl_serializer<T> final {
 	}
 
 	static void from_json(const json&, T&) {
-		RIFT_PANIC("Parsing data from JSON into empty struct is not supported (yet).");
+		CORE_PANIC("Parsing data from JSON into empty struct is not supported (yet).");
 	}
 };
