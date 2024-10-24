@@ -47,9 +47,14 @@ namespace compiler::lir {
 	 */
 	using LocalRef = CRef<LirLocal>;
 
+	/**
+	 * @brief Reference to block in LIR.
+	 */
 	using BlockRef    = CRef<Block>;
-	using MutBlockRef = Ref<Block>;
 
+	/**
+	 * @brief Any value in LIR representation
+	 */
 	struct LirLocation {
 	private:
 		using ValueType = std::variant<i64, LocalRef, BlockRef>;
@@ -123,6 +128,9 @@ namespace compiler::lir {
 
 	};
 
+	/**
+	 * @brief Single instruction of LIR code.
+	 */
 	struct Instruction final {
 		LirOperation operation = LirOperation::Uninitialized;
 		base::Optional<LocalRef> output;
@@ -147,7 +155,6 @@ namespace compiler::lir {
 
 		void debugPrint(std::ostream& output) const;
 	};
-	
 	
 
 	/**
@@ -176,7 +183,5 @@ namespace compiler::lir {
 		std::vector<BlockRef> block_order;
 
 		void debugPrint(std::ostream& output) const;
-
 	};
-
 }

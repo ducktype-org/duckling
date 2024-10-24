@@ -17,5 +17,9 @@ namespace compiler::lir {
 		}
 	};
 
+	/**
+	 * @brief Lower a MIRFunction to a LIRFunction
+	 * Generates TSL types
+	 */
 	DECLARE_QUERY(LowerToLirFunction, KeyOf_LowerToLirFunction, const Function&);
 }

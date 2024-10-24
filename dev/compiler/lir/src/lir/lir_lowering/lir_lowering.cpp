@@ -1,3 +1,11 @@
+/**
+ * @file lir_lowering.cpp
+ * @brief File implementing process of creating LIR function from MIR function
+ *
+ * @note when adding new cases to logic in this file you should most likely edit:
+ * - ... todo 
+ */
+
 #include "lir_lowering.hpp"
 #include "../lir_structure/lir_structure.hpp"
 
@@ -10,10 +18,24 @@
 
 namespace compiler::lir {
 
+	/**
+	 * @brief Mutable reference block in LIR.
+	 */
+	using MutBlockRef = Ref<Block>;
+
 	base::HashT KeyOf_LowerToLirFunction::customPerfectHash() const {
 		return base::perfectHash(function);
 	}
 
+	/**
+	 * @brief Creates LIR local data from MIR local data.
+	 * @todo change argument to MIR local reference.
+	 * @important remember that LirLocal should only be stored in a LIR function.
+	 * 
+	 * @param ctx 
+	 * @param mir_local 
+	 * @return LirLocal 
+	 */
 	LirLocal LirLocal::fromMir(query::Context& ctx, const mir::MirLocal& mir_local) {
 		auto type_layout = ctx.query<tsl::QueryTypeLayout>(mir_local.type.getType());
 
@@ -30,6 +52,31 @@ namespace compiler::lir {
 		return LirLocal{bool_layout};
 	}
 
+	/**
+	 * @brief Maps MIR operation to LIR operation for those
+	 * that have direct counterpart.
+	 * 
+	 * @param mir_operation 
+	 * @return LirOperation 
+	 */
+	LirOperation mir2lirOperation(mir::Operation mir_operation) {
+		switch (mir_operation) {
+			case mir::Operation::Assign:
+				return LirOperation::Assign;
+			case mir::Operation::ReturnValue:
+				return LirOperation::ReturnValue;
+			case mir::Operation::ReturnVoid:
+				return LirOperation::ReturnVoid;
+			case mir::Operation::Jump:
+				return LirOperation::Jump;
+			case mir::Operation::Branch:
+				return LirOperation::Branch;
+			// @TODO: add more cases
+			default:
+				CORE_PANIC("Operation without direct counterpart");
+		}
+	}
+
 
 
 	struct IMPLEMENT_QUERY(LowerToLirFunction, Function) {
@@ -37,9 +84,9 @@ namespace compiler::lir {
 		/**
 		 * @brief Helper struct for easy state encapsulation used.
 		 * by LowerToLirFunction query. 
-		 * @note This is not a typical type, and
+		 * @note This is not a typical struct, and
 		 * should be seen as a set of functions operating on some common state.
-		 * Order of those functions matter, as they build LIR state
+		 * Order of those functions matter, as they build components of LIR function
 		 * step by step.
 		 */
 		struct Mir2Lir {
@@ -63,10 +110,22 @@ namespace compiler::lir {
 
 			// helper functions: 
 
+			/**
+			 * @brief Returns LIR local associated with given MIR local.
+			 * 
+			 * @param mir_local 
+			 * @return LocalRef 
+			 */
 			LocalRef getLocal(mir::LocalRef mir_local) {
 				return mir_to_lir_local.at(mir_local);
 			}
 
+			/**
+			 * @brief Converts MIR location to LIR location.
+			 * 
+			 * @param loc 
+			 * @return LirLocation 
+			 */
 			LirLocation getLocation(const mir::MirLocation& loc) {
 				variant_match(loc.getVariant()) {
 					variant_case(mir::MirIntegerConst, integer) {
@@ -84,6 +143,11 @@ namespace compiler::lir {
 
 			// main functions:
 			
+			/**
+			 * @brief Creates local vars data,
+			 * puts them in a stable vector, and
+			 * maps MIR locals to LIR local refs.
+			 */
 			void makeLocals() {
 				for (const auto& mir_local : key.function.local_list) {
 					auto lir_local = LirLocal::fromMir(ctx, *mir_local);
@@ -110,6 +174,7 @@ namespace compiler::lir {
 			}
 
 			void lowerBlocks() {
+				// here we iterate in reverse only to emit better block order:
 				for (const auto& block: key.function.blocks | std::views::reverse) {
 					const auto lir_block = mir_to_lir_block[block.id];
 					block_order.emplace_back(lir_block);
@@ -125,6 +190,12 @@ namespace compiler::lir {
 
 			// instruction lowering functions:
 
+			/**
+			 * @brief Maps list of MIR locations to LIR locations.
+			 * 
+			 * @param locs 
+			 * @return std::vector<LirLocation> 
+			 */
 			std::vector<LirLocation> getLocations(const std::vector<mir::MirLocation>& locs) {
 				std::vector<LirLocation> result;
 				result.reserve(locs.size());
@@ -134,9 +205,17 @@ namespace compiler::lir {
 				return result;
 			}
 
+			/**
+			 * @brief Lowers flag of the given operation into
+			 * LIR operations. Should be called before lowering the operation
+			 * @TODO: does calling before always make sense?
+			 * @TODO: implement logic here
+			 *
+			 * @note: it is currently assumed this will not produce new blocks 
+			 * @param curr_block 
+			 * @param mir_instruction 
+			 */
 			void lowerFlags(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
-				// @TODO
-				// this does not produce new blocks?
 				for (const auto& flag : mir_instruction.flags) {
 					auto lir_local = getLocal(flag.local);
 					switch (flag.flag) {
@@ -156,24 +235,6 @@ namespace compiler::lir {
 				}
 			}
 
-			LirOperation mir2lirOperation(mir::Operation mir_operation) {
-				switch (mir_operation) {
-					case mir::Operation::Assign:
-						return LirOperation::Assign;
-					case mir::Operation::ReturnValue:
-						return LirOperation::ReturnValue;
-					case mir::Operation::ReturnVoid:
-						return LirOperation::ReturnVoid;
-					case mir::Operation::Jump:
-						return LirOperation::Jump;
-					case mir::Operation::Branch:
-						return LirOperation::Branch;
-					// @TODO: add more cases
-					default:
-						CORE_PANIC("Operation without direct counterpart");
-				}
-			}
-
 			/**
 			 * @brief Lowers instruction from MIR to LIR.
 			 * * Fills @p curr_block.
@@ -189,8 +250,10 @@ namespace compiler::lir {
 
 				switch (mir_instruction.operation) {
 					case mir::Operation::Assign:
-					// here much more cases will be added 
 					{
+						// this is a generic case, that will be used for most instructions
+						// it currently assumes the output is present, but it can be changed
+
 						auto output = getLocal(mir_instruction.output.value());
 						auto args = getLocations(mir_instruction.arguments);
 						curr_block->instructions.emplace_back(
@@ -251,6 +314,11 @@ namespace compiler::lir {
 				}
 			}
 
+			/**
+			 * @brief Return function composed of generated data.
+			 * Should be used once, at the end of LIR function creation.
+			 * @return Function 
+			 */
 			Function get() {
 				return Function{
 					key.function.name,
