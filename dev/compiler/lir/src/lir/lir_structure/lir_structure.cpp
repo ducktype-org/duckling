@@ -5,24 +5,26 @@ namespace compiler::lir {
 	void LirLocal::debugPrint(std::ostream& output, bool detailed) const {
 		// some id? lol
 		// @TODO...
-		output << "Local(" << "???" << ")";
-		if (detailed) {
-			output << " type: ???";
-		}
+		output << "Local("
+			   << "???"
+			   << ")";
+		if (detailed) output << " type: ???";
 	}
 
 	void Function::debugPrint(std::ostream& output) const {
 		output << "Function: " << name.strView() << "\n";
 		output << "Locals:\n";
 
-		for (const auto& local : local_list) {
+		for (const auto& local: local_list) {
 			local->debugPrint(output, true);
 			output << "\n";
 		}
 
 		output << "Blocks:\n";
 		for (auto block: block_order) {
-			output << "Block: " << "???" << "\n";
+			output << "Block: "
+				   << "???"
+				   << "\n";
 			for (const auto& instruction: block->instructions) {
 				output << "    ";
 				instruction.debugPrint(output);

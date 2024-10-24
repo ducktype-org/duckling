@@ -26,8 +26,7 @@ class LIRConstructionTest final: public tester::ContextSuite {
 public:
 	LIRConstructionTest(tester::TestConfig&& config):
 		  tester::ContextSuite(std::move(config), "mir construction test") {
-		
-		// @TODO 
+		// @TODO
 		// tests here don't tests much apart from the fact that code compiles
 		// and does not throw.
 		// This is due to the fact that LIR is in a very early stage of development
@@ -38,7 +37,6 @@ public:
 	}
 
 private:
-
 	void noTest() {
 		auto [module, scope] = getModule(fs::FilePath(path("modules/simple")));
 
@@ -54,14 +52,13 @@ private:
 			auto& foo_lir = ctx.query<compiler::lir::LowerToLirFunction>({ foo_mir });
 
 			// @TODO: add some proper tests here
-		
+
 			// Test debug print:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
 			std::stringstream foo_str;
 			foo_lir.debugPrint(foo_str);
 		});
 	}
-
 };
 
 TESTER_COMMON_MAIN("/compiler/lir/tests/")

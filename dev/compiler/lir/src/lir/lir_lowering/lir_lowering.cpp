@@ -3,7 +3,7 @@
  * @brief File implementing process of creating LIR function from MIR function
  *
  * @note when adding new cases to logic in this file you should most likely edit:
- * - ... todo 
+ * - ... todo
  */
 
 #include "lir_lowering.hpp"
@@ -31,59 +31,53 @@ namespace compiler::lir {
 	 * @brief Creates LIR local data from MIR local data.
 	 * @todo change argument to MIR local reference.
 	 * @important remember that LirLocal should only be stored in a LIR function.
-	 * 
-	 * @param ctx 
-	 * @param mir_local 
-	 * @return LirLocal 
+	 *
+	 * @param ctx
+	 * @param mir_local
+	 * @return LirLocal
 	 */
 	LirLocal LirLocal::fromMir(query::Context& ctx, const mir::MirLocal& mir_local) {
 		auto type_layout = ctx.query<tsl::QueryTypeLayout>(mir_local.type.getType());
 
-		return LirLocal{
-			mir_local.helios_id,
-			type_layout
-		};
+		return LirLocal{ mir_local.helios_id, type_layout };
 	}
 
 	LirLocal LirLocal::boolLocal(query::Context& ctx) {
-		auto bool_type = ctx.query<tsh::QueryBoolType>({});
+		auto bool_type   = ctx.query<tsh::QueryBoolType>({});
 		auto bool_layout = ctx.query<tsl::QueryTypeLayout>(bool_type);
-		
-		return LirLocal{bool_layout};
+
+		return LirLocal{ bool_layout };
 	}
 
 	/**
 	 * @brief Maps MIR operation to LIR operation for those
 	 * that have direct counterpart.
-	 * 
-	 * @param mir_operation 
-	 * @return LirOperation 
+	 *
+	 * @param mir_operation
+	 * @return LirOperation
 	 */
 	LirOperation mir2lirOperation(mir::Operation mir_operation) {
 		switch (mir_operation) {
-			case mir::Operation::Assign:
-				return LirOperation::Assign;
-			case mir::Operation::ReturnValue:
-				return LirOperation::ReturnValue;
-			case mir::Operation::ReturnVoid:
-				return LirOperation::ReturnVoid;
-			case mir::Operation::Jump:
-				return LirOperation::Jump;
-			case mir::Operation::Branch:
-				return LirOperation::Branch;
-			// @TODO: add more cases
-			default:
-				CORE_PANIC("Operation without direct counterpart");
+		case mir::Operation::Assign:
+			return LirOperation::Assign;
+		case mir::Operation::ReturnValue:
+			return LirOperation::ReturnValue;
+		case mir::Operation::ReturnVoid:
+			return LirOperation::ReturnVoid;
+		case mir::Operation::Jump:
+			return LirOperation::Jump;
+		case mir::Operation::Branch:
+			return LirOperation::Branch;
+		// @TODO: add more cases
+		default:
+			CORE_PANIC("Operation without direct counterpart");
 		}
 	}
 
-
-
 	struct IMPLEMENT_QUERY(LowerToLirFunction, Function) {
-
 		/**
 		 * @brief Helper struct for easy state encapsulation used.
-		 * by LowerToLirFunction query. 
+		 * by LowerToLirFunction query.
 		 * @note This is not a typical struct, and
 		 * should be seen as a set of functions operating on some common state.
 		 * Order of those functions matter, as they build components of LIR function
@@ -91,69 +85,65 @@ namespace compiler::lir {
 		 */
 		struct Mir2Lir {
 			Context& ctx;
-			QKey key;
+			QKey     key;
 
 			Mir2Lir(Context& ctx, QKey key): ctx(ctx), key(key) {}
 
 			base::StableVector<LirLocal> locals;
-			
+
 			// locals mapping:
 			base::Map<mir::LocalRef, LocalRef> mir_to_lir_local;
 			base::Map<mir::LocalRef, LocalRef> mir_to_lifetime_flag;
-			
+
 			base::StableVector<Block> blocks;
-			
+
 			// blocks mapping:
 			base::Map<mir::BlockID, MutBlockRef> mir_to_lir_block;
 
 			std::vector<BlockRef> block_order;
 
-			// helper functions: 
+			// helper functions:
 
 			/**
 			 * @brief Returns LIR local associated with given MIR local.
-			 * 
-			 * @param mir_local 
-			 * @return LocalRef 
+			 *
+			 * @param mir_local
+			 * @return LocalRef
 			 */
-			LocalRef getLocal(mir::LocalRef mir_local) {
-				return mir_to_lir_local.at(mir_local);
-			}
+			LocalRef getLocal(mir::LocalRef mir_local) { return mir_to_lir_local.at(mir_local); }
 
 			/**
 			 * @brief Converts MIR location to LIR location.
-			 * 
-			 * @param loc 
-			 * @return LirLocation 
+			 *
+			 * @param loc
+			 * @return LirLocation
 			 */
 			LirLocation getLocation(const mir::MirLocation& loc) {
 				variant_match(loc.getVariant()) {
 					variant_case(mir::MirIntegerConst, integer) {
-						return LirLocation{integer.value};
+						return LirLocation{ integer.value };
 					}
-					variant_case(mir::LocalRef, local) {
-						return LirLocation{getLocal(local)};
-					}
+					variant_case(mir::LocalRef, local) { return LirLocation{ getLocal(local) }; }
 					variant_case(mir::BlockID, block) {
-						return LirLocation{BlockRef(mir_to_lir_block.at(block))};
+						return LirLocation{ BlockRef(mir_to_lir_block.at(block)) };
 					}
 				}
 				CORE_PANIC("Unhandled variant in getLocation");
 			}
 
 			// main functions:
-			
+
 			/**
 			 * @brief Creates local vars data,
 			 * puts them in a stable vector, and
 			 * maps MIR locals to LIR local refs.
 			 */
 			void makeLocals() {
-				for (const auto& mir_local : key.function.local_list) {
-					auto lir_local = LirLocal::fromMir(ctx, *mir_local);
+				for (const auto& mir_local: key.function.local_list) {
+					auto lir_local     = LirLocal::fromMir(ctx, *mir_local);
 					auto lifetime_flag = LirLocal::boolLocal(ctx);
 
-					auto pos = locals.pushBack(std::move(lir_local));
+					auto pos      = locals.pushBack(std::move(lir_local));
 					auto flag_pos = locals.pushBack(std::move(lifetime_flag));
 
 					mir_to_lir_local.put(mir_local.ref(), locals.getCRef(pos).value());
@@ -163,14 +153,14 @@ namespace compiler::lir {
 
 			void makeInitialBlocks() {
 				// make initial block mapping, and
-				// unfilled blocks that will map to 
+				// unfilled blocks that will map to
 				// beginning of each mir block
-				for (const auto& mir_block : key.function.blocks) {
+				for (const auto& mir_block: key.function.blocks) {
 					// note that this block will only be filled with instructions
 					// and terminator later:
 					auto pos = blocks.pushBack({});
 					mir_to_lir_block.put(mir_block.id, blocks.getRef(pos).value());
-				}	
+				}
 			}
 
 			void lowerBlocks() {
@@ -180,9 +170,8 @@ namespace compiler::lir {
 					block_order.emplace_back(lir_block);
 
 					auto curr_block = lir_block;
-					for (const auto& mir_instruction : block.instructions) {
+					for (const auto& mir_instruction: block.instructions)
 						curr_block = lowerInstruction(curr_block, mir_instruction);
-					}
 
 					lowerTerminator(curr_block, block.terminator);
 				}
@@ -192,16 +181,14 @@ namespace compiler::lir {
 
 			/**
 			 * @brief Maps list of MIR locations to LIR locations.
-			 * 
-			 * @param locs 
-			 * @return std::vector<LirLocation> 
+			 *
+			 * @param locs
+			 * @return std::vector<LirLocation>
 			 */
 			std::vector<LirLocation> getLocations(const std::vector<mir::MirLocation>& locs) {
 				std::vector<LirLocation> result;
 				result.reserve(locs.size());
-				for (const auto& loc : locs) {
-					result.push_back(getLocation(loc));
-				}
+				for (const auto& loc: locs) result.push_back(getLocation(loc));
 				return result;
 			}
 
@@ -211,26 +198,26 @@ namespace compiler::lir {
 			 * @TODO: does calling before always make sense?
 			 * @TODO: implement logic here
 			 *
-			 * @note: it is currently assumed this will not produce new blocks 
-			 * @param curr_block 
-			 * @param mir_instruction 
+			 * @note: it is currently assumed this will not produce new blocks
+			 * @param curr_block
+			 * @param mir_instruction
 			 */
 			void lowerFlags(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
-				for (const auto& flag : mir_instruction.flags) {
+				for (const auto& flag: mir_instruction.flags) {
 					auto lir_local = getLocal(flag.local);
 					switch (flag.flag) {
 						using enum mir::OperationFlag::Flag;
-						case Construct:
-							// @TODO -- set lifetime flag
-							return;
-						case Destruct:
-							// @TODO -- ??? (also: after or before...?)
-							return;
-						case Move:
-							// @TODO -- unset lifetime flag
-							return;
-						default:
-							throw base::NotYetImplemented("flag in lowerFlags");
+					case Construct:
+						// @TODO -- set lifetime flag
+						return;
+					case Destruct:
+						// @TODO -- ??? (also: after or before...?)
+						return;
+					case Move:
+						// @TODO -- unset lifetime flag
+						return;
+					default:
+						throw base::NotYetImplemented("flag in lowerFlags");
 					}
 				}
 			}
@@ -239,36 +226,38 @@ namespace compiler::lir {
 			 * @brief Lowers instruction from MIR to LIR.
 			 * * Fills @p curr_block.
 			 * Legal to use only in lowerBlocks
-			 * @param curr_block 
+			 * @param curr_block
 			 * @return next curr_block
 			 */
-			MutBlockRef lowerInstruction(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
+			MutBlockRef
+				lowerInstruction(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
 				// curr_block already in order
-				
-				CORE_ASSERT(not mir::isTerminating(mir_instruction.operation), "Terminator in lowerInstruction");
+
+				CORE_ASSERT(
+					not mir::isTerminating(mir_instruction.operation),
+					"Terminator in lowerInstruction"
+				);
 				lowerFlags(curr_block, mir_instruction);
 
 				switch (mir_instruction.operation) {
-					case mir::Operation::Assign:
-					{
-						// this is a generic case, that will be used for most instructions
-						// it currently assumes the output is present, but it can be changed
+				case mir::Operation::Assign: {
+					// this is a generic case, that will be used for most instructions
+					// it currently assumes the output is present, but it can be changed
 
-						auto output = getLocal(mir_instruction.output.value());
-						auto args = getLocations(mir_instruction.arguments);
-						curr_block->instructions.emplace_back(
-							mir2lirOperation(mir_instruction.operation),
-							output,
-							std::move(args)
-						);
-						return curr_block;
-					}
-					case mir::Operation::DestructIf:
-						// @TODO implement it, once we know how to call destructors 
-						std::cerr << "DestructIf not implemented in LIR, skipping" << "\n";
-						return curr_block;
-					default:
-						throw base::NotYetImplemented("instruction in LowerToLirFunction");
+					auto output = getLocal(mir_instruction.output.value());
+					auto args   = getLocations(mir_instruction.arguments);
+					curr_block->instructions.emplace_back(
+						mir2lirOperation(mir_instruction.operation), output, std::move(args)
+					);
+					return curr_block;
+				}
+				case mir::Operation::DestructIf:
+					// @TODO implement it, once we know how to call destructors
+					std::cerr << "DestructIf not implemented in LIR, skipping"
+							  << "\n";
+					return curr_block;
+				default:
+					throw base::NotYetImplemented("instruction in LowerToLirFunction");
 				}
 			}
 
@@ -276,55 +265,49 @@ namespace compiler::lir {
 			 * @brief Lowers terminator from MIR to LIR.
 			 * Fills @p curr_block.
 			 * Legal to use only in lowerBlocks
-			 * @param curr_block 
+			 * @param curr_block
 			 * @return next curr_block
 			 */
 			void lowerTerminator(MutBlockRef curr_block, const mir::Instruction& mir_terminator) {
 				// @TODO
 				// curr_block alfredy in order
-				CORE_ASSERT(mir::isTerminating(mir_terminator.operation), "non-Terminator in lowerTerminator");
+				CORE_ASSERT(
+					mir::isTerminating(mir_terminator.operation),
+					"non-Terminator in lowerTerminator"
+				);
 				lowerFlags(curr_block, mir_terminator);
-				
+
 				CORE_ASSERT(mir_terminator.output.empty(), "terminator should not return");
 				switch (mir_terminator.operation) {
-					case mir::Operation::ReturnVoid:
-					case mir::Operation::ReturnValue:
-					case mir::Operation::Jump: 
-					case mir::Operation::Branch: {
-						auto args = getLocations(mir_terminator.arguments);
-						curr_block->terminator = Instruction{
-							mir2lirOperation(mir_terminator.operation),
-							{},
-							std::move(args)
-						};
-						break;
-					}
-					case mir::Operation::FunctionEnd: {
-						// @TODO...
-						curr_block->terminator = Instruction{
-							LirOperation::ReturnVoid,
-							{},
-							{}
-						};
-						break;
-					}
-					// @TODO: add more cases
-					default:
-						throw base::NotYetImplemented("terminator in LowerToLirFunction");
+				case mir::Operation::ReturnVoid:
+				case mir::Operation::ReturnValue:
+				case mir::Operation::Jump:
+				case mir::Operation::Branch: {
+					auto args              = getLocations(mir_terminator.arguments);
+					curr_block->terminator = Instruction{
+						mir2lirOperation(mir_terminator.operation), {}, std::move(args)
+					};
+					break;
+				}
+				case mir::Operation::FunctionEnd: {
+					// @TODO...
+					curr_block->terminator = Instruction{ LirOperation::ReturnVoid, {}, {} };
+					break;
+				}
+				// @TODO: add more cases
+				default:
+					throw base::NotYetImplemented("terminator in LowerToLirFunction");
 				}
 			}
 
 			/**
 			 * @brief Return function composed of generated data.
 			 * Should be used once, at the end of LIR function creation.
-			 * @return Function 
+			 * @return Function
 			 */
 			Function get() {
 				return Function{
-					key.function.name,
-					std::move(blocks),
-					std::move(locals),
-					std::move(block_order)
+					key.function.name, std::move(blocks), std::move(locals), std::move(block_order)
 				};
 			}
 		};
@@ -332,7 +315,7 @@ namespace compiler::lir {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// LirFunction is build-inplace here, and for this reason
 			// actives legal state only at the end.
-			// for this reason additional assertions should be put inplace, to 
+			// for this reason additional assertions should be put inplace, to
 			// ensure that the state is legal.
 
 			// what we do here:
@@ -343,7 +326,7 @@ namespace compiler::lir {
 			//   * generating lir-instructions, lir-blocks from each mir-instruction
 			// * mapping block numbers somehow
 
-			Mir2Lir mir2lir{ctx, key};
+			Mir2Lir mir2lir{ ctx, key };
 
 			// call order matters:
 			mir2lir.makeLocals();
@@ -358,4 +341,3 @@ namespace compiler::lir {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToLirFunction);
 }
-

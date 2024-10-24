@@ -8,8 +8,6 @@ namespace compiler::mir {
 	struct MirLocal;
 }
 
-
-
 // clang-format off
 
 // @TODO: two enums with the same name included in one cpp lead to compiler error.
@@ -50,7 +48,7 @@ namespace compiler::lir {
 	/**
 	 * @brief Reference to block in LIR.
 	 */
-	using BlockRef    = CRef<Block>;
+	using BlockRef = CRef<Block>;
 
 	/**
 	 * @brief Any value in LIR representation
@@ -66,7 +64,7 @@ namespace compiler::lir {
 		LirLocation(LocalRef value): value(value) {}
 
 		LirLocation(BlockRef value): value(value) {}
-	
+
 		bool operator==(const LirLocation& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
@@ -87,7 +85,6 @@ namespace compiler::lir {
 		const T& get() const {
 			return std::get<T>(value);
 		}
-
 	};
 
 	/**
@@ -100,7 +97,7 @@ namespace compiler::lir {
 		/**
 		 * @brief HELIOS id of the variable, if exist.
 		 */
-		base::Optional<helios::SymID>   helios_id;
+		base::Optional<helios::SymID> helios_id;
 
 		// a copy of type-layout here might bu sub-optimal
 		tsl::TypeLayout type;
@@ -109,13 +106,11 @@ namespace compiler::lir {
 
 	private:
 		LirLocal(helios::SymID helios_id, tsl::TypeLayout type):
-			helios_id(helios_id),
-			type(std::move(type)) {}
+			  helios_id(helios_id),
+			  type(std::move(type)) {}
 
-		LirLocal(tsl::TypeLayout type):
-			helios_id({}),
-			type(std::move(type)) {}
-		
+		LirLocal(tsl::TypeLayout type): helios_id({}), type(std::move(type)) {}
+
 		friend struct Function;
 		friend LocalRef;
 
@@ -125,14 +120,13 @@ namespace compiler::lir {
 		// @TODO: change to LocalRef (not now, due to forward declaration)
 		static LirLocal fromMir(query::Context& ctx, const mir::MirLocal& mir_local);
 		static LirLocal boolLocal(query::Context& ctx);
-
 	};
 
 	/**
 	 * @brief Single instruction of LIR code.
 	 */
 	struct Instruction final {
-		LirOperation operation = LirOperation::Uninitialized;
+		LirOperation             operation = LirOperation::Uninitialized;
 		base::Optional<LocalRef> output;
 		std::vector<LirLocation> arguments;
 
@@ -145,17 +139,16 @@ namespace compiler::lir {
 		Instruction& operator=(Instruction&&) = default;
 
 		Instruction(
-			LirOperation               operation,
-			base::Optional<LocalRef>   output,
-			std::vector<LirLocation>   arguments
+			LirOperation             operation,
+			base::Optional<LocalRef> output,
+			std::vector<LirLocation> arguments
 		):
-			operation(operation),
-			output(output),
-			arguments(std::move(arguments)) {}
+			  operation(operation),
+			  output(output),
+			  arguments(std::move(arguments)) {}
 
 		void debugPrint(std::ostream& output) const;
 	};
-	
 
 	/**
 	 * @brief LIR block.
@@ -167,7 +160,6 @@ namespace compiler::lir {
 		Instruction              terminator;
 	};
 
-
 	/**
 	 * @brief Function in LIR.
 	 */
@@ -175,7 +167,7 @@ namespace compiler::lir {
 		// @TODO: store type of the function
 
 		// @TODO: is this name mangled somehow:?
-		base::StrID                  name;
+		base::StrID name;
 
 		base::StableVector<Block>    blocks;
 		base::StableVector<LirLocal> local_list;

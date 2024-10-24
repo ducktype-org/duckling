@@ -117,9 +117,7 @@ namespace compiler::mir {
 		[[nodiscard]]
 		base::StrID getName() const;
 
-		bool operator==(const MirLocal& other) const {
-			return id == other.id;
-		};
+		bool operator==(const MirLocal& other) const { return id == other.id; }
 	};
 
 	/**
@@ -138,7 +136,7 @@ namespace compiler::mir {
 		MirLocation(LocalRef value): value(value) {}
 
 		MirLocation(BlockID value): value(value) {}
-		
+
 		bool operator==(const MirLocation& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
@@ -172,7 +170,7 @@ namespace compiler::mir {
 		enum class Flag { Construct, Destruct, Move };
 		Flag     flag;
 		LocalRef local;
-		
+
 		bool operator==(const OperationFlag& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
