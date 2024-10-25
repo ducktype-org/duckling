@@ -26,7 +26,9 @@ public:
 	}
 
 private:
-	void test_printing(const tsl::TypeLayout& layout, query::Context& ctx, bool do_non_recursive = false) {
+	void test_printing(
+		const tsl::TypeLayout& layout, query::Context& ctx, bool do_non_recursive = false
+	) {
 		std::cout << layout.toStringIdentification() << "\n";
 		std::cout << layout.toStringDefinition(ctx) << "\n";
 		std::cout << "non recursive:\n";
