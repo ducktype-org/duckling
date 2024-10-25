@@ -84,7 +84,7 @@ namespace tsl {
 			  source_type(source_type) {}
 
 		[[nodiscard]]
-		static std::string getIndent(u32 indent) {
+		static auto getIndent(u32 indent) {
 			return std::string(indent, '\t');
 		}
 	};

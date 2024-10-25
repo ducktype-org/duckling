@@ -102,7 +102,7 @@ namespace tsl {
 			result.resize(offsets.size());
 
 			for (usize component_idx = 0; component_idx < offsets.size(); component_idx++)
-				pq.push({ offsets[component_idx], component_idx });
+				pq.emplace(offsets[component_idx], component_idx);
 
 			usize offset_idx = offsets.size() - 1;
 			while (!pq.empty()) {
@@ -115,7 +115,7 @@ namespace tsl {
 		}
 
 		std::vector<compiler::helios::SymID> offsetsToSymIDs(
-			const std::vector<usize>& offsets, const std::vector<tsh::InterfaceElement> fields
+			const std::vector<usize>& offsets, const std::vector<tsh::InterfaceElement>& fields
 		) {
 			std::vector<usize>                   permutation = offsetsToPermutation(offsets);
 			std::vector<compiler::helios::SymID> result;
