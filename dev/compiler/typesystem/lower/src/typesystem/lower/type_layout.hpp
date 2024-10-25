@@ -126,7 +126,8 @@ namespace tsl {
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
-			return getIndent(indent) + "i" + std::to_string(getSize()) + " : " + std::to_string(getSize());
+			return getIndent(indent) + "i" + std::to_string(getSize()) + " : "
+			     + std::to_string(getSize());
 		}
 	};
 
@@ -140,7 +141,8 @@ namespace tsl {
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
-			return getIndent(indent) + "f" + std::to_string(getSize()) + " : " + std::to_string(getSize());
+			return getIndent(indent) + "f" + std::to_string(getSize()) + " : "
+			     + std::to_string(getSize());
 		}
 	};
 
