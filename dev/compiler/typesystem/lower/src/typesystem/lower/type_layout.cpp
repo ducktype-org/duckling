@@ -97,25 +97,29 @@ namespace tsl {
 		 * @return How the component types are permuted.
 		 */
 		std::vector<usize> offsetsToPermutation(const std::vector<usize>& offsets) {
-			std::priority_queue<std::pair<usize, usize>> pq;
-			std::vector<usize>                           result;
-			result.resize(offsets.size());
+			std::vector<std::pair<usize, usize>> offsets_with_idxs;
+			std::vector<usize>                   result;
+			offsets_with_idxs.reserve(offsets.size());
+			result.reserve(offsets.size());
 
 			for (usize component_idx = 0; component_idx < offsets.size(); component_idx++)
-				pq.emplace(offsets[component_idx], component_idx);
+				offsets_with_idxs.emplace_back(offsets[component_idx], component_idx);
+			std::sort(offsets_with_idxs.begin(), offsets_with_idxs.end());
 
-			usize offset_idx = offsets.size() - 1;
-			while (!pq.empty()) {
-				result[offset_idx] = pq.top().second;
-				pq.pop();
-				offset_idx--;
-			}
+			for (auto [offset, component_idx]: offsets_with_idxs) result.push_back(component_idx);
 
 			return result;
 		}
 
+		/**
+		 * @brief Get a map from the index of appearance in a class layout to symbol ID of field.
+		 * @param fields The interface elements representing the fields in a class.
+		 * @param offsets The offsets of the @p fields, in the same order.
+		 * @return A vector which has the field symbols in the order in which they appear in the
+		 * layout.
+		 */
 		std::vector<compiler::helios::SymID> offsetsToSymIDs(
-			const std::vector<usize>& offsets, const std::vector<tsh::InterfaceElement>& fields
+			const std::vector<tsh::InterfaceElement>& fields, const std::vector<usize>& offsets
 		) {
 			std::vector<usize>                   permutation = offsetsToPermutation(offsets);
 			std::vector<compiler::helios::SymID> result;
@@ -268,7 +272,7 @@ namespace tsl {
 			  field_elements(getFieldsOfInterface(class_info.getInterface(ctx))),
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
-			  offset_idx_to_sym_id(offsetsToSymIDs(field_offsets, field_elements)),
+			  offset_idx_to_sym_id(offsetsToSymIDs(field_elements, field_offsets)),
 			  total_size(
 				  field_layouts.empty()
 					  ? 0

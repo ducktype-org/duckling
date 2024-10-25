@@ -73,7 +73,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		virtual std::string toStringIdentification() const {
-			return "Layout of " + source_type.toString();
+			return "Layout of " + source_type.toString() + " : " + std::to_string(getSize());
 		}
 
 		virtual ~TypeLayoutABC() = default;
@@ -104,7 +104,7 @@ namespace tsl {
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
-			return getIndent(indent) + "{}";
+			return getIndent(indent) + "{} : " + std::to_string(getSize());
 		}
 	};
 
@@ -126,7 +126,7 @@ namespace tsl {
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
-			return getIndent(indent) + "i" + std::to_string(getSize());
+			return getIndent(indent) + "i" + std::to_string(getSize()) + " : " + std::to_string(getSize());
 		}
 	};
 
@@ -140,7 +140,7 @@ namespace tsl {
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
-			return getIndent(indent) + "f" + std::to_string(getSize());
+			return getIndent(indent) + "f" + std::to_string(getSize()) + " : " + std::to_string(getSize());
 		}
 	};
 
@@ -266,7 +266,10 @@ namespace tsl {
 	 */
 	class ClassTypeLayout: public TypeLayoutABC {
 		base::Map<compiler::helios::SymID, usize> field_offsets;
-		std::vector<compiler::helios::SymID>      offset_idx_to_sym_id;
+		/**
+		 * @brief A mapping of the order of appearance in the layout to the symbol of the field.
+		 */
+		std::vector<compiler::helios::SymID> offset_idx_to_sym_id;
 
 		// Delegate constructor.
 		ClassTypeLayout(struct ClassTypeLayoutConstructionHelper&& helper);

@@ -31,8 +31,10 @@ private:
 	) {
 		std::cout << layout.toStringIdentification() << "\n";
 		std::cout << layout.toStringDefinition(ctx) << "\n";
-		std::cout << "non recursive:\n";
-		if (do_non_recursive) std::cout << layout.toStringDefinition(ctx, false) << "\n";
+		if (do_non_recursive) {
+			std::cout << "non recursive:\n";
+			std::cout << layout.toStringDefinition(ctx, false) << "\n";
+		}
 	}
 
 	void basic_types_test() {
