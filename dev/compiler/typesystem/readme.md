@@ -33,6 +33,6 @@ The Lower Type System is responsible for generating precise runtime in-memory ty
 
 The Lower Type System depends on the Higher Type System. It generates its data based on the information provided by its counterpart.
 
-It is not crucial for the Lower Type System to deduplicate its data.
+It is not crucial for the Lower Type System to deduplicate its data. However, it is important for the same layouts to be generated for the same types. In other words, the Lower Type System does not have to deduplicate its data, but the generated data must be consistent and, in a sense, confluent.
 
 \todo More details about components (names unknown) in other pages.

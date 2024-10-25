@@ -362,7 +362,7 @@ namespace tsh::internal {
 
 		explicit PointerInfoImpl(const ComponentType component): component(component) {
 			representation = base::strConcat(
-				"pointer(", component.is_mutable ? "" : "const", component.type.toString(), ")"
+				"pointer(", component.is_mutable ? "" : "const ", component.type.toString(), ")"
 			);
 		}
 

@@ -34,7 +34,7 @@ namespace tsl {
 
 	public:
 		// This definition is necessary for default definitions in deriving classes.
-		bool operator==(const TypeLayoutABC& other) const = default;
+		bool operator<=>(const TypeLayoutABC& other) const = default;
 
 		/**
 		 * @brief Get the total size of a layout, in bits.
@@ -54,12 +54,39 @@ namespace tsl {
 			return source_type;
 		}
 
+		/**
+		 * @brief Get a string describing the layout in a human-friendly format.
+		 * @param ctx The query context for fetching layouts of components in composite layouts.
+		 * @param recursive Whether the layout string should contain full layout strings of
+		 * composite component types. Setting this to `false` will result in the use of IDs instead.
+		 * @param indent The indent at which to print. Mostly used internally for recursive prints.
+		 * @return A string describing the layout.
+		 */
+		[[nodiscard]]
+		virtual std::string
+			toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0) const
+			= 0;
+
+		/**
+		 * @brief Get a relatively short string identifying the type layout.
+		 * @return A string identifying the type layout.
+		 */
+		[[nodiscard]]
+		virtual std::string toStringIdentification() const {
+			return "Layout of " + source_type.toString();
+		}
+
 		virtual ~TypeLayoutABC() = default;
 
 	protected:
 		TypeLayoutABC(usize size, tsh::TypeInfo source_type):
 			  size(size),
 			  source_type(source_type) {}
+
+		[[nodiscard]]
+		static std::string getIndent(u32 indent) {
+			return std::string(indent, '\t');
+		}
 	};
 
 	class TypeLayout;
@@ -74,6 +101,11 @@ namespace tsl {
 	class EmptyTypeLayout: public TypeLayoutABC {
 	public:
 		EmptyTypeLayout(tsh::UnitInfo unit_info): TypeLayoutABC(0, unit_info) {}
+
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
+			return getIndent(indent) + "{}";
+		}
 	};
 
 	/**
@@ -91,6 +123,11 @@ namespace tsl {
 
 		IntegralTypeLayout(tsh::IntegralInfo integral_info):
 			  TypeLayoutABC(integral_info.getSize(), integral_info) {}
+
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
+			return getIndent(indent) + "i" + std::to_string(getSize());
+		}
 	};
 
 	/**
@@ -100,6 +137,11 @@ namespace tsl {
 	public:
 		FloatTypeLayout(tsh::FloatInfo float_info):
 			  TypeLayoutABC(float_info.getSize(), float_info) {}
+
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
+			return getIndent(indent) + "f" + std::to_string(getSize());
+		}
 	};
 
 	/**
@@ -109,6 +151,7 @@ namespace tsl {
 		usize tag_offset;
 		usize tag_size;
 		usize data_offset;
+		usize data_size;
 
 		base::Map<tsh::TypeInfo, usize> type_to_index;
 		std::vector<tsh::TypeInfo>      index_to_type;
@@ -160,6 +203,10 @@ namespace tsl {
 		tsh::TypeInfo getTypeOfIndex(usize index) const {
 			return index_to_type[index];
 		}
+
+		[[nodiscard]]
+		std::string
+			toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
 	};
 
 	/**
@@ -168,8 +215,17 @@ namespace tsl {
 	class TupleTypeLayout: public TypeLayoutABC {
 		/**
 		 * @brief The component offsets, in bytes.
+		 *
+		 * @note Not necessarily increasing. These offsets are given in the order of the components
+		 * in the source tuple type. This order may not be preserved in the layout.
 		 */
 		std::vector<usize> component_offsets;
+
+		/**
+		 * @brief The component indices of the components in the original tuple type, sorted by
+		 * their order of appearance (offset) in the layout.
+		 */
+		std::vector<usize> offset_idx_to_component_idx;
 
 		// Delegate constructor.
 		TupleTypeLayout(struct TupleTypeLayoutConstructionHelper&& helper);
@@ -179,6 +235,9 @@ namespace tsl {
 
 		/**
 		 * @return The full list of component offsets, in bytes.
+		 *
+		 * @note Not necessarily increasing. These offsets are given in the order of the components
+		 * in the source tuple type. This order may not be preserved in the layout.
 		 */
 		[[nodiscard]]
 		const std::vector<usize>& getComponentOffsets() const {
@@ -186,26 +245,31 @@ namespace tsl {
 		}
 
 		/**
-		 * @param index The index of a component.
+		 * @param index The index of a component in the original tuple type.
 		 * @return The offset of the component corresponding to the given index, in bytes.
 		 */
 		[[nodiscard]]
 		usize getComponentOffset(usize index) const {
 			return getComponentOffsets()[index];
 		}
+
+		[[nodiscard]]
+		std::string
+			toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
 	};
 
 	/**
 	 * @brief Layout of class type.
 	 *
 	 * @todo Add vtable support.
-	 * @todo Add laout of base classes.
+	 * @todo Add layout of base classes.
 	 */
 	class ClassTypeLayout: public TypeLayoutABC {
 		base::Map<compiler::helios::SymID, usize> field_offsets;
+		std::vector<compiler::helios::SymID>      offset_idx_to_sym_id;
 
 		// Delegate constructor.
-		ClassTypeLayout(const struct ClassTypeLayoutConstructionHelper& helper);
+		ClassTypeLayout(struct ClassTypeLayoutConstructionHelper&& helper);
 
 	public:
 		ClassTypeLayout(tsh::ClassInfo class_info, query::Context& ctx);
@@ -226,6 +290,10 @@ namespace tsl {
 		usize getFieldOffset(compiler::helios::SymID symbol) const {
 			return getFieldOffsets().at(symbol);
 		}
+
+		[[nodiscard]]
+		std::string
+			toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
 	};
 
 	/**
@@ -236,6 +304,11 @@ namespace tsl {
 		// @TODO: Add support for function objects
 		FunctionalTypeLayout(tsh::FunctionInfo function_info):
 			  TypeLayoutABC(POINTER_SIZE, function_info) {}
+
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
+			return getIndent(indent) + "Functional : " + std::to_string(getSize());
+		}
 	};
 
 	/**
@@ -272,6 +345,12 @@ namespace tsl {
 
 		// There is NO constructor from ReferenceInfo because
 		// ReferenceInfo will be soon removed. @TODO: remove this comment.
+
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
+			return getIndent(indent) + "Pointer to " + getSourceType().toString() + " : "
+			     + std::to_string(getSize());
+		}
 	};
 
 	using TypeLayoutDirectVariant = std::variant<
@@ -299,10 +378,29 @@ namespace tsl {
 
 		using TypeLayoutDirectVariant::TypeLayoutDirectVariant;
 
+		/**
+		 * @copydoc TypeLayoutABC::getSize
+		 */
 		[[nodiscard]]
 		usize getSize() const;
 
+		/**
+		 * @copydoc TypeLayoutABC::getSourceType
+		 */
 		[[nodiscard]]
 		tsh::TypeInfo getSourceType() const;
+
+		/**
+		 * @copydoc TypeLayoutABC::toStringDefinition
+		 */
+		[[nodiscard]]
+		std::string
+			toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0) const;
+
+		/**
+		 * @copydoc TypeLayoutABC::toStringIdentification
+		 */
+		[[nodiscard]]
+		std::string toStringIdentification() const;
 	};
 }

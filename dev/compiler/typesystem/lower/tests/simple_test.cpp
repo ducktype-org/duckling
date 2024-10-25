@@ -26,6 +26,13 @@ public:
 	}
 
 private:
+	void test_printing(tsl::TypeLayout layout, query::Context& ctx, bool do_non_recursive = false) {
+		std::cout << layout.toStringIdentification() << "\n";
+		std::cout << layout.toStringDefinition(ctx) << "\n";
+		std::cout << "non recursive:\n";
+		if (do_non_recursive) std::cout << layout.toStringDefinition(ctx, false) << "\n";
+	}
+
 	void basic_types_test() {
 		withContextDo([&](query::Context& ctx) -> void {
 			UnitInfo   unit_type   = ctx.query<QueryUnitType>({});
@@ -41,6 +48,7 @@ private:
 				}
 				variant_default { fail("Layout of unit type should be empty."); }
 			}
+			test_printing(unit_layout, ctx);
 
 			TypeInfo byte_sized_types[]{
 				ctx.query<QueryByteType>({}),
@@ -62,6 +70,7 @@ private:
 					}
 					variant_default { fail("Layout of byte sized type should be integral."); }
 				}
+				test_printing(byte_sized_layout, ctx);
 			}
 
 			usize int_sizes[] = { 8, 16, 32, 64, 128 };
@@ -81,6 +90,7 @@ private:
 					}
 					variant_default { fail("Layout of integral type should be integral."); }
 				}
+				test_printing(int_layout, ctx);
 			}
 
 			usize float_sizes[] = { 16, 32, 64, 80, 128 };
@@ -100,6 +110,7 @@ private:
 					}
 					variant_default { fail("Layout of float type should be float."); }
 				}
+				test_printing(float_layout, ctx);
 			}
 
 			FunctionInfo function_type     = ctx.query<QueryFunctionType>({ {}, unit_type });
@@ -117,6 +128,7 @@ private:
 				}
 				variant_default { fail("Layout of function type should be functional."); }
 			}
+			test_printing(functional_layout, ctx);
 
 			RawPointerInfo raw_pointer_type   = ctx.query<QueryRawPointerType>({});
 			TypeLayout     raw_pointer_layout = ctx.query<QueryTypeLayout>(raw_pointer_type);
@@ -134,6 +146,7 @@ private:
 				}
 				variant_default { fail("Layout of raw pointer type should be pointer-like."); }
 			}
+			test_printing(raw_pointer_layout, ctx);
 
 			PointerInfo unit_pointer_type   = ctx.query<QueryPointerType>({ unit_type });
 			TypeLayout  unit_pointer_layout = ctx.query<QueryTypeLayout>(unit_pointer_type);
@@ -155,6 +168,7 @@ private:
 				}
 				variant_default { fail("Layout of raw pointer type should be pointer-like."); }
 			}
+			test_printing(unit_pointer_layout, ctx);
 		});
 	}
 
@@ -192,6 +206,7 @@ private:
 				}
 				variant_default { fail("Layout of variant type should be variant-like."); }
 			}
+			test_printing(variant_layout, ctx, true);
 		});
 	}
 
@@ -223,6 +238,7 @@ private:
 				}
 				variant_default { fail("Layout of tuple type should be tuple-like."); }
 			}
+			test_printing(tuple_layout, ctx, true);
 		});
 	}
 
@@ -277,6 +293,7 @@ private:
 				}
 				variant_default { fail("Layout of class type should be class-like."); }
 			}
+			test_printing(my_class_layout, ctx, true);
 		});
 	}
 
