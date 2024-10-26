@@ -202,8 +202,7 @@ namespace compiler::backend::llvm_backend {
 
 
 	void llvmPrintLir(const lir::Function& lir_function) {
-		// Create a new module.
-		// std::unique_ptr<Module> TheModule = std::make_unique<Module>("
+
 
 		llvm::InitializeNativeTarget();
 		llvm::InitializeNativeTargetAsmPrinter();

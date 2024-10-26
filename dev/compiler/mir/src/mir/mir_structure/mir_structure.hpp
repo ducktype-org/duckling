@@ -121,6 +121,8 @@ namespace compiler::mir {
 	struct MirLocation final {
 	private:
 		// @TODO: global, literal, func-literal, ...
+		// "LocalAccess" a.b.c
+		// "GlobalAccess" a.b.c
 		using ValueType = std::variant<MirIntegerConst, LocalRef, BlockID>;
 
 		ValueType value;
