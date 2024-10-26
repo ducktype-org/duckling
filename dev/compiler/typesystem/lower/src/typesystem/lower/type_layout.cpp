@@ -4,9 +4,6 @@
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
-#include <queue>
-#include <ranges>
-
 namespace tsl {
 	namespace {
 		/**
