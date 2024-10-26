@@ -9,7 +9,7 @@ This folder contains scripts we use in the project.
 * [cmake](cmake/) - scipts that enhance building and testing the project,
 * [downloads](downloads/) - place for storing downloaded files,
 * [formatting](formatting/) - scripts for formatting the repository,
-* [RiftVM](RiftVM/) - scripts for the Rift Virtual Machine,
+* [VM](VM/) - scripts for the Duckling Virtual Machine,
 * [toolbox](toolbox/) - python modules used by `toolbox.py`.
 
 @subpage cmake-scripts-readme

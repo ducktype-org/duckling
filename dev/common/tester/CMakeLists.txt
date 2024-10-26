@@ -8,5 +8,5 @@ target_compile_definitions(Tester PRIVATE CMAKE_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
 
 add_example(tester_example examples/tester_example.cpp USES Tester Printer)
 
-rift_add_test(common tester_test_simple tests/test.cpp
+duck_add_test(common tester_test_simple tests/test.cpp
 	USES)

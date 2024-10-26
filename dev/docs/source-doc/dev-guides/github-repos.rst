@@ -17,8 +17,8 @@ Source code structure
 ---------------------
 
 * ``DucklingLS`` - duckling language server code
-* ``RiftCompiler`` - compiler code
-* ``RiftVM`` - virtual machine code
+* ``compiler`` - compiler code
+* ``VM`` - virtual machine code
 * ``base`` - custom module with standard-library-like implmentations
 * ``common`` - commonly used modules
 * ``docs`` - documentation

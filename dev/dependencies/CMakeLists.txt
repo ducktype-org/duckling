@@ -43,7 +43,6 @@ FetchContent_Declare(
 	URL "https://github.com/tobiaslocker/base64/archive/${BASE64_COMMIT}.zip"
 )
 
-
 # @CMAKE 25: change to usage of FetchContent_Declare SYSTEM parameter
 function(setAsSystemLibrary libname)
 	get_target_property(TEMP ${libname} INTERFACE_INCLUDE_DIRECTORIES)
@@ -66,21 +65,21 @@ find_library(gvc gvc)
 
 FindOrBuildICU(VERSION 74.1 URL "${ICU_RELEASE}" URL_HASH "${ICU_CONTROL}")
 
-FetchContent_MakeAvailable(base64)
-add_library(base64 INTERFACE)
-target_include_directories(base64 INTERFACE "${base64_SOURCE_DIR}/include" "${base64_SOURCE_DIR}/test")
+# Do not call MakeAvailable, because
+# we want to avoid using their CMakeLists.txt
 FetchContent_GetProperties(base64)
 if(NOT base64_POPULATED)
-    FetchContent_Populate(base64)
-    add_subdirectory("${base64_SOURCE_DIR}" "${base64_BINARY_DIR}")
+	FetchContent_Populate(base64)
 endif()
+
+add_library(base64 INTERFACE)
+target_include_directories(base64 INTERFACE "${base64_SOURCE_DIR}/include")
+setAsSystemLibrary(base64)
 
 BuildTreeSitter(
 	TS_URL "https://github.com/tree-sitter/tree-sitter/archive/${TREE_SITTER_COMMIT}.zip"
 	TS_CPP_URL "https://github.com/tree-sitter/tree-sitter-cpp/archive/${TREE_SITTER_CPP_COMMIT}.zip"
 )
-
-add_dependencies(build_all_tests base64_tests roundtrip_test)
 
 # This macro inserts LLVM as a library to the project. It should be used in the top-level
 # CMakeList.txt file.

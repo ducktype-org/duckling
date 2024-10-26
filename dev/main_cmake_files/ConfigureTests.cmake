@@ -3,9 +3,37 @@ if(ENABLE_COVERAGE)
 	find_program(LCOV lcov REQUIRED)
 	find_program(GENHTML genhtml REQUIRED)
 
+	# This target is used to generate coverage report.
+	# We do it in two steps since by default lcov 
+	# does not generate coverage data for files not linked by the tests.
+	# https://stackoverflow.com/a/78554322
+	# Some helpful guide: https://wiki.documentfoundation.org/Development/Lcov
 	add_custom_target(coverage
-		COMMAND ${LCOV} --directory "${CMAKE_SOURCE_DIR}" --capture --output-file coverage.info
-			--base-directory "${CMAKE_SOURCE_DIR}" --no-external --exclude "**/_deps/**"
+		# Initial coverage created for all files in the project.
+		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
+						--initial 
+						--capture 
+						--base-directory "${CMAKE_SOURCE_DIR}" 
+						--no-external 
+						--output-file coverage_base.info
+		# Creating coverage data for the tests.
+		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
+						--capture 
+						--base-directory "${CMAKE_SOURCE_DIR}" 
+						--no-external 
+						--output-file coverage_test.info
+		# Merging the two coverage data files.
+		COMMAND ${LCOV} --add-tracefile coverage_base.info 
+						--add-tracefile coverage_test.info 
+						--output-file coverage_unfiltered.info
+		# Removing unwanted files from the coverage report.
+		COMMAND ${LCOV} --ignore-errors unused # Unused exclusions returns an error ("playground" is currently unused).
+						--remove coverage_unfiltered.info 
+						"**/tests/**" 
+						"**/playground/**"
+						"${CMAKE_BINARY_DIR}/**"  # Especially we should exclude the dependencies.
+						--output-file coverage.info
+		
 		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 		VERBATIM)
@@ -18,7 +46,7 @@ include(CTest)
 enable_testing()
 
 # Common functions:
-function(rift_add_test test_pack test_name source USES)
+function(duck_add_test test_pack test_name source USES)
 	if(${USES} STREQUAL "USES")
 		add_executable(${test_name} ${CMAKE_CURRENT_LIST_DIR}/${source})
 		target_link_libraries(${test_name} Tester ${ARGN})
@@ -40,7 +68,7 @@ function(rift_add_test test_pack test_name source USES)
 
 		set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
 	else()
-		message(FATAL_ERROR "rift_add_test lacks uses clause")
+		message(FATAL_ERROR "duck_add_test lacks uses clause")
 	endif()
 endfunction()
 

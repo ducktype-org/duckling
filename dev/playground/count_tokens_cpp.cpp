@@ -64,7 +64,7 @@ struct CppParser {
 		if (ts_parser_set_language(parser, tree_sitter_cpp()))
 			tree = ts_parser_parse_string(parser, nullptr, source_code.data(), source_code.size());
 		else
-			RIFT_PANIC("Failed to set parser language.");
+			CORE_PANIC("Failed to set parser language.");
 	}
 
 	int getTokenCount() {
@@ -88,7 +88,7 @@ int main(int argc, const char** argv) {
 		input = clap.parse(argc, argv);
 	} catch (clap::exceptions::ClapException& e) {
 		printer::StreamPrinter::print({
-			{ "rift: ", printer::Color::DEFAULT },
+			{ "duckling: ", printer::Color::DEFAULT },
 			{ "error: ", printer::Color::RED },
 			{ e.what(), printer::Color::DEFAULT },
 		});

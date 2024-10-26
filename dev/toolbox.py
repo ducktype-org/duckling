@@ -22,6 +22,8 @@ from scripts.toolbox.internet_file import (
     callback_unTAR,
 )
 
+from scripts.toolbox.cpp_linter import simulate_cpp_linter
+
 DATA_USER = "dev"
 # @FUTURE: change this password and hide it:
 DATA_PASS = "7ocwXWOAwg="
@@ -340,9 +342,12 @@ def test(*args, **kwargs):
     """Performs tests of the code"""
     test_impl(*args, **kwargs)
 
+
 def download_llvm_impl(version, arch):
     log_info("==========================")
-    log_info("Downloading LLVM may or may not work, depending on a presence of compiled binaries listed here: https://github.com/llvm/llvm-project/releases/")
+    log_info(
+        "Downloading LLVM may or may not work, depending on a presence of compiled binaries listed here: https://github.com/llvm/llvm-project/releases/"
+    )
     log_new_line()
     log_info("- A note on binaries -")
     log_info("Volunteers make binaries for the LLVM project, which will be uploaded")
@@ -353,7 +358,7 @@ def download_llvm_impl(version, arch):
     log_info("==========================")
     log_new_line()
 
-    if arch == 'x86_64':
+    if arch == "x86_64":
         name = f"clang+llvm-{version}-{arch}-linux-gnu-ubuntu-18.04"
     else:
         name = f"clang+llvm-{version}-{arch}-linux-gnu"
@@ -367,7 +372,6 @@ def download_llvm_impl(version, arch):
         ],
     )
     llvm_file.download()
-
 
 
 @cli.command()
@@ -384,13 +388,43 @@ def download_llvm_impl(version, arch):
     prompt="Architecture",
     help="Architecture of the target machine",
     default="x86_64",
-    type=click.Choice(
-        ["x86_64", "aarch64"], case_sensitive=False
-    ),
+    type=click.Choice(["x86_64", "aarch64"], case_sensitive=False),
 )
 def download_llvm(*args, **kwargs):
     """Downloads specified version of LLVM. This is LINUX ONLY."""
     download_llvm_impl(*args, **kwargs)
+
+
+@cli.command()
+@click.option(
+    "-t",
+    "--tidy",
+    "clang_tidy_path",
+    prompt="clang-tidy path",
+    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-17 or clang-tidy",
+    default="clang-tidy-17",
+)
+@click.option(
+    "-f",
+    "--format",
+    "clang_format_path",
+    prompt="clang-format path",
+    help="Path to clang-format, ex. /usr/bin/clang-format-17 or clang-format",
+    default="scripts/downloads/clang-format",
+)
+@click.option(
+    "-b",
+    "--build",
+    prompt="build folder",
+    help="Path to build folder with compile_commands.json",
+    default="build",
+)
+def linter(*args, **kwargs):
+    """Simulates clang-tidy and clang-format as if in a workflow.
+
+    It compares the current branch's working tree with the most recent common ancestor shared with the 'main' branch (called the merge base).
+    """
+    simulate_cpp_linter(*args, **kwargs)
 
 
 if __name__ == "__main__":
@@ -399,6 +433,6 @@ if __name__ == "__main__":
 
     # Disable traceback for shorter error messages.
     # Comment this line when debugging.
-    sys.tracebacklimit = 0
+    # sys.tracebacklimit = 0
 
     cli()
