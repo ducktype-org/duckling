@@ -1,0 +1,22 @@
+File,Category,C++ Tokens,Duck Tokens,Duck Percentage of C++
+default_members,features,469,274,58.42%
+enum,features,890,549,61.69%
+multi_return_values,features,65,57,87.69%
+class_using,features,157,151,96.18%
+simple_if,features,68,56,82.35%
+loop,features,59,34,57.63%
+match,features,113,113,100.00%
+match_pair,features,104,79,75.96%
+sito,cp,107,95,88.79%
+choinka,cp,1539,1471,95.58%
+kapitan,cp,748,642,85.83%
+1,cp,750,641,85.47%
+dijkstra,cp,306,292,95.42%
+graph,cp,207,186,89.86%
+dfs,cp,283,237,83.75%
+function_types,please_classify,151,142,94.04%
+simple_tuple,please_classify,85,55,64.71%
+heap_objects,please_classify,187,133,71.12%
+simple_variant,please_classify,92,80,86.96%
+move,please_classify,136,74,54.41%
+simple,oop,109,93,85.32%
