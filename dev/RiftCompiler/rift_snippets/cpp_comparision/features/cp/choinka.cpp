@@ -16,16 +16,18 @@ using std::cout;
 using std::queue;
 typedef uint64_t kolor;
 
-struct Bombki {
+class Bombki {
+public:
     bool zepsute;
     kolor k1;
     kolor k2;
     uint32_t l1;
     uint32_t l2;
 };
-typedef struct Bombki Bombki;
+//typedef struct Bombki Bombki;
 
-struct NodePrimitive {
+class NodePrimitive {
+public:
     NodePrimitive* ojciecptr;
     std::vector<NodePrimitive*> dzieci;
     uint32_t rozmiarDrzewa;
@@ -67,27 +69,24 @@ Bombki dodaj(Bombki b1, Bombki b2) {
         return zepsuj();
     if (b1.l1 != 0)
         ilosciKolorow[b1.k1] = b1.l1;
-    else {
+    else
         return b2;
-    }
     if (b1.l2 != 0)
         ilosciKolorow[b1.k2] = b1.l2;
     if (b2.l1 != 0) {
-        if (ilosciKolorow.find(b2.k1) != ilosciKolorow.end()) {
+        if (ilosciKolorow.find(b2.k1) != ilosciKolorow.end())
             ilosciKolorow[b2.k1] = ilosciKolorow[b2.k1] + b2.l1;
-        } else {
+        else
             ilosciKolorow[b2.k1] = b2.l1;
-        }
     } else {
         ilosciKolorow.clear();
         return b1;
     }
     if (b2.l2 != 0) {
-        if (ilosciKolorow.find(b2.k2) != ilosciKolorow.end()) {
+        if (ilosciKolorow.find(b2.k2) != ilosciKolorow.end())
             ilosciKolorow[b2.k2] = ilosciKolorow[b2.k2] + b2.l2;
-        } else {
+        else
             ilosciKolorow[b2.k2] = b2.l2;
-        }
     }
     if (ilosciKolorow.empty())
         return zero();
@@ -161,12 +160,11 @@ void zmien(uint32_t indeks, kolor nowyKolor, Bombki T[]) {
 }
 
 Bombki wyluskaj(Bombki T[], uint32_t currindeks, uint32_t indeksl, uint32_t indeksp, uint32_t lprzedzial, uint32_t pprzedzial) {
-    if (lprzedzial == indeksp || indeksl == pprzedzial) {
+    if (lprzedzial == indeksp || indeksl == pprzedzial)
         return zero();
-    }
-    if (lprzedzial >= indeksl && pprzedzial <= indeksp) {
+    if (lprzedzial >= indeksl && pprzedzial <= indeksp)
         return T[currindeks];
-    } else {
+    else {
         if (!(indeksp < lprzedzial || indeksl > pprzedzial)) {
             uint32_t srodek = (lprzedzial + pprzedzial) / 2;
             return dodaj(wyluskaj(T, currindeks*2, indeksl, indeksp, lprzedzial, srodek), wyluskaj(T, currindeks*2+1, indeksl, indeksp, srodek, pprzedzial));
@@ -186,9 +184,8 @@ int main() {
     uint32_t Data[n+3];
     NodePrimitive PrimitiveTab[n+3];
     bool U[n+3];
-    for (int i = 0; i < rozmiarTablicy; i++) {
+    for (int i = 0; i < rozmiarTablicy; i++)
         T[i] = zero();
-    }
     for (int i = 0; i <= n; i++) {
         U[i] = false;
         PrimitiveTab[i] = pnodeinit();
@@ -202,11 +199,10 @@ int main() {
     }
     queue<NodePrimitive> que;
     for (int i = 2; i <= n; i++) {
-        if (!U[i]) {
+        if (!U[i])
             que.push(PrimitiveTab[i]);
-        } else {
+        else
             PrimitiveTab[i].nieodwiedzoneDzieci = PrimitiveTab[i].dzieci.size();
-        }
     }
     while (!que.empty()) {
         NodePrimitive nodeTop = que.front();
@@ -216,9 +212,8 @@ int main() {
     bool buul = false;
     bool* bul = & buul;
     robimyBinarke(Data, &(PrimitiveTab[1]), T, 0, n+1, bul);
-    if (*bul) {
+    if (*bul)
         return 0;
-    }
     kolor kacc;
     for (int i = 1; i <= n; i++) {
         cin >> kacc;
@@ -237,11 +232,10 @@ int main() {
         } else {
             cin >> v;
             Bombki b = wyluskaj(T, 1, Data[v], Data[v] + PrimitiveTab[v].rozmiarDrzewa, 0, prefiks);
-            if (b.zepsute) {
+            if (b.zepsute)
                 cout << "NIE\n";
-            } else {
+            else
                 cout << "TAK\n";
-            }
         }
     }
 }
