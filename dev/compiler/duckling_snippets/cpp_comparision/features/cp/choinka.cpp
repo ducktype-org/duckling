@@ -1,9 +1,11 @@
+// Bardzo niewdzięczny bo bardzo mało językowych feature'ów
+// todo?: c style arrays to vector (vla not in c++20 standard)
+
 #include <vector>
 #include <map>
 #include <cstdint>
 #include <algorithm>
-#include <stdio.h>
-#include <math.h>
+#include <cmath>
 #include <iostream>
 #include <queue>
 
@@ -14,7 +16,7 @@ using std::min;
 using std::cin;
 using std::cout;
 using std::queue;
-typedef uint64_t kolor;
+using kolor = uint64_t;
 
 class Bombki {
 public:
@@ -24,42 +26,26 @@ public:
     uint32_t l1;
     uint32_t l2;
 };
-//typedef struct Bombki Bombki;
 
 class NodePrimitive {
 public:
     NodePrimitive* ojciecptr;
-    std::vector<NodePrimitive*> dzieci;
+    vector<NodePrimitive*> dzieci;
     uint32_t rozmiarDrzewa;
     uint32_t numer;
     uint32_t nieodwiedzoneDzieci;
 };
 
 NodePrimitive pnodeinit() {
-    NodePrimitive res;
-    res.ojciecptr = nullptr;
-    vector<NodePrimitive*> dzieci;
-    res.dzieci = dzieci;
-    res.numer = 0;
-    res.rozmiarDrzewa = 1;
-    res.nieodwiedzoneDzieci = 0;
-    return res;
+    return {nullptr, {}, 1, 0, 0};
 }
 
 Bombki zepsuj() {
-    Bombki res;
-    res.zepsute = true;
-    return res;
+    return {true, 0, 0, 0, 0};
 }
 
 Bombki zero() {
-    Bombki res;
-    res.l2 = 0;
-    res.k1 = 0;
-    res.k2 = 0;
-    res.l1 = 0;
-    res.zepsute = false;
-    return res;
+    return {false, 0, 0, 0, 0};
 }
 
 Bombki dodaj(Bombki b1, Bombki b2) {
@@ -210,9 +196,8 @@ int main() {
         dodajDoDrzewa(&nodeTop);
     }
     bool buul = false;
-    bool* bul = & buul;
-    robimyBinarke(Data, &(PrimitiveTab[1]), T, 0, n+1, bul);
-    if (*bul)
+    robimyBinarke(Data, &(PrimitiveTab[1]), T, 0, n+1, &buul);
+    if (buul)
         return 0;
     kolor kacc;
     for (int i = 1; i <= n; i++) {

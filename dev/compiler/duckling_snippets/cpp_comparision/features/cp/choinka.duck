@@ -1,3 +1,8 @@
+import std.map;
+import std.min;
+import std.queue;
+import std.io.{scan, print, printLn};
+
 alias kolor = u64;
 class Bombki {
     zepsute: bool;
@@ -8,14 +13,14 @@ class Bombki {
 }
 
 class NodePrimitive {
-    ojciecptr: ref NodePrimitive;
+    ojciecptr: ref? NodePrimitive;
     dzieci: NodePrimitive[];
     numer: u32;
     rozmiarDrzewa: u32;
     nieodwiedzoneDzieci: u32;
 }
 
-fun pnodeinit() = NodePrimitive(nullptr, [], 0, 1, 0);
+fun pnodeinit() = NodePrimitive(none, [], 0, 1, 0);
 
 fun zepsuj() = Bombki(true, 0, 0, 0, 0);
 
@@ -23,7 +28,7 @@ fun zero() = Bombki(false, 0, 0, 0, 0);
 
 fun dodaj(b1: Bombki, b2: Bombki) = {
     let res = zero();
-    let ilosciKolorow: kolor->u32;
+    let ilosciKolorow: kolor => u32;
     if (b1.zepsute or b2.zepsute) 
         return zepsuj();
     if (b1.l1 != 0)
@@ -40,7 +45,7 @@ fun dodaj(b1: Bombki, b2: Bombki) = {
     } else
         return b1;
     if (b2.l2 != 0) {
-        if (b2.k2 notin ilosciKolorow)
+        if (b2.k2 not_in ilosciKolorow)
             ilosciKolorow[b2.k2] = ilosciKolorow[b2.k2] + b2.l2;
         else
             ilosciKolorow[b2.k2] = b2.l2;
@@ -82,7 +87,7 @@ fun kalkuluj(T: Bombki[], zakres: u32, indeks: u32) = {
 }
 
 fun robimyBinarke(Data: uint32_t[], pnode: ref NodePrimitive, T: Bombki[], mujindex: uint32_t, maxindex: uint32_t, bul: ref bool) = {
-    Data[pnode->numer] = mujindex;
+    Data[pnode.numer] = mujindex;
     var counter = 1;
     for (son in pnode.dzieci) {
         robimyBinarke(Data, son, T, mujindex+counter, maxindeks, bul);
@@ -90,7 +95,7 @@ fun robimyBinarke(Data: uint32_t[], pnode: ref NodePrimitive, T: Bombki[], mujin
     }
 }
 
-fun dodajDoDrzewa(node: ref NodePrimitive) = {
+fun dodajDoDrzewa(node: ref? NodePrimitive) = {
     if (node == nullptr or node.ojciecptr == nullptr)
         return;
         let ojciec = node.ojciecptr;
@@ -162,9 +167,8 @@ fun main() = {
         dodajDoDrzewa(ref nodeTop);
     }
     var buul = false;
-    let bul = ref buul;
-    robimyBinarke(Data, ref (PrimitiveTab[1]), T, 0, n, bul);
-    if (bul)
+    robimyBinarke(Data, ref (PrimitiveTab[1]), T, 0, n, ref buul);
+    if (buul)
         return 0;
     var kacc: kolor;
     for (i in 1..n) {

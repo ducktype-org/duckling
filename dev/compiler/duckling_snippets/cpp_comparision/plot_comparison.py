@@ -12,6 +12,7 @@ def plot_regression_line(tokens_cpp, tokens_duck, output):
     
     ax.scatter(tokens_cpp, tokens_duck, c='tab:blue')
     ax.plot([0, np.max(tokens_cpp)], [0, 0.7*np.max(tokens_cpp)], c='tab:gray', label=f'Target coeficcient: {0.7:.1%}')
+    ax.plot([0, np.max(tokens_cpp)], [0, 1*np.max(tokens_cpp)], c='tab:green', label=f'x=x')
     ax.plot([0, np.max(tokens_cpp)], [0, regression_coef*np.max(tokens_cpp)], c='tab:red', label=f'Current coeficcient: {regression_coef:0.1%}')
     
     ax.set_title("Comparison of codelength (in tokens)\nC++ vs Duckling")
@@ -44,8 +45,8 @@ def main(data_file, output_dir):
     except Exception as e:
         print(e)
         
-    tokens_cpp = df.iloc[:, 1].to_numpy()
-    tokens_duck = df.iloc[:, 2].to_numpy()
+    tokens_cpp = df.iloc[:, 2].to_numpy()
+    tokens_duck = df.iloc[:, 3].to_numpy()
     percentages = tokens_duck/tokens_cpp
     
     plot_regression_line(tokens_cpp, tokens_duck, os.path.join(output_dir, 'regression_line.png'))
