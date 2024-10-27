@@ -111,6 +111,10 @@ namespace compiler::backend::llvm_backend {
 				);
 				register_map.put(var.ref(), reg);
 			}
+
+			// @TODO: change function names lol:
+			generateBlockMapping(fun);
+
 			// here we assume that first block in block order is the entry block
 			// it might be wrong, but it's good enough for now
 			locals_builder.CreateBr(block_mapping[lir_function.block_order.at(0)].get());
@@ -181,8 +185,8 @@ namespace compiler::backend::llvm_backend {
 				*module
 			);
 
-			generateBlockMapping(fun);
 			generateLocalVars(fun);
+			// generateBlockMapping(fun);
 
 
 			for (auto& block: lir_function.block_order) {
@@ -212,6 +216,7 @@ namespace compiler::backend::llvm_backend {
 		LIR2LLVMFunction lir2llvm{Context, lir_function, module.refMut()};
 
 		auto fun = lir2llvm.createFunction();
+		
 		fun->print(llvm::errs());
 	}
 
