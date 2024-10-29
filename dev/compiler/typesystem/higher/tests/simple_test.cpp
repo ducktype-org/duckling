@@ -136,7 +136,9 @@ private:
 			const auto int_u = query::entryPoint<QueryIntegralType>({ 8U * (1 << i), false });
 			assertTrue(int_1.getKind() == Integral, "Int should have kind Integral.");
 
-			assertTrue(int_1.getSize() == 8 * (1 << i), "Size of Int should be as constructed.");
+			assertTrue(
+				int_1.getSize() == Bits(8) * (1 << i), "Size of Int should be as constructed."
+			);
 			assertTrue(int_1 == int_2, "Ints of the same size and signedness should be the same.");
 			assertTrue(
 				int_1 != int_u,
@@ -165,7 +167,9 @@ private:
 			auto float_1 = query::entryPoint<QueryFloatType>(float_size);
 			auto float_2 = query::entryPoint<QueryFloatType>(float_size);
 
-			assertTrue(float_1.getSize() == float_size, "Size of Float should be as constructed.");
+			assertTrue(
+				float_1.getSize() == Bits(float_size), "Size of Float should be as constructed."
+			);
 			assertTrue(float_1 == float_2, "Floats of the same size should be the same.");
 			assertTrue(float_1.getKind() == Float, "Floats should have float kind.");
 

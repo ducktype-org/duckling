@@ -12,6 +12,7 @@
 
 #include <base/variant.hpp>
 #include <base/maps.hpp>
+#include <base/bits_and_bytes.hpp>
 
 /**
  * @brief The namespace of all definitions of the Lower Type System.
@@ -25,7 +26,7 @@ namespace tsl {
 		/**
 		 * @brief The runtime contiguous size of a type's memory layout.
 		 */
-		usize size;
+		Bits size;
 
 		/**
 		 * @brief The source type of a memory layout.
@@ -41,7 +42,7 @@ namespace tsl {
 		 * @return The total size of a layout, in bits.
 		 */
 		[[nodiscard]]
-		usize getSize() const {
+		Bits getSize() const {
 			return size;
 		}
 
@@ -79,9 +80,7 @@ namespace tsl {
 		virtual ~TypeLayoutABC() = default;
 
 	protected:
-		TypeLayoutABC(usize size, tsh::TypeInfo source_type):
-			  size(size),
-			  source_type(source_type) {}
+		TypeLayoutABC(Bits size, tsh::TypeInfo source_type): size(size), source_type(source_type) {}
 
 		[[nodiscard]]
 		static auto getIndent(u32 indent) {
@@ -100,7 +99,7 @@ namespace tsl {
 	 */
 	class EmptyTypeLayout: public TypeLayoutABC {
 	public:
-		EmptyTypeLayout(tsh::UnitInfo unit_info): TypeLayoutABC(0, unit_info) {}
+		EmptyTypeLayout(tsh::UnitInfo unit_info): TypeLayoutABC(Bits(0), unit_info) {}
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
@@ -126,7 +125,7 @@ namespace tsl {
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
-			return getIndent(indent) + "i" + std::to_string(getSize()) + " : "
+			return getIndent(indent) + "i" + std::to_string(usize(getSize())) + " : "
 			     + std::to_string(getSize());
 		}
 	};
@@ -141,7 +140,7 @@ namespace tsl {
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
-			return getIndent(indent) + "f" + std::to_string(getSize()) + " : "
+			return getIndent(indent) + "f" + std::to_string(usize(getSize())) + " : "
 			     + std::to_string(getSize());
 		}
 	};
@@ -150,10 +149,10 @@ namespace tsl {
 	 * @brief Layout of a variant type.
 	 */
 	class VariantTypeLayout: public TypeLayoutABC {
-		usize tag_offset;
-		usize tag_size;
-		usize data_offset;
-		usize data_size;
+		Bytes tag_offset;
+		Bits  tag_size;
+		Bytes data_offset;
+		Bits  data_size;
 
 		base::Map<tsh::TypeInfo, usize> type_to_index;
 		std::vector<tsh::TypeInfo>      index_to_type;
@@ -168,7 +167,7 @@ namespace tsl {
 		 * @return The offset of the discriminating tag of this variant, in bytes.
 		 */
 		[[nodiscard]]
-		usize getTagOffset() const {
+		Bytes getTagOffset() const {
 			return tag_offset;
 		}
 
@@ -176,7 +175,7 @@ namespace tsl {
 		 * @return The size of the tag itself, in bits.
 		 */
 		[[nodiscard]]
-		usize getTagSize() const {
+		Bits getTagSize() const {
 			return tag_size;
 		}
 
@@ -184,7 +183,7 @@ namespace tsl {
 		 * @return The offset of the actual data held by this variant, in bytes, up to 8.
 		 */
 		[[nodiscard]]
-		usize getDataOffset() const {
+		Bytes getDataOffset() const {
 			return data_offset;
 		}
 
@@ -221,7 +220,7 @@ namespace tsl {
 		 * @note Not necessarily increasing. These offsets are given in the order of the components
 		 * in the source tuple type. This order may not be preserved in the layout.
 		 */
-		std::vector<usize> component_offsets;
+		std::vector<Bytes> component_offsets;
 
 		/**
 		 * @brief The component indices of the components in the original tuple type, sorted by
@@ -242,7 +241,7 @@ namespace tsl {
 		 * in the source tuple type. This order may not be preserved in the layout.
 		 */
 		[[nodiscard]]
-		const std::vector<usize>& getComponentOffsets() const {
+		const std::vector<Bytes>& getComponentOffsets() const {
 			return component_offsets;
 		}
 
@@ -251,7 +250,7 @@ namespace tsl {
 		 * @return The offset of the component corresponding to the given index, in bytes.
 		 */
 		[[nodiscard]]
-		usize getComponentOffset(usize index) const {
+		Bytes getComponentOffset(usize index) const {
 			return getComponentOffsets()[index];
 		}
 
@@ -267,7 +266,7 @@ namespace tsl {
 	 * @todo Add layout of base classes.
 	 */
 	class ClassTypeLayout: public TypeLayoutABC {
-		base::Map<compiler::helios::SymID, usize> field_offsets;
+		base::Map<compiler::helios::SymID, Bytes> field_offsets;
 		/**
 		 * @brief A mapping of the order of appearance in the layout to the symbol of the field.
 		 */
@@ -283,7 +282,7 @@ namespace tsl {
 		 * @return The full dictionary of field offsets, in bytes.
 		 */
 		[[nodiscard]]
-		const base::Map<compiler::helios::SymID, usize>& getFieldOffsets() const {
+		const base::Map<compiler::helios::SymID, Bytes>& getFieldOffsets() const {
 			return field_offsets;
 		}
 
@@ -292,7 +291,7 @@ namespace tsl {
 		 * @return The offset of the field corresponding to the given symbol, in bytes.
 		 */
 		[[nodiscard]]
-		usize getFieldOffset(compiler::helios::SymID symbol) const {
+		Bytes getFieldOffset(compiler::helios::SymID symbol) const {
 			return getFieldOffsets().at(symbol);
 		}
 
@@ -387,7 +386,7 @@ namespace tsl {
 		 * @copydoc TypeLayoutABC::getSize
 		 */
 		[[nodiscard]]
-		usize getSize() const;
+		Bits getSize() const;
 
 		/**
 		 * @copydoc TypeLayoutABC::getSourceType

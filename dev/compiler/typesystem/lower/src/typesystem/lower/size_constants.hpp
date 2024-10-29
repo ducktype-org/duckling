@@ -1,12 +1,13 @@
 #pragma once
 
 #include <base/ints.hpp>
+#include <base/bits_and_bytes.hpp>
 
 namespace tsl {
 	// This may become const instead of constexpr because it might be defined during runtime.
-	constexpr usize META_SIZE    = 64;
-	constexpr usize POINTER_SIZE = 64;
-	constexpr usize BYTE_SIZE    = 8;
-	constexpr usize BOOL_SIZE    = BYTE_SIZE;
-	constexpr usize CHAR_SIZE    = BYTE_SIZE;
+	constexpr Bits META_SIZE    = B2b(Bytes(8));
+	constexpr Bits POINTER_SIZE = B2b(Bytes(8));
+	constexpr Bits BYTE_SIZE    = B2b(Bytes(1));
+	constexpr Bits BOOL_SIZE    = BYTE_SIZE;
+	constexpr Bits CHAR_SIZE    = BYTE_SIZE;
 }

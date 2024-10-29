@@ -13,10 +13,10 @@ STRONG_TYPEDEF_INT_DIMENSIONAL(Bits, usize);
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(Bytes, usize);
 
-Bits B2b(Bytes bytes) { return Bits(usize(bytes) * 8); }
+inline constexpr Bits B2b(Bytes bytes) { return Bits(usize(bytes) * 8); }
 
 namespace std {
-	std::string to_string(Bits bits) { return to_string(usize(bits)) + "b"; }
+	inline std::string to_string(Bits bits) { return to_string(usize(bits)) + "b"; }
 
-	std::string to_string(Bytes bytes) { return to_string(usize(bytes)) + "B"; }
+	inline std::string to_string(Bytes bytes) { return to_string(usize(bytes)) + "B"; }
 }
