@@ -102,7 +102,7 @@ namespace compiler::lir {
 		// a copy of type-layout here might bu sub-optimal
 		tsl::TypeLayout type;
 
-		void debugPrint(std::ostream& output, bool detailed = false) const;
+		void debugPrint(query::Context&, std::ostream& output, bool detailed = false) const;
 
 	private:
 		LirLocal(helios::SymID helios_id, tsl::TypeLayout type):
@@ -174,6 +174,6 @@ namespace compiler::lir {
 
 		std::vector<BlockRef> block_order;
 
-		void debugPrint(std::ostream& output) const;
+		void debugPrint(query::Context&, std::ostream& output) const;
 	};
 }

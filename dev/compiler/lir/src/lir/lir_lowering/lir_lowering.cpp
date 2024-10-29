@@ -3,7 +3,12 @@
  * @brief File implementing process of creating LIR function from MIR function
  *
  * @note when adding new cases to logic in this file you should most likely edit:
- * - ... todo
+ * - mir2lirOperation -- for new operations
+ * - Mir2Lir::getLocation -- for new location
+ * - Mir2Lir::lowerFlags -- for flag handling
+ * - Mir2Lir::lowerInstruction -- for new instructions
+ * - Mir2Lir::lowerTerminator -- for new terminators
+ * - LowerToLirFunction::provide -- for some new steps
  */
 
 #include "lir_lowering.hpp"
