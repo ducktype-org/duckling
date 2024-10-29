@@ -4,7 +4,7 @@
 LLVM_INCLUDE_BEGIN()
 
 // #include <llvm/ADT/APInt.h>
-// #include <llvm/IR/Verifier.h>
+#include <llvm/IR/Verifier.h>
 // #include <llvm/ExecutionEngine/ExecutionEngine.h>
 // #include <llvm/ExecutionEngine/GenericValue.h>
 // #include <llvm/ExecutionEngine/MCJIT.h>
@@ -22,6 +22,13 @@ LLVM_INCLUDE_BEGIN()
 // #include <llvm/Support/Casting.h>
 #include <llvm/Support/TargetSelect.h>
 // #include <llvm/Support/raw_ostream.h>
+
+// #include <llvm/Support/TargetSelect.h>
+// #include <llvm/Support/Host.h>
+
+// #include <llvm/Target/TargetMachine.h>
+// #include <llvm/Target/TargetOptions.h>
+// #include <llvm/ADT/Optional.h>
 
 LLVM_INCLUDE_END()
 
@@ -41,9 +48,21 @@ namespace compiler::backend::llvm_backend {
 		return llvm::Type::getInt64Ty(context);
 	};
 
+	auto i32Type(llvm::LLVMContext& context) {
+		return llvm::Type::getInt32Ty(context);
+	};
+
 	auto voidFunType(llvm::LLVMContext& context) {
 		return llvm::FunctionType::get(
 			voidType(context),
+			{ },
+			false
+		);
+	};
+
+	auto intFunType(llvm::LLVMContext& context) {
+		return llvm::FunctionType::get(
+			i32Type(context),
 			{ },
 			false
 		);
@@ -204,7 +223,6 @@ namespace compiler::backend::llvm_backend {
 	};
 
 
-
 	void llvmPrintLir(const lir::Function& lir_function) {
 
 
@@ -217,7 +235,23 @@ namespace compiler::backend::llvm_backend {
 
 		auto fun = lir2llvm.createFunction();
 		
-		fun->print(llvm::errs());
+
+		std::cerr << "\n\nVerification: \n";
+		bool error_found = llvm::verifyFunction(*fun, &llvm::errs());
+		std::cerr << "\n\n\n";
+
+		// making obj files from api is for some reason not trivial,
+		// lacking docs for new api
+
+		if (error_found) {
+			std::cerr << "Errors, aborting!\n";
+		}
+		else {
+			std::cerr << "OK\n";
+			// so we will do this:...
+			fun->print(llvm::outs());
+		}
+
 	}
 
 }
