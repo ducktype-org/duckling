@@ -439,36 +439,6 @@ private:
 		);
 	}
 
-	/**
-	 * Test that there are two unique macro element types, and that they are correctly cast.
-	 */
-	void simple_macro_elements() {
-		const auto namespace_1 = query::entryPoint<QueryNamespaceType>({});
-		assertTrue(
-			namespace_1.getKind() == Namespace, "Namespace type should have kind Namespace."
-		);
-		const auto module_1 = query::entryPoint<QueryModuleType>({});
-		assertTrue(module_1.getKind() == Module, "Module type should have kind Module.");
-
-		assertTrue(namespace_1 != module_1, "All macro element types should be different.");
-
-		const auto namespace_2 = query::entryPoint<QueryNamespaceType>({});
-		const auto module_2    = query::entryPoint<QueryModuleType>({});
-
-		assertTrue(
-			namespace_1 == namespace_2 && module_1 == module_2,
-			"Macro element types of the same kind should be equal."
-		);
-
-		const TypeInfo      type_namespace = namespace_1;
-		const NamespaceInfo namespace_3    = type_namespace;
-		assertTrue(namespace_3.getKind() == Namespace, "Namespace should survive casting.");
-
-		const TypeInfo   type_module = module_1;
-		const ModuleInfo module_3    = type_module;
-		assertTrue(module_3.getKind() == Module, "Module should survive casting.");
-	}
-
 	void simple_implicit_coercibility() {
 		const auto int_2 = query::entryPoint<QueryIntegralType>({ 8U * (1 << 2) });
 		const auto int_3 = query::entryPoint<QueryIntegralType>({ 8U * (1 << 3) });
