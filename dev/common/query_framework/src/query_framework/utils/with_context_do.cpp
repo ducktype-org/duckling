@@ -41,4 +41,4 @@ namespace query::utils {
 			return {};
 		} });
 	}
-};
+}
