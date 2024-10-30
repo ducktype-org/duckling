@@ -2,6 +2,8 @@
 #include <tester/testing_utils.hpp>
 #include <base/bits_and_bytes.hpp>
 
+using base::bytes2bits;
+
 class BitsAndBytesTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS BitsAndBytesTest
@@ -45,7 +47,7 @@ public:
 
 		// Additional functionalities test.
 		Bytes Bs = Bytes(3);
-		Bits  bs = B2b(Bs);
+		Bits  bs = bytes2bits(Bs);
 		assertTrue(usize(bs) == 3 * 8, "Conversion failed");
 
 		assertTrue(std::to_string(Bs) == "3B", "Byte stringification failed");

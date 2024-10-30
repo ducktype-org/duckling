@@ -13,7 +13,9 @@ STRONG_TYPEDEF_INT_DIMENSIONAL(Bits, usize);
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(Bytes, usize);
 
-inline constexpr Bits B2b(Bytes bytes) { return Bits(usize(bytes) * 8); }
+namespace base {
+	inline constexpr Bits bytes2bits(Bytes bytes) { return Bits(usize(bytes) * 8); }
+}
 
 namespace std {
 	inline std::string to_string(Bits bits) { return to_string(usize(bits)) + "b"; }

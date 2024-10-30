@@ -4,6 +4,8 @@
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
+using base::bytes2bits;
+
 namespace tsl {
 	namespace {
 		/**
@@ -143,7 +145,9 @@ namespace tsl {
 		  VariantTypeLayout(VariantTypeLayoutConstructionHelper(variant_info, ctx)) {}
 
 	VariantTypeLayout::VariantTypeLayout(VariantTypeLayoutConstructionHelper helper):
-		  TypeLayoutABC(B2b(helper.offsets[1]) + helper.max_component_size, helper.variant_info),
+		  TypeLayoutABC(
+			  bytes2bits(helper.offsets[1]) + helper.max_component_size, helper.variant_info
+		  ),
 		  tag_offset{ 0 },                   // 0 bytes
 		  tag_size{ 8 },                     // 8 bits
 		  data_offset{ helper.offsets[1] },  // up to 8 bytes
@@ -194,7 +198,7 @@ namespace tsl {
 			  total_size(
 				  component_layouts.empty()
 					  ? Bits(0)
-					  : B2b(component_offsets.back()) + component_layouts.back().getSize()
+					  : bytes2bits(component_offsets.back()) + component_layouts.back().getSize()
 			  ) {}
 	};
 
@@ -269,8 +273,9 @@ namespace tsl {
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  offset_idx_to_sym_id(offsetsToSymIDs(field_elements, field_offsets)),
 			  total_size(
-				  field_layouts.empty() ? Bits(0)
-										: B2b(field_offsets.back()) + field_layouts.back().getSize()
+				  field_layouts.empty()
+					  ? Bits(0)
+					  : bytes2bits(field_offsets.back()) + field_layouts.back().getSize()
 			  ) {}
 	};
 
