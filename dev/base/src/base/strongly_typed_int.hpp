@@ -96,7 +96,12 @@
 			value--;                                                                               \
 			return old;                                                                            \
 		}                                                                                          \
-		inline constexpr auto operator<=>(const NAME& other) const = default;                      \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(==, bool)                                            \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(!=, bool)                                            \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(<, bool)                                             \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(>, bool)                                             \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(<=, bool)                                            \
+		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(>=, bool)                                            \
 		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(+, SELF_T)                                           \
 		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(-, SELF_T)                                           \
 		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(+=)                                          \

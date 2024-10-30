@@ -35,7 +35,7 @@ namespace tsl {
 
 	public:
 		// This definition is necessary for default definitions in deriving classes.
-		bool operator<=>(const TypeLayoutABC& other) const = default;
+		bool operator==(const TypeLayoutABC& other) const = default;
 
 		/**
 		 * @brief Get the total size of a layout, in bits.
