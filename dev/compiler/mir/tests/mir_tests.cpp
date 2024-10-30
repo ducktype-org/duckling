@@ -6,7 +6,7 @@
 
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
-#include <query_framework/test_utils/context_suite.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <tester/tester.hpp>
 
@@ -17,14 +17,14 @@
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
+using query::utils::withContextDo;
 
-class MIRConstructionTest final: public tester::ContextSuite {
+class MIRConstructionTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS MIRConstructionTest
 
 public:
-	MIRConstructionTest(tester::TestConfig&& config):
-		  tester::ContextSuite(std::move(config), "mir construction test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(simpleVarTest);
 		TESTER_ADD_TEST(testTerminatorSuccessors);
@@ -32,6 +32,8 @@ public:
 	}
 
 private:
+
+
 	void simpleTest() {
 		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_simple_test")));
 
