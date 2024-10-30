@@ -259,6 +259,7 @@ namespace compiler::mir {
 
 		Function()                = delete;
 		Function(const Function&) = delete;
+		Function(Function&&)      = default;
 
 		Function(
 			base::StrID                  name,
@@ -266,8 +267,6 @@ namespace compiler::mir {
 			base::StableVector<MirLocal> local_list,
 			BlockID                      entry_block
 		);
-
-		Function(Function&&) = default;
 
 		void debugPrint(std::ostream& output) const;
 	};
