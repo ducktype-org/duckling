@@ -32,8 +32,6 @@ public:
 	}
 
 private:
-
-
 	void simpleTest() {
 		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_simple_test")));
 

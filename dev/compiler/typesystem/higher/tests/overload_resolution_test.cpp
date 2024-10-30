@@ -16,9 +16,7 @@ class TypeSystemOverloadResolutionTest final: public tester::TestSuite {
 #define TESTER_CLASS TypeSystemOverloadResolutionTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(overload_resolution_test);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(overload_resolution_test); }
 
 private:
 	void overload_resolution_test() {
