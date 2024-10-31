@@ -8,7 +8,8 @@
 namespace compiler::mir {
 
 	struct KeyOf_LowerToMirFunction {
-		const helios::HOUTFunction& function;
+		// error reference to this thing is not valid, cause we pass a copy.....
+		helios::HOUTFunction function;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;

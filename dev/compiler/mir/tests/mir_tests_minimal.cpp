@@ -13,8 +13,11 @@
 
 #include <mir/mir_lowering/mir_lowering.hpp>
 
-using namespace tsh;
 using namespace compiler::helios::test_utils;
+
+
+
+
 
 class MIRConstructionTest final: public tester::ContextSuite {
 #undef TESTER_CLASS
@@ -44,8 +47,10 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+
+			bool a = unit.functions.at(0) == unit.functions.at(0);
+			message(std::to_string(a));
 		
-			ctx.query<compiler::mir::LowerToMirFunction>({ unit.functions.at(0) });
 		});
 	}
 };
