@@ -8,7 +8,7 @@
 namespace compiler::mir {
 
 	struct KeyOf_LowerToMirFunction {
-		// error reference to this thing is not valid, cause we pass a copy.....
+		// note that HOUTFunction copy is lightweight, cause its uses shared_ptr under the hood
 		helios::HOUTFunction function;
 
 		[[nodiscard]]
