@@ -190,7 +190,8 @@ public:
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(autoCacheTest);
 		TESTER_ADD_TEST(entryPointSanityTest);
-		TESTER_ADD_TEST(resultLifetimeTest);
+		TESTER_ADD_TEST(resultLifetimeTest<LifeTimeQueryStable>);
+		TESTER_ADD_TEST(resultLifetimeTest<LifeTimeQueryUnstable>);
 	}
 
 private:
@@ -218,21 +219,21 @@ private:
 		);
 	}
 
-	// template<class Query>
+	template<class Query>
 	void resultLifetimeTest() {
 		withContextDo([&](query::Context& ctx) {
-			auto res1 = ctx.query<LifeTimeQueryStable>(0);
+			auto res1 = ctx.query<Query>(0);
 			ASSERT_TRUE(res1.validate());
 
-			auto res2 = ctx.query<LifeTimeQueryStable>(0);
+			auto res2 = ctx.query<Query>(0);
 			ASSERT_TRUE(res2.validate());
 		});
 
 		withContextDo([&](query::Context& ctx) {
-			auto res1 = ctx.query<LifeTimeQueryStable>(0);
+			auto res1 = ctx.query<Query>(0);
 			ASSERT_TRUE(res1.validate());
 
-			auto res2 = ctx.query<LifeTimeQueryStable>(0);
+			auto res2 = ctx.query<Query>(0);
 			ASSERT_TRUE(res2.validate());
 		});
 	}
