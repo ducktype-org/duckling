@@ -127,12 +127,11 @@ struct IMPLEMENT_QUERY(VectorReferenceQuery, std::vector<u64>) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(VectorReferenceQuery);
 
-
 struct Result {
-	enum class Status {Live, Destroyed};
-	i64 id;
+	enum class Status { Live, Destroyed };
+	i64                                 id;
 	static inline std::map<u64, Status> status;
-	static inline i64 next_id = 0;
+	static inline i64                   next_id = 0;
 
 	void init() {
 		CORE_ASSERT(not status.contains(id), "ID duplication");
@@ -140,11 +139,13 @@ struct Result {
 	}
 
 	Result(): id(next_id++) { init(); }
+
 	Result(const Result&): id(next_id++) { init(); }
-	Result(Result&& oth) noexcept: id(next_id++) { 
+
+	Result(Result&& oth) noexcept: id(next_id++) {
 		init();
 		status.at(oth.id) = Status::Destroyed;
-		oth.id = -1;
+		oth.id            = -1;
 	}
 
 	bool validate() {
@@ -158,23 +159,24 @@ struct Result {
 };
 
 DECLARE_QUERY(LifeTimeQueryStable, u64, Result);
+
 struct IMPLEMENT_QUERY(LifeTimeQueryStable, Result) {
-	static auto provide(Context&, QKey) -> PResult {
-		return {};
-	}
+	static auto provide(Context&, QKey) -> PResult { return {}; }
+
 	QUERY_AUTO_CACHE_PRESULT_STABLE_REF
 };
+
 QUERY_IMPLEMENTATION_BOILERPLATE(LifeTimeQueryStable);
 
 DECLARE_QUERY(LifeTimeQueryUnstable, u64, Result);
+
 struct IMPLEMENT_QUERY(LifeTimeQueryUnstable, Result) {
-	static auto provide(Context&, QKey) -> PResult {
-		return {};
-	}
+	static auto provide(Context&, QKey) -> PResult { return {}; }
+
 	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
 };
-QUERY_IMPLEMENTATION_BOILERPLATE(LifeTimeQueryUnstable);
 
+QUERY_IMPLEMENTATION_BOILERPLATE(LifeTimeQueryUnstable);
 
 class QueryTest: public tester::ContextSuite {
 #undef TESTER_CLASS
@@ -182,11 +184,9 @@ class QueryTest: public tester::ContextSuite {
 
 
 public:
-
 	// @TODO: change it after withContextDo update
 	QueryTest(tester ::TestConfig config):
-      tester ::ContextSuite(std ::move(config), tester ::addSpacesBeforeCapital("QueryTest")) {
-		
+		  tester ::ContextSuite(std ::move(config), tester ::addSpacesBeforeCapital("QueryTest")) {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(autoCacheTest);
 		TESTER_ADD_TEST(entryPointSanityTest);
@@ -218,8 +218,6 @@ private:
 		);
 	}
 
-	
-
 	// template<class Query>
 	void resultLifetimeTest() {
 		withContextDo([&](query::Context& ctx) {
@@ -237,10 +235,7 @@ private:
 			auto res2 = ctx.query<LifeTimeQueryStable>(0);
 			ASSERT_TRUE(res2.validate());
 		});
-
 	}
 };
-
-
 
 TESTER_COMMON_MAIN("/common/query_framework/tests/");
