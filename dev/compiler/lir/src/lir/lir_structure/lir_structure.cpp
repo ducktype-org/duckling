@@ -2,29 +2,37 @@
 
 namespace compiler::lir {
 
+	/**
+	 * @brief This struct encapsulates the logic and shared state for printing LIR code.
+	 * This state is needed because the LIR lacks any kind of "ids" or names for locals, blocks, etc
+	 * The ids/names are given arbitrarily.
+	 * 
+	 * @note It should be used only used in lir::Function::debugPrint method
+	 */
+	struct LirPrinter {
+
+	};
+
 	void LirLocal::debugPrint(query::Context& ctx, std::ostream& output, bool detailed) const {
-		// some id? lol
-		// @TODO...
-		output << "Local("
-			   << "???"
-			   << ")";
-		if (detailed) output << " type:\n" << type.toStringDefinition(ctx, true, 1) << "\n";
+		// @TODO print some local identification
+		output << "  Local(" << "???" << ")\n";
+		if (detailed) output << "  TYPE:\n" << type.toStringDefinition(ctx, true, 1) << "\n";
 	}
 
 	void Function::debugPrint(query::Context& ctx, std::ostream& output) const {
-		output << "Function: " << name.strView() << "\n";
-		output << "Locals:\n";
+		output << "Function \"" << name.strView() << "\" = {\n";
+		output << " Locals:\n";
 
 		for (const auto& local: local_list) {
 			local->debugPrint(ctx, output, true);
 			output << "\n";
 		}
-
-		output << "Blocks:\n";
+		
+		size_t block_nr = 0;
+		output << " Blocks:\n";
 		for (auto block: block_order) {
-			output << "Block: "
-				   << "???"
-				   << "\n";
+			output << "  Block: " << block_nr << "\n";
+
 			for (const auto& instruction: block->instructions) {
 				output << "    ";
 				instruction.debugPrint(output);
@@ -33,7 +41,11 @@ namespace compiler::lir {
 			output << "    ";
 			block->terminator.debugPrint(output);
 			output << "\n";
+
+			block_nr++;
 		}
+
+		output << "}\n";
 	}
 
 	void Instruction::debugPrint(std::ostream& output) const {
