@@ -3,7 +3,7 @@
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/test_utils/context_suite.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 struct Key1 {
 	u64            v;
@@ -178,15 +178,15 @@ struct IMPLEMENT_QUERY(LifeTimeQueryUnstable, Result) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(LifeTimeQueryUnstable);
 
-class QueryTest: public tester::ContextSuite {
+using query::utils::withContextDo;
+
+class QueryTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS QueryTest
 
 
 public:
-	// @TODO: change it after withContextDo update
-	QueryTest(tester ::TestConfig config):
-		  tester ::ContextSuite(std ::move(config), tester ::addSpacesBeforeCapital("QueryTest")) {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(autoCacheTest);
 		TESTER_ADD_TEST(entryPointSanityTest);
