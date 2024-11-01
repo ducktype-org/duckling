@@ -6,7 +6,7 @@
 
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
-#include <query_framework/test_utils/context_suite.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <tester/tester.hpp>
 
@@ -18,14 +18,14 @@
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
+using query::utils::withContextDo;
 
-class LIRConstructionTest final: public tester::ContextSuite {
+class LIRConstructionTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS LIRConstructionTest
 
 public:
-	LIRConstructionTest(tester::TestConfig&& config):
-		  tester::ContextSuite(std::move(config), "mir construction test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		// @TODO
 		// tests here don't tests much apart from the fact that code compiles
 		// and does not throw.
@@ -56,7 +56,7 @@ private:
 			// Test debug print:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
 			std::stringstream foo_str;
-			foo_lir.debugPrint(foo_str);
+			foo_lir.debugPrint(ctx, foo_str);
 		});
 	}
 };

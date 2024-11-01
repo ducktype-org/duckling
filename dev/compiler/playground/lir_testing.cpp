@@ -4,7 +4,9 @@
 #include <helios/queries.hpp>
 #include <clap/clap.hpp>
 #include <iostream>
+#include <query_framework/utils/with_context_do.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_impl.hpp> //< needed not ctx.query, @TODO: move context to different file
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 
@@ -44,10 +46,11 @@ int main(int argc, const char* argv[]) {
 
 
 	for (auto& fun: top_level.functions) {
-		auto& mir_fun = query::entryPoint<compiler::mir::LowerToMirFunction>({ fun });
-		auto& lir_fun = query::entryPoint<compiler::lir::LowerToLirFunction>({ mir_fun });
-
-		lir_fun.debugPrint(std::cerr);
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto& mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
+			auto& lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
+			lir_fun.debugPrint(ctx, std::cerr);
+		});
 		std::cerr << "\n";
 	}
 }
