@@ -283,6 +283,11 @@ namespace compiler::mir {
 		Function(const Function&) = delete;
 		Function(Function&&)      = default;
 
+		Function& operator=(const Function&) = delete;
+
+		// We can change it to default, when there will be a reason:
+		Function& operator=(Function&&) = delete;
+
 		Function(
 			base::StrID                  name,
 			std::vector<Block>           blocks,

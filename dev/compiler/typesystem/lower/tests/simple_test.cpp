@@ -4,21 +4,21 @@
 #include <tester/tester.hpp>
 #include <typesystem/higher/type_interface.hpp>
 #include <typesystem/higher/queries.hpp>
-#include <query_framework/test_utils/context_suite.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <helios/test_utils/helios_test_utils.hpp>
 
 using namespace tsl;
 using namespace tsh;
+using query::utils::withContextDo;
 
-class LowerTypeSystemSimpleTest final: public tester::ContextSuite {
+class LowerTypeSystemSimpleTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS LowerTypeSystemSimpleTest
 
 public:
-	LowerTypeSystemSimpleTest(tester::TestConfig&& config):
-		  tester::ContextSuite(std::move(config), "Lower TypeSystem simple test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basic_types_test);
 		TESTER_ADD_TEST(variant_test);
 		TESTER_ADD_TEST(tuple_test);

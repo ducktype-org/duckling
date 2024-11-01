@@ -8,7 +8,8 @@
 namespace compiler::mir {
 
 	struct KeyOf_LowerToMirFunction {
-		const helios::HOUTFunction& function;
+		// note that HOUTFunction copy is lightweight, cause its uses shared_ptr under the hood
+		helios::HOUTFunction function;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
