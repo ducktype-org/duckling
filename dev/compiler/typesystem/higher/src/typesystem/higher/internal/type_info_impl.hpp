@@ -223,8 +223,8 @@ namespace tsh::internal {
 	};
 
 	class IntegralInfoImpl final: public TypeInfoImpl {
-		usize size;
-		bool  signedness;
+		Bits size;
+		bool signedness;
 
 	public:
 		[[nodiscard]]
@@ -238,12 +238,12 @@ namespace tsh::internal {
 		static constexpr Kind staticKind = Kind::Integral;
 
 		[[nodiscard]]
-		usize getSize() const {
+		Bits getSize() const {
 			return size;
 		}
 
 		explicit IntegralInfoImpl(const usize size, const bool signedness):
-			  size(size),
+			  size(Bits(size)),
 			  signedness(signedness) {
 			if (signedness)
 				representation = base::strConcat("i", size);
@@ -268,7 +268,7 @@ namespace tsh::internal {
 	};
 
 	class FloatInfoImpl final: public TypeInfoImpl {
-		usize size;
+		Bits size;
 
 	public:
 		[[nodiscard]]
@@ -282,11 +282,11 @@ namespace tsh::internal {
 		static constexpr Kind staticKind = Kind::Float;
 
 		[[nodiscard]]
-		usize getSize() const {
+		Bits getSize() const {
 			return size;
 		}
 
-		explicit FloatInfoImpl(usize size): size(size) {
+		explicit FloatInfoImpl(usize size): size(Bits(size)) {
 			representation = base::strConcat("f", size);
 		}
 
@@ -362,7 +362,7 @@ namespace tsh::internal {
 
 		explicit PointerInfoImpl(const ComponentType component): component(component) {
 			representation = base::strConcat(
-				"pointer(", component.is_mutable ? "" : "const", component.type.toString(), ")"
+				"pointer(", component.is_mutable ? "" : "const ", component.type.toString(), ")"
 			);
 		}
 

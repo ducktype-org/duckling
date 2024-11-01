@@ -94,3 +94,6 @@ add_example(variant_match_example src/base/examples/variant_match_example.cpp
 
 add_example(variant_visit_example src/base/examples/variant_visit_example.cpp
         USES Base)
+
+duck_add_test(base bits_and_bytes_test tests/bits_and_bytes_test.cpp
+        USES Base)
