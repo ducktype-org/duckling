@@ -5,20 +5,18 @@
 
 #include <base/variant.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
-#include <query_framework/test_utils/context_suite.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
+using query::utils::withContextDo;
 
-class TypeSystemOverloadResolutionTest final: public tester::ContextSuite {
+class TypeSystemOverloadResolutionTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS TypeSystemOverloadResolutionTest
 
 public:
-	TypeSystemOverloadResolutionTest(tester::TestConfig&& config):
-		  tester::ContextSuite(std::move(config), "TypeSystem overload resolution test") {
-		TESTER_ADD_TEST(overload_resolution_test);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(overload_resolution_test); }
 
 private:
 	void overload_resolution_test() {

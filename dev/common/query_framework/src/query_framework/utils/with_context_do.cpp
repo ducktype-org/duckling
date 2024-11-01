@@ -1,9 +1,9 @@
-#include "context_suite.hpp"
+#include "with_context_do.hpp"
 
 #include "../query_impl.hpp"
 #include "../query_entry_point.hpp"
 
-namespace tester {
+namespace query::utils {
 	namespace {
 		struct KeyFor_DoWithContext final {
 			std::function<std::any(query::Context&)> value;
@@ -31,11 +31,11 @@ namespace tester {
 		QUERY_IMPLEMENTATION_BOILERPLATE(DoWithContext)
 	}
 
-	std::any ContextSuite::withContextCompute(std::function<std::any(query::Context&)> action) {
+	std::any withContextCompute(std::function<std::any(query::Context&)> action) {
 		return query::entryPoint<DoWithContext>(std::move(action));
 	}
 
-	void ContextSuite::withContextDo(std::function<void(query::Context&)> action) {
+	void withContextDo(std::function<void(query::Context&)> action) {
 		query::entryPoint<DoWithContext>({ [&](query::Context& ctx) -> std::any {
 			action(ctx);
 			return {};
