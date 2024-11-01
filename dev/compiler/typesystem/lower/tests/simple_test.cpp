@@ -42,7 +42,7 @@ private:
 			UnitInfo   unit_type   = ctx.query<QueryUnitType>({});
 			TypeLayout unit_layout = ctx.query<QueryTypeLayout>(unit_type);
 
-			assertTrue(unit_layout.getSize() == 0, "Empty layout should have size zero.");
+			assertTrue(unit_layout.getSize() == Bits(0), "Empty layout should have size zero.");
 			assertTrue(
 				unit_layout.getSourceType() == ctx.query<QueryUnitType>({}),
 				"Layout should have source type as constructed."
@@ -82,7 +82,7 @@ private:
 				IntegralInfo int_type   = ctx.query<QueryIntegralType>(size);
 				TypeLayout   int_layout = ctx.query<QueryTypeLayout>(int_type);
 				assertTrue(
-					int_layout.getSize() == size,
+					int_layout.getSize() == Bits(size),
 					"Integral layout should have size equal to that of the source type."
 				);
 				assertTrue(
@@ -102,7 +102,7 @@ private:
 				FloatInfo  float_type   = ctx.query<QueryFloatType>(size);
 				TypeLayout float_layout = ctx.query<QueryTypeLayout>(float_type);
 				assertTrue(
-					float_layout.getSize() == size,
+					float_layout.getSize() == Bits(size),
 					"Float layout should have size equal to that of the source type."
 				);
 				assertTrue(
@@ -184,7 +184,7 @@ private:
 			TypeLayout   variant_layout = ctx.query<QueryTypeLayout>(variant_type);
 
 			assertTrue(
-				variant_layout.getSize() == 2 * BYTE_SIZE + 16,
+				variant_layout.getSize() == BYTE_SIZE * 2 + Bits(16),
 				"Variant layout size should account for data alignment."
 			);
 			assertTrue(
@@ -193,10 +193,12 @@ private:
 			);
 			variant_match(variant_layout()) {
 				variant_case(VariantTypeLayout, l) {
-					assertTrue(l.getTagOffset() == 0, "Variant tag should be at the beginning.");
+					assertTrue(
+						l.getTagOffset() == Bytes(0), "Variant tag should be at the beginning."
+					);
 					assertTrue(l.getTagSize() == BYTE_SIZE, "Variant tag should not be too big.");
 					assertTrue(
-						l.getDataOffset() == 2,
+						l.getDataOffset() == Bytes(2),
 						"Data offset takes should take alignment into account."
 					);
 					assertTrue(
@@ -225,7 +227,7 @@ private:
 			TypeLayout   tuple_layout = ctx.query<QueryTypeLayout>(tuple_type);
 
 			assertTrue(
-				tuple_layout.getSize() == 16 * BYTE_SIZE,
+				tuple_layout.getSize() == BYTE_SIZE * 16,
 				"Tuple layout size should account for data alignment."
 			);
 			assertTrue(
@@ -235,8 +237,8 @@ private:
 			variant_match(tuple_layout()) {
 				variant_case(TupleTypeLayout, l) {
 					assertTrue(
-						l.getComponentOffset(0) == 0 && l.getComponentOffset(1) == 2
-							&& l.getComponentOffset(2) == 8,
+						l.getComponentOffset(0) == Bytes(0) && l.getComponentOffset(1) == Bytes(2)
+							&& l.getComponentOffset(2) == Bytes(8),
 						"Tuple layout should align its component layouts."
 					);
 				}
@@ -278,7 +280,7 @@ private:
 
 			TypeLayout my_class_layout = ctx.query<QueryTypeLayout>(my_class_type);
 			assertTrue(
-				my_class_layout.getSize() == 16 * BYTE_SIZE,
+				my_class_layout.getSize() == BYTE_SIZE * 16,
 				"Class layout size should account for data alignment."
 			);
 			assertTrue(
@@ -289,9 +291,9 @@ private:
 			variant_match(my_class_layout()) {
 				variant_case(ClassTypeLayout, l) {
 					assertTrue(
-						l.getFieldOffset(a_field_symbol) == 0
-							&& l.getFieldOffset(b_field_symbol) == 2
-							&& l.getFieldOffset(c_field_symbol) == 8,
+						l.getFieldOffset(a_field_symbol) == Bytes(0)
+							&& l.getFieldOffset(b_field_symbol) == Bytes(2)
+							&& l.getFieldOffset(c_field_symbol) == Bytes(8),
 						"Class layout should align its component layouts."
 					);
 				}
