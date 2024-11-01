@@ -4,6 +4,8 @@
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
+using base::bytes2bits;
+
 namespace tsl {
 	namespace {
 		/**
@@ -25,8 +27,8 @@ namespace tsl {
 		 * @param layouts Vector of type layouts to aggregate over.
 		 * @return The maximum size of a type layout in the vector.
 		 */
-		usize maxTypeLayoutSizeInVector(const std::vector<TypeLayout>& layouts) {
-			usize max = 0;
+		Bits maxTypeLayoutSizeInVector(const std::vector<TypeLayout>& layouts) {
+			Bits max{ 0 };
 			for (const auto& type: layouts) max = std::max(max, type.getSize());
 			return max;
 		}
@@ -37,7 +39,7 @@ namespace tsl {
 		 * @param ctx The Query Context necessary to deduce composite type sizes.
 		 * @return The maximum size of a type in the vector.
 		 */
-		usize maxTypeSizeInVector(const std::vector<tsh::TypeInfo>& types, query::Context& ctx) {
+		Bits maxTypeSizeInVector(const std::vector<tsh::TypeInfo>& types, query::Context& ctx) {
 			return maxTypeLayoutSizeInVector(getLayoutVector(types, ctx));
 		}
 
@@ -46,26 +48,26 @@ namespace tsl {
 		 * @param sizes The sizes of the types.
 		 * @return The aligned offsets.
 		 */
-		std::vector<usize> alignOffsetsForSizeVector(const std::vector<usize>& sizes) {
+		std::vector<Bytes> alignOffsetsForSizeVector(const std::vector<Bits>& sizes) {
 			// Preamble.
-			std::vector<usize> offsets{};
+			std::vector<Bytes> offsets{};
 			offsets.reserve(sizes.size());
-			usize bytes_taken = 0;
+			Bytes bytes_taken{ 0 };
 
 			// For each component layout...
 			for (const auto& size_in_bits: sizes) {
 				// Get its size in bytes, rounded up.
-				usize size_in_bytes = (size_in_bits + 7) / 8;
+				Bytes size_in_bytes{ (usize(size_in_bits) + 7) / 8 };
 
 				// Find alignment factor.
 				usize alignment_factor = 8;
-				if (size_in_bytes <= 4) alignment_factor = 4;
-				if (size_in_bytes <= 2) alignment_factor = 2;
-				if (size_in_bytes <= 1) alignment_factor = 1;
+				if (size_in_bytes <= Bytes(4)) alignment_factor = 4;
+				if (size_in_bytes <= Bytes(2)) alignment_factor = 2;
+				if (size_in_bytes <= Bytes(1)) alignment_factor = 1;
 
 				// Round up offset to nearest multiple of alignment factor.
-				bytes_taken
-					= (bytes_taken + (alignment_factor - 1)) / alignment_factor * alignment_factor;
+				bytes_taken = (bytes_taken + Bytes(alignment_factor - 1)) / alignment_factor
+				            * alignment_factor;
 
 				// Save offset.
 				offsets.push_back(bytes_taken);
@@ -80,8 +82,8 @@ namespace tsl {
 		 * @param layouts The layouts of the types.
 		 * @return The aligned offsets.
 		 */
-		std::vector<usize> alignOffsetsForLayoutVector(const std::vector<TypeLayout>& layouts) {
-			std::vector<usize> sizes;
+		std::vector<Bytes> alignOffsetsForLayoutVector(const std::vector<TypeLayout>& layouts) {
+			std::vector<Bits> sizes;
 			sizes.reserve(layouts.size());
 			for (const auto& layout: layouts) sizes.push_back(layout.getSize());
 			return alignOffsetsForSizeVector(sizes);
@@ -93,8 +95,8 @@ namespace tsl {
 		 * @param offsets The offsets of the component types.
 		 * @return How the component types are permuted.
 		 */
-		std::vector<usize> offsetsToPermutation(const std::vector<usize>& offsets) {
-			std::vector<std::pair<usize, usize>> offsets_with_idxs;
+		std::vector<usize> offsetsToPermutation(const std::vector<Bytes>& offsets) {
+			std::vector<std::pair<Bytes, usize>> offsets_with_idxs;
 			std::vector<usize>                   result;
 			offsets_with_idxs.reserve(offsets.size());
 			result.reserve(offsets.size());
@@ -116,7 +118,7 @@ namespace tsl {
 		 * layout.
 		 */
 		std::vector<compiler::helios::SymID> offsetsToSymIDs(
-			const std::vector<tsh::InterfaceElement>& fields, const std::vector<usize>& offsets
+			const std::vector<tsh::InterfaceElement>& fields, const std::vector<Bytes>& offsets
 		) {
 			std::vector<usize>                   permutation = offsetsToPermutation(offsets);
 			std::vector<compiler::helios::SymID> result;
@@ -130,13 +132,13 @@ namespace tsl {
 
 	struct VariantTypeLayoutConstructionHelper {
 		tsh::VariantInfo   variant_info;
-		usize              max_component_size;
-		std::vector<usize> offsets;
+		Bits               max_component_size;
+		std::vector<Bytes> offsets;
 
 		VariantTypeLayoutConstructionHelper(tsh::VariantInfo variant_info, query::Context& ctx):
 			  variant_info(variant_info),
 			  max_component_size(maxTypeSizeInVector(variant_info.getUnderlyingTypes(), ctx)),
-			  offsets(alignOffsetsForSizeVector({ 8, max_component_size })) {}
+			  offsets(alignOffsetsForSizeVector({ Bits(8), max_component_size })) {}
 	};
 
 	VariantTypeLayout::VariantTypeLayout(tsh::VariantInfo variant_info, query::Context& ctx):
@@ -144,7 +146,7 @@ namespace tsl {
 
 	VariantTypeLayout::VariantTypeLayout(VariantTypeLayoutConstructionHelper helper):
 		  TypeLayoutABC(
-			  helper.offsets[1] * BYTE_SIZE + helper.max_component_size, helper.variant_info
+			  bytes2bits(helper.offsets[1]) + helper.max_component_size, helper.variant_info
 		  ),
 		  tag_offset{ 0 },                   // 0 bytes
 		  tag_size{ 8 },                     // 8 bits
@@ -176,7 +178,7 @@ namespace tsl {
 		}
 
 		// Display the total size
-		ss << getIndent(indent) << "} : " << getSize();
+		ss << getIndent(indent) << "} : " << std::to_string(getSize());
 
 		return ss.str();
 	}
@@ -184,9 +186,9 @@ namespace tsl {
 	struct TupleTypeLayoutConstructionHelper {
 		tsh::TupleInfo          tuple_info;
 		std::vector<TypeLayout> component_layouts;
-		std::vector<usize>      component_offsets;
+		std::vector<Bytes>      component_offsets;
 		std::vector<usize>      offset_idx_to_component_idx;
-		usize                   total_size;
+		Bits                    total_size;
 
 		TupleTypeLayoutConstructionHelper(tsh::TupleInfo tuple_info, query::Context& ctx):
 			  tuple_info(tuple_info),
@@ -195,8 +197,8 @@ namespace tsl {
 			  offset_idx_to_component_idx(offsetsToPermutation(component_offsets)),
 			  total_size(
 				  component_layouts.empty()
-					  ? 0
-					  : component_offsets.back() * BYTE_SIZE + component_layouts.back().getSize()
+					  ? Bits(0)
+					  : bytes2bits(component_offsets.back()) + component_layouts.back().getSize()
 			  ) {}
 	};
 
@@ -216,7 +218,7 @@ namespace tsl {
 		// Display the tuple header and components
 		ss << getIndent(indent) << "tuple {\n";
 		for (auto component_idx: offset_idx_to_component_idx) {
-			usize         component_offset = getComponentOffset(component_idx);
+			Bytes         component_offset = getComponentOffset(component_idx);
 			tsh::TypeInfo component_type   = tuple_type.getComponentTypes().at(component_idx);
 			auto          component_layout = ctx.query<QueryTypeLayout>(component_type);
 			if (recursive)
@@ -224,11 +226,11 @@ namespace tsl {
 			else
 				ss << getIndent(indent + 1) << component_layout.toStringIdentification();
 			// Display the offset
-			ss << " @ " << component_offset << "\n";
+			ss << " @ " << std::to_string(component_offset) << "\n";
 		}
 
 		// Display the total size
-		ss << getIndent(indent) << "} : " << getSize();
+		ss << getIndent(indent) << "} : " << std::to_string(getSize());
 
 		return ss.str();
 	}
@@ -237,9 +239,9 @@ namespace tsl {
 		tsh::ClassInfo                       class_info;
 		std::vector<tsh::InterfaceElement>   field_elements;
 		std::vector<TypeLayout>              field_layouts;
-		std::vector<usize>                   field_offsets;
+		std::vector<Bytes>                   field_offsets;
 		std::vector<compiler::helios::SymID> offset_idx_to_sym_id;
-		usize                                total_size;
+		Bits                                 total_size;
 
 		static std::vector<tsh::InterfaceElement>
 			getFieldsOfInterface(const tsh::TypeInterface& interface) {
@@ -272,8 +274,8 @@ namespace tsl {
 			  offset_idx_to_sym_id(offsetsToSymIDs(field_elements, field_offsets)),
 			  total_size(
 				  field_layouts.empty()
-					  ? 0
-					  : field_offsets.back() * BYTE_SIZE + field_layouts.back().getSize()
+					  ? Bits(0)
+					  : bytes2bits(field_offsets.back()) + field_layouts.back().getSize()
 			  ) {}
 	};
 
@@ -295,7 +297,7 @@ namespace tsl {
 		// Display the class header and components
 		ss << getIndent(indent) << class_type.toString() << " {\n";
 		for (auto field_sym_id: offset_idx_to_sym_id) {
-			usize         field_offset = getFieldOffset(field_sym_id);
+			Bytes         field_offset = getFieldOffset(field_sym_id);
 			tsh::TypeInfo field_type   = class_type.getMemberType(field_sym_id, ctx);
 			auto          field_layout = ctx.query<QueryTypeLayout>(field_type);
 			if (recursive)
@@ -303,11 +305,11 @@ namespace tsl {
 			else
 				ss << getIndent(indent + 1) << field_layout.toStringIdentification();
 			// Display the offset
-			ss << " @ " << field_offset << "\n";
+			ss << " @ " << std::to_string(field_offset) << "\n";
 		}
 
 		// Display the total size
-		ss << getIndent(indent) << "} : " << getSize();
+		ss << getIndent(indent) << "} : " << std::to_string(getSize());
 
 		return ss.str();
 	}
@@ -316,7 +318,7 @@ namespace tsl {
 		  TypeLayoutABC(POINTER_SIZE, pointer_info),
 		  pointee(box<TypeLayout>(ctx.query<QueryTypeLayout>(pointer_info.getUnderlyingType()))) {}
 
-	usize TypeLayout::getSize() const { return VISIT(*this, l, return l.getSize()); }
+	Bits TypeLayout::getSize() const { return VISIT(*this, l, return l.getSize()); }
 
 	tsh::TypeInfo TypeLayout::getSourceType() const {
 		return VISIT(*this, l, return l.getSourceType());
