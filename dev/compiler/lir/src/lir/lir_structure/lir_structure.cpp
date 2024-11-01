@@ -2,6 +2,8 @@
 
 namespace compiler::lir {
 
+	// @TODO: printing in this file in not perfect nor complete, make it better
+
 	/**
 	 * @brief This struct encapsulates the logic and shared state for printing LIR code.
 	 * This state is needed because the LIR lacks any kind of "ids" or names for locals, blocks, etc
