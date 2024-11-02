@@ -174,6 +174,16 @@ namespace compiler::lir {
 
 		std::vector<BlockRef> block_order;
 
+		/**
+		 * @brief Checks if block order uniquely stores 
+		 * all blocks.
+		 * 
+		 * @return true 
+		 * @return false 
+		 */
+		[[nodiscard]]
+		bool validateBlockOrder() const;
+
 		void debugPrint(query::Context&, std::ostream& output) const;
 	};
 }

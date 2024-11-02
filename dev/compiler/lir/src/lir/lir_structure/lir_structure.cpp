@@ -1,6 +1,19 @@
 #include "lir_structure.hpp"
+#include <base/maps.hpp>
 
 namespace compiler::lir {
+
+	bool Function::validateBlockOrder() const {
+		base::Map<BlockRef, bool> block_map;
+		for (const auto& block: block_order) {
+			if (block_map.contains(block)) return false;
+			block_map.put(block, true);
+		}
+		for (const auto& block: blocks) {
+			if (!block_map.contains(block.ref())) return false;
+		}
+		return true;
+	}
 
 	// @TODO: printing in this file in not perfect nor complete, make it better
 
@@ -12,6 +25,32 @@ namespace compiler::lir {
 	 * @note It should be used only used in lir::Function::debugPrint method
 	 */
 	struct LirPrinter {
+		query::Context& ctx;
+		std::ostream& output;
+
+		LirPrinter(query::Context& ctx, std::ostream& output):
+			ctx(ctx), output(output) {}
+
+		base::Map<LocalRef, usize> local_id;
+		base::Map<BlockRef, usize> block_id;
+
+		void setLocalIds(const Function& function) {
+			usize next_id = 0;
+			for (const auto& local: function.local_list) {
+				local_id[local.ref()] = next_id++;
+			}
+		}
+
+		void setBlockIds(const Function& function) {
+			usize next_id = 0;
+			for (const auto& block: function.block_order) {
+				block_id[block] = next_id++;
+			}
+		}
+
+		void debugPrint(const Function& function) {
+			setLocalIds(function);
+		}
 
 	};
 

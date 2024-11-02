@@ -50,6 +50,7 @@ private:
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
 			auto& foo_lir = ctx.query<compiler::lir::LowerToLirFunction>({ foo_mir });
+			ASSERT_TRUE(foo_lir.validateBlockOrder());
 
 			// @TODO: add some proper tests here
 
