@@ -6,7 +6,7 @@
 #include <iostream>
 #include <query_framework/utils/with_context_do.hpp>
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp> //< needed not ctx.query, @TODO: move context to different file
+#include <query_framework/query_impl.hpp>  //< needed for ctx.query, @TODO: move context to different file
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 

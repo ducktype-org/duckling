@@ -325,17 +325,17 @@ namespace compiler::lir {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// LirFunction is build-inplace here, and for this reason
-			// actives legal state only at the end.
+			// achieves legal state only at the end.
 			// for this reason additional assertions should be put inplace, to
 			// ensure that the state is legal.
 
 			// what we do here:
 			// * map mir locals to lir locals
+			// * map mir block numbers to lir blocks
 			// * go thru all blocks
 			// * generate lir-blocks from each mir-block, by:
 			//   * going thru all instructions
-			//   * generating lir-instructions, lir-blocks from each mir-instruction
-			// * mapping block numbers somehow
+			//   * generating lir-instructions and lir-blocks from each mir-instruction
 
 			Mir2Lir mir2lir{ ctx, key };
 
@@ -344,7 +344,12 @@ namespace compiler::lir {
 			mir2lir.makeInitialBlocks();
 			mir2lir.lowerBlocks();
 
-			return mir2lir.get();
+			auto fun = mir2lir.get();
+
+			// @opt: remove it in optimized, release builds
+			CORE_ASSERT(fun.validateBlockOrder(), "Invalid block order");
+
+			return fun;
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF

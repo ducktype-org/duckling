@@ -9,9 +9,8 @@ namespace compiler::lir {
 			if (block_map.contains(block)) return false;
 			block_map.put(block, true);
 		}
-		for (const auto& block: blocks) {
+		for (const auto& block: blocks)
 			if (!block_map.contains(block.ref())) return false;
-		}
 		return true;
 	}
 
@@ -19,15 +18,14 @@ namespace compiler::lir {
 	 * @brief This struct encapsulates the logic and shared state for printing LIR code.
 	 * This state is needed because the LIR lacks any kind of "ids" or names for locals, blocks, etc
 	 * The ids/names are given arbitrarily.
-	 * 
+	 *
 	 * @note It should be used only used in lir::Function::debugPrint method
 	 */
 	struct LirPrinter {
 		query::Context& ctx;
-		std::ostream& output;
+		std::ostream&   output;
 
-		LirPrinter(query::Context& ctx, std::ostream& output):
-			ctx(ctx), output(output) {}
+		LirPrinter(query::Context& ctx, std::ostream& output): ctx(ctx), output(output) {}
 
 		base::Map<LocalRef, usize> local_id;
 		base::Map<BlockRef, usize> block_id;
@@ -63,18 +61,10 @@ namespace compiler::lir {
 
 		void printLocation(const LirLocation& location) {
 			variant_match(location.getVariant()) {
-				variant_case(i64, value) {
-					output << value;
-				}
-				variant_case(LocalRef, local) {
-					printLocal(local, output);
-				}
-				variant_case(BlockRef, block) {
-					output << "Block(" << block_id[block] << ")";
-				}
-				variant_default {
-					CORE_PANIC("Unhandled variant in printLocation");
-				}
+				variant_case(i64, value) { output << value; }
+				variant_case(LocalRef, local) { printLocal(local, output); }
+				variant_case(BlockRef, block) { output << "Block(" << block_id[block] << ")"; }
+				variant_default { CORE_PANIC("Unhandled variant in printLocation"); }
 			}
 		}
 
@@ -89,7 +79,7 @@ namespace compiler::lir {
 				output_value << " :=";
 			}
 			output << output_value.str() << " ";
-	
+
 			output << std::left << std::setw(15);
 			output << base::enumToStr(instruction.operation).strView() << "  ";
 
@@ -127,12 +117,10 @@ namespace compiler::lir {
 				output << "    ";
 				printInstruction(block->terminator);
 				output << "\n";
-
 			}
 
 			output << "}";
 		}
-
 	};
 
 	void Function::debugPrint(query::Context& ctx, std::ostream& output) const {

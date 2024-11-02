@@ -170,11 +170,11 @@ namespace compiler::lir {
 		std::vector<BlockRef> block_order;
 
 		/**
-		 * @brief Checks if block order uniquely stores 
+		 * @brief Checks if block order uniquely stores
 		 * all blocks.
-		 * 
-		 * @return true 
-		 * @return false 
+		 *
+		 * @return true
+		 * @return false
 		 */
 		[[nodiscard]]
 		bool validateBlockOrder() const;
