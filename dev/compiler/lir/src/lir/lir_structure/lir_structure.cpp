@@ -58,6 +58,23 @@ namespace compiler::lir {
 			output << "Local(" << local_id[local] << ")";
 		}
 
+		void printLocation(const LirLocation& location) {
+			variant_match(location.getVariant()) {
+				variant_case(i64, value) {
+					output << value;
+				}
+				variant_case(LocalRef, local) {
+					printLocal(local);
+				}
+				variant_case(BlockRef, block) {
+					output << "Block(" << block_id[block] << ")";
+				}
+				variant_default {
+					CORE_PANIC("Unhandled variant in printLocation");
+				}
+			}
+		}
+
 		void printInstruction(const Instruction& instruction) {
 			if (instruction.output.has_value()) {
 				printLocal(instruction.output.value());
@@ -68,7 +85,12 @@ namespace compiler::lir {
 			}
 			output << base::enumToStr(instruction.operation).strView() << "  ";
 
-			// some args...
+			std::string_view sep = "";
+			for (auto arg: instruction.arguments) {
+				output << sep;
+				sep = ", ";
+				printLocation(arg);
+			}
 		}
 
 		void debugPrint(const Function& function) {
