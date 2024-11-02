@@ -54,8 +54,11 @@ namespace compiler::lir {
 			output << "    TYPE:\n" << local->type.toStringDefinition(ctx, true, 1) << "\n";
 		}
 
-		void printLocal(LocalRef local) {
-			output << "Local(" << local_id[local] << ")";
+		/**
+		 * @note Custom output, so we can align when printing instruction
+		 */
+		void printLocal(LocalRef local, std::ostream& loc_output) const {
+			loc_output << "Local(" << local_id[local] << ")";
 		}
 
 		void printLocation(const LirLocation& location) {
@@ -64,7 +67,7 @@ namespace compiler::lir {
 					output << value;
 				}
 				variant_case(LocalRef, local) {
-					printLocal(local);
+					printLocal(local, output);
 				}
 				variant_case(BlockRef, block) {
 					output << "Block(" << block_id[block] << ")";
@@ -76,13 +79,18 @@ namespace compiler::lir {
 		}
 
 		void printInstruction(const Instruction& instruction) {
+			// save flags to restore
+			auto output_flags = output.flags();
+
+			output << std::left << std::setw(12);
+			std::stringstream output_value;
 			if (instruction.output.has_value()) {
-				printLocal(instruction.output.value());
-				output << " := ";
+				printLocal(instruction.output.value(), output_value);
+				output_value << " :=";
 			}
-			else {
-				output << "            ";
-			}
+			output << output_value.str() << " ";
+	
+			output << std::left << std::setw(15);
 			output << base::enumToStr(instruction.operation).strView() << "  ";
 
 			std::string_view sep = "";
@@ -91,6 +99,9 @@ namespace compiler::lir {
 				sep = ", ";
 				printLocation(arg);
 			}
+
+			// restore flags
+			output.flags(output_flags);
 		}
 
 		void debugPrint(const Function& function) {
