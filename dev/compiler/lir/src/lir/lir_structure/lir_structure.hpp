@@ -67,8 +67,6 @@ namespace compiler::lir {
 
 		bool operator==(const LirLocation& other) const = default;
 
-		void debugPrint(std::ostream& output) const;
-
 		[[nodiscard]]
 		const ValueType& getVariant() const {
 			return value;
@@ -102,7 +100,6 @@ namespace compiler::lir {
 		// a copy of type-layout here might bu sub-optimal
 		tsl::TypeLayout type;
 
-		void debugPrint(query::Context&, std::ostream& output, bool detailed = false) const;
 
 	private:
 		LirLocal(helios::SymID helios_id, tsl::TypeLayout type):
@@ -146,8 +143,6 @@ namespace compiler::lir {
 			  operation(operation),
 			  output(output),
 			  arguments(std::move(arguments)) {}
-
-		void debugPrint(std::ostream& output) const;
 	};
 
 	/**
