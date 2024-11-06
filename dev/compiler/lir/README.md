@@ -3,7 +3,7 @@
 # What is LIR
 
 LIR is a module responsible for creation and definition of Low Intermediate Representation.
-LIR is very similar to MIR but its drops certain abstractions,
+LIR is very similar to MIR but it drops certain abstractions,
 which makes it simpler and is one step closer to an executable.
 
 ## LIR compared to MIR:
