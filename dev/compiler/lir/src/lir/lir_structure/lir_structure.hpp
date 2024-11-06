@@ -10,9 +10,9 @@ namespace compiler::mir {
 
 // clang-format off
 
-// @TODO: two enums with the same name included in one cpp lead to compiler error.
-// fix it
-
+// @TODO:
+// once this is introduced: https://github.com/orgs/ducktype-org/projects/11/views/1?pane=issue&itemId=86181552
+// change name to just Operation
 MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, LirOperation,
 	Uninitialized, //< placeholder for uninitialized value, should not be in LIR output
 
@@ -98,15 +98,15 @@ namespace compiler::lir {
 		base::Optional<helios::SymID> helios_id;
 
 		// a copy of type-layout here might bu sub-optimal
-		tsl::TypeLayout type;
+		tsl::TypeLayout layout;
 
 
 	private:
-		LirLocal(helios::SymID helios_id, tsl::TypeLayout type):
+		LirLocal(helios::SymID helios_id, tsl::TypeLayout layout):
 			  helios_id(helios_id),
-			  type(std::move(type)) {}
+			  layout(std::move(layout)) {}
 
-		LirLocal(tsl::TypeLayout type): helios_id({}), type(std::move(type)) {}
+		LirLocal(tsl::TypeLayout type): helios_id({}), layout(std::move(layout)) {}
 
 		friend struct Function;
 		friend LocalRef;

@@ -49,7 +49,7 @@ namespace compiler::lir {
 
 		void printLocalDesc(LocalRef local) {
 			output << "  Local(" << local_id[local] << ")\n";
-			output << "    TYPE:\n" << local->type.toStringDefinition(ctx, true, 1) << "\n";
+			output << "    LAYOUT:\n" << local->layout.toStringDefinition(ctx, true, 1) << "\n";
 		}
 
 		/**
