@@ -4,10 +4,9 @@
 
 namespace compiler::mir {
 	struct MirLocal;
-	
+
 	/**
 	 * @brief Reference to MIR Local variable data.
 	 */
 	using LocalRef = CRef<MirLocal>;
 }
-

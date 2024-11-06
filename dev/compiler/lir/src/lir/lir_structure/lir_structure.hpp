@@ -117,9 +117,9 @@ namespace compiler::lir {
 		/**
 		 * @brief Crates unique local with bool-type, and without
 		 * helios_id.
-		 * @note its used to create lifetime-flags 
-		 * @param ctx 
-		 * @return LirLocal 
+		 * @note its used to create lifetime-flags
+		 * @param ctx
+		 * @return LirLocal
 		 */
 		static LirLocal boolLocal(query::Context& ctx);
 	};
