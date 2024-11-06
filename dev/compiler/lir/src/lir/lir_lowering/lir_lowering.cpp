@@ -316,7 +316,7 @@ namespace compiler::lir {
 			 * Should be used once, at the end of LIR function creation.
 			 * @return Function
 			 */
-			Function get() {
+			Function get() && {
 				return Function{
 					key.function.name, std::move(blocks), std::move(locals), std::move(block_order)
 				};
@@ -344,7 +344,7 @@ namespace compiler::lir {
 			mir2lir.makeInitialBlocks();
 			mir2lir.lowerBlocks();
 
-			auto fun = mir2lir.get();
+			auto fun = std::move(mir2lir).get();
 
 			// @opt: remove it in optimized, release builds
 			CORE_ASSERT(fun.validateBlockOrder(), "Invalid block order");
