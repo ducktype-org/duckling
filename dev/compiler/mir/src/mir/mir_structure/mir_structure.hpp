@@ -256,6 +256,7 @@ namespace compiler::mir {
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
+		helios::ScopeID              top_lifetime_scope;
 
 		Function()                = delete;
 		Function(const Function&) = delete;
@@ -270,7 +271,8 @@ namespace compiler::mir {
 			base::StrID                  name,
 			std::vector<Block>           blocks,
 			base::StableVector<MirLocal> local_list,
-			BlockID                      entry_block
+			BlockID                      entry_block,
+			helios::ScopeID              top_lifetime_scope
 		);
 
 		void debugPrint(std::ostream& output) const;
