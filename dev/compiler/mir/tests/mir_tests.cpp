@@ -26,6 +26,7 @@ class MIRConstructionTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
+		// @TODO: add parameters test, once they are handled well
 		TESTER_ADD_TEST(simpleVarTest);
 		TESTER_ADD_TEST(testTerminatorSuccessors);
 		TESTER_ADD_TEST(mockLifetimeAnalysisTest);

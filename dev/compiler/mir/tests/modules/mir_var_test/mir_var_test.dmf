@@ -1,4 +1,4 @@
-fun foo(a: i32) = {
+fun foo() = {
 	var a: i32 = 23;
 	if (9) {
 		var b: i32 = 7;
