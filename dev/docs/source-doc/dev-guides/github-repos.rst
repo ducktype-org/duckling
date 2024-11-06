@@ -8,7 +8,7 @@ Here you can find description of all  active repositories in our project.
     :depth: 2
     :local:
 
-``rift-dev``
+``duckling``
 ============
 
 The main repository of the project. Source code is located in the ``dev/`` directory. Setup is automated with `toolbox.py`.
@@ -76,9 +76,9 @@ link `here <https://github.com/ducktype-org/dev-space/tree/main/organizacja/webs
 ``doc-confic``
 ==============
 
-This repository is dedicated to configuration of all of our sphinx-based documentation. It is included as a submodule in ``rift-doc`` and ``rift-dev``.
+This repository is dedicated to configuration of all of our sphinx-based documentation. It is included as a submodule in ``rift-doc`` and ``duckling``.
 
 ``zpp``
 =======
 
-Each year some zpp teams join our organization. Since their projects are usually somewhat independent from core language developement, they work on a separete repository (usually fork of ``rift-dev``) and their work is later synced-up or merged into core repos. These repos are marked with ``-zpp`` suffix and are poject specific.
+Each year some zpp teams join our organization. Since their projects are usually somewhat independent from core language developement, they work on a separete repository (usually fork of ``duckling``) and their work is later synced-up or merged into core repos. These repos are marked with ``-zpp`` suffix and are poject specific.

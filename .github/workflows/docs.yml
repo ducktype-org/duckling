@@ -18,7 +18,7 @@ env:
 
 jobs:
   docs:
-    if: github.repository == 'ducktype-org/rift-dev'
+    if: github.repository == 'ducktype-org/duckling'
     runs-on: ubuntu-24.04
 
     steps:
