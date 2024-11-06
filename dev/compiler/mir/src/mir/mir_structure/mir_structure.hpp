@@ -8,6 +8,8 @@
 #include <base/strongly_typed_id.hpp>
 #include <base/stringifyable_enum.hpp>
 
+#include "mir_local_ref.hpp"
+
 // clang-format off
 MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Uninitialized,
@@ -49,8 +51,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 namespace compiler::mir {
 
-	struct MirLocal;
-
 	/**
 	 * @brief Whether given operation is an operation that can (and has to be)
 	 * the last operation in the block (i.e. be a terminator).
@@ -72,11 +72,6 @@ namespace compiler::mir {
 	};
 
 	STRONG_TYPEDEF_ID(LocalID);
-
-	/**
-	 * @brief Reference to MIR Local variable data.
-	 */
-	using LocalRef = CRef<MirLocal>;
 
 	/**
 	 * @brief Description of a MIR Local variable, like a function argument or simply local

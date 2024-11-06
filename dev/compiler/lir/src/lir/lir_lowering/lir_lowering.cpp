@@ -41,10 +41,10 @@ namespace compiler::lir {
 	 * @param mir_local
 	 * @return LirLocal
 	 */
-	LirLocal LirLocal::fromMir(query::Context& ctx, const mir::MirLocal& mir_local) {
-		auto type_layout = ctx.query<tsl::QueryTypeLayout>(mir_local.type.getType());
+	LirLocal LirLocal::fromMir(query::Context& ctx, mir::LocalRef mir_local) {
+		auto type_layout = ctx.query<tsl::QueryTypeLayout>(mir_local->type.getType());
 
-		return LirLocal{ mir_local.helios_id, type_layout };
+		return LirLocal{ mir_local->helios_id, type_layout };
 	}
 
 	LirLocal LirLocal::boolLocal(query::Context& ctx) {
@@ -145,7 +145,7 @@ namespace compiler::lir {
 			 */
 			void makeLocals() {
 				for (const auto& mir_local: key.function.local_list) {
-					auto lir_local     = LirLocal::fromMir(ctx, *mir_local);
+					auto lir_local     = LirLocal::fromMir(ctx, mir_local.ref());
 					auto lifetime_flag = LirLocal::boolLocal(ctx);
 
 					auto pos      = locals.pushBack(std::move(lir_local));
@@ -198,8 +198,8 @@ namespace compiler::lir {
 			}
 
 			/**
-			 * @brief Lowers flag of the given operation into
-			 * LIR operations. Should be called before lowering the operation
+			 * @brief Lowers flags of the given operation into
+			 * LIR operations. Should always be called before lowering any operation
 			 * @TODO: does calling before always make sense?
 			 * @TODO: implement logic here
 			 *

@@ -4,9 +4,7 @@
 #include <base/stable_container.hpp>
 #include <base/stringifyable_enum.hpp>
 
-namespace compiler::mir {
-	struct MirLocal;
-}
+#include <mir/mir_structure/mir_local_ref.hpp>
 
 // clang-format off
 
@@ -106,7 +104,7 @@ namespace compiler::lir {
 			  helios_id(helios_id),
 			  layout(std::move(layout)) {}
 
-		LirLocal(tsl::TypeLayout type): helios_id({}), layout(std::move(layout)) {}
+		LirLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
 
 		friend struct Function;
 		friend LocalRef;
@@ -114,8 +112,15 @@ namespace compiler::lir {
 	public:
 		// note: don't use it outside lir lowering:
 
-		// @TODO: change to LocalRef (not now, due to forward declaration)
-		static LirLocal fromMir(query::Context& ctx, const mir::MirLocal& mir_local);
+		static LirLocal fromMir(query::Context& ctx, mir::LocalRef mir_local);
+
+		/**
+		 * @brief Crates unique local with bool-type, and without
+		 * helios_id.
+		 * @note its used to create lifetime-flags 
+		 * @param ctx 
+		 * @return LirLocal 
+		 */
 		static LirLocal boolLocal(query::Context& ctx);
 	};
 
