@@ -249,9 +249,11 @@ namespace compiler::mir {
 			for (usize i = 0; i < this->blocks.size(); i++)
 				blocks.emplace_back(this->blocks.getRef(i).value()->build());
 
-			return Function{
-				name.value(), std::move(blocks), std::move(local_list), entry_block.value()->getID(), top_lifetime_scope.value()
-			};
+			return Function{ name.value(),
+				             std::move(blocks),
+				             std::move(local_list),
+				             entry_block.value()->getID(),
+				             top_lifetime_scope.value() };
 		}
 
 		void setName(base::StrID name) {
