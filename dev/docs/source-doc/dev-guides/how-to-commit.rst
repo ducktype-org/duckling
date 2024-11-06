@@ -2,7 +2,7 @@
 How to commit
 =============
 
-This page describes how to comiit changes to our repositories following good practicies and standards. Keep in mind that this tutorial is focused on ``rift-dev`` - our repisitory. Other repositories do not require as strict practicies.
+This page describes how to comiit changes to our repositories following good practicies and standards. Keep in mind that this tutorial is focused on ``duckling`` - our repisitory. Other repositories do not require as strict practicies.
 
 .. contents::
     :depth: 1
@@ -21,7 +21,7 @@ Most of our repositories don't allow commiting directly to the ``main`` branch. 
 Make some changes
 =================
 
-Don't forget to write tests and docs! On ``rift-dev`` Quacker bot will block the merge if coverage percantege drops (this can be bypassed if really needed).
+Don't forget to write tests and docs! On ``duckling`` repo Quacker bot will block the merge if coverage percantege drops (this can be bypassed if really needed).
 
 Format your code
 ----------------

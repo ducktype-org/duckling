@@ -5,7 +5,7 @@ It includes helpful guides for developers, such as instructions on writing tests
 
 ## Building docs
 
-**Detailed instruction on how to build the docs can be found in main [README.md](https://github.com/ducktype-org/rift-dev?tab=readme-ov-file#initialize-the-repository-with-toolbox) file.**
+**Detailed instruction on how to build the docs can be found in main [README.md](https://github.com/ducktype-org/duckling?tab=readme-ov-file#initialize-the-repository-with-toolbox) file.**
 
 Make sure you have Python virtual environment set up (typically with `toolbox.py`), 
 as well as build directory created with `docs` option enabled.
