@@ -18,12 +18,14 @@ namespace compiler::mir {
 		base::StrID                  name,
 		std::vector<Block>           blocks,
 		base::StableVector<MirLocal> local_list,
-		BlockID                      entry_block
+		BlockID                      entry_block,
+		helios::SymID                helios_id
 	):
 		  name(name),
 		  blocks(std::move(blocks)),
 		  local_list(std::move(local_list)),
-		  entry_block(entry_block) {}
+		  entry_block(entry_block),
+		  helios_id(helios_id) {}
 
 
 	namespace hc = helios::code;
@@ -234,9 +236,12 @@ namespace compiler::mir {
 		base::StableVector<MirLocal>     local_list;
 
 		query::Context& ctx;
+		helios::SymID   helios_symbol;
 
 	public:
-		FunctionBuilder(query::Context& ctx): ctx(ctx) {}
+		FunctionBuilder(query::Context& ctx, helios::SymID helios_symbol):
+			  ctx(ctx),
+			  helios_symbol(helios_symbol) {}
 
 		[[nodiscard]]
 		Function build() {
@@ -246,9 +251,11 @@ namespace compiler::mir {
 			for (usize i = 0; i < this->blocks.size(); i++)
 				blocks.emplace_back(this->blocks.getRef(i).value()->build());
 
-			return Function{
-				name.value(), std::move(blocks), std::move(local_list), entry_block.value()->getID()
-			};
+			return Function{ name.value(),
+				             std::move(blocks),
+				             std::move(local_list),
+				             entry_block.value()->getID(),
+				             helios_symbol };
 		}
 
 		void setName(base::StrID name) {
@@ -441,7 +448,7 @@ namespace compiler::mir {
 	// @TODO: StmtExprBoolJmpVisitor for jumping code
 
 	Function lowerToPreMirFunction(query::Context& ctx, const helios::HOUTFunction& function) {
-		FunctionBuilder function_builder{ ctx };
+		FunctionBuilder function_builder{ ctx, function.original_symbol };
 		function_builder.setName(function.original_name);
 
 		// @TODO: add parameters do list od locals
