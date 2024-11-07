@@ -38,6 +38,15 @@ namespace base {
 		 */
 		StableVector(const StableVector&) = delete;
 
+		/**
+		 * @note It is pointer-wise comparision
+		 * @todo change it to value-wise comparision once StableVector refactor is introduced
+		 * @note it is used to compare mir::Function, lir::Function
+		 * There are a lot of questions regarding how hout, mir, lir objects
+		 * should be compared and hashed.
+		 */
+		bool operator==(const StableVector& other) const = default;
+
 		[[nodiscard]]
 		constexpr usize size() const noexcept {
 			return data.size();

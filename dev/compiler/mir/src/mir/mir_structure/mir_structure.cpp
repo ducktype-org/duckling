@@ -5,6 +5,8 @@
 
 namespace compiler::mir {
 
+	base::HashT Function::customPerfectHash() const { return base::perfectHash(helios_id); }
+
 	bool isTerminating(Operation op) {
 		switch (op) {
 		case Operation::ReturnVoid:

@@ -11,6 +11,7 @@
 #include "type_desc.hpp"
 #include <helios/scope_symbol_id.hpp>
 #include <base/optional.hpp>
+#include <base/bits_and_bytes.hpp>
 
 namespace tsh {
 	namespace internal {
@@ -136,7 +137,7 @@ namespace tsh {
 		 * @return The size of the type.
 		 */
 		[[nodiscard]]
-		usize getSize() const;
+		Bits getSize() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(IntegralInfo)
 
@@ -159,7 +160,7 @@ namespace tsh {
 		 * @return The size of the type.
 		 */
 		[[nodiscard]]
-		usize getSize() const;
+		Bits getSize() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(FloatInfo)
 

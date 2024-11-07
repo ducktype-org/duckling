@@ -1,7 +1,7 @@
-# Main Rift development repository
+# Main Duckling development repository
 
-This is the main repository for the Rift project. 
-It contains the main codebase and documentation for the project.
+This is the main repository for the Duckling project. 
+It contains the main codebase for the project.
 
 ## Documentation website
 
