@@ -1,7 +1,5 @@
 /**
  * @file mir_tests.cpp
- * @brief Tests in this file are very bad right now, because MIR
- * is not yet fully implemented and is hard to properly test.
  */
 
 #include <query_framework/query_entry_point.hpp>
@@ -163,6 +161,7 @@ private:
 	void mockLifetimeAnalysisTest() {
 		// since lifetime analysis is a mock implementation, we don't
 		// yet test them with much effort.
+		// @TODO: add better tests once proper lifetimes implementation is in place
 		// But we do want to make sure, that it compiles and does not throw:
 
 		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_var_test")));
