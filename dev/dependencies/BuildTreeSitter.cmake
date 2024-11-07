@@ -5,7 +5,6 @@ include(FetchContent)
 function(BuildTreeSitter)
 	set(oneValueArgs TS_URL TS_CPP_URL)
 	cmake_parse_arguments(BuildTreeSitter "" "${oneValueArgs}" "" ${ARGN})
-
 	set(DEPS_DIR ${PROJECT_BINARY_DIR}/_deps)
 
 	set(TS_DIR ${DEPS_DIR}/tree-sitter-src)
