@@ -666,7 +666,7 @@ namespace compiler::helios {
 			}
 
 			// Now, `a` will be a variant.
-			// @TODO: https://github.com/ducktype-org/rift-dev/pull/169#discussion_r1654601995
+			// @TODO: https://github.com/ducktype-org/duckling/pull/169#discussion_r1654601995
 			if (is_variant_b) std::swap(a, b);
 
 			variant_match(a) {

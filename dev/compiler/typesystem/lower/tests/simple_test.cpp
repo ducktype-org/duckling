@@ -4,21 +4,21 @@
 #include <tester/tester.hpp>
 #include <typesystem/higher/type_interface.hpp>
 #include <typesystem/higher/queries.hpp>
-#include <query_framework/test_utils/context_suite.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <helios/test_utils/helios_test_utils.hpp>
 
 using namespace tsl;
 using namespace tsh;
+using query::utils::withContextDo;
 
-class LowerTypeSystemSimpleTest final: public tester::ContextSuite {
+class LowerTypeSystemSimpleTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS LowerTypeSystemSimpleTest
 
 public:
-	LowerTypeSystemSimpleTest(tester::TestConfig&& config):
-		  tester::ContextSuite(std::move(config), "Lower TypeSystem simple test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basic_types_test);
 		TESTER_ADD_TEST(variant_test);
 		TESTER_ADD_TEST(tuple_test);
@@ -26,12 +26,23 @@ public:
 	}
 
 private:
+	void test_printing(
+		const tsl::TypeLayout& layout, query::Context& ctx, bool do_non_recursive = false
+	) {
+		std::cout << layout.toStringIdentification() << "\n";
+		std::cout << layout.toStringDefinition(ctx) << "\n";
+		if (do_non_recursive) {
+			std::cout << "non recursive:\n";
+			std::cout << layout.toStringDefinition(ctx, false) << "\n";
+		}
+	}
+
 	void basic_types_test() {
 		withContextDo([&](query::Context& ctx) -> void {
 			UnitInfo   unit_type   = ctx.query<QueryUnitType>({});
 			TypeLayout unit_layout = ctx.query<QueryTypeLayout>(unit_type);
 
-			assertTrue(unit_layout.getSize() == 0, "Empty layout should have size zero.");
+			assertTrue(unit_layout.getSize() == Bits(0), "Empty layout should have size zero.");
 			assertTrue(
 				unit_layout.getSourceType() == ctx.query<QueryUnitType>({}),
 				"Layout should have source type as constructed."
@@ -41,6 +52,7 @@ private:
 				}
 				variant_default { fail("Layout of unit type should be empty."); }
 			}
+			test_printing(unit_layout, ctx);
 
 			TypeInfo byte_sized_types[]{
 				ctx.query<QueryByteType>({}),
@@ -62,6 +74,7 @@ private:
 					}
 					variant_default { fail("Layout of byte sized type should be integral."); }
 				}
+				test_printing(byte_sized_layout, ctx);
 			}
 
 			usize int_sizes[] = { 8, 16, 32, 64, 128 };
@@ -69,7 +82,7 @@ private:
 				IntegralInfo int_type   = ctx.query<QueryIntegralType>(size);
 				TypeLayout   int_layout = ctx.query<QueryTypeLayout>(int_type);
 				assertTrue(
-					int_layout.getSize() == size,
+					int_layout.getSize() == Bits(size),
 					"Integral layout should have size equal to that of the source type."
 				);
 				assertTrue(
@@ -81,6 +94,7 @@ private:
 					}
 					variant_default { fail("Layout of integral type should be integral."); }
 				}
+				test_printing(int_layout, ctx);
 			}
 
 			usize float_sizes[] = { 16, 32, 64, 80, 128 };
@@ -88,7 +102,7 @@ private:
 				FloatInfo  float_type   = ctx.query<QueryFloatType>(size);
 				TypeLayout float_layout = ctx.query<QueryTypeLayout>(float_type);
 				assertTrue(
-					float_layout.getSize() == size,
+					float_layout.getSize() == Bits(size),
 					"Float layout should have size equal to that of the source type."
 				);
 				assertTrue(
@@ -100,6 +114,7 @@ private:
 					}
 					variant_default { fail("Layout of float type should be float."); }
 				}
+				test_printing(float_layout, ctx);
 			}
 
 			FunctionInfo function_type     = ctx.query<QueryFunctionType>({ {}, unit_type });
@@ -117,6 +132,7 @@ private:
 				}
 				variant_default { fail("Layout of function type should be functional."); }
 			}
+			test_printing(functional_layout, ctx);
 
 			RawPointerInfo raw_pointer_type   = ctx.query<QueryRawPointerType>({});
 			TypeLayout     raw_pointer_layout = ctx.query<QueryTypeLayout>(raw_pointer_type);
@@ -134,6 +150,7 @@ private:
 				}
 				variant_default { fail("Layout of raw pointer type should be pointer-like."); }
 			}
+			test_printing(raw_pointer_layout, ctx);
 
 			PointerInfo unit_pointer_type   = ctx.query<QueryPointerType>({ unit_type });
 			TypeLayout  unit_pointer_layout = ctx.query<QueryTypeLayout>(unit_pointer_type);
@@ -155,6 +172,7 @@ private:
 				}
 				variant_default { fail("Layout of raw pointer type should be pointer-like."); }
 			}
+			test_printing(unit_pointer_layout, ctx);
 		});
 	}
 
@@ -166,7 +184,7 @@ private:
 			TypeLayout   variant_layout = ctx.query<QueryTypeLayout>(variant_type);
 
 			assertTrue(
-				variant_layout.getSize() == 2 * BYTE_SIZE + 16,
+				variant_layout.getSize() == BYTE_SIZE * 2 + Bits(16),
 				"Variant layout size should account for data alignment."
 			);
 			assertTrue(
@@ -175,10 +193,12 @@ private:
 			);
 			variant_match(variant_layout()) {
 				variant_case(VariantTypeLayout, l) {
-					assertTrue(l.getTagOffset() == 0, "Variant tag should be at the beginning.");
+					assertTrue(
+						l.getTagOffset() == Bytes(0), "Variant tag should be at the beginning."
+					);
 					assertTrue(l.getTagSize() == BYTE_SIZE, "Variant tag should not be too big.");
 					assertTrue(
-						l.getDataOffset() == 2,
+						l.getDataOffset() == Bytes(2),
 						"Data offset takes should take alignment into account."
 					);
 					assertTrue(
@@ -192,6 +212,7 @@ private:
 				}
 				variant_default { fail("Layout of variant type should be variant-like."); }
 			}
+			test_printing(variant_layout, ctx, true);
 		});
 	}
 
@@ -206,7 +227,7 @@ private:
 			TypeLayout   tuple_layout = ctx.query<QueryTypeLayout>(tuple_type);
 
 			assertTrue(
-				tuple_layout.getSize() == 16 * BYTE_SIZE,
+				tuple_layout.getSize() == BYTE_SIZE * 16,
 				"Tuple layout size should account for data alignment."
 			);
 			assertTrue(
@@ -216,13 +237,14 @@ private:
 			variant_match(tuple_layout()) {
 				variant_case(TupleTypeLayout, l) {
 					assertTrue(
-						l.getComponentOffset(0) == 0 && l.getComponentOffset(1) == 2
-							&& l.getComponentOffset(2) == 8,
+						l.getComponentOffset(0) == Bytes(0) && l.getComponentOffset(1) == Bytes(2)
+							&& l.getComponentOffset(2) == Bytes(8),
 						"Tuple layout should align its component layouts."
 					);
 				}
 				variant_default { fail("Layout of tuple type should be tuple-like."); }
 			}
+			test_printing(tuple_layout, ctx, true);
 		});
 	}
 
@@ -258,7 +280,7 @@ private:
 
 			TypeLayout my_class_layout = ctx.query<QueryTypeLayout>(my_class_type);
 			assertTrue(
-				my_class_layout.getSize() == 16 * BYTE_SIZE,
+				my_class_layout.getSize() == BYTE_SIZE * 16,
 				"Class layout size should account for data alignment."
 			);
 			assertTrue(
@@ -269,14 +291,15 @@ private:
 			variant_match(my_class_layout()) {
 				variant_case(ClassTypeLayout, l) {
 					assertTrue(
-						l.getFieldOffset(a_field_symbol) == 0
-							&& l.getFieldOffset(b_field_symbol) == 2
-							&& l.getFieldOffset(c_field_symbol) == 8,
+						l.getFieldOffset(a_field_symbol) == Bytes(0)
+							&& l.getFieldOffset(b_field_symbol) == Bytes(2)
+							&& l.getFieldOffset(c_field_symbol) == Bytes(8),
 						"Class layout should align its component layouts."
 					);
 				}
 				variant_default { fail("Layout of class type should be class-like."); }
 			}
+			test_printing(my_class_layout, ctx, true);
 		});
 	}
 
