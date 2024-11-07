@@ -31,6 +31,9 @@ function(BuildTreeSitter)
 
 	FetchContent_MakeAvailable(fetch_tree_sitter fetch_tree_sitter_cpp)
 
+	# In the following targets the `make` command is used,
+ 	# not the ${CMAKE_MAKE_PROGRAM}, as tree sitter only provides
+	# `Makefile`s and does not support other build systems.
 	add_custom_target(
 		build_tree_sitter
 		BYPRODUCTS ${TS_LIB}
