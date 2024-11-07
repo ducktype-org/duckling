@@ -5,6 +5,9 @@
 #include "../scopes/scopes.hpp"
 #include <base/unique_pointer.hpp>
 #include <helios/hout/element_ref.hpp>
+#include "pst_parser/elements/hierarchy/not_statements.hpp"
+#include "pst_parser/pst_expr_visitor.hpp"
+#include "query_framework/query_int.hpp"
 #include "visitors.hpp"
 
 namespace compiler::helios::code {
@@ -117,53 +120,62 @@ namespace compiler::helios::code {
 		visitor.visitBinaryOperatorExpr(*this);
 	}
 
-	ElementRef<Expr> Expr::fromRPN(query::Context& ctx, const rpn::RPNExpr& expr) {
-		// The algorithm from RPN: https://en.wikipedia.org/wiki/Binary_expression_tree
-		std::stack<ElementRef<Expr>> st;
-		for (auto&& elem: expr.elements) {
-			variant_match(elem) {
-				variant_case(rpn::Identifier, idt) {
-					st.emplace(
-						base::make_unique<IdentifierExpr>(expr.scope, idt.symbol_list.back(), ctx)
-					);
-				}
+	struct PstExprToHoutExprVisitor: public pst::PstExprVisitorPanicky {
 
-				variant_case(rpn::Operator, oper) {
-					auto b = std::move(st.top());
-					st.pop();
-					auto a = std::move(st.top());
-					st.pop();
+	};
 
-					st.emplace(base::make_unique<BinaryOperatorExpr>(
-						expr.scope, oper.oper_id, std::move(a), std::move(b), ctx
-					));
-				}
-
-				variant_case(rpn::NamedIdentifier, idt) {
-					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
-						{ expr.scope, idt.symbol_name, true }
-					);
-					auto single
-						= sym_list.getAsSingle().expect("Not propagating errors here yet...");
-					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, single.back(), ctx));
-				}
-
-				variant_case(rpn::NumValue, num_value) {
-					st.emplace(base::make_unique<LiteralValueExpr>(
-						expr.scope, std::stoi(num_value.num_id.str()), ctx
-					));
-				}
-
-				variant_default {
-					CORE_PANIC(base::strConcat(
-						"Unhandlable type during parsing type from expr: ", typeid(elem).name()
-					));
-				}
-			}
-		}
-		CORE_ASSERT(st.size() == 1, "Empty HOUT Tree stack");
-		return std::move(st.top());
+	ElementRef<Expr> Expr::fromPST(query::Context& ctx, const PstRef<pst::ExprElement> root) {
+		PstExprToHoutExprVisitor vistitor;
+		
 	}
+
+	// ElementRef<Expr> Expr::fromRPN(query::Context& ctx, const rpn::RPNExpr& expr) {
+	// 	// The algorithm from RPN: https://en.wikipedia.org/wiki/Binary_expression_tree
+	// 	std::stack<ElementRef<Expr>> st;
+	// 	for (auto&& elem: expr.elements) {
+	// 		variant_match(elem) {
+	// 			variant_case(rpn::Identifier, idt) {
+	// 				st.emplace(
+	// 					base::make_unique<IdentifierExpr>(expr.scope, idt.symbol_list.back(), ctx)
+	// 				);
+	// 			}
+
+	// 			variant_case(rpn::Operator, oper) {
+	// 				auto b = std::move(st.top());
+	// 				st.pop();
+	// 				auto a = std::move(st.top());
+	// 				st.pop();
+
+	// 				st.emplace(base::make_unique<BinaryOperatorExpr>(
+	// 					expr.scope, oper.oper_id, std::move(a), std::move(b), ctx
+	// 				));
+	// 			}
+
+	// 			variant_case(rpn::NamedIdentifier, idt) {
+	// 				auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+	// 					{ expr.scope, idt.symbol_name, true }
+	// 				);
+	// 				auto single
+	// 					= sym_list.getAsSingle().expect("Not propagating errors here yet...");
+	// 				st.emplace(base::make_unique<IdentifierExpr>(expr.scope, single.back(), ctx));
+	// 			}
+
+	// 			variant_case(rpn::NumValue, num_value) {
+	// 				st.emplace(base::make_unique<LiteralValueExpr>(
+	// 					expr.scope, std::stoi(num_value.num_id.str()), ctx
+	// 				));
+	// 			}
+
+	// 			variant_default {
+	// 				CORE_PANIC(base::strConcat(
+	// 					"Unhandlable type during parsing type from expr: ", typeid(elem).name()
+	// 				));
+	// 			}
+	// 		}
+	// 	}
+	// 	CORE_ASSERT(st.size() == 1, "Empty HOUT Tree stack");
+	// 	return std::move(st.top());
+	// }
 
 // visitors:
 #define STMT_VISITOR(type) \
@@ -183,7 +195,8 @@ namespace compiler::helios::code {
 
 namespace compiler::helios {
 
-	// @NOTE: code for creating HoutOfExpr is adapted from HIR, and is generally temporary
+
+
 
 	/**
 	 * @brief HoutOfExpr for expression that contain only one element

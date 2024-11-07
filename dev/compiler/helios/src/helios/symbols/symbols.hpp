@@ -232,7 +232,7 @@ namespace compiler::helios {
 			/**
 			 * @brief The expression to parse from pst.
 			 */
-			const std::vector<pst::Expr::ExprElem>& expr;
+			const std::vector<const pst::ExprElement&>& expr;
 			/**
 			 * @brief A scope that the expression was written.
 			 */

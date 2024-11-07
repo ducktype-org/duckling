@@ -14,6 +14,7 @@
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
 #include "element_ref.hpp"
+#include "pst_parser/elements/hierarchy/not_statements.hpp"
 
 namespace compiler::helios::code {
 
@@ -57,7 +58,8 @@ namespace compiler::helios::code {
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
 
-		static ElementRef<Expr> fromRPN(query::Context& ctx, const rpn::RPNExpr& elements);
+		// static ElementRef<Expr> fromRPN(query::Context& ctx, const rpn::RPNExpr& elements);
+		static ElementRef<Expr> fromPST(query::Context& ctx, const PstRef<pst::ExprElement> root);
 	};
 
 	/**
@@ -208,7 +210,7 @@ namespace compiler::helios::code {
 
 namespace compiler::helios {
 	struct KeyOf_QueryHoutOfExpr {
-		PstRef<pst::Expr> expr;
+		PstRef<pst::ExprElement> expr;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;

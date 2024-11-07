@@ -23,9 +23,11 @@ namespace pst {
 
 		virtual void visitExprValue([[maybe_unused]] const expr::ExprValue& stmt) = 0;
 
-		virtual void visitTemplateSpecifier([[maybe_unused]] const expr::TemplateSpecifier& stmt) = 0;
+		virtual void visitTemplateSpecifier([[maybe_unused]] const expr::TemplateSpecifier& stmt)
+			= 0;
 
-		virtual void visitIdentifierLiteral([[maybe_unused]] const expr::IdentifierLiteral& stmt) = 0;
+		virtual void visitIdentifierLiteral([[maybe_unused]] const expr::IdentifierLiteral& stmt)
+			= 0;
 
 		virtual void visitAccess([[maybe_unused]] const expr::Access& stmt) = 0;
 
@@ -62,9 +64,11 @@ namespace pst {
 
 		void visitExprValue([[maybe_unused]] const expr::ExprValue& stmt) override {};
 
-		void visitTemplateSpecifier([[maybe_unused]] const expr::TemplateSpecifier& stmt) override {};
+		void visitTemplateSpecifier([[maybe_unused]] const expr::TemplateSpecifier& stmt) override {
+		};
 
-		void visitIdentifierLiteral([[maybe_unused]] const expr::IdentifierLiteral& stmt) override {};
+		void visitIdentifierLiteral([[maybe_unused]] const expr::IdentifierLiteral& stmt) override {
+		};
 
 		void visitAccess([[maybe_unused]] const expr::Access& stmt) override {};
 
@@ -88,9 +92,10 @@ namespace pst {
 /**
  * @brief Macro used to define PstExprVisitor methods
  */
-#define PANIC_EXPR_VISITOR_VISIT_METHOD(type)                           \
-	void visit##type([[maybe_unused]] const expr::type& stmt) override { \
-		CORE_PANIC("PstExprVisitorPanicky visited " #type);        \
+#define PANIC_EXPR_VISITOR_VISIT_METHOD(type)               \
+	void visit##type([[maybe_unused]]                       \
+	                 const expr::type& stmt) override {     \
+		CORE_PANIC("PstExprVisitorPanicky visited " #type); \
 	}
 
 	/**
