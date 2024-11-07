@@ -374,7 +374,7 @@ def download_llvm_impl(version, arch):
     llvm_file.download()
 
 
-@cli.cgommand()
+@cli.command()
 @click.option(
     "-v",
     "--version",
@@ -420,12 +420,11 @@ def download_llvm(*args, **kwargs):
     default="build",
 )
 @click.option(
-    "-s",
-    "--singlethread",
-    help="If passed, linter will run on a single thread instead of being multithreaded",
-    type=bool,
-    default=False,
-    is_flag=True,
+    "-j",
+    "--threads",
+    help="On how many threads can linter run?",
+    type=int,
+    default=4,
 )
 @click.option(
     "-r",
@@ -433,7 +432,6 @@ def download_llvm(*args, **kwargs):
     help="The branch relative to which the diff is created.",
     type=str,
     default="origin/main",
-    is_flag=True,
 )
 def linter(*args, **kwargs):
     """Simulates clang-tidy and clang-format as if in a workflow.
