@@ -90,24 +90,27 @@ def simulate_cpp_linter(clang_tidy_path: str, clang_format_path: str, build: str
         if file.endswith(".hpp") or file.endswith(".cpp"):
             log_info(f"Running linting on: {file}")
             try:
-                # clang-tidy command succeeds if no errors were found
-                bash_command_get_output(
+                # clang-tidy command succeeds if no errors were found.
+                # Prints warnings on stdout.
+                tidy_out, _ = bash_command_get_output(
                     f"{clang_tidy_path} -p {build_folder} --format-style file"
                     f' --line-filter="[{{"name": "{file}", "lines": {diffs[file]}}}]"'
                     f" --extra-arg= {file}"
                 )
+                if tidy_out:
+                    log_warning(f"clang-tidy output: \n{tidy_out}")
 
                 # clang-format command succeeds always and returns data (possibly empty)
                 lines = [f"--lines={start}:{stop}" for start, stop in diffs[file]]
-                clang_out, clang_err = bash_command_get_output(
+                format_out, format_err = bash_command_get_output(
                     f"{clang_format_path}"
                     " -style=file --dry-run"
                     f" {' '.join(lines)} {file}"
                 )
 
                 # Parse data returned by clang-format
-                if clang_out or clang_err:
-                    log_warning(f"Failed clang-format output: \n{clang_out}{clang_err}")
+                if format_out or format_err:
+                    log_warning(f"clang-format output: \n{format_out}{format_err}")
                     clang_format_failed = True
 
             except BashCommandError as e:
