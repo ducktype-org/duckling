@@ -5,7 +5,7 @@ include(FetchContent)
 function(BuildTreeSitter)
 	set(oneValueArgs TS_URL TS_CPP_URL)
 	cmake_parse_arguments(BuildTreeSitter "" "${oneValueArgs}" "" ${ARGN})
-	
+
 	set(DEPS_DIR ${PROJECT_BINARY_DIR}/_deps)
 
 	set(TS_DIR ${DEPS_DIR}/tree-sitter-src)
@@ -34,7 +34,7 @@ function(BuildTreeSitter)
 	add_custom_target(
 		build_tree_sitter
 		BYPRODUCTS ${TS_LIB}
-		COMMAND ${CMAKE_MAKE_PROGRAM} --quiet
+		COMMAND make -j --quiet
 		WORKING_DIRECTORY ${TS_DIR}
 		VERBATIM
 	)
@@ -42,7 +42,7 @@ function(BuildTreeSitter)
 	add_custom_target(
 		build_tree_sitter_cpp
 		BYPRODUCTS ${TS_CPP_LIB}
-		COMMAND ${CMAKE_MAKE_PROGRAM} --quiet
+		COMMAND make -j --quiet
 		WORKING_DIRECTORY ${TS_CPP_DIR}
 		VERBATIM
 	)
