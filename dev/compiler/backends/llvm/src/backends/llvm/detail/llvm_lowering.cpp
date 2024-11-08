@@ -5,7 +5,7 @@
 LLVM_INCLUDE_BEGIN()
 
 // #include <llvm/ADT/APInt.h>
-#include <llvm/IR/Verifier.h>
+// #include <llvm/IR/Verifier.h>
 // #include <llvm/ExecutionEngine/ExecutionEngine.h>
 // #include <llvm/ExecutionEngine/GenericValue.h>
 // #include <llvm/ExecutionEngine/MCJIT.h>
@@ -241,8 +241,7 @@ namespace compiler::backend_llvm {
 
 	};
 
-	Module lirFunction2Module(const lir::Function& lir_function) {
-
+	Module lirFunctionToModule(const lir::Function& lir_function) {
 		init();
 		llvm::LLVMContext& context = getLLVMContext();
 
@@ -254,25 +253,5 @@ namespace compiler::backend_llvm {
 		Box<ModuleImpl> module_impl = box<ModuleImpl>(std::move(module));
 		return Module{std::move(module_impl)};
 
-		// todo: move to moduleimpl methods:
-		// std::cerr << "\n\nVerification: \n";
-		// bool error_found = llvm::verifyFunction(*fun, &llvm::errs());
-		// std::cerr << "\n\n\n";
-
-		// // making obj files from api is for some reason not trivial,
-		// // lacking docs for new api
-
-		// if (error_found) {
-		// 	std::cerr << "Errors, aborting!\n";
-		// }
-		// else {
-		// 	std::cerr << "OK\n";
-		// 	// so we will do this:...
-		// 	fun->print(llvm::outs());
-		// }
-
 	}
-
-
-
 }

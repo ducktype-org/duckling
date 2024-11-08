@@ -58,6 +58,8 @@ int main(int argc, const char* argv[]) {
 		});
 		std::cerr << "\n\n\n";
 
-		compiler::backend::llvm_backend::llvmPrintLir(lir_fun);
+		auto llvm_module = compiler::backend_llvm::lirFunctionToModule(lir_fun);
+		bool v = llvm_module.verify();
+		llvm_module.debugPrint();
 	}
 }

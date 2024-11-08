@@ -4,6 +4,11 @@
 #include "llvm_includes/module.hpp"
 
 namespace compiler::backend_llvm {
+
+	/**
+	 * @brief Helper class of backend_llvm::Module
+	 * Implements it is a way similar to pimpl idiom
+	 */
 	struct ModuleImpl {
 		Box<llvm::Module> module;
 
@@ -11,5 +16,7 @@ namespace compiler::backend_llvm {
 
 		[[nodiscard]]
 		bool verify() const;
+
+		void debugPrint() const;
 	};
 }
