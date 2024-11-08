@@ -21,6 +21,15 @@ namespace base::extend {
 }
 
 namespace compiler::backend_llvm {
+
+	bool Module::verify() const {
+		return impl->verify();
+	}
+
+	void Module::debugPrint() const {
+		return impl->debugPrint();
+	}
+
 	bool ModuleImpl::verify() const {
 		// @TODO: does it verify all functions?
 		std::cerr << "LLVMVerification: \n";

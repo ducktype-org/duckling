@@ -47,8 +47,8 @@ namespace compiler::backend_llvm {
 		bool v1 = llvm::InitializeNativeTarget();
 		bool v2 = llvm::InitializeNativeTargetAsmPrinter();
 
-		CORE_ASSERT(v1, "failed to initialize llvm (1)");
-		CORE_ASSERT(v2, "failed to initialize llvm (2)");
+		CORE_ASSERT(not v1, "failed to initialize llvm (1)");
+		CORE_ASSERT(not v2, "failed to initialize llvm (2)");
 	}
 
 	llvm::LLVMContext& getLLVMContext() {
