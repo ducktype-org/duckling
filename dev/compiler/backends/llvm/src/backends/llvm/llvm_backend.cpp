@@ -1,4 +1,5 @@
 #include "llvm_backend.hpp"
+#include <lir/lir_structure/lir_structure.hpp>
 
 #include <llvm_helpers/llvm_helpers.hpp>
 LLVM_INCLUDE_BEGIN()
