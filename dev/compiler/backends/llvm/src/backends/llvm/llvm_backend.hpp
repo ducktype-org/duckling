@@ -16,6 +16,7 @@ namespace compiler::backend_llvm {
 		Box<ModuleImpl> impl;
 
 	public:
+		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 
 		void debugPrint(std::ostream&) const;
 		
@@ -28,7 +29,7 @@ namespace compiler::backend_llvm {
 	 * containing only this function.
 	 * @note This function is a temporary entry point for the llvm backend.
 	 */
-	Module llvmPrintLir(const lir::Function&);
+	Module lirFunction2Module(const lir::Function&);
 
 
 	// query for single function into module?

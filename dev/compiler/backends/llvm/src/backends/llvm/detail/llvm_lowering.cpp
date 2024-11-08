@@ -34,7 +34,8 @@ LLVM_INCLUDE_BEGIN()
 LLVM_INCLUDE_END()
 
 
-// #include "llvm_backend.hpp"
+#include "../llvm_backend.hpp"
+#include "module_impl.hpp"
 #include <lir/lir_structure/lir_structure.hpp>
 #include <base/box.hpp>
 #include <base/maps.hpp>
@@ -222,6 +223,7 @@ namespace compiler::backend_llvm {
 			);
 
 			generateLocalVars(fun);
+			// todo: remove it, and do stuff
 			// generateBlockMapping(fun);
 
 
@@ -239,34 +241,35 @@ namespace compiler::backend_llvm {
 
 	};
 
-	void llvmPrintLir(const lir::Function& lir_function) {
+	Module lirFunction2Module(const lir::Function& lir_function) {
 
 		init();
-		
 		llvm::LLVMContext& context = getLLVMContext();
 
 		Box<llvm::Module> module = box<llvm::Module>("test", context);
 
 		LIR2LLVMFunction lir2llvm{context, lir_function, module.refMut()};
-
 		auto fun = lir2llvm.createFunction();
-		
 
-		std::cerr << "\n\nVerification: \n";
-		bool error_found = llvm::verifyFunction(*fun, &llvm::errs());
-		std::cerr << "\n\n\n";
+		Box<ModuleImpl> module_impl = box<ModuleImpl>(std::move(module));
+		return Module{std::move(module_impl)};
 
-		// making obj files from api is for some reason not trivial,
-		// lacking docs for new api
+		// todo: move to moduleimpl methods:
+		// std::cerr << "\n\nVerification: \n";
+		// bool error_found = llvm::verifyFunction(*fun, &llvm::errs());
+		// std::cerr << "\n\n\n";
 
-		if (error_found) {
-			std::cerr << "Errors, aborting!\n";
-		}
-		else {
-			std::cerr << "OK\n";
-			// so we will do this:...
-			fun->print(llvm::outs());
-		}
+		// // making obj files from api is for some reason not trivial,
+		// // lacking docs for new api
+
+		// if (error_found) {
+		// 	std::cerr << "Errors, aborting!\n";
+		// }
+		// else {
+		// 	std::cerr << "OK\n";
+		// 	// so we will do this:...
+		// 	fun->print(llvm::outs());
+		// }
 
 	}
 
