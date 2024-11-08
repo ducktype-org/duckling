@@ -6,18 +6,17 @@ namespace base {
 
 	namespace extend {
 		/**
-		* @brief Pointer deleter functor used by Box, MBox
-		* Adding specialization for custom types
-		* can be used to avoid delete on incomplete types.
-		* 
-		* @tparam T 
-		*/
+		 * @brief Pointer deleter functor used by Box, MBox
+		 * Adding specialization for custom types
+		 * can be used to avoid delete on incomplete types.
+		 *
+		 * @tparam T
+		 */
 		template<class T>
 		struct BoxPtrDeleter {
 			static void del(T* ptr) { delete ptr; }
 		};
 	}
-
 
 	/**
 	 * @brief A pointer wrapper type, that owns the pointer and deletes it when it goes out of

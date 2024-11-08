@@ -15,20 +15,18 @@ namespace base::extend {
 
 	// };
 
-	void BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>::del(compiler::backend_llvm::ModuleImpl* ptr) {
+	void BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>::del(
+		compiler::backend_llvm::ModuleImpl* ptr
+	) {
 		delete ptr;
 	}
 }
 
 namespace compiler::backend_llvm {
 
-	bool Module::verify() const {
-		return impl->verify();
-	}
+	bool Module::verify() const { return impl->verify(); }
 
-	void Module::debugPrint() const {
-		return impl->debugPrint();
-	}
+	void Module::debugPrint() const { return impl->debugPrint(); }
 
 	bool ModuleImpl::verify() const {
 		// @TODO: does it verify all functions?
@@ -42,12 +40,11 @@ namespace compiler::backend_llvm {
 	}
 
 	void ModuleImpl::debugPrint() const {
-	
 		module->print(llvm::errs(), nullptr);
 		// fun->print(llvm::outs());
 	}
 
-	Module::~Module() = default;
+	Module::~Module()         = default;
 	ModuleImpl::~ModuleImpl() = default;
 
 }

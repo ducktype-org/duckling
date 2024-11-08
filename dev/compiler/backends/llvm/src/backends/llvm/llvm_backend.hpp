@@ -21,7 +21,7 @@ namespace base::extend {
 }
 
 namespace compiler::backend_llvm {
-	
+
 	/**
 	 * @brief Encapsulates a llvm module in a way
 	 * that does not require to include llvm headers.
@@ -35,7 +35,7 @@ namespace compiler::backend_llvm {
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 
 		void debugPrint() const;
-		
+
 		[[nodiscard]]
 		bool verify() const;
 

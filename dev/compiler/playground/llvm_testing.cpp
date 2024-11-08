@@ -47,19 +47,18 @@ int main(int argc, const char* argv[]) {
 
 	for (auto& fun: top_level.functions) {
 		auto& mir_fun = query::entryPoint<compiler::mir::LowerToMirFunction>({ fun });
-		
+
 		mir_fun.debugPrint(std::cerr);
 		std::cerr << "\n\n\n";
 
 		auto& lir_fun = query::entryPoint<compiler::lir::LowerToLirFunction>({ mir_fun });
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			lir_fun.debugPrint(ctx, std::cerr);
-		});
+		query::utils::withContextDo([&](query::Context& ctx) { lir_fun.debugPrint(ctx, std::cerr); }
+		);
 		std::cerr << "\n\n\n";
 
 		auto llvm_module = compiler::backend_llvm::lirFunctionToModule(lir_fun);
-		bool v = llvm_module.verify();
+		bool v           = llvm_module.verify();
 		llvm_module.debugPrint();
 	}
 }

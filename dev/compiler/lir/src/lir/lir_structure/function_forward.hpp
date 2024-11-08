@@ -1,6 +1,6 @@
 /**
  * @file function_forward.hpp
- * @brief forward declaration for less header dependencies 
+ * @brief forward declaration for less header dependencies
  */
 
 #pragma once
