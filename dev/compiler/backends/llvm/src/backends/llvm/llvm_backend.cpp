@@ -1,7 +1,5 @@
-#include "llvm_backend.hpp"
-#include <lir/lir_structure/lir_structure.hpp>
-
 #include <llvm_helpers/llvm_helpers.hpp>
+
 LLVM_INCLUDE_BEGIN()
 
 // #include <llvm/ADT/APInt.h>
@@ -33,13 +31,16 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
+
+#include "llvm_backend.hpp"
+#include <lir/lir_structure/lir_structure.hpp>
 #include <base/box.hpp>
 #include <base/maps.hpp>
 
 // usefull: https://github.com/llvm/llvm-project/tree/main/llvm/examples
 
 
-namespace compiler::backend::llvm_backend {
+namespace compiler::backend_llvm {
 
 	auto voidType(llvm::LLVMContext& context) {
 		return llvm::Type::getVoidTy(context);
