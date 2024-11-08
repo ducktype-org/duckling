@@ -4,11 +4,12 @@
 #include <base/box.hpp>
 
 namespace compiler::backend_llvm {
-
-	void init();
-
 	struct ModuleImpl;
-
+	
+	/**
+	 * @brief Encapsulates a llvm module in a way
+	 * that does not require to include llvm headers.
+	 */
 	struct Module {
 	private:
 		// this is done this way, to avoid including llvm headers here:
