@@ -1,4 +1,4 @@
-import std.io.printLn as printLn;
+import std.io.printLn;
 
 fun main() = {
     var p = 4, 5;

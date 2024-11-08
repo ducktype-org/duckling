@@ -1,4 +1,4 @@
-import std.io.printLn as printLn;
+import std.io.printLn;
 
 class Point {
     x: i32;

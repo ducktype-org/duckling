@@ -1,4 +1,4 @@
-import std.io as io;
+import std.io;
  
 fun doubleSum(list: List:{int | f32}) {
 	var out: f32; # default init

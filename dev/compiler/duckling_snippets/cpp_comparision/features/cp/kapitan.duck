@@ -1,7 +1,4 @@
-# optimize imports:?
-import std.set as set;
-import std.min as min;
-import std.abs as abs;
+import std.{set, min, abs};
 
 fun main() = {
     var n: i32;

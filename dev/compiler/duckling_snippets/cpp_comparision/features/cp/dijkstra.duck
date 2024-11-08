@@ -1,5 +1,5 @@
-import std.io.printLn as printLn;
-import std.priority_queue as priority_queue;
+import std.io.printLn;
+import std.priority_queue;
 
 const INF: const i32 = 99999999;
 

@@ -1,4 +1,4 @@
-import std.queue as queue;
+import std.queue;
 
 class Node {
     edges: List:{Node};

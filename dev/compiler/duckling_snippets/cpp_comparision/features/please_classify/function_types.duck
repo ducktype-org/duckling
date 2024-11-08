@@ -1,4 +1,4 @@
-import std.io as io;
+import std.io;
 
 template{T, U}
 fun map(list: List:{T}, modifier: const ref T -> U) -> List:{U} = {

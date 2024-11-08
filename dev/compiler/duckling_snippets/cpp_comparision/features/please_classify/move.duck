@@ -1,4 +1,4 @@
-import std.io as io;
+import std.io;
 
 class HeavyData {
 	private name: string;

@@ -1,4 +1,4 @@
-import std.io as io;
+import std.io;
 
 fun main() = {
 	let tuple = (1, 2.5, "hello");
