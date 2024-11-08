@@ -5,6 +5,7 @@
 #include <clap/clap.hpp>
 #include <iostream>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <backends/llvm/llvm_backend.hpp>
@@ -50,10 +51,11 @@ int main(int argc, const char* argv[]) {
 		mir_fun.debugPrint(std::cerr);
 		std::cerr << "\n\n\n";
 
-
 		auto& lir_fun = query::entryPoint<compiler::lir::LowerToLirFunction>({ mir_fun });
 
-		lir_fun.debugPrint(std::cerr);
+		query::utils::withContextDo([&](query::Context& ctx) {
+			lir_fun.debugPrint(ctx, std::cerr);
+		});
 		std::cerr << "\n\n\n";
 
 		compiler::backend::llvm_backend::llvmPrintLir(lir_fun);
