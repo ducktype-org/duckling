@@ -18,5 +18,7 @@ namespace compiler::backend_llvm {
 		bool verify() const;
 
 		void debugPrint() const;
+
+		~ModuleImpl();
 	};
 }

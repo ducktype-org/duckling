@@ -5,6 +5,22 @@
 
 namespace compiler::backend_llvm {
 	struct ModuleImpl;
+}
+
+namespace base::extend {
+	// this is needed to avoid
+	// UB with delete on incomplete type:
+	// extern template struct BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>;
+	// template struct BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>;
+	// extern template struct Box<compiler::backend_llvm::ModuleImpl>;
+
+	template<>
+	struct BoxPtrDeleter<compiler::backend_llvm::ModuleImpl> {
+		static void del(compiler::backend_llvm::ModuleImpl* ptr);
+	};
+}
+
+namespace compiler::backend_llvm {
 	
 	/**
 	 * @brief Encapsulates a llvm module in a way
@@ -22,6 +38,8 @@ namespace compiler::backend_llvm {
 		
 		[[nodiscard]]
 		bool verify() const;
+
+		~Module();
 	};
 
 	/**

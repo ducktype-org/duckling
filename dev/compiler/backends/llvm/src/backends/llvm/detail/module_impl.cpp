@@ -1,8 +1,24 @@
 #include "module_impl.hpp"
+#include "../llvm_backend.hpp"
 
 #include <iostream>
 
 #include "llvm_includes/ir_verifier.hpp"
+
+namespace base::extend {
+	// template class Box<compiler::backend_llvm::ModuleImpl>;
+
+	// template struct BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>;
+
+	// template<>
+	// struct BoxPtrDeleter<compiler::backend_llvm::ModuleImpl> {
+
+	// };
+
+	void BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>::del(compiler::backend_llvm::ModuleImpl* ptr) {
+		delete ptr;
+	}
+}
 
 namespace compiler::backend_llvm {
 	bool ModuleImpl::verify() const {
@@ -21,5 +37,8 @@ namespace compiler::backend_llvm {
 		module->print(llvm::errs(), nullptr);
 		// fun->print(llvm::outs());
 	}
+
+	Module::~Module() = default;
+	ModuleImpl::~ModuleImpl() = default;
 
 }
