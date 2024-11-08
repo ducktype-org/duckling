@@ -1,0 +1,12 @@
+template {T}
+fun sort(data: ref List:{T}) = {
+    for (i in 1..data.length()) {
+        var current = data[i];
+        var j = i-1;
+        while( j >= 0 and data[j] > current) {
+            data[j+1] = data[j];
+            j--;
+        }
+        data[j+1] = current;
+    }
+}

@@ -1,0 +1,14 @@
+template {T}
+fun sort(data: ref List:{T}) = {
+    var swapped = false;
+    for (i in 0..data.length()) {
+        swapped = false;
+        for (j in 1..data.length()) {
+            if (data[j] < data[j-1]) {
+                swap(data[j], data[j-1]);
+                swapped = true;
+            }
+        }
+        if (not swapped) break;
+    }
+}

@@ -1,5 +1,3 @@
-import std.io;
-
 template {T}
 fun sort(data: ref List:{T}) = {
     for (i in data) {
@@ -9,23 +7,4 @@ fun sort(data: ref List:{T}) = {
         }
         swap(i, min);
     }
-}
-
-fun main() = {
-    var n: i32;
-    var data: List:{i32};
-
-    io.scan(n);
-    for (i in 1..n) {
-        var tmp: int;
-        io.scan(tmp);
-        data.append(tmp);
-    }
-
-    sort(data);
-
-    for (i in 1..n) {
-        io.print(data[i], " ");
-    }
-    io.print("\n");
 }
