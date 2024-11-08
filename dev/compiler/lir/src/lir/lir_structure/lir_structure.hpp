@@ -6,6 +6,8 @@
 
 #include <mir/mir_structure/mir_local_ref.hpp>
 
+#include "function_forward.hpp"
+
 // clang-format off
 
 // @TODO:
