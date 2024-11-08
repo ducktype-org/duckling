@@ -253,9 +253,6 @@ namespace base {
 		~MBox() { ::base::extend::BoxPtrDeleter<T>::del(ptr); }
 	};
 
-	// template<class T>
-	// using Box = BoxWithDeleter<T, detail::Deleter<T>>;
-
 	// Deduction guide for constructing a MBox from a Box:
 	template<class U>
 	MBox(Box<U>&&) noexcept -> MBox<U>;
