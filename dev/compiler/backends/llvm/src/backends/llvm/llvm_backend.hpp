@@ -8,12 +8,10 @@ namespace compiler::backend_llvm {
 }
 
 namespace base::extend {
-	// this is needed to avoid
-	// UB with delete on incomplete type:
-	// extern template struct BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>;
-	// template struct BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>;
-	// extern template struct Box<compiler::backend_llvm::ModuleImpl>;
-
+	/**
+	 * @brief Custom Box/MBox deleter for ModuleImpl.
+	 * It is needed to avoid UB with delete on incomplete type.
+	 */
 	template<>
 	struct BoxPtrDeleter<compiler::backend_llvm::ModuleImpl> {
 		static void del(compiler::backend_llvm::ModuleImpl* ptr);
@@ -50,7 +48,6 @@ namespace compiler::backend_llvm {
 	Module lirFunctionToModule(const lir::Function&);
 
 
-	// query for single function into module?
 	// query for hout unit into module?
 	// what about forward declarations?
 }

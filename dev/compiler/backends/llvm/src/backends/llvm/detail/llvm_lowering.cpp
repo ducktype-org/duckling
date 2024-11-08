@@ -185,7 +185,14 @@ namespace compiler::backend_llvm {
 			}
 		}
 
+		/**
+		 * @brief lowers LIRFunction to LLVM Function and adds
+		 * it to the llvm module.
+		 *
+		 * @return llvm::Function* 
+		 */
 		llvm::Function* createFunction() {
+			// this adds the function to the module:
 			llvm::Function* fun = llvm::Function::Create(
 				voidFunType(context),
 				llvm::Function::ExternalLinkage,
@@ -217,7 +224,8 @@ namespace compiler::backend_llvm {
 		Box<llvm::Module> module = box<llvm::Module>("test", context);
 
 		LIR2LLVMFunction lir2llvm{ context, lir_function, module.refMut() };
-		auto             fun = lir2llvm.createFunction();
+		// this implicitly adds the function to the module:
+		lir2llvm.createFunction();
 
 		Box<ModuleImpl> module_impl = box<ModuleImpl>(std::move(module));
 		return Module{ std::move(module_impl) };

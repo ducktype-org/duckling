@@ -6,15 +6,6 @@
 #include "llvm_includes/ir_verifier.hpp"
 
 namespace base::extend {
-	// template class Box<compiler::backend_llvm::ModuleImpl>;
-
-	// template struct BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>;
-
-	// template<>
-	// struct BoxPtrDeleter<compiler::backend_llvm::ModuleImpl> {
-
-	// };
-
 	void BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>::del(
 		compiler::backend_llvm::ModuleImpl* ptr
 	) {

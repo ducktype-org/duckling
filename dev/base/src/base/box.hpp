@@ -6,8 +6,8 @@ namespace base {
 
 	namespace extend {
 		/**
-		 * @brief Pointer deleter functor used by Box, MBox
-		 * Adding specialization for custom types
+		 * @brief Pointer deleter functor used by Box, MBox.
+		 * @note Adding specialization for custom types
 		 * can be used to avoid delete on incomplete types.
 		 *
 		 * @tparam T
