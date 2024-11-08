@@ -60,11 +60,10 @@ int main(int argc, const char* argv[]) {
 		auto llvm_module = compiler::backend_llvm::lirFunctionToModule(lir_fun);
 		bool v           = llvm_module.verify();
 
-		if (v) {
+		if (v)
 			std::cerr << "LLVM verification passed\n\n";
-		} else {
+		else
 			std::cerr << "LLVM verification failed\n\n";
-		}
 
 		llvm_module.debugPrint();
 	}

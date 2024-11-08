@@ -189,7 +189,7 @@ namespace compiler::backend_llvm {
 		 * @brief lowers LIRFunction to LLVM Function and adds
 		 * it to the llvm module.
 		 *
-		 * @return llvm::Function* 
+		 * @return llvm::Function*
 		 */
 		llvm::Function* createFunction() {
 			// this adds the function to the module:
