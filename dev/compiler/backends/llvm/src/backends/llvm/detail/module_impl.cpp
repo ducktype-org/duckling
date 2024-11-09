@@ -25,17 +25,13 @@ namespace compiler::backend_llvm {
 		bool error_found = llvm::verifyModule(*module, &llvm::errs());
 		std::cerr << "\n";
 
-		// bool error_found = llvm::verifyFunction(*fun, &llvm::errs());
-
 		return not error_found;
 	}
 
 	void ModuleImpl::debugPrint() const {
 		module->print(llvm::errs(), nullptr);
-		// fun->print(llvm::outs());
 	}
 
 	Module::~Module()         = default;
 	ModuleImpl::~ModuleImpl() = default;
-
 }

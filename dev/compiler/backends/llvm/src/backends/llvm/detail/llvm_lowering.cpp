@@ -4,11 +4,6 @@
 
 LLVM_INCLUDE_BEGIN()
 
-// #include <llvm/ADT/APInt.h>
-// #include <llvm/IR/Verifier.h>
-// #include <llvm/ExecutionEngine/ExecutionEngine.h>
-// #include <llvm/ExecutionEngine/GenericValue.h>
-// #include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
@@ -20,13 +15,19 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IR/IRBuilder.h>
-// #include <llvm/Support/Casting.h>
 #include <llvm/Support/TargetSelect.h>
-// #include <llvm/Support/raw_ostream.h>
 
+// Those includes are not needed for now, but they might be needed in the future,
+// They are left here, for easy access -- since there are no API docs, that are easy to grasp:
+// #include <llvm/ADT/APInt.h>
+// #include <llvm/IR/Verifier.h>
+// #include <llvm/ExecutionEngine/ExecutionEngine.h>
+// #include <llvm/ExecutionEngine/GenericValue.h>
+// #include <llvm/ExecutionEngine/MCJIT.h>
+// #include <llvm/Support/Casting.h>
+// #include <llvm/Support/raw_ostream.h>
 // #include <llvm/Support/TargetSelect.h>
 // #include <llvm/Support/Host.h>
-
 // #include <llvm/Target/TargetMachine.h>
 // #include <llvm/Target/TargetOptions.h>
 // #include <llvm/ADT/Optional.h>
@@ -40,9 +41,16 @@ LLVM_INCLUDE_END()
 #include <base/box.hpp>
 #include <base/maps.hpp>
 
-// usefull: https://github.com/llvm/llvm-project/tree/main/llvm/examples
+// useful: https://github.com/llvm/llvm-project/tree/main/llvm/examples
+
+// @TODO: use this https://llvm.org/doxygen/classllvm_1_1DIBuilder.html
 
 namespace compiler::backend_llvm {
+	
+	/**
+	 * @brief Initializes some llvm components.
+	 * @note it *should* be safe to call it multiple times
+	 */
 	void init() {
 		bool v1 = llvm::InitializeNativeTarget();
 		bool v2 = llvm::InitializeNativeTargetAsmPrinter();
@@ -51,6 +59,15 @@ namespace compiler::backend_llvm {
 		CORE_ASSERT(not v2, "failed to initialize llvm (2)");
 	}
 
+	/**
+	 * @brief Returns reference to the llvm context.
+	 * @note as per https://llvm.org/doxygen/classllvm_1_1LLVMContext.html#details
+	 * singe context can't be used my multiple threads.
+	 * @note as of 9.11.2024 i did not find the reason, to have more then one context per thread,
+	 * hence this function.
+	 *
+	 * @return llvm::LLVMContext& 
+	 */
 	llvm::LLVMContext& getLLVMContext() {
 		static llvm::LLVMContext context;
 		return context;
@@ -70,8 +87,13 @@ namespace compiler::backend_llvm {
 		return llvm::FunctionType::get(i32Type(context), {}, false);
 	}
 
+	/**
+	 * @brief This struct should be treated as a function,
+	 * that takes LLVMContext, LIRFunction and LLVM Module,
+	 * and generates LLVM function in given module based
+	 * on provided LIRFunction.
+	 */
 	struct LIR2LLVMFunction {
-		// @todo: this should probably be static per thread or something like thats:
 		llvm::LLVMContext&   context;
 		const lir::Function& lir_function;
 		Ref<llvm::Module>    module;
@@ -82,10 +104,16 @@ namespace compiler::backend_llvm {
 			  context(context),
 			  lir_function(lir_function),
 			  module(module) {}
+	
+	private:
 
+		/**
+		 * Maps LIR blocks to LLVM blocks.
+		 * @note: Not all LLVM blocks will be here
+		 */
 		base::Map<lir::BlockRef, Ref<llvm::BasicBlock>> block_mapping;
 
-		void generateBlockMapping(llvm::Function* fun) {
+		void generateMainBlocks(llvm::Function* fun) {
 			u64 block_id = 0;
 			// llvm prints in reverse... eh:
 			for (auto& block: lir_function.blocks | std::views::reverse) {
@@ -96,9 +124,9 @@ namespace compiler::backend_llvm {
 		}
 
 		base::Map<lir::LocalRef, u64> tmp_id;
-
 		std::string llvmLocalName(lir::LocalRef lir_local) {
 			// @TODO.. far from optimal
+			// This will change anyway, with LIR ID unification
 			if (lir_local->helios_id) {
 				return base::strConcat("helios_", base::perfectHash(lir_local->helios_id.value()));
 			} else {
@@ -107,34 +135,44 @@ namespace compiler::backend_llvm {
 			}
 		}
 
-		base::Map<lir::LocalRef, Ref<llvm::Instruction>> register_map;
+		/**
+		 * @brief Maps lir locals to LLVM registers storing
+		 * pointers to them.
+		 */
+		base::Map<lir::LocalRef, Ref<llvm::Instruction>> local_register_map;
 
-		void generateLocalVars(llvm::Function* fun) {
+		void generateMainBlocksAndLocals(llvm::Function* fun) {
 			// allocate all local variables:
 			// first block:
 			llvm::BasicBlock* locals_block
 				= llvm::BasicBlock::Create(context, "local_variables", fun);
 			llvm::IRBuilder<> locals_builder(locals_block);
 			for (auto& var: lir_function.local_list) {
-				// @TODO: llvm types:
+				// @TODO: add llvm types:
 				auto reg = locals_builder.CreateAlloca(
 					i64Type(context), nullptr, llvmLocalName(var.ref())
 				);
-				register_map.put(var.ref(), reg);
+				local_register_map.put(var.ref(), reg);
 			}
 
-			// @TODO: change function names lol:
-			generateBlockMapping(fun);
+			generateMainBlocks(fun);
 
 			// here we assume that first block in block order is the entry block
 			// it might be wrong, but it's good enough for now
 			locals_builder.CreateBr(block_mapping[lir_function.block_order.at(0)].get());
 		}
 
+		/**
+		 * @brief Maps LIRLocation to LLVM Value.
+		 * @note In llvm a lot of things can be treated as values, and
+		 * its based on inheritance.
+		 * @param lir_location 
+		 * @return llvm::Value* 
+		 */
 		auto lir2LLVMLocation(const lir::LirLocation& lir_location) -> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
 				variant_case(i64, value) { return llvm::ConstantInt::get(i64Type(context), value); }
-				variant_case(lir::LocalRef, lir_local) { return register_map[lir_local].get(); }
+				variant_case(lir::LocalRef, lir_local) { return local_register_map[lir_local].get(); }
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
 				variant_default { CORE_PANIC("unknown lir location type"); }
 			}
@@ -185,6 +223,7 @@ namespace compiler::backend_llvm {
 			}
 		}
 
+	public:
 		/**
 		 * @brief lowers LIRFunction to LLVM Function and adds
 		 * it to the llvm module.
@@ -192,7 +231,7 @@ namespace compiler::backend_llvm {
 		 * @return llvm::Function*
 		 */
 		llvm::Function* createFunction() {
-			// this adds the function to the module:
+			// this also adds the function to the module:
 			llvm::Function* fun = llvm::Function::Create(
 				voidFunType(context),
 				llvm::Function::ExternalLinkage,
@@ -200,10 +239,7 @@ namespace compiler::backend_llvm {
 				*module
 			);
 
-			generateLocalVars(fun);
-			// todo: remove it, and do stuff
-			// generateBlockMapping(fun);
-
+			generateMainBlocksAndLocals(fun);
 
 			for (auto& block: lir_function.block_order) {
 				auto              llvm_block = block_mapping[block];
@@ -224,6 +260,7 @@ namespace compiler::backend_llvm {
 		Box<llvm::Module> module = box<llvm::Module>("test", context);
 
 		LIR2LLVMFunction lir2llvm{ context, lir_function, module.refMut() };
+		
 		// this implicitly adds the function to the module:
 		lir2llvm.createFunction();
 

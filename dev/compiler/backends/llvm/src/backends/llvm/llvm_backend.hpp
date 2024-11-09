@@ -46,8 +46,4 @@ namespace compiler::backend_llvm {
 	 * @note This function is a temporary entry point for the llvm backend.
 	 */
 	Module lirFunctionToModule(const lir::Function&);
-
-
-	// query for hout unit into module?
-	// what about forward declarations?
 }
