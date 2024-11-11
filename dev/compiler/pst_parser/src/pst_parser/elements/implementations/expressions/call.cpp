@@ -2,7 +2,7 @@
 
 namespace pst::expr {
 	ParserRef<ExprElement> Call::parse(LangParserState& state, u64 length) {
-		std::cerr << "Parsing Call Expression" << std::endl;
+		// std::cerr << "Parsing Call Expression" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		if (not(length == 1

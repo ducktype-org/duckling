@@ -2,7 +2,7 @@
 
 namespace pst::expr {
 	ParserRef<ExprElement> LogicOr::parse(LangParserState& state, u64 length) {
-		std::cerr << "Parsing Logical Or" << std::endl;
+		// std::cerr << "Parsing Logical Or" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());

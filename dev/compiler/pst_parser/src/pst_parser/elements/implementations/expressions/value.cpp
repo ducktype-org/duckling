@@ -2,7 +2,7 @@
 
 namespace pst::expr {
 	ParserRef<ExprElement> ExprValue::parse(LangParserState& state, u64 length) {
-		std::cerr << "Parsing Value" << std::endl;
+		// std::cerr << "Parsing Value" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());

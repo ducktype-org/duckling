@@ -8,7 +8,7 @@ namespace pst::expr {
 	}
 
 	ParserRef<ExprElement> ComparisonChain::parse(LangParserState& state, u64 length) {
-		std::cerr << "Parsing Comparison Chain Expression" << std::endl;
+		// std::cerr << "Parsing Comparison Chain Expression" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		u64 fwd = skipToOp(state, 0, length);
@@ -50,5 +50,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void ComparisonChain::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitComparisonChain(*this); }
+	void ComparisonChain::acceptVisitor(PstExprVisitor& visitor) const {
+		visitor.visitComparisonChain(*this);
+	}
 }

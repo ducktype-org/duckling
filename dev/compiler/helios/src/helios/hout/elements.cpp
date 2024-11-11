@@ -6,6 +6,7 @@
 #include "../scopes/scopes.hpp"
 #include <base/unique_pointer.hpp>
 #include <helios/hout/element_ref.hpp>
+#include "base/box.hpp"
 #include "base/exceptions.hpp"
 #include "base/optional.hpp"
 #include "helios/helios_errors.hpp"
@@ -96,11 +97,11 @@ namespace compiler::helios::code {
 	}
 
 	BinaryOperatorExpr::BinaryOperatorExpr(
-		query::Context&  ctx,
-		ScopeID          scope,
-		base::StrID      op,
-		ElementRef<Expr> lhs,
-		ElementRef<Expr> rhs
+		query::Context& ctx,
+		ScopeID         scope,
+		lexer::Operator op,
+		base::Box<Expr> lhs,
+		base::Box<Expr> rhs
 	):
 		  Expr(
 			  scope,
@@ -117,7 +118,7 @@ namespace compiler::helios::code {
 	void BinaryOperatorExpr::debugPrint(std::ostream& out) const {
 		out << base::strConcat("(");
 		lhs->debugPrint(out);
-		out << base::strConcat(op);
+		out << base::strConcat(op.str());
 		rhs->debugPrint(out);
 		out << base::strConcat(")");
 	}
@@ -141,11 +142,30 @@ namespace compiler::helios::code {
 			// @TODO: Change literal value from i64 to something more appropriate.
 			node = base::MBox(new LiteralValueExpr(ctx, scope, std::stoi(stmt.getValue().str())));
 		}
+
+		void visitBinaryOperator(const pst::expr::BinaryOperator& stmt) override {
+			PstExprToHoutExprVisitor lhs(ctx, scope);
+			PstExprToHoutExprVisitor rhs(ctx, scope);
+			stmt.getLeftOperand()->acceptVisitor(lhs);
+			stmt.getRightOperand()->acceptVisitor(rhs);
+			CORE_ASSERT(lhs.node, "Invalid LHS of binary operator");
+			CORE_ASSERT(rhs.node, "Invalid RHS of binary operator");
+			node = base::MBox(new BinaryOperatorExpr(
+				ctx,
+				scope,
+				stmt.getOperator(),
+				std::move(lhs.node).toOptBox().value(),
+				std::move(rhs.node).toOptBox().value()
+			));
+		}
 	};
 
 	errors::HResult<base::Box<Expr>, errors::Failed>
 		Expr::fromPST(query::Context& ctx, ScopeID scope, const PstRef<pst::ExprElement> root) {
 		PstExprToHoutExprVisitor visitor(ctx, scope);
+		std::cerr << "Expr: \n";
+		root->debugPrint(std::cerr);
+		std::cerr << '\n';
 		root->acceptVisitor(visitor);
 		auto opt_box = std::move(visitor.node).toOptBox();
 		if (opt_box.has_value()) return std::move(opt_box.value());
@@ -224,12 +244,12 @@ namespace compiler::helios::code {
 	) const {
 		UNPACK_RESULT(i64 lhs_value =, lhs->evaluateValue(ctx));
 		UNPACK_RESULT(i64 rhs_value =, rhs->evaluateValue(ctx));
-		if (op == "+") return lhs_value + rhs_value;
-		if (op == "-") return lhs_value - rhs_value;
-		if (op == "*") return lhs_value * rhs_value;
-		if (op == "/") return lhs_value / rhs_value;
-		if (op == "%") return lhs_value % rhs_value;
-		if (op == "^") return std::pow(lhs_value, rhs_value);
+		if (op.str()[0] == '+') return lhs_value + rhs_value;
+		if (op.str()[0] == '-') return lhs_value - rhs_value;
+		if (op.str()[0] == '*') return lhs_value * rhs_value;
+		if (op.str()[0] == '/') return lhs_value / rhs_value;
+		if (op.str()[0] == '%') return lhs_value % rhs_value;
+		if (op.str()[0] == '^') return std::pow(lhs_value, rhs_value);
 		CORE_PANIC("Unknown operator");
 	}
 }

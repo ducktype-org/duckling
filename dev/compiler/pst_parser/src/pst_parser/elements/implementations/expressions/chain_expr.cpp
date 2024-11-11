@@ -17,7 +17,7 @@ namespace pst::expr {
 	}
 
 	ParserRef<ExprElement> ChainExpr::parse(LangParserState& state, u64 length) {
-		std::cerr << "Parsing Chain Expression" << std::endl;
+		// std::cerr << "Parsing Chain Expression" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		u64 fwd = toNextLink(state, length);
@@ -33,7 +33,8 @@ namespace pst::expr {
 			out->chain.push_back(nullptr);
 			if (state[0].is(lang_def::NamedOperator::Period)) {
 				state.parse(out).with(&out->chain.back(), Access::parse, +fwd);
-			} else if (state[0].isBracketGroup(lexer::Token::Round) || state[0].isBracketGroup(lexer::Token::Square)) {
+			} else if (state[0].isBracketGroup(lexer::Token::Round)
+			           || state[0].isBracketGroup(lexer::Token::Square)) {
 				state.parse(out).with(&out->chain.back(), Call::parse, +fwd);
 			} else {
 				// Error
@@ -65,4 +66,10 @@ namespace pst::expr {
 	}
 
 	void ChainExpr::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitChainExpr(*this); }
+
+	ParserCBorrowRef<ExprElement> BinaryOperator::getLeftOperand() const { return left.borrow(); }
+
+	ParserCBorrowRef<ExprElement> BinaryOperator::getRightOperand() const { return right.borrow(); }
+
+	lexer::Operator BinaryOperator::getOperator() const { return op; }
 }

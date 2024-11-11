@@ -4,7 +4,7 @@
 
 namespace pst::expr {
 	ParserRef<ExprElement> IdentifierLiteral::parse(LangParserState& state, u64 length) {
-		std::cerr << "Parsing IdentifierLiteral Specifier" << std::endl;
+		// std::cerr << "Parsing IdentifierLiteral Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		auto out = base::make_unique<IdentifierLiteral>(state.getPosition());
@@ -31,5 +31,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void IdentifierLiteral::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitIdentifierLiteral(*this); }
+	void IdentifierLiteral::acceptVisitor(PstExprVisitor& visitor) const {
+		visitor.visitIdentifierLiteral(*this);
+	}
 }

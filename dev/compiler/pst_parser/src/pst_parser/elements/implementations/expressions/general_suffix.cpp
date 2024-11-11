@@ -16,7 +16,7 @@ namespace pst::expr {
 	}
 
 	ParserRef<ExprElement> GeneralSuffix::parse(LangParserState& state, u64 length) {
-		std::cerr << "Parsing General Suffix Expressions" << std::endl;
+		// std::cerr << "Parsing General Suffix Expressions" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		u64 fwd            = 0;

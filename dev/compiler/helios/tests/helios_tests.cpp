@@ -30,15 +30,15 @@ public:
 		pst::init();
 		tsh::init();
 
-		TESTER_ADD_TEST(errorTests);
+		TESTER_ADD_TEST(exprTreeTest);
 		TESTER_ADD_TEST(testI32Consts);
+		TESTER_ADD_TEST(errorTests);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testTypeOf);
 		TESTER_ADD_TEST(simpleHOUTTest);
 		TESTER_ADD_TEST(importTest);
 		TESTER_ADD_TEST(houtVisitorTest);
-		TESTER_ADD_TEST(exprTreeTest);
 		TESTER_ADD_TEST(heliosResultConceptTests);
 		TESTER_ADD_TEST(heliosResultTests);
 		TESTER_ADD_TEST(houtVariablesTest);

@@ -841,20 +841,20 @@ namespace compiler::helios {
 	// 	CORE_PANIC("Couldn't parse the type.");
 	// }
 
-	// /**
-	//  * Parses the expression assuming it evaluates to a type. Panics otherwise.
-	//  * @param ctx Context passed to a query.
-	//  * @param expr A PST expression, that has been written in the source code.
-	//  * @param expr_scope A scope where the expression has been expressed.
-	//  * @return tsh::TypeInfo with information about the evaluated type.
-	//  */
-	// ParseTypeFromExpr_Result parseTypeFromExpr(
-	// 	query::Context& ctx, const tpc::ParserCBorrowRef<pst::Expr>& expr, ScopeID expr_scope
-	// ) {
-	// 	rpn::RPNExpr rpn_expr = rpn::makeRPN(ctx, { expr->elements, expr_scope });
-	// 	UNPACK_RESULT(rpn::ExprElem final_type =, rpn::evalExpr(ctx, rpn_expr));
-	// 	UNPACK_RESULT(return, parseTypeFromExpr(ctx, final_type, expr_scope));
-	// }
+	/**
+	 * Parses the expression assuming it evaluates to a type. Panics otherwise.
+	 * @param ctx Context passed to a query.
+	 * @param expr A PST ExprElement, that has been written in the source code.
+	 * @param expr_scope A scope where the expression has been expressed.
+	 * @return tsh::TypeInfo with information about the evaluated type.
+	 */
+	ParseTypeFromExpr_Result
+		parseTypeFromExpr(query::Context& ctx, ScopeID expr_scope, PstRef<pst::ExprElement> expr) {
+		auto parsed = code::Expr::fromPST(ctx, expr_scope, expr);
+		if (parsed.hasError()) return errors::HError(parsed.error());
+		auto tree = std::move(parsed.value());
+		return tree->type_desc.getType();
+	}
 
 	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QueryType_Result) {
 		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
@@ -867,9 +867,9 @@ namespace compiler::helios {
 				symbol_type_info = type;
 			}
 
-			void setTypeOfSymbol(const pst::ParserCBorrowRef<pst::ExprElement>& expr) {
-				auto expr_tree = code::Expr::fromPST(ctx, scope(key), expr);
-				if (expr_tree.hasValue()) setTypeOfSymbol(expr_tree.value()->type_desc);
+			void setTypeOfSymbol(PstRef<pst::ExprElement> expr) {
+				auto tp = parseTypeFromExpr(ctx, scope(key), expr);
+				if (tp.hasValue()) setTypeOfSymbol(tp.value());
 			}
 
 		public:
@@ -893,7 +893,7 @@ namespace compiler::helios {
 				param_types.reserve(params->size());
 
 				for (auto param: params) {
-					auto&& parse_type_res = parseTypeFromExpr(ctx, param->getType(), scope(key));
+					auto&& parse_type_res = parseTypeFromExpr(ctx, scope(key), param->getType());
 					if (parse_type_res.hasValue()) {
 						param_types.emplace_back(parse_type_res.value());
 					} else {
@@ -903,7 +903,7 @@ namespace compiler::helios {
 				}
 				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
 				if (ret.has_value()) {
-					auto&& parsed = parseTypeFromExpr(ctx, ret.value(), scope(key));
+					auto&& parsed = parseTypeFromExpr(ctx, scope(key), ret.value());
 					if (parsed.hasValue()) {
 						ret_type = parsed.value();
 					} else {
@@ -1016,9 +1016,9 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				auto base_expr_tree = code::Expr::fromPST(ctx, class_scope, base);
-				if (base_expr_tree.hasValue()) {
-					class_info.base = base_expr_tree.type_desc;
+				auto tp = parseTypeFromExpr(ctx, class_scope, base);
+				if (tp.hasValue()) {
+					class_info.base = tp.value();
 				} else {
 					// @TODO: Report an error
 					return errors::HError(errors::Failed());
@@ -1027,9 +1027,9 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: implements) {
-					auto base_expr_tree = code::Expr::fromPST(ctx, class_scope, interface);
-					if (base_expr_tree.hasValue()) {
-						class_info.implements.push_back(base_expr_tree.type_desc);
+					auto tp = parseTypeFromExpr(ctx, class_scope, interface);
+					if (tp.hasValue()) {
+						class_info.implements.push_back(tp.value());
 					} else {
 						// @TODO: Report an error
 						return errors::HError(errors::Failed());
@@ -1047,7 +1047,7 @@ namespace compiler::helios {
 
 	struct
 		IMPLEMENT_QUERY(QueryHOUTExprTreeOfSym, errors::HResult<base::Box<code::Expr> COMMA errors::Failed>) {
-		class PstStmtVisitor_GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {
+		struct PstStmtVisitor_GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {
 			Context& ctx;
 			ScopeID  scope;
 
@@ -1070,7 +1070,7 @@ namespace compiler::helios {
 
 			PstStmtVisitor_GetHOUTExprTree visitor(ctx, scope(key));
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
-			return visitor.expr_tree;
+			return std::move(visitor.expr_tree);
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;

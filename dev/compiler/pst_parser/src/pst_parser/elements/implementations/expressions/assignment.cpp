@@ -2,7 +2,7 @@
 
 namespace pst::expr {
 	ParserRef<ExprElement> Assignment::parse(LangParserState& state, u64 length) {
-		std::cerr << "Parsing Assignment" << std::endl;
+		// std::cerr << "Parsing Assignment" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
@@ -47,5 +47,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void Assignment::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitAssignment(*this); }
+	void Assignment::acceptVisitor(PstExprVisitor& visitor) const {
+		visitor.visitAssignment(*this);
+	}
 }

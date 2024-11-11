@@ -2,7 +2,7 @@
 
 namespace pst::expr {
 	ParserRef<ExprElement> Access::parse(LangParserState& state, u64 length) {
-		std::cerr << "Parsing Access Specifier" << std::endl;
+		// std::cerr << "Parsing Access Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		if (length != 2 && length != 4) {}  // Error

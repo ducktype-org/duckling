@@ -2,7 +2,7 @@
 
 namespace pst::expr {
 	ParserRef<ExprElement> TemplateSpecifier::parse(LangParserState& state, u64 length) {
-		std::cerr << "Parsing Template Specifier" << std::endl;
+		// std::cerr << "Parsing Template Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		if (length != 2) {}  // Error
@@ -24,5 +24,8 @@ namespace pst::expr {
 
 		out << "}";
 	}
-	void TemplateSpecifier::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitTemplateSpecifier(*this); }
+
+	void TemplateSpecifier::acceptVisitor(PstExprVisitor& visitor) const {
+		visitor.visitTemplateSpecifier(*this);
+	}
 }

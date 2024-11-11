@@ -30,7 +30,7 @@ namespace pst::expr {
 	}
 
 	ParserRef<ExprElement> GeneralBinary::parse(LangParserState& state, u64 length) {
-		std::cerr << "Parsing General Binary Expressions" << std::endl;
+		// std::cerr << "Parsing General Binary Expressions" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		u64 fwd            = 0;

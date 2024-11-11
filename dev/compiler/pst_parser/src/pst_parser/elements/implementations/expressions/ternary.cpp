@@ -2,7 +2,7 @@
 
 namespace pst::expr {
 	ParserRef<ExprElement> Ternary::parse(LangParserState& state, u64 length) {
-		std::cerr << "Parsing Ternary" << std::endl;
+		// std::cerr << "Parsing Ternary" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());

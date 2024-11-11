@@ -17,6 +17,7 @@
 #include "base/exceptions.hpp"
 #include "element_ref.hpp"
 #include "helios/helios_errors.hpp"
+#include "lexer/token_common.hpp"
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
 
 namespace compiler::helios::code {
@@ -198,17 +199,17 @@ namespace compiler::helios::code {
 	struct BinaryOperatorExpr: public Expr {
 		// @TODO: At this point, this should be a symbol.
 		//  HOUT should not be concerned with overload resolution.
-		base::StrID op;
+		lexer::Operator op;
 
-		ElementRef<Expr> lhs;
-		ElementRef<Expr> rhs;
+		base::Box<Expr> lhs;
+		base::Box<Expr> rhs;
 
 		BinaryOperatorExpr(
 			query::Context&  ctx,
 			ScopeID          scope,
-			base::StrID      op,
-			ElementRef<Expr> lhs,
-			ElementRef<Expr> rhs
+			lexer::Operator  op,
+			base::Box<Expr> lhs,
+			base::Box<Expr> rhs
 		);
 
 		void debugPrint(std::ostream& out) const final;

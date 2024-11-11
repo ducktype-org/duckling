@@ -1,8 +1,10 @@
 #pragma once
 
+#include "lexer/token_common.hpp"
 #include "meta.hpp"
 #include "lists.hpp"           // IWYU pragma: keep
 #include "not_statements.hpp"  // IWYU pragma: keep
+#include "token_parser_core/parser_ref.hpp"
 
 #define CONDITION(name) static bool name(const LangParserState& state, i64 fwd = 0)
 
@@ -96,6 +98,10 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
+			ParserCBorrowRef<ExprElement> getLeftOperand() const;
+			ParserCBorrowRef<ExprElement> getRightOperand() const;
+			lexer::Operator               getOperator() const;
+
 			std::string elementType() const override { return "Infix Operator"; }
 		};
 
@@ -129,7 +135,8 @@ namespace pst {
 		};
 
 		/**
-		 * @note For now the inner expression is just a comma expression, this should probably have it's own parsing in the future
+		 * @note For now the inner expression is just a comma expression, this should probably have
+		 * it's own parsing in the future
 		 */
 		class TemplateSpecifier final: public ExprElement {
 			ParserRef<ExprElement> inner;
@@ -219,7 +226,7 @@ namespace pst {
 
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
 			void                          dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void                          acceptVisitor(PstExprVisitor& visitor) const final;
 
 			~ChainExpr() override = default;
 
@@ -355,7 +362,7 @@ namespace pst {
 			static u64 skipToOp(const LangParserState& state, u64 base, u64 length);
 
 		public:
-			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600){};
+			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600) {};
 
 			std::string elementType() const override { return "Comparison Chain"; }
 

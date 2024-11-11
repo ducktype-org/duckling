@@ -2,7 +2,7 @@
 
 namespace pst::expr {
 	ParserRef<ExprElement> LogicNot::parse(LangParserState& state, u64 length) {
-		std::cerr << "Parsing Logical Not" << std::endl;
+		// std::cerr << "Parsing Logical Not" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
