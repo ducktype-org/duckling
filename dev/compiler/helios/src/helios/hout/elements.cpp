@@ -1,10 +1,16 @@
 #include "elements.hpp"
 
+#include <cmath>
 #include <query_framework/query_impl.hpp>
 #include <base/variant.hpp>
 #include "../scopes/scopes.hpp"
 #include <base/unique_pointer.hpp>
 #include <helios/hout/element_ref.hpp>
+#include "base/exceptions.hpp"
+#include "base/optional.hpp"
+#include "helios/helios_errors.hpp"
+#include "helios/helios_result.hpp"
+#include "helios/scope_symbol_id.hpp"
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
 #include "pst_parser/pst_expr_visitor.hpp"
 #include "query_framework/query_int.hpp"
@@ -46,7 +52,7 @@ namespace compiler::helios::code {
 		out << "}\n";
 	}
 
-	LiteralValueExpr::LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx):
+	LiteralValueExpr::LiteralValueExpr(query::Context& ctx, ScopeID scope, i64 value):
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
@@ -73,7 +79,7 @@ namespace compiler::helios::code {
 		out << ";\n";
 	}
 
-	IdentifierExpr::IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx):
+	IdentifierExpr::IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol):
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
@@ -90,11 +96,11 @@ namespace compiler::helios::code {
 	}
 
 	BinaryOperatorExpr::BinaryOperatorExpr(
+		query::Context&  ctx,
 		ScopeID          scope,
 		base::StrID      op,
 		ElementRef<Expr> lhs,
-		ElementRef<Expr> rhs,
-		query::Context&  ctx
+		ElementRef<Expr> rhs
 	):
 		  Expr(
 			  scope,
@@ -121,12 +127,29 @@ namespace compiler::helios::code {
 	}
 
 	struct PstExprToHoutExprVisitor: public pst::PstExprVisitorPanicky {
+		explicit PstExprToHoutExprVisitor(query::Context& ctx, ScopeID scope):
+			  ctx(ctx),
+			  scope(scope) {}
 
+		query::Context& ctx;
+		ScopeID         scope;
+
+		base::MBox<Expr> node = nullptr;
+
+		void visitExprValue(const pst::expr::ExprValue& stmt) override {
+			stmt.getValue();
+			// @TODO: Change literal value from i64 to something more appropriate.
+			node = base::MBox(new LiteralValueExpr(ctx, scope, std::stoi(stmt.getValue().str())));
+		}
 	};
 
-	ElementRef<Expr> Expr::fromPST(query::Context& ctx, const PstRef<pst::ExprElement> root) {
-		PstExprToHoutExprVisitor vistitor;
-		
+	errors::HResult<base::Box<Expr>, errors::Failed>
+		Expr::fromPST(query::Context& ctx, ScopeID scope, const PstRef<pst::ExprElement> root) {
+		PstExprToHoutExprVisitor visitor(ctx, scope);
+		root->acceptVisitor(visitor);
+		auto opt_box = std::move(visitor.node).toOptBox();
+		if (opt_box.has_value()) return std::move(opt_box.value());
+		return errors::HError(errors::Failed());
 	}
 
 	// ElementRef<Expr> Expr::fromRPN(query::Context& ctx, const rpn::RPNExpr& expr) {
@@ -191,11 +214,27 @@ namespace compiler::helios::code {
 
 	EXPR_VISITOR(LiteralValueExpr);
 	EXPR_VISITOR(IdentifierExpr);
+
+	errors::HResult<i64, errors::Failed> LiteralValueExpr::evaluateValue(query::Context& ctx
+	) const {
+		return value;
+	}
+
+	errors::HResult<i64, errors::Failed> BinaryOperatorExpr::evaluateValue(query::Context& ctx
+	) const {
+		UNPACK_RESULT(i64 lhs_value =, lhs->evaluateValue(ctx));
+		UNPACK_RESULT(i64 rhs_value =, rhs->evaluateValue(ctx));
+		if (op == "+") return lhs_value + rhs_value;
+		if (op == "-") return lhs_value - rhs_value;
+		if (op == "*") return lhs_value * rhs_value;
+		if (op == "/") return lhs_value / rhs_value;
+		if (op == "%") return lhs_value % rhs_value;
+		if (op == "^") return std::pow(lhs_value, rhs_value);
+		CORE_PANIC("Unknown operator");
+	}
 }
 
 namespace compiler::helios {
-
-
 
 
 	/**
@@ -203,52 +242,54 @@ namespace compiler::helios {
 	 */
 	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key)
 		-> code::ElementRef<code::Expr> {
-		auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ key.expr });
+		CORE_PANIC("Not implemented yet...");
 
-		CORE_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single expression");
-		const auto& elem = key.expr->elements.at(0);
+		// auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ key.expr });
 
-		variant_match(elem) {
-			variant_case(pst::Expr::KeywordValue, key) {
-				throw base::NotYetImplemented("Keyword expressions");
-			}
-			variant_case(pst::Expr::NumLiteral, num) {
-				auto val = base::strIDToNum(num.num_id);
-				return base::make_unique<code::LiteralValueExpr>(scope, val, ctx);
-			}
-			variant_case(pst::Expr::Identifier, identifier) {
-				// @note: this does not handle overload
-				// @note: this does not handle "." operation
+		// CORE_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single
+		// expression"); const auto& elem = key.expr->elements.at(0);
 
-				auto lookup_result = ctx.query<QueryLookupInScopeAndParents>(KeyOf_LookupInScope{
-					scope, identifier.indent_id, true });
+		// variant_match(elem) {
+		// 	variant_case(pst::Expr::KeywordValue, key) {
+		// 		throw base::NotYetImplemented("Keyword expressions");
+		// 	}
+		// 	variant_case(pst::Expr::NumLiteral, num) {
+		// 		auto val = base::strIDToNum(num.num_id);
+		// 		return base::make_unique<code::LiteralValueExpr>(scope, val, ctx);
+		// 	}
+		// 	variant_case(pst::Expr::Identifier, identifier) {
+		// 		// @note: this does not handle overload
+		// 		// @note: this does not handle "." operation
 
-				compiler::helios::SymbolList lookup_dealiased;
+		// 		auto lookup_result = ctx.query<QueryLookupInScopeAndParents>(KeyOf_LookupInScope{
+		// 			scope, identifier.indent_id, true });
 
-				auto symbol_path
-					= lookup_result.getAsSingle().expect("Not propagating errors for now...");
+		// 		compiler::helios::SymbolList lookup_dealiased;
 
-				for (auto single_sym: symbol_path) {
-					auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym)
-					                     .expect("Not propagating errors for now...");
-					lookup_dealiased.insert(
-						lookup_dealiased.end(), dealiased.begin(), dealiased.end()
-					);
-				}
+		// 		auto symbol_path
+		// 			= lookup_result.getAsSingle().expect("Not propagating errors for now...");
 
-				CORE_ASSERT(!lookup_dealiased.empty(), "Empty lookup result");
+		// 		for (auto single_sym: symbol_path) {
+		// 			auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym)
+		// 			                     .expect("Not propagating errors for now...");
+		// 			lookup_dealiased.insert(
+		// 				lookup_dealiased.end(), dealiased.begin(), dealiased.end()
+		// 			);
+		// 		}
 
-				// @TODO: dont just ignore everything before last symbol
-				return base::make_unique<code::IdentifierExpr>(scope, lookup_dealiased.back(), ctx);
-			}
-			variant_case(pst::Expr::Group, group) {
-				throw base::NotYetImplemented("Expr from group");
-			}
-			variant_case_novalue(pst::Expr::Operator) {
-				CORE_PANIC("Expression consisting of only operator is not allowed (yet?).");
-			}
-		}
-		CORE_PANIC("No match in variant");
+		// 		CORE_ASSERT(!lookup_dealiased.empty(), "Empty lookup result");
+
+		// 		// @TODO: dont just ignore everything before last symbol
+		// 		return base::make_unique<code::IdentifierExpr>(scope, lookup_dealiased.back(), ctx);
+		// 	}
+		// 	variant_case(pst::Expr::Group, group) {
+		// 		throw base::NotYetImplemented("Expr from group");
+		// 	}
+		// 	variant_case_novalue(pst::Expr::Operator) {
+		// 		CORE_PANIC("Expression consisting of only operator is not allowed (yet?).");
+		// 	}
+		// }
+		// CORE_PANIC("No match in variant");
 	}
 
 	struct IMPLEMENT_QUERY(QueryHoutOfExpr, code::ElementRef<code::Expr>) {
@@ -256,15 +297,16 @@ namespace compiler::helios {
 			// @NOTE: this is simplest, mock implementation
 			// A proper Expr parsing will be added as new mission/PR
 
-			if (key.expr->elements.size() == 1)
-				return houtOfSingleExpr(ctx, key);
-			else {
-				std::stringstream expr_dprint;
-				key.expr->dprint(expr_dprint);
-				throw base::NotYetImplemented(
-					base::strConcat("Complicated HOUT expressions: ", expr_dprint.str())
-				);
-			}
+			CORE_PANIC("Not implemented yet...");
+			// if (key.expr->elements.size() == 1)
+			// 	return houtOfSingleExpr(ctx, key);
+			// else {
+			// 	std::stringstream expr_dprint;
+			// 	key.expr->dprint(expr_dprint);
+			// 	throw base::NotYetImplemented(
+			// 		base::strConcat("Complicated HOUT expressions: ", expr_dprint.str())
+			// 	);
+			// }
 		}
 
 		// @TODO: perhaps add cache

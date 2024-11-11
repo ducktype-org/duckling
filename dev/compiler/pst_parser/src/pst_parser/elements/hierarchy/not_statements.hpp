@@ -21,7 +21,7 @@
 namespace pst {
 
 	class FunParam final: public NotStmt {
-		tpc::Identifier                 name;
+		tpc::Identifier                        name;
 		ParserRef<ExprElement>                 type;
 		base::Optional<ParserRef<ExprElement>> initial;
 
@@ -105,7 +105,7 @@ namespace pst {
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, ClassStmt)
 
-		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos){};
+		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos) {};
 		static ParserRef<ClassBlock> parse(LangParserState& state, const ClassContext& ctx);
 
 		~ClassBlock() override = default;
@@ -187,10 +187,12 @@ namespace pst {
 		 */
 		static bool checkLength(LangParserState& state, i64 length);
 
-		virtual void           acceptVisitor(PstExprVisitor& visitor) const = 0;
 		explicit ExprElement(const dia::SourcePosition& position, i64 precedence):
 			  NotStmt(position),
 			  precedence(precedence) {}
+
+	public:
+		virtual void acceptVisitor(PstExprVisitor& visitor) const = 0;
 	};
 
 	class UniversalExpr: public NotStmt {

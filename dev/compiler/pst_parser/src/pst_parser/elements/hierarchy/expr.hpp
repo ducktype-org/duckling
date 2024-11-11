@@ -103,6 +103,8 @@ namespace pst {
 			lexer::Value number;
 
 		public:
+			lexer::Value getValue() const { return number; }
+
 			explicit ExprValue(const dia::SourcePosition& position, lexer::Value value):
 				  ExprElement(position, 0),
 				  number(value) {}
@@ -127,7 +129,7 @@ namespace pst {
 		};
 
 		/**
-		 * @note For now the inner expression is just a comma expression, this should probably have it's own parsing in the future 
+		 * @note For now the inner expression is just a comma expression, this should probably have it's own parsing in the future
 		 */
 		class TemplateSpecifier final: public ExprElement {
 			ParserRef<ExprElement> inner;

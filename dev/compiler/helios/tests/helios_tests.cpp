@@ -264,6 +264,8 @@ private:
 
 	void exprTreeTest() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/expressions")));
+
+		ASSERT_EQUAL(1, getValue("V1", root_scope));
 		ASSERT_EQUAL(31, getValue("V31", root_scope));
 
 		auto              sym1 = getChain("V31", root_scope).back();

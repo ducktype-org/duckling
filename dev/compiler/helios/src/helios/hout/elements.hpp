@@ -13,7 +13,10 @@
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
+#include "base/box.hpp"
+#include "base/exceptions.hpp"
 #include "element_ref.hpp"
+#include "helios/helios_errors.hpp"
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
 
 namespace compiler::helios::code {
@@ -47,6 +50,7 @@ namespace compiler::helios::code {
 		/**
 		 * The type of the expression, and its value category.
 		 */
+		// @EXPR: Make a method that returns HResult<tsh::TypeDesc<>, Failed> to avoid panics
 		tsh::TypeDesc<> type_desc;
 
 		Expr(ScopeID lifetime_scope, tsh::TypeDesc<> type_desc):
@@ -58,8 +62,10 @@ namespace compiler::helios::code {
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
 
-		// static ElementRef<Expr> fromRPN(query::Context& ctx, const rpn::RPNExpr& elements);
-		static ElementRef<Expr> fromPST(query::Context& ctx, const PstRef<pst::ExprElement> root);
+		static errors::HResult<base::Box<Expr>, errors::Failed>
+			fromPST(query::Context& ctx, ScopeID scope, const PstRef<pst::ExprElement> root);
+
+		virtual errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const = 0;
 	};
 
 	/**
@@ -165,10 +171,12 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		i64 value;
 
-		LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx);
+		LiteralValueExpr(query::Context& ctx, ScopeID scope, i64 value);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
+
+		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 
 	/**
@@ -181,7 +189,7 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		SymID symbol;
 
-		IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx);
+		IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
@@ -196,15 +204,17 @@ namespace compiler::helios::code {
 		ElementRef<Expr> rhs;
 
 		BinaryOperatorExpr(
+			query::Context&  ctx,
 			ScopeID          scope,
 			base::StrID      op,
 			ElementRef<Expr> lhs,
-			ElementRef<Expr> rhs,
-			query::Context&  ctx
+			ElementRef<Expr> rhs
 		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
+
+		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 }
 

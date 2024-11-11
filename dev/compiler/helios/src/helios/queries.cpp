@@ -6,6 +6,7 @@
 #include <base/stable_hashmap.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
+#include "base/exceptions.hpp"
 #include "scopes/scopes.hpp"
 #include "hout/elements.hpp"
 
@@ -109,9 +110,10 @@ namespace compiler::helios {
 			void visitUsing(const pst::Using&) override { empty = true; }
 
 			void visitExprStmt(const pst::ExprStmt& stmt) override {
-				auto expr = ctx.query<QueryHoutOfExpr>({ PstRef<pst::Expr>(stmt.getExpr()) });
-
-				output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
+				// @EXPR
+				CORE_PANIC("Not implemented yet...");
+				// auto expr = ctx.query<QueryHoutOfExpr>({ PstRef<pst::Expr>(stmt.getExpr()) });
+				// output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
 			}
 
 			void visitIf(const pst::If& stmt) override {
