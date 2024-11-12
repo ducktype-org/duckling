@@ -40,7 +40,7 @@ namespace compiler::frontend {
 	 * @brief Query map of children modules aka submodules
 	 * of given module.
 	 */
-	DECLARE_QUERY(QuerySubmodules, ModuleID, const base::HashMap<base::StrID COMMA ModuleID>&)
+	DECLARE_QUERY(QuerySubmodules, ModuleID, CRef<base::HashMap<base::StrID COMMA ModuleID>>)
 
 
 	/**
