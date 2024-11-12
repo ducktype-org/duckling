@@ -258,14 +258,13 @@ namespace compiler::helios {
 		}
 
 		static auto load(QKey key) -> LoadResult {
-			if (const auto& cache = key.ref->symbols) return QResWithACD{ cache->data, cache->acd };
+			if (const auto& cache = key.ref->symbols) return QResWithACD{ &cache->data, cache->acd };
 			return {};
 		}
 
-		static auto store([[maybe_unused]] QKey key, PResult p_res, [[maybe_unused]] query::ACD acd)
-			-> QResult {
+		static auto store(QKey key, PResult p_res, query::ACD acd) -> QResult {
 			key.ref->symbols.emplace(PResWithACD{ std::move(p_res), acd });
-			return key.ref->symbols.value().data;
+			return &key.ref->symbols.value().data;
 		}
 	};
 
@@ -273,11 +272,11 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryLookupInScope, LookupResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			const auto& symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
+			auto symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
 
 			LookupResult result{ {}, {} };
 
-			for (const auto& sym: symbol_list) {
+			for (const auto& sym: *symbol_list) {
 				if (isWildcard(sym)) {
 					if (key.with_wildcards) {
 						auto wild_result = ctx.query<QueryLookupInSymbol>({ sym, key.name, true });
