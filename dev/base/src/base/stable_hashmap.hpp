@@ -26,9 +26,7 @@ namespace base {
 		 * @param key Data key
 		 * @return A reference to the data.
 		 */
-		DATA_T& operator[](const KEY_T& key) {
-			return *data[key];
-		}
+		DATA_T& operator[](const KEY_T& key) { return *data[key]; }
 
 		/**
 		 * Returns the data identified by the key.
@@ -36,9 +34,7 @@ namespace base {
 		 * @param key Data key
 		 * @return A reference to the data.
 		 */
-		const DATA_T& operator[](const KEY_T& key) const {
-			return *data[key];
-		}
+		const DATA_T& operator[](const KEY_T& key) const { return *data[key]; }
 
 		/**
 		 * Returns a reference to the data inside an optional. If the data identified by the key
@@ -61,7 +57,7 @@ namespace base {
 			if_opt_some(data.atMaybe(key), ptr) { return *ptr; }
 			return {};
 		}
-		
+
 		/**
 		 * Returns a copy of a data inside an optional. If the data identified by the
 		 * key does not exist returns an empty optional.
@@ -80,9 +76,7 @@ namespace base {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& value) {
-			return data.put(
-				std::forward<K>(key), ::base::box<DATA_T>(std::forward<D>(value))
-			);
+			return data.put(std::forward<K>(key), ::base::box<DATA_T>(std::forward<D>(value)));
 		}
 
 		/**
