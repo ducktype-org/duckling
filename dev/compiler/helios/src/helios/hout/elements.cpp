@@ -74,7 +74,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
-				  ctx.query<QueryTypeOfSymbol>(symbol).expect(
+				  ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 					  "Handling errors in HOUT is not supported yet"
 				  ),
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
@@ -144,7 +144,7 @@ namespace compiler::helios::code {
 						{ expr.scope, idt.symbol_name, true }
 					);
 					auto single
-						= sym_list.getAsSingle().expect("Not propagating errors here yet...");
+						= sym_list->getAsSingle().expect("Not propagating errors here yet...");
 					st.emplace(base::make_unique<IdentifierExpr>(expr.scope, single.back(), ctx));
 				}
 
@@ -213,11 +213,11 @@ namespace compiler::helios {
 				compiler::helios::SymbolList lookup_dealiased;
 
 				auto symbol_path
-					= lookup_result.getAsSingle().expect("Not propagating errors for now...");
+					= lookup_result->getAsSingle().expect("Not propagating errors for now...");
 
 				for (auto single_sym: symbol_path) {
 					auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym)
-					                     .expect("Not propagating errors for now...");
+					                     ->expect("Not propagating errors for now...");
 					lookup_dealiased.insert(
 						lookup_dealiased.end(), dealiased.begin(), dealiased.end()
 					);
