@@ -216,7 +216,7 @@ namespace query {
  * It caches PResults using base::HashMap in a way that references to them are unstable.
  * @future: change it to component, when proper query-component system will be introduced
  */
-#define QUERY_AUTO_CACHE_COPY                                                  \
+#define QUERY_AUTO_CACHE_COPY                                                                  \
 	static inline base::                                                                       \
 		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>            \
 				cache;                                                                         \
@@ -227,8 +227,11 @@ namespace query {
 	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {               \
 		cache.put(key, { std::move(res), acd });                                               \
 		return cache.at(key).data;                                                             \
-	} \
-	static_assert(std::is_same_v<PResult, QResult>, "PResult and QResult should be equal for QUERY_AUTO_CACHE_COPY");
+	}                                                                                          \
+	static_assert(                                                                             \
+		std::is_same_v<PResult, QResult>,                                                      \
+		"PResult and QResult should be equal for QUERY_AUTO_CACHE_COPY"                        \
+	);
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
