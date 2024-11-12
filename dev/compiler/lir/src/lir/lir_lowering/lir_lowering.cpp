@@ -144,7 +144,7 @@ namespace compiler::lir {
 			 * maps MIR locals to LIR local refs.
 			 */
 			void makeLocals() {
-				for (const auto& mir_local: key.function.local_list) {
+				for (const auto& mir_local: key.function->local_list) {
 					auto lir_local     = LirLocal::fromMir(ctx, mir_local.ref());
 					auto lifetime_flag = LirLocal::boolLocal(ctx);
 
@@ -160,7 +160,7 @@ namespace compiler::lir {
 				// make initial block mapping, and
 				// unfilled blocks that will map to
 				// beginning of each mir block
-				for (const auto& mir_block: key.function.blocks) {
+				for (const auto& mir_block: key.function->blocks) {
 					// note that this block will only be filled with instructions
 					// and terminator later:
 					auto pos = blocks.pushBack({});
@@ -170,7 +170,7 @@ namespace compiler::lir {
 
 			void lowerBlocks() {
 				// here we iterate in reverse only to emit better block order:
-				for (const auto& block: key.function.blocks | std::views::reverse) {
+				for (const auto& block: key.function->blocks | std::views::reverse) {
 					const auto lir_block = mir_to_lir_block[block.id];
 					block_order.emplace_back(lir_block);
 
@@ -318,7 +318,7 @@ namespace compiler::lir {
 			 */
 			Function get() && {
 				return Function{
-					key.function.name, std::move(blocks), std::move(locals), std::move(block_order)
+					key.function->name, std::move(blocks), std::move(locals), std::move(block_order)
 				};
 			}
 		};
