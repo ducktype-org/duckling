@@ -294,7 +294,7 @@ namespace compiler::helios {
 			return result;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+		QUERY_AUTO_CACHE_REF;
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
@@ -320,7 +320,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+		QUERY_AUTO_CACHE_REF;
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);

@@ -484,7 +484,7 @@ namespace compiler::mir {
 			return addDestructors(ctx, std::move(function_no_lifetime));
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMirFunction);

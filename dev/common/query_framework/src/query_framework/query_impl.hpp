@@ -214,7 +214,7 @@ namespace query {
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
- * It caches PResults using base::HashMap in a way that references to them are unstable.
+ * It caches PResults using base::HashMap and returns copies of results on cache hit.
  * @future: change it to component, when proper query-component system will be introduced
  */
 #define QUERY_AUTO_CACHE_COPY                                                                  \
@@ -222,7 +222,7 @@ namespace query {
 		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>            \
 				cache;                                                                         \
 	static auto load(const QKey& key) -> LoadResult {                                          \
-		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
+		if (const auto& value = cache.atMaybe(key)) { return QResWithACD{ value->data, value->acd }; } \
 		return {};                                                                             \
 	}                                                                                          \
 	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {               \
@@ -236,23 +236,24 @@ namespace query {
 
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
- * It caches PResults using base::StableHashMap in a way that references to them are stable.
+ * It caches PResults using base::StableHashMap and returns stable references to results
+ * on cache hit.
  * @future: change it to component, when proper query-component system will be introduced
  */
-#define QUERY_AUTO_CACHE_PRESULT_STABLE_REF                                                    \
+#define QUERY_AUTO_CACHE_REF                                                    \
 	static inline base::                                                                       \
 		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>      \
 				cache;                                                                         \
 	static auto load(const QKey& key) -> LoadResult {                                          \
-		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
+		if (auto value = cache.atMaybe(key)) { return QResWithACD{ CRef<PResult>(&value->data), value->acd }; } \
 		return {};                                                                             \
 	}                                                                                          \
 	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {               \
 		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
-		return cache[key].data;                                                             \
+		return CRef<PResult>(&cache[key].data);                                                             \
 	}\
 	static_assert(                                                                             \
-		std::is_same_v<PResult, CRef<QResult>>,                                                \
+		std::is_same_v<CRef<PResult>, QResult>,                                                \
 		"QResult should be a CRef of PResutlt for QUERY_AUTO_CACHE_REF"                        \
 	);
 

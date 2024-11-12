@@ -272,7 +272,7 @@ struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
 		return out;
 	}
 
-	QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+	QUERY_AUTO_CACHE_REF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
@@ -290,7 +290,7 @@ struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleID
 		return out;
 	}
 
-	QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+	QUERY_AUTO_CACHE_REF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);

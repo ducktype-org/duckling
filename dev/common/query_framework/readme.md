@@ -363,8 +363,8 @@ In order to use it, two requirements must be met:
 
 There are currently two automatic-caching mechanisms:
 
-- `QUERY_AUTO_CACHE_COPY` -- it will cache `PResult`s in a way that references to them are unstable.
-- `QUERY_AUTO_CACHE_PRESULT_STABLE_REF` -- it will cache `PResult`s in a way that references to them are stable.
+- `QUERY_AUTO_CACHE_COPY` -- it will cache `PResult`s and return copy on load
+- `QUERY_AUTO_CACHE_REF` -- it will cache `PResult`s and return references to them (in generall will have slower cache, since references have to be stable)
 
 In both cases, the `store` function will rely on an implicit cast/conversion from `PResult` to `QResult`.
 
@@ -391,14 +391,14 @@ QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciStringAutoCache);
 #include <query_framework/query_impl.hpp>
 
 // Here we can return reference as it is stable:
-DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, const std::string&);
+DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, CRef<std::string>);
 
 struct IMPLEMENT_QUERY(FibonacciStringAutoCache, std::string) {
     static auto provide(Context& ctx, QKey key) -> PResult {
         return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
     }
 
-    QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+    QUERY_AUTO_CACHE_REF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciStringAutoCache);
