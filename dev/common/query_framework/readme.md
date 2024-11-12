@@ -329,7 +329,6 @@ In practice, that means that usually all non-pure queries are correctly cached.
 
 ### Copyable
 
-
 Every key type will be copied around by the framework.
 The programmer has to ensure that the copy operation will compile and that it will not break the state of the key or of the compiler.
 
@@ -367,6 +366,8 @@ There are currently two automatic-caching mechanisms:
 - `QUERY_AUTO_CACHE_REF` -- it will cache `PResult`s and return stable references to them (in generall will have slower cache, since references have to be stable).
 
 In first cases, the `store` function will rely on a copy construction of `PResult`.
+
+It is important to ensure that it is implosibble to modify cached data in any way thought QResult.
 
 Auto cache example: by copy:
 ~~~~~~~~~~cpp

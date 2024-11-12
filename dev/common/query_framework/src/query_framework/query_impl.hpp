@@ -185,10 +185,8 @@ namespace query {
 	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryID(pretty_name); \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;                            \
 	static_assert(                                                                                  \
-		(not std::is_reference_v<type::QResult>)                                                    \
-			or (std::is_lvalue_reference_v<type::QResult>                                           \
-	            and std::is_const_v<std::remove_reference_t<type::QResult>>),                       \
-		"Query result type should be either non-reference or const lvalue reference"                \
+		not std::is_reference_v<type::QResult>,                                                     \
+		"Query result type should not be a reference (use CRef instead)"                            \
 	);                                                                                              \
 	static_assert(                                                                                  \
 		std::is_same_v<                                                                             \
