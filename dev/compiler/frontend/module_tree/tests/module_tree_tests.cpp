@@ -111,7 +111,7 @@ private:
 
 		auto main_id = sources->at(0);
 
-		[[maybe_unused]] auto& pst = query::entryPoint<QueryFilePST>(main_id);
+		[[maybe_unused]] auto pst = query::entryPoint<QueryFilePST>(main_id);
 	}
 };
 

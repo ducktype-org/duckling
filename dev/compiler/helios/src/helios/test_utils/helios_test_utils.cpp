@@ -8,10 +8,10 @@ namespace compiler::helios::test_utils {
 
 		// This is what extendQueryRootScopeOfMainModuleFile is doing:
 		// (there is currently no way to call query extension without context)
-		auto  main_source_file = query::entryPoint<frontend::QueryMainSourceFile>(module);
-		auto& main_source_pst  = query::entryPoint<frontend::QueryFilePST>(main_source_file);
-		auto  main_file_root_scope
-			= query::entryPoint<QueryPrimaryCodeScopeFor>({ main_source_pst.getRootElement() });
+		auto main_source_file = query::entryPoint<frontend::QueryMainSourceFile>(module);
+		auto main_source_pst  = query::entryPoint<frontend::QueryFilePST>(main_source_file);
+		auto main_file_root_scope
+			= query::entryPoint<QueryPrimaryCodeScopeFor>({ main_source_pst->getRootElement() });
 
 		return { module, main_file_root_scope };
 	}

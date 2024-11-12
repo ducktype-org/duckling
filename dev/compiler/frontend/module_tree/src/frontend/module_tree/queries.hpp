@@ -46,7 +46,7 @@ namespace compiler::frontend {
 	/**
 	 * @brief Query PST of given file.
 	 */
-	DECLARE_QUERY(QueryFilePST, FileID, const pst::PST<>&)
+	DECLARE_QUERY(QueryFilePST, FileID, CRef<pst::PST<>>)
 
 	/**
 	 * @brief Returns ModuleID

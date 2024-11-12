@@ -298,12 +298,12 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
 /****************
  * QueryFilePST *
  ****************/
-struct IMPLEMENT_QUERY(QueryFilePST, const pst::PST<>&) {
+struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 	static auto provide(Context&, QKey key) -> PResult {
 		auto& file = files.at(key);
 		auto& pst  = file.getPST();
 		root_element_file_back_map.put(pst.getRootElement()->getID(), key);
-		return pst;
+		return &pst;
 	}
 
 	// @note: unstable ref here is only possible, because
