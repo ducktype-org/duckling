@@ -40,7 +40,7 @@ namespace compiler::helios {
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
 		  type(ctx.query<QueryTypeOfSymbol>(original_symbol)
-	               .expect("Handling errors in HOUT is not supported yet")),
+	               ->expect("Handling errors in HOUT is not supported yet")),
 		  top_lifetime_scope(parent(scope(symbol)).value()) {}
 
 	std::string HOUTGlobalData::debugPrint() const {
@@ -60,10 +60,10 @@ namespace compiler::helios {
 	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx):
 		  helios_symbol(symbol),
 		  original_name(name(symbol)),
-		  value(ctx.query<QueryConstValueOf>(symbol).expect(
+		  value(ctx.query<QueryConstValueOf>(symbol)->expect(
 			  "Handling errors in HOUT is not supported yet"
 		  )),
-		  type(ctx.query<QueryTypeOfSymbol>(symbol).expect(
+		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 			  "Handling errors in HOUT is not supported yet"
 		  )) {}
 }
