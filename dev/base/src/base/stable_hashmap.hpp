@@ -22,7 +22,7 @@ namespace base {
 
 		/**
 		 * Returns the data identified by the key.
-		 * @note throws if key is not present
+		 * @note throws `std::out_of_range` if key is not present
 		 * @param key Data key
 		 * @return A reference to the data.
 		 */
@@ -30,7 +30,7 @@ namespace base {
 
 		/**
 		 * Returns the data identified by the key.
-		 * @note throws if key is not present
+		 * @note throws `std::out_of_range` if key is not present
 		 * @param key Data key
 		 * @return A reference to the data.
 		 */
