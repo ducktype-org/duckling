@@ -237,23 +237,24 @@ namespace query {
 		"PResult and QResult should be equal for QUERY_AUTO_CACHE_COPY"             \
 	);
 
-#define QUERY_AUTO_CACHE_CONSTRUCT                                                    \
-	static inline base::                                                              \
-		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>   \
-				cache;                                                                \
-	static auto load(const QKey& key) -> LoadResult {                                 \
-		if (const auto& value = cache.atMaybe(key)) {                                 \
-			return QResWithACD{ value->data, value->acd };                            \
-		}                                                                             \
-		return {};                                                                    \
-	}                                                                                 \
-	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {      \
-		cache.put(key, { std::move(res), acd });                                      \
-		return cache.at(key).data;                                                    \
-	}                                                                                 \
-	static_assert(                                                                    \
-		std::is_constructible_v<QResult, PResult>,                                    \
-		"QResult should be constructible from PResult for QUERY_AUTO_CACHE_CONSTRUCT" \
+#define QUERY_AUTO_CACHE_CONSTRUCT                                                      \
+	static inline base::                                                                \
+		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>     \
+				cache;                                                                  \
+	static auto load(const QKey& key) -> LoadResult {                                   \
+		if (const auto& value = cache.atMaybe(key)) {                                   \
+			return QResWithACD{ value->data, value->acd };                              \
+		}                                                                               \
+		return {};                                                                      \
+	}                                                                                   \
+	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {        \
+		cache.put(key, { std::move(res), acd });                                        \
+		return cache.at(key).data;                                                      \
+	}                                                                                   \
+	static_assert(                                                                      \
+		std::is_constructible_v<QResult, PResult> && !std::is_same_v<QResult, PResult>, \
+		"QResult should be constructible from (but not equal to) PResult for "          \
+		"QUERY_AUTO_CACHE_CONSTRUCT"                                                    \
 	);
 
 /**
