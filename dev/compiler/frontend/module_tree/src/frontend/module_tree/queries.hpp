@@ -4,6 +4,7 @@
 #include <filesystem/file.hpp>
 #include <pst_parser/pst.hpp>
 #include <base/maps.hpp>
+#include <base/ref.hpp>
 
 // @TODO: this dependency can be relaxed by separating ModuleID and FileID
 #include "module_tree.hpp"
@@ -33,7 +34,7 @@ namespace compiler::frontend {
 	/**
 	 * @brief Query sources files of a module (without main source file).
 	 */
-	DECLARE_QUERY(QuerySourceFiles, ModuleID, const std::vector<FileID>&)
+	DECLARE_QUERY(QuerySourceFiles, ModuleID, CRef<std::vector<FileID>>)
 
 	/**
 	 * @brief Query map of children modules aka submodules

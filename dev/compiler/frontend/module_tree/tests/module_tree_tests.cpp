@@ -107,9 +107,9 @@ private:
 		[[maybe_unused]] auto awe = query::entryPoint<QuerySubmodules>(root).at(base::StrID("awe"));
 
 		auto sources = query::entryPoint<QuerySourceFiles>(root);
-		assertTrue(sources.size() == 1, "Bad source count!");
+		assertTrue(sources->size() == 1, "Bad source count!");
 
-		auto main_id = sources.at(0);
+		auto main_id = sources->at(0);
 
 		[[maybe_unused]] auto& pst = query::entryPoint<QueryFilePST>(main_id);
 	}
