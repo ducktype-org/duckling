@@ -28,9 +28,9 @@ namespace compiler::helios::test_utils {
                                            { result.back(), base::StrID(sym.c_str()), false }
 
                                        );
-			auto symbol_path = symbol.getAsSingle().valueOrThrow();
+			auto symbol_path = symbol->getAsSingle().valueOrThrow();
 			for (auto&& elem: symbol_path) {
-				auto dealiased = query::entryPoint<QueryDealias>(elem).valueOrThrow();
+				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrThrow();
 				result.insert(result.end(), dealiased.begin(), dealiased.end());
 			}
 			first_symbol = false;
@@ -39,15 +39,15 @@ namespace compiler::helios::test_utils {
 	}
 
 	int getValue(const std::string_view chain, ScopeID scope) {
-		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back()).valueOrThrow();
+		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back())->valueOrThrow();
 	}
 
 	tsh::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope) {
-		return query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back()).valueOrThrow();
+		return query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back())->valueOrThrow();
 	}
 
 	tsh::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back())
-		    .valueOrThrow();
+		    ->valueOrThrow();
 	}
 }

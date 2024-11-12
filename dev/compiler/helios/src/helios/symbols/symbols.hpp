@@ -122,20 +122,20 @@ namespace compiler::helios {
 	 * @brief Query result of lookup of single name within the symbol.
 	 * It essentially implements "symbol.name" operation.
 	 */
-	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, const LookupResult&);
+	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>);
 
 	using QueryDealias_Result = errors::HResult<SymbolList, errors::Failed>;
 	/**
 	 * A query that returns an "absolute path" to the symbol without aliases.
 	 */
-	DECLARE_QUERY(QueryDealias, SymID, const QueryDealias_Result&);
+	DECLARE_QUERY(QueryDealias, SymID, CRef<QueryDealias_Result>);
 
 	using PotentialParsingErrors = std::
 		variant<errors::SymbolNotFound, errors::Ambiguity, errors::InvalidExpr, errors::Failed>;
 	/**
 	 * Calculates a value of a constant.
 	 */
-	DECLARE_QUERY(QueryConstValueOf, SymID, const errors::HResult<i32 COMMA errors::Failed>&)
+	DECLARE_QUERY(QueryConstValueOf, SymID, CRef<errors::HResult<i32 COMMA errors::Failed>>)
 
 	/**
 	 * RPN - Reverse Polish Notation.
@@ -320,7 +320,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query type of the symbol.
 	 */
-	DECLARE_QUERY(QueryTypeOfSymbol, SymID, const QueryType_Result&);
+	DECLARE_QUERY(QueryTypeOfSymbol, SymID, CRef<QueryType_Result>);
 
 	/**
 	 * @brief Query tsh::TypeInfo from a symbol definition (like class definition).
@@ -331,7 +331,7 @@ namespace compiler::helios {
 	 * }
 	 * - Then we can use this query QueryTypeFromDefinition(T).
 	 */
-	DECLARE_QUERY(QueryTypeFromDefinition, SymID, const QueryType_Result&);
+	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QueryType_Result>);
 
 	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.
@@ -374,7 +374,7 @@ namespace compiler::helios {
 	 * Panics if the given `SymID` is not a class.
 	 * More information on `ClassSymbolData` in it's definition.
 	 */
-	DECLARE_QUERY(QueryClassSymbolData, SymID, const QueryClassSymbolData_Result&)
+	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>)
 
 	namespace code {
 		struct Expr;
