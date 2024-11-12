@@ -249,7 +249,7 @@ namespace query {
 	}                                                                                          \
 	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {               \
 		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
-		return cache.at(key).data;                                                             \
+		return cache[key].data;                                                             \
 	}\
 	static_assert(                                                                             \
 		std::is_same_v<PResult, CRef<QResult>>,                                                \
