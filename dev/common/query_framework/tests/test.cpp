@@ -66,7 +66,7 @@ struct IMPLEMENT_QUERY(FibonacciStringAutoCache, std::string) {
 		return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
 	}
 
-	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciStringAutoCache);
@@ -100,7 +100,7 @@ struct IMPLEMENT_QUERY(CallingEntryPoint, u64) {
 		return query::entryPoint<Fibonacci>({ key });
 	}
 
-	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(CallingEntryPoint);
@@ -173,7 +173,7 @@ DECLARE_QUERY(LifeTimeQueryUnstable, u64, Result);
 struct IMPLEMENT_QUERY(LifeTimeQueryUnstable, Result) {
 	static auto provide(Context&, QKey) -> PResult { return {}; }
 
-	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(LifeTimeQueryUnstable);

@@ -308,7 +308,7 @@ struct IMPLEMENT_QUERY(QueryFilePST, const pst::PST<>&) {
 
 	// @note: unstable ref here is only possible, because
 	// PResult is already a reference
-	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);

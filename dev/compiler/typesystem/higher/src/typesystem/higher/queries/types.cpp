@@ -205,7 +205,7 @@ namespace tsh {
 			return PointerInfo(pointer_pimpl);
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
@@ -217,7 +217,7 @@ namespace tsh {
 			return TupleInfo(tuple_pimpl);
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleType)
@@ -229,7 +229,7 @@ namespace tsh {
 			return VariantInfo(Variant_pimpl);
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVariantType)
@@ -243,7 +243,7 @@ namespace tsh {
 			return FunctionInfo(function_pimpl);
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType)
@@ -255,7 +255,7 @@ namespace tsh {
 			return ClassInfo(class_pimpl);
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassType)
