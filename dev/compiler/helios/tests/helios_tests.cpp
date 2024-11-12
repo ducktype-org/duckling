@@ -73,10 +73,10 @@ private:
 
 		const auto first_class = getChain("FirstClassEver", root_scope).back();
 		const auto first_class_info
-			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class).valueOrThrow();
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class)->valueOrThrow();
 		const auto first_class_typeinfo
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
-		          .valueOrThrow();
+		          ->valueOrThrow();
 
 		ASSERT_EQUAL(2, first_class_info.members.size());
 		ASSERT_EQUAL(2, first_class_info.methods.size());
@@ -89,7 +89,7 @@ private:
 		const auto second_class = getChain("SecondClass", root_scope).back();
 		auto       second_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(second_class)
-		          .valueOrThrow();
+		          ->valueOrThrow();
 
 		ASSERT_EQUAL(0, second_class_info.members.size());
 		ASSERT_EQUAL(0, second_class_info.methods.size());
@@ -269,7 +269,7 @@ private:
 		auto              sym1 = getChain("V31", root_scope).back();
 		std::stringstream out;
 		auto&             tree1
-			= query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym1).valueOrThrow();
+			= query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym1)->valueOrThrow();
 
 		tree1->debugPrint(out);
 		ASSERT_EQUAL("(3+((5+9)*2))", out.str());
@@ -277,7 +277,7 @@ private:
 		ASSERT_EQUAL(12, getValue("V12", root_scope));
 		auto  sym2 = getChain("V12", root_scope).back();
 		auto& tree2
-			= query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym2).valueOrThrow();
+			= query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym2)->valueOrThrow();
 		std::stringstream out2;
 		tree2->debugPrint(out2);
 
