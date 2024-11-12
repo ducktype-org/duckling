@@ -29,7 +29,7 @@ namespace compiler::lir {
 	using MutBlockRef = Ref<Block>;
 
 	base::HashT KeyOf_LowerToLirFunction::customPerfectHash() const {
-		return base::perfectHash(function);
+		return base::perfectHash(*function);
 	}
 
 	/**
