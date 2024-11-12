@@ -66,7 +66,7 @@ namespace base {
 		 * @return An optional with a copy of the data.
 		 */
 		Optional<DATA_T> atMaybeCopy(const KEY_T& key) const
-		requires std::is_copy_constructible_v<DATA_T> {
+			requires std::is_copy_constructible_v<DATA_T> {
 			if_opt_some(data.atMaybe(key), ptr) { return *ptr; }
 			return {};
 		}
