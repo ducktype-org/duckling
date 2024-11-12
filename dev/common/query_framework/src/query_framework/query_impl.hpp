@@ -236,6 +236,12 @@ namespace query {
 		"PResult and QResult should be equal for QUERY_AUTO_CACHE_COPY"             \
 	);
 
+/**
+ * @brief Macro defining typical hash based cache for fast prototyping.
+ * It caches PResults using base::HashMap and returns directly constructed QResults on cache hit.
+ * @note Cannot be used in place of QUERY_AUTO_CACHE_COPY for the sake of transparency.
+ * @future: change it to component, when proper query-component system will be introduced
+ */
 #define QUERY_AUTO_CACHE_CONSTRUCT                                                      \
 	static inline base::                                                                \
 		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>     \
