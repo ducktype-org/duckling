@@ -11,6 +11,7 @@
 #include <base/defer.hpp>
 #include <base/maps.hpp>
 #include <base/stable_hashmap.hpp>
+#include <base/ref.hpp>
 #include <diagnostic/logger.hpp>
 
 #include "acd.hpp"
@@ -249,7 +250,11 @@ namespace query {
 	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {               \
 		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
 		return cache.at(key).data;                                                             \
-	}
+	}\
+	static_assert(                                                                             \
+		std::is_same_v<PResult, CRef<QResult>>,                                                \
+		"QResult should be a CRef of PResutlt for QUERY_AUTO_CACHE_REF"                        \
+	);
 
 
 /**
