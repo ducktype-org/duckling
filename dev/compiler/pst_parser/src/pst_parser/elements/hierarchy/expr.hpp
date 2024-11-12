@@ -172,6 +172,22 @@ namespace pst {
 			std::string elementType() const override { return "Identifier Expression"; }
 		};
 
+		class KeywordLiteral final: public ExprElement {
+			Keyword                      key;
+			base::Optional<ParserRef<ExprElement>> template_specifier;
+
+		public:
+			KeywordLiteral(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
+
+			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+
+			~KeywordLiteral() override = default;
+			void dprint(std::ostream& out) const final;
+			void acceptVisitor(PstExprVisitor& visitor) const final;
+
+			std::string elementType() const override { return "Keyword Expression"; }
+		};
+
 		class Access final: public ExprElement {
 			base::StrID                            type;  ///< either `.` or `.?`
 			tpc::Identifier                        name;

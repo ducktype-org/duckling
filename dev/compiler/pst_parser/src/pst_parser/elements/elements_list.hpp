@@ -62,6 +62,7 @@ namespace pst {
 		class Literal;
 		class TemplateSpecifier;
 		class IdentifierLiteral;
+		class KeywordLiteral;
 		class Access;
 		class Call;
 		class ChainExpr;

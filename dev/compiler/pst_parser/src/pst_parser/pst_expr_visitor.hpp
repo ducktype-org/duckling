@@ -29,6 +29,9 @@ namespace pst {
 		virtual void visitIdentifierLiteral([[maybe_unused]] const expr::IdentifierLiteral& stmt)
 			= 0;
 
+		virtual void visitKeywordLiteral([[maybe_unused]] const expr::KeywordLiteral& stmt)
+			= 0;
+
 		virtual void visitAccess([[maybe_unused]] const expr::Access& stmt) = 0;
 
 		virtual void visitCall([[maybe_unused]] const expr::Call& stmt) = 0;
@@ -68,6 +71,9 @@ namespace pst {
 		};
 
 		void visitIdentifierLiteral([[maybe_unused]] const expr::IdentifierLiteral& stmt) override {
+		};
+
+		void visitKeywordLiteral([[maybe_unused]] const expr::KeywordLiteral& stmt) override {
 		};
 
 		void visitAccess([[maybe_unused]] const expr::Access& stmt) override {};
@@ -112,6 +118,7 @@ namespace pst {
 		PANIC_EXPR_VISITOR_VISIT_METHOD(ExprValue);
 		PANIC_EXPR_VISITOR_VISIT_METHOD(TemplateSpecifier);
 		PANIC_EXPR_VISITOR_VISIT_METHOD(IdentifierLiteral);
+		PANIC_EXPR_VISITOR_VISIT_METHOD(KeywordLiteral);
 		PANIC_EXPR_VISITOR_VISIT_METHOD(Access);
 		PANIC_EXPR_VISITOR_VISIT_METHOD(Call);
 		PANIC_EXPR_VISITOR_VISIT_METHOD(ChainExpr);

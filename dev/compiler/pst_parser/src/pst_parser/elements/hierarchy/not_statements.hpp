@@ -198,12 +198,12 @@ namespace pst {
 	class UniversalExpr: public NotStmt {
 	public:
 		static base::unique_ptr<ExprElement> parse(LangParserState& state);
-		UniversalExpr() = delete;
+		UniversalExpr();
 	};
 
 	class CommaExpr: public NotStmt {
 	public:
 		static base::unique_ptr<ExprElement> parse(LangParserState& state);
-		CommaExpr() = delete;
+		CommaExpr();
 	};
 }

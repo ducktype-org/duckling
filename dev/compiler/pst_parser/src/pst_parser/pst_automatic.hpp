@@ -95,6 +95,21 @@ namespace pst {
 		 * @brief Parses an identifier to @p result. Skips on success, logs error on failure.
 		 * @param result The place to store the parsed identifier.
 		 */
+		void one(tpc::Keyword* result, bool ignorable = false) {
+			if (!state.ctokens().peek().isKeyword()) {
+				state.log(base::make_unique<tpc::NoIdentifierError>(state.getPosition()));
+				*result = Keyword::NotAKeyword;
+				if (!ignorable) state.tokens().next();
+				return;
+			}
+			el->addToken(state[0]);
+			*result = lang_def::strAsKeyword(state.tokens().next().getValue());
+		}
+
+		/**
+		 * @brief Parses an identifier to @p result. Skips on success, logs error on failure.
+		 * @param result The place to store the parsed identifier.
+		 */
 		void one(tpc::Identifier* result, bool ignorable = false) {
 			if (!state.ctokens().peek().isIdentifier()) {
 				state.log(base::make_unique<tpc::NoIdentifierError>(state.getPosition()));
