@@ -7,6 +7,7 @@
 
 #include "box.hpp"
 #include "maps.hpp"
+#include <type_traits>
 
 namespace base {
 	/**
@@ -64,7 +65,8 @@ namespace base {
 		 * @param key Data key
 		 * @return An optional with a copy of the data.
 		 */
-		Optional<DATA_T> atMaybeCopy(const KEY_T& key) const {
+		Optional<DATA_T> atMaybeCopy(const KEY_T& key) const
+		requires std::is_copy_constructible_v<DATA_T> {
 			if_opt_some(data.atMaybe(key), ptr) { return *ptr; }
 			return {};
 		}
