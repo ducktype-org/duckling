@@ -440,8 +440,7 @@ private:
 		auto& statements = function.body.body->statements;
 
 		auto get_var_ref = [&](usize i) -> decltype(auto) {
-			return dynamic_cast<const compiler::helios::code::VariableStmt&>(*statements.at(i).get()
-			);
+			return dynamic_cast<const compiler::helios::code::VariableStmt&>(*statements.at(i));
 		};
 
 		auto i32_type   = query::entryPoint<tsh::QueryIntegralType>(32);
@@ -473,11 +472,10 @@ private:
 		}
 
 		{
-			auto& if_stmt
-				= dynamic_cast<const compiler::helios::code::IfStmt&>(*statements.at(4).get());
-			auto& var = dynamic_cast<const compiler::helios::code::VariableStmt&>(
-				*if_stmt.body.statements.at(0).get()
-			);
+			auto& if_stmt = dynamic_cast<const compiler::helios::code::IfStmt&>(*statements.at(4));
+			auto& var     = dynamic_cast<const compiler::helios::code::VariableStmt&>(
+                *if_stmt.body.statements.at(0)
+            );
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "x");
 			ASSERT_EQUAL(var.type.getType(), i32_type);
 		}

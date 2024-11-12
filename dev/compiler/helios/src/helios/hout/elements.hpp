@@ -15,7 +15,6 @@
 #include "../scope_symbol_id.hpp"
 #include "base/box.hpp"
 #include "base/exceptions.hpp"
-#include "element_ref.hpp"
 #include "helios/helios_errors.hpp"
 #include "lexer/token_common.hpp"
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
@@ -74,7 +73,7 @@ namespace compiler::helios::code {
 	 */
 	struct CodeBlock final {
 		ScopeID                       lifetime_scope;
-		std::vector<ElementRef<Stmt>> statements;
+		std::vector<base::Box<Stmt>> statements;
 	};
 
 	/* * * * * * * *
@@ -87,7 +86,7 @@ namespace compiler::helios::code {
 	struct VariableStmt final: public Stmt {
 		// @TODO: decide where we handle non-initial value (pre hout/post hout):
 		// currently PST always have it.
-		base::Optional<ElementRef<Expr>> initial_value;
+		base::Optional<base::Box<Expr>> initial_value;
 		tsh::TypeDesc<>                  type;
 
 		// @TODO decide if this is needed:
@@ -95,7 +94,7 @@ namespace compiler::helios::code {
 
 		VariableStmt(
 			ScopeID                          scope,
-			base::Optional<ElementRef<Expr>> initial_value,
+			base::Optional<base::Box<Expr>> initial_value,
 			tsh::TypeDesc<>                  type,
 			SymID                            helios_symbol
 		):
@@ -112,9 +111,9 @@ namespace compiler::helios::code {
 	 * @brief Represents `return [expr];` in HOUT
 	 */
 	struct ReturnStmt final: public Stmt {
-		ElementRef<Expr> value;
+		base::Box<Expr> value;
 
-		ReturnStmt(ScopeID scope, ElementRef<Expr> value): Stmt(scope), value(std::move(value)) {}
+		ReturnStmt(ScopeID scope, base::Box<Expr> value): Stmt(scope), value(std::move(value)) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
@@ -134,9 +133,9 @@ namespace compiler::helios::code {
 	 * @brief Represents expression statement in HOUT
 	 */
 	struct ExprStmt final: public Stmt {
-		ElementRef<Expr> expr;
+		base::Box<Expr> expr;
 
-		ExprStmt(ScopeID scope, ElementRef<Expr> expr): Stmt(scope), expr(std::move(expr)) {}
+		ExprStmt(ScopeID scope, base::Box<Expr> expr): Stmt(scope), expr(std::move(expr)) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
@@ -146,12 +145,12 @@ namespace compiler::helios::code {
 	 * @brief Represents if statement in HOUT
 	 */
 	struct IfStmt final: public Stmt {
-		ElementRef<Expr> condition;
+		base::Box<Expr> condition;
 		CodeBlock        body;
 
 		// @TODO: optional else body
 
-		IfStmt(ScopeID scope, ElementRef<Expr> condition, CodeBlock body):
+		IfStmt(ScopeID scope, base::Box<Expr> condition, CodeBlock body):
 			  Stmt(scope),
 			  condition(std::move(condition)),
 			  body(std::move(body)) {}
@@ -230,5 +229,5 @@ namespace compiler::helios {
 	/**
 	 * @brief Construct HOUT Expr from Pst Expr, "within" given scope
 	 */
-	DECLARE_QUERY(QueryHoutOfExpr, KeyOf_QueryHoutOfExpr, code::ElementRef<code::Expr>);
+	DECLARE_QUERY(QueryHoutOfExpr, KeyOf_QueryHoutOfExpr, base::Box<code::Expr>);
 }

@@ -102,7 +102,7 @@ namespace pst {
 			ParserCBorrowRef<ExprElement> getRightOperand() const;
 			lexer::Operator               getOperator() const;
 
-			std::string elementType() const override { return "Infix Operator"; }
+			std::string elementType() const override { return "Binary Operator"; }
 		};
 
 		class ExprValue final: public ExprElement {

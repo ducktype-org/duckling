@@ -5,7 +5,6 @@
 #include <base/variant.hpp>
 #include "../scopes/scopes.hpp"
 #include <base/unique_pointer.hpp>
-#include <helios/hout/element_ref.hpp>
 #include "base/box.hpp"
 #include "base/exceptions.hpp"
 #include "base/optional.hpp"
@@ -163,7 +162,7 @@ namespace compiler::helios::code {
 	errors::HResult<base::Box<Expr>, errors::Failed>
 		Expr::fromPST(query::Context& ctx, ScopeID scope, const PstRef<pst::ExprElement> root) {
 		PstExprToHoutExprVisitor visitor(ctx, scope);
-		std::cerr << "Expr: \n";
+		std::cerr << "\nExpr: \n";
 		root->debugPrint(std::cerr);
 		std::cerr << '\n';
 		root->acceptVisitor(visitor);
@@ -172,9 +171,9 @@ namespace compiler::helios::code {
 		return errors::HError(errors::Failed());
 	}
 
-	// ElementRef<Expr> Expr::fromRPN(query::Context& ctx, const rpn::RPNExpr& expr) {
+	// base::Box<Expr> Expr::fromRPN(query::Context& ctx, const rpn::RPNExpr& expr) {
 	// 	// The algorithm from RPN: https://en.wikipedia.org/wiki/Binary_expression_tree
-	// 	std::stack<ElementRef<Expr>> st;
+	// 	std::stack<base::Box<Expr>> st;
 	// 	for (auto&& elem: expr.elements) {
 	// 		variant_match(elem) {
 	// 			variant_case(rpn::Identifier, idt) {
@@ -261,7 +260,7 @@ namespace compiler::helios {
 	 * @brief HoutOfExpr for expression that contain only one element
 	 */
 	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key)
-		-> code::ElementRef<code::Expr> {
+		-> base::Box<code::Expr> {
 		CORE_PANIC("Not implemented yet...");
 
 		// auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ key.expr });
@@ -312,7 +311,7 @@ namespace compiler::helios {
 		// CORE_PANIC("No match in variant");
 	}
 
-	struct IMPLEMENT_QUERY(QueryHoutOfExpr, code::ElementRef<code::Expr>) {
+	struct IMPLEMENT_QUERY(QueryHoutOfExpr, base::Box<code::Expr>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @NOTE: this is simplest, mock implementation
 			// A proper Expr parsing will be added as new mission/PR

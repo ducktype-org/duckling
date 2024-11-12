@@ -71,9 +71,9 @@ namespace compiler::helios {
 		}
 
 		struct HoutStmtMaker final: public pst::PstStmtVisitorPanicky {
-			query::Context&                              ctx;
-			bool                                         empty = false;
-			base::Optional<code::ElementRef<code::Stmt>> out;
+			query::Context&                       ctx;
+			bool                                  empty = false;
+			base::Optional<base::Box<code::Stmt>> out;
 
 			HoutStmtMaker(query::Context& ctx): ctx(ctx) {}
 
@@ -91,8 +91,7 @@ namespace compiler::helios {
 
 			template<class T>
 			void output(T&& value) {
-				this->out.emplace(
-					base::make_unique<std::remove_reference_t<T>>(std::forward<T>(value))
+				this->out.emplace(base::Box(new std::remove_reference_t<T>(std::forward<T>(value)))
 				);
 			}
 
