@@ -197,11 +197,12 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRawPointerType)
 
-	struct IMPLEMENT_QUERY(QueryPointerType, PointerInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryPointerType, PointerInfo) {
 		static auto provide(Context&, const QKey key) -> PResult {
 			const auto pointer_pimpl = new internal::PointerInfoImpl{ key };
 			pushType(base::unique_ptr(pointer_pimpl));
-			return pointer_pimpl;
+			// @mauryct: is this valid:?
+			return PointerInfo(pointer_pimpl);
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
@@ -209,11 +210,11 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
 
-	struct IMPLEMENT_QUERY(QueryTupleType, TupleInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryTupleType, TupleInfo) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			const auto tuple_pimpl = new internal::TupleInfoImpl{ key.components };
 			pushType(base::unique_ptr(tuple_pimpl));
-			return tuple_pimpl;
+			return TupleInfo(tuple_pimpl);
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
@@ -221,11 +222,11 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleType)
 
-	struct IMPLEMENT_QUERY(QueryVariantType, VariantInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryVariantType, VariantInfo) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			const auto Variant_pimpl = new internal::VariantInfoImpl{ key.underlying_types };
 			pushType(base::unique_ptr(Variant_pimpl));
-			return Variant_pimpl;
+			return VariantInfo(Variant_pimpl);
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
@@ -233,13 +234,13 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVariantType)
 
-	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionInfo) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			const auto [params, result, pure, free] = key;
 			const auto function_pimpl
 				= new internal::FunctionInfoImpl{ params, result, pure, free };
 			pushType(base::unique_ptr(function_pimpl));
-			return function_pimpl;
+			return FunctionInfo(function_pimpl);
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
@@ -247,11 +248,11 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType)
 
-	struct IMPLEMENT_QUERY(QueryClassType, ClassInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryClassType, ClassInfo) {
 		static auto provide(Context&, QKey key) -> PResult {
 			const auto class_pimpl = new internal::ClassInfoImpl{ key };
 			pushType(base::unique_ptr(class_pimpl));
-			return class_pimpl;
+			return ClassInfo(class_pimpl);
 		}
 
 		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
