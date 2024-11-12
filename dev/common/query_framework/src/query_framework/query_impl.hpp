@@ -178,8 +178,9 @@ namespace query {
  * @param pretty_name Pretty name of the Query
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                \
-	auto type::QueryType::internal_query(type::QKey key, ::query::detail::NodeID from)              \
-		-> type::QResult {                                                                          \
+	auto type::QueryType::internal_query(                                                           \
+		type::QKey key, ::query::detail::NodeID from                                                \
+	) -> type::QResult {                                                                            \
 		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                     \
 	}                                                                                               \
 	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryID(pretty_name); \
@@ -234,27 +235,48 @@ namespace query {
 		"PResult and QResult should be equal for QUERY_AUTO_CACHE_COPY"                        \
 	);
 
+#define QUERY_AUTO_CACHE_CONSTRUCT                                                    \
+	static inline base::                                                              \
+		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>   \
+				cache;                                                                \
+	static auto load(const QKey& key) -> LoadResult {                                 \
+		if (const auto& value = cache.atMaybe(key)) {                                 \
+			return QResWithACD{ value->data, value->acd };                            \
+		}                                                                             \
+		return {};                                                                    \
+	}                                                                                 \
+	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {      \
+		cache.put(key, { std::move(res), acd });                                      \
+		return cache.at(key).data;                                                    \
+	}                                                                                 \
+	static_assert(                                                                    \
+		std::is_constructible_v<QResult, PResult>,                                    \
+		"QResult should be constructible from PResult for QUERY_AUTO_CACHE_CONSTRUCT" \
+	);
+
 /**
  * @brief Macro defining typical hash based cache for fast prototyping.
  * It caches PResults using base::StableHashMap and returns stable references to results
  * on cache hit.
  * @future: change it to component, when proper query-component system will be introduced
  */
-#define QUERY_AUTO_CACHE_REF                                                    \
-	static inline base::                                                                       \
-		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>      \
-				cache;                                                                         \
-	static auto load(const QKey& key) -> LoadResult {                                          \
-		if (auto value = cache.atMaybe(key)) { return QResWithACD{ CRef<PResult>(&value->data), value->acd }; } \
-		return {};                                                                             \
-	}                                                                                          \
-	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {               \
-		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
-		return CRef<PResult>(&cache[key].data);                                                             \
-	}\
-	static_assert(                                                                             \
-		std::is_same_v<CRef<PResult>, QResult>,                                                \
-		"QResult should be a CRef of PResutlt for QUERY_AUTO_CACHE_REF"                        \
+#define QUERY_AUTO_CACHE_REF                                                              \
+	static inline base::                                                                  \
+		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>> \
+				cache;                                                                    \
+	static auto load(const QKey& key) -> LoadResult {                                     \
+		if (auto value = cache.atMaybe(key)) {                                            \
+			return QResWithACD{ CRef<PResult>(&value->data), value->acd };                \
+		}                                                                                 \
+		return {};                                                                        \
+	}                                                                                     \
+	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {          \
+		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                \
+		return CRef<PResult>(&cache[key].data);                                           \
+	}                                                                                     \
+	static_assert(                                                                        \
+		std::is_same_v<CRef<PResult>, QResult>,                                           \
+		"QResult should be a CRef of PResult for QUERY_AUTO_CACHE_REF"                    \
 	);
 
 
