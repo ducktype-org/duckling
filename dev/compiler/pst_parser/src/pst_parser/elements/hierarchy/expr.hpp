@@ -4,6 +4,7 @@
 #include "meta.hpp"
 #include "lists.hpp"           // IWYU pragma: keep
 #include "not_statements.hpp"  // IWYU pragma: keep
+#include "token_parser_core/common_elements.hpp"
 #include "token_parser_core/parser_ref.hpp"
 
 #define CONDITION(name) static bool name(const LangParserState& state, i64 fwd = 0)
@@ -166,6 +167,8 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
+			const tpc::Identifier& getName() const { return name; }
+
 			std::string elementType() const override { return "Identifier Expression"; }
 		};
 
@@ -246,6 +249,8 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Round Group Expression"; }
+
+			ParserCBorrowRef<ExprElement> getInner() const { return expr.borrow(); }
 		};
 
 		class BlockExpr final: public ExprElement {

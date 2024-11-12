@@ -23,7 +23,12 @@ namespace pst {
 
 		if (!assertStmtChoice<Const>(state, state[0].is(Keyword::Const))) return nullptr;
 
+		std::cerr << state[0].getStrValue() << '\n';
+		std::cerr << state[1].getStrValue() << '\n';
+		std::cerr << state[2].getStrValue() << '\n';
 		state.parse(out).all(Keyword::Const, &out->name, NamedOperator::Colon);
+
+		std::cerr << state[0].getStrValue() << '\n';
 
 		state.parse(out).with(
 			&out->type,

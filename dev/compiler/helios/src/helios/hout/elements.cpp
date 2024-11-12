@@ -11,6 +11,7 @@
 #include "helios/helios_errors.hpp"
 #include "helios/helios_result.hpp"
 #include "helios/scope_symbol_id.hpp"
+#include "helios/symbols/symbols.hpp"
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
 #include "pst_parser/pst_expr_visitor.hpp"
 #include "query_framework/query_int.hpp"
@@ -115,11 +116,9 @@ namespace compiler::helios::code {
 		  rhs(std::move(rhs)) {}
 
 	void BinaryOperatorExpr::debugPrint(std::ostream& out) const {
-		out << base::strConcat("(");
 		lhs->debugPrint(out);
 		out << base::strConcat(op.str());
 		rhs->debugPrint(out);
-		out << base::strConcat(")");
 	}
 
 	void BinaryOperatorExpr::acceptVisitor(HoutExprVisitor& visitor) const {
@@ -156,6 +155,23 @@ namespace compiler::helios::code {
 				std::move(lhs.node).toOptBox().value(),
 				std::move(rhs.node).toOptBox().value()
 			));
+		}
+
+		void visitRoundExpr(const pst::expr::RoundExpr& stmt) override {
+			PstExprToHoutExprVisitor vis(ctx, scope);
+			stmt.getInner()->acceptVisitor(vis);
+			CORE_ASSERT(vis.node, "Invalid inner expr of RoundExpr");
+			node
+				= base::MBox(new ParenthesisExpr(ctx, scope, std::move(vis.node).toOptBox().value())
+			    );
+		}
+
+		void visitIdentifierLiteral(const pst::expr::IdentifierLiteral& stmt) override {
+			auto&& sym_list
+				= ctx.query<QueryLookupInScopeAndParents>({ scope, stmt.getName().value, true });
+			auto single = sym_list.getAsSingle().expect("Not propagating errors here yet...");
+
+			node = base::MBox(new IdentifierExpr(ctx, scope, single.back()));
 		}
 	};
 
@@ -233,6 +249,7 @@ namespace compiler::helios::code {
 
 	EXPR_VISITOR(LiteralValueExpr);
 	EXPR_VISITOR(IdentifierExpr);
+	EXPR_VISITOR(ParenthesisExpr);
 
 	errors::HResult<i64, errors::Failed> LiteralValueExpr::evaluateValue(query::Context& ctx
 	) const {
@@ -251,6 +268,31 @@ namespace compiler::helios::code {
 		if (op.str()[0] == '^') return std::pow(lhs_value, rhs_value);
 		CORE_PANIC("Unknown operator");
 	}
+
+	void ParenthesisExpr::debugPrint(std::ostream& out) const {
+		out << "(";
+		inner->debugPrint(out);
+		out << ")";
+	}
+
+	ParenthesisExpr::ParenthesisExpr(query::Context& ctx, ScopeID scope, base::Box<Expr> inner):
+		  Expr(
+			  scope,
+			  tsh::TypeDesc<>(
+				  // @TODO: Select type of expression based on result type of the operation.
+				  ctx.query<tsh::QueryIntegralType>({ 64 }),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  )
+		  ),
+		  inner(std::move(inner)) {}
+
+	errors::HResult<i64, errors::Failed> ParenthesisExpr::evaluateValue(query::Context& ctx) const {
+		return inner->evaluateValue(ctx);
+	}
+
+	errors::HResult<i64, errors::Failed> IdentifierExpr::evaluateValue(query::Context& ctx) const {
+		return ctx.query<QueryConstValueOf>(symbol);
+	}
 }
 
 namespace compiler::helios {
@@ -259,8 +301,7 @@ namespace compiler::helios {
 	/**
 	 * @brief HoutOfExpr for expression that contain only one element
 	 */
-	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key)
-		-> base::Box<code::Expr> {
+	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key) -> base::Box<code::Expr> {
 		CORE_PANIC("Not implemented yet...");
 
 		// auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ key.expr });

@@ -216,6 +216,8 @@ private:
 			void visitIdentifierExpr(const IdentifierExpr&) override { ident_count++; }
 
 			void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override { ident_count++; }
+
+			void visitParenthesisExpr(const ParenthesisExpr&) override { ident_count++; }
 		};
 
 		struct ExprVisitorRunner: public HoutStmtPanickyVisitor {
@@ -274,7 +276,7 @@ private:
 			= query::entryPoint<compiler::helios::QueryHOUTExprTreeOfSym>(sym1).valueOrThrow();
 
 		tree1->debugPrint(out);
-		ASSERT_EQUAL("(3+((5+9)*2))", out.str());
+		ASSERT_EQUAL("3+((5+9)*2)", out.str());
 
 		ASSERT_EQUAL(12, getValue("V12", root_scope));
 		auto  sym2 = getChain("V12", root_scope).back();

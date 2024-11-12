@@ -65,6 +65,7 @@ namespace compiler::helios::code {
 		static errors::HResult<base::Box<Expr>, errors::Failed>
 			fromPST(query::Context& ctx, ScopeID scope, const PstRef<pst::ExprElement> root);
 
+		// @TODO: Probably this should be moved to a visitor that handles evaluating values.
 		virtual errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const = 0;
 	};
 
@@ -72,7 +73,7 @@ namespace compiler::helios::code {
 	 * @brief A block of HOUT statements
 	 */
 	struct CodeBlock final {
-		ScopeID                       lifetime_scope;
+		ScopeID                      lifetime_scope;
 		std::vector<base::Box<Stmt>> statements;
 	};
 
@@ -87,16 +88,16 @@ namespace compiler::helios::code {
 		// @TODO: decide where we handle non-initial value (pre hout/post hout):
 		// currently PST always have it.
 		base::Optional<base::Box<Expr>> initial_value;
-		tsh::TypeDesc<>                  type;
+		tsh::TypeDesc<>                 type;
 
 		// @TODO decide if this is needed:
 		SymID helios_symbol;
 
 		VariableStmt(
-			ScopeID                          scope,
+			ScopeID                         scope,
 			base::Optional<base::Box<Expr>> initial_value,
-			tsh::TypeDesc<>                  type,
-			SymID                            helios_symbol
+			tsh::TypeDesc<>                 type,
+			SymID                           helios_symbol
 		):
 			  Stmt(scope),
 			  initial_value(std::move(initial_value)),
@@ -146,7 +147,7 @@ namespace compiler::helios::code {
 	 */
 	struct IfStmt final: public Stmt {
 		base::Box<Expr> condition;
-		CodeBlock        body;
+		CodeBlock       body;
 
 		// @TODO: optional else body
 
@@ -193,6 +194,22 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
+
+		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
+	};
+
+	/**
+	 * @brief Represents an expression inside "(" and ")"
+	 */
+	struct ParenthesisExpr final: public Expr {
+		base::Box<Expr> inner;
+
+		ParenthesisExpr(query::Context& ctx, ScopeID scope, base::Box<Expr> inner);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const override;
+
+		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 
 	struct BinaryOperatorExpr: public Expr {
@@ -204,9 +221,9 @@ namespace compiler::helios::code {
 		base::Box<Expr> rhs;
 
 		BinaryOperatorExpr(
-			query::Context&  ctx,
-			ScopeID          scope,
-			lexer::Operator  op,
+			query::Context& ctx,
+			ScopeID         scope,
+			lexer::Operator op,
 			base::Box<Expr> lhs,
 			base::Box<Expr> rhs
 		);

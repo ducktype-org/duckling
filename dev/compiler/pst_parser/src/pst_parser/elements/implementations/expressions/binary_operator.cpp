@@ -6,9 +6,9 @@ namespace pst::expr {
 
 		out << R"("left_expr": )";
 		nullAwareDprint(left, out);
-		out << R"(", "operator": )";
+		out << R"(, "operator": )";
 		tpc::nullAwareDprint(op, out);
-		out << R"(", "right_expr": )";
+		out << R"(, "right_expr": )";
 		nullAwareDprint(right, out);
 
 		out << "}";

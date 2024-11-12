@@ -25,22 +25,20 @@ namespace pst {
 
 	namespace {
 		bool universalEnd(const LangParserState& state, i64 fwd = 0) {
-			return state[fwd].is(Special::Comma) 
-				|| state[fwd].is(Special::Semicolon)
-				|| state[fwd].is(NamedOperator::Assign);
+			return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
+			    || state[fwd].is(NamedOperator::Assign);
 		}
-		
+
 		bool universalEndAllowComma(const LangParserState& state, i64 fwd = 0) {
-			return state[fwd].is(Special::Semicolon)
-				|| state[fwd].is(NamedOperator::Assign);
+			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign);
 		}
 	}
 
-	base::unique_ptr<ExprElement> UniversalExpr::parse(LangParserState &state) {
+	base::unique_ptr<ExprElement> UniversalExpr::parse(LangParserState& state) {
 		return expr::parseUntil<expr::Ternary, universalEnd>(state);
 	}
 
-	base::unique_ptr<ExprElement> CommaExpr::parse(LangParserState &state) {
+	base::unique_ptr<ExprElement> CommaExpr::parse(LangParserState& state) {
 		return expr::parseUntil<expr::Comma, universalEndAllowComma>(state);
 	}
 }
