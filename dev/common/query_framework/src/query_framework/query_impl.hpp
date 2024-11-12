@@ -189,6 +189,10 @@ namespace query {
 		"Query result type should not be a reference (use CRef instead)"                            \
 	);                                                                                              \
 	static_assert(                                                                                  \
+		not std::is_reference_v<type::PResult>,                                                     \
+		"Provider result type should not be a reference (use CRef instead)"                         \
+	);                                                                                              \
+	static_assert(                                                                                  \
 		std::is_same_v<                                                                             \
 			std::invoke_result_t<decltype(type::store), type::QKey, type::PResult, ::query::ACD>,   \
 			type::QResult>,                                                                         \
