@@ -89,7 +89,7 @@ private:
 
 	void stableHashMapTest() {
 		base::StableHashMap<std::string, std::string> map;
-		map["lol"] = "test";
+		map.put("lol", "test");
 
 		ASSERT_EQUAL("test", map["lol"]);
 		ASSERT_EQUAL(1, map.size());
@@ -118,7 +118,7 @@ private:
 		base::StableHashMap<usize, i64> map;
 		const i64*                      ptr = nullptr;
 		for (usize i = 0; i < 10'000; i++) {
-			map[i] = static_cast<i64>(i);
+			map.put(i, static_cast<i64>(i));
 			if (i == 0) ptr = &map[0];
 			assertEqual(ptr, &map[0], base::strConcat("A StableHashMap is not stable :O"));
 		}
