@@ -458,7 +458,8 @@ namespace compiler::helios {
 		IMPLEMENT_QUERY(QueryHoutOfExpr, errors::HResult<base::Box<code::Expr> COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @EXPR: Implement this
-			return code::Expr::fromPST(ctx, key.scope, key.expr);
+			ScopeID expr_scope = ctx.query<QueryPrimaryCodeScopeFor>({ key.expr });
+			return code::Expr::fromPST(ctx, expr_scope, key.expr);
 			CORE_PANIC("Not implemented yet...");
 			// @NOTE: this is simplest, mock implementation
 			// A proper Expr parsing will be added as new mission/PR

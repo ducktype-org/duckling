@@ -299,7 +299,6 @@ namespace compiler::helios::code {
 namespace compiler::helios {
 	struct KeyOf_QueryHoutOfExpr {
 		PstRef<pst::ExprElement> expr;
-		ScopeID                  scope;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
