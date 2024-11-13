@@ -254,7 +254,7 @@ namespace query {
 	}\
 	static_assert(                                                                             \
 		std::is_same_v<CRef<PResult>, QResult>,                                                \
-		"QResult should be a CRef of PResutlt for QUERY_AUTO_CACHE_REF"                        \
+		"QResult should be a CRef of PResult for QUERY_AUTO_CACHE_REF"                        \
 	);
 
 

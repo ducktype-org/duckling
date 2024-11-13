@@ -364,7 +364,7 @@ In order to use it, two requirements must be met:
 There are currently two automatic-caching mechanisms:
 
 - `QUERY_AUTO_CACHE_COPY` -- it will cache `PResult`s and return copy on load
-- `QUERY_AUTO_CACHE_REF` -- it will cache `PResult`s and return references to them (in generall will have slower cache, since references have to be stable)
+- `QUERY_AUTO_CACHE_REF` -- it will cache `PResult`s and return references to them (in general will have slower cache, since references have to be stable)
 
 In both cases, the `store` function will rely on an implicit cast/conversion from `PResult` to `QResult`.
 
