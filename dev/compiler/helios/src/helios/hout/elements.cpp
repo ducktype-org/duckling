@@ -230,6 +230,18 @@ namespace compiler::helios::code {
 			PstExprToHoutExprVisitor rhs(ctx, scope);
 			stmt.getLeftOperand()->acceptVisitor(lhs);
 			stmt.getRightOperand()->acceptVisitor(rhs);
+
+			// HoutExprTypeCheckVisitor vis_lhs(ctx, scope);
+			// HoutExprTypeCheckVisitor vis_rhs(ctx, scope);
+
+			// lhs.node->acceptVisitor(vis_lhs);
+			// rhs.node->acceptVisitor(vis_rhs);
+			// if (stmt.getOperator().str()[0] == '|' && vis_lhs.makes_type && vis_rhs.makes_type) {
+
+			// } else {
+
+			// }
+
 			// if operator == '|' then
 			// @EXPR: Make a visitor to check if expressions are types or values.
 			// bool is_variant_constructor = lhs.node->type_desc.getValueCategory().getCategory() !=
