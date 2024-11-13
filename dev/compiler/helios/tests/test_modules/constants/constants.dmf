@@ -41,7 +41,6 @@ const F: i32 = ((A + 1) / 2 + (E + 2) / 2) ^ 2 * NN.A;
 const M: i32 = (A + A * 2) * NN.NNN.A * Inner.Inner_X;
 
 
+fun foo(a: i32) = {
 
-fun foo(var a: i32) {
-	
 }

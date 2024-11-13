@@ -16,6 +16,7 @@
 #include "base/box.hpp"
 #include "base/exceptions.hpp"
 #include "helios/helios_errors.hpp"
+#include "lang_definitions/key_spec_op.hpp"
 #include "lexer/token_common.hpp"
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
 
@@ -164,6 +165,8 @@ namespace compiler::helios::code {
 	 * Expressions:  *
 	 * * * * * * * * */
 
+	// @EXPR: Sort these structs in an appropriate order
+
 	/**
 	 * @brief Represents a literal value written in the expression.
 	 */
@@ -173,6 +176,20 @@ namespace compiler::helios::code {
 		i64 value;
 
 		LiteralValueExpr(query::Context& ctx, ScopeID scope, i64 value);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const override;
+
+		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
+	};
+
+	/**
+	 * @brief Represents an expression made of a keyword, like "true", or "i32".
+	 */
+	struct KeywordExpr final: public Expr {
+		lang_def::Keyword keyword;
+
+		KeywordExpr(query::Context& ctx, ScopeID scope, lang_def::Keyword keyword);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
@@ -199,7 +216,12 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents an expression inside "(" and ")"
+	 * @brief Represents an expression inside "(" and ")".
+	 * @TODO: Decide if this class is needed.
+	 * For:
+	 * - nice dprints, because with this class we know what was in "()"
+	 * Against:
+	 * - We have/will have TupleConstructorExpr and VariantConstructor Expr.
 	 */
 	struct ParenthesisExpr final: public Expr {
 		base::Box<Expr> inner;
@@ -213,8 +235,8 @@ namespace compiler::helios::code {
 	};
 
 	struct BinaryOperatorExpr: public Expr {
-		// @TODO: At this point, this should be a symbol.
-		//  HOUT should not be concerned with overload resolution.
+		// @TODO: At this point, operator should be a symbol.
+		// HOUT should not be concerned with overload resolution.
 		lexer::Operator op;
 
 		base::Box<Expr> lhs;
@@ -227,6 +249,40 @@ namespace compiler::helios::code {
 			base::Box<Expr> lhs,
 			base::Box<Expr> rhs
 		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const override;
+
+		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
+	};
+
+	/**
+	 * @brief General unary operator. Correctness depends on a proper lookup of a method (operator).
+	 */
+	struct UnaryOperatorExpr: public Expr {
+		// @EXPR: Fill
+
+		void debugPrint(std::ostream& out) const override;
+		void acceptVisitor(HoutExprVisitor &) const override;
+
+		errors::HResult<i64, errors::Failed> evaluateValue(query::Context &ctx) const override;
+	};
+
+	struct TupleConstructorExpr: public Expr {
+		std::vector<base::Box<Expr>> elements;
+
+		TupleConstructorExpr(
+			query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
+		);
+
+		void debugPrint(std::ostream& out) const override;
+		void acceptVisitor(HoutExprVisitor &) const override;
+
+		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
+	};
+
+	struct VariantConstructorExpr: public Expr {
+		// @EXPR: Fill
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;

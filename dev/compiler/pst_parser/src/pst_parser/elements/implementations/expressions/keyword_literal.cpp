@@ -9,7 +9,7 @@ namespace pst::expr {
 
 		auto out = base::make_unique<KeywordLiteral>(state.getPosition());
 
-		state.parse(out).one(&out->key);
+		state.parse(out).one(&out->keyword);
 
 		if (length > 2 && state[0].is(NamedOperator::Colon)
 		    && state[1].isBracketGroup(Token::Curly))
@@ -22,7 +22,7 @@ namespace pst::expr {
 		out << "{";
 
 		out << R"("keyword": )";
-		tpc::nullAwareDprint(key, out);
+		tpc::nullAwareDprint(keyword, out);
 		if (template_specifier) {
 			out << R"(, "template": )";
 			nullAwareDprint(template_specifier.value(), out);

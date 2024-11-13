@@ -1,4 +1,5 @@
 #include "helios/helios_errors.hpp"
+#include "typesystem/higher/queries/types.hpp"
 #include <helios/scope_symbol_id.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
@@ -30,12 +31,12 @@ public:
 		pst::init();
 		tsh::init();
 
+		TESTER_ADD_TEST(testTypeOf);
 		TESTER_ADD_TEST(exprTreeTest);
 		TESTER_ADD_TEST(testI32Consts);
 		TESTER_ADD_TEST(errorTests);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testClassSymbolData);
-		TESTER_ADD_TEST(testTypeOf);
 		TESTER_ADD_TEST(simpleHOUTTest);
 		TESTER_ADD_TEST(importTest);
 		TESTER_ADD_TEST(houtVisitorTest);
@@ -105,6 +106,7 @@ private:
 
 		const auto INT32_TYPE = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
 		const auto F32_TYPE   = query::entryPoint<tsh::QueryFloatType>(32);
+		const auto BOOL_TYPE  = query::entryPoint<tsh::QueryBoolType>({});
 
 		ASSERT_EQUAL(true, INT32_TYPE == getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(true, F32_TYPE == getTypeOf("SimpleFloat", root_scope));
@@ -119,6 +121,11 @@ private:
 		const auto first_variant_type_info
 			= query::entryPoint<tsh::QueryVariantType>({ { INT32_TYPE, F32_TYPE } });
 		ASSERT_EQUAL(true, first_variant == first_variant_type_info);
+
+		const auto second_variant = getTypeOf("second_variant", root_scope);
+		const auto second_variant_type_info
+			= query::entryPoint<tsh::QueryVariantType>({ { INT32_TYPE, F32_TYPE, BOOL_TYPE } });
+		ASSERT_EQUAL(true, second_variant == second_variant_type_info);
 
 		const auto weird_variant = getTypeOf("weird_variant", root_scope);
 
@@ -287,9 +294,7 @@ private:
 
 		auto sym3       = getChain("N.V3", root_scope).back();
 		auto symV3_repr = base::strConcat("(Symbol V3 (", sym3.customPerfectHash(), "))");
-		ASSERT_EQUAL(
-			base::strConcat("(", symV3_repr, "+(", symV3_repr, "*", symV3_repr, "))"), out2.str()
-		);
+		ASSERT_EQUAL(base::strConcat(symV3_repr, "+", symV3_repr, "*", symV3_repr), out2.str());
 	}
 
 	void errorTests() {

@@ -33,6 +33,7 @@
 
 #include <optional>
 #include <functional>
+#include <type_traits>
 
 #include "exceptions.hpp"
 
@@ -290,15 +291,13 @@ namespace base {
 		 * @return Object T to perform an operation on.
 		 */
 		[[nodiscard]]
-		constexpr const T*
-			operator->() const {
+		constexpr const T* operator->() const {
 			_throwOnNoValue();
 			return private_optional.operator->();
 		}
 
 		[[nodiscard]]
-		constexpr T*
-			operator->() {
+		constexpr T* operator->() {
 			_throwOnNoValue();
 			return private_optional.operator->();
 		}
@@ -347,6 +346,19 @@ namespace base {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
+		}
+
+		/**
+		 * @brief Applies a function if contains a value. Does nothing otherwise.
+		 */
+		template<typename Function>
+		auto ifValue(const Function& function) -> void {
+			if (has_value()) function(value());
+		}
+
+		template<typename Function>
+		auto ifValue(const Function& function) const -> void {
+			if (has_value()) function(value());
 		}
 
 	protected:
@@ -536,6 +548,16 @@ namespace base {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
+		}
+
+		template<typename Function>
+		auto ifValue(const Function& function) -> void {
+			if (has_value()) function(value());
+		}
+
+		template<typename Function>
+		auto ifValue(const Function& function) const -> void {
+			if (has_value()) function(value());
 		}
 
 	private:

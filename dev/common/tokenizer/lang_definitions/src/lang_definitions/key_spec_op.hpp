@@ -89,7 +89,11 @@ namespace lang_def {
 		u32,
 		u64,
 		u128,
-		Float,
+
+		f32,
+		f64,
+		f80,
+
 		Char,
 		Bool,  // ...
 

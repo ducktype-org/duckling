@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lang_definitions/key_spec_op.hpp"
 #include "lexer/token_common.hpp"
 #include "meta.hpp"
 #include "lists.hpp"           // IWYU pragma: keep
@@ -173,7 +174,7 @@ namespace pst {
 		};
 
 		class KeywordLiteral final: public ExprElement {
-			Keyword                      key;
+			Keyword                                keyword;
 			base::Optional<ParserRef<ExprElement>> template_specifier;
 
 		public:
@@ -184,6 +185,8 @@ namespace pst {
 			~KeywordLiteral() override = default;
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
+
+			Keyword getKeyword() const { return keyword; }
 
 			std::string elementType() const override { return "Keyword Expression"; }
 		};
@@ -467,6 +470,8 @@ namespace pst {
 			~Comma() override = default;
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
+
+			const std::vector<ParserRef<ExprElement>>& getExpressions() const;
 		};
 
 		class Assignment final: public ExprElement {

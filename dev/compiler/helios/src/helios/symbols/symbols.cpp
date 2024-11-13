@@ -878,8 +878,6 @@ namespace compiler::helios {
 			base::Optional<tsh::TypeInfo> symbol_type_info;
 
 			void visitConst(const pst::Const& stmt) override {
-				std::cout << "\nPrinting const: \n";
-				stmt.dprint(std::cout);
 				setTypeOfSymbol(stmt.getType()); }
 
 			void visitVariable(const pst::Variable& stmt) override {

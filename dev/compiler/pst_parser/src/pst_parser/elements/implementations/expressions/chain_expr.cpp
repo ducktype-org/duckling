@@ -72,4 +72,6 @@ namespace pst::expr {
 	ParserCBorrowRef<ExprElement> BinaryOperator::getRightOperand() const { return right.borrow(); }
 
 	lexer::Operator BinaryOperator::getOperator() const { return op; }
+
+	const std::vector<ParserRef<ExprElement>>& Comma::getExpressions() const { return expressions; }
 }

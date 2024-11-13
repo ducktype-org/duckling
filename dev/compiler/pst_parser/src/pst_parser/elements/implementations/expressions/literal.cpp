@@ -9,7 +9,7 @@ namespace pst::expr {
 
 		if (state[0].isKeyword()) {
 			return KeywordLiteral::parse(state, length);
-		} if (state[0].isIdentifier()) {
+		} else if (state[0].isIdentifier()) {
 			return IdentifierLiteral::parse(state, length);
 		} else if (state[0].isNumLiteral()) {
 			return ExprValue::parse(state, length);
