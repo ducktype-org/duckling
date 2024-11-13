@@ -326,16 +326,18 @@ namespace pst {
 					NamedOperator::Divide,
 					NamedOperator::Plus,
 					NamedOperator::Minus,
+					NamedOperator::Pipe,
 				};
 				return gen_bin_ops.contains(state[fwd].asOperator().asNamed());
 			}
 
 			static i64 getOpPrec(Operator op) {
 				static const std::unordered_map<lang_def::NamedOperator, i64> precedences = {
-					{ NamedOperator::Multiply, 510 },
-					{ NamedOperator::Divide, 510 },
-					{ NamedOperator::Plus, 520 },
-					{ NamedOperator::Minus, 520 },
+					{ NamedOperator::Pipe, 540 },
+					{ NamedOperator::Multiply, 560 },
+					{ NamedOperator::Divide, 560 },
+					{ NamedOperator::Plus, 570 },
+					{ NamedOperator::Minus, 570 },
 				};
 				return precedences.at(op.asNamed());
 			}
