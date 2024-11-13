@@ -234,6 +234,10 @@ namespace query {
 	static_assert(                                                                             \
 		std::is_same_v<PResult, QResult>,                                                      \
 		"PResult and QResult should be equal for QUERY_AUTO_CACHE_COPY"                        \
+	);                                                                                         \
+	static_assert(                                                                             \
+		std::is_constructible_v<PResult>,                                                      \
+		"PResult should be copy constructible for QUERY_AUTO_CACHE_COPY"                       \
 	);
 
 
