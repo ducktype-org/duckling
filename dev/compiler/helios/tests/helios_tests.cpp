@@ -73,7 +73,8 @@ private:
 
 		const auto first_class = getChain("FirstClassEver", root_scope).back();
 		const auto first_class_info
-			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class)->valueOrThrow();
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class)
+		          ->valueOrThrow();
 		const auto first_class_typeinfo
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
 		          ->valueOrThrow();

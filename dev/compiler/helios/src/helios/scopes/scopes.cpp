@@ -258,7 +258,8 @@ namespace compiler::helios {
 		}
 
 		static auto load(QKey key) -> LoadResult {
-			if (const auto& cache = key.ref->symbols) return QResWithACD{ &cache->data, cache->acd };
+			if (const auto& cache = key.ref->symbols)
+				return QResWithACD{ &cache->data, cache->acd };
 			return {};
 		}
 

@@ -104,7 +104,8 @@ private:
 		auto pth  = fs::FilePath(path("test_module"));
 		auto root = query::entryPoint<QueryModuleTree>(pth);
 
-		[[maybe_unused]] auto awe = query::entryPoint<QuerySubmodules>(root)->at(base::StrID("awe"));
+		[[maybe_unused]] auto awe
+			= query::entryPoint<QuerySubmodules>(root)->at(base::StrID("awe"));
 
 		auto sources = query::entryPoint<QuerySourceFiles>(root);
 		assertTrue(sources->size() == 1, "Bad source count!");
