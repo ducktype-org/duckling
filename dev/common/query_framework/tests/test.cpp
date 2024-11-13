@@ -1,3 +1,6 @@
+#include "base/exceptions.hpp"
+#include "query_framework/dep_graph.hpp"
+#include <sstream>
 #include <tester/tester.hpp>
 #include <base/stable_hashmap.hpp>
 #include <query_framework/query_int.hpp>
@@ -178,7 +181,29 @@ struct IMPLEMENT_QUERY(LifeTimeQueryUnstable, Result) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(LifeTimeQueryUnstable);
 
+
+DECLARE_QUERY(CyclicQuery1, u64, u64);
+DECLARE_QUERY(CyclicQuery2, u64, u64);
+
+struct IMPLEMENT_QUERY(CyclicQuery1, u64) {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		return ctx.query<CyclicQuery2>(key);
+	}
+	QUERY_AUTO_CACHE_COPY
+};
+struct IMPLEMENT_QUERY(CyclicQuery2, u64) {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		return ctx.query<CyclicQuery1>(key);
+	}
+	QUERY_AUTO_CACHE_COPY
+};
+
+
+QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQuery1);
+QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQuery2);
+
 using query::utils::withContextDo;
+using query::utils::withContextCompute;
 
 class QueryTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -192,6 +217,10 @@ public:
 		TESTER_ADD_TEST(entryPointSanityTest);
 		TESTER_ADD_TEST(resultLifetimeTest<LifeTimeQueryStable>);
 		TESTER_ADD_TEST(resultLifetimeTest<LifeTimeQueryUnstable>);
+		TESTER_ADD_TEST(withContextDoCompute);
+		TESTER_ADD_TEST(queryNamesTest);
+		TESTER_ADD_TEST(cycleDetectionTest);
+		TESTER_ADD_TEST(debugPrintTest);
 	}
 
 private:
@@ -236,6 +265,47 @@ private:
 			auto res2 = ctx.query<Query>(0);
 			ASSERT_TRUE(res2.validate());
 		});
+	}
+
+	void withContextDoCompute() {
+		withContextDo([&](query::Context& ctx) {
+			auto res1 = ctx.query<Fibonacci>({10});
+			ASSERT_TRUE(res1 == 55);
+
+			auto res2 = ctx.query<Fibonacci>({10});
+			ASSERT_TRUE(res2 == 55);
+		});
+
+		auto res = withContextCompute([&](query::Context& ctx) {
+			return ctx.query<Fibonacci>({10});
+		});
+		ASSERT_TRUE(base::anyCast<u64>(res) == 55);
+	}
+
+	void queryNamesTest() {
+		assertTrue(Fibonacci::name == "Fibonacci", "Bad query name (1)");
+		assertTrue(FibonacciSum::name == "FibonacciSum", "Bad query name (2)");
+		assertTrue(FibonacciStringAutoCache::name == "FibonacciStringAutoCache", "Bad query name (3)");
+		assertTrue(CallingEntryPoint::name == "CallingEntryPoint", "Bad query name (4)");
+		assertTrue(ReferenceQuery::name == "ReferenceQuery", "Bad query name (5)");
+		assertTrue(VectorReferenceQuery::name == "VectorReferenceQuery", "Bad query name (6)");
+		assertTrue(LifeTimeQueryStable::name == "LifeTimeQueryStable", "Bad query name (7)");
+		assertTrue(LifeTimeQueryUnstable::name == "LifeTimeQueryUnstable", "Bad query name (8)");
+	}
+
+	void cycleDetectionTest() {
+		// note: this test will change when proper cycle handling will
+		// be introduced.
+		assertThrows<base::NotYetImplemented>([&]() {
+			query::entryPoint<CyclicQuery1>(1);
+		}, "Cycle detection did not throw.");
+	}
+
+	void debugPrintTest() {
+		// just check if it compiles and don't throw
+		std::stringstream s;
+		query::debugPrintDependencyGraphForDrawing(s);
+		query::debugPrintDependencyGraph(s);
 	}
 };
 
