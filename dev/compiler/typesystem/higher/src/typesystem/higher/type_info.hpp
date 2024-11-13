@@ -28,13 +28,9 @@
 /**
  * @brief Constructor from KindOfType##InfoImpl*.
  *
- * Marks respective query as a friend for exclusive construction access.
- *
  * @param KindOfType The class name from the TypeInfo hierarchy, without "Info".
  */
 #define CONSTRUCT_FROM_IMPLEMENTATION(KindOfType)           \
-	friend class internal::KindOfType##InfoImpl;            \
-	friend struct ImplementationOf_Query##KindOfType##Type; \
 	KindOfType##Info(const CPimpl pimpl): Base(reinterpret_cast<CBPimpl>(pimpl)) {}
 
 /**
