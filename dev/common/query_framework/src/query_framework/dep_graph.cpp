@@ -91,12 +91,12 @@ namespace query::detail {
 				out << "    ";
 				out << "> Query - " << std::setw(5) << std::left;
 				out << k.q_id.asInt() << std::setw(30) << std::left
-						  << "\"" + k.q_id.getName() + "\"";
+					<< "\"" + k.q_id.getName() + "\"";
 				out << " Key " << k.hash.val << " :=>\n";
 				for (auto& dep: v.dependencies) {
 					out << spacing << "(Q: "
-							  << "\"" << dep.q_id.getName() << "\", "
-							  << "K: " << dep.hash.val << "),\n";
+						<< "\"" << dep.q_id.getName() << "\", "
+						<< "K: " << dep.hash.val << "),\n";
 				}
 				if (!v.dependencies.empty()) out << '\n';
 			}
