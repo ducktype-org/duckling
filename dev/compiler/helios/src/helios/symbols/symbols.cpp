@@ -410,10 +410,8 @@ namespace compiler::helios {
 					}
 					CORE_PANIC("Invalid state");
 				}
-				for (auto path_symbol: path.value()) {
-					auto dealiased_hresult = ctx.query<QueryDealias>(path_symbol);
-					if (dealiased_hresult->hasError()) return errors::HError(dealiased_hresult->error());
-					auto& dealiased = dealiased_hresult->value();
+				for (auto path_symbol: path.value()) {	
+					UNPACK_RESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
 					result.insert(result.end(), dealiased.begin(), dealiased.end());
 				}
 
