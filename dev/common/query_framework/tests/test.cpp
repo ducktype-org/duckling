@@ -1,11 +1,14 @@
-#include "base/exceptions.hpp"
-#include "query_framework/dep_graph.hpp"
 #include <sstream>
+
 #include <tester/tester.hpp>
+
+#include <base/exceptions.hpp>
 #include <base/stable_hashmap.hpp>
+
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/dep_graph.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
 struct Key1 {
