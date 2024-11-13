@@ -154,7 +154,8 @@ namespace compiler::helios {
 
 				// for now initial value is assumed to always be present:
 				// this will probably change:
-				auto initial_value = ctx.query<QueryHoutOfExpr>({ stmt.getValue() });
+				auto initial_value
+					= ctx.query<QueryHoutOfExpr>({ stmt.getValue(), scope_of_symbol });
 
 				output(code::VariableStmt(
 					scope_of_symbol, std::move(initial_value), symbol_type, symbol

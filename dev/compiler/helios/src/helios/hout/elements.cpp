@@ -16,33 +16,36 @@
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
 #include "pst_parser/pst_expr_visitor.hpp"
 #include "query_framework/query_int.hpp"
+#include "typesystem/higher/queries/types.hpp"
 #include "typesystem/higher/type_desc.hpp"
 #include "typesystem/higher/type_info.hpp"
+#include "typesystem/higher/types.hpp"
 #include "typesystem/higher/value_category.hpp"
 #include "visitors.hpp"
 
 namespace {
 	tsh::TypeInfo getTypeOfKeyword(query::Context& ctx, lang_def::Keyword keyword) {
-		const static auto BUILTINS = std::unordered_map<base::StrID, tsh::TypeInfo>{
-			{ base::StrID("f128"), ctx.query<::tsh::QueryFloatType>(128) },
-			{ base::StrID("f80"), ctx.query<::tsh::QueryFloatType>(80) },
-			{ base::StrID("f64"), ctx.query<::tsh::QueryFloatType>(64) },
-			{ base::StrID("f32"), ctx.query<::tsh::QueryFloatType>(32) },
-			{ base::StrID("f16"), ctx.query<::tsh::QueryFloatType>(16) },
+		const static auto BUILTINS = std::unordered_map<lang_def::Keyword, tsh::TypeInfo>{
+			{ lang_def::Keyword::f80, ctx.query<::tsh::QueryFloatType>(80) },
+			{ lang_def::Keyword::f64, ctx.query<::tsh::QueryFloatType>(64) },
+			{ lang_def::Keyword::f32, ctx.query<::tsh::QueryFloatType>(32) },
 
-			{ base::StrID("i128"), ctx.query<::tsh::QueryIntegralType>({ 128, true }) },
-			{ base::StrID("i64"), ctx.query<::tsh::QueryIntegralType>({ 64, true }) },
-			{ base::StrID("i32"), ctx.query<::tsh::QueryIntegralType>({ 32, true }) },
-			{ base::StrID("i16"), ctx.query<::tsh::QueryIntegralType>({ 16, true }) },
-			{ base::StrID("i8"), ctx.query<::tsh::QueryIntegralType>({ 8, true }) },
+			{ lang_def::Keyword::i128, ctx.query<::tsh::QueryIntegralType>({ 128, true }) },
+			{ lang_def::Keyword::i64, ctx.query<::tsh::QueryIntegralType>({ 64, true }) },
+			{ lang_def::Keyword::i32, ctx.query<::tsh::QueryIntegralType>({ 32, true }) },
+			{ lang_def::Keyword::i16, ctx.query<::tsh::QueryIntegralType>({ 16, true }) },
+			{ lang_def::Keyword::i8, ctx.query<::tsh::QueryIntegralType>({ 8, true }) },
 
-			{ base::StrID("u128"), ctx.query<::tsh::QueryIntegralType>({ 128, false }) },
-			{ base::StrID("u64"), ctx.query<::tsh::QueryIntegralType>({ 64, false }) },
-			{ base::StrID("u32"), ctx.query<::tsh::QueryIntegralType>({ 32, false }) },
-			{ base::StrID("u16"), ctx.query<::tsh::QueryIntegralType>({ 16, false }) },
-			{ base::StrID("u8"), ctx.query<::tsh::QueryIntegralType>({ 8, false }) },
+			{ lang_def::Keyword::u128, ctx.query<::tsh::QueryIntegralType>({ 128, false }) },
+			{ lang_def::Keyword::u64, ctx.query<::tsh::QueryIntegralType>({ 64, false }) },
+			{ lang_def::Keyword::u32, ctx.query<::tsh::QueryIntegralType>({ 32, false }) },
+			{ lang_def::Keyword::u16, ctx.query<::tsh::QueryIntegralType>({ 16, false }) },
+			{ lang_def::Keyword::u8, ctx.query<::tsh::QueryIntegralType>({ 8, false }) },
+
+			{ lang_def::Keyword::True, ctx.query<::tsh::QueryBoolType>({}) },
+			{ lang_def::Keyword::False, ctx.query<::tsh::QueryBoolType>({}) },
 		};
-		return BUILTINS.at(lang_def::keywordToStr(keyword));
+		return BUILTINS.at(keyword);
 	}
 
 	tsh::TypeDesc<> getTypeDescOfTuple(
@@ -55,11 +58,25 @@ namespace {
 			// @NOTE: False here means all subtypes of a tuple are immutable.
 			tuple_components.emplace_back(tuple_subtype->type_desc.getType(), false);
 		}
-		std::reverse(tuple_components.begin(), tuple_components.end());
 
-		// @EXPR: Should this be literal?
+		// @EXPR: Should ValueCategory be literal?
 		return tsh::TypeDesc<>(
 			ctx.query<tsh::QueryTupleType>({ tuple_components }),
+			tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+		);
+	}
+
+	tsh::TypeDesc<> getTypeDescOfVariant(
+		query::Context& ctx, const std::vector<base::Box<compiler::helios::code::Expr>>& subtypes
+	) {
+		std::vector<tsh::TypeInfo> variant_subtypes;
+		variant_subtypes.reserve(subtypes.size());
+
+		for (auto&& subtype: subtypes) variant_subtypes.emplace_back(subtype->type_desc.getType());
+
+		// @EXPR: Should ValueCategory be literal?
+		return tsh::TypeDesc<>(
+			ctx.query<tsh::QueryVariantType>({ variant_subtypes }),
 			tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 		);
 	}
@@ -204,7 +221,6 @@ namespace compiler::helios::code {
 		base::MBox<Expr> node = nullptr;
 
 		void visitExprValue(const pst::expr::ExprValue& stmt) override {
-			stmt.getValue();
 			// @TODO: Change literal value from i64 to something more appropriate.
 			node = base::MBox(new LiteralValueExpr(ctx, scope, std::stoi(stmt.getValue().str())));
 		}
@@ -214,6 +230,10 @@ namespace compiler::helios::code {
 			PstExprToHoutExprVisitor rhs(ctx, scope);
 			stmt.getLeftOperand()->acceptVisitor(lhs);
 			stmt.getRightOperand()->acceptVisitor(rhs);
+			// if operator == '|' then
+			// @EXPR: Make a visitor to check if expressions are types or values.
+			// bool is_variant_constructor = lhs.node->type_desc.getValueCategory().getCategory() !=
+			// tsh::PrimaryCategory::
 			if (lhs.node && rhs.node) {
 				node = base::MBox(new BinaryOperatorExpr(
 					ctx,
@@ -263,15 +283,14 @@ namespace compiler::helios::code {
 
 			node = base::MBox(new TupleConstructorExpr(ctx, scope, std::move(expressions)));
 		}
-
 	};
 
 	errors::HResult<base::Box<Expr>, errors::Failed>
 		Expr::fromPST(query::Context& ctx, ScopeID scope, const PstRef<pst::ExprElement> root) {
-		PstExprToHoutExprVisitor visitor(ctx, scope);
 		std::cerr << "\nExpr: \n";
 		root->debugPrint(std::cerr);
 		std::cerr << '\n';
+		PstExprToHoutExprVisitor visitor(ctx, scope);
 		root->acceptVisitor(visitor);
 		auto opt_box = std::move(visitor.node).toOptBox();
 		if (opt_box.has_value()) return std::move(opt_box.value());
@@ -287,12 +306,18 @@ namespace compiler::helios::code {
 	) const {
 		UNPACK_RESULT(i64 lhs_value =, lhs->evaluateValue(ctx));
 		UNPACK_RESULT(i64 rhs_value =, rhs->evaluateValue(ctx));
-		if (op.str()[0] == '+') return lhs_value + rhs_value;
-		if (op.str()[0] == '-') return lhs_value - rhs_value;
-		if (op.str()[0] == '*') return lhs_value * rhs_value;
-		if (op.str()[0] == '/') return lhs_value / rhs_value;
-		if (op.str()[0] == '%') return lhs_value % rhs_value;
-		if (op.str()[0] == '^') return std::pow(lhs_value, rhs_value);
+		if (op.str()[0] == '+')
+			return lhs_value + rhs_value;
+		else if (op.str()[0] == '-')
+			return lhs_value - rhs_value;
+		else if (op.str()[0] == '*')
+			return lhs_value * rhs_value;
+		else if (op.str()[0] == '/')
+			return lhs_value / rhs_value;
+		else if (op.str()[0] == '%')
+			return lhs_value % rhs_value;
+		else if (op.str()[0] == '^')
+			return std::pow(lhs_value, rhs_value);
 		CORE_PANIC("Unknown operator");
 	}
 
@@ -339,8 +364,7 @@ namespace compiler::helios::code {
 
 	void TupleConstructorExpr::debugPrint(std::ostream& out) const {
 		out << "(";
-		bool add_comma = false;
-		for (auto&& e: elements) {
+		for (bool add_comma = false; auto&& e: elements) {
 			if (add_comma) out << ", ";
 			e->debugPrint(out);
 			add_comma = true;
@@ -348,10 +372,31 @@ namespace compiler::helios::code {
 		out << ")";
 	}
 
-	errors::HResult<i64, errors::Failed> TupleConstructorExpr::evaluateValue(query::Context& ctx
-	) const {
+	errors::HResult<i64, errors::Failed>
+		TupleConstructorExpr::evaluateValue(query::Context&) const {
 		throw base::NotYetImplemented("Evaluation of tuple values is not implemented yet");
 	}
+
+	void VariantConstructorExpr::debugPrint(std::ostream& out) const {
+		out << "(";
+		for (bool add_pipe = false; auto&& subtype: subtypes) {
+			if (add_pipe) out << " | ";
+			subtype->debugPrint(out);
+			add_pipe = true;
+		}
+		out << ")";
+	}
+
+	errors::HResult<i64, errors::Failed>
+		VariantConstructorExpr::evaluateValue(query::Context&) const {
+		throw base::NotYetImplemented("Evaluation of variant values is not implemented yet");
+	}
+
+	VariantConstructorExpr::VariantConstructorExpr(
+		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
+	):
+		  Expr(scope, getTypeDescOfVariant(ctx, subtypes)),
+		  subtypes(std::move(subtypes)) {}
 }
 
 namespace compiler::helios {
@@ -409,12 +454,15 @@ namespace compiler::helios {
 		// CORE_PANIC("No match in variant");
 	}
 
-	struct IMPLEMENT_QUERY(QueryHoutOfExpr, base::Box<code::Expr>) {
+	struct
+		IMPLEMENT_QUERY(QueryHoutOfExpr, errors::HResult<base::Box<code::Expr> COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			// @EXPR: Implement this
+			return code::Expr::fromPST(ctx, key.scope, key.expr);
+			CORE_PANIC("Not implemented yet...");
 			// @NOTE: this is simplest, mock implementation
 			// A proper Expr parsing will be added as new mission/PR
 
-			CORE_PANIC("Not implemented yet...");
 			// if (key.expr->elements.size() == 1)
 			// 	return houtOfSingleExpr(ctx, key);
 			// else {

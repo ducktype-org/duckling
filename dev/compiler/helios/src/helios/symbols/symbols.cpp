@@ -728,7 +728,7 @@ namespace compiler::helios {
 				= dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
 			const ScopeID key_scope = scope(key);
 
-
+			// @EXPR: Find all calls to fromPST and change them to use query.
 			auto eval = code::Expr::fromPST(ctx, key_scope, const_symbol->getValue());
 			if (eval.hasError()) {
 				// @TODO: Report an error

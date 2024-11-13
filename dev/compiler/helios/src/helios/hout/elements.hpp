@@ -264,9 +264,9 @@ namespace compiler::helios::code {
 		// @EXPR: Fill
 
 		void debugPrint(std::ostream& out) const override;
-		void acceptVisitor(HoutExprVisitor &) const override;
+		void acceptVisitor(HoutExprVisitor&) const override;
 
-		errors::HResult<i64, errors::Failed> evaluateValue(query::Context &ctx) const override;
+		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 
 	struct TupleConstructorExpr: public Expr {
@@ -277,13 +277,17 @@ namespace compiler::helios::code {
 		);
 
 		void debugPrint(std::ostream& out) const override;
-		void acceptVisitor(HoutExprVisitor &) const override;
+		void acceptVisitor(HoutExprVisitor&) const override;
 
 		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 
 	struct VariantConstructorExpr: public Expr {
-		// @EXPR: Fill
+		std::vector<base::Box<Expr>> subtypes;
+
+		VariantConstructorExpr(
+			query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
@@ -295,6 +299,7 @@ namespace compiler::helios::code {
 namespace compiler::helios {
 	struct KeyOf_QueryHoutOfExpr {
 		PstRef<pst::ExprElement> expr;
+		ScopeID                  scope;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
@@ -303,5 +308,5 @@ namespace compiler::helios {
 	/**
 	 * @brief Construct HOUT Expr from Pst Expr, "within" given scope
 	 */
-	DECLARE_QUERY(QueryHoutOfExpr, KeyOf_QueryHoutOfExpr, base::Box<code::Expr>);
+	DECLARE_QUERY(QueryHoutOfExpr, KeyOf_QueryHoutOfExpr, errors::HResult<base::Box<code::Expr> COMMA errors::Failed>);
 }
