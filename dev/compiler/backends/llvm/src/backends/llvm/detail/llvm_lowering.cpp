@@ -17,21 +17,6 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/Support/TargetSelect.h>
 
-// Those includes are not needed for now, but they might be needed in the future,
-// They are left here, for easy access -- since there are no API docs, that are easy to grasp:
-// #include <llvm/ADT/APInt.h>
-// #include <llvm/IR/Verifier.h>
-// #include <llvm/ExecutionEngine/ExecutionEngine.h>
-// #include <llvm/ExecutionEngine/GenericValue.h>
-// #include <llvm/ExecutionEngine/MCJIT.h>
-// #include <llvm/Support/Casting.h>
-// #include <llvm/Support/raw_ostream.h>
-// #include <llvm/Support/TargetSelect.h>
-// #include <llvm/Support/Host.h>
-// #include <llvm/Target/TargetMachine.h>
-// #include <llvm/Target/TargetOptions.h>
-// #include <llvm/ADT/Optional.h>
-
 LLVM_INCLUDE_END()
 
 
@@ -41,9 +26,7 @@ LLVM_INCLUDE_END()
 #include <base/box.hpp>
 #include <base/maps.hpp>
 
-// useful: https://github.com/llvm/llvm-project/tree/main/llvm/examples
-
-// @TODO: use this https://llvm.org/doxygen/classllvm_1_1DIBuilder.html
+// useful: https://github.com/llvm/llvm-project/tree/main/llvm/exampless
 
 namespace compiler::backend_llvm {
 	
@@ -188,6 +171,10 @@ namespace compiler::backend_llvm {
 			return llvm_locations;
 		}
 
+		/**
+		 * @brief Lowers LIRInstruction to LLVM instructions at the
+		 * end of the block given by @p builder. 
+		 */
 		void lir2LLVMInstuction(
 			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder
 		) {
