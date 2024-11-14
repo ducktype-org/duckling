@@ -28,9 +28,7 @@ namespace compiler::backend_llvm {
 		return not error_found;
 	}
 
-	void ModuleImpl::debugPrint() const {
-		module->print(llvm::errs(), nullptr);
-	}
+	void ModuleImpl::debugPrint() const { module->print(llvm::errs(), nullptr); }
 
 	Module::~Module()         = default;
 	ModuleImpl::~ModuleImpl() = default;

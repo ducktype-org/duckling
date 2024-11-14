@@ -29,7 +29,7 @@ LLVM_INCLUDE_END()
 // useful: https://github.com/llvm/llvm-project/tree/main/llvm/exampless
 
 namespace compiler::backend_llvm {
-	
+
 	/**
 	 * @brief Initializes some llvm components.
 	 * @note it *should* be safe to call it multiple times
@@ -49,7 +49,7 @@ namespace compiler::backend_llvm {
 	 * @note as of 9.11.2024 i did not find the reason, to have more then one context per thread,
 	 * hence this function.
 	 *
-	 * @return llvm::LLVMContext& 
+	 * @return llvm::LLVMContext&
 	 */
 	llvm::LLVMContext& getLLVMContext() {
 		static llvm::LLVMContext context;
@@ -87,9 +87,8 @@ namespace compiler::backend_llvm {
 			  context(context),
 			  lir_function(lir_function),
 			  module(module) {}
-	
-	private:
 
+	private:
 		/**
 		 * Maps LIR blocks to LLVM blocks.
 		 * @note: Not all LLVM blocks will be here
@@ -107,6 +106,7 @@ namespace compiler::backend_llvm {
 		}
 
 		base::Map<lir::LocalRef, u64> tmp_id;
+
 		std::string llvmLocalName(lir::LocalRef lir_local) {
 			// @TODO.. far from optimal
 			// This will change anyway, with LIR ID unification
@@ -149,13 +149,15 @@ namespace compiler::backend_llvm {
 		 * @brief Maps LIRLocation to LLVM Value.
 		 * @note In llvm a lot of things can be treated as values, and
 		 * its based on inheritance.
-		 * @param lir_location 
-		 * @return llvm::Value* 
+		 * @param lir_location
+		 * @return llvm::Value*
 		 */
 		auto lir2LLVMLocation(const lir::LirLocation& lir_location) -> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
 				variant_case(i64, value) { return llvm::ConstantInt::get(i64Type(context), value); }
-				variant_case(lir::LocalRef, lir_local) { return local_register_map[lir_local].get(); }
+				variant_case(lir::LocalRef, lir_local) {
+					return local_register_map[lir_local].get();
+				}
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
 				variant_default { CORE_PANIC("unknown lir location type"); }
 			}
@@ -173,7 +175,7 @@ namespace compiler::backend_llvm {
 
 		/**
 		 * @brief Lowers LIRInstruction to LLVM instructions at the
-		 * end of the block given by @p builder. 
+		 * end of the block given by @p builder.
 		 */
 		void lir2LLVMInstuction(
 			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder
@@ -247,7 +249,7 @@ namespace compiler::backend_llvm {
 		Box<llvm::Module> module = box<llvm::Module>("test", context);
 
 		LIR2LLVMFunction lir2llvm{ context, lir_function, module.refMut() };
-		
+
 		// this implicitly adds the function to the module:
 		lir2llvm.createFunction();
 
