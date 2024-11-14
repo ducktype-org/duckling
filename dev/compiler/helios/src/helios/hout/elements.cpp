@@ -209,6 +209,29 @@ namespace compiler::helios::code {
 
 	struct TupleConstructorVisitor: public pst::PstExprVisitorEmpty {};
 
+	// WIP
+	struct TypeOrValueExprVisitor: public pst::PstExprVisitorPanicky {
+		explicit TypeOrValueExprVisitor(query::Context& ctx, ScopeID scope):
+			  ctx(ctx),
+			  scope(scope) {}
+		enum class ExprNature {
+			TypeExpr,
+			ValueExpr
+		};
+		query::Context& ctx;
+		ScopeID         scope;
+		base::Optional<ExprNature>      nature;
+
+		void visitExprValue(const pst::expr::ExprValue&) override { nature = ExprNature::ValueExpr; }
+
+		void visitIdentifierLiteral(const pst::expr::IdentifierLiteral&) override {
+			// @EXPR 2.0 TODO...
+
+			nature = ExprNature::ValueExpr;
+		}
+
+	};
+
 	struct PstExprToHoutExprVisitor: public pst::PstExprVisitorPanicky {
 		explicit PstExprToHoutExprVisitor(query::Context& ctx, ScopeID scope):
 			  ctx(ctx),
