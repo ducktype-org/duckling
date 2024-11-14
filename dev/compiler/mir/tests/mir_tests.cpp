@@ -1,12 +1,10 @@
 /**
  * @file mir_tests.cpp
- * @brief Tests in this file are very bad right now, because MIR
- * is not yet fully implemented and is hard to properly test.
  */
 
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
-#include <query_framework/test_utils/context_suite.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <tester/tester.hpp>
 
@@ -17,15 +15,16 @@
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
+using query::utils::withContextDo;
 
-class MIRConstructionTest final: public tester::ContextSuite {
+class MIRConstructionTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS MIRConstructionTest
 
 public:
-	MIRConstructionTest(tester::TestConfig&& config):
-		  tester::ContextSuite(std::move(config), "mir construction test") {
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
+		// @TODO: add parameters test, once they are handled well
 		TESTER_ADD_TEST(simpleVarTest);
 		TESTER_ADD_TEST(testTerminatorSuccessors);
 		TESTER_ADD_TEST(mockLifetimeAnalysisTest);
@@ -162,6 +161,7 @@ private:
 	void mockLifetimeAnalysisTest() {
 		// since lifetime analysis is a mock implementation, we don't
 		// yet test them with much effort.
+		// @TODO: add better tests once proper lifetimes implementation is in place
 		// But we do want to make sure, that it compiles and does not throw:
 
 		auto [module, scope] = getModule(fs::FilePath(path("modules/mir_var_test")));

@@ -8,6 +8,8 @@
 #include <base/strongly_typed_id.hpp>
 #include <base/stringifyable_enum.hpp>
 
+#include "mir_local_ref.hpp"
+
 // clang-format off
 MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Uninitialized,
@@ -49,8 +51,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 namespace compiler::mir {
 
-	struct MirLocal;
-
 	/**
 	 * @brief Whether given operation is an operation that can (and has to be)
 	 * the last operation in the block (i.e. be a terminator).
@@ -67,14 +67,11 @@ namespace compiler::mir {
 
 	struct MirIntegerConst final {
 		i64 value;
+
+		bool operator==(const MirIntegerConst& other) const = default;
 	};
 
 	STRONG_TYPEDEF_ID(LocalID);
-
-	/**
-	 * @brief Reference to MIR Local variable data.
-	 */
-	using LocalRef = CRef<MirLocal>;
 
 	/**
 	 * @brief Description of a MIR Local variable, like a function argument or simply local
@@ -114,6 +111,8 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		base::StrID getName() const;
+
+		bool operator==(const MirLocal& other) const { return id == other.id; }
 	};
 
 	/**
@@ -133,7 +132,14 @@ namespace compiler::mir {
 
 		MirLocation(BlockID value): value(value) {}
 
+		bool operator==(const MirLocation& other) const = default;
+
 		void debugPrint(std::ostream& output) const;
+
+		[[nodiscard]]
+		const ValueType& getVariant() const {
+			return value;
+		}
 
 		/**
 		 * @brief Returns reference value of given type
@@ -159,6 +165,8 @@ namespace compiler::mir {
 		enum class Flag { Construct, Destruct, Move };
 		Flag     flag;
 		LocalRef local;
+
+		bool operator==(const OperationFlag& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 	};
@@ -208,6 +216,8 @@ namespace compiler::mir {
 			  flags(std::move(flags)),
 			  scope(scope) {}
 
+		bool operator==(const Instruction& other) const = default;
+
 		void debugPrint(std::ostream& output) const;
 	};
 
@@ -244,6 +254,8 @@ namespace compiler::mir {
 		 */
 		Instruction terminator;
 
+		bool operator==(const Block& other) const = default;
+
 		[[nodiscard]]
 		helios::ScopeID beginScope() const;
 	};
@@ -256,18 +268,35 @@ namespace compiler::mir {
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
+		helios::ScopeID              top_lifetime_scope;
+
+		// helios ID for hashes, ... this it temporary?
+		// pushing this ID all the way here is problematic
+		// it should be optional at best
+		helios::SymID helios_id;
 
 		Function()                = delete;
 		Function(const Function&) = delete;
+		Function(Function&&)      = default;
+
+		Function& operator=(const Function&) = delete;
+
+		// We can change it to default, when there will be a reason:
+		Function& operator=(Function&&) = delete;
 
 		Function(
 			base::StrID                  name,
 			std::vector<Block>           blocks,
 			base::StableVector<MirLocal> local_list,
-			BlockID                      entry_block
+			BlockID                      entry_block,
+			helios::ScopeID              top_lifetime_scope,
+			helios::SymID                helios_id
 		);
 
-		Function(Function&&) = default;
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
+
+		bool operator==(const Function& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 	};
