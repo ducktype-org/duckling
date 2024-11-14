@@ -130,7 +130,7 @@ namespace compiler::lir {
 	 * @brief Single instruction of LIR code.
 	 */
 	struct Instruction final {
-		Operation             operation = Operation::Uninitialized;
+		Operation                operation = Operation::Uninitialized;
 		base::Optional<LocalRef> output;
 		std::vector<LirLocation> arguments;
 
@@ -143,9 +143,7 @@ namespace compiler::lir {
 		Instruction& operator=(Instruction&&) = default;
 
 		Instruction(
-			Operation             operation,
-			base::Optional<LocalRef> output,
-			std::vector<LirLocation> arguments
+			Operation operation, base::Optional<LocalRef> output, std::vector<LirLocation> arguments
 		):
 			  operation(operation),
 			  output(output),
