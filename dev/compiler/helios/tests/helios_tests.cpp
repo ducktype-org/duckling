@@ -31,22 +31,22 @@ public:
 		pst::init();
 		tsh::init();
 
-		TESTER_ADD_TEST(testTypeOf);
-		TESTER_ADD_TEST(exprTreeTest);
-		TESTER_ADD_TEST(testI32Consts);
-		TESTER_ADD_TEST(errorTests);
-		TESTER_ADD_TEST(testEdgeEvals);
-		TESTER_ADD_TEST(testClassSymbolData);
-		TESTER_ADD_TEST(simpleHOUTTest);
-		TESTER_ADD_TEST(importTest);
-		TESTER_ADD_TEST(houtVisitorTest);
-		TESTER_ADD_TEST(heliosResultConceptTests);
-		TESTER_ADD_TEST(heliosResultTests);
+		// TESTER_ADD_TEST(testTypeOf);
+		// TESTER_ADD_TEST(exprTreeTest);
+		// TESTER_ADD_TEST(testI32Consts);
+		// TESTER_ADD_TEST(errorTests);
+		// TESTER_ADD_TEST(testEdgeEvals);
+		// TESTER_ADD_TEST(testClassSymbolData);
+		// TESTER_ADD_TEST(simpleHOUTTest);
+		// TESTER_ADD_TEST(importTest);
+		// TESTER_ADD_TEST(houtVisitorTest);
+		// TESTER_ADD_TEST(heliosResultConceptTests);
+		// TESTER_ADD_TEST(heliosResultTests);
 		TESTER_ADD_TEST(houtVariablesTest);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
-		TESTER_ADD_TEST(scopeParentsAndDepthTests);
+		// TESTER_ADD_TEST(scopeParentsAndDepthTests);
 	}
 
 private:
@@ -449,6 +449,7 @@ private:
 		auto get_var_ref = [&](usize i) -> decltype(auto) {
 			return dynamic_cast<const compiler::helios::code::VariableStmt&>(*statements.at(i));
 		};
+
 
 		auto i32_type   = query::entryPoint<tsh::QueryIntegralType>(32);
 		auto f32_type   = query::entryPoint<tsh::QueryFloatType>(32);

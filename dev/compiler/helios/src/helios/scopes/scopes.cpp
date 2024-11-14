@@ -248,7 +248,7 @@ namespace compiler::helios {
 				auto              as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());
 				as_stmt->acceptVisitor(symbol_grab);
 				return std::move(symbol_grab.out.value());
-			} else if (base_element->elementType() == "Expression") {
+			} else if (dynamic_cast<const pst::ExprElement*>(base_element.get())) {
 				// @FIXME: change the way we check the condition, by comparing enum
 				// values instead of strings. Make the enum stringifiable.
 				return std::vector<SymID>{};

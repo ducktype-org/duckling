@@ -16,6 +16,7 @@
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
 #include "pst_parser/pst_expr_visitor.hpp"
 #include "query_framework/query_int.hpp"
+#include "typesystem/higher/kind.hpp"
 #include "typesystem/higher/queries/types.hpp"
 #include "typesystem/higher/type_desc.hpp"
 #include "typesystem/higher/type_info.hpp"
@@ -209,27 +210,70 @@ namespace compiler::helios::code {
 
 	struct TupleConstructorVisitor: public pst::PstExprVisitorEmpty {};
 
-	// WIP
-	struct TypeOrValueExprVisitor: public pst::PstExprVisitorPanicky {
-		explicit TypeOrValueExprVisitor(query::Context& ctx, ScopeID scope):
+	struct HoutIsTypeExprVisitor: public HoutExprVisitor {
+		// @TODO czy to nie powinno być roboione na poziomie HELIOS'a, żeby sprawdzać, czy użytkownik 
+		// nie próbuje użyć typu jako wartości lub odwrotnie?
+		// Czyli żeby rzucić błędem, jeśli napisze: `let a: i32 + 13 = 20;` 
+		explicit HoutIsTypeExprVisitor(query::Context& ctx, ScopeID scope):
 			  ctx(ctx),
 			  scope(scope) {}
-		enum class ExprNature {
-			TypeExpr,
-			ValueExpr
-		};
+		bool is_type_expr = false;
 		query::Context& ctx;
 		ScopeID         scope;
-		base::Optional<ExprNature>      nature;
 
-		void visitExprValue(const pst::expr::ExprValue&) override { nature = ExprNature::ValueExpr; }
+		void visitLiteralValueExpr(const LiteralValueExpr&) override { is_type_expr = false; }
 
-		void visitIdentifierLiteral(const pst::expr::IdentifierLiteral&) override {
-			// @EXPR 2.0 TODO...
+		void visitIdentifierExpr(const IdentifierExpr& expr) override {
+			auto type = ctx.query<QueryTypeOfSymbol>(expr.symbol).expect("Not handling errors here yet.");
 
-			nature = ExprNature::ValueExpr;
+			switch(type.getKind()) {
+				case tsh::Kind::Meta:
+					is_type_expr = true;
+					break;
+				default:
+					is_type_expr = false;;
+			}
 		}
 
+		void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override { is_type_expr = false; }
+
+		void visitUnaryOperatorExpr(const UnaryOperatorExpr&) override { is_type_expr = false; }
+
+		void visitParenthesisExpr(const ParenthesisExpr& expr) override { 
+			HoutIsTypeExprVisitor vis(ctx, scope);
+			expr.inner->acceptVisitor(vis);
+			is_type_expr = vis.is_type_expr;
+		}
+
+		void visitKeywordExpr(const KeywordExpr& expr) override {
+			using Keyword = lang_def::Keyword;
+			switch(expr.keyword) {
+				case Keyword::None: case Keyword::True: case Keyword::False:
+            		is_type_expr = false;
+					break;
+				case Keyword::i8: case Keyword::i16: case Keyword::i32:
+				case Keyword::i64: case Keyword::i128: case Keyword::u8:
+				case Keyword::u16: case Keyword::u32: case Keyword::u64:
+				case Keyword::u128: case Keyword::f32: case Keyword::f64:
+				case Keyword::f80: case Keyword::Char: case Keyword::Bool:
+				case Keyword::Vec: case Keyword::Set: case Keyword::Dict:
+				case Keyword::Array:
+					is_type_expr = true;
+            		break;
+				default:
+					throw base::LogicError("KeywordExpr not yet handled by HoutIsTypeExprVisitor");
+			}
+		}
+
+		void visitTupleConstructorExpr(const TupleConstructorExpr&) override {
+			// @TODO all tuples are currently value tuples, not type delarations...
+			HoutIsTypeExprVisitor vis(ctx, scope);
+			is_type_expr = false;
+		}
+
+		void visitVariantConstructorExpr(const VariantConstructorExpr&) override {
+			is_type_expr = true;
+		}
 	};
 
 	struct PstExprToHoutExprVisitor: public pst::PstExprVisitorPanicky {
@@ -254,29 +298,33 @@ namespace compiler::helios::code {
 			stmt.getLeftOperand()->acceptVisitor(lhs);
 			stmt.getRightOperand()->acceptVisitor(rhs);
 
-			// HoutExprTypeCheckVisitor vis_lhs(ctx, scope);
-			// HoutExprTypeCheckVisitor vis_rhs(ctx, scope);
-
-			// lhs.node->acceptVisitor(vis_lhs);
-			// rhs.node->acceptVisitor(vis_rhs);
-			// if (stmt.getOperator().str()[0] == '|' && vis_lhs.makes_type && vis_rhs.makes_type) {
-
-			// } else {
-
-			// }
-
-			// if operator == '|' then
-			// @EXPR: Make a visitor to check if expressions are types or values.
-			// bool is_variant_constructor = lhs.node->type_desc.getValueCategory().getCategory() !=
-			// tsh::PrimaryCategory::
 			if (lhs.node && rhs.node) {
-				node = base::MBox(new BinaryOperatorExpr(
-					ctx,
-					scope,
-					stmt.getOperator(),
-					std::move(lhs.node).toOptBox().value(),
-					std::move(rhs.node).toOptBox().value()
-				));
+				HoutIsTypeExprVisitor vis_lhs(ctx, scope);
+				HoutIsTypeExprVisitor vis_rhs(ctx, scope);
+				lhs.node->acceptVisitor(vis_lhs);
+				rhs.node->acceptVisitor(vis_rhs);
+				
+				if (vis_lhs.is_type_expr != vis_rhs.is_type_expr) {
+					throw base::NotYetImplemented("Not implemented.");
+				}
+				if (stmt.getOperator().str()[0] == '|' && vis_lhs.is_type_expr && vis_rhs.is_type_expr) {
+					std::vector<base::Box<Expr>> subtypes;
+					subtypes.emplace_back(std::move(lhs.node).toOptBox().value());
+					subtypes.emplace_back(std::move(rhs.node).toOptBox().value());
+					node = base::MBox(new VariantConstructorExpr(
+						ctx,
+						scope,
+						std::move(subtypes)
+					));
+				} else {
+					node = base::MBox(new BinaryOperatorExpr(
+						ctx,
+						scope,
+						stmt.getOperator(),
+						std::move(lhs.node).toOptBox().value(),
+						std::move(rhs.node).toOptBox().value()
+					));
+				}
 			}
 		}
 
