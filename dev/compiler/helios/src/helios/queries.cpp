@@ -36,8 +36,10 @@ namespace compiler::helios {
 			HOUTUnit out;
 
 			// grab constants:
-			for (auto sym: symbols_in_module_root)
+			for (auto sym: symbols_in_module_root) {
+				// this does not work.
 				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
+			}
 
 			// grab functions:
 			for (auto sym: symbols_in_module_root)

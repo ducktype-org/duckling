@@ -31,6 +31,7 @@ public:
 		pst::init();
 		tsh::init();
 
+		TESTER_ADD_TEST(houtVariablesTest);
 		TESTER_ADD_TEST(testTypeOf);
 		TESTER_ADD_TEST(exprTreeTest);
 		TESTER_ADD_TEST(testI32Consts);
@@ -42,7 +43,6 @@ public:
 		TESTER_ADD_TEST(houtVisitorTest);
 		TESTER_ADD_TEST(heliosResultConceptTests);
 		TESTER_ADD_TEST(heliosResultTests);
-		TESTER_ADD_TEST(houtVariablesTest);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -177,7 +177,7 @@ private:
 
 		using namespace compiler::helios::code;
 
-		struct StmtVisitor: public HoutStmtPanickyVisitor {
+		struct StmtVisitor: public HoutStmtVisitorPanicky {
 			usize expr_stmt_count        = 0;
 			usize return_stmt_count      = 0;
 			usize void_return_stmt_count = 0;
@@ -214,7 +214,7 @@ private:
 			ASSERT_EQUAL(visitor.if_stmt_count, 1);
 		}
 
-		struct ExprVisitor: public HoutExprPanickyVisitor {
+		struct ExprVisitor: public HoutExprVisitorPanicky {
 			usize const_int_count = 0;
 			usize ident_count     = 0;
 
@@ -227,7 +227,7 @@ private:
 			void visitParenthesisExpr(const ParenthesisExpr&) override { ident_count++; }
 		};
 
-		struct ExprVisitorRunner: public HoutStmtPanickyVisitor {
+		struct ExprVisitorRunner: public HoutStmtVisitorPanicky {
 			ExprVisitor expr_visitor;
 
 			void visitExprStmt(const ExprStmt& expr) override {

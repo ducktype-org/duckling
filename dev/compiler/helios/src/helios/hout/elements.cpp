@@ -43,8 +43,7 @@ namespace {
 			{ lang_def::Keyword::u16, ctx.query<::tsh::QueryIntegralType>({ 16, false }) },
 			{ lang_def::Keyword::u8, ctx.query<::tsh::QueryIntegralType>({ 8, false }) },
 
-			{ lang_def::Keyword::True, ctx.query<::tsh::QueryBoolType>({}) },
-			{ lang_def::Keyword::False, ctx.query<::tsh::QueryBoolType>({}) },
+			{ lang_def::Keyword::Bool, ctx.query<::tsh::QueryBoolType>({}) },
 		};
 		return BUILTINS.at(keyword);
 	}
@@ -211,27 +210,32 @@ namespace compiler::helios::code {
 	struct TupleConstructorVisitor: public pst::PstExprVisitorEmpty {};
 
 	struct HoutIsTypeExprVisitor: public HoutExprVisitor {
-		// @TODO czy to nie powinno być roboione na poziomie HELIOS'a, żeby sprawdzać, czy użytkownik 
-		// nie próbuje użyć typu jako wartości lub odwrotnie?
-		// Czyli żeby rzucić błędem, jeśli napisze: `let a: i32 + 13 = 20;` 
+		// @TODO czy to nie powinno być roboione na poziomie HELIOS'a, żeby sprawdzać, czy
+		// użytkownik nie próbuje użyć typu jako wartości lub odwrotnie? Czyli żeby rzucić błędem,
+		// jeśli napisze: `let a: i32 + 13 = 20;`
 		explicit HoutIsTypeExprVisitor(query::Context& ctx, ScopeID scope):
 			  ctx(ctx),
 			  scope(scope) {}
-		bool is_type_expr = false;
+
+		bool            is_type_expr = false;
 		query::Context& ctx;
 		ScopeID         scope;
 
 		void visitLiteralValueExpr(const LiteralValueExpr&) override { is_type_expr = false; }
 
 		void visitIdentifierExpr(const IdentifierExpr& expr) override {
-			auto type = ctx.query<QueryTypeOfSymbol>(expr.symbol).expect("Not handling errors here yet.");
-
-			switch(type.getKind()) {
+			auto type = ctx.query<QueryTypeOfSymbol>(expr.symbol);
+			if (type.hasError()) {
+				// this is a class?
+				is_type_expr = true;
+			} else {
+				switch (type.value().getKind()) {
 				case tsh::Kind::Meta:
 					is_type_expr = true;
 					break;
 				default:
-					is_type_expr = false;;
+					is_type_expr = false;
+				}
 			}
 		}
 
@@ -239,7 +243,7 @@ namespace compiler::helios::code {
 
 		void visitUnaryOperatorExpr(const UnaryOperatorExpr&) override { is_type_expr = false; }
 
-		void visitParenthesisExpr(const ParenthesisExpr& expr) override { 
+		void visitParenthesisExpr(const ParenthesisExpr& expr) override {
 			HoutIsTypeExprVisitor vis(ctx, scope);
 			expr.inner->acceptVisitor(vis);
 			is_type_expr = vis.is_type_expr;
@@ -247,21 +251,35 @@ namespace compiler::helios::code {
 
 		void visitKeywordExpr(const KeywordExpr& expr) override {
 			using Keyword = lang_def::Keyword;
-			switch(expr.keyword) {
-				case Keyword::None: case Keyword::True: case Keyword::False:
-            		is_type_expr = false;
-					break;
-				case Keyword::i8: case Keyword::i16: case Keyword::i32:
-				case Keyword::i64: case Keyword::i128: case Keyword::u8:
-				case Keyword::u16: case Keyword::u32: case Keyword::u64:
-				case Keyword::u128: case Keyword::f32: case Keyword::f64:
-				case Keyword::f80: case Keyword::Char: case Keyword::Bool:
-				case Keyword::Vec: case Keyword::Set: case Keyword::Dict:
-				case Keyword::Array:
-					is_type_expr = true;
-            		break;
-				default:
-					throw base::LogicError("KeywordExpr not yet handled by HoutIsTypeExprVisitor");
+			switch (expr.keyword) {
+			case Keyword::None:
+			case Keyword::True:
+			case Keyword::False:
+				is_type_expr = false;
+				break;
+			case Keyword::i8:
+			case Keyword::i16:
+			case Keyword::i32:
+			case Keyword::i64:
+			case Keyword::i128:
+			case Keyword::u8:
+			case Keyword::u16:
+			case Keyword::u32:
+			case Keyword::u64:
+			case Keyword::u128:
+			case Keyword::f32:
+			case Keyword::f64:
+			case Keyword::f80:
+			case Keyword::Char:
+			case Keyword::Bool:
+			case Keyword::Vec:
+			case Keyword::Set:
+			case Keyword::Dict:
+			case Keyword::Array:
+				is_type_expr = true;
+				break;
+			default:
+				throw base::LogicError("KeywordExpr not yet handled by HoutIsTypeExprVisitor");
 			}
 		}
 
@@ -273,6 +291,15 @@ namespace compiler::helios::code {
 
 		void visitVariantConstructorExpr(const VariantConstructorExpr&) override {
 			is_type_expr = true;
+		}
+	};
+
+	struct HoutVariantTypeExtractorVisitor: public HoutExprVisitorEmpty {
+		//
+		base::Optional<std::vector<base::Box<Expr>>> subtypes;
+
+		void visitVariantConstructorExpr(const VariantConstructorExpr& expr) override {
+			// subtypes = { std::move(expr.subtypes) };
 		}
 	};
 
@@ -303,19 +330,15 @@ namespace compiler::helios::code {
 				HoutIsTypeExprVisitor vis_rhs(ctx, scope);
 				lhs.node->acceptVisitor(vis_lhs);
 				rhs.node->acceptVisitor(vis_rhs);
-				
-				if (vis_lhs.is_type_expr != vis_rhs.is_type_expr) {
+
+				if (vis_lhs.is_type_expr != vis_rhs.is_type_expr)
 					throw base::NotYetImplemented("Not implemented.");
-				}
-				if (stmt.getOperator().str()[0] == '|' && vis_lhs.is_type_expr && vis_rhs.is_type_expr) {
+				if (stmt.getOperator().str()[0] == '|' && vis_lhs.is_type_expr
+				    && vis_rhs.is_type_expr) {
 					std::vector<base::Box<Expr>> subtypes;
 					subtypes.emplace_back(std::move(lhs.node).toOptBox().value());
 					subtypes.emplace_back(std::move(rhs.node).toOptBox().value());
-					node = base::MBox(new VariantConstructorExpr(
-						ctx,
-						scope,
-						std::move(subtypes)
-					));
+					node = base::MBox(new VariantConstructorExpr(ctx, scope, std::move(subtypes)));
 				} else {
 					node = base::MBox(new BinaryOperatorExpr(
 						ctx,
@@ -343,7 +366,19 @@ namespace compiler::helios::code {
 				= ctx.query<QueryLookupInScopeAndParents>({ scope, stmt.getName().value, true });
 			auto single = sym_list.getAsSingle().expect("Not propagating errors here yet...");
 
-			node = base::MBox(new IdentifierExpr(ctx, scope, single.back()));
+			// Perform dealias
+
+			compiler::helios::SymbolList lookup_dealiased;
+
+			for (auto single_sym: single) {
+				auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym)
+				                     .expect("Not propagating errors for now...");
+				lookup_dealiased.insert(lookup_dealiased.end(), dealiased.begin(), dealiased.end());
+			}
+
+			CORE_ASSERT(!lookup_dealiased.empty(), "Empty lookup result");
+
+			node = base::MBox(new IdentifierExpr(ctx, scope, lookup_dealiased.back()));
 		}
 
 		void visitKeywordLiteral(const pst::expr::KeywordLiteral& stmt) override {
@@ -479,7 +514,9 @@ namespace compiler::helios::code {
 		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
 	):
 		  Expr(scope, getTypeDescOfVariant(ctx, subtypes)),
-		  subtypes(std::move(subtypes)) {}
+		  subtypes(std::move(subtypes)) {
+		debugPrint(std::cout);
+	}
 }
 
 namespace compiler::helios {
