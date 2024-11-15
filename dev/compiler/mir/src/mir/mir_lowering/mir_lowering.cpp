@@ -427,6 +427,26 @@ namespace compiler::mir {
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr&) override {
 			throw base::NotYetImplemented("binary operator");
 		}
+
+		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr&) override {
+			throw base::NotYetImplemented("unary operator");
+		}
+
+		void visitParenthesisExpr(const hc::ParenthesisExpr&) override {
+			throw base::NotYetImplemented("unary operator");
+		}
+
+		void visitKeywordExpr(const hc::KeywordExpr&) override {
+			throw base::NotYetImplemented("keyword");
+		}
+
+		void visitTupleConstructorExpr(const hc::TupleConstructorExpr&) override {
+			throw base::NotYetImplemented("tuple constructor");
+		}
+
+		void visitVariantConstructorExpr(const hc::VariantConstructorExpr&) override {
+			throw base::NotYetImplemented("variant constructor");
+		}
 	};
 
 	StmtLowerRes

@@ -36,8 +36,10 @@ namespace compiler::helios {
 			HOUTUnit out;
 
 			// grab constants:
-			for (auto sym: symbols_in_module_root)
+			for (auto sym: symbols_in_module_root) {
+				// this does not work.
 				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
+			}
 
 			// grab functions:
 			for (auto sym: symbols_in_module_root)
@@ -110,10 +112,9 @@ namespace compiler::helios {
 			void visitUsing(const pst::Using&) override { empty = true; }
 
 			void visitExprStmt(const pst::ExprStmt& stmt) override {
-				// @EXPR
-				CORE_PANIC("Not implemented yet...");
-				// auto expr = ctx.query<QueryHoutOfExpr>({ PstRef<pst::Expr>(stmt.getExpr()) });
-				// output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
+				auto expr = ctx.query<QueryHoutOfExpr>({ PstRef<pst::ExprElement>(stmt.getExpr()) })
+					.expect("Not handling errors here yet...");
+				output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
 			}
 
 			void visitIf(const pst::If& stmt) override {
