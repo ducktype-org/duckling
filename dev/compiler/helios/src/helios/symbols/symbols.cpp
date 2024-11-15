@@ -914,6 +914,10 @@ namespace compiler::helios {
 				}
 				setTypeOfSymbol(ctx.query<tsh::QueryFunctionType>({ param_types, ret_type }));
 			}
+
+			void visitClass(const pst::Class&) override {
+				setTypeOfSymbol(ctx.query<tsh::QueryClassType>(key));
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
