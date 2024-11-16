@@ -306,16 +306,21 @@ namespace compiler::helios::code {
 		}
 
 		void visitTupleConstructorExpr(const TupleConstructorExpr& tuple) override {
+			iterOverExprs(tuple.elements);
+		}
+
+		void visitVariantConstructorExpr(const VariantConstructorExpr& variant) override {
+			iterOverExprs(variant.subtypes);
+		}
+
+	private:
+		void iterOverExprs(const std::vector<base::Box<Expr>>& expressions) {
 			is_type_expr = true;
-			for (auto& el: tuple.elements) {
+			for (auto& el: expressions) {
 				HoutIsTypeExprVisitor vis(ctx, scope);
 				el->acceptVisitor(vis);
 				if (!vis.is_type_expr) is_type_expr = false;
 			}
-		}
-
-		void visitVariantConstructorExpr(const VariantConstructorExpr&) override {
-			is_type_expr = true;
 		}
 	};
 
