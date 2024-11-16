@@ -305,10 +305,13 @@ namespace compiler::helios::code {
 			}
 		}
 
-		void visitTupleConstructorExpr(const TupleConstructorExpr&) override {
-			// @TODO all tuples are currently value tuples, not type delarations...
-			HoutIsTypeExprVisitor vis(ctx, scope);
-			is_type_expr = false;
+		void visitTupleConstructorExpr(const TupleConstructorExpr& tuple) override {
+			is_type_expr = true;
+			for (auto& el: tuple.elements) {
+				HoutIsTypeExprVisitor vis(ctx, scope);
+				el->acceptVisitor(vis);
+				if (!vis.is_type_expr) is_type_expr = false;
+			}
 		}
 
 		void visitVariantConstructorExpr(const VariantConstructorExpr&) override {
