@@ -877,8 +877,7 @@ namespace compiler::helios {
 
 			base::Optional<tsh::TypeInfo> symbol_type_info;
 
-			void visitConst(const pst::Const& stmt) override {
-				setTypeOfSymbol(stmt.getType()); }
+			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getType()); }
 
 			void visitVariable(const pst::Variable& stmt) override {
 				setTypeOfSymbol(stmt.getType());
@@ -913,6 +912,10 @@ namespace compiler::helios {
 					}
 				}
 				setTypeOfSymbol(ctx.query<tsh::QueryFunctionType>({ param_types, ret_type }));
+			}
+
+			void visitClass(const pst::Class&) override {
+				// This method is empty on purpose, because we still want a panicky visitor
 			}
 		};
 
@@ -964,6 +967,18 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
+
+	struct IMPLEMENT_QUERY(QueryTypeOfSymbolOrDefinition, QueryType_Result) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto x = ctx.query<QueryTypeOfSymbol>(key);
+			if (x.hasValue()) return x.value();
+
+			return ctx.query<QueryTypeFromDefinition>(key);
+		}
+
+		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+	};
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbolOrDefinition)
 
 	struct IMPLEMENT_QUERY(QueryClassSymbolData, QueryClassSymbolData_Result) {
 		struct ClassDataParser final: pst::PstStmtVisitorPanicky {

@@ -24,65 +24,87 @@
 #include "typesystem/higher/value_category.hpp"
 #include "visitors.hpp"
 
-namespace {
-	tsh::TypeInfo getTypeOfKeyword(query::Context& ctx, lang_def::Keyword keyword) {
-		const static auto BUILTINS = std::unordered_map<lang_def::Keyword, tsh::TypeInfo>{
-			{ lang_def::Keyword::f80, ctx.query<::tsh::QueryFloatType>(80) },
-			{ lang_def::Keyword::f64, ctx.query<::tsh::QueryFloatType>(64) },
-			{ lang_def::Keyword::f32, ctx.query<::tsh::QueryFloatType>(32) },
+namespace compiler::helios::code {
+	namespace {
+		tsh::TypeInfo getTypeOfKeyword(query::Context& ctx, lang_def::Keyword keyword) {
+			const static auto BUILTINS = std::unordered_map<lang_def::Keyword, tsh::TypeInfo>{
+				{ lang_def::Keyword::f80, ctx.query<::tsh::QueryFloatType>(80) },
+				{ lang_def::Keyword::f64, ctx.query<::tsh::QueryFloatType>(64) },
+				{ lang_def::Keyword::f32, ctx.query<::tsh::QueryFloatType>(32) },
 
-			{ lang_def::Keyword::i128, ctx.query<::tsh::QueryIntegralType>({ 128, true }) },
-			{ lang_def::Keyword::i64, ctx.query<::tsh::QueryIntegralType>({ 64, true }) },
-			{ lang_def::Keyword::i32, ctx.query<::tsh::QueryIntegralType>({ 32, true }) },
-			{ lang_def::Keyword::i16, ctx.query<::tsh::QueryIntegralType>({ 16, true }) },
-			{ lang_def::Keyword::i8, ctx.query<::tsh::QueryIntegralType>({ 8, true }) },
+				{ lang_def::Keyword::i128, ctx.query<::tsh::QueryIntegralType>({ 128, true }) },
+				{ lang_def::Keyword::i64, ctx.query<::tsh::QueryIntegralType>({ 64, true }) },
+				{ lang_def::Keyword::i32, ctx.query<::tsh::QueryIntegralType>({ 32, true }) },
+				{ lang_def::Keyword::i16, ctx.query<::tsh::QueryIntegralType>({ 16, true }) },
+				{ lang_def::Keyword::i8, ctx.query<::tsh::QueryIntegralType>({ 8, true }) },
 
-			{ lang_def::Keyword::u128, ctx.query<::tsh::QueryIntegralType>({ 128, false }) },
-			{ lang_def::Keyword::u64, ctx.query<::tsh::QueryIntegralType>({ 64, false }) },
-			{ lang_def::Keyword::u32, ctx.query<::tsh::QueryIntegralType>({ 32, false }) },
-			{ lang_def::Keyword::u16, ctx.query<::tsh::QueryIntegralType>({ 16, false }) },
-			{ lang_def::Keyword::u8, ctx.query<::tsh::QueryIntegralType>({ 8, false }) },
+				{ lang_def::Keyword::u128, ctx.query<::tsh::QueryIntegralType>({ 128, false }) },
+				{ lang_def::Keyword::u64, ctx.query<::tsh::QueryIntegralType>({ 64, false }) },
+				{ lang_def::Keyword::u32, ctx.query<::tsh::QueryIntegralType>({ 32, false }) },
+				{ lang_def::Keyword::u16, ctx.query<::tsh::QueryIntegralType>({ 16, false }) },
+				{ lang_def::Keyword::u8, ctx.query<::tsh::QueryIntegralType>({ 8, false }) },
 
-			{ lang_def::Keyword::Bool, ctx.query<::tsh::QueryBoolType>({}) },
-		};
-		return BUILTINS.at(keyword);
-	}
-
-	tsh::TypeDesc<> getTypeDescOfTuple(
-		query::Context& ctx, const std::vector<base::Box<compiler::helios::code::Expr>>& elements
-	) {
-		std::vector<tsh::ComponentType> tuple_components;
-		tuple_components.reserve(elements.size());
-
-		for (auto&& tuple_subtype: elements) {
-			// @NOTE: False here means all subtypes of a tuple are immutable.
-			tuple_components.emplace_back(tuple_subtype->type_desc.getType(), false);
+				{ lang_def::Keyword::Bool, ctx.query<::tsh::QueryBoolType>({}) },
+			};
+			return BUILTINS.at(keyword);
 		}
 
-		// @EXPR: Should ValueCategory be literal?
-		return tsh::TypeDesc<>(
-			ctx.query<tsh::QueryTupleType>({ tuple_components }),
-			tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-		);
+		tsh::TypeDesc<>
+			getTypeDescOfTuple(query::Context& ctx, const std::vector<base::Box<Expr>>& elements) {
+			std::vector<tsh::ComponentType> tuple_components;
+			tuple_components.reserve(elements.size());
+
+			for (auto&& tuple_subtype: elements) {
+				// @NOTE: False here means all subtypes of a tuple are immutable.
+				tuple_components.emplace_back(tuple_subtype->type_desc.getType(), false);
+			}
+
+			// @EXPR: Should ValueCategory be literal?
+			return tsh::TypeDesc<>(
+				ctx.query<tsh::QueryTupleType>({ tuple_components }),
+				tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			);
+		}
+
+		tsh::TypeDesc<> getTypeDescOfVariant(
+			query::Context& ctx, const std::vector<base::Box<Expr>>& subtypes
+		) {
+			std::vector<tsh::TypeInfo> variant_subtypes;
+			variant_subtypes.reserve(subtypes.size());
+
+			for (auto&& subtype: subtypes)
+				variant_subtypes.emplace_back(subtype->type_desc.getType());
+
+			// @EXPR: Should ValueCategory be literal?
+			return tsh::TypeDesc<>(
+				ctx.query<tsh::QueryVariantType>({ variant_subtypes }),
+				tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			);
+		}
+
+		base::Optional<std::vector<base::Box<Expr>>> getVariantExprs(base::Ref<Expr> expr) {
+			if (auto variant = dynamic_cast<VariantConstructorExpr*>(expr.get()); variant)
+				return std::move(variant->subtypes);
+			return {};
+		}
+
+		base::Box<VariantConstructorExpr> constructVariantFrom(
+			query::Context& ctx, ScopeID scope, base::Box<Expr> lhs, base::Box<Expr> rhs
+		) {
+			std::vector<base::Box<Expr>> all_subtypes;
+
+			for (auto&& expr: std::array{ std::move(lhs), std::move(rhs) }) {
+				auto subtypes = getVariantExprs(expr.refMut());
+				if (subtypes)
+					for (auto&& subtype: *subtypes) all_subtypes.emplace_back(std::move(subtype));
+				else
+					all_subtypes.emplace_back(std::move(expr));
+			}
+
+			return base::Box(new VariantConstructorExpr(ctx, scope, std::move(all_subtypes)));
+		}
 	}
 
-	tsh::TypeDesc<> getTypeDescOfVariant(
-		query::Context& ctx, const std::vector<base::Box<compiler::helios::code::Expr>>& subtypes
-	) {
-		std::vector<tsh::TypeInfo> variant_subtypes;
-		variant_subtypes.reserve(subtypes.size());
-
-		for (auto&& subtype: subtypes) variant_subtypes.emplace_back(subtype->type_desc.getType());
-
-		// @EXPR: Should ValueCategory be literal?
-		return tsh::TypeDesc<>(
-			ctx.query<tsh::QueryVariantType>({ variant_subtypes }),
-			tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-		);
-	}
-}
-
-namespace compiler::helios::code {
 // visitors:
 #define STMT_VISITOR(type) \
 	void type::acceptVisitor(HoutStmtVisitor& visitor) const { visitor.visit##type(*this); }
@@ -170,7 +192,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
-				  ctx.query<QueryTypeOfSymbol>(symbol).expect(
+				  ctx.query<QueryTypeOfSymbolOrDefinition>(symbol).expect(
 					  "Handling errors in HOUT is not supported yet"
 				  ),
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
@@ -294,15 +316,6 @@ namespace compiler::helios::code {
 		}
 	};
 
-	struct HoutVariantTypeExtractorVisitor: public HoutExprVisitorEmpty {
-		//
-		base::Optional<std::vector<base::Box<Expr>>> subtypes;
-
-		void visitVariantConstructorExpr(const VariantConstructorExpr& expr) override {
-			// subtypes = { std::move(expr.subtypes) };
-		}
-	};
-
 	struct PstExprToHoutExprVisitor: public pst::PstExprVisitorPanicky {
 		explicit PstExprToHoutExprVisitor(query::Context& ctx, ScopeID scope):
 			  ctx(ctx),
@@ -311,12 +324,11 @@ namespace compiler::helios::code {
 		query::Context& ctx;
 		ScopeID         scope;
 
-		// @EXPR: This should probably be base::Optional<Box<Expr>>
-		base::MBox<Expr> node = nullptr;
+		base::Optional<base::Box<Expr>> node;
 
 		void visitExprValue(const pst::expr::ExprValue& stmt) override {
 			// @TODO: Change literal value from i64 to something more appropriate.
-			node = base::MBox(new LiteralValueExpr(ctx, scope, std::stoi(stmt.getValue().str())));
+			node = base::Box(new LiteralValueExpr(ctx, scope, std::stoi(stmt.getValue().str())));
 		}
 
 		void visitBinaryOperator(const pst::expr::BinaryOperator& stmt) override {
@@ -326,26 +338,21 @@ namespace compiler::helios::code {
 			stmt.getRightOperand()->acceptVisitor(rhs);
 
 			if (lhs.node && rhs.node) {
-				HoutIsTypeExprVisitor vis_lhs(ctx, scope);
-				HoutIsTypeExprVisitor vis_rhs(ctx, scope);
-				lhs.node->acceptVisitor(vis_lhs);
-				rhs.node->acceptVisitor(vis_rhs);
+				HoutIsTypeExprVisitor lhs_vis_expr(ctx, scope);
+				HoutIsTypeExprVisitor rhs_vis_expr(ctx, scope);
+				lhs.node.value()->acceptVisitor(lhs_vis_expr);
+				rhs.node.value()->acceptVisitor(rhs_vis_expr);
 
-				if (vis_lhs.is_type_expr != vis_rhs.is_type_expr)
+				if (lhs_vis_expr.is_type_expr != rhs_vis_expr.is_type_expr)
 					throw base::NotYetImplemented("Not implemented.");
-				if (stmt.getOperator().str()[0] == '|' && vis_lhs.is_type_expr
-				    && vis_rhs.is_type_expr) {
-					std::vector<base::Box<Expr>> subtypes;
-					subtypes.emplace_back(std::move(lhs.node).toOptBox().value());
-					subtypes.emplace_back(std::move(rhs.node).toOptBox().value());
-					node = base::MBox(new VariantConstructorExpr(ctx, scope, std::move(subtypes)));
+				if (stmt.getOperator().str()[0] == '|' && lhs_vis_expr.is_type_expr
+				    && rhs_vis_expr.is_type_expr) {
+					node = constructVariantFrom(
+						ctx, scope, std::move(*lhs.node), std::move(*rhs.node)
+					);
 				} else {
-					node = base::MBox(new BinaryOperatorExpr(
-						ctx,
-						scope,
-						stmt.getOperator(),
-						std::move(lhs.node).toOptBox().value(),
-						std::move(rhs.node).toOptBox().value()
+					node = base::Box(new BinaryOperatorExpr(
+						ctx, scope, stmt.getOperator(), std::move(*lhs.node), std::move(*rhs.node)
 					));
 				}
 			}
@@ -354,11 +361,7 @@ namespace compiler::helios::code {
 		void visitRoundExpr(const pst::expr::RoundExpr& stmt) override {
 			PstExprToHoutExprVisitor vis(ctx, scope);
 			stmt.getInner()->acceptVisitor(vis);
-			if (vis.node) {
-				node = base::MBox(
-					new ParenthesisExpr(ctx, scope, std::move(vis.node).toOptBox().value())
-				);
-			}
+			if (vis.node) node = base::Box(new ParenthesisExpr(ctx, scope, std::move(*vis.node)));
 		}
 
 		void visitIdentifierLiteral(const pst::expr::IdentifierLiteral& stmt) override {
@@ -378,11 +381,11 @@ namespace compiler::helios::code {
 
 			CORE_ASSERT(!lookup_dealiased.empty(), "Empty lookup result");
 
-			node = base::MBox(new IdentifierExpr(ctx, scope, lookup_dealiased.back()));
+			node = base::Box(new IdentifierExpr(ctx, scope, lookup_dealiased.back()));
 		}
 
 		void visitKeywordLiteral(const pst::expr::KeywordLiteral& stmt) override {
-			node = base::MBox(new KeywordExpr(ctx, scope, stmt.getKeyword()));
+			node = base::Box(new KeywordExpr(ctx, scope, stmt.getKeyword()));
 		}
 
 		void visitComma(const pst::expr::Comma& stmt) override {
@@ -394,12 +397,10 @@ namespace compiler::helios::code {
 					// Error has occurred.
 					return;
 				}
-				std::move(vis.node).toOptBox().ifValue([&](auto&& b) {
-					expressions.emplace_back(std::move(b));
-				});
+				vis.node.ifValue([&](auto&& b) { expressions.emplace_back(std::move(b)); });
 			}
 
-			node = base::MBox(new TupleConstructorExpr(ctx, scope, std::move(expressions)));
+			node = base::Box(new TupleConstructorExpr(ctx, scope, std::move(expressions)));
 		}
 	};
 
@@ -408,10 +409,11 @@ namespace compiler::helios::code {
 		std::cerr << "\nExpr: \n";
 		root->debugPrint(std::cerr);
 		std::cerr << '\n';
+
 		PstExprToHoutExprVisitor visitor(ctx, scope);
 		root->acceptVisitor(visitor);
-		auto opt_box = std::move(visitor.node).toOptBox();
-		if (opt_box.has_value()) return std::move(opt_box.value());
+
+		if_opt_some(visitor.node, expr) return std::move(expr);
 		return errors::HError(errors::Failed());
 	}
 
