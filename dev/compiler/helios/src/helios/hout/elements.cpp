@@ -351,8 +351,11 @@ namespace compiler::helios::code {
 				lhs.node.value()->acceptVisitor(lhs_vis_expr);
 				rhs.node.value()->acceptVisitor(rhs_vis_expr);
 
-				if (lhs_vis_expr.is_type_expr != rhs_vis_expr.is_type_expr)
+				if (lhs_vis_expr.is_type_expr != rhs_vis_expr.is_type_expr) {
+					// @TODO: I think this is not "NotYetImplemented", but rather
+					// an invalid syntax, so a compilation error should be raised.
 					throw base::NotYetImplemented("Not implemented.");
+				}
 				if (stmt.getOperator().str()[0] == '|' && lhs_vis_expr.is_type_expr
 				    && rhs_vis_expr.is_type_expr) {
 					node = constructVariantFrom(
