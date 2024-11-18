@@ -127,7 +127,9 @@ namespace query {
 					= QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 
 				// epilog:
-				log(base::strConcat("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"));
+				log(base::strConcat(
+					"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"
+				));
 
 				return result;
 			}
