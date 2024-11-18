@@ -24,7 +24,7 @@ namespace compiler::mir {
 	 * Performs lifetime analysis.
 	 * @note in the future it will validate move semantics and potentially other things.
 	 */
-	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, const Function&)
+	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, CRef<Function>)
 
 	/**
 	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.

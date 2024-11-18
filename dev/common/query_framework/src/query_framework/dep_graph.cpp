@@ -2,6 +2,7 @@
 
 #include <base/maps.hpp>
 #include <iomanip>
+#include <ostream>
 #include <vector>
 #include <iostream>
 
@@ -62,7 +63,7 @@ namespace query::detail {
 				if (node_data.at(node).color == Color::Visiting) {
 					// @TODO: cycle mark
 					std::cerr << "Dep graph at cycle: \n";
-					debugPrint();
+					debugPrint(std::cerr);
 					throw base::NotYetImplemented("Query Cycle!");
 				}
 			}
@@ -83,33 +84,33 @@ namespace query::detail {
 			node_data.at(node).color = Color::Done;
 		}
 
-		void debugPrint() {
-			std::cerr << "Dep Graph: \n";
+		void debugPrint(std::ostream& out) {
+			out << "Dep Graph: \n";
 			std::string spacing(25, ' ');
 			for (auto& [k, v]: node_data) {
-				std::cerr << "    ";
-				std::cerr << "> Query - " << std::setw(5) << std::left;
-				std::cerr << k.q_id.asInt() << std::setw(30) << std::left
-						  << "\"" + k.q_id.getName() + "\"";
-				std::cerr << " Key " << k.hash.val << " :=>\n";
+				out << "    ";
+				out << "> Query - " << std::setw(5) << std::left;
+				out << k.q_id.asInt() << std::setw(30) << std::left
+					<< "\"" + k.q_id.getName() + "\"";
+				out << " Key " << k.hash.val << " :=>\n";
 				for (auto& dep: v.dependencies) {
-					std::cerr << spacing << "(Q: "
-							  << "\"" << dep.q_id.getName() << "\", "
-							  << "K: " << dep.hash.val << "),\n";
+					out << spacing << "(Q: "
+						<< "\"" << dep.q_id.getName() << "\", "
+						<< "K: " << dep.hash.val << "),\n";
 				}
-				if (!v.dependencies.empty()) std::cerr << '\n';
+				if (!v.dependencies.empty()) out << '\n';
 			}
 		}
 
-		void debugPrintForDrawing() {
-			std::cerr << "Dep Graph: \n";
-			std::cerr << node_data.size() << "\n";
+		void debugPrintForDrawing(std::ostream& out) {
+			out << "Dep Graph: \n";
+			out << node_data.size() << "\n";
 
 			std::map<NodeID, u64> index;
 			u64                   id = 0;
 			for (auto& [k, v]: node_data) index[k] = id++;
 			for (auto& [k, v]: node_data)
-				for (auto& dep: v.dependencies) std::cerr << index[k] << " " << index[dep] << "\n";
+				for (auto& dep: v.dependencies) out << index[k] << " " << index[dep] << "\n";
 		}
 
 	}

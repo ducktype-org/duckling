@@ -252,7 +252,7 @@ namespace compiler::helios {
 		}
 
 		// @OPT: opt it?
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
@@ -267,7 +267,7 @@ namespace compiler::helios {
 				// module scope, but in the future it might be changed to custom code
 
 				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
-				return ctx.query<QueryLookupInScope>(
+				return *ctx.query<QueryLookupInScope>(
 					{ linked_scope, key.name, key.follow_wildcards }
 				);
 			}
@@ -278,7 +278,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
@@ -297,11 +297,11 @@ namespace compiler::helios {
 		CORE_ASSERT(!key.names.empty(), "lookupDotted received zero names");
 
 		// initial symbol:
-		LookupResult first = ctx.query<QueryLookupInScopeAndParents>(
+		auto first = ctx.query<QueryLookupInScopeAndParents>(
 			{ key.begin_scope, key.names[0], key.follow_wildcards }
 		);
 
-		UNPACK_RESULT(SymbolList result =, first.getAsSingle());
+		UNPACK_RESULT(SymbolList result =, first->getAsSingle());
 
 		if (key.names.size() == 1) return result;
 
@@ -312,7 +312,7 @@ namespace compiler::helios {
 				key.follow_wildcards,
 			});
 
-			UNPACK_RESULT(auto single_append_res =, append_res.getAsSingle());
+			UNPACK_RESULT(auto single_append_res =, append_res->getAsSingle());
 			result.insert(result.end(), single_append_res.begin(), single_append_res.end());
 		}
 		return result;
@@ -357,7 +357,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLinkedScope);
@@ -391,12 +391,12 @@ namespace compiler::helios {
 
 			bool       first_symbol = true;
 			SymbolList result;
-			for (auto&& pointed: alias_definition->getPointed()) {
-				auto&& pointed_symbol_lookup
+			for (auto pointed: alias_definition->getPointed()) {
+				auto pointed_symbol_lookup
 					= first_symbol
 				        ? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
 				        : ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false });
-				auto&& path = pointed_symbol_lookup.getAsSingle();
+				auto&& path = pointed_symbol_lookup->getAsSingle();
 				if (path.hasError()) {
 					variant_match(path.error()) {
 						variant_case(errors::Ambiguity, _) {
@@ -410,8 +410,8 @@ namespace compiler::helios {
 					}
 					CORE_PANIC("Invalid state");
 				}
-				for (auto&& path_symbol: path.value()) {
-					UNPACK_RESULT(auto&& dealiased =, ctx.query<QueryDealias>(path_symbol));
+				for (auto path_symbol: path.value()) {
+					UNPACK_RESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
 					result.insert(result.end(), dealiased.begin(), dealiased.end());
 				}
 
@@ -421,7 +421,7 @@ namespace compiler::helios {
 			return result;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
@@ -498,16 +498,16 @@ namespace compiler::helios {
 		variant_match(key.expr) {
 			variant_case(rpn::Identifier, idt) {
 				// .back() works for constants only.
-				auto&& sym_list = ctx.query<QueryDealias>(idt.symbol_list.back());
-				if (sym_list.hasError()) return errors::HError(errors::InvalidExpr());
-				return ctx.query<QueryConstValueOf>(sym_list.value().back());
+				auto sym_list = ctx.query<QueryDealias>(idt.symbol_list.back());
+				if (sym_list->hasError()) return errors::HError(errors::InvalidExpr());
+				return *ctx.query<QueryConstValueOf>(sym_list->value().back());
 			}
 			variant_case(rpn::NamedIdentifier, idt) {
-				auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+				auto sym_list = ctx.query<QueryLookupInScopeAndParents>(
 					{ key.expr_scope, idt.symbol_name, true }
 				);
 
-				UNPACK_RESULT(auto&& identifier =, sym_list.getAsSingle());
+				UNPACK_RESULT(auto&& identifier =, sym_list->getAsSingle());
 				UNPACK_RESULT(return,
 				                    parseValue(
 										ctx,
@@ -621,10 +621,10 @@ namespace compiler::helios {
 			variant_match(a) {
 				variant_case(rpn::Identifier, idt) { looked_up_symbol = idt.symbol_list; }
 				variant_case(rpn::NamedIdentifier, idt) {
-					auto&& sym_list = ctx.query<QueryLookupInScopeAndParents>(
+					auto sym_list = ctx.query<QueryLookupInScopeAndParents>(
 						{ key.expr_scope, idt.symbol_name, true }
 					);
-					UNPACK_RESULT(looked_up_symbol =, sym_list.getAsSingle());
+					UNPACK_RESULT(looked_up_symbol =, sym_list->getAsSingle());
 				}
 				variant_default {
 					throw base::NotYetImplemented("Lookup on non-identifier is not yet implemented"
@@ -633,12 +633,12 @@ namespace compiler::helios {
 			}
 			variant_match(b) {
 				variant_case(rpn::NamedIdentifier, idt_right) {
-					auto&& new_symbols = ctx.query<QueryLookupInSymbol>({
+					auto new_symbols = ctx.query<QueryLookupInSymbol>({
 						looked_up_symbol.back(),
 						idt_right.symbol_name,
 						true,
 					});
-					UNPACK_RESULT(SymbolList single =, new_symbols.getAsSingle());
+					UNPACK_RESULT(SymbolList single =, new_symbols->getAsSingle());
 					looked_up_symbol.insert(looked_up_symbol.end(), single.begin(), single.end());
 					return Identifier{ looked_up_symbol };
 				}
@@ -756,7 +756,7 @@ namespace compiler::helios {
 			return value.value();
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
@@ -793,7 +793,7 @@ namespace compiler::helios {
 		};
 		variant_match(expr) {
 			variant_case(rpn::Identifier, idt) {
-				return ctx.query<QueryTypeOfSymbol>(idt.symbol_list.back());
+				return *ctx.query<QueryTypeOfSymbol>(idt.symbol_list.back());
 			}
 			variant_case(rpn::Operator, oper) { return errors::HError(errors::InvalidExpr()); }
 			variant_case(rpn::NamedIdentifier, named_identifier) {
@@ -804,12 +804,12 @@ namespace compiler::helios {
 						named_identifier.symbol_name,
 						true,
 					});
-					UNPACK_RESULT(const SymbolList symbol =, symbol_res.getAsSingle());
+					UNPACK_RESULT(const SymbolList symbol =, symbol_res->getAsSingle());
 					// very simple dealias, that should
 					// ultimately be replaced by type expr comp-time eval:
 					auto&& dealias_sym = ctx.query<QueryDealias>({ symbol.back() });
-					if (dealias_sym.hasError()) return errors::HError(errors::InvalidExpr());
-					return ctx.query<QueryTypeFromDefinition>(dealias_sym.value().back());
+					if (dealias_sym->hasError()) return errors::HError(errors::InvalidExpr());
+					return *ctx.query<QueryTypeFromDefinition>(dealias_sym->value().back());
 				}
 				return it->second;
 			}
@@ -947,7 +947,7 @@ namespace compiler::helios {
 			return errors::HError(errors::Failed());
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+		QUERY_AUTO_CACHE_REF;
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
@@ -983,7 +983,7 @@ namespace compiler::helios {
 			return visitor.definition_type_info.value();
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+		QUERY_AUTO_CACHE_REF;
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
 
@@ -1006,11 +1006,11 @@ namespace compiler::helios {
 
 			auto class_stmt = getSymRef(key)->pst_stmt;
 
-			auto&& class_scope   = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt });
-			auto&& class_symbols = ctx.query<QuerySymbolsInScope>(class_scope);
+			auto class_scope   = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt });
+			auto class_symbols = ctx.query<QuerySymbolsInScope>(class_scope);
 
 			ClassSymbolData class_info;
-			for (auto&& sym: class_symbols) {
+			for (auto&& sym: *class_symbols) {
 				switch (kind(sym)) {
 				case SymbolKind::Method:
 					class_info.methods.push_back(sym);
@@ -1062,7 +1062,7 @@ namespace compiler::helios {
 			return class_info;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+		QUERY_AUTO_CACHE_REF;
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);
@@ -1100,7 +1100,7 @@ namespace compiler::helios {
 			return code::Expr::fromRPN(ctx, { rpn_expr.elements, scope(key) });
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHOUTExprTreeOfSym);

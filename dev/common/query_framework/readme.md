@@ -329,7 +329,6 @@ In practice, that means that usually all non-pure queries are correctly cached.
 
 ### Copyable
 
-
 Every key type will be copied around by the framework.
 The programmer has to ensure that the copy operation will compile and that it will not break the state of the key or of the compiler.
 
@@ -363,12 +362,13 @@ In order to use it, two requirements must be met:
 
 There are currently two automatic-caching mechanisms:
 
-- `QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF` -- it will cache `PResult`s in a way that references to them are unstable.
-- `QUERY_AUTO_CACHE_PRESULT_STABLE_REF` -- it will cache `PResult`s in a way that references to them are stable.
+- `QUERY_AUTO_CACHE_COPY` -- it will cache `PResult`s and return copy on load. It rely on copy constructor and move constructor of `PResult`.
+- `QUERY_AUTO_CACHE_REF` -- it will cache `PResult`s and return stable references to them (in general will have slower cache, since references have to be stable)
+- `QUERY_AUTO_CACHE_CONSTRUCT` -- it will cache `PResult`s and return `QResult(PResult)` on load.
 
-In both cases, the `store` function will rely on an implicit cast/conversion from `PResult` to `QResult`.
+It is important to ensure that it is impossible to modify cached data in any way thought QResult.
 
-Auto cache example: unstable reference:
+Auto cache example: by copy:
 ~~~~~~~~~~cpp
 
 #include <query_framework/query_impl.hpp>
@@ -380,25 +380,25 @@ struct IMPLEMENT_QUERY(FibonacciStringAutoCache, std::string) {
         return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
     }
 
-    QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+    QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciStringAutoCache);
 
 .. code-block:: cpp
-:caption: Auto cache example: stable reference
+:caption: Auto cache example: by reference
 
 #include <query_framework/query_impl.hpp>
 
 // Here we can return reference as it is stable:
-DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, const std::string&);
+DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, CRef<std::string>);
 
 struct IMPLEMENT_QUERY(FibonacciStringAutoCache, std::string) {
     static auto provide(Context& ctx, QKey key) -> PResult {
         return std::to_string(ctx.query<Fibonacci>(Key1{ key }));
     }
 
-    QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+    QUERY_AUTO_CACHE_REF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(FibonacciStringAutoCache);
