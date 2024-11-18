@@ -33,21 +33,18 @@ namespace query {
 }
 
 /**
- * @brief Macro emitting body of query interface struct.
- */
-#define INTERNAL_QUERY_INTERFACE_BOILERPLATE                                                  \
-	static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
-	static ::std::string_view       name;                                                     \
-	static ::query::detail::QueryID id;
-
-
-/**
  * @brief Macro used do delcare queries.
  *
  * For example:
  * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue)`
  */
-#define DECLARE_QUERY(query_type, key, value)                                    \
-	struct query_type: ::query::detail::QueryInterface<query_type, key, value> { \
-		INTERNAL_QUERY_INTERFACE_BOILERPLATE                                     \
+#define DECLARE_QUERY(query_type, key, value)                                                     \
+	struct query_type: ::query::detail::QueryInterface<query_type, key, value> {                  \
+	private:                                                                                      \
+		static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
+		static ::std::string_view       name;                                                     \
+		static ::query::detail::QueryID id;                                                       \
+		friend struct ::query::detail::ContextType;                                               \
+	public: \
+		static auto getName() { return name; }                               \
 	};

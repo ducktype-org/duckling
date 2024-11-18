@@ -40,7 +40,13 @@ namespace query {
 		private:
 			NodeID my_node;
 
-			ContextType(NodeID my_node): my_node(my_node){};
+			// /**
+			//  * @brief Depth of the current query in the query stack.
+			//  * Starts from 0.
+			//  */
+			// u64 depth;
+
+			ContextType(NodeID my_node): my_node(my_node) {};
 			friend struct ContextMaker;
 
 		public:
