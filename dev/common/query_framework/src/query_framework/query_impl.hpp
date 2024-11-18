@@ -14,15 +14,15 @@
 #include <base/ref.hpp>
 #include <diagnostic/logger.hpp>
 
-#include "acd.hpp"
 #include "query_int.hpp"
-#include "dep_graph.hpp"
-#include "query_id_provider.hpp"  // IWYU pragma: export
-#include "logs.hpp"
-#include "node_making.hpp"
 
+#include "detail/acd.hpp"
+#include "detail/dep_graph.hpp"
+#include "detail/query_id_provider.hpp"  // IWYU pragma: export
+#include "detail/logs.hpp"
+#include "detail/node_making.hpp"
 
-#include "detail/query_cache_macros.hpp" // IWYU pragma: export
+#include "detail/query_cache_macros.hpp"  // IWYU pragma: export
 
 namespace query {
 
@@ -49,7 +49,7 @@ namespace query {
 			//  */
 			// u64 depth;
 
-			ContextType(NodeID my_node): my_node(my_node) {};
+			ContextType(NodeID my_node): my_node(my_node){};
 			friend struct ContextMaker;
 
 		public:
@@ -98,12 +98,12 @@ namespace query {
 		template<typename QueryImplType>
 		auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) ->
 			typename QueryImplType::QResult {
-			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Enter.\n"));
+			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n"));
 
 			if (auto v = QueryImplType::load(key)) {
 				// @FUTURE: Add ACD check here...
 				log(base::strConcat(
-					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Cached. Done.\n"
+					"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
 				));
 
 				// @todo: This might bind & to a const&, via std::move "creating" &&.
@@ -112,7 +112,7 @@ namespace query {
 				// standardized behaviour.
 				return std::move(v.value().data);
 			} else {
-				auto node_id = makeNodeID(QueryImplType::QueryType::id, key);
+				auto node_id = makeNodeID(QueryImplType::QueryType::getID(), key);
 				auto context = ContextMaker::make(node_id);
 
 				// @FUTURE: provide legit acd here
@@ -125,7 +125,7 @@ namespace query {
 				defer(dep_graph::setExit(node_id));
 
 				log(base::strConcat(
-					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Calculating.\n"
+					"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n"
 				));
 
 				// calculation:
@@ -133,7 +133,7 @@ namespace query {
 					= QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 
 				// epilog:
-				log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Done.\n"));
+				log(base::strConcat("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"));
 
 				return result;
 			}

@@ -8,7 +8,7 @@
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/dep_graph.hpp>
+#include <query_framework/detail/dep_graph.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
 struct Key1 {
@@ -317,7 +317,9 @@ private:
 		assertTrue(ReferenceQuery::getName() == "ReferenceQuery", "Bad query name (5)");
 		assertTrue(VectorReferenceQuery::getName() == "VectorReferenceQuery", "Bad query name (6)");
 		assertTrue(LifeTimeQueryStable::getName() == "LifeTimeQueryStable", "Bad query name (7)");
-		assertTrue(LifeTimeQueryUnstable::getName() == "LifeTimeQueryUnstable", "Bad query name (8)");
+		assertTrue(
+			LifeTimeQueryUnstable::getName() == "LifeTimeQueryUnstable", "Bad query name (8)"
+		);
 	}
 
 	void cycleDetectionTest() {
