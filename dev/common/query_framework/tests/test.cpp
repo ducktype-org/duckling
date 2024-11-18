@@ -203,6 +203,26 @@ struct IMPLEMENT_QUERY(CyclicQuery2, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQuery1);
 QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQuery2);
 
+struct ConstructFrom {
+	u64 v;
+};
+
+struct ConstructTo {
+	static inline u64 construct_count = 0;
+	u64 v;
+	ConstructTo(ConstructFrom from): v(from.v) { construct_count++; }
+};
+
+DECLARE_QUERY(ConstructCacheTest, u64, ConstructTo);
+struct IMPLEMENT_QUERY(ConstructCacheTest, ConstructFrom) {
+	static auto provide(Context&, QKey key) -> PResult { return { key }; }
+
+	QUERY_AUTO_CACHE_CONSTRUCT
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(ConstructCacheTest);
+
+
 using query::utils::withContextCompute;
 using query::utils::withContextDo;
 
@@ -215,6 +235,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(autoCacheTest);
+		TESTER_ADD_TEST(testConstructCache);
 		TESTER_ADD_TEST(entryPointSanityTest);
 		TESTER_ADD_TEST(resultLifetimeTest<LifeTimeQueryStable>);
 		TESTER_ADD_TEST(resultLifetimeTest<LifeTimeQueryUnstable>);
@@ -238,6 +259,8 @@ private:
 	}
 
 	void autoCacheTest() {
+		// note: construct cache is tested in testConstructCache
+
 		assertTrue(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (5)");
 		assertTrue(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (6)");
 	}
@@ -308,6 +331,23 @@ private:
 		std::stringstream s;
 		query::debugPrintDependencyGraphForDrawing(s);
 		query::debugPrintDependencyGraph(s);
+	}
+
+	void testConstructCache() {
+		ConstructTo::construct_count = 0;
+		withContextDo([&](query::Context& ctx) {
+			auto res1 = ctx.query<ConstructCacheTest>(10);
+			ASSERT_TRUE(res1.v == 10);
+			ASSERT_TRUE(ConstructTo::construct_count == 1);
+
+			auto res2 = ctx.query<ConstructCacheTest>(10);
+			ASSERT_TRUE(res2.v == 10);
+			ASSERT_TRUE(ConstructTo::construct_count == 2);
+
+			auto res3 = ctx.query<ConstructCacheTest>(20);
+			ASSERT_TRUE(res3.v == 20);
+			ASSERT_TRUE(ConstructTo::construct_count == 3);
+		});
 	}
 };
 
