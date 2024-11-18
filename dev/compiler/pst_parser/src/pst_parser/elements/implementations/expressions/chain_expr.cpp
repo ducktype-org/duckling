@@ -74,4 +74,12 @@ namespace pst::expr {
 	lexer::Operator BinaryOperator::getOperator() const { return op; }
 
 	const std::vector<ParserRef<ExprElement>>& Comma::getExpressions() const { return expressions; }
+
+	ParserCBorrowRef<ExprElement> ChainExpr::getLiteral() const { return literal.borrow(); }
+
+	const std::vector<ParserRef<ExprElement>>& ChainExpr::getChain() const { return chain; }
+
+	base::StrID Access::getType() const { return type; }
+
+	const tpc::Identifier& Access::getName() const { return name; }
 }

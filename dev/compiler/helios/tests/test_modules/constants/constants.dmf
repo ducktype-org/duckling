@@ -14,7 +14,7 @@ const A: i32 = 1;
 const B: i32 = (X - 6) + (1 + A);
 
 const E: i32 = 2 + 2 * 2;
-const MAX_I32: i32 = 2 ^ 31 - 1;
+const MAX_I32: i32 = 2 ** 31 - 1;
 
 using N.*;
 

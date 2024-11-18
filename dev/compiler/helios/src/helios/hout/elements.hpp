@@ -16,6 +16,7 @@
 #include "base/box.hpp"
 #include "base/exceptions.hpp"
 #include "helios/helios_errors.hpp"
+#include "helios/lookup_result.hpp"
 #include "lang_definitions/key_spec_op.hpp"
 #include "lexer/token_common.hpp"
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
@@ -288,6 +289,25 @@ namespace compiler::helios::code {
 		VariantConstructorExpr(
 			query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
 		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const override;
+
+		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
+	};
+
+	/**
+	 * @brief Represents the "IDENTIFIER.DATA[.DATA]*" format of SymbolList.
+	 * @NOTE Currently it is just a mockup.
+	 * -----
+	 * @EXPR: We should implement shortening of the SymbolList, ex. leave only
+	 * the "IDENTIFIER.DATA[.DATA]*" format of SymbolList.
+	 * OR! Maybe leave it up to new expr type to decide.
+	 */
+	struct LinkedIdentifierExpr: public Expr {
+		SymbolList symbols;
+
+		LinkedIdentifierExpr(query::Context& ctx, ScopeID scope, SymbolList symbols);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;

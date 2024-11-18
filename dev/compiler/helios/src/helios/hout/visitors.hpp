@@ -35,6 +35,7 @@ namespace compiler::helios::code {
 		HOUT_VISITOR_METHOD(KeywordExpr);
 		HOUT_VISITOR_METHOD(TupleConstructorExpr);
 		HOUT_VISITOR_METHOD(VariantConstructorExpr);
+		HOUT_VISITOR_METHOD(LinkedIdentifierExpr);
 
 		virtual ~HoutExprVisitor() = default;
 	};
@@ -65,6 +66,7 @@ namespace compiler::helios::code {
 		HOUT_VISITOR_METHOD_PANIC(KeywordExpr);
 		HOUT_VISITOR_METHOD_PANIC(TupleConstructorExpr);
 		HOUT_VISITOR_METHOD_PANIC(VariantConstructorExpr);
+		HOUT_VISITOR_METHOD_PANIC(LinkedIdentifierExpr);
 	};
 
 	class HoutExprVisitorEmpty: public HoutExprVisitor {
@@ -77,5 +79,6 @@ namespace compiler::helios::code {
 		HOUT_VISITOR_METHOD_EMPTY(KeywordExpr);
 		HOUT_VISITOR_METHOD_EMPTY(TupleConstructorExpr);
 		HOUT_VISITOR_METHOD_EMPTY(VariantConstructorExpr);
+		HOUT_VISITOR_METHOD_EMPTY(LinkedIdentifierExpr);
 	};
 }

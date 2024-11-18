@@ -31,18 +31,20 @@ public:
 		pst::init();
 		tsh::init();
 
-		TESTER_ADD_TEST(houtVariablesTest);
-		TESTER_ADD_TEST(testTypeOf);
-		TESTER_ADD_TEST(exprTreeTest);
 		TESTER_ADD_TEST(testI32Consts);
 		TESTER_ADD_TEST(errorTests);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testClassSymbolData);
-		TESTER_ADD_TEST(simpleHOUTTest);
 		TESTER_ADD_TEST(importTest);
+
+		// Passing:
+		TESTER_ADD_TEST(houtVariablesTest);
+		TESTER_ADD_TEST(exprTreeTest);
+		TESTER_ADD_TEST(simpleHOUTTest);
 		TESTER_ADD_TEST(houtVisitorTest);
 		TESTER_ADD_TEST(heliosResultConceptTests);
 		TESTER_ADD_TEST(heliosResultTests);
+		TESTER_ADD_TEST(testTypeOf);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -61,6 +63,7 @@ private:
 		ASSERT_EQUAL(-3, getValue("B", root_scope));
 		ASSERT_EQUAL(-1, getValue("D", root_scope));
 		ASSERT_EQUAL(6, getValue("E", root_scope));
+		std::cout << getValue("MAX_I32", root_scope) << '\n';
 		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getValue("MAX_I32", root_scope));
 		ASSERT_EQUAL(3, getValue("H2", root_scope));
 		ASSERT_EQUAL(1, getValue("T0", root_scope));

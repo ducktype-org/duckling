@@ -21,6 +21,7 @@
 #include "../helios_errors.hpp"
 #include "../helios_result.hpp"
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
+#include "typesystem/higher/queries/types.hpp"
 #include <base/optional.hpp>
 #include <typesystem/higher/type_info.hpp>
 
@@ -916,6 +917,10 @@ namespace compiler::helios {
 
 			void visitClass(const pst::Class&) override {
 				// This method is empty on purpose, because we still want a panicky visitor
+			}
+
+			void visitNamespace(const pst::Namespace&) override {
+				setTypeOfSymbol(ctx.query<tsh::QueryNamespaceType>({}));
 			}
 		};
 

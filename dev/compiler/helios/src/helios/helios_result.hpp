@@ -263,6 +263,11 @@ namespace compiler::helios::errors {
 		}
 
 		/**
+		 * @brief Checks if HResult contains a value.
+		 */
+		explicit constexpr operator bool() { return hasValue(); }
+
+		/**
 		 * @brief Access the value, throw on no value.
 		 */
 		constexpr const ResTp& value() const& { return expect("Result it empty!"); }

@@ -10,12 +10,14 @@
 #include "base/optional.hpp"
 #include "helios/helios_errors.hpp"
 #include "helios/helios_result.hpp"
+#include "helios/lookup_result.hpp"
 #include "helios/scope_symbol_id.hpp"
 #include "helios/symbols/symbols.hpp"
 #include "lang_definitions/key_spec_op.hpp"
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
 #include "pst_parser/pst_expr_visitor.hpp"
 #include "query_framework/query_int.hpp"
+#include "typesystem/higher/internal/queries.hpp"
 #include "typesystem/higher/kind.hpp"
 #include "typesystem/higher/queries/types.hpp"
 #include "typesystem/higher/type_desc.hpp"
@@ -75,14 +77,14 @@ namespace compiler::helios::code {
 			for (auto&& subtype: subtypes)
 				variant_subtypes.emplace_back(subtype->type_desc.getType());
 
-			// @EXPR: Should ValueCategory be literal?
+			// @EXPR: Should ValueCategory be a literal?
 			return tsh::TypeDesc<>(
 				ctx.query<tsh::QueryVariantType>({ variant_subtypes }),
 				tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			);
 		}
 
-		base::Optional<std::vector<base::Box<Expr>>> getVariantExprs(base::Ref<Expr> expr) {
+		base::Optional<std::vector<base::Box<Expr>>> getVariantExpressions(base::Ref<Expr> expr) {
 			if (auto variant = dynamic_cast<VariantConstructorExpr*>(expr.get()); variant)
 				return std::move(variant->subtypes);
 			return {};
@@ -94,7 +96,7 @@ namespace compiler::helios::code {
 			std::vector<base::Box<Expr>> all_subtypes;
 
 			for (auto&& expr: std::array{ std::move(lhs), std::move(rhs) }) {
-				auto subtypes = getVariantExprs(expr.refMut());
+				auto subtypes = getVariantExpressions(expr.refMut());
 				if (subtypes)
 					for (auto&& subtype: *subtypes) all_subtypes.emplace_back(std::move(subtype));
 				else
@@ -125,6 +127,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(VariantConstructorExpr);
 	EXPR_VISITOR(ParenthesisExpr);
 	EXPR_VISITOR(KeywordExpr);
+	EXPR_VISITOR(LinkedIdentifierExpr);
 
 	constexpr usize INDENT_SIZE = 4;
 
@@ -229,7 +232,133 @@ namespace compiler::helios::code {
 		rhs->debugPrint(out);
 	}
 
-	struct TupleConstructorVisitor: public pst::PstExprVisitorEmpty {};
+	errors::HResult<i64, errors::Failed> LiteralValueExpr::evaluateValue(query::Context&) const {
+		return value;
+	}
+
+	errors::HResult<i64, errors::Failed> BinaryOperatorExpr::evaluateValue(query::Context& ctx
+	) const {
+		UNPACK_RESULT(i64 lhs_value =, lhs->evaluateValue(ctx));
+		UNPACK_RESULT(i64 rhs_value =, rhs->evaluateValue(ctx));
+		if (op.value == "+")
+			return lhs_value + rhs_value;
+		else if (op.value == "-")
+			return lhs_value - rhs_value;
+		else if (op.value == "*")
+			return lhs_value * rhs_value;
+		else if (op.value == "/")
+			return lhs_value / rhs_value;
+		else if (op.value == "%")
+			return lhs_value % rhs_value;
+		else if (op.value == "^")
+			return std::pow(lhs_value, rhs_value);
+		CORE_PANIC("Unknown operator");
+	}
+
+	void ParenthesisExpr::debugPrint(std::ostream& out) const {
+		out << "(";
+		inner->debugPrint(out);
+		out << ")";
+	}
+
+	ParenthesisExpr::ParenthesisExpr(query::Context&, ScopeID scope, base::Box<Expr> inner):
+		  Expr(scope, inner->type_desc),
+		  inner(std::move(inner)) {}
+
+	errors::HResult<i64, errors::Failed> ParenthesisExpr::evaluateValue(query::Context& ctx) const {
+		return inner->evaluateValue(ctx);
+	}
+
+	errors::HResult<i64, errors::Failed> IdentifierExpr::evaluateValue(query::Context& ctx) const {
+		return ctx.query<QueryConstValueOf>(symbol);
+	}
+
+	KeywordExpr::KeywordExpr(query::Context& ctx, ScopeID scope, lang_def::Keyword keyword):
+		  Expr(
+			  scope,
+			  tsh::TypeDesc<>(
+				  getTypeOfKeyword(ctx, keyword), tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  )
+		  ),
+		  keyword(keyword) {}
+
+	errors::HResult<i64, errors::Failed> KeywordExpr::evaluateValue(query::Context&) const {
+		throw base::NotYetImplemented("Evaluation of keyword values is not implemented yet");
+	}
+
+	void KeywordExpr::debugPrint(std::ostream& out) const {
+		out << lang_def::keywordToStr(keyword).strView();
+	}
+
+	TupleConstructorExpr::TupleConstructorExpr(
+		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
+	):
+		  Expr(scope, getTypeDescOfTuple(ctx, elements)),
+		  elements(std::move(elements)) {}
+
+	void TupleConstructorExpr::debugPrint(std::ostream& out) const {
+		out << "(";
+		for (bool add_comma = false; auto&& e: elements) {
+			if (add_comma) out << ", ";
+			e->debugPrint(out);
+			add_comma = true;
+		}
+		out << ")";
+	}
+
+	errors::HResult<i64, errors::Failed>
+		TupleConstructorExpr::evaluateValue(query::Context&) const {
+		throw base::NotYetImplemented("Evaluation of tuple values is not implemented yet");
+	}
+
+	void VariantConstructorExpr::debugPrint(std::ostream& out) const {
+		out << "(";
+		for (bool add_pipe = false; auto&& subtype: subtypes) {
+			if (add_pipe) out << " | ";
+			subtype->debugPrint(out);
+			add_pipe = true;
+		}
+		out << ")";
+	}
+
+	errors::HResult<i64, errors::Failed>
+		VariantConstructorExpr::evaluateValue(query::Context&) const {
+		throw base::NotYetImplemented("Evaluation of variant values is not implemented yet");
+	}
+
+	VariantConstructorExpr::VariantConstructorExpr(
+		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
+	):
+		  Expr(scope, getTypeDescOfVariant(ctx, subtypes)),
+		  subtypes(std::move(subtypes)) {
+		debugPrint(std::cout);
+	}
+
+	void LinkedIdentifierExpr::debugPrint(std::ostream& out) const {
+		for (bool add_dot = false; auto&& symbol: symbols) {
+			if (add_dot) out << ".";
+			out << name(symbol).str();
+			add_dot = true;
+		}
+	}
+
+	errors::HResult<i64, errors::Failed> LinkedIdentifierExpr::evaluateValue(query::Context& ctx
+	) const {
+		return ctx.query<QueryConstValueOf>(symbols.back());
+	}
+
+	LinkedIdentifierExpr::LinkedIdentifierExpr(
+		query::Context& ctx, ScopeID scope, SymbolList symbols
+	):
+		  Expr(
+			  scope,
+			  tsh::TypeDesc<>(
+				  ctx.query<QueryTypeOfSymbolOrDefinition>(symbols.back())
+					  .expect("Not handling errors here yet"),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  )
+		  ),
+		  symbols(std::move(symbols)) {}
 
 	struct HoutIsTypeExprVisitor: public HoutExprVisitor {
 		// @TODO czy to nie powinno być roboione na poziomie HELIOS'a, żeby sprawdzać, czy
@@ -245,21 +374,7 @@ namespace compiler::helios::code {
 
 		void visitLiteralValueExpr(const LiteralValueExpr&) override { is_type_expr = false; }
 
-		void visitIdentifierExpr(const IdentifierExpr& expr) override {
-			auto type = ctx.query<QueryTypeOfSymbol>(expr.symbol);
-			if (type.hasError()) {
-				// this is a class?
-				is_type_expr = true;
-			} else {
-				switch (type.value().getKind()) {
-				case tsh::Kind::Meta:
-					is_type_expr = true;
-					break;
-				default:
-					is_type_expr = false;
-				}
-			}
-		}
+		void visitIdentifierExpr(const IdentifierExpr& expr) override { testSymbol(expr.symbol); }
 
 		void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override { is_type_expr = false; }
 
@@ -313,7 +428,27 @@ namespace compiler::helios::code {
 			iterOverExprs(variant.subtypes);
 		}
 
+		void visitLinkedIdentifierExpr(const LinkedIdentifierExpr& val) override {
+			testSymbol(val.symbols.back());
+		}
+
 	private:
+		void testSymbol(SymID symbol) {
+			auto type = ctx.query<QueryTypeOfSymbol>(symbol);
+			if (type.hasError()) {
+				// this is a class?
+				is_type_expr = true;
+			} else {
+				switch (type.value().getKind()) {
+				case tsh::Kind::Meta:
+					is_type_expr = true;
+					break;
+				default:
+					is_type_expr = false;
+				}
+			}
+		}
+
 		void iterOverExprs(const std::vector<base::Box<Expr>>& expressions) {
 			is_type_expr = true;
 			for (auto& el: expressions) {
@@ -321,6 +456,59 @@ namespace compiler::helios::code {
 				el->acceptVisitor(vis);
 				if (!vis.is_type_expr) is_type_expr = false;
 			}
+		}
+	};
+
+	/**
+	 * @brief Tries to extract a resulting symbol from hout expression.
+	 */
+	struct HoutResultingSymbolListVisitor: public HoutExprVisitor {
+		explicit HoutResultingSymbolListVisitor(query::Context& ctx, ScopeID scope):
+			  ctx(ctx),
+			  scope(scope) {}
+
+		query::Context& ctx;
+		ScopeID         scope;
+
+		base::Optional<SymbolList> symbols;
+
+		void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override {
+			// ctx.query<tsh::internal::QueryInterfaceOfClass>()
+			throw base::NotYetImplemented("Cannot evaluate symbol after binary operators");
+		}
+
+		void visitIdentifierExpr(const IdentifierExpr& val) override {
+			symbols = SymbolList{ val.symbol };
+		}
+
+		void visitKeywordExpr(const KeywordExpr&) override {
+			throw base::NotYetImplemented("Cannot evaluate symbol from Keywords");
+		}
+
+		void visitLiteralValueExpr(const LiteralValueExpr&) override {
+			throw base::NotYetImplemented("Cannot evaluate symbol from literal values");
+		}
+
+		void visitParenthesisExpr(const ParenthesisExpr& val) override {
+			HoutResultingSymbolListVisitor vis(ctx, scope);
+			val.inner->acceptVisitor(vis);
+			symbols = vis.symbols;
+		}
+
+		void visitTupleConstructorExpr(const TupleConstructorExpr&) override {
+			throw base::NotYetImplemented("Cannot evaluate symbol from tuple");
+		}
+
+		void visitVariantConstructorExpr(const VariantConstructorExpr&) override {
+			throw base::NotYetImplemented("Cannot evaluate symbol from tuple");
+		}
+
+		void visitUnaryOperatorExpr(const UnaryOperatorExpr&) override {
+			throw base::NotYetImplemented("Cannot evaluate symbol after unary operators");
+		}
+
+		void visitLinkedIdentifierExpr(const LinkedIdentifierExpr& val) override {
+			symbols = val.symbols;
 		}
 	};
 
@@ -367,6 +555,46 @@ namespace compiler::helios::code {
 					));
 				}
 			}
+		}
+
+		void visitChainExpr(const pst::expr::ChainExpr& stmt) override {
+			// @TODO: Add a compiler log or some kind of information if lookup fails.
+
+			auto literal_expr = Expr::fromPST(ctx, scope, stmt.getLiteral());
+			if (!literal_expr) {
+				// Report an error?
+				return;
+			}
+
+			HoutResultingSymbolListVisitor resulting_symbol_vis(ctx, scope);
+			literal_expr.value()->acceptVisitor(resulting_symbol_vis);
+
+			CORE_ASSERT(resulting_symbol_vis.symbols, "Failed to get symbols");
+
+			SymbolList looked_up_symbol = std::move(resulting_symbol_vis.symbols.value());
+
+			for (auto&& el: stmt.getChain()) {
+				el->debugPrint(std::cout);
+				auto pst_access = dynamic_cast<pst::expr::Access*>(el.get());
+				CORE_ASSERT(pst_access, "Not handling non-AccessExprs yet");
+				CORE_ASSERT(pst_access->getType() == ".", "Not handling .? access operator yet");
+
+				auto new_symbols = ctx.query<QueryLookupInSymbol>(
+					{ looked_up_symbol.back(), pst_access->getName().value, true }
+				);
+
+				auto new_symbols_single = new_symbols.getAsSingle();
+				CORE_ASSERT(
+					new_symbols_single.hasValue(), "Access failed because couldn\'t getAsSingle()"
+				);
+
+				looked_up_symbol.insert(
+					looked_up_symbol.end(),
+					new_symbols_single.value().begin(),
+					new_symbols_single.value().end()
+				);
+			}
+			node = base::Box(new LinkedIdentifierExpr(ctx, scope, std::move(looked_up_symbol)));
 		}
 
 		void visitRoundExpr(const pst::expr::RoundExpr& stmt) override {
@@ -426,109 +654,6 @@ namespace compiler::helios::code {
 
 		if_opt_some(visitor.node, expr) return std::move(expr);
 		return errors::HError(errors::Failed());
-	}
-
-	errors::HResult<i64, errors::Failed> LiteralValueExpr::evaluateValue(query::Context& ctx
-	) const {
-		return value;
-	}
-
-	errors::HResult<i64, errors::Failed> BinaryOperatorExpr::evaluateValue(query::Context& ctx
-	) const {
-		UNPACK_RESULT(i64 lhs_value =, lhs->evaluateValue(ctx));
-		UNPACK_RESULT(i64 rhs_value =, rhs->evaluateValue(ctx));
-		if (op.str()[0] == '+')
-			return lhs_value + rhs_value;
-		else if (op.str()[0] == '-')
-			return lhs_value - rhs_value;
-		else if (op.str()[0] == '*')
-			return lhs_value * rhs_value;
-		else if (op.str()[0] == '/')
-			return lhs_value / rhs_value;
-		else if (op.str()[0] == '%')
-			return lhs_value % rhs_value;
-		else if (op.str()[0] == '^')
-			return std::pow(lhs_value, rhs_value);
-		CORE_PANIC("Unknown operator");
-	}
-
-	void ParenthesisExpr::debugPrint(std::ostream& out) const {
-		out << "(";
-		inner->debugPrint(out);
-		out << ")";
-	}
-
-	ParenthesisExpr::ParenthesisExpr(query::Context& ctx, ScopeID scope, base::Box<Expr> inner):
-		  Expr(scope, inner->type_desc),
-		  inner(std::move(inner)) {}
-
-	errors::HResult<i64, errors::Failed> ParenthesisExpr::evaluateValue(query::Context& ctx) const {
-		return inner->evaluateValue(ctx);
-	}
-
-	errors::HResult<i64, errors::Failed> IdentifierExpr::evaluateValue(query::Context& ctx) const {
-		return ctx.query<QueryConstValueOf>(symbol);
-	}
-
-	KeywordExpr::KeywordExpr(query::Context& ctx, ScopeID scope, lang_def::Keyword keyword):
-		  Expr(
-			  scope,
-			  tsh::TypeDesc<>(
-				  getTypeOfKeyword(ctx, keyword), tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  )
-		  ),
-		  keyword(keyword) {}
-
-	errors::HResult<i64, errors::Failed> KeywordExpr::evaluateValue(query::Context& ctx) const {
-		throw base::NotYetImplemented("Evaluation of keyword values is not implemented yet");
-	}
-
-	void KeywordExpr::debugPrint(std::ostream& out) const {
-		out << lang_def::keywordToStr(keyword).strView();
-	}
-
-	TupleConstructorExpr::TupleConstructorExpr(
-		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
-	):
-		  Expr(scope, getTypeDescOfTuple(ctx, elements)),
-		  elements(std::move(elements)) {}
-
-	void TupleConstructorExpr::debugPrint(std::ostream& out) const {
-		out << "(";
-		for (bool add_comma = false; auto&& e: elements) {
-			if (add_comma) out << ", ";
-			e->debugPrint(out);
-			add_comma = true;
-		}
-		out << ")";
-	}
-
-	errors::HResult<i64, errors::Failed>
-		TupleConstructorExpr::evaluateValue(query::Context&) const {
-		throw base::NotYetImplemented("Evaluation of tuple values is not implemented yet");
-	}
-
-	void VariantConstructorExpr::debugPrint(std::ostream& out) const {
-		out << "(";
-		for (bool add_pipe = false; auto&& subtype: subtypes) {
-			if (add_pipe) out << " | ";
-			subtype->debugPrint(out);
-			add_pipe = true;
-		}
-		out << ")";
-	}
-
-	errors::HResult<i64, errors::Failed>
-		VariantConstructorExpr::evaluateValue(query::Context&) const {
-		throw base::NotYetImplemented("Evaluation of variant values is not implemented yet");
-	}
-
-	VariantConstructorExpr::VariantConstructorExpr(
-		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
-	):
-		  Expr(scope, getTypeDescOfVariant(ctx, subtypes)),
-		  subtypes(std::move(subtypes)) {
-		debugPrint(std::cout);
 	}
 }
 

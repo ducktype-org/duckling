@@ -1,5 +1,7 @@
 #pragma once
 
+#include "base/optional.hpp"
+#include "base/string_id.hpp"
 #include "lang_definitions/key_spec_op.hpp"
 #include "lexer/token_common.hpp"
 #include "meta.hpp"
@@ -206,6 +208,15 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Access Expression"; }
+
+			base::StrID            getType() const;
+			const tpc::Identifier& getName() const;
+
+			base::Optional<ParserCBorrowRef<ExprElement>> getTemplateSpecifier() const {
+				return template_specifier.map([](const ParserRef<ExprElement>& t) {
+					return t.borrow();
+				});
+			}
 		};
 
 		/**
@@ -230,7 +241,7 @@ namespace pst {
 		};
 
 		/**
-		 * @brief Combined Access / Call / Subscirpt.
+		 * @brief Combined Access / Call / Subscript.
 		 */
 		class ChainExpr final: public ExprElement {
 			using Lower = Literal;
@@ -253,6 +264,9 @@ namespace pst {
 			~ChainExpr() override = default;
 
 			std::string elementType() const override { return "Chain Expression"; }
+
+			ParserCBorrowRef<ExprElement>              getLiteral() const;
+			const std::vector<ParserRef<ExprElement>>& getChain() const;
 		};
 
 		class RoundExpr final: public ExprElement {
@@ -325,21 +339,16 @@ namespace pst {
 			 */
 			CONDITION(isGenBinOp) {
 				static const std::set<lang_def::NamedOperator> gen_bin_ops = {
-					NamedOperator::Multiply,
-					NamedOperator::Divide,
-					NamedOperator::Plus,
-					NamedOperator::Minus,
-					NamedOperator::Pipe,
+					NamedOperator::Multiply, NamedOperator::Divide, NamedOperator::Plus,
+					NamedOperator::Minus,    NamedOperator::Pipe,
 				};
 				return gen_bin_ops.contains(state[fwd].asOperator().asNamed());
 			}
 
 			static i64 getOpPrec(Operator op) {
 				static const std::unordered_map<lang_def::NamedOperator, i64> precedences = {
-					{ NamedOperator::Pipe, 540 },
-					{ NamedOperator::Multiply, 560 },
-					{ NamedOperator::Divide, 560 },
-					{ NamedOperator::Plus, 570 },
+					{ NamedOperator::Pipe, 540 },   { NamedOperator::Multiply, 560 },
+					{ NamedOperator::Divide, 560 }, { NamedOperator::Plus, 570 },
 					{ NamedOperator::Minus, 570 },
 				};
 				return precedences.at(op.asNamed());
