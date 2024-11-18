@@ -209,11 +209,13 @@ struct ConstructFrom {
 
 struct ConstructTo {
 	static inline u64 construct_count = 0;
-	u64 v;
+	u64               v;
+
 	ConstructTo(ConstructFrom from): v(from.v) { construct_count++; }
 };
 
 DECLARE_QUERY(ConstructCacheTest, u64, ConstructTo);
+
 struct IMPLEMENT_QUERY(ConstructCacheTest, ConstructFrom) {
 	static auto provide(Context&, QKey key) -> PResult { return { key }; }
 
