@@ -446,7 +446,7 @@ namespace compiler::helios {
 
 			void visitLiteralValueExpr(const code::LiteralValueExpr& expr) override { result = expr.value; }
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
-				result = ctx.query<QueryConstValueOf>(expr.symbol);
+				result = *ctx.query<QueryConstValueOf>(expr.symbol);
 			}
 			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) override {
 				auto lhs_result = evaluateExpr(ctx, *expr.lhs);
@@ -500,7 +500,7 @@ namespace compiler::helios {
 				throw base::NotYetImplemented("Evaluation of variant values is not implemented yet");
 			}
 			void visitLinkedIdentifierExpr(const code::LinkedIdentifierExpr& expr) override {
-				result = ctx.query<QueryConstValueOf>(expr.symbols.back());
+				result = *ctx.query<QueryConstValueOf>(expr.symbols.back());
 			}
 		};
 
