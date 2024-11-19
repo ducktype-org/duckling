@@ -45,5 +45,5 @@ namespace compiler::backend_llvm {
 	 * containing only this function.
 	 * @note This function is a temporary entry point for the llvm backend.
 	 */
-	Module lirFunctionToModule(const lir::Function&);
+	Module lirFunctionToModule(CRef<lir::Function>);
 }

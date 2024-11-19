@@ -19,11 +19,12 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
-
 #include "../llvm_backend.hpp"
 #include "module_impl.hpp"
+
 #include <lir/lir_structure/lir_structure.hpp>
 #include <base/box.hpp>
+#include <base/ref.hpp>
 #include <base/maps.hpp>
 
 // useful: https://github.com/llvm/llvm-project/tree/main/llvm/exampless
@@ -77,12 +78,12 @@ namespace compiler::backend_llvm {
 	 * on provided LIRFunction.
 	 */
 	struct LIR2LLVMFunction {
-		llvm::LLVMContext&   context;
-		const lir::Function& lir_function;
-		Ref<llvm::Module>    module;
+		llvm::LLVMContext&  context;
+		CRef<lir::Function> lir_function;
+		Ref<llvm::Module>   module;
 
 		LIR2LLVMFunction(
-			llvm::LLVMContext& context, const lir::Function& lir_function, Ref<llvm::Module> module
+			llvm::LLVMContext& context, CRef<lir::Function> lir_function, Ref<llvm::Module> module
 		):
 			  context(context),
 			  lir_function(lir_function),
@@ -98,7 +99,7 @@ namespace compiler::backend_llvm {
 		void generateMainBlocks(llvm::Function* fun) {
 			u64 block_id = 0;
 			// llvm prints in reverse... eh:
-			for (auto& block: lir_function.blocks | std::views::reverse) {
+			for (auto& block: lir_function->blocks | std::views::reverse) {
 				llvm::BasicBlock* llvm_block
 					= llvm::BasicBlock::Create(context, base::strConcat("block_", block_id++), fun);
 				block_mapping.put(block.ref(), llvm_block);
@@ -130,7 +131,7 @@ namespace compiler::backend_llvm {
 			llvm::BasicBlock* locals_block
 				= llvm::BasicBlock::Create(context, "local_variables", fun);
 			llvm::IRBuilder<> locals_builder(locals_block);
-			for (auto& var: lir_function.local_list) {
+			for (auto& var: lir_function->local_list) {
 				// @TODO: add llvm types:
 				auto reg = locals_builder.CreateAlloca(
 					i64Type(context), nullptr, llvmLocalName(var.ref())
@@ -142,7 +143,7 @@ namespace compiler::backend_llvm {
 
 			// here we assume that first block in block order is the entry block
 			// it might be wrong, but it's good enough for now
-			locals_builder.CreateBr(block_mapping[lir_function.block_order.at(0)].get());
+			locals_builder.CreateBr(block_mapping[lir_function->block_order.at(0)].get());
 		}
 
 		/**
@@ -224,13 +225,13 @@ namespace compiler::backend_llvm {
 			llvm::Function* fun = llvm::Function::Create(
 				voidFunType(context),
 				llvm::Function::ExternalLinkage,
-				lir_function.name.strView(),
+				lir_function->name.strView(),
 				*module
 			);
 
 			generateMainBlocksAndLocals(fun);
 
-			for (auto& block: lir_function.block_order) {
+			for (auto& block: lir_function->block_order) {
 				auto              llvm_block = block_mapping[block];
 				llvm::IRBuilder<> builder(llvm_block.get());
 				for (const auto& instruction: block->instructions)
@@ -242,7 +243,7 @@ namespace compiler::backend_llvm {
 		}
 	};
 
-	Module lirFunctionToModule(const lir::Function& lir_function) {
+	Module lirFunctionToModule(CRef<lir::Function> lir_function) {
 		init();
 		llvm::LLVMContext& context = getLLVMContext();
 
