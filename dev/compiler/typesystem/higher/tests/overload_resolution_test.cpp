@@ -25,7 +25,7 @@ private:
 
 		const TypeInfo my_class_type
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(my_class_symbol)
-		          .expect("Not expecting an ERROR here...");
+		          ->expect("Not expecting an ERROR here...");
 
 
 		withContextDo([&](query::Context& ctx) {

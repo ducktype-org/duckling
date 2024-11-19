@@ -7,6 +7,8 @@
 
 #include "node_id.hpp"
 
+#include <ostream>
+
 namespace query::detail {
 
 	// @OPT: pick good type size here
@@ -38,13 +40,15 @@ namespace query::detail {
 		 */
 		void setExit(detail::NodeID node);
 
-		void debugPrint();
-		void debugPrintForDrawing();
+		void debugPrint(std::ostream& out);
+		void debugPrintForDrawing(std::ostream& out);
 	}
 }
 
 namespace query {
-	inline void debugPrintDependencyGraph() { detail::dep_graph::debugPrint(); }
+	inline void debugPrintDependencyGraph(std::ostream& out) { detail::dep_graph::debugPrint(out); }
 
-	inline void debugPrintDependencyGraphForDrawing() { detail::dep_graph::debugPrintForDrawing(); }
+	inline void debugPrintDependencyGraphForDrawing(std::ostream& out) {
+		detail::dep_graph::debugPrintForDrawing(out);
+	}
 }

@@ -272,7 +272,7 @@ struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
 		return out;
 	}
 
-	QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+	QUERY_AUTO_CACHE_REF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
@@ -290,7 +290,7 @@ struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleID
 		return out;
 	}
 
-	QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+	QUERY_AUTO_CACHE_REF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
@@ -298,17 +298,17 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
 /****************
  * QueryFilePST *
  ****************/
-struct IMPLEMENT_QUERY(QueryFilePST, const pst::PST<>&) {
+struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 	static auto provide(Context&, QKey key) -> PResult {
 		auto& file = files.at(key);
 		auto& pst  = file.getPST();
 		root_element_file_back_map.put(pst.getRootElement()->getID(), key);
-		return pst;
+		return &pst;
 	}
 
 	// @note: unstable ref here is only possible, because
 	// PResult is already a reference
-	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);

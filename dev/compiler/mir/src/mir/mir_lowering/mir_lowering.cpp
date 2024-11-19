@@ -276,7 +276,7 @@ namespace compiler::mir {
 		LocalRef addLocal(helios::SymID helios_id) {
 			auto key = local_list.emplaceBack(MirLocal{
 				helios_id,
-				ctx.query<helios::QueryTypeOfSymbol>(helios_id).expect(
+				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
 					"Handling ERRORS in MIR is not supported yet..."
 				),
 				scope(helios_id) });
@@ -484,7 +484,7 @@ namespace compiler::mir {
 			return addDestructors(ctx, std::move(function_no_lifetime));
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMirFunction);
