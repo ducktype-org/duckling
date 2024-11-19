@@ -68,6 +68,9 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Prefix Operator"; }
+
+			lexer::Operator               getOperator() const;
+			ParserCBorrowRef<ExprElement> getExpr() const;
 		};
 
 		class SuffixOperator: public ExprElement {
@@ -85,6 +88,9 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			std::string elementType() const override { return "Suffix Operator"; }
+
+			lexer::Operator               getOperator() const;
+			ParserCBorrowRef<ExprElement> getExpr() const;
 		};
 
 		class BinaryOperator: public ExprElement {

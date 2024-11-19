@@ -264,9 +264,11 @@ namespace compiler::helios::code {
 		// @NOTE: `op` and `prefix` should be replaced with a SymID that links to a proper function
 		// that resolves the operator
 		pst::Operator op;
-		bool prefix = false;  // prefix/suffix
+		bool          prefix = false;  // prefix/suffix
 
 		base::Box<Expr> expr;
+
+		UnaryOperatorExpr(ScopeID scope, lexer::Operator op, bool prefix, base::Box<Expr> expr);
 
 		void debugPrint(std::ostream& out) const override;
 		void acceptVisitor(HoutExprVisitor&) const override;
@@ -302,7 +304,7 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents the "IDENTIFIER.DATA[.DATA]*" format of SymbolList.
-	 * @NOTE Currently it is just a mockup.
+	 * @NOTE Currently it is just a mockup. Should be refactored to AccessExpr
 	 * -----
 	 * @EXPR: We should implement shortening of the SymbolList, ex. leave only
 	 * the "IDENTIFIER.DATA[.DATA]*" format of SymbolList.

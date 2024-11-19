@@ -82,4 +82,12 @@ namespace pst::expr {
 	base::StrID Access::getType() const { return type; }
 
 	const tpc::Identifier& Access::getName() const { return name; }
+
+	lexer::Operator SuffixOperator::getOperator() const { return op; }
+
+	ParserCBorrowRef<ExprElement> SuffixOperator::getExpr() const { return expr.borrow(); }
+
+	lexer::Operator PrefixOperator::getOperator() const { return op; }
+
+	ParserCBorrowRef<ExprElement> PrefixOperator::getExpr() const { return expr.borrow(); }
 }

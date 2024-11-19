@@ -531,8 +531,8 @@ namespace compiler::helios {
 				setTypeOfSymbol(ctx.query<tsh::QueryNamespaceType>({}));
 			}
 
-			void visitAlias(const pst::Alias& stmt) override {
-				std::cout << "Alias...\n";
+			void visitImport(const pst::Import&) override {
+				setTypeOfSymbol(ctx.query<tsh::QueryNamespaceType>({}));
 			}
 		};
 

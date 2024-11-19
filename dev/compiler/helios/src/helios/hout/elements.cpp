@@ -8,6 +8,7 @@
 #include "base/box.hpp"
 #include "base/exceptions.hpp"
 #include "base/optional.hpp"
+#include "base/str_utils.hpp"
 #include "helios/helios_errors.hpp"
 #include "helios/helios_result.hpp"
 #include "helios/lookup_result.hpp"
@@ -330,9 +331,7 @@ namespace compiler::helios::code {
 		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
 	):
 		  Expr(scope, getTypeDescOfVariant(ctx, subtypes)),
-		  subtypes(std::move(subtypes)) {
-		debugPrint(std::cout);
-	}
+		  subtypes(std::move(subtypes)) {}
 
 	void LinkedIdentifierExpr::debugPrint(std::ostream& out) const {
 		for (bool add_dot = false; auto&& symbol: symbols) {
@@ -359,6 +358,34 @@ namespace compiler::helios::code {
 			  )
 		  ),
 		  symbols(std::move(symbols)) {}
+
+	UnaryOperatorExpr::UnaryOperatorExpr(
+		ScopeID scope, lexer::Operator op, bool prefix, base::Box<Expr> expr
+	):
+		  Expr(scope, expr->type_desc),
+		  op(op),
+		  prefix(prefix),
+		  expr(std::move(expr)) {}
+
+	void UnaryOperatorExpr::debugPrint(std::ostream& out) const {
+		if (prefix) {
+			out << op.str();
+			expr->debugPrint(out);
+		} else {
+			expr->debugPrint(out);
+			out << op.str();
+		}
+	}
+
+	errors::HResult<i64, errors::Failed> UnaryOperatorExpr::evaluateValue(query::Context& ctx
+	) const {
+		UNPACK_RESULT(i64 expr_value =, expr->evaluateValue(ctx));
+		if (op.value == "-" && prefix) return -expr_value;
+		return errors::HError(errors::Failed());
+		// throw base::NotYetImplemented(
+		// 	base::strConcat("Not handling prefix:", prefix, " of operator ", op.str())
+		// );
+	}
 
 	struct HoutIsTypeExprVisitor: public HoutExprVisitor {
 		// @TODO czy to nie powinno być roboione na poziomie HELIOS'a, żeby sprawdzać, czy
@@ -574,11 +601,11 @@ namespace compiler::helios::code {
 			SymbolList looked_up_symbol = std::move(resulting_symbol_vis.symbols.value());
 
 			for (auto&& el: stmt.getChain()) {
-				el->debugPrint(std::cout);
 				auto pst_access = dynamic_cast<pst::expr::Access*>(el.get());
 				CORE_ASSERT(pst_access, "Not handling non-AccessExprs yet");
 				CORE_ASSERT(pst_access->getType() == ".", "Not handling .? access operator yet");
 
+				std::cout << "Lookup in: " << name(looked_up_symbol.back()).strView() << " " << pst_access->getName().value.strView() << std::endl;
 				auto new_symbols = ctx.query<QueryLookupInSymbol>(
 					{ looked_up_symbol.back(), pst_access->getName().value, true }
 				);
@@ -608,21 +635,18 @@ namespace compiler::helios::code {
 		void visitIdentifierLiteral(const pst::expr::IdentifierLiteral& stmt) override {
 			auto&& sym_list
 				= ctx.query<QueryLookupInScopeAndParents>({ scope, stmt.getName().value, true });
-			auto single = sym_list.getAsSingle().expect("Not propagating errors here yet...");
 
-			// Perform dealias
-
-			compiler::helios::SymbolList lookup_dealiased;
-
-			for (auto single_sym: single) {
-				auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym)
-				                     .expect("Not propagating errors for now...");
-				lookup_dealiased.insert(lookup_dealiased.end(), dealiased.begin(), dealiased.end());
+			auto res = sym_list.getAsSingle();
+			if (res.hasError()) {
+				// Report an error
+				return;
 			}
 
-			CORE_ASSERT(!lookup_dealiased.empty(), "Empty lookup result");
-
-			node = base::Box(new IdentifierExpr(ctx, scope, lookup_dealiased.back()));
+			dealiasSymbolList(ctx, res.value())
+				.optValue()
+				.ifValue([&](const SymbolList& dealiased) {
+					node = base::Box(new IdentifierExpr(ctx, scope, dealiased.back()));
+				});
 		}
 
 		void visitKeywordLiteral(const pst::expr::KeywordLiteral& stmt) override {
@@ -645,12 +669,25 @@ namespace compiler::helios::code {
 		}
 
 		void visitSuffixOperator(const pst::expr::SuffixOperator& stmt) override {
-			std::cout << "Suffix:\n";
-			stmt.dprint(std::cout);
-			std::cout << "Suffix2:\n" << std::endl;
-			stmt.debugPrint(std::cout);
-			std::cout << std::endl;
-			CORE_PANIC("Not handling it yet...");
+			// @NOTE: This is a mockup
+			PstExprToHoutExprVisitor vis(ctx, scope);
+			stmt.getExpr()->acceptVisitor(vis);
+			if_opt_some(vis.node, expr) {
+				node = base::Box(
+					new UnaryOperatorExpr(scope, stmt.getOperator(), false, std::move(expr))
+				);
+			}
+		}
+
+		void visitPrefixOperator(const pst::expr::PrefixOperator& stmt) override {
+			// @NOTE: This is a mockup
+			PstExprToHoutExprVisitor vis(ctx, scope);
+			stmt.getExpr()->acceptVisitor(vis);
+			if_opt_some(vis.node, expr) {
+				node = base::Box(
+					new UnaryOperatorExpr(scope, stmt.getOperator(), true, std::move(expr))
+				);
+			}
 		}
 	};
 
