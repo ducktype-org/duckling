@@ -15,10 +15,10 @@ our "mini docs" that should be helpful to start working with LLVM code.
 ## Useful resources:
 
 **Official llvm examples:**
-https://github.com/llvm/llvm-project/tree/main/llvm/exampless
+<https://github.com/llvm/llvm-project/tree/main/llvm/examples>
 
 **LLVM api source docs**:
-https://llvm.org/doxygen/
+<https://llvm.org/doxygen/>
 
 ## API vs internals
 
