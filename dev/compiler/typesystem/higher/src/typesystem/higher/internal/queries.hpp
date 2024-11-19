@@ -30,5 +30,5 @@ namespace tsh::internal {
 	 * @note This query is made for the purpose of caching. Analogous queries for most other
 	 * types do not exist, because getting their interfaces is trivial.
 	 */
-	DECLARE_QUERY(QueryInterfaceOfClass, WrappedClassInfoImplPtr, const TypeInterface&)
+	DECLARE_QUERY(QueryInterfaceOfClass, WrappedClassInfoImplPtr, CRef<TypeInterface>)
 }

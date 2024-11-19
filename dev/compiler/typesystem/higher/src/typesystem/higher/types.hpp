@@ -50,7 +50,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(UnitInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Unit)
 	};
 
@@ -69,7 +68,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(VoidInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Void)
 	};
 
@@ -87,7 +85,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(ByteInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Byte)
 	};
 
@@ -103,7 +100,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(BoolInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Bool)
 	};
 
@@ -119,7 +115,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(CharInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Char)
 	};
 
@@ -142,7 +137,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(IntegralInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Integral)
 	};
 
@@ -165,7 +159,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(FloatInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Float)
 	};
 
@@ -228,7 +221,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(RawPointerInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(RawPointer)
 	};
 
@@ -265,7 +257,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(PointerInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Pointer)
 	};
 
@@ -371,7 +362,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(ReferenceInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Reference)
 	};
 
@@ -400,7 +390,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(TupleInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Tuple)
 	};
 
@@ -481,7 +470,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(FunctionInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Function)
 	};
 
@@ -504,7 +492,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(VariantInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Variant)
 	};
 
@@ -572,7 +559,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(ClassInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Class)
 	};
 
@@ -586,7 +572,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(NamespaceInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Namespace)
 	};
 
@@ -596,7 +581,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(ModuleInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Module)
 	};
 
@@ -609,7 +593,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(MetaInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Meta)
 	};
 
@@ -619,7 +602,6 @@ namespace tsh {
 
 		CONSTRUCT_WITH_CHECKED_CAST(ImportInfo)
 
-	protected:
 		CONSTRUCT_FROM_IMPLEMENTATION(Import)
 	};
 }

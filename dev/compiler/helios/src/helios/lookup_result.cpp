@@ -68,7 +68,7 @@ namespace compiler::helios {
 		dealiasSymbolList(query::Context& ctx, const SymbolList& symbol_list) {
 		SymbolList dealiased;
 		for (auto sym: symbol_list) {
-			UNPACK_RESULT(auto res =, ctx.query<QueryDealias>(sym));
+			UNPACK_RESULT(auto res =, *ctx.query<QueryDealias>(sym));
 			dealiased.insert(dealiased.end(), res.begin(), res.end());
 		}
 		return dealiased;

@@ -47,7 +47,7 @@ namespace compiler::frontend {
 
 		base::Optional<ModuleID> current_module;
 
-		for (const auto& [name, submodule]: ctx.query<QuerySubmodules>(from)) {
+		for (const auto& [name, submodule]: *ctx.query<QuerySubmodules>(from)) {
 			if (name == path.at(0)) {
 				current_module = submodule;
 				break;
@@ -68,7 +68,7 @@ namespace compiler::frontend {
 
 		for (usize i = 1; i < path.size() and current_module.has_value(); i++) {
 			auto curr_children = ctx.query<QuerySubmodules>(current_module.value());
-			for (const auto& [name, submodule]: curr_children) {
+			for (const auto& [name, submodule]: *curr_children) {
 				if (name == path.at(i)) {
 					current_module = submodule;
 					break;

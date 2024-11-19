@@ -36,20 +36,19 @@ namespace compiler::helios {
 			HOUTUnit out;
 
 			// grab constants:
-			for (auto sym: symbols_in_module_root) {
-				// this does not work.
+			for (auto sym: *symbols_in_module_root)
 				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
-			}
+
 
 			// grab functions:
-			for (auto sym: symbols_in_module_root)
+			for (auto sym: *symbols_in_module_root)
 				if (kind(sym) == SymbolKind::Function)
 					out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
 
 			return out;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
@@ -100,7 +99,7 @@ namespace compiler::helios {
 			void visitReturn(const pst::Return& stmt) override {
 				if (auto val = stmt.getValue()) {
 					auto expr = ctx.query<QueryHoutOfExpr>({ val.value() })
-					                .expect("Not handling errors here yet...");
+					                ->expect("Not handling errors here yet...");
 					output(code::ReturnStmt(scopeOf(stmt), std::move(expr)));
 				} else {
 					output(code::VoidReturnStmt(scopeOf(stmt)));
@@ -113,7 +112,7 @@ namespace compiler::helios {
 
 			void visitExprStmt(const pst::ExprStmt& stmt) override {
 				auto expr = ctx.query<QueryHoutOfExpr>({ PstRef<pst::ExprElement>(stmt.getExpr()) })
-					.expect("Not handling errors here yet...");
+				                .expect("Not handling errors here yet...");
 				output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
 			}
 
@@ -124,7 +123,7 @@ namespace compiler::helios {
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
 				auto condition = ctx.query<QueryHoutOfExpr>({ stmt.getCondition() })
-				                     .expect("Not handling errors here yet");
+				                     ->expect("Not handling errors here yet");
 
 				auto body = queryCodeOfCodeBlock(ctx, stmt.getBody());
 
@@ -151,14 +150,14 @@ namespace compiler::helios {
 				auto symbol
 					= ctx.query<QuerySymbolOfSTMT>({ scope_of_symbol, PstRef<pst::Stmt>(&stmt) });
 
-				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol).expect(
+				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 					"Handling errors is not supported in HOUT yet"
 				);
 
 				// for now initial value is assumed to always be present:
 				// this will probably change:
 				auto initial_value = ctx.query<QueryHoutOfExpr>({ stmt.getValue() })
-				                         .expect("Not handling errors here yet...");
+				                         ->expect("Not handling errors here yet...");
 
 				output(code::VariableStmt(
 					scope_of_symbol, std::move(initial_value), symbol_type, symbol
@@ -210,7 +209,7 @@ namespace compiler::helios {
 			return func_maker.out.value();
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCodeOFFun);

@@ -195,7 +195,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
-				  ctx.query<QueryTypeOfSymbolOrDefinition>(symbol).expect(
+				  ctx.query<QueryTypeOfSymbolOrDefinition>(symbol)->expect(
 					  "Handling errors in HOUT is not supported yet"
 				  ),
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
@@ -270,7 +270,7 @@ namespace compiler::helios::code {
 	}
 
 	errors::HResult<i64, errors::Failed> IdentifierExpr::evaluateValue(query::Context& ctx) const {
-		return ctx.query<QueryConstValueOf>(symbol);
+		return *ctx.query<QueryConstValueOf>(symbol);
 	}
 
 	KeywordExpr::KeywordExpr(query::Context& ctx, ScopeID scope, lang_def::Keyword keyword):
@@ -342,7 +342,7 @@ namespace compiler::helios::code {
 
 	errors::HResult<i64, errors::Failed> LinkedIdentifierExpr::evaluateValue(query::Context& ctx
 	) const {
-		return ctx.query<QueryConstValueOf>(symbols.back());
+		return *ctx.query<QueryConstValueOf>(symbols.back());
 	}
 
 	LinkedIdentifierExpr::LinkedIdentifierExpr(
@@ -352,7 +352,7 @@ namespace compiler::helios::code {
 			  scope,
 			  tsh::TypeDesc<>(
 				  ctx.query<QueryTypeOfSymbolOrDefinition>(symbols.back())
-					  .expect("Not handling errors here yet"),
+					  ->expect("Not handling errors here yet"),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
@@ -460,7 +460,7 @@ namespace compiler::helios::code {
 
 	private:
 		void testSymbol(SymID symbol) {
-			auto type = ctx.query<QueryTypeOfSymbol>(symbol);
+			auto type = *ctx.query<QueryTypeOfSymbol>(symbol);
 			if (type.hasError()) {
 				// this is a class?
 				is_type_expr = true;
@@ -604,8 +604,9 @@ namespace compiler::helios::code {
 				CORE_ASSERT(pst_access, "Not handling non-AccessExprs yet");
 				CORE_ASSERT(pst_access->getType() == ".", "Not handling .? access operator yet");
 
-				std::cout << "Lookup in: " << name(looked_up_symbol.back()).strView() << " " << pst_access->getName().value.strView() << std::endl;
-				auto new_symbols = ctx.query<QueryLookupInSymbol>(
+				std::cout << "Lookup in: " << name(looked_up_symbol.back()).strView() << " "
+						  << pst_access->getName().value.strView() << std::endl;
+				auto new_symbols = *ctx.query<QueryLookupInSymbol>(
 					{ looked_up_symbol.back(), pst_access->getName().value, true }
 				);
 
@@ -633,7 +634,7 @@ namespace compiler::helios::code {
 
 		void visitIdentifierLiteral(const pst::expr::IdentifierLiteral& stmt) override {
 			auto&& sym_list
-				= ctx.query<QueryLookupInScopeAndParents>({ scope, stmt.getName().value, true });
+				= *ctx.query<QueryLookupInScopeAndParents>({ scope, stmt.getName().value, true });
 
 			auto res = sym_list.getAsSingle();
 			if (res.hasError()) {
