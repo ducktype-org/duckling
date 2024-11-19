@@ -136,7 +136,7 @@ namespace compiler::helios {
 	/**
 	 * Calculates a value of a constant.
 	 */
-	DECLARE_QUERY(QueryConstValueOf, SymID, CRef<errors::HResult<i32 COMMA errors::Failed>>)
+	DECLARE_QUERY(QueryConstValueOf, SymID, CRef<errors::HResult<i64 COMMA errors::Failed>>)
 
 	using ParseTypeFromExpr_Result = errors::HResult<tsh::TypeInfo, PotentialParsingErrors>;
 	using QueryType_Result         = errors::HResult<tsh::TypeInfo, errors::Failed>;
