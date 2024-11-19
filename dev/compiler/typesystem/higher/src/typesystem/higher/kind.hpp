@@ -45,6 +45,11 @@ namespace tsh {
 		VTable,
 
 		/**
+		 * @brief The kind of the import value.
+		 */
+		Import,
+
+		/**
 		 * @brief The kind of the type which holds type values. In other words, the "type" type.
 		 */
 		Meta,

@@ -532,7 +532,7 @@ namespace compiler::helios {
 			}
 
 			void visitImport(const pst::Import&) override {
-				setTypeOfSymbol(ctx.query<tsh::QueryNamespaceType>({}));
+				setTypeOfSymbol(ctx.query<tsh::QueryImportType>({}));
 			}
 		};
 

@@ -18,7 +18,6 @@
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
 #include "pst_parser/pst_expr_visitor.hpp"
 #include "query_framework/query_int.hpp"
-#include "typesystem/higher/internal/queries.hpp"
 #include "typesystem/higher/kind.hpp"
 #include "typesystem/higher/queries/types.hpp"
 #include "typesystem/higher/type_desc.hpp"
@@ -706,79 +705,13 @@ namespace compiler::helios::code {
 }
 
 namespace compiler::helios {
-	/**
-	 * @brief HoutOfExpr for expression that contain only one element
-	 */
-	auto houtOfSingleExpr(query::Context& ctx, KeyOf_QueryHoutOfExpr key) -> base::Box<code::Expr> {
-		CORE_PANIC("Not implemented yet...");
-
-		// auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ key.expr });
-
-		// CORE_ASSERT(key.expr->elements.size() == 1, "houtOfSingleExpr got non single
-		// expression"); const auto& elem = key.expr->elements.at(0);
-
-		// variant_match(elem) {
-		// 	variant_case(pst::Expr::KeywordValue, key) {
-		// 		throw base::NotYetImplemented("Keyword expressions");
-		// 	}
-		// 	variant_case(pst::Expr::NumLiteral, num) {
-		// 		auto val = base::strIDToNum(num.num_id);
-		// 		return base::make_unique<code::LiteralValueExpr>(scope, val, ctx);
-		// 	}
-		// 	variant_case(pst::Expr::Identifier, identifier) {
-		// 		// @note: this does not handle overload
-		// 		// @note: this does not handle "." operation
-
-		// 		auto lookup_result = ctx.query<QueryLookupInScopeAndParents>(KeyOf_LookupInScope{
-		// 			scope, identifier.indent_id, true });
-
-		// 		compiler::helios::SymbolList lookup_dealiased;
-
-		// 		auto symbol_path
-		// 			= lookup_result.getAsSingle().expect("Not propagating errors for now...");
-
-		// 		for (auto single_sym: symbol_path) {
-		// 			auto dealiased = ctx.query<compiler::helios::QueryDealias>(single_sym)
-		// 			                     .expect("Not propagating errors for now...");
-		// 			lookup_dealiased.insert(
-		// 				lookup_dealiased.end(), dealiased.begin(), dealiased.end()
-		// 			);
-		// 		}
-
-		// 		CORE_ASSERT(!lookup_dealiased.empty(), "Empty lookup result");
-
-		// 		// @TODO: dont just ignore everything before last symbol
-		// 		return base::make_unique<code::IdentifierExpr>(scope, lookup_dealiased.back(), ctx);
-		// 	}
-		// 	variant_case(pst::Expr::Group, group) {
-		// 		throw base::NotYetImplemented("Expr from group");
-		// 	}
-		// 	variant_case_novalue(pst::Expr::Operator) {
-		// 		CORE_PANIC("Expression consisting of only operator is not allowed (yet?).");
-		// 	}
-		// }
-		// CORE_PANIC("No match in variant");
-	}
 
 	struct
 		IMPLEMENT_QUERY(QueryHoutOfExpr, errors::HResult<base::Box<code::Expr> COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// @EXPR: Implement this
 			ScopeID expr_scope = ctx.query<QueryPrimaryCodeScopeFor>({ key.expr });
 			return code::Expr::fromPST(ctx, expr_scope, key.expr);
 			CORE_PANIC("Not implemented yet...");
-			// @NOTE: this is simplest, mock implementation
-			// A proper Expr parsing will be added as new mission/PR
-
-			// if (key.expr->elements.size() == 1)
-			// 	return houtOfSingleExpr(ctx, key);
-			// else {
-			// 	std::stringstream expr_dprint;
-			// 	key.expr->dprint(expr_dprint);
-			// 	throw base::NotYetImplemented(
-			// 		base::strConcat("Complicated HOUT expressions: ", expr_dprint.str())
-			// 	);
-			// }
 		}
 
 		// @TODO: perhaps add cache
