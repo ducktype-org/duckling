@@ -483,7 +483,8 @@ namespace compiler::helios {
 				i64 result_value = result.value();
 				if (expr.op.value == "-" && expr.prefix) result = -result_value;
 				else {
-					throw base::NotYetImplemented("Evaluation of different than '-' unary operators is not implemented yet");
+					// Not implemented yet
+					result = errors::HError(errors::Failed());
 				}
 			}
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {

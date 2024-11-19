@@ -232,28 +232,7 @@ namespace compiler::helios::code {
 		rhs->debugPrint(out);
 	}
 
-	errors::HResult<i64, errors::Failed> LiteralValueExpr::evaluateValue(query::Context&) const {
-		return value;
-	}
 
-	errors::HResult<i64, errors::Failed> BinaryOperatorExpr::evaluateValue(query::Context& ctx
-	) const {
-		UNPACK_RESULT(i64 lhs_value =, lhs->evaluateValue(ctx));
-		UNPACK_RESULT(i64 rhs_value =, rhs->evaluateValue(ctx));
-		if (op.value == "+")
-			return lhs_value + rhs_value;
-		else if (op.value == "-")
-			return lhs_value - rhs_value;
-		else if (op.value == "*")
-			return lhs_value * rhs_value;
-		else if (op.value == "/")
-			return lhs_value / rhs_value;
-		else if (op.value == "%")
-			return lhs_value % rhs_value;
-		else if (op.value == "**")
-			return std::pow(lhs_value, rhs_value);
-		CORE_PANIC("Unknown operator");
-	}
 
 	void ParenthesisExpr::debugPrint(std::ostream& out) const {
 		out << "(";
@@ -265,13 +244,7 @@ namespace compiler::helios::code {
 		  Expr(scope, inner->type_desc),
 		  inner(std::move(inner)) {}
 
-	errors::HResult<i64, errors::Failed> ParenthesisExpr::evaluateValue(query::Context& ctx) const {
-		return inner->evaluateValue(ctx);
-	}
 
-	errors::HResult<i64, errors::Failed> IdentifierExpr::evaluateValue(query::Context& ctx) const {
-		return *ctx.query<QueryConstValueOf>(symbol);
-	}
 
 	KeywordExpr::KeywordExpr(query::Context& ctx, ScopeID scope, lang_def::Keyword keyword):
 		  Expr(
@@ -282,9 +255,6 @@ namespace compiler::helios::code {
 		  ),
 		  keyword(keyword) {}
 
-	errors::HResult<i64, errors::Failed> KeywordExpr::evaluateValue(query::Context&) const {
-		throw base::NotYetImplemented("Evaluation of keyword values is not implemented yet");
-	}
 
 	void KeywordExpr::debugPrint(std::ostream& out) const {
 		out << lang_def::keywordToStr(keyword).strView();
@@ -306,10 +276,6 @@ namespace compiler::helios::code {
 		out << ")";
 	}
 
-	errors::HResult<i64, errors::Failed>
-		TupleConstructorExpr::evaluateValue(query::Context&) const {
-		throw base::NotYetImplemented("Evaluation of tuple values is not implemented yet");
-	}
 
 	void VariantConstructorExpr::debugPrint(std::ostream& out) const {
 		out << "(";
@@ -321,10 +287,6 @@ namespace compiler::helios::code {
 		out << ")";
 	}
 
-	errors::HResult<i64, errors::Failed>
-		VariantConstructorExpr::evaluateValue(query::Context&) const {
-		throw base::NotYetImplemented("Evaluation of variant values is not implemented yet");
-	}
 
 	VariantConstructorExpr::VariantConstructorExpr(
 		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
@@ -338,11 +300,6 @@ namespace compiler::helios::code {
 			out << name(symbol).str();
 			add_dot = true;
 		}
-	}
-
-	errors::HResult<i64, errors::Failed> LinkedIdentifierExpr::evaluateValue(query::Context& ctx
-	) const {
-		return *ctx.query<QueryConstValueOf>(symbols.back());
 	}
 
 	LinkedIdentifierExpr::LinkedIdentifierExpr(
@@ -374,16 +331,6 @@ namespace compiler::helios::code {
 			expr->debugPrint(out);
 			out << op.str();
 		}
-	}
-
-	errors::HResult<i64, errors::Failed> UnaryOperatorExpr::evaluateValue(query::Context& ctx
-	) const {
-		UNPACK_RESULT(i64 expr_value =, expr->evaluateValue(ctx));
-		if (op.value == "-" && prefix) return -expr_value;
-		return errors::HError(errors::Failed());
-		// throw base::NotYetImplemented(
-		// 	base::strConcat("Not handling prefix:", prefix, " of operator ", op.str())
-		// );
 	}
 
 	struct HoutIsTypeExprVisitor: public HoutExprVisitor {
@@ -566,9 +513,8 @@ namespace compiler::helios::code {
 				rhs.node.value()->acceptVisitor(rhs_vis_expr);
 
 				if (lhs_vis_expr.is_type_expr != rhs_vis_expr.is_type_expr) {
-					// @TODO: I think this is not "NotYetImplemented", but rather
-					// an invalid syntax, so a compilation error should be raised.
-					throw base::NotYetImplemented("Not implemented.");
+					// @TODO: Report an error
+					return;
 				}
 				if (stmt.getOperator().str()[0] == '|' && lhs_vis_expr.is_type_expr
 				    && rhs_vis_expr.is_type_expr) {

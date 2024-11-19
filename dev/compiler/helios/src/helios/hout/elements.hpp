@@ -65,9 +65,6 @@ namespace compiler::helios::code {
 
 		static errors::HResult<base::Box<Expr>, errors::Failed>
 			fromPST(query::Context& ctx, ScopeID scope, const PstRef<pst::ExprElement> root);
-
-		// @TODO: Probably this should be moved to a visitor that handles evaluating values.
-		virtual errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const = 0;
 	};
 
 	/**
@@ -180,7 +177,6 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 
-		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 
 	/**
@@ -194,7 +190,6 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 
-		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 
 	/**
@@ -212,7 +207,6 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 
-		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 
 	/**
@@ -231,7 +225,6 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 
-		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 
 	struct BinaryOperatorExpr: public Expr {
@@ -254,7 +247,6 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 
-		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 
 	/**
@@ -273,7 +265,6 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const override;
 		void acceptVisitor(HoutExprVisitor&) const override;
 
-		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 
 	struct TupleConstructorExpr: public Expr {
@@ -286,7 +277,6 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const override;
 		void acceptVisitor(HoutExprVisitor&) const override;
 
-		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 
 	struct VariantConstructorExpr: public Expr {
@@ -299,7 +289,6 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 
-		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 
 	/**
@@ -318,7 +307,6 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 
-		errors::HResult<i64, errors::Failed> evaluateValue(query::Context& ctx) const override;
 	};
 }
 
