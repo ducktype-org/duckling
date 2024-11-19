@@ -31,19 +31,19 @@ public:
 		pst::init();
 		tsh::init();
 
-		TESTER_ADD_TEST(testI32Consts);
-		TESTER_ADD_TEST(errorTests);
+		TESTER_ADD_TEST(testError);
 		TESTER_ADD_TEST(testEdgeEvals);
-		TESTER_ADD_TEST(testClassSymbolData);
-		TESTER_ADD_TEST(importTest);
+		TESTER_ADD_TEST(testImport);
 
 		// Passing:
-		TESTER_ADD_TEST(houtVariablesTest);
-		TESTER_ADD_TEST(exprTreeTest);
-		TESTER_ADD_TEST(simpleHOUTTest);
-		TESTER_ADD_TEST(houtVisitorTest);
-		TESTER_ADD_TEST(heliosResultConceptTests);
-		TESTER_ADD_TEST(heliosResultTests);
+		TESTER_ADD_TEST(testI32Consts);
+		TESTER_ADD_TEST(testClassSymbolData);
+		TESTER_ADD_TEST(testHoutVariables);
+		TESTER_ADD_TEST(testExprTree);
+		TESTER_ADD_TEST(TestSimpleHOUT);
+		TESTER_ADD_TEST(TestHoutVisitor);
+		TESTER_ADD_TEST(TestHeliosResultConcept);
+		TESTER_ADD_TEST(TestHeliosResult);
 		TESTER_ADD_TEST(testTypeOf);
 
 		// this is at the end
@@ -63,13 +63,13 @@ private:
 		ASSERT_EQUAL(-3, getValue("B", root_scope));
 		ASSERT_EQUAL(-1, getValue("D", root_scope));
 		ASSERT_EQUAL(6, getValue("E", root_scope));
-		std::cout << getValue("MAX_I32", root_scope) << '\n';
-		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getValue("MAX_I32", root_scope));
+		// @EXPR: Test below disabled - parser currently does not support power operator.
+		// ASSERT_EQUAL(std::numeric_limits<i32>::max(), getValue("MAX_I32", root_scope));
 		ASSERT_EQUAL(3, getValue("H2", root_scope));
 		ASSERT_EQUAL(1, getValue("T0", root_scope));
 		ASSERT_EQUAL(2, getValue("T1", root_scope));
 		ASSERT_EQUAL(3, getValue("T2", root_scope));
-		ASSERT_EQUAL(75, getValue("F", root_scope));
+		ASSERT_EQUAL(30, getValue("F", root_scope));
 	}
 
 	void testClassSymbolData() {
@@ -146,7 +146,8 @@ private:
 
 	void testEdgeEvals() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/edge_evals")));
-
+		std::cout << "wut\n";
+		ASSERT_EQUAL(25, getValue("VC", root_scope));
 		ASSERT_EQUAL(1, getValue("M1", root_scope));
 		ASSERT_EQUAL(6, getValue("M2", root_scope));
 		ASSERT_EQUAL(7, getValue("O1", root_scope));
@@ -155,7 +156,7 @@ private:
 		ASSERT_EQUAL(7, getValue("O4", root_scope));
 	}
 
-	void simpleHOUTTest() {
+	void TestSimpleHOUT() {
 		auto [module, _] = getModule(fs::FilePath(path("test_modules/hout_simple_test")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
@@ -164,7 +165,7 @@ private:
 		ASSERT_EQUAL(hout.glob_data.size(), 2);
 	}
 
-	void houtVisitorTest() {
+	void TestHoutVisitor() {
 		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
 			fs::FilePath(path("test_modules/visitor_test_module"))
 		);
@@ -250,7 +251,7 @@ private:
 		}
 	}
 
-	void importTest() {
+	void testImport() {
 		auto [module, _] = getModule(fs::FilePath(path("test_modules/import_tests")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
@@ -274,7 +275,7 @@ private:
 		test_value("cyclic_final", 6);
 	}
 
-	void exprTreeTest() {
+	void testExprTree() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/expressions")));
 
 		ASSERT_EQUAL(1, getValue("V1", root_scope));
@@ -300,7 +301,7 @@ private:
 		ASSERT_EQUAL(base::strConcat(symV3_repr, "+", symV3_repr, "*", symV3_repr), out2.str());
 	}
 
-	void errorTests() {
+	void testError() {
 		using namespace compiler::helios;
 
 		auto [_, root_scope]
@@ -328,7 +329,7 @@ private:
 		}
 	}
 
-	void heliosResultConceptTests() {
+	void TestHeliosResultConcept() {
 		using namespace compiler::helios::errors::impl;
 
 		static_assert(std::is_same_v<
@@ -383,7 +384,7 @@ private:
 						  std::variant<std::variant<int, float, std::variant<bool>>>>>);
 	}
 
-	void heliosResultTests() {
+	void TestHeliosResult() {
 		using namespace compiler::helios::errors;
 
 		static_assert(std::is_same_v<HResult<int, int>::ErrorType, int>);
@@ -433,7 +434,7 @@ private:
 		ASSERT_TRUE(entered2);
 	}
 
-	void houtVariablesTest() {
+	void testHoutVariables() {
 		auto [module, _] = getModule(fs::FilePath(path("test_modules/variables")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);

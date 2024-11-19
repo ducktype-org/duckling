@@ -14,7 +14,6 @@
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
 #include "base/box.hpp"
-#include "base/exceptions.hpp"
 #include "helios/helios_errors.hpp"
 #include "helios/lookup_result.hpp"
 #include "lang_definitions/key_spec_op.hpp"
@@ -262,7 +261,12 @@ namespace compiler::helios::code {
 	 * @brief General unary operator. Correctness depends on a proper lookup of a method (operator).
 	 */
 	struct UnaryOperatorExpr: public Expr {
-		// @EXPR: Fill
+		// @NOTE: `op` and `prefix` should be replaced with a SymID that links to a proper function
+		// that resolves the operator
+		pst::Operator op;
+		bool prefix = false;  // prefix/suffix
+
+		base::Box<Expr> expr;
 
 		void debugPrint(std::ostream& out) const override;
 		void acceptVisitor(HoutExprVisitor&) const override;

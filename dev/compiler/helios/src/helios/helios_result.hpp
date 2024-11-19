@@ -279,6 +279,17 @@ namespace compiler::helios::errors {
 		constexpr ResTp&& value() && { return std::move(expect("Result it empty!")); }
 
 		/**
+		 * @brief Access the value as an optional.
+		 */
+		constexpr const base::Optional<ResTp>& optValue() const& { return value_storage; }
+
+		constexpr const base::Optional<ResTp>&& optValue() const&& { return std::move(value_storage); }
+
+		constexpr base::Optional<ResTp>& optValue() & { return value_storage; }
+
+		constexpr base::Optional<ResTp>&& optValue() && { return std::move(value_storage); }
+
+		/**
 		 * @brief Access the value, throw on no value with a message.
 		 */
 		constexpr const ResTp& expect(std::string_view message) const& {

@@ -1,6 +1,8 @@
 #include "lookup_result.hpp"
+#include "helios/symbols/symbols.hpp"
 #include "helios_errors.hpp"
 #include <base/exceptions.hpp>
+#include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {
 
@@ -61,4 +63,14 @@ namespace compiler::helios {
 	}
 
 	NestedResult LookupResult::toNode(SymID node) const { return { node, { leaves, children } }; }
+
+	errors::HResult<SymbolList, errors::Failed>
+		dealiasSymbolList(query::Context& ctx, const SymbolList& symbol_list) {
+		SymbolList dealiased;
+		for (auto sym: symbol_list) {
+			UNPACK_RESULT(auto res =, ctx.query<QueryDealias>(sym));
+			dealiased.insert(dealiased.end(), res.begin(), res.end());
+		}
+		return dealiased;
+	}
 }

@@ -922,6 +922,10 @@ namespace compiler::helios {
 			void visitNamespace(const pst::Namespace&) override {
 				setTypeOfSymbol(ctx.query<tsh::QueryNamespaceType>({}));
 			}
+
+			void visitAlias(const pst::Alias& stmt) override {
+				std::cout << "Alias...\n";
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

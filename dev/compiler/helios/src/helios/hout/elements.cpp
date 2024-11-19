@@ -250,7 +250,7 @@ namespace compiler::helios::code {
 			return lhs_value / rhs_value;
 		else if (op.value == "%")
 			return lhs_value % rhs_value;
-		else if (op.value == "^")
+		else if (op.value == "**")
 			return std::pow(lhs_value, rhs_value);
 		CORE_PANIC("Unknown operator");
 	}
@@ -594,7 +594,9 @@ namespace compiler::helios::code {
 					new_symbols_single.value().end()
 				);
 			}
-			node = base::Box(new LinkedIdentifierExpr(ctx, scope, std::move(looked_up_symbol)));
+			dealiasSymbolList(ctx, looked_up_symbol).optValue().ifValue([&](auto&& dealiased) {
+				node = base::Box(new LinkedIdentifierExpr(ctx, scope, std::move(dealiased)));
+			});
 		}
 
 		void visitRoundExpr(const pst::expr::RoundExpr& stmt) override {
@@ -640,6 +642,15 @@ namespace compiler::helios::code {
 			}
 
 			node = base::Box(new TupleConstructorExpr(ctx, scope, std::move(expressions)));
+		}
+
+		void visitSuffixOperator(const pst::expr::SuffixOperator& stmt) override {
+			std::cout << "Suffix:\n";
+			stmt.dprint(std::cout);
+			std::cout << "Suffix2:\n" << std::endl;
+			stmt.debugPrint(std::cout);
+			std::cout << std::endl;
+			CORE_PANIC("Not handling it yet...");
 		}
 	};
 

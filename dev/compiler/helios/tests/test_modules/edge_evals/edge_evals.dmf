@@ -1,3 +1,11 @@
+namespace Na {
+    namespace Nb {
+        fun c(v: i32) = { return v + 2; }
+    }
+}
+
+# const VC: i32 = (Na.Nb.c)(23)
+const VC: i32 = Na.Nb.c(23);
 
 const M1: i32 = 10 / 2 / 5;
 const M2: i32 = 120 / 5 / 4;
