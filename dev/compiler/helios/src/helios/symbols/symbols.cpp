@@ -22,7 +22,10 @@
 #include "../helios_result.hpp"
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
 #include "typesystem/higher/queries/types.hpp"
+
+#include <cmath>
 #include <base/optional.hpp>
+#include <helios/hout/visitors.hpp>
 #include <typesystem/higher/type_info.hpp>
 
 namespace compiler::helios {
@@ -429,6 +432,78 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
 	struct IMPLEMENT_QUERY(QueryConstValueOf, errors::HResult<i64 COMMA errors::Failed>) {
+		struct EvaluateHoutExprVisitor: public code::HoutExprVisitor {
+			Context& ctx;
+			errors::HResult<i64 COMMA errors::Failed> result;
+
+			EvaluateHoutExprVisitor(Context& ctx): ctx(ctx) {}
+
+			static errors::HResult<i64, errors::Failed> evaluateExpr(Context& ctx, const code::Expr &expr) {
+				EvaluateHoutExprVisitor visitor(ctx);
+				expr.acceptVisitor(visitor);
+				return visitor.result;
+			}
+
+			void visitLiteralValueExpr(const code::LiteralValueExpr& expr) override { result = expr.value; }
+			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
+				result = *ctx.query<QueryConstValueOf>(expr.symbol);
+			}
+			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) override {
+				auto lhs_result = evaluateExpr(ctx, *expr.lhs);
+				if (lhs_result.hasError()) {
+					result = lhs_result;
+					return;
+				}
+				auto rhs_result = evaluateExpr(ctx, *expr.rhs);
+				if (rhs_result.hasError()) {
+					result = rhs_result;
+					return;
+				}
+				i64 lhs_value = lhs_result.value(), rhs_value = rhs_result.value();
+				if (expr.op.value == "+")
+					result = lhs_value + rhs_value;
+				else if (expr.op.value == "-")
+					result = lhs_value - rhs_value;
+				else if (expr.op.value == "*")
+					result = lhs_value * rhs_value;
+				else if (expr.op.value == "/")
+					result = lhs_value / rhs_value;
+				else if (expr.op.value == "%")
+					result = lhs_value % rhs_value;
+				else if (expr.op.value == "**")
+					result = std::pow(lhs_value, rhs_value);
+				else {
+					result = errors::HError(errors::Failed());
+					throw base::NotYetImplemented("Evaluation of different than '+-*/%**' binary operators is not implemented yet");
+				}
+			}
+			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) override {
+				result = evaluateExpr(ctx, *expr.expr);
+				if (result.hasError()) return;
+				i64 result_value = result.value();
+				if (expr.op.value == "-" && expr.prefix) result = -result_value;
+				else {
+					// Not implemented yet
+					result = errors::HError(errors::Failed());
+				}
+			}
+			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
+				result = evaluateExpr(ctx, *expr.inner);
+			}
+			void visitKeywordExpr(const code::KeywordExpr& expr) override {
+				throw base::NotYetImplemented("Evaluation of keyword values is not implemented yet");
+			}
+			void visitTupleConstructorExpr(const code::TupleConstructorExpr& expr) override {
+				throw base::NotYetImplemented("Evaluation of tuple values is not implemented yet");
+			}
+			void visitVariantConstructorExpr(const code::VariantConstructorExpr& expr) override {
+				throw base::NotYetImplemented("Evaluation of variant values is not implemented yet");
+			}
+			void visitLinkedIdentifierExpr(const code::LinkedIdentifierExpr& expr) override {
+				result = *ctx.query<QueryConstValueOf>(expr.symbols.back());
+			}
+		};
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
@@ -439,10 +514,9 @@ namespace compiler::helios {
 			// @EXPR: Find all calls to fromPST and change them to use query.
 			auto eval = code::Expr::fromPST(ctx, key_scope, const_symbol->getValue());
 			if (eval.hasError()) {
-				// @TODO: Report an error
 				return errors::HError(errors::Failed());
 			}
-			return eval.value()->evaluateValue(ctx);
+			return EvaluateHoutExprVisitor::evaluateExpr(ctx, *eval.value());
 		}
 
 		QUERY_AUTO_CACHE_REF
