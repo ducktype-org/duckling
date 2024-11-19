@@ -23,6 +23,7 @@
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
 #include "typesystem/higher/queries/types.hpp"
 #include <base/optional.hpp>
+#include <helios/hout/visitors.hpp>
 #include <typesystem/higher/type_info.hpp>
 
 namespace compiler::helios {
@@ -429,6 +430,26 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
 
 	struct IMPLEMENT_QUERY(QueryConstValueOf, errors::HResult<i32 COMMA errors::Failed>) {
+		struct EvalutateHoutExprVisitor: public code::HoutExprVisitor {
+			Context& ctx;
+			i64      result = 0;
+
+			EvalutateHoutExprVisitor(Context& ctx): ctx(ctx) {}
+
+			void visitLiteralValueExpr(const code::LiteralValueExpr& expr) override { result = expr.value; }
+			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
+				auto r = ctx.query<QueryConstValueOf>(expr.symbol);
+				if (r.hasValue()) result = r.value();
+				else
+			}
+			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) override { result = expr.value; }
+			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) override { result = expr.value; }
+			void visitKeywordExpr(const code::KeywordExpr& expr) override { result = expr.value; }
+			void visitTupleConstructorExpr(const code::TupleConstructorExpr& expr) override { result = expr.value; }
+			void visitVariantConstructorExpr(const code::VariantConstructorExpr& expr) override { result = expr.value; }
+			void visitLinkedIdentifierExpr(const code::LinkedIdentifierExpr& expr) override { result = expr.value; }
+		};
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
