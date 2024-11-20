@@ -10,7 +10,6 @@
 #include <base/str_utils.hpp>
 #include <cctype>
 #include <iostream>
-X
 
 /**
  * Basic helper functions.
@@ -30,8 +29,7 @@ namespace {
 
 		// if an argv[i] contains a white space, then it must have been added with quotes
 		for (usize i = 1; i < argc; i++) {
-			CORE_ASSERT(
-				argv[i] != nullptr, "Clap received null pointer as one of argv arguments.");
+			CORE_ASSERT(argv[i] != nullptr, "Clap received null pointer as one of argv arguments.");
 
 			bool has_whitespace = false;
 			auto arg            = std::string(argv[i]);
