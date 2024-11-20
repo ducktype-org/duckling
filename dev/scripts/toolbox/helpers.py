@@ -82,7 +82,7 @@ def get_llvm_strings(version, os, arch) -> tuple[str, str, str, str]:
         # This branch is legacy, for LLVM 18 and lower.
         if os != "Linux":
             exit_with_error(
-                "This configuration is not supported: {arch} {os}. Visit: https://github.com/llvm/llvm-project/releases/"
+                f"This configuration is not supported: {version=}, {arch=} {os=}. Visit: https://github.com/llvm/llvm-project/releases/"
             )
 
         if arch == "x86_64":
