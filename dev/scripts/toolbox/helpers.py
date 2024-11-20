@@ -27,9 +27,9 @@ def bash_command(cmd, cwd=".", redirect=None):
     stdout, stderr = proc.communicate()
 
     if stdout is not None:
-        stdout = stdout.decode('UTF-8')
+        stdout = stdout.decode("UTF-8")
     if stderr is not None:
-        stderr = stderr.decode('UTF-8')
+        stderr = stderr.decode("UTF-8")
 
     status = proc.wait()
     if status != 0:
@@ -44,12 +44,15 @@ def bash_command_get_output(cmd, cwd="."):
 def log_info(msg, newline=True):
     click.echo(click.style(f"[INFO]: {msg}", fg="yellow", bold=False), nl=newline)
 
+
 def log_warning(msg, fg="magenta", newline=True):
     click.echo(click.style(f"[WARNING]: {msg}", fg=fg, bold=True), nl=newline)
+
 
 def get_input(msg, newline=False):
     click.echo(click.style(f"[INPUT]: {msg}", fg="blue", bold=False), nl=newline)
     return input()
+
 
 def log_new_line():
     click.echo("")
@@ -58,3 +61,38 @@ def log_new_line():
 def abort_if_false(ctx, param, value):
     if not value:
         ctx.abort()
+
+
+def get_llvm_strings(version, os, arch) -> tuple[str, str, str, str]:
+    """
+    Takes `version`, `os` and `arch` params and returns a tuple[link_to_download, downloaded_file, extracted_file, friendly_name]
+    """
+    name = ""
+    if int(version.split(".")[0]) >= 19:
+        name = f"LLVM-{version}-{os}-{arch}"
+
+        return (
+            f"https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/{name}.tar.xz",
+            f"scripts/downloads/llvm_{version}_{os}_{arch}.tar.xz",
+            name,
+            f"lib_llvm_{version}_{os}_{arch}",
+        )
+
+    else:
+        # This branch is legacy, for LLVM 18 and lower.
+        if os != "Linux":
+            exit_with_error(
+                "This configuration is not supported: {arch} {os}. Visit: https://github.com/llvm/llvm-project/releases/"
+            )
+
+        if arch == "x86_64":
+            name = f"clang+llvm-{version}-x86_64-linux-gnu-ubuntu-18.04"
+        else:
+            name = f"clang+llvm-{version}-aarch64-linux-gnu"
+
+        return (
+            f"https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/{name}.tar.xz",
+            f"scripts/downloads/llvm_{version}_{arch}.tar.xz",
+            name,
+            f"llvm_lib_{version}_{arch}",
+        )
