@@ -56,6 +56,12 @@ namespace compiler::helios {
 		tsh::FunctionInfo type;
 
 		/**
+		 * @brief Lifetime scope, thats higher
+		 * then any lifetime scope in the function (including parameters)
+		 */
+		helios::ScopeID top_lifetime_scope;
+
+		/**
 		 * Construct a HOUT Function object.
 		 * @param symbol The symbol of the function.
 		 * @param ctx The query context to resolve the function's properties.

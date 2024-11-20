@@ -268,6 +268,7 @@ namespace compiler::mir {
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
+		helios::ScopeID              top_lifetime_scope;
 
 		// helios ID for hashes, ... this it temporary?
 		// pushing this ID all the way here is problematic
@@ -288,6 +289,7 @@ namespace compiler::mir {
 			std::vector<Block>           blocks,
 			base::StableVector<MirLocal> local_list,
 			BlockID                      entry_block,
+			helios::ScopeID              top_lifetime_scope,
 			helios::SymID                helios_id
 		);
 

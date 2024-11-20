@@ -46,18 +46,18 @@ private:
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
-			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
-			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
+			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			ASSERT_EQUAL(foo_mir->name, base::StrID("foo"));
 
-			auto& foo_lir = ctx.query<compiler::lir::LowerToLirFunction>({ foo_mir });
-			ASSERT_TRUE(foo_lir.validateBlockOrder());
+			auto foo_lir = ctx.query<compiler::lir::LowerToLirFunction>({ foo_mir });
+			ASSERT_TRUE(foo_lir->validateBlockOrder());
 
 			// @TODO: add some proper tests here
 
 			// Test debug print:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
 			std::stringstream foo_str;
-			foo_lir.debugPrint(ctx, foo_str);
+			foo_lir->debugPrint(ctx, foo_str);
 		});
 	}
 };

@@ -24,6 +24,7 @@ class MIRConstructionTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
+		// @TODO: add parameters test, once they are handled well
 		TESTER_ADD_TEST(simpleVarTest);
 		TESTER_ADD_TEST(testTerminatorSuccessors);
 		TESTER_ADD_TEST(mockLifetimeAnalysisTest);
@@ -131,14 +132,14 @@ private:
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
-			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
 
-			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL(foo_mir.blocks.size(), 5);
-			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
+			ASSERT_EQUAL(foo_mir->name, base::StrID("foo"));
+			ASSERT_EQUAL(foo_mir->blocks.size(), 5);
+			ASSERT_EQUAL(foo_mir->local_list.size(), 2);
 
 			auto get_block_terminator
-				= [&](u64 block_id) { return foo_mir.blocks.at(block_id).terminator; };
+				= [&](u64 block_id) { return foo_mir->blocks.at(block_id).terminator; };
 			auto get_block_successors = [&](u64 block_id) {
 				return compiler::mir::getTerminatorSuccessors(get_block_terminator(block_id));
 			};
@@ -171,10 +172,10 @@ private:
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
-			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
 
-			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
+			ASSERT_EQUAL(foo_mir->name, base::StrID("foo"));
+			ASSERT_EQUAL(foo_mir->local_list.size(), 2);
 		});
 	}
 };

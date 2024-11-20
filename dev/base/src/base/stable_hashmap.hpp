@@ -5,8 +5,9 @@
 
 #pragma once
 
-#include "unique_pointer.hpp"
+#include "box.hpp"
 #include "maps.hpp"
+#include <type_traits>
 
 namespace base {
 	/**
@@ -21,20 +22,20 @@ namespace base {
 		StableHashMap() = default;
 
 		/**
-		 * Returns a const reference to data. If the data identified by the key does not exist
-		 * throws std::out_of_range exception.
-		 * @param key Data key
-		 * @return A const reference to the data.
-		 */
-		const DATA_T& at(const KEY_T& key) const { return *data.at(key); }
-
-		/**
-		 * Returns a reference to the data. If the data identified by the key does not exist throws
-		 * std::out_of_range exception.
+		 * Returns the data identified by the key.
+		 * @note throws `std::out_of_range` if key is not present
 		 * @param key Data key
 		 * @return A reference to the data.
 		 */
-		DATA_T& at(const KEY_T& key) { return *data.at(key); }
+		DATA_T& operator[](const KEY_T& key) { return *data[key]; }
+
+		/**
+		 * Returns the data identified by the key.
+		 * @note throws `std::out_of_range` if key is not present
+		 * @param key Data key
+		 * @return A reference to the data.
+		 */
+		const DATA_T& operator[](const KEY_T& key) const { return *data[key]; }
 
 		/**
 		 * Returns a reference to the data inside an optional. If the data identified by the key
@@ -58,19 +59,16 @@ namespace base {
 			return {};
 		}
 
-		Optional<DATA_T> atMaybeCopy(const KEY_T& key) const {
+		/**
+		 * Returns a copy of a data inside an optional. If the data identified by the
+		 * key does not exist returns an empty optional.
+		 * @param key Data key
+		 * @return An optional with a copy of the data.
+		 */
+		Optional<DATA_T> atMaybeCopy(const KEY_T& key) const
+			requires std::is_copy_constructible_v<DATA_T> {
 			if_opt_some(data.atMaybe(key), ptr) { return *ptr; }
 			return {};
-		}
-
-		/**
-		 * Returns the data identified by the key. If needed, allocates space for the key and data.
-		 * @param key Data key
-		 * @return A reference to the data.
-		 */
-		DATA_T& operator[](const KEY_T& key) {
-			if (!contains(key)) data.emplace(key, ::base::make_unique<DATA_T>());
-			return *data[key];
 		}
 
 		/**
@@ -80,9 +78,7 @@ namespace base {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		auto put(K&& key, D&& value) {
-			return data.put(
-				std::forward<K>(key), ::base::make_unique<DATA_T>(std::forward<D>(value))
-			);
+			return data.put(std::forward<K>(key), ::base::box<DATA_T>(std::forward<D>(value)));
 		}
 
 		/**
@@ -107,6 +103,6 @@ namespace base {
 		}
 
 	private:
-		HashMap<KEY_T, unique_ptr<DATA_T>, HASH_T> data;
+		HashMap<KEY_T, Box<DATA_T>, HASH_T> data;
 	};
 }
