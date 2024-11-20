@@ -6,27 +6,27 @@
 					"Name": "xxx"
 				},
 				"Base": {
-					"Expression": [
-						{
-							"Identifier": "aaa"
-						},
-					]
+					"Identifier Expression": {
+						"name": {
+							"Name": "aaa"
+						}
+					}
 				},
 				"Implements": {
 					"inheritance list": [
 						{
-							"Expression": [
-								{
-									"Identifier": "bbb"
-								},
-							]
+							"Identifier Expression": {
+								"name": {
+									"Name": "bbb"
+								}
+							}
 						},
 						{
-							"Expression": [
-								{
-									"Identifier": "cccc"
-								},
-							]
+							"Identifier Expression": {
+								"name": {
+									"Name": "cccc"
+								}
+							}
 						},
 					]
 				},
@@ -39,11 +39,9 @@
 									"Name": "x"
 								},
 								"type": {
-									"Expression": [
-										{
-											"KeywordValue": "i32"
-										},
-									]
+									"Keyword Expression": {
+										"keyword": "i32"
+									}
 								}
 							}
 						},
@@ -57,18 +55,14 @@
 									"Name": "y"
 								},
 								"type": {
-									"Expression": [
-										{
-											"KeywordValue": "i32"
-										},
-									]
+									"Keyword Expression": {
+										"keyword": "i32"
+									}
 								},
 								"initial": {
-									"Expression": [
-										{
-											"NumLiteral": "5"
-										},
-									]
+									"Value Expr": {
+										"number": "5"
+									}
 								}
 							}
 						},
@@ -86,11 +80,9 @@
 														"Name": "a"
 													},
 													"type": {
-														"Expression": [
-															{
-																"KeywordValue": "i64"
-															},
-														]
+														"Keyword Expression": {
+															"keyword": "i64"
+														}
 													}
 												}
 											}
@@ -102,11 +94,11 @@
 														"Name": "c"
 													},
 													"type": {
-														"Expression": [
-															{
-																"Identifier": "yyy"
-															},
-														]
+														"Identifier Expression": {
+															"name": {
+																"Name": "yyy"
+															}
+														}
 													}
 												}
 											}
@@ -118,23 +110,29 @@
 									"Code Block": [
 										{
 											"Expr Stmt": {
-												"Expression": [
-													{
-														"Identifier": "goo"
-													},
-													{
-														"Group": {
-															"type": "()",
-															"expr": {
-																"Expression": [
-																	{
-																		"Identifier": "a"
-																	},
-																]
+												"Chain Expression": {
+													"literal": {
+														"Identifier Expression": {
+															"name": {
+																"Name": "goo"
 															}
 														}
 													},
-												]
+													"chain": [
+														{
+															"Call Expression": {
+																"type": "[]",
+																"arguments": {
+																	"Identifier Expression": {
+																		"name": {
+																			"Name": "a"
+																		}
+																	}
+																}
+															}
+														}
+													]
+												}
 											}
 										},
 									]
@@ -158,11 +156,9 @@
 														"Name": "z"
 													},
 													"type": {
-														"Expression": [
-															{
-																"KeywordValue": "i64"
-															},
-														]
+														"Keyword Expression": {
+															"keyword": "i64"
+														}
 													}
 												}
 											}
@@ -170,38 +166,42 @@
 									]
 								},
 								"return": {
-									"Expression": [
-										{
-											"KeywordValue": "i64"
-										},
-									]
+									"Keyword Expression": {
+										"keyword": "i64"
+									}
 								},
 								"body": {
 									"Code Block": [
 										{
 											"Expr Stmt": {
-												"Expression": [
-													{
-														"Identifier": "x"
+												"Assignment Expr": {
+													"assigned variables": {
+														"Identifier Expression": {
+															"name": {
+																"Name": "x"
+															}
+														}
 													},
-													{
-														"Operator": "="
-													},
-													{
-														"Identifier": "z"
-													},
-												]
+													"assignment type": "=",
+													"assigned value": {
+														"Identifier Expression": {
+															"name": {
+																"Name": "z"
+															}
+														}
+													}
+												}
 											}
 										},
 										{
 											"Action": {
 												"kind": "Return",
 												"value": {
-													"Expression": [
-														{
-															"Identifier": "y"
-														},
-													]
+													"Identifier Expression": {
+														"name": {
+															"Name": "y"
+														}
+													}
 												}
 											}
 										},
@@ -234,11 +234,9 @@
 																		"Name": "c"
 																	},
 																	"type": {
-																		"Expression": [
-																			{
-																				"KeywordValue": "i64"
-																			},
-																		]
+																		"Keyword Expression": {
+																			"keyword": "i64"
+																		}
 																	}
 																}
 															}
@@ -248,23 +246,29 @@
 												"inits": {
 													"initialization list": [
 														{
-															"Expression": [
-																{
-																	"Identifier": "aaa"
-																},
-																{
-																	"Group": {
-																		"type": "()",
-																		"expr": {
-																			"Expression": [
-																				{
-																					"Identifier": "c"
-																				},
-																			]
+															"Chain Expression": {
+																"literal": {
+																	"Identifier Expression": {
+																		"name": {
+																			"Name": "aaa"
 																		}
 																	}
 																},
-															]
+																"chain": [
+																	{
+																		"Call Expression": {
+																			"type": "[]",
+																			"arguments": {
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "c"
+																					}
+																				}
+																			}
+																		}
+																	}
+																]
+															}
 														},
 													]
 												},
@@ -272,17 +276,23 @@
 													"Code Block": [
 														{
 															"Expr Stmt": {
-																"Expression": [
-																	{
-																		"Identifier": "x"
+																"Assignment Expr": {
+																	"assigned variables": {
+																		"Identifier Expression": {
+																			"name": {
+																				"Name": "x"
+																			}
+																		}
 																	},
-																	{
-																		"Operator": "="
-																	},
-																	{
-																		"Identifier": "c"
-																	},
-																]
+																	"assignment type": "=",
+																	"assigned value": {
+																		"Identifier Expression": {
+																			"name": {
+																				"Name": "c"
+																			}
+																		}
+																	}
+																}
 															}
 														},
 													]
@@ -305,17 +315,21 @@
 													"Code Block": [
 														{
 															"Expr Stmt": {
-																"Expression": [
-																	{
-																		"Identifier": "x"
+																"Assignment Expr": {
+																	"assigned variables": {
+																		"Identifier Expression": {
+																			"name": {
+																				"Name": "x"
+																			}
+																		}
 																	},
-																	{
-																		"Operator": "="
-																	},
-																	{
-																		"NumLiteral": "81"
-																	},
-																]
+																	"assignment type": "=",
+																	"assigned value": {
+																		"Value Expr": {
+																			"number": "81"
+																		}
+																	}
+																}
 															}
 														},
 													]

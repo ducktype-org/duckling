@@ -3,6 +3,22 @@
 #include "../../hierarchy/expr.hpp"
 
 namespace pst {
+	class EmptyExprError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Empty expression";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		EmptyExprError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	void ExprElement::fastForward(LangParserState& state, i64 length) {
 		state.tokens().skip(length);
 	}
@@ -11,6 +27,7 @@ namespace pst {
 		if (length == 0) {
 			std::cerr << "empty expression" << std::endl;
 			// Empty expression error
+			state.log(base::make_unique<EmptyExprError>(state.getPosition()));
 			fastForward(state, length);
 			return false;
 		}
@@ -26,11 +43,11 @@ namespace pst {
 	namespace {
 		bool universalEnd(const LangParserState& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
-			    || state[fwd].is(NamedOperator::Assign);
+			    || ExprClassify::isAssignment(state, fwd);
 		}
 
 		bool universalEndAllowComma(const LangParserState& state, i64 fwd = 0) {
-			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign);
+			return state[fwd].is(Special::Semicolon) || ExprClassify::isAssignment(state, fwd);
 		}
 	}
 

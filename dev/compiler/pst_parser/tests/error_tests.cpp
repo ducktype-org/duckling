@@ -5,7 +5,7 @@
 
 #include <lexer/lexer.hpp>
 #include <sstream>
-#include <tester/tester.hpp>
+#include <tester/tester.hpp> 
 #include <tester/testing_utils.hpp>
 #include <utility>
 
@@ -29,12 +29,12 @@ class PSTErrorTests: public tester::TestSuite {
 		virtual ~GenExample() = default;
 	};
 
-	template<typename Element, bool good = true>
+	template<typename Element, bool good = true, typename Parser = Element>
 	struct Example: public GenExample {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element>::fromContents(code);
+			auto parsed = pst::PST<Element, Parser>::fromContents(code);
 			return parsed.getLogger().good() == good;
 		}
 
@@ -48,7 +48,7 @@ class PSTErrorTests: public tester::TestSuite {
 		}
 	};
 
-	template<std::derived_from<pst::ClassStmt> Element, bool good = true>
+	template<std::derived_from<pst::ClassStmt> Element, bool good = true, typename Parser = Element>
 	struct ClassStmtExample: public GenExample {
 		pst::ClassContext context;
 
@@ -65,7 +65,7 @@ class PSTErrorTests: public tester::TestSuite {
 			  context{ base::StrID(class_name.c_str()), {} } {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element>::fromContentsWithContext(this->code, context);
+			auto parsed = pst::PST<Element, Parser>::fromContentsWithContext(this->code, context);
 			return parsed.getLogger().good() == good;
 		}
 
@@ -113,9 +113,9 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Const, false> badStmtChoice{ "block {}" };
 
-	Example<pst::Expr, true>  simpleExpr{ "x + y" };
-	Example<pst::Expr, true>  blockExpr{ "x + {return 2 * x;}" };
-	Example<pst::Expr, false> badTokenExpr{ "\"" };
+	Example<pst::ExprElement, true, pst::UniversalExpr>  simpleExpr{ "x + y" };
+	Example<pst::ExprElement, true, pst::UniversalExpr>  blockExpr{ "x + {return 2 * x;}" };
+	Example<pst::ExprElement, false, pst::UniversalExpr> badTokenExpr{ "\"" };
 
 	Example<pst::Fun, true>  simpleFunction1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
 	Example<pst::Fun, true>  simpleFunction2{ "fun foo(x: i32, y: i32 = 1) = {}" };

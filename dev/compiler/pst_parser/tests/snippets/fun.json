@@ -30,32 +30,40 @@
 						"Code Block": [
 							{
 								"Expr Stmt": {
-									"Expression": [
-										{
-											"Identifier": "x"
+									"Assignment Expr": {
+										"assigned variables": {
+											"Identifier Expression": {
+												"name": {
+													"Name": "x"
+												}
+											}
 										},
-										{
-											"Operator": "="
-										},
-										{
-											"NumLiteral": "3"
-										},
-									]
+										"assignment type": "=",
+										"assigned value": {
+											"Value Expr": {
+												"number": "3"
+											}
+										}
+									}
 								}
 							},
 							{
 								"Expr Stmt": {
-									"Expression": [
-										{
-											"Identifier": "y"
+									"Assignment Expr": {
+										"assigned variables": {
+											"Identifier Expression": {
+												"name": {
+													"Name": "y"
+												}
+											}
 										},
-										{
-											"Operator": "="
-										},
-										{
-											"NumLiteral": "4"
-										},
-									]
+										"assignment type": "=",
+										"assigned value": {
+											"Value Expr": {
+												"number": "4"
+											}
+										}
+									}
 								}
 							},
 						]

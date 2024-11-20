@@ -1,5 +1,5 @@
 fun foo() = {
-	a: T;
+	let a: T = 5;
 	defer a.close();
 
 	while A (true) {

@@ -30,8 +30,7 @@ namespace pst {
 			CommaExpr::parse
 		);
 
-		// If there is no = then expr parsing already threw an error
-		state.parse(out).tryEat(NamedOperator::Assign);
+		state.parse(out).one(NamedOperator::Assign, true);
 
 		state.parse(out).with(&out->value, CommaExpr::parse);
 		return out;

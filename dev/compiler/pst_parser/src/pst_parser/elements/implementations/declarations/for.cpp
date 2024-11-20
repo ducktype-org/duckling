@@ -1,4 +1,5 @@
 #include "preamble.hpp"
+#include "../../hierarchy/expr.hpp"
 
 namespace pst {
 	class ForBracketError final: public dia::Error {
@@ -33,6 +34,18 @@ namespace pst {
 		ForNoInError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
+	class ForTypeExpr: public NotStmt {
+	public:
+		static bool end(const LangParserState& state, i64 fwd = 0) {
+			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign) || state[fwd].is(Keyword::In);
+		}
+
+		static base::unique_ptr<ExprElement> parse(LangParserState& state) {
+			return expr::parseUntil<expr::Comma, end>(state);
+		}
+		ForTypeExpr() = delete;
+	};
+
 	ParserRef<For> For::parse(LangParserState& state) {
 		// @TODO: attr list
 		auto position = state.getPosition();
@@ -52,7 +65,7 @@ namespace pst {
 			if (state.parse(out).tryEat(NamedOperator::Colon)) {
 				state.parse(out).with(
 					&out->type,
-					CommaExpr::parse
+					ForTypeExpr::parse
 				);
 				state.parse(out).tryEat(Keyword::In);
 			} else {

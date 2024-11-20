@@ -51,7 +51,7 @@ namespace pst::expr {
 
 		out << R"("literal": )";
 		nullAwareDprint(literal, out);
-		out << R"(", chain": [)";
+		out << R"(, "chain": [)";
 		bool first = true;
 		for (auto& link: chain) {
 			if (!first)

@@ -9,17 +9,21 @@
 					"Code Block": [
 						{
 							"Expr Stmt": {
-								"Expression": [
-									{
-										"Identifier": "x"
+								"Binary Operator": {
+									"left_expr": {
+										"Identifier Expression": {
+											"name": {
+												"Name": "x"
+											}
+										}
 									},
-									{
-										"Operator": "+"
-									},
-									{
-										"NumLiteral": "3"
-									},
-								]
+									"operator": "+",
+									"right_expr": {
+										"Value Expr": {
+											"number": "3"
+										}
+									}
+								}
 							}
 						},
 					]

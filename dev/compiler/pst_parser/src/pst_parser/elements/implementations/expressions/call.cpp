@@ -12,7 +12,10 @@ namespace pst::expr {
 		auto out = base::make_unique<Call>(state.getPosition());
 
 		state.parse(out).goDown();
-		state.parse(out).with(&out->args, Comma::parse, state.ctokens().size());
+		// This is a little wrong but calls will be changed to fix that
+		if (state.ctokens().size() > 0) {
+			state.parse(out).with(&out->args, Comma::parse, state.ctokens().size());
+		}
 		state.parse(out).goUpAndSkip();
 
 		return out;
@@ -25,7 +28,7 @@ namespace pst::expr {
 			out << R"--("type": "()")--";
 		else
 			out << R"--("type": "[]")--";
-		out << R"(, "arguments": ")";
+		out << R"(, "arguments": )";
 		nullAwareDprint(args, out);
 
 		out << "}";

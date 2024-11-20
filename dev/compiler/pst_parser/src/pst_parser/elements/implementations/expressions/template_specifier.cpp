@@ -10,7 +10,10 @@ namespace pst::expr {
 		auto out = base::make_unique<TemplateSpecifier>(state.getPosition());
 		state.parse(out).one(NamedOperator::Colon);
 		state.parse(out).goDown();
-		state.parse(out).with(&out->inner, Comma::parse, state.ctokens().size());
+		// This is a little wrong but templates will be changed anyway
+		if (state.ctokens().size() > 0) {
+			state.parse(out).with(&out->inner, Comma::parse, state.ctokens().size());
+		}
 		state.parse(out).goUpAndSkip();
 
 		return out;
