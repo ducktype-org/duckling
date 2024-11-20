@@ -132,17 +132,17 @@ def simulate_cpp_linter(
     if not build_folder.exists():
         exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
 
-    diffs = get_diffs(branch)
-    log_info(f"Found {diffs=}")
+    file_diffs = get_diffs(branch)
+    log_info(f"Found {file_diffs=}")
 
     clang_format_failed = False
 
-    def run_linter_on(file, file_diffs):
+    def run_linter_on(file, diff):
         if file.endswith(".hpp") or file.endswith(".cpp"):
             log_info(f"Running linting on: {file}")
             try:
-                run_clang_tidy_on(clang_tidy_path, build_folder, file, file_diffs)
-                if not run_clang_format_on(clang_format_path, file, file_diffs):
+                run_clang_tidy_on(clang_tidy_path, build_folder, file, diff)
+                if not run_clang_format_on(clang_format_path, file, diff):
                     global clang_format_failed
                     clang_format_failed = True
 
@@ -153,8 +153,8 @@ def simulate_cpp_linter(
 
     # From my testing: printing is thread-safe, so this is fine.
     with ThreadPoolExecutor(max_workers=threads) as e:
-        for file, file_diffs in diffs.items():
-            e.submit(run_linter_on, file, file_diffs)
+        for file, diff in file_diffs.items():
+            e.submit(run_linter_on, file, diff)
 
     if clang_format_failed:
         log_new_line()

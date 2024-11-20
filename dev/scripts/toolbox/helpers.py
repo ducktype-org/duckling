@@ -1,6 +1,14 @@
+import pathlib
 import subprocess as sp
 
 import click
+
+
+def with_venv(cmd):
+    if not pathlib.Path(".venv").exists():
+        exit_with_error('.venv does not exits. Use "./toolbox.py setup-venv"')
+
+    bash_command(f"source .venv/bin/activate && {cmd}")
 
 
 def exit_with_error(msg):
@@ -11,9 +19,11 @@ def exit_with_error(msg):
 
 
 class BashCommandError(Exception):
-    def __init__(self, command, exit_code, stdout, stderr):
+    def __init__(self, command: str, exit_code, stdout, stderr):
         super().__init__(
-            f"Bash command `{command}` has failed with a an exit code: {exit_code}, because: \n{stdout} ;;\n {stderr}"
+            f"\n\tBash command `{command}` has failed with a an exit code: {exit_code}, because:\n"
+            + f"[STDOUT]:{"\n" + stdout if stdout else ""}\n"
+            + f"[STDERR]:{"\n" + stderr if stderr else ""}"
         )
         self.command = command
         self.exit_code = exit_code
@@ -27,9 +37,9 @@ def bash_command(cmd, cwd=".", redirect=None):
     stdout, stderr = proc.communicate()
 
     if stdout is not None:
-        stdout = stdout.decode('UTF-8')
+        stdout = stdout.decode("UTF-8")
     if stderr is not None:
-        stderr = stderr.decode('UTF-8')
+        stderr = stderr.decode("UTF-8")
 
     status = proc.wait()
     if status != 0:
@@ -44,12 +54,15 @@ def bash_command_get_output(cmd, cwd="."):
 def log_info(msg, newline=True):
     click.echo(click.style(f"[INFO]: {msg}", fg="yellow", bold=False), nl=newline)
 
+
 def log_warning(msg, fg="magenta", newline=True):
     click.echo(click.style(f"[WARNING]: {msg}", fg=fg, bold=True), nl=newline)
+
 
 def get_input(msg, newline=False):
     click.echo(click.style(f"[INPUT]: {msg}", fg="blue", bold=False), nl=newline)
     return input()
+
 
 def log_new_line():
     click.echo("")
@@ -58,3 +71,10 @@ def log_new_line():
 def abort_if_false(ctx, param, value):
     if not value:
         ctx.abort()
+
+
+def make_pretty_command(command):
+    pretty_command = command.replace("\n", " ")
+    while "  " in pretty_command:
+        pretty_command = pretty_command.replace("  ", " ")
+    return pretty_command

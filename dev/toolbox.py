@@ -13,6 +13,8 @@ from scripts.toolbox.helpers import (
     exit_with_error,
     log_info,
     log_new_line,
+    make_pretty_command,
+    with_venv,
 )
 from scripts.toolbox.internet_file import (
     InternetFile,
@@ -53,13 +55,6 @@ def cli():
     pass
 
 
-def with_venv(cmd):
-    if not pathlib.Path(".venv").exists():
-        exit_with_error('.venv does not exits. Use "./toolbox.py setup-venv"')
-
-    bash_command(f"source .venv/bin/activate && {cmd}")
-
-
 def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, coverage):
     bld = pathlib.Path(build_dir)
     if bld.exists():
@@ -79,7 +74,7 @@ def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, cove
          -D USE_CCACHE={'ON' if ccache else 'OFF'}
          -D ENABLE_COVERAGE={'true' if coverage else 'false'}
     """
-    cmd = cmd.replace("\n", " ")
+    cmd = make_pretty_command(cmd)
 
     log_info("Setting up a build folder...")
     if docs:
