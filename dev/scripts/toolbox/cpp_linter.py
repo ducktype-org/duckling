@@ -79,12 +79,12 @@ def get_diffs(branch: str):
     return changes
 
 
-def run_clang_tidy_on(
+def clang_tidy_on(
     clang_tidy_path: str,
     build_folder: pathlib.Path,
     file: str,
     file_diffs: list[tuple[int, int]],
-    out
+    out,
 ):
     """
     Runs clang-tidy on a file with given file_diffs
@@ -92,20 +92,22 @@ def run_clang_tidy_on(
 
     # clang-tidy command succeeds if no errors were found.
     # Prints warnings on stdout.
-    tidy_out, _ = bash_command_get_output(
-        f"{clang_tidy_path} -p {build_folder} --format-style file"
-        f' --line-filter="[{{"name": "{file}", "lines": {file_diffs}}}]"'
-        f" --extra-arg= {file}"
-    )
-    if tidy_out:
-        log_warning(f"clang-tidy output: \n{tidy_out}", file=out)
+    try:
+        tidy_out, _ = bash_command_get_output(
+            f"{clang_tidy_path} -p {build_folder} --format-style file"
+            f' --line-filter="[{{"name": "{file}", "lines": {file_diffs}}}]"'
+            f" --extra-arg= {file}"
+        )
+        if tidy_out:
+            log_warning(f"clang-tidy output: \n{tidy_out}", file=out)
+    except BashCommandError as e:
+        log_warning(
+            f"clang-tidy failed: {file}, because:\n{e.stdout}{e.stderr}", file=out
+        )
 
 
-def run_clang_format_on(
-    clang_format_path: str,
-    file: str,
-    file_diffs: list[tuple[int, int]],
-    out
+def clang_format_on(
+    clang_format_path: str, file: str, file_diffs: list[tuple[int, int]], out
 ) -> bool:
     """
     Dry-run clang-format on a file with given file_diffs to test
@@ -125,6 +127,28 @@ def run_clang_format_on(
     return True
 
 
+def run_linter_on(
+    clang_tidy_path: str, clang_format_path: str, build_folder: pathlib.Path, file, diff
+) -> bool:
+    clang_format_failed = False
+    if file.endswith(".hpp") or file.endswith(".cpp"):
+        out = tempfile.TemporaryFile("w+")
+        log_info(f"Linting: {file}", file=out)
+
+        clang_tidy_on(clang_tidy_path, build_folder, file, diff, out)
+
+        if not clang_format_on(clang_format_path, file, diff, out):
+            clang_format_failed = True
+
+        out.seek(0)
+        print(out.read())
+
+    else:
+        log_info(f"Skipping linting on: {file}")
+
+    return clang_format_failed
+
+
 def simulate_cpp_linter(
     clang_tidy_path: str, clang_format_path: str, build: str, threads: int, branch: str
 ):
@@ -137,39 +161,14 @@ def simulate_cpp_linter(
 
     clang_format_failed = False
 
-    def run_linter_on(file, diff):
-        if file.endswith(".hpp") or file.endswith(".cpp"):
-            out = tempfile.TemporaryFile('w+')
-            log_info(f"Running linting on: {file}", file=out)
-            try:
-                run_clang_tidy_on(clang_tidy_path, build_folder, file, diff, out)
-                if not run_clang_format_on(clang_format_path, file, diff, out):
-                    global clang_format_failed
-                    clang_format_failed = True
-
-            except BashCommandError as e:
-                out.seek(0)
-                print(out.read())
-                log_warning(f"Failed: {file}, because:\n{e.stdout}{e.stderr}")
-            else:
-                out.seek(0)
-                print(out.read())
-
-        else:
-            log_info(f"Skipping linting on: {file}")
-
-    for file, diff in file_diffs.items():
-        run_linter_on(file, diff)
-    # From my testing: printing is thread-safe, so this is fine.
-    # with ThreadPoolExecutor(max_workers=threads) as e:
-    #     for file, diff in file_diffs.items():
-    #         e.submit(run_linter_on, file, diff)
+    with ThreadPoolExecutor(max_workers=threads) as e:
+        call_linter = lambda fd: run_linter_on(
+            clang_tidy_path, clang_format_path, build_folder, *fd
+        )
+        results = e.map(call_linter, file_diffs.items())
+        clang_format_failed = any(results)
 
     if clang_format_failed:
-        log_new_line()
-        to_format = get_input(
-            "Found formatting issues. Do you want to format the repo [Y/n]: "
-        ).lower()
-        log_new_line()
-        if to_format == "y" or to_format == "":
+        to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
+        if to_format.lower() in ["y", ""]:
             bash_command("./scripts/formatting/format_repo.sh")

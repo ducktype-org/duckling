@@ -53,11 +53,11 @@ def bash_command_get_output(cmd, cwd="."):
 
 
 def log_info(msg, newline=True, file=sys.stdout):
-    click.echo(click.style(f"[INFO]: {msg}", fg="yellow", bold=False), nl=newline, file=file)
+    click.echo(click.style(f"[INFO]: {msg}", fg="yellow", bold=False), color=True, nl=newline, file=file)
 
 
 def log_warning(msg, newline=True, file=sys.stdout):
-    click.echo(click.style(f"[WARNING]: {msg}", fg="magenta", bold=True), nl=newline, file=file)
+    click.echo(click.style(f"[WARNING]: {msg}", fg="magenta", bold=True), color=True, nl=newline, file=file)
 
 
 def get_input(msg, newline=False):
