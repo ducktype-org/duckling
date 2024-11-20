@@ -90,6 +90,7 @@ namespace lang_def {
 		u64,
 		u128,
 
+		f16,
 		f32,
 		f64,
 		f80,

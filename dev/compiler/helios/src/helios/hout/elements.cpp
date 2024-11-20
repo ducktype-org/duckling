@@ -33,6 +33,7 @@ namespace compiler::helios::code {
 				{ lang_def::Keyword::f80, ctx.query<::tsh::QueryFloatType>(80) },
 				{ lang_def::Keyword::f64, ctx.query<::tsh::QueryFloatType>(64) },
 				{ lang_def::Keyword::f32, ctx.query<::tsh::QueryFloatType>(32) },
+				{ lang_def::Keyword::f16, ctx.query<::tsh::QueryFloatType>(16) },
 
 				{ lang_def::Keyword::i128, ctx.query<::tsh::QueryIntegralType>({ 128, true }) },
 				{ lang_def::Keyword::i64, ctx.query<::tsh::QueryIntegralType>({ 64, true }) },
@@ -232,8 +233,6 @@ namespace compiler::helios::code {
 		rhs->debugPrint(out);
 	}
 
-
-
 	void ParenthesisExpr::debugPrint(std::ostream& out) const {
 		out << "(";
 		inner->debugPrint(out);
@@ -244,8 +243,6 @@ namespace compiler::helios::code {
 		  Expr(scope, inner->type_desc),
 		  inner(std::move(inner)) {}
 
-
-
 	KeywordExpr::KeywordExpr(query::Context& ctx, ScopeID scope, lang_def::Keyword keyword):
 		  Expr(
 			  scope,
@@ -254,7 +251,6 @@ namespace compiler::helios::code {
 			  )
 		  ),
 		  keyword(keyword) {}
-
 
 	void KeywordExpr::debugPrint(std::ostream& out) const {
 		out << lang_def::keywordToStr(keyword).strView();
@@ -276,7 +272,6 @@ namespace compiler::helios::code {
 		out << ")";
 	}
 
-
 	void VariantConstructorExpr::debugPrint(std::ostream& out) const {
 		out << "(";
 		for (bool add_pipe = false; auto&& subtype: subtypes) {
@@ -286,7 +281,6 @@ namespace compiler::helios::code {
 		}
 		out << ")";
 	}
-
 
 	VariantConstructorExpr::VariantConstructorExpr(
 		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
