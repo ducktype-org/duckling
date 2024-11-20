@@ -1,5 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import pathlib
+import sys
+import tempfile
 from scripts.toolbox.helpers import (
     BashCommandError,
     bash_command,
@@ -82,6 +84,7 @@ def run_clang_tidy_on(
     build_folder: pathlib.Path,
     file: str,
     file_diffs: list[tuple[int, int]],
+    out
 ):
     """
     Runs clang-tidy on a file with given file_diffs
@@ -95,13 +98,14 @@ def run_clang_tidy_on(
         f" --extra-arg= {file}"
     )
     if tidy_out:
-        log_warning(f"clang-tidy output: \n{tidy_out}")
+        log_warning(f"clang-tidy output: \n{tidy_out}", file=out)
 
 
 def run_clang_format_on(
     clang_format_path: str,
     file: str,
     file_diffs: list[tuple[int, int]],
+    out
 ) -> bool:
     """
     Dry-run clang-format on a file with given file_diffs to test
@@ -116,17 +120,13 @@ def run_clang_format_on(
 
     # Print data returned by clang-format
     if format_out or format_err:
-        log_warning(f"clang-format output: \n{format_out}{format_err}")
+        log_warning(f"clang-format output: \n{format_out}{format_err}", file=out)
         return False
     return True
 
 
 def simulate_cpp_linter(
-    clang_tidy_path: str,
-    clang_format_path: str,
-    build: str,
-    threads: int,
-    branch: str
+    clang_tidy_path: str, clang_format_path: str, build: str, threads: int, branch: str
 ):
     build_folder = pathlib.Path(build)
     if not build_folder.exists():
@@ -139,22 +139,31 @@ def simulate_cpp_linter(
 
     def run_linter_on(file, diff):
         if file.endswith(".hpp") or file.endswith(".cpp"):
-            log_info(f"Running linting on: {file}")
+            out = tempfile.TemporaryFile('w+')
+            log_info(f"Running linting on: {file}", file=out)
             try:
-                run_clang_tidy_on(clang_tidy_path, build_folder, file, diff)
-                if not run_clang_format_on(clang_format_path, file, diff):
+                run_clang_tidy_on(clang_tidy_path, build_folder, file, diff, out)
+                if not run_clang_format_on(clang_format_path, file, diff, out):
                     global clang_format_failed
                     clang_format_failed = True
 
             except BashCommandError as e:
+                out.seek(0)
+                print(out.read())
                 log_warning(f"Failed: {file}, because:\n{e.stdout}{e.stderr}")
+            else:
+                out.seek(0)
+                print(out.read())
+
         else:
             log_info(f"Skipping linting on: {file}")
 
+    for file, diff in file_diffs.items():
+        run_linter_on(file, diff)
     # From my testing: printing is thread-safe, so this is fine.
-    with ThreadPoolExecutor(max_workers=threads) as e:
-        for file, diff in file_diffs.items():
-            e.submit(run_linter_on, file, diff)
+    # with ThreadPoolExecutor(max_workers=threads) as e:
+    #     for file, diff in file_diffs.items():
+    #         e.submit(run_linter_on, file, diff)
 
     if clang_format_failed:
         log_new_line()

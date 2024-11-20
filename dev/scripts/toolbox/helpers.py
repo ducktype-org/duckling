@@ -1,5 +1,6 @@
 import pathlib
 import subprocess as sp
+import sys
 
 import click
 
@@ -51,21 +52,21 @@ def bash_command_get_output(cmd, cwd="."):
     return bash_command(cmd, cwd, redirect=sp.PIPE)
 
 
-def log_info(msg, newline=True):
-    click.echo(click.style(f"[INFO]: {msg}", fg="yellow", bold=False), nl=newline)
+def log_info(msg, newline=True, file=sys.stdout):
+    click.echo(click.style(f"[INFO]: {msg}", fg="yellow", bold=False), nl=newline, file=file)
 
 
-def log_warning(msg, fg="magenta", newline=True):
-    click.echo(click.style(f"[WARNING]: {msg}", fg=fg, bold=True), nl=newline)
+def log_warning(msg, newline=True, file=sys.stdout):
+    click.echo(click.style(f"[WARNING]: {msg}", fg="magenta", bold=True), nl=newline, file=file)
 
 
 def get_input(msg, newline=False):
-    click.echo(click.style(f"[INPUT]: {msg}", fg="blue", bold=False), nl=newline)
+    click.echo(click.style(f"[INPUT]: {msg}", fg="blue", bold=False, blink=True), nl=newline)
     return input()
 
 
-def log_new_line():
-    click.echo("")
+def log_new_line(file=sys.stdout):
+    click.echo("", file=file)
 
 
 def abort_if_false(ctx, param, value):
