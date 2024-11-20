@@ -447,6 +447,11 @@ namespace compiler::mir {
 		void visitVariantConstructorExpr(const hc::VariantConstructorExpr&) override {
 			throw base::NotYetImplemented("variant constructor");
 		}
+
+		void visitLinkedIdentifierExpr(const hc::LinkedIdentifierExpr&) override {
+			throw base::NotYetImplemented("linked identifier expr");
+		}
+
 	};
 
 	StmtLowerRes
