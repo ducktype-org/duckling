@@ -186,21 +186,21 @@ namespace compiler::backend_llvm {
 			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder
 		) {
 			switch (lir_instruction.operation) {
-			case lir::LirOperation::ReturnVoid: {
+			case lir::Operation::ReturnVoid: {
 				builder.CreateRetVoid();
 				break;
 			}
-			case lir::LirOperation::ReturnValue: {
+			case lir::Operation::ReturnValue: {
 				builder.CreateRet(lir2LLVMLocation(lir_instruction.arguments.at(0)));
 				break;
 			}
-			case lir::LirOperation::Jump: {
+			case lir::Operation::Jump: {
 				builder.CreateBr(
 					block_mapping[lir_instruction.arguments.at(0).get<lir::BlockRef>()].get()
 				);
 				break;
 			}
-			case lir::LirOperation::Branch: {
+			case lir::Operation::Branch: {
 				// here for lir locals we need more stuff:
 				auto cond = lir2LLVMLocation(lir_instruction.arguments.at(0));
 				auto true_block

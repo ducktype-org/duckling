@@ -16,3 +16,5 @@ target_link_libraries(LLVMBackend ${llvm_libs})
 
 make_module(LLVMBackend USES Base QueryFramework LIR llvm_helpers)
 
+duck_add_test(compiler llvm_test tests/llvm_test.cpp
+	USES Base LLVMBackend)
