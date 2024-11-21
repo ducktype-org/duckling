@@ -92,20 +92,61 @@ by the pointers to the instruction itself casted to `llvm::Value*`.
 
 ## LLVM includes
 
-Currently unused includes, that might be useful in the future:
+
+Currently used includes, and what we use from them:
 
 ```cpp
-#include <llvm/ADT/APInt.h>
+// for llvm::BasicBlock
+#include <llvm/IR/BasicBlock.h>
+
+// for single instructions:
+#include <llvm/IR/Function.h>
+
+// for single instructions:
+#include <llvm/IR/Instructions.h>
+
+// For llvm::Context
+#include <llvm/IR/LLVMContext.h>
+
+// For llvm::Module
+#include <llvm/IR/Module.h>
+
+// For llvm::Type
+#include <llvm/IR/Type.h>
+
+// For llvm::IRBuilder:
+#include <llvm/IR/IRBuilder.h>
+
+// for llvm initialization:
+#include <llvm/Support/TargetSelect.h>
+
+```
+
+Currently unused includes, that might be useful in the future
+(note that a lot of them are included recursively by the used ones):
+
+```cpp
+
+#include <llvm/IR/Argument.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/IR/InstrTypes.h>
+
+#include <llvm/ADT/APInt.h>
+
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/ExecutionEngine/MCJIT.h>
+
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/Host.h>
+
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
+
 #include <llvm/ADT/Optional.h>
 ```
 
