@@ -63,6 +63,10 @@ namespace compiler::backend_llvm {
 
 	auto i32Type(llvm::LLVMContext& context) { return llvm::Type::getInt32Ty(context); }
 
+	auto integerType(llvm::LLVMContext& context, u64 bits) {
+		return llvm::Type::getIntNTy(context, bits);
+	};
+
 	auto voidFunType(llvm::LLVMContext& context) {
 		return llvm::FunctionType::get(voidType(context), {}, false);
 	}

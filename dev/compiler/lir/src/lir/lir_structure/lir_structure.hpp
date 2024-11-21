@@ -108,7 +108,7 @@ namespace compiler::lir {
 
 		LirLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
 
-		friend struct Function;
+		friend Function;
 		friend LocalRef;
 
 	public:
