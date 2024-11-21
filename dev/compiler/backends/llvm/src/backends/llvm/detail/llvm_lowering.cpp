@@ -110,7 +110,7 @@ namespace compiler::backend_llvm {
 			}
 		}
 
-		base::Map<lir::LocalRef, u64> tmp_id;
+		base::Map<lir::LocalRef, u64> tmp_local_id;
 
 		std::string llvmLocalName(lir::LocalRef lir_local) {
 			// @TODO.. far from optimal
@@ -118,8 +118,8 @@ namespace compiler::backend_llvm {
 			if (lir_local->helios_id) {
 				return base::strConcat("helios_", base::perfectHash(lir_local->helios_id.value()));
 			} else {
-				if (not tmp_id.contains(lir_local)) tmp_id.put(lir_local, tmp_id.size());
-				return base::strConcat("tmp_", tmp_id[lir_local]);
+				if (not tmp_local_id.contains(lir_local)) tmp_local_id.put(lir_local, tmp_local_id.size());
+				return base::strConcat("tmp_", tmp_local_id[lir_local]);
 			}
 		}
 
