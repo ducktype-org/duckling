@@ -6,6 +6,8 @@
 
 #include <mir/mir_structure/mir_local_ref.hpp>
 
+#include "function_forward.hpp"
+
 // clang-format off
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
@@ -105,7 +107,7 @@ namespace compiler::lir {
 
 		LirLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
 
-		friend struct Function;
+		friend Function;
 		friend LocalRef;
 
 	public:

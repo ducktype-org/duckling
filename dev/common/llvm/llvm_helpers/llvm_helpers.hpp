@@ -1,3 +1,5 @@
+#pragma once
+
 enum class Compiler { Clang, GCC };
 
 #if defined(__clang__)
