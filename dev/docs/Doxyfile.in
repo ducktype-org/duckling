@@ -45,7 +45,7 @@ PREDEFINED = "DECLARE_QUERY(name, key, value)=auto name(key) -> value;/**< \quer
             "IMPLEMENT_QUERY(name, PResult)=ImplementationOf_##name final: public query::QueryImplementation<name, PResult>" \
             "QUERY_IMPLEMENTATION_BOILERPLATE(name)=" \
             "COMMA=," \
-            "MAKE_STRINGIFYABLE_ENUM(namespace_name, base_type, name, ...)=namespace namespace_name { enum class name : base_type { __VA_ARGS__, COUNT } }"
+            "MAKE_STRINGIFYABLE_ENUM(namespace_name, base_type, name, ...)=namespace namespace_name { enum class name : base_type { __VA_ARGS__, COUNT }; }"
 
 # Currently unused left for potential future 
 # FILTER_PATTERNS = "*.hpp=python @CMAKE_CURRENT_SOURCE_DIR@/doxygen-ext/format_fixer.py"

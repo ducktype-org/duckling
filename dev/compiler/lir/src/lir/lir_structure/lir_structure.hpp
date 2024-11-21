@@ -8,9 +8,6 @@
 
 // clang-format off
 
-// @TODO:
-// once this is introduced: https://github.com/orgs/ducktype-org/projects/11/views/1?pane=issue&itemId=86181552
-// change name to just Operation
 MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Placeholder for uninitialized value, should not be in LIR output. */
 	Uninitialized,
