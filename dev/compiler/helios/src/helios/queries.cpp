@@ -35,18 +35,18 @@ namespace compiler::helios {
 			HOUTUnit out;
 
 			// grab constants:
-			for (auto sym: symbols_in_module_root)
+			for (auto sym: *symbols_in_module_root)
 				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
 
 			// grab functions:
-			for (auto sym: symbols_in_module_root)
+			for (auto sym: *symbols_in_module_root)
 				if (kind(sym) == SymbolKind::Function)
 					out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
 
 			return out;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
@@ -147,7 +147,7 @@ namespace compiler::helios {
 				auto symbol
 					= ctx.query<QuerySymbolOfSTMT>({ scope_of_symbol, PstRef<pst::Stmt>(&stmt) });
 
-				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol).expect(
+				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 					"Handling errors is not supported in HOUT yet"
 				);
 
@@ -205,7 +205,7 @@ namespace compiler::helios {
 			return func_maker.out.value();
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCodeOFFun);

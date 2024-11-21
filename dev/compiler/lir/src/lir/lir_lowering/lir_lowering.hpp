@@ -5,7 +5,7 @@
 
 namespace compiler::lir {
 	struct KeyOf_LowerToLirFunction {
-		const mir::Function& function;
+		CRef<mir::Function> function;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
@@ -13,7 +13,7 @@ namespace compiler::lir {
 		bool operator==(const KeyOf_LowerToLirFunction& oth) const {
 			// this kind of doesn't work, but it won't be run anyway (mir functions are unique)
 			// @TODO: change it during hash-query refactor
-			return function == oth.function;
+			return (*function) == (*oth.function);
 		}
 	};
 
@@ -21,5 +21,5 @@ namespace compiler::lir {
 	 * @brief Lower a MIRFunction to a LIRFunction
 	 * Generates TSL types
 	 */
-	DECLARE_QUERY(LowerToLirFunction, KeyOf_LowerToLirFunction, const Function&);
+	DECLARE_QUERY(LowerToLirFunction, KeyOf_LowerToLirFunction, CRef<Function>);
 }
