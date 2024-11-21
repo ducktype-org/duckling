@@ -13,6 +13,10 @@
 
 #include "queries.hpp"
 
+/**
+ * @brief The namespace of all definitions of the Higher Type System.
+ * Short for "Type System: High(er)".
+ */
 namespace tsh {
 	void init();  // if needed
 
