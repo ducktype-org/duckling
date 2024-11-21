@@ -8,6 +8,6 @@ is not desired, for following reasons:
   This has significant impact on compilation time, but more importantly on responsiveness of 
   tools like clangd (a good few second of delay between keystroke, and clangd reaction). 
 
-* We don't want to really directly on LLVM api in a large portion of the project, since it can change,
+* We don't want to rely directly on LLVM api in a large portion of the project, since it can change,
   when we migrate to newer LLVM versions. It should be restricted strictly this folder if possible.
 
