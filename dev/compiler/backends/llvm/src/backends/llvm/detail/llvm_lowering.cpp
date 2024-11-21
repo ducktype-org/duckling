@@ -235,8 +235,8 @@ namespace compiler::backend_llvm {
 				auto              llvm_block = block_mapping[block];
 				llvm::IRBuilder<> builder(llvm_block.get());
 				for (const auto& instruction: block->instructions)
-					lir2LLVMInstuction(instruction, builder);
-				lir2LLVMInstuction(block->terminator, builder);
+					lir2LLVMInstruction(instruction, builder);
+				lir2LLVMInstruction(block->terminator, builder);
 			}
 
 			return fun;
