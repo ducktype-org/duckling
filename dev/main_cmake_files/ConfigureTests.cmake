@@ -1,14 +1,27 @@
+function(add_to_coverage target)
+	if(ENABLE_COVERAGE)
+		add_dependencies(build_all_coveraged_targets ${target})
+	endif()
+endfunction()
+
 if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
 	find_program(LCOV lcov REQUIRED)
 	find_program(GENHTML genhtml REQUIRED)
+
+	add_custom_target(build_all_coveraged_targets)
 
 	# This target is used to generate coverage report.
 	# We do it in two steps since by default lcov 
 	# does not generate coverage data for files not linked by the tests.
 	# https://stackoverflow.com/a/78554322
 	# Some helpful guide: https://wiki.documentfoundation.org/Development/Lcov
+	# Usage of this target:
+	# 1. compile and run the tests
+	# 2. run this target
 	add_custom_target(coverage
+		# Build all targets we want to coverage, so especially the ones that are not linked by the tests.
+		COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target build_all_coveraged_targets -j ${CMAKE_BUILD_PARALLEL_LEVEL}
 		# Initial coverage created for all files in the project.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
 						--initial 
