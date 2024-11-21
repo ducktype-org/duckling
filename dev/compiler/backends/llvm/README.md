@@ -99,7 +99,7 @@ Currently used includes, and what we use from them:
 // for llvm::BasicBlock
 #include <llvm/IR/BasicBlock.h>
 
-// for single instructions:
+// for llvm::Function:
 #include <llvm/IR/Function.h>
 
 // for single instructions:
