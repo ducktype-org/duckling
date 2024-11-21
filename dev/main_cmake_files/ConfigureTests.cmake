@@ -1,6 +1,6 @@
 function(add_to_coverage target)
 	if(ENABLE_COVERAGE)
-		add_dependencies(build_all_coveraged_targets ${target})
+		add_dependencies(build_all_coverage_targets ${target})
 	endif()
 endfunction()
 
@@ -9,7 +9,7 @@ if(ENABLE_COVERAGE)
 	find_program(LCOV lcov REQUIRED)
 	find_program(GENHTML genhtml REQUIRED)
 
-	add_custom_target(build_all_coveraged_targets)
+	add_custom_target(build_all_coverage_targets)
 
 	# This target is used to generate coverage report.
 	# We do it in two steps since by default lcov 
@@ -21,7 +21,7 @@ if(ENABLE_COVERAGE)
 	# 2. run this target
 	add_custom_target(coverage
 		# Build all targets we want to coverage, so especially the ones that are not linked by the tests.
-		COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target build_all_coveraged_targets -j ${CMAKE_BUILD_PARALLEL_LEVEL}
+		COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target build_all_coverage_targets -j ${CMAKE_BUILD_PARALLEL_LEVEL}
 		# Initial coverage created for all files in the project.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
 						--initial 
