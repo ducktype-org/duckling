@@ -1,4 +1,4 @@
-# Don't commit things beggining with `.`
+# Don't commit things that start with `.`
 .*
 
 # We want all gitignores and github files

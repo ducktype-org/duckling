@@ -9,29 +9,28 @@
 #include "function_forward.hpp"
 
 // clang-format off
+// Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
+MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
+	/** Placeholder for uninitialized value, should not be in LIR output. */
+	Uninitialized,
 
-// @TODO:
-// once this is introduced: https://github.com/orgs/ducktype-org/projects/11/views/1?pane=issue&itemId=86181552
-// change name to just Operation
-MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, LirOperation,
-	Uninitialized, //< placeholder for uninitialized value, should not be in LIR output
-
-	Assign, //< simple byte by byte assignment
+	/** Simple byte by byte assignment. */
+	Assign,
 
 	/**
-	 * @brief Placeholder. 
-	 * @todo  Some decisions here to be made about operations like that.
-     * Perhaps we want more generic code for MIR, so algorithms are simpler.
-	 * There could be single operation for all Add, Sub, etc, and single one for all
-	 * comparisons.
-	 */
+		@brief Placeholder.
+		@todo Some decisions here to be made about operations like that.
+	*//**
+		Perhaps we want more generic code for MIR, so algorithms are simpler.
+		There could be single operation for all Add, Sub, etc, and single one for all comparisons.
+	*/
 	IntegerAdd,
-	
+
 	ReturnVoid,
 	ReturnValue,
 	Jump,
 	Branch
-);
+)
 
 // clang-format on
 
@@ -130,7 +129,7 @@ namespace compiler::lir {
 	 * @brief Single instruction of LIR code.
 	 */
 	struct Instruction final {
-		LirOperation             operation = LirOperation::Uninitialized;
+		Operation                operation = Operation::Uninitialized;
 		base::Optional<LocalRef> output;
 		std::vector<LirLocation> arguments;
 
@@ -143,9 +142,7 @@ namespace compiler::lir {
 		Instruction& operator=(Instruction&&) = default;
 
 		Instruction(
-			LirOperation             operation,
-			base::Optional<LocalRef> output,
-			std::vector<LirLocation> arguments
+			Operation operation, base::Optional<LocalRef> output, std::vector<LirLocation> arguments
 		):
 			  operation(operation),
 			  output(output),
