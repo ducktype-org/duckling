@@ -26,7 +26,7 @@ To my best knowledge LLVM itself does not provide any clear distinguishing
 between external API and internal implementations.
 Here is a list of things we consider stable-ish external API based on our work with LLVM code so far (also usage of those components is usual quite simple) (note that this list is not complete and will be expanded or modified as we interact more with LLVM code and features):
 
-* Operations on modules as a hole (optimizations, compilation, printing, etc).
+* Operations on modules as a whole (optimizations, compilation, printing, etc).
 * Construction of functions using `llvm::Function::Create` (not of their code).
 * Construction of blocks with `llvm::BasicBlock::Create` (not of their code).
 * Construction of block code using `llvm::IRBuilder`(one per block).
@@ -77,7 +77,7 @@ in the sense that most objects will be linked to some parents, e.g.:
 * instructions to blocks
 * ...
 
-So far LLVM automatically manged linked objects underneath, and 
+So far LLVM automatically managed linked objects underneath, and 
 "we" only had to deal with what top-level object we have at hand -- most likely a module.
 
 
