@@ -59,10 +59,6 @@ namespace compiler::backend_llvm {
 
 	auto i32Type(llvm::LLVMContext& context) { return llvm::Type::getInt32Ty(context); }
 
-	auto integerType(llvm::LLVMContext& context, u64 bits) {
-		return llvm::Type::getIntNTy(context, bits);
-	};
-
 	auto voidFunType(llvm::LLVMContext& context) {
 		return llvm::FunctionType::get(voidType(context), {}, false);
 	}
@@ -114,7 +110,8 @@ namespace compiler::backend_llvm {
 			if (lir_local->helios_id) {
 				return base::strConcat("helios_", base::perfectHash(lir_local->helios_id.value()));
 			} else {
-				if (not tmp_local_id.contains(lir_local)) tmp_local_id.put(lir_local, tmp_local_id.size());
+				if (not tmp_local_id.contains(lir_local))
+					tmp_local_id.put(lir_local, tmp_local_id.size());
 				return base::strConcat("tmp_", tmp_local_id[lir_local]);
 			}
 		}
