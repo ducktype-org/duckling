@@ -11,25 +11,29 @@
 #include "mir_local_ref.hpp"
 
 // clang-format off
+// Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Uninitialized,
 
 	Call,
 	VCall,
 
-	Assign, //< simple byte by byte assignment
+	/** Simple byte by byte assignment */
+	Assign,
 
 	/**
-	 * @brief Placeholder. 
-	 * @todo  Some decisions here to be made about operations like that.
-     * Perhaps we want more generic code for MIR, so algorithms are simpler.
-	 * There could be single operation for all Add, Sub, etc, and single one for all
-	 * comparisons. 
-	 */
+		@brief Placeholder.
+		@todo  Some decisions here to be made about operations like that.
+	*//**
+		Perhaps we want more generic code for MIR, so algorithms are simpler.
+		There could be single operation for all Add, Sub, etc, and single one for all comparisons.
+	*/
 	IntegerAdd,
-	
-	Destruct,	//< See readme.md for more info about destruct.
-	DestructIf, //< See readme.md for more info about DestructIf.
+
+	/** See readme.md for more info about destruct. */
+	Destruct,
+	/** See readme.md for more info about DestructIf. */
+	DestructIf,
 
 	ReturnVoid,
 	ReturnValue,
@@ -37,15 +41,14 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Branch,
 
 	/**
-	 * @brief Operation that represents end of a function.
-	 * @note  It is always implicitly added at the end of a function.
-	 * This operation can have different meaning depending on the context.
-	 * For example in a function that returns void, it is just a return.
-	 * In a function that returns value, "it is" an compiler error, unless its
-	 * unreachable.
-	 */
+		@brief Operation that represents end of a function.
+		This operation can have different meaning depending on the context.
+		For example in a function that returns void, it is just a return.
+		In a function that returns value, "it is" an compiler error, unless it's unreachable.
+		@note  It is always implicitly added at the end of a function.
+	*/
 	FunctionEnd
-);
+)
 
 // clang-format on
 
