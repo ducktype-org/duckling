@@ -9,6 +9,7 @@
 #include "base/stringifyable_enum.hpp"
 
 // clang-format off
+// Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(tsh, i32, Kind
 	/**
 		@brief Enum which identifies the features of a type described in the Type System.

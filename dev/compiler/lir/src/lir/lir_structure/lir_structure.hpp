@@ -7,7 +7,7 @@
 #include <mir/mir_structure/mir_local_ref.hpp>
 
 // clang-format off
-
+// Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Placeholder for uninitialized value, should not be in LIR output. */
 	Uninitialized,
