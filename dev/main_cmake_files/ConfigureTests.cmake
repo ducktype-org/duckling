@@ -20,8 +20,6 @@ if(ENABLE_COVERAGE)
 	# 1. compile and run the tests
 	# 2. run this target
 	add_custom_target(coverage
-		# Build all targets we want to coverage, so especially the ones that are not linked by the tests.
-		COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target build_all_coverage_targets -j ${CMAKE_BUILD_PARALLEL_LEVEL}
 		# Initial coverage created for all files in the project.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
 						--initial 
@@ -50,6 +48,7 @@ if(ENABLE_COVERAGE)
 		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 		VERBATIM)
+	add_dependencies(coverage build_all_coverage_targets)
 endif()
 
 
