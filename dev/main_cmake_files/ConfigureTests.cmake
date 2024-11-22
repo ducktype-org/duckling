@@ -79,6 +79,7 @@ function(duck_add_test test_pack test_name source USES)
 		endif()
 
 		set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
+		add_to_coverage(${test_name})
 	else()
 		message(FATAL_ERROR "duck_add_test lacks uses clause")
 	endif()
