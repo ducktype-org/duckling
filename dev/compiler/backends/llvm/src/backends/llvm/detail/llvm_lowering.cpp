@@ -96,8 +96,9 @@ namespace compiler::backend_llvm {
 			auto block_ids = lir_function->getBlockIDs();
 			// llvm prints in reverse... eh:
 			for (auto block: lir_function->block_order) {
-				llvm::BasicBlock* llvm_block
-					= llvm::BasicBlock::Create(context, base::strConcat("lir_block_", block_ids[block]), fun);
+				llvm::BasicBlock* llvm_block = llvm::BasicBlock::Create(
+					context, base::strConcat("lir_block_", block_ids[block]), fun
+				);
 				block_mapping.put(block, llvm_block);
 			}
 		}
@@ -106,11 +107,10 @@ namespace compiler::backend_llvm {
 
 		std::string llvmLocalName(lir::LocalRef lir_local) {
 			// @TODO.. this might have to change in the future
-			if (lir_local->helios_id) {
+			if (lir_local->helios_id)
 				return base::strConcat("helios_", lir_local_ids[lir_local]);
-			} else {
+			else
 				return base::strConcat("tmp_", lir_local_ids[lir_local]);
-			}
 		}
 
 		/**

@@ -7,7 +7,7 @@ namespace compiler::lir {
 		CORE_ASSERT(this->validateBlockOrder(), "Invalid block order");
 
 		base::Map<BlockRef, usize> block_ids;
-		usize next_id = 0;
+		usize                      next_id = 0;
 		for (const auto& block: block_order) {
 			block_ids.put(block, next_id);
 			next_id++;
@@ -17,7 +17,7 @@ namespace compiler::lir {
 
 	base::Map<LocalRef, u64> Function::getLocalIDs() const {
 		base::Map<LocalRef, usize> local_ids;
-		usize next_id = 0;
+		usize                      next_id = 0;
 		for (const auto& local: local_list) {
 			local_ids.put(local.ref(), next_id);
 			next_id++;
@@ -55,7 +55,7 @@ namespace compiler::lir {
 		void printLocalDesc(LocalRef local) {
 			output << "  Local(" << local_id[local] << ")";
 			if (local->helios_id.has_value())
-				output << ", helios_name: " << name(local->helios_id.value()).strView();	
+				output << ", helios_name: " << name(local->helios_id.value()).strView();
 			output << "\n";
 			output << "    LAYOUT:\n" << local->layout.toStringDefinition(ctx, true, 1) << "\n";
 		}
