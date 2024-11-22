@@ -10,6 +10,7 @@ MAKE_FLAG_TYPE(test_flag_namespace, TestFlagOpts, TestFlag,
 	Opt4,
 	Opt5
 )
+
 // clang-format on
 
 class FlagTypeTest: public tester::TestSuite {
@@ -49,7 +50,7 @@ public:
 		ASSERT_TRUE(!flag_123.contains(Opt1 | Opt4));
 
 		auto flag_234 = Opt2 | Opt3 | Opt4;
-		auto flag_23 = flag_123;
+		auto flag_23  = flag_123;
 		flag_23 &= flag_234;
 
 		ASSERT_TRUE(flag_23.contains(Opt2 | Opt3));

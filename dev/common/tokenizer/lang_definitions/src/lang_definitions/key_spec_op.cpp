@@ -100,8 +100,8 @@ namespace lang_def {
 			{ Keyword::This, "this", KeywordFlag() },
 		} };
 
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlag>, 17>
-		bc_keywords_array{ {
+	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlag>, 17> bc_keywords_array{
+		{
 			{ Keyword::BCFunction, "function", KeywordFlag() },
 			{ Keyword::BCLocalSize, "local_size", KeywordFlag() },
 			{ Keyword::BCRetSize, "ret_size", KeywordFlag() },
@@ -119,7 +119,8 @@ namespace lang_def {
 			{ Keyword::BCData, "data", KeywordFlag() },
 			{ Keyword::BCVariant, "variant", KeywordFlag() },
 			{ Keyword::BCFunType, "fun", KeywordFlag() },
-		} };
+		}
+	};
 
 
 	/**

@@ -41,6 +41,7 @@ MAKE_FLAG_TYPE(tsh, ValueSemanticFlags, ValueSemanticFlag,
 	USE,
 	DESTROY
 )
+
 // clang-format on
 
 namespace tsh {
@@ -78,11 +79,11 @@ namespace tsh {
 		explicit ValueCategory(const PrimaryCategory&);
 
 		ValueCategory(
-			PrimaryCategory category,
-			bool            is_mutable,
-			bool            is_pure,
-			ValueSemanticFlag  allows_semantic,
-			ValueSemanticFlag  force_semantic
+			PrimaryCategory   category,
+			bool              is_mutable,
+			bool              is_pure,
+			ValueSemanticFlag allows_semantic,
+			ValueSemanticFlag force_semantic
 		);
 
 		/**

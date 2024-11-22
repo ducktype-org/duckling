@@ -178,7 +178,7 @@ namespace lang_def {
 
 MAKE_FLAG_TYPE(lang_def, KeywordFlags, KeywordFlag, IS_ACTION)
 
-namespace lang_def{
+namespace lang_def {
 	namespace key_spec_op {
 		void init();
 	}
