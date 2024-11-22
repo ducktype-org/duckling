@@ -180,12 +180,12 @@ namespace pst {
 		/**
 		 * @brief Skips tokens, used to preserve position in case of error.
 		 */
-		static void fastForward(LangParserState& state, i64 length);
+		static void fastForward(LangParserState& state, u64 length);
 
 		/**
 		 * @brief Sanity check of length.
 		 */
-		static bool checkLength(LangParserState& state, i64 length);
+		static bool checkLength(LangParserState& state, u64 length);
 
 		explicit ExprElement(const dia::SourcePosition& position, i64 precedence):
 			  NotStmt(position),

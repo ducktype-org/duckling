@@ -135,7 +135,10 @@ namespace pst {
 			lexer::Value number;
 
 		public:
-			lexer::Value getValue() const { return number; }
+			[[nodiscard]]
+			lexer::Value getValue() const {
+				return number;
+			}
 
 			explicit ExprValue(const dia::SourcePosition& position, lexer::Value value):
 				  ExprElement(position, 0),
@@ -198,7 +201,10 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
-			const tpc::Identifier& getName() const { return name; }
+			[[nodiscard]]
+			const tpc::Identifier& getName() const {
+				return name;
+			}
 
 			[[nodiscard]]
 			std::string elementType() const override {
