@@ -19,7 +19,7 @@
 #include <base/perfect_hash.hpp>
 #include <result.hpp>
 
-// Seams fixed:
+// Seems fixed:
 // #if __GNUC__ < 12 && (!defined(__clang__))
 // // @GCC12: This specialization is in C++17, but is suported by GCC only from version 12
 // // Delete this code when switched to GCC12 (currently GCC10/GCC11 is used)
