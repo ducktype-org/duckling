@@ -50,8 +50,8 @@ namespace tsh {
 		const PrimaryCategory category,
 		const bool            is_mutable,
 		const bool            is_pure,
-		const base::FlagType  allows_semantic,
-		const base::FlagType  force_semantic
+		const ValueSemantics  allows_semantic,
+		const ValueSemantics  force_semantic
 	):
 		  category(category),
 		  is_mutable(is_mutable),
