@@ -4,6 +4,7 @@ add_subdirectory(typesystem)
 add_subdirectory(helios)
 add_subdirectory(mir)
 add_subdirectory(lir)
+add_subdirectory(backends)
 
 add_subdirectory(lsp_interface)
 
