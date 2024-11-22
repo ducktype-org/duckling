@@ -127,7 +127,7 @@ namespace base {
 
 	public:
 		MBox() = default;
-		MBox(std::nullptr_t) {};
+		MBox(std::nullptr_t){};
 
 		/**
 		 * @brief Constructs an MBox from a raw pointer.

@@ -105,7 +105,7 @@ namespace pst {
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, ClassStmt)
 
-		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos) {};
+		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos){};
 		static ParserRef<ClassBlock> parse(LangParserState& state, const ClassContext& ctx);
 
 		~ClassBlock() override = default;

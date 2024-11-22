@@ -403,7 +403,7 @@ namespace pst {
 			static u64 skipToOp(const LangParserState& state, u64 base, u64 length);
 
 		public:
-			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600) {};
+			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600){};
 
 			std::string elementType() const override { return "Comparison Chain"; }
 

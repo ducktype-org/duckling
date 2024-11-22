@@ -11,9 +11,8 @@ namespace pst::expr {
 		state.parse(out).one(NamedOperator::Colon);
 		state.parse(out).goDown();
 		// This is a little wrong but templates will be changed anyway
-		if (state.ctokens().size() > 0) {
+		if (state.ctokens().size() > 0)
 			state.parse(out).with(&out->inner, Comma::parse, state.ctokens().size());
-		}
 		state.parse(out).goUpAndSkip();
 
 		return out;

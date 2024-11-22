@@ -25,10 +25,7 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Const, &out->name, NamedOperator::Colon);
 
-		state.parse(out).with(
-			&out->type,
-			CommaExpr::parse
-		);
+		state.parse(out).with(&out->type, CommaExpr::parse);
 
 		state.parse(out).one(NamedOperator::Assign, true);
 

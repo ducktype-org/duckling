@@ -33,10 +33,7 @@ namespace pst {
 			is_var ? Keyword::Var : Keyword::Let, &out->name, NamedOperator::Colon
 		);
 
-		state.parse(out).with(
-			&out->type,
-			CommaExpr::parse
-		);
+		state.parse(out).with(&out->type, CommaExpr::parse);
 
 		state.parse(out).one(NamedOperator::Assign, true);
 

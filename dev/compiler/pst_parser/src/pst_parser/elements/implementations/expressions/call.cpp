@@ -13,9 +13,8 @@ namespace pst::expr {
 
 		state.parse(out).goDown();
 		// This is a little wrong but calls will be changed to fix that
-		if (state.ctokens().size() > 0) {
+		if (state.ctokens().size() > 0)
 			state.parse(out).with(&out->args, Comma::parse, state.ctokens().size());
-		}
 		state.parse(out).goUpAndSkip();
 
 		return out;

@@ -451,7 +451,6 @@ namespace compiler::mir {
 		void visitLinkedIdentifierExpr(const hc::LinkedIdentifierExpr&) override {
 			throw base::NotYetImplemented("linked identifier expr");
 		}
-
 	};
 
 	StmtLowerRes

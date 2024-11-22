@@ -176,7 +176,6 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
-
 	};
 
 	/**
@@ -189,7 +188,6 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
-
 	};
 
 	/**
@@ -206,7 +204,6 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
-
 	};
 
 	/**
@@ -224,7 +221,6 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
-
 	};
 
 	struct BinaryOperatorExpr: public Expr {
@@ -246,7 +242,6 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
-
 	};
 
 	/**
@@ -264,7 +259,6 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const override;
 		void acceptVisitor(HoutExprVisitor&) const override;
-
 	};
 
 	struct TupleConstructorExpr: public Expr {
@@ -276,7 +270,6 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const override;
 		void acceptVisitor(HoutExprVisitor&) const override;
-
 	};
 
 	struct VariantConstructorExpr: public Expr {
@@ -288,7 +281,6 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
-
 	};
 
 	/**
@@ -306,7 +298,6 @@ namespace compiler::helios::code {
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
-
 	};
 }
 

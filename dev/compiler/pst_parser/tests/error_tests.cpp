@@ -5,7 +5,7 @@
 
 #include <lexer/lexer.hpp>
 #include <sstream>
-#include <tester/tester.hpp> 
+#include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 #include <utility>
 

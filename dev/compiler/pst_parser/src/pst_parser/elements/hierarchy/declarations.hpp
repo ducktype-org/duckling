@@ -100,7 +100,7 @@ namespace pst {
 	class Class final: public Decl {
 	private:
 		tpc::Identifier           name;
-		ParserRef<ExprElement>           base       = nullptr;
+		ParserRef<ExprElement>    base       = nullptr;
 		ParserRef<ImplementsList> implements = nullptr;
 		ParserRef<ClassBlock>     body       = nullptr;
 
@@ -145,10 +145,10 @@ namespace pst {
 	};
 
 	class Variable final: public Decl {
-		tpc::Identifier name;
+		tpc::Identifier        name;
 		ParserRef<ExprElement> type     = nullptr;
 		ParserRef<ExprElement> value    = nullptr;
-		bool            is_const = true;
+		bool                   is_const = true;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Variable);
@@ -188,10 +188,10 @@ namespace pst {
 	};
 
 	class Fun final: public Decl {
-		tpc::Identifier                 name;
-		ParserRef<ParamList>            params = nullptr;
+		tpc::Identifier                        name;
+		ParserRef<ParamList>                   params = nullptr;
 		base::Optional<ParserRef<ExprElement>> ret;
-		ParserRef<CodeBlockOrStmt>      body = nullptr;
+		ParserRef<CodeBlockOrStmt>             body = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Fun);
@@ -282,8 +282,8 @@ namespace pst {
 	class For final: public CodeDecl {
 		tpc::OptionalIdentifier    optional_name;
 		tpc::Identifier            iterator;
-		ParserRef<ExprElement>            type     = nullptr;
-		ParserRef<ExprElement>            iterable = nullptr;
+		ParserRef<ExprElement>     type     = nullptr;
+		ParserRef<ExprElement>     iterable = nullptr;
 		ParserRef<CodeBlockOrStmt> body     = nullptr;
 
 	public:

@@ -111,7 +111,9 @@ namespace pst {
 		void dprint(std::ostream& out) const override;
 
 		[[nodiscard]]
-		std::string elementType() const override { return "Expr Stmt"; }
+		std::string elementType() const override {
+			return "Expr Stmt";
+		}
 
 		[[nodiscard]]
 		ParserCBorrowRef<ExprElement> getExpr() const {
@@ -180,7 +182,7 @@ namespace pst {
 
 	// TODO: Merge it with variable. Or perhaps make a new class DataStorage.
 	class Const final: public Stmt {
-		tpc::Identifier name;
+		tpc::Identifier        name;
 		ParserRef<ExprElement> type;
 		ParserRef<ExprElement> value;
 

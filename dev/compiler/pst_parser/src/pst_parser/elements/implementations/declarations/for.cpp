@@ -37,12 +37,14 @@ namespace pst {
 	class ForTypeExpr: public NotStmt {
 	public:
 		static bool end(const LangParserState& state, i64 fwd = 0) {
-			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign) || state[fwd].is(Keyword::In);
+			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
+			    || state[fwd].is(Keyword::In);
 		}
 
 		static base::unique_ptr<ExprElement> parse(LangParserState& state) {
 			return expr::parseUntil<expr::Comma, end>(state);
 		}
+
 		ForTypeExpr() = delete;
 	};
 
@@ -63,10 +65,7 @@ namespace pst {
 			state.parse(out).one(&out->iterator, true);
 
 			if (state.parse(out).tryEat(NamedOperator::Colon)) {
-				state.parse(out).with(
-					&out->type,
-					ForTypeExpr::parse
-				);
+				state.parse(out).with(&out->type, ForTypeExpr::parse);
 				state.parse(out).tryEat(Keyword::In);
 			} else {
 				state.parse(out).one(Keyword::In);

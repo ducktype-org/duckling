@@ -283,7 +283,9 @@ namespace compiler::helios::errors {
 		 */
 		constexpr const base::Optional<ResTp>& optValue() const& { return value_storage; }
 
-		constexpr const base::Optional<ResTp>&& optValue() const&& { return std::move(value_storage); }
+		constexpr const base::Optional<ResTp>&& optValue() const&& {
+			return std::move(value_storage);
+		}
 
 		constexpr base::Optional<ResTp>& optValue() & { return value_storage; }
 

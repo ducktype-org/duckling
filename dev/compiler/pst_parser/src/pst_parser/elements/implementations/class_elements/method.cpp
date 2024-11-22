@@ -30,10 +30,7 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Fun, &out->name, &out->params);
 		if (state.parse(out).tryEat(NamedOperator::SingleArrow))
-			state.parse(out).with(
-				&out->ret,
-				CommaExpr::parse
-			);
+			state.parse(out).with(&out->ret, CommaExpr::parse);
 
 		state.parse(out).all(NamedOperator::Assign, &out->body);
 
