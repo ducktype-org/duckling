@@ -53,7 +53,10 @@ namespace compiler::lir {
 		LirPrinter(query::Context& ctx, std::ostream& output): ctx(ctx), output(output) {}
 
 		void printLocalDesc(LocalRef local) {
-			output << "  Local(" << local_id[local] << ")\n";
+			output << "  Local(" << local_id[local] << ")";
+			if (local->helios_id.has_value())
+				output << ", helios_name: " << name(local->helios_id.value()).strView();	
+			output << "\n";
 			output << "    LAYOUT:\n" << local->layout.toStringDefinition(ctx, true, 1) << "\n";
 		}
 
