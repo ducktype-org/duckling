@@ -10,7 +10,7 @@ namespace pst::expr {
 		auto out = base::make_unique<RoundExpr>(state.getPosition());
 
 		state.parse(out).goDown();
-		state.parse(out).with(&out->expr, Comma::parse, (i64)state.ctokens().size());
+		state.parse(out).with(&out->expr, Comma::parse, (i64) state.ctokens().size());
 		state.parse(out).goUpAndSkip();
 
 		return out;
