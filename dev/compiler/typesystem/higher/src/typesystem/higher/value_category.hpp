@@ -34,7 +34,7 @@ namespace tsh {
 }
 
 // clang-format off
-MAKE_FLAG_TYPE(tsh, ValueSemanticFlags, ValueSemanticFlag,
+MAKE_FLAG_TYPE(tsh, ValueSemanticsOptions, ValueSemantics,
 	MOVE,
 	COPY,
 	REINIT,
@@ -49,7 +49,7 @@ namespace tsh {
 	 * Value category class describes properties of a value other than its type.
 	 */
 	class ValueCategory {
-		using enum ValueSemanticFlags;
+		using enum ValueSemanticsOptions;
 
 		/**
 		 * Primary category of a value.
@@ -66,12 +66,12 @@ namespace tsh {
 		/**
 		 * Allowed semantics describe what can be done with a value.
 		 */
-		ValueSemanticFlag allows_semantic{ MOVE | COPY | REINIT | USE | DESTROY };
+		ValueSemantics allows_semantic{ MOVE | COPY | REINIT | USE | DESTROY };
 		/**
 		 * Forces semantics describe what must be done with a value. Note that it might be redundant
 		 * because of information kept in allowed semantics.
 		 */
-		ValueSemanticFlag force_semantic{};
+		ValueSemantics force_semantic{};
 
 	public:
 		ValueCategory() = default;
@@ -79,11 +79,11 @@ namespace tsh {
 		explicit ValueCategory(const PrimaryCategory&);
 
 		ValueCategory(
-			PrimaryCategory   category,
-			bool              is_mutable,
-			bool              is_pure,
-			ValueSemanticFlag allows_semantic,
-			ValueSemanticFlag force_semantic
+			PrimaryCategory category,
+			bool            is_mutable,
+			bool            is_pure,
+			ValueSemantics  allows_semantic,
+			ValueSemantics  force_semantic
 		);
 
 		/**
@@ -114,7 +114,7 @@ namespace tsh {
 		 * A simple getter for allows_semantic.
 		 */
 		[[nodiscard]]
-		ValueSemanticFlag getAllowsSemantic() const {
+		ValueSemantics getAllowsSemantic() const {
 			return allows_semantic;
 		}
 
@@ -122,7 +122,7 @@ namespace tsh {
 		 * A simple getter for force_semantic.
 		 */
 		[[nodiscard]]
-		ValueSemanticFlag getForceSemantic() const {
+		ValueSemantics getForceSemantic() const {
 			return force_semantic;
 		}
 

@@ -2,9 +2,6 @@
  * @file flag.hpp
  * @brief This is a very basic implementation of FlagType, which is enum-like
  * type, that allow to store multiple options in single value.
- *
- * @note Current implementation does not allow to create strongly
- * typed flag-types. It should be changed to this in the future.
  */
 #pragma once
 
@@ -15,6 +12,10 @@
 
 #define MAKE_FLAG_TYPE(namespace_name, enum_name, flag_name, ...)                              \
 	MAKE_STRINGIFYABLE_ENUM(namespace_name, u32, enum_name, __VA_ARGS__)                       \
+                                                                                               \
+	static_assert(                                                                             \
+		static_cast<u32>(namespace_name::enum_name::COUNT) < 64, "Too many flag options."      \
+	);                                                                                         \
                                                                                                \
 	namespace namespace_name {                                                                 \
 		class flag_name {                                                                      \
@@ -67,16 +68,18 @@
 			constexpr auto operator<=>(const flag_name& oth) const = default;                  \
                                                                                                \
 			[[nodiscard]]                                                                      \
-			std::string to_string() const {                                                    \
+			std::string toString(bool in_brackets = false) const {                             \
 				std::stringstream ss;                                                          \
 				std::string       separator;                                                   \
                                                                                                \
+				if (in_brackets) ss << "[";                                                    \
 				for (int i = 0; i < static_cast<u32>(enum_name::COUNT); i++) {                 \
 					if (data & (1 << i)) {                                                     \
 						ss << separator << base::enumToStr(static_cast<enum_name>(i)).str();   \
-						separator = " | ";                                                     \
+						separator = "|";                                                       \
 					}                                                                          \
 				}                                                                              \
+				if (in_brackets) ss << "]";                                                    \
                                                                                                \
 				return ss.str();                                                               \
 			}                                                                                  \

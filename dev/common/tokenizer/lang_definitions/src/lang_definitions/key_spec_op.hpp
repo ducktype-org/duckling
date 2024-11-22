@@ -176,7 +176,7 @@ namespace lang_def {
 	};
 }
 
-MAKE_FLAG_TYPE(lang_def, KeywordFlags, KeywordFlag, IS_ACTION)
+MAKE_FLAG_TYPE(lang_def, KeywordFlagsOptions, KeywordFlags, IS_ACTION)
 
 namespace lang_def {
 	namespace key_spec_op {
@@ -193,7 +193,7 @@ namespace lang_def {
 	base::StrID specialToStr(Special spec);
 	base::StrID operatorToStr(Operator oper);
 
-	KeywordFlag keywordFlags(Keyword key);
+	KeywordFlags keywordFlags(Keyword key);
 
 	std::vector<Keyword>  getKeywords();
 	std::vector<Special>  getSpecials();

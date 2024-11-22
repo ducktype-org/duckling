@@ -47,11 +47,11 @@ namespace tsh {
 	 * @brief Construct the value category with manually given values of all attributes.
 	 */
 	ValueCategory::ValueCategory(
-		const PrimaryCategory   category,
-		const bool              is_mutable,
-		const bool              is_pure,
-		const ValueSemanticFlag allows_semantic,
-		const ValueSemanticFlag force_semantic
+		const PrimaryCategory category,
+		const bool            is_mutable,
+		const bool            is_pure,
+		const ValueSemantics  allows_semantic,
+		const ValueSemantics  force_semantic
 	):
 		  category(category),
 		  is_mutable(is_mutable),
