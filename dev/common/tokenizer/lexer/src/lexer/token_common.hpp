@@ -18,10 +18,14 @@ namespace lexer {
 		operator base::StrID() { return value; }
 
 		[[nodiscard]]
-		std::string str() const { return value.str(); }
+		std::string str() const {
+			return value.str();
+		}
 
 		[[nodiscard]]
-		lang_def::NamedOperator asNamed() const { return lang_def::strAsOperator(value); }
+		lang_def::NamedOperator asNamed() const {
+			return lang_def::strAsOperator(value);
+		}
 
 		/**
 		 * @note This should do the corrected UTF-8 check in the future.
@@ -47,7 +51,9 @@ namespace lexer {
 		operator base::StrID() { return value; }
 
 		[[nodiscard]]
-		std::string str() const { return value.str(); }
+		std::string str() const {
+			return value.str();
+		}
 
 		/**
 		 * @note This should probably do something more in the future

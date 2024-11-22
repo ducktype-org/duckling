@@ -507,11 +507,14 @@ namespace compiler::helios {
 				);
 			}
 
-			void visitTupleConstructorExpr([[maybe_unused]] const code::TupleConstructorExpr& expr) override {
+			void visitTupleConstructorExpr([[maybe_unused]] const code::TupleConstructorExpr& expr
+			) override {
 				throw base::NotYetImplemented("Evaluation of tuple values is not implemented yet");
 			}
 
-			void visitVariantConstructorExpr([[maybe_unused]] const code::VariantConstructorExpr& expr) override {
+			void visitVariantConstructorExpr(
+				[[maybe_unused]] const code::VariantConstructorExpr& expr
+			) override {
 				throw base::NotYetImplemented("Evaluation of variant values is not implemented yet"
 				);
 			}

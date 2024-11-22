@@ -68,10 +68,12 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Prefix Operator"; }
+			std::string elementType() const override {
+				return "Prefix Operator";
+			}
 
 			[[nodiscard]]
-			lexer::Operator               getOperator() const;
+			lexer::Operator getOperator() const;
 			[[nodiscard]]
 			ParserCBorrowRef<ExprElement> getExpr() const;
 		};
@@ -91,10 +93,12 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Suffix Operator"; }
+			std::string elementType() const override {
+				return "Suffix Operator";
+			}
 
 			[[nodiscard]]
-			lexer::Operator               getOperator() const;
+			lexer::Operator getOperator() const;
 			[[nodiscard]]
 			ParserCBorrowRef<ExprElement> getExpr() const;
 		};
@@ -119,10 +123,12 @@ namespace pst {
 			[[nodiscard]]
 			ParserCBorrowRef<ExprElement> getRightOperand() const;
 			[[nodiscard]]
-			lexer::Operator               getOperator() const;
+			lexer::Operator getOperator() const;
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Binary Operator"; }
+			std::string elementType() const override {
+				return "Binary Operator";
+			}
 		};
 
 		class ExprValue final: public ExprElement {
@@ -142,7 +148,9 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Value Expr"; }
+			std::string elementType() const override {
+				return "Value Expr";
+			}
 		};
 
 		/**
@@ -172,7 +180,9 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Template Specifier Expression"; }
+			std::string elementType() const override {
+				return "Template Specifier Expression";
+			}
 		};
 
 		class IdentifierLiteral final: public ExprElement {
@@ -191,7 +201,9 @@ namespace pst {
 			const tpc::Identifier& getName() const { return name; }
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Identifier Expression"; }
+			std::string elementType() const override {
+				return "Identifier Expression";
+			}
 		};
 
 		class KeywordLiteral final: public ExprElement {
@@ -208,10 +220,14 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			Keyword getKeyword() const { return keyword; }
+			Keyword getKeyword() const {
+				return keyword;
+			}
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Keyword Expression"; }
+			std::string elementType() const override {
+				return "Keyword Expression";
+			}
 		};
 
 		class Access final: public ExprElement {
@@ -229,10 +245,12 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Access Expression"; }
+			std::string elementType() const override {
+				return "Access Expression";
+			}
 
 			[[nodiscard]]
-			base::StrID            getType() const;
+			base::StrID getType() const;
 			[[nodiscard]]
 			const tpc::Identifier& getName() const;
 
@@ -250,8 +268,9 @@ namespace pst {
 		 * @note Currently an empty call/subscript results in an error.
 		 */
 		class Call final: public ExprElement {
-			lexer::Token::BracketType type = lexer::Token::BracketType::None;  ///< either Round or Square
-			ParserRef<ExprElement>    args;
+			lexer::Token::BracketType type
+				= lexer::Token::BracketType::None;  ///< either Round or Square
+			ParserRef<ExprElement> args;
 
 		public:
 			Call(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
@@ -263,7 +282,9 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Call Expression"; }
+			std::string elementType() const override {
+				return "Call Expression";
+			}
 		};
 
 		/**
@@ -290,10 +311,12 @@ namespace pst {
 			~ChainExpr() override = default;
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Chain Expression"; }
+			std::string elementType() const override {
+				return "Chain Expression";
+			}
 
 			[[nodiscard]]
-			ParserCBorrowRef<ExprElement>              getLiteral() const;
+			ParserCBorrowRef<ExprElement> getLiteral() const;
 			[[nodiscard]]
 			const std::vector<ParserRef<ExprElement>>& getChain() const;
 		};
@@ -311,10 +334,14 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Round Group Expression"; }
+			std::string elementType() const override {
+				return "Round Group Expression";
+			}
 
 			[[nodiscard]]
-			ParserCBorrowRef<ExprElement> getInner() const { return expr.borrow(); }
+			ParserCBorrowRef<ExprElement> getInner() const {
+				return expr.borrow();
+			}
 		};
 
 		class BlockExpr final: public ExprElement {
@@ -330,7 +357,9 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Block Expression"; }
+			std::string elementType() const override {
+				return "Block Expression";
+			}
 		};
 
 		class GeneralPrefix final: public PrefixOperator {
@@ -432,7 +461,9 @@ namespace pst {
 			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600){};
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Comparison Chain"; }
+			std::string elementType() const override {
+				return "Comparison Chain";
+			}
 
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
 
@@ -491,7 +522,9 @@ namespace pst {
 			explicit Ternary(const dia::SourcePosition& position): ExprElement(position, 800) {}
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Ternary Expr"; }
+			std::string elementType() const override {
+				return "Ternary Expr";
+			}
 
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
 
@@ -509,7 +542,9 @@ namespace pst {
 			explicit Comma(const dia::SourcePosition& position): ExprElement(position, 900) {}
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Comma Expr"; }
+			std::string elementType() const override {
+				return "Comma Expr";
+			}
 
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
 
@@ -533,7 +568,9 @@ namespace pst {
 				  ExprElement(position, 1'000) {}
 
 			[[nodiscard]]
-			std::string elementType() const override { return "Assignment Expr"; }
+			std::string elementType() const override {
+				return "Assignment Expr";
+			}
 
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
 
