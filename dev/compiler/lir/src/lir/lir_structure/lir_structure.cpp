@@ -3,6 +3,28 @@
 
 namespace compiler::lir {
 
+	base::Map<BlockRef, u64> Function::getBlockIDs() const {
+		CORE_ASSERT(this->validateBlockOrder(), "Invalid block order");
+
+		base::Map<BlockRef, usize> block_ids;
+		usize next_id = 0;
+		for (const auto& block: block_order) {
+			block_ids.put(block, next_id);
+			next_id++;
+		}
+		return block_ids;
+	}
+
+	base::Map<LocalRef, u64> Function::getLocalIDs() const {
+		base::Map<LocalRef, usize> local_ids;
+		usize next_id = 0;
+		for (const auto& local: local_list) {
+			local_ids.put(local.ref(), next_id);
+			next_id++;
+		}
+		return local_ids;
+	}
+
 	bool Function::validateBlockOrder() const {
 		base::Map<BlockRef, bool> block_map;
 		for (const auto& block: block_order) {
@@ -25,27 +47,10 @@ namespace compiler::lir {
 		query::Context& ctx;
 		std::ostream&   output;
 
-		LirPrinter(query::Context& ctx, std::ostream& output): ctx(ctx), output(output) {}
-
 		base::Map<LocalRef, usize> local_id;
 		base::Map<BlockRef, usize> block_id;
 
-		void setLocalIds(const Function& function) {
-			usize next_id = 0;
-			for (const auto& local: function.local_list) {
-				local_id.put(local.ref(), next_id);
-				next_id++;
-			}
-		}
-
-		void setBlockIds(const Function& function) {
-			CORE_ASSERT(function.validateBlockOrder(), "Invalid block order");
-			usize next_id = 0;
-			for (const auto& block: function.block_order) {
-				block_id.put(block, next_id);
-				next_id++;
-			}
-		}
+		LirPrinter(query::Context& ctx, std::ostream& output): ctx(ctx), output(output) {}
 
 		void printLocalDesc(LocalRef local) {
 			output << "  Local(" << local_id[local] << ")\n";
@@ -95,8 +100,9 @@ namespace compiler::lir {
 		}
 
 		void debugPrint(const Function& function) {
-			setLocalIds(function);
-			setBlockIds(function);
+			// set local and block ids:
+			local_id = function.getLocalIDs();
+			block_id = function.getBlockIDs();
 
 			output << "Function \"" << function.name.strView() << "\":\n";
 
@@ -126,6 +132,4 @@ namespace compiler::lir {
 	void Function::debugPrint(query::Context& ctx, std::ostream& output) const {
 		LirPrinter{ ctx, output }.debugPrint(*this);
 	}
-
-
 }

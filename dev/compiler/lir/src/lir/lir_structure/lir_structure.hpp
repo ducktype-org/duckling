@@ -99,7 +99,6 @@ namespace compiler::lir {
 		// a copy of type-layout here might bu sub-optimal
 		tsl::TypeLayout layout;
 
-
 	private:
 		LirLocal(helios::SymID helios_id, tsl::TypeLayout layout):
 			  helios_id(helios_id),
@@ -184,5 +183,23 @@ namespace compiler::lir {
 		bool validateBlockOrder() const;
 
 		void debugPrint(query::Context&, std::ostream& output) const;
+
+		/**
+		 * @brief Returns a map from all blocks to unique ids.
+		 * @note Those ids does not cary any meaning, they are made here to be consistent in 
+		 * different part of compiler (e.g. lir printing, llvm lowering).
+		 * @return base::Map<BlockRef, u64>
+		 */
+		[[nodiscard]]
+		base::Map<BlockRef, u64> getBlockIDs() const;
+
+		/**
+		 * @brief Returns a map from all locals to unique ids.
+		 * @note Those ids does not cary any meaning, they are made here to be consistent in
+		 * different part of compiler (e.g. lir printing, llvm lowering).
+		 * @return base::Map<BlockRef, u64>
+		 */
+		[[nodiscard]]
+		base::Map<LocalRef, u64> getLocalIDs() const;
 	};
 }
