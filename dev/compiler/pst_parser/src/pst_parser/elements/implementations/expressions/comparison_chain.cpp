@@ -17,7 +17,7 @@ namespace pst::expr {
 		auto out = base::make_unique<ComparisonChain>(state.getPosition());
 
 		while (fwd < length) {
-			out->sub_expr.push_back(nullptr);
+			out->sub_expr.emplace_back(nullptr);
 			state.parse(out).with(&out->sub_expr.back(), Lower::parse, +fwd);
 
 			out->operators.push_back(state[0].asOperator());
@@ -27,7 +27,7 @@ namespace pst::expr {
 			fwd = skipToOp(state, 0, length);
 		}
 
-		out->sub_expr.push_back(nullptr);
+		out->sub_expr.emplace_back(nullptr);
 		state.parse(out).with(&out->sub_expr.back(), Lower::parse, +fwd);
 
 		return out;

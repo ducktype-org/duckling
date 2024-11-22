@@ -41,7 +41,7 @@ namespace pst::expr {
 		if (fwd == reduced_length) {}  // Error
 
 		std::vector<i64> operators;
-		i64              next;
+		i64              next = 0;
 		while (fwd < reduced_length) {
 			next = skipLiteral(state, fwd, reduced_length);
 			if (fwd == next) {}             // Error

@@ -25,14 +25,14 @@ namespace pst {
 
 	bool ExprElement::checkLength(LangParserState& state, i64 length) {
 		if (length <= 0) {
-			std::cerr << "empty expression" << std::endl;
+			std::cerr << "empty expression\n";
 			// Empty expression error
 			state.log(base::make_unique<EmptyExprError>(state.getPosition()));
 			fastForward(state, length);
 			return false;
 		}
 		if (state[length - 1].is(lexer::Token::Type::Sentinel)) {
-			std::cerr << "too long expression" << std::endl;
+			std::cerr << "too long expression\n";
 			// Expression length too long error
 			fastForward(state, length);
 			return false;
