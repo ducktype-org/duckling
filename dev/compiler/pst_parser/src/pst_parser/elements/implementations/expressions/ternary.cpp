@@ -16,13 +16,13 @@ namespace pst::expr {
 		for (i64 i = 0; i < length; i++) {
 			if (state[i].is(Keyword::If)) {
 				if (if_found) {
-					std::cerr << "Ternary error 1" << std::endl;
+					std::cerr << "Ternary error 1\n";
 					// Partial ternary expression error
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (i != 0) {
-					std::cerr << "Ternary error 2" << std::endl;
+					std::cerr << "Ternary error 2\n";
 					// ternary expression in improper context error
 					fastForward(state, length);
 					return nullptr;
@@ -30,13 +30,13 @@ namespace pst::expr {
 				if (!if_found) if_found = true;
 			} else if (state[i].is(Keyword::Then)) {
 				if (!if_found) {
-					std::cerr << "Ternary error 3" << std::endl;
+					std::cerr << "Ternary error 3\n";
 					// Partial ternary expression error
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (then_found) {
-					std::cerr << "Ternary error 4" << std::endl;
+					std::cerr << "Ternary error 4\n";
 					// multiple ternary in one expression error
 					fastForward(state, length);
 					return nullptr;
@@ -47,13 +47,13 @@ namespace pst::expr {
 				}
 			} else if (state[i].is(Keyword::Else)) {
 				if (!if_found || !then_found) {
-					std::cerr << "Ternary error 5" << std::endl;
+					std::cerr << "Ternary error 5\n";
 					// Partial ternary expression error
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (else_found) {
-					std::cerr << "Ternary error 6" << std::endl;
+					std::cerr << "Ternary error 6\n";
 					// multiple ternary in one expression error
 					fastForward(state, length);
 					return nullptr;
@@ -66,7 +66,7 @@ namespace pst::expr {
 		}
 		if (!if_found) return Lower::parse(state, length);
 		if (if_found && !else_found) {
-			std::cerr << "Ternary error 7" << std::endl;
+			std::cerr << "Ternary error 7\n";
 			// Partial ternary expression error
 			fastForward(state, length);
 			return nullptr;
