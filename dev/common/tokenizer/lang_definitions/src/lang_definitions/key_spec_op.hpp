@@ -174,12 +174,11 @@ namespace lang_def {
 		Multiply,
 		Divide,
 	};
+}
 
-	// @TODO: this could be defined enum-like, maybe with macro
-	namespace KeywordFlags {
-		constexpr base::FlagType is_action(0);
-	}
+MAKE_FLAG_TYPE(lang_def, KeywordFlags, KeywordFlag, IS_ACTION)
 
+namespace lang_def{
 	namespace key_spec_op {
 		void init();
 	}
@@ -194,7 +193,7 @@ namespace lang_def {
 	base::StrID specialToStr(Special spec);
 	base::StrID operatorToStr(Operator oper);
 
-	base::FlagType keywordFlags(Keyword key);
+	KeywordFlag keywordFlags(Keyword key);
 
 	std::vector<Keyword>  getKeywords();
 	std::vector<Special>  getSpecials();
