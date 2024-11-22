@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> GeneralPrefix::parse(LangParserState& state, u64 length) {
+	ParserRef<ExprElement> GeneralPrefix::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing General Prefix Expressions" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 

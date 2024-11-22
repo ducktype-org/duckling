@@ -1,17 +1,17 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	u64 ComparisonChain::skipToOp(const LangParserState& state, u64 base, u64 length) {
-		u64 fwd = base;
+	i64 ComparisonChain::skipToOp(const LangParserState& state, i64 base, i64 length) {
+		i64 fwd = base;
 		while (fwd < length && !ExprClassify::isComparison(state, fwd)) fwd++;
 		return fwd;
 	}
 
-	ParserRef<ExprElement> ComparisonChain::parse(LangParserState& state, u64 length) {
+	ParserRef<ExprElement> ComparisonChain::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Comparison Chain Expression" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
-		u64 fwd = skipToOp(state, 0, length);
+		i64 fwd = skipToOp(state, 0, length);
 		if (fwd == length) return Lower::parse(state, length);
 
 		auto out = base::make_unique<ComparisonChain>(state.getPosition());

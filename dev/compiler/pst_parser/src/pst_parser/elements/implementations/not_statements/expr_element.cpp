@@ -19,12 +19,12 @@ namespace pst {
 		EmptyExprError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	void ExprElement::fastForward(LangParserState& state, u64 length) {
+	void ExprElement::fastForward(LangParserState& state, i64 length) {
 		state.tokens().skip(length);
 	}
 
-	bool ExprElement::checkLength(LangParserState& state, u64 length) {
-		if (length == 0) {
+	bool ExprElement::checkLength(LangParserState& state, i64 length) {
+		if (length <= 0) {
 			std::cerr << "empty expression" << std::endl;
 			// Empty expression error
 			state.log(base::make_unique<EmptyExprError>(state.getPosition()));

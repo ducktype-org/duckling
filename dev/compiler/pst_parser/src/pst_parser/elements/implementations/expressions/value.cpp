@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> ExprValue::parse(LangParserState& state, u64 length) {
+	ParserRef<ExprElement> ExprValue::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Value" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 

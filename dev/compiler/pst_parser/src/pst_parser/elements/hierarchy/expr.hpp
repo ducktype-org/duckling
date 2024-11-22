@@ -144,7 +144,7 @@ namespace pst {
 				  ExprElement(position, 0),
 				  number(value) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~ExprValue() override = default;
 			void dprint(std::ostream& out) const final;
@@ -163,7 +163,7 @@ namespace pst {
 		public:
 			Literal() = delete;
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 		};
 
 		/**
@@ -176,7 +176,7 @@ namespace pst {
 		public:
 			TemplateSpecifier(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~TemplateSpecifier() override = default;
 			void dprint(std::ostream& out) const final;
@@ -195,7 +195,7 @@ namespace pst {
 		public:
 			IdentifierLiteral(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~IdentifierLiteral() override = default;
 			void dprint(std::ostream& out) const final;
@@ -219,7 +219,7 @@ namespace pst {
 		public:
 			KeywordLiteral(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~KeywordLiteral() override = default;
 			void dprint(std::ostream& out) const final;
@@ -244,7 +244,7 @@ namespace pst {
 		public:
 			Access(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~Access() override = default;
 			void dprint(std::ostream& out) const final;
@@ -281,7 +281,7 @@ namespace pst {
 		public:
 			Call(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~Call() override = default;
 			void dprint(std::ostream& out) const final;
@@ -305,12 +305,12 @@ namespace pst {
 			/**
 			 * @brief checks length before the start of the next link
 			 */
-			static u64 toNextLink(const LangParserState& state, u64 length);
+			static i64 toNextLink(const LangParserState& state, i64 length);
 
 		public:
 			ChainExpr(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 			void                          dprint(std::ostream& out) const final;
 			void                          acceptVisitor(PstExprVisitor& visitor) const final;
 
@@ -333,7 +333,7 @@ namespace pst {
 		public:
 			explicit RoundExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~RoundExpr() override = default;
 			void dprint(std::ostream& out) const final;
@@ -356,7 +356,7 @@ namespace pst {
 		public:
 			explicit BlockExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~BlockExpr() override = default;
 			void dprint(std::ostream& out) const final;
@@ -376,7 +376,7 @@ namespace pst {
 			explicit GeneralPrefix(const dia::SourcePosition& pos, Operator op):
 				  PrefixOperator(pos, op, 400) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~GeneralPrefix() override = default;
 		};
@@ -386,13 +386,13 @@ namespace pst {
 			using Self  = GeneralSuffix;
 
 			static ParserRef<ExprElement>
-				parseRecursive(LangParserState& state, u64 length, u64 iter);
+				parseRecursive(LangParserState& state, i64 length, u64 iter);
 
 		public:
 			explicit GeneralSuffix(const dia::SourcePosition& pos, Operator op):
 				  SuffixOperator(pos, op, 450) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~GeneralSuffix() override = default;
 		};
@@ -423,7 +423,7 @@ namespace pst {
 
 			struct OperatorBuilder;
 
-			using BuilderExpr = std::variant<u64, base::unique_ptr<OperatorBuilder>>;
+			using BuilderExpr = std::variant<i64, base::unique_ptr<OperatorBuilder>>;
 
 			struct OperatorBuilder {
 				BuilderExpr lhs;
@@ -445,12 +445,12 @@ namespace pst {
 			 * `::`)
 			 *
 			 */
-			static u64 skipLiteral(const LangParserState& state, u64 base, u64 length);
+			static i64 skipLiteral(const LangParserState& state, i64 base, i64 length);
 
 			static ParserRef<ExprElement>
 				parseRecursive(LangParserState& state, const BuilderExpr& expr);
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~GeneralBinary() override = default;
 		};
@@ -461,7 +461,7 @@ namespace pst {
 			std::vector<ParserRef<ExprElement>> sub_expr;
 			std::vector<Operator>               operators;
 
-			static u64 skipToOp(const LangParserState& state, u64 base, u64 length);
+			static i64 skipToOp(const LangParserState& state, i64 base, i64 length);
 
 		public:
 			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600){};
@@ -471,7 +471,7 @@ namespace pst {
 				return "Comparison Chain";
 			}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~ComparisonChain() override = default;
 			void dprint(std::ostream& out) const final;
@@ -486,7 +486,7 @@ namespace pst {
 			explicit LogicNot(const dia::SourcePosition& position):
 				  PrefixOperator(position, lang_def::keywordToStr(Keyword::Not), 730) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~LogicNot() override = default;
 		};
@@ -499,7 +499,7 @@ namespace pst {
 			explicit LogicAnd(const dia::SourcePosition& position):
 				  BinaryOperator(position, lang_def::keywordToStr(lang_def::Keyword::And), 730) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~LogicAnd() override = default;
 		};
@@ -512,7 +512,7 @@ namespace pst {
 			explicit LogicOr(const dia::SourcePosition& position):
 				  BinaryOperator(position, lang_def::keywordToStr(lang_def::Keyword::Or), 760) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~LogicOr() override = default;
 		};
@@ -532,7 +532,7 @@ namespace pst {
 				return "Ternary Expr";
 			}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~Ternary() override = default;
 			void dprint(std::ostream& out) const final;
@@ -552,7 +552,7 @@ namespace pst {
 				return "Comma Expr";
 			}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~Comma() override = default;
 			void dprint(std::ostream& out) const final;
@@ -578,7 +578,7 @@ namespace pst {
 				return "Assignment Expr";
 			}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
+			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
 
 			~Assignment() override = default;
 			void dprint(std::ostream& out) const final;

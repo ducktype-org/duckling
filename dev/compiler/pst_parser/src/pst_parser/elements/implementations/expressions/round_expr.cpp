@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> RoundExpr::parse(LangParserState& state, u64 length) {
+	ParserRef<ExprElement> RoundExpr::parse(LangParserState& state, i64 length) {
 		std::cerr << "Parsing Round Group Expression";
 		if (!checkLength(state, length)) return nullptr;
 
@@ -10,7 +10,7 @@ namespace pst::expr {
 		auto out = base::make_unique<RoundExpr>(state.getPosition());
 
 		state.parse(out).goDown();
-		state.parse(out).with(&out->expr, Comma::parse, state.ctokens().size());
+		state.parse(out).with(&out->expr, Comma::parse, (i64)state.ctokens().size());
 		state.parse(out).goUpAndSkip();
 
 		return out;

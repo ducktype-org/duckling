@@ -3,8 +3,8 @@
 #include <stack>
 
 namespace pst::expr {
-	u64 GeneralBinary::skipLiteral(const LangParserState& state, u64 base, u64 length) {
-		u64 fwd = base;
+	i64 GeneralBinary::skipLiteral(const LangParserState& state, i64 base, i64 length) {
+		i64 fwd = base;
 		if (state[fwd].isIdentifier()) { fwd++; }  // Ignores first identifier
 		while (fwd < length && !isGenBinOp(state, fwd)
 		       && !(state[fwd].isIdentifier() && !state[fwd - 1].is(NamedOperator::Period))) {
@@ -15,8 +15,8 @@ namespace pst::expr {
 
 	ParserRef<ExprElement>
 		GeneralBinary::parseRecursive(LangParserState& state, const BuilderExpr& expr) {
-		if (std::holds_alternative<u64>(expr)) {
-			return Lower::parse(state, std::get<u64>(expr));
+		if (std::holds_alternative<i64>(expr)) {
+			return Lower::parse(state, std::get<i64>(expr));
 		} else {
 			auto op  = std::get<base::unique_ptr<OperatorBuilder>>(expr).borrow();
 			auto out = base::make_unique<GeneralBinary>(state.getPosition(), op->type);
@@ -29,19 +29,19 @@ namespace pst::expr {
 		}
 	}
 
-	ParserRef<ExprElement> GeneralBinary::parse(LangParserState& state, u64 length) {
+	ParserRef<ExprElement> GeneralBinary::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing General Binary Expressions" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
-		u64 fwd            = 0;
-		u64 reduced_length = length;
+		i64 fwd            = 0;
+		i64 reduced_length = length;
 		// Here this should include the prefix word operators in the future
 		while (fwd < length && state[fwd].isOperator()) fwd++;
 		while (fwd < reduced_length && state[reduced_length - 1].isOperator()) reduced_length--;
 		if (fwd == reduced_length) {}  // Error
 
-		std::vector<u64> operators;
-		u64              next;
+		std::vector<i64> operators;
+		i64              next;
 		while (fwd < reduced_length) {
 			next = skipLiteral(state, fwd, reduced_length);
 			if (fwd == next) {}             // Error
@@ -54,7 +54,7 @@ namespace pst::expr {
 
 		struct Partial {
 			BuilderExpr lhs;
-			u64         op_place;
+			i64         op_place;
 			i64         op_prec;
 		};
 
@@ -62,7 +62,7 @@ namespace pst::expr {
 		fwd = operators[0];
 		stack.push({ fwd, fwd, getOpPrec(state[fwd].asOperator()) });
 
-		for (u64 i = 1; i < operators.size(); i++) {
+		for (i64 i = 1; i < operators.size(); i++) {
 			fwd                   = operators[i];
 			i64         curr_prec = getOpPrec(state[fwd].asOperator());
 			BuilderExpr lhs       = operators[i] - operators[i - 1] - 1;

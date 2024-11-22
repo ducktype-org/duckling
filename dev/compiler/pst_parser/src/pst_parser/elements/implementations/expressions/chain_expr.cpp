@@ -1,10 +1,10 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	u64 ChainExpr::toNextLink(const LangParserState& state, u64 length) {
+	i64 ChainExpr::toNextLink(const LangParserState& state, i64 length) {
 		CORE_ASSERT(length > 0, "Illegal max length to next link");
 
-		u64 fwd = 1;
+		i64 fwd = 1;
 		if (state[0].is(Keyword::Lambda)) fwd = 2;  // Skip ()
 		while (fwd < length) {
 			if (state[fwd].is(lang_def::NamedOperator::Period)) break;
@@ -16,11 +16,11 @@ namespace pst::expr {
 		return fwd;
 	}
 
-	ParserRef<ExprElement> ChainExpr::parse(LangParserState& state, u64 length) {
+	ParserRef<ExprElement> ChainExpr::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Chain Expression" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
-		u64 fwd = toNextLink(state, length);
+		i64 fwd = toNextLink(state, length);
 		if (fwd == length) return Lower::parse(state, length);
 
 		auto out = base::make_unique<ChainExpr>(state.getPosition());

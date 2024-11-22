@@ -3,7 +3,7 @@
 #include "../../hierarchy/not_statements.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> BlockExpr::parse(LangParserState& state, u64 length) {
+	ParserRef<ExprElement> BlockExpr::parse(LangParserState& state, i64 length) {
 		std::cerr << "Parsing Round Group Expression";
 		if (!checkLength(state, length)) return nullptr;
 

@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> LogicOr::parse(LangParserState& state, u64 length) {
+	ParserRef<ExprElement> LogicOr::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Logical Or" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
@@ -9,9 +9,9 @@ namespace pst::expr {
 
 
 		bool or_found = false;
-		u64  or_fwd   = 0;
+		i64  or_fwd   = 0;
 
-		for (u64 i = 0; i < length; i++) {
+		for (i64 i = 0; i < length; i++) {
 			if (state[i].is(Keyword::Or)) {
 				or_found = true;
 				or_fwd   = i;

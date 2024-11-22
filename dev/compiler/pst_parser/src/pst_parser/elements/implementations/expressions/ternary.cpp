@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> Ternary::parse(LangParserState& state, u64 length) {
+	ParserRef<ExprElement> Ternary::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Ternary" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
@@ -9,11 +9,11 @@ namespace pst::expr {
 
 		bool if_found   = false;
 		bool then_found = false;
-		u64  then_fwd   = 0;
+		i64  then_fwd   = 0;
 		bool else_found = false;
-		u64  else_fwd   = 0;
+		i64  else_fwd   = 0;
 
-		for (u64 i = 0; i < length; i++) {
+		for (i64 i = 0; i < length; i++) {
 			if (state[i].is(Keyword::If)) {
 				if (if_found) {
 					std::cerr << "Ternary error 1" << std::endl;

@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> Access::parse(LangParserState& state, u64 length) {
+	ParserRef<ExprElement> Access::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Access Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
@@ -15,7 +15,7 @@ namespace pst::expr {
 
 		if (length > 2 && state[0].is(NamedOperator::Colon)
 		    && state[1].isBracketGroup(Token::Curly))
-			state.parse(out).with(&out->template_specifier, TemplateSpecifier::parse, 2UL);
+			state.parse(out).with(&out->template_specifier, TemplateSpecifier::parse, 2L);
 
 		return out;
 	}

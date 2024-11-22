@@ -1,16 +1,16 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> LogicAnd::parse(LangParserState& state, u64 length) {
+	ParserRef<ExprElement> LogicAnd::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Logical And" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
 		bool and_found = false;
-		u64  and_fwd   = 0;
+		i64  and_fwd   = 0;
 
-		for (u64 i = 0; i < length; i++) {
+		for (i64 i = 0; i < length; i++) {
 			if (state[i].is(Keyword::And)) {
 				and_found = true;
 				and_fwd   = i;

@@ -1,21 +1,21 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> Assignment::parse(LangParserState& state, u64 length) {
+	ParserRef<ExprElement> Assignment::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Assignment" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
-		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
+		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition((i64)length - 1).getEnd());
 
 		bool found = false;
-		u64  place = 0;
-		for (u64 i = 0; i < length; i++) {
-			if (ExprClassify::isAssignment(state, i)) {
+		i64  place = 0;
+		for (i64 i = 0; i < length; i++) {
+			if (ExprClassify::isAssignment(state, (i64)i)) {
 				if (!found) {
 					found = true;
 					place = i;
 				} else {
-					std::cerr << "multiple assignments" << std::endl;
+					std::cerr << "multiple assignments" << "\n";
 					// Multiple assignments in one expression
 					fastForward(state, length);
 					return nullptr;
