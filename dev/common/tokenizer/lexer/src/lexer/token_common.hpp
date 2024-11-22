@@ -17,8 +17,10 @@ namespace lexer {
 
 		operator base::StrID() { return value; }
 
+		[[nodiscard]]
 		std::string str() const { return value.str(); }
 
+		[[nodiscard]]
 		lang_def::NamedOperator asNamed() const { return lang_def::strAsOperator(value); }
 
 		/**
@@ -39,11 +41,12 @@ namespace lexer {
 
 		Value();
 		Value(const base::StrID id): value(id){};
-		Value(const std::string str): value(base::StrID(str.c_str())){};
+		Value(const std::string& str): value(base::StrID(str.c_str())){};
 		Value(const Value&) = default;
 
 		operator base::StrID() { return value; }
 
+		[[nodiscard]]
 		std::string str() const { return value.str(); }
 
 		/**

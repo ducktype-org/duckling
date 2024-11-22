@@ -481,7 +481,7 @@ namespace compiler::helios {
 					result = errors::HError(errors::Failed());
 					throw base::NotYetImplemented(
 						"Evaluation of different than '+-*/%**' binary operators is not "
-					    "implemented yet"
+						"implemented yet"
 					);
 				}
 			}
@@ -502,16 +502,16 @@ namespace compiler::helios {
 				result = evaluateExpr(ctx, *expr.inner);
 			}
 
-			void visitKeywordExpr(const code::KeywordExpr& expr) override {
+			void visitKeywordExpr([[maybe_unused]] const code::KeywordExpr& expr) override {
 				throw base::NotYetImplemented("Evaluation of keyword values is not implemented yet"
 				);
 			}
 
-			void visitTupleConstructorExpr(const code::TupleConstructorExpr& expr) override {
+			void visitTupleConstructorExpr([[maybe_unused]] const code::TupleConstructorExpr& expr) override {
 				throw base::NotYetImplemented("Evaluation of tuple values is not implemented yet");
 			}
 
-			void visitVariantConstructorExpr(const code::VariantConstructorExpr& expr) override {
+			void visitVariantConstructorExpr([[maybe_unused]] const code::VariantConstructorExpr& expr) override {
 				throw base::NotYetImplemented("Evaluation of variant values is not implemented yet"
 				);
 			}

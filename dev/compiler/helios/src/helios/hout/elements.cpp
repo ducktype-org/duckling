@@ -545,7 +545,7 @@ namespace compiler::helios::code {
 				CORE_ASSERT(pst_access->getType() == ".", "Not handling .? access operator yet");
 
 				std::cout << "Lookup in: " << name(looked_up_symbol.back()).strView() << " "
-						  << pst_access->getName().value.strView() << std::endl;
+						  << pst_access->getName().value.strView() << "\n";
 				auto new_symbols = *ctx.query<QueryLookupInSymbol>(
 					{ looked_up_symbol.back(), pst_access->getName().value, true }
 				);

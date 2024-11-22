@@ -67,9 +67,12 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Prefix Operator"; }
 
+			[[nodiscard]]
 			lexer::Operator               getOperator() const;
+			[[nodiscard]]
 			ParserCBorrowRef<ExprElement> getExpr() const;
 		};
 
@@ -87,9 +90,12 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Suffix Operator"; }
 
+			[[nodiscard]]
 			lexer::Operator               getOperator() const;
+			[[nodiscard]]
 			ParserCBorrowRef<ExprElement> getExpr() const;
 		};
 
@@ -108,10 +114,14 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
+			[[nodiscard]]
 			ParserCBorrowRef<ExprElement> getLeftOperand() const;
+			[[nodiscard]]
 			ParserCBorrowRef<ExprElement> getRightOperand() const;
+			[[nodiscard]]
 			lexer::Operator               getOperator() const;
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Binary Operator"; }
 		};
 
@@ -131,6 +141,7 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Value Expr"; }
 		};
 
@@ -160,6 +171,7 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Template Specifier Expression"; }
 		};
 
@@ -178,11 +190,12 @@ namespace pst {
 
 			const tpc::Identifier& getName() const { return name; }
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Identifier Expression"; }
 		};
 
 		class KeywordLiteral final: public ExprElement {
-			Keyword                                keyword;
+			Keyword                                keyword = Keyword::NotAKeyword;
 			base::Optional<ParserRef<ExprElement>> template_specifier;
 
 		public:
@@ -194,8 +207,10 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
+			[[nodiscard]]
 			Keyword getKeyword() const { return keyword; }
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Keyword Expression"; }
 		};
 
@@ -213,11 +228,15 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Access Expression"; }
 
+			[[nodiscard]]
 			base::StrID            getType() const;
+			[[nodiscard]]
 			const tpc::Identifier& getName() const;
 
+			[[nodiscard]]
 			base::Optional<ParserCBorrowRef<ExprElement>> getTemplateSpecifier() const {
 				return template_specifier.map([](const ParserRef<ExprElement>& t) {
 					return t.borrow();
@@ -231,7 +250,7 @@ namespace pst {
 		 * @note Currently an empty call/subscript results in an error.
 		 */
 		class Call final: public ExprElement {
-			lexer::Token::BracketType type;  ///< either Round or Square
+			lexer::Token::BracketType type = lexer::Token::BracketType::None;  ///< either Round or Square
 			ParserRef<ExprElement>    args;
 
 		public:
@@ -243,6 +262,7 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Call Expression"; }
 		};
 
@@ -269,9 +289,12 @@ namespace pst {
 
 			~ChainExpr() override = default;
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Chain Expression"; }
 
+			[[nodiscard]]
 			ParserCBorrowRef<ExprElement>              getLiteral() const;
+			[[nodiscard]]
 			const std::vector<ParserRef<ExprElement>>& getChain() const;
 		};
 
@@ -287,8 +310,10 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Round Group Expression"; }
 
+			[[nodiscard]]
 			ParserCBorrowRef<ExprElement> getInner() const { return expr.borrow(); }
 		};
 
@@ -304,6 +329,7 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Block Expression"; }
 		};
 
@@ -405,6 +431,7 @@ namespace pst {
 		public:
 			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600){};
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Comparison Chain"; }
 
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
@@ -463,6 +490,7 @@ namespace pst {
 		public:
 			explicit Ternary(const dia::SourcePosition& position): ExprElement(position, 800) {}
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Ternary Expr"; }
 
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
@@ -480,6 +508,7 @@ namespace pst {
 		public:
 			explicit Comma(const dia::SourcePosition& position): ExprElement(position, 900) {}
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Comma Expr"; }
 
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
@@ -488,6 +517,7 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
+			[[nodiscard]]
 			const std::vector<ParserRef<ExprElement>>& getExpressions() const;
 		};
 
@@ -502,6 +532,7 @@ namespace pst {
 			explicit Assignment(const dia::SourcePosition& position):
 				  ExprElement(position, 1'000) {}
 
+			[[nodiscard]]
 			std::string elementType() const override { return "Assignment Expr"; }
 
 			static ParserRef<ExprElement> parse(LangParserState& state, u64 length);
