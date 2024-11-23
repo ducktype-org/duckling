@@ -93,27 +93,24 @@ namespace compiler::backend_llvm {
 		base::Map<lir::BlockRef, Ref<llvm::BasicBlock>> block_mapping;
 
 		void generateMainBlocks(llvm::Function* fun) {
-			u64 block_id = 0;
+			auto block_ids = lir_function->getBlockIDs();
 			// llvm prints in reverse... eh:
-			for (auto& block: lir_function->blocks | std::views::reverse) {
-				llvm::BasicBlock* llvm_block
-					= llvm::BasicBlock::Create(context, base::strConcat("block_", block_id++), fun);
-				block_mapping.put(block.ref(), llvm_block);
+			for (auto block: lir_function->block_order) {
+				llvm::BasicBlock* llvm_block = llvm::BasicBlock::Create(
+					context, base::strConcat("lir_block_", block_ids[block]), fun
+				);
+				block_mapping.put(block, llvm_block);
 			}
 		}
 
-		base::Map<lir::LocalRef, u64> tmp_local_id;
+		base::Map<lir::LocalRef, u64> lir_local_ids;
 
 		std::string llvmLocalName(lir::LocalRef lir_local) {
-			// @TODO.. far from optimal
-			// This will change anyway, with LIR ID unification
-			if (lir_local->helios_id) {
-				return base::strConcat("helios_", base::perfectHash(lir_local->helios_id.value()));
-			} else {
-				if (not tmp_local_id.contains(lir_local))
-					tmp_local_id.put(lir_local, tmp_local_id.size());
-				return base::strConcat("tmp_", tmp_local_id[lir_local]);
-			}
+			// @TODO.. this might have to change in the future
+			if (lir_local->helios_id)
+				return base::strConcat("helios_", lir_local_ids[lir_local]);
+			else
+				return base::strConcat("tmp_", lir_local_ids[lir_local]);
 		}
 
 		/**
@@ -124,6 +121,10 @@ namespace compiler::backend_llvm {
 
 		void generateMainBlocksAndLocals(llvm::Function* fun) {
 			// allocate all local variables:
+
+			// set local id map:
+			lir_local_ids = lir_function->getLocalVariableIDs();
+
 			// first block:
 			llvm::BasicBlock* locals_block
 				= llvm::BasicBlock::Create(context, "local_variables", fun);
