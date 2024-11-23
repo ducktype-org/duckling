@@ -11,6 +11,7 @@ function(make_module MODULE_NAME)
 
 	target_include_directories(${MODULE_NAME} PUBLIC src ${make_module_INCLUDE})
 	target_link_libraries(${MODULE_NAME} ${make_module_USES})
+	add_to_coverage(${MODULE_NAME})
 endfunction()
 
 function(add_example exmaple_name source USES)
