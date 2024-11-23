@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import os
 import pathlib
 import sys
 import shutil
@@ -11,8 +12,11 @@ from scripts.toolbox.helpers import (
     abort_if_false,
     bash_command,
     exit_with_error,
+    get_llvm_strings,
     log_info,
     log_new_line,
+    make_pretty_command,
+    with_venv,
 )
 from scripts.toolbox.internet_file import (
     InternetFile,
@@ -53,13 +57,6 @@ def cli():
     pass
 
 
-def with_venv(cmd):
-    if not pathlib.Path(".venv").exists():
-        exit_with_error('.venv does not exits. Use "./toolbox.py setup-venv"')
-
-    bash_command(f"source .venv/bin/activate && {cmd}")
-
-
 def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, coverage):
     bld = pathlib.Path(build_dir)
     if bld.exists():
@@ -79,7 +76,7 @@ def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, cove
          -D USE_CCACHE={'ON' if ccache else 'OFF'}
          -D ENABLE_COVERAGE={'true' if coverage else 'false'}
     """
-    cmd = cmd.replace("\n", " ")
+    cmd = make_pretty_command(cmd)
 
     log_info("Setting up a build folder...")
     if docs:
@@ -343,7 +340,7 @@ def test(*args, **kwargs):
     test_impl(*args, **kwargs)
 
 
-def download_llvm_impl(version, arch):
+def download_llvm_impl(version, os, arch):
     log_info("==========================")
     log_info(
         "Downloading LLVM may or may not work, depending on a presence of compiled binaries listed here: https://github.com/llvm/llvm-project/releases/"
@@ -358,17 +355,14 @@ def download_llvm_impl(version, arch):
     log_info("==========================")
     log_new_line()
 
-    if arch == "x86_64":
-        name = f"clang+llvm-{version}-{arch}-linux-gnu-ubuntu-18.04"
-    else:
-        name = f"clang+llvm-{version}-{arch}-linux-gnu"
+    link, downloaded, extracted, friendly = get_llvm_strings(version, os, arch)
 
     llvm_file = InternetFile(
-        f"scripts/downloads/llvm_{version}_{arch}.tar.xz",
-        f"https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/{name}.tar.xz",
+        downloaded,
+        link,
         after_download=[
             (callback_unTAR,),
-            (callback_move, name, f"llvm_lib_{version}_{arch}"),
+            (callback_move, extracted, friendly),
         ],
     )
     llvm_file.download()
@@ -379,19 +373,27 @@ def download_llvm_impl(version, arch):
     "-v",
     "--version",
     prompt="LLVM Version",
-    help="Version of LLVM release, ex. 18.1.8",
+    help="Version of LLVM release, ex. 19.1.4",
     default="18.1.8",
+)
+@click.option(
+    "-o",
+    "--os",
+    prompt="Operating system",
+    help="Operating system of the target machine",
+    default="linux",
+    type=click.Choice(["Linux", "macOS", "Windows"], case_sensitive=False),
 )
 @click.option(
     "-a",
     "--arch",
     prompt="Architecture",
     help="Architecture of the target machine",
-    default="x86_64",
-    type=click.Choice(["x86_64", "aarch64"], case_sensitive=False),
+    default="X64",
+    type=click.Choice(["X64", "ARM64"], case_sensitive=False),
 )
 def download_llvm(*args, **kwargs):
-    """Downloads specified version of LLVM. This is LINUX ONLY."""
+    """Downloads the specified version of LLVM."""
     download_llvm_impl(*args, **kwargs)
 
 
@@ -419,6 +421,20 @@ def download_llvm(*args, **kwargs):
     help="Path to build folder with compile_commands.json",
     default="build",
 )
+@click.option(
+    "-j",
+    "--threads",
+    help="On how many threads can linter use. Defaults to os.cpu_count()",
+    type=int,
+    default=os.cpu_count() or 1,
+)
+@click.option(
+    "-r",
+    "--branch",
+    help="The branch relative to which the diff is created.",
+    type=str,
+    default="origin/main",
+)
 def linter(*args, **kwargs):
     """Simulates clang-tidy and clang-format as if in a workflow.
 
@@ -433,6 +449,6 @@ if __name__ == "__main__":
 
     # Disable traceback for shorter error messages.
     # Comment this line when debugging.
-    # sys.tracebacklimit = 0
+    sys.tracebacklimit = 0
 
     cli()
