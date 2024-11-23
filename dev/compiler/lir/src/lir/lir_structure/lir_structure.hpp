@@ -186,7 +186,7 @@ namespace compiler::lir {
 
 		/**
 		 * @brief Returns a map from all blocks to unique ids.
-		 * @note Those ids does not cary any meaning, they are made here to be consistent in
+		 * @note Those ids do not cary any meaning, they are made here to be consistent in
 		 * different part of compiler (e.g. lir printing, llvm lowering).
 		 * @return base::Map<BlockRef, u64>
 		 */
@@ -195,7 +195,7 @@ namespace compiler::lir {
 
 		/**
 		 * @brief Returns a map from all locals to unique ids.
-		 * @note Those ids does not cary any meaning, they are made here to be consistent in
+		 * @note Those ids do not cary any meaning, they are made here to be consistent in
 		 * different part of compiler (e.g. lir printing, llvm lowering).
 		 * @return base::Map<BlockRef, u64>
 		 */
