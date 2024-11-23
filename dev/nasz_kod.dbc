@@ -1,0 +1,73 @@
+# ZPP1.1 - 6.1.1 - Typy
+
+# type primitive: nazwa wielkość_w_bajtach
+# type pointer: nazwa typ
+# type static_table: nazwa typ liczba_komórek
+# type dynamic_table: nazwa typ
+# type data: nazwa {nazwa_pola_1: typ_pola_1, nazwa_pola_2: typ_pola_2,. . .}
+# type variant: nazwa {typ_1, typ_2,. . .}
+# type fun: nazwa {typ_argumentu_1, typ_argumentu_2,. . . } typ_wyniku
+
+type primitive: int64 8
+type primitive: int32 4
+
+type data: fraction {numerator: int64, denominator: int64}
+
+function nwd {
+    arg_size: 16;
+    next_arg_size: 16;
+    ret_size: 8;
+
+    local_size: 24;
+
+    code: {
+        # nwd(a, b) = nwd(b % a, a)
+        init_type int64;  # a    = 0
+        init_type int64;  # b    = 8
+        init_type int64;  # temp = 16
+
+        mov_l64_arg64 0, 0; # *a = arg[0]
+        mov_l64_arg64 8, 8; # *b = arg[1]
+
+        cmpEq_l64_imm 0, 0; # if(*a == 0)
+        jmpRelIf_label End; #   goto End;
+
+        mov_l64_l64 16, 8;  # *temp = *b
+        mod_l64_l64 16, 0;  # *temp = *temp % *a
+
+        mov_arg64_l64 0, 16; # call(*temp, ...)
+        mov_arg64_l64 8, 0;  # call(..., *a)
+
+        deinit;
+
+        ret_tailcall 0;  # return call(nwd)
+
+        label End;
+
+        deinit;
+        deinit;
+        ret_l64 8;
+    }
+}
+
+function main {
+    arg_size: 0;
+	next_arg_size: 16;
+    ret_size: 8;
+    local_size: 16;
+
+    code: {
+        # init_type fraction;
+
+        input_l64 0;
+        input_l64 8;
+
+        mov_arg64_l64 0, 0;
+        mov_arg64_l64 8, 8;
+        call_func 0;
+        mov_l64_r0 0;
+        output_l64 0;
+        ret_l64 0;
+        # deinit;
+    }
+}

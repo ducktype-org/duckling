@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import os
 import pathlib
 import sys
 import shutil
@@ -417,9 +418,9 @@ def download_llvm(*args, **kwargs):
 @click.option(
     "-j",
     "--threads",
-    help="On how many threads can linter run?",
+    help="On how many threads can linter use. Defaults to os.cpu_count()",
     type=int,
-    default=4,
+    default=os.cpu_count() or 1,
 )
 @click.option(
     "-r",
