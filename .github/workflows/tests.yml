@@ -20,12 +20,12 @@ env:
 
 jobs:
   build:
+    if: github.event.pull_request.draft == false
+    
     strategy:
       matrix:
         build-type: [Debug, Release]  # (Release, Debug, RelWithDebInfo, etc.)
       fail-fast: false
-
-    if: github.event.pull_request.draft == false
 
     outputs:
       # @note: with matrix runs, each run works with the same output,
