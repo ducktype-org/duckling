@@ -59,20 +59,20 @@ namespace compiler::lir {
 	 * that have direct counterpart.
 	 *
 	 * @param mir_operation
-	 * @return LirOperation
+	 * @return Operation
 	 */
-	LirOperation mir2lirOperation(mir::Operation mir_operation) {
+	Operation mir2lirOperation(mir::Operation mir_operation) {
 		switch (mir_operation) {
 		case mir::Operation::Assign:
-			return LirOperation::Assign;
+			return Operation::Assign;
 		case mir::Operation::ReturnValue:
-			return LirOperation::ReturnValue;
+			return Operation::ReturnValue;
 		case mir::Operation::ReturnVoid:
-			return LirOperation::ReturnVoid;
+			return Operation::ReturnVoid;
 		case mir::Operation::Jump:
-			return LirOperation::Jump;
+			return Operation::Jump;
 		case mir::Operation::Branch:
-			return LirOperation::Branch;
+			return Operation::Branch;
 		// @TODO: add more cases
 		default:
 			CORE_PANIC("Operation without direct counterpart");
@@ -302,7 +302,7 @@ namespace compiler::lir {
 				}
 				case mir::Operation::FunctionEnd: {
 					// @TODO...
-					curr_block->terminator = Instruction{ LirOperation::ReturnVoid, {}, {} };
+					curr_block->terminator = Instruction{ Operation::ReturnVoid, {}, {} };
 					break;
 				}
 				// @TODO: add more cases

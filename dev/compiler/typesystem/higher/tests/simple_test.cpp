@@ -393,12 +393,14 @@ private:
 	}
 
 	void simple_value_category() {
+		using enum ValueSemanticsOptions;
+
 		const auto vc = ValueCategory(
 			PrimaryCategory::Local,
 			true,
 			false,
 			(MOVE | COPY | REINIT | USE | DESTROY),
-			base::EmptyFlag
+			ValueSemantics()
 		);
 		assertTrue(
 			vc.getCategory() == PrimaryCategory::Local,
@@ -416,7 +418,7 @@ private:
 			"ValueCategory constructor should initialize unchanged allowsSemantic value."
 		);
 		assertTrue(
-			vc.getForceSemantic() == base::EmptyFlag,
+			vc.getForceSemantic() == ValueSemantics(),
 			"ValueCategory constructor should initialize unchanged forceSemantic value."
 		);
 
@@ -425,12 +427,12 @@ private:
 			true,
 			false,
 			(MOVE | COPY | REINIT | USE | DESTROY),
-			base::EmptyFlag
+			ValueSemantics()
 		);
 		assertTrue(vc == vc_1, "Value categories constructed the same way should be equal.");
 
 		const auto vc_2 = ValueCategory(
-			PrimaryCategory::Local, true, false, (COPY | REINIT | USE), base::EmptyFlag
+			PrimaryCategory::Local, true, false, (COPY | REINIT | USE), ValueSemantics()
 		);
 		assertTrue(
 			vc_1.contains(vc_2),

@@ -6,116 +6,47 @@
 #pragma once
 #include <base/exceptions.hpp>
 #include <sstream>
+#include "base/stringifyable_enum.hpp"
 
-/**
- * @brief The namespace of all definitions of the Higher Type System.
- * Short for "Type System: High(er)".
- */
-namespace tsh {
+// clang-format off
+// Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
+MAKE_STRINGIFYABLE_ENUM(tsh, i32, Kind
 	/**
-	 * @brief Enum which identifies the features of a type described in the Type System.
-	 *
-	 * For example, the Void type does not hold much information about itself.
-	 * However, each of the several Integral types holds a signedness boolean.
-	 * Furthermore, a Tuple type holds information about its component types.
-	 * Each class of types is described with a different Kind.
-	 */
-	enum class Kind : int32_t {
-		Unit,
-		Void,
-		Byte,
-		Bool,
-		Char,
-		Integral,
-		Float,
-		RawPointer,
-		Pointer,
-		Reference,
-		Function,
-		Enum,
-		Flag,
-		Optional,
-		Tuple,
-		Variant,
-		Class,
-		TypeTemplate,
-		Namespace,
-		CodeBlock,
-		Module,
-		VTable,
+		@brief Enum which identifies the features of a type described in the Type System.
+	*//**
+		For example, the Void type does not hold much information about itself.
+		However, each of the several Integral types holds a signedness boolean.
+		Furthermore, a Tuple type holds information about its component types.
+		Each class of types is described with a different Kind.
+	*/,
 
-		/**
-		 * @brief The kind of the type which holds type values. In other words, the "type" type.
-		 */
-		Meta,
+	/** @brief The kind of the general TypeInfo(Impl). */
+	Any = -1,
 
-		/**
-		 * @brief The kind of the general TypeInfo(Impl).
-		 * Must not be used in constructors or non-static contexts.
-		 */
-		Any = -1,
-	};
+	Unit,
+	Void,
+	Byte,
+	Bool,
+	Char,
+	Integral,
+	Float,
+	RawPointer,
+	Pointer,
+	Reference,
+	Function,
+	Enum,
+	Flag,
+	Optional,
+	Tuple,
+	Variant,
+	Class,
+	TypeTemplate,
+	Namespace,
+	CodeBlock,
+	Module,
+	VTable,
 
-	inline std::string kindToString(Kind kind) {
-		using enum Kind;
-		switch (kind) {
-		case Unit:
-			return "Unit";
-		case Void:
-			return "Void";
-		case Byte:
-			return "Byte";
-		case Bool:
-			return "Bool";
-		case Char:
-			return "Char";
-		case Integral:
-			return "Integral";
-		case Float:
-			return "Float";
-		case RawPointer:
-			return "RawPointer";
-		case Pointer:
-			return "Pointer";
-		case Reference:
-			return "Reference";
-		case Function:
-			return "Function";
-		case Enum:
-			return "Enum";
-		case Flag:
-			return "Flag";
-		case Optional:
-			return "Optional";
-		case Tuple:
-			return "Tuple";
-		case Variant:
-			return "Variant";
-		case Class:
-			return "Class";
-		case TypeTemplate:
-			return "TypeTemplate";
-		case Namespace:
-			return "Namespace";
-		case CodeBlock:
-			return "CodeBlock";
-		case Module:
-			return "Module";
-		case VTable:
-			return "VTable";
-		case Meta:
-			return "Meta";
-
-
-		case Any:
-			return "Any";
-
-
-		default:
-			std::stringstream ss;
-			ss << "Tried to translate non-existent Kind with underlying value "
-			   << static_cast<int>(kind) << " to string.";
-			CORE_PANIC(ss.str());
-		}
-	}
-}
+	/** @brief The kind of the type which holds type values. In other words, the "type" type. */
+	Meta
+)
+// clang-format on
