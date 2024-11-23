@@ -74,6 +74,41 @@ def abort_if_false(ctx, param, value):
         ctx.abort()
 
 
+def get_llvm_strings(version, os, arch) -> tuple[str, str, str, str]:
+    """
+    Takes `version`, `os` and `arch` params and returns a tuple[link_to_download, downloaded_file, extracted_file, friendly_name]
+    """
+    name = ""
+    if int(version.split(".")[0]) >= 19:
+        name = f"LLVM-{version}-{os}-{arch}"
+
+        return (
+            f"https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/{name}.tar.xz",
+            f"scripts/downloads/llvm_{version}_{os}_{arch}.tar.xz",
+            name,
+            f"lib_llvm_{version}_{os}_{arch}",
+        )
+
+    else:
+        # This branch is legacy, for LLVM 18 and lower.
+        if os != "Linux":
+            exit_with_error(
+                f"This configuration is not supported: {version=}, {arch=} {os=}. Visit: https://github.com/llvm/llvm-project/releases/"
+            )
+
+        if arch == "x86_64":
+            name = f"clang+llvm-{version}-x86_64-linux-gnu-ubuntu-18.04"
+        else:
+            name = f"clang+llvm-{version}-aarch64-linux-gnu"
+
+        return (
+            f"https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/{name}.tar.xz",
+            f"scripts/downloads/llvm_{version}_{arch}.tar.xz",
+            name,
+            f"llvm_lib_{version}_{arch}",
+        )
+
+
 def make_pretty_command(command):
     pretty_command = command.replace("\n", " ")
     while "  " in pretty_command:
