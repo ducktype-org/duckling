@@ -389,6 +389,7 @@ private:
 
 		HResult<int, float> whoa = 1;
 		ASSERT_TRUE(whoa.hasValue());
+		ASSERT_TRUE(bool(whoa));
 		ASSERT_TRUE(!whoa.hasError());
 		ASSERT_EQUAL(1, whoa.value());
 
