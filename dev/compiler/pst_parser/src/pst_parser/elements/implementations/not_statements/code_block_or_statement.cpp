@@ -29,7 +29,7 @@ namespace pst {
 			variant_case(ParserRef<Stmt>, stmt) { return const_iterator(&stmt); }
 			variant_case(ParserRef<CodeBlock>, code_block) { return code_block->begin(); }
 		}
-		CORE_PANIC("something went wrong");
+		CORE_UNREACHABLE();
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::end() const {
@@ -37,6 +37,6 @@ namespace pst {
 			variant_case(ParserRef<Stmt>, stmt) { return const_iterator(&stmt) + 1; }
 			variant_case(ParserRef<CodeBlock>, code_block) { return code_block->end(); }
 		}
-		CORE_PANIC("something went wrong");
+		CORE_UNREACHABLE();
 	}
 }

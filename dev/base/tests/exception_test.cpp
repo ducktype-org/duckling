@@ -30,6 +30,8 @@ public:
 
 	void throwPanic3() { CORE_ASSERT(false, "panic test 3"); }
 
+	void throwPanic4() { CORE_UNREACHABLE(); }
+
 	void testPanic1() {
 		try {
 			throwPanic1();
@@ -62,6 +64,16 @@ public:
 				containsCstr(panic.what(), "    Assertion failed: `false`\n    panic test 3"),
 				"Bad panic reason"
 			);
+			return;
+		}
+		fail("Panic what not caught");
+	}
+
+	void testPanic4() {
+		try {
+			throwPanic4();
+		} catch (base::Panic& panic) {
+			assertTrue(containsCstr(panic.what(), "Unreachable"), "Bad panic reason");
 			return;
 		}
 		fail("Panic what not caught");

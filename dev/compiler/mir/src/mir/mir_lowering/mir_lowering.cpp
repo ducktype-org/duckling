@@ -392,7 +392,7 @@ namespace compiler::mir {
 				opt_none { throw base::NotYetImplemented("variable without initial value in MIR"); }
 			}
 
-			CORE_PANIC("match_optional failed in visitVariableStmt.");
+			CORE_UNREACHABLE();
 		}
 	};
 
