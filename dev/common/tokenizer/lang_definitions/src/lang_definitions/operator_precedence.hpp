@@ -34,5 +34,4 @@ namespace lang_def {
 	OperatorAssociativity operatorAssociativity(base::StrID operator_, OperatorType operator_type);
 	OperatorAssociativity
 		operatorAssociativity(NamedOperator operator_, OperatorType operator_type);
-
 }
