@@ -1,5 +1,5 @@
 fun foo() = {
-	var a: i32 = 23;
+	var a: i64 = 23;
 	if (9) {
 		var b: i32 = 7;
 	}
