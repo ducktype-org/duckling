@@ -1,3 +1,4 @@
+#include "base/optional.hpp"
 #include "helios/helios_errors.hpp"
 #include <helios/scope_symbol_id.hpp>
 #include <helios/scopes/scopes.hpp>
@@ -393,12 +394,12 @@ private:
 		ASSERT_TRUE(!hr1.hasError());
 		ASSERT_EQUAL(1, hr1.value());
 
-		auto opt1 = hr1.optValue();
+		base::Optional<base::Ref<int>> opt1 = hr1.optValue();
 		ASSERT_TRUE(opt1.has_value());
-		ASSERT_EQUAL(1, *opt1)
+		ASSERT_EQUAL(1, **opt1);
 
-		HResult<int, float> hr_ref = 1;
-
+		base::Optional<int> stolen_opt = std::move(hr1).optValueMove();
+		ASSERT_EQUAL(1, stolen_opt);
 
 		std::string                    info  = "Hello";
 		HResult<int, std::string_view> whoa2 = HError(std::string_view(info));

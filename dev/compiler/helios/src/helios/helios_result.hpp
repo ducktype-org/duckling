@@ -2,6 +2,7 @@
 
 // Feel free to modify this file, as this code is very generic and tough to write once.
 
+#include "base/ref.hpp"
 #include <base/exceptions.hpp>
 #include <base/define_helper.hpp>
 #include <type_traits>
@@ -251,7 +252,7 @@ namespace compiler::helios::errors {
 		 */
 		[[nodiscard]]
 		constexpr bool hasError() const {
-			return !value_storage.has_value();
+			return error_storage.has_value();
 		}
 
 		/**
@@ -259,7 +260,7 @@ namespace compiler::helios::errors {
 		 */
 		[[nodiscard]]
 		constexpr bool hasValue() const {
-			return !hasError();
+			return value_storage.has_value();
 		}
 
 		/**
@@ -281,15 +282,19 @@ namespace compiler::helios::errors {
 		/**
 		 * @brief Access the value as an optional.
 		 */
-		constexpr const base::Optional<ResTp>& optValue() const& { return value_storage; }
-
-		constexpr const base::Optional<ResTp>&& optValue() const&& {
-			return std::move(value_storage);
+		constexpr base::Optional<base::Ref<ResTp>> optValue() {
+			static_assert(!std::is_reference_v<ResTp>);
+			if_opt_some(value_storage, value) return &value;
+			return {};
 		}
 
-		constexpr base::Optional<ResTp>& optValue() & { return value_storage; }
+		constexpr base::Optional<base::CRef<ResTp>> optValue() const {
+			static_assert(!std::is_reference_v<ResTp>);
+			if_opt_some(value_storage, value) return &value;
+			return {};
+		}
 
-		constexpr base::Optional<ResTp>&& optValue() && { return std::move(value_storage); }
+		constexpr base::Optional<ResTp> optValueMove() && { return std::move(value_storage); }
 
 		/**
 		 * @brief Access the value, throw on no value with a message.
