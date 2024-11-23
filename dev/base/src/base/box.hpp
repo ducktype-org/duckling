@@ -4,6 +4,20 @@
 
 namespace base {
 
+	namespace extend {
+		/**
+		 * @brief Pointer deleter functor used by Box, MBox.
+		 * @note Adding specialization for custom types
+		 * can be used to avoid delete on incomplete types.
+		 *
+		 * @tparam T
+		 */
+		template<class T>
+		struct BoxPtrDeleter {
+			static void del(T* ptr) { delete ptr; }
+		};
+	}
+
 	/**
 	 * @brief A pointer wrapper type, that owns the pointer and deletes it when it goes out of
 	 * scope. It is not nullable, and it is not copyable.
@@ -98,7 +112,7 @@ namespace base {
 
 		bool operator==(const Box& other) const { return ptr == other.ptr; }
 
-		~Box() { delete ptr; }
+		~Box() { ::base::extend::BoxPtrDeleter<T>::del(ptr); }
 	};
 
 	/**
@@ -235,7 +249,7 @@ namespace base {
 			return Box<T>(output);
 		}
 
-		~MBox() { delete ptr; }
+		~MBox() { ::base::extend::BoxPtrDeleter<T>::del(ptr); }
 	};
 
 	// Deduction guide for constructing a MBox from a Box:

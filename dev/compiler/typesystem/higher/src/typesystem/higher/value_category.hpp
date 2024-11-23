@@ -31,17 +31,26 @@ namespace tsh {
 	 * @return The symbol's primary category.
 	 */
 	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol);
+}
 
-	constexpr base::FlagType MOVE(0);
-	constexpr base::FlagType COPY(1);
-	constexpr base::FlagType REINIT(2);
-	constexpr base::FlagType USE(3);
-	constexpr base::FlagType DESTROY(4);
+// clang-format off
+MAKE_FLAG_TYPE(tsh, ValueSemanticsOptions, ValueSemantics,
+	MOVE,
+	COPY,
+	REINIT,
+	USE,
+	DESTROY
+)
 
+// clang-format on
+
+namespace tsh {
 	/**
 	 * Value category class describes properties of a value other than its type.
 	 */
 	class ValueCategory {
+		using enum ValueSemanticsOptions;
+
 		/**
 		 * Primary category of a value.
 		 */
@@ -57,12 +66,12 @@ namespace tsh {
 		/**
 		 * Allowed semantics describe what can be done with a value.
 		 */
-		base::FlagType allows_semantic{ MOVE | COPY | REINIT | USE | DESTROY };
+		ValueSemantics allows_semantic{ MOVE | COPY | REINIT | USE | DESTROY };
 		/**
 		 * Forces semantics describe what must be done with a value. Note that it might be redundant
 		 * because of information kept in allowed semantics.
 		 */
-		base::FlagType force_semantic{};
+		ValueSemantics force_semantic{};
 
 	public:
 		ValueCategory() = default;
@@ -73,8 +82,8 @@ namespace tsh {
 			PrimaryCategory category,
 			bool            is_mutable,
 			bool            is_pure,
-			base::FlagType  allows_semantic,
-			base::FlagType  force_semantic
+			ValueSemantics  allows_semantic,
+			ValueSemantics  force_semantic
 		);
 
 		/**
@@ -105,7 +114,7 @@ namespace tsh {
 		 * A simple getter for allows_semantic.
 		 */
 		[[nodiscard]]
-		base::FlagType getAllowsSemantic() const {
+		ValueSemantics getAllowsSemantic() const {
 			return allows_semantic;
 		}
 
@@ -113,7 +122,7 @@ namespace tsh {
 		 * A simple getter for force_semantic.
 		 */
 		[[nodiscard]]
-		base::FlagType getForceSemantic() const {
+		ValueSemantics getForceSemantic() const {
 			return force_semantic;
 		}
 

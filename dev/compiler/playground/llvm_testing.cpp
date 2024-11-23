@@ -4,11 +4,11 @@
 #include <helios/queries.hpp>
 #include <clap/clap.hpp>
 #include <iostream>
-#include <query_framework/utils/with_context_do.hpp>
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>  //< needed for ctx.query, @TODO: move context to different file
+#include <query_framework/utils/with_context_do.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
+#include <backends/llvm/llvm_backend.hpp>
 
 int main(int argc, const char* argv[]) {
 	// @TODO: add to helios init
@@ -46,11 +46,26 @@ int main(int argc, const char* argv[]) {
 
 
 	for (auto& fun: top_level.functions) {
+		auto mir_fun = query::entryPoint<compiler::mir::LowerToMirFunction>({ fun });
+
+		mir_fun->debugPrint(std::cerr);
+		std::cerr << "\n\n\n";
+
+		auto lir_fun = query::entryPoint<compiler::lir::LowerToLirFunction>({ mir_fun });
+
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
-			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
 			lir_fun->debugPrint(ctx, std::cerr);
 		});
-		std::cerr << "\n";
+		std::cerr << "\n\n\n";
+
+		auto llvm_module = compiler::backend_llvm::lirFunctionToModule(lir_fun);
+		bool v           = llvm_module.verify();
+
+		if (v)
+			std::cerr << "LLVM verification passed\n\n";
+		else
+			std::cerr << "LLVM verification failed\n\n";
+
+		llvm_module.debugPrint();
 	}
 }
