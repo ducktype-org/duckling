@@ -123,7 +123,7 @@ namespace compiler::backend_llvm {
 			// allocate all local variables:
 
 			// set local id map:
-			lir_local_ids = lir_function->getLocalIDs();
+			lir_local_ids = lir_function->getLocalVariableIDs();
 
 			// first block:
 			llvm::BasicBlock* locals_block

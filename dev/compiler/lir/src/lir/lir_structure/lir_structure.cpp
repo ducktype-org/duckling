@@ -15,7 +15,7 @@ namespace compiler::lir {
 		return block_ids;
 	}
 
-	base::Map<LocalRef, u64> Function::getLocalIDs() const {
+	base::Map<LocalRef, u64> Function::getLocalVariableIDs() const {
 		base::Map<LocalRef, usize> local_ids;
 		usize                      next_id = 0;
 		for (const auto& local: local_list) {
@@ -104,7 +104,7 @@ namespace compiler::lir {
 
 		void debugPrint(const Function& function) {
 			// set local and block ids:
-			local_id = function.getLocalIDs();
+			local_id = function.getLocalVariableIDs();
 			block_id = function.getBlockIDs();
 
 			output << "Function \"" << function.name.strView() << "\":\n";

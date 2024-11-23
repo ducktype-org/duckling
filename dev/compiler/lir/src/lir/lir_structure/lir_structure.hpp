@@ -200,6 +200,6 @@ namespace compiler::lir {
 		 * @return base::Map<BlockRef, u64>
 		 */
 		[[nodiscard]]
-		base::Map<LocalRef, u64> getLocalIDs() const;
+		base::Map<LocalRef, u64> getLocalVariableIDs() const;
 	};
 }
