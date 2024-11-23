@@ -160,7 +160,7 @@ namespace compiler::backend_llvm {
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
 				variant_default { CORE_PANIC("unknown lir location type"); }
 			}
-			CORE_PANIC("unreachable");
+			CORE_UNREACHABLE();
 		}
 
 		auto lir2LLVMLocationList(const std::vector<lir::LirLocation>& lir_locations)
