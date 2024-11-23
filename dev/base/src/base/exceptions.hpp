@@ -93,7 +93,7 @@ namespace base {
  * for clearly unreachable code, e.g. after swich case where each case returns,
  * especially in cases when linter complains about missing return.
  *
- * @note CORE_PANIC is be definition also unreachable during correct execution.
+ * @note CORE_PANIC is by definition also unreachable during correct execution.
  * This macro should be used instead of CORE_PANIC **only** in places where it is intuitively clear
  * that it better encapsulates the meaning/intent of the code. Examples where panic is better:
  * * `if (cond) CORE_PANIC("error description")`,
