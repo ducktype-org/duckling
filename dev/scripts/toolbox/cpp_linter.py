@@ -1,4 +1,7 @@
+from concurrent.futures import ThreadPoolExecutor
 import pathlib
+import sys
+import tempfile
 from scripts.toolbox.helpers import (
     BashCommandError,
     bash_command,
@@ -21,14 +24,14 @@ def get_unstaged_new_files() -> bool:
     return new_unstaged_files
 
 
-def get_diffs():
+def get_diffs(branch: str):
     if new_unstaged_files := get_unstaged_new_files():
         log_warning(
             f"Files not in working tree, so not included in diff: [{', '.join(new_unstaged_files)}]"
         )
 
     diff_out, _ = bash_command_get_output(
-        "git diff --merge-base origin/main -U0 --relative"
+        f"git diff --merge-base {branch} -U0 --relative"
     )
     diff_lines = diff_out.splitlines()
 
@@ -37,7 +40,7 @@ def get_diffs():
     prev_line = None
     filename = None
     for line in diff_lines:
-        file_deleted = prev_line == '+++ /dev/null'
+        file_deleted = prev_line == "+++ /dev/null"
 
         if line.startswith("@@") and not file_deleted:
             # Check if this diff is for a new file...
@@ -76,53 +79,96 @@ def get_diffs():
     return changes
 
 
-def simulate_cpp_linter(clang_tidy_path: str, clang_format_path: str, build: str):
+def clang_tidy_on(
+    clang_tidy_path: str,
+    build_folder: pathlib.Path,
+    file: str,
+    file_diffs: list[tuple[int, int]],
+    out,
+):
+    """
+    Runs clang-tidy on a file with given file_diffs
+    """
+
+    # clang-tidy command succeeds if no errors were found.
+    # Prints warnings on stdout.
+    try:
+        tidy_out, _ = bash_command_get_output(
+            f"{clang_tidy_path} -p {build_folder} --format-style file"
+            f' --line-filter="[{{"name": "{file}", "lines": {file_diffs}}}]"'
+            f" --extra-arg= {file}"
+        )
+        if tidy_out:
+            log_warning(f"clang-tidy output: \n{tidy_out}", file=out)
+    except BashCommandError as e:
+        log_warning(
+            f"clang-tidy failed: {file}, because:\n{e.stdout}{e.stderr}", file=out
+        )
+
+
+def clang_format_on(
+    clang_format_path: str, file: str, file_diffs: list[tuple[int, int]], out
+) -> bool:
+    """
+    Dry-run clang-format on a file with given file_diffs to test
+    if it's properly formatted. Returns true if so, false otherwise.
+    """
+
+    # clang-format command succeeds always and returns data (possibly empty)
+    lines = [f"--lines={start}:{stop}" for start, stop in file_diffs]
+    format_out, format_err = bash_command_get_output(
+        f"{clang_format_path}" " -style=file --dry-run" f" {' '.join(lines)} {file}"
+    )
+
+    # Print data returned by clang-format
+    if format_out or format_err:
+        log_warning(f"clang-format output: \n{format_out}{format_err}", file=out)
+        return False
+    return True
+
+
+def run_linter_on(
+    clang_tidy_path: str, clang_format_path: str, build_folder: pathlib.Path, file, diff
+) -> bool:
+    clang_format_failed = False
+    if file.endswith(".hpp") or file.endswith(".cpp"):
+        out = tempfile.TemporaryFile("w+")
+        log_info(f"Linting: {file}", file=out)
+
+        clang_tidy_on(clang_tidy_path, build_folder, file, diff, out)
+
+        if not clang_format_on(clang_format_path, file, diff, out):
+            clang_format_failed = True
+
+        out.seek(0)
+        print(out.read())
+
+    else:
+        log_info(f"Skipping linting on: {file}")
+
+    return clang_format_failed
+
+
+def simulate_cpp_linter(
+    clang_tidy_path: str, clang_format_path: str, build: str, threads: int, branch: str
+):
     build_folder = pathlib.Path(build)
     if not build_folder.exists():
         exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
 
-    diffs = get_diffs()
-    log_info(f"Found {diffs=}")
+    file_diffs = get_diffs(branch)
+    log_info(f"Found {file_diffs=}")
 
     clang_format_failed = False
 
-    for file in diffs:
-        if file.endswith(".hpp") or file.endswith(".cpp"):
-            log_info(f"Running linting on: {file}")
-            try:
-                # clang-tidy command succeeds if no errors were found.
-                # Prints warnings on stdout.
-                tidy_out, _ = bash_command_get_output(
-                    f"{clang_tidy_path} -p {build_folder} --format-style file"
-                    f' --line-filter="[{{"name": "{file}", "lines": {diffs[file]}}}]"'
-                    f" --extra-arg= {file}"
-                )
-                if tidy_out:
-                    log_warning(f"clang-tidy output: \n{tidy_out}")
-
-                # clang-format command succeeds always and returns data (possibly empty)
-                lines = [f"--lines={start}:{stop}" for start, stop in diffs[file]]
-                format_out, format_err = bash_command_get_output(
-                    f"{clang_format_path}"
-                    " -style=file --dry-run"
-                    f" {' '.join(lines)} {file}"
-                )
-
-                # Parse data returned by clang-format
-                if format_out or format_err:
-                    log_warning(f"clang-format output: \n{format_out}{format_err}")
-                    clang_format_failed = True
-
-            except BashCommandError as e:
-                log_warning(f"Failed: {file}, because:\n{e.stdout}{e.stderr}")
-        else:
-            log_info(f"Skipping linting on: {file}")
+    with ThreadPoolExecutor(max_workers=threads) as e:
+        call_linter = lambda fd: run_linter_on(
+            clang_tidy_path, clang_format_path, build_folder, *fd
+        )
+        results = e.map(call_linter, file_diffs.items())
+        clang_format_failed = any(results)
 
     if clang_format_failed:
-        log_new_line()
-        to_format = get_input(
-            "Found formatting issues. Do you want to format the repo [Y/n]: "
-        ).lower()
-        log_new_line()
-        if to_format == "y" or to_format == "":
+        to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
+        if to_format.lower() in ["y", ""]:
             bash_command("./scripts/formatting/format_repo.sh")
