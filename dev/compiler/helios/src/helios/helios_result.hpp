@@ -263,6 +263,11 @@ namespace compiler::helios::errors {
 		}
 
 		/**
+		 * @brief Checks if HResult contains a value.
+		 */
+		explicit constexpr operator bool() { return hasValue(); }
+
+		/**
 		 * @brief Access the value, throw on no value.
 		 */
 		constexpr const ResTp& value() const& { return expect("Result it empty!"); }
@@ -272,6 +277,19 @@ namespace compiler::helios::errors {
 		constexpr ResTp& value() & { return expect("Result it empty!"); }
 
 		constexpr ResTp&& value() && { return std::move(expect("Result it empty!")); }
+
+		/**
+		 * @brief Access the value as an optional.
+		 */
+		constexpr const base::Optional<ResTp>& optValue() const& { return value_storage; }
+
+		constexpr const base::Optional<ResTp>&& optValue() const&& {
+			return std::move(value_storage);
+		}
+
+		constexpr base::Optional<ResTp>& optValue() & { return value_storage; }
+
+		constexpr base::Optional<ResTp>&& optValue() && { return std::move(value_storage); }
 
 		/**
 		 * @brief Access the value, throw on no value with a message.

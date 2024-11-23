@@ -13,7 +13,12 @@
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
-#include "element_ref.hpp"
+#include "base/box.hpp"
+#include "helios/helios_errors.hpp"
+#include "helios/lookup_result.hpp"
+#include "lang_definitions/key_spec_op.hpp"
+#include "lexer/token_common.hpp"
+#include "pst_parser/elements/hierarchy/not_statements.hpp"
 
 namespace compiler::helios::code {
 
@@ -46,6 +51,7 @@ namespace compiler::helios::code {
 		/**
 		 * The type of the expression, and its value category.
 		 */
+		// @EXPR: Make a method that returns HResult<tsh::TypeDesc<>, Failed> to avoid panics
 		tsh::TypeDesc<> type_desc;
 
 		Expr(ScopeID lifetime_scope, tsh::TypeDesc<> type_desc):
@@ -57,15 +63,16 @@ namespace compiler::helios::code {
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
 
-		static ElementRef<Expr> fromRPN(query::Context& ctx, const rpn::RPNExpr& elements);
+		static errors::HResult<base::Box<Expr>, errors::Failed>
+			fromPST(query::Context& ctx, ScopeID scope, const PstRef<pst::ExprElement> root);
 	};
 
 	/**
 	 * @brief A block of HOUT statements
 	 */
 	struct CodeBlock final {
-		ScopeID                       lifetime_scope;
-		std::vector<ElementRef<Stmt>> statements;
+		ScopeID                      lifetime_scope;
+		std::vector<base::Box<Stmt>> statements;
 	};
 
 	/* * * * * * * *
@@ -78,17 +85,17 @@ namespace compiler::helios::code {
 	struct VariableStmt final: public Stmt {
 		// @TODO: decide where we handle non-initial value (pre hout/post hout):
 		// currently PST always have it.
-		base::Optional<ElementRef<Expr>> initial_value;
-		tsh::TypeDesc<>                  type;
+		base::Optional<base::Box<Expr>> initial_value;
+		tsh::TypeDesc<>                 type;
 
 		// @TODO decide if this is needed:
 		SymID helios_symbol;
 
 		VariableStmt(
-			ScopeID                          scope,
-			base::Optional<ElementRef<Expr>> initial_value,
-			tsh::TypeDesc<>                  type,
-			SymID                            helios_symbol
+			ScopeID                         scope,
+			base::Optional<base::Box<Expr>> initial_value,
+			tsh::TypeDesc<>                 type,
+			SymID                           helios_symbol
 		):
 			  Stmt(scope),
 			  initial_value(std::move(initial_value)),
@@ -103,9 +110,9 @@ namespace compiler::helios::code {
 	 * @brief Represents `return [expr];` in HOUT
 	 */
 	struct ReturnStmt final: public Stmt {
-		ElementRef<Expr> value;
+		base::Box<Expr> value;
 
-		ReturnStmt(ScopeID scope, ElementRef<Expr> value): Stmt(scope), value(std::move(value)) {}
+		ReturnStmt(ScopeID scope, base::Box<Expr> value): Stmt(scope), value(std::move(value)) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
@@ -125,9 +132,9 @@ namespace compiler::helios::code {
 	 * @brief Represents expression statement in HOUT
 	 */
 	struct ExprStmt final: public Stmt {
-		ElementRef<Expr> expr;
+		base::Box<Expr> expr;
 
-		ExprStmt(ScopeID scope, ElementRef<Expr> expr): Stmt(scope), expr(std::move(expr)) {}
+		ExprStmt(ScopeID scope, base::Box<Expr> expr): Stmt(scope), expr(std::move(expr)) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
@@ -137,12 +144,12 @@ namespace compiler::helios::code {
 	 * @brief Represents if statement in HOUT
 	 */
 	struct IfStmt final: public Stmt {
-		ElementRef<Expr> condition;
-		CodeBlock        body;
+		base::Box<Expr> condition;
+		CodeBlock       body;
 
 		// @TODO: optional else body
 
-		IfStmt(ScopeID scope, ElementRef<Expr> condition, CodeBlock body):
+		IfStmt(ScopeID scope, base::Box<Expr> condition, CodeBlock body):
 			  Stmt(scope),
 			  condition(std::move(condition)),
 			  body(std::move(body)) {}
@@ -155,6 +162,8 @@ namespace compiler::helios::code {
 	 * Expressions:  *
 	 * * * * * * * * */
 
+	// @EXPR: Sort these structs in an appropriate order
+
 	/**
 	 * @brief Represents a literal value written in the expression.
 	 */
@@ -163,7 +172,19 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		i64 value;
 
-		LiteralValueExpr(ScopeID scope, i64 value, query::Context& ctx);
+		LiteralValueExpr(query::Context& ctx, ScopeID scope, i64 value);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const override;
+	};
+
+	/**
+	 * @brief Represents an expression made of a keyword, like "true", or "i32".
+	 */
+	struct KeywordExpr final: public Expr {
+		lang_def::Keyword keyword;
+
+		KeywordExpr(query::Context& ctx, ScopeID scope, lang_def::Keyword keyword);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
@@ -179,27 +200,101 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		SymID symbol;
 
-		IdentifierExpr(ScopeID scope, SymID symbol, query::Context& ctx);
+		IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const override;
+	};
+
+	/**
+	 * @brief Represents an expression inside "(" and ")".
+	 * @TODO: Decide if this class is needed.
+	 * For:
+	 * - nice dprints, because with this class we know what was in "()"
+	 * Against:
+	 * - We have/will have TupleConstructorExpr and VariantConstructor Expr.
+	 */
+	struct ParenthesisExpr final: public Expr {
+		base::Box<Expr> inner;
+
+		ParenthesisExpr(query::Context& ctx, ScopeID scope, base::Box<Expr> inner);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
 	struct BinaryOperatorExpr: public Expr {
-		// @TODO: At this point, this should be a symbol.
-		//  HOUT should not be concerned with overload resolution.
-		base::StrID op;
+		// @TODO: At this point, operator should be a symbol.
+		// HOUT should not be concerned with overload resolution.
+		// @EXPR: ??? Introduce a mock for a builtin methods system ???
+		lexer::Operator op;
 
-		ElementRef<Expr> lhs;
-		ElementRef<Expr> rhs;
+		base::Box<Expr> lhs;
+		base::Box<Expr> rhs;
 
 		BinaryOperatorExpr(
-			ScopeID          scope,
-			base::StrID      op,
-			ElementRef<Expr> lhs,
-			ElementRef<Expr> rhs,
-			query::Context&  ctx
+			query::Context& ctx,
+			ScopeID         scope,
+			lexer::Operator op,
+			base::Box<Expr> lhs,
+			base::Box<Expr> rhs
 		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const override;
+	};
+
+	/**
+	 * @brief General unary operator. Correctness depends on a proper lookup of a method (operator).
+	 */
+	struct UnaryOperatorExpr: public Expr {
+		// @NOTE: `op` and `prefix` should be replaced with a SymID that links to a proper function
+		// that resolves the operator
+		pst::Operator op;
+		bool          prefix = false;  // prefix/suffix
+
+		base::Box<Expr> expr;
+
+		UnaryOperatorExpr(ScopeID scope, lexer::Operator op, bool prefix, base::Box<Expr> expr);
+
+		void debugPrint(std::ostream& out) const override;
+		void acceptVisitor(HoutExprVisitor&) const override;
+	};
+
+	struct TupleConstructorExpr: public Expr {
+		std::vector<base::Box<Expr>> elements;
+
+		TupleConstructorExpr(
+			query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
+		);
+
+		void debugPrint(std::ostream& out) const override;
+		void acceptVisitor(HoutExprVisitor&) const override;
+	};
+
+	struct VariantConstructorExpr: public Expr {
+		std::vector<base::Box<Expr>> subtypes;
+
+		VariantConstructorExpr(
+			query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const override;
+	};
+
+	/**
+	 * @brief Represents the "IDENTIFIER.DATA[.DATA]*" format of SymbolList.
+	 * @NOTE Currently it is just a mockup. Should be refactored to AccessExpr
+	 * -----
+	 * @EXPR: We should implement shortening of the SymbolList, ex. leave only
+	 * the "IDENTIFIER.DATA[.DATA]*" format of SymbolList.
+	 * OR! Maybe leave it up to new expr type to decide.
+	 */
+	struct LinkedIdentifierExpr: public Expr {
+		SymbolList symbols;
+
+		LinkedIdentifierExpr(query::Context& ctx, ScopeID scope, SymbolList symbols);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
@@ -208,7 +303,7 @@ namespace compiler::helios::code {
 
 namespace compiler::helios {
 	struct KeyOf_QueryHoutOfExpr {
-		PstRef<pst::Expr> expr;
+		PstRef<pst::ExprElement> expr;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
@@ -217,5 +312,5 @@ namespace compiler::helios {
 	/**
 	 * @brief Construct HOUT Expr from Pst Expr, "within" given scope
 	 */
-	DECLARE_QUERY(QueryHoutOfExpr, KeyOf_QueryHoutOfExpr, code::ElementRef<code::Expr>);
+	DECLARE_QUERY(QueryHoutOfExpr, KeyOf_QueryHoutOfExpr, errors::HResult<base::Box<code::Expr> COMMA errors::Failed>);
 }

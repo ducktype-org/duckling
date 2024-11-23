@@ -19,6 +19,9 @@ namespace compiler::helios {
 
 	using SymbolList = std::vector<SymID>;
 
+	errors::HResult<SymbolList, errors::Failed>
+		dealiasSymbolList(query::Context& ctx, const SymbolList& symbol_list);
+
 	struct NestedResult;
 
 	/**
