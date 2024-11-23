@@ -1,5 +1,6 @@
 #pragma once
 
+#include "elements_list.hpp"
 #include "../lang_parser_state.hpp"
 
 namespace pst::detail {
@@ -30,17 +31,18 @@ namespace pst::detail {
 		}
 
 		static bool isAssignOrSemicolon(const LangParserState& st, i64 fwd) {
-			return st[fwd].is(lang_def::Operator::Assign)
+			return st[fwd].is(lang_def::NamedOperator::Assign)
 			    || st[fwd].is(lang_def::Special::Semicolon);
 		}
 
 		static bool isAssignOrCommaOrEnd(const LangParserState& st, i64 fwd) {
 			return st[fwd].is(lexer::Token::Type::Sentinel)
-			    || st[fwd].is(lang_def::Operator::Assign) || st[fwd].is(lang_def::Special::Comma);
+			    || st[fwd].is(lang_def::NamedOperator::Assign)
+			    || st[fwd].is(lang_def::Special::Comma);
 		}
 
 		static bool isAssign(const LangParserState& st, i64 fwd) {
-			return st[fwd].is(lang_def::Operator::Assign);
+			return st[fwd].is(lang_def::NamedOperator::Assign);
 		}
 
 		/**
@@ -48,13 +50,13 @@ namespace pst::detail {
 		 */
 		static bool isBlockGroup(const LangParserState& st, i64 fwd) {
 			return st[fwd].isBracketGroup(lexer::Token::Curly)
-			    && not st[fwd - 1].is(lang_def::Operator::Colon);
+			    && not st[fwd - 1].is(lang_def::NamedOperator::Colon);
 		}
 
 		static bool isImplementsOrBlockGroup(const LangParserState& st, i64 fwd) {
 			return st[fwd].is(lang_def::Keyword::Implements)
 			    || (st[fwd].isBracketGroup(lexer::Token::Curly)
-			        && not st[fwd - 1].is(lang_def::Operator::Colon));
+			        && not st[fwd - 1].is(lang_def::NamedOperator::Colon));
 		}
 
 		template<lang_def::Keyword key>

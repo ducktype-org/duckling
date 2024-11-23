@@ -19,7 +19,7 @@ namespace lang_def {
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 66>
+	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 71>
 		lang_keywords_array{ {
 			{ Keyword::Fun, "fun", KeywordFlags() },
 			{ Keyword::Class, "class", KeywordFlags() },
@@ -29,7 +29,7 @@ namespace lang_def {
 			{ Keyword::Using, "using", KeywordFlags() },
 			{ Keyword::Alias, "alias", KeywordFlags() },
 			{ Keyword::In, "in", KeywordFlags() },
-
+			{ Keyword::Lambda, "lambda", KeywordFlags() },
 			{ Keyword::Var, "var", KeywordFlags() },
 			{ Keyword::Let, "let", KeywordFlags() },
 			{ Keyword::Const, "const", KeywordFlags() },
@@ -38,9 +38,9 @@ namespace lang_def {
 			{ Keyword::For, "for", KeywordFlags() },
 			{ Keyword::Loop, "loop", KeywordFlags() },
 			{ Keyword::If, "if", KeywordFlags() },
+			{ Keyword::Then, "then", KeywordFlags() },
 			{ Keyword::Else, "else", KeywordFlags() },
 			{ Keyword::Elif, "elif", KeywordFlags() },
-
 			{ Keyword::Block, "block", KeywordFlags() },
 			{ Keyword::With, "with", KeywordFlags() },
 			{ Keyword::Try, "try", KeywordFlags() },
@@ -72,7 +72,10 @@ namespace lang_def {
 			{ Keyword::u64, "u64", KeywordFlags() },
 			{ Keyword::u128, "u128", KeywordFlags() },
 
-			{ Keyword::Float, "float", KeywordFlags() },
+			{ Keyword::f16, "f16", KeywordFlags() },
+			{ Keyword::f32, "f32", KeywordFlags() },
+			{ Keyword::f64, "f64", KeywordFlags() },
+			{ Keyword::f80, "f80", KeywordFlags() },
 			{ Keyword::Char, "char", KeywordFlags() },
 			{ Keyword::Bool, "bool", KeywordFlags() },
 
@@ -135,23 +138,30 @@ namespace lang_def {
 		{ Special::DolarSign, "$" },
 	} };
 
-	constexpr std::array<std::pair<Operator, std::string_view>, 15> operator_array{ {
-		{ Operator::NotAnOperator, "NotAnOperator" },
-		{ Operator::Period, "." },
-		{ Operator::PeriodStar, ".*" },
-		{ Operator::Colon, ":" },
-		{ Operator::Assign, "=" },
-		{ Operator::Pipe, "|" },
-		{ Operator::QuestionMark, "?" },
-		{ Operator::SingleArrow, "->" },
-		{ Operator::DoubleArrow, "=>" },
+	constexpr std::array<std::pair<NamedOperator, std::string_view>, 21> operator_array{ {
+		{ NamedOperator::NotAnOperator, "NotAnOperator" },
+		{ NamedOperator::Period, "." },
+		{ NamedOperator::PeriodStar, ".*" },
+		{ NamedOperator::Colon, ":" },
+		{ NamedOperator::Assign, "=" },
+		{ NamedOperator::Pipe, "|" },
+		{ NamedOperator::QuestionMark, "?" },
+		{ NamedOperator::SingleArrow, "->" },
+		{ NamedOperator::DoubleArrow, "=>" },
 
-		{ Operator::Minus, "-" },
-		{ Operator::Plus, "+" },
-		{ Operator::DoublePlus, "++" },
-		{ Operator::DoubleMinus, "--" },
-		{ Operator::Multiply, "*" },
-		{ Operator::Divide, "/" },
+		{ NamedOperator::Lesser, "<" },
+		{ NamedOperator::Greater, ">" },
+		{ NamedOperator::LEqual, "<=" },
+		{ NamedOperator::GEqual, ">=" },
+		{ NamedOperator::Equal, "==" },
+		{ NamedOperator::NotEqual, "!=" },
+
+		{ NamedOperator::Minus, "-" },
+		{ NamedOperator::Plus, "+" },
+		{ NamedOperator::DoublePlus, "++" },
+		{ NamedOperator::DoubleMinus, "--" },
+		{ NamedOperator::Multiply, "*" },
+		{ NamedOperator::Divide, "/" },
 	} };
 
 	// Distinct for all keyword modes:
@@ -164,11 +174,11 @@ namespace lang_def {
 	// Single for all:
 	base::VectorMap<Keyword, KeywordFlags, false, true> keyword_flags;
 
-	base::VectorMap<base::StrID, Special, false, true>  special_map;
-	base::VectorMap<base::StrID, Operator, false, true> operator_map;
+	base::VectorMap<base::StrID, Special, false, true>       special_map;
+	base::VectorMap<base::StrID, NamedOperator, false, true> operator_map;
 
-	base::VectorMap<Special, base::StrID, false, true>  rev_special_map;
-	base::VectorMap<Operator, base::StrID, false, true> rev_operator_map;
+	base::VectorMap<Special, base::StrID, false, true>       rev_special_map;
+	base::VectorMap<NamedOperator, base::StrID, false, true> rev_operator_map;
 
 	void key_spec_op::init() {
 		SIMPLE_INIT_GUARD_BEGIN;
@@ -246,16 +256,16 @@ namespace lang_def {
 		return Special::NotASpecial;
 	}
 
-	Operator strAsOperator(base::StrID id) {
+	NamedOperator strAsOperator(base::StrID id) {
 		if (operator_map.contains(id)) return operator_map[id];
-		return Operator::NotAnOperator;
+		return NamedOperator::NotAnOperator;
 	}
 
 	base::StrID keywordToStr(Keyword key) { return rev_keyword_map[key]; }
 
 	base::StrID specialToStr(Special spec) { return rev_special_map[spec]; }
 
-	base::StrID operatorToStr(Operator oper) { return rev_operator_map[oper]; }
+	base::StrID operatorToStr(NamedOperator oper) { return rev_operator_map[oper]; }
 
 	KeywordFlags keywordFlags(Keyword key) { return keyword_flags[key]; }
 
@@ -273,8 +283,8 @@ namespace lang_def {
 		return result;
 	}
 
-	std::vector<Operator> getOperators() {
-		std::vector<Operator> result;
+	std::vector<NamedOperator> getOperators() {
+		std::vector<NamedOperator> result;
 		result.reserve(operator_array.size());
 		for (const auto& [k, s]: operator_array) result.push_back(k);
 		return result;

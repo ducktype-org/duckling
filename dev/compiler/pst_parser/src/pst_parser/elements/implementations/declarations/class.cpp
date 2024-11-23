@@ -1,4 +1,5 @@
 #include "preamble.hpp"
+#include "../../hierarchy/expr.hpp"
 
 namespace pst {
 	class ClassEndingError final: public dia::Error {
@@ -17,6 +18,20 @@ namespace pst {
 		}
 	};
 
+	class classExtendsExpr: public NotStmt {
+	public:
+		static bool end(const LangParserState& state, i64 fwd = 0) {
+			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
+			    || detail::Conditions::isImplementsOrBlockGroup(state, fwd);
+		}
+
+		static base::unique_ptr<ExprElement> parse(LangParserState& state) {
+			return expr::parseUntil<expr::ChainExpr, end>(state);
+		}
+
+		classExtendsExpr() = delete;
+	};
+
 	ParserRef<Class> Class::parse(LangParserState& state) {
 		auto position = state.getPosition();
 		auto out      = makeRef<Class>(position);
@@ -25,16 +40,8 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Class, &out->name);
 
-		if (state.parse(out).tryEat(Keyword::Extends)) {
-			state.parse(out).with<Expr>(
-				&out->base,
-				Expr::parseUntil<
-					detail::Conditions::isImplementsOrBlockGroup,
-					detail::Conditions::isImplementsOrBlockGroup,
-					ClassEndingError>,
-				false
-			);
-		}
+		if (state.parse(out).tryEat(Keyword::Extends))
+			state.parse(out).with(&out->base, classExtendsExpr::parse);
 		if (state.parse(out).tryEat(Keyword::Implements))
 			state.parse(out).one(&out->implements, true);
 

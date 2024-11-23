@@ -18,11 +18,42 @@
 
 namespace pst {
 	class PstStmtVisitor;
+	class PstExprVisitor;
 	class Attribute;
 
 	using StateCondition = bool(const LangParserState&, i64);
 
 	using GetName = std::string (*)();
+
+	class NotStmt: public LangElement {
+	public:
+		explicit NotStmt(const dia::SourcePosition& position): LangElement(position) {}
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Not Statement";
+		}
+
+		bool trailingSemicolon() override;
+	};
+
+	class Attribute final: public NotStmt {
+		ParserRef<DottedName> name;
+		ParserRef<AtrArgList> args = nullptr;
+
+	public:
+		explicit Attribute(dia::SourcePosition& pos): NotStmt(pos) {}
+
+		static ParserRef<Attribute> parse(LangParserState& state);
+		~Attribute() final = default;
+
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Attribute";
+		}
+	};
 
 	enum class StmtKind {
 		Import,
@@ -122,18 +153,6 @@ namespace pst {
 
 #define STMT_CHILD_CONSTRUCTOR(class_name) \
 	class_name(const dia::SourcePosition& position): Stmt(StmtKind::class_name, position) {}
-
-	class NotStmt: public LangElement {
-	public:
-		explicit NotStmt(const dia::SourcePosition& position): LangElement(position) {}
-
-		[[nodiscard]]
-		std::string elementType() const override {
-			return "Not Statement";
-		}
-
-		bool trailingSemicolon() override;
-	};
 
 	struct ClassContext {
 		base::StrID                                 name;

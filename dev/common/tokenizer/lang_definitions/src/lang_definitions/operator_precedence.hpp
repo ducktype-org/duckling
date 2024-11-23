@@ -29,9 +29,9 @@ namespace lang_def {
 	enum class OperatorAssociativity { LeftToRight, RightToLeft };
 
 	i64 operatorPrecedence(base::StrID operator_, OperatorType operator_type);
-	i64 operatorPrecedence(Operator operator_, OperatorType operator_type);
+	i64 operatorPrecedence(NamedOperator operator_, OperatorType operator_type);
 
 	OperatorAssociativity operatorAssociativity(base::StrID operator_, OperatorType operator_type);
-	OperatorAssociativity operatorAssociativity(Operator operator_, OperatorType operator_type);
-
+	OperatorAssociativity
+		operatorAssociativity(NamedOperator operator_, OperatorType operator_type);
 }

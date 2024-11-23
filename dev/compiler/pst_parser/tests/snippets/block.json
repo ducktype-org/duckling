@@ -27,14 +27,16 @@
 					"Code Block": [
 						{
 							"Expr Stmt": {
-								"Expression": [
-									{
-										"Identifier": "a"
+								"Suffix Operator": {
+									"expression": {
+										"Identifier Expression": {
+											"name": {
+												"Name": "a"
+											}
+										}
 									},
-									{
-										"Operator": "++"
-									},
-								]
+									"operator": "++"
+								}
 							}
 						},
 					]

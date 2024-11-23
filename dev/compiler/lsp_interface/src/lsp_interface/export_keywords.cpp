@@ -87,7 +87,7 @@ namespace lsp {
 		 * This loop parses the output of Duckling cvompiler's getOperators() function and adds the
 		 * operators to the list.
 		 */
-		for (lang_def::Operator o: lang_def::getOperators()) {
+		for (lang_def::NamedOperator o: lang_def::getOperators()) {
 			std::string op = lang_def::operatorToStr(o).str();
 			if (op.rfind("NotA", 0) == std::string::npos)
 				operators.push_back(lang_def::operatorToStr(o).str());
