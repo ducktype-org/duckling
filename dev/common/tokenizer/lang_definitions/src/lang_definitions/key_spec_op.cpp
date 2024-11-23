@@ -19,112 +19,111 @@ namespace lang_def {
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
-	constexpr std::array<std::tuple<Keyword, std::string_view, base::FlagType>, 71>
+	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 71>
 		lang_keywords_array{ {
-			{ Keyword::Fun, "fun", base::EmptyFlag },
-			{ Keyword::Class, "class", base::EmptyFlag },
-			{ Keyword::Namespace, "namespace", base::EmptyFlag },
-			{ Keyword::Import, "import", base::EmptyFlag },
-			{ Keyword::As, "as", base::EmptyFlag },
-			{ Keyword::Using, "using", base::EmptyFlag },
-			{ Keyword::Alias, "alias", base::EmptyFlag },
-			{ Keyword::In, "in", base::EmptyFlag },
-			{ Keyword::Lambda, "lambda", base::EmptyFlag },
+			{ Keyword::Fun, "fun", KeywordFlags() },
+			{ Keyword::Class, "class", KeywordFlags() },
+			{ Keyword::Namespace, "namespace", KeywordFlags() },
+			{ Keyword::Import, "import", KeywordFlags() },
+			{ Keyword::As, "as", KeywordFlags() },
+			{ Keyword::Using, "using", KeywordFlags() },
+			{ Keyword::Alias, "alias", KeywordFlags() },
+			{ Keyword::In, "in", KeywordFlags() },
+			{ Keyword::Lambda, "lambda", KeywordFlags() },
+			{ Keyword::Var, "var", KeywordFlags() },
+			{ Keyword::Let, "let", KeywordFlags() },
+			{ Keyword::Const, "const", KeywordFlags() },
 
-			{ Keyword::Var, "var", base::EmptyFlag },
-			{ Keyword::Let, "let", base::EmptyFlag },
-			{ Keyword::Const, "const", base::EmptyFlag },
+			{ Keyword::While, "while", KeywordFlags() },
+			{ Keyword::For, "for", KeywordFlags() },
+			{ Keyword::Loop, "loop", KeywordFlags() },
+			{ Keyword::If, "if", KeywordFlags() },
+			{ Keyword::Then, "then", KeywordFlags() },
+			{ Keyword::Else, "else", KeywordFlags() },
+			{ Keyword::Elif, "elif", KeywordFlags() },
+			{ Keyword::Block, "block", KeywordFlags() },
+			{ Keyword::With, "with", KeywordFlags() },
+			{ Keyword::Try, "try", KeywordFlags() },
+			{ Keyword::Catch, "catch", KeywordFlags() },
+			{ Keyword::Test, "test", KeywordFlags() },
+			{ Keyword::Debug, "debug", KeywordFlags() },
+			{ Keyword::Switch, "switch", KeywordFlags() },
+			{ Keyword::Case, "case", KeywordFlags() },
 
-			{ Keyword::While, "while", base::EmptyFlag },
-			{ Keyword::For, "for", base::EmptyFlag },
-			{ Keyword::Loop, "loop", base::EmptyFlag },
-			{ Keyword::If, "if", base::EmptyFlag },
-			{ Keyword::Then, "then", base::EmptyFlag },
-			{ Keyword::Else, "else", base::EmptyFlag },
-			{ Keyword::Elif, "elif", base::EmptyFlag },
+			{ Keyword::Return, "return", KeywordFlagsOptions::IS_ACTION },
+			{ Keyword::Break, "break", KeywordFlagsOptions::IS_ACTION },
+			{ Keyword::Continue, "continue", KeywordFlagsOptions::IS_ACTION },
+			{ Keyword::Redo, "redo", KeywordFlagsOptions::IS_ACTION },
+			{ Keyword::Restart, "restart", KeywordFlagsOptions::IS_ACTION },
+			{ Keyword::Defer, "defer", KeywordFlagsOptions::IS_ACTION },
+			{ Keyword::Throw, "throw", KeywordFlagsOptions::IS_ACTION },
+			{ Keyword::Assert, "assert", KeywordFlags() },
+			{ Keyword::CompileAssert, "compile_assert", KeywordFlags() },
 
-			{ Keyword::Block, "block", base::EmptyFlag },
-			{ Keyword::With, "with", base::EmptyFlag },
-			{ Keyword::Try, "try", base::EmptyFlag },
-			{ Keyword::Catch, "catch", base::EmptyFlag },
-			{ Keyword::Test, "test", base::EmptyFlag },
-			{ Keyword::Debug, "debug", base::EmptyFlag },
-			{ Keyword::Switch, "switch", base::EmptyFlag },
-			{ Keyword::Case, "case", base::EmptyFlag },
+			{ Keyword::i8, "i8", KeywordFlags() },
+			{ Keyword::i16, "i16", KeywordFlags() },
+			{ Keyword::i32, "i32", KeywordFlags() },
+			{ Keyword::i64, "i64", KeywordFlags() },
+			{ Keyword::i128, "i128", KeywordFlags() },
 
-			{ Keyword::Return, "return", KeywordFlags::is_action },
-			{ Keyword::Break, "break", KeywordFlags::is_action },
-			{ Keyword::Continue, "continue", KeywordFlags::is_action },
-			{ Keyword::Redo, "redo", KeywordFlags::is_action },
-			{ Keyword::Restart, "restart", KeywordFlags::is_action },
-			{ Keyword::Defer, "defer", KeywordFlags::is_action },
-			{ Keyword::Throw, "throw", KeywordFlags::is_action },
-			{ Keyword::Assert, "assert", base::EmptyFlag },
-			{ Keyword::CompileAssert, "compile_assert", base::EmptyFlag },
+			{ Keyword::u8, "u8", KeywordFlags() },
+			{ Keyword::u16, "u16", KeywordFlags() },
+			{ Keyword::u32, "u32", KeywordFlags() },
+			{ Keyword::u64, "u64", KeywordFlags() },
+			{ Keyword::u128, "u128", KeywordFlags() },
 
-			{ Keyword::i8, "i8", base::EmptyFlag },
-			{ Keyword::i16, "i16", base::EmptyFlag },
-			{ Keyword::i32, "i32", base::EmptyFlag },
-			{ Keyword::i64, "i64", base::EmptyFlag },
-			{ Keyword::i128, "i128", base::EmptyFlag },
+			{ Keyword::f16, "f16", KeywordFlags() },
+			{ Keyword::f32, "f32", KeywordFlags() },
+			{ Keyword::f64, "f64", KeywordFlags() },
+			{ Keyword::f80, "f80", KeywordFlags() },
+			{ Keyword::Char, "char", KeywordFlags() },
+			{ Keyword::Bool, "bool", KeywordFlags() },
 
-			{ Keyword::u8, "u8", base::EmptyFlag },
-			{ Keyword::u16, "u16", base::EmptyFlag },
-			{ Keyword::u32, "u32", base::EmptyFlag },
-			{ Keyword::u64, "u64", base::EmptyFlag },
-			{ Keyword::u128, "u128", base::EmptyFlag },
+			{ Keyword::Vec, "vec", KeywordFlags() },
+			{ Keyword::Set, "set", KeywordFlags() },
+			{ Keyword::Dict, "dict", KeywordFlags() },
+			{ Keyword::Array, "array", KeywordFlags() },
 
-			{ Keyword::f16, "f16", base::EmptyFlag },
-			{ Keyword::f32, "f32", base::EmptyFlag },
-			{ Keyword::f64, "f64", base::EmptyFlag },
-			{ Keyword::f80, "f80", base::EmptyFlag },
-			{ Keyword::Char, "char", base::EmptyFlag },
-			{ Keyword::Bool, "bool", base::EmptyFlag },
+			{ Keyword::None, "none", KeywordFlags() },
+			{ Keyword::True, "true", KeywordFlags() },
+			{ Keyword::False, "false", KeywordFlags() },
 
-			{ Keyword::Vec, "vec", base::EmptyFlag },
-			{ Keyword::Set, "set", base::EmptyFlag },
-			{ Keyword::Dict, "dict", base::EmptyFlag },
-			{ Keyword::Array, "array", base::EmptyFlag },
+			{ Keyword::Sizeof, "sizeof", KeywordFlags() },
+			{ Keyword::Not, "not", KeywordFlags() },
+			{ Keyword::And, "and", KeywordFlags() },
+			{ Keyword::Or, "or", KeywordFlags() },
+			{ Keyword::Xor, "xor", KeywordFlags() },
 
-			{ Keyword::None, "none", base::EmptyFlag },
-			{ Keyword::True, "true", base::EmptyFlag },
-			{ Keyword::False, "false", base::EmptyFlag },
-
-			{ Keyword::Sizeof, "sizeof", base::EmptyFlag },
-			{ Keyword::Not, "not", base::EmptyFlag },
-			{ Keyword::And, "and", base::EmptyFlag },
-			{ Keyword::Or, "or", base::EmptyFlag },
-			{ Keyword::Xor, "xor", base::EmptyFlag },
-
-			{ Keyword::Extends, "extends", base::EmptyFlag },
-			{ Keyword::Implements, "implements", base::EmptyFlag },
-			{ Keyword::Public, "public", base::EmptyFlag },
-			{ Keyword::Private, "private", base::EmptyFlag },
-			{ Keyword::Protected, "protected", base::EmptyFlag },
-			{ Keyword::Static, "static", base::EmptyFlag },
-			{ Keyword::This, "this", base::EmptyFlag },
+			{ Keyword::Extends, "extends", KeywordFlags() },
+			{ Keyword::Implements, "implements", KeywordFlags() },
+			{ Keyword::Public, "public", KeywordFlags() },
+			{ Keyword::Private, "private", KeywordFlags() },
+			{ Keyword::Protected, "protected", KeywordFlags() },
+			{ Keyword::Static, "static", KeywordFlags() },
+			{ Keyword::This, "this", KeywordFlags() },
 		} };
 
-	constexpr std::array<std::tuple<Keyword, std::string_view, base::FlagType>, 17>
-		bc_keywords_array{ {
-			{ Keyword::BCFunction, "function", base::EmptyFlag },
-			{ Keyword::BCLocalSize, "local_size", base::EmptyFlag },
-			{ Keyword::BCRetSize, "ret_size", base::EmptyFlag },
-			{ Keyword::BCArgSize, "arg_size", base::EmptyFlag },
-			{ Keyword::BCNextArgSize, "next_arg_size", base::EmptyFlag },
-			{ Keyword::BCDefine, "define", base::EmptyFlag },
-			{ Keyword::BCLabel, "label", base::EmptyFlag },
-			{ Keyword::BCArg, "arg", base::EmptyFlag },
-			{ Keyword::BCCode, "code", base::EmptyFlag },
-			{ Keyword::BCType, "type", base::EmptyFlag },
-			{ Keyword::BCPrimitive, "primitive", base::EmptyFlag },
-			{ Keyword::BCPointer, "pointer", base::EmptyFlag },
-			{ Keyword::BCStaticTable, "static_table", base::EmptyFlag },
-			{ Keyword::BCDynamicTable, "dynamic_table", base::EmptyFlag },
-			{ Keyword::BCData, "data", base::EmptyFlag },
-			{ Keyword::BCVariant, "variant", base::EmptyFlag },
-			{ Keyword::BCFunType, "fun", base::EmptyFlag },
-		} };
+	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 17> bc_keywords_array{
+		{
+			{ Keyword::BCFunction, "function", KeywordFlags() },
+			{ Keyword::BCLocalSize, "local_size", KeywordFlags() },
+			{ Keyword::BCRetSize, "ret_size", KeywordFlags() },
+			{ Keyword::BCArgSize, "arg_size", KeywordFlags() },
+			{ Keyword::BCNextArgSize, "next_arg_size", KeywordFlags() },
+			{ Keyword::BCDefine, "define", KeywordFlags() },
+			{ Keyword::BCLabel, "label", KeywordFlags() },
+			{ Keyword::BCArg, "arg", KeywordFlags() },
+			{ Keyword::BCCode, "code", KeywordFlags() },
+			{ Keyword::BCType, "type", KeywordFlags() },
+			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
+			{ Keyword::BCPointer, "pointer", KeywordFlags() },
+			{ Keyword::BCStaticTable, "static_table", KeywordFlags() },
+			{ Keyword::BCDynamicTable, "dynamic_table", KeywordFlags() },
+			{ Keyword::BCData, "data", KeywordFlags() },
+			{ Keyword::BCVariant, "variant", KeywordFlags() },
+			{ Keyword::BCFunType, "fun", KeywordFlags() },
+		}
+	};
 
 
 	/**
@@ -173,7 +172,7 @@ namespace lang_def {
 	base::VectorMap<Keyword, base::StrID, false, true> rev_keyword_map;
 
 	// Single for all:
-	base::VectorMap<Keyword, base::FlagType, false, true> keyword_flags;
+	base::VectorMap<Keyword, KeywordFlags, false, true> keyword_flags;
 
 	base::VectorMap<base::StrID, Special, false, true>       special_map;
 	base::VectorMap<base::StrID, NamedOperator, false, true> operator_map;
@@ -188,7 +187,7 @@ namespace lang_def {
 
 		// keywords:
 		rev_keyword_map.put(Keyword::NotAKeyword, base::StrID("NotAKeyword"));
-		keyword_flags.put(Keyword::NotAKeyword, base::EmptyFlag);
+		keyword_flags.put(Keyword::NotAKeyword, KeywordFlags());
 
 		for (auto [k, s, f]: lang_keywords_array) {
 			lang_keyword_map.put(makeStrID(s), k);
@@ -268,7 +267,7 @@ namespace lang_def {
 
 	base::StrID operatorToStr(NamedOperator oper) { return rev_operator_map[oper]; }
 
-	base::FlagType keywordFlags(Keyword key) { return keyword_flags[key]; }
+	KeywordFlags keywordFlags(Keyword key) { return keyword_flags[key]; }
 
 	std::vector<Keyword> getKeywords() {
 		std::vector<Keyword> result;
