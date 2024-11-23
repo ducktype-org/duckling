@@ -33,7 +33,6 @@
 
 #include <optional>
 #include <functional>
-#include <type_traits>
 
 #include "exceptions.hpp"
 
@@ -350,19 +349,6 @@ namespace base {
 			return {};
 		}
 
-		/**
-		 * @brief Applies a function if contains a value. Does nothing otherwise.
-		 */
-		template<typename Function>
-		auto ifValue(const Function& function) -> void {
-			if (has_value()) function(value());
-		}
-
-		template<typename Function>
-		auto ifValue(const Function& function) const -> void {
-			if (has_value()) function(value());
-		}
-
 	protected:
 		void _throwOnNoValue() const {
 			if (!has_value()) CORE_PANIC("Tried to retrieve a value from an empty optional.");
@@ -550,16 +536,6 @@ namespace base {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
-		}
-
-		template<typename Function>
-		auto ifValue(const Function& function) -> void {
-			if (has_value()) function(value());
-		}
-
-		template<typename Function>
-		auto ifValue(const Function& function) const -> void {
-			if (has_value()) function(value());
 		}
 
 	private:

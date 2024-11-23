@@ -387,11 +387,18 @@ private:
 		// static_assert(std::is_same_v<impl::flatten::FlattenVariant_t<int, int>,
 		// impl::FlattenVariant_t<typename T>)
 
-		HResult<int, float> whoa = 1;
-		ASSERT_TRUE(whoa.hasValue());
-		ASSERT_TRUE(bool(whoa));
-		ASSERT_TRUE(!whoa.hasError());
-		ASSERT_EQUAL(1, whoa.value());
+		HResult<int, float> hr1 = 1;
+		ASSERT_TRUE(hr1.hasValue());
+		ASSERT_TRUE(bool(hr1));
+		ASSERT_TRUE(!hr1.hasError());
+		ASSERT_EQUAL(1, hr1.value());
+
+		auto opt1 = hr1.optValue();
+		ASSERT_TRUE(opt1.has_value());
+		ASSERT_EQUAL(1, *opt1)
+
+		HResult<int, float> hr_ref = 1;
+
 
 		std::string                    info  = "Hello";
 		HResult<int, std::string_view> whoa2 = HError(std::string_view(info));

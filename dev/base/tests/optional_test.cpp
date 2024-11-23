@@ -28,7 +28,6 @@ public:
 		TESTER_ADD_TEST(comparatorTest);
 		TESTER_ADD_TEST(boolAndResetTest);
 		TESTER_ADD_TEST(arrowOperatorTest);
-		TESTER_ADD_TEST(ifValueTest);
 	}
 
 	template<class T, class U>
@@ -251,22 +250,6 @@ public:
 		base::Optional<std::string&> opt_ref(str);
 		opt_ref->push_back('r');
 		ASSERT_EQUAL("r", opt_ref.value());
-	}
-
-	void ifValueTest() {
-		base::Optional<int> opt;
-		bool if_value_ran = false;
-		auto lam = [&](){
-			opt.ifValue([&](const auto&) {
-				if_value_ran = true;
-			});
-		};
-		lam();
-		ASSERT_TRUE(!if_value_ran);
-
-		opt = 3;
-		lam();
-		ASSERT_TRUE(if_value_ran);
 	}
 };
 
