@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include "ints.hpp"
+#include "ints.hpp" // IWYU pragma: export
 
 /**
  * @brief Macro used to create Strong ID types.

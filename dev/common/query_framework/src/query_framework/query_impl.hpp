@@ -18,7 +18,6 @@
 
 #include "detail/acd.hpp"
 #include "detail/dep_graph.hpp"
-#include "detail/query_id_provider.hpp"  // IWYU pragma: export
 #include "detail/logs.hpp"
 #include "detail/node_making.hpp"
 
@@ -39,6 +38,7 @@ namespace query::detail {
 	struct ContextType final {
 	private:
 		NodeID my_node;
+		bool active = true;
 
 		ContextType(NodeID my_node): my_node(my_node){};
 		friend struct ContextMaker;
@@ -54,10 +54,18 @@ namespace query::detail {
 		ContextType(const ContextType&) = delete;
 		ContextType(ContextType&&)      = delete;
 
+		void assertActive() const {
+			CORE_ASSERT(active, "Context is inactive.");
+		}
+
 		template<typename OthQuery>
 		auto query(typename OthQuery::QKey key) -> decltype(auto) {
+			assertActive();
 			NodeID dep_id = makeNodeID(OthQuery::id, key);
 			dep_graph::addDependency(my_node, dep_id);
+
+			this->active = false;
+			defer (this->active = true);
 
 			return OthQuery::internal_query(key, my_node);
 		}
@@ -66,7 +74,10 @@ namespace query::detail {
 		 * Log message to be shown to the user.
 		 * @param message The dia::Message to be logged.
 		 */
-		void log(base::unique_ptr<dia::Message> message) { logger.log(std::move(message)); }
+		void log(base::unique_ptr<dia::Message> message) { 
+			assertActive();
+			logger.log(std::move(message));
+		}
 	};
 
 	inline dia::Logger ContextType::logger{};
