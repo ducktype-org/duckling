@@ -166,11 +166,11 @@ namespace query::detail {
 		using Context = ::query::detail::ContextType;
 
 		/**
-		* Standard query function signatures:
-		*  static auto provide(Context& context, QKey key) -> PResult;
-		*  static auto load(QKey key) -> LoadResult;
-		*  static auto store(QKey key, PResult res, query::ACD acd) -> QResult;
-		*/
+		 * Standard query function signatures:
+		 *  static auto provide(Context& context, QKey key) -> PResult;
+		 *  static auto load(QKey key) -> LoadResult;
+		 *  static auto store(QKey key, PResult res, query::ACD acd) -> QResult;
+		 */
 	};
 }
 
