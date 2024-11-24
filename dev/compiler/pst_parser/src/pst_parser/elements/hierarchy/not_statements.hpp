@@ -195,15 +195,21 @@ namespace pst {
 		virtual void acceptVisitor(PstExprVisitor& visitor) const = 0;
 	};
 
+	/**
+	 * @brief The default entry point to expression parsing that doesn't allow comma expressions top-level
+	 */
 	class UniversalExpr: public NotStmt {
 	public:
 		static base::unique_ptr<ExprElement> parse(LangParserState& state);
-		UniversalExpr();
+		UniversalExpr() = delete;
 	};
 
+	/**
+	 * @brief Secondary entry point to expression parsing that allows comma expressions top-level.
+	 */
 	class CommaExpr: public NotStmt {
 	public:
 		static base::unique_ptr<ExprElement> parse(LangParserState& state);
-		CommaExpr();
+		CommaExpr() = delete;
 	};
 }

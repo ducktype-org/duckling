@@ -1,14 +1,15 @@
 #pragma once
 
-#include "base/optional.hpp"
-#include "base/string_id.hpp"
-#include "lang_definitions/key_spec_op.hpp"
-#include "lexer/token_common.hpp"
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
+#include <lang_definitions/key_spec_op.hpp>
+#include <lexer/token_common.hpp>
+#include <token_parser_core/parser_ref.hpp>
+
 #include "meta.hpp"
 #include "lists.hpp"           // IWYU pragma: keep
 #include "not_statements.hpp"  // IWYU pragma: keep
-#include "token_parser_core/common_elements.hpp"
-#include "token_parser_core/parser_ref.hpp"
+#include <token_parser_core/common_elements.hpp>
 
 #define CONDITION(name) static bool name(const LangParserState& state, i64 fwd = 0)
 
@@ -16,7 +17,9 @@ namespace pst {
 	class CodeBlock;
 
 	/**
-	 * @brief This should be generalized or made into separate parts in logical places.
+	 * @brief For now these are some more general expr classification functions.
+	 *
+	 * @note This is temporary, it will be improved in the future.
 	 */
 	class ExprClassify {
 	public:
@@ -455,6 +458,11 @@ namespace pst {
 			~GeneralBinary() override = default;
 		};
 
+		/**
+		 * @brief This class represents a chain of compared expressions for example: `0 < a + b <= c.size()`
+		 *
+		 * The chain is scared as a list of sub-expressions and a list of operators between them.
+		 */
 		class ComparisonChain final: public ExprElement {
 			using Lower = GeneralBinary;
 
@@ -478,6 +486,9 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 		};
 
+		/**
+		 * @brief Logical not operator.
+		 */
 		class LogicNot final: public PrefixOperator {
 			using Lower = ComparisonChain;
 			using Self  = LogicNot;
@@ -491,6 +502,9 @@ namespace pst {
 			~LogicNot() override = default;
 		};
 
+		/**
+		 * @brief Logical and operator.
+		 */
 		class LogicAnd final: public BinaryOperator {
 			using Lower = LogicNot;
 			using Self  = LogicAnd;
@@ -504,6 +518,9 @@ namespace pst {
 			~LogicAnd() override = default;
 		};
 
+		/**
+		 * @brief Logical or operator.
+		 */
 		class LogicOr final: public BinaryOperator {
 			using Lower = LogicAnd;
 			using Self  = LogicOr;
@@ -517,6 +534,13 @@ namespace pst {
 			~LogicOr() override = default;
 		};
 
+		/**
+		 * @brief Ternary expression(`if condition then if_true else if_else`).
+		 * 
+		 * @note For now the parsing of ternary is pretty limited with only one such expression without any parenthesis. This is a limited but safe option.
+		 * 
+		 * @note This should be the default starting level for an expression when comma expression would cause parsing problems.
+		 */
 		class Ternary final: public ExprElement {
 			using Lower = LogicOr;
 
@@ -539,6 +563,11 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 		};
 
+		/**
+		 * @brief Comma separated expression.
+		 * 
+		 * @note This is the second possible entry point for expression parsing when comma expression doesn't cause problems with other parsing.
+		 */
 		class Comma final: public ExprElement {
 			using Lower = Ternary;
 
@@ -562,6 +591,11 @@ namespace pst {
 			const std::vector<ParserRef<ExprElement>>& getExpressions() const;
 		};
 
+		/**
+		 * @brief This is an assignment expression.
+		 *
+		 * @note An assignment expression is supposed to appear only once in a stmt expression.
+		 */
 		class Assignment final: public ExprElement {
 			using Lower = Comma;
 

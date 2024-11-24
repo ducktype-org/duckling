@@ -3,6 +3,11 @@
 #include "elements_list.hpp"
 #include "../lang_parser_state.hpp"
 
+namespace pst {
+	class PstStmtVisitor;
+	class PstExprVisitor;
+}
+
 namespace pst::detail {
 
 	/**

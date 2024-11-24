@@ -34,6 +34,9 @@ namespace pst {
 		ForNoInError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
+	/**
+	 * @brief Expr parsing for type inside for.
+	 */
 	class ForTypeExpr: public NotStmt {
 	public:
 		static bool end(const LangParserState& state, i64 fwd = 0) {

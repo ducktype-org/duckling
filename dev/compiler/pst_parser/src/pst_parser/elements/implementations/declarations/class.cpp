@@ -2,23 +2,10 @@
 #include "../../hierarchy/expr.hpp"
 
 namespace pst {
-	class ClassEndingError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unexpected end to class definition.";
-		}
-
-	public:
-		ClassEndingError(dia::SourcePosition pos): dia::Error(pos) {}
-
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-	};
-
-	class classExtendsExpr: public NotStmt {
+	/**
+	 * @brief Expr parser for the extends class expression.
+	 */
+	class ClassExtendsExpr: public NotStmt {
 	public:
 		static bool end(const LangParserState& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
@@ -29,7 +16,7 @@ namespace pst {
 			return expr::parseUntil<expr::ChainExpr, end>(state);
 		}
 
-		classExtendsExpr() = delete;
+		ClassExtendsExpr() = delete;
 	};
 
 	ParserRef<Class> Class::parse(LangParserState& state) {
@@ -41,7 +28,7 @@ namespace pst {
 		state.parse(out).all(Keyword::Class, &out->name);
 
 		if (state.parse(out).tryEat(Keyword::Extends))
-			state.parse(out).with(&out->base, classExtendsExpr::parse);
+			state.parse(out).with(&out->base, ClassExtendsExpr::parse);
 		if (state.parse(out).tryEat(Keyword::Implements))
 			state.parse(out).one(&out->implements, true);
 
