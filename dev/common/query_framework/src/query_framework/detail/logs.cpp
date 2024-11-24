@@ -2,11 +2,10 @@
 
 #include <iostream>
 
-namespace query {
-	// @TODO: generally if logging is disabled then calculation of log arguments should not happen
-	constexpr bool LOG_QUERY_EVENTS = false;
-
+namespace query::detail {
 	void log(std::string_view str) {
-		if constexpr (LOG_QUERY_EVENTS) std::cerr << str;
+		// @TODO: we should probably have some common module for functions like this,
+		// and optional debug logging
+		std::cerr << str;
 	}
 }

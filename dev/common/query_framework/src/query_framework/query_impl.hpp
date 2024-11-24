@@ -63,9 +63,9 @@ namespace query::detail {
 		}
 
 		/**
-			* Log message to be shown to the user.
-			* @param message The dia::Message to be logged.
-			*/
+		 * Log message to be shown to the user.
+		 * @param message The dia::Message to be logged.
+		 */
 		void log(base::unique_ptr<dia::Message> message) { logger.log(std::move(message)); }
 	};
 
@@ -89,13 +89,13 @@ namespace query::detail {
 	template<typename QueryImplType>
 	auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) ->
 		typename QueryImplType::QResult {
-		log(base::strConcat("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n"));
+		QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n");
 
 		if (auto v = QueryImplType::load(key)) {
 			// @FUTURE: Add ACD check here...
-			log(base::strConcat(
+			QUERY_DEBUG_LOG(
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
-			));
+			);
 
 			// @todo: This might bind & to a const&, via std::move "creating" &&.
 			// It should works for all cases in our codebase,
@@ -115,18 +115,18 @@ namespace query::detail {
 			// Use of defer here makes it also called when an exception is thrown.
 			defer(dep_graph::setExit(node_id));
 
-			log(base::strConcat(
+			QUERY_DEBUG_LOG(
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n"
-			));
+			);
 
 			// calculation:
 			auto&& result
 				= QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 
 			// epilog:
-			log(base::strConcat(
+			QUERY_DEBUG_LOG(
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"
-			));
+			);
 
 			return result;
 		}
