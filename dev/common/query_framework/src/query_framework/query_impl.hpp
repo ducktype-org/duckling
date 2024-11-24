@@ -24,127 +24,123 @@
 
 #include "query_cache_macros.hpp"  // IWYU pragma: export
 
-namespace query {
+namespace query::detail {
+	/**
+	 * @brief ContextType is type of a special object
+	 * that query implementation use to perform three key operations:
+	 * 	* call other query
+	 *  * log
+	 *  * report compiler error
+	 *
+	 * @FUTURE: there exist a concept of "custom context" types as
+	 * a way to hack-in the query model. This however will most likely be
+	 * discarded.
+	 */
+	struct ContextType final {
+	private:
+		NodeID my_node;
 
-	namespace detail {
+		ContextType(NodeID my_node): my_node(my_node){};
+		friend struct ContextMaker;
 
-		/**
-		 * @brief ContextType is type of a special object
-		 * that query implementation use to perform three key operations:
-		 * 	* call other query
-		 *  * log
-		 *  * report compiler error
-		 *
-		 * @FUTURE: there exist a concept of "custom context" types as
-		 * a way to hack-in the query model. This however will most likely be
-		 * discarded.
-		 */
-		struct ContextType final {
-		private:
-			NodeID my_node;
+	public:
+		// @TODO: add currently engaged query sanity check to context operations
 
-			ContextType(NodeID my_node): my_node(my_node){};
-			friend struct ContextMaker;
+		// @TODO: Make the context (and thus the logger) be propagated through query calls,
+		// so that all queries run on the same file / in the same compilation thread / whatever
+		// use a single, *non-static* logger object.
+		static dia::Logger logger;
 
-		public:
-			// @TODO: add currently engaged query sanity check to context operations
+		ContextType(const ContextType&) = delete;
+		ContextType(ContextType&&)      = delete;
 
-			// @TODO: Make the context (and thus the logger) be propagated through query calls,
-			// so that all queries run on the same file / in the same compilation thread / whatever
-			// use a single, *non-static* logger object.
-			static dia::Logger logger;
+		template<typename OthQuery>
+		auto query(typename OthQuery::QKey key) -> decltype(auto) {
+			NodeID dep_id = makeNodeID(OthQuery::id, key);
+			dep_graph::addDependency(my_node, dep_id);
 
-			ContextType(const ContextType&) = delete;
-			ContextType(ContextType&&)      = delete;
-
-			template<typename OthQuery>
-			auto query(typename OthQuery::QKey key) -> decltype(auto) {
-				NodeID dep_id = makeNodeID(OthQuery::id, key);
-				dep_graph::addDependency(my_node, dep_id);
-
-				return OthQuery::internal_query(key, my_node);
-			}
-
-			/**
-			 * Log message to be shown to the user.
-			 * @param message The dia::Message to be logged.
-			 */
-			void log(base::unique_ptr<dia::Message> message) { logger.log(std::move(message)); }
-		};
-
-		inline dia::Logger ContextType::logger{};
-
-		/**
-		 * @brief Internal helper struct used to create context
-		 */
-		struct ContextMaker final {
-			static auto make(NodeID my_node) { return ContextType(my_node); }
-		};
-
-		/**
-		 * @brief Internal function implementing the call to a query.
-		 *
-		 * @tparam QueryImplType Implementation Struct of a Query to call.
-		 * @param key Query key
-		 * @param from node id of caller
-		 * @return QueryImplType::QResult
-		 */
-		template<typename QueryImplType>
-		auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) ->
-			typename QueryImplType::QResult {
-			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n"));
-
-			if (auto v = QueryImplType::load(key)) {
-				// @FUTURE: Add ACD check here...
-				log(base::strConcat(
-					"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
-				));
-
-				// @todo: This might bind & to a const&, via std::move "creating" &&.
-				// It should works for all cases in our codebase,
-				// but I'm not sure if it will work always and if it is
-				// standardized behaviour.
-				return std::move(v.value().data);
-			} else {
-				auto node_id = makeNodeID(QueryImplType::QueryType::getID(), key);
-				auto context = ContextMaker::make(node_id);
-
-				// @FUTURE: provide legit acd here
-				ACD acd;
-
-				// prolog:
-				dep_graph::setEntry(node_id, from);
-
-				// Use of defer here makes it also called when an exception is thrown.
-				defer(dep_graph::setExit(node_id));
-
-				log(base::strConcat(
-					"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n"
-				));
-
-				// calculation:
-				auto&& result
-					= QueryImplType::store(key, QueryImplType::provide(context, key), acd);
-
-				// epilog:
-				log(base::strConcat(
-					"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"
-				));
-
-				return result;
-			}
+			return OthQuery::internal_query(key, my_node);
 		}
 
-	}
+		/**
+			* Log message to be shown to the user.
+			* @param message The dia::Message to be logged.
+			*/
+		void log(base::unique_ptr<dia::Message> message) { logger.log(std::move(message)); }
+	};
+
+	inline dia::Logger ContextType::logger{};
 
 	/**
-	 * @brief Base class for Query implementation struct.
-	 * The reason PResult is defined here is that in some cases
-	 * it might allow to remove big dependencies from .hpp files.
-	 *
-	 * @tparam QueryType_tp Query to implement
-	 * @tparam PResult_tp PResult of a query
+	 * @brief Internal helper struct used to create context
 	 */
+	struct ContextMaker final {
+		static auto make(NodeID my_node) { return ContextType(my_node); }
+	};
+
+	/**
+	 * @brief Internal function implementing the call to a query.
+	 *
+	 * @tparam QueryImplType Implementation Struct of a Query to call.
+	 * @param key Query key
+	 * @param from node id of caller
+	 * @return QueryImplType::QResult
+	 */
+	template<typename QueryImplType>
+	auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) ->
+		typename QueryImplType::QResult {
+		log(base::strConcat("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n"));
+
+		if (auto v = QueryImplType::load(key)) {
+			// @FUTURE: Add ACD check here...
+			log(base::strConcat(
+				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
+			));
+
+			// @todo: This might bind & to a const&, via std::move "creating" &&.
+			// It should works for all cases in our codebase,
+			// but I'm not sure if it will work always and if it is
+			// standardized behaviour.
+			return std::move(v.value().data);
+		} else {
+			auto node_id = makeNodeID(QueryImplType::QueryType::getID(), key);
+			auto context = ContextMaker::make(node_id);
+
+			// @FUTURE: provide legit acd here
+			ACD acd;
+
+			// prolog:
+			dep_graph::setEntry(node_id, from);
+
+			// Use of defer here makes it also called when an exception is thrown.
+			defer(dep_graph::setExit(node_id));
+
+			log(base::strConcat(
+				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n"
+			));
+
+			// calculation:
+			auto&& result
+				= QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+
+			// epilog:
+			log(base::strConcat(
+				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"
+			));
+
+			return result;
+		}
+	}
+
+
+	/**
+	* @brief Base class for Query implementation struct.
+	* The reason PResult is defined here is that in some cases
+	* it might allow to remove big dependencies from .hpp files.
+	*
+	* @tparam QueryType_tp Query to implement
+	* @tparam PResult_tp PResult of a query
+	*/
 	template<typename QueryType_tp, typename PResult_tp>
 	struct QueryImplementation {
 		using QueryType = QueryType_tp;
@@ -159,11 +155,11 @@ namespace query {
 		using Context = ::query::detail::ContextType;
 
 		/**
-		 * Standard query function signatures:
-		 *  static auto provide(Context& context, QKey key) -> PResult;
-		 *  static auto load(QKey key) -> LoadResult;
-		 *  static auto store(QKey key, PResult res, query::ACD acd) -> QResult;
-		 */
+		* Standard query function signatures:
+		*  static auto provide(Context& context, QKey key) -> PResult;
+		*  static auto load(QKey key) -> LoadResult;
+		*  static auto store(QKey key, PResult res, query::ACD acd) -> QResult;
+		*/
 	};
 }
 
@@ -173,7 +169,7 @@ namespace query {
  * @param PResult Type returned by the Provide method
  */
 #define IMPLEMENT_QUERY(query_type, PResult) \
-	ImplementationOf_##query_type final: public query::QueryImplementation<query_type, PResult>
+	ImplementationOf_##query_type final: public query::detail::QueryImplementation<query_type, PResult>
 
 /**
  * @brief This is an internal query, and shouldn't be used directly. It used by
