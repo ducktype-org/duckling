@@ -648,7 +648,7 @@ namespace compiler::helios {
 					);
 				}
 			}
-			CORE_PANIC("Something strange has happened during . operator evaluation...");
+			CORE_UNREACHABLE();
 		}
 		if (op.oper_id == "|") {
 			// @TODO: Check if A and B are types.
@@ -857,7 +857,7 @@ namespace compiler::helios {
 			}
 			variant_default { CORE_PANIC("Unhandleble type during parsing type from expr..."); }
 		}
-		CORE_PANIC("Couldn't parse the type.");
+		CORE_UNREACHABLE();
 	}
 
 	/**
