@@ -94,7 +94,7 @@ def clang_tidy_on(
     # Prints warnings on stdout.
     try:
         tidy_out, _ = bash_command_get_output(
-            f"{clang_tidy_path} -p {build_folder} --format-style file"
+            f"{clang_tidy_path} -p {build_folder} --format-style file --config-file .clang-tidy"
             f' --line-filter="[{{"name": "{file}", "lines": {file_diffs}}}]"'
             f" --extra-arg= {file}"
         )

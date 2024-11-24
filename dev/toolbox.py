@@ -404,7 +404,7 @@ def download_llvm(*args, **kwargs):
     "clang_tidy_path",
     prompt="clang-tidy path",
     help="Path to clang-tidy, ex. /usr/bin/clang-tidy-17 or clang-tidy",
-    default="clang-tidy-17",
+    default="clang-tidy-18",
 )
 @click.option(
     "-f",
