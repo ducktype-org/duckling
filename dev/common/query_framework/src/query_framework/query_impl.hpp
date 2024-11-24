@@ -14,12 +14,15 @@
 #include <base/ref.hpp>
 #include <diagnostic/logger.hpp>
 
-#include "acd.hpp"
 #include "query_int.hpp"
-#include "dep_graph.hpp"
-#include "query_id_provider.hpp"  // IWYU pragma: export
-#include "logs.hpp"
-#include "node_making.hpp"
+
+#include "detail/acd.hpp"
+#include "detail/dep_graph.hpp"
+#include "detail/query_id_provider.hpp"  // IWYU pragma: export
+#include "detail/logs.hpp"
+#include "detail/node_making.hpp"
+
+#include "query_cache_macros.hpp"  // IWYU pragma: export
 
 namespace query {
 
@@ -89,12 +92,12 @@ namespace query {
 		template<typename QueryImplType>
 		auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) ->
 			typename QueryImplType::QResult {
-			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Enter.\n"));
+			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n"));
 
 			if (auto v = QueryImplType::load(key)) {
 				// @FUTURE: Add ACD check here...
 				log(base::strConcat(
-					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Cached. Done.\n"
+					"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
 				));
 
 				// @todo: This might bind & to a const&, via std::move "creating" &&.
@@ -103,7 +106,7 @@ namespace query {
 				// standardized behaviour.
 				return std::move(v.value().data);
 			} else {
-				auto node_id = makeNodeID(QueryImplType::QueryType::id, key);
+				auto node_id = makeNodeID(QueryImplType::QueryType::getID(), key);
 				auto context = ContextMaker::make(node_id);
 
 				// @FUTURE: provide legit acd here
@@ -116,7 +119,7 @@ namespace query {
 				defer(dep_graph::setExit(node_id));
 
 				log(base::strConcat(
-					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Calculating.\n"
+					"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n"
 				));
 
 				// calculation:
@@ -124,7 +127,9 @@ namespace query {
 					= QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 
 				// epilog:
-				log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Done.\n"));
+				log(base::strConcat(
+					"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"
+				));
 
 				return result;
 			}
@@ -213,96 +218,3 @@ namespace query {
  */
 #define QUERY_IMPLEMENTATION_BOILERPLATE(query_type) \
 	INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_##query_type, #query_type)
-
-/**
- * @brief Macro defining typical hash based cache for fast prototyping.
- * It caches PResults using base::HashMap and returns copies of results on cache hit.
- * @future: change it to component, when proper query-component system will be introduced
- */
-#define QUERY_AUTO_CACHE_COPY                                                       \
-	static inline base::                                                            \
-		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>> \
-				cache;                                                              \
-	static auto load(const QKey& key) -> LoadResult {                               \
-		if (const auto& value = cache.atMaybe(key)) {                               \
-			return QResWithACD{ value->data, value->acd };                          \
-		}                                                                           \
-		return {};                                                                  \
-	}                                                                               \
-	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {    \
-		cache.put(key, { std::move(res), acd });                                    \
-		return cache.at(key).data;                                                  \
-	}                                                                               \
-	static_assert(                                                                  \
-		std::is_same_v<PResult, QResult>,                                           \
-		"PResult and QResult should be equal for QUERY_AUTO_CACHE_COPY"             \
-	);                                                                              \
-	static_assert(                                                                  \
-		std::is_copy_constructible_v<PResult>,                                      \
-		"PResult should be copy constructible for QUERY_AUTO_CACHE_COPY"            \
-	);
-
-
-/**
- * @brief Macro defining typical hash based cache for fast prototyping.
- * It caches PResults using base::HashMap and returns directly constructed QResults on cache hit.
- * @note Cannot be used in place of QUERY_AUTO_CACHE_COPY for the sake of transparency.
- * @future: change it to component, when proper query-component system will be introduced
- */
-#define QUERY_AUTO_CACHE_CONSTRUCT                                                      \
-	static inline base::                                                                \
-		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>     \
-				cache;                                                                  \
-	static auto load(const QKey& key) -> LoadResult {                                   \
-		if (const auto& value = cache.atMaybe(key)) {                                   \
-			return QResWithACD{ value->data, value->acd };                              \
-		}                                                                               \
-		return {};                                                                      \
-	}                                                                                   \
-	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {        \
-		cache.put(key, { std::move(res), acd });                                        \
-		return cache.at(key).data;                                                      \
-	}                                                                                   \
-	static_assert(                                                                      \
-		std::is_constructible_v<QResult, PResult> && !std::is_same_v<QResult, PResult>, \
-		"QResult should be constructible from (but not equal to) PResult for "          \
-		"QUERY_AUTO_CACHE_CONSTRUCT"                                                    \
-	);
-
-
-/**
- * @brief Macro defining typical hash based cache for fast prototyping.
- * It caches PResults using base::StableHashMap and returns stable references to results
- * on cache hit.
- * @future: change it to component, when proper query-component system will be introduced
- */
-#define QUERY_AUTO_CACHE_REF                                                              \
-	static inline base::                                                                  \
-		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>> \
-				cache;                                                                    \
-	static auto load(const QKey& key) -> LoadResult {                                     \
-		if (auto value = cache.atMaybe(key)) {                                            \
-			return QResWithACD{ CRef<PResult>(&value->data), value->acd };                \
-		}                                                                                 \
-		return {};                                                                        \
-	}                                                                                     \
-	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {          \
-		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                \
-		return CRef<PResult>(&cache[key].data);                                           \
-	}                                                                                     \
-	static_assert(                                                                        \
-		std::is_same_v<CRef<PResult>, QResult>,                                           \
-		"QResult should be a CRef of PResult for QUERY_AUTO_CACHE_REF"                    \
-	);
-
-
-/**
- * @brief Macro defining empty storing and loading for when providing fresh result
- * is expected to be faster than trying to look it up in a cache.
- */
-#define QUERY_AUTO_NO_CACHE                                                     \
-	static auto store(const QKey&, PResult res, const query::ACD&) -> QResult { \
-		return QResult{ std::move(res) };                                       \
-	}                                                                           \
-                                                                                \
-	static auto load(const QKey&) -> LoadResult { return {}; }

@@ -4,14 +4,15 @@
  */
 #pragma once
 
-#include <string_view>
-#include "query_id.hpp"
-#include "node_id.hpp"
-#include "empty_key.hpp"
+#include <string_view>          // IWYU pragma: export
+#include "detail/query_id.hpp"  // IWYU pragma: export
+#include "detail/node_id.hpp"   // IWYU pragma: export
+#include "empty_key.hpp"        // IWYU pragma: export
 
 namespace query::detail {
 
 	struct ContextType;
+	struct EntryPointHelper;
 
 	/**
 	 * @brief Base class for defining query interface
@@ -33,21 +34,21 @@ namespace query {
 }
 
 /**
- * @brief Macro emitting body of query interface struct.
- */
-#define INTERNAL_QUERY_INTERFACE_BOILERPLATE                                                  \
-	static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
-	static ::std::string_view       name;                                                     \
-	static ::query::detail::QueryID id;
-
-
-/**
  * @brief Macro used do delcare queries.
  *
  * For example:
  * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue)`
  */
-#define DECLARE_QUERY(query_type, key, value)                                    \
-	struct query_type: ::query::detail::QueryInterface<query_type, key, value> { \
-		INTERNAL_QUERY_INTERFACE_BOILERPLATE                                     \
+#define DECLARE_QUERY(query_type, key, value)                                                     \
+	struct query_type: ::query::detail::QueryInterface<query_type, key, value> {                  \
+	private:                                                                                      \
+		static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
+		static ::std::string_view       name;                                                     \
+		static ::query::detail::QueryID id;                                                       \
+		friend struct ::query::detail::ContextType;                                               \
+		friend struct ::query::detail::EntryPointHelper;                                          \
+                                                                                                  \
+	public:                                                                                       \
+		static auto getName() { return name; }                                                    \
+		static auto getID() { return id; }                                                        \
 	};
