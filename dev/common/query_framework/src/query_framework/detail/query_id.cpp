@@ -20,9 +20,7 @@ namespace query::detail {
 
 	std::string_view QueryID::getName() const { return nameMap().at(val); }
 
-	void QueryID::setName(QueryID query, std::string_view name) {
-		nameMap().put(query.val, name);
-	}
+	void QueryID::setName(QueryID query, std::string_view name) { nameMap().put(query.val, name); }
 
 	namespace {
 		QueryID           next                = { 1 };

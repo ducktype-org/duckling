@@ -38,7 +38,7 @@ namespace query::detail {
 	struct ContextType final {
 	private:
 		NodeID my_node;
-		bool active = true;
+		bool   active = true;
 
 		ContextType(NodeID my_node): my_node(my_node){};
 		friend struct ContextMaker;
@@ -54,9 +54,7 @@ namespace query::detail {
 		ContextType(const ContextType&) = delete;
 		ContextType(ContextType&&)      = delete;
 
-		void assertActive() const {
-			CORE_ASSERT(active, "Context is inactive.");
-		}
+		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
 
 		template<typename OthQuery>
 		auto query(typename OthQuery::QKey key) -> decltype(auto) {
@@ -65,7 +63,7 @@ namespace query::detail {
 			dep_graph::addDependency(my_node, dep_id);
 
 			this->active = false;
-			defer (this->active = true);
+			defer(this->active = true);
 
 			return OthQuery::internal_query(key, my_node);
 		}
@@ -74,7 +72,7 @@ namespace query::detail {
 		 * Log message to be shown to the user.
 		 * @param message The dia::Message to be logged.
 		 */
-		void log(base::unique_ptr<dia::Message> message) { 
+		void log(base::unique_ptr<dia::Message> message) {
 			assertActive();
 			logger.log(std::move(message));
 		}
@@ -131,27 +129,23 @@ namespace query::detail {
 			);
 
 			// calculation:
-			auto&& result
-				= QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+			auto&& result = QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 
 			// epilog:
-			QUERY_DEBUG_LOG(
-				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"
-			);
+			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n");
 
 			return result;
 		}
 	}
 
-
 	/**
-	* @brief Base class for Query implementation struct.
-	* The reason PResult is defined here is that in some cases
-	* it might allow to remove big dependencies from .hpp files.
-	*
-	* @tparam QueryType_tp Query to implement
-	* @tparam PResult_tp PResult of a query
-	*/
+	 * @brief Base class for Query implementation struct.
+	 * The reason PResult is defined here is that in some cases
+	 * it might allow to remove big dependencies from .hpp files.
+	 *
+	 * @tparam QueryType_tp Query to implement
+	 * @tparam PResult_tp PResult of a query
+	 */
 	template<typename QueryType_tp, typename PResult_tp>
 	struct QueryImplementation {
 		using QueryType = QueryType_tp;
@@ -180,7 +174,8 @@ namespace query::detail {
  * @param PResult Type returned by the Provide method
  */
 #define IMPLEMENT_QUERY(query_type, PResult) \
-	ImplementationOf_##query_type final: public query::detail::QueryImplementation<query_type, PResult>
+	ImplementationOf_##query_type final:     \
+		  public query::detail::QueryImplementation<query_type, PResult>
 
 /**
  * @brief This is an internal query, and shouldn't be used directly. It used by

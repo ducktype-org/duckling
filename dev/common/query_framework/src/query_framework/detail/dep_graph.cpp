@@ -90,8 +90,8 @@ namespace query::detail {
 			for (auto& [k, v]: node_data) {
 				out << "    ";
 				out << "> Query - " << std::setw(5) << std::left;
-				out << k.q_id.asInt() << std::setw(30) << std::left
-					<< "\"" << k.q_id.getName() << "\"";
+				out << k.q_id.asInt() << std::setw(30) << std::left << "\"" << k.q_id.getName()
+					<< "\"";
 				out << " Key " << k.hash.val << " :=>\n";
 				for (auto& dep: v.dependencies) {
 					out << spacing << "(Q: "
