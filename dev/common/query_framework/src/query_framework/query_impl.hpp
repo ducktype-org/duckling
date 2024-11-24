@@ -22,7 +22,7 @@
 #include "detail/logs.hpp"
 #include "detail/node_making.hpp"
 
-#include "detail/query_cache_macros.hpp"  // IWYU pragma: export
+#include "query_cache_macros.hpp"  // IWYU pragma: export
 
 namespace query {
 
