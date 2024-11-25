@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <base/str_utils.hpp>
+#include <base/str_utils.hpp>  // IWYU pragma: export
 #include <string_view>
 
 namespace query::detail {

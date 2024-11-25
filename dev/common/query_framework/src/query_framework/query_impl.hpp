@@ -12,7 +12,10 @@
 #include <base/maps.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/ref.hpp>
+#include <base/exceptions.hpp>
+#include <base/unique_pointer.hpp>
 #include <diagnostic/logger.hpp>
+#include <diagnostic/message.hpp>
 
 #include "query_int.hpp"
 
