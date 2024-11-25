@@ -18,6 +18,7 @@
 
 #include "detail/acd.hpp"
 #include "detail/dep_graph.hpp"
+#include "detail/query_id_provider.hpp"  // IWYU pragma: export
 #include "detail/logs.hpp"
 #include "detail/node_making.hpp"
 
