@@ -238,8 +238,10 @@ namespace context_leak {
 
 	struct IMPLEMENT_QUERY(IdentityQuery, u64) {
 		static auto provide(Context&, QKey key) -> PResult { return key; }
+
 		QUERY_AUTO_NO_CACHE
 	};
+
 	QUERY_IMPLEMENTATION_BOILERPLATE(IdentityQuery);
 
 	struct IMPLEMENT_QUERY(LeakQuery, u64) {
@@ -248,8 +250,10 @@ namespace context_leak {
 			ctx.query<UseLeakedContext>(1);
 			return key;
 		}
+
 		QUERY_AUTO_NO_CACHE
 	};
+
 	QUERY_IMPLEMENTATION_BOILERPLATE(LeakQuery);
 
 	struct IMPLEMENT_QUERY(UseLeakedContext, u64) {
@@ -258,11 +262,12 @@ namespace context_leak {
 			leaked_context->query<IdentityQuery>(1);
 			return key;
 		}
+
 		QUERY_AUTO_NO_CACHE
 	};
-	QUERY_IMPLEMENTATION_BOILERPLATE(UseLeakedContext);	
-}
 
+	QUERY_IMPLEMENTATION_BOILERPLATE(UseLeakedContext);
+}
 
 using query::utils::withContextCompute;
 using query::utils::withContextDo;
@@ -395,10 +400,14 @@ private:
 	}
 
 	void testContextSanityCheck() {
-		assertThrows<base::Panic>([&]() {
-			query::entryPoint<context_leak::LeakQuery>(1);
-		}, "Bad context usage not detected");
-		assertTrue(context_leak::use_leaked_query_happened, "Something else happened, the test is inconclusive");
+		assertThrows<base::Panic>(
+			[&]() { query::entryPoint<context_leak::LeakQuery>(1); },
+			"Bad context usage not detected"
+		);
+		assertTrue(
+			context_leak::use_leaked_query_happened,
+			"Something else happened, the test is inconclusive"
+		);
 	}
 };
 
