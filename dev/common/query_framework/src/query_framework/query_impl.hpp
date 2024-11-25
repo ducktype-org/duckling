@@ -122,11 +122,16 @@ namespace query::detail {
 			// @FUTURE: provide legit acd here
 			ACD acd;
 
-			// prolog:
-			dep_graph::setEntry(node_id, from);
 
 			// Use of defer here makes it also called when an exception is thrown.
+			// it is before setEntry, because setEntry can throw on cycle
+			// @TODO: in the future we might want to guarantee that query operation are no-throw
+			// apart from panics and similar stuff.
+			// We for sure need more control of what happens if query operation throws.
 			defer(dep_graph::setExit(node_id));
+
+			// prolog:
+			dep_graph::setEntry(node_id, from);
 
 			QUERY_DEBUG_LOG(
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n"

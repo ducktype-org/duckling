@@ -224,6 +224,45 @@ struct IMPLEMENT_QUERY(ConstructCacheTest, ConstructFrom) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(ConstructCacheTest);
 
+namespace context_leak {
+	query::Context* leaked_context = nullptr;
+
+	// This is a flag used to check if context leak
+	// detection actually took place, and that other
+	// assertions did not prevent it
+	bool use_leaked_query_happened = false;
+
+	DECLARE_QUERY(IdentityQuery, u64, u64);
+	DECLARE_QUERY(LeakQuery, u64, u64);
+	DECLARE_QUERY(UseLeakedContext, u64, u64);
+
+	struct IMPLEMENT_QUERY(IdentityQuery, u64) {
+		static auto provide(Context&, QKey key) -> PResult { return key; }
+		QUERY_AUTO_NO_CACHE
+	};
+	QUERY_IMPLEMENTATION_BOILERPLATE(IdentityQuery);
+
+	struct IMPLEMENT_QUERY(LeakQuery, u64) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			leaked_context = &ctx;
+			ctx.query<UseLeakedContext>(1);
+			return key;
+		}
+		QUERY_AUTO_NO_CACHE
+	};
+	QUERY_IMPLEMENTATION_BOILERPLATE(LeakQuery);
+
+	struct IMPLEMENT_QUERY(UseLeakedContext, u64) {
+		static auto provide(Context&, QKey key) -> PResult {
+			use_leaked_query_happened = true;
+			leaked_context->query<IdentityQuery>(1);
+			return key;
+		}
+		QUERY_AUTO_NO_CACHE
+	};
+	QUERY_IMPLEMENTATION_BOILERPLATE(UseLeakedContext);	
+}
+
 
 using query::utils::withContextCompute;
 using query::utils::withContextDo;
@@ -245,6 +284,7 @@ public:
 		TESTER_ADD_TEST(queryNamesTest);
 		TESTER_ADD_TEST(cycleDetectionTest);
 		TESTER_ADD_TEST(debugPrintTest);
+		TESTER_ADD_TEST(testContextSanityCheck);
 	}
 
 private:
@@ -352,6 +392,13 @@ private:
 			ASSERT_TRUE(res3.v == 20);
 			ASSERT_TRUE(ConstructTo::construct_count == 3);
 		});
+	}
+
+	void testContextSanityCheck() {
+		assertThrows<base::Panic>([&]() {
+			query::entryPoint<context_leak::LeakQuery>(1);
+		}, "Bad context usage not detected");
+		assertTrue(context_leak::use_leaked_query_happened, "Something else happened, the test is inconclusive");
 	}
 };
 
