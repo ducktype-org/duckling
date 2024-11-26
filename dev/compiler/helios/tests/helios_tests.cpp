@@ -17,6 +17,7 @@
 
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <base/variant.hpp>
+#include <base/box.hpp>
 #include <helios/helios_result.hpp>
 
 using namespace compiler::helios::test_utils;
@@ -398,7 +399,7 @@ private:
 		ASSERT_TRUE(opt1.has_value());
 		ASSERT_EQUAL(1, **opt1);
 
-		HResult<std::string, float> hr2 = "Value";
+		HResult<std::string, float> hr2        = "Value";
 		base::Optional<std::string> stolen_opt = std::move(hr2).optValueMove();
 		ASSERT_EQUAL("Value", stolen_opt);
 
