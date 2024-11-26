@@ -433,7 +433,7 @@ namespace compiler::mir {
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr&) override {
-			throw base::NotYetImplemented("unary operator");
+			throw base::NotYetImplemented("parenthesis expr");
 		}
 
 		void visitKeywordExpr(const hc::KeywordExpr&) override {
