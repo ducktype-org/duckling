@@ -181,7 +181,7 @@ namespace compiler::helios::errors {
 	 * @brief Our implementation of std::expected for HELIOS purposes.
 	 */
 	template<class ResTp, class ErrTp1, class... ErrTps>
-	class HResult {
+	requires(!std::is_reference_v<ResTp>) class HResult {
 	public:
 		using ErrorTypeStruct = SingleVariantExtractor<UniqueTypesVariant_t<ErrTp1, ErrTps...>>;
 		using ErrorIsVariant  = std::is_base_of<std::true_type, ErrorTypeStruct>;
@@ -283,13 +283,11 @@ namespace compiler::helios::errors {
 		 * @brief Access the value as an optional.
 		 */
 		constexpr base::Optional<base::Ref<ResTp>> optValue() {
-			static_assert(!std::is_reference_v<ResTp>);
 			if_opt_some(value_storage, value) return &value;
 			return {};
 		}
 
 		constexpr base::Optional<base::CRef<ResTp>> optValue() const {
-			static_assert(!std::is_reference_v<ResTp>);
 			if_opt_some(value_storage, value) return &value;
 			return {};
 		}
