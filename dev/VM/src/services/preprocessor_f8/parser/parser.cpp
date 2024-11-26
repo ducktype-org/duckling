@@ -377,7 +377,7 @@ namespace assemble {
 
 			switch (next.asKeyword()) {
 			case lang_def::Keyword::BCArgSize: {
-				state.parse().one(lang_def::Operator::Colon);
+				state.parse().one(lang_def::NamedOperator::Colon);
 				if (out->arg_size != size_t_max)
 					state.err.failAndLog(state.getPosition(), "arg_size duplicate");
 				auto value = state.tokens().next();
@@ -398,7 +398,7 @@ namespace assemble {
 				break;
 			}
 			case lang_def::Keyword::BCNextArgSize: {
-				state.parse().one(lang_def::Operator::Colon);
+				state.parse().one(lang_def::NamedOperator::Colon);
 				if (out->next_arg_size != size_t_max) {
 					state.err.failAndLog(
 						state.ctokens().peek().getPosition(), "next_arg_size duplicate"
@@ -425,7 +425,7 @@ namespace assemble {
 			}
 
 			case lang_def::Keyword::BCLocalSize: {
-				state.parse().one(lang_def::Operator::Colon);
+				state.parse().one(lang_def::NamedOperator::Colon);
 				if (out->local_size != size_t_max)
 					state.err.failAndLog(state.getPosition(), "local_size duplicate");
 				auto value = state.tokens().next();
@@ -447,7 +447,7 @@ namespace assemble {
 			}
 
 			case lang_def::Keyword::BCRetSize: {
-				state.parse().one(lang_def::Operator::Colon);
+				state.parse().one(lang_def::NamedOperator::Colon);
 				if (out->ret_size != size_t_max)
 					state.err.failAndLog(state.getPosition(), "ret_size duplicate");
 				auto value = state.tokens().next();
@@ -473,7 +473,7 @@ namespace assemble {
 			}
 
 			case lang_def::Keyword::BCCode: {
-				state.parse().one(lang_def::Operator::Colon);
+				state.parse().one(lang_def::NamedOperator::Colon);
 				if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly))
 					state.err.failAndLog(state.getPosition(), "no {} on code:");
 
@@ -514,7 +514,7 @@ namespace assemble {
 
 		/// @TODO: implement keywordToNumLiteral
 		auto type = state.tokens().next().asKeyword();
-		state.parse().one(lang_def::Operator::Colon);
+		state.parse().one(lang_def::NamedOperator::Colon);
 		base::StrID name = state.tokens().next().getValue();
 
 		switch (type) {
@@ -572,7 +572,7 @@ namespace assemble {
 			while (state.notEmpty()) {
 				tpc::Identifier field_name;
 				tpc::Identifier field_type;
-				state.parse().all(&field_name, lang_def::Operator::Colon, &field_type);
+				state.parse().all(&field_name, lang_def::NamedOperator::Colon, &field_type);
 				fields.emplace_back(Field{ field_name.value, field_type.value });
 
 				if (state.empty()) break;

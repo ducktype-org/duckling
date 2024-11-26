@@ -1,5 +1,5 @@
-#include "helios/helios_errors.hpp"
-#include "typesystem/higher/queries/types.hpp"
+#include <base/optional.hpp>
+#include <helios/helios_errors.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
@@ -17,6 +17,7 @@
 
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <base/variant.hpp>
+#include <base/box.hpp>
 #include <helios/helios_result.hpp>
 
 using namespace compiler::helios::test_utils;
@@ -397,15 +398,25 @@ private:
 		// static_assert(std::is_same_v<impl::flatten::FlattenVariant_t<int, int>,
 		// impl::FlattenVariant_t<typename T>)
 
-		HResult<int, float> whoa = 1;
-		ASSERT_TRUE(whoa.hasValue());
-		ASSERT_TRUE(!whoa.hasError());
-		ASSERT_EQUAL(1, whoa.value());
+		HResult<int, float> hr1 = 1;
+		ASSERT_TRUE(hr1.hasValue());
+		ASSERT_TRUE(bool(hr1));
+		ASSERT_TRUE(!hr1.hasError());
+		ASSERT_EQUAL(1, hr1.value());
+
+		base::Optional<base::Ref<int>> opt1 = hr1.optValue();
+		ASSERT_TRUE(opt1.has_value());
+		ASSERT_EQUAL(1, **opt1);
+
+		HResult<std::string, float> hr2        = "Value";
+		base::Optional<std::string> stolen_opt = std::move(hr2).optValueMove();
+		ASSERT_EQUAL("Value", stolen_opt);
 
 		std::string                    info  = "Hello";
 		HResult<int, std::string_view> whoa2 = HError(std::string_view(info));
 		ASSERT_TRUE(!whoa2.hasValue());
 		ASSERT_TRUE(whoa2.hasError());
+		ASSERT_TRUE(!bool(whoa2));
 		ASSERT_EQUAL(whoa2.error(), "Hello");
 
 		struct Err1 {};

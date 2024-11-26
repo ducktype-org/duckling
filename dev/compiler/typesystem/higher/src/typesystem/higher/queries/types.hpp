@@ -194,4 +194,9 @@ namespace tsh {
 	 * @brief Query to get the Module type.
 	 */
 	DECLARE_QUERY(QueryModuleType, query::EmptyKey, ModuleInfo)
+
+	/**
+	 * @brief Query to get the Import type.
+	 */
+	DECLARE_QUERY(QueryImportType, query::EmptyKey, ImportInfo)
 }

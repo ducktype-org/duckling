@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "char.hpp"
+#include "token_common.hpp"
 
 #include <diagnostic/source_position.hpp>
 #include <base/smart_pointers.hpp>
@@ -19,7 +20,7 @@
 
 namespace lexer {
 	using lang_def::Keyword;
-	using lang_def::Operator;
+	using lang_def::NamedOperator;
 	using lang_def::Special;
 
 	class Token;
@@ -135,6 +136,9 @@ namespace lexer {
 
 		[[nodiscard]]
 		bool isOperator() const;
+		[[nodiscard]]
+		Operator asOperator() const;
+
 		[[nodiscard]]
 		bool isIdentifier() const;
 		[[nodiscard]]
