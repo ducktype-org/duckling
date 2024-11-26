@@ -123,7 +123,7 @@ namespace vm {
 			variant_case_novalue(api::request::Output) { return output(); }
 			variant_default { return api::Response(api::response::Empty()); }
 		}
-		CORE_PANIC("something went wrong");
+		CORE_UNREACHABLE();
 	}
 
 	cpp::result<api::Response, api::CoreOperationError>
@@ -171,7 +171,7 @@ namespace vm {
 			variant_case(api::StatusRequest, status_request) { return api::Response(getStatus()); }
 			variant_default { return api::Response(api::response::Empty()); }
 		}
-		CORE_PANIC("something went wrong");
+		CORE_UNREACHABLE();
 	}
 
 	VCPU::~VCPU() {

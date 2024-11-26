@@ -87,3 +87,16 @@ namespace base {
 		"    In " __FILE__ ":" DETAIL_LANG_STR(__LINE__), \
 		base::strConcat(panic_title, "    ", what)        \
 	)
+
+/**
+ * @brief Wrapper for CORE_PANIC intended to be used
+ * for clearly unreachable code, e.g. after swich case where each case returns,
+ * especially in cases when linter complains about missing return.
+ *
+ * @note CORE_PANIC is by definition also unreachable during correct execution.
+ * This macro should be used instead of CORE_PANIC **only** in places where it is intuitively clear
+ * that it better encapsulates the meaning/intent of the code. Examples where panic is better:
+ * * `if (cond) CORE_PANIC("error description")`,
+ * * `default: CORE_PANIC("unhandled case")`.
+ */
+#define CORE_UNREACHABLE() _THROW_PANIC("    Unreachable code reached! Panic.", "")

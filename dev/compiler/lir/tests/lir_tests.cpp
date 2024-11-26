@@ -52,7 +52,29 @@ private:
 			auto foo_lir = ctx.query<compiler::lir::LowerToLirFunction>({ foo_mir });
 			ASSERT_TRUE(foo_lir->validateBlockOrder());
 
-			// @TODO: add some proper tests here
+			// test locals types:
+
+			// this might change in the future:
+			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
+
+			for (auto& local: foo_lir->local_list) {
+				if (local->helios_id.has_value()
+				    and compiler::helios::name(local->helios_id.value()) == "a") {
+					ASSERT_EQUAL(
+						local->layout.getSourceType(),
+						ctx.query<::tsh::QueryIntegralType>({ 64, true })
+					);
+				}
+				if (local->helios_id.has_value()
+				    and compiler::helios::name(local->helios_id.value()) == "b") {
+					ASSERT_EQUAL(
+						local->layout.getSourceType(),
+						ctx.query<::tsh::QueryIntegralType>({ 32, true })
+					);
+				}
+			}
+
+			// @TODO: more proper tests here
 
 			// Test debug print:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.

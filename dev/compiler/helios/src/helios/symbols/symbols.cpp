@@ -485,6 +485,13 @@ namespace compiler::helios {
 					);
 				}
 			}
+<<<<<<< HEAD
+=======
+			CORE_UNREACHABLE();
+		}
+		if (op.oper_id == "|") {
+			// @TODO: Check if A and B are types.
+>>>>>>> expr-2.0
 
 			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) override {
 				result = evaluateExpr(ctx, *expr.expr);

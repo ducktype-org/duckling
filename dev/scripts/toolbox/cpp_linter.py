@@ -84,7 +84,7 @@ def clang_tidy_on(
     build_folder: pathlib.Path,
     file: str,
     file_diffs: list[tuple[int, int]],
-    out,
+    log_file,
 ):
     """
     Runs clang-tidy on a file with given file_diffs
@@ -94,20 +94,21 @@ def clang_tidy_on(
     # Prints warnings on stdout.
     try:
         tidy_out, _ = bash_command_get_output(
-            f"{clang_tidy_path} -p {build_folder} --format-style file"
+            f"{clang_tidy_path} -p {build_folder} --format-style file --config-file .clang-tidy"
             f' --line-filter="[{{"name": "{file}", "lines": {file_diffs}}}]"'
-            f" --extra-arg= {file}"
+            f" --extra-arg= {file}",
+            click_file=log_file,
         )
         if tidy_out:
-            log_warning(f"clang-tidy output: \n{tidy_out}", file=out)
+            log_warning(f"clang-tidy output: \n{tidy_out}", file=log_file)
     except BashCommandError as e:
         log_warning(
-            f"clang-tidy failed: {file}, because:\n{e.stdout}{e.stderr}", file=out
+            f"clang-tidy failed: {file}, because:\n{e.stdout}{e.stderr}", file=log_file
         )
 
 
 def clang_format_on(
-    clang_format_path: str, file: str, file_diffs: list[tuple[int, int]], out
+    clang_format_path: str, file: str, file_diffs: list[tuple[int, int]], log_file
 ) -> bool:
     """
     Dry-run clang-format on a file with given file_diffs to test
@@ -117,36 +118,38 @@ def clang_format_on(
     # clang-format command succeeds always and returns data (possibly empty)
     lines = [f"--lines={start}:{stop}" for start, stop in file_diffs]
     format_out, format_err = bash_command_get_output(
-        f"{clang_format_path}" " -style=file --dry-run" f" {' '.join(lines)} {file}"
+        f"{clang_format_path}" " -style=file --dry-run" f" {' '.join(lines)} {file}",
+        click_file=log_file,
     )
 
     # Print data returned by clang-format
     if format_out or format_err:
-        log_warning(f"clang-format output: \n{format_out}{format_err}", file=out)
+        log_warning(f"clang-format output: \n{format_out}{format_err}", file=log_file)
         return False
     return True
 
 
 def run_linter_on(
     clang_tidy_path: str, clang_format_path: str, build_folder: pathlib.Path, file, diff
-) -> bool:
+) -> tuple[str, bool]:
     clang_format_failed = False
+    logs = ""
     if file.endswith(".hpp") or file.endswith(".cpp"):
-        out = tempfile.TemporaryFile("w+")
-        log_info(f"Linting: {file}", file=out)
+        log_file = tempfile.TemporaryFile("w+")
+        log_info(f"Linting: {file}", file=log_file)
 
-        clang_tidy_on(clang_tidy_path, build_folder, file, diff, out)
+        clang_tidy_on(clang_tidy_path, build_folder, file, diff, log_file)
 
-        if not clang_format_on(clang_format_path, file, diff, out):
+        if not clang_format_on(clang_format_path, file, diff, log_file):
             clang_format_failed = True
 
-        out.seek(0)
-        print(out.read())
+        log_file.seek(0)
+        logs = log_file.read()
 
     else:
         log_info(f"Skipping linting on: {file}")
 
-    return clang_format_failed
+    return logs, clang_format_failed
 
 
 def simulate_cpp_linter(
@@ -162,11 +165,16 @@ def simulate_cpp_linter(
     clang_format_failed = False
 
     with ThreadPoolExecutor(max_workers=threads) as e:
-        call_linter = lambda fd: run_linter_on(
-            clang_tidy_path, clang_format_path, build_folder, *fd
-        )
+
+        def call_linter(fd: tuple[str, list[tuple[int, int]]]):
+            return run_linter_on(clang_tidy_path, clang_format_path, build_folder, *fd)
+
         results = e.map(call_linter, file_diffs.items())
-        clang_format_failed = any(results)
+
+        for logs, cf_failed in results:
+            sys.stdout.write(logs)
+            if cf_failed:
+                clang_format_failed = True
 
     if clang_format_failed:
         to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
