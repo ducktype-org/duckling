@@ -398,8 +398,9 @@ private:
 		ASSERT_TRUE(opt1.has_value());
 		ASSERT_EQUAL(1, **opt1);
 
-		base::Optional<int> stolen_opt = std::move(hr1).optValueMove();
-		ASSERT_EQUAL(1, stolen_opt);
+		HResult<std::string, float> hr2 = "Value";
+		base::Optional<std::string> stolen_opt = std::move(hr2).optValueMove();
+		ASSERT_EQUAL("Value", stolen_opt);
 
 		std::string                    info  = "Hello";
 		HResult<int, std::string_view> whoa2 = HError(std::string_view(info));
