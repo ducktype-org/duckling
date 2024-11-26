@@ -99,7 +99,7 @@ namespace pst {
 		}
 	};
 
-	class ExprStmt: public Stmt {
+	class ExprStmt final: public Stmt {
 		ParserRef<ExprElement> expr;
 
 	public:
