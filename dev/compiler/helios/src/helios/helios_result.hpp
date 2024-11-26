@@ -2,6 +2,7 @@
 
 // Feel free to modify this file, as this code is very generic and tough to write once.
 
+#include <base/ref.hpp>
 #include <base/exceptions.hpp>
 #include <base/define_helper.hpp>
 #include <type_traits>
@@ -180,7 +181,7 @@ namespace compiler::helios::errors {
 	 * @brief Our implementation of std::expected for HELIOS purposes.
 	 */
 	template<class ResTp, class ErrTp1, class... ErrTps>
-	class HResult {
+	requires(!std::is_reference_v<ResTp>) class HResult {
 	public:
 		using ErrorTypeStruct = SingleVariantExtractor<UniqueTypesVariant_t<ErrTp1, ErrTps...>>;
 		using ErrorIsVariant  = std::is_base_of<std::true_type, ErrorTypeStruct>;
@@ -251,7 +252,7 @@ namespace compiler::helios::errors {
 		 */
 		[[nodiscard]]
 		constexpr bool hasError() const {
-			return !value_storage.has_value();
+			return error_storage.has_value();
 		}
 
 		/**
@@ -259,8 +260,13 @@ namespace compiler::helios::errors {
 		 */
 		[[nodiscard]]
 		constexpr bool hasValue() const {
-			return !hasError();
+			return value_storage.has_value();
 		}
+
+		/**
+		 * @brief Checks if HResult contains a value.
+		 */
+		explicit constexpr operator bool() { return hasValue(); }
 
 		/**
 		 * @brief Access the value, throw on no value.
@@ -272,6 +278,21 @@ namespace compiler::helios::errors {
 		constexpr ResTp& value() & { return expect("Result it empty!"); }
 
 		constexpr ResTp&& value() && { return std::move(expect("Result it empty!")); }
+
+		/**
+		 * @brief Access the value as an optional.
+		 */
+		constexpr base::Optional<base::Ref<ResTp>> optValue() {
+			if_opt_some(value_storage, value) return &value;
+			return {};
+		}
+
+		constexpr base::Optional<base::CRef<ResTp>> optValue() const {
+			if_opt_some(value_storage, value) return &value;
+			return {};
+		}
+
+		constexpr base::Optional<ResTp> optValueMove() && { return std::move(value_storage); }
 
 		/**
 		 * @brief Access the value, throw on no value with a message.

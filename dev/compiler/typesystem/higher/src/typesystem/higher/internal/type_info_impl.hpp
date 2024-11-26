@@ -662,4 +662,19 @@ namespace tsh::internal {
 
 		explicit MetaInfoImpl() = default;
 	};
+
+	class ImportInfoImpl final: public TypeInfoImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return staticKind;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind staticKind = Kind::Import;
+
+		explicit ImportInfoImpl() = default;
+	};
 }
