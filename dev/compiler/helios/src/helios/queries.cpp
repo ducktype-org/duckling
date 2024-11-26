@@ -6,7 +6,7 @@
 #include <base/stable_hashmap.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
-#include "base/exceptions.hpp"
+#include <base/exceptions.hpp>
 #include "scopes/scopes.hpp"
 #include "hout/elements.hpp"
 
