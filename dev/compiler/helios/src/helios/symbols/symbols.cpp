@@ -20,8 +20,8 @@
 #include "../pst_ref.hpp"
 #include "../helios_errors.hpp"
 #include "../helios_result.hpp"
-#include "pst_parser/elements/hierarchy/not_statements.hpp"
-#include "typesystem/higher/queries/types.hpp"
+#include <pst_parser/elements/hierarchy/not_statements.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <cmath>
 #include <base/optional.hpp>
