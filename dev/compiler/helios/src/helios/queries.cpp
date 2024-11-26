@@ -6,6 +6,7 @@
 #include <base/stable_hashmap.hpp>
 #include <pst_parser/pst_visitor.hpp>
 
+#include <base/exceptions.hpp>
 #include "scopes/scopes.hpp"
 #include "hout/elements.hpp"
 
@@ -37,6 +38,7 @@ namespace compiler::helios {
 			// grab constants:
 			for (auto sym: *symbols_in_module_root)
 				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
+
 
 			// grab functions:
 			for (auto sym: *symbols_in_module_root)
@@ -70,9 +72,9 @@ namespace compiler::helios {
 		}
 
 		struct HoutStmtMaker final: public pst::PstStmtVisitorPanicky {
-			query::Context&                              ctx;
-			bool                                         empty = false;
-			base::Optional<code::ElementRef<code::Stmt>> out;
+			query::Context&                       ctx;
+			bool                                  empty = false;
+			base::Optional<base::Box<code::Stmt>> out;
 
 			HoutStmtMaker(query::Context& ctx): ctx(ctx) {}
 
@@ -90,14 +92,14 @@ namespace compiler::helios {
 
 			template<class T>
 			void output(T&& value) {
-				this->out.emplace(
-					base::make_unique<std::remove_reference_t<T>>(std::forward<T>(value))
+				this->out.emplace(base::Box(new std::remove_reference_t<T>(std::forward<T>(value)))
 				);
 			}
 
 			void visitReturn(const pst::Return& stmt) override {
 				if (auto val = stmt.getValue()) {
-					auto expr = ctx.query<QueryHoutOfExpr>({ val.value() });
+					auto expr = ctx.query<QueryHoutOfExpr>({ val.value() })
+					                .expect("Not handling errors here yet...");
 					output(code::ReturnStmt(scopeOf(stmt), std::move(expr)));
 				} else {
 					output(code::VoidReturnStmt(scopeOf(stmt)));
@@ -109,8 +111,8 @@ namespace compiler::helios {
 			void visitUsing(const pst::Using&) override { empty = true; }
 
 			void visitExprStmt(const pst::ExprStmt& stmt) override {
-				auto expr = ctx.query<QueryHoutOfExpr>({ PstRef<pst::Expr>(stmt.getExpr()) });
-
+				auto expr = ctx.query<QueryHoutOfExpr>({ PstRef<pst::ExprElement>(stmt.getExpr()) })
+				                .expect("Not handling errors here yet...");
 				output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
 			}
 
@@ -120,7 +122,8 @@ namespace compiler::helios {
 
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
-				auto condition = ctx.query<QueryHoutOfExpr>({ stmt.getCondition() });
+				auto condition = ctx.query<QueryHoutOfExpr>({ stmt.getCondition() })
+				                     .expect("Not handling errors here yet");
 
 				auto body = queryCodeOfCodeBlock(ctx, stmt.getBody());
 
@@ -153,7 +156,8 @@ namespace compiler::helios {
 
 				// for now initial value is assumed to always be present:
 				// this will probably change:
-				auto initial_value = ctx.query<QueryHoutOfExpr>({ stmt.getValue() });
+				auto initial_value = ctx.query<QueryHoutOfExpr>({ stmt.getValue() })
+				                         .expect("Not handling errors here yet...");
 
 				output(code::VariableStmt(
 					scope_of_symbol, std::move(initial_value), symbol_type, symbol

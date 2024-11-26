@@ -32,6 +32,7 @@ namespace tsh {
 		class NamespaceInfoImpl;
 		class ModuleInfoImpl;
 		class MetaInfoImpl;
+		class ImportInfoImpl;
 	}
 
 	/******************\
@@ -593,5 +594,14 @@ namespace tsh {
 		CONSTRUCT_WITH_CHECKED_CAST(MetaInfo)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(Meta)
+	};
+
+	class ImportInfo: public TypeInfo {
+	public:
+		SETUP_TYPE_WITH_BASE(ImportInfo, TypeInfo)
+
+		CONSTRUCT_WITH_CHECKED_CAST(ImportInfo)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(Import)
 	};
 }

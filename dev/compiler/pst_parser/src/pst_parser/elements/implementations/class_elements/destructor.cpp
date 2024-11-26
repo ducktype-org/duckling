@@ -24,13 +24,13 @@ namespace pst {
 		out->parseSpecifiers(state);
 
 		state.parse(out).eatOne();
-		state.parse(out).all(Operator::Period, &out->kind);
+		state.parse(out).all(NamedOperator::Period, &out->kind);
 
 		state.parse(out).goDown();
 		if (state.notEmpty()) state.log(base::make_unique<NonEmptyError>(state.getPosition()));
 		state.parse(out).goUpAndSkip();
 
-		state.parse(out).all(Operator::Assign, &out->body);
+		state.parse(out).all(NamedOperator::Assign, &out->body);
 
 		return out;
 	}

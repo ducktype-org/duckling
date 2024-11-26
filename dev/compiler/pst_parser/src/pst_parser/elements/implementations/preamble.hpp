@@ -2,6 +2,7 @@
 
 #include "../../lang_parser_state.hpp"
 #include "../../pst_visitor.hpp"        // IWYU pragma: export
+#include "../../pst_expr_visitor.hpp"   // IWYU pragma: export
 #include "../parser_common_errors.hpp"  // IWYU pragma: export
 
 #include <token_parser_core/automatic.hpp>
@@ -22,8 +23,9 @@ namespace pst {
 	using tpc::makeRef;
 
 	using lang_def::Keyword;
-	using lang_def::Operator;
+	using lang_def::NamedOperator;
 	using lang_def::Special;
+	using lexer::Operator;
 
 	using lexer::Token;
 

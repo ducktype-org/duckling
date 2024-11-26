@@ -14,11 +14,9 @@
 										"Name": "a"
 									},
 									"type": {
-										"Expression": [
-											{
-												"KeywordValue": "i32"
-											}
-										]
+										"Keyword Expression": {
+											"keyword": "i32"
+										}
 									}
 								}
 							}
@@ -30,15 +28,13 @@
 										"Name": "b"
 									},
 									"type": {
-										"Expression": [
-											{
-												"Identifier": "f32"
-											}
-										]
+										"Keyword Expression": {
+											"keyword": "f32"
+										}
 									}
 								}
 							}
-						}
+						},
 					]
 				},
 				"return": "unit",
@@ -63,11 +59,9 @@
 										"Name": "a"
 									},
 									"type": {
-										"Expression": [
-											{
-												"KeywordValue": "i32"
-											}
-										]
+										"Keyword Expression": {
+											"keyword": "i32"
+										}
 									}
 								}
 							}
@@ -79,22 +73,18 @@
 										"Name": "b"
 									},
 									"type": {
-										"Expression": [
-											{
-												"Identifier": "f32"
-											}
-										]
+										"Keyword Expression": {
+											"keyword": "f32"
+										}
 									},
 									"initial": {
-										"Expression": [
-											{
-												"NumLiteral": "0"
-											}
-										]
+										"Value Expr": {
+											"number": "0"
+										}
 									}
 								}
 							}
-						}
+						},
 					]
 				},
 				"return": "unit",
@@ -119,11 +109,9 @@
 										"Name": "a"
 									},
 									"type": {
-										"Expression": [
-											{
-												"Identifier": "f32"
-											}
-										]
+										"Keyword Expression": {
+											"keyword": "f32"
+										}
 									}
 								}
 							}
@@ -135,22 +123,18 @@
 										"Name": "b"
 									},
 									"type": {
-										"Expression": [
-											{
-												"KeywordValue": "i32"
-											}
-										]
+										"Keyword Expression": {
+											"keyword": "i32"
+										}
 									},
 									"initial": {
-										"Expression": [
-											{
-												"NumLiteral": "42"
-											}
-										]
+										"Value Expr": {
+											"number": "42"
+										}
 									}
 								}
 							}
-						}
+						},
 					]
 				},
 				"return": "unit",
@@ -175,15 +159,15 @@
 										"Name": "a"
 									},
 									"type": {
-										"Expression": [
-											{
-												"Identifier": "A"
+										"Identifier Expression": {
+											"name": {
+												"Name": "A"
 											}
-										]
+										}
 									}
 								}
 							}
-						}
+						},
 					]
 				},
 				"return": "unit",
@@ -193,6 +177,6 @@
 					}
 				}
 			}
-		}
+		},
 	]
 }

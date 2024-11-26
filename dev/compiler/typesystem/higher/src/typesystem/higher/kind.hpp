@@ -46,6 +46,9 @@ MAKE_STRINGIFYABLE_ENUM(tsh, i32, Kind
 	Module,
 	VTable,
 
+	/** @brief The kind of the import value. */
+	Import,
+
 	/** @brief The kind of the type which holds type values. In other words, the "type" type. */
 	Meta
 )

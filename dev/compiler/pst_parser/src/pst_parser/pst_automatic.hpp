@@ -27,8 +27,9 @@
 
 namespace pst {
 	using lang_def::Keyword;
-	using lang_def::Operator;
+	using lang_def::NamedOperator;
 	using lang_def::Special;
+	using lexer::Operator;
 
 	template<typename State>
 	class PSTAutomatic {
@@ -94,6 +95,21 @@ namespace pst {
 		 * @brief Parses an identifier to @p result. Skips on success, logs error on failure.
 		 * @param result The place to store the parsed identifier.
 		 */
+		void one(tpc::Keyword* result, bool ignorable = false) {
+			if (!state.ctokens().peek().isKeyword()) {
+				state.log(base::make_unique<tpc::NoIdentifierError>(state.getPosition()));
+				*result = Keyword::NotAKeyword;
+				if (!ignorable) state.tokens().next();
+				return;
+			}
+			el->addToken(state[0]);
+			*result = lang_def::strAsKeyword(state.tokens().next().getValue());
+		}
+
+		/**
+		 * @brief Parses an identifier to @p result. Skips on success, logs error on failure.
+		 * @param result The place to store the parsed identifier.
+		 */
 		void one(tpc::Identifier* result, bool ignorable = false) {
 			if (!state.ctokens().peek().isIdentifier()) {
 				state.log(base::make_unique<tpc::NoIdentifierError>(state.getPosition()));
@@ -126,6 +142,21 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
+		 *
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param fun The value.
+		 */
+		template<std::derived_from<LangElement> El, typename Sink, typename... Args>
+		void assign(Sink* sink, ParserRef<El> sub_tree) {
+			if (sub_tree != nullptr) {
+				sub_tree->setParent(el);
+				el->addChild(sub_tree);
+				*sink = std::move(sub_tree);
+			}
+		}
+
+		/**
 		 * @brief Call a custom parse function with automation.
 		 *
 		 * The return type of the parsed function usually has to be specified with the first
@@ -138,11 +169,7 @@ namespace pst {
 		template<std::derived_from<LangElement> El, typename Sink, typename... Args>
 		void with(Sink* sink, ParserRef<El> fun(State&, Args...), Args&&... args) {
 			ParserRef<El> result = fun(state, std::forward<Args>(args)...);
-			if (result != nullptr) {
-				result->setParent(el);
-				el->addChild(result);
-				*sink = std::move(result);
-			}
+			assign(sink, std::move(result));
 		}
 
 		/**

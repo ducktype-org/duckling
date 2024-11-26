@@ -38,6 +38,7 @@ namespace lang_def {
 		Using,
 		Alias,
 		In,
+		Lambda,
 
 		// Var-like:
 		Var,
@@ -49,6 +50,7 @@ namespace lang_def {
 		For,
 		Loop,
 		If,
+		Then,
 		Elif,
 		Else,
 
@@ -87,7 +89,12 @@ namespace lang_def {
 		u32,
 		u64,
 		u128,
-		Float,
+
+		f16,
+		f32,
+		f64,
+		f80,
+
 		Char,
 		Bool,  // ...
 
@@ -156,7 +163,7 @@ namespace lang_def {
 	};
 
 	// only operator significant during parsing
-	enum class Operator {
+	enum class NamedOperator {
 		NotAnOperator,
 		Period,
 		PeriodStar,
@@ -166,6 +173,13 @@ namespace lang_def {
 		QuestionMark,
 		SingleArrow,
 		DoubleArrow,
+
+		Lesser,
+		Greater,
+		LEqual,
+		GEqual,
+		Equal,
+		NotEqual,
 
 		Plus,
 		Minus,
@@ -185,17 +199,17 @@ namespace lang_def {
 
 	void setKeywordMode(KeywordMode mode);
 
-	Special  strAsSpecial(base::StrID id);
-	Keyword  strAsKeyword(base::StrID id);
-	Operator strAsOperator(base::StrID id);
+	Special       strAsSpecial(base::StrID id);
+	Keyword       strAsKeyword(base::StrID id);
+	NamedOperator strAsOperator(base::StrID id);
 
 	base::StrID keywordToStr(Keyword key);
 	base::StrID specialToStr(Special spec);
-	base::StrID operatorToStr(Operator oper);
+	base::StrID operatorToStr(NamedOperator oper);
 
 	KeywordFlags keywordFlags(Keyword key);
 
-	std::vector<Keyword>  getKeywords();
-	std::vector<Special>  getSpecials();
-	std::vector<Operator> getOperators();
+	std::vector<Keyword>       getKeywords();
+	std::vector<Special>       getSpecials();
+	std::vector<NamedOperator> getOperators();
 }

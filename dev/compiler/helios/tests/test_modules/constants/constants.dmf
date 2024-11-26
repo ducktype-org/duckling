@@ -14,7 +14,7 @@ const A: i32 = 1;
 const B: i32 = (X - 6) + (1 + A);
 
 const E: i32 = 2 + 2 * 2;
-const MAX_I32: i32 = 2 ^ 31 - 1;
+const MAX_I32: i32 = 2 ** 31 - 1;
 
 using N.*;
 
@@ -36,12 +36,10 @@ namespace Inner {
 }
 using Inner.*;
 
-const F: i32 = ((A + 1) / 2 + (E + 2) / 2) ^ 2 * NN.A;
+const F: i32 = ((A + 1) / 2 + (E + 2) / 2) * 2 * NN.A;
 
 const M: i32 = (A + A * 2) * NN.NNN.A * Inner.Inner_X;
 
+fun foo(a: i32) = {
 
-
-fun foo(var a: i32) {
-	
 }

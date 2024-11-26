@@ -291,4 +291,15 @@ namespace tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMetaType)
+
+	struct IMPLEMENT_QUERY(QueryImportType, ImportInfo::Pimpl) {
+		static auto provide(Context&, QKey) -> PResult {
+			static auto import_impl = internal::ImportInfoImpl{};
+			return &import_impl;
+		}
+
+		QUERY_AUTO_NO_CACHE
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImportType)
 }

@@ -1,4 +1,5 @@
 #include "preamble.hpp"
+#include "../../hierarchy/lists.hpp"  // IWYU pragma: keep
 
 namespace pst {
 	ParserRef<Method> Method::parse(LangParserState& state, const ClassContext& ctx) {
@@ -10,9 +11,10 @@ namespace pst {
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		state.parse(out).all(Keyword::Fun, &out->name, &out->params);
-		if (state.parse(out).tryEat(Operator::SingleArrow)) state.parse(out).one(&out->rets);
+		if (state.parse(out).tryEat(NamedOperator::SingleArrow))
+			state.parse(out).with(&out->ret, CommaExpr::parse);
 
-		state.parse(out).all(Operator::Assign, &out->body);
+		state.parse(out).all(NamedOperator::Assign, &out->body);
 
 		return out;
 	}
@@ -24,7 +26,10 @@ namespace pst {
 		out << ",\"parameters\":";
 		nullAwareDprint(params, out);
 		out << ",\"return\":";
-		nullAwareDprint(rets, out);
+		if (ret)
+			nullAwareDprint(ret.value(), out);
+		else
+			out << "\"unit\"";
 		out << ",\"body\":";
 		nullAwareDprint(body, out);
 		out << "}";
