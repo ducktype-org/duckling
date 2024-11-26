@@ -46,4 +46,5 @@ CheckOptions:
   readability-identifier-naming.TypedefCase: CamelCase
   readability-identifier-naming.VariableCase: lower_case
 
+...
 # https://gist.github.com/airglow923/1fa3bda42f2b193920d7f46ee8345e04
