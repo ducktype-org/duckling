@@ -48,15 +48,15 @@ def bash_command(cmd, cwd=".", redirect=None, click_file=sys.stdout):
     return stdout, stderr
 
 
-def bash_command_get_output(cmd, cwd=".", click_log_file=sys.stdout):
-    return bash_command(cmd, cwd, redirect=sp.PIPE)
+def bash_command_get_output(cmd, cwd=".", click_file=sys.stdout):
+    return bash_command(cmd, cwd, redirect=sp.PIPE, click_file=click_file)
 
 
-def click_log(prefix, msg, fg, bold=False, newline=True, file=sys.stdout):
+def click_log(prefix, msg, fg, bold=False, nl=True, file=sys.stdout):
     click.echo(
         click.style(f"[{prefix}]: {msg}", fg=fg, bold=bold),
         color=True,
-        nl=newline,
+        nl=nl,
         file=file,
     )
 
@@ -73,8 +73,8 @@ def log_warning(msg, file=sys.stdout):
     click_log("WARNING", msg, fg="magenta", bold=True, file=file)
 
 
-def get_input(msg, newline=False):
-    click_log("INPUT", msg, fg="blue", newline=newline)
+def get_input(msg, nl=False):
+    click_log("INPUT", msg, fg="blue", nl=nl)
     return input()
 
 

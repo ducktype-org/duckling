@@ -97,7 +97,7 @@ def clang_tidy_on(
             f"{clang_tidy_path} -p {build_folder} --format-style file --config-file .clang-tidy"
             f' --line-filter="[{{"name": "{file}", "lines": {file_diffs}}}]"'
             f" --extra-arg= {file}",
-            click_log_file=log_file,
+            click_file=log_file,
         )
         if tidy_out:
             log_warning(f"clang-tidy output: \n{tidy_out}", file=log_file)
@@ -119,7 +119,7 @@ def clang_format_on(
     lines = [f"--lines={start}:{stop}" for start, stop in file_diffs]
     format_out, format_err = bash_command_get_output(
         f"{clang_format_path}" " -style=file --dry-run" f" {' '.join(lines)} {file}",
-        click_log_file=log_info,
+        click_file=log_info,
     )
 
     # Print data returned by clang-format
