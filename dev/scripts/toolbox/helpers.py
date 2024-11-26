@@ -32,8 +32,8 @@ class BashCommandError(Exception):
         self.stderr = stderr
 
 
-def bash_command(cmd, cwd=".", redirect=None):
-    click.echo(click.style(f"[BASH]: {cmd}", fg="bright_cyan", bold=False))
+def bash_command(cmd, cwd=".", redirect=None, click_file=sys.stdout):
+    log_bash(cmd, file=click_file)
     proc = sp.Popen(["/bin/bash", "-c", cmd], cwd=cwd, stdout=redirect, stderr=redirect)
     stdout, stderr = proc.communicate()
 
@@ -48,20 +48,33 @@ def bash_command(cmd, cwd=".", redirect=None):
     return stdout, stderr
 
 
-def bash_command_get_output(cmd, cwd="."):
-    return bash_command(cmd, cwd, redirect=sp.PIPE)
+def bash_command_get_output(cmd, cwd=".", click_file=sys.stdout):
+    return bash_command(cmd, cwd, redirect=sp.PIPE, click_file=click_file)
 
 
-def log_info(msg, newline=True, file=sys.stdout):
-    click.echo(click.style(f"[INFO]: {msg}", fg="yellow", bold=False), color=True, nl=newline, file=file)
+def click_log(prefix, msg, fg, bold=False, nl=True, file=sys.stdout):
+    click.echo(
+        click.style(f"[{prefix}]: {msg}", fg=fg, bold=bold),
+        color=True,
+        nl=nl,
+        file=file,
+    )
 
 
-def log_warning(msg, newline=True, file=sys.stdout):
-    click.echo(click.style(f"[WARNING]: {msg}", fg="magenta", bold=True), color=True, nl=newline, file=file)
+def log_info(msg, file=sys.stdout):
+    click_log("INFO", msg, fg="yellow", file=file)
 
 
-def get_input(msg, newline=False):
-    click.echo(click.style(f"[INPUT]: {msg}", fg="blue", bold=False, blink=True), nl=newline)
+def log_bash(msg, file=sys.stdout):
+    click_log("BASH", msg, fg="bright_cyan", file=file)
+
+
+def log_warning(msg, file=sys.stdout):
+    click_log("WARNING", msg, fg="magenta", bold=True, file=file)
+
+
+def get_input(msg, nl=False):
+    click_log("INPUT", msg, fg="blue", nl=nl)
     return input()
 
 
