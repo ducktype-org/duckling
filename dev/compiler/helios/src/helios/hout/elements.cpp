@@ -64,7 +64,7 @@ namespace compiler::helios::code {
 
 			return tsh::TypeDesc<>(
 				ctx.query<tsh::QueryTupleType>({ tuple_components }),
-				tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+				tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			);
 		}
 
@@ -79,7 +79,7 @@ namespace compiler::helios::code {
 
 			return tsh::TypeDesc<>(
 				ctx.query<tsh::QueryVariantType>({ variant_subtypes }),
-				tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+				tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			);
 		}
 
