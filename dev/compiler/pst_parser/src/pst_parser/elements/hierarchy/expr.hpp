@@ -239,6 +239,9 @@ namespace pst {
 			}
 		};
 
+		/**
+		 * @brief This represents a single access expression of type `[expression operator like . or .?][name][optionally template specifier]`
+		 */
 		class Access final: public ExprElement {
 			base::StrID                            type;  ///< either `.` or `.?`
 			tpc::Identifier                        name;
@@ -330,6 +333,9 @@ namespace pst {
 			const std::vector<ParserRef<ExprElement>>& getChain() const;
 		};
 
+		/**
+		 * @brief Expression in round brackets
+		 */
 		class RoundExpr final: public ExprElement {
 			ParserRef<ExprElement> expr;
 
@@ -353,6 +359,11 @@ namespace pst {
 			}
 		};
 
+		/**
+		 * @brief Block expression
+		 *
+		 * A block that has value equal to the value returned from it.
+		 */
 		class BlockExpr final: public ExprElement {
 			ParserRef<CodeBlock> block;
 
@@ -364,6 +375,10 @@ namespace pst {
 			~BlockExpr() override = default;
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
+
+			ParserCBorrowRef<CodeBlock> getBlock() {
+				return block.borrow();
+			}
 
 			[[nodiscard]]
 			std::string elementType() const override {
