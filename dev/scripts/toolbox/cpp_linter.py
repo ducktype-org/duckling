@@ -171,9 +171,9 @@ def simulate_cpp_linter(
 
         results = e.map(call_linter, file_diffs.items())
 
-        for logs, failed in results:
+        for logs, cf_failed in results:
             sys.stdout.write(logs)
-            if failed:
+            if cf_failed:
                 clang_format_failed = True
 
     if clang_format_failed:
