@@ -1,5 +1,5 @@
 ---
-Checks: 'readability-identifier-naming.*,clang-diagnostic-*,-clang-diagnostic-unknown-warning-option,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-owning-memory,-cppcoreguidelines-avoid-do-while,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-special-member-functions,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-cppcoreguidelines-avoid-non-const-global-variables,-cppcoreguidelines-macro-usage,-cppcoreguidelines-non-private-member-variables-in-classes,-cppcoreguidelines-avoid-const-or-ref-data-members,-cppcoreguidelines-pro-type-reinterpret-cast,modernize-*,-modernize-use-trailing-return-type,performance-*,concurrency-* readability-redundant-inline-specifier,bugprone-suspicious-include,readability-duplicate-include'
+Checks: 'readability-identifier-naming.*,clang-diagnostic-*,-clang-diagnostic-unknown-warning-option,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-owning-memory,-cppcoreguidelines-avoid-do-while,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-special-member-functions,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-cppcoreguidelines-avoid-non-const-global-variables,-cppcoreguidelines-macro-usage,-cppcoreguidelines-non-private-member-variables-in-classes,-cppcoreguidelines-avoid-const-or-ref-data-members,-cppcoreguidelines-pro-type-reinterpret-cast,modernize-*,-modernize-use-trailing-return-type,performance-*,concurrency-* readability-redundant-inline-specifier,bugprone-suspicious-include,misc-include-cleaner,readability-duplicate-include'
 WarningsAsErrors: true
 HeaderFilterRegex: ''
 FormatStyle: file
@@ -45,5 +45,8 @@ CheckOptions:
   readability-identifier-naming.StructCase: CamelCase
   readability-identifier-naming.TypedefCase: CamelCase
   readability-identifier-naming.VariableCase: lower_case
+
+  # @NOTE This is a very temporary solution: only `*.hpp` in a regex format
+  misc-include-cleaner.IgnoreHeaders: ".*\\.hpp"
 
 # https://gist.github.com/airglow923/1fa3bda42f2b193920d7f46ee8345e04
