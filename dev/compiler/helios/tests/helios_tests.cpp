@@ -407,6 +407,7 @@ private:
 		HResult<int, std::string_view> whoa2 = HError(std::string_view(info));
 		ASSERT_TRUE(!whoa2.hasValue());
 		ASSERT_TRUE(whoa2.hasError());
+		ASSERT_TRUE(!bool(whoa2));
 		ASSERT_EQUAL(whoa2.error(), "Hello");
 
 		struct Err1 {};
