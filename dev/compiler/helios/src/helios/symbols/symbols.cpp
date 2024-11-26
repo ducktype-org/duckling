@@ -487,9 +487,9 @@ namespace compiler::helios {
 			}
 <<<<<<< HEAD
 =======
+
 			CORE_UNREACHABLE();
-		}
-		if (op.oper_id == "|") {
+		} if (op.oper_id == "|"){
 			// @TODO: Check if A and B are types.
 >>>>>>> expr-2.0
 

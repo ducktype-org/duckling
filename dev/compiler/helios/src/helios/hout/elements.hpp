@@ -294,7 +294,7 @@ namespace compiler::helios::code {
 	 * -----
 	 * @TODO: We should implement shortening of the SymbolList, ex. leave only
 	 * the "IDENTIFIER.DATA[.DATA]*" format of SymbolList
-     # and represent it as a Access/Call tree.
+	 # and represent it as a Access/Call tree.
 	 */
 	struct LinkedIdentifierExpr: public Expr {
 		SymbolList symbols;

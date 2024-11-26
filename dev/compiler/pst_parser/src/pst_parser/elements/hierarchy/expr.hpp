@@ -240,7 +240,8 @@ namespace pst {
 		};
 
 		/**
-		 * @brief This represents a single access expression of type `[expression operator like . or .?][name][optionally template specifier]`
+		 * @brief This represents a single access expression of type `[expression operator like . or
+		 * .?][name][optionally template specifier]`
 		 */
 		class Access final: public ExprElement {
 			base::StrID                            type;  ///< either `.` or `.?`
@@ -376,9 +377,7 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
-			ParserCBorrowRef<CodeBlock> getBlock() {
-				return block.borrow();
-			}
+			ParserCBorrowRef<CodeBlock> getBlock() { return block.borrow(); }
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -474,7 +473,8 @@ namespace pst {
 		};
 
 		/**
-		 * @brief This class represents a chain of compared expressions for example: `0 < a + b <= c.size()`
+		 * @brief This class represents a chain of compared expressions for example: `0 < a + b <=
+		 * c.size()`
 		 *
 		 * The chain is scared as a list of sub-expressions and a list of operators between them.
 		 */
@@ -551,10 +551,12 @@ namespace pst {
 
 		/**
 		 * @brief Ternary expression(`if condition then if_true else if_else`).
-		 * 
-		 * @note For now the parsing of ternary is pretty limited with only one such expression without any parenthesis. This is a limited but safe option.
-		 * 
-		 * @note This should be the default starting level for an expression when comma expression would cause parsing problems.
+		 *
+		 * @note For now the parsing of ternary is pretty limited with only one such expression
+		 * without any parenthesis. This is a limited but safe option.
+		 *
+		 * @note This should be the default starting level for an expression when comma expression
+		 * would cause parsing problems.
 		 */
 		class Ternary final: public ExprElement {
 			using Lower = LogicOr;
@@ -580,8 +582,9 @@ namespace pst {
 
 		/**
 		 * @brief Comma separated expression.
-		 * 
-		 * @note This is the second possible entry point for expression parsing when comma expression doesn't cause problems with other parsing.
+		 *
+		 * @note This is the second possible entry point for expression parsing when comma
+		 * expression doesn't cause problems with other parsing.
 		 */
 		class Comma final: public ExprElement {
 			using Lower = Ternary;

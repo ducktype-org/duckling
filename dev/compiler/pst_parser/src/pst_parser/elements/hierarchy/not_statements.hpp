@@ -196,7 +196,8 @@ namespace pst {
 	};
 
 	/**
-	 * @brief The default entry point to expression parsing that doesn't allow comma expressions top-level
+	 * @brief The default entry point to expression parsing that doesn't allow comma expressions
+	 * top-level
 	 */
 	class UniversalExpr: public NotStmt {
 	public:
