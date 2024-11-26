@@ -581,7 +581,7 @@ namespace compiler::helios::code {
 			}
 
 			if_opt_some(dealiasSymbolList(ctx, res.value()).optValueMove(), dealiased) {
-				node = base::Box(new IdentifierExpr(ctx, scope, std::move(dealiased)));
+				node = base::Box(new IdentifierExpr(ctx, scope, dealiased.back()));
 			}
 		}
 
@@ -598,7 +598,7 @@ namespace compiler::helios::code {
 					// Error has occurred.
 					return;
 				}
-				vis.node.flatMap([&](auto&& b) { expressions.emplace_back(std::move(b)); });
+				if_opt_some(vis.node, b) { expressions.emplace_back(std::move(b)); }
 			}
 
 			node = base::Box(new TupleConstructorExpr(ctx, scope, std::move(expressions)));
