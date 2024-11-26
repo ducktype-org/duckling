@@ -1,8 +1,8 @@
 add_library(QueryFramework
-	src/query_framework/logs.cpp
-	src/query_framework/dep_graph.cpp
-	src/query_framework/query_id_provider.cpp
-	src/query_framework/query_id.cpp
+	src/query_framework/detail/logs.cpp
+	src/query_framework/detail/dep_graph.cpp
+	src/query_framework/detail/query_id_provider.cpp
+	src/query_framework/detail/query_id.cpp
 	src/query_framework/utils/with_context_do.cpp
 )
 

@@ -1,13 +1,24 @@
+function(add_to_coverage target)
+	if(ENABLE_COVERAGE)
+		add_dependencies(build_all_coverage_targets ${target})
+	endif()
+endfunction()
+
 if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
 	find_program(LCOV lcov REQUIRED)
 	find_program(GENHTML genhtml REQUIRED)
+
+	add_custom_target(build_all_coverage_targets)
 
 	# This target is used to generate coverage report.
 	# We do it in two steps since by default lcov 
 	# does not generate coverage data for files not linked by the tests.
 	# https://stackoverflow.com/a/78554322
 	# Some helpful guide: https://wiki.documentfoundation.org/Development/Lcov
+	# Usage of this target:
+	# 1. compile and run the tests
+	# 2. run this target
 	add_custom_target(coverage
 		# Initial coverage created for all files in the project.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
@@ -37,6 +48,7 @@ if(ENABLE_COVERAGE)
 		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 		VERBATIM)
+	add_dependencies(coverage build_all_coverage_targets)
 endif()
 
 
@@ -67,6 +79,7 @@ function(duck_add_test test_pack test_name source USES)
 		endif()
 
 		set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
+		add_to_coverage(${test_name})
 	else()
 		message(FATAL_ERROR "duck_add_test lacks uses clause")
 	endif()

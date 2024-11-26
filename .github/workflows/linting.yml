@@ -1,9 +1,13 @@
 name: cpp-linter
 
-on: pull_request
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
   cpp-linter:
+    if: github.event.pull_request.draft == false
+
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +33,9 @@ jobs:
           version: 17
           lines-changed-only: true
           database: 'dev'
+
+          # Note that tidy-checks: '', means it uses .clang-tidy file
+          # according to the cpp-linter action docs.
 
           # Enable to let linter post requested format changes in PR thread:
           # format-review: true
