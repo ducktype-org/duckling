@@ -119,7 +119,7 @@ def clang_format_on(
     lines = [f"--lines={start}:{stop}" for start, stop in file_diffs]
     format_out, format_err = bash_command_get_output(
         f"{clang_format_path}" " -style=file --dry-run" f" {' '.join(lines)} {file}",
-        click_file=log_info,
+        click_file=log_file,
     )
 
     # Print data returned by clang-format
