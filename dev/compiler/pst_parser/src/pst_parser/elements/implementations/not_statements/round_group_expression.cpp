@@ -27,7 +27,7 @@ namespace pst {
 		}
 
 		state.parse(out).goDown();
-		if (state.notEmpty()) state.parse(out).with<Expr>(&out->expr, Expr::parse, true);
+		if (state.notEmpty()) state.parse(out).with(&out->expr, CommaExpr::parse);
 		state.parse(out).goUpAndSkip();
 
 		return out;

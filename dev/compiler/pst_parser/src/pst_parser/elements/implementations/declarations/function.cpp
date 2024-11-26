@@ -29,17 +29,10 @@ namespace pst {
 		state.parse(out).all(Keyword::Fun, &out->name);
 		state.parse(out).with<ParamList>(&out->params, ParamList::parse);
 
-		if (state.parse(out).tryEat(Operator::SingleArrow))
-			state.parse(out).with<Expr>(
-				&out->ret,
-				Expr::parseUntil<
-					detail::Conditions::isAssign,
-					detail::Conditions::isAssign,
-					FunctionReturnTypeListEndError>,
-				true
-			);
+		if (state.parse(out).tryEat(NamedOperator::SingleArrow))
+			state.parse(out).with(&out->ret, CommaExpr::parse);
 
-		state.parse(out).all(Operator::Assign, &out->body);
+		state.parse(out).all(NamedOperator::Assign, &out->body);
 
 		return out;
 	}

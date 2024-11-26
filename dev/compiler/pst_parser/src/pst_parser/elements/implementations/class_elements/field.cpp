@@ -28,18 +28,11 @@ namespace pst {
 			state.parse(out).eatOne();
 		}
 
-		state.parse(out).all(&out->name, Operator::Colon);
-		state.parse(out).with(
-			&out->type,
-			Expr::parseUntil<
-				detail::Conditions::isAssignOrSemicolon,
-				detail::Conditions::isAssignOrSemicolon,
-				FieldTypeEndError>,
-			true
-		);
+		state.parse(out).all(&out->name, NamedOperator::Colon);
+		state.parse(out).with(&out->type, CommaExpr::parse);
 
-		if (state.parse(out).tryEat(Operator::Assign))
-			state.parse(out).with<Expr>(&out->init, Expr::parse, true);
+		if (state.parse(out).tryEat(NamedOperator::Assign))
+			state.parse(out).with(&out->init, CommaExpr::parse);
 
 		return out;
 	}

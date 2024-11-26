@@ -141,10 +141,10 @@ namespace pst {
 	};
 
 	class Method final: public ClassStmt {
-		tpc::Identifier      name;
-		ParserRef<ParamList> params = nullptr;
-		ParserRef<RetList>   rets   = nullptr;
-		ParserRef<CodeBlock> body   = nullptr;
+		tpc::Identifier                        name;
+		ParserRef<ParamList>                   params = nullptr;
+		base::Optional<ParserRef<ExprElement>> ret;
+		ParserRef<CodeBlock>                   body = nullptr;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Method);
@@ -177,10 +177,10 @@ namespace pst {
 	};
 
 	class Field final: public ClassStmt {
-		bool                            is_mutable = true;
-		tpc::Identifier                 name;
-		ParserRef<Expr>                 type;
-		base::Optional<ParserRef<Expr>> init;
+		bool                                   is_mutable = true;
+		tpc::Identifier                        name;
+		ParserRef<ExprElement>                 type;
+		base::Optional<ParserRef<ExprElement>> init;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Field);
@@ -200,7 +200,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getType() const {
+		ParserCBorrowRef<ExprElement> getType() const {
 			return type.borrow();
 		}
 
