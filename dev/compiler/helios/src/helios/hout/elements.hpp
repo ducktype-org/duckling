@@ -51,7 +51,6 @@ namespace compiler::helios::code {
 		/**
 		 * The type of the expression, and its value category.
 		 */
-		// @EXPR: Make a method that returns HResult<tsh::TypeDesc<>, Failed> to avoid panics
 		tsh::TypeDesc<> type_desc;
 
 		Expr(ScopeID lifetime_scope, tsh::TypeDesc<> type_desc):
@@ -162,8 +161,6 @@ namespace compiler::helios::code {
 	 * Expressions:  *
 	 * * * * * * * * */
 
-	// @EXPR: Sort these structs in an appropriate order
-
 	/**
 	 * @brief Represents a literal value written in the expression.
 	 */
@@ -223,10 +220,12 @@ namespace compiler::helios::code {
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
+	/**
+	 * @brief A binary operator.
+	 */
 	struct BinaryOperatorExpr: public Expr {
 		// @TODO: At this point, operator should be a symbol.
 		// HOUT should not be concerned with overload resolution.
-		// @EXPR: ??? Introduce a mock for a builtin methods system ???
 		lexer::Operator op;
 
 		base::Box<Expr> lhs;
@@ -261,6 +260,9 @@ namespace compiler::helios::code {
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
+	/**
+	 * @brief Tuple constructor inside an expression.
+	 */
 	struct TupleConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> elements;
 
@@ -272,6 +274,9 @@ namespace compiler::helios::code {
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
 
+	/**
+	 * @brief Variant constructor inside an expression.
+	 */
 	struct VariantConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> subtypes;
 
@@ -287,9 +292,9 @@ namespace compiler::helios::code {
 	 * @brief Represents the "IDENTIFIER.DATA[.DATA]*" format of SymbolList.
 	 * @NOTE Currently it is just a mockup. Should be refactored to AccessExpr
 	 * -----
-	 * @EXPR: We should implement shortening of the SymbolList, ex. leave only
-	 * the "IDENTIFIER.DATA[.DATA]*" format of SymbolList.
-	 * OR! Maybe leave it up to new expr type to decide.
+	 * @TODO: We should implement shortening of the SymbolList, ex. leave only
+	 * the "IDENTIFIER.DATA[.DATA]*" format of SymbolList
+     # and represent it as a Access/Call tree.
 	 */
 	struct LinkedIdentifierExpr: public Expr {
 		SymbolList symbols;

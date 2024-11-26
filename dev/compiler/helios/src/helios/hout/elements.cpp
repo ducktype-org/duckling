@@ -62,7 +62,6 @@ namespace compiler::helios::code {
 				tuple_components.emplace_back(tuple_subtype->type_desc.getType(), false);
 			}
 
-			// @EXPR: Should ValueCategory be literal?
 			return tsh::TypeDesc<>(
 				ctx.query<tsh::QueryTupleType>({ tuple_components }),
 				tsh::ValueCategory(tsh::PrimaryCategory::Literal)
@@ -78,7 +77,6 @@ namespace compiler::helios::code {
 			for (auto&& subtype: subtypes)
 				variant_subtypes.emplace_back(subtype->type_desc.getType());
 
-			// @EXPR: Should ValueCategory be a literal?
 			return tsh::TypeDesc<>(
 				ctx.query<tsh::QueryVariantType>({ variant_subtypes }),
 				tsh::ValueCategory(tsh::PrimaryCategory::Literal)
