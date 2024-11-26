@@ -559,9 +559,9 @@ namespace compiler::helios::code {
 					new_symbols_single.value().end()
 				);
 			}
-			dealiasSymbolList(ctx, looked_up_symbol).optValue().ifValue([&](auto&& dealiased) {
+			if_opt_some(dealiasSymbolList(ctx, looked_up_symbol).optValueMove(), dealiased) {
 				node = base::Box(new LinkedIdentifierExpr(ctx, scope, std::move(dealiased)));
-			});
+			}
 		}
 
 		void visitRoundExpr(const pst::expr::RoundExpr& stmt) override {
@@ -580,11 +580,9 @@ namespace compiler::helios::code {
 				return;
 			}
 
-			dealiasSymbolList(ctx, res.value())
-				.optValue()
-				.ifValue([&](const SymbolList& dealiased) {
-					node = base::Box(new IdentifierExpr(ctx, scope, dealiased.back()));
-				});
+			if_opt_some(dealiasSymbolList(ctx, res.value()).optValueMove(), dealiased) {
+				node = base::Box(new IdentifierExpr(ctx, scope, std::move(dealiased)));
+			}
 		}
 
 		void visitKeywordLiteral(const pst::expr::KeywordLiteral& stmt) override {
@@ -600,7 +598,7 @@ namespace compiler::helios::code {
 					// Error has occurred.
 					return;
 				}
-				vis.node.ifValue([&](auto&& b) { expressions.emplace_back(std::move(b)); });
+				vis.node.flatMap([&](auto&& b) { expressions.emplace_back(std::move(b)); });
 			}
 
 			node = base::Box(new TupleConstructorExpr(ctx, scope, std::move(expressions)));
