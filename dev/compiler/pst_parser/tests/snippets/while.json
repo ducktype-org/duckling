@@ -5,29 +5,44 @@
 				"name": "<ANONYMOUS>",
 				"condition": {
 					"Round Group Expression": {
-						"Expression": [
-							{
-								"Identifier": "a"
-							},
-							{
-								"Operator": "+"
-							},
-							{
-								"Identifier": "b"
-							},
-							{
-								"Operator": "<"
-							},
-							{
-								"NumLiteral": "4"
-							},
-							{
-								"Operator": "+"
-							},
-							{
-								"NumLiteral": "0.8"
-							},
-						]
+						"Comparison Chain": {
+							"sub-expressions": [
+								{
+									"Binary Operator": {
+										"left_expr": {
+											"Identifier Expression": {
+												"name": {
+													"Name": "a"
+												}
+											}
+										},
+										"operator": "+",
+										"right_expr": {
+											"Identifier Expression": {
+												"name": {
+													"Name": "b"
+												}
+											}
+										}
+									}
+								},
+								{
+									"Binary Operator": {
+										"left_expr": {
+											"Value Expr": {
+												"number": "4"
+											}
+										},
+										"operator": "+",
+										"right_expr": {
+											"Value Expr": {
+												"number": "0.8"
+											}
+										}
+									}
+								}
+							]
+						}
 					}
 				},
 				"body": {
@@ -35,17 +50,23 @@
 						"Code Block": [
 							{
 								"Expr Stmt": {
-									"Expression": [
-										{
-											"Identifier": "c"
+									"Binary Operator": {
+										"left_expr": {
+											"Identifier Expression": {
+												"name": {
+													"Name": "c"
+												}
+											}
 										},
-										{
-											"Operator": "-"
-										},
-										{
-											"Identifier": "d"
-										},
-									]
+										"operator": "-",
+										"right_expr": {
+											"Identifier Expression": {
+												"name": {
+													"Name": "d"
+												}
+											}
+										}
+									}
 								}
 							},
 						]

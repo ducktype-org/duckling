@@ -172,6 +172,11 @@ namespace lexer {
 
 	bool Token::isOperator() const { return type == Type::Operator; }
 
+	Operator Token::asOperator() const {
+		if (isOperator()) return { getValue() };
+		return { lang_def::NamedOperator::NotAnOperator };
+	}
+
 	bool Token::isIdentifier() const { return type == Type::Identifier; }
 
 	bool Token::isNumLiteral() const { return type == Type::NumLiteral; }
@@ -184,7 +189,7 @@ namespace lexer {
 
 	bool Token::is(Type qtype) const { return type == qtype; }
 
-	bool Token::is(Operator op) const { return lang_def::strAsOperator(str_id) == op; }
+	bool Token::is(Operator op) const { return op == getValue(); }
 
 	bool Token::is(Special spc) const { return lang_def::strAsSpecial(str_id) == spc; }
 

@@ -100,7 +100,7 @@ namespace pst {
 	class Class final: public Decl {
 	private:
 		tpc::Identifier           name;
-		ParserRef<Expr>           base       = nullptr;
+		ParserRef<ExprElement>    base       = nullptr;
 		ParserRef<ImplementsList> implements = nullptr;
 		ParserRef<ClassBlock>     body       = nullptr;
 
@@ -118,7 +118,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getBase() const {
+		ParserCBorrowRef<ExprElement> getBase() const {
 			return base.borrow();
 		}
 
@@ -145,10 +145,10 @@ namespace pst {
 	};
 
 	class Variable final: public Decl {
-		tpc::Identifier name;
-		ParserRef<Expr> type     = nullptr;
-		ParserRef<Expr> value    = nullptr;
-		bool            is_const = true;
+		tpc::Identifier        name;
+		ParserRef<ExprElement> type     = nullptr;
+		ParserRef<ExprElement> value    = nullptr;
+		bool                   is_const = true;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Variable);
@@ -161,12 +161,12 @@ namespace pst {
 		bool trailingSemicolon() override;
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getType() const {
+		ParserCBorrowRef<ExprElement> getType() const {
 			return type.borrow();
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getValue() const {
+		ParserCBorrowRef<ExprElement> getValue() const {
 			return value.borrow();
 		}
 
@@ -187,19 +187,11 @@ namespace pst {
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
-	using ParamList = List<
-		FunParam,
-		false,
-		lexer::Token::BracketType::Round,
-		detail::Conditions::isComma,
-		detail::Conditions::isSentinel,
-		detail::NameGetters::parameterList>;
-
 	class Fun final: public Decl {
-		tpc::Identifier                 name;
-		ParserRef<ParamList>            params = nullptr;
-		base::Optional<ParserRef<Expr>> ret;
-		ParserRef<CodeBlockOrStmt>      body = nullptr;
+		tpc::Identifier                        name;
+		ParserRef<ParamList>                   params = nullptr;
+		base::Optional<ParserRef<ExprElement>> ret;
+		ParserRef<CodeBlockOrStmt>             body = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Fun);
@@ -255,7 +247,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getCondition() const {
+		ParserCBorrowRef<ExprElement> getCondition() const {
 			return condition->getExpr();
 		}
 
@@ -290,8 +282,8 @@ namespace pst {
 	class For final: public CodeDecl {
 		tpc::OptionalIdentifier    optional_name;
 		tpc::Identifier            iterator;
-		ParserRef<Expr>            type     = nullptr;
-		ParserRef<Expr>            iterable = nullptr;
+		ParserRef<ExprElement>     type     = nullptr;
+		ParserRef<ExprElement>     iterable = nullptr;
 		ParserRef<CodeBlockOrStmt> body     = nullptr;
 
 	public:
