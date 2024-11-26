@@ -13,12 +13,12 @@
 
 #include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
-#include "base/box.hpp"
-#include "helios/helios_errors.hpp"
-#include "helios/lookup_result.hpp"
-#include "lang_definitions/key_spec_op.hpp"
-#include "lexer/token_common.hpp"
-#include "pst_parser/elements/hierarchy/not_statements.hpp"
+#include <base/box.hpp>
+#include <helios/helios_errors.hpp>
+#include <helios/lookup_result.hpp>
+#include <lang_definitions/key_spec_op.hpp>
+#include <lexer/token_common.hpp>
+#include <pst_parser/elements/hierarchy/not_statements.hpp>
 
 namespace compiler::helios::code {
 
