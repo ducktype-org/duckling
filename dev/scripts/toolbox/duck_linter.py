@@ -39,7 +39,7 @@ class SourceFile:
 
 		log_new_line()
 
-def get_modified_file(all, relative_to):
+def get_modified_files(all, relative_to):
 	ls_out = None
 	if all:
 		ls_out = bash_command_get_output("git ls-files")[0]
