@@ -444,6 +444,19 @@ def linter(*args, **kwargs):
     simulate_cpp_linter(*args, **kwargs)
 
 @cli.command()
+@click.option(
+    "--all",
+    is_flag=True,
+    default=False,
+    help="Check all files, not just the ones that are modified",
+)
+@click.option(
+    "-r",
+    "--branch",
+    help="The branch relative to which the diff is created.",
+    type=str,
+    default="origin/main",
+)
 def duck_linter(*args, **kwargs):
     """Check for violations of
     some of the C++ coding guidelines for Duckling project.

@@ -21,8 +21,6 @@
 
 // @opt: make switch-cases in this file "sorted"
 
-#include "vector"
-
 namespace compiler::lir {
 
 	/**
