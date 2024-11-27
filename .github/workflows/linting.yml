@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+
       - name: Install gvc, LLVM and nlohmann_json
         run: sudo apt -y install libgraphviz-dev llvm llvm-dev nlohmann-json3-dev
         # @TODO: Remove nlohmann-json3-dev dependency from here. It was added, because linter
@@ -23,6 +24,7 @@ jobs:
          cmake -DCMAKE_CXX_COMPILER=g++-13 -D BUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
          cd ..
         shell: bash
+      
       - uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
@@ -45,6 +47,12 @@ jobs:
           # in a pull request's thread. Set it to false to disable the comment.
           # Set it to true to post a new comment (and delete the old comment).
           step-summary: true
+        
+      - name: Run duck linter
+        run: |
+         cd dev
+         python3 toolbox.py duck-linter --skip-correct 
+        shell: bash
 
       - name: Fail fast?!
         if: steps.linter.outputs.checks-failed > 0

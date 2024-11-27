@@ -467,7 +467,9 @@ def duck_linter(*args, **kwargs):
     """Check for violations of
     some of the C++ coding guidelines for Duckling project.
     """
-    duck_linter_impl(*args, **kwargs)
+    passed = duck_linter_impl(*args, **kwargs)
+    if not passed:
+        exit_with_error("Linting failed.")
 
 
 if __name__ == "__main__":

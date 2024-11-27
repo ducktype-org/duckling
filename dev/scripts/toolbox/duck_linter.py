@@ -64,10 +64,13 @@ def get_source_files(all, relative_to) -> List[SourceFile]:
 
 
 def duck_linter_impl(all, branch, skip_correct):
-	# Simple implementation for now
+	passed_all = True
 	
 	file = get_source_files(all, branch)
 	for f in file:
-		f.runAllChecks(skip_correct)
-		
-	
+		passed = f.runAllChecks(skip_correct)
+		if not passed:
+			passed_all = False
+
+	return passed_all
+
