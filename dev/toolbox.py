@@ -27,6 +27,7 @@ from scripts.toolbox.internet_file import (
 )
 
 from scripts.toolbox.cpp_linter import simulate_cpp_linter
+from scripts.toolbox.duck_linter import duck_linter_impl
 
 DATA_USER = "dev"
 # @FUTURE: change this password and hide it:
@@ -441,6 +442,13 @@ def linter(*args, **kwargs):
     It compares the current branch's working tree with the most recent common ancestor shared with the 'main' branch (called the merge base).
     """
     simulate_cpp_linter(*args, **kwargs)
+
+@cli.command()
+def duck_linter(*args, **kwargs):
+    """Check for violations of
+    some of the C++ coding guidelines for Duckling project.
+    """
+    duck_linter_impl(*args, **kwargs)
 
 
 if __name__ == "__main__":
