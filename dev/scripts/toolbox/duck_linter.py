@@ -27,17 +27,23 @@ class SourceFile:
 			if not import_path.exists():
 				self.errors.append(f"Relative import `{imp}` does not exist.")
 
-	def runAllChecks(self):
+	def runAllChecks(self, skip_correct):
+		""" Returns True if all checks passed, False otherwise"""
+
 		self.relativeImportChecks()
 
 		if len(self.errors) > 0:
 			log_warning(f"{self.path}: ERRORS FOUND")
 			for error in self.errors:
 				log_warning(" * " + error)
+			log_new_line()
+			return False
 		else:
-			log_info(f"{self.path}: OK")
+			if not skip_correct:
+				log_info(f"{self.path}: OK")
+				log_new_line()
+			return True
 
-		log_new_line()
 
 def get_modified_files(all, relative_to):
 	ls_out = None
@@ -57,10 +63,11 @@ def get_source_files(all, relative_to) -> List[SourceFile]:
 	return source_files
 
 
-def duck_linter_impl(all, branch):
+def duck_linter_impl(all, branch, skip_correct):
 	# Simple implementation for now
 	
 	file = get_source_files(all, branch)
 	for f in file:
-		f.runAllChecks()
+		f.runAllChecks(skip_correct)
+		
 	

@@ -457,6 +457,12 @@ def linter(*args, **kwargs):
     type=str,
     default="origin/main",
 )
+@click.option(
+    "--skip-correct",
+    is_flag=True,
+    default=False,
+    help="Skips logging on files without errors.",
+)
 def duck_linter(*args, **kwargs):
     """Check for violations of
     some of the C++ coding guidelines for Duckling project.
