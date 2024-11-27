@@ -51,7 +51,7 @@ jobs:
       - name: Run duck linter
         run: |
          cd dev
-         python3 toolbox.py duck-linter --skip-correct 
+         python3 toolbox.py duck-linter --relative main --skip-correct 
         shell: bash
 
       - name: Fail fast?!
