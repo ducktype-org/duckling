@@ -49,7 +49,7 @@ def get_modified_files(all, relative_to):
 	return files
 
 def get_source_files(all, relative_to) -> List[SourceFile]:
-	files = get_modified_file(all, relative_to)
+	files = get_modified_files(all, relative_to)
 	source_files = []
 	for file in files:
 		if file.endswith(".cpp") or file.endswith(".hpp"):
