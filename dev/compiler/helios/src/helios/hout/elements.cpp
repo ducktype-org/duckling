@@ -508,6 +508,7 @@ namespace compiler::helios::code {
 					// @TODO: Report an error
 					return;
 				}
+				// @TODO: should this not be .value == "|"?
 				if (stmt.getOperator().str()[0] == '|' && lhs_vis_expr.is_type_expr
 				    && rhs_vis_expr.is_type_expr) {
 					node = constructVariantFrom(
@@ -648,7 +649,6 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			ScopeID expr_scope = ctx.query<QueryPrimaryCodeScopeFor>({ key.expr });
 			return code::Expr::fromPST(ctx, expr_scope, key.expr);
-			CORE_PANIC("Not implemented yet...");
 		}
 
 		// @TODO: perhaps add cache
