@@ -21,7 +21,7 @@
 namespace pst {
 
 	class FunParam final: public NotStmt {
-		tpc::Identifier                        name;
+		tpc::Identifier                   name;
 		MBox<ExprElement>                 type;
 		base::Optional<MBox<ExprElement>> initial;
 

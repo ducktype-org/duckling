@@ -16,10 +16,7 @@ namespace pst {
 	 * @tparam Container - Vector-like container of SubElements with emplace_back. Possibly with
 	 * other condition because of iteration.
 	 */
-	template<
-		class ListElements,
-		GetName getName,
-		class Container = std::vector<MBox<ListElements>>>
+	template<class ListElements, GetName getName, class Container = std::vector<MBox<ListElements>>>
 	class List: public NotStmt {
 	protected:
 		Container elements;

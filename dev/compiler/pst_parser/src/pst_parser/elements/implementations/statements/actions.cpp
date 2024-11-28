@@ -8,7 +8,7 @@ namespace pst {
 		if (!assertStmtChoice<Action>(state, state[0].isKeyword())) return nullptr;
 
 		MBox<Action> out;
-		auto              keyword = state[0].asKeyword();
+		auto         keyword = state[0].asKeyword();
 
 		switch (keyword) {
 		case Keyword::Return:
@@ -39,15 +39,16 @@ namespace pst {
 		state.parse(out.toOpt().value()).eatOne();
 
 		// @TODO: for now we assume if there is no expression there is a semicolon
-		if (!state[0].is(Special::Semicolon)) state.parse(out.toOpt().value()).with(&out->expr, CommaExpr::parse);
+		if (!state[0].is(Special::Semicolon))
+			state.parse(out.toOpt().value()).with(&out->expr, CommaExpr::parse);
 
 		return out;
 	}
 
 	namespace detail {
 		void simpleActionDprint(
-			std::ostream&                                 out,
-			const std::string&                            kind,
+			std::ostream&                            out,
+			const std::string&                       kind,
 			const base::Optional<MBox<ExprElement>>* expr
 		) {
 			out << "{";

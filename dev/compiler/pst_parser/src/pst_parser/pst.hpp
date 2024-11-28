@@ -29,7 +29,7 @@ namespace pst {
 
 	private:
 		tokenizer::OwnFile      file;
-		MBox<Element>      element;
+		MBox<Element>           element;
 		std::vector<ImportType> imports;
 
 		/**

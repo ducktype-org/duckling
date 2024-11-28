@@ -51,7 +51,7 @@ namespace pst {
 
 	class Block final: public CodeDecl {
 		tpc::OptionalIdentifier optional_name;
-		MBox<CodeBlock>    code_block = nullptr;
+		MBox<CodeBlock>         code_block = nullptr;
 
 	public:
 		explicit Block(const dia::SourcePosition& position): CodeDecl(position) {}
@@ -69,7 +69,7 @@ namespace pst {
 	};
 
 	class Namespace final: public Decl {
-		tpc::Identifier      name;
+		tpc::Identifier name;
 		MBox<CodeBlock> body = nullptr;
 
 	public:
@@ -99,7 +99,7 @@ namespace pst {
 
 	class Class final: public Decl {
 	private:
-		tpc::Identifier           name;
+		tpc::Identifier      name;
 		MBox<ExprElement>    base       = nullptr;
 		MBox<ImplementsList> implements = nullptr;
 		MBox<ClassBlock>     body       = nullptr;
@@ -145,10 +145,10 @@ namespace pst {
 	};
 
 	class Variable final: public Decl {
-		tpc::Identifier        name;
+		tpc::Identifier   name;
 		MBox<ExprElement> type     = nullptr;
 		MBox<ExprElement> value    = nullptr;
-		bool                   is_const = true;
+		bool              is_const = true;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Variable);
@@ -188,7 +188,7 @@ namespace pst {
 	};
 
 	class Fun final: public Decl {
-		tpc::Identifier                        name;
+		tpc::Identifier                   name;
 		MBox<ParamList>                   params = nullptr;
 		base::Optional<MBox<ExprElement>> ret;
 		MBox<CodeBlockOrStmt>             body = nullptr;
@@ -217,7 +217,7 @@ namespace pst {
 		}
 
 		static MBox<Fun> parse(LangParserState& state);
-		void                  dprint(std::ostream& out) const final;
+		void             dprint(std::ostream& out) const final;
 		~Fun() final = default;
 
 		[[nodiscard]]
@@ -229,16 +229,16 @@ namespace pst {
 	};
 
 	class If final: public CodeDecl {
-		MBox<RoundGroupExpr>  condition = nullptr;
-		tpc::OptionalIdentifier    optional_name;
-		MBox<CodeBlockOrStmt> body      = nullptr;
-		MBox<CodeBlockOrStmt> else_body = nullptr;
+		MBox<RoundGroupExpr>    condition = nullptr;
+		tpc::OptionalIdentifier optional_name;
+		MBox<CodeBlockOrStmt>   body      = nullptr;
+		MBox<CodeBlockOrStmt>   else_body = nullptr;
 
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {}
 
 		static MBox<If> parse(LangParserState& state);
-		void                 dprint(std::ostream& out) const final;
+		void            dprint(std::ostream& out) const final;
 		~If() final = default;
 
 		[[nodiscard]]
@@ -260,15 +260,15 @@ namespace pst {
 	};
 
 	class While final: public CodeDecl {
-		MBox<RoundGroupExpr>  condition = nullptr;
-		tpc::OptionalIdentifier    optional_name;
-		MBox<CodeBlockOrStmt> body = nullptr;
+		MBox<RoundGroupExpr>    condition = nullptr;
+		tpc::OptionalIdentifier optional_name;
+		MBox<CodeBlockOrStmt>   body = nullptr;
 
 	public:
 		explicit While(const dia::SourcePosition& position): CodeDecl(position) {}
 
 		static MBox<While> parse(LangParserState& state);
-		void                    dprint(std::ostream& out) const final;
+		void               dprint(std::ostream& out) const final;
 		~While() final = default;
 
 		[[nodiscard]]
@@ -280,17 +280,17 @@ namespace pst {
 	};
 
 	class For final: public CodeDecl {
-		tpc::OptionalIdentifier    optional_name;
-		tpc::Identifier            iterator;
-		MBox<ExprElement>     type     = nullptr;
-		MBox<ExprElement>     iterable = nullptr;
-		MBox<CodeBlockOrStmt> body     = nullptr;
+		tpc::OptionalIdentifier optional_name;
+		tpc::Identifier         iterator;
+		MBox<ExprElement>       type     = nullptr;
+		MBox<ExprElement>       iterable = nullptr;
+		MBox<CodeBlockOrStmt>   body     = nullptr;
 
 	public:
 		explicit For(const dia::SourcePosition& position): CodeDecl(position) {}
 
 		static MBox<For> parse(LangParserState& state);
-		void                  dprint(std::ostream& out) const final;
+		void             dprint(std::ostream& out) const final;
 		~For() final = default;
 
 		[[nodiscard]]

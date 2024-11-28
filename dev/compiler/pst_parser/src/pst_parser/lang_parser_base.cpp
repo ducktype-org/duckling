@@ -4,9 +4,7 @@
 #include <base/str_utils.hpp>
 
 namespace pst {
-	void LangParserState::addImport(const ImportType& import) {
-		imports.push_back(import);
-	}
+	void LangParserState::addImport(const ImportType& import) { imports.push_back(import); }
 
 	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }
 

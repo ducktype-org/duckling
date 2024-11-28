@@ -34,13 +34,11 @@ namespace pst {
 	template<typename State>
 	class PSTAutomatic {
 	protected:
-		State&                            state;
+		State&                state;
 		Ref<pst::LangElement> el;
 
 	public:
-		PSTAutomatic(State& state, Ref<pst::LangElement> caller):
-			  state(state),
-			  el(caller) {}
+		PSTAutomatic(State& state, Ref<pst::LangElement> caller): state(state), el(caller) {}
 
 		PSTAutomatic(const PSTAutomatic&) = delete;
 

@@ -28,7 +28,7 @@ namespace pst {
 	 */
 	class Import final: public Stmt {
 		MBox<DottedName> names;
-		tpc::Identifier       alias;
+		tpc::Identifier  alias;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Import);
@@ -124,7 +124,7 @@ namespace pst {
 	};
 
 	class Alias final: public Stmt {
-		tpc::Identifier       name;
+		tpc::Identifier  name;
 		MBox<DottedName> points_to;
 
 	public:
@@ -182,7 +182,7 @@ namespace pst {
 
 	// TODO: Merge it with variable. Or perhaps make a new class DataStorage.
 	class Const final: public Stmt {
-		tpc::Identifier        name;
+		tpc::Identifier   name;
 		MBox<ExprElement> type;
 		MBox<ExprElement> value;
 

@@ -11,8 +11,9 @@ namespace pst {
 		template<std::derived_from<Stmt> T>
 		MBox<T> parseStmt(LangParserState& state) {
 			MBox<T> out = T::parse(state);
-			auto opt = out.toOpt();
-			if (opt && opt.value()->trailingSemicolon()) state.parse(opt.value()).one(Special::Semicolon);
+			auto    opt = out.toOpt();
+			if (opt && opt.value()->trailingSemicolon())
+				state.parse(opt.value()).one(Special::Semicolon);
 			return out;
 		}
 
@@ -82,7 +83,7 @@ namespace pst {
 
 		while (as_special == Special::AtSign) {
 			MBox<Attribute> attr = Attribute::parse(state);
-			auto opt = std::move(attr).toOptBox();
+			auto            opt  = std::move(attr).toOptBox();
 			if (opt) attributes.push_back(std::move(opt.value()));
 			as_special = state[0].asSpecial();
 		}
@@ -122,7 +123,7 @@ namespace pst {
 		attributes = std::move(additions);
 
 		using namespace std::views;
-		auto borrow = [](Box<Attribute>& arg) -> Child { return arg.refMut(); };
+		auto borrow             = [](Box<Attribute>& arg) -> Child { return arg.refMut(); };
 		auto borrowed_additions = attributes | transform(borrow);
 
 		sub_elements.insert(

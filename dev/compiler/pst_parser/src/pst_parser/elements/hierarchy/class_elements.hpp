@@ -31,8 +31,8 @@ namespace pst {
 			lang_def::Keyword::Protected,
 		};
 
-		lang_def::Keyword     specifier = lang_def::Keyword::NotAKeyword;
-		MBox<ClassBlock> block;
+		lang_def::Keyword specifier = lang_def::Keyword::NotAKeyword;
+		MBox<ClassBlock>  block;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock);
@@ -141,7 +141,7 @@ namespace pst {
 	};
 
 	class Method final: public ClassStmt {
-		tpc::Identifier                        name;
+		tpc::Identifier                   name;
 		MBox<ParamList>                   params = nullptr;
 		base::Optional<MBox<ExprElement>> ret;
 		MBox<CodeBlock>                   body = nullptr;
@@ -177,8 +177,8 @@ namespace pst {
 	};
 
 	class Field final: public ClassStmt {
-		bool                                   is_mutable = true;
-		tpc::Identifier                        name;
+		bool                              is_mutable = true;
+		tpc::Identifier                   name;
 		MBox<ExprElement>                 type;
 		base::Optional<MBox<ExprElement>> init;
 

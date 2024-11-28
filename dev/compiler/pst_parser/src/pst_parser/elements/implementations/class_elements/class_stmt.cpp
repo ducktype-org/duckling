@@ -5,8 +5,9 @@ namespace pst {
 		template<std::derived_from<ClassStmt> T, class... Ts>
 		MBox<T> parseStmt(LangParserState& state, Ts... args) {
 			MBox<T> out = T::parse(state, std::forward<Ts...>(args)...);
-			auto opt = out.toOpt();
-			if (opt && opt.value()->trailingSemicolon()) state.parse(opt.value()).one(Special::Semicolon);
+			auto    opt = out.toOpt();
+			if (opt && opt.value()->trailingSemicolon())
+				state.parse(opt.value()).one(Special::Semicolon);
 			return out;
 		}
 	}

@@ -104,8 +104,8 @@ namespace pst {
 		}
 
 		static MBox<Stmt> parse(LangParserState& state);
-		bool                   trailingSemicolon() override;
-		virtual void           acceptVisitor(PstStmtVisitor& visitor) const = 0;
+		bool              trailingSemicolon() override;
+		virtual void      acceptVisitor(PstStmtVisitor& visitor) const = 0;
 
 		/**
 		 * @note This might need to return a vector of borrow pointers instead

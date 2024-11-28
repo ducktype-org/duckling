@@ -58,7 +58,7 @@ namespace pst {
 		class PrefixOperator: public ExprElement {
 		protected:
 			MBox<ExprElement> expr;
-			Operator               op;
+			Operator          op;
 
 		public:
 			explicit PrefixOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):
@@ -82,7 +82,7 @@ namespace pst {
 
 		class SuffixOperator: public ExprElement {
 		protected:
-			Operator               op;
+			Operator          op;
 			MBox<ExprElement> expr;
 
 		public:
@@ -108,7 +108,7 @@ namespace pst {
 		class BinaryOperator: public ExprElement {
 		protected:
 			MBox<ExprElement> left;
-			Operator               op;
+			Operator          op;
 			MBox<ExprElement> right;
 
 		public:
@@ -191,7 +191,7 @@ namespace pst {
 		};
 
 		class IdentifierLiteral final: public ExprElement {
-			tpc::Identifier                        name;
+			tpc::Identifier                   name;
 			base::Optional<MBox<ExprElement>> template_specifier;
 
 		public:
@@ -215,7 +215,7 @@ namespace pst {
 		};
 
 		class KeywordLiteral final: public ExprElement {
-			Keyword                                keyword = Keyword::NotAKeyword;
+			Keyword                           keyword = Keyword::NotAKeyword;
 			base::Optional<MBox<ExprElement>> template_specifier;
 
 		public:
@@ -243,8 +243,8 @@ namespace pst {
 		 * .?][name][optionally template specifier]`
 		 */
 		class Access final: public ExprElement {
-			base::StrID                            type;  ///< either `.` or `.?`
-			tpc::Identifier                        name;
+			base::StrID                       type;  ///< either `.` or `.?`
+			tpc::Identifier                   name;
 			base::Optional<MBox<ExprElement>> template_specifier;
 
 		public:
@@ -268,9 +268,7 @@ namespace pst {
 
 			[[nodiscard]]
 			base::Optional<MCRef<ExprElement>> getTemplateSpecifier() const {
-				return template_specifier.map([](const auto& t) {
-					return t.ref();
-				});
+				return template_specifier.map([](const auto& t) { return t.ref(); });
 			}
 		};
 
@@ -317,8 +315,8 @@ namespace pst {
 			ChainExpr(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
-			void                          dprint(std::ostream& out) const final;
-			void                          acceptVisitor(PstExprVisitor& visitor) const final;
+			void                     dprint(std::ostream& out) const final;
+			void                     acceptVisitor(PstExprVisitor& visitor) const final;
 
 			~ChainExpr() override = default;
 
@@ -401,8 +399,7 @@ namespace pst {
 			using Lower = GeneralPrefix;
 			using Self  = GeneralSuffix;
 
-			static MBox<ExprElement>
-				parseRecursive(LangParserState& state, i64 length, u64 iter);
+			static MBox<ExprElement> parseRecursive(LangParserState& state, i64 length, u64 iter);
 
 		public:
 			explicit GeneralSuffix(const dia::SourcePosition& pos, Operator op):
@@ -481,7 +478,7 @@ namespace pst {
 			using Lower = GeneralBinary;
 
 			std::vector<MBox<ExprElement>> sub_expr;
-			std::vector<Operator>               operators;
+			std::vector<Operator>          operators;
 
 			static i64 skipToOp(const LangParserState& state, i64 base, i64 length);
 
@@ -617,7 +614,7 @@ namespace pst {
 			using Lower = Comma;
 
 			MBox<ExprElement> variables;
-			base::StrID            type;
+			base::StrID       type;
 			MBox<ExprElement> value;
 
 		public:

@@ -1,8 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	MBox<ExprElement>
-		GeneralSuffix::parseRecursive(LangParserState& state, i64 length, u64 iter) {
+	MBox<ExprElement> GeneralSuffix::parseRecursive(LangParserState& state, i64 length, u64 iter) {
 		if (iter == 0) return Lower::parse(state, length);
 
 		auto out = box<GeneralSuffix>(state.getPosition(), state[length - 1].getValue());
