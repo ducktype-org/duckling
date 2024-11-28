@@ -34,7 +34,7 @@ namespace compiler::helios {
 		 * @brief PST element for which the scope was created.
 		 * Empty for root scope.
 		 */
-		base::Optional<PstRef<pst::LangElement>> related_pst_element;
+		base::Optional<MCRef<pst::LangElement>> related_pst_element;
 
 		/**
 		 * @brief Module, the scope was defined in
@@ -245,10 +245,10 @@ namespace compiler::helios {
 				return filterSymbolsFromStmtList(ctx, key, getStmtsFromStmtAggregate(base_element));
 			} else if (base_element->isStatement()) {
 				SymbolGrabVisitor symbol_grab(ctx, key);
-				auto              as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());
+				auto              as_stmt = dynamic_cast<const pst::Stmt*>(&*base_element);
 				as_stmt->acceptVisitor(symbol_grab);
 				return std::move(symbol_grab.out.value());
-			} else if (dynamic_cast<const pst::ExprElement*>(base_element.get())) {
+			} else if (dynamic_cast<const pst::ExprElement*>(&*base_element)) {
 				// @FIXME: change the way we check the condition, by comparing enum
 				// values instead of strings. Make the enum stringifiable.
 				return std::vector<SymID>{};

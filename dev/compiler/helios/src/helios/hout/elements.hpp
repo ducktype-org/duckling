@@ -63,7 +63,7 @@ namespace compiler::helios::code {
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
 
 		static errors::HResult<base::Box<Expr>, errors::Failed>
-			fromPST(query::Context& ctx, ScopeID scope, const PstRef<pst::ExprElement> root);
+			fromPST(query::Context& ctx, ScopeID scope, const MCRef<pst::ExprElement> root);
 	};
 
 	/**
@@ -308,7 +308,7 @@ namespace compiler::helios::code {
 
 namespace compiler::helios {
 	struct KeyOf_QueryHoutOfExpr {
-		PstRef<pst::ExprElement> expr;
+		MCRef<pst::ExprElement> expr;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;

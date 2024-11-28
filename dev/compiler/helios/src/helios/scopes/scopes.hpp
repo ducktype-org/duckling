@@ -65,7 +65,7 @@ namespace compiler::helios {
 		 * @todo: once scope refactor will be introduced, most "empty scope"
 		 * stuff will be no longer needed.
 		 */
-		PstRef<pst::LangElement> base_element;
+		MCRef<pst::LangElement> base_element;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;

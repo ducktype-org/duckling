@@ -117,9 +117,9 @@ namespace pst::detail {
 
 		explicit ForwardBorrowIterator(const MBox<ParserElement>* ptr): it(ptr) {}
 
-		value_type operator*() const { return it->borrow(); }
+		value_type operator*() const { return it->ref(); }
 
-		value_type operator[](difference_type diff) const { return it[diff]->borrow(); }
+		value_type operator[](difference_type diff) const { return it[diff]->ref(); }
 
 		ForwardBorrowIterator& operator++() {
 			++it;

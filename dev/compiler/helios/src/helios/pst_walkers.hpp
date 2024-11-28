@@ -16,7 +16,7 @@ namespace compiler::helios {
 	// @future: walkers for class and other stuff
 
 	template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
-	using StmtList = std::vector<PstRef<Stmt>>;
+	using StmtList = std::vector<MCRef<Stmt>>;
 
 	/**
 	 * @brief Returns all children statements of given LangElement
@@ -28,7 +28,7 @@ namespace compiler::helios {
 	 *
 	 * @return StmtList
 	 */
-	StmtList<> getStmtsFromStmtAggregate(PstRef<pst::LangElement>);
+	StmtList<> getStmtsFromStmtAggregate(MCRef<pst::LangElement>);
 
 	/**
 	 * @brief Returns all children statements of given ClassBlock
@@ -36,5 +36,5 @@ namespace compiler::helios {
 	 *
 	 * @return StmtList
 	 */
-	StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(PstRef<pst::LangElement>);
+	StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(MCRef<pst::LangElement>);
 }

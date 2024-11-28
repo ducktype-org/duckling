@@ -71,7 +71,7 @@ namespace compiler::helios {
 	/**
 	 * @return Pst element symbol was created from
 	 */
-	PstRef<pst::Stmt> stmt(SymID);
+	MCRef<pst::Stmt> stmt(SymID);
 
 	struct KeyOf_QuerySymbolOfSTMT {
 		/**
@@ -86,7 +86,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Statement to change to symbol
 		 */
-		PstRef<pst::Stmt> stmt;
+		MCRef<pst::Stmt> stmt;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;

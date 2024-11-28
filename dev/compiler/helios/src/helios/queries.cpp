@@ -62,7 +62,7 @@ namespace compiler::helios {
 		static auto queryCodeOfCodeBlock(query::Context& ctx, const Container& container) {
 			auto            scope = ctx.query<QueryPrimaryCodeScopeFor>({ container });
 			code::CodeBlock block(scope, {});
-			for (const auto& stmt: container) {
+			for (const auto& stmt: *container) {
 				HoutStmtMaker stmt_maker(ctx);
 				stmt->acceptVisitor(stmt_maker);
 				if (not stmt_maker.empty)
@@ -80,7 +80,7 @@ namespace compiler::helios {
 
 			template<class T>
 			ScopeID scopeOf(const T& element) {
-				return ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::LangElement>(&element) });
+				return ctx.query<QueryPrimaryCodeScopeFor>({ MCRef<pst::LangElement>(&element) });
 			}
 
 			// @TODO: visits for all valid stmt-s
@@ -111,7 +111,7 @@ namespace compiler::helios {
 			void visitUsing(const pst::Using&) override { empty = true; }
 
 			void visitExprStmt(const pst::ExprStmt& stmt) override {
-				auto expr = ctx.query<QueryHoutOfExpr>({ PstRef<pst::ExprElement>(stmt.getExpr()) })
+				auto expr = ctx.query<QueryHoutOfExpr>({ MCRef<pst::ExprElement>(stmt.getExpr()) })
 				                .expect("Not handling errors here yet...");
 				output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
 			}
@@ -148,7 +148,7 @@ namespace compiler::helios {
 				// @TODO: error handling
 
 				auto symbol
-					= ctx.query<QuerySymbolOfSTMT>({ scope_of_symbol, PstRef<pst::Stmt>(&stmt) });
+					= ctx.query<QuerySymbolOfSTMT>({ scope_of_symbol, MCRef<pst::Stmt>(&stmt) });
 
 				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 					"Handling errors is not supported in HOUT yet"
@@ -185,7 +185,7 @@ namespace compiler::helios {
 				// Scope of function itself:
 				// this scope will contain all "function declaration" symbols like parameters
 				// auto outer_scope
-				// 	= ctx.query<QueryPrimaryCodeScopeFor>({ PstRef<pst::LangElement>(&stmt) });
+				// 	= ctx.query<QueryPrimaryCodeScopeFor>({ MCRef<pst::LangElement>(&stmt) });
 
 				auto fun_body = stmt.getBody();
 

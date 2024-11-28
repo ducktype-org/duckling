@@ -538,7 +538,7 @@ namespace compiler::helios::code {
 			SymbolList looked_up_symbol = std::move(resulting_symbol_vis.symbols.value());
 
 			for (auto&& el: stmt.getChain()) {
-				auto pst_access = dynamic_cast<pst::expr::Access*>(el.get());
+				auto pst_access = dynamic_cast<pst::expr::Access*>(&*el);
 				CORE_ASSERT(pst_access, "Not handling non-AccessExprs yet");
 				CORE_ASSERT(pst_access->getType() == ".", "Not handling .? access operator yet");
 
@@ -628,7 +628,7 @@ namespace compiler::helios::code {
 	};
 
 	errors::HResult<base::Box<Expr>, errors::Failed>
-		Expr::fromPST(query::Context& ctx, ScopeID scope, const PstRef<pst::ExprElement> root) {
+		Expr::fromPST(query::Context& ctx, ScopeID scope, const MCRef<pst::ExprElement> root) {
 		std::cerr << "\nExpr: \n";
 		root->debugPrint(std::cerr);
 		std::cerr << '\n';
