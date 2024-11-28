@@ -435,6 +435,10 @@ namespace pst {
 					{ NamedOperator::Divide, 560 }, { NamedOperator::Plus, 570 },
 					{ NamedOperator::Minus, 570 },
 				};
+				if (not precedences.contains(op.asNamed()))
+					throw base::NotYetImplemented(
+						base::strConcat("Operator precedence for operator: ", op.value.strView())
+					);
 				return precedences.at(op.asNamed());
 			}
 

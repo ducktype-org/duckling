@@ -112,7 +112,7 @@ namespace compiler::helios {
 
 			void visitExprStmt(const pst::ExprStmt& stmt) override {
 				auto expr = ctx.query<QueryHoutOfExpr>({ PstRef<pst::ExprElement>(stmt.getExpr()) })
-				                .expect("Not handling errors here yet...");
+				                .expect("Not handling errors here yet... (ExprStmt)");
 				output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
 			}
 
