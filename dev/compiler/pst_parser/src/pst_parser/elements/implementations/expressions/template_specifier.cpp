@@ -1,13 +1,13 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> TemplateSpecifier::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> TemplateSpecifier::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Template Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		if (length != 2) {}  // Error
 
-		auto out = base::make_unique<TemplateSpecifier>(state.getPosition());
+		auto out = box<TemplateSpecifier>(state.getPosition());
 		state.parse(out).one(NamedOperator::Colon);
 		state.parse(out).goDown();
 		// This is a little wrong but templates will be changed anyway

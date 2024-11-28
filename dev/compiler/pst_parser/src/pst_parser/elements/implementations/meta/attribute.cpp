@@ -19,16 +19,16 @@ namespace pst {
 		}
 	};
 
-	ParserRef<Attribute> Attribute::parse(LangParserState& state) {
+	MBox<Attribute> Attribute::parse(LangParserState& state) {
 		auto                 position = state.getPosition();
-		ParserRef<Attribute> out      = makeRef<Attribute>(position);
+		Box<Attribute> out      = box<Attribute>(position);
 
 		if (!assertStmtChoice<Attribute>(state, state[0].is(Special::AtSign))) return nullptr;
 
 		state.parse(out).all(Special::AtSign, &out->name);
 
 		// @TODO: Make a more general solution to dotted names that can't have stars
-		if (out->name != nullptr && out->name->getStar())
+		if (out->name && out->name->getStar())
 			state.log(base::make_unique<AttrStarError>(out->name->getSourcePosition()));
 		if (state[0].isBracketGroup(Token::BracketType::Round)) state.parse(out).one(&out->args);
 
@@ -39,7 +39,7 @@ namespace pst {
 		out << "{";
 		out << "\"name\" : ";
 		nullAwareDprint(name, out);
-		if (args != nullptr) {
+		if (args) {
 			out << ", \"args\": ";
 			nullAwareDprint(args, out);
 		}

@@ -3,8 +3,8 @@
 #include "../../hierarchy/expr.hpp"
 
 namespace pst {
-	ParserRef<ExprStmt> ExprStmt::parse(LangParserState& state) {
-		auto out = base::make_unique<ExprStmt>(state.getPosition());
+	MBox<ExprStmt> ExprStmt::parse(LangParserState& state) {
+		auto out = box<ExprStmt>(state.getPosition());
 		state.parse(out)
 			.with(&out->expr, expr::parseUntil<expr::Assignment, ExprClassify::exprStmtEnd>);
 		return out;

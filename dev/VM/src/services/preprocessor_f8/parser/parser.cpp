@@ -10,6 +10,7 @@
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/parser_state.hpp>
+#include <token_parser_core/parser_ref.hpp>
 #include <token_parser_core/tpc.hpp>
 #include <base/maps.hpp>
 #include <variant>

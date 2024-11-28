@@ -3,7 +3,7 @@
 #include "../../hierarchy/not_statements.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> Literal::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> Literal::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Literal" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 

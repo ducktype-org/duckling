@@ -1,13 +1,13 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> Access::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> Access::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Access Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		if (length != 2 && length != 4) {}  // Error
 
-		auto out = base::make_unique<Access>(state.getPosition());
+		auto out = box<Access>(state.getPosition());
 
 		out->type = state[0].getValue();
 		state.parse(out).eatOne();  // `.` or `.?`

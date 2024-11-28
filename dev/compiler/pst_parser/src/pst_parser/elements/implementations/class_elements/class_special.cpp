@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	tpc::ParserRef<ClassSpecial>
+	MBox<ClassSpecial>
 		ClassSpecial::parse(LangParserState& state, const ClassContext& ctx) {
 		i64 skip = ClassStmt::countSpecifiers(state);
 

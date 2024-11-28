@@ -36,13 +36,13 @@ namespace pst {
 	};
 
 	class Attribute final: public NotStmt {
-		ParserRef<DottedName> name;
-		ParserRef<AtrArgList> args = nullptr;
+		MBox<DottedName> name;
+		MBox<AtrArgList> args = nullptr;
 
 	public:
 		explicit Attribute(dia::SourcePosition& pos): NotStmt(pos) {}
 
-		static ParserRef<Attribute> parse(LangParserState& state);
+		static MBox<Attribute> parse(LangParserState& state);
 		~Attribute() final = default;
 
 		void dprint(std::ostream& out) const final;
@@ -78,7 +78,7 @@ namespace pst {
 		StmtKind kind;
 
 	protected:
-		using AttrList = std::vector<ParserRef<Attribute>>;
+		using AttrList = std::vector<Box<Attribute>>;
 
 		AttrList attributes;
 
@@ -91,7 +91,7 @@ namespace pst {
 		/**
 		 * @brief Prepends attributes after parsing handling sub elements and position.
 		 */
-		void addAttributes(std::vector<ParserRef<Attribute>>&& additions);
+		void addAttributes(AttrList&& additions);
 
 		void dprintAttributes(std::ostream& out) const;
 
@@ -103,7 +103,7 @@ namespace pst {
 			return kind;
 		}
 
-		static ParserRef<Stmt> parse(LangParserState& state);
+		static MBox<Stmt> parse(LangParserState& state);
 		bool                   trailingSemicolon() override;
 		virtual void           acceptVisitor(PstStmtVisitor& visitor) const = 0;
 
@@ -179,10 +179,10 @@ namespace pst {
 			  context(std::move(ctx)) {}
 
 	private:
-		static ParserRef<ClassStmt> chooseStmt(LangParserState& state, const ClassContext& ctx);
+		static MBox<ClassStmt> chooseStmt(LangParserState& state, const ClassContext& ctx);
 
 	public:
-		static ParserRef<ClassStmt> parse(LangParserState& state, const ClassContext& ctx);
+		static MBox<ClassStmt> parse(LangParserState& state, const ClassContext& ctx);
 
 		const ClassContext& getContext() { return { context }; }
 

@@ -35,12 +35,12 @@ namespace pst {
 	class PSTAutomatic {
 	protected:
 		State&                            state;
-		ParserBorrowRef<pst::LangElement> el;
+		Ref<pst::LangElement> el;
 
 	public:
-		PSTAutomatic(State& state, ParserBorrowRef<pst::LangElement> caller):
+		PSTAutomatic(State& state, Ref<pst::LangElement> caller):
 			  state(state),
-			  el(std::move(caller)) {}
+			  el(caller) {}
 
 		PSTAutomatic(const PSTAutomatic&) = delete;
 
@@ -137,7 +137,7 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
-		void one(ParserRef<T>* result, bool = false) {
+		void one(MBox<T>* result, bool = false) {
 			with(result, T::parse);
 		}
 
@@ -148,8 +148,8 @@ namespace pst {
 		 * @param fun The value.
 		 */
 		template<std::derived_from<LangElement> El, typename Sink, typename... Args>
-		void assign(Sink* sink, ParserRef<El> sub_tree) {
-			if (sub_tree != nullptr) {
+		void assign(Sink* sink, MBox<El> sub_tree) {
+			if (sub_tree) {
 				sub_tree->setParent(el);
 				el->addChild(sub_tree);
 				*sink = std::move(sub_tree);
@@ -167,8 +167,8 @@ namespace pst {
 		 * @param args Arguments passed to the parsing function
 		 */
 		template<std::derived_from<LangElement> El, typename Sink, typename... Args>
-		void with(Sink* sink, ParserRef<El> fun(State&, Args...), Args&&... args) {
-			ParserRef<El> result = fun(state, std::forward<Args>(args)...);
+		void with(Sink* sink, MBox<El> fun(State&, Args...), Args&&... args) {
+			MBox<El> result = fun(state, std::forward<Args>(args)...);
 			assign(sink, std::move(result));
 		}
 

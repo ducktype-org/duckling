@@ -180,6 +180,21 @@ namespace base {
 			return *this;
 		}
 
+		/**
+		 * @brief Move assignment. The object previously pointed to by the Box is deleted.
+		 *
+		 * @tparam U
+		 * @param oth
+		 * @return MBox&
+		 */
+		template<class U>
+		MBox& operator=(Box<U>&& oth) noexcept {
+			delete ptr;
+			ptr     = std::move(oth).ptr;
+			oth.ptr = nullptr;
+			return *this;
+		}
+
 		friend void swap(MBox& first, MBox& second) noexcept { std::swap(first.ptr, second.ptr); }
 
 		operator bool() const { return ptr; }

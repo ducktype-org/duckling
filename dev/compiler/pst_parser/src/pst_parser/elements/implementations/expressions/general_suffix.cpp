@@ -1,12 +1,11 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement>
+	MBox<ExprElement>
 		GeneralSuffix::parseRecursive(LangParserState& state, i64 length, u64 iter) {
 		if (iter == 0) return Lower::parse(state, length);
 
-		auto out
-			= base::make_unique<GeneralSuffix>(state.getPosition(), state[length - 1].getValue());
+		auto out = box<GeneralSuffix>(state.getPosition(), state[length - 1].getValue());
 
 		state.parse(out).with(&out->expr, parseRecursive, length - 1, iter - 1);
 
@@ -15,7 +14,7 @@ namespace pst::expr {
 		return out;
 	}
 
-	ParserRef<ExprElement> GeneralSuffix::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> GeneralSuffix::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing General Suffix Expressions" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 

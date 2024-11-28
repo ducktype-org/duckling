@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> LogicOr::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> LogicOr::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Logical Or" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
@@ -20,7 +20,7 @@ namespace pst::expr {
 		}
 		if (!or_found) return Lower::parse(state, length);
 
-		auto out = base::make_unique<LogicOr>(pos);
+		auto out = box<LogicOr>(pos);
 
 		state.parse(out).with(&out->left, Lower::parse, +or_fwd);
 		state.parse(out).one(Keyword::Or);

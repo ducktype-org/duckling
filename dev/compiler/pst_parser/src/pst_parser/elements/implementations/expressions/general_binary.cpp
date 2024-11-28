@@ -13,13 +13,13 @@ namespace pst::expr {
 		return fwd;
 	}
 
-	ParserRef<ExprElement>
+	MBox<ExprElement>
 		GeneralBinary::parseRecursive(LangParserState& state, const BuilderExpr& expr) {
 		if (std::holds_alternative<i64>(expr)) {
 			return Lower::parse(state, std::get<i64>(expr));
 		} else {
-			auto op  = std::get<base::unique_ptr<OperatorBuilder>>(expr).borrow();
-			auto out = base::make_unique<GeneralBinary>(state.getPosition(), op->type);
+			auto op  = std::get<Box<OperatorBuilder>>(expr).ref();
+			auto out = box<GeneralBinary>(state.getPosition(), op->type);
 
 			state.parse(out).with(&out->left, parseRecursive, op->lhs);
 			state.parse(out).one(op->type);
@@ -29,7 +29,7 @@ namespace pst::expr {
 		}
 	}
 
-	ParserRef<ExprElement> GeneralBinary::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> GeneralBinary::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing General Binary Expressions" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
@@ -69,7 +69,7 @@ namespace pst::expr {
 			while (!stack.empty() && stack.top().op_prec <= curr_prec) {
 				Partial partial = std::move(stack.top());
 				stack.pop();
-				lhs = base::make_unique<OperatorBuilder>(
+				lhs = box<OperatorBuilder>(
 					std::move(partial.lhs), state[partial.op_place].asOperator(), std::move(lhs)
 				);
 			}
@@ -80,7 +80,7 @@ namespace pst::expr {
 		while (!stack.empty()) {
 			Partial partial = std::move(stack.top());
 			stack.pop();
-			rhs = base::make_unique<OperatorBuilder>(
+			rhs = box<OperatorBuilder>(
 				std::move(partial.lhs), state[partial.op_place].asOperator(), std::move(rhs)
 			);
 		}

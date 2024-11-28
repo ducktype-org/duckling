@@ -4,7 +4,6 @@
 #include <base/string_id.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <lexer/token_common.hpp>
-#include <token_parser_core/parser_ref.hpp>
 
 #include "meta.hpp"
 #include "lists.hpp"           // IWYU pragma: keep
@@ -49,7 +48,7 @@ namespace pst {
 		 * @brief General parseUntil
 		 */
 		template<std::derived_from<ExprElement> T, StateCondition until>
-		ParserRef<ExprElement> parseUntil(LangParserState& state) {
+		MBox<ExprElement> parseUntil(LangParserState& state) {
 			i64 length = 0;
 			while (!state[length].is(lexer::Token::Type::Sentinel) && !until(state, length))
 				length++;
@@ -58,7 +57,7 @@ namespace pst {
 
 		class PrefixOperator: public ExprElement {
 		protected:
-			ParserRef<ExprElement> expr;
+			MBox<ExprElement> expr;
 			Operator               op;
 
 		public:
@@ -78,13 +77,13 @@ namespace pst {
 			[[nodiscard]]
 			lexer::Operator getOperator() const;
 			[[nodiscard]]
-			ParserCBorrowRef<ExprElement> getExpr() const;
+			MCRef<ExprElement> getExpr() const;
 		};
 
 		class SuffixOperator: public ExprElement {
 		protected:
 			Operator               op;
-			ParserRef<ExprElement> expr;
+			MBox<ExprElement> expr;
 
 		public:
 			explicit SuffixOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):
@@ -103,14 +102,14 @@ namespace pst {
 			[[nodiscard]]
 			lexer::Operator getOperator() const;
 			[[nodiscard]]
-			ParserCBorrowRef<ExprElement> getExpr() const;
+			MCRef<ExprElement> getExpr() const;
 		};
 
 		class BinaryOperator: public ExprElement {
 		protected:
-			ParserRef<ExprElement> left;
+			MBox<ExprElement> left;
 			Operator               op;
-			ParserRef<ExprElement> right;
+			MBox<ExprElement> right;
 
 		public:
 			explicit BinaryOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):
@@ -122,9 +121,9 @@ namespace pst {
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			ParserCBorrowRef<ExprElement> getLeftOperand() const;
+			MCRef<ExprElement> getLeftOperand() const;
 			[[nodiscard]]
-			ParserCBorrowRef<ExprElement> getRightOperand() const;
+			MCRef<ExprElement> getRightOperand() const;
 			[[nodiscard]]
 			lexer::Operator getOperator() const;
 
@@ -147,7 +146,7 @@ namespace pst {
 				  ExprElement(position, 0),
 				  number(value) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~ExprValue() override = default;
 			void dprint(std::ostream& out) const final;
@@ -166,7 +165,7 @@ namespace pst {
 		public:
 			Literal() = delete;
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 		};
 
 		/**
@@ -174,12 +173,12 @@ namespace pst {
 		 * it's own parsing in the future
 		 */
 		class TemplateSpecifier final: public ExprElement {
-			ParserRef<ExprElement> inner;
+			MBox<ExprElement> inner;
 
 		public:
 			TemplateSpecifier(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~TemplateSpecifier() override = default;
 			void dprint(std::ostream& out) const final;
@@ -193,12 +192,12 @@ namespace pst {
 
 		class IdentifierLiteral final: public ExprElement {
 			tpc::Identifier                        name;
-			base::Optional<ParserRef<ExprElement>> template_specifier;
+			base::Optional<MBox<ExprElement>> template_specifier;
 
 		public:
 			IdentifierLiteral(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~IdentifierLiteral() override = default;
 			void dprint(std::ostream& out) const final;
@@ -217,12 +216,12 @@ namespace pst {
 
 		class KeywordLiteral final: public ExprElement {
 			Keyword                                keyword = Keyword::NotAKeyword;
-			base::Optional<ParserRef<ExprElement>> template_specifier;
+			base::Optional<MBox<ExprElement>> template_specifier;
 
 		public:
 			KeywordLiteral(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~KeywordLiteral() override = default;
 			void dprint(std::ostream& out) const final;
@@ -246,12 +245,12 @@ namespace pst {
 		class Access final: public ExprElement {
 			base::StrID                            type;  ///< either `.` or `.?`
 			tpc::Identifier                        name;
-			base::Optional<ParserRef<ExprElement>> template_specifier;
+			base::Optional<MBox<ExprElement>> template_specifier;
 
 		public:
 			Access(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~Access() override = default;
 			void dprint(std::ostream& out) const final;
@@ -268,9 +267,9 @@ namespace pst {
 			const tpc::Identifier& getName() const;
 
 			[[nodiscard]]
-			base::Optional<ParserCBorrowRef<ExprElement>> getTemplateSpecifier() const {
-				return template_specifier.map([](const ParserRef<ExprElement>& t) {
-					return t.borrow();
+			base::Optional<MCRef<ExprElement>> getTemplateSpecifier() const {
+				return template_specifier.map([](const auto& t) {
+					return t.ref();
 				});
 			}
 		};
@@ -283,12 +282,12 @@ namespace pst {
 		class Call final: public ExprElement {
 			lexer::Token::BracketType type
 				= lexer::Token::BracketType::None;  ///< either Round or Square
-			ParserRef<ExprElement> args;
+			MBox<ExprElement> args;
 
 		public:
 			Call(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~Call() override = default;
 			void dprint(std::ostream& out) const final;
@@ -306,8 +305,8 @@ namespace pst {
 		class ChainExpr final: public ExprElement {
 			using Lower = Literal;
 
-			ParserRef<ExprElement>              literal;
-			std::vector<ParserRef<ExprElement>> chain;
+			MBox<ExprElement>              literal;
+			std::vector<MBox<ExprElement>> chain;
 
 			/**
 			 * @brief checks length before the start of the next link
@@ -317,7 +316,7 @@ namespace pst {
 		public:
 			ChainExpr(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 			void                          dprint(std::ostream& out) const final;
 			void                          acceptVisitor(PstExprVisitor& visitor) const final;
 
@@ -329,21 +328,21 @@ namespace pst {
 			}
 
 			[[nodiscard]]
-			ParserCBorrowRef<ExprElement> getLiteral() const;
+			MCRef<ExprElement> getLiteral() const;
 			[[nodiscard]]
-			const std::vector<ParserRef<ExprElement>>& getChain() const;
+			const std::vector<MBox<ExprElement>>& getChain() const;
 		};
 
 		/**
 		 * @brief Expression in round brackets
 		 */
 		class RoundExpr final: public ExprElement {
-			ParserRef<ExprElement> expr;
+			MBox<ExprElement> expr;
 
 		public:
 			explicit RoundExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~RoundExpr() override = default;
 			void dprint(std::ostream& out) const final;
@@ -355,8 +354,8 @@ namespace pst {
 			}
 
 			[[nodiscard]]
-			ParserCBorrowRef<ExprElement> getInner() const {
-				return expr.borrow();
+			MCRef<ExprElement> getInner() const {
+				return expr.ref();
 			}
 		};
 
@@ -366,18 +365,18 @@ namespace pst {
 		 * A block that has value equal to the value returned from it.
 		 */
 		class BlockExpr final: public ExprElement {
-			ParserRef<CodeBlock> block;
+			MBox<CodeBlock> block;
 
 		public:
 			explicit BlockExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~BlockExpr() override = default;
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
-			ParserCBorrowRef<CodeBlock> getBlock() { return block.borrow(); }
+			MCRef<CodeBlock> getBlock() { return block.ref(); }
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -393,7 +392,7 @@ namespace pst {
 			explicit GeneralPrefix(const dia::SourcePosition& pos, Operator op):
 				  PrefixOperator(pos, op, 400) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~GeneralPrefix() override = default;
 		};
@@ -402,14 +401,14 @@ namespace pst {
 			using Lower = GeneralPrefix;
 			using Self  = GeneralSuffix;
 
-			static ParserRef<ExprElement>
+			static MBox<ExprElement>
 				parseRecursive(LangParserState& state, i64 length, u64 iter);
 
 		public:
 			explicit GeneralSuffix(const dia::SourcePosition& pos, Operator op):
 				  SuffixOperator(pos, op, 450) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~GeneralSuffix() override = default;
 		};
@@ -440,7 +439,7 @@ namespace pst {
 
 			struct OperatorBuilder;
 
-			using BuilderExpr = std::variant<i64, base::unique_ptr<OperatorBuilder>>;
+			using BuilderExpr = std::variant<i64, Box<OperatorBuilder>>;
 
 			struct OperatorBuilder {
 				BuilderExpr lhs;
@@ -464,10 +463,10 @@ namespace pst {
 			 */
 			static i64 skipLiteral(const LangParserState& state, i64 base, i64 length);
 
-			static ParserRef<ExprElement>
+			static MBox<ExprElement>
 				parseRecursive(LangParserState& state, const BuilderExpr& expr);
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~GeneralBinary() override = default;
 		};
@@ -481,7 +480,7 @@ namespace pst {
 		class ComparisonChain final: public ExprElement {
 			using Lower = GeneralBinary;
 
-			std::vector<ParserRef<ExprElement>> sub_expr;
+			std::vector<MBox<ExprElement>> sub_expr;
 			std::vector<Operator>               operators;
 
 			static i64 skipToOp(const LangParserState& state, i64 base, i64 length);
@@ -494,7 +493,7 @@ namespace pst {
 				return "Comparison Chain";
 			}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~ComparisonChain() override = default;
 			void dprint(std::ostream& out) const final;
@@ -512,7 +511,7 @@ namespace pst {
 			explicit LogicNot(const dia::SourcePosition& position):
 				  PrefixOperator(position, lang_def::keywordToStr(Keyword::Not), 730) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~LogicNot() override = default;
 		};
@@ -528,7 +527,7 @@ namespace pst {
 			explicit LogicAnd(const dia::SourcePosition& position):
 				  BinaryOperator(position, lang_def::keywordToStr(lang_def::Keyword::And), 730) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~LogicAnd() override = default;
 		};
@@ -544,7 +543,7 @@ namespace pst {
 			explicit LogicOr(const dia::SourcePosition& position):
 				  BinaryOperator(position, lang_def::keywordToStr(lang_def::Keyword::Or), 760) {}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~LogicOr() override = default;
 		};
@@ -561,9 +560,9 @@ namespace pst {
 		class Ternary final: public ExprElement {
 			using Lower = LogicOr;
 
-			ParserRef<ExprElement> condition;
-			ParserRef<ExprElement> if_true;
-			ParserRef<ExprElement> if_false;
+			MBox<ExprElement> condition;
+			MBox<ExprElement> if_true;
+			MBox<ExprElement> if_false;
 
 		public:
 			explicit Ternary(const dia::SourcePosition& position): ExprElement(position, 800) {}
@@ -573,7 +572,7 @@ namespace pst {
 				return "Ternary Expr";
 			}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~Ternary() override = default;
 			void dprint(std::ostream& out) const final;
@@ -589,7 +588,7 @@ namespace pst {
 		class Comma final: public ExprElement {
 			using Lower = Ternary;
 
-			std::vector<ParserRef<ExprElement>> expressions;
+			std::vector<MBox<ExprElement>> expressions;
 
 		public:
 			explicit Comma(const dia::SourcePosition& position): ExprElement(position, 900) {}
@@ -599,14 +598,14 @@ namespace pst {
 				return "Comma Expr";
 			}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~Comma() override = default;
 			void dprint(std::ostream& out) const final;
 			void acceptVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			const std::vector<ParserRef<ExprElement>>& getExpressions() const;
+			const std::vector<MBox<ExprElement>>& getExpressions() const;
 		};
 
 		/**
@@ -617,9 +616,9 @@ namespace pst {
 		class Assignment final: public ExprElement {
 			using Lower = Comma;
 
-			ParserRef<ExprElement> variables;
+			MBox<ExprElement> variables;
 			base::StrID            type;
-			ParserRef<ExprElement> value;
+			MBox<ExprElement> value;
 
 		public:
 			explicit Assignment(const dia::SourcePosition& position):
@@ -630,7 +629,7 @@ namespace pst {
 				return "Assignment Expr";
 			}
 
-			static ParserRef<ExprElement> parse(LangParserState& state, i64 length);
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~Assignment() override = default;
 			void dprint(std::ostream& out) const final;

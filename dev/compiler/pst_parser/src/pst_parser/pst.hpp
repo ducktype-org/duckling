@@ -29,7 +29,7 @@ namespace pst {
 
 	private:
 		tokenizer::OwnFile      file;
-		ParserRef<Element>      element;
+		MBox<Element>      element;
 		std::vector<ImportType> imports;
 
 		/**
@@ -93,7 +93,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const std::vector<ParserCBorrowRef<Import>>& getImports() const {
+		const std::vector<ImportType>& getImports() const {
 			return imports;
 		}
 
@@ -108,8 +108,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Element> getRootElement() const {
-			return element.borrow();
+		MCRef<Element> getRootElement() const {
+			return element.ref();
 		}
 
 		PST(PST&& other) noexcept:

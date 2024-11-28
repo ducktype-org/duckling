@@ -66,7 +66,7 @@ std::string stringPosition(dia::SourcePosition pos) {
  *
  * @note Adds information about position and element class
  */
-Agnode_t* dotElement(Handler& hdl, pst::ParserCBorrowRef<pst::LangElement> el) {
+Agnode_t* dotElement(Handler& hdl, MCRef<pst::LangElement> el) {
 	std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType();
 	auto        self = hdl.addNode(name);
 

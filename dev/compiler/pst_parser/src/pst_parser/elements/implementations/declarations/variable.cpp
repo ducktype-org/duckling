@@ -17,9 +17,9 @@ namespace pst {
 		VariableTypeEndError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<Variable> Variable::parse(LangParserState& state) {
+	MBox<Variable> Variable::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Variable>(position);
+		auto out      = box<Variable>(position);
 
 		const bool is_var = state[0].is(Keyword::Var);
 		const bool is_let = state[0].is(Keyword::Let);

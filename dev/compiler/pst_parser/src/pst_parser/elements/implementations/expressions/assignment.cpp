@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> Assignment::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> Assignment::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Assignment" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
@@ -26,7 +26,7 @@ namespace pst::expr {
 			}
 		}
 		if (!found) return Lower::parse(state, length);
-		auto out = base::make_unique<Assignment>(pos);
+		auto out = box<Assignment>(pos);
 
 		state.parse(out).with(&out->variables, Lower::parse, +place);
 

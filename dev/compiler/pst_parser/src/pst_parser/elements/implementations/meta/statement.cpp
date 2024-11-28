@@ -9,13 +9,14 @@ namespace pst {
 	namespace detail {
 
 		template<std::derived_from<Stmt> T>
-		ParserRef<T> parseStmt(LangParserState& state) {
-			ParserRef<T> out = T::parse(state);
-			if (out->trailingSemicolon()) state.parse(out).one(Special::Semicolon);
+		MBox<T> parseStmt(LangParserState& state) {
+			MBox<T> out = T::parse(state);
+			auto opt = out.toOpt();
+			if (opt && opt.value()->trailingSemicolon()) state.parse(opt.value()).one(Special::Semicolon);
 			return out;
 		}
 
-		ParserRef<Stmt> chooseStmt(LangParserState& state) {
+		MBox<Stmt> chooseStmt(LangParserState& state) {
 			Special as_special = state[0].asSpecial();
 			Keyword as_keyword = state[0].asKeyword();
 
@@ -80,22 +81,23 @@ namespace pst {
 		AttrList attributes;
 
 		while (as_special == Special::AtSign) {
-			ParserRef<Attribute> attr = Attribute::parse(state);
-			if (attr != nullptr) attributes.push_back(std::move(attr));
+			MBox<Attribute> attr = Attribute::parse(state);
+			auto opt = std::move(attr).toOptBox();
+			if (opt) attributes.push_back(std::move(opt.value()));
 			as_special = state[0].asSpecial();
 		}
 		return attributes;
 	}
 
-	ParserRef<Stmt> Stmt::parse(LangParserState& state) {
+	MBox<Stmt> Stmt::parse(LangParserState& state) {
 		// Collect Attributes
 		auto attributes = collectAttributes(state);
 
 		// Parse Statement
-		ParserRef<Stmt> out = detail::chooseStmt(state);
+		MBox<Stmt> out = detail::chooseStmt(state);
 
 		// Add Attributes
-		if (out != nullptr) out->addAttributes(std::move(attributes));
+		if (out) out->addAttributes(std::move(attributes));
 
 		return out;
 	}
@@ -109,18 +111,18 @@ namespace pst {
 		if (not attributes.empty()) {
 			out << R"("attributes": [)";
 			for (auto& attribute: attributes) {
-				tpc::nullAwareDprint(attribute, out);
+				attribute->debugPrint(out);
 				out << ",";
 			}
 			out << "],";
 		}
 	}
 
-	void Stmt::addAttributes(std::vector<ParserRef<Attribute>>&& additions) {
+	void Stmt::addAttributes(AttrList&& additions) {
 		attributes = std::move(additions);
 
 		using namespace std::views;
-		auto borrow = [](ParserRef<Attribute>& arg) -> Child { return arg.borrow_mut(); };
+		auto borrow = [](Box<Attribute>& arg) -> Child { return arg.refMut(); };
 		auto borrowed_additions = attributes | transform(borrow);
 
 		sub_elements.insert(
