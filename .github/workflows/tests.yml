@@ -20,7 +20,7 @@ env:
 
 jobs:
   build:
-    if: false
+    if: github.event.pull_request.draft == false
     
     strategy:
       matrix:
