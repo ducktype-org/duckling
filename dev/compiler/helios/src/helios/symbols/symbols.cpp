@@ -17,7 +17,6 @@
 #include "../lookup_result.hpp"
 #include "../scope_symbol_id.hpp"
 #include "../scopes/scopes.hpp"
-#include "../pst_ref.hpp"
 #include "../helios_errors.hpp"
 #include "../helios_result.hpp"
 #include <pst_parser/elements/hierarchy/not_statements.hpp>

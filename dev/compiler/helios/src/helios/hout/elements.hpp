@@ -11,7 +11,6 @@
 #include <typesystem/higher/type_desc.hpp>
 #include <typesystem/higher/queries.hpp>
 
-#include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
 #include <base/box.hpp>
 #include <helios/helios_errors.hpp>

@@ -9,7 +9,6 @@
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/lang_parser_state.hpp>
 
-#include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
 #include "../lookup_result.hpp"
 

@@ -7,7 +7,6 @@
 #include <query_framework/query_int.hpp>
 #include <pst_parser/elements/elements.hpp>
 
-#include "../pst_ref.hpp"
 #include "../lookup_result.hpp"
 #include "../helios_errors.hpp"
 #include "../helios_result.hpp"
