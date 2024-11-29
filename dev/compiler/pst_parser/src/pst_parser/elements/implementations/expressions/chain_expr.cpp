@@ -16,14 +16,14 @@ namespace pst::expr {
 		return fwd;
 	}
 
-	ParserRef<ExprElement> ChainExpr::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> ChainExpr::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Chain Expression" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		i64 fwd = toNextLink(state, length);
 		if (fwd == length) return Lower::parse(state, length);
 
-		auto out = base::make_unique<ChainExpr>(state.getPosition());
+		auto out = box<ChainExpr>(state.getPosition());
 
 		state.parse(out).with(&out->literal, Lower::parse, +fwd);
 		length -= fwd;
@@ -66,17 +66,17 @@ namespace pst::expr {
 
 	void ChainExpr::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitChainExpr(*this); }
 
-	ParserCBorrowRef<ExprElement> BinaryOperator::getLeftOperand() const { return left.borrow(); }
+	MCRef<ExprElement> BinaryOperator::getLeftOperand() const { return left.ref(); }
 
-	ParserCBorrowRef<ExprElement> BinaryOperator::getRightOperand() const { return right.borrow(); }
+	MCRef<ExprElement> BinaryOperator::getRightOperand() const { return right.ref(); }
 
 	lexer::Operator BinaryOperator::getOperator() const { return op; }
 
-	const std::vector<ParserRef<ExprElement>>& Comma::getExpressions() const { return expressions; }
+	const std::vector<MBox<ExprElement>>& Comma::getExpressions() const { return expressions; }
 
-	ParserCBorrowRef<ExprElement> ChainExpr::getLiteral() const { return literal.borrow(); }
+	MCRef<ExprElement> ChainExpr::getLiteral() const { return literal.ref(); }
 
-	const std::vector<ParserRef<ExprElement>>& ChainExpr::getChain() const { return chain; }
+	const std::vector<MBox<ExprElement>>& ChainExpr::getChain() const { return chain; }
 
 	base::StrID Access::getType() const { return type; }
 
@@ -84,9 +84,9 @@ namespace pst::expr {
 
 	lexer::Operator SuffixOperator::getOperator() const { return op; }
 
-	ParserCBorrowRef<ExprElement> SuffixOperator::getExpr() const { return expr.borrow(); }
+	MCRef<ExprElement> SuffixOperator::getExpr() const { return expr.ref(); }
 
 	lexer::Operator PrefixOperator::getOperator() const { return op; }
 
-	ParserCBorrowRef<ExprElement> PrefixOperator::getExpr() const { return expr.borrow(); }
+	MCRef<ExprElement> PrefixOperator::getExpr() const { return expr.ref(); }
 }

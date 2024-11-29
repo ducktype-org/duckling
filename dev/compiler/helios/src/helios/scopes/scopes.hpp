@@ -9,7 +9,6 @@
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/lang_parser_state.hpp>
 
-#include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
 #include "../lookup_result.hpp"
 
@@ -65,7 +64,7 @@ namespace compiler::helios {
 		 * @todo: once scope refactor will be introduced, most "empty scope"
 		 * stuff will be no longer needed.
 		 */
-		PstRef<pst::LangElement> base_element;
+		MCRef<pst::LangElement> base_element;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;

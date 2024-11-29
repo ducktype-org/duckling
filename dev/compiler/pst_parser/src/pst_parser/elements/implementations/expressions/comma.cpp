@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> Comma::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> Comma::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Comma" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
@@ -11,7 +11,7 @@ namespace pst::expr {
 		for (i64 i = 0; i < length; i++)
 			if (state[i].is(Special::Comma)) ends.push_back(i);
 		if (ends.empty()) return Lower::parse(state, length);
-		auto out   = base::make_unique<Comma>(pos);
+		auto out   = box<Comma>(pos);
 		i64  start = -1;
 
 		for (auto end: ends) {

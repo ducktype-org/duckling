@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> Ternary::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> Ternary::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Ternary" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
@@ -72,7 +72,7 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		auto out = base::make_unique<Ternary>(pos);
+		auto out = box<Ternary>(pos);
 
 		state.parse(out).one(Keyword::If);
 		state.parse(out).with(&out->condition, Lower::parse, then_fwd - 1);

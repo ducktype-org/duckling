@@ -111,10 +111,10 @@ namespace pst {
 			StateCondition            isEnding,
 			GetName                   getName,
 			class ParsingClass = ListElements>
-		static auto parseList(LangParserState& state) -> ParserRef<Self> {
+		static auto parseList(LangParserState& state) -> MBox<Self> {
 			auto position = state.getPosition();
 
-			auto out = tpc::makeRef<Self>(position);
+			Box<Self> out = box<Self>(position);
 
 			// Handle opening brackets:
 			if constexpr (BRACKETS != lexer::Token::BracketType::None) {
@@ -161,7 +161,7 @@ namespace pst {
 						}
 					}
 
-					ParserRef<ListElements> ref;
+					MBox<ListElements> ref;
 					state.parse(out).template with<ListElements>(&ref, ParsingClass::parse);
 					out->elements.emplace_back(std::move(ref));
 

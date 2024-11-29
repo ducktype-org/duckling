@@ -3,9 +3,11 @@
 namespace pst {
 	namespace detail {
 		template<std::derived_from<ClassStmt> T, class... Ts>
-		ParserRef<T> parseStmt(LangParserState& state, Ts... args) {
-			ParserRef<T> out = T::parse(state, std::forward<Ts...>(args)...);
-			if (out->trailingSemicolon()) state.parse(out).one(Special::Semicolon);
+		MBox<T> parseStmt(LangParserState& state, Ts... args) {
+			MBox<T> out = T::parse(state, std::forward<Ts...>(args)...);
+			auto    opt = out.toOpt();
+			if (opt && opt.value()->trailingSemicolon())
+				state.parse(opt.value()).one(Special::Semicolon);
 			return out;
 		}
 	}
@@ -19,7 +21,7 @@ namespace pst {
 	void ClassStmt::parseSpecifiers(LangParserState& state) {
 		while (class_specs.contains(state[0].asKeyword())) {
 			context.specifiers.emplace_back(&state[0]);
-			state.parse(base::borrow_ptr(this)).eatOne();
+			state.parse(Ref(this)).eatOne();
 		}
 	}
 
@@ -35,7 +37,7 @@ namespace pst {
 		}
 	}
 
-	ParserRef<ClassStmt> ClassStmt::chooseStmt(LangParserState& state, const ClassContext& ctx) {
+	MBox<ClassStmt> ClassStmt::chooseStmt(LangParserState& state, const ClassContext& ctx) {
 		i64 skip = countSpecifiers(state);
 
 		Keyword as_keyword = state[skip].asKeyword();
@@ -56,15 +58,15 @@ namespace pst {
 		return detail::parseStmt<Field>(state, ctx);
 	}
 
-	tpc::ParserRef<ClassStmt> ClassStmt::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<ClassStmt> ClassStmt::parse(LangParserState& state, const ClassContext& ctx) {
 		// Collect Attributes
 		auto attributes = collectAttributes(state);
 
 		// Parse Statement
-		ParserRef<ClassStmt> out = chooseStmt(state, ctx);
+		MBox<ClassStmt> out = chooseStmt(state, ctx);
 
 		// Add Attributes
-		if (out != nullptr) out->addAttributes(std::move(attributes));
+		if (out) out->addAttributes(std::move(attributes));
 
 		return out;
 	}

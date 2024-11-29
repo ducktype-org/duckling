@@ -17,9 +17,9 @@ namespace pst {
 		FieldTypeEndError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<Field> Field::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<Field> Field::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Field>(position, ctx);
+		auto out      = box<Field>(position, ctx);
 
 		out->parseSpecifiers(state);
 

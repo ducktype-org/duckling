@@ -313,9 +313,8 @@ struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);
 
-ModuleID compiler::frontend::extendQueryModuleIDOfPST(
-	query::Context&, pst::ParserCBorrowRef<pst::LangElement> element
-) {
+ModuleID
+	compiler::frontend::extendQueryModuleIDOfPST(query::Context&, MCRef<pst::LangElement> element) {
 	// get top-level:
 	while (element->getParent().has_value()) element = element->getParent().value();
 

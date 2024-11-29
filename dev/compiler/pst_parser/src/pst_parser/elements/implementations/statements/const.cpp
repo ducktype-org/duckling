@@ -17,9 +17,9 @@ namespace pst {
 		ConstTypeEndError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<Const> Const::parse(LangParserState& state) {
+	MBox<Const> Const::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Const>(position);
+		auto out      = box<Const>(position);
 
 		if (!assertStmtChoice<Const>(state, state[0].is(Keyword::Const))) return nullptr;
 

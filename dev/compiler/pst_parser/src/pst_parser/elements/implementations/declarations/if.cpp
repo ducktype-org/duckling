@@ -1,10 +1,10 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<If> If::parse(LangParserState& state) {
+	MBox<If> If::parse(LangParserState& state) {
 		// @TODO: attr list
 		auto position = state.getPosition();
-		auto out      = makeRef<If>(position);
+		auto out      = box<If>(position);
 
 		if (!assertStmtChoice<If>(state, state[0].is(Keyword::If))) return nullptr;
 

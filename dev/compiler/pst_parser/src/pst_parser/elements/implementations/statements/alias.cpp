@@ -17,9 +17,9 @@ namespace pst {
 		AliasStarError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<Alias> Alias::parse(LangParserState& state) {
+	MBox<Alias> Alias::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Alias>(position);
+		auto out      = box<Alias>(position);
 
 		if (!assertStmtChoice<Alias>(state, state[0].is(Keyword::Alias))) return nullptr;
 

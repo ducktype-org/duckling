@@ -17,7 +17,6 @@
 #include "../lookup_result.hpp"
 #include "../scope_symbol_id.hpp"
 #include "../scopes/scopes.hpp"
-#include "../pst_ref.hpp"
 #include "../helios_errors.hpp"
 #include "../helios_result.hpp"
 #include <pst_parser/elements/hierarchy/not_statements.hpp>
@@ -63,7 +62,7 @@ namespace compiler::helios {
 		SymbolKind  kind;
 
 		// we will need to cast it:
-		PstRef<pst::Stmt> pst_stmt;
+		MCRef<pst::Stmt> pst_stmt;
 	};
 
 	/**
@@ -83,7 +82,7 @@ namespace compiler::helios {
 
 	ScopeID scope(SymID id) { return getSymRef(id)->scope; }
 
-	PstRef<pst::Stmt> stmt(SymID id) { return getSymRef(id)->pst_stmt; }
+	MCRef<pst::Stmt> stmt(SymID id) { return getSymRef(id)->pst_stmt; }
 
 	namespace {
 		/**
@@ -107,12 +106,12 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return base::borrow_ptr<SymbolData>
 	 */
-	Ref<SymbolData> makeSymbolFromStatement(const ScopeID& scope, PstRef<pst::Stmt> stmt) {
+	Ref<SymbolData> makeSymbolFromStatement(const ScopeID& scope, MCRef<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		switch (stmt->getKind()) {
 		case pst::StmtKind::Fun: {
-			auto&& function_ = dynamic_cast<const pst::Fun*>(stmt.get());
+			auto&& function_ = dynamic_cast<const pst::Fun*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = function_->getName(),
@@ -121,7 +120,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Namespace: {
-			auto&& namespace_ = dynamic_cast<const pst::Namespace*>(stmt.get());
+			auto&& namespace_ = dynamic_cast<const pst::Namespace*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = namespace_->getName(),
@@ -130,7 +129,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Const: {
-			auto&& const_ = dynamic_cast<const pst::Const*>(stmt.get());
+			auto&& const_ = dynamic_cast<const pst::Const*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = const_->getName(),
@@ -139,7 +138,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Class: {
-			auto&& class_ = dynamic_cast<const pst::Class*>(stmt.get());
+			auto&& class_ = dynamic_cast<const pst::Class*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = class_->getName(),
@@ -148,7 +147,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Alias: {
-			auto&& alias_ = dynamic_cast<const pst::Alias*>(stmt.get());
+			auto&& alias_ = dynamic_cast<const pst::Alias*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = alias_->getName(),
@@ -158,7 +157,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Using: {
-			auto&& using_ = dynamic_cast<const pst::Using*>(stmt.get());
+			auto&& using_ = dynamic_cast<const pst::Using*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope = scope,
 				.name
@@ -170,7 +169,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Variable: {
-			auto&& variable_ = dynamic_cast<const pst::Variable*>(stmt.get());
+			auto&& variable_ = dynamic_cast<const pst::Variable*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = variable_->getName(),
@@ -182,7 +181,7 @@ namespace compiler::helios {
 		}
 		case pst::StmtKind::Import: {
 			// For now only non-wildcard import exist
-			auto&& import = dynamic_cast<const pst::Import*>(stmt.get());
+			auto&& import = dynamic_cast<const pst::Import*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = import->getAlias(),
@@ -193,7 +192,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Method: {
-			auto&& method = dynamic_cast<const pst::Method*>(stmt.get());
+			auto&& method = dynamic_cast<const pst::Method*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = method->getName(),
@@ -202,7 +201,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Field: {
-			auto&& field = dynamic_cast<const pst::Field*>(stmt.get());
+			auto&& field = dynamic_cast<const pst::Field*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = field->getName(),
@@ -211,7 +210,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Constructor: {
-			auto&& constructor = dynamic_cast<const pst::Constructor*>(stmt.get());
+			auto&& constructor = dynamic_cast<const pst::Constructor*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope    = scope,
 				.name     = constructor->getName(),
@@ -230,7 +229,7 @@ namespace compiler::helios {
 		default:
 			break;
 		}
-		auto stmt_ptr = stmt.get();
+		auto stmt_ptr = &*stmt;
 		CORE_PANIC(base::strConcat(
 			"makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
 		));
@@ -327,7 +326,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.ref->kind) {
 			case SymbolKind::Using: {
-				auto using_stmt = dynamic_cast<const pst::Using*>(key.ref->pst_stmt.get());
+				auto using_stmt = dynamic_cast<const pst::Using*>(&*key.ref->pst_stmt);
 				auto names      = using_stmt->getPointed();
 				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
 				CORE_ASSERT(
@@ -337,14 +336,14 @@ namespace compiler::helios {
 				return ctx.query<QueryLinkedScope>({ lookup_res.value().back() });
 			}
 			case SymbolKind::Namespace: {
-				auto namespace_stmt = dynamic_cast<const pst::Namespace*>(key.ref->pst_stmt.get());
+				auto namespace_stmt = dynamic_cast<const pst::Namespace*>(&*key.ref->pst_stmt);
 				auto inner_scope    = ctx.query<QueryPrimaryCodeScopeFor>({
                     namespace_stmt->getBody(),
                 });
 				return inner_scope;
 			}
 			case SymbolKind::Import: {
-				auto import_stmt = dynamic_cast<const pst::Import*>(key.ref->pst_stmt.get());
+				auto import_stmt = dynamic_cast<const pst::Import*>(&*key.ref->pst_stmt);
 
 				// @TODO: proper error handling via ErrorScope
 				auto imported_module = frontend::getRelativeModule(
@@ -391,8 +390,7 @@ namespace compiler::helios {
 
 			if (kind(key) != SymbolKind::Alias) return SymbolList{ key };
 
-			auto&& alias_definition
-				= dynamic_cast<const pst::Alias*>(getSymRef(key)->pst_stmt.get());
+			auto&& alias_definition = dynamic_cast<const pst::Alias*>(&*getSymRef(key)->pst_stmt);
 
 			bool       first_symbol = true;
 			SymbolList result;
@@ -527,8 +525,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
-			const auto const_symbol
-				= dynamic_cast<const pst::Const*>(getSymRef(key)->pst_stmt.get());
+			const auto const_symbol = dynamic_cast<const pst::Const*>(&*getSymRef(key)->pst_stmt);
 			const ScopeID key_scope = scope(key);
 
 			auto eval = code::Expr::fromPST(ctx, key_scope, const_symbol->getValue());
@@ -549,7 +546,7 @@ namespace compiler::helios {
 	 * @return tsh::TypeInfo with information about the evaluated type.
 	 */
 	ParseTypeFromExpr_Result
-		parseTypeFromExpr(query::Context& ctx, ScopeID expr_scope, PstRef<pst::ExprElement> expr) {
+		parseTypeFromExpr(query::Context& ctx, ScopeID expr_scope, MCRef<pst::ExprElement> expr) {
 		auto parsed = code::Expr::fromPST(ctx, expr_scope, expr);
 		if (parsed.hasError()) return errors::HError(parsed.error());
 		auto tree = std::move(parsed.value());
@@ -567,7 +564,7 @@ namespace compiler::helios {
 				symbol_type_info = type;
 			}
 
-			void setTypeOfSymbol(PstRef<pst::ExprElement> expr) {
+			void setTypeOfSymbol(MCRef<pst::ExprElement> expr) {
 				auto tp = parseTypeFromExpr(ctx, scope(key), expr);
 				if (tp.hasValue()) setTypeOfSymbol(tp.value());
 			}
@@ -592,7 +589,7 @@ namespace compiler::helios {
 				std::vector<tsh::TypeInfo> param_types{};
 				param_types.reserve(params->size());
 
-				for (auto param: params) {
+				for (auto param: *params) {
 					auto&& parse_type_res = parseTypeFromExpr(ctx, scope(key), param->getType());
 					if (parse_type_res.hasValue()) {
 						param_types.emplace_back(parse_type_res.value());
@@ -690,9 +687,9 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryClassSymbolData, QueryClassSymbolData_Result) {
 		struct ClassDataParser final: pst::PstStmtVisitorPanicky {
-			base::Optional<base::StrID>                                name;
-			base::Optional<tpc::ParserCBorrowRef<pst::ExprElement>>    base_class;
-			base::Optional<tpc::ParserCBorrowRef<pst::ImplementsList>> implements;
+			base::Optional<base::StrID>                name;
+			base::Optional<MCRef<pst::ExprElement>>    base_class;
+			base::Optional<MCRef<pst::ImplementsList>> implements;
 
 			void visitClass(const pst::Class& stmt) override {
 				name = stmt.getName();
@@ -750,7 +747,7 @@ namespace compiler::helios {
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
-				for (auto&& interface: implements) {
+				for (auto&& interface: *implements) {
 					auto tp = parseTypeFromExpr(ctx, class_scope, interface);
 					if (tp.hasValue()) {
 						class_info.implements.push_back(tp.value());
@@ -777,7 +774,7 @@ namespace compiler::helios {
 
 			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
 
-			void setExprTree(const pst::ParserCBorrowRef<pst::ExprElement>& expr) {
+			void setExprTree(const MCRef<pst::ExprElement>& expr) {
 				expr_tree = code::Expr::fromPST(ctx, scope, expr);
 			}
 

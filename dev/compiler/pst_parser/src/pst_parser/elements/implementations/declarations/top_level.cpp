@@ -1,10 +1,10 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<TopLevel> TopLevel::parse(LangParserState& state) {
-		auto out = makeRef<TopLevel>(state.getPosition());
+	MBox<TopLevel> TopLevel::parse(LangParserState& state) {
+		auto out = box<TopLevel>(state.getPosition());
 		while (state.notEmpty()) {
-			ParserRef<Stmt> stmt;
+			MBox<Stmt> stmt;
 			state.parse(out).one(&stmt);
 			out->statements.emplace_back(std::move(stmt));
 		}

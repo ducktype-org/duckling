@@ -17,9 +17,9 @@ namespace pst {
 		FunParamEndError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<FunParam> FunParam::parse(LangParserState& state) {
+	MBox<FunParam> FunParam::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<FunParam>(position);
+		auto out      = box<FunParam>(position);
 
 		state.parse(out).all(&out->name, NamedOperator::Colon);
 
