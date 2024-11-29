@@ -175,6 +175,9 @@ namespace pst {
 		}
 
 		[[nodiscard]]
+    /**
+     * @note Optional of MRef here is intentional
+     */
 		base::Optional<MCRef<ExprElement>> getValue() const {
 			return expr.map([](const auto& e) { return e.ref(); });
 		}
