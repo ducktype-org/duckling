@@ -15,7 +15,7 @@ namespace hashing {
 		static constexpr u32 FNV_prime    = (1u << 24) + (1u << 8) + 0x93u;
 		u32                  state        = offset_basis;
 
-		constexpr void update_hash(const void* data, usize len) noexcept {
+		/*constexpr*/ void update_hash(const void* data, usize len) noexcept {
 			update_hash(static_cast<const char*>(data), len);
 		}
 
@@ -45,9 +45,13 @@ namespace hashing {
 		static constexpr u64 FNV_prime    = (1ull << 40) + (1ull << 8) + 0xb3ull;
 		u64                  state        = offset_basis;
 
-		constexpr void update_hash(const volatile void* data, usize len) noexcept {
+		/*constexpr*/ void update_hash(const void* data, usize len) noexcept {
+			update_hash(static_cast<const char*>(data), len);
+		}
+
+		constexpr void update_hash(const char* data, usize len) noexcept {
 			for (usize i = 0; i < len; ++i) {
-				state ^= static_cast<const volatile unsigned char*>(data)[i];
+				state ^= data[i];
 				state *= FNV_prime;
 			}
 		}
