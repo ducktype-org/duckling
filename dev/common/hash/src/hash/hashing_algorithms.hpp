@@ -5,59 +5,64 @@
 
 #include "hash_utils.hpp"
 
-
 namespace hashing {
 
 
-class fnv1a_32 : public call_overloads {
-    friend call_overloads;
+	class fnv1a_32: public call_overloads {
+		friend call_overloads;
 
-    static constexpr u32 offset_basis = 2166136261u;
-    static constexpr u32 FNV_prime = (1u << 24) + (1u << 8) + 0x93u;
-    u32 state = offset_basis;
+		static constexpr u32 offset_basis = 2'166'136'261u;
+		static constexpr u32 FNV_prime    = (1u << 24) + (1u << 8) + 0x93u;
+		u32                  state        = offset_basis;
 
-    constexpr void update_hash(const volatile void* data, usize len) noexcept {
-        for (usize i = 0; i < len; ++i) {
-            state ^= static_cast<const volatile unsigned char*>(data)[i];
-            state *= FNV_prime;
-        }
-    }
+		constexpr void update_hash(const void* data, usize len) noexcept {
+			update_hash(static_cast<const char*>(data), len);
+		}
 
-public:
-    using result_type = u32;
+		constexpr void update_hash(const char* data, usize len) noexcept {
+			for (usize i = 0; i < len; ++i) {
+				state ^= data[i];
+				state *= FNV_prime;
+			}
+		}
 
-    constexpr fnv1a_32() = default;
-    constexpr fnv1a_32(u32 state) : state(state) {}
+	public:
+		using result_type = u32;
 
-    constexpr explicit operator result_type() noexcept {
-        return static_cast<result_type>(state);
-    }
-};
+		constexpr fnv1a_32() = default;
 
-class fnv1a_64 : public call_overloads {
-    friend call_overloads;
+		constexpr fnv1a_32(u32 state): state(state) {}
 
-    static constexpr u64 offset_basis = 14695981039346656037ull;
-    static constexpr u64 FNV_prime = (1ull << 40) + (1ull << 8) + 0xb3ull;
-    u64 state = offset_basis;
+		constexpr explicit operator result_type() noexcept {
+			return static_cast<result_type>(state);
+		}
+	};
 
-    constexpr void update_hash(const volatile void* data, usize len) noexcept {
-        for (usize i = 0; i < len; ++i) {
-            state ^= static_cast<const volatile unsigned char*>(data)[i];
-            state *= FNV_prime;
-        }
-    }
+	class fnv1a_64: public call_overloads {
+		friend call_overloads;
 
-public:
-    using result_type = u64;
+		static constexpr u64 offset_basis = 14'695'981'039'346'656'037ull;
+		static constexpr u64 FNV_prime    = (1ull << 40) + (1ull << 8) + 0xb3ull;
+		u64                  state        = offset_basis;
 
-    constexpr fnv1a_64() = default;
-    constexpr fnv1a_64(u64 state) : state(state) {}
+		constexpr void update_hash(const volatile void* data, usize len) noexcept {
+			for (usize i = 0; i < len; ++i) {
+				state ^= static_cast<const volatile unsigned char*>(data)[i];
+				state *= FNV_prime;
+			}
+		}
 
-    constexpr explicit operator result_type() noexcept {
-        return static_cast<result_type>(state);
-    }
-};
+	public:
+		using result_type = u64;
+
+		constexpr fnv1a_64() = default;
+
+		constexpr fnv1a_64(u64 state): state(state) {}
+
+		constexpr explicit operator result_type() noexcept {
+			return static_cast<result_type>(state);
+		}
+	};
 
 
-} // namespace hash
+}  // namespace hash
