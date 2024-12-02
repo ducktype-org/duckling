@@ -22,7 +22,7 @@ struct IMPLEMENT_QUERY(MyQuery, PResult) {
 
 	protected:
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override {
+		std::string toStringBrief() const override {
 			return { "Some random log from Query1." };
 		}
 
