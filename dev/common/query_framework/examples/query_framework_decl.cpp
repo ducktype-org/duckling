@@ -1,9 +1,9 @@
 #include <query_framework/query_impl.hpp>
-#include "decl.hpp"            // query declaration
+#include "query_framework_decl.hpp"  // query declaration
 
-#include <base/str_utils.hpp>  // base::strConcat
-#include <base/optional.hpp>   // base::Optional
-#include <base/maps.hpp>       // base::Map
+#include <base/str_utils.hpp>        // base::strConcat
+#include <base/optional.hpp>         // base::Optional
+#include <base/maps.hpp>             // base::Map
 
 /**
  * PResult type for MyQuery
@@ -22,7 +22,7 @@ struct IMPLEMENT_QUERY(MyQuery, PResult) {
 
 	protected:
 		[[nodiscard]]
-		printer::MessageContent toMessageContentBrief() const override {
+		std::string toStringBrief() const override {
 			return { "Some random log from Query1." };
 		}
 

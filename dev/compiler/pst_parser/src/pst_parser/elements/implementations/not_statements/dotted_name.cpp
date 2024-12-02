@@ -10,23 +10,23 @@ namespace pst {
 
 	bool DottedName::getStar() const { return star; }
 
-	ParserRef<DottedName> DottedName::parse(LangParserState& state) {
+	MBox<DottedName> DottedName::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<DottedName>(position);
+		auto out      = box<DottedName>(position);
 		do {
 			bool            is_id = state[0].isIdentifier();
 			tpc::Identifier next;
 			state.parse(out).one(&next, true);
 			if (is_id) out->names.push_back(next);
 			// If not special meaning, assume wrong type
-			else if (!state[0].is(lang_def::Operator::Period)
-			         && !state[0].is(lang_def::Operator::PeriodStar)
+			else if (!state[0].is(lang_def::NamedOperator::Period)
+			         && !state[0].is(lang_def::NamedOperator::PeriodStar)
 			         && !state[0].is(lang_def::Special::Semicolon)) {
 				state.tokens().next();
 			}
-		} while (state.parse(out).tryEat(lang_def::Operator::Period));
+		} while (state.parse(out).tryEat(lang_def::NamedOperator::Period));
 
-		if (state.parse(out).tryEat(lang_def::Operator::PeriodStar)) out->star = true;
+		if (state.parse(out).tryEat(lang_def::NamedOperator::PeriodStar)) out->star = true;
 
 		return out;
 	}

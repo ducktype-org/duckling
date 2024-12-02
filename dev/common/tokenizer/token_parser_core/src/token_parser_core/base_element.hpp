@@ -1,6 +1,6 @@
 #pragma once
 
-#include "parser_ref.hpp"
+#include <base/box.hpp>
 #include <base/ints.hpp>
 #include <ostream>
 
@@ -84,9 +84,8 @@ namespace tpc {
 		}
 	};
 
-	template<typename T, typename State, typename... Args>
+	template<typename Base, typename T, typename State, typename... Args>
 	concept ParseAbleElement = requires(State& state, Args&&... args) {
-		requires std::derived_from<T, Element>;
-		{ T::parse(state, std::forward<Args>(args)...) } -> std::same_as<ParserRef<T>>;
+		{ T::parse(state, std::forward<Args>(args)...) } -> std::convertible_to<MBox<Base>>;
 	};
 }

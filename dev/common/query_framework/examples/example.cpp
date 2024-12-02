@@ -140,7 +140,7 @@ int main() {
 	// because the instant logging is instant, while the dumping is ordered.
 
 	std::cerr << query::entryPoint<Query2>(2) << "\n";
-	query::debugPrintDependencyGraph();
+	query::debugPrintDependencyGraph(std::cerr);
 	std::cerr << "\n";
 
 	std::cerr << "Here are the logs in user readable form:\n";

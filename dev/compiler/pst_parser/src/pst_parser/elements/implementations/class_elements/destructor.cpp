@@ -17,20 +17,20 @@ namespace pst {
 		}
 	};
 
-	ParserRef<Destructor> Destructor::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<Destructor> Destructor::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Destructor>(position, ctx);
+		auto out      = box<Destructor>(position, ctx);
 
 		out->parseSpecifiers(state);
 
 		state.parse(out).eatOne();
-		state.parse(out).all(Operator::Period, &out->kind);
+		state.parse(out).all(NamedOperator::Period, &out->kind);
 
 		state.parse(out).goDown();
 		if (state.notEmpty()) state.log(base::make_unique<NonEmptyError>(state.getPosition()));
 		state.parse(out).goUpAndSkip();
 
-		state.parse(out).all(Operator::Assign, &out->body);
+		state.parse(out).all(NamedOperator::Assign, &out->body);
 
 		return out;
 	}

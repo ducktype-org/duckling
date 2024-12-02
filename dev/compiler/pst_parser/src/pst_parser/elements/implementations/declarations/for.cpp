@@ -1,4 +1,5 @@
 #include "preamble.hpp"
+#include "../../hierarchy/expr.hpp"
 
 namespace pst {
 	class ForBracketError final: public dia::Error {
@@ -33,10 +34,27 @@ namespace pst {
 		ForNoInError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<For> For::parse(LangParserState& state) {
+	/**
+	 * @brief Expr parsing for type inside for.
+	 */
+	class ForTypeExpr: public NotStmt {
+	public:
+		static bool end(const LangParserState& state, i64 fwd = 0) {
+			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
+			    || state[fwd].is(Keyword::In);
+		}
+
+		static MBox<ExprElement> parse(LangParserState& state) {
+			return expr::parseUntil<expr::Comma, end>(state);
+		}
+
+		ForTypeExpr() = delete;
+	};
+
+	MBox<For> For::parse(LangParserState& state) {
 		// @TODO: attr list
 		auto position = state.getPosition();
-		auto out      = makeRef<For>(position);
+		auto out      = box<For>(position);
 
 		if (!assertStmtChoice<For>(state, state[0].is(Keyword::For))) return nullptr;
 
@@ -49,21 +67,14 @@ namespace pst {
 
 			state.parse(out).one(&out->iterator, true);
 
-			if (state.parse(out).tryEat(Operator::Colon)) {
-				state.parse(out).with<Expr>(
-					&out->type,
-					Expr::parseUntil<
-						detail::Conditions::is<Keyword::In>,
-						detail::Conditions::is<Keyword::In>,
-						ForNoInError>,
-					true
-				);
+			if (state.parse(out).tryEat(NamedOperator::Colon)) {
+				state.parse(out).with(&out->type, ForTypeExpr::parse);
 				state.parse(out).tryEat(Keyword::In);
 			} else {
 				state.parse(out).one(Keyword::In);
 			}
 
-			state.parse(out).with<Expr>(&out->iterable, Expr::parse, true);
+			state.parse(out).with(&out->iterable, CommaExpr::parse);
 
 			state.parse(out).goUpAndSkip();
 		}

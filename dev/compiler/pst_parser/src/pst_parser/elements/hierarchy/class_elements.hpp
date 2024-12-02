@@ -17,7 +17,7 @@ namespace pst {
 		  ClassSpecial(StmtKind::class_name, position, ctx) {}
 
 #define CLASS_STMT_PARSE(class_name) \
-	static ParserRef<class_name> parse(LangParserState& state, const ClassContext& ctx);
+	static MBox<class_name> parse(LangParserState& state, const ClassContext& ctx);
 
 	/**
 	 * @brief Access specifier block inside of a class.
@@ -31,8 +31,8 @@ namespace pst {
 			lang_def::Keyword::Protected,
 		};
 
-		lang_def::Keyword     specifier = lang_def::Keyword::NotAKeyword;
-		ParserRef<ClassBlock> block;
+		lang_def::Keyword specifier = lang_def::Keyword::NotAKeyword;
+		MBox<ClassBlock>  block;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock);
@@ -52,8 +52,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<ClassBlock> getBlock() const {
-			return block.borrow();
+		MCRef<ClassBlock> getBlock() const {
+			return block.ref();
 		}
 
 		[[nodiscard]]
@@ -98,9 +98,9 @@ namespace pst {
 	};
 
 	class Constructor final: public ClassSpecial {
-		ParserRef<ParamList> params = nullptr;
-		ParserRef<InitList>  inits  = nullptr;
-		ParserRef<CodeBlock> body   = nullptr;
+		MBox<ParamList> params = nullptr;
+		MBox<InitList>  inits  = nullptr;
+		MBox<CodeBlock> body   = nullptr;
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Constructor);
@@ -123,7 +123,7 @@ namespace pst {
 	};
 
 	class Destructor final: public ClassSpecial {
-		ParserRef<CodeBlock> body = nullptr;
+		MBox<CodeBlock> body = nullptr;
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Destructor);
@@ -141,10 +141,10 @@ namespace pst {
 	};
 
 	class Method final: public ClassStmt {
-		tpc::Identifier      name;
-		ParserRef<ParamList> params = nullptr;
-		ParserRef<RetList>   rets   = nullptr;
-		ParserRef<CodeBlock> body   = nullptr;
+		tpc::Identifier                   name;
+		MBox<ParamList>                   params = nullptr;
+		base::Optional<MBox<ExprElement>> ret;
+		MBox<CodeBlock>                   body = nullptr;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Method);
@@ -177,10 +177,10 @@ namespace pst {
 	};
 
 	class Field final: public ClassStmt {
-		bool                            is_mutable = true;
-		tpc::Identifier                 name;
-		ParserRef<Expr>                 type;
-		base::Optional<ParserRef<Expr>> init;
+		bool                              is_mutable = true;
+		tpc::Identifier                   name;
+		MBox<ExprElement>                 type;
+		base::Optional<MBox<ExprElement>> init;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Field);
@@ -200,8 +200,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getType() const {
-			return type.borrow();
+		MCRef<ExprElement> getType() const {
+			return type.ref();
 		}
 
 		[[nodiscard]]
