@@ -48,8 +48,6 @@ namespace query::detail {
 		friend struct ContextMaker;
 
 	public:
-		// @TODO: add currently engaged query sanity check to context operations
-
 		// @TODO: Make the context (and thus the logger) be propagated through query calls,
 		// so that all queries run on the same file / in the same compilation thread / whatever
 		// use a single, *non-static* logger object.
