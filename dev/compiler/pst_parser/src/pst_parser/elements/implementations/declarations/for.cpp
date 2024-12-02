@@ -54,7 +54,7 @@ namespace pst {
 	MBox<For> For::parse(LangParserState& state) {
 		// @TODO: attr list
 		auto position = state.getPosition();
-		auto out      = box<For>(position);
+		auto out      = makeBox<For>(position);
 
 		if (!assertStmtChoice<For>(state, state[0].is(Keyword::For))) return nullptr;
 

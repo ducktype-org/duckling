@@ -7,7 +7,7 @@ namespace pst::expr {
 
 		if (!state[0].isOperator()) return Lower::parse(state, length);
 
-		auto out = box<GeneralPrefix>(state.getPosition(), state[0].getValue());
+		auto out = makeBox<GeneralPrefix>(state.getPosition(), state[0].getValue());
 
 		state.parse(out).eatOne();
 		state.parse(out).with(&out->expr, parse, length - 1);

@@ -92,8 +92,7 @@ namespace compiler::helios {
 
 			template<class T>
 			void output(T&& value) {
-				this->out.emplace(base::Box(new std::remove_reference_t<T>(std::forward<T>(value)))
-				);
+				this->out.emplace(makeBox<std::remove_reference_t<T>>(std::forward<T>(value)));
 			}
 
 			void visitReturn(const pst::Return& stmt) override {

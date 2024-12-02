@@ -19,7 +19,7 @@ namespace pst::expr {
 			return Lower::parse(state, std::get<i64>(expr));
 		} else {
 			auto op  = std::get<Box<OperatorBuilder>>(expr).ref();
-			auto out = box<GeneralBinary>(state.getPosition(), op->type);
+			auto out = makeBox<GeneralBinary>(state.getPosition(), op->type);
 
 			state.parse(out).with(&out->left, parseRecursive, op->lhs);
 			state.parse(out).one(op->type);
@@ -69,7 +69,7 @@ namespace pst::expr {
 			while (!stack.empty() && stack.top().op_prec <= curr_prec) {
 				Partial partial = std::move(stack.top());
 				stack.pop();
-				lhs = box<OperatorBuilder>(
+				lhs = makeBox<OperatorBuilder>(
 					std::move(partial.lhs), state[partial.op_place].asOperator(), std::move(lhs)
 				);
 			}
@@ -80,7 +80,7 @@ namespace pst::expr {
 		while (!stack.empty()) {
 			Partial partial = std::move(stack.top());
 			stack.pop();
-			rhs = box<OperatorBuilder>(
+			rhs = makeBox<OperatorBuilder>(
 				std::move(partial.lhs), state[partial.op_place].asOperator(), std::move(rhs)
 			);
 		}

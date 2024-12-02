@@ -102,7 +102,7 @@ namespace compiler::helios::code {
 					all_subtypes.emplace_back(std::move(expr));
 			}
 
-			return base::Box(new VariantConstructorExpr(ctx, scope, std::move(all_subtypes)));
+			return makeBox<VariantConstructorExpr>(ctx, scope, std::move(all_subtypes));
 		}
 	}
 
@@ -489,7 +489,7 @@ namespace compiler::helios::code {
 
 		void visitExprValue(const pst::expr::ExprValue& stmt) override {
 			// @TODO: Change literal value from i64 to something more appropriate.
-			node = base::Box(new LiteralValueExpr(ctx, scope, std::stoi(stmt.getValue().str())));
+			node = makeBox<LiteralValueExpr>(ctx, scope, std::stoi(stmt.getValue().str()));
 		}
 
 		void visitBinaryOperator(const pst::expr::BinaryOperator& stmt) override {
@@ -515,9 +515,9 @@ namespace compiler::helios::code {
 						ctx, scope, std::move(*lhs.node), std::move(*rhs.node)
 					);
 				} else {
-					node = base::Box(new BinaryOperatorExpr(
+					node = makeBox<BinaryOperatorExpr>(
 						ctx, scope, stmt.getOperator(), std::move(*lhs.node), std::move(*rhs.node)
-					));
+					);
 				}
 			}
 		}
@@ -561,14 +561,14 @@ namespace compiler::helios::code {
 				);
 			}
 			if_opt_some(dealiasSymbolList(ctx, looked_up_symbol).optValueMove(), dealiased) {
-				node = base::Box(new LinkedIdentifierExpr(ctx, scope, std::move(dealiased)));
+				node = makeBox<LinkedIdentifierExpr>(ctx, scope, std::move(dealiased));
 			}
 		}
 
 		void visitRoundExpr(const pst::expr::RoundExpr& stmt) override {
 			PstExprToHoutExprVisitor vis(ctx, scope);
 			stmt.getInner()->acceptVisitor(vis);
-			if (vis.node) node = base::Box(new ParenthesisExpr(ctx, scope, std::move(*vis.node)));
+			if (vis.node) node = makeBox<ParenthesisExpr>(ctx, scope, std::move(*vis.node));
 		}
 
 		void visitIdentifierLiteral(const pst::expr::IdentifierLiteral& stmt) override {
@@ -582,12 +582,12 @@ namespace compiler::helios::code {
 			}
 
 			if_opt_some(dealiasSymbolList(ctx, res.value()).optValueMove(), dealiased) {
-				node = base::Box(new IdentifierExpr(ctx, scope, dealiased.back()));
+				node = makeBox<IdentifierExpr>(ctx, scope, dealiased.back());
 			}
 		}
 
 		void visitKeywordLiteral(const pst::expr::KeywordLiteral& stmt) override {
-			node = base::Box(new KeywordExpr(ctx, scope, stmt.getKeyword()));
+			node = makeBox<KeywordExpr>(ctx, scope, stmt.getKeyword());
 		}
 
 		void visitComma(const pst::expr::Comma& stmt) override {
@@ -602,7 +602,7 @@ namespace compiler::helios::code {
 				if_opt_some(vis.node, b) { expressions.emplace_back(std::move(b)); }
 			}
 
-			node = base::Box(new TupleConstructorExpr(ctx, scope, std::move(expressions)));
+			node = makeBox<TupleConstructorExpr>(ctx, scope, std::move(expressions));
 		}
 
 		void visitSuffixOperator(const pst::expr::SuffixOperator& stmt) override {
@@ -610,9 +610,8 @@ namespace compiler::helios::code {
 			PstExprToHoutExprVisitor vis(ctx, scope);
 			stmt.getExpr()->acceptVisitor(vis);
 			if_opt_some(vis.node, expr) {
-				node = base::Box(
-					new UnaryOperatorExpr(scope, stmt.getOperator(), false, std::move(expr))
-				);
+				node
+					= makeBox<UnaryOperatorExpr>(scope, stmt.getOperator(), false, std::move(expr));
 			}
 		}
 
@@ -621,9 +620,7 @@ namespace compiler::helios::code {
 			PstExprToHoutExprVisitor vis(ctx, scope);
 			stmt.getExpr()->acceptVisitor(vis);
 			if_opt_some(vis.node, expr) {
-				node = base::Box(
-					new UnaryOperatorExpr(scope, stmt.getOperator(), true, std::move(expr))
-				);
+				node = makeBox<UnaryOperatorExpr>(scope, stmt.getOperator(), true, std::move(expr));
 			}
 		}
 	};

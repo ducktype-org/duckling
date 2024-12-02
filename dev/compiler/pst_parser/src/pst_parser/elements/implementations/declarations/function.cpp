@@ -22,7 +22,7 @@ namespace pst {
 	// @TODO: make better
 	MBox<Fun> Fun::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = box<Fun>(position);
+		auto out      = makeBox<Fun>(position);
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 

@@ -7,7 +7,7 @@ namespace pst::expr {
 
 		if (length != 2) {}  // Error
 
-		auto out = box<TemplateSpecifier>(state.getPosition());
+		auto out = makeBox<TemplateSpecifier>(state.getPosition());
 		state.parse(out).one(NamedOperator::Colon);
 		state.parse(out).goDown();
 		// This is a little wrong but templates will be changed anyway

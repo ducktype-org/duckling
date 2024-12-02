@@ -109,25 +109,25 @@ private:
 	void testBoxRef() {
 		// basic Box:
 		{
-			Box<LiveCounter> a = box<LiveCounter>();
+			Box<LiveCounter> a = makeBox<LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 1);
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
 		// Box type deduction:
 		{
-			Box  a = box<LiveCounter>();
-			auto b = box<LiveCounter>();
+			Box  a = makeBox<LiveCounter>();
+			auto b = makeBox<LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 2);
 
-			Box c = box<const LiveCounter>();
+			Box c = makeBox<const LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 3);
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
 		// Box move:
 		{
-			Box<LiveCounter> a = box<LiveCounter>();
+			Box<LiveCounter> a = makeBox<LiveCounter>();
 			a->state           = 2;
 			Box<LiveCounter> b = std::move(a);
 
@@ -148,7 +148,7 @@ private:
 
 		// Ref from Box:
 		{
-			Box<LiveCounter> a = box<LiveCounter>(123);
+			Box<LiveCounter> a = makeBox<LiveCounter>(123);
 			ASSERT_EQUAL(a->state, 123);
 
 			auto a_ref = a.refMut();
@@ -192,7 +192,7 @@ private:
 			[[maybe_unused]] Ref<LiveCounter> a_ref = &a;
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
-			Box<LiveCounter> live = box<LiveCounterInherit>();
+			Box<LiveCounter> live = makeBox<LiveCounterInherit>();
 			ASSERT_EQUAL(LiveCounter::count, 2);
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
@@ -230,8 +230,8 @@ private:
 			ASSERT_EQUAL(ref_2, Ref(&a));
 			ASSERT_TRUE(ref_1 != ref_2);
 
-			Box c = box<LiveCounter>();
-			Box d = box<LiveCounter>();
+			Box c = makeBox<LiveCounter>();
+			Box d = makeBox<LiveCounter>();
 
 			Ref c_ref = c.ref();
 			Ref d_ref = d.ref();
@@ -269,7 +269,7 @@ private:
 				Ref<Data>  data_3;
 				MRef<Data> data_4;
 
-				Container(): data_1(box<Data>()), data_3(data_1.refMut()){};
+				Container(): data_1(makeBox<Data>()), data_3(data_1.refMut()){};
 				Container(Container&&) = default;
 			};
 
@@ -300,7 +300,7 @@ private:
 	void testMBoxMRef() {
 		// basic MBox:
 		{
-			MBox<LiveCounter> a = box<LiveCounter>();
+			MBox<LiveCounter> a = makeBox<LiveCounter>();
 
 			ASSERT_TRUE(a.toOpt().has_value());
 			ASSERT_TRUE(a.ref().toOpt().has_value());
@@ -324,17 +324,17 @@ private:
 
 		// MBox type deduction:
 		{
-			MBox a = box<LiveCounter>();
+			MBox a = makeBox<LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
-			MBox b = box<const LiveCounter>();
+			MBox b = makeBox<const LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 2);
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
 		// MBox move:
 		{
-			MBox<LiveCounter> a = box<LiveCounter>();
+			MBox<LiveCounter> a = makeBox<LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
 			a->state = 2;
@@ -357,7 +357,7 @@ private:
 
 		// Ref from Box:
 		{
-			MBox<LiveCounter> a = box<LiveCounter>(123);
+			MBox<LiveCounter> a = makeBox<LiveCounter>(123);
 			ASSERT_EQUAL(LiveCounter::count, 1);
 			ASSERT_EQUAL(a->state, 123);
 
@@ -413,7 +413,7 @@ private:
 			[[maybe_unused]] MRef<LiveCounter> a_ref = &a;
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
-			MBox<LiveCounter> live = box<LiveCounterInherit>();
+			MBox<LiveCounter> live = makeBox<LiveCounterInherit>();
 			ASSERT_EQUAL(LiveCounter::count, 2);
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
@@ -451,8 +451,8 @@ private:
 			ASSERT_EQUAL(ref_2, MRef(&a));
 			ASSERT_TRUE(ref_1 != ref_2);
 
-			Box c = box<LiveCounter>();
-			Box d = box<LiveCounter>();
+			Box c = makeBox<LiveCounter>();
+			Box d = makeBox<LiveCounter>();
 
 			MRef c_ref = c.ref();
 			MRef d_ref = d.ref();
@@ -465,7 +465,7 @@ private:
 
 		// move MBox into Box:
 		{
-			MBox a = box<LiveCounter>();
+			MBox a = makeBox<LiveCounter>();
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
 			Box b = std::move(a).toOptBox().value();

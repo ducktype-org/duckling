@@ -38,19 +38,24 @@ namespace base {
 		template<class U>
 		friend class MBox;
 
+
+		template<class U, class... Args>
+		friend Box<U> makeBox(Args&&...);
+
 		constexpr void assertNotNull() const {
 			if (ptr == nullptr) CORE_PANIC("Box was in null state, when non-null was required!");
 		}
-
-	public:
-		Box()               = delete;
-		Box(std::nullptr_t) = delete;
 
 		/**
 		 * @brief Constructs a Box from a raw pointer.
 		 * @note It takes ownership of the pointer.
 		 */
 		explicit Box(T* ptr) noexcept: ptr{ ptr } { assertNotNull(); }
+
+	public:
+		Box()               = delete;
+		Box(std::nullptr_t) = delete;
+
 
 		Box(const Box& other) = delete;
 
@@ -139,15 +144,16 @@ namespace base {
 			if (ptr == nullptr) CORE_PANIC("MBox was in null state, when non-null was required!");
 		}
 
-	public:
-		MBox() = default;
-		MBox(std::nullptr_t){};
-
 		/**
 		 * @brief Constructs an MBox from a raw pointer.
 		 * @note It takes ownership of the pointer.
 		 */
 		explicit MBox(T* ptr) noexcept: ptr{ ptr } {}
+
+	public:
+		MBox() = default;
+		MBox(std::nullptr_t){};
+
 
 		MBox(const MBox& other) = delete;
 
@@ -272,7 +278,7 @@ namespace base {
 	MBox(Box<U>&&) noexcept -> MBox<U>;
 
 	template<class T, class... Args>
-	inline Box<T> box(Args&&... args) {
+	inline Box<T> makeBox(Args&&... args) {
 		return Box<T>(new T(std::forward<Args>(args)...));
 	}
 
@@ -285,7 +291,7 @@ namespace base {
 
 // global namespace export:
 using base::Box;
-using base::box;
 using base::CBox;
+using base::makeBox;
 using base::MBox;
 using base::MCBox;

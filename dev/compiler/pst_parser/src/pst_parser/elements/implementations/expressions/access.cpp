@@ -7,7 +7,7 @@ namespace pst::expr {
 
 		if (length != 2 && length != 4) {}  // Error
 
-		auto out = box<Access>(state.getPosition());
+		auto out = makeBox<Access>(state.getPosition());
 
 		out->type = state[0].getValue();
 		state.parse(out).eatOne();  // `.` or `.?`

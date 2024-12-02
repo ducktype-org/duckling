@@ -324,7 +324,7 @@ namespace tsl {
 	public:
 		PointerTypeLayout(const PointerTypeLayout& other):
 			  TypeLayoutABC(other.getSize(), other.getSourceType()),
-			  pointee(other.pointee ? box<TypeLayout>(*other.pointee) : MBox<TypeLayout>{}) {}
+			  pointee(other.pointee ? makeBox<TypeLayout>(*other.pointee) : MBox<TypeLayout>{}) {}
 
 		Ref<TypeLayout> operator->() { return pointee.toOpt().value(); }
 

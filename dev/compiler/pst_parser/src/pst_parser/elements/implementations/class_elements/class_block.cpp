@@ -3,7 +3,7 @@
 namespace pst {
 	MBox<ClassBlock> ClassBlock::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = box<ClassBlock>(position);
+		auto out      = makeBox<ClassBlock>(position);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
 			state.log(base::make_unique<error::BlockStartError>(state.getPosition()));
