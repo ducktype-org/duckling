@@ -20,5 +20,4 @@ namespace query {
 		Data data;
 		ACD  acd;
 	};
-
 }
