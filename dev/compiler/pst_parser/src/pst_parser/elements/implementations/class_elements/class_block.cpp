@@ -1,9 +1,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<ClassBlock> ClassBlock::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<ClassBlock> ClassBlock::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = makeRef<ClassBlock>(position);
+		auto out      = box<ClassBlock>(position);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
 			state.log(base::make_unique<error::BlockStartError>(state.getPosition()));
@@ -13,7 +13,7 @@ namespace pst {
 		state.parse(out).goDown();
 
 		while (state.notEmpty()) {
-			ParserRef<ClassStmt> stmt;
+			MBox<ClassStmt> stmt;
 			state.parse(out).with(&stmt, ClassStmt::parse, ctx);
 			out->statements.emplace_back(std::move(stmt));
 		}

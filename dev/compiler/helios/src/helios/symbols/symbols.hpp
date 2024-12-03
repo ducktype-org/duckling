@@ -7,7 +7,6 @@
 #include <query_framework/query_int.hpp>
 #include <pst_parser/elements/elements.hpp>
 
-#include "../pst_ref.hpp"
 #include "../lookup_result.hpp"
 #include "../helios_errors.hpp"
 #include "../helios_result.hpp"
@@ -71,7 +70,7 @@ namespace compiler::helios {
 	/**
 	 * @return Pst element symbol was created from
 	 */
-	PstRef<pst::Stmt> stmt(SymID);
+	MCRef<pst::Stmt> stmt(SymID);
 
 	struct KeyOf_QuerySymbolOfSTMT {
 		/**
@@ -86,7 +85,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Statement to change to symbol
 		 */
-		PstRef<pst::Stmt> stmt;
+		MCRef<pst::Stmt> stmt;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;

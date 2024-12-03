@@ -21,14 +21,14 @@
 namespace pst {
 
 	class FunParam final: public NotStmt {
-		tpc::Identifier                        name;
-		ParserRef<ExprElement>                 type;
-		base::Optional<ParserRef<ExprElement>> initial;
+		tpc::Identifier                   name;
+		MBox<ExprElement>                 type;
+		base::Optional<MBox<ExprElement>> initial;
 
 	public:
 		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {}
 
-		static ParserRef<FunParam> parse(LangParserState& state);
+		static MBox<FunParam> parse(LangParserState& state);
 		~FunParam() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -38,8 +38,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<ExprElement> getType() const {
-			return type.borrow();
+		MCRef<ExprElement> getType() const {
+			return type.ref();
 		}
 	};
 
@@ -65,7 +65,7 @@ namespace pst {
 
 		explicit DottedName(const dia::SourcePosition& position): NotStmt(position) {}
 
-		static ParserRef<DottedName> parse(LangParserState& state);
+		static MBox<DottedName> parse(LangParserState& state);
 
 		[[nodiscard]]
 		std::vector<base::StrID> getNames() const;
@@ -77,14 +77,14 @@ namespace pst {
 	};
 
 	class CodeBlock final: public NotStmt {
-		std::vector<ParserRef<Stmt>> statements;
+		std::vector<MBox<Stmt>> statements;
 
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, Stmt)
 
 		explicit CodeBlock(const dia::SourcePosition& position): NotStmt(position) {}
 
-		static ParserRef<CodeBlock> parse(LangParserState& state);
+		static MBox<CodeBlock> parse(LangParserState& state);
 		~CodeBlock() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -100,13 +100,13 @@ namespace pst {
 	};
 
 	class ClassBlock final: public NotStmt {
-		std::vector<ParserRef<ClassStmt>> statements;
+		std::vector<MBox<ClassStmt>> statements;
 
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, ClassStmt)
 
 		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos){};
-		static ParserRef<ClassBlock> parse(LangParserState& state, const ClassContext& ctx);
+		static MBox<ClassBlock> parse(LangParserState& state, const ClassContext& ctx);
 
 		~ClassBlock() override = default;
 		void dprint(std::ostream& out) const final;
@@ -123,12 +123,12 @@ namespace pst {
 	};
 
 	class CodeBlockOrStmt final: public NotStmt {
-		std::variant<ParserRef<Stmt>, ParserRef<CodeBlock>> content;
+		std::variant<MBox<Stmt>, MBox<CodeBlock>> content;
 
 	public:
 		explicit CodeBlockOrStmt(const dia::SourcePosition& position): NotStmt(position) {}
 
-		static ParserRef<CodeBlockOrStmt> parse(LangParserState& state);
+		static MBox<CodeBlockOrStmt> parse(LangParserState& state);
 		~CodeBlockOrStmt() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -150,12 +150,12 @@ namespace pst {
 	};
 
 	class RoundGroupExpr final: public NotStmt {
-		ParserRef<ExprElement> expr = nullptr;
+		MBox<ExprElement> expr = nullptr;
 
 	public:
 		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {}
 
-		static ParserRef<RoundGroupExpr> parse(LangParserState& state);
+		static MBox<RoundGroupExpr> parse(LangParserState& state);
 		~RoundGroupExpr() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -165,8 +165,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<ExprElement> getExpr() const {
-			return expr.borrow();
+		MCRef<ExprElement> getExpr() const {
+			return expr.ref();
 		}
 	};
 
@@ -201,7 +201,7 @@ namespace pst {
 	 */
 	class UniversalExpr: public NotStmt {
 	public:
-		static base::unique_ptr<ExprElement> parse(LangParserState& state);
+		static MBox<ExprElement> parse(LangParserState& state);
 		UniversalExpr() = delete;
 	};
 
@@ -210,7 +210,7 @@ namespace pst {
 	 */
 	class CommaExpr: public NotStmt {
 	public:
-		static base::unique_ptr<ExprElement> parse(LangParserState& state);
+		static MBox<ExprElement> parse(LangParserState& state);
 		CommaExpr() = delete;
 	};
 }

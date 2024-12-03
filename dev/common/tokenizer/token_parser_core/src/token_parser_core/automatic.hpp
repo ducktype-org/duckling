@@ -27,6 +27,7 @@
 
 #include "parser_state.hpp"
 #include "common_elements.hpp"
+#include "parser_ref.hpp"
 #include <lang_definitions/key_spec_op.hpp>
 
 #include "base_element.hpp"
@@ -50,6 +51,14 @@ namespace tpc {
 
 	template<typename T>
 	void nullAwareDprint(const ParserRef<T>& ref, std::ostream& out) {
+		if (!ref)
+			out << "\"<nullptr>\"";
+		else
+			ref->debugPrint(out);
+	}
+
+	template<typename T>
+	void nullAwareDprint(const MBox<T>& ref, std::ostream& out) {
 		if (!ref)
 			out << "\"<nullptr>\"";
 		else

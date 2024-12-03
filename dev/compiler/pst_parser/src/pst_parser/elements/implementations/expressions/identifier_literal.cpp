@@ -3,11 +3,11 @@
 #include "../../hierarchy/not_statements.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> IdentifierLiteral::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> IdentifierLiteral::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing IdentifierLiteral Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
-		auto out = base::make_unique<IdentifierLiteral>(state.getPosition());
+		auto out = box<IdentifierLiteral>(state.getPosition());
 
 		state.parse(out).one(&out->name);
 

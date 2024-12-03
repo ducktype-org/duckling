@@ -53,8 +53,7 @@ namespace compiler::frontend {
 	 * Assumes that @p element is a TopLevel element of some File parsed with interface of Frontend
 	 * module.
 	 */
-	ModuleID
-		extendQueryModuleIDOfPST(query::Context&, pst::ParserCBorrowRef<pst::LangElement> element);
+	ModuleID extendQueryModuleIDOfPST(query::Context&, MCRef<pst::LangElement> element);
 
 	/**
 	 * @brief Query extension used to

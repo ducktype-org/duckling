@@ -508,6 +508,7 @@ namespace compiler::helios::code {
 					// @TODO: Report an error
 					return;
 				}
+				// @TODO: should this not be .value == "|"?
 				if (stmt.getOperator().str()[0] == '|' && lhs_vis_expr.is_type_expr
 				    && rhs_vis_expr.is_type_expr) {
 					node = constructVariantFrom(
@@ -538,7 +539,7 @@ namespace compiler::helios::code {
 			SymbolList looked_up_symbol = std::move(resulting_symbol_vis.symbols.value());
 
 			for (auto&& el: stmt.getChain()) {
-				auto pst_access = dynamic_cast<pst::expr::Access*>(el.get());
+				auto pst_access = dynamic_cast<pst::expr::Access*>(&*el);
 				CORE_ASSERT(pst_access, "Not handling non-AccessExprs yet");
 				CORE_ASSERT(pst_access->getType() == ".", "Not handling .? access operator yet");
 
@@ -628,7 +629,7 @@ namespace compiler::helios::code {
 	};
 
 	errors::HResult<base::Box<Expr>, errors::Failed>
-		Expr::fromPST(query::Context& ctx, ScopeID scope, const PstRef<pst::ExprElement> root) {
+		Expr::fromPST(query::Context& ctx, ScopeID scope, const MCRef<pst::ExprElement> root) {
 		std::cerr << "\nExpr: \n";
 		root->debugPrint(std::cerr);
 		std::cerr << '\n';
@@ -648,7 +649,6 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			ScopeID expr_scope = ctx.query<QueryPrimaryCodeScopeFor>({ key.expr });
 			return code::Expr::fromPST(ctx, expr_scope, key.expr);
-			CORE_PANIC("Not implemented yet...");
 		}
 
 		// @TODO: perhaps add cache

@@ -12,16 +12,16 @@ namespace pst {
 			    || detail::Conditions::isImplementsOrBlockGroup(state, fwd);
 		}
 
-		static base::unique_ptr<ExprElement> parse(LangParserState& state) {
+		static MBox<ExprElement> parse(LangParserState& state) {
 			return expr::parseUntil<expr::ChainExpr, end>(state);
 		}
 
 		ClassExtendsExpr() = delete;
 	};
 
-	ParserRef<Class> Class::parse(LangParserState& state) {
+	MBox<Class> Class::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Class>(position);
+		auto out      = box<Class>(position);
 
 		if (!assertStmtChoice<Class>(state, state[0].is(Keyword::Class))) return nullptr;
 

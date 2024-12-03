@@ -1,15 +1,15 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<Import> Import::parse(LangParserState& state) {
+	MBox<Import> Import::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Import>(position);
+		auto out      = box<Import>(position);
 
 		if (!assertStmtChoice<Import>(state, state[0].is(Keyword::Import))) return nullptr;
 
 		state.parse(out).all(Keyword::Import, &out->names, Keyword::As, &out->alias);
 
-		state.addImport(out.borrow());
+		state.addImport(out.ref());
 		return out;
 	}
 
@@ -17,7 +17,7 @@ namespace pst {
 
 	std::vector<base::StrID> Import::getModulePath() const {
 		std::vector<base::StrID> out;
-		for (auto& elem: names) out.emplace_back(elem.value);
+		for (auto& elem: *names) out.emplace_back(elem.value);
 		return out;
 	}
 

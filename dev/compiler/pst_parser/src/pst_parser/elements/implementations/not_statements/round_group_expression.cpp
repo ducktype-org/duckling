@@ -17,9 +17,9 @@ namespace pst {
 		RoundExprStartError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<RoundGroupExpr> RoundGroupExpr::parse(LangParserState& state) {
+	MBox<RoundGroupExpr> RoundGroupExpr::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<RoundGroupExpr>(position);
+		auto out      = box<RoundGroupExpr>(position);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Round)) {
 			state.log(base::make_unique<RoundExprStartError>(state.getPosition()));

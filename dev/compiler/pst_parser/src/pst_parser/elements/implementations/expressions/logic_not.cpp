@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> LogicNot::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> LogicNot::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Logical Not" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
@@ -9,7 +9,7 @@ namespace pst::expr {
 
 		if (!state[0].is(Keyword::Not)) return Lower::parse(state, length);
 
-		auto out = base::make_unique<LogicNot>(pos);
+		auto out = box<LogicNot>(pos);
 
 		state.parse(out).one(Keyword::Not);
 		state.parse(out).with(&out->expr, Self::parse, length - 1);

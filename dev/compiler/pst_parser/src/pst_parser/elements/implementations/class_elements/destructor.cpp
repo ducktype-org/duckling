@@ -17,9 +17,9 @@ namespace pst {
 		}
 	};
 
-	ParserRef<Destructor> Destructor::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<Destructor> Destructor::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Destructor>(position, ctx);
+		auto out      = box<Destructor>(position, ctx);
 
 		out->parseSpecifiers(state);
 

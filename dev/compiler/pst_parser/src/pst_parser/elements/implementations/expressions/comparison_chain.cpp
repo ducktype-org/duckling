@@ -7,14 +7,14 @@ namespace pst::expr {
 		return fwd;
 	}
 
-	ParserRef<ExprElement> ComparisonChain::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> ComparisonChain::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Comparison Chain Expression" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		i64 fwd = skipToOp(state, 0, length);
 		if (fwd == length) return Lower::parse(state, length);
 
-		auto out = base::make_unique<ComparisonChain>(state.getPosition());
+		auto out = box<ComparisonChain>(state.getPosition());
 
 		while (fwd < length) {
 			out->sub_expr.emplace_back(nullptr);

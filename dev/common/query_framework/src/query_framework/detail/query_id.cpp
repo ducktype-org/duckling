@@ -7,6 +7,7 @@
 #include "query_id.hpp"
 
 #include <base/maps.hpp>
+#include <string_view>
 
 namespace query::detail {
 	namespace {
@@ -18,9 +19,7 @@ namespace query::detail {
 		}
 	}
 
-	const std::string& QueryID::getName() const { return nameMap().at(val); }
+	std::string_view QueryID::getName() const { return nameMap().at(val); }
 
-	void QueryID::setName(const QueryID& query, const std::string_view name) {
-		nameMap().put(query.val, name);
-	}
+	void QueryID::setName(QueryID query, std::string_view name) { nameMap().put(query.val, name); }
 }

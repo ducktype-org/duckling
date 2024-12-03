@@ -16,10 +16,7 @@ namespace pst {
 	 * @tparam Container - Vector-like container of SubElements with emplace_back. Possibly with
 	 * other condition because of iteration.
 	 */
-	template<
-		class ListElements,
-		GetName getName,
-		class Container = std::vector<ParserRef<ListElements>>>
+	template<class ListElements, GetName getName, class Container = std::vector<MBox<ListElements>>>
 	class List: public NotStmt {
 	protected:
 		Container elements;
@@ -55,7 +52,7 @@ namespace pst {
 	public:
 		explicit ParamList(const dia::SourcePosition& pos): List(pos) {}
 
-		static ParserRef<ParamList> parse(LangParserState& state);
+		static MBox<ParamList> parse(LangParserState& state);
 
 		~ParamList() final = default;
 	};
@@ -64,7 +61,7 @@ namespace pst {
 	public:
 		explicit ImplementsList(const dia::SourcePosition& pos): List(pos) {}
 
-		static ParserRef<ImplementsList> parse(LangParserState& state);
+		static MBox<ImplementsList> parse(LangParserState& state);
 
 		~ImplementsList() final = default;
 	};
@@ -73,7 +70,7 @@ namespace pst {
 	public:
 		explicit AtrArgList(const dia::SourcePosition& pos): List(pos) {}
 
-		static ParserRef<AtrArgList> parse(LangParserState& state);
+		static MBox<AtrArgList> parse(LangParserState& state);
 
 		~AtrArgList() final = default;
 	};
@@ -82,7 +79,7 @@ namespace pst {
 	public:
 		explicit InitList(const dia::SourcePosition& pos): List(pos) {}
 
-		static ParserRef<InitList> parse(LangParserState& state);
+		static MBox<InitList> parse(LangParserState& state);
 
 		~InitList() final = default;
 	};

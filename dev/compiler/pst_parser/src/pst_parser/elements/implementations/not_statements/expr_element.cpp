@@ -51,11 +51,11 @@ namespace pst {
 		}
 	}
 
-	base::unique_ptr<ExprElement> UniversalExpr::parse(LangParserState& state) {
+	MBox<ExprElement> UniversalExpr::parse(LangParserState& state) {
 		return expr::parseUntil<expr::Ternary, universalEnd>(state);
 	}
 
-	base::unique_ptr<ExprElement> CommaExpr::parse(LangParserState& state) {
+	MBox<ExprElement> CommaExpr::parse(LangParserState& state) {
 		return expr::parseUntil<expr::Comma, universalEndAllowComma>(state);
 	}
 }

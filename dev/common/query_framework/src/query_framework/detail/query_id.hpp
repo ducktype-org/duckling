@@ -5,6 +5,7 @@
 #pragma once
 
 #include <base/ints.hpp>
+#include <string_view>
 
 namespace query::detail {
 	struct QueryID final {
@@ -16,9 +17,9 @@ namespace query::detail {
 			return val;
 		}
 
-		static void setName(const QueryID& query, std::string_view name);
+		static void setName(QueryID query, std::string_view name);
 
 		[[nodiscard]]
-		const std::string& getName() const;
+		std::string_view getName() const;
 	};
 }

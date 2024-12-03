@@ -2,9 +2,9 @@
 #include "../../hierarchy/lists.hpp"  // IWYU pragma: keep
 
 namespace pst {
-	ParserRef<Constructor> Constructor::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<Constructor> Constructor::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Constructor>(position, ctx);
+		auto out      = box<Constructor>(position, ctx);
 
 		out->parseSpecifiers(state);
 

@@ -1,7 +1,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	ParserRef<ExprElement> LogicAnd::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> LogicAnd::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Logical And" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
@@ -19,7 +19,7 @@ namespace pst::expr {
 		}
 		if (!and_found) return Lower::parse(state, length);
 
-		auto out = base::make_unique<LogicAnd>(pos);
+		auto out = box<LogicAnd>(pos);
 
 		state.parse(out).with(&out->left, Lower::parse, +and_fwd);
 		state.parse(out).one(Keyword::Or);

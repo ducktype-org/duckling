@@ -3,7 +3,7 @@
 #include "../../hierarchy/not_statements.hpp"
 
 namespace pst {
-	ParserRef<ParamList> ParamList::parse(LangParserState& state) {
+	MBox<ParamList> ParamList::parse(LangParserState& state) {
 		return ListParsingTemplate::parseList<
 			FunParam,
 			ParamList,
