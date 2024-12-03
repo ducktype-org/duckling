@@ -77,7 +77,7 @@ Agnode_t* dotElement(Handler& hdl, MCRef<pst::LangElement> el) {
 				auto sub_node = hdl.addNode(stringPosition(token->getPosition()) + "\n" + value);
 				hdl.addEdge(self, sub_node);
 				static std::string shape_string = "shape";
-				static std::string box_string   = "makeBox";
+				static std::string box_string   = "box";
 				static std::string empty_string = "";
 				agsafeset(sub_node, shape_string.data(), box_string.data(), empty_string.data());
 			}
