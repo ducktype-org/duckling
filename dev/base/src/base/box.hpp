@@ -38,24 +38,28 @@ namespace base {
 		template<class U>
 		friend class MBox;
 
-
-		template<class U, class... Args>
-		friend Box<U> makeBox(Args&&...);
-
 		constexpr void assertNotNull() const {
 			if (ptr == nullptr) CORE_PANIC("Box was in null state, when non-null was required!");
 		}
 
-		/**
-		 * @brief Constructs a Box from a raw pointer.
-		 * @note It takes ownership of the pointer.
-		 */
 		explicit Box(T* ptr) noexcept: ptr{ ptr } { assertNotNull(); }
 
 	public:
 		Box()               = delete;
 		Box(std::nullptr_t) = delete;
 
+		/**
+		 * @brief Constructs a Box from a raw pointer.
+		 * It takes ownership of the pointer.
+		 *
+		 * For a regular construction use `makeBox` instead.
+		 * It is not a constructor in order to make this call more explicit.
+		 */
+		static Box fromPointer(T* ptr) noexcept {
+			Box&& box = Box(ptr);
+			box.assertNotNull();
+			return box;
+		}
 
 		Box(const Box& other) = delete;
 
@@ -152,7 +156,7 @@ namespace base {
 
 	public:
 		MBox() = default;
-		MBox(std::nullptr_t){};
+		MBox(std::nullptr_t) {};
 
 
 		MBox(const MBox& other) = delete;
@@ -279,7 +283,7 @@ namespace base {
 
 	template<class T, class... Args>
 	inline Box<T> makeBox(Args&&... args) {
-		return Box<T>(new T(std::forward<Args>(args)...));
+		return Box<T>::fromPointer(new T(std::forward<Args>(args)...));
 	}
 
 	template<class T>

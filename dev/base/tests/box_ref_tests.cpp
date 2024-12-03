@@ -79,6 +79,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(cppSanityCheck);
 		TESTER_ADD_TEST(testBoxRef);
+		TESTER_ADD_TEST(testBoxFromPtr);
 		TESTER_ADD_TEST(defaultMembersTest);
 		TESTER_ADD_TEST(testMBoxMRef);
 	}
@@ -241,6 +242,16 @@ private:
 			ASSERT_EQUAL(c.ref(), d_ref);
 			ASSERT_EQUAL(d.ref(), c_ref);
 		}
+	}
+
+	void testBoxFromPtr() {
+		auto a = makeBox<int>(7);
+		ASSERT_EQUAL(7, *a);
+
+		int* ptr = new int(42);
+		ASSERT_EQUAL(42, *ptr);
+		auto b = Box<int>::fromPointer(ptr);
+		ASSERT_EQUAL(42, *b);
 	}
 
 	void defaultMembersTest() {
