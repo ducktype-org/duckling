@@ -1,9 +1,8 @@
-#include "elements.hpp"
+#include "../elements.hpp"
 
 #include <cmath>
 #include <query_framework/query_impl.hpp>
 #include <base/variant.hpp>
-#include "../scopes/scopes.hpp"
 #include <base/unique_pointer.hpp>
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
@@ -24,7 +23,7 @@
 #include <typesystem/higher/type_info.hpp>
 #include <typesystem/higher/types.hpp>
 #include <typesystem/higher/value_category.hpp>
-#include "visitors.hpp"
+#include "../visitors.hpp"
 
 namespace compiler::helios::code {
 	namespace {
@@ -112,21 +111,21 @@ namespace compiler::helios::code {
 #define EXPR_VISITOR(type) \
 	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
 
-	STMT_VISITOR(ReturnStmt);
-	STMT_VISITOR(VoidReturnStmt);
-	STMT_VISITOR(ExprStmt);
-	STMT_VISITOR(IfStmt);
-	STMT_VISITOR(VariableStmt);
+	STMT_VISITOR(ReturnStmt)
+	STMT_VISITOR(VoidReturnStmt)
+	STMT_VISITOR(ExprStmt)
+	STMT_VISITOR(IfStmt)
+	STMT_VISITOR(VariableStmt)
 
-	EXPR_VISITOR(LiteralValueExpr);
-	EXPR_VISITOR(IdentifierExpr);
-	EXPR_VISITOR(BinaryOperatorExpr);
-	EXPR_VISITOR(UnaryOperatorExpr);
-	EXPR_VISITOR(TupleConstructorExpr);
-	EXPR_VISITOR(VariantConstructorExpr);
-	EXPR_VISITOR(ParenthesisExpr);
-	EXPR_VISITOR(KeywordExpr);
-	EXPR_VISITOR(LinkedIdentifierExpr);
+	EXPR_VISITOR(LiteralValueExpr)
+	EXPR_VISITOR(IdentifierExpr)
+	EXPR_VISITOR(BinaryOperatorExpr)
+	EXPR_VISITOR(UnaryOperatorExpr)
+	EXPR_VISITOR(TupleConstructorExpr)
+	EXPR_VISITOR(VariantConstructorExpr)
+	EXPR_VISITOR(ParenthesisExpr)
+	EXPR_VISITOR(KeywordExpr)
+	EXPR_VISITOR(LinkedIdentifierExpr)
 
 	constexpr usize INDENT_SIZE = 4;
 
