@@ -54,6 +54,10 @@ jobs:
         run: exit 1
 
   duck-linter:
+    if: github.event.pull_request.draft == false
+
+    runs-on: ubuntu-24.04
+    steps:
       - uses: actions/checkout@v4
 
       - name: Run duck linter
