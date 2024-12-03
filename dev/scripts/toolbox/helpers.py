@@ -109,7 +109,7 @@ def get_llvm_strings(version, os, arch) -> tuple[str, str, str, str]:
                 f"This configuration is not supported: {version=}, {arch=} {os=}. Visit: https://github.com/llvm/llvm-project/releases/"
             )
 
-        if arch == "x86_64":
+        if arch == "X64":
             name = f"clang+llvm-{version}-x86_64-linux-gnu-ubuntu-18.04"
         else:
             name = f"clang+llvm-{version}-aarch64-linux-gnu"
