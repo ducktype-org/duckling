@@ -1,4 +1,6 @@
 #include "../elements.hpp"
+#include "stmt.hpp"
+#include "expr.hpp"
 
 #include <cmath>
 #include <query_framework/query_impl.hpp>
