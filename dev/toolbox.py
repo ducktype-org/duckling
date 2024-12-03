@@ -458,14 +458,18 @@ def linter(*args, **kwargs):
     default="origin/main",
 )
 @click.option(
-    "--skip-correct",
+    "--verbose",
     is_flag=True,
     default=False,
-    help="Skips logging on files without errors.",
+    help="Also shows checks files that didn't had any errors.",
 )
 def duck_linter(*args, **kwargs):
     """Check for violations of
     some of the C++ coding guidelines for Duckling project.
+    Current checks:
+    * relative import check
+
+    For details see dev-guides.
     """
     passed = duck_linter_impl(*args, **kwargs)
     if not passed:

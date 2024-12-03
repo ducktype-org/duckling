@@ -13,7 +13,6 @@ Guidelines related to the source code.
 
     *
 
-
 .. admonition:: TODO
 
     More / full guidelines.

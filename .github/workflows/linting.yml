@@ -53,10 +53,12 @@ jobs:
         if: steps.linter.outputs.checks-failed > 0
         run: exit 1
 
+  duck-linter:
+      - uses: actions/checkout@v4
 
       - name: Run duck linter
         run: |
          git fetch origin main
          cd dev
-         python3 toolbox.py duck-linter --branch origin/main --skip-correct 
+         python3 toolbox.py duck-linter --branch origin/main 
         shell: bash

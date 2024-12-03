@@ -27,7 +27,7 @@ class SourceFile:
 			if not import_path.exists():
 				self.errors.append(f"Relative import `{imp}` does not exist.")
 
-	def runAllChecks(self, skip_correct):
+	def runAllChecks(self, verbose):
 		""" Returns True if all checks passed, False otherwise"""
 
 		self.relativeImportChecks()
@@ -39,7 +39,7 @@ class SourceFile:
 			log_new_line()
 			return False
 		else:
-			if not skip_correct:
+			if verbose:
 				log_info(f"{self.path}: OK")
 				log_new_line()
 			return True
@@ -63,12 +63,12 @@ def get_source_files(all, relative_to) -> List[SourceFile]:
 	return source_files
 
 
-def duck_linter_impl(all, branch, skip_correct):
+def duck_linter_impl(all, branch, verbose):
 	passed_all = True
 	
 	file = get_source_files(all, branch)
 	for f in file:
-		passed = f.runAllChecks(skip_correct)
+		passed = f.runAllChecks(verbose)
 		if not passed:
 			passed_all = False
 
