@@ -10,7 +10,7 @@ from scripts.toolbox.helpers import (
 	log_new_line
 )
 
-RELATIVE_IMPORT_REGEX = re.compile(r'#include "(.*?)"')
+_RELATIVE_IMPORT_REGEX = re.compile(r'#include "(.*?)"')
 
 class SourceFile:
 	def __init__(self, path: str):
@@ -21,7 +21,7 @@ class SourceFile:
 			self.content = file.read()
 
 	def relativeImportChecks(self):
-		imports = re.findall(RELATIVE_IMPORT_REGEX, self.content)
+		imports = re.findall(_RELATIVE_IMPORT_REGEX, self.content)
 		for imp in imports:
 			import_path = self.dir / imp
 			if not import_path.exists():
