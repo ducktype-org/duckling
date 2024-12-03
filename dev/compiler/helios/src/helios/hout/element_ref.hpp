@@ -1,8 +1,8 @@
 #pragma once
 
-#include <base/unique_pointer.hpp>
+#include <base/box.hpp>
 
 namespace compiler::helios::code {
 	template<typename T>
-	using ElementRef = base::unique_ptr<T>;
+	using ElementRef = base::Box<T>;
 }
