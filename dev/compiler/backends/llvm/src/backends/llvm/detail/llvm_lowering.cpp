@@ -1,5 +1,7 @@
 
 
+#include "base/exceptions.hpp"
+#include "typesystem/lower/type_layout.hpp"
 #include <llvm_helpers/llvm_helpers.hpp>
 
 LLVM_INCLUDE_BEGIN()
@@ -58,6 +60,28 @@ namespace compiler::backend_llvm {
 	auto i64Type(llvm::LLVMContext& context) { return llvm::Type::getInt64Ty(context); }
 
 	auto i32Type(llvm::LLVMContext& context) { return llvm::Type::getInt32Ty(context); }
+
+	auto typeFromLayout(llvm::LLVMContext& context, tsl::TypeLayout& layout) -> llvm::Type * {
+		variant_match(layout()) {
+			variant_case_novalue(tsl::IntegralTypeLayout) {
+				return llvm::Type::getIntNTy(context, static_cast<usize>(layout.getSize()));
+			}
+			variant_case_novalue(tsl::FloatTypeLayout) {
+				switch (static_cast<usize>(layout.getSize())) {
+					case 32:
+						return llvm::Type::getFloatTy(context);
+					case 64:
+						return llvm::Type::getDoubleTy(context);
+					default:
+						CORE_PANIC("Float size different than 32 or 64 not implemented yet.");
+				}
+			}
+			variant_default {
+				CORE_PANIC("Type not handled yet.");
+			}
+		}
+		CORE_UNREACHABLE();
+	}
 
 	auto voidFunType(llvm::LLVMContext& context) {
 		return llvm::FunctionType::get(voidType(context), {}, false);
@@ -132,7 +156,8 @@ namespace compiler::backend_llvm {
 			for (auto& var: lir_function->local_list) {
 				// @TODO: add llvm types:
 				auto reg = locals_builder.CreateAlloca(
-					i64Type(context), nullptr, llvmLocalName(var.ref())
+					typeFromLayout(context, var->layout),
+					 nullptr, llvmLocalName(var.ref())
 				);
 				local_register_map.put(var.ref(), reg);
 			}

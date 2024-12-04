@@ -1,5 +1,6 @@
 fun main() = {
 	var a: i32 = 23;
+	var b: bool = 0;
 	#if (0) {
 	#	var b: i32 = 7;
 	#}
