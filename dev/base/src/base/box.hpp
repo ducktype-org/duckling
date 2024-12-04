@@ -55,11 +55,7 @@ namespace base {
 		 * For a regular construction use `makeBox` instead.
 		 * It is not a constructor in order to make this call more explicit.
 		 */
-		static Box fromPointer(T* ptr) noexcept {
-			Box&& box = Box(ptr);
-			box.assertNotNull();
-			return box;
-		}
+		static Box fromPointer(T* ptr) noexcept { return Box(ptr); }
 
 		Box(const Box& other) = delete;
 
@@ -156,7 +152,7 @@ namespace base {
 
 	public:
 		MBox() = default;
-		MBox(std::nullptr_t) {};
+		MBox(std::nullptr_t){};
 
 
 		MBox(const MBox& other) = delete;
