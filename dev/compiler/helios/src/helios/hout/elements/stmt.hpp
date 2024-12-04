@@ -1,8 +1,9 @@
 #pragma once
 
-#include "code_block.hpp"
 #include "expr.hpp"
 #include "../../scope_symbol_id.hpp"
+
+#include <vector>
 
 #include <base/ints.hpp>
 #include <base/box.hpp>
@@ -23,6 +24,15 @@ namespace compiler::helios::code {
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
 
 		virtual void acceptVisitor(HoutStmtVisitor&) const = 0;
+	};
+
+	/**
+	 * @brief A block of HOUT statements
+	 */
+	struct CodeBlock final {
+		ScopeID lifetime_scope;
+		// @TODO: Make sure that this template instantiation with incomplete type Stmt is not UB.
+		std::vector<base::Box<Stmt>> statements;
 	};
 
 	/***********************\
