@@ -7,11 +7,13 @@
 #include <base/box.hpp>
 
 namespace compiler::helios::code {
+	struct Stmt;
+
 	/**
 	 * @brief A block of HOUT statements
 	 */
 	struct CodeBlock final {
-		ScopeID                             lifetime_scope;
-		std::vector<base::Box<struct Stmt>> statements;
+		ScopeID                      lifetime_scope;
+		std::vector<base::Box<Stmt>> statements;
 	};
 }

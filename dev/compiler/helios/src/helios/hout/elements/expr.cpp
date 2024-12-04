@@ -1,3 +1,9 @@
+/**
+ * @file expr.cpp
+ * @brief Implementation of methods in the Expr hierarchy, except for
+ * Expr::fromPST which is in expr_fromPST.cpp due to complexity arising from visitors.
+ */
+
 #include "expr.hpp"
 #include "../visitors.hpp"
 

@@ -19,7 +19,7 @@ namespace compiler::helios {
 		static auto store(QKey, PResult res, query::ACD) -> QResult { return res; }
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
 
 	base::HashT KeyOf_QueryHoutOfExpr::customPerfectHash() const {
 		auto hash_1 = this->expr->getID().asInt();
