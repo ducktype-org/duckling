@@ -3,15 +3,10 @@
 #include "../services.hpp"
 #include <code_data/instruction.hpp>
 #include <code_data/code.hpp>
-#include "kill_core_exception.hpp"
-#include "services/executor_f8/op_case.hpp"
 
-#include <code_data/code.hpp>
 #include <api/data/request.hpp>
 #include <api/data/status.hpp>
 
-#include <iostream>
-#include <shared_mutex>
 #include <mutex>
 #include <condition_variable>
 #include <atomic>

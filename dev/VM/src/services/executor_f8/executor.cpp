@@ -6,6 +6,7 @@
 #include <services_data/type_metadata/type.hpp>
 #include <supervisor/vcpu.hpp>
 #include "op_case.hpp"
+#include <services/executor_f8/kill_core_exception.hpp>
 #include "executor.hpp"
 
 #include <iostream>
