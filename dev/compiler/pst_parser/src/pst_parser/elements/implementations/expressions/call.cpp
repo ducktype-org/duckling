@@ -9,7 +9,7 @@ namespace pst::expr {
 		        && (state[0].isBracketGroup(lexer::Token::Round)
 		            || state[0].isBracketGroup(lexer::Token::Square)))) {}  // Error
 
-		auto out = box<Call>(state.getPosition());
+		auto out = makeBox<Call>(state.getPosition());
 
 		state.parse(out).goDown();
 		// This is a little wrong but calls will be changed to fix that

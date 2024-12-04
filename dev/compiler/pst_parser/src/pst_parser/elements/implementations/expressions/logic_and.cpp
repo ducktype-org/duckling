@@ -19,7 +19,7 @@ namespace pst::expr {
 		}
 		if (!and_found) return Lower::parse(state, length);
 
-		auto out = box<LogicAnd>(pos);
+		auto out = makeBox<LogicAnd>(pos);
 
 		state.parse(out).with(&out->left, Lower::parse, +and_fwd);
 		state.parse(out).one(Keyword::Or);

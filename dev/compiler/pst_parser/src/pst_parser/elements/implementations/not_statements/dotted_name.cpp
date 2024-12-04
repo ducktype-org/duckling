@@ -12,7 +12,7 @@ namespace pst {
 
 	MBox<DottedName> DottedName::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = box<DottedName>(position);
+		auto out      = makeBox<DottedName>(position);
 		do {
 			bool            is_id = state[0].isIdentifier();
 			tpc::Identifier next;

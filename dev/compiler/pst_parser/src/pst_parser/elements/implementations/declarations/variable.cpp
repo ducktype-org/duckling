@@ -19,7 +19,7 @@ namespace pst {
 
 	MBox<Variable> Variable::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = box<Variable>(position);
+		auto out      = makeBox<Variable>(position);
 
 		const bool is_var = state[0].is(Keyword::Var);
 		const bool is_let = state[0].is(Keyword::Let);

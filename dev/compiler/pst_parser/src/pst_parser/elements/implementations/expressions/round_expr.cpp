@@ -7,7 +7,7 @@ namespace pst::expr {
 
 		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Round))) {}  // Error
 
-		auto out = box<RoundExpr>(state.getPosition());
+		auto out = makeBox<RoundExpr>(state.getPosition());
 
 		state.parse(out).goDown();
 		state.parse(out).with(&out->expr, Comma::parse, (i64) state.ctokens().size());
