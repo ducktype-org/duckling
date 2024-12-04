@@ -1,6 +1,5 @@
 #include <base/optional.hpp>
 #include <helios/helios_errors.hpp>
-#include <helios/scope_symbol_id.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
 #include <helios/queries.hpp>
