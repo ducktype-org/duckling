@@ -21,6 +21,7 @@ class PSTBuilderTest: public tester::TestSuite {
 		"snippets/namespace.duck", "snippets/params_err.duck",
 		"snippets/class.duck",     "snippets/using_err.duck",
 		"snippets/using.duck",     "snippets/while.duck",
+		"snippets/expressions.duck",
 	};
 
 	template<typename Element, bool good = true>
