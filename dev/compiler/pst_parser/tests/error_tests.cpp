@@ -186,6 +186,12 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::While, true> simpleWhile{ "while (x < 5) {}" };
 
+	Example<pst::ExprElement, true, pst::UniversalExpr> simpleTernary{ "if 5 then x else y" };
+	Example<pst::ExprElement, false, pst::UniversalExpr> bad1Ternary{ "if if 5 then x else y" };
+	Example<pst::ExprElement, false, pst::UniversalExpr> bad2Ternary{ "+ if 5 then x else y" };
+	Example<pst::ExprElement, false, pst::UniversalExpr> bad3Ternary{ "if 5 else y" };
+	Example<pst::ExprElement, false, pst::UniversalExpr> bad4Ternary{ "5 then x else y" };
+
 	void exampleTests() {
 		for (auto e: examples) assertTrue((*e)(), e->message());
 	}
