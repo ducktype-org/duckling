@@ -199,6 +199,12 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::ExprElement, true, pst::UniversalExpr> simpleBlockExpr{ "x + {return 2;}" };
 
+	Example<pst::ExprElement, true, pst::UniversalExpr> simpleRoundExpr{ "x + (x, y)" };
+
+	Example<pst::ExprElement, true, pst::UniversalExpr> simpleChainExpr{ "(x * t).y.z(4)[3]" };
+
+	Example<pst::ExprElement, true, pst::UniversalExpr> simpleTemplateExpr{ "(x * t).y:{x, y}.z:{}(4)[3]" };
+
 	void exampleTests() {
 		for (auto e: examples) assertTrue((*e)(), e->message());
 	}

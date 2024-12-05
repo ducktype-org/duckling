@@ -1,11 +1,31 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	class BadAccessError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected single access expression";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		BadAccessError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	MBox<ExprElement> Access::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Access Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
-		if (length != 2 && length != 4) {}  // Error
+		if (length != 2 && length != 4) {
+			state.log(base::make_unique<BadAccessError>(dia::SourcePosition(
+				state.getPosition(), state.getPosition(length - 1).getEnd()
+			)));
+		} 
 
 		auto out = makeBox<Access>(state.getPosition());
 

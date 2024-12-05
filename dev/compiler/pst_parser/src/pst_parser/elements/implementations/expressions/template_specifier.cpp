@@ -1,11 +1,31 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	class BadTemplateError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected single template specialization expression";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		BadTemplateError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	MBox<ExprElement> TemplateSpecifier::parse(LangParserState& state, i64 length) {
 		// std::cerr << "Parsing Template Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
-		if (length != 2) {}  // Error
+		if (length != 2) {
+			state.log(base::make_unique<BadTemplateError>(dia::SourcePosition(
+				state.getPosition(), state.getPosition(length - 1).getEnd()
+			)));
+		}
 
 		auto out = makeBox<TemplateSpecifier>(state.getPosition());
 		state.parse(out).one(NamedOperator::Colon);
