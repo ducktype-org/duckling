@@ -197,6 +197,8 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprElement, true, pst::UniversalExpr> simpleOperators{ "++ ++ 3 + 5 ++" };
 	Example<pst::ExprElement, false, pst::UniversalExpr> badOperators{ "++ ++ ++ ++" };
 
+	Example<pst::ExprElement, true, pst::UniversalExpr> simpleBlockExpr{ "x + {return 2;}" };
+
 	void exampleTests() {
 		for (auto e: examples) assertTrue((*e)(), e->message());
 	}
