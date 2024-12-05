@@ -12,36 +12,33 @@ namespace hashing {
 		h(t);
 	}
 
-	template<hash_algorithm HashAlgorithm, std::floating_point F>
-	void add_to_hash(HashAlgorithm& h, F f) {
-		if (f == 0.0f) f = 0.0f;
-		h(&f, sizeof(f));
-	}
+	// template<hash_algorithm HashAlgorithm, std::floating_point F>
+	// void add_to_hash(HashAlgorithm& h, F f) {
+	// 	if (f == 0.0f) f = 0.0f;
+	// 	h(&f, sizeof(f));
+	// }
 
 	namespace detail {
-
 		static constexpr bool AllowForStdHash = true;
+
+		auto hash_decompose(const auto&);
 
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void apply_hash(HashAlgorithm& h, const T& t) {
+
 			if constexpr (requires { add_to_hash(h, t); }) {
 				add_to_hash(h, t);
-			} else if constexpr (requires { h(t); }) {
-				h(t);
 			} else if constexpr (requires { hash_decompose(t); }) {
-				std::apply([&](auto&&... args) { (add_to_hash(h, args), ...); }, hash_decompose(t));
-			} else if constexpr (AllowForStdHash && requires { std::hash<T>{}(t); }) {
+				std::apply([&](auto&&... args) { (apply_hash(h, args), ...); }, hash_decompose(t));
+			} else if constexpr (detail::AllowForStdHash && requires { std::hash<T>{}(t); }) {
 				h(std::hash<T>{}(t));
 			} else {
 				static_assert(
-					false,
-					"Please provide an 'add_to_hash' or 'hash_decompose' overload for this type"
+					false, "Please provide an 'add_to_hash' or 'hash_decompose' overload for this type"
 				);
 			}
 		}
-
 	}  // namespace detail
-
 	template<hash_algorithm HashAlgorithm = fnv1a_64, bool AppendTypeHashCode = true>
 	class hash {
 	public:
@@ -56,6 +53,27 @@ namespace hashing {
 
 			return static_cast<result_type>(h);
 		}
+	};
+
+	template<hash_algorithm HashAlgorithm = fnv1a_64, bool AppendTypeHashCode = true>
+	class stateful_hash {
+		HashAlgorithm h;
+
+	public:
+		using result_type = typename HashAlgorithm::result_type;
+
+		constexpr stateful_hash() = default;
+
+		template<typename T>
+		constexpr result_type operator()(const T& t) noexcept {
+			detail::apply_hash(h, t);
+
+			if constexpr (AppendTypeHashCode) h(type_hash_code<T>);
+
+			return static_cast<result_type>(h);
+		}
+
+		constexpr explicit operator result_type() noexcept { return static_cast<result_type>(h); }
 	};
 
 

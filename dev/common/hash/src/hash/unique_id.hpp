@@ -2,8 +2,12 @@
 
 namespace hashing {
 
-	namespace detail {
+	struct type_hash_code_t {
+			u32 value{};
 
+			constexpr operator u32() const noexcept { return value; }
+		};
+	namespace detail {
 
 		class fnv1a_32_consteval {
 			static constexpr u32 offset_basis = 2'166'136'261u;
@@ -27,20 +31,20 @@ namespace hashing {
 		};
 
 		struct str {
-			u32 hash_value;
+			type_hash_code_t hash_value;
 
 			template<usize N>
 			consteval str(const char (&arr)[N]) {
 				fnv1a_32_consteval h;
 				h.update_hash(arr);
-				hash_value = static_cast<u32>(h);
+				hash_value.value = static_cast<u32>(h);
 			}
 
-			consteval operator u32() const { return hash_value; }
+			consteval operator type_hash_code_t() const { return hash_value; }
 		};
 
 		template<typename T>
-		consteval str unique_name() {
+		consteval str unique_string() {
 #ifdef _MSC_VER
 			return str{ __FUNCDNAME__ };
 #else
@@ -50,12 +54,12 @@ namespace hashing {
 
 		template<typename T>
 		consteval auto unique_id() {
-			return static_cast<u32>(unique_name<T>());
+			return static_cast<type_hash_code_t>(unique_string<T>());
 		}
 
 	}  // namespace detail
 
 	template<typename T>
-	constexpr u32 type_hash_code = detail::unique_id<T>();
+	constexpr type_hash_code_t type_hash_code = detail::unique_id<T>();
 
 }  // namespace hash
