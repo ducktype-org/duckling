@@ -34,9 +34,9 @@ namespace pst::expr {
 		} else if (state[0].isBracketGroup(lexer::Token::Curly)) {
 			return BlockExpr::parse(state, length);
 		} else {
-			state.log(base::make_unique<BadLiteralError>(dia::SourcePosition(
-				state.getPosition(), state.getPosition(length - 1).getEnd()
-			)));
+			state.log(base::make_unique<BadLiteralError>(
+				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
+			));
 			fastForward(state, length);
 			return nullptr;
 		}

@@ -30,9 +30,8 @@ namespace pst {
 			fastForward(state, length);
 			return false;
 		}
-		if (state[length - 1].is(lexer::Token::Type::Sentinel)) {
+		if (state[length - 1].is(lexer::Token::Type::Sentinel))
 			CORE_PANIC("Internal error too long expression\n");
-		}
 		return true;
 	}
 

@@ -22,9 +22,9 @@ namespace pst::expr {
 		if (!checkLength(state, length)) return nullptr;
 
 		if (length != 2) {
-			state.log(base::make_unique<BadTemplateError>(dia::SourcePosition(
-				state.getPosition(), state.getPosition(length - 1).getEnd()
-			)));
+			state.log(base::make_unique<BadTemplateError>(
+				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
+			));
 		}
 
 		auto out = makeBox<TemplateSpecifier>(state.getPosition());
