@@ -22,6 +22,7 @@ namespace pst::expr {
 		if (!checkLength(state, length)) return nullptr;
 
 		if (length != 2) {
+			// This should almost never happen
 			state.log(base::make_unique<BadTemplateError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
