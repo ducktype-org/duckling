@@ -42,15 +42,20 @@ namespace base {
 			if (ptr == nullptr) CORE_PANIC("Box was in null state, when non-null was required!");
 		}
 
+		explicit Box(T* ptr) noexcept: ptr{ ptr } { assertNotNull(); }
+
 	public:
 		Box()               = delete;
 		Box(std::nullptr_t) = delete;
 
 		/**
 		 * @brief Constructs a Box from a raw pointer.
-		 * @note It takes ownership of the pointer.
+		 * It takes ownership of the pointer.
+		 *
+		 * For a regular construction use `makeBox` instead.
+		 * It is not a constructor in order to make this call more explicit.
 		 */
-		explicit Box(T* ptr) noexcept: ptr{ ptr } { assertNotNull(); }
+		static Box fromPointer(T* ptr) noexcept { return Box(ptr); }
 
 		Box(const Box& other) = delete;
 
@@ -139,15 +144,16 @@ namespace base {
 			if (ptr == nullptr) CORE_PANIC("MBox was in null state, when non-null was required!");
 		}
 
-	public:
-		MBox() = default;
-		MBox(std::nullptr_t){};
-
 		/**
 		 * @brief Constructs an MBox from a raw pointer.
 		 * @note It takes ownership of the pointer.
 		 */
 		explicit MBox(T* ptr) noexcept: ptr{ ptr } {}
+
+	public:
+		MBox() = default;
+		MBox(std::nullptr_t){};
+
 
 		MBox(const MBox& other) = delete;
 
@@ -272,8 +278,8 @@ namespace base {
 	MBox(Box<U>&&) noexcept -> MBox<U>;
 
 	template<class T, class... Args>
-	inline Box<T> box(Args&&... args) {
-		return Box<T>(new T(std::forward<Args>(args)...));
+	inline Box<T> makeBox(Args&&... args) {
+		return Box<T>::fromPointer(new T(std::forward<Args>(args)...));
 	}
 
 	template<class T>
@@ -285,7 +291,7 @@ namespace base {
 
 // global namespace export:
 using base::Box;
-using base::box;
 using base::CBox;
+using base::makeBox;
 using base::MBox;
 using base::MCBox;

@@ -26,7 +26,7 @@ namespace pst::expr {
 			}
 		}
 		if (!found) return Lower::parse(state, length);
-		auto out = box<Assignment>(pos);
+		auto out = makeBox<Assignment>(pos);
 
 		state.parse(out).with(&out->variables, Lower::parse, +place);
 

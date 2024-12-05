@@ -19,7 +19,7 @@ namespace pst {
 
 	MBox<AccessBlock> AccessBlock::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = box<AccessBlock>(position, ctx);
+		auto out      = makeBox<AccessBlock>(position, ctx);
 
 		if (not access_specifiers.contains(state[0].asKeyword())) {
 			state.log(base::make_unique<NoSpecifierError>(position));

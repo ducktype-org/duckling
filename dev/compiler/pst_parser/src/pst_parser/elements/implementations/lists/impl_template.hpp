@@ -114,7 +114,7 @@ namespace pst {
 		static auto parseList(LangParserState& state) -> MBox<Self> {
 			auto position = state.getPosition();
 
-			Box<Self> out = box<Self>(position);
+			Box<Self> out = makeBox<Self>(position);
 
 			// Handle opening brackets:
 			if constexpr (BRACKETS != lexer::Token::BracketType::None) {

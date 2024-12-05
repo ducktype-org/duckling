@@ -9,7 +9,7 @@ namespace pst::expr {
 
 		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Curly))) {}  // Error
 
-		auto out = box<BlockExpr>(state.getPosition());
+		auto out = makeBox<BlockExpr>(state.getPosition());
 
 		state.parse(out).one(&out->block);
 

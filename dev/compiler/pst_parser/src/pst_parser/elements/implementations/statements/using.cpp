@@ -3,7 +3,7 @@
 namespace pst {
 	MBox<Using> Using::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = box<Using>(position);
+		auto out      = makeBox<Using>(position);
 
 		if (!assertStmtChoice<Using>(state, state[0].is(Keyword::Using))) return nullptr;
 

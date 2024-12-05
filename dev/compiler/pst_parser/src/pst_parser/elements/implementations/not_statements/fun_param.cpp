@@ -19,7 +19,7 @@ namespace pst {
 
 	MBox<FunParam> FunParam::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = box<FunParam>(position);
+		auto out      = makeBox<FunParam>(position);
 
 		state.parse(out).all(&out->name, NamedOperator::Colon);
 

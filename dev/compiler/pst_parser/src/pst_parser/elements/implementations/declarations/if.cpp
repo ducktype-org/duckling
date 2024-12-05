@@ -4,7 +4,7 @@ namespace pst {
 	MBox<If> If::parse(LangParserState& state) {
 		// @TODO: attr list
 		auto position = state.getPosition();
-		auto out      = box<If>(position);
+		auto out      = makeBox<If>(position);
 
 		if (!assertStmtChoice<If>(state, state[0].is(Keyword::If))) return nullptr;
 

@@ -7,7 +7,7 @@ namespace pst::expr {
 		// std::cerr << "Parsing IdentifierLiteral Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
-		auto out = box<KeywordLiteral>(state.getPosition());
+		auto out = makeBox<KeywordLiteral>(state.getPosition());
 
 		state.parse(out).one(&out->keyword);
 
