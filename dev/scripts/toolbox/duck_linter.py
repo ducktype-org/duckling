@@ -20,7 +20,7 @@ class SourceFile:
 		with open(path, 'r') as file:
 			self.content = file.read()
 
-	def relativeImportChecks(self):
+	def _relativeImportChecks(self):
 		imports = re.findall(_RELATIVE_IMPORT_REGEX, self.content)
 		for imp in imports:
 			import_path = self.dir / imp
@@ -30,7 +30,7 @@ class SourceFile:
 	def runAllChecks(self, verbose):
 		""" Returns True if all checks passed, False otherwise"""
 
-		self.relativeImportChecks()
+		self._relativeImportChecks()
 
 		if len(self.errors) > 0:
 			log_warning(f"{self.path}: ERRORS FOUND")
