@@ -27,6 +27,7 @@ from scripts.toolbox.internet_file import (
 )
 
 from scripts.toolbox.cpp_linter import simulate_cpp_linter
+from scripts.toolbox.duck_linter import duck_linter_impl
 
 DATA_USER = "dev"
 # @FUTURE: change this password and hide it:
@@ -441,6 +442,38 @@ def linter(*args, **kwargs):
     It compares the current branch's working tree with the most recent common ancestor shared with the 'main' branch (called the merge base).
     """
     simulate_cpp_linter(*args, **kwargs)
+
+@cli.command()
+@click.option(
+    "--all",
+    is_flag=True,
+    default=False,
+    help="Check all files, not just the ones that are modified",
+)
+@click.option(
+    "-r",
+    "--branch",
+    help="The branch relative to which the diff is created.",
+    type=str,
+    default="origin/main",
+)
+@click.option(
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Also shows checks files that didn't had any errors.",
+)
+def duck_linter(*args, **kwargs):
+    """Check for violations of
+    some of the C++ coding guidelines for Duckling project.
+    Current checks:
+    * relative import check
+
+    For details see dev-guides.
+    """
+    passed = duck_linter_impl(*args, **kwargs)
+    if not passed:
+        exit_with_error("Linting failed.")
 
 
 if __name__ == "__main__":
