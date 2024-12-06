@@ -1,6 +1,8 @@
 #pragma once
 #include <concepts>
 
+#include <base/ints.hpp>
+
 #include "unique_id.hpp"
 
 namespace hashing {
@@ -19,46 +21,39 @@ namespace hashing {
 
 	namespace detail {
 		template<typename Self, typename CheckT>
-		struct acc : public std::remove_cvref_t<Self> {
-			void check(CheckT* data, usize len) requires requires {
-				std::remove_cvref_t<Self>::update_hash(data, len);
-			}{}
+		struct acc: public std::remove_cvref_t<Self> {
+			void check(CheckT* data, usize len)
+				requires requires { std::remove_cvref_t<Self>::update_hash(data, len); } {}
 		};
 	}
 
 	template<typename T>
 	concept has_update_hash_void = requires(T t, void* data, usize len) {
-		[](void* data, usize len) requires requires {
-			detail::acc<T, void>{}.check(data, len);
-		}{}(data, len);
+		[](void* data, usize len) requires requires { detail::acc<T, void>{}.check(data, len); }
+		{}(data, len);
 	};
 
 	template<typename T>
 	concept has_update_hash_char = requires(T t, char* data, usize len) {
-		[](char* data, usize len) requires requires {
-			detail::acc<T, char>{}.check(data, len);
-		}{}(data, len);
+		[](char* data, usize len) requires requires { detail::acc<T, char>{}.check(data, len); }
+		{}(data, len);
 	};
 
 	template<typename T>
 	concept has_update_hash = has_update_hash_void<T> || has_update_hash_char<T>;
 
 	namespace detail {
-	template<typename Self>
-	struct hc_acc: public std::remove_cvref_t<Self> {
-		void check(const type_hash_code_t& hash) requires requires {
-			std::remove_cvref_t<Self>::add_hash_code(hash);
-		}{}
-	};
+		template<typename Self>
+		struct hc_acc: public std::remove_cvref_t<Self> {
+			void check(const type_hash_code_t& hash)
+				requires requires { std::remove_cvref_t<Self>::add_hash_code(hash); } {}
+		};
 	}
-	
+
 	template<typename Self, typename T>
 	constexpr bool is_hash_code_aware
 		= std::is_same_v<std::remove_cvref_t<T>, type_hash_code_t>
-		&& requires(const type_hash_code_t& hash) {
-			detail::hc_acc<Self>{}.check(hash);
-		};
-		
+	   && requires(const type_hash_code_t& hash) { detail::hc_acc<Self>{}.check(hash); };
 
 	class call_overloads {
 	public:
@@ -107,5 +102,13 @@ namespace hashing {
 		}
 	};
 
+	namespace detail {
+		template<typename HashAlgorithm, typename T>
+		concept can_hash
+			= hash_algorithm<HashAlgorithm> && requires(HashAlgorithm& h, const T& t) { h(t); };
+
+		template<typename T>
+		concept can_hash_decompose = requires(const T& t) { hash_decompose(t); };
+	}
 
 }  // namespace hashing

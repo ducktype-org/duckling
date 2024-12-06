@@ -1,12 +1,17 @@
 #pragma once
 
+#include <base/ints.hpp>
+
 namespace hashing {
 
 	struct type_hash_code_t {
-			u32 value{};
+		u32 value{};
 
-			constexpr operator u32() const noexcept { return value; }
-		};
+		constexpr auto operator<=>(const type_hash_code_t&) const = default;
+
+		constexpr operator u32() const noexcept { return value; }
+	};
+
 	namespace detail {
 
 		class fnv1a_32_consteval {
