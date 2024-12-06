@@ -1,10 +1,12 @@
 @page hash-module Hash Module
 
-The Hash module provides a `hash` template, parametrized by a hashing algorithm,
-that allows for adding multiple objects to hash.
+This module implements hashing utilities that allow to easily add hashing support to any type and
+to hash any set of objects using a hashing algorithm of choice. Module provides some ready
+algorithms and allows to add more.
 
 ## Contents:
 - hash.hpp
 - hash_utils.hpp
 - hashing_algorithms.hpp
+- hashing_algorithms.cpp
 - unique_id.hpp

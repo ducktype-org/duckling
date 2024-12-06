@@ -86,9 +86,7 @@ namespace hashing {
 
 		template<has_update_hash_void Self, std::ranges::input_range R>
 		requires std::has_unique_object_representations_v<std::ranges::range_value_t<R>>
-		constexpr auto&& operator()(this Self&& self, R&& range) noexcept(
-			noexcept(std::ranges::data(range), std::ranges::size(range))
-		) {
+		constexpr auto&& operator()(this Self&& self, R&& range) {
 			if constexpr (std::ranges::contiguous_range<R>) {
 				std::forward<Self>(self).update_hash(
 					std::ranges::data(range),

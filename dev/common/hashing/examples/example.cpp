@@ -58,7 +58,7 @@ int main() {
 	std::cout << h << '\n';  // some 32-bit number
 
 	// by default the type's hash-code is appended to the hashed bytes so it's possible to
-	// differentiate between hashes of pair(1, 2) and int[2]{1, 2}, but if we want to this can be
+	// differentiate between hashes of pair(1, 2) and array<int, 2>{1, 2}, but if we want to this can be
 	// turned off
 	struct type3 {
 		int x{ 1 };
@@ -66,7 +66,7 @@ int main() {
 	};
 
 	struct type4 {
-		int a[2]{ 1, 2 };
+		std::array<int, 2> a{ 1, 2 };
 	};
 
 	std::cout << hashing::hash{}(type3{}) << ' ' << hashing::hash{}(type4{})

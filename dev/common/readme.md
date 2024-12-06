@@ -72,5 +72,5 @@ Json module
 \subpage hashing-module
 
   This module implements hashing utilities that allow to easily add hashing support to any type and
-  then to hash any set of objects using a hashing algorithm of choice. Module provides some ready
+  to hash any set of objects using a hashing algorithm of choice. Module provides some ready
   algorithms and allows to add more.
