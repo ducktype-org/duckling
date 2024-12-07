@@ -9,17 +9,20 @@ namespace hashing {
 
 	template<hash_algorithm HashAlgorithm, typename T>
 	constexpr void add_to_hash(HashAlgorithm& h, const T& t)
-		requires detail::can_hash<HashAlgorithm, T> || detail::can_hash_decompose<T>
-	          || std::is_floating_point_v<T> {
-		if constexpr (detail::can_hash<HashAlgorithm, T>) {
+		requires detail::can_hash_directly<HashAlgorithm, T> || detail::can_hash_decompose<T>
+	          || std::is_floating_point_v<T> || detail::can_stdhash<T> {
+		if constexpr (detail::can_hash_directly<HashAlgorithm, T>) {
 			h(t);
 		} else if constexpr (detail::can_hash_decompose<T>) {
 			std::apply([&](auto&&... args) { (add_to_hash(h, args), ...); }, hash_decompose(t));
 		} else if constexpr (std::is_floating_point_v<T>) {
 			auto t_ = auto{ t };
-			if (t_ == 0.0f) t_ = 0.0f;
+			if (t_ == 0) t_ = 0;
 			std::array<char, sizeof(t_)> arr = std::bit_cast<std::array<char, sizeof(t_)>, T>(t_);
 			h(arr.data(), arr.size());
+		} else if constexpr (detail::can_stdhash<T>) {
+			using std::hash;
+			add_to_hash(h, hash<T>{}(t));
 		} else {
 			static_assert(false, "Please provide a specialization for this type");
 		}
@@ -28,16 +31,22 @@ namespace hashing {
 	namespace detail {
 		static constexpr bool AllowForStdHash = true;
 
-		auto hash_decompose(const auto&);
-
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void apply_hash(HashAlgorithm& h, const T& t) {
-			if constexpr (requires { add_to_hash(h, t); }) {
+			if constexpr (detail::can_add_to_hash<HashAlgorithm, T>) {
 				add_to_hash(h, t);
-			} else if constexpr (requires { hash_decompose(t); }) {
-				apply_hash(h, t);
-			} else if constexpr (detail::AllowForStdHash && requires { std::hash<T>{}(t); }) {
-				h(std::hash<T>{}(t));
+			} else if constexpr (detail::can_hash_directly<HashAlgorithm, T>) {
+				static_assert(
+					false, "can_add_to_hash: should never happen as add_to_hash should exist"
+				);
+				h(t);
+			} else if constexpr (detail::can_hash_decompose<T>) {
+				static_assert(false, "apply: shoult never happen as add_to_hash should exist");
+				std::apply([&](auto&&... args) { (apply_hash(h, args), ...); }, hash_decompose(t));
+			} else if constexpr (detail::AllowForStdHash && detail::can_stdhash<T>) {
+				static_assert(false, "stdHash: should never happen as add_to_hash should exist");
+				using std::hash;
+				h(hash<T>{}(t));
 			} else {
 				static_assert(
 					false,

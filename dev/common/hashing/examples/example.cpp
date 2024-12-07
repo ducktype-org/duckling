@@ -44,41 +44,40 @@ struct type2 {
 };
 
 int main() {
+	using namespace hashing;
+
 	my_map::unordered_map<int, int> m;
 	m[1] = 2;
 	m[2] = 3;
 	std::cout << m[1] << ' ' << m[2] << '\n';  // 2 3
 
 	// by default fnva_64 algorithm is used
-	std::cout << hashing::hash{}(type1{}) << '\n';  // some 64-bit number
+	std::cout << hash{}(type1{}) << '\n';  // some 64-bit number
 
 	// but we can also specify the algorithm, it's also possible to get the hash value at compile
 	// time
-	constexpr auto h = hashing::hash<hashing::fnv1a_32>{}(type2{});
+	constexpr auto h = hash<fnv1a_32>{}(type2{});
 	std::cout << h << '\n';  // some 32-bit number
 
 	// by default the type's hash-code is appended to the hashed bytes so it's possible to
-	// differentiate between hashes of pair(1, 2) and array<int, 2>{1, 2}, but if we want to this can be
-	// turned off
+	// differentiate between hashes of pair(1, 2) and array<int, 2>{1, 2}, but if we want to this
+	// can be turned off
 	struct type3 {
-		int x{ 1 };
-		int y{ 2 };
+		int x{ 1'234 }, y{ 9'876 };
 	};
 
 	struct type4 {
-		std::array<int, 2> a{ 1, 2 };
+		std::array<int, 2> a{ 1'234, 9'876 };
 	};
 
-	std::cout << hashing::hash{}(type3{}) << ' ' << hashing::hash{}(type4{})
-			  << '\n';  // different numbers
-	std::cout << "the same hashes:\n\t" << hashing::hash<hashing::fnv1a_32, false>{}(type3{})
-			  << "\n\t" << hashing::hash<hashing::fnv1a_32, false>{}(type4{})
-			  << '\n';  // same number
+	std::cout << "different hashes:\n\t" << hash{}(type3{}) << "\n\t" << hash{}(type4{}) << '\n';
+	std::cout << "the same hashes:\n\t" << hash<fnv1a_64, false>{}(type3{}) << "\n\t"
+			  << hash<fnv1a_64, false>{}(type4{}) << '\n';
 
 	// we can also visualize the bytes that were hashed
 	std::cout << "notice 4 bytes starting from yellow ones, this is the type's hash-code:\n"
-			  << hashing::hash<hashing::debug_hash>{}(type3{}) << '\n'
-			  << hashing::hash<hashing::debug_hash>{}(type4{}) << '\n';
+			  << hash<debug_hash>{}(type3{}) << '\n'
+			  << hash<debug_hash>{}(type4{}) << '\n';
 
 	std::cout << "here the type's hash-code is not appended:\n"
 			  << hashing::hash<hashing::debug_hash, false>{}(type3{}) << '\n'
@@ -97,6 +96,7 @@ int main() {
 			  << '\n';
 
 	// module also provides unique ids for types in compile time
+	// note that those can change between compilations
 	std::cout << static_cast<u32>(hashing::type_hash_code<int>) << ' '
 			  << static_cast<u32>(hashing::type_hash_code<type1>) << '\n';
 }
