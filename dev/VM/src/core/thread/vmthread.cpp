@@ -4,10 +4,10 @@
 #include <code_data/code.hpp>
 #include <cstring>
 #include <services_data/type_metadata/type.hpp>
-#include <supervisor/vcpu.hpp>
+#include <core/supervisor/supervisor.hpp>
+#include "core/kill_process_exception.hpp"
 #include "op_case.hpp"
-#include <services/executor_f8/kill_core_exception.hpp>
-#include "executor.hpp"
+#include "vmthread.hpp"
 
 #include <iostream>
 
@@ -16,28 +16,38 @@
 #include <utility>
 
 namespace vm {
+	VMThread::VMThread(VMProcess& process):
+		  frame_stack(FRAME_COUNT, internalInitFrame()),
+		  local_stack_reserved(STACK_LENGTH),
+		  runtime_data(frame_stack, local_stack_reserved),
+		  process(process),
+		  process_memory(process.getMemory()),
+		  process_types(process.getTypeMetadata()) {
+		// @TODO: not loaded status
+		setStatus(api::NotStarted{});
+	}
 
-	void Executor::handleExecutionStrategy() {
+	void VMThread::handleExecutionStrategy() {
 		std::unique_lock lock(external_api_mutex);
 		if (execution_strategy == ExecutionStrategy::Paused) setStatus(api::Paused{});
 		pause_cv.wait(lock, [this] { return execution_strategy != ExecutionStrategy::Paused; });
 		setStatus(api::Running{});
-		if (execution_strategy == ExecutionStrategy::Stoped) throw KillCoreException{};
+		if (execution_strategy == ExecutionStrategy::Stoped) throw KillProcessException{};
 		if (execution_strategy == ExecutionStrategy::StepByStep)
 			execution_strategy = ExecutionStrategy::Paused;
 	}
 
 	[[gnu::always_inline]]
-	inline void Executor::handleExecutionStrategyIfNeeded() {
+	inline void VMThread::handleExecutionStrategyIfNeeded() {
 		if (is_running) return;
 		handleExecutionStrategy();
 	}
 
-	Frame Executor::internalInitFrame() {
+	Frame VMThread::internalInitFrame() {
 		return Frame{
 			.instr       = nullptr,
 			.local_stack = nullptr,
-			.regs        = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = memory.nullPtr() },
+			.regs        = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = process_memory.nullPtr() },
 			.flags       = FlagData{ .flag = false },
 			.ret_val     = 0,
 			.next_args   = nullptr,
@@ -49,11 +59,11 @@ namespace vm {
 	}
 
 	[[gnu::always_inline]]
-	inline base::ModRawView Executor::internalDerefPointer(Pointer pointer) {
+	inline base::ModRawView VMThread::internalDerefPointer(Pointer pointer) {
 		auto block_id = pointer.getBlock();
 		auto offset   = pointer.getOffset();
 
-		auto block = memory.getBlock(block_id);
+		auto block = process_memory.getBlock(block_id);
 		auto type  = block->innerType();
 		auto view  = block->deref(type, offset);
 
@@ -93,7 +103,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::op_exit(OPFUN_ARGS) { IF_TC(return;) }
 
 	RETURN_TYPE OpFuns::op_handle_strategy(OPFUN_ARGS) {
-		{ executor.handleExecutionStrategy(); }
+		{ thread.handleExecutionStrategy(); }
 		OPFUN_CONT(1);
 	}
 
@@ -273,7 +283,7 @@ namespace vm {
 			// should be pointer to the next frame, `local_stack` should be pointer to the local
 			// stack of the new function. Old values of `instr` nad `local_stack` should be saved on
 			// the frame of the caller.
-			auto& runtime_data = executor.runtime_data;
+			auto& runtime_data = thread.runtime_data;
 
 			// Save current registers and flow.
 			frame->instr       = instr + 1;
@@ -287,15 +297,15 @@ namespace vm {
 			frame->args = prev_frame->next_args;
 
 			// Update values passed as arguments.
-			instr = executor.executing_code->functions[function_id].bc.data();
+			instr = thread.executing_code->functions[function_id].bc.data();
 
-			u64 local_stack_size = executor.executing_code->functions[function_id].stack_size;
+			u64 local_stack_size = thread.executing_code->functions[function_id].stack_size;
 			local_stack          = runtime_data.local_stack_top;
 			runtime_data.local_stack_top += local_stack_size;
 
 			frame->next_args = runtime_data.local_stack_top;
 			runtime_data.local_stack_top
-				+= executor.executing_code->functions[function_id].next_arg_size;
+				+= thread.executing_code->functions[function_id].next_arg_size;
 
 			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
 				CORE_PANIC("VM stack overflow.");
@@ -313,7 +323,7 @@ namespace vm {
 		{
 			auto function_id = instr->arg0;
 
-			instr = executor.executing_code->functions[function_id].bc.data();
+			instr = thread.executing_code->functions[function_id].bc.data();
 
 			swap(frame->args, frame->next_args);
 		}
@@ -334,8 +344,8 @@ namespace vm {
 
 			frame--;
 
-			frame->regs.p64_reg_0                 = ret_val;
-			executor.runtime_data.local_stack_top = local_stack;
+			frame->regs.p64_reg_0               = ret_val;
+			thread.runtime_data.local_stack_top = local_stack;
 
 			// Load previous frame
 			instr       = frame->instr;  // This is already a pointer to next instr
@@ -350,8 +360,8 @@ namespace vm {
 			// For explanation go to op_ret_l64.
 			frame--;
 
-			frame->regs.p64_reg_0                 = instr->arg0;
-			executor.runtime_data.local_stack_top = local_stack;
+			frame->regs.p64_reg_0               = instr->arg0;
+			thread.runtime_data.local_stack_top = local_stack;
 
 			// Load previous frame
 			instr       = frame->instr;  // This is already a pointer to next instr
@@ -363,11 +373,11 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_init_type(OPFUN_ARGS) {
 		{
-			auto             type      = executor.types.getType(vm::TypeID(instr->arg0));
+			auto             type      = thread.process_types.getType(vm::TypeID(instr->arg0));
 			auto             type_size = type->getSize();
 			base::ModRawView data(&local_stack[frame->local_stack_head], type_size);
 			frame->local_stack_head += type_size;
-			auto block = executor.stack_allocator.makeTypeBlock(type, data);
+			auto block = thread.stack_allocator.makeTypeBlock(type, data);
 			frame->block_id_stack.push_back(block);
 		}
 		OPFUN_CONT(1);
@@ -376,10 +386,10 @@ namespace vm {
 	RETURN_TYPE OpFuns::op_deinit(OPFUN_ARGS) {
 		{
 			auto block_id  = frame->block_id_stack.back();
-			auto type_size = executor.memory.getBlock(block_id)->rawPointer().size();
+			auto type_size = thread.process_memory.getBlock(block_id)->rawPointer().size();
 			// if (type_size < frame->local_stack_head) CORE_PANIC("init/deinits not paired");
 			frame->local_stack_head -= type_size;
-			executor.stack_allocator.deleteBlock(block_id);
+			thread.stack_allocator.deleteBlock(block_id);
 			frame->block_id_stack.pop_back();
 		}
 		OPFUN_CONT(1);
@@ -387,15 +397,16 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_input_l64(OPFUN_ARGS) {
 		{
-			executor.setStatus(api::WaitingForInput{});
-			derefStack<i64>(local_stack, instr->arg0) = executor.vcpu.getInput<i64>();
-			executor.setStatus(api::Running{});
+			thread.setStatus(api::WaitingForInput{});
+			derefStack<i64>(local_stack, instr->arg0)
+				= thread.process.getIO().getInput<i64>(thread);
+			thread.setStatus(api::Running{});
 		}
 		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_output_l64(OPFUN_ARGS) {
-		{ executor.vcpu.writeOutput(derefStack<u64>(local_stack, instr->arg0)); }
+		{ thread.process.getIO().writeOutput(derefStack<u64>(local_stack, instr->arg0)); }
 		OPFUN_CONT(1);
 	}
 
@@ -407,7 +418,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_alloc_lptr_type(OPFUN_ARGS) {
 		{
-			auto type = executor.types.getType(vm::TypeID(instr->arg1));
+			auto type = thread.process_types.getType(vm::TypeID(instr->arg1));
 			// This is disasbled, because we don't want to pay performance for initializing it
 			// NOLINTBEGIN(cppcoreguidelines-pro-type-member-init)
 			BlockID block;
@@ -417,11 +428,11 @@ namespace vm {
 				auto inner_type = type->getInnerType().value();
 				auto table_size = type->getStaticTableSize().value();
 
-				// @TODO: It is possible to access memory of the array via
+				// @TODO: It is possible to access process_memory.of the array via
 				// mov_l64_imm, which should be at least detected, if not illegal
-				block = executor.dynamic_allocator.makeArrayBlock(inner_type, table_size);
+				block = thread.dynamic_allocator.makeArrayBlock(inner_type, table_size);
 			} else {
-				block = executor.dynamic_allocator.makeTypeBlock(type);
+				block = thread.dynamic_allocator.makeTypeBlock(type);
 			}
 			derefStack<Pointer>(local_stack, instr->arg0) = Pointer(block, 0);
 		}
@@ -430,7 +441,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_free_lptr(OPFUN_ARGS) {
 		{
-			executor.dynamic_allocator.deleteBlock(
+			thread.dynamic_allocator.deleteBlock(
 				derefStack<Pointer>(local_stack, instr->arg0).getBlock()
 			);
 		}
@@ -442,7 +453,7 @@ namespace vm {
 		int                     next      = 1;
 		{
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg1);
-			auto view    = executor.internalDerefPointer(pointer);
+			auto view    = thread.internalDerefPointer(pointer);
 			u64  idx     = 0;
 #ifdef USE_TAIL_CALLS
 			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
@@ -469,7 +480,7 @@ namespace vm {
 		int                     next      = 1;
 		{
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
-			auto view    = executor.internalDerefPointer(pointer);
+			auto view    = thread.internalDerefPointer(pointer);
 			u64  idx     = 0;
 #ifdef USE_TAIL_CALLS
 			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
@@ -498,7 +509,7 @@ namespace vm {
 	#pragma GCC optimize("-fno-crossjumping")
 #endif
 
-	u64 Executor::internalCallMain(const FuncData& main_func) {
+	u64 VMThread::internalCallMain(const FuncData& main_func) {
 		// We create one artificial "pre" frame, that when main function returns
 		// it will go to it and end execution.
 		Frame* pre_frame = runtime_data.frame_stack_base;
@@ -562,7 +573,7 @@ namespace vm {
 	#pragma GCC pop_options
 #endif
 
-	void Executor::run(const Code& code) {
+	void VMThread::run(const Code& code) {
 		// @TODO: ensure correct status
 
 		setStatus(api::Running{});
@@ -571,10 +582,10 @@ namespace vm {
 		try {
 			internalCallMain(executing_code->functions[code.main_id]);
 			setStatus(api::NotStarted{});
-		} catch (KillCoreException) { setStatus(api::NotStarted{}); }
+		} catch (KillProcessException) { setStatus(api::NotStarted{}); }
 	}
 
-	void Executor::prestart() {
+	void VMThread::prestart() {
 		std::unique_lock lock(external_api_mutex);
 		if (execution_strategy == ExecutionStrategy::Stoped) {
 			is_running         = true;
@@ -582,14 +593,14 @@ namespace vm {
 		}
 	}
 
-	void Executor::stop() {
+	void VMThread::stop() {
 		std::unique_lock lock(external_api_mutex);
 		is_running         = false;
 		execution_strategy = ExecutionStrategy::Stoped;
 		pause_cv.notify_all();
 	}
 
-	bool Executor::resume() {
+	bool VMThread::resume() {
 		std::unique_lock lock(external_api_mutex);
 		if (execution_strategy == ExecutionStrategy::Stoped
 		    || execution_strategy == ExecutionStrategy::Normal) {
@@ -601,7 +612,7 @@ namespace vm {
 		return true;
 	}
 
-	bool Executor::pause() {
+	bool VMThread::pause() {
 		std::unique_lock lock(external_api_mutex);
 		if (execution_strategy == ExecutionStrategy::Stoped
 		    || execution_strategy == ExecutionStrategy::Paused) {
@@ -615,7 +626,7 @@ namespace vm {
 		return true;
 	}
 
-	bool Executor::step() {
+	bool VMThread::step() {
 		std::unique_lock lock(external_api_mutex);
 		if (execution_strategy == ExecutionStrategy::Stoped)
 			return false;
@@ -627,21 +638,21 @@ namespace vm {
 		return true;
 	}
 
-	void Executor::setStatus(vm::api::ExecStatus new_status) {
+	void VMThread::setStatus(vm::api::ExecStatus new_status) {
 		// @TODO: check if change is legal
 		this->status = std::move(new_status);
-		vcpu.onEvent(api::Executing{ status });
+		process.onEvent(api::Executing{ status });
 	}
 
-	bool Executor::isPaused() {
+	bool VMThread::isPaused() {
 		std::unique_lock lock(external_api_mutex);
 		return execution_strategy == ExecutionStrategy::Paused;
 	}
 
-	bool Executor::isAlive() {
+	bool VMThread::isAlive() {
 		std::unique_lock lock(external_api_mutex);
 		return execution_strategy != ExecutionStrategy::Stoped;
 	}
 
-	void Executor::notifyPaused() { pause_cv.notify_all(); }
+	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 }  // namespace vm

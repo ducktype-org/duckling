@@ -17,7 +17,7 @@ add_subdirectory(src/memory_data)
 add_subdirectory(src/code_data)
 add_subdirectory(src/services)
 add_subdirectory(src/services_data)
-add_subdirectory(src/supervisor)
+add_subdirectory(src/core)
 
 function(duck_add_vm suffix defines default)
   set(exec "VM_${suffix}")

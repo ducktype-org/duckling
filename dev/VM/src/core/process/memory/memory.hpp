@@ -4,8 +4,7 @@
 #include <base/smart_pointers.hpp>
 
 namespace vm {
-	template<class... DynamicData>
-	class DataManagerDef;
+	class VMProcess;
 
 	/**
 	 * @brief Holds metadata about all dynamic memory of the VCPU.
@@ -24,8 +23,7 @@ namespace vm {
 	private:
 		Memory() = default;
 
-		template<class... DynamicData>
-		friend class DataManagerDef;
+		friend class VMProcess;
 
 		struct BlockData {
 			u64    refcount = 0;

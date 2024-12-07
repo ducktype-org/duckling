@@ -21,7 +21,7 @@ namespace vm {
 #include "../services.hpp"
 
 namespace vm {
-	class VCPU;
+	class VMProcess;
 
 	/**
 	 * @brief Default dynamic memory allocator.
@@ -35,8 +35,6 @@ namespace vm {
 	class Allocator {
 	private:
 		Memory& memory;
-
-		static Memory& getMemory(VCPU& vcpu);
 
 		template<class... DynamicServices>
 		Allocator(ServiceManagerDef<DynamicServices...>& serviceManager):

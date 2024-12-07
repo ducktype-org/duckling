@@ -8,8 +8,10 @@
 #include "type_metadata/type_metadata.hpp"
 
 namespace vm {
+
 	/**
-	 * @brief Cointainer for the data used by the VM services.
+	 * @brief Container for the data used by the VM services.
+	 * @warning DEPRECATED
 	 */
 	template<class... DynamicData>
 	class DataManagerDef {

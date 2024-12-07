@@ -4,16 +4,8 @@
  */
 #pragma once
 
-#include "services/service_manager.hpp"
-#include "services_data/data_manager.hpp"
 #include <api/api.hpp>
 #include <filesystem/file.hpp>
-
-namespace vm {
-	// @TODO: move somewhere else
-	using DataManager    = DataManagerDef<>;
-	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
-}
 
 namespace vm::api {
 	/**
@@ -24,7 +16,7 @@ namespace vm::api {
 	/**
 	 * @brief Get the execution status of the VM
 	 */
-	cpp::result<VCPUStatus, ApiError> getExecutionStatus(PID pid);
+	cpp::result<ProcStatus, ApiError> getExecutionStatus(PID pid);
 
 	/**
 	 * @brief Pauses the execution of the program.

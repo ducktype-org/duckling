@@ -1,5 +1,6 @@
 #include <api/api.hpp>
 #include "cli.hpp"
+#include <iostream>
 #include <json/json.hpp>
 
 std::string convertError(const vm::api::ApiError& apiError) {

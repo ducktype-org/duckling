@@ -7,7 +7,7 @@
 #include "profiler/profiler.hpp"
 
 namespace vm {
-	class VCPU;
+	class VMProcess;
 
 	/**
 	 * @brief Container for all services used by the VM.
@@ -21,20 +21,10 @@ namespace vm {
 	private:
 		using Services = std::tuple<base::Optional<ServiceTypes>...>;
 
-		Allocator      allocator;
-		StackAllocator stackAllocator;
-		Executor       executor;
-		Preprocessor   preprocessor;
-
 		Services services;
 
 	public:
-		ServiceManagerDef():
-			  allocator(*this),
-			  stackAllocator(*this),
-			  executor(*this),
-			  preprocessor(*this),
-			  services(base::Optional<ServiceTypes>()...) {}
+		ServiceManagerDef(): services(base::Optional<ServiceTypes>()...) {}
 
 		template<class T>
 		T& get() {

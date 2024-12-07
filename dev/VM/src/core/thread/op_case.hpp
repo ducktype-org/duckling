@@ -61,8 +61,8 @@
  * with `0` being the current instruction.
  */
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define OPFUN_CONT(i)                                                                          \
-	IF_TC({ CLANG_MUST_TAIL return instr[i].opfun(&instr[i], local_stack, frame, executor); }) \
+#define OPFUN_CONT(i)                                                                        \
+	IF_TC({ CLANG_MUST_TAIL return instr[i].opfun(&instr[i], local_stack, frame, thread); }) \
 	IF_NOT_TC({ instr += i; })
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 
@@ -70,21 +70,21 @@
  * @brief Same as #OPFUN_CONT, but this also handles execution strategy check.
  */
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define OPFUN_CONT_CHECK_STRATEGY(i)                                                \
-	IF_TC({                                                                         \
-		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                                 \
-			if (!executor.is_running)                                               \
-				return op_handle_strategy(&instr[i], local_stack, frame, executor); \
-		}                                                                           \
-		return instr[i].opfun(&instr[i], local_stack, frame, executor);             \
-	})                                                                              \
-	IF_NOT_TC({                                                                     \
-		instr += i;                                                                 \
-		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                                 \
-			if (!executor.is_running) [[unlikely]] {                                \
-				return op_handle_strategy(instr, local_stack, frame, executor);     \
-			}                                                                       \
-		}                                                                           \
+#define OPFUN_CONT_CHECK_STRATEGY(i)                                              \
+	IF_TC({                                                                       \
+		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                               \
+			if (!thread.is_running)                                               \
+				return op_handle_strategy(&instr[i], local_stack, frame, thread); \
+		}                                                                         \
+		return instr[i].opfun(&instr[i], local_stack, frame, thread);             \
+	})                                                                            \
+	IF_NOT_TC({                                                                   \
+		instr += i;                                                               \
+		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                               \
+			if (!thread.is_running) [[unlikely]] {                                \
+				return op_handle_strategy(instr, local_stack, frame, thread);     \
+			}                                                                     \
+		}                                                                         \
 	})
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 

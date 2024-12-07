@@ -1,6 +1,8 @@
 #pragma once
 
-#include "../services.hpp"
+#include <condition_variable>
+#include <core/process/memory.hpp>
+#include <services_data/type_metadata/type_metadata.hpp>
 #include <code_data/instruction.hpp>
 #include <code_data/code.hpp>
 
@@ -8,7 +10,6 @@
 #include <api/data/status.hpp>
 
 #include <mutex>
-#include <condition_variable>
 #include <atomic>
 
 /**
@@ -20,14 +21,27 @@ namespace vm {
 	enum class ExecutionStrategy { Normal, StepByStep, Paused, Stoped };
 	struct Frame;
 
-	constexpr u64 FRAMES_LENGTH = 16'384;
-	constexpr u64 STACK_LENGTH  = FRAMES_LENGTH * 256;
+	class VMProcess;
+
+	/**
+	 * @brief Frames are on stack, this is the maximum number of frame pointers available.
+	 */
+	constexpr u64 FRAME_COUNT = 16'384;
+
+	/**
+	 * @brief Number of fixed and preallocated stack bytes.
+	 * 256 - a magic number - it means if all of the frames take on average 256 bytes
+	 * of stack space, then there can be at most FRAME_COUNT frames
+	 * on the stack, but if functions on average take more than 256 bytes of space
+	 * then fewer frames will be able to fit.
+	 */
+	constexpr u64 STACK_LENGTH = FRAME_COUNT * 256;
 
 	// This structure holds pointers to `frame_stack` and `local_stack_reserved`
 	// vectors for fast access during runtime. `frame_stack` is a vector of frames,
 	// that we use like a stack. Top of the stack is saved in the `frame` argument
 	// passed inside opcode functions, which is also the current frame. `local_stack_reserved` is
-	// one continous block of memory, from which every function gets it's own chunk. It also
+	// one continuous block of memory, from which every function gets it's own chunk. It also
 	// behaves like a stack, but can be moved forward by many bytes, so `local_stack_top`
 	// is kept to remember where the top of the stack currently is.
 	struct RuntimeData {
@@ -39,7 +53,7 @@ namespace vm {
 
 		RuntimeData(std::vector<Frame>& frame_stack, std::vector<std::byte>& local_stack):
 			  frame_stack_base(frame_stack.data()),
-			  frame_stack_end(frame_stack.data() + FRAMES_LENGTH),
+			  frame_stack_end(frame_stack.data() + FRAME_COUNT),
 			  local_stack_base(local_stack.data()),
 			  local_stack_top(local_stack.data()),
 			  local_stack_end(local_stack.data() + STACK_LENGTH) {}
@@ -50,23 +64,16 @@ namespace vm {
 	 *
 	 * This service is responsible for executing the code.
 	 * Most of the code in this class is executed
-	 * in the Exection Thread, but some methods can be called from the supervisor thread.
+	 * in the Execution Thread, but some methods can be called from the supervisor thread.
 	 * It also provides endpoints for the VCPU to control the execution of the code
 	 * in a memory-safe way (see `external_api_mutex`).
 	 */
-	class Executor {
+	class VMThread {
 	private:
-		Allocator&      dynamic_allocator;
-		StackAllocator& stack_allocator;
-		Memory&         memory;
-		TypeMetadata&   types;
-
-		VCPU& vcpu;
-
 		std::vector<Frame> frame_stack;
 
 		/**
-		 * @brief Continous block of memory, that is used for the call stack.
+		 * @brief Continuous block of memory, that is used for the call stack.
 		 * Here each stack frame is composed of: "arg_stack", local_stack". The "arg_stack" is used
 		 * for arguments passed to the function, and the "local_stack" is used for local variables.
 		 * [arg_stack(1) | local_stack(1) | arg_stack(1) | local_stack(2) | ...]
@@ -83,19 +90,14 @@ namespace vm {
 		 */
 		api::ExecStatus status;
 
-		template<class... DynamicServices>
-		Executor(ServiceManagerDef<DynamicServices...>& serviceManager):
-			  dynamic_allocator(serviceManager.template get<Allocator>()),
-			  stack_allocator(serviceManager.template get<StackAllocator>()),
-			  memory(serviceManager.getVCPU().getData().template get<Memory>()),
-			  types(serviceManager.getVCPU().getData().template get<TypeMetadata>()),
-			  vcpu(serviceManager.getVCPU()),
-			  frame_stack(FRAMES_LENGTH, internalInitFrame()),
-			  local_stack_reserved(STACK_LENGTH),
-			  runtime_data(frame_stack, local_stack_reserved) {
-			// @TODO: not loaded status
-			setStatus(api::NotStarted{});
-		}
+		/**
+		 * @brief Process link as well as some of it's resources.
+	     */
+		VMProcess&    process;
+		Memory&       process_memory;
+		TypeMetadata& process_types;
+
+		VMThread(VMProcess& process);
 
 		// This might change:
 		std::condition_variable pause_cv;
@@ -103,7 +105,7 @@ namespace vm {
 		 * @brief Mutex that controls access to `is_running` and `execution_strategy`.
 		 *
 		 * When the supervisor thread (external api) wants to change the execution strategy, it has
-		 * to lock this mutex. The Exection Thread running in a loop will first check the
+		 * to lock this mutex. The Execution Thread running in a loop will first check the
 		 * `is_running` flag every instruction, and if it is false, it will wait on `pause_cv` until
 		 * it is notified by the supervisor thread.
 		 */
@@ -182,8 +184,8 @@ namespace vm {
 		bool step();
 
 		/**
-		 * @brief Force kill the execution of a program (by Supervisor)
-		 * Called from the supervisor.
+		 * @brief Force kill the execution of a thread.
+		 * Called from the process.
 		 */
 		void stop();
 
@@ -198,12 +200,10 @@ namespace vm {
 		// Given lock cannot be a lock on external_api_mutex
 		// If you have access to external_api_mutex, implement this yourself.
 		template<class Condition>
-		void waitUntilNotPausedAndCondition(std::unique_lock<std::mutex>& lock, Condition x) {
-			pause_cv.wait(lock, [this, &x] {
-				bool b1 = !isPaused();
-				bool b2 = x();
-				return b1 && b2;
-			});
+		void waitUntilNotPausedAndCondition(
+			std::unique_lock<std::mutex>& lock, Condition condition
+		) {
+			pause_cv.wait(lock, [this, &condition] { return !isPaused() && condition(); });
 		}
 
 		void notifyPaused();

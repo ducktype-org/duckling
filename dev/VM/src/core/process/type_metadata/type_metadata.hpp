@@ -4,8 +4,7 @@
 #include "type.hpp"
 
 namespace vm {
-	template<class... DynamicData>
-	class DataManagerDef;
+	class VMProcess;
 
 	/**
 	 * @brief Holds metadata about all types in the VCPU.
@@ -44,7 +43,6 @@ namespace vm {
 		[[nodiscard]]
 		base::Optional<TypeCRef> getTypeByName(base::StrID name) const;
 
-		template<class... DynamicData>
-		friend class DataManagerDef;
+		friend class VMProcess;
 	};
 }

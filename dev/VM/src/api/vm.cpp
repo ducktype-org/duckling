@@ -2,7 +2,7 @@
 #include "supervisor/supervisor.hpp"
 
 namespace vm::api {
-	void ignoreResponse([[maybe_unused]] const Response& response){};
+	void ignoreResponse([[maybe_unused]] const Response& response) {};
 
 	template<class T>
 	cpp::result<T, ApiError> mapOrWrongResponse(const Response& response) {
@@ -10,10 +10,10 @@ namespace vm::api {
 		return cpp::failure(WrongResponse{});
 	}
 
-	cpp::result<VCPUStatus, ApiError> getExecutionStatus(PID pid) {
+	cpp::result<ProcStatus, ApiError> getExecutionStatus(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeStatusRequest(pid))
-		    .flat_map(mapOrWrongResponse<VCPUStatus>);
+		    .flat_map(mapOrWrongResponse<ProcStatus>);
 	}
 
 	cpp::result<void, ApiError> pause(PID pid) {

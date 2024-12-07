@@ -29,5 +29,5 @@ namespace vm::api {
 	}
 
 	using Response
-		= std::variant<VCPUStatus, response::Output, response::Block, TypeCRef, response::Empty>;
+		= std::variant<ProcStatus, response::Output, response::Block, TypeCRef, response::Empty>;
 }

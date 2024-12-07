@@ -3,7 +3,7 @@
 #include <clap/clap.hpp>
 #include <printer/stream_printer.hpp>
 
-#include <supervisor/supervisor.hpp>
+#include <core/supervisor/supervisor.hpp>
 #include "cli.hpp"
 #include "server.hpp"
 

@@ -1,33 +1,39 @@
 #pragma once
 
+#include <core/process/proc_io.hpp>
+#include <services_data/type_metadata/type_metadata.hpp>
+#include <code_data/code.hpp>
+#include <condition_variable>
 #include <shared_mutex>
 #include <thread>
 #include <memory>
 #include <base/optional.hpp>
 #include <api/vm.hpp>
+#include <core/thread/vmthread.hpp>
 
-#include <ostream>
-#include <istream>
 #include <iostream>
 
 namespace vm {
+	using DataManager    = DataManagerDef<>;
+	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
+
 	/**
-	 * @brief The API for using the virtual CPU of the VM.
-	 * It manages VCPU's data and services.
+	 * @brief The API for using the virtual process of the VM.
+	 * It manages process'es data and services.
 	 *
-	 * VCPU is an abstract concepts that represents the program's execution environment.
+	 * VMProcess is an abstract concepts that represents the program's execution environment.
 	 *
 	 * @note The code in this class is executed in the supervisor's thread.
 	 *
 	 * It is responsible for loading and parsing of the program,
-	 * creating and reseting the Exection Thread,
+	 * creating and reseting the Execution Thread,
 	 * setting the status of the execution (pause, stop, run),
 	 * managing the input and output of the executing thread and some more.
 	 *
 	 * Only execution of the code is done in the separate thread,
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
-	class VCPU: public Listener<api::VCPUStatus> {
+	class VMProcess: public Listener<api::ProcStatus> {
 	private:
 		std::shared_mutex rwGlobal;
 
@@ -35,24 +41,17 @@ namespace vm {
 
 		std::condition_variable_any status_cv;
 		std::shared_mutex           rwStatus;
-		api::VCPUStatus             status;
+		api::ProcStatus             status;
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		// @TODO: In future, never use stdio. Even CLI should use custom input/output and manage IO
-		// on its own. It will help with the need to support other concurrent processes and
-		// inserting CLI's commands
-		bool                                uses_stdio;
-		std::mutex                          input_mutex;
-		std::mutex                          output_mutex;
-		std::condition_variable             output_empty_cv;
-		base::unique_ptr<std::stringstream> input_stream  = nullptr;
-		base::unique_ptr<std::stringstream> output_stream = nullptr;
-
 		base::Optional<vm::Code> loadedCode = {};
 
 		cpp::result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
+
+		Memory       memory;
+		TypeMetadata type_meta_data;
 
 		/**
 		 * @brief Performs external execution request on the VCPU.
@@ -115,23 +114,15 @@ namespace vm {
 		 *
 		 * @return api::VCPUStatus
 		 */
-		api::VCPUStatus getStatus();
+		api::ProcStatus getStatus();
 
-
-		/**
-		 * Service and data manager constructors can depend on
-		 * VCPU, and should be constructor as a last one in VCPU
-		 *
-		 * Also ServiceManager initialization depend on DataManager, so it has to be
-		 * initialized before serviceManager.
-		 *
-		 * This design is not perfect, and might be changed in the future.
-		 */
-		DataManager dataManager;
 		/**
 		 * @brief Holds all services. When it's constructed, it initializes all services.
 		 */
-		ServiceManager serviceManager;
+		ServiceManager service_manager;
+
+		ProcIO                           io;
+		base::Optional<ProcIORedirecter> redirecter;
 
 	public:
 		/**
@@ -141,46 +132,31 @@ namespace vm {
 		 *
 		 * Name of this method may be misleading
 		 */
-		void onEvent(const api::VCPUStatus& event) noexcept override;
+		void onEvent(const api::ProcStatus& event) noexcept override;
 
-		/**
-		 * Can be safely called from Execution Thread only
-		 */
-		DataManager& getData();
+		Memory& getMemory();
+
+		// This should be moved to a code/program object...
+		TypeMetadata& getTypeMetadata();
 
 		/**
 		 * Can be safely called from Execution Thread only
 		 */
 		ServiceManager& getServices();
 
+		ProcIO& getIO();
+
 		/**
-		 * For executor use only
+		 * @brief Attaching means all IO is interactive, input is read from stdin, output
+		 * @brief is automatically forwarded to stdout.
 		 */
-		template<class T>
-		T getInput() {
-			T     v{};
-			auto& exec = serviceManager.get<Executor>();
-			if (uses_stdio) {
-				std::cin >> v;
-			} else {
-				std::unique_lock lock(input_mutex);
-				exec.waitUntilNotPausedAndCondition(lock, [this, &exec] {
-					return !exec.isAlive() || !input_stream->str().empty();
-				});
-				if (exec.isAlive()) (*input_stream) >> v;
-			}
-			return v;
+		void attach() {
+			// So long this object lives, the outputs are redirected.
+			redirecter.emplace(io.attach(std::cin, std::cout));
 		}
 
-		template<class T>
-		void writeOutput(const T& v) {
-			if (uses_stdio) {
-				std::cout << v;
-			} else {
-				std::unique_lock lock(output_mutex);
-				(*output_stream) << v;
-				output_empty_cv.notify_one();
-			}
+		void detach() {
+			redirecter.reset();
 		}
 
 		// For external API
@@ -188,15 +164,15 @@ namespace vm {
 		// Each of the following methods can be called concurrently, so they should synchronize
 		// resources.
 		/**
-		 * @brief Entry point to perform requests on the VCPU.
+		 * @brief Entry point to perform requests on the process.
 		 */
 		cpp::result<api::Response, api::CoreOperationError>
 			doRequest(const api::RequestVariant& request);
 
-		VCPU(bool use_stdio):
+		VMProcess():
 			  status(api::ExecutionNotStarted{}),
-			  uses_stdio(use_stdio),
-			  serviceManager(*this){};
-		virtual ~VCPU();
+
+			  service_manager() {};
+		virtual ~VMProcess();
 	};
 }

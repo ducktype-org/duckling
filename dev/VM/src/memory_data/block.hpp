@@ -1,6 +1,5 @@
 #pragma once
 
-#include <vector>
 #include <base/ints.hpp>
 #include <base/exceptions.hpp>
 #include <memory_data/pointer.hpp>

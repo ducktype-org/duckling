@@ -9,7 +9,7 @@
 #include "services_data/memory/memory.hpp"
 
 namespace vm {
-	class VCPU;
+	class VMProcess;
 
 	/**
 	 * @brief Memory allocator
@@ -21,7 +21,7 @@ namespace vm {
 	private:
 		Memory& memory;
 
-		static Memory& getMemory(VCPU& vcpu);
+		static Memory& getMemory(VMProcess& vcpu);
 
 		template<class... DynamicServices>
 		StackAllocator(ServiceManagerDef<DynamicServices...>& serviceManager):
@@ -29,16 +29,13 @@ namespace vm {
 
 	public:
 		BlockID makeTypeBlock(TypeCRef type, base::ModRawView data) {
-			auto block_id = memory.reserveBlockID();
-			std::memset(data.getBegin(), 0, data.size());
-			memory.makeBlock(block_id, Block(block_id, type, data));
-			return block_id;
+			return makeArrayBlock(type, 1, data);
 		}
 
-		BlockID makeArrayBlock(TypeCRef type, u64 length, base::ModRawView data) {
+		BlockID makeArrayBlock(TypeCRef type, u64 length, base::ModRawView stack_ptr) {
 			auto block_id = memory.reserveBlockID();
-			std::memset(data.getBegin(), 0, data.size() * length);
-			memory.makeBlock(block_id, Block(block_id, type, length, data));
+			std::memset(stack_ptr.getBegin(), 0, stack_ptr.size() * length);
+			memory.makeBlock(block_id, Block(block_id, type, length, stack_ptr));
 			return block_id;
 		}
 
