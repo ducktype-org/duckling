@@ -6,21 +6,46 @@
 
 namespace hashing {
 
-
 	template<hash_algorithm HashAlgorithm, typename T>
-	constexpr void add_to_hash(HashAlgorithm& h, const T& t)
-		requires detail::can_hash_directly<HashAlgorithm, T> || detail::can_hash_decompose<T>
-	          || std::is_floating_point_v<T> || detail::can_stdhash<T> {
-		if constexpr (detail::can_hash_directly<HashAlgorithm, T>) {
-			h(t);
-		} else if constexpr (detail::can_hash_decompose<T>) {
+	constexpr void add_to_hash(HashAlgorithm& h, const T& t) {
+		if constexpr (detail::can_hash_decompose<T>) {
 			std::apply([&](auto&&... args) { (add_to_hash(h, args), ...); }, hash_decompose(t));
-		} else if constexpr (std::is_floating_point_v<T>) {
+		} else if constexpr (detail::can_hash_directly<HashAlgorithm, T>) {
+			h(t);
+		}
+		// specializations for types that are not ours:
+		else if constexpr (std::is_floating_point_v<T>) {
 			auto t_ = auto{ t };
 			if (t_ == 0) t_ = 0;
-			std::array<char, sizeof(t_)> arr = std::bit_cast<std::array<char, sizeof(t_)>, T>(t_);
-			h(arr.data(), arr.size());
-		} else if constexpr (detail::can_stdhash<T>) {
+			detail::hash_as_chars(h, t_);
+		} else if constexpr (std::is_pointer_v<T>) {
+			detail::hash_as_chars(h, t);
+		} else if constexpr (std::is_null_pointer_v<T>) {
+			h(type_hash_code<T>);
+		}
+		// overloads for ranges
+		else if constexpr (std::ranges::contiguous_range<T> && requires(std::ranges::range_value_t<T> elem) {
+							   add_to_hash(h, elem);
+						   }) {
+			for (auto&& elem: t) add_to_hash(h, elem);
+		}
+		// some ranges will compare equal but keep their elements in unspecified order
+		else if constexpr (std::ranges::input_range<T> && requires(std::ranges::range_value_t<T> elem, HashAlgorithm::result_type res) {
+							   add_to_hash(h, elem);
+							   { res ^= res } -> std::same_as<typename HashAlgorithm::result_type>;
+							   add_to_hash(h, res);
+						   }) {
+			auto                                hash_copy = h;
+			typename HashAlgorithm::result_type result{};
+			for (auto&& elem: t) {
+				add_to_hash(hash_copy, elem);
+				result ^= static_cast<typename HashAlgorithm::result_type>(hash_copy);
+			}
+			add_to_hash(h, result);
+		}
+		// std::hash is not constexpr, so if some type needs to be hashable in compile-time,
+		// its specialization should be provided above
+		else if constexpr (detail::can_stdhash<T>) {
 			using std::hash;
 			add_to_hash(h, hash<T>{}(t));
 		} else {
@@ -29,24 +54,11 @@ namespace hashing {
 	}
 
 	namespace detail {
-		static constexpr bool AllowForStdHash = true;
 
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void apply_hash(HashAlgorithm& h, const T& t) {
 			if constexpr (detail::can_add_to_hash<HashAlgorithm, T>) {
 				add_to_hash(h, t);
-			} else if constexpr (detail::can_hash_directly<HashAlgorithm, T>) {
-				static_assert(
-					false, "can_add_to_hash: should never happen as add_to_hash should exist"
-				);
-				h(t);
-			} else if constexpr (detail::can_hash_decompose<T>) {
-				static_assert(false, "apply: shoult never happen as add_to_hash should exist");
-				std::apply([&](auto&&... args) { (apply_hash(h, args), ...); }, hash_decompose(t));
-			} else if constexpr (detail::AllowForStdHash && detail::can_stdhash<T>) {
-				static_assert(false, "stdHash: should never happen as add_to_hash should exist");
-				using std::hash;
-				h(hash<T>{}(t));
 			} else {
 				static_assert(
 					false,

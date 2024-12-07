@@ -1,7 +1,9 @@
 #pragma once
 #include <concepts>
 
-#include <base/ints.hpp>
+// #include <base/ints.hpp>
+#include "../../../../base/src/base/ints.hpp"
+
 
 #include "unique_id.hpp"
 
@@ -39,11 +41,6 @@ namespace hashing {
 	concept has_update_hash = has_update_hash_void<T> || has_update_hash_char<T>;
 
 	namespace detail {
-		// template<typename Self>
-		// struct hc_acc: public std::remove_cvref_t<Self> {
-		// 	void check(const type_hash_code_t& hash)
-		// 		requires requires { std::remove_cvref_t<Self>::add_hash_code(hash); } {}
-		// };
 		template<typename Self>
 		struct hc_acc: public std::remove_cvref_t<Self> {
 			void check(const type_hash_code_t& hash)
@@ -71,7 +68,7 @@ namespace hashing {
 		}
 
 		template<has_update_hash Self, typename T>
-		requires(std::has_unique_object_representations_v<T> && !std::ranges::input_range<T>)
+		requires(std::has_unique_object_representations_v<T>)
 		constexpr auto&& operator()(this Self&& self, const T& t) noexcept {
 			if constexpr (is_hash_code_aware<Self, T>) {
 				std::forward<Self>(self).add_hash_code(t);
@@ -81,21 +78,6 @@ namespace hashing {
 			} else {
 				std::forward<Self>(self).update_hash(std::addressof(t), sizeof(t));
 			}
-			return std::forward<Self>(self);
-		}
-
-		template<has_update_hash_char Self, std::ranges::contiguous_range R>
-		requires std::has_unique_object_representations_v<std::ranges::range_value_t<R>>
-		constexpr auto&& operator()(this Self&& self, R&& range) requires requires {
-			std::forward<Self>(self).update_hash(
-				std::ranges::data(range),
-				std::ranges::size(range) * sizeof(std::ranges::range_value_t<R>)
-			);
-		} {
-			std::forward<Self>(self).update_hash(
-				std::ranges::data(range),
-				std::ranges::size(range) * sizeof(std::ranges::range_value_t<R>)
-			);
 			return std::forward<Self>(self);
 		}
 	};
@@ -115,6 +97,12 @@ namespace hashing {
 
 		template<typename T>
 		concept can_hash_decompose = requires(const T& t) { hash_decompose(t); };
+
+		template<hash_algorithm HashAlgorithm, typename T>
+		constexpr void hash_as_chars(HashAlgorithm& h, const T& t) {
+			std::array arr = std::bit_cast<std::array<char, sizeof(t)>, T>(t);
+			h(arr.data(), arr.size());
+		}
 	}
 
 }  // namespace hashing
