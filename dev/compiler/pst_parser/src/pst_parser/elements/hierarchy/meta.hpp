@@ -99,7 +99,7 @@ namespace pst {
 
 	public:
 		[[nodiscard]]
-		StmtKind getKind() const {
+		StmtKind getStmtKind() const {
 			return kind;
 		}
 

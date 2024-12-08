@@ -174,8 +174,16 @@ namespace pst {
 		 * @note it is used by helios as a hacky way to check if given element in an expression
 		 */
 		[[nodiscard]]
-		virtual std::string elementType() const {
+		std::string elementType() const override {
 			return "Element";
+		}
+
+		/**
+		 * @brief Returns the kind of the element.
+		 */
+		[[nodiscard]]
+		ElementKind getElementKind() const {
+			return kind;
 		}
 
 		template<typename X>
@@ -185,6 +193,7 @@ namespace pst {
 		dia::SourcePosition              source_position;
 		std::vector<SubElement>          sub_elements;
 		base::Optional<Ref<LangElement>> parent;
+		ElementKind                      kind = ElementKind::KindNotSet;	
 
 		void addToken(const tpc::Token& token);
 		void addToken(const base::unique_ptr<tpc::Token>& token);

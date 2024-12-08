@@ -104,7 +104,7 @@ namespace compiler::helios {
 	Ref<SymbolData> makeSymbolFromStatement(const ScopeID& scope, MCRef<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
-		switch (stmt->getKind()) {
+		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
 			auto&& function_ = dynamic_cast<const pst::Fun*>(&*stmt);
 			return putInSymtable(SymbolData{
