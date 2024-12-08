@@ -125,22 +125,43 @@ namespace compiler::helios {
 			Invalid,
 		};
 
-		ElementScopeKind getScopeKind(QKey element) {
+		static ElementScopeKind getScopeKind(QKey element) {
 			switch (element.base_element->getElementKind()) {
 				case pst::ElementKind::TopLevel:
+					return ElementScopeKind::Standard;
+
 				case pst::ElementKind::Import:
-				case pst::ElementKind::Block:
+					return ElementScopeKind::Invalid;
+				
+
+				// code blocks:
+				case pst::ElementKind::Block: {
+					auto parent_kind = element.base_element->getParent().value()->getElementKind();
+					if (parent_kind == pst::ElementKind::CodeBlockOrStmt) {
+						return ElementScopeKind::Transparent;
+					} else {
+						return ElementScopeKind::Standard;
+					}
+				}
 				case pst::ElementKind::CodeBlockOrStmt:
+					return ElementScopeKind::Standard;
+				
+			
 				case pst::ElementKind::Namespace:
-				case pst::ElementKind::Class:
 				case pst::ElementKind::Variable:
-				case pst::ElementKind::Fun:
 				case pst::ElementKind::Using:
 				case pst::ElementKind::Alias:
 				case pst::ElementKind::Const:
+				case pst::ElementKind::Class:
 				case pst::ElementKind::Action:
+					// this is transparent, since we don't need this scope:
+					return ElementScopeKind::Transparent;
+
+				case pst::ElementKind::Fun:
 
 				case pst::ElementKind::ExprStmt:
+					// note: this is needed for lifetimes
+					// but what we should do is put 
 					return ElementScopeKind::Standard;
 
 				case pst::ElementKind::ExprElement:
@@ -153,6 +174,16 @@ namespace compiler::helios {
 		}
 
 		static auto provide(Context& ctx, QKey element) -> PResult {
+			auto element_scope_kind = getScopeKind(element);
+
+			if (element_scope_kind == ElementScopeKind::Invalid) {
+				auto element_ptr = &*element.base_element;
+				CORE_PANIC(base::strConcat(
+					"Scope of element for which scope does not make sense (or was not added.): ",
+					typeid(*element_ptr).name()
+				));
+			}
+
 			ScopeID parent = element.base_element->getParent().has_value()
 			                   ? ctx.query<QueryPrimaryCodeScopeFor>(
 								   { element.base_element->getParent().value() }
@@ -161,6 +192,9 @@ namespace compiler::helios {
 								   { frontend::extendQueryModuleIDOfPST(ctx, element.base_element) }
 							   );
 
+			if (element_scope_kind == ElementScopeKind::Transparent) {
+				return parent;
+			}
 
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
@@ -243,17 +277,7 @@ namespace compiler::helios {
 				);
 			}
 
-			void visitNamespace(const pst::Namespace&) override {
-				// This seems strange, but namespace scope is indeed empty.
-				// The scope that is full is the codeblock within the namespace.
-				output(std::vector<SymID>());
-			}
-
 			void visitExprStmt(const pst::ExprStmt&) override { output(std::vector<SymID>()); }
-
-			void visitReturn(const pst::Return&) override { output(std::vector<SymID>()); }
-
-			void visitVariable(const pst::Variable&) override { output(std::vector<SymID>()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

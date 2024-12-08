@@ -132,6 +132,7 @@ namespace compiler::helios {
 			void visitVariable(const pst::Variable& stmt) override {
 				// @TODO: do something with mut/immut
 
+				// todo in this PR: change it
 				// @note: This is a hot-path, that should work *most*
 				// of the times. It will be changed during scope refactor.
 				auto    stmt_parent        = stmt.getParent().value();
