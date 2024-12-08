@@ -9,6 +9,8 @@
 
 #include <variant>
 
+#include "element_kind.hpp"
+
 namespace pst {
 	class Import;
 

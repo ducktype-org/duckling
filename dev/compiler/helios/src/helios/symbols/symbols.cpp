@@ -246,6 +246,7 @@ namespace compiler::helios {
 			} else {
 				parent_map.put(pst_id, key.scope);
 			}
+			
 
 			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
 		}
