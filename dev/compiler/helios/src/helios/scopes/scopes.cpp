@@ -114,6 +114,44 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
+		enum class ElementScopeKind {
+			// Has standard scope:
+			Standard,
+
+			// gets element from its parent:
+			Transparent,
+
+			// Does not make sense to have a scope:
+			Invalid,
+		};
+
+		ElementScopeKind getScopeKind(QKey element) {
+			switch (element.base_element->getElementKind()) {
+				case pst::ElementKind::TopLevel:
+				case pst::ElementKind::Import:
+				case pst::ElementKind::Block:
+				case pst::ElementKind::CodeBlockOrStmt:
+				case pst::ElementKind::Namespace:
+				case pst::ElementKind::Class:
+				case pst::ElementKind::Variable:
+				case pst::ElementKind::Fun:
+				case pst::ElementKind::Using:
+				case pst::ElementKind::Alias:
+				case pst::ElementKind::Const:
+				case pst::ElementKind::Action:
+
+				case pst::ElementKind::ExprStmt:
+					return ElementScopeKind::Standard;
+
+				case pst::ElementKind::ExprElement:
+					return ElementScopeKind::Transparent;
+				
+				case pst::ElementKind::KindNotSet:
+					CORE_UNREACHABLE();
+			}
+			CORE_UNREACHABLE();
+		}
+
 		static auto provide(Context& ctx, QKey element) -> PResult {
 			ScopeID parent = element.base_element->getParent().has_value()
 			                   ? ctx.query<QueryPrimaryCodeScopeFor>(

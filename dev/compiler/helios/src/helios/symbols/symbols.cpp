@@ -689,8 +689,8 @@ namespace compiler::helios {
 
 			void visitClass(const pst::Class& stmt) override {
 				name = stmt.getName();
-				if (auto&& base = stmt.getBase(); base != nullptr) base_class = base;
-				if (auto&& implements = stmt.getImplements(); implements != nullptr)
+				if (auto base = stmt.getBase(); base != nullptr) base_class = base;
+				if (auto implements = stmt.getImplements(); implements != nullptr)
 					this->implements = implements;
 			}
 		};

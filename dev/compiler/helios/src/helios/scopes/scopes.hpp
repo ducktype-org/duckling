@@ -72,9 +72,13 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Query Scope for given PST element.
-	 * @note: Primary Scopes are linked directly to PST structure.
-	 * This means that every PST element has a scope, even for some it doesn't make a lot of sense.
+	 * @brief Query Primary Scope for given PST element.
+	 * For some elements (e.g: namespace) this will be a scope of the element itself.
+	 * For some it will be a scope this element is contained in (e.g. inner expression elements).
+	 * For some (e.g: function) this might be slightly different.
+	 * For some for which scope does not make sense, it can panic.
+	 * 
+	 * @note: Scope strucure are linked directly to PST structure.
 	 * The reason for this is that handling scope structure without direct link to PST was highly
 	 * bug prone and led to potential errors or lack of consistency between different fragments of
 	 * code.
