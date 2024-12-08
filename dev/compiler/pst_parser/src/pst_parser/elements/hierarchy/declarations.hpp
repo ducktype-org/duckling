@@ -3,12 +3,17 @@
 #include "statements.hpp"
 
 namespace pst {
-#define DECL_CHILD_CONSTRUCTOR(class_name) \
-	class_name(const dia::SourcePosition& position): Decl(StmtKind::class_name, position) {}
+#define DECL_CHILD_CONSTRUCTOR(class_name, element_type_) \
+	class_name(const dia::SourcePosition& position): Decl(StmtKind::class_name, position) {\
+		this->element_kind = element_type_;\
+	}
+
+#define DECL_CHILD_CONSTRUCTOR_NO_KIND(class_name) \
+	class_name(const dia::SourcePosition& position): Decl(StmtKind::class_name, position) { }
 
 	class CodeDecl: public Decl {
 	public:
-		DECL_CHILD_CONSTRUCTOR(CodeDecl);
+		DECL_CHILD_CONSTRUCTOR_NO_KIND(CodeDecl);
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -25,7 +30,8 @@ namespace pst {
 		std::vector<MBox<Stmt>> statements;
 
 	public:
-		DECL_CHILD_CONSTRUCTOR(TopLevel);
+		DECL_CHILD_CONSTRUCTOR(TopLevel, ElementKind::TopLevel);
+
 		static MBox<TopLevel> parse(LangParserState& state);
 
 		~TopLevel() override = default;
@@ -54,7 +60,9 @@ namespace pst {
 		MBox<CodeBlock>         code_block = nullptr;
 
 	public:
-		explicit Block(const dia::SourcePosition& position): CodeDecl(position) {}
+		explicit Block(const dia::SourcePosition& position): CodeDecl(position) {
+			element_kind = ElementKind::Block;
+		}
 
 		static MBox<Block> parse(LangParserState& state);
 		~Block() final = default;
@@ -73,7 +81,7 @@ namespace pst {
 		MBox<CodeBlock> body = nullptr;
 
 	public:
-		DECL_CHILD_CONSTRUCTOR(Namespace);
+		DECL_CHILD_CONSTRUCTOR(Namespace, ElementKind::Namespace);
 
 		[[nodiscard]]
 		base::StrID getName() const {
@@ -105,7 +113,7 @@ namespace pst {
 		MBox<ClassBlock>     body       = nullptr;
 
 	public:
-		DECL_CHILD_CONSTRUCTOR(Class);
+		DECL_CHILD_CONSTRUCTOR(Class, ElementKind::Class);
 
 		[[nodiscard]]
 		base::StrID getName() const {
@@ -151,7 +159,7 @@ namespace pst {
 		bool              is_const = true;
 
 	public:
-		DECL_CHILD_CONSTRUCTOR(Variable);
+		DECL_CHILD_CONSTRUCTOR(Variable, ElementKind::Variable);
 
 		[[nodiscard]]
 		base::StrID getName() const {
@@ -194,7 +202,7 @@ namespace pst {
 		MBox<CodeBlockOrStmt>             body = nullptr;
 
 	public:
-		DECL_CHILD_CONSTRUCTOR(Fun);
+		DECL_CHILD_CONSTRUCTOR(Fun, ElementKind::Fun);
 
 		[[nodiscard]]
 		base::StrID getName() const {

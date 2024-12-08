@@ -149,8 +149,10 @@ namespace pst {
 		}
 	};
 
-#define STMT_CHILD_CONSTRUCTOR(class_name) \
-	class_name(const dia::SourcePosition& position): Stmt(StmtKind::class_name, position) {}
+#define STMT_CHILD_CONSTRUCTOR(class_name, element_kind_) \
+	class_name(const dia::SourcePosition& position): Stmt(StmtKind::class_name, position) {\
+		this->element_kind = element_kind_;\
+	}
 
 	struct ClassContext {
 		base::StrID                                 name;

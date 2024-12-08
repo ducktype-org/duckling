@@ -180,10 +180,15 @@ namespace pst {
 
 		/**
 		 * @brief Returns the kind of the element.
+		 * This is mostly to decide how HELIOS will create scopes for this element.
+		 * We might change it to "ScopeKind" in the future.
+		 * For now we keep logic of deciding on ScopeKinds in HELIOS
+		 * for consistency.
 		 */
 		[[nodiscard]]
 		ElementKind getElementKind() const {
-			return kind;
+			CORE_ASSERT(element_kind != ElementKind::KindNotSet, "Element kind not set");
+			return element_kind;
 		}
 
 		template<typename X>
@@ -193,7 +198,12 @@ namespace pst {
 		dia::SourcePosition              source_position;
 		std::vector<SubElement>          sub_elements;
 		base::Optional<Ref<LangElement>> parent;
-		ElementKind                      kind = ElementKind::KindNotSet;	
+
+		/**
+		 * @brief Kind of the element.
+		 * @note This is mostly for HELIOS to decide how to create scopes.
+		 */
+		ElementKind                      element_kind = ElementKind::KindNotSet;	
 
 		void addToken(const tpc::Token& token);
 		void addToken(const base::unique_ptr<tpc::Token>& token);

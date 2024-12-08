@@ -126,7 +126,9 @@ namespace pst {
 		std::variant<MBox<Stmt>, MBox<CodeBlock>> content;
 
 	public:
-		explicit CodeBlockOrStmt(const dia::SourcePosition& position): NotStmt(position) {}
+		explicit CodeBlockOrStmt(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::CodeBlockOrStmt;
+		}
 
 		static MBox<CodeBlockOrStmt> parse(LangParserState& state);
 		~CodeBlockOrStmt() final = default;
@@ -177,6 +179,7 @@ namespace pst {
 		const i64 precedence;
 
 	protected:
+
 		/**
 		 * @brief Skips tokens, used to preserve position in case of error.
 		 */
@@ -189,7 +192,9 @@ namespace pst {
 
 		explicit ExprElement(const dia::SourcePosition& position, i64 precedence):
 			  NotStmt(position),
-			  precedence(precedence) {}
+			  precedence(precedence) {
+			this->element_kind = ElementKind::ExprElement;
+		}
 
 	public:
 		virtual void acceptVisitor(PstExprVisitor& visitor) const = 0;

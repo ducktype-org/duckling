@@ -31,7 +31,7 @@ namespace pst {
 		tpc::Identifier  alias;
 
 	public:
-		STMT_CHILD_CONSTRUCTOR(Import);
+		STMT_CHILD_CONSTRUCTOR(Import, ElementKind::Import);
 		static MBox<Import> parse(LangParserState& state);
 		[[nodiscard]]
 		const decltype(names)& getNames() const;
@@ -70,7 +70,7 @@ namespace pst {
 		MBox<DottedName> names;
 
 	public:
-		STMT_CHILD_CONSTRUCTOR(Using);
+		STMT_CHILD_CONSTRUCTOR(Using, ElementKind::Using);
 		static MBox<Using> parse(LangParserState& state);
 
 		[[nodiscard]]
@@ -103,7 +103,9 @@ namespace pst {
 		MBox<ExprElement> expr;
 
 	public:
-		explicit ExprStmt(dia::SourcePosition pos): Stmt(StmtKind::ExprStmt, pos){};
+		explicit ExprStmt(dia::SourcePosition pos): Stmt(StmtKind::ExprStmt, pos) {
+			this->element_kind = ElementKind::ExprStmt;
+		};
 
 		static MBox<ExprStmt> parse(LangParserState& state);
 
@@ -128,7 +130,7 @@ namespace pst {
 		MBox<DottedName> points_to;
 
 	public:
-		STMT_CHILD_CONSTRUCTOR(Alias);
+		STMT_CHILD_CONSTRUCTOR(Alias, ElementKind::Alias);
 
 		[[nodiscard]]
 		base::StrID getName() const {
@@ -165,7 +167,7 @@ namespace pst {
 		base::Optional<MBox<ExprElement>> expr;
 
 	public:
-		STMT_CHILD_CONSTRUCTOR(Action);
+		STMT_CHILD_CONSTRUCTOR(Action, ElementKind::Action);
 		static MBox<Action> parse(LangParserState& state);
 		~Action() override = default;
 
@@ -190,7 +192,7 @@ namespace pst {
 		MBox<ExprElement> value;
 
 	public:
-		STMT_CHILD_CONSTRUCTOR(Const);
+		STMT_CHILD_CONSTRUCTOR(Const, ElementKind::Const);
 		static MBox<Const> parse(LangParserState& state);
 
 		[[nodiscard]]
