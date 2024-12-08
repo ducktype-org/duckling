@@ -1,11 +1,8 @@
 #include <iostream>
 
-// #include <tester/tester.hpp>
-// #include <base/ints.hpp>
-// #include <hashing/hash.hpp>
-
-#include "../src/hashing/hash.hpp"
-#include "../../tester/src/tester/tester.hpp"
+#include <tester/tester.hpp>
+#include <base/ints.hpp>
+#include <hashing/hash.hpp>
 
 using namespace hashing;
 
@@ -66,6 +63,9 @@ namespace my_map {
 	using unordered_map = std::unordered_map<Key, T, Hash, Pred, Alloc>;
 }
 
+template<typename From, typename To>
+concept is_explicitly_convertible_to = requires(From f) { static_cast<To>(f); };
+
 class HashingTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS HashingTest
@@ -86,7 +86,7 @@ private:
 		assertTrue(type_hash_code<std::string> != type_hash_code<S>, "hash-codes should differ");
 		assertTrue(type_hash_code<X> == type_hash_code<X>, "hash-code should be the same");
 		assertTrue(
-			std::convertible_to<decltype(type_hash_code<Y>), u32>,
+			is_explicitly_convertible_to<decltype(type_hash_code<Y>), u32>,
 			"hash-code should be convertible to u32"
 		);
 	}
@@ -100,31 +100,30 @@ private:
 			has_update_hash_char<fnv1a_64>, "fnv1a_64 should have update_hash(char*, usize)"
 		);
 		constexpr auto res2 = fnv1a_64{}(std::array{ 1, 2, 3 });
-		constexpr auto res3 = debug_hash{}("hello", 5);
+		constexpr auto res3 = static_cast<std::string>(debug_hash{}("hello", 5)).size();
 		assertTrue(
-			std::convertible_to<decltype(res1), u32>,
-			"fnv1a_32 should be convertible to
-			u32 "); assertTrue(std::convertible_to<decltype(res2), u64>, " fnv1a_64 should be
-				convertible to u64
-			"); assertTrue(std::convertible_to<decltype(res3), std::string>,
-			"debug_hash should be convertible to std::string"
+			is_explicitly_convertible_to<decltype(res1), u32>,
+			"fnv1a_32 should be convertible to u32 "
 		);
-		assertTrue(static_cast<std::string>(res3).size() > 0, "debug_hash should return a
-		non-empty string");
+		assertTrue(
+			is_explicitly_convertible_to<decltype(res2), u64>,
+			" fnv1a_64 should be convertible to u64"
+		);
+		assertTrue(res3 > 0, "debug_hash should return a non-empty string");
 	}
 
 	template<typename Alg>
 	void hashTest() {
-		// hash<Alg> hasher;
-		// assertTrue(hasher(1.f) != hasher(2.f), "hashes should differ");
-		// constexpr auto res1 = hasher(X{});
-		// constexpr auto res2 = hasher(S{});
-		// assertTrue(res1 != res2, "hashes should differ");
-		// my_map::unordered_map<std::string, int> m;
-		// m["hello"] = 42;
-		// m["world"] = 7;
-		// assertTrue(m["hello"] == 42, "hello should be 42");
-		// assertTrue(m["world"] == 7, "world should be 7");
+		hash<Alg> hasher;
+		assertTrue(hasher(1.f) != hasher(2.f), "hashes should differ");
+		constexpr auto res1 = hasher(X{});
+		constexpr auto res2 = hasher(S{});
+		assertTrue(res1 != res2, "hashes should differ");
+		my_map::unordered_map<std::string, int> m;
+		m["hello"] = 42;
+		m["world"] = 7;
+		assertTrue(m["hello"] == 42, "hello should be 42");
+		assertTrue(m["world"] == 7, "world should be 7");
 	}
 };
 

@@ -1,9 +1,7 @@
 #pragma once
 #include <concepts>
 
-// #include <base/ints.hpp>
-#include "../../../../base/src/base/ints.hpp"
-
+#include <base/ints.hpp>
 
 #include "unique_id.hpp"
 
@@ -27,6 +25,12 @@ namespace hashing {
 			void check(CheckT* data, usize len)
 				requires requires { acc{}.std::remove_cvref_t<Self>::update_hash(data, len); } {}
 		};
+
+		template<typename Self>
+		struct hc_acc: public std::remove_cvref_t<Self> {
+			void check(const type_hash_code_t& hash)
+				requires requires { hc_acc{}.std::remove_cvref_t<Self>::add_hash_code(hash); } {}
+		};
 	}
 
 	template<typename T>
@@ -39,14 +43,6 @@ namespace hashing {
 
 	template<typename T>
 	concept has_update_hash = has_update_hash_void<T> || has_update_hash_char<T>;
-
-	namespace detail {
-		template<typename Self>
-		struct hc_acc: public std::remove_cvref_t<Self> {
-			void check(const type_hash_code_t& hash)
-				requires requires { hc_acc{}.std::remove_cvref_t<Self>::add_hash_code(hash); } {}
-		};
-	}
 
 	template<typename Self, typename T>
 	constexpr bool is_hash_code_aware
@@ -102,6 +98,21 @@ namespace hashing {
 		constexpr void hash_as_chars(HashAlgorithm& h, const T& t) {
 			std::array arr = std::bit_cast<std::array<char, sizeof(t)>, T>(t);
 			h(arr.data(), arr.size());
+		}
+
+		template<typename HashAlgorithm, typename R>
+		concept can_hash_range_as_chars
+			= hash_algorithm<HashAlgorithm> && std::ranges::contiguous_range<R>
+		   && std::has_unique_object_representations_v<std::ranges::range_value_t<R>>
+		   && requires(HashAlgorithm& h, const R& t) {
+				  h(std::ranges::data(t),
+			        std::ranges::size(t) * sizeof(std::ranges::range_value_t<R>));
+			  };
+
+		template<hash_algorithm HashAlgorithm, std::ranges::contiguous_range R>
+		constexpr void hash_range_as_chars(HashAlgorithm& h, const R& t)
+			requires can_hash_range_as_chars<HashAlgorithm, R> {
+			h(std::ranges::data(t), std::ranges::size(t) * sizeof(std::ranges::range_value_t<R>));
 		}
 	}
 

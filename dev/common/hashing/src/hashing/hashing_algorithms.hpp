@@ -2,10 +2,9 @@
 
 #include <type_traits>
 #include <ranges>
+#include <vector>
 
-// #include <base/ints.hpp>
-#include "../../../../base/src/base/ints.hpp"
-
+#include <base/ints.hpp>
 
 #include "unique_id.hpp"
 #include "hash_utils.hpp"
@@ -100,7 +99,47 @@ namespace hashing {
 
 		debug_hash() = default;
 
-		explicit operator result_type() noexcept;
+		explicit constexpr operator result_type() noexcept {
+			std::string ret;
+			usize       line = 0, pos = 0;
+
+			constexpr std::string_view yellow = "\033[1;33m";
+			constexpr std::string_view red    = "\033[1;31m";
+			constexpr std::string_view reset  = "\033[0m";
+
+			auto append_line_number = [](std::string& str, usize num) {
+				str += "line ";
+				std::string num_str;
+				do {
+					num_str += '0' + num % 10;
+					num /= 10;
+				} while (num != 0);
+				str += std::string(4 - num_str.size(), ' ');
+				str += num_str;
+				str += ":    ";
+			};
+			auto append_hex = [](std::string& str, std::byte b) {
+				constexpr std::string_view hex = "0123456789ABCDEF";
+				str += hex[std::to_integer<unsigned>(b >> 4)];
+				str += hex[std::to_integer<unsigned>(b & std::byte{ 0xF })];
+			};
+
+			for (auto&& [b, len, type]: bytes) {
+				for (usize i = pos, j = 0; j < len; ++i, ++j) {
+					if (i % 16 == 0) {
+						if (line != 0) ret += '\n';
+						append_line_number(ret, line++);
+					}
+					if (i == pos) ret += (type == type::hash_code ? yellow : red);
+					append_hex(ret, static_cast<std::byte>(b[j]));
+					ret += ' ';
+					if (i == pos) ret += reset;
+				}
+				pos = (pos + len) % 16;
+			}
+
+			return ret;
+		}
 	};
 
 

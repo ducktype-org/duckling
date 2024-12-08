@@ -1,5 +1,5 @@
 add_library(Hashing
-    src/hashing/hashing_algorithms.cpp
+    src/hashing/empty.cpp
 )
 
 make_module(Hashing USES Base Tester)

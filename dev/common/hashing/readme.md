@@ -8,5 +8,4 @@ algorithms and allows to add more.
 - hash.hpp
 - hash_utils.hpp
 - hashing_algorithms.hpp
-- hashing_algorithms.cpp
 - unique_id.hpp
