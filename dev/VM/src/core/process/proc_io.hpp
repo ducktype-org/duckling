@@ -28,9 +28,11 @@ namespace vm {
 			T    v{};
 			auto lck = lock();
 
-			// Reading from a string_stream is non-blocking, so we have to wait, unless
-			// the input is redirected from std::cin, then it's blocking.
-			if (!stdio) {
+			// Reading from a string_stream is non-blocking, so we have to wait...
+			// unless the input is redirected from std::cin, then it's blocking.
+			// Also, in case of any other redirected input, all the data is usually in the buffer
+			// beforehand, but it's not always true so this design is not perfect.
+			if (!attached) {
 				thread.waitUntilNotPausedAndCondition(lck, [this, &thread] {
 					return !thread.isAlive() || input_stream.rdbuf()->in_avail();
 				});
@@ -59,7 +61,7 @@ namespace vm {
 		std::condition_variable output_empty_cv;
 
 	private:
-		std::atomic_bool stdio = false;
+		std::atomic_bool attached = false;
 
 		std::mutex iomutex;
 
@@ -79,7 +81,7 @@ namespace vm {
 			  output(proc_io.output_stream),
 			  inbuf(proc_io.input_stream.rdbuf()),
 			  outbuf(proc_io.output_stream.rdbuf()) {
-			proc_io.stdio = true;
+			proc_io.attached = true;
 			input.get().rdbuf(input_stream.rdbuf());
 			output.get().rdbuf(output_stream.rdbuf());
 		}
@@ -87,7 +89,7 @@ namespace vm {
 	public:
 		~ProcIORedirecter() {
 			if (!moved) {
-				proc_io.get().stdio = true;
+				proc_io.get().attached = true;
 
 				// Restore the original buffers
 				input.get().rdbuf(inbuf);
