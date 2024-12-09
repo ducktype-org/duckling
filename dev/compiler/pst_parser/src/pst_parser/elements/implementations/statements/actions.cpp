@@ -2,52 +2,54 @@
 #include "../../hierarchy/actions.hpp"
 
 namespace pst {
-	ParserRef<Action> Action::parse(LangParserState& state) {
+	MBox<Action> Action::parse(LangParserState& state) {
 		dia::SourcePosition position = state.getPosition();
 
 		if (!assertStmtChoice<Action>(state, state[0].isKeyword())) return nullptr;
 
-		ParserRef<Action> out;
-		auto              keyword = state[0].asKeyword();
+		MBox<Action> out;
+		auto         keyword = state[0].asKeyword();
 
 		switch (keyword) {
 		case Keyword::Return:
-			out = makeRef<Return>(position);
+			out = makeBox<Return>(position);
 			break;
 		case Keyword::Break:
-			out = makeRef<Break>(position);
+			out = makeBox<Break>(position);
 			break;
 		case Keyword::Continue:
-			out = makeRef<Continue>(position);
+			out = makeBox<Continue>(position);
 			break;
 		case Keyword::Redo:
-			out = makeRef<Redo>(position);
+			out = makeBox<Redo>(position);
 			break;
 		case Keyword::Restart:
-			out = makeRef<Restart>(position);
+			out = makeBox<Restart>(position);
 			break;
 		case Keyword::Defer:
-			out = makeRef<Defer>(position);
+			out = makeBox<Defer>(position);
 			break;
 		case Keyword::Throw:
-			out = makeRef<Throw>(position);
+			out = makeBox<Throw>(position);
 			break;
 		default:
 			assertStmtChoice<Action>(state, false);
 			return nullptr;
 		}
-		state.parse(out).eatOne();
+		state.parse(out.toOpt().value()).eatOne();
 
 		// @TODO: for now we assume if there is no expression there is a semicolon
 		if (!state[0].is(Special::Semicolon))
-			state.parse(out).with<Expr>(&out->expr, Expr::parse, true);
+			state.parse(out.toOpt().value()).with(&out->expr, CommaExpr::parse);
 
 		return out;
 	}
 
 	namespace detail {
 		void simpleActionDprint(
-			std::ostream& out, const std::string& kind, const base::Optional<ParserRef<Expr>>* expr
+			std::ostream&                            out,
+			const std::string&                       kind,
+			const base::Optional<MBox<ExprElement>>* expr
 		) {
 			out << "{";
 			out << R"("kind": ")" << kind << "\"";

@@ -1,0 +1,29 @@
+#include "preamble.hpp"
+
+#include "../../hierarchy/not_statements.hpp"
+
+namespace pst::expr {
+	MBox<ExprElement> BlockExpr::parse(LangParserState& state, i64 length) {
+		std::cerr << "Parsing Round Group Expression";
+		if (!checkLength(state, length)) return nullptr;
+
+		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Curly))) {}  // Error
+
+		auto out = makeBox<BlockExpr>(state.getPosition());
+
+		state.parse(out).one(&out->block);
+
+		return out;
+	}
+
+	void BlockExpr::dprint(std::ostream& out) const {
+		out << "{";
+
+		out << R"("block": )";
+		nullAwareDprint(block, out);
+
+		out << "}";
+	}
+
+	void BlockExpr::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitBlockExpr(*this); }
+}

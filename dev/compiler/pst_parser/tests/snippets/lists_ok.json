@@ -9,11 +9,9 @@
 					"function parameter list": []
 				},
 				"return": {
-					"Expression": [
-						{
-							"KeywordValue": "i32"
-						}
-					]
+					"Keyword Expression": {
+						"keyword": "i32"
+					}
 				},
 				"body": {
 					"Code Block or Statement": {
@@ -31,17 +29,19 @@
 					"function parameter list": []
 				},
 				"return": {
-					"Expression": [
-						{
-							"NumLiteral": "1"
+					"Binary Operator": {
+						"left_expr": {
+							"Value Expr": {
+								"number": "1"
+							}
 						},
-						{
-							"Operator": "+"
-						},
-						{
-							"NumLiteral": "1"
+						"operator": "+",
+						"right_expr": {
+							"Value Expr": {
+								"number": "1"
+							}
 						}
-					]
+					}
 				},
 				"body": {
 					"Code Block or Statement": {
@@ -59,26 +59,20 @@
 					"function parameter list": []
 				},
 				"return": {
-					"Expression": [
-						{
-							"Comma separated": [
-								{
-									"Expression": [
-										{
-											"KeywordValue": "i32"
-										}
-									]
-								},
-								{
-									"Expression": [
-										{
-											"KeywordValue": "i32"
-										}
-									]
+					"Comma Expr": {
+						"sub-expressions": [
+							{
+								"Keyword Expression": {
+									"keyword": "i32"
 								}
-							]
-						}
-					]
+							},
+							{
+								"Keyword Expression": {
+									"keyword": "i32"
+								}
+							}
+						]
+					}
 				},
 				"body": {
 					"Code Block or Statement": {
@@ -96,55 +90,48 @@
 					"function parameter list": []
 				},
 				"return": {
-					"Expression": [
-						{
-							"Comma separated": [
-								{
-									"Expression": [
-										{
-											"KeywordValue": "i32"
+					"Comma Expr": {
+						"sub-expressions": [
+							{
+								"Keyword Expression": {
+									"keyword": "i32"
+								}
+							},
+							{
+								"Binary Operator": {
+									"left_expr": {
+										"Value Expr": {
+											"number": "1"
 										}
-									]
-								},
-								{
-									"Expression": [
-										{
-											"NumLiteral": "1"
-										},
-										{
-											"Operator": "+"
-										},
-										{
-											"NumLiteral": "1"
+									},
+									"operator": "+",
+									"right_expr": {
+										"Value Expr": {
+											"number": "1"
 										}
-									]
-								},
-								{
-									"Expression": [
-										{
-											"Group": {
-												"type": "()",
-												"expr": {
-													"Expression": [
-														{
-															"Identifier": "abc"
-														}
-													]
-												}
+									}
+								}
+							},
+							{
+								"Round Group Expression": {
+									"inner_expr": {
+										"Identifier Expression": {
+											"name": {
+												"Name": "abc"
 											}
 										}
-									]
-								},
-								{
-									"Expression": [
-										{
-											"Identifier": "x"
-										}
-									]
+									}
 								}
-							]
-						}
-					]
+							},
+							{
+								"Identifier Expression": {
+									"name": {
+										"Name": "x"
+									}
+								}
+							}
+						]
+					}
 				},
 				"body": {
 					"Code Block or Statement": {
@@ -162,55 +149,48 @@
 					"function parameter list": []
 				},
 				"return": {
-					"Expression": [
-						{
-							"Comma separated": [
-								{
-									"Expression": [
-										{
-											"KeywordValue": "i32"
+					"Comma Expr": {
+						"sub-expressions": [
+							{
+								"Keyword Expression": {
+									"keyword": "i32"
+								}
+							},
+							{
+								"Binary Operator": {
+									"left_expr": {
+										"Value Expr": {
+											"number": "1"
 										}
-									]
-								},
-								{
-									"Expression": [
-										{
-											"NumLiteral": "1"
-										},
-										{
-											"Operator": "+"
-										},
-										{
-											"NumLiteral": "1"
+									},
+									"operator": "+",
+									"right_expr": {
+										"Value Expr": {
+											"number": "1"
 										}
-									]
-								},
-								{
-									"Expression": [
-										{
-											"Group": {
-												"type": "()",
-												"expr": {
-													"Expression": [
-														{
-															"Identifier": "abc"
-														}
-													]
-												}
+									}
+								}
+							},
+							{
+								"Round Group Expression": {
+									"inner_expr": {
+										"Identifier Expression": {
+											"name": {
+												"Name": "abc"
 											}
 										}
-									]
-								},
-								{
-									"Expression": [
-										{
-											"Identifier": "x"
-										}
-									]
+									}
 								}
-							]
-						}
-					]
+							},
+							{
+								"Identifier Expression": {
+									"name": {
+										"Name": "x"
+									}
+								}
+							}
+						]
+					}
 				},
 				"body": {
 					"Code Block or Statement": {
@@ -218,6 +198,6 @@
 					}
 				}
 			}
-		}
+		},
 	]
 }

@@ -17,9 +17,9 @@ namespace pst {
 		FieldTypeEndError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<Field> Field::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<Field> Field::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Field>(position, ctx);
+		auto out      = makeBox<Field>(position, ctx);
 
 		out->parseSpecifiers(state);
 
@@ -28,18 +28,11 @@ namespace pst {
 			state.parse(out).eatOne();
 		}
 
-		state.parse(out).all(&out->name, Operator::Colon);
-		state.parse(out).with(
-			&out->type,
-			Expr::parseUntil<
-				detail::Conditions::isAssignOrSemicolon,
-				detail::Conditions::isAssignOrSemicolon,
-				FieldTypeEndError>,
-			true
-		);
+		state.parse(out).all(&out->name, NamedOperator::Colon);
+		state.parse(out).with(&out->type, CommaExpr::parse);
 
-		if (state.parse(out).tryEat(Operator::Assign))
-			state.parse(out).with<Expr>(&out->init, Expr::parse, true);
+		if (state.parse(out).tryEat(NamedOperator::Assign))
+			state.parse(out).with(&out->init, CommaExpr::parse);
 
 		return out;
 	}

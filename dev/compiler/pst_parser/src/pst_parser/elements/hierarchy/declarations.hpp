@@ -22,11 +22,11 @@ namespace pst {
 	};
 
 	class TopLevel final: public Decl {
-		std::vector<tpc::ParserRef<Stmt>> statements;
+		std::vector<MBox<Stmt>> statements;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(TopLevel);
-		static ParserRef<TopLevel> parse(LangParserState& state);
+		static MBox<TopLevel> parse(LangParserState& state);
 
 		~TopLevel() override = default;
 		void dprint(std::ostream& out) const final;
@@ -51,12 +51,12 @@ namespace pst {
 
 	class Block final: public CodeDecl {
 		tpc::OptionalIdentifier optional_name;
-		ParserRef<CodeBlock>    code_block = nullptr;
+		MBox<CodeBlock>         code_block = nullptr;
 
 	public:
 		explicit Block(const dia::SourcePosition& position): CodeDecl(position) {}
 
-		static ParserRef<Block> parse(LangParserState& state);
+		static MBox<Block> parse(LangParserState& state);
 		~Block() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -69,8 +69,8 @@ namespace pst {
 	};
 
 	class Namespace final: public Decl {
-		tpc::Identifier      name;
-		ParserRef<CodeBlock> body = nullptr;
+		tpc::Identifier name;
+		MBox<CodeBlock> body = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Namespace);
@@ -81,11 +81,11 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<CodeBlock> getBody() const {
-			return body.borrow();
+		MCRef<CodeBlock> getBody() const {
+			return body.ref();
 		}
 
-		static ParserRef<Namespace> parse(LangParserState& state);
+		static MBox<Namespace> parse(LangParserState& state);
 		~Namespace() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -99,10 +99,10 @@ namespace pst {
 
 	class Class final: public Decl {
 	private:
-		tpc::Identifier           name;
-		ParserRef<Expr>           base       = nullptr;
-		ParserRef<ImplementsList> implements = nullptr;
-		ParserRef<ClassBlock>     body       = nullptr;
+		tpc::Identifier      name;
+		MBox<ExprElement>    base       = nullptr;
+		MBox<ImplementsList> implements = nullptr;
+		MBox<ClassBlock>     body       = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Class);
@@ -113,21 +113,21 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<ClassBlock> getBody() const {
-			return body.borrow();
+		MCRef<ClassBlock> getBody() const {
+			return body.ref();
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getBase() const {
-			return base.borrow();
+		MCRef<ExprElement> getBase() const {
+			return base.ref();
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<ImplementsList> getImplements() const {
-			return implements.borrow();
+		MCRef<ImplementsList> getImplements() const {
+			return implements.ref();
 		}
 
-		static ParserRef<Class> parse(LangParserState& state);
+		static MBox<Class> parse(LangParserState& state);
 		~Class() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -145,10 +145,10 @@ namespace pst {
 	};
 
 	class Variable final: public Decl {
-		tpc::Identifier name;
-		ParserRef<Expr> type     = nullptr;
-		ParserRef<Expr> value    = nullptr;
-		bool            is_const = true;
+		tpc::Identifier   name;
+		MBox<ExprElement> type     = nullptr;
+		MBox<ExprElement> value    = nullptr;
+		bool              is_const = true;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Variable);
@@ -161,13 +161,13 @@ namespace pst {
 		bool trailingSemicolon() override;
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getType() const {
-			return type.borrow();
+		MCRef<ExprElement> getType() const {
+			return type.ref();
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getValue() const {
-			return value.borrow();
+		MCRef<ExprElement> getValue() const {
+			return value.ref();
 		}
 
 		[[nodiscard]]
@@ -175,7 +175,7 @@ namespace pst {
 			return is_const;
 		}
 
-		static ParserRef<Variable> parse(LangParserState& state);
+		static MBox<Variable> parse(LangParserState& state);
 		~Variable() final = default;
 		void dprint(std::ostream& out) const final;
 
@@ -187,19 +187,11 @@ namespace pst {
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
-	using ParamList = List<
-		FunParam,
-		false,
-		lexer::Token::BracketType::Round,
-		detail::Conditions::isComma,
-		detail::Conditions::isSentinel,
-		detail::NameGetters::parameterList>;
-
 	class Fun final: public Decl {
-		tpc::Identifier                 name;
-		ParserRef<ParamList>            params = nullptr;
-		base::Optional<ParserRef<Expr>> ret;
-		ParserRef<CodeBlockOrStmt>      body = nullptr;
+		tpc::Identifier                   name;
+		MBox<ParamList>                   params = nullptr;
+		base::Optional<MBox<ExprElement>> ret;
+		MBox<CodeBlockOrStmt>             body = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Fun);
@@ -210,22 +202,25 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		auto getParams() const {
-			return params.borrow();
+		MCRef<ParamList> getParams() const {
+			return params.ref();
 		}
 
 		[[nodiscard]]
-		auto getRet() const {
-			return ret.map([](const auto& v) { return v.borrow(); });
+		/**
+		 * @note Optional of MCRef here is intentional
+		 */
+		base::Optional<MCRef<ExprElement>> getRet() const {
+			return ret.map([](const auto& v) { return v.ref(); });
 		}
 
 		[[nodiscard]]
-		auto getBody() const {
-			return body.borrow();
+		MCRef<CodeBlockOrStmt> getBody() const {
+			return body.ref();
 		}
 
-		static ParserRef<Fun> parse(LangParserState& state);
-		void                  dprint(std::ostream& out) const final;
+		static MBox<Fun> parse(LangParserState& state);
+		void             dprint(std::ostream& out) const final;
 		~Fun() final = default;
 
 		[[nodiscard]]
@@ -237,16 +232,16 @@ namespace pst {
 	};
 
 	class If final: public CodeDecl {
-		ParserRef<RoundGroupExpr>  condition = nullptr;
-		tpc::OptionalIdentifier    optional_name;
-		ParserRef<CodeBlockOrStmt> body      = nullptr;
-		ParserRef<CodeBlockOrStmt> else_body = nullptr;
+		MBox<RoundGroupExpr>    condition = nullptr;
+		tpc::OptionalIdentifier optional_name;
+		MBox<CodeBlockOrStmt>   body      = nullptr;
+		MBox<CodeBlockOrStmt>   else_body = nullptr;
 
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {}
 
-		static ParserRef<If> parse(LangParserState& state);
-		void                 dprint(std::ostream& out) const final;
+		static MBox<If> parse(LangParserState& state);
+		void            dprint(std::ostream& out) const final;
 		~If() final = default;
 
 		[[nodiscard]]
@@ -255,28 +250,28 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getCondition() const {
+		MCRef<ExprElement> getCondition() const {
 			return condition->getExpr();
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<CodeBlockOrStmt> getBody() const {
-			return body.borrow();
+		MCRef<CodeBlockOrStmt> getBody() const {
+			return body.ref();
 		}
 
 		void acceptVisitor(PstStmtVisitor& visitor) const override;
 	};
 
 	class While final: public CodeDecl {
-		ParserRef<RoundGroupExpr>  condition = nullptr;
-		tpc::OptionalIdentifier    optional_name;
-		ParserRef<CodeBlockOrStmt> body = nullptr;
+		MBox<RoundGroupExpr>    condition = nullptr;
+		tpc::OptionalIdentifier optional_name;
+		MBox<CodeBlockOrStmt>   body = nullptr;
 
 	public:
 		explicit While(const dia::SourcePosition& position): CodeDecl(position) {}
 
-		static ParserRef<While> parse(LangParserState& state);
-		void                    dprint(std::ostream& out) const final;
+		static MBox<While> parse(LangParserState& state);
+		void               dprint(std::ostream& out) const final;
 		~While() final = default;
 
 		[[nodiscard]]
@@ -288,17 +283,17 @@ namespace pst {
 	};
 
 	class For final: public CodeDecl {
-		tpc::OptionalIdentifier    optional_name;
-		tpc::Identifier            iterator;
-		ParserRef<Expr>            type     = nullptr;
-		ParserRef<Expr>            iterable = nullptr;
-		ParserRef<CodeBlockOrStmt> body     = nullptr;
+		tpc::OptionalIdentifier optional_name;
+		tpc::Identifier         iterator;
+		MBox<ExprElement>       type     = nullptr;
+		MBox<ExprElement>       iterable = nullptr;
+		MBox<CodeBlockOrStmt>   body     = nullptr;
 
 	public:
 		explicit For(const dia::SourcePosition& position): CodeDecl(position) {}
 
-		static ParserRef<For> parse(LangParserState& state);
-		void                  dprint(std::ostream& out) const final;
+		static MBox<For> parse(LangParserState& state);
+		void             dprint(std::ostream& out) const final;
 		~For() final = default;
 
 		[[nodiscard]]

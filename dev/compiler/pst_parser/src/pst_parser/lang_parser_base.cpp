@@ -4,9 +4,7 @@
 #include <base/str_utils.hpp>
 
 namespace pst {
-	void LangParserState::addImport(const tpc::ParserCBorrowRef<pst::Import>& import) {
-		imports.push_back(import);
-	}
+	void LangParserState::addImport(const ImportType& import) { imports.push_back(import); }
 
 	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }
 
@@ -20,10 +18,11 @@ namespace pst {
 
 	void LangElement::addToken(const tpc::Token& t) { addToken(base::borrow_ptr(&t)); }
 
-	void LangElement::addChild(ParserBorrowRef<LangElement> el) {
-		if (el != nullptr) {
-			sub_elements.emplace_back(el);
-			setLastToken(el->getSourcePosition());
+	void LangElement::addChild(MRef<LangElement> el) {
+		auto opt = el.toOpt();
+		if (opt) {
+			sub_elements.emplace_back(opt.value());
+			setLastToken(opt.value()->getSourcePosition());
 		}
 	}
 

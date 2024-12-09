@@ -1,9 +1,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<Block> Block::parse(LangParserState& state) {
+	MBox<Block> Block::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Block>(position);
+		auto out      = makeBox<Block>(position);
 
 		if (!assertStmtChoice<Block>(state, state[0].is(Keyword::Block))) return nullptr;
 

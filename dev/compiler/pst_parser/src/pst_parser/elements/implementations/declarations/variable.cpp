@@ -17,9 +17,9 @@ namespace pst {
 		VariableTypeEndError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<Variable> Variable::parse(LangParserState& state) {
+	MBox<Variable> Variable::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Variable>(position);
+		auto out      = makeBox<Variable>(position);
 
 		const bool is_var = state[0].is(Keyword::Var);
 		const bool is_let = state[0].is(Keyword::Let);
@@ -29,21 +29,16 @@ namespace pst {
 		out->is_const = is_let;
 
 		// @TODO: Add a possibility for type deduction from assigned value and no initial value.
-		state.parse(out).all(is_var ? Keyword::Var : Keyword::Let, &out->name, Operator::Colon);
-
-		state.parse(out).with(
-			&out->type,
-			Expr::parseUntil<
-				detail::Conditions::isAssignOrSemicolon,
-				detail::Conditions::isAssign,
-				VariableTypeEndError>,
-			true
+		state.parse(out).all(
+			is_var ? Keyword::Var : Keyword::Let, &out->name, NamedOperator::Colon
 		);
 
-		state.parse(out).one(Operator::Assign, true);
+		state.parse(out).with(&out->type, CommaExpr::parse);
+
+		state.parse(out).one(NamedOperator::Assign, true);
 
 		// @TODO: Perhaps add possibility for default construction.
-		state.parse(out).with<Expr>(&out->value, Expr::parse, true);
+		state.parse(out).with(&out->value, CommaExpr::parse);
 
 		return out;
 	}

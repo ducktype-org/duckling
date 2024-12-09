@@ -17,12 +17,41 @@
 #include <set>
 
 namespace pst {
-	class PstStmtVisitor;
 	class Attribute;
 
 	using StateCondition = bool(const LangParserState&, i64);
 
 	using GetName = std::string (*)();
+
+	class NotStmt: public LangElement {
+	public:
+		explicit NotStmt(const dia::SourcePosition& position): LangElement(position) {}
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Not Statement";
+		}
+
+		bool trailingSemicolon() override;
+	};
+
+	class Attribute final: public NotStmt {
+		MBox<DottedName> name;
+		MBox<AtrArgList> args = nullptr;
+
+	public:
+		explicit Attribute(dia::SourcePosition& pos): NotStmt(pos) {}
+
+		static MBox<Attribute> parse(LangParserState& state);
+		~Attribute() final = default;
+
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Attribute";
+		}
+	};
 
 	enum class StmtKind {
 		Import,
@@ -49,7 +78,7 @@ namespace pst {
 		StmtKind kind;
 
 	protected:
-		using AttrList = std::vector<ParserRef<Attribute>>;
+		using AttrList = std::vector<Box<Attribute>>;
 
 		AttrList attributes;
 
@@ -62,7 +91,7 @@ namespace pst {
 		/**
 		 * @brief Prepends attributes after parsing handling sub elements and position.
 		 */
-		void addAttributes(std::vector<ParserRef<Attribute>>&& additions);
+		void addAttributes(AttrList&& additions);
 
 		void dprintAttributes(std::ostream& out) const;
 
@@ -74,9 +103,9 @@ namespace pst {
 			return kind;
 		}
 
-		static ParserRef<Stmt> parse(LangParserState& state);
-		bool                   trailingSemicolon() override;
-		virtual void           acceptVisitor(PstStmtVisitor& visitor) const = 0;
+		static MBox<Stmt> parse(LangParserState& state);
+		bool              trailingSemicolon() override;
+		virtual void      acceptVisitor(PstStmtVisitor& visitor) const = 0;
 
 		/**
 		 * @note This might need to return a vector of borrow pointers instead
@@ -123,18 +152,6 @@ namespace pst {
 #define STMT_CHILD_CONSTRUCTOR(class_name) \
 	class_name(const dia::SourcePosition& position): Stmt(StmtKind::class_name, position) {}
 
-	class NotStmt: public LangElement {
-	public:
-		explicit NotStmt(const dia::SourcePosition& position): LangElement(position) {}
-
-		[[nodiscard]]
-		std::string elementType() const override {
-			return "Not Statement";
-		}
-
-		bool trailingSemicolon() override;
-	};
-
 	struct ClassContext {
 		base::StrID                                 name;
 		std::vector<base::c_borrow_ptr<tpc::Token>> specifiers;
@@ -162,10 +179,10 @@ namespace pst {
 			  context(std::move(ctx)) {}
 
 	private:
-		static ParserRef<ClassStmt> chooseStmt(LangParserState& state, const ClassContext& ctx);
+		static MBox<ClassStmt> chooseStmt(LangParserState& state, const ClassContext& ctx);
 
 	public:
-		static ParserRef<ClassStmt> parse(LangParserState& state, const ClassContext& ctx);
+		static MBox<ClassStmt> parse(LangParserState& state, const ClassContext& ctx);
 
 		const ClassContext& getContext() { return { context }; }
 

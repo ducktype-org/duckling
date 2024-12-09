@@ -38,6 +38,15 @@ namespace base {
 		 */
 		StableVector(const StableVector&) = delete;
 
+		/**
+		 * @note It is pointer-wise comparision
+		 * @todo change it to value-wise comparision once StableVector refactor is introduced
+		 * @note it is used to compare mir::Function, lir::Function
+		 * There are a lot of questions regarding how hout, mir, lir objects
+		 * should be compared and hashed.
+		 */
+		bool operator==(const StableVector& other) const = default;
+
 		[[nodiscard]]
 		constexpr usize size() const noexcept {
 			return data.size();
@@ -70,13 +79,13 @@ namespace base {
 		}
 
 		constexpr Key pushBack(const Data& value) {
-			auto new_ptr = box<Data>(value);
+			auto new_ptr = makeBox<Data>(value);
 			data.emplace_back(std::move(new_ptr));
 			return Key(data.size() - 1);
 		}
 
 		Key pushBack(Data&& value) {
-			auto new_ptr = box<Data>(std::move(value));
+			auto new_ptr = makeBox<Data>(std::move(value));
 			data.emplace_back(std::move(new_ptr));
 			return Key(data.size() - 1);
 		}

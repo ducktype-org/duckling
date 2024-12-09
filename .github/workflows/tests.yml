@@ -4,6 +4,7 @@ on:
   push:
     branches: [ "main", "dev" ]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 env:
@@ -19,6 +20,8 @@ env:
 
 jobs:
   build:
+    if: github.event.pull_request.draft == false
+    
     strategy:
       matrix:
         build-type: [Debug, Release]  # (Release, Debug, RelWithDebInfo, etc.)
@@ -33,7 +36,7 @@ jobs:
       # it should not override if the step if skipped.
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
 
-    timeout-minutes: 10  # (Per matrix run)
+    timeout-minutes: 12  # (Per matrix run)
 
     runs-on: ubuntu-24.04
 

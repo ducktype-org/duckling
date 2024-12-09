@@ -1,4 +1,4 @@
-class T { }
+class T {}
 
 fun foo() = {
 	var a: i32 = in_n;
@@ -21,4 +21,3 @@ namespace N {
 	class Q {}
 	const in_n: i32 = 0;
 }
-

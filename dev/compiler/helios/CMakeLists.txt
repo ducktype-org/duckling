@@ -6,7 +6,10 @@ add_library(HELIOS
 	src/helios/queries.cpp
 	src/helios/lookup_result.cpp
 	src/helios/hout/hout.cpp
-	src/helios/hout/elements.cpp
+	src/helios/hout/elements/stmt.cpp
+	src/helios/hout/elements/expr.cpp
+	src/helios/hout/elements/expr_fromPST.cpp
+	src/helios/hout/elements/query_hout_of_expr.cpp
 	src/helios/helios_errors.hpp
 	src/helios/test_utils/helios_test_utils.cpp
 	src/helios/helios_result.hpp

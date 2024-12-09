@@ -4,6 +4,7 @@
 #include <filesystem/file.hpp>
 #include <pst_parser/pst.hpp>
 #include <base/maps.hpp>
+#include <base/ref.hpp>
 
 // @TODO: this dependency can be relaxed by separating ModuleID and FileID
 #include "module_tree.hpp"
@@ -33,27 +34,26 @@ namespace compiler::frontend {
 	/**
 	 * @brief Query sources files of a module (without main source file).
 	 */
-	DECLARE_QUERY(QuerySourceFiles, ModuleID, const std::vector<FileID>&)
+	DECLARE_QUERY(QuerySourceFiles, ModuleID, CRef<std::vector<FileID>>)
 
 	/**
 	 * @brief Query map of children modules aka submodules
 	 * of given module.
 	 */
-	DECLARE_QUERY(QuerySubmodules, ModuleID, const base::HashMap<base::StrID COMMA ModuleID>&)
+	DECLARE_QUERY(QuerySubmodules, ModuleID, CRef<base::HashMap<base::StrID COMMA ModuleID>>)
 
 
 	/**
 	 * @brief Query PST of given file.
 	 */
-	DECLARE_QUERY(QueryFilePST, FileID, const pst::PST<>&)
+	DECLARE_QUERY(QueryFilePST, FileID, CRef<pst::PST<>>)
 
 	/**
 	 * @brief Returns ModuleID
 	 * Assumes that @p element is a TopLevel element of some File parsed with interface of Frontend
 	 * module.
 	 */
-	ModuleID
-		extendQueryModuleIDOfPST(query::Context&, pst::ParserCBorrowRef<pst::LangElement> element);
+	ModuleID extendQueryModuleIDOfPST(query::Context&, MCRef<pst::LangElement> element);
 
 	/**
 	 * @brief Query extension used to

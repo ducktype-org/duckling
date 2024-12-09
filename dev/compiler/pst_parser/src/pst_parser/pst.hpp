@@ -15,18 +15,21 @@ namespace pst {
 	 *
 	 * @tparam Element Root Element to parse.
 	 */
-	template<std::derived_from<LangElement> Element = TopLevel>
+	template<
+		std::derived_from<LangElement> Element = TopLevel,
+		std::derived_from<LangElement> Parser  = Element>
 	class PST {
 	public:
 		/**
 		 * @brief Checks if an element is pars-able using given arguments.
 		 */
 		template<typename... Args>
-		constexpr static bool ParseAble = tpc::ParseAbleElement<Element, LangParserState, Args...>;
+		constexpr static bool ParseAble
+			= tpc::ParseAbleElement<Element, Parser, LangParserState, Args...>;
 
 	private:
 		tokenizer::OwnFile      file;
-		ParserRef<Element>      element;
+		MBox<Element>           element;
 		std::vector<ImportType> imports;
 
 		/**
@@ -45,7 +48,7 @@ namespace pst {
                 ),
                 file->getLogger()
             );
-			element = Element::parse(state, std::forward<Args>(args)...);
+			element = Parser::parse(state, std::forward<Args>(args)...);
 			imports = std::move(state).extractState();
 		}
 
@@ -90,7 +93,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const std::vector<ParserCBorrowRef<Import>>& getImports() const {
+		const std::vector<ImportType>& getImports() const {
 			return imports;
 		}
 
@@ -105,8 +108,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Element> getRootElement() const {
-			return element.borrow();
+		MCRef<Element> getRootElement() const {
+			return element.ref();
 		}
 
 		PST(PST&& other) noexcept:

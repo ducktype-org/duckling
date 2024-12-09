@@ -34,7 +34,7 @@ namespace compiler::helios {
 		 * @brief PST element for which the scope was created.
 		 * Empty for root scope.
 		 */
-		base::Optional<PstRef<pst::LangElement>> related_pst_element;
+		base::Optional<MCRef<pst::LangElement>> related_pst_element;
 
 		/**
 		 * @brief Module, the scope was defined in
@@ -106,7 +106,7 @@ namespace compiler::helios {
 			});
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRootScopeOf);
@@ -145,7 +145,7 @@ namespace compiler::helios {
 			});
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);
@@ -245,10 +245,10 @@ namespace compiler::helios {
 				return filterSymbolsFromStmtList(ctx, key, getStmtsFromStmtAggregate(base_element));
 			} else if (base_element->isStatement()) {
 				SymbolGrabVisitor symbol_grab(ctx, key);
-				auto              as_stmt = dynamic_cast<const pst::Stmt*>(base_element.get());
+				auto              as_stmt = dynamic_cast<const pst::Stmt*>(&*base_element);
 				as_stmt->acceptVisitor(symbol_grab);
 				return std::move(symbol_grab.out.value());
-			} else if (base_element->elementType() == "Expression") {
+			} else if (dynamic_cast<const pst::ExprElement*>(&*base_element)) {
 				// @FIXME: change the way we check the condition, by comparing enum
 				// values instead of strings. Make the enum stringifiable.
 				return std::vector<SymID>{};
@@ -258,14 +258,14 @@ namespace compiler::helios {
 		}
 
 		static auto load(QKey key) -> LoadResult {
-			if (const auto& cache = key.ref->symbols) return QResWithACD{ cache->data, cache->acd };
+			if (const auto& cache = key.ref->symbols)
+				return QResWithACD{ &cache->data, cache->acd };
 			return {};
 		}
 
-		static auto store([[maybe_unused]] QKey key, PResult p_res, [[maybe_unused]] query::ACD acd)
-			-> QResult {
+		static auto store(QKey key, PResult p_res, query::ACD acd) -> QResult {
 			key.ref->symbols.emplace(PResWithACD{ std::move(p_res), acd });
-			return key.ref->symbols.value().data;
+			return &key.ref->symbols.value().data;
 		}
 	};
 
@@ -273,16 +273,16 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryLookupInScope, LookupResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			const auto& symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
+			auto symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
 
 			LookupResult result{ {}, {} };
 
-			for (const auto& sym: symbol_list) {
+			for (const auto& sym: *symbol_list) {
 				if (isWildcard(sym)) {
 					if (key.with_wildcards) {
-						auto& wild_result = ctx.query<QueryLookupInSymbol>({ sym, key.name, true });
-						if (!wild_result.isEmpty())
-							result.children.push_back(wild_result.toNode(sym));
+						auto wild_result = ctx.query<QueryLookupInSymbol>({ sym, key.name, true });
+						if (!wild_result->isEmpty())
+							result.children.push_back(wild_result->toNode(sym));
 					}
 				} else if (name(sym) == key.name) {
 					result.leaves.push_back(sym);
@@ -294,33 +294,33 @@ namespace compiler::helios {
 			return result;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+		QUERY_AUTO_CACHE_REF;
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
 	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, LookupResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			LookupResult result = ctx.query<QueryLookupInScope>(key);
+			auto result = ctx.query<QueryLookupInScope>(key);
 
 			if (key.scope.ref->parent.has_value()) {
 				auto parent = key.scope.ref->parent.value();
 
 				// Reverse insertion order allow for linear result concatenation instead of
 				// quadratic
-				LookupResult parent_result = ctx.query<QueryLookupInScopeAndParents>(
+				LookupResult parent_result = *ctx.query<QueryLookupInScopeAndParents>(
 					{ parent, key.name, key.with_wildcards }
 				);
 
-				parent_result.insert(std::move(result));
+				parent_result.insert(*result);
 
 				return parent_result;
 			} else {
-				return result;
+				return *result;
 			}
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF;
+		QUERY_AUTO_CACHE_REF;
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
@@ -339,11 +339,11 @@ namespace compiler::helios {
 	}
 
 	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
-		auto  main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
-		auto& main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
+		auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
+		auto main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
 
 		auto main_file_root_scope
-			= ctx.query<QueryPrimaryCodeScopeFor>({ main_source_pst.getRootElement() });
+			= ctx.query<QueryPrimaryCodeScopeFor>({ main_source_pst->getRootElement() });
 
 		return main_file_root_scope;
 	}

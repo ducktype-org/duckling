@@ -1,17 +1,17 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<CodeBlockOrStmt> CodeBlockOrStmt::parse(LangParserState& state) {
-		auto out = makeRef<CodeBlockOrStmt>(state.getPosition());
+	MBox<CodeBlockOrStmt> CodeBlockOrStmt::parse(LangParserState& state) {
+		auto out = makeBox<CodeBlockOrStmt>(state.getPosition());
 		if (state[0].isBracketGroup(Token::BracketType::Curly)) {
-			ParserRef<CodeBlock> block;
+			MBox<CodeBlock> block;
 			state.parse(out).one(&block);
-			if (block == nullptr) return nullptr;
+			if (!block) return nullptr;
 			out->content = std::move(block);
 		} else {
-			ParserRef<Stmt> stmt;
+			MBox<Stmt> stmt;
 			state.parse(out).one(&stmt);
-			if (stmt == nullptr) return nullptr;
+			if (!stmt) return nullptr;
 			out->content = std::move(stmt);
 		}
 
@@ -26,17 +26,17 @@ namespace pst {
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {
 		variant_match(content) {
-			variant_case(ParserRef<Stmt>, stmt) { return const_iterator(&stmt); }
-			variant_case(ParserRef<CodeBlock>, code_block) { return code_block->begin(); }
+			variant_case(MBox<Stmt>, stmt) { return const_iterator(&stmt); }
+			variant_case(MBox<CodeBlock>, code_block) { return code_block->begin(); }
 		}
-		CORE_PANIC("something went wrong");
+		CORE_UNREACHABLE();
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::end() const {
 		variant_match(content) {
-			variant_case(ParserRef<Stmt>, stmt) { return const_iterator(&stmt) + 1; }
-			variant_case(ParserRef<CodeBlock>, code_block) { return code_block->end(); }
+			variant_case(MBox<Stmt>, stmt) { return const_iterator(&stmt) + 1; }
+			variant_case(MBox<CodeBlock>, code_block) { return code_block->end(); }
 		}
-		CORE_PANIC("something went wrong");
+		CORE_UNREACHABLE();
 	}
 }

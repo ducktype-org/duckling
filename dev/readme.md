@@ -1,3 +1,5 @@
+\page dev-readme ReadMe
+
 # Main development folder
 
 ## File structure

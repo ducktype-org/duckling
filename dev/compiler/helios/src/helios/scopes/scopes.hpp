@@ -9,7 +9,6 @@
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/lang_parser_state.hpp>
 
-#include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
 #include "../lookup_result.hpp"
 
@@ -65,7 +64,7 @@ namespace compiler::helios {
 		 * @todo: once scope refactor will be introduced, most "empty scope"
 		 * stuff will be no longer needed.
 		 */
-		PstRef<pst::LangElement> base_element;
+		MCRef<pst::LangElement> base_element;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
@@ -95,19 +94,19 @@ namespace compiler::helios {
 	/**
 	 * @brief Performs lookup of single name inside given scope.
 	 */
-	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, const LookupResult&);
+	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, CRef<LookupResult>);
 
 	/**
 	 * @brief Performs lookup of single name inside given scope and its parents.
 	 */
-	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, const LookupResult&);
+	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, CRef<LookupResult>);
 
 	/**
 	 * @brief Query all symbols that are directly inside given scope.
 	 *
 	 * @NOTE: For structs, it returns what's inside struct's body.
 	 */
-	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, const std::vector<SymID>&);
+	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>);
 
 	/**
 	 * @brief Root scope of main module file is currently the "effective" root scope.

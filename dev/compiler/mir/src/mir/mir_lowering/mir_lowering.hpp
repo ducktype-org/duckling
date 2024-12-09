@@ -8,7 +8,8 @@
 namespace compiler::mir {
 
 	struct KeyOf_LowerToMirFunction {
-		helios::HOUTFunction& function;
+		// note that HOUTFunction copy is lightweight, cause its uses shared_ptr under the hood
+		helios::HOUTFunction function;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
@@ -23,7 +24,7 @@ namespace compiler::mir {
 	 * Performs lifetime analysis.
 	 * @note in the future it will validate move semantics and potentially other things.
 	 */
-	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, const Function&)
+	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, CRef<Function>)
 
 	/**
 	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.

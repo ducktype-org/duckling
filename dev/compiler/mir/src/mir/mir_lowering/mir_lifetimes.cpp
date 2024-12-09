@@ -114,8 +114,8 @@ namespace compiler::mir {
 			auto  successors = getTerminatorSuccessors(terminator);
 			if (successors.empty()) {
 				// the function ends
-				for (auto& local: function.local_list)
-					add_destructor(terminator.scope, local.ref());
+				auto ending_scopes = getEndingScopes(terminator.scope, function.top_lifetime_scope);
+				add_destructors(ending_scopes, terminator.scope);
 			} else {
 				base::Optional<std::vector<helios::ScopeID>> ending_scopes;
 

@@ -164,7 +164,7 @@ namespace vm {
 			}
 			variant_default { CORE_PANIC("Unexpected Type kind"); }
 		}
-		CORE_PANIC("something went wrong");
+		CORE_UNREACHABLE();
 	}
 
 	// pointer, staticTable, dynamicTable

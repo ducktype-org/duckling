@@ -27,7 +27,13 @@ Since "language" used to define workflows is not something we work with every da
 
 Notable triggers:
 * `push` -- on push to specified branches
-* `pull_request` -- on some pull request activities (importantly on the PR creation)
+* `pull_request` -- on some pull request activities.
+   The default ones are opened, synchronize, reopened.
+   We can change them by adding additional property `types: [...]`.
+   In particular we are using [opened, synchronize, reopened, ready_for_review],
+   so it also runs when someone un-drafts the PR.
+   See <https://docs.github.com/en/actions/reference/events-that-trigger-workflows#pull_request> for
+   more details.
 * `workflow_dispatch` -- on manual trigger
 
 GH docs: <https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows>

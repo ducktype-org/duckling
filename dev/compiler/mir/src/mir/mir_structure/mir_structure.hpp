@@ -8,26 +8,32 @@
 #include <base/strongly_typed_id.hpp>
 #include <base/stringifyable_enum.hpp>
 
+#include "mir_local_ref.hpp"
+
 // clang-format off
+// Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Uninitialized,
 
 	Call,
 	VCall,
 
-	Assign, //< simple byte by byte assignment
+	/** Simple byte by byte assignment */
+	Assign,
 
 	/**
-	 * @brief Placeholder. 
-	 * @todo  Some decisions here to be made about operations like that.
-     * Perhaps we want more generic code for MIR, so algorithms are simpler.
-	 * There could be single operation for all Add, Sub, etc, and single one for all
-	 * comparisons. 
-	 */
+		@brief Placeholder.
+		@todo  Some decisions here to be made about operations like that.
+	*//**
+		Perhaps we want more generic code for MIR, so algorithms are simpler.
+		There could be single operation for all Add, Sub, etc, and single one for all comparisons.
+	*/
 	IntegerAdd,
-	
-	Destruct,	//< See readme.md for more info about destruct.
-	DestructIf, //< See readme.md for more info about DestructIf.
+
+	/** See readme.md for more info about destruct. */
+	Destruct,
+	/** See readme.md for more info about DestructIf. */
+	DestructIf,
 
 	ReturnVoid,
 	ReturnValue,
@@ -35,21 +41,18 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Branch,
 
 	/**
-	 * @brief Operation that represents end of a function.
-	 * @note  It is always implicitly added at the end of a function.
-	 * This operation can have different meaning depending on the context.
-	 * For example in a function that returns void, it is just a return.
-	 * In a function that returns value, "it is" an compiler error, unless its
-	 * unreachable.
-	 */
+		@brief Operation that represents end of a function.
+		This operation can have different meaning depending on the context.
+		For example in a function that returns void, it is just a return.
+		In a function that returns value, "it is" an compiler error, unless it's unreachable.
+		@note  It is always implicitly added at the end of a function.
+	*/
 	FunctionEnd
-);
+)
 
 // clang-format on
 
 namespace compiler::mir {
-
-	struct MirLocal;
 
 	/**
 	 * @brief Whether given operation is an operation that can (and has to be)
@@ -67,14 +70,11 @@ namespace compiler::mir {
 
 	struct MirIntegerConst final {
 		i64 value;
+
+		bool operator==(const MirIntegerConst& other) const = default;
 	};
 
 	STRONG_TYPEDEF_ID(LocalID);
-
-	/**
-	 * @brief Reference to MIR Local variable data.
-	 */
-	using LocalRef = CRef<MirLocal>;
 
 	/**
 	 * @brief Description of a MIR Local variable, like a function argument or simply local
@@ -114,6 +114,8 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		base::StrID getName() const;
+
+		bool operator==(const MirLocal& other) const { return id == other.id; }
 	};
 
 	/**
@@ -122,6 +124,8 @@ namespace compiler::mir {
 	struct MirLocation final {
 	private:
 		// @TODO: global, literal, func-literal, ...
+		// "LocalAccess" a.b.c
+		// "GlobalAccess" a.b.c
 		using ValueType = std::variant<MirIntegerConst, LocalRef, BlockID>;
 
 		ValueType value;
@@ -133,7 +137,14 @@ namespace compiler::mir {
 
 		MirLocation(BlockID value): value(value) {}
 
+		bool operator==(const MirLocation& other) const = default;
+
 		void debugPrint(std::ostream& output) const;
+
+		[[nodiscard]]
+		const ValueType& getVariant() const {
+			return value;
+		}
 
 		/**
 		 * @brief Returns reference value of given type
@@ -159,6 +170,8 @@ namespace compiler::mir {
 		enum class Flag { Construct, Destruct, Move };
 		Flag     flag;
 		LocalRef local;
+
+		bool operator==(const OperationFlag& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 	};
@@ -208,6 +221,8 @@ namespace compiler::mir {
 			  flags(std::move(flags)),
 			  scope(scope) {}
 
+		bool operator==(const Instruction& other) const = default;
+
 		void debugPrint(std::ostream& output) const;
 	};
 
@@ -244,6 +259,8 @@ namespace compiler::mir {
 		 */
 		Instruction terminator;
 
+		bool operator==(const Block& other) const = default;
+
 		[[nodiscard]]
 		helios::ScopeID beginScope() const;
 	};
@@ -256,18 +273,35 @@ namespace compiler::mir {
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
+		helios::ScopeID              top_lifetime_scope;
+
+		// helios ID for hashes, ... this it temporary?
+		// pushing this ID all the way here is problematic
+		// it should be optional at best
+		helios::SymID helios_id;
 
 		Function()                = delete;
 		Function(const Function&) = delete;
+		Function(Function&&)      = default;
+
+		Function& operator=(const Function&) = delete;
+
+		// We can change it to default, when there will be a reason:
+		Function& operator=(Function&&) = delete;
 
 		Function(
 			base::StrID                  name,
 			std::vector<Block>           blocks,
 			base::StableVector<MirLocal> local_list,
-			BlockID                      entry_block
+			BlockID                      entry_block,
+			helios::ScopeID              top_lifetime_scope,
+			helios::SymID                helios_id
 		);
 
-		Function(Function&&) = default;
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
+
+		bool operator==(const Function& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 	};

@@ -1,19 +1,16 @@
 #pragma once
 
 #include <token_parser_core/base_element.hpp>
-#include <token_parser_core/parser_ref.hpp>
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <base/strongly_typed_id.hpp>
+#include <base/ref.hpp>
+#include <base/box.hpp>
 
 #include <variant>
 
 namespace pst {
 	class Import;
-
-	using tpc::ParserBorrowRef;
-	using tpc::ParserCBorrowRef;
-	using tpc::ParserRef;
 
 	STRONG_TYPEDEF_ID(PstID);
 
@@ -25,8 +22,8 @@ namespace pst {
 	 */
 	class LangElement: public tpc::Element {
 	public:
-		using Child      = ParserBorrowRef<LangElement>;
-		using ConstChild = ParserCBorrowRef<LangElement>;
+		using Child      = Ref<LangElement>;
+		using ConstChild = CRef<LangElement>;
 
 		using SubToken = base::c_borrow_ptr<tpc::Token>;
 
@@ -183,24 +180,25 @@ namespace pst {
 		friend class PSTAutomatic;
 
 	protected:
-		dia::SourcePosition                          source_position;
-		std::vector<SubElement>                      sub_elements;
-		base::Optional<ParserBorrowRef<LangElement>> parent;
+		dia::SourcePosition              source_position;
+		std::vector<SubElement>          sub_elements;
+		base::Optional<Ref<LangElement>> parent;
 
 		void addToken(const tpc::Token& token);
 		void addToken(const base::unique_ptr<tpc::Token>& token);
 		void addToken(base::c_borrow_ptr<tpc::Token> token);
 
 		template<std::derived_from<LangElement> El>
-		void addChild(base::Optional<ParserRef<El>>& el) {
-			if (el) addChild(el.value().borrow());
+		void addChild(MRef<El> el) {
+			auto opt = el.toOpt();
+			if (opt) addChild(opt.value());
 		}
 
-		void addChild(ParserBorrowRef<LangElement> child);
+		void addChild(MRef<LangElement> child);
 
 		template<typename T>
-		void addChild(ParserRef<T>& child) {
-			addChild(child.borrow_mut());
+		void addChild(MBox<T>& child) {
+			addChild(child.refMut());
 		}
 
 		/**
@@ -213,13 +211,13 @@ namespace pst {
 		 */
 		void setFirstToken(dia::SourcePosition pos);
 
-		void setParent(ParserBorrowRef<LangElement> parent) { this->parent.emplace(parent); }
+		void setParent(Ref<LangElement> parent) { this->parent.emplace(parent); }
 
 	private:
 		PstID id = PstID::next();
 	};
 
-	using ImportType = tpc::ParserCBorrowRef<pst::Import>;
+	using ImportType = CRef<pst::Import>;
 }
 
 ID_STD_HASH(::pst::PstID);

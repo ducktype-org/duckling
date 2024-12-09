@@ -5,7 +5,7 @@ Development Guidelines
 This is a documentation of practices that we use like: how to commit, how to format code, etc. 
 This should be read by everyone before staring to develop.
 
-It also contains old ``guidelines`` from ``rift-dev``.
+It also contains old ``guidelines`` from ``duckling`` repo.
 
 .. toctree::
     :maxdepth: 2
@@ -14,6 +14,7 @@ It also contains old ``guidelines`` from ``rift-dev``.
     :glob:
 
     build-guidelines/index.rst
+    source-guidelines/index.rst
     docs-guidelines/index.rst
     *
     old-guidelines/index.rst

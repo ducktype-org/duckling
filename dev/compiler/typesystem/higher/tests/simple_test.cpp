@@ -136,7 +136,9 @@ private:
 			const auto int_u = query::entryPoint<QueryIntegralType>({ 8U * (1 << i), false });
 			assertTrue(int_1.getKind() == Integral, "Int should have kind Integral.");
 
-			assertTrue(int_1.getSize() == 8 * (1 << i), "Size of Int should be as constructed.");
+			assertTrue(
+				int_1.getSize() == Bits(8) * (1 << i), "Size of Int should be as constructed."
+			);
 			assertTrue(int_1 == int_2, "Ints of the same size and signedness should be the same.");
 			assertTrue(
 				int_1 != int_u,
@@ -165,7 +167,9 @@ private:
 			auto float_1 = query::entryPoint<QueryFloatType>(float_size);
 			auto float_2 = query::entryPoint<QueryFloatType>(float_size);
 
-			assertTrue(float_1.getSize() == float_size, "Size of Float should be as constructed.");
+			assertTrue(
+				float_1.getSize() == Bits(float_size), "Size of Float should be as constructed."
+			);
 			assertTrue(float_1 == float_2, "Floats of the same size should be the same.");
 			assertTrue(float_1.getKind() == Float, "Floats should have float kind.");
 
@@ -389,12 +393,14 @@ private:
 	}
 
 	void simple_value_category() {
+		using enum ValueSemanticsOptions;
+
 		const auto vc = ValueCategory(
 			PrimaryCategory::Local,
 			true,
 			false,
 			(MOVE | COPY | REINIT | USE | DESTROY),
-			base::EmptyFlag
+			ValueSemantics()
 		);
 		assertTrue(
 			vc.getCategory() == PrimaryCategory::Local,
@@ -412,7 +418,7 @@ private:
 			"ValueCategory constructor should initialize unchanged allowsSemantic value."
 		);
 		assertTrue(
-			vc.getForceSemantic() == base::EmptyFlag,
+			vc.getForceSemantic() == ValueSemantics(),
 			"ValueCategory constructor should initialize unchanged forceSemantic value."
 		);
 
@@ -421,48 +427,18 @@ private:
 			true,
 			false,
 			(MOVE | COPY | REINIT | USE | DESTROY),
-			base::EmptyFlag
+			ValueSemantics()
 		);
 		assertTrue(vc == vc_1, "Value categories constructed the same way should be equal.");
 
 		const auto vc_2 = ValueCategory(
-			PrimaryCategory::Local, true, false, (COPY | REINIT | USE), base::EmptyFlag
+			PrimaryCategory::Local, true, false, (COPY | REINIT | USE), ValueSemantics()
 		);
 		assertTrue(
 			vc_1.contains(vc_2),
 			"Value category with full allows_semantic should contain same value category with "
 			"subset of allowed semantics."
 		);
-	}
-
-	/**
-	 * Test that there are two unique macro element types, and that they are correctly cast.
-	 */
-	void simple_macro_elements() {
-		const auto namespace_1 = query::entryPoint<QueryNamespaceType>({});
-		assertTrue(
-			namespace_1.getKind() == Namespace, "Namespace type should have kind Namespace."
-		);
-		const auto module_1 = query::entryPoint<QueryModuleType>({});
-		assertTrue(module_1.getKind() == Module, "Module type should have kind Module.");
-
-		assertTrue(namespace_1 != module_1, "All macro element types should be different.");
-
-		const auto namespace_2 = query::entryPoint<QueryNamespaceType>({});
-		const auto module_2    = query::entryPoint<QueryModuleType>({});
-
-		assertTrue(
-			namespace_1 == namespace_2 && module_1 == module_2,
-			"Macro element types of the same kind should be equal."
-		);
-
-		const TypeInfo      type_namespace = namespace_1;
-		const NamespaceInfo namespace_3    = type_namespace;
-		assertTrue(namespace_3.getKind() == Namespace, "Namespace should survive casting.");
-
-		const TypeInfo   type_module = module_1;
-		const ModuleInfo module_3    = type_module;
-		assertTrue(module_3.getKind() == Module, "Module should survive casting.");
 	}
 
 	void simple_implicit_coercibility() {
