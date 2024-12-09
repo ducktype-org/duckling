@@ -37,9 +37,7 @@ void cli() {
 void cli(const fs::FilePath& filepath) {
 	vm::PID pid = expect(vm::api::spawn()).pid;
 	expect(vm::api::loadFile(pid, filepath));
-	expect(vm::api::attach(pid, std::cin, std::cout));
 	expect(vm::api::run(pid));
-	std::cout << "Before join...\n";
+	expect(vm::api::attach(pid, std::cin, std::cout));
 	expect(vm::api::join(pid));
-	std::cout << "After join...\n";
 }

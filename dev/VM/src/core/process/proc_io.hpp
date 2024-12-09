@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core/thread/vmthread.hpp"
+#include <condition_variable>
+#include <functional>
 #include <iostream>
 
 namespace vm {
@@ -16,44 +18,48 @@ namespace vm {
 	public:
 		ProcIO() = default;
 
+		std::unique_lock<std::mutex> lock() { return std::unique_lock(iomutex); }
+
 		/**
 		 * For thread use only
 		 */
 		template<class T>
 		T getInput(VMThread& thread) {
-			std::cerr << "Getting input...\n";
-			T                v{};
-			std::unique_lock lock(iomutex);
-			std::cout << stdio << '\n';
-			if (stdio) {
-				std::cerr << "Reading from cin...\n";
-				std::cin >> v;
-			} else {
-				// Reading from a string_stream is non-blocking, so we have to wait.
-				std::cerr << "Reading from input_stream...\n";
-				thread.waitUntilNotPausedAndCondition(lock, [this, &thread] {
-					std::cerr << "Test..." << input_stream.rdbuf()->in_avail() << '\n';
+			T    v{};
+			auto lck = lock();
+
+			// Reading from a string_stream is non-blocking, so we have to wait, unless
+			// the input is redirected from std::cin, then it's blocking.
+			if (!stdio) {
+				thread.waitUntilNotPausedAndCondition(lck, [this, &thread] {
 					return !thread.isAlive() || input_stream.rdbuf()->in_avail();
 				});
-
-				if (thread.isAlive()) input_stream >> v;
 			}
 
-			std::cerr << "Got input..." << v << '\n';
+			if (thread.isAlive()) input_stream >> v;
+
 			return v;
 		}
 
 		template<class T>
 		void writeOutput(const T& v) {
-			std::unique_lock lock(iomutex);
-			output_stream << v;
+			{
+				auto lck = lock();
+				output_stream << v;
+			}
+			output_empty_cv.notify_all();
 		}
+
+		std::stringstream& inputStream() { return input_stream; }
+
+		std::stringstream& outputStream() { return output_stream; }
 
 		ProcIORedirecter attach(std::istream& input_source, std::ostream& output_dst);
 
+		std::condition_variable output_empty_cv;
+
 	private:
-		// @TODO: temporary fix, currently thread does not wake up on it's own :C
-		bool stdio = false;
+		std::atomic_bool stdio = false;
 
 		std::mutex iomutex;
 
@@ -69,30 +75,58 @@ namespace vm {
 
 		ProcIORedirecter(ProcIO& proc_io, std::istream& input_stream, std::ostream& output_stream):
 			  proc_io(proc_io),
-			  input_stream(input_stream),
-			  output_stream(output_stream),
-			  inbuf(input_stream.rdbuf()),
-			  outbuf(output_stream.rdbuf()) {
-			std::cerr << "Created redirecter..." << std::endl;
+			  input(proc_io.input_stream),
+			  output(proc_io.output_stream),
+			  inbuf(proc_io.input_stream.rdbuf()),
+			  outbuf(proc_io.output_stream.rdbuf()) {
 			proc_io.stdio = true;
-			input_stream.rdbuf(proc_io.input_stream.rdbuf());
-			output_stream.rdbuf(proc_io.output_stream.rdbuf());
+			input.get().rdbuf(input_stream.rdbuf());
+			output.get().rdbuf(output_stream.rdbuf());
 		}
 
 	public:
 		~ProcIORedirecter() {
-			std::cerr << "Detached..." << std::endl;
-			proc_io.stdio = false;
-			// Restore the original buffers
-			input_stream.rdbuf(inbuf);
-			output_stream.rdbuf(outbuf);
+			if (!moved) {
+				proc_io.get().stdio = true;
+
+				// Restore the original buffers
+				input.get().rdbuf(inbuf);
+				output.get().rdbuf(outbuf);
+			}
+		}
+
+		ProcIORedirecter(const ProcIORedirecter&) = default;
+
+		ProcIORedirecter(ProcIORedirecter&& other) noexcept:
+			  proc_io(other.proc_io),
+			  input(other.input),
+			  output(other.output),
+			  inbuf(other.inbuf),
+			  outbuf(other.outbuf) {
+			other.moved = true;
+		}
+
+		ProcIORedirecter& operator=(const ProcIORedirecter&) = delete;
+
+		ProcIORedirecter& operator=(ProcIORedirecter&& other) noexcept {
+			proc_io     = other.proc_io;
+			input       = other.input;
+			output      = other.output;
+			inbuf       = other.inbuf;
+			outbuf      = other.outbuf;
+			other.moved = true;
+
+			return *this;
 		}
 
 	private:
-		ProcIO&         proc_io;
-		std::istream&   input_stream;
-		std::ostream&   output_stream;
-		std::streambuf* inbuf  = nullptr;
-		std::streambuf* outbuf = nullptr;
+		bool moved = false;
+
+		std::reference_wrapper<ProcIO> proc_io;
+
+		std::reference_wrapper<std::istream> input;
+		std::reference_wrapper<std::ostream> output;
+		std::streambuf*                      inbuf  = nullptr;
+		std::streambuf*                      outbuf = nullptr;
 	};
 }

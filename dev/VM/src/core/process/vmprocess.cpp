@@ -1,5 +1,5 @@
 #include "vmprocess.hpp"
-#include "api/data/core_operation_error.hpp"
+#include <api/data/core_operation_error.hpp>
 #include <base/exceptions.hpp>
 #include <core/process/memory/memory.hpp>
 #include <preprocessor/preprocessor.hpp>
@@ -75,23 +75,18 @@ namespace vm {
 	}
 
 	cpp::result<api::Response, api::CoreOperationError>
-		VMProcess::input(const api::request::Input& /*request*/) {
-		throw base::NotYetImplemented("Input from api not yet implemented");
-		// TODO: add checking for stdio
-		// std::unique_lock lock(input_mutex);
-		// input_stream->write(request.input.c_str(), std::streamsize(request.input.size()));
-		// getMainVMThread().notifyPaused();
-		// return api::Response(api::response::Empty());
+		VMProcess::input(const api::request::Input& request) {
+		auto lock = io.lock();
+		io.inputStream() << request.input;
+		getMainVMThread().notifyPaused();
+		return api::Response(api::response::Empty());
 	}
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::output() {
-		throw base::NotYetImplemented("Output from api not yet implemented");
-		// TODO: add checking for stdio
-		// std::unique_lock lock(output_mutex);
-		// std::string      content;
-		// output_empty_cv.wait(lock, [&] { return !(content = output_stream->str()).empty(); });
-		// output_stream->str(std::string());
-		// return api::Response(api::response::Output{ content });
+		auto        lock = io.lock();
+		std::string content;
+		io.output_empty_cv.wait(lock, [&] { return !(content = io.outputStream().str()).empty(); });
+		return api::Response(api::response::Output{ content });
 	}
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::stop() {
@@ -201,7 +196,8 @@ namespace vm {
 
 	ProcIO& VMProcess::getIO() { return io; }
 
-	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }
+	VMThread& VMProcess::getMainVMThread() {
+		return vm_threads.front(); }
 
 	cpp::result<api::Response, api::CoreOperationError>
 		VMProcess::attach(std::istream& istream, std::ostream& ostream) {
@@ -213,6 +209,7 @@ namespace vm {
 	}
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::detach() {
+		std::cerr << "Handling detach..." << std::endl;
 		if (!io_redirecter)
 			return cpp::failure(api::CoreOperationError{ api::AttachDetachError{} });
 		io_redirecter.reset();
