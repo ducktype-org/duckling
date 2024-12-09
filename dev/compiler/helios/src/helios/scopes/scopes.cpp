@@ -22,8 +22,6 @@
 namespace compiler::helios {
 
 	struct ScopeData final {
-		// adapted from hir:
-
 		// created on startup:
 		std::optional<ScopeID> parent;
 
@@ -41,14 +39,13 @@ namespace compiler::helios {
 		 */
 		frontend::ModuleID parent_module;
 
-		// cache entries:
+		// cache entry:
 		// in the future we might need separation for: direct symbols, expanded symbols
 		// in this system scope is no longer closed/open as we think of it as a pure-value object
 		// any lookup in the scope requires calculation of symbols witch itself is done only once!
 		base::Optional<query::CacheEntry<SymbolList>> symbols;
 
 		u64 depth;
-
 
 		// This delete is important, to prevent any copy of scope data:
 		// ScopeData(const ScopeData&)            = delete;
@@ -156,6 +153,11 @@ namespace compiler::helios {
 				case pst::ElementKind::Action:
 					// this is transparent, since we don't need this scope:
 					return ElementScopeKind::Transparent;
+
+				case pst::ElementKind::If:
+				case pst::ElementKind::While:
+				case pst::ElementKind::For:
+					return ElementScopeKind::Standard;
 
 				case pst::ElementKind::Fun:
 

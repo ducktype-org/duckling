@@ -17,25 +17,33 @@ namespace pst {
 
         Block,
         CodeBlockOrStmt,
-
+        
+        // Duckling declarations:
         Namespace,
         Class,
         Variable,
         Fun,
-
+        
         Using,
         Alias,
 
         Const,
 
+
+        // Duckling statements:
+        If,
+        While,
+        For,
+
+        // Actions:
         Action,
 
-        // TODO: stuff like ifs, fors, whiles, -- statements (not in PST definition, but in Duckling definition)
-
+        // Expressions:
         ExprStmt,
 
         // for all expression elements:
         ExprElement,
+        
         
         // for detecting when kind was not set:
         KindNotSet,
