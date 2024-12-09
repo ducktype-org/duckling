@@ -2,8 +2,8 @@
 
 #include <base/ints.hpp>
 #include <base/exceptions.hpp>
-#include <memory_data/pointer.hpp>
-#include <services_data/type_metadata/type.hpp>
+#include "pointer.hpp"
+#include <core/process/type_metadata/type.hpp>
 #include <base/raw_view.hpp>
 #include <base/optional.hpp>
 #include <result.hpp>

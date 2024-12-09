@@ -1,6 +1,8 @@
 #pragma once
 
-#include <memory_data/block.hpp>
+#include "core/process/memory/allocator/allocator.hpp"
+#include "core/process/memory/allocator/stack_allocator.hpp"
+#include "memory_data/block.hpp"
 #include <base/smart_pointers.hpp>
 
 namespace vm {
@@ -21,7 +23,7 @@ namespace vm {
 	 */
 	class Memory {
 	private:
-		Memory() = default;
+		Memory();
 
 		friend class VMProcess;
 
@@ -50,8 +52,14 @@ namespace vm {
 			return id >= high_id || !blocks[usize(id)].owned;
 		}
 
+		StackAllocator stack_allocator;
+		Allocator      dynamic_allocator;
+
 	public:
 		using error = std::string;
+
+		StackAllocator& getStackAllocator();
+		Allocator&      getDynamicAllocator();
 
 		BlockID reserveBlockID();
 		void    returnBlockID(BlockID);

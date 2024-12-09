@@ -1,6 +1,6 @@
 #pragma once
 
-#include <services_data/type_metadata/type.hpp>
+#include <core/process/type_metadata/type.hpp>
 #include "pointer.hpp"
 
 namespace vm {

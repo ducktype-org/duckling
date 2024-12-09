@@ -3,7 +3,7 @@
 #include <code_data/opcodes.hpp>
 #include <code_data/code.hpp>
 #include <cstring>
-#include <services_data/type_metadata/type.hpp>
+#include <core/process/type_metadata/type.hpp>
 #include <core/supervisor/supervisor.hpp>
 #include "core/kill_process_exception.hpp"
 #include "op_case.hpp"
@@ -22,7 +22,9 @@ namespace vm {
 		  runtime_data(frame_stack, local_stack_reserved),
 		  process(process),
 		  process_memory(process.getMemory()),
-		  process_types(process.getTypeMetadata()) {
+		  process_types(process.getTypeMetadata()),
+		  process_stack_allocator(process_memory.getStackAllocator()),
+		  process_dynamic_allocator(process_memory.getDynamicAllocator()) {
 		// @TODO: not loaded status
 		setStatus(api::NotStarted{});
 	}
@@ -377,7 +379,7 @@ namespace vm {
 			auto             type_size = type->getSize();
 			base::ModRawView data(&local_stack[frame->local_stack_head], type_size);
 			frame->local_stack_head += type_size;
-			auto block = thread.stack_allocator.makeTypeBlock(type, data);
+			auto block = thread.process_stack_allocator.makeTypeBlock(type, data);
 			frame->block_id_stack.push_back(block);
 		}
 		OPFUN_CONT(1);
@@ -389,7 +391,7 @@ namespace vm {
 			auto type_size = thread.process_memory.getBlock(block_id)->rawPointer().size();
 			// if (type_size < frame->local_stack_head) CORE_PANIC("init/deinits not paired");
 			frame->local_stack_head -= type_size;
-			thread.stack_allocator.deleteBlock(block_id);
+			thread.process_stack_allocator.deleteBlock(block_id);
 			frame->block_id_stack.pop_back();
 		}
 		OPFUN_CONT(1);
@@ -430,9 +432,9 @@ namespace vm {
 
 				// @TODO: It is possible to access process_memory.of the array via
 				// mov_l64_imm, which should be at least detected, if not illegal
-				block = thread.dynamic_allocator.makeArrayBlock(inner_type, table_size);
+				block = thread.process_dynamic_allocator.makeArrayBlock(inner_type, table_size);
 			} else {
-				block = thread.dynamic_allocator.makeTypeBlock(type);
+				block = thread.process_dynamic_allocator.makeTypeBlock(type);
 			}
 			derefStack<Pointer>(local_stack, instr->arg0) = Pointer(block, 0);
 		}
@@ -441,7 +443,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_free_lptr(OPFUN_ARGS) {
 		{
-			thread.dynamic_allocator.deleteBlock(
+			thread.process_dynamic_allocator.deleteBlock(
 				derefStack<Pointer>(local_stack, instr->arg0).getBlock()
 			);
 		}

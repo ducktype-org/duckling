@@ -1,8 +1,7 @@
 #pragma once
 
 #include "status.hpp"
-#include <services_data/type_metadata/type.hpp>
-#include <memory_data/block.hpp>
+#include <core/process/type_metadata/type.hpp>
 
 template<>
 struct nlohmann::adl_serializer<base::RawView> {

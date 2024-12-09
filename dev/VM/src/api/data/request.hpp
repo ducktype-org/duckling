@@ -2,7 +2,7 @@
 
 #include <variant>
 #include <filesystem/file.hpp>
-#include <memory_data/pointer.hpp>
+#include <core/process/memory/memory_data/pointer.hpp>
 #include "process_info.hpp"
 
 namespace vm::api {
@@ -42,6 +42,13 @@ namespace vm::api {
 			u64     size;
 		};
 
+		struct Attach {
+			std::istream& istream;
+			std::ostream& ostream;
+		};
+
+		struct Detach {};
+
 	}
 
 	// @Deprecated - ExecutorRequest will have template based api (not variant based)
@@ -56,11 +63,14 @@ namespace vm::api {
 		request::Output,
 		request::Step>;
 
+	// @TODO: this should also contain request::Input, request::Output.
+	using IORequest = std::variant<request::Attach, request::Detach>;
+
 	using DataRequest = std::variant<request::TypeMetadata, request::Block>;
 
 	struct StatusRequest {};
 
-	using RequestVariant = std::variant<ExecutorRequest, DataRequest, StatusRequest>;
+	using RequestVariant = std::variant<ExecutorRequest, DataRequest, StatusRequest, IORequest>;
 
 	struct SupervisorRequest {
 		PID            pid;
@@ -70,4 +80,5 @@ namespace vm::api {
 	SupervisorRequest makeExecutorRequest(PID pid, ExecutorRequest&& data);
 	SupervisorRequest makeDataRequest(PID pid, DataRequest&& data);
 	SupervisorRequest makeStatusRequest(PID pid);
+	SupervisorRequest makeIORequest(PID pid, IORequest&& data);
 }

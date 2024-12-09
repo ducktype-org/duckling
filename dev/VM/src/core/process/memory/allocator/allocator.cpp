@@ -1,9 +1,10 @@
-#include <supervisor/vcpu.hpp>
+#include <core/process/vmprocess.hpp>
+#include <core/process/memory/memory.hpp>
 
 #include "allocator.hpp"
 
 namespace vm {
-	Memory& Allocator::getMemory(VMProcess& vcpu) { return vcpu.getData().get<Memory>(); }
+	Allocator::Allocator(Memory& memory): memory(memory) {}
 
 	BlockID Allocator::makeTypeBlock(TypeCRef type) { return makeArrayBlock(type, 1); }
 
@@ -23,4 +24,5 @@ namespace vm {
 		memory.deleteBlock(block_id);
 		memory.returnBlockID(block_id);
 	}
+
 }

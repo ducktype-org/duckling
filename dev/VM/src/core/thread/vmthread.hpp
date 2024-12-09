@@ -1,8 +1,10 @@
 #pragma once
 
+#include <core/process/memory/allocator/allocator.hpp>
+#include <core/process/memory/allocator/stack_allocator.hpp>
 #include <condition_variable>
-#include <core/process/memory.hpp>
-#include <services_data/type_metadata/type_metadata.hpp>
+#include <core/process/memory/memory.hpp>
+#include <core/process/type_metadata/type_metadata.hpp>
 #include <code_data/instruction.hpp>
 #include <code_data/code.hpp>
 
@@ -92,12 +94,13 @@ namespace vm {
 
 		/**
 		 * @brief Process link as well as some of it's resources.
-	     */
-		VMProcess&    process;
-		Memory&       process_memory;
-		TypeMetadata& process_types;
+		 */
+		VMProcess&      process;
+		Memory&         process_memory;
+		TypeMetadata&   process_types;
+		StackAllocator& process_stack_allocator;
+		Allocator&      process_dynamic_allocator;
 
-		VMThread(VMProcess& process);
 
 		// This might change:
 		std::condition_variable pause_cv;
@@ -159,6 +162,8 @@ namespace vm {
 		void setStatus(vm::api::ExecStatus status);
 
 	public:
+		VMThread(VMProcess& process);
+
 		/**
 		 * @brief Pause the execution of a program (by Supervisor)
 		 * Set execution status to paused.
@@ -211,9 +216,7 @@ namespace vm {
 		bool isPaused();
 		bool isAlive();
 
-		template<class... DynamicServices>
-		friend class ServiceManagerDef;
-
+		friend class VMProcess;
 		friend class OpFuns;
 	};
 }

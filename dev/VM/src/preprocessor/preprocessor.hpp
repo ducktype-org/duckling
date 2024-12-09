@@ -1,23 +1,26 @@
 #pragma once
 
-#include "../services.hpp"
+#include <core/process/type_metadata/type_metadata.hpp>
 #include <code_data/code.hpp>
 #include <filesystem/file.hpp>
 #include <base/optional.hpp>
 
 namespace vm {
+	class VMProcess;
+
 	// @TODO: static type checking
 
 	/**
 	 * @brief Service that loads the program file to the VM.
+	 * @TODO: Refactor this to return a program object....
 	 */
 	class Preprocessor {
+		friend VMProcess;
+
 	private:
 		TypeMetadata& type_metadata;
 
-		template<class... DynamicServices>
-		Preprocessor([[maybe_unused]] ServiceManagerDef<DynamicServices...>& serviceManager):
-			  type_metadata(serviceManager.getVCPU().getData().template get<TypeMetadata>()) {}
+		Preprocessor(VMProcess& process);
 
 	public:
 		template<class... DynamicServices>

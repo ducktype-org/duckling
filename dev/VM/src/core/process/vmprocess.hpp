@@ -1,7 +1,14 @@
 #pragma once
 
+#include <deque>
+#include <services/profiler/profiler.hpp>
+#include <services/service_manager.hpp>
+#include <services/reference_counter/reference_counter.hpp>
+#include <api/api.hpp>
+#include <listener/listener.hpp>
+#include <core/process/memory/memory.hpp>
+#include <core/process/type_metadata/type_metadata.hpp>
 #include <core/process/proc_io.hpp>
-#include <services_data/type_metadata/type_metadata.hpp>
 #include <code_data/code.hpp>
 #include <condition_variable>
 #include <shared_mutex>
@@ -10,11 +17,14 @@
 #include <base/optional.hpp>
 #include <api/vm.hpp>
 #include <core/thread/vmthread.hpp>
+#include "api/data/request.hpp"
+#include "memory/allocator/allocator.hpp"
+#include "memory/allocator/stack_allocator.hpp"
+#include <preprocessor/preprocessor.hpp>
 
 #include <iostream>
 
 namespace vm {
-	using DataManager    = DataManagerDef<>;
 	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
 
 	/**
@@ -53,13 +63,16 @@ namespace vm {
 		Memory       memory;
 		TypeMetadata type_meta_data;
 
+		// @TODO: Read Processors' docs and do the TODO there...
+		Preprocessor preprocessor;
+
 		/**
 		 * @brief Performs external execution request on the VCPU.
 		 *
 		 * This method is called by the supervisor. The possible requests include
-		 * io operations, start/stop the Exection Thread or communicate with the Exection Thread.
+		 * io operations, start/stop the Execution Thread or communicate with the Execution Thread.
 		 *
-		 * @param request Request that performs action on the Exection Thread.
+		 * @param request Request that performs action on the Execution Thread.
 		 * @return cpp::result<api::Response, api::CoreOperationError>
 		 */
 		cpp::result<api::Response, api::CoreOperationError>
@@ -78,6 +91,10 @@ namespace vm {
 		 */
 		cpp::result<api::Response, api::CoreOperationError>
 			doRequest(const api::DataRequest& request);
+
+
+		cpp::result<api::Response, api::CoreOperationError> doRequest(const api::IORequest& request
+		);
 
 		/**
 		 * @brief Creates new thread that runs the code in the Executor service.
@@ -119,10 +136,24 @@ namespace vm {
 		/**
 		 * @brief Holds all services. When it's constructed, it initializes all services.
 		 */
-		ServiceManager service_manager;
+		ServiceManager service_manager = ServiceManager();
 
 		ProcIO                           io;
-		base::Optional<ProcIORedirecter> redirecter;
+		base::Optional<ProcIORedirecter> io_redirecter;
+
+		/**
+		 * @brief Attaching means all IO is interactive, input is read from stdin, output
+		 * @brief is automatically forwarded to stdout.
+		 */
+		cpp::result<api::Response, api::CoreOperationError>
+			attach(std::istream& istream = std::cin, std::ostream& ostream = std::cout);
+
+		cpp::result<api::Response, api::CoreOperationError> detach();
+
+		// @TODO: Improve this....
+		std::deque<VMThread> vm_threads;
+
+		VMThread& getMainVMThread();
 
 	public:
 		/**
@@ -146,19 +177,6 @@ namespace vm {
 
 		ProcIO& getIO();
 
-		/**
-		 * @brief Attaching means all IO is interactive, input is read from stdin, output
-		 * @brief is automatically forwarded to stdout.
-		 */
-		void attach() {
-			// So long this object lives, the outputs are redirected.
-			redirecter.emplace(io.attach(std::cin, std::cout));
-		}
-
-		void detach() {
-			redirecter.reset();
-		}
-
 		// For external API
 
 		// Each of the following methods can be called concurrently, so they should synchronize
@@ -169,10 +187,8 @@ namespace vm {
 		cpp::result<api::Response, api::CoreOperationError>
 			doRequest(const api::RequestVariant& request);
 
-		VMProcess():
-			  status(api::ExecutionNotStarted{}),
+		VMProcess();
 
-			  service_manager() {};
 		virtual ~VMProcess();
 	};
 }

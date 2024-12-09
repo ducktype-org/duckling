@@ -82,4 +82,10 @@ namespace vm {
 			refCheck(id);
 		}
 	}
+
+	Memory::Memory(): stack_allocator(*this), dynamic_allocator(*this) {}
+
+	StackAllocator& Memory::getStackAllocator() { return stack_allocator; }
+
+	Allocator& Memory::getDynamicAllocator() { return dynamic_allocator; }
 }

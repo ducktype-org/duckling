@@ -1,7 +1,8 @@
 #include "vmprocess.hpp"
-#include "base/exceptions.hpp"
-#include "services_data/memory/memory.hpp"
-#include <services/preprocessor_f8/preprocessor.hpp>
+#include "api/data/core_operation_error.hpp"
+#include <base/exceptions.hpp>
+#include <core/process/memory/memory.hpp>
+#include <preprocessor/preprocessor.hpp>
 #include <core/thread/vmthread.hpp>
 
 #include <memory>
@@ -32,7 +33,7 @@ namespace vm {
 		VMProcess::loadProgram(const fs::FilePath& path) {
 		std::unique_lock lock(rwGlobal);
 		// @TODO: this code should be improved in the future to not just return plain strings
-		auto code_result = service_manager.get<vm::Preprocessor>().getCode(path);
+		auto code_result = preprocessor.getCode(path);
 
 		if (code_result.has_value()) {
 			loadedCode = base::Optional(code_result.value());
@@ -49,10 +50,10 @@ namespace vm {
 			);  // @TODO: change to more verbose error handling
 		if (!loadedCode.has_value())
 			return cpp::failure(api::CoreOperationError{ api::RunError{} });
-		service_manager.get<vm::VMThread>().prestart();
+		getMainVMThread().prestart();
 		coreThread = std::make_unique<std::thread>([this] {
 			try {
-				service_manager.get<vm::VMThread>().run(*loadedCode);
+				getMainVMThread().run(*loadedCode);
 
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
@@ -69,7 +70,7 @@ namespace vm {
 		if (coreThread && coreThread->joinable())
 			coreThread->join();
 		else
-			return cpp::failure(api::CoreOperationError{ api::JoinError{} });
+			return cpp::failure(api::CoreOperationError{ api::AttachDetachError{} });
 		return api::Response(api::response::Empty());
 	}
 
@@ -79,7 +80,7 @@ namespace vm {
 		// TODO: add checking for stdio
 		// std::unique_lock lock(input_mutex);
 		// input_stream->write(request.input.c_str(), std::streamsize(request.input.size()));
-		// service_manager.get<vm::VMThread>().notifyPaused();
+		// getMainVMThread().notifyPaused();
 		// return api::Response(api::response::Empty());
 	}
 
@@ -94,7 +95,7 @@ namespace vm {
 	}
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::stop() {
-		service_manager.get<vm::VMThread>().stop();
+		getMainVMThread().stop();
 		(void) join();
 		coreThread.reset(nullptr);
 		return api::response::Empty{};
@@ -106,15 +107,15 @@ namespace vm {
 			variant_case_novalue(api::request::Run) { return run(); }
 			variant_case_novalue(api::request::Join) { return join(); }
 			variant_case_novalue(api::request::Pause) {
-				service_manager.get<vm::VMThread>().pause();
+				getMainVMThread().pause();
 				return api::Response(api::response::Empty());
 			}
 			variant_case_novalue(api::request::Resume) {
-				service_manager.get<vm::VMThread>().resume();
+				getMainVMThread().resume();
 				return api::Response(api::response::Empty());
 			}
 			variant_case_novalue(api::request::Step) {
-				service_manager.get<vm::VMThread>().step();
+				getMainVMThread().step();
 				return api::Response(api::response::Empty());
 			}
 			variant_case(api::request::Load, load_request) {
@@ -167,14 +168,31 @@ namespace vm {
 	}
 
 	cpp::result<api::Response, api::CoreOperationError>
+		VMProcess::doRequest(const api::IORequest& request) {
+		variant_match(request) {
+			variant_case(api::request::Attach, attach_request) {
+				getMainVMThread().notifyPaused();
+				return attach(attach_request.istream, attach_request.ostream);
+			}
+			variant_case_novalue(api::request::Detach) { return detach(); }
+		}
+		CORE_UNREACHABLE();
+	}
+
+	cpp::result<api::Response, api::CoreOperationError>
 		VMProcess::doRequest(const api::RequestVariant& request) {
 		variant_match(request) {
 			variant_case(api::ExecutorRequest, exec_request) { return doRequest(exec_request); }
 			variant_case(api::DataRequest, data_request) { return doRequest(data_request); }
+			variant_case(api::IORequest, io_request) { return doRequest(io_request); }
 			variant_case(api::StatusRequest, status_request) { return api::Response(getStatus()); }
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 		CORE_UNREACHABLE();
+	}
+
+	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}), preprocessor(*this) {
+		vm_threads.emplace_back(*this);
 	}
 
 	VMProcess::~VMProcess() {
@@ -182,4 +200,22 @@ namespace vm {
 	}
 
 	ProcIO& VMProcess::getIO() { return io; }
+
+	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }
+
+	cpp::result<api::Response, api::CoreOperationError>
+		VMProcess::attach(std::istream& istream, std::ostream& ostream) {
+		if (io_redirecter) return cpp::failure(api::CoreOperationError{ api::AttachDetachError{} });
+
+		// So long this object lives, any IO is redirected.
+		io_redirecter.emplace(io.attach(istream, ostream));
+		return api::Response(api::response::Empty());
+	}
+
+	cpp::result<api::Response, api::CoreOperationError> VMProcess::detach() {
+		if (!io_redirecter)
+			return cpp::failure(api::CoreOperationError{ api::AttachDetachError{} });
+		io_redirecter.reset();
+		return api::Response(api::response::Empty());
+	}
 }

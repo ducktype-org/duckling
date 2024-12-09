@@ -1,6 +1,6 @@
 #include "type.hpp"
 #include "type_metadata.hpp"
-#include <supervisor/supervisor.hpp>
+#include <core/supervisor/supervisor.hpp>
 #include <base/variant.hpp>
 #include <base/defer.hpp>
 #include <utility>

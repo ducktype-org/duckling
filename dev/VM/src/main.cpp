@@ -1,5 +1,3 @@
-#include <iomanip>
-
 #include <clap/clap.hpp>
 #include <printer/stream_printer.hpp>
 

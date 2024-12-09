@@ -12,4 +12,8 @@ namespace vm::api {
 	SupervisorRequest makeStatusRequest(PID pid) {
 		return SupervisorRequest{ pid, StatusRequest{} };
 	}
+
+	SupervisorRequest makeIORequest(PID pid, IORequest&& data) {
+		return SupervisorRequest{ pid, data };
+	}
 }

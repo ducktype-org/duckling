@@ -3,7 +3,7 @@
 #include <variant>
 #include <base/string_id.hpp>
 #include <base/optional.hpp>
-#include <memory_data/pointer.hpp>
+#include <core/process/memory/memory_data/pointer.hpp>
 #include "kinds.hpp"
 
 #include <json/json.hpp>
