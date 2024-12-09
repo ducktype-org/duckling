@@ -403,6 +403,12 @@ namespace compiler::helios {
 		return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;
 	}
 
+	ScopeID getPSTElementParentScope(query::Context& ctx, MCRef<pst::LangElement> element) {
+		// note: this might not be correct:
+		return ctx.query<QueryPrimaryCodeScopeFor>({ element->getParent().value() });
+	}
+	
+
 	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
 		auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
 		auto main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);

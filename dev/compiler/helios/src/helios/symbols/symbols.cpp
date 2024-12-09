@@ -241,7 +241,7 @@ namespace compiler::helios {
 			// It currently prevents some scope bugs/inconsistencies from happening.
 			if (parent_map.contains(pst_id)) {
 				CORE_ASSERT(
-					parent_map.at(pst_id) == key.scope, "Parent mismatch in QuerySymbolOfSTMT"
+					parent_map.at(pst_id) == key.scope, base::strConcat("Parent mismatch in QuerySymbolOfSTMT for: ", key.stmt->getSourcePosition().genStr(""))
 				);
 			} else {
 				parent_map.put(pst_id, key.scope);
