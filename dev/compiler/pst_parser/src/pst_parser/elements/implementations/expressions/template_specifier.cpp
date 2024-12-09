@@ -5,7 +5,7 @@ namespace pst::expr {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected single template specialization expression";
+			return "Expected single template instantiation expression";
 		}
 
 	public:
