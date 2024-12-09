@@ -18,7 +18,6 @@ namespace pst::expr {
 	};
 
 	MBox<ExprElement> Access::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing Access Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		if (length != 2 && length != 4) {

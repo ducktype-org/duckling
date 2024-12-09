@@ -18,7 +18,6 @@ namespace pst::expr {
 	};
 
 	MBox<ExprElement> RoundExpr::parse(LangParserState& state, i64 length) {
-		std::cerr << "Parsing Round Group Expression";
 		if (!checkLength(state, length)) return nullptr;
 
 		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Round))) {

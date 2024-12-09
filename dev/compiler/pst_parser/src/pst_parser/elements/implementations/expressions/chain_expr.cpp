@@ -33,7 +33,6 @@ namespace pst::expr {
 	}
 
 	MBox<ExprElement> ChainExpr::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing Chain Expression" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		i64 fwd = toNextLink(state, length);

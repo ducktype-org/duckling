@@ -18,7 +18,6 @@ namespace pst::expr {
 	};
 
 	MBox<ExprElement> TemplateSpecifier::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing Template Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		if (length != 2) {

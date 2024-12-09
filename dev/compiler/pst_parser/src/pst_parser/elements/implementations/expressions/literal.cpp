@@ -20,7 +20,6 @@ namespace pst::expr {
 	};
 
 	MBox<ExprElement> Literal::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing Literal" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		if (state[0].isKeyword()) {

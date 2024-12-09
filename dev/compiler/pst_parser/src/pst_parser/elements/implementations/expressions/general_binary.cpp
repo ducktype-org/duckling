@@ -62,7 +62,6 @@ namespace pst::expr {
 	}
 
 	MBox<ExprElement> GeneralBinary::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing General Binary Expressions" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		auto pos = dia::SourcePosition(

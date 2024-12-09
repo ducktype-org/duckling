@@ -18,7 +18,6 @@ namespace pst::expr {
 	};
 
 	MBox<ExprElement> Call::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing Call Expression" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		if (not(length == 1

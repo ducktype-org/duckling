@@ -20,7 +20,6 @@ namespace pst::expr {
 	};
 
 	MBox<ExprElement> BlockExpr::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing Block Expression";
 		if (!checkLength(state, length)) return nullptr;
 
 		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Curly))) {

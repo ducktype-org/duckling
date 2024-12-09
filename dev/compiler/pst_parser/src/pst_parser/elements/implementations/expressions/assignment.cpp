@@ -18,7 +18,6 @@ namespace pst::expr {
 	};
 
 	MBox<ExprElement> Assignment::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing Assignment" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		auto pos = dia::SourcePosition(
