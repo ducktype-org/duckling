@@ -132,7 +132,7 @@ namespace compiler::helios {
 				
 
 				// code blocks:
-				case pst::ElementKind::Block: {
+				case pst::ElementKind::CodeBlock: {
 					auto parent_kind = element.base_element->getParent().value()->getElementKind();
 					if (parent_kind == pst::ElementKind::CodeBlockOrStmt) {
 						return ElementScopeKind::Transparent;
@@ -151,6 +151,7 @@ namespace compiler::helios {
 				case pst::ElementKind::Const:
 				case pst::ElementKind::Class:
 				case pst::ElementKind::Action:
+				case pst::ElementKind::Block: //< note that block is not a code block that is used in stuff like ifs
 					// this is transparent, since we don't need this scope:
 					return ElementScopeKind::Transparent;
 

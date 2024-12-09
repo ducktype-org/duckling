@@ -187,7 +187,9 @@ namespace pst {
 		 */
 		[[nodiscard]]
 		ElementKind getElementKind() const {
-			CORE_ASSERT(element_kind != ElementKind::KindNotSet, "Element kind not set");
+			CORE_ASSERT(element_kind != ElementKind::KindNotSet, base::strConcat(
+				"Element kind not set. Element type: ", elementType()
+			));
 			return element_kind;
 		}
 

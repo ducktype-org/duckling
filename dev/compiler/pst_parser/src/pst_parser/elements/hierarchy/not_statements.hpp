@@ -82,7 +82,9 @@ namespace pst {
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, Stmt)
 
-		explicit CodeBlock(const dia::SourcePosition& position): NotStmt(position) {}
+		explicit CodeBlock(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::CodeBlock;
+		}
 
 		static MBox<CodeBlock> parse(LangParserState& state);
 		~CodeBlock() final = default;

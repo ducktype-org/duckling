@@ -15,7 +15,7 @@ namespace pst {
         TopLevel,
         Import,
 
-        Block,
+        CodeBlock,
         CodeBlockOrStmt,
         
         // Duckling declarations:
@@ -23,6 +23,7 @@ namespace pst {
         Class,
         Variable,
         Fun,
+        Block,
         
         Using,
         Alias,
