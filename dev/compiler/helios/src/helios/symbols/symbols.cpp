@@ -700,11 +700,13 @@ namespace compiler::helios {
 
 			auto class_stmt = getSymRef(key)->pst_stmt;
 
+			// todo -- change in this PR: this is not a class scope now.
+			// We could use "linkedScope" logic, to make it work
 			auto class_scope   = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt });
 			auto class_symbols = ctx.query<QuerySymbolsInScope>(class_scope);
 
 			ClassSymbolData class_info;
-			for (auto&& sym: *class_symbols) {
+			for (auto sym: *class_symbols) {
 				switch (kind(sym)) {
 				case SymbolKind::Method:
 					class_info.methods.push_back(sym);

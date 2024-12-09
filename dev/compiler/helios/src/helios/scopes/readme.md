@@ -33,8 +33,11 @@ As above, but with parents.
 
 ## `QueryLinkedScope`
 
-(defined in symbols.hpp/cpp) -- given a scope to lookup in, when looking up
-in symbol for which we just lookup in scope.
+Intuitively this returns a scope, programmer would associate with this element.
+It can work slightly different for different elements.
+
+For most symbols it will either panic, or return a scope to lookup in, when
+looking up in this element (e.g. for namespace).
 
 ## TODOS
 
