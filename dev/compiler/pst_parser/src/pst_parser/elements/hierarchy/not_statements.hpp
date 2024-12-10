@@ -26,7 +26,9 @@ namespace pst {
 		base::Optional<MBox<ExprElement>> initial;
 
 	public:
-		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {}
+		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::FunParam;
+		}
 
 		static MBox<FunParam> parse(LangParserState& state);
 		~FunParam() final = default;

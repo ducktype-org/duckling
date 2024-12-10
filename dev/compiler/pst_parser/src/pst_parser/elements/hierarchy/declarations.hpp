@@ -246,7 +246,9 @@ namespace pst {
 		MBox<CodeBlockOrStmt>   else_body = nullptr;
 
 	public:
-		explicit If(const dia::SourcePosition& position): CodeDecl(position) {}
+		explicit If(const dia::SourcePosition& position): CodeDecl(position) {
+			element_kind = ElementKind::If;
+		}
 
 		static MBox<If> parse(LangParserState& state);
 		void            dprint(std::ostream& out) const final;
@@ -276,7 +278,9 @@ namespace pst {
 		MBox<CodeBlockOrStmt>   body = nullptr;
 
 	public:
-		explicit While(const dia::SourcePosition& position): CodeDecl(position) {}
+		explicit While(const dia::SourcePosition& position): CodeDecl(position) {
+			element_kind = ElementKind::While;
+		}
 
 		static MBox<While> parse(LangParserState& state);
 		void               dprint(std::ostream& out) const final;

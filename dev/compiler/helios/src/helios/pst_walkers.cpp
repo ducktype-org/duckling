@@ -16,6 +16,7 @@ namespace compiler::helios {
 		}
 	}
 
+	// TODO in this PR: make it detail:
 	StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(MCRef<pst::LangElement> elem) {
 		if (auto* ptr = dynamic_cast<const pst::ClassBlock*>(&*elem)) {
 			StmtList<pst::ClassStmt> out;
@@ -43,10 +44,11 @@ namespace compiler::helios {
 		}
 		if (auto* ptr = dynamic_cast<const pst::TopLevel*>(&*elem)) {
 			StmtList<> out;
-			for (auto&& e: ptr->getStatements()) out.emplace_back(e.ref());
+			for (auto& e: ptr->getStatements()) out.emplace_back(e.ref());
 			return out;
 		} 
 		if (auto* ptr = dynamic_cast<const pst::ClassBlock*>(&*elem)) {
+			// todo in this PR: deal with unused warning
 			auto elements = getChildStmtsOfClassBlock(elem);
 			StmtList<> out;
 			for (auto e: elements) out.emplace_back(e);

@@ -157,6 +157,13 @@ namespace compiler::helios {
 		case pst::ElementKind::ExprElement:
 			// @todo: once we have top-expressions, this should be transparent for non-tops 
 			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::ExprWrapper:
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::FunParam:
+		case pst::ElementKind::ParamList:
+			return ElementScopeKind::Transparent;
 		
 		case pst::ElementKind::KindNotSet:
 			CORE_UNREACHABLE();

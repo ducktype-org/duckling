@@ -50,7 +50,9 @@ namespace pst {
 
 	class ParamList final: public List<FunParam, detail::NameGetters::parameterList> {
 	public:
-		explicit ParamList(const dia::SourcePosition& pos): List(pos) {}
+		explicit ParamList(const dia::SourcePosition& pos): List(pos) {
+			this->element_kind = ElementKind::ParamList;
+		}
 
 		static MBox<ParamList> parse(LangParserState& state);
 
