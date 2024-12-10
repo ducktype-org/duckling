@@ -26,7 +26,7 @@ def get_unstaged_new_files() -> bool:
 
 def get_repo_cpp_files():
     ls_out = bash_command_get_output("./scripts/list_files.sh | xargs wc -l")[0]
-    file_lengths = [line.split() for line in ls_out.splitlines()][::-1]
+    file_lengths = [line.split() for line in ls_out.splitlines()][:-1]
 
     files = {}
     for line_count, file in file_lengths:
