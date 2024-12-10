@@ -86,12 +86,20 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryPrimaryCodeScopeFor, KeyOf_QueryCodeScopeFor, ScopeID);
 
+	struct KeyOf_QueryCodeScopeForStmt final {
+		MCRef<pst::Stmt> base_element;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const;
+		bool        operator==(const KeyOf_QueryCodeScopeForStmt&) const = default;
+	};
+
 	/**
-	 * @brief Query Primary so called Intuitive for given PST element.
+	 * @brief Query Primary so called Intuitive for given PST stmt element.
 	 * Intuitively this is a scope, that you associate with given element,
 	 * when looking at the code (think of namespaces for example).
 	 */
-	DECLARE_QUERY(QueryIntuitiveCodeScopeFor, KeyOf_QueryCodeScopeFor, ScopeID);
+	DECLARE_QUERY(QueryIntuitiveCodeScopeFor, KeyOf_QueryCodeScopeForStmt, ScopeID);
 
 	struct KeyOf_LookupInScope final {
 		ScopeID     scope;

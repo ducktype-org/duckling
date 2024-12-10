@@ -319,6 +319,8 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
+		
+		// todo in this PR: use intuitive scopes here
 
 		struct QueryLinkedScopeVisitor: pst::PstStmtVisitorPanicky {
 			query::Context& ctx;

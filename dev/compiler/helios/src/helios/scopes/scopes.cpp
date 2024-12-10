@@ -226,8 +226,31 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);
 
 	struct IMPLEMENT_QUERY(QueryIntuitiveCodeScopeFor, ScopeID) {
+		struct QueryIntuitiveScopeVisitor: pst::PstStmtVisitorPanicky {
+			query::Context&  ctx;
+			QKey             key;
+			
+			QueryIntuitiveScopeVisitor(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
+
+			base::Optional<ScopeID> out;
+
+			void visitNamespace(const pst::Namespace& namespace_stmt) override {
+				out = ctx.query<QueryPrimaryCodeScopeFor>({ namespace_stmt.getBody() });
+			}
+
+			void visitClass(const pst::Class& class_stmt) override {
+				out = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt.getBody() });
+			}
+		};
+
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
-	
+			// note: not all cases are handled here, which is intentional.
+			// We might add more in the future, but this query should remain a simple one.
+			
+			QueryIntuitiveScopeVisitor visitor(ctx, key);
+			key.base_element->acceptVisitor(visitor);
+			return visitor.out.value();
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -399,8 +422,11 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
 
 	base::HashT KeyOf_QueryCodeScopeFor::customPerfectHash() const {
-		auto hash_1 = base_element->getID().asInt();
-		return hash_1;
+		return base_element->getID().asInt();
+	}
+
+	base::HashT KeyOf_QueryCodeScopeForStmt::customPerfectHash() const {
+		return base_element->getID().asInt();
 	}
 
 	base::HashT KeyOf_LookupInScope::customPerfectHash() const {
