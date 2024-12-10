@@ -436,6 +436,13 @@ def download_llvm(*args, **kwargs):
     type=str,
     default="origin/main",
 )
+@click.option(
+    "-a",
+    "--all",
+    is_flag=True,
+    default=False,
+    help="Check all files, not just the ones that are modified",
+)
 def linter(*args, **kwargs):
     """Simulates clang-tidy and clang-format as if in a workflow.
 
@@ -445,6 +452,7 @@ def linter(*args, **kwargs):
 
 @cli.command()
 @click.option(
+    "-a",
     "--all",
     is_flag=True,
     default=False,
@@ -458,6 +466,7 @@ def linter(*args, **kwargs):
     default="origin/main",
 )
 @click.option(
+    "-v",
     "--verbose",
     is_flag=True,
     default=False,

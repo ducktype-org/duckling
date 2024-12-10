@@ -24,7 +24,18 @@ def get_unstaged_new_files() -> bool:
     return new_unstaged_files
 
 
-def get_diffs(branch: str):
+def get_repo_files():
+    ls_out = bash_command_get_output("./scripts/list_files.sh | xargs wc -l")[0]
+    file_lengths = [line.split() for line in ls_out.splitlines()][::-1]
+
+    files = {}
+    for line_count, file in file_lengths:
+        files[file] = [[1, line_count]]
+
+    return files
+
+
+def get_modified_files_and_lines(branch: str):
     if new_unstaged_files := get_unstaged_new_files():
         log_warning(
             f"Files not in working tree, so not included in diff: [{', '.join(new_unstaged_files)}]"
@@ -85,6 +96,11 @@ def get_diffs(branch: str):
 
     return changes
 
+
+def get_files_for_linter(all, branch):
+    if all:
+        return get_repo_files()
+    return get_modified_files_and_lines(branch)
 
 def clang_tidy_on(
     clang_tidy_path: str,
@@ -160,13 +176,18 @@ def run_linter_on(
 
 
 def simulate_cpp_linter(
-    clang_tidy_path: str, clang_format_path: str, build: str, threads: int, branch: str
+    clang_tidy_path: str,
+    clang_format_path: str,
+    build: str,
+    threads: int,
+    branch: str,
+    all: bool,
 ):
     build_folder = pathlib.Path(build)
     if not build_folder.exists():
         exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
 
-    file_diffs = get_diffs(branch)
+    file_diffs = get_files_for_linter(all, branch)
     log_info(f"Found {file_diffs=}")
 
     clang_format_failed = False
