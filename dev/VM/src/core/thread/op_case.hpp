@@ -1,6 +1,6 @@
 #pragma once
 
-#include "config.hpp"
+#include <config.hpp>
 
 #if defined(__clang__)
 	#define CLANG_MUST_TAIL [[clang::musttail]]

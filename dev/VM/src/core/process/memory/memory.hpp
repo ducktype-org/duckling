@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/process/memory/allocator/allocator.hpp"
-#include "core/process/memory/allocator/stack_allocator.hpp"
+#include <core/process/memory/allocator/allocator.hpp>
+#include <core/process/memory/allocator/stack_allocator.hpp>
 #include "memory_data/block.hpp"
 #include <base/smart_pointers.hpp>
 

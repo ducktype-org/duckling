@@ -5,7 +5,7 @@
 #include <cstring>
 #include <core/process/type_metadata/type.hpp>
 #include <core/supervisor/supervisor.hpp>
-#include "core/kill_process_exception.hpp"
+#include <core/kill_process_exception.hpp>
 #include "op_case.hpp"
 #include "vmthread.hpp"
 
