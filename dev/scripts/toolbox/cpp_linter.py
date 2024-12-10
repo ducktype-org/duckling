@@ -140,7 +140,7 @@ def clang_format_on(
 ) -> bool:
     """
     Dry-run clang-format on a file with given file_diffs to test
-    if it's properly formatted. Returns true if so, false otherwise.
+    if it's properly formatted. Returns False if so, True otherwise.
     """
 
     # clang-format command succeeds always and returns data (possibly empty)
