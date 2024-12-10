@@ -120,10 +120,10 @@ namespace pst {
 			return "Class Block";
 		}
 
-		// [[nodiscard]]
-		// bool isStatementAggregate() const final {
-		// 	return true;
-		// }
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
 	};
 
 	class CodeBlockOrStmt final: public NotStmt {

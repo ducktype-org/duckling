@@ -30,6 +30,7 @@ namespace compiler::helios {
 	}
 
 	StmtList<> getStmtsFromStmtAggregate(MCRef<pst::LangElement> elem) {
+		// @TODO: dont use dynamic_cast's here, but a visitor
 		if (auto* ptr = dynamic_cast<const pst::CodeBlock*>(&*elem)) {
 			StmtList<> out;
 			for (auto&& e: *ptr) out.emplace_back(e);
@@ -44,12 +45,18 @@ namespace compiler::helios {
 			StmtList<> out;
 			for (auto&& e: ptr->getStatements()) out.emplace_back(e.ref());
 			return out;
-		} else {
-			const auto& element = *elem;
-			CORE_PANIC(base::strConcat(
-				"Bad Duckling Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
-			));
+		} 
+		if (auto* ptr = dynamic_cast<const pst::ClassBlock*>(&*elem)) {
+			auto elements = getChildStmtsOfClassBlock(elem);
+			StmtList<> out;
+			for (auto e: elements) out.emplace_back(e);
+			return out;
 		}
+		
+		const auto& element = *elem;
+		CORE_PANIC(base::strConcat(
+			"Bad Duckling Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
+		));
 	}
 
 }

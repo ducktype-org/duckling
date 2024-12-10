@@ -340,25 +340,13 @@ namespace compiler::helios {
 			auto base_element = key.ref->related_pst_element.value();
 
 			if (base_element->isStatementAggregate()) {
-				// @TODO: the error here is that this perform double scoping
-				// for CodeBlocks inside CodeBlocksOrStmt
-				// Hot-patch:
-				// @TODO: change elementType usage to elementKind (once its implemented)
-				if (base_element->elementType() == "Code Block")
-					if (base_element->getParent().value()->elementType()
-					    == "Code Block or Statement") {
-						// hot patch currently does:
-						// code block inside CodeBlockOrStmt has empty scope
-						return {};
-					}
-
 				return filterSymbolsFromStmtList(ctx, key, getStmtsFromStmtAggregate(base_element));
 			} else if (base_element->isStatement()) {
 				SymbolGrabVisitor symbol_grab(ctx, key);
 				auto              as_stmt = dynamic_cast<const pst::Stmt*>(&*base_element);
 				as_stmt->acceptVisitor(symbol_grab);
 				return std::move(symbol_grab.out.value());
-			} else if (dynamic_cast<const pst::ExprElement*>(&*base_element)) {
+			} else if (base_element->getElementKind() == pst::ElementKind::ExprElement) {
 				// @FIXME: change the way we check the condition, by comparing enum
 				// values instead of strings. Make the enum stringifiable.
 				return std::vector<SymID>{};
