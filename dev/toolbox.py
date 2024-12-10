@@ -448,7 +448,12 @@ def linter(*args, **kwargs):
 
     It compares the current branch's working tree with the most recent common ancestor shared with the 'main' branch (called the merge base).
     """
-    simulate_cpp_linter(*args, **kwargs)
+    clang_tidy_failed, clang_format_failed = simulate_cpp_linter(*args, **kwargs)
+    if clang_tidy_failed or clang_format_failed:
+        exit_with_error(
+            f"Linter has failed because: {clang_format_failed=}, {clang_tidy_failed=}"
+        )
+
 
 @cli.command()
 @click.option(

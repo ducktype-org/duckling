@@ -221,7 +221,4 @@ def simulate_cpp_linter(
         else:
             clang_format_failed = False
 
-    if clang_tidy_failed:
-        exit_with_error(
-            f"Linter has failed because: {clang_format_failed=}, {clang_tidy_failed=}"
-        )
+    return clang_tidy_failed, clang_format_failed
