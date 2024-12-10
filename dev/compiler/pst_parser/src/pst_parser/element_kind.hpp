@@ -46,6 +46,9 @@ namespace pst {
 
         // for all expression elements:
         ExprElement,
+
+        // for Expr wrappers like round group:
+        ExprWrapper,
         
         
         // for detecting when kind was not set:

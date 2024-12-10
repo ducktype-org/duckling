@@ -159,7 +159,9 @@ namespace pst {
 		MBox<ExprElement> expr = nullptr;
 
 	public:
-		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {}
+		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::ExprWrapper;
+		}
 
 		static MBox<RoundGroupExpr> parse(LangParserState& state);
 		~RoundGroupExpr() final = default;

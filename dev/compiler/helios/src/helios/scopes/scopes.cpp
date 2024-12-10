@@ -146,6 +146,7 @@ namespace compiler::helios {
 					}
 				}
 				case pst::ElementKind::CodeBlockOrStmt:
+				case pst::ElementKind::ClassBlock:
 					return ElementScopeKind::Standard;
 				
 			
