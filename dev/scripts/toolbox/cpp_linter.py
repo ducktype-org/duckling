@@ -102,15 +102,17 @@ def get_files_for_linter(all, branch):
         return get_repo_cpp_files()
     return get_modified_files_and_lines(branch)
 
+
 def clang_tidy_on(
     clang_tidy_path: str,
     build_folder: pathlib.Path,
     file: str,
     file_diffs: list[tuple[int, int]],
     log_file,
-):
+) -> bool:
     """
     Runs clang-tidy on a file with given file_diffs
+    Returns true if no errors were found, false otherwise.
     """
 
     # clang-tidy command succeeds if no errors were found.
@@ -124,10 +126,13 @@ def clang_tidy_on(
         )
         if tidy_out:
             log_warning(f"clang-tidy output: \n{tidy_out}", file=log_file)
+            return False
     except BashCommandError as e:
         log_warning(
             f"clang-tidy failed: {file}, because:\n{e.stdout}{e.stderr}", file=log_file
         )
+        return False
+    return True
 
 
 def clang_format_on(
@@ -154,14 +159,16 @@ def clang_format_on(
 
 def run_linter_on(
     clang_tidy_path: str, clang_format_path: str, build_folder: pathlib.Path, file, diff
-) -> tuple[str, bool]:
+) -> tuple[str, bool, bool]:
     clang_format_failed = False
+    clang_tidy_failed = False
     logs = ""
     if file.endswith(".hpp") or file.endswith(".cpp"):
         log_file = tempfile.TemporaryFile("w+")
         log_info(f"Linting: {file}", file=log_file)
 
-        clang_tidy_on(clang_tidy_path, build_folder, file, diff, log_file)
+        if not clang_tidy_on(clang_tidy_path, build_folder, file, diff, log_file):
+            clang_tidy_failed = True
 
         if not clang_format_on(clang_format_path, file, diff, log_file):
             clang_format_failed = True
@@ -172,7 +179,7 @@ def run_linter_on(
     else:
         log_info(f"Skipping linting on: {file}")
 
-    return logs, clang_format_failed
+    return logs, clang_tidy_failed, clang_format_failed
 
 
 def simulate_cpp_linter(
@@ -191,6 +198,7 @@ def simulate_cpp_linter(
     log_info(f"Found {file_diffs=}")
 
     clang_format_failed = False
+    clang_tidy_failed = False
 
     with ThreadPoolExecutor(max_workers=threads) as e:
 
@@ -199,12 +207,19 @@ def simulate_cpp_linter(
 
         results = e.map(call_linter, file_diffs.items())
 
-        for logs, cf_failed in results:
+        for logs, ct_failed, cf_failed in results:
             sys.stdout.write(logs)
             if cf_failed:
                 clang_format_failed = True
+            if ct_failed:
+                clang_tidy_failed = True
 
     if clang_format_failed:
         to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
         if to_format.lower() in ["y", ""]:
             bash_command("./scripts/formatting/format_repo.sh")
+        else:
+            exit(1)
+
+    if clang_tidy_failed:
+        exit(1)
