@@ -24,7 +24,7 @@ def get_unstaged_new_files() -> bool:
     return new_unstaged_files
 
 
-def get_repo_files():
+def get_repo_cpp_files():
     ls_out = bash_command_get_output("./scripts/list_files.sh | xargs wc -l")[0]
     file_lengths = [line.split() for line in ls_out.splitlines()][::-1]
 
@@ -99,7 +99,7 @@ def get_modified_files_and_lines(branch: str):
 
 def get_files_for_linter(all, branch):
     if all:
-        return get_repo_files()
+        return get_repo_cpp_files()
     return get_modified_files_and_lines(branch)
 
 def clang_tidy_on(
