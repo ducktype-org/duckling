@@ -74,7 +74,6 @@ def get_diffs(branch: str):
                 line_start = int(diffed)
                 line_range = [line_start, line_start + 1]
 
-
             # Save to our dict which files have changed and which haven't.
             # There may be multiple places in one files with changed lines, so we have a list of ranges.
             if filename not in changes:
