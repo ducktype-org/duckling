@@ -112,7 +112,7 @@ def clang_tidy_on(
 ) -> bool:
     """
     Runs clang-tidy on a file with given file_diffs
-    Returns true if no errors were found, false otherwise.
+    Returns False if no errors were found, True otherwise.
     """
 
     # clang-tidy command succeeds if no errors were found.
@@ -126,13 +126,13 @@ def clang_tidy_on(
         )
         if tidy_out:
             log_warning(f"clang-tidy output: \n{tidy_out}", file=log_file)
-            return False
+            return True
     except BashCommandError as e:
         log_warning(
             f"clang-tidy failed: {file}, because:\n{e.stdout}{e.stderr}", file=log_file
         )
-        return False
-    return True
+        return True
+    return False
 
 
 def clang_format_on(
@@ -153,8 +153,8 @@ def clang_format_on(
     # Print data returned by clang-format
     if format_out or format_err:
         log_warning(f"clang-format output: \n{format_out}{format_err}", file=log_file)
-        return False
-    return True
+        return True
+    return False
 
 
 def run_linter_on(
@@ -167,10 +167,10 @@ def run_linter_on(
         log_file = tempfile.TemporaryFile("w+")
         log_info(f"Linting: {file}", file=log_file)
 
-        if not clang_tidy_on(clang_tidy_path, build_folder, file, diff, log_file):
+        if clang_tidy_on(clang_tidy_path, build_folder, file, diff, log_file):
             clang_tidy_failed = True
 
-        if not clang_format_on(clang_format_path, file, diff, log_file):
+        if clang_format_on(clang_format_path, file, diff, log_file):
             clang_format_failed = True
 
         log_file.seek(0)
@@ -209,10 +209,8 @@ def simulate_cpp_linter(
 
         for logs, ct_failed, cf_failed in results:
             sys.stdout.write(logs)
-            if cf_failed:
-                clang_format_failed = True
-            if ct_failed:
-                clang_tidy_failed = True
+            clang_tidy_failed |= ct_failed
+            clang_format_failed |= cf_failed
 
     if clang_format_failed:
         to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
