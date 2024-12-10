@@ -544,9 +544,8 @@ namespace compiler::helios {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
 			const auto const_symbol = dynamic_cast<const pst::Const*>(&*getSymRef(key)->pst_stmt);
-			const ScopeID key_scope = scope(key);
 
-			auto eval = code::Expr::fromPST(ctx, key_scope, const_symbol->getValue());
+			auto eval = code::Expr::fromPST(ctx, const_symbol->getValue());
 			if (eval.hasError()) return errors::HError(errors::Failed());
 			return EvaluateHoutExprVisitor::evaluateExpr(ctx, *eval.value());
 		}
@@ -564,11 +563,10 @@ namespace compiler::helios {
 	 * @return tsh::TypeInfo with information about the evaluated type.
 	 */
 	ParseTypeFromExpr_Result
-		parseTypeFromExpr(query::Context& ctx, ScopeID expr_scope, MCRef<pst::ExprElement> expr) {
-		
+		parseTypeFromExpr(query::Context& ctx, MCRef<pst::ExprElement> expr) {		
 		// @TODO: Helios Type Fixes: this should be a method on hout, that just return type|error|can't-short-path
 		
-		auto parsed = code::Expr::fromPST(ctx, expr_scope, expr);
+		auto parsed = code::Expr::fromPST(ctx, expr);
 		if (parsed.hasError()) return errors::HError(parsed.error());
 		auto tree = std::move(parsed.value());
 		return tree->type_desc.getType();
@@ -577,7 +575,6 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QueryType_Result) {
 		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
 			Context&    ctx;
-			const QKey& key;
 
 			void setTypeOfSymbol(const tsh::TypeInfo& type) {
 				if (symbol_type_info.has_value())
@@ -586,12 +583,12 @@ namespace compiler::helios {
 			}
 
 			void setTypeOfSymbol(MCRef<pst::ExprElement> expr) {
-				auto tp = parseTypeFromExpr(ctx, scope(key), expr);
+				auto tp = parseTypeFromExpr(ctx, expr);
 				if (tp.hasValue()) setTypeOfSymbol(tp.value());
 			}
 
 		public:
-			PstStmtVisitor_GetTypeOf(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
+			PstStmtVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
 
 			base::Optional<tsh::TypeInfo> symbol_type_info;
 
@@ -611,7 +608,7 @@ namespace compiler::helios {
 				param_types.reserve(params->size());
 
 				for (auto param: *params) {
-					auto&& parse_type_res = parseTypeFromExpr(ctx, scope(key), param->getType());
+					auto&& parse_type_res = parseTypeFromExpr(ctx, param->getType());
 					if (parse_type_res.hasValue()) {
 						param_types.emplace_back(parse_type_res.value());
 					} else {
@@ -621,7 +618,7 @@ namespace compiler::helios {
 				}
 				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
 				if (ret.has_value()) {
-					auto&& parsed = parseTypeFromExpr(ctx, scope(key), ret.value());
+					auto&& parsed = parseTypeFromExpr(ctx, ret.value());
 					if (parsed.hasValue()) {
 						ret_type = parsed.value();
 					} else {
@@ -634,6 +631,7 @@ namespace compiler::helios {
 
 			void visitClass(const pst::Class&) override {
 				// This method is empty on purpose, because we still want a panicky visitor
+				// @TODO: Helios-type-fixes: this should just return meta type
 			}
 
 			void visitNamespace(const pst::Namespace&) override {
@@ -646,9 +644,9 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto&& symbol_ref = getSymRef(key);
+			auto symbol_ref = getSymRef(key);
 
-			PstStmtVisitor_GetTypeOf visitor(ctx, key);
+			PstStmtVisitor_GetTypeOf visitor(ctx);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
 			if_opt_some(visitor.symbol_type_info, type) return type;
 			return errors::HError(errors::Failed());
@@ -764,7 +762,7 @@ namespace compiler::helios {
 				// @TODO Helios Type Fixes
 				// change this to new hout type eval
 
-				auto tp = parseTypeFromExpr(ctx, class_scope, base);
+				auto tp = parseTypeFromExpr(ctx, base);
 				if (tp.hasValue()) {
 					class_info.base = tp.value();
 				} else {
@@ -775,7 +773,7 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements) {
-					auto tp = parseTypeFromExpr(ctx, class_scope, interface);
+					auto tp = parseTypeFromExpr(ctx, interface);
 					if (tp.hasValue()) {
 						class_info.implements.push_back(tp.value());
 					} else {
@@ -802,7 +800,7 @@ namespace compiler::helios {
 			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
 
 			void setExprTree(const MCRef<pst::ExprElement>& expr) {
-				expr_tree = code::Expr::fromPST(ctx, scope, expr);
+				expr_tree = code::Expr::fromPST(ctx, expr);
 			}
 
 		public:

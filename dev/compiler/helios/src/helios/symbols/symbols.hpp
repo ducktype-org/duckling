@@ -213,6 +213,7 @@ namespace compiler::helios {
 	 * @brief Return Expr tree of HOUT of a expression assigned to a constant.
 	 * @note This query is temporary and is used for testing only.
 	 * @note type of this query is weird, but it will likely be refactored in expr-2.0 anyway
+	 * @todo Helios-types-fixes: delete this query
 	 */
 	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, CRef<errors::HResult<base::Box<code::Expr> COMMA errors::Failed>>);
 }
