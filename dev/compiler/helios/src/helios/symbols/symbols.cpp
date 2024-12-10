@@ -723,11 +723,8 @@ namespace compiler::helios {
 
 			auto class_stmt = getSymRef(key)->pst_stmt;
 
-			// todo -- change in this PR: this is not a class scope now.
-			// We could use "linkedScope" logic, to make it work
-			// change to "queryIntuitiveScopeOf(pst)"
-			auto class_scope   = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt });
-			auto class_symbols = ctx.query<QuerySymbolsInScope>(class_scope);
+			auto class_body_scope   = ctx.query<QueryIntuitiveCodeScopeFor>({ class_stmt });
+			auto class_symbols = ctx.query<QuerySymbolsInScope>(class_body_scope);
 
 			ClassSymbolData class_info;
 			for (auto sym: *class_symbols) {

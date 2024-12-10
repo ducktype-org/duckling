@@ -262,6 +262,8 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_COPY
 	};
 
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIntuitiveCodeScopeFor)
+
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
 		/**
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
