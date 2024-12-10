@@ -225,6 +225,14 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);
 
+	struct IMPLEMENT_QUERY(QueryIntuitiveCodeScopeFor, ScopeID) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+	
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
 		/**
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
@@ -390,7 +398,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
 
-	base::HashT KeyOf_QueryPrimaryCodeScopeFor::customPerfectHash() const {
+	base::HashT KeyOf_QueryCodeScopeFor::customPerfectHash() const {
 		auto hash_1 = base_element->getID().asInt();
 		return hash_1;
 	}

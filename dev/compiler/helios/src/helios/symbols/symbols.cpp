@@ -319,38 +319,58 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			switch (key.ref->kind) {
-			case SymbolKind::Using: {
-				auto using_stmt = dynamic_cast<const pst::Using*>(&*key.ref->pst_stmt);
-				auto names      = using_stmt->getPointed();
+
+		struct QueryLinkedScopeVisitor: pst::PstStmtVisitorPanicky {
+			query::Context& ctx;
+			QKey key;
+
+			QueryLinkedScopeVisitor(query::Context& ctx, QKey key): ctx(ctx), key(key) {}
+
+			base::Optional<ScopeID> result_scope;
+
+			void output(ScopeID out) {
+				CORE_ASSERT(result_scope.empty(), "Output already set");
+				result_scope.emplace(out);
+			}
+
+			void visitUsing(const pst::Using& using_stmt) override {
+				auto names = using_stmt.getPointed();
 				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
 				CORE_ASSERT(
 					lookup_res.hasValue() && not lookup_res.value().empty(),
 					"Using points to something that does not exists or is empty"
 				);
-				return ctx.query<QueryLinkedScope>({ lookup_res.value().back() });
+				auto ret = ctx.query<QueryLinkedScope>({ lookup_res.value().back() });
+				output(ret);
 			}
-			case SymbolKind::Namespace: {
-				auto namespace_stmt = dynamic_cast<const pst::Namespace*>(&*key.ref->pst_stmt);
-				auto inner_scope    = ctx.query<QueryPrimaryCodeScopeFor>({
-                    namespace_stmt->getBody(),
-                });
-				return inner_scope;
-			}
-			case SymbolKind::Import: {
-				auto import_stmt = dynamic_cast<const pst::Import*>(&*key.ref->pst_stmt);
 
-				// @TODO: proper error handling via ErrorScope
+			void visitNamespace(const pst::Namespace& namespace_stmt) override {
+				auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>({ namespace_stmt.getBody() });
+				output(inner_scope);
+			}
+
+			void visitImport(const pst::Import& import_stmt) override {
+				// @TODO: proper error handling
 				auto imported_module = frontend::getRelativeModule(
-										   ctx, module(scope(key)), import_stmt->getModulePath()
+										   ctx, module(scope(key)), import_stmt.getModulePath()
 				)
 				                           .value();
 
 				// Here we don't access just root scope, because root scopes are currently empty:
 				auto linked_scope = queryRootScopeOfMainModuleFile(ctx, imported_module);
 
-				return linked_scope;
+				output(linked_scope);
+			}
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			switch (key.ref->kind) {
+			case SymbolKind::Using:
+			case SymbolKind::Namespace:
+			case SymbolKind::Import: {
+				QueryLinkedScopeVisitor visitor(ctx, key);
+				key.ref->pst_stmt->acceptVisitor(visitor);
+				return visitor.result_scope.value();
 			}
 			default:
 				throw base::NotYetImplemented("Getting linked scope...");
@@ -702,6 +722,7 @@ namespace compiler::helios {
 
 			// todo -- change in this PR: this is not a class scope now.
 			// We could use "linkedScope" logic, to make it work
+			// change to "queryIntuitiveScopeOf(pst)"
 			auto class_scope   = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt });
 			auto class_symbols = ctx.query<QuerySymbolsInScope>(class_scope);
 
