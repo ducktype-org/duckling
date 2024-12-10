@@ -178,6 +178,11 @@ namespace compiler::helios {
 				
 				case pst::ElementKind::KindNotSet:
 					CORE_UNREACHABLE();
+
+				default:
+					throw base::NotYetImplemented(base::strConcat(
+						"PST element scope kind for: ", element.base_element->elementType()
+					));
 			}
 			CORE_UNREACHABLE();
 		}

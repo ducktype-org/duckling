@@ -17,6 +17,8 @@ namespace pst {
 
         CodeBlock,
         CodeBlockOrStmt,
+
+        ClassBlock,
         
         // Duckling declarations:
         Namespace,
