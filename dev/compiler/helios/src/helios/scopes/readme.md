@@ -18,6 +18,10 @@ Currently:
 This can be strange, but intuitively it gives the first scope the scope tree, 
 walking PST from this element up.
 
+## `QueryIntuitiveCodeScopeFor`
+
+@TODO
+
 ## `QuerySymbolsInScope`
 
 Get lists of symbols associated with given scope.

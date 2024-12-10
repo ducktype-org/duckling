@@ -120,6 +120,11 @@ namespace compiler::helios {
 
 			// Does not make sense to have a scope:
 			Invalid,
+
+			// @TODO: introduce:
+			// * TransparentInvalid -- transparent for implementation, but invalid for user
+			// this allows to easily implement scope parents, but disallow to get PrimaryScopes for elements that don't have it.
+			// For examples namespaces don't have primary scopes (which can be counterintuitive)
 		};
 
 		static ElementScopeKind getScopeKind(QKey element) {
@@ -168,7 +173,8 @@ namespace compiler::helios {
 					return ElementScopeKind::Standard;
 
 				case pst::ElementKind::ExprElement:
-					return ElementScopeKind::Transparent;
+					// @todo: once we have top-expressions, this should be transparent for non-tops 
+					return ElementScopeKind::Standard;
 				
 				case pst::ElementKind::KindNotSet:
 					CORE_UNREACHABLE();
@@ -247,7 +253,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// note: not all cases are handled here, which is intentional.
 			// We might add more in the future, but this query should remain a simple one.
-			
+
 			QueryIntuitiveScopeVisitor visitor(ctx, key);
 			key.base_element->acceptVisitor(visitor);
 			return visitor.out.value();
