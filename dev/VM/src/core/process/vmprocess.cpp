@@ -5,7 +5,6 @@
 #include <preprocessor/preprocessor.hpp>
 #include <core/thread/vmthread.hpp>
 
-#include <memory>
 #include <mutex>
 #include <base/variant.hpp>
 #include <api/data/request.hpp>
@@ -45,30 +44,22 @@ namespace vm {
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::run() {
 		std::unique_lock lock(rwGlobal);
-		if (coreThread)
+		if (getMainVMThread().exec_thread)
 			return cpp::failure(api::CoreOperationError{ api::RunError{} }
 			);  // @TODO: change to more verbose error handling
 		if (!loadedCode.has_value())
 			return cpp::failure(api::CoreOperationError{ api::RunError{} });
 		getMainVMThread().prestart();
-		coreThread = std::make_unique<std::thread>([this] {
-			try {
-				getMainVMThread().run(*loadedCode);
-
-				// @TODO: catch not general std::exception&
-			} catch (const std::exception& e) {
-				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";
-				onEvent(api::ProcStatus{ api::Panicked{ e } });
-			}
-		});
+		getMainVMThread().initThread(*loadedCode);
 		return api::Response(api::response::Empty());
 	}
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::join() {
 		// @TODO: more verbose errors
 		// @TODO: check status
-		if (coreThread && coreThread->joinable())
-			coreThread->join();
+		auto& thread = getMainVMThread().exec_thread;
+		if (thread && thread->joinable())
+			thread->join();
 		else
 			return cpp::failure(api::CoreOperationError{ api::AttachDetachError{} });
 		return api::Response(api::response::Empty());
@@ -92,7 +83,7 @@ namespace vm {
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::stop() {
 		getMainVMThread().stop();
 		(void) join();
-		coreThread.reset(nullptr);
+		getMainVMThread().exec_thread.reset();
 		return api::response::Empty{};
 	}
 
@@ -191,7 +182,8 @@ namespace vm {
 	}
 
 	VMProcess::~VMProcess() {
-		if (coreThread) (void) (stop());
+		for (auto& t: vm_threads)
+			if (t.exec_thread) (void) (stop());
 	}
 
 	ProcIO& VMProcess::getIO() { return io; }

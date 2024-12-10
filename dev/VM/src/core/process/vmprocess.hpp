@@ -47,8 +47,6 @@ namespace vm {
 	private:
 		std::shared_mutex rwGlobal;
 
-		std::unique_ptr<std::thread> coreThread;
-
 		std::condition_variable_any status_cv;
 		std::shared_mutex           rwStatus;
 		api::ProcStatus             status;

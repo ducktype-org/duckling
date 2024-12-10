@@ -1,5 +1,7 @@
 #pragma once
 
+#include "base/box.hpp"
+#include "base/optional.hpp"
 #include <core/process/memory/allocator/allocator.hpp>
 #include <core/process/memory/allocator/stack_allocator.hpp>
 #include <condition_variable>
@@ -72,6 +74,8 @@ namespace vm {
 	 */
 	class VMThread {
 	private:
+		base::Optional<std::thread> exec_thread;
+
 		std::vector<Frame> frame_stack;
 
 		/**
@@ -195,6 +199,8 @@ namespace vm {
 		void stop();
 
 		void prestart();
+
+		void initThread(const vm::Code& code);
 
 		/**
 		 * @brief Called on coreThread

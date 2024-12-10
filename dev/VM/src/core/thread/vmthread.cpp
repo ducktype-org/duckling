@@ -657,4 +657,19 @@ namespace vm {
 	}
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
+
+	base::Optional<std::thread> VMThread::getExecThread() { return exec_thread; }
+
+	void VMThread::initThread(const vm::Code& code) {
+		exec_thread = std::thread([this, code] {
+			try {
+				run(code);
+
+				// @TODO: catch not general std::exception&
+			} catch (const std::exception& e) {
+				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";
+				process.onEvent(api::ProcStatus{ api::Panicked{ e } });
+			}
+		});
+	}
 }  // namespace vm
