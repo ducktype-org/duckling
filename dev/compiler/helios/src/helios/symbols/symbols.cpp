@@ -348,7 +348,7 @@ namespace compiler::helios {
 				                           .value();
 
 				// Here we don't access just root scope, because root scopes are currently empty:
-				auto linked_scope = extendQueryRootScopeOfMainModuleFile(ctx, imported_module);
+				auto linked_scope = queryRootScopeOfMainModuleFile(ctx, imported_module);
 
 				return linked_scope;
 			}

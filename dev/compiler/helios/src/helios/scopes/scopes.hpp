@@ -127,5 +127,5 @@ namespace compiler::helios {
 	 * @param module
 	 * @return ScopeID
 	 */
-	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context&, frontend::ModuleID module);
+	ScopeID queryRootScopeOfMainModuleFile(query::Context&, frontend::ModuleID module);
 }

@@ -8,7 +8,7 @@ namespace compiler::helios::test_utils {
 		auto module = query::entryPoint<frontend::QueryModuleTree>(path);
 
 		auto main_file_root_scope = query::utils::withContextCompute( [&](query::Context& ctx) {
-				return extendQueryRootScopeOfMainModuleFile(ctx, module);
+				return queryRootScopeOfMainModuleFile(ctx, module);
 		});
 
 		return { module, base::anyCast<ScopeID>( main_file_root_scope) };

@@ -409,7 +409,7 @@ namespace compiler::helios {
 	}
 	
 
-	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
+	ScopeID queryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
 		auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
 		auto main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
 
