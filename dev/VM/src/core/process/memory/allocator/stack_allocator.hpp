@@ -28,6 +28,5 @@ namespace vm {
 		BlockID makeArrayBlock(TypeCRef type, u64 length, base::ModRawView stack_ptr);
 
 		void deleteBlock(BlockID block_id);
-
 	};
 }

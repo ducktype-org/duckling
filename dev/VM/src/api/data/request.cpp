@@ -14,6 +14,6 @@ namespace vm::api {
 	}
 
 	SupervisorRequest makeIORequest(PID pid, IORequest&& data) {
-		return SupervisorRequest{ pid, data };
+		return SupervisorRequest{ pid, std::move(data) };
 	}
 }

@@ -196,8 +196,7 @@ namespace vm {
 
 	ProcIO& VMProcess::getIO() { return io; }
 
-	VMThread& VMProcess::getMainVMThread() {
-		return vm_threads.front(); }
+	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }
 
 	cpp::result<api::Response, api::CoreOperationError>
 		VMProcess::attach(std::istream& istream, std::ostream& ostream) {

@@ -10,6 +10,7 @@
 #include <base/unique_pointer.hpp>
 #include <core/process/type_metadata/type_metadata.hpp>
 #include <core/process/memory/memory_data/block.hpp>
+
 // #include <core/process/memory/memory.hpp>
 
 // This is mostly so that cmake in the linter starting from this file doesn't break in executor.hpp
@@ -31,6 +32,7 @@ namespace vm {
 	 */
 	class Allocator {
 		friend class Memory;
+
 	private:
 		Memory& memory;
 		Allocator(Memory& memory);
