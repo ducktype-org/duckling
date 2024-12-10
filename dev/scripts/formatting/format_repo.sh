@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Go to dev directory location
+# Go to dev/ directory
 original_location=$(pwd)
-cd "$(dirname "$0")"/../.. || exit 1
+cd "$(dirname "$0")"/../../ || exit 1
 
 # Gather files
 files=$(./scripts/list_files.sh)
