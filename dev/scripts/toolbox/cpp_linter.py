@@ -62,10 +62,18 @@ def get_diffs(branch: str):
                 line_start = int(line_start)
                 num_lines = int(num_lines)
                 line_range = [line_start, line_start + num_lines]
+
+                # This is for the format:
+                # @@ -16 +15,0 @@
+                # -#include <iostream>
+                # (Which is very odd)
+                if line_range[1] == 0:
+                    continue
             else:
                 # In this case there is only 1 line changed
                 line_start = int(diffed)
                 line_range = [line_start, line_start + 1]
+
 
             # Save to our dict which files have changed and which haven't.
             # There may be multiple places in one files with changed lines, so we have a list of ranges.
