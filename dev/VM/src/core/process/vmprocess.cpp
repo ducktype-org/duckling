@@ -208,7 +208,6 @@ namespace vm {
 	}
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::detach() {
-		std::cerr << "Handling detach..." << std::endl;
 		if (!io_redirecter)
 			return cpp::failure(api::CoreOperationError{ api::AttachDetachError{} });
 		io_redirecter.reset();

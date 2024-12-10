@@ -2,10 +2,9 @@
 
 #include <tuple>
 #include <base/ints.hpp>
-#include <concepts>
 #include <base/optional.hpp>
-#include "memory/memory.hpp"
-#include "type_metadata/type_metadata.hpp"
+#include <core/process/memory/memory.hpp>
+#include <core/process/type_metadata/type_metadata.hpp>
 
 namespace vm {
 

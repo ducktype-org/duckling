@@ -43,7 +43,7 @@ namespace vm {
 	 * Only execution of the code is done in the separate thread,
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
-	class VMProcess: public Listener<api::ProcStatus> {
+	class VMProcess final: public Listener<api::ProcStatus> {
 	private:
 		std::shared_mutex rwGlobal;
 
@@ -189,6 +189,6 @@ namespace vm {
 
 		VMProcess();
 
-		virtual ~VMProcess();
+		~VMProcess() final;
 	};
 }
