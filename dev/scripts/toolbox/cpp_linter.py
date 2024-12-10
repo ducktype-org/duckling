@@ -219,7 +219,9 @@ def simulate_cpp_linter(
         if to_format.lower() in ["y", ""]:
             bash_command("./scripts/formatting/format_repo.sh")
         else:
-            exit(1)
+            clang_format_failed = False
 
     if clang_tidy_failed:
-        exit(1)
+        exit_with_error(
+            f"Linter has failed because: {clang_format_failed=}, {clang_tidy_failed=}"
+        )
