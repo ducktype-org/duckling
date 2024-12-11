@@ -2,8 +2,18 @@
  * @file scopes.hpp
  * @brief This file defines Queries responsible for creation of Scopes and operations on them.
  *
- * List of scopes for given PST element:
- * * For CodeBlock: Scope containing all statements in the block.
+ * What are created for given PST element (list only for elements that have their own scope):
+ * * TopLevel: Scope containing all top-level statements in the file.
+ * * CodeBlockOrStmt: Scope containing all statements in the block.
+ * * CodeBlock: Scope containing all statements in the block.
+ *   Unless it is contained in CodeBlockOrStmt, then it does not have a scope.
+ * * ClassBlock: Scope containing all statements in the class.
+ * * If, While, For: Scope for symbols defined in the condition/iteration declaration.
+ * * Fun, ClassMethod: Scope for function parameters.
+ *
+ * * ExprStmt: Scope for expresion lifetime
+ *   (this will change in the future, we will just have scope for top-exprs).
+ * 
  */
 #pragma once
 
