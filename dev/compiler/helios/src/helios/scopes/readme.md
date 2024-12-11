@@ -1,47 +1,29 @@
-# HELIOS Scopes
+\page helios-scopes HELIOS Scopes
 
-# Scope operations
+# HELIOS Scopes API
 
-## `QueryRootScopeOf`
+Note: This is mostly to list operations, see docs for details.
 
-module root scope.
+* `QueryRootScopeOf` -- Get module root scope for given module.
 
-## `QueryPrimaryCodeScopeFor`
+* `QueryPrimaryCodeScopeFor` -- Generate HELIOS-scope associated with given PST element.
+   Dictates what PST elements have their own scope.
 
-Maps PST to scopes.
-Dictates what PST elements have their own scope.
+* `queryBodyCodeScopeFor` -- Query a scope, that intuitively represents an element body.
 
-Currently: 
-* For elements that have a scope: it return scope defined for that element,
-* For elements, that don't have a scope, but in a way are important in scope structure: it returns QueryPrimaryCodeScopeFor(parent)
-* For elements that does
-This can be strange, but intuitively it gives the first scope the scope tree, 
-walking PST from this element up.
+* `QuerySymbolsInScope` -- Get lists of symbols located inside with given scope.
 
-## `QueryIntuitiveCodeScopeFor`
+* `LookupInScope` -- Lookups in given scope. Implements main scope-lookup logic.
+  Uses `QuerySymbolsInScope`.
 
-@TODO
+* `QueryLookupInScopeAndParents` -- As above, but with parents.
 
-## `QuerySymbolsInScope`
+# HELIOS Internal scope operations
 
-Get lists of symbols associated with given scope.
 
-##  `LookupInScope` 
-
-Lookups in given scope. Implements main scope-lookup logic.
-Uses `QuerySymbolsInScope`.
-
-## `QueryLookupInScopeAndParents`
-
-As above, but with parents.
-
-## `QueryLinkedScope`
-
-Intuitively this returns a scope, programmer would associate with this element.
-It can work slightly different for different elements.
-
-For most symbols it will either panic, or return a scope to lookup in, when
-looking up in this element (e.g. for namespace).
+* `QueryLinkedScope` -- Returns a scope, that HELIOS can lookup-in, when looking up in given symbol. (works only for some types of symbols).
+  Intuitively this returns a scope, programmer would associate with this element when writing `element.some_name`.
+  It can work slightly different for different elements.
 
 ## TODOS
 
@@ -60,15 +42,13 @@ note: each symbol need a scope. If we don't have one, we should add one.
 
 # Future todos
 
+## Default parameter expression scopes
+
 Scopes of Expression for default parameter values.
-Its non trivial, since it will probably get called at callee side.
-Maybe we wanta function per default parameter.
-Cool thing is that snice move is zero-cost most of the times, we can just rely on it.
+Its non trivial, since it will probably get called at callee side, which doesn't work well with lifetimes.
 
+It might require some corner-case if'ing.
+Alternatively maybe we want a function per default parameter, that calculates it.
 
-# TODO
+Cool thing is that since move is a zero-cost operation (most of the times), we can just rely on it.
 
-sanity check, that scope(sym) is correct for all symbols-in-scope
-
-
-split scope files, so its clear, and simple

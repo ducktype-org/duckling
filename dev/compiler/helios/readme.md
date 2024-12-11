@@ -1,5 +1,13 @@
 @page helios-module Helios
 
+\subpage helios-scopes
+
+@attention
+This document contains mostly legacy-docs, that don't represent
+the intent of the module well.
+
+@todo rewrite it.
+
 @attention
 This is the documentation of the implementation of HELIOS. For a general overview of the HELIOS process, see: `@TODO`.
 
@@ -38,3 +46,6 @@ Files:
 - pst_walkers.hpp
 - [queries.hpp](helios/queries.hpp)
 - scope_symbol_id.hpp
+
+
+

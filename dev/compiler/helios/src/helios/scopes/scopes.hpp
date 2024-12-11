@@ -1,5 +1,9 @@
-/** @file scopes.hpp
- *  @brief This file defines Queries responsible for creation of Scopes and operations on them.
+/**
+ * @file scopes.hpp
+ * @brief This file defines Queries responsible for creation of Scopes and operations on them.
+ *
+ * List of scopes for given PST element:
+ * * For CodeBlock: Scope containing all statements in the block.
  */
 #pragma once
 
@@ -12,7 +16,7 @@
 #include "../scope_symbol_id.hpp"
 #include "../lookup_result.hpp"
 
-// @TODO: relax this dependency
+// @TODO: relax this dependency (we only need ModuleID in hpp)
 #include <frontend/module_tree/queries.hpp>
 
 namespace compiler::helios {
@@ -51,18 +55,6 @@ namespace compiler::helios {
 	struct KeyOf_QueryCodeScopeFor final {
 		/**
 		 * @brief Element for which the scope is created.
-		 * @note: scopes of various elements behave differently
-		 * Scope behaviour for:
-		 * * StatementAggregates -- a scope of aggregated statements
-		 * * Function -- a scope of function arguments (@todo: function scopes are currently empty)
-		 * * Namespaces -- empty Scope
-		 * * Classes -- scope containing class fields
-		 * * Expr -- empty Scope
-		 * * Return -- empty Scope
-		 * * Variables -- empty Scope
-		 *
-		 * @todo: once scope refactor will be introduced, most "empty scope"
-		 * stuff will be no longer needed.
 		 */
 		MCRef<pst::LangElement> base_element;
 
@@ -72,14 +64,15 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Query Primary Scope for given PST element.
+	 * @brief Generate HELIOS-scope associated with given PST element.
+	 * Also: dictates what PST elements have their own scope.
+	 * 
 	 * For some elements (e.g: code-block) this will be a scope of the element itself.
 	 * For some it will be a scope this element is contained in (e.g. inner expression elements).
 	 * For some (e.g: function) this might be slightly different.
-	 *
 	 * For some elements for which scope does not make sense, it can panic.
 	 * 
-	 * @note: Scope strucure are linked directly to PST structure.
+	 * @note Scope strucure are linked directly to PST structure.
 	 * The reason for this is that handling scope structure without direct link to PST was highly
 	 * bug prone and led to potential errors or lack of consistency between different fragments of
 	 * code.
@@ -88,7 +81,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief A helper function, to make scope API consistent.
-	 * Query scope of the body for given PST stmt element.
+	 * Generate scope of the body for given PST stmt element.
 	 * Intuitively this is a scope, that you associate with given element,
 	 * when looking at the code (think of namespaces for example).
 	 */
@@ -116,8 +109,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query all symbols that are directly inside given scope.
-	 *
-	 * @NOTE: For structs, it returns what's inside struct's body.
+	 * Also: dictates what symbols are contained in what scopes.
 	 */
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>);
 
@@ -131,7 +123,8 @@ namespace compiler::helios {
 	ScopeID getPSTElementParentScope(query::Context&, MCRef<pst::LangElement> element);
 
 	/**
-	 * @brief Root scope of main module file is currently the "effective" root scope.
+	 * @brief Root scope of main module file.
+	 * It is currently the "effective" root scope of a module.
 	 * See: QueryRootScope for details
 	 * @todo: this has to change in the future
 	 *

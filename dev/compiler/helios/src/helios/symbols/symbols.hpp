@@ -17,7 +17,6 @@
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>
-#include <typesystem/higher/type_info.hpp>
 
 namespace compiler::helios {
 

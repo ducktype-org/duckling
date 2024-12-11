@@ -266,6 +266,12 @@ namespace compiler::helios {
 				// @NOTE: for now imports are done via linked scope that looks at root
 				// module scope, but in the future it might be changed to custom code
 
+				// @note: this will probably brake for usings,
+				// when they look at a symbol without linked scope.
+				// We might just delete QueryLinkedScope at some point,
+				// when QueryLookupInSymbol will get more and more
+				// per-symbol-kind cases.
+
 				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
 				return *ctx.query<QueryLookupInScope>(
 					{ linked_scope, key.name, key.follow_wildcards }
@@ -372,7 +378,7 @@ namespace compiler::helios {
 				return visitor.result_scope.value();
 			}
 			default:
-				throw base::NotYetImplemented("Getting linked scope...");
+				throw base::NotYetImplemented("Getting linked scope for some SymbolKind...");
 			}
 		}
 
