@@ -10,7 +10,7 @@
 #include "../lookup_result.hpp"
 #include "../helios_errors.hpp"
 #include "../helios_result.hpp"
-#include "base/box.hpp"
+#include <base/box.hpp>
 #include <base/unique_pointer.hpp>
 #include <typesystem/higher/type_info.hpp>
 #include <helios/scopes/scopes.hpp>

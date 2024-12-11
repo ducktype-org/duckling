@@ -10,7 +10,7 @@
 
 #include "expr.hpp"
 #include "../visitors.hpp"
-#include "pst_parser/pst_expr_visitor.hpp"
+#include <pst_parser/pst_expr_visitor.hpp>
 
 namespace compiler::helios::code {
 	namespace {
