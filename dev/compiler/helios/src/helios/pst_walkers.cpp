@@ -14,19 +14,24 @@ namespace compiler::helios {
 			else
 				out.push_back(stmt);
 		}
-	}
 
-	// TODO in this PR: make it detail:
-	StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(MCRef<pst::LangElement> elem) {
-		if (auto* ptr = dynamic_cast<const pst::ClassBlock*>(&*elem)) {
-			StmtList<pst::ClassStmt> out;
-			for (auto&& e: *ptr) detail::visitClassStmts(out, e);
-			return out;
-		} else {
-			const auto& element = *elem;
-			CORE_PANIC(base::strConcat(
-				"Bad Duckling Element in `getChildStmtsOfClassBlock`: ", typeid(element).name()
-			));
+		/**
+		* @brief Returns all children statements of given ClassBlock
+		* Flattens access specifier blocks as their information is included in statements.
+		*
+		* @return StmtList
+		*/
+		StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(MCRef<pst::LangElement> elem) {
+			if (auto* ptr = dynamic_cast<const pst::ClassBlock*>(&*elem)) {
+				StmtList<pst::ClassStmt> out;
+				for (auto&& e: *ptr) detail::visitClassStmts(out, e);
+				return out;
+			} else {
+				const auto& element = *elem;
+				CORE_PANIC(base::strConcat(
+					"Bad Duckling Element in `getChildStmtsOfClassBlock`: ", typeid(element).name()
+				));
+			}
 		}
 	}
 
@@ -49,7 +54,7 @@ namespace compiler::helios {
 		} 
 		if (auto* ptr = dynamic_cast<const pst::ClassBlock*>(&*elem)) {
 			// todo in this PR: deal with unused warning
-			auto elements = getChildStmtsOfClassBlock(elem);
+			auto elements = detail::getChildStmtsOfClassBlock(elem);
 			StmtList<> out;
 			for (auto e: elements) out.emplace_back(e);
 			return out;
@@ -60,5 +65,4 @@ namespace compiler::helios {
 			"Bad Duckling Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
 		));
 	}
-
 }
