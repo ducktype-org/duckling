@@ -320,8 +320,6 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
 		
-		// todo in this PR: use intuitive scopes here
-
 		struct QueryLinkedScopeVisitor: pst::PstStmtVisitorPanicky {
 			query::Context& ctx;
 			QKey key;
@@ -346,11 +344,6 @@ namespace compiler::helios {
 				output(ret);
 			}
 
-			void visitNamespace(const pst::Namespace& namespace_stmt) override {
-				auto inner_scope = ctx.query<QueryPrimaryCodeScopeFor>({ namespace_stmt.getBody() });
-				output(inner_scope);
-			}
-
 			void visitImport(const pst::Import& import_stmt) override {
 				// @TODO: proper error handling
 				auto imported_module = frontend::getRelativeModule(
@@ -367,8 +360,12 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.ref->kind) {
-			case SymbolKind::Using:
 			case SymbolKind::Namespace:
+				return queryBodyCodeScopeFor(ctx, key.ref->pst_stmt);
+			
+
+			// Special cases for "wildcards":
+			case SymbolKind::Using:
 			case SymbolKind::Import: {
 				QueryLinkedScopeVisitor visitor(ctx, key);
 				key.ref->pst_stmt->acceptVisitor(visitor);
