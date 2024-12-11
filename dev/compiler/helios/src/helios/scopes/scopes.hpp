@@ -95,11 +95,12 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Query Primary so called Intuitive for given PST stmt element.
+	 * @brief A helper function, to make scope API consistent.
+	 * Query scope of the body for given PST stmt element.
 	 * Intuitively this is a scope, that you associate with given element,
 	 * when looking at the code (think of namespaces for example).
 	 */
-	DECLARE_QUERY(QueryIntuitiveCodeScopeFor, KeyOf_QueryCodeScopeForStmt, ScopeID);
+	ScopeID queryBodyCodeScopeFor(query::Context&, MCRef<pst::Stmt> stmt);
 
 	struct KeyOf_LookupInScope final {
 		ScopeID     scope;

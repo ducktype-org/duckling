@@ -247,12 +247,16 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);
 
-	struct IMPLEMENT_QUERY(QueryIntuitiveCodeScopeFor, ScopeID) {
-		struct QueryIntuitiveScopeVisitor: pst::PstStmtVisitorPanicky {
+	ScopeID queryBodyCodeScopeFor(query::Context& ctx, MCRef<pst::Stmt> stmt) {
+		// note: not all cases are handled here, which is intentional.
+		// We might add more in the future, but this function should remain a simple one.
+
+		struct QueryBodyScopeVisitor: pst::PstStmtVisitorPanicky {
 			query::Context&  ctx;
-			QKey             key;
+			MCRef<pst::Stmt> stmt;
 			
-			QueryIntuitiveScopeVisitor(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
+			QueryBodyScopeVisitor(query::Context& ctx, MCRef<pst::Stmt> stmt):
+				ctx(ctx), stmt(stmt) {}
 
 			base::Optional<ScopeID> out;
 
@@ -265,20 +269,13 @@ namespace compiler::helios {
 			}
 		};
 
+		QueryBodyScopeVisitor visitor(ctx, stmt);
+		stmt->acceptVisitor(visitor);
+		return visitor.out.value();
+	}
 
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			// note: not all cases are handled here, which is intentional.
-			// We might add more in the future, but this query should remain a simple one.
 
-			QueryIntuitiveScopeVisitor visitor(ctx, key);
-			key.base_element->acceptVisitor(visitor);
-			return visitor.out.value();
-		}
 
-		QUERY_AUTO_CACHE_COPY
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIntuitiveCodeScopeFor)
 
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
 		/**
