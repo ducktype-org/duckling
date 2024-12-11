@@ -139,6 +139,7 @@ namespace compiler::helios {
 		case pst::ElementKind::Class:
 		case pst::ElementKind::Action:
 		case pst::ElementKind::Block: //< note that block is not a code block that is used in stuff like ifs
+		case pst::ElementKind::ClassField:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
 
@@ -148,7 +149,7 @@ namespace compiler::helios {
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::Fun:
-
+		case pst::ElementKind::ClassMethod:
 		case pst::ElementKind::ExprStmt:
 			// note: this is needed for lifetimes
 			// but what we should do is put 

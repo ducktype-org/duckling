@@ -50,6 +50,16 @@ namespace pst {
         // for Expr wrappers like round group:
         ExprWrapper,
 
+        // classes:
+        ClassField,
+        ClassMethod,
+
+        // use it, once its docs are more stable:
+        // ClassConstructor,
+        // ClassDestructor,
+        
+        // note: AccessBlock is not here, since it should be invisible to HELIOS (at least for now)
+
         // others:
         FunParam,
         ParamList,

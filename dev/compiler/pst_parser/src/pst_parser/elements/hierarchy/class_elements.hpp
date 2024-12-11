@@ -4,9 +4,11 @@
 #include "not_statements.hpp"
 
 namespace pst {
-#define CLASS_STMT_CHILD_CONSTRUCTOR(class_name)                              \
+#define CLASS_STMT_CHILD_CONSTRUCTOR(class_name, kind)                              \
 	class_name(const dia::SourcePosition& position, const ClassContext& ctx): \
-		  ClassStmt(StmtKind::class_name, position, ctx) {}
+		  ClassStmt(StmtKind::class_name, position, ctx) { \
+			this->element_kind = kind; \
+		  }
 
 #define CLASS_STMT_PASS_CONSTRUCTOR(class_name)                                              \
 	class_name(StmtKind kind, const dia::SourcePosition& position, const ClassContext& ctx): \
@@ -35,7 +37,7 @@ namespace pst {
 		MBox<ClassBlock>  block;
 
 	public:
-		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock);
+		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock, ElementKind::KindNotSet);
 		CLASS_STMT_PARSE(AccessBlock);
 
 		~AccessBlock() override = default;
@@ -92,7 +94,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool trailingSemicolon() override final {
+		bool trailingSemicolon() final {
 			return false;
 		}
 	};
@@ -147,7 +149,7 @@ namespace pst {
 		MBox<CodeBlock>                   body = nullptr;
 
 	public:
-		CLASS_STMT_CHILD_CONSTRUCTOR(Method);
+		CLASS_STMT_CHILD_CONSTRUCTOR(Method, ElementKind::ClassMethod);
 		CLASS_STMT_PARSE(Method);
 
 		~Method() override = default;
@@ -183,7 +185,7 @@ namespace pst {
 		base::Optional<MBox<ExprElement>> init;
 
 	public:
-		CLASS_STMT_CHILD_CONSTRUCTOR(Field);
+		CLASS_STMT_CHILD_CONSTRUCTOR(Field, ElementKind::ClassField);
 		CLASS_STMT_PARSE(Field);
 
 		~Field() override = default;
