@@ -14,6 +14,7 @@
  * * ExprStmt: Scope for expresion lifetime
  *   (this will change in the future, we will just have scope for top-exprs).
  * 
+ * @note all symbols need a scope. If we don't have one, we should add it.
  */
 #pragma once
 

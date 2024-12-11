@@ -25,20 +25,6 @@ Note: This is mostly to list operations, see docs for details.
   Intuitively this returns a scope, programmer would associate with this element when writing `element.some_name`.
   It can work slightly different for different elements.
 
-## TODOS
-
-todo: semantic of QueryPrimaryCodeScopeFor vs scope(SymOf(pst))
-
-Scopes work as follow:
-
-- **Block/CodeBlockOrStmt**: singe scope containing everything.
-  This means that it might be somewhat artificial for functions,
-  but this way we can use it for almost everything.
-- **Namespace**: transparent?
-
-
-note: each symbol need a scope. If we don't have one, we should add one.
-
 
 # Future todos
 
@@ -51,4 +37,10 @@ It might require some corner-case if'ing.
 Alternatively maybe we want a function per default parameter, that calculates it.
 
 Cool thing is that since move is a zero-cost operation (most of the times), we can just rely on it.
+
+## ...
+
+todo: semantic of QueryPrimaryCodeScopeFor vs scope(SymOf(pst))
+
+This will be set, with follow ups PRs
 
