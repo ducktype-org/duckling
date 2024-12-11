@@ -347,7 +347,7 @@ namespace compiler::helios {
 			if (base_element->isStatementAggregate()) {
 				return filterSymbolsFromStmtList(ctx, key, getStmtsFromStmtAggregate(base_element));
 			} else if (base_element->isStatement()) {
-				// note: if this check fail, it might be that we are missing some case
+				// note: if this check fail, it might be that we are missing some cases
 				CORE_ASSERT(getScopeKind(base_element) == ElementScopeKind::Standard, "Bad element in QuerySymbolsInScope");
 
 				SymbolGrabVisitor symbol_grab(ctx, key);
