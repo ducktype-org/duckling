@@ -340,7 +340,6 @@ namespace compiler::helios::code {
 	errors::HResult<base::Box<Expr>, errors::Failed>
 		Expr::fromPST(query::Context& ctx, MCRef<pst::ExprElement> root) {
 
-		// @TODO: this is sort of quadratic, but ok for now:
 		auto scope = ctx.query<QueryPrimaryCodeScopeFor>({root});
 		
 		std::cerr << "\nExpr: \n";

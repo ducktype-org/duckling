@@ -567,7 +567,8 @@ namespace compiler::helios {
 	 */
 	ParseTypeFromExpr_Result
 		parseTypeFromExpr(query::Context& ctx, MCRef<pst::ExprElement> expr) {		
-		// @TODO: Helios Type Fixes: this should be a method on hout, that just return type|error|can't-short-path
+		// @TODO Helios Type Fixes: this should be a method on hout, that just return type|error|can't-short-path
+		// (see also issue #385)
 		
 		auto parsed = code::Expr::fromPST(ctx, expr);
 		if (parsed.hasError()) return errors::HError(parsed.error());
@@ -761,6 +762,7 @@ namespace compiler::helios {
 			if_opt_some(class_data_parser.base_class, base) {
 				// @TODO Helios Type Fixes
 				// change this to new hout type eval
+				// (see also issue #385)
 
 				auto tp = parseTypeFromExpr(ctx, base);
 				if (tp.hasValue()) {

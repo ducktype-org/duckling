@@ -157,7 +157,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Does QueryTypeOfSymbol and upon failing does QueryTypeFromDefinition.
-	 * @todo Helios Type Fixes: delete this query
+	 * @todo Helios Type Fixes: delete this query (see also issue #385)
 	 */
 	DECLARE_QUERY(QueryTypeOfSymbolOrDefinition, SymID, CRef<QueryType_Result>);
 
