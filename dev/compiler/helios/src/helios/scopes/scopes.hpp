@@ -86,14 +86,6 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryPrimaryCodeScopeFor, KeyOf_QueryCodeScopeFor, ScopeID);
 
-	struct KeyOf_QueryCodeScopeForStmt final {
-		MCRef<pst::Stmt> base_element;
-
-		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-		bool        operator==(const KeyOf_QueryCodeScopeForStmt&) const = default;
-	};
-
 	/**
 	 * @brief A helper function, to make scope API consistent.
 	 * Query scope of the body for given PST stmt element.
@@ -133,6 +125,8 @@ namespace compiler::helios {
 	 * @brief Return the scope, that symbol created from given PST element
 	 * Should be in.
 	 * @note This has to be consistant with QuerySymbolsInScope
+	 * @todo This will be changed to private method in QuerySymbolOfStmt,
+	 * and scope consistency sanity check will be moved to QuerySymbolsInScope.
 	 */
 	ScopeID getPSTElementParentScope(query::Context&, MCRef<pst::LangElement> element);
 

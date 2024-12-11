@@ -91,14 +91,17 @@ namespace compiler::helios {
 		return out;
 	}
 
+	/**
+	 * @brief A way helios creates scope for given pst element.
+	 */
 	enum class ElementScopeKind {
 		// Has standard scope:
 		Standard,
 
-		// gets element from its parent:
+		// Inherits scope from its parent:
 		Transparent,
 
-		// Does not make sense to have a scope:
+		// Does not have a scope:
 		Invalid,
 
 		// @TODO: introduce:
@@ -107,8 +110,12 @@ namespace compiler::helios {
 		// For examples namespaces don't have primary scopes (which can be counterintuitive)
 	};
 
-	// @TODO: move it to different file?
+	/**
+	 * Determines scope kind for given PST element.
+	 */
 	ElementScopeKind getScopeKind(MCRef<pst::LangElement> element) {
+		// @TODO: move it to different file?
+
 		switch (element->getElementKind()) {
 		case pst::ElementKind::TopLevel:
 			return ElementScopeKind::Standard;
@@ -146,13 +153,12 @@ namespace compiler::helios {
 		case pst::ElementKind::If:
 		case pst::ElementKind::While:
 		case pst::ElementKind::For:
-			return ElementScopeKind::Standard;
-
 		case pst::ElementKind::Fun:
 		case pst::ElementKind::ClassMethod:
+			return ElementScopeKind::Standard;
+
 		case pst::ElementKind::ExprStmt:
-			// note: this is needed for lifetimes
-			// but what we should do is put 
+			// note: this will be needed for lifetimes 
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::ExprElement:
@@ -432,11 +438,7 @@ namespace compiler::helios {
 	base::HashT KeyOf_QueryCodeScopeFor::customPerfectHash() const {
 		return base_element->getID().asInt();
 	}
-
-	base::HashT KeyOf_QueryCodeScopeForStmt::customPerfectHash() const {
-		return base_element->getID().asInt();
-	}
-
+	
 	base::HashT KeyOf_LookupInScope::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(scope);
 		auto hash_2 = std::hash<base::StrID>()(name);
