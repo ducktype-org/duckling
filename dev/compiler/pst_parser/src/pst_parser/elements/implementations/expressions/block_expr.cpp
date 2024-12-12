@@ -23,7 +23,7 @@ namespace pst::expr {
 		if (!checkLength(state, length)) return nullptr;
 
 		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Curly))) {
-			// This should almost never happen
+			// This should (probably) never happen with how it's called by the parser
 			state.log(base::make_unique<BadBlockError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));

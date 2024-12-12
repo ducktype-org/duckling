@@ -21,7 +21,7 @@ namespace pst::expr {
 		if (!checkLength(state, length)) return nullptr;
 
 		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Round))) {
-			// This should almost never happen
+			// This should (probably) never happen with how it's called by the parser
 			state.log(base::make_unique<BadRoundExprError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));

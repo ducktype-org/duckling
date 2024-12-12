@@ -19,22 +19,6 @@ namespace pst::expr {
 		OnlyPrefixError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	class NoIdentifierError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected an identifier to start here";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		NoIdentifierError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
 	i64 GeneralBinary::skipLiteral(const LangParserState& state, i64 base, i64 length) {
 		i64 fwd = base;
 		if (state[fwd].isIdentifier()) { fwd++; }  // Ignores first identifier
@@ -79,7 +63,7 @@ namespace pst::expr {
 		i64              next = 0;
 		while (fwd < reduced_length) {
 			next = skipLiteral(state, fwd, reduced_length);
-			if (fwd == next) base::make_unique<NoIdentifierError>(state.getPosition(fwd));
+			if (fwd == next) base::make_unique<tpc::NoIdentifierError>(state.getPosition(fwd));
 			if (next < reduced_length - 1)  // Not a suffix operator or end of expression
 				operators.push_back(next);
 			fwd = std::min(next + 1, reduced_length);

@@ -1,6 +1,10 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	/**
+	 * @brief For now this is a safety error unless there will be some situation where only a value
+	 * will be accepted.
+	 */
 	class BadValueError final: public dia::Error {
 	protected:
 		[[nodiscard]]
@@ -39,7 +43,7 @@ namespace pst::expr {
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
 		if (!state[0].is(lexer::Token::Type::NumLiteral)) {
-			// This should never happen
+			// This should (probably) never happen with how it's called by the parser
 			state.log(base::make_unique<BadValueError>(pos));
 			fastForward(state, length);
 			return nullptr;
