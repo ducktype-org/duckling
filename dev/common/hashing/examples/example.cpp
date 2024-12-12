@@ -4,9 +4,8 @@
 #include <tuple>
 #include <iostream>
 
-// #include <base/ints.hpp>
-// #include <hashing/hash.hpp>
-#include "../src/hashing/hash.hpp"
+#include <base/ints.hpp>
+#include <hashing/hash.hpp>
 
 // example usage of hashing utilities
 
@@ -22,7 +21,7 @@ namespace my_map {
 	using unordered_map = std::unordered_map<Key, T, Hash, Pred, Alloc>;
 }
 
-// we can hash our own types by telling the machinery which subobjects to hash
+// to hook our own type we can simply tell the machinery which subobjects of our type to hash
 struct type1 {
 	int         size{ 7 };
 	int         capacity{ 42 };
@@ -54,22 +53,20 @@ int main() {
 
 	// by default fnva_64 algorithm is used
 	std::cout << hash{}(type1{}) << '\n';  // some 64-bit number
-
-	// but we can also specify the algorithm, it's also possible to get the hash value at compile
-	// time
-	// static_assert(!std::has_unique_object_representations_v<bool>);
-	// constexpr auto h = hash<fnv1a_32>{}(type2{});
-	// std::cout << h << '\n';  // some 32-bit number
+	// but we can specify the algorithm explicitly as a template parameter
+	// it's also possible to get the hash value at compile time
+	constexpr auto h = hash<fnv1a_32>{}(type2{});
+	std::cout << h << '\n';  // some 32-bit number
 
 	// by default the type's hash-code is appended to the hashed bytes so it's possible to
-	// differentiate between hashes of pair(1, 2) and array<int, 2>{1, 2}, but if we want to this
-	// can be turned off
+	// differentiate between hashes of pair<int, int>{1, 2} and array<int, 2>{1, 2}, but
+	// if we want to this can be turned off
 	struct type3 {
-		int x{ 0x0a'aa'aa'ab }, y{ 9'876 };
+		int x{ 123 }, y{ 456 };
 	};
 
 	struct type4 {
-		std::array<int, 2> a{ 1'234, 9'876 };
+		std::array<int, 2> a{ 123, 456 };
 	};
 
 	std::cout << "different hashes:\n\t" << hash{}(type3{}) << "\n\t" << hash{}(type4{}) << '\n';

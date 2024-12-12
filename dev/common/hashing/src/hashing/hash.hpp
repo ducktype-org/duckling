@@ -6,28 +6,50 @@
 
 namespace hashing {
 
+
+	// this is a template overload for the 'add_to_hash' function
+	// if a friend function overload exists for the type, it will be used
+	// this one serves as a fallback and a place where specializations for
+	// types that are not ours can be added like built-in types
 	template<hash_algorithm HashAlgorithm, typename T>
 	constexpr void add_to_hash(HashAlgorithm& h, const T& t) {
+		// for most types we only want to add to hash some subset of their subobjects (bases + members)
+		// this can be done easily by defining `hash_decompose` friend function that
+		// lists subobjects in an order we want to hash them
 		if constexpr (detail::can_hash_decompose<T>) {
 			std::apply([&](auto&&... args) { (add_to_hash(h, args), ...); }, hash_decompose(t));
-		} else if constexpr (detail::can_hash_directly<HashAlgorithm, T>) {
+		}
+		// if there is no user-defined specialization for hash_decompose nor add_to_hash, but the chosen
+		// hashing algorithm is able to hash the type directly, we can use it (for most algorithms those
+		// will be types with unique representations)
+		else if constexpr (detail::can_hash_directly<HashAlgorithm, T>) {
 			h(t);
 		}
 		// specializations for types that are not ours
 		else if constexpr (std::is_floating_point_v<T>) {
-			// -0.0 == 0.0, so they should have the same hash
+			// IEEE 754 floating point numbers have multiple representations of 0:
+			// -0.0 == 0.0, but they should have the same hash
 			auto t_ = auto{ t };
 			if (t_ == 0) t_ = 0;
 			detail::hash_as_chars(h, t_);
-		} else if constexpr (std::is_pointer_v<T>) {
+		}
+		// specialation for pointers
+		else if constexpr (std::is_pointer_v<T>) {
 			detail::hash_as_chars(h, t);
-		} else if constexpr (std::is_null_pointer_v<T>) {
+		}
+		// it's likely that nullptr will have a trivial bit representation and has
+		// only one value so we hash it's hash-code instead
+		else if constexpr (std::is_null_pointer_v<T>) {
 			h(type_hash_code<T>);
 		}
 		// overloads for ranges
+		// if the range is contiguous and its elements have unique representations we can
+		// treat it as a segment of memory and hash it directly
 		else if constexpr (detail::can_hash_range_as_chars<HashAlgorithm, T>) {
 			detail::hash_range_as_chars(h, t);
-		} else if constexpr (std::ranges::contiguous_range<T> && requires(std::ranges::range_value_t<T> elem) {
+		}
+		// overload if range is contiguous and we can add its elements to the hash
+		else if constexpr (std::ranges::contiguous_range<T> && requires(std::ranges::range_value_t<T> elem) {
 								 add_to_hash(h, elem);
 							 }) {
 			for (auto&& elem: t) add_to_hash(h, elem);

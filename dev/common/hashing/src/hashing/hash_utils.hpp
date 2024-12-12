@@ -16,7 +16,7 @@ namespace hashing {
 
 		std::is_invocable_v<T, void*, usize> || std::is_invocable_v<T, char*, usize>;
 		typename T::result_type;
-		std::is_convertible_v<const T, typename T::result_type>;
+		std::is_convertible_v<T, typename T::result_type>;
 	};
 
 	namespace detail {
@@ -101,6 +101,13 @@ namespace hashing {
 		}
 
 		template<typename HashAlgorithm, typename R>
+		concept is_range_with_hashable_elements
+			= hash_algorithm<HashAlgorithm> && std::ranges::input_range<R>
+			&& requires(HashAlgorithm& h, const R& t) {
+				add_to_hash(h, std::declval<std::ranges::range_value_t<R>());
+		};
+
+		template<typename HashAlgorithm, typename R>
 		concept can_hash_range_as_chars
 			= hash_algorithm<HashAlgorithm> && std::ranges::contiguous_range<R>
 		   && std::has_unique_object_representations_v<std::ranges::range_value_t<R>>
@@ -114,6 +121,9 @@ namespace hashing {
 			requires can_hash_range_as_chars<HashAlgorithm, R> {
 			h(std::ranges::data(t), std::ranges::size(t) * sizeof(std::ranges::range_value_t<R>));
 		}
+
+		
+
 	}
 
 }  // namespace hashing
