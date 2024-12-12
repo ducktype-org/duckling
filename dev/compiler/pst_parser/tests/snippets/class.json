@@ -123,11 +123,15 @@
 															"Call Expression": {
 																"type": "[]",
 																"arguments": {
-																	"Identifier Expression": {
-																		"name": {
-																			"Name": "a"
-																		}
-																	}
+																	"call list": [
+																		{
+																			"Identifier Expression": {
+																				"name": {
+																					"Name": "a"
+																				}
+																			}
+																		},
+																	]
 																}
 															}
 														}
@@ -259,11 +263,15 @@
 																		"Call Expression": {
 																			"type": "[]",
 																			"arguments": {
-																				"Identifier Expression": {
-																					"name": {
-																						"Name": "c"
-																					}
-																				}
+																				"call list": [
+																					{
+																						"Identifier Expression": {
+																							"name": {
+																								"Name": "c"
+																							}
+																						}
+																					},
+																				]
 																			}
 																		}
 																	}

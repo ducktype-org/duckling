@@ -124,11 +124,8 @@ void printHelp(
  * @return clap::Clap
  */
 clap::Clap getClap() {
-	// standard options:
-	auto clap = config::standardOptions();
-
-	// custom options of main:
-	clap.add(
+	// returning prvalue for guaranteed copy elision
+	return config::standardOptions().add(
 		clap::ParamBuilder::ofFlag()
 			.addLongName("let-it-throw")
 			.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
@@ -137,8 +134,6 @@ clap::Clap getClap() {
 	                     "will happen. In that case exception will most likely not be caught.")
 			.build()
 	);
-
-	return clap;
 }
 
 /**

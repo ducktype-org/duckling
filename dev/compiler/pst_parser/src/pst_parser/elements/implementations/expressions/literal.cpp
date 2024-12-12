@@ -4,7 +4,6 @@
 
 namespace pst::expr {
 	MBox<ExprElement> Literal::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing Literal" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		if (state[0].isKeyword()) {
@@ -18,7 +17,9 @@ namespace pst::expr {
 		} else if (state[0].isBracketGroup(lexer::Token::Curly)) {
 			return BlockExpr::parse(state, length);
 		} else {
-			// Error
+			state.log(base::make_unique<tpc::NoIdentifierError>(
+				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
+			));
 			fastForward(state, length);
 			return nullptr;
 		}
