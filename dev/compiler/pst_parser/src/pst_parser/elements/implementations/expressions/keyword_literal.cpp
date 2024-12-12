@@ -4,7 +4,6 @@
 
 namespace pst::expr {
 	MBox<ExprElement> KeywordLiteral::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing IdentifierLiteral Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		auto out = makeBox<KeywordLiteral>(state.getPosition());

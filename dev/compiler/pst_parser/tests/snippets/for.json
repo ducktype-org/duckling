@@ -48,36 +48,34 @@
 								"Call Expression": {
 									"type": "[]",
 									"arguments": {
-										"Comma Expr": {
-											"sub-expressions": [
-												{
-													"Binary Operator": {
-														"left_expr": {
-															"Identifier Expression": {
-																"name": {
-																	"Name": "c"
-																}
-															}
-														},
-														"operator": "+",
-														"right_expr": {
-															"Identifier Expression": {
-																"name": {
-																	"Name": "d"
-																}
+										"call list": [
+											{
+												"Binary Operator": {
+													"left_expr": {
+														"Identifier Expression": {
+															"name": {
+																"Name": "c"
 															}
 														}
-													}
-												},
-												{
-													"Identifier Expression": {
-														"name": {
-															"Name": "w"
+													},
+													"operator": "+",
+													"right_expr": {
+														"Identifier Expression": {
+															"name": {
+																"Name": "d"
+															}
 														}
 													}
 												}
-											]
-										}
+											},
+											{
+												"Identifier Expression": {
+													"name": {
+														"Name": "w"
+													}
+												}
+											},
+										]
 									}
 								}
 							}
@@ -102,11 +100,15 @@
 												"Call Expression": {
 													"type": "[]",
 													"arguments": {
-														"Identifier Expression": {
-															"name": {
-																"Name": "a"
-															}
-														}
+														"call list": [
+															{
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "a"
+																	}
+																}
+															},
+														]
 													}
 												}
 											}

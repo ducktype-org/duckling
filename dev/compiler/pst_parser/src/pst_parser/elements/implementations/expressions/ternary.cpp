@@ -1,8 +1,55 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	class MultipleTernaryError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Multiple repeating ternary components in a single expression";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		MultipleTernaryError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class PartialTernaryError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Partial ternary expression";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		PartialTernaryError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class ImproperTernaryError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Ternary expression starting in an improper place";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		ImproperTernaryError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	MBox<ExprElement> Ternary::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing Ternary" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
@@ -16,28 +63,24 @@ namespace pst::expr {
 		for (i64 i = 0; i < length; i++) {
 			if (state[i].is(Keyword::If)) {
 				if (if_found) {
-					std::cerr << "Ternary error 1\n";
-					// Partial ternary expression error
+					state.log(base::make_unique<MultipleTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (i != 0) {
-					std::cerr << "Ternary error 2\n";
-					// ternary expression in improper context error
+					state.log(base::make_unique<ImproperTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (!if_found) if_found = true;
 			} else if (state[i].is(Keyword::Then)) {
 				if (!if_found) {
-					std::cerr << "Ternary error 3\n";
-					// Partial ternary expression error
+					state.log(base::make_unique<PartialTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (then_found) {
-					std::cerr << "Ternary error 4\n";
-					// multiple ternary in one expression error
+					state.log(base::make_unique<MultipleTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
@@ -47,14 +90,12 @@ namespace pst::expr {
 				}
 			} else if (state[i].is(Keyword::Else)) {
 				if (!if_found || !then_found) {
-					std::cerr << "Ternary error 5\n";
-					// Partial ternary expression error
+					state.log(base::make_unique<PartialTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (else_found) {
-					std::cerr << "Ternary error 6\n";
-					// multiple ternary in one expression error
+					state.log(base::make_unique<MultipleTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
@@ -66,8 +107,7 @@ namespace pst::expr {
 		}
 		if (!if_found) return Lower::parse(state, length);
 		if (if_found && !else_found) {
-			std::cerr << "Ternary error 7\n";
-			// Partial ternary expression error
+			state.log(base::make_unique<PartialTernaryError>(pos));
 			fastForward(state, length);
 			return nullptr;
 		}
