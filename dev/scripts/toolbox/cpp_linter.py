@@ -74,7 +74,7 @@ def get_modified_files_and_lines(branch: str):
                 num_lines = int(num_lines)
                 line_range = [line_start, line_start + num_lines]
 
-                # This is for the format:
+                # This is for the format (note the "0" added lines):
                 # @@ -16 +15,0 @@
                 # -#include <iostream>
                 # (Which is very odd)
