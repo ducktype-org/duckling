@@ -2,7 +2,7 @@
 
 namespace pst {
 	MBox<TopLevel> TopLevel::parse(LangParserState& state) {
-		auto out = box<TopLevel>(state.getPosition());
+		auto out = makeBox<TopLevel>(state.getPosition());
 		while (state.notEmpty()) {
 			MBox<Stmt> stmt;
 			state.parse(out).one(&stmt);

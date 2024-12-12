@@ -270,14 +270,14 @@ namespace compiler::backend_llvm {
 		init();
 		llvm::LLVMContext& context = getLLVMContext();
 
-		Box<llvm::Module> module = box<llvm::Module>("test", context);
+		Box<llvm::Module> module = makeBox<llvm::Module>("test", context);
 
 		LIR2LLVMFunction lir2llvm{ context, lir_function, module.refMut() };
 
 		// this implicitly adds the function to the module:
 		lir2llvm.createFunction();
 
-		Box<ModuleImpl> module_impl = box<ModuleImpl>(std::move(module));
+		Box<ModuleImpl> module_impl = makeBox<ModuleImpl>(std::move(module));
 		return Module{ std::move(module_impl) };
 	}
 }

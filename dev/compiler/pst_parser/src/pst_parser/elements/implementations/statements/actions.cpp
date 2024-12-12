@@ -12,25 +12,25 @@ namespace pst {
 
 		switch (keyword) {
 		case Keyword::Return:
-			out = box<Return>(position);
+			out = makeBox<Return>(position);
 			break;
 		case Keyword::Break:
-			out = box<Break>(position);
+			out = makeBox<Break>(position);
 			break;
 		case Keyword::Continue:
-			out = box<Continue>(position);
+			out = makeBox<Continue>(position);
 			break;
 		case Keyword::Redo:
-			out = box<Redo>(position);
+			out = makeBox<Redo>(position);
 			break;
 		case Keyword::Restart:
-			out = box<Restart>(position);
+			out = makeBox<Restart>(position);
 			break;
 		case Keyword::Defer:
-			out = box<Defer>(position);
+			out = makeBox<Defer>(position);
 			break;
 		case Keyword::Throw:
-			out = box<Throw>(position);
+			out = makeBox<Throw>(position);
 			break;
 		default:
 			assertStmtChoice<Action>(state, false);

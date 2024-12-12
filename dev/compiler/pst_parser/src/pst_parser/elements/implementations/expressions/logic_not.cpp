@@ -9,7 +9,7 @@ namespace pst::expr {
 
 		if (!state[0].is(Keyword::Not)) return Lower::parse(state, length);
 
-		auto out = box<LogicNot>(pos);
+		auto out = makeBox<LogicNot>(pos);
 
 		state.parse(out).one(Keyword::Not);
 		state.parse(out).with(&out->expr, Self::parse, length - 1);

@@ -4,7 +4,7 @@
 namespace pst {
 	MBox<Constructor> Constructor::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = box<Constructor>(position, ctx);
+		auto out      = makeBox<Constructor>(position, ctx);
 
 		out->parseSpecifiers(state);
 

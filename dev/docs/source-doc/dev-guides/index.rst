@@ -14,6 +14,7 @@ It also contains old ``guidelines`` from ``duckling`` repo.
     :glob:
 
     build-guidelines/index.rst
+    source-guidelines/index.rst
     docs-guidelines/index.rst
     *
     old-guidelines/index.rst

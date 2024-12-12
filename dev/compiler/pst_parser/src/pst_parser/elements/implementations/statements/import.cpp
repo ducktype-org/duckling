@@ -3,7 +3,7 @@
 namespace pst {
 	MBox<Import> Import::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = box<Import>(position);
+		auto out      = makeBox<Import>(position);
 
 		if (!assertStmtChoice<Import>(state, state[0].is(Keyword::Import))) return nullptr;
 

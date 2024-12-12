@@ -79,13 +79,13 @@ namespace base {
 		}
 
 		constexpr Key pushBack(const Data& value) {
-			auto new_ptr = box<Data>(value);
+			auto new_ptr = makeBox<Data>(value);
 			data.emplace_back(std::move(new_ptr));
 			return Key(data.size() - 1);
 		}
 
 		Key pushBack(Data&& value) {
-			auto new_ptr = box<Data>(std::move(value));
+			auto new_ptr = makeBox<Data>(std::move(value));
 			data.emplace_back(std::move(new_ptr));
 			return Key(data.size() - 1);
 		}

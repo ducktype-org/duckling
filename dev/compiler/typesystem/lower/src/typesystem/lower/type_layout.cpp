@@ -316,7 +316,8 @@ namespace tsl {
 
 	PointerTypeLayout::PointerTypeLayout(tsh::PointerInfo pointer_info, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, pointer_info),
-		  pointee(box<TypeLayout>(ctx.query<QueryTypeLayout>(pointer_info.getUnderlyingType()))) {}
+		  pointee(makeBox<TypeLayout>(ctx.query<QueryTypeLayout>(pointer_info.getUnderlyingType()))
+	      ) {}
 
 	Bits TypeLayout::getSize() const { return VISIT(*this, l, return l.getSize()); }
 

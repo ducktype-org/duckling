@@ -19,7 +19,7 @@ namespace pst {
 
 	MBox<RoundGroupExpr> RoundGroupExpr::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = box<RoundGroupExpr>(position);
+		auto out      = makeBox<RoundGroupExpr>(position);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Round)) {
 			state.log(base::make_unique<RoundExprStartError>(state.getPosition()));

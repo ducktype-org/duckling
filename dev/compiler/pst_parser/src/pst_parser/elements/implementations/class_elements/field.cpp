@@ -19,7 +19,7 @@ namespace pst {
 
 	MBox<Field> Field::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = box<Field>(position, ctx);
+		auto out      = makeBox<Field>(position, ctx);
 
 		out->parseSpecifiers(state);
 

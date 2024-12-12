@@ -19,7 +19,7 @@ namespace pst {
 
 	MBox<Alias> Alias::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = box<Alias>(position);
+		auto out      = makeBox<Alias>(position);
 
 		if (!assertStmtChoice<Alias>(state, state[0].is(Keyword::Alias))) return nullptr;
 

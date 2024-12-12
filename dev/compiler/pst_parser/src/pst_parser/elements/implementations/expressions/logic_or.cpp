@@ -20,7 +20,7 @@ namespace pst::expr {
 		}
 		if (!or_found) return Lower::parse(state, length);
 
-		auto out = box<LogicOr>(pos);
+		auto out = makeBox<LogicOr>(pos);
 
 		state.parse(out).with(&out->left, Lower::parse, +or_fwd);
 		state.parse(out).one(Keyword::Or);

@@ -19,7 +19,7 @@ namespace pst {
 
 	MBox<Const> Const::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = box<Const>(position);
+		auto out      = makeBox<Const>(position);
 
 		if (!assertStmtChoice<Const>(state, state[0].is(Keyword::Const))) return nullptr;
 
