@@ -1,7 +1,3 @@
-
-
-#include "base/exceptions.hpp"
-#include "typesystem/lower/type_layout.hpp"
 #include <llvm_helpers/llvm_helpers.hpp>
 
 LLVM_INCLUDE_BEGIN()
@@ -20,6 +16,7 @@ LLVM_INCLUDE_END()
 #include "../llvm_backend.hpp"
 #include "module_impl.hpp"
 
+#include <typesystem/lower/type_layout.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <base/box.hpp>
 #include <base/ref.hpp>
