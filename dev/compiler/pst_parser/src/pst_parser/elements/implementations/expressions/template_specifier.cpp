@@ -1,18 +1,36 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	class BadTemplateError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected single template instantiation expression";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		BadTemplateError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	MBox<ExprElement> TemplateSpecifier::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing Template Specifier" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
-		if (length != 2) {}  // Error
+		if (length != 2) {
+			// This should (probably) never happen with how it's called by the parser
+			state.log(base::make_unique<BadTemplateError>(
+				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
+			));
+		}
 
 		auto out = makeBox<TemplateSpecifier>(state.getPosition());
 		state.parse(out).one(NamedOperator::Colon);
 		state.parse(out).goDown();
-		// This is a little wrong but templates will be changed anyway
-		if (state.ctokens().size() > 0)
-			state.parse(out).with(&out->inner, Comma::parse, (i64) state.ctokens().size());
+		state.parse(out).one(&out->inner);
 		state.parse(out).goUpAndSkip();
 
 		return out;

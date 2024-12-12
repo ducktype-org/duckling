@@ -3,11 +3,31 @@
 #include "../../hierarchy/not_statements.hpp"
 
 namespace pst::expr {
+	class BadBlockError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected single block expression";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		BadBlockError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	MBox<ExprElement> BlockExpr::parse(LangParserState& state, i64 length) {
-		std::cerr << "Parsing Round Group Expression";
 		if (!checkLength(state, length)) return nullptr;
 
-		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Curly))) {}  // Error
+		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Curly))) {
+			// This should (probably) never happen with how it's called by the parser
+			state.log(base::make_unique<BadBlockError>(
+				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
+			));
+		}
 
 		auto out = makeBox<BlockExpr>(state.getPosition());
 

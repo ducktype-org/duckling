@@ -85,4 +85,22 @@ namespace pst {
 
 		~InitList() final = default;
 	};
+
+	class CallList final: public List<ExprElement, detail::NameGetters::callList> {
+	public:
+		explicit CallList(const dia::SourcePosition& pos): List(pos) {}
+
+		static MBox<CallList> parse(LangParserState& state);
+
+		~CallList() final = default;
+	};
+
+	class TemplateList final: public List<ExprElement, detail::NameGetters::templateList> {
+	public:
+		explicit TemplateList(const dia::SourcePosition& pos): List(pos) {}
+
+		static MBox<TemplateList> parse(LangParserState& state);
+
+		~TemplateList() final = default;
+	};
 }
