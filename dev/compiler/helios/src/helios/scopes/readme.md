@@ -26,8 +26,8 @@ Note: This is mostly to list operations, see docs for details.
   * For namespaces it returns namespace body-scope
   * For wildcard usings it returns `QueryLinkedScope` of the symbol using is pointing to.
 
-  HELIOS uses it as a auxiliary query, in lookup implementation. 
-  Note: this query will likely be dented in the future, after the Scope Refactor.
+  HELIOS uses it as an auxiliary query, in lookup implementation. 
+  Note: this query will likely be deleted in the future, after the Scope Refactor.
 
 # Future todos
 

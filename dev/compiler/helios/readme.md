@@ -12,28 +12,28 @@ It operates on modules and PST and creates HELIOS-output (HOUT).
 HOUT and HOUT Units
 ===================
 
-HOUT is the first compiler IR. In represent code in a tree like structure, 
+HOUT is the first compiler IR. It represents code in a tree like structure, 
 similar to PST, but:
 
 * Names are fully resolved (including overloads).
 * Is fully typed (including templates).
 * All macros are expanded.
-* USer defined operators and functions are unified.
+* User defined operators and functions are unified.
 * Functions, globals, etc are not linked together into some concrete structure,
   but are represented by individual data types, that we can operate on, without
   any greater context.
 
 HOUT Units (represented by `HOUTUnit` struct),
-are a sets of HOUT elements, currently consisting of:
+are sets of HOUT elements, currently consisting of:
 
 * Functions
 * GlobalData (e.g. global variables)
 
-There is no assumption on what this set represent. In can be a duckling source file, module, 
+There is no assumption on what this set represents. In can be a duckling source file, module, 
 or just a completely random group of symbols.
 
-It is planed to treat HOUT Units as "c++-ish translation units", meaning that each HOUT Unit will
-be converted into single LLVM IR module / VM module / object file.
+It is planned to treat HOUT Units as "c++-ish translation units", meaning that each HOUT Unit will
+be converted into a single LLVM IR module / VM module / object file.
 
 This way it should be relatively simple to split symbols among object files in arbitrary way, e.g.:
 
@@ -50,8 +50,8 @@ API
 HELIOS top-level API
 --------------------
 
-HELIOS top-level API is defined in [queries.hpp file](src/helios/queries.hpp).
-It consists of queries generating varius HOUT Units, and a query that generates HOUT of single function.
+HELIOS top-level API is defined in the [queries.hpp file](src/helios/queries.hpp).
+It consists of queries generating various HOUT Units, and a query that generates HOUT of a single function.
 
 
 Additional HELIOS API
@@ -70,7 +70,7 @@ retrieve additional information.
 HELIOS test utils
 -----------------
 
-HELIOS also exports some test utils in [test_utils folder](src/helios/test_utils/).
+HELIOS also exports some test utils in the [test_utils folder](src/helios/test_utils/).
 
 
 
@@ -80,9 +80,9 @@ Additional Info
 Compile time eval
 -----------------
 
-While complex compile time evaluation is planed to take place
+While complex compile time evaluation is planned to take place
 in low level IRs (in MIR, LIR or VM), simple compile time calculations
-are planned to albo be implemented in HOUT (as a tree-like interpretation of HOUT, mostly for expressions).
+are planned to also be implemented in HOUT (as a tree-like interpretation of HOUT, mostly for expressions).
 
 This way we can "short-path" simple evaluations, that will be extremely common in Duckling code, mostly:
 
