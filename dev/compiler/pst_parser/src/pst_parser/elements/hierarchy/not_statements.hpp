@@ -13,8 +13,6 @@
 
 #include <base/string_id.hpp>
 
-#include <unicode/unistr.h>
-
 #include "meta.hpp"
 #include "lists.hpp"
 

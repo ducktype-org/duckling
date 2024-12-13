@@ -12,8 +12,6 @@
 
 #include <base/string_id.hpp>
 
-#include <unicode/unistr.h>
-
 #include <set>
 
 namespace pst {

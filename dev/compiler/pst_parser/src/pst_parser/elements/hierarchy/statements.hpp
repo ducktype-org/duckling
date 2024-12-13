@@ -10,10 +10,7 @@
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/automatic.hpp>
 
-#include <base/unique_pointer.hpp>
 #include <base/string_id.hpp>
-
-#include <unicode/unistr.h>
 
 #include "meta.hpp"
 #include "not_statements.hpp"
