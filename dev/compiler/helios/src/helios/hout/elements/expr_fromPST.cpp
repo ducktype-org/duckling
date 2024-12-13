@@ -10,7 +10,7 @@
 
 #include "expr.hpp"
 #include "../visitors.hpp"
-#include "pst_parser/pst_expr_visitor.hpp"
+#include <pst_parser/pst_expr_visitor.hpp>
 
 namespace compiler::helios::code {
 	namespace {
@@ -237,7 +237,7 @@ namespace compiler::helios::code {
 		void visitChainExpr(const pst::expr::ChainExpr& stmt) override {
 			// @TODO: Add a compiler log or some kind of information if lookup fails.
 
-			auto literal_expr = Expr::fromPST(ctx, scope, stmt.getLiteral());
+			auto literal_expr = Expr::fromPST(ctx, stmt.getLiteral());
 			if (!literal_expr) {
 				// Report an error?
 				return;
@@ -338,7 +338,9 @@ namespace compiler::helios::code {
 	};
 
 	errors::HResult<base::Box<Expr>, errors::Failed>
-		Expr::fromPST(query::Context& ctx, ScopeID scope, const MCRef<pst::ExprElement> root) {
+		Expr::fromPST(query::Context& ctx, MCRef<pst::ExprElement> root) {
+		auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ root });
+
 		std::cerr << "\nExpr: \n";
 		root->debugPrint(std::cerr);
 		std::cerr << '\n';

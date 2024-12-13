@@ -29,7 +29,7 @@ namespace compiler::helios {
 			// store it in some vector or something
 			// lookup all and stuff
 
-			auto main_file_root_scope = extendQueryRootScopeOfMainModuleFile(ctx, key);
+			auto main_file_root_scope = queryRootScopeOfMainModuleFile(ctx, key);
 
 			auto symbols_in_module_root = ctx.query<QuerySymbolsInScope>(main_file_root_scope);
 
@@ -132,17 +132,7 @@ namespace compiler::helios {
 			void visitVariable(const pst::Variable& stmt) override {
 				// @TODO: do something with mut/immut
 
-				// @note: This is a hot-path, that should work *most*
-				// of the times. It will be changed during scope refactor.
-				auto    stmt_parent        = stmt.getParent().value();
-				auto    stmt_parent_parent = stmt_parent->getParent().value();
-				ScopeID scope_of_symbol    = scopeOf(*stmt_parent);
-				// @todo: change the usage of elementType to elementKind (once its implemented)
-				// scope refactor will fix it
-				if (stmt_parent_parent->elementType() == "Code Block or Statement"
-				    and stmt_parent->elementType() == "Code Block") {
-					scope_of_symbol = parent(scope_of_symbol).value();
-				}
+				ScopeID scope_of_symbol = getPSTElementParentScope(ctx, &stmt);
 
 				// @TODO: error handling
 

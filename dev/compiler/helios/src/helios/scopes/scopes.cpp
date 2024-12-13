@@ -22,8 +22,6 @@
 namespace compiler::helios {
 
 	struct ScopeData final {
-		// adapted from hir:
-
 		// created on startup:
 		std::optional<ScopeID> parent;
 
@@ -41,14 +39,13 @@ namespace compiler::helios {
 		 */
 		frontend::ModuleID parent_module;
 
-		// cache entries:
+		// cache entry:
 		// in the future we might need separation for: direct symbols, expanded symbols
 		// in this system scope is no longer closed/open as we think of it as a pure-value object
 		// any lookup in the scope requires calculation of symbols witch itself is done only once!
 		base::Optional<query::CacheEntry<SymbolList>> symbols;
 
 		u64 depth;
-
 
 		// This delete is important, to prevent any copy of scope data:
 		// ScopeData(const ScopeData&)            = delete;
@@ -94,6 +91,98 @@ namespace compiler::helios {
 		return out;
 	}
 
+	/**
+	 * @brief A way helios creates scope for given pst element.
+	 */
+	enum class ElementScopeKind {
+		// Has standard scope:
+		Standard,
+
+		// Inherits scope from its parent:
+		Transparent,
+
+		// Does not have a scope:
+		Invalid,
+
+		// @TODO: introduce:
+		// * TransparentInvalid -- transparent for implementation, but invalid for user
+		// this allows to easily implement scope parents, but disallow to get PrimaryScopes for
+		// elements that don't have it.
+		// For examples namespaces don't have primary scopes (which can be counterintuitive)
+	};
+
+	/**
+	 * Determines scope kind for given PST element.
+	 */
+	ElementScopeKind getScopeKind(MCRef<pst::LangElement> element) {
+		// @TODO: move it to different file?
+
+		switch (element->getElementKind()) {
+		case pst::ElementKind::TopLevel:
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::Import:
+			return ElementScopeKind::Invalid;
+
+
+		// code blocks:
+		case pst::ElementKind::CodeBlock: {
+			auto parent_kind = element->getParent().value()->getElementKind();
+			if (parent_kind == pst::ElementKind::CodeBlockOrStmt)
+				return ElementScopeKind::Transparent;
+			else
+				return ElementScopeKind::Standard;
+		}
+		case pst::ElementKind::CodeBlockOrStmt:
+		case pst::ElementKind::ClassBlock:
+			return ElementScopeKind::Standard;
+
+
+		case pst::ElementKind::Namespace:
+		case pst::ElementKind::Variable:
+		case pst::ElementKind::Using:
+		case pst::ElementKind::Alias:
+		case pst::ElementKind::Const:
+		case pst::ElementKind::Class:
+		case pst::ElementKind::Action:
+		case pst::ElementKind::Block:  //< note that Block != CodeBlock
+		case pst::ElementKind::ClassField:
+			// this is transparent, since we don't need this scope:
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::If:
+		case pst::ElementKind::While:
+		case pst::ElementKind::For:
+		case pst::ElementKind::Fun:
+		case pst::ElementKind::ClassMethod:
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::ExprStmt:
+			// note: this will be needed for lifetimes
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::ExprElement:
+			// @todo: once we have top-expressions, this should be transparent for non-tops
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::ExprWrapper:
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::FunParam:
+		case pst::ElementKind::ParamList:
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::KindNotSet:
+			CORE_UNREACHABLE();
+
+		default:
+			throw base::NotYetImplemented(
+				base::strConcat("PST element scope kind for: ", element->elementType())
+			);
+		}
+		CORE_UNREACHABLE();
+	}
+
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeID) {
 		static auto provide(Context&, QKey key) -> PResult {
 			return putInScopeTable(ScopeData{
@@ -115,6 +204,16 @@ namespace compiler::helios {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
 		static auto provide(Context& ctx, QKey element) -> PResult {
+			auto element_scope_kind = getScopeKind(element.base_element);
+
+			if (element_scope_kind == ElementScopeKind::Invalid) {
+				auto element_ptr = &*element.base_element;
+				CORE_PANIC(base::strConcat(
+					"Scope of element for which scope does not make sense (or was not added.): ",
+					typeid(*element_ptr).name()
+				));
+			}
+
 			ScopeID parent = element.base_element->getParent().has_value()
 			                   ? ctx.query<QueryPrimaryCodeScopeFor>(
 								   { element.base_element->getParent().value() }
@@ -123,6 +222,7 @@ namespace compiler::helios {
 								   { frontend::extendQueryModuleIDOfPST(ctx, element.base_element) }
 							   );
 
+			if (element_scope_kind == ElementScopeKind::Transparent) return parent;
 
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
@@ -149,6 +249,34 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPrimaryCodeScopeFor);
+
+	ScopeID queryBodyCodeScopeFor(query::Context& ctx, MCRef<pst::Stmt> stmt) {
+		// note: not all cases are handled here, which is intentional.
+		// We might add more in the future, but this function should remain a simple one.
+
+		struct QueryBodyScopeVisitor: pst::PstStmtVisitorPanicky {
+			query::Context&  ctx;
+			MCRef<pst::Stmt> stmt;
+
+			QueryBodyScopeVisitor(query::Context& ctx, MCRef<pst::Stmt> stmt):
+				  ctx(ctx),
+				  stmt(stmt) {}
+
+			base::Optional<ScopeID> out;
+
+			void visitNamespace(const pst::Namespace& namespace_stmt) override {
+				out = ctx.query<QueryPrimaryCodeScopeFor>({ namespace_stmt.getBody() });
+			}
+
+			void visitClass(const pst::Class& class_stmt) override {
+				out = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt.getBody() });
+			}
+		};
+
+		QueryBodyScopeVisitor visitor(ctx, stmt);
+		stmt->acceptVisitor(visitor);
+		return visitor.out.value();
+	}
 
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
 		/**
@@ -184,6 +312,8 @@ namespace compiler::helios {
 				this->out.emplace(std::forward<Args>(args)...);
 			}
 
+			// here, we add only stmts, that actually have a primary scope.
+
 			void visitFun(const pst::Fun&) override {
 				// Scope of "fun →()← {}"
 				// @TODO: iterate function parameters and create symbols out of them
@@ -199,23 +329,7 @@ namespace compiler::helios {
 				output(std::vector<SymID>{});
 			}
 
-			void visitClass(const pst::Class& class_) override {
-				output(
-					filterSymbolsFromStmtList(ctx, key, getChildStmtsOfClassBlock(class_.getBody()))
-				);
-			}
-
-			void visitNamespace(const pst::Namespace&) override {
-				// This seems strange, but namespace scope is indeed empty.
-				// The scope that is full is the codeblock within the namespace.
-				output(std::vector<SymID>());
-			}
-
 			void visitExprStmt(const pst::ExprStmt&) override { output(std::vector<SymID>()); }
-
-			void visitReturn(const pst::Return&) override { output(std::vector<SymID>()); }
-
-			void visitVariable(const pst::Variable&) override { output(std::vector<SymID>()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -230,25 +344,19 @@ namespace compiler::helios {
 			auto base_element = key.ref->related_pst_element.value();
 
 			if (base_element->isStatementAggregate()) {
-				// @TODO: the error here is that this perform double scoping
-				// for CodeBlocks inside CodeBlocksOrStmt
-				// Hot-patch:
-				// @TODO: change elementType usage to elementKind (once its implemented)
-				if (base_element->elementType() == "Code Block")
-					if (base_element->getParent().value()->elementType()
-					    == "Code Block or Statement") {
-						// hot patch currently does:
-						// code block inside CodeBlockOrStmt has empty scope
-						return {};
-					}
-
 				return filterSymbolsFromStmtList(ctx, key, getStmtsFromStmtAggregate(base_element));
 			} else if (base_element->isStatement()) {
+				// note: if this check fail, it might be that we are missing some cases
+				CORE_ASSERT(
+					getScopeKind(base_element) == ElementScopeKind::Standard,
+					"Bad element in QuerySymbolsInScope"
+				);
+
 				SymbolGrabVisitor symbol_grab(ctx, key);
 				auto              as_stmt = dynamic_cast<const pst::Stmt*>(&*base_element);
 				as_stmt->acceptVisitor(symbol_grab);
 				return std::move(symbol_grab.out.value());
-			} else if (dynamic_cast<const pst::ExprElement*>(&*base_element)) {
+			} else if (base_element->getElementKind() == pst::ElementKind::ExprElement) {
 				// @FIXME: change the way we check the condition, by comparing enum
 				// values instead of strings. Make the enum stringifiable.
 				return std::vector<SymID>{};
@@ -325,9 +433,8 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
 
-	base::HashT KeyOf_QueryPrimaryCodeScopeFor::customPerfectHash() const {
-		auto hash_1 = base_element->getID().asInt();
-		return hash_1;
+	base::HashT KeyOf_QueryCodeScopeFor::customPerfectHash() const {
+		return base_element->getID().asInt();
 	}
 
 	base::HashT KeyOf_LookupInScope::customPerfectHash() const {
@@ -338,7 +445,12 @@ namespace compiler::helios {
 		return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;
 	}
 
-	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
+	ScopeID getPSTElementParentScope(query::Context& ctx, MCRef<pst::LangElement> element) {
+		// note: this might not be correct:
+		return ctx.query<QueryPrimaryCodeScopeFor>({ element->getParent().value() });
+	}
+
+	ScopeID queryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
 		auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
 		auto main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
 

@@ -104,7 +104,7 @@ namespace compiler::helios {
 	Ref<SymbolData> makeSymbolFromStatement(const ScopeID& scope, MCRef<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
-		switch (stmt->getKind()) {
+		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
 			auto&& function_ = dynamic_cast<const pst::Fun*>(&*stmt);
 			return putInSymtable(SymbolData{
@@ -241,11 +241,16 @@ namespace compiler::helios {
 			// It currently prevents some scope bugs/inconsistencies from happening.
 			if (parent_map.contains(pst_id)) {
 				CORE_ASSERT(
-					parent_map.at(pst_id) == key.scope, "Parent mismatch in QuerySymbolOfSTMT"
+					parent_map.at(pst_id) == key.scope,
+					base::strConcat(
+						"Parent mismatch in QuerySymbolOfSTMT for: ",
+						key.stmt->getSourcePosition().genStr("")
+					)
 				);
 			} else {
 				parent_map.put(pst_id, key.scope);
 			}
+
 
 			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
 		}
@@ -264,6 +269,12 @@ namespace compiler::helios {
 			case SymbolKind::Import: {
 				// @NOTE: for now imports are done via linked scope that looks at root
 				// module scope, but in the future it might be changed to custom code
+
+				// @note: this will probably brake for usings,
+				// when they look at a symbol without linked scope.
+				// We might just delete QueryLinkedScope at some point,
+				// when QueryLookupInSymbol will get more and more
+				// per-symbol-kind cases.
 
 				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
 				return *ctx.query<QueryLookupInScope>(
@@ -318,41 +329,59 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			switch (key.ref->kind) {
-			case SymbolKind::Using: {
-				auto using_stmt = dynamic_cast<const pst::Using*>(&*key.ref->pst_stmt);
-				auto names      = using_stmt->getPointed();
+		struct QueryLinkedScopeVisitor: pst::PstStmtVisitorPanicky {
+			query::Context& ctx;
+			QKey            key;
+
+			QueryLinkedScopeVisitor(query::Context& ctx, QKey key): ctx(ctx), key(key) {}
+
+			base::Optional<ScopeID> result_scope;
+
+			void output(ScopeID out) {
+				CORE_ASSERT(result_scope.empty(), "Output already set");
+				result_scope.emplace(out);
+			}
+
+			void visitUsing(const pst::Using& using_stmt) override {
+				auto names      = using_stmt.getPointed();
 				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
 				CORE_ASSERT(
 					lookup_res.hasValue() && not lookup_res.value().empty(),
 					"Using points to something that does not exists or is empty"
 				);
-				return ctx.query<QueryLinkedScope>({ lookup_res.value().back() });
+				auto ret = ctx.query<QueryLinkedScope>({ lookup_res.value().back() });
+				output(ret);
 			}
-			case SymbolKind::Namespace: {
-				auto namespace_stmt = dynamic_cast<const pst::Namespace*>(&*key.ref->pst_stmt);
-				auto inner_scope    = ctx.query<QueryPrimaryCodeScopeFor>({
-                    namespace_stmt->getBody(),
-                });
-				return inner_scope;
-			}
-			case SymbolKind::Import: {
-				auto import_stmt = dynamic_cast<const pst::Import*>(&*key.ref->pst_stmt);
 
-				// @TODO: proper error handling via ErrorScope
+			void visitImport(const pst::Import& import_stmt) override {
+				// @TODO: proper error handling
 				auto imported_module = frontend::getRelativeModule(
-										   ctx, module(scope(key)), import_stmt->getModulePath()
+										   ctx, module(scope(key)), import_stmt.getModulePath()
 				)
 				                           .value();
 
 				// Here we don't access just root scope, because root scopes are currently empty:
-				auto linked_scope = extendQueryRootScopeOfMainModuleFile(ctx, imported_module);
+				auto linked_scope = queryRootScopeOfMainModuleFile(ctx, imported_module);
 
-				return linked_scope;
+				output(linked_scope);
+			}
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			switch (key.ref->kind) {
+			case SymbolKind::Namespace:
+				return queryBodyCodeScopeFor(ctx, key.ref->pst_stmt);
+
+
+			// Special cases for "wildcards":
+			case SymbolKind::Using:
+			case SymbolKind::Import: {
+				QueryLinkedScopeVisitor visitor(ctx, key);
+				key.ref->pst_stmt->acceptVisitor(visitor);
+				return visitor.result_scope.value();
 			}
 			default:
-				throw base::NotYetImplemented("Getting linked scope...");
+				throw base::NotYetImplemented("Getting linked scope for some SymbolKind...");
 			}
 		}
 
@@ -521,9 +550,8 @@ namespace compiler::helios {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
 			const auto const_symbol = dynamic_cast<const pst::Const*>(&*getSymRef(key)->pst_stmt);
-			const ScopeID key_scope = scope(key);
 
-			auto eval = code::Expr::fromPST(ctx, key_scope, const_symbol->getValue());
+			auto eval = code::Expr::fromPST(ctx, const_symbol->getValue());
 			if (eval.hasError()) return errors::HError(errors::Failed());
 			return EvaluateHoutExprVisitor::evaluateExpr(ctx, *eval.value());
 		}
@@ -540,9 +568,11 @@ namespace compiler::helios {
 	 * @param expr_scope A scope where the expression has been expressed.
 	 * @return tsh::TypeInfo with information about the evaluated type.
 	 */
-	ParseTypeFromExpr_Result
-		parseTypeFromExpr(query::Context& ctx, ScopeID expr_scope, MCRef<pst::ExprElement> expr) {
-		auto parsed = code::Expr::fromPST(ctx, expr_scope, expr);
+	ParseTypeFromExpr_Result parseTypeFromExpr(query::Context& ctx, MCRef<pst::ExprElement> expr) {
+		// @TODO Helios Type Fixes: this should be a method on hout, that just return
+		// type|error|can't-short-path (see also issue #385)
+
+		auto parsed = code::Expr::fromPST(ctx, expr);
 		if (parsed.hasError()) return errors::HError(parsed.error());
 		auto tree = std::move(parsed.value());
 		return tree->type_desc.getType();
@@ -550,8 +580,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QueryType_Result) {
 		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
-			Context&    ctx;
-			const QKey& key;
+			Context& ctx;
 
 			void setTypeOfSymbol(const tsh::TypeInfo& type) {
 				if (symbol_type_info.has_value())
@@ -560,12 +589,12 @@ namespace compiler::helios {
 			}
 
 			void setTypeOfSymbol(MCRef<pst::ExprElement> expr) {
-				auto tp = parseTypeFromExpr(ctx, scope(key), expr);
+				auto tp = parseTypeFromExpr(ctx, expr);
 				if (tp.hasValue()) setTypeOfSymbol(tp.value());
 			}
 
 		public:
-			PstStmtVisitor_GetTypeOf(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
+			PstStmtVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
 
 			base::Optional<tsh::TypeInfo> symbol_type_info;
 
@@ -585,7 +614,7 @@ namespace compiler::helios {
 				param_types.reserve(params->size());
 
 				for (auto param: *params) {
-					auto&& parse_type_res = parseTypeFromExpr(ctx, scope(key), param->getType());
+					auto&& parse_type_res = parseTypeFromExpr(ctx, param->getType());
 					if (parse_type_res.hasValue()) {
 						param_types.emplace_back(parse_type_res.value());
 					} else {
@@ -595,7 +624,7 @@ namespace compiler::helios {
 				}
 				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
 				if (ret.has_value()) {
-					auto&& parsed = parseTypeFromExpr(ctx, scope(key), ret.value());
+					auto&& parsed = parseTypeFromExpr(ctx, ret.value());
 					if (parsed.hasValue()) {
 						ret_type = parsed.value();
 					} else {
@@ -608,6 +637,7 @@ namespace compiler::helios {
 
 			void visitClass(const pst::Class&) override {
 				// This method is empty on purpose, because we still want a panicky visitor
+				// @TODO: Helios-type-fixes: this should just return meta type
 			}
 
 			void visitNamespace(const pst::Namespace&) override {
@@ -620,9 +650,9 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto&& symbol_ref = getSymRef(key);
+			auto symbol_ref = getSymRef(key);
 
-			PstStmtVisitor_GetTypeOf visitor(ctx, key);
+			PstStmtVisitor_GetTypeOf visitor(ctx);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
 			if_opt_some(visitor.symbol_type_info, type) return type;
 			return errors::HError(errors::Failed());
@@ -688,8 +718,8 @@ namespace compiler::helios {
 
 			void visitClass(const pst::Class& stmt) override {
 				name = stmt.getName();
-				if (auto&& base = stmt.getBase(); base != nullptr) base_class = base;
-				if (auto&& implements = stmt.getImplements(); implements != nullptr)
+				if (auto base = stmt.getBase(); base != nullptr) base_class = base;
+				if (auto implements = stmt.getImplements(); implements != nullptr)
 					this->implements = implements;
 			}
 		};
@@ -699,11 +729,11 @@ namespace compiler::helios {
 
 			auto class_stmt = getSymRef(key)->pst_stmt;
 
-			auto class_scope   = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt });
-			auto class_symbols = ctx.query<QuerySymbolsInScope>(class_scope);
+			auto class_body_scope = queryBodyCodeScopeFor(ctx, class_stmt);
+			auto class_symbols    = ctx.query<QuerySymbolsInScope>(class_body_scope);
 
 			ClassSymbolData class_info;
-			for (auto&& sym: *class_symbols) {
+			for (auto sym: *class_symbols) {
 				switch (kind(sym)) {
 				case SymbolKind::Method:
 					class_info.methods.push_back(sym);
@@ -732,7 +762,11 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				auto tp = parseTypeFromExpr(ctx, class_scope, base);
+				// @TODO Helios Type Fixes
+				// change this to new hout type eval
+				// (see also issue #385)
+
+				auto tp = parseTypeFromExpr(ctx, base);
 				if (tp.hasValue()) {
 					class_info.base = tp.value();
 				} else {
@@ -743,7 +777,7 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements) {
-					auto tp = parseTypeFromExpr(ctx, class_scope, interface);
+					auto tp = parseTypeFromExpr(ctx, interface);
 					if (tp.hasValue()) {
 						class_info.implements.push_back(tp.value());
 					} else {
@@ -770,7 +804,7 @@ namespace compiler::helios {
 			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
 
 			void setExprTree(const MCRef<pst::ExprElement>& expr) {
-				expr_tree = code::Expr::fromPST(ctx, scope, expr);
+				expr_tree = code::Expr::fromPST(ctx, expr);
 			}
 
 		public:
