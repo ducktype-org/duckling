@@ -52,9 +52,7 @@ namespace compiler::helios {
 			for (auto& e: ptr->getStatements()) out.emplace_back(e.ref());
 			return out;
 		}
-		if (auto* ptr = dynamic_cast<const pst::ClassBlock*>(&*elem)) {
-			// todo in this PR: deal with unused warning
-
+		if (dynamic_cast<const pst::ClassBlock*>(&*elem)) {
 			auto       elements = detail::getChildStmtsOfClassBlock(elem);
 			StmtList<> out;
 			for (auto e: elements) out.emplace_back(e);

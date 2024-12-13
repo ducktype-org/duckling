@@ -145,8 +145,7 @@ namespace compiler::helios {
 		case pst::ElementKind::Const:
 		case pst::ElementKind::Class:
 		case pst::ElementKind::Action:
-		case pst::ElementKind::Block:  //< note that block is not a code block that is used in stuff
-		                               //like ifs
+		case pst::ElementKind::Block:  //< note that Block != CodeBlock
 		case pst::ElementKind::ClassField:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
