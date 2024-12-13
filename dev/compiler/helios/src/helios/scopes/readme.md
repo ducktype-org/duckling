@@ -20,11 +20,14 @@ Note: This is mostly to list operations, see docs for details.
 
 # HELIOS Internal scope operations
 
+* `QueryLinkedScope` -- Returns a scope associated with given HELIOS Symbol in terms of lookup.
+  For example: 
 
-* `QueryLinkedScope` -- Returns a scope, that HELIOS can lookup-in, when looking up in given symbol. (works only for some types of symbols).
-  Intuitively this returns a scope, programmer would associate with this element when writing `element.some_name`.
-  It can work slightly different for different elements.
+  * For namespaces it returns namespace body-scope
+  * For wildcard usings it returns `QueryLinkedScope` of the symbol using is pointing to.
 
+  HELIOS uses it as a auxiliary query, in lookup implementation. 
+  Note: this query will likely be dented in the future, after the Scope Refactor.
 
 # Future todos
 
