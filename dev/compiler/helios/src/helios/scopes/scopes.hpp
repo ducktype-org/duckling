@@ -13,7 +13,7 @@
  *
  * * ExprStmt: Scope for expresion lifetime
  *   (this will change in the future, we will just have scope for top-exprs).
- * 
+ *
  * @note all symbols need a scope. If we don't have one, we should add it.
  */
 #pragma once
@@ -77,12 +77,12 @@ namespace compiler::helios {
 	/**
 	 * @brief Generate HELIOS-scope associated with given PST element.
 	 * Also: dictates what PST elements have their own scope.
-	 * 
+	 *
 	 * For some elements (e.g: code-block) this will be a scope of the element itself.
 	 * For some it will be a scope this element is contained in (e.g. inner expression elements).
 	 * For some (e.g: function) this might be slightly different.
 	 * For some elements for which scope does not make sense, it can panic.
-	 * 
+	 *
 	 * @note Scope strucure are linked directly to PST structure.
 	 * The reason for this is that handling scope structure without direct link to PST was highly
 	 * bug prone and led to potential errors or lack of consistency between different fragments of

@@ -3,13 +3,13 @@
 #include "statements.hpp"
 
 namespace pst {
-#define DECL_CHILD_CONSTRUCTOR(class_name, element_type_) \
-	class_name(const dia::SourcePosition& position): Decl(StmtKind::class_name, position) {\
-		this->element_kind = element_type_;\
+#define DECL_CHILD_CONSTRUCTOR(class_name, element_type_)                                   \
+	class_name(const dia::SourcePosition& position): Decl(StmtKind::class_name, position) { \
+		this->element_kind = element_type_;                                                 \
 	}
 
 #define DECL_CHILD_CONSTRUCTOR_NO_KIND(class_name) \
-	class_name(const dia::SourcePosition& position): Decl(StmtKind::class_name, position) { }
+	class_name(const dia::SourcePosition& position): Decl(StmtKind::class_name, position) {}
 
 	class CodeDecl: public Decl {
 	public:

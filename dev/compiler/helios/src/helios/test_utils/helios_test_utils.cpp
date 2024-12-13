@@ -7,11 +7,11 @@ namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::FilePath& path) {
 		auto module = query::entryPoint<frontend::QueryModuleTree>(path);
 
-		auto main_file_root_scope = query::utils::withContextCompute( [&](query::Context& ctx) {
-				return queryRootScopeOfMainModuleFile(ctx, module);
+		auto main_file_root_scope = query::utils::withContextCompute([&](query::Context& ctx) {
+			return queryRootScopeOfMainModuleFile(ctx, module);
 		});
 
-		return { module, base::anyCast<ScopeID>( main_file_root_scope) };
+		return { module, base::anyCast<ScopeID>(main_file_root_scope) };
 	}
 
 	std::vector<SymID> getChain(const std::string_view chain, ScopeID scope) {

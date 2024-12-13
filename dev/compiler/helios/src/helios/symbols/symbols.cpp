@@ -241,12 +241,16 @@ namespace compiler::helios {
 			// It currently prevents some scope bugs/inconsistencies from happening.
 			if (parent_map.contains(pst_id)) {
 				CORE_ASSERT(
-					parent_map.at(pst_id) == key.scope, base::strConcat("Parent mismatch in QuerySymbolOfSTMT for: ", key.stmt->getSourcePosition().genStr(""))
+					parent_map.at(pst_id) == key.scope,
+					base::strConcat(
+						"Parent mismatch in QuerySymbolOfSTMT for: ",
+						key.stmt->getSourcePosition().genStr("")
+					)
 				);
 			} else {
 				parent_map.put(pst_id, key.scope);
 			}
-			
+
 
 			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
 		}
@@ -325,10 +329,9 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
-		
 		struct QueryLinkedScopeVisitor: pst::PstStmtVisitorPanicky {
 			query::Context& ctx;
-			QKey key;
+			QKey            key;
 
 			QueryLinkedScopeVisitor(query::Context& ctx, QKey key): ctx(ctx), key(key) {}
 
@@ -340,7 +343,7 @@ namespace compiler::helios {
 			}
 
 			void visitUsing(const pst::Using& using_stmt) override {
-				auto names = using_stmt.getPointed();
+				auto names      = using_stmt.getPointed();
 				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
 				CORE_ASSERT(
 					lookup_res.hasValue() && not lookup_res.value().empty(),
@@ -368,7 +371,7 @@ namespace compiler::helios {
 			switch (key.ref->kind) {
 			case SymbolKind::Namespace:
 				return queryBodyCodeScopeFor(ctx, key.ref->pst_stmt);
-			
+
 
 			// Special cases for "wildcards":
 			case SymbolKind::Using:
@@ -565,11 +568,10 @@ namespace compiler::helios {
 	 * @param expr_scope A scope where the expression has been expressed.
 	 * @return tsh::TypeInfo with information about the evaluated type.
 	 */
-	ParseTypeFromExpr_Result
-		parseTypeFromExpr(query::Context& ctx, MCRef<pst::ExprElement> expr) {		
-		// @TODO Helios Type Fixes: this should be a method on hout, that just return type|error|can't-short-path
-		// (see also issue #385)
-		
+	ParseTypeFromExpr_Result parseTypeFromExpr(query::Context& ctx, MCRef<pst::ExprElement> expr) {
+		// @TODO Helios Type Fixes: this should be a method on hout, that just return
+		// type|error|can't-short-path (see also issue #385)
+
 		auto parsed = code::Expr::fromPST(ctx, expr);
 		if (parsed.hasError()) return errors::HError(parsed.error());
 		auto tree = std::move(parsed.value());
@@ -578,7 +580,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QueryType_Result) {
 		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
-			Context&    ctx;
+			Context& ctx;
 
 			void setTypeOfSymbol(const tsh::TypeInfo& type) {
 				if (symbol_type_info.has_value())
@@ -727,8 +729,8 @@ namespace compiler::helios {
 
 			auto class_stmt = getSymRef(key)->pst_stmt;
 
-			auto class_body_scope   = queryBodyCodeScopeFor(ctx, class_stmt);
-			auto class_symbols = ctx.query<QuerySymbolsInScope>(class_body_scope);
+			auto class_body_scope = queryBodyCodeScopeFor(ctx, class_stmt);
+			auto class_symbols    = ctx.query<QuerySymbolsInScope>(class_body_scope);
 
 			ClassSymbolData class_info;
 			for (auto sym: *class_symbols) {

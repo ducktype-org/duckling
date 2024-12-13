@@ -111,7 +111,8 @@ namespace pst {
 
 		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos) {
 			this->element_kind = ElementKind::ClassBlock;
-		};
+		}
+
 		static MBox<ClassBlock> parse(LangParserState& state, const ClassContext& ctx);
 
 		~ClassBlock() override = default;
@@ -187,7 +188,6 @@ namespace pst {
 		const i64 precedence;
 
 	protected:
-
 		/**
 		 * @brief Skips tokens, used to preserve position in case of error.
 		 */

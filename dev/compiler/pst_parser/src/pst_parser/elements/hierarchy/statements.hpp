@@ -105,7 +105,7 @@ namespace pst {
 	public:
 		explicit ExprStmt(dia::SourcePosition pos): Stmt(StmtKind::ExprStmt, pos) {
 			this->element_kind = ElementKind::ExprStmt;
-		};
+		}
 
 		static MBox<ExprStmt> parse(LangParserState& state);
 

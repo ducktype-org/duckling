@@ -4,11 +4,11 @@
 #include "not_statements.hpp"
 
 namespace pst {
-#define CLASS_STMT_CHILD_CONSTRUCTOR(class_name, kind)                              \
+#define CLASS_STMT_CHILD_CONSTRUCTOR(class_name, kind)                        \
 	class_name(const dia::SourcePosition& position, const ClassContext& ctx): \
-		  ClassStmt(StmtKind::class_name, position, ctx) { \
-			this->element_kind = kind; \
-		  }
+		  ClassStmt(StmtKind::class_name, position, ctx) {                    \
+		this->element_kind = kind;                                            \
+	}
 
 #define CLASS_STMT_PASS_CONSTRUCTOR(class_name)                                              \
 	class_name(StmtKind kind, const dia::SourcePosition& position, const ClassContext& ctx): \
