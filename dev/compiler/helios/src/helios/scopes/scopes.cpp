@@ -485,14 +485,19 @@ namespace compiler::helios {
 	void ScopeID::debugPrintScopeAndParents() {
 		auto iter_scope = *this;
 
-		std::cerr << iter_scope.customPerfectHash() << " -> ";
-		while (parent(iter_scope)) {
-			iter_scope = parent(iter_scope).value();
+		while (true) {
 			std::cerr << iter_scope.customPerfectHash()
 			          << "("
-					  << iter_scope.ref->related_pst_element.value()->elementType()
+					  << (
+						iter_scope.ref->related_pst_element.has_value() ?
+						 iter_scope.ref->related_pst_element.value()->elementType()
+						 : "ROOT"
+					  	)
 					  << ")"
 			          << " -> ";
+					  
+			if (not parent(iter_scope).has_value()) break;
+			iter_scope = parent(iter_scope).value();
 		}
 		std::cerr << "\n";
 	}
