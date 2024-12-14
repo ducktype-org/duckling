@@ -385,11 +385,6 @@ namespace compiler::helios {
 
 			// validate output:
 			for (auto sym: output) {
-				if (not(scope(sym) == key)) {
-					scope(sym).debugPrintScopeAndParents();
-					key.debugPrintScopeAndParents();
-				}
-
 				CORE_ASSERT(
 					scope(sym) == key,
 					base::strConcat(
