@@ -61,7 +61,7 @@ namespace compiler::helios {
 		 * @param scope
 		 */
 		void debugPrintScopeAndParents();
-	
+
 	private:
 		Ref<ScopeData> ref;
 
@@ -71,7 +71,6 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QuerySymbolsInScope;
 		friend struct ImplementationOf_QueryLookupInScopeAndParents;
 		friend struct ScopeAccess_Functor;
-		
 	};
 
 }

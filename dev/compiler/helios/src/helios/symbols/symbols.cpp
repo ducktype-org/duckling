@@ -236,7 +236,8 @@ namespace compiler::helios {
 		 * Should be in.
 		 * @note This has to be consistant with QuerySymbolsInScope
 		 */
-		static ScopeID getPSTElementParentScope(query::Context& ctx, MCRef<pst::LangElement> element) {
+		static ScopeID
+			getPSTElementParentScope(query::Context& ctx, MCRef<pst::LangElement> element) {
 			// note: this might become more complicated in the future:
 			return ctx.query<QueryPrimaryCodeScopeFor>({ element->getParent().value() });
 		}
@@ -382,7 +383,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLinkedScope);
 
 	base::HashT KeyOf_QuerySymbolOfSTMT::customPerfectHash() const {
-		return stmt->getID().asInt();;
+		return stmt->getID().asInt();
 	}
 
 	base::HashT KeyOf_LookupInSymbol::customPerfectHash() const {

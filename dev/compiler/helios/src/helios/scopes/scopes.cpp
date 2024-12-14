@@ -21,7 +21,6 @@
 
 namespace compiler::helios {
 
-
 	struct ScopeData final {
 		// created on startup:
 		std::optional<ScopeID> parent;
@@ -136,10 +135,10 @@ namespace compiler::helios {
 		}
 		case pst::ElementKind::CodeBlockOrStmt:
 			return ElementScopeKind::Standard;
-		
+
 		case pst::ElementKind::ClassBlock: {
 			// This if is because AccessBlock's store a ClassBlock inside.
-			// Only the "top-class" ClassBlock has a scope. 
+			// Only the "top-class" ClassBlock has a scope.
 			auto parent_kind = element->getParent().value()->getElementKind();
 			if (parent_kind == pst::ElementKind::Class)
 				return ElementScopeKind::Standard;
@@ -298,9 +297,8 @@ namespace compiler::helios {
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
 		 */
 		template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
-		static std::vector<SymID> filterSymbolsFromStmtList(
-			query::Context& ctx, const StmtList<Stmt>& list
-		) {
+		static std::vector<SymID>
+			filterSymbolsFromStmtList(query::Context& ctx, const StmtList<Stmt>& list) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
 				if (stmt->isDeclaration()) {
@@ -352,7 +350,6 @@ namespace compiler::helios {
 		 * `provide` function simply calls it and validates output.
 		 */
 		static auto getSymbols(Context& ctx, QKey key) -> PResult {
-
 			// @TODO: expand macros?
 
 			if (not key.ref->related_pst_element.has_value()) {
@@ -382,25 +379,36 @@ namespace compiler::helios {
 				CORE_PANIC("Query symbols from scope of non-statement, non-codeblock and non-expr");
 			}
 		}
-		
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto output = getSymbols(ctx, key);
 
 			// validate output:
 			for (auto sym: output) {
-				if (not (scope(sym) == key)) {
+				if (not(scope(sym) == key)) {
 					scope(sym).debugPrintScopeAndParents();
 					key.debugPrintScopeAndParents();
 				}
 
-				CORE_ASSERT(scope(sym) == key, base::strConcat(
-					"Scope mismatch in QuerySymbolsInScope and QuerySymbolOfSTMT\n",
-					" for symbol: ", name(sym), "\n\n"
-					" considered scope : ", key.ref->related_pst_element.value()->elementType(), 
-					", ID: ", key.ref->related_pst_element.value()->getID().asInt(), "\n\n",
-					" scope of symbol: ", scope(sym).ref->related_pst_element.value()->elementType(),
-					", ID: ", scope(sym).ref->related_pst_element.value()->getID().asInt(), "\n"
-				));
+				CORE_ASSERT(
+					scope(sym) == key,
+					base::strConcat(
+						"Scope mismatch in QuerySymbolsInScope and QuerySymbolOfSTMT\n",
+						" for symbol: ",
+						name(sym),
+						"\n\n"
+						" considered scope : ",
+						key.ref->related_pst_element.value()->elementType(),
+						", ID: ",
+						key.ref->related_pst_element.value()->getID().asInt(),
+						"\n\n",
+						" scope of symbol: ",
+						scope(sym).ref->related_pst_element.value()->elementType(),
+						", ID: ",
+						scope(sym).ref->related_pst_element.value()->getID().asInt(),
+						"\n"
+					)
+				);
 			}
 			return output;
 		}
@@ -499,15 +507,12 @@ namespace compiler::helios {
 		auto iter_scope = *this;
 
 		while (true) {
-			std::cerr << iter_scope.customPerfectHash()
-			          << "("
-					  << (
-						iter_scope.ref->related_pst_element.has_value() ?
-						 iter_scope.ref->related_pst_element.value()->elementType()
-						 : "ROOT"
-					  	)
+			std::cerr << iter_scope.customPerfectHash() << "("
+					  << (iter_scope.ref->related_pst_element.has_value()
+			                  ? iter_scope.ref->related_pst_element.value()->elementType()
+			                  : "ROOT")
 					  << ")"
-			          << " -> ";
+					  << " -> ";
 
 			if (not parent(iter_scope).has_value()) break;
 			iter_scope = parent(iter_scope).value();

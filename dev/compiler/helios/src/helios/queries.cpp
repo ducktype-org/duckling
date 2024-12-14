@@ -125,8 +125,7 @@ namespace compiler::helios {
 
 				// @TODO: error handling
 
-				auto symbol
-					= ctx.query<QuerySymbolOfSTMT>({ MCRef<pst::Stmt>(&stmt) });
+				auto symbol = ctx.query<QuerySymbolOfSTMT>({ MCRef<pst::Stmt>(&stmt) });
 
 				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 					"Handling errors is not supported in HOUT yet"
@@ -137,9 +136,9 @@ namespace compiler::helios {
 				auto initial_value = ctx.query<QueryHoutOfExpr>({ stmt.getValue() })
 				                         .expect("Not handling errors here yet...");
 
-				output(code::VariableStmt(
-					scope(symbol), std::move(initial_value), symbol_type, symbol
-				));
+				output(
+					code::VariableStmt(scope(symbol), std::move(initial_value), symbol_type, symbol)
+				);
 			}
 		};
 
