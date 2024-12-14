@@ -284,12 +284,12 @@ namespace compiler::helios {
 		 */
 		template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
 		static std::vector<SymID> filterSymbolsFromStmtList(
-			query::Context& ctx, ScopeID scope, const StmtList<Stmt>& list
+			query::Context& ctx, const StmtList<Stmt>& list
 		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
 				if (stmt->isDeclaration()) {
-					auto sym_id = ctx.query<QuerySymbolOfSTMT>({ scope, stmt });
+					auto sym_id = ctx.query<QuerySymbolOfSTMT>({ stmt });
 					symbols.emplace_back(sym_id);
 				}
 			}
@@ -332,8 +332,11 @@ namespace compiler::helios {
 			void visitExprStmt(const pst::ExprStmt&) override { output(std::vector<SymID>()); }
 		};
 
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::vector<SymID> out;
+		/**
+		 * This is an actual implementation of the query.
+		 * `provide` function simply calls it and validates output.
+		 */
+		static auto getSymbols(Context& ctx, QKey key) -> PResult {
 
 			// @TODO: expand macros?
 
@@ -344,7 +347,7 @@ namespace compiler::helios {
 			auto base_element = key.ref->related_pst_element.value();
 
 			if (base_element->isStatementAggregate()) {
-				return filterSymbolsFromStmtList(ctx, key, getStmtsFromStmtAggregate(base_element));
+				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(base_element));
 			} else if (base_element->isStatement()) {
 				// note: if this check fail, it might be that we are missing some cases
 				CORE_ASSERT(
@@ -363,6 +366,17 @@ namespace compiler::helios {
 			} else {
 				CORE_PANIC("Query symbols from scope of non-statement, non-codeblock and non-expr");
 			}
+		}
+		
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto output = getSymbols(ctx, key);
+
+			// validate output:
+			for (auto sym: output) {
+				CORE_ASSERT(scope(sym) == key, "Scope mismatch in QuerySymbolsInScope and QuerySymbolOfSTMT");
+			}
+
+			return output;
 		}
 
 		static auto load(QKey key) -> LoadResult {

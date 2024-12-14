@@ -132,12 +132,10 @@ namespace compiler::helios {
 			void visitVariable(const pst::Variable& stmt) override {
 				// @TODO: do something with mut/immut
 
-				ScopeID scope_of_symbol = getPSTElementParentScope(ctx, &stmt);
-
 				// @TODO: error handling
 
 				auto symbol
-					= ctx.query<QuerySymbolOfSTMT>({ scope_of_symbol, MCRef<pst::Stmt>(&stmt) });
+					= ctx.query<QuerySymbolOfSTMT>({ MCRef<pst::Stmt>(&stmt) });
 
 				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 					"Handling errors is not supported in HOUT yet"
@@ -149,7 +147,7 @@ namespace compiler::helios {
 				                         .expect("Not handling errors here yet...");
 
 				output(code::VariableStmt(
-					scope_of_symbol, std::move(initial_value), symbol_type, symbol
+					scope(symbol), std::move(initial_value), symbol_type, symbol
 				));
 			}
 		};
