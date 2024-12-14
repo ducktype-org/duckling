@@ -231,28 +231,19 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, SymID) {
-		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
+		/**
+		 * @brief Return the scope, that symbol created from given PST element
+		 * Should be in.
+		 * @note This has to be consistant with QuerySymbolsInScope
+		 */
+		static ScopeID getPSTElementParentScope(query::Context& ctx, MCRef<pst::LangElement> element) {
+			// note: this might become more complicated in the future:
+			return ctx.query<QueryPrimaryCodeScopeFor>({ element->getParent().value() });
+		}
 
-		static auto provide(Context&, QKey key) -> PResult {
-			auto pst_id = key.stmt->getID();
-
-			// This is a sanity check, that might be rendered obsolete
-			// once scope refactor will be introduced.
-			// It currently prevents some scope bugs/inconsistencies from happening.
-			if (parent_map.contains(pst_id)) {
-				CORE_ASSERT(
-					parent_map.at(pst_id) == key.scope,
-					base::strConcat(
-						"Parent mismatch in QuerySymbolOfSTMT for: ",
-						key.stmt->getSourcePosition().genStr("")
-					)
-				);
-			} else {
-				parent_map.put(pst_id, key.scope);
-			}
-
-
-			return PResult{ makeSymbolFromStatement(key.scope, key.stmt) };
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto scope = getPSTElementParentScope(ctx, key.stmt);
+			return PResult{ makeSymbolFromStatement(scope, key.stmt) };
 		}
 
 		// @OPT: opt it?
