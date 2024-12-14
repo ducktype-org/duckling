@@ -382,11 +382,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLinkedScope);
 
 	base::HashT KeyOf_QuerySymbolOfSTMT::customPerfectHash() const {
-		auto hash_1 = base::perfectHash(scope);
-		auto hash_2 = stmt->getID().asInt();
-
-		// @FIXME: this does not work:
-		return hash_1 * 143 + hash_2 * 7;
+		return stmt->getID().asInt();;
 	}
 
 	base::HashT KeyOf_LookupInSymbol::customPerfectHash() const {
