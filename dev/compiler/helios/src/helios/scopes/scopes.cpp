@@ -135,8 +135,17 @@ namespace compiler::helios {
 				return ElementScopeKind::Standard;
 		}
 		case pst::ElementKind::CodeBlockOrStmt:
-		case pst::ElementKind::ClassBlock:
 			return ElementScopeKind::Standard;
+		
+		case pst::ElementKind::ClassBlock: {
+			// This if is because AccessBlock's store a ClassBlock inside.
+			// Only the "top-class" ClassBlock has a scope. 
+			auto parent_kind = element->getParent().value()->getElementKind();
+			if (parent_kind == pst::ElementKind::Class)
+				return ElementScopeKind::Standard;
+			else
+				return ElementScopeKind::Transparent;
+		}
 
 
 		case pst::ElementKind::Namespace:
@@ -148,8 +157,12 @@ namespace compiler::helios {
 		case pst::ElementKind::Action:
 		case pst::ElementKind::Block:  //< note that Block != CodeBlock
 		case pst::ElementKind::ClassField:
-		case pst::ElementKind::AccessBlock:
 			// this is transparent, since we don't need this scope:
+			return ElementScopeKind::Transparent;
+
+		// this has to be transparent, since ClassBlock scopes
+		// contain all symbols in AccessBlock's
+		case pst::ElementKind::AccessBlock:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::If:
@@ -495,7 +508,7 @@ namespace compiler::helios {
 					  	)
 					  << ")"
 			          << " -> ";
-					  
+
 			if (not parent(iter_scope).has_value()) break;
 			iter_scope = parent(iter_scope).value();
 		}
