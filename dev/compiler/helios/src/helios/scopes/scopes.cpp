@@ -21,6 +21,7 @@
 
 namespace compiler::helios {
 
+
 	struct ScopeData final {
 		// created on startup:
 		std::optional<ScopeID> parent;
@@ -374,9 +375,20 @@ namespace compiler::helios {
 
 			// validate output:
 			for (auto sym: output) {
-				CORE_ASSERT(scope(sym) == key, "Scope mismatch in QuerySymbolsInScope and QuerySymbolOfSTMT");
-			}
+				if (not (scope(sym) == key)) {
+					scope(sym).debugPrintScopeAndParents();
+					key.debugPrintScopeAndParents();
+				}
 
+				CORE_ASSERT(scope(sym) == key, base::strConcat(
+					"Scope mismatch in QuerySymbolsInScope and QuerySymbolOfSTMT\n",
+					" for symbol: ", name(sym), "\n\n"
+					" considered scope : ", key.ref->related_pst_element.value()->elementType(), 
+					", ID: ", key.ref->related_pst_element.value()->getID().asInt(), "\n\n",
+					" scope of symbol: ", scope(sym).ref->related_pst_element.value()->elementType(),
+					", ID: ", scope(sym).ref->related_pst_element.value()->getID().asInt(), "\n"
+				));
+			}
 			return output;
 		}
 
@@ -468,5 +480,20 @@ namespace compiler::helios {
 			= ctx.query<QueryPrimaryCodeScopeFor>({ main_source_pst->getRootElement() });
 
 		return main_file_root_scope;
+	}
+
+	void ScopeID::debugPrintScopeAndParents() {
+		auto iter_scope = *this;
+
+		std::cerr << iter_scope.customPerfectHash() << " -> ";
+		while (parent(iter_scope)) {
+			iter_scope = parent(iter_scope).value();
+			std::cerr << iter_scope.customPerfectHash()
+			          << "("
+					  << iter_scope.ref->related_pst_element.value()->elementType()
+					  << ")"
+			          << " -> ";
+		}
+		std::cerr << "\n";
 	}
 }

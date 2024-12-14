@@ -14,15 +14,6 @@
 
 namespace compiler::helios {
 
-	void debugPrintScopeAndParents(ScopeID scope) {
-		std::cerr << scope.customPerfectHash() << " -> ";
-		while (parent(scope)) {
-			scope = parent(scope).value();
-			std::cerr << scope.customPerfectHash() << " -> ";
-		}
-		std::cerr << "\n";
-	}
-
 	struct IMPLEMENT_QUERY(QueryTopLevelEntities, HOUTUnit) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// go over all to level symbols and get theirs hout
