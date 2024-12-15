@@ -163,8 +163,7 @@ private:
 		ASSERT_EQUAL(hout.glob_data.size(), 2);
 
 		// just for cov and to see if it does not throw:
-		[[maybe_unused]]
-		auto hout_debug_print = hout.debugPrint();
+		[[maybe_unused]] auto hout_debug_print = hout.debugPrint();
 	}
 
 	void TestHoutVisitor() {
@@ -511,8 +510,7 @@ private:
 		}
 
 		// debug print test just for cov and to see if it does not throw:
-		[[maybe_unused]]
-		auto debug_print_out = hout.debugPrint();
+		[[maybe_unused]] auto debug_print_out = hout.debugPrint();
 	}
 
 	void scopeParentsAndDepthTests() {
