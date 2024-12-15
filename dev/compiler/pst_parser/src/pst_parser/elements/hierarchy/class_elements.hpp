@@ -37,7 +37,7 @@ namespace pst {
 		MBox<ClassBlock>  block;
 
 	public:
-		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock, ElementKind::KindNotSet);
+		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock, ElementKind::AccessBlock);
 		CLASS_STMT_PARSE(AccessBlock);
 
 		~AccessBlock() override = default;

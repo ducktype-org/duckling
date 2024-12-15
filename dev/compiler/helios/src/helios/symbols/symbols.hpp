@@ -73,15 +73,6 @@ namespace compiler::helios {
 
 	struct KeyOf_QuerySymbolOfSTMT {
 		/**
-		 * @brief scope to create symbol in
-		 *
-		 * @TODO: is this needed? -- now you can create two symbols from the same pst element.
-		 * It might be better to derive scope structure directly from PST structure.
-		 * @TODO: scopes are already derived like this, it should now be deleted
-		 */
-		ScopeID scope;
-
-		/**
 		 * @brief Statement to change to symbol
 		 */
 		MCRef<pst::Stmt> stmt;

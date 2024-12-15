@@ -52,6 +52,7 @@ namespace pst {
 		// classes:
 		ClassField,
 		ClassMethod,
+		AccessBlock,
 
 		// use it, once its docs are more stable:
 		// ClassConstructor,

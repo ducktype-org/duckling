@@ -134,8 +134,17 @@ namespace compiler::helios {
 				return ElementScopeKind::Standard;
 		}
 		case pst::ElementKind::CodeBlockOrStmt:
-		case pst::ElementKind::ClassBlock:
 			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::ClassBlock: {
+			// This is because AccessBlocks store a ClassBlock inside.
+			// Only the "top-class" ClassBlock has a scope.
+			auto parent_kind = element->getParent().value()->getElementKind();
+			if (parent_kind == pst::ElementKind::Class)
+				return ElementScopeKind::Standard;
+			else
+				return ElementScopeKind::Transparent;
+		}
 
 
 		case pst::ElementKind::Namespace:
@@ -148,6 +157,11 @@ namespace compiler::helios {
 		case pst::ElementKind::Block:  //< note that Block != CodeBlock
 		case pst::ElementKind::ClassField:
 			// this is transparent, since we don't need this scope:
+			return ElementScopeKind::Transparent;
+
+		// this has to be transparent, since ClassBlock scopes
+		// contain all symbols in AccessBlock's
+		case pst::ElementKind::AccessBlock:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::If:
@@ -283,13 +297,12 @@ namespace compiler::helios {
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
 		 */
 		template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
-		static std::vector<SymID> filterSymbolsFromStmtList(
-			query::Context& ctx, ScopeID scope, const StmtList<Stmt>& list
-		) {
+		static std::vector<SymID>
+			filterSymbolsFromStmtList(query::Context& ctx, const StmtList<Stmt>& list) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
 				if (stmt->isDeclaration()) {
-					auto sym_id = ctx.query<QuerySymbolOfSTMT>({ scope, stmt });
+					auto sym_id = ctx.query<QuerySymbolOfSTMT>({ stmt });
 					symbols.emplace_back(sym_id);
 				}
 			}
@@ -332,9 +345,11 @@ namespace compiler::helios {
 			void visitExprStmt(const pst::ExprStmt&) override { output(std::vector<SymID>()); }
 		};
 
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::vector<SymID> out;
-
+		/**
+		 * This is an actual implementation of the query.
+		 * `provide` function simply calls it and validates output.
+		 */
+		static auto getSymbols(Context& ctx, QKey key) -> PResult {
 			// @TODO: expand macros?
 
 			if (not key.ref->related_pst_element.has_value()) {
@@ -344,7 +359,7 @@ namespace compiler::helios {
 			auto base_element = key.ref->related_pst_element.value();
 
 			if (base_element->isStatementAggregate()) {
-				return filterSymbolsFromStmtList(ctx, key, getStmtsFromStmtAggregate(base_element));
+				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(base_element));
 			} else if (base_element->isStatement()) {
 				// note: if this check fail, it might be that we are missing some cases
 				CORE_ASSERT(
@@ -363,6 +378,34 @@ namespace compiler::helios {
 			} else {
 				CORE_PANIC("Query symbols from scope of non-statement, non-codeblock and non-expr");
 			}
+		}
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto output = getSymbols(ctx, key);
+
+			// validate output:
+			for (auto sym: output) {
+				CORE_ASSERT(
+					scope(sym) == key,
+					base::strConcat(
+						"Scope mismatch in QuerySymbolsInScope and QuerySymbolOfSTMT\n",
+						" for symbol: ",
+						name(sym),
+						"\n\n"
+						" considered scope : ",
+						key.ref->related_pst_element.value()->elementType(),
+						", ID: ",
+						key.ref->related_pst_element.value()->getID().asInt(),
+						"\n\n",
+						" scope of symbol: ",
+						scope(sym).ref->related_pst_element.value()->elementType(),
+						", ID: ",
+						scope(sym).ref->related_pst_element.value()->getID().asInt(),
+						"\n"
+					)
+				);
+			}
+			return output;
 		}
 
 		static auto load(QKey key) -> LoadResult {
@@ -445,11 +488,6 @@ namespace compiler::helios {
 		return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;
 	}
 
-	ScopeID getPSTElementParentScope(query::Context& ctx, MCRef<pst::LangElement> element) {
-		// note: this might not be correct:
-		return ctx.query<QueryPrimaryCodeScopeFor>({ element->getParent().value() });
-	}
-
 	ScopeID queryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
 		auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
 		auto main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
@@ -458,5 +496,22 @@ namespace compiler::helios {
 			= ctx.query<QueryPrimaryCodeScopeFor>({ main_source_pst->getRootElement() });
 
 		return main_file_root_scope;
+	}
+
+	void ScopeID::debugPrintScopeAndParents() {
+		auto iter_scope = *this;
+
+		while (true) {
+			std::cerr << iter_scope.customPerfectHash() << "("
+					  << (iter_scope.ref->related_pst_element.has_value()
+			                  ? iter_scope.ref->related_pst_element.value()->elementType()
+			                  : "ROOT")
+					  << ")"
+					  << " -> ";
+
+			if (not parent(iter_scope).has_value()) break;
+			iter_scope = parent(iter_scope).value();
+		}
+		std::cerr << "\n";
 	}
 }

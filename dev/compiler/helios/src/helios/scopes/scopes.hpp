@@ -125,15 +125,6 @@ namespace compiler::helios {
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>);
 
 	/**
-	 * @brief Return the scope, that symbol created from given PST element
-	 * Should be in.
-	 * @note This has to be consistant with QuerySymbolsInScope
-	 * @todo This will be changed to private method in QuerySymbolOfStmt,
-	 * and scope consistency sanity check will be moved to QuerySymbolsInScope.
-	 */
-	ScopeID getPSTElementParentScope(query::Context&, MCRef<pst::LangElement> element);
-
-	/**
 	 * @brief Root scope of main module file.
 	 * It is currently the "effective" root scope of a module.
 	 * See: QueryRootScope for details
