@@ -161,6 +161,10 @@ private:
 
 		ASSERT_EQUAL(hout.functions.size(), 3);
 		ASSERT_EQUAL(hout.glob_data.size(), 2);
+
+		// just for cov and to see if it does not throw:
+		[[maybe_unused]]
+		auto hout_debug_print = hout.debugPrint();
 	}
 
 	void TestHoutVisitor() {
@@ -505,6 +509,10 @@ private:
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "e");
 			ASSERT_EQUAL(var.type.getType().getKind(), tsh::Kind::Class);
 		}
+
+		// debug print test just for cov and to see if it does not throw:
+		[[maybe_unused]]
+		auto debug_print_out = hout.debugPrint();
 	}
 
 	void scopeParentsAndDepthTests() {
@@ -517,6 +525,10 @@ private:
 				ASSERT_TRUE(depth > 0);
 				ASSERT_EQUAL(depth - 1, scopeDepth(scope));
 				depth = scopeDepth(scope);
+
+				// it is just for cov mostly
+				// @TODO: make it not print to cerr, but to ostream or string:
+				scope.debugPrintScopeAndParents();
 			}
 			assertTrue(parent(scope).empty(), "Scope at depth 0 can't have a parent");
 		}
