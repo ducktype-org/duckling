@@ -137,7 +137,7 @@ namespace compiler::helios {
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::ClassBlock: {
-			// This if is because AccessBlock's store a ClassBlock inside.
+			// This is because AccessBlocks store a ClassBlock inside.
 			// Only the "top-class" ClassBlock has a scope.
 			auto parent_kind = element->getParent().value()->getElementKind();
 			if (parent_kind == pst::ElementKind::Class)
