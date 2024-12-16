@@ -575,6 +575,7 @@ namespace compiler::helios {
 			}
 
 			void setTypeOfSymbol(MCRef<pst::ExprElement> expr) {
+				// note in this PS: this is wrong, "parseTypeFromExpr" does something strange
 				auto tp = parseTypeFromExpr(ctx, expr);
 				if (tp.hasValue()) setTypeOfSymbol(tp.value());
 			}
@@ -622,8 +623,7 @@ namespace compiler::helios {
 			}
 
 			void visitClass(const pst::Class&) override {
-				// This method is empty on purpose, because we still want a panicky visitor
-				// @TODO: Helios-type-fixes: this should just return meta type
+				setTypeOfSymbol(ctx.query<tsh::QueryMetaType>({}));
 			}
 
 			void visitNamespace(const pst::Namespace&) override {
