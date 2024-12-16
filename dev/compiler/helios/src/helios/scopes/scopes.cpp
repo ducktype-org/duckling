@@ -302,7 +302,7 @@ namespace compiler::helios {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
 				if (stmt->isDeclaration()) {
-					auto sym_id = ctx.query<QuerySymbolOfSTMT>({ stmt });
+					auto sym_id = ctx.query<QuerySymbolOfSTMT>({ stmt.toOpt().value() });
 					symbols.emplace_back(sym_id);
 				}
 			}

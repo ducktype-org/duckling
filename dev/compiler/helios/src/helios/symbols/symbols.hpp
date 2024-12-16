@@ -71,21 +71,10 @@ namespace compiler::helios {
 	 */
 	MCRef<pst::Stmt> stmt(SymID);
 
-	struct KeyOf_QuerySymbolOfSTMT {
-		/**
-		 * @brief Statement to change to symbol
-		 */
-		MCRef<pst::Stmt> stmt;
-
-		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-		bool        operator==(const KeyOf_QuerySymbolOfSTMT&) const = default;
-	};
-
 	/**
 	 * @brief Query symbols associated with given element in PST
 	 */
-	DECLARE_QUERY(QuerySymbolOfSTMT, KeyOf_QuerySymbolOfSTMT, SymID);
+	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<pst::Stmt>, SymID);
 
 	struct KeyOf_LookupInSymbol {
 		/**

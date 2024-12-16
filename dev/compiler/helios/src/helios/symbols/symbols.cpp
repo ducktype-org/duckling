@@ -243,8 +243,8 @@ namespace compiler::helios {
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto scope = getPSTElementParentScope(ctx, key.stmt);
-			return PResult{ makeSymbolFromStatement(scope, key.stmt) };
+			auto scope = getPSTElementParentScope(ctx, key.element);
+			return PResult{ makeSymbolFromStatement(scope, key.element) };
 		}
 
 		// @OPT: opt it?
@@ -381,8 +381,6 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLinkedScope);
-
-	base::HashT KeyOf_QuerySymbolOfSTMT::customPerfectHash() const { return stmt->getID().asInt(); }
 
 	base::HashT KeyOf_LookupInSymbol::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(symbol);
