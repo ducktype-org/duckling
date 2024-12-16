@@ -109,6 +109,7 @@ private:
 		const auto INT32_TYPE = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
 		const auto F32_TYPE   = query::entryPoint<tsh::QueryFloatType>(32);
 		const auto BOOL_TYPE  = query::entryPoint<tsh::QueryBoolType>({});
+		const auto META_TYPE  = query::entryPoint<tsh::QueryMetaType>({});
 
 		ASSERT_EQUAL(true, INT32_TYPE == getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(true, F32_TYPE == getTypeOf("SimpleFloat", root_scope));
@@ -141,6 +142,8 @@ private:
 		const auto weird_variant_type
 			= query::entryPoint<tsh::QueryVariantType>({ { classA, right_tuple } });
 		ASSERT_EQUAL(true, weird_variant == weird_variant_type);
+
+		ASSERT_EQUAL(META_TYPE, getTypeOf("T", root_scope));
 	}
 
 	void testEdgeEvals() {
