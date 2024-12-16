@@ -49,16 +49,21 @@ namespace compiler::helios::code {
 			fromPST(query::Context& ctx, MCRef<pst::ExprElement> root);
 
 
-
+	private:
 		using EvalToType_Result = errors::HResult<tsh::TypeInfo, CouldNotEvalShortPath, errors::Failed>;
 
 		/**
 		 * TODO: in this PR
+		 * @note: private overrides work in C++
 		 */
 		virtual EvalToType_Result evalToType(query::Context&) {
 			// this is the default:
 			return errors::HError(CouldNotEvalShortPath());
 		}
+
+		// note: this will not work
+		friend struct ImplementationOF_EvalExprToType;
+	
 	};
 
 	/***********************\

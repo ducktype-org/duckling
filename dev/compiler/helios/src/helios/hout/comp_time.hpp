@@ -14,10 +14,12 @@ namespace compiler::helios {
 
     struct KeyOf_EvalExprToType {
         Ref<pst::ExprElement> expr;
+        // todo: hash, ==
+        // todo: make template for pst-query keys
     };
     
     /**
      * Given the PST element, evaluates type of that element
      */
-    DECLARE_QUERY(EvalExprToType, pst::ExprElement, TypeEvalResult)
+    DECLARE_QUERY(EvalExprToType, KeyOf_EvalExprToType, TypeEvalResult)
 }
