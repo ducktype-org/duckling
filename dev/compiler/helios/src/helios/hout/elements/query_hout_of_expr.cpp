@@ -337,10 +337,9 @@ namespace compiler::helios::code {
 		}
 	};
 
-
 	ExprConstructionResult fromPST(query::Context& ctx, MCRef<pst::ExprElement> element) {
 		auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ element });
-		
+
 		// std::cerr << "\nExpr: \n";
 		// root->debugPrint(std::cerr);
 		// std::cerr << '\n'
@@ -356,8 +355,7 @@ namespace compiler::helios::code {
 
 namespace compiler::helios {
 
-	struct
-		IMPLEMENT_QUERY(QueryHoutOfExpr, ExprConstructionResult) {
+	struct IMPLEMENT_QUERY(QueryHoutOfExpr, ExprConstructionResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO static assert this is top-expr
 			return code::fromPST(ctx, key.expr);

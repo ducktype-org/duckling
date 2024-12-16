@@ -537,7 +537,7 @@ namespace compiler::helios {
 
 			const auto const_symbol = dynamic_cast<const pst::Const*>(&*getSymRef(key)->pst_stmt);
 
-			auto eval = ctx.query<QueryHoutOfExpr>( { const_symbol->getValue() } );
+			auto eval = ctx.query<QueryHoutOfExpr>({ const_symbol->getValue() });
 			if (eval.hasError()) return errors::HError(errors::Failed());
 			return EvaluateHoutExprVisitor::evaluateExpr(ctx, *eval.value());
 		}
