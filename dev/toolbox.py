@@ -447,8 +447,8 @@ def download_llvm(*args, **kwargs):
     "--no-merge-base",
     is_flag=True,
     default=False,
-    help="On no-merge-base: compare against the latest commit on `branch`"
-    "instead of the commit which is the LCA of `branch` and current branch."
+    help="On no-merge-base: compare against the latest commit on `branch` "
+    "instead of the commit which is the LCA of `branch` and current branch. "
     "This feature allows to run the linter on a shallow clone.",
 )
 def linter(*args, **kwargs):
@@ -489,8 +489,8 @@ def linter(*args, **kwargs):
     "--no-merge-base",
     is_flag=True,
     default=False,
-    help="On no-merge-base: compare against the latest commit on `branch`"
-    "instead of the commit which is the LCA of `branch` and current branch."
+    help="On no-merge-base: compare against the latest commit on `branch` "
+    "instead of the commit which is the LCA of `branch` and current branch. "
     "This feature allows to run the linter on a shallow clone.",
 )
 def duck_linter(*args, **kwargs):
