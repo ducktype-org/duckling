@@ -1,12 +1,11 @@
-#include "query_framework/query_impl.hpp"
+#include <query_framework/query_impl.hpp>
 #include "query_hout_of_expr.hpp"
 
 namespace compiler::helios {
 	struct
 		IMPLEMENT_QUERY(QueryHoutOfExpr, errors::HResult<base::Box<code::Expr> COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			ScopeID expr_scope = ctx.query<QueryPrimaryCodeScopeFor>({ key.expr });
-			return code::Expr::fromPST(ctx, expr_scope, key.expr);
+			return code::Expr::fromPST(ctx, key.expr);
 		}
 
 		// @TODO: perhaps add cache

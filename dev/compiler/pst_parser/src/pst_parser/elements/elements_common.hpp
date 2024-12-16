@@ -86,6 +86,10 @@ namespace pst::detail {
 		static std::string attributeArgList() { return "attribute argument"; }
 
 		static std::string classInitList() { return "initialization"; }
+
+		static std::string callList() { return "call"; }
+
+		static std::string templateList() { return "template"; }
 	};
 
 	/**

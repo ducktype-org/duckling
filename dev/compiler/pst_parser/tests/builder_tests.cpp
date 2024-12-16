@@ -13,14 +13,15 @@ class PSTBuilderTest: public tester::TestSuite {
 #define TESTER_CLASS PSTBuilderTest
 
 	std::vector<std::string> paths = {
-		"snippets/actions.duck",   "snippets/all_statements.txt",
-		"snippets/block.duck",     "snippets/fun.duck",
-		"snippets/fun2.duck",      "snippets/if.duck",
-		"snippets/import.duck",    "snippets/lists_err.duck",
-		"snippets/lists_ok.duck",  "snippets/missing_semicolon_err.duck",
-		"snippets/namespace.duck", "snippets/params_err.duck",
-		"snippets/class.duck",     "snippets/using_err.duck",
-		"snippets/using.duck",     "snippets/while.duck",
+		"snippets/actions.duck",     "snippets/all_statements.txt",
+		"snippets/block.duck",       "snippets/fun.duck",
+		"snippets/fun2.duck",        "snippets/if.duck",
+		"snippets/import.duck",      "snippets/lists_err.duck",
+		"snippets/lists_ok.duck",    "snippets/missing_semicolon_err.duck",
+		"snippets/namespace.duck",   "snippets/params_err.duck",
+		"snippets/class.duck",       "snippets/using_err.duck",
+		"snippets/using.duck",       "snippets/while.duck",
+		"snippets/expressions.duck",
 	};
 
 	template<typename Element, bool good = true>

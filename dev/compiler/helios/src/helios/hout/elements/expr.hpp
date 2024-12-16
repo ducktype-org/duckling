@@ -41,7 +41,7 @@ namespace compiler::helios::code {
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
 
 		static errors::HResult<base::Box<Expr>, errors::Failed>
-			fromPST(query::Context& ctx, ScopeID scope, MCRef<pst::ExprElement> root);
+			fromPST(query::Context& ctx, MCRef<pst::ExprElement> root);
 	};
 
 	/***********************\

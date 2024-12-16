@@ -7,7 +7,7 @@ namespace pst {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Empty expression";
+			return "Empty expression where non-empty expected";
 		}
 
 	public:
@@ -25,18 +25,13 @@ namespace pst {
 
 	bool ExprElement::checkLength(LangParserState& state, i64 length) {
 		if (length <= 0) {
-			std::cerr << "empty expression\n";
 			// Empty expression error
 			state.log(base::make_unique<EmptyExprError>(state.getPosition()));
 			fastForward(state, length);
 			return false;
 		}
-		if (state[length - 1].is(lexer::Token::Type::Sentinel)) {
-			std::cerr << "too long expression\n";
-			// Expression length too long error
-			fastForward(state, length);
-			return false;
-		}
+		if (state[length - 1].is(lexer::Token::Type::Sentinel))
+			CORE_PANIC("Internal error too long expression\n");
 		return true;
 	}
 

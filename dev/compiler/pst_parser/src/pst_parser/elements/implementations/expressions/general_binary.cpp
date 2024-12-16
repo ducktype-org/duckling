@@ -3,6 +3,22 @@
 #include <stack>
 
 namespace pst::expr {
+	class OnlyPrefixError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expression has only prefix operators";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		OnlyPrefixError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	i64 GeneralBinary::skipLiteral(const LangParserState& state, i64 base, i64 length) {
 		i64 fwd = base;
 		if (state[fwd].isIdentifier()) { fwd++; }  // Ignores first identifier
@@ -30,21 +46,24 @@ namespace pst::expr {
 	}
 
 	MBox<ExprElement> GeneralBinary::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing General Binary Expressions" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
+
+		auto pos = dia::SourcePosition(
+			state.getPosition(), state.getPosition((i64) length - 1).getEnd()
+		);
 
 		i64 fwd            = 0;
 		i64 reduced_length = length;
 		// Here this should include the prefix word operators in the future
 		while (fwd < length && state[fwd].isOperator()) fwd++;
 		while (fwd < reduced_length && state[reduced_length - 1].isOperator()) reduced_length--;
-		if (fwd == reduced_length) {}  // Error
+		if (fwd == reduced_length) state.log(base::make_unique<OnlyPrefixError>(pos));
 
 		std::vector<i64> operators;
 		i64              next = 0;
 		while (fwd < reduced_length) {
 			next = skipLiteral(state, fwd, reduced_length);
-			if (fwd == next) {}             // Error
+			if (fwd == next) base::make_unique<tpc::NoIdentifierError>(state.getPosition(fwd));
 			if (next < reduced_length - 1)  // Not a suffix operator or end of expression
 				operators.push_back(next);
 			fwd = std::min(next + 1, reduced_length);
