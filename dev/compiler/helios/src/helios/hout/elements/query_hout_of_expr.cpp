@@ -10,6 +10,11 @@
 #include <base/box.hpp>
 
 namespace compiler::helios::code {
+	/**
+	 * This is an effective implementation of QueryHoutOfExpr.
+	 * QueryHoutOfExpr is mostly a wrapper for future cache.
+	 * @note This is a private function of this file.
+	 */
 	ExprConstructionResult fromPST(query::Context& ctx, MCRef<pst::ExprElement> element);
 
 	namespace {
