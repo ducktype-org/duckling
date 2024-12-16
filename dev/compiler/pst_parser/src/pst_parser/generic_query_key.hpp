@@ -5,6 +5,10 @@
 #include <concepts>
 
 namespace pst {
+    /**
+     * This can be used as a key of a query taking just single PST element.
+     * @todo this is a perfect template for explicit instantiations, to speed up compilation
+     */
     template<std::derived_from<LangElement> T = LangElement>
     struct GenericPSTQueryKey {
         /**
