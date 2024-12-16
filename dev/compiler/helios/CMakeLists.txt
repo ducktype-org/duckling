@@ -10,6 +10,7 @@ add_library(HELIOS
 	src/helios/hout/elements/expr.cpp
 	src/helios/hout/elements/expr_fromPST.cpp
 	src/helios/hout/elements/query_hout_of_expr.cpp
+	src/helios/hout/comp_time.cpp
 	src/helios/helios_errors.hpp
 	src/helios/test_utils/helios_test_utils.cpp
 	src/helios/helios_result.hpp

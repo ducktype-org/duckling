@@ -336,7 +336,8 @@ namespace compiler::helios::code {
 			}
 		}
 	};
-
+	
+	
 	errors::HResult<base::Box<Expr>, errors::Failed>
 		Expr::fromPST(query::Context& ctx, MCRef<pst::ExprElement> root) {
 		auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ root });

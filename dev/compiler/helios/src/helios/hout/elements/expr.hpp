@@ -15,6 +15,7 @@
 #include <helios/lookup_result.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <lexer/token_common.hpp>
+#include "evaluations.hpp"
 
 namespace compiler::helios::code {
 	class HoutExprVisitor;
@@ -39,9 +40,25 @@ namespace compiler::helios::code {
 		virtual void debugPrint(std::ostream& out) const = 0;
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
-
+		
+		/**
+		 * @TODO: it should be wrapped into a query, to not build now tree each time
+		 * This method should be private, and query should be friends
+		 */
 		static errors::HResult<base::Box<Expr>, errors::Failed>
 			fromPST(query::Context& ctx, MCRef<pst::ExprElement> root);
+
+
+
+		using EvalToType_Result = errors::HResult<tsh::TypeInfo, CouldNotEvalShortPath, errors::Failed>;
+
+		/**
+		 * TODO: in this PR
+		 */
+		virtual EvalToType_Result evalToType(query::Context&) {
+			// this is the default:
+			return errors::HError(CouldNotEvalShortPath());
+		}
 	};
 
 	/***********************\
