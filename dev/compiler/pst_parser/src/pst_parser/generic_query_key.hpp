@@ -13,8 +13,11 @@ namespace pst {
 	struct GenericPSTQueryKey {
 		/**
 		 * @brief Element for which the query is run.
+         * @TODO: this is an MCRef, since all keys ware defined like this
+         * after PST "boxification". We should decide how HELIOS handles PST nulls,
+         * and have a single convention.
 		 */
-		CRef<T> element;
+		MCRef<T> element;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {

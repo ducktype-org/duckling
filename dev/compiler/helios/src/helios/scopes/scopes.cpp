@@ -278,12 +278,11 @@ namespace compiler::helios {
 			base::Optional<ScopeID> out;
 
 			void visitNamespace(const pst::Namespace& namespace_stmt) override {
-				out = ctx.query<QueryPrimaryCodeScopeFor>({ namespace_stmt.getBody().toOpt().value(
-				) });
+				out = ctx.query<QueryPrimaryCodeScopeFor>({ namespace_stmt.getBody() });
 			}
 
 			void visitClass(const pst::Class& class_stmt) override {
-				out = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt.getBody().toOpt().value() });
+				out = ctx.query<QueryPrimaryCodeScopeFor>({ class_stmt.getBody() });
 			}
 		};
 
@@ -302,7 +301,7 @@ namespace compiler::helios {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
 				if (stmt->isDeclaration()) {
-					auto sym_id = ctx.query<QuerySymbolOfSTMT>({ stmt.toOpt().value() });
+					auto sym_id = ctx.query<QuerySymbolOfSTMT>({ stmt });
 					symbols.emplace_back(sym_id);
 				}
 			}
@@ -489,7 +488,7 @@ namespace compiler::helios {
 		auto main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
 
 		auto main_file_root_scope = ctx.query<QueryPrimaryCodeScopeFor>(
-			{ main_source_pst->getRootElement().toOpt().value() }
+			{ main_source_pst->getRootElement() }
 		);
 
 		return main_file_root_scope;
