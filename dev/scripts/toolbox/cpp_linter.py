@@ -35,14 +35,14 @@ def get_repo_cpp_files():
     return files
 
 
-def get_modified_files_and_lines(branch: str):
+def get_modified_files_and_lines(branch: str, no_merge_base: bool = False):
     if new_unstaged_files := get_unstaged_new_files():
         log_warning(
             f"Files not in working tree, so not included in diff: [{', '.join(new_unstaged_files)}]"
         )
 
     diff_out, _ = bash_command_get_output(
-        f"git diff --merge-base {branch} -U0 --relative"
+        f"git diff {'' if no_merge_base else '--merge-base'} {branch} -U0 --relative"
     )
     diff_lines = diff_out.splitlines()
 
@@ -97,10 +97,10 @@ def get_modified_files_and_lines(branch: str):
     return changes
 
 
-def get_files_for_linter(all, branch):
+def get_files_for_linter(all, branch, no_merge_base):
     if all:
         return get_repo_cpp_files()
-    return get_modified_files_and_lines(branch)
+    return get_modified_files_and_lines(branch, no_merge_base)
 
 
 def clang_tidy_on(
@@ -189,12 +189,13 @@ def simulate_cpp_linter(
     threads: int,
     branch: str,
     all: bool,
+    no_merge_base: bool
 ):
     build_folder = pathlib.Path(build)
     if not build_folder.exists():
         exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
 
-    file_diffs = get_files_for_linter(all, branch)
+    file_diffs = get_files_for_linter(all, branch, no_merge_base)
     log_info(f"Found {file_diffs=}")
 
     clang_format_failed = False

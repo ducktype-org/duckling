@@ -443,6 +443,14 @@ def download_llvm(*args, **kwargs):
     default=False,
     help="Check all files, not just the ones that are modified",
 )
+@click.option(
+    "--no-merge-base",
+    is_flag=True,
+    default=False,
+    help="On no-merge-base: compare against the latest commit on `branch`"
+    "instead of the commit which is the LCA of `branch` and current branch."
+    "This feature allows to run the linter on a shallow clone.",
+)
 def linter(*args, **kwargs):
     """Simulates clang-tidy and clang-format as if in a workflow.
 
@@ -476,6 +484,14 @@ def linter(*args, **kwargs):
     is_flag=True,
     default=False,
     help="Also shows checks files that didn't had any errors.",
+)
+@click.option(
+    "--no-merge-base",
+    is_flag=True,
+    default=False,
+    help="On no-merge-base: compare against the latest commit on `branch`"
+    "instead of the commit which is the LCA of `branch` and current branch."
+    "This feature allows to run the linter on a shallow clone.",
 )
 def duck_linter(*args, **kwargs):
     """Check for violations of

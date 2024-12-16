@@ -40,8 +40,8 @@ class SourceFile:
             return True
 
 
-def get_source_files(all, relative_to) -> List[SourceFile]:
-    files = get_files_for_linter(all, relative_to).keys()
+def get_source_files(all, relative_to, no_merge_base) -> List[SourceFile]:
+    files = get_files_for_linter(all, relative_to, no_merge_base).keys()
     source_files = []
     for file in files:
         if file.endswith(".cpp") or file.endswith(".hpp"):
@@ -49,10 +49,10 @@ def get_source_files(all, relative_to) -> List[SourceFile]:
     return source_files
 
 
-def duck_linter_impl(all, branch, verbose):
+def duck_linter_impl(all, branch, verbose, no_merge_base):
     passed_all = True
 
-    file = get_source_files(all, branch)
+    file = get_source_files(all, branch, no_merge_base)
     for f in file:
         passed = f.runAllChecks(verbose)
         if not passed:
