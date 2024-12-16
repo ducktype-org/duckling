@@ -10,6 +10,8 @@
 #include <base/box.hpp>
 
 namespace compiler::helios::code {
+	namespace {
+
 	/**
 	 * This is an effective implementation of QueryHoutOfExpr.
 	 * QueryHoutOfExpr is mostly a wrapper for future cache.
@@ -17,29 +19,27 @@ namespace compiler::helios::code {
 	 */
 	ExprConstructionResult fromPST(query::Context& ctx, MCRef<pst::ExprElement> element);
 
-	namespace {
 
-		base::Optional<std::vector<base::Box<Expr>>> getVariantExpressions(base::Ref<Expr> expr) {
-			if (auto variant = dynamic_cast<VariantConstructorExpr*>(expr.get()); variant)
-				return std::move(variant->subtypes);
-			return {};
+	base::Optional<std::vector<base::Box<Expr>>> getVariantExpressions(base::Ref<Expr> expr) {
+		if (auto variant = dynamic_cast<VariantConstructorExpr*>(expr.get()); variant)
+			return std::move(variant->subtypes);
+		return {};
+	}
+
+	base::Box<VariantConstructorExpr> constructVariantFrom(
+		query::Context& ctx, ScopeID scope, base::Box<Expr> lhs, base::Box<Expr> rhs
+	) {
+		std::vector<base::Box<Expr>> all_subtypes;
+
+		for (auto&& expr: std::array{ std::move(lhs), std::move(rhs) }) {
+			auto subtypes = getVariantExpressions(expr.refMut());
+			if (subtypes)
+				for (auto&& subtype: *subtypes) all_subtypes.emplace_back(std::move(subtype));
+			else
+				all_subtypes.emplace_back(std::move(expr));
 		}
 
-		base::Box<VariantConstructorExpr> constructVariantFrom(
-			query::Context& ctx, ScopeID scope, base::Box<Expr> lhs, base::Box<Expr> rhs
-		) {
-			std::vector<base::Box<Expr>> all_subtypes;
-
-			for (auto&& expr: std::array{ std::move(lhs), std::move(rhs) }) {
-				auto subtypes = getVariantExpressions(expr.refMut());
-				if (subtypes)
-					for (auto&& subtype: *subtypes) all_subtypes.emplace_back(std::move(subtype));
-				else
-					all_subtypes.emplace_back(std::move(expr));
-			}
-
-			return makeBox<VariantConstructorExpr>(ctx, scope, std::move(all_subtypes));
-		}
+		return makeBox<VariantConstructorExpr>(ctx, scope, std::move(all_subtypes));
 	}
 
 	struct HoutIsTypeExprVisitor: public HoutExprVisitor {
@@ -355,7 +355,8 @@ namespace compiler::helios::code {
 		if_opt_some(visitor.node, expr) return std::move(expr);
 		return errors::HError(errors::Failed());
 	}
-
+	
+	}
 }
 
 namespace compiler::helios {
