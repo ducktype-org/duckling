@@ -487,9 +487,8 @@ namespace compiler::helios {
 		auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);
 		auto main_source_pst  = ctx.query<frontend::QueryFilePST>(main_source_file);
 
-		auto main_file_root_scope = ctx.query<QueryPrimaryCodeScopeFor>(
-			{ main_source_pst->getRootElement() }
-		);
+		auto main_file_root_scope
+			= ctx.query<QueryPrimaryCodeScopeFor>({ main_source_pst->getRootElement() });
 
 		return main_file_root_scope;
 	}
