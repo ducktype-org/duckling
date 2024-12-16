@@ -138,7 +138,7 @@ namespace vm {
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
 		 */
-		const Code* executing_code = nullptr;
+		MRef<const Code> executing_code = nullptr;
 
 		/**
 		 * @TODO:
@@ -200,13 +200,13 @@ namespace vm {
 
 		void prestart();
 
-		void initThread(const vm::Code& code);
+		void initThread(Ref<const vm::Code> code);
 
 		/**
 		 * @brief Called on coreThread
 		 * coreThread is `main` exec thread
 		 */
-		void run(const Code&);
+		void run(Ref<const Code>);
 
 		// Given lock cannot be a lock on external_api_mutex
 		// If you have access to external_api_mutex, implement this yourself.

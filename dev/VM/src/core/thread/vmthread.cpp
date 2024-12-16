@@ -575,14 +575,14 @@ namespace vm {
 	#pragma GCC pop_options
 #endif
 
-	void VMThread::run(const Code& code) {
+	void VMThread::run(Ref<const Code> code) {
 		// @TODO: ensure correct status
 
 		setStatus(api::Running{});
 
-		executing_code = &code;
+		executing_code = code;
 		try {
-			internalCallMain(executing_code->functions[code.main_id]);
+			internalCallMain(executing_code->functions[code->main_id]);
 			setStatus(api::NotStarted{});
 		} catch (KillProcessException) { setStatus(api::NotStarted{}); }
 	}
@@ -658,9 +658,7 @@ namespace vm {
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
-	base::Optional<std::thread> VMThread::getExecThread() { return exec_thread; }
-
-	void VMThread::initThread(const vm::Code& code) {
+	void VMThread::initThread(Ref<const vm::Code> code) {
 		exec_thread = std::thread([this, code] {
 			try {
 				run(code);

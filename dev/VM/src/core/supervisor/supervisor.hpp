@@ -8,22 +8,15 @@
 #include <base/smart_pointers.hpp>
 
 namespace vm {
-	/**
-	 * @brief Supervisor for the VM, responsible for managing VCPU's ('VCPU') and forwarding
-	 * requests.
-	 *
-	 * To run the VM, you should use the frontend API (like `server.hpp` or `cli.hpp`), not this
-	 * class directly.
-	 */
 	class Supervisor {
 	private:
 		Supervisor() = default;
 
 		std::shared_mutex                                    rwProcessTable;
 		PID                                                  next = 0;
-		std::unordered_map<PID, base::unique_ptr<VMProcess>> processTable;
+		std::unordered_map<PID, Box<VMProcess>> processTable;
 
-		cpp::result<base::borrow_ptr<VMProcess>, api::ApiError> getProcess(PID pid);
+		cpp::result<Ref<VMProcess>, api::ApiError> getProcess(PID pid);
 
 
 	public:

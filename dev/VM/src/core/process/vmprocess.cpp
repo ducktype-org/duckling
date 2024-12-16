@@ -50,7 +50,7 @@ namespace vm {
 		if (!loadedCode.has_value())
 			return cpp::failure(api::CoreOperationError{ api::RunError{} });
 		getMainVMThread().prestart();
-		getMainVMThread().initThread(*loadedCode);
+		getMainVMThread().initThread(Ref(&*loadedCode));
 		return api::Response(api::response::Empty());
 	}
 
@@ -67,6 +67,7 @@ namespace vm {
 
 	cpp::result<api::Response, api::CoreOperationError>
 		VMProcess::input(const api::request::Input& request) {
+		// @TODO: https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
 		auto lock = io.lock();
 		io.inputStream() << request.input;
 		getMainVMThread().notifyPaused();
@@ -76,6 +77,7 @@ namespace vm {
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::output() {
 		auto        lock = io.lock();
 		std::string content;
+		CORE_ASSERT(!io_redirecter, "Cannot read output from api when IO is being redirected");
 		io.output_empty_cv.wait(lock, [&] { return !(content = io.outputStream().str()).empty(); });
 		return api::Response(api::response::Output{ content });
 	}
@@ -192,6 +194,7 @@ namespace vm {
 
 	cpp::result<api::Response, api::CoreOperationError>
 		VMProcess::attach(std::istream& istream, std::ostream& ostream) {
+		// @TODO: Flush the ostream from ProcIO to new ostream.
 		if (io_redirecter) return cpp::failure(api::CoreOperationError{ api::AttachDetachError{} });
 
 		// So long this object lives, any IO is redirected.

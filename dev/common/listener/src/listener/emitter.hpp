@@ -4,6 +4,7 @@
 #include <set>
 #include <queue>
 #include <concepts>
+#include <base/ref.hpp>
 #include "listener.hpp"
 
 /**
@@ -13,8 +14,8 @@
 template<class Event>
 requires std::copy_constructible<Event> class Emitter {
 private:
-	std::set<Listener<Event>*> listeners;
-	std::queue<Event>          eventQueue;
+	std::set<Ref<Event>> listeners;
+	std::queue<Event>    eventQueue;
 
 public:
 	void queueEvent(const Event& event) { eventQueue.push(event); }
@@ -35,9 +36,9 @@ public:
 	 * Unless manually erased, the emitter will clean added listener during it's destruction.
 	 * @param listener
 	 */
-	void attach(Listener<Event>* listener) { listeners.emplace(listener); }
+	void attach(Ref<Event> listener) { listeners.emplace(listener); }
 
-	void detach(Listener<Event>* listener) { listeners.erase(listener); }
+	void detach(Ref<Event> listener) { listeners.erase(listener); }
 
 	void removeAllListeners() { listeners.clear(); }
 
