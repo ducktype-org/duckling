@@ -29,6 +29,7 @@ class SourceFile:
         self._relativeImportChecks()
 
         if len(self.errors) > 0:
+            log_new_line()
             log_warning(f"{self.path}: ERRORS FOUND")
             for error in self.errors:
                 log_warning(" * " + error)
