@@ -147,12 +147,6 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QueryType_Result>);
 
 	/**
-	 * @brief Does QueryTypeOfSymbol and upon failing does QueryTypeFromDefinition.
-	 * @todo Helios Type Fixes: delete this query (see also issue #385)
-	 */
-	DECLARE_QUERY(QueryTypeOfSymbolOrDefinition, SymID, CRef<QueryType_Result>);
-
-	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.
 	 */
 	struct ClassSymbolData {

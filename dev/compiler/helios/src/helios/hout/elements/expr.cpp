@@ -97,7 +97,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
-				  ctx.query<QueryTypeOfSymbolOrDefinition>(symbol)->expect(
+				  ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 					  "Handling errors in HOUT is not supported yet"
 				  ),
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
@@ -203,7 +203,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
-				  ctx.query<QueryTypeOfSymbolOrDefinition>(symbols.back())
+				  ctx.query<QueryTypeOfSymbol>(symbols.back())
 					  ->expect("Not handling errors here yet"),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )

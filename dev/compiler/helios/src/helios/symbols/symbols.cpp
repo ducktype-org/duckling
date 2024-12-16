@@ -684,18 +684,6 @@ namespace compiler::helios {
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
 
-	struct IMPLEMENT_QUERY(QueryTypeOfSymbolOrDefinition, QueryType_Result) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto x = *ctx.query<QueryTypeOfSymbol>(key);
-			if (x.hasValue()) return x.value();
-
-			return *ctx.query<QueryTypeFromDefinition>(key);
-		}
-
-		QUERY_AUTO_CACHE_REF;
-	};
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbolOrDefinition)
-
 	struct IMPLEMENT_QUERY(QueryClassSymbolData, QueryClassSymbolData_Result) {
 		struct ClassDataParser final: pst::PstStmtVisitorPanicky {
 			base::Optional<base::StrID>                name;
