@@ -5,7 +5,9 @@ namespace compiler::helios {
 	struct
 		IMPLEMENT_QUERY(QueryHoutOfExpr, errors::HResult<base::Box<code::Expr> COMMA errors::Failed>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			return code::Expr::fromPST(ctx, key.expr);
+			// @TODO: in some places fromPST is used instead of this query, fix it
+			// make "fromPST" private
+			return code::Expr::fromPST(ctx, key.element);
 		}
 
 		// @TODO: perhaps add cache
@@ -19,10 +21,4 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
-
-	base::HashT KeyOf_QueryHoutOfExpr::customPerfectHash() const {
-		auto hash_1 = this->expr->getID().asInt();
-
-		return hash_1;
-	}
 }
