@@ -660,7 +660,7 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto&& symbol_ref = getSymRef(key);
+			auto symbol_ref = getSymRef(key);
 
 			PstStmtVisitor_GetTypeFromDefinition visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
