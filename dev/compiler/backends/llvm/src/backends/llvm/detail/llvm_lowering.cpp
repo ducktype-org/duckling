@@ -58,7 +58,7 @@ namespace compiler::backend_llvm {
 
 	auto i32Type(llvm::LLVMContext& context) { return llvm::Type::getInt32Ty(context); }
 
-	auto typeFromLayout(llvm::LLVMContext& context, tsl::TypeLayout& layout) -> llvm::Type* {
+	auto typeFromLayout(llvm::LLVMContext& context, const tsl::TypeLayout& layout) -> llvm::Type* {
 		variant_match(layout()) {
 			variant_case_novalue(tsl::IntegralTypeLayout) {
 				return llvm::Type::getIntNTy(context, static_cast<usize>(layout.getSize()));
