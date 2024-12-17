@@ -8,7 +8,7 @@
 namespace compiler::helios {
 
     struct IMPLEMENT_QUERY(EvalExprToType, TypeEvalResult) {
-        auto provide(Context& ctx, QKey key) -> PResult {
+        static auto provide(Context& ctx, QKey key) -> PResult {
             // todo: query type from expr
             // get type from virtual functions
             auto parsed = ctx.query<QueryHoutOfExpr>({ key.expr });
@@ -37,4 +37,6 @@ namespace compiler::helios {
 
         QUERY_AUTO_CACHE_COPY
     };
+
+    QUERY_IMPLEMENTATION_BOILERPLATE(EvalExprToType);
 }
