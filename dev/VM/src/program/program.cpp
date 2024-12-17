@@ -888,58 +888,28 @@ namespace assemble {
 
 	// @TODO: this function returns errors as string, in the future `StreamPrinter` like object
 	// should be returned, that can produce both human readable and json error output
-	// cpp::result<vm::Code, std::string>
-	// 	getCode(CodeContainer& code, vm::TypeMetadata& type_metadata) {
-	// 	if (!code.ok) return cpp::failure(code.error);
+	cpp::result<std::vector<vm::FuncData>, std::string>
+		makeCode(const std::vector<tpc::ParserRef<Func>>& funcs, vm::TypeMetadata& type_metadata) {
+		usize main_id = SIZE_MAX;
 
-
-	// 	usize main_id = SIZE_MAX;
-
-	// 	for (i32 idx = 0; idx < code.code->functions.size(); idx++) {
-	// 		if (code.code->functions[idx]->name.value.strView() == "main") {
-	// 			main_id = idx;
-	// 			break;
-	// 		}
-	// 	}
-
-	// 	if (main_id == SIZE_MAX) return cpp::failure("error: No main.");
-
-	// 	vm::Code instructions_code;
-	// 	for (auto& func: code.code->functions)
-	// 		functions.emplace_back(changeFuncToFuncData(func.borrow(), type_metadata));
-	// 	assertTailcallsSignatures(functions);
-
-	// 	return functions;
-	// }
-
-}
-
-namespace vm {
-
-	cpp::result<vm::VMProgram, std::string> vm::VMProgram::assemble(const std::vector<fs::FilePath>& files) {
-		vm::VMProgram program;
-		for (auto& file: files) {
-			auto parsed_code = assemble::parseFile(file);
-
-			// @TODO:
-			// it is left, because JSON is broken
-			std::cerr << parsed_code.error;
-
-			if (!parsed_code.ok) return cpp::fail(parsed_code.error);
-
-			auto opt_err = assemble::defineTypes(parsed_code.code->types, program.type_metadata);
-			if (opt_err) return cpp::fail(*opt_err);
-
-			auto result = assemble::getCode(parsed_code, program.type_metadata);
-
-			// parsed_code.print(std::cerr);
+		for (i32 idx = 0; idx < funcs.size(); idx++) {
+			if (funcs[idx]->name.value.strView() == "main") {
+				main_id = idx;
+				break;
+			}
 		}
 
-		return result;
-	}
+		// @TODO: Detect duplicated function names
 
-	cpp::result<vm::VMProgram, std::string> assemble(const fs::FilePath& file) {
-		return assemble(std::vector{ file });
+		if (main_id == SIZE_MAX) return cpp::failure("error: No main.");
+
+		std::vector<vm::FuncData> program_functions;
+		program_functions.reserve(funcs.size());
+		for (auto& func: funcs)
+			program_functions.emplace_back(changeFuncToFuncData(func.borrow(), type_metadata));
+		assertTailcallsSignatures(program_functions);
+
+		return program_functions;
 	}
 
 	cpp::result<tpc::ParserRef<ParsedCode>, std::string> parse(const fs::FilePath& file) {
@@ -960,5 +930,40 @@ namespace vm {
 
 		// parsed_code.print(std::cerr);
 	}
+}
 
+namespace vm {
+	cpp::result<vm::VMProgram, std::string>
+		vm::VMProgram::assemble(const std::vector<fs::FilePath>& files) {
+		vm::VMProgram                               program;
+		std::vector<tpc::ParserRef<assemble::Func>> funcs;
+		std::vector<tpc::ParserRef<assemble::Type>> types;
+
+		for (auto& file: files) {
+			auto parsed_code = assemble::parseFile(file);
+
+			// @TODO:
+			// it is left, because JSON is broken
+			std::cerr << parsed_code.error;
+
+			if (!parsed_code.ok) return cpp::fail(parsed_code.error);
+
+			for (auto& func: parsed_code.code->functions) funcs.push_back(std::move(func));
+			for (auto& tp: parsed_code.code->types) types.push_back(std::move(tp));
+		}
+
+		auto opt_err = assemble::defineTypes(types, program.type_metadata);
+		if (opt_err) return cpp::fail(*opt_err);
+
+		auto result = assemble::makeCode(funcs, program.type_metadata);
+		if (result.has_error()) return cpp::fail(result.error());
+
+		program.functions = std::move(result.value());
+
+		return program;
+	}
+
+	cpp::result<vm::VMProgram, std::string> VMProgram::assemble(const fs::FilePath& file) {
+		return assemble(std::vector{ file });
+	}
 }

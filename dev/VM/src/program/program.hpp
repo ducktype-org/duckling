@@ -48,6 +48,7 @@ namespace vm {
 
 	private:
 		base::StableHashMap<base::StrID, FuncData> name_to_fun;
+		std::vector<FuncData> functions;
 
 		TypeMetadata type_metadata;
 	};
