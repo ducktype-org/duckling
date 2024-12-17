@@ -64,6 +64,7 @@ namespace compiler::backend_llvm {
 				return llvm::Type::getIntNTy(context, static_cast<usize>(layout.getSize()));
 			}
 			variant_case_novalue(tsl::FloatTypeLayout) {
+			// see https://llvm.org/docs/LangRef.html#floating-point-types for docs on LLVM floating point types
 				switch (static_cast<usize>(layout.getSize())) {
 				case 32:
 					return llvm::Type::getFloatTy(context);
