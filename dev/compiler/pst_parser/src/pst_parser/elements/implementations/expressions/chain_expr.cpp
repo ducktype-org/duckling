@@ -1,6 +1,22 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	class BadChainExprError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected access or call expression expression";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		BadChainExprError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	i64 ChainExpr::toNextLink(const LangParserState& state, i64 length) {
 		CORE_ASSERT(length > 0, "Illegal max length to next link");
 
@@ -17,7 +33,6 @@ namespace pst::expr {
 	}
 
 	MBox<ExprElement> ChainExpr::parse(LangParserState& state, i64 length) {
-		// std::cerr << "Parsing Chain Expression" << std::endl;
 		if (!checkLength(state, length)) return nullptr;
 
 		i64 fwd = toNextLink(state, length);
@@ -36,7 +51,9 @@ namespace pst::expr {
 			} else if (state[0].isBracketGroup(lexer::Token::Round) || state[0].isBracketGroup(lexer::Token::Square)) {
 				state.parse(out).with(&out->chain.back(), Call::parse, +fwd);
 			} else {
-				// Error
+				state.log(base::make_unique<BadChainExprError>(
+					dia::SourcePosition(state.getPosition(), state.getPosition(fwd - 1).getEnd())
+				));
 				fastForward(state, fwd);
 			}
 			length -= fwd;

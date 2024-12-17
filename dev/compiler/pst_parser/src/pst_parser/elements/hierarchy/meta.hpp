@@ -4,15 +4,11 @@
 #include "../elements_common.hpp"
 
 #include <diagnostic/source_position.hpp>
-#include <token_parser_core/token_stream.hpp>
-#include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/automatic.hpp>
 
 #include <base/string_id.hpp>
-
-#include <unicode/unistr.h>
 
 #include <set>
 
@@ -99,7 +95,7 @@ namespace pst {
 
 	public:
 		[[nodiscard]]
-		StmtKind getKind() const {
+		StmtKind getStmtKind() const {
 			return kind;
 		}
 
@@ -149,8 +145,10 @@ namespace pst {
 		}
 	};
 
-#define STMT_CHILD_CONSTRUCTOR(class_name) \
-	class_name(const dia::SourcePosition& position): Stmt(StmtKind::class_name, position) {}
+#define STMT_CHILD_CONSTRUCTOR(class_name, element_kind_)                                   \
+	class_name(const dia::SourcePosition& position): Stmt(StmtKind::class_name, position) { \
+		this->element_kind = element_kind_;                                                 \
+	}
 
 	struct ClassContext {
 		base::StrID                                 name;
