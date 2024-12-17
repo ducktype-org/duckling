@@ -8,7 +8,7 @@ cd "$(dirname "$0")"/../../ || exit 1
 files=$(./scripts/list_files.sh)
 
 # Run the formatting
-echo "$files" | xargs clang-format-17 --Werror --style=file:".clang-format" -i --verbose
+echo "$files" | xargs ./scripts/downloads/clang-format --Werror --style=file:".clang-format" -i --verbose
 
 # Return to the original location
 cd "$original_location" || exit 1
