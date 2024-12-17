@@ -17,13 +17,10 @@
 #include <lexer/token_common.hpp>
 #include "evaluations.hpp"
 
-namespace compiler::helios {
-	// forward declaration for friend:
-	struct ImplementationOf_EvalExprToType;
-}
-
 namespace compiler::helios::code {
 	class HoutExprVisitor;
+
+	using EvalToType_Result = errors::HResult<tsh::TypeInfo, CouldNotEvalShortPath, errors::Failed>;
 
 	/**
 	 * @brief Base class for all HOUT expressions.
@@ -45,20 +42,6 @@ namespace compiler::helios::code {
 		virtual void debugPrint(std::ostream& out) const = 0;
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
-		
-	private:
-		using EvalToType_Result = errors::HResult<tsh::TypeInfo, CouldNotEvalShortPath, errors::Failed>;
-
-		/**
-		 * TODO: in this PR
-		 * @note: private overrides work in C++
-		 */
-		virtual EvalToType_Result evalToType(query::Context&) {
-			// this is the default:
-			return errors::HError(CouldNotEvalShortPath());
-		}
-		friend ImplementationOf_EvalExprToType;
-	
 	};
 
 	/***********************\
@@ -66,7 +49,7 @@ namespace compiler::helios::code {
 	\***********************/
 
 	/**
-	 * @brief Represents a literal value written in the expression.
+	 * @brief Represents a integer literal value written in the expression.
 	 */
 	struct LiteralValueExpr final: public Expr {
 		// @TODO: ctv + type for consts?
@@ -81,6 +64,7 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents an expression made of a keyword, like "true", or "i32".
+	 * @brief This is a mock
 	 */
 	struct KeywordExpr final: public Expr {
 		lang_def::Keyword keyword;
@@ -180,6 +164,7 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Variant constructor inside an expression.
+	 * @todo Does it work like a chain?
 	 */
 	struct VariantConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> subtypes;

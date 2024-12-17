@@ -25,6 +25,9 @@ namespace compiler::helios::code {
 			return {};
 		}
 
+		/**
+		 * @TODO dont flatten variants (even if, then dont do it here)
+		 */
 		base::Box<VariantConstructorExpr> constructVariantFrom(
 			query::Context& ctx, ScopeID scope, base::Box<Expr> lhs, base::Box<Expr> rhs
 		) {
