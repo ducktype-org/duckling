@@ -2,6 +2,8 @@
 
 #include "preamble.hpp"
 
+#include <unicode/unistr.h>
+
 namespace pst {
 	template<GetName type>
 	class OpeningBracketMissingError final: public dia::Error {

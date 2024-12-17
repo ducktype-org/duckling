@@ -50,7 +50,9 @@ namespace pst {
 
 	class ParamList final: public List<FunParam, detail::NameGetters::parameterList> {
 	public:
-		explicit ParamList(const dia::SourcePosition& pos): List(pos) {}
+		explicit ParamList(const dia::SourcePosition& pos): List(pos) {
+			this->element_kind = ElementKind::ParamList;
+		}
 
 		static MBox<ParamList> parse(LangParserState& state);
 
@@ -82,5 +84,23 @@ namespace pst {
 		static MBox<InitList> parse(LangParserState& state);
 
 		~InitList() final = default;
+	};
+
+	class CallList final: public List<ExprElement, detail::NameGetters::callList> {
+	public:
+		explicit CallList(const dia::SourcePosition& pos): List(pos) {}
+
+		static MBox<CallList> parse(LangParserState& state);
+
+		~CallList() final = default;
+	};
+
+	class TemplateList final: public List<ExprElement, detail::NameGetters::templateList> {
+	public:
+		explicit TemplateList(const dia::SourcePosition& pos): List(pos) {}
+
+		static MBox<TemplateList> parse(LangParserState& state);
+
+		~TemplateList() final = default;
 	};
 }
