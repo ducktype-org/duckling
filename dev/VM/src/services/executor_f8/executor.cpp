@@ -1,7 +1,7 @@
 #include <base/ints.hpp>
-#include <code_data/instruction.hpp>
-#include <code_data/opcodes.hpp>
-#include <code_data/code.hpp>
+#include <program/instruction.hpp>
+#include <program/opcodes.hpp>
+#include <program/code.hpp>
 #include <cstring>
 #include <services_data/type_metadata/type.hpp>
 #include <supervisor/vcpu.hpp>
@@ -531,7 +531,7 @@ namespace vm {
 	#ifdef USE_COMPUTED_GOTO
 		constexpr static std::array<void*, OP_CASES_COUNT> opcode_label = {
 		#define DEF_OPCODE(opcode) LABEL_PTR(opcode),
-		#include <code_data/opcodes_list.hpp>
+		#include <program/opcodes_list.hpp>
 		#undef DEF_OPCODE
 		};
 	#endif
@@ -544,7 +544,7 @@ namespace vm {
 			IF_NOT_CG(switch (static_cast<OpcodeFix8>(instr->opcode))) {
 	#define DEF_OPCODE(opcode)     OP_CASE(opcode)
 	#define DEF_OPCODE_END(opcode) OP_CASE_END(opcode)
-	#include <code_data/opcodes_list.hpp>
+	#include <program/opcodes_list.hpp>
 	#undef DEF_OPCODE
 	#undef DEF_OPCODE_END
 				IF_NOT_CG(default : { CORE_PANIC("Unknown operator:", u64(instr->opcode)); })
@@ -561,7 +561,7 @@ namespace vm {
 	#pragma GCC pop_options
 #endif
 
-	void Executor::run(const Code& code) {
+	void Executor::run(const VMProgram& code) {
 		// @TODO: ensure correct status
 
 		setStatus(api::Running{});

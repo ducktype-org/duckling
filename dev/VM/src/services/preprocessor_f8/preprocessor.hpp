@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../services.hpp"
-#include <code_data/code.hpp>
+#include <program/code.hpp>
 #include <filesystem/file.hpp>
 #include <base/optional.hpp>
 
@@ -16,7 +16,8 @@ namespace vm {
 		TypeMetadata& type_metadata;
 
 		template<class... DynamicServices>
-		Preprocessor([[maybe_unused]] ServiceManagerDef<DynamicServices...>& serviceManager):
+		Preprocessor([[maybe_unused]]
+		             ServiceManagerDef<DynamicServices...>& serviceManager):
 			  type_metadata(serviceManager.getVCPU().getData().template get<TypeMetadata>()) {}
 
 	public:
@@ -29,6 +30,8 @@ namespace vm {
 		 * @param file
 		 * @return cpp::result<vm::Code, std::string>
 		 */
-		cpp::result<vm::Code, std::string> getCode(const fs::FilePath& file);
+		cpp::result<vm::VMProgram, std::string> getCode(const fs::FilePath& file);
+
+		cpp::result<vm::VMProgram, std::string> getCode(const std::vector<fs::FilePath>& files);
 	};
 }

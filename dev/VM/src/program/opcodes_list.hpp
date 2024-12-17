@@ -23,7 +23,7 @@
  * switch (opcode) {
  *   #define DEF_OPCODE(opcode)     OP_CASE(opcode)
  *   #define DEF_OPCODE_END(opcode) OP_CASE_END(opcode)
- *   #include <code_data/opcodes_list.hpp>
+ *   #include <program/opcodes_list.hpp>
  *   #undef DEF_OPCODE
  *   #undef DEF_OPCODE_END
  * }

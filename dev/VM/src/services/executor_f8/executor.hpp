@@ -1,12 +1,12 @@
 #pragma once
 
 #include "../services.hpp"
-#include <code_data/instruction.hpp>
-#include <code_data/code.hpp>
+#include <program/instruction.hpp>
+#include <program/code.hpp>
 #include "kill_core_exception.hpp"
 #include "services/executor_f8/op_case.hpp"
 
-#include <code_data/code.hpp>
+#include <program/code.hpp>
 #include <api/data/request.hpp>
 #include <api/data/status.hpp>
 
@@ -134,7 +134,7 @@ namespace vm {
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
 		 */
-		const Code* executing_code = nullptr;
+		const VMProgram* executing_code = nullptr;
 
 		/**
 		 * @TODO:
@@ -198,7 +198,7 @@ namespace vm {
 		 * @brief Called on coreThread
 		 * coreThread is `main` exec thread
 		 */
-		void run(const Code&);
+		void run(const VMProgram&);
 
 		// Given lock cannot be a lock on external_api_mutex
 		// If you have access to external_api_mutex, implement this yourself.

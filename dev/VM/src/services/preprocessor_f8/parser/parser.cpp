@@ -1,6 +1,8 @@
 
 #include "parser.hpp"
-#include <code_data/opcodes.hpp>
+#include <base/exceptions.hpp>
+#include <program/program.hpp>
+#include <program/opcodes.hpp>
 #include <lexer/lexer.hpp>
 #include <token_file/file.hpp>
 #include <lexer/classifications.hpp>
@@ -651,15 +653,15 @@ namespace assemble {
 	}
 
 	tpc::ParserRef<ParsedCode> ParsedCode::parse(F8ParserState& state) {
-		auto out = tpc::makeRef<ParsedCode>();
+		ParsedCode out;
 
 		while (state.notEmpty()) {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state);
-				if (type != nullptr) out->types.emplace_back(std::move(type));
+				if (type != nullptr) out.types.emplace_back(std::move(type));
 			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state);
-				if (func != nullptr) out->functions.emplace_back(std::move(func));
+				if (func != nullptr) out.functions.emplace_back(std::move(func));
 			} else {
 				state.fail(0, "Unexpected keyword");
 				return out;
@@ -673,7 +675,7 @@ namespace assemble {
 		// @TODO: https://github.com/ducktype-org/rift-poc-zpp1/issues/70
 		bool                       ok    = true;
 		std::string                error = "";
-		tpc::ParserRef<ParsedCode> code;
+		base::Optional<ParsedCode> code;
 		void                       print(std::ostream&);
 	};
 
@@ -683,7 +685,7 @@ namespace assemble {
 		lang_def::setKeywordMode(lang_def::KeywordMode::DuckBC);
 
 		auto maybeContent = path.getContentSafe();
-		if (maybeContent.has_error()) return CodeContainer{ false, maybeContent.error(), nullptr };
+		if (maybeContent.has_error()) return CodeContainer{ false, maybeContent.error(), {} };
 
 		tokenizer::OwnFile file = lexer::tokenizeFile(path);
 
@@ -695,12 +697,12 @@ namespace assemble {
 			tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()), log
 		);
 
-		tpc::ParserRef<ParsedCode> out = ParsedCode::parse(state);
+		ParsedCode out = ParsedCode::parse(state);
 
 		std::stringstream err_stream;
 		log.dumpLog(false, err_stream);
 
-		return { log.good(), err_stream.str(), std::move(out) };
+		return { log.good(), err_stream.str(), out };
 	}
 
 	// returns true if was successfully
@@ -828,6 +830,9 @@ namespace assemble {
 
 		for (auto& op: func->code->opcodes) {
 			// calculate type arguments:
+			std::cerr << "op: ";
+			op->debugPrint(std::cerr);
+			std::cerr << '\n';
 			for (auto& arg: op->args) {
 				variant_match(arg) {
 					variant_case(OpCodeLabelArg, label) {
@@ -883,36 +888,57 @@ namespace assemble {
 
 	// @TODO: this function returns errors as string, in the future `StreamPrinter` like object
 	// should be returned, that can produce both human readable and json error output
-	cpp::result<vm::Code, std::string>
-		getCode(CodeContainer& code, vm::TypeMetadata& type_metadata) {
-		if (!code.ok) return cpp::failure(code.error);
+	// cpp::result<vm::Code, std::string>
+	// 	getCode(CodeContainer& code, vm::TypeMetadata& type_metadata) {
+	// 	if (!code.ok) return cpp::failure(code.error);
 
-		vm::Code instructions_code;
 
-		usize main_id = SIZE_MAX;
+	// 	usize main_id = SIZE_MAX;
 
-		for (i32 idx = 0; idx < code.code->functions.size(); idx++) {
-			if (code.code->functions[idx]->name.value.strView() == "main") {
-				main_id = idx;
-				break;
-			}
+	// 	for (i32 idx = 0; idx < code.code->functions.size(); idx++) {
+	// 		if (code.code->functions[idx]->name.value.strView() == "main") {
+	// 			main_id = idx;
+	// 			break;
+	// 		}
+	// 	}
+
+	// 	if (main_id == SIZE_MAX) return cpp::failure("error: No main.");
+
+	// 	vm::Code instructions_code;
+	// 	for (auto& func: code.code->functions)
+	// 		functions.emplace_back(changeFuncToFuncData(func.borrow(), type_metadata));
+	// 	assertTailcallsSignatures(functions);
+
+	// 	return functions;
+	// }
+
+
+	cpp::result<vm::VMProgram, std::string> assemble(const std::vector<fs::FilePath>& files) {
+		for (auto& file: files) {
+			auto parsed_code = parseFile(file);
+
+			// @TODO:
+			// it is left, because JSON is broken
+			std::cerr << parsed_code.error;
+
+			if (!parsed_code.ok) return cpp::fail(parsed_code.error);
+
+			bool status = defineTypes(parsed_code, type_metadata);
+			if (!status) return cpp::fail(parsed_code.error);
+
+			auto result = getCode(parsed_code, type_metadata);
+
+			// parsed_code.print(std::cerr);
 		}
 
-		if (main_id == SIZE_MAX) return cpp::failure("error: No main.");
-		instructions_code.main_id = main_id;
-
-		for (auto& func: code.code->functions) {
-			instructions_code.functions.emplace_back(
-				changeFuncToFuncData(func.borrow(), type_metadata)
-			);
-		}
-		assertTailcallsSignatures(instructions_code.functions);
-
-		return instructions_code;
+		return result;
 	}
 
-	cpp::result<vm::Code, std::string>
-		assemble(const fs::FilePath& file, vm::TypeMetadata& type_metadata) {
+	cpp::result<vm::VMProgram, std::string> assemble(const fs::FilePath& file) {
+		return assemble(std::vector{ file });
+	}
+
+	cpp::result<ParsedCode, std::string> parse(const fs::FilePath& file) {
 		auto parsed_code = parseFile(file);
 
 		// @TODO:
@@ -920,14 +946,15 @@ namespace assemble {
 		std::cerr << parsed_code.error;
 
 		if (!parsed_code.ok) return cpp::fail(parsed_code.error);
+		if (!parsed_code.code) CORE_UNREACHABLE("parsed_code.ok and no code");
+		return std::move(parsed_code.code);
 
-		bool status = defineTypes(parsed_code, type_metadata);
-		if (!status) return cpp::fail(parsed_code.error);
+		// bool status = defineTypes(parsed_code, type_metadata);
+		// if (!status) return cpp::fail(parsed_code.error);
 
-		auto result = getCode(parsed_code, type_metadata);
+		// auto result = getCode(parsed_code, type_metadata);
 
 		// parsed_code.print(std::cerr);
-
-		return result;
 	}
+
 }

@@ -102,6 +102,10 @@ namespace base {
 			return data.size();
 		}
 
+		auto begin() { return data.begin(); }
+
+		auto end() { return data.end(); }
+
 	private:
 		HashMap<KEY_T, Box<DATA_T>, HASH_T> data;
 	};

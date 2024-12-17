@@ -1,0 +1,32 @@
+type primitive: int64 8
+type pointer: int64_ptr int64
+
+function main {
+    arg_size: 0;
+	next_arg_size: 16;
+    ret_size: 8;
+    local_size: 32;
+
+    code: {
+        init_type int64_ptr; # &p = 0, p = NULL
+        init_type int64;     # &a = 16, a = 0
+
+        mov_l64_imm 16, 16;        # a = 16
+        store_lptr_l64_ofs 0, 16;  # p = a  (p = &a)
+        mov_l64_imm 16, 42;        # a = 5
+
+        deinit;
+
+        init_type int64;  # &b = 16, b = 0
+
+        load_l64_lptr_ofs 16, 0;  # b = *p, (b = a), a is freed
+
+        output_l64 0;
+        output_l64 8;
+        output_l64 16;
+
+        deinit;
+        deinit;
+        ret_l64 8;
+    }
+}

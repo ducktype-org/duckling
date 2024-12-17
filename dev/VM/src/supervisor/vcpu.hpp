@@ -50,7 +50,7 @@ namespace vm {
 		base::unique_ptr<std::stringstream> input_stream  = nullptr;
 		base::unique_ptr<std::stringstream> output_stream = nullptr;
 
-		base::Optional<vm::Code> loadedCode = {};
+		base::Optional<vm::VMProgram> loadedCode = {};
 
 		cpp::result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
 
@@ -196,7 +196,7 @@ namespace vm {
 		VCPU(bool use_stdio):
 			  status(api::ExecutionNotStarted{}),
 			  uses_stdio(use_stdio),
-			  serviceManager(*this){};
+			  serviceManager(*this) {};
 		virtual ~VCPU();
 	};
 }
