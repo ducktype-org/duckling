@@ -59,12 +59,10 @@ namespace vm::api {
 		request::Stop,
 		request::Run,
 		request::Join,
-		request::Input,
-		request::Output,
 		request::Step>;
 
-	// @TODO: this should also contain request::Input, request::Output.
-	using IORequest = std::variant<request::Attach, request::Detach>;
+	using IORequest
+		= std::variant<request::Input, request::Output, request::Attach, request::Detach>;
 
 	using DataRequest = std::variant<request::TypeMetadata, request::Block>;
 

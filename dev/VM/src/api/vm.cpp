@@ -72,13 +72,13 @@ namespace vm::api {
 
 	cpp::result<void, ApiError> input(PID pid, const std::string& input) {
 		return Supervisor::get()
-		    .doRequest(api::makeExecutorRequest(pid, request::Input{ input }))
+		    .doRequest(api::makeIORequest(pid, request::Input{ input }))
 		    .map(ignoreResponse);
 	}
 
 	cpp::result<response::Output, ApiError> output(PID pid) {
 		return Supervisor::get()
-		    .doRequest(api::makeExecutorRequest(pid, request::Output{}))
+		    .doRequest(api::makeIORequest(pid, request::Output{}))
 		    .flat_map(mapOrWrongResponse<response::Output>);
 	}
 

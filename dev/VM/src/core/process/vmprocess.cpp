@@ -112,8 +112,6 @@ namespace vm {
 				});
 			}
 			variant_case_novalue(api::request::Stop) { return stop(); }
-			variant_case(api::request::Input, input_request) { return input(input_request); }
-			variant_case_novalue(api::request::Output) { return output(); }
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 		CORE_UNREACHABLE();
@@ -158,6 +156,8 @@ namespace vm {
 	cpp::result<api::Response, api::CoreOperationError>
 		VMProcess::doRequest(const api::IORequest& request) {
 		variant_match(request) {
+			variant_case(api::request::Input, input_request) { return input(input_request); }
+			variant_case_novalue(api::request::Output) { return output(); }
 			variant_case(api::request::Attach, attach_request) {
 				getMainVMThread().notifyPaused();
 				return attach(attach_request.istream, attach_request.ostream);
