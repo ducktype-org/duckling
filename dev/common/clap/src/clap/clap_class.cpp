@@ -253,9 +253,9 @@ namespace {
 }
 
 namespace clap {
-	Clap& Clap::add(Parameter&& parameter) {
+	Clap&& Clap::add(Parameter&& parameter) {
 		parameters.push_back(std::move(parameter));
-		return *this;
+		return std::move(*this);
 	}
 
 	ParsingResult Clap::parse(CLIArgs args) { return parse(args.argc, args.argv); }
@@ -304,14 +304,14 @@ namespace clap {
 
 	const std::vector<Parameter>& Clap::getParameters() const { return parameters; }
 
-	Clap& Clap::addPositional(base::unique_ptr<ValueParser> parameter) {
+	Clap&& Clap::addPositional(base::unique_ptr<ValueParser> parameter) {
 		positional_parameters.push_back(std::move(parameter));
-		return *this;
+		return std::move(*this);
 	}
 
-	Clap& Clap::setDefaultParser(base::unique_ptr<ValueParser> parser) {
+	Clap&& Clap::setDefaultParser(base::unique_ptr<ValueParser> parser) {
 		default_value_parser = std::move(parser);
-		return *this;
+		return std::move(*this);
 	}
 
 	void Clap::validateParsing(ParsingResult& result) const {
@@ -347,7 +347,7 @@ namespace clap {
 
 	Clap::Clap() { default_value_parser = StringParser::make(); }
 
-	Clap& Clap::addHelpFlag() {
+	Clap&& Clap::addHelpFlag() {
 		return add(ParamBuilder::ofFlag()
 		               .addShortName('h')
 		               .addLongName("help")

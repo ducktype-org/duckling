@@ -535,7 +535,7 @@ namespace compiler::helios {
 
 			const auto const_symbol = dynamic_cast<const pst::Const*>(&*getSymRef(key)->pst_stmt);
 
-			auto eval = code::Expr::fromPST(ctx, const_symbol->getValue());
+			auto eval = ctx.query<QueryHoutOfExpr>({ const_symbol->getValue() });
 			if (eval.hasError()) return errors::HError(errors::Failed());
 			return EvaluateHoutExprVisitor::evaluateExpr(ctx, *eval.value());
 		}
@@ -556,7 +556,7 @@ namespace compiler::helios {
 		// @TODO Helios Type Fixes: this should be a method on hout, that just return
 		// type|error|can't-short-path (see also issue #385)
 
-		auto parsed = code::Expr::fromPST(ctx, expr);
+		auto parsed = ctx.query<QueryHoutOfExpr>({ expr });
 		if (parsed.hasError()) return errors::HError(parsed.error());
 		auto tree = std::move(parsed.value());
 		return tree->type_desc.getType();
@@ -788,7 +788,7 @@ namespace compiler::helios {
 			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
 
 			void setExprTree(const MCRef<pst::ExprElement>& expr) {
-				expr_tree = code::Expr::fromPST(ctx, expr);
+				expr_tree = ctx.query<QueryHoutOfExpr>({ expr });
 			}
 
 		public:
