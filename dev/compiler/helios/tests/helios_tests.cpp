@@ -130,19 +130,17 @@ private:
 			= query::entryPoint<tsh::QueryVariantType>({ { INT32_TYPE, F32_TYPE, BOOL_TYPE } });
 		ASSERT_EQUAL(true, second_variant == second_variant_type_info);
 
-		[[maybe_unused]]
-		const auto weird_variant = getTypeOf("weird_variant", root_scope);
+		[[maybe_unused]] const auto weird_variant = getTypeOf("weird_variant", root_scope);
 
-		const auto classA      = getTypeFromDefinition("A", root_scope);
-		const auto classB      = getTypeFromDefinition("B", root_scope);
-		const auto classC      = getTypeFromDefinition("C", root_scope);
+		const auto classA = getTypeFromDefinition("A", root_scope);
+		const auto classB = getTypeFromDefinition("B", root_scope);
+		const auto classC = getTypeFromDefinition("C", root_scope);
 
-		[[maybe_unused]]
-		auto       right_tuple = query::entryPoint<tsh::QueryTupleType>(
-            { { { classA, false },
-		              { query::entryPoint<tsh::QueryVariantType>({ { classB, classC } }), false } } }
-        );
-		
+		[[maybe_unused]] auto right_tuple = query::entryPoint<tsh::QueryTupleType>(
+			{ { { classA, false },
+		        { query::entryPoint<tsh::QueryVariantType>({ { classB, classC } }), false } } }
+		);
+
 		// @todo HOUT 2.0
 		// uncomment it, and make it work
 		// right now weird_variant_type has META instead of A/B/C as subtypes
@@ -157,7 +155,6 @@ private:
 		// ASSERT_EQUAL(true, weird_variant == weird_variant_type);
 
 		ASSERT_EQUAL(META_TYPE, getTypeOf("T", root_scope));
-
 	}
 
 	void testEdgeEvals() {

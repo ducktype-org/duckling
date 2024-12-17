@@ -660,7 +660,7 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind staticKind = Kind::Meta;
 
-		explicit MetaInfoImpl() { representation = "META"; };
+		explicit MetaInfoImpl() { representation = "META"; }
 	};
 
 	class ImportInfoImpl final: public TypeInfoImpl {

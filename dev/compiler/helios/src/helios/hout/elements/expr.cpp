@@ -33,7 +33,7 @@ namespace compiler::helios::code {
 			};
 			return BUILTINS.at(keyword);
 		}
-		
+
 		/**
 		 * @todo HOUT 2.0 This should be sort of moved to hout creation, and comp-time
 		 * maybe we will need it still in hout creation to detect tuples-types vs normal-tuples

@@ -24,7 +24,6 @@
 
 #include "../hout/comp_time.hpp"
 
-
 namespace compiler::helios {
 	/**
 	 * @TODO: move to some docs
@@ -561,7 +560,7 @@ namespace compiler::helios {
 			}
 
 			void setTypeOfSymbol(MCRef<pst::ExprElement> expr) {
-				auto tp = ctx.query<EvalExprToType>({expr});
+				auto tp = ctx.query<EvalExprToType>({ expr });
 				if (tp.hasValue()) setTypeOfSymbol(tp.value());
 			}
 
@@ -586,9 +585,9 @@ namespace compiler::helios {
 				param_types.reserve(params->size());
 
 				for (auto param: *params) {
-					// @TODO HOUT 2.0: we should create symbol from parameter here, and just get type of symbol.
-					// its not trivial, since parameter symbols don't exist yet
-					auto parse_type_res = ctx.query<EvalExprToType>({param->getType()});
+					// @TODO HOUT 2.0: we should create symbol from parameter here, and just get
+					// type of symbol. its not trivial, since parameter symbols don't exist yet
+					auto parse_type_res = ctx.query<EvalExprToType>({ param->getType() });
 					if (parse_type_res.hasValue()) {
 						param_types.emplace_back(parse_type_res.value());
 					} else {
@@ -598,7 +597,7 @@ namespace compiler::helios {
 				}
 				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
 				if (ret.has_value()) {
-					auto parsed = ctx.query<EvalExprToType>({ret.value()});
+					auto parsed = ctx.query<EvalExprToType>({ ret.value() });
 					if (parsed.hasValue()) {
 						ret_type = parsed.value();
 					} else {
@@ -722,8 +721,8 @@ namespace compiler::helios {
 			class_stmt->acceptVisitor(class_data_parser);
 			class_info.name = class_data_parser.name.value();
 
-			if_opt_some(class_data_parser.base_class, base) {Tuple
-				auto tp = ctx.query<EvalExprToType>({base});
+			if_opt_some(class_data_parser.base_class, base) {
+				Tuple auto tp = ctx.query<EvalExprToType>({ base });
 				if (tp.hasValue()) {
 					class_info.base = tp.value();
 				} else {
@@ -734,7 +733,7 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements) {
-					auto tp = ctx.query<EvalExprToType>({interface});
+					auto tp = ctx.query<EvalExprToType>({ interface });
 					if (tp.hasValue()) {
 						class_info.implements.push_back(tp.value());
 					} else {
