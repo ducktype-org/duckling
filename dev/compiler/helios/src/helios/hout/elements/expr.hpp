@@ -17,6 +17,11 @@
 #include <lexer/token_common.hpp>
 #include "evaluations.hpp"
 
+namespace compiler::helios {
+	// forward declaration for friend:
+	struct ImplementationOf_EvalExprToType;
+}
+
 namespace compiler::helios::code {
 	class HoutExprVisitor;
 
@@ -52,9 +57,7 @@ namespace compiler::helios::code {
 			// this is the default:
 			return errors::HError(CouldNotEvalShortPath());
 		}
-
-		// note: this will not work
-		friend struct ImplementationOF_EvalExprToType;
+		friend ImplementationOf_EvalExprToType;
 	
 	};
 
