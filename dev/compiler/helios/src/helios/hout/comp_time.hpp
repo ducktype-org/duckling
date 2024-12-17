@@ -25,6 +25,8 @@ namespace compiler::helios {
     /**
      * Given the PST expression, parses it and evaluates this expression to type
 	 * @return tsh::TypeInfo with information about the evaluated type.
+     * @todo should this return type info or type desc, we should have a document
+     * defining which one is which
 	 */
     DECLARE_QUERY(EvalExprToType, KeyOf_EvalExprToType, TypeEvalResult)
 }

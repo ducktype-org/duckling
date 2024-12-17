@@ -26,7 +26,9 @@ namespace compiler::helios::code {
 		}
 
 		/**
-		 * @TODO dont flatten variants (even if, then dont do it here)
+		 * @note this flatten variants, because there are binary operators in PST
+		 * The construction is kind of weird, since we
+		 * make lhs, rhs, and just extract subtypes from them.
 		 */
 		base::Box<VariantConstructorExpr> constructVariantFrom(
 			query::Context& ctx, ScopeID scope, base::Box<Expr> lhs, base::Box<Expr> rhs
@@ -131,13 +133,15 @@ namespace compiler::helios::code {
 					// 	return;
 					// }
 
-					// @TODO: should this not be .value == "|"?
-					// if (stmt.getOperator().str()[0] == '|' && lhs_vis_expr.is_type_expr
-					//     && rhs_vis_expr.is_type_expr) {
-					// 	node = constructVariantFrom(
-					// 		ctx, scope, std::move(*lhs.node), std::move(*rhs.node)
-					// 	);
-					// } else {
+					if (stmt.getOperator().str() == "|") {
+						// @todo hout-2.0:
+						// here we assume that "|" always produces a variant (likely valid)
+						// put constructVariantFrom treats types incorrectly,
+						// as its type is not "meta", but the variant itself
+						node = constructVariantFrom(
+							ctx, scope, std::move(*lhs.node), std::move(*rhs.node)
+						);
+					} else {
 						node = makeBox<BinaryOperatorExpr>(
 							ctx,
 							scope,
@@ -145,7 +149,7 @@ namespace compiler::helios::code {
 							std::move(*lhs.node),
 							std::move(*rhs.node)
 						);
-					// }
+					}
 					// clang format on
 				}
 			}
