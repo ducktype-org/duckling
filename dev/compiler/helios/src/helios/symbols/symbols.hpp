@@ -127,8 +127,7 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, CRef<errors::HResult<i64 COMMA errors::Failed>>)
 
-	using ParseTypeFromExpr_Result = errors::HResult<tsh::TypeInfo, PotentialParsingErrors>;
-	using QueryType_Result         = errors::HResult<tsh::TypeInfo, errors::Failed>;
+	using QueryType_Result = errors::HResult<tsh::TypeInfo, errors::Failed>;
 
 	/**
 	 * @brief Query type of the symbol.

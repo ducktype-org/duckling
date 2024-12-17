@@ -23,6 +23,7 @@
 #include <typesystem/higher/type_info.hpp>
 
 #include "../hout/elements/evaluations.hpp"
+#include "../hout/comp_time.hpp"
 
 
 namespace compiler::helios {
@@ -550,41 +551,6 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
-	/**
-	 * Parses the expression and evaluates it to type.
-	 * @param ctx Context passed to a query.
-	 * @param expr A PST ExprElement.
-	 * @return tsh::TypeInfo with information about the evaluated type.
-	 */
-	ParseTypeFromExpr_Result evalTypeFromPSTExpr(query::Context& ctx, MCRef<pst::ExprElement> expr) {
-		// @TODO Helios Type Fixes: this should be a method on hout, that just return
-		// type|error|can't-short-path (see also issue #385)
-
-		auto parsed = ctx.query<QueryHoutOfExpr>({ expr });
-		if (parsed.hasError()) return errors::HError(parsed.error());
-
-		auto tree = std::move(parsed.value());
-		auto result = tree->evalToType(ctx);
-
-		// note: short/long path logic should be hidden
-		// passing pst to query eval to type is cool, since it will be able to report errors
-
-		if (result.hasError()) {
-			variant_match(result.error()) {
-				variant_case(CouldNotEvalShortPath, _) {
-					throw base::NotYetImplemented("standard comp time not yet implemented");
-				}
-				variant_case(errors::Failed, _) {
-					return errors::HError(errors::Failed());
-				}
-				variant_default {
-					CORE_PANIC("Some case not handled");
-				}
-			}
-		}
-		return result.value();
-	}
-
 	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QueryType_Result) {
 		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
 			Context& ctx;
@@ -596,7 +562,7 @@ namespace compiler::helios {
 			}
 
 			void setTypeOfSymbol(MCRef<pst::ExprElement> expr) {
-				auto tp = evalTypeFromPSTExpr(ctx, expr);
+				auto tp = ctx.query<EvalExprToType>({expr});
 				if (tp.hasValue()) setTypeOfSymbol(tp.value());
 			}
 
@@ -622,7 +588,7 @@ namespace compiler::helios {
 
 				for (auto param: *params) {
 					// TODO (in this PR?): we should create symbol from parameter here, and just get type of symbol:
-					auto parse_type_res = evalTypeFromPSTExpr(ctx, param->getType());
+					auto parse_type_res = ctx.query<EvalExprToType>({param->getType()});
 					if (parse_type_res.hasValue()) {
 						param_types.emplace_back(parse_type_res.value());
 					} else {
@@ -632,7 +598,7 @@ namespace compiler::helios {
 				}
 				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
 				if (ret.has_value()) {
-					auto parsed = evalTypeFromPSTExpr(ctx, ret.value());
+					auto parsed = ctx.query<EvalExprToType>({ret.value()});
 					if (parsed.hasValue()) {
 						ret_type = parsed.value();
 					} else {
@@ -762,7 +728,7 @@ namespace compiler::helios {
 				// (see also issue #385)
 				// done?
 
-				auto tp = evalTypeFromPSTExpr(ctx, base);
+				auto tp = ctx.query<EvalExprToType>({base});
 				if (tp.hasValue()) {
 					class_info.base = tp.value();
 				} else {
@@ -773,7 +739,7 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements) {
-					auto tp = evalTypeFromPSTExpr(ctx, interface);
+					auto tp = ctx.query<EvalExprToType>({interface});
 					if (tp.hasValue()) {
 						class_info.implements.push_back(tp.value());
 					} else {

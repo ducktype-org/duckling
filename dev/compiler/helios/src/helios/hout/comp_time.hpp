@@ -13,13 +13,18 @@ namespace compiler::helios {
     using TypeEvalResult = errors::HResult<tsh::TypeInfo, errors::Failed>;
 
     struct KeyOf_EvalExprToType {
-        Ref<pst::ExprElement> expr;
-        // todo: hash, ==
-        // todo: make template for pst-query keys
+        MCRef<pst::ExprElement> expr;
+
+
+        bool operator==(const KeyOf_EvalExprToType&) const = default;
+
+        [[nodiscard]]
+        base::HashT customPerfectHash() const;
     };
     
     /**
-     * Given the PST element, evaluates type of that element
-     */
+     * Given the PST expression, parses it and evaluates this expression to type
+	 * @return tsh::TypeInfo with information about the evaluated type.
+	 */
     DECLARE_QUERY(EvalExprToType, KeyOf_EvalExprToType, TypeEvalResult)
 }
