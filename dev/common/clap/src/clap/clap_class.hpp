@@ -45,11 +45,11 @@ namespace clap {
 			  parameters(std::move(other.parameters)) {}
 
 		// Clap is move-only
-		Clap& operator=(Clap&& other) noexcept {
+		Clap&& operator=(Clap&& other) noexcept {
 			default_value_parser  = std::move(other.default_value_parser);
 			positional_parameters = std::move(other.positional_parameters);
 			parameters            = std::move(other.parameters);
-			return *this;
+			return std::move(*this);
 		}
 
 		/**
@@ -57,28 +57,28 @@ namespace clap {
 		 * @param parameter A parameter constructed with clap::ParamBuilder.
 		 * @return A reference to self.
 		 */
-		Clap& add(Parameter&& parameter);
+		Clap&& add(Parameter&& parameter);
 
 		/**
 		 * Adds a positional parameter without a name to the Clap.
 		 * @param parameter value parser created like: clap::StringParser::make().
 		 * @return A reference to self.
 		 */
-		Clap& addPositional(base::unique_ptr<ValueParser> parameter);
+		Clap&& addPositional(base::unique_ptr<ValueParser> parameter);
 
 		/**
 		 * Sets the default value parser for the Clap. Might be a nullptr.
 		 * @param parser A value parser to be used.
 		 * @return A reference to self.
 		 */
-		Clap& setDefaultParser(base::unique_ptr<ValueParser> parser);
+		Clap&& setDefaultParser(base::unique_ptr<ValueParser> parser);
 
 		/**
 		 * Adds a standard help flag functionality.
 		 * If flag is passed raises clap::exceptions::HelpException.
 		 * @return A reference to self.
 		 */
-		Clap& addHelpFlag();
+		Clap&& addHelpFlag();
 
 		/**
 		 * Perform parsing.
