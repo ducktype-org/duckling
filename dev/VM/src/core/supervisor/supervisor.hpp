@@ -12,8 +12,8 @@ namespace vm {
 	private:
 		Supervisor() = default;
 
-		std::shared_mutex                                    rwProcessTable;
-		PID                                                  next = 0;
+		std::shared_mutex                       rwProcessTable;
+		PID                                     next = 0;
 		std::unordered_map<PID, Box<VMProcess>> processTable;
 
 		cpp::result<Ref<VMProcess>, api::ApiError> getProcess(PID pid);
