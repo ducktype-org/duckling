@@ -1,13 +1,13 @@
 #include <query_framework/query_impl.hpp>
-#include "query_hout_of_expr.hpp"
-
-#include "../../scopes/scopes.hpp"
 #include <pst_parser/pst_expr_visitor.hpp>
-#include "../visitors.hpp"
-#include "expr.hpp"
 
 #include <base/optional.hpp>
 #include <base/box.hpp>
+
+#include "../../scopes/scopes.hpp"
+#include "../visitors.hpp"
+#include "query_hout_of_expr.hpp"
+#include "expr.hpp"
 
 namespace compiler::helios::code {
 	namespace {

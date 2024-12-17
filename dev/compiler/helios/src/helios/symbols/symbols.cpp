@@ -1,26 +1,26 @@
 #include "symbols.hpp"
 
+#include <vector>
+#include <cmath>
+
 #include <base/exceptions.hpp>
 #include <base/string_id.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/stable_container.hpp>
 #include <base/variant.hpp>
 #include <base/unique_pointer.hpp>
+#include <base/optional.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/pst_visitor.hpp>
-#include <helios/hout/elements.hpp>
-
-#include <vector>
+#include <typesystem/higher/type_info.hpp>
 
 #include <pst_parser/elements/hierarchy/not_statements.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <cmath>
-#include <base/optional.hpp>
+#include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
-#include <typesystem/higher/type_info.hpp>
 
 #include "../hout/comp_time.hpp"
 
@@ -722,7 +722,7 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				Tuple auto tp = ctx.query<EvalExprToType>({ base });
+				auto tp = ctx.query<EvalExprToType>({ base });
 				if (tp.hasValue()) {
 					class_info.base = tp.value();
 				} else {

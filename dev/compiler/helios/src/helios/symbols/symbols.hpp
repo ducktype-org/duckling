@@ -7,9 +7,9 @@
 #include <query_framework/query_int.hpp>
 #include <pst_parser/elements/elements.hpp>
 
-#include "../lookup_result.hpp"
-#include "../helios_errors.hpp"
-#include "../helios_result.hpp"
+#include <helios/lookup_result.hpp>
+#include <helios/helios_errors.hpp>
+#include <helios/helios_result.hpp>
 #include <base/box.hpp>
 #include <base/unique_pointer.hpp>
 #include <typesystem/higher/type_info.hpp>
