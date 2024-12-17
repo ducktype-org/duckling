@@ -65,6 +65,9 @@ namespace compiler::helios {
 				case Keyword::u128:
                     output(ctx.query<tsh::QueryIntegralType>({128, false}));
                     break;
+				case Keyword::f16:
+                    output(ctx.query<tsh::QueryFloatType>(16));
+                    break;
 				case Keyword::f32:
                     output(ctx.query<tsh::QueryFloatType>(32));
                     break;
@@ -82,7 +85,7 @@ namespace compiler::helios {
                     break;
 
 				default:
-				    CORE_PANIC("KeywordExpr not yet handled by HoutIsTypeExprVisitor");
+				    CORE_PANIC("Keyword not yet handled by ShortPathVisitor");
 				}
 			}
 
