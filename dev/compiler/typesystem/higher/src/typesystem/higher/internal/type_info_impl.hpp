@@ -635,7 +635,6 @@ namespace tsh::internal {
 
 	class ModuleInfoImpl final: public TypeInfoImpl {
 	public:
-		
 		[[nodiscard]]
 		Kind getKind() const override {
 			return staticKind;

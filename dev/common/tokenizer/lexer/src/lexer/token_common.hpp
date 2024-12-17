@@ -19,7 +19,6 @@ namespace lexer {
 
 		[[nodiscard]]
 		std::string str() const {
-			// @todo: delete StrID here?
 			return value.str();
 		}
 
