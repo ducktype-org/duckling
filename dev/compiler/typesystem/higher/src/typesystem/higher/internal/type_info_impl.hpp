@@ -635,6 +635,7 @@ namespace tsh::internal {
 
 	class ModuleInfoImpl final: public TypeInfoImpl {
 	public:
+		
 		[[nodiscard]]
 		Kind getKind() const override {
 			return staticKind;
@@ -660,7 +661,7 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind staticKind = Kind::Meta;
 
-		explicit MetaInfoImpl() = default;
+		explicit MetaInfoImpl() { representation = "META"; };
 	};
 
 	class ImportInfoImpl final: public TypeInfoImpl {
