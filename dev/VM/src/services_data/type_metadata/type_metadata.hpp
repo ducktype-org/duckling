@@ -47,6 +47,6 @@ namespace vm {
 		template<class... DynamicData>
 		friend class DataManagerDef;
 
-		friend class Program;
+		friend class VMProgram;
 	};
 }

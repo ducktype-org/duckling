@@ -102,6 +102,7 @@ namespace vm {
 			return getKind() == Kind::Primitive and getSize() == qsize;
 		}
 
+		[[nodiscard]]
 		base::Optional<TypeCRef> getLowestTypeAtPos(Offset pos) const;
 
 

@@ -7,7 +7,6 @@
 #include <filesystem/file.hpp>
 #include "base/string_id.hpp"
 #include "instruction.hpp"
-#include <services/preprocessor_f8/parser/parser.hpp>
 #include "services_data/type_metadata/type_metadata.hpp"
 #include <vector>
 
@@ -34,18 +33,22 @@ namespace vm {
 	public:
 		VMProgram() = default;
 
-		cpp::result<VMProgram, std::string> includeFile(const fs::FilePath& file) const {
-			auto code = assemble::assemble(file, type_meta_data);
+		// cpp::result<VMProgram, std::string> includeFile(const fs::FilePath& file) const {
+		// 	auto code = assemble::assemble(file, type_meta_data);
 
-			// @TODO: Report an error
-			if (code.has_error()) return false;
+		// 	// @TODO: Report an error
+		// 	if (code.has_error()) return false;
 
-			code.
-		}
+		// 	code.
+		// }
+
+		static cpp::result<VMProgram, std::string> assemble(const fs::FilePath& file);
+		static cpp::result<vm::VMProgram, std::string>
+			assemble(const std::vector<fs::FilePath>& file);
 
 	private:
 		base::StableHashMap<base::StrID, FuncData> name_to_fun;
 
-		TypeMetadata type_meta_data;
+		TypeMetadata type_metadata;
 	};
 }

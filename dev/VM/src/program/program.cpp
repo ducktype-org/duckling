@@ -1,5 +1,4 @@
-
-#include "parser.hpp"
+#include "program.hpp"
 #include <base/exceptions.hpp>
 #include <program/program.hpp>
 #include <program/opcodes.hpp>
@@ -653,15 +652,15 @@ namespace assemble {
 	}
 
 	tpc::ParserRef<ParsedCode> ParsedCode::parse(F8ParserState& state) {
-		ParsedCode out;
+		auto out = tpc::makeRef<ParsedCode>();
 
 		while (state.notEmpty()) {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state);
-				if (type != nullptr) out.types.emplace_back(std::move(type));
+				if (type != nullptr) out->types.emplace_back(std::move(type));
 			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state);
-				if (func != nullptr) out.functions.emplace_back(std::move(func));
+				if (func != nullptr) out->functions.emplace_back(std::move(func));
 			} else {
 				state.fail(0, "Unexpected keyword");
 				return out;
@@ -675,7 +674,7 @@ namespace assemble {
 		// @TODO: https://github.com/ducktype-org/rift-poc-zpp1/issues/70
 		bool                       ok    = true;
 		std::string                error = "";
-		base::Optional<ParsedCode> code;
+		tpc::ParserRef<ParsedCode> code;
 		void                       print(std::ostream&);
 	};
 
@@ -685,7 +684,7 @@ namespace assemble {
 		lang_def::setKeywordMode(lang_def::KeywordMode::DuckBC);
 
 		auto maybeContent = path.getContentSafe();
-		if (maybeContent.has_error()) return CodeContainer{ false, maybeContent.error(), {} };
+		if (maybeContent.has_error()) return CodeContainer{ false, maybeContent.error(), nullptr };
 
 		tokenizer::OwnFile file = lexer::tokenizeFile(path);
 
@@ -697,27 +696,29 @@ namespace assemble {
 			tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()), log
 		);
 
-		ParsedCode out = ParsedCode::parse(state);
+		tpc::ParserRef<ParsedCode> out = ParsedCode::parse(state);
 
 		std::stringstream err_stream;
 		log.dumpLog(false, err_stream);
 
-		return { log.good(), err_stream.str(), out };
+		return { log.good(), err_stream.str(), std::move(out) };
 	}
 
-	// returns true if was successfully
-	bool defineTypes(CodeContainer& code, vm::TypeMetadata& type_metadata) {
+	// Returns empty optional if was successful,
+	// otherwise a string with an error.
+	// @TODO: On C++23, replace with std::result.
+	base::Optional<std::string> defineTypes(
+		const std::vector<tpc::ParserRef<Type>>& types, vm::TypeMetadata& type_metadata
+	) {
 		base::Map<base::StrID, vm::TypeRef> type_map;
 
-		for (auto& type: code.code->types) {
+		// Insert type names and types to type_metadata
+		for (auto& type: types) {
 			base::StrID name = VISIT(type->datatype, value, return value.name);
 
 			if (type_map.contains(name)) {
-				code.ok = false;
-				code.error += base::strConcat("Error: repeated type: ", name, "\n");
-
-				/// Possible we can allow to continue
-				return false;
+				// Possibly, we can allow to continue
+				return base::strConcat("Error: repeated type: ", name, "\n");
 			}
 
 			vm::Type typ      = vm::Type::declareType(name);
@@ -725,7 +726,7 @@ namespace assemble {
 			type_map.put(name, type_ref);
 		}
 
-		for (auto& type: code.code->types) {
+		for (auto& type: types) {
 			variant_match(type->datatype) {
 				variant_case(PrimitiveType, data) {
 					type_map[data.name]->definePrimitive(data.size);
@@ -764,8 +765,7 @@ namespace assemble {
 		}
 
 		type_metadata.finalize();
-
-		return true;
+		return {};
 	}
 
 	void CodeContainer::print(std::ostream& out) {
@@ -912,10 +912,14 @@ namespace assemble {
 	// 	return functions;
 	// }
 
+}
 
-	cpp::result<vm::VMProgram, std::string> assemble(const std::vector<fs::FilePath>& files) {
+namespace vm {
+
+	cpp::result<vm::VMProgram, std::string> vm::VMProgram::assemble(const std::vector<fs::FilePath>& files) {
+		vm::VMProgram program;
 		for (auto& file: files) {
-			auto parsed_code = parseFile(file);
+			auto parsed_code = assemble::parseFile(file);
 
 			// @TODO:
 			// it is left, because JSON is broken
@@ -923,10 +927,10 @@ namespace assemble {
 
 			if (!parsed_code.ok) return cpp::fail(parsed_code.error);
 
-			bool status = defineTypes(parsed_code, type_metadata);
-			if (!status) return cpp::fail(parsed_code.error);
+			auto opt_err = assemble::defineTypes(parsed_code.code->types, program.type_metadata);
+			if (opt_err) return cpp::fail(*opt_err);
 
-			auto result = getCode(parsed_code, type_metadata);
+			auto result = assemble::getCode(parsed_code, program.type_metadata);
 
 			// parsed_code.print(std::cerr);
 		}
@@ -938,7 +942,7 @@ namespace assemble {
 		return assemble(std::vector{ file });
 	}
 
-	cpp::result<ParsedCode, std::string> parse(const fs::FilePath& file) {
+	cpp::result<tpc::ParserRef<ParsedCode>, std::string> parse(const fs::FilePath& file) {
 		auto parsed_code = parseFile(file);
 
 		// @TODO:
@@ -946,7 +950,7 @@ namespace assemble {
 		std::cerr << parsed_code.error;
 
 		if (!parsed_code.ok) return cpp::fail(parsed_code.error);
-		if (!parsed_code.code) CORE_UNREACHABLE("parsed_code.ok and no code");
+		if (!parsed_code.code) CORE_PANIC("parsed_code.ok and no code");
 		return std::move(parsed_code.code);
 
 		// bool status = defineTypes(parsed_code, type_metadata);
