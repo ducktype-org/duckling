@@ -173,7 +173,7 @@ namespace pst {
 		 * it's own parsing in the future
 		 */
 		class TemplateSpecifier final: public ExprElement {
-			MBox<ExprElement> inner;
+			MBox<TemplateList> inner;
 
 		public:
 			TemplateSpecifier(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
@@ -280,7 +280,7 @@ namespace pst {
 		class Call final: public ExprElement {
 			lexer::Token::BracketType type
 				= lexer::Token::BracketType::None;  ///< either Round or Square
-			MBox<ExprElement> args;
+			MBox<CallList> args;
 
 		public:
 			Call(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
