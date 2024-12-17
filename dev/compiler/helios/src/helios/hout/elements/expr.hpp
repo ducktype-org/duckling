@@ -15,12 +15,9 @@
 #include <helios/lookup_result.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <lexer/token_common.hpp>
-#include "evaluations.hpp"
 
 namespace compiler::helios::code {
 	class HoutExprVisitor;
-
-	using EvalToType_Result = errors::HResult<tsh::TypeInfo, CouldNotEvalShortPath, errors::Failed>;
 
 	/**
 	 * @brief Base class for all HOUT expressions.

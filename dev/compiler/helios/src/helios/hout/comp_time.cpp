@@ -10,6 +10,11 @@ namespace compiler::helios {
 
     struct IMPLEMENT_QUERY(EvalExprToType, TypeEvalResult) {
 
+        /**
+         * State representing failure to short-path 
+         */
+        struct CouldNotEvalShortPath {};
+
         using ShortPathResult = errors::HResult<tsh::TypeInfo, CouldNotEvalShortPath, errors::Failed>;
 
         /**
