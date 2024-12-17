@@ -41,14 +41,6 @@ namespace compiler::helios::code {
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
 		
-		/**
-		 * @TODO: it should be wrapped into a query, to not build now tree each time
-		 * This method should be private, and query should be friends
-		 */
-		static errors::HResult<base::Box<Expr>, errors::Failed>
-			fromPST(query::Context& ctx, MCRef<pst::ExprElement> root);
-
-
 	private:
 		using EvalToType_Result = errors::HResult<tsh::TypeInfo, CouldNotEvalShortPath, errors::Failed>;
 
