@@ -74,7 +74,7 @@ namespace tsh::internal {
 		 * @return The text representation of this type.
 		 */
 		[[nodiscard]]
-		virtual const std::string& toString() const {
+		const std::string& toString() const {
 			// @TODO: this is just a draft, in the future this method may
 			// have verbosity / depth given as parameter
 			return representation;

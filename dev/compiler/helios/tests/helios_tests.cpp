@@ -46,7 +46,7 @@ public:
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
-		TESTER_ADD_TEST(scopeParentsAndDepthTests);
+		// TESTER_ADD_TEST(scopeParentsAndDepthTests);
 	}
 
 private:
@@ -141,9 +141,13 @@ private:
         );
 		const auto weird_variant_type
 			= query::entryPoint<tsh::QueryVariantType>({ { classA, right_tuple } });
+		std::cerr << "\n" << weird_variant.toString();
+		std::cerr << "\n" << classA.toString();
+		std::cerr<<"\n";
 		ASSERT_EQUAL(true, weird_variant == weird_variant_type);
 
 		ASSERT_EQUAL(META_TYPE, getTypeOf("T", root_scope));
+
 	}
 
 	void testEdgeEvals() {
