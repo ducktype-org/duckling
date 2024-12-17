@@ -106,13 +106,15 @@ namespace compiler::helios {
             }
 
 			void visitTupleConstructorExpr(const code::TupleConstructorExpr& expr) override {
-				// @todo hout2.0: this is incorrect, type of this expression
+				// @todo HOUT 2.0: this is generally an incorrect implementation,
+                // type of this expression
 				// will be a meta in the future
 				output(expr.type_desc.getType()); 
 			}
 			
 			void visitVariantConstructorExpr(const code::VariantConstructorExpr& expr) override {
-				// @todo hout2.0: this is incorrect, type of this expression
+				// @todo HOUT 2.0: this is generally an incorrect implementation,
+                // type of this expression
 				// will be a meta in the future
 				output(expr.type_desc.getType()); 
 			}

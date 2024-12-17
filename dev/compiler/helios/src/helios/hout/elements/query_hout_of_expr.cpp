@@ -134,7 +134,7 @@ namespace compiler::helios::code {
 					// }
 
 					if (stmt.getOperator().str() == "|") {
-						// @todo hout-2.0:
+						// @todo HOUT 2.0:
 						// here we assume that "|" always produces a variant (likely valid)
 						// put constructVariantFrom treats types incorrectly,
 						// as its type is not "meta", but the variant itself

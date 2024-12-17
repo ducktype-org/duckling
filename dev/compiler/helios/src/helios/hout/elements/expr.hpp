@@ -96,7 +96,7 @@ namespace compiler::helios::code {
 	 * Against:
 	 * - We have/will have TupleConstructorExpr and VariantConstructor Expr.
 	 * 
-	 * @TODO Hout 2.0 just delete it, we should print "()" from hout structure anyway
+	 * @TODO HOUT 2.0 just delete it, we should print "()" from hout structure anyway
 	 */
 	struct ParenthesisExpr final: public Expr {
 		base::Box<Expr> inner;
@@ -138,7 +138,7 @@ namespace compiler::helios::code {
 		// that resolves the operator
 		pst::Operator op;
 
-		// @TODO hout-2.0: this should not be needed at this stage
+		// @TODO HOUT 2.0: this should not be needed at this stage
 		bool prefix = false;  // prefix/suffix
 
 		base::Box<Expr> expr;
@@ -151,7 +151,7 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Tuple constructor inside an expression.
-	 * @todo hout 2.0 type of this expr is the type of tuple, not meta type
+	 * @todo HOUT 2.0 type of this expr is the type of tuple, not meta type
 	 * we should fix it here, and comp-time.
 	 * We might want to keep this element, the question is
 	 * where (any maybe how) we distinguish between tuple-expressions and tuple-types.
@@ -170,7 +170,7 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Variant constructor inside an expression.
 	 * @todo Does it work like a chain?
-	 * @todo hout 2.0 type of this expr is the type of variant, not meta type
+	 * @todo HOUT 2.0 type of this expr is the type of variant, not meta type
 	 * we should fix it here, and comp-time.
 	 * We should probably delete this element.
 	 */

@@ -586,7 +586,7 @@ namespace compiler::helios {
 				param_types.reserve(params->size());
 
 				for (auto param: *params) {
-					// TODO hout 2.0: we should create symbol from parameter here, and just get type of symbol.
+					// @TODO HOUT 2.0: we should create symbol from parameter here, and just get type of symbol.
 					// its not trivial, since parameter symbols don't exist yet
 					auto parse_type_res = ctx.query<EvalExprToType>({param->getType()});
 					if (parse_type_res.hasValue()) {
@@ -722,12 +722,7 @@ namespace compiler::helios {
 			class_stmt->acceptVisitor(class_data_parser);
 			class_info.name = class_data_parser.name.value();
 
-			if_opt_some(class_data_parser.base_class, base) {
-				// @TODO Helios Type Fixes
-				// change this to new hout type eval
-				// (see also issue #385)
-				// done?
-
+			if_opt_some(class_data_parser.base_class, base) {Tuple
 				auto tp = ctx.query<EvalExprToType>({base});
 				if (tp.hasValue()) {
 					class_info.base = tp.value();

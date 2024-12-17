@@ -143,7 +143,7 @@ private:
 		              { query::entryPoint<tsh::QueryVariantType>({ { classB, classC } }), false } } }
         );
 		
-		// @todo hout 2.0
+		// @todo HOUT 2.0
 		// uncomment it, and make it work
 		// right now weird_variant_type has META instead of A/B/C as subtypes
 		// its not a trivial fix to do unfortunately
