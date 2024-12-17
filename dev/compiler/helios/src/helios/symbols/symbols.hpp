@@ -10,14 +10,13 @@
 #include "../lookup_result.hpp"
 #include "../helios_errors.hpp"
 #include "../helios_result.hpp"
-#include "base/box.hpp"
+#include <base/box.hpp>
 #include <base/unique_pointer.hpp>
 #include <typesystem/higher/type_info.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>
-#include <typesystem/higher/type_info.hpp>
 
 namespace compiler::helios {
 
@@ -73,15 +72,6 @@ namespace compiler::helios {
 	MCRef<pst::Stmt> stmt(SymID);
 
 	struct KeyOf_QuerySymbolOfSTMT {
-		/**
-		 * @brief scope to create symbol in
-		 *
-		 * @TODO: is this needed? -- now you can create two symbols from the same pst element.
-		 * It might be better to derive scope structure directly from PST structure.
-		 * @TODO: scopes are already derived like this, it should now be deleted
-		 */
-		ScopeID scope;
-
 		/**
 		 * @brief Statement to change to symbol
 		 */
@@ -158,6 +148,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Does QueryTypeOfSymbol and upon failing does QueryTypeFromDefinition.
+	 * @todo Helios Type Fixes: delete this query (see also issue #385)
 	 */
 	DECLARE_QUERY(QueryTypeOfSymbolOrDefinition, SymID, CRef<QueryType_Result>);
 
@@ -212,6 +203,7 @@ namespace compiler::helios {
 	 * @brief Return Expr tree of HOUT of a expression assigned to a constant.
 	 * @note This query is temporary and is used for testing only.
 	 * @note type of this query is weird, but it will likely be refactored in expr-2.0 anyway
+	 * @todo Helios-types-fixes: probably delete this query (see also issue #385)
 	 */
 	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, CRef<errors::HResult<base::Box<code::Expr> COMMA errors::Failed>>);
 }

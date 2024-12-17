@@ -14,22 +14,13 @@
 
 namespace compiler::helios {
 
-	void debugPrintScopeAndParents(ScopeID scope) {
-		std::cerr << scope.customPerfectHash() << " -> ";
-		while (parent(scope)) {
-			scope = parent(scope).value();
-			std::cerr << scope.customPerfectHash() << " -> ";
-		}
-		std::cerr << "\n";
-	}
-
 	struct IMPLEMENT_QUERY(QueryTopLevelEntities, HOUTUnit) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// go over all to level symbols and get theirs hout
 			// store it in some vector or something
 			// lookup all and stuff
 
-			auto main_file_root_scope = extendQueryRootScopeOfMainModuleFile(ctx, key);
+			auto main_file_root_scope = queryRootScopeOfMainModuleFile(ctx, key);
 
 			auto symbols_in_module_root = ctx.query<QuerySymbolsInScope>(main_file_root_scope);
 
@@ -132,22 +123,9 @@ namespace compiler::helios {
 			void visitVariable(const pst::Variable& stmt) override {
 				// @TODO: do something with mut/immut
 
-				// @note: This is a hot-path, that should work *most*
-				// of the times. It will be changed during scope refactor.
-				auto    stmt_parent        = stmt.getParent().value();
-				auto    stmt_parent_parent = stmt_parent->getParent().value();
-				ScopeID scope_of_symbol    = scopeOf(*stmt_parent);
-				// @todo: change the usage of elementType to elementKind (once its implemented)
-				// scope refactor will fix it
-				if (stmt_parent_parent->elementType() == "Code Block or Statement"
-				    and stmt_parent->elementType() == "Code Block") {
-					scope_of_symbol = parent(scope_of_symbol).value();
-				}
-
 				// @TODO: error handling
 
-				auto symbol
-					= ctx.query<QuerySymbolOfSTMT>({ scope_of_symbol, MCRef<pst::Stmt>(&stmt) });
+				auto symbol = ctx.query<QuerySymbolOfSTMT>({ MCRef<pst::Stmt>(&stmt) });
 
 				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 					"Handling errors is not supported in HOUT yet"
@@ -158,9 +136,9 @@ namespace compiler::helios {
 				auto initial_value = ctx.query<QueryHoutOfExpr>({ stmt.getValue() })
 				                         .expect("Not handling errors here yet...");
 
-				output(code::VariableStmt(
-					scope_of_symbol, std::move(initial_value), symbol_type, symbol
-				));
+				output(
+					code::VariableStmt(scope(symbol), std::move(initial_value), symbol_type, symbol)
+				);
 			}
 		};
 
