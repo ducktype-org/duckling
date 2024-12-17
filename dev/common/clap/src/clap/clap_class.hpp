@@ -39,18 +39,15 @@ namespace clap {
 		Clap();
 
 		// Clap is move-only
-		Clap(Clap&& other) noexcept:
-			  default_value_parser(std::move(other.default_value_parser)),
-			  positional_parameters(std::move(other.positional_parameters)),
-			  parameters(std::move(other.parameters)) {}
-
-		// Clap is move-only
-		Clap&& operator=(Clap&& other) noexcept {
+		Clap& operator=(Clap&& other) noexcept {
 			default_value_parser  = std::move(other.default_value_parser);
 			positional_parameters = std::move(other.positional_parameters);
 			parameters            = std::move(other.parameters);
-			return std::move(*this);
+			return *this;
 		}
+
+		// Clap is move-only
+		Clap(Clap&& other) noexcept: Clap() { *this = std::move(other); }
 
 		/**
 		 * Adds a named parameter to the Clap.
