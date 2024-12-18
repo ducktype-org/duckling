@@ -286,7 +286,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryHoutOfExpr, ExprConstructionResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO static assert this is top-expr
-			return code::fromPST(ctx, key.expr);
+			return code::fromPST(ctx, key.element);
 		}
 
 		// @TODO: perhaps add cache
@@ -300,10 +300,4 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
-
-	base::HashT KeyOf_QueryHoutOfExpr::customPerfectHash() const {
-		auto hash_1 = this->expr->getID().asInt();
-
-		return hash_1;
-	}
 }

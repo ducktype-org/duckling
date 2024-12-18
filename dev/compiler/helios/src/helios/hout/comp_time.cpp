@@ -125,7 +125,7 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto parsed = ctx.query<QueryHoutOfExpr>({ key.expr });
+			auto parsed = ctx.query<QueryHoutOfExpr>({ key.element });
 			if (parsed.hasError()) return errors::HError(parsed.error());
 
 			ShortPathVisitor visitor(ctx);
@@ -152,6 +152,4 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(EvalExprToType);
-
-	base::HashT KeyOf_EvalExprToType::customPerfectHash() const { return expr->getID().asInt(); }
 }

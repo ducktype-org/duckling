@@ -1,8 +1,11 @@
 #pragma once
 
 #include <query_framework/query_int.hpp>
-#include <pst_parser/elements/elements_list.hpp>
+#include <pst_parser/generic_query_key.hpp>
 #include <typesystem/higher/type_info.hpp>
+
+// this is needed here so contraint from GenericPSTQueryKey is satisfied:
+#include <pst_parser/elements/hierarchy/expr.hpp>
 
 #include <helios/helios_errors.hpp>
 #include <helios/helios_result.hpp>
@@ -11,16 +14,6 @@ namespace compiler::helios {
 
 	using TypeEval_Result = errors::HResult<tsh::TypeInfo, errors::Failed>;
 
-	struct KeyOf_EvalExprToType {
-		MCRef<pst::ExprElement> expr;
-
-
-		bool operator==(const KeyOf_EvalExprToType&) const = default;
-
-		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-	};
-
 	/**
 	 * Given the PST expression, parses it and evaluates this expression to a type.
 	 * This is a go-to API to do this.
@@ -28,5 +21,5 @@ namespace compiler::helios {
 	 * @todo should this return type info or type desc, we should have a document
 	 * defining which one is which
 	 */
-	DECLARE_QUERY(EvalExprToType, KeyOf_EvalExprToType, TypeEval_Result)
+	DECLARE_QUERY(EvalExprToType, pst::GenericPSTQueryKey<pst::ExprElement>, TypeEval_Result)
 }
