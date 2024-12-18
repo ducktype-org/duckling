@@ -4,27 +4,19 @@
  */
 #pragma once
 
-#include "services/service_manager.hpp"
-#include "services_data/data_manager.hpp"
 #include <api/api.hpp>
 #include <filesystem/file.hpp>
-
-namespace vm {
-	// @TODO: move somewhere else
-	using DataManager    = DataManagerDef<>;
-	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
-}
 
 namespace vm::api {
 	/**
 	 * @brief Create new process in the api
 	 */
-	cpp::result<ProcessInfo, ApiError> spawn(bool usesStdio);
+	cpp::result<ProcessInfo, ApiError> spawn();
 
 	/**
 	 * @brief Get the execution status of the VM
 	 */
-	cpp::result<VCPUStatus, ApiError> getExecutionStatus(PID pid);
+	cpp::result<ProcStatus, ApiError> getExecutionStatus(PID pid);
 
 	/**
 	 * @brief Pauses the execution of the program.
@@ -40,12 +32,14 @@ namespace vm::api {
 	cpp::result<void, ApiError> resume(PID pid);
 	cpp::result<void, ApiError> step(PID pid);
 
-	cpp::result<void, ApiError>             loadFile(PID pid, const fs::FilePath& path);
-	cpp::result<void, ApiError>             run(PID pid);
-	cpp::result<void, ApiError>             join(PID pid);
-	cpp::result<void, ApiError>             stop(PID pid);
-	cpp::result<void, ApiError>             kill(PID pid);
-	cpp::result<void, ApiError>             input(PID pid, const std::string& input);
+	cpp::result<void, ApiError> loadFile(PID pid, const fs::FilePath& path);
+	cpp::result<void, ApiError> run(PID pid);
+	cpp::result<void, ApiError> join(PID pid);
+	cpp::result<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output);
+	cpp::result<void, ApiError> detach(PID pid);
+	cpp::result<void, ApiError> stop(PID pid);
+	cpp::result<void, ApiError> kill(PID pid);
+	cpp::result<void, ApiError> input(PID pid, const std::string& input);
 	cpp::result<response::Output, ApiError> output(PID pid);
 
 	cpp::result<TypeCRef, ApiError>        getType(PID pid, const std::string& type_name);

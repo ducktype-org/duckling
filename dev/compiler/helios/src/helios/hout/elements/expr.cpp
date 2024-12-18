@@ -34,6 +34,10 @@ namespace compiler::helios::code {
 			return BUILTINS.at(keyword);
 		}
 
+		/**
+		 * @todo HOUT 2.0 This should be sort of moved to hout creation, and comp-time
+		 * maybe we will need it still in hout creation to detect tuples-types vs normal-tuples
+		 */
 		tsh::TypeDesc<>
 			getTypeDescOfTuple(query::Context& ctx, const std::vector<base::Box<Expr>>& elements) {
 			std::vector<tsh::ComponentType> tuple_components;
@@ -96,7 +100,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
-				  ctx.query<QueryTypeOfSymbolOrDefinition>(symbol)->expect(
+				  ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 					  "Handling errors in HOUT is not supported yet"
 				  ),
 				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
@@ -202,7 +206,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
-				  ctx.query<QueryTypeOfSymbolOrDefinition>(symbols.back())
+				  ctx.query<QueryTypeOfSymbol>(symbols.back())
 					  ->expect("Not handling errors here yet"),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )

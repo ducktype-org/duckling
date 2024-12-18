@@ -1,5 +1,5 @@
 #pragma once
 
-#include "elements/stmt.hpp"
-#include "elements/expr.hpp"
-#include "elements/query_hout_of_expr.hpp"
+#include "elements/stmt.hpp"                // IWYU pragma: export
+#include "elements/expr.hpp"                // IWYU pragma: export
+#include "elements/query_hout_of_expr.hpp"  // IWYU pragma: export

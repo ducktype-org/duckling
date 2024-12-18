@@ -6,7 +6,7 @@
 #pragma once
 
 #include "frame.hpp"
-#include "config.hpp"
+#include <config.hpp>
 #include <base/ints.hpp>
 #include <array>
 
@@ -15,7 +15,7 @@
 #define OPFUN_ARGS                                                    \
 	const Fix8Instruction *IF_NOT_TC(&) instr [[maybe_unused]],       \
 		std::byte *        IF_NOT_TC(&) local_stack [[maybe_unused]], \
-		Frame *IF_NOT_TC(&) frame [[maybe_unused]], Executor &executor [[maybe_unused]]
+		Frame *IF_NOT_TC(&) frame [[maybe_unused]], VMThread &thread [[maybe_unused]]
 
 #define RETURN_TYPE IF_NOT_TC([[gnu::always_inline]] inline) void
 
@@ -36,7 +36,7 @@ namespace {
 }
 
 namespace vm {
-	class Executor;
+	class VMThread;
 
 	/**
 	 * @brief Bytecode instruction representation.

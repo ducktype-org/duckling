@@ -1,7 +1,4 @@
 #include <api/vm.hpp>
-#include <services/preprocessor_f8/parser/parser.hpp>
-#include <services/executor_f8/executor.hpp>
-#include <services/service_manager.hpp>
 #include <base/variant.hpp>
 #include <iostream>
 
@@ -12,7 +9,7 @@ int main(int argc, char** argv) {
 	}
 	fs::FilePath file(argv[1]);
 
-	auto process_pid = vm::api::spawn(true).expect("Process spawn error").pid;
+	auto process_pid = vm::api::spawn().expect("Process spawn error").pid;
 
 	auto loaded_file_response = vm::api::loadFile(process_pid, file);
 
