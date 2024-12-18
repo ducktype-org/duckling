@@ -96,7 +96,7 @@ namespace compiler::helios {
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
-				// @todo this only works is the identifier is a class.
+				// @todo this only works if the identifier is a class.
 				// this should be changed in the future
 				auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
 				if (type->hasValue())
@@ -125,7 +125,7 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// todo: query type from expr
+			// @todo: query type from expr
 			// get type from virtual functions
 			auto parsed = ctx.query<QueryHoutOfExpr>({ key.expr });
 			if (parsed.hasError()) return errors::HError(parsed.error());
@@ -143,7 +143,7 @@ namespace compiler::helios {
 					variant_case(CouldNotEvalShortPath, _) {
 						throw base::NotYetImplemented("Comp time when short-path eval failed");
 					}
-					variant_default { CORE_PANIC("Unhandler error in EvalExprToType"); }
+					variant_default { CORE_PANIC("Unhandled error in EvalExprToType"); }
 				}
 			}
 

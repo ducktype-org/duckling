@@ -46,7 +46,7 @@ namespace compiler::helios::code {
 	\***********************/
 
 	/**
-	 * @brief Represents a integer literal value written in the expression.
+	 * @brief Represents an integer literal value written in the expression.
 	 */
 	struct LiteralValueExpr final: public Expr {
 		// @TODO: ctv + type for consts?
