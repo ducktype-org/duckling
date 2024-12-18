@@ -1,91 +1,82 @@
-#include "memory.hpp"
+#include <iostream>
 #include <base/exceptions.hpp>
+#include <mutex>
+#include "memory.hpp"
 
 namespace vm {
-	BlockID Memory::reserveBlockID() {
+
+	Ref<Block> Memory::createBlock(BlockData data) {
+		std::memset(data.view.getBegin(), 0, data.view.size());
+
 		if (free_ids.empty()) {
-			blocks.emplace_back();
-			blocks.back().owned = true;
-			CORE_ASSERT(usize(high_id) == blocks.size() - 1, "Bad high id");
-			return high_id++;
-		}
-		BlockID res = free_ids.back();
-		free_ids.pop_back();
-		return res;
-	}
-
-	bool Memory::refCheck(BlockID id) {
-		if (blocks[usize(id)].refcount == 0) {
-			if (id == high_id - BlockID(1)) {
-				high_id--;
-				blocks.pop_back();
-			} else {
-				free_ids.push_back(id);
-			}
-			return false;
-		}
-		return true;
-	}
-
-	void Memory::returnBlockID(BlockID id) {
-		if (isUnowned(id))
-			CORE_PANIC("Tried returning an unowned id");
-		else if (blocks[usize(id)].filled)
-			CORE_PANIC("Tried returning an id of an unfreed block");
-		refCheck(id);
-	}
-
-	void Memory::makeBlock(BlockID id, Block&& block) {
-		if (isUnowned(id))
-			CORE_PANIC("Tried creating an unowned block");
-		else if (blocks[usize(id)].filled)
-			CORE_PANIC("Tried creating an initialized block");
-		blocks[usize(id)].block = new Block(std::move(block));
-
-		// @TODO: this assumes every block is initialized
-		blocks[usize(id)].filled = true;
-	}
-
-	void Memory::deleteBlock(BlockID id) {
-		if (isUnowned(id)) CORE_PANIC("Tried deleting an unowned block");
-		blocks[usize(id)].filled = false;
-		delete blocks[usize(id)].block;
-
-		// @FIXME: refCheck deleted BlockData if ref count is zero
-		// Issue: https://github.com/ducktype-org/rift-poc-zpp1/issues/90
-		// this can cause memory error here:
-		// this code only make sense if refCheck didn't delete block
-
-		// if (!refCheck(id)) {
-		// 	blocks[usize(id)].deleted = false;
-		// } else {
-		// 	blocks[usize(id)].deleted = true;
-		// }
-		blocks[usize(id)].deleted = false;
-	}
-
-	void Memory::createRef(BlockID id) {
-		if (isUnowned(id))
-			CORE_PANIC("Tried creating a reference to an unowned block");
-		else if (!blocks[usize(id)].filled)
-			CORE_PANIC("Tried creating a reference to an uninitialized block");
-		blocks[usize(id)].refcount++;
-	}
-
-	void Memory::destroyRef(BlockID id) {
-		if (id >= high_id || (!blocks[usize(id)].owned && !blocks[usize(id)].deleted))
-			CORE_PANIC("Tried deleting a reference to an unowned block");
-		if (blocks[usize(id)].refcount == 0)
-			CORE_PANIC("Tried deleting a reference to an unreferenced block");
-		if (--blocks[usize(id)].refcount == 0 && blocks[usize(id)].deleted) {
-			blocks[usize(id)].deleted = true;
-			refCheck(id);
+			auto id = BlockID(blocks.size());
+			blocks.emplace_back(id, data, &mutex_);
+			return &blocks.back();
+		} else {
+			BlockID id = free_ids.back();
+			free_ids.pop_back();
+			blocks[usize(id)] = Block(id, data, &mutex_);
+			return &blocks[static_cast<u64>(id)];
 		}
 	}
 
-	Memory::Memory(): stack_allocator(*this), dynamic_allocator(*this) {}
+	void Memory::deleteBlock(Ref<Block> block) {
+		block->used = false;
+		free_ids.push_back(block->id);
+	}
 
-	StackAllocator& Memory::getStackAllocator() { return stack_allocator; }
+	void Memory::destroyReference(Ref<Block> block) {
+		if (block->refcount == 0) CORE_PANIC("Tried deleting a reference to an unreferenced block");
+		if (--block->refcount == 0) deleteBlock(block);
+	}
 
-	Allocator& Memory::getDynamicAllocator() { return dynamic_allocator; }
+	void Memory::createReference(Ref<Block> block) { block->refcount++; }
+
+	Ref<Block> Memory::getBlock(BlockID id) {
+		if (static_cast<u64>(id) >= blocks.size()) CORE_PANIC("Accessing block out of bounds");
+		if (!blocks[usize(id)].used) CORE_PANIC("Accessing freed block");
+		return &blocks[static_cast<u64>(id)];
+	}
+
+	auto Memory::initializeFrameStack()
+		-> std::pair<Ref<std::vector<Frame>>, Ref<std::vector<std::byte>>> {
+		std::unique_lock lock(mutex_);
+		threads_executor_frame_stack.emplace_back(FRAMES_LENGTH);
+		threads_executor_local_stack.emplace_back(STACK_LENGTH);
+		return { &threads_executor_frame_stack.back(), &threads_executor_local_stack.back() };
+	}
+
+	auto Memory::allocateHeap(TypeCRef type) -> Ref<Block> {
+		std::unique_lock lock(mutex_);
+		return createBlock(heap_allocator.allocate(type));
+	}
+
+	auto Memory::allocateStack(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block> {
+		std::unique_lock lock(mutex_);
+		return createBlock(stack_allocator.allocate(type, stack_pointer));
+	}
+
+	void Memory::freeBlock(Ref<Block> block) {
+		std::unique_lock lock(mutex_);
+		block->deallocated = true;
+		block->data.allocator->deallocate(&block->data);
+		if (block->refcount == 0) deleteBlock(block);
+	}
+
+	auto Memory::requestBlockIDs() -> base::StableVector<BlockID> {
+		base::StableVector<BlockID> ids;
+		for (auto& block: blocks)
+			if (block.used) ids.pushBack(block.id);
+		return ids;
+	}
+
+	auto Memory::requestBlockData(BlockID id) -> base::RawView {
+		return { getBlock(id)->data.view.getBegin(), getBlock(id)->data.view.size() };
+	}
+
+	auto Memory::requestBlockType(BlockID id) -> TypeCRef {
+		return getBlock(id)->data.element_type;
+	}
+
+
 }

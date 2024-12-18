@@ -6,6 +6,7 @@
 #include <core/process/type_metadata/type.hpp>
 #include <core/supervisor/supervisor.hpp>
 #include <core/kill_process_exception.hpp>
+#include "core/process/memory/pointer.hpp"
 #include "op_case.hpp"
 #include "vmthread.hpp"
 
@@ -17,14 +18,10 @@
 
 namespace vm {
 	VMThread::VMThread(VMProcess& process):
-		  frame_stack(FRAME_COUNT, internalInitFrame()),
-		  local_stack_reserved(STACK_LENGTH),
-		  runtime_data(frame_stack, local_stack_reserved),
+		  runtime_data(process.getMemory().initializeFrameStack()),
 		  process(process),
 		  process_memory(process.getMemory()),
-		  process_types(process.getTypeMetadata()),
-		  process_stack_allocator(process_memory.getStackAllocator()),
-		  process_dynamic_allocator(process_memory.getDynamicAllocator()) {
+		  process_types(process.getTypeMetadata()) {
 		// @TODO: not loaded status
 		setStatus(api::NotStarted{});
 	}
@@ -43,34 +40,6 @@ namespace vm {
 	inline void VMThread::handleExecutionStrategyIfNeeded() {
 		if (is_running) return;
 		handleExecutionStrategy();
-	}
-
-	Frame VMThread::internalInitFrame() {
-		return Frame{
-			.instr       = nullptr,
-			.local_stack = nullptr,
-			.regs        = Registers{ .p64_reg_0 = 0, .pointer_reg_0 = process_memory.nullPtr() },
-			.flags       = FlagData{ .flag = false },
-			.ret_val     = 0,
-			.next_args   = nullptr,
-			.args        = nullptr,
-
-			.block_id_stack   = std::vector<BlockID>(),
-			.local_stack_head = 0,
-		};
-	}
-
-	[[gnu::always_inline]]
-	inline base::ModRawView VMThread::internalDerefPointer(Pointer pointer) {
-		auto block_id = pointer.getBlock();
-		auto offset   = pointer.getOffset();
-
-		auto block = process_memory.getBlock(block_id);
-		auto type  = block->innerType();
-		auto view  = block->deref(type, offset);
-
-		CORE_ASSERT(view.size() == type->getSize(), "Bad deref size");
-		return view;
 	}
 
 	template<typename T>
@@ -375,24 +344,20 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_init_type(OPFUN_ARGS) {
 		{
-			auto             type      = thread.process_types.getType(vm::TypeID(instr->arg0));
-			auto             type_size = type->getSize();
-			base::ModRawView data(&local_stack[frame->local_stack_head], type_size);
-			frame->local_stack_head += type_size;
-			auto block = thread.process_stack_allocator.makeTypeBlock(type, data);
-			frame->block_id_stack.push_back(block);
+			auto type     = thread.process_types.getType(vm::TypeID(instr->arg0));
+			auto data_ptr = local_stack + frame->local_stack_head;
+			auto block    = thread.process_memory.allocateStack(type, data_ptr);
+			frame->block_stack.push_back(block);
+			frame->local_stack_head += type->getSize();
 		}
 		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_deinit(OPFUN_ARGS) {
 		{
-			auto block_id  = frame->block_id_stack.back();
-			auto type_size = thread.process_memory.getBlock(block_id)->rawPointer().size();
-			// if (type_size < frame->local_stack_head) CORE_PANIC("init/deinits not paired");
-			frame->local_stack_head -= type_size;
-			thread.process_stack_allocator.deleteBlock(block_id);
-			frame->block_id_stack.pop_back();
+			auto block = frame->block_stack.back();
+			frame->block_stack.pop_back();
+			thread.process_memory.freeBlock(block);
 		}
 		OPFUN_CONT(1);
 	}
@@ -420,31 +385,16 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_alloc_lptr_type(OPFUN_ARGS) {
 		{
-			auto type = thread.process_types.getType(vm::TypeID(instr->arg1));
-			// This is disasbled, because we don't want to pay performance for initializing it
-			// NOLINTBEGIN(cppcoreguidelines-pro-type-member-init)
-			BlockID block;
-			// NOLINTEND(cppcoreguidelines-pro-type-member-init)
-			if (type->getKind() == vm::Type::Kind::StaticTable) {
-				// @TODO: As noted in type.hpp, interface used below may change
-				auto inner_type = type->getInnerType().value();
-				auto table_size = type->getStaticTableSize().value();
-
-				// @TODO: It is possible to access process_memory.of the array via
-				// mov_l64_imm, which should be at least detected, if not illegal
-				block = thread.process_dynamic_allocator.makeArrayBlock(inner_type, table_size);
-			} else {
-				block = thread.process_dynamic_allocator.makeTypeBlock(type);
-			}
-			derefStack<Pointer>(local_stack, instr->arg0) = Pointer(block, 0);
+			auto type  = thread.process_types.getType(vm::TypeID(instr->arg1));
+			auto block = thread.process_memory.allocateHeap(type);
+			derefStack<Pointer>(local_stack, instr->arg0) = Memory::getPointer(block);
 		}
 		OPFUN_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::op_free_lptr(OPFUN_ARGS) {
 		{
-			thread.process_dynamic_allocator.deleteBlock(
-				derefStack<Pointer>(local_stack, instr->arg0).getBlock()
+			thread.process_memory.freeBlock(derefStack<Pointer>(local_stack, instr->arg0).getBlock()
 			);
 		}
 		OPFUN_CONT(1);
@@ -455,7 +405,7 @@ namespace vm {
 		int                     next      = 1;
 		{
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg1);
-			auto view    = thread.internalDerefPointer(pointer);
+			auto view    = Memory::getPointerData(pointer, view_size);
 			u64  idx     = 0;
 #ifdef USE_TAIL_CALLS
 			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
@@ -482,7 +432,7 @@ namespace vm {
 		int                     next      = 1;
 		{
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
-			auto view    = thread.internalDerefPointer(pointer);
+			auto view    = Memory::getPointerData(pointer, view_size);
 			u64  idx     = 0;
 #ifdef USE_TAIL_CALLS
 			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
