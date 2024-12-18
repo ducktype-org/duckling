@@ -1,6 +1,5 @@
 /**
  * @file code.hpp
- *
  */
 #pragma once
 

@@ -13,11 +13,10 @@ endfunction()
 # Add vm files
 add_subdirectory(src/api)
 add_subdirectory(src/events)
-add_subdirectory(src/memory_data)
 add_subdirectory(src/code_data)
 add_subdirectory(src/services)
-add_subdirectory(src/services_data)
-add_subdirectory(src/supervisor)
+add_subdirectory(src/core)
+add_subdirectory(src/preprocessor)
 
 function(duck_add_vm suffix defines default)
   set(exec "VM_${suffix}")
