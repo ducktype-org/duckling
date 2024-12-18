@@ -9,7 +9,7 @@
 
 namespace compiler::helios {
 
-	using TypeEvalResult = errors::HResult<tsh::TypeInfo, errors::Failed>;
+	using TypeEval_Result = errors::HResult<tsh::TypeInfo, errors::Failed>;
 
 	struct KeyOf_EvalExprToType {
 		MCRef<pst::ExprElement> expr;
@@ -27,5 +27,5 @@ namespace compiler::helios {
 	 * @todo should this return type info or type desc, we should have a document
 	 * defining which one is which
 	 */
-	DECLARE_QUERY(EvalExprToType, KeyOf_EvalExprToType, TypeEvalResult)
+	DECLARE_QUERY(EvalExprToType, KeyOf_EvalExprToType, TypeEval_Result)
 }

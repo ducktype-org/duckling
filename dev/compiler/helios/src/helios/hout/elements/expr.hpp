@@ -151,10 +151,10 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Tuple constructor inside an expression.
-	 * @todo HOUT 2.0 type of this expr is the type of tuple, not meta type
+	 * @todo HOUT 2.0: type of this expr is the type of tuple, not meta type
 	 * we should fix it here, and comp-time.
-	 * We might want to keep this element, the question is
-	 * where (any maybe how) we distinguish between tuple-expressions and tuple-types.
+	 * We will keep this element, and distinguish tuple-meta from tuple-tuple
+	 * during hout creation. Change this name to "TupleTypeExpr" (and "TupleExpr")
 	 */
 	struct TupleConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> elements;
@@ -170,9 +170,8 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Variant constructor inside an expression.
 	 * @todo Does it work like a chain?
-	 * @todo HOUT 2.0 type of this expr is the type of variant, not meta type
+	 * @todo HOUT 2.0: type of this expr is the type of variant, not meta type
 	 * we should fix it here, and comp-time.
-	 * We should probably delete this element.
 	 */
 	struct VariantConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> subtypes;

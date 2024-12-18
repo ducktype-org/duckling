@@ -8,7 +8,7 @@
 
 namespace compiler::helios {
 
-	struct IMPLEMENT_QUERY(EvalExprToType, TypeEvalResult) {
+	struct IMPLEMENT_QUERY(EvalExprToType, TypeEval_Result) {
 		/**
 		 * State representing failure to short-path
 		 */
@@ -125,8 +125,6 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// @todo: query type from expr
-			// get type from virtual functions
 			auto parsed = ctx.query<QueryHoutOfExpr>({ key.expr });
 			if (parsed.hasError()) return errors::HError(parsed.error());
 
