@@ -1,5 +1,5 @@
-#include "api/data/status.hpp"
-#include "api/vm.hpp"
+#include <api/data/status.hpp>
+#include <api/vm.hpp>
 #include <api/api.hpp>
 #include <cstdint>
 #include <tester/tester.hpp>
@@ -23,7 +23,7 @@ public:
 
 private:
 	vm::PID loadProgram(std::string_view path_name) {
-		auto process_pid_response = vm::api::spawn(false);
+		auto process_pid_response = vm::api::spawn();
 		assertTrue(process_pid_response.has_value(), "Spawn failed (loadProgram)");
 		auto pid = process_pid_response.value().pid;
 
@@ -35,7 +35,7 @@ private:
 
 	// Checks if the program status is correct after loading a file.
 	void parsesTheFile() {
-		auto process_pid_response = vm::api::spawn(false);
+		auto process_pid_response = vm::api::spawn();
 		assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
 		auto pid = process_pid_response.expect("Spawn failed (2)").pid;
 

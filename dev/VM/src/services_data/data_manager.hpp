@@ -2,14 +2,15 @@
 
 #include <tuple>
 #include <base/ints.hpp>
-#include <concepts>
 #include <base/optional.hpp>
-#include "memory/memory.hpp"
-#include "type_metadata/type_metadata.hpp"
+#include <core/process/memory/memory.hpp>
+#include <core/process/type_metadata/type_metadata.hpp>
 
 namespace vm {
+
 	/**
-	 * @brief Cointainer for the data used by the VM services.
+	 * @brief Container for the data used by the VM services.
+	 * @warning DEPRECATED
 	 */
 	template<class... DynamicData>
 	class DataManagerDef {

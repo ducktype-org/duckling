@@ -5,9 +5,10 @@
 #pragma once
 
 #include <filesystem/file.hpp>
-#include "base/string_id.hpp"
+#include <base/stable_hashmap.hpp>
+#include <base/string_id.hpp>
+#include <core/process/type_metadata/type_metadata.hpp>
 #include "instruction.hpp"
-#include "services_data/type_metadata/type_metadata.hpp"
 #include <vector>
 
 namespace vm {
@@ -30,8 +31,12 @@ namespace vm {
 	 * code.
 	 */
 	class VMProgram {
+		friend class OpFuns;
+
 	public:
 		VMProgram() = default;
+
+		// @todo: These methods should be made private/accessible only from preprocessor.
 
 		// cpp::result<VMProgram, std::string> includeFile(const fs::FilePath& file) const {
 		// 	auto code = assemble::assemble(file, type_meta_data);

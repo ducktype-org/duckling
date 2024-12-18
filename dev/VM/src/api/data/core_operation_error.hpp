@@ -13,13 +13,21 @@ namespace vm::api {
 
 	struct JoinError {};
 
+	struct AttachDetachError {};
+
 	struct OtherError {
 		std::string error;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(OtherError, error);
 	};
 
-	using CoreOperationErrorVariant
-		= std::variant<ResumeError, PauseError, RunError, JoinError, OtherError, LoadProgramError>;
+	using CoreOperationErrorVariant = std::variant<
+		ResumeError,
+		PauseError,
+		RunError,
+		JoinError,
+		AttachDetachError,
+		OtherError,
+		LoadProgramError>;
 
 	struct CoreOperationError {
 		CoreOperationErrorVariant error;
@@ -33,3 +41,4 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::RunError, "RunError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::JoinError, "JoinError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::OtherError, "OtherError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::CoreOperationError, "CoreOperationError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::AttachDetachError, "AttachDetachError");
