@@ -3,8 +3,8 @@
 #include <variant>
 #include <filesystem/file.hpp>
 
-#include "core/process/memory/pointer.hpp"
-#include "core/process/memory/block.hpp"
+#include <core/process/memory/pointer.hpp>
+#include <core/process/memory/block.hpp>
 #include "process_info.hpp"
 
 namespace vm::api {

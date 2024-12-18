@@ -1,10 +1,10 @@
 #pragma once
 
+#include <functional>
 #include <base/ints.hpp>
 #include <base/raw_view.hpp>
-#include <functional>
 
-#include "core/process/type_metadata/definitions.hpp"
+#include <core/process/type_metadata/definitions.hpp>
 #include "allocator.h"
 
 namespace vm {

@@ -75,7 +75,6 @@ namespace vm {
 		 */
 		u64 local_stack_head{};
 
-		Frame() : regs{.p64_reg_0 = 0, .pointer_reg_0 = Pointer::null()}
-	      {}
+		Frame(): regs{ .p64_reg_0 = 0, .pointer_reg_0 = Pointer::null() } {}
 	};
 }
