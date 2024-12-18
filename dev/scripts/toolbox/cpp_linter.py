@@ -24,14 +24,25 @@ def get_unstaged_new_files() -> bool:
     return new_unstaged_files
 
 
-def get_diffs(branch: str):
+def get_repo_cpp_files():
+    ls_out = bash_command_get_output("./scripts/list_files.sh | xargs wc -l")[0]
+    file_lengths = [line.split() for line in ls_out.splitlines()][:-1]
+
+    files = {}
+    for line_count, file in file_lengths:
+        files[file] = [[1, line_count]]
+
+    return files
+
+
+def get_modified_files_and_lines(branch: str, no_merge_base: bool = False):
     if new_unstaged_files := get_unstaged_new_files():
         log_warning(
             f"Files not in working tree, so not included in diff: [{', '.join(new_unstaged_files)}]"
         )
 
     diff_out, _ = bash_command_get_output(
-        f"git diff --merge-base {branch} -U0 --relative"
+        f"git diff {'' if no_merge_base else '--merge-base'} {branch} -U0 --relative"
     )
     diff_lines = diff_out.splitlines()
 
@@ -62,6 +73,13 @@ def get_diffs(branch: str):
                 line_start = int(line_start)
                 num_lines = int(num_lines)
                 line_range = [line_start, line_start + num_lines]
+
+                # This is for the format (note the "0" added lines):
+                # @@ -16 +15,0 @@
+                # -#include <iostream>
+                # (Which is very odd)
+                if line_range[1] == 0:
+                    continue
             else:
                 # In this case there is only 1 line changed
                 line_start = int(diffed)
@@ -79,15 +97,22 @@ def get_diffs(branch: str):
     return changes
 
 
+def get_files_for_linter(all, branch, no_merge_base):
+    if all:
+        return get_repo_cpp_files()
+    return get_modified_files_and_lines(branch, no_merge_base)
+
+
 def clang_tidy_on(
     clang_tidy_path: str,
     build_folder: pathlib.Path,
     file: str,
     file_diffs: list[tuple[int, int]],
     log_file,
-):
+) -> bool:
     """
     Runs clang-tidy on a file with given file_diffs
+    Returns False if no errors were found, True otherwise.
     """
 
     # clang-tidy command succeeds if no errors were found.
@@ -101,10 +126,13 @@ def clang_tidy_on(
         )
         if tidy_out:
             log_warning(f"clang-tidy output: \n{tidy_out}", file=log_file)
+            return True
     except BashCommandError as e:
         log_warning(
             f"clang-tidy failed: {file}, because:\n{e.stdout}{e.stderr}", file=log_file
         )
+        return True
+    return False
 
 
 def clang_format_on(
@@ -112,7 +140,7 @@ def clang_format_on(
 ) -> bool:
     """
     Dry-run clang-format on a file with given file_diffs to test
-    if it's properly formatted. Returns true if so, false otherwise.
+    if it's properly formatted. Returns False if so, True otherwise.
     """
 
     # clang-format command succeeds always and returns data (possibly empty)
@@ -125,22 +153,24 @@ def clang_format_on(
     # Print data returned by clang-format
     if format_out or format_err:
         log_warning(f"clang-format output: \n{format_out}{format_err}", file=log_file)
-        return False
-    return True
+        return True
+    return False
 
 
 def run_linter_on(
     clang_tidy_path: str, clang_format_path: str, build_folder: pathlib.Path, file, diff
-) -> tuple[str, bool]:
+) -> tuple[str, bool, bool]:
     clang_format_failed = False
+    clang_tidy_failed = False
     logs = ""
     if file.endswith(".hpp") or file.endswith(".cpp"):
         log_file = tempfile.TemporaryFile("w+")
         log_info(f"Linting: {file}", file=log_file)
 
-        clang_tidy_on(clang_tidy_path, build_folder, file, diff, log_file)
+        if clang_tidy_on(clang_tidy_path, build_folder, file, diff, log_file):
+            clang_tidy_failed = True
 
-        if not clang_format_on(clang_format_path, file, diff, log_file):
+        if clang_format_on(clang_format_path, file, diff, log_file):
             clang_format_failed = True
 
         log_file.seek(0)
@@ -149,20 +179,27 @@ def run_linter_on(
     else:
         log_info(f"Skipping linting on: {file}")
 
-    return logs, clang_format_failed
+    return logs, clang_tidy_failed, clang_format_failed
 
 
 def simulate_cpp_linter(
-    clang_tidy_path: str, clang_format_path: str, build: str, threads: int, branch: str
+    clang_tidy_path: str,
+    clang_format_path: str,
+    build: str,
+    threads: int,
+    branch: str,
+    all: bool,
+    no_merge_base: bool
 ):
     build_folder = pathlib.Path(build)
     if not build_folder.exists():
         exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
 
-    file_diffs = get_diffs(branch)
+    file_diffs = get_files_for_linter(all, branch, no_merge_base)
     log_info(f"Found {file_diffs=}")
 
     clang_format_failed = False
+    clang_tidy_failed = False
 
     with ThreadPoolExecutor(max_workers=threads) as e:
 
@@ -171,12 +208,16 @@ def simulate_cpp_linter(
 
         results = e.map(call_linter, file_diffs.items())
 
-        for logs, cf_failed in results:
+        for logs, ct_failed, cf_failed in results:
             sys.stdout.write(logs)
-            if cf_failed:
-                clang_format_failed = True
+            clang_tidy_failed |= ct_failed
+            clang_format_failed |= cf_failed
 
     if clang_format_failed:
+        log_new_line()
         to_format = get_input("Found formatting issues. Format the repo [Y/n]: ")
         if to_format.lower() in ["y", ""]:
-            bash_command("./scripts/formatting/format_repo.sh")
+            bash_command(f"./scripts/formatting/format_repo.sh {clang_format_path}")
+            clang_format_failed = False
+
+    return clang_tidy_failed, clang_format_failed

@@ -24,7 +24,7 @@ jobs:
          cmake -DCMAKE_CXX_COMPILER=g++-14 -D BUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
          cd ..
         shell: bash
-      
+
       - uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
@@ -64,5 +64,5 @@ jobs:
         run: |
          git fetch origin main
          cd dev
-         python3 toolbox.py duck-linter --branch origin/main 
+         python3 toolbox.py duck-linter --branch origin/main --no-merge-base
         shell: bash

@@ -13,8 +13,6 @@
 
 #include <base/string_id.hpp>
 
-#include <unicode/unistr.h>
-
 #include "meta.hpp"
 #include "lists.hpp"
 
@@ -26,7 +24,9 @@ namespace pst {
 		base::Optional<MBox<ExprElement>> initial;
 
 	public:
-		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {}
+		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::FunParam;
+		}
 
 		static MBox<FunParam> parse(LangParserState& state);
 		~FunParam() final = default;
@@ -82,7 +82,9 @@ namespace pst {
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, Stmt)
 
-		explicit CodeBlock(const dia::SourcePosition& position): NotStmt(position) {}
+		explicit CodeBlock(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::CodeBlock;
+		}
 
 		static MBox<CodeBlock> parse(LangParserState& state);
 		~CodeBlock() final = default;
@@ -105,7 +107,10 @@ namespace pst {
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, ClassStmt)
 
-		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos){};
+		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos) {
+			this->element_kind = ElementKind::ClassBlock;
+		}
+
 		static MBox<ClassBlock> parse(LangParserState& state, const ClassContext& ctx);
 
 		~ClassBlock() override = default;
@@ -116,17 +121,19 @@ namespace pst {
 			return "Class Block";
 		}
 
-		// [[nodiscard]]
-		// bool isStatementAggregate() const final {
-		// 	return true;
-		// }
+		[[nodiscard]]
+		bool isStatementAggregate() const final {
+			return true;
+		}
 	};
 
 	class CodeBlockOrStmt final: public NotStmt {
 		std::variant<MBox<Stmt>, MBox<CodeBlock>> content;
 
 	public:
-		explicit CodeBlockOrStmt(const dia::SourcePosition& position): NotStmt(position) {}
+		explicit CodeBlockOrStmt(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::CodeBlockOrStmt;
+		}
 
 		static MBox<CodeBlockOrStmt> parse(LangParserState& state);
 		~CodeBlockOrStmt() final = default;
@@ -153,7 +160,9 @@ namespace pst {
 		MBox<ExprElement> expr = nullptr;
 
 	public:
-		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {}
+		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::ExprWrapper;
+		}
 
 		static MBox<RoundGroupExpr> parse(LangParserState& state);
 		~RoundGroupExpr() final = default;
@@ -189,7 +198,9 @@ namespace pst {
 
 		explicit ExprElement(const dia::SourcePosition& position, i64 precedence):
 			  NotStmt(position),
-			  precedence(precedence) {}
+			  precedence(precedence) {
+			this->element_kind = ElementKind::ExprElement;
+		}
 
 	public:
 		virtual void acceptVisitor(PstExprVisitor& visitor) const = 0;

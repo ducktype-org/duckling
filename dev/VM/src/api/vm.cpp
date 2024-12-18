@@ -1,5 +1,6 @@
 #include "vm.hpp"
-#include "supervisor/supervisor.hpp"
+#include <api/data/request.hpp>
+#include <core/supervisor/supervisor.hpp>
 
 namespace vm::api {
 	void ignoreResponse([[maybe_unused]] const Response& response){};
@@ -10,10 +11,10 @@ namespace vm::api {
 		return cpp::failure(WrongResponse{});
 	}
 
-	cpp::result<VCPUStatus, ApiError> getExecutionStatus(PID pid) {
+	cpp::result<ProcStatus, ApiError> getExecutionStatus(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeStatusRequest(pid))
-		    .flat_map(mapOrWrongResponse<VCPUStatus>);
+		    .flat_map(mapOrWrongResponse<ProcStatus>);
 	}
 
 	cpp::result<void, ApiError> pause(PID pid) {
@@ -34,9 +35,8 @@ namespace vm::api {
 		    .map(ignoreResponse);
 	}
 
-	cpp::result<ProcessInfo, ApiError> spawn(bool usesStdio) {
-		return Supervisor::get().newProcess(usesStdio).map([](auto& x) { return ProcessInfo{ x }; }
-		);
+	cpp::result<ProcessInfo, ApiError> spawn() {
+		return Supervisor::get().newProcess().map([](auto& x) { return ProcessInfo{ x }; });
 	}
 
 	cpp::result<void, ApiError> loadFile(PID pid, const fs::FilePath& path) {
@@ -72,13 +72,13 @@ namespace vm::api {
 
 	cpp::result<void, ApiError> input(PID pid, const std::string& input) {
 		return Supervisor::get()
-		    .doRequest(api::makeExecutorRequest(pid, request::Input{ input }))
+		    .doRequest(api::makeIORequest(pid, request::Input{ input }))
 		    .map(ignoreResponse);
 	}
 
 	cpp::result<response::Output, ApiError> output(PID pid) {
 		return Supervisor::get()
-		    .doRequest(api::makeExecutorRequest(pid, request::Output{}))
+		    .doRequest(api::makeIORequest(pid, request::Output{}))
 		    .flat_map(mapOrWrongResponse<response::Output>);
 	}
 
@@ -92,5 +92,17 @@ namespace vm::api {
 		return Supervisor::get()
 		    .doRequest(api::makeDataRequest(pid, request::Block{ BlockID(block_id) }))
 		    .flat_map(mapOrWrongResponse<response::Block>);
+	}
+
+	cpp::result<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {
+		return Supervisor::get()
+		    .doRequest(api::makeIORequest(pid, request::Attach{ input, output }))
+		    .map(ignoreResponse);
+	}
+
+	cpp::result<void, ApiError> detach(PID pid) {
+		return Supervisor::get()
+		    .doRequest(api::makeIORequest(pid, request::Detach{}))
+		    .map(ignoreResponse);
 	}
 }

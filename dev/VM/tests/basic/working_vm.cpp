@@ -11,7 +11,7 @@ public:
 
 private:
 	void simpleRun() {
-		auto process_pid_response = vm::api::spawn(false);
+		auto process_pid_response = vm::api::spawn();
 		assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
 		auto pid = process_pid_response.expect("Spawn failed (2)").pid;
 

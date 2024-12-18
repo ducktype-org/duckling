@@ -39,9 +39,6 @@ namespace compiler::helios::code {
 		virtual void debugPrint(std::ostream& out) const = 0;
 
 		virtual void acceptVisitor(HoutExprVisitor&) const = 0;
-
-		static errors::HResult<base::Box<Expr>, errors::Failed>
-			fromPST(query::Context& ctx, ScopeID scope, MCRef<pst::ExprElement> root);
 	};
 
 	/***********************\
@@ -49,7 +46,7 @@ namespace compiler::helios::code {
 	\***********************/
 
 	/**
-	 * @brief Represents a literal value written in the expression.
+	 * @brief Represents an integer literal value written in the expression.
 	 */
 	struct LiteralValueExpr final: public Expr {
 		// @TODO: ctv + type for consts?
@@ -64,6 +61,7 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents an expression made of a keyword, like "true", or "i32".
+	 * @brief This is a mock
 	 */
 	struct KeywordExpr final: public Expr {
 		lang_def::Keyword keyword;
@@ -97,6 +95,10 @@ namespace compiler::helios::code {
 	 * - nice dprints, because with this class we know what was in "()"
 	 * Against:
 	 * - We have/will have TupleConstructorExpr and VariantConstructor Expr.
+	 *
+	 * @TODO HOUT 2.0: once variants are chained in PST we can delete it
+	 * For now it will be kept for simplicity of creating VariantConstructorExpr.
+	 * Also we should print all "()" from hout structure anyway.
 	 */
 	struct ParenthesisExpr final: public Expr {
 		base::Box<Expr> inner;
@@ -137,7 +139,9 @@ namespace compiler::helios::code {
 		// @NOTE: `op` and `prefix` should be replaced with a SymID that links to a proper function
 		// that resolves the operator
 		pst::Operator op;
-		bool          prefix = false;  // prefix/suffix
+
+		// @TODO HOUT 2.0: this should not be needed at this stage
+		bool prefix = false;  // prefix/suffix
 
 		base::Box<Expr> expr;
 
@@ -149,6 +153,10 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Tuple constructor inside an expression.
+	 * @todo HOUT 2.0: type of this expr is the type of tuple, not meta type
+	 * we should fix it here, and comp-time.
+	 * We will keep this element, and distinguish tuple-meta from tuple-tuple
+	 * during hout creation. Change this name to "TupleTypeExpr" (and "TupleExpr")
 	 */
 	struct TupleConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> elements;
@@ -163,6 +171,9 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Variant constructor inside an expression.
+	 * @todo HOUT 2.0: type of this expr is the type of variant, not meta type
+	 * we should fix it here, and comp-time.
+	 * Also see: comments on ParenthesisExpr.
 	 */
 	struct VariantConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> subtypes;
