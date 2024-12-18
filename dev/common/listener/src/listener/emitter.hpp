@@ -4,47 +4,46 @@
 #include <set>
 #include <queue>
 #include <concepts>
+#include <base/ref.hpp>
 #include "listener.hpp"
 
+/**
+ * @brief Class for emitting a target `Event`.
+ * Supports immediate firing of an event as well as a scheduling.
+ */
 template<class Event>
-class Emitter {
+requires std::copy_constructible<Event> class Emitter {
 private:
-	std::set<Listener<Event>*> listeners;
-	std::queue<Event>          eventQueue;
+	std::set<Ref<Event>> listeners;
+	std::queue<Event>    eventQueue;
 
 public:
-	void addEvent(const Event& event) noexcept requires std::copy_constructible<Event> {
-		eventQueue.push(event);
-	}
+	void queueEvent(const Event& event) { eventQueue.push(event); }
 
-	void addEvent(Event&& event) noexcept requires std::move_constructible<Event> {
-		eventQueue.emplace(std::move(event));
-	}
-
-	void fire(const Event& event) noexcept {
+	void fireEvent(const Event& event) {
 		for (auto l: listeners) l->onNotify(event);
 	}
 
-	void processEvents() noexcept {
+	void processEvents() {
 		while (!eventQueue.empty()) {
-			fire(eventQueue.front());
+			fireEvent(eventQueue.front());
 			eventQueue.pop();
 		}
 	}
 
 	/**
-	 * Adds listener to the emitter's notify list.<br>
+	 * Adds listener to the emitter's notify list.
 	 * Unless manually erased, the emitter will clean added listener during it's destruction.
 	 * @param listener
 	 */
-	void attach(Listener<Event>* listener) noexcept { listeners.emplace(listener); }
+	void attach(Ref<Event> listener) { listeners.emplace(listener); }
 
-	void detach(Listener<Event>* listener) noexcept { listeners.erase(listener); }
+	void detach(Ref<Event> listener) { listeners.erase(listener); }
 
-	void removeAllListeners() noexcept { listeners.clear(); }
+	void removeAllListeners() { listeners.clear(); }
 
 	[[nodiscard]]
-	usize listenerCount() const noexcept {
+	usize listenerCount() const {
 		return listeners.size();
 	}
 };
