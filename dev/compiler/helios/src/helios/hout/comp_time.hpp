@@ -5,7 +5,7 @@
 #include <typesystem/higher/type_info.hpp>
 
 // this is needed here so contraint from GenericPSTQueryKey is satisfied:
-#include <pst_parser/elements/hierarchy/expr.hpp> 
+#include <pst_parser/elements/hierarchy/expr.hpp>
 
 #include <helios/helios_errors.hpp>
 #include <helios/helios_result.hpp>
