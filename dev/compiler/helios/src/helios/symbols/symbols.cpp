@@ -1,26 +1,28 @@
 #include "symbols.hpp"
 
+#include <vector>
+#include <cmath>
+
 #include <base/exceptions.hpp>
 #include <base/string_id.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/stable_container.hpp>
 #include <base/variant.hpp>
 #include <base/unique_pointer.hpp>
+#include <base/optional.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/pst_visitor.hpp>
-#include <helios/hout/elements.hpp>
-
-#include <vector>
+#include <typesystem/higher/type_info.hpp>
 
 #include <pst_parser/elements/hierarchy/not_statements.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <cmath>
-#include <base/optional.hpp>
+#include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
-#include <typesystem/higher/type_info.hpp>
+
+#include "../hout/comp_time.hpp"
 
 namespace compiler::helios {
 	/**
@@ -547,23 +549,6 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
-	/**
-	 * Parses the expression assuming it evaluates to a type. Panics otherwise.
-	 * @param ctx Context passed to a query.
-	 * @param expr A PST ExprElement, that has been written in the source code.
-	 * @param expr_scope A scope where the expression has been expressed.
-	 * @return tsh::TypeInfo with information about the evaluated type.
-	 */
-	ParseTypeFromExpr_Result parseTypeFromExpr(query::Context& ctx, MCRef<pst::ExprElement> expr) {
-		// @TODO Helios Type Fixes: this should be a method on hout, that just return
-		// type|error|can't-short-path (see also issue #385)
-
-		auto parsed = ctx.query<QueryHoutOfExpr>({ expr });
-		if (parsed.hasError()) return errors::HError(parsed.error());
-		auto tree = std::move(parsed.value());
-		return tree->type_desc.getType();
-	}
-
 	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QueryType_Result) {
 		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
 			Context& ctx;
@@ -575,7 +560,7 @@ namespace compiler::helios {
 			}
 
 			void setTypeOfSymbol(MCRef<pst::ExprElement> expr) {
-				auto tp = parseTypeFromExpr(ctx, expr);
+				auto tp = ctx.query<EvalExprToType>({ expr });
 				if (tp.hasValue()) setTypeOfSymbol(tp.value());
 			}
 
@@ -600,7 +585,9 @@ namespace compiler::helios {
 				param_types.reserve(params->size());
 
 				for (auto param: *params) {
-					auto&& parse_type_res = parseTypeFromExpr(ctx, param->getType());
+					// @TODO HOUT 2.0: we should create symbol from parameter here, and just get
+					// type of symbol. its not trivial, since parameter symbols don't exist yet
+					auto parse_type_res = ctx.query<EvalExprToType>({ param->getType() });
 					if (parse_type_res.hasValue()) {
 						param_types.emplace_back(parse_type_res.value());
 					} else {
@@ -610,7 +597,7 @@ namespace compiler::helios {
 				}
 				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
 				if (ret.has_value()) {
-					auto&& parsed = parseTypeFromExpr(ctx, ret.value());
+					auto parsed = ctx.query<EvalExprToType>({ ret.value() });
 					if (parsed.hasValue()) {
 						ret_type = parsed.value();
 					} else {
@@ -622,8 +609,7 @@ namespace compiler::helios {
 			}
 
 			void visitClass(const pst::Class&) override {
-				// This method is empty on purpose, because we still want a panicky visitor
-				// @TODO: Helios-type-fixes: this should just return meta type
+				setTypeOfSymbol(ctx.query<tsh::QueryMetaType>({}));
 			}
 
 			void visitNamespace(const pst::Namespace&) override {
@@ -673,7 +659,7 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto&& symbol_ref = getSymRef(key);
+			auto symbol_ref = getSymRef(key);
 
 			PstStmtVisitor_GetTypeFromDefinition visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
@@ -683,18 +669,6 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_REF;
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
-
-	struct IMPLEMENT_QUERY(QueryTypeOfSymbolOrDefinition, QueryType_Result) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto x = *ctx.query<QueryTypeOfSymbol>(key);
-			if (x.hasValue()) return x.value();
-
-			return *ctx.query<QueryTypeFromDefinition>(key);
-		}
-
-		QUERY_AUTO_CACHE_REF;
-	};
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbolOrDefinition)
 
 	struct IMPLEMENT_QUERY(QueryClassSymbolData, QueryClassSymbolData_Result) {
 		struct ClassDataParser final: pst::PstStmtVisitorPanicky {
@@ -748,11 +722,7 @@ namespace compiler::helios {
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
-				// @TODO Helios Type Fixes
-				// change this to new hout type eval
-				// (see also issue #385)
-
-				auto tp = parseTypeFromExpr(ctx, base);
+				auto tp = ctx.query<EvalExprToType>({ base });
 				if (tp.hasValue()) {
 					class_info.base = tp.value();
 				} else {
@@ -763,7 +733,7 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements) {
-					auto tp = parseTypeFromExpr(ctx, interface);
+					auto tp = ctx.query<EvalExprToType>({ interface });
 					if (tp.hasValue()) {
 						class_info.implements.push_back(tp.value());
 					} else {

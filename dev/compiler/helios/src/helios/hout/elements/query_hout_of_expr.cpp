@@ -1,13 +1,13 @@
 #include <query_framework/query_impl.hpp>
-#include "query_hout_of_expr.hpp"
-
-#include "../../scopes/scopes.hpp"
 #include <pst_parser/pst_expr_visitor.hpp>
-#include "../visitors.hpp"
-#include "expr.hpp"
 
 #include <base/optional.hpp>
 #include <base/box.hpp>
+
+#include "../../scopes/scopes.hpp"
+#include "../visitors.hpp"
+#include "query_hout_of_expr.hpp"
+#include "expr.hpp"
 
 namespace compiler::helios::code {
 	namespace {
@@ -25,6 +25,11 @@ namespace compiler::helios::code {
 			return {};
 		}
 
+		/**
+		 * @note this flatten variants, because there are binary operators in PST
+		 * The construction is kind of weird, since we
+		 * make lhs, rhs, and just extract subtypes from them.
+		 */
 		base::Box<VariantConstructorExpr> constructVariantFrom(
 			query::Context& ctx, ScopeID scope, base::Box<Expr> lhs, base::Box<Expr> rhs
 		) {
@@ -40,109 +45,6 @@ namespace compiler::helios::code {
 
 			return makeBox<VariantConstructorExpr>(ctx, scope, std::move(all_subtypes));
 		}
-
-		struct HoutIsTypeExprVisitor: public HoutExprVisitor {
-			// @TODO czy to nie powinno być roboione na poziomie HELIOS'a, żeby sprawdzać, czy
-			// użytkownik nie próbuje użyć typu jako wartości lub odwrotnie? Czyli żeby rzucić
-			// błędem, jeśli napisze: `let a: i32 + 13 = 20;`
-			explicit HoutIsTypeExprVisitor(query::Context& ctx, ScopeID scope):
-				  ctx(ctx),
-				  scope(scope) {}
-
-			bool            is_type_expr = false;
-			query::Context& ctx;
-			ScopeID         scope;
-
-			void visitLiteralValueExpr(const LiteralValueExpr&) override { is_type_expr = false; }
-
-			void visitIdentifierExpr(const IdentifierExpr& expr) override {
-				testSymbol(expr.symbol);
-			}
-
-			void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override {
-				is_type_expr = false;
-			}
-
-			void visitUnaryOperatorExpr(const UnaryOperatorExpr&) override { is_type_expr = false; }
-
-			void visitParenthesisExpr(const ParenthesisExpr& expr) override {
-				HoutIsTypeExprVisitor vis(ctx, scope);
-				expr.inner->acceptVisitor(vis);
-				is_type_expr = vis.is_type_expr;
-			}
-
-			void visitKeywordExpr(const KeywordExpr& expr) override {
-				using Keyword = lang_def::Keyword;
-				switch (expr.keyword) {
-				case Keyword::None:
-				case Keyword::True:
-				case Keyword::False:
-					is_type_expr = false;
-					break;
-				case Keyword::i8:
-				case Keyword::i16:
-				case Keyword::i32:
-				case Keyword::i64:
-				case Keyword::i128:
-				case Keyword::u8:
-				case Keyword::u16:
-				case Keyword::u32:
-				case Keyword::u64:
-				case Keyword::u128:
-				case Keyword::f32:
-				case Keyword::f64:
-				case Keyword::f80:
-				case Keyword::Char:
-				case Keyword::Bool:
-				case Keyword::Vec:
-				case Keyword::Set:
-				case Keyword::Dict:
-				case Keyword::Array:
-					is_type_expr = true;
-					break;
-				default:
-					throw base::LogicError("KeywordExpr not yet handled by HoutIsTypeExprVisitor");
-				}
-			}
-
-			void visitTupleConstructorExpr(const TupleConstructorExpr& tuple) override {
-				iterOverExprs(tuple.elements);
-			}
-
-			void visitVariantConstructorExpr(const VariantConstructorExpr& variant) override {
-				iterOverExprs(variant.subtypes);
-			}
-
-			void visitLinkedIdentifierExpr(const LinkedIdentifierExpr& val) override {
-				testSymbol(val.symbols.back());
-			}
-
-		private:
-			void testSymbol(SymID symbol) {
-				auto type = *ctx.query<QueryTypeOfSymbol>(symbol);
-				if (type.hasError()) {
-					// this is a class?
-					is_type_expr = true;
-				} else {
-					switch (type.value().getKind()) {
-					case tsh::Kind::Meta:
-						is_type_expr = true;
-						break;
-					default:
-						is_type_expr = false;
-					}
-				}
-			}
-
-			void iterOverExprs(const std::vector<base::Box<Expr>>& expressions) {
-				is_type_expr = true;
-				for (auto& el: expressions) {
-					HoutIsTypeExprVisitor vis(ctx, scope);
-					el->acceptVisitor(vis);
-					if (!vis.is_type_expr) is_type_expr = false;
-				}
-			}
-		};
 
 		/**
 		 * @brief Tries to extract a resulting symbol from hout expression.
@@ -219,18 +121,23 @@ namespace compiler::helios::code {
 				stmt.getRightOperand()->acceptVisitor(rhs);
 
 				if (lhs.node && rhs.node) {
-					HoutIsTypeExprVisitor lhs_vis_expr(ctx, scope);
-					HoutIsTypeExprVisitor rhs_vis_expr(ctx, scope);
-					lhs.node.value()->acceptVisitor(lhs_vis_expr);
-					rhs.node.value()->acceptVisitor(rhs_vis_expr);
+					// clang format off
+					// commented out, so we can remember about it in upcoming HOUT PRs:
+					// HoutIsTypeExprVisitor lhs_vis_expr(ctx, scope);
+					// HoutIsTypeExprVisitor rhs_vis_expr(ctx, scope);
+					// lhs.node.value()->acceptVisitor(lhs_vis_expr);
+					// rhs.node.value()->acceptVisitor(rhs_vis_expr);
 
-					if (lhs_vis_expr.is_type_expr != rhs_vis_expr.is_type_expr) {
-						// @TODO: Report an error
-						return;
-					}
-					// @TODO: should this not be .value == "|"?
-					if (stmt.getOperator().str()[0] == '|' && lhs_vis_expr.is_type_expr
-					    && rhs_vis_expr.is_type_expr) {
+					// if (lhs_vis_expr.is_type_expr != rhs_vis_expr.is_type_expr) {
+					// 	// @TODO: Report an error
+					// 	return;
+					// }
+
+					if (stmt.getOperator().str() == "|") {
+						// @todo HOUT 2.0:
+						// here we assume that "|" always produces a variant (likely valid)
+						// put constructVariantFrom treats types incorrectly,
+						// as its type is not "meta", but the variant itself
 						node = constructVariantFrom(
 							ctx, scope, std::move(*lhs.node), std::move(*rhs.node)
 						);
@@ -243,6 +150,7 @@ namespace compiler::helios::code {
 							std::move(*rhs.node)
 						);
 					}
+					// clang format on
 				}
 			}
 

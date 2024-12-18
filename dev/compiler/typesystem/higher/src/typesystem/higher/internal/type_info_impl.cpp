@@ -42,7 +42,7 @@ namespace tsh::internal {
 
 	TupleInfoImpl::TupleInfoImpl(std::vector<ComponentType> components):
 		  components(std::move(components)) {
-		representation = stringifyTypeVector(this->components);
+		representation = "Tuple" + stringifyTypeVector(this->components);
 	}
 
 	FunctionInfoImpl::FunctionInfoImpl(
@@ -90,7 +90,7 @@ namespace tsh::internal {
 
 	VariantInfoImpl::VariantInfoImpl(const std::vector<TypeInfo>& variant_types):
 		  underlying_types(variant_types) {
-		representation = "Variant " + stringifyTypeVector(variant_types);
+		representation = "Variant " + stringifyTypeVector(underlying_types);
 	}
 
 	ClassInfoImpl::ClassInfoImpl(compiler::helios::SymID symbol): symbol(symbol) {
