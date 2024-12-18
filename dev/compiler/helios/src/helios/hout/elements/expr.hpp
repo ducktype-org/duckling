@@ -96,7 +96,9 @@ namespace compiler::helios::code {
 	 * Against:
 	 * - We have/will have TupleConstructorExpr and VariantConstructor Expr.
 	 *
-	 * @TODO HOUT 2.0 just delete it, we should print "()" from hout structure anyway
+	 * @TODO HOUT 2.0: once variants are chained in PST we can delete it
+	 * For now it will be kept for simplicity of creating VariantConstructorExpr.
+	 * Also we should print all "()" from hout structure anyway.
 	 */
 	struct ParenthesisExpr final: public Expr {
 		base::Box<Expr> inner;
@@ -169,9 +171,9 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Variant constructor inside an expression.
-	 * @todo Does it work like a chain?
 	 * @todo HOUT 2.0: type of this expr is the type of variant, not meta type
 	 * we should fix it here, and comp-time.
+	 * Also see: comments on ParenthesisExpr.
 	 */
 	struct VariantConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> subtypes;
