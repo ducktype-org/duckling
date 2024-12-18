@@ -77,6 +77,4 @@ namespace vm {
 	auto Memory::requestBlockType(BlockID id) -> TypeCRef {
 		return getBlock(id)->data.element_type;
 	}
-
-
 }
