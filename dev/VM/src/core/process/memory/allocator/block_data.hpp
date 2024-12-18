@@ -5,7 +5,7 @@
 #include <base/raw_view.hpp>
 
 #include <core/process/type_metadata/definitions.hpp>
-#include "allocator.h"
+#include "allocator.hpp"
 
 namespace vm {
 	class BlockData {

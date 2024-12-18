@@ -5,6 +5,7 @@
 #include <deque>
 #include <core/process/type_metadata/definitions.hpp>
 #include <core/process/type_metadata/type.hpp>
+#include "allocator.hpp"
 #include "block_data.hpp"
 
 namespace vm {
