@@ -1,5 +1,6 @@
 add_library(Hashing
-    src/hashing/empty.cpp   # this cmake macro requires at last one .cpp file @TODO
+    src/hashing/hash.hpp
+    src/hashing/unique_id.hpp
 )
 
 make_module(Hashing USES Base Tester)
