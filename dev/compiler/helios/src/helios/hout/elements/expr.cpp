@@ -11,6 +11,7 @@
 namespace compiler::helios::code {
 	namespace {
 		tsh::TypeInfo getTypeOfKeyword(query::Context& ctx, lang_def::Keyword keyword) {
+			// @todo HOUT 2.0 this is incorrect
 			const static auto BUILTINS = std::unordered_map<lang_def::Keyword, tsh::TypeInfo>{
 				{ lang_def::Keyword::f80, ctx.query<::tsh::QueryFloatType>(80) },
 				{ lang_def::Keyword::f64, ctx.query<::tsh::QueryFloatType>(64) },
