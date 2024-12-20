@@ -115,7 +115,10 @@ namespace compiler::helios {
 						return;
 					}
 					else {
-						subtypes.emplace_back(sub_type_result.value());
+						// @todo: False here means all subtypes of a tuple are immutable.
+						// this is likely wrong, we will have to change it with 
+						// type info, type desc, component type refactor
+						subtypes.emplace_back(sub_type_result.value(), false);
 					}
 				}
 				output(ctx.query<tsh::QueryTupleType>({ subtypes }) );

@@ -186,13 +186,6 @@ namespace tsh {
 		 */
 		bool is_mutable = false;
 
-		ComponentType(TypeInfo type, bool is_mutable):
-			type(type),
-			is_mutable(is_mutable) {}
-
-		ComponentType(TypeInfo type):
-			type(type) {}
-
 		/**
 		 * @brief Create a string representation of the component type.
 		 */
