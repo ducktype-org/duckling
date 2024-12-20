@@ -19,31 +19,29 @@ namespace compiler::helios::code {
 		 */
 		ExprConstructionResult fromPST(query::Context& ctx, MCRef<pst::ExprElement> element);
 
-		base::Optional<std::vector<base::Box<Expr>>> getVariantExpressions(base::Ref<Expr> expr) {
-			if (auto variant = dynamic_cast<VariantConstructorExpr*>(expr.get()); variant)
-				return std::move(variant->subtypes);
-			return {};
-		}
-
-		/**
-		 * @note this flatten variants, because there are binary operators in PST
-		 * The construction is kind of weird, since we
-		 * make lhs, rhs, and just extract subtypes from them.
-		 */
-		base::Box<VariantConstructorExpr> constructVariantFrom(
-			query::Context& ctx, ScopeID scope, base::Box<Expr> lhs, base::Box<Expr> rhs
+		void getVariantSubExprsAux(
+			MCRef<pst::ExprElement> expr, std::vector<CRef<pst::ExprElement>>& sub_exprs_append
 		) {
-			std::vector<base::Box<Expr>> all_subtypes;
-
-			for (auto&& expr: std::array{ std::move(lhs), std::move(rhs) }) {
-				auto subtypes = getVariantExpressions(expr.refMut());
-				if (subtypes)
-					for (auto&& subtype: *subtypes) all_subtypes.emplace_back(std::move(subtype));
-				else
-					all_subtypes.emplace_back(std::move(expr));
+			if (auto bin_op = dynamic_cast<const pst::expr::BinaryOperator*>(&*expr)) {
+				if (bin_op->getOperator().str() == "|") {
+					getVariantSubExprsAux(bin_op->getLeftOperand(), sub_exprs_append);
+					getVariantSubExprsAux(bin_op->getRightOperand(), sub_exprs_append);
+				}
 			}
-
-			return makeBox<VariantConstructorExpr>(ctx, scope, std::move(all_subtypes));
+			else {
+				sub_exprs_append.emplace_back(expr.toOpt().value());
+			}
+		}
+			
+		/**
+		 * @brief Extracts sub expressions from a variant operator.
+		 */
+		std::vector<CRef<pst::ExprElement>> getVariantSubExprs(const pst::expr::BinaryOperator& expr) {
+			CORE_ASSERT(expr.getOperator().str() == "|", "Not a variant operator");
+			std::vector<CRef<pst::ExprElement>> sub_exprs;
+			getVariantSubExprsAux(expr.getLeftOperand(), sub_exprs);
+			getVariantSubExprsAux(expr.getRightOperand(), sub_exprs);
+			return sub_exprs;
 		}
 
 		/**
@@ -115,43 +113,53 @@ namespace compiler::helios::code {
 			}
 
 			void visitBinaryOperator(const pst::expr::BinaryOperator& stmt) override {
-				PstExprToHoutExprVisitor lhs(ctx, scope);
-				PstExprToHoutExprVisitor rhs(ctx, scope);
-				stmt.getLeftOperand()->acceptVisitor(lhs);
-				stmt.getRightOperand()->acceptVisitor(rhs);
+				// handle variants:
+				if (stmt.getOperator().str() == "|") {
+					// @todo HOUT 2.0:
+					// Here we assume that "|" always produces a variant (likely valid).
+					// If it does not, and "|" will remain a binary operator,
+					// we will have to do something with it.
+					// (likely if-out if all sub expressions are meta or non-meta, throw otherwise,
+					// (require parentheses))
 
-				if (lhs.node && rhs.node) {
-					// clang format off
-					// commented out, so we can remember about it in upcoming HOUT PRs:
-					// HoutIsTypeExprVisitor lhs_vis_expr(ctx, scope);
-					// HoutIsTypeExprVisitor rhs_vis_expr(ctx, scope);
-					// lhs.node.value()->acceptVisitor(lhs_vis_expr);
-					// rhs.node.value()->acceptVisitor(rhs_vis_expr);
+					auto sub_exprs = getVariantSubExprs(stmt);
+					// @todo HOUT 2.0:
+					// validate that all sub types are meta
 
-					// if (lhs_vis_expr.is_type_expr != rhs_vis_expr.is_type_expr) {
-					// 	// @TODO: Report an error
-					// 	return;
-					// }
+					std::vector<Box<Expr>> all_subtypes;
 
-					if (stmt.getOperator().str() == "|") {
-						// @todo HOUT 2.0:
-						// here we assume that "|" always produces a variant (likely valid)
-						// put constructVariantFrom treats types incorrectly,
-						// as its type is not "meta", but the variant itself
-						node = constructVariantFrom(
-							ctx, scope, std::move(*lhs.node), std::move(*rhs.node)
-						);
-					} else {
-						node = makeBox<BinaryOperatorExpr>(
-							ctx,
-							scope,
-							stmt.getOperator(),
-							std::move(*lhs.node),
-							std::move(*rhs.node)
-						);
+					for (auto sub_expr: sub_exprs) {
+						auto sub_expr_hout = fromPST(ctx, sub_expr);
+						if (sub_expr_hout.hasError()) {
+							// Error has occurred.
+							return;
+						}
+						all_subtypes.emplace_back(std::move(sub_expr_hout).value());
 					}
-					// clang format on
+					node = makeBox<VariantConstructorExpr>(ctx, scope, std::move(all_subtypes));
+					return;
 				}
+
+
+				auto lhs_res = fromPST(ctx, stmt.getLeftOperand());
+				auto rhs_res = fromPST(ctx, stmt.getRightOperand());
+
+				if (lhs_res.hasError() or rhs_res.hasError()) {
+					return; // failed
+				}
+
+				auto lhs = std::move(lhs_res).value();
+				auto rhs = std::move(rhs_res).value();
+
+				// @todo here we should type check,
+				// and make function call / builtin binary operator
+				node = makeBox<BinaryOperatorExpr>(
+					ctx,
+					scope,
+					stmt.getOperator(),
+					std::move(lhs),
+					std::move(rhs)
+				);
 			}
 
 			void visitChainExpr(const pst::expr::ChainExpr& stmt) override {
