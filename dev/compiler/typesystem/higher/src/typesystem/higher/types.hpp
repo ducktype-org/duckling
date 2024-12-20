@@ -168,6 +168,8 @@ namespace tsh {
 
 	/**
 	 * @brief A type supplied with mutability information.
+	 * 
+	 * @todo should this exist, how it realted to typeinfo, typedesc; document it.
 	 *
 	 * It's called "Component Type" because it is used in types which are composed of other types.
 	 * For example, a typed pointer may point to an immutable value. Or a tuple may have some
@@ -183,6 +185,13 @@ namespace tsh {
 		 * @brief Whether the component is mutable or not.
 		 */
 		bool is_mutable = false;
+
+		ComponentType(TypeInfo type, bool is_mutable):
+			type(type),
+			is_mutable(is_mutable) {}
+
+		ComponentType(TypeInfo type):
+			type(type) {}
 
 		/**
 		 * @brief Create a string representation of the component type.

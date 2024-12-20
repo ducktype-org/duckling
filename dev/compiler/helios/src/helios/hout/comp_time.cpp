@@ -106,10 +106,19 @@ namespace compiler::helios {
 			}
 
 			void visitTupleConstructorExpr(const code::TupleConstructorExpr& expr) override {
-				// @todo HOUT 2.0: this is generally an incorrect implementation,
-				// type of this expression
-				// will be a meta in the future
-				output(expr.type_desc.getType());
+				std::vector<tsh::ComponentType> subtypes;
+				for (auto& sub_type: expr.elements) {
+					// should we here short-path or not?
+					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref() );
+					if (sub_type_result.hasError()) {
+						failed = true;
+						return;
+					}
+					else {
+						subtypes.emplace_back(sub_type_result.value());
+					}
+				}
+				output(ctx.query<tsh::QueryTupleType>({ subtypes }) );
 			}
 
 			void visitVariantConstructorExpr(const code::VariantConstructorExpr& expr) override {

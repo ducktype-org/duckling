@@ -34,25 +34,7 @@ namespace compiler::helios::code {
 			return BUILTINS.at(keyword);
 		}
 
-		/**
-		 * @todo HOUT 2.0 This should be sort of moved to hout creation, and comp-time
-		 * maybe we will need it still in hout creation to detect tuples-types vs normal-tuples
-		 */
-		tsh::TypeDesc<>
-			getTypeDescOfTuple(query::Context& ctx, const std::vector<base::Box<Expr>>& elements) {
-			std::vector<tsh::ComponentType> tuple_components;
-			tuple_components.reserve(elements.size());
 
-			for (auto&& tuple_subtype: elements) {
-				// @NOTE: False here means all subtypes of a tuple are immutable.
-				tuple_components.emplace_back(tuple_subtype->type_desc.getType(), false);
-			}
-
-			return tsh::TypeDesc<>(
-				ctx.query<tsh::QueryTupleType>({ tuple_components }),
-				tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			);
-		}
 	}
 
 #define EXPR_VISITOR(type) \
@@ -148,7 +130,7 @@ namespace compiler::helios::code {
 	TupleConstructorExpr::TupleConstructorExpr(
 		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
 	):
-		  Expr(scope, getTypeDescOfTuple(ctx, elements)),
+		  Expr(scope, ctx.query<tsh::QueryMetaType>({})),
 		  elements(std::move(elements)) {}
 
 	void TupleConstructorExpr::debugPrint(std::ostream& out) const {

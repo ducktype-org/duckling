@@ -236,14 +236,13 @@ namespace compiler::helios::code {
 
 			void visitComma(const pst::expr::Comma& stmt) override {
 				std::vector<Box<Expr>> expressions;
-				for (auto&& ex: stmt.getExpressions()) {
-					PstExprToHoutExprVisitor vis(ctx, scope);
-					ex->acceptVisitor(vis);
-					if (!vis.node) {
+				for (auto& ex: stmt.getExpressions()) {
+					auto res = fromPST(ctx, ex.ref());
+					if (res.hasError()) {
 						// Error has occurred.
 						return;
 					}
-					if_opt_some(vis.node, b) { expressions.emplace_back(std::move(b)); }
+					expressions.emplace_back(std::move(res).value());
 				}
 
 				node = makeBox<TupleConstructorExpr>(ctx, scope, std::move(expressions));
