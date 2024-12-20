@@ -42,8 +42,8 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(IdentifierExpr)
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
-	EXPR_VISITOR(TupleConstructorExpr)
-	EXPR_VISITOR(VariantConstructorExpr)
+	EXPR_VISITOR(TupleTypeConstructorExpr)
+	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
 	EXPR_VISITOR(KeywordExpr)
 	EXPR_VISITOR(LinkedIdentifierExpr)
@@ -125,13 +125,13 @@ namespace compiler::helios::code {
 		out << lang_def::keywordToStr(keyword).strView();
 	}
 
-	TupleConstructorExpr::TupleConstructorExpr(
+	TupleTypeConstructorExpr::TupleTypeConstructorExpr(
 		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
 	):
 		  Expr(scope, ctx.query<tsh::QueryMetaType>({})),
 		  elements(std::move(elements)) {}
 
-	void TupleConstructorExpr::debugPrint(std::ostream& out) const {
+	void TupleTypeConstructorExpr::debugPrint(std::ostream& out) const {
 		out << "(";
 		for (bool add_comma = false; auto&& e: elements) {
 			if (add_comma) out << ", ";
@@ -141,7 +141,7 @@ namespace compiler::helios::code {
 		out << ")";
 	}
 
-	void VariantConstructorExpr::debugPrint(std::ostream& out) const {
+	void VariantTypeConstructorExpr::debugPrint(std::ostream& out) const {
 		out << "(";
 		for (bool add_pipe = false; auto&& subtype: subtypes) {
 			if (add_pipe) out << " | ";
@@ -151,7 +151,7 @@ namespace compiler::helios::code {
 		out << ")";
 	}
 
-	VariantConstructorExpr::VariantConstructorExpr(
+	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
 		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
 	):
 		  Expr(scope, ctx.query<tsh::QueryMetaType>({})),

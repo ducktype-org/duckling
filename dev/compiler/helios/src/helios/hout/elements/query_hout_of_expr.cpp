@@ -81,11 +81,11 @@ namespace compiler::helios::code {
 				symbols = vis.symbols;
 			}
 
-			void visitTupleConstructorExpr(const TupleConstructorExpr&) override {
+			void visitTupleTypeConstructorExpr(const TupleTypeConstructorExpr&) override {
 				throw base::NotYetImplemented("Cannot evaluate symbol from tuple");
 			}
 
-			void visitVariantConstructorExpr(const VariantConstructorExpr&) override {
+			void visitVariantTypeConstructorExpr(const VariantTypeConstructorExpr&) override {
 				throw base::NotYetImplemented("Cannot evaluate symbol from tuple");
 			}
 
@@ -137,7 +137,7 @@ namespace compiler::helios::code {
 						}
 						all_subtypes.emplace_back(std::move(sub_expr_hout).value());
 					}
-					node = makeBox<VariantConstructorExpr>(ctx, scope, std::move(all_subtypes));
+					node = makeBox<VariantTypeConstructorExpr>(ctx, scope, std::move(all_subtypes));
 					return;
 				}
 
@@ -240,7 +240,7 @@ namespace compiler::helios::code {
 					expressions.emplace_back(std::move(res).value());
 				}
 
-				node = makeBox<TupleConstructorExpr>(ctx, scope, std::move(expressions));
+				node = makeBox<TupleTypeConstructorExpr>(ctx, scope, std::move(expressions));
 			}
 
 			void visitSuffixOperator(const pst::expr::SuffixOperator& stmt) override {

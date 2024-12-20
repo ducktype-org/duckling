@@ -440,11 +440,11 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("keyword");
 		}
 
-		void visitTupleConstructorExpr(const hc::TupleConstructorExpr&) override {
+		void visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) override {
 			throw base::NotYetImplemented("tuple constructor");
 		}
 
-		void visitVariantConstructorExpr(const hc::VariantConstructorExpr&) override {
+		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr&) override {
 			throw base::NotYetImplemented("variant constructor");
 		}
 
