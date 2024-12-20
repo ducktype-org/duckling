@@ -109,31 +109,29 @@ namespace compiler::helios {
 				std::vector<tsh::ComponentType> subtypes;
 				for (auto& sub_type: expr.elements) {
 					// should we here short-path or not?
-					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref() );
+					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref());
 					if (sub_type_result.hasError()) {
 						failed = true;
 						return;
-					}
-					else {
+					} else {
 						// @todo: False here means all subtypes of a tuple are immutable.
-						// this is likely wrong, we will have to change it with 
+						// this is likely wrong, we will have to change it with
 						// type info, type desc, component type refactor
 						subtypes.emplace_back(sub_type_result.value(), false);
 					}
 				}
-				output(ctx.query<tsh::QueryTupleType>({ subtypes }) );
+				output(ctx.query<tsh::QueryTupleType>({ subtypes }));
 			}
 
 			void visitVariantConstructorExpr(const code::VariantConstructorExpr& expr) override {
 				std::vector<tsh::TypeInfo> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
-					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref() );
+					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref());
 					if (sub_type_result.hasError()) {
 						failed = true;
 						return;
-					}
-					else {
+					} else {
 						subtypes.emplace_back(sub_type_result.value());
 					}
 				}

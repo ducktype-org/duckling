@@ -154,7 +154,7 @@ private:
 		ASSERT_EQUAL(META_TYPE, getTypeOf("C", root_scope));
 
 		const auto tuple_ii_ff = getTypeOf("TupleIIFF", root_scope);
-		
+
 		const auto tuple_f16_f32 = query::entryPoint<tsh::QueryTupleType>(
 			{ { { F16_TYPE, false }, { F32_TYPE, false } } }
 		);
@@ -163,7 +163,7 @@ private:
 		);
 
 		const auto tuple_ii_ff_type_info = query::entryPoint<tsh::QueryTupleType>(
-			{ { { tuple_i16_i32, false }, { tuple_f16_f32, false }} }
+			{ { { tuple_i16_i32, false }, { tuple_f16_f32, false } } }
 		);
 
 		ASSERT_EQUAL(tuple_ii_ff, tuple_ii_ff_type_info);

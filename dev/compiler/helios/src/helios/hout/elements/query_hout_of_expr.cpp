@@ -27,16 +27,16 @@ namespace compiler::helios::code {
 					getVariantSubExprsAux(bin_op->getLeftOperand(), sub_exprs_append);
 					getVariantSubExprsAux(bin_op->getRightOperand(), sub_exprs_append);
 				}
-			}
-			else {
+			} else {
 				sub_exprs_append.emplace_back(expr.toOpt().value());
 			}
 		}
-			
+
 		/**
 		 * @brief Extracts sub expressions from a variant operator.
 		 */
-		std::vector<CRef<pst::ExprElement>> getVariantSubExprs(const pst::expr::BinaryOperator& expr) {
+		std::vector<CRef<pst::ExprElement>> getVariantSubExprs(const pst::expr::BinaryOperator& expr
+		) {
 			CORE_ASSERT(expr.getOperator().str() == "|", "Not a variant operator");
 			std::vector<CRef<pst::ExprElement>> sub_exprs;
 			getVariantSubExprsAux(expr.getLeftOperand(), sub_exprs);
@@ -144,9 +144,7 @@ namespace compiler::helios::code {
 				auto lhs_res = fromPST(ctx, stmt.getLeftOperand());
 				auto rhs_res = fromPST(ctx, stmt.getRightOperand());
 
-				if (lhs_res.hasError() or rhs_res.hasError()) {
-					return; // failed
-				}
+				if (lhs_res.hasError() or rhs_res.hasError()) return;  // failed
 
 				auto lhs = std::move(lhs_res).value();
 				auto rhs = std::move(rhs_res).value();
@@ -154,11 +152,7 @@ namespace compiler::helios::code {
 				// @todo here we should type check,
 				// and make function call / builtin binary operator
 				node = makeBox<BinaryOperatorExpr>(
-					ctx,
-					scope,
-					stmt.getOperator(),
-					std::move(lhs),
-					std::move(rhs)
+					ctx, scope, stmt.getOperator(), std::move(lhs), std::move(rhs)
 				);
 			}
 

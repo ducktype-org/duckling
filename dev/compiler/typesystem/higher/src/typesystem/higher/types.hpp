@@ -168,7 +168,7 @@ namespace tsh {
 
 	/**
 	 * @brief A type supplied with mutability information.
-	 * 
+	 *
 	 * @todo should this exist, how it realted to typeinfo, typedesc; document it.
 	 *
 	 * It's called "Component Type" because it is used in types which are composed of other types.
