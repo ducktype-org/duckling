@@ -116,7 +116,7 @@ namespace compiler::helios {
 				std::vector<tsh::TypeInfo> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
-					auto sub_type_result = ctx.query<EvalExprToType>({ sub_type.ref() });
+					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref() );
 					if (sub_type_result.hasError()) {
 						failed = true;
 						return;
@@ -133,14 +133,9 @@ namespace compiler::helios {
 			}
 		};
 
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto parsed = ctx.query<QueryHoutOfExpr>({ key.element });
-			if (parsed.hasError()) return errors::HError(parsed.error());
-
-			// assert here that type of parsed.value() is meta
-
+		static auto evalHoutExprToType(query::Context& ctx, CRef<code::Expr> expr) -> PResult {
 			ShortPathVisitor visitor(ctx);
-			parsed.value()->acceptVisitor(visitor);
+			expr->acceptVisitor(visitor);
 
 			if (visitor.failed) return errors::HError(errors::Failed());
 
@@ -157,6 +152,15 @@ namespace compiler::helios {
 			}
 
 			return short_path_result.value();
+		}
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto parsed = ctx.query<QueryHoutOfExpr>({ key.element });
+			if (parsed.hasError()) return errors::HError(parsed.error());
+
+			// @TODO (once it works) assert here that type of parsed.value() is meta
+
+			return evalHoutExprToType(ctx, parsed.value().ref());
 		}
 
 		QUERY_AUTO_CACHE_COPY

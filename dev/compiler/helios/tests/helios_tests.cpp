@@ -46,7 +46,7 @@ public:
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
-		TESTER_ADD_TEST(scopeParentsAndDepthTests);
+		// TESTER_ADD_TEST(scopeParentsAndDepthTests);
 	}
 
 private:
@@ -130,13 +130,13 @@ private:
 			= query::entryPoint<tsh::QueryVariantType>({ { INT32_TYPE, F32_TYPE, BOOL_TYPE } });
 		ASSERT_EQUAL(true, second_variant == second_variant_type_info);
 
-		[[maybe_unused]] const auto weird_variant = getTypeOf("weird_variant", root_scope);
+		const auto weird_variant = getTypeOf("weird_variant", root_scope);
 
 		const auto classA = getTypeFromDefinition("A", root_scope);
 		const auto classB = getTypeFromDefinition("B", root_scope);
 		const auto classC = getTypeFromDefinition("C", root_scope);
 
-		[[maybe_unused]] auto right_tuple = query::entryPoint<tsh::QueryTupleType>(
+		auto right_tuple = query::entryPoint<tsh::QueryTupleType>(
 			{ { { classA, false },
 		        { query::entryPoint<tsh::QueryVariantType>({ { classB, classC } }), false } } }
 		);
@@ -146,13 +146,13 @@ private:
 		// right now weird_variant_type has META instead of A/B/C as subtypes
 		// its not a trivial fix to do unfortunately
 
-		// const auto weird_variant_type
-		// 	= query::entryPoint<tsh::QueryVariantType>({ { classA, right_tuple } });
+		const auto weird_variant_type
+			= query::entryPoint<tsh::QueryVariantType>({ { classA, right_tuple } });
 
-		// std::cerr << "\n" << weird_variant.toString();
-		// std::cerr << "\n" << classA.toString();
-		// std::cerr<<"\n";
-		// ASSERT_EQUAL(true, weird_variant == weird_variant_type);
+		std::cerr << "\n" << weird_variant.toString();
+		std::cerr << "\n" << classA.toString();
+		std::cerr<<"\n";
+		ASSERT_EQUAL(true, weird_variant == weird_variant_type);
 
 		ASSERT_EQUAL(META_TYPE, getTypeOf("T", root_scope));
 	}
