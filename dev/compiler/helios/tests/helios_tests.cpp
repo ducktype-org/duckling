@@ -46,7 +46,7 @@ public:
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
-		// TESTER_ADD_TEST(scopeParentsAndDepthTests);
+		TESTER_ADD_TEST(scopeParentsAndDepthTests);
 	}
 
 private:
@@ -106,7 +106,9 @@ private:
 	void testTypeOf() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/types")));
 
+		const auto INT16_TYPE = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
 		const auto INT32_TYPE = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
+		const auto F16_TYPE   = query::entryPoint<tsh::QueryFloatType>(16);
 		const auto F32_TYPE   = query::entryPoint<tsh::QueryFloatType>(32);
 		const auto BOOL_TYPE  = query::entryPoint<tsh::QueryBoolType>({});
 		const auto META_TYPE  = query::entryPoint<tsh::QueryMetaType>({});
@@ -141,20 +143,30 @@ private:
 		        { query::entryPoint<tsh::QueryVariantType>({ { classB, classC } }), false } } }
 		);
 
-		// @todo HOUT 2.0
-		// uncomment it, and make it work
-		// right now weird_variant_type has META instead of A/B/C as subtypes
-		// its not a trivial fix to do unfortunately
-
 		const auto weird_variant_type
 			= query::entryPoint<tsh::QueryVariantType>({ { classA, right_tuple } });
 
-		std::cerr << "\n" << weird_variant.toString();
-		std::cerr << "\n" << classA.toString();
-		std::cerr<<"\n";
 		ASSERT_EQUAL(true, weird_variant == weird_variant_type);
 
 		ASSERT_EQUAL(META_TYPE, getTypeOf("T", root_scope));
+		ASSERT_EQUAL(META_TYPE, getTypeOf("A", root_scope));
+		ASSERT_EQUAL(META_TYPE, getTypeOf("B", root_scope));
+		ASSERT_EQUAL(META_TYPE, getTypeOf("C", root_scope));
+
+		const auto tuple_ii_ff = getTypeOf("TupleIIFF", root_scope);
+		
+		const auto tuple_f16_f32 = query::entryPoint<tsh::QueryTupleType>(
+			{ { { F16_TYPE, false }, { F32_TYPE, false } } }
+		);
+		const auto tuple_i16_i32 = query::entryPoint<tsh::QueryTupleType>(
+			{ { { INT16_TYPE, false }, { INT32_TYPE, false } } }
+		);
+
+		const auto tuple_ii_ff_type_info = query::entryPoint<tsh::QueryTupleType>(
+			{ { { tuple_i16_i32, false }, { tuple_f16_f32, false }} }
+		);
+
+		ASSERT_EQUAL(tuple_ii_ff, tuple_ii_ff_type_info);
 	}
 
 	void testEdgeEvals() {
