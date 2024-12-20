@@ -18,7 +18,7 @@ namespace compiler::helios::code {
 		 * @note This is a private function of this file.
 		 */
 		ExprConstructionResult fromPST(query::Context& ctx, MCRef<pst::ExprElement> element);
-	
+
 		void getVariantSubExprsInPlace(
 			MCRef<pst::ExprElement> expr, std::vector<CRef<pst::ExprElement>>& sub_exprs_append
 		) {

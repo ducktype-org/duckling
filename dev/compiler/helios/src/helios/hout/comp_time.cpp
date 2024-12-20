@@ -105,7 +105,8 @@ namespace compiler::helios {
 					failed = true;
 			}
 
-			void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr) override {
+			void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr
+			) override {
 				std::vector<tsh::ComponentType> subtypes;
 				for (auto& sub_type: expr.elements) {
 					// should we here short-path or not?
@@ -123,7 +124,8 @@ namespace compiler::helios {
 				output(ctx.query<tsh::QueryTupleType>({ subtypes }));
 			}
 
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr) override {
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
+			) override {
 				std::vector<tsh::TypeInfo> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
