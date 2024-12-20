@@ -105,18 +105,39 @@ namespace compiler::helios {
 					failed = true;
 			}
 
-			void visitTupleConstructorExpr(const code::TupleConstructorExpr& expr) override {
-				// @todo HOUT 2.0: this is generally an incorrect implementation,
-				// type of this expression
-				// will be a meta in the future
-				output(expr.type_desc.getType());
+			void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr
+			) override {
+				std::vector<tsh::ComponentType> subtypes;
+				for (auto& sub_type: expr.elements) {
+					// should we here short-path or not?
+					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref());
+					if (sub_type_result.hasError()) {
+						failed = true;
+						return;
+					} else {
+						// @todo: False here means all subtypes of a tuple are immutable.
+						// this is likely wrong, we will have to change it with
+						// type info, type desc, component type refactor
+						subtypes.emplace_back(sub_type_result.value(), false);
+					}
+				}
+				output(ctx.query<tsh::QueryTupleType>({ subtypes }));
 			}
 
-			void visitVariantConstructorExpr(const code::VariantConstructorExpr& expr) override {
-				// @todo HOUT 2.0: this is generally an incorrect implementation,
-				// type of this expression
-				// will be a meta in the future
-				output(expr.type_desc.getType());
+			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
+			) override {
+				std::vector<tsh::TypeInfo> subtypes;
+				for (auto& sub_type: expr.subtypes) {
+					// should we here short-path or not?
+					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref());
+					if (sub_type_result.hasError()) {
+						failed = true;
+						return;
+					} else {
+						subtypes.emplace_back(sub_type_result.value());
+					}
+				}
+				output(ctx.query<tsh::QueryVariantType>({ subtypes }));
 			}
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
@@ -124,12 +145,9 @@ namespace compiler::helios {
 			}
 		};
 
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto parsed = ctx.query<QueryHoutOfExpr>({ key.element });
-			if (parsed.hasError()) return errors::HError(parsed.error());
-
+		static auto evalHoutExprToType(query::Context& ctx, CRef<code::Expr> expr) -> PResult {
 			ShortPathVisitor visitor(ctx);
-			parsed.value()->acceptVisitor(visitor);
+			expr->acceptVisitor(visitor);
 
 			if (visitor.failed) return errors::HError(errors::Failed());
 
@@ -146,6 +164,15 @@ namespace compiler::helios {
 			}
 
 			return short_path_result.value();
+		}
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto parsed = ctx.query<QueryHoutOfExpr>({ key.element });
+			if (parsed.hasError()) return errors::HError(parsed.error());
+
+			// @TODO (once it works) assert here that type of parsed.value() is meta
+
+			return evalHoutExprToType(ctx, parsed.value().ref());
 		}
 
 		QUERY_AUTO_CACHE_COPY
