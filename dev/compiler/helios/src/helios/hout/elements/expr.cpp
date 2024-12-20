@@ -53,21 +53,6 @@ namespace compiler::helios::code {
 				tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			);
 		}
-
-		tsh::TypeDesc<> getTypeDescOfVariant(
-			query::Context& ctx, const std::vector<base::Box<Expr>>& subtypes
-		) {
-			std::vector<tsh::TypeInfo> variant_subtypes;
-			variant_subtypes.reserve(subtypes.size());
-
-			for (auto&& subtype: subtypes)
-				variant_subtypes.emplace_back(subtype->type_desc.getType());
-
-			return tsh::TypeDesc<>(
-				ctx.query<tsh::QueryVariantType>({ variant_subtypes }),
-				tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			);
-		}
 	}
 
 #define EXPR_VISITOR(type) \
@@ -189,7 +174,7 @@ namespace compiler::helios::code {
 	VariantConstructorExpr::VariantConstructorExpr(
 		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
 	):
-		  Expr(scope, getTypeDescOfVariant(ctx, subtypes)),
+		  Expr(scope, ctx.query<tsh::QueryMetaType>({})),
 		  subtypes(std::move(subtypes)) {}
 
 	void LinkedIdentifierExpr::debugPrint(std::ostream& out) const {

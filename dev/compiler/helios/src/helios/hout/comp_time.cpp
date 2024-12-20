@@ -113,10 +113,19 @@ namespace compiler::helios {
 			}
 
 			void visitVariantConstructorExpr(const code::VariantConstructorExpr& expr) override {
-				// @todo HOUT 2.0: this is generally an incorrect implementation,
-				// type of this expression
-				// will be a meta in the future
-				output(expr.type_desc.getType());
+				std::vector<tsh::TypeInfo> subtypes;
+				for (auto& sub_type: expr.subtypes) {
+					// should we here short-path or not?
+					auto sub_type_result = ctx.query<EvalExprToType>({ sub_type.ref() });
+					if (sub_type_result.hasError()) {
+						failed = true;
+						return;
+					}
+					else {
+						subtypes.emplace_back(sub_type_result.value());
+					}
+				}
+				output(ctx.query<tsh::QueryVariantType>({ subtypes }));
 			}
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
@@ -127,6 +136,8 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto parsed = ctx.query<QueryHoutOfExpr>({ key.element });
 			if (parsed.hasError()) return errors::HError(parsed.error());
+
+			// assert here that type of parsed.value() is meta
 
 			ShortPathVisitor visitor(ctx);
 			parsed.value()->acceptVisitor(visitor);
