@@ -18,14 +18,14 @@ namespace compiler::helios::code {
 		 * @note This is a private function of this file.
 		 */
 		ExprConstructionResult fromPST(query::Context& ctx, MCRef<pst::ExprElement> element);
-
-		void getVariantSubExprsAux(
+	
+		void getVariantSubExprsInPlace(
 			MCRef<pst::ExprElement> expr, std::vector<CRef<pst::ExprElement>>& sub_exprs_append
 		) {
 			if (auto bin_op = dynamic_cast<const pst::expr::BinaryOperator*>(&*expr)) {
 				if (bin_op->getOperator().str() == "|") {
-					getVariantSubExprsAux(bin_op->getLeftOperand(), sub_exprs_append);
-					getVariantSubExprsAux(bin_op->getRightOperand(), sub_exprs_append);
+					getVariantSubExprsInPlace(bin_op->getLeftOperand(), sub_exprs_append);
+					getVariantSubExprsInPlace(bin_op->getRightOperand(), sub_exprs_append);
 				}
 			} else {
 				sub_exprs_append.emplace_back(expr.toOpt().value());
@@ -34,13 +34,14 @@ namespace compiler::helios::code {
 
 		/**
 		 * @brief Extracts sub expressions from a variant operator.
+		 * This flattens PST `a | b | c` expression (only if there are no parenthesis).
 		 */
 		std::vector<CRef<pst::ExprElement>> getVariantSubExprs(const pst::expr::BinaryOperator& expr
 		) {
 			CORE_ASSERT(expr.getOperator().str() == "|", "Not a variant operator");
 			std::vector<CRef<pst::ExprElement>> sub_exprs;
-			getVariantSubExprsAux(expr.getLeftOperand(), sub_exprs);
-			getVariantSubExprsAux(expr.getRightOperand(), sub_exprs);
+			getVariantSubExprsInPlace(expr.getLeftOperand(), sub_exprs);
+			getVariantSubExprsInPlace(expr.getRightOperand(), sub_exprs);
 			return sub_exprs;
 		}
 

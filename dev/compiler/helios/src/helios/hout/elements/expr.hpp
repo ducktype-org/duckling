@@ -153,10 +153,6 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Tuple constructor inside an expression.
-	 * @todo HOUT 2.0: type of this expr is the type of tuple, not meta type
-	 * we should fix it here, and comp-time.
-	 * We will keep this element, and distinguish tuple-meta from tuple-tuple
-	 * during hout creation. Change this name to "TupleTypeExpr" (and "TupleExpr")
 	 */
 	struct TupleConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> elements;
@@ -171,9 +167,6 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Variant constructor inside an expression.
-	 * @todo HOUT 2.0: type of this expr is the type of variant, not meta type
-	 * we should fix it here, and comp-time.
-	 * Also see: comments on ParenthesisExpr.
 	 */
 	struct VariantConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> subtypes;
