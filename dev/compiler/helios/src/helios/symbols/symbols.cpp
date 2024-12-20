@@ -441,7 +441,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryConstValueOf, errors::HResult<i64 COMMA errors::Failed>) {
 		// @todo HOUT 2.0 move this to comp_time on integers
-		
+
 		struct EvaluateHoutExprVisitor: public code::HoutExprVisitor {
 			Context&                                  ctx;
 			errors::HResult<i64 COMMA errors::Failed> result;
