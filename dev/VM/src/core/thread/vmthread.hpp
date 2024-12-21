@@ -100,7 +100,6 @@ namespace vm {
 		 */
 		VMProcess&      process;
 		Memory&         process_memory;
-		TypeMetadata&   process_types;
 		StackAllocator& process_stack_allocator;
 		Allocator&      process_dynamic_allocator;
 
@@ -158,7 +157,7 @@ namespace vm {
 		 *
 		 * @return value returned by the program
 		 */
-		u64 internalCallMain(const FuncData&);
+		u64 internalCallMain(CRef<FuncData>);
 
 		// @TODO add some thread data in the future
 

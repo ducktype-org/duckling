@@ -8,6 +8,8 @@
 #include <base/stable_hashmap.hpp>
 #include <base/string_id.hpp>
 #include <core/process/type_metadata/type_metadata.hpp>
+#include "base/optional.hpp"
+#include "core/process/type_metadata/type.hpp"
 #include "instruction.hpp"
 #include <vector>
 
@@ -51,9 +53,15 @@ namespace vm {
 		static cpp::result<vm::VMProgram, std::string>
 			assemble(const std::vector<fs::FilePath>& file);
 
+		base::Optional<CRef<FuncData>> getFuncByName(base::StrID name) const;
+		Ref<FuncData>                  getFunc(usize id) const;
+
+		base::Optional<CRef<Type>> getTypeByName(base::StrID name) const;
+		CRef<Type>                 getType(TypeID id) const;
+
 	private:
-		base::StableHashMap<base::StrID, FuncData> name_to_fun;
-		std::vector<FuncData> functions;
+		base::StableHashMap<base::StrID, usize> name_to_fun;
+		base::StableVector<FuncData>            functions;
 
 		TypeMetadata type_metadata;
 	};

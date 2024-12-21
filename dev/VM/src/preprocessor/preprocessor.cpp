@@ -12,5 +12,4 @@ namespace vm {
 		Preprocessor::getCode(const std::vector<fs::FilePath>& files) {
 		return vm::VMProgram::assemble(files);
 	}
-	Preprocessor::Preprocessor(VMProcess& process): type_metadata(process.getTypeMetadata()) {}
 }

@@ -22,7 +22,6 @@ namespace vm {
 		  runtime_data(frame_stack, local_stack_reserved),
 		  process(process),
 		  process_memory(process.getMemory()),
-		  process_types(process.getTypeMetadata()),
 		  process_stack_allocator(process_memory.getStackAllocator()),
 		  process_dynamic_allocator(process_memory.getDynamicAllocator()) {
 		// @TODO: not loaded status
@@ -375,7 +374,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_init_type(OPFUN_ARGS) {
 		{
-			auto             type      = thread.process_types.getType(vm::TypeID(instr->arg0));
+			auto             type      = thread.executing_code->getType(vm::TypeID(instr->arg0));
 			auto             type_size = type->getSize();
 			base::ModRawView data(&local_stack[frame->local_stack_head], type_size);
 			frame->local_stack_head += type_size;
@@ -420,7 +419,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_alloc_lptr_type(OPFUN_ARGS) {
 		{
-			auto type = thread.process_types.getType(vm::TypeID(instr->arg1));
+			auto type = thread.executing_code->getType(vm::TypeID(instr->arg1));
 			// This is disasbled, because we don't want to pay performance for initializing it
 			// NOLINTBEGIN(cppcoreguidelines-pro-type-member-init)
 			BlockID block;
@@ -511,7 +510,7 @@ namespace vm {
 	#pragma GCC optimize("-fno-crossjumping")
 #endif
 
-	u64 VMThread::internalCallMain(const FuncData& main_func) {
+	u64 VMThread::internalCallMain(CRef<FuncData> main_func) {
 		// We create one artificial "pre" frame, that when main function returns
 		// it will go to it and end execution.
 		Frame* pre_frame = runtime_data.frame_stack_base;
@@ -530,12 +529,12 @@ namespace vm {
 		// Frame of the main function.
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
 		std::byte* local_stack = runtime_data.local_stack_top;
-		runtime_data.local_stack_top += main_func.stack_size;
+		runtime_data.local_stack_top += main_func->stack_size;
 
 		frame->next_args = runtime_data.local_stack_top;
-		runtime_data.local_stack_top += main_func.next_arg_size;
+		runtime_data.local_stack_top += main_func->next_arg_size;
 
-		auto* instr = main_func.bc.data();
+		auto* instr = main_func->bc.data();
 
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
@@ -582,7 +581,9 @@ namespace vm {
 
 		executing_code = code;
 		try {
-			internalCallMain(executing_code->functions[code->main_id]);
+			internalCallMain(
+				executing_code->getFuncByName(base::StrID("main")).expect("Expected main!")
+			);
 			setStatus(api::NotStarted{});
 		} catch (KillProcessException) { setStatus(api::NotStarted{}); }
 	}
@@ -642,7 +643,7 @@ namespace vm {
 
 	void VMThread::setStatus(vm::api::ExecStatus new_status) {
 		// @TODO: check if change is legal
-		this->status = new_status;
+		this->status = std::move(new_status);
 		process.onEvent(api::Executing{ status });
 	}
 

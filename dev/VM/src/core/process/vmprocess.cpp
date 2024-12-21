@@ -12,8 +12,6 @@
 namespace vm {
 	Memory& VMProcess::getMemory() { return memory; }
 
-	TypeMetadata& VMProcess::getTypeMetadata() { return type_meta_data; }
-
 	ServiceManager& VMProcess::getServices() { return service_manager; }
 
 	void VMProcess::onEvent(const api::ProcStatus& event) noexcept {
@@ -35,7 +33,7 @@ namespace vm {
 		auto code_result = preprocessor.getCode(path);
 
 		if (code_result.has_value()) {
-			loadedCode = base::Optional(code_result.value());
+			loadedProgram.emplace(std::move(code_result.value()));
 			return api::Response(api::response::Empty());
 		} else {
 			return cpp::failure(api::LoadProgramError{ code_result.error() });
@@ -47,10 +45,10 @@ namespace vm {
 		if (getMainVMThread().exec_thread)
 			return cpp::failure(api::CoreOperationError{ api::RunError{} }
 			);  // @TODO: change to more verbose error handling
-		if (!loadedCode.has_value())
+		if (!loadedProgram.has_value())
 			return cpp::failure(api::CoreOperationError{ api::RunError{} });
 		getMainVMThread().prestart();
-		getMainVMThread().initThread(Ref(&*loadedCode));
+		getMainVMThread().initThread(Ref(&*loadedProgram));
 		return api::Response(api::response::Empty());
 	}
 
@@ -134,14 +132,19 @@ namespace vm {
 		cpp::result<api::Response, api::CoreOperationError> response;
 		variant_match(request) {
 			variant_case(api::request::TypeMetadata, type_request) {
-				auto res
-					= type_meta_data.getTypeByName(base::StrID(type_request.type_name.c_str()));
-				match_optional(res) {
-					opt_some(value) { response = value; }
-					opt_none {
-						response = cpp::failure(api::CoreOperationError{
-							api::OtherError{ "Type not found" } });
+				if (loadedProgram) {
+					auto res
+						= loadedProgram->getTypeByName(base::StrID(type_request.type_name.c_str()));
+					match_optional(res) {
+						opt_some(value) { response = value; }
+						opt_none {
+							response = cpp::failure(api::CoreOperationError{
+								api::OtherError{ "Type not found" } });
+						}
 					}
+				} else {
+					response = cpp::failure(api::CoreOperationError{
+						api::OtherError{ "Program not loaded" } });
 				}
 			}
 			variant_case(api::request::Block, block_request) {
@@ -179,7 +182,7 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}), preprocessor(*this) {
+	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}), preprocessor() {
 		vm_threads.emplace_back(*this);
 	}
 

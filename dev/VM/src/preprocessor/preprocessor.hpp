@@ -18,14 +18,9 @@ namespace vm {
 		friend VMProcess;
 
 	private:
-		TypeMetadata& type_metadata;
-
-		Preprocessor(VMProcess& process);
+		Preprocessor() = default;
 
 	public:
-		template<class... DynamicServices>
-		friend class ServiceManagerDef;
-
 		/**
 		 * @brief Parses the file, creates type metadata and returns the code.
 		 *

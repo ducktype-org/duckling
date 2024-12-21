@@ -52,12 +52,11 @@ namespace vm {
 		std::ios_base::Init cin_cout_init;
 
 
-		base::Optional<vm::VMProgram> loadedCode = {};
+		base::Optional<vm::VMProgram> loadedProgram = {};
 
 		cpp::result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
 
-		Memory       memory;
-		TypeMetadata type_meta_data;
+		Memory memory;
 
 		// @TODO: Read Processors' docs and do the TODO there...
 		Preprocessor preprocessor;
@@ -162,9 +161,6 @@ namespace vm {
 		void onEvent(const api::ProcStatus& event) noexcept override;
 
 		Memory& getMemory();
-
-		// This should be moved to a code/program object...
-		TypeMetadata& getTypeMetadata();
 
 		/**
 		 * Can be safely called from Execution Thread only

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <base/stable_container.hpp>
-#include "base/stable_hashmap.hpp"
 #include "type.hpp"
 
 namespace vm {
@@ -17,8 +16,11 @@ namespace vm {
 	private:
 		enum class TypeMetadataState { AddingTypes, Finalized };
 
-		base::StableHashMap<TypeID, Type>  types;
-		base::HashMap<base::StrID, TypeID> type_ids;
+		base::StableVector<Type, TypeID> types;
+		// This vector contains TypeIDs of valid types. It is used to iterate over types.
+		// @todo: Remove this onces it's possible to iterate over types.
+		std::vector<TypeID>                types_ids;
+		base::HashMap<base::StrID, TypeID> names_to_type;
 
 		TypeMetadataState state{ TypeMetadata::TypeMetadataState::AddingTypes };
 

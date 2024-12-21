@@ -19,6 +19,7 @@
 #include <base/string_id.hpp>
 
 namespace assemble {
+	using std::move;
 
 	class F8ParserState final: public tpc::ParserState {
 	public:
@@ -890,7 +891,7 @@ namespace assemble {
 	// should be returned, that can produce both human readable and json error output
 	cpp::result<std::vector<vm::FuncData>, std::string>
 		makeCode(const std::vector<tpc::ParserRef<Func>>& funcs, vm::TypeMetadata& type_metadata) {
-		usize main_id = SIZE_MAX;
+		base::Optional<usize> main_id;
 
 		for (i32 idx = 0; idx < funcs.size(); idx++) {
 			if (funcs[idx]->name.value.strView() == "main") {
@@ -901,7 +902,7 @@ namespace assemble {
 
 		// @TODO: Detect duplicated function names
 
-		if (main_id == SIZE_MAX) return cpp::failure("error: No main.");
+		if (!main_id) return cpp::failure("error: No main.");
 
 		std::vector<vm::FuncData> program_functions;
 		program_functions.reserve(funcs.size());
@@ -958,7 +959,11 @@ namespace vm {
 		auto result = assemble::makeCode(funcs, program.type_metadata);
 		if (result.has_error()) return cpp::fail(result.error());
 
-		program.functions = std::move(result.value());
+		auto func_data_vec = std::move(result.value());
+		for (usize i = 0; i < funcs.size(); i++) {
+			program.functions.emplaceBack(std::move(func_data_vec[i]));
+			program.name_to_fun.put(funcs[i]->name, i);
+		}
 
 		return program;
 	}
@@ -967,3 +972,15 @@ namespace vm {
 		return assemble(std::vector{ file });
 	}
 }
+
+base::Optional<CRef<vm::FuncData>> vm::VMProgram::getFuncByName(base::StrID name) const {
+	auto data = name_to_fun.atMaybeCopy(name);
+	if_opt_some(data, func_id) return &functions[func_id];
+	return {};
+}
+
+base::Optional<CRef<vm::Type>> vm::VMProgram::getTypeByName(base::StrID name) const {
+	return type_metadata.getTypeByName(name);
+}
+
+CRef<vm::Type> vm::VMProgram::getType(TypeID id) const { return type_metadata.getType(id); }

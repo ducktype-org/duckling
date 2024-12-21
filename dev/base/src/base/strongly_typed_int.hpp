@@ -76,6 +76,10 @@
 			return value;                                                                          \
 		}                                                                                          \
 		inline constexpr explicit(EXPLICIT_BASE) operator BASE() noexcept { return value; }        \
+		[[nodiscard]]                                                                              \
+		inline constexpr BASE asInt() const noexcept {                                             \
+			return value;                                                                          \
+		}                                                                                          \
 		inline constexpr NAME  operator+() const noexcept { return NAME(+value); }                 \
 		inline constexpr NAME  operator-() const noexcept { return NAME(-value); }                 \
 		inline constexpr NAME& operator++() noexcept {                                             \
