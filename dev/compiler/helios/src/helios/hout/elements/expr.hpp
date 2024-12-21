@@ -94,10 +94,10 @@ namespace compiler::helios::code {
 	 * For:
 	 * - nice dprints, because with this class we know what was in "()"
 	 * Against:
-	 * - We have/will have TupleConstructorExpr and VariantConstructor Expr.
+	 * - We have/will have TupleTypeConstructorExpr and VariantConstructor Expr.
 	 *
 	 * @TODO HOUT 2.0: once variants are chained in PST we can delete it
-	 * For now it will be kept for simplicity of creating VariantConstructorExpr.
+	 * For now it will be kept for simplicity of creating VariantTypeConstructorExpr.
 	 * Also we should print all "()" from hout structure anyway.
 	 */
 	struct ParenthesisExpr final: public Expr {
@@ -153,15 +153,11 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Tuple constructor inside an expression.
-	 * @todo HOUT 2.0: type of this expr is the type of tuple, not meta type
-	 * we should fix it here, and comp-time.
-	 * We will keep this element, and distinguish tuple-meta from tuple-tuple
-	 * during hout creation. Change this name to "TupleTypeExpr" (and "TupleExpr")
 	 */
-	struct TupleConstructorExpr: public Expr {
+	struct TupleTypeConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> elements;
 
-		TupleConstructorExpr(
+		TupleTypeConstructorExpr(
 			query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
 		);
 
@@ -171,14 +167,11 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Variant constructor inside an expression.
-	 * @todo HOUT 2.0: type of this expr is the type of variant, not meta type
-	 * we should fix it here, and comp-time.
-	 * Also see: comments on ParenthesisExpr.
 	 */
-	struct VariantConstructorExpr: public Expr {
+	struct VariantTypeConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> subtypes;
 
-		VariantConstructorExpr(
+		VariantTypeConstructorExpr(
 			query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
 		);
 
