@@ -315,8 +315,8 @@ private:
 		ASSERT_EQUAL("3+((5+9)*2)", out.str());
 
 		ASSERT_EQUAL(12, getValue("V12", root_scope));
-		auto sym2 = getChain("V12", root_scope).back();
-		auto tree2 = valueOfConstOrVariable(sym2);
+		auto              sym2  = getChain("V12", root_scope).back();
+		auto              tree2 = valueOfConstOrVariable(sym2);
 		std::stringstream out2;
 		tree2->debugPrint(out2);
 

@@ -51,7 +51,6 @@ namespace compiler::helios::test_utils {
 		    ->valueOrThrow();
 	}
 
-
 	Box<code::Expr> valueOfConstOrVariable(SymID sym) {
 		struct PstStmtVisitor_GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {
 			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
@@ -65,8 +64,8 @@ namespace compiler::helios::test_utils {
 
 			void visitVariable(const pst::Variable& stmt) override { setExprTree(stmt.getType()); }
 		};
-		
-		auto pst_stmt = stmt(sym);
+
+		auto                           pst_stmt = stmt(sym);
 		PstStmtVisitor_GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 

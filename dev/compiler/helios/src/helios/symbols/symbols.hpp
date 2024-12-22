@@ -68,7 +68,8 @@ namespace compiler::helios {
 
 	/**
 	 * @return Pst element symbol was created from
-	 * @todo should this be an external API? It might depend on incremental compilation implementation
+	 * @todo should this be an external API? It might depend on incremental compilation
+	 * implementation
 	 */
 	MCRef<pst::Stmt> stmt(SymID);
 
