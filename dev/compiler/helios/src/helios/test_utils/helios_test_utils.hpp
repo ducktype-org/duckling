@@ -5,6 +5,9 @@
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
 
+// @todo relax this dependency, just expr is needed (#404)
+#include <helios/hout/elements/expr.hpp>
+
 namespace compiler::helios::test_utils {
 	/**
 	 * Get the ModuleID and ScopeID of a module in the given directory.
@@ -47,4 +50,9 @@ namespace compiler::helios::test_utils {
 	 * @return The type of the last symbol in the chain.
 	 */
 	tsh::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope);
+
+	/**
+	 * @brief returns hout-expr of the value of given const or variable.
+	 */
+	Box<code::Expr> valueOfConstOrVariable(SymID sym);
 }

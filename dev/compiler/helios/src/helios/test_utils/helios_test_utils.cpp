@@ -2,6 +2,8 @@
 
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+#include <pst_parser/pst_visitor.hpp>
+#include <helios/hout/elements/query_hout_of_expr.hpp>
 
 namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::FilePath& path) {
@@ -47,5 +49,27 @@ namespace compiler::helios::test_utils {
 	tsh::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back())
 		    ->valueOrThrow();
+	}
+
+
+	Box<code::Expr> valueOfConstOrVariable(SymID sym) {
+		struct PstStmtVisitor_GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {
+			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
+
+			void setExprTree(const MCRef<pst::ExprElement>& expr) {
+				expr_tree = query::entryPoint<QueryHoutOfExpr>({ expr });
+			}
+
+		public:
+			void visitConst(const pst::Const& stmt) override { setExprTree(stmt.getValue()); }
+
+			void visitVariable(const pst::Variable& stmt) override { setExprTree(stmt.getType()); }
+		};
+		
+		auto pst_stmt = stmt(sym);
+		PstStmtVisitor_GetHOUTExprTree visitor;
+		pst_stmt->acceptVisitor(visitor);
+
+		return std::move(visitor.expr_tree).value();
 	}
 }
