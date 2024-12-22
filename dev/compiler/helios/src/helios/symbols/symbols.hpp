@@ -32,6 +32,7 @@ namespace compiler::helios {
 		Using,
 		Variable,
 		Import,
+		Parameter,
 
 		// Class Symbols
 		Method,
@@ -67,14 +68,15 @@ namespace compiler::helios {
 	ScopeID scope(SymID);
 
 	/**
-	 * @return Pst element symbol was created from
+	 * @return PST Stmt element symbol was created from.
+	 * Panics if element in not a statement.
 	 */
-	MCRef<pst::Stmt> stmt(SymID);
+	CRef<pst::Stmt> stmt(SymID);
 
 	/**
 	 * @brief Query symbols associated with given element in PST
 	 */
-	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<pst::Stmt>, SymID);
+	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, SymID);
 
 	struct KeyOf_LookupInSymbol {
 		/**
