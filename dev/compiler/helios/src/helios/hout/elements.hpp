@@ -1,7 +1,5 @@
 #pragma once
 
-#include "elements/stmt.hpp"  // IWYU pragma: export
-#include "elements/expr.hpp"  // IWYU pragma: export
-
-// delete it?
+#include "elements/stmt.hpp"                // IWYU pragma: export
+#include "elements/expr.hpp"                // IWYU pragma: export
 #include "elements/query_hout_of_expr.hpp"  // IWYU pragma: export
