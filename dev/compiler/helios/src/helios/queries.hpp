@@ -5,34 +5,30 @@
  */
 #pragma once
 
+#include <vector>
+
 #include <query_framework/query_int.hpp>
 
 // @TODO: relax this dependency
 #include <frontend/module_tree/queries.hpp>
 
-#include <vector>
-
 #include "scope_symbol_id.hpp"
 #include "hout/hout.hpp"
+#include "hout/elements/expr.hpp"
 
 namespace compiler::helios {
 	// @FUTURE: perhaps we will need to add more granularity to HOUT generation for efficient
 	// incremental compilation
 
 	/**
-	 * @brief Debug function to print scope and its parents IDs.
-	 * @note: not used right now
-	 * @param scope
-	 */
-	void debugPrintScopeAndParents(ScopeID scope);
-
-	/**
 	 * @brief Query FULL HOUTUnit of single module
+	 * @note Not yet implemented
 	 */
 	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, const HOUTUnit&)
 
 	/**
 	 * @brief Query HOUTUnit of module and all its submodules recursively
+	 * @note Not yet implemented
 	 */
 	DECLARE_QUERY(QueryModuleHOUTRecursively, frontend::ModuleID, std::vector<HOUTUnit>)
 

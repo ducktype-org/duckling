@@ -11,7 +11,7 @@
 #include <base/ints.hpp>
 
 #include <base/optional.hpp>
-#include <memory_data/pointer.hpp>
+#include <core/process/memory/memory_data/pointer.hpp>
 
 namespace vm {
 

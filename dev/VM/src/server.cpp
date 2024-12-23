@@ -1,6 +1,6 @@
 #include <json/json.hpp>
 #include <api/api.hpp>
-#include <supervisor/supervisor.hpp>
+#include <core/supervisor/supervisor.hpp>
 #include "server.hpp"
 
 #include <result.hpp>
@@ -42,7 +42,7 @@ void server(i32 port) {
 	([](vm::PID pid) { return toResponse(vm::api::getExecutionStatus(pid)); });
 
 	CROW_ROUTE(app, "/process/spawn").methods(crow::HTTPMethod::PUT)([]() {
-		return toResponse(vm::api::spawn(false));
+		return toResponse(vm::api::spawn());
 	});
 	CROW_ROUTE(app, "/process/kill/<uint>").methods(crow::HTTPMethod::DELETE)([](vm::PID pid) {
 		return toResponse(vm::api::kill(pid));

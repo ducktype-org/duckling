@@ -106,9 +106,12 @@ private:
 	void testTypeOf() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/types")));
 
+		const auto INT16_TYPE = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
 		const auto INT32_TYPE = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
+		const auto F16_TYPE   = query::entryPoint<tsh::QueryFloatType>(16);
 		const auto F32_TYPE   = query::entryPoint<tsh::QueryFloatType>(32);
 		const auto BOOL_TYPE  = query::entryPoint<tsh::QueryBoolType>({});
+		const auto META_TYPE  = query::entryPoint<tsh::QueryMetaType>({});
 
 		ASSERT_EQUAL(true, INT32_TYPE == getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(true, F32_TYPE == getTypeOf("SimpleFloat", root_scope));
@@ -131,16 +134,39 @@ private:
 
 		const auto weird_variant = getTypeOf("weird_variant", root_scope);
 
-		const auto classA      = getTypeFromDefinition("A", root_scope);
-		const auto classB      = getTypeFromDefinition("B", root_scope);
-		const auto classC      = getTypeFromDefinition("C", root_scope);
-		auto       right_tuple = query::entryPoint<tsh::QueryTupleType>(
-            { { { classA, false },
-		              { query::entryPoint<tsh::QueryVariantType>({ { classB, classC } }), false } } }
-        );
+		const auto classA = getTypeFromDefinition("A", root_scope);
+		const auto classB = getTypeFromDefinition("B", root_scope);
+		const auto classC = getTypeFromDefinition("C", root_scope);
+
+		auto right_tuple = query::entryPoint<tsh::QueryTupleType>(
+			{ { { classA, false },
+		        { query::entryPoint<tsh::QueryVariantType>({ { classB, classC } }), false } } }
+		);
+
 		const auto weird_variant_type
 			= query::entryPoint<tsh::QueryVariantType>({ { classA, right_tuple } });
+
 		ASSERT_EQUAL(true, weird_variant == weird_variant_type);
+
+		ASSERT_EQUAL(META_TYPE, getTypeOf("T", root_scope));
+		ASSERT_EQUAL(META_TYPE, getTypeOf("A", root_scope));
+		ASSERT_EQUAL(META_TYPE, getTypeOf("B", root_scope));
+		ASSERT_EQUAL(META_TYPE, getTypeOf("C", root_scope));
+
+		const auto tuple_ii_ff = getTypeOf("TupleIIFF", root_scope);
+
+		const auto tuple_f16_f32 = query::entryPoint<tsh::QueryTupleType>(
+			{ { { F16_TYPE, false }, { F32_TYPE, false } } }
+		);
+		const auto tuple_i16_i32 = query::entryPoint<tsh::QueryTupleType>(
+			{ { { INT16_TYPE, false }, { INT32_TYPE, false } } }
+		);
+
+		const auto tuple_ii_ff_type_info = query::entryPoint<tsh::QueryTupleType>(
+			{ { { tuple_i16_i32, false }, { tuple_f16_f32, false } } }
+		);
+
+		ASSERT_EQUAL(tuple_ii_ff, tuple_ii_ff_type_info);
 	}
 
 	void testEdgeEvals() {
@@ -161,6 +187,9 @@ private:
 
 		ASSERT_EQUAL(hout.functions.size(), 3);
 		ASSERT_EQUAL(hout.glob_data.size(), 2);
+
+		// just for cov and to see if it does not throw:
+		[[maybe_unused]] auto hout_debug_print = hout.debugPrint();
 	}
 
 	void TestHoutVisitor() {
@@ -505,6 +534,9 @@ private:
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "e");
 			ASSERT_EQUAL(var.type.getType().getKind(), tsh::Kind::Class);
 		}
+
+		// debug print test just for cov and to see if it does not throw:
+		[[maybe_unused]] auto debug_print_out = hout.debugPrint();
 	}
 
 	void scopeParentsAndDepthTests() {
@@ -517,6 +549,10 @@ private:
 				ASSERT_TRUE(depth > 0);
 				ASSERT_EQUAL(depth - 1, scopeDepth(scope));
 				depth = scopeDepth(scope);
+
+				// it is just for cov mostly
+				// @TODO: make it not print to cerr, but to ostream or string:
+				scope.debugPrintScopeAndParents();
 			}
 			assertTrue(parent(scope).empty(), "Scope at depth 0 can't have a parent");
 		}

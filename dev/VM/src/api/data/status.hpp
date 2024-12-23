@@ -36,7 +36,7 @@ namespace vm::api {
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(vm::api::Executing, exec_status);
 	};
 
-	using VCPUStatus
+	using ProcStatus
 		= std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Panicked, Executing>;
 }
 

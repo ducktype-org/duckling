@@ -50,7 +50,9 @@
 												{
 													"Call Expression": {
 														"type": "[]",
-														"arguments": "<nullptr>"
+														"arguments": {
+															"call list": []
+														}
 													}
 												}
 											]

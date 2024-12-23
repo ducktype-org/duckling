@@ -15,3 +15,6 @@ var first_variant: i32 | f32 = 1;
 var second_variant: i32 | f32 | bool = true;
 
 var weird_variant: A | (A, B | C) = A();
+
+class T { }
+
