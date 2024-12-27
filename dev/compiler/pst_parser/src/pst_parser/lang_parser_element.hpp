@@ -197,6 +197,8 @@ namespace pst {
 			return element_kind;
 		}
 
+		virtual void acceptVisitor(PstVisitor& visitor) const;
+
 		template<typename X>
 		friend class PSTAutomatic;
 
@@ -239,8 +241,6 @@ namespace pst {
 		void setFirstToken(dia::SourcePosition pos);
 
 		void setParent(Ref<LangElement> parent) { this->parent.emplace(parent); }
-		
-		virtual void acceptVisitor(PstVisitor& visitor) const;
 
 	private:
 		PstID id = PstID::next();
