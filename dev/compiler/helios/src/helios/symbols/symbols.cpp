@@ -279,6 +279,7 @@ namespace compiler::helios {
 				key.element.toOpt().has_value(),
 				"Nullptr element given to QuerySymbolOfSTMT! (add some null handling before calling it)"
 			);
+			// todo in this PR: change to single visitor
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = dynamic_cast<const pst::Stmt*>(&*key.element)) {
 				return PResult{ makeSymbolFromStatement(scope, stmt) };
@@ -625,6 +626,7 @@ namespace compiler::helios {
 				param_types.reserve(params->size());
 
 				for (auto param: *params) {
+					// @todo in this PR
 					// @TODO HOUT 2.0: we should create symbol from parameter here, and just get
 					// type of symbol. its not trivial, since parameter symbols don't exist yet
 					auto parse_type_res = ctx.query<EvalExprToType>({ param->getType() });
@@ -665,7 +667,9 @@ namespace compiler::helios {
 			auto symbol_ref = getSymRef(key);
 
 			PstStmtVisitor_GetTypeOf visitor(ctx);
-			symbol_ref->pst_stmt->acceptVisitor(visitor);
+			symbol_ref->pst_element->acceptVisitor(visitor);
+			// @TODO is this PR: revert some casts, that are no longer needed, since
+			// visitors are for PST elements, not stmts
 
 			// @TODO in this PR: add support for other symbol
 			

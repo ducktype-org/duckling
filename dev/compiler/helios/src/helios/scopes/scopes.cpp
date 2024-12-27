@@ -327,6 +327,7 @@ namespace compiler::helios {
 			// here, we add only stmts, that actually have a primary scope.
 
 			void visitFun(const pst::Fun&) override {
+				// @todo in this PR
 				// Scope of "fun →()← {}"
 				// @TODO: iterate function parameters and create symbols out of them
 				// The problem is that currently function parameters are Expr in Pst -- this has to
