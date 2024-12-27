@@ -42,7 +42,7 @@ namespace pst {
 		out << "}";
 	}
 
-	void Destructor::acceptVisitor(PstStmtVisitor& visitor) const {
+	void Destructor::acceptVisitor(PstVisitor& visitor) const {
 		visitor.visitDestructor(*this);
 	}
 }

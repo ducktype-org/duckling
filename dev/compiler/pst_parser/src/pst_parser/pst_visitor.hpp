@@ -9,12 +9,15 @@ namespace pst {
 
 
 	/**
-	 * PstStmtVisitor is a simple base class for VisitorPattern in `pst::Stmt`s.
-	 * It is used by calling `stmt.acceptVisitor(visitor)`.
+	 * PstVisitor is a simple base class for VisitorPattern in PST.
+	 * It does not define visit methods for all elements, rather
+	 * it mostly defines it for `pst::Stmt`s and some other needed
+	 * by HELIOS.
+	 * It is used by calling `element.acceptVisitor(visitor)`.
 	 */
-	class PstStmtVisitor {
+	class PstVisitor {
 	public:
-		virtual ~PstStmtVisitor() = default;
+		virtual ~PstVisitor() = default;
 
 		virtual void visitImport([[maybe_unused]] const Import& stmt) = 0;
 
@@ -50,30 +53,30 @@ namespace pst {
 
 		virtual void visitVariable([[maybe_unused]] const Variable& stmt) = 0;
 
-		virtual void visitIf([[maybe_unused]] const If& stmt) {}
+		virtual void visitIf([[maybe_unused]] const If& stmt) = 0;
 
-		virtual void visitWhile([[maybe_unused]] const While& stmt) {}
+		virtual void visitWhile([[maybe_unused]] const While& stmt) = 0;
 
-		virtual void visitMethod([[maybe_unused]] const Method& stmt) {}
+		virtual void visitMethod([[maybe_unused]] const Method& stmt) = 0;
 
-		virtual void visitField([[maybe_unused]] const Field& stmt) {}
+		virtual void visitField([[maybe_unused]] const Field& stmt) = 0;
 
-		virtual void visitConstructor([[maybe_unused]] const Constructor& stmt) {}
+		virtual void visitConstructor([[maybe_unused]] const Constructor& stmt) = 0;
 
-		virtual void visitDestructor([[maybe_unused]] const Destructor& stmt) {}
+		virtual void visitDestructor([[maybe_unused]] const Destructor& stmt) = 0;
 
-		virtual void visitAccessBlock([[maybe_unused]] const AccessBlock& stmt) {}
+		virtual void visitAccessBlock([[maybe_unused]] const AccessBlock& stmt) = 0;
 
-		virtual void visitFor([[maybe_unused]] const For& stmt) {}
+		virtual void visitFor([[maybe_unused]] const For& stmt) = 0;
 	};
 
 	/**
-	 * A simple implementation for PstStmtVisitor, that by default does nothing on visiting.
+	 * A simple implementation for PstVisitor, that by default does nothing on visiting.
 	 * It's a helper class, whose functionality is meant to be overriden for desired statements.
 	 */
-	class PstStmtVisitorEmpty: public PstStmtVisitor {
+	class PstVisitorEmpty: public PstVisitor {
 	public:
-		~PstStmtVisitorEmpty() override = default;
+		~PstVisitorEmpty() override = default;
 
 		void visitImport([[maybe_unused]] const Import& stmt) override {}
 
@@ -127,20 +130,20 @@ namespace pst {
 	};
 
 /**
- * @brief Macro used to define PstStmtVisitor methods
+ * @brief Macro used to define PstVisitor methods
  */
 #define PANIC_VISITOR_VISIT_METHOD(type)                           \
 	void visit##type([[maybe_unused]] const type& stmt) override { \
-		CORE_PANIC("PstStmtVisitorPanicky visited " #type);        \
+		CORE_PANIC("PstVisitorPanicky visited " #type);        \
 	}
 
 	/**
-	 * A simple implementation for PstStmtVisitor, that by default does CORE_PANIC.
+	 * A simple implementation for PstVisitor, that by default does CORE_PANIC.
 	 * It's a helper class, whose functionality is meant to be overriden for desired statements.
 	 */
-	class PstStmtVisitorPanicky: public PstStmtVisitor {
+	class PstVisitorPanicky: public PstVisitor {
 	public:
-		~PstStmtVisitorPanicky() override = default;
+		~PstVisitorPanicky() override = default;
 
 		PANIC_VISITOR_VISIT_METHOD(Import);
 		PANIC_VISITOR_VISIT_METHOD(Using);

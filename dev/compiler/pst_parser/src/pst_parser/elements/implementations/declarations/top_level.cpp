@@ -11,7 +11,7 @@ namespace pst {
 		return out;
 	}
 
-	void TopLevel::acceptVisitor(PstStmtVisitor&) const {
+	void TopLevel::acceptVisitor(PstVisitor&) const {
 		CORE_PANIC("Visitng TopLevel statement");
 	}
 

@@ -22,7 +22,7 @@
 	}
 
 template<class T>
-requires std::is_base_of_v<pst::PstStmtVisitor, T> class PstStmtVisitorTester final: public T {
+requires std::is_base_of_v<pst::PstVisitor, T> class PstVisitorTester final: public T {
 public:
 	int counter = 0;
 
@@ -82,8 +82,8 @@ private:
 
 	void testVisitorImpl(const std::string& filename, usize expected_counter) {
 		auto pst            = prepare(path(filename));
-		auto panicky_vistor = PstStmtVisitorTester<pst::PstStmtVisitorPanicky>();
-		auto empty_vistor   = PstStmtVisitorTester<pst::PstStmtVisitorEmpty>();
+		auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
+		auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
 		for (auto&& stmt: pst.getRootElement()->getStatements()) {
 			assertThrows<base::Panic>(
 				[&] { stmt->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"

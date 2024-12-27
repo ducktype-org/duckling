@@ -50,7 +50,7 @@ namespace pst {
 		~Import() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -83,7 +83,7 @@ namespace pst {
 		~Using() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -119,7 +119,7 @@ namespace pst {
 			return expr.ref();
 		}
 
-		void acceptVisitor(PstStmtVisitor&) const override;
+		void acceptVisitor(PstVisitor&) const override;
 	};
 
 	class Alias final: public Stmt {
@@ -143,7 +143,7 @@ namespace pst {
 		~Alias() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -210,7 +210,7 @@ namespace pst {
 		~Const() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {

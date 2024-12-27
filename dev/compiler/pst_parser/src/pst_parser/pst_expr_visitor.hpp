@@ -8,7 +8,7 @@ namespace pst {
 	// IDEs to generate correct skeleton for defining these methods with a name in place .
 
 	/**
-	 * PstStmtVisitor is a simple base class for VisitorPattern in `pst::Stmt`s.
+	 * PstVisitor is a simple base class for VisitorPattern in `pst::Stmt`s.
 	 * It is used by calling `stmt.acceptVisitor(visitor)`.
 	 */
 	class PstExprVisitor {
@@ -51,7 +51,7 @@ namespace pst {
 	};
 
 	/**
-	 * A simple implementation for PstStmtVisitor, that by default does nothing on visiting.
+	 * A simple implementation for PstVisitor, that by default does nothing on visiting.
 	 * It's a helper class, whose functionality is meant to be overriden for desired statements.
 	 */
 	class PstExprVisitorEmpty: public PstExprVisitor {
@@ -102,7 +102,7 @@ namespace pst {
 	}
 
 	/**
-	 * A simple implementation for PstStmtVisitor, that by default does CORE_PANIC.
+	 * A simple implementation for PstVisitor, that by default does CORE_PANIC.
 	 * It's a helper class, whose functionality is meant to be overriden for desired statements.
 	 */
 	class PstExprVisitorPanicky: public PstExprVisitor {
