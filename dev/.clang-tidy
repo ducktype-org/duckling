@@ -1,5 +1,5 @@
 ---
-Checks: 'readability-identifier-naming.*,clang-diagnostic-*,-clang-diagnostic-unknown-warning-option,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-owning-memory,-cppcoreguidelines-avoid-do-while,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-special-member-functions,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-cppcoreguidelines-avoid-non-const-global-variables,-cppcoreguidelines-macro-usage,-cppcoreguidelines-non-private-member-variables-in-classes,-cppcoreguidelines-avoid-const-or-ref-data-members,-cppcoreguidelines-pro-type-reinterpret-cast,modernize-*,-modernize-use-trailing-return-type,performance-*,concurrency-* readability-redundant-inline-specifier,bugprone-suspicious-include,readability-duplicate-include'
+Checks: 'readability-identifier-naming*,clang-diagnostic-*,-clang-diagnostic-unknown-warning-option,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-owning-memory,-cppcoreguidelines-avoid-do-while,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-special-member-functions,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-cppcoreguidelines-avoid-non-const-global-variables,-cppcoreguidelines-macro-usage,-cppcoreguidelines-non-private-member-variables-in-classes,-cppcoreguidelines-avoid-const-or-ref-data-members,-cppcoreguidelines-pro-type-reinterpret-cast,modernize-*,-modernize-use-trailing-return-type,performance-*,concurrency-* readability-redundant-inline-specifier,bugprone-suspicious-include,readability-duplicate-include'
 WarningsAsErrors: true
 HeaderFilterRegex: ''
 FormatStyle: file
@@ -26,25 +26,38 @@ CheckOptions:
   google-readability-function-size.StatementThreshold: '800'
 
 
+  # Names config:
+  
+  # Types:
   readability-identifier-naming.ClassCase: CamelCase
-  readability-identifier-naming.ClassMemberCase: lower_case
-  readability-identifier-naming.ClassName: CamelCase
-  readability-identifier-naming.ClassConstantCase: UPPER_CASE
-  readability-identifier-naming.ClassMethodCase: camelBack
-  readability-identifier-naming.ConstantCase: UPPER_CASE
-  readability-identifier-naming.EnumCase: CamelCase
-  readability-identifier-naming.FunctionCase: camelBack
-  readability-identifier-naming.GlobalConstantCase: UPPER_CASE
-  readability-identifier-naming.GlobalConstantPointerCase: UPPER_CASE
-  readability-identifier-naming.InlineNamespaceCase: lower_case
-  readability-identifier-naming.MacroDefinitionCase: aNy_CasE
-  readability-identifier-naming.MemberCase: lower_case
-  readability-identifier-naming.MethodCase: camelBack
-  readability-identifier-naming.NamespaceCase: lower_case
-  readability-identifier-naming.ParameterCase: lower_case
   readability-identifier-naming.StructCase: CamelCase
   readability-identifier-naming.TypedefCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+
+  # Function like:
+  readability-identifier-naming.FunctionCase: camelBack
+  readability-identifier-naming.MethodCase: camelBack
+  readability-identifier-naming.ClassMethodCase: camelBack
+  
+  # Variable like:
   readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.ClassMemberCase: lower_case
+  readability-identifier-naming.MemberCase: lower_case
+  readability-identifier-naming.ParameterCase: lower_case
+  readability-identifier-naming.LocalConstantCase: lower_case
+  
+  # Namespaces:
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.InlineNamespaceCase: lower_case
+  
+  # Constant like:
+  readability-identifier-naming.ClassConstantCase: UPPER_CASE
+  readability-identifier-naming.ConstantCase: UPPER_CASE
+  readability-identifier-naming.GlobalConstantCase: UPPER_CASE
+  readability-identifier-naming.GlobalConstantPointerCase: UPPER_CASE
+
+  # Macros:
+  readability-identifier-naming.MacroDefinitionCase: aNy_CasE
 
 ...
 # https://gist.github.com/airglow923/1fa3bda42f2b193920d7f46ee8345e04

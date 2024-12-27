@@ -793,37 +793,4 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);
-
-	struct
-		IMPLEMENT_QUERY(QueryHOUTExprTreeOfSym, errors::HResult<base::Box<code::Expr> COMMA errors::Failed>) {
-		struct PstStmtVisitor_GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {
-			Context& ctx;
-			ScopeID  scope;
-
-			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
-
-			void setExprTree(const MCRef<pst::ExprElement>& expr) {
-				expr_tree = ctx.query<QueryHoutOfExpr>({ expr });
-			}
-
-		public:
-			PstStmtVisitor_GetHOUTExprTree(Context& ctx, ScopeID scope): ctx(ctx), scope(scope) {}
-
-			void visitConst(const pst::Const& stmt) override { setExprTree(stmt.getValue()); }
-
-			void visitVariable(const pst::Variable& stmt) override { setExprTree(stmt.getType()); }
-		};
-
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto&& symbol_ref = getSymRef(key);
-
-			PstStmtVisitor_GetHOUTExprTree visitor(ctx, scope(key));
-			symbol_ref->pst_stmt->acceptVisitor(visitor);
-			return std::move(visitor.expr_tree);
-		}
-
-		QUERY_AUTO_CACHE_REF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHOUTExprTreeOfSym);
 }
