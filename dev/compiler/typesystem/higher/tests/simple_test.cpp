@@ -31,20 +31,20 @@ class HigherTypeSystemSimpleTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(trivial_cast_and_assignment);
-		TESTER_ADD_TEST(simple_void_and_unit);
-		TESTER_ADD_TEST(simple_byte_sized);
-		TESTER_ADD_TEST(simple_ints);
-		TESTER_ADD_TEST(simple_floats);
-		TESTER_ADD_TEST(simple_pointer);
-		TESTER_ADD_TEST(simple_tuple);
-		TESTER_ADD_TEST(simple_variant);
-		TESTER_ADD_TEST(simple_function);
-		TESTER_ADD_TEST(simple_language_elements);
-		TESTER_ADD_TEST(simple_meta);
-		TESTER_ADD_TEST(simple_type_desc);
-		TESTER_ADD_TEST(simple_value_category);
-		TESTER_ADD_TEST(simple_implicit_coercibility);
+		TESTER_ADD_TEST(trivialCastAndAssignment);
+		TESTER_ADD_TEST(simpleVoidAndUnit);
+		TESTER_ADD_TEST(simpleByteSized);
+		TESTER_ADD_TEST(simpleInts);
+		TESTER_ADD_TEST(simpleFloats);
+		TESTER_ADD_TEST(simplePointer);
+		TESTER_ADD_TEST(simpleTuple);
+		TESTER_ADD_TEST(simpleVariant);
+		TESTER_ADD_TEST(simpleFunction);
+		TESTER_ADD_TEST(simpleLanguageElements);
+		TESTER_ADD_TEST(simpleMeta);
+		TESTER_ADD_TEST(simpleTypeDesc);
+		TESTER_ADD_TEST(simpleValueCategory);
+		TESTER_ADD_TEST(simpleImplicitCoercibility);
 	}
 
 private:
@@ -54,7 +54,7 @@ private:
 	 * Test that the specialized TypeInfo to TypeInfo dynamic cast works as intended.
 	 * Also, test that assignment works.
 	 */
-	void trivial_cast_and_assignment() {
+	void trivialCastAndAssignment() {
 		const TypeInfo type_1{ query::entryPoint<QueryVoidType>({}) };
 		TypeInfo       type_2 = type_1;
 		assertTrue(type_1 == type_2, "The trivial dynamic cast should not change any objects.");
@@ -65,7 +65,7 @@ private:
 	/**
 	 * Test that there is only one void and one unit type, and that they are correctly cast.
 	 */
-	void simple_void_and_unit() {
+	void simpleVoidAndUnit() {
 		const auto void_1 = query::entryPoint<QueryVoidType>({});
 		const auto void_2 = query::entryPoint<QueryVoidType>({});
 		assertTrue(void_1 == void_2, "There should only be one Void type.");
@@ -90,7 +90,7 @@ private:
 	/**
 	 * Test that there are three unique byte-sized types, and that they are correctly cast.
 	 */
-	void simple_byte_sized() {
+	void simpleByteSized() {
 		const auto byte_1 = query::entryPoint<QueryByteType>({});
 		assertTrue(byte_1.getKind() == Byte, "Byte type should have kind Byte.");
 		const auto bool_1 = query::entryPoint<QueryBoolType>({});
@@ -129,7 +129,7 @@ private:
 	 * Test that there are signed and unsigned versions of each integral type
 	 * of sizes from 8 bits to 128 bits, and that they are correctly cast.
 	 */
-	void simple_ints() {
+	void simpleInts() {
 		for (usize i = 0; i < 5; i++) {
 			const auto int_1 = query::entryPoint<QueryIntegralType>({ 8U * (1 << i) });
 			const auto int_2 = query::entryPoint<QueryIntegralType>({ 8U * (1 << i) });
@@ -166,7 +166,7 @@ private:
 	 * Test that there are floating point types of sizes from 16 bits to 128 bits,
 	 * and that they are correctly cast.
 	 */
-	void simple_floats() {
+	void simpleFloats() {
 		for (const std::array<usize, 5> float_sizes = { 16, 32, 64, 80, 128 };
 		     const usize                float_size: float_sizes) {
 			auto float_1 = query::entryPoint<QueryFloatType>(float_size);
@@ -193,7 +193,7 @@ private:
 	 * Test that Raw Pointer and Pointer types correctly cast
 	 * between each other and retain information as expected.
 	 */
-	void simple_pointer() {
+	void simplePointer() {
 		const auto raw_1 = query::entryPoint<QueryRawPointerType>(false);
 		assertTrue(raw_1.getKind() == RawPointer, "Raw Pointer should have kind RawPointer.");
 		const auto raw_2 = query::entryPoint<QueryRawPointerType>(true);
@@ -232,7 +232,7 @@ private:
 	 * Test that tuples with different components are treated as different types
 	 * and that they are correctly cast.
 	 */
-	void simple_tuple() {
+	void simpleTuple() {
 		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
 		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
 
@@ -262,7 +262,7 @@ private:
 	 * Test that variants with different components are treated as different types
 	 * and that they are correctly cast.
 	 */
-	void simple_variant() {
+	void simpleVariant() {
 		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
 		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
 
@@ -289,7 +289,7 @@ private:
 	 * Test that function pointers and objects are treated as different types
 	 * and that they are correctly cast.
 	 */
-	void simple_function() {
+	void simpleFunction() {
 		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
 		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
 
@@ -336,7 +336,7 @@ private:
 		);
 	}
 
-	void simple_language_elements() {
+	void simpleLanguageElements() {
 		const auto nspace   = query::entryPoint<QueryNamespaceType>({});
 		const auto nspace_2 = query::entryPoint<QueryNamespaceType>({});
 
@@ -360,7 +360,7 @@ private:
 		assertTrue(module_3.getKind() == Module, "ModuleType should survive casting.");
 	}
 
-	void simple_meta() {
+	void simpleMeta() {
 		const auto meta   = query::entryPoint<QueryMetaType>({});
 		const auto meta_2 = query::entryPoint<QueryMetaType>({});
 
@@ -373,7 +373,7 @@ private:
 		assertTrue(met_3.getKind() == Meta, "MetaType should survive casting.");
 	}
 
-	void simple_type_desc() {
+	void simpleTypeDesc() {
 		const auto void_i = query::entryPoint<QueryVoidType>({});
 		const auto int_i  = query::entryPoint<QueryIntegralType>({ 8 });
 
@@ -397,7 +397,7 @@ private:
 		);
 	}
 
-	void simple_value_category() {
+	void simpleValueCategory() {
 		using enum ValueSemanticsOptions;
 
 		const auto vc = ValueCategory(
@@ -446,7 +446,7 @@ private:
 		);
 	}
 
-	void simple_implicit_coercibility() {
+	void simpleImplicitCoercibility() {
 		const auto int_2 = query::entryPoint<QueryIntegralType>({ 8U * (1 << 2) });
 		const auto int_3 = query::entryPoint<QueryIntegralType>({ 8U * (1 << 3) });
 		assertTrue(
