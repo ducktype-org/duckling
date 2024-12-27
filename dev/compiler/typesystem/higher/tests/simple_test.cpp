@@ -149,10 +149,10 @@ private:
 			IntegralInfo int_3    = type_int;
 			assertTrue(int_3.getKind() == Integral, "Int should survive casting.");
 
-			ASSERT_TRUE(int_1.isSigned());
-			ASSERT_TRUE(int_2.isSigned());
-			ASSERT_TRUE(not int_u.isSigned());
-			ASSERT_TRUE(int_3.isSigned());
+			ASSERT_TRUE(int_1.getSignedness());
+			ASSERT_TRUE(int_2.getSignedness());
+			ASSERT_TRUE(not int_u.getSignedness());
+			ASSERT_TRUE(int_3.getSignedness());
 		}
 
 		assertTrue(
