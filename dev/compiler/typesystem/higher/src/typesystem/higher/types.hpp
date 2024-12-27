@@ -134,7 +134,7 @@ namespace tsh {
 		 */
 		[[nodiscard]]
 		Bits getSize() const;
-		
+
 		/**
 		 * @return true if the integer is singed
 		 */
