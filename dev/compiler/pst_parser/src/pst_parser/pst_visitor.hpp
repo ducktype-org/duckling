@@ -7,13 +7,13 @@ namespace pst {
 	// Attention. All of the following [[maybe_unused]] attributes serve purpose of allowing
 	// IDEs to generate correct skeleton for defining these methods with a name in place .
 
-
 	/**
 	 * PstVisitor is a simple base class for VisitorPattern in PST.
 	 * It does not define visit methods for all elements, rather
 	 * it mostly defines it for `pst::Stmt`s and some other needed
 	 * by HELIOS.
 	 * It is used by calling `element.acceptVisitor(visitor)`.
+	 * @note Don't use/implement it for expressions, use PstExprVisitor instead.
 	 */
 	class PstVisitor {
 	public:

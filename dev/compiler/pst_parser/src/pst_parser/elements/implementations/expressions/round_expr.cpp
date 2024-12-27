@@ -45,5 +45,5 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void RoundExpr::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitRoundExpr(*this); }
+	void RoundExpr::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitRoundExpr(*this); }
 }

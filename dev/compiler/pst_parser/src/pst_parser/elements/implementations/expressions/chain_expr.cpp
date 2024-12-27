@@ -81,7 +81,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void ChainExpr::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitChainExpr(*this); }
+	void ChainExpr::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitChainExpr(*this); }
 
 	MCRef<ExprElement> BinaryOperator::getLeftOperand() const { return left.ref(); }
 

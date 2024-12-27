@@ -203,7 +203,7 @@ namespace pst {
 		}
 
 	public:
-		virtual void acceptVisitor(PstExprVisitor& visitor) const = 0;
+		virtual void acceptExprVisitor(PstExprVisitor& visitor) const = 0;
 	};
 
 	/**

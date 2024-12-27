@@ -45,5 +45,5 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void BlockExpr::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitBlockExpr(*this); }
+	void BlockExpr::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitBlockExpr(*this); }
 }
