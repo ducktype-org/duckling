@@ -82,16 +82,34 @@ private:
 
 	void testVisitorImpl(const std::string& filename, usize expected_counter) {
 		auto pst            = prepare(path(filename));
-		auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
-		auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
-		for (auto&& stmt: pst.getRootElement()->getStatements()) {
-			assertThrows<base::Panic>(
-				[&] { stmt->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
-			);
-			stmt->acceptVisitor(empty_vistor);
+		{
+			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
+			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
+			for (auto& stmt: pst.getRootElement()->getStatements()) {
+				assertThrows<base::Panic>(
+					[&] { stmt->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
+				);
+				stmt->acceptVisitor(empty_vistor);	
+			}
+			ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
+			ASSERT_EQUAL(expected_counter, empty_vistor.counter);
 		}
-		ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
-		ASSERT_EQUAL(expected_counter, empty_vistor.counter);
+		
+		// check that is also works when called from LangElement:
+		{
+			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
+			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
+			for (auto& stmt: pst.getRootElement()->getStatements()) {
+				Ref<pst::LangElement> lang_stmt = &*stmt;
+				assertThrows<base::Panic>(
+					[&] { lang_stmt->acceptVisitor(panicky_vistor); },
+					"LangElement did not call it\'s visitor"
+				);
+				lang_stmt->acceptVisitor(empty_vistor);			
+			}
+			ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
+			ASSERT_EQUAL(expected_counter, empty_vistor.counter);
+		}
 	}
 
 	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 18); }
