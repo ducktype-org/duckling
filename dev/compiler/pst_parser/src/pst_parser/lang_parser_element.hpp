@@ -19,6 +19,8 @@ namespace pst {
 	template<typename State>
 	class PSTAutomatic;
 
+	class PstVisitor;
+
 	/**
 	 * @brief Base Element for all of the PST elements.
 	 */
@@ -237,6 +239,8 @@ namespace pst {
 		void setFirstToken(dia::SourcePosition pos);
 
 		void setParent(Ref<LangElement> parent) { this->parent.emplace(parent); }
+		
+		virtual void acceptVisitor(PstVisitor& visitor) const;
 
 	private:
 		PstID id = PstID::next();
