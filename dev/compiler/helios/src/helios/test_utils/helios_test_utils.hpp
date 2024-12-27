@@ -55,5 +55,5 @@ namespace compiler::helios::test_utils {
 	 * @brief returns hout-expr of the value of given const or variable.
 	 * @note It's a hack-ish method, for easy testing only
 	 */
-	Box<code::Expr> valueOfConst(SymID sym);
+	Box<code::Expr> getExprOfConst(SymID sym);
 }

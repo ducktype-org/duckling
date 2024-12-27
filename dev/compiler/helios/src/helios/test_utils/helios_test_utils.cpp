@@ -51,8 +51,8 @@ namespace compiler::helios::test_utils {
 		    ->valueOrThrow();
 	}
 
-	Box<code::Expr> valueOfConst(SymID sym) {
-		struct PstStmtVisitor_GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {
+	Box<code::Expr> getExprOfConst(SymID sym) {
+		struct GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {
 			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
 
 			void setExprTree(const MCRef<pst::ExprElement>& expr) {
@@ -64,7 +64,7 @@ namespace compiler::helios::test_utils {
 		};
 
 		auto                           pst_stmt = stmt(sym);
-		PstStmtVisitor_GetHOUTExprTree visitor;
+		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
 		return std::move(visitor.expr_tree).value();
