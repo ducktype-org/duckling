@@ -134,6 +134,9 @@ namespace tsh {
 		 */
 		[[nodiscard]]
 		Bits getSize() const;
+		
+		[[nodiscard]]
+		bool isSigned() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(IntegralInfo)
 

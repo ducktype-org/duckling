@@ -81,7 +81,7 @@ namespace compiler::helios::code {
 	BinaryOperatorExpr::BinaryOperatorExpr(
 		query::Context& ctx,
 		ScopeID         scope,
-		lexer::Operator op,
+		BuiltinBinary   operation,
 		base::Box<Expr> lhs,
 		base::Box<Expr> rhs
 	):
@@ -93,14 +93,15 @@ namespace compiler::helios::code {
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  )
 		  ),
-		  op(op),
+		  operation(operation),
 		  lhs(std::move(lhs)),
 		  rhs(std::move(rhs)) {}
 
 	void BinaryOperatorExpr::debugPrint(std::ostream& out) const {
-		lhs->debugPrint(out);
-		out << base::strConcat(op.str());
-		rhs->debugPrint(out);
+		// hmm, todo in this PR
+		// lhs->debugPrint(out);
+		// out << base::strConcat(op.str());
+		// rhs->debugPrint(out);
 	}
 
 	void ParenthesisExpr::debugPrint(std::ostream& out) const {
@@ -180,20 +181,20 @@ namespace compiler::helios::code {
 		  symbols(std::move(symbols)) {}
 
 	UnaryOperatorExpr::UnaryOperatorExpr(
-		ScopeID scope, lexer::Operator op, bool prefix, base::Box<Expr> expr
+		ScopeID scope, BuiltinUnary operation, base::Box<Expr> expr
 	):
 		  Expr(scope, expr->type_desc),
-		  op(op),
-		  prefix(prefix),
+		  operation(operation),
 		  expr(std::move(expr)) {}
 
 	void UnaryOperatorExpr::debugPrint(std::ostream& out) const {
-		if (prefix) {
-			out << op.str();
-			expr->debugPrint(out);
-		} else {
-			expr->debugPrint(out);
-			out << op.str();
-		}
+		// hmm, todo in this PR
+		// if (prefix) {
+		// 	out << op.str();
+		// 	expr->debugPrint(out);
+		// } else {
+		// 	expr->debugPrint(out);
+		// 	out << op.str();
+		// }
 	}
 }

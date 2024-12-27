@@ -32,6 +32,7 @@ namespace compiler::helios::code {
 			}
 		}
 
+
 		/**
 		 * @brief Extracts sub expressions from a variant operator.
 		 * This flattens PST `a | b | c` expression (only if there are no parenthesis).
@@ -113,6 +114,43 @@ namespace compiler::helios::code {
 				node = makeBox<LiteralValueExpr>(ctx, scope, std::stoi(stmt.getValue().str()));
 			}
 
+			/**
+			 * If valid builtin exist, returns it.
+			 * Otherwise returns None.
+			 */
+			static base::Optional<Box<Expr>> binaryBuiltin(base::StrID op, Ref<Expr> lhs, Ref<Expr> rhs) {
+				// @todo: make it smarter?
+
+				auto lhs_type = lhs->type_desc;
+				auto rhs_type = lhs->type_desc;
+				
+				// note: this is mock
+				bool is_lhs_integer = lhs_type.getType().getKind() == tsh::Kind::Integral;
+				bool is_rhs_integer = lhs_type.getType().getKind() == tsh::Kind::Integral;
+
+				if (not is_lhs_integer or not is_rhs_integer) {
+					// @TODO: report an error?
+					// no builtins for non-integers for now:
+					return {};
+				}
+
+				auto lhs_as_integer = tsh::IntegralInfo(lhs_type.getType());
+				auto rhs_as_integer = tsh::IntegralInfo(rhs_type.getType());
+
+				// we only do the most simplest version here:
+				if (lhs_as_integer.getSize() != rhs_as_integer.getSize() or
+				    lhs_as_integer.) {
+
+				}
+
+				if (op == "+") {
+					return makeBox<BinaryOperatorExpr>(lhs, BuiltinBinary::IntegerAdd, std::move(lhs), std::move(rhs));
+				}
+				node = makeBox<BinaryOperatorExpr>(
+					ctx, scope, stmt.getOperator(), std::move(lhs), std::move(rhs)
+				);
+			}
+
 			void visitBinaryOperator(const pst::expr::BinaryOperator& stmt) override {
 				// handle variants:
 				if (stmt.getOperator().str() == "|") {
@@ -141,20 +179,29 @@ namespace compiler::helios::code {
 					return;
 				}
 
-
 				auto lhs_res = fromPST(ctx, stmt.getLeftOperand());
 				auto rhs_res = fromPST(ctx, stmt.getRightOperand());
 
+				// @todo: make failure more explicit...
 				if (lhs_res.hasError() or rhs_res.hasError()) return;  // failed
 
 				auto lhs = std::move(lhs_res).value();
 				auto rhs = std::move(rhs_res).value();
 
-				// @todo here we should type check,
-				// and make function call / builtin binary operator
-				node = makeBox<BinaryOperatorExpr>(
-					ctx, scope, stmt.getOperator(), std::move(lhs), std::move(rhs)
-				);
+				// @todo here we should:
+				// * lookup for user defined operators
+				// * type check
+				// * make function call
+
+				// if no function call is found, we try to use builtin operators:
+				auto builtin = binaryBuiltin(stmt.getOperator(), lhs, rhs);
+				if (builtin.hasValue()) {
+					node = std::move(builtin).value();
+					return;
+				}
+				else {
+					// failed
+				}
 			}
 
 			void visitChainExpr(const pst::expr::ChainExpr& stmt) override {
@@ -245,24 +292,24 @@ namespace compiler::helios::code {
 
 			void visitSuffixOperator(const pst::expr::SuffixOperator& stmt) override {
 				// @NOTE: This is a mockup
-				PstExprToHoutExprVisitor vis(ctx, scope);
-				stmt.getExpr()->acceptVisitor(vis);
-				if_opt_some(vis.node, expr) {
-					node = makeBox<UnaryOperatorExpr>(
-						scope, stmt.getOperator(), false, std::move(expr)
-					);
-				}
+				auto inner = fromPST(ctx, stmt.getExpr());
+
+				if (inner.hasError()) return;  // failed
+
+				node = makeBox<UnaryOperatorExpr>(
+					scope, stmt.getOperator(), false, std::move(inner.value())
+				);
 			}
 
 			void visitPrefixOperator(const pst::expr::PrefixOperator& stmt) override {
 				// @NOTE: This is a mockup
-				PstExprToHoutExprVisitor vis(ctx, scope);
-				stmt.getExpr()->acceptVisitor(vis);
-				if_opt_some(vis.node, expr) {
-					node = makeBox<UnaryOperatorExpr>(
-						scope, stmt.getOperator(), true, std::move(expr)
-					);
-				}
+				auto inner = fromPST(ctx, stmt.getExpr());
+
+				if (inner.hasError()) return;  // failed
+
+				node = makeBox<UnaryOperatorExpr>(
+					scope, stmt.getOperator(), true, std::move(inner.value())
+				);
 			}
 		};
 

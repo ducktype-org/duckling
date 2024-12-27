@@ -110,12 +110,25 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * Builtin binary operation.
+	 */
+	enum class BuiltinBinary {
+		// we don't have to be super specific here
+		// we will likely want to be super specific in LIR
+
+		IntegerAdd,
+		IntegerSub,
+		IntegerMul,
+		IntegerDiv,
+		IntegerMod,
+		IntegerPow,
+	};
+
+	/**
 	 * @brief A binary operator.
 	 */
 	struct BinaryOperatorExpr: public Expr {
-		// @TODO: At this point, operator should be a symbol.
-		// HOUT should not be concerned with overload resolution.
-		lexer::Operator op;
+		BuiltinBinary operation;
 
 		base::Box<Expr> lhs;
 		base::Box<Expr> rhs;
@@ -123,7 +136,7 @@ namespace compiler::helios::code {
 		BinaryOperatorExpr(
 			query::Context& ctx,
 			ScopeID         scope,
-			lexer::Operator op,
+			BuiltinBinary   operation,
 			base::Box<Expr> lhs,
 			base::Box<Expr> rhs
 		);
@@ -133,19 +146,23 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Builtin unary operations.
+	 */
+	enum class BuiltinUnary {
+		// we don't have to be super specific here
+		// we will likely want to be super specific in LIR
+		IntegerNegation,
+	};
+
+	/**
 	 * @brief General unary operator. Correctness depends on a proper lookup of a method (operator).
 	 */
 	struct UnaryOperatorExpr: public Expr {
-		// @NOTE: `op` and `prefix` should be replaced with a SymID that links to a proper function
-		// that resolves the operator
-		pst::Operator op;
-
-		// @TODO HOUT 2.0: this should not be needed at this stage
-		bool prefix = false;  // prefix/suffix
+		BuiltinUnary operation;
 
 		base::Box<Expr> expr;
 
-		UnaryOperatorExpr(ScopeID scope, lexer::Operator op, bool prefix, base::Box<Expr> expr);
+		UnaryOperatorExpr(ScopeID scope, BuiltinUnary operation, base::Box<Expr> expr);
 
 		void debugPrint(std::ostream& out) const override;
 		void acceptVisitor(HoutExprVisitor&) const override;
@@ -195,4 +212,7 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;
 	};
+
+	// @todo HOUT 2.0: function call expression
+	// it should hold SymID of a function and vector of arguments
 }

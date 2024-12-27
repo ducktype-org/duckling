@@ -57,6 +57,8 @@ namespace tsh {
 
 	Bits IntegralInfo::getSize() const { return toCPimpl(pimpl)->getSize(); }
 
+	bool IntegralInfo::isSigned() const { return toCPimpl(pimpl)->getSignedness(); }
+
 	Bits FloatInfo::getSize() const { return toCPimpl(pimpl)->getSize(); }
 
 	bool RawPointerInfo::isMutable() const { return toCPimpl(pimpl)->isMutable(); }

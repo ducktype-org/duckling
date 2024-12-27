@@ -31,6 +31,7 @@ class HigherTypeSystemSimpleTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		// todo as side PR: fix naming here
 		TESTER_ADD_TEST(trivial_cast_and_assignment);
 		TESTER_ADD_TEST(simple_void_and_unit);
 		TESTER_ADD_TEST(simple_byte_sized);
@@ -148,6 +149,11 @@ private:
 			TypeInfo     type_int = int_1;
 			IntegralInfo int_3    = type_int;
 			assertTrue(int_3.getKind() == Integral, "Int should survive casting.");
+
+
+			ASSERT_TRUE(int_1.isSigned());
+			ASSERT_TRUE(int_2.isSigned());
+			ASSERT_TRUE(not int_3.isSigned());
 		}
 
 		assertTrue(
