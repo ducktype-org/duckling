@@ -50,21 +50,21 @@ namespace pst {
 
 		virtual void visitVariable([[maybe_unused]] const Variable& stmt) = 0;
 
-		virtual void visitIf([[maybe_unused]] const If& stmt) = 0;
+		virtual void visitIf([[maybe_unused]] const If& stmt) {}
 
-		virtual void visitWhile([[maybe_unused]] const While& stmt) = 0;
+		virtual void visitWhile([[maybe_unused]] const While& stmt) {}
 
-		virtual void visitMethod([[maybe_unused]] const Method& stmt) = 0;
+		virtual void visitMethod([[maybe_unused]] const Method& stmt) {}
 
-		virtual void visitField([[maybe_unused]] const Field& stmt) = 0;
+		virtual void visitField([[maybe_unused]] const Field& stmt) {}
 
-		virtual void visitConstructor([[maybe_unused]] const Constructor& stmt) = 0;
+		virtual void visitConstructor([[maybe_unused]] const Constructor& stmt) {}
 
-		virtual void visitDestructor([[maybe_unused]] const Destructor& stmt) = 0;
+		virtual void visitDestructor([[maybe_unused]] const Destructor& stmt) {}
 
-		virtual void visitAccessBlock([[maybe_unused]] const AccessBlock& stmt) = 0;
+		virtual void visitAccessBlock([[maybe_unused]] const AccessBlock& stmt) {}
 
-		virtual void visitFor([[maybe_unused]] const For& stmt) = 0;
+		virtual void visitFor([[maybe_unused]] const For& stmt) {}
 	};
 
 	/**
