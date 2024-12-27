@@ -63,7 +63,7 @@ namespace compiler::helios::test_utils {
 			void visitConst(const pst::Const& stmt) override { setExprTree(stmt.getValue()); }
 		};
 
-		auto                           pst_stmt = stmt(sym);
+		auto            pst_stmt = stmt(sym);
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
