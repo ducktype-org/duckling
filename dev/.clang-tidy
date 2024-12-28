@@ -29,9 +29,15 @@ CheckOptions:
   # Names config:
   
   # Types:
-  readability-identifier-naming.ClassCase: CamelCase
-  readability-identifier-naming.StructCase: CamelCase
-  readability-identifier-naming.TypedefCase: CamelCase
+  
+  # note: the project default is CamelCase for types, 
+  # but we have a lot od edge-cases, like `KeyOF_` prefix,
+  # and in general we preferer flexibility here
+  # for its expressivness.
+
+  readability-identifier-naming.ClassCase: aNy_CasE
+  readability-identifier-naming.StructCase: aNy_CasE
+  readability-identifier-naming.TypedefCase: aNy_CasE
   readability-identifier-naming.EnumCase: CamelCase
 
   # Function like:
@@ -52,6 +58,7 @@ CheckOptions:
   
   # Constant like:
   readability-identifier-naming.ClassConstantCase: UPPER_CASE
+  readability-identifier-naming.EnumConstantCase: CamelCase
   readability-identifier-naming.ConstantCase: UPPER_CASE
   readability-identifier-naming.GlobalConstantCase: UPPER_CASE
   readability-identifier-naming.GlobalConstantPointerCase: UPPER_CASE
