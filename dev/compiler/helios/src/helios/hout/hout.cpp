@@ -13,7 +13,10 @@ namespace compiler::helios {
 		for (auto& const_: glob_data) out += const_.debugPrint();
 
 		out += "\nFunctions:\n";
-		for (auto& func: functions) out += func.debugPrint();
+		for (auto& func: functions) {
+			out += func.debugPrint();
+			out += "\n";
+		}
 
 		return out;
 	}
@@ -21,7 +24,7 @@ namespace compiler::helios {
 	std::string HOUTFunction::debugPrint() const {
 		std::stringstream out;
 		out << "fun ";
-		out << original_name.strView();
+		out << original_name.strView() << " : ";
 		out << this->type.toString() << "\n";
 		out << "Parameters: \n";
 		if (content.parameters->empty()) out << "  none\n";
