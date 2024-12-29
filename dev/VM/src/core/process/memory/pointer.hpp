@@ -26,11 +26,11 @@ namespace vm {
 		friend class Memory;
 
 	public:
-		Pointer(Ref<Block> block, u64 offset_): block(block.get()), offset(offset_) {}
+		Pointer(Ref<Block> block, u64 offset): block(block.get()), offset(offset) {}
 
-		void movePointer(i64 _offset) {
+		void movePointer(i64 move_by) {
 			if (block == nullptr) CORE_PANIC("Accessing null pointer");
-			offset += _offset;
+			offset += move_by;
 		}
 
 		[[nodiscard]]

@@ -61,9 +61,9 @@ namespace vm {
 		friend class Memory;
 
 	public:
-		Block(BlockID id_, BlockData data_, Ref<std::shared_mutex> mutex_):
-			  id(id_),
-			  data(data_),
-			  shared_mutex(mutex_) {}
+		Block(BlockID id, BlockData data, Ref<std::shared_mutex> mutex):
+			  id(id),
+			  data(data),
+			  shared_mutex(mutex) {}
 	};
 }

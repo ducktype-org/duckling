@@ -23,7 +23,7 @@
 namespace vm {
 	class Memory {
 	private:
-		mutable std::shared_mutex mutex_;
+		mutable std::shared_mutex mutex;
 		HeapAllocator             heap_allocator;
 		StackAllocator            stack_allocator;
 

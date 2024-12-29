@@ -9,12 +9,12 @@ namespace vm {
 
 		if (free_ids.empty()) {
 			auto id = BlockID(blocks.size());
-			blocks.emplace_back(id, data, &mutex_);
+			blocks.emplace_back(id, data, &mutex);
 			return &blocks.back();
 		} else {
 			BlockID id = free_ids.back();
 			free_ids.pop_back();
-			blocks[usize(id)] = Block(id, data, &mutex_);
+			blocks[usize(id)] = Block(id, data, &mutex);
 			return &blocks[static_cast<u64>(id)];
 		}
 	}
@@ -36,23 +36,23 @@ namespace vm {
 	}
 
 	auto Memory::initializeFrameStack() -> Ref<ThreadStack> {
-		std::unique_lock lock(mutex_);
+		std::unique_lock lock(mutex);
 		threads_frame_stacks.emplace_back();
 		return &threads_frame_stacks.back();
 	}
 
 	auto Memory::allocateHeap(TypeCRef type) -> Ref<Block> {
-		std::unique_lock lock(mutex_);
+		std::unique_lock lock(mutex);
 		return createBlock(heap_allocator.allocate(type));
 	}
 
 	auto Memory::allocateStack(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block> {
-		std::unique_lock lock(mutex_);
+		std::unique_lock lock(mutex);
 		return createBlock(stack_allocator.allocate(type, stack_pointer));
 	}
 
 	void Memory::freeBlock(Ref<Block> block) {
-		std::unique_lock lock(mutex_);
+		std::unique_lock lock(mutex);
 		block->deallocated = true;
 		block->data.allocator->deallocate(&block->data);
 		if (block->refcount == 0) deleteBlock(block);

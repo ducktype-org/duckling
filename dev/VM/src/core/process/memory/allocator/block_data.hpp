@@ -19,10 +19,10 @@ namespace vm {
 
 	public:
 		BlockData(
-			TypeCRef element_type_, base::ModRawView view_, Ref<AllocatorABC> allocator_
+			TypeCRef element_type, base::ModRawView view, Ref<AllocatorABC> allocator
 		) noexcept:
-			  element_type(element_type_),
-			  view(view_),
-			  allocator(allocator_) {}
+			  element_type(element_type),
+			  view(view),
+			  allocator(allocator) {}
 	};
 }
