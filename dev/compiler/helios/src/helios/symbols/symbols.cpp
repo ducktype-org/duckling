@@ -661,6 +661,10 @@ namespace compiler::helios {
 			void visitImport(const pst::Import&) override {
 				setTypeOfSymbol(ctx.query<tsh::QueryImportType>({}));
 			}
+
+			void visitFunParam(const pst::FunParam& param) override {
+				setTypeOfSymbol(param.getType());
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -668,9 +672,7 @@ namespace compiler::helios {
 
 			PstVisitor_GetTypeOf visitor(ctx);
 			symbol_ref->pst_element->acceptVisitor(visitor);
-		
-			// @TODO in this PR: add support for other symbol
-			
+					
 			if_opt_some(visitor.symbol_type_info, type) return type;
 			return errors::HError(errors::Failed());
 		}
