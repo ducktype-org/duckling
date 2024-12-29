@@ -73,6 +73,7 @@ public:
 		TESTER_ADD_TEST(testMissingSemiErr);
 		TESTER_ADD_TEST(testVisitor);
 		TESTER_ADD_TEST(testVisitorAlternative);
+		TESTER_ADD_TEST(testFunctionParameterVisitors);
 
 		// TESTER_ADD_TEST(testParsingHandler)
 	}
@@ -194,6 +195,43 @@ private:
 		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
 		);
+	}
+
+	void testFunctionParameterVisitors() {
+		pst::PST<> pst = prepare(path("snippets/function_with_parameters.duck"));
+		assertTrue(
+			pst.getLogger().messageCount() == 0, "Expected 0 errors"
+		);
+		
+		auto fun = dynamic_cast<const pst::Fun*>(&*pst.getRootElement()->getStatements().at(0));
+		ASSERT_TRUE(fun != nullptr);
+
+		auto params = fun->getParams();
+		ASSERT_EQUAL(params->size(), 3);
+
+		struct PstParamVisitor: public pst::PstVisitorPanicky {
+			usize counter = 0;
+			bool good_name = false;
+			base::StrID expected_name;
+
+			PstParamVisitor(base::StrID expected_name): expected_name(expected_name) {}
+
+
+			void visitFunParam(const pst::FunParam& param) override {
+				counter++;
+				good_name = param.getName() == expected_name;
+			}
+		};
+
+		std::array names = {"a", "b", "c"};
+		
+		usize i = 0;
+		for (auto param: *params) {
+			PstParamVisitor visitor(base::StrID(names.at(i)));
+			param->acceptVisitor(visitor);
+			ASSERT_EQUAL(visitor.counter, 1);
+			i++;
+		}
 	}
 
 
