@@ -10,7 +10,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Return() final = default;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class Break final: public Action {
@@ -20,7 +20,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Break() final = default;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class Continue final: public Action {
@@ -30,7 +30,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Continue() final = default;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class Redo final: public Action {
@@ -40,7 +40,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Redo() final = default;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class Restart final: public Action {
@@ -50,7 +50,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Restart() final = default;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class Defer final: public Action {
@@ -60,7 +60,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Defer() final = default;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	/**
@@ -73,7 +73,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~Throw() final = default;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 }

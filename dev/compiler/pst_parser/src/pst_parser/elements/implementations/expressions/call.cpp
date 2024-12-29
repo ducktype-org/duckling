@@ -51,5 +51,5 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void Call::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitCall(*this); }
+	void Call::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitCall(*this); }
 }

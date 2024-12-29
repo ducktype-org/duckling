@@ -49,7 +49,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void ComparisonChain::acceptVisitor(PstExprVisitor& visitor) const {
+	void ComparisonChain::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitComparisonChain(*this);
 	}
 }

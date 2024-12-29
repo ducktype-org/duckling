@@ -52,7 +52,7 @@ namespace compiler::helios::test_utils {
 	}
 
 	Box<code::Expr> getExprOfConst(SymID sym) {
-		struct GetHOUTExprTree final: public pst::PstStmtVisitorPanicky {
+		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
 			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
 
 			void setExprTree(const MCRef<pst::ExprElement>& expr) {

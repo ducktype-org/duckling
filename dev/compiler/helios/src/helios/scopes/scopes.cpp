@@ -267,7 +267,7 @@ namespace compiler::helios {
 		// note: not all cases are handled here, which is intentional.
 		// We might add more in the future, but this function should remain a simple one.
 
-		struct QueryBodyScopeVisitor: pst::PstStmtVisitorPanicky {
+		struct QueryBodyScopeVisitor: pst::PstVisitorPanicky {
 			query::Context&  ctx;
 			MCRef<pst::Stmt> stmt;
 
@@ -311,7 +311,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Gets symbols for scopes of various statements.
 		 */
-		struct SymbolGrabVisitor final: pst::PstStmtVisitorPanicky {
+		struct SymbolGrabVisitor final: pst::PstVisitorPanicky {
 			SymbolGrabVisitor(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
 			base::Optional<std::vector<SymID>> out;

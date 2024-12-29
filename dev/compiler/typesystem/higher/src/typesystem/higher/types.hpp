@@ -135,6 +135,12 @@ namespace tsh {
 		[[nodiscard]]
 		Bits getSize() const;
 
+		/**
+		 * @return true if the integer is singed
+		 */
+		[[nodiscard]]
+		bool getSignedness() const;
+
 		CONSTRUCT_WITH_CHECKED_CAST(IntegralInfo)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(Integral)
