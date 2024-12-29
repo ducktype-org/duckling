@@ -39,10 +39,10 @@ namespace compiler::helios::code {
 	 * @brief Represents HOUT function parameter.
 	 */
 	struct Parameter final {
-		base::StrID name;
-		tsh::TypeDesc<> type;
+		base::StrID                     name;
+		tsh::TypeDesc<>                 type;
 		base::Optional<base::Box<Expr>> initial_value;
-		SymID helios_symbol;
+		SymID                           helios_symbol;
 	};
 
 	/***********************\

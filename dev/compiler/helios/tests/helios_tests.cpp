@@ -7,7 +7,7 @@
 #include <helios/hout/visitors.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-#include <query_framework/query_impl.hpp> // @todo relax it to just Context type #404
+#include <query_framework/query_impl.hpp>  // @todo relax it to just Context type #404
 #include <tester/tester.hpp>
 #include <pst_parser/parser.hpp>
 #include <filesystem/file.hpp>
@@ -541,7 +541,7 @@ private:
 
 	void testFunctionParameters() {
 		auto [module, _] = getModule(fs::FilePath(path("test_modules/parameters")));
-		
+
 		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
 		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, true });
 
@@ -549,7 +549,6 @@ private:
 			auto hout = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			ASSERT_EQUAL(hout.functions.size(), 2);
 			{
-
 				auto function = hout.functions.at(0);
 				ASSERT_EQUAL(function.original_name, "foo");
 
@@ -560,28 +559,32 @@ private:
 
 				// get "a" thru return:
 				ASSERT_EQUAL(function.content.body->statements.size(), 1);
-				
+
 				auto ret_stmt = function.content.body->statements.at(0).ref();
-				auto ret_stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
+				auto ret_stmt_casted
+					= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
 				assertTrue(ret_stmt_casted != nullptr, "Return statement expected");
-				
+
 				auto ret_expr = ret_stmt_casted->value.ref();
-				auto ret_expr_casted = dynamic_cast<const compiler::helios::code::IdentifierExpr*>(&*ret_expr);
+				auto ret_expr_casted
+					= dynamic_cast<const compiler::helios::code::IdentifierExpr*>(&*ret_expr);
 				assertTrue(ret_expr_casted != nullptr, "Identifier expression expected");
 
-				auto a_sym = ret_expr_casted->symbol;
+				auto a_sym  = ret_expr_casted->symbol;
 				auto a_type = ret_expr_casted->type_desc;
 
 				ASSERT_EQUAL(int32_type, a_type.getType());
-				ASSERT_EQUAL(int32_type, ctx.query<compiler::helios::QueryTypeOfSymbol>({a_sym})->value());
-			
+				ASSERT_EQUAL(
+					int32_type, ctx.query<compiler::helios::QueryTypeOfSymbol>({ a_sym })->value()
+				);
+
 				ASSERT_EQUAL(a_sym, a_param.helios_symbol);
 			}
 
 			{
 				auto function = hout.functions.at(1);
 				ASSERT_EQUAL(function.original_name, "bar");
-				auto& abc_param = function.content.parameters->at(0);
+				auto& abc_param    = function.content.parameters->at(0);
 				auto& second_param = function.content.parameters->at(1);
 
 				ASSERT_EQUAL("abc", abc_param.name);

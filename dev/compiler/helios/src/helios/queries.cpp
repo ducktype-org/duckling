@@ -180,22 +180,19 @@ namespace compiler::helios {
 
 				for (auto param: *stmt.getParams()) {
 					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
-					auto param_name = name(param_symbol);
-					auto param_type = ctx.query<QueryTypeOfSymbol>({ param_symbol });
+					auto param_name   = name(param_symbol);
+					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
 
 					auto value = param->getValue();
-					
+
 					if (param_type->hasError()) {
 						// @TODO: Report an error
 						return;
 					}
 
 					if (value.empty()) {
-						parameters.emplace_back( 
-							param_name,
-							param_type->value(),
-							std::nullopt,
-							param_symbol
+						parameters.emplace_back(
+							param_name, param_type->value(), std::nullopt, param_symbol
 						);
 					} else {
 						auto initial_value = ctx.query<QueryHoutOfExpr>({ value.value() });
@@ -214,7 +211,8 @@ namespace compiler::helios {
 					}
 				}
 
-				output.content.parameters = std::make_shared<const std::vector<code::Parameter>>(std::move(parameters));
+				output.content.parameters
+					= std::make_shared<const std::vector<code::Parameter>>(std::move(parameters));
 
 				this->out.emplace(std::move(output));
 			}

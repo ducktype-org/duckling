@@ -33,7 +33,7 @@ namespace compiler::helios {
 	 * that will require some boilerplate.
 	 */
 	struct HOUTFunctionContent {
-		std::shared_ptr<const code::CodeBlock> body;
+		std::shared_ptr<const code::CodeBlock>              body;
 		std::shared_ptr<const std::vector<code::Parameter>> parameters;
 	};
 

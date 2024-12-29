@@ -68,7 +68,7 @@ namespace pst {
 		virtual void visitAccessBlock([[maybe_unused]] const AccessBlock& stmt) = 0;
 
 		virtual void visitFor([[maybe_unused]] const For& stmt) = 0;
-		
+
 		virtual void visitFunParam([[maybe_unused]] const FunParam& param) = 0;
 	};
 
@@ -129,7 +129,7 @@ namespace pst {
 		void visitDestructor([[maybe_unused]] const Destructor& stmt) override {}
 
 		void visitAccessBlock([[maybe_unused]] const AccessBlock& stmt) override {}
-		
+
 		void visitFunParam([[maybe_unused]] const FunParam& param) override {}
 	};
 

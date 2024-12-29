@@ -199,10 +199,8 @@ private:
 
 	void testFunctionParameterVisitors() {
 		pst::PST<> pst = prepare(path("snippets/function_with_parameters.duck"));
-		assertTrue(
-			pst.getLogger().messageCount() == 0, "Expected 0 errors"
-		);
-		
+		assertTrue(pst.getLogger().messageCount() == 0, "Expected 0 errors");
+
 		auto fun = dynamic_cast<const pst::Fun*>(&*pst.getRootElement()->getStatements().at(0));
 		ASSERT_TRUE(fun != nullptr);
 
@@ -210,12 +208,11 @@ private:
 		ASSERT_EQUAL(params->size(), 4);
 
 		struct PstParamVisitor: public pst::PstVisitorPanicky {
-			usize counter = 0;
-			bool good_name = false;
+			usize       counter   = 0;
+			bool        good_name = false;
 			base::StrID expected_name;
 
 			PstParamVisitor(base::StrID expected_name): expected_name(expected_name) {}
-
 
 			void visitFunParam(const pst::FunParam& param) override {
 				counter++;
@@ -223,8 +220,8 @@ private:
 			}
 		};
 
-		std::array names = {"a", "b", "c", "d"};
-		
+		std::array names = { "a", "b", "c", "d" };
+
 		usize i = 0;
 		for (auto param: *params) {
 			PstParamVisitor visitor(base::StrID(names.at(i)));

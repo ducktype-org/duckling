@@ -34,7 +34,7 @@ namespace compiler::helios {
 			if (param.initial_value.has_value()) {
 				out << " = ";
 				param.initial_value.value()->debugPrint(out);
-			}	
+			}
 			out << "\n";
 		}
 		out << "{\n";

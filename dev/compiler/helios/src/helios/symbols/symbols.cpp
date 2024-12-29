@@ -122,46 +122,46 @@ namespace compiler::helios {
 		case pst::StmtKind::Fun: {
 			auto function = dynamic_cast<const pst::Fun*>(&*stmt);
 			return putInSymtable(SymbolData{
-				.scope    = scope,
-				.name     = function->getName(),
-				.kind     = SymbolKind::Function,
+				.scope       = scope,
+				.name        = function->getName(),
+				.kind        = SymbolKind::Function,
 				.pst_element = stmt,
 			});
 		}
 		case pst::StmtKind::Namespace: {
 			auto namespace_stmt = dynamic_cast<const pst::Namespace*>(&*stmt);
 			return putInSymtable(SymbolData{
-				.scope    = scope,
-				.name     = namespace_stmt->getName(),
-				.kind     = SymbolKind::Namespace,
+				.scope       = scope,
+				.name        = namespace_stmt->getName(),
+				.kind        = SymbolKind::Namespace,
 				.pst_element = stmt,
 			});
 		}
 		case pst::StmtKind::Const: {
 			auto const_stmt = dynamic_cast<const pst::Const*>(&*stmt);
 			return putInSymtable(SymbolData{
-				.scope    = scope,
-				.name     = const_stmt->getName(),
-				.kind     = SymbolKind::Const,
+				.scope       = scope,
+				.name        = const_stmt->getName(),
+				.kind        = SymbolKind::Const,
 				.pst_element = stmt,
 			});
 		}
 		case pst::StmtKind::Class: {
 			auto class_stmt = dynamic_cast<const pst::Class*>(&*stmt);
 			return putInSymtable(SymbolData{
-				.scope    = scope,
-				.name     = class_stmt->getName(),
-				.kind     = SymbolKind::Class,
+				.scope       = scope,
+				.name        = class_stmt->getName(),
+				.kind        = SymbolKind::Class,
 				.pst_element = stmt,
 			});
 		}
 		case pst::StmtKind::Alias: {
 			auto alias = dynamic_cast<const pst::Alias*>(&*stmt);
 			return putInSymtable(SymbolData{
-				.scope    = scope,
-				.name     = alias->getName(),
-				.is_alias = true,
-				.kind     = SymbolKind::Alias,
+				.scope       = scope,
+				.name        = alias->getName(),
+				.is_alias    = true,
+				.kind        = SymbolKind::Alias,
 				.pst_element = stmt,
 			});
 		}
@@ -170,7 +170,8 @@ namespace compiler::helios {
 			return putInSymtable(SymbolData{
 				.scope = scope,
 				.name
-				= base::StrID(base::strConcat("<USING> ", using_stmt->getPointed().front()).c_str()),
+				= base::StrID(base::strConcat("<USING> ", using_stmt->getPointed().front()).c_str()
+			    ),
 				.is_wildcard = true,
 				.is_alias    = true,
 				.kind        = SymbolKind::Using,
@@ -203,35 +204,35 @@ namespace compiler::helios {
 		case pst::StmtKind::Method: {
 			auto method = dynamic_cast<const pst::Method*>(&*stmt);
 			return putInSymtable(SymbolData{
-				.scope    = scope,
-				.name     = method->getName(),
-				.kind     = SymbolKind::Method,
+				.scope       = scope,
+				.name        = method->getName(),
+				.kind        = SymbolKind::Method,
 				.pst_element = stmt,
 			});
 		}
 		case pst::StmtKind::Field: {
 			auto field = dynamic_cast<const pst::Field*>(&*stmt);
 			return putInSymtable(SymbolData{
-				.scope    = scope,
-				.name     = field->getName(),
-				.kind     = SymbolKind::Field,
+				.scope       = scope,
+				.name        = field->getName(),
+				.kind        = SymbolKind::Field,
 				.pst_element = stmt,
 			});
 		}
 		case pst::StmtKind::Constructor: {
 			auto constructor = dynamic_cast<const pst::Constructor*>(&*stmt);
 			return putInSymtable(SymbolData{
-				.scope    = scope,
-				.name     = constructor->getName(),
-				.kind     = SymbolKind::Constructor,
+				.scope       = scope,
+				.name        = constructor->getName(),
+				.kind        = SymbolKind::Constructor,
 				.pst_element = stmt,
 			});
 		}
 		case pst::StmtKind::Destructor: {
 			return putInSymtable(SymbolData{
-				.scope    = scope,
-				.name     = base::StrID("destroy"),
-				.kind     = SymbolKind::Destructor,
+				.scope       = scope,
+				.name        = base::StrID("destroy"),
+				.kind        = SymbolKind::Destructor,
 				.pst_element = stmt,
 			});
 		}
@@ -252,10 +253,10 @@ namespace compiler::helios {
 	 */
 	Ref<SymbolData> makeSymbolFromPSTElement(ScopeID scope, CRef<pst::LangElement> element) {
 		if (auto parameter = dynamic_cast<const pst::FunParam*>(&*element)) {
-				return putInSymtable(SymbolData{
-				.scope    = scope,
-				.name     = parameter->getName(),
-				.kind     = SymbolKind::Parameter,
+			return putInSymtable(SymbolData{
+				.scope       = scope,
+				.name        = parameter->getName(),
+				.kind        = SymbolKind::Parameter,
 				.pst_element = element,
 			});
 		}
@@ -279,15 +280,14 @@ namespace compiler::helios {
 			// Something to think about as part of #412
 			CORE_ASSERT(
 				key.element.toOpt().has_value(),
-				"Nullptr element given to QuerySymbolOfSTMT! (add some null handling before calling it)"
+				"Nullptr element given to QuerySymbolOfSTMT! (add some null handling before "
+			    "calling it)"
 			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
-			if (auto stmt = dynamic_cast<const pst::Stmt*>(&*key.element)) {
+			if (auto stmt = dynamic_cast<const pst::Stmt*>(&*key.element))
 				return PResult{ makeSymbolFromStatement(scope, stmt) };
-			}
-			else {
+			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.toOpt().value()) };
-			}
 		}
 
 		// @OPT: opt it?
@@ -579,7 +579,8 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
-			const auto const_symbol = dynamic_cast<const pst::Const*>(&*getSymRef(key)->pst_element);
+			const auto const_symbol
+				= dynamic_cast<const pst::Const*>(&*getSymRef(key)->pst_element);
 
 			auto eval = ctx.query<QueryHoutOfExpr>({ const_symbol->getValue() });
 			if (eval.hasError()) return errors::HError(errors::Failed());
@@ -628,8 +629,8 @@ namespace compiler::helios {
 
 				for (auto param: *params) {
 					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
-					auto param_type = ctx.query<QueryTypeOfSymbol>({ param_symbol });
-					
+					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
+
 					if (param_type->hasValue()) {
 						param_types.emplace_back(param_type->value());
 					} else {
@@ -672,7 +673,7 @@ namespace compiler::helios {
 
 			PstVisitor_GetTypeOf visitor(ctx);
 			symbol_ref->pst_element->acceptVisitor(visitor);
-					
+
 			if_opt_some(visitor.symbol_type_info, type) return type;
 			return errors::HError(errors::Failed());
 		}
