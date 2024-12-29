@@ -206,7 +206,7 @@ private:
 
 		auto the_function = hout.functions.at(0);
 
-		auto& stmt_list = the_function.body.body->statements;
+		auto& stmt_list = the_function.content.body->statements;
 		ASSERT_EQUAL(stmt_list.size(), 5);
 
 		using namespace compiler::helios::code;
@@ -483,9 +483,9 @@ private:
 		ASSERT_EQUAL(function.original_name, "foo");
 
 		// note that alias should not be included here:
-		ASSERT_EQUAL(function.body.body->statements.size(), 7);
+		ASSERT_EQUAL(function.content.body->statements.size(), 7);
 
-		auto& statements = function.body.body->statements;
+		auto& statements = function.content.body->statements;
 
 		auto get_var_ref = [&](usize i) -> decltype(auto) {
 			return dynamic_cast<const compiler::helios::code::VariableStmt&>(*statements.at(i));
@@ -553,9 +553,9 @@ private:
 			// @todo in this PR: get to "a" thru hout code and check that it this the same a the latter
 
 			// get "a" thru return:
-			ASSERT_EQUAL(function.body.body->statements.size(), 1);
+			ASSERT_EQUAL(function.content.body->statements.size(), 1);
 			
-			auto ret_stmt = function.body.body->statements.at(0).ref();
+			auto ret_stmt = function.content.body->statements.at(0).ref();
 			auto ret_stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
 			assertTrue(ret_stmt_casted != nullptr, "Return statement expected");
 			
