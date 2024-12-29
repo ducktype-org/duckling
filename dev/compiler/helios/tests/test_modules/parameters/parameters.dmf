@@ -1,5 +1,4 @@
-# @todo in this PR: add tests
+
 fun foo(a: i32) = {
     return a;
 }
-

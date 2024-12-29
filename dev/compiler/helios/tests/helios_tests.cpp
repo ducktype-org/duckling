@@ -6,6 +6,8 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/query_impl.hpp> // @todo relax it to just Context type #404
 #include <tester/tester.hpp>
 #include <pst_parser/parser.hpp>
 #include <filesystem/file.hpp>
@@ -43,6 +45,7 @@ public:
 		TESTER_ADD_TEST(testHeliosResultConcept);
 		TESTER_ADD_TEST(testHeliosResult);
 		TESTER_ADD_TEST(testTypeOf);
+		TESTER_ADD_TEST(testFunctionParameters);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -534,6 +537,38 @@ private:
 
 		// debug print test just for cov and to see if it does not throw:
 		[[maybe_unused]] auto debug_print_out = hout.debugPrint();
+	}
+
+	void testFunctionParameters() {
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/parameters")));
+		
+		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto hout = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			ASSERT_EQUAL(hout.functions.size(), 1);
+			auto function = hout.functions.at(0);
+			ASSERT_EQUAL(function.original_name, "foo");
+
+			// @todo in this PR: get to "a" thru hout code and check that it this the same a the latter
+
+			// get "a" thru return:
+			ASSERT_EQUAL(function.body.body->statements.size(), 1);
+			
+			auto ret_stmt = function.body.body->statements.at(0).ref();
+			auto ret_stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
+			assertTrue(ret_stmt_casted != nullptr, "Return statement expected");
+			
+			auto ret_expr = ret_stmt_casted->value.ref();
+			auto ret_expr_casted = dynamic_cast<const compiler::helios::code::IdentifierExpr*>(&*ret_expr);
+			assertTrue(ret_expr_casted != nullptr, "Identifier expression expected");
+
+			auto a_sym = ret_expr_casted->symbol;
+			auto a_type = ret_expr_casted->type_desc;
+
+			ASSERT_EQUAL(int32_type, a_type.getType());
+			ASSERT_EQUAL(int32_type, ctx.query<compiler::helios::QueryTypeOfSymbol>({a_sym})->value());
+		});
 	}
 
 	void scopeParentsAndDepthTests() {
