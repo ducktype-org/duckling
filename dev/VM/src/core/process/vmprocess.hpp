@@ -12,8 +12,6 @@
 #include <code_data/code.hpp>
 #include <condition_variable>
 #include <shared_mutex>
-#include <thread>
-#include <memory>
 #include <base/optional.hpp>
 #include <api/vm.hpp>
 #include <core/thread/vmthread.hpp>

@@ -354,8 +354,10 @@ namespace vm {
 	RETURN_TYPE OpFuns::op_deinit(OPFUN_ARGS) {
 		{
 			auto block = frame->block_stack.back();
+			auto type  = thread.process_memory.getBlockType(block);
 			frame->block_stack.pop_back();
 			thread.process_memory.freeBlock(block);
+			frame->local_stack_head -= type->getSize();
 		}
 		OPFUN_CONT(1);
 	}

@@ -18,9 +18,8 @@ namespace vm {
 	 */
 	class Pointer final {
 	private:
-		// @todo check if we change it to "Ref<Block>" it is compiled to the same code
-		Block* block;
-		u64    offset;
+		MRef<Block> block;
+		u64         offset;
 
 		Pointer(): block(nullptr), offset(0) {}
 
@@ -37,7 +36,7 @@ namespace vm {
 		[[nodiscard]]
 		auto getBlock() -> Ref<Block> {
 			if (block == nullptr) CORE_PANIC("Accessing null pointer");
-			return block;
+			return block.toOpt()->get();
 		}
 
 		static Pointer null() { return {}; }

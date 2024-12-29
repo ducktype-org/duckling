@@ -3,7 +3,6 @@
 #include <deque>
 #include <mutex>
 #include <shared_mutex>
-#include <utility>
 #include <cstring>
 #include <base/ints.hpp>
 #include <base/ref.hpp>
@@ -15,6 +14,7 @@
 #include <code_data/frame.hpp>
 
 #include "block.hpp"
+#include "core/process/memory/thread_stack.hpp"
 #include "pointer.hpp"
 #include "allocator/block_data.hpp"
 #include "allocator/heap_allocator.hpp"
@@ -23,35 +23,25 @@
 namespace vm {
 	class Memory {
 	private:
-		static constexpr u64 FRAMES_LENGTH = 16'384;
-		static constexpr u64 STACK_LENGTH  = FRAMES_LENGTH * 256;
-
 		mutable std::shared_mutex mutex_;
 		HeapAllocator             heap_allocator;
 		StackAllocator            stack_allocator;
 
-		std::deque<std::vector<Frame>> threads_executor_frame_stack;
-		/**
-		 * @brief Continous block of memory, that is used for the call stack.
-		 * Here each stack frame is composed of: "arg_stack", local_stack". The "arg_stack" is used
-		 * for arguments passed to the function, and the "local_stack" is used for local variables.
-		 * [arg_stack(1) | local_stack(1) | arg_stack(1) | local_stack(2) | ...]
-		 * When preparing for a new function call, the arguments are placed
-		 * exactly after the local variables of the current function, so in the "arg_stack"
-		 * of the new frame.
-		 */
-		std::deque<std::vector<std::byte>> threads_executor_local_stack;
+		std::deque<ThreadStack> threads_frame_stacks;
 
-		std::deque<Block> blocks = {};
-		// @TODO: stable vector doesn't have pop_back method, so for now we use deque
+		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
+		// After the block is destroyed and the reference count drops to zero, instead of freeing
+		// the memory, we mark the block as unused and add its ID to the free_ids list. Then when we
+		// need to allocate a new block, we first check if there are any free IDs available. Blocks
+		// are stored in a deque, so we can have pointers to them without worrying about
+		// reallocation.
+		std::deque<Block>   blocks   = {};
 		std::deque<BlockID> free_ids = {};
 
 		[[nodiscard]]
 		Ref<Block> createBlock(BlockData data);
 
 		void deleteBlock(Ref<Block> block);
-
-		static void createReference(Ref<Block> block);
 
 		void destroyReference(Ref<Block> block);
 
@@ -65,8 +55,7 @@ namespace vm {
 
 		// =================== Used by executor ===================
 
-		auto initializeFrameStack()
-			-> std::pair<Ref<std::vector<Frame>>, Ref<std::vector<std::byte>>>;
+		auto initializeFrameStack() -> Ref<ThreadStack>;
 
 		auto allocateHeap(TypeCRef type) -> Ref<Block>;
 
@@ -87,7 +76,7 @@ namespace vm {
 		[[nodiscard]]
 		static inline auto getPointer(Ref<Block> block) -> Pointer {
 			std::unique_lock lock(*block->shared_mutex);
-			createReference(block);
+			block->refcount++;
 			return { block, 0 };
 		}
 
@@ -106,13 +95,13 @@ namespace vm {
 
 		inline auto destroyPointer(Pointer pointer) -> void {
 			std::unique_lock lock(*pointer.block->shared_mutex);
-			destroyReference(pointer.block);
+			destroyReference(pointer.block.toOpt()->get());
 		}
 
 		// ======================== Requests ========================
 
 		[[nodiscard]]
-		auto requestBlockIDs() -> base::StableVector<BlockID>;
+		auto requestBlockIDs() -> std::vector<BlockID>;
 
 		[[nodiscard]]
 		auto requestBlockData(BlockID id) -> base::RawView;

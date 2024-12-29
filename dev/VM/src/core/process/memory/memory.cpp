@@ -1,6 +1,6 @@
-#include <iostream>
 #include <base/exceptions.hpp>
 #include <mutex>
+#include <core/process/memory/thread_stack.hpp>
 #include "memory.hpp"
 
 namespace vm {
@@ -30,20 +30,16 @@ namespace vm {
 		if (--block->refcount == 0) deleteBlock(block);
 	}
 
-	void Memory::createReference(Ref<Block> block) { block->refcount++; }
-
 	Ref<Block> Memory::getBlock(BlockID id) {
 		if (static_cast<u64>(id) >= blocks.size()) CORE_PANIC("Accessing block out of bounds");
 		if (!blocks[usize(id)].used) CORE_PANIC("Accessing freed block");
 		return &blocks[static_cast<u64>(id)];
 	}
 
-	auto Memory::initializeFrameStack()
-		-> std::pair<Ref<std::vector<Frame>>, Ref<std::vector<std::byte>>> {
+	auto Memory::initializeFrameStack() -> Ref<ThreadStack> {
 		std::unique_lock lock(mutex_);
-		threads_executor_frame_stack.emplace_back(FRAMES_LENGTH);
-		threads_executor_local_stack.emplace_back(STACK_LENGTH);
-		return { &threads_executor_frame_stack.back(), &threads_executor_local_stack.back() };
+		threads_frame_stacks.emplace_back();
+		return &threads_frame_stacks.back();
 	}
 
 	auto Memory::allocateHeap(TypeCRef type) -> Ref<Block> {
@@ -63,10 +59,10 @@ namespace vm {
 		if (block->refcount == 0) deleteBlock(block);
 	}
 
-	auto Memory::requestBlockIDs() -> base::StableVector<BlockID> {
-		base::StableVector<BlockID> ids;
+	auto Memory::requestBlockIDs() -> std::vector<BlockID> {
+		std::vector<BlockID> ids;
 		for (auto& block: blocks)
-			if (block.used) ids.pushBack(block.id);
+			if (block.used) ids.push_back(block.id);
 		return ids;
 	}
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/process/memory/thread_stack.hpp"
 #include <base/box.hpp>
 #include <base/optional.hpp>
 #include <condition_variable>
@@ -53,12 +54,12 @@ namespace vm {
 		std::byte* local_stack_top;   // Pointer to the place, where new stack should start.
 		std::byte* local_stack_end;   // Pointer to the first value not allocated.
 
-		RuntimeData(std::pair<Ref<std::vector<Frame>>, Ref<std::vector<std::byte>>> data):
-			  frame_stack_base(data.first->data()),
-			  frame_stack_end(data.first->data() + data.first->size()),
-			  local_stack_base(data.second->data()),
-			  local_stack_top(data.second->data()),
-			  local_stack_end(data.second->data() + data.second->size()) {}
+		RuntimeData(Ref<ThreadStack> stack):
+			  frame_stack_base(stack->getFrameStack()->data()),
+			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
+			  local_stack_base(stack->getLocalStack()->data()),
+			  local_stack_top(stack->getLocalStack()->data()),
+			  local_stack_end(stack->getLocalStack()->data() + stack->getLocalStack()->size()) {}
 	};
 
 	/**

@@ -36,12 +36,13 @@ namespace vm {
 		 * @brief  Current instruction in the stack frame.
 		 * It is only updated when the new function is called.
 		 */
-		const struct Fix8Instruction* instr{};
+		const struct Fix8Instruction* instr = nullptr;
+		;
 
 		/**
 		 * @brief Memory array where the local variables are stored.
 		 */
-		std::byte* local_stack{};
+		std::byte* local_stack = nullptr;
 
 		Registers regs;
 		FlagData  flags{};
@@ -55,13 +56,15 @@ namespace vm {
 		 * @brief Place where the arguments for the
 		 * future function call are stored (called "next arg stack").
 		 */
-		std::byte* next_args{};
+		std::byte* next_args = nullptr;
+		;
 
 		/**
 		 * @brief Place where the arguments for the
 		 * current function call are stored (called "arg stack").
 		 */
-		std::byte* args{};
+		std::byte* args = nullptr;
+		;
 
 		/**
 		 * @brief Stack of block IDs used by the function created with init_type
