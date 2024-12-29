@@ -326,13 +326,15 @@ namespace compiler::helios {
 
 			// here, we add only stmts, that actually have a primary scope.
 
-			void visitFun(const pst::Fun&) override {
-				// @todo in this PR
+			void visitFun(const pst::Fun& fun) override {
 				// Scope of "fun →()← {}"
-				// @TODO: iterate function parameters and create symbols out of them
-				// The problem is that currently function parameters are Expr in Pst -- this has to
-				// change Variable declaration or custom element is probably a better choice
-				output(std::vector<SymID>{});
+				
+				std::vector<SymID> out;
+				for (auto params: *fun.getParams()) {
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>({ params }));
+				}
+
+				output(std::move(out));
 			}
 
 			void visitIf(const pst::If&) override {
