@@ -411,7 +411,7 @@ namespace compiler::helios {
 			case SymbolKind::Using:
 			case SymbolKind::Import: {
 				QueryLinkedScopeVisitor visitor(ctx, key);
-				key.ref->stmtCast()->acceptVisitor(visitor);
+				key.ref->pst_element->acceptVisitor(visitor);
 				return visitor.result_scope.value();
 			}
 			default:
