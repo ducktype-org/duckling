@@ -26,25 +26,45 @@ CheckOptions:
   google-readability-function-size.StatementThreshold: '800'
 
 
-  readability-identifier-naming.ClassCase: CamelCase
-  readability-identifier-naming.ClassMemberCase: lower_case
-  readability-identifier-naming.ClassName: CamelCase
-  readability-identifier-naming.ClassConstantCase: UPPER_CASE
-  readability-identifier-naming.ClassMethodCase: camelBack
-  readability-identifier-naming.ConstantCase: UPPER_CASE
+  # Names config:
+  
+  # Types:
+  
+  # note: the project default is CamelCase for types, 
+  # but we have a lot od edge-cases, like `KeyOF_` prefix,
+  # and in general we preferer flexibility here
+  # for its expressivness.
+
+  readability-identifier-naming.ClassCase: aNy_CasE
+  readability-identifier-naming.StructCase: aNy_CasE
+  readability-identifier-naming.TypedefCase: aNy_CasE
   readability-identifier-naming.EnumCase: CamelCase
+
+  # Function like:
   readability-identifier-naming.FunctionCase: camelBack
+  readability-identifier-naming.MethodCase: camelBack
+  readability-identifier-naming.ClassMethodCase: camelBack
+  
+  # Variable like:
+  readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.ClassMemberCase: lower_case
+  readability-identifier-naming.MemberCase: lower_case
+  readability-identifier-naming.ParameterCase: lower_case
+  readability-identifier-naming.LocalConstantCase: lower_case
+  
+  # Namespaces:
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.InlineNamespaceCase: lower_case
+  
+  # Constant like:
+  readability-identifier-naming.ClassConstantCase: UPPER_CASE
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.ConstantCase: UPPER_CASE
   readability-identifier-naming.GlobalConstantCase: UPPER_CASE
   readability-identifier-naming.GlobalConstantPointerCase: UPPER_CASE
-  readability-identifier-naming.InlineNamespaceCase: lower_case
+
+  # Macros:
   readability-identifier-naming.MacroDefinitionCase: aNy_CasE
-  readability-identifier-naming.MemberCase: lower_case
-  readability-identifier-naming.MethodCase: camelBack
-  readability-identifier-naming.NamespaceCase: lower_case
-  readability-identifier-naming.ParameterCase: lower_case
-  readability-identifier-naming.StructCase: CamelCase
-  readability-identifier-naming.TypedefCase: CamelCase
-  readability-identifier-naming.VariableCase: lower_case
 
 ...
 # https://gist.github.com/airglow923/1fa3bda42f2b193920d7f46ee8345e04

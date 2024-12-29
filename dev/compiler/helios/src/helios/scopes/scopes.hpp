@@ -28,7 +28,7 @@
 #include "../scope_symbol_id.hpp"
 #include "../lookup_result.hpp"
 
-// @TODO: relax this dependency (we only need ModuleID in hpp)
+// @TODO: relax this dependency (we only need ModuleID in hpp) (#404)
 #include <frontend/module_tree/queries.hpp>
 
 namespace compiler::helios {
