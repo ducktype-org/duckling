@@ -1,6 +1,5 @@
 #include <base/exceptions.hpp>
 #include <mutex>
-#include <core/process/memory/thread_stack.hpp>
 #include "memory.hpp"
 
 namespace vm {

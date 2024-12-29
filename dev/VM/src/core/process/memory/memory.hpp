@@ -14,8 +14,8 @@
 #include <code_data/frame.hpp>
 
 #include "block.hpp"
-#include "core/process/memory/thread_stack.hpp"
 #include "pointer.hpp"
+#include "thread_stack.hpp"
 #include "allocator/block_data.hpp"
 #include "allocator/heap_allocator.hpp"
 #include "allocator/stack_allocator.hpp"

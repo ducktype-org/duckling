@@ -1,10 +1,10 @@
 #pragma once
 
-#include "core/process/memory/thread_stack.hpp"
 #include <base/box.hpp>
 #include <base/optional.hpp>
 #include <condition_variable>
 #include <core/process/memory/memory.hpp>
+#include <core/process/memory/thread_stack.hpp>
 #include <core/process/type_metadata/type_metadata.hpp>
 #include <code_data/instruction.hpp>
 #include <code_data/code.hpp>
