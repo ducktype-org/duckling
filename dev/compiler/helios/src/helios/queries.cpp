@@ -150,28 +150,73 @@ namespace compiler::helios {
 
 			HOUTFunctionMaker(query::Context& ctx, SymID symbol):
 				  ctx(ctx),
-				  original_symbol(std::move(symbol)) {}
+				  original_symbol(symbol) {}
 
 			void visitFun(const pst::Fun& stmt) final {
 				// @TODO: create function here...
 				// - create types, attributes, flags, ...
-				// @TODO: params, rest, flags, attributes, etc
+				// @TODO: rest, flags, attributes, etc
 
 				HOUTFunction output(original_symbol, ctx);
 
 				// Scope of function itself:
-				// this scope will contain all "function declaration" symbols like parameters
+				// this scope contains all "function declaration" symbols like parameters
 				// auto outer_scope
 				// 	= ctx.query<QueryPrimaryCodeScopeFor>({ MCRef<pst::LangElement>(&stmt) });
 
+
+				// body:
+
 				auto fun_body = stmt.getBody();
 
-				// HOUTCode out;
 				code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
-				output.body.body
+				output.content.body
 					= std::make_shared<const code::CodeBlock>(std::move(function_body));
 
-				this->out.emplace(output);
+
+				// parameters:
+
+				std::vector<code::Parameter> parameters;
+
+				for (auto param: *stmt.getParams()) {
+					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
+					auto param_name = name(param_symbol);
+					auto param_type = ctx.query<QueryTypeOfSymbol>({ param_symbol });
+
+					auto value = param->getValue();
+					
+					if (param_type->hasError()) {
+						// @TODO: Report an error
+						return;
+					}
+
+					if (value.empty()) {
+						parameters.emplace_back( 
+							param_name,
+							param_type->value(),
+							std::nullopt,
+							param_symbol
+						);
+					} else {
+						auto initial_value = ctx.query<QueryHoutOfExpr>({ value.value() });
+
+						if (initial_value.hasError()) {
+							// @TODO: Report an error
+							return;
+						}
+
+						parameters.emplace_back(
+							param_name,
+							param_type->value(),
+							std::move(initial_value.value()),
+							param_symbol
+						);
+					}
+				}
+
+				output.content.parameters = std::make_shared<const std::vector<code::Parameter>>(std::move(parameters));
+
+				this->out.emplace(std::move(output));
 			}
 		};
 

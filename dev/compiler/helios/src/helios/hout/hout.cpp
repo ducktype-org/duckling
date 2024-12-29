@@ -20,13 +20,22 @@ namespace compiler::helios {
 
 	std::string HOUTFunction::debugPrint() const {
 		std::stringstream out;
-		// @TODO
-
 		out << "fun ";
 		out << original_name.strView();
-		out << this->type.toString();
-		out << " {\n";
-		for (auto&& stmt: body.body->statements) stmt->debugPrint(out, 1);
+		out << this->type.toString() << "\n";
+		out << "Parameters: \n";
+		if (content.parameters->empty()) out << "  none\n";
+		for (auto& param: *content.parameters) {
+			out << "  " << param.name.strView() << " : ";
+			out << param.type.getType().toString();
+			if (param.initial_value.has_value()) {
+				out << " = ";
+				param.initial_value.value()->debugPrint(out);
+			}	
+			out << "\n";
+		}
+		out << "{\n";
+		for (auto& stmt: content.body->statements) stmt->debugPrint(out, 1);
 		out << "}\n";
 		return out.str();
 	}

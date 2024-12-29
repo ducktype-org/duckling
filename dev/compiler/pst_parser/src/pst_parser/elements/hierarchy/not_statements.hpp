@@ -47,6 +47,11 @@ namespace pst {
 			return name.value;
 		}
 
+		[[nodiscard]]
+		base::Optional<MCRef<ExprElement>> getValue() const {
+			return initial.map([](const auto& v) { return v.ref(); });
+		}
+
 		void acceptVisitor(PstVisitor& visitor) const final;
 	};
 
