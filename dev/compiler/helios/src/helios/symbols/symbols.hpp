@@ -68,6 +68,8 @@ namespace compiler::helios {
 
 	/**
 	 * @return Pst element symbol was created from
+	 * @todo should this be an external API? It might depend on incremental compilation
+	 * implementation
 	 */
 	MCRef<pst::Stmt> stmt(SymID);
 
@@ -176,16 +178,4 @@ namespace compiler::helios {
 	 * More information on `ClassSymbolData` in it's definition.
 	 */
 	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>)
-
-	namespace code {
-		struct Expr;
-	}
-
-	/**
-	 * @brief Return Expr tree of HOUT of a expression assigned to a constant.
-	 * @note This query is temporary and is used for testing only.
-	 * @note type of this query is weird, but it will likely be refactored in expr-2.0 anyway
-	 * @todo HOUT 2.0: probably delete this query (see also issue #385)
-	 */
-	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, CRef<errors::HResult<base::Box<code::Expr> COMMA errors::Failed>>);
 }

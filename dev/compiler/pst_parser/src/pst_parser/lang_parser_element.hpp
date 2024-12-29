@@ -19,6 +19,8 @@ namespace pst {
 	template<typename State>
 	class PSTAutomatic;
 
+	class PstVisitor;
+
 	/**
 	 * @brief Base Element for all of the PST elements.
 	 */
@@ -194,6 +196,8 @@ namespace pst {
 			);
 			return element_kind;
 		}
+
+		virtual void acceptVisitor(PstVisitor& visitor) const;
 
 		template<typename X>
 		friend class PSTAutomatic;

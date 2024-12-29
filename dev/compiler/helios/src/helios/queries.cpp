@@ -62,7 +62,7 @@ namespace compiler::helios {
 			return block;
 		}
 
-		struct HoutStmtMaker final: public pst::PstStmtVisitorPanicky {
+		struct HoutStmtMaker final: public pst::PstVisitorPanicky {
 			query::Context&                       ctx;
 			bool                                  empty = false;
 			base::Optional<base::Box<code::Stmt>> out;
@@ -142,7 +142,7 @@ namespace compiler::helios {
 			}
 		};
 
-		struct HOUTFunctionMaker final: public pst::PstStmtVisitorPanicky {
+		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {
 			query::Context& ctx;
 			SymID           original_symbol;
 

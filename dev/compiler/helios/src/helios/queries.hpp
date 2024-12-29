@@ -9,7 +9,7 @@
 
 #include <query_framework/query_int.hpp>
 
-// @TODO: relax this dependency
+// @TODO: relax this dependency (#404)
 #include <frontend/module_tree/queries.hpp>
 
 #include "scope_symbol_id.hpp"

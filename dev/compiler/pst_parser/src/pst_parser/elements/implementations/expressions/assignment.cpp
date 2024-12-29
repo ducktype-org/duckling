@@ -63,7 +63,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void Assignment::acceptVisitor(PstExprVisitor& visitor) const {
+	void Assignment::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitAssignment(*this);
 	}
 }

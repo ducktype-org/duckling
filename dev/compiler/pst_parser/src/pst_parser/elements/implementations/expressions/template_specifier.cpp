@@ -45,7 +45,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void TemplateSpecifier::acceptVisitor(PstExprVisitor& visitor) const {
+	void TemplateSpecifier::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitTemplateSpecifier(*this);
 	}
 }
