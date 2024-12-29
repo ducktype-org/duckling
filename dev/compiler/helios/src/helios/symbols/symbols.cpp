@@ -732,7 +732,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Class, "Symbol is not a class");
 
-			auto class_stmt = getSymRef(key)->pst_element;
+			auto class_stmt = getSymRef(key)->stmtCast();
 
 			auto class_body_scope = queryBodyCodeScopeFor(ctx, class_stmt);
 			auto class_symbols    = ctx.query<QuerySymbolsInScope>(class_body_scope);
