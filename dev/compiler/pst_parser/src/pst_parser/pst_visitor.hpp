@@ -133,7 +133,7 @@ namespace pst {
  * @brief Macro used to define PstVisitor methods
  */
 #define PANIC_VISITOR_VISIT_METHOD(type)                           \
-	void visit##type([[maybe_unused]] const type& stmt) override { \
+	void visit##type([[maybe_unused]] const type& pst_node) override { \
 		CORE_PANIC("PstVisitorPanicky visited " #type);        \
 	}
 
