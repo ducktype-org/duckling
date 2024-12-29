@@ -68,5 +68,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void ExprValue::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitExprValue(*this); }
+	void ExprValue::acceptExprVisitor(PstExprVisitor& visitor) const {
+		visitor.visitExprValue(*this);
+	}
 }

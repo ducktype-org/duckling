@@ -47,7 +47,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void AccessBlock::acceptVisitor(PstVisitor& visitor) const {
-		visitor.visitAccessBlock(*this);
-	}
+	void AccessBlock::acceptVisitor(PstVisitor& visitor) const { visitor.visitAccessBlock(*this); }
 }

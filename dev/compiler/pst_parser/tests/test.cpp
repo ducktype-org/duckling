@@ -81,7 +81,7 @@ private:
 	pst::PST<> prepare(const std::string& filename) { return { fs::FilePath(filename) }; }
 
 	void testVisitorImpl(const std::string& filename, usize expected_counter) {
-		auto pst            = prepare(path(filename));
+		auto pst = prepare(path(filename));
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
@@ -89,12 +89,12 @@ private:
 				assertThrows<base::Panic>(
 					[&] { stmt->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
 				);
-				stmt->acceptVisitor(empty_vistor);	
+				stmt->acceptVisitor(empty_vistor);
 			}
 			ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
 			ASSERT_EQUAL(expected_counter, empty_vistor.counter);
 		}
-		
+
 		// check that is also works when called from LangElement:
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
@@ -105,7 +105,7 @@ private:
 					[&] { lang_stmt->acceptVisitor(panicky_vistor); },
 					"LangElement did not call it\'s visitor"
 				);
-				lang_stmt->acceptVisitor(empty_vistor);			
+				lang_stmt->acceptVisitor(empty_vistor);
 			}
 			ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
 			ASSERT_EQUAL(expected_counter, empty_vistor.counter);

@@ -35,7 +35,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void Constructor::acceptVisitor(PstVisitor& visitor) const {
-		visitor.visitConstructor(*this);
-	}
+	void Constructor::acceptVisitor(PstVisitor& visitor) const { visitor.visitConstructor(*this); }
 }

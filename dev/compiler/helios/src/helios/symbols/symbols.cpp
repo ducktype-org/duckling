@@ -648,9 +648,7 @@ namespace compiler::helios {
 			}
 
 		public:
-			PstVisitor_GetTypeFromDefinition(Context& ctx, const QKey& key):
-				  ctx(ctx),
-				  key(key) {}
+			PstVisitor_GetTypeFromDefinition(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
 			base::Optional<tsh::TypeInfo> definition_type_info;
 
