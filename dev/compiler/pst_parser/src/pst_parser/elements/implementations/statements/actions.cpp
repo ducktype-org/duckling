@@ -82,19 +82,17 @@ namespace pst {
 
 	void Throw::dprint(std::ostream& out) const { detail::simpleActionDprint(out, "Throw", &expr); }
 
-	void Return::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitReturn(*this); }
+	void Return::acceptVisitor(PstVisitor& visitor) const { visitor.visitReturn(*this); }
 
-	void Break::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitBreak(*this); }
+	void Break::acceptVisitor(PstVisitor& visitor) const { visitor.visitBreak(*this); }
 
-	void Continue::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitContinue(*this); }
+	void Continue::acceptVisitor(PstVisitor& visitor) const { visitor.visitContinue(*this); }
 
-	void Redo::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitRedo(*this); }
+	void Redo::acceptVisitor(PstVisitor& visitor) const { visitor.visitRedo(*this); }
 
-	void Restart::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitRestart(*this); }
+	void Restart::acceptVisitor(PstVisitor& visitor) const { visitor.visitRestart(*this); }
 
-	void Defer::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitDefer(*this); }
+	void Defer::acceptVisitor(PstVisitor& visitor) const { visitor.visitDefer(*this); }
 
-	void Throw::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitThrow(*this); }
-
-
+	void Throw::acceptVisitor(PstVisitor& visitor) const { visitor.visitThrow(*this); }
 }

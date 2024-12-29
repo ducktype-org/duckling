@@ -323,7 +323,7 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
-		struct QueryLinkedScopeVisitor: pst::PstStmtVisitorPanicky {
+		struct QueryLinkedScopeVisitor: pst::PstVisitorPanicky {
 			query::Context& ctx;
 			QKey            key;
 
@@ -551,7 +551,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
 	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QueryType_Result) {
-		class PstStmtVisitor_GetTypeOf final: public pst::PstStmtVisitorPanicky {
+		class PstVisitor_GetTypeOf final: public pst::PstVisitorPanicky {
 			Context& ctx;
 
 			void setTypeOfSymbol(const tsh::TypeInfo& type) {
@@ -566,7 +566,7 @@ namespace compiler::helios {
 			}
 
 		public:
-			PstStmtVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
+			PstVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
 
 			base::Optional<tsh::TypeInfo> symbol_type_info;
 
@@ -625,7 +625,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto symbol_ref = getSymRef(key);
 
-			PstStmtVisitor_GetTypeOf visitor(ctx);
+			PstVisitor_GetTypeOf visitor(ctx);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
 			if_opt_some(visitor.symbol_type_info, type) return type;
 			return errors::HError(errors::Failed());
@@ -637,7 +637,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
 
 	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, QueryType_Result) {
-		class PstStmtVisitor_GetTypeFromDefinition final: public pst::PstStmtVisitorPanicky {
+		class PstVisitor_GetTypeFromDefinition final: public pst::PstVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
 
@@ -648,9 +648,7 @@ namespace compiler::helios {
 			}
 
 		public:
-			PstStmtVisitor_GetTypeFromDefinition(Context& ctx, const QKey& key):
-				  ctx(ctx),
-				  key(key) {}
+			PstVisitor_GetTypeFromDefinition(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
 			base::Optional<tsh::TypeInfo> definition_type_info;
 
@@ -662,7 +660,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto symbol_ref = getSymRef(key);
 
-			PstStmtVisitor_GetTypeFromDefinition visitor(ctx, key);
+			PstVisitor_GetTypeFromDefinition visitor(ctx, key);
 			symbol_ref->pst_stmt->acceptVisitor(visitor);
 			return visitor.definition_type_info.value();
 		}
@@ -672,7 +670,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
 
 	struct IMPLEMENT_QUERY(QueryClassSymbolData, QueryClassSymbolData_Result) {
-		struct ClassDataParser final: pst::PstStmtVisitorPanicky {
+		struct ClassDataParser final: pst::PstVisitorPanicky {
 			base::Optional<base::StrID>                name;
 			base::Optional<MCRef<pst::ExprElement>>    base_class;
 			base::Optional<MCRef<pst::ImplementsList>> implements;

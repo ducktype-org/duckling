@@ -52,7 +52,7 @@ namespace pst {
 			return true;
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class Block final: public CodeDecl {
@@ -73,7 +73,7 @@ namespace pst {
 			return "Block";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class Namespace final: public Decl {
@@ -102,7 +102,7 @@ namespace pst {
 			return "Namespace";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class Class final: public Decl {
@@ -149,7 +149,7 @@ namespace pst {
 		// 	return true;
 		// }
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class Variable final: public Decl {
@@ -192,7 +192,7 @@ namespace pst {
 			return is_const ? "Let" : "Var";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class Fun final: public Decl {
@@ -236,7 +236,7 @@ namespace pst {
 			return "Function";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class If final: public CodeDecl {
@@ -269,7 +269,7 @@ namespace pst {
 			return body.ref();
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class While final: public CodeDecl {
@@ -291,7 +291,7 @@ namespace pst {
 			return "While";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class For final: public CodeDecl {
@@ -313,7 +313,7 @@ namespace pst {
 			return "For";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 }

@@ -205,7 +205,7 @@ namespace compiler::helios::code {
 
 			void visitRoundExpr(const pst::expr::RoundExpr& stmt) override {
 				PstExprToHoutExprVisitor vis(ctx, scope);
-				stmt.getInner()->acceptVisitor(vis);
+				stmt.getInner()->acceptExprVisitor(vis);
 				if (vis.node) node = makeBox<ParenthesisExpr>(ctx, scope, std::move(*vis.node));
 			}
 
@@ -246,7 +246,7 @@ namespace compiler::helios::code {
 			void visitSuffixOperator(const pst::expr::SuffixOperator& stmt) override {
 				// @NOTE: This is a mockup
 				PstExprToHoutExprVisitor vis(ctx, scope);
-				stmt.getExpr()->acceptVisitor(vis);
+				stmt.getExpr()->acceptExprVisitor(vis);
 				if_opt_some(vis.node, expr) {
 					node = makeBox<UnaryOperatorExpr>(
 						scope, stmt.getOperator(), false, std::move(expr)
@@ -257,7 +257,7 @@ namespace compiler::helios::code {
 			void visitPrefixOperator(const pst::expr::PrefixOperator& stmt) override {
 				// @NOTE: This is a mockup
 				PstExprToHoutExprVisitor vis(ctx, scope);
-				stmt.getExpr()->acceptVisitor(vis);
+				stmt.getExpr()->acceptExprVisitor(vis);
 				if_opt_some(vis.node, expr) {
 					node = makeBox<UnaryOperatorExpr>(
 						scope, stmt.getOperator(), true, std::move(expr)
@@ -274,7 +274,7 @@ namespace compiler::helios::code {
 			// std::cerr << '\n'
 
 			PstExprToHoutExprVisitor visitor(ctx, scope);
-			element->acceptVisitor(visitor);
+			element->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
 			return errors::HError(errors::Failed());
