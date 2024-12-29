@@ -279,7 +279,6 @@ namespace compiler::helios {
 				key.element.toOpt().has_value(),
 				"Nullptr element given to QuerySymbolOfSTMT! (add some null handling before calling it)"
 			);
-			// todo in this PR: change to single visitor
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = dynamic_cast<const pst::Stmt*>(&*key.element)) {
 				return PResult{ makeSymbolFromStatement(scope, stmt) };
