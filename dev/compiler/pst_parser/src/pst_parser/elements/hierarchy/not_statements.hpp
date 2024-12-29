@@ -46,6 +46,8 @@ namespace pst {
 		base::StrID getName() const {
 			return name.value;
 		}
+
+		void acceptVisitor(PstVisitor& visitor) const final;
 	};
 
 	class DottedName final: public NotStmt {

@@ -668,9 +668,7 @@ namespace compiler::helios {
 
 			PstVisitor_GetTypeOf visitor(ctx);
 			symbol_ref->pst_element->acceptVisitor(visitor);
-			// @TODO is this PR: revert some casts, that are no longer needed, since
-			// visitors are for PST elements, not stmts
-
+		
 			// @TODO in this PR: add support for other symbol
 			
 			if_opt_some(visitor.symbol_type_info, type) return type;
