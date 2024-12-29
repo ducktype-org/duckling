@@ -95,6 +95,4 @@ namespace pst {
 	void Defer::acceptVisitor(PstVisitor& visitor) const { visitor.visitDefer(*this); }
 
 	void Throw::acceptVisitor(PstVisitor& visitor) const { visitor.visitThrow(*this); }
-
-
 }
