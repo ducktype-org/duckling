@@ -23,10 +23,10 @@ namespace pst {
 
 		state.parse(out).all(&out->name, NamedOperator::Colon);
 
-		state.parse(out).with(&out->type, UniversalExpr::parse);
+		state.parse(out).one(&out->type);
 
 		if (state.parse(out).tryEat(NamedOperator::Assign))
-			state.parse(out).with(&out->initial, UniversalExpr::parse);
+			state.parse(out).one(&out->initial);
 
 		return out;
 	}

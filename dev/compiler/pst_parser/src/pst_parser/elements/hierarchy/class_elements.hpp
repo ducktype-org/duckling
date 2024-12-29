@@ -145,7 +145,7 @@ namespace pst {
 	class Method final: public ClassStmt {
 		tpc::Identifier                   name;
 		MBox<ParamList>                   params = nullptr;
-		base::Optional<MBox<ExprElement>> ret;
+		base::Optional<MBox<CommaExprHolder>> ret;
 		MBox<CodeBlock>                   body = nullptr;
 
 	public:
@@ -181,8 +181,8 @@ namespace pst {
 	class Field final: public ClassStmt {
 		bool                              is_mutable = true;
 		tpc::Identifier                   name;
-		MBox<ExprElement>                 type;
-		base::Optional<MBox<ExprElement>> init;
+		MBox<CommaExprHolder>                 type;
+		base::Optional<MBox<CommaExprHolder>> init;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Field, ElementKind::ClassField);
@@ -202,7 +202,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getType() const {
+		MCRef<ExprHolder> getType() const {
 			return type.ref();
 		}
 

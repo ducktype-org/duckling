@@ -161,7 +161,7 @@ namespace pst {
 	 */
 	class Action: public Stmt {
 	protected:
-		base::Optional<MBox<ExprElement>> expr;
+		base::Optional<MBox<CommaExprHolder>> expr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action, ElementKind::Action);
@@ -177,8 +177,8 @@ namespace pst {
 		/**
 		 * @note Optional of MRef here is intentional
 		 */
-		base::Optional<MCRef<ExprElement>> getValue() const {
-			return expr.map([](const auto& e) { return e.ref(); });
+		base::Optional<MCRef<ExprHolder>> getValue() const {
+			return expr.map([](const auto& e) -> MCRef<ExprHolder> { return e.ref(); });
 		}
 	};
 

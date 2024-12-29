@@ -35,6 +35,15 @@ namespace pst {
 		return true;
 	}
 
+	void ExprHolder::dprint(std::ostream& out) const {
+		out << "{";
+
+		out << R"("expr":)";
+		tpc::nullAwareDprint(expr, out);
+
+		out << "}";
+	}
+
 	namespace {
 		bool universalEnd(const LangParserState& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
@@ -44,13 +53,21 @@ namespace pst {
 		bool universalEndAllowComma(const LangParserState& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Semicolon) || ExprClassify::isAssignment(state, fwd);
 		}
+
+		bool AssignmentEnd(const LangParserState& state, i64 fwd = 0) {
+			return state[fwd].is(Special::Semicolon);
+		}
 	}
 
-	MBox<ExprElement> UniversalExpr::parse(LangParserState& state) {
+	MBox<ExprElement> ExprParserHelper::parseUniversal(LangParserState& state) {
 		return expr::parseUntil<expr::Ternary, universalEnd>(state);
 	}
 
-	MBox<ExprElement> CommaExpr::parse(LangParserState& state) {
+	MBox<ExprElement> ExprParserHelper::parseComma(LangParserState& state) {
 		return expr::parseUntil<expr::Comma, universalEndAllowComma>(state);
+	}
+
+	MBox<ExprElement> ExprParserHelper::parseAssignment(LangParserState& state) {
+		return expr::parseUntil<expr::Assignment, AssignmentEnd>(state);
 	}
 }

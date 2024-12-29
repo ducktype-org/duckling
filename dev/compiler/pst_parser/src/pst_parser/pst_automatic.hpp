@@ -140,6 +140,15 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Parses an Element. Skips on success, logs error on failure.
+		 * @param result The place to store the parsed element.
+		 */
+		template<std::derived_from<LangElement> T>
+		void one(base::Optional<MBox<T>>* result, bool = false) {
+			with(result, T::parse);
+		}
+
+		/**
 		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
 		 *
 		 * @param sink Place to store the new value(works with optionals).

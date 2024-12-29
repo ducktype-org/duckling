@@ -20,8 +20,8 @@ namespace pst {
 
 	class FunParam final: public NotStmt {
 		tpc::Identifier                   name;
-		MBox<ExprElement>                 type;
-		base::Optional<MBox<ExprElement>> initial;
+		MBox<UniversalExprHolder>                 type;
+		base::Optional<MBox<UniversalExprHolder>> initial;
 
 	public:
 		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {
@@ -38,7 +38,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getType() const {
+		MCRef<ExprHolder> getType() const {
 			return type.ref();
 		}
 	};
@@ -157,7 +157,7 @@ namespace pst {
 	};
 
 	class RoundGroupExpr final: public NotStmt {
-		MBox<ExprElement> expr = nullptr;
+		MBox<CommaExprHolder> expr = nullptr;
 
 	public:
 		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {
@@ -174,7 +174,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getExpr() const {
+		MCRef<ExprHolder> getExpr() const {
 			return expr.ref();
 		}
 	};
@@ -206,22 +206,99 @@ namespace pst {
 		virtual void acceptVisitor(PstExprVisitor& visitor) const = 0;
 	};
 
+	class ExprHolder: public NotStmt {
+	protected:
+		MBox<ExprElement> expr;
+
+		using NotStmt::NotStmt;
+	public:
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Top Level Expression";
+		}
+
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]] 
+		MCRef<ExprElement> getExpr() const {
+			return expr.ref();
+		}
+
+		virtual bool isTopLevel() = 0;
+	};
+
+	class ExprParserHelper {
+	public:
+		ExprParserHelper() = delete;
+		static MBox<ExprElement> parseUniversal(LangParserState& state);
+		static MBox<ExprElement> parseComma(LangParserState& state);
+		static MBox<ExprElement> parseAssignment(LangParserState& state);
+		static MBox<ExprElement> parseForType(LangParserState& state);
+	};
+
+	using ExprParseFun = MBox<ExprElement>(LangParserState&);
+
+	template <typename Self, ExprParseFun parseFun, bool TOP_LEVEL = true>
+	class ExprHolderTemplate: public ExprHolder {
+	public:
+		using ExprHolder::ExprHolder;
+
+		static MBox<Self> parse(LangParserState& state) {
+			auto position = state.getPosition();
+			auto out      = makeBox<Self>(position);
+
+			state.parse(out).with(&out->expr, parseFun);
+			return out;
+		}
+
+		bool isTopLevel() override {return TOP_LEVEL;}
+	};
+
+
 	/**
 	 * @brief The default entry point to expression parsing that doesn't allow comma expressions
 	 * top-level
 	 */
-	class UniversalExpr: public NotStmt {
+	class UniversalExprHolder final: public ExprHolderTemplate<UniversalExprHolder, ExprParserHelper::parseUniversal, true> {
 	public:
-		static MBox<ExprElement> parse(LangParserState& state);
-		UniversalExpr() = delete;
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~UniversalExprHolder() final = default;
 	};
 
 	/**
-	 * @brief Secondary entry point to expression parsing that allows comma expressions top-level.
+	 * @brief The version of the default entry point that isn't top-level
 	 */
-	class CommaExpr: public NotStmt {
+	class UniversalExprHolderLowerLevel final: public ExprHolderTemplate<UniversalExprHolderLowerLevel, ExprParserHelper::parseUniversal, false> {
 	public:
-		static MBox<ExprElement> parse(LangParserState& state);
-		CommaExpr() = delete;
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~UniversalExprHolderLowerLevel() final = default;
+	};
+
+	/**
+	 * @brief Secondary entry point to expression parsing that allows comma expressions
+	 * top-level
+	 */
+	class CommaExprHolder final: public ExprHolderTemplate<CommaExprHolder, ExprParserHelper::parseComma, true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~CommaExprHolder() final = default;
+	};
+
+	/**
+	 * @brief Tertiary entry point to expression parsing that allows assignment expressions top-level.
+	 */
+	class AssignmentExprHolder final: public ExprHolderTemplate<AssignmentExprHolder, ExprParserHelper::parseAssignment, true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~AssignmentExprHolder() final = default;
+	};
+
+	/**
+	 * @brief Expression parsing entry point for type in for statement.
+	 */
+	class ForTypeExprHolder final: public ExprHolderTemplate<ForTypeExprHolder, ExprParserHelper::parseAssignment, true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~ForTypeExprHolder() final = default;
 	};
 }

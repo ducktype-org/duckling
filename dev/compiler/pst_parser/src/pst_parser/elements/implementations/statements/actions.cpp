@@ -40,7 +40,7 @@ namespace pst {
 
 		// @TODO: for now we assume if there is no expression there is a semicolon
 		if (!state[0].is(Special::Semicolon))
-			state.parse(out.toOpt().value()).with(&out->expr, CommaExpr::parse);
+			state.parse(out.toOpt().value()).one(&out->expr);
 
 		return out;
 	}

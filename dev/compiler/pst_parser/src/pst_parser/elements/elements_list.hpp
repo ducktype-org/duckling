@@ -79,4 +79,13 @@ namespace pst {
 		class Comma;
 		class Assignment;
 	}
+
+	// Expr Holders
+
+	class ExprHolder;
+	class UniversalExprHolder;
+	class UniversalExprHolderLowerLevel;
+	class CommaExprHolder;
+	class AssignmentExprHolder;
+	class ForTypeExprHolder;
 }
