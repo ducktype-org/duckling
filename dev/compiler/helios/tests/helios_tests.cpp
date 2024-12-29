@@ -38,10 +38,10 @@ public:
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testExprTree);
-		TESTER_ADD_TEST(TestSimpleHOUT);
-		TESTER_ADD_TEST(TestHoutVisitor);
-		TESTER_ADD_TEST(TestHeliosResultConcept);
-		TESTER_ADD_TEST(TestHeliosResult);
+		TESTER_ADD_TEST(testSimpleHOUT);
+		TESTER_ADD_TEST(testHoutVisitor);
+		TESTER_ADD_TEST(testHeliosResultConcept);
+		TESTER_ADD_TEST(testHeliosResult);
 		TESTER_ADD_TEST(testTypeOf);
 
 		// this is at the end
@@ -180,7 +180,7 @@ private:
 		// ASSERT_EQUAL(7, getValue("O4", root_scope));
 	}
 
-	void TestSimpleHOUT() {
+	void testSimpleHOUT() {
 		auto [module, _] = getModule(fs::FilePath(path("test_modules/hout_simple_test")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
@@ -192,7 +192,7 @@ private:
 		[[maybe_unused]] auto hout_debug_print = hout.debugPrint();
 	}
 
-	void TestHoutVisitor() {
+	void testHoutVisitor() {
 		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
 			fs::FilePath(path("test_modules/visitor_test_module"))
 		);
@@ -353,7 +353,7 @@ private:
 		}
 	}
 
-	void TestHeliosResultConcept() {
+	void testHeliosResultConcept() {
 		using namespace compiler::helios::errors::impl;
 
 		static_assert(std::is_same_v<
@@ -408,7 +408,7 @@ private:
 						  std::variant<std::variant<int, float, std::variant<bool>>>>>);
 	}
 
-	void TestHeliosResult() {
+	void testHeliosResult() {
 		using namespace compiler::helios::errors;
 
 		static_assert(std::is_same_v<HResult<int, int>::ErrorType, int>);
