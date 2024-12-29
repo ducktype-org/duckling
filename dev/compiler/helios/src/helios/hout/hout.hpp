@@ -49,6 +49,11 @@ namespace compiler::helios {
 
 		base::StrID original_name;
 
+		// @todo (in this PR):
+		// add function parameters to function body/content/here
+		// add function parameter to debug printing
+		// add function type to printing
+
 		HOUTCode body;
 
 		tsh::FunctionInfo type;

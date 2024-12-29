@@ -24,7 +24,8 @@ namespace compiler::helios {
 
 		out << "fun ";
 		out << original_name.strView();
-		out << " ( @TODO ) -> @TODO {\n";
+		out << this->type.toString();
+		out << " {\n";
 		for (auto&& stmt: body.body->statements) stmt->debugPrint(out, 1);
 		out << "}\n";
 		return out.str();
