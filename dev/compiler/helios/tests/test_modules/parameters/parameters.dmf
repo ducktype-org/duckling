@@ -1,3 +1,4 @@
+# @todo in this PR: add tests
 fun foo(a: i32) = {
     var b: i32 = 0;
     return a;

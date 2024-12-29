@@ -626,12 +626,11 @@ namespace compiler::helios {
 				param_types.reserve(params->size());
 
 				for (auto param: *params) {
-					// @todo in this PR
-					// @TODO HOUT 2.0: we should create symbol from parameter here, and just get
-					// type of symbol. its not trivial, since parameter symbols don't exist yet
-					auto parse_type_res = ctx.query<EvalExprToType>({ param->getType() });
-					if (parse_type_res.hasValue()) {
-						param_types.emplace_back(parse_type_res.value());
+					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
+					auto param_type = ctx.query<QueryTypeOfSymbol>({ param_symbol });
+					
+					if (param_type->hasValue()) {
+						param_types.emplace_back(param_type->value());
 					} else {
 						// @TODO: Report an error
 						return;
