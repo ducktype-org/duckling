@@ -120,57 +120,57 @@ namespace compiler::helios {
 
 		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
-			auto function_ = dynamic_cast<const pst::Fun*>(&*stmt);
+			auto function = dynamic_cast<const pst::Fun*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope    = scope,
-				.name     = function_->getName(),
+				.name     = function->getName(),
 				.kind     = SymbolKind::Function,
 				.pst_element = stmt,
 			});
 		}
 		case pst::StmtKind::Namespace: {
-			auto namespace_ = dynamic_cast<const pst::Namespace*>(&*stmt);
+			auto namespace_stmt = dynamic_cast<const pst::Namespace*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope    = scope,
-				.name     = namespace_->getName(),
+				.name     = namespace_stmt->getName(),
 				.kind     = SymbolKind::Namespace,
 				.pst_element = stmt,
 			});
 		}
 		case pst::StmtKind::Const: {
-			auto const_ = dynamic_cast<const pst::Const*>(&*stmt);
+			auto const_stmt = dynamic_cast<const pst::Const*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope    = scope,
-				.name     = const_->getName(),
+				.name     = const_stmt->getName(),
 				.kind     = SymbolKind::Const,
 				.pst_element = stmt,
 			});
 		}
 		case pst::StmtKind::Class: {
-			auto class_ = dynamic_cast<const pst::Class*>(&*stmt);
+			auto class_stmt = dynamic_cast<const pst::Class*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope    = scope,
-				.name     = class_->getName(),
+				.name     = class_stmt->getName(),
 				.kind     = SymbolKind::Class,
 				.pst_element = stmt,
 			});
 		}
 		case pst::StmtKind::Alias: {
-			auto alias_ = dynamic_cast<const pst::Alias*>(&*stmt);
+			auto alias = dynamic_cast<const pst::Alias*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope    = scope,
-				.name     = alias_->getName(),
+				.name     = alias->getName(),
 				.is_alias = true,
 				.kind     = SymbolKind::Alias,
 				.pst_element = stmt,
 			});
 		}
 		case pst::StmtKind::Using: {
-			auto using_ = dynamic_cast<const pst::Using*>(&*stmt);
+			auto using_stmt = dynamic_cast<const pst::Using*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope = scope,
 				.name
-				= base::StrID(base::strConcat("<USING> ", using_->getPointed().front()).c_str()),
+				= base::StrID(base::strConcat("<USING> ", using_stmt->getPointed().front()).c_str()),
 				.is_wildcard = true,
 				.is_alias    = true,
 				.kind        = SymbolKind::Using,
@@ -178,10 +178,10 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Variable: {
-			auto variable_ = dynamic_cast<const pst::Variable*>(&*stmt);
+			auto variable = dynamic_cast<const pst::Variable*>(&*stmt);
 			return putInSymtable(SymbolData{
 				.scope       = scope,
-				.name        = variable_->getName(),
+				.name        = variable->getName(),
 				.is_wildcard = false,
 				.is_alias    = false,
 				.kind        = SymbolKind::Variable,
