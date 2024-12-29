@@ -207,7 +207,7 @@ private:
 		ASSERT_TRUE(fun != nullptr);
 
 		auto params = fun->getParams();
-		ASSERT_EQUAL(params->size(), 3);
+		ASSERT_EQUAL(params->size(), 4);
 
 		struct PstParamVisitor: public pst::PstVisitorPanicky {
 			usize counter = 0;
@@ -223,7 +223,7 @@ private:
 			}
 		};
 
-		std::array names = {"a", "b", "c"};
+		std::array names = {"a", "b", "c", "d"};
 		
 		usize i = 0;
 		for (auto param: *params) {
