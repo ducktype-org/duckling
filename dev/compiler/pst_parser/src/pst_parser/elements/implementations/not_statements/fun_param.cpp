@@ -46,6 +46,5 @@ namespace pst {
 		out << "}}";
 	}
 
-	// @todo: in this PR: add tests for funparam visitor!
 	void FunParam::acceptVisitor(PstVisitor& visitor) const { visitor.visitFunParam(*this); }
 }

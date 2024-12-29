@@ -275,6 +275,8 @@ namespace compiler::helios {
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			// Note: we might actually accept nulls in such queries, and just return failed
+			// Something to think about as part of #412
 			CORE_ASSERT(
 				key.element.toOpt().has_value(),
 				"Nullptr element given to QuerySymbolOfSTMT! (add some null handling before calling it)"

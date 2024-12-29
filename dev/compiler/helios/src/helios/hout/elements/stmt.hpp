@@ -43,17 +43,6 @@ namespace compiler::helios::code {
 		tsh::TypeDesc<> type;
 		base::Optional<base::Box<Expr>> initial_value;
 		SymID helios_symbol;
-
-		Parameter(
-			base::StrID name,
-			tsh::TypeDesc<> type,
-			base::Optional<base::Box<Expr>> initial_value,
-			SymID helios_symbol
-		):
-			  name(name),
-			  type(type),
-			  initial_value(std::move(initial_value)),
-			  helios_symbol(helios_symbol) {}
 	};
 
 	/***********************\
