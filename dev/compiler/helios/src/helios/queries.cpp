@@ -89,7 +89,7 @@ namespace compiler::helios {
 			void visitReturn(const pst::Return& stmt) override {
 				if (auto val = stmt.getValue()) {
 					auto expr = ctx.query<QueryHoutOfExpr>({ val.value() })
-					                .expect("Not handling errors here yet...");
+					                .expect("Not handling errors here yet... (return expr)");
 					output(code::ReturnStmt(scopeOf(stmt), std::move(expr)));
 				} else {
 					output(code::VoidReturnStmt(scopeOf(stmt)));
@@ -134,7 +134,7 @@ namespace compiler::helios {
 				// for now initial value is assumed to always be present:
 				// this will probably change:
 				auto initial_value = ctx.query<QueryHoutOfExpr>({ stmt.getValue() })
-				                         .expect("Not handling errors here yet...");
+				                         .expect(" (variable initial value)");
 
 				output(
 					code::VariableStmt(scope(symbol), std::move(initial_value), symbol_type, symbol)

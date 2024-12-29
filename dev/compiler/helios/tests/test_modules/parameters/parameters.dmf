@@ -1,5 +1,5 @@
 fun foo(a: i32) = {
     var b: i32 = 0;
-    return b;
+    return a;
 }
 
