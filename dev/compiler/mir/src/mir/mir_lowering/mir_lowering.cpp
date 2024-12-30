@@ -421,7 +421,7 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
-			// @todo in this PR
+			// @todo in this PR, and in LIR, LLVM (note: llvm is not )
 			throw base::NotYetImplemented("bool literal");
 		}
 

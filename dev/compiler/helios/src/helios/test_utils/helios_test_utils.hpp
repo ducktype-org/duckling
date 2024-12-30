@@ -8,6 +8,8 @@
 // @todo relax this dependency, just expr is needed (#404)
 #include <helios/hout/elements/expr.hpp>
 
+// @todo add versions of functions, that takes context
+
 namespace compiler::helios::test_utils {
 	/**
 	 * Get the ModuleID and ScopeID of a module in the given directory.
@@ -52,8 +54,14 @@ namespace compiler::helios::test_utils {
 	tsh::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope);
 
 	/**
-	 * @brief returns hout-expr of the value of given const or variable.
+	 * @brief returns hout-expr of the value of given const.
 	 * @note It's a hack-ish method, for easy testing only
 	 */
 	Box<code::Expr> getExprOfConst(SymID sym);
+
+	/**
+	 * @brief returns hout-expr of the value of given variable.
+	 * @note It's a hack-ish method, for easy testing only
+	 */
+	Box<code::Expr> getExprOfVariable(SymID sym);
 }
