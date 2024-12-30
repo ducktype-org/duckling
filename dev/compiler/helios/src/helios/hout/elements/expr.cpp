@@ -11,6 +11,7 @@
 namespace compiler::helios::code {
 	namespace {
 		tsh::TypeInfo getTypeOfKeyword(query::Context& ctx, lang_def::Keyword keyword) {
+			// @todo HOUT 2.0 this is incorrect
 			const static auto BUILTINS = std::unordered_map<lang_def::Keyword, tsh::TypeInfo>{
 				{ lang_def::Keyword::f80, ctx.query<::tsh::QueryFloatType>(80) },
 				{ lang_def::Keyword::f64, ctx.query<::tsh::QueryFloatType>(64) },
@@ -33,41 +34,6 @@ namespace compiler::helios::code {
 			};
 			return BUILTINS.at(keyword);
 		}
-
-		/**
-		 * @todo HOUT 2.0 This should be sort of moved to hout creation, and comp-time
-		 * maybe we will need it still in hout creation to detect tuples-types vs normal-tuples
-		 */
-		tsh::TypeDesc<>
-			getTypeDescOfTuple(query::Context& ctx, const std::vector<base::Box<Expr>>& elements) {
-			std::vector<tsh::ComponentType> tuple_components;
-			tuple_components.reserve(elements.size());
-
-			for (auto&& tuple_subtype: elements) {
-				// @NOTE: False here means all subtypes of a tuple are immutable.
-				tuple_components.emplace_back(tuple_subtype->type_desc.getType(), false);
-			}
-
-			return tsh::TypeDesc<>(
-				ctx.query<tsh::QueryTupleType>({ tuple_components }),
-				tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			);
-		}
-
-		tsh::TypeDesc<> getTypeDescOfVariant(
-			query::Context& ctx, const std::vector<base::Box<Expr>>& subtypes
-		) {
-			std::vector<tsh::TypeInfo> variant_subtypes;
-			variant_subtypes.reserve(subtypes.size());
-
-			for (auto&& subtype: subtypes)
-				variant_subtypes.emplace_back(subtype->type_desc.getType());
-
-			return tsh::TypeDesc<>(
-				ctx.query<tsh::QueryVariantType>({ variant_subtypes }),
-				tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			);
-		}
 	}
 
 #define EXPR_VISITOR(type) \
@@ -77,8 +43,8 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(IdentifierExpr)
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
-	EXPR_VISITOR(TupleConstructorExpr)
-	EXPR_VISITOR(VariantConstructorExpr)
+	EXPR_VISITOR(TupleTypeConstructorExpr)
+	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
 	EXPR_VISITOR(KeywordExpr)
 	EXPR_VISITOR(LinkedIdentifierExpr)
@@ -160,13 +126,13 @@ namespace compiler::helios::code {
 		out << lang_def::keywordToStr(keyword).strView();
 	}
 
-	TupleConstructorExpr::TupleConstructorExpr(
+	TupleTypeConstructorExpr::TupleTypeConstructorExpr(
 		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
 	):
-		  Expr(scope, getTypeDescOfTuple(ctx, elements)),
+		  Expr(scope, ctx.query<tsh::QueryMetaType>({})),
 		  elements(std::move(elements)) {}
 
-	void TupleConstructorExpr::debugPrint(std::ostream& out) const {
+	void TupleTypeConstructorExpr::debugPrint(std::ostream& out) const {
 		out << "(";
 		for (bool add_comma = false; auto&& e: elements) {
 			if (add_comma) out << ", ";
@@ -176,7 +142,7 @@ namespace compiler::helios::code {
 		out << ")";
 	}
 
-	void VariantConstructorExpr::debugPrint(std::ostream& out) const {
+	void VariantTypeConstructorExpr::debugPrint(std::ostream& out) const {
 		out << "(";
 		for (bool add_pipe = false; auto&& subtype: subtypes) {
 			if (add_pipe) out << " | ";
@@ -186,10 +152,10 @@ namespace compiler::helios::code {
 		out << ")";
 	}
 
-	VariantConstructorExpr::VariantConstructorExpr(
+	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
 		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
 	):
-		  Expr(scope, getTypeDescOfVariant(ctx, subtypes)),
+		  Expr(scope, ctx.query<tsh::QueryMetaType>({})),
 		  subtypes(std::move(subtypes)) {}
 
 	void LinkedIdentifierExpr::debugPrint(std::ostream& out) const {
