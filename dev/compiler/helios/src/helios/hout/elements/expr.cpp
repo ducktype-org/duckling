@@ -41,6 +41,8 @@ namespace compiler::helios::code {
 	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
 
 	EXPR_VISITOR(LiteralIntExpr)
+	EXPR_VISITOR(LiteralBoolExpr)
+	EXPR_VISITOR(LiteralTypeExpr)
 	EXPR_VISITOR(IdentifierExpr)
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
@@ -61,6 +63,28 @@ namespace compiler::helios::code {
 		  value(value) {}
 
 	void LiteralIntExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
+
+	LiteralBoolExpr::LiteralBoolExpr(query::Context& ctx, ScopeID scope, bool value):
+		  Expr(
+			  scope,
+			  tsh::TypeDesc<>(
+				  ctx.query<tsh::QueryBoolType>({}),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  )
+		  ),
+		  value(value) {}
+
+	void LiteralBoolExpr::debugPrint(std::ostream& out) const { out << (value ? "true" : "false"); }
+
+	LiteralTypeExpr::LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::TypeInfo type):
+		  Expr(
+			  scope,
+			  tsh::TypeDesc<>(
+				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  )
+		  ),
+		  value_type(type) {}
 
 	IdentifierExpr::IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol):
 		  Expr(
@@ -112,7 +136,7 @@ namespace compiler::helios::code {
 	ParenthesisExpr::ParenthesisExpr(query::Context&, ScopeID scope, base::Box<Expr> inner):
 		  Expr(scope, inner->type_desc),
 		  inner(std::move(inner)) {}
-		  
+
 	TupleTypeConstructorExpr::TupleTypeConstructorExpr(
 		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
 	):

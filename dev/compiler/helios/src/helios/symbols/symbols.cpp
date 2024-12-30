@@ -459,6 +459,14 @@ namespace compiler::helios {
 				result = expr.value;
 			}
 
+			void visitLiteralBoolExpr(const code::LiteralBoolExpr&) override {
+				throw base::NotYetImplemented("Evaluation of boolean values is not implemented yet");
+			}
+
+			void visitLiteralTypeExpr(const code::LiteralTypeExpr&) override {
+				throw base::NotYetImplemented("Evaluation of type values is not implemented yet");
+			}
+
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
 				result = *ctx.query<QueryConstValueOf>(expr.symbol);
 			}

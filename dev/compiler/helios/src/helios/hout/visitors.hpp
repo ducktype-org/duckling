@@ -28,6 +28,8 @@ namespace compiler::helios::code {
 	class HoutExprVisitor {
 	public:
 		HOUT_VISITOR_METHOD(LiteralIntExpr);
+		HOUT_VISITOR_METHOD(LiteralBoolExpr);
+		HOUT_VISITOR_METHOD(LiteralTypeExpr);
 		HOUT_VISITOR_METHOD(IdentifierExpr);
 		HOUT_VISITOR_METHOD(BinaryOperatorExpr);
 		HOUT_VISITOR_METHOD(UnaryOperatorExpr);
@@ -58,6 +60,8 @@ namespace compiler::helios::code {
 	class HoutExprVisitorPanicky: public HoutExprVisitor {
 	public:
 		HOUT_VISITOR_METHOD_PANIC(LiteralIntExpr);
+		HOUT_VISITOR_METHOD_PANIC(LiteralBoolExpr);
+		HOUT_VISITOR_METHOD_PANIC(LiteralTypeExpr);
 		HOUT_VISITOR_METHOD_PANIC(IdentifierExpr);
 		HOUT_VISITOR_METHOD_PANIC(BinaryOperatorExpr);
 		HOUT_VISITOR_METHOD_PANIC(UnaryOperatorExpr);
@@ -70,6 +74,8 @@ namespace compiler::helios::code {
 	class HoutExprVisitorEmpty: public HoutExprVisitor {
 	public:
 		HOUT_VISITOR_METHOD_EMPTY(LiteralIntExpr);
+		HOUT_VISITOR_METHOD_EMPTY(LiteralBoolExpr);
+		HOUT_VISITOR_METHOD_EMPTY(LiteralTypeExpr);
 		HOUT_VISITOR_METHOD_EMPTY(IdentifierExpr);
 		HOUT_VISITOR_METHOD_EMPTY(BinaryOperatorExpr);
 		HOUT_VISITOR_METHOD_EMPTY(UnaryOperatorExpr);

@@ -48,7 +48,7 @@ namespace compiler::helios::code {
 		/**
 		 * @brief Tries to extract a resulting symbol from hout expression.
 		 */
-		struct HoutResultingSymbolListVisitor: public HoutExprVisitor {
+		struct HoutResultingSymbolListVisitor final: public HoutExprVisitor {
 			explicit HoutResultingSymbolListVisitor(query::Context& ctx, ScopeID scope):
 				  ctx(ctx),
 				  scope(scope) {}
@@ -68,6 +68,14 @@ namespace compiler::helios::code {
 			}
 
 			void visitLiteralIntExpr(const LiteralIntExpr&) override {
+				throw base::NotYetImplemented("Cannot evaluate symbol from literal values");
+			}
+
+			void visitLiteralBoolExpr(const LiteralBoolExpr&) override {
+				throw base::NotYetImplemented("Cannot evaluate symbol from literal values");
+			}
+
+			void visitLiteralTypeExpr(const LiteralTypeExpr&) override {
 				throw base::NotYetImplemented("Cannot evaluate symbol from literal values");
 			}
 

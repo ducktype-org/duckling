@@ -420,6 +420,14 @@ namespace compiler::mir {
 			output({ continuation, MirLocation{ MirIntegerConst{ expr.value } } });
 		}
 
+		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
+			throw base::NotYetImplemented("bool literal");
+		}
+
+		void visitLiteralTypeExpr(const hc::LiteralTypeExpr& expr) override {
+			throw base::NotYetImplemented("type literal");
+		}
+
 		void visitIdentifierExpr(const hc::IdentifierExpr&) override {
 			throw base::NotYetImplemented("identifier");
 		}
