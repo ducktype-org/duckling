@@ -8,8 +8,6 @@
 // @todo relax this dependency, just expr is needed (#404)
 #include <helios/hout/elements/expr.hpp>
 
-// @todo add versions of functions, that takes context
-
 namespace compiler::helios::test_utils {
 	/**
 	 * Get the ModuleID and ScopeID of a module in the given directory.
