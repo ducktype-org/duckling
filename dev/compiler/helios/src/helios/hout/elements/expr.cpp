@@ -11,6 +11,7 @@
 namespace compiler::helios::code {
 	namespace {
 		tsh::TypeInfo getTypeOfKeyword(query::Context& ctx, lang_def::Keyword keyword) {
+			// @todo in this PR
 			// @todo HOUT 2.0 this is incorrect
 			const static auto BUILTINS = std::unordered_map<lang_def::Keyword, tsh::TypeInfo>{
 				{ lang_def::Keyword::f80, ctx.query<::tsh::QueryFloatType>(80) },
@@ -46,7 +47,6 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(TupleTypeConstructorExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
-	EXPR_VISITOR(KeywordExpr)
 	EXPR_VISITOR(LinkedIdentifierExpr)
 
 	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, ScopeID scope, i64 value):
@@ -112,20 +112,7 @@ namespace compiler::helios::code {
 	ParenthesisExpr::ParenthesisExpr(query::Context&, ScopeID scope, base::Box<Expr> inner):
 		  Expr(scope, inner->type_desc),
 		  inner(std::move(inner)) {}
-
-	KeywordExpr::KeywordExpr(query::Context& ctx, ScopeID scope, lang_def::Keyword keyword):
-		  Expr(
-			  scope,
-			  tsh::TypeDesc<>(
-				  getTypeOfKeyword(ctx, keyword), tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  )
-		  ),
-		  keyword(keyword) {}
-
-	void KeywordExpr::debugPrint(std::ostream& out) const {
-		out << lang_def::keywordToStr(keyword).strView();
-	}
-
+		  
 	TupleTypeConstructorExpr::TupleTypeConstructorExpr(
 		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
 	):

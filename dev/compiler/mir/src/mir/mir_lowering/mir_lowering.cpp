@@ -436,9 +436,7 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("parenthesis expr");
 		}
 
-		void visitKeywordExpr(const hc::KeywordExpr&) override {
-			throw base::NotYetImplemented("keyword");
-		}
+		// @TODO in this PR visit literals
 
 		void visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) override {
 			throw base::NotYetImplemented("tuple constructor");

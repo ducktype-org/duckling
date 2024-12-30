@@ -67,10 +67,6 @@ namespace compiler::helios::code {
 				symbols = SymbolList{ val.symbol };
 			}
 
-			void visitKeywordExpr(const KeywordExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from Keywords");
-			}
-
 			void visitLiteralIntExpr(const LiteralIntExpr&) override {
 				throw base::NotYetImplemented("Cannot evaluate symbol from literal values");
 			}
@@ -226,7 +222,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitKeywordLiteral(const pst::expr::KeywordLiteral& stmt) override {
-				node = makeBox<KeywordExpr>(ctx, scope, stmt.getKeyword());
+				// @TODO in this PR
 			}
 
 			void visitComma(const pst::expr::Comma& stmt) override {

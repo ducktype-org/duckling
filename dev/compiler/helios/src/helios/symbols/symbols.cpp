@@ -512,11 +512,6 @@ namespace compiler::helios {
 				result = evaluateExpr(ctx, *expr.inner);
 			}
 
-			void visitKeywordExpr([[maybe_unused]] const code::KeywordExpr& expr) override {
-				throw base::NotYetImplemented("Evaluation of keyword values is not implemented yet"
-				);
-			}
-
 			void visitTupleTypeConstructorExpr(
 				[[maybe_unused]] const code::TupleTypeConstructorExpr& expr
 			) override {

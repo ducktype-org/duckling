@@ -35,65 +35,65 @@ namespace compiler::helios {
 				result.emplace(res);
 			}
 
-			void visitKeywordExpr(const code::KeywordExpr& expr) override {
-				// note: this logic will be moved to hout-creation,
-				// once we have TypeLiteral hout element
+			// void visitKeywordExpr(const code::KeywordExpr& expr) override {
+			// 	// note: this logic will be moved to hout-creation,
+			// 	// once we have TypeLiteral hout element
 
-				using Keyword = lang_def::Keyword;
-				switch (expr.keyword) {
-				case Keyword::i8:
-					output(ctx.query<tsh::QueryIntegralType>({ 8, true }));
-					break;
-				case Keyword::i16:
-					output(ctx.query<tsh::QueryIntegralType>({ 16, true }));
-					break;
-				case Keyword::i32:
-					output(ctx.query<tsh::QueryIntegralType>({ 32, true }));
-					break;
-				case Keyword::i64:
-					output(ctx.query<tsh::QueryIntegralType>({ 64, true }));
-					break;
-				case Keyword::i128:
-					output(ctx.query<tsh::QueryIntegralType>({ 128, true }));
-					break;
-				case Keyword::u8:
-					output(ctx.query<tsh::QueryIntegralType>({ 8, false }));
-					break;
-				case Keyword::u16:
-					output(ctx.query<tsh::QueryIntegralType>({ 16, false }));
-					break;
-				case Keyword::u32:
-					output(ctx.query<tsh::QueryIntegralType>({ 32, false }));
-					break;
-				case Keyword::u64:
-					output(ctx.query<tsh::QueryIntegralType>({ 64, false }));
-					break;
-				case Keyword::u128:
-					output(ctx.query<tsh::QueryIntegralType>({ 128, false }));
-					break;
-				case Keyword::f16:
-					output(ctx.query<tsh::QueryFloatType>(16));
-					break;
-				case Keyword::f32:
-					output(ctx.query<tsh::QueryFloatType>(32));
-					break;
-				case Keyword::f64:
-					output(ctx.query<tsh::QueryFloatType>(64));
-					break;
-				case Keyword::f80:
-					output(ctx.query<tsh::QueryFloatType>(80));
-					break;
-				case Keyword::Char:
-					output(ctx.query<tsh::QueryCharType>({}));
-					break;
-				case Keyword::Bool:
-					output(ctx.query<tsh::QueryBoolType>({}));
-					break;
+			// 	using Keyword = lang_def::Keyword;
+			// 	switch (expr.keyword) {
+			// 	case Keyword::i8:
+			// 		output(ctx.query<tsh::QueryIntegralType>({ 8, true }));
+			// 		break;
+			// 	case Keyword::i16:
+			// 		output(ctx.query<tsh::QueryIntegralType>({ 16, true }));
+			// 		break;
+			// 	case Keyword::i32:
+			// 		output(ctx.query<tsh::QueryIntegralType>({ 32, true }));
+			// 		break;
+			// 	case Keyword::i64:
+			// 		output(ctx.query<tsh::QueryIntegralType>({ 64, true }));
+			// 		break;
+			// 	case Keyword::i128:
+			// 		output(ctx.query<tsh::QueryIntegralType>({ 128, true }));
+			// 		break;
+			// 	case Keyword::u8:
+			// 		output(ctx.query<tsh::QueryIntegralType>({ 8, false }));
+			// 		break;
+			// 	case Keyword::u16:
+			// 		output(ctx.query<tsh::QueryIntegralType>({ 16, false }));
+			// 		break;
+			// 	case Keyword::u32:
+			// 		output(ctx.query<tsh::QueryIntegralType>({ 32, false }));
+			// 		break;
+			// 	case Keyword::u64:
+			// 		output(ctx.query<tsh::QueryIntegralType>({ 64, false }));
+			// 		break;
+			// 	case Keyword::u128:
+			// 		output(ctx.query<tsh::QueryIntegralType>({ 128, false }));
+			// 		break;
+			// 	case Keyword::f16:
+			// 		output(ctx.query<tsh::QueryFloatType>(16));
+			// 		break;
+			// 	case Keyword::f32:
+			// 		output(ctx.query<tsh::QueryFloatType>(32));
+			// 		break;
+			// 	case Keyword::f64:
+			// 		output(ctx.query<tsh::QueryFloatType>(64));
+			// 		break;
+			// 	case Keyword::f80:
+			// 		output(ctx.query<tsh::QueryFloatType>(80));
+			// 		break;
+			// 	case Keyword::Char:
+			// 		output(ctx.query<tsh::QueryCharType>({}));
+			// 		break;
+			// 	case Keyword::Bool:
+			// 		output(ctx.query<tsh::QueryBoolType>({}));
+			// 		break;
 
-				default:
-					CORE_PANIC("Keyword not yet handled by ShortPathVisitor");
-				}
-			}
+			// 	default:
+			// 		CORE_PANIC("Keyword not yet handled by ShortPathVisitor");
+			// 	}
+			// }
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
 				// @todo this only works if the identifier is a class.
