@@ -54,11 +54,13 @@ namespace compiler::lir {
 	 */
 	struct LirLocation {
 	private:
-		using ValueType = std::variant<i64, LocalRef, BlockRef>;
+		using ValueType = std::variant<i64, bool, LocalRef, BlockRef>;
 		ValueType value;
 
 	public:
 		LirLocation(i64 value): value(value) {}
+		
+		LirLocation(bool value): value(value) {}
 
 		LirLocation(LocalRef value): value(value) {}
 
