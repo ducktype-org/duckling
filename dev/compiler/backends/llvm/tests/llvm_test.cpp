@@ -16,14 +16,15 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(returnVoidTest);
 		TESTER_ADD_TEST(simpleTypesVariables);
+		TESTER_ADD_TEST(booleanLiteralsTests);
 	}
 
 private:
-	void returnVoidTest() {
+	void runTestForSingleFunctionInModule(std::string module_path) {
 		using namespace compiler;
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module
-				= ctx.query<frontend::QueryModuleTree>(fs::FilePath(path("modules/simple")));
+				= ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			ASSERT_TRUE(top_level.functions.size() == 1);
@@ -32,6 +33,8 @@ private:
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
 
 			auto llvm_module = backend_llvm::lirFunctionToModule(lir_fun);
+
+			// this is were the main part ot test is:
 			assertTrue(llvm_module.verify(), "LLVM module verification failed");
 
 			// debug print for coverage only:
@@ -39,25 +42,19 @@ private:
 		});
 	}
 
+	void returnVoidTest() {
+		runTestForSingleFunctionInModule("modules/simple");
+	}
+
 	void simpleTypesVariables() {
-		using namespace compiler;
-		query::utils::withContextDo([&](query::Context& ctx) {
-			// Currently this test is for coverage mainly, but it will be
-			// replaced with something more meaningful in the future.
-			auto module
-				= ctx.query<frontend::QueryModuleTree>(fs::FilePath(path("modules/variables")));
-			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
+		// Currently this test is for coverage mainly, but it will be
+		// replaced with something more meaningful in the future.
 
-			ASSERT_TRUE(top_level.functions.size() == 1);
+		runTestForSingleFunctionInModule("modules/variables");
+	}
 
-			auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ top_level.functions[0] });
-			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
-
-			auto llvm_module = backend_llvm::lirFunctionToModule(lir_fun);
-			assertTrue(llvm_module.verify(), "LLVM module verification failed");
-
-			llvm_module.debugPrint();
-		});
+	void booleanLiteralsTests() {
+		runTestForSingleFunctionInModule("modules/boolean_literals");
 	}
 };
 
