@@ -39,7 +39,7 @@ namespace compiler::helios::code {
 #define EXPR_VISITOR(type) \
 	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
 
-	EXPR_VISITOR(LiteralValueExpr)
+	EXPR_VISITOR(LiteralIntExpr)
 	EXPR_VISITOR(IdentifierExpr)
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
@@ -49,7 +49,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(KeywordExpr)
 	EXPR_VISITOR(LinkedIdentifierExpr)
 
-	LiteralValueExpr::LiteralValueExpr(query::Context& ctx, ScopeID scope, i64 value):
+	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, ScopeID scope, i64 value):
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
@@ -60,7 +60,7 @@ namespace compiler::helios::code {
 		  ),
 		  value(value) {}
 
-	void LiteralValueExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
+	void LiteralIntExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
 
 	IdentifierExpr::IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol):
 		  Expr(

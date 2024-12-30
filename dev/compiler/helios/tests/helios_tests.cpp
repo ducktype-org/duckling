@@ -249,7 +249,7 @@ private:
 			usize const_int_count = 0;
 			usize ident_count     = 0;
 
-			void visitLiteralValueExpr(const LiteralValueExpr&) override { const_int_count++; }
+			void visitLiteralIntExpr(const LiteralIntExpr&) override { const_int_count++; }
 
 			void visitIdentifierExpr(const IdentifierExpr&) override { ident_count++; }
 

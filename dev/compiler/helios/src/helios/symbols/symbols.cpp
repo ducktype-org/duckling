@@ -455,7 +455,7 @@ namespace compiler::helios {
 				return visitor.result;
 			}
 
-			void visitLiteralValueExpr(const code::LiteralValueExpr& expr) override {
+			void visitLiteralIntExpr(const code::LiteralIntExpr& expr) override {
 				result = expr.value;
 			}
 

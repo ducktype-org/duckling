@@ -48,12 +48,12 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Represents an integer literal value written in the expression.
 	 */
-	struct LiteralValueExpr final: public Expr {
+	struct LiteralIntExpr final: public Expr {
 		// @TODO: ctv + type for consts?
 		// @note: this is a mock
 		i64 value;
 
-		LiteralValueExpr(query::Context& ctx, ScopeID scope, i64 value);
+		LiteralIntExpr(query::Context& ctx, ScopeID scope, i64 value);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const override;

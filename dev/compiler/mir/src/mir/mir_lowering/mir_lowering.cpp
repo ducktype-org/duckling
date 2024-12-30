@@ -416,7 +416,7 @@ namespace compiler::mir {
 			this->out.emplace(value);
 		}
 
-		void visitLiteralValueExpr(const hc::LiteralValueExpr& expr) override {
+		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
 			output({ continuation, MirLocation{ MirIntegerConst{ expr.value } } });
 		}
 

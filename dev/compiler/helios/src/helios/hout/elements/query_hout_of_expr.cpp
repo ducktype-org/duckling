@@ -71,7 +71,7 @@ namespace compiler::helios::code {
 				throw base::NotYetImplemented("Cannot evaluate symbol from Keywords");
 			}
 
-			void visitLiteralValueExpr(const LiteralValueExpr&) override {
+			void visitLiteralIntExpr(const LiteralIntExpr&) override {
 				throw base::NotYetImplemented("Cannot evaluate symbol from literal values");
 			}
 
@@ -110,7 +110,7 @@ namespace compiler::helios::code {
 
 			void visitExprValue(const pst::expr::ExprValue& stmt) override {
 				// @TODO: Change literal value from i64 to something more appropriate.
-				node = makeBox<LiteralValueExpr>(ctx, scope, std::stoi(stmt.getValue().str()));
+				node = makeBox<LiteralIntExpr>(ctx, scope, std::stoi(stmt.getValue().str()));
 			}
 
 			void visitBinaryOperator(const pst::expr::BinaryOperator& stmt) override {
