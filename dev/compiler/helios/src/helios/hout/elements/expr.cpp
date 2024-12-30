@@ -9,7 +9,7 @@
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios::code {
-	
+
 #define EXPR_VISITOR(type) \
 	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
 
@@ -58,6 +58,10 @@ namespace compiler::helios::code {
 			  )
 		  ),
 		  value_type(type) {}
+
+	void LiteralTypeExpr::debugPrint(std::ostream& out) const {
+		out << value_type.toString();
+	}
 
 	IdentifierExpr::IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol):
 		  Expr(

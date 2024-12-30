@@ -421,10 +421,11 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
+			// @todo in this PR
 			throw base::NotYetImplemented("bool literal");
 		}
 
-		void visitLiteralTypeExpr(const hc::LiteralTypeExpr& expr) override {
+		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override {
 			throw base::NotYetImplemented("type literal");
 		}
 
@@ -443,8 +444,6 @@ namespace compiler::mir {
 		void visitParenthesisExpr(const hc::ParenthesisExpr&) override {
 			throw base::NotYetImplemented("parenthesis expr");
 		}
-
-		// @TODO in this PR visit literals
 
 		void visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) override {
 			throw base::NotYetImplemented("tuple constructor");

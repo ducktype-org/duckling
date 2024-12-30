@@ -102,7 +102,7 @@ namespace compiler::helios::code {
 			}
 		};
 
-		struct PstExprToHoutExprVisitor: public pst::PstExprVisitorPanicky {
+		struct PstExprToHoutExprVisitor final: public pst::PstExprVisitorPanicky {
 			explicit PstExprToHoutExprVisitor(query::Context& ctx, ScopeID scope):
 				  ctx(ctx),
 				  scope(scope) {}
@@ -290,7 +290,7 @@ namespace compiler::helios::code {
 				case pst::Keyword::f16:
 					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(16));
 					break;
-					
+
 
 				default:
 					CORE_PANIC("Keyword not yet handled (or bad keyword) by PstExprToHoutExprVisitor");
