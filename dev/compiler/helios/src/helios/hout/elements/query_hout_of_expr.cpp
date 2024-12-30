@@ -230,7 +230,71 @@ namespace compiler::helios::code {
 			}
 
 			void visitKeywordLiteral(const pst::expr::KeywordLiteral& stmt) override {
-				// @TODO in this PR
+				switch (stmt.getKeyword()) {
+				
+				// true, false:
+				case pst::Keyword::True:
+					node = makeBox<LiteralBoolExpr>(ctx, scope, true);
+					break;
+				case pst::Keyword::False:
+					node = makeBox<LiteralBoolExpr>(ctx, scope, false);
+					break;
+			
+
+				// types:
+				case pst::Keyword::Bool:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryBoolType>({}));
+					break;
+				
+				case pst::Keyword::i128:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({128, true}));
+					break;
+				case pst::Keyword::i64:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({64, true}));
+					break;
+				case pst::Keyword::i32:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({32, true}));
+					break;
+				case pst::Keyword::i16:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({16, true}));
+					break;
+				case pst::Keyword::i8:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({8, true}));
+					break;
+				
+				case pst::Keyword::u128:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({128, false}));
+					break;
+				case pst::Keyword::u64:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({64, false}));
+					break;
+				case pst::Keyword::u32:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({32, false}));
+					break;
+				case pst::Keyword::u16:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({16, false}));
+					break;
+				case pst::Keyword::u8:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({8, false}));
+					break;
+
+				case pst::Keyword::f80:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(80));
+					break;
+				case pst::Keyword::f64:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(64));
+					break;
+				case pst::Keyword::f32:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(32));
+					break;
+				case pst::Keyword::f16:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(16));
+					break;
+					
+
+				default:
+					CORE_PANIC("Keyword not yet handled (or bad keyword) by PstExprToHoutExprVisitor");
+				}
 			}
 
 			void visitComma(const pst::expr::Comma& stmt) override {

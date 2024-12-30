@@ -9,34 +9,7 @@
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios::code {
-	namespace {
-		tsh::TypeInfo getTypeOfKeyword(query::Context& ctx, lang_def::Keyword keyword) {
-			// @todo in this PR
-			// @todo HOUT 2.0 this is incorrect
-			const static auto BUILTINS = std::unordered_map<lang_def::Keyword, tsh::TypeInfo>{
-				{ lang_def::Keyword::f80, ctx.query<::tsh::QueryFloatType>(80) },
-				{ lang_def::Keyword::f64, ctx.query<::tsh::QueryFloatType>(64) },
-				{ lang_def::Keyword::f32, ctx.query<::tsh::QueryFloatType>(32) },
-				{ lang_def::Keyword::f16, ctx.query<::tsh::QueryFloatType>(16) },
-
-				{ lang_def::Keyword::i128, ctx.query<::tsh::QueryIntegralType>({ 128, true }) },
-				{ lang_def::Keyword::i64, ctx.query<::tsh::QueryIntegralType>({ 64, true }) },
-				{ lang_def::Keyword::i32, ctx.query<::tsh::QueryIntegralType>({ 32, true }) },
-				{ lang_def::Keyword::i16, ctx.query<::tsh::QueryIntegralType>({ 16, true }) },
-				{ lang_def::Keyword::i8, ctx.query<::tsh::QueryIntegralType>({ 8, true }) },
-
-				{ lang_def::Keyword::u128, ctx.query<::tsh::QueryIntegralType>({ 128, false }) },
-				{ lang_def::Keyword::u64, ctx.query<::tsh::QueryIntegralType>({ 64, false }) },
-				{ lang_def::Keyword::u32, ctx.query<::tsh::QueryIntegralType>({ 32, false }) },
-				{ lang_def::Keyword::u16, ctx.query<::tsh::QueryIntegralType>({ 16, false }) },
-				{ lang_def::Keyword::u8, ctx.query<::tsh::QueryIntegralType>({ 8, false }) },
-
-				{ lang_def::Keyword::Bool, ctx.query<::tsh::QueryBoolType>({}) },
-			};
-			return BUILTINS.at(keyword);
-		}
-	}
-
+	
 #define EXPR_VISITOR(type) \
 	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
 
