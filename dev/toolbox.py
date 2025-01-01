@@ -28,6 +28,9 @@ from scripts.toolbox.internet_file import (
 
 from scripts.toolbox.cpp_linter import simulate_cpp_linter
 from scripts.toolbox.duck_linter import duck_linter_impl
+from scripts.toolbox.run_preprocessor import run_preprocessor_impl
+
+# @todo move all other implementation to separate files
 
 DATA_USER = "dev"
 # @FUTURE: change this password and hide it:
@@ -504,6 +507,34 @@ def duck_linter(*args, **kwargs):
     passed = duck_linter_impl(*args, **kwargs)
     if not passed:
         exit_with_error("Linting failed.")
+
+
+@cli.command()
+@click.option(
+    "-b",
+    "--build_dir",
+    prompt="build directory with docs enabled",
+    help="The name of the build directory with enabled docs.",
+    default="build",
+)
+@click.option(
+    "-c",
+    "--cmake_path",
+    prompt="CMake file path",
+    help="Path to cmake file defining the compilation of the file (for example the one defining add_library).",
+)
+@click.option(
+    "-f",
+    "--source_file",
+    prompt="Source file path",
+    help="File name to run preprocessor on, relative to cmake path (for example whatever was written in add_library).",
+    type=str
+)
+def run_preprocessor(*args, **kwargs):
+    """Runs the preprocessor on the given file
+    using CMake build system."""
+
+    run_preprocessor_impl(*args, **kwargs)
 
 
 if __name__ == "__main__":
