@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os
 import pathlib
@@ -6,9 +6,8 @@ import sys
 import shutil
 
 import click
-import requests
 
-from scripts.toolbox.helpers import (
+from scripts.py.toolbox.helpers import (
     abort_if_false,
     bash_command,
     exit_with_error,
@@ -18,7 +17,7 @@ from scripts.toolbox.helpers import (
     make_pretty_command,
     with_venv,
 )
-from scripts.toolbox.internet_file import (
+from scripts.py.toolbox.internet_file import (
     InternetFile,
     callback_chmod,
     callback_move,
@@ -26,8 +25,10 @@ from scripts.toolbox.internet_file import (
     callback_unTAR,
 )
 
-from scripts.toolbox.cpp_linter import simulate_cpp_linter
-from scripts.toolbox.duck_linter import duck_linter_impl
+from scripts.py.toolbox.cpp_linter import simulate_cpp_linter
+from scripts.py.toolbox.duck_linter import duck_linter_impl
+
+# @todo move all other implementation to separate files
 
 DATA_USER = "dev"
 # @FUTURE: change this password and hide it:
