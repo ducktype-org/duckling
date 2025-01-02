@@ -15,7 +15,7 @@ MAKE_PREPROCESSING_PREFIX = "Preprocessing CXX source to "
 
 
 def run_preprocessor_impl(build_dir, cmake_path, source_file):
-    log_info(
+    log_warning(
         "This command will not work with ninja and might not work on non-linux system!"
     )
 
