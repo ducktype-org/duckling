@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os
 import pathlib
@@ -6,9 +6,8 @@ import sys
 import shutil
 
 import click
-import requests
 
-from scripts.toolbox.helpers import (
+from scripts.py.toolbox.helpers import (
     abort_if_false,
     bash_command,
     exit_with_error,
@@ -18,7 +17,7 @@ from scripts.toolbox.helpers import (
     make_pretty_command,
     with_venv,
 )
-from scripts.toolbox.internet_file import (
+from scripts.py.toolbox.internet_file import (
     InternetFile,
     callback_chmod,
     callback_move,
@@ -26,9 +25,8 @@ from scripts.toolbox.internet_file import (
     callback_unTAR,
 )
 
-from scripts.toolbox.cpp_linter import simulate_cpp_linter
-from scripts.toolbox.duck_linter import duck_linter_impl
-from scripts.toolbox.run_preprocessor import run_preprocessor_impl
+from scripts.py.toolbox.cpp_linter import simulate_cpp_linter
+from scripts.py.toolbox.duck_linter import duck_linter_impl
 
 # @todo move all other implementation to separate files
 
@@ -509,32 +507,6 @@ def duck_linter(*args, **kwargs):
         exit_with_error("Linting failed.")
 
 
-@cli.command()
-@click.option(
-    "-b",
-    "--build-dir",
-    prompt="build directory with docs enabled",
-    help="The name of the build directory with enabled docs.",
-    default="build",
-)
-@click.option(
-    "-c",
-    "--cmake-path",
-    prompt="CMake file path",
-    help="Path to cmake file defining the compilation of the file (for example the one defining add_library).",
-)
-@click.option(
-    "-f",
-    "--source-file",
-    prompt="Source file path",
-    help="File name to run preprocessor on, relative to cmake path (for example whatever was written in add_library).",
-    type=str
-)
-def run_preprocessor(*args, **kwargs):
-    """Runs the preprocessor on the given file
-    using CMake build system."""
-
-    run_preprocessor_impl(*args, **kwargs)
 
 
 if __name__ == "__main__":
