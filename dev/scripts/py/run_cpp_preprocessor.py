@@ -47,7 +47,7 @@ def run_preprocessor_impl(build_dir, cmake_path, source_file):
 @click.option(
     "-b",
     "--build-dir",
-    prompt="build directory with docs enabled",
+    prompt="build directory",
     help="The name of the build directory with enabled docs.",
     default="build",
 )
