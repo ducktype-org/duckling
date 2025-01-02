@@ -2,8 +2,8 @@ from typing import List
 import re
 from pathlib import Path
 
-from scripts.toolbox.cpp_linter import get_files_for_linter
-from scripts.toolbox.helpers import log_info, log_warning, log_new_line
+from .cpp_linter import get_files_for_linter
+from .helpers import log_info, log_warning, log_new_line
 
 _RELATIVE_IMPORT_REGEX = re.compile(r'#include "(.*?)"')
 
