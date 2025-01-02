@@ -4,9 +4,9 @@ import pathlib
 import sys
 
 import requests
-from math import log10, floor
+import math
 
-from scripts.toolbox.helpers import bash_command, exit_with_error, log_info
+from .helpers import bash_command, exit_with_error, log_info
 
 
 class InternetFile:
@@ -30,10 +30,12 @@ class InternetFile:
                     )
 
                 with open(self.path, "wb") as f:
-                    total_length = int(res.headers.get('content-length'))
+                    total_length = int(res.headers.get("content-length"))
                     total_length_mib = None
                     written_format_base = None
-                    display_progress_bar = total_length is not None  # content length header exists
+                    display_progress_bar = (
+                        total_length is not None
+                    )  # content length header exists
                     bytes_to_mib = lambda x: round(x / 1024 / 1024, 2)
 
                     if display_progress_bar:
@@ -46,10 +48,15 @@ class InternetFile:
                         #
                         # floor(log10(x)) is for counting decimal digits and '+3' is leaving
                         # space for '.XY'.
-                        written_format_base = '{:>' + str(floor(log10((total_length_mib))) + 3) + '}'
+                        written_format_base = (
+                            "{:>"
+                            + str(math.floor(math.log10((total_length_mib))) + 3)
+                            + "}"
+                        )
                     else:
-                        log_info(f"Cannot display a progress bar during downloading of {self.path}...")
-
+                        toolbox.helpers.log_info(
+                            f"Cannot display a progress bar during downloading of {self.path}..."
+                        )
 
                     written = 0
                     for chunk in res.iter_content(chunk_size=8192):
@@ -61,13 +68,14 @@ class InternetFile:
                             written_mib_padded = written_format_base.format(written_mib)
 
                             # Force a carriage return and rewrite the line
-                            sys.stdout.write(f"\r{self.path}: {written_mib_padded}/{total_length_mib} MiB")
+                            sys.stdout.write(
+                                f"\r{self.path}: {written_mib_padded}/{total_length_mib} MiB"
+                            )
                             sys.stdout.flush()
 
                     if display_progress_bar:
-                        sys.stdout.write('\n')
+                        sys.stdout.write("\n")
                         sys.stdout.flush()
-
 
                 log_info(f"Done downloading {self.path} from {self.resource_url}")
 
