@@ -5,6 +5,7 @@ from pathlib import Path
 from toolbox.helpers import (
     bash_command,
     bash_command_get_output,
+    exit_with_error,
     get_input,
     log_info,
     log_warning,
@@ -71,5 +72,7 @@ def run_preprocessor(*args, **kwargs):
 
 
 if __name__ == "__main__":
-    # Check if run from dev/
+    if Path.cwd().name != "dev":
+        exit_with_error("Please run this script from the dev/ directory.")
+
     run_preprocessor()
