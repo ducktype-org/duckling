@@ -512,20 +512,20 @@ def duck_linter(*args, **kwargs):
 @cli.command()
 @click.option(
     "-b",
-    "--build_dir",
+    "--build-dir",
     prompt="build directory with docs enabled",
     help="The name of the build directory with enabled docs.",
     default="build",
 )
 @click.option(
     "-c",
-    "--cmake_path",
+    "--cmake-path",
     prompt="CMake file path",
     help="Path to cmake file defining the compilation of the file (for example the one defining add_library).",
 )
 @click.option(
     "-f",
-    "--source_file",
+    "--source-file",
     prompt="Source file path",
     help="File name to run preprocessor on, relative to cmake path (for example whatever was written in add_library).",
     type=str
