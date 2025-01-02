@@ -281,7 +281,7 @@ namespace compiler::helios {
 			CORE_ASSERT(
 				key.element.toOpt().has_value(),
 				"Nullptr element given to QuerySymbolOfSTMT! (add some null handling before "
-			    "calling it)"
+				"calling it)"
 			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = dynamic_cast<const pst::Stmt*>(&*key.element))

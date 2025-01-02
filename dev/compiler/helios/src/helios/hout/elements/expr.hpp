@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../symbols/symbols.hpp" // @todo ... #404
+#include "../../symbols/symbols.hpp"  // @todo ... #404
 #include "../../scope_symbol_id.hpp"
 
 #include <vector>
