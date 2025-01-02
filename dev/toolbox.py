@@ -507,8 +507,6 @@ def duck_linter(*args, **kwargs):
         exit_with_error("Linting failed.")
 
 
-
-
 if __name__ == "__main__":
     if pathlib.Path.cwd() != pathlib.Path(__file__).parent.absolute():
         exit_with_error("Toolbox should be called from the root of the project")
