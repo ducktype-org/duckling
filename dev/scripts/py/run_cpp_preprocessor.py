@@ -52,7 +52,7 @@ def run_preprocessor_impl(build_dir, cmake_path, source_file):
     "-c",
     "--cmake-path",
     prompt="CMake file path",
-    help="Path to cmake file defining the compilation of the file (for example the one defining add_library).",
+    help="Path to a parent directory of cmake file defining the compilation of the file (for example the one defining add_library).",
 )
 @click.option(
     "-f",
