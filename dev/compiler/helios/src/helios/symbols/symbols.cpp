@@ -61,7 +61,7 @@ namespace compiler::helios {
 		CRef<pst::LangElement> pst_element;
 
 		/**
-		 * Retrun associated pst_element casted to Stmt.
+		 * Return associated pst_element cast to Stmt.
 		 * Panics if element is not a statement.
 		 */
 		[[nodiscard]]

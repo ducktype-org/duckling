@@ -25,11 +25,11 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Storage for heavy function data,
-	 * in a way that makes it cheep to copy, since
-	 * we want HOUTFunction to be copyable object.
+	 * in a way that makes it cheap to copy, since
+	 * we want HOUTFunction to be a copyable object.
 	 * @note use of shared_ptr's is intentional, as they
 	 * work well for incomplete types, and fit the use case.
-	 * In the future we might optimize it to single (or zero) sharer_ptr, but
+	 * In the future we might optimize it to single (or zero) shared_ptr, but
 	 * that will require some boilerplate.
 	 */
 	struct HOUTFunctionContent {
