@@ -33,11 +33,13 @@ def run_preprocessor_impl(build_dir, cmake_path, source_file):
         out.find(MAKE_PREPROCESSING_PREFIX) + len(MAKE_PREPROCESSING_PREFIX) :
     ].strip()
 
-    log_info(f"Preprocessed file is at {i_file}")
+    output_file = cmake_dir / i_file
+
+    log_info(f"Preprocessed file is at {output_file}")
 
     open_vscode = get_input("Open file in vscode? [Y/n]: ")
-    if open_vscode.lower() in ["y"]:
-        bash_command(f"code {cmake_dir / i_file}")
+    if open_vscode.lower() in ["y", ""]:
+        bash_command(f"code {output_file}")
 
 
 @click.command()
@@ -69,4 +71,5 @@ def run_preprocessor(*args, **kwargs):
 
 
 if __name__ == "__main__":
+    # Check if run from dev/
     run_preprocessor()
