@@ -7,6 +7,8 @@ import shutil
 
 import click
 
+from scripts.py.toolbox.integration.test import load_test_set, run_tests
+from scripts.py.toolbox.integration.config import load_config
 from scripts.py.toolbox.helpers import (
     abort_if_false,
     bash_command,
@@ -14,7 +16,7 @@ from scripts.py.toolbox.helpers import (
     get_llvm_strings,
     log_info,
     log_new_line,
-    make_pretty_command,
+    make_singleline_command,
     with_venv,
 )
 from scripts.py.toolbox.internet_file import (
@@ -78,7 +80,7 @@ def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, cove
          -D USE_CCACHE={'ON' if ccache else 'OFF'}
          -D ENABLE_COVERAGE={'true' if coverage else 'false'}
     """
-    cmd = make_pretty_command(cmd)
+    cmd = make_singleline_command(cmd)
 
     log_info("Setting up a build folder...")
     if docs:
@@ -507,12 +509,21 @@ def duck_linter(*args, **kwargs):
         exit_with_error("Linting failed.")
 
 
+@cli.command()
+def run_integration_tests():
+    """Runs integration tests"""
+    log_info("Running integration tests...")
+    config = load_config("tests")
+    testset = load_test_set(config)
+    run_tests(testset)
+
+
 if __name__ == "__main__":
     if pathlib.Path.cwd() != pathlib.Path(__file__).parent.absolute():
         exit_with_error("Toolbox should be called from the root of the project")
 
     # Disable traceback for shorter error messages.
     # Comment this line when debugging.
-    sys.tracebacklimit = 0
+    # sys.tracebacklimit = 0
 
     cli()

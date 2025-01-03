@@ -22,7 +22,7 @@ def exit_with_error(msg):
 class BashCommandError(Exception):
     def __init__(self, command: str, exit_code, stdout, stderr):
         super().__init__(
-            f"\n\tBash command `{command}` has failed with a an exit code: {exit_code}, because:\n"
+            f"\n\tBash command `{command}` has failed with an exit code: {exit_code}, because:\n"
             + f"[STDOUT]:{"\n" + stdout if stdout else ""}\n"
             + f"[STDERR]:{"\n" + stderr if stderr else ""}"
         )
@@ -122,8 +122,8 @@ def get_llvm_strings(version, os, arch) -> tuple[str, str, str, str]:
         )
 
 
-def make_pretty_command(command):
+def make_singleline_command(command: str) -> str:
     pretty_command = command.replace("\n", " ")
     while "  " in pretty_command:
         pretty_command = pretty_command.replace("  ", " ")
-    return pretty_command
+    return pretty_command.lstrip().rstrip()
