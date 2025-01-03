@@ -1,28 +1,43 @@
-name = "C++ tests"
+Name = "C++ tests"
 
-# subtests = ["subpack1"]
+Compile = "g++ ${program_name}.cpp ${compile_args} ${compile_flags}"
+compile_flags = "-O2 -std=c++23 -Wall"
+compile_args = "-o ${program_name}"
+Run = "./${program_name}"
+PostRun = "echo Ran ${program_name}!"
+Clean = "rm -f ${program_name}"
+FailFast = true
+ExitCode = 1
 
-[env]
+# SubTests = ["subpack1"]
+
+[Env]
 lolz = "rofl"
 
-[build]
-compiler = "g++"
-compile_args_misc = "-O2 -std=c++23 -Wall"
 
-[tests.test1]
-name = "Custom name"
-compile_file = "file_fib.cpp"
-compile_args = "-o file_fib"
-run_program = "./file_fib"
-[tests.test1.run_cases]
-simple = { input = { string = "5" }, output = { string = "0 1 1 2 3 " } }
-normal = { name = "Up to 100", input = { string = "100" }, output = { program = "python3 gen_fibs.py 100" } }
-# alternative syntax to specify the test
-[tests.test1.run_cases.large]
-name = "Up to 1e5"
-input = { string = 1e5 }
-exit_code = 1
+[Tests.fib-tests]
+Name = "Custom name"
+program_name = "file_fib"
+[Tests.test1.RunCases]
+simple = { Input = { string = "5" }, Output = { string = "0 1 1 2 3 " } }
+normal = { Name = "Up to 100", Input = { string = "100" }, Output = { run = "python3 gen_fibs.py 100" } }
+# alternative syntax to specify a test
+[Tests.test1.RunCases.large]
+Name = "Up to 1e5"
+Input = { string = 1e5 }
+Err = { string = "Too large" }
+ExitCode = 1
 
-[tests.test-args]
-compiler_args = ""
-compiler_args_misc = ""
+[Tests.test-shell-cat]
+Compile = ""
+Run = "cat"
+[Tests.test-shell-cat.RunCases]
+hello-world = { Input = { string = "Hello, world!" }, Output = { string = "Hello, world!" } }
+wrong = { Input = { string = "Hello, world!" }, Output = { string = "Hello, world" }, ExitCode = 1 }
+
+[Tests.test-shell-echo]
+Compile = ""
+Run = "echo"
+[Tests.test-shell-echo.RunCases]
+hello-world = { RunArgs = "Hello, world!", Output = { string = "Hello, world!" } }
+wrong = { Input = { string = "Hello, world!" }, Output = { string = "Hello, world" }, ExitCode = 1 }

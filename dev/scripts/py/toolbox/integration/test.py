@@ -2,28 +2,13 @@ from dataclasses import dataclass
 from typing import Optional, Self
 from pathlib import Path
 
-from .config import config_find_keys
+from .config import config_find_key, make_test_name
 from .runcase import RunCase, make_data_from_dict
 from ..helpers import (
     bash_command,
     bash_command_get_output,
     log_info,
-    make_singleline_command,
 )
-
-TEST_KEYS = {
-    "name",
-    "description",
-    "pre_build_command",
-    "clean_command",
-    "compiler",
-    "compile_file",
-    "compile_args",
-    "compile_args_misc",
-    "run_program",
-    "run_cases",
-    "timeout_s",
-}
 
 
 @dataclass
@@ -32,21 +17,12 @@ class Test:
     description: Optional[str]
     pre_build_command: str
     clean_command: str
-    compiler: str
-    compile_file: str
-    compile_args: str
-    compile_args_misc: str
-    run_program: str
+    compile: str
+    run: str
     run_cases: list[RunCase]
     timeout_s: int
 
-    @property
-    def compile(self) -> str:
-        return make_singleline_command(
-            f"{self.compiler} {self.compile_file} {self.compile_misc_args} {self.compile_args}"
-        )
-
-    def run(self):
+    def run_test(self):
         bash_command(self.compile)
         for i, run_case in enumerate(self.run_cases):
             log_info(f"Running test case {i} -- {self.name}/{run_case.name}")
@@ -78,55 +54,48 @@ def load_run_case(test_dict: dict, run_case_name: str) -> RunCase:
     run_case_dict = test_dict["run_cases"][run_case_name]
 
     input = None
-    if "input" in run_case_dict:
-        input = make_data_from_dict(run_case_dict["input"])
+    if "Input" in run_case_dict:
+        input = make_data_from_dict(run_case_dict["Input"])
     expected_output = None
-    if "output" in run_case_dict:
-        expected_output = make_data_from_dict(run_case_dict["output"])
+    if "Output" in run_case_dict:
+        expected_output = make_data_from_dict(run_case_dict["Output"])
     expected_err = None
-    if "err" in run_case_dict:
-        expected_err = make_data_from_dict(run_case_dict["err"])
+    if "Err" in run_case_dict:
+        expected_err = make_data_from_dict(run_case_dict["Err"])
 
     return RunCase(
-        name=run_case_dict.get("name", run_case_name),
-        run_args=run_case_dict.get("run_args", ""),
+        name=make_test_name(run_case_dict.get("Name", run_case_name)),
+        run_args=run_case_dict.get("RunArgs", ""),
         input=input,
         expected_output=expected_output,
         expected_err=expected_err,
-        expected_exitcode=run_case_dict.get("exitcode", 0),
-        post_run_command=run_case_dict.get("post_run_command", None),
+        expected_exitcode=run_case_dict.get("ExitCode", 0),
+        post_run=run_case_dict.get("PostRun", None),
     )
 
 
 def load_test(config: dict, test_name) -> Test:
-    test_dict = config["tests"][test_name]
-    test = Test(
-        name=test_name,
-        description=test_dict.get("description"),
-        pre_build_command=test_dict.get("pre_build_command", ""),
-        clean_command=test_dict.get("clean_command", ""),
-        compiler=config_find_keys(config, "build", "compiler"),
-        compile_file=test_dict["compile_file"],
-        compile_args=test_dict.get(
-            "compile_args", config_find_keys(config, "build", "compile_args")
-        ),
-        compile_args_misc=test_dict.get(
-            "compile_args_misc",
-        ),
-        run_program=test_dict["run_program"],
+    test_dict = config["Tests"][test_name]
+    return Test(
+        name=make_test_name(test_dict.get("Name", test_name)),
+        description=test_dict.get("Description"),
+        compile=test_dict.get("Compile", config_find_key(config, "Compile")),
+        run=test_dict.get("Run", config_find_key(config, "Run")),
+        post_run=test_dict.get("PostRun", config_find_key(config, "PostRun")),
         run_cases=[
-            load_run_case(test_dict, run_case) for run_case in test_dict["run_cases"]
+            load_run_case(test_dict, run_case)
+            for run_case in test_dict.get("run_cases", {})
         ],
-        timeout_s=test_dict.get("timeout_s", 10),
+        timeout_s=test_dict.get(
+            "timeout_s", x if (x := config_find_key(config, "PostRun")) else 10
+        ),
     )
-    name = test_dict["name"]
-    description = test_dict.get("description")
 
 
 def load_test_set(config: dict) -> TestSet:
-    name = config["name"]
-    subtests = [load_test_set(subtest) for subtest in config.get("subtests", [])]
-    tests = [load_test(config, test) for test in config.get("tests", [])]
+    name = make_test_name(config["Name"])
+    subtests = [load_test_set(subtest) for subtest in config.get("SubTests", [])]
+    tests = [load_test(config, test) for test in config.get("Tests", [])]
     return TestSet(name, subtests, tests)
 
 
@@ -139,4 +108,5 @@ def run_tests(tests: TestSet, tree=None):
     for test in tests.tests:
         test.run()
 
-    run_tests(tests.subtests, tree)
+    for subtests in tests.subtests:
+        run_tests(subtests, tree)

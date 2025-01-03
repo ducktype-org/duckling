@@ -3,17 +3,22 @@ from dataclasses import dataclass
 from typing import Optional, Self
 from tomllib import loads
 
-from ..helpers import exit_with_error, log_info
+from .utils import make_test_name, resembles_builtin
+
+from ..helpers import exit_with_error, log_info, log_warning
 
 CONFIG_KEYS = {
-    "name",
-    "subtests",
-    "tests",
-    "build",
-    "env",
-    "config_file",
-    "parent",
-    "fail_fast",
+    "Name",
+    "Description",
+    "Env",
+    "Tests",
+    "SubTests",
+    "Compile",
+    "Run",
+    "PostRun",
+    "TimeOut",
+    "ExitCode",
+    "FailFast",
 }
 
 
@@ -21,31 +26,12 @@ CONFIG_KEYS = {
 class Config:
     config_file: Path
     name: str
-    build: dict
     env: dict
+    variables: dict
     tests: list[dict]
     subtests: list[Self]
     parent: Optional[Self]
     fail_fast: bool
-
-
-def make_test_name(name: str) -> str:
-    name = name.replace("tests", "")
-    name = name.replace("Tests", "")
-    name = name.replace("test", "")
-    name = name.replace("Test", "")
-
-    name = name.capitalize()
-    name = name.replace("-", "_")
-    name = name.replace(" ", "_")
-    while "__" in name:
-        name = name.replace("__", "_")
-    i = name.find("_")
-    while i != -1:
-        name = name[:i] + " " + name[i + 1 :].capitalize()
-        i = name.find("_")
-
-    return name.lstrip().rstrip()
 
 
 def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
@@ -59,40 +45,36 @@ def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
     with open(config_file) as f:
         config = loads(f.read())
 
-    if not "name" in config:
-        config["name"] = dir_with_config.stem
+    config["Parent"] = parent
+    config["ConfigFile"] = config_file
+    config["Name"] = config.get("Name", dir_with_config.stem)
+    config["FailFast"] = config.get("FailFast", False)
 
-    if not "fail_fast" in config:
-        config["fail_fast"] = False
-
-    # config["name"] = make_test_name(config["name"])
-    config["config_file"] = config_file
-    config["parent"] = parent
-
-    if not ("subtests" in config or "tests" in config):
+    if not ("SubTests" in config or "Tests" in config):
         exit_with_error(
-            f"Config file {config_file} does not contain any tests or subtests"
+            f"Config file {config_file} does not contain any Tests or SubTests"
         )
 
-    if "subtests" in config:
-        config["subtests"] = [
+    if "SubTests" in config:
+        config["SubTests"] = [
             load_config(dir_with_config / subtest, parent=config)
-            for subtest in config["subtests"]
+            for subtest in config["SubTests"]
         ]
 
-    if "tests" in config:
-        for test_name in config["tests"]:
-            test = config["tests"][test_name]
-            # test["name"] = make_test_name(test_name)
-            test["name"] = test_name
+    if "Tests" in config:
+        for test_name in config["Tests"]:
+            test = config["Tests"][test_name]
+            test["Name"] = test_name
 
-    if unknown_keys := set(config.keys()).difference(CONFIG_KEYS):
-        exit_with_error(f"Unknown keys: {unknown_keys} in config file {config_file}")
+    for var in config:
+        if not resembles_builtin(var, CONFIG_KEYS) and not var in CONFIG_KEYS:
+            if var[0].isupper():
+                exit_with_error(f"Variables should be in snake_case or kebab-case, not: {var}")
 
     return config
 
 
-def config_find_keys(config: dict, *keys) -> Optional[dict]:
+def config_find_key(config: dict, *keys) -> Optional[dict]:
     dictionary = config
     result = None
     for key in keys:
@@ -102,6 +84,6 @@ def config_find_keys(config: dict, *keys) -> Optional[dict]:
     if result:
         return result
 
-    if config["parent"]:
-        return config_find_keys(config["parent"], *keys)
+    if config["Parent"]:
+        return config_find_key(config["Parent"], *keys)
     return None

@@ -63,7 +63,7 @@ def make_data_from_dict(data: dict) -> Data:
     elif "run" in data:
         return DataFromProgram(data.get("compile", ""), data["run"])
     else:
-        raise ValueError("Invalid data dictionary")
+        raise ValueError("Invalid data dictionary: " + str(data))
 
 
 # https://unix.stackexchange.com/questions/922/cant-pipe-into-diff
@@ -79,4 +79,4 @@ class RunCase:
     expected_exitcode: int
     expected_output: Optional[Data]
     expected_err: Optional[Data]
-    post_run_command: str
+    post_run: str
