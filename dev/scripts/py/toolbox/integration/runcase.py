@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from ..helpers import bash_command
+from ..helpers import bash_command, clamp_str
 
 
 class Data(abc.ABC):
@@ -32,10 +32,10 @@ class DataFromString(Data):
         self.string = string
 
     def get_command(self) -> str:
-        return f"echo {self.string}"
+        return f"echo \"{self.string}\""
 
     def __str__(self) -> str:
-        return f"String: {self.string[:10] + ('...' if len(self.string) > 10 else '')}"
+        return f"String: \"{clamp_str(self.string)}\""
 
 
 class DataFromProgram(Data):

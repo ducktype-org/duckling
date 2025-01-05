@@ -1,6 +1,5 @@
-from typing import Optional
 
-from ..helpers import exit_with_error, log_warning
+from ..helpers import exit_with_error
 
 
 def make_test_name(name: str) -> str:
@@ -28,11 +27,31 @@ def make_test_name(name: str) -> str:
     return name.lstrip().rstrip()
 
 
-def resembles_builtin(name: str, builtin_set: set[str]) -> Optional[str]:
+def check_resembles_builtin(name: str, builtin_set: set[str]):
+    if name in builtin_set:
+        return
+
     for key in builtin_set:
         if name.lower() == key.lower() and name != key:
-            log_warning(
+            exit_with_error(
                 f"Incorrect spelling of '{name}' in config file. Consider: '{key}'"
             )
-            return key
-    return None
+    if name[0].isupper():
+        exit_with_error(
+            f"Unknown builtin `{name}`. Variables should be in snake_case or kebab-case."
+        )
+
+
+class VariableNotFound(Exception):
+    def __init__(self, variable_name, expr):
+        super().__init__(f"Cannot resolve: `{variable_name}` for expression: {expr}.")
+        self.variable_name = variable_name
+        self.expr = expr
+
+
+class ExpressionFillError(Exception):
+    def __init__(self, expr):
+        super().__init__(
+            f"Couldn't resolve {expr}. Possible usage of cyclic variables."
+        )
+        self.expr = expr

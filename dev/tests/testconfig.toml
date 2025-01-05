@@ -1,2 +1,1 @@
-SubTests = ["package1"]
-tests = 'lol'
+Subtests = ["package1"]

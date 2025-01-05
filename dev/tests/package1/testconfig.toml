@@ -1,13 +1,16 @@
-Name = "C++ tests"
+# Name = "C++ tests"
 
-Compile = "g++ ${program_name}.cpp ${compile_args} ${compile_flags}"
 compile_flags = "-O2 -std=c++23 -Wall"
-compile_args = "-o ${program_name}"
-Run = "./${program_name}"
-PostRun = "echo Ran ${program_name}!"
-Clean = "rm -f ${program_name}"
+compile_args = "-o #{program_name}"
+
+Compile = "g++ #{program_name}.cpp #{compile_args} #{compile_flags}"
+Run = "./#{program_name}"
+PostRun = "echo Ran #{program_name}!"
+Clean = "rm -f #{program_name}"
+
 FailFast = true
-ExitCode = 1
+ExitCode = 0
+TimeOut = 10
 
 # SubTests = ["subpack1"]
 
@@ -18,11 +21,11 @@ lolz = "rofl"
 [Tests.fib-tests]
 Name = "Custom name"
 program_name = "file_fib"
-[Tests.test1.RunCases]
+[Tests.fib-tests.RunCases]
 simple = { Input = { string = "5" }, Output = { string = "0 1 1 2 3 " } }
 normal = { Name = "Up to 100", Input = { string = "100" }, Output = { run = "python3 gen_fibs.py 100" } }
 # alternative syntax to specify a test
-[Tests.test1.RunCases.large]
+[Tests.fib-tests.RunCases.large]
 Name = "Up to 1e5"
 Input = { string = 1e5 }
 Err = { string = "Too large" }
@@ -30,14 +33,16 @@ ExitCode = 1
 
 [Tests.test-shell-cat]
 Compile = ""
-Run = "cat"
+program_name = "cat"
+Run = "#{program_name}"
 [Tests.test-shell-cat.RunCases]
 hello-world = { Input = { string = "Hello, world!" }, Output = { string = "Hello, world!" } }
 wrong = { Input = { string = "Hello, world!" }, Output = { string = "Hello, world" }, ExitCode = 1 }
 
 [Tests.test-shell-echo]
 Compile = ""
-Run = "echo"
+program_name = "echo"
+Run = "#{program_name}"
 [Tests.test-shell-echo.RunCases]
-hello-world = { RunArgs = "Hello, world!", Output = { string = "Hello, world!" } }
-wrong = { Input = { string = "Hello, world!" }, Output = { string = "Hello, world" }, ExitCode = 1 }
+hello-world = { RunArgs = "\"Hello, world!\"", Output = { string = "Hello, world!" } }
+wrong = { RunArgs = "\"Hello, world!\"", Output = { string = "Hello, world" }, ExitCode = 1 }

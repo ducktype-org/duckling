@@ -1,37 +1,70 @@
 from dataclasses import dataclass
 from typing import Optional, Self
-from pathlib import Path
 
-from .config import config_find_key, make_test_name
+from .utils import (
+    ExpressionFillError,
+    VariableNotFound,
+    check_resembles_builtin,
+    make_test_name,
+)
+
+from .config import (
+    config_find_and_fill,
+    config_find_value,
+    CONFIG_KEYS,
+    config_get_name_path,
+)
 from .runcase import RunCase, make_data_from_dict
 from ..helpers import (
-    bash_command,
-    bash_command_get_output,
+    exit_with_error,
     log_info,
+    make_singleline_command,
 )
+
+TEST_ALLOWED_KEYS = {*CONFIG_KEYS, "RunCases"}
+RUN_CASE_ALLOWED_KEYS = {
+    "Name",
+    "Input",
+    "Output",
+    "Err",
+    "RunArgs",
+    "TimeOut",
+    "ExitCode",
+}
 
 
 @dataclass
 class Test:
     name: str
     description: Optional[str]
-    pre_build_command: str
-    clean_command: str
+    run_cases: list[RunCase]
+
     compile: str
     run: str
-    run_cases: list[RunCase]
-    timeout_s: int
+    post_run: str
+    timeout: int
+    fail_fast: bool
+    clean: str
 
     def run_test(self):
-        bash_command(self.compile)
+        # bash_command(self.compile)
+        if self.compile:
+            log_info(f"Soon will run bash: {self.compile}")
         for i, run_case in enumerate(self.run_cases):
-            log_info(f"Running test case {i} -- {self.name}/{run_case.name}")
-            bash_command_get_output(
-                f"{run_case.input.get_command()} | {self.run_program} {run_case.run_args}"
+            log_info(
+                f"Running case [{i + 1}/{len(self)}] -- {self.name}/{run_case.name}"
             )
 
+            var = f"{run_case.input.get_command() + ' | ' if run_case.input else ''} {self.run} {run_case.run_args}"
+            var = make_singleline_command(var)
+
+            log_info(f"Test: {var}")
+            # bash_command_get_output(
+            #     f"{run_case.input.get_command()} | {self.run_program} {run_case.run_args}"
+            # )
+
     def __str__(self) -> str:
-        return f"{self.name}: {self.description}"
+        return f"{self.name}: {self.description if self.description else ''}"
 
     def __len__(self) -> int:
         return len(self.run_cases)
@@ -51,24 +84,22 @@ class TestSet:
 
 
 def load_run_case(test_dict: dict, run_case_name: str) -> RunCase:
-    run_case_dict = test_dict["run_cases"][run_case_name]
+    run_case_dict = test_dict["RunCases"][run_case_name]
 
-    input = None
-    if "Input" in run_case_dict:
-        input = make_data_from_dict(run_case_dict["Input"])
-    expected_output = None
-    if "Output" in run_case_dict:
-        expected_output = make_data_from_dict(run_case_dict["Output"])
-    expected_err = None
-    if "Err" in run_case_dict:
-        expected_err = make_data_from_dict(run_case_dict["Err"])
+    for var in run_case_dict:
+        check_resembles_builtin(var, RUN_CASE_ALLOWED_KEYS)
+
+    io_data = [None, None, None]
+    for i, io in enumerate(["Input", "Output", "Err"]):
+        if io in run_case_dict:
+            io_data[i] = make_data_from_dict(run_case_dict[io])
 
     return RunCase(
-        name=make_test_name(run_case_dict.get("Name", run_case_name)),
+        name=run_case_dict.get("Name", run_case_name),
         run_args=run_case_dict.get("RunArgs", ""),
-        input=input,
-        expected_output=expected_output,
-        expected_err=expected_err,
+        input=io_data[0],
+        expected_output=io_data[1],
+        expected_err=io_data[2],
         expected_exitcode=run_case_dict.get("ExitCode", 0),
         post_run=run_case_dict.get("PostRun", None),
     )
@@ -76,37 +107,54 @@ def load_run_case(test_dict: dict, run_case_name: str) -> RunCase:
 
 def load_test(config: dict, test_name) -> Test:
     test_dict = config["Tests"][test_name]
-    return Test(
-        name=make_test_name(test_dict.get("Name", test_name)),
-        description=test_dict.get("Description"),
-        compile=test_dict.get("Compile", config_find_key(config, "Compile")),
-        run=test_dict.get("Run", config_find_key(config, "Run")),
-        post_run=test_dict.get("PostRun", config_find_key(config, "PostRun")),
-        run_cases=[
-            load_run_case(test_dict, run_case)
-            for run_case in test_dict.get("run_cases", {})
-        ],
-        timeout_s=test_dict.get(
-            "timeout_s", x if (x := config_find_key(config, "PostRun")) else 10
-        ),
+    test_path = config_get_name_path(test_dict)
+
+    for var in test_dict:
+        check_resembles_builtin(var, TEST_ALLOWED_KEYS)
+
+    if not "RunCases" in test_dict or not test_dict["RunCases"]:
+        exit_with_error(f"Test {test_path} has no RunCases.")
+
+    try:
+        return Test(
+            name=test_dict.get("Name", test_name),
+            description=test_dict.get("Description"),
+            compile=config_find_and_fill(test_dict, "Compile"),
+            run=config_find_and_fill(test_dict, "Run"),
+            post_run=config_find_and_fill(test_dict, "PostRun"),
+            run_cases=[
+                load_run_case(test_dict, run_case)
+                for run_case in test_dict.get("RunCases", {})
+            ],
+            timeout=config_find_value(test_dict, "TimeOut", default=10),
+            clean=config_find_and_fill(test_dict, "Clean"),
+            fail_fast=config_find_value(test_dict, "FailFast", default=False),
+        )
+    except (VariableNotFound, ExpressionFillError) as e:
+        exit_with_error(
+            f"In test case {test_path}\n\t{e.__class__.__name__}: {''.join(e.args)}"
+        )
+
+
+def load_subtest(config: dict) -> TestSet:
+    return TestSet(
+        name=config["Name"],
+        subtests=[load_subtest(subtest) for subtest in config.get("Subtests", [])],
+        tests=[load_test(config, test) for test in config.get("Tests", [])],
     )
-
-
-def load_test_set(config: dict) -> TestSet:
-    name = make_test_name(config["Name"])
-    subtests = [load_test_set(subtest) for subtest in config.get("SubTests", [])]
-    tests = [load_test(config, test) for test in config.get("Tests", [])]
-    return TestSet(name, subtests, tests)
 
 
 def run_tests(tests: TestSet, tree=None):
     if tree is None:
         tree = [tests.name]
+    else:
+        tree.append(tests.name)
 
-    log_info(f"Running {tree}")
+    log_info(f"Running: [{'/'.join(map(make_test_name, tree))}]")
 
+    print(tests)
     for test in tests.tests:
-        test.run()
+        test.run_test()
 
     for subtests in tests.subtests:
         run_tests(subtests, tree)

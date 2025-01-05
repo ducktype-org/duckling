@@ -127,3 +127,7 @@ def make_singleline_command(command: str) -> str:
     while "  " in pretty_command:
         pretty_command = pretty_command.replace("  ", " ")
     return pretty_command.lstrip().rstrip()
+
+
+def clamp_str(string, max_len=10, surround="`"):
+    return f"{surround}{string[:max_len] + (f'{surround}...' if len(string) > max_len else surround)}"

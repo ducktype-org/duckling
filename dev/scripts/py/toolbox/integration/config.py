@@ -1,20 +1,21 @@
 from pathlib import Path
-from dataclasses import dataclass
-from typing import Optional, Self
+import re
+from typing import Optional
 from tomllib import loads
 
-from .utils import make_test_name, resembles_builtin
+from .utils import ExpressionFillError, VariableNotFound, check_resembles_builtin
 
-from ..helpers import exit_with_error, log_info, log_warning
+from ..helpers import clamp_str, exit_with_error, log_info
 
 CONFIG_KEYS = {
     "Name",
     "Description",
     "Env",
     "Tests",
-    "SubTests",
+    "Subtests",
     "Compile",
     "Run",
+    "Clean",
     "PostRun",
     "TimeOut",
     "ExitCode",
@@ -22,16 +23,17 @@ CONFIG_KEYS = {
 }
 
 
-@dataclass
-class Config:
-    config_file: Path
-    name: str
-    env: dict
-    variables: dict
-    tests: list[dict]
-    subtests: list[Self]
-    parent: Optional[Self]
-    fail_fast: bool
+# @dataclass
+# class Config:
+#     config_file: Path
+#     name: str
+#     env: dict
+#     variables: dict
+#     tests: list[dict]
+#     subtests: list[Self]
+#     parent: Optional[Self]
+#     fail_fast: bool
+#     time_out: int
 
 
 def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
@@ -45,45 +47,73 @@ def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
     with open(config_file) as f:
         config = loads(f.read())
 
-    config["Parent"] = parent
-    config["ConfigFile"] = config_file
-    config["Name"] = config.get("Name", dir_with_config.stem)
-    config["FailFast"] = config.get("FailFast", False)
+    for var in config:
+        check_resembles_builtin(var, CONFIG_KEYS)
 
-    if not ("SubTests" in config or "Tests" in config):
+    config["_Parent"] = parent
+    config["_ConfigFile"] = config_file
+    config["Name"] = config.get("Name", dir_with_config.stem)
+
+    if not ("Subtests" in config or "Tests" in config):
         exit_with_error(
-            f"Config file {config_file} does not contain any Tests or SubTests"
+            f"Config file {config_file} does not contain any Tests or Subtests"
         )
 
-    if "SubTests" in config:
-        config["SubTests"] = [
+    if "Subtests" in config:
+        config["Subtests"] = [
             load_config(dir_with_config / subtest, parent=config)
-            for subtest in config["SubTests"]
+            for subtest in config["Subtests"]
         ]
 
     if "Tests" in config:
         for test_name in config["Tests"]:
             test = config["Tests"][test_name]
             test["Name"] = test_name
-
-    for var in config:
-        if not resembles_builtin(var, CONFIG_KEYS) and not var in CONFIG_KEYS:
-            if var[0].isupper():
-                exit_with_error(f"Variables should be in snake_case or kebab-case, not: {var}")
+            test["_Parent"] = config
 
     return config
 
 
-def config_find_key(config: dict, *keys) -> Optional[dict]:
-    dictionary = config
-    result = None
-    for key in keys:
-        if key in dictionary:
-            result = dictionary[key]
-            dictionary = result
-    if result:
-        return result
+def config_find_value(config: dict, key, default=None) -> Optional[dict]:
+    if key in config:
+        return config[key]
 
-    if config["Parent"]:
-        return config_find_key(config["Parent"], *keys)
-    return None
+    if config["_Parent"]:
+        return config_find_value(config["_Parent"], key)
+    return default
+
+
+VARIABLE_EXPRESSION = re.compile(r"#{(.*?)}")
+
+
+def config_fill_variables(config: dict, expr) -> str:
+    ORIGINAL_EXPR = expr
+    MAX_ITER = 10
+
+    def repl_var(matchobj):
+        variable_name = matchobj.group(1)
+        if value := config_find_value(config, variable_name):
+            return value
+
+        raise VariableNotFound(variable_name, expr)
+
+    for _ in range(MAX_ITER):
+        expr = VARIABLE_EXPRESSION.sub(repl_var, expr)
+
+        if not VARIABLE_EXPRESSION.search(expr):
+            return expr
+
+    raise ExpressionFillError(clamp_str(ORIGINAL_EXPR, 100))
+
+
+def config_find_and_fill(config, key):
+    value = config_find_value(config, key)
+    return config_fill_variables(config, value)
+
+
+def config_get_name_path(config):
+    return (
+        (config_get_name_path(parent) if (parent := config["_Parent"]) else "")
+        + "/"
+        + config["Name"]
+    )
