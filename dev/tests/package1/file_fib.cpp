@@ -1,5 +1,7 @@
 #include <iostream>
 
+constexpr long long MOD = 1e9 + 7;
+
 int main() {
 	int n = 0;
 	std::cin >> n;
@@ -9,10 +11,11 @@ int main() {
 		return 1;
 	}
 
-	int a = 0, b = 1;
+	long long a = 0, b = 1;
 	while (n--) {
-		std::cout << a << " ";
-		b += a;
-		a = b - a;
+		long long ans = ((a % MOD) + MOD) % MOD;
+		std::cout << ans << " ";
+		b = (a + b) % MOD;
+		a = (b - a) % MOD;
 	}
 }

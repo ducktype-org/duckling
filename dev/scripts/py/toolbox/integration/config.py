@@ -1,7 +1,8 @@
 from pathlib import Path
 import re
+import tomllib
 from typing import Optional
-from tomllib import loads
+import yaml
 
 from .utils import ExpressionFillError, VariableNotFound, check_resembles_builtin
 
@@ -36,27 +37,36 @@ CONFIG_KEYS = {
 #     time_out: int
 
 
-def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
-    log_info(f"Loading config from {dir_with_config}")
-
-    dir_with_config = Path(dir_with_config)
-    config_file = dir_with_config / "testconfig.toml"
+def get_config_dict(dir_with_config: Path, ext="yaml"):
+    config_file = dir_with_config / f"testconfig.{ext}"
     if not config_file.exists():
         exit_with_error(f"Config file {config_file} does not exist")
 
     with open(config_file) as f:
-        config = loads(f.read())
+        if ext == "yaml":
+            config = yaml.safe_load(f.read())
+        elif ext == "toml":
+            config = tomllib.loads(f.read())
+
+    config["_ConfigFile"] = config_file
+    return config
+
+
+def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
+    log_info(f"Loading config from {dir_with_config}")
+
+    dir_with_config = Path(dir_with_config)
+    config = get_config_dict(dir_with_config)
 
     for var in config:
         check_resembles_builtin(var, CONFIG_KEYS)
 
     config["_Parent"] = parent
-    config["_ConfigFile"] = config_file
     config["Name"] = config.get("Name", dir_with_config.stem)
 
     if not ("Subtests" in config or "Tests" in config):
         exit_with_error(
-            f"Config file {config_file} does not contain any Tests or Subtests"
+            f"Config file {config["_ConfigFile"]} does not contain any Tests or Subtests"
         )
 
     if "Subtests" in config:
@@ -83,7 +93,7 @@ def config_find_value(config: dict, key, default=None) -> Optional[dict]:
     return default
 
 
-VARIABLE_EXPRESSION = re.compile(r"#{(.*?)}")
+VARIABLE_EXPRESSION = re.compile(r"@{(.*?)}")
 
 
 def config_fill_variables(config: dict, expr) -> str:

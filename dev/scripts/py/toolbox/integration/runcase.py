@@ -32,10 +32,10 @@ class DataFromString(Data):
         self.string = string
 
     def get_command(self) -> str:
-        return f"echo \"{self.string}\""
+        return f'echo -n "{self.string}"'
 
     def __str__(self) -> str:
-        return f"String: \"{clamp_str(self.string)}\""
+        return f'String: "{clamp_str(self.string)}"'
 
 
 class DataFromProgram(Data):
@@ -60,15 +60,12 @@ def make_data_from_dict(data: dict) -> Data:
         return DataFromFile(file)
     elif "string" in data:
         return DataFromString(data["string"])
-    elif "run" in data:
+    elif "run" in data or "compile" in data:
+        if not "run" in data:
+            raise ValueError(f"Missing `run` in DataFromProgram: {data}")
         return DataFromProgram(data.get("compile", ""), data["run"])
     else:
         raise ValueError("Invalid data dictionary: " + str(data))
-
-
-# https://unix.stackexchange.com/questions/922/cant-pipe-into-diff
-# Tee
-# pipe output to post_run_command
 
 
 @dataclass

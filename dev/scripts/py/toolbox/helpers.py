@@ -20,9 +20,11 @@ def exit_with_error(msg):
 
 
 class BashCommandError(Exception):
-    def __init__(self, command: str, exit_code, stdout, stderr):
+    def __init__(
+        self, command: str, exit_code, stdout, stderr, at: pathlib.Path = None
+    ):
         super().__init__(
-            f"\n\tBash command `{command}` has failed with an exit code: {exit_code}, because:\n"
+            f"\n\tBash command `{command}` {f'executed at `{at.absolute()}` ' if at else ''}\n\thas failed with an exit code: {exit_code}, because:\n"
             + f"[STDOUT]:{"\n" + stdout if stdout else ""}\n"
             + f"[STDERR]:{"\n" + stderr if stderr else ""}"
         )
@@ -30,6 +32,7 @@ class BashCommandError(Exception):
         self.exit_code = exit_code
         self.stdout = stdout
         self.stderr = stderr
+        self.at = at
 
 
 def bash_command(cmd, cwd=".", redirect=None, click_file=sys.stdout):
@@ -44,7 +47,9 @@ def bash_command(cmd, cwd=".", redirect=None, click_file=sys.stdout):
 
     status = proc.wait()
     if status != 0:
-        raise BashCommandError(cmd, status, stdout, stderr)
+        raise BashCommandError(
+            cmd, status, stdout, stderr, at=pathlib.Path(cwd) if cwd != "." else None
+        )
     return stdout, stderr
 
 

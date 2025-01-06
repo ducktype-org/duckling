@@ -1,5 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional, Self
+import subprocess as sp
+
+from pathlib import Path
 
 from .utils import (
     ExpressionFillError,
@@ -13,10 +16,14 @@ from .config import (
     config_find_value,
     CONFIG_KEYS,
     config_get_name_path,
+    load_config,
 )
 from .runcase import RunCase, make_data_from_dict
 from ..helpers import (
+    BashCommandError,
+    clamp_str,
     exit_with_error,
+    log_bash,
     log_info,
     make_singleline_command,
 )
@@ -38,6 +45,7 @@ class Test:
     name: str
     description: Optional[str]
     run_cases: list[RunCase]
+    cwd: Path
 
     compile: str
     run: str
@@ -47,21 +55,78 @@ class Test:
     clean: str
 
     def run_test(self):
-        # bash_command(self.compile)
         if self.compile:
-            log_info(f"Soon will run bash: {self.compile}")
+            self.exec_command(self.compile, cwd=self.cwd)
         for i, run_case in enumerate(self.run_cases):
-            log_info(
-                f"Running case [{i + 1}/{len(self)}] -- {self.name}/{run_case.name}"
-            )
+            log_info(f" -- [{i + 1}/{len(self)}] - {run_case.name}")
 
             var = f"{run_case.input.get_command() + ' | ' if run_case.input else ''} {self.run} {run_case.run_args}"
             var = make_singleline_command(var)
 
-            log_info(f"Test: {var}")
-            # bash_command_get_output(
-            #     f"{run_case.input.get_command()} | {self.run_program} {run_case.run_args}"
-            # )
+            log_bash(f'cd "{self.cwd.absolute()}" && "{var}"')
+
+            # get input
+            test_input = bytes()
+            if run_case.input:
+                test_input, _ = self.exec_command(
+                    run_case.input.get_command(), cwd=self.cwd
+                )
+
+            # run test
+            test_output, test_err = self.exec_command(
+                f"{self.run} {run_case.run_args}",
+                cwd=self.cwd,
+                input=test_input,
+                exitcode=run_case.expected_exitcode,
+            )
+
+            # compare test and expected output
+            if run_case.expected_output:
+                test_expected_output, _ = self.exec_command(
+                    run_case.expected_output.get_command(), cwd=self.cwd
+                )
+                if test_output != test_expected_output:
+                    # For now...
+                    print("", test_output, "\n", test_expected_output)
+                    exit_with_error(
+                        f"Stdouts do not match: {clamp_str(test_output.decode('UTF-8'))} != {clamp_str(test_expected_output.decode('UTF-8'))}"
+                    )
+
+            # compare test and expected err
+            if run_case.expected_err:
+                test_expected_err, _ = self.exec_command(
+                    run_case.expected_err.get_command(), cwd=self.cwd
+                )
+                if test_err != test_expected_err:
+                    # For now...
+                    print("", test_err, "\n", test_expected_err)
+                    exit_with_error(
+                        f"Stderrs do not match: {clamp_str(test_err.decode('UTF-8'))} != {clamp_str(test_expected_err.decode('UTF-8'))}"
+                    )
+
+            # post run
+            if self.post_run:
+                self.exec_command(self.post_run, self.cwd, test_output)
+
+    def exec_command(self, cmd, cwd: Path, input: bytes | None = None, exitcode=0):
+        proc = sp.Popen(
+            ["/bin/bash", "-c", cmd],
+            cwd=cwd,
+            stdin=sp.PIPE,
+            stdout=sp.PIPE,
+            stderr=sp.PIPE,
+        )
+        stdout, stderr = proc.communicate(input=input)
+
+        status = proc.wait()
+        if status != exitcode:
+            if stdout is not None:
+                stdout = stdout.decode("UTF-8")
+            if stderr is not None:
+                stderr = stderr.decode("UTF-8")
+            raise BashCommandError(cmd, status, stdout, stderr, at=cwd)
+
+        return stdout, stderr
 
     def __str__(self) -> str:
         return f"{self.name}: {self.description if self.description else ''}"
@@ -122,6 +187,7 @@ def load_test(config: dict, test_name) -> Test:
             compile=config_find_and_fill(test_dict, "Compile"),
             run=config_find_and_fill(test_dict, "Run"),
             post_run=config_find_and_fill(test_dict, "PostRun"),
+            cwd=config["_ConfigFile"].parent,
             run_cases=[
                 load_run_case(test_dict, run_case)
                 for run_case in test_dict.get("RunCases", {})
@@ -150,11 +216,16 @@ def run_tests(tests: TestSet, tree=None):
     else:
         tree.append(tests.name)
 
-    log_info(f"Running: [{'/'.join(map(make_test_name, tree))}]")
-
-    print(tests)
     for test in tests.tests:
+        log_info(f"Testing: {'/'.join(tree + [test.name])}")
         test.run_test()
 
     for subtests in tests.subtests:
         run_tests(subtests, tree)
+
+
+def integration_tests():
+    log_info("Running integration tests...")
+    config = load_config("tests")
+    testset = load_subtest(config)
+    run_tests(testset)

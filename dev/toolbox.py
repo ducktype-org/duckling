@@ -7,8 +7,7 @@ import shutil
 
 import click
 
-from scripts.py.toolbox.integration.test import load_subtest, run_tests
-from scripts.py.toolbox.integration.config import load_config
+from scripts.py.toolbox.integration.test import integration_tests
 from scripts.py.toolbox.helpers import (
     abort_if_false,
     bash_command,
@@ -512,10 +511,7 @@ def duck_linter(*args, **kwargs):
 @cli.command()
 def run_integration_tests():
     """Runs integration tests"""
-    log_info("Running integration tests...")
-    config = load_config("tests")
-    testset = load_subtest(config)
-    run_tests(testset)
+    integration_tests()
 
 
 if __name__ == "__main__":
@@ -524,6 +520,6 @@ if __name__ == "__main__":
 
     # Disable traceback for shorter error messages.
     # Comment this line when debugging.
-    # sys.tracebacklimit = 0
+    sys.tracebacklimit = 0
 
     cli()
