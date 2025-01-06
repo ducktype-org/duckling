@@ -2,10 +2,9 @@
 
 #include <base/box.hpp>
 #include <base/optional.hpp>
-#include <core/process/memory/allocator/allocator.hpp>
-#include <core/process/memory/allocator/stack_allocator.hpp>
 #include <condition_variable>
 #include <core/process/memory/memory.hpp>
+#include <core/process/memory/thread_stack.hpp>
 #include <core/process/type_metadata/type_metadata.hpp>
 #include <code_data/instruction.hpp>
 #include <code_data/code.hpp>
@@ -55,12 +54,12 @@ namespace vm {
 		std::byte* local_stack_top;   // Pointer to the place, where new stack should start.
 		std::byte* local_stack_end;   // Pointer to the first value not allocated.
 
-		RuntimeData(std::vector<Frame>& frame_stack, std::vector<std::byte>& local_stack):
-			  frame_stack_base(frame_stack.data()),
-			  frame_stack_end(frame_stack.data() + FRAME_COUNT),
-			  local_stack_base(local_stack.data()),
-			  local_stack_top(local_stack.data()),
-			  local_stack_end(local_stack.data() + STACK_LENGTH) {}
+		RuntimeData(Ref<ThreadStack> stack):
+			  frame_stack_base(stack->getFrameStack()->data()),
+			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
+			  local_stack_base(stack->getLocalStack()->data()),
+			  local_stack_top(stack->getLocalStack()->data()),
+			  local_stack_end(stack->getLocalStack()->data() + stack->getLocalStack()->size()) {}
 	};
 
 	/**
@@ -76,19 +75,6 @@ namespace vm {
 	private:
 		base::Optional<std::thread> exec_thread;
 
-		std::vector<Frame> frame_stack;
-
-		/**
-		 * @brief Continuous block of memory, that is used for the call stack.
-		 * Here each stack frame is composed of: "arg_stack", local_stack". The "arg_stack" is used
-		 * for arguments passed to the function, and the "local_stack" is used for local variables.
-		 * [arg_stack(1) | local_stack(1) | arg_stack(1) | local_stack(2) | ...]
-		 * When preparing for a new function call, the arguments are placed
-		 * exactly after the local variables of the current function, so in the "arg_stack"
-		 * of the new frame.
-		 */
-		std::vector<std::byte> local_stack_reserved;
-
 		RuntimeData runtime_data;
 
 		/**
@@ -99,11 +85,9 @@ namespace vm {
 		/**
 		 * @brief Process link as well as some of it's resources.
 		 */
-		VMProcess&      process;
-		Memory&         process_memory;
-		TypeMetadata&   process_types;
-		StackAllocator& process_stack_allocator;
-		Allocator&      process_dynamic_allocator;
+		VMProcess&    process;
+		Memory&       process_memory;
+		TypeMetadata& process_types;
 
 
 		// This might change:
@@ -150,9 +134,6 @@ namespace vm {
 		 * of derefing only part of a block with given type from given offset.
 		 */
 		base::ModRawView internalDerefPointer(Pointer);
-
-		/** Using raw Frame pointers seem to boost performance in function calls */
-		Frame internalInitFrame();
 
 		/**
 		 * @brief This is the main function to call when starting the execution of a program.
