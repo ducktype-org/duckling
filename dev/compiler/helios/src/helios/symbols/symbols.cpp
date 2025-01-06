@@ -455,14 +455,26 @@ namespace compiler::helios {
 					variant_match(path.error()) {
 						variant_case(errors::Ambiguity, _) {
 							// this error might need to be reported earlier:
-							ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(alias_definition->getSourcePosition(), "Ambiguity in dealias"));
-							
+							ctx.log(
+								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::
+									make(
+										alias_definition->getSourcePosition(),
+										"Ambiguity in dealias"
+									)
+							);
+
 							return errors::HError(errors::Failed());
 						}
 						variant_case(errors::SymbolNotFound, _) {
 							// this error might need to be reported earlier:
-							ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(alias_definition->getSourcePosition(), "Symbol not found in dealias"));
-							
+							ctx.log(
+								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::
+									make(
+										alias_definition->getSourcePosition(),
+										"Symbol not found in dealias"
+									)
+							);
+
 							return errors::HError(errors::Failed());
 						}
 					}

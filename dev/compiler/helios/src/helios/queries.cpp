@@ -133,8 +133,9 @@ namespace compiler::helios {
 
 				// for now initial value is assumed to always be present:
 				// this will probably change:
-				auto initial_value = ctx.query<QueryHoutOfExpr>({ stmt.getValue() })
-				                         .expect("Not handling errors here yet... (variable initial value)");
+				auto initial_value
+					= ctx.query<QueryHoutOfExpr>({ stmt.getValue() })
+				          .expect("Not handling errors here yet... (variable initial value)");
 
 				output(
 					code::VariableStmt(scope(symbol), std::move(initial_value), symbol_type, symbol)
@@ -200,7 +201,8 @@ namespace compiler::helios {
 						auto initial_value = ctx.query<QueryHoutOfExpr>({ value.value() });
 
 						if (initial_value.hasError()) {
-							// we just fail here, because we can't continue without correct initial expression
+							// we just fail here, because we can't continue without correct initial
+							// expression
 							return;
 						}
 
