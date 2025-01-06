@@ -56,6 +56,9 @@ def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
     log_info(f"Loading config from {dir_with_config}")
 
     dir_with_config = Path(dir_with_config)
+    if not dir_with_config.exists():
+        exit_with_error(f"Directory {dir_with_config.absolute()} does not exist")
+
     config = get_config_dict(dir_with_config)
 
     for var in config:
@@ -118,7 +121,9 @@ def config_fill_variables(config: dict, expr) -> str:
 
 def config_find_and_fill(config, key):
     value = config_find_value(config, key)
-    return config_fill_variables(config, value)
+    if value:
+        return config_fill_variables(config, value)
+    return value
 
 
 def config_get_name_path(config):

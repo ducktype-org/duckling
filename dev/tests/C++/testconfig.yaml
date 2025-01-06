@@ -1,12 +1,12 @@
-Name: "C++ tests"
+Name: "Tests of C++"
 
 compile_flags: "-O2 -std=c++23 -Wall"
 compile_args: "-o @{program_name}"
 
 Compile: "g++ @{program_name}.cpp @{compile_args} @{compile_flags}"
 Run: "./@{program_name}"
-PostRun: "echo Ran @{program_name}!"
-Clean: "rm -f @{program_name}"
+PostRun: "echo \"Ran @{program_name}!\""
+Clean: "rm @{program_name}"
 
 FailFast: true
 ExitCode: 0
@@ -24,6 +24,11 @@ Tests:
           string: "5"
         Output:
           string: "0 1 1 2 3 "
+      simple-from-file:
+        Input:
+          file: input_for_fib
+        Output:
+          string: "0 1 1 2 3 "
       normal:
         Name: "Up to 100"
         Input:
@@ -37,24 +42,3 @@ Tests:
         Err:
           string: "Too large\n"
         ExitCode: 1
-
-  test-shell-cat:
-    Compile: ""
-    program_name: "cat"
-    Run: "@{program_name}"
-    RunCases:
-      hello-world:
-        Input:
-          string: "Hello, world!"
-        Output:
-          string: "Hello, world!"
-
-  test-shell-echo:
-    Compile: ""
-    program_name: "echo"
-    Run: "@{program_name}"
-    RunCases:
-      hello-world:
-        RunArgs: "\"Hello, world!\""
-        Output:
-          string: "Hello, world!\n"

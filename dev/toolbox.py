@@ -509,9 +509,35 @@ def duck_linter(*args, **kwargs):
 
 
 @cli.command()
-def run_integration_tests():
+@click.option(
+    "-c",
+    "--clean",
+    is_flag=True,
+    default=False,
+    help="Runs `Clean` command on every test",
+)
+@click.option(
+    "-d",
+    "--dry",
+    is_flag=True,
+    default=False,
+    help="Only prints commands to be executed instead of really executing them",
+)
+@click.option(
+    "-t",
+    "--test",
+    type=str,
+    default="",
+    help="Runs a particular test, i.e `tests/C++/",
+)
+def itest(*args, **kwargs):
     """Runs integration tests"""
-    integration_tests()
+    # TODO:
+    # * "--test"
+    # * FailFast
+    # * Better handling of errors (like logging to a file)
+    # * improve readability of messages
+    integration_tests(*args, **kwargs)
 
 
 if __name__ == "__main__":
@@ -520,6 +546,6 @@ if __name__ == "__main__":
 
     # Disable traceback for shorter error messages.
     # Comment this line when debugging.
-    sys.tracebacklimit = 0
+    # sys.tracebacklimit = 0
 
     cli()

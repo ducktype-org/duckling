@@ -52,12 +52,12 @@ class DataFromProgram(Data):
         return f"Program: {self.run}"
 
 
-def make_data_from_dict(data: dict) -> Data:
+def make_data_from_dict(data: dict, config_dir: Path) -> Data:
     if "file" in data:
-        file = Path(data["file"])
-        if not file.exists():
-            raise FileNotFoundError(f"File not found: {file}")
-        return DataFromFile(file)
+        path = config_dir / Path(data["file"])
+        if not path.exists():
+            raise FileNotFoundError(f"File not found: {path.absolute()}")
+        return DataFromFile(data["file"])
     elif "string" in data:
         return DataFromString(data["string"])
     elif "run" in data or "compile" in data:

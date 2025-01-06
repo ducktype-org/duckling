@@ -8,7 +8,6 @@ from .utils import (
     ExpressionFillError,
     VariableNotFound,
     check_resembles_builtin,
-    make_test_name,
 )
 
 from .config import (
@@ -25,6 +24,7 @@ from ..helpers import (
     exit_with_error,
     log_bash,
     log_info,
+    log_warning,
     make_singleline_command,
 )
 
@@ -54,85 +54,114 @@ class Test:
     fail_fast: bool
     clean: str
 
-    def run_test(self):
+    def run_test(self, dry: bool):
         if self.compile:
-            self.exec_command(self.compile, cwd=self.cwd)
+            self.exec_command(self.compile, cwd=self.cwd, dry=dry)
         for i, run_case in enumerate(self.run_cases):
-            log_info(f" -- [{i + 1}/{len(self)}] - {run_case.name}")
-
-            var = f"{run_case.input.get_command() + ' | ' if run_case.input else ''} {self.run} {run_case.run_args}"
-            var = make_singleline_command(var)
-
-            log_bash(f'cd "{self.cwd.absolute()}" && "{var}"')
-
-            # get input
-            test_input = bytes()
-            if run_case.input:
-                test_input, _ = self.exec_command(
-                    run_case.input.get_command(), cwd=self.cwd
+            log_info(f"[{i + 1}/{len(self)}] - {run_case.name}")
+            try:
+                self.test_case(run_case, dry)
+            except BashCommandError as e:
+                exit_with_error(
+                    f"Case `{self.name}/{run_case.name}` has failed because: {''.join(e.args)}"
                 )
 
-            # run test
-            test_output, test_err = self.exec_command(
-                f"{self.run} {run_case.run_args}",
-                cwd=self.cwd,
-                input=test_input,
-                exitcode=run_case.expected_exitcode,
+    def test_case(self, run_case, dry: bool) -> bool:
+        var = f"{run_case.input.get_command() + ' | ' if run_case.input else ''} {self.run} {run_case.run_args}"
+        var = make_singleline_command(var)
+
+        log_bash(f'cd "{self.cwd.absolute()}" && "{var}"')
+
+        # get input
+        test_input = bytes()
+        if run_case.input:
+            test_input, _ = self.exec_command(
+                run_case.input.get_command(), cwd=self.cwd, dry=dry
             )
 
-            # compare test and expected output
-            if run_case.expected_output:
-                test_expected_output, _ = self.exec_command(
-                    run_case.expected_output.get_command(), cwd=self.cwd
-                )
-                if test_output != test_expected_output:
-                    # For now...
-                    print("", test_output, "\n", test_expected_output)
-                    exit_with_error(
-                        f"Stdouts do not match: {clamp_str(test_output.decode('UTF-8'))} != {clamp_str(test_expected_output.decode('UTF-8'))}"
-                    )
-
-            # compare test and expected err
-            if run_case.expected_err:
-                test_expected_err, _ = self.exec_command(
-                    run_case.expected_err.get_command(), cwd=self.cwd
-                )
-                if test_err != test_expected_err:
-                    # For now...
-                    print("", test_err, "\n", test_expected_err)
-                    exit_with_error(
-                        f"Stderrs do not match: {clamp_str(test_err.decode('UTF-8'))} != {clamp_str(test_expected_err.decode('UTF-8'))}"
-                    )
-
-            # post run
-            if self.post_run:
-                self.exec_command(self.post_run, self.cwd, test_output)
-
-    def exec_command(self, cmd, cwd: Path, input: bytes | None = None, exitcode=0):
-        proc = sp.Popen(
-            ["/bin/bash", "-c", cmd],
-            cwd=cwd,
-            stdin=sp.PIPE,
-            stdout=sp.PIPE,
-            stderr=sp.PIPE,
+        # run test
+        test_output, test_err = self.exec_command(
+            f"{self.run} {run_case.run_args}",
+            cwd=self.cwd,
+            input=test_input,
+            exitcode=run_case.expected_exitcode,
+            dry=dry,
         )
-        stdout, stderr = proc.communicate(input=input)
 
-        status = proc.wait()
-        if status != exitcode:
-            if stdout is not None:
-                stdout = stdout.decode("UTF-8")
-            if stderr is not None:
-                stderr = stderr.decode("UTF-8")
-            raise BashCommandError(cmd, status, stdout, stderr, at=cwd)
+        # compare test and expected output
+        if run_case.expected_output:
+            test_expected_output, _ = self.exec_command(
+                run_case.expected_output.get_command(), cwd=self.cwd, dry=dry
+            )
+            if test_output != test_expected_output:
+                # For now...
+                print("", test_output, "\n", test_expected_output)
+                exit_with_error(
+                    f"Stdouts do not match: {clamp_str(test_output.decode('UTF-8'))} != {clamp_str(test_expected_output.decode('UTF-8'))}"
+                )
 
-        return stdout, stderr
+        # compare test and expected err
+        if run_case.expected_err:
+            test_expected_err, _ = self.exec_command(
+                run_case.expected_err.get_command(), cwd=self.cwd, dry=dry
+            )
+            if test_err != test_expected_err:
+                # For now...
+                print("", test_err, "\n", test_expected_err)
+                exit_with_error(
+                    f"Stderrs do not match: {clamp_str(test_err.decode('UTF-8'))} != {clamp_str(test_expected_err.decode('UTF-8'))}"
+                )
+
+        # post run
+        if self.post_run:
+            self.exec_command(
+                self.post_run, self.cwd, redirect=False, input=test_output, dry=dry
+            )
+
+    def exec_command(
+        self,
+        cmd,
+        cwd: Path,
+        redirect=True,
+        input: bytes | None = None,
+        exitcode=0,
+        dry: bool = False,
+    ):
+        if dry:
+            cmd = cmd.replace("\n", "\\n")
+            log_info(f"[DRY RUN]: cd '{cwd}' && '{cmd}'")
+            return bytes(), bytes()
+        else:
+            proc = sp.Popen(
+                ["/bin/bash", "-c", cmd],
+                cwd=cwd,
+                stdin=sp.PIPE if input else None,
+                stdout=sp.PIPE if redirect else None,
+                stderr=sp.PIPE if redirect else None,
+            )
+            stdout, stderr = proc.communicate(input=input)
+
+            status = proc.wait()
+            if status != exitcode:
+                if stdout is not None:
+                    stdout = stdout.decode("UTF-8")
+                if stderr is not None:
+                    stderr = stderr.decode("UTF-8")
+                raise BashCommandError(cmd, status, stdout, stderr, at=cwd)
+
+            return stdout, stderr
 
     def __str__(self) -> str:
         return f"{self.name}: {self.description if self.description else ''}"
 
     def __len__(self) -> int:
         return len(self.run_cases)
+
+    def run_clean(self, dry: bool):
+        try:
+            self.exec_command(self.clean, cwd=self.cwd, redirect=False, dry=dry)
+        except BashCommandError:
+            log_warning(f"Cleaning has (partially) failed on {self.name}.")
 
 
 @dataclass
@@ -155,9 +184,10 @@ def load_run_case(test_dict: dict, run_case_name: str) -> RunCase:
         check_resembles_builtin(var, RUN_CASE_ALLOWED_KEYS)
 
     io_data = [None, None, None]
+    config_dir = test_dict["_Parent"]["_ConfigFile"].parent
     for i, io in enumerate(["Input", "Output", "Err"]):
         if io in run_case_dict:
-            io_data[i] = make_data_from_dict(run_case_dict[io])
+            io_data[i] = make_data_from_dict(run_case_dict[io], config_dir)
 
     return RunCase(
         name=run_case_dict.get("Name", run_case_name),
@@ -210,22 +240,27 @@ def load_subtest(config: dict) -> TestSet:
     )
 
 
-def run_tests(tests: TestSet, tree=None):
+def run_tests(tests: TestSet, tree, clean, dry):
     if tree is None:
         tree = [tests.name]
     else:
         tree.append(tests.name)
 
     for test in tests.tests:
-        log_info(f"Testing: {'/'.join(tree + [test.name])}")
-        test.run_test()
+        pth = "/".join(tree + [test.name])
+        if clean:
+            log_info(f"Cleaning: {pth}")
+            test.run_clean(dry)
+        else:
+            log_info(f"Testing: {pth}")
+            test.run_test(dry)
 
     for subtests in tests.subtests:
-        run_tests(subtests, tree)
+        run_tests(subtests, tree.copy(), clean, dry=dry)
 
 
-def integration_tests():
+def integration_tests(clean, dry, test):
     log_info("Running integration tests...")
     config = load_config("tests")
     testset = load_subtest(config)
-    run_tests(testset)
+    run_tests(testset, tree=None, clean=clean, dry=dry)

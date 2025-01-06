@@ -1,0 +1,20 @@
+Tests:
+  test-shell-cat:
+    Run: "cat"
+    RunCases:
+      hello-world:
+        Input:
+          string: "Hello, world!"
+        Output:
+          string: "Hello, world!"
+      error-no-file:
+        RunArgs: inexistent-file
+        ExitCode: 1
+
+  test-shell-echo:
+    Run: "echo"
+    RunCases:
+      hello-world:
+        RunArgs: '"Hello, world!"'
+        Output:
+          string: "Hello, world!\n"
