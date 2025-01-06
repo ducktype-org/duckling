@@ -152,6 +152,8 @@ namespace compiler::helios {
 				  ctx(ctx),
 				  original_symbol(symbol) {}
 
+			// @TODO: make failure more explicit
+
 			void visitFun(const pst::Fun& stmt) final {
 				// @TODO: create function here...
 				// - create types, attributes, flags, ...
@@ -186,7 +188,7 @@ namespace compiler::helios {
 					auto value = param->getValue();
 
 					if (param_type->hasError()) {
-						// @TODO: Report an error
+						// we just fail here, because we can't continue without type
 						return;
 					}
 
@@ -198,7 +200,7 @@ namespace compiler::helios {
 						auto initial_value = ctx.query<QueryHoutOfExpr>({ value.value() });
 
 						if (initial_value.hasError()) {
-							// @TODO: Report an error
+							// we just fail here, because we can't continue without correct initial expression
 							return;
 						}
 

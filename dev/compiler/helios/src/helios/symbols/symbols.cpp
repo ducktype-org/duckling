@@ -450,15 +450,19 @@ namespace compiler::helios {
 					= first_symbol
 				        ? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
 				        : ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false });
-				auto&& path = pointed_symbol_lookup->getAsSingle();
+				auto path = pointed_symbol_lookup->getAsSingle();
 				if (path.hasError()) {
 					variant_match(path.error()) {
 						variant_case(errors::Ambiguity, _) {
-							// @TODO: Report an error
+							// this error might need to be reported earlier:
+							ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(alias_definition->getSourcePosition(), "Ambiguity in dealias"));
+							
 							return errors::HError(errors::Failed());
 						}
 						variant_case(errors::SymbolNotFound, _) {
-							// @TODO: Report an error
+							// this error might need to be reported earlier:
+							ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(alias_definition->getSourcePosition(), "Symbol not found in dealias"));
+							
 							return errors::HError(errors::Failed());
 						}
 					}
@@ -596,6 +600,8 @@ namespace compiler::helios {
 		class PstVisitor_GetTypeOf final: public pst::PstVisitorPanicky {
 			Context& ctx;
 
+			// @TODO: make failure more explicit
+
 			void setTypeOfSymbol(const tsh::TypeInfo& type) {
 				if (symbol_type_info.has_value())
 					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
@@ -634,7 +640,7 @@ namespace compiler::helios {
 					if (param_type->hasValue()) {
 						param_types.emplace_back(param_type->value());
 					} else {
-						// @TODO: Report an error
+						// we just fail here, because we can't continue without type
 						return;
 					}
 				}
@@ -644,7 +650,7 @@ namespace compiler::helios {
 					if (parsed.hasValue()) {
 						ret_type = parsed.value();
 					} else {
-						// @TODO: Report an error
+						// we just fail here, because we can't continue without type
 						return;
 					}
 				}
@@ -772,7 +778,7 @@ namespace compiler::helios {
 				if (tp.hasValue()) {
 					class_info.base = tp.value();
 				} else {
-					// @TODO: Report an error
+					// We just fail here, error should be reported by EvalExprToType
 					return errors::HError(errors::Failed());
 				}
 			}
@@ -783,7 +789,7 @@ namespace compiler::helios {
 					if (tp.hasValue()) {
 						class_info.implements.push_back(tp.value());
 					} else {
-						// @TODO: Report an error
+						// We just fail here, error should be reported by EvalExprToType
 						return errors::HError(errors::Failed());
 					}
 				}
